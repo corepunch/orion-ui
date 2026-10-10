@@ -1,0 +1,1273 @@
+{
+  "samples": [
+    {
+      "file": "01_feel_it_140bpm_1bar.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/01_feel_it_140bpm_1bar.wav",
+      "original_sha256": "99aadf3e92cb20abac57f781f5964d864880a9e0a0610d4e6a6a1efaade16937",
+      "frames": 75600,
+      "target_beats": [
+        0,
+        2,
+        4
+      ],
+      "master_sha256": "aa9485689d1614eb3909d5eecec6c5e94db7a4a7ca00edc31c13481a200738f9"
+    },
+    {
+      "file": "02_so_high_140bpm_1bar.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/02_so_high_140bpm_1bar.wav",
+      "original_sha256": "caf1dcb4d3be7468c74d5dd22fc5e864bc7b6d412be7ff9be773b6dcc4e90440",
+      "frames": 75600,
+      "target_beats": [
+        0,
+        1,
+        4
+      ],
+      "master_sha256": "de0f21cbc6074680698c46332e3b2895e7410f647626152608c07d7aa135ddbd"
+    },
+    {
+      "file": "03_move_with_me_140bpm_1bar.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/03_move_with_me_140bpm_1bar.wav",
+      "original_sha256": "d896adc7635d2aa035a987c16ae5ffcd65dd04a12e49af7d04546bdc80f75d86",
+      "frames": 75600,
+      "target_beats": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "master_sha256": "e3df66560b77365c132c4734398b67fd08a3128b91b61780dbdbc7cdedda950a"
+    },
+    {
+      "file": "04_light_the_night_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/04_light_the_night_140bpm_2bars.wav",
+      "original_sha256": "1a43f71bef9507f42988f19aa15f36f862eed9c69996bf68920643635ae199e2",
+      "frames": 151200,
+      "target_beats": [
+        0,
+        1,
+        2,
+        4,
+        8
+      ],
+      "master_sha256": "852a1c9e82aefbcf5ef862bdcea2c81a598292f69d9b0afa2cc4c5ab5fdfb130"
+    },
+    {
+      "file": "05_ooh_yeah_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/05_ooh_yeah_140bpm_2bars.wav",
+      "original_sha256": "1293ecf822fbce52d2e475674dd8172e03a93b33218d1744370da23a1bf50b51",
+      "frames": 151200,
+      "target_beats": [
+        0,
+        4,
+        8
+      ],
+      "master_sha256": "aa0013e3b53cd71954966b158b294d5cf1bb66210eace775f736dab38be45d72"
+    },
+    {
+      "file": "06_pulse_in_my_heart_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/06_pulse_in_my_heart_140bpm_2bars.wav",
+      "original_sha256": "e1c1c0a80a0f5a48b4987a31425fc90ab33cc81cf894fc50cc80c92d329906a2",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/06.wav",
+      "source_seconds": [
+        0.0810204081632653,
+        0.813,
+        1.204,
+        1.668,
+        3.57
+      ],
+      "target_beats": [
+        0,
+        2,
+        3,
+        4,
+        8
+      ],
+      "source_gain": 1.0035698172862677,
+      "master_sha256": "710bca294dfcd8ef2d098bd11eb85d5f23147a3044569a9fbc0dd320c3937f42",
+      "source_sha256": "6a44e6e84e7be4ef9d5b378b6d8a93c719799bc1ce9920d54cb63f30a1bd13c2"
+    },
+    {
+      "file": "07_we_own_this_moment_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/07_we_own_this_moment_140bpm_2bars.wav",
+      "original_sha256": "4f0704da70f691efbd1f29d3636f48cda58a5d0b793cfeada1af2eb61938a645",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/07.wav",
+      "source_seconds": [
+        3.4203174603174604,
+        3.92,
+        4.465,
+        4.78,
+        5.205,
+        6.91
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        8
+      ],
+      "source_gain": 1.9207399720119682,
+      "master_sha256": "3f0fe6fc1670fcfd810cd6ac2284cb00ea7c52ba0597a833ef55da0051d50f46",
+      "source_sha256": "b259815573a9a733967649ee3370efbaf2f4db075cad88252fea42693989724d"
+    },
+    {
+      "file": "08_stay_close_to_me_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/08_stay_close_to_me_140bpm_2bars.wav",
+      "original_sha256": "d0c0ef6ce8a27b984529bb28c8d3540ab7ccc73b542340876da967def2803883",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/08.wav",
+      "source_seconds": [
+        0.07564625850340136,
+        0.815,
+        1.615,
+        2.078,
+        3.39
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        5,
+        8
+      ],
+      "source_gain": 1.0002176667980207,
+      "master_sha256": "662e064d783ca0dad1c53a899872d686a39896f5d882d3560d5a2800ac69ebb0",
+      "source_sha256": "f8886c009fa5f52df9ee77da08c34c565fd2f835e062721207c46155be711370"
+    },
+    {
+      "file": "09_turn_up_the_glow_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/09_turn_up_the_glow_140bpm_2bars.wav",
+      "original_sha256": "76e69e67ddd6a4c20a4140d20c7cd619a89627747cf01ef6773c189368105686",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/09.wav",
+      "source_seconds": [
+        0.08394557823129252,
+        0.457,
+        0.787,
+        1.014,
+        3.47
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        2.5,
+        8
+      ],
+      "source_gain": 1.0233406536867027,
+      "master_sha256": "1b55077d307f85f925af4ce7b334887b9244042989b5184cd917a78818fce5e1",
+      "source_sha256": "75fa6269eaaa505fe76ff6665c5a1fe749f45c1ef69ac803b8dcd8ba7eff42b6"
+    },
+    {
+      "file": "10_spark_in_my_soul_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/10_spark_in_my_soul_140bpm_2bars.wav",
+      "original_sha256": "78d1ea0eaf19236fb779adec130646258063e434c1c7079ecc2f210dfdcccae6",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/10.wav",
+      "source_seconds": [
+        0.03392290249433107,
+        0.935,
+        1.365,
+        1.799,
+        3.62
+      ],
+      "target_beats": [
+        0,
+        2,
+        3,
+        4,
+        8
+      ],
+      "source_gain": 1.7353880198863663,
+      "master_sha256": "786e62c08e1982f9fee3afa14b90fc0744f2e268286cf43ae5c7c66c1082479b",
+      "source_sha256": "36eae8c3c86ce923f56857a0902c6595ac89e6a9f1a6b269332b010e335d75b0"
+    },
+    {
+      "file": "11_make_it_shine_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/11_make_it_shine_140bpm_2bars.wav",
+      "original_sha256": "7b7c1bbe9881ea37f679d16a09cf5fae048674530fbe9d4fff458cabc42f429f",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/11.wav",
+      "source_seconds": [
+        3.4097732426303855,
+        3.965,
+        4.695,
+        6.96
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        8
+      ],
+      "source_gain": 1.3108693597244991,
+      "master_sha256": "dccc32c61e27138714a1588339f5e246aa0beb3ec0c9630cfcaf29320a7ba583",
+      "source_sha256": "0aa371c945e5a212212dcc7bea13ff5a1cb98cc468349016c77ad644a179188f"
+    },
+    {
+      "file": "12_all_night_alive_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/12_all_night_alive_140bpm_2bars.wav",
+      "original_sha256": "f8860324a2a7ed206f6a74b6377ea75e19f7e83689299591f39084b7d5d5ba90",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/12.wav",
+      "source_seconds": [
+        1.354671201814059,
+        1.986,
+        2.645,
+        2.925,
+        4.7
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        3,
+        8
+      ],
+      "source_gain": 1.0476988347891396,
+      "master_sha256": "b9c633fac7d0fc4e4390e366a837744b1ef7a79f6a0ad0443c96b10c29249e3b",
+      "source_sha256": "349b90d37d2c89d006ed65b4901c6fb91f1008e3701ee798861fa56a9889538f"
+    },
+    {
+      "file": "13_feel_the_rush_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/13_feel_the_rush_140bpm_2bars.wav",
+      "original_sha256": "90bee9c2280257be918e0ff29b73c9f566ffea5e8a12e57763dbf49fdca97baf",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/13.wav",
+      "source_seconds": [
+        0.049546485260770975,
+        0.635,
+        0.918,
+        4.44
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        8
+      ],
+      "source_gain": 1.4413011492200045,
+      "master_sha256": "38aa78a6bb397b00edd773863ae188e1dd238ab68f0ca7b376135361f684c091",
+      "source_sha256": "434196f2f666a58ce439c88ca1eafc3b9df77eb51001652da26215d284d578b7"
+    },
+    {
+      "file": "14_together_we_rise_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/14_together_we_rise_140bpm_2bars.wav",
+      "original_sha256": "6193802b4a544770394bd8f9d2ddc875cab938a59d9c3d7e5e6a1967b2df4666",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/14.wav",
+      "source_seconds": [
+        0.088140589569161,
+        0.575,
+        0.994,
+        1.95,
+        4.19
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4,
+        8
+      ],
+      "source_gain": 1.0369715694532005,
+      "master_sha256": "7298d753fa61c93564209695737a6765f3f5189711b526d4e6871c8ccad96ba2",
+      "source_sha256": "8f021551e04b51ff08277848d814531549a43d7ad6e8aa2baa139109a905f5f1"
+    },
+    {
+      "file": "15_come_into_the_light_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/15_come_into_the_light_140bpm_4bars.wav",
+      "original_sha256": "1c74e105624e790c2a9ac7cb65fb9695d9bd56ff930096623254ba3ac6b9b3ac",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/15.wav",
+      "source_seconds": [
+        0.0690702947845805,
+        0.951,
+        1.828,
+        2.708,
+        3.588,
+        7.15
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        16
+      ],
+      "source_gain": 1.2032782011538907,
+      "master_sha256": "e10665f3f888aa277d8676af9247bd2e41155ea033f2e54ff3f5311c005c7484",
+      "source_sha256": "1cba34f61afb68d4c3ac4721a044c58805c7e531de8a987143bcffb3cb579c9c"
+    },
+    {
+      "file": "16_never_let_go_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/16_never_let_go_140bpm_2bars.wav",
+      "original_sha256": "0fec947e1fbfeea8abd701a0f04192e24a06acc332acd6a7d096fe3a4d0ed457",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/16.wav",
+      "source_seconds": [
+        0.060430839002267575,
+        0.603,
+        1.438,
+        3.48
+      ],
+      "target_beats": [
+        0,
+        1,
+        4,
+        8
+      ],
+      "source_gain": 1.0439495404608226,
+      "master_sha256": "ef1c686a10bf76497a68b173658683059413cac0e5126dc94fa7c85ac10bb4dd",
+      "source_sha256": "9e700dc029770c6cb7d148d25c5de22a2f72dea6ad409fd4871d3bf8c8683fa1"
+    },
+    {
+      "file": "17_higher_every_time_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/17_higher_every_time_140bpm_4bars.wav",
+      "original_sha256": "cc1ae26c758ced5b47de624f4546991c43ea47e247eb86de7bb6ad297c9874d9",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/17.wav",
+      "source_seconds": [
+        0.07918367346938776,
+        1.109,
+        1.847,
+        3.578,
+        6.67
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        8,
+        16
+      ],
+      "source_gain": 1.2565536876537153,
+      "master_sha256": "26f2366c1a58d178d8966b50281fb9b3782eb9d8838e03d8cb1e42c04649fc65",
+      "source_sha256": "d852d8686c937964f43f400a541bbc109a226ac9b1635b9f508cc9b093231c4c"
+    },
+    {
+      "file": "18_can_you_hear_my_heartbeat_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/18_can_you_hear_my_heartbeat_140bpm_4bars.wav",
+      "original_sha256": "968f3108b1effc0a2385f6c5f7262d2cc92f3d74fe1c2ea304c1d7d1bccfd6dc",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/18.wav",
+      "source_seconds": [
+        0.08600907029478458,
+        0.49,
+        0.978,
+        1.855,
+        2.848,
+        4.185,
+        6.77
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4,
+        6,
+        10,
+        16
+      ],
+      "source_gain": 1.2830466061649592,
+      "master_sha256": "0e6e359c3849d2b3531be002d91648e439e8fec1a00bcd39157ad14faad914c1",
+      "source_sha256": "d99119783cb45ab9fcaccf939ac8e05363eb3b477e55d6f588432feeb62e654d"
+    },
+    {
+      "file": "19_we_can_dance_until_the_morning_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/19_we_can_dance_until_the_morning_140bpm_2bars.wav",
+      "original_sha256": "fa6bad640113fd499971fc8ab3cab62058e1b2747d066d2d4f2985974c6dada5",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/19.wav",
+      "source_seconds": [
+        0.0791609977324263,
+        0.352,
+        0.783,
+        1.25,
+        1.648,
+        2.139,
+        2.337,
+        2.963,
+        3.55
+      ],
+      "target_beats": [
+        0,
+        0.5,
+        1.5,
+        2.5,
+        3.5,
+        4.5,
+        5,
+        6.5,
+        8
+      ],
+      "source_gain": 1.0076490673843375,
+      "master_sha256": "57e109b4ff69bf00ab773fe83232b871d09da66989dd7c63a33a5b765ef9d358",
+      "source_sha256": "358de40073675d968ad57a3b1f97cdb975035b6ef5f9e1c2d1d3055c4efe79ab"
+    },
+    {
+      "file": "20_hold_me_in_the_rhythm_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/20_hold_me_in_the_rhythm_140bpm_4bars.wav",
+      "original_sha256": "27189eef881b99f2aec89d01267ec7ed7601e6a17244e51237bc5b635c05a05b",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/20.wav",
+      "source_seconds": [
+        0.10954648526077097,
+        1.025,
+        2.846,
+        3.279,
+        3.715,
+        6.83
+      ],
+      "target_beats": [
+        0,
+        2,
+        6,
+        7,
+        8,
+        16
+      ],
+      "source_gain": 1.132300026485338,
+      "master_sha256": "0a5fc17e563a5b4756a348cca64539147e35a02d7912340bbb4c644396f44503",
+      "source_sha256": "1e61b494dac26979d1dd1734c75b980028360bb133192ed5dc0186d0af3f8127"
+    },
+    {
+      "file": "21_let_the_colours_carry_you_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/21_let_the_colours_carry_you_140bpm_4bars.wav",
+      "original_sha256": "d3dfadbe5f621a16734e31824cc46aea2c9f885b4b3d375d1156fcc80b99e6be",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/21.wav",
+      "source_seconds": [
+        0.09038548752834467,
+        0.592,
+        1.012,
+        1.884,
+        2.778,
+        3.57,
+        6.77
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4,
+        6,
+        8,
+        16
+      ],
+      "source_gain": 1.155674879132683,
+      "master_sha256": "ec5dfc9f79e27581a8cae522694d21b17a3b707a7a5c8cc3a59c4756188f01b8",
+      "source_sha256": "2b80f3d79ab9f3b02b534c0946f471b9e35ea60e6461c58449e4956326584afb"
+    },
+    {
+      "file": "22_lift_your_voice_and_touch_the_sky_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/22_lift_your_voice_and_touch_the_sky_140bpm_4bars.wav",
+      "original_sha256": "fef6f312cf8689f76aef9c3af026416d27a693473caaf77401f9e5ba24599833",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/22.wav",
+      "source_seconds": [
+        0.08854875283446711,
+        0.589,
+        1.014,
+        1.89,
+        2.77,
+        3.42,
+        4.073,
+        6.79
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4,
+        6,
+        8,
+        10,
+        16
+      ],
+      "source_gain": 1.0521656408971716,
+      "master_sha256": "2d39822bc370ea46cad290d1df3e578ea5bd43a7333bd1728417ca606d0ad746",
+      "source_sha256": "852a8716c8b6ee8692fff60dcac4776753100cf407b0528737e6246f2eee333e"
+    },
+    {
+      "file": "23_open_up_your_heart_tonight_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/23_open_up_your_heart_tonight_140bpm_4bars.wav",
+      "original_sha256": "3aa00d7287466bb87e5fc156093003216019e3d312ed49c677462e9891d42d7d",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/23.wav",
+      "source_seconds": [
+        0.06328798185941042,
+        0.557,
+        0.8,
+        1.457,
+        1.878,
+        2.757,
+        3.63,
+        6.74
+      ],
+      "target_beats": [
+        0,
+        1,
+        1.5,
+        3,
+        4,
+        6,
+        8,
+        16
+      ],
+      "source_gain": 1.0013744326785152,
+      "master_sha256": "f291dbecd9329664c58bcda7972e049d16e15d185570b68ed3c799b70ebd4cad",
+      "source_sha256": "ca02f261f94e3fffb7c2d79f4899cd80cf853fd61b9d6bf0fa89fcd7b767f9cc"
+    },
+    {
+      "file": "24_scat_doo_ba_dee_dah_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/24_scat_doo_ba_dee_dah_140bpm_2bars.wav",
+      "original_sha256": "e348d084056015b01844f67a667a5e343e918fe19b93ee10ddbc7c128b3d4b96",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/24.wav",
+      "source_seconds": [
+        0.08235827664399092,
+        0.55,
+        0.986,
+        1.635,
+        3.47
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4,
+        8
+      ],
+      "source_gain": 1.05308129302127,
+      "master_sha256": "984b65ea574e5d70abf23c7b462098483713627d09bff42b8abf54589fd59646",
+      "source_sha256": "30c38b6bffee39e109641e9ba00351e712a8dc7830c1db59e2e1bc8d2294cc95"
+    },
+    {
+      "file": "25_scat_sha_bee_doo_wah_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/25_scat_sha_bee_doo_wah_140bpm_2bars.wav",
+      "original_sha256": "29f80153de2289981e40545c16472f82d97e6d66ebf8fba1eee66064f3fc75ee",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/25.wav",
+      "source_seconds": [
+        0.06458049886621316,
+        0.265,
+        1.129,
+        1.56,
+        3.48
+      ],
+      "target_beats": [
+        0,
+        0.5,
+        2.5,
+        3.5,
+        8
+      ],
+      "source_gain": 1.0630810793671128,
+      "master_sha256": "436b95aa6794d8d774d8d719514eab0b2e324fa9c4d4dd1e07d856e234d04ad6",
+      "source_sha256": "2eb0f6447fd11df1cc5bf192623f62dd0508ea477e95499bd4b56ad1ff2b880d"
+    },
+    {
+      "file": "26_scat_ba_da_bop_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/26_scat_ba_da_bop_140bpm_2bars.wav",
+      "original_sha256": "ffb5a0e51f02bd5e5f1706e6b12fabb991476f63d2bd1ee2120cf14bbbf293d8",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/26.wav",
+      "source_seconds": [
+        0.12959183673469388,
+        0.457,
+        0.832,
+        1.7
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        8
+      ],
+      "source_gain": 1.4516068959704773,
+      "master_sha256": "e70e8c040a4a0cd958d58f99d1020cdd015159cf56601f7cbc1aa3a113947acc",
+      "source_sha256": "f5e71e1f3b9c61d613f5ae14a1af4b664a6bb6eb99dbbede114c09a17b130a1c"
+    },
+    {
+      "file": "27_vowels_oo_ee_ah_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/27_vowels_oo_ee_ah_140bpm_2bars.wav",
+      "original_sha256": "835bf7f61b26b2df779810e46b807ad6166f311abe323ca5face06a7268901b2",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/27.wav",
+      "source_seconds": [
+        0.07251700680272109,
+        1.007,
+        1.997,
+        4.43
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        8
+      ],
+      "source_gain": 1.046875023328806,
+      "master_sha256": "e5a460205e3c58b51b6b1adb1a2621c986e8953e032df0ba3398a6986785ffb6",
+      "source_sha256": "269df9461ad2f75b267b79cca20ca2721a75c482edb515b60a8b8046eb436cd5"
+    },
+    {
+      "file": "28_scat_da_ya_da_ya_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/28_scat_da_ya_da_ya_140bpm_2bars.wav",
+      "original_sha256": "231b15153af16a3bd2291f1a9227e49a025fd5f39d1438b2906d81fcaa04052a",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/28.wav",
+      "source_seconds": [
+        0.44160997732426305,
+        0.763,
+        1.435,
+        2.001,
+        3.68
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        4,
+        8
+      ],
+      "source_gain": 1.0539271963244712,
+      "master_sha256": "d4206596c2eefaa8608ef73a284d623e840c271a24dafcf0ea7679e9b745320e",
+      "source_sha256": "bb34b8fedc3685ea8ca5bdea309e92c035f7a6149305c498d949f7373d641595"
+    },
+    {
+      "file": "29_hum_mm_ah_oo_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/29_hum_mm_ah_oo_140bpm_2bars.wav",
+      "original_sha256": "3222ad2caaafbbb4a99930eb67041e97dff759383f43270e8386a1b176917d23",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/29.wav",
+      "source_seconds": [
+        0.10748299319727891,
+        0.529,
+        0.962,
+        1.84
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        8
+      ],
+      "source_gain": 2.250285566910113,
+      "master_sha256": "ec99064f52bd452a313e98750434a2f38ef28184588d761bbaa7b2b0b9165c0c",
+      "source_sha256": "e9494a52d719599899cc88a88c6685badc33fe034fbfd2bf6691054de50ded26"
+    },
+    {
+      "file": "30_scat_doo_ba_dee_doo_ba_dah_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/30_scat_doo_ba_dee_doo_ba_dah_140bpm_2bars.wav",
+      "original_sha256": "a5224b7cc66bce0bf64eaf3a5d7737916222b534789ae79475cb1eaab942c576",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/30.wav",
+      "source_seconds": [
+        0.08292517006802722,
+        0.53,
+        0.96,
+        1.3948,
+        1.6453,
+        2.0414,
+        3.48
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        8
+      ],
+      "source_gain": 1.4346398476160234,
+      "master_sha256": "86432476acea6588a97edde722ee9d8ecedb67aa58d392919681c7a984ad7b29",
+      "source_sha256": "3a08cc04b3b059a33bc5f6ede803290af100f43dbd272e992fb701212eb8f72b"
+    },
+    {
+      "file": "31_scat_sha_ba_dee_ya_sha_ba_doo_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/31_scat_sha_ba_dee_ya_sha_ba_doo_140bpm_2bars.wav",
+      "original_sha256": "0db2d72331880c850b993a63cb690ca5a3991f8d7d0384237e72092d974e1ce1",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/31.wav",
+      "source_seconds": [
+        0.03528344671201814,
+        0.439,
+        0.854,
+        1.501,
+        2.15,
+        2.596,
+        2.7258,
+        3.41
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        5.5,
+        8
+      ],
+      "source_gain": 1.0412681610397376,
+      "master_sha256": "d381056ce0db4707eeb968c26cc9a3974da04f79607c7fc7c95b858f1fbe517a",
+      "source_sha256": "cfd3491f62382be23b7578c5f5b2ec137a4abaec9c1e9b03713b3d9fcc797287"
+    },
+    {
+      "file": "32_scat_da_ba_da_ba_dee_yah_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/32_scat_da_ba_da_ba_dee_yah_140bpm_2bars.wav",
+      "original_sha256": "6c386953722d9734d563b182b5823b9b105353396951c1c011d62b528bce0bee",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/32.wav",
+      "source_seconds": [
+        0.07805442176870749,
+        0.381,
+        0.52,
+        0.797,
+        0.98,
+        1.22,
+        1.79
+      ],
+      "target_beats": [
+        0,
+        0.5,
+        1,
+        1.5,
+        2,
+        2.5,
+        8
+      ],
+      "source_gain": 1.1276092616740665,
+      "master_sha256": "edfbed215b1ba80e843db97d6fa700ce3c5bedb989dc4675d2b8fe274c1ac722",
+      "source_sha256": "b9115f24444bb589919672d780a25fc6b683c5cd44effc6a3102e957195703f4"
+    },
+    {
+      "file": "33_vowels_oo_ah_ee_oh_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/33_vowels_oo_ah_ee_oh_140bpm_4bars.wav",
+      "original_sha256": "6492760c7db6f00a314681acb5da9f7389ff716c5a25754f3f608a2995e1b0ca",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/33.wav",
+      "source_seconds": [
+        0.08349206349206349,
+        1.008,
+        1.819,
+        3.508,
+        7.12
+      ],
+      "target_beats": [
+        0,
+        2,
+        4,
+        8,
+        16
+      ],
+      "source_gain": 1.595444041604435,
+      "master_sha256": "4cc0c810a552aed0a99d33ec1acd1c027e0f27bcdf9e02ed75698128f3178cb6",
+      "source_sha256": "10992022b506a3f8f56d35e674723f80820591df642651e4b6047ce118fbed2e"
+    },
+    {
+      "file": "34_scat_ba_doo_bee_ba_doo_wah_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/34_scat_ba_doo_bee_ba_doo_wah_140bpm_2bars.wav",
+      "original_sha256": "036f27a5b10acfc8739daf3ebfb1b053ed7b7221b8a794261fc176b82dd22c45",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/34.wav",
+      "source_seconds": [
+        0.09113378684807256,
+        0.508,
+        0.987,
+        1.634,
+        2.073,
+        2.754,
+        3.5
+      ],
+      "target_beats": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        6,
+        8
+      ],
+      "source_gain": 1.0551380599051985,
+      "master_sha256": "f673889386cda6612eb57bee8f5c165c8193ce1107d370735630fd335901802c",
+      "source_sha256": "ce4819b9f9c227a1a3534adcf19ee6078824b6135e304ca5195fd34784e141d5"
+    },
+    {
+      "file": "35_vowels_ah_eh_oh_ah_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/35_vowels_ah_eh_oh_ah_140bpm_4bars.wav",
+      "original_sha256": "6944d59334680c7e00b266b3e063b182abab4df3d385e75fb9a27740a856923e",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/vocals-2026-10-09/isolated/35.wav",
+      "source_seconds": [
+        0.09063492063492064,
+        1.097,
+        2.777,
+        4.079,
+        6.9
+      ],
+      "target_beats": [
+        0,
+        2,
+        6,
+        10,
+        16
+      ],
+      "source_gain": 1.0232942889010797,
+      "master_sha256": "4aec15f21e4796d739a2eb21d1ee71b8175840916505525abd5f5f0db6a19cff",
+      "source_sha256": "11ed3a97e4cfb247fcfb7bbbd1bec4e5426d0d91202c6f1c393d2c3a21a09c1f"
+    },
+    {
+      "file": "male_rap_all_right_tonight_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_all_right_tonight_140bpm_2bars.wav",
+      "original_sha256": "84f4171dc5778dd37da5acfe7175d23350f9507d48e1c3cf59b7f26d65138117",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/06.wav",
+      "source_seconds": [
+        0.121995,
+        0.984966,
+        1.59,
+        2.45585,
+        3.6
+      ],
+      "target_beats": [
+        0.0,
+        2.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "source_gain": 1.1181550273680694,
+      "master_sha256": "83a9cdd2d2715a3891c1899fb904b15da64d3fa9cafb0dd6056081bb39f90745",
+      "source_sha256": "4ff187eec799b58d76f4943c9ad508c8bc54ac1179c0aabd1fb15134d9a01da4"
+    },
+    {
+      "file": "male_rap_bring_that_beat_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_bring_that_beat_140bpm_2bars.wav",
+      "original_sha256": "26420b9ab25be61cab311ccee58159a95c6b7d741cd2dac66f6c7d76fc87c2e0",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/05.wav",
+      "source_seconds": [
+        0.087166,
+        0.896145,
+        1.726553,
+        2.540748,
+        3.21
+      ],
+      "target_beats": [
+        0.0,
+        2.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "source_gain": 1.4380586883930229,
+      "master_sha256": "a6e375bbe665dacf6362dead8aa75a50dcef8d3f842a8b830df7547a4d4aea97",
+      "source_sha256": "bdac44baae1ec228c24da2ff2863ded31179cbff13a3ba9e4bbbae6f2ea6a495"
+    },
+    {
+      "file": "male_rap_come_on_move_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_come_on_move_140bpm_2bars.wav",
+      "original_sha256": "de42c13fa5b4be5cad5a6c92a4f3a03dba3e778be9e4ac9c1950e35ec8d0dc17",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/01.wav",
+      "source_seconds": [
+        0.191769,
+        1.050249,
+        1.73,
+        2.76,
+        3.38
+      ],
+      "target_beats": [
+        0.0,
+        2.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "source_gain": 0.8515705807995848,
+      "master_sha256": "18f1036c166d76bb7dfddfcdfac0d4477e5c67083c8ebf635eb9c089c2cb0043",
+      "source_sha256": "df9002f46009840fe9bea4c8f3dad094ae2e75fe3d868716a0665ca414ca9ad0"
+    },
+    {
+      "file": "male_rap_concrete_glow_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_concrete_glow_140bpm_4bars.wav",
+      "original_sha256": "268deb8c354cc7a14fd5d1769b3b66a369005f3d85d3ef0e737874dfbbd190fb",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/07.wav",
+      "source_seconds": [
+        6.872,
+        10.275,
+        13.27
+      ],
+      "target_beats": [
+        0.0,
+        8.0,
+        16.0
+      ],
+      "source_gain": 1.2357416602381632,
+      "master_sha256": "73b6aad296ef9599385571017aed33d6e5e8028fd1f6b37c429512631a8b312c",
+      "source_sha256": "33da4f8a6244d8cb8a429a1b8455a35a5a4c14ff8584f5b605eb4e34ba55009e"
+    },
+    {
+      "file": "male_rap_forward_fire_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_forward_fire_140bpm_4bars.wav",
+      "original_sha256": "6b0a294bedcc07467d9daaa5bbdf691f99e5ce24401daa3bce35063a3ca75334",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/06.wav",
+      "source_seconds": [
+        5.118,
+        8.530295,
+        12.02
+      ],
+      "target_beats": [
+        0.0,
+        8.0,
+        16.0
+      ],
+      "source_gain": 1.1372809537296038,
+      "master_sha256": "8643d94915b1f8ff27550607488b41184029637b7fe7eec3f4f6f0a79d722004",
+      "source_sha256": "4ff187eec799b58d76f4943c9ad508c8bc54ac1179c0aabd1fb15134d9a01da4"
+    },
+    {
+      "file": "male_rap_fresh_step_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_fresh_step_140bpm_2bars.wav",
+      "original_sha256": "3203f4b7ff333a21bf2f050476d1d6c5634b2c0e97582ff03f612e36adba95bd",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/03.wav",
+      "source_seconds": [
+        6.992,
+        8.752,
+        10.35
+      ],
+      "target_beats": [
+        0.0,
+        4.0,
+        8.0
+      ],
+      "source_gain": 1.519256452774226,
+      "master_sha256": "8110578e7e596e45f25c78a994e6b4c45b1feffb90921be837a3fbc7faadfc3d",
+      "source_sha256": "5a7651152dbd0b3fdbf2465ff02fc23ed0b2143f8bd050f337a8f4782d0a7c1b"
+    },
+    {
+      "file": "male_rap_go_go_move_fast_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_go_go_move_fast_140bpm_2bars.wav",
+      "original_sha256": "5bb511bd50eb8450c334620d435d0852bb86d50df758546ab7d2cdab26d3c07f",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/03.wav",
+      "source_seconds": [
+        0.035442,
+        1.004989,
+        1.824989,
+        2.64
+      ],
+      "target_beats": [
+        0.0,
+        2.0,
+        4.0,
+        8.0
+      ],
+      "source_gain": 1.491522855117359,
+      "master_sha256": "b171afce18c55102c014586fb40f30d68d803170d99d4343a12d9df0278a9d89",
+      "source_sha256": "5a7651152dbd0b3fdbf2465ff02fc23ed0b2143f8bd050f337a8f4782d0a7c1b"
+    },
+    {
+      "file": "male_rap_hands_up_high_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_hands_up_high_140bpm_2bars.wav",
+      "original_sha256": "5ba36d31265f95b4c52056409ec979bcdfae67dbec0537f256a0f545f1ccfbe7",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/02.wav",
+      "source_seconds": [
+        0.082381,
+        0.93,
+        1.790476,
+        2.755011,
+        3.6
+      ],
+      "target_beats": [
+        0.0,
+        2.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "source_gain": 0.8822871869127635,
+      "master_sha256": "ccf284ea7918fcabac6c224bb6b62bd19a3662e4ad36263b8a2a43eea69a1ba6",
+      "source_sha256": "5ed33026a43be2c2a3c43533082a34ddbe123fdf4c2215108c04db19bec82cbe"
+    },
+    {
+      "file": "male_rap_hey_yo_jump_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_hey_yo_jump_140bpm_2bars.wav",
+      "original_sha256": "ad5e396858bb28884a7ca982228fa8e79a61485b628493e7426a08f51e37cca5",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/04.wav",
+      "source_seconds": [
+        0.05839,
+        0.924989,
+        1.79,
+        2.654989,
+        3.5
+      ],
+      "target_beats": [
+        0.0,
+        2.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "source_gain": 0.9410127058133186,
+      "master_sha256": "0e5fe3bc8bc86bba90da4d5fc315cff522c4deb76fdb64ad53a0042928184d54",
+      "source_sha256": "4412168d2808d0caad1ef62a403a357877cac43c3bf356e62d6eb97ad2f5da99"
+    },
+    {
+      "file": "male_rap_light_up_the_floor_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_light_up_the_floor_140bpm_4bars.wav",
+      "original_sha256": "2e517ecad1e9ef2681174540d8f3c368146bc7a75c570edd53d247bdabd90241",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/01.wav",
+      "source_seconds": [
+        8.393333,
+        12.02,
+        15.2
+      ],
+      "target_beats": [
+        0.0,
+        8.0,
+        16.0
+      ],
+      "source_gain": 0.883583543722755,
+      "master_sha256": "362174e8e1c51029dc34beb340ce0fc48136e7b94ada839a7f69b11574a8a4be",
+      "source_sha256": "df9002f46009840fe9bea4c8f3dad094ae2e75fe3d868716a0665ca414ca9ad0"
+    },
+    {
+      "file": "male_rap_night_shift_charge_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_night_shift_charge_140bpm_4bars.wav",
+      "original_sha256": "3d94d2d5fe25af0ffafc98eb5962c7e341f54ce61adfefb009f4cff56546bdaf",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/10.wav",
+      "source_seconds": [
+        8.625079,
+        12.084989,
+        15.28
+      ],
+      "target_beats": [
+        0.0,
+        8.0,
+        16.0
+      ],
+      "source_gain": 0.8767280385062366,
+      "master_sha256": "68137f598055e9b821f07f185577d8539a8c429414e0e33ce38f18e9806e230d",
+      "source_sha256": "452f61e72f6d2d697eeffd982fdfe3923189c657c6ae052eac96d0a90c3bcbcf"
+    },
+    {
+      "file": "male_rap_one_more_time_crew_140bpm_2bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_one_more_time_crew_140bpm_2bars.wav",
+      "original_sha256": "7ed32c3b40633f4b0dd5fcdcc21485d6b0988f274124804146f2ccdcf244bb37",
+      "frames": 151200,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/07.wav",
+      "source_seconds": [
+        0.091746,
+        0.890113,
+        1.744989,
+        2.544989,
+        3.58
+      ],
+      "target_beats": [
+        0.0,
+        2.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "source_gain": 1.0243260052813565,
+      "master_sha256": "53e64e153e6d42e13c42b7be23c3318837c85a1ea6ffef19c75f639b342230f8",
+      "source_sha256": "33da4f8a6244d8cb8a429a1b8455a35a5a4c14ff8584f5b605eb4e34ba55009e"
+    },
+    {
+      "file": "male_rap_power_in_motion_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_power_in_motion_140bpm_4bars.wav",
+      "original_sha256": "257974b5b583dd0ecb905bd496d460685923bc0d0c3f2a03c148273a11135f9e",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/02.wav",
+      "source_seconds": [
+        4.599184,
+        8.032,
+        11.52
+      ],
+      "target_beats": [
+        0.0,
+        8.0,
+        16.0
+      ],
+      "source_gain": 0.8810464123859811,
+      "master_sha256": "6ec267ab0b893cca9bb5450e851ff50816eb23f70d35511aa2be4b7370da13f3",
+      "source_sha256": "5ed33026a43be2c2a3c43533082a34ddbe123fdf4c2215108c04db19bec82cbe"
+    },
+    {
+      "file": "male_rap_pulse_patrol_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_pulse_patrol_140bpm_4bars.wav",
+      "original_sha256": "478f137837b27b1f61bcbf20fa33e5339139a4e7a0d96f216459cf090f82e348",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/05.wav",
+      "source_seconds": [
+        4.89542,
+        7.045125,
+        9.23,
+        11.4,
+        14.1
+      ],
+      "target_beats": [
+        0.0,
+        4.0,
+        8.0,
+        12.0,
+        16.0
+      ],
+      "source_gain": 1.4345716425395239,
+      "master_sha256": "4446e8ff997a70024c9f9501e29d6e78e013a828c6db8bda6ee9236122182855",
+      "source_sha256": "bdac44baae1ec228c24da2ff2863ded31179cbff13a3ba9e4bbbae6f2ea6a495"
+    },
+    {
+      "file": "male_rap_raise_the_roofline_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_raise_the_roofline_140bpm_4bars.wav",
+      "original_sha256": "c9e7397ce253fc6ed6f0b0a5ea8a5e64d21f7e19a999c46aa60aff5e615dc770",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/08.wav",
+      "source_seconds": [
+        8.655896,
+        12.03542,
+        15.18
+      ],
+      "target_beats": [
+        0.0,
+        8.0,
+        16.0
+      ],
+      "source_gain": 1.4226540925001188,
+      "master_sha256": "98724df9ec6939c9d9d032ba362deaf53a5a6c60299492fe0bae92145e0ff53a",
+      "source_sha256": "1b7a164f127b3091703b9ac33630b52195631cdfc3d220b6bba47628181d34d8"
+    },
+    {
+      "file": "male_rap_rock_this_place_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_rock_this_place_140bpm_4bars.wav",
+      "original_sha256": "438cd7df596f4bd438ad7db5987a87e2a333410567bd014e4c46c59539ba705d",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/08.wav",
+      "source_seconds": [
+        0.088027,
+        1.8,
+        3.515057,
+        5.170385,
+        6.86
+      ],
+      "target_beats": [
+        0.0,
+        4.0,
+        8.0,
+        12.0,
+        16.0
+      ],
+      "source_gain": 0.8866348305250941,
+      "master_sha256": "15aded3693d0f40e6be693dd5eb508e2a191414795eb0308a8750b8492f61d73",
+      "source_sha256": "1b7a164f127b3091703b9ac33630b52195631cdfc3d220b6bba47628181d34d8"
+    },
+    {
+      "file": "male_rap_room_to_rise_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_room_to_rise_140bpm_4bars.wav",
+      "original_sha256": "d25de634d8bf7b7e4a5ae79044284fe4e48680c42c88c86eb98679930b4334a3",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/04.wav",
+      "source_seconds": [
+        4.100091,
+        5.535011,
+        6.9,
+        8.436,
+        9.88
+      ],
+      "target_beats": [
+        0.0,
+        4.0,
+        8.0,
+        12.0,
+        16.0
+      ],
+      "source_gain": 1.3584525696103396,
+      "master_sha256": "da6795da90519f7458bd7dc81113f7bd571dc51d94808caefa95a191803e2bb2",
+      "source_sha256": "4412168d2808d0caad1ef62a403a357877cac43c3bf356e62d6eb97ad2f5da99"
+    },
+    {
+      "file": "male_rap_signal_to_move_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_signal_to_move_140bpm_4bars.wav",
+      "original_sha256": "cac6fc7c39ac3a68e86bd1faaf53964c63faa8dd7234b85357273c718f6bd588",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/09.wav",
+      "source_seconds": [
+        6.80161,
+        10.361,
+        13.36
+      ],
+      "target_beats": [
+        0.0,
+        8.0,
+        16.0
+      ],
+      "source_gain": 1.1679311799063994,
+      "master_sha256": "08acc4f76e35245db2df6b3a4976eb782da1e8e8aa41ef0483799c46ae1da46d",
+      "source_sha256": "e331d61916c04940e0f5faa2e3a72bd8c0979c4322d7e308fb8218ec057ee812"
+    },
+    {
+      "file": "male_rap_turn_it_up_crew_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_turn_it_up_crew_140bpm_4bars.wav",
+      "original_sha256": "18f8ccd033a1b7974b980023b709ef59f124695feca27d4907a0ee0345150ab6",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/10.wav",
+      "source_seconds": [
+        0.08839,
+        1.801973,
+        3.510499,
+        5.235011,
+        6.72
+      ],
+      "target_beats": [
+        0.0,
+        4.0,
+        8.0,
+        12.0,
+        16.0
+      ],
+      "source_gain": 0.8359495368922842,
+      "master_sha256": "b82e1794f6cfd5c4a0420ab0df596771b055598b5d46111b3d158a1d92adecee",
+      "source_sha256": "452f61e72f6d2d697eeffd982fdfe3923189c657c6ae052eac96d0a90c3bcbcf"
+    },
+    {
+      "file": "male_rap_yeah_keep_moving_140bpm_4bars.mp3",
+      "master": "tools/groove_audio/work/vocal-cleanup-2026-10-10/pcm/male_rap_yeah_keep_moving_140bpm_4bars.wav",
+      "original_sha256": "077d621482909d23fa044a5a0dae7376d3f41db8a97eb9e942336945de2e0c16",
+      "frames": 302400,
+      "source": "tools/groove_audio/work/male-rap-2026-10-09/isolated/09.wav",
+      "source_seconds": [
+        0.084036,
+        1.780023,
+        3.46059,
+        5.160068,
+        6.22
+      ],
+      "target_beats": [
+        0.0,
+        4.0,
+        8.0,
+        12.0,
+        16.0
+      ],
+      "source_gain": 1.0849480730802972,
+      "master_sha256": "a46f727f5cc5db1c5208e8734681485c0ee7c915a9bff19adf2e1e9575eb446c",
+      "source_sha256": "e331d61916c04940e0f5faa2e3a72bd8c0979c4322d7e308fb8218ec057ee812"
+    }
+  ]
+}

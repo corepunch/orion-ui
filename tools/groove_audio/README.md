@@ -11,6 +11,12 @@ cut WAV samples, and test whether its backing could be approximated with Groove'
 existing synthesizer. Source recordings, generated samples, model weights and
 rendered studies are deliberately excluded from this directory's Git history.
 
+`clean_vocals.py` repairs documented sample edit seams from authentic isolated
+source handles, protects phoneme attacks during de-clicking, smooths releases,
+and stages verified gapless MP3s without replacing app assets. The plan and
+before/after evidence for the existing 55 vocals are in
+[the vocal cleanup report](../../apps/groove/docs/vocal-cleanup-2026-10-10/README.md).
+
 The selected vocal extraction for the `song2` library is documented in
 [Selected Take Me Higher extraction](selected-vocal-extraction.md). That recipe
 reproduces the approved `01-existing-mel.wav` audition from the untouched
