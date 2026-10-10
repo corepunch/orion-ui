@@ -608,7 +608,17 @@ void dispatch_message(ui_event_t *msg) {
     case kEventDragDrop: {
       const char *path = (const char *)msg->lParam;
       if (path && path[0]) {
-        ui_open_file(path);
+        px = (int16_t)LOWORD(msg->wParam);
+        py = (int16_t)HIWORD(msg->wParam);
+        bool handled = false;
+        if ((win = find_window(SCALE_POINT(px), SCALE_POINT(py))) && !window_has_state(win, WINDOW_STATE_DISABLED)) {
+          handled = handle_mouse(evDropFile, win, (int16_t)LOCAL_X(px, py, win), (int16_t)LOCAL_Y(px, py, win), (void *)path);
+          // Bubble from the hit window to its root, each in its own content space.
+          for (window_t *w = win; w && !handled; w = w->parent)
+            handled = send_message(w, evDropFile, MAKEDWORD((uint16_t)(int16_t)LOCAL_X(px, py, w),
+                                                            (uint16_t)(int16_t)LOCAL_Y(px, py, w)), (void *)path);
+        }
+        if (!handled) ui_open_file(path);
       }
       if (msg->lParam) {
         free(msg->lParam);

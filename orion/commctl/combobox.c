@@ -370,6 +370,16 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         invalidate_window(win);
       }
       return true;
+    // win_button keeps its extras in userdata, which here is combobox_state_t:
+    // never let it read or write them.
+    case evGetTooltipText:
+      return false;
+    case btnSetIconName:
+    case btnSetTooltip:
+    case btnSetFaceColor:
+      fprintf(stderr, "[combobox] button message rejected win=%u msg=%u: combobox has no button extras\n", win->id, msg);
+      fflush(stderr);
+      return false;
     default:
       return win_button(win, msg, wparam, lparam);
   }

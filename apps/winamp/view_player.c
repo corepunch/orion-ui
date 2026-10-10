@@ -54,7 +54,7 @@ static void player_slider_sprites(uint16_t id, sprite_slider_t *d) {
   };
 }
 
-static void player_apply_skin(window_t *win) {
+void player_apply_skin(window_t *win) {
   for (int i = 0; i < (int)ARRAY_LEN(kPlayerButtons); i++) {
     window_t *c = get_window_item(win, kPlayerButtons[i].id);
     sprite_button_t d;
@@ -194,6 +194,8 @@ result_t win_winamp_player(window_t *win, uint32_t msg, uint32_t wparam, void *l
     case evMeasure:
       skin_view_measure(WA_MAIN_H, lparam);
       return true;
+    case evDropFile:
+      return app_drop_file(lparam, -1, true);   // like Winamp: dropped on the player, it plays
     case evResize:
       player_place(win);
       return false;

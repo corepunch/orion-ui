@@ -37,6 +37,7 @@
 #define WA_VIS_BARS   19
 #define WA_VIS_N      512
 #define WA_TICK_MS    33
+#define WA_DROP_BATCH_TICKS 15    // drops this close together count as one drag
 
 enum {
   SKIN_MAIN, SKIN_TITLEBAR, SKIN_CBUTTONS, SKIN_SHUFREP, SKIN_POSBAR, SKIN_VOLUME, SKIN_BALANCE,
@@ -106,6 +107,7 @@ typedef struct {
   uint8_t vis_bars[WA_VIS_BARS], vis_peaks[WA_VIS_BARS];
   float vis_peak_hold[WA_VIS_BARS];
   int marquee_px, tick;
+  int drop_tick;                   // tick of the last drop that started playback
   float pt_per_px;                 // logical points per skin pixel
 } winamp_t;
 
@@ -115,6 +117,8 @@ extern winamp_t *g_app;
 winamp_t *app_init(void);
 void app_shutdown(winamp_t *app);
 void app_add_path(const char *path);
+bool app_drop_file(const char *path, int index, bool play);   // index -1 appends
+void app_set_skin(const char *path);
 void app_command(uint16_t id);
 void app_play_index(int index);
 void app_tick(void);
@@ -144,6 +148,7 @@ void analyzer_update(const float ring[WA_VIS_N], int at, uint8_t bars[WA_VIS_BAR
 void playlist_clear(wa_playlist_t *pl);
 bool playlist_add(wa_playlist_t *pl, const char *path);
 void playlist_remove(wa_playlist_t *pl, int index);
+void playlist_move(wa_playlist_t *pl, int from, int to);
 int  playlist_scan(wa_playlist_t *pl, const char *dir);
 bool mp3_probe(const char *path, char **title, int *seconds);
 
@@ -174,5 +179,7 @@ result_t win_winamp_player(window_t *win, uint32_t msg, uint32_t wparam, void *l
 result_t win_winamp_equalizer(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_winamp_playlist(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void skin_view_measure(int skin_h, layout_measure_t *m);
+void player_apply_skin(window_t *win);                     // re-send sprites after a skin change
+void eq_apply_skin(window_t *win);
 
 #endif

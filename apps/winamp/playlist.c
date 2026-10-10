@@ -42,6 +42,27 @@ void playlist_remove(wa_playlist_t *pl, int index) {
   if (pl->selected >= pl->count) pl->selected = pl->count - 1;
 }
 
+// Moves one track, keeping the current and selected tracks pointing at the same items.
+void playlist_move(wa_playlist_t *pl, int from, int to) {
+  if (from < 0 || from >= pl->count || to < 0 || to >= pl->count) {
+    fprintf(stderr, "[wa] playlist move rejected from=%d to=%d count=%d\n", from, to, pl->count);
+    fflush(stderr);
+    return;
+  }
+  if (from == to) return;
+  wa_track_t t = pl->items[from];
+  if (from < to) memmove(&pl->items[from], &pl->items[from + 1], (size_t)(to - from) * sizeof(t));
+  else memmove(&pl->items[to + 1], &pl->items[to], (size_t)(from - to) * sizeof(t));
+  pl->items[to] = t;
+  int *marks[] = { &pl->current, &pl->selected };
+  for (int i = 0; i < 2; i++) {
+    int *m = marks[i];
+    if (*m == from) *m = to;
+    else if (from < to && *m > from && *m <= to) (*m)--;
+    else if (from > to && *m >= to && *m < from) (*m)++;
+  }
+}
+
 static int compare_names(const void *a, const void *b) { return strcasecmp(*(char *const *)a, *(char *const *)b); }
 
 static bool has_mp3_ext(const char *name) {

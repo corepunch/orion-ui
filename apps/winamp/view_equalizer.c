@@ -37,7 +37,7 @@ static void eq_slider_sprites(sprite_slider_t *d) {
   };
 }
 
-static void eq_apply_skin(window_t *win) {
+void eq_apply_skin(window_t *win) {
   for (int i = 0; i < (int)ARRAY_LEN(kEqButtons); i++) {
     window_t *c = get_window_item(win, kEqButtons[i].id);
     sprite_button_t d;
