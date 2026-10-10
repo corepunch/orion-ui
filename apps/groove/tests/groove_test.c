@@ -714,8 +714,10 @@ static void test_shared_block_cards(void) {
   send_message(library, evLeftButtonUp, MAKEDWORD(4, 4), NULL);
   ASSERT_EQUAL(g_app->song.preview_block, 0);
   send_message(library, evLeftButtonDown, MAKEDWORD(4, 4), NULL);
+  ASSERT_EQUAL(g_app->song.preview_block, 0);
   send_message(library, evMouseMove, MAKEDWORD(12, 4), NULL);
   ASSERT_TRUE(g_app->drag.active && window_is_lifted(library) && window_lift_is_copy(library));
+  ASSERT(g_app->song.preview_block == -1, "starting a library drag stops the audition");
   send_message(library, evPointerCancel, 0, NULL);
   ASSERT_FALSE(g_app->drag.active || window_is_lifted(library));
   ASSERT_TRUE(g_ui_runtime.captured == NULL);
@@ -866,8 +868,11 @@ static void test_drag_off_sheet_removes(void) {
   window_t *sheet = g_app->sheet;
   send_message(sheet, evResize, 0, NULL);
   int x = 32, y = 22 + 8;
+  app_preview(0);
+  ASSERT_EQUAL(g_app->song.preview_block, 0);
   send_message(sheet, evLeftButtonDown, MAKEDWORD(x, y), NULL);
   send_message(sheet, evMouseMove, MAKEDWORD(x + 12, y), NULL);
+  ASSERT(g_app->song.preview_block == -1, "starting a clip drag stops the audition");
   send_message(sheet, evLeftButtonUp, MAKEDWORD(x + 12, y), NULL);
   ASSERT_EQUAL(g_app->song.nclips, 2);
   send_message(sheet, evLeftButtonDown, MAKEDWORD(x, y), NULL);

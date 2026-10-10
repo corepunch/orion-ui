@@ -240,6 +240,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         if (!st->own_drag && abs(mx - st->press.x) + abs(my - st->press.y) > SHEET_SLOP) {
           st->own_drag = true;
           g_app->drag.active = true;
+          app_preview_stop();
           window_t *card = child_at(win, st->press_clip);
           if (card) {
             ipoint16_t size = clip_cell_size(win, block_get(g_app->drag.block));

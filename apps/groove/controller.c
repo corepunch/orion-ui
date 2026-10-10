@@ -211,6 +211,12 @@ void app_preview(int block) {
   g_app->auditioned = block;
 }
 
+void app_preview_stop(void) {
+  app_lock();
+  g_app->song.preview_block = -1;
+  app_unlock();
+}
+
 static void library_refilter(void) {
   if (g_app->bin) send_message(g_app->bin, binFilter, 0, NULL);
 }

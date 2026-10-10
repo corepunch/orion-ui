@@ -216,6 +216,7 @@ void      app_set_playing(bool playing);
 void      app_seek_position(int position);
 void      app_set_bpm(int bpm);
 void      app_preview(int block);
+void      app_preview_stop(void);          // silence the audition; the buffer stays until the next one
 void      app_select_clip(int idx);
 bool      app_drop(const drag_t *d);          // commits a drag (add or move)
 void      app_set_genre(uint8_t genre);        // 0 = every genre, else one GENRE_* flag
