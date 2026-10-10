@@ -57,8 +57,8 @@ static const toolbar_item_t kFilePickerItems[] = {
   { TOOLBAR_ITEM_LABEL,    0,                     NULL,            54, 0, "Location:", NULL },
   { TOOLBAR_ITEM_COMBOBOX, FP_ID_LOC_COMBO,       NULL,           180, 0, NULL,        NULL },
   { TOOLBAR_ITEM_SEPARATOR, 0,                    NULL,             0, 0, NULL,        NULL },
-  { TOOLBAR_ITEM_BUTTON,   FP_ID_TOOL_UP,         "folder-plus",   0, 0, NULL, "Up one folder" },
-  { TOOLBAR_ITEM_BUTTON,   FP_ID_TOOL_NEW_FOLDER, "folder",        0, 0, NULL, "Create new folder" },
+  { TOOLBAR_ITEM_BUTTON,   FP_ID_TOOL_UP,         "arrow-bend-left-up", 0, 0, NULL, "Up one folder" },
+  { TOOLBAR_ITEM_BUTTON,   FP_ID_TOOL_NEW_FOLDER, "folder-plus",   0, 0, NULL, "Create new folder" },
 };
 
 typedef struct {
@@ -146,44 +146,23 @@ static const form_def_t kNewFolderForm = {
   .child_count = ARRAY_LEN(kNewFolderChildren),
 };
 
-static const form_ctrl_def_t kFilePickerFileRow[] = {
-  {
-    .class_name = "Label",
-    .text = "File:",
-    .name = "lbl_file",
-    .size = {FP_LABEL_W, FP_EDIT_H},
-    .h_align = LAYOUT_ALIGN_START,
-    .v_align = LAYOUT_ALIGN_CENTER,
-  },
-  {
-    .class_name = "TextBox",
-    .id = FP_ID_FILE_EDIT,
-    .text = "",
-    .name = "edit_file",
-    .flags = WINDOW_FLEXSPACE,
-    .h_align = LAYOUT_ALIGN_STRETCH,
-    .v_align = LAYOUT_ALIGN_CENTER,
-  },
+// File and Filter share one grid so the labels size together and the inputs
+// share their left and right edges (see imageeditor.orion's image_resize).
+static const form_ctrl_def_t kFilePickerFieldLabels[] = {
+  { .class_name = "Label", .text = "File:",   .name = "lbl_file",   .v_align = LAYOUT_ALIGN_CENTER },
+  { .class_name = "Label", .text = "Filter:", .name = "lbl_filter", .v_align = LAYOUT_ALIGN_CENTER },
 };
 
-static const form_ctrl_def_t kFilePickerFilterRow[] = {
-  {
-    .class_name = "Label",
-    .text = "Filter:",
-    .name = "lbl_filter",
-    .size = {FP_LABEL_W, CONTROL_HEIGHT},
-    .h_align = LAYOUT_ALIGN_START,
-    .v_align = LAYOUT_ALIGN_CENTER,
-  },
-  {
-    .class_name = "ComboBox",
-    .id = FP_ID_FILTER_COMBO,
-    .text = "",
-    .name = "combo_filter",
-    .flags = WINDOW_FLEXSPACE,
-    .h_align = LAYOUT_ALIGN_STRETCH,
-    .v_align = LAYOUT_ALIGN_CENTER,
-  },
+static const form_ctrl_def_t kFilePickerFieldInputs[] = {
+  { .class_name = "TextBox",  .id = FP_ID_FILE_EDIT,    .text = "", .name = "edit_file",    .h_align = LAYOUT_ALIGN_STRETCH },
+  { .class_name = "ComboBox", .id = FP_ID_FILTER_COMBO, .text = "", .name = "combo_filter", .h_align = LAYOUT_ALIGN_STRETCH },
+};
+
+static const form_ctrl_def_t kFilePickerFieldColumns[] = {
+  { .class_name = "Column", .name = "labels", .size = {-1, 0}, .layout_spacing = FP_ROW_GAP,
+    .children = kFilePickerFieldLabels, .child_count = ARRAY_LEN(kFilePickerFieldLabels) },
+  { .class_name = "Column", .name = "inputs", .layout_spacing = FP_ROW_GAP,
+    .children = kFilePickerFieldInputs, .child_count = ARRAY_LEN(kFilePickerFieldInputs) },
 };
 
 static const form_ctrl_def_t kFilePickerActions[] = {
@@ -223,24 +202,13 @@ static const form_ctrl_def_t kFilePickerChildren[] = {
     .v_align = LAYOUT_ALIGN_STRETCH,
   },
   {
-    .class_name = "StackView",
-    .name = "file_row",
-    .flags = WINDOW_STACK_HORIZONTAL,
+    .class_name = "GridView",
+    .name = "fields",
     .layout_spacing = 6,
     .h_align = LAYOUT_ALIGN_STRETCH,
     .v_align = LAYOUT_ALIGN_START,
-    .children = kFilePickerFileRow,
-    .child_count = ARRAY_LEN(kFilePickerFileRow),
-  },
-  {
-    .class_name = "StackView",
-    .name = "filter_row",
-    .flags = WINDOW_STACK_HORIZONTAL,
-    .layout_spacing = 6,
-    .h_align = LAYOUT_ALIGN_STRETCH,
-    .v_align = LAYOUT_ALIGN_START,
-    .children = kFilePickerFilterRow,
-    .child_count = ARRAY_LEN(kFilePickerFilterRow),
+    .children = kFilePickerFieldColumns,
+    .child_count = ARRAY_LEN(kFilePickerFieldColumns),
   },
   {
     .class_name = "StackView",
@@ -719,15 +687,6 @@ static result_t fp_proc(window_t *win, uint32_t msg,
         }
       }
 
-      // Set column width so exactly 2 icon-view columns fit within the list
-      // width minus the vertical scrollbar strip.
-      if (ps->list_win) {
-        irect16_t list_rect = get_client_rect(ps->list_win);
-        int list_w = list_rect.w > 0 ? list_rect.w : (FP_LIST_W + FP_PAD * 2);
-        send_message(ps->list_win, RVM_SETCOLUMNWIDTH,
-                     (uint32_t)MAX(1, (list_w - SCROLLBAR_WIDTH) / 2), NULL);
-      }
-
       // Apply the initial filter
       fp_apply_filter(ps);
 
@@ -811,8 +770,10 @@ static result_t fp_proc(window_t *win, uint32_t msg,
         int sel = (int)send_message(ps->location_combo,
                                     cbGetCurrentSelection, 0, NULL);
         if (sel >= 0 && sel < ps->loc_count) {
-          send_message(ps->list_win, FLM_SETPATH, 0, ps->loc_paths[sel]);
-          fp_sync_location_combo(ps, ps->loc_paths[sel]);
+          char target[512];  // loc_paths is rewritten by the sync below
+          snprintf(target, sizeof(target), "%s", ps->loc_paths[sel]);
+          send_message(ps->list_win, FLM_SETPATH, 0, target);
+          fp_sync_location_combo(ps, target);
         }
         return true;
       }

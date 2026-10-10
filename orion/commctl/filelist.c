@@ -1,14 +1,14 @@
 // commctl/filelist.c — file-browser control
 //
-// win_filelist extends win_reportview: it calls win_reportview for rendering
+// win_filelist extends win_iconview: it calls win_iconview for rendering
 // (evPaint), scroll (evWheel), item management
 // (RVM_*), and cleanup (evDestroy), while implementing its own
 // directory loading, click/double-click handling, navigation, and extension
 // filtering.
 //
-// Click events are handled here rather than delegated to win_reportview so
+// Click events are handled here rather than delegated to win_iconview so
 // that FLN_* notifications are emitted directly, avoiding the RVN_* routing
-// that win_reportview uses (which sends to get_root_window and would bypass
+// that win_iconview uses (which sends to get_root_window and would bypass
 // win_filelist when it is used as a child control).
 
 #include <stdio.h>
@@ -24,14 +24,12 @@
 #include <orion/user/theme.h>
 #include <orion/kernel/kernel.h>
 
-#define FL_ENTRY_HEIGHT  COLUMNVIEW_ENTRY_HEIGHT
-#define FL_WIN_PADDING   COLUMNVIEW_WIN_PADDING
-
-#define FL_ICON_PARENT  "arrow-left"
+#define FL_ICON_PARENT  "arrow-bend-left-up"
 #define FL_ICON_FOLDER  "folder"
 #define FL_ICON_FILE    "page"
 #define FL_COLOR_FOLDER 0xffa0d000u
 #define FL_COLOR_GEM    0xff50d050u  // bright green — executable .gem plugin
+#define FL_ICON_TEXT_GAP 2
 #define FL_DUP_DBLCLICK_MS (DOUBLE_CLICK_MS / 2u)
 
 // ---------------------------------------------------------------------------
@@ -283,23 +281,10 @@ static bool fl_duplicate_nav_double_click(filelist_data_t *data, uint32_t pos,
 // Window procedure
 // ---------------------------------------------------------------------------
 
-// Convert packed wparam coordinates to a filelist item index.
-// Returns -1 when the position is outside the item grid.
-//
-// Coordinate space note:
-//   event.c delivers content-space coordinates (scroll already included) to
-//   both root and child windows, so wparam can be used directly.  No further
-//   adjustment is needed.
+// Convert packed content-space wparam coordinates to a filelist item index,
+// or -1 outside the rows.  Row geometry belongs to win_iconview.
 static int fl_hit_index(window_t *win, filelist_data_t *data, uint32_t wparam) {
-  int mx = (int)(int16_t)LOWORD(wparam);
-  int my = (int)(int16_t)HIWORD(wparam);
-  int col_w = (int)(uint32_t)send_message(win, RVM_GETCOLUMNWIDTH, 0, NULL);
-  int eff_w = win->frame.w - (win->vscroll.visible ? get_theme()->scrollbar_width : 0);
-  int ncol  = (col_w > 0 && eff_w > 0) ? (eff_w / col_w) : 1;
-  if (ncol < 1) ncol = 1;
-  int col   = (col_w > 0) ? (mx / col_w) : 0;
-  int row   = (my - FL_WIN_PADDING) / FL_ENTRY_HEIGHT;
-  int index = row * ncol + col;
+  int index = (int)send_message(win, RVM_HITTEST, wparam, NULL);
   return (index >= 0 && index < data->count) ? index : -1;
 }
 
@@ -312,7 +297,8 @@ result_t win_filelist(window_t *win, uint32_t msg,
     // -----------------------------------------------------------------------
     case evCreate: {
       // Initialise ListView rendering infrastructure.
-      win_reportview(win, msg, wparam, NULL);
+      win_iconview(win, msg, wparam, NULL);
+      send_message(win, RVM_SETICONTEXTGAP, FL_ICON_TEXT_GAP, NULL);
 
       data = malloc(sizeof(filelist_data_t));
       if (!data) return false;
@@ -320,8 +306,9 @@ result_t win_filelist(window_t *win, uint32_t msg,
       win->userdata  = data;
       data->selected = -1;
 
-      // Initial path: lparam if provided, else cwd.
-      const char *init = (const char *)lparam;
+      // Initial path: the form definition's text if set, else cwd.
+      const form_ctrl_def_t *cd = (const form_ctrl_def_t *)lparam;
+      const char *init = cd ? cd->text : NULL;
       if (init && init[0])
         strncpy(data->curpath, init, sizeof(data->curpath) - 1);
       else if (!axGetCwd(data->curpath, sizeof(data->curpath)))
@@ -332,13 +319,13 @@ result_t win_filelist(window_t *win, uint32_t msg,
     }
 
     // -----------------------------------------------------------------------
-    // Delegate rendering and scrolling to win_reportview.
+    // Delegate rendering and scrolling to win_iconview.
     case evPaint:
     case evWheel:
-      return win_reportview(win, msg, wparam, lparam);
+      return win_iconview(win, msg, wparam, lparam);
 
     // -----------------------------------------------------------------------
-    // Own click handling — NOT delegated to win_reportview to avoid the RVN_*
+    // Own click handling — NOT delegated to win_iconview to avoid the RVN_*
     // routing (which sends to root, bypassing win_filelist when it is a child).
     case evLeftButtonDown: {
       int index = fl_hit_index(win, data, wparam);
@@ -443,10 +430,10 @@ result_t win_filelist(window_t *win, uint32_t msg,
         free(data);
         win->userdata = NULL;
       }
-      return win_reportview(win, msg, wparam, lparam);
+      return win_iconview(win, msg, wparam, lparam);
 
     // -----------------------------------------------------------------------
     default:
-      return win_reportview(win, msg, wparam, lparam);
+      return win_iconview(win, msg, wparam, lparam);
   }
 }

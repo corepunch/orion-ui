@@ -1,6 +1,7 @@
 // VIEW: the playlist editor — PLEDIT.BMP frame tiled to the window height,
 // the track list in the system font with PLEDIT.TXT colours. Tap a track to
-// play it, drag to scroll.
+// play it, drag to scroll, touch and hold to pick a track up and reorder it.
+// Files dropped on the list are inserted where they land.
 
 #include "winamp.h"
 
@@ -9,12 +10,14 @@
 #define LEFT_W   12
 #define RIGHT_W  20
 #define DRAG_SLOP 6
+#define HOLD_MS   350
 
 typedef struct {
   wa_canvas_t canvas;
   uint16_t pressed;          // bottom-bar command under the finger
-  bool inside, scrolling, tracking;
-  int down_y, down_scroll, down_row;
+  bool inside, scrolling, tracking, reordering;
+  int down_y, down_scroll, down_row, drag_row;
+  uint32_t hold_timer;       // pending touch-and-hold that picks up down_row
 } pl_view_t;
 
 // Bottom bar: ADD REM SEL MISC, then the mini transport. y is relative to the
@@ -128,6 +131,31 @@ static int row_at(pl_view_t *v, uint32_t wparam) {
   return i < g_app->list.count ? i : -1;
 }
 
+// Insertion slot for a content-space y: the row boundary nearest to it.
+static int slot_at(pl_view_t *v, int y) {
+  irect16_t list = list_rect(&v->canvas);
+  int rh = row_height();
+  int slot = g_app->list.scroll + (y - list.y + rh / 2) / rh;
+  return MAX(0, MIN(slot, g_app->list.count));
+}
+
+static void cancel_hold(pl_view_t *v) {
+  if (v->hold_timer) axCancelTimer(v->hold_timer);
+  v->hold_timer = 0;
+}
+
+// Follows the finger with the picked-up track; past either end the list scrolls.
+static void reorder_to(pl_view_t *v, int y) {
+  wa_playlist_t *pl = &g_app->list;
+  irect16_t list = list_rect(&v->canvas);
+  if (y < list.y && pl->scroll > 0) pl->scroll--;
+  if (y >= list.y + list.h) pl->scroll++;
+  clamp_scroll(&v->canvas);
+  int row = pl->scroll + (y - list.y) / row_height();
+  row = MAX(0, MIN(row, pl->count - 1));
+  if (row != v->drag_row) { playlist_move(pl, v->drag_row, row); v->drag_row = row; }
+}
+
 result_t win_winamp_playlist(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   pl_view_t *v = win->userdata;
   switch (msg) {
@@ -149,8 +177,26 @@ result_t win_winamp_playlist(window_t *win, uint32_t msg, uint32_t wparam, void 
         canvas_fill(&v->canvas, R(r.x, r.y, r.w, 1), g_app->skin.pl_current);   // pressed: lit top edge
       }
       paint_rows(win, v);
+      int r = v->reordering ? v->drag_row - g_app->list.scroll : -1;
+      if (r >= 0 && r < visible_rows(&v->canvas)) {
+        irect16_t list = list_rect(&v->canvas);
+        draw_sel_rect(R(list.x, list.y + r * row_height(), list.w, row_height()));
+      }
       return true;
     }
+    case evDropFile: {
+      int slot = slot_at(v, (int16_t)HIWORD(wparam));
+      return app_drop_file(lparam, slot < g_app->list.count ? slot : -1, false);
+    }
+    case evTimer:
+      if (wparam != v->hold_timer) return false;
+      v->hold_timer = 0;
+      if (v->tracking && !v->scrolling && v->down_row >= 0 && v->down_row < g_app->list.count) {
+        v->reordering = true;
+        v->drag_row = g_app->list.selected = v->down_row;
+        invalidate_window(win);
+      }
+      return true;
     case evQueryDrag:
       return DRAG_NOW;
     case evWheel: {
@@ -169,6 +215,9 @@ result_t win_winamp_playlist(window_t *win, uint32_t msg, uint32_t wparam, void 
       v->down_y = (int16_t)HIWORD(wparam);
       v->down_scroll = g_app->list.scroll;
       v->down_row = row_at(v, wparam);
+      v->reordering = false;
+      cancel_hold(v);
+      if (v->tracking && v->down_row >= 0) v->hold_timer = axSetTimer(win, HOLD_MS, NULL, false);
       set_capture(win);
       invalidate_window(win);
       return true;
@@ -180,8 +229,9 @@ result_t win_winamp_playlist(window_t *win, uint32_t msg, uint32_t wparam, void 
         return true;
       }
       if (!v->tracking) return false;
+      if (v->reordering) { reorder_to(v, (int16_t)HIWORD(wparam)); invalidate_window(win); return true; }
       int dy = (int16_t)HIWORD(wparam) - v->down_y;
-      if (!v->scrolling && abs(dy) > DRAG_SLOP) v->scrolling = true;
+      if (!v->scrolling && abs(dy) > DRAG_SLOP) { v->scrolling = true; cancel_hold(v); }
       if (v->scrolling) {
         g_app->list.scroll = v->down_scroll - dy / row_height();
         clamp_scroll(&v->canvas);
@@ -190,11 +240,12 @@ result_t win_winamp_playlist(window_t *win, uint32_t msg, uint32_t wparam, void 
       return true;
     }
     case evLeftButtonUp: {
-      bool tap = v->tracking && !v->scrolling;
+      bool tap = v->tracking && !v->scrolling && !v->reordering;
       uint16_t pressed = v->pressed;
       bool inside = v->inside;
+      cancel_hold(v);
       v->pressed = 0;
-      v->inside = v->tracking = v->scrolling = false;
+      v->inside = v->tracking = v->scrolling = v->reordering = false;
       set_capture(NULL);
       if (pressed && inside) app_command(kBottom[pressed - 1].id);
       else if (tap && v->down_row >= 0 && v->down_row == row_at(v, wparam)) app_play_index(v->down_row);
@@ -202,10 +253,10 @@ result_t win_winamp_playlist(window_t *win, uint32_t msg, uint32_t wparam, void 
       return true;
     }
     case evPointerCancel:
-      if (v) { v->pressed = 0; v->inside = v->tracking = v->scrolling = false; set_capture(NULL); invalidate_window(win); }
+      if (v) { cancel_hold(v); v->pressed = 0; v->inside = v->tracking = v->scrolling = v->reordering = false; set_capture(NULL); invalidate_window(win); }
       return true;
     case evDestroy:
-      if (v) { canvas_free(&v->canvas); free(v); win->userdata = NULL; }
+      if (v) { cancel_hold(v); canvas_free(&v->canvas); free(v); win->userdata = NULL; }
       if (g_app && g_app->playlist == win) g_app->playlist = NULL;
       return true;
     default:

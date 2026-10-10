@@ -33,7 +33,6 @@ void app_relayout(void) {
 }
 
 result_t win_winamp_main(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-  (void)lparam;
   if (!g_app) return false;
   switch (msg) {
     case evCreate:
@@ -50,6 +49,8 @@ result_t win_winamp_main(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
     case evTimer:
       app_tick();
       return true;
+    case evDropFile:
+      return app_drop_file(lparam, -1, false);
     case evCommand:
       if (HIWORD(wparam) != kAcceleratorNotification) return false;
       app_command(LOWORD(wparam));

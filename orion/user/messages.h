@@ -109,6 +109,12 @@ enum {
   // Optional tooltip anchor: wparam is the queried content point; lparam is
   // irect16_t* in this window's content space. Default is the whole control.
   evGetTooltipRect,
+  // A file was dropped on the window (≈ WM_DROPFILES), one message per file.
+  // wparam = MAKEDWORD(x, y) in content space; lparam = const char* path, valid
+  // only during the call. Delivered to the deepest window under the drop point
+  // and bubbled to its parents; return true to consume it. Unconsumed drops go
+  // to ui_open_file().
+  evDropFile,
   evUser = 1000
 };
 

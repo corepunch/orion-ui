@@ -3,6 +3,8 @@
 #include "winamp.h"
 #include <orion/commdlg/filepicker.h>
 #include <unistd.h>
+#include <strings.h>
+#include <sys/stat.h>
 
 winamp_t *g_app = NULL;
 
@@ -230,6 +232,7 @@ winamp_t *app_init(void) {
   app->list = (wa_playlist_t){ .current = -1, .selected = -1 };
   app->show_eq = app->show_pl = true;
   app->engine.volume = 0.8f;
+  app->drop_tick = -WA_DROP_BATCH_TICKS - 1;
   engine_set_eq(&app->engine, app->eq_db, 0, false);
   if (!skin_load_default(&app->skin)) {
     fprintf(stderr, "[wa] default skin incomplete\n");
@@ -251,6 +254,59 @@ winamp_t *app_init(void) {
 void app_add_path(const char *path) {
   if (playlist_scan(&g_app->list, path) == 0) playlist_add(&g_app->list, path);
   if (g_app->list.selected < 0 && g_app->list.count) g_app->list.selected = 0;
+}
+
+static bool has_ext(const char *path, const char *ext) {
+  size_t n = strlen(path), e = strlen(ext);
+  return n > e && !strcasecmp(path + n - e, ext);
+}
+
+static bool is_skin(const char *path) {
+  if (has_ext(path, ".wsz")) return true;
+  char main_bmp[1024];
+  struct stat st;
+  return !stat(path, &st) && S_ISDIR(st.st_mode) &&
+         snprintf(main_bmp, sizeof(main_bmp), "%s/main.bmp", path) < (int)sizeof(main_bmp) && !access(main_bmp, R_OK);
+}
+
+void app_set_skin(const char *path) {
+  if (!skin_load(&g_app->skin, path)) { fprintf(stderr, "[wa] skin incomplete path=%s\n", path); fflush(stderr); }
+  if (g_app->player) player_apply_skin(g_app->player);
+  if (g_app->equalizer) eq_apply_skin(g_app->equalizer);
+  app_invalidate_all();
+}
+
+// A dropped skin is applied; MP3s and folders of MP3s join the playlist at
+// `index` (-1 appends). With `play`, the first added track starts, once per
+// batch: a multi-file drop arrives as one event per file.
+bool app_drop_file(const char *path, int index, bool play) {
+  wa_playlist_t *pl = &g_app->list;
+  if (is_skin(path)) {
+#ifdef AX_PLATFORM_IOS
+    // The drop was imported into Documents; keep it as the skin for the next launch.
+    if (has_ext(path, ".wsz") && rename(path, "Skin.wsz") == 0) path = "Skin.wsz";
+#endif
+    app_set_skin(path);
+    return true;
+  }
+  int before = pl->count, first = -1;
+  if (playlist_scan(pl, path) == 0 && has_ext(path, ".mp3") && !playlist_add(pl, path))
+    for (int i = 0; i < pl->count && first < 0; i++) if (!strcmp(pl->items[i].path, path)) first = i;   // already listed
+  int added = pl->count - before;
+  if (!added && first < 0) { fprintf(stderr, "[wa] drop ignored: no new MP3 or skin path=%s\n", path); fflush(stderr); return false; }
+  if (added) {
+    first = index >= 0 && index < before ? index : before;
+    for (int i = 0; i < added && first < before; i++) playlist_move(pl, before + i, first + i);
+  } else if (index >= 0) {
+    playlist_move(pl, first, first < index ? index - 1 : index);
+    first = first < index ? index - 1 : index;
+  }
+  pl->selected = first;
+  bool batch = g_app->tick - g_app->drop_tick <= WA_DROP_BATCH_TICKS;
+  if (play && !batch) app_play_index(first);
+  if (play) g_app->drop_tick = g_app->tick;
+  app_invalidate_all();
+  return true;
 }
 
 void app_shutdown(winamp_t *app) {
