@@ -45,6 +45,13 @@ typedef enum {
   CAT_COUNT
 } category_t;
 
+// Library tabs group related sample types; cards retain their detailed category.
+typedef enum {
+  FAMILY_LOOP, FAMILY_DRUM, FAMILY_BASS, FAMILY_GUITAR, FAMILY_SYNTH,
+  FAMILY_PAD, FAMILY_STAB, FAMILY_VOX, FAMILY_SCRATCH, FAMILY_FX,
+  FAMILY_COUNT
+} family_t;
+
 // Genre tags are bit flags: a dry four-on-the-floor kick serves Dance, Rave
 // and Techno alike, so it carries all three.
 enum {
@@ -72,6 +79,7 @@ typedef struct {
   const char *display_name;
   uint16_t    variant;    // 0 = unversioned; otherwise a visible 1-based sample variant
   category_t  cat;
+  family_t    family;     // library tab; may differ from the category's default
   uint8_t     genres;     // GENRE_* tags
   int         bars;       // duration: 1, 2 or 4 bars
   block_pcm_t audio;
@@ -80,7 +88,9 @@ typedef struct {
 } block_t;
 
 extern const char *const kCategoryName[CAT_COUNT];
+extern const char *const kFamilyName[FAMILY_COUNT];
 extern const char *const kGenreName[GENRE_COUNT]; // index = bit number of the GENRE_* flag
+family_t block_family(category_t cat);
 uint32_t category_color(category_t cat);
 uint32_t track_color(int track);              // hue of the track's earliest clip (view_sheet.c)
 int      sheet_row_h(window_t *sheet);         // height of one track lane, shared by the sheet and the header column
@@ -90,6 +100,7 @@ void     tracks_sync(void);
 int            blocks_count(void);
 const block_t *block_get(int id);
 int            blocks_in_category(category_t cat, int *ids, int max);
+int            blocks_in_family(family_t family, int *ids, int max);
 // Blocks are synthesized on demand, one at a time (library.c, synth.c).
 // block_render() is pure and leaves the result with the caller; the other
 // three change what the audio callback reads, so call them under the audio lock.
@@ -160,7 +171,7 @@ typedef struct {
   char          filename[512];
   drag_t        drag;
   uint8_t       genre;      // library filter: 0 = every genre, else one GENRE_* flag
-  int           category;   // library filter: the one category_t the bin shows
+  family_t      family;     // library filter
   int           auditioned; // block whose PCM the last audition loaded, or -1
   int           peak_credit;   // waveform overviews the cards may still render this timer tick
   bool          peaks_pending; // a card went without its overview; repaint next tick
@@ -191,7 +202,7 @@ enum {
 #define ID_DELETE    ID_EDIT_DELETE
 // Above every auto-assigned card id (1..GR_MAX_BLOCKS inside a bin), so
 // get_window_item() cannot find a card first.
-#define ID_FAMILY(cat) (ID_LIBRARY_WINDOW_FAMILY_DRUMS + (cat)) // contiguous family actions emitted from groove.orion
+#define ID_FAMILY(family) (ID_LIBRARY_WINDOW_FAMILY_LOOP + (family)) // contiguous family actions emitted from groove.orion
 #define ID_GENRE     (ID_CONTROL_BASE + 3)
 #define ID_MUTE(t)   (ID_CONTROL_BASE + 32 + (t))    // track header buttons
 #define ID_SOLO(t)   (ID_CONTROL_BASE + 48 + (t))
@@ -220,7 +231,7 @@ void      app_preview_stop(void);          // silence the audition; the buffer s
 void      app_select_clip(int idx);
 bool      app_drop(const drag_t *d);          // commits a drag (add or move)
 void      app_set_genre(uint8_t genre);        // 0 = every genre, else one GENRE_* flag
-void      app_set_category(int category);      // one category_t
+void      app_set_family(int family);
 bool      block_visible(int id);               // passes the family and genre filters
 lresult_t groove_library_db(database_t *db, uint32_t msg, uint32_t wparam, void *lparam);
 // Blocks load lazily. Audio stays loaded for blocks in the song and the one

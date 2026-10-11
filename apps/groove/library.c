@@ -12,6 +12,19 @@ const char *const kCategoryName[CAT_COUNT] = {
   "Bass", "Keys", "Organ", "Guitar", "Synth", "Pads", "Stabs", "Vocals", "Scratch", "FX",
 };
 
+const char *const kFamilyName[FAMILY_COUNT] = {
+  "Drum Loops", "Drum Fills", "Bass", "Guitar", "Synth", "Pads", "Stabs", "Vocals", "Scratch", "FX",
+};
+
+family_t block_family(category_t cat) {
+  static const family_t family[CAT_COUNT] = {
+    FAMILY_LOOP, FAMILY_LOOP, FAMILY_LOOP, FAMILY_LOOP, FAMILY_LOOP, FAMILY_LOOP, FAMILY_LOOP, FAMILY_DRUM,
+    FAMILY_BASS, FAMILY_SYNTH, FAMILY_SYNTH, FAMILY_GUITAR, FAMILY_SYNTH, FAMILY_PAD, FAMILY_STAB,
+    FAMILY_VOX, FAMILY_SCRATCH, FAMILY_FX,
+  };
+  return cat >= 0 && cat < CAT_COUNT ? family[cat] : FAMILY_LOOP;
+}
+
 const char *const kGenreName[GENRE_COUNT] = { "Dance", "Hip Hop", "Rave", "Techno" };
 
 uint32_t category_color(category_t cat) {
@@ -41,6 +54,7 @@ typedef struct {
   const char *sample;           // optional MP3 sample, rendered instead of a synth recipe
   const char *display_name;    // shared family name when this recipe is one numbered variant
   uint16_t    variant;
+  uint8_t     family_override; // 0 = category default, otherwise family_t + 1
 } def_t;
 
 // ── Hand-written recipes ─────────────────────────────────────────────────
@@ -160,13 +174,16 @@ GEN(f_rumble)      { // kick, plus its own reverb tail low-passed and ducked und
 #define LOOP (X_ECHO | X_FOLD)          // echo that wraps into the next pass
 #define WIDE (X_HALL | X_FOLD)          // hall that wraps into the next pass
 // Drum row, note row, note row with vowel words, hand-written row.
-#define D(name, cat, genres, bars, kit, fx, lanes)                    { name, cat, genres, bars, kit,  fx, 0,   0,    lanes, NULL,  NULL, NULL, NULL, 0 }
-#define DV(name, label, ver, cat, genres, bars, kit, fx, lanes)       { name, cat, genres, bars, kit,  fx, 0,   0,    lanes, NULL,  NULL, NULL, label, ver }
-#define N(name, cat, genres, bars, inst, fx, spb, hold, steps)        { name, cat, genres, bars, inst, fx, spb, hold, steps, NULL,  NULL, NULL, NULL, 0 }
-#define NV(name, label, ver, cat, genres, bars, inst, fx, spb, hold, steps) { name, cat, genres, bars, inst, fx, spb, hold, steps, NULL, NULL, NULL, label, ver }
-#define V(name, cat, genres, bars, inst, fx, spb, hold, steps, words) { name, cat, genres, bars, inst, fx, spb, hold, steps, words, NULL, NULL, NULL, 0 }
-#define F(name, cat, genres, bars, fx, fn)                            { name, cat, genres, bars, 0,    fx, 0,   0,    NULL,  NULL,  fn, NULL, NULL, 0 }
-#define M(name, genres, bars, file)                                   { name, CAT_VOX, genres, bars, 0, 0, 0, 0, NULL, NULL, NULL, file, NULL, 0 }
+// DF/FF place a transition in Drum Fills without changing its pictogram category.
+#define D(name, cat, genres, bars, kit, fx, lanes)                    { name, cat, genres, bars, kit,  fx, 0,   0,    lanes, NULL,  NULL, NULL, NULL, 0, 0 }
+#define DV(name, label, ver, cat, genres, bars, kit, fx, lanes)       { name, cat, genres, bars, kit,  fx, 0,   0,    lanes, NULL,  NULL, NULL, label, ver, 0 }
+#define N(name, cat, genres, bars, inst, fx, spb, hold, steps)        { name, cat, genres, bars, inst, fx, spb, hold, steps, NULL,  NULL, NULL, NULL, 0, 0 }
+#define NV(name, label, ver, cat, genres, bars, inst, fx, spb, hold, steps) { name, cat, genres, bars, inst, fx, spb, hold, steps, NULL, NULL, NULL, label, ver, 0 }
+#define V(name, cat, genres, bars, inst, fx, spb, hold, steps, words) { name, cat, genres, bars, inst, fx, spb, hold, steps, words, NULL, NULL, NULL, 0, 0 }
+#define F(name, cat, genres, bars, fx, fn)                            { name, cat, genres, bars, 0,    fx, 0,   0,    NULL,  NULL,  fn, NULL, NULL, 0, 0 }
+#define M(name, genres, bars, file)                                   { name, CAT_VOX, genres, bars, 0, 0, 0, 0, NULL, NULL, NULL, file, NULL, 0, 0 }
+#define DF(name, cat, genres, bars, kit, fx, lanes)                   { name, cat, genres, bars, kit,  fx, 0,   0,    lanes, NULL,  NULL, NULL, NULL, 0, FAMILY_DRUM + 1 }
+#define FF(name, cat, genres, bars, fx, fn)                           { name, cat, genres, bars, 0,    fx, 0,   0,    NULL,  NULL,  fn, NULL, NULL, 0, FAMILY_DRUM + 1 }
 
 // Chords of the house key. Everything tonal is in A minor so blocks stack.
 #define Am  "A3+C4+E4"
@@ -182,7 +199,7 @@ static const def_t kDefs[] = {
   DV("Four Floor", "Four-on-Floor", 1, CAT_DRUMS, DAN | RAV | TEC, 1, KIT_CLASSIC, 0, "k=x...x...x...x... h=o.o.o.o.o.o.o.o. o=..x...x...x...x. c=....x.......x..."),
   D("Break Beat",      CAT_DRUMS,   HIP | RAV,       1, KIT_CLASSIC, 0, "k=x.....x...x..... s=....x.......x..x h=x.x.x.x.x.x.x.x."),
   D("Hat Groove",      CAT_DRUMS,   ANY,             1, KIT_CLASSIC, 0, "h=xooxooxooxooxoox"),
-  D("Snare Fill",      CAT_DRUMS,   ANY,             1, KIT_CLASSIC, 0, "k=x............... s=o.o.o.o.xoxoxxxx"),
+  DF("Snare Fill",     CAT_DRUMS,   ANY,             1, KIT_CLASSIC, 0, "k=x............... s=o.o.o.o.xoxoxxxx"),
   D("Half Time",       CAT_DRUMS,   HIP,             2, KIT_CLASSIC, 0, "k=x.......x.x.....x.......x....... s=........x...............x.....xx h=x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x. o=..............................x."),
   N("Root Pulse",      CAT_BASS,    DAN | TEC,       1, I_BASS,   0, 2, 0.8f, "A1 A1 A1 A1 A1 A1 A1 A1"),
   N("Walking",         CAT_BASS,    HIP,             2, I_BASS,   0, 1, 0.9f, "A1 C2 D2 E2 G1 E2 D2 C2"),
@@ -207,10 +224,10 @@ static const def_t kDefs[] = {
   D("Trap Hats",       CAT_DRUMS,   HIP,             1, KIT_CLASSIC, 0, "k=x.....x.....x... s=........x....... h=xoxoxxoxoxxoxoxx"),
   DV("Clap Beat", "Four-on-Floor", 3, CAT_DRUMS, DAN | TEC, 1, KIT_CLASSIC, 0, "k=x...x...x...x... h=..x...x...x...x. c=....x.......x..."),
   D("Shuffle",         CAT_DRUMS,   DAN | HIP,       1, KIT_CLASSIC, 0, "k=x.....x.x.....x. s=....x.......x... h=x.oox.oox.oox.oo"),
-  D("Kick Rush",       CAT_DRUMS,   RAV | TEC,       1, KIT_CLASSIC, 0, "k=xoxoxoxoxoxoxoxx"),
+  DF("Kick Rush",      CAT_DRUMS,   RAV | TEC,       1, KIT_CLASSIC, 0, "k=xoxoxoxoxoxoxoxx"),
   D("Sixteenths",      CAT_DRUMS,   DAN | TEC,       1, KIT_CLASSIC, 0, "k=x...x...x...x... s=....x.......x... h=xoxoxoxoxoxoxoxo"),
-  D("Breakdown",       CAT_DRUMS,   DAN | RAV | TEC, 2, KIT_CLASSIC, 0, "k=x.......x.......x...x...x.x.x.xx s=..............................xx h=................x.x.x.x.x.x.x.x."),
-  D("Clap Fill",       CAT_DRUMS,   DAN | RAV,       1, KIT_CLASSIC, 0, "k=x.......x....... c=........x.x.xxxx"),
+  DF("Breakdown",      CAT_DRUMS,   DAN | RAV | TEC, 2, KIT_CLASSIC, 0, "k=x.......x.......x...x...x.x.x.xx s=..............................xx h=................x.x.x.x.x.x.x.x."),
+  DF("Clap Fill",      CAT_DRUMS,   DAN | RAV,       1, KIT_CLASSIC, 0, "k=x.......x....... c=........x.x.xxxx"),
   D("Double Kick",     CAT_DRUMS,   RAV | TEC,       1, KIT_CLASSIC, 0, "k=x.x...x.x.x...x. s=....x.......x... h=x.x.x.x.x.x.x.x."),
   N("Octave Jump",     CAT_BASS,    DAN,             1, I_BASS,   0, 2, 0.8f, "A1 A2 A1 A2 A1 A2 A1 A2"),
   N("Slow Roots",      CAT_BASS,    HIP,             2, I_SUB,    0, 1, 3.6f, "A1 - - - F1 - - -"),
@@ -251,11 +268,11 @@ static const def_t kDefs[] = {
   D("Dry Floor",       CAT_KICK,    ANY,             1, KIT_CLASSIC, 0, "k=x...x...x...x..."),
   F("Room Pulse",      CAT_KICK,    ANY,             1, 0, g_room_pulse),
   F("Half Kick",       CAT_KICK,    HIP,             1, 0, g_half_kick),
-  F("Kick Run",        CAT_KICK,    RAV | TEC,       1, 0, g_kick_run),
+  FF("Kick Run",       CAT_KICK,    RAV | TEC,       1, 0, g_kick_run),
   D("Back Snap",       CAT_SNARE,   ANY,             1, KIT_CLASSIC, 0, "s=....x.......x..."),
   D("Rim Tick",        CAT_SNARE,   ANY,             1, KIT_CLASSIC, 0, "s=..x...x...x...x."),
   D("Ghost Notes",     CAT_SNARE,   ANY,             1, KIT_CLASSIC, 0, "s=o.o.x.o.o.o.x.o."),
-  D("Snare Run",       CAT_SNARE,   ANY,             1, KIT_CLASSIC, 0, "s=........xoxoxxxx"),
+  DF("Snare Run",      CAT_SNARE,   ANY,             1, KIT_CLASSIC, 0, "s=........xoxoxxxx"),
   D("Closed 8ths",     CAT_HAT,     ANY,             1, KIT_CLASSIC, 0, "h=x.x.x.x.x.x.x.x."),
   D("Open Offbeat",    CAT_HAT,     ANY,             1, KIT_CLASSIC, 0, "o=..x...x...x...x."),
   D("Tick 16ths",      CAT_HAT,     ANY,             1, KIT_CLASSIC, 0, "h=xxxxxxxxxxxxxxxx"),
@@ -263,9 +280,9 @@ static const def_t kDefs[] = {
   D("Clap Back",       CAT_CLAP,    ANY,             1, KIT_CLASSIC, 0, "c=....x.......x..."),
   F("Clap Stack",      CAT_CLAP,    ANY,             1, 0, g_clap_stack),
   D("Double Clap",     CAT_CLAP,    ANY,             1, KIT_CLASSIC, 0, "c=....xx......xx.."),
-  D("Clap Rush",       CAT_CLAP,    ANY,             1, KIT_CLASSIC, 0, "c=........xoxoxxxx"),
+  DF("Clap Rush",      CAT_CLAP,    ANY,             1, KIT_CLASSIC, 0, "c=........xoxoxxxx"),
   F("Ride 8ths",       CAT_CYMBAL,  ANY,             1, 0, g_ride_8),
-  F("Crash Down",      CAT_CYMBAL,  ANY,             1, 0, g_crash_one),
+  FF("Crash Down",     CAT_CYMBAL,  ANY,             1, 0, g_crash_one),
   F("Bell Pattern",    CAT_CYMBAL,  ANY,             1, 0, g_bell_pat),
   F("Splash",          CAT_CYMBAL,  ANY,             1, 0, g_splash),
   D("Shaker 16",       CAT_PERC,    ANY,             1, KIT_CLASSIC, 0, "h=xoxoxoxoxoxoxoxo"),
@@ -303,7 +320,7 @@ static const def_t kDefs[] = {
   D("Handbag",         CAT_DRUMS,  DAN,         1, KIT_909,    0,               "k=x...x...x...x... c=....x.......x... a=xoxoxoxoxoxoxoxo o=..x...x...x...x."),
   D("Piano House",     CAT_DRUMS,  DAN,         1, KIT_909,    0,               "k=x...x...x...x..x c=....x..o....x... h=x.x.x.x.x.x.x.x. o=..x...x...x...x."),
   D("Dance Pop",       CAT_DRUMS,  DAN | HIP,   1, KIT_909,    X_ROOM,          "k=x.....x.x.....x. s=....x.......x... h=x.x.x.x.x.x.x.x."),
-  D("Floor Build",     CAT_DRUMS,  DAN | RAV,   2, KIT_909,    0,               "k=x... o=..x. c=....x.......x................... s=................o.o.o.o.xoxoxxRR"),
+  DF("Floor Build",    CAT_DRUMS,  DAN | RAV,   2, KIT_909,    0,               "k=x... o=..x. c=....x.......x................... s=................o.o.o.o.xoxoxxRR"),
   D("909 Floor",       CAT_KICK,   DAN | TEC,   1, KIT_909,    0,               "k=x..."),
   D("Euro Kick",       CAT_KICK,   DAN,         1, KIT_909,    0,               "k=x...x...x...x.x."),
   D("Kick Skip",       CAT_KICK,   DAN | TEC,   1, KIT_909,    0,               "k=x...x..xx...x..."),
@@ -322,10 +339,10 @@ static const def_t kDefs[] = {
   D("909 Clap",        CAT_CLAP,   DAN | TEC,   1, KIT_909,    0,               "c=....x.......x..."),
   D("Clap Gallop",     CAT_CLAP,   DAN,         1, KIT_909,    0,               "c=....x..x....x.xx"),
   D("Clap Room",       CAT_CLAP,   DAN | RAV,   1, KIT_909,    X_ROOM,          "c=....x.......x..."),
-  D("909 Crash",       CAT_CYMBAL, DAN | TEC,   1, KIT_909,    0,               "y=x..............."),
+  DF("909 Crash",      CAT_CYMBAL, DAN | TEC,   1, KIT_909,    0,               "y=x..............."),
   D("Ride Bell 4s",    CAT_CYMBAL, DAN,         1, KIT_909,    0,               "d=x...x...x...x..."),
-  D("Reverse Crash",   CAT_CYMBAL, ANY,         1, KIT_909,    X_REVERSE,       "y=x..............."),
-  D("Crash & Ride",    CAT_CYMBAL, DAN,         1, KIT_909,    0,               "y=x............... d=....x...x...x..."),
+  DF("Reverse Crash",  CAT_CYMBAL, ANY,         1, KIT_909,    X_REVERSE,       "y=x..............."),
+  DF("Crash & Ride",   CAT_CYMBAL, DAN,         1, KIT_909,    0,               "y=x............... d=....x...x...x..."),
   D("Cowbell Offs",    CAT_PERC,   DAN,         1, KIT_909,    0,               "b=..x...x...x...x."),
   D("Conga House",     CAT_PERC,   DAN | TEC,   1, KIT_909,    0,               "g=..x..x....x..x.. G=x.....x.x......."),
   D("Tamb 909",        CAT_PERC,   DAN,         1, KIT_909,    0,               "a=xoxoxoxoxoxoxoxo"),
@@ -399,7 +416,7 @@ static const def_t kDefs[] = {
   D("808 Boom",        CAT_KICK,   HIP,         1, KIT_808,    0,               "k=x.........x....."),
   D("808 Skip",        CAT_KICK,   HIP,         1, KIT_808,    0,               "k=x..x......x..x.."),
   D("Dusty Kick",      CAT_KICK,   HIP,         1, KIT_LOFI,   X_CRUSH,         "k=x......x..x....."),
-  D("Boom Tail",       CAT_KICK,   HIP | TEC,   1, KIT_808,    X_ROOM,          "k=x..............."),
+  DF("Boom Tail",      CAT_KICK,   HIP | TEC,   1, KIT_808,    X_ROOM,          "k=x..............."),
   D("Fat Backbeat",    CAT_SNARE,  HIP,         1, KIT_BREAK,  X_ROOM,          "s=....x.......x..."),
   D("Rim 2 & 4",       CAT_SNARE,  HIP,         1, KIT_808,    0,               "r=....x.......x..."),
   D("Snare Drag",      CAT_SNARE,  HIP,         1, KIT_BREAK,  X_SWING,         "s=....x..o.o..x.rr"),
@@ -410,7 +427,7 @@ static const def_t kDefs[] = {
   D("Dusty Hats",      CAT_HAT,    HIP,         1, KIT_LOFI,   X_SWING | X_CRUSH, "h=xoxoxoxoxoxoxoxo"),
   D("808 Clap",        CAT_CLAP,   HIP | TEC,   1, KIT_808,    0,               "c=....x.......x..."),
   D("Lazy Clap",       CAT_CLAP,   HIP,         1, KIT_LOFI,   X_SWING | X_ROOM, "c=....x......xx..."),
-  D("Dusty Crash",     CAT_CYMBAL, HIP,         1, KIT_LOFI,   X_CRUSH,         "y=x..............."),
+  DF("Dusty Crash",    CAT_CYMBAL, HIP,         1, KIT_LOFI,   X_CRUSH,         "y=x..............."),
   D("Ride Swing",      CAT_CYMBAL, HIP,         1, KIT_BREAK,  X_SWING,         "d=x...x..xx...x..x"),
   D("Cowbell 808",     CAT_PERC,   HIP,         1, KIT_808,    0,               "b=x..x..x..x..x.x."),
   D("Lazy Tamb",       CAT_PERC,   HIP,         1, KIT_BREAK,  X_SWING,         "a=..x...x...x...x."),
@@ -475,11 +492,11 @@ static const def_t kDefs[] = {
   D("Stomp Clap",      CAT_DRUMS,  RAV,         1, KIT_HARD,   0,               "k=x...x...x...x... c=x...x...x...x... o=..x...x...x...x."),
   D("Rolling Break",   CAT_DRUMS,  RAV,         1, KIT_BREAK,  0,               "k=x..x..x...x..x.. s=....x.......x..x d=x.x.x.x.x.x.x.x."),
   D("Amen Style",      CAT_DRUMS,  RAV | HIP,   1, KIT_BREAK,  X_ROOM | X_DRIVE, "k=x.x.......xx.... s=....x..o.o..x..o d=x.x.x.x.x.x.x.x."),
-  D("Rave Build",      CAT_DRUMS,  RAV,         2, KIT_HARD,   0,               "k=x... s=........x...x...x.x.x.x.xxxxxxRR y=x..............................."),
+  DF("Rave Build",     CAT_DRUMS,  RAV,         2, KIT_HARD,   0,               "k=x... s=........x...x...x.x.x.x.xxxxxxRR y=x..............................."),
   D("Hard Kick 4s",    CAT_KICK,   RAV,         1, KIT_HARD,   0,               "k=x..."),
   D("Gabber Kick",     CAT_KICK,   RAV,         1, KIT_HARD,   X_DRIVE,         "k=x..."),
   D("Hard Gallop",     CAT_KICK,   RAV,         1, KIT_HARD,   0,               "k=x.x.x..xx.x.x..x"),
-  D("Kick Roll Up",    CAT_KICK,   RAV | TEC,   1, KIT_HARD,   0,               "k=x...x...x.x.xxRR"),
+  DF("Kick Roll Up",   CAT_KICK,   RAV | TEC,   1, KIT_HARD,   0,               "k=x...x...x.x.xxRR"),
   D("Break Snare",     CAT_SNARE,  RAV,         1, KIT_BREAK,  X_ROOM,          "s=....x..x.x..x..."),
   D("Snare Rush",      CAT_SNARE,  RAV,         1, KIT_HARD,   0,               "s=Xoxo"),
   D("Clap Snare",      CAT_SNARE,  RAV,         1, KIT_HARD,   0,               "s=....x.......x... c=....x.......x..."),
@@ -488,8 +505,8 @@ static const def_t kDefs[] = {
   D("Rave Ride",       CAT_HAT,    RAV,         1, KIT_HARD,   0,               "d=Xoxo"),
   D("Rave Clap",       CAT_CLAP,   RAV,         1, KIT_HARD,   X_ROOM,          "c=....x.......x..."),
   D("Clap On Beat",    CAT_CLAP,   RAV,         1, KIT_HARD,   0,               "c=x..."),
-  D("Big Crash",       CAT_CYMBAL, RAV | TEC,   2, KIT_HARD,   X_HALL,          "y=x..............................."),
-  D("China Hits",      CAT_CYMBAL, RAV,         1, KIT_HARD,   X_DRIVE,         "y=x.......x......."),
+  DF("Big Crash",      CAT_CYMBAL, RAV | TEC,   2, KIT_HARD,   X_HALL,          "y=x..............................."),
+  DF("China Hits",     CAT_CYMBAL, RAV,         1, KIT_HARD,   X_DRIVE,         "y=x.......x......."),
   D("Rave Bell",       CAT_CYMBAL, RAV,         1, KIT_HARD,   0,               "d=x..x..x.x..x..x."),
   D("Fast Congas",     CAT_PERC,   RAV,         1, KIT_BREAK,  0,               "g=x.xx.x.xx.xx.x.x G=..x...x.....x..."),
   N("Samba Whistle",   CAT_PERC,   RAV,         1, I_WHISTLE,  X_ROOM,          4, 0.5f, "A6 - A6 A6 - A6 - A6 A6 - A6 A6 - A6 - -"),
@@ -562,17 +579,17 @@ static const def_t kDefs[] = {
   D("Tech Rim",        CAT_SNARE,  TEC,         1, KIT_TECHNO, 0,               "r=x..x..x..x..x.x."),
   D("Snap Hats",       CAT_HAT,    TEC,         1, KIT_TECHNO, 0,               "h=Xoxo"),
   D("Dry Open",        CAT_HAT,    TEC,         1, KIT_TECHNO, 0,               "o=..x."),
-  D("Hat Sweep",       CAT_HAT,    TEC | RAV,   2, KIT_TECHNO, X_UP,            "h=x"),
+  DF("Hat Sweep",      CAT_HAT,    TEC | RAV,   2, KIT_TECHNO, X_UP,            "h=x"),
   D("Offbeat Ride",    CAT_HAT,    TEC,         1, KIT_TECHNO, 0,               "d=..x."),
   D("Tech Clap",       CAT_CLAP,   TEC,         1, KIT_TECHNO, X_ROOM,          "c=....x.......x..."),
   D("Off Clap",        CAT_CLAP,   TEC,         1, KIT_TECHNO, 0,               "c=......x.......x."),
-  D("Delay Crash",     CAT_CYMBAL, TEC | DAN,   2, KIT_TECHNO, LOOP,            "y=x..............................."),
+  DF("Delay Crash",    CAT_CYMBAL, TEC | DAN,   2, KIT_TECHNO, LOOP,            "y=x..............................."),
   D("Tiny Cymbal",     CAT_CYMBAL, TEC,         1, KIT_TECHNO, 0,               "d=x.......x......."),
   D("Plastic Wood",    CAT_PERC,   TEC,         1, KIT_TECHNO, 0,               "w=x.x..x.x..x.x.x."),
   N("Metal Hits",      CAT_PERC,   TEC,         1, I_FMSEQ,    X_ROOM,          4, 0.5f, "A5 - - A5 - - E6 - - A5 - - - D6 - -"),
   D("Tribal Toms",     CAT_PERC,   TEC,         1, KIT_TECHNO, 0,               "T=..x...x.....x... t=x....x....x..x.. l=...x....x......x"),
   D("Zap Perc",        CAT_PERC,   TEC | RAV,   1, KIT_TECHNO, 0,               "z=..x.....x..x...x"),
-  D("Click Train",     CAT_PERC,   TEC,         2, KIT_TECHNO, X_UP,            "r=xoxo"),
+  DF("Click Train",    CAT_PERC,   TEC,         2, KIT_TECHNO, X_UP,            "r=xoxo"),
   D("Tech Bongo",      CAT_PERC,   TEC,         1, KIT_TECHNO, 0,               "g=x.x..x.x..x.x.x. G=...x......x....."),
   D("Tech Roll",       CAT_FILL,   TEC,         1, KIT_TECHNO, 0,               "s=o.o.o.o.xoxoxxRR"),
   D("Hat Rush",        CAT_FILL,   TEC | RAV,   1, KIT_TECHNO, 0,               "h=x.x.x.x.xxxxRRRR"),
@@ -681,7 +698,9 @@ static void meta(void) {
   if (g_meta) return;
   for (int i = 0; i < NUM_DEFS; i++) {
     g_blocks[i].name = kDefs[i].name; g_blocks[i].display_name = kDefs[i].display_name ? kDefs[i].display_name : kDefs[i].name;
-    g_blocks[i].variant = kDefs[i].variant; g_blocks[i].cat = kDefs[i].cat; g_blocks[i].genres = kDefs[i].genres; g_blocks[i].bars = kDefs[i].bars;
+    g_blocks[i].variant = kDefs[i].variant; g_blocks[i].cat = kDefs[i].cat;
+    g_blocks[i].family = kDefs[i].family_override ? (family_t)(kDefs[i].family_override - 1) : block_family(kDefs[i].cat);
+    g_blocks[i].genres = kDefs[i].genres; g_blocks[i].bars = kDefs[i].bars;
   }
   g_meta = true;
 }
@@ -693,6 +712,13 @@ const block_t *block_get(int id) { meta(); return id >= 0 && id < NUM_DEFS ? &g_
 int blocks_in_category(category_t cat, int *ids, int max) {
   int n = 0;
   for (int i = 0; i < NUM_DEFS && n < max; i++) if (kDefs[i].cat == cat) ids[n++] = i;
+  return n;
+}
+
+int blocks_in_family(family_t family, int *ids, int max) {
+  meta();
+  int n = 0;
+  for (int i = 0; i < NUM_DEFS && n < max; i++) if (g_blocks[i].family == family) ids[n++] = i;
   return n;
 }
 

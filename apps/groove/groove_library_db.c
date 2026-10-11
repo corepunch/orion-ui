@@ -29,7 +29,7 @@ static bool block_row_init(library_block_t *row, int id) {
   memset(row, 0, sizeof(*row));
   row->id = id;
   snprintf(row->name, sizeof(row->name), "%s", block->display_name ? block->display_name : block->name);
-  row->category = block->cat;
+  row->category = block->family;
   row->genres = block->genres;
   row->bars = block->bars;
   row->variant = block->variant;
@@ -38,9 +38,9 @@ static bool block_row_init(library_block_t *row, int id) {
 
 static result_node_t *block_fetch(void) {
   result_node_t *head = NULL, **tail = &head;
-  for (int category = 0; category < CAT_COUNT; category++) {
+  for (int category = 0; category < FAMILY_COUNT; category++) {
     int ids[GR_MAX_BLOCKS];
-    int count = blocks_in_category((category_t)category, ids, ARRAY_LEN(ids));
+    int count = blocks_in_family((family_t)category, ids, ARRAY_LEN(ids));
     for (int i = 0; i < count; i++) {
       result_node_t *node = calloc(1, sizeof(*node) + sizeof(library_block_t));
       if (!node) { free_result_list(head); return NULL; }
@@ -61,7 +61,7 @@ static result_t block_object_proc(const void *object, uint32_t msg, uint32_t wpa
   switch (LOWORD(wparam)) {
     case 0x7100: snprintf(out, cap, "%d", row->id); return true;
     case 0x7101: snprintf(out, cap, "%s", row->name); return true;
-    case 0x7102: snprintf(out, cap, "%s", row->category >= 0 && row->category < CAT_COUNT ? kCategoryName[row->category] : ""); return true;
+    case 0x7102: snprintf(out, cap, "%s", row->category >= 0 && row->category < FAMILY_COUNT ? kFamilyName[row->category] : ""); return true;
     case 0x7103: snprintf(out, cap, "%u", row->genres); return true;
     case 0x7104: snprintf(out, cap, "%d", row->bars); return true;
     case 0x7105: snprintf(out, cap, "%u", row->variant); return true;

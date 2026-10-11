@@ -114,7 +114,7 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             st->ids[st->count++] = ((library_block_t *)row->data)->id;
           free_result_list(rows);
         } else {
-          for (int cat = 0; cat < CAT_COUNT; cat++) st->count += blocks_in_category(cat, st->ids + st->count, MAX_TILES - st->count);
+          for (int family = 0; family < FAMILY_COUNT; family++) st->count += blocks_in_family(family, st->ids + st->count, MAX_TILES - st->count);
         }
       }
       window_t *template = st->flow ? st->flow->children : NULL;

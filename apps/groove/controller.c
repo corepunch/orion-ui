@@ -119,7 +119,7 @@ groove_t *app_init(void) {
   app->selected_clip = -1;
   app->drag.track = -1;
   app->auditioned = -1;
-  app->category = CAT_DRUMS;
+  app->family = FAMILY_LOOP;
   app->peak_credit = GR_PEAKS_PER_TICK;
   if (axAudioInit()) {
     AXaudiospec want = { GR_SAMPLE_RATE, AX_AUDIO_S16, 2, 1024, audio_cb, app }, got;
@@ -221,14 +221,14 @@ static void library_refilter(void) {
   if (g_app->bin) send_message(g_app->bin, binFilter, 0, NULL);
 }
 
-void app_set_category(int category) {
-  if (category < 0 || category >= CAT_COUNT) {
-    fprintf(stderr, "[gr] family filter rejected value=%d count=%d\n", category, CAT_COUNT);
+void app_set_family(int family) {
+  if (family < 0 || family >= FAMILY_COUNT) {
+    fprintf(stderr, "[gr] family filter rejected value=%d count=%d\n", family, FAMILY_COUNT);
     fflush(stderr);
     return;
   }
-  if (category == g_app->category) return;
-  g_app->category = category;
+  if ((family_t)family == g_app->family) return;
+  g_app->family = (family_t)family;
   library_refilter();
   transport_refresh();
 }
@@ -246,7 +246,7 @@ void app_set_genre(uint8_t genre) {
 
 bool block_visible(int id) {
   const block_t *b = block_get(id);
-  return b && (int)b->cat == g_app->category && (!g_app->genre || (b->genres & g_app->genre));
+  return b && b->family == g_app->family && (!g_app->genre || (b->genres & g_app->genre));
 }
 
 void app_select_clip(int idx) {
@@ -333,7 +333,7 @@ void app_command(uint16_t id) {
       invalidate_window(g_app->sheet);
       break;
     default:
-      if (id >= ID_FAMILY(0) && id < ID_FAMILY(CAT_COUNT)) app_set_category(id - ID_FAMILY(0));
+      if (id >= ID_FAMILY(0) && id < ID_FAMILY(FAMILY_COUNT)) app_set_family(id - ID_FAMILY(0));
       else if (id >= ID_MUTE(0) && id < ID_MUTE(GR_TRACKS)) { app_lock(); s->mute[id - ID_MUTE(0)] = !s->mute[id - ID_MUTE(0)]; app_unlock(); tracks_sync(); }
       else if (id >= ID_SOLO(0) && id < ID_SOLO(GR_TRACKS)) { app_lock(); s->solo[id - ID_SOLO(0)] = !s->solo[id - ID_SOLO(0)]; app_unlock(); tracks_sync(); }
       break;

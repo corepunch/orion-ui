@@ -11,11 +11,11 @@ void transport_refresh(void) {
   window_t *win = g_app->library;
   if (!win) return;
   send_message(win, tbCheckButton, ID_PLAY, (void *)(intptr_t)g_app->shown_playing);
-  send_message(win, tbCheckButton, ID_FAMILY(g_app->category), (void *)(intptr_t)1);
+  send_message(win, tbCheckButton, ID_FAMILY(g_app->family), (void *)(intptr_t)1);
 }
 
 // A library window created without the form (tests) takes the form's own toolbar:
-// the transport, then one pictogram button per family in category_t order.
+// the transport, then one pictogram button per family in family_t order.
 static void set_items(window_t *win) {
   send_message(win, tbSetItems, (uint32_t)groove_library_window_form.toolbar_count, (void *)groove_library_window_form.toolbar_items);
 }

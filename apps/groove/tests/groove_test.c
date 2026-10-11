@@ -86,7 +86,7 @@ static void test_blocks(void) {
   for (int i = 0; i < blocks_count(); i++) {
     const block_t *b = block_get(i);
     block_pcm_t pcm;
-    ASSERT(b->name && b->name[0] && b->cat < CAT_COUNT && (b->bars == 1 || b->bars == 2 || b->bars == 4), "metadata");
+    ASSERT(b->name && b->name[0] && b->cat < CAT_COUNT && b->family < FAMILY_COUNT && (b->bars == 1 || b->bars == 2 || b->bars == 4), "metadata");
     ASSERT(b->display_name && b->display_name[0] && b->variant <= 99, "display label and numeric variant metadata");
     ASSERT(b->genres && !(b->genres & ~GENRE_ANY), "every block carries at least one known genre tag");
     for (int k = 0; k < i; k++) ASSERT(strcmp(block_get(k)->name, b->name) != 0, "names are unique");
@@ -138,8 +138,26 @@ static void test_genres(void) {
   for (int i = 0; i < blocks_count(); i++) shared += (block_get(i)->genres & (block_get(i)->genres - 1)) != 0;
   ASSERT(shared > 100, "many blocks belong to more than one genre");
   int ids[GR_MAX_BLOCKS], sum = 0;
-  for (int c = 0; c < CAT_COUNT; c++) { int n = blocks_in_category(c, ids, GR_MAX_BLOCKS); ASSERT(n > 0, "no empty family tab"); sum += n; }
+  for (int c = 0; c < FAMILY_COUNT; c++) { int n = blocks_in_family(c, ids, GR_MAX_BLOCKS); ASSERT(n > 0, "no empty family tab"); sum += n; }
   ASSERT_EQUAL(sum, blocks_count());
+  ASSERT(FAMILY_COUNT == 10 && block_family(CAT_FILL) == FAMILY_DRUM && block_family(CAT_CYMBAL) == FAMILY_LOOP,
+         "percussion has a rhythm tab and a fill tab");
+  ASSERT(block_family(CAT_KEYS) == FAMILY_SYNTH && block_family(CAT_ORGAN) == FAMILY_SYNTH && block_family(CAT_SYNTH) == FAMILY_SYNTH,
+         "keys, organ and synth share a tab while retaining their sample types");
+  const char *fills[] = { "Snare Fill", "Kick Rush", "Breakdown", "Clap Fill", "Kick Run", "Snare Run", "Clap Rush",
+                          "Crash Down", "Floor Build", "909 Crash", "Reverse Crash", "Crash & Ride", "Boom Tail", "Dusty Crash",
+                          "Rave Build", "Kick Roll Up", "Big Crash", "China Hits", "Hat Sweep", "Delay Crash", "Click Train", "Tom Down" };
+  for (int i = 0; i < ARRAY_LEN(fills); i++) {
+    const block_t *b = named_block(fills[i]);
+    ASSERT(b && b->family == FAMILY_DRUM, "a one-shot, rising roll or descending fill belongs to Drum Fills");
+  }
+  const char *loops[] = { "Four Floor", "Half Kick", "Clap Back", "Ride 8ths", "Bell Pattern", "Splash", "Conga Loop", "Ride Swing" };
+  for (int i = 0; i < ARRAY_LEN(loops); i++) {
+    const block_t *b = named_block(loops[i]);
+    ASSERT(b && b->family == FAMILY_LOOP, "a repeating drum pattern belongs to Drum Loops");
+  }
+  ASSERT(named_block("Crash Down")->cat == CAT_CYMBAL && named_block("Kick Run")->cat == CAT_KICK,
+         "moving a sample between tabs preserves its detailed type and pictogram");
   PASS();
 }
 
@@ -684,12 +702,12 @@ static void test_library_transport(void) {
   ASSERT(g_app->song.loop && bar_checked(g_app->toolbar, ID_LOOP), "and back on");
   char tooltip[256] = {0};
   resize_window(win, SCREEN_W, 700);
-  r = tb->item_rects[toolbar_index(ID_FAMILY(CAT_GUITAR))];
+  r = tb->item_rects[toolbar_index(ID_FAMILY(FAMILY_GUITAR))];
   ASSERT(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 4, r.y + 4), tooltip) &&
-         strcmp(tooltip, kCategoryName[CAT_GUITAR]) == 0, "a family button names its family");
-  click_toolbar(ID_FAMILY(CAT_GUITAR));
-  ASSERT(g_app->category == CAT_GUITAR && library_visible() > 0 && library_visible() < blocks_count(), "a routed family click switches the library");
-  ASSERT(g_app->song.loop && bar_checked(g_app->toolbar, ID_LOOP) && toolbar_checked(ID_FAMILY(CAT_GUITAR)), "the family check leaves Loop checked");
+         strcmp(tooltip, kFamilyName[FAMILY_GUITAR]) == 0, "a family button names its family");
+  click_toolbar(ID_FAMILY(FAMILY_GUITAR));
+  ASSERT(g_app->family == FAMILY_GUITAR && library_visible() > 0 && library_visible() < blocks_count(), "a routed family click switches the library");
+  ASSERT(g_app->song.loop && bar_checked(g_app->toolbar, ID_LOOP) && toolbar_checked(ID_FAMILY(FAMILY_GUITAR)), "the family check leaves Loop checked");
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();
@@ -735,6 +753,16 @@ static void test_shared_block_cards(void) {
   PASS();
 }
 
+static window_t *library_card(window_t *page, int block) {
+  window_t *card = page->children;
+  int ids[GR_MAX_BLOCKS];
+  for (int family = 0; family < FAMILY_COUNT; family++) {
+    int count = blocks_in_family((family_t)family, ids, ARRAY_LEN(ids));
+    for (int i = 0; i < count && card; i++, card = card->next) if (ids[i] == block) return card;
+  }
+  return NULL;
+}
+
 static void test_drag_anchor(void) {
   TEST("library and canvas drops snap the exact card origin, including scrolling and release position; pointer anchoring is optional");
   test_env_init();
@@ -742,9 +770,9 @@ static void test_drag_anchor(void) {
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
-  window_t *sheet = g_app->sheet, *page = g_app->bin, *library = page->children;
-  int block = 0;
-  while (library && block_get(block)->bars < 2) { library = library->next; block++; }
+  window_t *sheet = g_app->sheet, *page = g_app->bin;
+  int block = 4; // Half Time: a visible two-bar loop
+  window_t *library = library_card(page, block);
   ASSERT_NOT_NULL(library);
   send_message(page, evResize, 0, NULL);
   set_scroll_info(page, SB_VERT, &(scroll_info_t){ .fMask = SIF_POS, .nPos = 20 }, false);
@@ -819,8 +847,7 @@ static void test_drag_center_boundaries(void) {
   send_message(page, evResize, 0, NULL);
   const int percent[] = {20, 49, 51, 80};
   for (int block = 0; block <= 4; block += 4) {
-    window_t *library = page->children;
-    for (int i = 0; i < block && library; i++) library = library->next;
+    window_t *library = library_card(page, block);
     ASSERT_NOT_NULL(library);
     ipoint16_t size = clip_cell_size(sheet, block_get(block));
     const ipoint16_t grabs[] = {{5, 5}, {size.x / 2, size.y / 2}, {size.x - 5, size.y - 5}};
@@ -940,7 +967,7 @@ static void test_genre_filter(void) {
   ASSERT_NOT_NULL(win);
   show_window(win, true);
   ASSERT_EQUAL(g_app->genre, 0);
-  int ids[GR_MAX_BLOCKS], n = blocks_in_category(g_app->category, ids, GR_MAX_BLOCKS);
+  int ids[GR_MAX_BLOCKS], n = blocks_in_family(g_app->family, ids, GR_MAX_BLOCKS);
   for (int g = 0; g < GENRE_COUNT; g++) {
     app_set_genre((uint8_t)(1 << g));
     int expect = 0;
@@ -968,31 +995,31 @@ static void test_family_filter(void) {
   window_t *bar = g_app->library;
   toolbar_state_t *tb = toolbar_get_state(bar);
   int ids[GR_MAX_BLOCKS];
-  ASSERT(g_app->category == CAT_DRUMS && toolbar_checked(ID_FAMILY(CAT_DRUMS)), "the library opens on Drums");
-  ASSERT_EQUAL(library_visible(), blocks_in_category(CAT_DRUMS, ids, GR_MAX_BLOCKS));
+  ASSERT(g_app->family == FAMILY_LOOP && toolbar_checked(ID_FAMILY(FAMILY_LOOP)), "the library opens on drum loops");
+  ASSERT_EQUAL(library_visible(), blocks_in_family(FAMILY_LOOP, ids, GR_MAX_BLOCKS));
   int first = toolbar_index(ID_FAMILY(0));
-  ASSERT(first >= 0 && toolbar_index(ID_FAMILY(CAT_COUNT - 1)) == first + CAT_COUNT - 1, "one button per family, in order");
-  for (int i = first; i < first + CAT_COUNT; i++) {
+  ASSERT(first >= 0 && toolbar_index(ID_FAMILY(FAMILY_COUNT - 1)) == first + FAMILY_COUNT - 1, "one button per family, in order");
+  for (int i = first; i < first + FAMILY_COUNT; i++) {
     irect16_t r = tb->item_rects[i];
     ASSERT(tb->items[i].type == TOOLBAR_ITEM_BUTTON && (tb->items[i].style & TOOLBAR_ITEM_FLAG_ARTWORK), "family buttons draw artwork");
     ASSERT(r.w == toolbar_effective_bsz(bar) && r.h == toolbar_effective_bsz(bar), "family buttons are full toolbar size");
     ASSERT(r.x + r.w <= bar->frame.w, "every button fits one row at the default width");
   }
-  ASSERT(strcmp(tb->items[first + CAT_GUITAR].icon, "strip:11") == 0 && CAT_GUITAR == 11, "a family button shows its atlas cell");
-  for (int c = CAT_COUNT - 1; c >= 0; c--) {
+  ASSERT(strcmp(tb->items[first + FAMILY_GUITAR].icon, "strip:11") == 0, "a family button uses an existing atlas cell");
+  for (int c = FAMILY_COUNT - 1; c >= 0; c--) {
     click_toolbar(ID_FAMILY(c));
-    ASSERT(g_app->category == c && library_visible() == blocks_in_category(c, ids, GR_MAX_BLOCKS), "a routed click shows one family");
+    ASSERT(g_app->family == (family_t)c && library_visible() == blocks_in_family(c, ids, GR_MAX_BLOCKS), "a routed click shows one family");
     int checked = 0;
-    for (int i = first; i < first + CAT_COUNT; i++) checked += (tb->items[i].state & TBSTATE_CHECKED) != 0;
+    for (int i = first; i < first + FAMILY_COUNT; i++) checked += (tb->items[i].state & TBSTATE_CHECKED) != 0;
     ASSERT(checked == 1 && toolbar_checked(ID_FAMILY(c)), "exactly the chosen family is checked");
   }
   app_set_genre(GENRE_DANCE);
-  int n = blocks_in_category(CAT_DRUMS, ids, GR_MAX_BLOCKS), dance_drums = 0;
+  int n = blocks_in_family(FAMILY_LOOP, ids, GR_MAX_BLOCKS), dance_drums = 0;
   for (int i = 0; i < n; i++) dance_drums += (block_get(ids[i])->genres & GENRE_DANCE) != 0;
   ASSERT(dance_drums > 0 && dance_drums < n && library_visible() == dance_drums, "family and genre combine");
-  app_set_category(CAT_COUNT);
-  app_set_category(-1);
-  ASSERT(g_app->category == CAT_DRUMS, "a value outside the families is rejected");
+  app_set_family(FAMILY_COUNT);
+  app_set_family(-1);
+  ASSERT(g_app->family == FAMILY_LOOP, "a value outside the families is rejected");
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();
