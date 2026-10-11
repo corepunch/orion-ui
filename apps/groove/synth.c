@@ -276,6 +276,15 @@ void sy_hit(sy_ctx_t *c, sy_kit_t kit, char lane, int s, float a) {
 void sy_drums(sy_ctx_t *c, sy_kit_t kit, const char *lanes) {
   double step = c->bar / 16.0;
   int steps = (int)(c->n / step + 0.5);
+  const char *closed = NULL;
+  int closed_len = 0;
+  for (const char *p = lanes; p && *p;) {
+    while (*p == ' ') p++;
+    if (!p[0] || p[1] != '=') break;
+    int len = (int)strcspn(p + 2, " ");
+    if (*p == 'h') { closed = p + 2; closed_len = len; }
+    p += len + 2;
+  }
   for (const char *p = lanes; p && *p;) {
     while (*p == ' ') p++;
     if (!p[0] || p[1] != '=') break;
@@ -284,6 +293,28 @@ void sy_drums(sy_ctx_t *c, sy_kit_t kit, const char *lanes) {
     int len = (int)strcspn(pat, " ");
     for (int i = 0; len > 0 && i < steps; i++) {
       int s = (int)((i + (i & 1 ? c->swing : 0.0f)) * step), half = (int)(step / 2), third = (int)(step / 3);
+      if (lane == 'o' && closed_len && strchr("xoXrR", pat[i % len])) {
+        int strokes = pat[i % len] == 'R' ? 3 : pat[i % len] == 'r' ? 2 : 1;
+        const kit_t *k = &kKits[kit < KIT_COUNT ? kit : KIT_909];
+        for (int hit = 0; hit < strokes; hit++) {
+          int start = s + hit * (strokes == 3 ? third : half);
+          int end = start + (int)(0.45f * SR);
+          for (int j = i; j <= i + closed_len; j++) {
+            char ch = closed[j % closed_len];
+            if (!strchr("xoXrR", ch)) continue;
+            int nh = ch == 'R' ? 3 : ch == 'r' ? 2 : 1;
+            int at = (int)((j + (j & 1 ? c->swing : 0.0f)) * step);
+            for (int h = 0; h < nh; h++) {
+              int stop = at + h * (nh == 3 ? third : half);
+              if (stop > start && stop < end) end = stop;
+            }
+          }
+          float a = pat[i % len] == 'o' ? 0.45f : pat[i % len] == 'X' ? 1.1f : 0.9f;
+          if (strokes > 1) a = hit == 0 ? 0.8f : hit == 1 ? 0.6f : 0.7f;
+          k_metal(c, start, a * 1.8f, k->odecay, (end - start) / SR, 1.0f, k->hmetal, k->hhp);
+        }
+        continue;
+      }
       switch (pat[i % len]) {
         case 'x': sy_hit(c, kit, lane, s, 0.9f);  break;
         case 'o': sy_hit(c, kit, lane, s, 0.45f); break;
@@ -334,19 +365,6 @@ static void v_bass(sy_ctx_t *c, int s, int g, float hz, float a, bool bright) {
     float x = bright ? osc_chans(&tri, &pul, &saw, hz / SR, 0.4f, 0.55f, 0.4f, 0.5f) + 0.3f * osc_tri(&sub, hz * 0.5f / SR)
                      : osc_tri(&tri, hz / SR);
     sy_mix(c, s + i, a * e * svf_run(&lp, x * 0.55f, F_LP));
-  }
-}
-static void v_pluck(sy_ctx_t *c, int s, int g, float hz, float a, float damp) {
-  int N = (int)(SR / hz), n = (int)((damp > 0.99f ? 1.4f : 0.5f) * SR);
-  float d[4096], prev = 0;
-  if (N < 2) N = 2;
-  if (N > 4096) N = 4096;
-  for (int i = 0; i < N; i++) { float x = sy_rnd(c); d[i] = 0.5f * (x + prev); prev = x; }
-  for (int i = 0, p = 0; i < n; i++) {
-    float y = d[p], nx = d[(p + 1) % N];
-    d[p] = damp * 0.5f * (y + nx);
-    p = (p + 1) % N;
-    sy_mix(c, s + i, a * 0.9f * y * (i > g ? expf(-(i - g) / SR * 5.0f) : 1.0f));
   }
 }
 static void v_acid(sy_ctx_t *c, const sy_note_t *n) {
@@ -621,25 +639,55 @@ static void v_whistle(sy_ctx_t *c, const sy_note_t *n) {
   }
 }
 
-// ── Strings (Karplus-Strong) ─────────────────────────────────────────────
-enum { POST_NONE, POST_WAH, POST_DIST };
-static void v_string(sy_ctx_t *c, const sy_note_t *n, float damp, float seconds, bool bright, float release, int post) {
-  int N = CLAMP((int)(SR / n->hz), 2, 4096), len = (int)(seconds * SR);
-  float d[4096], prev = 0, lp1 = 0, lp2 = 0, e = 1, rel = expf(-release / SR);
-  svf_t wah = {0};
-  for (int i = 0; i < N; i++) { float x = sy_rnd(c); d[i] = bright ? x : 0.5f * (x + prev); prev = x; }
+// ── Guitar strings ──────────────────────────────────────────────────────
+static void v_guitar(sy_ctx_t *c, const sy_note_t *n, sy_inst_t inst) {
+  bool mute = inst == I_MUTE, acoustic = inst == I_PLUCK;
+  sine_t modes[32];
+  float amp[32], decay[32];
+  float pick = (acoustic ? 0.19f : 0.15f) + 0.012f * sinf(n->step * 1.7f + n->idx);
+  float release = mute ? 65.0f : 32.0f, rel = expf(-release / SR), e = 1;
+  int count = 0, len = MIN(n->g + (int)(0.35f * SR), c->n + SY_TAIL - n->s);
+  svf_t body = {0}, air = {0}, pickup = {0}, cabinet = {0}, wah = {0};
+  svf_set(&body, 190.0f, 1.2f); svf_set(&air, 105.0f, 0.8f);
+  svf_set(&pickup, acoustic ? 7200.0f : 4800.0f, 0.7f);
+  svf_set(&cabinet, 3600.0f, 0.7f);
+  // Pluck-position and pickup-position notches; upper string modes decay first.
+  for (int h = 1; h <= 32 && n->hz * h < SR * 0.42f; h++) {
+    float stiffness = acoustic ? 0.000015f : 0.000005f;
+    sine_init(&modes[count], n->hz * h * sqrtf(1.0f + stiffness * (h * h - 1)), 0);
+    amp[count] = sinf(SY_PI * h * pick) / (h * powf((float)h, acoustic ? 0.30f : 0.18f));
+    if (!acoustic) amp[count] *= sinf(SY_PI * h * 0.19f);
+    decay[count] = expf(-(mute ? 22.0f + 1.8f * h : 0.7f + 0.028f * h * h + n->hz * 0.0007f) / SR);
+    count++;
+  }
+  float scrape = 1, scrape_decay = expf(-650.0f / SR);
+  for (int i = 0; i < len; i++) {
+    float y = 0;
+    for (int h = 0; h < count; h++) { y += amp[h] * sine_next(&modes[h]); amp[h] *= decay[h]; }
+    y += 0.05f * sy_rnd(c) * scrape;
+    scrape *= scrape_decay;
+    if (acoustic) y += 0.16f * svf_run(&body, y, F_BP) + 0.04f * svf_run(&air, y, F_BP);
+    y = svf_run(&pickup, y, F_LP);
+    if (inst == I_WAH) {
+      if (!(i & 31)) svf_set(&wah, 550.0f + 1750.0f * expf(-i / (0.09f * SR)), 2.0f);
+      y = 0.35f * y + 1.8f * svf_run(&wah, y, F_BP);
+    } else if (inst == I_DIST) {
+      y = svf_run(&cabinet, tanhf(y * 3.2f), F_LP) * 0.65f;
+    }
+    if (i >= n->g) e *= rel;
+    sy_mix(c, n->s + i, n->a * y * e * fmin1(i / (0.001f * SR)) * tail_window(i, len));
+  }
+}
+
+// ── Pizzicato (Karplus-Strong) ───────────────────────────────────────────
+static void v_string(sy_ctx_t *c, const sy_note_t *n) {
+  int N = CLAMP((int)(SR / n->hz), 2, 4096), len = (int)(0.3f * SR);
+  float d[4096], prev = 0, e = 1, rel = expf(-30.0f / SR);
+  for (int i = 0; i < N; i++) { float x = sy_rnd(c); d[i] = 0.5f * (x + prev); prev = x; }
   for (int i = 0, p = 0; i < len && e > 1e-4f; i++) {
     float y = d[p], nx = d[(p + 1) % N];
-    d[p] = damp * 0.5f * (y + nx);
+    d[p] = 0.975f * 0.5f * (y + nx);
     p = (p + 1) % N;
-    if (post == POST_WAH) {
-      if (!(i & 15)) svf_set(&wah, 450.0f + 1900.0f * sinf(SY_PI * fmin1(i / (0.2f * SR))), 3.5f);
-      y = 3.0f * svf_run(&wah, y, F_BP);
-    } else if (post == POST_DIST) {
-      y = tanhf(y * 7.0f);
-      lp1 += 0.36f * (y - lp1); lp2 += 0.36f * (lp1 - lp2);
-      y = lp2 * 0.6f;
-    }
     sy_mix(c, n->s + i, n->a * 0.9f * y * e);
     if (i > n->g) e *= rel;
   }
@@ -708,8 +756,8 @@ void sy_voice(sy_ctx_t *c, sy_inst_t inst, const sy_note_t *note) {
     case I_PIANO:    v_piano(c, n.s, n.g, n.hz, n.a);                                       break;
     case I_BASS:     v_bass(c, n.s, n.g, n.hz, n.a, true);                                  break;
     case I_SUB:      v_bass(c, n.s, n.g, n.hz, n.a, false);                                 break;
-    case I_PLUCK:    v_pluck(c, n.s, n.g, n.hz, n.a, 0.996f);                               break;
-    case I_MUTE:     v_pluck(c, n.s, n.g, n.hz, n.a, 0.93f);                                break;
+    case I_PLUCK: case I_MUTE: case I_WAH: case I_DIST: case I_CLEAN:
+                    v_guitar(c, &n, inst);                                               break;
     case I_ACID:     v_acid(c, &n);                                                         break;
     case I_PAD:      v_pad(c, n.s, n.g, n.hz, n.a);                                         break;
     case I_ARP:      v_arp(c, n.s, n.hz, n.a);                                              break;
@@ -733,11 +781,8 @@ void sy_voice(sy_ctx_t *c, sy_inst_t inst, const sy_note_t *note) {
     case I_HOOVER:   v_hoover(c, &n);                                                       break;
     case I_CHOIR:    v_choir(c, &n);                                                        break;
     case I_WHISTLE:  v_whistle(c, &n);                                                      break;
-    case I_PIZZ:     v_string(c, &n, 0.975f, 0.3f, false, 30.0f, POST_NONE);                break;
+    case I_PIZZ:     v_string(c, &n);                                                     break;
     case I_BLEEP:    v_bleep(c, &n);                                                        break;
-    case I_WAH:      v_string(c, &n, 0.992f, 0.5f, true, 25.0f, POST_WAH);                  break;
-    case I_DIST:     v_string(c, &n, 0.996f, 1.2f, false, 25.0f, POST_DIST);                break;
-    case I_CLEAN:    v_string(c, &n, 0.990f, 0.6f, true, 12.0f, POST_NONE);                 break;
     case I_VOX:      v_vox(c, &n, false);                                                   break;
     case I_ROBOT:    v_vox(c, &n, true);                                                    break;
   }

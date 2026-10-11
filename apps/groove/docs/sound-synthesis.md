@@ -41,9 +41,9 @@ There are six ways the engine produces a signal. Every voice combines a few of t
 | Sine with a moving pitch | `sin` of a phase that advances faster or slower over time | kicks, toms, sub bass, zaps, sirens |
 | Triangle, pulse and saw | three channels on one note. The triangle is the body, the pulse the hollow mid, the saw the edge. Pulse and saw edges are rounded (PolyBLEP) so high notes do not alias | basses, leads, stabs, pads, strings, organ, hoover |
 | Filtered noise | random samples through a low-, band- or high-pass filter | snares, claps, shakers, risers, breath |
-| Additive | a handful of sine partials, each with its own decay | piano, organ, vibes |
+| Additive | sine partials, each with its own decay; guitar modes use pluck/pickup-position notches and slight string stiffness | piano, organ, vibes, guitars |
 | FM | one sine bends the phase of another; a falling amount gives a bright attack and a dull tail | electric piano, bells, FM bass |
-| Plucked string | a short burst of noise circulating in a delay line that loses a little each pass (Karplus-Strong) | guitars, pizzicato |
+| Plucked string | a short burst of noise circulating in a delay line that loses a little each pass (Karplus-Strong) | pizzicato |
 
 Two more pieces shape those signals:
 
@@ -72,6 +72,43 @@ A kit is a table of numbers for these voices (`kKits` in `synth.c`). The same pa
 | `KIT_TECHNO` | deep driven kick, tin snare, dry hats |
 | `KIT_BREAK` | short clicky kick, full snare, noisier hats |
 | `KIT_LOFI` | rounded kick, dull hats |
+
+### Guitar and drum-loop revision (October 11, 2026)
+
+All 21 existing guitar blocks now use a tuned, 32-mode plucked-string model.
+The pluck position shapes the harmonic notches; upper modes decay faster, and
+slight string stiffness separates the upper partials. Acoustic parts add body
+resonance. Electric parts use pickup filtering, with a separate wah sweep or
+soft drive and cabinet roll-off where requested. Palm muting damps the string
+quickly. Sustained notes follow their recipe gate instead of ending after a
+fixed 0.5–1.4 seconds. The short pick transient stays below the pitched body.
+These remain synthesized approximations, pending listening review.
+
+Closed-hat steps now choke preceding open hats, including rolls, swing and the
+next loop's first closed hit. A four-millisecond end ramp avoids a hard cut.
+Simultaneous open and closed steps retain the open attack; the next closed hit
+ends it. This also improves existing combined drum patterns.
+
+The library adds twelve complete two-bar grooves, three per primary genre:
+
+| Dance | Hip-hop | Rave | Techno |
+|---|---|---|---|
+| Velvet House | Pocket Break | Cutback Break | Machine Shuffle |
+| Neon Two Step | Subway Funk | Rush Hour Break | Copper Motor |
+| Conga Club | Lowrider Bounce | Brightside Rave | Grid Runner |
+
+Each has a second-bar variation, a kick and backbeat, and supporting percussion.
+No separate snare or hat patterns were added. New entries are appended to keep
+saved source IDs stable. The local eJay catalogue does contain individual parts:
+its Dance product lists 55 snare and 52 hat clip files. Its other products also
+have loop groups. Those are file counts, including variations, not counts of
+unique musical ideas; their presence does not set Groove's desired balance.
+Commercial reference audio is not included in the app.
+
+`tests/groove_synth_test.c` checks high-note tuning, sustained gates, palm-mute
+decay and hat choking in both lane orders and across the loop seam. The library
+suite checks rendered lengths, levels and finite output. These checks do not
+establish perceived realism or musical quality.
 
 ### Vocals
 
@@ -199,7 +236,7 @@ Splitting the library into one folder per genre would have meant either copying 
 
 The genre control in the library toolbar holds one genre or All: `visible = (filter == 0 || (block.genres & filter)) && matches(search)`. The search field also matches genre names.
 
-The five vocal samples carry all four genre tags. The other blocks use genre tags to share suitable sounds across styles.
+The vocal samples carry all four genre tags. The other blocks use genre tags to share suitable sounds across styles.
 
 Every tonal block is written in A minor (chords Am, F, C, G, Dm, Em), so any two blocks can be stacked without clashing.
 
@@ -224,18 +261,17 @@ A typical synthesized block renders in about 10 ms unoptimized. The slowest, a f
 
 ## Limitations
 
-- **Vocals are the exception to synthesis.** The five blocks in the Vocals family decode MP3 clips from `share/vocals/`; every other family is synthesized. The family remains grouped as a vocal sample bin, like the voice group in eJay.
+- **Vocals are the exception to synthesis.** The 55 blocks in the Vocals family decode MP3 clips from `share/vocals/`; every other family is synthesized. The family remains grouped as a vocal sample bin, like the voice group in eJay.
 - **Electronic sounds are close; acoustic ones are sketches.** Drum machines, acid, FM bass, saw stacks and noise sweeps are what the original hardware did, so they hold up. Piano, guitar, strings, brass and choir are simple models and sound like it.
 - **Mono.** A block is one channel. The reference also stored mono clips and split wide sounds into L and R halves; Groove has no stereo pairs, and chorus here only thickens the sound.
 - **One fixed sound per block.** There is no per-clip pitch, filter or volume. A block in another key needs another row.
 - **One key.** Everything tonal is in A minor. That keeps blocks compatible and limits harmony to the chords of that key.
 - **Fixed effect settings.** Reverb, echo and drive have one setting each; a row can only switch them on.
 - **Effects are per block, not per voice.** A drum row with `X_ROOM` puts the kick in the room too.
-- **Open hats do not choke.** A closed hat does not cut a ringing open hat, as it would on a drum machine.
 - **Decay times do not follow tempo.** Envelopes are in seconds, so at 180 BPM long kicks overlap and at 70 BPM short sounds leave gaps.
 - **Folded tails.** A `LOOP` or `WIDE` block starts with the tail of its own ending, which is right when it repeats and slightly wrong the first time it plays.
 - **A small pause on first use.** A block that was never rendered is rendered on click or drop. On a slow machine a long pad can take a noticeable moment.
-- **Fewer blocks than the reference.** Dance eJay has 1352 clip files under 484 titles; many are L/R halves and numbered variations of one idea. Groove has 432 blocks, including five vocal samples available in every genre. Guitar, organ and scratch are tagged only for the genres whose reference product has them. Numbered variations of one idea are not reproduced.
+- **Fewer blocks than the reference.** Dance eJay has 1352 clip files under 484 titles; many are L/R halves and numbered variations of one idea. Groove has 494 blocks, including 55 vocal samples available in every genre. Guitar, organ and scratch are tagged only for the genres whose reference product has them. Numbered variations of one idea are not reproduced.
 - **Not checked by ear in CI.** The tests verify that every block renders, is finite, levelled and the right length. They cannot tell whether it sounds good.
 
 ## Adding a block

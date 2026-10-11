@@ -688,6 +688,19 @@ static const def_t kDefs[] = {
   M("Signal to Move",                ANY, 4, "male_rap_signal_to_move_140bpm_4bars.mp3"),
   M("Turn It Up Crew",               ANY, 4, "male_rap_turn_it_up_crew_140bpm_4bars.mp3"),
   M("Night Shift Charge",            ANY, 4, "male_rap_night_shift_charge_140bpm_4bars.mp3"),
+  // Complete two-bar grooves; append to preserve saved source IDs.
+  D("Velvet House", CAT_DRUMS, DAN, 2, KIT_909, X_SWING, "k=x...x...x...x...x...x...x..ox... c=....x.......x.......x.......x... h=x.o.x.o.x.o.x.o.x.o.x.o.x.o.x.oo o=..x...x...x...x...x...x...x...x. m=...o...o..o...o....o..o....o..o."),
+  D("Neon Two Step", CAT_DRUMS, DAN | HIP, 2, KIT_909, X_SWING, "k=x.....x...x.....x..o....x.....x. s=....x.......x.......x.......x..o h=x.o.x.o.x.o.x.o.x.o.x.o.x.oo..x. o=......x.......x...x.......x....."),
+  D("Conga Club", CAT_DRUMS, DAN | TEC, 2, KIT_909, 0, "k=x...x...x...x...x...x...x...x... c=....x.......x.......x.......x... g=..o..x....o..x....x..o...x...o.. G=x......o.x......x.....o.x.....o. h=x...x...x...x...x...x...x...x.o. o=..x...x...x...x...x...x...x...x."),
+  D("Pocket Break", CAT_DRUMS, HIP, 2, KIT_BREAK, X_SWING | X_ROOM, "k=x.....x...x.....x..o..x...x..o.. s=....X..o....X.......X.....o.X..o h=X.o.x.o.X.o.x.o.X.o.x.o.X.o.x.oo o=..............x.......x........."),
+  D("Subway Funk", CAT_DRUMS, HIP, 2, KIT_LOFI, X_SWING, "k=x..o....x.x.....x.....x..o..x... s=....x.....o.x.......x..o....x..o h=x.oox.o.x.oox.o.x.o.x.oox.o.x.oo r=..........o.......o............."),
+  D("Lowrider Bounce", CAT_DRUMS, HIP, 2, KIT_808, 0, "k=x..x..x.........x.....x..x....x. c=....x.......x.......x.......x... h=x.o.x.o.x.o.x.o.x.o.x.o.x.o.r.x. o=..........x.......x............. b=.......o...............o......o."),
+  D("Cutback Break", CAT_DRUMS, RAV | HIP, 2, KIT_BREAK, X_ROOM, "k=x.x.......xx....x.....x..x...... s=....X..o.o..X.......X..x..o.X..x h=x.o.x.o.x.o.x.o.x.o.x.o.x.o.x.oo o=..............x.......x........."),
+  D("Rush Hour Break", CAT_DRUMS, RAV, 2, KIT_BREAK, 0, "k=x.....x...x..o..x.x.......xx.... s=....x..x.o..x.......x..o.x..x.rr h=x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x. d=x.......x.......x.......x......."),
+  D("Brightside Rave", CAT_DRUMS, RAV | DAN, 2, KIT_HARD, 0, "k=x...x...x...x...x...x...x...x..o c=....x.......x.......x.......x... s=.......o..o............o..o...oo h=x...x...x...x...x...x...x...x... o=..x...x...x...x...x...x...x...x."),
+  D("Machine Shuffle", CAT_DRUMS, TEC, 2, KIT_TECHNO, X_SWING, "k=x...x...x...x...x...x...x...x... r=....x.......x.......x.......x..o h=x.oox.o.x.oox.o.x.o.x.oox.o.x.oo o=......x.......x...x.......x..... t=...o......o............o.....o.."),
+  D("Copper Motor", CAT_DRUMS, TEC, 2, KIT_TECHNO, 0, "k=x...x...x...x...x...x...x..ox... c=....x.......x.......x.......x... h=x.o.x.o.x.o.x.o.x.o.x.o.x.o.x.oo T=..o......o...........o....o..... l=.......x......o....o........x... o=......x.......x...x.......x....."),
+  D("Grid Runner", CAT_DRUMS, TEC | HIP, 2, KIT_808, 0, "k=x.....x...x.....x..x....x.....x. s=....x.......x.......x.......x..o h=x.oxx.oxx.oxx.oxx.oxx.oxx.oxx.or o=......x...................x..... r=.........o........o............."),
 };
 #define NUM_DEFS ((int)(sizeof(kDefs) / sizeof(kDefs[0])))
 
