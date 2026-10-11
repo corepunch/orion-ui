@@ -51,10 +51,24 @@ static bool pane_member(window_t *host, window_t *pane) {
   return p == host;
 }
 
+static bool pane_visible(window_t *host, window_t *pane) {
+  for (window_t *p = pane; p; p = p->parent) {
+    if (!window_has_state(p, WINDOW_STATE_VISIBLE)) return false;
+    if (p == host) return true;
+  }
+  return false;
+}
+
 window_t *pane_host_active(window_t *host) {
   pane_host_state_t *st = pane_state(host);
   if (!st) return NULL;
-  if (!pane_member(host, st->active)) st->active = pane_host_pane(host, 0);
+  if (!pane_member(host, st->active) || !pane_visible(host, st->active)) {
+    st->active = NULL;
+    for (int i = 0, n = pane_host_count(host); i < n; i++) {
+      window_t *pane = pane_host_pane(host, i);
+      if (pane_visible(host, pane)) { st->active = pane; break; }
+    }
+  }
   return st->active;
 }
 
@@ -200,6 +214,7 @@ static void pane_preview(window_t *host, ipoint16_t point) {
   if (!st || !st->drag_page) return;
   for (int i = 0, count = pane_host_count(host); i < count; i++) {
     window_t *pane = pane_host_pane(host, i);
+    if (!pane_visible(host, pane)) continue;
     ipoint16_t pt = window_map_point(host, pane, point);
     irect16_t r = get_client_rect(pane);
     if (!rect_contains_point(r, pt)) continue;

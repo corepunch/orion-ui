@@ -171,11 +171,31 @@ static void test_pane_coordinate_mapping(void) {
   destroy_window(root); test_env_shutdown(); PASS();
 }
 
+static void test_hidden_panes_are_not_drop_targets(void) {
+  TEST("PaneHost ignores collapsed panes for active focus and snap targets");
+  test_env_init();
+  window_t *host = pane_test_host(), *hidden = pane_host_pane(host, 0);
+  window_t *hidden_page = pane_test_tab(hidden, "Collapsed");
+  window_t *visible = pane_host_split(host, hidden, PANE_RIGHT);
+  pane_test_tab(visible, "A"); pane_test_tab(visible, "B");
+  set_focus(hidden_page->children);
+  window_set_state(hidden, WINDOW_STATE_VISIBLE, false);
+  send_message(host, evResize, 0, NULL);
+  ASSERT_EQUAL(pane_host_active(host), visible);
+  pane_drag(visible, 1, host, (ipoint16_t){200, 200});
+  pane_drop_t preview;
+  ASSERT_TRUE(pane_host_get_preview(host, &preview));
+  ASSERT_EQUAL(preview.pane, visible);
+  send_message(host, evPointerCancel, 0, NULL);
+  destroy_window(host); test_env_shutdown(); PASS();
+}
+
 int main(void) {
   TEST_START("PaneHost");
   test_pane_moves_and_collapses();
   test_pane_drag_edges();
   test_pane_drag_cancel_and_insert();
   test_pane_coordinate_mapping();
+  test_hidden_panes_are_not_drop_targets();
   TEST_END();
 }

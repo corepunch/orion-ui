@@ -325,7 +325,7 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
 
       if (gc_overview_handle_command(wparam, lparam)) return true;
 
-      if (code == kMenuBarNotificationItemClick) {
+      if (code == kMenuBarNotificationItemClick || code == kAcceleratorNotification) {
         (void)gc_execute_action(LOWORD(wparam));
         return true;
       }

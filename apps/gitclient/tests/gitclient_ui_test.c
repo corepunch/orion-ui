@@ -587,7 +587,7 @@ static const accel_t *gc_find_accel(uint16_t cmd) {
 
 void test_action_metadata_and_accelerators(void) {
     TEST("gitclient Orion: metadata + accels enumerate menu shortcuts");
-    ASSERT_EQUAL(gitclient_action_meta_count, 50);
+    ASSERT_EQUAL(gitclient_action_meta_count, 57);
 
     for (int i = 0; i < gitclient_action_meta_count; i++) {
         ASSERT_TRUE(gitclient_action_meta[i].name[0] != '\0');
@@ -834,6 +834,127 @@ void test_activitybar_navigation(void) {
   PASS();
 }
 
+static void gc_drag_view(window_t *source, int index, window_t *target, ipoint16_t point, bool release) {
+  irect16_t tab; send_message(source, tcGetTabRect, index, &tab);
+  ipoint16_t start = window_map_point(source, NULL, (ipoint16_t){tab.x + 8, 8});
+  ipoint16_t end = window_map_point(target, NULL, point);
+  ui_event_t event = {.message = kEventLeftButtonDown, .x = start.x * UI_WINDOW_SCALE, .y = start.y * UI_WINDOW_SCALE};
+  dispatch_message(&event);
+  event.message = kEventMouseMoved; event.x = end.x * UI_WINDOW_SCALE; event.y = end.y * UI_WINDOW_SCALE;
+  dispatch_message(&event);
+  if (release) { event.message = kEventLeftButtonUp; dispatch_message(&event); }
+}
+
+static void test_gitclient_pane_layout(void) {
+  TEST("Git Client pane docking preserves defaults, live views, bindings and drafts");
+  test_env_init();
+  if (!ui_init_graphics(UI_INIT_HIDDEN, "gitclient-pane-test", 1200, 800)) {
+    test_env_shutdown(); SKIP("Offscreen graphics unavailable");
+  }
+  gc_state_t saved = g_test_state;
+  database_t *saved_db = ui_get_database();
+  memset(&g_test_state, 0, sizeof(g_test_state));
+  g_test_state.ephemeral = true;
+  g_test_state.history_db = make_db(); g_test_state.changes_db = make_changes_db();
+  DB_CLASS(github_database_proc);
+  g_test_state.github_db = create_database("gc-pane-github", "github_database_proc", NULL);
+  ui_set_database(g_test_state.history_db);
+  register_database("db", g_test_state.history_db); register_database("github_db", g_test_state.github_db);
+  char plugin[4096];
+  snprintf(plugin, sizeof(plugin), "%s/../lib/gitclient_components%s", ui_get_exe_dir(), AX_DYNLIB_EXT);
+  ASSERT_TRUE(fe_load_component_plugin(plugin));
+  window_t *root = create_window_from_form(&gitclient_main_window_form, 0, 0, NULL, gc_main_proc, 0, NULL);
+  ASSERT_NOT_NULL(root);
+  root->frame.w = 1200; root->frame.h = 780; send_message(root, evResize, 0, NULL);
+  gc_open_repo(s_repo);
+  window_t *changes = get_window_item(g_test_state.changes_page_win, ID_CHANGES_PAGE_PANES);
+  window_t *history = get_window_item(g_test_state.history_page_win, ID_HISTORY_PAGE_PANES);
+  window_t *github = get_window_item(g_test_state.github_page_win, ID_GITHUB_PAGE_PANES);
+  ASSERT_EQUAL(pane_host_count(get_window_item(g_test_state.overview_page_win, ID_OVERVIEW_PAGE_PANES)), 1);
+  ASSERT_EQUAL(pane_host_count(changes), 2); ASSERT_EQUAL(pane_host_count(history), 7); ASSERT_EQUAL(pane_host_count(github), 2);
+  window_t *left = pane_host_pane(changes, 0), *right = pane_host_pane(changes, 1);
+  ASSERT_EQUAL(left->parent->id, ID_CHANGES_PAGE_CHANGES_SPLIT);
+  ASSERT_EQUAL(splitview_get_left(left->parent), left);
+  ASSERT_TRUE(abs(left->frame.w * 10 - (left->frame.w + right->frame.w) * 3) <= 10);
+  window_t *panel = get_window_item(root, ID_CHANGES_PAGE_CHANGES_PANEL);
+  window_t *summary = get_window_item(root, ID_CHANGES_PAGE_COMMIT_SUMMARY);
+  window_t *files = g_test_state.changes_files_win, *diff = g_test_state.changes_diff_win;
+  void *diff_state = diff->userdata, *file_state = files->userdata;
+  send_message(summary, edSetText, 0, "Draft survives docking"); set_focus(summary);
+  gc_drag_view(right, 0, left, (ipoint16_t){left->frame.w / 2, left->frame.h / 2}, true);
+  ASSERT_EQUAL(pane_host_count(changes), 1);
+  ASSERT_EQUAL(diff->parent, left); ASSERT_EQUAL(diff->userdata, diff_state); ASSERT_EQUAL(files->userdata, file_state);
+  ASSERT_EQUAL(send_message(left, tcGetCount, 0, NULL), 2);
+  send_message(root, evCommand, MAKEDWORD(ID_VIEW_NEXT_TAB, kAcceleratorNotification), NULL);
+  ASSERT_EQUAL(g_ui_runtime.focused, summary);
+  char draft[64]; send_message(summary, edGetText, sizeof(draft), draft);
+  ASSERT_STR_EQUAL(draft, "Draft survives docking");
+  gc_drag_view(left, 1, left, (ipoint16_t){left->frame.w / 2, left->frame.h - 4}, false);
+  pane_drop_t preview;
+  ASSERT_TRUE(pane_host_get_preview(changes, &preview)); ASSERT_EQUAL(preview.edge, PANE_BOTTOM);
+  send_message(changes, evLeftButtonUp, MAKEDWORD(preview.rect.x + preview.rect.w / 2, preview.rect.y + preview.rect.h - 4), NULL);
+  ASSERT_EQUAL(pane_host_count(changes), 2);
+  ASSERT_EQUAL(panel->parent, left); ASSERT_NOT_EQUAL(diff->parent, left);
+  ASSERT_EQUAL(diff->userdata, diff_state);
+  set_focus(summary); gc_set_view_mode(GC_TAB_HISTORY); gc_set_view_mode(GC_TAB_CHANGES);
+  ASSERT_EQUAL(g_ui_runtime.focused, summary);
+  ASSERT_EQUAL(pane_host_count(changes), 2);
+  send_message(summary, edSetText, 0, "Draft remains editable");
+  send_message(root, evCommand, MAKEDWORD(summary->id, ednChange), summary);
+  ASSERT_EQUAL(get_window_item(root, ID_CHANGES_PAGE_COMMIT_SUMMARY), summary);
+
+  gc_set_view_mode(GC_TAB_HISTORY);
+  window_t *log = g_test_state.log_win, *history_files = g_test_state.history_files_win;
+  window_t *log_pane = log->parent, *files_pane = history_files->parent;
+  ASSERT_EQUAL(log_pane->parent->id, ID_HISTORY_PAGE_LOG_FILES_SPLIT);
+  ASSERT_EQUAL(files_pane->parent, log_pane->parent);
+  ASSERT_TRUE(log_pane->frame.y < files_pane->frame.y);
+  window_t *stash_pane = g_test_state.stash_win->parent;
+  bool has_stash = send_message(g_test_state.stash_win, tvGetRecord, 0, NULL) != 0;
+  ASSERT_EQUAL(window_has_state(stash_pane, WINDOW_STATE_VISIBLE), has_stash);
+  ASSERT_TRUE(pane_host_move_tab(history, history_files, log_pane, PANE_CENTER, -1));
+  ASSERT_EQUAL(pane_host_count(history), 6);
+  ASSERT_EQUAL(g_test_state.history_files_win, history_files);
+  send_message(log_pane, tcSetSelection, 0, NULL);
+  send_message(log, RVM_SETSELECTION, 0, NULL);
+  tableview_handle_master_selection(root, log);
+  ASSERT_NOT_NULL((void *)send_message(history_files, tvGetRecord, 0, NULL));
+  ASSERT_EQUAL(history_files->context_menu_count, 0);
+  window_t *branches = g_test_state.branches_win;
+  ASSERT_EQUAL(branches->context_menu_count, CONTEXT_MENU_BRANCHES_COUNT);
+  set_focus(log);
+  ASSERT_TRUE(gc_pane_command(ID_VIEW_SPLIT_RIGHT));
+  ASSERT_EQUAL(pane_host_count(history), 7);
+  ASSERT_NOT_EQUAL(log->parent, history_files->parent);
+  ASSERT_TRUE(gc_pane_command(ID_VIEW_NEXT_PANE));
+  ASSERT_NOT_NULL(pane_host_active(history));
+  gc_refresh_all();
+  ASSERT_EQUAL(g_test_state.log_win, log); ASSERT_EQUAL(g_test_state.history_files_win, history_files);
+
+  // GitHub keeps the stacked default and can regroup without invoking network fetches.
+  gc_set_view_mode(GC_TAB_CHANGES);
+  git_repo_t *repo = g_test_state.repo; g_test_state.repo = NULL;
+  gc_set_view_mode(GC_TAB_GITHUB);
+  window_t *issues = g_test_state.github_issues_win, *pulls = g_test_state.github_pulls_win;
+  window_t *issues_panel = issues->parent, *pulls_panel = pulls->parent;
+  ASSERT_TRUE(issues_panel->parent->frame.y < pulls_panel->parent->frame.y);
+  ASSERT_TRUE(pane_host_move_tab(github, pulls_panel, issues_panel->parent, PANE_CENTER, -1));
+  ASSERT_EQUAL(pane_host_count(github), 1);
+  ASSERT_EQUAL(g_test_state.github_issues_win, issues); ASSERT_EQUAL(g_test_state.github_pulls_win, pulls);
+  ASSERT_TRUE(gc_pane_command(ID_VIEW_SPLIT_DOWN));
+  ASSERT_EQUAL(pane_host_count(github), 2);
+  g_test_state.repo = repo;
+  gc_set_view_mode(GC_TAB_CHANGES);
+  root->frame.w = 420; root->frame.h = 700; send_message(root, evResize, 0, NULL);
+  ASSERT_EQUAL(g_test_state.activity_win->dock->side, DOCK_BOTTOM);
+  ASSERT_EQUAL(pane_host_count(changes), 2);
+  send_message(summary, edGetText, sizeof(draft), draft); ASSERT_STR_EQUAL(draft, "Draft remains editable");
+  destroy_window(root);
+  destroy_database(g_test_state.history_db); destroy_database(g_test_state.changes_db); destroy_database(g_test_state.github_db);
+  ui_set_database(saved_db); test_env_shutdown(); ui_shutdown_graphics(); g_test_state = saved;
+  PASS();
+}
+
 int main(void) {
     if (!setup_repo()) {
         printf("ERROR: could not create test repository (is git in PATH?)\n");
@@ -859,6 +980,7 @@ int main(void) {
     test_reload_history_log_invalidates_diff_and_reports_failure();
     test_overview_close_filtered_cards();
     test_activitybar_navigation();
+    test_gitclient_pane_layout();
 
     gct_remove_dir(s_repo);
 

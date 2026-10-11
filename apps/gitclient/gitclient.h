@@ -331,6 +331,7 @@ void gc_show_worktrees_dialog(window_t *parent);
 void gc_show_reflog_dialog(window_t *parent);
 void gc_update_status(void);
 void gc_set_view_mode(int tab);
+bool gc_pane_command(uint16_t id);
 void gc_overview_refresh(void);
 void gc_overview_open(int index);
 void gc_overview_fetch_all(void);

@@ -33,7 +33,8 @@ takes mouse capture and displays a themed preview:
 
 Release to commit. Escape, pointer cancellation, resizing, or removal of the
 source/target cancels the preview; releasing outside all panes leaves the tree
-unchanged. Dragging is local to one PaneHost. A split must leave at least 96 logical
+unchanged. Hidden panes are skipped by drop targeting and active-pane fallback.
+Dragging is local to one PaneHost. A split must leave at least 96 logical
 pixels of width or 64 of height per new pane. Splitting a pane's only tab into
 itself is rejected. Existing SplitView dividers remain resizable.
 
@@ -74,3 +75,7 @@ reannounces retained focus to the new ancestors. Like the other descendant
 lifecycle notifications, detach handlers may update references but must not
 mutate the hierarchy. Containers explicitly arrange the result. `window_map_point`
 converts content coordinates between windows, including nested scroll offsets.
+
+Git Client uses a separate PaneHost inside each activity Page. Its initial split
+trees live in `gitclient.orion`; existing table and diff windows become tab
+contents, retaining their database bindings and command IDs when moved.

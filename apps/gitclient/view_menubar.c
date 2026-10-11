@@ -83,6 +83,10 @@ void gc_handle_command_impl(uint16_t id) {
   GC_LOG("gc_handle_command: id=%d", (int)id);
 
   switch (id) {
+    case ID_VIEW_NEXT_PANE: case ID_VIEW_NEXT_TAB: case ID_VIEW_MOVE_TAB:
+    case ID_VIEW_SPLIT_LEFT: case ID_VIEW_SPLIT_RIGHT: case ID_VIEW_SPLIT_UP: case ID_VIEW_SPLIT_DOWN:
+      gc_pane_command(id);
+      break;
     case ID_VIEW_WINDOW_MODE:
       if (window_is_maximized(gc->main_win)) restore_window(gc->main_win);
       else maximize_window(gc->main_win);

@@ -60,6 +60,32 @@ build/bin/gitclient /tmp/ws/work/api-gateway
 ![Overview](../../docs/screenshots/gitclient_overview.jpg)
 ![Focus](../../docs/screenshots/gitclient_focused.jpg)
 
+## Rearranging views
+
+Each activity page now contains Orion's [PaneHost](../../docs/pane-host.md).
+The initial split tree, orientations, and ratios remain declared in
+`gitclient.orion`:
+
+- Overview keeps the repository board and summary together.
+- Changes keeps its files and commit form on the left, with Diff on the right.
+- History keeps Branches, Tags, Stash, Worktrees, Commits, Files, and Diff in
+  their existing positions. The original Stash pane still hides when empty.
+- GitHub keeps Issues above Pull Requests.
+
+Drag a view's tab onto another pane to group the views, onto its TabBar to choose
+an insertion position, or near an edge to split. The snap overlay previews the
+result. Empty source panes collapse, and Escape cancels a drag. Each activity
+page keeps its own layout while switching pages. Layout changes last for the
+current app session; `.gitworkspace` continues to store repository paths.
+
+Moving a view preserves its actual controls, database bindings, selections,
+context menus, diff state, and commit draft. The Changes file list and commit
+form move together. The View menu also provides Focus Next Pane (Ctrl+Alt+Tab),
+Next View Tab (Ctrl+Tab), Move View to Next Pane (Ctrl+Shift+M), and directional
+split commands (right: Ctrl+Shift+E, below: Ctrl+Shift+O). On macOS the primary
+modifier is Command. Splitting separates the current tab from its group; for a
+single-tab pane it places the view beside the next visible pane.
+
 ## Architecture
 
 The application follows a **database-driven** pattern where the model layer defines data structures and the UI auto-populates from the database. Views contain minimal code — almost no manual population loops, no array management, no hardcoded column setup.
@@ -85,7 +111,8 @@ Views are bound to database columns in `gitclient.orion`. When you call `send_me
 
 | File | Purpose |
 |------|---------|
-| `gitclient.orion` | Declarative schema, capability map, shortcuts, toolbars, forms |
+| `gitclient.orion` | Declarative schema, capability map, shortcuts, toolbars, default pane trees and forms |
+| `view_panes.c` | Routes view-navigation and docking commands to PaneHost |
 | `datasource/gitclient_db.c` | Database procedure — in-memory tables populated from git |
 | `datasource/changes_database_proc.c` | Changes-tab adaptor — working-tree files from git status |
 | `datasource/github_database_proc.c` | GitHub adaptor — issues and PRs from the gh CLI |

@@ -7,11 +7,18 @@ void page_history_refresh_sidebar(void) {
   if (!gc || !gc->history_db) return;
   if (gc->stash_win) {
     send_message(gc->stash_win, tvRefresh, 0, NULL);
-    bool visible = send_message(gc->stash_win, tvGetRecord, 0, NULL) != 0;
-    if (visible != window_has_state(gc->stash_win, WINDOW_STATE_VISIBLE)) {
-      show_window(gc->stash_win, visible);
-      send_message(gc->stash_win->parent, evResize, 0, NULL);
-      invalidate_window(gc->stash_win->parent);
+    window_t *pane = gc->stash_win->parent;
+    bool original = pane && pane->id == ID_HISTORY_PAGE_STASH_LIST_TABS && pane->parent &&
+                    pane->parent->id == ID_HISTORY_PAGE_TAGS_STASH_SPLIT;
+    if (original) {
+      bool visible = send_message(pane, tcGetCount, 0, NULL) > 1 ||
+                     send_message(gc->stash_win, tvGetRecord, 0, NULL) != 0;
+      if (visible != window_has_state(pane, WINDOW_STATE_VISIBLE)) {
+        // Keep the original empty-stash collapse; TabView owns its tabs' visibility.
+        window_set_state(pane, WINDOW_STATE_VISIBLE, visible);
+        send_message(pane->parent, evResize, 0, NULL);
+        invalidate_window(pane->parent);
+      }
     }
   }
   gc->worktree_syncing = true;
