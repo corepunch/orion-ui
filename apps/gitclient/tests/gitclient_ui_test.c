@@ -768,6 +768,7 @@ void test_activitybar_navigation(void) {
   ASSERT_EQUAL(g_test_state.tab, GC_TAB_CHANGES);
   window_t *summary = get_window_item(host, ID_CHANGES_PAGE_COMMIT_SUMMARY);
   send_message(summary, edSetText, 0, "Keep this draft");
+  set_focus(summary);
   window_t *pages[] = {g_test_state.overview_page_win, g_test_state.changes_page_win,
                       g_test_state.history_page_win, g_test_state.github_page_win};
   const uint16_t commands[] = {ID_VIEW_OVERVIEW, ID_VIEW_CHANGES, ID_VIEW_HISTORY, ID_VIEW_GITHUB};
@@ -785,11 +786,36 @@ void test_activitybar_navigation(void) {
     }
     ASSERT_EQUAL(pages[view]->frame.x, bar->frame.w);
     ASSERT_EQUAL(pages[view]->frame.w, get_client_rect(host).w - bar->frame.w);
+    if (view == GC_TAB_CHANGES) ASSERT_EQUAL(g_ui_runtime.focused, summary);
   }
   send_message(host, evCommand, MAKEDWORD(ID_VIEW_CHANGES, kMenuBarNotificationItemClick), NULL);
   ASSERT_EQUAL(g_test_state.tab, GC_TAB_CHANGES);
   ASSERT_TRUE(toolbar_is_button_checked(bar, ID_VIEW_CHANGES));
+  ASSERT_EQUAL(g_ui_runtime.focused, summary);
+  send_message(host, evCommand, MAKEDWORD(ID_VIEW_HISTORY, kAcceleratorNotification), NULL);
+  ASSERT_EQUAL(g_test_state.tab, GC_TAB_HISTORY);
+  ASSERT_TRUE(toolbar_is_button_checked(bar, ID_VIEW_HISTORY));
+  gc_set_view_mode(GC_TAB_CHANGES);
+  ASSERT_EQUAL(g_ui_runtime.focused, summary);
   char draft[64];
+  send_message(summary, edGetText, sizeof(draft), draft);
+  ASSERT_STR_EQUAL(draft, "Keep this draft");
+  host->frame.w = 420; host->frame.h = 700;
+  send_message(host, evResize, 0, NULL);
+  ASSERT_EQUAL(bar->dock->side, DOCK_BOTTOM);
+  ASSERT_EQUAL(tb->orientation, TOOLBAR_HORIZONTAL);
+  for (int view = 0; view < ARRAY_LEN(pages); view++) {
+    irect16_t item;
+    ASSERT_TRUE(send_message(bar, tbGetItemRect, commands[view], &item));
+    uint32_t point = MAKEDWORD(item.x + item.w / 2, item.y + item.h / 2);
+    send_message(bar->toolbar, evLeftButtonDown, point, NULL);
+    send_message(bar->toolbar, evLeftButtonUp, point, NULL);
+    ASSERT_EQUAL(window_active_page(host), pages[view]);
+    ASSERT_EQUAL(pages[view]->frame.w, get_client_rect(host).w);
+    ASSERT_EQUAL(pages[view]->frame.h, get_client_rect(host).h - bar->frame.h);
+  }
+  gc_set_view_mode(GC_TAB_CHANGES);
+  ASSERT_EQUAL(g_ui_runtime.focused, summary);
   send_message(summary, edGetText, sizeof(draft), draft);
   ASSERT_STR_EQUAL(draft, "Keep this draft");
   host->frame.w = 600; host->frame.h = 400;

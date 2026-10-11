@@ -1,5 +1,5 @@
 // Win32-style tab control. Direct children are pages; each child's title is
-// used as its tab label and only the selected page is visible.
+// used as its TabBar label and only the selected page is visible.
 //
 // Icons are set per-tab via tcSetImageStrip (bitmap_strip_t*) + tcSetTabIcon
 // (tab_index, icon_index).  When icons are present the tab header height
@@ -16,8 +16,14 @@
 #include "commctl.h"
 #include <stdio.h>
 
+typedef struct tab_focus_s {
+  window_t *page, *focus;
+  struct tab_focus_s *next;
+} tab_focus_t;
+
 typedef struct {
-  int selected;
+  int selected, scroll;
+  tab_focus_t *focus;
   uint32_t style;
   bitmap_strip_t strip;
   int *tab_icons;
@@ -49,6 +55,63 @@ static window_t *tab_page(window_t *win, int index) {
   int i = 0;
   FOR_EACH_PAGE(win, st, c) if (i++ == index) return c;
   return NULL;
+}
+
+static void tab_remember_focus(window_t *win, window_t *focus) {
+  tabview_state_t *st = win->userdata;
+  if (!st || !(st->style & TAB_STYLE_RESTORE_FOCUS)) return;
+  window_t *page = focus;
+  while (page && page->parent != win) page = page->parent;
+  if (!page || page == st->list || page != tab_page(win, st->selected)) return;
+  tab_focus_t *entry = st->focus;
+  while (entry && entry->page != page) entry = entry->next;
+  if (!entry) {
+    entry = calloc(1, sizeof(*entry));
+    if (!entry) {
+      fprintf(stderr, "[tv] focus allocation failed win=%u page=%u\n", win->id, page->id);
+      fflush(stderr); return;
+    }
+    entry->page = page; entry->next = st->focus; st->focus = entry;
+  }
+  entry->focus = focus;
+}
+
+static bool tab_focusable(window_t *page, window_t *focus) {
+  if (!focus || !is_window(focus) || (focus->flags & WINDOW_NOTABSTOP)) return false;
+  for (window_t *p = focus; p; p = p->parent) {
+    if (!window_has_state(p, WINDOW_STATE_VISIBLE) || window_has_state(p, WINDOW_STATE_DISABLED)) return false;
+    if (p == page) return true;
+  }
+  return false;
+}
+
+static window_t *tab_first_focus(window_t *page) {
+  if (!window_has_state(page, WINDOW_STATE_VISIBLE) || window_has_state(page, WINDOW_STATE_DISABLED)) return NULL;
+  for (window_t *c = page->children; c; c = c->next) {
+    window_t *focus = tab_first_focus(c);
+    if (focus) return focus;
+  }
+  return !(page->flags & WINDOW_NOTABSTOP) ? page : NULL;
+}
+
+static void tab_restore_focus(window_t *win) {
+  tabview_state_t *st = win->userdata;
+  if (!st || !(st->style & TAB_STYLE_RESTORE_FOCUS)) return;
+  window_t *page = tab_page(win, st->selected), *focus = NULL;
+  if (!page) return;
+  for (tab_focus_t *entry = st->focus; entry; entry = entry->next)
+    if (entry->page == page) focus = entry->focus;
+  if (!tab_focusable(page, focus)) focus = tab_first_focus(page);
+  set_focus(focus ? focus : win);
+}
+
+static void tab_forget_window(tabview_state_t *st, window_t *win) {
+  for (tab_focus_t **p = &st->focus; *p;) {
+    tab_focus_t *entry = *p;
+    if (entry->page == win) { *p = entry->next; free(entry); continue; }
+    if (entry->focus == win) entry->focus = NULL;
+    p = &entry->next;
+  }
 }
 
 static int tab_header_height(tabview_state_t *st) {
@@ -167,6 +230,18 @@ static void tab_arrange(window_t *win) {
     st->list->frame.w = sidebar_width(win, st); // the scrollbar may have just appeared
     page_rect = tab_page_rect(win, st, get_client_rect(win));
   }
+  if (!is_sidebar(st)) {
+    int x = 2, selected_x = 2, selected_w = 0, idx = 0, width = get_client_rect(win).w;
+    FOR_EACH_PAGE(win, st, c) {
+      int w = tab_width(c, st, idx);
+      if (idx++ == st->selected) { selected_x = x; selected_w = w; }
+      x += w + 1;
+    }
+    if (selected_x - st->scroll < 2) st->scroll = selected_x - 2;
+    else if (selected_x + selected_w - st->scroll > width)
+      st->scroll = selected_x + selected_w - width;
+    st->scroll = MAX(0, MIN(st->scroll, MAX(0, x - width)));
+  }
   int i = 0;
   FOR_EACH_PAGE(win, st, c) {
     bool visible = i++ == st->selected;
@@ -191,10 +266,12 @@ static bool tab_select(window_t *win, int index, bool notify) {
     fflush(stderr);
     return false;
   }
-  if (index == st->selected) return false;
+  tab_remember_focus(win, g_ui_runtime.focused);
+  if (index == st->selected) { tab_arrange(win); tab_restore_focus(win); return false; }
   st->selected = index;
   if (is_sidebar(st) && st->list) sidebar_reveal(win, st, index);
   tab_arrange(win);
+  tab_restore_focus(win);
   invalidate_window(win);
   if (notify && win->parent)
     send_message(win->parent, evCommand, MAKEDWORD((uint16_t)win->id, tcnSelChange), win);
@@ -228,6 +305,7 @@ static result_t win_tabview_list(window_t *win, uint32_t msg, uint32_t wparam, v
     }
     case evLeftButtonDown: {
       ipoint16_t pt = { (int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam) };
+      tab_remember_focus(tabs, g_ui_runtime.focused);
       set_focus(tabs);
       for (int i = 0, n = tab_count(tabs); i < n; i++)
         if (rect_contains_point(sidebar_row(tabs, st, i), pt)) { tab_select(tabs, i, true); break; }
@@ -257,9 +335,9 @@ static bool tab_paint(window_t *win) {
   theme_draw(THEME_PART_TAB_BAR, rect_split_top(cr, th), CTRL_NORMAL);
   if (!st) return true;
 
-  int selected_x = 2;
+  int selected_x = 2 - st->scroll;
   window_t *selected = NULL;
-  int x = 2, i = 0;
+  int x = 2 - st->scroll, i = 0;
   FOR_EACH_PAGE(win, st, c) {
     if (i == st->selected) { selected = c; selected_x = x; }
     else draw_tab_item(c, x, false, st, i);
@@ -312,6 +390,14 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       }
       st->selected = 0;
       return true;
+    case evDescendantFocus:
+      tab_remember_focus(win, lparam); return true;
+    case evDescendantDestroy:
+      if (st) tab_forget_window(st, lparam);
+      return true;
+    case evSetFocus:
+      if (g_ui_runtime.focused == win) tab_restore_focus(win);
+      return true;
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m) { m->desired_w = 200; m->desired_h = 200; }
@@ -336,10 +422,10 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (is_sidebar(st)) return false;
       int th = tab_header_height(st);
       if (my < 0 || my >= th) return false;
-      int left = 2, i = 0;
+      int left = 2 - st->scroll, i = 0;
       FOR_EACH_PAGE(win, st, c) {
         int w = tab_width(c, st, i);
-        if (mx >= left && mx < left + w) { set_focus(win); tab_select(win, i, true); return true; }
+        if (mx >= left && mx < left + w) { tab_remember_focus(win, g_ui_runtime.focused); set_focus(win); tab_select(win, i, true); return true; }
         left += w + 1;
         i++;
       }
@@ -367,8 +453,47 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       }
       return (result_t)(intptr_t)page;
     }
+    case tcGetTabRect: {
+      int index = (int)wparam, x = 2 - (st ? st->scroll : 0), i = 0;
+      if (!st || !lparam || index < 0 || index >= tab_count(win)) {
+        fprintf(stderr, "[tv] get_tab_rect rejected win=%u index=%d\n", win->id, index);
+        fflush(stderr); return false;
+      }
+      if (is_sidebar(st)) {
+        *(irect16_t *)lparam = rect_offset(sidebar_row(win, st, index), 0, -get_scroll_pos(st->list, SB_VERT));
+        return true;
+      }
+      FOR_EACH_PAGE(win, st, c) {
+        int width = tab_width(c, st, i);
+        if (i++ == index) { *(irect16_t *)lparam = R(x, 0, width, tab_header_height(st)); return true; }
+        x += width + 1;
+      }
+      return false;
+    }
+    case tcDeletePage: {
+      int index = (int)wparam;
+      window_t *page = st ? tab_page(win, index) : NULL;
+      if (!page) {
+        fprintf(stderr, "[tv] delete_page rejected win=%u index=%d count=%d\n", win->id, index, tab_count(win));
+        fflush(stderr); return false;
+      }
+      bool had_focus = false;
+      for (window_t *p = g_ui_runtime.focused; p; p = p->parent) had_focus |= p == win;
+      if (index < st->selected) st->selected--;
+      if (index < st->tab_icon_count) {
+        memmove(st->tab_icons + index, st->tab_icons + index + 1,
+                (size_t)(st->tab_icon_count - index - 1) * sizeof(int));
+        st->tab_icon_count--;
+      }
+      destroy_window(page);
+      tab_arrange(win);
+      if (had_focus) tab_restore_focus(win);
+      invalidate_window(win);
+      if (win->parent) send_message(win->parent, evCommand, MAKEDWORD(win->id, tcnSelChange), win);
+      return true;
+    }
     case tcSetStyle: {
-      const uint32_t known = TAB_STYLE_ICONS_ONLY | TAB_STYLE_SIDEBAR;
+      const uint32_t known = TAB_STYLE_ICONS_ONLY | TAB_STYLE_SIDEBAR | TAB_STYLE_RESTORE_FOCUS;
       if (!st || (wparam & ~known)) {
         fprintf(stderr, "[tv] set_style rejected win=%u style=0x%x reason=%s\n",
                 win ? (unsigned)win->id : 0, (unsigned)wparam,
@@ -427,7 +552,11 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return true;
     case evParentNotify: return win->parent ? send_message(win->parent, msg, wparam, lparam) : false;
     case evDestroy:
-      if (st) tab_cleanup_icons(st);
+      if (st) {
+        tab_cleanup_icons(st);
+        while (st->focus) { tab_focus_t *entry = st->focus; st->focus = entry->next; free(entry); }
+        free(st); win->userdata = NULL;
+      }
       return true;
     default: return false;
   }

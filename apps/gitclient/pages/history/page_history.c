@@ -39,6 +39,7 @@ result_t page_history_proc(window_t *win, uint32_t msg,
 
   gc_state_t *gc = g_gc;
   if (!gc) return false;
+  gc->history_page_win = win;
 
   gc->branches_win      = get_window_item(win, ID_HISTORY_PAGE_BRANCHES);
   gc->tags_win          = get_window_item(win, ID_HISTORY_PAGE_TAGS);

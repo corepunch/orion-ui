@@ -7,12 +7,13 @@
 #include "pages/github/page_github.h"
 #include <orion/user/vga_font.h>
 #include <orion/commctl/menubar.h>
-#include <orion/user/dock.h>
 #include <sys/stat.h>
 
 // ============================================================
 // Open / refresh
 // ============================================================
+
+static const uint16_t k_gc_view_commands[] = {ID_VIEW_OVERVIEW, ID_VIEW_CHANGES, ID_VIEW_HISTORY, ID_VIEW_GITHUB};
 
 void gc_set_view_mode(int tab) {
   gc_state_t *gc = g_gc; if (!gc || !gc->main_win) return;
@@ -21,28 +22,20 @@ void gc_set_view_mode(int tab) {
     fflush(stderr);
     return;
   }
-  if (gc->tab != GC_TAB_OVERVIEW && tab == GC_TAB_OVERVIEW) gc->focus_tab = gc->tab ? gc->tab : GC_TAB_CHANGES;
-  gc->tab = tab;
-  gc_diff_invalidate();   // each page owns its own diff window
-  gc->history_mode = (tab == GC_TAB_HISTORY);
-  static const uint16_t view_commands[] = {ID_VIEW_OVERVIEW, ID_VIEW_CHANGES, ID_VIEW_HISTORY, ID_VIEW_GITHUB};
-  if (gc->activity_win) send_message(gc->activity_win, tbCheckButton, view_commands[tab], (void *)(intptr_t)1);
+  page_host_select(gc->main_win, k_gc_view_commands[tab]);
+}
 
-  window_t *page = tab == GC_TAB_OVERVIEW ? gc->overview_page_win :
-                   tab == GC_TAB_CHANGES  ? gc->changes_page_win :
-                   tab == GC_TAB_HISTORY  ? gc->history_page_win :
-                   tab == GC_TAB_GITHUB   ? gc->github_page_win : NULL;
-  if (page) set_host_page(gc->main_win, page);
-  window_t *pages[] = {gc->overview_page_win, gc->changes_page_win, gc->history_page_win, gc->github_page_win};
-  for (int i = 0; i < ARRAY_LEN(pages); i++)
-    if (pages[i]) show_window(pages[i], pages[i] == page);
+static void gc_view_activated(int tab) {
+  gc_state_t *gc = g_gc;
+  gc->tab = tab;
+  gc_diff_invalidate();
+  gc->history_mode = (tab == GC_TAB_HISTORY);
 
   switch (tab) {
     case GC_TAB_OVERVIEW:
       gc->files_win = NULL;
       gc->diff_win  = NULL;
       gc_overview_refresh();
-      if (gc->board_win) set_focus(gc->board_win);
       break;
     case GC_TAB_CHANGES:
       gc->files_win = gc->changes_files_win;
@@ -288,22 +281,14 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       gc->main_win = win;
 
       gc->activity_win = get_window_item(win, ID_MAIN_WINDOW_ACTIVITY);
-      if (gc->activity_win)
-        dock_window(gc->activity_win, DOCK_LEFT, DOCK_EDGE(DOCK_LEFT), DOCK_TOOLBAR | DOCK_NOFLOAT, 0, 0);
-      gc->overview_page_win = create_window_from_form(
-        &gc_overview_page_form, 0, 0, win, gc_page_overview_proc, gc->hinstance, NULL);
-      gc->changes_page_win = create_window_from_form(
-        &gc_changes_page_form, 0, 0, win, page_changes_proc, gc->hinstance, NULL);
-      gc->history_page_win = create_window_from_form(
-        &gc_history_page_form, 0, 0, win, page_history_proc, gc->hinstance, NULL);
-      gc->github_page_win = create_window_from_form(
-        &gc_github_page_form, 0, 0, win, page_github_proc, gc->hinstance, NULL);
-      window_t *pages[] = {gc->overview_page_win, gc->changes_page_win, gc->history_page_win, gc->github_page_win};
-      for (int i = 0; i < ARRAY_LEN(pages); i++)
-        if (pages[i]) dock_window(pages[i], DOCK_FILL, 0, DOCK_NOFLOAT, 0, 0);
-
+      static const page_handler_t pages[] = {
+        {"overview_page", gc_page_overview_proc},
+        {"changes_page",  page_changes_proc},
+        {"history_page",  page_history_proc},
+        {"github_page",   page_github_proc},
+      };
       send_message(win, evStatusBar, 0, "No repository");
-      gc_set_view_mode(GC_TAB_CHANGES);
+      if (!page_host_init(win, &gc_main_window_form, pages, ARRAY_LEN(pages))) return false;
 
       char font_path[600];
       snprintf(font_path, sizeof(font_path),
@@ -318,6 +303,11 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       vga_font_shutdown();
       git_repo_close(gc->repo);
       gc->repo = NULL;
+      return false;
+
+    case evPageChanged:
+      for (int i = 0; i < ARRAY_LEN(k_gc_view_commands); i++)
+        if (k_gc_view_commands[i] == wparam) { gc_view_activated(i); return true; }
       return false;
 
     case evActivate:

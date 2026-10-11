@@ -172,6 +172,7 @@ static void rebuild_board(void) {
 result_t gc_page_overview_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   (void)wparam; (void)lparam;
   if (msg != evCreate || !g_gc) return false;
+  g_gc->overview_page_win = win;
   g_gc->summary_win = get_window_item(win, ID_OVERVIEW_PAGE_SUMMARY);
   g_gc->board_win   = get_window_item(win, ID_OVERVIEW_PAGE_BOARD);
   return true;

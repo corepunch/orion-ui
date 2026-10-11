@@ -139,6 +139,10 @@ struct vgat_state_s {
 
 extern const vgat_cmd_t g_cmds[];
 
+result_t terminal_workspace_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+bool terminal_workspace_command(window_t *page, uint32_t command);
+window_t *terminal_workspace_terminal(window_t *page, int pane);
+
 result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 bool terminal_run_lua_file(vgat_state_t *st, const char *path);
 bool terminal_start_script(window_t *win, const char *path);

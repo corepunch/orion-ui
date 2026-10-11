@@ -220,7 +220,6 @@ typedef struct {
   hinstance_t hinstance;
   bool history_mode;
   int tab;
-  int focus_tab;
   git_summary_t tiles[GC_MAX_TILES];
   int tile_count;
   bool fetching_all;

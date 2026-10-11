@@ -88,7 +88,7 @@ void gc_handle_command_impl(uint16_t id) {
       else maximize_window(gc->main_win);
       break;
     case ID_VIEW_OVERVIEW:
-      gc_set_view_mode(gc->tab == GC_TAB_OVERVIEW && gc->repo ? gc->focus_tab : GC_TAB_OVERVIEW);
+      gc_set_view_mode(GC_TAB_OVERVIEW);
       break;
     case ID_VIEW_CHANGES: gc_set_view_mode(GC_TAB_CHANGES); break;
     case ID_VIEW_HISTORY: gc_set_view_mode(GC_TAB_HISTORY); break;

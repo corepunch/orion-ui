@@ -8,7 +8,7 @@ canonical way to build application-level and per-window toolbars.
 
 ### Activity bars
 
-An activity bar is a vertical navigation toolbar. It uses the same button size
+An activity bar is a navigation toolbar, vertical by default. It uses the same button size
 as PencilTest's tool palette (`TB_SPACING`), theme painting, tooltips, and
 `TBSTYLE_CHECKGROUP` selection that Groove uses for its instrument filters.
 Buttons send ordinary `evCommand` / `btnClicked` notifications to the parent;
@@ -32,6 +32,13 @@ an authored filled variant while selected; `icon` remains the outline variant.
 Dock the control with
 `DOCK_LEFT`, `DOCK_TOOLBAR | DOCK_NOFLOAT`; dock the app's pages with `DOCK_FILL`
 and show the active page. The dock manager owns sizing and resizing.
+
+For page navigation, use [PageHost](page-host.md). Its ActivityBar lists
+`<Page form="form_name" command="view.command" />` references; each page form
+supplies `title`, `icon`, `checked-icon`, `tooltip`, and `focus`. The host's
+`active-page` chooses the initial destination. PageHost generates the buttons,
+synchronizes selection and focus, and docks the bar left in landscape or bottom
+in portrait. Standalone activity bars retain their ordinary toolbar behavior.
 
 ### Toolbar bands
 

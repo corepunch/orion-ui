@@ -10,6 +10,7 @@
 
 #include "user.h"
 #include "dock.h"
+#include "page_host.h"
 #include "messages.h"
 #include "draw.h"
 #include "theme.h"
@@ -536,8 +537,11 @@ void destroy_window(window_t *win) {
     set_host_page(window_page_host(win), NULL);
   if (g_ui_runtime.tracked == win) track_mouse(NULL);
   dock_forget_window(win);
+  for (window_t *p = win->parent; p; p = p->parent)
+    send_message(p, evDescendantDestroy, 0, win);
   send_message(win, evDestroy, 0, NULL);
   if (g_ui_runtime.focused == win) set_focus(NULL);
+  page_host_forget_window(win);
   if (g_ui_runtime.captured == win) set_capture(NULL);
   if (g_ui_runtime.tracked_toolbar == win) g_ui_runtime.tracked_toolbar = NULL;
   if (g_ui_runtime.dragging == win) g_ui_runtime.dragging = NULL;
@@ -689,6 +693,7 @@ void set_focus(window_t* win) {
   if (win == g_ui_runtime.focused)
     return;
   if (g_ui_runtime.focused) {
+    page_host_remember_focus(g_ui_runtime.focused);
     window_set_state(g_ui_runtime.focused, WINDOW_STATE_EDITING, false);
     post_message(g_ui_runtime.focused, evKillFocus, 0, win);
     invalidate_window_chrome(g_ui_runtime.focused);
@@ -698,6 +703,8 @@ void set_focus(window_t* win) {
     invalidate_window_chrome(win);
   }
   g_ui_runtime.focused = win;
+  for (window_t *p = win ? win->parent : NULL; p; p = p->parent)
+    send_message(p, evDescendantFocus, 0, win);
 }
 
 // Invalidate window (request repaint).

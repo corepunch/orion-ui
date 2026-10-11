@@ -135,8 +135,51 @@ void test_tabview_sidebar_scrolls_with_framework_scrollbar(void) {
   destroy_window(host); test_env_shutdown(); PASS();
 }
 
+static void test_tabview_session_focus_and_removal(void) {
+  TEST("TabView restores focus, forgets destroyed controls and keeps the selected tab visible");
+  test_env_init();
+  window_t *tabs = create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 180, 200), NULL, "TabView", 0, NULL);
+  window_t *pages[8], *edits[8];
+  for (int i = 0; i < 8; i++) {
+    char title[32]; snprintf(title, sizeof(title), "Session %d", i + 1);
+    pages[i] = create_window(title, WINDOW_NOTITLE, MAKERECT(0, 0, 100, 100), tabs, page_proc, 0, NULL);
+    edits[i] = create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 80, 24), pages[i], "TextEdit", 0, NULL);
+  }
+  ASSERT_TRUE(send_message(tabs, tcSetStyle, TAB_STYLE_RESTORE_FOCUS, NULL));
+  ASSERT_TRUE(send_message(tabs, tcSetSelection, 0, NULL));
+  ASSERT_EQUAL(g_ui_runtime.focused, edits[0]);
+  window_t *alternate = create_window("", WINDOW_NOTITLE, MAKERECT(0, 30, 80, 24), pages[0], "TextEdit", 0, NULL);
+  set_focus(alternate);
+  ASSERT_TRUE(send_message(tabs, tcSetSelection, 7, NULL));
+  ASSERT_EQUAL(g_ui_runtime.focused, edits[7]);
+  irect16_t r;
+  ASSERT_TRUE(send_message(tabs, tcGetTabRect, 7, &r));
+  ASSERT_TRUE(r.x >= 0 && r.x + r.w <= get_client_rect(tabs).w);
+  ASSERT_TRUE(send_message(tabs, tcSetSelection, 0, NULL));
+  ASSERT_EQUAL(g_ui_runtime.focused, alternate);
+  ASSERT_TRUE(send_message(tabs, tcGetTabRect, 0, &r));
+  ASSERT_EQUAL(r.x, 2);
+  ASSERT_TRUE(send_message(tabs, tcSetSelection, 7, NULL));
+  destroy_window(alternate);
+  ASSERT_TRUE(send_message(tabs, tcSetSelection, 0, NULL));
+  ASSERT_EQUAL(g_ui_runtime.focused, edits[0]);
+  ASSERT_TRUE(send_message(tabs, tcSetSelection, 7, NULL));
+  ASSERT_TRUE(send_message(tabs, tcDeletePage, 0, NULL));
+  ASSERT_EQUAL(send_message(tabs, tcGetSelection, 0, NULL), 6);
+  ASSERT_EQUAL(send_message(tabs, tcGetPage, 6, NULL), (intptr_t)pages[7]);
+  ASSERT_EQUAL(g_ui_runtime.focused, edits[7]);
+  ASSERT_FALSE(send_message(tabs, tcDeletePage, 50, NULL));
+  ASSERT_EQUAL(send_message(tabs, tcGetCount, 0, NULL), 7);
+  ASSERT_TRUE(send_message(tabs, tcDeletePage, 6, NULL));
+  ASSERT_EQUAL(g_ui_runtime.focused, edits[6]);
+  destroy_window(tabs);
+  ASSERT_NULL(g_ui_runtime.focused);
+  test_env_shutdown(); PASS();
+}
+
 int main(void) {
   TEST_START("TabView tests");
+  test_tabview_session_focus_and_removal();
   test_tabview_selects_and_arranges_pages();
   test_tabview_sidebar_lists_tabs_vertically();
   test_tabview_sidebar_scrolls_with_framework_scrollbar();

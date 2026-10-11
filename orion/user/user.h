@@ -118,6 +118,7 @@ typedef struct toolbar_state_s {
   toolbar_item_t *items;          // owned copy of the item descriptors (malloc'd)
   int             item_count;     // number of items in items[]
   irect16_t      *item_rects;     // computed band-relative rect per item (malloc'd)
+  char           *item_texts;         // owned label string storage
   char          (*item_tooltips)[256]; // owned tooltip string copies (parallel to items)
   char          (*item_icons)[64];     // owned icon name copies for dynamically-built items
   char          (*item_checked_icons)[64]; // owned checked_icon copies (parallel to items)
@@ -272,7 +273,7 @@ typedef struct form_ctrl_def_s {
 // When provided and show_ddx_dialog() is used instead of show_dialog_from_form(),
 // no custom window proc is required: controls are populated on create, and the
 // OK / Cancel buttons end the dialog automatically.
-typedef struct {
+typedef struct form_def_s {
   const char             *name;        // window title
   int                     width, height; // client area dimensions
   flags_t                 flags;       // window flags
@@ -296,6 +297,10 @@ typedef struct {
   int                     db_table_id;   // TABLE_* enum value
   const void             *db_fields;     // db_field_meta_t array for this table
   int                     db_field_count; // number of fields in db_fields[]
+  const struct page_binding_s *page_bindings;
+  int                     page_binding_count;
+  uint32_t                initial_page;
+  const char             *icon, *checked_icon, *tooltip; // page navigation metadata
 } form_def_t;
 
 // Declarative database API metadata emitted from .orion documents.
@@ -560,6 +565,7 @@ typedef struct window_pages_s {
   window_t *host;                         // PAGE: host currently projecting it
   const toolbar_item_t *toolbar_items;    // PAGE: declarative toolbar contribution; not owned
   int toolbar_count;
+  struct page_host_s *page_host;
 } window_pages_t;
 
 static inline window_t *window_active_page(const window_t *host) { return host && host->pages ? host->pages->active_page : NULL; }

@@ -223,17 +223,15 @@
     </plugins>
 
     <forms>
-        <form name="main_window" title="Git Client" width="960" height="640" role="host" flags="statusbar" spacing="0">
+        <form name="main_window" title="Git Client" width="960" height="640" role="host" active-page="changes_page" flags="statusbar" spacing="0">
             <ActivityBar name="activity" flags="notitle">
-                <Toolbar>
-                    <Button name="overview" command="view.overview" icon="gc-nav-overview" checked-icon="gc-nav-overview-fill" text="Overview" tooltip="All repositories (Ctrl+0)" />
-                    <Button name="changes" command="view.changes" icon="gc-nav-changes" checked-icon="gc-nav-changes-fill" text="Changes" tooltip="Working tree (Ctrl+1)" />
-                    <Button name="history" command="view.history" icon="gc-nav-history" checked-icon="gc-nav-history-fill" text="History" tooltip="Commit history (Ctrl+2)" />
-                    <Button name="github" command="view.github" icon="gc-nav-github" checked-icon="gc-nav-github-fill" text="GitHub" tooltip="Issues and pull requests (Ctrl+3)" />
-                </Toolbar>
+                <Page form="overview_page" command="view.overview" />
+                <Page form="changes_page" command="view.changes" />
+                <Page form="history_page" command="view.history" />
+                <Page form="github_page" command="view.github" />
             </ActivityBar>
         </form>
-        <form name="overview_page" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
+        <form name="overview_page" title="Overview" icon="gc-nav-overview" checked-icon="gc-nav-overview-fill" tooltip="All repositories (Ctrl+0)" focus="board" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <requires library="gitclient_components" />
             <StackView name="summary" orientation="horizontal" spacing="6" padding="14 10 14 2" />
             <TileGrid name="board" flags="notitle,nofill,vscroll,flexspace" spacing="6" padding="10 6 10 10" />
@@ -245,7 +243,7 @@
                 <Button name="close" text="" width="16" control-size="small" />
             </StackView>
         </form>
-        <form name="changes_page" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
+        <form name="changes_page" title="Changes" icon="gc-nav-changes" checked-icon="gc-nav-changes-fill" tooltip="Working tree (Ctrl+1)" focus="changes_files" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <requires library="gitclient_components" />
             <SplitView name="changes_split" split-ratio="0.30" flags="flexspace">
                 <StackView name="changes_panel" spacing="4" padding="4">
@@ -264,7 +262,7 @@
                 <DiffView name="changes_diff" flags="notitle,nofill,vscroll,flexspace"/>
             </SplitView>
         </form>
-        <form name="history_page" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
+        <form name="history_page" title="History" icon="gc-nav-history" checked-icon="gc-nav-history-fill" tooltip="Commit history (Ctrl+2)" focus="log" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <requires library="gitclient_components" />
             <SplitView name="history_main_split" flags="flexspace">
                 <SplitView name="left_split" orientation="vertical" flags="flexspace" width="180">
@@ -306,7 +304,7 @@
                 </SplitView>
             </SplitView>
         </form>
-        <form name="github_page" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
+        <form name="github_page" title="GitHub" icon="gc-nav-github" checked-icon="gc-nav-github-fill" tooltip="Issues and pull requests (Ctrl+3)" focus="issues" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <SplitView name="github_split" orientation="vertical" flags="flexspace">
                 <StackView name="issues_panel" spacing="4" padding="4">
                     <Label text="Issues" />

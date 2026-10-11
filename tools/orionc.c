@@ -226,7 +226,8 @@ static void read_control_attrs(xmlNodePtr n, attrs_t *a) {
 static void free_attrs(attrs_t *a) { for (int i = 0; i < ARRAY_LEN(a->v); i++) free(a->v[i]); }
 static bool is_control(xmlNodePtr parent, xmlNodePtr n) {
   return n && n->type == XML_ELEMENT_NODE && !elem(n, "requires") && !elem(n, "toolbar") &&
-         !(elem(parent, "tableview") && elem(n, "column"));
+         !(elem(parent, "tableview") && elem(n, "column")) &&
+         !(elem(parent, "activitybar") && elem(n, "page"));
 }
 static bool has_controls(xmlNodePtr n) { EACH_ELEMENT(c, n) if (is_control(n, c)) return true; return false; }
 
@@ -413,7 +414,20 @@ static void collect_control_ids(ids_t *ids, xmlNodePtr parent, const char *form)
 
 static void collect_activitybar_ids(ids_t *ids, cmd_refs_t *refs, xmlNodePtr parent, const char *scope) {
   EACH_ELEMENT(c, parent) if (is_control(parent, c)) {
-    if (elem(c, "activitybar")) collect_toolbar_ids(ids, refs, child(c, "toolbar"), scope);
+    if (elem(c, "activitybar")) {
+      collect_toolbar_ids(ids, refs, child(c, "toolbar"), scope);
+      EACH_ELEMENT(page, c) if (elem(page, "page")) {
+        char *command = attr(page, "command"), *name = attr(page, "form"), id[256];
+        if (resolve_action(id, sizeof(id), command, NULL, scope, name, name)) {
+          if (refs && refs->n < ORIONC_MAX_IDS) {
+            snprintf(refs->v[refs->n].name, ORIONC_MAX_IDENT, "%s", command);
+            snprintf(refs->v[refs->n].id, ORIONC_MAX_IDENT, "%s", id);
+            refs->n++;
+          }
+        } else add_id(ids, id);
+        free(command); free(name);
+      }
+    }
     collect_activitybar_ids(ids, refs, c, scope);
   }
 }
@@ -973,6 +987,130 @@ static void emit_bindings(FILE *f, const char *prefix, const char *form, const b
   LINE("};\n\n");
 }
 
+static xmlNodePtr activity_find_form(xmlNodePtr forms, const char *name) {
+  EACH_ELEMENT(form, forms) if (elem(form, "form")) {
+    char *candidate = attr(form, "name");
+    bool match = candidate && name && eq(candidate, name);
+    free(candidate);
+    if (match) return form;
+  }
+  return NULL;
+}
+
+static bool activity_control_id(xmlNodePtr parent, const char *form, const char *name, char *out, size_t cap) {
+  int ordinal = 0;
+  EACH_ELEMENT(c, parent) if (is_control(parent, c)) {
+    char *candidate = attr(c, "name");
+    bool match = candidate && eq(candidate, name);
+    if (match) control_id(out, cap, form, candidate, (char *)c->name, ordinal);
+    free(candidate);
+    if (match || activity_control_id(c, form, name, out, cap)) return true;
+    ordinal++;
+  }
+  return false;
+}
+
+static bool activity_form_needed(xmlNodePtr form, xmlNodePtr forms, const char *only) {
+  if (!only) return true;
+  char *name = attr(form, "name");
+  bool needed = eq(nz(name, ""), only);
+  xmlNodePtr host = activity_find_form(forms, only);
+  EACH_ELEMENT(bar, host) if (elem(bar, "activitybar")) {
+    xmlNodePtr toolbar = child(bar, "toolbar");
+    EACH_ELEMENT(button, toolbar ? toolbar : bar) {
+      char *page = attr(button, toolbar ? "page" : "form");
+      needed |= page && name && eq(page, name);
+      free(page);
+    }
+  }
+  free(name);
+  return needed;
+}
+
+static bool activity_binding_locations(xmlNodePtr form, xmlNodePtr parent) {
+  EACH_ELEMENT(node, parent) {
+    if (elem(node, "activitybar") && node->parent != form) {
+      xmlNodePtr toolbar = child(node, "toolbar");
+      EACH_ELEMENT(button, toolbar ? toolbar : node) if (elem(button, "page") || xmlHasProp(button, BAD_CAST "page")) {
+        fprintf(stderr, "orionc: bound ActivityBar must be a direct child of its host form\n");
+        return false;
+      }
+    }
+    if (!activity_binding_locations(form, node)) return false;
+  }
+  return true;
+}
+
+static int emit_page_bindings(FILE *f, xmlNodePtr form, const char *prefix, const char *form_id, char *initial, size_t initial_cap) {
+  if (!activity_binding_locations(form, form)) return -1;
+  char *role = attr(form, "role"), *active = attr(form, "active-page");
+  char commands[64][256], names[64][128];
+  int count = 0;
+  xmlNodePtr bound_bar = NULL;
+  const char *error = NULL;
+  snprintf(initial, initial_cap, "0");
+  EACH_ELEMENT(bar, form) if (elem(bar, "activitybar")) {
+    xmlNodePtr toolbar = child(bar, "toolbar");
+    if (toolbar && child(bar, "page")) {
+      fprintf(stderr, "orionc: ActivityBar cannot mix Page entries and Toolbar buttons\n");
+      free(role); free(active); return -1;
+    }
+    EACH_ELEMENT(button, toolbar ? toolbar : bar) {
+      char *page = attr(button, toolbar ? "page" : "form");
+      if (!page) {
+        if (!toolbar && elem(button, "page")) {
+          fprintf(stderr, "orionc: activity Page requires form=\n");
+          free(role); free(active); return -1;
+        }
+        continue;
+      }
+      char *focus = attr(button, "focus"), *bar_name = attr(bar, "name");
+      char *command = attr(button, "command"), *menu = attr(button, "menu"), *name = attr(button, "name"), *text = attr(button, "text");
+      char id[256], bar_id[256] = "0", focus_id[256] = "0", page_id[128], pageq[256];
+      xmlNodePtr target = activity_find_form(form->parent, page);
+      char *target_role = attr(target, "role");
+      if (!toolbar) { free(focus); focus = attr(target, "focus"); free(name); name = strdup(page); }
+      resolve_action(id, sizeof(id), command, menu, form_id, name, text);
+      ident(page_id, sizeof(page_id), page, false); cstr(pageq, sizeof(pageq), page);
+      if (!role || !eq(role, "host")) error = "page bindings require role=host";
+      else if (!(toolbar ? elem(button, "button") : elem(button, "page"))) error = "invalid activity page entry";
+      else if (!target) error = "unknown activity page";
+      else if (!target_role || !eq(target_role, "page")) error = "activity target requires role=page";
+      else if (!bar_name || !activity_control_id(form, form_id, bar_name, bar_id, sizeof(bar_id))) error = "activity bar requires a name";
+      else if (bound_bar && bound_bar != bar) error = "host requires one bound activity bar";
+      else if (xmlHasProp(button, BAD_CAST "if")) error = "conditional activity page bindings are unsupported";
+      else if (count >= ARRAY_LEN(commands)) error = "too many activity pages";
+      else if (focus && !activity_control_id(target, page_id, focus, focus_id, sizeof(focus_id))) error = "unknown activity focus control";
+      for (int i = 0; i < count && !error; i++)
+        if (eq(commands[i], id) || eq(names[i], page)) error = "duplicate activity command or page";
+      if (!error) {
+        if (!count) OUT("static const page_binding_t %s_%s_page_bindings[] = {\n", prefix, form_id);
+        OUT("  { %s, %s, %s, &%s_%s_form, %s },\n", id, bar_id, pageq, prefix, page_id, focus_id);
+        snprintf(commands[count], sizeof(commands[count]), "%s", id);
+        snprintf(names[count], sizeof(names[count]), "%s", page);
+        count++; bound_bar = bar;
+        if (!active && count == 1) snprintf(initial, initial_cap, "%s", id);
+        if (active && eq(active, page)) snprintf(initial, initial_cap, "%s", id);
+      }
+      if (error) fprintf(stderr, "orionc: form '%s', page '%s': %s\n", form_id, page, error);
+      free(page); free(focus); free(bar_name); free(command); free(menu); free(name); free(text); free(target_role);
+      if (error) { free(role); free(active); return -1; }
+    }
+  }
+  if (count) LINE("};\n\n");
+  xmlNodePtr toolbar = child(bound_bar, "toolbar");
+  EACH_ELEMENT(button, toolbar) if (elem(button, "button") && !xmlHasProp(button, BAD_CAST "page")) {
+    fprintf(stderr, "orionc: form '%s': every button in a bound ActivityBar requires page=\n", form_id);
+    free(role); free(active); return -1;
+  }
+  if (active && eq(initial, "0")) {
+    fprintf(stderr, "orionc: form '%s': unknown active-page '%s'\n", form_id, active);
+    free(role); free(active); return -1;
+  }
+  free(role); free(active);
+  return count;
+}
+
 static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr database) {
   char *name = attr(form, "name"), *title = attr(form, "title"), *flags_raw = attr(form, "flags"), *role = attr(form, "role"), *spacing = attrs_first(form, "spacing", "layout_spacing");
   rect_t sz = size_attr(form), pad = {0}, mar = {0}; char form_id[128], titleq[ORIONC_STRING_SIZE], flags[256];
@@ -1005,6 +1143,9 @@ static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr d
   int count = 0; bindings_t bindings = {0}; button_ids_t btn_ids = {0}; 
   emit_controls_ex(f, form, form_id, "0", &bindings, &count, &btn_ids); LINE("};\n\n");
   emit_bindings(f, prefix, form_id, &bindings);
+  char initial[256];
+  int activity_count = emit_page_bindings(f, form, prefix, form_id, initial, sizeof(initial));
+  if (activity_count < 0) { free(name); free(title); free(flags_raw); free(role); free(spacing); return false; }
   OUT("static const form_def_t %s_%s_form = { .name = %s, .width = %d, .height = %d, .flags = (%s)%s | WINDOW_AUTO_LAYOUT, .role = %s, .layout_spacing = %u, .padding = { %d, %d, %d, %d }, .margin = { %d, %d, %d, %d }, .children = %s_%s_children, .child_count = %d",
       prefix, form_id, titleq, sz.w, sz.h, flags,
       toolbar && !eq(role, "page") ? " | WINDOW_TOOLBAR" : "", role_name,
@@ -1012,6 +1153,14 @@ static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr d
       pad.x, pad.y, pad.w, pad.h, mar.x, mar.y, mar.w, mar.h, prefix, form_id, count);
   if (toolbar) OUT(", .toolbar_items = %s, .toolbar_count = ARRAY_LEN(%s)", toolbar_symbol, toolbar_symbol);
   else LINE(", .toolbar_items = NULL, .toolbar_count = 0");
+  if (activity_count) OUT(", .page_bindings = %s_%s_page_bindings, .page_binding_count = %d, .initial_page = %s", prefix, form_id, activity_count, initial);
+  const char *page_attrs[] = {"icon", "checked-icon", "tooltip"};
+  const char *page_fields[] = {"icon", "checked_icon", "tooltip"};
+  for (int i = 0; i < ARRAY_LEN(page_attrs); i++) {
+    char *value = attr(form, page_attrs[i]), quoted[ORIONC_STRING_SIZE];
+    if (value) { cstr(quoted, sizeof(quoted), value); OUT(", .%s = %s", page_fields[i], quoted); }
+    free(value);
+  }
   if (bindings.n) {
     char table_id[128], meta[128]; 
     ident(table_id, sizeof(table_id), bindings.table, true);
@@ -1076,7 +1225,7 @@ int main(int argc, char **argv) {
   EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"); collect_toolbar_ids(&commands, &refs, child(form, "toolbar"), name); collect_activitybar_ids(&commands, &refs, form, name); free(name); }
   collect_toolbar_ids(&commands, &refs, app_toolbar, "application");
   collect_context_ids(&commands, &refs, contexts);
-  EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"), form_id[128]; if (!only || eq(name, only)) { ident(form_id, sizeof(form_id), name, false); collect_control_ids(&controls, form, form_id); } free(name); }
+  EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"), form_id[128]; if (activity_form_needed(form, forms, only)) { ident(form_id, sizeof(form_id), name, false); collect_control_ids(&controls, form, form_id); } free(name); }
   int errors = validate_actions(&commands, &refs, &meta);
   tpl(f, "/* Generated by orionc_alt from {{input}}. */\n#ifndef {{guard}}\n#define {{guard}}\n\n#include <orion/ui.h>\n\n",
       (kv_t[]){{"input", input}, {"guard", guard}, {NULL, NULL}});
@@ -1100,7 +1249,13 @@ int main(int argc, char **argv) {
   } else {
     emit_database(f, database, pre, true);
   }
-  EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"); if (!only || eq(name, only)) { if (!emit_form(f, form, pre, database)) return 1; } free(name); }
+  EACH_ELEMENT(form, forms) if (elem(form, "form") && activity_form_needed(form, forms, only)) {
+    char *name = attr(form, "name"), id[128]; ident(id, sizeof(id), name, false);
+    OUT("static const form_def_t %s_%s_form;\n", pre, id); free(name);
+  }
+  EACH_ELEMENT(form, forms) if (elem(form, "form") && activity_form_needed(form, forms, only)) {
+    if (!emit_form(f, form, pre, database)) { fclose(f); xmlFreeDoc(doc); return 1; }
+  }
   OUT("#endif /* %s */\n", guard);
   fclose(f); xmlFreeDoc(doc);
   return errors ? 1 : 0;

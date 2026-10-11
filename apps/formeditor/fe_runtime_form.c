@@ -467,6 +467,8 @@ static void runtime_fill_combo_params(runtime_build_ctx_t *ctx, xmlNodePtr node,
 static bool runtime_is_control_node(xmlNodePtr parent, xmlNodePtr node) {
   if (!node || node->type != XML_ELEMENT_NODE)
     return false;
+  if (parent && str_ieq((const char *)parent->name, "ActivityBar") &&
+      str_ieq((const char *)node->name, "Page")) return false;
   if (xmlStrcasecmp(node->name, BAD_CAST "Toolbar") == 0)
     return false;
   if (parent && xmlStrcasecmp(node->name, BAD_CAST "Column") == 0 &&
@@ -521,14 +523,37 @@ static flags_t runtime_control_size(runtime_build_ctx_t *ctx, xmlNodePtr node) {
   return CONTROL_SIZE_REGULAR;
 }
 
+static xmlNodePtr runtime_page_form(const char *name) {
+  if (!g_app || !name) return NULL;
+  for (int i = 0; i < g_app->form_count; i++) {
+    xmlNodePtr form = g_app->forms[i]->userdata2;
+    xmlChar *id = form ? xmlGetProp(form, BAD_CAST "name") : NULL;
+    bool match = id && strcmp((const char *)id, name) == 0;
+    xmlFree(id);
+    if (match) return form;
+  }
+  xmlNodePtr root = g_app->project.xml_root;
+  for (xmlNodePtr group = root ? root->children : NULL; group; group = group->next) {
+    if (!str_ieq((const char *)group->name, "forms")) continue;
+    for (xmlNodePtr form = group->children; form; form = form->next) {
+      xmlChar *id = xmlGetProp(form, BAD_CAST "name");
+      bool match = id && strcmp((const char *)id, name) == 0;
+      xmlFree(id);
+      if (match) return form;
+    }
+  }
+  return NULL;
+}
+
 static void runtime_fill_activity_params(runtime_build_ctx_t *ctx, xmlNodePtr node, const void **out) {
   xmlNodePtr toolbar = NULL;
   for (xmlNodePtr c = node->children; c; c = c->next)
     if (c->type == XML_ELEMENT_NODE && str_ieq((const char *)c->name, "Toolbar")) { toolbar = c; break; }
-  if (!toolbar) return;
+  xmlNodePtr source = toolbar ? toolbar : node;
+  const char *tag = toolbar ? "Button" : "Page";
   int count = 0;
-  for (xmlNodePtr c = toolbar->children; c; c = c->next)
-    if (c->type == XML_ELEMENT_NODE && str_ieq((const char *)c->name, "Button")) count++;
+  for (xmlNodePtr c = source->children; c; c = c->next)
+    if (c->type == XML_ELEMENT_NODE && str_ieq((const char *)c->name, tag)) count++;
   activitybar_params_t *params = runtime_alloc(ctx, sizeof(*params));
   toolbar_item_t *items = count ? runtime_alloc(ctx, count * sizeof(*items)) : NULL;
   if (!params || (count && !items)) {
@@ -536,12 +561,22 @@ static void runtime_fill_activity_params(runtime_build_ctx_t *ctx, xmlNodePtr no
     fflush(stderr);
     return;
   }
-  for (xmlNodePtr c = toolbar->children; c; c = c->next) {
-    if (c->type != XML_ELEMENT_NODE || !str_ieq((const char *)c->name, "Button")) continue;
+  for (xmlNodePtr c = source->children; c; c = c->next) {
+    if (c->type != XML_ELEMENT_NODE || !str_ieq((const char *)c->name, tag)) continue;
+    char *name = toolbar ? NULL : runtime_xml_attr_dup(ctx, c, "form");
+    xmlNodePtr metadata = toolbar ? c : runtime_page_form(name);
+    if (!metadata) {
+      fprintf(stderr, "[form] activity page unavailable form=%s\n", name ? name : "(missing)");
+      fflush(stderr);
+      continue;
+    }
+    char *title = runtime_xml_attr_dup(ctx, metadata, toolbar ? "text" : "title");
+    char *tooltip = runtime_xml_attr_dup(ctx, metadata, "tooltip");
     items[params->count++] = (toolbar_item_t){
       .type = TOOLBAR_ITEM_BUTTON, .ident = ctx->next_generated_id++, .style = TBSTYLE_CHECKGROUP | runtime_control_size(ctx, c),
-      .icon = runtime_xml_attr_dup(ctx, c, "icon"), .text = runtime_xml_attr_dup(ctx, c, "text"),
-      .tooltip = runtime_xml_attr_dup(ctx, c, "tooltip"), .checked_icon = runtime_xml_attr_dup(ctx, c, "checked-icon")
+      .icon = runtime_xml_attr_dup(ctx, metadata, "icon"), .text = title ? title : name,
+      .tooltip = tooltip ? tooltip : title ? title : name,
+      .checked_icon = runtime_xml_attr_dup(ctx, metadata, "checked-icon")
     };
   }
   params->items = items;

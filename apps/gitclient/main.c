@@ -110,7 +110,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_gc->main_win = create_window_from_form(&gc_main_window_form, 16, 32,
                                            NULL, gc_main_proc,
                                            hinstance, NULL);
-  if (!g_gc->main_win) return false;
+  if (!g_gc->main_win || !page_host_selection(g_gc->main_win)) return false;
   maximize_window(g_gc->main_win);
   show_window(g_gc->main_win, true);
 

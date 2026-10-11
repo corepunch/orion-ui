@@ -386,10 +386,10 @@ void test_activitybar_preview(void) {
   setup();
   window_t *doc = g_app->active_form;
   install_form_xml(doc,
-    "<form name=\"main\" width=\"400\" height=\"300\">"
+    "<form name=\"main\" width=\"400\" height=\"300\" role=\"host\" active-page=\"changes\">"
     "<ActivityBar name=\"activity\"><Toolbar>"
-    "<Button command=\"view.overview\" icon=\"view-grid\" text=\"Overview\" tooltip=\"All repositories\" />"
-    "<Button command=\"view.changes\" icon=\"git-commit\" checked-icon=\"git-commit-fill\" text=\"Changes\" tooltip=\"Working tree\" />"
+    "<Button command=\"view.overview\" page=\"overview\" icon=\"view-grid\" text=\"Overview\" tooltip=\"All repositories\" />"
+    "<Button command=\"view.changes\" page=\"changes\" focus=\"files\" icon=\"git-commit\" checked-icon=\"git-commit-fill\" text=\"Changes\" tooltip=\"Working tree\" />"
     "</Toolbar></ActivityBar></form>");
   window_t *bar = descendant_by_class(doc, "ActivityBar");
   ASSERT_NOT_NULL(bar);
@@ -406,6 +406,61 @@ void test_activitybar_preview(void) {
   ASSERT_FALSE(tb->items[0].state & TBSTATE_CHECKED);
   ASSERT_TRUE(tb->items[1].state & TBSTATE_CHECKED);
   ASSERT_NULL(descendant_by_class(bar, "Button"));
+  const char *saved_path = "build/activity-preview-roundtrip.orion";
+  ASSERT_TRUE(fe_project_save(saved_path));
+  xmlDocPtr saved = xmlReadFile(saved_path, NULL, XML_PARSE_NONET);
+  ASSERT_NOT_NULL(saved);
+  xmlNodePtr form = first_child(first_child(xmlDocGetRootElement(saved), "forms"), "form");
+  char *active = attr_dup(form, "active-page");
+  ASSERT_STR_EQUAL(active, "changes"); free(active);
+  xmlNodePtr toolbar = first_child(first_child(form, "ActivityBar"), "Toolbar");
+  xmlNodePtr button = first_child(toolbar, "Button");
+  char *page = attr_dup(button, "page");
+  ASSERT_STR_EQUAL(page, "overview"); free(page);
+  xmlFreeDoc(saved); remove(saved_path);
+  teardown();
+  PASS();
+}
+
+void test_page_navigation_preview(void) {
+  TEST("PageHost: FormEditor resolves page metadata and preserves Page references");
+  setup();
+  window_t *page = g_app->active_form;
+  install_form_xml(page, "<form name=\"details\" title=\"Details\" width=\"400\" height=\"300\" role=\"page\" "
+    "icon=\"git-commit\" checked-icon=\"git-commit-fill\" tooltip=\"Document details\"><Label text=\"Content\"/></form>");
+  create_form_doc(400, 300);
+  window_t *host = g_app->active_form;
+  install_form_xml(host, "<form name=\"main\" width=\"400\" height=\"300\" role=\"host\" active-page=\"details\">"
+    "<ActivityBar name=\"activity\"><Page form=\"details\"/></ActivityBar></form>");
+  window_t *bar = descendant_by_class(host, "ActivityBar");
+  ASSERT_NOT_NULL(bar);
+  toolbar_state_t *tb = window_toolbar_state(bar);
+  ASSERT_EQUAL(tb->item_count, 1);
+  ASSERT_STR_EQUAL(tb->items[0].text, "Details");
+  ASSERT_STR_EQUAL(tb->items[0].icon, "git-commit");
+  ASSERT_STR_EQUAL(tb->items[0].checked_icon, "git-commit-fill");
+  ASSERT_STR_EQUAL(tb->items[0].tooltip, "Document details");
+  ASSERT_NULL(descendant_by_class(bar, "Page"));
+  const char *path = "build/page-preview-roundtrip.orion";
+  ASSERT_TRUE(fe_project_save(path));
+  xmlDocPtr saved = xmlReadFile(path, NULL, XML_PARSE_NONET);
+  ASSERT_NOT_NULL(saved);
+  xmlNodePtr forms = first_child(xmlDocGetRootElement(saved), "forms");
+  bool found_page = false, found_host = false;
+  for (xmlNodePtr f = forms->children; f; f = f->next) {
+    char *name = attr_dup(f, "name");
+    if (name && strcmp(name, "details") == 0) {
+      char *icon = attr_dup(f, "icon");
+      ASSERT_STR_EQUAL(icon, "git-commit"); free(icon); found_page = true;
+    }
+    if (name && strcmp(name, "main") == 0) {
+      char *ref = attr_dup(first_child(first_child(f, "ActivityBar"), "Page"), "form");
+      ASSERT_STR_EQUAL(ref, "details"); free(ref); found_host = true;
+    }
+    free(name);
+  }
+  ASSERT_TRUE(found_page && found_host);
+  xmlFreeDoc(saved); remove(path);
   teardown();
   PASS();
 }
@@ -422,5 +477,6 @@ int main(void) {
   test_database_field_drop_rejects_other_database();
   test_socialfeed_project_loads_runtime_and_database();
   test_activitybar_preview();
+  test_page_navigation_preview();
   TEST_END();
 }

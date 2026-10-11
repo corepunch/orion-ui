@@ -119,17 +119,14 @@ The compiler generates `db_commit_t`, `ID_DB_COMMITS`, `commits_fields[]`, etc.
 
 ```xml
 <form name="main_window" width="800" height="480"
-      role="host" flags="toolbar,statusbar">
-  <TabView name="views">
-    <StackView name="history_tab" text="History" />
-  </TabView>
+      role="host" active-page="history_page" flags="statusbar">
+  <ActivityBar name="activity">
+    <Page form="history_page" command="view.history" />
+  </ActivityBar>
 </form>
 
-<form name="history_page" width="800" height="440" role="page">
-  <Toolbar>
-    <Button command="branch.new" icon="git-fork" text="Branch" />
-    <Button command="repo.search" icon="search" text="Search" />
-  </Toolbar>
+<form name="history_page" title="History" width="800" height="440" role="page"
+      icon="gc-nav-history" checked-icon="gc-nav-history-fill" focus="log">
   <TableView name="log" source="db.commits">
     <Column field="subject" title="Subject" width="0" />
     <Column field="author" title="Author" width="110" />
@@ -139,8 +136,12 @@ The compiler generates `db_commit_t`, `ID_DB_COMMITS`, `commits_fields[]`, etc.
 ```
 
 No C code is needed for column setup. The tableview reads field IDs from the
-form definition. When the History page is selected, the host projects its
-nested toolbar into the host toolbar.
+form definition. This abbreviated example shows one destination; the app declares
+Overview, Changes, History, and GitHub, with Changes selected initially.
+`page_host_init` connects runtime page procedures to these declarations.
+Orion owns page creation, docking, visibility, rail selection, and focus restoration;
+`evPageChanged` triggers Git Client's refresh and status logic. The existing
+page layouts stay in their forms. See [PageHost and Page](../../docs/page-host.md).
 
 ### 3. Populate from git
 

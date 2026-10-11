@@ -121,6 +121,13 @@ manager; controls provide orientation/measurement and apps provide content.
 `WINDOW_TITLETOOLBAR` merges a window's caption into ordinary toolbar items, with
 one paint/input path for app actions and window controls. See [Workspace Docking](docs/docking.md).
 
+`PageHost` / `Page` navigation lives in `orion/user/page_host.c`. A host form binds its
+activity bar to page forms in `.orion`. Page forms supply navigation icons and titles.
+The bar docks left in landscape and bottom in portrait; the framework owns page creation,
+visibility, selection, and focus restoration. Apps supply page procedures and
+respond to `evPageChanged` for domain behavior. The host uses ordinary docking
+and `set_host_page` toolbar projection. See [PageHost and Page](docs/page-host.md).
+
 Non-client hit-testing is one function: `window_nc_hit_test()` sends `evNcHitTest` (a proc may claim
 the point) and otherwise answers `HT_CAPTION`, `HT_CLOSE`, `HT_MAXBUTTON`, `HT_GROWBOX` or `HT_CLIENT`;
 the input router uses it to start drags and resizes and to resolve caption buttons on release. The

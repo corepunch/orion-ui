@@ -433,6 +433,7 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
     case evDestroy:
       if (tb) {
         SAFE_DELETE(tb->items, free);
+        SAFE_DELETE(tb->item_texts, free);
         SAFE_DELETE(tb->item_tooltips, free);
         SAFE_DELETE(tb->item_icons, free);
         SAFE_DELETE(tb->item_checked_icons, free);
@@ -932,6 +933,7 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
 
       clear_toolbar_children(win);
       SAFE_DELETE(tb->items, free);
+      SAFE_DELETE(tb->item_texts, free);
       SAFE_DELETE(tb->item_tooltips, free);
       SAFE_DELETE(tb->item_icons, free);
       SAFE_DELETE(tb->item_checked_icons, free);
@@ -946,6 +948,25 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         if (tb->items) {
           memcpy(tb->items, lparam, (size_t)n * sizeof(toolbar_item_t));
           tb->item_count = n;
+        }
+
+        size_t text_size = 0;
+        for (int i = 0; tb->items && i < n; i++)
+          if (tb->items[i].text) text_size += strlen(tb->items[i].text) + 1;
+        tb->item_texts = text_size ? malloc(text_size) : NULL;
+        if (text_size && !tb->item_texts) {
+          fprintf(stderr, "[tb] label allocation failed win=%u count=%d\n", win->id, n);
+          fflush(stderr);
+        }
+        char *text = tb->item_texts;
+        for (int i = 0; tb->items && i < n; i++) {
+          const char *label = tb->items[i].text;
+          tb->items[i].text = NULL;
+          if (!label || !text) continue;
+          size_t len = strlen(label) + 1;
+          memcpy(text, label, len);
+          tb->items[i].text = text;
+          text += len;
         }
 
         tb->item_tooltips = calloc((size_t)n, sizeof(*tb->item_tooltips));

@@ -14,6 +14,7 @@ result_t page_github_proc(window_t *win, uint32_t msg,
 
   gc_state_t *gc = g_gc;
   if (!gc) return false;
+  gc->github_page_win = win;
 
   gc->github_issues_win = get_window_item(win, ID_GITHUB_PAGE_ISSUES);
   gc->github_pulls_win  = get_window_item(win, ID_GITHUB_PAGE_PULLS);

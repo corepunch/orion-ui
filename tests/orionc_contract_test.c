@@ -16,8 +16,8 @@
 #include <sys/wait.h>
 
 // Write fixture to a temp file, run orionc, capture combined output + exit code.
-static int run_orionc(const char *fixture, const char *tag, char *out, size_t out_sz) {
-    char input[512], output[512], cmd[1024];
+static int run_orionc_form(const char *fixture, const char *tag, char *out, size_t out_sz, const char *form) {
+    char input[512], output[512], cmd[1200];
     snprintf(input, sizeof(input), "/tmp/orionc_%s_%d.orion", tag, (int)getpid());
     snprintf(output, sizeof(output), "/tmp/orionc_%s_%d.h", tag, (int)getpid());
 
@@ -27,8 +27,8 @@ static int run_orionc(const char *fixture, const char *tag, char *out, size_t ou
     fclose(f);
 
     snprintf(cmd, sizeof(cmd),
-             "build/bin/orionc --input %s --output %s --prefix test 2>&1",
-             input, output);
+             "build/bin/orionc --input %s --output %s --prefix test %s%s 2>&1",
+             input, output, form ? "--form " : "", form ? form : "");
     FILE *p = popen(cmd, "r");
     if (!p) { remove(input); return -1; }
     size_t n = fread(out, 1, out_sz - 1, p);
@@ -45,6 +45,10 @@ static int run_orionc(const char *fixture, const char *tag, char *out, size_t ou
     remove(output);
     if (WIFEXITED(rc)) return WEXITSTATUS(rc);
     return -1;
+}
+
+static int run_orionc(const char *fixture, const char *tag, char *out, size_t out_sz) {
+  return run_orionc_form(fixture, tag, out, out_sz, NULL);
 }
 
 static bool contains(const char *hay, const char *needle) {
@@ -219,6 +223,64 @@ static void test_content_column_width(void) {
   PASS();
 }
 
+static void test_activity_page_bindings(void) {
+  TEST("orionc: activity bindings resolve forward forms and reject invalid navigation");
+  const char *format = "<orion><forms><form name=\"main\" width=\"400\" role=\"%s\" active-page=\"%s\">"
+    "<ActivityBar name=\"activity\"><Toolbar>"
+    "<Button name=\"first\" page=\"%s\" focus=\"%s\"/>%s</Toolbar></ActivityBar></form>"
+    "<form name=\"details\" width=\"400\" role=\"%s\"><TextEdit name=\"editor\"/></form>"
+    "<form name=\"unrelated\" width=\"100\"/></forms></orion>";
+  char fixture[2048], out[16000];
+  snprintf(fixture, sizeof(fixture), format, "host", "details", "details", "editor", "", "page");
+  ASSERT_EQUAL(run_orionc(fixture, "pages", out, sizeof(out)), 0);
+  ASSERT_TRUE(contains(out, "{ ID_MAIN_FIRST, ID_MAIN_ACTIVITY, \"details\", &test_details_form, ID_DETAILS_EDITOR }"));
+  ASSERT_TRUE(contains(out, ".initial_page = ID_MAIN_FIRST"));
+  ASSERT_TRUE(contains(out, ".page_binding_count = 1"));
+  ASSERT_EQUAL(run_orionc_form(fixture, "pages_only", out, sizeof(out), "main"), 0);
+  ASSERT_TRUE(contains(out, "static const form_def_t test_details_form ="));
+  ASSERT_FALSE(contains(out, "test_unrelated_form"));
+  const char *cases[][7] = {
+    {"normal", "details", "details", "editor", "", "page",   "require role=host"},
+    {"host", "missing", "details", "editor", "", "page",    "unknown active-page"},
+    {"host", "details", "missing", "editor", "", "page",    "unknown activity page"},
+    {"host", "details", "details", "missing", "", "page",   "unknown activity focus control"},
+    {"host", "details", "details", "editor", "", "normal",  "requires role=page"},
+    {"host", "details", "details", "editor", "<Button name=\"second\" page=\"details\"/>", "page", "duplicate activity"},
+    {"host", "details", "details", "editor", "<Button name=\"second\"/>", "page", "requires page="},
+  };
+  for (int i = 0; i < (int)(sizeof(cases) / sizeof(cases[0])); i++) {
+    snprintf(fixture, sizeof(fixture), format, cases[i][0], cases[i][1], cases[i][2], cases[i][3], cases[i][4], cases[i][5]);
+    ASSERT_TRUE(run_orionc(fixture, "bad_pages", out, sizeof(out)) != 0);
+    ASSERT_TRUE(contains(out, cases[i][6]));
+  }
+  PASS();
+}
+
+static void test_page_metadata(void) {
+  TEST("orionc: Page entries derive navigation from page forms");
+  const char *format = "<orion><forms><form name=\"main\" width=\"400\" role=\"host\">"
+    "<ActivityBar name=\"activity\">%s</ActivityBar></form>"
+    "<form name=\"details\" title=\"Details\" width=\"400\" role=\"page\" focus=\"editor\" "
+    "icon=\"document\" checked-icon=\"document-fill\" tooltip=\"Document details\"><TextEdit name=\"editor\"/></form>"
+    "<form name=\"unrelated\" width=\"100\"/></forms></orion>";
+  char fixture[2048], out[16000];
+  snprintf(fixture, sizeof(fixture), format, "<Page form=\"details\"/>");
+  ASSERT_EQUAL(run_orionc_form(fixture, "page_metadata", out, sizeof(out), "main"), 0);
+  ASSERT_TRUE(contains(out, "{ ID_MAIN_DETAILS, ID_MAIN_ACTIVITY, \"details\", &test_details_form, ID_DETAILS_EDITOR }"));
+  ASSERT_TRUE(contains(out, ".initial_page = ID_MAIN_DETAILS"));
+  ASSERT_TRUE(contains(out, ".icon = \"document\", .checked_icon = \"document-fill\", .tooltip = \"Document details\""));
+  ASSERT_FALSE(contains(out, "test_unrelated_form"));
+  ASSERT_FALSE(contains(out, "{ \"Page\","));
+  const char *bad[] = {"<Page/>", "<Page form=\"missing\"/>",
+    "<Page form=\"details\"/><Page form=\"details\"/>",
+    "<Page form=\"details\"/><Toolbar><Button page=\"details\"/></Toolbar>"};
+  for (int i = 0; i < (int)(sizeof(bad) / sizeof(bad[0])); i++) {
+    snprintf(fixture, sizeof(fixture), format, bad[i]);
+    ASSERT_TRUE(run_orionc(fixture, "invalid_page_metadata", out, sizeof(out)) != 0);
+  }
+  PASS();
+}
+
 static void test_activitybar_declaration(void) {
   TEST("orionc: nested activity buttons share validated commands and stay out of the form child tree");
   char out[12000] = {0};
@@ -249,6 +311,8 @@ int main(void) {
     TEST_START("orionc generator contract");
 #if !defined(_WIN32)
     test_valid_manifest_accepted();
+    test_activity_page_bindings();
+    test_page_metadata();
     test_content_column_width();
     test_activitybar_declaration();
     test_application_toolbar_declaration();

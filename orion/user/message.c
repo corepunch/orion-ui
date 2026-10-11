@@ -13,6 +13,7 @@
 #include "scrollbar.h"
 #include "toolbar.h"
 #include "dock.h"
+#include "page_host.h"
 #include <orion/kernel/renderer.h>
 
 #define CONTAINS(x, y, x1, y1, w1, h1) \
@@ -236,7 +237,15 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   }
   // Handle special messages
   switch (msg) {
+    case evCommand:
+      if (page_host_command(win, wparam)) return true;
+      break;
+    case evSetFocus:
+      if (g_ui_runtime.focused == win && page_host_selection(win))
+        page_host_select(win, page_host_selection(win));
+      break;
     case evResize:
+      page_host_layout(win);
       if (win->flags & WINDOW_TOOLBAR) toolbar_handle_message(win, msg, wparam, lparam);
       layout_docked_toolbars(win, get_client_rect(win));
       break;

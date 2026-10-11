@@ -48,6 +48,7 @@ result_t page_changes_proc(window_t *win, uint32_t msg,
 
   gc_state_t *gc = g_gc;
   if (!gc) return false;
+  gc->changes_page_win = win;
 
   gc->changes_files_win = get_window_item(win, ID_CHANGES_PAGE_CHANGES_FILES);
   gc->changes_diff_win  = get_window_item(win, ID_CHANGES_PAGE_CHANGES_DIFF);
