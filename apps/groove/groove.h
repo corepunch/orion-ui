@@ -134,6 +134,7 @@ int  song_clip_end(const song_t *s, int idx); // effective endpoint; source dura
 int  song_clip_at(const song_t *s, int track, int position);    // clip index or -1
 bool song_can_place(const song_t *s, int track, int position, int ticks, int ignore_clip);
 int  song_add_clip(song_t *s, int block, int track, int position); // clip index or -1
+int  song_repeat_clip(song_t *s, int idx); // copy after that block's run, or -1 when blocked
 bool song_move_clip(song_t *s, int idx, int track, int position);
 int64_t position_frames_for_bpm(int position, int bpm);
 void song_remove_clip(song_t *s, int idx);
@@ -230,6 +231,7 @@ void      app_preview(int block);
 void      app_preview_stop(void);          // silence the audition; the buffer stays until the next one
 void      app_select_clip(int idx);
 bool      app_drop(const drag_t *d);          // commits a drag (add or move)
+bool      app_repeat_clip(int idx);           // double-tap: another copy after the run
 void      app_set_genre(uint8_t genre);        // 0 = every genre, else one GENRE_* flag
 void      app_set_family(int family);
 bool      block_visible(int id);               // passes the family and genre filters

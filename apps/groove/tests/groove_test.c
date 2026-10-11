@@ -888,6 +888,100 @@ static void test_drag_center_boundaries(void) {
   PASS();
 }
 
+static void finger(uint32_t message, int x, int y, uint32_t time) {
+  ui_event_t event = {.message = message, .wParam = MAKEDWORD(x * UI_WINDOW_SCALE, y * UI_WINDOW_SCALE),
+                      .pointer = {.flags = AX_POINTER_TOUCH, .time = time}};
+  dispatch_message(&event);
+}
+
+static void test_sheet_gestures(void) {
+  TEST("a clip swipe scrolls, a hold moves, a tap plays, and a double-tap extends that sample's run");
+  test_env_init();
+  g_app = app_init();
+  ASSERT_NOT_NULL(g_app);
+  int len = block_get(0)->bars * GR_TICKS_BAR;
+  song_t chain;
+  song_init(&chain);
+  ASSERT_EQUAL(song_add_clip(&chain, 0, 0, 0), 0);
+  ASSERT_EQUAL(song_repeat_clip(&chain, 0), 1);
+  ASSERT(chain.clips[1].block == 0 && chain.clips[1].position == len && chain.clips[1].track == 0, "a copy lands on the next slot");
+  ASSERT_EQUAL(song_repeat_clip(&chain, 0), 2);
+  ASSERT_EQUAL(chain.clips[2].position, 2 * len);
+  song_init(&chain);
+  song_add_clip(&chain, 0, 0, 0);
+  song_add_clip(&chain, 0, 0, len);
+  song_add_clip(&chain, 1, 0, 2 * len);
+  ASSERT_EQUAL(song_repeat_clip(&chain, 0), -1);
+  ASSERT_EQUAL(chain.nclips, 3);
+  song_init(&chain);
+  song_add_clip(&chain, 0, 0, 0);
+  song_add_clip(&chain, 0, 0, 3 * len);
+  ASSERT_EQUAL(song_repeat_clip(&chain, 0), 2);
+  ASSERT_EQUAL(chain.clips[2].position, len);
+  song_init(&chain);
+  song_add_clip(&chain, 0, 0, 0);
+  song_add_clip(&chain, 1, 1, len);
+  ASSERT(song_repeat_clip(&chain, 0) == 2 && chain.clips[2].track == 0 && chain.clips[2].position == len, "another track does not block");
+  song_init(&chain);
+  song_add_clip(&chain, 0, 0, (GR_BARS - block_get(0)->bars) * GR_TICKS_BAR);
+  ASSERT_EQUAL(song_repeat_clip(&chain, 0), -1);
+  ASSERT_EQUAL(chain.nclips, 1);
+
+  window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  show_window(win, true);
+  song_add_clip(&g_app->song, 0, 0, 0);
+  window_t *sheet = g_app->sheet;
+  send_message(sheet, evResize, 0, NULL);
+  int sx = window_screen_x(sheet) + 32, sy = window_screen_y(sheet) + 40;
+  finger(kEventLeftButtonDown, sx + 48, sy, 1000);
+  finger(kEventLeftButtonDragged, sx + 8, sy, 1016);
+  ASSERT(get_scroll_pos(sheet, SB_HORZ) > 0, "a swipe over a clip scrolls");
+  ASSERT_FALSE(g_app->drag.active);
+  ASSERT_EQUAL(g_app->song.nclips, 1);
+  ASSERT_EQUAL(g_app->song.clips[0].position, 0);
+  ASSERT_EQUAL(g_app->song.preview_block, -1);
+  finger(kEventLeftButtonUp, sx + 8, sy, 1100);
+  ASSERT_NULL(g_ui_runtime.captured);
+  set_scroll_info(sheet, SB_HORZ, &(scroll_info_t){ .fMask = SIF_POS, .nPos = 0 }, false);
+  send_message(sheet, evHScroll, 0, NULL);
+
+  finger(kEventLeftButtonDown, sx, sy, 2000);
+  finger(kEventLeftButtonDragged, sx + 12, sy, 2000 + TOUCH_LONG_PRESS_MS);
+  ASSERT_TRUE(g_app->drag.active && g_ui_runtime.captured == sheet);
+  window_t *lifted = sheet->children;
+  while (lifted && !window_is_lifted(lifted)) lifted = lifted->next;
+  ASSERT_NOT_NULL(lifted);
+  finger(kEventPointerCancel, sx + 12, sy, 2000 + TOUCH_LONG_PRESS_MS + 20);
+  ASSERT_FALSE(g_app->drag.active);
+  ASSERT_NULL(g_ui_runtime.captured);
+  ASSERT_EQUAL(g_app->song.clips[0].position, 0);
+  ASSERT_EQUAL(g_app->song.preview_block, -1);
+
+  finger(kEventLeftButtonDown, sx, sy, 4000);
+  finger(kEventLeftButtonUp, sx, sy, 4100);
+  ASSERT_EQUAL(g_app->song.preview_block, 0);
+  ASSERT_EQUAL(g_app->song.nclips, 1);
+  ASSERT_FALSE(g_app->song.playing);
+
+  ASSERT_TRUE(send_message(sheet, evLeftButtonDoubleClick, MAKEDWORD(32, 40), NULL));
+  ASSERT_EQUAL(g_app->song.nclips, 2);
+  ASSERT_EQUAL(g_app->song.clips[1].block, 0);
+  ASSERT_EQUAL(g_app->song.clips[1].position, len);
+  ASSERT_EQUAL(g_app->selected_clip, 1);
+  app_new_song();
+  song_add_clip(&g_app->song, 0, 0, 0);
+  song_add_clip(&g_app->song, 1, 0, len);
+  send_message(sheet, evResize, 0, NULL);
+  ASSERT_TRUE(send_message(sheet, evLeftButtonDoubleClick, MAKEDWORD(32, 40), NULL));
+  ASSERT_EQUAL(g_app->song.nclips, 2);
+  ASSERT_EQUAL(g_app->selected_clip, -1);
+  destroy_window(win);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
+}
+
 static void test_drag_off_sheet_removes(void) {
   TEST("dropping a moved clip outside the grid removes it; dropping inside keeps it");
   test_env_init();
@@ -1046,6 +1140,7 @@ int main(void) {
   test_shared_block_cards();
   test_drag_anchor();
   test_drag_center_boundaries();
+  test_sheet_gestures();
   test_drag_off_sheet_removes();
   TEST_END();
 }

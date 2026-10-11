@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<orion version="1" name="terminal" title="Terminal" root="apps/terminal">
+    <plugins>
+        <plugin name="terminal_components" />
+    </plugins>
+
+    <menus var="kTerminalMenus" count="kTerminalMenuCount">
+        <menu name="view" label="View">
+            <item name="workspace" label="Workspace" />
+        </menu>
+    </menus>
+
+    <forms>
+        <form name="main_window" title="Terminal" width="1024" height="700" role="host" auto_layout="1" spacing="0" padding="0">
+            <ActivityBar name="activity" flags="notitle">
+                <Toolbar>
+                    <Button name="workspace" command="view.workspace" icon="workspace" checked-icon="workspace-fill" text="Workspace" tooltip="Terminal workspace" />
+                </Toolbar>
+            </ActivityBar>
+        </form>
+        <form name="workspace_page" title="Workspace" width="960" height="680" role="page" auto_layout="1" flags="nofill,flexspace" spacing="0" padding="0">
+            <SplitView name="terminals" split-ratio="0.5" flags="flexspace">
+                <TerminalView name="left_terminal" flags="notitle,nofill,vscroll,flexspace" />
+                <TerminalView name="right_terminal" flags="notitle,nofill,vscroll,flexspace" />
+            </SplitView>
+        </form>
+    </forms>
+</orion>

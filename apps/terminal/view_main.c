@@ -129,6 +129,23 @@ bool terminal_run_lua_file(vgat_state_t *st, const char *path) {
 }
 #endif /* HAVE_LUA */
 
+bool terminal_start_script(window_t *win, const char *path) {
+  vgat_state_t *st = win ? (vgat_state_t *)win->userdata : NULL;
+  if (!st || !path || !path[0]) return false;
+#if defined(HAVE_LUA)
+  free(st->startup_script);
+  st->startup_script = strdup(path);
+  if (!st->startup_script) return false;
+  bool ok = terminal_run_lua_file(st, st->startup_script);
+#else
+  vgat_screen_write_string(&st->screen, "Lua scripting is not available in this build.\n",
+                           9, VGAT_BG_DEFAULT);
+  bool ok = false;
+#endif
+  invalidate_window(win);
+  return ok;
+}
+
 // ── Command forward declarations ──────────────────────────────────────────
 
 static void cmd_echo(vgat_state_t *, int, char **);
@@ -503,12 +520,6 @@ result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       if (!getcwd(st->cwd, sizeof(st->cwd)))
         snprintf(st->cwd, sizeof(st->cwd), "/");
 
-      char font_path[512];
-      snprintf(font_path, sizeof(font_path), "%s/../share/orion/fonts/monoid.ttf",
-               ui_get_exe_dir());
-      vga_font_init(font_path, 12.0f);
-      ansi_init_palette256();
-
       irect16_t cr = get_client_rect(win);
       int cols = cr.w / vga_char_width();
       int rows = cr.h / vga_char_height();
@@ -522,49 +533,7 @@ result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       vgat_screen_write_string(&st->screen, "Type 'help' for available commands\n", 10, VGAT_BG_DEFAULT);
       vgat_screen_newline(&st->screen);
 
-      // If a launch script was provided via create_window() lparam, run it.
-      if (lparam) {
-        const terminal_launch_t *launch = (const terminal_launch_t *)lparam;
-        if (launch->script_path) {
-#if defined(HAVE_LUA)
-          st->startup_script = strdup(launch->script_path);
-          if (st->startup_script)
-            terminal_run_lua_file(st, st->startup_script);
-#else
-          vgat_screen_write_string(&st->screen,
-            "Lua scripting is not available in this build.\n", 9, VGAT_BG_DEFAULT);
-#endif
-        }
-
-        // If a shell was specified, launch it in PTY mode
-        if (launch->shell) {
-          irect16_t cr = get_client_rect(win);
-          int cols = cr.w / vga_char_width();
-          int rows = cr.h / vga_char_height();
-          if (cols <= 0) cols = VGAT_DEFAULT_COLS;
-          if (rows <= 0) rows = VGAT_DEFAULT_ROWS;
-
-          const char *const argv[] = { launch->shell, NULL };
-          st->pty_fd = vgat_pty_exec(argv, rows, cols, &st->pty_pid);
-          if (st->pty_fd >= 0) {
-            st->mode = VGAT_MODE_PTY;
-            init_ansi_parser(st);
-            if (start_pty_watch(st)) {
-              vgat_screen_clear(&st->screen);
-            } else {
-              vgat_pty_close(st->pty_pid); close(st->pty_fd);
-              st->pty_fd = -1; st->pty_pid = 0; st->mode = VGAT_MODE_CMD;
-              vgat_screen_write_string(&st->screen,
-                "Failed to watch PTY output\n", 9, VGAT_BG_DEFAULT);
-            }
-          } else {
-            vgat_screen_write_string(&st->screen,
-              "Failed to launch shell. Type 'help' for available commands\n",
-              9, VGAT_BG_DEFAULT);
-            vgat_screen_newline(&st->screen);
-          }
-        }
-      }
+      (void)lparam;
       return true;
     }
 
@@ -591,7 +560,6 @@ result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
           st->pty_fd = -1;
           vgat_pty_close(st->pty_pid);
         }
-        vga_font_shutdown();
         vgat_screen_shutdown(&st->screen);
 #if defined(HAVE_LUA)
         if (st->L) lua_close(st->L);
@@ -723,6 +691,13 @@ result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       }
 
       vga_text_free_grid(&grid);
+      return true;
+    }
+
+    case evArrange: {
+      layout_arrange_t *a = (layout_arrange_t *)lparam;
+      if (a) win->frame = a->rect;
+      terminal_proc(win, evResize, 0, NULL);
       return true;
     }
 

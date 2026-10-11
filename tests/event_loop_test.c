@@ -173,6 +173,69 @@ static result_t proc_b(window_t *w, uint32_t msg, uint32_t wp, void *lp) {
   return 1;
 }
 
+static uint32_t paint_order[4], paint_params[4];
+static int paint_order_count;
+static result_t paint_order_proc(window_t *w, uint32_t msg, uint32_t wp, void *lp) {
+  (void)w; (void)lp;
+  if ((msg == evPaint || msg == evNCPaint) && paint_order_count < 4) {
+    paint_order[paint_order_count] = msg;
+    paint_params[paint_order_count++] = wp;
+  }
+  return true;
+}
+
+static void test_full_invalidation_keeps_background_before_content(void) {
+  TEST("full invalidation: background paint stays before content paint after coalescing");
+  test_env_init();
+  window_t *win = test_env_create_window("paint-order", 0, 0, 100, 100, paint_order_proc, NULL);
+  ASSERT_NOT_NULL(win);
+  repost_messages();
+  paint_order_count = 0;
+  post_message(win, evPaint, 0, NULL);
+  post_message(win, evNCPaint, 1, NULL);
+  invalidate_window(win);
+  repost_messages();
+  ASSERT_EQUAL(paint_order_count, 2);
+  ASSERT_EQUAL(paint_order[0], evNCPaint);
+  ASSERT_EQUAL(paint_params[0], 0);
+  ASSERT_EQUAL(paint_order[1], evPaint);
+  paint_order_count = 0;
+  post_message(win, evPaint, 0, NULL);
+  invalidate_window(win);
+  repost_messages();
+  ASSERT_EQUAL(paint_order_count, 2);
+  ASSERT_EQUAL(paint_order[0], evNCPaint);
+  ASSERT_EQUAL(paint_order[1], evPaint);
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
+static result_t focus_paint_proc(window_t *win, uint32_t msg, uint32_t wp, void *lp) {
+  (void)wp; (void)lp;
+  if (msg == evKillFocus || msg == evSetFocus) invalidate_window(win);
+  return true;
+}
+
+static void test_incomplete_repaint_defers_composition(void) {
+  TEST("focus repaint: do not composite the background-only intermediate frame");
+  test_env_init();
+  window_t *win = test_env_create_window("focus-paint", 0, 0, 100, 100, focus_paint_proc, NULL);
+  ASSERT_NOT_NULL(win);
+  repost_messages();
+  g_ui_runtime.needs_composite = false;
+  post_message(win, evKillFocus, 0, NULL);
+  post_message(win, evNCPaint, 1, NULL);
+  post_message(win, evSetFocus, 0, NULL);
+  repost_messages();
+  ASSERT_TRUE(g_ui_runtime.needs_composite);
+  repost_messages();
+  ASSERT_FALSE(g_ui_runtime.needs_composite);
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
 // Hooks for test_invalidate_window_enqueues_paint.
 static int hook_nc_paint_count = 0;
 static int hook_paint_count    = 0;
@@ -650,6 +713,8 @@ int main(int argc, char *argv[]) {
   // Part 2: post_message deduplication
   test_post_message_deduplication();
   test_post_message_different_targets_both_delivered();
+  test_full_invalidation_keeps_background_before_content();
+  test_incomplete_repaint_defers_composition();
 
   // Part 3: invalidate_window
   test_invalidate_window_enqueues_paint();

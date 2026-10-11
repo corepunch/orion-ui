@@ -281,6 +281,23 @@ static void save_song_as_dialog(void) {
     message_box(g_app->menubar_win, "Could not save the Groove song. Check the filename and available space.", "Save failed", MB_OK);
 }
 
+bool app_repeat_clip(int idx) {
+  song_t *s = &g_app->song;
+  if (idx < 0 || idx >= s->nclips) {
+    fprintf(stderr, "[gr] repeat rejected idx=%d nclips=%d\n", idx, s->nclips);
+    fflush(stderr);
+    return false;
+  }
+  int block = s->clips[idx].block;
+  if (!app_block_audio(block)) return false;
+  app_lock();
+  int added = song_repeat_clip(s, idx);
+  if (added >= 0) g_app->selected_clip = added;
+  app_unlock();
+  if (added >= 0) invalidate_window(g_app->sheet);
+  return added >= 0;
+}
+
 bool app_drop(const drag_t *d) {
   song_t *s = &g_app->song;
   bool ok = false, audio = d->from_clip < 0 && app_block_audio(d->block); // render before taking the lock

@@ -551,6 +551,17 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   return value;
 }
 
+static void order_background_before_content(window_t *win, uint8_t nc_index) {
+  for (uint8_t p = queue.read; p != nc_index; p++) {
+    if (queue.messages[p].target == win && queue.messages[p].msg == evPaint) {
+      msg_t paint = queue.messages[p];
+      queue.messages[p] = queue.messages[nc_index];
+      queue.messages[nc_index] = paint;
+      return;
+    }
+  }
+}
+
 // Post message to window queue (asynchronous).
 // Keeps Orion-posted lifecycle/repaint work separate from the platform's live
 // input queue so repost_messages() cannot accidentally consume fresh mouse/
@@ -568,6 +579,7 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         queue.messages[r].lparam = lparam;
       } else if (msg == evNCPaint && wparam == 0) {
         queue.messages[r].wparam = 0;
+        order_background_before_content(win, r);
       } else {
         free_posted_lparam(msg, lparam);
       }
@@ -575,12 +587,15 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     }
   }
 
-  queue.messages[queue.write++] = (msg_t) {
+  uint8_t index = queue.write++;
+  queue.messages[index] = (msg_t) {
     .target = win,
     .msg = msg,
     .wparam = wparam,
     .lparam = lparam,
   };
+  if (msg == evNCPaint && wparam == 0)
+    order_background_before_content(win, index);
 
   // Wake get_message() so the caller's while-loop exits and repost_messages()
   // can process the newly-queued message this iteration.
@@ -606,6 +621,8 @@ bool is_valid_window_ptr(window_t *target, window_t *list) {
 void repost_messages(void) {
   bool frame_began = g_ui_runtime.running;
   bool frame_had_paint = false;
+  window_t *unfinished[0x100];
+  int unfinished_count = 0;
   if (frame_began) {
     ui_begin_frame();   // make GL context current, bind platform framebuffer
   }
@@ -624,28 +641,45 @@ void repost_messages(void) {
       free_posted_lparam(m->msg, m->lparam);
       continue;
     }
-    if (m->msg == evPaint) frame_had_paint = true;
+    if (m->msg == evNCPaint && m->wparam == 0) {
+      bool found = false;
+      for (int i = 0; i < unfinished_count; i++)
+        if (unfinished[i] == m->target) { found = true; break; }
+      if (!found) unfinished[unfinished_count++] = m->target;
+    }
     send_message(m->target, m->msg, m->wparam, m->lparam);
+    if (m->msg == evPaint) {
+      frame_had_paint = true;
+      for (int i = 0; i < unfinished_count; i++) {
+        if (unfinished[i] == m->target) {
+          unfinished[i] = unfinished[--unfinished_count];
+          break;
+        }
+      }
+    }
     free_posted_lparam(m->msg, m->lparam);
   }
   // Composite baked root-window FBO textures to the screen. A move can
   // request a blit without posting evPaint (the surfaces are already valid).
   bool want_composite = frame_had_paint || g_ui_runtime.needs_composite;
-  g_ui_runtime.needs_composite = false;
-  if (frame_began && want_composite) {
+  // Focus notifications can enqueue the matching client paint after this
+  // frame's queue snapshot. Keep the previous screen until it is complete.
+  bool complete = unfinished_count == 0;
+  g_ui_runtime.needs_composite = !complete;
+  if (frame_began && complete && want_composite) {
     composite_root_windows();
   }
   char screenshot_path[1024];
   int screenshot_quality = 90;
   bool quit_after_screenshot = false;
-  if (frame_began && ui_dequeue_screenshot_for_frame(frame_had_paint,
+  if (frame_began && ui_dequeue_screenshot_for_frame(frame_had_paint && complete,
         screenshot_path, sizeof(screenshot_path), &screenshot_quality,
         &quit_after_screenshot)) {
     ui_save_screenshot(screenshot_path, screenshot_quality);
   }
   // A window procedure may request quit while dispatching.  Still present any
   // frame that was begun; otherwise its completed drawing is never swapped.
-  if (frame_began) {
+  if (frame_began && complete) {
     ui_end_frame();     // present frame (swap buffers / flushBuffer)
   }
   if (quit_after_screenshot) ui_request_quit();

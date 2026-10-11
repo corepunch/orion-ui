@@ -168,8 +168,8 @@ built-in scrollbars can move. A tap delivers the press and release together;
 travelling past `TOUCH_SLOP` drives the same `evGesture` pan and, on release,
 `scrollbar_fling()` momentum; resting for `TOUCH_HOLD_MS` delivers the press.
 Before holding a press back, the router asks the window under the finger and its
-ancestors `evQueryDrag`: `DRAG_NOW` (painting canvases, sliders, sheet clips)
-takes the press at once, `DRAG_AFTER_HOLD` (library cards) is picked up after
+ancestors `evQueryDrag`: `DRAG_NOW` (painting canvases, sliders)
+takes the press at once, `DRAG_AFTER_HOLD` (library cards, sheet clips) is picked up after
 `TOUCH_LONG_PRESS_MS`. A platform timer reports the hold while the finger rests;
 sample timestamps decide when a busy main thread queues the timer late.
 

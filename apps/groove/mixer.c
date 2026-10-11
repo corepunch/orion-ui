@@ -61,6 +61,35 @@ bool song_can_place(const song_t *s, int track, int position, int ticks, int ign
   return ignore_clip >= 0 ? ignore_clip < s->nclips : s->nclips < GR_MAX_CLIPS;
 }
 
+// Another copy of clip idx, on its track, after the abutting run of that same
+// block. A different block overlapping the destination refuses the copy.
+int song_repeat_clip(song_t *s, int idx) {
+  if (idx < 0 || idx >= s->nclips) {
+    fprintf(stderr, "[mx] repeat_clip rejected idx=%d nclips=%d\n", idx, s->nclips);
+    fflush(stderr);
+    return -1;
+  }
+  int block = s->clips[idx].block, track = s->clips[idx].track;
+  int len = clip_ticks(&s->clips[idx]), end = s->clips[idx].position + len;
+  for (;;) {
+    int further = end;
+    for (int i = 0; i < s->nclips; i++) {
+      const clip_t *c = &s->clips[i];
+      int c0, c1;
+      if (c->track != track) continue;
+      c0 = c->position;
+      c1 = c0 + clip_ticks(c);
+      if (c0 >= end + len || c1 <= end) continue;
+      if (c->block != block) return -1;
+      if (c1 > further) further = c1;
+    }
+    if (further == end) break;
+    end = further;
+  }
+  if (!song_can_place(s, track, end, len, -1)) return -1;
+  return song_add_clip(s, block, track, end);
+}
+
 int song_add_clip(song_t *s, int block, int track, int position) {
   const block_t *b = block_get(block);
   if (!b || s->nclips >= GR_MAX_CLIPS || !song_can_place(s, track, position, b->bars * GR_TICKS_BAR, -1)) {

@@ -1,8 +1,12 @@
 // VIEW: the sheet — track headers on the left, bar ruler on top, one lane per
 // track. Blocks snap to quarter bars. It is the drop target for tiles dragged
-// from the bin (shDragOver / shDrop). Each clip is a child window; dragging
-// one lifts that window with window_set_drag_visual, and dropping it outside
-// the grid removes the clip.
+// from the bin (shDragOver / shDrop). A finger swipe scrolls, including over
+// a clip; holding the clip, then moving, picks it up. A mouse drag still
+// picks a clip up as soon as it moves. A tap plays the sample; picking one up
+// stops that audition. A double-tap lays another copy after that sample's run
+// unless a different sample is in the way. Each clip is a child window.
+// Dragging one lifts that window with window_set_drag_visual, and dropping
+// it outside the grid removes the clip.
 //
 // Coordinates: mouse messages arrive in content space (client + scroll), so
 // `mx - hpos` is the client x. Clip windows receive their own client space.
@@ -213,10 +217,10 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evHScroll: sync_clips(win); invalidate_window(win); return true;
     case evPaint: paint_sheet(win); return true;
     case evHitTest: return true; // clips paint, the sheet keeps the pointer
-    case evQueryDrag: { // clips drag; a swipe over empty lanes scrolls
+    case evQueryDrag: { // hold picks up a clip; a swipe scrolls the sheet
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
       if (my < RULER_H) return false;
-      return song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), position_at(mx)) >= 0 ? DRAG_NOW : DRAG_NONE;
+      return song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), position_at(mx)) >= 0 ? DRAG_AFTER_HOLD : DRAG_NONE;
     }
     case evLeftButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
@@ -268,6 +272,15 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       drag_clear(win);
       if (removed) app_command(ID_DELETE); // dragged off the grid; the pressed clip is selected
       return true;
+    case evLeftButtonDoubleClick: {
+      int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
+      if (!st || my < RULER_H) return false;
+      int track = (my - RULER_H) / row_h(win);
+      int idx = track >= 0 && track < GR_TRACKS ? song_clip_at(&g_app->song, track, position_at(mx)) : -1;
+      if (idx < 0) return false;
+      app_repeat_clip(idx);
+      return true;
+    }
     case evRightButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
       if (my < RULER_H) return false;

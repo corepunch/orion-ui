@@ -7,6 +7,13 @@ starts and the song's loop endpoint all retain fractional positions. The
 ruler shows the subdivisions. A tap on the ruler, or on the arrangement
 where no clip is visible, seeks in the same 64-tick steps.
 
+A finger swipe scrolls the sheet, clips included. Holding a clip for
+`TOUCH_LONG_PRESS_MS`, then moving, picks it up; a mouse still picks a clip
+up as soon as it moves. A tap on a clip plays that sample. A double-tap
+places another copy on the same track, immediately after the clip, or after
+the run of that same sample already continuing from it. A different sample
+overlapping that next slot leaves the song unchanged.
+
 The sheet defaults to `GR_DROP_ANCHOR_SAMPLE`. Library drags and moves of
 existing clips retain the exact cursor offset inside the card, in logical
 pixels. The sheet subtracts that offset and compares the dragged card's center
