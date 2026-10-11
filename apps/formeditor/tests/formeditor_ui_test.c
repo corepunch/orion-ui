@@ -465,6 +465,32 @@ void test_page_navigation_preview(void) {
   PASS();
 }
 
+static void test_pane_host_preview(void) {
+  TEST("PaneHost: FormEditor instantiates and saves a nested pane tree");
+  setup();
+  const fe_component_desc_t *desc = find_window_class_desc_by_proc(win_pane_host);
+  ASSERT_NOT_NULL(desc);
+  ASSERT_TRUE(desc->capabilities & FE_COMPONENT_PLACEABLE);
+  window_t *form = g_app->active_form;
+  install_form_xml(form, "<form name=\"workspace\" width=\"600\" height=\"400\">"
+    "<PaneHost name=\"panes\"><SplitView name=\"split\"><TabView name=\"left\"/>"
+    "<TabView name=\"right\"/></SplitView></PaneHost></form>");
+  window_t *host = descendant_by_class(form, "PaneHost");
+  ASSERT_NOT_NULL(host);
+  ASSERT_EQUAL(pane_host_count(host), 2);
+  ASSERT_EQUAL(pane_host_pane(host, 0)->parent->proc, win_splitview);
+  const char *path = "build/pane-host-preview-roundtrip.orion";
+  ASSERT_TRUE(fe_project_save(path));
+  xmlDocPtr saved = xmlReadFile(path, NULL, XML_PARSE_NONET);
+  ASSERT_NOT_NULL(saved);
+  xmlNodePtr forms = first_child(xmlDocGetRootElement(saved), "forms");
+  xmlNodePtr pane = first_child(first_child(forms, "form"), "PaneHost");
+  ASSERT_NOT_NULL(pane);
+  ASSERT_NOT_NULL(first_child(first_child(pane, "SplitView"), "TabView"));
+  xmlFreeDoc(saved); remove(path);
+  teardown(); PASS();
+}
+
 int main(void) {
   TEST_START("Form Editor Window-First Recovery");
   test_window_first_document_state();
@@ -478,5 +504,6 @@ int main(void) {
   test_socialfeed_project_loads_runtime_and_database();
   test_activitybar_preview();
   test_page_navigation_preview();
+  test_pane_host_preview();
   TEST_END();
 }

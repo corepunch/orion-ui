@@ -496,6 +496,60 @@ static void remove_from_parent_child_list(window_t *win) {
   }
 }
 
+bool window_reparent(window_t *win, window_t *parent, window_t *before) {
+  bool valid = win && parent && is_window(win) && is_window(parent) && win->parent &&
+               get_root_window(win) == get_root_window(parent) && !win->dock && win->role == WINDOW_ROLE_NORMAL &&
+               win->parent->toolbar != win && (!before || (is_window(before) && before->parent == parent));
+  if (valid) {
+    bool child_found = false, before_found = before == NULL;
+    for (window_t *c = win->parent->children; c; c = c->next) if (c == win) child_found = true;
+    for (window_t *c = parent->children; c; c = c->next) if (c == before) before_found = true;
+    valid = child_found && before_found;
+  }
+  for (window_t *p = parent; valid && p; p = p->parent) if (p == win) valid = false;
+  if (!valid) {
+    fprintf(stderr, "[window] reparent rejected win=%p parent=%p before=%p\n", (void *)win, (void *)parent, (void *)before);
+    fflush(stderr); return false;
+  }
+  if (before == win) return true;
+  window_t *old = win->parent;
+  for (window_t *p = old; p; p = p->parent) send_message(p, evDescendantDetach, 0, win);
+  remove_from_parent_child_list(win);
+  win->parent = parent;
+  window_t **link = &parent->children;
+  while (*link && *link != before) link = &(*link)->next;
+  win->next = *link; *link = win;
+  for (window_t *p = g_ui_runtime.focused; p; p = p->parent) {
+    if (p != win) continue;
+    for (window_t *owner = win->parent; owner; owner = owner->parent)
+      send_message(owner, evDescendantFocus, 0, g_ui_runtime.focused);
+    break;
+  }
+  invalidate_window(old); invalidate_window(parent);
+  return true;
+}
+
+static ipoint16_t window_point_to_screen(window_t *win, ipoint16_t point) {
+  for (; win; win = win->parent) {
+    point = window_content_to_client(win, point);
+    point.x += win->frame.x - (int)win->hscroll.pos;
+    point.y += win->frame.y + titlebar_height(win) - (int)win->vscroll.pos;
+  }
+  return point;
+}
+
+static ipoint16_t window_point_from_screen(window_t *win, ipoint16_t point) {
+  if (!win) return point;
+  point = window_point_from_screen(win->parent, point);
+  point.x -= win->frame.x - (int)win->hscroll.pos;
+  point.y -= win->frame.y + titlebar_height(win) - (int)win->vscroll.pos;
+  return window_client_to_content(win, point);
+}
+
+ipoint16_t window_map_point(window_t *from, window_t *to, ipoint16_t point) {
+  return window_point_from_screen(to, window_point_to_screen(from, point));
+}
+
 // Remove window hooks
 extern void remove_from_global_hooks(window_t *win);
 
@@ -690,8 +744,12 @@ void set_capture(window_t *win) {
 
 // Set focused window
 void set_focus(window_t* win) {
-  if (win == g_ui_runtime.focused)
+  if (win == g_ui_runtime.focused) {
+    // A newly constructed child can already hold focus before its container selects it.
+    for (window_t *p = win ? win->parent : NULL; p; p = p->parent)
+      send_message(p, evDescendantFocus, 0, win);
     return;
+  }
   if (g_ui_runtime.focused) {
     page_host_remember_focus(g_ui_runtime.focused);
     window_set_state(g_ui_runtime.focused, WINDOW_STATE_EDITING, false);

@@ -10,6 +10,10 @@
             <item name="close" label="Close Tab" shortcut="Ctrl+Shift+W" />
             <item name="next" label="Next Tab" shortcut="Ctrl+Tab" />
             <item name="previous" label="Previous Tab" shortcut="Ctrl+Shift+Tab" />
+            <item name="split_right" label="Split Right" shortcut="Ctrl+Shift+E" />
+            <item name="split_down" label="Split Down" shortcut="Ctrl+Shift+O" />
+            <item name="move" label="Move Tab to Next Pane" shortcut="Ctrl+Shift+M" />
+            <item name="focus_next" label="Focus Next Pane" shortcut="Ctrl+Alt+Tab" />
         </menu>
         <menu name="view" label="View">
             <item name="workspace" label="Workspace" />
@@ -29,10 +33,18 @@
                 <Button name="previous_tab" text="Previous" width="80" />
                 <Button name="next_tab" text="Next" width="80" />
             </StackView>
-            <SplitView name="terminals" split-ratio="0.5" flags="flexspace">
-                <TabView name="left_tabs" flags="flexspace" />
-                <TabView name="right_tabs" flags="flexspace" />
-            </SplitView>
+            <StackView name="pane_actions" orientation="horizontal" height="28" spacing="4" padding="4 0">
+                <Button name="split_right" text="Split Right" width="80" />
+                <Button name="split_down" text="Split Down" width="80" />
+                <Button name="move_tab" text="Move Tab" width="80" />
+                <Button name="next_pane" text="Next Pane" width="80" />
+            </StackView>
+            <PaneHost name="panes" flags="flexspace">
+                <SplitView name="terminals" split-ratio="0.5" flags="flexspace">
+                    <TabView name="left_tabs" flags="flexspace" />
+                    <TabView name="right_tabs" flags="flexspace" />
+                </SplitView>
+            </PaneHost>
         </form>
         <form name="session_tab" title="Terminal" width="960" height="640" flags="notitle,nofill" spacing="0" padding="0">
             <TerminalView name="terminal" flags="notitle,nofill,vscroll,flexspace" />

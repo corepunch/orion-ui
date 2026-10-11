@@ -165,6 +165,8 @@ result_t win_splitview(window_t *win, uint32_t msg,
       splitview_state_t *st = (splitview_state_t *)win->userdata;
       if (!st) return false;
       uint16_t code = HIWORD(wparam);
+      if (code == tcnBeginDrag || code == tcnSelChange)
+        return win->parent ? send_message(win->parent, msg, wparam, lparam) : false;
       if (code == spnDragStart) {
         st->dragging = true;
         uint32_t packed = (uint32_t)(uintptr_t)lparam;
@@ -196,7 +198,7 @@ result_t win_splitview(window_t *win, uint32_t msg,
       return true;
     }
 
-    case evLeftButtonUp: {
+    case evPointerCancel: case evLeftButtonUp: {
       splitview_state_t *st = (splitview_state_t *)win->userdata;
       if (st && st->dragging) {
         st->dragging = false;
@@ -206,6 +208,8 @@ result_t win_splitview(window_t *win, uint32_t msg,
       return false;
     }
 
+    case evPaint: return false;
+    case evDestroy: free(win->userdata); win->userdata = NULL; return true;
     case evGetCursor:
       return curArrow;
 

@@ -706,6 +706,10 @@ bool is_window(window_t *win);
 void ui_rc_poll(void); // service pending remote-control screenshot requests and queries
 int  window_nc_hit_test(window_t *win, int sx, int sy);   // HT_* under a screen point
 window_t *get_root_window(window_t *window);
+// Move an ordinary child within the same root; before=NULL appends. Keeps its resources alive.
+bool window_reparent(window_t *win, window_t *parent, window_t *before);
+// Map content coordinates between windows, accounting for nested scroll offsets.
+ipoint16_t window_map_point(window_t *from, window_t *to, ipoint16_t point);
 // Framework-owned desktop root created by UI_INIT_DESKTOP, or NULL when the
 // current runtime has no desktop. Desktop icon controls should parent here.
 window_t *get_desktop_window(void);

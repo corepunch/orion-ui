@@ -32,3 +32,19 @@ The header reveals the selected tab when labels exceed the available width.
 `tcGetTabRect(index, &rect)` reports a tab's rectangle in TabView coordinates,
 including the current scroll offset. Sidebar style continues to use its standard
 scrollbar. Pointer hit-testing and painting use the same offset.
+
+## Moving tabs
+
+`tabview_move_page(source, index, target, before)` transfers the same page window
+and its remembered focus to another TabView under the same root. It also supports
+reordering within one TabView. `before` is an insertion slot (0 through the target
+count), or -1 to append. Icon indices follow their pages; an empty destination
+adopts the source image strip. Nonempty destinations must use the same strip when
+moving an icon-bearing tab. Rejected transfers leave the page in its source.
+
+`TAB_STYLE_DRAG_TABS` enables drag initiation from the horizontal TabBar. After a
+six-pixel threshold, TabView sends synchronous `tcnBeginDrag` through `evCommand`
+with a `tab_drag_t` containing the page and source-local pointer position. Its
+parent may take capture to manage the interaction. `tcGetStyle` queries the flags.
+[PaneHost](pane-host.md) supplies the reusable drop targets, snap overlay, nested
+splits, and empty-pane collapse for applications.

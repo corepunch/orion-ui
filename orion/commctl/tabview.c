@@ -23,6 +23,8 @@ typedef struct tab_focus_s {
 
 typedef struct {
   int selected, scroll;
+  window_t *pressed_page;
+  ipoint16_t press_point;
   tab_focus_t *focus;
   uint32_t style;
   bitmap_strip_t strip;
@@ -377,6 +379,73 @@ static bool tab_set_tab_icon(tabview_state_t *st, int count, int idx, int ico) {
   return true;
 }
 
+bool tabview_move_page(window_t *source, int index, window_t *target, int before) {
+  bool valid = source && target && is_window(source) && is_window(target) &&
+               source->proc == win_tabview && target->proc == win_tabview;
+  tabview_state_t *src = valid ? source->userdata : NULL, *dst = valid ? target->userdata : NULL;
+  int count = valid ? tab_count(source) : 0, target_count = valid ? tab_count(target) : 0;
+  if (before == -1) before = target_count;
+  if (!src || !dst || index < 0 || index >= count || before < 0 || before > target_count ||
+      get_root_window(source) != get_root_window(target)) {
+    fprintf(stderr, "[tv] move_page rejected source=%p target=%p index=%d before=%d\n",
+            (void *)source, (void *)target, index, before);
+    fflush(stderr); return false;
+  }
+  window_t *page = tab_page(source, index);
+  for (window_t *p = target; p; p = p->parent) if (p == page) {
+    fprintf(stderr, "[tv] move_page rejected win=%u reason=cycle\n", source->id);
+    fflush(stderr); return false;
+  }
+  if (source == target && (before == index || before == index + 1)) {
+    tab_select(source, index, false); return true;
+  }
+  int icon = index < src->tab_icon_count ? src->tab_icons[index] : -1;
+  if (source != target && target_count && icon >= 0 && memcmp(&src->strip, &dst->strip, sizeof(src->strip))) {
+    fprintf(stderr, "[tv] move_page rejected win=%u target=%u reason=different_icon_strips\n", source->id, target->id);
+    fflush(stderr); return false;
+  }
+  int new_count = target_count + (source != target);
+  int *icons = malloc((size_t)new_count * sizeof(*icons));
+  if (!icons) {
+    fprintf(stderr, "[tv] move_page allocation failed win=%u count=%d\n", source->id, new_count);
+    fflush(stderr); return false;
+  }
+  int n = 0;
+  for (int i = 0; i <= target_count; i++) {
+    if (i == before) icons[n++] = icon;
+    if (i == target_count || (source == target && i == index)) continue;
+    icons[n++] = i < dst->tab_icon_count ? dst->tab_icons[i] : -1;
+  }
+  tab_remember_focus(source, g_ui_runtime.focused);
+  tab_remember_focus(target, g_ui_runtime.focused);
+  window_t *selected = tab_page(source, src->selected);
+  tab_focus_t *memory = NULL;
+  for (tab_focus_t **p = &src->focus; *p; p = &(*p)->next)
+    if ((*p)->page == page) { memory = *p; *p = memory->next; break; }
+  if (!window_reparent(page, target, before < target_count ? tab_page(target, before) : NULL)) {
+    if (memory) { memory->next = src->focus; src->focus = memory; }
+    free(icons); return false;
+  }
+  if (memory) { tab_forget_window(dst, page); memory->next = dst->focus; dst->focus = memory; }
+  if (source != target) {
+    if (index < src->tab_icon_count) {
+      memmove(src->tab_icons + index, src->tab_icons + index + 1, (size_t)(src->tab_icon_count - index - 1) * sizeof(int));
+      src->tab_icon_count--;
+    }
+    if (index < src->selected) src->selected--;
+    if (selected == page) src->selected = MIN(index, count - 2);
+    src->selected = MAX(0, src->selected);
+    tab_arrange(source); invalidate_window(source);
+  }
+  if (source != target && !target_count) dst->strip = src->strip;
+  free(dst->tab_icons); dst->tab_icons = icons; dst->tab_icon_count = new_count;
+  dst->selected = before - (source == target && index < before);
+  tab_arrange(target); tab_restore_focus(target); invalidate_window(target);
+  if (source->parent) send_message(source->parent, evCommand, MAKEDWORD(source->id, tcnSelChange), source);
+  if (source != target && target->parent) send_message(target->parent, evCommand, MAKEDWORD(target->id, tcnSelChange), target);
+  return true;
+}
+
 result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   tabview_state_t *st = (tabview_state_t *)win->userdata;
   switch (msg) {
@@ -392,8 +461,14 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return true;
     case evDescendantFocus:
       tab_remember_focus(win, lparam); return true;
-    case evDescendantDestroy:
-      if (st) tab_forget_window(st, lparam);
+    case evDescendantDestroy: case evDescendantDetach:
+      if (st) {
+        tab_forget_window(st, lparam);
+        if (st->pressed_page == lparam) {
+          st->pressed_page = NULL;
+          if (g_ui_runtime.captured == win) set_capture(NULL);
+        }
+      }
       return true;
     case evSetFocus:
       if (g_ui_runtime.focused == win) tab_restore_focus(win);
@@ -425,12 +500,33 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       int left = 2 - st->scroll, i = 0;
       FOR_EACH_PAGE(win, st, c) {
         int w = tab_width(c, st, i);
-        if (mx >= left && mx < left + w) { tab_remember_focus(win, g_ui_runtime.focused); set_focus(win); tab_select(win, i, true); return true; }
+        if (mx >= left && mx < left + w) {
+          tab_remember_focus(win, g_ui_runtime.focused); set_focus(win); tab_select(win, i, true);
+          if (st->style & TAB_STYLE_DRAG_TABS) {
+            st->pressed_page = c; st->press_point = (ipoint16_t){mx, my}; set_capture(win);
+          }
+          return true;
+        }
         left += w + 1;
         i++;
       }
       return true;
     }
+    case evMouseMove: {
+      if (!st || !st->pressed_page || g_ui_runtime.captured != win) return false;
+      ipoint16_t pt = {(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
+      if (abs(pt.x - st->press_point.x) + abs(pt.y - st->press_point.y) < 6) return true;
+      tab_drag_t drag = {st->pressed_page, pt};
+      st->pressed_page = NULL;
+      if (win->parent) send_message(win->parent, evCommand, MAKEDWORD(win->id, tcnBeginDrag), &drag);
+      if (g_ui_runtime.captured == win) set_capture(NULL);
+      return true;
+    }
+    case evPointerCancel: case evLeftButtonUp:
+      if (!st || !st->pressed_page) return false;
+      st->pressed_page = NULL;
+      if (g_ui_runtime.captured == win) set_capture(NULL);
+      return true;
     case evKeyDown:
       if (!st) {
         fprintf(stderr, "[tv] keydown rejected win=%u reason=no_state key=%u\n",
@@ -441,6 +537,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (wparam == (is_sidebar(st) ? AX_KEY_UPARROW : AX_KEY_LEFTARROW))    return tab_select(win, st->selected - 1, true);
       if (wparam == (is_sidebar(st) ? AX_KEY_DOWNARROW : AX_KEY_RIGHTARROW)) return tab_select(win, st->selected + 1, true);
       return false;
+    case tcGetStyle: return st ? st->style : 0;
     case tcGetSelection: return st ? st->selected : -1;
     case tcSetSelection: return tab_select(win, (int)wparam, false) || (st && st->selected == (int)wparam);
     case tcGetCount: return tab_count(win);
@@ -493,7 +590,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return true;
     }
     case tcSetStyle: {
-      const uint32_t known = TAB_STYLE_ICONS_ONLY | TAB_STYLE_SIDEBAR | TAB_STYLE_RESTORE_FOCUS;
+      const uint32_t known = TAB_STYLE_ICONS_ONLY | TAB_STYLE_SIDEBAR | TAB_STYLE_RESTORE_FOCUS | TAB_STYLE_DRAG_TABS;
       if (!st || (wparam & ~known)) {
         fprintf(stderr, "[tv] set_style rejected win=%u style=0x%x reason=%s\n",
                 win ? (unsigned)win->id : 0, (unsigned)wparam,

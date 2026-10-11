@@ -599,6 +599,13 @@ void dispatch_message(ui_event_t *msg) {
   update_pointer_state(msg);
   if (touch_filter(msg)) return;
   if (dock_handle_event(msg)) return;
+  // Escape cancels a captured pointer operation at the input boundary.
+  if (msg->message == kEventKeyDown && msg->keyCode == AX_KEY_ESCAPE && g_ui_runtime.captured) {
+    send_message(g_ui_runtime.captured, evPointerCancel, 0, NULL);
+    set_capture(NULL);
+    pointer_target = NULL;
+    return;
+  }
 
   window_t *win;
   int px, py; // platform logical coordinates

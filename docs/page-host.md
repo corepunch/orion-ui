@@ -93,14 +93,10 @@ Invalid initialization or selection logs a framework diagnostic to stderr.
 ## Page content and tiling
 
 PageHost manages navigation; a Page owns its content and layout. A Page may contain
-an ordinary form, a fixed SplitView, or eventually a workspace of tiled panes and
-tab groups. Orion supplies reusable layout and docking controls; apps compose them
-inside pages. Tiling is optional and scoped to that page, rather than imposed on
-every Orion window. This host preserves existing page layouts. Dynamic pane trees,
-cross-host transfers, and layout persistence across launches remain separate work.
+an ordinary form, a fixed SplitView, or a [PaneHost](pane-host.md) with dynamically
+split tabbed panes. Tiling is optional and scoped to that page.
 
-
-Terminal demonstrates this composition: its Workspace Page contains a SplitView
-with a TabView in each pane. Each tab owns one TerminalView; each pane keeps its
-own selected tab while the split layout remains part of the Workspace Page.
-See [TabView](tabview.md) for the reusable tab lifecycle and focus APIs.
+Terminal's Workspace Page contains a PaneHost. Its SplitViews arrange panes;
+each pane's TabView owns independent TerminalView sessions. Moving a tab preserves
+the session, while splitting and resizing alter the page's pane tree. Cross-host
+transfers and layout persistence across launches remain separate work.

@@ -128,6 +128,11 @@ visibility, selection, and focus restoration. Apps supply page procedures and
 respond to `evPageChanged` for domain behavior. The host uses ordinary docking
 and `set_host_page` toolbar projection. See [PageHost and Page](docs/page-host.md).
 
+`PaneHost` in `orion/commctl/pane_host.c` composes SplitView branches and TabView
+leaves inside a Page. TabBar drags use capture and a themed child overlay to preview
+moves and edge splits. Window-system reparenting preserves live content; PaneHost
+collapses empty branches. See [PaneHost](docs/pane-host.md).
+
 Non-client hit-testing is one function: `window_nc_hit_test()` sends `evNcHitTest` (a proc may claim
 the point) and otherwise answers `HT_CAPTION`, `HT_CLOSE`, `HT_MAXBUTTON`, `HT_GROWBOX` or `HT_CLIENT`;
 the input router uses it to start drags and resizes and to resolve caption buttons on release. The

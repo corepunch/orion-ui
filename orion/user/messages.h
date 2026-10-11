@@ -431,7 +431,7 @@ enum {
 // PageHost selection: wparam = command ID, lparam = selected page.
 enum { evPageChanged = evUser + 920 };
 // Synchronous lifecycle notifications to ancestors; lparam = descendant window.
-enum { evDescendantFocus = evUser + 930, evDescendantDestroy };
+enum { evDescendantFocus = evUser + 930, evDescendantDestroy, evDescendantDetach };
 
 // Dock host notifications.
 enum {
@@ -524,6 +524,8 @@ enum {
   tcGetPage,         // wparam = page index; returns the page window_t*, or NULL when out of range
   tcDeletePage,      // wparam = index; destroys that page and selects a surviving neighbor
   tcGetTabRect,      // wparam = index; lparam = irect16_t* in TabView coordinates
+  tcGetStyle,
+  tcnBeginDrag,      // evCommand; lparam = tab_drag_t*, synchronous, parent takes capture
 };
 // Card / Badge / TileGrid messages, in the spirit of NSCollectionView / UICollectionView items.
 enum {
@@ -571,6 +573,7 @@ enum {
 #define SEGMENTED_INSET        2  // track margin around the segments
 #define TAB_CONTROL_HEIGHT 22
 #define TAB_STYLE_ICONS_ONLY (1u << 0) // show tab icons without page-title labels
+#define TAB_STYLE_DRAG_TABS (1u << 3) // notify parent after a TabBar drag threshold
 #define TAB_STYLE_RESTORE_FOCUS (1u << 2) // restore each page's focused descendant on selection
 #define TAB_STYLE_SIDEBAR    (1u << 1) // tabs as a vertical list down the left edge; pages fill the rest
 #define TAB_SIDEBAR_ROW_HEIGHT 24

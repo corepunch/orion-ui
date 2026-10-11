@@ -41,7 +41,9 @@ static void test_terminal_page_host(void) {
   window_t *left = terminal_workspace_terminal(page, 0), *right = terminal_workspace_terminal(page, 1);
   ASSERT_EQUAL(page_host_page(host, ID_VIEW_WORKSPACE), page);
   ASSERT_EQUAL(window_active_page(host), page);
-  ASSERT_EQUAL(split->parent, page);
+  window_t *panes = get_window_item(page, ID_WORKSPACE_PAGE_PANES);
+  ASSERT_EQUAL(split->parent, panes);
+  ASSERT_EQUAL(panes->parent, page);
   ASSERT_EQUAL(splitview_get_left(split), left_tabs);
   ASSERT_EQUAL(splitview_get_right(split), right_tabs);
   ASSERT_EQUAL(left->parent->parent, left_tabs);
@@ -146,25 +148,57 @@ static void test_terminal_page_host(void) {
   ASSERT_EQUAL(process->pty_watch, watch);
   ASSERT_EQUAL(process->mode, VGAT_MODE_PTY);
 #endif
-  set_focus(right_second);
-  send_message(host, evCommand, MAKEDWORD(ID_TAB_CLOSE, kAcceleratorNotification), NULL);
-  ASSERT_EQUAL(send_message(right_tabs, tcGetCount, 0, NULL), 1);
-  window_t *fresh = terminal_workspace_terminal(page, 1);
-  ASSERT_NOT_EQUAL(fresh, right_second);
-#ifndef _WIN32
-  int status = 0;
-  ASSERT_EQUAL(waitpid(pid, &status, WNOHANG), -1);
-  ASSERT_EQUAL(errno, ECHILD);
-#endif
-  ASSERT_STR_EQUAL(((vgat_state_t *)fresh->userdata)->input_buf, "");
-  ASSERT_EQUAL(terminal_workspace_terminal(page, 0), left);
-  ASSERT_STR_EQUAL(ls->input_buf, "left draft");
-
   host->frame.w = 1000; host->frame.h = 650;
   send_message(host, evResize, 0, NULL);
   ASSERT_EQUAL(bar->dock->side, DOCK_LEFT);
   ASSERT_EQUAL(tb->orientation, TOOLBAR_VERTICAL);
   ASSERT_TRUE(fabs(terminal_split_ratio(left_tabs, right_tabs) - ratio) < 0.01);
+
+  // Move the live PTY into a new bottom pane. Its empty old pane collapses.
+  set_focus(right_second);
+  ASSERT_TRUE(pane_host_move_tab(panes, right_second->parent, left_tabs, PANE_BOTTOM, -1));
+  ASSERT_EQUAL(pane_host_count(panes), 2);
+  ASSERT_EQUAL(terminal_workspace_terminal(page, 0), left);
+  ASSERT_EQUAL(terminal_workspace_terminal(page, 1), right_second);
+  ASSERT_EQUAL(g_ui_runtime.focused, right_second);
+  ASSERT_STR_EQUAL(ls->input_buf, "left draft");
+#ifndef _WIN32
+  ASSERT_EQUAL(process->pty_pid, pid); ASSERT_EQUAL(process->pty_fd, fd);
+  ASSERT_EQUAL(process->pty_watch, watch); ASSERT_EQUAL(process->mode, VGAT_MODE_PTY);
+#endif
+  click_workspace(bar);
+  ASSERT_EQUAL(g_ui_runtime.focused, right_second);
+  ASSERT_TRUE(pane_host_move_tab(panes, right_second->parent, left_tabs, PANE_CENTER, 0));
+  ASSERT_EQUAL(pane_host_count(panes), 1);
+  ASSERT_EQUAL(g_ui_runtime.focused, right_second);
+  send_message(host, evCommand, MAKEDWORD(ID_TAB_CLOSE, kAcceleratorNotification), NULL);
+  ASSERT_EQUAL(pane_host_count(panes), 1);
+  ASSERT_EQUAL(terminal_workspace_terminal(page, 0), left);
+#ifndef _WIN32
+  int status = 0;
+  ASSERT_EQUAL(waitpid(pid, &status, WNOHANG), -1);
+  ASSERT_EQUAL(errno, ECHILD);
+#endif
+  ASSERT_STR_EQUAL(ls->input_buf, "left draft");
+  send_message(host, evCommand, MAKEDWORD(ID_TAB_CLOSE, kAcceleratorNotification), NULL);
+  window_t *fresh = terminal_workspace_terminal(page, 0);
+  ASSERT_NOT_NULL(fresh); ASSERT_NOT_EQUAL(fresh, left);
+  ASSERT_STR_EQUAL(((vgat_state_t *)fresh->userdata)->input_buf, "");
+  // Commands use the same reusable split/move implementation as dragging.
+  ASSERT_TRUE(terminal_workspace_command(page, ID_TAB_SPLIT_RIGHT));
+  ASSERT_EQUAL(pane_host_count(panes), 2);
+  ASSERT_TRUE(terminal_workspace_command(page, ID_TAB_SPLIT_DOWN));
+  ASSERT_EQUAL(pane_host_count(panes), 3);
+  ASSERT_TRUE(terminal_workspace_command(page, ID_TAB_FOCUS_NEXT));
+  ASSERT_EQUAL(g_ui_runtime.focused, fresh);
+  ASSERT_TRUE(terminal_workspace_command(page, ID_TAB_MOVE));
+  ASSERT_EQUAL(pane_host_count(panes), 2);
+  ASSERT_EQUAL(g_ui_runtime.focused, fresh);
+  host->frame.w = 420; host->frame.h = 700;
+  send_message(host, evResize, 0, NULL);
+  ASSERT_EQUAL(bar->dock->side, DOCK_BOTTOM);
+  click_workspace(bar);
+  ASSERT_EQUAL(g_ui_runtime.focused, fresh);
   gem_shutdown();
   ASSERT_NULL(g_terminal.host); ASSERT_NULL(g_ui_runtime.focused);
   test_env_shutdown(); ui_shutdown_graphics();

@@ -2,9 +2,8 @@
 #include "build/generated/apps/terminal/terminal.h"
 
 typedef struct {
-  window_t *panes[2];
-  unsigned next_tab[2];
-  int active_pane;
+  window_t *host;
+  unsigned next_tab;
 } terminal_workspace_t;
 
 static result_t terminal_tab_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -18,62 +17,78 @@ static result_t terminal_tab_proc(window_t *win, uint32_t msg, uint32_t wparam, 
 
 window_t *terminal_workspace_terminal(window_t *page, int pane) {
   terminal_workspace_t *st = page ? page->userdata : NULL;
-  if (!st || pane < 0 || pane >= 2 || !st->panes[pane]) return NULL;
-  window_t *tabs = st->panes[pane];
-  if (!send_message(tabs, tcGetCount, 0, NULL)) return NULL;
+  window_t *tabs = st ? pane_host_pane(st->host, pane) : NULL;
+  if (!tabs || !send_message(tabs, tcGetCount, 0, NULL)) return NULL;
   int index = send_message(tabs, tcGetSelection, 0, NULL);
   window_t *tab = (window_t *)send_message(tabs, tcGetPage, index, NULL);
   return get_window_item(tab, ID_SESSION_TAB_TERMINAL);
 }
 
-static bool terminal_new_tab(terminal_workspace_t *st, int pane) {
-  window_t *tabs = st->panes[pane];
+static bool terminal_new_tab(terminal_workspace_t *st, window_t *tabs) {
   window_t *tab = create_window_from_form(&terminal_session_tab_form, 0, 0,
                                           tabs, terminal_tab_proc, tabs->hinstance, NULL);
   if (!tab) return false;
-  snprintf(tab->title, sizeof(tab->title), "Terminal %u", ++st->next_tab[pane]);
+  snprintf(tab->title, sizeof(tab->title), "Terminal %u", ++st->next_tab);
   int index = send_message(tabs, tcGetCount, 0, NULL) - 1;
   return send_message(tabs, tcSetSelection, index, NULL);
 }
 
 bool terminal_workspace_command(window_t *page, uint32_t command) {
   terminal_workspace_t *st = page ? page->userdata : NULL;
-  if (!st || !st->panes[st->active_pane]) return false;
-  window_t *tabs = st->panes[st->active_pane];
+  window_t *tabs = st ? pane_host_active(st->host) : NULL;
+  if (!tabs) return false;
   int count = send_message(tabs, tcGetCount, 0, NULL);
   int index = send_message(tabs, tcGetSelection, 0, NULL);
   switch (command) {
     case ID_TAB_NEW: case ID_WORKSPACE_PAGE_NEW_TAB:
-      return terminal_new_tab(st, st->active_pane);
-    case ID_TAB_CLOSE: case ID_WORKSPACE_PAGE_CLOSE_TAB:
+      return terminal_new_tab(st, tabs);
+    case ID_TAB_CLOSE: case ID_WORKSPACE_PAGE_CLOSE_TAB: {
       if (!count) return false;
-      if (count == 1 && !terminal_new_tab(st, st->active_pane)) return false;
-      if (!send_message(tabs, tcDeletePage, index, NULL)) return false;
-      return send_message(tabs, tcSetSelection, send_message(tabs, tcGetSelection, 0, NULL), NULL);
+      window_t *tab = (window_t *)send_message(tabs, tcGetPage, index, NULL);
+      // Keep one usable session when closing the final tab in the whole workspace.
+      if (count == 1 && pane_host_count(st->host) == 1 && !terminal_new_tab(st, tabs)) return false;
+      return pane_host_close_tab(st->host, tab);
+    }
     case ID_TAB_NEXT: case ID_WORKSPACE_PAGE_NEXT_TAB:
       return count && send_message(tabs, tcSetSelection, (index + 1) % count, NULL);
     case ID_TAB_PREVIOUS: case ID_WORKSPACE_PAGE_PREVIOUS_TAB:
       return count && send_message(tabs, tcSetSelection, (index + count - 1) % count, NULL);
+    case ID_TAB_SPLIT_RIGHT: case ID_WORKSPACE_PAGE_SPLIT_RIGHT:
+    case ID_TAB_SPLIT_DOWN: case ID_WORKSPACE_PAGE_SPLIT_DOWN: {
+      bool right = command == ID_TAB_SPLIT_RIGHT || command == ID_WORKSPACE_PAGE_SPLIT_RIGHT;
+      if (!terminal_new_tab(st, tabs)) return false;
+      window_t *tab = (window_t *)send_message(tabs, tcGetPage, count, NULL);
+      if (pane_host_move_tab(st->host, tab, tabs, right ? PANE_RIGHT : PANE_BOTTOM, -1)) return true;
+      pane_host_close_tab(st->host, tab);
+      send_message(tabs, tcSetSelection, index, NULL);
+      return false;
+    }
+    case ID_TAB_MOVE: case ID_WORKSPACE_PAGE_MOVE_TAB:
+    case ID_TAB_FOCUS_NEXT: case ID_WORKSPACE_PAGE_NEXT_PANE: {
+      int panes = pane_host_count(st->host), current = 0;
+      while (current < panes && pane_host_pane(st->host, current) != tabs) current++;
+      window_t *next = pane_host_pane(st->host, (current + 1) % panes);
+      if (command == ID_TAB_MOVE || command == ID_WORKSPACE_PAGE_MOVE_TAB) {
+        if (!count) return false;
+        return pane_host_move_tab(st->host, (window_t *)send_message(tabs, tcGetPage, index, NULL), next, PANE_CENTER, -1);
+      }
+      return send_message(next, tcSetSelection, send_message(next, tcGetSelection, 0, NULL), NULL);
+    }
     default: return false;
   }
 }
 
 result_t terminal_workspace_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  (void)lparam;
   terminal_workspace_t *st = win->userdata;
   switch (msg) {
     case evCreate:
       st = allocate_window_data(win, sizeof(*st));
       if (!st) return false;
-      st->panes[0] = get_window_item(win, ID_WORKSPACE_PAGE_LEFT_TABS);
-      st->panes[1] = get_window_item(win, ID_WORKSPACE_PAGE_RIGHT_TABS);
-      for (int i = 0; i < 2; i++)
-        if (!st->panes[i] || !send_message(st->panes[i], tcSetStyle, TAB_STYLE_RESTORE_FOCUS, NULL) ||
-            !terminal_new_tab(st, i)) return false;
-      st->active_pane = 0;
-      return true;
-    case evDescendantFocus:
-      for (window_t *p = lparam; st && p && p != win; p = p->parent)
-        for (int i = 0; i < 2; i++) if (p == st->panes[i]) st->active_pane = i;
+      st->host = get_window_item(win, ID_WORKSPACE_PAGE_PANES);
+      if (!st->host || !pane_host_count(st->host)) return false;
+      for (int i = 0; i < pane_host_count(st->host); i++)
+        if (!terminal_new_tab(st, pane_host_pane(st->host, i))) return false;
       return true;
     case evCommand: return terminal_workspace_command(win, LOWORD(wparam));
     case evPaint: return false;
