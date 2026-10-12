@@ -242,8 +242,11 @@
             </ActivityBar>
         </form>
         <form name="overview_page" title="Overview" icon="gc-nav-overview" checked-icon="gc-nav-overview-fill" tooltip="All repositories (Ctrl+0)" focus="board" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
+            <PaneToolbar replace="true">
+                <Button command="view.close_tab" icon="pane-close" tooltip="Close active view" />
+            </PaneToolbar>
             <requires library="gitclient_components" />
-            <TabView name="repositories_tabs" flags="flexspace">
+            <TabView name="repositories_tabs" hide-single-tab="true" flags="flexspace">
                 <StackView name="repositories_panel" text="Repositories" flags="flexspace" spacing="0" padding="0">
                     <StackView name="summary" orientation="horizontal" spacing="6" padding="14 10 14 2" />
                     <TileGrid name="board" flags="notitle,nofill,vscroll,flexspace" spacing="6" padding="10 6 10 10" />
@@ -258,9 +261,12 @@
             </StackView>
         </form>
         <form name="changes_page" title="Changes" icon="gc-nav-changes" checked-icon="gc-nav-changes-fill" tooltip="Working tree (Ctrl+1)" focus="changes_files" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
+            <PaneToolbar replace="true">
+                <Button command="view.close_tab" icon="pane-close" tooltip="Close active view" />
+            </PaneToolbar>
             <requires library="gitclient_components" />
             <SplitView name="changes_split" split-ratio="0.30" flags="flexspace">
-                <TabView name="changes_panel_tabs" flags="flexspace">
+                <TabView name="changes_panel_tabs" hide-single-tab="true" flags="flexspace">
                     <StackView name="changes_panel" text="Changes" spacing="4" padding="4">
                         <CheckBox name="stage_all" text="0 changed files" margin="4 0 0 0" />
                         <TableView name="changes_files" source="db.files" master="none" check-field="staged" column-titles="false" context-menu="files" flags="notitle,nofill,vscroll,flexspace">
@@ -275,16 +281,19 @@
                         </StackView>
                     </StackView>
                 </TabView>
-                <TabView name="changes_diff_tabs" flags="flexspace">
+                <TabView name="changes_diff_tabs" hide-single-tab="true" flags="flexspace">
                     <DiffView name="changes_diff" text="Diff" flags="notitle,nofill,vscroll,flexspace"/>
                 </TabView>
             </SplitView>
         </form>
         <form name="history_page" title="History" icon="gc-nav-history" checked-icon="gc-nav-history-fill" tooltip="Commit history (Ctrl+2)" focus="log" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
+            <PaneToolbar replace="true">
+                <Button command="view.close_tab" icon="pane-close" tooltip="Close active view" />
+            </PaneToolbar>
             <requires library="gitclient_components" />
             <SplitView name="history_main_split" flags="flexspace">
                 <SplitView name="left_split" orientation="vertical" flags="flexspace" width="180">
-                    <TabView name="branches_tabs" flags="flexspace">
+                    <TabView name="branches_tabs" hide-single-tab="true" flags="flexspace">
                         <TableView name="branches" text="Branches" source="db.branches" context-menu="branches" flags="notitle,nofill,vscroll">
                             <Column field="name" title="Branch" width="0" />
                             <Column field="kind" title="" width="64" />
@@ -293,20 +302,20 @@
                     </TabView>
                     <SplitView name="tags_worktrees_split" split-ratio="0.35" flags="flexspace">
                         <SplitView name="tags_stash_split" orientation="vertical" flags="flexspace">
-                            <TabView name="tags_tabs" flags="flexspace">
+                            <TabView name="tags_tabs" hide-single-tab="true" flags="flexspace">
                                 <TableView name="tags" text="Tags" source="db.tags" context-menu="tags" flags="notitle,nofill,vscroll">
                                     <Column field="name" title="Tag" width="0" />
                                     <Column field="date" title="Date" width="80" />
                                 </TableView>
                             </TabView>
-                            <TabView name="stash_list_tabs" flags="flexspace">
+                            <TabView name="stash_list_tabs" hide-single-tab="true" flags="flexspace">
                                 <TableView name="stash_list" text="Stash" source="db.stash" context-menu="stash" flags="notitle,nofill,vscroll">
                                     <Column field="message" title="Stash" width="0" />
                                     <Column field="branch" title="Branch" width="80" />
                                 </TableView>
                             </TabView>
                         </SplitView>
-                        <TabView name="worktrees_tabs" flags="flexspace">
+                        <TabView name="worktrees_tabs" hide-single-tab="true" flags="flexspace">
                             <TableView name="worktrees" text="Worktrees" source="db.worktrees" master="none" flags="notitle,nofill,vscroll">
                                 <Column field="name" title="Worktree" width="0" />
                                 <Column field="status" title="State" width="64" />
@@ -316,29 +325,32 @@
                 </SplitView>
                 <SplitView name="history_content_split" flags="flexspace">
                     <SplitView name="log_files_split" orientation="vertical" flags="flexspace">
-                        <TabView name="log_tabs" flags="flexspace">
+                        <TabView name="log_tabs" hide-single-tab="true" flags="flexspace">
                             <TableView name="log" text="Commits" source="db.commits" cell-style="two-line" flags="notitle,nofill,vscroll,flexspace">
                                 <Column field="subject" title="Subject" width="0" min-width="120" />
                                 <Column field="author" title="Author" width="0" />
                                 <Column field="date" title="Date" width="0" />
                             </TableView>
                         </TabView>
-                        <TabView name="history_files_tabs" flags="flexspace">
+                        <TabView name="history_files_tabs" hide-single-tab="true" flags="flexspace">
                             <TableView name="history_files" text="Files" source="db.files" master="log" flags="notitle,nofill,vscroll,flexspace">
                                 <Column field="path" title="File" width="0" />
                                 <Column field="status" title="Status" width="64" />
                             </TableView>
                         </TabView>
                     </SplitView>
-                    <TabView name="history_diff_tabs" flags="flexspace">
+                    <TabView name="history_diff_tabs" hide-single-tab="true" flags="flexspace">
                         <DiffView name="history_diff" text="Diff" flags="notitle,nofill,vscroll,flexspace"/>
                     </TabView>
                 </SplitView>
             </SplitView>
         </form>
         <form name="github_page" title="GitHub" icon="gc-nav-github" checked-icon="gc-nav-github-fill" tooltip="Issues and pull requests (Ctrl+3)" focus="issues" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
+            <PaneToolbar replace="true">
+                <Button command="view.close_tab" icon="pane-close" tooltip="Close active view" />
+            </PaneToolbar>
             <SplitView name="github_split" orientation="vertical" flags="flexspace">
-                <TabView name="issues_panel_tabs" flags="flexspace">
+                <TabView name="issues_panel_tabs" hide-single-tab="true" flags="flexspace">
                     <StackView name="issues_panel" text="Issues" spacing="4" padding="4">
                         <TableView name="issues" source="github_db.issues" flags="notitle,nofill,vscroll,flexspace">
                             <Column field="number" title="#" width="40" />
@@ -349,7 +361,7 @@
                         </TableView>
                     </StackView>
                 </TabView>
-                <TabView name="pulls_panel_tabs" flags="flexspace">
+                <TabView name="pulls_panel_tabs" hide-single-tab="true" flags="flexspace">
                     <StackView name="pulls_panel" text="Pull Requests" spacing="4" padding="4">
                         <TableView name="pulls" source="github_db.pulls" flags="notitle,nofill,vscroll,flexspace">
                             <Column field="number" title="#" width="40" />

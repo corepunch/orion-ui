@@ -52,6 +52,18 @@ splits, and empty-pane collapse for applications.
 
 ## Header size and pane actions
 
+`tcHideSingleTab(true)` (or `TAB_STYLE_HIDE_SINGLE_TAB` through `tcSetStyle`)
+hides the tab chrome when exactly one visible tab remains. Declare it with
+`<TabView hide-single-tab="true">` in `.orion`; FormEditor previews the same
+policy. Multiple tabs restore the normal TabBar automatically, including after
+moving, hiding, or restoring views. New Page splits inherit the source style.
+Sidebar mode keeps its navigation list.
+
+Without pane actions, the single-tab header collapses and content fills the
+control. With actions, a plain title caption retains the toolbar and drag target.
+`tcGetTabRect` returns that caption's bounds, or an empty rectangle when the
+header is collapsed. Pass false to `tcHideSingleTab` to restore normal tabs.
+
 Horizontal TabBars use the theme's `tab_header_height` (32 logical pixels in
 both bundled themes), `tab_min_width`, and `tab_padding`. Icon strips can grow
 the header further. Sidebar rows keep their own metrics.
@@ -68,7 +80,8 @@ notification. A Page activates the originating pane and dispatches the ordinary
 command to its app procedure, so clicking another pane's action targets that pane.
 
 Page supplies Split and Close automatically; an optional `<PaneToolbar>` adds
-app actions before them. See [Page docking](page-docking.md).
+app actions before them. `<PaneToolbar replace="true">` supplies the complete
+action list instead. See [Page docking](page-docking.md).
 
 `tcHidePage` removes the indexed tab while retaining its child window and focus
 history. `tcGetHiddenCount` reports retained tabs; `tcShowPages` restores them in

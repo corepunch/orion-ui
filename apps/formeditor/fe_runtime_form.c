@@ -633,6 +633,13 @@ static void runtime_fill_def(runtime_build_ctx_t *ctx, xmlNodePtr node,
     runtime_fill_combo_params(ctx, node, &out->lparam);
   } else if (str_ieq((const char *)node->name, "ActivityBar")) {
     runtime_fill_activity_params(ctx, node, &out->lparam);
+  } else if (str_ieq((const char *)node->name, "TabView")) {
+    char hide[16] = {0};
+    runtime_xml_attr_copy(node, "hide-single-tab", hide, sizeof(hide));
+    if (str_ieq(hide, "true") || strcmp(hide, "1") == 0) {
+      tabview_params_t *params = runtime_alloc(ctx, sizeof(*params));
+      if (params) { params->style = TAB_STYLE_HIDE_SINGLE_TAB; out->lparam = params; }
+    }
   }
 
   out->children = runtime_build_defs(ctx, node, &out->child_count);
@@ -720,6 +727,9 @@ window_t *fe_create_runtime_form_window(window_t *doc,
     if (def.role == WINDOW_ROLE_PAGE) {
       for (xmlNodePtr bar = form_node->children; bar; bar = bar->next) {
         if (bar->type != XML_ELEMENT_NODE || !str_ieq((const char *)bar->name, "PaneToolbar")) continue;
+        char replace[16] = {0};
+        runtime_xml_attr_copy(bar, "replace", replace, sizeof(replace));
+        def.pane_toolbar_replace = str_ieq(replace, "true") || strcmp(replace, "1") == 0;
         int count = 0;
         for (xmlNodePtr item = bar->children; item; item = item->next)
           if (item->type == XML_ELEMENT_NODE && str_ieq((const char *)item->name, "Button")) count++;

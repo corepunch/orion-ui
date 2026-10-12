@@ -140,6 +140,7 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 result_t win_slider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_gradient(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+typedef struct { uint32_t style; } tabview_params_t;
 result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 // Column browser (NSBrowser-style multi-column hierarchical navigation).

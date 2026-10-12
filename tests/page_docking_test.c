@@ -334,6 +334,49 @@ static void test_pane_header_actions(void) {
   destroy_window(page); test_env_shutdown(); PASS();
 }
 
+static void test_replacement_pane_actions(void) {
+  TEST("Page replacement toolbar keeps only declared actions across splits and resizes");
+  test_env_init();
+  const toolbar_item_t close = {.type = TOOLBAR_ITEM_BUTTON, .ident = PANE_ACTION_CLOSE};
+  const form_ctrl_def_t tabs = {.class_name = "TabView", .flags = WINDOW_FLEXSPACE};
+  form_def_t def = {.name = "Workspace", .width = 900, .height = 600,
+    .flags = WINDOW_NOTITLE | WINDOW_AUTO_LAYOUT, .role = WINDOW_ROLE_PAGE,
+    .children = &tabs, .child_count = 1, .pane_toolbar_items = &close,
+    .pane_toolbar_count = 1, .pane_toolbar_replace = true};
+  window_t *page = create_window_from_form(&def, 0, 0, NULL, pane_test_page, 0, NULL);
+  ASSERT_NOT_NULL(page);
+  window_t *pane = page_pane_at(page, 0);
+  ASSERT_TRUE(send_message(pane, tcHideSingleTab, true, NULL));
+  pane_test_tab(pane, "A");
+  window_t *right = page_split_pane(page, pane, PANE_RIGHT);
+  ASSERT_NOT_NULL(right);
+  ASSERT_TRUE(send_message(right, tcGetStyle, 0, NULL) & TAB_STYLE_HIDE_SINGLE_TAB);
+  window_t *b = pane_test_tab(right, "B");
+  send_message(page, evResize, 0, NULL);
+  for (int i = 0; i < page_pane_count(page); i++) {
+    window_t *bar = (window_t *)send_message(page_pane_at(page, i), tcGetToolbar, 0, NULL);
+    ASSERT_NOT_NULL(bar);
+    ASSERT_EQUAL(toolbar_get_state(bar)->item_count, 1);
+    ASSERT_EQUAL(toolbar_get_state(bar)->items[0].ident, PANE_ACTION_CLOSE);
+  }
+  ASSERT_TRUE(page_pane_action(page, right, PANE_ACTION_CLOSE));
+  ASSERT_TRUE(is_window(b)); ASSERT_FALSE(window_has_state(b, WINDOW_STATE_VISIBLE));
+  ASSERT_TRUE(page_show_closed_views(page));
+  ASSERT_TRUE(window_has_state(b, WINDOW_STATE_VISIBLE));
+  destroy_window(page);
+  def.pane_toolbar_items = NULL; def.pane_toolbar_count = 0;
+  page = create_window_from_form(&def, 0, 0, NULL, pane_test_page, 0, NULL);
+  ASSERT_NOT_NULL(page);
+  pane = page_pane_at(page, 0);
+  right = page_split_pane(page, pane, PANE_RIGHT);
+  ASSERT_NOT_NULL(right);
+  send_message(page, evResize, 0, NULL);
+  ASSERT_FALSE(send_message(pane, tcGetToolbar, 0, NULL));
+  ASSERT_FALSE(send_message(right, tcGetToolbar, 0, NULL));
+  ASSERT_TRUE(send_message(right, tcGetStyle, 0, NULL) & TAB_STYLE_DRAG_TABS);
+  destroy_window(page); test_env_shutdown(); PASS();
+}
+
 static void test_default_pane_actions(void) {
   TEST("Page provides Split and Close without declarations and preserves closed tool views");
   test_env_init();
@@ -390,6 +433,7 @@ static void test_default_pane_actions(void) {
 
 int main(void) {
   TEST_START("Page docking");
+  test_replacement_pane_actions();
   test_default_pane_actions();
   test_pane_header_actions();
   test_pane_moves_and_collapses();

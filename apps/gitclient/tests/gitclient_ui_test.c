@@ -869,6 +869,16 @@ static void test_gitclient_pane_layout(void) {
   window_t *github = g_test_state.github_page_win;
   ASSERT_EQUAL(page_pane_count(g_test_state.overview_page_win), 1);
   ASSERT_EQUAL(page_pane_count(changes), 2); ASSERT_EQUAL(page_pane_count(history), 7); ASSERT_EQUAL(page_pane_count(github), 2);
+  window_t *pages[] = {g_test_state.overview_page_win, changes, history, github};
+  for (int p = 0; p < ARRAY_LEN(pages); p++) {
+    for (int i = 0; i < page_pane_count(pages[p]); i++) {
+      ASSERT_TRUE(send_message(page_pane_at(pages[p], i), tcGetStyle, 0, NULL) & TAB_STYLE_HIDE_SINGLE_TAB);
+      window_t *bar = (window_t *)send_message(page_pane_at(pages[p], i), tcGetToolbar, 0, NULL);
+      ASSERT_NOT_NULL(bar);
+      ASSERT_EQUAL(toolbar_get_state(bar)->item_count, 1);
+      ASSERT_EQUAL(toolbar_get_state(bar)->items[0].ident, ID_VIEW_CLOSE_TAB);
+    }
+  }
   window_t *left = page_pane_at(changes, 0), *right = page_pane_at(changes, 1);
   ASSERT_EQUAL(left->parent->id, ID_CHANGES_PAGE_CHANGES_SPLIT);
   ASSERT_EQUAL(splitview_get_left(left->parent), left);
@@ -922,21 +932,21 @@ static void test_gitclient_pane_layout(void) {
   set_focus(log);
   window_t *pane_bar = (window_t *)send_message(log_pane, tcGetToolbar, 0, NULL);
   ASSERT_NOT_NULL(pane_bar);
-  ASSERT_EQUAL(toolbar_get_state(pane_bar)->item_count, 2);
+  ASSERT_EQUAL(toolbar_get_state(pane_bar)->item_count, 1);
+  ASSERT_EQUAL(toolbar_get_state(pane_bar)->items[0].ident, ID_VIEW_CLOSE_TAB);
   irect16_t action_rect;
-  ASSERT_TRUE(send_message(pane_bar, tbGetItemRect, PANE_ACTION_SPLIT_RIGHT, &action_rect));
-  uint32_t point = MAKEDWORD(action_rect.x + action_rect.w / 2, action_rect.y + action_rect.h / 2);
-  set_focus(branches);
-  send_message(pane_bar->toolbar, evLeftButtonDown, point, NULL);
-  send_message(pane_bar->toolbar, evLeftButtonUp, point, NULL);
+  ASSERT_FALSE(send_message(pane_bar, tbGetItemRect, PANE_ACTION_SPLIT_RIGHT, &action_rect));
+  ASSERT_TRUE(gc_pane_command(ID_VIEW_SPLIT_RIGHT));
+  uint32_t point;
   ASSERT_EQUAL(page_pane_count(history), 7);
   ASSERT_NOT_EQUAL(log->parent, history_files->parent);
+  ASSERT_TRUE(send_message(log->parent, tcGetStyle, 0, NULL) & TAB_STYLE_HIDE_SINGLE_TAB);
   ASSERT_TRUE(gc_pane_command(ID_VIEW_NEXT_PANE));
   ASSERT_NOT_NULL(page_active_pane(history));
   gc_refresh_all();
   ASSERT_EQUAL(g_test_state.log_win, log); ASSERT_EQUAL(g_test_state.history_files_win, history_files);
   pane_bar = (window_t *)send_message(log->parent, tcGetToolbar, 0, NULL);
-  ASSERT_TRUE(send_message(pane_bar, tbGetItemRect, PANE_ACTION_CLOSE, &action_rect));
+  ASSERT_TRUE(send_message(pane_bar, tbGetItemRect, ID_VIEW_CLOSE_TAB, &action_rect));
   point = MAKEDWORD(action_rect.x + action_rect.w / 2, action_rect.y + action_rect.h / 2);
   set_focus(history_files);
   send_message(pane_bar->toolbar, evLeftButtonDown, point, NULL);
@@ -960,13 +970,9 @@ static void test_gitclient_pane_layout(void) {
   ASSERT_EQUAL(page_pane_count(github), 1);
   ASSERT_EQUAL(g_test_state.github_issues_win, issues); ASSERT_EQUAL(g_test_state.github_pulls_win, pulls);
   pane_bar = (window_t *)send_message(issues_panel->parent, tcGetToolbar, 0, NULL);
-  ASSERT_TRUE(send_message(pane_bar, tbGetItemRect, PANE_ACTION_SPLIT_RIGHT, &action_rect));
-  point = MAKEDWORD(action_rect.x + action_rect.w / 2, action_rect.y + action_rect.h / 2);
-  ui_event_t alt = {.message = kEventModifiersChanged, .wParam = AX_MOD_ALT};
-  dispatch_message(&alt);
-  send_message(pane_bar->toolbar, evLeftButtonDown, point, NULL);
-  send_message(pane_bar->toolbar, evLeftButtonUp, point, NULL);
-  alt.wParam = 0; dispatch_message(&alt);
+  ASSERT_EQUAL(toolbar_get_state(pane_bar)->item_count, 1);
+  ASSERT_EQUAL(toolbar_get_state(pane_bar)->items[0].ident, ID_VIEW_CLOSE_TAB);
+  ASSERT_TRUE(gc_pane_command(ID_VIEW_SPLIT_DOWN));
   ASSERT_EQUAL(page_pane_count(github), 2);
   ASSERT_TRUE(pulls_panel->parent->frame.y > issues_panel->parent->frame.y);
   g_test_state.repo = repo;

@@ -938,6 +938,12 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
     if (elem(c, "tableview")) snprintf(lparam, sizeof(lparam), "&%s_%s_tableview_params", form, nz(a.v[A_NAME], "unnamed"));
     if (elem(c, "activitybar") && child(c, "toolbar")) snprintf(lparam, sizeof(lparam), "&%s_%s_activity_params", form, nz(a.v[A_NAME], "unnamed"));
     if (elem(c, "combobox") && attr(c, "source")) snprintf(lparam, sizeof(lparam), "&%s_%s_combobox_params", form, nz(a.v[A_NAME], "unnamed"));
+    if (elem(c, "tabview")) {
+      char *hide = attr(c, "hide-single-tab");
+      if (eq(hide, "true") || eq(hide, "1"))
+        snprintf(lparam, sizeof(lparam), "&(const tabview_params_t){ .style = TAB_STYLE_HIDE_SINGLE_TAB }");
+      free(hide);
+    }
     if (elem(c, "SplitView")) {
       const char *orientation = eq(a.v[A_ORIENT], "vertical") ? "SPLIT_HORZ" : "SPLIT_VERT";
       char *raw_ratio = attrs_first(c, "split-ratio", "split_ratio");
@@ -1177,6 +1183,9 @@ static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr d
   if (toolbar) OUT(", .toolbar_items = %s, .toolbar_count = ARRAY_LEN(%s)", toolbar_symbol, toolbar_symbol);
   else LINE(", .toolbar_items = NULL, .toolbar_count = 0");
   if (pane_toolbar) OUT(", .pane_toolbar_items = %s, .pane_toolbar_count = ARRAY_LEN(%s)", pane_symbol, pane_symbol);
+  char *pane_replace = pane_toolbar ? attr(pane_toolbar, "replace") : NULL;
+  if (eq(pane_replace, "true") || eq(pane_replace, "1")) OUT(", .pane_toolbar_replace = true");
+  free(pane_replace);
   if (activity_count) OUT(", .page_bindings = %s_%s_page_bindings, .page_binding_count = %d, .initial_page = %s", prefix, form_id, activity_count, initial);
   const char *page_attrs[] = {"icon", "checked-icon", "tooltip"};
   const char *page_fields[] = {"icon", "checked_icon", "tooltip"};

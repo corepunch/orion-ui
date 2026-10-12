@@ -1098,13 +1098,14 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
   if (!win) return NULL;
 
   win->role = def->role;
-  if (def->toolbar_items || def->toolbar_count || def->pane_toolbar_count) {
+  if (def->toolbar_items || def->toolbar_count || def->pane_toolbar_count || def->pane_toolbar_replace) {
     if (!win->pages) win->pages = calloc(1, sizeof(*win->pages));
     if (win->pages) {
       win->pages->toolbar_items = (const toolbar_item_t *)def->toolbar_items;
       win->pages->toolbar_count = def->toolbar_count;
       win->pages->pane_toolbar_items = def->pane_toolbar_items;
       win->pages->pane_toolbar_count = def->pane_toolbar_count;
+      win->pages->pane_toolbar_replace = def->pane_toolbar_replace;
     } else {
       fprintf(stderr, "[window] page toolbar allocation failed win=%u\n", win->id);
       fflush(stderr);

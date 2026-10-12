@@ -290,6 +290,7 @@ typedef struct form_def_s {
   int                     toolbar_count;  // number of toolbar items
   const toolbar_item_t   *pane_toolbar_items; // PAGE: shared TabBar actions
   int                     pane_toolbar_count;
+  bool                    pane_toolbar_replace;
   // ── DDX (Dialog Data Exchange) fields ───────────────────────────────────
   const ctrl_binding_t   *bindings;      // data-exchange table (may be NULL)
   int                     binding_count;   // number of entries in bindings[]
@@ -571,6 +572,7 @@ typedef struct window_pages_s {
   int toolbar_count;
   const toolbar_item_t *pane_toolbar_items;
   int pane_toolbar_count;
+  bool pane_toolbar_replace;
   struct page_host_s *page_host;
   struct page_docking_s *docking;          // PAGE: framework-owned, separate from app userdata
 } window_pages_t;

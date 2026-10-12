@@ -471,8 +471,8 @@ static void test_page_docking_preview(void) {
   ASSERT_NULL(find_window_class_desc("PaneHost"));
   window_t *form = g_app->active_form;
   install_form_xml(form, "<form name=\"workspace\" role=\"page\" width=\"600\" height=\"400\">"
-    "<PaneToolbar><Button icon=\"columns\" alt-command=\"pane.down\" alt-icon=\"rows\"/></PaneToolbar>"
-    "<SplitView name=\"split\" flags=\"flexspace\"><TabView name=\"left\"/>"
+    "<PaneToolbar replace=\"true\"><Button icon=\"columns\" alt-command=\"pane.down\" alt-icon=\"rows\"/></PaneToolbar>"
+    "<SplitView name=\"split\" flags=\"flexspace\"><TabView name=\"left\" hide-single-tab=\"true\"/>"
     "<TabView name=\"right\"/></SplitView></form>");
   window_t *split = descendant_by_class(form, "SplitView");
   ASSERT_NOT_NULL(split);
@@ -480,14 +480,18 @@ static void test_page_docking_preview(void) {
   ASSERT_EQUAL(page->role, WINDOW_ROLE_PAGE);
   ASSERT_EQUAL(page_pane_count(page), 2);
   ASSERT_EQUAL(page_pane_at(page, 0)->parent, split);
+  ASSERT_TRUE(send_message(page_pane_at(page, 0), tcGetStyle, 0, NULL) & TAB_STYLE_HIDE_SINGLE_TAB);
   ASSERT_TRUE(send_message(page_pane_at(page, 0), tcGetStyle, 0, NULL) & TAB_STYLE_DRAG_TABS);
   window_t *actions = (window_t *)send_message(page_pane_at(page, 0), tcGetToolbar, 0, NULL);
   ASSERT_NOT_NULL(actions);
+  ASSERT_EQUAL(toolbar_get_state(actions)->item_count, 1);
   ASSERT_STR_EQUAL(toolbar_get_state(actions)->items[0].alt_icon, "rows");
   window_t *new_pane = page_split_pane(page, page_pane_at(page, 0), PANE_BOTTOM);
   ASSERT_NOT_NULL(new_pane);
+  ASSERT_TRUE(send_message(new_pane, tcGetStyle, 0, NULL) & TAB_STYLE_HIDE_SINGLE_TAB);
   actions = (window_t *)send_message(new_pane, tcGetToolbar, 0, NULL);
   ASSERT_NOT_NULL(actions);
+  ASSERT_EQUAL(toolbar_get_state(actions)->item_count, 1);
   ASSERT_STR_EQUAL(toolbar_get_state(actions)->items[0].icon, "columns");
   const char *path = "build/page-docking-preview-roundtrip.orion";
   ASSERT_TRUE(fe_project_save(path));
@@ -497,6 +501,8 @@ static void test_page_docking_preview(void) {
   xmlNodePtr saved_form = first_child(forms, "form");
   ASSERT_NULL(first_child(saved_form, "PaneHost"));
   ASSERT_NOT_NULL(first_child(saved_form, "PaneToolbar"));
+  xmlChar *replace = xmlGetProp(first_child(saved_form, "PaneToolbar"), BAD_CAST "replace");
+  ASSERT_NOT_NULL(replace); ASSERT_STR_EQUAL((const char *)replace, "true"); xmlFree(replace);
   ASSERT_NOT_NULL(first_child(first_child(saved_form, "SplitView"), "TabView"));
   xmlChar *role = xmlGetProp(saved_form, BAD_CAST "role");
   ASSERT_NOT_NULL(role); ASSERT_STR_EQUAL((const char *)role, "page"); xmlFree(role);

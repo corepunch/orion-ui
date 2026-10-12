@@ -537,6 +537,7 @@ enum {
   tcHidePage,       // wparam=index; retain the content window but remove its tab
   tcShowPages,      // restore hidden tabs, preserving their content and icons
   tcGetHiddenCount,
+  tcHideSingleTab = evUser + 361, // wparam=bool; hide single-tab chrome, retaining pane actions
 };
 enum { svGetPane = evUser + 360 }; // wparam = 0 (left/top) or 1 (right/bottom); returns window_t*
 // Card / Badge / TileGrid messages, in the spirit of NSCollectionView / UICollectionView items.
@@ -588,6 +589,7 @@ enum {
 #define TAB_STYLE_DRAG_TABS (1u << 3) // notify parent after a TabBar drag threshold
 #define TAB_STYLE_RESTORE_FOCUS (1u << 2) // restore each page's focused descendant on selection
 #define TAB_STYLE_SIDEBAR    (1u << 1) // tabs as a vertical list down the left edge; pages fill the rest
+#define TAB_STYLE_HIDE_SINGLE_TAB (1u << 4)
 #define TAB_SIDEBAR_ROW_HEIGHT 24
 
 // Analogous to WinAPI CW_USEDEFAULT: pass as x or y to create_window() /

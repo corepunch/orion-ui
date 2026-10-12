@@ -94,16 +94,19 @@ static void pane_configure(window_t *owner, window_t *tree, bool initial) {
   if (pane_class(tree, "TabView")) {
     if (!send_message(tree, tcGetToolbar, 0, NULL)) {
       int custom = initial ? owner->pages->pane_toolbar_count : 0;
-      int count = custom + ARRAY_LEN(pane_actions);
-      toolbar_item_t *items = calloc((size_t)count, sizeof(*items));
-      if (!items) {
-        fprintf(stderr, "[page] pane toolbar allocation failed page=%u count=%d\n", owner->id, count);
-        fflush(stderr); return;
+      int defaults = owner->pages->pane_toolbar_replace ? 0 : ARRAY_LEN(pane_actions);
+      int count = custom + defaults;
+      if (count) {
+        toolbar_item_t *items = calloc((size_t)count, sizeof(*items));
+        if (!items) {
+          fprintf(stderr, "[page] pane toolbar allocation failed page=%u count=%d\n", owner->id, count);
+          fflush(stderr); return;
+        }
+        if (custom) memcpy(items, owner->pages->pane_toolbar_items, custom * sizeof(*items));
+        if (defaults) memcpy(items + custom, pane_actions, sizeof(pane_actions));
+        send_message(tree, tcSetToolbar, count, items);
+        free(items);
       }
-      if (custom) memcpy(items, owner->pages->pane_toolbar_items, custom * sizeof(*items));
-      memcpy(items + custom, pane_actions, sizeof(pane_actions));
-      send_message(tree, tcSetToolbar, count, items);
-      free(items);
     }
     uint32_t style = send_message(tree, tcGetStyle, 0, NULL);
     uint32_t required = TAB_STYLE_RESTORE_FOCUS | TAB_STYLE_DRAG_TABS;
@@ -154,6 +157,8 @@ window_t *page_split_pane(window_t *owner, window_t *pane, pane_edge_t edge) {
     fprintf(stderr, "[page] split allocation failed page=%u\n", owner->id);
     fflush(stderr); if (split) destroy_window(split); return NULL;
   }
+  uint32_t style = send_message(pane, tcGetStyle, 0, NULL);
+  send_message(tabs, tcSetStyle, style, NULL);
   window_t *bar = (window_t *)send_message(pane, tcGetToolbar, 0, NULL);
   toolbar_state_t *actions = toolbar_get_state(bar);
   if (actions && !send_message(tabs, tcSetToolbar, actions->item_count, actions->items)) {

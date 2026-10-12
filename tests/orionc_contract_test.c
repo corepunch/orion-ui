@@ -309,12 +309,14 @@ static void test_pane_toolbar_declaration(void) {
   TEST("Page pane toolbars share menu commands and declare alternate actions");
   const char *xml = "<orion name=\"test\"><menus><menu name=\"pane\" label=\"Pane\">"
     "<item name=\"right\" label=\"Right\"/><item name=\"down\" label=\"Down\"/></menu></menus>"
-    "<forms><form name=\"workspace\" width=\"800\" role=\"page\"><PaneToolbar>"
+    "<forms><form name=\"workspace\" width=\"800\" role=\"page\"><PaneToolbar replace=\"true\">"
     "<Button command=\"pane.right\" icon=\"columns\" alt-command=\"pane.down\" alt-icon=\"rows\" alt-tooltip=\"Split Down\"/>"
-    "</PaneToolbar><TabView name=\"tabs\"/></form></forms></orion>";
+    "</PaneToolbar><TabView name=\"tabs\" hide-single-tab=\"true\"/></form></forms></orion>";
   char out[32768];
   ASSERT_EQUAL(run_orionc(xml, "pane_toolbar", out, sizeof(out)), 0);
   ASSERT_TRUE(contains(out, ".pane_toolbar_items = test_workspace_pane_toolbar"));
+  ASSERT_TRUE(contains(out, ".pane_toolbar_replace = true"));
+  ASSERT_TRUE(contains(out, "&(const tabview_params_t){ .style = TAB_STYLE_HIDE_SINGLE_TAB }"));
   ASSERT_TRUE(contains(out, ".alt_ident = ID_PANE_DOWN, .alt_icon = \"rows\", .alt_tooltip = \"Split Down\""));
   ASSERT_FALSE(contains(out, ".class_name = \"PaneToolbar\""));
   const char *invalid = "<orion name=\"test\"><forms><form name=\"main\" width=\"400\"><PaneToolbar/>"

@@ -134,6 +134,14 @@ static int tab_header_height(tabview_state_t *st) {
   return (st && st->strip.cols > 0) ? MAX(TAB_CONTROL_HEIGHT, st->strip.icon_h + 4) : TAB_CONTROL_HEIGHT;
 }
 
+static bool tab_single_hidden(window_t *win, tabview_state_t *st) {
+  return st && !is_sidebar(st) && (st->style & TAB_STYLE_HIDE_SINGLE_TAB) && tab_count(win) == 1;
+}
+
+static int tab_header_extent(window_t *win, tabview_state_t *st) {
+  return tab_single_hidden(win, st) && !st->actions ? 0 : tab_header_height(st);
+}
+
 static bool tab_has_icon(tabview_state_t *st, int idx) {
   return st && st->tab_icons && idx >= 0 && idx < st->tab_icon_count
          && st->tab_icons[idx] >= 0 && st->strip.cols > 0;
@@ -227,7 +235,8 @@ static void draw_tab_item(window_t *page, int x, bool selected, tabview_state_t 
 
 static irect16_t tab_page_rect(window_t *win, tabview_state_t *st, irect16_t r) {
   if (is_sidebar(st)) return rect_trim_left(r, sidebar_width(win, st));
-  irect16_t page_rect = rect_trim_top(r, tab_header_height(st));
+  if (!tab_header_extent(win, st)) return r;
+  irect16_t page_rect = rect_trim_top(r, tab_header_extent(win, st));
   int frame = get_theme()->tab_pane_frame;
   page_rect.x += frame; page_rect.w = MAX(0, page_rect.w - 2 * frame);
   page_rect.h = MAX(0, page_rect.h - frame);
@@ -243,7 +252,7 @@ static result_t tab_actions_proc(window_t *win, uint32_t msg, uint32_t wparam, v
   if (msg == evPaint) return false;
   if (msg != evCommand) return false;
   window_t *tabs = win->parent;
-  tab_action_t action = {tabs, lparam, wparam};
+  tab_action_t action = {tabs, win, wparam};
   return tabs->parent ? send_message(tabs->parent, evCommand, MAKEDWORD(tabs->id, tcnAction), &action) : false;
 }
 
@@ -269,7 +278,8 @@ static void tab_arrange(window_t *win) {
     st->list->frame.w = sidebar_width(win, st); // the scrollbar may have just appeared
     page_rect = tab_page_rect(win, st, get_client_rect(win));
   }
-  if (!is_sidebar(st)) {
+  if (tab_single_hidden(win, st)) st->scroll = 0;
+  else if (!is_sidebar(st)) {
     int x = 2, selected_x = 2, selected_w = 0, idx = 0, width = tab_available_width(win, st);
     FOR_EACH_PAGE(win, st, c) {
       int w = tab_width(c, st, idx);
@@ -370,7 +380,7 @@ static bool tab_paint(window_t *win) {
   tabview_state_t *st = (tabview_state_t *)win->userdata;
   if (is_sidebar(st)) return false; // the list and the selected page paint as children
   irect16_t cr = get_client_rect(win);
-  int th = st ? tab_header_height(st) : TAB_CONTROL_HEIGHT;
+  int th = tab_header_extent(win, st);
   theme_draw(THEME_PART_TAB_BAR, rect_split_top(cr, th), CTRL_NORMAL);
   if (!st) return true;
 
@@ -378,7 +388,12 @@ static bool tab_paint(window_t *win) {
   int selected_x = 2 - st->scroll;
   window_t *selected = NULL;
   int x = 2 - st->scroll, i = 0;
-  FOR_EACH_PAGE(win, st, c) {
+  if (tab_single_hidden(win, st)) {
+    window_t *page = tab_page(win, 0);
+    if (th) draw_text_ellipsized(FONT_SMALL, page->title, get_theme()->tab_padding,
+      (th - text_char_height(FONT_SMALL)) / 2, MAX(0, tab_available_width(win, st) - 2 * get_theme()->tab_padding),
+      get_sys_color(brTextNormal));
+  } else FOR_EACH_PAGE(win, st, c) {
     if (i == st->selected) { selected = c; selected_x = x; }
     else draw_tab_item(c, x, false, st, i);
     x += tab_width(c, st, i) + 1;
@@ -487,7 +502,7 @@ bool tabview_move_page(window_t *source, int index, window_t *target, int before
 result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   tabview_state_t *st = (tabview_state_t *)win->userdata;
   switch (msg) {
-    case evCreate:
+    case evCreate: {
       st = allocate_window_data(win, sizeof(*st));
       if (!st) {
         fprintf(stderr, "[tv] create failed win=%u reason=state_allocation\n",
@@ -496,7 +511,11 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         return false;
       }
       st->selected = 0;
+      const form_ctrl_def_t *def = lparam;
+      const tabview_params_t *params = def ? def->lparam : NULL;
+      if (params) return send_message(win, tcSetStyle, params->style, NULL);
       return true;
+    }
     case evDescendantFocus:
       tab_remember_focus(win, lparam); return true;
     case evDescendantDestroy: case evDescendantDetach:
@@ -535,11 +554,11 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       }
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
       if (is_sidebar(st)) return false;
-      int th = tab_header_height(st);
+      int th = tab_header_extent(win, st);
       if (my < 0 || my >= th || mx < 0 || mx >= tab_available_width(win, st)) return false;
       int left = 2 - st->scroll, i = 0;
       FOR_EACH_PAGE(win, st, c) {
-        int w = tab_width(c, st, i);
+        int w = tab_single_hidden(win, st) ? tab_available_width(win, st) - left : tab_width(c, st, i);
         if (mx >= left && mx < left + w) {
           tab_remember_focus(win, g_ui_runtime.focused); set_focus(win); tab_select(win, i, true);
           if (st->style & TAB_STYLE_DRAG_TABS) {
@@ -620,9 +639,13 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         *(irect16_t *)lparam = rect_offset(sidebar_row(win, st, index), 0, -get_scroll_pos(st->list, SB_VERT));
         return true;
       }
+      if (tab_single_hidden(win, st)) {
+        *(irect16_t *)lparam = st->actions ? R(0, 0, tab_available_width(win, st), tab_header_height(st)) : R(0, 0, 0, 0);
+        return true;
+      }
       FOR_EACH_PAGE(win, st, c) {
         int width = tab_width(c, st, i);
-        if (i++ == index) { *(irect16_t *)lparam = R(x, 0, width, tab_header_height(st)); return true; }
+        if (i++ == index) { *(irect16_t *)lparam = R(x, 0, width, tab_header_extent(win, st)); return true; }
         x += width + 1;
       }
       return false;
@@ -711,8 +734,14 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (win->parent) send_message(win->parent, evCommand, MAKEDWORD(win->id, tcnSelChange), win);
       return true;
     }
+    case tcHideSingleTab: {
+      uint32_t style = st ? st->style : 0;
+      return send_message(win, tcSetStyle, wparam ? style | TAB_STYLE_HIDE_SINGLE_TAB :
+        style & ~TAB_STYLE_HIDE_SINGLE_TAB, NULL);
+    }
     case tcSetStyle: {
-      const uint32_t known = TAB_STYLE_ICONS_ONLY | TAB_STYLE_SIDEBAR | TAB_STYLE_RESTORE_FOCUS | TAB_STYLE_DRAG_TABS;
+      const uint32_t known = TAB_STYLE_ICONS_ONLY | TAB_STYLE_SIDEBAR | TAB_STYLE_RESTORE_FOCUS |
+        TAB_STYLE_DRAG_TABS | TAB_STYLE_HIDE_SINGLE_TAB;
       if (!st || (wparam & ~known)) {
         fprintf(stderr, "[tv] set_style rejected win=%u style=0x%x reason=%s\n",
                 win ? (unsigned)win->id : 0, (unsigned)wparam,

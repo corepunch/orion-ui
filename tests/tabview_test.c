@@ -178,8 +178,51 @@ static void test_tabview_session_focus_and_removal(void) {
   test_env_shutdown(); PASS();
 }
 
+static void test_tabview_hide_single_tab(void) {
+  TEST("HideSingleTab follows visible tab count and retains a draggable caption with actions");
+  test_env_init();
+  const tabview_params_t params = {.style = TAB_STYLE_HIDE_SINGLE_TAB | TAB_STYLE_DRAG_TABS};
+  const form_ctrl_def_t def = {.class_name = "TabView", .lparam = &params};
+  window_t *tabs = create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 320, 200),
+    NULL, "TabView", 0, (void *)&def);
+  window_t *a = create_window("A", WINDOW_NOTITLE, MAKERECT(0, 0, 1, 1), tabs, page_proc, 0, NULL);
+  send_message(tabs, evResize, 0, NULL);
+  ASSERT_EQUAL(a->frame.y, 0); ASSERT_EQUAL(a->frame.h, 200);
+  irect16_t r;
+  ASSERT_TRUE(send_message(tabs, tcGetTabRect, 0, &r)); ASSERT_EQUAL(r.h, 0);
+  ASSERT_FALSE(send_message(tabs, evLeftButtonDown, MAKEDWORD(10, 4), NULL));
+  ASSERT_TRUE(send_message(tabs, tcHideSingleTab, false, NULL));
+  ASSERT_EQUAL(a->frame.y, TAB_CONTROL_HEIGHT);
+  ASSERT_TRUE(send_message(tabs, tcHideSingleTab, true, NULL));
+  ASSERT_TRUE(send_message(tabs, tcGetStyle, 0, NULL) & TAB_STYLE_DRAG_TABS);
+  window_t *b = create_window("B", WINDOW_NOTITLE, MAKERECT(0, 0, 1, 1), tabs, page_proc, 0, NULL);
+  send_message(tabs, evResize, 0, NULL);
+  ASSERT_EQUAL(a->frame.y, TAB_CONTROL_HEIGHT);
+  ASSERT_TRUE(send_message(tabs, tcGetTabRect, 1, &r)); ASSERT_EQUAL(r.h, TAB_CONTROL_HEIGHT);
+  ASSERT_TRUE(send_message(tabs, tcHidePage, 1, NULL)); ASSERT_EQUAL(a->frame.y, 0);
+  ASSERT_TRUE(send_message(tabs, tcShowPages, 0, NULL)); ASSERT_EQUAL(a->frame.y, TAB_CONTROL_HEIGHT);
+  ASSERT_TRUE(send_message(tabs, tcDeletePage, 1, NULL)); ASSERT_FALSE(is_window(b));
+  ASSERT_EQUAL(a->frame.y, 0);
+  const toolbar_item_t action = {.type = TOOLBAR_ITEM_BUTTON, .ident = 2400};
+  ASSERT_TRUE(send_message(tabs, tcSetToolbar, 1, (void *)&action));
+  window_t *bar = (window_t *)send_message(tabs, tcGetToolbar, 0, NULL);
+  ASSERT_TRUE(window_has_state(bar, WINDOW_STATE_VISIBLE));
+  ASSERT_EQUAL(a->frame.y, TAB_CONTROL_HEIGHT);
+  ASSERT_TRUE(send_message(tabs, tcGetTabRect, 0, &r));
+  ASSERT_EQUAL(r.x, 0); ASSERT_EQUAL(r.w, bar->frame.x);
+  ASSERT_TRUE(send_message(tabs, evLeftButtonDown, MAKEDWORD(r.w - 4, 4), NULL));
+  ASSERT_EQUAL(g_ui_runtime.captured, tabs);
+  send_message(tabs, evPointerCancel, 0, NULL);
+  ASSERT_NULL(g_ui_runtime.captured);
+  ASSERT_TRUE(send_message(tabs, tcSetToolbar, 0, NULL)); ASSERT_EQUAL(a->frame.y, 0);
+  ASSERT_TRUE(send_message(tabs, tcSetStyle, TAB_STYLE_HIDE_SINGLE_TAB | TAB_STYLE_SIDEBAR, NULL));
+  ASSERT_TRUE(a->frame.x > 0);
+  destroy_window(tabs); test_env_shutdown(); PASS();
+}
+
 int main(void) {
   TEST_START("TabView tests");
+  test_tabview_hide_single_tab();
   test_tabview_session_focus_and_removal();
   test_tabview_selects_and_arranges_pages();
   test_tabview_sidebar_lists_tabs_vertically();

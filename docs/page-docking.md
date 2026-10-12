@@ -123,6 +123,18 @@ Terminal adds only its app-specific New Tab action:
 </PaneToolbar>
 ```
 
+Use `replace="true"` to supply the complete toolbar instead. Git Client keeps only
+Close, routed through its existing command handler:
+
+```xml
+<PaneToolbar replace="true">
+    <Button command="view.close_tab" icon="pane-close" tooltip="Close active view" />
+</PaneToolbar>
+```
+
+An empty replacement toolbar hides all pane actions. Omitting `replace` keeps
+the standard Split and Close actions.
+
 New splits inherit the source pane's current toolbar. Custom items support
 `alt-command`, `alt-icon`, and `alt-tooltip`; the shared toolbar owns modifier
 handling. FormEditor previews both standard and custom actions.
