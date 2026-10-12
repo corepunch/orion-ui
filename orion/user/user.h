@@ -566,6 +566,7 @@ typedef struct window_pages_s {
   const toolbar_item_t *toolbar_items;    // PAGE: declarative toolbar contribution; not owned
   int toolbar_count;
   struct page_host_s *page_host;
+  struct page_docking_s *docking;          // PAGE: framework-owned, separate from app userdata
 } window_pages_t;
 
 static inline window_t *window_active_page(const window_t *host) { return host && host->pages ? host->pages->active_page : NULL; }

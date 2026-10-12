@@ -5,7 +5,7 @@ Terminal uses Orion's [PageHost and Page](../../docs/page-host.md) navigation.
 and initial focus. PageHost creates the page, selects it, restores the last focused
 terminal, and places the activity bar left in landscape or bottom in portrait.
 
-The Workspace page owns a reusable Orion `PaneHost`, initially containing a
+The Workspace Page directly owns its docking layout, initially containing a
 `SplitView` with a `TabView` in each pane. Each tab
 instantiates the `session_tab` form containing one independent `TerminalView`.
 Switching tabs retains the terminals, running PTYs, input drafts, scrollback,
@@ -23,7 +23,7 @@ around that pane's tab list. TabView reveals the selected tab when its TabBar ov
 The TabBar selects sessions; it is distinct from the outer window TitleBar.
 
 `main.c` initializes PageHost and routes commands. `pages/workspace/page_workspace.c`
-creates/closes session forms and routes commands through PaneHost and TabView.
+creates/closes session forms and routes commands through Page and TabView.
 `view_main.c`, `vgat_screen.c`, and `pty.c` implement terminal behavior; they do not manage tabs or page navigation.
 FormEditor uses the registered TerminalView preview from `components/plug.c`.
 
@@ -36,7 +36,7 @@ Split Right and Split Down open a new session in a new pane. Move Tab moves the
 selected session to the next pane in tree order, and Next Pane changes focus.
 Their standalone shortcuts are Ctrl+Shift+E, Ctrl+Shift+O, Ctrl+Shift+M, and
 Ctrl+Alt+Tab (Command replaces Ctrl on macOS). The static controls and shortcuts
-are declared in `terminal.orion`; [PaneHost](../../docs/pane-host.md) owns drag,
+are declared in `terminal.orion`; [Page docking](../../docs/page-docking.md) owns drag,
 snap preview, tab transfers, splitting, and collapse.
 
 Build with `make build/bin/terminal`. The app tests are `test_terminal_app_test` and

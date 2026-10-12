@@ -128,10 +128,14 @@ visibility, selection, and focus restoration. Apps supply page procedures and
 respond to `evPageChanged` for domain behavior. The host uses ordinary docking
 and `set_host_page` toolbar projection. See [PageHost and Page](docs/page-host.md).
 
-`PaneHost` in `orion/commctl/pane_host.c` composes SplitView branches and TabView
-leaves inside a Page. TabBar drags use capture and a themed child overlay to preview
-moves and edge splits. Window-system reparenting preserves live content; PaneHost
-collapses empty branches. See [PaneHost](docs/pane-host.md).
+A Page owns docking in `orion/user/page.c`: SplitView branches and TabView leaves
+are its direct content, without another host window. The window system handles
+Page docking before app message handlers, preserving app-owned userdata. Common
+controls are addressed through their registered classes and messages (`svGetPane`,
+`tcMovePage`), keeping the user library independent of the common-controls library.
+TabBar drags use Page capture and a themed overlay painted after its children.
+Reparenting preserves live content; Page collapses empty branches and cancels drags
+on deactivation. See [Page docking](docs/page-docking.md).
 
 Non-client hit-testing is one function: `window_nc_hit_test()` sends `evNcHitTest` (a proc may claim
 the point) and otherwise answers `HT_CAPTION`, `HT_CLOSE`, `HT_MAXBUTTON`, `HT_GROWBOX` or `HT_CLIENT`;

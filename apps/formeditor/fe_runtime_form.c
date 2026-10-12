@@ -698,6 +698,10 @@ window_t *fe_create_runtime_form_window(window_t *doc,
     char flags_expr[128] = {0};
     runtime_xml_attr_copy(form_node, "flags", flags_expr, sizeof(flags_expr));
     def.flags = WINDOW_NOTITLE | WINDOW_AUTO_LAYOUT | runtime_parse_flags(flags_expr);
+    char role[16] = {0};
+    runtime_xml_attr_copy(form_node, "role", role, sizeof(role));
+    if (strcmp(role, "page") == 0) def.role = WINDOW_ROLE_PAGE;
+    else if (strcmp(role, "host") == 0) def.role = WINDOW_ROLE_HOST;
     def.layout_spacing = (uint8_t)runtime_xml_attr_int(form_node, "spacing", 4);
 
     char rect_expr[64] = {0};

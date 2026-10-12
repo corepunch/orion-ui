@@ -567,6 +567,14 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       }
       return false;
     }
+    case tcMovePage: {
+      tab_move_t *move = lparam;
+      if (!move) {
+        fprintf(stderr, "[tv] move_page rejected win=%u index=%u reason=no_parameters\n", win->id, wparam);
+        fflush(stderr); return false;
+      }
+      return tabview_move_page(win, (int)wparam, move->target, move->before);
+    }
     case tcDeletePage: {
       int index = (int)wparam;
       window_t *page = st ? tab_page(win, index) : NULL;

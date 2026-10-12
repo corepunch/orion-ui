@@ -465,28 +465,31 @@ void test_page_navigation_preview(void) {
   PASS();
 }
 
-static void test_pane_host_preview(void) {
-  TEST("PaneHost: FormEditor instantiates and saves a nested pane tree");
+static void test_page_docking_preview(void) {
+  TEST("Page: FormEditor instantiates and saves a directly owned pane tree");
   setup();
-  const fe_component_desc_t *desc = find_window_class_desc_by_proc(win_pane_host);
-  ASSERT_NOT_NULL(desc);
-  ASSERT_TRUE(desc->capabilities & FE_COMPONENT_PLACEABLE);
+  ASSERT_NULL(find_window_class_desc("PaneHost"));
   window_t *form = g_app->active_form;
-  install_form_xml(form, "<form name=\"workspace\" width=\"600\" height=\"400\">"
-    "<PaneHost name=\"panes\"><SplitView name=\"split\"><TabView name=\"left\"/>"
-    "<TabView name=\"right\"/></SplitView></PaneHost></form>");
-  window_t *host = descendant_by_class(form, "PaneHost");
-  ASSERT_NOT_NULL(host);
-  ASSERT_EQUAL(pane_host_count(host), 2);
-  ASSERT_EQUAL(pane_host_pane(host, 0)->parent->proc, win_splitview);
-  const char *path = "build/pane-host-preview-roundtrip.orion";
+  install_form_xml(form, "<form name=\"workspace\" role=\"page\" width=\"600\" height=\"400\">"
+    "<SplitView name=\"split\" flags=\"flexspace\"><TabView name=\"left\"/>"
+    "<TabView name=\"right\"/></SplitView></form>");
+  window_t *split = descendant_by_class(form, "SplitView");
+  ASSERT_NOT_NULL(split);
+  window_t *page = split->parent;
+  ASSERT_EQUAL(page->role, WINDOW_ROLE_PAGE);
+  ASSERT_EQUAL(page_pane_count(page), 2);
+  ASSERT_EQUAL(page_pane_at(page, 0)->parent, split);
+  ASSERT_TRUE(send_message(page_pane_at(page, 0), tcGetStyle, 0, NULL) & TAB_STYLE_DRAG_TABS);
+  const char *path = "build/page-docking-preview-roundtrip.orion";
   ASSERT_TRUE(fe_project_save(path));
   xmlDocPtr saved = xmlReadFile(path, NULL, XML_PARSE_NONET);
   ASSERT_NOT_NULL(saved);
   xmlNodePtr forms = first_child(xmlDocGetRootElement(saved), "forms");
-  xmlNodePtr pane = first_child(first_child(forms, "form"), "PaneHost");
-  ASSERT_NOT_NULL(pane);
-  ASSERT_NOT_NULL(first_child(first_child(pane, "SplitView"), "TabView"));
+  xmlNodePtr saved_form = first_child(forms, "form");
+  ASSERT_NULL(first_child(saved_form, "PaneHost"));
+  ASSERT_NOT_NULL(first_child(first_child(saved_form, "SplitView"), "TabView"));
+  xmlChar *role = xmlGetProp(saved_form, BAD_CAST "role");
+  ASSERT_NOT_NULL(role); ASSERT_STR_EQUAL((const char *)role, "page"); xmlFree(role);
   xmlFreeDoc(saved); remove(path);
   teardown(); PASS();
 }
@@ -504,6 +507,6 @@ int main(void) {
   test_socialfeed_project_loads_runtime_and_database();
   test_activitybar_preview();
   test_page_navigation_preview();
-  test_pane_host_preview();
+  test_page_docking_preview();
   TEST_END();
 }

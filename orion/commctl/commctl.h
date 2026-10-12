@@ -250,25 +250,10 @@ result_t win_splitview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 window_t *splitview_get_left(window_t *win);
 window_t *splitview_get_right(window_t *win);
 
-// PaneHost composes a tree of SplitViews whose leaves are TabViews.
-typedef enum { PANE_CENTER, PANE_LEFT, PANE_RIGHT, PANE_TOP, PANE_BOTTOM } pane_edge_t;
 typedef struct { window_t *page; ipoint16_t point; } tab_drag_t; // point in source TabView content space
-// index is an insertion slot (0..count), or -1 to append. Also supports same-pane reorder.
+typedef struct { window_t *target; int before; } tab_move_t;
+// before is an insertion slot (0..count), or -1 to append. Also supports same-pane reorder.
 bool tabview_move_page(window_t *source, int index, window_t *target, int before);
-typedef struct {
-  window_t *pane;
-  pane_edge_t edge;
-  int index;
-  irect16_t rect; // preview in PaneHost coordinates
-} pane_drop_t;
-result_t win_pane_host(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-int pane_host_count(window_t *host);
-window_t *pane_host_pane(window_t *host, int index);
-window_t *pane_host_active(window_t *host);
-window_t *pane_host_split(window_t *host, window_t *pane, pane_edge_t edge);
-bool pane_host_move_tab(window_t *host, window_t *page, window_t *target, pane_edge_t edge, int before);
-bool pane_host_close_tab(window_t *host, window_t *page);
-bool pane_host_get_preview(window_t *host, pane_drop_t *preview);
 
 // Console API functions
 void init_console(void);

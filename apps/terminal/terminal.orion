@@ -39,12 +39,10 @@
                 <Button name="move_tab" text="Move Tab" width="80" />
                 <Button name="next_pane" text="Next Pane" width="80" />
             </StackView>
-            <PaneHost name="panes" flags="flexspace">
-                <SplitView name="terminals" split-ratio="0.5" flags="flexspace">
-                    <TabView name="left_tabs" flags="flexspace" />
-                    <TabView name="right_tabs" flags="flexspace" />
-                </SplitView>
-            </PaneHost>
+            <SplitView name="terminals" split-ratio="0.5" flags="flexspace">
+                <TabView name="left_tabs" flags="flexspace" />
+                <TabView name="right_tabs" flags="flexspace" />
+            </SplitView>
         </form>
         <form name="session_tab" title="Terminal" width="960" height="640" flags="notitle,nofill" spacing="0" padding="0">
             <TerminalView name="terminal" flags="notitle,nofill,vscroll,flexspace" />

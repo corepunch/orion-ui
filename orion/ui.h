@@ -7,6 +7,7 @@
 #include <orion/user/user.h>
 #include <orion/user/dock.h>
 #include <orion/user/page_host.h>
+#include <orion/user/page.h>
 #include <orion/user/messages.h>
 #include <orion/user/text.h>
 #include <orion/user/draw.h>
