@@ -72,10 +72,17 @@ static void test_terminal_page_host(void) {
   ASSERT_TRUE(left_tabs->frame.w > before);
   double ratio = terminal_split_ratio(left_tabs, right_tabs);
 
-  // The action row creates a tab only in the last-focused pane.
-  window_t *new_button = get_window_item(page, ID_WORKSPACE_PAGE_NEW_TAB);
-  send_message(new_button, evLeftButtonDown, 0, NULL);
-  send_message(new_button, evLeftButtonUp, 0, NULL);
+  // The Page's projected toolbar creates a tab in the last-focused pane.
+  toolbar_state_t *actions = toolbar_get_state(host);
+  ASSERT_NOT_NULL(actions); ASSERT_EQUAL(actions->item_count, 10);
+  ASSERT_EQUAL(page->children, split); ASSERT_NULL(split->next);
+  ASSERT_EQUAL(page->pages->toolbar_count, actions->item_count);
+  ASSERT_FALSE(page->flags & WINDOW_TOOLBAR);
+  irect16_t new_tab;
+  ASSERT_TRUE(send_message(host, tbGetItemRect, ID_TAB_NEW, &new_tab));
+  uint32_t point = MAKEDWORD(new_tab.x + new_tab.w / 2, new_tab.y + new_tab.h / 2);
+  send_message(host->toolbar, evLeftButtonDown, point, NULL);
+  send_message(host->toolbar, evLeftButtonUp, point, NULL);
   ASSERT_EQUAL(send_message(left_tabs, tcGetCount, 0, NULL), 1);
   ASSERT_EQUAL(send_message(right_tabs, tcGetCount, 0, NULL), 2);
   window_t *right_second = terminal_workspace_terminal(page, 1);
@@ -124,6 +131,11 @@ static void test_terminal_page_host(void) {
   host->frame.w = 420; host->frame.h = 700;
   send_message(host, evResize, 0, NULL);
   ASSERT_EQUAL(bar->dock->side, DOCK_BOTTOM);
+  for (int i = 0; i < actions->item_count; i++) {
+    if (actions->items[i].type != TOOLBAR_ITEM_BUTTON) continue;
+    ASSERT_EQUAL(actions->item_rects[i].y, actions->item_rects[0].y);
+    ASSERT_TRUE(actions->item_rects[i].x + actions->item_rects[i].w <= host->frame.w);
+  }
   ASSERT_EQUAL(tb->orientation, TOOLBAR_HORIZONTAL);
   ASSERT_EQUAL(page->frame.w, get_client_rect(host).w);
   ASSERT_EQUAL(page->frame.h, get_client_rect(host).h - bar->frame.h);
@@ -197,6 +209,11 @@ static void test_terminal_page_host(void) {
   host->frame.w = 420; host->frame.h = 700;
   send_message(host, evResize, 0, NULL);
   ASSERT_EQUAL(bar->dock->side, DOCK_BOTTOM);
+  for (int i = 0; i < actions->item_count; i++) {
+    if (actions->items[i].type != TOOLBAR_ITEM_BUTTON) continue;
+    ASSERT_EQUAL(actions->item_rects[i].y, actions->item_rects[0].y);
+    ASSERT_TRUE(actions->item_rects[i].x + actions->item_rects[i].w <= host->frame.w);
+  }
   click_workspace(bar);
   ASSERT_EQUAL(g_ui_runtime.focused, fresh);
   gem_shutdown();

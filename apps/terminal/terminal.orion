@@ -21,24 +21,24 @@
     </menus>
 
     <forms>
-        <form name="main_window" title="Terminal" width="1024" height="700" role="host" active-page="workspace_page" auto_layout="1" spacing="0" padding="0">
+        <form name="main_window" title="Terminal" width="1024" height="700" role="host" active-page="workspace_page" flags="toolbar" auto_layout="1" spacing="0" padding="0">
             <ActivityBar name="activity" flags="notitle">
                 <Page form="workspace_page" command="view.workspace" />
             </ActivityBar>
         </form>
         <form name="workspace_page" title="Workspace" icon="workspace" checked-icon="workspace-fill" tooltip="Terminal workspace" focus="left_tabs" width="960" height="680" role="page" auto_layout="1" flags="nofill,flexspace" spacing="0" padding="0">
-            <StackView name="tab_actions" orientation="horizontal" height="28" spacing="4" padding="4 0">
-                <Button name="new_tab" text="New Tab" width="80" />
-                <Button name="close_tab" text="Close Tab" width="80" />
-                <Button name="previous_tab" text="Previous" width="80" />
-                <Button name="next_tab" text="Next" width="80" />
-            </StackView>
-            <StackView name="pane_actions" orientation="horizontal" height="28" spacing="4" padding="4 0">
-                <Button name="split_right" text="Split Right" width="80" />
-                <Button name="split_down" text="Split Down" width="80" />
-                <Button name="move_tab" text="Move Tab" width="80" />
-                <Button name="next_pane" text="Next Pane" width="80" />
-            </StackView>
+            <Toolbar>
+                <Button command="tab.new" icon="tab-new" text="New Tab" tooltip="New terminal tab (Ctrl+Shift+T)" />
+                <Button command="tab.close" icon="tab-close" text="Close Tab" tooltip="Close terminal tab (Ctrl+Shift+W)" />
+                <Separator />
+                <Button command="tab.previous" icon="tab-previous" text="Previous" tooltip="Previous tab (Ctrl+Shift+Tab)" />
+                <Button command="tab.next" icon="tab-next" text="Next" tooltip="Next tab (Ctrl+Tab)" />
+                <Separator />
+                <Button command="tab.split_right" icon="split-right" text="Split Right" tooltip="Split pane right (Ctrl+Shift+E)" />
+                <Button command="tab.split_down" icon="split-down" text="Split Down" tooltip="Split pane below (Ctrl+Shift+O)" />
+                <Button command="tab.move" icon="tab-move" text="Move Tab" tooltip="Move tab to next pane (Ctrl+Shift+M)" />
+                <Button command="tab.focus_next" icon="pane-next" text="Next Pane" tooltip="Focus next pane (Ctrl+Alt+Tab)" />
+            </Toolbar>
             <SplitView name="terminals" split-ratio="0.5" flags="flexspace">
                 <TabView name="left_tabs" flags="flexspace" />
                 <TabView name="right_tabs" flags="flexspace" />

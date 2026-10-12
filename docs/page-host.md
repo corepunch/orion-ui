@@ -90,6 +90,18 @@ or a visible enabled descendant, falling back to the page itself. Host destructi
 releases navigation metadata; ordinary child ownership destroys the pages.
 Invalid initialization or selection logs a framework diagnostic to stderr.
 
+## Page toolbars
+
+Declare `<Toolbar>` inside the `role="page"` form and give the host the `toolbar`
+flag. PageHost projects the active Page's items into that standard toolbar band;
+the Page itself does not reserve a second toolbar. Toolbar items use the same
+`command` IDs as menus and accelerators. Commands matching the projected items
+are offered to the active Page before the host's app handler; unhandled commands
+fall back to the host. Control notifications such as edit changes are not routed.
+
+Terminal's Workspace Page uses one row of icon buttons, grouped with separators,
+with tooltips for labels and shortcuts. The split tree is its only content child.
+
 ## Page content and tiling
 
 PageHost fills the application workspace, owning its ActivityBar and Pages.
@@ -101,9 +113,9 @@ Docking state is separate from the app's Page userdata. The window system handle
 layout, tab drags, previews, and empty-pane collapse without forwarding from app
 procedures. Switching activities cancels an in-progress drag and retains the pane
 tree and live view state. The Page's ordinary auto-layout also accommodates fixed
-command rows beside its pane tree.
+controls beside its pane tree.
 
-Terminal's Workspace Page declares command rows followed by its SplitView. Each
+Terminal's Workspace Page declares its toolbar and a SplitView. Each
 pane's TabView owns independent TerminalView sessions. Git Client declares each
 activity's default split tree directly in that Page's form. Cross-Page transfers,
 floating panes, auto-hide, and layout persistence are not implemented by this API.

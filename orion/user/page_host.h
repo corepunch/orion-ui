@@ -24,7 +24,7 @@ window_t *page_host_page(window_t *host, uint32_t command);
 uint32_t page_host_selection(window_t *host);
 
 // Window-system integration.
-bool page_host_command(window_t *host, uint32_t wparam);
+bool page_host_command(window_t *host, uint32_t wparam, void *lparam);
 void page_host_remember_focus(window_t *win);
 void page_host_forget_window(window_t *win);
 void page_host_layout(window_t *host);

@@ -15,14 +15,16 @@ regains keyboard focus.
 Closing a tab destroys its session. Empty panes collapse; closing the entire
 workspace's last tab opens a fresh session. Startup Lua scripts run in the initial terminal in each pane.
 
-The action row offers New Tab, Close Tab, Previous, and Next for the last-focused
-pane. Other panes keep their own selected tabs. Standalone shortcuts are
+The Workspace Page declares a standard icon toolbar in `terminal.orion`. PageHost
+projects it as one toolbar row with tooltips and separators. New Tab, Close Tab,
+Previous, and Next act on the last-focused pane. Other panes keep their own selected tabs. Standalone shortcuts are
 Ctrl+Shift+T, Ctrl+Shift+W, Ctrl+Shift+Tab, and Ctrl+Tab respectively (the framework
 uses Command for the primary shortcut modifier on macOS). Previous/Next wrap
 around that pane's tab list. TabView reveals the selected tab when its TabBar overflows.
 The TabBar selects sessions; it is distinct from the outer window TitleBar.
 
-`main.c` initializes PageHost and routes commands. `pages/workspace/page_workspace.c`
+`main.c` initializes PageHost. The framework routes projected toolbar commands,
+menu commands, and accelerators to the active Page using the same command IDs. `pages/workspace/page_workspace.c`
 creates/closes session forms and routes commands through Page and TabView.
 `view_main.c`, `vgat_screen.c`, and `pty.c` implement terminal behavior; they do not manage tabs or page navigation.
 FormEditor uses the registered TerminalView preview from `components/plug.c`.

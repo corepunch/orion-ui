@@ -98,7 +98,7 @@ static void test_activity_lifecycle(void) {
   ASSERT_EQUAL(g_ui_runtime.focused, edit);
   ASSERT_FALSE(page_host_select(host, 9999));
   ASSERT_EQUAL(page_host_selection(host), ACT_SECOND);
-  ASSERT_FALSE(page_host_command(host, MAKEDWORD(ACT_FIRST, ednChange)));
+  ASSERT_FALSE(page_host_command(host, MAKEDWORD(ACT_FIRST, ednChange), NULL));
   host->frame.w = 700; host->frame.h = 420;
   send_message(host, evResize, 0, NULL);
   ASSERT_EQUAL(second->frame.x, bar->frame.w);
@@ -219,11 +219,59 @@ static void test_page_navigation_and_orientation(void) {
   PASS();
 }
 
+static window_t *toolbar_command_page;
+static uint32_t toolbar_command_wparam;
+static void *toolbar_command_source;
+
+static result_t test_toolbar_page_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == evCommand) {
+    toolbar_command_page = win; toolbar_command_wparam = wparam; toolbar_command_source = lparam;
+    return LOWORD(wparam) == 2200;
+  }
+  return msg == evCreate || msg == evDestroy;
+}
+
+static void test_page_toolbar_commands(void) {
+  TEST("Page toolbar commands, menu actions and accelerators route only to the active Page");
+  test_env_init();
+  const toolbar_item_t items[] = {{.type = TOOLBAR_ITEM_BUTTON, .ident = 2200, .text = "Run"},
+                                {.type = TOOLBAR_ITEM_BUTTON, .ident = 2201, .text = "Unhandled"}};
+  form_def_t page_form = activity_page_form;
+  page_form.toolbar_items = items; page_form.toolbar_count = ARRAY_LEN(items);
+  page_binding_t bindings[] = {{ACT_FIRST, RAIL, "first", &page_form, 0}, {ACT_SECOND, RAIL, "second", &page_form, 0}};
+  form_def_t form = page_host_form;
+  form.flags |= WINDOW_TOOLBAR; form.page_bindings = bindings;
+  const page_handler_t handlers[] = {{"first", test_toolbar_page_proc}, {"second", test_toolbar_page_proc}};
+  window_t *host = create_window_from_form(&form, 0, 0, NULL, test_page_host_proc, 0, NULL);
+  ASSERT_TRUE(page_host_init(host, &form, handlers, 2));
+  window_t *second = page_host_page(host, ACT_SECOND);
+  ASSERT_EQUAL(toolbar_get_state(host)->item_count, 2);
+  ASSERT_TRUE(send_message(host, evCommand, MAKEDWORD(2200, btnClicked), host->toolbar));
+  ASSERT_EQUAL(toolbar_command_page, second); ASSERT_EQUAL(toolbar_command_source, host->toolbar);
+  ASSERT_TRUE(page_host_select(host, ACT_FIRST));
+  uint16_t codes[] = {0, kMenuBarNotificationItemClick, kAcceleratorNotification};
+  for (int i = 0; i < ARRAY_LEN(codes); i++) {
+    uint32_t command = MAKEDWORD(2200, codes[i]);
+    ASSERT_TRUE(send_message(host, evCommand, command, NULL));
+    ASSERT_EQUAL(toolbar_command_page, page_host_page(host, ACT_FIRST));
+    ASSERT_EQUAL(toolbar_command_wparam, command);
+  }
+  toolbar_command_page = NULL;
+  ASSERT_FALSE(send_message(host, evCommand, MAKEDWORD(9999, btnClicked), NULL));
+  ASSERT_NULL(toolbar_command_page);
+  ASSERT_FALSE(send_message(host, evCommand, MAKEDWORD(2200, ednChange), NULL));
+  ASSERT_NULL(toolbar_command_page);
+  ASSERT_FALSE(page_host_command(host, MAKEDWORD(2201, btnClicked), NULL));
+  ASSERT_EQUAL(toolbar_command_page, page_host_page(host, ACT_FIRST));
+  destroy_window(host); test_env_shutdown(); PASS();
+}
+
 int main(void) {
   TEST_START("Activity page host");
   test_activity_lifecycle();
   test_activity_focus_lifetime();
   test_activity_validation();
   test_page_navigation_and_orientation();
+  test_page_toolbar_commands();
   TEST_END();
 }

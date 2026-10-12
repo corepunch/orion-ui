@@ -39,22 +39,22 @@ bool terminal_workspace_command(window_t *page, uint32_t command) {
   int count = send_message(tabs, tcGetCount, 0, NULL);
   int index = send_message(tabs, tcGetSelection, 0, NULL);
   switch (command) {
-    case ID_TAB_NEW: case ID_WORKSPACE_PAGE_NEW_TAB:
+    case ID_TAB_NEW:
       return terminal_new_tab(st, tabs);
-    case ID_TAB_CLOSE: case ID_WORKSPACE_PAGE_CLOSE_TAB: {
+    case ID_TAB_CLOSE: {
       if (!count) return false;
       window_t *tab = (window_t *)send_message(tabs, tcGetPage, index, NULL);
       // Keep one usable session when closing the final tab in the whole workspace.
       if (count == 1 && page_pane_count(page) == 1 && !terminal_new_tab(st, tabs)) return false;
       return page_close_tab(page, tab);
     }
-    case ID_TAB_NEXT: case ID_WORKSPACE_PAGE_NEXT_TAB:
+    case ID_TAB_NEXT:
       return count && send_message(tabs, tcSetSelection, (index + 1) % count, NULL);
-    case ID_TAB_PREVIOUS: case ID_WORKSPACE_PAGE_PREVIOUS_TAB:
+    case ID_TAB_PREVIOUS:
       return count && send_message(tabs, tcSetSelection, (index + count - 1) % count, NULL);
-    case ID_TAB_SPLIT_RIGHT: case ID_WORKSPACE_PAGE_SPLIT_RIGHT:
-    case ID_TAB_SPLIT_DOWN: case ID_WORKSPACE_PAGE_SPLIT_DOWN: {
-      bool right = command == ID_TAB_SPLIT_RIGHT || command == ID_WORKSPACE_PAGE_SPLIT_RIGHT;
+    case ID_TAB_SPLIT_RIGHT:
+    case ID_TAB_SPLIT_DOWN: {
+      bool right = command == ID_TAB_SPLIT_RIGHT;
       if (!terminal_new_tab(st, tabs)) return false;
       window_t *tab = (window_t *)send_message(tabs, tcGetPage, count, NULL);
       if (page_move_tab(page, tab, tabs, right ? PANE_RIGHT : PANE_BOTTOM, -1)) return true;
@@ -62,12 +62,12 @@ bool terminal_workspace_command(window_t *page, uint32_t command) {
       send_message(tabs, tcSetSelection, index, NULL);
       return false;
     }
-    case ID_TAB_MOVE: case ID_WORKSPACE_PAGE_MOVE_TAB:
-    case ID_TAB_FOCUS_NEXT: case ID_WORKSPACE_PAGE_NEXT_PANE: {
+    case ID_TAB_MOVE:
+    case ID_TAB_FOCUS_NEXT: {
       int panes = page_pane_count(page), current = 0;
       while (current < panes && page_pane_at(page, current) != tabs) current++;
       window_t *next = page_pane_at(page, (current + 1) % panes);
-      if (command == ID_TAB_MOVE || command == ID_WORKSPACE_PAGE_MOVE_TAB) {
+      if (command == ID_TAB_MOVE) {
         if (!count) return false;
         return page_move_tab(page, (window_t *)send_message(tabs, tcGetPage, index, NULL), next, PANE_CENTER, -1);
       }
