@@ -14,6 +14,7 @@
 
 #include "test_framework.h"
 #include "test_env.h"
+#include "test_graphics.h"
 #include "gitclient_test_helpers.h"
 #include "apps/gitclient/gitclient.h"
 #include "apps/gitclient/gc_actions.h"
@@ -736,9 +737,7 @@ void test_overview_close_filtered_cards(void) {
 void test_activitybar_navigation(void) {
   TEST("activity bar: clicks and View commands select one page, preserve state and resize beside the rail");
   test_env_init();
-  if (!ui_init_graphics(UI_INIT_HIDDEN, "activity-bar-test", 960, 640)) {
-    SKIP("Offscreen graphics unavailable");
-  }
+  ASSERT_TRUE(test_graphics_init(960, 640));
   gc_state_t saved = g_test_state;
   database_t *saved_db = ui_get_database();
   memset(&g_test_state, 0, sizeof(g_test_state));
@@ -829,7 +828,7 @@ void test_activitybar_navigation(void) {
   destroy_database(g_test_state.github_db);
   ui_set_database(saved_db);
   test_env_shutdown();
-  ui_shutdown_graphics();
+  test_graphics_shutdown();
   g_test_state = saved;
   PASS();
 }
@@ -848,9 +847,7 @@ static void gc_drag_view(window_t *source, int index, window_t *target, ipoint16
 static void test_gitclient_pane_layout(void) {
   TEST("Git Client pane docking preserves defaults, live views, bindings and drafts");
   test_env_init();
-  if (!ui_init_graphics(UI_INIT_HIDDEN, "gitclient-pane-test", 1200, 800)) {
-    test_env_shutdown(); SKIP("Offscreen graphics unavailable");
-  }
+  ASSERT_TRUE(test_graphics_init(1200, 800));
   gc_state_t saved = g_test_state;
   database_t *saved_db = ui_get_database();
   memset(&g_test_state, 0, sizeof(g_test_state));
@@ -951,7 +948,7 @@ static void test_gitclient_pane_layout(void) {
   send_message(summary, edGetText, sizeof(draft), draft); ASSERT_STR_EQUAL(draft, "Draft remains editable");
   destroy_window(root);
   destroy_database(g_test_state.history_db); destroy_database(g_test_state.changes_db); destroy_database(g_test_state.github_db);
-  ui_set_database(saved_db); test_env_shutdown(); ui_shutdown_graphics(); g_test_state = saved;
+  ui_set_database(saved_db); test_env_shutdown(); test_graphics_shutdown(); g_test_state = saved;
   PASS();
 }
 

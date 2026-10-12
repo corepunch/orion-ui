@@ -1,5 +1,6 @@
 #include "test_framework.h"
 #include "test_env.h"
+#include "test_graphics.h"
 #include <orion/user/toolbar.h>
 #include <orion/commctl/menubar.h>
 #include <math.h>
@@ -29,9 +30,7 @@ static double terminal_split_ratio(window_t *left, window_t *right) {
 static void test_terminal_page_host(void) {
   TEST("Terminal pane tabs retain independent sessions under the Workspace split");
   test_env_init();
-  if (!ui_init_graphics(UI_INIT_HIDDEN, "Terminal pane tabs test", 1024, 768)) {
-    test_env_shutdown(); SKIP("Offscreen graphics unavailable");
-  }
+  ASSERT_TRUE(test_graphics_init(1024, 768));
   char *args[] = {"terminal", NULL};
   ASSERT_TRUE(gem_init(1, args, 0));
   window_t *host = g_terminal.host, *page = g_terminal.page, *bar = g_terminal.activity;
@@ -218,7 +217,7 @@ static void test_terminal_page_host(void) {
   ASSERT_EQUAL(g_ui_runtime.focused, fresh);
   gem_shutdown();
   ASSERT_NULL(g_terminal.host); ASSERT_NULL(g_ui_runtime.focused);
-  test_env_shutdown(); ui_shutdown_graphics();
+  test_env_shutdown(); test_graphics_shutdown();
   PASS();
 }
 

@@ -53,6 +53,7 @@ GEM_NM   = nm -g
 GEM_SYM  = T _gem_get_interface
 else ifeq ($(UNAME_S),Linux)
 LIBS     += -lGL -lutil
+LDFLAGS_TEST += -lEGL
 CFLAGS   += -fPIC
 LIB_EXT  = so
 LIB_FLAGS = -shared -fPIC
@@ -332,7 +333,7 @@ test: share $(TEST_BINS)
 	done
 	@echo "All tests passed!"
 
-$(TEST_BINS): $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_SRCS) $(TEST_DIR)/test_env.c $(GENERATED_HEADERS) $(CORE_LIBS) $(COMPONENT_PLUGIN_BINS) | $(BIN_DIR)
+$(TEST_BINS): $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_SRCS) $(wildcard $(TEST_DIR)/*.h) $(TEST_DIR)/test_env.c $(GENERATED_HEADERS) $(CORE_LIBS) $(COMPONENT_PLUGIN_BINS) | $(BIN_DIR)
 	@echo "TEST    $@"
 	@src='$(firstword $(filter %/$*.c,$(TEST_SRCS)))'; \
 	app_dir=; app=; stem='$*'; \
