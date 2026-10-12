@@ -52,6 +52,7 @@ Each pane has New Tab (+), Split, and Close Tab (×) actions at the right of its
 close button. Click Split to split right;
 hold Alt to change the icon, tooltip, and action to split down. The button targets
 its own pane, even when another pane had focus, as do New Tab and Close Tab.
-`PaneToolbar` declares these actions once
-in `terminal.orion`, and dynamically created panes inherit it. Both directions
+Orion supplies Split and Close by default. `PaneToolbar` in `terminal.orion`
+adds only New Tab; the Page handles `evPaneAction` to create and close sessions.
+Dynamically created panes inherit all three actions. Both directions
 remain available in the Tab menu and through their existing shortcuts.

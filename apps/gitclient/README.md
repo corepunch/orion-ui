@@ -83,8 +83,13 @@ context menus, diff state, and commit draft. The Changes file list and commit
 form move together. The View menu also provides Focus Next Pane (Ctrl+Alt+Tab),
 Next View Tab (Ctrl+Tab), Move View to Next Pane (Ctrl+Shift+M), and directional
 split commands (right: Ctrl+Shift+E, below: Ctrl+Shift+O). On macOS the primary
-modifier is Command. Splitting separates the current tab from its group; for a
-single-tab pane it places the view beside the next visible pane.
+modifier is Command. Orion automatically supplies Split and Close at the right
+of each pane's title bar. Alt changes Split Right to Split Down. These actions
+target their own pane even when another has focus. Splitting separates the
+current tab from its group; with one tab, Split Right/Down creates an empty
+group for docking other views. Close hides the current view without discarding
+its state or bindings. View → Show Closed Views restores it; Ctrl+Shift+W also
+closes the active view. No per-app pane toolbar declaration is needed.
 
 ## Architecture
 

@@ -430,6 +430,8 @@ enum {
 };
 // PageHost selection: wparam = command ID, lparam = selected page.
 enum { evPageChanged = evUser + 920 };
+// Page asks its app to handle a standard pane action; true suppresses the default.
+enum { evPaneAction = evUser + 921 }; // wparam=PANE_ACTION_*, lparam=TabView*
 // Synchronous lifecycle notifications to ancestors; lparam = descendant window.
 enum { evDescendantFocus = evUser + 930, evDescendantDestroy, evDescendantDetach };
 
@@ -532,6 +534,9 @@ enum {
   tcSetToolbar,     // wparam=count, lparam=toolbar_item_t*; copied, right-aligned in TabBar
   tcGetToolbar,     // returns the toolbar owner window, or NULL
   tcnAction,        // evCommand; lparam=tab_action_t*, synchronous pane action
+  tcHidePage,       // wparam=index; retain the content window but remove its tab
+  tcShowPages,      // restore hidden tabs, preserving their content and icons
+  tcGetHiddenCount,
 };
 enum { svGetPane = evUser + 360 }; // wparam = 0 (left/top) or 1 (right/bottom); returns window_t*
 // Card / Badge / TileGrid messages, in the spirit of NSCollectionView / UICollectionView items.

@@ -36,9 +36,6 @@
             </Toolbar>
             <PaneToolbar>
                 <Button command="tab.new" icon="tab-new" text="New Tab" tooltip="New tab in this pane (Ctrl+Shift+T)" />
-                <Button command="tab.split_right" icon="split-right" text="Split Right" tooltip="Split Right (Alt: Split Down)"
-                        alt-command="tab.split_down" alt-icon="split-down" alt-tooltip="Split Down (release Alt: Split Right)" />
-                <Button command="tab.close" icon="tab-close" text="Close Tab" tooltip="Close active tab in this pane (Ctrl+Shift+W)" />
             </PaneToolbar>
             <SplitView name="terminals" split-ratio="0.5" flags="flexspace">
                 <TabView name="left_tabs" flags="flexspace" />

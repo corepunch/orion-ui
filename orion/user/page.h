@@ -4,6 +4,7 @@
 #include "user.h"
 
 typedef enum { PANE_CENTER, PANE_LEFT, PANE_RIGHT, PANE_TOP, PANE_BOTTOM } pane_edge_t;
+enum { PANE_ACTION_SPLIT_RIGHT = 0xff10, PANE_ACTION_SPLIT_DOWN, PANE_ACTION_CLOSE };
 typedef struct {
   window_t *pane;
   pane_edge_t edge;
@@ -18,6 +19,8 @@ window_t *page_active_pane(window_t *page);
 window_t *page_split_pane(window_t *page, window_t *pane, pane_edge_t edge);
 bool page_move_tab(window_t *page, window_t *view, window_t *target, pane_edge_t edge, int before);
 bool page_close_tab(window_t *page, window_t *view);
+bool page_pane_action(window_t *page, window_t *pane, uint32_t action);
+bool page_show_closed_views(window_t *page);
 bool page_get_drop_preview(window_t *page, pane_drop_t *preview);
 
 // Window-system integration; application page procedures need no forwarding.

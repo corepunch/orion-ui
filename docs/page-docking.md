@@ -98,21 +98,34 @@ are unchanged. Applications still own session lifetime and persistence policy.
 
 ## Pane toolbars
 
-Declare shared pane actions once on the Page. Every initial pane receives a copy;
-new splits inherit the source pane's current actions. For example:
+Every Page pane receives a standard right-aligned Split and Close toolbar, without
+an app declaration. Alt changes Split's icon, tooltip, and command from right
+to down. With several tabs, Split moves the selected view into a new group;
+with one tab, it opens an empty group for docking other views. Close hides the
+selected tool view while keeping its window, data bindings, and state alive.
+A group containing only hidden views is hidden when another visible group exists;
+it is retained so reopening can restore its views. An empty group with no retained
+views collapses normally. `page_show_closed_views(page)` restores closed views.
+
+`page_pane_action(page, pane, PANE_ACTION_*)` runs these same actions from menus
+or accelerators. Before applying the default, Page sends itself `evPaneAction`
+with the action in `wparam` and the originating TabView in `lparam`. An app may
+return true after handling it: Terminal creates sessions on split and destroys
+them on close, using its final-session policy. No forwarding is required for
+apps using the standard behavior.
+
+Optional `<PaneToolbar>` items are added before the standard controls. For example,
+Terminal adds only its app-specific New Tab action:
 
 ```xml
 <PaneToolbar>
-    <Button command="tab.split_right" icon="split-right" tooltip="Split Right (Alt: Split Down)"
-            alt-command="tab.split_down" alt-icon="split-down" alt-tooltip="Split Down" />
+    <Button command="tab.new" icon="tab-new" tooltip="New tab in this pane" />
 </PaneToolbar>
 ```
 
-The commands refer to the same menu action IDs used by accelerators. The toolbar
-reserves space on the right of the TabBar. Holding Alt changes the icon and
-hover tooltip immediately; activation uses the modifier state at release. The
-shared toolbar control owns this behavior. FormEditor preserves the declaration
-and previews its icons, including alternate icons, without executing app commands.
+New splits inherit the source pane's current toolbar. Custom items support
+`alt-command`, `alt-icon`, and `alt-tooltip`; the shared toolbar owns modifier
+handling. FormEditor previews both standard and custom actions.
 
 ## Relationship to MFC
 

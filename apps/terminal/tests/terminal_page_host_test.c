@@ -45,8 +45,8 @@ static void test_terminal_page_host(void) {
   toolbar_state_t *pane_actions = toolbar_get_state(pane_bar);
   ASSERT_EQUAL(pane_actions->item_count, 3);
   ASSERT_EQUAL(pane_actions->items[0].ident, ID_TAB_NEW);
-  ASSERT_EQUAL(pane_actions->items[1].alt_ident, ID_TAB_SPLIT_DOWN);
-  ASSERT_EQUAL(pane_actions->items[2].ident, ID_TAB_CLOSE);
+  ASSERT_EQUAL(pane_actions->items[1].alt_ident, PANE_ACTION_SPLIT_DOWN);
+  ASSERT_EQUAL(pane_actions->items[2].ident, PANE_ACTION_CLOSE);
   window_t *panes = page;
   ASSERT_EQUAL(split->parent, panes);
   ASSERT_EQUAL(page->parent, host);
@@ -156,7 +156,7 @@ static void test_terminal_page_host(void) {
   // Closing selected and inactive tabs leaves the opposite pane intact.
   window_t *left_bar = (window_t *)send_message(left_tabs, tcGetToolbar, 0, NULL);
   irect16_t close_tab;
-  ASSERT_TRUE(send_message(left_bar, tbGetItemRect, ID_TAB_CLOSE, &close_tab));
+  ASSERT_TRUE(send_message(left_bar, tbGetItemRect, PANE_ACTION_CLOSE, &close_tab));
   point = MAKEDWORD(close_tab.x + close_tab.w / 2, close_tab.y + close_tab.h / 2);
   set_focus(right_second);
   send_message(left_bar->toolbar, evLeftButtonDown, point, NULL);
@@ -233,7 +233,7 @@ static void test_terminal_page_host(void) {
   pane_bar = (window_t *)send_message(active_pane, tcGetToolbar, 0, NULL);
   ASSERT_NOT_NULL(pane_bar);
   irect16_t action;
-  ASSERT_TRUE(send_message(pane_bar, tbGetItemRect, ID_TAB_SPLIT_RIGHT, &action));
+  ASSERT_TRUE(send_message(pane_bar, tbGetItemRect, PANE_ACTION_SPLIT_RIGHT, &action));
   ui_event_t alt = {.message = kEventModifiersChanged, .wParam = AX_MOD_ALT};
   dispatch_message(&alt);
   int pane_count = page_pane_count(page);
@@ -248,7 +248,7 @@ static void test_terminal_page_host(void) {
   ASSERT_EQUAL(toolbar_get_state(pane_bar)->item_count, 3);
   alt.wParam = 0; dispatch_message(&alt);
   // Closing the sole tab safely destroys its pane and the clicked toolbar.
-  ASSERT_TRUE(send_message(pane_bar, tbGetItemRect, ID_TAB_CLOSE, &close_tab));
+  ASSERT_TRUE(send_message(pane_bar, tbGetItemRect, PANE_ACTION_CLOSE, &close_tab));
   point = MAKEDWORD(close_tab.x + close_tab.w / 2, close_tab.y + close_tab.h / 2);
   send_message(pane_bar->toolbar, evLeftButtonDown, point, NULL);
   send_message(pane_bar->toolbar, evLeftButtonUp, point, NULL);

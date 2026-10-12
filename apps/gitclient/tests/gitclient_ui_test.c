@@ -588,7 +588,7 @@ static const accel_t *gc_find_accel(uint16_t cmd) {
 
 void test_action_metadata_and_accelerators(void) {
     TEST("gitclient Orion: metadata + accels enumerate menu shortcuts");
-    ASSERT_EQUAL(gitclient_action_meta_count, 57);
+    ASSERT_EQUAL(gitclient_action_meta_count, 59);
 
     for (int i = 0; i < gitclient_action_meta_count; i++) {
         ASSERT_TRUE(gitclient_action_meta[i].name[0] != '\0');
@@ -920,13 +920,34 @@ static void test_gitclient_pane_layout(void) {
   window_t *branches = g_test_state.branches_win;
   ASSERT_EQUAL(branches->context_menu_count, CONTEXT_MENU_BRANCHES_COUNT);
   set_focus(log);
-  ASSERT_TRUE(gc_pane_command(ID_VIEW_SPLIT_RIGHT));
+  window_t *pane_bar = (window_t *)send_message(log_pane, tcGetToolbar, 0, NULL);
+  ASSERT_NOT_NULL(pane_bar);
+  ASSERT_EQUAL(toolbar_get_state(pane_bar)->item_count, 2);
+  irect16_t action_rect;
+  ASSERT_TRUE(send_message(pane_bar, tbGetItemRect, PANE_ACTION_SPLIT_RIGHT, &action_rect));
+  uint32_t point = MAKEDWORD(action_rect.x + action_rect.w / 2, action_rect.y + action_rect.h / 2);
+  set_focus(branches);
+  send_message(pane_bar->toolbar, evLeftButtonDown, point, NULL);
+  send_message(pane_bar->toolbar, evLeftButtonUp, point, NULL);
   ASSERT_EQUAL(page_pane_count(history), 7);
   ASSERT_NOT_EQUAL(log->parent, history_files->parent);
   ASSERT_TRUE(gc_pane_command(ID_VIEW_NEXT_PANE));
   ASSERT_NOT_NULL(page_active_pane(history));
   gc_refresh_all();
   ASSERT_EQUAL(g_test_state.log_win, log); ASSERT_EQUAL(g_test_state.history_files_win, history_files);
+  pane_bar = (window_t *)send_message(log->parent, tcGetToolbar, 0, NULL);
+  ASSERT_TRUE(send_message(pane_bar, tbGetItemRect, PANE_ACTION_CLOSE, &action_rect));
+  point = MAKEDWORD(action_rect.x + action_rect.w / 2, action_rect.y + action_rect.h / 2);
+  set_focus(history_files);
+  send_message(pane_bar->toolbar, evLeftButtonDown, point, NULL);
+  send_message(pane_bar->toolbar, evLeftButtonUp, point, NULL);
+  ASSERT_TRUE(is_window(log)); ASSERT_FALSE(window_has_state(log, WINDOW_STATE_VISIBLE));
+  ASSERT_EQUAL(g_test_state.log_win, log);
+  gc_refresh_all();
+  ASSERT_FALSE(window_has_state(log, WINDOW_STATE_VISIBLE));
+  ASSERT_TRUE(gc_pane_command(ID_VIEW_SHOW_CLOSED_VIEWS));
+  ASSERT_TRUE(window_has_state(log, WINDOW_STATE_VISIBLE));
+  ASSERT_NOT_NULL((void *)send_message(log, tvGetRecord, 0, NULL));
 
   // GitHub keeps the stacked default and can regroup without invoking network fetches.
   gc_set_view_mode(GC_TAB_CHANGES);
@@ -938,8 +959,16 @@ static void test_gitclient_pane_layout(void) {
   ASSERT_TRUE(page_move_tab(github, pulls_panel, issues_panel->parent, PANE_CENTER, -1));
   ASSERT_EQUAL(page_pane_count(github), 1);
   ASSERT_EQUAL(g_test_state.github_issues_win, issues); ASSERT_EQUAL(g_test_state.github_pulls_win, pulls);
-  ASSERT_TRUE(gc_pane_command(ID_VIEW_SPLIT_DOWN));
+  pane_bar = (window_t *)send_message(issues_panel->parent, tcGetToolbar, 0, NULL);
+  ASSERT_TRUE(send_message(pane_bar, tbGetItemRect, PANE_ACTION_SPLIT_RIGHT, &action_rect));
+  point = MAKEDWORD(action_rect.x + action_rect.w / 2, action_rect.y + action_rect.h / 2);
+  ui_event_t alt = {.message = kEventModifiersChanged, .wParam = AX_MOD_ALT};
+  dispatch_message(&alt);
+  send_message(pane_bar->toolbar, evLeftButtonDown, point, NULL);
+  send_message(pane_bar->toolbar, evLeftButtonUp, point, NULL);
+  alt.wParam = 0; dispatch_message(&alt);
   ASSERT_EQUAL(page_pane_count(github), 2);
+  ASSERT_TRUE(pulls_panel->parent->frame.y > issues_panel->parent->frame.y);
   g_test_state.repo = repo;
   gc_set_view_mode(GC_TAB_CHANGES);
   root->frame.w = 420; root->frame.h = 700; send_message(root, evResize, 0, NULL);

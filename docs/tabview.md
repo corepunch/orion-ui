@@ -67,4 +67,11 @@ Actions notify the parent with `tcnAction` and a synchronous `tab_action_t`:
 notification. A Page activates the originating pane and dispatches the ordinary
 command to its app procedure, so clicking another pane's action targets that pane.
 
-A Page can declare a shared `<PaneToolbar>` in `.orion`; see [Page docking](page-docking.md).
+Page supplies Split and Close automatically; an optional `<PaneToolbar>` adds
+app actions before them. See [Page docking](page-docking.md).
+
+`tcHidePage` removes the indexed tab while retaining its child window and focus
+history. `tcGetHiddenCount` reports retained tabs; `tcShowPages` restores them in
+child order, including their icons. Hidden tabs are excluded from selection,
+dragging, tab counts, and painting. Destroying or detaching a retained view
+removes its hidden-tab record.

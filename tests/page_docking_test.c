@@ -334,8 +334,63 @@ static void test_pane_header_actions(void) {
   destroy_window(page); test_env_shutdown(); PASS();
 }
 
+static void test_default_pane_actions(void) {
+  TEST("Page provides Split and Close without declarations and preserves closed tool views");
+  test_env_init();
+  window_t *page = pane_test_host(), *pane = page_pane_at(page, 0);
+  window_t *a = pane_test_tab(pane, "A"), *b = pane_test_tab(pane, "B");
+  window_t *bar = (window_t *)send_message(pane, tcGetToolbar, 0, NULL);
+  ASSERT_NOT_NULL(bar);
+  toolbar_state_t *toolbar = toolbar_get_state(bar);
+  ASSERT_EQUAL(toolbar->item_count, 2);
+  ASSERT_EQUAL(toolbar->items[0].ident, PANE_ACTION_SPLIT_RIGHT);
+  ASSERT_EQUAL(toolbar->items[0].alt_ident, PANE_ACTION_SPLIT_DOWN);
+  ASSERT_EQUAL(toolbar->items[1].ident, PANE_ACTION_CLOSE);
+  ASSERT_TRUE(page_pane_action(page, pane, PANE_ACTION_CLOSE));
+  ASSERT_TRUE(is_window(b)); ASSERT_EQUAL(b->parent, pane);
+  ASSERT_EQUAL(send_message(pane, tcGetCount, 0, NULL), 1);
+  ASSERT_EQUAL(send_message(pane, tcGetHiddenCount, 0, NULL), 1);
+  ASSERT_FALSE(window_has_state(b, WINDOW_STATE_VISIBLE));
+  ASSERT_TRUE(page_pane_action(page, pane, PANE_ACTION_SPLIT_RIGHT));
+  window_t *empty = page_active_pane(page);
+  ASSERT_NOT_EQUAL(empty, pane);
+  ASSERT_EQUAL(page_pane_count(page), 2);
+  ASSERT_TRUE(page_pane_action(page, empty, PANE_ACTION_CLOSE));
+  ASSERT_EQUAL(page_pane_count(page), 1);
+  ASSERT_TRUE(is_window(b));
+  ASSERT_TRUE(page_show_closed_views(page));
+  ASSERT_EQUAL(send_message(pane, tcGetCount, 0, NULL), 2);
+  ASSERT_EQUAL((window_t *)send_message(pane, tcGetPage, 1, NULL), b);
+  ASSERT_TRUE(page_pane_action(page, pane, PANE_ACTION_CLOSE)); // A is selected.
+  ASSERT_TRUE(is_window(a));
+  ASSERT_TRUE(page_pane_action(page, pane, PANE_ACTION_SPLIT_DOWN));
+  empty = page_active_pane(page);
+  ASSERT_TRUE(page_move_tab(page, b, empty, PANE_CENTER, -1));
+  ASSERT_TRUE(is_window(pane)); // Retains A, so cannot destroy the empty source.
+  ASSERT_FALSE(window_has_state(pane, WINDOW_STATE_VISIBLE));
+  ASSERT_TRUE(page_show_closed_views(page));
+  ASSERT_TRUE(window_has_state(pane, WINDOW_STATE_VISIBLE));
+  ASSERT_EQUAL((window_t *)send_message(pane, tcGetPage, 0, NULL), a);
+  set_focus(b);
+  window_t *focus = g_ui_runtime.focused;
+  ASSERT_TRUE(send_message(pane, tcHidePage, 0, NULL));
+  ASSERT_EQUAL(g_ui_runtime.focused, focus);
+  ASSERT_TRUE(page_show_closed_views(page));
+  pane_drag(pane, 0, empty, (ipoint16_t){empty->frame.w / 2, empty->frame.h / 2});
+  pane_drop_t preview;
+  ASSERT_TRUE(page_get_drop_preview(page, &preview));
+  ASSERT_TRUE(page_pane_action(page, pane, PANE_ACTION_CLOSE));
+  ASSERT_FALSE(page_get_drop_preview(page, &preview));
+  ASSERT_NULL(g_ui_runtime.captured);
+  destroy_window(a);
+  ASSERT_EQUAL(send_message(pane, tcGetHiddenCount, 0, NULL), 0);
+  ASSERT_TRUE(page_show_closed_views(page));
+  destroy_window(page); test_env_shutdown(); PASS();
+}
+
 int main(void) {
   TEST_START("Page docking");
+  test_default_pane_actions();
   test_pane_header_actions();
   test_pane_moves_and_collapses();
   test_pane_drag_edges();

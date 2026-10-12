@@ -10,7 +10,7 @@ void page_history_refresh_sidebar(void) {
     window_t *pane = gc->stash_win->parent;
     bool original = pane && pane->id == ID_HISTORY_PAGE_STASH_LIST_TABS && pane->parent &&
                     pane->parent->id == ID_HISTORY_PAGE_TAGS_STASH_SPLIT;
-    if (original) {
+    if (original && !send_message(pane, tcGetHiddenCount, 0, NULL)) {
       bool visible = send_message(pane, tcGetCount, 0, NULL) > 1 ||
                      send_message(gc->stash_win, tvGetRecord, 0, NULL) != 0;
       if (visible != window_has_state(pane, WINDOW_STATE_VISIBLE)) {

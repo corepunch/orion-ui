@@ -84,6 +84,7 @@ void gc_handle_command_impl(uint16_t id) {
 
   switch (id) {
     case ID_VIEW_NEXT_PANE: case ID_VIEW_NEXT_TAB: case ID_VIEW_MOVE_TAB:
+    case ID_VIEW_CLOSE_TAB: case ID_VIEW_SHOW_CLOSED_VIEWS:
     case ID_VIEW_SPLIT_LEFT: case ID_VIEW_SPLIT_RIGHT: case ID_VIEW_SPLIT_UP: case ID_VIEW_SPLIT_DOWN:
       gc_pane_command(id);
       break;

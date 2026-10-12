@@ -22,11 +22,18 @@ typedef struct tab_focus_s {
   struct tab_focus_s *next;
 } tab_focus_t;
 
+typedef struct tab_hidden_s {
+  window_t *page;
+  int icon;
+  struct tab_hidden_s *next;
+} tab_hidden_t;
+
 typedef struct {
   int selected, scroll;
   window_t *pressed_page;
   ipoint16_t press_point;
   tab_focus_t *focus;
+  tab_hidden_t *hidden;
   uint32_t style;
   bitmap_strip_t strip;
   int *tab_icons;
@@ -40,9 +47,14 @@ typedef struct {
 
 static bool is_sidebar(const tabview_state_t *st) { return st && (st->style & TAB_STYLE_SIDEBAR); }
 
+static tab_hidden_t *tab_hidden(const tabview_state_t *st, window_t *page) {
+  for (tab_hidden_t *p = st ? st->hidden : NULL; p; p = p->next) if (p->page == page) return p;
+  return NULL;
+}
+
 // Pages exclude the sidebar list and header toolbar.
 static window_t *page_from(const tabview_state_t *st, window_t *c) {
-  while (c && st && (c == st->list || c == st->actions)) c = c->next;
+  while (c && st && (c == st->list || c == st->actions || tab_hidden(st, c))) c = c->next;
   return c;
 }
 #define FOR_EACH_PAGE(win, st, c) for (window_t *c = page_from(st, (win)->children); c; c = page_from(st, c->next))
@@ -489,6 +501,8 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       tab_remember_focus(win, lparam); return true;
     case evDescendantDestroy: case evDescendantDetach:
       if (st) {
+        for (tab_hidden_t **p = &st->hidden; *p; p = &(*p)->next)
+          if ((*p)->page == lparam) { tab_hidden_t *entry = *p; *p = entry->next; free(entry); break; }
         tab_forget_window(st, lparam);
         if (st->pressed_page == lparam) {
           st->pressed_page = NULL;
@@ -621,6 +635,60 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       }
       return tabview_move_page(win, (int)wparam, move->target, move->before);
     }
+    case tcGetHiddenCount: {
+      int count = 0;
+      for (tab_hidden_t *p = st ? st->hidden : NULL; p; p = p->next) count++;
+      return count;
+    }
+    case tcHidePage: {
+      window_t *page = tab_page(win, (int)wparam);
+      tab_hidden_t *entry = page ? calloc(1, sizeof(*entry)) : NULL;
+      if (!entry) {
+        fprintf(stderr, "[tv] hide_page rejected win=%u index=%u: invalid page or allocation failed\n", win->id, wparam);
+        fflush(stderr); return false;
+      }
+      bool had_focus = false;
+      for (window_t *p = g_ui_runtime.focused; p; p = p->parent) had_focus |= p == win;
+      tab_remember_focus(win, g_ui_runtime.focused);
+      *entry = (tab_hidden_t){page, wparam < (uint32_t)st->tab_icon_count ? st->tab_icons[wparam] : -1, st->hidden};
+      st->hidden = entry;
+      if ((int)wparam < st->tab_icon_count) {
+        memmove(st->tab_icons + wparam, st->tab_icons + wparam + 1, (st->tab_icon_count - wparam - 1) * sizeof(int));
+        st->tab_icon_count--;
+      }
+      if ((int)wparam < st->selected) st->selected--;
+      show_window(page, false); tab_arrange(win);
+      if (had_focus) {
+        if (tab_count(win)) tab_restore_focus(win); else set_focus(win);
+      }
+      invalidate_window(win);
+      if (win->parent) send_message(win->parent, evCommand, MAKEDWORD(win->id, tcnSelChange), win);
+      return true;
+    }
+    case tcShowPages: {
+      if (!st || !st->hidden) return true;
+      int count = tab_count(win) + send_message(win, tcGetHiddenCount, 0, NULL);
+      int *icons = malloc((size_t)count * sizeof(*icons));
+      if (!icons) {
+        fprintf(stderr, "[tv] show_pages allocation failed win=%u count=%d\n", win->id, count);
+        fflush(stderr); return false;
+      }
+      window_t *selected = tab_page(win, st->selected);
+      int i = 0, visible = 0, selection = 0;
+      for (window_t *c = win->children; c; c = c->next) {
+        if (c == st->list || c == st->actions) continue;
+        tab_hidden_t *hidden = tab_hidden(st, c);
+        icons[i] = hidden ? hidden->icon : visible < st->tab_icon_count ? st->tab_icons[visible] : -1;
+        if (!hidden) visible++;
+        if (c == selected) selection = i;
+        i++;
+      }
+      while (st->hidden) { tab_hidden_t *p = st->hidden; st->hidden = p->next; free(p); }
+      free(st->tab_icons); st->tab_icons = icons; st->tab_icon_count = count; st->selected = selection;
+      tab_arrange(win); invalidate_window(win);
+      if (win->parent) send_message(win->parent, evCommand, MAKEDWORD(win->id, tcnSelChange), win);
+      return true;
+    }
     case tcDeletePage: {
       int index = (int)wparam;
       window_t *page = st ? tab_page(win, index) : NULL;
@@ -706,6 +774,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (st) {
         tab_cleanup_icons(st);
         while (st->focus) { tab_focus_t *entry = st->focus; st->focus = entry->next; free(entry); }
+        while (st->hidden) { tab_hidden_t *entry = st->hidden; st->hidden = entry->next; free(entry); }
         free(st); win->userdata = NULL;
       }
       return true;

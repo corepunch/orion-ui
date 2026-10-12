@@ -37,6 +37,8 @@
             <Separator />
             <item name="next_pane" label="Focus Next Pane" shortcut="Ctrl+Alt+Tab" />
             <item name="next_tab" label="Next View Tab" shortcut="Ctrl+Tab" />
+            <item name="close_tab" label="Close View" shortcut="Ctrl+Shift+W" />
+            <item name="show_closed_views" label="Show Closed Views" />
             <item name="move_tab" label="Move View to Next Pane" shortcut="Ctrl+Shift+M" />
             <item name="split_left" label="Split View Left" />
             <item name="split_right" label="Split View Right" shortcut="Ctrl+Shift+E" />

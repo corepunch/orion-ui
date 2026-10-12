@@ -89,6 +89,13 @@ result_t terminal_workspace_proc(window_t *win, uint32_t msg, uint32_t wparam, v
         if (!terminal_new_tab(st, page_pane_at(win, i))) return false;
       return true;
     case evCommand: return terminal_workspace_command(win, LOWORD(wparam));
+    case evPaneAction:
+      switch (wparam) {
+        case PANE_ACTION_SPLIT_RIGHT: terminal_workspace_command(win, ID_TAB_SPLIT_RIGHT); return true;
+        case PANE_ACTION_SPLIT_DOWN:  terminal_workspace_command(win, ID_TAB_SPLIT_DOWN); return true;
+        case PANE_ACTION_CLOSE:       terminal_workspace_command(win, ID_TAB_CLOSE); return true;
+        default: return false;
+      }
     case evPaint: return false;
     case evDestroy: free(st); win->userdata = NULL; return true;
     default: return false;

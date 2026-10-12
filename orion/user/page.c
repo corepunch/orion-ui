@@ -8,6 +8,13 @@
 #define PANE_MIN_WIDTH 96
 #define PANE_MIN_HEIGHT 64
 
+static const toolbar_item_t pane_actions[] = {
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = PANE_ACTION_SPLIT_RIGHT, .icon = "pane-split-right",
+   .tooltip = "Split Right (Alt: Split Down)", .alt_ident = PANE_ACTION_SPLIT_DOWN,
+   .alt_icon = "pane-split-down", .alt_tooltip = "Split Down (release Alt: Split Right)"},
+  {.type = TOOLBAR_ITEM_BUTTON, .ident = PANE_ACTION_CLOSE, .icon = "pane-close", .tooltip = "Close active tab"},
+};
+
 typedef struct page_docking_s {
   window_t *active, *drag_page;
   pane_drop_t drop;
@@ -85,8 +92,19 @@ window_t *page_active_pane(window_t *owner) {
 static void pane_configure(window_t *owner, window_t *tree, bool initial) {
   if (!tree) return;
   if (pane_class(tree, "TabView")) {
-    if (initial && owner->pages->pane_toolbar_count && !send_message(tree, tcGetToolbar, 0, NULL))
-      send_message(tree, tcSetToolbar, owner->pages->pane_toolbar_count, (void *)owner->pages->pane_toolbar_items);
+    if (!send_message(tree, tcGetToolbar, 0, NULL)) {
+      int custom = initial ? owner->pages->pane_toolbar_count : 0;
+      int count = custom + ARRAY_LEN(pane_actions);
+      toolbar_item_t *items = calloc((size_t)count, sizeof(*items));
+      if (!items) {
+        fprintf(stderr, "[page] pane toolbar allocation failed page=%u count=%d\n", owner->id, count);
+        fflush(stderr); return;
+      }
+      if (custom) memcpy(items, owner->pages->pane_toolbar_items, custom * sizeof(*items));
+      memcpy(items + custom, pane_actions, sizeof(pane_actions));
+      send_message(tree, tcSetToolbar, count, items);
+      free(items);
+    }
     uint32_t style = send_message(tree, tcGetStyle, 0, NULL);
     uint32_t required = TAB_STYLE_RESTORE_FOCUS | TAB_STYLE_DRAG_TABS;
     if ((style & required) != required) send_message(tree, tcSetStyle, style | required, NULL);
@@ -151,6 +169,15 @@ window_t *page_split_pane(window_t *owner, window_t *pane, pane_edge_t edge) {
 
 static void pane_collapse_empty(window_t *owner, window_t *pane) {
   if (!pane_member(owner, pane) || send_message(pane, tcGetCount, 0, NULL)) return;
+  if (send_message(pane, tcGetHiddenCount, 0, NULL)) {
+    for (int i = 0, n = page_pane_count(owner); i < n; i++) {
+      window_t *other = page_pane_at(owner, i);
+      if (other != pane && pane_visible(owner, other)) {
+        show_window(pane, false); pane_arrange(owner); break;
+      }
+    }
+    return;
+  }
   window_t *split = pane->parent;
   if (split == owner || !pane_class(split, "SplitView")) return;
   window_t *sibling = pane_child(split, 0);
@@ -203,6 +230,51 @@ bool page_close_tab(window_t *owner, window_t *page) {
   window_t *active = page_active_pane(owner);
   if (active && send_message(active, tcGetCount, 0, NULL))
     send_message(active, tcSetSelection, send_message(active, tcGetSelection, 0, NULL), NULL);
+  return true;
+}
+
+bool page_pane_action(window_t *owner, window_t *pane, uint32_t action) {
+  if (!pane_member(owner, pane) || action < PANE_ACTION_SPLIT_RIGHT || action > PANE_ACTION_CLOSE) {
+    fprintf(stderr, "[page] pane action rejected page=%u pane=%p action=%u\n",
+            owner && is_window(owner) ? owner->id : 0, (void *)pane, action);
+    fflush(stderr); return false;
+  }
+  pane_cancel(owner);
+  pane_state(owner)->active = pane;
+  set_focus(pane);
+  if (send_message(owner, evPaneAction, action, pane)) return true;
+  if (!is_window(owner) || !pane_member(owner, pane)) return false;
+  int count = send_message(pane, tcGetCount, 0, NULL);
+  int selected = send_message(pane, tcGetSelection, 0, NULL);
+  if (action == PANE_ACTION_CLOSE) {
+    if (count && !send_message(pane, tcHidePage, selected, NULL)) return false;
+    pane_collapse_empty(owner, pane);
+    window_t *active = page_active_pane(owner);
+    if (active) set_focus(active);
+    return true;
+  }
+  pane_edge_t edge = action == PANE_ACTION_SPLIT_RIGHT ? PANE_RIGHT : PANE_BOTTOM;
+  if (count > 1)
+    return page_move_tab(owner, (window_t *)send_message(pane, tcGetPage, selected, NULL), pane, edge, -1);
+  window_t *created = page_split_pane(owner, pane, edge);
+  if (!created) return false;
+  pane_state(owner)->active = created; set_focus(created); return true;
+}
+
+bool page_show_closed_views(window_t *owner) {
+  if (!pane_state(owner)) {
+    fprintf(stderr, "[page] show closed views rejected page=%p: unavailable state\n", (void *)owner);
+    fflush(stderr); return false;
+  }
+  for (int i = 0, n = page_pane_count(owner); i < n; i++) {
+    window_t *pane = page_pane_at(owner, i);
+    if (!send_message(pane, tcGetHiddenCount, 0, NULL)) continue;
+    if (!send_message(pane, tcShowPages, 0, NULL)) return false;
+    show_window(pane, true);
+  }
+  pane_arrange(owner);
+  window_t *active = page_active_pane(owner);
+  if (active) set_focus(active);
   return true;
 }
 
@@ -304,6 +376,11 @@ bool page_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       if (st && HIWORD(wparam) == tcnAction && lparam) {
         tab_action_t *action = lparam;
         if (!pane_member(win, action->pane)) return false;
+        uint32_t command = LOWORD(action->command);
+        if (command >= PANE_ACTION_SPLIT_RIGHT && command <= PANE_ACTION_CLOSE) {
+          *result = page_pane_action(win, action->pane, command);
+          return true;
+        }
         st->active = action->pane;
         set_focus(action->pane);
         window_t *host = window_page_host(win);

@@ -9,3 +9,6 @@ included as `PHOSPHOR-LICENSE`.
 | Asset | Upstream icon | Used by |
 |---|---|---|
 | arrow-bend-left-up.svg | arrow-bend-left-up (regular) | FileList ".." row, file picker "Up one folder" |
+| pane-split-right.svg | columns (regular) | Standard pane title bar |
+| pane-split-down.svg | rows (regular) | Standard pane title bar with Alt |
+| pane-close.svg | x (regular) | Standard pane title bar |

@@ -4,8 +4,12 @@ bool gc_pane_command(uint16_t id) {
   gc_state_t *gc = g_gc;
   if (!gc || !gc->main_win) return false;
   window_t *page = window_active_page(gc->main_win);
+  if (id == ID_VIEW_SHOW_CLOSED_VIEWS) return page_show_closed_views(page);
   window_t *pane = page_active_pane(page);
   if (!pane) return false;
+  if (id == ID_VIEW_CLOSE_TAB) return page_pane_action(page, pane, PANE_ACTION_CLOSE);
+  if (id == ID_VIEW_SPLIT_RIGHT) return page_pane_action(page, pane, PANE_ACTION_SPLIT_RIGHT);
+  if (id == ID_VIEW_SPLIT_DOWN) return page_pane_action(page, pane, PANE_ACTION_SPLIT_DOWN);
   int count = send_message(pane, tcGetCount, 0, NULL);
   if (!count) return false;
   int selected = send_message(pane, tcGetSelection, 0, NULL);
