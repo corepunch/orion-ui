@@ -41,6 +41,19 @@ This will:
 
 The test environment (`test_env.h` and `test_env.c`) provides utilities for testing Orion windows and messages:
 
+Use `test_env_init()` for control, command-routing, and layout tests without a
+graphics context. Tests that instantiate app graphics resources or inspect pixels
+can use `test_graphics.h`: `test_graphics_init(width, height)` and
+`test_graphics_shutdown()`. On Linux this uses Mesa surfaceless EGL; on macOS it
+uses CGL. Neither creates a native window or requires a display server. Other
+supported platforms retain the hidden platform-context path. Context creation
+failure fails these tests rather than silently skipping app integration coverage.
+
+Linux CI runs `make test` with `DISPLAY` and `WAYLAND_DISPLAY` unset and
+`LIBGL_ALWAYS_SOFTWARE=1`. It needs Mesa's software driver and EGL development
+library, but no Xvfb. Existing tests specifically exercising a native display
+retain their own availability checks.
+
 ### Features
 
 - **Window Creation**: Helper functions to create test windows

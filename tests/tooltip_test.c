@@ -1,5 +1,6 @@
 #include "test_framework.h"
 #include "test_env.h"
+#include "test_graphics.h"
 #include <orion/commctl/commctl.h>
 #include <orion/user/toolbar.h>
 #include <orion/user/dock.h>
@@ -206,15 +207,12 @@ static void test_tooltip_bubble_tails(void) {
 
 int main(void) {
   TEST_START("Immediate tooltips");
-  if (!ui_init_graphics(UI_INIT_HIDDEN, "tooltip-test", 640, 480)) {
-    fprintf(stderr, "Offscreen graphics unavailable\n");
-    return 1;
-  }
+  if (!test_graphics_init(640, 480)) return 1;
   test_immediate_control_tooltip();
   test_immediate_toolbar_tooltip();
   test_toolbar_tooltip_sides();
   test_inherited_tooltip();
   test_tooltip_bubble_tails();
-  ui_shutdown_graphics();
+  test_graphics_shutdown();
   TEST_END();
 }

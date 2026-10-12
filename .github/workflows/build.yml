@@ -55,7 +55,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y liblua5.4-dev libgl1-mesa-dev libcglm-dev libx11-dev libegl-dev libxml2-dev xvfb xauth libgl1-mesa-dri
+        sudo apt-get install -y liblua5.4-dev libgl1-mesa-dev libcglm-dev libx11-dev libegl-dev libxml2-dev libgl1-mesa-dri
 
     - name: Build and run tests
-      run: xvfb-run -a -s "-screen 0 1280x1024x24" make test
+      run: env -u DISPLAY -u WAYLAND_DISPLAY make test
