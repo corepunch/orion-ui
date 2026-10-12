@@ -225,7 +225,7 @@ static void read_control_attrs(xmlNodePtr n, attrs_t *a) {
 
 static void free_attrs(attrs_t *a) { for (int i = 0; i < ARRAY_LEN(a->v); i++) free(a->v[i]); }
 static bool is_control(xmlNodePtr parent, xmlNodePtr n) {
-  return n && n->type == XML_ELEMENT_NODE && !elem(n, "requires") && !elem(n, "toolbar") &&
+  return n && n->type == XML_ELEMENT_NODE && !elem(n, "requires") && !elem(n, "toolbar") && !elem(n, "panetoolbar") &&
          !(elem(parent, "tableview") && elem(n, "column")) &&
          !(elem(parent, "activitybar") && elem(n, "page"));
 }
@@ -378,7 +378,13 @@ static void collect_toolbar_ids(ids_t *ids, cmd_refs_t *refs,
           refs->n++;
         }
       } else add_id(ids, id);
-      free(command); free(menu); free(name); free(text);
+      char *alt = attr(it, "alt-command");
+      if (alt && resolve_action(id, sizeof(id), alt, NULL, tb_scope, NULL, NULL) && refs && refs->n < ORIONC_MAX_IDS) {
+        snprintf(refs->v[refs->n].name, ORIONC_MAX_IDENT, "%s", alt);
+        snprintf(refs->v[refs->n].id, ORIONC_MAX_IDENT, "%s", id);
+        refs->n++;
+      }
+      free(alt); free(command); free(menu); free(name); free(text);
     }
   }
 }
@@ -524,9 +530,18 @@ static void emit_toolbar(FILE *f, xmlNodePtr toolbar, const char *symbol,
       if (icon && *icon) snprintf(iconq, sizeof(iconq), "\"%s\"", icon); else snprintf(iconq, sizeof(iconq), "NULL");
       if (checked && *checked) snprintf(checkedq, sizeof(checkedq), ", 0, \"%s\"", checked); // color, checked_icon
       emit_if(f, it, false);
-      OUT("  { %s, %s, %s, %s, %s%s%s, %s, %s%s },\n", toolbar_type(it), id, iconq, nz(w, "0"), nz(flags, "0"),
+      OUT("  { %s, %s, %s, %s, %s%s%s, %s, %s%s", toolbar_type(it), id, iconq, nz(w, "0"), nz(flags, "0"),
           elem(toolbar->parent, "activitybar") && elem(it, "button") ? " | TBSTYLE_CHECKGROUP" : "",
           elem(it, "button") ? control_size_flag(it) : "", textq, tipq, checkedq);
+      char *alt = attr(it, "alt-command"), *alt_icon = attr(it, "alt-icon"), *alt_tip = attr(it, "alt-tooltip");
+      if (alt) {
+        char alt_id[256], aq[ORIONC_STRING_SIZE], tq[ORIONC_STRING_SIZE];
+        resolve_action(alt_id, sizeof(alt_id), alt, NULL, scope, NULL, NULL);
+        cstr(aq, sizeof(aq), nz(alt_icon, icon)); cstr(tq, sizeof(tq), nz(alt_tip, tooltip));
+        OUT(", .alt_ident = %s, .alt_icon = %s, .alt_tooltip = %s", alt_id, aq, tq);
+      }
+      free(alt); free(alt_icon); free(alt_tip);
+      LINE(" },\n");
       emit_if(f, it, true);
       free(command); free(menu); free(name); free(icon); free(w); free(flags); free(text); free(tooltip); free(checked);
     }
@@ -1124,7 +1139,14 @@ static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr d
     return false;
   }
   ident(form_id, sizeof(form_id), name, false); cstr(titleq, sizeof(titleq), nz(title, name));
-  xmlNodePtr toolbar = child(form, "toolbar");
+  xmlNodePtr toolbar = child(form, "toolbar"), pane_toolbar = child(form, "panetoolbar");
+  int pane_toolbar_count = 0;
+  EACH_ELEMENT(item, form) if (elem(item, "panetoolbar")) pane_toolbar_count++;
+  if (pane_toolbar_count > 1 || (pane_toolbar && !eq(role, "page"))) {
+    fprintf(stderr, "orionc: form '%s' allows one <PaneToolbar> and requires role=page\n", nz(name, ""));
+    free(name); free(title); free(flags_raw); free(role); free(spacing); return false;
+  }
+  char pane_symbol[256]; snprintf(pane_symbol, sizeof(pane_symbol), "%s_%s_pane_toolbar", prefix, form_id);
   char toolbar_symbol[256]; snprintf(toolbar_symbol, sizeof(toolbar_symbol), "%s_%s_toolbar", prefix, form_id);
   int toolbar_count = 0;
   EACH_ELEMENT(item, form) if (elem(item, "toolbar")) toolbar_count++;
@@ -1138,6 +1160,7 @@ static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr d
   emit_tableviews(f, form, form, database, form_id);
   emit_comboboxes(f, form, form_id);
   emit_toolbar(f, toolbar, toolbar_symbol, name);
+  emit_toolbar(f, pane_toolbar, pane_symbol, name);
   emit_activitybars(f, form, form_id);
   OUT("static const form_ctrl_def_t %s_%s_children[] = {\n", prefix, form_id);
   int count = 0; bindings_t bindings = {0}; button_ids_t btn_ids = {0}; 
@@ -1153,6 +1176,7 @@ static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr d
       pad.x, pad.y, pad.w, pad.h, mar.x, mar.y, mar.w, mar.h, prefix, form_id, count);
   if (toolbar) OUT(", .toolbar_items = %s, .toolbar_count = ARRAY_LEN(%s)", toolbar_symbol, toolbar_symbol);
   else LINE(", .toolbar_items = NULL, .toolbar_count = 0");
+  if (pane_toolbar) OUT(", .pane_toolbar_items = %s, .pane_toolbar_count = ARRAY_LEN(%s)", pane_symbol, pane_symbol);
   if (activity_count) OUT(", .page_bindings = %s_%s_page_bindings, .page_binding_count = %d, .initial_page = %s", prefix, form_id, activity_count, initial);
   const char *page_attrs[] = {"icon", "checked-icon", "tooltip"};
   const char *page_fields[] = {"icon", "checked_icon", "tooltip"};
@@ -1222,7 +1246,7 @@ int main(int argc, char **argv) {
   }
   ids_t commands = {0}, controls = {0}; cmd_refs_t refs = {0}; action_meta_list_t meta = {0};
   EACH_ELEMENT(m, menus) if (elem(m, "menu")) { char *name = attr(m, "name"), scope[128]; ident(scope, sizeof(scope), name, true); collect_menu_ids(&commands, &meta, m, scope, name); free(name); }
-  EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"); collect_toolbar_ids(&commands, &refs, child(form, "toolbar"), name); collect_activitybar_ids(&commands, &refs, form, name); free(name); }
+  EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"); collect_toolbar_ids(&commands, &refs, child(form, "toolbar"), name); collect_toolbar_ids(&commands, &refs, child(form, "panetoolbar"), name); collect_activitybar_ids(&commands, &refs, form, name); free(name); }
   collect_toolbar_ids(&commands, &refs, app_toolbar, "application");
   collect_context_ids(&commands, &refs, contexts);
   EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"), form_id[128]; if (activity_form_needed(form, forms, only)) { ident(form_id, sizeof(form_id), name, false); collect_control_ids(&controls, form, form_id); } free(name); }

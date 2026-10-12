@@ -1,5 +1,6 @@
 // A pane tree uses ordinary SplitViews and TabViews; moving a tab keeps its window alive.
 #include "page.h"
+#include "toolbar.h"
 #include <orion/commctl/commctl.h>
 #include <orion/user/draw.h>
 #include <stdio.h>
@@ -81,21 +82,23 @@ window_t *page_active_pane(window_t *owner) {
   return st->active;
 }
 
-static void pane_configure(window_t *tree) {
+static void pane_configure(window_t *owner, window_t *tree, bool initial) {
   if (!tree) return;
   if (pane_class(tree, "TabView")) {
+    if (initial && owner->pages->pane_toolbar_count && !send_message(tree, tcGetToolbar, 0, NULL))
+      send_message(tree, tcSetToolbar, owner->pages->pane_toolbar_count, (void *)owner->pages->pane_toolbar_items);
     uint32_t style = send_message(tree, tcGetStyle, 0, NULL);
     uint32_t required = TAB_STYLE_RESTORE_FOCUS | TAB_STYLE_DRAG_TABS;
     if ((style & required) != required) send_message(tree, tcSetStyle, style | required, NULL);
   } else if (pane_class(tree, "SplitView")) {
-    pane_configure(pane_child(tree, 0)); pane_configure(pane_child(tree, 1));
+    pane_configure(owner, pane_child(tree, 0), initial); pane_configure(owner, pane_child(tree, 1), initial);
   }
 }
 
 static void pane_arrange(window_t *owner) {
   window_t *tree = pane_tree(owner);
   if (!tree) return;
-  pane_configure(tree);
+  pane_configure(owner, tree, false);
   irect16_t area = get_client_rect(owner);
   layout_arrange_window(owner, &area);
   invalidate_window(owner);
@@ -132,6 +135,11 @@ window_t *page_split_pane(window_t *owner, window_t *pane, pane_edge_t edge) {
   if (!tabs) {
     fprintf(stderr, "[page] split allocation failed page=%u\n", owner->id);
     fflush(stderr); if (split) destroy_window(split); return NULL;
+  }
+  window_t *bar = (window_t *)send_message(pane, tcGetToolbar, 0, NULL);
+  toolbar_state_t *actions = toolbar_get_state(bar);
+  if (actions && !send_message(tabs, tcSetToolbar, actions->item_count, actions->items)) {
+    destroy_window(split); return NULL;
   }
   if (parent == owner) split->layout = pane->layout;
   // Place the new branch in the old leaf's slot before moving the leaf inside it.
@@ -270,6 +278,7 @@ bool page_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
         fprintf(stderr, "[page] docking state allocation failed page=%u\n", win->id);
         fflush(stderr); return false;
       }
+      pane_configure(win, pane_tree(win), true);
       pane_arrange(win);
       return false;
     case evDestroy:
@@ -280,7 +289,7 @@ bool page_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       pane_arrange(win); return false;
     case evArrange: case evDeactivate:
       if (st && st->drag_page) pane_cancel(win);
-      pane_configure(pane_tree(win));
+      pane_configure(win, pane_tree(win), false);
       return false;
     case evDescendantFocus:
       for (window_t *p = lparam; st && p && p != win; p = p->parent)
@@ -292,6 +301,16 @@ bool page_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       if (pane_contains(lparam, st->active)) st->active = NULL;
       return false;
     case evCommand:
+      if (st && HIWORD(wparam) == tcnAction && lparam) {
+        tab_action_t *action = lparam;
+        if (!pane_member(win, action->pane)) return false;
+        st->active = action->pane;
+        set_focus(action->pane);
+        window_t *host = window_page_host(win);
+        window_t *target = host && window_active_page(host) == win ? host : win;
+        *result = send_message(target, evCommand, action->command, action->source);
+        return true;
+      }
       if (st && HIWORD(wparam) == tcnBeginDrag && lparam) {
         tab_drag_t *drag = lparam;
         if (!drag->page || !pane_member(win, drag->page->parent)) return false;

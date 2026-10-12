@@ -95,3 +95,38 @@ Remove the `<PaneHost>` wrapper from `role="page"` forms and call the `page_*` A
 with the Page window. The old PaneHost class and `pane_host_*` docking APIs have
 been removed. PageHost navigation APIs (`page_host_init`, `page_host_select`, etc.)
 are unchanged. Applications still own session lifetime and persistence policy.
+
+## Pane toolbars
+
+Declare shared pane actions once on the Page. Every initial pane receives a copy;
+new splits inherit the source pane's current actions. For example:
+
+```xml
+<PaneToolbar>
+    <Button command="tab.split_right" icon="split-right" tooltip="Split Right (Alt: Split Down)"
+            alt-command="tab.split_down" alt-icon="split-down" alt-tooltip="Split Down" />
+</PaneToolbar>
+```
+
+The commands refer to the same menu action IDs used by accelerators. The toolbar
+reserves space on the right of the TabBar. Holding Alt changes the icon and
+hover tooltip immediately; activation uses the modifier state at release. The
+shared toolbar control owns this behavior. FormEditor preserves the declaration
+and previews its icons, including alternate icons, without executing app commands.
+
+## Relationship to MFC
+
+Page plays the workspace/frame ownership role; its internal docking state plays
+the manager role. TabView groups live child windows, and SplitView provides the
+resizable tree. This follows MFC's separation between a frame-owned
+[CDockingManager](https://learn.microsoft.com/en-us/cpp/mfc/reference/cdockingmanager-class)
+and [CTabbedPane](https://learn.microsoft.com/en-us/cpp/mfc/reference/ctabbedpane-class),
+using Orion window procedures and messages rather than C++ inheritance.
+PageHost routes commands to the active Page before falling back to the host,
+consistent with MFC's [active-view command routing](https://learn.microsoft.com/en-us/cpp/mfc/command-routing).
+
+This is an adaptation, not API compatibility: Page docking currently supports
+in-page tiled tab groups. Floating panes, auto-hide strips, persisted layouts,
+and separate document/tool-window caption policies are not implemented here.
+Orion's existing `dock.c` manages toolbar bands and floating controls separately;
+it is not yet unified with the Page split tree.

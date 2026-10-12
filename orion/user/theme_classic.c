@@ -343,6 +343,7 @@ static theme_t g_classic_theme = {
   .toolbar_button_size    = SYSICON_SIZE + 4,
   .toolbar_padding        = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
   .tab_pane_frame            = 2,
+  .tab_header_height         = 32, .tab_min_width = 80, .tab_padding = 16,
   .menu_capsule              = 0,
   .badge_padding             = 7,
   .badge_corner_radius       = 5,

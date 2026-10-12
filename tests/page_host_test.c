@@ -226,7 +226,8 @@ static void *toolbar_command_source;
 static result_t test_toolbar_page_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   if (msg == evCommand) {
     toolbar_command_page = win; toolbar_command_wparam = wparam; toolbar_command_source = lparam;
-    return LOWORD(wparam) == 2200;
+    if (LOWORD(wparam) == 2203) return send_message(window_page_host(win), msg, wparam, lparam);
+    return LOWORD(wparam) == 2200 || LOWORD(wparam) == 2202;
   }
   return msg == evCreate || msg == evDestroy;
 }
@@ -256,9 +257,13 @@ static void test_page_toolbar_commands(void) {
     ASSERT_EQUAL(toolbar_command_page, page_host_page(host, ACT_FIRST));
     ASSERT_EQUAL(toolbar_command_wparam, command);
   }
+  ASSERT_FALSE(send_message(host, evCommand, MAKEDWORD(2203, kAcceleratorNotification), NULL));
   toolbar_command_page = NULL;
   ASSERT_FALSE(send_message(host, evCommand, MAKEDWORD(9999, btnClicked), NULL));
-  ASSERT_NULL(toolbar_command_page);
+  ASSERT_EQUAL(toolbar_command_page, page_host_page(host, ACT_FIRST));
+  ASSERT_TRUE(send_message(host, evCommand, MAKEDWORD(2202, kMenuBarNotificationItemClick), NULL));
+  ASSERT_EQUAL(LOWORD(toolbar_command_wparam), 2202);
+  toolbar_command_page = NULL;
   ASSERT_FALSE(send_message(host, evCommand, MAKEDWORD(2200, ednChange), NULL));
   ASSERT_NULL(toolbar_command_page);
   ASSERT_FALSE(page_host_command(host, MAKEDWORD(2201, btnClicked), NULL));

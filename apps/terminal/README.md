@@ -46,3 +46,12 @@ Build with `make build/bin/terminal`. The app tests are `test_terminal_app_test`
 `make build/bin/test_…` targets. The PageHost integration test uses offscreen graphics
 and covers navigation, focus restoration, split resizing, tab creation/removal,
 live PTY retention and cleanup, and landscape/portrait placement.
+
+Each pane has New Tab (+), Split, and Close Tab (×) actions at the right of its
+32-pixel TabBar. Close removes the pane's active tab; individual tabs have no
+close button. Click Split to split right;
+hold Alt to change the icon, tooltip, and action to split down. The button targets
+its own pane, even when another pane had focus, as do New Tab and Close Tab.
+`PaneToolbar` declares these actions once
+in `terminal.orion`, and dynamically created panes inherit it. Both directions
+remain available in the Tab menu and through their existing shortcuts.

@@ -236,6 +236,7 @@ typedef struct {
   } item_background;
   int control_padding;       // standard inset from control frame to content area
   int tab_pane_frame;        // TabView page inset from the tab bar frame (bevel width; 0 = flat)
+  int tab_header_height, tab_min_width, tab_padding;
   int menu_capsule;          // 1 = menu-bar selection is a padded capsule around the label; 0 = full item cell
   int badge_padding, badge_corner_radius; // Badge: horizontal text inset and corner radius
   int badge_tint_alpha;      // Badge: alpha of the tinted face behind the text (0..255)

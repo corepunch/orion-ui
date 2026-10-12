@@ -16,7 +16,7 @@ typedef struct {
 typedef struct page_host_s {
   window_t *bar;
   int count;
-  bool changing;
+  bool changing, routing;
   activity_entry_t entries[];
 } page_host_t;
 
@@ -110,10 +110,12 @@ bool page_host_command(window_t *host, uint32_t wparam, void *lparam) {
   }
   window_t *page = window_active_page(host);
   if (!page || !page->pages || !command) return false;
-  for (int i = 0; i < page->pages->toolbar_count; i++)
-    if ((uint32_t)page->pages->toolbar_items[i].ident == command)
-      return send_message(page, evCommand, wparam, lparam);
-  return false;
+  page_host_t *st = activity_state(host);
+  if (!st || st->routing) return false;
+  st->routing = true;
+  bool handled = send_message(page, evCommand, wparam, lparam);
+  if (is_window(host) && activity_state(host) == st) st->routing = false;
+  return handled;
 }
 
 void page_host_remember_focus(window_t *win) {

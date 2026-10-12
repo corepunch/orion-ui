@@ -305,6 +305,24 @@ static void test_activitybar_declaration(void) {
   PASS();
 }
 
+static void test_pane_toolbar_declaration(void) {
+  TEST("Page pane toolbars share menu commands and declare alternate actions");
+  const char *xml = "<orion name=\"test\"><menus><menu name=\"pane\" label=\"Pane\">"
+    "<item name=\"right\" label=\"Right\"/><item name=\"down\" label=\"Down\"/></menu></menus>"
+    "<forms><form name=\"workspace\" width=\"800\" role=\"page\"><PaneToolbar>"
+    "<Button command=\"pane.right\" icon=\"columns\" alt-command=\"pane.down\" alt-icon=\"rows\" alt-tooltip=\"Split Down\"/>"
+    "</PaneToolbar><TabView name=\"tabs\"/></form></forms></orion>";
+  char out[32768];
+  ASSERT_EQUAL(run_orionc(xml, "pane_toolbar", out, sizeof(out)), 0);
+  ASSERT_TRUE(contains(out, ".pane_toolbar_items = test_workspace_pane_toolbar"));
+  ASSERT_TRUE(contains(out, ".alt_ident = ID_PANE_DOWN, .alt_icon = \"rows\", .alt_tooltip = \"Split Down\""));
+  ASSERT_FALSE(contains(out, ".class_name = \"PaneToolbar\""));
+  const char *invalid = "<orion name=\"test\"><forms><form name=\"main\" width=\"400\"><PaneToolbar/>"
+    "</form></forms></orion>";
+  ASSERT_TRUE(run_orionc(invalid, "pane_toolbar_bad_role", out, sizeof(out)) != 0);
+  PASS();
+}
+
 #endif
 
 int main(void) {
@@ -313,6 +331,7 @@ int main(void) {
     test_valid_manifest_accepted();
     test_activity_page_bindings();
     test_page_metadata();
+    test_pane_toolbar_declaration();
     test_content_column_width();
     test_activitybar_declaration();
     test_application_toolbar_declaration();

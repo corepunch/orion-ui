@@ -469,7 +469,7 @@ static bool runtime_is_control_node(xmlNodePtr parent, xmlNodePtr node) {
     return false;
   if (parent && str_ieq((const char *)parent->name, "ActivityBar") &&
       str_ieq((const char *)node->name, "Page")) return false;
-  if (xmlStrcasecmp(node->name, BAD_CAST "Toolbar") == 0)
+  if (str_ieq((const char *)node->name, "Toolbar") || str_ieq((const char *)node->name, "PaneToolbar"))
     return false;
   if (parent && xmlStrcasecmp(node->name, BAD_CAST "Column") == 0 &&
       (xmlStrcasecmp(parent->name, BAD_CAST "TableView") == 0 ||
@@ -717,12 +717,35 @@ window_t *fe_create_runtime_form_window(window_t *doc,
       def.toolbar_items = NULL;
       def.toolbar_count = 0;
 
+    if (def.role == WINDOW_ROLE_PAGE) {
+      for (xmlNodePtr bar = form_node->children; bar; bar = bar->next) {
+        if (bar->type != XML_ELEMENT_NODE || !str_ieq((const char *)bar->name, "PaneToolbar")) continue;
+        int count = 0;
+        for (xmlNodePtr item = bar->children; item; item = item->next)
+          if (item->type == XML_ELEMENT_NODE && str_ieq((const char *)item->name, "Button")) count++;
+        toolbar_item_t *items = runtime_alloc(&ctx, count * sizeof(*items));
+        if (!items) break;
+        for (xmlNodePtr item = bar->children; item; item = item->next) {
+          if (item->type != XML_ELEMENT_NODE || !str_ieq((const char *)item->name, "Button")) continue;
+          int i = def.pane_toolbar_count++;
+          items[i] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = CTRL_ID_BASE + i,
+            .icon = runtime_xml_attr_dup(&ctx, item, "icon"), .text = runtime_xml_attr_dup(&ctx, item, "text"),
+            .tooltip = runtime_xml_attr_dup(&ctx, item, "tooltip"),
+            .alt_icon = runtime_xml_attr_dup(&ctx, item, "alt-icon"), .alt_tooltip = runtime_xml_attr_dup(&ctx, item, "alt-tooltip")};
+          if (xmlHasProp(item, BAD_CAST "alt-command")) items[i].alt_ident = CTRL_ID_BASE + count + i;
+        }
+        def.pane_toolbar_items = items;
+        break;
+      }
+    }
     def.child_count = 0;
     def.children = runtime_build_defs(&ctx, form_node, &def.child_count);
   }
 
   window_t *root = create_window_from_form(&def, 0, 0, parent, proc, 0, NULL);
 
+  // TabViews own copied descriptors; future splits copy their source pane's actions.
+  if (root && root->pages) { root->pages->pane_toolbar_items = NULL; root->pages->pane_toolbar_count = 0; }
   runtime_release(&ctx);
   return root;
 }

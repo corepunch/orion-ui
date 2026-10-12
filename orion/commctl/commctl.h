@@ -252,6 +252,7 @@ window_t *splitview_get_right(window_t *win);
 
 typedef struct { window_t *page; ipoint16_t point; } tab_drag_t; // point in source TabView content space
 typedef struct { window_t *target; int before; } tab_move_t;
+typedef struct { window_t *pane, *source; uint32_t command; } tab_action_t;
 // before is an insertion slot (0..count), or -1 to append. Also supports same-pane reorder.
 bool tabview_move_page(window_t *source, int index, window_t *target, int before);
 

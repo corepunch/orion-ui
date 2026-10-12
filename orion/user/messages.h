@@ -490,6 +490,8 @@ typedef struct {
   uint32_t            color;  // packed 0xAABBGGRR plastic face colour; 0 uses theme accent
   const char         *checked_icon; // shown instead of icon while TBSTATE_CHECKED
   uint32_t            state;  // initial TBSTATE_* bits; live state is read back through tbGetState
+  int                 alt_ident; // alternate command while Alt is held; 0 disables
+  const char         *alt_icon, *alt_tooltip;
 } toolbar_item_t;
 
 // Per-item extras addressed by `ident`; `mask` selects the valid fields (≈ TBBUTTONINFO).
@@ -527,6 +529,9 @@ enum {
   tcGetStyle,
   tcnBeginDrag,      // evCommand; lparam = tab_drag_t*, synchronous, parent takes capture
   tcMovePage,        // wparam = source index; lparam = tab_move_t*, preserves the content window
+  tcSetToolbar,     // wparam=count, lparam=toolbar_item_t*; copied, right-aligned in TabBar
+  tcGetToolbar,     // returns the toolbar owner window, or NULL
+  tcnAction,        // evCommand; lparam=tab_action_t*, synchronous pane action
 };
 enum { svGetPane = evUser + 360 }; // wparam = 0 (left/top) or 1 (right/bottom); returns window_t*
 // Card / Badge / TileGrid messages, in the spirit of NSCollectionView / UICollectionView items.
@@ -573,7 +578,7 @@ enum {
 #define SEGMENTED_LABEL_MAX    32
 #define SEGMENTED_PADDING      8  // horizontal label padding inside one segment
 #define SEGMENTED_INSET        2  // track margin around the segments
-#define TAB_CONTROL_HEIGHT 22
+#define TAB_CONTROL_HEIGHT (get_theme()->tab_header_height)
 #define TAB_STYLE_ICONS_ONLY (1u << 0) // show tab icons without page-title labels
 #define TAB_STYLE_DRAG_TABS (1u << 3) // notify parent after a TabBar drag threshold
 #define TAB_STYLE_RESTORE_FOCUS (1u << 2) // restore each page's focused descendant on selection

@@ -49,3 +49,22 @@ with a `tab_drag_t` containing the page and source-local pointer position. Its
 parent may take capture to manage the interaction. `tcGetStyle` queries the flags.
 The owning [Page](page-docking.md) supplies the reusable drop targets, snap overlay, nested
 splits, and empty-pane collapse for applications.
+
+## Header size and pane actions
+
+Horizontal TabBars use the theme's `tab_header_height` (32 logical pixels in
+both bundled themes), `tab_min_width`, and `tab_padding`. Icon strips can grow
+the header further. Sidebar rows keep their own metrics.
+
+`tcSetToolbar(count, items)` adds a standard toolbar at the right of the TabBar;
+`tcGetToolbar` returns its owner window. Descriptors and strings are copied.
+The toolbar is excluded from tab counting, selection, movement, and page layout.
+Tabs scroll and paint only in the remaining header space. Sidebar mode hides the
+header toolbar. Send a zero count to remove it.
+
+Actions notify the parent with `tcnAction` and a synchronous `tab_action_t`:
+`pane`, `source` toolbar window, and packed `command`. SplitView forwards this
+notification. A Page activates the originating pane and dispatches the ordinary
+command to its app procedure, so clicking another pane's action targets that pane.
+
+A Page can declare a shared `<PaneToolbar>` in `.orion`; see [Page docking](page-docking.md).
