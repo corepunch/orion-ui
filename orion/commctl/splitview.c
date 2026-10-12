@@ -146,6 +146,10 @@ result_t win_splitview(window_t *win, uint32_t msg,
       return true;
     }
 
+    case svGetPane:
+      if (wparam <= 1) return (result_t)(wparam ? splitview_get_right(win) : splitview_get_left(win));
+      fprintf(stderr, "[splitview] get_pane rejected win=%u index=%u\n", win->id, wparam);
+      fflush(stderr); return 0;
     case evResize: {
       splitview_state_t *st = (splitview_state_t *)win->userdata;
       if (st) splitview_arrange(st, win);

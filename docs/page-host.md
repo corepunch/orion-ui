@@ -92,11 +92,18 @@ Invalid initialization or selection logs a framework diagnostic to stderr.
 
 ## Page content and tiling
 
-PageHost manages navigation; a Page owns its content and layout. A Page may contain
-an ordinary form, a fixed SplitView, or a [PaneHost](pane-host.md) with dynamically
-split tabbed panes. Tiling is optional and scoped to that page.
+PageHost fills the application workspace, owning its ActivityBar and Pages.
+Each Page owns its content and layout directly. A Page may contain an ordinary
+form or a [dockable pane tree](page-docking.md) made of SplitViews and TabViews.
+No intermediate PaneHost window is required.
 
-Terminal's Workspace Page contains a PaneHost. Its SplitViews arrange panes;
-each pane's TabView owns independent TerminalView sessions. Moving a tab preserves
-the session, while splitting and resizing alter the page's pane tree. Cross-host
-transfers and layout persistence across launches remain separate work.
+Docking state is separate from the app's Page userdata. The window system handles
+layout, tab drags, previews, and empty-pane collapse without forwarding from app
+procedures. Switching activities cancels an in-progress drag and retains the pane
+tree and live view state. The Page's ordinary auto-layout also accommodates fixed
+command rows beside its pane tree.
+
+Terminal's Workspace Page declares command rows followed by its SplitView. Each
+pane's TabView owns independent TerminalView sessions. Git Client declares each
+activity's default split tree directly in that Page's form. Cross-Page transfers,
+floating panes, auto-hide, and layout persistence are not implemented by this API.

@@ -14,6 +14,7 @@
 #include "toolbar.h"
 #include "dock.h"
 #include "page_host.h"
+#include "page.h"
 #include <orion/kernel/renderer.h>
 
 #define CONTAINS(x, y, x1, y1, w1, h1) \
@@ -235,6 +236,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
       hook->func(win, msg, wparam, lparam, hook->userdata);
     }
   }
+  if (page_handle_message(win, msg, wparam, lparam, &value)) return value;
   // Handle special messages
   switch (msg) {
     case evCommand:
@@ -553,7 +555,10 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
     });
     draw_builtin_scrollbars(win);
   }
-  if (msg == evPaint && g_ui_runtime.running) dock_paint_overlay(win);
+  if (msg == evPaint && g_ui_runtime.running) {
+    dock_paint_overlay(win);
+    if (win->role == WINDOW_ROLE_PAGE) page_paint_overlay(win, paint_clip);
+  }
   // After the root's own children, including when the root paints them itself.
   if (msg == evPaint && !win->parent && g_ui_runtime.running)
     paint_drag_visuals(win);

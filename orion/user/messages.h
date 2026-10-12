@@ -526,7 +526,9 @@ enum {
   tcGetTabRect,      // wparam = index; lparam = irect16_t* in TabView coordinates
   tcGetStyle,
   tcnBeginDrag,      // evCommand; lparam = tab_drag_t*, synchronous, parent takes capture
+  tcMovePage,        // wparam = source index; lparam = tab_move_t*, preserves the content window
 };
+enum { svGetPane = evUser + 360 }; // wparam = 0 (left/top) or 1 (right/bottom); returns window_t*
 // Card / Badge / TileGrid messages, in the spirit of NSCollectionView / UICollectionView items.
 enum {
   lbSetStyle = evUser + 380, // lparam = label_create_params_t*: colour role, font role, single-line truncation

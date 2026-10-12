@@ -41,9 +41,9 @@ static void test_terminal_page_host(void) {
   window_t *left = terminal_workspace_terminal(page, 0), *right = terminal_workspace_terminal(page, 1);
   ASSERT_EQUAL(page_host_page(host, ID_VIEW_WORKSPACE), page);
   ASSERT_EQUAL(window_active_page(host), page);
-  window_t *panes = get_window_item(page, ID_WORKSPACE_PAGE_PANES);
+  window_t *panes = page;
   ASSERT_EQUAL(split->parent, panes);
-  ASSERT_EQUAL(panes->parent, page);
+  ASSERT_EQUAL(page->parent, host);
   ASSERT_EQUAL(splitview_get_left(split), left_tabs);
   ASSERT_EQUAL(splitview_get_right(split), right_tabs);
   ASSERT_EQUAL(left->parent->parent, left_tabs);
@@ -156,8 +156,8 @@ static void test_terminal_page_host(void) {
 
   // Move the live PTY into a new bottom pane. Its empty old pane collapses.
   set_focus(right_second);
-  ASSERT_TRUE(pane_host_move_tab(panes, right_second->parent, left_tabs, PANE_BOTTOM, -1));
-  ASSERT_EQUAL(pane_host_count(panes), 2);
+  ASSERT_TRUE(page_move_tab(panes, right_second->parent, left_tabs, PANE_BOTTOM, -1));
+  ASSERT_EQUAL(page_pane_count(panes), 2);
   ASSERT_EQUAL(terminal_workspace_terminal(page, 0), left);
   ASSERT_EQUAL(terminal_workspace_terminal(page, 1), right_second);
   ASSERT_EQUAL(g_ui_runtime.focused, right_second);
@@ -168,11 +168,11 @@ static void test_terminal_page_host(void) {
 #endif
   click_workspace(bar);
   ASSERT_EQUAL(g_ui_runtime.focused, right_second);
-  ASSERT_TRUE(pane_host_move_tab(panes, right_second->parent, left_tabs, PANE_CENTER, 0));
-  ASSERT_EQUAL(pane_host_count(panes), 1);
+  ASSERT_TRUE(page_move_tab(panes, right_second->parent, left_tabs, PANE_CENTER, 0));
+  ASSERT_EQUAL(page_pane_count(panes), 1);
   ASSERT_EQUAL(g_ui_runtime.focused, right_second);
   send_message(host, evCommand, MAKEDWORD(ID_TAB_CLOSE, kAcceleratorNotification), NULL);
-  ASSERT_EQUAL(pane_host_count(panes), 1);
+  ASSERT_EQUAL(page_pane_count(panes), 1);
   ASSERT_EQUAL(terminal_workspace_terminal(page, 0), left);
 #ifndef _WIN32
   int status = 0;
@@ -186,13 +186,13 @@ static void test_terminal_page_host(void) {
   ASSERT_STR_EQUAL(((vgat_state_t *)fresh->userdata)->input_buf, "");
   // Commands use the same reusable split/move implementation as dragging.
   ASSERT_TRUE(terminal_workspace_command(page, ID_TAB_SPLIT_RIGHT));
-  ASSERT_EQUAL(pane_host_count(panes), 2);
+  ASSERT_EQUAL(page_pane_count(panes), 2);
   ASSERT_TRUE(terminal_workspace_command(page, ID_TAB_SPLIT_DOWN));
-  ASSERT_EQUAL(pane_host_count(panes), 3);
+  ASSERT_EQUAL(page_pane_count(panes), 3);
   ASSERT_TRUE(terminal_workspace_command(page, ID_TAB_FOCUS_NEXT));
   ASSERT_EQUAL(g_ui_runtime.focused, fresh);
   ASSERT_TRUE(terminal_workspace_command(page, ID_TAB_MOVE));
-  ASSERT_EQUAL(pane_host_count(panes), 2);
+  ASSERT_EQUAL(page_pane_count(panes), 2);
   ASSERT_EQUAL(g_ui_runtime.focused, fresh);
   host->frame.w = 420; host->frame.h = 700;
   send_message(host, evResize, 0, NULL);
