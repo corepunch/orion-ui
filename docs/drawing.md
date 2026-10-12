@@ -270,3 +270,9 @@ name. `SpriteButton` and `SpriteSlider` (`commctl/sprite.c`) are the controls bu
 on these calls: sprites are bitmap rects stretched to the control's frame, so a
 skin scales with the window. SpriteSlider answers the Slider messages
 (`slSetRange`, `slSetPos`, `slGetPos`, `sliderValueChanged`) and adds `spsnReleased`.
+
+TabView header geometry uses `theme_t.tab_header_height`, `tab_min_width`, and
+`tab_padding`. Bundled themes use a 32-pixel horizontal header with an 80-pixel
+minimum tab width and 16-pixel horizontal label padding. TabView clips labels to
+the space before its header toolbar; the normal window paint pass draws its
+selected content and toolbar children.

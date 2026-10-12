@@ -53,8 +53,9 @@ void test_tabview_selects_and_arranges_pages(void) {
   ASSERT(g_history_clicks == 0, "hidden History page received click");
 
   g_tab_notifications = 0;
-  send_message(tabs, evLeftButtonDown,
-               MAKEDWORD((uint16_t)(2 + 48 + 1 + 4), (uint16_t)4), NULL);
+  irect16_t tab_rect;
+  ASSERT_TRUE(send_message(tabs, tcGetTabRect, 1, &tab_rect));
+  send_message(tabs, evLeftButtonDown, MAKEDWORD(tab_rect.x + 4, 4), NULL);
   ASSERT_EQUAL(send_message(tabs, tcGetSelection, 0, NULL), 1);
   ASSERT_FALSE(window_has_state(changes, WINDOW_STATE_VISIBLE));
   ASSERT_TRUE(window_has_state(history, WINDOW_STATE_VISIBLE));

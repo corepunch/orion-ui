@@ -169,7 +169,7 @@ result_t win_splitview(window_t *win, uint32_t msg,
       splitview_state_t *st = (splitview_state_t *)win->userdata;
       if (!st) return false;
       uint16_t code = HIWORD(wparam);
-      if (code == tcnBeginDrag || code == tcnSelChange)
+      if (code == tcnBeginDrag || code == tcnSelChange || code == tcnAction)
         return win->parent ? send_message(win->parent, msg, wparam, lparam) : false;
       if (code == spnDragStart) {
         st->dragging = true;

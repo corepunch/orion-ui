@@ -332,7 +332,8 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
     case TOOLBAR_ITEM_BUTTON: {
       irect16_t local = {0, 0, r.w, r.h};
       // A checked button swaps to its checked image, which is a state image like any other.
-      const char *icon = is_active && item->checked_icon ? item->checked_icon : item->icon;
+      const char *icon = item->alt_ident && (ui_get_mod_state() & AX_MOD_ALT) && item->alt_icon ? item->alt_icon :
+                         is_active && item->checked_icon ? item->checked_icon : item->icon;
       const char *icon_name = icon ? icon : "missing";
       // Derive each flag independently; let the theme decide rendering.
       ctrl_state_t state = disabled ? CTRL_DISABLED : CTRL_NORMAL;
@@ -383,7 +384,8 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       theme_draw(THEME_PART_TOOLBAR_SPLIT_BUTTON, btn_part, btn_state);
 
       int btn_poff = btn_pressed ? th->press_icon_offset : 0;
-      const char *icon_name = item->icon ? item->icon : "missing";
+      const char *icon = item->alt_ident && (ui_get_mod_state() & AX_MOD_ALT) && item->alt_icon ? item->alt_icon : item->icon;
+      const char *icon_name = icon ? icon : "missing";
       irect16_t icon_rect = btn_part;
       icon_rect.h -= toolbar_label_extra(tb);
       draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, btn_poff, disabled);
@@ -437,6 +439,8 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
         SAFE_DELETE(tb->item_tooltips, free);
         SAFE_DELETE(tb->item_icons, free);
         SAFE_DELETE(tb->item_checked_icons, free);
+        SAFE_DELETE(tb->item_alt_icons, free);
+        SAFE_DELETE(tb->item_alt_tooltips, free);
         SAFE_DELETE(tb->item_rects, free);
         free(tb);
         win->userdata = NULL;
@@ -509,7 +513,8 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
         if (item->style & TBSTYLE_CHECK) toolbar_set_checked(tb, saved_idx, !(item->state & TBSTATE_CHECKED));
         else if (item->style & TBSTYLE_CHECKGROUP) toolbar_set_checked(tb, saved_idx, true);
         invalidate_window(win->parent);
-        send_message(owner, evCommand, MAKEDWORD((uint16_t)item->ident, (uint16_t)btnClicked), win);
+        int command = item->alt_ident && (ui_get_mod_state() & AX_MOD_ALT) ? item->alt_ident : item->ident;
+        send_message(owner, evCommand, MAKEDWORD((uint16_t)command, (uint16_t)btnClicked), win);
       }
       return true;
     }
@@ -559,10 +564,12 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
         if (tc->id == (uint32_t)tb->items[idx].ident &&
             send_message(tc, evGetTooltipText, MAKEDWORD(LOWORD(wparam) - tc->frame.x, HIWORD(wparam) - tc->frame.y), lparam))
           return true;
-      if (idx < 0 || !tb->items[idx].tooltip || !tb->items[idx].tooltip[0])
-        return false;
+      if (idx < 0) return false;
+      const toolbar_item_t *item = &tb->items[idx];
+      const char *tip = item->alt_ident && (ui_get_mod_state() & AX_MOD_ALT) && item->alt_tooltip ? item->alt_tooltip : item->tooltip;
+      if (!tip || !tip[0]) return false;
       char *buf = (char *)lparam;
-      strncpy(buf, tb->items[idx].tooltip, 255);
+      strncpy(buf, tip, 255);
       buf[255] = '\0';
       return true;
     }
@@ -937,6 +944,8 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
       SAFE_DELETE(tb->item_tooltips, free);
       SAFE_DELETE(tb->item_icons, free);
       SAFE_DELETE(tb->item_checked_icons, free);
+      SAFE_DELETE(tb->item_alt_icons, free);
+      SAFE_DELETE(tb->item_alt_tooltips, free);
       tb->item_count = 0;
       SAFE_DELETE(tb->item_rects, free);
       tb->hot_item = -1;
@@ -1008,6 +1017,25 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
           }
           snprintf(tb->item_checked_icons[i], sizeof(tb->item_checked_icons[i]), "%s", alt);
           tb->items[i].checked_icon = tb->item_checked_icons[i];
+        }
+
+        tb->item_alt_icons = calloc((size_t)n, sizeof(*tb->item_alt_icons));
+        tb->item_alt_tooltips = calloc((size_t)n, sizeof(*tb->item_alt_tooltips));
+        for (int i = 0; tb->items && i < n; i++) {
+          const char *icon = tb->items[i].alt_icon, *tip = tb->items[i].alt_tooltip;
+          tb->items[i].alt_icon = NULL; tb->items[i].alt_tooltip = NULL;
+          if (icon && tb->item_alt_icons) {
+            snprintf(tb->item_alt_icons[i], sizeof(tb->item_alt_icons[i]), "%s", icon);
+            tb->items[i].alt_icon = tb->item_alt_icons[i];
+          }
+          if (tip && tb->item_alt_tooltips) {
+            snprintf(tb->item_alt_tooltips[i], sizeof(tb->item_alt_tooltips[i]), "%s", tip);
+            tb->items[i].alt_tooltip = tb->item_alt_tooltips[i];
+          }
+          if ((icon && !tb->item_alt_icons) || (tip && !tb->item_alt_tooltips)) {
+            fprintf(stderr, "[tb] alternate action allocation failed win=%u ident=%d\n", win->id, tb->items[i].ident);
+            fflush(stderr);
+          }
         }
 
         compute_toolbar_item_rects(win, tb);
@@ -1259,4 +1287,23 @@ window_t *create_docked_toolbar(window_t *owner, toolbar_dock_t dock, winproc_t 
   dock_window(bar, dock == TOOLBAR_DOCK_LEFT ? DOCK_LEFT : DOCK_TOP, DOCK_ALL_EDGES, DOCK_TOOLBAR, 0, 0);
   invalidate_window(owner);
   return bar;
+}
+
+static void toolbar_refresh_modifiers(window_t *win) {
+  toolbar_state_t *tb = toolbar_get_state(win);
+  for (int i = 0; tb && i < tb->item_count; i++) {
+    if (!tb->items[i].alt_ident) continue;
+    invalidate_window(win);
+    if (tb->hot_item == i && tb->item_rects) {
+      char tip[256] = {0};
+      irect16_t r = tb->item_rects[i];
+      if (send_message(win->toolbar, evGetTooltipText, MAKEDWORD(r.x + 1, r.y + 1), tip))
+        tooltip_update(win->toolbar, tip, g_ui_runtime.last_mouse_sx, g_ui_runtime.last_mouse_sy);
+    }
+  }
+  for (window_t *c = win->children; c; c = c->next) toolbar_refresh_modifiers(c);
+}
+
+void toolbar_modifiers_changed(void) {
+  for (window_t *win = g_ui_runtime.windows; win; win = win->next) toolbar_refresh_modifiers(win);
 }

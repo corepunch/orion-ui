@@ -13,6 +13,7 @@
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
+#include <orion/user/toolbar.h>
 #include "commctl.h"
 #include <stdio.h>
 
@@ -30,6 +31,7 @@ typedef struct {
   bitmap_strip_t strip;
   int *tab_icons;
   int tab_icon_count;
+  window_t *actions;
   window_t *list; // sidebar row list, NULL outside TAB_STYLE_SIDEBAR
 } tabview_state_t;
 
@@ -38,9 +40,9 @@ typedef struct {
 
 static bool is_sidebar(const tabview_state_t *st) { return st && (st->style & TAB_STYLE_SIDEBAR); }
 
-// Pages are the children other than the sidebar list.
+// Pages exclude the sidebar list and header toolbar.
 static window_t *page_from(const tabview_state_t *st, window_t *c) {
-  while (c && st && c == st->list) c = c->next;
+  while (c && st && (c == st->list || c == st->actions)) c = c->next;
   return c;
 }
 #define FOR_EACH_PAGE(win, st, c) for (window_t *c = page_from(st, (win)->children); c; c = page_from(st, c->next))
@@ -64,7 +66,7 @@ static void tab_remember_focus(window_t *win, window_t *focus) {
   if (!st || !(st->style & TAB_STYLE_RESTORE_FOCUS)) return;
   window_t *page = focus;
   while (page && page->parent != win) page = page->parent;
-  if (!page || page == st->list || page != tab_page(win, st->selected)) return;
+  if (!page || page == st->list || page == st->actions || page != tab_page(win, st->selected)) return;
   tab_focus_t *entry = st->focus;
   while (entry && entry->page != page) entry = entry->next;
   if (!entry) {
@@ -132,7 +134,7 @@ static int tab_icon_gap(tabview_state_t *st) {
 static int tab_width(window_t *page, tabview_state_t *st, int idx) {
   if (st && (st->style & TAB_STYLE_ICONS_ONLY))
     return tab_has_icon(st, idx) ? st->strip.icon_w + 8 : TAB_CONTROL_HEIGHT;
-  int w = MAX(48, strwidth(page ? page->title : "") + 18);
+  int w = MAX(get_theme()->tab_min_width, strwidth(page ? page->title : "") + 2 * get_theme()->tab_padding);
   if (tab_has_icon(st, idx)) w += st->strip.icon_w + tab_icon_gap(st);
   return w;
 }
@@ -220,9 +222,32 @@ static irect16_t tab_page_rect(window_t *win, tabview_state_t *st, irect16_t r) 
   return page_rect;
 }
 
+static int tab_available_width(window_t *win, tabview_state_t *st) {
+  return st->actions && !is_sidebar(st) ? st->actions->frame.x : get_client_rect(win).w;
+}
+
+static result_t tab_actions_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == evCreate || msg == evDestroy) return true;
+  if (msg == evPaint) return false;
+  if (msg != evCommand) return false;
+  window_t *tabs = win->parent;
+  tab_action_t action = {tabs, lparam, wparam};
+  return tabs->parent ? send_message(tabs->parent, evCommand, MAKEDWORD(tabs->id, tcnAction), &action) : false;
+}
+
 static void tab_arrange(window_t *win) {
   tabview_state_t *st = (tabview_state_t *)win->userdata;
   if (!st) return;
+  if (st->actions) {
+    show_window(st->actions, !is_sidebar(st));
+    int height = tab_header_height(st);
+    send_message(st->actions, tbSetButtonSize, MAX(8, height - 2 * toolbar_effective_padding(st->actions)), NULL);
+    isize16_t size = {0};
+    send_message(st->actions, tbGetIdealSize, 0, &size);
+    irect16_t header = rect_split_top(get_client_rect(win), height);
+    st->actions->frame = rect_split_right(header, MIN(header.w, size.w));
+    send_message(st->actions, evResize, 0, NULL);
+  }
   int count = tab_count(win);
   if (st->selected >= count) st->selected = MAX(0, count - 1);
   irect16_t page_rect = tab_page_rect(win, st, get_client_rect(win));
@@ -233,7 +258,7 @@ static void tab_arrange(window_t *win) {
     page_rect = tab_page_rect(win, st, get_client_rect(win));
   }
   if (!is_sidebar(st)) {
-    int x = 2, selected_x = 2, selected_w = 0, idx = 0, width = get_client_rect(win).w;
+    int x = 2, selected_x = 2, selected_w = 0, idx = 0, width = tab_available_width(win, st);
     FOR_EACH_PAGE(win, st, c) {
       int w = tab_width(c, st, idx);
       if (idx++ == st->selected) { selected_x = x; selected_w = w; }
@@ -337,6 +362,7 @@ static bool tab_paint(window_t *win) {
   theme_draw(THEME_PART_TAB_BAR, rect_split_top(cr, th), CTRL_NORMAL);
   if (!st) return true;
 
+  set_clip_rect(win, R(0, 0, tab_available_width(win, st), th));
   int selected_x = 2 - st->scroll;
   window_t *selected = NULL;
   int x = 2 - st->scroll, i = 0;
@@ -347,11 +373,11 @@ static bool tab_paint(window_t *win) {
     i++;
   }
 
-  irect16_t page = rect_trim_top(cr, th - 1);
-  theme_draw(THEME_PART_TAB_PANE, page, CTRL_NORMAL);
   if (selected) draw_tab_item(selected, selected_x, true, st, st->selected);
-  if (selected) send_message(selected, evPaint, 0, NULL);
-  return true;
+  set_clip_rect(win, cr);
+  irect16_t page = rect_trim_top(cr, th);
+  theme_draw(THEME_PART_TAB_PANE, page, CTRL_NORMAL);
+  return false; // The window system paints the selected page and the toolbar children.
 }
 
 static void tab_cleanup_icons(tabview_state_t *st) {
@@ -484,7 +510,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       tab_arrange(win);
       return true;
     }
-    case evResize: tab_arrange(win); return true;
+    case evThemeChanged: case evResize: tab_arrange(win); return true;
     case evPaint: return tab_paint(win);
     case evLeftButtonDown: {
       if (!st) {
@@ -496,7 +522,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
       if (is_sidebar(st)) return false;
       int th = tab_header_height(st);
-      if (my < 0 || my >= th) return false;
+      if (my < 0 || my >= th || mx < 0 || mx >= tab_available_width(win, st)) return false;
       int left = 2 - st->scroll, i = 0;
       FOR_EACH_PAGE(win, st, c) {
         int w = tab_width(c, st, i);
@@ -537,6 +563,26 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (wparam == (is_sidebar(st) ? AX_KEY_UPARROW : AX_KEY_LEFTARROW))    return tab_select(win, st->selected - 1, true);
       if (wparam == (is_sidebar(st) ? AX_KEY_DOWNARROW : AX_KEY_RIGHTARROW)) return tab_select(win, st->selected + 1, true);
       return false;
+    case tcGetToolbar: return st ? (result_t)st->actions : 0;
+    case tcSetToolbar: {
+      if (!st || wparam > 4096 || (wparam && !lparam)) {
+        fprintf(stderr, "[tv] toolbar rejected win=%u count=%u\n", win->id, wparam);
+        fflush(stderr); return false;
+      }
+      if (!wparam) {
+        if (st->actions) destroy_window(st->actions);
+        st->actions = NULL;
+      } else {
+        if (!st->actions) st->actions = create_window("", WINDOW_NOTITLE | WINDOW_TOOLBAR | WINDOW_NODRAG |
+          WINDOW_NOACTIVATE | WINDOW_NOTABSTOP, MAKERECT(0, 0, 1, 1), win, tab_actions_proc, win->hinstance, NULL);
+        if (!st->actions) {
+          fprintf(stderr, "[tv] toolbar allocation failed win=%u\n", win->id);
+          fflush(stderr); return false;
+        }
+        send_message(st->actions, tbSetItems, wparam, lparam);
+      }
+      tab_arrange(win); invalidate_window(win); return true;
+    }
     case tcGetStyle: return st ? st->style : 0;
     case tcGetSelection: return st ? st->selected : -1;
     case tcSetSelection: return tab_select(win, (int)wparam, false) || (st && st->selected == (int)wparam);

@@ -399,6 +399,7 @@ static theme_t g_modern_theme = {
   .toolbar_button_size    = TB_SPACING,
   .toolbar_padding        = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
   .tab_pane_frame            = 0,
+  .tab_header_height         = 32, .tab_min_width = 80, .tab_padding = 16,
   .menu_capsule              = 1,
   .badge_padding             = 7,
   .badge_corner_radius       = 5,

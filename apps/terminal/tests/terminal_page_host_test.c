@@ -40,6 +40,13 @@ static void test_terminal_page_host(void) {
   window_t *left = terminal_workspace_terminal(page, 0), *right = terminal_workspace_terminal(page, 1);
   ASSERT_EQUAL(page_host_page(host, ID_VIEW_WORKSPACE), page);
   ASSERT_EQUAL(window_active_page(host), page);
+  window_t *pane_bar = (window_t *)send_message(right_tabs, tcGetToolbar, 0, NULL);
+  ASSERT_NOT_NULL(pane_bar);
+  toolbar_state_t *pane_actions = toolbar_get_state(pane_bar);
+  ASSERT_EQUAL(pane_actions->item_count, 3);
+  ASSERT_EQUAL(pane_actions->items[0].ident, ID_TAB_NEW);
+  ASSERT_EQUAL(pane_actions->items[1].alt_ident, ID_TAB_SPLIT_DOWN);
+  ASSERT_EQUAL(pane_actions->items[2].ident, ID_TAB_CLOSE);
   window_t *panes = page;
   ASSERT_EQUAL(split->parent, panes);
   ASSERT_EQUAL(page->parent, host);
@@ -71,17 +78,18 @@ static void test_terminal_page_host(void) {
   ASSERT_TRUE(left_tabs->frame.w > before);
   double ratio = terminal_split_ratio(left_tabs, right_tabs);
 
-  // The Page's projected toolbar creates a tab in the last-focused pane.
+  // Pane actions target their own pane even when the opposite pane has focus.
   toolbar_state_t *actions = toolbar_get_state(host);
-  ASSERT_NOT_NULL(actions); ASSERT_EQUAL(actions->item_count, 10);
+  ASSERT_NOT_NULL(actions); ASSERT_EQUAL(actions->item_count, 5);
   ASSERT_EQUAL(page->children, split); ASSERT_NULL(split->next);
   ASSERT_EQUAL(page->pages->toolbar_count, actions->item_count);
   ASSERT_FALSE(page->flags & WINDOW_TOOLBAR);
   irect16_t new_tab;
-  ASSERT_TRUE(send_message(host, tbGetItemRect, ID_TAB_NEW, &new_tab));
+  ASSERT_TRUE(send_message(pane_bar, tbGetItemRect, ID_TAB_NEW, &new_tab));
   uint32_t point = MAKEDWORD(new_tab.x + new_tab.w / 2, new_tab.y + new_tab.h / 2);
-  send_message(host->toolbar, evLeftButtonDown, point, NULL);
-  send_message(host->toolbar, evLeftButtonUp, point, NULL);
+  set_focus(left);
+  send_message(pane_bar->toolbar, evLeftButtonDown, point, NULL);
+  send_message(pane_bar->toolbar, evLeftButtonUp, point, NULL);
   ASSERT_EQUAL(send_message(left_tabs, tcGetCount, 0, NULL), 1);
   ASSERT_EQUAL(send_message(right_tabs, tcGetCount, 0, NULL), 2);
   window_t *right_second = terminal_workspace_terminal(page, 1);
@@ -146,7 +154,13 @@ static void test_terminal_page_host(void) {
   ASSERT_EQUAL(g_ui_runtime.focused, left_second);
 
   // Closing selected and inactive tabs leaves the opposite pane intact.
-  send_message(host, evCommand, MAKEDWORD(ID_TAB_CLOSE, kAcceleratorNotification), NULL);
+  window_t *left_bar = (window_t *)send_message(left_tabs, tcGetToolbar, 0, NULL);
+  irect16_t close_tab;
+  ASSERT_TRUE(send_message(left_bar, tbGetItemRect, ID_TAB_CLOSE, &close_tab));
+  point = MAKEDWORD(close_tab.x + close_tab.w / 2, close_tab.y + close_tab.h / 2);
+  set_focus(right_second);
+  send_message(left_bar->toolbar, evLeftButtonDown, point, NULL);
+  send_message(left_bar->toolbar, evLeftButtonUp, point, NULL);
   ASSERT_EQUAL(send_message(left_tabs, tcGetCount, 0, NULL), 1);
   ASSERT_EQUAL(g_ui_runtime.focused, left);
   ASSERT_EQUAL(terminal_workspace_terminal(page, 1), right_second);
@@ -215,6 +229,30 @@ static void test_terminal_page_host(void) {
   }
   click_workspace(bar);
   ASSERT_EQUAL(g_ui_runtime.focused, fresh);
+  window_t *active_pane = page_active_pane(page);
+  pane_bar = (window_t *)send_message(active_pane, tcGetToolbar, 0, NULL);
+  ASSERT_NOT_NULL(pane_bar);
+  irect16_t action;
+  ASSERT_TRUE(send_message(pane_bar, tbGetItemRect, ID_TAB_SPLIT_RIGHT, &action));
+  ui_event_t alt = {.message = kEventModifiersChanged, .wParam = AX_MOD_ALT};
+  dispatch_message(&alt);
+  int pane_count = page_pane_count(page);
+  uint32_t split_point = MAKEDWORD(action.x + action.w / 2, action.y + action.h / 2);
+  send_message(pane_bar->toolbar, evLeftButtonDown, split_point, NULL);
+  send_message(pane_bar->toolbar, evLeftButtonUp, split_point, NULL);
+  ASSERT_EQUAL(page_pane_count(page), pane_count + 1);
+  window_t *new_pane = page_active_pane(page);
+  ASSERT_TRUE(new_pane->frame.y > active_pane->frame.y);
+  pane_bar = (window_t *)send_message(new_pane, tcGetToolbar, 0, NULL);
+  ASSERT_NOT_NULL(pane_bar);
+  ASSERT_EQUAL(toolbar_get_state(pane_bar)->item_count, 3);
+  alt.wParam = 0; dispatch_message(&alt);
+  // Closing the sole tab safely destroys its pane and the clicked toolbar.
+  ASSERT_TRUE(send_message(pane_bar, tbGetItemRect, ID_TAB_CLOSE, &close_tab));
+  point = MAKEDWORD(close_tab.x + close_tab.w / 2, close_tab.y + close_tab.h / 2);
+  send_message(pane_bar->toolbar, evLeftButtonDown, point, NULL);
+  send_message(pane_bar->toolbar, evLeftButtonUp, point, NULL);
+  ASSERT_EQUAL(page_pane_count(page), pane_count);
   gem_shutdown();
   ASSERT_NULL(g_terminal.host); ASSERT_NULL(g_ui_runtime.focused);
   test_env_shutdown(); test_graphics_shutdown();

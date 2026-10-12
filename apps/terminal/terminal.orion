@@ -28,17 +28,18 @@
         </form>
         <form name="workspace_page" title="Workspace" icon="workspace" checked-icon="workspace-fill" tooltip="Terminal workspace" focus="left_tabs" width="960" height="680" role="page" auto_layout="1" flags="nofill,flexspace" spacing="0" padding="0">
             <Toolbar>
-                <Button command="tab.new" icon="tab-new" text="New Tab" tooltip="New terminal tab (Ctrl+Shift+T)" />
-                <Button command="tab.close" icon="tab-close" text="Close Tab" tooltip="Close terminal tab (Ctrl+Shift+W)" />
-                <Separator />
                 <Button command="tab.previous" icon="tab-previous" text="Previous" tooltip="Previous tab (Ctrl+Shift+Tab)" />
                 <Button command="tab.next" icon="tab-next" text="Next" tooltip="Next tab (Ctrl+Tab)" />
                 <Separator />
-                <Button command="tab.split_right" icon="split-right" text="Split Right" tooltip="Split pane right (Ctrl+Shift+E)" />
-                <Button command="tab.split_down" icon="split-down" text="Split Down" tooltip="Split pane below (Ctrl+Shift+O)" />
                 <Button command="tab.move" icon="tab-move" text="Move Tab" tooltip="Move tab to next pane (Ctrl+Shift+M)" />
                 <Button command="tab.focus_next" icon="pane-next" text="Next Pane" tooltip="Focus next pane (Ctrl+Alt+Tab)" />
             </Toolbar>
+            <PaneToolbar>
+                <Button command="tab.new" icon="tab-new" text="New Tab" tooltip="New tab in this pane (Ctrl+Shift+T)" />
+                <Button command="tab.split_right" icon="split-right" text="Split Right" tooltip="Split Right (Alt: Split Down)"
+                        alt-command="tab.split_down" alt-icon="split-down" alt-tooltip="Split Down (release Alt: Split Right)" />
+                <Button command="tab.close" icon="tab-close" text="Close Tab" tooltip="Close active tab in this pane (Ctrl+Shift+W)" />
+            </PaneToolbar>
             <SplitView name="terminals" split-ratio="0.5" flags="flexspace">
                 <TabView name="left_tabs" flags="flexspace" />
                 <TabView name="right_tabs" flags="flexspace" />

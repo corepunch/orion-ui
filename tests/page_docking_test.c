@@ -1,8 +1,15 @@
 #include "test_framework.h"
 #include "test_env.h"
+#include <orion/user/toolbar.h>
+
+static uint32_t pane_command;
+static window_t *pane_command_target;
 
 static result_t pane_test_page(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-  (void)win; (void)wparam; (void)lparam;
+  (void)lparam;
+  if (msg == evCommand && HIWORD(wparam) == btnClicked) {
+    pane_command = LOWORD(wparam); pane_command_target = page_active_pane(win); return true;
+  }
   return msg == evCreate || msg == evDestroy;
 }
 
@@ -268,8 +275,68 @@ static void test_page_owns_layout_and_lifecycle(void) {
   test_env_shutdown(); PASS();
 }
 
+static void test_pane_header_actions(void) {
+  TEST("Pane toolbar reserves tab space, follows splits, and targets its own pane with Alt actions");
+  test_env_init();
+  window_t *page = pane_test_host(), *left = page_pane_at(page, 0);
+  pane_test_tab(left, "Left");
+  char icon[] = "split-right", alt_icon[] = "split-down", alt_tip[] = "Split Down";
+  toolbar_item_t item = {.type = TOOLBAR_ITEM_BUTTON, .ident = 2400, .icon = icon, .tooltip = "Split Right",
+    .alt_ident = 2401, .alt_icon = alt_icon, .alt_tooltip = alt_tip};
+  ASSERT_TRUE(send_message(left, tcSetToolbar, 1, &item));
+  window_t *right = page_split_pane(page, left, PANE_RIGHT);
+  ASSERT_NOT_NULL(right); pane_test_tab(right, "Right");
+  window_t *bar = (window_t *)send_message(left, tcGetToolbar, 0, NULL);
+  window_t *copy = (window_t *)send_message(right, tcGetToolbar, 0, NULL);
+  ASSERT_NOT_NULL(copy); ASSERT_NOT_EQUAL(copy, bar);
+  icon[0] = alt_icon[0] = alt_tip[0] = '!';
+  toolbar_state_t *items = toolbar_get_state(copy);
+  ASSERT_STR_EQUAL(items->items[0].alt_icon, "split-down");
+  ASSERT_EQUAL(send_message(right, tcGetCount, 0, NULL), 1);
+  ASSERT_EQUAL(copy->frame.y, 0); ASSERT_EQUAL(copy->frame.h, get_theme()->tab_header_height);
+  ASSERT_EQUAL(copy->frame.x + copy->frame.w, get_client_rect(right).w);
+  for (int i = 0; i < 7; i++) pane_test_tab(right, "Long session title");
+  irect16_t tab, r;
+  ASSERT_TRUE(send_message(right, tcGetTabRect, 7, &tab));
+  ASSERT_TRUE(tab.x + tab.w <= copy->frame.x);
+  ASSERT_EQUAL(tab.h, get_theme()->tab_header_height);
+  ASSERT_TRUE(send_message(copy, tbGetItemRect, 2400, &r));
+  pane_command = 0;
+  ui_event_t modifiers = {.message = kEventModifiersChanged, .wParam = AX_MOD_ALT};
+  dispatch_message(&modifiers);
+  char tip[256];
+  uint32_t point = MAKEDWORD(r.x + r.w / 2, r.y + r.h / 2);
+  ASSERT_TRUE(send_message(copy->toolbar, evGetTooltipText, point, tip));
+  ASSERT_STR_EQUAL(tip, "Split Down");
+  set_focus(left);
+  ui_event_t click = {.message = kEventLeftButtonDown,
+    .x = (window_screen_x(copy) + r.x + r.w / 2) * UI_WINDOW_SCALE,
+    .y = (window_screen_y(copy) + r.y + r.h / 2) * UI_WINDOW_SCALE};
+  dispatch_message(&click); click.message = kEventLeftButtonUp; dispatch_message(&click);
+  ASSERT_EQUAL(pane_command, 2401); ASSERT_EQUAL(pane_command_target, right);
+  modifiers.wParam = 0; dispatch_message(&modifiers);
+  send_message(copy->toolbar, evLeftButtonDown, point, NULL);
+  send_message(copy->toolbar, evLeftButtonUp, point, NULL);
+  ASSERT_EQUAL(pane_command, 2400);
+  send_message(copy->toolbar, evLeftButtonDown, point, NULL);
+  modifiers.wParam = AX_MOD_ALT; dispatch_message(&modifiers);
+  send_message(copy->toolbar, evLeftButtonUp, point, NULL);
+  ASSERT_EQUAL(pane_command, 2401);
+  send_message(copy, tbEnableItem, 2400, NULL);
+  pane_command = 0;
+  send_message(copy->toolbar, evLeftButtonDown, point, NULL);
+  send_message(copy->toolbar, evLeftButtonUp, point, NULL);
+  ASSERT_EQUAL(pane_command, 0);
+  modifiers.wParam = 0; dispatch_message(&modifiers);
+  ASSERT_TRUE(send_message(right, tcSetStyle, TAB_STYLE_SIDEBAR, NULL));
+  ASSERT_FALSE(window_has_state(copy, WINDOW_STATE_VISIBLE));
+  ASSERT_EQUAL(send_message(right, tcGetCount, 0, NULL), 8);
+  destroy_window(page); test_env_shutdown(); PASS();
+}
+
 int main(void) {
   TEST_START("Page docking");
+  test_pane_header_actions();
   test_pane_moves_and_collapses();
   test_pane_drag_edges();
   test_pane_drag_cancel_and_insert();

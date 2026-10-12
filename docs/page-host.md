@@ -95,9 +95,10 @@ Invalid initialization or selection logs a framework diagnostic to stderr.
 Declare `<Toolbar>` inside the `role="page"` form and give the host the `toolbar`
 flag. PageHost projects the active Page's items into that standard toolbar band;
 the Page itself does not reserve a second toolbar. Toolbar items use the same
-`command` IDs as menus and accelerators. Commands matching the projected items
-are offered to the active Page before the host's app handler; unhandled commands
-fall back to the host. Control notifications such as edit changes are not routed.
+`command` IDs as menus and accelerators. Commands are offered to the active Page
+before the host's app handler, including commands absent from the toolbar.
+Unhandled commands fall back to the host. A routing guard prevents recursion
+when a Page forwards a command back to its host. Control notifications such as edit changes are not routed.
 
 Terminal's Workspace Page uses one row of icon buttons, grouped with separators,
 with tooltips for labels and shortcuts. The split tree is its only content child.

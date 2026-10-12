@@ -87,7 +87,7 @@ bool ui_is_key_down(uint32_t key) {
 }
 
 static void update_key_state(ui_event_t *msg) {
-  uint32_t key;
+  uint32_t old_mod = g_mod_state, key;
   switch (msg->message) {
     case kEventKeyDown:
     case kEventKeyUp:
@@ -101,13 +101,14 @@ static void update_key_state(ui_event_t *msg) {
     case kEventKillFocus:
       memset(g_key_state, 0, sizeof(g_key_state));
       g_mod_state = 0;
-      return;
+      break;
     default:
       return;
   }
   g_key_state[AX_KEY_SHIFT] = (g_mod_state & AX_MOD_SHIFT) != 0;
   g_key_state[AX_KEY_CTRL]  = (g_mod_state & AX_MOD_CTRL)  != 0;
   g_key_state[AX_KEY_ALT]   = (g_mod_state & AX_MOD_ALT)   != 0;
+  if ((old_mod ^ g_mod_state) & AX_MOD_ALT) toolbar_modifiers_changed();
 }
 
 static void update_pointer_state(ui_event_t *msg) {

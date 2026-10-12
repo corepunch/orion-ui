@@ -122,6 +122,8 @@ typedef struct toolbar_state_s {
   char          (*item_tooltips)[256]; // owned tooltip string copies (parallel to items)
   char          (*item_icons)[64];     // owned icon name copies for dynamically-built items
   char          (*item_checked_icons)[64]; // owned checked_icon copies (parallel to items)
+  char          (*item_alt_icons)[64];
+  char          (*item_alt_tooltips)[256];
   int             hot_item;       // index of hovered item; -1 = none
   int             pressed_item;   // index of currently pressed item; -1 = none
   bool            pressed_in_arrow; // true when the press was in the dropdown arrow zone
@@ -286,6 +288,8 @@ typedef struct form_def_s {
   // ── Toolbar fields ───────────────────────────────────────────────────────
   const void             *toolbar_items;  // toolbar_item_t array (may be NULL)
   int                     toolbar_count;  // number of toolbar items
+  const toolbar_item_t   *pane_toolbar_items; // PAGE: shared TabBar actions
+  int                     pane_toolbar_count;
   // ── DDX (Dialog Data Exchange) fields ───────────────────────────────────
   const ctrl_binding_t   *bindings;      // data-exchange table (may be NULL)
   int                     binding_count;   // number of entries in bindings[]
@@ -565,6 +569,8 @@ typedef struct window_pages_s {
   window_t *host;                         // PAGE: host currently projecting it
   const toolbar_item_t *toolbar_items;    // PAGE: declarative toolbar contribution; not owned
   int toolbar_count;
+  const toolbar_item_t *pane_toolbar_items;
+  int pane_toolbar_count;
   struct page_host_s *page_host;
   struct page_docking_s *docking;          // PAGE: framework-owned, separate from app userdata
 } window_pages_t;
