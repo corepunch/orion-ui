@@ -3,8 +3,10 @@
 // from the bin (shDragOver / shDrop). A finger swipe scrolls, including over
 // a clip; holding the clip, then moving, picks it up. A mouse drag still
 // picks a clip up as soon as it moves. A tap plays the sample; picking one up
-// stops that audition. A double-tap lays another copy after that sample's run
-// unless a different sample is in the way. Each clip is a child window.
+// stops that audition. Holding the last two fractions of a clip, then moving,
+// resizes it in beat fractions (four per beat) instead of moving it. A mouse
+// drag from that end resizes immediately. A longer span loops the source, and
+// a shorter one plays the prefix. Each clip is a child window.
 // Dragging one lifts that window with window_set_drag_visual, and dropping
 // it outside the grid removes the clip.
 //
@@ -18,11 +20,14 @@
 #define BAR_W      88
 #define SNAP_W     (BAR_W * GR_SNAP_TICKS / GR_TICKS_BAR)
 #define SHEET_SLOP 4
+#define RESIZE_FRACTIONS 2
 
 typedef struct {
   int press_clip;
   ipoint16_t press;
   bool own_drag;
+  bool resize;      // the press landed on the clip's trailing fractions
+  int resize_ticks; // stored duration at the press
   groove_drop_anchor_t drop_anchor;
 } sheet_t;
 
@@ -58,8 +63,14 @@ ipoint16_t clip_cell_size(window_t *sheet, const block_t *b) {
   return (ipoint16_t){ b->bars * BAR_W, row_h(sheet) };
 }
 
-static irect16_t clip_rect(window_t *win, int track, int position, int bars) {
-  return R(position_x(win, position), track_y(win, track), bars * BAR_W, row_h(win));
+static irect16_t clip_rect(window_t *win, int track, int position, int ticks) {
+  return R(position_x(win, position), track_y(win, track), ticks * BAR_W / GR_TICKS_BAR, row_h(win));
+}
+
+static int drag_span(const drag_t *d) {
+  if (d->from_clip >= 0 && d->from_clip < g_app->song.nclips) return song_clip_ticks(&g_app->song, d->from_clip);
+  const block_t *b = block_get(d->block);
+  return (b ? b->bars : 1) * GR_TICKS_BAR;
 }
 
 static int child_count(window_t *win) {
@@ -121,22 +132,22 @@ static void sync_clips(window_t *win) {
 static void drag_target(window_t *win, int cx, int cy) {
   drag_t *d = &g_app->drag;
   const sheet_t *st = win->userdata;
-  int bars = block_get(d->block)->bars;
+  int ticks = drag_span(d);
   d->track = -1;
   d->valid = false;
   if (!rect_contains_point(grid_rect(win), (ipoint16_t){ (int16_t)cx, (int16_t)cy })) return;
   cx += hpos(win);
   cy -= RULER_H;
   if (st->drop_anchor == GR_DROP_ANCHOR_SAMPLE) {
-    irect16_t sample = R(cx - d->grab.x, cy - d->grab.y, bars * BAR_W, row_h(win));
+    irect16_t sample = R(cx - d->grab.x, cy - d->grab.y, ticks * BAR_W / GR_TICKS_BAR, row_h(win));
     irect16_t center = rect_center(sample, 0, 0);
     // Candidate centers account for the full width of multi-bar samples.
     cx = center.x - (sample.w - SNAP_W) / 2;
     cy = center.y;
   }
   d->track = CLAMP(floordiv(cy, row_h(win)), 0, GR_TRACKS - 1);
-  d->position = CLAMP(floordiv(cx, SNAP_W) * GR_SNAP_TICKS, 0, (GR_BARS - bars) * GR_TICKS_BAR);
-  d->valid = song_can_place(&g_app->song, d->track, d->position, bars * GR_TICKS_BAR, d->from_clip);
+  d->position = CLAMP(floordiv(cx, SNAP_W) * GR_SNAP_TICKS, 0, GR_BARS * GR_TICKS_BAR - ticks);
+  d->valid = song_can_place(&g_app->song, d->track, d->position, ticks, d->from_clip);
 }
 
 static void drag_clear(window_t *win) {
@@ -144,6 +155,40 @@ static void drag_clear(window_t *win) {
   if (card) window_clear_drag_visual(card);
   g_app->drag = (drag_t){ .track = -1, .from_clip = -1 };
   invalidate_window(win);
+}
+
+// The true end has to be visible. The last two fractions are the resize handle.
+static bool on_resize_handle(int idx, int content_x) {
+  const song_t *s = &g_app->song;
+  if (idx < 0 || idx >= s->nclips) return false;
+  int origin = s->clips[idx].position, stored = origin + song_clip_ticks(s, idx);
+  if (song_clip_end(s, idx) != stored) return false;
+  int at = position_at(content_x), tail = RESIZE_FRACTIONS * GR_FRACTION_TICKS;
+  return at >= MAX(origin, stored - tail) && at < stored;
+}
+
+static int resize_limit(int idx) {
+  const song_t *s = &g_app->song;
+  const clip_t *c = &s->clips[idx];
+  int end = GR_BARS * GR_TICKS_BAR;
+  for (int i = 0; i < s->nclips; i++) {
+    const clip_t *next = &s->clips[i];
+    if (i != idx && next->track == c->track && next->position > c->position) end = MIN(end, next->position);
+  }
+  return (end - c->position) / GR_FRACTION_TICKS * GR_FRACTION_TICKS;
+}
+
+static void resize_clip(window_t *win, int mx) {
+  sheet_t *st = win->userdata;
+  int idx = st->press_clip;
+  if (idx < 0 || idx >= g_app->song.nclips) return;
+  int delta = (mx - st->press.x) * GR_TICKS_BAR / BAR_W, step = GR_FRACTION_TICKS;
+  int steps = delta >= 0 ? delta / step : -((-delta) / step);
+  int ticks = st->resize_ticks + steps * step, limit = resize_limit(idx);
+  if (limit < step) return;
+  ticks = CLAMP(ticks, step, limit);
+  if (ticks == song_clip_ticks(&g_app->song, idx) || !app_resize_clip(idx, ticks)) return;
+  sync_clips(win);
 }
 
 static void paint_ruler(window_t *win, int cur_bar) {
@@ -189,7 +234,7 @@ static void paint_sheet(window_t *win) {
   if (d->active && d->track >= 0) {
     const block_t *b = block_get(d->block);
     stroke_rounded_rect(d->valid ? category_color(b->cat) : get_sys_color(brTextError),
-                        clip_rect(win, d->track, d->position, b->bars), get_theme()->card_corner_radius, 2);
+                        clip_rect(win, d->track, d->position, drag_span(d)), get_theme()->card_corner_radius, 2);
   }
   int px = (int)((double)s->pos / bar * BAR_W) - hpos(win);
   fill_rect(get_sys_color(brAccent), R(px - 1, RULER_H, 2, grid.h));
@@ -217,19 +262,22 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evHScroll: sync_clips(win); invalidate_window(win); return true;
     case evPaint: paint_sheet(win); return true;
     case evHitTest: return true; // clips paint, the sheet keeps the pointer
-    case evQueryDrag: { // hold picks up a clip; a swipe scrolls the sheet
+    case evQueryDrag: { // hold picks up a clip; a swipe scrolls the sheet. The trailing fractions resize.
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
       if (my < RULER_H) return false;
       return song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), position_at(mx)) >= 0 ? DRAG_AFTER_HOLD : DRAG_NONE;
     }
     case evLeftButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
+      st->resize = false;
       if (my < RULER_H) { app_seek_position(seek_ticks(mx)); return true; }
       int track = (my - RULER_H) / row_h(win), position = position_at(mx);
       st->press_clip = track >= 0 && track < GR_TRACKS ? song_clip_at(&g_app->song, track, position) : -1;
       st->press = (ipoint16_t){ (int16_t)mx, (int16_t)my };
       app_select_clip(st->press_clip);
       if (st->press_clip < 0) { app_seek_position(seek_ticks(mx)); return true; }
+      st->resize = on_resize_handle(st->press_clip, mx);
+      st->resize_ticks = song_clip_ticks(&g_app->song, st->press_clip);
       const clip_t *c = &g_app->song.clips[st->press_clip];
       ipoint16_t grab = { mx - c->position * BAR_W / GR_TICKS_BAR, my - track_y(win, c->track) };
       g_app->drag = (drag_t){ .block = c->block, .from_clip = st->press_clip, .grab = grab,
@@ -241,6 +289,14 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (!st || st->press_clip < 0) return false;
       {
         int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
+        if (st->resize) {
+          if (!st->own_drag && abs(mx - st->press.x) + abs(my - st->press.y) > SHEET_SLOP) {
+            st->own_drag = true;
+            app_preview_stop();
+          }
+          if (st->own_drag) resize_clip(win, mx);
+          return true;
+        }
         if (!st->own_drag && abs(mx - st->press.x) + abs(my - st->press.y) > SHEET_SLOP) {
           st->own_drag = true;
           g_app->drag.active = true;
@@ -248,6 +304,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           window_t *card = child_at(win, st->press_clip);
           if (card) {
             ipoint16_t size = clip_cell_size(win, block_get(g_app->drag.block));
+            size.x = MAX(1, drag_span(&g_app->drag) * BAR_W / GR_TICKS_BAR);
             resize_window(card, size.x, size.y);
             window_set_drag_visual(card, mx - st->press.x, my - st->press.y);
           }
@@ -263,24 +320,16 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evLeftButtonUp:
       if (!st || st->press_clip < 0) return false;
       if (!st->own_drag) app_preview(g_app->drag.block);
-      if (st->own_drag) drag_target(win, (int16_t)LOWORD(wparam) - hpos(win), (int16_t)HIWORD(wparam));
-      if (st->own_drag && g_app->drag.track >= 0 && g_app->drag.valid) app_drop(&g_app->drag);
-      bool removed = st->own_drag && g_app->drag.track < 0;
+      if (st->own_drag && !st->resize) drag_target(win, (int16_t)LOWORD(wparam) - hpos(win), (int16_t)HIWORD(wparam));
+      if (st->own_drag && !st->resize && g_app->drag.track >= 0 && g_app->drag.valid) app_drop(&g_app->drag);
+      bool removed = st->own_drag && !st->resize && g_app->drag.track < 0;
       st->press_clip = -1;
       st->own_drag = false;
+      st->resize = false;
       set_capture(NULL);
       drag_clear(win);
       if (removed) app_command(ID_DELETE); // dragged off the grid; the pressed clip is selected
       return true;
-    case evLeftButtonDoubleClick: {
-      int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
-      if (!st || my < RULER_H) return false;
-      int track = (my - RULER_H) / row_h(win);
-      int idx = track >= 0 && track < GR_TRACKS ? song_clip_at(&g_app->song, track, position_at(mx)) : -1;
-      if (idx < 0) return false;
-      app_repeat_clip(idx);
-      return true;
-    }
     case evRightButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
       if (my < RULER_H) return false;
@@ -311,10 +360,15 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case shDragEnd: drag_clear(win); return true;
     case evPointerCancel:
       if (st && st->press_clip >= 0) {
+        int idx = st->press_clip, ticks = st->resize_ticks;
+        bool restore = st->resize && st->own_drag;
         st->press_clip = -1;
         st->own_drag = false;
+        st->resize = false;
         set_capture(NULL);
+        if (restore) app_resize_clip(idx, ticks);
         drag_clear(win);
+        if (restore) sync_clips(win);
       }
       return true;
     case evDestroy:

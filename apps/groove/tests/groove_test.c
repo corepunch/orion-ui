@@ -32,6 +32,8 @@ static void test_project_io(void) {
   ASSERT(song_add_clip(&g_app->song, 1, 1, 0) == 1, "same-position clip added");
   ASSERT(song_add_clip(&g_app->song, 2, 6, 4 * GR_TICKS_BAR) == 2, "later clip added");
   ASSERT(song_add_clip(&g_app->song, 0, 3, 6 * GR_TICKS_BAR) == 3, "a second clip reuses its source");
+  int resized = block_get(0)->bars * GR_TICKS_BAR + 2 * GR_FRACTION_TICKS;
+  ASSERT_TRUE(song_resize_clip(&g_app->song, 3, resized));
   char path[128];
   snprintf(path, sizeof(path), "/tmp/orion-groove-project-%ld", (long)getpid());
   char saved[140]; snprintf(saved, sizeof(saved), "%s.groove", path);
@@ -39,7 +41,7 @@ static void test_project_io(void) {
   ASSERT_TRUE(app_save_song(path));
   ASSERT(access(saved, F_OK) == 0, "save appends the project extension");
   FILE *f = fopen(saved, "rb"); ASSERT_NOT_NULL(f);
-  char line[256]; ASSERT(fgets(line, sizeof(line), f) && strcmp(line, "ORION_GROOVE 2\n") == 0, "saves the source-table format");
+  char line[256]; ASSERT(fgets(line, sizeof(line), f) && strcmp(line, "ORION_GROOVE 3\n") == 0, "saves the source-table format");
   int bpm, loop, assets, clips; uint32_t mute, solo;
   ASSERT(fscanf(f, "%d %d %u %u %d %d", &bpm, &loop, &mute, &solo, &assets, &clips) == 6 && assets == 3 && clips == 4, "writes one table entry per distinct source");
   fclose(f);
@@ -49,16 +51,31 @@ static void test_project_io(void) {
   ASSERT(g_app->song.nclips == 4 && g_app->song.clips[0].block == 0 && g_app->song.clips[1].block == 1 && g_app->song.clips[2].track == 6 && g_app->song.clips[3].block == 0, "clip sources and placements are restored");
   ASSERT(g_app->song.clips[0].position == 0 && g_app->song.clips[1].position == 0 && g_app->song.clips[2].position == 4 * GR_TICKS_BAR && g_app->song.clips[3].position == 6 * GR_TICKS_BAR, "clip positions are restored");
   ASSERT(g_app->song.clips[0].order == 1 && g_app->song.clips[1].order == 2 && g_app->song.clip_order == 4, "same-position stacking order is restored");
+  ASSERT(g_app->song.clips[0].length == 0 && g_app->song.clips[3].length == resized, "only a resized clip stores a duration");
+  ASSERT_EQUAL(song_clip_ticks(&g_app->song, 3), resized);
   ASSERT(block_get(0)->audio.pcm && block_get(0)->audio_bpm == 128, "loaded arrangement audio is ready at its saved tempo");
+  f = fopen(bad, "wb"); ASSERT_NOT_NULL(f);
+  fprintf(f, "ORION_GROOVE 2\n140 1 0 0 1 1\nB 0\t%s\n0 2 0 9\n", block_get(0)->name);
+  fclose(f);
+  ASSERT_TRUE(app_open_song(bad));
+  ASSERT(g_app->song.nclips == 1 && g_app->song.clips[0].length == 0 && g_app->song.clips[0].track == 2, "a version 2 clip keeps its block length");
+  ASSERT_EQUAL(song_clip_ticks(&g_app->song, 0), block_get(0)->bars * GR_TICKS_BAR);
+  ASSERT_EQUAL(g_app->song.bpm, 140);
   f = fopen(bad, "wb"); ASSERT_NOT_NULL(f); fputs("ORION_GROOVE 1\n70 1 0 0 1\n99999 0 0 1\n", f); fclose(f);
   int old_clips = g_app->song.nclips;
   ASSERT_FALSE(app_open_song(bad));
   ASSERT_EQUAL(g_app->song.nclips, old_clips);
-  ASSERT_EQUAL(g_app->song.bpm, 128);
+  ASSERT_EQUAL(g_app->song.bpm, 140);
+  f = fopen(bad, "wb"); ASSERT_NOT_NULL(f);
+  fprintf(f, "ORION_GROOVE 3\n140 1 0 0 1 1\nB 0\t%s\n0 0 0 1 3\n", block_get(0)->name);
+  fclose(f);
+  ASSERT_FALSE(app_open_song(bad));
+  ASSERT_EQUAL(g_app->song.nclips, old_clips);
+  ASSERT_EQUAL(g_app->song.clips[0].track, 2);
   f = fopen(bad, "wb"); ASSERT_NOT_NULL(f); fputs("ORION_GROOVE 1\n120 1 0 0 1\n0 2 512 7\n", f); fclose(f);
   ASSERT_FALSE(app_open_song(bad));
   ASSERT_EQUAL(g_app->song.nclips, old_clips);
-  ASSERT_EQUAL(g_app->song.bpm, 128);
+  ASSERT_EQUAL(g_app->song.bpm, 140);
   remove(saved); remove(bad);
   destroy_window(win);
   app_shutdown(g_app);
@@ -888,6 +905,42 @@ static void test_drag_center_boundaries(void) {
   PASS();
 }
 
+static void test_clip_resize(void) {
+  TEST("resizing a clip keeps one placement, loops the extension, and trims the prefix");
+  song_t s;
+  song_init(&s);
+  load_block(0, s.bpm);
+  int natural = block_get(0)->bars * GR_TICKS_BAR;
+  ASSERT_EQUAL(song_add_clip(&s, 0, 0, 0), 0);
+  ASSERT(song_clip_ticks(&s, 0) == natural && s.clips[0].length == 0, "a new clip uses its block length");
+  ASSERT_FALSE(song_resize_clip(&s, 0, natural + 1));
+  ASSERT_FALSE(song_resize_clip(&s, -1, natural));
+  ASSERT_EQUAL(s.clips[0].length, 0);
+  ASSERT_TRUE(song_resize_clip(&s, 0, natural + GR_FRACTION_TICKS));
+  ASSERT(s.nclips == 1 && s.clips[0].length == natural + GR_FRACTION_TICKS, "the same clip grows by one fraction");
+  const float *pcm = block_get(0)->audio.pcm;
+  int64_t at = position_frames_for_bpm(natural, s.bpm);
+  ASSERT_EQUAL(at, block_get(0)->audio.frames);
+  float lr[8];
+  s.playing = true; s.loop = false; s.pos = at;
+  song_render(&s, lr, 4);
+  for (int i = 0; i < 4; i++) ASSERT(lr[2 * i] == pcm[i] * 0.5f && lr[2 * i + 1] == lr[2 * i], "the extension repeats the sample");
+  ASSERT_TRUE(song_move_clip(&s, 0, 1, GR_FRACTION_TICKS));
+  ASSERT_EQUAL(s.clips[0].length, natural + GR_FRACTION_TICKS);
+  ASSERT_TRUE(song_move_clip(&s, 0, 0, 0));
+  ASSERT_TRUE(song_resize_clip(&s, 0, GR_FRACTION_TICKS));
+  int64_t cut = position_frames_for_bpm(GR_FRACTION_TICKS, s.bpm);
+  s.playing = true; s.loop = false; s.pos = cut - 1;
+  song_render(&s, lr, 2);
+  ASSERT(lr[0] == pcm[cut - 1] * 0.5f && lr[2] == 0 && !s.playing, "a shortened clip stops at its new end");
+  ASSERT_TRUE(song_resize_clip(&s, 0, natural));
+  ASSERT_EQUAL(s.clips[0].length, 0);
+  ASSERT_EQUAL(song_add_clip(&s, 0, 0, (GR_BARS - block_get(0)->bars) * GR_TICKS_BAR), 1);
+  ASSERT_FALSE(song_resize_clip(&s, 1, natural + GR_FRACTION_TICKS));
+  ASSERT_EQUAL(s.clips[1].length, 0);
+  PASS();
+}
+
 static void finger(uint32_t message, int x, int y, uint32_t time) {
   ui_event_t event = {.message = message, .wParam = MAKEDWORD(x * UI_WINDOW_SCALE, y * UI_WINDOW_SCALE),
                       .pointer = {.flags = AX_POINTER_TOUCH, .time = time}};
@@ -895,38 +948,11 @@ static void finger(uint32_t message, int x, int y, uint32_t time) {
 }
 
 static void test_sheet_gestures(void) {
-  TEST("a clip swipe scrolls, a hold moves, a tap plays, and a double-tap extends that sample's run");
+  TEST("a clip swipe scrolls, a hold moves, a tap plays, and the trailing fractions resize");
   test_env_init();
   g_app = app_init();
   ASSERT_NOT_NULL(g_app);
-  int len = block_get(0)->bars * GR_TICKS_BAR;
-  song_t chain;
-  song_init(&chain);
-  ASSERT_EQUAL(song_add_clip(&chain, 0, 0, 0), 0);
-  ASSERT_EQUAL(song_repeat_clip(&chain, 0), 1);
-  ASSERT(chain.clips[1].block == 0 && chain.clips[1].position == len && chain.clips[1].track == 0, "a copy lands on the next slot");
-  ASSERT_EQUAL(song_repeat_clip(&chain, 0), 2);
-  ASSERT_EQUAL(chain.clips[2].position, 2 * len);
-  song_init(&chain);
-  song_add_clip(&chain, 0, 0, 0);
-  song_add_clip(&chain, 0, 0, len);
-  song_add_clip(&chain, 1, 0, 2 * len);
-  ASSERT_EQUAL(song_repeat_clip(&chain, 0), -1);
-  ASSERT_EQUAL(chain.nclips, 3);
-  song_init(&chain);
-  song_add_clip(&chain, 0, 0, 0);
-  song_add_clip(&chain, 0, 0, 3 * len);
-  ASSERT_EQUAL(song_repeat_clip(&chain, 0), 2);
-  ASSERT_EQUAL(chain.clips[2].position, len);
-  song_init(&chain);
-  song_add_clip(&chain, 0, 0, 0);
-  song_add_clip(&chain, 1, 1, len);
-  ASSERT(song_repeat_clip(&chain, 0) == 2 && chain.clips[2].track == 0 && chain.clips[2].position == len, "another track does not block");
-  song_init(&chain);
-  song_add_clip(&chain, 0, 0, (GR_BARS - block_get(0)->bars) * GR_TICKS_BAR);
-  ASSERT_EQUAL(song_repeat_clip(&chain, 0), -1);
-  ASSERT_EQUAL(chain.nclips, 1);
-
+  int natural = block_get(0)->bars * GR_TICKS_BAR;
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
@@ -940,6 +966,7 @@ static void test_sheet_gestures(void) {
   ASSERT_FALSE(g_app->drag.active);
   ASSERT_EQUAL(g_app->song.nclips, 1);
   ASSERT_EQUAL(g_app->song.clips[0].position, 0);
+  ASSERT_EQUAL(g_app->song.clips[0].length, 0);
   ASSERT_EQUAL(g_app->song.preview_block, -1);
   finger(kEventLeftButtonUp, sx + 8, sy, 1100);
   ASSERT_NULL(g_ui_runtime.captured);
@@ -964,18 +991,71 @@ static void test_sheet_gestures(void) {
   ASSERT_EQUAL(g_app->song.nclips, 1);
   ASSERT_FALSE(g_app->song.playing);
 
-  ASSERT_TRUE(send_message(sheet, evLeftButtonDoubleClick, MAKEDWORD(32, 40), NULL));
-  ASSERT_EQUAL(g_app->song.nclips, 2);
-  ASSERT_EQUAL(g_app->song.clips[1].block, 0);
-  ASSERT_EQUAL(g_app->song.clips[1].position, len);
-  ASSERT_EQUAL(g_app->selected_clip, 1);
-  app_new_song();
-  song_add_clip(&g_app->song, 0, 0, 0);
-  song_add_clip(&g_app->song, 1, 0, len);
+  window_t *card = sheet->children;
+  int hx = card->frame.x + card->frame.w - 2, hy = card->frame.y + 4;
+  int outside = card->frame.x + card->frame.w - 12;
+  ASSERT_FALSE(send_message(sheet, evLeftButtonDoubleClick, MAKEDWORD(hx, hy), NULL));
+  ASSERT(g_app->song.nclips == 1 && g_app->song.clips[0].length == 0, "a double-tap does not copy the sample");
+
+  send_message(sheet, evLeftButtonDown, MAKEDWORD(hx, hy), NULL);
+  send_message(sheet, evLeftButtonUp, MAKEDWORD(hx, hy), NULL);
+  ASSERT(g_app->song.preview_block == 0 && g_app->song.clips[0].length == 0, "a tap on the end still plays the sample");
+
+  int grown = natural + (20 * GR_TICKS_BAR / 88) / GR_FRACTION_TICKS * GR_FRACTION_TICKS;
+  send_message(sheet, evLeftButtonDown, MAKEDWORD(hx, hy), NULL);
+  send_message(sheet, evMouseMove, MAKEDWORD(hx + 20, hy), NULL);
+  ASSERT(g_app->song.nclips == 1 && !g_app->drag.active && g_app->song.clips[0].position == 0, "the end drag resizes in place");
+  ASSERT_EQUAL(g_app->song.clips[0].length, grown);
+  ASSERT_EQUAL(card->frame.w, grown * 88 / GR_TICKS_BAR);
+  ASSERT_EQUAL(g_app->song.preview_block, -1);
+  send_message(sheet, evPointerCancel, 0, NULL);
+  ASSERT(g_app->song.clips[0].length == 0 && song_clip_ticks(&g_app->song, 0) == natural, "cancel restores the block length");
+  ASSERT_EQUAL(card->frame.w, natural * 88 / GR_TICKS_BAR);
+  ASSERT_NULL(g_ui_runtime.captured);
+
+  send_message(sheet, evLeftButtonDown, MAKEDWORD(outside, hy), NULL);
+  send_message(sheet, evMouseMove, MAKEDWORD(outside + 12, hy), NULL);
+  ASSERT(g_app->drag.active && g_app->song.clips[0].length == 0 && g_app->song.nclips == 1, "just before the end, a drag still moves");
+  send_message(sheet, evPointerCancel, 0, NULL);
+  ASSERT_FALSE(g_app->drag.active);
+  ASSERT_EQUAL(g_app->song.clips[0].position, 0);
+
+  send_message(sheet, evLeftButtonDown, MAKEDWORD(hx, hy), NULL);
+  send_message(sheet, evMouseMove, MAKEDWORD(hx + 20, hy), NULL);
+  send_message(sheet, evLeftButtonUp, MAKEDWORD(hx + 20, hy), NULL);
+  ASSERT(g_app->song.clips[0].length == grown && g_app->song.nclips == 1 && !g_app->drag.active, "releasing keeps the new length");
+  ASSERT_NULL(g_ui_runtime.captured);
+
+  int shrunk = grown + ((-40) * GR_TICKS_BAR / 88) / GR_FRACTION_TICKS * GR_FRACTION_TICKS;
+  hx = card->frame.x + card->frame.w - 2;
+  send_message(sheet, evLeftButtonDown, MAKEDWORD(hx, hy), NULL);
+  send_message(sheet, evMouseMove, MAKEDWORD(hx - 40, hy), NULL);
+  send_message(sheet, evLeftButtonUp, MAKEDWORD(hx - 40, hy), NULL);
+  ASSERT_EQUAL(g_app->song.clips[0].length, shrunk);
+  ASSERT(shrunk < natural && shrunk % GR_FRACTION_TICKS == 0, "dragging the end back trims by fractions");
+
+  hx = card->frame.x + card->frame.w - 2;
+  int tx = window_screen_x(sheet) + hx, ty = window_screen_y(sheet) + hy;
+  int extended = shrunk + (30 * GR_TICKS_BAR / 88) / GR_FRACTION_TICKS * GR_FRACTION_TICKS;
+  finger(kEventLeftButtonDown, tx, ty, 6000);
+  finger(kEventLeftButtonDragged, tx + 30, ty, 6000 + TOUCH_LONG_PRESS_MS);
+  ASSERT(g_app->song.nclips == 1 && !g_app->drag.active && g_app->song.clips[0].position == 0, "a hold on the end resizes instead of moving");
+  ASSERT_EQUAL(g_app->song.clips[0].length, extended);
+  finger(kEventLeftButtonUp, tx + 30, ty, 6000 + TOUCH_LONG_PRESS_MS + 40);
+  ASSERT_EQUAL(g_app->song.clips[0].length, extended);
+  ASSERT_NULL(g_ui_runtime.captured);
+
+  ASSERT_EQUAL(song_add_clip(&g_app->song, 1, 0, 2 * GR_TICKS_BAR), 1);
   send_message(sheet, evResize, 0, NULL);
-  ASSERT_TRUE(send_message(sheet, evLeftButtonDoubleClick, MAKEDWORD(32, 40), NULL));
-  ASSERT_EQUAL(g_app->song.nclips, 2);
-  ASSERT_EQUAL(g_app->selected_clip, -1);
+  card = sheet->children;
+  hx = card->frame.x + card->frame.w - 2;
+  hy = card->frame.y + 4;
+  send_message(sheet, evLeftButtonDown, MAKEDWORD(hx, hy), NULL);
+  send_message(sheet, evMouseMove, MAKEDWORD(hx + 400, hy), NULL);
+  send_message(sheet, evLeftButtonUp, MAKEDWORD(hx + 400, hy), NULL);
+  ASSERT(g_app->song.nclips == 2 && g_app->song.clips[0].length == 2 * GR_TICKS_BAR, "the edge stops at the next clip");
+  ASSERT_EQUAL(song_clip_end(&g_app->song, 0), 2 * GR_TICKS_BAR);
+  ASSERT_EQUAL(card->frame.w, 2 * 88);
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();
@@ -1129,6 +1209,7 @@ int main(void) {
   test_song_rules();
   test_mixer();
   test_overlap_audio();
+  test_clip_resize();
   test_sheet_drop();
   test_overlap_sheet();
   test_fractional_selection();

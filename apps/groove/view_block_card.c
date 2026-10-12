@@ -101,7 +101,15 @@ static void paint_card_variant(const block_t *b, irect16_t r, int visible_width)
                 CARD_LABEL_BG, true);
 }
 
-static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state) {
+static int sheet_card_index(window_t *win) {
+  int i = 0;
+  for (window_t *c = win->parent ? win->parent->children : NULL; c; c = c->next, i++)
+    if (c == win) return i;
+  return -1;
+}
+
+// period > 0 draws the source waveform at its own scale, repeating when the clip is longer.
+static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state, int period) {
   theme_draw_ex(THEME_PART_CARD, r, state | CTRL_PLASTIC, &(theme_draw_opts_t){.color = color}); // its shadow margin is the only gap between neighbouring cards
   int icon_size = r.h * 3 / 4;
   r = theme_content_rect(THEME_PART_CARD, r, state | CTRL_PLASTIC);
@@ -109,8 +117,11 @@ static void paint_block_card(int block, const block_t *b, irect16_t r, int visib
   irect16_t wave = r;
   uint32_t ink = color_with_alpha(get_sys_color(brTextOnColor), (color >> 24) * 0x99 / 255);
   if (wave.w > 0 && wave.h > 0) {
-    uint32_t texture = waveform_texture(g_app, block, (ipoint16_t){wave.w, wave.h}, radius);
-    if (texture) draw_sprite_region(texture, wave, NULL, ink, 0);
+    if (period > 0) draw_waveform(b, wave, period, radius, ink);
+    else {
+      uint32_t texture = waveform_texture(g_app, block, (ipoint16_t){wave.w, wave.h}, radius);
+      if (texture) draw_sprite_region(texture, wave, NULL, ink, 0);
+    }
   }
   int icon_width = 0;
   icon_size = MIN(icon_size, MIN(r.w - 8, r.h));
@@ -146,10 +157,18 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       ctrl_state_t state = st->state | (st->down && !window_is_lifted(win) ? CTRL_PRESSED : lit ? CTRL_HOVER : CTRL_NORMAL);
       if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
       irect16_t r = get_client_rect(win);
-      int visible_width = r.w;
-      if (win->parent == g_app->sheet) r.w = clip_cell_size(g_app->sheet, b).x;
+      int visible_width = r.w, period = 0;
+      if (win->parent == g_app->sheet) {
+        int natural_w = clip_cell_size(g_app->sheet, b).x, idx = sheet_card_index(win);
+        int bars = MAX(1, b->bars);
+        int stored_w = idx >= 0 && idx < g_app->song.nclips
+          ? song_clip_ticks(&g_app->song, idx) * natural_w / (bars * GR_TICKS_BAR) : natural_w;
+        if (stored_w != natural_w) {
+          period = theme_content_rect(THEME_PART_CARD, R(r.x, r.y, natural_w, r.h), state | CTRL_PLASTIC).w;
+        } else r.w = natural_w; // an overlap crops the full card; the window clips the tail
+      }
       if (win->parent && card_on_screen(win)) app_block_peaks(st->block); // a stale overview stays up until the new one is ready
-      paint_block_card(st->block, b, r, visible_width, category_color(b->cat), state);
+      paint_block_card(st->block, b, r, visible_width, category_color(b->cat), state, period);
       return true;
     }
     case grCardSetBlock:

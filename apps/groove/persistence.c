@@ -49,7 +49,7 @@ bool app_save_song(const char *path) {
   FILE *f = fopen(tmp_path, "wb");
   if (!f) return false;
   uint32_t mute = track_flags(s->mute), solo = track_flags(s->solo);
-  bool ok = fprintf(f, "ORION_GROOVE 2\n%d %d %" PRIu32 " %" PRIu32 " %d %d\n",
+  bool ok = fprintf(f, "ORION_GROOVE 3\n%d %d %" PRIu32 " %" PRIu32 " %d %d\n",
                     s->bpm, s->loop ? 1 : 0, mute, solo, nassets, s->nclips) > 0;
   for (int i = 0; ok && i < nassets; i++)
     ok = fprintf(f, "B %d\t%s\n", asset_ids[i], block_get(asset_ids[i])->name) > 0;
@@ -57,7 +57,8 @@ bool app_save_song(const char *path) {
     const clip_t *c = &s->clips[i];
     int asset = 0;
     while (asset < nassets && asset_ids[asset] != c->block) asset++;
-    ok = asset < nassets && fprintf(f, "%d %d %d %" PRIu64 "\n", asset, c->track, c->position, c->order) > 0;
+    int span = song_clip_ticks(s, i), natural = block_get(c->block)->bars * GR_TICKS_BAR;
+    ok = asset < nassets && fprintf(f, "%d %d %d %" PRIu64 " %d\n", asset, c->track, c->position, c->order, span == natural ? 0 : span) > 0;
   }
   if (fclose(f) != 0) ok = false;
 #ifdef _WIN32
@@ -79,7 +80,7 @@ bool app_open_song(const char *path) {
   uint32_t mute = 0, solo = 0;
   song_t next;
   song_init(&next);
-  bool ok = fscanf(f, "%31s %d", magic, &version) == 2 && !strcmp(magic, "ORION_GROOVE") && version == 2;
+  bool ok = fscanf(f, "%31s %d", magic, &version) == 2 && !strcmp(magic, "ORION_GROOVE") && (version == 2 || version == 3);
   if (ok) ok = fscanf(f, "%d %d %" SCNu32 " %" SCNu32 " %d %d", &bpm, &loop, &mute, &solo, &nassets, &nclips) == 6;
   ok = ok && bpm >= GR_BPM_MIN && bpm <= GR_BPM_MAX && (loop == 0 || loop == 1) &&
        !(mute & ~((1u << GR_TRACKS) - 1)) && !(solo & ~((1u << GR_TRACKS) - 1)) &&
@@ -99,16 +100,21 @@ bool app_open_song(const char *path) {
     if (ok) asset_ids[i] = block;
   }
   for (int i = 0; ok && i < nclips; i++) {
-    int source, track, position;
+    int source, track, position, length = 0;
     uint64_t order;
-    if (fscanf(f, "%d %d %d %" SCNu64, &source, &track, &position, &order) != 4) { ok = false; break; }
+    int fields = version == 3
+      ? fscanf(f, "%d %d %d %" SCNu64 " %d", &source, &track, &position, &order, &length)
+      : fscanf(f, "%d %d %d %" SCNu64, &source, &track, &position, &order);
+    if (fields != (version == 3 ? 5 : 4)) { ok = false; break; }
     int block = source >= 0 && source < nassets ? asset_ids[source] : -1;
     const block_t *b = block_get(block);
-    int ticks = b ? b->bars * GR_TICKS_BAR : 0;
+    int natural = b ? b->bars * GR_TICKS_BAR : 0;
+    int ticks = length > 0 ? length : natural;
+    if (length < 0 || (length > 0 && (length < GR_FRACTION_TICKS || length % GR_FRACTION_TICKS))) { ok = false; break; }
     if (!b || !song_can_place(&next, track, position, ticks, -1) || !order) { ok = false; break; }
     for (int j = 0; j < next.nclips; j++) if (next.clips[j].order == order) ok = false;
     if (!ok) break;
-    next.clips[next.nclips++] = (clip_t){ block, track, position, order };
+    next.clips[next.nclips++] = (clip_t){ block, track, position, order, length };
     next.clip_order = MAX(next.clip_order, order);
   }
   if (ok) { int c; do c = fgetc(f); while (c != EOF && isspace((unsigned char)c)); ok = c == EOF && !ferror(f); }

@@ -9,10 +9,13 @@ where no clip is visible, seeks in the same 64-tick steps.
 
 A finger swipe scrolls the sheet, clips included. Holding a clip for
 `TOUCH_LONG_PRESS_MS`, then moving, picks it up; a mouse still picks a clip
-up as soon as it moves. A tap on a clip plays that sample. A double-tap
-places another copy on the same track, immediately after the clip, or after
-the run of that same sample already continuing from it. A different sample
-overlapping that next slot leaves the song unchanged.
+up as soon as it moves. A tap on a clip plays that sample. Holding the last
+two fractions of a clip, then moving, resizes that clip instead. A mouse
+drag from the same end resizes as soon as it moves. A beat is four fractions
+(16 ticks), and the length changes by whole fractions. The clip stays one
+placement: a longer span loops its source audio, and a shorter span plays
+the prefix. The edge stops at the next clip on that track, or at the end of
+the song. A double-tap does not copy the sample.
 
 The sheet defaults to `GR_DROP_ANCHOR_SAMPLE`. Library drags and moves of
 existing clips retain the exact cursor offset inside the card, in logical
@@ -36,7 +39,9 @@ the earlier clip up to the next remaining start or its natural end. At identical
 starts, the most recently added or moved clip covers the others, which remain
 in the song and return when the covering clip is removed. Selection, right-click
 deletion and the playback loop endpoint follow the visible arrangement. Cropped
-waveforms retain their original time scale, and dragging lifts the full clip.
+waveforms retain their original time scale, and dragging lifts the clip at
+its stored length. An overlap does not change that length, so a hidden tail
+returns while the clip is moving.
 
 The target can opt into cursor-based placement:
 

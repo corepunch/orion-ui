@@ -13,9 +13,22 @@ void song_init(song_t *s) {
   s->preview_block = -1;
 }
 
-static int clip_ticks(const clip_t *c) {
+static int clip_natural_ticks(const clip_t *c) {
   const block_t *b = block_get(c->block);
   return (b ? b->bars : 1) * GR_TICKS_BAR;
+}
+
+static int clip_ticks(const clip_t *c) {
+  return c->length > 0 ? c->length : clip_natural_ticks(c);
+}
+
+int song_clip_ticks(const song_t *s, int idx) {
+  if (!s || idx < 0 || idx >= s->nclips) {
+    fprintf(stderr, "[mx] clip_ticks rejected idx=%d nclips=%d\n", idx, s ? s->nclips : -1);
+    fflush(stderr);
+    return 0;
+  }
+  return clip_ticks(&s->clips[idx]);
 }
 
 int64_t position_frames_for_bpm(int position, int bpm) {
@@ -61,33 +74,21 @@ bool song_can_place(const song_t *s, int track, int position, int ticks, int ign
   return ignore_clip >= 0 ? ignore_clip < s->nclips : s->nclips < GR_MAX_CLIPS;
 }
 
-// Another copy of clip idx, on its track, after the abutting run of that same
-// block. A different block overlapping the destination refuses the copy.
-int song_repeat_clip(song_t *s, int idx) {
+bool song_resize_clip(song_t *s, int idx, int ticks) {
   if (idx < 0 || idx >= s->nclips) {
-    fprintf(stderr, "[mx] repeat_clip rejected idx=%d nclips=%d\n", idx, s->nclips);
+    fprintf(stderr, "[mx] resize_clip rejected idx=%d nclips=%d\n", idx, s->nclips);
     fflush(stderr);
-    return -1;
+    return false;
   }
-  int block = s->clips[idx].block, track = s->clips[idx].track;
-  int len = clip_ticks(&s->clips[idx]), end = s->clips[idx].position + len;
-  for (;;) {
-    int further = end;
-    for (int i = 0; i < s->nclips; i++) {
-      const clip_t *c = &s->clips[i];
-      int c0, c1;
-      if (c->track != track) continue;
-      c0 = c->position;
-      c1 = c0 + clip_ticks(c);
-      if (c0 >= end + len || c1 <= end) continue;
-      if (c->block != block) return -1;
-      if (c1 > further) further = c1;
-    }
-    if (further == end) break;
-    end = further;
+  const clip_t *c = &s->clips[idx];
+  int natural = clip_natural_ticks(c), max_len = GR_BARS * GR_TICKS_BAR - c->position;
+  if (ticks < GR_FRACTION_TICKS || ticks > max_len || ticks % GR_FRACTION_TICKS) {
+    fprintf(stderr, "[mx] resize_clip rejected idx=%d ticks=%d max=%d\n", idx, ticks, max_len);
+    fflush(stderr);
+    return false;
   }
-  if (!song_can_place(s, track, end, len, -1)) return -1;
-  return song_add_clip(s, block, track, end);
+  s->clips[idx].length = ticks == natural ? 0 : ticks;
+  return true;
 }
 
 int song_add_clip(song_t *s, int block, int track, int position) {
@@ -154,8 +155,14 @@ void song_render(song_t *s, float *lr, int frames) {
       const block_t *b = block_get(c->block);
       if (!b || !b->audio.pcm || !track_audible(s, c->track)) continue;
       int64_t start = position_frames_for_bpm(c->position, s->bpm);
-      int64_t from = MAX(s->pos, start), to = MIN(s->pos + chunk, MIN(clip_ends[i], start + b->audio.frames));
-      if (to > from) add_mono(lr + 2 * (done + (int)(from - s->pos)), b->audio.pcm + (from - start), (int)(to - from), CLIP_GAIN);
+      int64_t from = MAX(s->pos, start), to = MIN(s->pos + chunk, clip_ends[i]), src_len = b->audio.frames;
+      if (to <= from || src_len <= 0) continue;
+      for (int64_t at = from; at < to; ) { // past the source, the same clip loops; a shorter span plays the prefix
+        int64_t off = (at - start) % src_len;
+        int n = (int)MIN(to - at, src_len - off);
+        add_mono(lr + 2 * (done + (int)(at - s->pos)), b->audio.pcm + off, n, CLIP_GAIN);
+        at += n;
+      }
     }
     s->pos += chunk;
     done += chunk;

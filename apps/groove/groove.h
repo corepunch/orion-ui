@@ -22,7 +22,8 @@
 #define GR_SAMPLE_RATE  44100
 #define GR_BEATS_BAR    4
 #define GR_TICKS_BAR    256
-#define GR_SNAP_TICKS   (GR_TICKS_BAR / 4)
+#define GR_SNAP_TICKS   (GR_TICKS_BAR / 4)                       // one beat
+#define GR_FRACTION_TICKS (GR_TICKS_BAR / (GR_BEATS_BAR * 4))    // a beat is four fractions
 #define GR_TRACKS       8
 #define GR_SHEET_HEADER_W 32 // width of the track header column beside the sheet
 #define GR_RULER_H      22
@@ -114,7 +115,7 @@ void           blocks_free(void);
 int            bar_frames_for_bpm(int bpm);
 
 // ── Song + mixer ─────────────────────────────────────────────────────────
-typedef struct { int block, track, position; uint64_t order; } clip_t; // position in ticks
+typedef struct { int block, track, position; uint64_t order; int length; } clip_t; // position, and length when not the block's own bars, in ticks
 
 typedef struct {
   clip_t   clips[GR_MAX_CLIPS];
@@ -130,11 +131,12 @@ typedef struct {
 
 void song_init(song_t *s);
 int  song_length_ticks(const song_t *s);
-int  song_clip_end(const song_t *s, int idx); // effective endpoint; source duration stays intact
+int  song_clip_ticks(const song_t *s, int idx); // stored duration; a later clip can hide the tail
+int  song_clip_end(const song_t *s, int idx);   // visible endpoint
 int  song_clip_at(const song_t *s, int track, int position);    // clip index or -1
 bool song_can_place(const song_t *s, int track, int position, int ticks, int ignore_clip);
 int  song_add_clip(song_t *s, int block, int track, int position); // clip index or -1
-int  song_repeat_clip(song_t *s, int idx); // copy after that block's run, or -1 when blocked
+bool song_resize_clip(song_t *s, int idx, int ticks); // beat fractions; the block's own length clears the override
 bool song_move_clip(song_t *s, int idx, int track, int position);
 int64_t position_frames_for_bpm(int position, int bpm);
 void song_remove_clip(song_t *s, int idx);
@@ -231,7 +233,7 @@ void      app_preview(int block);
 void      app_preview_stop(void);          // silence the audition; the buffer stays until the next one
 void      app_select_clip(int idx);
 bool      app_drop(const drag_t *d);          // commits a drag (add or move)
-bool      app_repeat_clip(int idx);           // double-tap: another copy after the run
+bool      app_resize_clip(int idx, int ticks); // stored duration in beat fractions
 void      app_set_genre(uint8_t genre);        // 0 = every genre, else one GENRE_* flag
 void      app_set_family(int family);
 bool      block_visible(int id);               // passes the family and genre filters
@@ -253,6 +255,7 @@ bool block_pictograms_load(groove_t *app);
 bitmap_strip_t block_pictogram_strip(void); // the category atlas as an icon strip, in category_t order
 // Shared logical-pixel alpha masks; audio revision and geometry determine reuse.
 uint32_t waveform_texture(groove_t *app, int block, ipoint16_t size, int radius);
+void draw_waveform(const block_t *b, irect16_t wave, int period, int radius, uint32_t color);
 void waveform_cache_free(groove_t *app);
 // Moves a card window. A visual drag keeps the painted copy still: the frame
 // delta is added back into the drag offset.
