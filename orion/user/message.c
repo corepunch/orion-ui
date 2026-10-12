@@ -240,7 +240,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   // Handle special messages
   switch (msg) {
     case evCommand:
-      if (page_host_command(win, wparam)) return true;
+      if (page_host_command(win, wparam, lparam)) return true;
       break;
     case evSetFocus:
       if (g_ui_runtime.focused == win && page_host_selection(win))

@@ -86,8 +86,8 @@ converts content coordinates between windows, including nested scroll offsets.
 
 Git Client declares each activity's initial split tree directly in its Page form.
 Existing table and diff windows are tab contents, retaining their database bindings
-and command IDs when moved. Terminal declares its command rows and initial split
-as siblings in the Workspace Page; each tab holds an independent session form.
+and command IDs when moved. Terminal declares its toolbar and initial split in the Workspace Page; each tab
+holds an independent session form.
 
 ## Migration from PaneHost
 

@@ -25,9 +25,6 @@ static result_t terminal_host_proc(window_t *win, uint32_t msg, uint32_t wparam,
       g_terminal.page = page_host_page(win, ID_VIEW_WORKSPACE);
       return terminal_workspace_terminal(g_terminal.page, 0) && terminal_workspace_terminal(g_terminal.page, 1);
     }
-    case evCommand:
-      return terminal_workspace_command(g_terminal.page, LOWORD(wparam));
-
     case evPaint: return false;
     case evDestroy:
       free_accelerators(g_terminal.accel);

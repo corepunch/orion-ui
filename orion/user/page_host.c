@@ -101,12 +101,19 @@ bool page_host_select(window_t *host, uint32_t command) {
   return true;
 }
 
-bool page_host_command(window_t *host, uint32_t wparam) {
+bool page_host_command(window_t *host, uint32_t wparam, void *lparam) {
   uint16_t code = HIWORD(wparam), command = LOWORD(wparam);
   if (code != 0 && code != btnClicked && code != kAcceleratorNotification && code != kMenuBarNotificationItemClick) return false;
-  if (!activity_entry(host, command)) return false;
-  page_host_select(host, command);
-  return true;
+  if (activity_entry(host, command)) {
+    page_host_select(host, command);
+    return true;
+  }
+  window_t *page = window_active_page(host);
+  if (!page || !page->pages || !command) return false;
+  for (int i = 0; i < page->pages->toolbar_count; i++)
+    if ((uint32_t)page->pages->toolbar_items[i].ident == command)
+      return send_message(page, evCommand, wparam, lparam);
+  return false;
 }
 
 void page_host_remember_focus(window_t *win) {
