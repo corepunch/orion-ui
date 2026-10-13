@@ -636,6 +636,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         set_focus(win);
       } else if (gesture->phase == AX_GESTURE_UPDATE && state->gesture_active) {
         window_view_apply_gesture(win, gesture);
+        canvas_sync_scrollbars(win, state);
         invalidate_window(win);
       } else {
         state->gesture_active = false;

@@ -4,6 +4,7 @@
 #include "user.h"
 
 typedef enum { DOCK_FLOAT, DOCK_TOP, DOCK_LEFT, DOCK_BOTTOM, DOCK_RIGHT, DOCK_FILL } dock_side_t;
+typedef enum { DOCK_ALIGN_NONE, DOCK_ALIGN_START, DOCK_ALIGN_CENTER, DOCK_ALIGN_END } dock_align_t;
 #define DOCK_EDGE(side) (1u << (side))
 #define DOCK_ALL_EDGES (DOCK_EDGE(DOCK_TOP) | DOCK_EDGE(DOCK_LEFT) | DOCK_EDGE(DOCK_BOTTOM) | DOCK_EDGE(DOCK_RIGHT))
 #define DOCK_RESIZABLE 1u
@@ -11,10 +12,12 @@ typedef enum { DOCK_FLOAT, DOCK_TOP, DOCK_LEFT, DOCK_BOTTOM, DOCK_RIGHT, DOCK_FI
 #define DOCK_MENU      4u
 #define DOCK_NOFLOAT   8u
 #define DOCK_SPLITTER  5
+#define DOCK_FLOAT_GAP 4
 
 // The host owns its panes in every state, including floating. Extents are logical pixels.
 typedef struct dock_state_s {
   dock_side_t side, last_side;
+  dock_align_t horizontal, vertical;
   uint32_t allowed, flags;
   int extent, minimum, order;
   bool collapsed;
@@ -30,6 +33,8 @@ typedef struct dock_host_s {
 bool dock_window(window_t *win, dock_side_t side, uint32_t allowed, uint32_t flags, int extent, int minimum);
 bool dock_set_side(window_t *win, dock_side_t side);
 bool dock_float(window_t *win, irect16_t frame);
+bool dock_float_aligned(window_t *win, dock_align_t horizontal, dock_align_t vertical);
+bool dock_resize_float(window_t *win, int width, int height);
 bool dock_collapse(window_t *win, bool collapsed);
 irect16_t dock_layout(window_t *host, irect16_t area);
 irect16_t dock_content_rect(window_t *host);

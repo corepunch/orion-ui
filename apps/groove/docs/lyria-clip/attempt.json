@@ -1,0 +1,16 @@
+{
+  "attempted_at": "2026-10-13T11:49:49.203554+00:00",
+  "provider": "Google Gemini API",
+  "model": "lyria-3-clip-preview",
+  "endpoint": "https://generativelanguage.googleapis.com/v1beta/interactions",
+  "plan": "sample-plan.json",
+  "model_lookup": "successful",
+  "status": "rejected",
+  "http_status": 429,
+  "api_error_code": "too_many_requests",
+  "message": "Rate limit exceeded for model lyria-3-clip (limit: 0 input tokens per minute on Free Tier). Please upgrade your tier at https://ai.dev/rate-limit.",
+  "generation_requests": 1,
+  "audio_generated": false,
+  "library_registered": false,
+  "next_step": "Use a Gemini project with Lyria quota and rerun into a new take directory."
+}

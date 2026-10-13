@@ -185,6 +185,15 @@ apply their content view's zoom, rotation and pan.
 `evPointerCancel` aborts the first finger's interaction before a gesture begins.
 Apple Pencil strokes retain priority over finger gestures.
 
+Middle-button dragging is framework navigation. The middle-pan router in
+`event.c` chooses the nearest scrollable window or pannable content view under
+the pointer, captures it, and sends `evGesture` begin/update/end notifications
+with unit scale and zero rotation. Deltas use viewport points, so scrolling and
+high zoom cannot distort movement. Built-in scrollbars clamp eligible axes and
+publish ordinary `evHScroll` / `evVScroll` notifications; content views use their
+existing transform. Release, Escape, pointer cancellation, focus loss, or an
+unavailable target ends the drag. Applications need no middle-button handlers.
+
 One finger scrolls too. Finger samples carry `AX_POINTER_TOUCH` and a
 timestamp; `touch_filter()` in `event.c` holds back a press over content whose
 built-in scrollbars can move. A tap delivers the press and release together;

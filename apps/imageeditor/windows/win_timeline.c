@@ -167,7 +167,11 @@ window_t *create_timeline_window(void) {
     MAKERECT(0, 0, 500, TIMELINE_WIN_H), g_app->chrome_win, timeline_proc, g_app->hinstance, NULL);
   if (!win) return NULL;
   g_app->timeline_win = win;
-  if (win->parent) dock_window(win, DOCK_BOTTOM, DOCK_EDGE(DOCK_TOP) | DOCK_EDGE(DOCK_BOTTOM), DOCK_TOOLBAR, 0, 0);
+  if (win->parent) dock_window(win, IMAGEEDITOR_BW ? DOCK_FLOAT : DOCK_BOTTOM,
+                              DOCK_EDGE(DOCK_TOP) | DOCK_EDGE(DOCK_BOTTOM), DOCK_TOOLBAR, 0, 0);
+#if IMAGEEDITOR_BW
+  if (win->parent) dock_float_aligned(win, DOCK_ALIGN_CENTER, DOCK_ALIGN_END);
+#endif
   timeline_toolbar_sync();
   show_window(win, IMAGEEDITOR_BW || (tl_doc() && tl_doc()->anim && tl_doc()->anim->frame_count > 1));
   return win;

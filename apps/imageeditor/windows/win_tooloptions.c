@@ -107,8 +107,7 @@ void imageeditor_sync_tool_options(void) {
   }
   int height = toolbar_effective_item_height(win) + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
   if (dock_is_floating(win)) {
-    irect16_t r = win->frame; r.h = height;
-    dock_float(win, r);
+    dock_resize_float(win, PALETTE_WIN_W, height);
   } else if (!win->dock) resize_window(win, PALETTE_WIN_W, height);
   else dock_content_rect(win->parent);
   if (focus && is_window(focus)) g_ui_runtime.focused = focus;

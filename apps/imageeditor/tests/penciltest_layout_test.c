@@ -49,8 +49,18 @@ static void test_ipad_options_keep_toolbar_geometry(void) {
   window_t *options = g_app->tool_options_win;
   ASSERT_EQUAL(options->frame.w, PALETTE_WIN_W);
   ASSERT_EQUAL(options->frame.w, g_app->tool_win->frame.w);
-  ASSERT_EQUAL(options->frame.x, TOOL_OPTIONS_WIN_X);
+  ASSERT_EQUAL(options->frame.x - (g_app->tool_win->frame.x + g_app->tool_win->frame.w), DOCK_FLOAT_GAP);
   ASSERT_EQUAL(window_screen_y(options), TOOL_OPTIONS_WIN_Y);
+  g_app->current_tool = ID_TOOL_RECT;
+  imageeditor_sync_tool_options();
+  ASSERT_EQUAL(options->frame.x - g_app->tool_win->frame.w, DOCK_FLOAT_GAP);
+  send_message(g_app->chrome_win, evDisplayChange, MAKEDWORD(758, 1080), NULL);
+  window_t *timeline = g_app->timeline_win;
+  irect16_t area = dock_content_rect(g_app->chrome_win);
+  ASSERT_EQUAL(timeline->frame.x, rect_center(area, timeline->frame.w, timeline->frame.h).x);
+  ASSERT_EQUAL(area.y + area.h - (timeline->frame.y + timeline->frame.h), DOCK_FLOAT_GAP);
+  ASSERT_EQUAL(options->frame.x - g_app->tool_win->frame.w, DOCK_FLOAT_GAP);
+  send_message(g_app->chrome_win, evDisplayChange, MAKEDWORD(1080, 758), NULL);
   ASSERT_TRUE(dock_float(options, R(100, 160, options->frame.w, options->frame.h)));
   send_message(doc->win, evDisplayChange, MAKEDWORD(1080, 758), NULL);
   send_message(options, evDisplayChange, MAKEDWORD(1080, 758), NULL);
@@ -66,8 +76,8 @@ static void test_ipad_options_keep_toolbar_geometry(void) {
   PASS();
 }
 
-static void test_pencil_canvas_reserves_docked_timeline(void) {
-  TEST("Pencil Test maximized canvas reserves the docked timeline and expands when it floats");
+static void test_pencil_canvas_with_floating_timeline(void) {
+  TEST("Pencil Test timeline starts floating at the bottom; docking reserves canvas space");
   penciltest_setup();
   int w, h;
   penciltest_default_size(&w, &h);
@@ -98,10 +108,16 @@ static void test_pencil_canvas_reserves_docked_timeline(void) {
   ASSERT_TRUE(fabsf(bounds.h - visible_h) < 0.01f);
   ASSERT_EQUAL(area.x, g_app->tool_win->frame.w);
   ASSERT_EQUAL(area.y, window_screen_y(g_app->main_toolbar_win) + g_app->main_toolbar_win->frame.h);
-  ASSERT_EQUAL(area.y + area.h, window_screen_y(g_app->timeline_win));
+  ASSERT_TRUE(dock_is_floating(g_app->timeline_win));
+  ASSERT_EQUAL(area.y + area.h, 758);
+  ASSERT_EQUAL(window_screen_y(g_app->timeline_win) + g_app->timeline_win->frame.h, 758 - DOCK_FLOAT_GAP);
+  ASSERT_EQUAL(g_app->timeline_win->frame.x,
+               area.x + (area.w - g_app->timeline_win->frame.w) / 2);
+  ASSERT_TRUE(dock_set_side(g_app->timeline_win, DOCK_BOTTOM));
+  ASSERT_EQUAL(doc->win->frame.y + doc->win->frame.h, window_screen_y(g_app->timeline_win));
   ASSERT_TRUE(dock_float(g_app->timeline_win, R(100, 400, 600, TIMELINE_WIN_H)));
   ASSERT_EQUAL(doc->win->frame.y + doc->win->frame.h, 758);
-  ASSERT_EQUAL(imageeditor_document_workspace_rect().h, area.h + g_app->timeline_win->frame.h);
+  ASSERT_EQUAL(imageeditor_document_workspace_rect().h, area.h);
   canvas_doc_t *loaded = create_document("image.pcx", CANVAS_W, CANVAS_H);
   ASSERT_NOT_NULL(loaded);
   ASSERT_EQUAL(loaded->canvas_w, CANVAS_W * g_bw_retina_scale);
@@ -279,7 +295,7 @@ static void test_document_palette(void) {
 int main(void) {
   TEST_START("Pencil Test iPad layout");
   test_ipad_options_keep_toolbar_geometry();
-  test_pencil_canvas_reserves_docked_timeline();
+  test_pencil_canvas_with_floating_timeline();
   test_pencil_paper_and_ink();
   test_onion_tint_is_not_gray();
   test_no_fg_bg_swatch();

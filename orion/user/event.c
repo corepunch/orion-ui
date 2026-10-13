@@ -151,7 +151,8 @@ static uint32_t pointer_target_id;
 // Handle mouse events on child windows.
 result_t send_pointer_message(window_t *win, uint32_t msg, uint32_t point, void *lparam) {
   if (window_has_view(win) && (msg == evMouseMove || msg == evLeftButtonDown ||
-      msg == evLeftButtonUp || msg == evLeftButtonDoubleClick || msg == evRightButtonDown || msg == evRightButtonUp)) {
+      msg == evLeftButtonUp || msg == evLeftButtonDoubleClick || msg == evRightButtonDown || msg == evRightButtonUp ||
+      msg == evMiddleButtonDown || msg == evMiddleButtonUp)) {
     ipoint16_t client = {(int16_t)LOWORD(point), (int16_t)HIWORD(point)};
     ipoint16_t content = window_client_to_content(win, client);
     point = MAKEDWORD(content.x, content.y);
@@ -399,7 +400,7 @@ void move_to_top(window_t* _win) {
 // the press). Windows answer evQueryDrag: DRAG_NOW takes the press at once;
 // DRAG_AFTER_HOLD waits TOUCH_LONG_PRESS_MS, then takes the press and the
 // drag that follows. Both waits run on a platform timer so the press lands
-// while the finger rests. Stylus and mouse input never pan.
+// while the finger rests. Stylus and mouse input bypass this touch filter.
 enum { TOUCH_IDLE, TOUCH_PENDING, TOUCH_HELD, TOUCH_PANNING };
 static struct {
   int phase;
@@ -588,6 +589,97 @@ static bool touch_filter(ui_event_t *msg) {
   }
 }
 
+// Middle-drag uses viewport deltas, independently of scroll offsets and zoom.
+static struct { window_t *win; uint32_t id; float x, y; } middle_pan;
+
+static bool middle_pan_alive(void) {
+  return middle_pan.win && is_window(middle_pan.win) && middle_pan.win->id == middle_pan.id;
+}
+
+static bool middle_pan_send(uint32_t phase, float x, float y) {
+  if (!middle_pan_alive()) return false;
+  window_t *win = middle_pan.win;
+  ax_gesture_t gesture = {phase, LOCAL_X(x, y, win), LOCAL_Y(x, y, win),
+    LOCAL_X(middle_pan.x, middle_pan.y, win), LOCAL_Y(middle_pan.x, middle_pan.y, win), 1, 0};
+  return send_message(win, evGesture, MAKEDWORD((int)gesture.x, (int)gesture.y), &gesture);
+}
+
+static void middle_pan_end(uint32_t phase) {
+  middle_pan_send(phase, middle_pan.x, middle_pan.y);
+  if (middle_pan_alive() && g_ui_runtime.captured == middle_pan.win) set_capture(NULL);
+  memset(&middle_pan, 0, sizeof(middle_pan));
+}
+
+static window_t *middle_pan_at(int px, int py) {
+  if (g_ui_runtime.captured || g_ui_runtime.dragging || g_ui_runtime.resizing) return NULL;
+  int sx = SCALE_POINT(px), sy = SCALE_POINT(py);
+  window_t *target = NULL;
+  for (window_t *win = find_window(sx, sy); win; win = win->parent) {
+    if (window_has_state(win, WINDOW_STATE_DISABLED) || !window_has_state(win, WINDOW_STATE_VISIBLE)) return NULL;
+    ipoint16_t point = {sx - win_abs_x(win), sy - win_abs_y(win)};
+    irect16_t client = get_client_rect(win);
+    if (!rect_contains_point(client, point)) return NULL;
+    if (target) continue;
+    if (window_has_view(win)) {
+      frect_t bounds = window_view_bounds(win);
+      if (win->view->free_pan || bounds.w > client.w || bounds.h > client.h) target = win;
+    }
+    if (!target && scrollbar_can_scroll(win)) target = win;
+  }
+  return target;
+}
+
+static bool middle_pan_filter(ui_event_t *msg) {
+  int px = (int16_t)msg->x, py = (int16_t)msg->y;
+  if (middle_pan.win) {
+    bool available = middle_pan_alive() && g_ui_runtime.captured == middle_pan.win;
+    for (window_t *win = available ? middle_pan.win : NULL; win; win = win->parent)
+      if (window_has_state(win, WINDOW_STATE_DISABLED) || !window_has_state(win, WINDOW_STATE_VISIBLE)) available = false;
+    if (!available) middle_pan_end(AX_GESTURE_CANCEL);
+  }
+  if (middle_pan.win) {
+    switch (msg->message) {
+      case kEventMouseMoved:
+      case kEventOtherButtonDragged:
+        g_ui_runtime.last_mouse_sx = SCALE_POINT(px);
+        g_ui_runtime.last_mouse_sy = SCALE_POINT(py);
+        middle_pan_send(AX_GESTURE_UPDATE, px, py);
+        middle_pan.x = px; middle_pan.y = py;
+        return true;
+      case kEventOtherButtonUp: middle_pan_end(AX_GESTURE_END); return true;
+      case kEventPointerCancel: middle_pan_end(AX_GESTURE_CANCEL); return true;
+      case kEventKillFocus: middle_pan_end(AX_GESTURE_CANCEL); break;
+      case kEventGesture: middle_pan_end(AX_GESTURE_CANCEL); break;
+      case kEventKeyDown:
+        if (msg->keyCode == AX_KEY_ESCAPE) { middle_pan_end(AX_GESTURE_CANCEL); return true; }
+        break;
+      case kEventLeftButtonDown: case kEventLeftButtonUp: case kEventLeftDoubleClick:
+      case kEventRightButtonDown: case kEventRightButtonUp: case kEventRightDoubleClick:
+      case kEventLeftButtonDragged: case kEventRightButtonDragged:
+      case kEventOtherButtonDown: case kEventOtherDoubleClick:
+        return true;
+    }
+  }
+  return false;
+}
+
+static bool middle_pan_begin(ui_event_t *msg) {
+  int px = (int16_t)msg->x, py = (int16_t)msg->y;
+  window_t *win = middle_pan_at(px, py);
+  if (!win) return false;
+  tooltip_cancel();
+  touch_reset();
+  set_focus(win);
+  middle_pan.win = win; middle_pan.id = win->id;
+  middle_pan.x = px; middle_pan.y = py;
+  set_capture(win);
+  if (!middle_pan_send(AX_GESTURE_BEGIN, px, py)) {
+    middle_pan_end(AX_GESTURE_CANCEL);
+    return false;
+  }
+  return true;
+}
+
 // Dispatch a platform AXmessage to the Orion window system.
 void dispatch_message(ui_event_t *msg) {
   // Sentinel events are wakeup-only — clear the pending flag and skip.
@@ -600,6 +692,7 @@ void dispatch_message(ui_event_t *msg) {
 
   update_key_state(msg);
   update_pointer_state(msg);
+  if (middle_pan_filter(msg)) return;
   if (touch_filter(msg)) return;
   if (dock_handle_event(msg)) return;
   // Escape cancels a captured pointer operation at the input boundary.
@@ -938,7 +1031,8 @@ void dispatch_message(ui_event_t *msg) {
     }
 
     case kEventLeftButtonDown:
-    case kEventRightButtonDown: {
+    case kEventRightButtonDown:
+    case kEventOtherButtonDown: {
       if (msg->message == kEventLeftButtonDown) pointer_target = NULL;
       px = (int)msg->x;
       py = (int)msg->y;
@@ -986,6 +1080,8 @@ void dispatch_message(ui_event_t *msg) {
           if (resize_target && window_nc_hit_test(resize_target, sx, sy) == HT_GROWBOX) nc_hit = HT_GROWBOX;
           else nc_hit = window_nc_hit_test(win, sx, sy);
         }
+        if (msg->message == kEventOtherButtonDown && nc_hit != HT_CLIENT) break;
+        if (msg->message == kEventOtherButtonDown && middle_pan_begin(msg)) break;
         if (nc_hit == HT_GROWBOX) {
           g_ui_runtime.resizing = resize_target;
           resize_anchor[0] = sx - (resize_target->frame.x + resize_target->frame.w);
@@ -1009,7 +1105,7 @@ void dispatch_message(ui_event_t *msg) {
           } else {
             int wmsg = (msg->message == kEventLeftButtonDown)
                        ? evLeftButtonDown
-                       : evRightButtonDown;
+                       : msg->message == kEventRightButtonDown ? evRightButtonDown : evMiddleButtonDown;
             if (!handle_mouse(wmsg, win, lx, ly, NULL)) {
               send_pointer_message(win, wmsg, MAKEDWORD(lx, ly), NULL);
               if (wmsg == evLeftButtonDown) { pointer_target = win; pointer_target_id = win->id; }
@@ -1033,6 +1129,20 @@ void dispatch_message(ui_event_t *msg) {
           send_pointer_message(win, evLeftButtonDoubleClick,
                        MAKEDWORD(lx, ly), NULL);
         }
+      }
+      break;
+    }
+
+    case kEventOtherButtonUp: {
+      px = (int)msg->x;
+      py = (int)msg->y;
+      if ((win = g_ui_runtime.captured) || (win = find_window(SCALE_POINT(px), SCALE_POINT(py)))) {
+        if (window_has_state(win, WINDOW_STATE_DISABLED)) return;
+        if (win != g_ui_runtime.captured && window_nc_hit_test(win, SCALE_POINT(px), SCALE_POINT(py)) != HT_CLIENT) break;
+        int lx = LOCAL_X(px, py, win);
+        int ly = LOCAL_Y(px, py, win);
+        if (!handle_mouse(evMiddleButtonUp, win, lx, ly, NULL))
+          send_pointer_message(win, evMiddleButtonUp, MAKEDWORD(lx, ly), NULL);
       }
       break;
     }

@@ -1060,7 +1060,7 @@ void test_ie_tool_options_dock_under_layers(void) {
 
     ASSERT_NOT_NULL(g_app->layers_win);
     ASSERT_NOT_NULL(g_app->tool_options_win);
-    ASSERT_EQUAL(g_app->tool_options_win->frame.x, TOOL_OPTIONS_WIN_X);
+    ASSERT_EQUAL(g_app->tool_options_win->frame.x, 0);
     ASSERT_TRUE(g_app->tool_options_win->flags & WINDOW_TOOLBAR);
     ASSERT_TRUE(g_app->tool_options_win->flags & WINDOW_NOTITLE);
     ASSERT_EQUAL(g_app->tool_options_win->frame.w, TOOL_OPTIONS_WIN_W);
