@@ -26,6 +26,7 @@ enum {
   evKillFocus,
   evHitTest,
   evNcHitTest,        // wparam = MAKEDWORD(screen_x, screen_y); return an HT_* code, or 0 for the default (≈ WM_NCHITTEST)
+  evChildHitTest,     // parent viewport point in wparam; return a direct child to override default child hit-testing, or 0
   // Sent to a parent before selected mouse/key events are delivered to a
   // child window, analogous to WinAPI WM_PARENTNOTIFY but consumable.
   // wparam = 0; lparam = parent_notify_t*. Return true to consume the event.
@@ -452,6 +453,7 @@ enum {
 // the edges) and every item is centred on the row.
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
+#define TOOLBAR_STYLE_TRANSPARENT    (1u << 3) // retain the parent's surface behind toolbar items (TBSTYLE_TRANSPARENT)
 #define TOOLBAR_STYLE_WRAPABLE       (1u << 7) // vertical toolbar flows into a new column at the window height (≈ TBSTYLE_WRAPABLE)
 #define TOOLBAR_STYLE_PLASTIC        (1u << 6) // procedural coloured body with recessed SVG glyph
 #if defined(__APPLE__) && TARGET_OS_IOS
@@ -539,7 +541,10 @@ enum {
   tcGetHiddenCount,
   tcHideSingleTab = evUser + 361, // wparam=bool; hide single-tab chrome, retaining pane actions
 };
-enum { svGetPane = evUser + 360 }; // wparam = 0 (left/top) or 1 (right/bottom); returns window_t*
+enum {
+  svGetPane = evUser + 360, // wparam = 0 (left/top) or 1 (right/bottom); returns window_t*
+  svSetPaneMargin,         // wparam = shared leaf-pane margin; resize band includes both margins + theme spacing
+};
 // Card / Badge / TileGrid messages, in the spirit of NSCollectionView / UICollectionView items.
 enum {
   lbSetStyle = evUser + 380, // lparam = label_create_params_t*: colour role, font role, single-line truncation
@@ -590,6 +595,7 @@ enum {
 #define TAB_STYLE_RESTORE_FOCUS (1u << 2) // restore each page's focused descendant on selection
 #define TAB_STYLE_SIDEBAR    (1u << 1) // tabs as a vertical list down the left edge; pages fill the rest
 #define TAB_STYLE_HIDE_SINGLE_TAB (1u << 4)
+#define TAB_STYLE_PANE (1u << 5) // Page pane: selected tab meets the pane's top edge
 #define TAB_SIDEBAR_ROW_HEIGHT 24
 
 // Analogous to WinAPI CW_USEDEFAULT: pass as x or y to create_window() /
@@ -643,7 +649,7 @@ typedef enum {
   brModalOverlay         = 23,  // modal owner dimming overlay (ARGB with alpha)
   brToolbarForeground    = 24,  // toolbar icons, labels, and dropdown arrows
   brPanelDark            = 25,  // inactive tabs; one step below the face
-  brPanelDarker          = 26,  // toolbar and tab-strip chrome, outside the client
+  brPanelDarker          = 26,  // toolbar chrome and Page background, outside the panes
   brTextWarning          = 27,  // attention needed but not an error (uncommitted, pending)
   brTextInfo             = 28,  // neutral informational status (to push, to pull)
   brTextSecondary        = 29,  // readable de-emphasised text (subtitles, metadata); brTextDisabled is for inactive controls
@@ -651,7 +657,8 @@ typedef enum {
   brSelectionTop         = 31,  // selection gradient endpoints (sRGB)
   brSelectionBottom      = 32,
   brPlasticNeutral       = 33,  // neutral plastic face (transport buttons): silver
-  brCount                = 34
+  brTabBarBg             = 34,  // tab strip: between Page background and inactive tab face
+  brCount                = 35
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).

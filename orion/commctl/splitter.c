@@ -15,8 +15,7 @@
 // idiom where a child control notifies the parent, and the parent owns the
 // drag loop.
 //
-// The splitter is a fixed two-pixel rule: a dark edge and a themed accent.
-// Hover changes only the accent colour, never the line geometry.
+// The resize band is empty at rest and shows a centered two-pixel highlight on hover.
 
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
@@ -37,6 +36,7 @@ result_t win_splitter(window_t *win, uint32_t msg,
           (splitter_data_t *)malloc(sizeof(splitter_data_t));
       if (!st) return false;
       st->orientation = (int)(intptr_t)lparam;
+      st->hot = false;
       win->userdata = st;
       return true;
     }
@@ -50,16 +50,12 @@ result_t win_splitter(window_t *win, uint32_t msg,
     case evPaint: {
       irect16_t cr = get_client_rect(win);
       splitter_data_t *st = (splitter_data_t *)win->userdata;
-      uint32_t dark = get_sys_color(brDarkEdge);
-      uint32_t accent = get_sys_color(st && st->hot ? brActiveTitlebar : brBorderActive);
+      if (!st || !st->hot) return true;
+      uint32_t accent = color_with_alpha(get_sys_color(brTextInfo), 128);
       if (st && st->orientation == SPLIT_VERT) {
-        int x = cr.x + (cr.w - 2) / 2;
-        fill_rect(dark,   R(x,     cr.y, 1, cr.h));
-        fill_rect(accent, R(x + 1, cr.y, 1, cr.h));
+        fill_rect(accent, rect_center(cr, MIN(cr.w, SPLITTER_HIGHLIGHT_WIDTH), cr.h));
       } else {
-        int y = cr.y + (cr.h - 2) / 2;
-        fill_rect(dark,   R(cr.x, y,     cr.w, 1));
-        fill_rect(accent, R(cr.x, y + 1, cr.w, 1));
+        fill_rect(accent, rect_center(cr, cr.w, MIN(cr.h, SPLITTER_HIGHLIGHT_WIDTH)));
       }
       return true;
     }
@@ -85,8 +81,8 @@ result_t win_splitter(window_t *win, uint32_t msg,
     case evLeftButtonDown: {
       if (!win->parent) return false;
       // local hit point inside splitter
-      int local_x = (int)LOWORD(wparam);
-      int local_y = (int)HIWORD(wparam);
+      int local_x = (int16_t)LOWORD(wparam);
+      int local_y = (int16_t)HIWORD(wparam);
       // parent-local coords: add our own frame position (which is in parent space)
       int px = local_x + win->frame.x;
       int py = local_y + win->frame.y;

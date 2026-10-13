@@ -231,6 +231,7 @@ void layout_flow_horizontal(window_t *first, int start_x, int gap);
 //   3. Call set_capture(NULL) + stop tracking on evLeftButtonUp.
 // See apps/gitclient/view_main.c for the canonical usage pattern.
 #define SPLIT_VERT 0
+#define SPLITTER_HIGHLIGHT_WIDTH 2
 #define SPLIT_HORZ 1
 result_t win_splitter(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 int      win_splitter_orientation(window_t *win);
@@ -243,6 +244,8 @@ int      win_splitter_orientation(window_t *win);
 // panes; a splitter bar is created automatically between them.
 // The parent does NOT need to handle spnDragStart — the drag loop is internal.
 // Declarative forms may supply splitview_params_t through form_ctrl_def_t.lparam.
+// svSetPaneMargin supplies the shared leaf margin for the resize band; leaf
+// margins themselves use ordinary layout.layout_margin metadata.
 typedef struct {
   int orientation;
   double split_ratio;  // Fraction of available space given to the left/top pane.

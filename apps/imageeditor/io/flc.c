@@ -2,6 +2,7 @@
 
 #if IMAGEEDITOR_INDEXED
 #include <errno.h>
+#include "flc_codec.h"
 #ifdef _WIN32
 #include <windows.h>
 #include <io.h>
@@ -104,9 +105,8 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
   FILE *fp = fopen(path, "rb");
   uint8_t header[128], *pixels = NULL, *block = NULL, *metadata = NULL;
   anim_timeline_t *tl = NULL;
-  uint8_t *layerdata = NULL;
-  bool soft_pencil_layers = false;
-  bool alpha_index_layers = false;
+  long layer_offset = 0;
+  uint32_t layer_length = 0;
   uint8_t active_layer = IE_LAYER_PENCIL, visible_layers = 15;
   if (layers) memset(layers, 0, sizeof(*layers));
   uint32_t pal[256], editing_pal[256];
@@ -137,19 +137,17 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
     } else if (flc_u16(chunk + 4) == FLC_LAYERS) {
       uint64_t n = (uint64_t)w * h;
       uint64_t bytes = n * (1 + 3u * frames);
-      if (layerdata || (memcmp(chunk + 8, "PTL2", 4) && memcmp(chunk + 8, "PTL3", 4) && memcmp(chunk + 8, "PTL4", 4)) || chunk[12] != IE_LAYER_COUNT ||
+      if (layer_offset || memcmp(chunk + 8, "PTL5", 4) || chunk[12] != IE_LAYER_COUNT ||
           chunk[13] >= IE_LAYER_COUNT || chunk[14] > 15 || chunk[15] != 0 ||
-          bytes + n * frames > FLC_LIMIT || length != 16 + bytes) goto fail;
-      alpha_index_layers = !memcmp(chunk + 8, "PTL4", 4);
-      soft_pencil_layers = alpha_index_layers || !memcmp(chunk + 8, "PTL3", 4);
-      layerdata = malloc((size_t)bytes);
-      if (!layerdata || fread(layerdata, 1, (size_t)bytes, fp) != bytes) goto fail;
+          bytes + n * frames > FLC_LIMIT || length < 16 + 6u * (1 + 3u * frames)) goto fail;
+      layer_offset = ftell(fp); layer_length = length - 16;
+      if (layer_offset < 0 || fseek(fp, layer_length, SEEK_CUR)) goto fail;
       active_layer = chunk[13]; visible_layers = chunk[14];
     } else if (fseek(fp, length - 16, SEEK_CUR)) goto fail;
     pos += length;
   }
   const char *ext = strrchr(path, '.');
-  if ((layerdata && !metadata) || (ext && !strcasecmp(ext, ".ptf") && !layerdata)) goto fail;
+  if ((layer_offset && !metadata) || (ext && !strcasecmp(ext, ".ptf") && !layer_offset)) goto fail;
   if (fseek(fp, 128, SEEK_SET)) goto fail;
   pixels = calloc((size_t)w, h);
   tl = calloc(1, sizeof(*tl));
@@ -215,50 +213,56 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
     free(block); block = NULL;
   }
 #if IMAGEEDITOR_BW
-  if (!alpha_index_layers) {
-    // Older projects reserve index 0; rotate indices so 255 is transparent.
+  if (!layer_offset) {
+    // External FLICs reserve index 0; rotate indices so 255 is transparent.
     memmove(out_pal, out_pal + 1, 255 * sizeof(*out_pal));
     out_pal[255] = 0;
     size_t n = (size_t)w * h;
     for (int i = 0; i < frames; i++) {
       for (size_t p = 0; p < n; p++) tl->frames[i]->data[p]--;
-      if (layerdata) for (int layer = 1; layer < IE_LAYER_COUNT; layer++) {
-        if (layer == IE_LAYER_PENCIL) continue;
-        uint8_t *cel = layerdata + n + ((size_t)i * 3 + layer - 1) * n;
-        for (size_t p = 0; p < n; p++) cel[p]--;
-      }
     }
-    if (layerdata) for (size_t p = 0; p < n; p++) layerdata[p]--;
   }
 #endif
-  if (layerdata) {
+  if (layer_offset) {
     size_t n = (size_t)w * h;
-    if (!soft_pencil_layers) for (int i = 0; i < frames; i++) {
-      uint8_t *pencil = layerdata + n + ((size_t)i * 3 + (IE_LAYER_PENCIL - 1)) * n;
-      for (size_t p = 0; p < n; p++)
-        pencil[p] = pencil[p] ? IE_PENCIL_MAX_OPACITY : 0;
+    if (fseek(fp, layer_offset, SEEK_SET)) goto fail;
+    uint32_t remaining = layer_length;
+    // Decode directly into final cel buffers; only the prior same-layer cel is needed.
+    for (int plane = 0; plane < 1 + 3 * frames; plane++) {
+      uint8_t ch[6];
+      if (remaining < 6 || fread(ch, 1, 6, fp) != 6) goto fail;
+      uint32_t size = flc_u32(ch);
+      if (size < 6 || size > remaining || size > n + (n & 1) + 6) goto fail;
+      block = malloc(size);
+      if (!block) goto fail;
+      memcpy(block, ch, 6);
+      if (fread(block + 6, 1, size - 6, fp) != size - 6) goto fail;
+      uint8_t *dst = pixels;
+      const uint8_t *previous = NULL;
+      if (plane) {
+        int index = (plane - 1) / 3, layer = (plane - 1) % 3;
+        anim_frame_t *f = tl->frames[index];
+        if (!layer) { f->cels = malloc(3 * n); if (!f->cels) goto fail; f->cels_size = 3 * n; }
+        dst = f->cels + (size_t)layer * n;
+        if (index) previous = tl->frames[index - 1]->cels + (size_t)layer * n;
+      }
+      if (!flc_codec_decode(block, size, dst, previous, w, h)) goto fail;
+      free(block); block = NULL; remaining -= size;
     }
-    for (int i = 0; i < frames; i++) {
-      anim_frame_t *f = tl->frames[i];
-      f->cels = malloc(3 * n);
-      if (!f->cels) goto fail;
-      memcpy(f->cels, layerdata + n + (size_t)i * 3 * n, 3 * n);
-      f->cels_size = 3 * n;
-    }
+    if (remaining) goto fail;
     if (layers) {
       layers->background = malloc(n);
       if (!layers->background) goto fail;
-      memcpy(layers->background, layerdata, n);
+      memcpy(layers->background, pixels, n);
       layers->active = active_layer; layers->visible = visible_layers;
     }
   }
-  free(layerdata);
   fclose(fp); free(pixels); free(metadata);
   *out_w = w; *out_h = h;
   return tl;
 fail:
   if (fp) fclose(fp);
-  free(pixels); free(block); free(metadata); free(layerdata); anim_timeline_free(tl);
+  free(pixels); free(block); free(metadata); anim_timeline_free(tl);
   return NULL;
 }
 
@@ -267,7 +271,7 @@ anim_timeline_t *flc_load(const char *path, int *w, int *h, uint32_t palette[256
   return flc_load_layers(path, w, h, palette, background, show_bg, NULL);
 }
 
-static bool flc_write_frame(FILE *fp, const canvas_doc_t *doc, int index) {
+static bool flc_write_frame(FILE *fp, const canvas_doc_t *doc, int index, uint8_t *previous, bool first) {
   const anim_frame_t *frame = doc->anim->frames[index];
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   uint8_t *composite = NULL;
@@ -280,9 +284,12 @@ static bool flc_write_frame(FILE *fp, const canvas_doc_t *doc, int index) {
   if (!pixels || (index != doc->anim->active_frame &&
       (frame->format != FRAME_FORMAT_INDEXED || frame->data_size != n)) ||
       frame->delay_ms < 1 || frame->delay_ms > 65535) { free(composite); return false; }
-  uint8_t header[16] = {0}, palette[778] = {0}, copy[6] = {0};
-  flc_put32(header, 16 + sizeof(palette) + 6 + n + (n & 1));
-  flc_put16(header + 4, 0xf1fa); flc_put16(header + 6, 2); flc_put16(header + 8, frame->delay_ms);
+  size_t size;
+  uint8_t *chunk = flc_codec_encode(pixels, first ? NULL : previous, doc->canvas_w, doc->canvas_h, &size);
+  if (!chunk) { free(composite); return false; }
+  uint8_t header[16] = {0}, palette[778] = {0};
+  flc_put32(header, 16 + (first ? sizeof(palette) : 0) + size);
+  flc_put16(header + 4, 0xf1fa); flc_put16(header + 6, first ? 2 : 1); flc_put16(header + 8, frame->delay_ms);
   flc_put32(palette, sizeof(palette)); flc_put16(palette + 4, 4); flc_put16(palette + 6, 1);
   for (int i = 0; i < 256; i++) {
     uint32_t c = doc->ipal.entries[i];
@@ -291,11 +298,10 @@ static bool flc_write_frame(FILE *fp, const canvas_doc_t *doc, int index) {
     palette[11 + i * 3] = (COLOR_G(c) * a + g * (255 - a)) / 255;
     palette[12 + i * 3] = (COLOR_B(c) * a + b * (255 - a)) / 255;
   }
-  flc_put32(copy, 6 + n + (n & 1)); flc_put16(copy + 4, 16);
-  bool ok = fwrite(header, 1, 16, fp) == 16 && fwrite(palette, 1, sizeof(palette), fp) == sizeof(palette) &&
-         fwrite(copy, 1, 6, fp) == 6 &&
-         fwrite(pixels, 1, n, fp) == n && (!(n & 1) || fputc(0, fp) != EOF);
-  free(composite);
+  bool ok = fwrite(header, 1, 16, fp) == 16 && (!first || fwrite(palette, 1, sizeof(palette), fp) == sizeof(palette)) &&
+            fwrite(chunk, 1, size, fp) == size;
+  if (ok) memcpy(previous, pixels, n);
+  free(chunk); free(composite);
   return ok;
 }
 
@@ -319,22 +325,31 @@ static bool flc_write_metadata(FILE *fp, const canvas_doc_t *doc) {
 
 static bool flc_write_layers(FILE *fp, const canvas_doc_t *doc) {
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
+  long start = ftell(fp);
+  if (start < 0) return false;
   uint8_t header[16] = {0};
-  flc_put32(header, 16 + n * (1 + 3u * doc->anim->frame_count));
-  flc_put16(header + 4, FLC_LAYERS); memcpy(header + 8, "PTL4", 4);
+  flc_put16(header + 4, FLC_LAYERS); memcpy(header + 8, "PTL5", 4);
   header[12] = IE_LAYER_COUNT; header[13] = doc->layer.active;
   for (int i = 0; i < IE_LAYER_COUNT; i++) if (doc->layer.stack[i]->visible) header[14] |= 1u << i;
-  if (fwrite(header, 1, 16, fp) != 16 || fwrite(doc->layer.stack[0]->pixels, 1, n, fp) != n) return false;
+  if (fwrite(header, 1, 16, fp) != 16 ||
+      !flc_codec_write(fp, doc->layer.stack[0]->pixels, NULL, doc->canvas_w, doc->canvas_h)) return false;
   uint8_t *blank = calloc(1, n);
-  if (!blank) return false;
+  uint8_t *previous = malloc(3 * n);
+  if (!blank || !previous) { free(blank); free(previous); return false; }
   bool ok = true;
   for (int f = 0; ok && f < doc->anim->frame_count; f++)
     for (int layer = 1; ok && layer < IE_LAYER_COUNT; layer++) {
       const uint8_t *pixels = pencil_frame_layer(doc, f, layer);
       if (!pixels) memset(blank, layer == IE_LAYER_PENCIL ? 0 : doc->ipal.transparent, n);
-      ok = fwrite(pixels ? pixels : blank, 1, n, fp) == n;
+      uint8_t *old = previous + (size_t)(layer - 1) * n;
+      ok = flc_codec_write(fp, pixels ? pixels : blank, f ? old : NULL, doc->canvas_w, doc->canvas_h);
+      if (ok) memcpy(old, pixels ? pixels : blank, n);
     }
-  free(blank);
+  long end = ftell(fp);
+  if (end < start || (uint64_t)(end - start) > 2u * FLC_LIMIT) ok = false;
+  flc_put32(header, end - start);
+  if (ok) ok = !fseek(fp, start, SEEK_SET) && fwrite(header, 1, 16, fp) == 16 && !fseek(fp, end, SEEK_SET);
+  free(blank); free(previous);
   return ok;
 }
 
@@ -347,35 +362,42 @@ bool flc_save(const char *path, const canvas_doc_t *doc) {
      return false;
   }
   uint64_t n = (uint64_t)doc->canvas_w * doc->canvas_h;
-  uint64_t frame_size = 16 + 778 + 6 + n + (n & 1);
-  uint64_t total = 128 + frame_size * (doc->anim->frame_count + 1) + 16 + (uint64_t)FLC_META_SIZE * doc->anim->frame_count;
   uint64_t layer_bytes = pencil_has_layers(doc) ? n * (1 + 3u * doc->anim->frame_count) : 0;
-  if (layer_bytes) total += 16 + layer_bytes;
-  if (total > 2u * FLC_LIMIT || n * doc->anim->frame_count + layer_bytes > FLC_LIMIT) return false;
+  if (n * doc->anim->frame_count + layer_bytes > FLC_LIMIT) return false;
+  uint8_t *previous = malloc((size_t)n);
+  if (!previous) return false;
   char temp[1024];
-  if (snprintf(temp, sizeof(temp), "%s.XXXXXX", path) >= (int)sizeof(temp)) return false;
+  if (snprintf(temp, sizeof(temp), "%s.XXXXXX", path) >= (int)sizeof(temp)) { free(previous); return false; }
 #ifdef _WIN32
   int fd = _mktemp_s(temp, sizeof(temp)) ? -1 :
            _open(temp, _O_CREAT | _O_EXCL | _O_RDWR | _O_BINARY, _S_IREAD | _S_IWRITE);
 #else
   int fd = mkstemp(temp);
 #endif
-  if (fd < 0) { return false; }
+  if (fd < 0) { free(previous); return false; }
   FILE *fp = fdopen(fd, "wb");
-  if (!fp) { close(fd); remove(temp); return false; }
+  if (!fp) { close(fd); remove(temp); free(previous); return false; }
   uint8_t header[128] = {0};
-  flc_put32(header, total); flc_put16(header + 4, 0xaf12);
+  flc_put16(header + 4, 0xaf12);
   flc_put16(header + 6, doc->anim->frame_count);
   flc_put16(header + 8, doc->canvas_w); flc_put16(header + 10, doc->canvas_h);
   flc_put16(header + 12, 8); flc_put16(header + 14, 3);
   flc_put32(header + 16, MAX(1, 1000 / doc->anim->fps));
   flc_put16(header + 38, 1); flc_put16(header + 40, 1);
-  flc_put32(header + 80, 128); flc_put32(header + 84, 128 + frame_size);
+  flc_put32(header + 80, 128);
   bool ok = fwrite(header, 1, 128, fp) == 128;
-  for (int i = 0; ok && i < doc->anim->frame_count; i++) ok = flc_write_frame(fp, doc, i);
-  if (ok) ok = flc_write_frame(fp, doc, 0); // Ring frame restores the start for other FLC players.
+  for (int i = 0; ok && i < doc->anim->frame_count; i++) {
+    if (i == 1) flc_put32(header + 84, ftell(fp));
+    ok = flc_write_frame(fp, doc, i, previous, i == 0);
+  }
+  if (doc->anim->frame_count == 1) flc_put32(header + 84, ftell(fp));
+  if (ok) ok = flc_write_frame(fp, doc, 0, previous, false); // Ring frame restores the start.
   if (ok) ok = flc_write_metadata(fp, doc);
   if (ok && pencil_has_layers(doc)) ok = flc_write_layers(fp, doc);
+  long total = ftell(fp);
+  if (total < 128 || (uint64_t)total > 2u * FLC_LIMIT) ok = false;
+  flc_put32(header, total);
+  if (ok) ok = !fseek(fp, 0, SEEK_SET) && fwrite(header, 1, 128, fp) == 128;
   if (fflush(fp)) ok = false;
 #ifdef _WIN32
   if (ok && _commit(fd)) ok = false;
@@ -389,6 +411,7 @@ bool flc_save(const char *path, const canvas_doc_t *doc) {
   if (ok) ok = rename(temp, path) == 0;
 #endif
   if (!ok) remove(temp);
+  free(previous);
   return ok;
 }
 #endif

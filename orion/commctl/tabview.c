@@ -214,12 +214,10 @@ static void draw_tab_icon(tabview_state_t *st, int idx, int x, int y, int h) {
 static void draw_tab_item(window_t *page, int x, bool selected, tabview_state_t *st, int idx) {
   int w = tab_width(page, st, idx);
   int th = tab_header_height(st);
-  // 1px of tab-bar chrome above the tabs, so a face does not meet the panel above.
-  // Both tab states extend to the pane; inactive tabs start lower at the top.
-  int y = (selected ? 0 : 2) + TAB_TOP_PAD;
+  int y = (selected ? 0 : 2) + ((st->style & TAB_STYLE_PANE) ? 0 : TAB_TOP_PAD);
   int h = th - y;
   ctrl_state_t state = selected ? CTRL_SELECTED : CTRL_NORMAL;
-  theme_draw(THEME_PART_TAB, R(x, y, w, h), state);
+  theme_draw(THEME_PART_TAB, rect_inset_xy(R(x, y, w, h), selected ? 0 : 2, 0), state);
   bool has_icon = tab_has_icon(st, idx);
   if (st->style & TAB_STYLE_ICONS_ONLY) {
     draw_tab_icon(st, idx, x + (w - st->strip.icon_w) / 2, y, h);
@@ -285,7 +283,7 @@ static void tab_arrange(window_t *win) {
     FOR_EACH_PAGE(win, st, c) {
       int w = tab_width(c, st, idx);
       if (idx++ == st->selected) { selected_x = x; selected_w = w; }
-      x += w + 1;
+      x += w;
     }
     if (selected_x - st->scroll < start) st->scroll = selected_x - start;
     else if (selected_x + selected_w - st->scroll > width)
@@ -397,7 +395,7 @@ static bool tab_paint(window_t *win) {
   } else FOR_EACH_PAGE(win, st, c) {
     if (i == st->selected) { selected = c; selected_x = x; }
     else draw_tab_item(c, x, false, st, i);
-    x += tab_width(c, st, i) + 1;
+    x += tab_width(c, st, i);
     i++;
   }
 
@@ -567,7 +565,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
           }
           return true;
         }
-        left += w + 1;
+        left += w;
         i++;
       }
       return true;
@@ -613,6 +611,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
           fprintf(stderr, "[tv] toolbar allocation failed win=%u\n", win->id);
           fflush(stderr); return false;
         }
+        send_message(st->actions, tbModifyStyle, TOOLBAR_STYLE_TRANSPARENT, (void *)(uintptr_t)TOOLBAR_STYLE_TRANSPARENT);
         send_message(st->actions, tbSetItems, wparam, lparam);
       }
       tab_arrange(win); invalidate_window(win); return true;
@@ -647,7 +646,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       FOR_EACH_PAGE(win, st, c) {
         int width = tab_width(c, st, i);
         if (i++ == index) { *(irect16_t *)lparam = R(x, 0, width, tab_header_extent(win, st)); return true; }
-        x += width + 1;
+        x += width;
       }
       return false;
     }
@@ -742,7 +741,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     }
     case tcSetStyle: {
       const uint32_t known = TAB_STYLE_ICONS_ONLY | TAB_STYLE_SIDEBAR | TAB_STYLE_RESTORE_FOCUS |
-        TAB_STYLE_DRAG_TABS | TAB_STYLE_HIDE_SINGLE_TAB;
+        TAB_STYLE_DRAG_TABS | TAB_STYLE_HIDE_SINGLE_TAB | TAB_STYLE_PANE;
       if (!st || (wparam & ~known)) {
         fprintf(stderr, "[tv] set_style rejected win=%u style=0x%x reason=%s\n",
                 win ? (unsigned)win->id : 0, (unsigned)wparam,

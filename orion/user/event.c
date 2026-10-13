@@ -171,9 +171,11 @@ static int handle_mouse(int msg, window_t *win, int x, int y, void *lparam) {
   x -= win->hscroll.pos;
   y -= win->vscroll.pos;
   if (!rect_contains_point(get_client_rect(win), (ipoint16_t){x, y})) return false;
+  window_t *target = window_child_hit_test(win, (ipoint16_t){x, y});
   for (window_t *c = win->children; c; c = c->next) {
     if (!window_has_state(c, WINDOW_STATE_VISIBLE)) continue;
-    if (!CONTAINS(x, y, c->frame.x, c->frame.y, c->frame.w, c->frame.h))
+    if (target && c != target) continue;
+    if (!rect_contains_point(c->frame, (ipoint16_t){x, y}))
       continue;
     // Hit-test in viewport space, then deliver in the child's content space.
     // Controls should not need to know whether an event came directly from a

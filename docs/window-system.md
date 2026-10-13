@@ -191,6 +191,11 @@ identifies the source window.
 - `track_mouse(win)` requests mouse-leave tracking.
 
 The central event router owns descendant hit-testing and coordinate conversion.
+`evChildHitTest` lets a container return a direct child for a viewport point,
+overriding ordinary sibling hit-testing. The window system validates the child
+and uses the same query for hover/cursor lookup and pointer dispatch. SplitView
+uses it to route its resize band ahead of nested layout branches. The splitter's
+actual frame covers the adjoining pane margins plus theme spacing.
 A child receives pointer coordinates in its own content space, including its
 scroll offset. Do not add the scroll position again in app code.
 

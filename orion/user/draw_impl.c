@@ -21,9 +21,28 @@
 extern window_t *get_root_window(window_t *window);
 
 
-// When non-NULL, viewport/projection/scissor functions redirect from
-// screen-space to FBO-local coordinates automatically.
+// Root-relative drawing coordinates are translated into the current surface.
 static window_t *g_fbo_root = NULL;
+static window_t *g_draw_surface = NULL;
+
+window_t *set_draw_surface(window_t *win) {
+  window_t *previous = g_draw_surface;
+  g_draw_surface = win;
+  return previous;
+}
+
+window_t *get_draw_surface(window_t *root) {
+  return g_draw_surface && get_root_window(g_draw_surface) == root ? g_draw_surface : root;
+}
+
+static ipoint16_t draw_surface_origin(window_t const *root) {
+  window_t *target = get_draw_surface((window_t *)root);
+  if (target == root) return (ipoint16_t){0, 0};
+  int dx, dy;
+  window_lift_offset(target, &dx, &dy);
+  return (ipoint16_t){window_screen_x(target) - root->frame.x + dx,
+                     window_screen_y(target) - root->frame.y + dy};
+}
 
 // OpenGL's framebuffer origin is bottom-left. Keep that backend detail here;
 // every public drawing/scissor API uses logical top-left coordinates.
@@ -33,9 +52,11 @@ int ui_surface_px(int logical) { return (int)ceilf((float)logical * ui_surface_s
 
 static irect16_t fbo_rect(window_t const *root, irect16_t r) {
   float scale = ui_surface_scale();
+  ipoint16_t origin = draw_surface_origin(root);
+  r = rect_offset(r, -origin.x, -origin.y);
   int x0 = (int)roundf(r.x * scale), x1 = (int)roundf((r.x + r.w) * scale);
   int y0 = (int)roundf(r.y * scale), y1 = (int)roundf((r.y + r.h) * scale);
-  window_surface_t *surf = window_surface(root);
+  window_surface_t *surf = window_surface(get_draw_surface((window_t *)root));
   return R(x0, (surf ? surf->h : 0) - y1, x1 - x0, y1 - y0);
 }
 
@@ -232,17 +253,17 @@ void set_clip_rect(window_t const *win, irect16_t r) {
 void set_viewport_for_fbo(window_t *root) {
   if (!g_ui_runtime.running || !root) return;
   g_fbo_root = root;
-  window_surface_t *surf = window_surface(root);
+  window_surface_t *surf = window_surface(get_draw_surface(root));
   if (!surf) return;
   int w = surf->w;
   int h = surf->h;
   if (w <= 0 || h <= 0) return;
-  R_SetViewport(0, 0, w, h);
-  R_DisableScissor();
+  ipoint16_t origin = draw_surface_origin(root);
   float scale = ui_surface_scale();
-  int log_w = (int)roundf((float)w / scale);
-  int log_h = (int)roundf((float)h / scale);
-  set_projection(0, 0, log_w, log_h);
+  R_SetViewport(-(int)roundf(origin.x * scale), h - ui_surface_px(root->frame.h) + (int)roundf(origin.y * scale),
+                ui_surface_px(root->frame.w), ui_surface_px(root->frame.h));
+  R_DisableScissor();
+  set_projection(0, 0, root->frame.w, root->frame.h);
 }
 
 // Set an FBO scissor using root-local, top-left logical coordinates.

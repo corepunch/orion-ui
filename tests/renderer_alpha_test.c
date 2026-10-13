@@ -4,6 +4,7 @@
 #include <orion/user/toolbar.h>
 #include <orion/user/image.h>
 #include <orion/user/color.h>
+#include "test_env.h"
 #include <string.h>
 
 #if defined(__APPLE__) && !TARGET_OS_IOS
@@ -15,6 +16,142 @@ extern void init_ui_white_texture(void);
 extern void shutdown_white_texture(void);
 
 static uint32_t viewport_texture;
+
+static result_t pane_surface_proc(window_t *win, uint32_t msg, uint32_t wp, void *lp) {
+  if (msg == evPaint && win->role != WINDOW_ROLE_PAGE) fill_rect(get_sys_color(brTextSuccess), get_client_rect(win));
+  return false;
+}
+
+static uint32_t pane_pixel(window_t *root, int x, int y) {
+  uint8_t pixel[4];
+  window_surface_t *surf = window_surface(root);
+  R_BindWindowTarget(surf->fbo);
+  glReadPixels(ui_surface_px(x), surf->h - ui_surface_px(y) - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+  return (uint32_t)pixel[0] | (uint32_t)pixel[1] << 8 | (uint32_t)pixel[2] << 16 | (uint32_t)pixel[3] << 24;
+}
+
+static void test_page_pane_surfaces(void) {
+  TEST("Page panes clip nested content to tab corners and highlight both splitter pixels");
+  CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
+    (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
+  CGLPixelFormatObj format = NULL;
+  CGLContextObj context = NULL;
+  GLint count = 0;
+  if (CGLChoosePixelFormat(attrs, &format, &count) != kCGLNoError || !format) { SKIP("Offscreen OpenGL unavailable"); }
+  CGLError error = CGLCreateContext(format, NULL, &context);
+  CGLDestroyPixelFormat(format);
+  if (error != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
+  CGLSetCurrentContext(context);
+  test_env_init();
+  bool ok = ui_init_prog();
+  if (ok) {
+    init_ui_white_texture();
+    set_theme(THEME_MODERN);
+    static const form_ctrl_def_t panes[] = {
+      {.class_name = "TabView", .id = 1, .flags = WINDOW_FLEXSPACE},
+      {.class_name = "TabView", .id = 2, .flags = WINDOW_FLEXSPACE},
+    };
+    static const form_ctrl_def_t children[] = {
+      {.class_name = "SplitView", .id = 3, .flags = WINDOW_FLEXSPACE,
+       .children = panes, .child_count = 2, .lparam = (void *)SPLIT_VERT},
+    };
+    const form_def_t def = {.name = "", .width = 400, .height = 240,
+      .flags = WINDOW_NOTITLE | WINDOW_AUTO_LAYOUT, .role = WINDOW_ROLE_PAGE,
+      .children = children, .child_count = 1, .pane_toolbar_replace = true};
+    window_t *root = create_window_from_form(&def, 30, 40, NULL, pane_surface_proc, 0, NULL);
+    window_t *left = page_pane_at(root, 0);
+    window_t *bottom = page_split_pane(root, left, PANE_BOTTOM);
+    for (int i = 0; i < page_pane_count(root); i++) {
+      window_t *pane = page_pane_at(root, i);
+      create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 1, 1), pane, pane_surface_proc, 0, NULL);
+      send_message(pane, evResize, 0, NULL);
+      ok &= page_is_pane(pane) && (send_message(pane, tcGetStyle, 0, NULL) & TAB_STYLE_PANE);
+    }
+    g_ui_runtime.running = true;
+    send_message(root, evPaint, 0, NULL);
+    uint32_t background = get_sys_color(brPanelDarker);
+    for (int i = 0; i < page_pane_count(root); i++) {
+      window_t *pane = page_pane_at(root, i);
+      ipoint16_t p = window_map_point(pane, root, (ipoint16_t){0, 0});
+      int w = pane->frame.w, h = pane->frame.h;
+      ok &= pane_pixel(root, p.x - 1, p.y + h / 2) == background;
+      ok &= pane_pixel(root, p.x + w, p.y + h / 2) == background;
+      ok &= pane_pixel(root, p.x + w / 2, p.y - 1) == background;
+      ok &= pane_pixel(root, p.x + w / 2, p.y + h) == background;
+      ok &= pane_pixel(root, p.x, p.y) == background;
+      ok &= pane_pixel(root, p.x + w - 1, p.y) == background;
+      ok &= pane_pixel(root, p.x, p.y + h - 1) == background;
+      ok &= pane_pixel(root, p.x + w - 1, p.y + h - 1) == background;
+      ok &= pane_pixel(root, p.x + w / 2, p.y + h - 4) == get_sys_color(brTextSuccess);
+      ok &= pane_pixel(root, p.x + 20, p.y) != background;
+      ok &= pane_pixel(root, p.x + 20, p.y + 2) == get_sys_color(brControlBg);
+    }
+    create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 1, 1), left, pane_surface_proc, 0, NULL);
+    create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 1, 1), left, pane_surface_proc, 0, NULL);
+    send_message(left, evResize, 0, NULL);
+    send_message(root, evPaint, 0, NULL);
+    irect16_t tabs[3];
+    for (int i = 0; i < 3; i++) send_message(left, tcGetTabRect, i, &tabs[i]);
+    ok &= tabs[1].x == tabs[0].x + tabs[0].w && tabs[2].x == tabs[1].x + tabs[1].w;
+    ipoint16_t origin = window_map_point(left, root, (ipoint16_t){0, 0});
+    uint32_t bar = get_sys_color(brTabBarBg);
+    for (int x = tabs[2].x - 2; x < tabs[2].x + 2; x++)
+      ok &= pane_pixel(root, origin.x + x, origin.y + 12) == bar;
+    ok &= pane_pixel(root, origin.x + tabs[1].x, origin.y + 12) == bar;
+    ok &= pane_pixel(root, origin.x + tabs[1].x + 1, origin.y + 12) == bar;
+    ok &= pane_pixel(root, origin.x + tabs[1].x + 4, origin.y + 12) != bar;
+    ipoint16_t click = window_map_point(left, NULL, (ipoint16_t){tabs[1].x, 12});
+    ui_event_t event = {.message = kEventLeftButtonDown, .x = click.x * UI_WINDOW_SCALE, .y = click.y * UI_WINDOW_SCALE};
+    dispatch_message(&event);
+    event.message = kEventLeftButtonUp; dispatch_message(&event);
+    ok &= send_message(left, tcGetSelection, 0, NULL) == 1;
+    send_message(left, tcSetSelection, 0, NULL);
+    send_message(root, evPaint, 0, NULL);
+    window_t *right = page_pane_at(root, 2);
+    const toolbar_item_t action = {.type = TOOLBAR_ITEM_CUSTOM, .ident = 999};
+    send_message(right, tcSetToolbar, 1, (void *)&action);
+    window_t *actions = (window_t *)send_message(right, tcGetToolbar, 0, NULL);
+    ipoint16_t action_point = window_map_point(right, root, (ipoint16_t){actions->frame.x + 4, actions->frame.y + 12});
+    send_message(root, evPaint, 0, NULL);
+    ok &= pane_pixel(root, action_point.x, action_point.y) == bar;
+    send_message(actions, tbModifyStyle, TOOLBAR_STYLE_TRANSPARENT, NULL);
+    send_message(root, evPaint, 0, NULL);
+    ok &= pane_pixel(root, action_point.x, action_point.y) == get_sys_color(brPanelDarker);
+    send_message(actions, tbModifyStyle, TOOLBAR_STYLE_TRANSPARENT, (void *)(uintptr_t)TOOLBAR_STYLE_TRANSPARENT);
+    send_message(root, evPaint, 0, NULL);
+    ok &= pane_pixel(root, action_point.x, action_point.y) == bar;
+    window_t *splitters[] = {NULL, NULL};
+    window_t *splits[] = {get_window_item(root, 3), bottom->parent};
+    for (int i = 0; i < 2; i++) {
+      for (window_t *c = splits[i]->children; c; c = c->next)
+        if (c->proc == win_splitter) splitters[i] = c;
+      window_t *splitter = splitters[i];
+      ipoint16_t p = window_map_point(splitter, root, (ipoint16_t){splitter->frame.w / 2, splitter->frame.h / 2});
+      ipoint16_t step = i ? (ipoint16_t){0, 1} : (ipoint16_t){1, 0};
+      ok &= pane_pixel(root, p.x - step.x, p.y - step.y) == background;
+      ok &= pane_pixel(root, p.x, p.y) == background;
+      send_message(splitter, evMouseMove, 0, NULL);
+      send_message(root, evPaint, 0, NULL);
+      uint32_t hot = pane_pixel(root, p.x, p.y);
+      ok &= hot != background && hot == pane_pixel(root, p.x - step.x, p.y - step.y);
+      ok &= pane_pixel(root, p.x + step.x, p.y + step.y) == background;
+      ok &= pane_pixel(root, p.x - 2 * step.x, p.y - 2 * step.y) == background;
+      send_message(splitter, evMouseLeave, 0, NULL);
+      send_message(root, evPaint, 0, NULL);
+      ok &= pane_pixel(root, p.x, p.y) == background;
+    }
+    ok &= get_draw_surface(root) == root && glGetError() == GL_NO_ERROR;
+    g_ui_runtime.running = false;
+    destroy_window(root);
+    shutdown_white_texture();
+    ui_shutdown_prog();
+  }
+  test_env_shutdown();
+  CGLSetCurrentContext(NULL);
+  CGLDestroyContext(context);
+  ASSERT_TRUE(ok);
+  PASS();
+}
 static void test_shader_state_restore(void) {
   TEST("Typed sprite state survives raw effects and lazy indexed shader creation");
   CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
@@ -302,7 +439,7 @@ static void test_fixed_viewport(void) {
     uint8_t white[] = {255, 255, 255, 255};
     viewport_texture = R_CreateTextureRGBA(1, 1, white, R_FILTER_NEAREST, R_WRAP_CLAMP);
     window_t root = {0}, child = {0};
-    root.frame = R(0, 0, 217, 188);
+    root.frame = R(0, 0, 200 + SCROLLBAR_WIDTH, 150 + TITLEBAR_HEIGHT + STATUSBAR_HEIGHT);
     root.flags = WINDOW_HSCROLL | WINDOW_VSCROLL | WINDOW_STATUSBAR;
     root.hscroll.pos = 200;
     root.vscroll.pos = 150;
@@ -312,7 +449,7 @@ static void test_fixed_viewport(void) {
     child.parent = &root;
     child.proc = viewport_proc;
     window_surface_t *surf = window_surface_ensure(&root);
-    R_EnsureWindowTarget(&surf->fbo, &surf->tex, &surf->w, &surf->h, 217, 188);
+    R_EnsureWindowTarget(&surf->fbo, &surf->tex, &surf->w, &surf->h, root.frame.w, root.frame.h);
     glBindFramebuffer(GL_FRAMEBUFFER, surf->fbo);
     glDisable(GL_SCISSOR_TEST);
     glClearColor(0, 0, 0, 1);
@@ -320,7 +457,7 @@ static void test_fixed_viewport(void) {
     g_ui_runtime.running = true;
     send_message(&child, evPaint, 0, NULL);
     uint8_t pixel[4];
-    glReadPixels(199, 188 - TITLEBAR_HEIGHT - 149 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+    glReadPixels(199, root.frame.h - TITLEBAR_HEIGHT - 149 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
     ok = pixel[0] == 255 && pixel[1] == 255 && pixel[2] == 255;
     g_ui_runtime.running = false;
     glDeleteTextures(1, &surf->tex);
@@ -484,6 +621,7 @@ int main(void) {
   TEST_START("Renderer alpha");
 #if defined(__APPLE__) && !TARGET_OS_IOS
   test_shader_state_restore();
+  test_page_pane_surfaces();
   test_plastic_surface();
   test_selection_gradient();
   test_view_rotation();

@@ -234,7 +234,7 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
     case THEME_PART_TAB: {
       bool selected = (state & CTRL_SELECTED) != 0;
       uint32_t face = get_sys_color(selected ? brControlBg : brPanelDark);
-      uint32_t bar = get_sys_color(brPanelDarker);
+      uint32_t bar = get_sys_color(brTabBarBg);
       fill_rect(face, r);
       // Win95 2px chamfer against the tab strip.
       fill_rect(bar, R(r.x, r.y, 2, 1));
@@ -249,7 +249,8 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
       else fill_rect(get_sys_color(brDarkEdge), R(r.x, r.y + r.h - 1, r.w, 1));
       break;
     }
-    case THEME_PART_TAB_BAR:             fill_rect(get_sys_color(brPanelDarker), r); break;
+    case THEME_PART_TAB_BAR:             fill_rect(get_sys_color(brTabBarBg), r); break;
+    case THEME_PART_PAGE:                fill_rect(get_sys_color(brPanelDarker), r); break;
     case THEME_PART_TAB_PANE:
       fill_rect(get_sys_color(brControlBg), r);
       classic_draw_bevel(r);
@@ -346,9 +347,10 @@ static theme_t g_classic_theme = {
   },
   .tab = {
     .header = { .height = TITLEBAR_HEIGHT, .start = 0 },
-    .min_width = 80, .padding = 16, .pane_frame = 2,
+    .min_width = 80, .padding = 16, .pane_frame = 2, .pane_margin = 2,
   },
   .menu = { .capsule = 0 },
+  .splitter = { .spacing = 2 },
   .badge = { .padding = 7, .corner_radius = 5, .tint_alpha = 0x40 },
   .tooltip = {
     .corner_radius = 4, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,

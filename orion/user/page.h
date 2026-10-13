@@ -22,6 +22,7 @@ bool page_close_tab(window_t *page, window_t *view);
 bool page_pane_action(window_t *page, window_t *pane, uint32_t action);
 bool page_show_closed_views(window_t *page);
 bool page_get_drop_preview(window_t *page, pane_drop_t *preview);
+bool page_is_pane(window_t *win);
 
 // Window-system integration; application page procedures need no forwarding.
 bool page_handle_message(window_t *page, uint32_t msg, uint32_t wparam, void *lparam, result_t *result);

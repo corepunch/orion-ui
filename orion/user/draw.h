@@ -113,6 +113,9 @@ void set_viewport(irect16_t frame);
 void set_projection(int x, int y, int w, int h);
 void set_clip_rect(window_t const *, irect16_t r);
 void set_viewport_for_fbo(window_t *root);
+// Paint redirection for a child subtree; NULL selects the root surface.
+window_t *set_draw_surface(window_t *win);
+window_t *get_draw_surface(window_t *root);
 float ui_surface_scale(void);          // HiDPI scale (>= 1.0), shared by paint and composite
 int   ui_surface_px(int logical);      // logical length -> physical surface pixels
 void set_scissor_fbo(window_t const *root, irect16_t r);

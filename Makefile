@@ -112,9 +112,11 @@ CORE_LDLIBS      = -L$(LIB_DIR) -lkernel -lcommctl -lcommdlg -luser
 
 # Tools
 ORIONC_BIN   = $(BIN_DIR)/orionc$(EXE_EXT)
-TOOLS_SRCS   = $(filter-out tools/orionc.c,$(wildcard tools/*.c))
-TOOLS_BINS   = $(patsubst tools/%.c,$(BIN_DIR)/%$(EXE_EXT),$(TOOLS_SRCS)) $(ORIONC_BIN)
+TOOLS_SRCS   = $(filter-out tools/orionc.c tools/penciltest_video.c,$(wildcard tools/*.c))
+TOOLS_BINS   = $(patsubst tools/%.c,$(BIN_DIR)/%$(EXE_EXT),$(TOOLS_SRCS)) $(ORIONC_BIN) $(if $(IS_WIN),,$(BIN_DIR)/penciltest-video)
 TOOLS_CFLAGS = $(CFLAGS) -Wno-unused-function
+PENCILTEST_VIDEO_CFLAGS = $(shell $(PKG_CONFIG) --cflags libpng 2>/dev/null)
+PENCILTEST_VIDEO_LIBS   = $(shell $(PKG_CONFIG) --libs libpng 2>/dev/null)
 
 # Examples are directory names under $(APPS)/, independent of their contents.
 EXAMPLES     = $(patsubst $(APPS)/%/,%,$(filter %/,$(wildcard $(APPS)/*/)))
@@ -162,6 +164,9 @@ GENERATED_HEADERS = $(patsubst $(APPS)/%.orion,$(GENERATED_DIR)/$(APPS)/%.h,$(wi
 
 TEST_SRCS = $(sort $(filter-out $(TEST_DIR)/test_env.c,$(wildcard $(TEST_DIR)/*.c)) \
     $(wildcard $(APPS)/*/tests/*.c))
+ifeq ($(IS_WIN),1)
+TEST_SRCS := $(filter-out $(APPS)/imageeditor/tests/penciltest_video_test.c,$(TEST_SRCS))
+endif
 TEST_BINS = $(patsubst %,$(BIN_DIR)/test_%$(EXE_EXT),$(basename $(notdir $(TEST_SRCS))))
 
 # Tests unity-include app implementations; edits must rebuild their executables.
@@ -200,6 +205,18 @@ $(ORIONC_BIN): TOOL_LINK = $(LDFLAGS) $(LIBS)
 $(ORIONC_BIN): $(BIN_DIR)/%$(EXE_EXT): tools/%.c | $(BIN_DIR)
 	@echo "TOOL    $@"
 	@$(CC) $(TOOLS_CFLAGS) -I. -Itools -o $@ $< $(TOOL_LINK)
+
+# POSIX command-line converter; no Orion window system or graphics dependency.
+$(BIN_DIR)/penciltest-video: tools/penciltest_video.c apps/imageeditor/io/flc_codec.h | $(BIN_DIR)
+	@echo "TOOL    $@"
+	@$(CC) -std=c99 -Wall -Wextra -O2 $(PENCILTEST_VIDEO_CFLAGS) -o $@ $< $(PENCILTEST_VIDEO_LIBS) -lm
+
+.PHONY: penciltest-video
+penciltest-video: $(BIN_DIR)/penciltest-video
+
+$(BIN_DIR)/test_penciltest_video_test$(EXE_EXT): tools/penciltest_video.c
+$(BIN_DIR)/test_penciltest_video_test$(EXE_EXT): CFLAGS += $(PENCILTEST_VIDEO_CFLAGS)
+$(BIN_DIR)/test_penciltest_video_test$(EXE_EXT): LDFLAGS_TEST += $(PENCILTEST_VIDEO_LIBS)
 
 $(GENERATED_DIR)/$(APPS)/%.h: $(APPS)/%.orion $(ORIONC_BIN) | $(GENERATED_DIR)
 	@mkdir -p $(dir $@)

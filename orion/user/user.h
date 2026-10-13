@@ -531,7 +531,7 @@ struct window_s {
   int                       context_menu_count;
 };
 
-// Compositor-private per-root-window redirection surface (physical pixels).
+// Compositor-private window redirection surface (physical pixels).
 typedef struct { uint32_t fbo, tex; int w, h; } window_surface_t;
 window_surface_t *window_surface(const window_t *win);        // NULL when the window has none
 bool              window_has_surface(const window_t *win);
@@ -725,6 +725,7 @@ window_t *get_desktop_window(void);
 void enable_desktop_window(bool enabled);
 void sync_desktop_window(void);
 window_t *find_window(int x, int y);
+window_t *window_child_hit_test(window_t *win, ipoint16_t point); // container override, parent viewport coordinates
 window_t *find_default_button(window_t *win);
 bool window_has_focus(const window_t *win);
 

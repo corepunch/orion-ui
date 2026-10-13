@@ -6,6 +6,11 @@ canonical way to build application-level and per-window toolbars.
 
 ## Overview
 
+`TOOLBAR_STYLE_TRANSPARENT` skips the toolbar band's background fill, allowing
+the parent surface to show through. Buttons retain their ordinary hover and
+pressed feedback. TabView uses this style for its header action toolbar so
+Close and Split share the tab-strip background.
+
 ### Activity bars
 
 An activity bar is a navigation toolbar, vertical by default. It uses the same button size

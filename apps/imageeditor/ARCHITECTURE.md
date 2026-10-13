@@ -134,7 +134,7 @@ Selecting a missing swatch adds it as an undoable command, using only an empty
 slot unreferenced by any working layer, stored composite, or cel.
 
 File > Save / Save As writes `.ptf` (Pencil Test project). It retains an FLC
-playback stream with flattened COLOR256/COPY frames and a ring frame, followed
+playback stream with a COLOR256 palette, compressed flattened frames and a ring frame, followed
 by versioned editing chunks. Older FLC/FLI and PCX/BMP files open on Color with
 empty Background/Pencil/FX planes. Saving an imported file asks for a PTF name.
 GIF, APNG and sprite-sheet exports flatten the complete composition. The RGBA
@@ -152,26 +152,37 @@ name at 4 (32 bytes), FPS at 36, delay at 40, loop/show-paper at 44/45, paper RG
 at 48, and 256 packed RGBA palette entries at 60. Other bytes are reserved.
 
 The new `0x7075` top-level trailer follows it. Its 16-byte header holds total
-chunk length at 0, type at 4, `PTL4` at 8, layer count 4 at 12, active layer at
+chunk length at 0, type at 4, `PTL5` at 8, layer count 4 at 12, active layer at
 13, a four-bit visibility mask at 14, and reserved zero at 15. Its payload is
 one shared Background plane, then Color/Pencil/FX planes for every frame in
-timeline order. Every plane is exactly width × height bytes. PTF requires this
-extension; its size, signature, layer count, and selectors are validated before
-opening. Plain legacy FLC can omit it. Older FLC readers can use the flattened
-playback stream but cannot preserve the editing layers if they rewrite it.
-`PTL2` and `PTL3` remain readable: their palette indices are rotated from
-transparent 0 to transparent 255. `PTL2` pencil ink becomes alpha 64; `PTL3`
-already stores pencil alpha. Pencil alpha is never palette-remapped.
+timeline order. Each plane is a complete FLIC pixel subchunk with a 32-bit length,
+16-bit type, payload, and optional zero byte for word alignment. Decoded planes
+are exactly width × height bytes. The shared `io/flc_codec.h` encoder selects
+the smallest of BLACK (13), scanline byte-run RLE (15), FLI byte-delta RLE (12),
+and COPY (16). COPY bounds worst-case size for noisy pixels. Delta records use
+the preceding frame's same-layer plane; Background and the first cel of each
+layer must be independently decodable. Unchanged cels are zero-line LC records
+(or smaller BLACK/COPY records). Pencil coverage is never palette-remapped.
 
-Files are currently uncompressed. Total composite/cel/background pixel storage
-is limited to 512 MiB; frame delays are 1–65535 ms. Save reads live working layers
+The flattened playback stream uses the same codecs and writes its palette once.
+Its ring frame restores the first image from the last. File length, second-frame
+offset, and layer-trailer length are patched after encoding. PTF requires the
+editing extension; old `PTL2`/`PTL3`/`PTL4` projects are rejected. Plain external
+FLC/FLI imports still work. Other FLC readers can use the flattened playback
+stream but cannot preserve the editing layers if they rewrite it.
+
+All pixel compression is lossless. Total decoded composite/cel/background pixel
+storage is limited to 512 MiB; frame delays are 1–65535 ms. Save reads live working layers
 without mutating history, writes and flushes a sibling temporary file, then
 atomically replaces the destination. A failed write preserves the original.
 Load validates and decodes the file before opening a document; malformed chunks,
-unknown layer versions, truncation and allocation failures discard partial data.
+unknown layer versions, truncated packets, out-of-row runs, missing delta bases,
+trailing layer data and allocation failures discard partial data. Layer records
+decode directly into final cel buffers without allocating a second full movie.
 
 Regression coverage: `test_penciltest_layers_test`, `test_penciltest_flc_test`,
-`test_penciltest_layout_test`, and the shared history suites. Layer tests cover
+`test_penciltest_rle_test`, `test_penciltest_video_test`, `test_penciltest_layout_test`,
+and the shared history suites. Layer tests cover
 sidebar routing, palette visibility, underpaint fill, frame operations, playback,
 resize/undo, PTF round trips, corrupted extensions, and flattened exports.
 

@@ -112,6 +112,18 @@ Orion deliberately mirrors the WinAPI mental model. Think WinAPI first, then map
 
 # Framework patterns
 
+## Clean architecture — no hacks
+
+Keep Orion's architecture close to WinAPI/MFC: windows own their state and
+lifetime, containers own layout, the window system owns input routing and
+coordinate conversion, and themes own visual metrics and colors.
+
+Absolutely no hacks or app-specific workarounds for framework gaps. Extend the
+responsible framework component through a focused, reusable API instead. Do not
+use fake spacing, compensating coordinates, unrelated flags, or duplicate state
+to make a visual or interaction appear correct. Layout, painting, hit-testing,
+and drag previews must derive from the same geometry and ownership contracts.
+
 ## Message handling
 
 Every window proc must handle at minimum `evCreate`, `evPaint`, and `evDestroy`.

@@ -163,6 +163,7 @@ typedef enum {
   THEME_PART_SCROLLBAR_ARROW_LEFT,
   THEME_PART_SCROLLBAR_ARROW_RIGHT,
   THEME_PART_SCROLLBAR_CORNER,
+  THEME_PART_PAGE,           // workspace behind a Page's pane tree
   THEME_PART_COUNT,
 } theme_part_t;
 
@@ -246,7 +247,10 @@ typedef struct {
     struct { int height, start; } header; // horizontal TabView height and leading inset
     int min_width, padding;
     int pane_frame;          // page inset from the tab bar frame (bevel width; 0 = flat)
+    int corner_radius;       // shared by tab faces and Page pane composition
+    int pane_margin;         // outside each Page pane, in logical pixels
   } tab;
+  struct { int spacing; } splitter; // layout space reserved between pane allocations
   struct { int capsule; } menu; // 1 = padded selection capsule; 0 = full item cell
   struct {
     int padding, corner_radius;

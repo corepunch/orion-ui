@@ -25,14 +25,16 @@
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
 #include <orion/user/rect.h>
+#include <orion/user/theme.h>
 #include "commctl.h"
+#include "layout_shared.h"
 
 #define SPLITVIEW_MIN_PANE 32
 
 typedef struct {
   int      orientation;   // SPLIT_VERT or SPLIT_HORZ
   double   split_ratio;   // 0.0 .. 1.0 — fraction of space given to left/top pane
-  int      divider_w;     // splitter bar thickness in pixels (default 6)
+  int      pane_margin;   // common leaf margin, shared across a split tree
   bool     dragging;      // true while the user is dragging the divider
   int      drag_start;    // mouse axis position when drag began
   double   drag_ratio;    // split_ratio when drag began
@@ -69,23 +71,25 @@ static void splitview_get_panes(window_t *win, window_t **left, window_t **right
 static void splitview_arrange(splitview_state_t *st, window_t *win) {
   irect16_t cr = get_client_rect(win);
   int total = (st->orientation == SPLIT_VERT) ? cr.w : cr.h;
-  int available = MAX(0, total - st->divider_w);
+  int spacing = MIN(total, get_theme()->splitter.spacing);
+  int available = MAX(0, total - spacing);
   int split_px = (int)(available * st->split_ratio + 0.5);
   if (available >= SPLITVIEW_MIN_PANE * 2)
     split_px = MAX(SPLITVIEW_MIN_PANE, MIN(split_px, available - SPLITVIEW_MIN_PANE));
   else split_px = MAX(0, MIN(split_px, available));
+  int margin = MIN(st->pane_margin, MIN(split_px, available - split_px));
 
   irect16_t r_left, r_split, r_right;
   if (st->orientation == SPLIT_VERT) {
     r_left  = rect_split_left(cr, split_px);
     irect16_t rem = rect_trim_left(cr, split_px);
-    r_split = rect_split_left(rem, st->divider_w);
-    r_right = rect_trim_left(rem, st->divider_w);
+    r_split = rect_inset_xy(rect_split_left(rem, spacing), -margin, 0);
+    r_right = rect_trim_left(rem, spacing);
   } else {
     r_left  = rect_split_top(cr, split_px);
     irect16_t rem = rect_trim_top(cr, split_px);
-    r_split = rect_split_top(rem, st->divider_w);
-    r_right = rect_trim_top(rem, st->divider_w);
+    r_split = rect_inset_xy(rect_split_top(rem, spacing), 0, -margin);
+    r_right = rect_trim_top(rem, spacing);
   }
 
   window_t *left = NULL, *right = NULL, *splitter = NULL;
@@ -94,23 +98,14 @@ static void splitview_arrange(splitview_state_t *st, window_t *win) {
   bool right_visible = right && window_has_state(right, WINDOW_STATE_VISIBLE);
   if (left_visible != right_visible) {
     window_t *only = left_visible ? left : right;
-    only->frame = cr;
     if (splitter) window_set_state(splitter, WINDOW_STATE_VISIBLE, false);
-    layout_arrange_t la = {only->frame}; send_message(only, evArrange, 0, &la);
+    layout_arrange_child(only, cr);
     return;
   }
-  if (splitter) window_set_state(splitter, WINDOW_STATE_VISIBLE, true);
-  if (left)     left->frame = r_left;
+  if (splitter) window_set_state(splitter, WINDOW_STATE_VISIBLE, r_split.w > 0 && r_split.h > 0);
+  layout_arrange_child(left, r_left);
+  layout_arrange_child(right, r_right);
   if (splitter) splitter->frame = r_split;
-  if (right)    right->frame = r_right;
-
-  window_t *children[] = { left, splitter, right };
-  for (int i = 0; i < 3; i++) {
-    if (children[i] && children[i]->proc) {
-      layout_arrange_t la = {children[i]->frame};
-      send_message(children[i], evArrange, 0, &la);
-    }
-  }
 }
 
 result_t win_splitview(window_t *win, uint32_t msg,
@@ -127,7 +122,6 @@ result_t win_splitview(window_t *win, uint32_t msg,
         fflush(stderr);
         st->split_ratio = 0.5;
       }
-      st->divider_w = 6;
       st->dragging = false;
 
       // Create the splitter child.
@@ -150,7 +144,27 @@ result_t win_splitview(window_t *win, uint32_t msg,
       if (wparam <= 1) return (result_t)(wparam ? splitview_get_right(win) : splitview_get_left(win));
       fprintf(stderr, "[splitview] get_pane rejected win=%u index=%u\n", win->id, wparam);
       fflush(stderr); return 0;
-    case evResize: {
+    case svSetPaneMargin: {
+      splitview_state_t *st = win->userdata;
+      if (!st || wparam > INT16_MAX) {
+        fprintf(stderr, "[splitview] pane margin rejected win=%u margin=%u state=%p\n", win->id, wparam, (void *)st);
+        fflush(stderr); return false;
+      }
+      if (st->pane_margin != (int)wparam) {
+        st->pane_margin = (int)wparam;
+        splitview_arrange(st, win);
+        invalidate_window(win);
+      }
+      return true;
+    }
+    case evChildHitTest: {
+      window_t *splitter = NULL;
+      splitview_get_panes(win, NULL, NULL, &splitter);
+      ipoint16_t point = {(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
+      return splitter && window_has_state(splitter, WINDOW_STATE_VISIBLE) && rect_contains_point(splitter->frame, point)
+        ? (result_t)splitter : 0;
+    }
+    case evThemeChanged: case evResize: {
       splitview_state_t *st = (splitview_state_t *)win->userdata;
       if (st) splitview_arrange(st, win);
       return true;
@@ -192,7 +206,7 @@ result_t win_splitview(window_t *win, uint32_t msg,
                   : (int16_t)HIWORD(wparam);
       int delta = pos - st->drag_start;
       irect16_t cr = get_client_rect(win);
-      int total = st->orientation == SPLIT_VERT ? cr.w : cr.h;
+      int total = MAX(0, (st->orientation == SPLIT_VERT ? cr.w : cr.h) - get_theme()->splitter.spacing);
       if (total > 0)
         st->split_ratio = st->drag_ratio + (double)delta / total;
       if (st->split_ratio < 0.0) st->split_ratio = 0.0;
