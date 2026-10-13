@@ -18,15 +18,22 @@
 #include <sys/wait.h>
 #include <png.h>
 #include "../apps/imageeditor/io/flc_codec.h"
+#include "../apps/imageeditor/palette.h"
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
 #define PV_LIMIT (512u * 1024u * 1024u)
 #define PV_BINS 32768
 #define PV_META_SIZE 1084
 
 typedef enum { PV_PENCIL, PV_BLACK, PV_PALETTE } pv_mode_t;
+typedef enum { PV_DEFAULT_PALETTE, PV_GENERATED_PALETTE, PV_EXISTING_PALETTE } pv_palette_source_t;
 typedef struct {
   const char *input, *output, *frames, *ffmpeg;
   pv_mode_t mode;
+  pv_palette_source_t palette_source;
+  const char *palette_path;
   int colors, threshold, width, height, max_frames;
   double fps;
 } pv_options_t;
@@ -35,10 +42,10 @@ typedef struct { uint64_t count, sum[3]; } pv_bin_t;
 typedef struct { int start, end, axis, range; uint64_t count; } pv_box_t;
 typedef struct {
   FILE *pixels;
-  int width, height, count, fps, colors;
+  int width, height, count, fps, colors, black_index;
   pv_time_t *times;
   pv_bin_t *histogram;
-  uint8_t palette[256][4], lookup[PV_BINS];
+  uint8_t palette[256][4], playback_palette[256][4], lookup[PV_BINS];
 } pv_video_t;
 
 static bool pv_error(const char *message) {
@@ -69,8 +76,9 @@ static void pv_usage(FILE *fp) {
         "  -o, --output FILE.ptf   Native project (optional when --frames is used)\n"
         "  --mode pencil          Lossless 8-bit luminance -> Pencil coverage (default)\n"
         "  --mode black           Thresholded opaque black -> Color; other pixels clear\n"
-        "  --mode palette         Global adaptive palette -> Color\n"
-        "  --colors N             32, 64, 128 or 256 (default 256; 255 opaque at 256)\n"
+        "  --mode palette         Quantize RGB video -> Color\n"
+        "  --palette SOURCE       default (32 colors), generated, or an existing RIFF .pal\n"
+        "  --colors N             Generated budget: 32 (default), 64, 128 or 256\n"
         "  --threshold N          Black when luminance < N, 0..255 (default 128)\n"
         "  --frames DIRECTORY     Export 8-bit grayscale / indexed PNGs and timing.tsv\n"
         "  --size WIDTHxHEIGHT    Explicit resize; otherwise preserve source dimensions\n"
@@ -82,9 +90,9 @@ static void pv_usage(FILE *fp) {
 }
 
 static bool pv_parse(int argc, char **argv, pv_options_t *o) {
-  *o = (pv_options_t){.colors = 256, .threshold = 128, .ffmpeg = getenv("FFMPEG")};
+  *o = (pv_options_t){.colors = 32, .threshold = 128, .ffmpeg = getenv("FFMPEG")};
   if (!o->ffmpeg || !*o->ffmpeg) o->ffmpeg = "ffmpeg";
-  bool colors_set = false, threshold_set = false, positional = false;
+  bool colors_set = false, palette_set = false, threshold_set = false, positional = false;
   for (int i = 1; i < argc; i++) {
     const char *arg = argv[i], *v;
     double n;
@@ -103,6 +111,11 @@ static bool pv_parse(int argc, char **argv, pv_options_t *o) {
       else if (!strcmp(v, "black"))   o->mode = PV_BLACK;
       else if (!strcmp(v, "palette")) o->mode = PV_PALETTE;
       else return pv_error("--mode must be pencil, black or palette");
+    } else if (!strcmp(arg, "--palette")) {
+      palette_set = true;
+      if (!strcmp(v, "default")) o->palette_source = PV_DEFAULT_PALETTE;
+      else if (!strcmp(v, "generated")) o->palette_source = PV_GENERATED_PALETTE;
+      else { o->palette_source = PV_EXISTING_PALETTE; o->palette_path = v; }
     } else if (!strcmp(arg, "--size")) {
       char *end;
       errno = 0;
@@ -132,7 +145,9 @@ static bool pv_parse(int argc, char **argv, pv_options_t *o) {
     } else return pv_error("unknown option (use --help)");
   }
   if (!o->input || (!o->output && !o->frames)) return pv_error("input and --output and/or --frames are required");
-  if (colors_set && o->mode != PV_PALETTE) return pv_error("--colors applies only to --mode palette");
+  if (colors_set && !palette_set) o->palette_source = PV_GENERATED_PALETTE;
+  if (colors_set && o->palette_source != PV_GENERATED_PALETTE)
+    return pv_error("--colors applies only to --palette generated");
   if (threshold_set && o->mode != PV_BLACK) return pv_error("--threshold applies only to --mode black");
   if (o->output && o->frames && !strcmp(o->output, o->frames)) return pv_error("project and frames must have different paths");
   return true;
@@ -234,8 +249,9 @@ static bool pv_timing(FILE *log, pv_video_t *v, const pv_options_t *o) {
 static bool pv_decode(const pv_options_t *o, pv_video_t *v) {
   FILE *log = tmpfile();
   v->pixels = tmpfile();
-  if (o->mode == PV_PALETTE) v->histogram = calloc(PV_BINS, sizeof(*v->histogram));
-  if (!log || !v->pixels || (o->mode == PV_PALETTE && !v->histogram)) {
+  bool histogram = o->mode == PV_PALETTE || o->palette_source == PV_GENERATED_PALETTE;
+  if (histogram) v->histogram = calloc(PV_BINS, sizeof(*v->histogram));
+  if (!log || !v->pixels || (histogram && !v->histogram)) {
     if (log) fclose(log);
     return pv_error("cannot allocate decode spool");
   }
@@ -276,8 +292,8 @@ static bool pv_decode(const pv_options_t *o, pv_video_t *v) {
     ungetc(c, stream);
     if (!(ok = pv_read_ppm(stream, v, &rgb))) break;
     uint64_t n = (uint64_t)v->width * v->height;
-    if (v->count == INT_MAX || (o->output && (v->count == 65535 || n * (1 + 4u * (v->count + 1)) > PV_LIMIT))) {
-      ok = pv_error("native project exceeds Penciltest's 512 MiB decoded limit; use --size, --fps, --max-frames, or export only --frames");
+    if (v->count == INT_MAX || (o->output && (v->count == 65535 || n * 3 > PV_LIMIT))) {
+      ok = pv_error("native project exceeds Penciltest's frame-count or working-layer limit; use --size, --fps, --max-frames, or export only --frames");
       break;
     }
     if (v->histogram) for (size_t p = 0; p < n; p++) {
@@ -336,19 +352,36 @@ static void pv_measure_box(pv_box_t *box, const int *bins, const pv_bin_t *histo
   }
 }
 
-static void pv_palette(pv_video_t *v, const pv_options_t *o) {
+static const char *pv_exe_dir(void) {
+  static char path[PATH_MAX];
+#ifdef __APPLE__
+  uint32_t size = sizeof(path);
+  if (_NSGetExecutablePath(path, &size)) return NULL;
+#else
+  ssize_t size = readlink("/proc/self/exe", path, sizeof(path) - 1);
+  if (size < 0 || (size_t)size >= sizeof(path) - 1) return NULL;
+  path[size] = 0;
+#endif
+  char *slash = strrchr(path, '/');
+  if (!slash) return NULL;
+  *slash = 0;
+  return path;
+}
+
+static bool pv_palette(pv_video_t *v, const pv_options_t *o) {
   memset(v->palette, 0, sizeof(v->palette));
-  if (o->mode == PV_PENCIL) {
-    for (int i = 0; i < 255; i++) {
-      v->palette[i][0] = v->palette[i][1] = v->palette[i][2] = i;
-      v->palette[i][3] = 255;
-    }
-    v->colors = 255;
-  } else if (o->mode == PV_BLACK) {
-    v->palette[0][3] = 255; v->colors = 1;
+  if (o->palette_source == PV_DEFAULT_PALETTE) {
+    const char *dir = pv_exe_dir();
+    if (!dir || !pencil_palette_load_default(dir, v->palette, &v->colors))
+      return pv_error("cannot load the shared default palette");
+  } else if (o->palette_source == PV_EXISTING_PALETTE) {
+    if (!riff_palette_load(o->palette_path, v->palette, &v->colors)) return false;
+    if (v->colors > 255) return pv_error("Penciltest reserves index 255 for transparency; existing palettes must have 1..255 colors");
   } else {
+    if (!v->histogram) return pv_error("missing video histogram for generated palette");
     int bins[PV_BINS], count = 0;
     for (int i = 0; i < PV_BINS; i++) if (v->histogram[i].count) bins[count++] = i;
+    if (!count) return pv_error("video histogram has no colors");
     pv_box_t boxes[255] = {{.end = count}};
     pv_measure_box(boxes, bins, v->histogram);
     int target = o->colors == 256 ? 255 : o->colors;
@@ -380,6 +413,18 @@ static void pv_palette(pv_video_t *v, const pv_options_t *o) {
       for (int ch = 0; ch < 3; ch++) v->palette[i][ch] = (sums[ch] + boxes[i].count / 2) / boxes[i].count;
       v->palette[i][3] = 255;
     }
+  }
+  if (o->mode == PV_BLACK) {
+    v->black_index = -1;
+    for (int i = 0; i < v->colors; i++)
+      if (!v->palette[i][0] && !v->palette[i][1] && !v->palette[i][2]) { v->black_index = i; break; }
+    if (v->black_index < 0 && o->palette_source == PV_GENERATED_PALETTE) {
+      v->black_index = v->colors < (o->colors < 255 ? o->colors : 255) ? v->colors++ : 0;
+      memset(v->palette[v->black_index], 0, 3); v->palette[v->black_index][3] = 255;
+    }
+    if (v->black_index < 0) return pv_error("--mode black requires an RGB black entry in the chosen palette");
+  }
+  if (v->histogram) {
     for (int bin = 0; bin < PV_BINS; bin++) if (v->histogram[bin].count) {
       int rgb[3];
       for (int ch = 0; ch < 3; ch++) rgb[ch] = (v->histogram[bin].sum[ch] + v->histogram[bin].count / 2) / v->histogram[bin].count;
@@ -392,6 +437,11 @@ static void pv_palette(pv_video_t *v, const pv_options_t *o) {
       v->lookup[bin] = best;
     }
   }
+  memcpy(v->playback_palette, v->palette, sizeof(v->palette));
+  if (o->mode == PV_PENCIL) for (int i = 0; i < 256; i++) {
+    memset(v->playback_palette[i], i, 3); v->playback_palette[i][3] = 255;
+  }
+  return true;
 }
 
 static void pv_convert(const pv_video_t *v, const pv_options_t *o, const uint8_t *rgb, uint8_t *image, uint8_t *pencil) {
@@ -400,7 +450,7 @@ static void pv_convert(const pv_video_t *v, const pv_options_t *o, const uint8_t
   for (size_t p = 0; p < n; p++) {
     uint8_t gray = pv_gray(rgb + p * 3);
     if      (o->mode == PV_PENCIL)  { image[p] = gray; pencil[p] = 255 - gray; }
-    else if (o->mode == PV_BLACK)   image[p] = gray < o->threshold ? 0 : 255;
+    else if (o->mode == PV_BLACK)   image[p] = gray < o->threshold ? v->black_index : 255;
     else                          image[p] = v->lookup[pv_bin_index(rgb + p * 3)];
   }
 }
@@ -445,7 +495,7 @@ static bool pv_flc_frame(FILE *fp, const pv_video_t *v, const uint8_t *image, in
   pv_put16(header + 6, first ? 2 : 1); pv_put16(header + 8, v->times[index].delay);
   pv_put32(palette, sizeof(palette)); pv_put16(palette + 4, 4); pv_put16(palette + 6, 1);
   for (int i = 0; i < 256; i++) for (int ch = 0; ch < 3; ch++)
-    palette[10 + i * 3 + ch] = v->palette[i][3] ? v->palette[i][ch] : 255;
+    palette[10 + i * 3 + ch] = v->playback_palette[i][3] ? v->playback_palette[i][ch] : 255;
   bool ok = pv_write(fp, header, sizeof(header)) && (!first || pv_write(fp, palette, sizeof(palette))) && pv_write(fp, chunk, size);
   if (ok) memcpy(previous, image, n);
   free(chunk);
@@ -471,7 +521,7 @@ static bool pv_metadata(FILE *fp, const pv_video_t *v) {
 static bool pv_output(const pv_options_t *o, pv_video_t *v) {
   size_t n = (size_t)v->width * v->height;
   uint8_t *rgb = malloc(n * 3), *image = malloc(n), *pencil = malloc(n), *blank = malloc(n);
-  uint8_t *previous = o->output ? malloc(4 * n) : NULL;
+  uint8_t *previous = o->output ? malloc(n) : NULL;
   uint8_t project_header[128] = {0};
   char *temp = NULL, *directory = NULL;
   FILE *project = NULL, *layers = NULL, *timing = NULL;
@@ -527,10 +577,10 @@ static bool pv_output(const pv_options_t *o, pv_video_t *v) {
       memset(blank, 255, n);
       const uint8_t *planes[] = {o->mode == PV_PENCIL ? blank : image, pencil, blank};
       for (int layer = 0; ok && layer < 3; layer++) {
-        uint8_t *old = previous + (size_t)(layer + 1) * n;
-        ok = flc_codec_write(layers, planes[layer], i ? old : NULL, v->width, v->height);
-        if (ok) memcpy(old, planes[layer], n);
+        ok = flc_codec_write(layers, planes[layer], NULL, v->width, v->height);
       }
+      long stored = ftell(layers);
+      if (stored < 0 || (uint64_t)stored + n > PV_LIMIT) ok = pv_error("encoded layer storage exceeds Penciltest's 512 MiB limit");
     }
     if (ok && directory) {
       char path[PATH_MAX];
@@ -604,8 +654,8 @@ int main(int argc, char **argv) {
   pv_video_t v = {0};
   bool ok = pv_decode(&o, &v);
   if (ok) {
-    pv_palette(&v, &o);
-    ok = pv_output(&o, &v);
+    ok = pv_palette(&v, &o);
+    if (ok) ok = pv_output(&o, &v);
   }
   if (ok) printf("Converted %d frames, %dx%d, %s%s%s\n", v.count, v.width, v.height,
                  o.output ? o.output : "", o.output && o.frames ? "; " : "", o.frames ? o.frames : "");

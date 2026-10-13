@@ -568,6 +568,7 @@ int canvas_nearest_palette_index(const canvas_doc_t *doc, uint32_t color) {
   for (int i = 0; i < doc->ipal.count && i < 256; i++) {
     if (i == doc->ipal.transparent) continue;  // skip transparent slot
     uint32_t e = doc->ipal.entries[i];
+    if (!COLOR_A(e)) continue;
     int dr = abs(r - (int)COLOR_R(e));
     int dg = abs(g - (int)COLOR_G(e));
     int db = abs(b - (int)COLOR_B(e));

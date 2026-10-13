@@ -130,7 +130,11 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
       return false;
     }
     case evSetFocus:
-      if (g_app && doc) { g_app->active_doc = doc; imageeditor_sync_tool_palette(); }
+      if (g_app && doc) {
+        g_app->active_doc = doc;
+        imageeditor_sync_tool_palette();
+        timeline_win_refresh();
+      }
       return false;
     case evClose: {
       // WM_CLOSE analogue: give the user a chance to save before closing.
@@ -203,6 +207,10 @@ canvas_doc_t *create_document(const char *filename, int w, int h) {
 
 canvas_doc_t *create_document_pixels(const char *filename, int w, int h) {
   if (!g_app) return NULL;
+#if IMAGEEDITOR_BW
+  const uint32_t *default_colors = pencil_default_colors();
+  if (!default_colors) return NULL;
+#endif
 
   if (w <= 0 || h <= 0 || w > 16384 || h > 16384) return NULL;
 
@@ -253,7 +261,7 @@ canvas_doc_t *create_document_pixels(const char *filename, int w, int h) {
   // Initialize the palette.
 #if IMAGEEDITOR_BW
   doc->ipal.transparent = 255;
-  memcpy(doc->ipal.entries, k_pencil_palette, sizeof(k_pencil_palette));
+  memcpy(doc->ipal.entries, default_colors, 256 * sizeof(uint32_t));
   doc->ipal.entries[255] = 0;
   doc->ipal.count = IE_PENCIL_COLORS;
   for (int i = 0; i < IE_LAYER_COUNT; i++)
@@ -374,6 +382,7 @@ canvas_doc_t *create_document_pixels(const char *filename, int w, int h) {
 
   // Rebuild the Window menu so the new document appears in the list.
   window_menu_rebuild();
+  timeline_win_refresh();
 
   return doc;
 }
@@ -419,4 +428,5 @@ void close_document(canvas_doc_t *doc) {
   // Rebuild the Window menu to remove the closed document.
   window_menu_rebuild();
   imageeditor_sync_main_toolbar();
+  timeline_win_refresh();
 }

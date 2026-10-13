@@ -4,6 +4,7 @@
 #include "test_env.h"
 #include "apps/imageeditor/imageeditor.h"
 #include "apps/imageeditor/io/flc_codec.h"
+#include "anim_test_helpers.h"
 
 app_state_t *g_app;
 int g_bw_retina_scale = 1;
@@ -118,8 +119,8 @@ static void rle_native(void) {
   fclose(fp);
   int w, h; uint32_t palette[256], bg; bool show;
   anim_timeline_t *tl = flc_load(path, &w, &h, palette, &bg, &show);
-  ASSERT_NOT_NULL(tl); ASSERT_EQUAL(tl->frames[0]->cels[1025 * 5], 123);
-  ASSERT_EQUAL(tl->frames[1]->cels[1025 * 5 + 2 * 1025 + 800], 201);
+  ASSERT_NOT_NULL(tl); ASSERT_EQUAL(test_anim_cel_pixel(tl->frames[0], 1, 0, 1025, 5), 123);
+  ASSERT_EQUAL(test_anim_cel_pixel(tl->frames[1], 1, 2 * 1025 + 800, 1025, 5), 201);
   anim_timeline_free(tl);
   fp = fopen(path, "r+b"); ASSERT_NOT_NULL(fp);
   ASSERT_EQUAL(fseek(fp, layers + 11, SEEK_SET), 0); fputc('4', fp); fclose(fp);

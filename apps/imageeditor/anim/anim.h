@@ -3,16 +3,8 @@
 
 // Animation support for the Image Editor.
 //
-// Storage model:
-//   • All editing is done in RGBA (doc->pixels — unchanged).
-//   • On frame commit (frame switch / play / save) the RGBA buffer is
-//     quantized into the target frame_format_t and stored in anim_frame_t.
-//   • On frame load the compressed bytes are expanded back to RGBA.
-//
-// Memory cost at 320x200:
-//   RGBA      → 256 000 bytes / frame
-//   INDEXED   →  65 024 bytes / frame  (1/4)
-//   BITMAP_1BIT →  8 000 bytes / frame  (1/32)
+// Penciltest stores independent RLE cels; only the active working layers stay
+// decoded. Other builds retain their RGBA/indexed/bitmap storage.
 
 #include <stdint.h>
 #include <stddef.h>
@@ -25,7 +17,8 @@
 typedef enum {
   FRAME_FORMAT_RGBA      = 0,  // 4 bytes/pixel – live editing buffer
   FRAME_FORMAT_INDEXED   = 1,  // 1 byte/pixel + 256-entry RGBA palette
-  FRAME_FORMAT_BITMAP_1BIT = 2 // 1 bit/pixel packed into bytes (ceil(w*h/8))
+  FRAME_FORMAT_BITMAP_1BIT = 2, // 1 bit/pixel packed into bytes (ceil(w*h/8))
+  FRAME_FORMAT_RLE_INDEXED = 3 // Independent FLIC BLACK/BRUN/COPY subchunk
 } frame_format_t;
 
 // ============================================================
@@ -35,8 +28,8 @@ typedef enum {
 typedef struct {
   uint8_t       *data;          // compressed pixel bytes
   size_t         data_size;     // byte count of data
-  uint8_t       *cels;          // Pencil Test: Color, Pencil, FX indexed planes
-  size_t         cels_size;     // three canvas-sized planes; NULL for legacy frames
+  uint8_t       *cels;          // Penciltest: three independent RLE chunks: Color, Pencil, FX
+  size_t         cels_size;     // encoded byte count; NULL for blank/imported single-plane frames
   frame_format_t format;
   uint32_t       palette[256];  // RGBA entries (for FRAME_FORMAT_INDEXED only)
   int            delay_ms;      // per-frame display duration in milliseconds
@@ -72,8 +65,9 @@ int quantize_rgba_indexed(const uint8_t *rgba, int w, int h,
 
 // Compress pixel data into a frame using the given format.
 // In RGBA builds: pixels is 4-byte/px RGBA; FRAME_FORMAT_INDEXED quantizes it.
-// In IMAGEEDITOR_INDEXED builds: pixels is 1-byte/px indices, stored directly.
-// frame->data is (re)allocated on success; old data is freed first.
+// In IMAGEEDITOR_INDEXED builds: pixels is 1-byte/px indices.
+// RLE_INDEXED encodes an independent plane; pack_cels stores all three Penciltest cels.
+// frame->data is replaced only after encoding succeeds.
 // Returns true on success, false on allocation failure.
 bool anim_frame_compress(anim_frame_t *frame, const uint8_t *pixels,
                          int w, int h, frame_format_t fmt);
@@ -85,6 +79,9 @@ bool anim_frame_compress(anim_frame_t *frame, const uint8_t *pixels,
 // Returns true on success.
 bool anim_frame_expand(const anim_frame_t *frame, uint8_t *pixels_out,
                        int w, int h);
+bool anim_frame_expand_indices(const anim_frame_t *frame, uint8_t *pixels, int w, int h);
+bool anim_frame_pack_cels(anim_frame_t *frame, const uint8_t *const planes[3], int w, int h);
+bool anim_frame_expand_cel(const anim_frame_t *frame, int cel, uint8_t *pixels, int w, int h);
 
 // ============================================================
 // Timeline CRUD
@@ -130,35 +127,15 @@ bool anim_timeline_switch_frame(anim_timeline_t *tl, int idx,
 // GL rendering helpers (anim_render.c)
 // ============================================================
 
-// Initialise GL programs for indexed and 1-bit rendering.
-// Call once after GL context is available.
-bool anim_render_init(void);
+bool anim_render_pencil_onion(const anim_frame_t *frame, int w, int h, uint32_t *tex);
 
-// Release GL resources created by anim_render_init.
-void anim_render_shutdown(void);
-
-// Create (or update) a GL_RGBA texture representing a compressed frame.
-// If *tex is 0 a new texture is allocated; otherwise the existing one is
-// updated.  palette is the caller's palette (doc->ipal.entries) for
-// INDEXED frames; pass NULL for non-indexed formats.
-// Returns true on success.
-bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
-                                 uint32_t *tex, const uint32_t *palette);
-
-// Same as anim_render_frame_thumbnail, then replace black with `tint` while
-// keeping coverage so the 25%/12.5%/6.25% overlay still steps.
-bool anim_render_frame_thumbnail_tinted(const anim_frame_t *frame, int w, int h,
+// Expand a frame to an onion texture tinted while preserving stroke coverage.
+bool anim_render_onion(const anim_frame_t *frame, int w, int h,
                                         uint32_t *tex, const uint32_t *palette,
                                         uint32_t tint);
 
 // Replace #000000 in a gray onion with `tint`. Paper (near-white) becomes
 // transparent; source alpha is kept. `npx` is the pixel count.
 void anim_onion_tint_rgba(uint8_t *rgba, size_t npx, uint32_t tint);
-
-// Create a square, center-cropped thumbnail with strengthened stroke coverage.
-// Texture rows match the bottom-up convention used by draw_rounded_rect.
-bool anim_render_frame_thumbnail_scaled(const anim_frame_t *frame,
-                                        int w, int h, int target_size,
-                                        uint32_t *tex, const uint32_t *palette);
 
 #endif // __ANIM_H__

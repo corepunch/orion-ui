@@ -191,24 +191,26 @@ bool canvas_resize_frames(canvas_doc_t *doc, int x, int y, int w, int h,
     anim_frame_t *frame = doc->anim->frames[i];
     if (pencil_has_layers(doc) && frame->cels) {
       size_t old_n = (size_t)doc->canvas_w * doc->canvas_h, new_n = (size_t)w * h;
-      if (frame->cels_size != 3 * old_n) return false;
       uint8_t *cels = malloc(3 * new_n);
       if (!cels) return false;
       for (int li = 0; li < 3; li++) {
         layer_t cel = {0};
         cel.pixels = malloc(old_n);
         if (!cel.pixels) { free(cels); return false; }
-        memcpy(cel.pixels, frame->cels + li * old_n, old_n);
-        bool ok = true;
-        if (resample) {
+        bool ok = anim_frame_expand_cel(frame, li, cel.pixels, doc->canvas_w, doc->canvas_h);
+        if (ok && resample) {
           uint8_t *pixels = layer_resample_pixels(&cel, doc->canvas_w, doc->canvas_h, w, h, filter);
           free(cel.pixels); cel.pixels = pixels; ok = pixels != NULL;
-        } else ok = layer_crop_expand(&cel, doc->canvas_w, doc->canvas_h, x, y, w, h, layer_empty_value(doc, li + 1));
+        } else if (ok) ok = layer_crop_expand(&cel, doc->canvas_w, doc->canvas_h, x, y, w, h, layer_empty_value(doc, li + 1));
         if (ok) memcpy(cels + li * new_n, cel.pixels, new_n);
         free(cel.pixels);
         if (!ok) { free(cels); return false; }
       }
-      free(frame->cels); frame->cels = cels; frame->cels_size = 3 * new_n;
+      const uint8_t *planes[] = {cels, cels + new_n, cels + 2 * new_n};
+      bool ok = anim_frame_pack_cels(frame, planes, w, h);
+      free(cels);
+      if (!ok) return false;
+      continue;
     }
     if (!frame->data || !frame->data_size) continue;
     layer_t layer = {0};

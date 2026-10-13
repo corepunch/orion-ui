@@ -10,15 +10,20 @@ bool cmd_pencil_layer(canvas_doc_t *doc, int layer) {
   int old_tool = g_app ? g_app->current_tool : ID_TOOL_PENCIL;
 
   if (doc->sel.move.active) return false;
-  if (g_app) {
-    g_app->pencil_layer_color[doc->layer.active] = g_app->fg_color;
-  }
   doc_set_active_layer(doc, layer);
   canvas_clear_selection_mask(doc);
   doc->sel.active = false;
   if (g_app) {
-    g_app->fg_color = layer == IE_LAYER_PENCIL ? pencil_configured_color() :
-                      g_app->pencil_layer_color[layer] ? g_app->pencil_layer_color[layer] : pencil_configured_color();
+    if (layer == IE_LAYER_PENCIL) g_app->fg_color = pencil_configured_color();
+    else {
+#if IMAGEEDITOR_BW
+      int index = doc->pencil_color_index[layer];
+      if (!cmd_pencil_color(doc, index))
+        for (int i = 0; i < doc->ipal.count; i++) if (cmd_pencil_color(doc, i)) break;
+#else
+      g_app->fg_color = pencil_configured_color();
+#endif
+    }
     g_app->bg_color = IE_PAPER_COLOR;
     int tool = old_tool;
     if (old_layer == IE_LAYER_PENCIL && layer == IE_LAYER_COLOR && tool == ID_TOOL_PENCIL)

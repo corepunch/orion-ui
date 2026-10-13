@@ -121,14 +121,16 @@
       </menu>
 
       <menu name="anim" label="Anim">
-        <item name="new_frame" label="New Frame" />
-        <item name="duplicate_frame" label="Duplicate Frame" />
-        <item name="delete_frame" label="Delete Frame" />
+        <item name="new_frame" label="New Frame" shortcut="N" />
+        <item name="duplicate_frame" label="Duplicate Frame" shortcut="D" />
+        <item name="delete_frame" label="Delete Frame" shortcut="Shift+Delete;Shift+Backspace" />
         <Separator />
-        <item name="prev_frame" label="Previous Frame" shortcut="Page Up" />
-        <item name="next_frame" label="Next Frame" shortcut="Page Down" />
+        <item name="prev_frame" label="Previous Frame" shortcut="Left;Page Up" />
+        <item name="next_frame" label="Next Frame" shortcut="Right;Page Down" />
+        <item name="first_frame" label="First Frame" shortcut="Home" />
+        <item name="last_frame" label="Last Frame" shortcut="End" />
         <Separator />
-        <item name="play" label="Play" />
+        <item name="play" label="Play / Pause" shortcut="Space" />
         <item name="stop" label="Stop" />
         <item name="loop" label="[ ] Loop" />
         <item name="onion_skin" label="Onion Skin Settings..." />

@@ -178,7 +178,7 @@ static void test_no_fg_bg_swatch(void) {
 }
 
 static void test_coloring_palette(void) {
-  TEST("single-column half-size palette selects 16 colors; drawing survives frame switches and undo");
+  TEST("single-column half-size palette selects all 32 colors; drawing survives frame switches and undo");
   penciltest_setup();
   canvas_doc_t *doc = create_document(NULL, 64, 64);
   ASSERT_NOT_NULL(doc);
@@ -218,8 +218,8 @@ static void test_coloring_palette(void) {
     uint32_t point = MAKEDWORD(r.x + r.w / 2, r.y + r.h / 2);
     send_message(g_app->tool_win->toolbar, evLeftButtonDown, point, NULL);
     send_message(g_app->tool_win->toolbar, evLeftButtonUp, point, NULL);
-    ASSERT_EQUAL(g_app->fg_color, k_pencil_palette[swatch]);
-    ASSERT_EQUAL(doc->ipal.entries[g_app->fg_palette_idx], k_pencil_palette[swatch]);
+    ASSERT_EQUAL(g_app->fg_color, pencil_default_colors()[swatch]);
+    ASSERT_EQUAL(doc->ipal.entries[g_app->fg_palette_idx], pencil_default_colors()[swatch]);
     ASSERT_TRUE(ie_doc_begin_op(doc, "Color Stroke"));
     canvas_set_pixel(doc, swatch, 0, g_app->fg_color);
     ie_doc_commit_op(doc, true);
@@ -229,42 +229,51 @@ static void test_coloring_palette(void) {
   ASSERT_EQUAL(found, IE_PENCIL_COLORS);
   cmd_frame_add(doc, false);
   ASSERT_TRUE(cmd_frame_select(doc, 0));
-  for (int i = 0; i < IE_PENCIL_COLORS; i++) ASSERT_EQUAL(canvas_get_pixel(doc, i, 0), k_pencil_palette[i]);
+  for (int i = 0; i < IE_PENCIL_COLORS; i++) ASSERT_EQUAL(canvas_get_pixel(doc, i, 0), pencil_default_colors()[i]);
   ASSERT_TRUE(cmd_pencil_color(doc, 4));
   ASSERT_TRUE(ie_doc_begin_op(doc, "Color Fill"));
   canvas_flood_fill(doc, 0, 1, g_app->fg_color);
   ie_doc_commit_op(doc, true);
-  ASSERT_EQUAL(canvas_get_pixel(doc, 0, 1), k_pencil_palette[4]);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 0, 1), pencil_default_colors()[4]);
   cmd_undo(doc);
   ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 0, 1)), 0);
   cmd_redo(doc);
-  ASSERT_EQUAL(canvas_get_pixel(doc, 0, 1), k_pencil_palette[4]);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 0, 1), pencil_default_colors()[4]);
   penciltest_teardown();
   PASS();
 }
 
-static void test_legacy_palette_extension(void) {
-  TEST("legacy palette gains colors without recoloring stored frames; extension is undoable");
+static void test_document_palette(void) {
+  TEST("document colors select exact indices without inserting, recoloring or history; larger palettes page");
   penciltest_setup();
-  canvas_doc_t *doc = create_document(NULL, 8, 8);
-  ASSERT_NOT_NULL(doc);
-  memset(doc->ipal.entries + 3, 0, 253 * sizeof(uint32_t));
-  doc->ipal.count = 256; // FLC reader retains the full palette, including unused entries.
+  canvas_doc_t *doc = create_document(NULL, 64, 64); ASSERT_NOT_NULL(doc);
+  memset(doc->ipal.entries, 0, sizeof(doc->ipal.entries));
+  doc->ipal.count = 256;
+  for (int i = 0; i < 80; i++) doc->ipal.entries[i] = MAKE_COLOR(i * 3, 255 - i * 2, i, 255);
+  doc->ipal.entries[79] = doc->ipal.entries[70];
   ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_COLOR));
-  doc->pixels[0] = 3;
-  cmd_frame_add(doc, false);
-  ASSERT_TRUE(cmd_pencil_color(doc, 4));
-  ASSERT_EQUAL(g_app->fg_palette_idx, 4); // Slot 3 is still referenced by frame 0.
-  ASSERT_EQUAL(doc->ipal.entries[3], 0);
-  ASSERT_EQUAL(doc->ipal.entries[4], k_pencil_palette[4]);
-  cmd_undo(doc);
-  ASSERT_EQUAL(doc->ipal.entries[4], 0);
-  cmd_redo(doc);
-  ASSERT_EQUAL(doc->ipal.entries[4], k_pencil_palette[4]);
-  ASSERT_TRUE(cmd_frame_select(doc, 0));
-  ASSERT_EQUAL(doc->pixels[0], 3);
-  penciltest_teardown();
-  PASS();
+  uint32_t before[256]; memcpy(before, doc->ipal.entries, sizeof(before));
+  int history = doc->undo.count;
+  ASSERT_TRUE(cmd_pencil_color(doc, 79));
+  ASSERT_EQUAL(g_app->fg_palette_idx, 79); ASSERT_EQUAL(g_app->fg_color, doc->ipal.entries[79]);
+  ASSERT_EQUAL(doc->undo.count, history); ASSERT_FALSE(doc->modified);
+  ASSERT_EQUAL(memcmp(before, doc->ipal.entries, sizeof(before)), 0);
+  canvas_set_pixel(doc, 0, 0, g_app->fg_color); ASSERT_EQUAL(doc->pixels[0], 79);
+  imageeditor_sync_tool_palette();
+  toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
+  bool found = false;
+  for (int i = 0; i < tb->item_count; i++) if (tb->items[i].ident == IE_PENCIL_PALETTE_BASE + 79) found = true;
+  ASSERT_TRUE(found);
+  ASSERT_FALSE(cmd_pencil_color(doc, 80)); ASSERT_FALSE(cmd_pencil_color(doc, 255));
+  ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_PENCIL));
+  ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_COLOR)); ASSERT_EQUAL(g_app->fg_palette_idx, 79);
+  canvas_doc_t *other = create_document(NULL, 64, 64); ASSERT_NOT_NULL(other);
+  ASSERT_TRUE(cmd_pencil_layer(other, IE_LAYER_COLOR)); ASSERT_TRUE(cmd_pencil_color(other, 4));
+  set_focus(doc->canvas_win);
+  send_message(doc->canvas_win, evSetFocus, 0, NULL);
+  ASSERT_EQUAL(g_app->fg_palette_idx, 79);
+  ASSERT_EQUAL(g_app->fg_color, doc->ipal.entries[79]);
+  penciltest_teardown(); PASS();
 }
 
 int main(void) {
@@ -275,6 +284,6 @@ int main(void) {
   test_onion_tint_is_not_gray();
   test_no_fg_bg_swatch();
   test_coloring_palette();
-  test_legacy_palette_extension();
+  test_document_palette();
   TEST_END();
 }

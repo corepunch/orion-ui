@@ -536,6 +536,48 @@ static void test_onion_alpha(void) {
   PASS();
 }
 
+static bool srgb_upload_boundaries(void) {
+  uint8_t pixels[256 * 3 * 4], stored[sizeof(pixels)], readback[256 * 4];
+  for (int row = 0; row < 3; row++) for (int c = 0; c < 256; c++) {
+    uint8_t *p = pixels + (row * 256 + c) * 4;
+    p[0] = c; p[1] = 255 - c; p[2] = c ^ 0x55;
+    p[3] = row == 0 ? 0 : row == 1 ? 128 : 255;
+  }
+  uint32_t tex = R_CreateTextureSRGBA8(256, 3, pixels, R_FILTER_NEAREST, R_WRAP_CLAMP);
+  if (!tex) return false;
+  bool ok = true;
+  for (int pass = 0; pass < 2; pass++) {
+    if (pass) {
+      for (size_t i = 0; i < sizeof(pixels); i += 4) pixels[i + 1] ^= 0xff;
+      ok &= R_UpdateTextureRGBA(tex, 0, 0, 256, 3, pixels);
+    }
+    glBindTexture(GL_TEXTURE_2D, tex);
+    GLint format = 0;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
+    ok &= format == GL_SRGB8_ALPHA8;
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, stored);
+    for (size_t i = 0; i < sizeof(pixels); i += 4) {
+      int alpha = pixels[i + 3];
+      ok &= stored[i + 3] == alpha;
+      for (int c = 0; c < 3; c++) {
+        int expected = alpha == 0 ? 0 : alpha == 255 ? pixels[i + c] :
+          ui_linear_to_srgb8(ui_srgb8_to_linear(pixels[i + c]) * (128.0f / 255));
+        ok &= stored[i + c] == expected;
+      }
+    }
+    ok &= R_ReadTextureSRGBA8(tex, 256, 1, readback);
+    // A one-row read starts at texture row zero, which is transparent.
+    for (size_t i = 0; i < sizeof(readback); i++) ok &= readback[i] == 0;
+    uint8_t full[sizeof(pixels)];
+    ok &= R_ReadTextureSRGBA8(tex, 256, 3, full);
+    // Readback flips rows: the top output row is the opaque uploaded row.
+    ok &= memcmp(full, pixels + 2 * sizeof(readback), sizeof(readback)) == 0;
+  }
+  ok &= glGetError() == GL_NO_ERROR;
+  R_DeleteTexture(tex);
+  return ok;
+}
+
 static void test_srgb_linear_source_over(void) {
   TEST("sRGB window targets store linear-light source-over results");
   CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
@@ -566,6 +608,7 @@ static void test_srgb_linear_source_over(void) {
     correct &= color_tex != 0 && float_tex != 0;
   }
   if (correct) {
+    correct &= srgb_upload_boundaries();
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glViewport(0, 0, 1, 1);
     glDisable(GL_SCISSOR_TEST);

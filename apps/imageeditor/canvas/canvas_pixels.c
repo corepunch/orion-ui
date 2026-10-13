@@ -24,6 +24,10 @@ static uint8_t canvas_indexed_value(const canvas_doc_t *doc, uint32_t color) {
     if (color == IE_PAPER_COLOR) return 0;
     return COLOR_A(color);
   }
+  if (g_app && g_app->active_doc == doc && g_app->fg_color == color &&
+      g_app->fg_palette_idx >= 0 && g_app->fg_palette_idx < doc->ipal.count &&
+      g_app->fg_palette_idx != doc->ipal.transparent && doc->ipal.entries[g_app->fg_palette_idx] == color)
+    return (uint8_t)g_app->fg_palette_idx;
   return (uint8_t)canvas_nearest_palette_index(doc, color);
 }
 #endif

@@ -12,8 +12,7 @@ uniform vec4 params1;
 
 void main() {
   float a = texture(tex0, tex).a;
-  // Thumbnail cleanup uses a strict alpha test: any coverage surviving the
-  // blur becomes fully opaque. Preserve the source colour for line art.
+  // Convert nonzero mask coverage to a hard edge for selection editing.
   float m = a > 0.0 ? 1.0 : 0.0;
   outColor = vec4(texture(tex0, tex).rgb, m * alpha) * col * tint;
 }

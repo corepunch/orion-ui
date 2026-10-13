@@ -15,6 +15,12 @@ void swap_foreground_background_colors(void) {
   else if (g_app->fg_palette_idx == 1) g_app->fg_palette_idx = 2;
   else if (g_app->fg_palette_idx == 2) g_app->fg_palette_idx = 1;
 #endif
+#if IMAGEEDITOR_BW
+  if (g_app->active_doc && g_app->active_doc->layer.active != IE_LAYER_PENCIL) {
+    cmd_pencil_color(g_app->active_doc, g_app->fg_palette_idx);
+    imageeditor_sync_tool_palette();
+  }
+#endif
   if (g_app->tool_win)  invalidate_window(g_app->tool_win);
   if (g_app->color_win) invalidate_window(g_app->color_win);
 }

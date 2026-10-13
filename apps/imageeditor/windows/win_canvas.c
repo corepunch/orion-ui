@@ -355,15 +355,8 @@ static void canvas_draw_onion_slot(canvas_win_state_t *state, canvas_doc_t *doc,
   bool live = g_ui_runtime.dragging || doc->drawing;
   if (stale && !live) {
     if (pencil_has_layers(doc)) {
-      R_DeleteTexture(state->onion_tex[slot]);
-      state->onion_tex[slot] = 0;
-      size_t n = (size_t)doc->canvas_w * doc->canvas_h;
-      if (frame->cels && frame->cels_size == 3 * n) {
-        state->onion_tex[slot] = R_CreateTextureR8(doc->canvas_w, doc->canvas_h,
-                                                  frame->cels + n, R_FILTER_NEAREST, R_WRAP_CLAMP);
-        if (!state->onion_tex[slot]) return;
-      }
-    } else if (!anim_render_frame_thumbnail_tinted(frame, doc->canvas_w, doc->canvas_h,
+      if (!anim_render_pencil_onion(frame, doc->canvas_w, doc->canvas_h, &state->onion_tex[slot])) return;
+    } else if (!anim_render_onion(frame, doc->canvas_w, doc->canvas_h,
                                                    &state->onion_tex[slot],
 #if IMAGEEDITOR_INDEXED
                                                    doc->ipal.entries,
@@ -501,6 +494,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
         g_app->active_doc = doc;
         imageeditor_sync_tool_palette();
         imageeditor_sync_main_toolbar();
+        timeline_win_refresh();
       }
       return false;
 
@@ -706,6 +700,10 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           g_app->fg_color = canvas_get_pixel(doc, px, py);
 #if IMAGEEDITOR_INDEXED
           g_app->fg_palette_idx = doc->pixels[(size_t)py * doc->canvas_w + px];
+#if IMAGEEDITOR_BW
+          cmd_pencil_color(doc, g_app->fg_palette_idx);
+          imageeditor_sync_tool_palette();
+#endif
 #endif
           if (g_app->tool_win)  invalidate_window(g_app->tool_win);
           if (g_app->color_win) invalidate_window(g_app->color_win);

@@ -3,6 +3,7 @@
 #include "test_framework.h"
 #include "test_env.h"
 #include "apps/imageeditor/imageeditor.h"
+#include "anim_test_helpers.h"
 
 app_state_t *g_app;
 int g_bw_retina_scale = 1;
@@ -49,8 +50,8 @@ static void flc_roundtrip(void) {
   ASSERT_STR_EQUAL(tl->frames[1]->name, "Hold pose");
   ASSERT_NOT_NULL(tl->frames[0]->cels);
   ASSERT_NOT_NULL(tl->frames[1]->cels);
-  ASSERT_EQUAL(tl->frames[0]->cels[(IE_LAYER_PENCIL - 1) * 15 + 4], 0);
-  ASSERT_EQUAL(memcmp(tl->frames[1]->cels + (IE_LAYER_PENCIL - 1) * 15, doc->pixels, 15), 0);
+  ASSERT_EQUAL(test_anim_cel_pixel(tl->frames[0], IE_LAYER_PENCIL - 1, 4, 5, 3), 0);
+  ASSERT_TRUE(test_anim_cel_matches(tl->frames[1], IE_LAYER_PENCIL - 1, doc->pixels, 5, 3));
   ASSERT_EQUAL(memcmp(pal, doc->ipal.entries, sizeof(pal)), 0);
   ASSERT_EQUAL(bg, doc->background.color); ASSERT_FALSE(show);
   anim_timeline_free(tl);
@@ -78,7 +79,7 @@ static void flc_menu_and_retina(void) {
   ASSERT_TRUE(imageeditor_open_file_path(flc_test_path));
   canvas_doc_t *again = g_app->active_doc;
   ASSERT_NOT_NULL(again->anim->frames[1]->cels);
-  ASSERT_EQUAL(again->anim->frames[1]->cels[(IE_LAYER_PENCIL - 1) * 15 + 8], 1);
+  ASSERT_EQUAL(test_anim_cel_pixel(again->anim->frames[1], IE_LAYER_PENCIL - 1, 8, 5, 3), 1);
   ASSERT_EQUAL(again->canvas_w, 5);
   close_document(again); close_document(doc);
   g_bw_retina_scale = 1;
@@ -146,15 +147,15 @@ static void flc_external_compression(void) {
   anim_timeline_t *tl = flc_load(path, &w, &h, pal, &bg, &show);
   ASSERT_NOT_NULL(tl); ASSERT_EQUAL(tl->frame_count, 7); ASSERT_EQUAL(tl->fps, 10);
   uint32_t black = MAKE_COLOR(0,0,0,255), red = MAKE_COLOR(255,0,0,255), white = MAKE_COLOR(255,255,255,255);
-  ASSERT_EQUAL(pal[tl->frames[1]->data[0]], black);
-  ASSERT_EQUAL(pal[tl->frames[1]->data[5]], white);
-  ASSERT_EQUAL(pal[tl->frames[1]->data[10]], red);
-  ASSERT_EQUAL(pal[tl->frames[2]->data[6]], red);
-  ASSERT_EQUAL(pal[tl->frames[2]->data[7]], black);
-  ASSERT_EQUAL(pal[tl->frames[2]->data[9]], red);
-  ASSERT_EQUAL(pal[tl->frames[3]->data[11]], white);
-  ASSERT_EQUAL(pal[tl->frames[3]->data[12]], white);
-  ASSERT_EQUAL(pal[tl->frames[4]->data[12]], black);
+  ASSERT_EQUAL(pal[test_anim_index(tl->frames[1], 0, 5, 3)], black);
+  ASSERT_EQUAL(pal[test_anim_index(tl->frames[1], 5, 5, 3)], white);
+  ASSERT_EQUAL(pal[test_anim_index(tl->frames[1], 10, 5, 3)], red);
+  ASSERT_EQUAL(pal[test_anim_index(tl->frames[2], 6, 5, 3)], red);
+  ASSERT_EQUAL(pal[test_anim_index(tl->frames[2], 7, 5, 3)], black);
+  ASSERT_EQUAL(pal[test_anim_index(tl->frames[2], 9, 5, 3)], red);
+  ASSERT_EQUAL(pal[test_anim_index(tl->frames[3], 11, 5, 3)], white);
+  ASSERT_EQUAL(pal[test_anim_index(tl->frames[3], 12, 5, 3)], white);
+  ASSERT_EQUAL(pal[test_anim_index(tl->frames[4], 12, 5, 3)], black);
   ASSERT_EQUAL(memcmp(tl->frames[5]->data, tl->frames[6]->data, 15), 0);
   ASSERT_EQUAL(tl->frames[6]->delay_ms, 100);
   anim_timeline_free(tl);
@@ -165,7 +166,7 @@ static void flc_external_compression(void) {
   fp = fopen(path, "wb"); fwrite(file, 1, size, fp); fclose(fp);
   tl = flc_load(path, &w, &h, pal, &bg, &show);
   ASSERT_NOT_NULL(tl); ASSERT_EQUAL(tl->frames[0]->delay_ms, 100);
-  ASSERT_EQUAL(pal[tl->frames[1]->data[5]], MAKE_COLOR(252,252,252,255));
+  ASSERT_EQUAL(pal[test_anim_index(tl->frames[1], 5, 5, 3)], MAKE_COLOR(252,252,252,255));
   anim_timeline_free(tl);
   ASSERT_TRUE(imageeditor_open_file_path(path));
   canvas_doc_t *legacy = g_app->active_doc;
@@ -220,9 +221,9 @@ static void flc_color_palette_roundtrip(void) {
   canvas_doc_t *again = g_app->active_doc;
   for (int frame = 0; frame < 2; frame++) {
     ASSERT_TRUE(cmd_frame_select(again, frame));
-    for (int i = 0; i < IE_PENCIL_COLORS; i++) ASSERT_EQUAL(canvas_get_pixel(again, i, 0), k_pencil_palette[i]);
+    for (int i = 0; i < IE_PENCIL_COLORS; i++) ASSERT_EQUAL(canvas_get_pixel(again, i, 0), pencil_default_colors()[i]);
   }
-  ASSERT_EQUAL(canvas_get_pixel(again, 0, 1), k_pencil_palette[4]);
+  ASSERT_EQUAL(canvas_get_pixel(again, 0, 1), pencil_default_colors()[4]);
   close_document(again); close_document(doc); remove(path);
   PASS();
 }
