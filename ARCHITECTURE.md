@@ -134,6 +134,13 @@ Page docking before app message handlers, preserving app-owned userdata. Common
 controls are addressed through their registered classes and messages (`svGetPane`,
 `tcMovePage`), keeping the user library independent of the common-controls library.
 TabBar drags use Page capture and a themed overlay painted after its children.
+Pane subtrees use reusable child surfaces, composited with the tab corner radius;
+the drawing layer redirects their root-relative viewport and scissors. Splitters
+reserve `theme.splitter.spacing` (Modern: 0, Classic: 2). Pane margins use normal
+layout metadata and come from `theme.tab.pane_margin` (default 2). SplitView owns
+the resize band covering both margins plus spacing and shows a centered two-pixel
+tab-drop highlight. `evChildHitTest` gives that band priority over nested layout
+branches through the window system's shared hit-test/dispatch path.
 Reparenting preserves live content; Page collapses empty branches and cancels drags
 on deactivation. See [Page docking](docs/page-docking.md).
 

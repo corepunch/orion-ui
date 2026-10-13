@@ -679,8 +679,9 @@ void toolbar_draw_non_client(window_t *win) {
   set_viewport_for_fbo(root);
   set_scissor_fbo(root, R(0, 0, root->frame.w, root->frame.h));
   set_projection(0, 0, root->frame.w, root->frame.h);
-  theme_draw(tb && (tb->style & TOOLBAR_STYLE_COMPACT) ? THEME_PART_MENU_BAR : THEME_PART_TOOLBAR,
-             tb_rect, CTRL_NORMAL);
+  if (!tb || !(tb->style & TOOLBAR_STYLE_TRANSPARENT))
+    theme_draw(tb && (tb->style & TOOLBAR_STYLE_COMPACT) ? THEME_PART_MENU_BAR : THEME_PART_TOOLBAR,
+               tb_rect, CTRL_NORMAL);
 
   if (tb && (tb->style & TOOLBAR_STYLE_GRIP)) {
     irect16_t grip = tb->orientation == TOOLBAR_VERTICAL

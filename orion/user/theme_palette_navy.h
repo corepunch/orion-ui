@@ -12,6 +12,7 @@
 
 #define NAVY_SHADOW     WEB(0x0D1B34)
 #define NAVY_CHROME     WEB(0x142440)
+#define NAVY_TAB_BAR    WEB(0x182A49)
 #define NAVY_RECESS     WEB(0x1C3152)
 #define NAVY_FACE       WEB(0x243D60)
 #define NAVY_RAISED     WEB(0x294669)
@@ -54,6 +55,7 @@
   [brToolbarForeground]    = NAVY_TEXT, \
   [brPanelDark]            = NAVY_RECESS, \
   [brPanelDarker]          = NAVY_CHROME, \
+  [brTabBarBg]             = NAVY_TAB_BAR, \
   [brTextWarning]          = WEB(0xF2C14E), \
   [brTextInfo]             = WEB(0x7AB8FF), \
   [brTextSecondary]        = NAVY_TEXT_MUTED, \

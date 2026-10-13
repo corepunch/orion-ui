@@ -35,6 +35,7 @@
   [brToolbarForeground]    = 0xffd8d8d8, \
   [brPanelDark]            = 0xff323232, \
   [brPanelDarker]          = 0xff262626, \
+  [brTabBarBg]             = 0xff2c2c2c, \
   [brTextWarning]          = 0xff2ea8e5, \
   [brTextInfo]             = 0xfff0a04c, \
   [brTextSecondary]        = 0xff9a9a9a, \

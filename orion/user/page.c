@@ -3,6 +3,7 @@
 #include "toolbar.h"
 #include <orion/commctl/commctl.h>
 #include <orion/user/draw.h>
+#include "theme.h"
 #include <stdio.h>
 
 #define PANE_MIN_WIDTH 96
@@ -31,6 +32,13 @@ static page_docking_t *pane_state(window_t *owner) {
 
 static bool pane_class(window_t *win, const char *name) {
   return win && win->proc == find_window_class_proc(name);
+}
+
+bool page_is_pane(window_t *win) {
+  if (!pane_class(win, "TabView")) return false;
+  window_t *owner = win->parent;
+  while (pane_class(owner, "SplitView")) owner = owner->parent;
+  return pane_state(owner) != NULL;
 }
 
 static window_t *pane_child(window_t *split, int index) {
@@ -92,6 +100,8 @@ window_t *page_active_pane(window_t *owner) {
 static void pane_configure(window_t *owner, window_t *tree, bool initial) {
   if (!tree) return;
   if (pane_class(tree, "TabView")) {
+    int margin = get_theme()->tab.pane_margin;
+    tree->layout.layout_margin = R(margin, margin, margin, margin);
     if (!send_message(tree, tcGetToolbar, 0, NULL)) {
       int custom = initial ? owner->pages->pane_toolbar_count : 0;
       int defaults = owner->pages->pane_toolbar_replace ? 0 : ARRAY_LEN(pane_actions);
@@ -109,10 +119,11 @@ static void pane_configure(window_t *owner, window_t *tree, bool initial) {
       }
     }
     uint32_t style = send_message(tree, tcGetStyle, 0, NULL);
-    uint32_t required = TAB_STYLE_RESTORE_FOCUS | TAB_STYLE_DRAG_TABS;
+    uint32_t required = TAB_STYLE_RESTORE_FOCUS | TAB_STYLE_DRAG_TABS | TAB_STYLE_PANE;
     if ((style & required) != required) send_message(tree, tcSetStyle, style | required, NULL);
   } else if (pane_class(tree, "SplitView")) {
     pane_configure(owner, pane_child(tree, 0), initial); pane_configure(owner, pane_child(tree, 1), initial);
+    send_message(tree, svSetPaneMargin, get_theme()->tab.pane_margin, NULL);
   }
 }
 
@@ -135,8 +146,9 @@ static void pane_cancel(window_t *owner) {
 
 static bool pane_can_split(window_t *pane, pane_edge_t edge) {
   irect16_t r = get_client_rect(pane);
-  if (edge == PANE_LEFT || edge == PANE_RIGHT) return r.w >= 2 * PANE_MIN_WIDTH + 6;
-  if (edge == PANE_TOP || edge == PANE_BOTTOM) return r.h >= 2 * PANE_MIN_HEIGHT + 6;
+  int gap = get_theme()->splitter.spacing + 2 * get_theme()->tab.pane_margin;
+  if (edge == PANE_LEFT || edge == PANE_RIGHT) return r.w >= 2 * PANE_MIN_WIDTH + gap;
+  if (edge == PANE_TOP || edge == PANE_BOTTOM) return r.h >= 2 * PANE_MIN_HEIGHT + gap;
   return false;
 }
 
@@ -164,7 +176,7 @@ window_t *page_split_pane(window_t *owner, window_t *pane, pane_edge_t edge) {
   if (actions && !send_message(tabs, tcSetToolbar, actions->item_count, actions->items)) {
     destroy_window(split); return NULL;
   }
-  if (parent == owner) split->layout = pane->layout;
+  if (parent == owner) { split->layout = pane->layout; split->layout.layout_margin = R(0, 0, 0, 0); }
   // Place the new branch in the old leaf's slot before moving the leaf inside it.
   window_reparent(split, parent, pane);
   window_reparent(pane, split, leading ? NULL : tabs);
@@ -319,7 +331,8 @@ static void pane_preview(window_t *owner, ipoint16_t point) {
             (st->drag_page->parent == pane && send_message(pane, tcGetCount, 0, NULL) == 1)) {
           drop.pane = NULL; break;
         }
-        int width = MAX(0, (r.w - 6) / 2), height = MAX(0, (r.h - 6) / 2);
+        int gap = get_theme()->splitter.spacing + 2 * get_theme()->tab.pane_margin;
+        int width = MAX(0, (r.w - gap) / 2), height = MAX(0, (r.h - gap) / 2);
         switch (drop.edge) {
           case PANE_LEFT:   r = rect_split_left(r, width); break;
           case PANE_RIGHT:  r = rect_split_right(r, width); break;
@@ -361,7 +374,7 @@ bool page_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
     case evDestroy:
       if (st) { pane_cancel(win); free(st); win->pages->docking = NULL; }
       return false;
-    case evResize:
+    case evThemeChanged: case evResize:
       if (st && st->drag_page) pane_cancel(win);
       pane_arrange(win); return false;
     case evArrange: case evDeactivate:

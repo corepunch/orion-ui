@@ -73,7 +73,8 @@ static void test_pane_moves_and_collapses(void) {
   ASSERT_TRUE(page_close_tab(host, c));
   ASSERT_EQUAL(page_pane_count(host), 1);
   ASSERT_EQUAL(bottom->parent, host);
-  ASSERT_EQUAL(bottom->frame.w, 900); ASSERT_EQUAL(bottom->frame.h, 600);
+  ASSERT_EQUAL(bottom->frame.w, 900 - 2 * get_theme()->tab.pane_margin);
+  ASSERT_EQUAL(bottom->frame.h, 600 - 2 * get_theme()->tab.pane_margin);
   ASSERT_FALSE(window_reparent(bottom, b, NULL));
   ASSERT_TRUE(page_close_tab(host, a));
   ASSERT_EQUAL(g_ui_runtime.focused, focus);
@@ -431,8 +432,39 @@ static void test_default_pane_actions(void) {
   destroy_window(page); test_env_shutdown(); PASS();
 }
 
+static void test_pane_margins(void) {
+  TEST("Page pane margin is configurable and stable through nested splits and repeated arrangement");
+  test_env_init();
+  int saved_margin = get_theme()->tab.pane_margin;
+  window_t *host = pane_test_host(), *left = page_pane_at(host, 0);
+  pane_test_tab(left, "A");
+  ASSERT_EQUAL(left->frame.x, saved_margin); ASSERT_EQUAL(left->frame.y, saved_margin);
+  window_t *right = page_split_pane(host, left, PANE_RIGHT);
+  pane_test_tab(right, "B");
+  window_t *bottom = page_split_pane(host, right, PANE_BOTTOM);
+  pane_test_tab(bottom, "C");
+  int margins[] = {0, 1, 3};
+  for (int i = 0; i < ARRAY_LEN(margins); i++) {
+    int margin = get_theme()->tab.pane_margin = margins[i];
+    send_message(host, evThemeChanged, 0, NULL);
+    for (int pass = 0; pass < 2; pass++) {
+      send_message(host, evResize, 0, NULL);
+      ASSERT_EQUAL(left->frame.x, margin); ASSERT_EQUAL(left->frame.y, margin);
+      ASSERT_EQUAL(left->frame.h, host->frame.h - 2 * margin);
+      ASSERT_EQUAL(right->frame.x, margin); ASSERT_EQUAL(right->frame.y, margin);
+      ASSERT_EQUAL(bottom->frame.x, margin);
+      ASSERT_EQUAL(bottom->frame.y - right->frame.y - right->frame.h, get_theme()->splitter.spacing + 2 * margin);
+      ASSERT_EQUAL(right->parent->frame.x + right->frame.x - left->frame.x - left->frame.w, get_theme()->splitter.spacing + 2 * margin);
+      ASSERT_EQUAL(bottom->frame.y + bottom->frame.h, right->parent->frame.h - margin);
+    }
+  }
+  get_theme()->tab.pane_margin = saved_margin;
+  destroy_window(host); test_env_shutdown(); PASS();
+}
+
 int main(void) {
   TEST_START("Page docking");
+  test_pane_margins();
   test_replacement_pane_actions();
   test_default_pane_actions();
   test_pane_header_actions();

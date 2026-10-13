@@ -5,7 +5,7 @@
 #include <orion/kernel/renderer.h>
 #include "theme.h"
 
-// Compositor-owned redirection surfaces, keyed by root window (≈ DWM). The
+// Compositor-owned redirection surfaces, keyed by window (≈ DWM). The
 // window struct carries no surface state; procs only paint.
 typedef struct { const window_t *win; window_surface_t surface; int attr[WCA_COUNT]; } surface_entry_t;
 static surface_entry_t *g_surfaces;

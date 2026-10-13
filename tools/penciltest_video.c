@@ -1,0 +1,615 @@
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+#define _DARWIN_C_SOURCE 1
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <string.h>
+#include <errno.h>
+#include <math.h>
+#include <ctype.h>
+#include <limits.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <png.h>
+#include "../apps/imageeditor/io/flc_codec.h"
+
+#define PV_LIMIT (512u * 1024u * 1024u)
+#define PV_BINS 32768
+#define PV_META_SIZE 1084
+
+typedef enum { PV_PENCIL, PV_BLACK, PV_PALETTE } pv_mode_t;
+typedef struct {
+  const char *input, *output, *frames, *ffmpeg;
+  pv_mode_t mode;
+  int colors, threshold, width, height, max_frames;
+  double fps;
+} pv_options_t;
+typedef struct { double pts, duration; uint16_t delay; } pv_time_t;
+typedef struct { uint64_t count, sum[3]; } pv_bin_t;
+typedef struct { int start, end, axis, range; uint64_t count; } pv_box_t;
+typedef struct {
+  FILE *pixels;
+  int width, height, count, fps, colors;
+  pv_time_t *times;
+  pv_bin_t *histogram;
+  uint8_t palette[256][4], lookup[PV_BINS];
+} pv_video_t;
+
+static bool pv_error(const char *message) {
+  fprintf(stderr, "penciltest-video: %s\n", message);
+  return false;
+}
+
+static bool pv_system_error(const char *path) {
+  fprintf(stderr, "penciltest-video: %s: %s\n", path, strerror(errno));
+  return false;
+}
+
+static void pv_put16(uint8_t *p, uint16_t n) { p[0] = n; p[1] = n >> 8; }
+static void pv_put32(uint8_t *p, uint32_t n) { pv_put16(p, n); pv_put16(p + 2, n >> 16); }
+static bool pv_write(FILE *fp, const void *p, size_t n) { return fwrite(p, 1, n, fp) == n; }
+static uint8_t pv_gray(const uint8_t *rgb) { return (77u * rgb[0] + 150u * rgb[1] + 29u * rgb[2] + 128u) >> 8; }
+static int pv_bin_index(const uint8_t *rgb) { return (rgb[0] >> 3) * 1024 + (rgb[1] >> 3) * 32 + (rgb[2] >> 3); }
+
+static bool pv_number(const char *s, double *value) {
+  char *end;
+  errno = 0;
+  *value = strtod(s, &end);
+  return s[0] && !*end && !errno && isfinite(*value);
+}
+
+static void pv_usage(FILE *fp) {
+  fputs("Usage: penciltest-video [options] INPUT.mp4\n"
+        "  -o, --output FILE.ptf   Native project (optional when --frames is used)\n"
+        "  --mode pencil          Lossless 8-bit luminance -> Pencil coverage (default)\n"
+        "  --mode black           Thresholded opaque black -> Color; other pixels clear\n"
+        "  --mode palette         Global adaptive palette -> Color\n"
+        "  --colors N             32, 64, 128 or 256 (default 256; 255 opaque at 256)\n"
+        "  --threshold N          Black when luminance < N, 0..255 (default 128)\n"
+        "  --frames DIRECTORY     Export 8-bit grayscale / indexed PNGs and timing.tsv\n"
+        "  --size WIDTHxHEIGHT    Explicit resize; otherwise preserve source dimensions\n"
+        "  --fps RATE             Explicit resampling, 1..1000; otherwise source timing\n"
+        "  --max-frames N         Convert only the first N decoded/output frames\n"
+        "  --ffmpeg PATH          FFmpeg executable (default $FFMPEG or ffmpeg)\n"
+        "  -h, --help             Show help\n"
+        "Outputs must not already exist. Audio is omitted. Native timing is in ms.\n", fp);
+}
+
+static bool pv_parse(int argc, char **argv, pv_options_t *o) {
+  *o = (pv_options_t){.colors = 256, .threshold = 128, .ffmpeg = getenv("FFMPEG")};
+  if (!o->ffmpeg || !*o->ffmpeg) o->ffmpeg = "ffmpeg";
+  bool colors_set = false, threshold_set = false, positional = false;
+  for (int i = 1; i < argc; i++) {
+    const char *arg = argv[i], *v;
+    double n;
+    if (!positional && !strcmp(arg, "--")) { positional = true; continue; }
+    if (positional || arg[0] != '-') {
+      if (o->input) return pv_error("only one input video is supported");
+      o->input = arg; continue;
+    }
+    if (i + 1 == argc) return pv_error("missing option value");
+    v = argv[++i];
+    if      (!strcmp(arg, "-o") || !strcmp(arg, "--output")) o->output = v;
+    else if (!strcmp(arg, "--frames")) o->frames = v;
+    else if (!strcmp(arg, "--ffmpeg")) o->ffmpeg = v;
+    else if (!strcmp(arg, "--mode")) {
+      if      (!strcmp(v, "pencil"))  o->mode = PV_PENCIL;
+      else if (!strcmp(v, "black"))   o->mode = PV_BLACK;
+      else if (!strcmp(v, "palette")) o->mode = PV_PALETTE;
+      else return pv_error("--mode must be pencil, black or palette");
+    } else if (!strcmp(arg, "--size")) {
+      char *end;
+      errno = 0;
+      long width = strtol(v, &end, 10);
+      if (errno || end == v || *end != 'x' || width < 1 || width > 16384)
+        return pv_error("--size must be WIDTHxHEIGHT, each 1..16384");
+      const char *start = end + 1;
+      long height = strtol(start, &end, 10);
+      if (errno || end == start || *end || height < 1 || height > 16384)
+        return pv_error("--size must be WIDTHxHEIGHT, each 1..16384");
+      o->width = (int)width; o->height = (int)height;
+    } else if (!strcmp(arg, "--colors")) {
+      if (!pv_number(v, &n) || (n != 32 && n != 64 && n != 128 && n != 256))
+        return pv_error("--colors must be 32, 64, 128 or 256");
+      o->colors = (int)n; colors_set = true;
+    } else if (!strcmp(arg, "--threshold")) {
+      if (!pv_number(v, &n) || n < 0 || n > 255 || n != floor(n))
+        return pv_error("--threshold must be an integer in 0..255");
+      o->threshold = (int)n; threshold_set = true;
+    } else if (!strcmp(arg, "--fps")) {
+      if (!pv_number(v, &o->fps) || o->fps < 1 || o->fps > 1000)
+        return pv_error("--fps must be in 1..1000");
+    } else if (!strcmp(arg, "--max-frames")) {
+      if (!pv_number(v, &n) || n < 1 || n > INT_MAX || n != floor(n))
+        return pv_error("--max-frames must be a positive integer");
+      o->max_frames = (int)n;
+    } else return pv_error("unknown option (use --help)");
+  }
+  if (!o->input || (!o->output && !o->frames)) return pv_error("input and --output and/or --frames are required");
+  if (colors_set && o->mode != PV_PALETTE) return pv_error("--colors applies only to --mode palette");
+  if (threshold_set && o->mode != PV_BLACK) return pv_error("--threshold applies only to --mode black");
+  if (o->output && o->frames && !strcmp(o->output, o->frames)) return pv_error("project and frames must have different paths");
+  return true;
+}
+
+static bool pv_absent(const char *path) {
+  struct stat st;
+  if (!lstat(path, &st)) { errno = EEXIST; return pv_system_error(path); }
+  return errno == ENOENT || pv_system_error(path);
+}
+
+static bool pv_token(FILE *fp, char *out, size_t size) {
+  int c;
+  do {
+    c = fgetc(fp);
+    if (c == '#') while (c != '\n' && c != EOF) c = fgetc(fp);
+  } while (c != EOF && isspace(c));
+  size_t n = 0;
+  while (c != EOF && !isspace(c)) {
+    if (n + 1 == size) return false;
+    out[n++] = (char)c; c = fgetc(fp);
+  }
+  out[n] = 0;
+  return n && c != EOF;
+}
+
+static bool pv_read_ppm(FILE *fp, pv_video_t *v, uint8_t **rgb) {
+  char token[32];
+  double w, h;
+  if (!pv_token(fp, token, sizeof(token)) || strcmp(token, "P6") ||
+      !pv_token(fp, token, sizeof(token)) || !pv_number(token, &w) ||
+      !pv_token(fp, token, sizeof(token)) || !pv_number(token, &h) ||
+      !pv_token(fp, token, sizeof(token)) || strcmp(token, "255") ||
+      w < 1 || h < 1 || w > 16384 || h > 16384 || w != floor(w) || h != floor(h))
+    return pv_error("invalid decoded PPM frame");
+  if (v->count && (w != v->width || h != v->height)) return pv_error("video dimensions changed during decoding");
+  if (!*rgb) {
+    v->width = (int)w; v->height = (int)h;
+    *rgb = malloc((size_t)v->width * v->height * 3);
+    if (!*rgb) return pv_error("cannot allocate decoded frame");
+  }
+  size_t bytes = (size_t)v->width * v->height * 3;
+  return fread(*rgb, 1, bytes, fp) == bytes || pv_error("truncated decoded frame");
+}
+
+static bool pv_timing(FILE *log, pv_video_t *v, const pv_options_t *o) {
+  v->times = calloc(v->count, sizeof(*v->times));
+  if (!v->times) return pv_error("cannot allocate frame timing");
+  char line[8192];
+  int found = 0;
+  double rate = 0, time_base = 0;
+  rewind(log);
+  while (fgets(line, sizeof(line), log)) {
+    if (!strstr(line, "Parsed_showinfo_")) continue;
+    char *p = strstr(line, "config in time_base:"), *q;
+    int num, den;
+    if (p && sscanf(p, "config in time_base: %d/%d", &num, &den) == 2 && num > 0 && den > 0)
+      time_base = (double)num / den;
+    if (p && (q = strstr(p, "frame_rate:")) && sscanf(q, "frame_rate: %d/%d", &num, &den) == 2 && num > 0 && den > 0)
+      rate = (double)num / den;
+    p = strstr(line, " n:");
+    int index;
+    if (!p || sscanf(p, " n: %d", &index) != 1 || index != found) continue;
+    char *stamp = strstr(p, " pts_time:");
+    if (!stamp) continue;
+    if (found == v->count) break; // A limited decode can log one extra filtered frame.
+    double pts, duration = 0;
+    if (sscanf(stamp, " pts_time:%lf", &pts) != 1 || !isfinite(pts)) return pv_error("invalid source timestamp");
+    int64_t ticks;
+    q = strstr(p, " pts:");
+    if (time_base && q && sscanf(q, " pts: %" SCNd64, &ticks) == 1) pts = ticks * time_base;
+    q = strstr(stamp, " duration_time:");
+    if (q) sscanf(q, " duration_time:%lf", &duration);
+    q = strstr(stamp, " duration:");
+    if (time_base && q && sscanf(q, " duration: %" SCNd64, &ticks) == 1 && ticks > 0) duration = ticks * time_base;
+    v->times[found++] = (pv_time_t){.pts = pts, .duration = duration};
+  }
+  if (found != v->count) return pv_error("FFmpeg did not report timing for every decoded frame");
+  if (o->fps) rate = o->fps;
+  if (!(rate > 0) && v->count > 1) rate = (v->count - 1) / (v->times[v->count - 1].pts - v->times[0].pts);
+  if (!(rate > 0) || !isfinite(rate)) return pv_error("unknown source frame rate; specify --fps");
+  v->fps = (int)fmax(1, fmin(1000, round(rate)));
+  double elapsed_ms = 0;
+  int64_t rounded_ms = 0;
+  for (int i = 0; i < v->count; i++) {
+    double duration = i + 1 < v->count ? v->times[i + 1].pts - v->times[i].pts : v->times[i].duration;
+    if (i + 1 == v->count && (!(duration > 0) || !isfinite(duration))) duration = 1 / rate;
+    if (!(duration > 0) || !isfinite(duration) || duration > 65.535)
+      return pv_error("frame duration cannot be represented by Penciltest (1..65535 ms)");
+    elapsed_ms += duration * 1000;
+    int64_t end_ms = llround(elapsed_ms), delay = end_ms - rounded_ms;
+    if (delay < 1 || delay > 65535) return pv_error("frame duration cannot be represented by Penciltest (1..65535 ms)");
+    v->times[i].delay = (uint16_t)delay;
+    rounded_ms = end_ms;
+  }
+  return true;
+}
+
+static bool pv_decode(const pv_options_t *o, pv_video_t *v) {
+  FILE *log = tmpfile();
+  v->pixels = tmpfile();
+  if (o->mode == PV_PALETTE) v->histogram = calloc(PV_BINS, sizeof(*v->histogram));
+  if (!log || !v->pixels || (o->mode == PV_PALETTE && !v->histogram)) {
+    if (log) fclose(log);
+    return pv_error("cannot allocate decode spool");
+  }
+  char filter[256] = "", size[80] = "", fps[80] = "", limit[32];
+  if (o->width) snprintf(size, sizeof(size), "scale=%d:%d:flags=lanczos,", o->width, o->height);
+  if (o->fps) snprintf(fps, sizeof(fps), "fps=%.9g,", o->fps);
+  snprintf(filter, sizeof(filter), "%s%sformat=rgb24,showinfo", size, fps);
+  snprintf(limit, sizeof(limit), "%d", o->max_frames);
+  char *args[40]; int ac = 0;
+#define PV_ARG(s) args[ac++] = (char *)(s)
+  PV_ARG(o->ffmpeg); PV_ARG("-hide_banner"); PV_ARG("-nostdin"); PV_ARG("-nostats");
+  PV_ARG("-loglevel"); PV_ARG("info"); PV_ARG("-xerror"); PV_ARG("-i"); PV_ARG(o->input);
+  PV_ARG("-map"); PV_ARG("0:V:0"); PV_ARG("-an"); PV_ARG("-sn"); PV_ARG("-dn");
+  PV_ARG("-vf"); PV_ARG(filter); PV_ARG("-vsync"); PV_ARG("0");
+  if (o->max_frames) { PV_ARG("-frames:v"); PV_ARG(limit); }
+  PV_ARG("-c:v"); PV_ARG("ppm"); PV_ARG("-f"); PV_ARG("image2pipe"); PV_ARG("pipe:1");
+  args[ac] = NULL;
+#undef PV_ARG
+  int pipefd[2];
+  if (pipe(pipefd)) { fclose(log); return pv_system_error("decoder pipe"); }
+  pid_t child = fork();
+  if (child < 0) { close(pipefd[0]); close(pipefd[1]); fclose(log); return pv_system_error("decoder process"); }
+  if (!child) {
+    if (dup2(pipefd[1], STDOUT_FILENO) < 0 || dup2(fileno(log), STDERR_FILENO) < 0) _exit(126);
+    close(pipefd[0]); close(pipefd[1]);
+    execvp(o->ffmpeg, args);
+    fprintf(stderr, "Cannot execute FFmpeg '%s': %s\n", o->ffmpeg, strerror(errno));
+    _exit(127);
+  }
+  close(pipefd[1]);
+  FILE *stream = fdopen(pipefd[0], "rb");
+  uint8_t *rgb = NULL;
+  bool ok = stream != NULL;
+  if (!stream) close(pipefd[0]);
+  while (ok) {
+    int c = fgetc(stream);
+    if (c == EOF) { if (ferror(stream)) ok = false; break; }
+    ungetc(c, stream);
+    if (!(ok = pv_read_ppm(stream, v, &rgb))) break;
+    uint64_t n = (uint64_t)v->width * v->height;
+    if (v->count == INT_MAX || (o->output && (v->count == 65535 || n * (1 + 4u * (v->count + 1)) > PV_LIMIT))) {
+      ok = pv_error("native project exceeds Penciltest's 512 MiB decoded limit; use --size, --fps, --max-frames, or export only --frames");
+      break;
+    }
+    if (v->histogram) for (size_t p = 0; p < n; p++) {
+      const uint8_t *pixel = rgb + p * 3;
+      pv_bin_t *bin = &v->histogram[pv_bin_index(pixel)];
+      bin->count++;
+      for (int ch = 0; ch < 3; ch++) bin->sum[ch] += pixel[ch];
+    }
+    if (!(ok = pv_write(v->pixels, rgb, (size_t)n * 3))) pv_system_error("decoded pixel spool");
+    if (ok) v->count++;
+  }
+  if (stream) fclose(stream);
+  if (!ok) kill(child, SIGTERM);
+  int status = 0;
+  pid_t waited;
+  do { waited = waitpid(child, &status, 0); } while (waited < 0 && errno == EINTR);
+  if (waited < 0 || !WIFEXITED(status) || WEXITSTATUS(status)) {
+    if (ok) {
+      pv_error("FFmpeg decoding failed:");
+      rewind(log);
+      char line[8192];
+      while (fgets(line, sizeof(line), log))
+        if (!strstr(line, "showinfo") && !strstr(line, "comment         :")) fputs(line, stderr);
+    }
+    ok = false;
+  }
+  free(rgb);
+  if (ok && !v->count) ok = pv_error("video contains no decoded frames");
+  if (ok) ok = pv_timing(log, v, o);
+  fclose(log);
+  return ok;
+}
+
+static int pv_sort_axis;
+static int pv_compare_bins(const void *a, const void *b) {
+  int x = *(const int *)a, y = *(const int *)b, shift = (2 - pv_sort_axis) * 5;
+  int difference = ((x >> shift) & 31) - ((y >> shift) & 31);
+  return difference ? difference : x - y;
+}
+
+static void pv_measure_box(pv_box_t *box, const int *bins, const pv_bin_t *histogram) {
+  int lo[3] = {31,31,31}, hi[3] = {0,0,0};
+  box->count = 0;
+  for (int i = box->start; i < box->end; i++) {
+    int bin = bins[i];
+    box->count += histogram[bin].count;
+    for (int ch = 0; ch < 3; ch++) {
+      int value = (bin >> ((2 - ch) * 5)) & 31;
+      if (value < lo[ch]) lo[ch] = value;
+      if (value > hi[ch]) hi[ch] = value;
+    }
+  }
+  box->axis = 0; box->range = hi[0] - lo[0];
+  for (int ch = 1; ch < 3; ch++) if (hi[ch] - lo[ch] > box->range) {
+    box->axis = ch; box->range = hi[ch] - lo[ch];
+  }
+}
+
+static void pv_palette(pv_video_t *v, const pv_options_t *o) {
+  memset(v->palette, 0, sizeof(v->palette));
+  if (o->mode == PV_PENCIL) {
+    for (int i = 0; i < 255; i++) {
+      v->palette[i][0] = v->palette[i][1] = v->palette[i][2] = i;
+      v->palette[i][3] = 255;
+    }
+    v->colors = 255;
+  } else if (o->mode == PV_BLACK) {
+    v->palette[0][3] = 255; v->colors = 1;
+  } else {
+    int bins[PV_BINS], count = 0;
+    for (int i = 0; i < PV_BINS; i++) if (v->histogram[i].count) bins[count++] = i;
+    pv_box_t boxes[255] = {{.end = count}};
+    pv_measure_box(boxes, bins, v->histogram);
+    int target = o->colors == 256 ? 255 : o->colors;
+    v->colors = 1;
+    while (v->colors < target) {
+      int best = -1;
+      double score = -1;
+      for (int i = 0; i < v->colors; i++) if (boxes[i].end - boxes[i].start > 1) {
+        double s = (double)boxes[i].count * boxes[i].range;
+        if (s > score) { best = i; score = s; }
+      }
+      if (best < 0) break;
+      pv_box_t *box = &boxes[best];
+      pv_sort_axis = box->axis;
+      qsort(bins + box->start, box->end - box->start, sizeof(*bins), pv_compare_bins);
+      uint64_t weight = 0;
+      int split = box->start;
+      do { weight += v->histogram[bins[split++]].count; }
+      while (split < box->end - 1 && weight < box->count / 2);
+      boxes[v->colors] = (pv_box_t){.start = split, .end = box->end};
+      box->end = split;
+      pv_measure_box(box, bins, v->histogram);
+      pv_measure_box(&boxes[v->colors++], bins, v->histogram);
+    }
+    for (int i = 0; i < v->colors; i++) {
+      uint64_t sums[3] = {0};
+      for (int j = boxes[i].start; j < boxes[i].end; j++)
+        for (int ch = 0; ch < 3; ch++) sums[ch] += v->histogram[bins[j]].sum[ch];
+      for (int ch = 0; ch < 3; ch++) v->palette[i][ch] = (sums[ch] + boxes[i].count / 2) / boxes[i].count;
+      v->palette[i][3] = 255;
+    }
+    for (int bin = 0; bin < PV_BINS; bin++) if (v->histogram[bin].count) {
+      int rgb[3];
+      for (int ch = 0; ch < 3; ch++) rgb[ch] = (v->histogram[bin].sum[ch] + v->histogram[bin].count / 2) / v->histogram[bin].count;
+      int best = 0, distance = INT_MAX;
+      for (int i = 0; i < v->colors; i++) {
+        int d = 0;
+        for (int ch = 0; ch < 3; ch++) { int diff = rgb[ch] - v->palette[i][ch]; d += diff * diff; }
+        if (d < distance) { best = i; distance = d; }
+      }
+      v->lookup[bin] = best;
+    }
+  }
+}
+
+static void pv_convert(const pv_video_t *v, const pv_options_t *o, const uint8_t *rgb, uint8_t *image, uint8_t *pencil) {
+  size_t n = (size_t)v->width * v->height;
+  memset(pencil, 0, n);
+  for (size_t p = 0; p < n; p++) {
+    uint8_t gray = pv_gray(rgb + p * 3);
+    if      (o->mode == PV_PENCIL)  { image[p] = gray; pencil[p] = 255 - gray; }
+    else if (o->mode == PV_BLACK)   image[p] = gray < o->threshold ? 0 : 255;
+    else                          image[p] = v->lookup[pv_bin_index(rgb + p * 3)];
+  }
+}
+
+static bool pv_png(const char *path, const pv_video_t *v, pv_mode_t mode, const uint8_t *pixels) {
+  FILE *fp = fopen(path, "wb");
+  if (!fp) return pv_system_error(path);
+  png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+  png_infop info = png ? png_create_info_struct(png) : NULL;
+  bool ok = false;
+  if (png && info && !setjmp(png_jmpbuf(png))) {
+    png_init_io(png, fp);
+    png_set_IHDR(png, info, v->width, v->height, 8, mode == PV_PENCIL ? PNG_COLOR_TYPE_GRAY : PNG_COLOR_TYPE_PALETTE,
+                 PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+    png_set_compression_level(png, 9);
+    png_set_sRGB(png, info, PNG_sRGB_INTENT_PERCEPTUAL);
+    if (mode != PV_PENCIL) {
+      png_color colors[256]; uint8_t alpha[256];
+      for (int i = 0; i < 256; i++) {
+        colors[i] = (png_color){v->palette[i][0], v->palette[i][1], v->palette[i][2]};
+        alpha[i] = v->palette[i][3];
+      }
+      colors[255] = (png_color){255,255,255};
+      png_set_PLTE(png, info, colors, 256); png_set_tRNS(png, info, alpha, 256, NULL);
+    }
+    png_write_info(png, info);
+    for (int y = 0; y < v->height; y++) png_write_row(png, (png_const_bytep)(pixels + (size_t)y * v->width));
+    png_write_end(png, info); ok = true;
+  }
+  if (png) png_destroy_write_struct(&png, info ? &info : NULL);
+  if (fclose(fp)) ok = false;
+  return ok || pv_error("PNG write failed");
+}
+
+static bool pv_flc_frame(FILE *fp, const pv_video_t *v, const uint8_t *image, int index, uint8_t *previous, bool first) {
+  size_t n = (size_t)v->width * v->height;
+  size_t size;
+  uint8_t *chunk = flc_codec_encode(image, first ? NULL : previous, v->width, v->height, &size);
+  if (!chunk) return false;
+  uint8_t header[16] = {0}, palette[778] = {0};
+  pv_put32(header, 16 + (first ? sizeof(palette) : 0) + size); pv_put16(header + 4, 0xf1fa);
+  pv_put16(header + 6, first ? 2 : 1); pv_put16(header + 8, v->times[index].delay);
+  pv_put32(palette, sizeof(palette)); pv_put16(palette + 4, 4); pv_put16(palette + 6, 1);
+  for (int i = 0; i < 256; i++) for (int ch = 0; ch < 3; ch++)
+    palette[10 + i * 3 + ch] = v->palette[i][3] ? v->palette[i][ch] : 255;
+  bool ok = pv_write(fp, header, sizeof(header)) && (!first || pv_write(fp, palette, sizeof(palette))) && pv_write(fp, chunk, size);
+  if (ok) memcpy(previous, image, n);
+  free(chunk);
+  return ok;
+}
+
+static bool pv_metadata(FILE *fp, const pv_video_t *v) {
+  uint8_t header[16] = {0};
+  pv_put32(header, 16u + (uint32_t)v->count * PV_META_SIZE);
+  pv_put16(header + 4, 0x7074); memcpy(header + 8, "PTA1", 4);
+  if (!pv_write(fp, header, sizeof(header))) return false;
+  for (int i = 0; i < v->count; i++) {
+    uint8_t m[PV_META_SIZE] = {0};
+    memcpy(m, "PTF1", 4); snprintf((char *)m + 4, 32, "Frame %d", i + 1);
+    pv_put32(m + 36, v->fps); pv_put32(m + 40, v->times[i].delay);
+    m[44] = m[45] = 1; pv_put32(m + 48, 0xffffffff);
+    memcpy(m + 60, v->palette, sizeof(v->palette));
+    if (!pv_write(fp, m, sizeof(m))) return false;
+  }
+  return true;
+}
+
+static bool pv_output(const pv_options_t *o, pv_video_t *v) {
+  size_t n = (size_t)v->width * v->height;
+  uint8_t *rgb = malloc(n * 3), *image = malloc(n), *pencil = malloc(n), *blank = malloc(n);
+  uint8_t *previous = o->output ? malloc(4 * n) : NULL;
+  uint8_t project_header[128] = {0};
+  char *temp = NULL, *directory = NULL;
+  FILE *project = NULL, *layers = NULL, *timing = NULL;
+  int png_count = 0;
+  bool temp_created = false;
+  bool ok = rgb && image && pencil && blank && (!o->output || previous);
+  if (!ok) pv_error("cannot allocate conversion frame");
+  if (ok && o->output) {
+    temp = malloc(strlen(o->output) + 12);
+    if (temp) temp[0] = 0;
+    layers = tmpfile();
+    if (!temp || !layers) ok = pv_error("cannot allocate project spool");
+    if (ok) {
+      sprintf(temp, "%s.XXXXXX", o->output);
+      int fd = mkstemp(temp);
+      if (fd < 0) ok = pv_system_error(o->output);
+      else {
+        temp_created = true;
+        if (!(project = fdopen(fd, "w+b"))) { close(fd); ok = pv_system_error(o->output); }
+      }
+    }
+    if (ok) {
+      pv_put16(project_header + 4, 0xaf12); pv_put16(project_header + 6, v->count);
+      pv_put16(project_header + 8, v->width); pv_put16(project_header + 10, v->height);
+      pv_put16(project_header + 12, 8); pv_put16(project_header + 14, 3); pv_put32(project_header + 16, 1000 / v->fps);
+      pv_put16(project_header + 38, 1); pv_put16(project_header + 40, 1); pv_put32(project_header + 80, 128);
+      memset(blank, 255, n);
+      ok = pv_write(project, project_header, sizeof(project_header)) && flc_codec_write(layers, blank, NULL, v->width, v->height);
+    }
+  }
+  if (ok && o->frames) {
+    directory = malloc(strlen(o->frames) + 12);
+    if (!directory) ok = pv_error("cannot allocate PNG directory path");
+    else {
+      sprintf(directory, "%s.XXXXXX", o->frames);
+      if (!mkdtemp(directory)) { free(directory); directory = NULL; ok = pv_system_error(o->frames); }
+    }
+    if (ok) {
+      char path[PATH_MAX];
+      if (snprintf(path, sizeof(path), "%s/timing.tsv", directory) >= (int)sizeof(path)) ok = pv_error("PNG directory path is too long");
+      else if (!(timing = fopen(path, "w"))) ok = pv_system_error(path);
+      else if (fprintf(timing, "frame\tpts_seconds\tdelay_ms\n") < 0) ok = false;
+    }
+  }
+  rewind(v->pixels);
+  for (int i = 0; ok && i < v->count; i++) {
+    ok = fread(rgb, 1, n * 3, v->pixels) == n * 3;
+    if (!ok) break;
+    pv_convert(v, o, rgb, image, pencil);
+    if (project) {
+      if (i == 1) pv_put32(project_header + 84, ftell(project));
+      ok = pv_flc_frame(project, v, image, i, previous, i == 0);
+      memset(blank, 255, n);
+      const uint8_t *planes[] = {o->mode == PV_PENCIL ? blank : image, pencil, blank};
+      for (int layer = 0; ok && layer < 3; layer++) {
+        uint8_t *old = previous + (size_t)(layer + 1) * n;
+        ok = flc_codec_write(layers, planes[layer], i ? old : NULL, v->width, v->height);
+        if (ok) memcpy(old, planes[layer], n);
+      }
+    }
+    if (ok && directory) {
+      char path[PATH_MAX];
+      if (snprintf(path, sizeof(path), "%s/frame-%06d.png", directory, i + 1) >= (int)sizeof(path)) ok = pv_error("PNG path is too long");
+      else { png_count = i + 1; ok = pv_png(path, v, o->mode, image); }
+      if (ok) ok = fprintf(timing, "%d\t%.9f\t%u\n", i + 1, v->times[i].pts, v->times[i].delay) > 0;
+    }
+  }
+  if (ok && project) {
+    rewind(v->pixels);
+    ok = fread(rgb, 1, n * 3, v->pixels) == n * 3;
+    pv_convert(v, o, rgb, image, pencil);
+    if (v->count == 1) pv_put32(project_header + 84, ftell(project));
+    if (ok) ok = pv_flc_frame(project, v, image, 0, previous, false) && pv_metadata(project, v);
+    uint8_t header[16] = {0};
+    long layer_size = ftell(layers);
+    if (layer_size < 0 || (uint64_t)layer_size > 2u * PV_LIMIT) ok = false;
+    pv_put32(header, 16 + layer_size); pv_put16(header + 4, 0x7075); memcpy(header + 8, "PTL5", 4);
+    header[12] = 4; header[13] = o->mode == PV_PENCIL ? 2 : 1; header[14] = 15;
+    if (ok) ok = pv_write(project, header, sizeof(header));
+    if (fflush(layers)) ok = false;
+    rewind(layers);
+    size_t bytes;
+    while (ok && (bytes = fread(rgb, 1, n * 3, layers))) ok = pv_write(project, rgb, bytes);
+    long total = ftell(project);
+    if (total < 128 || (uint64_t)total > 2u * PV_LIMIT) ok = false;
+    pv_put32(project_header, total);
+    if (ok) ok = !fseek(project, 0, SEEK_SET) && pv_write(project, project_header, sizeof(project_header));
+    if (ferror(layers) || fflush(project) || fsync(fileno(project))) ok = false;
+  }
+  if (layers) fclose(layers);
+  if (project && fclose(project)) ok = false;
+  if (timing && fclose(timing)) ok = false;
+  // Publish only completed outputs, without replacing an existing project.
+  bool linked = false;
+  if (ok && o->output) {
+    if (link(temp, o->output)) ok = pv_system_error(o->output);
+    else linked = true;
+  }
+  if (ok && directory) {
+    ok = pv_absent(o->frames);
+    if (ok && rename(directory, o->frames)) ok = pv_system_error(o->frames);
+  }
+  if (!ok) {
+    pv_error("conversion failed; incomplete outputs removed");
+    if (linked) unlink(o->output);
+    if (directory) {
+      char path[PATH_MAX];
+      for (int i = 1; i <= png_count; i++) {
+        snprintf(path, sizeof(path), "%s/frame-%06d.png", directory, i); unlink(path);
+      }
+      snprintf(path, sizeof(path), "%s/timing.tsv", directory); unlink(path); rmdir(directory);
+    }
+  }
+  if (temp_created) unlink(temp);
+  free(temp); free(directory); free(rgb); free(image); free(pencil); free(blank); free(previous);
+  return ok;
+}
+
+static void pv_free(pv_video_t *v) {
+  if (v->pixels) fclose(v->pixels);
+  free(v->times); free(v->histogram);
+}
+
+#ifndef PENCILTEST_VIDEO_NO_MAIN
+int main(int argc, char **argv) {
+  for (int i = 1; i < argc; i++) if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h")) { pv_usage(stdout); return 0; }
+  pv_options_t o;
+  if (!pv_parse(argc, argv, &o)) { pv_usage(stderr); return 2; }
+  if ((o.output && !pv_absent(o.output)) || (o.frames && !pv_absent(o.frames))) return 1;
+  pv_video_t v = {0};
+  bool ok = pv_decode(&o, &v);
+  if (ok) {
+    pv_palette(&v, &o);
+    ok = pv_output(&o, &v);
+  }
+  if (ok) printf("Converted %d frames, %dx%d, %s%s%s\n", v.count, v.width, v.height,
+                 o.output ? o.output : "", o.output && o.frames ? "; " : "", o.frames ? o.frames : "");
+  pv_free(&v);
+  return ok ? 0 : 1;
+}
+#endif

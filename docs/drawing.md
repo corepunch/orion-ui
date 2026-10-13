@@ -16,6 +16,12 @@ Inside `evPaint` the coordinate origin **(0, 0)** is the
 **top-left corner of the window's content area**.  Positive Y goes
 **downward**.  Units are logical pixels (screen pixels ÷ `UI_WINDOW_SCALE`).
 
+Page panes redirect subtree painting to a reusable child surface. The drawing
+system keeps coordinates and clipping relative to the root while translating the
+viewport into that surface. The window system composites it once with
+`theme.tab.corner_radius`; controls do not paint corner covers. Internal
+`set_draw_surface()` / `get_draw_surface()` select and restore the paint target.
+
 ## Colour Format
 
 Colours are `uint32_t` values in **0xAABBGGRR** byte order on little-endian
@@ -59,9 +65,13 @@ Retina scaling. No gradient texture or per-row geometry is allocated.
 
 `fill_gradient_rounded_top_rect(top, bottom, r, radius)` uses the same single-pass
 gradient with rounded top corners and square bottom corners. Modern, Light and
-Navy inactive tabs fade from their current face colour to `brPanelDarker` at the
+Navy inactive tabs fade from their current face colour to `brTabBarBg` at the
 bottom, giving a recessed shadow. Selected tabs use equal `brControlBg` endpoints
 to merge with the pane.
+
+`THEME_PART_PAGE` paints the Page background with `brPanelDarker`, including pane
+margins and splitter gaps. The tab strip uses `brTabBarBg`, lighter than the Page
+background and darker than inactive tab faces (`brPanelDark`).
 
 Modern and Navy share blue surfaces and cyan selection. Selected/pressed
 toolbar items, list/sidebar rows, and active menu items use `brSelectionTop`

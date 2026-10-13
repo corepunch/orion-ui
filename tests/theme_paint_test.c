@@ -345,7 +345,7 @@ static void test_navy_caption_bar(void) {
 }
 
 static void test_panel_shades_and_tabs(void) {
-  TEST("Toolbar and tab strip are darker; active tab merges with the pane");
+  TEST("Page, tab strip and tab faces have distinct shades; active tab merges with the pane");
   theme_style_t styles[] = {THEME_MODERN, THEME_LIGHT, THEME_NAVY, THEME_CLASSIC};
   for (int i = 0; i < ARRAY_LEN(styles); i++) {
     theme_t *theme = paint_with_theme(styles[i]);
@@ -357,15 +357,24 @@ static void test_panel_shades_and_tabs(void) {
     ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
     memset(pixels, 0, sizeof(pixels));
     theme->draw_part(THEME_PART_TAB_BAR, R(10, 10, 80, 30), CTRL_NORMAL);
+    ASSERT_EQUAL(pixels[25][50], get_sys_color(brTabBarBg));
+    memset(pixels, 0, sizeof(pixels));
+    theme->draw_part(THEME_PART_PAGE, R(10, 10, 80, 30), CTRL_NORMAL);
     ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
+    for (int shift = 0; shift < 24; shift += 8) {
+      ASSERT_TRUE(((get_sys_color(brPanelDarker) >> shift) & 255) < ((get_sys_color(brTabBarBg) >> shift) & 255));
+      ASSERT_TRUE(((get_sys_color(brTabBarBg) >> shift) & 255) < ((get_sys_color(brPanelDark) >> shift) & 255));
+      ASSERT_TRUE(((get_sys_color(brPanelDark) >> shift) & 255) < ((get_sys_color(brControlBg) >> shift) & 255));
+    }
     memset(pixels, 0, sizeof(pixels));
     theme->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_NORMAL);
     for (int shift = 0; shift < 24; shift += 8) {
       ASSERT_TRUE(((pixels[10][50] >> shift) & 255) > ((pixels[39][50] >> shift) & 255));
       ASSERT_TRUE(((pixels[10][50] >> shift) & 255) <= ((get_sys_color(brPanelDark) >> shift) & 255));
-      ASSERT_TRUE(((pixels[39][50] >> shift) & 255) >= ((get_sys_color(brPanelDarker) >> shift) & 255));
+      ASSERT_TRUE(((pixels[39][50] >> shift) & 255) >= ((get_sys_color(brTabBarBg) >> shift) & 255));
     }
-    ASSERT_EQUAL(pixels[10][10], 0);
+    if (get_theme()->tab.corner_radius) { ASSERT_EQUAL(pixels[10][10], 0); }
+    else { ASSERT_EQUAL(pixels[10][10], pixels[10][50]); }
     ASSERT_EQUAL(pixels[39][10], pixels[39][50]);
     memset(pixels, 0, sizeof(pixels));
     theme->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_SELECTED);
@@ -377,6 +386,7 @@ static void test_panel_shades_and_tabs(void) {
   theme_t *modern = paint_with_theme(THEME_MODERN);
   memset(pixels, 0, sizeof(pixels));
   modern->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_SELECTED);
+  ASSERT_EQUAL(recorded_radius, get_theme()->tab.corner_radius);
   ASSERT_EQUAL(pixels[10][10], 0);
   ASSERT_EQUAL(pixels[39][10], get_sys_color(brControlBg));
   PASS();

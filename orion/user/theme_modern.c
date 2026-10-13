@@ -22,7 +22,6 @@
 #define RADIUS_TOOLBAR_ITEM  4
 #define RADIUS_BUTTON        ((BUTTON_HEIGHT + 1) / 2)
 #define RADIUS_MENU_ITEM     6
-#define RADIUS_TAB           6
 
 // Secondary-button resting border. Navy uses the palette hairline;
 // default keeps the original quiet gray outline.
@@ -125,8 +124,8 @@ static void modern_draw_tab(irect16_t r, ctrl_state_t state) {
   uint32_t color = (state & CTRL_SELECTED) ? get_sys_color(brControlBg) :
                    (state & (CTRL_HOVER | CTRL_PRESSED)) ? get_sys_color(brButtonHover) :
                    get_sys_color(brPanelDark);
-  uint32_t bottom = (state & CTRL_SELECTED) ? color : get_sys_color(brPanelDarker);
-  fill_gradient_rounded_top_rect(color, bottom, r, RADIUS_TAB);
+  uint32_t bottom = (state & CTRL_SELECTED) ? color : get_sys_color(brTabBarBg);
+  fill_gradient_rounded_top_rect(color, bottom, r, get_theme()->tab.corner_radius);
 }
 
 // ── Titlebar ─────────────────────────────────────────────────────────────────
@@ -295,7 +294,8 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
     case THEME_PART_TAB:
       modern_draw_tab(r, state);
       break;
-    case THEME_PART_TAB_BAR:             fill_rect(get_sys_color(brPanelDarker), r); break;
+    case THEME_PART_TAB_BAR:             fill_rect(get_sys_color(brTabBarBg), r); break;
+    case THEME_PART_PAGE:                fill_rect(get_sys_color(brPanelDarker), r); break;
     case THEME_PART_TAB_PANE:            fill_rect(get_sys_color(brControlBg), r); break;
     case THEME_PART_PANEL_BORDER:        break;
     case THEME_PART_WINDOW_BORDER:       break;
@@ -397,9 +397,10 @@ static theme_t g_modern_theme = {
   },
   .tab = {
     .header = { .height = TITLEBAR_HEIGHT, .start = 0 },
-    .min_width = 80, .padding = 16, .pane_frame = 0,
+    .min_width = 80, .padding = 16, .pane_frame = 0, .corner_radius = 6, .pane_margin = 2,
   },
   .menu = { .capsule = 1 },
+  .splitter = { .spacing = 0 },
   .badge = { .padding = 7, .corner_radius = 5, .tint_alpha = 0x40 },
   .tooltip = {
     .corner_radius = 6, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,

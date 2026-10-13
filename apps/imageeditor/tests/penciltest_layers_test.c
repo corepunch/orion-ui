@@ -3,6 +3,7 @@
 #include "test_framework.h"
 #include "test_env.h"
 #include "apps/imageeditor/imageeditor.h"
+#include "apps/imageeditor/io/flc_codec.h"
 
 app_state_t *g_app;
 int g_bw_retina_scale = 1;
@@ -185,9 +186,14 @@ static void test_layer_project(void) {
   ASSERT_TRUE(imageeditor_open_file_path(path));
   ASSERT_EQUAL(g_app->active_doc->anim->frames[0]->cels_size, 768);
   FILE *fp = fopen(path, "r+b"); ASSERT_NOT_NULL(fp);
-  ASSERT_EQUAL(fseek(fp, -(16 + 256 * 7), SEEK_END), 0);
-  uint8_t header[16]; ASSERT_EQUAL(fread(header, 1, 16, fp), 16);
-  ASSERT_EQUAL(memcmp(header + 8, "PTL4", 4), 0);
+  ASSERT_EQUAL(fseek(fp, 128, SEEK_SET), 0);
+  uint8_t header[16];
+  for (;;) {
+    ASSERT_EQUAL(fread(header, 1, 16, fp), 16);
+    if (flc_codec_u16(header + 4) == 0x7075) break;
+    ASSERT_EQUAL(fseek(fp, flc_codec_u32(header) - 16, SEEK_CUR), 0);
+  }
+  ASSERT_EQUAL(memcmp(header + 8, "PTL5", 4), 0);
   header[11] = '9';
   ASSERT_EQUAL(fseek(fp, -16, SEEK_CUR), 0);
   ASSERT_EQUAL(fwrite(header, 1, 16, fp), 16); fclose(fp);

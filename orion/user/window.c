@@ -642,6 +642,15 @@ void destroy_window(window_t *win) {
 extern int titlebar_height(window_t const *win);
 extern int statusbar_height(window_t const *win);
 
+window_t *window_child_hit_test(window_t *win, ipoint16_t point) {
+  window_t *hit = (window_t *)send_message(win, evChildHitTest, MAKEDWORD(point.x, point.y), NULL);
+  if (!hit) return NULL;
+  for (window_t *c = win->children; c; c = c->next)
+    if (c == hit && window_has_state(c, WINDOW_STATE_VISIBLE) && rect_contains_point(c->frame, point)) return c;
+  fprintf(stderr, "[window] child hit-test rejected win=%u child=%p point=%d,%d\n", win->id, (void *)hit, point.x, point.y);
+  fflush(stderr); return NULL;
+}
+
 window_t *find_window(int x, int y) {
   window_t *last = NULL;
   for (window_t *win = g_ui_runtime.windows; win; win = win->next) {

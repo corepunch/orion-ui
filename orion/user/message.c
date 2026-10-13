@@ -15,6 +15,7 @@
 #include "dock.h"
 #include "page_host.h"
 #include "page.h"
+#include "theme.h"
 #include <orion/kernel/renderer.h>
 
 #define CONTAINS(x, y, x1, y1, w1, h1) \
@@ -179,18 +180,19 @@ static bool parent_notify_message(uint32_t msg) {
   }
 }
 
-// Bind the root's offscreen target. evPaint cannot assume the matching
+// Bind the current offscreen target. evPaint cannot assume the matching
 // evNCPaint just ran: another root (menu popup, tooltip) can paint in between
-// and leave its FBO bound. Children share this same root target.
+// and leave its FBO bound. A rounded pane redirects its entire subtree.
 static bool bind_root_surface(window_t *root) {
   if (!root) {
     fprintf(stderr, "[ui] root surface rejected: root window unavailable\n");
     fflush(stderr);
     return false;
   }
-  window_surface_t *surf = window_surface_ensure(root);
+  window_t *target = get_draw_surface(root);
+  window_surface_t *surf = window_surface_ensure(target);
   if (!surf || !R_EnsureWindowTarget(&surf->fbo, &surf->tex, &surf->w, &surf->h,
-                                     ui_surface_px(root->frame.w), ui_surface_px(root->frame.h)))
+                                     ui_surface_px(target->frame.w), ui_surface_px(target->frame.h)))
     return false;
   R_BindWindowTarget(surf->fbo);
   R_SetFramebufferSRGB(true);
@@ -230,6 +232,9 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   intptr_t value = 0;
   irect16_t paint_clip = {0};
   bool paint_ready = false;
+  window_t *previous_surface = NULL;
+  bool rounded_pane = msg == evPaint && g_ui_runtime.running && win->parent &&
+                      get_theme()->tab.corner_radius > 0 && page_is_pane(win);
   // Call registered hooks
   for (winhook_t *hook = g_hooks; hook; hook = hook->next) {
     if (msg == hook->msg) {
@@ -256,7 +261,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
       if (g_ui_runtime.running) {
         if (!bind_root_surface(root)) return false;
         if (win == root && (win->flags & WINDOW_TRANSPARENT)) R_ClearWindowTarget(window_surface(root)->fbo);
-        R_BindWindowTarget(window_surface(root)->fbo);
+        R_BindWindowTarget(window_surface(get_draw_surface(root))->fbo);
         set_viewport_for_fbo(root);
         if (!(win->flags&WINDOW_TRANSPARENT) && wparam == 0) {
           draw_panel(win);
@@ -273,7 +278,12 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
     case evPaint:
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
       if (g_ui_runtime.running) {
-        if (!bind_root_surface(root)) return false;
+        if (rounded_pane) previous_surface = set_draw_surface(win);
+        if (!bind_root_surface(root)) {
+          if (rounded_pane) set_draw_surface(previous_surface);
+          return false;
+        }
+        if (rounded_pane) R_ClearWindowTarget(window_surface(win)->fbo);
         if (win->parent && (win->flags & WINDOW_TOOLBAR)) toolbar_draw_non_client(win);
         int t = titlebar_height(root);
         // Shift projection so that (0,0) in drawing space maps to the top-left
@@ -315,6 +325,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
         paint_clip = clip;
         paint_ready = true;
         set_scissor_fbo(root, clip);
+        if (win->role == WINDOW_ROLE_PAGE) theme_draw(THEME_PART_PAGE, get_client_rect(win), CTRL_NORMAL);
       }
       break;
     case tbSetButtonInfo:
@@ -470,10 +481,12 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
             send_message(floating, evHitTest, MAKEDWORD(x - floating->frame.x, y - floating->frame.y - titlebar_height(floating)), lparam);
             break;
           }
+          window_t *target = window_child_hit_test(win, (ipoint16_t){x, y});
           for (window_t *item = win->children; item; item = item->next) {
             if (!window_has_state(item, WINDOW_STATE_VISIBLE)) continue;
+            if (target && item != target) continue;
             irect16_t r = item->frame;
-            if (CONTAINS(x, y, r.x, r.y, r.w, r.h)) {
+            if (rect_contains_point(r, (ipoint16_t){x, y})) {
               *(window_t **)lparam = item;
               send_message(item, evHitTest,
                            MAKEDWORD((uint16_t)(x - r.x),
@@ -562,6 +575,18 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   // After the root's own children, including when the root paints them itself.
   if (msg == evPaint && !win->parent && g_ui_runtime.running)
     paint_drag_visuals(win);
+  if (rounded_pane) {
+    set_draw_surface(previous_surface);
+    if (!bind_root_surface(root)) return false;
+    set_scissor_fbo(root, paint_clip);
+    window_surface_t *surf = window_surface(win);
+    ipoint16_t origin = {window_screen_x(win) - root->frame.x, window_screen_y(win) - root->frame.y};
+    int dx, dy;
+    window_lift_offset(win, &dx, &dy);
+    irect16_t r = rect_offset(R(0, 0, win->frame.w, win->frame.h), origin.x + dx, origin.y + dy);
+    render_rounded_rect(surf->tex, r, surf->w, surf->h,
+                        get_theme()->tab.corner_radius * ui_surface_scale(), 1, 0xffffffff);
+  }
   return value;
 }
 

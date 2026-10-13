@@ -882,7 +882,9 @@ static void test_gitclient_pane_layout(void) {
   window_t *left = page_pane_at(changes, 0), *right = page_pane_at(changes, 1);
   ASSERT_EQUAL(left->parent->id, ID_CHANGES_PAGE_CHANGES_SPLIT);
   ASSERT_EQUAL(splitview_get_left(left->parent), left);
-  ASSERT_TRUE(abs(left->frame.w * 10 - (left->frame.w + right->frame.w) * 3) <= 10);
+  int margin = get_theme()->tab.pane_margin;
+  int left_width = left->frame.w + 2 * margin, right_width = right->frame.w + 2 * margin;
+  ASSERT_TRUE(abs(left_width * 10 - (left_width + right_width) * 3) <= 10);
   window_t *panel = get_window_item(root, ID_CHANGES_PAGE_CHANGES_PANEL);
   window_t *summary = get_window_item(root, ID_CHANGES_PAGE_COMMIT_SUMMARY);
   window_t *files = g_test_state.changes_files_win, *diff = g_test_state.changes_diff_win;

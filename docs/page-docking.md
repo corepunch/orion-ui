@@ -44,7 +44,24 @@ source/target cancels the preview; releasing outside all panes leaves the tree
 unchanged. Hidden panes are skipped by drop targeting and active-pane fallback.
 Dragging is local to one Page. A split must leave at least 96 logical
 pixels of width or 64 of height per new pane. Splitting a pane's only tab into
-itself is rejected. Existing SplitView dividers remain resizable.
+itself is rejected. `get_theme()->splitter.spacing` controls the layout space
+between pane allocations (Modern, Light, Navy: 0; Classic: 2 logical pixels).
+The resize hotspot is both adjoining pane margins plus that spacing. Hover
+paints a centered two-pixel line using the tab-drop outline color (`brTextInfo`,
+alpha 128); it does not reserve additional layout space.
+`get_theme()->tab.pane_margin` configures the outside margin of every pane
+(default: 2 logical pixels, 0 disables it). It applies to standalone panes,
+nested splits, and surviving panes after collapse. Send `evThemeChanged` or
+resize the Page after changing the metric to arrange its panes again.
+Page supplies margins through ordinary layout metadata and configures each
+SplitView's resize band with `svSetPaneMargin`. SplitView arranges its children
+through the shared layout API and owns the splitter's actual window rectangle.
+
+Each pane's complete subtree is painted to a reusable window surface and composited
+against `brPanelDarker`, using `theme.tab.corner_radius`, the same radius as its
+tab faces (Modern: 6, Classic: 0). The tab strip uses the lighter `brTabBarBg` role.
+Content, toolbar children, and scrollbars share this silhouette. Page tabs meet the
+pane's top edge so the selected first tab follows its top-left corner.
 
 Moving a tab reparents its existing child window, preserving running sessions,
 scrollback, app state, and remembered descendant focus. The destination selects

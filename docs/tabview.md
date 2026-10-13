@@ -11,6 +11,12 @@ create a child using `create_window_from_form`, then select its index with
 name and session behavior. `tcGetCount`, `tcGetPage`, and `tcGetSelection` query
 the current children and selection.
 
+Horizontal tabs have adjacent allocation rectangles without an extra spacing
+pixel. Inactive tab faces are inset 2 logical pixels on each side, leaving a
+4-pixel visual gap between inactive faces. Selected tabs fill their allocation
+to merge with the pane; the full allocation remains clickable and is returned
+by `tcGetTabRect` for docking and drag targeting.
+
 `tcDeletePage(index)` destroys the page and its descendants. If it was selected,
 the next page is selected, or the previous page when the last page was removed.
 Removing an earlier inactive page retains the selected page. The parent receives
