@@ -472,6 +472,53 @@ static void test_fixed_viewport(void) {
   PASS();
 }
 
+static result_t scroll_paint_host_proc(window_t *win, uint32_t msg, uint32_t wp, void *lp) {
+  if (msg == evPaint) { fill_rect(get_sys_color(brColumnViewBg), get_client_rect(win)); return false; }
+  return msg == evCreate || msg == evDestroy;
+}
+
+static void test_scroll_padding_paint(void) {
+  TEST("Managed root and child lists paint the last row once and preserve bottom padding");
+  CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
+    (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
+  CGLPixelFormatObj format = NULL;
+  CGLContextObj context = NULL;
+  GLint count = 0;
+  if (CGLChoosePixelFormat(attrs, &format, &count) != kCGLNoError || !format) { SKIP("Offscreen OpenGL unavailable"); }
+  CGLError error = CGLCreateContext(format, NULL, &context);
+  CGLDestroyPixelFormat(format);
+  if (error != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
+  CGLSetCurrentContext(context);
+  test_env_init(); set_theme(THEME_MODERN);
+  bool ok = ui_init_prog();
+  if (ok) {
+    init_ui_white_texture();
+    for (int nested = 0; nested < 2; nested++) {
+      window_t *root = create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 240, 160), NULL,
+                                     nested ? scroll_paint_host_proc : win_iconview, 0, NULL);
+      window_t *list = nested ? create_window("", WINDOW_NOTITLE, MAKERECT(20, 30, 120, 103), root, win_iconview, 0, NULL) : root;
+      if (!nested) list->frame = R(0, 0, 120, 103);
+      for (int i = 0; i < 20; i++) {
+        reportview_item_t item = {.text = ""};
+        send_message(list, RVM_ADDITEM, 0, &item);
+      }
+      send_message(list, RVM_SETSELECTION, 19, NULL);
+      g_ui_runtime.running = true;
+      send_message(root, evPaint, 0, NULL);
+      int x = nested ? 20 : 0, y = nested ? 30 : 0;
+      int bottom = y + get_client_rect(list).h;
+      ok &= pane_pixel(root, x + 10, bottom - COLUMNVIEW_WIN_PADDING - 3) == get_sys_color(brTextNormal);
+      ok &= pane_pixel(root, x + 10, bottom - 2) == get_sys_color(brColumnViewBg);
+      g_ui_runtime.running = false;
+      destroy_window(root);
+    }
+    shutdown_white_texture(); ui_shutdown_prog();
+  }
+  test_env_shutdown();
+  CGLSetCurrentContext(NULL); CGLDestroyContext(context);
+  ASSERT_TRUE(ok); PASS();
+}
+
 static void test_onion_alpha(void) {
   TEST("Faded strokes keep an opaque canvas opaque through window compositing");
   CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
@@ -669,6 +716,7 @@ int main(void) {
   test_selection_gradient();
   test_view_rotation();
   test_fixed_viewport();
+  test_scroll_padding_paint();
 #endif
   test_onion_alpha();
   test_srgb_linear_source_over();

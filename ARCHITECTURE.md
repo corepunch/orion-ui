@@ -295,6 +295,14 @@ content window. The view publishes range, page, and position with
 Standalone `win_scrollbar` controls are reserved for layouts where the
 scrollbar is an independent child.
 
+Pixel controls publish unpadded dimensions and content/viewport insets through
+`window_set_scroll_content()`. The window owns padded ranges, gutter resolution,
+resize clamping and `window_ensure_rect_visible()`. Controls derive item bounds
+from `window_scroll_content_rect()` and use the same rectangles for hit-testing,
+reveal and painting through `window_scroll_rect_to_client()`. Managed root and
+child windows both paint in client space; fixed report headers are viewport
+insets. TileGrid uses the same conversions for its arranged child frames.
+
 The framework owns scrollbar hit-testing, drag behavior, wheel routing, and
 coordinate adjustment. The view owns content extent and painting at
 `content_position - scroll_position`. See [Scrollbars](docs/scrollbars.md).

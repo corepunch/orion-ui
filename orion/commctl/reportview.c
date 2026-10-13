@@ -6,74 +6,22 @@
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
 
-static int report_content_height(reportview_data_t *data) {
-  return rv_report_header_height(data) + (int)data->count * rv_entry_height(data);
+static void report_sync_scroll(window_t *win, reportview_data_t *data) {
+  window_set_scroll_content(win, 0, 0,
+                            (irect16_t){0}, (irect16_t){0, rv_report_header_height(data), 0, 0});
 }
 
-static void report_sync_scroll(window_t *win, reportview_data_t *data) {
-  if (!win || !data)
-    return;
-
-  int t = titlebar_height(win);
-  int s = statusbar_height(win);
-  int content_w = win->frame.w;
-  int content_h = win->frame.h - t - s;
-  if (content_w <= 0 || content_h <= 0)
-    return;
-
-  int total_w = rv_report_total_width(data, content_w);
-  int total_h = report_content_height(data);
-
-  bool show_h = false;
-  bool show_v = false;
-  for (int i = 0; i < 3; i++) {
-    int page_w = content_w - (show_v ? get_theme()->scrollbar.width : 0);
-    int page_h = content_h - (show_h ? get_theme()->scrollbar.width : 0);
-    if (page_w < 0) page_w = 0;
-    if (page_h < 0) page_h = 0;
-    bool next_h = total_w > page_w;
-    bool next_v = total_h > page_h;
-    if (next_h == show_h && next_v == show_v)
-      break;
-    show_h = next_h;
-    show_v = next_v;
-  }
-
-  int page_w = content_w - (show_v ? get_theme()->scrollbar.width : 0);
-  int page_h = content_h - (show_h ? get_theme()->scrollbar.width : 0);
-  if (page_w < 0) page_w = 0;
-  if (page_h < 0) page_h = 0;
-
-  int max_x = total_w - page_w;
-  int max_y = total_h - page_h;
-  if (max_x < 0) max_x = 0;
-  if (max_y < 0) max_y = 0;
-  if ((int)win->hscroll.pos > max_x) win->hscroll.pos = (uint32_t)max_x;
-  if ((int)win->vscroll.pos > max_y) win->vscroll.pos = (uint32_t)max_y;
-
-  scroll_info_t hsi;
-  hsi.fMask = SIF_ALL;
-  hsi.nMin = 0;
-  hsi.nMax = total_w;
-  hsi.nPage = (uint32_t)page_w;
-  hsi.nPos = (int)win->hscroll.pos;
-  set_scroll_info(win, SB_HORZ, &hsi, false);
-
-  scroll_info_t si;
-  si.fMask = SIF_ALL;
-  si.nMin = 0;
-  si.nMax = total_h;
-  si.nPage = (uint32_t)page_h;
-  si.nPos = (int)win->vscroll.pos;
-  set_scroll_info(win, SB_VERT, &si, false);
+static irect16_t report_item_rect(window_t *win, reportview_data_t *data, int index) {
+  irect16_t content = window_scroll_content_rect(win);
+  return R(content.x, content.y + index * rv_entry_height(data), content.w, rv_entry_height(data));
 }
 
 static int report_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam) {
   int my = (int)(int16_t)HIWORD(wparam);
-  int header_h = rv_report_header_height(data);
-  if (my < header_h)
-    return -1;
-  int row = (my - header_h) / rv_entry_height(data);
+  int origin = window_scroll_content_rect(win).y;
+  irect16_t point = window_scroll_rect_to_client(win, R(0, my, 0, 0));
+  if (my < origin || point.y < window_scroll_viewport(win).y) return -1;
+  int row = (my - origin) / rv_entry_height(data);
   return rv_valid_index(data, row) ? row : RV_INVALID_SELECTION;
 }
 
@@ -83,7 +31,7 @@ static bool report_hit_checkbox(window_t *win, reportview_data_t *data,
   int row = report_hit_index(win, data, wparam);
   if (!rv_valid_index(data, row)) return false;
   int mx = (int16_t)LOWORD(wparam);
-  int first_x = -(int)win->hscroll.pos + WIN_PADDING;
+  int first_x = window_scroll_content_rect(win).x + WIN_PADDING;
   if (mx < first_x || mx >= first_x + CHECKBOX_BOX_SIZE + CHECKBOX_GAP) return false;
   if (index_out) *index_out = row;
   return true;
@@ -115,14 +63,8 @@ static int report_hit_column_edge(window_t *win, reportview_data_t *data,
   (void)win;
 #else
   int header_h = rv_report_header_height(data);
-  // Be tolerant to either coordinate convention used by the caller:
-  // 1) viewport-space y (header at [0, header_h))
-  // 2) content-space y (includes vscroll.pos)
-  int vy = my;
-  if (vy < 0 || vy >= header_h) {
-    vy = my - (int)win->vscroll.pos;
-    if (vy < 0 || vy >= header_h) return -1;
-  }
+  int vy = window_scroll_rect_to_client(win, R(mx, my, 0, 0)).y;
+  if (vy < 0 || vy >= header_h) return -1;
 #endif
   int col_x = 0;
   for (uint32_t col = 0; col < data->column_count; col++) {
@@ -136,26 +78,11 @@ static int report_hit_column_edge(window_t *win, reportview_data_t *data,
   return -1;
 }
 
-static void report_scroll_to_item(window_t *win, reportview_data_t *data, int index) {
-  int scroll_y = (int)win->vscroll.pos;
-  int visible_h = get_client_rect(win).h;
-  int header_h = rv_report_header_height(data);
-  int entry_h = rv_entry_height(data);
-  int item_y_top = header_h + index * entry_h;
-  int item_y_bottom = item_y_top + entry_h;
-
-  if (item_y_top - scroll_y < header_h)
-    win->vscroll.pos = (uint32_t)(item_y_top - header_h);
-  else if (item_y_bottom - scroll_y > visible_h)
-    win->vscroll.pos = (uint32_t)(item_y_bottom - visible_h);
-}
-
 static void report_paint(window_t *win, reportview_data_t *data) {
   irect16_t cr = get_client_rect(win);
   int eff_w = cr.w;
-  int scroll_x = (int)win->hscroll.pos;
   int header_h = rv_report_header_height(data);
-  int body_h = cr.h - header_h;
+  int body_h = window_scroll_viewport(win).h;
   int entry_h = rv_entry_height(data);
   int scroll_y = (int)win->vscroll.pos;
   uint32_t bg_col = get_sys_color(brColumnViewBg);
@@ -173,7 +100,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   fill_rect(bg_col, rect_trim_top(cr, header_h));
 
   if (data->selected >= first_row && data->selected < last_row) {
-    int y = header_h + data->selected * entry_h - scroll_y;
+    int y = window_scroll_rect_to_client(win, report_item_rect(win, data, data->selected)).y;
     int top = MAX(y, header_h), bottom = MIN(y + entry_h, cr.h);
     theme_draw(THEME_PART_LIST_ITEM, R(0, top, eff_w, bottom - top), CTRL_SELECTED);
   }
@@ -183,7 +110,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   for (uint32_t col = 0; col < draw_columns; col++) {
     int col_w = data->cell_style == REPORTVIEW_CELL_TWO_LINE
               ? eff_w : rv_get_report_column_width(data, (int)col, eff_w);
-    int draw_x = col_x - scroll_x;
+    int draw_x = window_scroll_rect_to_client(win, R(col_x, 0, 0, 0)).x;
     int clip_x = MAX(0, draw_x);
     int clip_r = MIN(eff_w, draw_x + col_w);
     int clip_w = clip_r - clip_x;
@@ -205,7 +132,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
       reportview_item_t *it = &data->items[row];
       uint32_t fg = (row == data->selected) ? theme_foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED)
                   : it->color ? it->color : get_sys_color(brTextNormal);
-      int y = header_h + row * entry_h - scroll_y;
+      int y = window_scroll_rect_to_client(win, report_item_rect(win, data, row)).y;
       const char *src = "";
       if (col == 0) {
         src = it->text ? it->text : "";
@@ -254,7 +181,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
       int col_w = data->cell_style == REPORTVIEW_CELL_TWO_LINE
                 ? eff_w : rv_get_report_column_width(data, (int)col, eff_w);
     col_x += col_w;
-    int sep_x = col_x - scroll_x;
+    int sep_x = window_scroll_rect_to_client(win, R(col_x, 0, 0, 0)).x;
 #if REPORTVIEW_RESIZE_FULL_HEIGHT
     if (sep_x >= 0 && sep_x <= eff_w) {
       uint32_t da = get_sys_color(brDarkEdge);
@@ -302,6 +229,12 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       data->column_titles_visible = true;
       data->preserve_icon_colors = false;
       report_sync_scroll(win, data);
+      return true;
+    }
+    case evMeasureScrollContent: {
+      layout_measure_t *m = lparam;
+      m->desired_w = rv_report_total_width(data, m->avail_w);
+      m->desired_h = (int)data->count * rv_entry_height(data);
       return true;
     }
     case evMeasure: {
@@ -448,8 +381,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     case RVM_SETSELECTION:
       if ((int)wparam >= 0 && wparam < data->count) {
         data->selected = (int)wparam;
-        report_scroll_to_item(win, data, data->selected);
-        report_sync_scroll(win, data);
+        window_ensure_rect_visible(win, report_item_rect(win, data, data->selected), SB_VERT);
         rv_invalidate(win, data);
         return true;
       }
@@ -613,13 +545,9 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       rv_invalidate(win, data);
       return true;
     case evVScroll:
-      win->vscroll.pos = (uint32_t)wparam;
-      report_sync_scroll(win, data);
       rv_invalidate(win, data);
       return true;
     case evHScroll:
-      win->hscroll.pos = (uint32_t)wparam;
-      report_sync_scroll(win, data);
       rv_invalidate(win, data);
       return true;
     case evArrange: {
@@ -689,8 +617,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       }
       if (next != cur && next >= 0) {
         data->selected = next;
-        report_scroll_to_item(win, data, next);
-        report_sync_scroll(win, data);
+        window_ensure_rect_visible(win, report_item_rect(win, data, next), SB_VERT);
         rv_notify(win, data, next, RVN_SELCHANGE);
         rv_invalidate(win, data);
       }

@@ -499,6 +499,13 @@ typedef struct {
   ipoint16_t drag_pointer; // client-space pointer at the last pan step
 } window_view_t;
 
+typedef struct {
+  bool enabled;
+  int width, height;
+  irect16_t padding;       // left, top, right, bottom; part of the scroll extent
+  irect16_t viewport_inset; // fixed client bands, e.g. a report header
+} window_scroll_content_t;
+
 struct window_s {
   irect16_t frame;
   struct window_placement_s *placement; // lazily allocated on maximize (≈ WINDOWPLACEMENT)
@@ -519,6 +526,7 @@ struct window_s {
   void *userdata2;
   win_sb_t hscroll;   // built-in horizontal scrollbar state (WINDOW_HSCROLL)
   win_sb_t vscroll;   // built-in vertical scrollbar state (WINDOW_VSCROLL)
+  window_scroll_content_t scroll_content;
   window_view_t *view; // Lazily allocated by window_view_init. Transforms this window's content; child frames remain in viewport space.
   struct window_s *next;
   struct window_s *children;
@@ -848,6 +856,15 @@ int  get_scroll_pos(window_t *win, int bar);
 void enable_scroll_bar(window_t *win, int bar, bool enable);
 // Publish pixel content extent and position; resolve both gutters and relayout.
 void set_scroll_content(window_t *win, int width, int height, int x, int y);
+// Managed pixel scrolling. Zero width fills the viewport; empty content has no padding extent.
+void window_set_scroll_content(window_t *win, int width, int height,
+                               irect16_t padding, irect16_t viewport_inset);
+void window_sync_scroll_content(window_t *win);
+irect16_t window_scroll_viewport(const window_t *win);
+irect16_t window_scroll_content_rect(const window_t *win);
+irect16_t window_scroll_rect_to_client(const window_t *win, irect16_t rect);
+irect16_t window_scroll_rect_from_client(const window_t *win, irect16_t rect);
+void window_ensure_rect_visible(window_t *win, irect16_t rect, int bar);
 void show_scroll_bar(window_t *win, int bar, bool show);
 void reset_scroll_bar_auto(window_t *win, int bar);
 

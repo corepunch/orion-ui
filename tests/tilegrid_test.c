@@ -162,10 +162,30 @@ static void test_scroll_range_follows_content(void) {
     ASSERT_TRUE(bar->visible);
     send_message(grid, evVScroll, 100000, NULL);                // beyond the end
     ASSERT_TRUE((int)grid->vscroll.pos <= si.nMax);
+    send_message(grid, tgSetSelection, 39, NULL);
+    window_t *last = tile(grid, 39);
+    ASSERT_EQUAL(last->frame.y + last->frame.h, get_client_rect(grid).h - grid->layout.layout_padding.h);
     send_message(grid, tgClear, 0, NULL);
     ASSERT_EQUAL((int)grid->vscroll.pos, 0);
     test_env_shutdown();
     PASS();
+}
+
+static void test_gutter_reflow_can_hide_scrollbar(void) {
+    TEST("TileGrid: widening past a column boundary removes an unnecessary scrollbar");
+    test_env_init(); set_theme(THEME_CLASSIC);
+    window_t *host = test_env_create_window("host", 0, 0, 640, 480, host_proc, NULL);
+    window_t *grid = make_grid(host, 2, 200);
+    grid->frame.w = 400;
+    grid->frame.h = MAX(tile(grid, 0)->frame.h, tile(grid, 1)->frame.h)
+                  + grid->layout.layout_padding.y + grid->layout.layout_padding.h + 1;
+    send_message(grid, evResize, 0, NULL);
+    ASSERT_TRUE(grid->vscroll.visible);
+    grid->frame.w = 426;
+    send_message(grid, evResize, 0, NULL);
+    ASSERT_FALSE(grid->vscroll.visible);
+    ASSERT_EQUAL(tile(grid, 0)->frame.y, tile(grid, 1)->frame.y);
+    test_env_shutdown(); PASS();
 }
 
 static void test_badge_and_truncating_label_measure(void) {
@@ -195,6 +215,7 @@ int main(void) {
     test_selection_keyboard_and_notifications();
     test_nested_content_click_after_scroll();
     test_scroll_range_follows_content();
+    test_gutter_reflow_can_hide_scrollbar();
     test_badge_and_truncating_label_measure();
     TEST_END();
 }

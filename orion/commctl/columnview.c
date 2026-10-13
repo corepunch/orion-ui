@@ -158,21 +158,6 @@ int rv_large_icon_cell_h(const reportview_data_t *data) {
        + RV_LARGE_ICON_BOT_PAD;
 }
 
-// Number of columns that fit in the available width (outer padding excluded).
-int rv_large_icon_ncol(const reportview_data_t *data, int eff_w, int cell_w) {
-  if (data && data->fixed_large_icon_cols > 0)
-    return data->fixed_large_icon_cols;
-  int usable = MAX(1, eff_w - 2 * RV_LARGE_ICON_PAD);
-  return MAX(1, usable / cell_w);
-}
-
-// Left-edge x for the first column, centred within eff_w.
-int rv_large_icon_x0(int eff_w, int ncol, int cell_w) {
-  int grid_w = ncol * cell_w;
-  return RV_LARGE_ICON_PAD
-       + MAX(0, (eff_w - 2 * RV_LARGE_ICON_PAD - grid_w) / 2);
-}
-
 // Draw one icon from the per-instance strip centred inside icon_rect.
 // If no strip is assigned (or icon_id is out of range) a small placeholder
 // rectangle is drawn so the icon slot is always visually occupied.

@@ -25,8 +25,6 @@
 typedef struct {
   int  min_w;
   int  selected;
-  int  content_w, content_h;   // last extent published to the scrollbars
-  int  page_h;                 // client height it was published for
 } tilegrid_state_t;
 
 static int tilegrid_index_of(window_t *grid, const window_t *child) {
@@ -48,7 +46,8 @@ static int tilegrid_layout(window_t *win, int client_w, bool apply) {
   int content_w = MAX(1, client_w - pad.x - pad.w);
   int cols = MAX(1, (content_w + gap) / (g->min_w + gap));
   int tile_w = MAX(1, (content_w - (cols - 1) * gap) / cols);
-  int y = pad.y;
+  irect16_t content = window_scroll_content_rect(win);
+  int y = 0;
   for (int first = 0; first < count; first += cols) {
     int row_h = 1;
     for (int i = first; i < MIN(count, first + cols); i++)
@@ -56,29 +55,18 @@ static int tilegrid_layout(window_t *win, int client_w, bool apply) {
     if (apply)
       for (int i = first; i < MIN(count, first + cols); i++)
         layout_arrange_child(layout_child_at(win, i),
-                             R(pad.x + (i - first) * (tile_w + gap), y - (int)win->vscroll.pos, tile_w, row_h));
+                             window_scroll_rect_to_client(win, R(content.x + (i - first) * (tile_w + gap), content.y + y, tile_w, row_h)));
     y += row_h + gap;
   }
-  return (count ? y - gap : y) + pad.h;
+  return count ? y - gap : 0;
 }
 
 static void tilegrid_relayout(window_t *win) {
   tilegrid_state_t *g = (tilegrid_state_t *)win->userdata;
   if (!g) return;
-  irect16_t cr = get_client_rect(win);
-  // Keep the scroll position inside the content (content may have shrunk, or the grid may not be sized yet).
-  int max_pos = MAX(0, tilegrid_layout(win, cr.w, false) - cr.h);
-  if ((int)win->vscroll.pos > max_pos) win->vscroll.pos = (uint32_t)max_pos;
-  int height = tilegrid_layout(win, cr.w, true);
-  // Publishing the extent may add or remove the scrollbar gutter, which changes the client width and
-  // re-enters through evResize; the size check makes that converge.
-  int w = cr.w;
-  if (height != g->content_h || w != g->content_w || cr.h != g->page_h) {
-    g->content_h = height;
-    g->content_w = w;
-    g->page_h = cr.h;
-    set_scroll_content(win, w, height, 0, (int)win->vscroll.pos);
-  }
+  window_set_scroll_content(win, 0, 0,
+                            layout_padding_for(win), (irect16_t){0});
+  tilegrid_layout(win, get_client_rect(win).w, true);
   invalidate_window(win);
 }
 
@@ -89,16 +77,6 @@ static void tilegrid_sync_states(window_t *win) {
     uint32_t state = i == g->selected ? CTRL_SELECTED | (window_has_focus(win) ? CTRL_FOCUSED : 0) : 0;
     send_message(c, cdSetState, state, NULL);
   }
-}
-
-static void tilegrid_scroll_to(window_t *win, window_t *tile) {
-  irect16_t cr = get_client_rect(win), pad = layout_padding_for(win);
-  if (cr.h <= 0) return;   // not sized yet
-  int pos = (int)win->vscroll.pos;
-  if (tile->frame.y < pad.y) pos += tile->frame.y - pad.y;
-  else if (tile->frame.y + tile->frame.h > cr.h - pad.h) pos += tile->frame.y + tile->frame.h - (cr.h - pad.h);
-  win->vscroll.pos = (uint32_t)MAX(0, pos);
-  tilegrid_relayout(win);
 }
 
 static void tilegrid_select(window_t *win, int index, bool announce) {
@@ -112,7 +90,7 @@ static void tilegrid_select(window_t *win, int index, bool announce) {
   bool changed = index != g->selected;
   g->selected = index;
   tilegrid_sync_states(win);
-  tilegrid_scroll_to(win, layout_child_at(win, index));
+  window_ensure_rect_visible(win, window_scroll_rect_from_client(win, layout_child_at(win, index)->frame), SB_VERT);
   if (announce && changed) tilegrid_notify(win, index, tgnSelChange);
 }
 
@@ -177,22 +155,29 @@ result_t win_tilegrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (g && (int)wparam < layout_child_count(win)) {
         g->selected = (int)wparam;
         tilegrid_sync_states(win);
-        tilegrid_scroll_to(win, layout_child_at(win, (int)wparam));
+        window_ensure_rect_visible(win, window_scroll_rect_from_client(win, layout_child_at(win, (int)wparam)->frame), SB_VERT);
       }
       return true;
     case tgClear:
       while (win->children) destroy_window(win->children);
-      if (g) { g->selected = -1; g->content_h = g->content_w = g->page_h = 0; }
-      win->vscroll.pos = 0;
+      if (g) g->selected = -1;
       tilegrid_relayout(win);
       return true;
 
+    case evMeasureScrollContent: {
+      layout_measure_t *m = lparam;
+      irect16_t pad = layout_padding_for(win);
+      m->desired_w = 0;
+      m->desired_h = tilegrid_layout(win, m->avail_w + pad.x + pad.w, false);
+      return true;
+    }
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (!m || !g) return true;
       int w = m->avail_w > 0 ? m->avail_w : get_client_rect(win).w;
       m->desired_w = w;
-      m->desired_h = tilegrid_layout(win, w, false);
+      irect16_t pad = layout_padding_for(win);
+      m->desired_h = tilegrid_layout(win, w, false) + pad.y + pad.h;
       return true;
     }
     case evArrange: {
@@ -204,7 +189,6 @@ result_t win_tilegrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       tilegrid_relayout(win);
       return true;
     case evVScroll:
-      win->vscroll.pos = wparam;
       tilegrid_relayout(win);
       return true;
     case evPaint:

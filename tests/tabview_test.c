@@ -132,7 +132,10 @@ void test_tabview_sidebar_scrolls_with_framework_scrollbar(void) {
   ASSERT_EQUAL(send_message(tabs, tcGetSelection, 0, NULL), 0);
   ASSERT_TRUE(send_message(tabs, tcSetSelection, 11, NULL));
   int pos = get_scroll_pos(list, SB_VERT), h = get_client_rect(list).h;
-  ASSERT(6 + 12 * TAB_SIDEBAR_ROW_HEIGHT <= pos + h + 6, "selecting the last page reveals its row");
+  ASSERT_EQUAL(6 + 12 * TAB_SIDEBAR_ROW_HEIGHT - pos, h - 6);
+  irect16_t last_row;
+  ASSERT_TRUE(send_message(tabs, tcGetTabRect, 11, &last_row));
+  ASSERT_EQUAL(last_row.y + last_row.h, h - 6);
   destroy_window(host); test_env_shutdown(); PASS();
 }
 
