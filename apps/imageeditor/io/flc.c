@@ -103,7 +103,7 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
                                  uint32_t out_pal[256], uint32_t *background, bool *show_bg,
                                  pencil_file_layers_t *layers) {
   FILE *fp = fopen(path, "rb");
-  uint8_t header[128], *pixels = NULL, *block = NULL, *metadata = NULL;
+  uint8_t header[128], *pixels = NULL, *block = NULL, *metadata = NULL, *cel_buffers = NULL;
   anim_timeline_t *tl = NULL;
   long layer_offset = 0;
   uint32_t layer_length = 0;
@@ -121,7 +121,7 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
   if (magic == 0xaf11) speed = flc_u16(header + 16) * 1000u / 70u;
   if ((magic != 0xaf12 && magic != 0xaf11) || flc_u16(header + 12) != 8 ||
       !frames || !w || !h || w > 16384 || h > 16384 || total < 128 || total > 2u * FLC_LIMIT ||
-      (uint64_t)w * h * frames > FLC_LIMIT || speed > 65535) goto fail;
+      (uint64_t)w * h * 3 > FLC_LIMIT || speed > 65535) goto fail;
   if (!speed) speed = 83;
   if (fseek(fp, 0, SEEK_END) || ftell(fp) < (long)total || fseek(fp, 128, SEEK_SET)) goto fail;
   // Find the optional editing trailer before palette remapping. It follows the ring frame.
@@ -135,11 +135,9 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
       metadata = malloc(length - 16);
       if (!metadata || fread(metadata, 1, length - 16, fp) != length - 16) goto fail;
     } else if (flc_u16(chunk + 4) == FLC_LAYERS) {
-      uint64_t n = (uint64_t)w * h;
-      uint64_t bytes = n * (1 + 3u * frames);
       if (layer_offset || memcmp(chunk + 8, "PTL5", 4) || chunk[12] != IE_LAYER_COUNT ||
           chunk[13] >= IE_LAYER_COUNT || chunk[14] > 15 || chunk[15] != 0 ||
-          bytes + n * frames > FLC_LIMIT || length < 16 + 6u * (1 + 3u * frames)) goto fail;
+          length < 16 + 6u * (1 + 3u * frames)) goto fail;
       layer_offset = ftell(fp); layer_length = length - 16;
       if (layer_offset < 0 || fseek(fp, layer_length, SEEK_CUR)) goto fail;
       active_layer = chunk[13]; visible_layers = chunk[14];
@@ -182,9 +180,11 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
     anim_frame_t *frame = anim_frame_new(NULL, delay ? delay : (int)speed);
     if (!frame) goto fail;
     tl->frames[tl->frame_count++] = frame;
-    frame->format = FRAME_FORMAT_INDEXED; frame->data_size = (size_t)w * h;
-    budget += frame->data_size;
-    if (budget > FLC_LIMIT || !(frame->data = malloc(frame->data_size))) goto fail;
+    frame->format = IE_FRAME_FORMAT;
+    if (!layer_offset) {
+      frame->data_size = (size_t)w * h;
+      if (!(frame->data = malloc(frame->data_size))) goto fail;
+    }
     if (meta) {
       uint32_t fps = flc_u32(meta + 36), saved_delay = flc_u32(meta + 40);
       if (memcmp(meta, "PTF1", 4) || !fps || fps > 1000 || !saved_delay || saved_delay > 65535) goto fail;
@@ -195,7 +195,7 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
       for (int i = 0; i < 256; i++) editing_pal[i] = flc_u32(meta + 60 + i * 4);
       if (tl->frame_count > 1 && memcmp(out_pal, editing_pal, sizeof(editing_pal))) goto fail;
       memcpy(out_pal, editing_pal, sizeof(editing_pal));
-      memcpy(frame->data, pixels, frame->data_size);
+      if (frame->data) memcpy(frame->data, pixels, frame->data_size);
       colors = 256;
     } else {
       uint8_t map[256]; bool used[256] = {0};
@@ -210,6 +210,14 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
       for (size_t i = 0; i < frame->data_size; i++) frame->data[i] = map[pixels[i]];
       snprintf(frame->name, sizeof(frame->name), "Frame %d", tl->frame_count);
     }
+#if IMAGEEDITOR_BW
+    if (!layer_offset) {
+      for (size_t p = 0; p < frame->data_size; p++) frame->data[p]--;
+      if (!anim_frame_compress(frame, frame->data, w, h, FRAME_FORMAT_RLE_INDEXED)) goto fail;
+    }
+#endif
+    budget += frame->data_size;
+    if (budget > FLC_LIMIT) goto fail;
     free(block); block = NULL;
   }
 #if IMAGEEDITOR_BW
@@ -217,17 +225,16 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
     // External FLICs reserve index 0; rotate indices so 255 is transparent.
     memmove(out_pal, out_pal + 1, 255 * sizeof(*out_pal));
     out_pal[255] = 0;
-    size_t n = (size_t)w * h;
-    for (int i = 0; i < frames; i++) {
-      for (size_t p = 0; p < n; p++) tl->frames[i]->data[p]--;
-    }
   }
 #endif
   if (layer_offset) {
     size_t n = (size_t)w * h;
     if (fseek(fp, layer_offset, SEEK_SET)) goto fail;
+    cel_buffers = malloc(6 * n);
+    if (!cel_buffers) goto fail;
+    budget += n;
     uint32_t remaining = layer_length;
-    // Decode directly into final cel buffers; only the prior same-layer cel is needed.
+    // File deltas use two temporary frames; retained cels are independent RLE.
     for (int plane = 0; plane < 1 + 3 * frames; plane++) {
       uint8_t ch[6];
       if (remaining < 6 || fread(ch, 1, 6, fp) != 6) goto fail;
@@ -241,13 +248,19 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
       const uint8_t *previous = NULL;
       if (plane) {
         int index = (plane - 1) / 3, layer = (plane - 1) % 3;
-        anim_frame_t *f = tl->frames[index];
-        if (!layer) { f->cels = malloc(3 * n); if (!f->cels) goto fail; f->cels_size = 3 * n; }
-        dst = f->cels + (size_t)layer * n;
-        if (index) previous = tl->frames[index - 1]->cels + (size_t)layer * n;
+        dst = cel_buffers + (size_t)layer * n;
+        if (index) previous = cel_buffers + (size_t)(layer + 3) * n;
       }
       if (!flc_codec_decode(block, size, dst, previous, w, h)) goto fail;
       free(block); block = NULL; remaining -= size;
+      if (plane && (plane - 1) % 3 == 2) {
+        int index = (plane - 1) / 3;
+        const uint8_t *planes[] = {cel_buffers, cel_buffers + n, cel_buffers + 2 * n};
+        if (!anim_frame_pack_cels(tl->frames[index], planes, w, h)) goto fail;
+        budget += tl->frames[index]->cels_size;
+        if (budget > FLC_LIMIT) goto fail;
+        memcpy(cel_buffers + 3 * n, cel_buffers, 3 * n);
+      }
     }
     if (remaining) goto fail;
     if (layers) {
@@ -257,12 +270,12 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
       layers->active = active_layer; layers->visible = visible_layers;
     }
   }
-  fclose(fp); free(pixels); free(metadata);
+  fclose(fp); free(pixels); free(metadata); free(cel_buffers);
   *out_w = w; *out_h = h;
   return tl;
 fail:
   if (fp) fclose(fp);
-  free(pixels); free(block); free(metadata); anim_timeline_free(tl);
+  free(pixels); free(block); free(metadata); free(cel_buffers); anim_timeline_free(tl);
   return NULL;
 }
 
@@ -275,15 +288,17 @@ static bool flc_write_frame(FILE *fp, const canvas_doc_t *doc, int index, uint8_
   const anim_frame_t *frame = doc->anim->frames[index];
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   uint8_t *composite = NULL;
-  const uint8_t *pixels = index == doc->anim->active_frame ? doc->pixels : frame->data;
+  const uint8_t *pixels = doc->pixels;
   if (pencil_has_layers(doc)) {
     composite = malloc(n);
     if (!composite || !pencil_composite_frame(doc, index, composite)) { free(composite); return false; }
     pixels = composite;
+  } else if (index != doc->anim->active_frame) {
+    composite = malloc(n);
+    if (!composite || !anim_frame_expand_indices(frame, composite, doc->canvas_w, doc->canvas_h)) { free(composite); return false; }
+    pixels = composite;
   }
-  if (!pixels || (index != doc->anim->active_frame &&
-      (frame->format != FRAME_FORMAT_INDEXED || frame->data_size != n)) ||
-      frame->delay_ms < 1 || frame->delay_ms > 65535) { free(composite); return false; }
+  if (!pixels || frame->delay_ms < 1 || frame->delay_ms > 65535) { free(composite); return false; }
   size_t size;
   uint8_t *chunk = flc_codec_encode(pixels, first ? NULL : previous, doc->canvas_w, doc->canvas_h, &size);
   if (!chunk) { free(composite); return false; }
@@ -333,23 +348,22 @@ static bool flc_write_layers(FILE *fp, const canvas_doc_t *doc) {
   for (int i = 0; i < IE_LAYER_COUNT; i++) if (doc->layer.stack[i]->visible) header[14] |= 1u << i;
   if (fwrite(header, 1, 16, fp) != 16 ||
       !flc_codec_write(fp, doc->layer.stack[0]->pixels, NULL, doc->canvas_w, doc->canvas_h)) return false;
+  long cel_start = ftell(fp);
+  if (cel_start < 0) return false;
   uint8_t *blank = calloc(1, n);
-  uint8_t *previous = malloc(3 * n);
-  if (!blank || !previous) { free(blank); free(previous); return false; }
+  if (!blank) return false;
   bool ok = true;
   for (int f = 0; ok && f < doc->anim->frame_count; f++)
     for (int layer = 1; ok && layer < IE_LAYER_COUNT; layer++) {
-      const uint8_t *pixels = pencil_frame_layer(doc, f, layer);
-      if (!pixels) memset(blank, layer == IE_LAYER_PENCIL ? 0 : doc->ipal.transparent, n);
-      uint8_t *old = previous + (size_t)(layer - 1) * n;
-      ok = flc_codec_write(fp, pixels ? pixels : blank, f ? old : NULL, doc->canvas_w, doc->canvas_h);
-      if (ok) memcpy(old, pixels ? pixels : blank, n);
+      ok = pencil_read_frame_layer(doc, f, layer, blank) && flc_codec_write(fp, blank, NULL, doc->canvas_w, doc->canvas_h);
+      long pos = ftell(fp);
+      if (pos < cel_start || (uint64_t)(pos - cel_start) + n > FLC_LIMIT) ok = false;
     }
   long end = ftell(fp);
   if (end < start || (uint64_t)(end - start) > 2u * FLC_LIMIT) ok = false;
   flc_put32(header, end - start);
   if (ok) ok = !fseek(fp, start, SEEK_SET) && fwrite(header, 1, 16, fp) == 16 && !fseek(fp, end, SEEK_SET);
-  free(blank); free(previous);
+  free(blank);
   return ok;
 }
 
@@ -362,8 +376,7 @@ bool flc_save(const char *path, const canvas_doc_t *doc) {
      return false;
   }
   uint64_t n = (uint64_t)doc->canvas_w * doc->canvas_h;
-  uint64_t layer_bytes = pencil_has_layers(doc) ? n * (1 + 3u * doc->anim->frame_count) : 0;
-  if (n * doc->anim->frame_count + layer_bytes > FLC_LIMIT) return false;
+  if (n * 3 > FLC_LIMIT) return false;
   uint8_t *previous = malloc((size_t)n);
   if (!previous) return false;
   char temp[1024];

@@ -270,7 +270,6 @@ Use:
 
 * compressed/disk-backed frames,
 * cached decoded frames around the playhead,
-* cached thumbnails,
 * proxy playback,
 * user-visible memory budget,
 * background cache eviction.

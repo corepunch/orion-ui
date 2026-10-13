@@ -4,41 +4,44 @@ bool pencil_has_layers(const canvas_doc_t *doc) {
   return IMAGEEDITOR_BW && doc && doc->layer.count == IE_LAYER_COUNT;
 }
 
-const uint8_t *pencil_frame_layer(const canvas_doc_t *doc, int frame, int layer) {
-  if (!pencil_has_layers(doc) || !doc->anim || frame < 0 || frame >= doc->anim->frame_count ||
-      layer < 0 || layer >= IE_LAYER_COUNT) return NULL;
-  if (layer == IE_LAYER_BG || frame == doc->anim->active_frame)
-    return doc->layer.stack[layer]->pixels;
-  const anim_frame_t *f = doc->anim->frames[frame];
-  size_t n = (size_t)doc->canvas_w * doc->canvas_h;
-  if (f->cels && f->cels_size == 3 * n) return f->cels + (layer - 1) * n;
-  if (!f->cels && layer == IE_LAYER_COLOR && f->format == FRAME_FORMAT_INDEXED && f->data_size == n)
-    return f->data;
-  return NULL;
+static bool pencil_expand_stored_layer(const anim_frame_t *frame, int layer, uint8_t *pixels, int w, int h) {
+  if (frame->cels) return anim_frame_expand_cel(frame, layer - 1, pixels, w, h);
+  if (layer == IE_LAYER_COLOR && frame->data) return anim_frame_expand_indices(frame, pixels, w, h);
+  memset(pixels, layer == IE_LAYER_PENCIL ? 0 : 255, (size_t)w * h);
+  return true;
+}
+
+bool pencil_read_frame_layer(const canvas_doc_t *doc, int frame, int layer, uint8_t *pixels) {
+  if (!pencil_has_layers(doc) || !pixels || !doc->anim || frame < 0 || frame >= doc->anim->frame_count ||
+      layer < 0 || layer >= IE_LAYER_COUNT) return false;
+  if (layer == IE_LAYER_BG || frame == doc->anim->active_frame) {
+    memcpy(pixels, doc->layer.stack[layer]->pixels, (size_t)doc->canvas_w * doc->canvas_h);
+    return true;
+  }
+  return pencil_expand_stored_layer(doc->anim->frames[frame], layer, pixels, doc->canvas_w, doc->canvas_h);
 }
 
 bool pencil_composite_frame(const canvas_doc_t *doc, int frame, uint8_t *pixels) {
 #if IMAGEEDITOR_INDEXED
-  if (!pencil_has_layers(doc) || !pixels || !doc->anim || frame < 0 || frame >= doc->anim->frame_count)
-    return false;
-  const anim_frame_t *f = doc->anim->frames[frame];
+  if (!pencil_has_layers(doc) || !pixels || !doc->anim || frame < 0 || frame >= doc->anim->frame_count) return false;
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
-  if (frame != doc->anim->active_frame &&
-      ((f->cels && f->cels_size != 3 * n) || (!f->cels && f->data &&
-        (f->format != FRAME_FORMAT_INDEXED || f->data_size != n)))) return false;
+  uint8_t *plane = malloc(n);
+  if (!plane) return false;
   memset(pixels, doc->ipal.transparent, n);
   static const int order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
-  for (int order_i = 0; order_i < IE_LAYER_COUNT; order_i++) {
-    int layer = order[order_i];
+  bool ok = true;
+  int ink = canvas_nearest_palette_index(doc, pencil_configured_color());
+  for (int i = 0; ok && i < IE_LAYER_COUNT; i++) {
+    int layer = order[i];
     if (!doc->layer.stack[layer]->visible) continue;
-    const uint8_t *src = pencil_frame_layer(doc, frame, layer);
-    if (src) for (size_t p = 0; p < n; p++) {
-      if (layer == IE_LAYER_PENCIL) {
-        if (src[p]) pixels[p] = (uint8_t)canvas_nearest_palette_index(doc, pencil_configured_color());
-      } else if (src[p] != doc->ipal.transparent) pixels[p] = src[p];
+    ok = pencil_read_frame_layer(doc, frame, layer, plane);
+    if (ok) for (size_t p = 0; p < n; p++) {
+      if (layer == IE_LAYER_PENCIL) { if (plane[p]) pixels[p] = ink; }
+      else if (plane[p] != doc->ipal.transparent) pixels[p] = plane[p];
     }
   }
-  return true;
+  free(plane);
+  return ok;
 #else
   (void)doc; (void)frame; (void)pixels;
   return false;
@@ -52,63 +55,43 @@ static void pencil_rgba_blend(uint8_t *dst, uint32_t color, uint8_t alpha) {
 }
 
 static bool pencil_composite_frame_rgba(const canvas_doc_t *doc, int frame, uint8_t *rgba) {
-  if (!pencil_has_layers(doc) || !rgba || !doc->anim || frame < 0 || frame >= doc->anim->frame_count)
-    return false;
-  const anim_frame_t *f = doc->anim->frames[frame];
+  if (!pencil_has_layers(doc) || !rgba || !doc->anim || frame < 0 || frame >= doc->anim->frame_count) return false;
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
-  if (frame != doc->anim->active_frame &&
-      ((f->cels && f->cels_size != 3 * n) || (!f->cels && f->data &&
-        (f->format != FRAME_FORMAT_INDEXED || f->data_size != n)))) return false;
+  uint8_t *plane = malloc(n);
+  if (!plane) return false;
   memset(rgba, 0, n * 4);
   static const int order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
-  for (int order_i = 0; order_i < IE_LAYER_COUNT; order_i++) {
-    int layer = order[order_i];
+  bool ok = true;
+  for (int i = 0; ok && i < IE_LAYER_COUNT; i++) {
+    int layer = order[i];
     const layer_t *lay = doc->layer.stack[layer];
     if (!lay->visible) continue;
-    const uint8_t *src = pencil_frame_layer(doc, frame, layer);
-    if (!src) continue;
+    ok = pencil_read_frame_layer(doc, frame, layer, plane);
+    if (!ok) break;
     for (size_t p = 0; p < n; p++) {
-      uint32_t color;
-      uint32_t alpha;
+      uint32_t color, alpha;
       if (layer == IE_LAYER_PENCIL) {
-        if (!src[p]) continue;
-        color = pencil_configured_color();
-        alpha = src[p];
+        if (!plane[p]) continue;
+        color = pencil_configured_color(); alpha = plane[p];
       } else {
-        uint8_t index = src[p];
-        if (index == (uint8_t)doc->ipal.transparent) continue;
-        color = doc->ipal.entries[index];
-        alpha = COLOR_A(color);
+        if (plane[p] == (uint8_t)doc->ipal.transparent) continue;
+        color = doc->ipal.entries[plane[p]]; alpha = COLOR_A(color);
       }
-      alpha = alpha * lay->opacity / 255;
-      pencil_rgba_blend(rgba + p * 4, color, (uint8_t)alpha);
+      pencil_rgba_blend(rgba + p * 4, color, alpha * lay->opacity / 255);
     }
   }
-  return true;
+  free(plane);
+  return ok;
 }
 #endif
 
 bool doc_anim_commit(canvas_doc_t *doc) {
   if (!doc || !doc->anim) return false;
   anim_frame_t *frame = doc->anim->frames[doc->anim->active_frame];
-  if (!pencil_has_layers(doc))
-    return anim_frame_compress(frame, doc->pixels, doc->canvas_w, doc->canvas_h, IE_FRAME_FORMAT);
-  size_t n = (size_t)doc->canvas_w * doc->canvas_h;
-  uint8_t *cels = malloc(3 * n), *composite = malloc(n);
-  bool ok = cels && composite && pencil_composite_frame(doc, doc->anim->active_frame, composite);
-  if (ok) {
-    for (int i = 1; i < IE_LAYER_COUNT; i++) memcpy(cels + (i - 1) * n, doc->layer.stack[i]->pixels, n);
-    ok = anim_frame_compress(frame, composite, doc->canvas_w, doc->canvas_h, FRAME_FORMAT_INDEXED);
-  }
-  free(composite);
-  if (!ok) {
-    free(cels);
-    return false;
-  }
-  free(frame->cels);
-  frame->cels = cels;
-  frame->cels_size = 3 * n;
-  return true;
+  if (!pencil_has_layers(doc)) return anim_frame_compress(frame, doc->pixels, doc->canvas_w, doc->canvas_h, IE_FRAME_FORMAT);
+  const uint8_t *planes[3];
+  for (int i = 0; i < 3; i++) planes[i] = doc->layer.stack[i + 1]->pixels;
+  return anim_frame_pack_cels(frame, planes, doc->canvas_w, doc->canvas_h);
 }
 
 bool doc_anim_load(canvas_doc_t *doc, int index) {
@@ -116,14 +99,14 @@ bool doc_anim_load(canvas_doc_t *doc, int index) {
   anim_frame_t *frame = doc->anim->frames[index];
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   if (pencil_has_layers(doc)) {
-    if ((frame->cels && frame->cels_size != 3 * n) || (!frame->cels && frame->data &&
-        (frame->format != FRAME_FORMAT_INDEXED || frame->data_size != n))) return false;
-    for (int i = 1; i < IE_LAYER_COUNT; i++) {
-      const uint8_t *src = frame->cels ? frame->cels + (i - 1) * n :
-                           i == IE_LAYER_COLOR ? frame->data : NULL;
-      if (src) memcpy(doc->layer.stack[i]->pixels, src, n);
-      else memset(doc->layer.stack[i]->pixels, i == IE_LAYER_PENCIL ? 0 : 255, n);
-    }
+    uint8_t *decoded = malloc(3 * n);
+    if (!decoded) return false;
+    bool ok = true;
+    for (int i = 0; ok && i < 3; i++)
+      ok = pencil_expand_stored_layer(frame, i + 1, decoded + (size_t)i * n, doc->canvas_w, doc->canvas_h);
+    if (ok) for (int i = 0; i < 3; i++) memcpy(doc->layer.stack[i + 1]->pixels, decoded + (size_t)i * n, n);
+    free(decoded);
+    if (!ok) return false;
   } else if (frame->data && frame->data_size) {
     if (!anim_frame_expand(frame, doc->pixels, doc->canvas_w, doc->canvas_h)) return false;
   } else memset(doc->pixels, 0, n * DOC_BPP);

@@ -63,6 +63,8 @@ static const char *kValid = ""
   "      <item name=\"refresh\" label=\"Refresh\" shortcut=\"F5;Ctrl+F5\" />\n"
   "      <item name=\"rewind\" label=\"Rewind\" shortcut=\"Home\" />\n"
   "      <item name=\"forward\" label=\"Go to End\" shortcut=\"End\" />\n"
+  "      <item name=\"previous\" label=\"Previous\" shortcut=\"Left;Up\" />\n"
+  "      <item name=\"next\" label=\"Next\" shortcut=\"Right;Down\" />\n"
   "    </menu>\n"
   "  </menus>\n"
   "  <forms>\n"
@@ -81,6 +83,10 @@ void test_valid_manifest_accepted(void) {
     ASSERT_EQUAL(rc, 0);
     ASSERT_TRUE(contains(out, "{ FVIRTKEY, AX_KEY_HOME, ID_REPO_REWIND }"));
     ASSERT_TRUE(contains(out, "{ FVIRTKEY, AX_KEY_END, ID_REPO_FORWARD }"));
+    ASSERT_TRUE(contains(out, "{ FVIRTKEY, AX_KEY_LEFTARROW, ID_REPO_PREVIOUS }"));
+    ASSERT_TRUE(contains(out, "{ FVIRTKEY, AX_KEY_UPARROW, ID_REPO_PREVIOUS }"));
+    ASSERT_TRUE(contains(out, "{ FVIRTKEY, AX_KEY_RIGHTARROW, ID_REPO_NEXT }"));
+    ASSERT_TRUE(contains(out, "{ FVIRTKEY, AX_KEY_DOWNARROW, ID_REPO_NEXT }"));
     ASSERT_TRUE(contains(out, ".role = WINDOW_ROLE_HOST"));
     ASSERT_TRUE(contains(out, ".role = WINDOW_ROLE_PAGE"));
     ASSERT_TRUE(contains(out, "test_page_toolbar"));

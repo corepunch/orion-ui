@@ -166,6 +166,8 @@ static uint8_t *premultiply_srgba8(const uint8_t *rgba, int w, int h) {
   if (!out) return NULL;
   for (size_t i = 0; i < bytes; i += 4) {
     uint8_t a = rgba[i + 3];
+    if (a == 255) { memcpy(out + i, rgba + i, 4); continue; }
+    if (a == 0) { memset(out + i, 0, 4); continue; }
     float alpha = (float)a / 255.0f;
     out[i + 0] = ui_linear_to_srgb8(ui_srgb8_to_linear(rgba[i + 0]) * alpha);
     out[i + 1] = ui_linear_to_srgb8(ui_srgb8_to_linear(rgba[i + 1]) * alpha);
@@ -1108,6 +1110,10 @@ bool R_ReadTextureSRGBA8(uint32_t tex, int w, int h, uint8_t *out_rgba) {
   }
 
   for (size_t i = 0; i < pixel_count; i++) {
+    if (encoded && encoded[i * 4 + 3] == 255) {
+      memcpy(out_rgba + i * 4, encoded + i * 4, 4);
+      continue;
+    }
     float alpha = format == R_TEXTURE_RGBA16F_LINEAR
                 ? linear[i * 4 + 3] : (float)encoded[i * 4 + 3] / 255.0f;
     if (!isfinite(alpha) || alpha <= 0.0f) {

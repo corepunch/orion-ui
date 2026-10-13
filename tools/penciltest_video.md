@@ -2,154 +2,132 @@
 
 `penciltest-video` converts MP4 and other FFmpeg-readable video into editable
 Penciltest `.ptf` projects, PNG frame sequences, or both. It is a C99 command-line
-tool for macOS and Linux. Build-time dependencies are a C compiler, `pkg-config`
-and `libpng`; conversion requires FFmpeg on `PATH`, in `$FFMPEG`, or supplied
-with `--ffmpeg PATH`. The converter launches FFmpeg directly without a shell.
+tool for macOS and Linux. Build dependencies are a C compiler, `pkg-config` and
+`libpng`; conversion requires FFmpeg on `PATH`, in `$FFMPEG`, or supplied with
+`--ffmpeg PATH`. FFmpeg is launched directly without a shell.
 
 ```sh
 make penciltest-video
 build/bin/penciltest-video --help
 ```
 
-## Conversion modes
+## Conversion and palette choices
 
 | Mode | Native layer | Pixel transfer | PNG output |
 |---|---|---|---|
-| `--mode pencil` (default) | Pencil | 8-bit luminance stored reversibly as `255 - luminance` coverage | Lossless 8-bit single-channel grayscale |
-| `--mode black` | Color | Luminance below `--threshold` becomes opaque RGB black; other pixels become transparent | 8-bit indexed black and transparency |
-| `--mode palette --colors N` | Color | One adaptive palette for the whole video, without dithering | 8-bit indexed color with the same palette |
+| `--mode pencil` (default) | Pencil | All 256 luminance levels stored reversibly as `255 - luminance` coverage | Lossless 8-bit grayscale |
+| `--mode black` | Color | Luminance below `--threshold` becomes exact RGB black; other pixels are transparent | Indexed black/transparency |
+| `--mode palette` | Color | RGB video quantized into the chosen document palette, without dithering | Indexed colors |
 
-Supported palette budgets are **32, 64, 128, 256**. For 32/64/128, the budget is
-an upper bound on opaque colors. At 256, Penciltest's reserved transparent index
-255 leaves **255 opaque colors plus transparency**. All other unused entries
-are transparent. Palette mode uses a 5-bit RGB histogram, weighted median-cut
-boxes, and nearest palette colors for histogram bins. A shared palette prevents
-palette changes between frames; palette conversion is lossy.
+Choose the document palette independently of the conversion mode:
 
-Pencil mode preserves every decoded luminance sample, including antialiased
-edges and gray shading. Luminance is `(77*R + 150*G + 29*B + 128) >> 8`; neutral
-RGB grays remain exact. This does not recover detail already lost by MP4
-compression, and converting a color source to grayscale discards chroma.
-Penciltest displays Pencil coverage with its configured purple ink and paper
-style, including its normal compositing behavior. The saved coverage bytes and
-grayscale PNGs are lossless; the app's styled display is not a visually exact
-black-and-white copy. Use black or palette mode for RGB black on the Color layer.
+| Option | Behavior |
+|---|---|
+| `--palette default` (default) | Load the same 32-color RIFF palette used by Penciltest. |
+| `--palette FILE.pal` | Use the ordered RGB entries in an existing binary RIFF PAL file. |
+| `--palette generated --colors 32` | Derive one adaptive palette from the entire video. |
 
-PNG supports one-channel 8-bit grayscale and lossless compression; JPEG would
-introduce another lossy encoding. The generated grayscale PNGs are readable by
-macOS's image subsystem and Preview. See the [PNG specification](https://www.w3.org/TR/2003/REC-PNG-20031110/).
+The shared resource is `apps/imageeditor/share/palettes/default.pal`, packaged
+beside the binaries in `build/share/imageeditor/palettes/`. It contains 16 dark/light
+pairs; the original eight pairs are unchanged. No palette RGB table is duplicated
+in the app or converter. Every project embeds its editing palette, so later
+changes to the default resource cannot recolor an existing project.
+
+RIFF PAL files contain RGB and Windows flags, not alpha. Existing palettes may
+have 1–255 entries; native index 255 remains reserved for transparency. Unused
+native entries are empty, not extra grayscale colors. Malformed or oversized
+palette files are rejected. Black mode requires an exact black entry in an
+existing palette; the default includes one. Generated black-mode palettes reserve
+black within the requested budget.
+
+Generated budgets are 32 (default), 64, 128 or 256; 256 means 255 opaque colors
+plus transparency. `--colors` without `--palette` selects generated palettes for
+compatibility with earlier commands; combining it with default/existing palettes
+is rejected. Generation uses a 5-bit RGB histogram, weighted median-cut boxes and
+nearest palette colors for occupied histogram bins. Color quantization is lossy;
+one palette for the whole video prevents frame-to-frame palette flicker.
+
+Pencil coverage and grayscale PNG samples are independent of the editing palette.
+Luminance is `(77*R + 150*G + 29*B + 128) >> 8`; neutral RGB grays remain exact.
+Penciltest displays that coverage using its configured purple ink and paper style.
+The compatibility FLC playback stream retains a grayscale palette for pencil
+mode; that playback palette never replaces the embedded editing palette.
 
 ## Examples
 
-Use the supplied video at its original dimensions and timing:
+Preserve the source dimensions and timing:
 
 ```sh
-build/bin/penciltest-video --mode pencil \
-  --output build/pencil.ptf --frames build/pencil-frames \
-  /Users/igor/Downloads/generated_video-2.mp4
+build/bin/penciltest-video --mode pencil --palette default \
+  --output build/pencil.ptf --frames build/pencil-frames input.mp4
 
-build/bin/penciltest-video --mode black --threshold 128 \
-  --output build/black.ptf --frames build/black-frames \
-  /Users/igor/Downloads/generated_video-2.mp4
+build/bin/penciltest-video --mode black --palette default --threshold 128 \
+  --output build/black.ptf --frames build/black-frames input.mp4
 
-build/bin/penciltest-video --mode palette --colors 64 \
-  --output build/palette-64.ptf --frames build/palette-64-frames \
-  /Users/igor/Downloads/generated_video-2.mp4
+build/bin/penciltest-video --mode palette --palette generated --colors 32 \
+  --output build/palette-32.ptf --frames build/palette-32-frames input.mp4
+
+build/bin/penciltest-video --mode palette --palette default \
+  --output build/palette-default.ptf input.mp4
+
+build/bin/penciltest-video --mode palette \
+  --palette apps/imageeditor/share/palettes/default.pal \
+  --output build/palette-existing.ptf input.mp4
 ```
 
-Specify `--ffmpeg /path/to/ffmpeg` before the input when FFmpeg is not on `PATH`.
-Outputs must not already exist. Parent directories must exist. PNG files are
-named `frame-000001.png`, `frame-000002.png`, etc. Their directory also contains
-`timing.tsv` with source timestamps and native frame delays.
-
-For a smaller editable project, explicitly choose dimensions and/or frame rate:
-
-```sh
-build/bin/penciltest-video --mode palette --colors 32 \
-  --size 584x392 --fps 12 --output build/small.ptf input.mp4
-```
-
-`--size` resizes to exactly the requested dimensions using Lanczos filtering;
-choose dimensions with the source aspect ratio to avoid stretching. `--fps`
-resamples the timeline. `--max-frames N` limits the number of output frames.
-Omit `--output` to export only PNGs:
-
-```sh
-build/bin/penciltest-video --mode pencil --frames build/gray-frames input.mp4
-```
+For a smaller project, explicitly add `--size 584x392 --fps 12`. Resizing uses
+Lanczos filtering at exactly the requested dimensions; preserve the aspect ratio
+when choosing them. `--max-frames N` limits conversion. Omit `--output` to export
+only PNGs. Outputs must not already exist; parent directories must exist. PNGs
+are named `frame-000001.png`, etc., with source timing in `timing.tsv`.
 
 ## Timing and storage
 
-Source frames, dimensions and presentation timing are preserved by default.
-FFmpeg applies the input's display rotation. The first moving video stream is
-selected, excluding attached cover pictures. Audio, subtitles and additional
-video streams are omitted. Frame delays use native millisecond precision with
-cumulative rounding, so fractional rates do not accumulate rounding drift.
-The native timeline's default integer FPS is the nearest source rate; each
-frame retains its own delay, including variable frame durations. FFmpeg's
-[showinfo filter](https://ffmpeg.org/ffmpeg-filters.html#showinfo) supplies the
-source timestamps without requiring `ffprobe`.
+Source dimensions, display rotation and timing are preserved by default. The
+first moving video stream is selected, excluding attached covers. Audio,
+subtitles and additional video streams are omitted. Native frame delays use
+millisecond precision with cumulative rounding, including fractional and variable
+rates. FFmpeg's `showinfo` supplies timestamps without requiring `ffprobe`.
 
-The output follows the FLC container and Penciltest `PTA1` / `PTL5`
-editing trailers implemented in `apps/imageeditor/io/flc.c`. It includes a ring
-frame, the palette, frame names, delays, and separate Background, Color, Pencil
-and FX planes. The imported layer is active; the other animation layers are
-empty. Paper is white. Both playback frames and editable planes use lossless
-FLI-style scanline RLE and frame differences, with raw COPY only when smaller.
-Unchanged layers need only a tiny record. The app and converter share the codec
-in `apps/imageeditor/io/flc_codec.h`. Old raw `PTL2`/`PTL3`/`PTL4` projects are
-not supported by the new app; ordinary external FLC/FLI imports still work.
+Native projects use Penciltest's FLC container with `PTA1` editing metadata and
+`PTL5` layer chunks. Editable Color/Pencil/FX cels use independent lossless scanline
+RLE, with raw COPY when smaller. Background is shared. Flattened playback frames
+may use temporal differences. The app retains compressed frames, four working
+byte planes and visible onion textures; there is no timeline thumbnail pipeline.
 
-Native projects must fit Penciltest's 512 MiB decoded-pixel limit, 65535 frames,
-16384 pixels per dimension, and 1–65535 ms per frame. The converter rejects
-oversized native projects; it never silently resizes or drops frames. PNG-only
-export bypasses the native frame-count and aggregate pixel limits. Decoded RGB
-frames are spooled to temporary disk files, so memory usage does not grow with
-the full decoded movie. Allow disk space for the RGB spool, compressed layer spool and
-outputs. Completed outputs are published only after conversion succeeds;
-existing projects are never replaced.
+Native limits are 512 MiB encoded cels, 65535 frames, 16384 pixels per dimension,
+1–65535 ms per frame, and 512 MiB for three decoded working cels. PNG-only export
+bypasses native frame-count and encoded-layer limits. Decoded RGB is spooled to
+temporary disk files, so memory does not grow with the movie. Allow disk space for
+that spool, compressed layers and outputs. Outputs are published only after a
+successful conversion; existing files are never replaced by the tool.
 
-For `generated_video-2.mp4`, all three full-resolution conversions produced
-**145 frames at 1168×784**, with **6042 ms** total native playback time. The
-original rate is 24 fps. Native project sizes after RLE are **91.69 MiB** for
-Pencil, **17.61 MiB** for solid black, and **55.00 MiB** for 64-color, down from
-508.52 MiB each in the raw format. All original dimensions, frames, delays and
-converted pixel bytes are preserved.
-The PNG sequences occupy approximately 34 MiB for grayscale, 3.7 MiB for
-thresholded black, and 17 MiB for 64-color, including filesystem allocation.
-Generated examples are in `build/penciltest-video-example/` and are untracked.
+## Regenerated video examples
 
-ZIP with DEFLATE level 9 gives the following sizes for this same clip. Extracted
-files were verified against their originals with SHA-256.
-
-| Mode | Native RLE | RLE plus ZIP | Old raw format plus ZIP |
-|---|---:|---:|---:|
-| Pencil | 91.69 MiB | 68.38 MiB | 67.28 MiB |
-| Solid black | 17.61 MiB | 7.15 MiB | 6.63 MiB |
-| 64-color | 55.00 MiB | 35.28 MiB | 34.43 MiB |
-
-ZIP provides another lossless reduction. In this clip, ZIP alone compresses the
-old raw layout slightly better than RLE followed by ZIP. The new RLE files save
-space while remaining directly editable by the app. ZIP archives must be
-extracted before opening; ZIP support is not part of the native loader.
+`build/penciltest-video-example/` contains full-resolution conversions of
+`/Users/igor/Downloads/generated_video-2.mp4`: pencil, black, generated 32-color,
+fixed default-palette color, and fixed existing-palette color. Each project has
+145 frames at 1168×784, 24 fps, and 6042 ms total duration. Every project includes
+its PNG sequence and timing, plus a ZIP of the PTF. These generated assets remain
+untracked. The original examples are preserved in the sibling backup directory.
 
 ## Validation
 
 ```sh
-make build/bin/test_penciltest_video_test
-build/bin/test_penciltest_video_test
-make build/bin/test_penciltest_rle_test
-build/bin/test_penciltest_rle_test
-
-# Also reopen the generated full example projects and compare every cel to its PNG:
+make build/bin/test_palette_file_test build/bin/test_penciltest_video_test
+build/bin/test_palette_file_test
 PENCILTEST_VIDEO_EXAMPLES=build/penciltest-video-example \
   build/bin/test_penciltest_video_test
+
+make build/bin/test_penciltest_layout_test build/bin/test_penciltest_memory_test
+build/bin/test_penciltest_layout_test
+PENCILTEST_MEMORY_EXAMPLE=build/penciltest-video-example/pencil.ptf \
+  build/bin/test_penciltest_memory_test
 ```
 
-The tests exercise all 256 grayscale levels, threshold boundaries, all palette
-budgets, fractional and variable timing, decoder failures, quoted file paths,
-PNG pixel roundtrips, existing-file protection, and odd-size multi-frame native
-projects reopened through Penciltest's actual loader. The separate
-`test_penciltest_rle_test` suite checks FLIC packet semantics, long runs and skips,
-wide rows, incompressible pixels, temporal deltas, malformed packets, native
-compression size, and rejection of old layer versions.
+Tests cover all grayscale levels, threshold boundaries, palette sources and
+budgets, corrupt RIFF files, fractional/variable timing, decoder failures, quoted
+paths, native/PNG round trips, and existing-output protection. Full-example
+verification decodes every cel and compares it with its PNG. Sidebar tests verify
+all 32 default swatches fit, larger document palettes page, duplicate colors
+retain their selected index, and selection never mutates palettes or history.

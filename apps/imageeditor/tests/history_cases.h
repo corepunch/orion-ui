@@ -227,7 +227,13 @@ static void history_selection_resize_layers(void) {
   cmd_frame_add(doc, true);
   cmd_resize_image(doc, 16, 20, IMAGE_RESIZE_NEAREST);
   ASSERT_TRUE(cmd_frame_select(doc, 0));
+  #if IMAGEEDITOR_BW
+  uint8_t decoded[16 * 20];
+  ASSERT_TRUE(anim_frame_expand_cel(doc->anim->frames[0], 1, decoded, 16, 20));
+  ASSERT_NULL(doc->anim->frames[0]->data);
+#else
   ASSERT_EQUAL(doc->anim->frames[0]->data_size, (size_t)16 * 20 * DOC_BPP);
+#endif
   ASSERT_EQUAL(doc->canvas_w, 16);
   cmd_undo(doc);
   ASSERT_EQUAL(doc->canvas_w, 32);

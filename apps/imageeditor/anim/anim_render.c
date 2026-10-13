@@ -1,80 +1,8 @@
-// Animation GL rendering: thumbnail generation for indexed and 1-bit frames.
+// Animation onion textures for indexed and RGBA frames.
 
 #include "imageeditor.h"
 
-// ============================================================
-// GL shader programs
-// ============================================================
-
-// Vertex shader shared by both programs.
-static const char kAnimVertSrc[] =
-  "#version 150 core\n"
-  "in  vec2 a_pos;\n"
-  "in  vec2 a_uv;\n"
-  "out vec2 v_uv;\n"
-  "void main() {\n"
-  "  v_uv        = a_uv;\n"
-  "  gl_Position = vec4(a_pos, 0.0, 1.0);\n"
-  "}\n";
-
-// Indexed-colour fragment shader:
-//   u_indices  – GL_R8 texture, one byte per pixel (palette index)
-//   u_palette  – GL_RGBA texture, 256x1 colour LUT
-static const char kIndexedFragSrc[] =
-  "#version 150 core\n"
-  "uniform sampler2D u_indices;\n"
-  "uniform sampler2D u_palette;\n"
-  "in  vec2 v_uv;\n"
-  "out vec4 frag_color;\n"
-  "void main() {\n"
-  "  float idx   = texture(u_indices, v_uv).r * 255.0;\n"
-  "  vec2  lut_uv = vec2((idx + 0.5) / 256.0, 0.5);\n"
-  "  frag_color  = texture(u_palette, lut_uv);\n"
-  "}\n";
-
-// 1-bit fragment shader:
-//   u_bits     – GL_R8 texture, 0.0 or ~1.0 per pixel
-//   u_fg_color – foreground RGBA
-//   u_bg_color – background RGBA
-static const char k1BitFragSrc[] =
-  "#version 150 core\n"
-  "uniform sampler2D u_bits;\n"
-  "uniform vec4 u_fg_color;\n"
-  "uniform vec4 u_bg_color;\n"
-  "in  vec2 v_uv;\n"
-  "out vec4 frag_color;\n"
-  "void main() {\n"
-  "  float bit  = step(0.5, texture(u_bits, v_uv).r);\n"
-  "  frag_color = mix(u_bg_color, u_fg_color, bit);\n"
-  "}\n";
-
-static GLuint s_indexed_prog = 0;
-static GLuint s_1bit_prog    = 0;
-
-static GLuint link_program(const char *vert_src, const char *frag_src) {
-  uint32_t program = 0;
-  ui_load_program_from_source(vert_src, frag_src, "a_pos", "a_uv", NULL, &program);
-  return program;
-}
-
-bool anim_render_init(void) {
-  if (s_indexed_prog && s_1bit_prog) return true; // already initialised
-
-  s_indexed_prog = link_program(kAnimVertSrc, kIndexedFragSrc);
-  s_1bit_prog    = link_program(kAnimVertSrc, k1BitFragSrc);
-  return s_indexed_prog != 0 && s_1bit_prog != 0;
-}
-
-void anim_render_shutdown(void) {
-  if (s_indexed_prog) { glDeleteProgram(s_indexed_prog); s_indexed_prog = 0; }
-  if (s_1bit_prog)    { glDeleteProgram(s_1bit_prog);    s_1bit_prog    = 0; }
-}
-
-// ============================================================
-// Thumbnail generation
-// ============================================================
-
-// Expand the compressed frame to RGBA in a temporary buffer, then upload
+// Expand the compressed onion frame to RGBA in a temporary buffer, then upload
 // that buffer into a RGBA GL texture.  This is the universal path that
 // works for all three formats without requiring a separate FBO pass.
 //
@@ -94,28 +22,30 @@ static uint8_t *anim_frame_rgba(const anim_frame_t *frame, int w, int h,
   bool ok = false;
 
   if (frame->data && frame->data_size > 0) {
-    if (frame->format == FRAME_FORMAT_INDEXED) {
+    if (frame->format == FRAME_FORMAT_INDEXED || frame->format == FRAME_FORMAT_RLE_INDEXED) {
       // Indexed frames: expand palette indices → RGBA manually.
       // anim_frame_expand() in indexed builds does a raw memcpy of indices
       // (targeting doc->pixels, which is 1-byte/pixel), but here we always
       // need RGBA output.  Use the caller-supplied palette (doc->ipal).
       size_t npx = (size_t)w * (size_t)h;
-      if (frame->data_size < npx) { free(rgba); return NULL; }
+      uint8_t *indices = malloc(npx);
+      if (!indices || !anim_frame_expand_indices(frame, indices, w, h)) { free(indices); free(rgba); return NULL; }
       const uint32_t *pal = palette ? palette : frame->palette;
       for (size_t i = 0; i < npx; i++) {
-        uint8_t idx = frame->data[i];
+        uint8_t idx = indices[i];
         uint32_t col = pal[idx];
         rgba[i*4+0] = COLOR_R(col);
         rgba[i*4+1] = COLOR_G(col);
         rgba[i*4+2] = COLOR_B(col);
         rgba[i*4+3] = COLOR_A(col);
       }
+      free(indices);
       ok = true;
     } else {
       ok = anim_frame_expand(frame, rgba, w, h);
     }
   } else {
-    // Empty frame — produce a transparent black thumbnail.
+    // Empty frame — produce a transparent onion.
     memset(rgba, 0, sz);
     ok = true;
   }
@@ -138,7 +68,22 @@ void anim_onion_tint_rgba(uint8_t *rgba, size_t npx, uint32_t tint) {
   }
 }
 
-static bool anim_upload_thumbnail_rgba(uint8_t *rgba, int w, int h, uint32_t *tex) {
+bool anim_render_pencil_onion(const anim_frame_t *frame, int w, int h, uint32_t *tex) {
+  if (!frame || !tex || w < 1 || h < 1) return false;
+  uint8_t *coverage = malloc((size_t)w * h);
+  if (!coverage) return false;
+  bool ok = true;
+  if (frame->cels) ok = anim_frame_expand_cel(frame, 1, coverage, w, h);
+  else memset(coverage, 0, (size_t)w * h);
+  uint32_t texture = ok ? R_CreateTextureR8(w, h, coverage, R_FILTER_NEAREST, R_WRAP_CLAMP) : 0;
+  free(coverage);
+  if (!texture) return false;
+  if (*tex) R_DeleteTexture(*tex);
+  *tex = texture;
+  return true;
+}
+
+static bool anim_upload_onion_rgba(uint8_t *rgba, int w, int h, uint32_t *tex) {
   if (!rgba || !tex) return false;
   if (*tex == 0) {
     *tex = R_CreateTextureSRGBA8(w, h, rgba, R_FILTER_LINEAR, R_WRAP_CLAMP);
@@ -147,53 +92,14 @@ static bool anim_upload_thumbnail_rgba(uint8_t *rgba, int w, int h, uint32_t *te
   return R_UpdateTextureRGBA(*tex, 0, 0, w, h, rgba);
 }
 
-bool anim_render_frame_thumbnail(const anim_frame_t *frame, int w, int h,
-                                 uint32_t *tex, const uint32_t *palette) {
-  if (!tex) return false;
-  uint8_t *rgba = anim_frame_rgba(frame, w, h, palette);
-  if (!rgba) return false;
-  bool ok = anim_upload_thumbnail_rgba(rgba, w, h, tex);
-  free(rgba);
-  return ok;
-}
-
-bool anim_render_frame_thumbnail_tinted(const anim_frame_t *frame, int w, int h,
+bool anim_render_onion(const anim_frame_t *frame, int w, int h,
                                         uint32_t *tex, const uint32_t *palette,
                                         uint32_t tint) {
   if (!tex) return false;
   uint8_t *rgba = anim_frame_rgba(frame, w, h, palette);
   if (!rgba) return false;
   anim_onion_tint_rgba(rgba, (size_t)w * (size_t)h, tint);
-  bool ok = anim_upload_thumbnail_rgba(rgba, w, h, tex);
+  bool ok = anim_upload_onion_rgba(rgba, w, h, tex);
   free(rgba);
   return ok;
-}
-
-bool anim_render_frame_thumbnail_scaled(const anim_frame_t *frame,
-                                        int w, int h, int target_size,
-                                        uint32_t *tex, const uint32_t *palette) {
-  if (!tex)
-    return false;
-
-  uint8_t *rgba = anim_frame_rgba(frame, w, h, palette);
-  if (!rgba) {
-    return false;
-  }
-  // Keep a little resolution in the cached thumbnail and let the linear
-  // texture sampler perform the final reduction when it is drawn.  This
-  // gives curves and diagonal strokes a second, sub-pixel filtering pass.
-  int render_size = target_size * 2;
-  uint8_t *small = downscale_image_ex(rgba, w, h, render_size,
-                                      IMAGE_DOWNSCALE_STROKES | IMAGE_DOWNSCALE_FLIP_Y);
-  free(rgba);
-  if (!small) return false;
-  uint32_t scaled = R_CreateTextureSRGBA8(render_size, render_size, small,
-                                          R_FILTER_LINEAR, R_WRAP_CLAMP);
-  image_free(small);
-  if (!scaled) {
-    return false;
-  }
-  if (*tex) R_DeleteTexture(*tex);
-  *tex = scaled;
-  return true;
 }

@@ -373,7 +373,6 @@ V4/V5 files with unsupported color metadata, and PNGs above 8 bits are rejected
 with a diagnostic because the document model remains 8-bit RGBA and this build
 has no ICC transform library.
 
-Image-editor resize/downscale uses alpha-weighted linear-light filtering.
 CPU layer compositing, pixel-canvas antialiasing, layer merges and background
 compositing use the same linear-light source-over rule as the GPU renderer.
 Image-editor effect shaders keep their existing sRGB math: the loader converts

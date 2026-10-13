@@ -26,18 +26,6 @@ uint8_t *inflate_raw(const void *data, size_t size, size_t *out_size);
 // Release a pixel buffer returned by load_image().
 void image_free(uint8_t *pixels);
 
-// Center-crop to a square and area-resample straight sRGB RGBA to target_size
-// squared. Filtering is alpha-weighted in linear light.
-// Returns a new buffer (also for small sources); release with image_free().
-uint8_t *downscale_image(const uint8_t *pixels, int w, int h, int target_size);
-
-enum {
-  IMAGE_DOWNSCALE_STROKES = 1 << 0, // Maintain visibility of thin transparent artwork.
-  IMAGE_DOWNSCALE_FLIP_Y = 1 << 1,  // Bottom-up rows for framebuffer-style drawing.
-};
-uint8_t *downscale_image_ex(const uint8_t *pixels, int w, int h, int target_size,
-                            unsigned flags);
-
 // Save straight-alpha sRGB RGBA8 pixels to PNG and declare the sRGB color space.
 // Returns true on success.
 bool save_image_png(const char *path, const uint8_t *pixels, int w, int h);

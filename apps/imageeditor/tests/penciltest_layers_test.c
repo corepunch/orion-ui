@@ -4,6 +4,7 @@
 #include "test_env.h"
 #include "apps/imageeditor/imageeditor.h"
 #include "apps/imageeditor/io/flc_codec.h"
+#include "anim_test_helpers.h"
 
 app_state_t *g_app;
 int g_bw_retina_scale = 1;
@@ -25,7 +26,7 @@ static void layers_teardown(void) {
 
 static bool layer_pixel(canvas_doc_t *doc, int layer, int x, int y, int swatch) {
   if (!cmd_pencil_layer(doc, layer) || !ie_doc_begin_op(doc, "Layer Stroke")) return false;
-  canvas_set_pixel(doc, x, y, k_pencil_palette[swatch]);
+  canvas_set_pixel(doc, x, y, pencil_default_colors()[swatch]);
   ie_doc_commit_op(doc, true);
   return true;
 }
@@ -57,13 +58,13 @@ static void test_layer_sidebar(void) {
     send_message(g_app->tool_win->toolbar, evLeftButtonUp, point, NULL);
     ASSERT_EQUAL(doc->layer.active, order[i]);
     ASSERT_TRUE(doc->pixels == doc->layer.stack[order[i]]->pixels);
-    ASSERT_EQUAL(color_button_count(), order[i] == IE_LAYER_PENCIL ? 0 : 16);
+    ASSERT_EQUAL(color_button_count(), order[i] == IE_LAYER_PENCIL ? 0 : IE_PENCIL_COLORS);
   }
   ASSERT_TRUE(cmd_pencil_color(doc, 12));
   ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_PENCIL));
   ASSERT_EQUAL(g_app->fg_color, IE_INK_COLOR);
   ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_FX));
-  ASSERT_EQUAL(g_app->fg_color, k_pencil_palette[12]);
+  ASSERT_EQUAL(g_app->fg_color, pencil_default_colors()[12]);
   ASSERT_EQUAL(doc->undo.count, 0);
   layers_teardown(); PASS();
 }
@@ -115,9 +116,9 @@ static void test_underpaint_fill(void) {
   ie_doc_commit_op(doc, true);
   uint8_t ink_top = doc->pixels[3 * 16 + 6], ink_left = doc->pixels[6 * 16 + 3];
   ASSERT_TRUE(ie_doc_begin_op(doc, "Underpaint"));
-  ASSERT_TRUE(pencil_color_fill(doc, 6, 6, k_pencil_palette[4], 2));
+  ASSERT_TRUE(pencil_color_fill(doc, 6, 6, pencil_default_colors()[4], 2));
   ie_doc_commit_op(doc, true);
-  ASSERT_EQUAL(canvas_get_pixel(doc, 6, 6), k_pencil_palette[4]);
+  ASSERT_EQUAL(canvas_get_pixel(doc, 6, 6), pencil_default_colors()[4]);
   ASSERT_EQUAL(doc->pixels[0], 255);
   ASSERT_EQUAL(doc->layer.stack[IE_LAYER_COLOR]->pixels[3 * 16 + 6], ink_top);
   ASSERT_EQUAL(doc->layer.stack[IE_LAYER_COLOR]->pixels[6 * 16 + 3], ink_left);
@@ -126,7 +127,7 @@ static void test_underpaint_fill(void) {
   cmd_redo(doc); ASSERT_EQUAL(doc->pixels[6 * 16 + 6], 4);
   ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_PENCIL));
   ASSERT_TRUE(ie_doc_begin_op(doc, "Monochrome Stroke"));
-  canvas_set_pixel(doc, 6, 6, k_pencil_palette[12]);
+  canvas_set_pixel(doc, 6, 6, pencil_default_colors()[12]);
   ie_doc_commit_op(doc, true);
   ASSERT_EQUAL(COLOR_A(canvas_get_pixel(doc, 6, 6)), 255);
   ASSERT_EQUAL(COLOR_R(canvas_get_pixel(doc, 6, 6)), COLOR_R(pencil_configured_color()));
@@ -146,8 +147,9 @@ static void test_layer_resize(void) {
   for (int i = 0; i < 4; i++) ASSERT_TRUE(layer_pixel(doc, i, 4, 4, i + 3));
   cmd_frame_add(doc, true);
   cmd_resize_image(doc, 8, 8, IMAGE_RESIZE_NEAREST);
-  ASSERT_EQUAL(doc->anim->frames[0]->cels_size, 3 * 64);
-  ASSERT_EQUAL(doc->anim->frames[1]->cels_size, 3 * 64);
+  uint8_t resized[8 * 8];
+  ASSERT_TRUE(anim_frame_expand_cel(doc->anim->frames[0], 1, resized, 8, 8));
+  ASSERT_TRUE(anim_frame_expand_cel(doc->anim->frames[1], 1, resized, 8, 8));
   cmd_undo(doc);
   for (int i = 0; i < 4; i++) ASSERT_EQUAL(doc->layer.stack[i]->pixels[4 * 16 + 4], i == IE_LAYER_PENCIL ? 255 : i + 3);
   ASSERT_TRUE(cmd_frame_select(doc, 0));
@@ -184,7 +186,7 @@ static void test_layer_project(void) {
   again->anim->frames[0]->cels_size = 1;
   ASSERT_FALSE(image_io_save(path, again));
   ASSERT_TRUE(imageeditor_open_file_path(path));
-  ASSERT_EQUAL(g_app->active_doc->anim->frames[0]->cels_size, 768);
+  ASSERT_EQUAL(test_anim_cel_pixel(g_app->active_doc->anim->frames[0], 1, 2, 16, 16), 255);
   FILE *fp = fopen(path, "r+b"); ASSERT_NOT_NULL(fp);
   ASSERT_EQUAL(fseek(fp, 128, SEEK_SET), 0);
   uint8_t header[16];
@@ -214,7 +216,7 @@ static void test_layer_exports(void) {
   int w, h; uint8_t *rgba = load_image(path, &w, &h);
   ASSERT_NOT_NULL(rgba); ASSERT_EQUAL(w, 32); ASSERT_EQUAL(h, 16);
   for (int f = 0; f < 2; f++) for (int i = 0; i < 4; i++) {
-    uint32_t color = k_pencil_palette[i ? i + 3 : 12];
+    uint32_t color = pencil_default_colors()[i ? i + 3 : 12];
     if (i == IE_LAYER_PENCIL) color = pencil_configured_color();
     uint8_t *p = rgba + (f * 16 + i) * 4;
     ASSERT_EQUAL(p[0], COLOR_R(color)); ASSERT_EQUAL(p[1], COLOR_G(color)); ASSERT_EQUAL(p[2], COLOR_B(color));
@@ -243,7 +245,7 @@ static void test_layer_exports(void) {
   }
   fclose(apng); ASSERT_TRUE(has_srgb);
   rgba = load_image(path, &w, &h); ASSERT_NOT_NULL(rgba);
-  ASSERT_EQUAL(rgba[0], COLOR_R(k_pencil_palette[12])); image_free(rgba); remove(path);
+  ASSERT_EQUAL(rgba[0], COLOR_R(pencil_default_colors()[12])); image_free(rgba); remove(path);
   snprintf(path, sizeof(path), "%s/animation.gif", layer_test_dir);
   ASSERT_TRUE(anim_export_gif(doc, path));
   if (getenv("LAYERS_KEEP_EXPORT")) printf("GIF export: %s\n", path);

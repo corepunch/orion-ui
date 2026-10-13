@@ -1,6 +1,7 @@
 // Animation support: frame compress/expand and timeline CRUD.
 
 #include "imageeditor.h"
+#include "../io/flc_codec.h"
 
 // ============================================================
 // Internal helpers
@@ -196,6 +197,19 @@ bool anim_frame_compress(anim_frame_t *frame, const uint8_t *pixels,
   memset(new_palette, 0, sizeof(new_palette));
 
   switch (fmt) {
+    case FRAME_FORMAT_RLE_INDEXED: {
+#if IMAGEEDITOR_INDEXED
+      new_data = flc_codec_encode(pixels, NULL, w, h, &new_size);
+#else
+      uint8_t *indices = malloc(npx);
+      if (!indices) return false;
+      int colors = quantize_rgba_indexed(pixels, w, h, new_palette, indices);
+      if (colors) new_data = flc_codec_encode(indices, NULL, w, h, &new_size);
+      free(indices);
+#endif
+      if (!new_data) return false;
+      break;
+    }
     case FRAME_FORMAT_RGBA: {
       size_t sz = npx * 4;
       new_data = malloc(sz);
@@ -246,7 +260,7 @@ bool anim_frame_compress(anim_frame_t *frame, const uint8_t *pixels,
   frame->data_size = new_size;
   frame->format    = fmt;
   frame->revision++;
-  if (fmt == FRAME_FORMAT_INDEXED)
+  if (fmt == FRAME_FORMAT_INDEXED || fmt == FRAME_FORMAT_RLE_INDEXED)
     memcpy(frame->palette, new_palette, sizeof(new_palette));
   return true;
 }
@@ -258,6 +272,19 @@ bool anim_frame_expand(const anim_frame_t *frame, uint8_t *pixels_out,
   size_t npx = (size_t)w * (size_t)h;
 
   switch (frame->format) {
+    case FRAME_FORMAT_RLE_INDEXED:
+#if IMAGEEDITOR_INDEXED
+      return anim_frame_expand_indices(frame, pixels_out, w, h);
+#else
+      {
+        uint8_t *indices = malloc(npx);
+        if (!indices) return false;
+        bool ok = anim_frame_expand_indices(frame, indices, w, h);
+        if (ok) for (size_t i = 0; i < npx; i++) memcpy(pixels_out + i * 4, &frame->palette[indices[i]], 4);
+        free(indices);
+        return ok;
+      }
+#endif
     case FRAME_FORMAT_RGBA:
       if (frame->data_size < npx * 4) return false;
       memcpy(pixels_out, frame->data, npx * 4);
@@ -301,6 +328,54 @@ bool anim_frame_expand(const anim_frame_t *frame, uint8_t *pixels_out,
   }
 }
 
+bool anim_frame_expand_indices(const anim_frame_t *frame, uint8_t *pixels, int w, int h) {
+  if (!frame || !pixels || !frame->data || w < 1 || h < 1) return false;
+  if (frame->format == FRAME_FORMAT_RLE_INDEXED)
+    return flc_codec_decode(frame->data, frame->data_size, pixels, NULL, w, h);
+  if (frame->format != FRAME_FORMAT_INDEXED || frame->data_size != (size_t)w * h) return false;
+  memcpy(pixels, frame->data, frame->data_size);
+  return true;
+}
+
+bool anim_frame_pack_cels(anim_frame_t *frame, const uint8_t *const planes[3], int w, int h) {
+  if (!frame || !planes) return false;
+  uint8_t *chunks[3] = {0}; size_t sizes[3] = {0}, total = 0;
+  bool ok = true;
+  for (int i = 0; ok && i < 3; i++) {
+    chunks[i] = flc_codec_encode(planes[i], NULL, w, h, &sizes[i]);
+    ok = chunks[i] != NULL && sizes[i] <= SIZE_MAX - total;
+    total += sizes[i];
+  }
+  uint8_t *packed = ok ? malloc(total) : NULL;
+  if (!packed) ok = false;
+  size_t offset = 0;
+  for (int i = 0; i < 3; i++) {
+    if (ok) { memcpy(packed + offset, chunks[i], sizes[i]); offset += sizes[i]; }
+    free(chunks[i]);
+  }
+  if (!ok) { free(packed); return false; }
+  free(frame->data); free(frame->cels);
+  frame->data = NULL; frame->data_size = 0;
+  frame->cels = packed; frame->cels_size = total;
+  frame->format = FRAME_FORMAT_RLE_INDEXED; frame->revision++;
+  return true;
+}
+
+bool anim_frame_expand_cel(const anim_frame_t *frame, int cel, uint8_t *pixels, int w, int h) {
+  if (!frame || !frame->cels || !pixels || cel < 0 || cel >= 3 || frame->format != FRAME_FORMAT_RLE_INDEXED) return false;
+  size_t offset = 0, selected_size = 0;
+  const uint8_t *selected = NULL;
+  for (int i = 0; i < 3; i++) {
+    if (offset > frame->cels_size || frame->cels_size - offset < 6) return false;
+    const uint8_t *chunk = frame->cels + offset;
+    size_t size = flc_codec_u32(chunk); uint16_t type = flc_codec_u16(chunk + 4);
+    if (size < 6 || size > frame->cels_size - offset || (size & 1) || (type != 13 && type != 15 && type != 16)) return false;
+    if (i == cel) { selected = chunk; selected_size = size; }
+    offset += size;
+  }
+  return offset == frame->cels_size && flc_codec_decode(selected, selected_size, pixels, NULL, w, h);
+}
+
 // ============================================================
 // Frame / timeline lifecycle
 // ============================================================
@@ -309,7 +384,7 @@ anim_frame_t *anim_frame_new(const char *name, int delay_ms) {
   anim_frame_t *f = calloc(1, sizeof(anim_frame_t));
   if (!f) return NULL;
   f->delay_ms = delay_ms > 0 ? delay_ms : 80; // default ~12 fps
-  f->format   = FRAME_FORMAT_INDEXED;
+  f->format   = IMAGEEDITOR_BW ? FRAME_FORMAT_RLE_INDEXED : FRAME_FORMAT_INDEXED;
   if (name)
     strncpy(f->name, name, sizeof(f->name) - 1);
   else
@@ -334,6 +409,7 @@ anim_timeline_t *anim_timeline_new(int w, int h) {
   anim_frame_t *f = anim_frame_new("Frame 1", 80);
   if (!f) { free(tl->frames); free(tl); return NULL; }
 
+#if !IMAGEEDITOR_BW
   // Allocate an initial blank (transparent) RGBA frame so the first
   // frame's pixels are valid RGBA that can be committed later.
   size_t sz = (size_t)w * (size_t)h * 4;
@@ -341,6 +417,7 @@ anim_timeline_t *anim_timeline_new(int w, int h) {
   if (!f->data) { anim_frame_free(f); free(tl->frames); free(tl); return NULL; }
   f->data_size = sz;
   f->format    = FRAME_FORMAT_RGBA;
+#endif
 
   tl->frames[0]    = f;
   tl->frame_count  = 1;
@@ -468,7 +545,7 @@ bool anim_timeline_switch_frame(anim_timeline_t *tl, int idx,
   if (idx < 0 || idx >= tl->frame_count) return false;
   if (idx == tl->active_frame) return true;
 
-  // Playback only displays stored frames; do not recompress or rebuild thumbs.
+  // Playback only displays stored frames; do not recompress.
   if (!tl->playing) {
     anim_frame_t *cur = tl->frames[tl->active_frame];
     if (!anim_frame_compress(cur, *working_buf, w, h, commit_fmt))

@@ -72,7 +72,7 @@ use `cmd_undo`/`cmd_redo` so all views and command availability are refreshed.
 ## Presentation and availability
 
 Command completion and history navigation refresh the canvas, layers, timeline,
-thumbnail/onion caches, document title, and Undo/Redo availability. Undo/Redo also
+onion caches, document title, and Undo/Redo availability. Undo/Redo also
 refresh the canvas view extent after restoring dimensions. A pending command
 disables both history actions; otherwise availability comes from the active
 document's corresponding stack. Empty history and no document disable both.
@@ -101,21 +101,48 @@ build/bin/test_history_indexed_test`, then run each executable.
 
 Pencil Test has four fixed byte planes, composited bottom to top: Background,
 Pencil, Color, FX. Background is shared by all frames. Each `anim_frame_t` stores
-three canvas-sized cel planes in `cels` (Color, Pencil, FX); `data` retains a
-flattened preview. The live document owns four working layers. `doc_anim_commit`,
+three independent RLE chunks in `cels` (Color, Pencil, FX), with an encoded
+`cels_size`. Layered frames have no retained flattened `data` copy. Single-plane
+FLIC imports use `FRAME_FORMAT_RLE_INDEXED` until committed into the fixed layers.
+The live document owns four decoded working layers. `doc_anim_commit`,
 `doc_anim_load`, and `doc_anim_switch` manage their transfer. Frame structure edits,
 resizing/cropping, and history preserve all cels and the shared background.
-Rendering, thumbnails, and export compose against the live shared background,
+Rendering and export compose against the live shared background,
 rather than trusting a preview from before the background changed.
 
 The tool strip stays one column wide. The four layer buttons are half-size
-(`TOOLBAR_ITEM_FLAG_SMALL`) and pack 2×2 into a single button cell; the 16
+(`TOOLBAR_ITEM_FLAG_SMALL`) and pack 2×2 into a single button cell; the document
 color swatches are the same half size, two per row. Pencil hides the color palette and
 uses a fixed configurable pencil color; painting paper on it erases to transparency. Background,
-Color, and FX expose 16 swatches, with their last tool/color remembered during
+Color, and FX expose the document palette, with their last tool/color remembered during
 the session. Color fill uses opaque ink on the Color plane as a boundary.
-Onion skin reads neighboring Pencil planes above Background and beneath the
-current Pencil/Color/FX. The timeline retains one shared frame timing.
+Onion skin decodes neighboring Pencil planes into a temporary byte buffer, uploads
+an R8 texture, and frees the buffer. Only the textures for visible onion slots
+persist; there is no decoded-frame cache. Document composition and exports likewise
+decode one plane at a time, then release the temporary buffer. Resize transforms
+and recompresses one stored frame at a time; history copies encoded frame bytes.
+Each frame is independently decodable, so arbitrary selection, reordering and
+deletion never need a prior frame. The timeline retains one shared frame timing.
+
+The timeline uses numbered frame buttons with selection and drag reordering.
+Document creation, activation and closing synchronize the frame buttons, including
+the initial selected frame. Shortcuts come from `imageeditor.orion`: Left/Right
+(also Page Up/Down) navigate; Home/End select the first/last frame; Space plays or
+pauses at the displayed frame; N adds, D duplicates, and Shift+Delete or
+Shift+Backspace deletes a frame. Stop during playback restores the frame selected
+when playback began. Text-editing controls suppress these shortcuts.
+It does not generate thumbnails or retain preview textures: painting the strip
+never decodes frames, composites full-resolution images over paper, or runs CPU
+downscaling. Indexed canvas layers remain R8 textures resolved/tinted on the GPU.
+`test_penciltest_render_test` checks this boundary and optionally benchmarks
+opening and selecting frames via `PENCILTEST_RENDER_EXAMPLE=/path/to/project.ptf`.
+The benchmark stubs drawing/upload calls; its times exclude canvas GPU rendering.
+
+For the 145-frame, 1168×784 example, retained Pencil/Color/FX frame payloads occupy
+50.23 MiB instead of 506.51 MiB for the previous cels plus flattened previews.
+The four decoded working layers occupy 3.49 MiB. Render buffers, textures, metadata
+and undo checkpoints are additional allocations; these figures are payload sizes,
+not total process RSS. Compressed buffers own only their encoded allocation size.
 
 Pencil stores alpha from 0 to 255 in a `GL_R8` texture, tinted with
 `pencil_configured_color()`. Dabs add coverage even when a stroke crosses or
@@ -128,10 +155,15 @@ grain and opacity are configured in `imageeditor.h`.
 Background and Color store palette indices in `GL_R8`, resolved by the renderer's
 palette shader. Index 255 is transparent; ink and paper occupy indices 0 and 1.
 New Background pixels contain paper, new Color pixels contain 255, and new
-Pencil pixels contain zero alpha. Default coloring swatches occupy indices 2–15.
-Imported palettes can be larger.
-Selecting a missing swatch adds it as an undoable command, using only an empty
-slot unreferenced by any working layer, stored composite, or cel.
+Pencil pixels contain zero alpha. The default palette is loaded from `share/palettes/default.pal` (binary RIFF PAL),
+with 32 colors arranged as 16 dark/light pairs. App and converter share its reader;
+projects embed their own palette. No tool swatch is substituted on import.
+Color selection chooses an existing document index without adding colors, scanning
+frames or touching history. Duplicate RGB entries retain their distinct indices.
+Selections are remembered per document and painting layer. All 32 default colors
+fit in the single-column tool strip; larger palettes use pages of 32 defined
+colors, skipping unused/transparent entries. Tool buttons use the theme's small
+control size to leave room for the complete default palette.
 
 File > Save / Save As writes `.ptf` (Pencil Test project). It retains an FLC
 playback stream with a COLOR256 palette, compressed flattened frames and a ring frame, followed
@@ -158,30 +190,32 @@ one shared Background plane, then Color/Pencil/FX planes for every frame in
 timeline order. Each plane is a complete FLIC pixel subchunk with a 32-bit length,
 16-bit type, payload, and optional zero byte for word alignment. Decoded planes
 are exactly width × height bytes. The shared `io/flc_codec.h` encoder selects
-the smallest of BLACK (13), scanline byte-run RLE (15), FLI byte-delta RLE (12),
-and COPY (16). COPY bounds worst-case size for noisy pixels. Delta records use
-the preceding frame's same-layer plane; Background and the first cel of each
-layer must be independently decodable. Unchanged cels are zero-line LC records
-(or smaller BLACK/COPY records). Pencil coverage is never palette-remapped.
+BLACK (13), scanline byte-run RLE (15), or COPY (16) for independent cel records.
+COPY bounds worst-case size for noisy pixels. Earlier PTL5 files with FLI delta
+records (12) remain readable: the loader reconstructs one frame at a time through
+two temporary cel buffers, then immediately repacks it as independent RLE.
+Pencil coverage is never palette-remapped.
 
-The flattened playback stream uses the same codecs and writes its palette once.
+The flattened playback stream also supports FLI byte deltas and writes its palette once.
 Its ring frame restores the first image from the last. File length, second-frame
 offset, and layer-trailer length are patched after encoding. PTF requires the
 editing extension; old `PTL2`/`PTL3`/`PTL4` projects are rejected. Plain external
 FLC/FLI imports still work. Other FLC readers can use the flattened playback
 stream but cannot preserve the editing layers if they rewrite it.
 
-All pixel compression is lossless. Total decoded composite/cel/background pixel
-storage is limited to 512 MiB; frame delays are 1–65535 ms. Save reads live working layers
+All pixel compression is lossless. Retained encoded frame storage plus the shared
+background is limited to 512 MiB; three decoded working cel planes are separately
+limited to 512 MiB. The frame-count × decoded-area limit has been removed, allowing
+long compressible animations. Frame delays are 1–65535 ms. Save reads live working layers
 without mutating history, writes and flushes a sibling temporary file, then
 atomically replaces the destination. A failed write preserves the original.
 Load validates and decodes the file before opening a document; malformed chunks,
 unknown layer versions, truncated packets, out-of-row runs, missing delta bases,
-trailing layer data and allocation failures discard partial data. Layer records
-decode directly into final cel buffers without allocating a second full movie.
+trailing layer data and allocation failures discard partial data. The loader never
+retains a decoded movie or flattened preview stream.
 
 Regression coverage: `test_penciltest_layers_test`, `test_penciltest_flc_test`,
-`test_penciltest_rle_test`, `test_penciltest_video_test`, `test_penciltest_layout_test`,
+`test_penciltest_rle_test`, `test_penciltest_memory_test`, `test_penciltest_video_test`, `test_penciltest_layout_test`,
 and the shared history suites. Layer tests cover
 sidebar routing, palette visibility, underpaint fill, frame operations, playback,
 resize/undo, PTF round trips, corrupted extensions, and flattened exports.

@@ -1,82 +1,39 @@
 #include "imageeditor.h"
+#include "../palette.h"
 
-const uint32_t k_pencil_palette[IE_PENCIL_COLORS] = {
-  IE_INK_COLOR,                         IE_PAPER_COLOR,
-  MAKE_COLOR(0x53, 0x60, 0x78, 0xFF), MAKE_COLOR(0xBC, 0xC5, 0xD6, 0xFF),
-  MAKE_COLOR(0xCC, 0x4B, 0x52, 0xFF), MAKE_COLOR(0xF2, 0x99, 0x89, 0xFF),
-  MAKE_COLOR(0xDE, 0x9E, 0x36, 0xFF), MAKE_COLOR(0xF7, 0xDF, 0x9A, 0xFF),
-  MAKE_COLOR(0x86, 0x55, 0x42, 0xFF), MAKE_COLOR(0xDA, 0xAF, 0x89, 0xFF),
-  MAKE_COLOR(0x3C, 0x79, 0x60, 0xFF), MAKE_COLOR(0x9C, 0xCD, 0xA3, 0xFF),
-  MAKE_COLOR(0x3E, 0x70, 0xB6, 0xFF), MAKE_COLOR(0x9C, 0xCB, 0xE8, 0xFF),
-  MAKE_COLOR(0x97, 0x79, 0xBE, 0xFF), MAKE_COLOR(0xE6, 0xAC, 0xCB, 0xFF),
-};
-
-const char *const k_pencil_color_names[IE_PENCIL_COLORS] = {
-  "Ink", "Paper", "Slate", "Silver", "Red", "Coral", "Ochre", "Cream",
-  "Brown", "Sand", "Forest", "Mint", "Blue", "Sky", "Lavender", "Rose",
-};
+const uint32_t *pencil_default_colors(void) {
+  static uint32_t colors[256];
+  static bool loaded;
+  if (!loaded) {
+    uint8_t rgba[256][4]; int count;
+    if (!pencil_palette_load_default(ui_get_exe_dir(), rgba, &count)) return NULL;
+    for (int i = 0; i < 256; i++)
+      colors[i] = MAKE_COLOR(rgba[i][0], rgba[i][1], rgba[i][2], rgba[i][3]);
+    loaded = true;
+  }
+  return colors;
+}
 
 uint32_t pencil_configured_color(void) {
-  return k_pencil_palette[IE_PENCIL_COLOR_SWATCH];
-}
-
 #if IMAGEEDITOR_BW
-static int pencil_unused_palette_index(const canvas_doc_t *doc) {
-  bool used[256] = {0};
-  used[(uint8_t)doc->ipal.transparent] = true;
-  size_t n = (size_t)doc->canvas_w * doc->canvas_h;
-  for (int i = 0; i < doc->layer.count; i++) {
-    if (i == IE_LAYER_PENCIL && pencil_has_layers(doc)) continue;
-    for (size_t p = 0; p < n; p++) used[doc->layer.stack[i]->pixels[p]] = true;
-  }
-  for (int i = 0; doc->anim && i < doc->anim->frame_count; i++) {
-    anim_frame_t *frame = doc->anim->frames[i];
-    if (!frame->data || !frame->data_size) continue;
-    if (frame->format != FRAME_FORMAT_INDEXED || frame->data_size < n) {
-
-      return -1;
-    }
-    for (size_t p = 0; p < n; p++) used[frame->data[p]] = true;
-    if (frame->cels && frame->cels_size == 3 * n) {
-      for (int layer = 1; layer < IE_LAYER_COUNT; layer++) {
-        if (layer == IE_LAYER_PENCIL) continue;
-        const uint8_t *cel = frame->cels + (size_t)(layer - 1) * n;
-        for (size_t p = 0; p < n; p++) used[cel[p]] = true;
-      }
-    }
-  }
-  for (int i = 0; i < 256; i++)
-    if (!used[i] && (i >= doc->ipal.count || COLOR_A(doc->ipal.entries[i]) == 0)) return i;
-  return -1;
-}
-#endif
-
-bool cmd_pencil_color(canvas_doc_t *doc, int swatch) {
-  if (!g_app || swatch < 0 || swatch >= IE_PENCIL_COLORS) return false;
-  uint32_t color = k_pencil_palette[swatch];
-#if IMAGEEDITOR_BW
-  if (doc) {
-    if (doc->command.before) return false;
-    int idx = -1;
-    for (int i = 0; i < doc->ipal.count; i++)
-      if (i != doc->ipal.transparent && doc->ipal.entries[i] == color) { idx = i; break; }
-    if (idx < 0) {
-      anim_stop_playback(doc);
-      idx = pencil_unused_palette_index(doc);
-      if (idx < 0) {
-        return false;
-      }
-      if (!ie_doc_begin_op(doc, "Add Palette Color")) return false;
-      doc->ipal.entries[idx] = color;
-      doc->ipal.count = MAX(doc->ipal.count, idx + 1);
-      ie_doc_commit_op(doc, true);
-    }
-    g_app->fg_palette_idx = idx;
-  }
+  const uint32_t *colors = pencil_default_colors();
+  return colors ? colors[IE_PENCIL_COLOR_SWATCH] : IE_INK_COLOR;
 #else
-  (void)doc;
+  return IE_INK_COLOR;
 #endif
-  g_app->fg_color = color;
+}
+
+bool cmd_pencil_color(canvas_doc_t *doc, int index) {
+#if IMAGEEDITOR_BW
+  if (!g_app || !doc || index < 0 || index >= doc->ipal.count || index >= 256 ||
+      index == doc->ipal.transparent || !COLOR_A(doc->ipal.entries[index])) return false;
+  g_app->fg_palette_idx = index;
+  g_app->fg_color = doc->ipal.entries[index];
+  doc->pencil_color_index[doc->layer.active] = index;
   if (g_app->tool_win) invalidate_window(g_app->tool_win);
   return true;
+#else
+  (void)doc; (void)index;
+  return false;
+#endif
 }

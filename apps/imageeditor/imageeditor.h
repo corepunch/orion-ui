@@ -65,7 +65,9 @@ extern int g_bw_retina_scale;
 #endif
 
 // Frame format used for animation timeline compress/expand.
-#if IMAGEEDITOR_INDEXED
+#if IMAGEEDITOR_BW
+#define IE_FRAME_FORMAT FRAME_FORMAT_RLE_INDEXED
+#elif IMAGEEDITOR_INDEXED
 #define IE_FRAME_FORMAT FRAME_FORMAT_INDEXED
 #else
 #define IE_FRAME_FORMAT FRAME_FORMAT_RGBA
@@ -209,17 +211,18 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define IE_ONION_PREV_COLOR MAKE_COLOR(0x4C, 0x91, 0xF5, 0xFF)  /* #4C91F5 */
 #define IE_ONION_NEXT_COLOR MAKE_COLOR(0xF0, 0x8D, 0xB4, 0xFF)  /* #F08DB4 */
 
-#define IE_PENCIL_COLORS 16
+#define IE_PENCIL_COLORS 32
 #define IE_PENCIL_PALETTE_BASE 0x7f00
 #define IE_PENCIL_LAYER_BASE 0x7e00
+#define IE_PENCIL_PALETTE_PREV 0x7df0
+#define IE_PENCIL_PALETTE_NEXT 0x7df1
 #define IE_PENCIL_COLOR_SWATCH 0
 #define IE_PENCIL_MAX_OPACITY 64       // 25% of 255; pencil coverage is stored as a byte.
 #define IE_PENCIL_FADE_LENGTH 16.0f   // Logical pixels from each stroke endpoint to full opacity.
 #define IE_PENCIL_DAB_SPACING 0.5f    // Backing pixels; flow is normalized by brush width.
 #define IE_PENCIL_GRAIN_VARIATION 32  // Deterministic 0–12.5% paper-grain variation.
 enum { IE_LAYER_BG, IE_LAYER_COLOR, IE_LAYER_PENCIL, IE_LAYER_FX, IE_LAYER_COUNT };
-extern const uint32_t k_pencil_palette[IE_PENCIL_COLORS];
-extern const char *const k_pencil_color_names[IE_PENCIL_COLORS];
+const uint32_t *pencil_default_colors(void);
 uint32_t pencil_configured_color(void);
 
 // ============================================================
@@ -357,10 +360,11 @@ typedef struct canvas_doc_s {
   // doc->pixels stores 1-byte palette indices rather than 4-byte RGBA values.
   struct {
     uint32_t entries[256]; // RGBA value for each palette entry (index → color)
-    int      count;        // number of used entries (up to 256)
+    int      count;        // palette span (up to 256); empty entries have alpha 0
     int      transparent;  // palette index that means "transparent" (default: IMAGEEDITOR_TRANSPARENT_INDEX)
   } ipal;
 #endif
+  int pencil_color_index[IE_LAYER_COUNT];
 } canvas_doc_t;
 
 #define ONION_SKIN_MAX_STEPS 4
@@ -401,7 +405,6 @@ typedef struct {
   uint32_t       anim_timer_id; // axSetTimer handle for playback; 0 = stopped
   hinstance_t    hinstance;  // owning app instance
   int            current_tool;
-  uint32_t       pencil_layer_color[IE_LAYER_COUNT];
   bool           anim_trace_enabled; // onion-skin overlay toggle for animation frames
   int            anim_trace_frames;  // active onion-skin step span (max non-zero prev/next opacity step)
   float          anim_trace_prev_opacity[ONION_SKIN_MAX_STEPS];
@@ -919,10 +922,9 @@ anim_timeline_t *flc_load_layers(const char *path, int *w, int *h, uint32_t pale
 #endif
 
 // Floating frame strip geometry.
-#define TIMELINE_THUMB_W        TB_SPACING
+#define TIMELINE_FRAME_W        TB_SPACING
 #define TIMELINE_WIN_H          TOOLBAR_BAND_HEIGHT
-#define TIMELINE_FRAME_GAP      4   // pixels between adjacent frame thumbs
-#define TIMELINE_FRAME_OUTLINE  1   // selected/hover frame ring thickness
+#define TIMELINE_FRAME_GAP      4   // pixels between adjacent frame buttons
 
 // Factory helper: create, show, and register the timeline palette window.
 window_t *create_timeline_window(void);
@@ -932,7 +934,6 @@ void timeline_toolbar_sync(void);
 
 // Refresh the timeline palette after frame changes.
 void timeline_win_refresh(void);
-void timeline_win_refresh_active_frame(void);
 
 // Animation playback tick — called from evTimer to advance frames.
 void anim_tick(canvas_doc_t *doc);
@@ -953,7 +954,6 @@ bool ie_doc_begin_op(canvas_doc_t *doc, const char *op_name);
 // Commit the operation — marks dirty, updates title, and refreshes all views.
 // Failure restores the document. No-ops/cancellation preserve redo.
 void ie_doc_commit_op(canvas_doc_t *doc, bool success);
-void ie_doc_commit_frame_op(canvas_doc_t *doc, bool success);
 
 // Dirty state and title management.
 void ie_doc_mark_dirty(canvas_doc_t *doc);
@@ -998,14 +998,14 @@ void cmd_frame_move(canvas_doc_t *doc, int from, int to);
 
 // Edit commands
 void cmd_undo(canvas_doc_t *doc);
-bool cmd_pencil_color(canvas_doc_t *doc, int swatch);
+bool cmd_pencil_color(canvas_doc_t *doc, int index);
 bool pencil_has_layers(const canvas_doc_t *doc);
 bool cmd_pencil_layer(canvas_doc_t *doc, int layer);
 void imageeditor_sync_tool_palette(void);
 bool doc_anim_commit(canvas_doc_t *doc);
 bool doc_anim_load(canvas_doc_t *doc, int index);
 bool doc_anim_switch(canvas_doc_t *doc, int index);
-const uint8_t *pencil_frame_layer(const canvas_doc_t *doc, int frame, int layer);
+bool pencil_read_frame_layer(const canvas_doc_t *doc, int frame, int layer, uint8_t *pixels);
 bool pencil_composite_frame(const canvas_doc_t *doc, int frame, uint8_t *pixels);
 bool doc_anim_rgba(const canvas_doc_t *doc, int frame, uint8_t *rgba);
 bool pencil_color_fill(canvas_doc_t *doc, int x, int y, uint32_t color, int gap);

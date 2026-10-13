@@ -113,7 +113,9 @@ static inline uint8_t *flc_codec_encode(const uint8_t *pixels, const uint8_t *pr
   if (payload & 1) chunk[6 + payload] = 0;
   *size = 6 + payload + (payload & 1);
   flc_codec_put32(chunk, *size); flc_codec_put16(chunk + 4, type);
-  return chunk;
+  uint8_t *packed = realloc(chunk, *size);
+  if (!packed) free(chunk);
+  return packed;
 }
 
 static inline bool flc_codec_decode(const uint8_t *chunk, size_t size, uint8_t *pixels,

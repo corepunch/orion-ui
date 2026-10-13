@@ -49,6 +49,11 @@ void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
 
       uint8_t sa8 = (uint8_t)((src[3] * lay->opacity + 127) / 255);
       if (sa8 == 0) continue;
+      if (lay->blend_mode == LAYER_BLEND_NORMAL) {
+        uint8_t source[4] = {src[0], src[1], src[2], sa8};
+        ui_composite_srgba8(d, source, 1.0f);
+        continue;
+      }
       float sa = (float)sa8 / 255.0f;
       float da = (float)d[3] / 255.0f;
       float inv = 1.0f - sa;

@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <orion/user/toolbar.h>
 
+#include "anim_shortcut_helpers.h"
+
 // ── Cross-platform temp directory helper (same pattern as image_test.c) ─────────
 static const char *ie_temp_dir(void) {
     const char *d = getenv("TEMP");
@@ -88,6 +90,7 @@ static void ie_teardown(void) {
         close_document(g_app->docs);
 
     free(g_app->clipboard);
+    free_accelerators(g_app->accel);
     free(g_app);
     g_app = NULL;
     // test_env_shutdown destroys any remaining windows (orphaned dialogs left
@@ -269,7 +272,6 @@ static void test_ie_anim_playback_restores_selection(void) {
   ASSERT_EQUAL(doc->anim->playback_start_frame, 1);
   anim_tick(doc);
   ASSERT_EQUAL(doc->anim->active_frame, 2);
-  handle_menu_command(ID_ANIM_PLAY);
   ASSERT_EQUAL(doc->anim->playback_start_frame, 1);
   anim_tick(doc);
   ASSERT_EQUAL(doc->anim->active_frame, 0);
@@ -391,23 +393,23 @@ void test_ie_timeline_keyboard_navigation(void) {
     create_timeline_window();
     ASSERT_NOT_NULL(g_app->timeline_win);
 
-    ASSERT_TRUE(send_message(g_app->timeline_win, evKeyDown, AX_KEY_LEFTARROW, NULL));
+    ASSERT_TRUE(test_anim_shortcut(AX_KEY_LEFTARROW, 0));
     ASSERT_EQUAL(doc->anim->active_frame, 1);
     ASSERT_EQUAL(canvas_get_pixel(doc, 0, 0), MAKE_COLOR(0x44, 0x55, 0x66, 0xFF));
 
-    ASSERT_TRUE(send_message(g_app->timeline_win, evKeyDown, AX_KEY_LEFTARROW, NULL));
+    ASSERT_TRUE(test_anim_shortcut(AX_KEY_LEFTARROW, 0));
     ASSERT_EQUAL(doc->anim->active_frame, 0);
     ASSERT_EQUAL(canvas_get_pixel(doc, 0, 0), MAKE_COLOR(0x11, 0x22, 0x33, 0xFF));
 
-    ASSERT_TRUE(send_message(g_app->timeline_win, evKeyDown, AX_KEY_RIGHTARROW, NULL));
+    ASSERT_TRUE(test_anim_shortcut(AX_KEY_RIGHTARROW, 0));
     ASSERT_EQUAL(doc->anim->active_frame, 1);
     ASSERT_EQUAL(canvas_get_pixel(doc, 0, 0), MAKE_COLOR(0x44, 0x55, 0x66, 0xFF));
 
-    ASSERT_TRUE(send_message(g_app->timeline_win, evKeyDown, AX_KEY_HOME, NULL));
+    ASSERT_TRUE(test_anim_shortcut(AX_KEY_HOME, 0));
     ASSERT_EQUAL(doc->anim->active_frame, 0);
     ASSERT_EQUAL(canvas_get_pixel(doc, 0, 0), MAKE_COLOR(0x11, 0x22, 0x33, 0xFF));
 
-    ASSERT_TRUE(send_message(g_app->timeline_win, evKeyDown, AX_KEY_END, NULL));
+    ASSERT_TRUE(test_anim_shortcut(AX_KEY_END, 0));
     ASSERT_EQUAL(doc->anim->active_frame, 2);
     ASSERT_EQUAL(canvas_get_pixel(doc, 0, 0), MAKE_COLOR(0x77, 0x88, 0x99, 0xFF));
 
@@ -470,7 +472,7 @@ static void test_ie_floating_frames(void) {
   int active = doc->anim->active_frame;
   send_message(win, evWheel, 0, (void *)(intptr_t)MAKEDWORD(0, 1));
   ASSERT_EQUAL(doc->anim->active_frame, active);
-  send_message(win, evKeyDown, AX_KEY_HOME, NULL);
+  ASSERT_TRUE(test_anim_shortcut(AX_KEY_HOME, 0));
   ASSERT_EQUAL(doc->anim->active_frame, 0);
   ASSERT_TRUE(dock_float(win, R(20, 150, 700, win->frame.h)));
   send_message(g_app->chrome_win, evDisplayChange, MAKEDWORD(1080, 758), NULL);

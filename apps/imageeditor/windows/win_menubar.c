@@ -363,7 +363,10 @@ bool imageeditor_open_file_path(const char *path) {
     }
     pal_count = 256;
     px = malloc((size_t)img_w * img_h);
-    if (px) memcpy(px, loaded_anim->frames[0]->data, (size_t)img_w * img_h);
+    if (px) {
+      if (loaded_layers.background) memset(px, 255, (size_t)img_w * img_h);
+      else if (!anim_frame_expand_indices(loaded_anim->frames[0], px, img_w, img_h)) { free(px); px = NULL; }
+    }
   } else px = image_io_load(path, &img_w, &img_h, pal, &pal_count);
 #else
   uint8_t *px = image_io_load(path, &img_w, &img_h, NULL, NULL);
@@ -401,6 +404,7 @@ bool imageeditor_open_file_path(const char *path) {
 #if IMAGEEDITOR_INDEXED
   // Overwrite the default palette with the one embedded in the file.
   if (pal_count > 0) {
+    memset(ndoc->ipal.entries, 0, sizeof(ndoc->ipal.entries));
     memcpy(ndoc->ipal.entries, pal, (size_t)pal_count * sizeof(uint32_t));
     ndoc->ipal.count = pal_count;
   }
@@ -929,7 +933,21 @@ void handle_menu_command(uint16_t id) {
         anim_step_frame(doc, +1);
       break;
 
+    case ID_ANIM_FIRST_FRAME:
+    case ID_ANIM_LAST_FRAME:
+      if (doc && doc->anim)
+        cmd_frame_select(doc, id == ID_ANIM_FIRST_FRAME ? 0 : doc->anim->frame_count - 1);
+      break;
+
     case ID_ANIM_PLAY:
+      if (doc && doc->anim && doc->anim->playing) {
+        doc->anim->playing = false;
+        if (g_app->anim_timer_id) axCancelTimer(g_app->anim_timer_id);
+        g_app->anim_timer_id = 0;
+        if (doc->canvas_win) invalidate_window(doc->canvas_win);
+        timeline_win_refresh();
+        break;
+      }
       if (doc && doc->anim && !doc->anim->playing) {
         // Ensure the timeline window exists; recreate it if it was closed.
         if (g_app && !g_app->timeline_win)

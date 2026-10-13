@@ -39,9 +39,7 @@ static void pencil_end(canvas_doc_t *doc, canvas_win_state_t *view, ipoint16_t d
   canvas_stroke_set_radius(doc, pencil_radius());
   canvas_stroke_end(doc, doc_pt);
   ie_doc_invalidate_canvas(doc);
-  if (pencil_has_layers(doc) && doc->layer.active == IE_LAYER_BG)
-    ie_doc_commit_op(doc, true);
-  else ie_doc_commit_frame_op(doc, true);
+  ie_doc_commit_op(doc, true);
 }
 
 static void pencil_cancel(canvas_doc_t *doc, canvas_win_state_t *view) {
