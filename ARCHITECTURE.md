@@ -78,12 +78,12 @@ same command IDs so one controller path owns each action.
 A child can be shown under the pointer without leaving its layout slot.
 `window_set_drag_visual` keeps the frame where it is, omits the in-place paint,
 and composites that same window above the root at a screen offset. Clearing the
-offset paints it on its frame again. The lifted paint includes the theme drag shadow (`drag_shadow_blur`,
-`drag_shadow_offset`, `drag_shadow_color`) underneath the window when the blur
+offset paints it on its frame again. The lifted paint includes the theme drag shadow (`drag.shadow.blur`,
+`drag.shadow.offset`, `drag.shadow.color`) underneath the window when the blur
 is non-zero. That drop shadow is separate from the resting window halo.
 
 Window composition keeps texture ownership and drawing in the renderer, while
-the active theme owns `window_corner_radius` in logical pixels (Modern: 8,
+the active theme owns `window.corner_radius` in logical pixels (Modern: 8,
 Classic: 0). Rounded UI fills and window textures share the rounded-box SDF
 shader; theme code does not rasterize corner geometry. Modern toolbar, list,
 and tab backgrounds share `item_background` roles for hover, selection,
@@ -94,7 +94,7 @@ Modern root windows, including popups, receive a procedural shadow immediately
 before their surface is composited. `draw_rect_shadow(rect, radius, blur, offset,
 color)` uses logical pixels and the existing quad/SDF shader with a Gaussian-tail
 approximation; no blur texture or additional framebuffer is allocated. Theme
-fields `window_shadow_blur`, `window_shadow_offset`, and `window_shadow_color`
+fields `window.shadow.blur`, `window.shadow.offset`, and `window.shadow.color`
 control the default appearance. Zero blur disables the shadow.
 Transparent roots (`WINDOW_TRANSPARENT`), such as the workspace-sized application
 chrome host, have no compositor corner mask or shadow. Their children define
@@ -427,8 +427,8 @@ not trigger another theme switch in response to `evThemeChanged`.
 Each theme owns its palette; `apply_palette()` is the sole writer during a
 switch.  `set_sys_colors()` applies runtime overrides on top of the active
 theme and is unrelated to `set_theme()`.  See `orion/user/theme.h` for the
-full contract including metric fields (`scrollbar_width`, `scrollbar_overlay`,
-`press_icon_offset`, `button_corner_radius`, `control_padding`).
+full contract including metric fields (`scrollbar.width`, `scrollbar.overlay`,
+`control.press_icon_offset`, `button.corner_radius`, `control.padding`).
 
 ## Debugging The Message Pipeline
 

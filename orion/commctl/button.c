@@ -123,7 +123,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
         }
         return true;
       }
-      irect16_t content = rect_inset_xy(local, get_theme()->control_padding, 2);
+      irect16_t content = rect_inset_xy(local, get_theme()->control.padding, 2);
       irect16_t label = rect_center(content, strwidth(win->title), CHAR_HEIGHT);
       get_theme()->draw_button_label(label, win->title, state);
       return true;
@@ -219,7 +219,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       if (g_ui_runtime.focused == win) state |= CTRL_FOCUSED;
       irect16_t local = {0, 0, win->frame.w, win->frame.h};
       theme_draw(THEME_PART_TOOLBAR_BUTTON, local, state);
-      int px = (state & CTRL_PRESSED) && !(state & CTRL_DISABLED) ? get_theme()->press_icon_offset : 0;
+      int px = (state & CTRL_PRESSED) && !(state & CTRL_DISABLED) ? get_theme()->control.press_icon_offset : 0;
       toolbar_button_data_t *bd = (toolbar_button_data_t *)win->userdata;
       bool drew_icon = false;
       if (bd && bd->icon_name[0]) {
@@ -245,7 +245,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       }
       if (!drew_icon) {
         // Fallback: draw text label when no image has been set.
-        irect16_t inner = rect_inset_xy(local, get_theme()->control_padding, 2);
+        irect16_t inner = rect_inset_xy(local, get_theme()->control.padding, 2);
         get_theme()->draw_button_label(inner, win->title, state);
       }
       return true;

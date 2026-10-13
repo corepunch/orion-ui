@@ -370,7 +370,7 @@ typedef struct {
 // +5 instead of +4 keeps the height odd at both scales so that 9x9 theme
 // icons centre with equal integer padding on every side.
 #define SYSICON_SIZE      24              // canonical size of sysicon/toolbar SVG tiles
-#define TITLEBAR_HEIGHT   (FONT_SIZE + 9)
+#define TITLEBAR_HEIGHT   (FONT_SIZE + 15)
 #if defined(__APPLE__) && TARGET_OS_IOS
 #define TOOLBAR_HEIGHT    42
 #define BUTTON_HEIGHT     40
@@ -448,7 +448,7 @@ enum {
 #define TOOLBAR_ITEM_FLAG_FLEXSPACE  (1u << 5) // horizontal spacer shares remaining width
 #define TOOLBAR_ITEM_FLAG_ARTWORK    (1u << 6) // button icon is full-colour artwork filling the button; no plastic body
 // Item flags also take CONTROL_SIZE_*: the button cell and its glyph scale by the theme's
-// control_size_pct; a bigger cell spreads into the band padding (toolbar_large_inset short of
+// control.size_pct; a bigger cell spreads into the band padding (toolbar.large_inset short of
 // the edges) and every item is centred on the row.
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
@@ -584,7 +584,7 @@ enum {
 #define SEGMENTED_LABEL_MAX    32
 #define SEGMENTED_PADDING      8  // horizontal label padding inside one segment
 #define SEGMENTED_INSET        2  // track margin around the segments
-#define TAB_CONTROL_HEIGHT (get_theme()->tab_header_height)
+#define TAB_CONTROL_HEIGHT (get_theme()->tab.header.height)
 #define TAB_STYLE_ICONS_ONLY (1u << 0) // show tab icons without page-title labels
 #define TAB_STYLE_DRAG_TABS (1u << 3) // notify parent after a TabBar drag threshold
 #define TAB_STYLE_RESTORE_FOCUS (1u << 2) // restore each page's focused descendant on selection

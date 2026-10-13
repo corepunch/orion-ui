@@ -55,13 +55,13 @@ static void populate_toolbar(window_t *win) {
 
 window_t *formeditor_create_tool_toolbar(hinstance_t hinstance) {
   build_tool_items();
-  int padding = 2 * get_theme()->toolbar_padding;
+  int padding = 2 * get_theme()->toolbar.padding;
   window_t *tp = create_window(
       "Tools",
       WINDOW_TOOLBAR | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
-      MAKERECT(PALETTE_WIN_X, get_theme()->menubar_height + 4,
+      MAKERECT(PALETTE_WIN_X, get_theme()->menubar.height + 4,
                FE_TOOLBAR_BTN_SIZE + padding,
-               get_theme()->caption_height + g_tool_count * FE_TOOLBAR_BTN_SIZE +
+               get_theme()->caption.height + g_tool_count * FE_TOOLBAR_BTN_SIZE +
                (g_tool_count - 1) * TOOLBAR_SPACING + padding),
       NULL, win_tool_palette_proc, hinstance, NULL);
   if (tp) show_window(tp, true);

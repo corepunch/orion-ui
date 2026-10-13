@@ -77,9 +77,9 @@ draw_badge_ex(FONT_SMALLEST, "1", R(x, y, 16, 16), get_sys_color(brActiveTitleba
 uint32_t soft = color_with_alpha(color, 0x40);   // same colour, different alpha
 ```
 
-The accent edge is a plain `card_edge_width` rectangle clipped by the card's silhouette in the shader, so
-there is nothing to align or mask by hand. Geometry lives in `theme_t` (`card_corner_radius`,
-`card_edge_width`, `card_ring_width`). Pass an edge colour with zero alpha for no edge.
+The accent edge is a plain `card.edge_width` rectangle clipped by the card's silhouette in the shader, so
+there is nothing to align or mask by hand. Geometry lives in `theme_t` (`card.corner_radius`,
+`card.edge_width`, `card.ring_width`). Pass an edge colour with zero alpha for no edge.
 The hovered card face is the 50% midpoint of `brControlBg` and `brButtonHover`.
 
 Status colours come from the theme: `brTextError`, `brTextWarning`, `brTextInfo`, `brTextSuccess`, `brTextDisabled`.
@@ -90,7 +90,7 @@ Modern text fields and comboboxes use capsule ends: their radius follows half th
 field height, including desktop and iPad toolbar sizes. Classic keeps its bevelled geometry.
 
 ```c
-stroke_rounded_rect(get_sys_color(brAccent), r, get_theme()->card_corner_radius, 2);
+stroke_rounded_rect(get_sys_color(brAccent), r, get_theme()->card.corner_radius, 2);
 ```
 
 ### `draw_rect`
@@ -233,7 +233,7 @@ and reaches the shader as uniforms; the kernel entry `render_plastic_surface` ta
 of floats and never sees `ctrl_state_t`. `draw_plastic_button` below is the framework painter behind it:
 it draws a tinted plastic button and solid white SVG glyph in one shader pass. `color` is packed `0xAABBGGRR`; zero
 uses `brAccent`. Icon names use the SVG cache at their final draw size, avoiding a second scaling
-of the glyph mask. `control_size` scales the glyph by the theme's `control_size_pct`
+of the glyph mask. `control_size` scales the glyph by the theme's `control.size_pct`
 (see the toolbar guide for the size system). Glyph placement and press offsets snap to device pixels, and
 the glyph has no emboss, highlight halo or inner shadow. The shader adds a smooth
 vertical gradient, directional button bevel and a small drop shadow.
@@ -241,8 +241,8 @@ Normal, hover, selected, pressed and disabled states share the same allocated
 rectangle. Disabled takes precedence over interaction flags.
 
 The shadow stays inside `rect`; no extra layer, framebuffer or neighbouring
-repaint margin is needed. Theme metrics `plastic_corner_radius`,
-`plastic_bevel_width` and `plastic_shadow_size` are logical pixels. Radius clamps
+repaint margin is needed. Theme metrics `plastic.corner_radius`,
+`plastic.bevel_width` and `plastic.shadow_size` are logical pixels. Radius clamps
 to half the face size, allowing rounded rectangles, capsules and circles;
 `CORNER_RADIUS_CIRCULAR` (-1) asks for that full rounding at any size, like
 AppKit's circular bezel. SDF
@@ -271,8 +271,14 @@ on these calls: sprites are bitmap rects stretched to the control's frame, so a
 skin scales with the window. SpriteSlider answers the Slider messages
 (`slSetRange`, `slSetPos`, `slGetPos`, `sliderValueChanged`) and adds `spsnReleased`.
 
-TabView header geometry uses `theme_t.tab_header_height`, `tab_min_width`, and
-`tab_padding`. Bundled themes use a 32-pixel horizontal header with an 80-pixel
-minimum tab width and 16-pixel horizontal label padding. TabView clips labels to
+Theme settings are grouped in inline structs by component: `scrollbar`, `caption`,
+`menubar`, `toolbar`, `control`, `button`, `window`, `card`, `plastic`, `drag`,
+`tab`, `menu`, `badge`, `field`, and `tooltip`. Shadows live under `window.shadow`,
+`drag.shadow`, and `tooltip.shadow`; shared control sizes use `control.size_pct`.
+
+TabView header geometry uses `theme_t.tab.header.height`, `tab.header.start`,
+`tab.min_width`, and `tab.padding`. Bundled themes use `TITLEBAR_HEIGHT` for the
+horizontal header, a zero leading inset, an 80-pixel minimum tab width, and
+16-pixel horizontal label padding. TabView clips labels to
 the space before its header toolbar; the normal window paint pass draws its
 selected content and toolbar children.

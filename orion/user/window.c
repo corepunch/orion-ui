@@ -786,7 +786,7 @@ int window_nc_hit_test(window_t *win, int sx, int sy) {
   irect16_t frame = win->frame;
   if (!win->parent) {
     int lx = sx - frame.x, ly = sy - frame.y;
-    if (lx >= frame.w - get_theme()->scrollbar_width && ly >= frame.h - get_theme()->scrollbar_width &&
+    if (lx >= frame.w - get_theme()->scrollbar.width && ly >= frame.h - get_theme()->scrollbar.width &&
         lx < frame.w && ly < frame.h && !(win->flags & WINDOW_NORESIZE))
       return HT_GROWBOX;
   }
@@ -810,8 +810,8 @@ int window_nc_hit_test(window_t *win, int sx, int sy) {
   if (tb && (tb->style & TOOLBAR_STYLE_GRIP)) {
     int title_h = toolbar_content_offset(win);
     irect16_t grip = tb->orientation == TOOLBAR_VERTICAL
-        ? R(frame.x, frame.y + title_h, frame.w, get_theme()->toolbar_grip_size)
-        : R(frame.x, frame.y + title_h, get_theme()->toolbar_grip_size, band - title_h);
+        ? R(frame.x, frame.y + title_h, frame.w, get_theme()->toolbar.grip_size)
+        : R(frame.x, frame.y + title_h, get_theme()->toolbar.grip_size, band - title_h);
     return rect_contains_point(grip, (ipoint16_t){sx, sy}) ? HT_CAPTION : HT_CLIENT;
   }
   if (!(win->flags & WINDOW_TOOLBAR)) return HT_CAPTION;
@@ -854,10 +854,10 @@ irect16_t get_client_rect(window_t const *win) {
   bool has_h = (win->flags & WINDOW_HSCROLL) && win->hscroll.visible;
   bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
   bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
-  bool overlay = get_theme()->scrollbar_overlay;
+  bool overlay = get_theme()->scrollbar.overlay;
   // Overlay scrollbars draw over content — no reserved gutter strips.
-  int hstrip = (has_h && !h_merged && !overlay) ? get_theme()->scrollbar_width : 0;
-  int vstrip = (has_v && !overlay) ? get_theme()->scrollbar_width : 0;
+  int hstrip = (has_h && !h_merged && !overlay) ? get_theme()->scrollbar.width : 0;
+  int vstrip = (has_v && !overlay) ? get_theme()->scrollbar.width : 0;
   int cw = win->frame.w - vstrip;
   int ch = win->frame.h - t - s - hstrip;
   if (cw < 0) cw = 0;
@@ -881,14 +881,14 @@ void adjust_window_rect(irect16_t *r, flags_t flags) {
   t += caption_extent(flags);
   if (flags & WINDOW_TOOLBAR)    t += theme_toolbar_band_height();
   int s = (flags & WINDOW_STATUSBAR) ? STATUSBAR_HEIGHT : 0;
-  // Horizontal scrollbar: adds get_theme()->scrollbar_width to the bottom unless it is
+  // Horizontal scrollbar: adds get_theme()->scrollbar.width to the bottom unless it is
   // merged with the status bar (WINDOW_STATUSBAR also set), or the active
   // theme uses overlay scrollbars (no reserved gutter).
   bool hscroll_standalone = (flags & WINDOW_HSCROLL) && !(flags & WINDOW_STATUSBAR);
-  bool overlay = get_theme()->scrollbar_overlay;
-  int hstrip = (hscroll_standalone && !overlay) ? get_theme()->scrollbar_width : 0;
-  // Vertical scrollbar: adds get_theme()->scrollbar_width to the right (Classic only).
-  int vstrip = ((flags & WINDOW_VSCROLL) && !overlay) ? get_theme()->scrollbar_width : 0;
+  bool overlay = get_theme()->scrollbar.overlay;
+  int hstrip = (hscroll_standalone && !overlay) ? get_theme()->scrollbar.width : 0;
+  // Vertical scrollbar: adds get_theme()->scrollbar.width to the right (Classic only).
+  int vstrip = ((flags & WINDOW_VSCROLL) && !overlay) ? get_theme()->scrollbar.width : 0;
   r->y -= t;
   r->w += vstrip;
   r->h += t + s + hstrip;

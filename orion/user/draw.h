@@ -13,7 +13,7 @@ void fill_rect(uint32_t color, irect16_t r);
 void fill_rounded_rect(uint32_t color, irect16_t r, int radius);
 // One rounded bubble face and tail over the existing rounded rectangle shadow.
 typedef enum { TOOLTIP_TAIL_TOP, TOOLTIP_TAIL_BOTTOM, TOOLTIP_TAIL_LEFT, TOOLTIP_TAIL_RIGHT } tooltip_tail_side_t;
-// r includes tooltip_shadow_size on every side; tail_offset is measured along that side within r.
+// r includes tooltip.shadow.size on every side; tail_offset is measured along that side within r.
 irect16_t tooltip_bubble_body_rect(irect16_t r, tooltip_tail_side_t side);
 void draw_tooltip_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side);
 void render_tooltip_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
@@ -29,13 +29,13 @@ static inline uint32_t color_with_alpha(uint32_t color, uint8_t alpha) {
   return ((uint32_t)alpha << 24) | (color & 0x00FFFFFFu);
 }
 // A card: brControlBg, halfway to brButtonHover when hovered, with an optional accent edge on its left side.
-// The edge is a plain `edge_width`-pixel rectangle; the active theme's card_corner_radius rounds (or not)
-// the card and the edge together. CTRL_SELECTED draws a ring in the accent edge's colour (theme accent when there is no edge) in the theme's card_ring_width margin,
+// The edge is a plain `edge_width`-pixel rectangle; the active theme's card.corner_radius rounds (or not)
+// the card and the edge together. CTRL_SELECTED draws a ring in the accent edge's colour (theme accent when there is no edge) in the theme's card.ring_width margin,
 // which is reserved inside `r` for every card so selecting never shifts content.
 void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color);
 // Framework internals behind theme_draw_ex(CTRL_PLASTIC); controls and apps never call these directly.
 // Single shader pass; shadow is reserved inside r, so controls never paint outside their bounds.
-// control_size (CONTROL_SIZE_*) scales the glyph by the theme's control_size_pct.
+// control_size (CONTROL_SIZE_*) scales the glyph by the theme's control.size_pct.
 void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon, uint32_t control_size, bool round);
 void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color);
 // Kernel entry point: plain floats only, so the renderer knows nothing about control state.

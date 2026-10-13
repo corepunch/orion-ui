@@ -234,7 +234,7 @@ static void paint_sheet(window_t *win) {
   if (d->active && d->track >= 0) {
     const block_t *b = block_get(d->block);
     stroke_rounded_rect(d->valid ? category_color(b->cat) : get_sys_color(brTextError),
-                        clip_rect(win, d->track, d->position, drag_span(d)), get_theme()->card_corner_radius, 2);
+                        clip_rect(win, d->track, d->position, drag_span(d)), get_theme()->card.corner_radius, 2);
   }
   int px = (int)((double)s->pos / bar * BAR_W) - hpos(win);
   fill_rect(get_sys_color(brAccent), R(px - 1, RULER_H, 2, grid.h));

@@ -64,9 +64,11 @@ control. With actions, a plain title caption retains the toolbar and drag target
 `tcGetTabRect` returns that caption's bounds, or an empty rectangle when the
 header is collapsed. Pass false to `tcHideSingleTab` to restore normal tabs.
 
-Horizontal TabBars use the theme's `tab_header_height` (32 logical pixels in
-both bundled themes), `tab_min_width`, and `tab_padding`. Icon strips can grow
-the header further. Sidebar rows keep their own metrics.
+Horizontal TabBars use the theme's `tab.header.height`, `tab.header.start`,
+`tab.min_width`, and `tab.padding`. Bundled themes use `TITLEBAR_HEIGHT` for the
+header and zero for the leading inset (`tab.header.start`). The inset applies
+to tab layout, painting, hit-testing, and selection scrolling. Icon strips can
+grow the header further. Sidebar rows and single-tab captions keep their own geometry.
 
 `tcSetToolbar(count, items)` adds a standard toolbar at the right of the TabBar;
 `tcGetToolbar` returns its owner window. Descriptors and strings are copied.

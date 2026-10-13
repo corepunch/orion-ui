@@ -293,13 +293,13 @@ static void test_pane_header_actions(void) {
   toolbar_state_t *items = toolbar_get_state(copy);
   ASSERT_STR_EQUAL(items->items[0].alt_icon, "split-down");
   ASSERT_EQUAL(send_message(right, tcGetCount, 0, NULL), 1);
-  ASSERT_EQUAL(copy->frame.y, 0); ASSERT_EQUAL(copy->frame.h, get_theme()->tab_header_height);
+  ASSERT_EQUAL(copy->frame.y, 0); ASSERT_EQUAL(copy->frame.h, get_theme()->tab.header.height);
   ASSERT_EQUAL(copy->frame.x + copy->frame.w, get_client_rect(right).w);
   for (int i = 0; i < 7; i++) pane_test_tab(right, "Long session title");
   irect16_t tab, r;
   ASSERT_TRUE(send_message(right, tcGetTabRect, 7, &tab));
   ASSERT_TRUE(tab.x + tab.w <= copy->frame.x);
-  ASSERT_EQUAL(tab.h, get_theme()->tab_header_height);
+  ASSERT_EQUAL(tab.h, get_theme()->tab.header.height);
   ASSERT_TRUE(send_message(copy, tbGetItemRect, 2400, &r));
   pane_command = 0;
   ui_event_t modifiers = {.message = kEventModifiersChanged, .wParam = AX_MOD_ALT};

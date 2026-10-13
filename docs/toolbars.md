@@ -485,11 +485,11 @@ because framework items also occupy positions in the toolbar state.
 
 A button item takes a `CONTROL_SIZE_*` style (`control-size="mini|small|regular|large"`
 in `.orion`), the same intrinsic sizes dialog controls use. The toolbar's button size
-(`tbSetButtonSize`, else the theme's `toolbar_button_size`) is the regular cell;
-`theme_control_extent()` scales it by the theme's `control_size_pct`, which follows
+(`tbSetButtonSize`, else the theme's `toolbar.button_size`) is the regular cell;
+`theme_control_extent()` scales it by the theme's `control.size_pct`, which follows
 AppKit's round bezels (regular 21, small 18, mini 15, large 28). The row keeps the
 regular height: a bigger cell spreads into the band padding and stops the theme's
-`toolbar_large_inset` short of the band edges, and every item is centred on the row's
+`toolbar.large_inset` short of the band edges, and every item is centred on the row's
 axis. An iTunes-style transport is three plain buttons: `control-size="small"` rewind and
 forward around a `control-size="large"` play that fills the band. Nothing is hand-sized;
 the glyph scales with the cell.

@@ -23,24 +23,24 @@ static void app_chrome_resize_children(window_t *win) {
   app_chrome_state_t *st = (app_chrome_state_t *)win->userdata;
   if (!st) return;
   st->menubar = app_chrome_menubar(win);
-  int menu_h = get_theme()->menubar_height;
+  int menu_h = get_theme()->menubar.height;
   window_t *bar = app_chrome_toolbar(win);
   if (bar && bar->dock && bar->dock->side == DOCK_TOP && st->presentation == TOOLBAR_PRESENTATION_COMPACT) {
     send_message(bar, tbModifyStyle, TOOLBAR_STYLE_COMPACT | TOOLBAR_STYLE_GRIP, (void *)(uintptr_t)(TOOLBAR_STYLE_COMPACT | TOOLBAR_STYLE_GRIP));
-    send_message(bar, tbSetButtonSize, menu_h - 2 * get_theme()->toolbar_compact_padding, NULL);
-    isize16_t ideal = {2 * get_theme()->toolbar_compact_padding, 0};
+    send_message(bar, tbSetButtonSize, menu_h - 2 * get_theme()->toolbar.compact.padding, NULL);
+    isize16_t ideal = {2 * get_theme()->toolbar.compact.padding, 0};
     send_message(bar, tbGetIdealSize, 0, &ideal);
     int width = ideal.w;
     int menu_width = st->menubar ? send_message(st->menubar, kMenuBarMessageGetContentWidth, 0, NULL) : win->frame.w;
     bool compact = st->menubar && st->menubar->dock && st->menubar->dock->side == DOCK_TOP &&
-                   width + menu_width + menu_h + get_theme()->toolbar_compact_spacing - 2 * get_theme()->toolbar_compact_padding + get_theme()->toolbar_compact_menu_gap <= win->frame.w;
+                   width + menu_width + menu_h + get_theme()->toolbar.compact.spacing - 2 * get_theme()->toolbar.compact.padding + get_theme()->toolbar.compact.menu_gap <= win->frame.w;
     toolbar_dock_t dock = compact ? TOOLBAR_DOCK_MENU : TOOLBAR_DOCK_TOP;
     toolbar_set_dock_hint(bar, dock);
     if (compact) {
       // The menu bar's restore button fills the last menu_h square. Its centre sits one
-      // compact pitch (button + get_theme()->toolbar_compact_spacing) past the last button's centre.
+      // compact pitch (button + get_theme()->toolbar.compact.spacing) past the last button's centre.
       irect16_t row = rect_split_top(get_client_rect(win), menu_h);
-      int slot = menu_h + get_theme()->toolbar_compact_spacing - 2 * get_theme()->toolbar_compact_padding;
+      int slot = menu_h + get_theme()->toolbar.compact.spacing - 2 * get_theme()->toolbar.compact.padding;
       bar->frame = rect_split_right(rect_trim_right(row, slot), width);
       invalidate_window(bar);
     } else {
@@ -67,7 +67,7 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
       }
       if (cfg->menubar_proc)
         st->menubar = create_window("menubar", WINDOW_NOTITLE | WINDOW_NORESIZE,
-                                    MAKERECT(0, 0, win->frame.w, get_theme()->menubar_height),
+                                    MAKERECT(0, 0, win->frame.w, get_theme()->menubar.height),
                                     win, cfg->menubar_proc, 0, NULL);
       if (st->menubar) {
         send_message(st->menubar, kMenuBarMessageSetMenus, cfg->menu_count, (void *)cfg->menus);
@@ -131,7 +131,7 @@ window_t *create_app_chrome(const char *title, winproc_t menubar_proc,
                             const menu_def_t *menus, int menu_count,
                             winproc_t toolbar_proc, hinstance_t hinstance) {
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
-  int menu_h = get_theme()->menubar_height;
+  int menu_h = get_theme()->menubar.height;
   int sh = MAX(menu_h + theme_toolbar_band_height(), ui_get_system_metrics(kSystemMetricScreenHeight));
   app_chrome_create_t cfg = {menubar_proc, menus, menu_count, toolbar_proc};
   window_t *win = create_window(title ? title : "Application Chrome",

@@ -79,10 +79,10 @@ result_t win_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       win_stack(win, msg, wparam, lparam);
       win->userdata = card;
       const theme_t *theme = get_theme();
-      int inset = theme->card_ring_width;
+      int inset = theme->card.ring_width;
       win->layout.layout_padding = (irect16_t){
-        inset + theme->card_edge_width + theme->card_padding_x, inset + theme->card_padding_y,
-        inset + theme->card_padding_x, inset + theme->card_padding_y };
+        inset + theme->card.edge_width + theme->card.padding_x, inset + theme->card.padding_y,
+        inset + theme->card.padding_x, inset + theme->card.padding_y };
       win->layout.layout_spacing = 3;
       return true;
     }

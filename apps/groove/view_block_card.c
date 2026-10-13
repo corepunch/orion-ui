@@ -113,7 +113,7 @@ static void paint_block_card(int block, const block_t *b, irect16_t r, int visib
   theme_draw_ex(THEME_PART_CARD, r, state | CTRL_PLASTIC, &(theme_draw_opts_t){.color = color}); // its shadow margin is the only gap between neighbouring cards
   int icon_size = r.h * 3 / 4;
   r = theme_content_rect(THEME_PART_CARD, r, state | CTRL_PLASTIC);
-  int radius = MAX(0, get_theme()->card_corner_radius - get_theme()->card_ring_width);
+  int radius = MAX(0, get_theme()->card.corner_radius - get_theme()->card.ring_width);
   irect16_t wave = r;
   uint32_t ink = color_with_alpha(get_sys_color(brTextOnColor), (color >> 24) * 0x99 / 255);
   if (wave.w > 0 && wave.h > 0) {

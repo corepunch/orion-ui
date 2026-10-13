@@ -265,8 +265,8 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
       break;
     case THEME_PART_HEADER:              classic_draw_button_bg(r, state); break;
     case THEME_PART_RESIZE_GRIP:
-      fill_rect(get_sys_color(brLightEdge), R(r.x+r.w, r.y+r.h-get_theme()->scrollbar_width+1, 1, get_theme()->scrollbar_width));
-      fill_rect(get_sys_color(brLightEdge), R(r.x+r.w-get_theme()->scrollbar_width+1, r.y+r.h, get_theme()->scrollbar_width, 1));
+      fill_rect(get_sys_color(brLightEdge), R(r.x+r.w, r.y+r.h-get_theme()->scrollbar.width+1, 1, get_theme()->scrollbar.width));
+      fill_rect(get_sys_color(brLightEdge), R(r.x+r.w-get_theme()->scrollbar.width+1, r.y+r.h, get_theme()->scrollbar.width, 1));
       break;
     case THEME_PART_MENU_BAR:
       fill_rect(get_sys_color(brWindowDarkBg), r);
@@ -276,7 +276,7 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
     case THEME_PART_SEPARATOR:
     case THEME_PART_SLIDER_TRACK:        fill_rect(get_sys_color(brDarkEdge), r); break;
     case THEME_PART_SCROLLBAR_TRACK:     fill_rect(get_sys_color(brStatusbarBg), r); break;
-    case THEME_PART_SCROLLBAR_THUMB:     fill_rect(get_sys_color(disabled ? brDarkEdge : brLightEdge), rect_inset(r, (get_theme()->scrollbar_width - SCROLLBAR_THUMB_WIDTH) / 2)); break;
+    case THEME_PART_SCROLLBAR_THUMB:     fill_rect(get_sys_color(disabled ? brDarkEdge : brLightEdge), rect_inset(r, (get_theme()->scrollbar.width - SCROLLBAR_THUMB_WIDTH) / 2)); break;
     case THEME_PART_SCROLLBAR_ARROW_UP:
     case THEME_PART_SCROLLBAR_ARROW_DOWN:
     case THEME_PART_SCROLLBAR_ARROW_LEFT:
@@ -336,46 +336,38 @@ static theme_t g_classic_theme = {
   .draw_part              = classic_draw_part,
   .draw_window_chrome     = classic_draw_window_chrome,
   .draw_statusbar_text    = classic_draw_statusbar_text,
-  .scrollbar_width        = 13,
-  .scrollbar_overlay      = false,
-  .caption_height         = FONT_SIZE + 5,
-  .menubar_height         = FONT_SIZE + 5,
-  .toolbar_button_size    = SYSICON_SIZE + 4,
-  .toolbar_padding        = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
-  .tab_pane_frame            = 2,
-  .tab_header_height         = 32, .tab_min_width = 80, .tab_padding = 16,
-  .menu_capsule              = 0,
-  .badge_padding             = 7,
-  .badge_corner_radius       = 5,
-  .badge_tint_alpha          = 0x40,
-  .tooltip_corner_radius = 4, .tooltip_tail_size = 6,
-  .tooltip_padding_x = 8, .tooltip_padding_y = 5, .tooltip_gap = 2, .tooltip_shadow_size = 10,
-  .tooltip_shadow_blur = 2, .tooltip_shadow_offset = {0, 3},
-  .toolbar_compact_padding   = 2,
-  .toolbar_compact_spacing   = 6,
-  .toolbar_compact_icon      = TOOLBAR_COMPACT_ICON_SIZE,
-  .toolbar_compact_menu_gap  = 8,
-  .toolbar_grip_size         = 12,
-  .toolbar_dropdown_arrow_w  = 12,
-  .toolbar_large_inset    = 2,
-  .press_icon_offset      = 1,
-  .button_corner_radius   = 0,
-  .window_corner_radius   = 0,
-  .card_corner_radius     = 0,
-  .card_edge_width        = 4,
-  .card_ring_width        = 1,
-  .card_highlight_width   = 0,
-  .plastic_corner_radius = CORNER_RADIUS_CIRCULAR,
-  .plastic_bevel_width   = 2,
-  .plastic_shadow_size   = 3,
-  .plastic = { .gloss = 0.7f, .rim = 0.7f, .ink = 0.12f, .lift = 0.08f, .glyph_size = 20, .shadow_color = 0xE0000000 },
-  .control_size_pct = { 100, 84, 71, 133 }, // AppKit round bezels (regular 21, small 18, mini 15, large 28); small lands on 32 of a 38 px row
-  .card_padding_x         = 8,
-  .card_padding_y         = 6,
-  .drag_shadow_blur       = 6,
-  .drag_shadow_offset     = {0, 8},
-  .drag_shadow_color      = 0xE0000000,
-  .control_padding        = BUTTON_PADDING,
+  .scrollbar = { .width = 13, .overlay = false },
+  .caption = { .height = FONT_SIZE + 5 },
+  .menubar = { .height = FONT_SIZE + 5 },
+  .toolbar = {
+    .button_size = SYSICON_SIZE + 4, .padding = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
+    .compact = { .padding = 2, .spacing = 6, .icon = TOOLBAR_COMPACT_ICON_SIZE, .menu_gap = 8 },
+    .grip_size = 12, .dropdown_arrow_w = 12, .large_inset = 2,
+  },
+  .tab = {
+    .header = { .height = TITLEBAR_HEIGHT, .start = 0 },
+    .min_width = 80, .padding = 16, .pane_frame = 2,
+  },
+  .menu = { .capsule = 0 },
+  .badge = { .padding = 7, .corner_radius = 5, .tint_alpha = 0x40 },
+  .tooltip = {
+    .corner_radius = 4, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,
+    .shadow = { .size = 10, .blur = 2, .offset = {0, 3} },
+  },
+  .control = { .padding = BUTTON_PADDING, .press_icon_offset = 1, .size_pct = { 100, 84, 71, 133 } },
+  .button = { .corner_radius = 0 },
+  .window = { .corner_radius = 0 },
+  .card = {
+    .corner_radius = 0, .edge_width = 4, .ring_width = 1, .highlight_width = 0,
+    .padding_x = 8, .padding_y = 6,
+  },
+  .plastic = {
+    .corner_radius = CORNER_RADIUS_CIRCULAR, .bevel_width = 2, .shadow_size = 3,
+    .gloss = 0.7f, .rim = 0.7f, .ink = 0.12f, .lift = 0.08f, .glyph_size = 20, .shadow_color = 0xE0000000,
+  },
+  .drag = {
+    .shadow = { .blur = 6, .offset = {0, 8}, .color = 0xE0000000 },
+  },
   .apply_palette          = classic_apply_palette,
 };
 

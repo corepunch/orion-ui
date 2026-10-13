@@ -181,7 +181,7 @@ static uint32_t modern_surface_midpoint(uint32_t a, uint32_t b) {
 
 static void modern_draw_field_bg(irect16_t r, ctrl_state_t state) {
   bool focused = (state & CTRL_FOCUSED) && !(state & CTRL_DISABLED);
-  int radius = (state & CTRL_MULTILINE) ? get_theme()->multiline_field_corner_radius : (MIN(r.w, r.h) + 1) / 2;
+  int radius = (state & CTRL_MULTILINE) ? get_theme()->field.multiline_corner_radius : (MIN(r.w, r.h) + 1) / 2;
   uint32_t border, fill;
   if (modern_navy()) {
     border = focused ? get_sys_color(brAccent) : get_sys_color(brLightEdge);
@@ -393,57 +393,46 @@ static theme_t g_modern_theme = {
   .draw_part              = modern_draw_part,
   .draw_window_chrome     = modern_draw_window_chrome,
   .draw_statusbar_text    = modern_draw_statusbar_text,
-  .scrollbar_width        = SCROLLBAR_WIDTH,
-  .caption_height         = TITLEBAR_HEIGHT,
-  .menubar_height         = MODERN_MENUBAR_HEIGHT,
-  .toolbar_button_size    = TB_SPACING,
-  .toolbar_padding        = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
-  .tab_pane_frame            = 0,
-  .tab_header_height         = 32, .tab_min_width = 80, .tab_padding = 16,
-  .menu_capsule              = 1,
-  .badge_padding             = 7,
-  .badge_corner_radius       = 5,
-  .badge_tint_alpha          = 0x40,
-  .tooltip_corner_radius = 6, .tooltip_tail_size = 6,
-  .multiline_field_corner_radius = (CONTROL_HEIGHT_REGULAR + 1) / 2,
-  .tooltip_padding_x = 8, .tooltip_padding_y = 5, .tooltip_gap = 2, .tooltip_shadow_size = 10,
-  .tooltip_shadow_blur = 2, .tooltip_shadow_offset = {0, 3},
-  .toolbar_compact_padding   = 2,
-  .toolbar_compact_spacing   = 6,
-  .toolbar_compact_icon      = TOOLBAR_COMPACT_ICON_SIZE,
-  .toolbar_compact_menu_gap  = 8,
-  .toolbar_grip_size         = 12,
-  .toolbar_dropdown_arrow_w  = 12,
-  .toolbar_large_inset    = 2,
-  // Use the same reserved-space scrollbar geometry as Classic for now.  The
-  // overlay/auto-hide treatment is deliberately deferred until it has a
-  // complete input and layout contract.
-  .scrollbar_overlay      = false,
-  .press_icon_offset      = 0,
-  .button_corner_radius   = RADIUS_BUTTON,
-  .window_corner_radius   = 8,
-  .card_corner_radius     = 7,
-  .card_edge_width        = 4,
-  .card_ring_width        = 1,
-  .card_highlight_width   = 1,
-  .plastic_corner_radius = CORNER_RADIUS_CIRCULAR,
-  .plastic_bevel_width   = 2,
-  .plastic_shadow_size   = 3,
-  .plastic = { .gloss = 1.0f, .rim = 0.55f, .ink = 0.10f, .lift = 0.10f, .glyph_size = 20, .shadow_color = 0xE0000000 },
-  .control_size_pct = { 100, 84, 71, 133 }, // AppKit round bezels (regular 21, small 18, mini 15, large 28); small lands on 32 of a 38 px row
-  .card_padding_x         = 12,
-  .card_padding_y         = 8,
-  .window_shadow_blur     = 8,
-  .window_shadow_offset   = {0, 4},
-  .window_shadow_color    = 0x80000000,
-  .drag_shadow_blur       = 6,
-  .drag_shadow_offset     = {0, 8},
-  .drag_shadow_color      = 0xE0000000,
+  .scrollbar = { .width = SCROLLBAR_WIDTH, .overlay = false },
+  .caption = { .height = TITLEBAR_HEIGHT },
+  .menubar = { .height = MODERN_MENUBAR_HEIGHT },
+  .toolbar = {
+    .button_size = TB_SPACING, .padding = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
+    .compact = { .padding = 2, .spacing = 6, .icon = TOOLBAR_COMPACT_ICON_SIZE, .menu_gap = 8 },
+    .grip_size = 12, .dropdown_arrow_w = 12, .large_inset = 2,
+  },
+  .tab = {
+    .header = { .height = TITLEBAR_HEIGHT, .start = 0 },
+    .min_width = 80, .padding = 16, .pane_frame = 0,
+  },
+  .menu = { .capsule = 1 },
+  .badge = { .padding = 7, .corner_radius = 5, .tint_alpha = 0x40 },
+  .tooltip = {
+    .corner_radius = 6, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,
+    .shadow = { .size = 10, .blur = 2, .offset = {0, 3} },
+  },
+  .field = { .multiline_corner_radius = (CONTROL_HEIGHT_REGULAR + 1) / 2 },
+  .control = { .padding = BUTTON_PADDING, .press_icon_offset = 0, .size_pct = { 100, 84, 71, 133 } },
+  .button = { .corner_radius = RADIUS_BUTTON },
+  .window = {
+    .corner_radius = 8,
+    .shadow = { .blur = 8, .offset = {0, 4}, .color = 0x80000000 },
+  },
+  .card = {
+    .corner_radius = 7, .edge_width = 4, .ring_width = 1, .highlight_width = 1,
+    .padding_x = 12, .padding_y = 8,
+  },
+  .plastic = {
+    .corner_radius = CORNER_RADIUS_CIRCULAR, .bevel_width = 2, .shadow_size = 3,
+    .gloss = 1.0f, .rim = 0.55f, .ink = 0.10f, .lift = 0.10f, .glyph_size = 20, .shadow_color = 0xE0000000,
+  },
+  .drag = {
+    .shadow = { .blur = 6, .offset = {0, 8}, .color = 0xE0000000 },
+  },
   .item_background        = {
     .hover = brButtonHover, .selected = brAccent,
     .selected_hover = brAccent, .pressed = brAccent,
   },
-  .control_padding        = BUTTON_PADDING,
   .apply_palette          = modern_apply_palette,
 };
 

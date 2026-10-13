@@ -1201,7 +1201,7 @@ void test_compact_application_toolbar(void) {
   ASSERT_NOT_NULL(bar);
   ASSERT_EQUAL(bar->frame.y, 0);
   ASSERT_EQUAL(bar->frame.h, MENUBAR_HEIGHT);
-  ASSERT_EQUAL(bar->frame.x + bar->frame.w, 600 - MENUBAR_HEIGHT - (get_theme()->toolbar_compact_spacing - 2 * get_theme()->toolbar_compact_padding)); // restore button one pitch away
+  ASSERT_EQUAL(bar->frame.x + bar->frame.w, 600 - MENUBAR_HEIGHT - (get_theme()->toolbar.compact.spacing - 2 * get_theme()->toolbar.compact.padding)); // restore button one pitch away
   toolbar_state_t *tb = require_toolbar_state(bar);
   irect16_t r = tb->item_rects[0];
   ASSERT_EQUAL(r.y, 2);

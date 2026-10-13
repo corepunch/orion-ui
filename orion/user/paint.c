@@ -31,16 +31,16 @@ bool window_lift_offset(const window_t *win, int *dx, int *dy) {
 // so the offset part of the shadow remains visible underneath the fill.
 void paint_lift_shadow(window_t *root, window_t *win, irect16_t clip) {
   theme_t *theme = get_theme();
-  int blur = theme->drag_shadow_blur;
+  int blur = theme->drag.shadow.blur;
   if (blur <= 0) return;
   int pad = blur * 3 + 1;
-  int ax = theme->drag_shadow_offset.x < 0 ? -theme->drag_shadow_offset.x : theme->drag_shadow_offset.x;
-  int ay = theme->drag_shadow_offset.y < 0 ? -theme->drag_shadow_offset.y : theme->drag_shadow_offset.y;
+  int ax = theme->drag.shadow.offset.x < 0 ? -theme->drag.shadow.offset.x : theme->drag.shadow.offset.x;
+  int ay = theme->drag.shadow.offset.y < 0 ? -theme->drag.shadow.offset.y : theme->drag.shadow.offset.y;
   irect16_t wide = R(clip.x - pad - ax - 1, clip.y - pad - ay - 1,
                      clip.w + 2 * (pad + ax + 1), clip.h + 2 * (pad + ay + 1));
   set_scissor_fbo(root, isect_rect(wide, R(0, 0, root->frame.w, root->frame.h)));
-  draw_rect_shadow(get_client_rect(win), (float)theme->card_corner_radius, (float)blur,
-                   theme->drag_shadow_offset, theme->drag_shadow_color);
+  draw_rect_shadow(get_client_rect(win), (float)theme->card.corner_radius, (float)blur,
+                   theme->drag.shadow.offset, theme->drag.shadow.color);
   set_scissor_fbo(root, clip);
 }
 

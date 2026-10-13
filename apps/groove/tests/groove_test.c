@@ -677,7 +677,7 @@ static void test_library_transport(void) {
     }
   }
   irect16_t play = tb->item_rects[toolbar_index(ID_PLAY)], fwd = tb->item_rects[toolbar_index(ID_FORWARD)];
-  int inset = get_theme()->toolbar_large_inset, small = theme_control_extent(toolbar_effective_bsz(bar), CONTROL_SIZE_SMALL);
+  int inset = get_theme()->toolbar.large_inset, small = theme_control_extent(toolbar_effective_bsz(bar), CONTROL_SIZE_SMALL);
 #ifndef AX_PLATFORM_IOS
   ASSERT_EQUAL(small, 32);
 #endif

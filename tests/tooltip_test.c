@@ -28,7 +28,7 @@ static void test_immediate_control_tooltip(void) {
   window_t *tip = find_tooltip("Control hint");
   ASSERT_NOT_NULL(tip);
   ASSERT_TRUE(window_has_state(tip, WINDOW_STATE_VISIBLE));
-  ASSERT_TRUE(tip->frame.y + tip->frame.h - get_theme()->tooltip_shadow_size <= window_screen_y(button));
+  ASSERT_TRUE(tip->frame.y + tip->frame.h - get_theme()->tooltip.shadow.size <= window_screen_y(button));
   irect16_t frame = tip->frame;
   tooltip_update(button, "Control hint", 120, 115);
   ASSERT_TRUE(!memcmp(&frame, &tip->frame, sizeof(frame)));
@@ -81,7 +81,7 @@ static void test_toolbar_tooltip_sides(void) {
   show_window(bar, true);
   const dock_side_t sides[] = {DOCK_LEFT, DOCK_RIGHT, DOCK_TOP, DOCK_BOTTOM};
   const theme_t *theme = get_theme();
-  int pad = theme->tooltip_shadow_size, gap = theme->tooltip_gap;
+  int pad = theme->tooltip.shadow.size, gap = theme->tooltip.gap;
   for (int i = 0; i < ARRAY_LEN(sides); i++) {
     ASSERT_TRUE(dock_set_side(bar, sides[i]));
     irect16_t item_rect;

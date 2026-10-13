@@ -154,7 +154,7 @@ static int tab_icon_gap(tabview_state_t *st) {
 static int tab_width(window_t *page, tabview_state_t *st, int idx) {
   if (st && (st->style & TAB_STYLE_ICONS_ONLY))
     return tab_has_icon(st, idx) ? st->strip.icon_w + 8 : TAB_CONTROL_HEIGHT;
-  int w = MAX(get_theme()->tab_min_width, strwidth(page ? page->title : "") + 2 * get_theme()->tab_padding);
+  int w = MAX(get_theme()->tab.min_width, strwidth(page ? page->title : "") + 2 * get_theme()->tab.padding);
   if (tab_has_icon(st, idx)) w += st->strip.icon_w + tab_icon_gap(st);
   return w;
 }
@@ -171,7 +171,7 @@ static int sidebar_rows_width(window_t *win, tabview_state_t *st) {
 }
 
 static int sidebar_width(window_t *win, tabview_state_t *st) {
-  bool bar = st->list && st->list->vscroll.visible && !get_theme()->scrollbar_overlay;
+  bool bar = st->list && st->list->vscroll.visible && !get_theme()->scrollbar.overlay;
   return sidebar_rows_width(win, st) + (bar ? SCROLLBAR_WIDTH : 0);
 }
 
@@ -215,9 +215,9 @@ static void draw_tab_item(window_t *page, int x, bool selected, tabview_state_t 
   int w = tab_width(page, st, idx);
   int th = tab_header_height(st);
   // 1px of tab-bar chrome above the tabs, so a face does not meet the panel above.
-  // Selected tab stays flush with the pane. Inactive tabs keep a 2px shelf above it.
+  // Both tab states extend to the pane; inactive tabs start lower at the top.
   int y = (selected ? 0 : 2) + TAB_TOP_PAD;
-  int h = selected ? th - y : th - y - 2;
+  int h = th - y;
   ctrl_state_t state = selected ? CTRL_SELECTED : CTRL_NORMAL;
   theme_draw(THEME_PART_TAB, R(x, y, w, h), state);
   bool has_icon = tab_has_icon(st, idx);
@@ -237,7 +237,7 @@ static irect16_t tab_page_rect(window_t *win, tabview_state_t *st, irect16_t r) 
   if (is_sidebar(st)) return rect_trim_left(r, sidebar_width(win, st));
   if (!tab_header_extent(win, st)) return r;
   irect16_t page_rect = rect_trim_top(r, tab_header_extent(win, st));
-  int frame = get_theme()->tab_pane_frame;
+  int frame = get_theme()->tab.pane_frame;
   page_rect.x += frame; page_rect.w = MAX(0, page_rect.w - 2 * frame);
   page_rect.h = MAX(0, page_rect.h - frame);
   return page_rect;
@@ -280,13 +280,14 @@ static void tab_arrange(window_t *win) {
   }
   if (tab_single_hidden(win, st)) st->scroll = 0;
   else if (!is_sidebar(st)) {
-    int x = 2, selected_x = 2, selected_w = 0, idx = 0, width = tab_available_width(win, st);
+    int start = get_theme()->tab.header.start;
+    int x = start, selected_x = start, selected_w = 0, idx = 0, width = tab_available_width(win, st);
     FOR_EACH_PAGE(win, st, c) {
       int w = tab_width(c, st, idx);
       if (idx++ == st->selected) { selected_x = x; selected_w = w; }
       x += w + 1;
     }
-    if (selected_x - st->scroll < 2) st->scroll = selected_x - 2;
+    if (selected_x - st->scroll < start) st->scroll = selected_x - start;
     else if (selected_x + selected_w - st->scroll > width)
       st->scroll = selected_x + selected_w - width;
     st->scroll = MAX(0, MIN(st->scroll, MAX(0, x - width)));
@@ -385,13 +386,13 @@ static bool tab_paint(window_t *win) {
   if (!st) return true;
 
   set_clip_rect(win, R(0, 0, tab_available_width(win, st), th));
-  int selected_x = 2 - st->scroll;
+  int selected_x = get_theme()->tab.header.start - st->scroll;
   window_t *selected = NULL;
-  int x = 2 - st->scroll, i = 0;
+  int x = selected_x, i = 0;
   if (tab_single_hidden(win, st)) {
     window_t *page = tab_page(win, 0);
-    if (th) draw_text_ellipsized(FONT_SMALL, page->title, get_theme()->tab_padding,
-      (th - text_char_height(FONT_SMALL)) / 2, MAX(0, tab_available_width(win, st) - 2 * get_theme()->tab_padding),
+    if (th) draw_text_ellipsized(FONT_SMALL, page->title, get_theme()->tab.padding,
+      (th - text_char_height(FONT_SMALL)) / 2, MAX(0, tab_available_width(win, st) - 2 * get_theme()->tab.padding),
       get_sys_color(brTextNormal));
   } else FOR_EACH_PAGE(win, st, c) {
     if (i == st->selected) { selected = c; selected_x = x; }
@@ -556,7 +557,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (is_sidebar(st)) return false;
       int th = tab_header_extent(win, st);
       if (my < 0 || my >= th || mx < 0 || mx >= tab_available_width(win, st)) return false;
-      int left = 2 - st->scroll, i = 0;
+      int left = tab_single_hidden(win, st) ? 0 : get_theme()->tab.header.start - st->scroll, i = 0;
       FOR_EACH_PAGE(win, st, c) {
         int w = tab_single_hidden(win, st) ? tab_available_width(win, st) - left : tab_width(c, st, i);
         if (mx >= left && mx < left + w) {
@@ -630,7 +631,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return (result_t)(intptr_t)page;
     }
     case tcGetTabRect: {
-      int index = (int)wparam, x = 2 - (st ? st->scroll : 0), i = 0;
+      int index = (int)wparam, x = get_theme()->tab.header.start - (st ? st->scroll : 0), i = 0;
       if (!st || !lparam || index < 0 || index >= tab_count(win)) {
         fprintf(stderr, "[tv] get_tab_rect rejected win=%u index=%d\n", win->id, index);
         fflush(stderr); return false;
