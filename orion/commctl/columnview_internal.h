@@ -80,8 +80,6 @@ int rv_report_header_height(const reportview_data_t *data);
 int rv_get_report_column_width(reportview_data_t *data, int col, int avail_w);
 int rv_report_total_width(reportview_data_t *data, int avail_w);
 int rv_large_icon_cell_h(const reportview_data_t *data);
-int rv_large_icon_ncol(const reportview_data_t *data, int eff_w, int cell_w);
-int rv_large_icon_x0(int eff_w, int ncol, int cell_w);
 void rv_draw_item_icon(bitmap_strip_t *strip, int icon_id,
                        irect16_t const *icon_rect, uint32_t col);
 

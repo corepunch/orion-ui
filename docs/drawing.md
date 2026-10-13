@@ -298,3 +298,9 @@ horizontal header, a zero leading inset, an 80-pixel minimum tab width, and
 16-pixel horizontal label padding. TabView clips labels to
 the space before its header toolbar; the normal window paint pass draws its
 selected content and toolbar children.
+
+### Asymmetric content insets
+
+`rect_inset_edges(rect, insets)` interprets the inset fields as left, top, right,
+and bottom, and clamps exhausted width or height to zero. Layout containers and
+window-managed scroll content share this utility for their padded content area.

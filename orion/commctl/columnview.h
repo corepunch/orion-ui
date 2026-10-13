@@ -39,7 +39,7 @@ enum {
   RVM_GETCOLUMNTITLESVISIBLE,
   RVM_SETPRESERVEICONCOLORS, // wparam = 0 tint icons with row color; non-zero draw strip colors
   RVM_SETICONTEXTGAP,      // wparam = pixels between icon slot and item text in icon-list mode
-  RVM_HITTEST,             // wparam = MAKEDWORD(client_x, client_y); returns item index or -1
+  RVM_HITTEST,             // wparam = MAKEDWORD(content_x, content_y); returns item index or -1
   RVM_SETEXTENDEDSTYLE,    // wparam = style mask (0 = all); lparam = new RVS_EX_* bits
   RVM_GETEXTENDEDSTYLE,
   RVM_SETITEMSTATE,        // wparam = item index (-1 = all); lparam = reportview_item_state_t*

@@ -116,6 +116,9 @@ enum {
   // and bubbled to its parents; return true to consume it. Unconsumed drops go
   // to ui_open_file().
   evDropFile,
+  // Optional intrinsic scroll measurement: layout_measure_t*, unpadded available
+  // viewport in, unpadded content dimensions out. Must not change layout or scroll state.
+  evMeasureScrollContent,
   evUser = 1000
 };
 

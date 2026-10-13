@@ -11,16 +11,23 @@ typedef struct {
   int cell_w;
   int cell_h;
   int usable_w;
+  int origin_x;
 } icon_grid_geom_t;
 
+static int grid_column_count(reportview_data_t *data, int width) {
+  int cell_w = data->column_width > 0 ? data->column_width : DEFAULT_COLUMN_WIDTH;
+  return data->fixed_large_icon_cols > 0 ? data->fixed_large_icon_cols : MAX(1, width / cell_w);
+}
+
 static icon_grid_geom_t grid_geom(window_t *win, reportview_data_t *data) {
-  int eff_w = rv_content_width(win);
+  irect16_t content = window_scroll_content_rect(win);
   int cell_w = data->column_width > 0 ? data->column_width : DEFAULT_COLUMN_WIDTH;
   return (icon_grid_geom_t){
-    .ncol = rv_large_icon_ncol(data, eff_w, cell_w),
+    .ncol = grid_column_count(data, content.w),
     .cell_w = cell_w,
     .cell_h = rv_large_icon_cell_h(data),
-    .usable_w = MAX(1, eff_w - 2 * RV_LARGE_ICON_PAD),
+    .usable_w = MAX(1, content.w),
+    .origin_x = content.x,
   };
 }
 
@@ -29,85 +36,47 @@ static int grid_col_x(const icon_grid_geom_t *g, int col) {
     int usable = g ? g->usable_w : 0;
     int cell_w = g ? g->cell_w : 0;
     if (g && g->ncol == 1)
-      return RV_LARGE_ICON_PAD + MAX(0, (usable - cell_w) / 2);
-    return RV_LARGE_ICON_PAD;
+      return g->origin_x + MAX(0, (usable - cell_w) / 2);
+    return g ? g->origin_x : 0;
   }
   if (g->ncol <= 1)
-    return RV_LARGE_ICON_PAD + MAX(0, (g->usable_w - g->cell_w) / 2);
+    return g->origin_x + MAX(0, (g->usable_w - g->cell_w) / 2);
 
   int min_span = (g->ncol - 1) * g->cell_w;
   int fill_span = g->usable_w - g->cell_w;
   int span = MAX(min_span, fill_span);
-  return RV_LARGE_ICON_PAD
+  return g->origin_x
        + (span * col + (g->ncol - 1) / 2) / (g->ncol - 1);
 }
 
-static int grid_content_height(window_t *win, reportview_data_t *data) {
-  icon_grid_geom_t g = grid_geom(win, data);
-  int rows = (data->count == 0) ? 0 : ((int)data->count + g.ncol - 1) / g.ncol;
-  return 2 * RV_LARGE_ICON_PAD + rows * g.cell_h;
+static void grid_sync_scroll(window_t *win) {
+  window_set_scroll_content(win, 0, 0, win->scroll_content.padding, (irect16_t){0});
 }
 
-static void grid_sync_scroll(window_t *win, reportview_data_t *data) {
-  if (!win || !data)
-    return;
-  irect16_t cr = get_client_rect(win);
-  if (cr.h <= 0)
-    return;
-  int total_h = grid_content_height(win, data);
-  int max_scroll_px = total_h - cr.h;
-  if (max_scroll_px < 0)
-    max_scroll_px = 0;
-  if ((int)win->vscroll.pos > max_scroll_px)
-    win->vscroll.pos = (uint32_t)max_scroll_px;
-  scroll_info_t si;
-  si.fMask = SIF_ALL;
-  si.nMin = 0;
-  si.nMax = total_h;
-  si.nPage = (uint32_t)cr.h;
-  si.nPos = (int)win->vscroll.pos;
-  set_scroll_info(win, SB_VERT, &si, false);
+static irect16_t grid_item_rect(window_t *win, reportview_data_t *data, int index) {
+  icon_grid_geom_t g = grid_geom(win, data);
+  irect16_t content = window_scroll_content_rect(win);
+  return R(grid_col_x(&g, index % g.ncol), content.y + index / g.ncol * g.cell_h, g.cell_w, g.cell_h);
 }
 
 static int grid_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam) {
   int mx = (int)(int16_t)LOWORD(wparam);
   int my = (int)(int16_t)HIWORD(wparam);
   icon_grid_geom_t g = grid_geom(win, data);
-  int local_y = my - RV_LARGE_ICON_PAD;
+  int local_y = my - window_scroll_content_rect(win).y;
   if (local_y < 0)
     return RV_INVALID_SELECTION;
-  int col = RV_INVALID_SELECTION;
-  for (int i = 0; i < g.ncol; i++) {
-    int cx = grid_col_x(&g, i);
-    if (mx >= cx && mx < cx + g.cell_w) {
-      col = i;
-      break;
-    }
-  }
-  if (col < 0)
-    return RV_INVALID_SELECTION;
   int row = local_y / g.cell_h;
-  int index = row * g.ncol + col;
-  return rv_valid_index(data, index) ? index : RV_INVALID_SELECTION;
-}
-
-static void grid_scroll_to_item(window_t *win, reportview_data_t *data, int index) {
-  int scroll_y = (int)win->vscroll.pos;
-  int visible_h = get_client_rect(win).h;
-  icon_grid_geom_t g = grid_geom(win, data);
-  int row = index / g.ncol;
-  int item_y_top = RV_LARGE_ICON_PAD + row * g.cell_h;
-  int item_y_bottom = item_y_top + g.cell_h;
-
-  if (item_y_top - scroll_y < 0)
-    win->vscroll.pos = (uint32_t)(item_y_top > 0 ? item_y_top : 0);
-  else if (item_y_bottom - scroll_y > visible_h)
-    win->vscroll.pos = (uint32_t)(item_y_bottom - visible_h);
+  for (int col = 0; col < g.ncol; col++) {
+    int index = row * g.ncol + col;
+    if (rv_valid_index(data, index) && rect_contains_point(grid_item_rect(win, data, index), (ipoint16_t){mx, my}))
+      return index;
+  }
+  return RV_INVALID_SELECTION;
 }
 
 static void grid_paint(window_t *win, reportview_data_t *data) {
   irect16_t cr = get_client_rect(win);
-  int scroll_y = (int)win->vscroll.pos;
   icon_grid_geom_t g = grid_geom(win, data);
   int icon_sz = data->icon_size;
   int label_h = text_char_height(FONT_SMALLEST) + 2;
@@ -118,10 +87,8 @@ static void grid_paint(window_t *win, reportview_data_t *data) {
   fill_rect(bg_col, R(0, 0, cr.w, cr.h));
 
   for (uint32_t i = 0; i < data->count; i++) {
-    int icol = (int)i % g.ncol;
-    int irow = (int)i / g.ncol;
-    int cx = grid_col_x(&g, icol);
-    int cy = RV_LARGE_ICON_PAD + irow * g.cell_h - scroll_y;
+    irect16_t item = window_scroll_rect_to_client(win, grid_item_rect(win, data, i));
+    int cx = item.x, cy = item.y;
     if (cy + g.cell_h <= 0)
       continue;
     if (cy >= clip_bot)
@@ -172,15 +139,25 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       data->redraw_dirty = false;
       data->column_titles_visible = true;
       data->preserve_icon_colors = false;
-      grid_sync_scroll(win, data);
+      window_set_scroll_content(win, 0, 0,
+                                (irect16_t){RV_LARGE_ICON_PAD, RV_LARGE_ICON_PAD, RV_LARGE_ICON_PAD, RV_LARGE_ICON_PAD},
+                                (irect16_t){0});
+      return true;
+    }
+    case evMeasureScrollContent: {
+      layout_measure_t *m = lparam;
+      int ncol = grid_column_count(data, m->avail_w);
+      m->desired_w = 0;
+      m->desired_h = ((int)data->count + ncol - 1) / ncol * rv_large_icon_cell_h(data);
       return true;
     }
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (!m) return true;
       icon_grid_geom_t g = grid_geom(win, data);
-      int min_h = 2 * RV_LARGE_ICON_PAD + rv_large_icon_cell_h(data);
-      int min_w = MAX(1, 2 * RV_LARGE_ICON_PAD + g.ncol * g.cell_w);
+      irect16_t pad = win->scroll_content.padding;
+      int min_h = pad.y + pad.h + rv_large_icon_cell_h(data);
+      int min_w = MAX(1, pad.x + pad.w + g.ncol * g.cell_w);
       m->desired_w = MAX(m->desired_w, min_w);
       m->desired_h = MAX(m->desired_h, min_h);
       return true;
@@ -223,7 +200,7 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (!rv_store_item(data, i, item))
         return -1;
       data->count++;
-      grid_sync_scroll(win, data);
+      grid_sync_scroll(win);
       rv_invalidate(win, data);
       return (result_t)i;
     }
@@ -237,7 +214,7 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       rv_rebind_item_refs(data, (uint32_t)wparam);
       if (data->selected == (int)wparam) data->selected = RV_INVALID_SELECTION;
       else if (data->selected > (int)wparam) data->selected--;
-      grid_sync_scroll(win, data);
+      grid_sync_scroll(win);
       rv_invalidate(win, data);
       return true;
     }
@@ -248,8 +225,7 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case RVM_SETSELECTION:
       if ((int)wparam >= 0 && wparam < data->count) {
         data->selected = (int)wparam;
-        grid_scroll_to_item(win, data, data->selected);
-        grid_sync_scroll(win, data);
+        window_ensure_rect_visible(win, grid_item_rect(win, data, data->selected), SB_VERT);
         rv_invalidate(win, data);
         return true;
       }
@@ -257,13 +233,13 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case RVM_CLEAR:
       data->count = 0;
       rv_reset_view_state(win, data);
-      grid_sync_scroll(win, data);
+      grid_sync_scroll(win);
       rv_invalidate(win, data);
       return true;
     case RVM_SETCOLUMNWIDTH:
       if (wparam > 0) {
         data->column_width = (int)wparam;
-        grid_sync_scroll(win, data);
+        grid_sync_scroll(win);
         rv_invalidate(win, data);
         return true;
       }
@@ -306,20 +282,20 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
     case RVM_SETLARGEICONCOLS:
       data->fixed_large_icon_cols = (int)wparam;
-      grid_sync_scroll(win, data);
+      grid_sync_scroll(win);
       rv_invalidate(win, data);
       return true;
     case RVM_SETICONSIZE:
       if ((int)wparam > 0) {
         data->icon_size = (int)wparam;
-        grid_sync_scroll(win, data);
+        grid_sync_scroll(win);
         rv_invalidate(win, data);
         return true;
       }
       return false;
     case RVM_SETCOLUMNTITLESVISIBLE:
       data->column_titles_visible = (wparam != 0);
-      grid_sync_scroll(win, data);
+      grid_sync_scroll(win);
       rv_invalidate(win, data);
       return true;
     case RVM_GETCOLUMNTITLESVISIBLE:
@@ -334,8 +310,6 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       rv_invalidate(win, data);
       return true;
     case evVScroll:
-      win->vscroll.pos = (uint32_t)wparam;
-      grid_sync_scroll(win, data);
       rv_invalidate(win, data);
       return true;
     case evArrange: {
@@ -346,11 +320,11 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         if (r.h < 1) r.h = 1;
         win->frame = r;
       }
-      grid_sync_scroll(win, data);
+      grid_sync_scroll(win);
       return true;
     }
     case evResize:
-      grid_sync_scroll(win, data);
+      grid_sync_scroll(win);
       return false;
     case evKeyDown: {
       if (!data || data->count == 0)
@@ -385,8 +359,7 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       }
       if (next != cur && next >= 0) {
         data->selected = next;
-        grid_scroll_to_item(win, data, next);
-        grid_sync_scroll(win, data);
+        window_ensure_rect_visible(win, grid_item_rect(win, data, next), SB_VERT);
         rv_notify(win, data, next, RVN_SELCHANGE);
         rv_invalidate(win, data);
       }

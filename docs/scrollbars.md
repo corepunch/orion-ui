@@ -51,6 +51,49 @@ window_t *view = create_window("View", WINDOW_HSCROLL | WINDOW_VSCROLL,
 
 ### Setting the scroll range and position (`SetScrollInfo` equivalent)
 
+For pixel-based controls, prefer the window-managed content API:
+
+```c
+window_set_scroll_content(win, content_width, content_height,
+    R(left_padding, top_padding, right_padding, bottom_padding),
+    R(0, fixed_header_height, 0, 0));
+```
+
+The dimensions exclude padding and fixed client bands. Zero width stretches
+content across the available viewport; an empty axis has no padding extent.
+The window computes padded ranges, subtracts fixed bands from scrollbar pages,
+resolves interacting gutters, and clamps positions on content changes and
+`evResize`. Wrapping controls handle `evMeasureScrollContent` with a
+`layout_measure_t`: the window supplies the unpadded available viewport, and the
+control returns unpadded content dimensions without changing layout or scroll
+state. The window repeats measurement while resolving gutters, starting with
+no automatic gutters so an unnecessary scrollbar can disappear. Reports and
+both adaptive grids use this measurement contract.
+
+`window_scroll_content_rect()` gives the content origin and dimensions in the
+same content space delivered to pointer handlers. Build each item rectangle
+there and use it for hit-testing and `window_ensure_rect_visible()`. Reveal
+takes `SB_HORZ`, `SB_VERT`, or `SB_BOTH`, preserves the configured padding,
+excludes fixed headers, and sends ordinary
+`evHScroll` / `evVScroll` notifications when the position changes. Oversized
+items align their leading edge rather than alternating between opposite edges.
+
+Managed controls paint in client coordinates: map their item rectangles with
+`window_scroll_rect_to_client()`. Use `window_scroll_rect_from_client()` for
+viewport-space child frames or fixed-header input. The window dispatcher avoids
+the legacy root-only scroll projection for managed controls, so root and nested
+controls use the same mapping. `window_scroll_viewport()` supplies the client
+clip region excluding fixed bands. Padding remains part of scrolling content;
+it is not a second border or a change to child input routing.
+
+Small-icon lists (including FileList), icon grids, reports, combobox popup
+lists, TabView sidebars, and TileGrid use this contract. TileGrid forwards its
+declarative layout padding; other controls supply their visual padding. Reports
+reserve their fixed header as a viewport inset. Item measurement, wrapping,
+column widths, and selection remain responsibilities of the control.
+
+The lower-level API remains available for custom ranges and existing views:
+
 ```c
 scroll_info_t si;
 si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;

@@ -49,13 +49,7 @@ static inline irect16_t layout_margin_for(window_t *win) {
 }
 
 static inline irect16_t layout_inset_rect(irect16_t r, irect16_t inset) {
-  r.x += inset.x;
-  r.y += inset.y;
-  r.w -= inset.x + inset.w;
-  r.h -= inset.y + inset.h;
-  if (r.w < 0) r.w = 0;
-  if (r.h < 0) r.h = 0;
-  return r;
+  return rect_inset_edges(r, inset);
 }
 
 static inline irect16_t layout_content_rect(window_t *win, irect16_t r) {

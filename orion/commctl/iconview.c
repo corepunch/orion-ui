@@ -7,66 +7,54 @@
 #include <orion/user/theme.h>
 #include <orion/user/svg_icon_loader.h>
 
-static int icon_content_height(reportview_data_t *data) {
-  return (int)data->count * ENTRY_HEIGHT;
+static void icon_sync_scroll(window_t *win, reportview_data_t *data) {
+  window_set_scroll_content(win, 0, (int)data->count * ENTRY_HEIGHT,
+                            (irect16_t){WIN_PADDING, WIN_PADDING, WIN_PADDING, WIN_PADDING}, (irect16_t){0});
 }
 
-static void icon_sync_scroll(window_t *win, reportview_data_t *data) {
-  if (!win || !data)
-    return;
-  irect16_t cr = get_client_rect(win);
-  if (cr.h <= 0)
-    return;
-  int total_h = icon_content_height(data);
-  int max_scroll_px = total_h - cr.h;
-  if (max_scroll_px < 0)
-    max_scroll_px = 0;
-  if ((int)win->vscroll.pos > max_scroll_px)
-    win->vscroll.pos = (uint32_t)max_scroll_px;
-  scroll_info_t si;
-  si.fMask = SIF_ALL;
-  si.nMin = 0;
-  si.nMax = total_h;
-  si.nPage = (uint32_t)cr.h;
-  si.nPos = (int)win->vscroll.pos;
-  set_scroll_info(win, SB_VERT, &si, false);
+static irect16_t icon_item_rect(window_t *win, int index) {
+  irect16_t content = window_scroll_content_rect(win);
+  return R(content.x, content.y + index * ENTRY_HEIGHT, content.w, ENTRY_HEIGHT);
 }
 
 static int icon_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam) {
   int my = (int)(int16_t)HIWORD(wparam);
-  int row = (my - WIN_PADDING) / ENTRY_HEIGHT;
+  irect16_t content = window_scroll_content_rect(win);
+  ipoint16_t point = {(int16_t)LOWORD(wparam), my};
+  if (!rect_contains_point(content, point)) return RV_INVALID_SELECTION;
+  int row = (my - content.y) / ENTRY_HEIGHT;
   return rv_valid_index(data, row) ? row : RV_INVALID_SELECTION;
 }
 
 static void icon_paint(window_t *win, reportview_data_t *data) {
   irect16_t cr = get_client_rect(win);
-  int scroll_y = (int)win->vscroll.pos;
   uint32_t bg_col = get_sys_color(brColumnViewBg);
   fill_rect(bg_col, R(0, 0, cr.w, cr.h));
 
   bitmap_strip_t *strip = data->icon_strip;
   for (uint32_t i = 0; i < data->count; i++) {
-    int y = (int)i * ENTRY_HEIGHT + WIN_PADDING - scroll_y;
+    irect16_t item = window_scroll_rect_to_client(win, icon_item_rect(win, i));
+    int y = item.y;
     if (y + ENTRY_HEIGHT <= 0)
       continue;
     if (y >= cr.h)
       break;
 
-    int item_w = MAX(0, cr.w - 2 * WIN_PADDING);
+    int item_w = item.w;
     int item_h = ENTRY_HEIGHT - 1;
-    int x = WIN_PADDING;
+    int x = item.x;
     int gap = data->icon_text_gap;
     irect16_t icon_rect = {x, y, ICON_OFFSET, item_h};
     irect16_t text_rect = {x + ICON_OFFSET + gap, y,
-                           MAX(0, cr.w - x - ICON_OFFSET - gap - WIN_PADDING),
+                           MAX(0, item.w - ICON_OFFSET - gap),
                            item_h};
 
     uint32_t icon_col = (int)i == data->selected ? get_sys_color(brControlBg)
                                                  : data->items[i].color;
     if ((int)i == data->selected)
-      fill_rect(get_sys_color(brTextNormal), R(x - 2, y, item_w, item_h));
+      fill_rect(get_sys_color(brTextNormal), R(x, y, item_w, item_h));
     else
-      fill_rect(bg_col, R(x - 2, y, item_w, item_h));
+      fill_rect(bg_col, R(x, y, item_w, item_h));
     const char *icon_name = data->items[i].icon_name;
     if (icon_name) {
       sysicon_resolved_t res;
@@ -108,7 +96,8 @@ result_t win_iconview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (!m) return true;
       m->desired_w = MAX(m->desired_w, 1);
-      m->desired_h = MAX(m->desired_h, ENTRY_HEIGHT);
+      irect16_t pad = win->scroll_content.padding;
+      m->desired_h = MAX(m->desired_h, ENTRY_HEIGHT + pad.y + pad.h);
       return true;
     }
     case evPaint:
@@ -173,16 +162,8 @@ result_t win_iconview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return (result_t)data->selected;
     case RVM_SETSELECTION:
       if ((int)wparam >= 0 && wparam < data->count) {
-        int selected = (int)wparam;
         data->selected = (int)wparam;
-        int scroll_y = (int)win->vscroll.pos;
-        int item_y_top = selected * ENTRY_HEIGHT + WIN_PADDING;
-        int item_y_bottom = item_y_top + ENTRY_HEIGHT;
-        if (item_y_top - scroll_y < 0)
-          win->vscroll.pos = (uint32_t)(item_y_top > 0 ? item_y_top : 0);
-        else if (item_y_bottom - scroll_y > get_client_rect(win).h)
-          win->vscroll.pos = (uint32_t)(item_y_bottom - get_client_rect(win).h);
-        icon_sync_scroll(win, data);
+        window_ensure_rect_visible(win, icon_item_rect(win, data->selected), SB_VERT);
         rv_invalidate(win, data);
         return true;
       }
@@ -247,8 +228,6 @@ result_t win_iconview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       rv_invalidate(win, data);
       return true;
     case evVScroll:
-      win->vscroll.pos = (uint32_t)wparam;
-      icon_sync_scroll(win, data);
       rv_invalidate(win, data);
       return true;
     case evArrange: {
@@ -297,14 +276,7 @@ result_t win_iconview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       }
       if (next != cur && next >= 0) {
         data->selected = next;
-        int scroll_y = (int)win->vscroll.pos;
-        int item_y_top = next * ENTRY_HEIGHT + WIN_PADDING;
-        int item_y_bottom = item_y_top + ENTRY_HEIGHT;
-        if (item_y_top - scroll_y < 0)
-          win->vscroll.pos = (uint32_t)(item_y_top > 0 ? item_y_top : 0);
-        else if (item_y_bottom - scroll_y > get_client_rect(win).h)
-          win->vscroll.pos = (uint32_t)(item_y_bottom - get_client_rect(win).h);
-        icon_sync_scroll(win, data);
+        window_ensure_rect_visible(win, icon_item_rect(win, next), SB_VERT);
         rv_notify(win, data, next, RVN_SELCHANGE);
         rv_invalidate(win, data);
       }

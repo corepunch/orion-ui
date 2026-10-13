@@ -244,6 +244,16 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   if (page_handle_message(win, msg, wparam, lparam, &value)) return value;
   // Handle special messages
   switch (msg) {
+    case evHScroll:
+    case evVScroll:
+      if (win->scroll_content.enabled) {
+        scroll_info_t si = {.fMask = SIF_POS, .nPos = (int)wparam};
+        int axis = msg == evHScroll ? SB_HORZ : SB_VERT;
+        set_scroll_info(win, axis, &si, false);
+        wparam = get_scroll_pos(win, axis);
+        invalidate_window(win);
+      }
+      break;
     case evCommand:
       if (page_host_command(win, wparam, lparam)) return true;
       break;
@@ -252,6 +262,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
         page_host_select(win, page_host_selection(win));
       break;
     case evResize:
+      window_sync_scroll_content(win);
       page_host_layout(win);
       if (win->flags & WINDOW_TOOLBAR) toolbar_handle_message(win, msg, wparam, lparam);
       layout_docked_toolbars(win, get_client_rect(win));
@@ -300,8 +311,8 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
           cx = window_screen_x(win) - window_screen_x(root) + lift_x;
           cy = window_screen_y(win) + titlebar_height(win) - (window_screen_y(root) + t) + lift_y;
         }
-        int scroll_x = win->parent ? 0 : win->hscroll.pos;
-        int scroll_y = win->parent ? 0 : win->vscroll.pos;
+        int scroll_x = (win->parent || win->scroll_content.enabled) ? 0 : win->hscroll.pos;
+        int scroll_y = (win->parent || win->scroll_content.enabled) ? 0 : win->vscroll.pos;
         set_projection(scroll_x - cx, -t - cy + scroll_y,
                        root->frame.w + scroll_x - cx,
                        root->frame.h - t - cy + scroll_y);

@@ -177,24 +177,14 @@ static int sidebar_width(window_t *win, tabview_state_t *st) {
 
 // Row rectangle in the list's content space.
 static irect16_t sidebar_row(window_t *win, tabview_state_t *st, int idx) {
-  return R(SIDEBAR_PAD, SIDEBAR_PAD + idx * TAB_SIDEBAR_ROW_HEIGHT,
-           sidebar_rows_width(win, st) - 2 * SIDEBAR_PAD, TAB_SIDEBAR_ROW_HEIGHT);
+  (void)win;
+  irect16_t content = window_scroll_content_rect(st->list);
+  return R(content.x, content.y + idx * TAB_SIDEBAR_ROW_HEIGHT, content.w, TAB_SIDEBAR_ROW_HEIGHT);
 }
 
-static void sidebar_sync_scroll(window_t *win, tabview_state_t *st, int pos) {
-  int content_h = tab_count(win) * TAB_SIDEBAR_ROW_HEIGHT + 2 * SIDEBAR_PAD;
-  scroll_info_t si = { .fMask = SIF_RANGE | SIF_PAGE | SIF_POS, .nMin = 0, .nMax = content_h,
-                       .nPage = get_client_rect(st->list).h, .nPos = pos };
-  set_scroll_info(st->list, SB_VERT, &si, false);
-}
-
-static void sidebar_reveal(window_t *win, tabview_state_t *st, int idx) {
-  irect16_t r = sidebar_row(win, st, idx);
-  int pos = get_scroll_pos(st->list, SB_VERT), h = get_client_rect(st->list).h;
-  if (r.y - SIDEBAR_PAD < pos) pos = r.y - SIDEBAR_PAD;
-  else if (r.y + r.h + SIDEBAR_PAD > pos + h) pos = r.y + r.h + SIDEBAR_PAD - h;
-  sidebar_sync_scroll(win, st, pos);
-  invalidate_window(st->list);
+static void sidebar_sync_scroll(window_t *win, tabview_state_t *st) {
+  window_set_scroll_content(st->list, 0, tab_count(win) * TAB_SIDEBAR_ROW_HEIGHT,
+                            (irect16_t){SIDEBAR_PAD, SIDEBAR_PAD, SIDEBAR_PAD, SIDEBAR_PAD}, (irect16_t){0});
 }
 
 static void draw_tab_icon(tabview_state_t *st, int idx, int x, int y, int h) {
@@ -272,7 +262,7 @@ static void tab_arrange(window_t *win) {
   irect16_t page_rect = tab_page_rect(win, st, get_client_rect(win));
   if (is_sidebar(st) && st->list) {
     st->list->frame = rect_split_left(get_client_rect(win), sidebar_width(win, st));
-    sidebar_sync_scroll(win, st, get_scroll_pos(st->list, SB_VERT));
+    sidebar_sync_scroll(win, st);
     st->list->frame.w = sidebar_width(win, st); // the scrollbar may have just appeared
     page_rect = tab_page_rect(win, st, get_client_rect(win));
   }
@@ -317,7 +307,7 @@ static bool tab_select(window_t *win, int index, bool notify) {
   tab_remember_focus(win, g_ui_runtime.focused);
   if (index == st->selected) { tab_arrange(win); tab_restore_focus(win); return false; }
   st->selected = index;
-  if (is_sidebar(st) && st->list) sidebar_reveal(win, st, index);
+  if (is_sidebar(st) && st->list) window_ensure_rect_visible(st->list, sidebar_row(win, st, index), SB_VERT);
   tab_arrange(win);
   tab_restore_focus(win);
   invalidate_window(win);
@@ -334,10 +324,10 @@ static result_t win_tabview_list(window_t *win, uint32_t msg, uint32_t wparam, v
   if (!st) return false;
   switch (msg) {
     case evPaint: {
-      int scroll = get_scroll_pos(win, SB_VERT), h = get_client_rect(win).h, i = 0;
+      int h = get_client_rect(win).h, i = 0;
       theme_draw(THEME_PART_SIDEBAR, get_client_rect(win), CTRL_NORMAL);
       FOR_EACH_PAGE(tabs, st, c) {
-        irect16_t r = rect_offset(sidebar_row(tabs, st, i), 0, -scroll);
+        irect16_t r = window_scroll_rect_to_client(win, sidebar_row(tabs, st, i));
         if (r.y + r.h >= 0 && r.y <= h) {
           ctrl_state_t state = i == st->selected ? CTRL_SELECTED : CTRL_NORMAL;
           // Same capsule as a menu item; the theme insets it, so widen the rect to land on the row.
@@ -359,6 +349,8 @@ static result_t win_tabview_list(window_t *win, uint32_t msg, uint32_t wparam, v
         if (rect_contains_point(sidebar_row(tabs, st, i), pt)) { tab_select(tabs, i, true); break; }
       return true;
     }
+    case evCreate:
+    case evDestroy: return true;
     case evVScroll: invalidate_window(win); return true;
     default: return false;
   }
@@ -636,7 +628,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         fflush(stderr); return false;
       }
       if (is_sidebar(st)) {
-        *(irect16_t *)lparam = rect_offset(sidebar_row(win, st, index), 0, -get_scroll_pos(st->list, SB_VERT));
+        *(irect16_t *)lparam = window_scroll_rect_to_client(st->list, sidebar_row(win, st, index));
         return true;
       }
       if (tab_single_hidden(win, st)) {

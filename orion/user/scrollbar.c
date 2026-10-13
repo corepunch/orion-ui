@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <limits.h>
 #include <math.h>
 #include "user.h"
 #include "messages.h"
@@ -118,7 +119,7 @@ void get_scroll_info(window_t *win, int bar, scroll_info_t *info) {
   if (info->fMask & SIF_POS)  info->nPos  = sb->pos;
 }
 
-void set_scroll_content(window_t *win, int width, int height, int x, int y) {
+static void scroll_publish_content(window_t *win, int width, int height, int x, int y, irect16_t inset, bool measure) {
   if (!win || width < 0 || height < 0) {
     fprintf(stderr, "[sb] invalid content win=%u size=%dx%d\n", win ? win->id : 0, width, height);
     fflush(stderr);
@@ -128,18 +129,37 @@ void set_scroll_content(window_t *win, int width, int height, int x, int y) {
   win_sb_t bars[] = {win->hscroll, win->vscroll};
   int extent[] = {width, height}, position[] = {x, y};
   bool allowed[] = {(win->flags & WINDOW_HSCROLL) != 0, (win->flags & WINDOW_VSCROLL) != 0};
-  int available[] = {win->frame.w, MAX(0, win->frame.h - titlebar_height(win) - statusbar_height(win))};
-  int gutter[] = {(win->flags & WINDOW_STATUSBAR) ? 0 : get_theme()->scrollbar.width, get_theme()->scrollbar.width};
+  int available[] = {MAX(0, win->frame.w - inset.x - inset.w),
+                     MAX(0, win->frame.h - titlebar_height(win) - statusbar_height(win) - inset.y - inset.h)};
+  int strip = get_theme()->scrollbar.overlay ? 0 : get_theme()->scrollbar.width;
+  int gutter[] = {(win->flags & WINDOW_STATUSBAR) ? 0 : strip, strip};
   for (int axis = 0; axis < 2; axis++)
     bars[axis].visible = allowed[axis] && bars[axis].visible_mode == SB_VIS_SHOW;
   // Start without automatic gutters, then converge as either bar can reduce
   // the other axis's page. Both states are committed before notifying layout.
   for (int pass = 0; pass < 3; pass++) {
     bool visible[] = {bars[0].visible, bars[1].visible};
+    int page[] = {MAX(0, available[0] - (visible[1] ? gutter[1] : 0)),
+                  MAX(0, available[1] - (visible[0] ? gutter[0] : 0))};
+    if (measure) {
+      window_scroll_content_t *content = &win->scroll_content;
+      irect16_t pad = content->padding;
+      layout_measure_t m = {MAX(0, page[0] - pad.x - pad.w), MAX(0, page[1] - pad.y - pad.h),
+                            content->width, content->height};
+      if (send_message(win, evMeasureScrollContent, 0, &m)) {
+        if (m.desired_w < 0 || m.desired_h < 0 ||
+            m.desired_w > INT_MAX - pad.x - pad.w || m.desired_h > INT_MAX - pad.y - pad.h) {
+          fprintf(stderr, "[sb] invalid measured content win=%u size=%dx%d\n", win->id, m.desired_w, m.desired_h);
+          fflush(stderr);
+          return;
+        }
+        content->width = m.desired_w; content->height = m.desired_h;
+        extent[0] = m.desired_w ? m.desired_w + pad.x + pad.w : 0;
+        extent[1] = m.desired_h ? m.desired_h + pad.y + pad.h : 0;
+      }
+    }
     for (int axis = 0; axis < 2; axis++) {
-      int other = 1 - axis;
-      int page = MAX(0, available[axis] - (visible[other] ? gutter[other] : 0));
-      scroll_info_t info = {.fMask = SIF_ALL, .nMax = extent[axis], .nPage = page, .nPos = position[axis]};
+      scroll_info_t info = {.fMask = SIF_ALL, .nMax = extent[axis], .nPage = page[axis], .nPos = position[axis]};
       set_scroll_info_one(&bars[axis], &info);
       bars[axis].visible &= allowed[axis];
       bars[axis].enabled = bars[axis].page < extent[axis];
@@ -151,6 +171,53 @@ void set_scroll_content(window_t *win, int width, int height, int x, int y) {
   if (before.w != after.w || before.h != after.h)
     send_message(win, evResize, 0, NULL);
   invalidate_window(win);
+}
+
+void set_scroll_content(window_t *win, int width, int height, int x, int y) {
+  scroll_publish_content(win, width, height, x, y, (irect16_t){0}, false);
+}
+
+irect16_t window_scroll_viewport(const window_t *win) {
+  return rect_inset_edges(get_client_rect(win), win->scroll_content.viewport_inset);
+}
+
+irect16_t window_scroll_content_rect(const window_t *win) {
+  irect16_t rect = rect_inset_edges(window_scroll_viewport(win), win->scroll_content.padding);
+  if (win->scroll_content.width) rect.w = win->scroll_content.width;
+  rect.h = win->scroll_content.height;
+  return rect;
+}
+
+irect16_t window_scroll_rect_to_client(const window_t *win, irect16_t rect) {
+  return rect_offset(rect, -win->hscroll.pos, -win->vscroll.pos);
+}
+
+irect16_t window_scroll_rect_from_client(const window_t *win, irect16_t rect) {
+  return rect_offset(rect, win->hscroll.pos, win->vscroll.pos);
+}
+
+void window_sync_scroll_content(window_t *win) {
+  if (!win || !win->scroll_content.enabled) return;
+  window_scroll_content_t *content = &win->scroll_content;
+  irect16_t pad = content->padding;
+  int width = content->width ? content->width + pad.x + pad.w : 0;
+  int height = content->height ? content->height + pad.y + pad.h : 0;
+  scroll_publish_content(win, width, height, win->hscroll.pos, win->vscroll.pos, content->viewport_inset, true);
+}
+
+void window_set_scroll_content(window_t *win, int width, int height,
+                               irect16_t padding, irect16_t viewport_inset) {
+  if (!win || width < 0 || height < 0 || padding.x < 0 || padding.y < 0 || padding.w < 0 || padding.h < 0 ||
+      viewport_inset.x < 0 || viewport_inset.y < 0 || viewport_inset.w < 0 || viewport_inset.h < 0 ||
+      width > INT_MAX - padding.x - padding.w || height > INT_MAX - padding.y - padding.h) {
+    fprintf(stderr, "[sb] invalid managed content win=%u size=%dx%d padding=%d,%d,%d,%d inset=%d,%d,%d,%d\n",
+            win ? win->id : 0, width, height, padding.x, padding.y, padding.w, padding.h,
+            viewport_inset.x, viewport_inset.y, viewport_inset.w, viewport_inset.h);
+    fflush(stderr);
+    return;
+  }
+  win->scroll_content = (window_scroll_content_t){true, width, height, padding, viewport_inset};
+  window_sync_scroll_content(win);
 }
 
 int get_scroll_pos(window_t *win, int bar) {
@@ -223,6 +290,30 @@ static bool sb_try_scroll(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int 
       send_message(win, evMouseMove, MAKEDWORD((uint16_t)lx, (uint16_t)ly), NULL);
   }
   return true;
+}
+
+void window_ensure_rect_visible(window_t *win, irect16_t rect, int bar) {
+  if (!win || !win->scroll_content.enabled || rect.w < 0 || rect.h < 0 ||
+      (bar != SB_HORZ && bar != SB_VERT && bar != SB_BOTH)) {
+    fprintf(stderr, "[sb] invalid reveal win=%u rect=%d,%d,%d,%d bar=%d\n",
+            win ? win->id : 0, rect.x, rect.y, rect.w, rect.h, bar);
+    fflush(stderr);
+    return;
+  }
+  irect16_t visible = rect_inset_edges(window_scroll_viewport(win), win->scroll_content.padding);
+  int start[] = {rect.x, rect.y}, length[] = {rect.w, rect.h};
+  int origin[] = {visible.x, visible.y}, page[] = {visible.w, visible.h};
+  win_sb_t *bars[] = {&win->hscroll, &win->vscroll};
+  int flags[] = {WINDOW_HSCROLL, WINDOW_VSCROLL};
+  uint32_t messages[] = {evHScroll, evVScroll};
+  for (int axis = 0; axis < 2; axis++) {
+    if (!(win->flags & flags[axis]) || (bar != SB_BOTH && bar != axis)) continue;
+    int pos = bars[axis]->pos;
+    int top = start[axis] - origin[axis], bottom = top + length[axis];
+    if (top < pos || length[axis] > page[axis]) pos = top;
+    else if (bottom > pos + page[axis]) pos = bottom - page[axis];
+    sb_try_scroll(win, bars[axis], messages[axis], pos);
+  }
 }
 
 // ── Classic drag helpers ──────────────────────────────────────────────────────

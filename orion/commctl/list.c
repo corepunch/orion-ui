@@ -12,35 +12,26 @@
 
 #define LIST_HEIGHT     POPUP_ITEM_HEIGHT
 
-// Helper functions (will be moved to ui/user/window.c later)
-extern window_t *get_root_window(window_t *window);
-
 static void list_sync_scroll(window_t *win) {
-  window_t *cb = win ? win->userdata : NULL;
-  int content_h = cb ? MENU_START_Y * 2 + (int)cb->cursor_pos * LIST_HEIGHT : 0;
-  int page_h = win ? get_client_rect(win).h : 0;
-  scroll_info_t si = { SIF_ALL, 0, content_h, page_h, win ? (int)win->vscroll.pos : 0 };
-  set_scroll_info(win, SB_VERT, &si, false);
+  window_t *cb = win->userdata;
+  window_set_scroll_content(win, 0, cb ? (int)cb->cursor_pos * LIST_HEIGHT : 0,
+                            (irect16_t){0, MENU_START_Y, 0, MENU_START_Y}, (irect16_t){0});
 }
 
-static void list_scroll_to_item(window_t *win) {
-  window_t *cb = win ? win->userdata : NULL;
-  if (!cb || win->cursor_pos >= cb->cursor_pos)
-    return;
-  int pos = (int)win->vscroll.pos;
-  int page_h = get_client_rect(win).h;
-  int top = (int)win->cursor_pos * LIST_HEIGHT;
-  int bottom = top + LIST_HEIGHT + MENU_START_Y * 2;
-  if (top < pos) pos = top;
-  else if (bottom > pos + page_h) pos = bottom - page_h;
-  win->vscroll.pos = (uint32_t)MAX(0, pos);
-  list_sync_scroll(win);
+static irect16_t list_item_rect(window_t *win, int index) {
+  irect16_t content = window_scroll_content_rect(win);
+  return R(content.x, content.y + index * LIST_HEIGHT, content.w, LIST_HEIGHT);
+}
+
+static void list_reveal_selection(window_t *win) {
+  window_t *cb = win->userdata;
+  if (cb && win->cursor_pos < cb->cursor_pos)
+    window_ensure_rect_visible(win, list_item_rect(win, win->cursor_pos), SB_VERT);
 }
 
 static bool list_point_inside(window_t *win, uint32_t wparam) {
-  int x = (int16_t)LOWORD(wparam) - (int)win->hscroll.pos;
-  int y = (int16_t)HIWORD(wparam) - (int)win->vscroll.pos;
-  return x >= 0 && y >= 0 && x < win->frame.w && y < win->frame.h;
+  irect16_t point = window_scroll_rect_to_client(win, R((int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam), 0, 0));
+  return rect_contains_point(R(0, 0, win->frame.w, win->frame.h), (ipoint16_t){point.x, point.y});
 }
 
 static void list_cancel(window_t *win) {
@@ -70,11 +61,10 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evPaint:
       if (!cb || !texts)
         return true;
-      int item_w = get_client_rect(win).w;
       theme_draw(THEME_PART_MENU_POPUP,
-          R(0, win->vscroll.pos, item_w, get_client_rect(win).h), CTRL_NORMAL);
+          get_client_rect(win), CTRL_NORMAL);
       for (uint32_t i = 0; i < cb->cursor_pos; i++) {
-        irect16_t item = { 0, MENU_START_Y + (int)(i * LIST_HEIGHT), item_w, LIST_HEIGHT };
+        irect16_t item = window_scroll_rect_to_client(win, list_item_rect(win, i));
         popup_item_paint(item, texts[i], i == win->cursor_pos ? CTRL_SELECTED : CTRL_NORMAL, FONT_SMALL);
       }
       return true;
@@ -85,7 +75,7 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         list_cancel(win);
         return true;
       }
-      int y = (int16_t)HIWORD(wparam) - MENU_START_Y;
+      int y = (int16_t)HIWORD(wparam) - window_scroll_content_rect(win).y;
       if (y < 0 || y >= (int)cb->cursor_pos * LIST_HEIGHT) return true;
       win->cursor_pos = y / LIST_HEIGHT;
       if (win->cursor_pos < cb->cursor_pos) {
@@ -125,7 +115,7 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             win->cursor_pos = count - 1;  // clamp out-of-range, don't decrement further
           else if (win->cursor_pos > 0)
             win->cursor_pos--;
-          list_scroll_to_item(win);
+          list_reveal_selection(win);
           invalidate_window(win);
         }
         return true;
@@ -133,11 +123,11 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (key == AX_KEY_DOWNARROW) {
         if (win->cursor_pos + 1 < count) {
           win->cursor_pos++;
-          list_scroll_to_item(win);
+          list_reveal_selection(win);
           invalidate_window(win);
         } else if (win->cursor_pos >= count && count > 0) {
           win->cursor_pos = count - 1;  // clamp out-of-range to last item
-          list_scroll_to_item(win);
+          list_reveal_selection(win);
           invalidate_window(win);
         }
         return true;
@@ -162,11 +152,12 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case lstSetItem:
       win->cursor_pos = (cb && wparam < cb->cursor_pos) ? wparam : 0;
       list_sync_scroll(win);
-      list_scroll_to_item(win);
+      list_reveal_selection(win);
+      return true;
+    case evResize:
+      list_sync_scroll(win);
       return true;
     case evVScroll:
-      win->vscroll.pos = wparam;
-      list_sync_scroll(win);
       invalidate_window(win);
       return true;
   }

@@ -31,6 +31,12 @@ static inline irect16_t rect_inset_xy(irect16_t r, int dx, int dy) {
   return (irect16_t){ r.x + dx, r.y + dy, r.w - 2*dx, r.h - 2*dy };
 }
 
+// Insets are left, top, right, bottom; clamp an exhausted content area to zero.
+static inline irect16_t rect_inset_edges(irect16_t r, irect16_t inset) {
+  int w = r.w - inset.x - inset.w, h = r.h - inset.y - inset.h;
+  return R(r.x + inset.x, r.y + inset.y, w > 0 ? w : 0, h > 0 ? h : 0);
+}
+
 // ── Translation ───────────────────────────────────────────────────────────
 
 // Translate without changing size.
