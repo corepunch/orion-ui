@@ -119,6 +119,8 @@ enum {
   // Optional intrinsic scroll measurement: layout_measure_t*, unpadded available
   // viewport in, unpadded content dimensions out. Must not change layout or scroll state.
   evMeasureScrollContent,
+  evMiddleButtonDown, // wparam = MAKEDWORD(x, y) in content space.
+  evMiddleButtonUp,
   evUser = 1000
 };
 

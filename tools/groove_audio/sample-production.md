@@ -75,6 +75,12 @@ does not by itself put its internal events on the beats.
 
 ## 2. Generate original raw takes
 
+For direct Google Gemini API access, use
+[the Lyria 3 Clip generator](../../apps/groove/docs/lyria-clip/README.md)
+with `GEMINI_API_KEY`. Its API model is `lyria-3-clip-preview`; outputs are
+30-second stereo MP3 takes requiring the same isolation and timing verification
+as the provider workflow below.
+
 The October 2026 vocal batch used Runway's `generate_music` capability with
 `model="lyria-3-clip"`. Confirm the connected account first. The interface exposes
 a prompt, model and name, but no exact duration or MIDI-note schedule. Its output

@@ -129,7 +129,6 @@ extern int g_bw_retina_scale;
 #define TOOL_OPTIONS_PANEL_H   TOOLBAR_BAND_HEIGHT
 #define TOOL_OPTIONS_WIN_W     PALETTE_WIN_W
 #define TOOL_OPTIONS_WIN_H     TOOL_OPTIONS_PANEL_H
-#define TOOL_OPTIONS_WIN_X     (PALETTE_WIN_X + APP_TOOLS_W + 8)
 #define TOOL_OPTIONS_WIN_Y     (PALETTE_WIN_Y + 4 * TOOL_PALETTE_BTN_SIZE)
 
 // Brush slider steps (radii: 0, 1, 2, 3, 4).

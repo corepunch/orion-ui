@@ -76,6 +76,17 @@ geometry survives host resizing while the visible frame is clamped to the host.
 Invalid registration, flags, extents, or edge transitions return false and log to
 stderr without changing the existing registration.
 
+`dock_float_aligned(pane, horizontal, vertical)` keeps a floating pane aligned to
+the remaining document area after all docked bands. Each axis accepts
+`DOCK_ALIGN_START`, `DOCK_ALIGN_CENTER`, `DOCK_ALIGN_END`, or `DOCK_ALIGN_NONE`
+(preserve its free position). The framework applies the shared `DOCK_FLOAT_GAP`
+of 4 logical pixels at aligned edges. For example, center/end places a toolbar
+at bottom center; start/none places it beside the left sidebar without changing
+its vertical position. Alignment follows host resizing and docked-band changes.
+`dock_resize_float` changes its preferred size while retaining alignment.
+Dragging to a free position with `dock_float`, or docking with `dock_set_side`,
+clears alignment so subsequent layout preserves the user's placement.
+
 Floating children paint and hit-test above docked content. Clicking one raises it
 within the workspace without disturbing dock order. Destruction releases framework
 metadata and cancels any active gesture; ordinary parent destruction owns every

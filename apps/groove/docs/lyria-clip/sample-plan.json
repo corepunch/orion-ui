@@ -1,0 +1,18 @@
+{
+  "title": "Neon in My Heart",
+  "slug": "female_neon_in_my_heart_140bpm",
+  "role": "ascending Eurodance melodic hook",
+  "lyrics": "Neon in my heart",
+  "syllables": ["Ne", "on", "in", "my", "heart"],
+  "sound": "Bright, confident rising melody; sustain heart and release cleanly.",
+  "voice": "One adult female alto/mezzo, clear powerful chest voice, a slight husky edge, open vowels, restrained vibrato; uplifting 1990s Eurodance delivery.",
+  "bpm": 140,
+  "meter": "4/4",
+  "bars": 2,
+  "attack_beats": [0, 1, 2, 3, 4],
+  "attack_seconds": [0, 0.428571429, 0.857142857, 1.285714286, 1.714285714],
+  "slot_seconds": 3.428571429,
+  "release_before_seconds": 3.3,
+  "raw_clip_seconds": 30,
+  "full_prompt": "DRY SOLO FEMALE A CAPPELLA SAMPLER PHRASE. One unaccompanied adult woman, clear powerful alto/mezzo chest voice with a slight natural husky edge, bright open vowels, restrained vibrato. Uplifting, confident 1990s Eurodance vocal delivery, but completely isolated voice. Exact 140 BPM, 4/4, straight timing, A minor. Sing only the original lyric: Neon in my heart. Bright rising five-note melody: Ne at 0.000000 seconds, on at 0.428571 seconds, in at 0.857143 seconds, my at 1.285714 seconds, heart at 1.714286 seconds. Sustain heart warmly and release cleanly before 3.3 seconds. First phoneme starts immediately at time zero. A complete two-bar phrase occupies 3.428571 seconds; after the phrase leave silence for the remainder of the 30-second clip. One phrase only, no repeats, no extra lyrics. Close microphone in an acoustically dead vocal booth. Human singing voice only: no instruments, drums, percussion, bass, piano, synths, pads, chords, claps, clicks, beatboxing or audible metronome. No backing vocals, harmonies, choir, doubling, reverb, delay or ambience. No intro, count-in, initial pause or introductory breath. Tempo is a silent internal reference. This is an isolated short vocal sample for a grid sampler, not a full song."
+}

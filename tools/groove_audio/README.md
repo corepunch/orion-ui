@@ -6,6 +6,11 @@ generation prompts, isolation, musical attack alignment, gapless MP3 checks
 through Groove's decoder, and reproducible Python/Pillow waveform comparisons.
 `verify_sample.py` and `decode_sample.c` implement the file checks and plots.
 
+For direct Gemini API vocal generation, see
+[Lyria 3 Clip for Groove](../../apps/groove/docs/lyria-clip/README.md).
+`generate_lyria.py` reads `GEMINI_API_KEY` from the environment, sends a prepared
+prompt, and preserves raw audio and generation evidence in an ignored workspace.
+
 These scripts preserve the workflow used to isolate vocals from **Take Me Higher**,
 cut WAV samples, and test whether its backing could be approximated with Groove's
 existing synthesizer. Source recordings, generated samples, model weights and

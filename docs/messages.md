@@ -29,6 +29,8 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 | `evLeftButtonDown` | LMB pressed | `LOWORD`=x, `HIWORD`=y (window-local) |
 | `evLeftButtonUp` | LMB released | same |
 | `evRightButtonDown` | RMB pressed | same |
+| `evMiddleButtonDown` | Middle mouse button pressed | same (content coordinates for windows with a content view) |
+| `evMiddleButtonUp` | Middle mouse button released | same |
 | `evMouseMove` | Mouse moved | same |
 | `evMouseLeave` | Mouse left window | – |
 | `evKeyDown` | Key pressed | Orion `AX_KEY_*` value in `wparam` |
@@ -43,6 +45,12 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 | `evHitTest` | Find child at point | `lparam` = `window_t **` |
 | `evRefreshStencil` | Stencil buffer needs update | – |
 | `evUser` (1000) | First app-defined message | – |
+
+Middle-button dragging over scrollable content is handled by the window system
+through `evGesture`, with unit scale and zero rotation. It works automatically
+for built-in scrollbars and content views, retains the starting window until
+release, and cancels on Escape or pointer cancellation. Raw middle-button
+messages remain available when the press does not start framework panning.
 
 ## Control Notification Codes
 

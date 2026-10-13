@@ -76,6 +76,7 @@ bool dock_set_side(window_t *win, dock_side_t side) {
   dock_state_t *d = win->dock;
   if (d->side == DOCK_FLOAT && !d->collapsed) d->floating = win->frame;
   d->side = d->last_side = side;
+  d->horizontal = d->vertical = DOCK_ALIGN_NONE;
   dock_orient(win);
   dock_refresh(win->parent);
   return true;
@@ -87,9 +88,29 @@ bool dock_float(window_t *win, irect16_t frame) {
   if (win->dock->side != DOCK_FLOAT) win->dock->last_side = win->dock->side;
   if (win->dock->collapsed) frame.h = MAX(frame.h, MAX(win->dock->floating.h, win->dock->extent));
   win->dock->side = DOCK_FLOAT;
+  win->dock->horizontal = win->dock->vertical = DOCK_ALIGN_NONE;
   win->dock->floating = frame;
   dock_orient(win);
   dock_place(win, frame);
+  dock_refresh(win->parent);
+  return true;
+}
+
+bool dock_float_aligned(window_t *win, dock_align_t horizontal, dock_align_t vertical) {
+  if (horizontal < DOCK_ALIGN_NONE || horizontal > DOCK_ALIGN_END || vertical < DOCK_ALIGN_NONE || vertical > DOCK_ALIGN_END)
+    return dock_error(win, "invalid floating alignment", horizontal < DOCK_ALIGN_NONE || horizontal > DOCK_ALIGN_END ? horizontal : vertical);
+  if (!win || !win->dock) return dock_error(win, "floating alignment unavailable", 0);
+  if (!dock_float(win, dock_is_floating(win) ? win->dock->floating : win->frame)) return false;
+  win->dock->horizontal = horizontal; win->dock->vertical = vertical;
+  dock_refresh(win->parent);
+  return true;
+}
+
+bool dock_resize_float(window_t *win, int width, int height) {
+  if (!dock_is_floating(win)) return dock_error(win, "floating resize unavailable", win && win->dock ? (int)win->dock->side : -1);
+  if (width <= 0 || height <= 0)
+    return dock_error(win, "invalid floating size", width <= 0 ? width : height);
+  win->dock->floating.w = width; win->dock->floating.h = height;
   dock_refresh(win->parent);
   return true;
 }
@@ -126,6 +147,35 @@ static int64_t dock_order(window_t *win) {
   return (int64_t)win->dock->order + (dock_vertical(win->dock->side) ? (INT64_C(1) << 32) : 0);
 }
 
+static void dock_place_float(window_t *win, irect16_t content) {
+  dock_state_t *d = win->dock;
+  irect16_t r = d->floating, bounds = get_client_rect(win->parent);
+  irect16_t inset = rect_inset_xy(content, MIN(DOCK_FLOAT_GAP, content.w / 2), MIN(DOCK_FLOAT_GAP, content.h / 2));
+  if (d->flags & DOCK_MENU) {
+    ipoint16_t size = {0}; send_message(win, evDockMeasure, 0, &size);
+    r.w = size.x; r.h = size.y;
+  }
+  if (d->collapsed) r.h = titlebar_height(win);
+  r.w = MIN(r.w, d->horizontal ? inset.w : bounds.w);
+  r.h = MIN(r.h, d->vertical ? inset.h : bounds.h);
+  irect16_t centered = rect_center(inset, r.w, r.h);
+  switch (d->horizontal) {
+    case DOCK_ALIGN_START:  r.x = inset.x;                          break;
+    case DOCK_ALIGN_CENTER: r.x = centered.x;                       break;
+    case DOCK_ALIGN_END:    r.x = rect_split_right(inset, r.w).x;   break;
+    default: break;
+  }
+  switch (d->vertical) {
+    case DOCK_ALIGN_START:  r.y = inset.y;                          break;
+    case DOCK_ALIGN_CENTER: r.y = centered.y;                       break;
+    case DOCK_ALIGN_END:    r.y = rect_split_bottom(inset, r.h).y;  break;
+    default: break;
+  }
+  r.x = CLAMP(r.x, 0, MAX(0, bounds.w - r.w));
+  r.y = CLAMP(r.y, 0, MAX(0, bounds.h - r.h));
+  dock_place(win, r);
+}
+
 irect16_t dock_layout(window_t *host, irect16_t area) {
   if (!host) { dock_error(NULL, "missing host", 0); return area; }
   if (!host->dock_host && !(host->dock_host = calloc(1, sizeof(*host->dock_host)))) {
@@ -144,21 +194,8 @@ irect16_t dock_layout(window_t *host, irect16_t area) {
     dock_state_t *d = pane->dock;
     order = dock_order(pane);
     d->splitter = R(0, 0, 0, 0);
-    if (!window_has_state(pane, WINDOW_STATE_VISIBLE) || d->side == DOCK_FILL ||
+    if (!window_has_state(pane, WINDOW_STATE_VISIBLE) || d->side == DOCK_FILL || d->side == DOCK_FLOAT ||
         ((d->flags & DOCK_TOOLBAR) && toolbar_dock_hint(pane) == TOOLBAR_DOCK_MENU)) continue;
-    if (d->side == DOCK_FLOAT) {
-      irect16_t r = d->floating, bounds = get_client_rect(host);
-      if (d->flags & DOCK_MENU) {
-        ipoint16_t size = {0}; send_message(pane, evDockMeasure, 0, &size);
-        r.w = size.x; r.h = size.y;
-      }
-      if (d->collapsed) r.h = titlebar_height(pane);
-      r.w = MIN(r.w, bounds.w); r.h = MIN(r.h, bounds.h);
-      r.x = CLAMP(r.x, 0, MAX(0, bounds.w - r.w));
-      r.y = CLAMP(r.y, 0, MAX(0, bounds.h - r.h));
-      dock_place(pane, r);
-      continue;
-    }
     irect16_t old = pane->frame;
     int available = dock_vertical(d->side) ? area.w : area.h;
     int gap = (d->flags & DOCK_RESIZABLE) ? MIN(DOCK_SPLITTER, available) : 0;
@@ -181,7 +218,11 @@ irect16_t dock_layout(window_t *host, irect16_t area) {
   }
   host->dock_host->content = area;
   for (window_t *c = host->children; c; c = c->next)
-    if (c->dock && c->dock->side == DOCK_FILL && window_has_state(c, WINDOW_STATE_VISIBLE)) dock_place(c, area);
+    if (c->dock && window_has_state(c, WINDOW_STATE_VISIBLE)) {
+      if (c->dock->side == DOCK_FILL) dock_place(c, area);
+      else if (c->dock->side == DOCK_FLOAT &&
+               !((c->dock->flags & DOCK_TOOLBAR) && toolbar_dock_hint(c) == TOOLBAR_DOCK_MENU)) dock_place_float(c, area);
+    }
   host->dock_host->busy = false;
   return area;
 }

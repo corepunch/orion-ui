@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "user.h"
 #include "messages.h"
@@ -170,6 +171,8 @@ static bool parent_notify_message(uint32_t msg) {
     case evLeftButtonUp:
     case evRightButtonDown:
     case evRightButtonUp:
+    case evMiddleButtonDown:
+    case evMiddleButtonUp:
     case evMouseMove:
     case evKeyDown:
     case evKeyUp:
@@ -381,7 +384,8 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   // Non-client input must never reach the document or its child controls.
   if (msg == evLeftButtonDown || msg == evLeftButtonDoubleClick ||
       msg == evLeftButtonUp || msg == evRightButtonDown ||
-      msg == evRightButtonUp || msg == evMouseMove || msg == evWheel) {
+      msg == evRightButtonUp || msg == evMiddleButtonDown ||
+      msg == evMiddleButtonUp || msg == evMouseMove || msg == evWheel) {
     ipoint16_t point = {(int16_t)LOWORD(wparam) - win->hscroll.pos,
                        (int16_t)HIWORD(wparam) - win->vscroll.pos};
     if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL | WINDOW_STATUSBAR)) &&
@@ -415,6 +419,17 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   if (!value) {
     switch (msg) {
       case evGesture:
+        if (window_has_view(win)) {
+          const ax_gesture_t *gesture = lparam;
+          if (!gesture || gesture->phase > AX_GESTURE_CANCEL || !isfinite(gesture->x) || !isfinite(gesture->y) ||
+              !isfinite(gesture->previous_x) || !isfinite(gesture->previous_y) ||
+              !isfinite(gesture->scale) || gesture->scale <= 0 || !isfinite(gesture->rotation)) {
+            fprintf(stderr, "[view] invalid gesture win=%u phase=%u\n", win->id, gesture ? gesture->phase : UINT32_MAX);
+            fflush(stderr); return false;
+          }
+          if (gesture->phase == AX_GESTURE_UPDATE) window_view_apply_gesture(win, gesture);
+          return true;
+        }
         return scrollbar_handle_builtin_gesture(win, lparam);
       case evPointerCancel:
         // Existing controls release their pressed state without an inside click.

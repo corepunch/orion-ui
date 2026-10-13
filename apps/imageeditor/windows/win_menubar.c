@@ -177,7 +177,7 @@ window_t *create_tool_options_window(void) {
   window_t *tw = create_window(
       "Options",
       WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOTITLE | WINDOW_TOOLBAR,
-      MAKERECT(TOOL_OPTIONS_WIN_X, TOOL_OPTIONS_WIN_Y,
+      MAKERECT(0, TOOL_OPTIONS_WIN_Y,
                TOOL_OPTIONS_WIN_W, TOOL_OPTIONS_WIN_H),
       g_app->chrome_win, win_tool_options_proc, g_app->hinstance, NULL);
   show_window(tw, true);
@@ -186,6 +186,7 @@ window_t *create_tool_options_window(void) {
   if (tw && tw->parent) {
     tw->frame.y -= window_screen_y(tw->parent);
     dock_window(tw, DOCK_FLOAT, DOCK_ALL_EDGES, DOCK_TOOLBAR, 0, 0);
+    dock_float_aligned(tw, DOCK_ALIGN_START, DOCK_ALIGN_NONE);
   }
   return tw;
 }

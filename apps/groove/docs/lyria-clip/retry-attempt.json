@@ -1,0 +1,20 @@
+{
+  "attempted_at": "2026-10-13T11:59:20.571753+00:00",
+  "provider": "Google Gemini API",
+  "model": "lyria-3-clip-preview",
+  "endpoint": "https://generativelanguage.googleapis.com/v1beta/interactions",
+  "plan": "sample-plan.json",
+  "model_lookup": "not repeated",
+  "status": "rejected",
+  "http_status": 429,
+  "api_error_code": "too_many_requests",
+  "message": "Rate limit exceeded for model lyria-3-clip (limit: 0 input tokens per minute on Free Tier). Please upgrade your tier at https://ai.dev/rate-limit.",
+  "generation_requests": 1,
+  "audio_generated": false,
+  "library_registered": false,
+  "next_step": "Activate Gemini API paid billing for the key's project in AI Studio; Google Cloud Free Trial welcome credits do not cover Gemini API usage for new accounts.",
+  "attempt_number": 2,
+  "total_generation_requests": 2,
+  "configured_key_matches_zshrc": true,
+  "billing_documentation": "https://ai.google.dev/gemini-api/docs/billing#does-the-google-cloud-free-trial-apply-to-gemini-api-usage"
+}

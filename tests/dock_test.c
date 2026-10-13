@@ -77,6 +77,54 @@ static void test_dock_ownership_and_layout(void) {
   PASS();
 }
 
+static void test_dock_floating_alignment(void) {
+  TEST("floating alignment shares edge spacing, follows dock content, and releases on manual placement");
+  test_env_init();
+  window_t *host = dock_test_host();
+  window_t *bottom = create_window("Bottom", WINDOW_NOTITLE, MAKERECT(0, 0, 280, 40), host, dock_test_proc, 0, NULL);
+  window_t *options = create_window("Options", WINDOW_NOTITLE, MAKERECT(0, 120, 40, 180), host, dock_test_proc, 0, NULL);
+  ASSERT_TRUE(dock_window(bottom, DOCK_FLOAT, DOCK_ALL_EDGES, 0, 0, 0));
+  ASSERT_TRUE(dock_window(options, DOCK_FLOAT, DOCK_ALL_EDGES, 0, 0, 0));
+  ASSERT_TRUE(dock_float_aligned(bottom, DOCK_ALIGN_CENTER, DOCK_ALIGN_END));
+  ASSERT_TRUE(dock_float_aligned(options, DOCK_ALIGN_START, DOCK_ALIGN_NONE));
+  window_t *sidebar = create_window("Sidebar", WINDOW_NOTITLE, MAKERECT(0, 0, 60, 200), host, dock_test_proc, 0, NULL);
+  ASSERT_TRUE(dock_window(sidebar, DOCK_LEFT, DOCK_ALL_EDGES, 0, 60, 0));
+  for (int width = 900; width >= 500; width -= 200) {
+    resize_window(host, width, width - 200);
+    irect16_t area = dock_content_rect(host);
+    ASSERT_EQUAL(options->frame.x - (sidebar->frame.x + sidebar->frame.w), DOCK_FLOAT_GAP);
+    ASSERT_EQUAL(options->frame.y, MIN(120, get_client_rect(host).h - options->frame.h));
+    ASSERT_EQUAL(bottom->frame.x, rect_center(area, bottom->frame.w, bottom->frame.h).x);
+    ASSERT_EQUAL(area.y + area.h - (bottom->frame.y + bottom->frame.h), DOCK_FLOAT_GAP);
+    ASSERT_EQUAL(bottom->frame.w, 280);
+  }
+  ASSERT_TRUE(dock_resize_float(bottom, 200, 50));
+  ASSERT_TRUE(dock_resize_float(options, 40, 100));
+  irect16_t area = dock_content_rect(host);
+  ASSERT_EQUAL(bottom->frame.x, rect_center(area, 200, 50).x);
+  ASSERT_EQUAL(area.y + area.h - (bottom->frame.y + bottom->frame.h), DOCK_FLOAT_GAP);
+  show_window(sidebar, false);
+  ASSERT_EQUAL(options->frame.x, DOCK_FLOAT_GAP);
+  show_window(sidebar, true);
+  ASSERT_EQUAL(options->frame.x, sidebar->frame.w + DOCK_FLOAT_GAP);
+  ASSERT_FALSE(dock_float_aligned(bottom, (dock_align_t)99, DOCK_ALIGN_END));
+  ASSERT_FALSE(dock_resize_float(bottom, -1, 40));
+  ASSERT_EQUAL(bottom->dock->horizontal, DOCK_ALIGN_CENTER);
+  ASSERT_EQUAL(bottom->dock->floating.w, 200);
+  resize_window(host, 30, 50);
+  ASSERT_TRUE(bottom->frame.w >= 0 && bottom->frame.h >= 0);
+  resize_window(host, 900, 700);
+  ASSERT_EQUAL(bottom->frame.w, 200);
+  ASSERT_TRUE(dock_float(bottom, R(100, 100, 200, 50)));
+  resize_window(host, 800, 600);
+  ASSERT_EQUAL(bottom->frame.x, 100);
+  ASSERT_EQUAL(bottom->frame.y, 100);
+  ASSERT_TRUE(dock_set_side(options, DOCK_RIGHT));
+  ASSERT_EQUAL(options->dock->horizontal, DOCK_ALIGN_NONE);
+  test_env_shutdown();
+  PASS();
+}
+
 static void test_dock_form_resize(void) {
   TEST("docked forms reflow their content across the full pane after resize and floating");
   test_env_init();
@@ -274,6 +322,8 @@ static void test_dock_fixed_pane(void) {
   ASSERT_FALSE(pane->dock->collapsed);
   ASSERT_TRUE(dock_collapse(pane, false));
   ASSERT_FALSE(dock_float(pane, R(20, 20, 300, 200)));
+  ASSERT_FALSE(dock_float_aligned(pane, DOCK_ALIGN_CENTER, DOCK_ALIGN_END));
+  ASSERT_FALSE(dock_resize_float(pane, 300, 200));
   ASSERT_FALSE(dock_set_side(pane, DOCK_TOP));
   irect16_t gap = tb->item_rects[1];
   int x = window_screen_x(pane) + gap.x + gap.w / 2, y = window_screen_y(pane) + gap.y + gap.h / 2;
@@ -290,6 +340,7 @@ static void test_dock_fixed_pane(void) {
 int main(void) {
   TEST_START("Workspace docking");
   test_dock_ownership_and_layout();
+  test_dock_floating_alignment();
   test_dock_form_resize();
   test_dock_pointer_and_caption();
   test_dock_drag_and_resize();
