@@ -25,6 +25,30 @@ static void video_grayscale(void) {
   for (int i = 0; i < 256; i++) {
     ASSERT_EQUAL(image[i], i < 128 ? 0 : 255); ASSERT_EQUAL(pencil[i], 0);
   }
+  o.threshold = 170; o.min_width = 1;
+  pv_convert(&v, &o, rgb, image, pencil);
+  for (int i = 0; i < 256; i++) ASSERT_EQUAL(image[i], i < 170 ? 0 : 255);
+  PASS();
+}
+
+static void video_ink_cleanup(const char *directory) {
+  TEST("stroke worker preserves complete frames and rejects failures, truncation and invalid regions");
+  char python[PATH_MAX]; snprintf(python, sizeof(python), "%s/fake ' python", directory);
+  FILE *script = fopen(python, "w"); ASSERT_NOT_NULL(script);
+  fputs("#!/bin/sh\ncat\n", script); fclose(script); ASSERT_EQUAL(chmod(python, 0700), 0);
+  pv_options_t o = {.mode = PV_BLACK, .python = python, .filter = "filter ' path.py", .threshold = 170, .min_width = 3.5, .min_length = 20};
+  pv_video_t v = {.width = 3, .height = 1, .count = 1};
+  uint8_t rgb[] = {0,0,0, 127,127,127, 255,255,255}, actual[9];
+  v.pixels = tmpfile(); ASSERT_NOT_NULL(v.pixels);
+  ASSERT_TRUE(pv_write(v.pixels, rgb, sizeof(rgb))); ASSERT_TRUE(pv_filter_ink(&o, &v));
+  ASSERT_EQUAL(fread(actual, 1, 9, v.pixels), 9); ASSERT_EQUAL(memcmp(rgb, actual, 9), 0);
+  script = fopen(python, "w"); ASSERT_NOT_NULL(script); fputs("#!/bin/sh\nprintf x\n", script); fclose(script);
+  ASSERT_FALSE(pv_filter_ink(&o, &v));
+  script = fopen(python, "w"); ASSERT_NOT_NULL(script); fputs("#!/bin/sh\nexit 1\n", script); fclose(script);
+  ASSERT_FALSE(pv_filter_ink(&o, &v));
+  o.region_count = 1; o.regions[0] = (pv_region_t){2,0,2,1};
+  ASSERT_FALSE(pv_filter_ink(&o, &v));
+  fclose(v.pixels); unlink(python);
   PASS();
 }
 
@@ -39,6 +63,13 @@ static void video_arguments(void) {
   ASSERT_FALSE(pv_parse(ARRAY_LEN(bad), bad, &o));
   bad[4] = "128.5"; ASSERT_FALSE(pv_parse(ARRAY_LEN(bad), bad, &o));
   bad[4] = "128"; ASSERT_TRUE(pv_parse(ARRAY_LEN(bad), bad, &o));
+  ASSERT_TRUE(o.min_width == 3.5); ASSERT_EQUAL(o.min_length, 20);
+  ASSERT_EQUAL(o.threshold, 128);
+  bad[3] = "--min-width"; bad[4] = "1"; ASSERT_TRUE(pv_parse(ARRAY_LEN(bad), bad, &o));
+  bad[4] = "0"; ASSERT_FALSE(pv_parse(ARRAY_LEN(bad), bad, &o));
+  bad[4] = "64"; ASSERT_FALSE(pv_parse(ARRAY_LEN(bad), bad, &o));
+  bad[4] = "1.5"; ASSERT_TRUE(pv_parse(ARRAY_LEN(bad), bad, &o));
+  bad[4] = "2"; bad[2] = "pencil"; ASSERT_FALSE(pv_parse(ARRAY_LEN(bad), bad, &o));
   char *pal[] = {"converter", "--palette", "default", "--colors", "32", "--frames", "out", "input.mp4"};
   ASSERT_FALSE(pv_parse(ARRAY_LEN(pal), pal, &o));
   pal[2] = "generated"; ASSERT_TRUE(pv_parse(ARRAY_LEN(pal), pal, &o));
@@ -98,7 +129,7 @@ static void video_native_roundtrip(const char *directory, pv_mode_t mode, pv_pal
   char path[PATH_MAX], frames[PATH_MAX], png_path[PATH_MAX];
   snprintf(path, sizeof(path), "%s/mode-%d.ptf", directory, mode);
   snprintf(frames, sizeof(frames), "%s/mode-%d-frames", directory, mode);
-  pv_options_t o = {.output = path, .frames = frames, .mode = mode, .colors = 32, .threshold = 128};
+  pv_options_t o = {.output = path, .frames = frames, .mode = mode, .colors = 32, .threshold = 170, .min_width = 2};
   char palette_path[PATH_MAX]; snprintf(palette_path, sizeof(palette_path), "%s/custom.pal", directory);
   o.palette_source = source; o.palette_path = palette_path;
   pv_time_t times[] = {{.delay = 42}, {.pts = 0.042, .delay = 83}};
@@ -137,7 +168,7 @@ static void video_native_roundtrip(const char *directory, pv_mode_t mode, pv_pal
     snprintf(png_path, sizeof(png_path), "%s/frame-%06d.png", frames, i + 1);
     FILE *png_file = fopen(png_path, "rb"); ASSERT_NOT_NULL(png_file);
     uint8_t header[26]; ASSERT_EQUAL(fread(header, 1, sizeof(header), png_file), sizeof(header)); fclose(png_file);
-    ASSERT_EQUAL(header[24], 8); ASSERT_EQUAL(header[25], mode == PV_PENCIL ? PNG_COLOR_TYPE_GRAY : PNG_COLOR_TYPE_PALETTE);
+    ASSERT_EQUAL(header[24], mode == PV_BLACK ? 1 : 8); ASSERT_EQUAL(header[25], mode == PV_PENCIL ? PNG_COLOR_TYPE_GRAY : PNG_COLOR_TYPE_PALETTE);
     png_image png = {.version = PNG_IMAGE_VERSION};
     ASSERT_TRUE(png_image_begin_read_from_file(&png, png_path));
     png.format = mode == PV_PENCIL ? PNG_FORMAT_GRAY : PNG_FORMAT_RGBA;
@@ -211,10 +242,10 @@ static void video_decoder(const char *directory) {
   PASS();
 }
 
-static void video_external_projects(const char *directory) {
+static void video_external_projects(const char *directory, bool ink_only) {
   TEST("full example projects reopen with every frame matching its exported PNG");
   const char *names[] = {"pencil", "black", "palette-32", "palette-default", "palette-existing"};
-  for (int example = 0; example < ARRAY_LEN(names); example++) {
+  for (int example = ink_only ? 1 : 0; example < (ink_only ? 2 : ARRAY_LEN(names)); example++) {
     int mode = example < 3 ? example : PV_PALETTE;
     char path[PATH_MAX];
     snprintf(path, sizeof(path), "%s/%s.ptf", directory, names[example]);
@@ -247,6 +278,7 @@ static void video_external_projects(const char *directory) {
           uint32_t expected = MAKE_COLOR(color[0], color[1], color[2], color[3]);
           if (!color[3]) { ASSERT_EQUAL(cel[p], 255); }
           else { ASSERT_EQUAL(palette[cel[p]], expected); }
+          if (mode == PV_BLACK && color[3]) ASSERT_EQUAL(expected, MAKE_COLOR(0,0,0,255));
         }
       }
     }
@@ -262,7 +294,7 @@ int main(void) {
   TEST_START("Penciltest video conversion");
   char directory[] = "/tmp/orion-video-test-XXXXXX";
   if (!mkdtemp(directory)) { perror(directory); return 1; }
-  video_grayscale(); video_arguments(); video_global_palette(); video_timestamps(); video_decoder(directory);
+  video_grayscale(); video_ink_cleanup(directory); video_arguments(); video_global_palette(); video_timestamps(); video_decoder(directory);
   video_palette_sources(directory);
   video_native_roundtrip(directory, PV_PENCIL, PV_DEFAULT_PALETTE);
   video_native_roundtrip(directory, PV_BLACK, PV_DEFAULT_PALETTE);
@@ -272,7 +304,9 @@ int main(void) {
   video_native_roundtrip(directory, PV_PENCIL, PV_GENERATED_PALETTE);
   video_native_roundtrip(directory, PV_BLACK, PV_GENERATED_PALETTE);
   const char *examples = getenv("PENCILTEST_VIDEO_EXAMPLES");
-  if (examples) video_external_projects(examples);
+  if (examples) video_external_projects(examples, false);
+  const char *ink_example = getenv("PENCILTEST_VIDEO_INK_EXAMPLE");
+  if (ink_example) video_external_projects(ink_example, true);
   char palette_path[PATH_MAX]; snprintf(palette_path, sizeof(palette_path), "%s/custom.pal", directory); unlink(palette_path);
   rmdir(directory);
   TEST_END();

@@ -4,11 +4,14 @@
 Penciltest `.ptf` projects, PNG frame sequences, or both. It is a C99 command-line
 tool for macOS and Linux. Build dependencies are a C compiler, `pkg-config` and
 `libpng`; conversion requires FFmpeg on `PATH`, in `$FFMPEG`, or supplied with
-`--ffmpeg PATH`. FFmpeg is launched directly without a shell.
+`--ffmpeg PATH`. Black-ink cleanup additionally uses Python 3, NumPy and OpenCV.
+FFmpeg and the Python filter are launched directly without a shell.
 
 ```sh
 make penciltest-video
 build/bin/penciltest-video --help
+python3 -m venv build/lineart-python
+build/lineart-python/bin/python3 -m pip install -r tools/lineart_requirements.txt
 ```
 
 ## Conversion and palette choices
@@ -16,7 +19,7 @@ build/bin/penciltest-video --help
 | Mode | Native layer | Pixel transfer | PNG output |
 |---|---|---|---|
 | `--mode pencil` (default) | Pencil | All 256 luminance levels stored reversibly as `255 - luminance` coverage | Lossless 8-bit grayscale |
-| `--mode black` | Color | Luminance below `--threshold` becomes exact RGB black; other pixels are transparent | Indexed black/transparency |
+| `--mode black` | Color | Stroke-aware simplification; one exact RGB black entry and transparency, with no antialiasing | 1-bit indexed black/transparency |
 | `--mode palette` | Color | RGB video quantized into the chosen document palette, without dithering | Indexed colors |
 
 Choose the document palette independently of the conversion mode:
@@ -53,6 +56,54 @@ Penciltest displays that coverage using its configured purple ink and paper styl
 The compatibility FLC playback stream retains a grayscale palette for pencil
 mode; that playback palette never replaces the embedded editing palette.
 
+## Stroke-aware ink cleanup
+
+Black mode uses the selected stroke-aware algorithm with defaults
+`--threshold 170 --min-width 3.5 --min-length 20`. The converter keeps video
+handling, timing, palette transfer, PNG packing and native PTF writing in C99.
+It runs the packaged `simplify_lineart.py` filter once per clip, feeding decoded
+RGB through temporary files. The filter uses OpenCV's Euclidean distance
+transform, Zhang–Suen skeletonization and branch-width selection to remove thin
+terminal and isolated strokes while retaining loops and connections between
+contours. Surviving source pixels are assigned to their closest skeleton sample.
+No hatch filling, weak-connection pruning, SDF or morphological-opening mode is
+included. This is the restored pre-fill variant.
+
+`make penciltest-video` packages both Python files beside the executable. The
+converter finds `build/lineart-python/bin/python3` when installed as above,
+otherwise uses `python3`. Override this with `--python PATH` or
+`PENCILTEST_PYTHON`; `--stroke-filter PATH` overrides the script location.
+Missing dependencies, worker errors and incomplete frames abort conversion
+before any outputs are published. Black mode supports at most 16 million pixels
+per frame in the OpenCV filter; other modes retain their previous limits.
+
+`--protect-region X,Y,W,H` preserves the original thresholded ink in an important
+region and can be repeated. Aggressive cleanup cannot distinguish a nose from a
+scratch, so the approved skateboard example protects the face with
+`--protect-region 525,105,165,140`. No face coordinates are built into the
+algorithm. Regions follow estimated Farnebäck motion by default; use
+`--fixed-protection` for stationary regions. Motion tracking is a geometric
+estimate, not automatic face recognition.
+
+`--temporal` optionally uses motion-aligned previous selection and width
+hysteresis to reduce borderline stroke changes. It is experimental and disabled
+by default. The selected reference frame and restored export use ordinary
+per-frame selection. Soft pencil coverage and full-color palette quantization
+retain their existing behavior.
+
+Black PNGs have two 1-bit indices (opaque black and transparent white). Native
+Color cels retain the editable 8-bit document palette, using only its black index
+and transparent index 255. Cleanup does not repair source contour gaps. Existing
+construction lines can remain when they join contours; that conservative behavior
+is retained in the selected pre-fill version.
+
+The same filter can export standalone 1-bit black/white PNGs on white paper:
+
+```sh
+build/lineart-python/bin/python3 tools/simplify_lineart.py input.png output.png \
+  --threshold 170 --min-width 3.5 --min-length 20 --protect-region 525,105,165,140
+```
+
 ## Examples
 
 Preserve the source dimensions and timing:
@@ -61,7 +112,7 @@ Preserve the source dimensions and timing:
 build/bin/penciltest-video --mode pencil --palette default \
   --output build/pencil.ptf --frames build/pencil-frames input.mp4
 
-build/bin/penciltest-video --mode black --palette default --threshold 128 \
+build/bin/penciltest-video --mode black --palette default --threshold 170 --min-width 3.5 --min-length 20 \
   --output build/black.ptf --frames build/black-frames input.mp4
 
 build/bin/penciltest-video --mode palette --palette generated --colors 32 \
@@ -111,12 +162,23 @@ fixed default-palette color, and fixed existing-palette color. Each project has
 its PNG sequence and timing, plus a ZIP of the PTF. These generated assets remain
 untracked. The original examples are preserved in the sibling backup directory.
 
+`build/penciltest-video-ink-example/` contains the re-export with binary ink
+opening (previous example): `black.ptf`, `black.ptf.zip`, and `black-frames/` with 1-bit PNGs and
+unchanged timing. It uses the same source at 1168×784, 145 frames, and 6042 ms.
+
+`build/penciltest-video-stroke-example/` contains the restored stroke-aware
+export, with the same 145 source frames and timing. Its first frame matches the
+approved `build/lineart-comparison/strong-face-protected.png` pixel for pixel.
+The original comparison assets and all generated exports remain untracked.
+
 ## Validation
 
 ```sh
 make build/bin/test_palette_file_test build/bin/test_penciltest_video_test
 build/bin/test_palette_file_test
 PENCILTEST_VIDEO_EXAMPLES=build/penciltest-video-example \
+  build/bin/test_penciltest_video_test
+PENCILTEST_VIDEO_INK_EXAMPLE=build/penciltest-video-stroke-example \
   build/bin/test_penciltest_video_test
 
 make build/bin/test_penciltest_layout_test build/bin/test_penciltest_memory_test
@@ -125,9 +187,17 @@ PENCILTEST_MEMORY_EXAMPLE=build/penciltest-video-example/pencil.ptf \
   build/bin/test_penciltest_memory_test
 ```
 
-Tests cover all grayscale levels, threshold boundaries, palette sources and
+Tests cover all grayscale levels, threshold boundaries, worker failures and
+truncation, true 1-bit PNG round trips, palette sources and
 budgets, corrupt RIFF files, fractional/variable timing, decoder failures, quoted
 paths, native/PNG round trips, and existing-output protection. Full-example
 verification decodes every cel and compares it with its PNG. Sidebar tests verify
 all 32 default swatches fit, larger document palettes page, duplicate colors
 retain their selected index, and selection never mutates palettes or history.
+
+Stroke selection, protected features, contour connectivity, binary masks and the
+RGB worker protocol are covered by:
+
+```sh
+build/lineart-python/bin/python3 tools/test_lineart_strokes.py
+```

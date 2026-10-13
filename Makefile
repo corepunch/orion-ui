@@ -207,9 +207,10 @@ $(ORIONC_BIN): $(BIN_DIR)/%$(EXE_EXT): tools/%.c | $(BIN_DIR)
 	@$(CC) $(TOOLS_CFLAGS) -I. -Itools -o $@ $< $(TOOL_LINK)
 
 # POSIX command-line converter; no Orion window system or graphics dependency.
-$(BIN_DIR)/penciltest-video: tools/penciltest_video.c apps/imageeditor/io/flc_codec.h apps/imageeditor/palette.h orion/user/palette_file.h | $(BIN_DIR) share
+$(BIN_DIR)/penciltest-video: tools/penciltest_video.c tools/simplify_lineart.py tools/lineart_strokes.py apps/imageeditor/io/flc_codec.h apps/imageeditor/palette.h orion/user/palette_file.h | $(BIN_DIR) share
 	@echo "TOOL    $@"
 	@$(CC) -std=c99 -Wall -Wextra -O2 $(PENCILTEST_VIDEO_CFLAGS) -o $@ $< $(PENCILTEST_VIDEO_LIBS) -lm
+	@cp tools/simplify_lineart.py tools/lineart_strokes.py $(BIN_DIR)/
 
 .PHONY: penciltest-video
 penciltest-video: $(BIN_DIR)/penciltest-video

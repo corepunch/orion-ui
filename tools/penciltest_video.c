@@ -29,13 +29,16 @@
 
 typedef enum { PV_PENCIL, PV_BLACK, PV_PALETTE } pv_mode_t;
 typedef enum { PV_DEFAULT_PALETTE, PV_GENERATED_PALETTE, PV_EXISTING_PALETTE } pv_palette_source_t;
+typedef struct { int x, y, w, h; } pv_region_t;
 typedef struct {
-  const char *input, *output, *frames, *ffmpeg;
+  const char *input, *output, *frames, *ffmpeg, *python, *filter;
   pv_mode_t mode;
   pv_palette_source_t palette_source;
   const char *palette_path;
-  int colors, threshold, width, height, max_frames;
-  double fps;
+  int colors, threshold, width, height, max_frames, region_count;
+  double fps, min_width, min_length;
+  bool fixed_protection, temporal;
+  pv_region_t regions[32];
 } pv_options_t;
 typedef struct { double pts, duration; uint16_t delay; } pv_time_t;
 typedef struct { uint64_t count, sum[3]; } pv_bin_t;
@@ -75,12 +78,19 @@ static void pv_usage(FILE *fp) {
   fputs("Usage: penciltest-video [options] INPUT.mp4\n"
         "  -o, --output FILE.ptf   Native project (optional when --frames is used)\n"
         "  --mode pencil          Lossless 8-bit luminance -> Pencil coverage (default)\n"
-        "  --mode black           Thresholded opaque black -> Color; other pixels clear\n"
+        "  --mode black           Stroke-aware opaque black ink -> Color; other pixels clear\n"
         "  --mode palette         Quantize RGB video -> Color\n"
         "  --palette SOURCE       default (32 colors), generated, or an existing RIFF .pal\n"
         "  --colors N             Generated budget: 32 (default), 64, 128 or 256\n"
-        "  --threshold N          Black when luminance < N, 0..255 (default 128)\n"
-        "  --frames DIRECTORY     Export 8-bit grayscale / indexed PNGs and timing.tsv\n"
+        "  --threshold N          Black when luminance < N, 0..255 (default 170)\n"
+        "  --min-width N          Estimated stroke width, 1..63 pixels (default 3.5)\n"
+        "  --min-length N         Remove short isolated strokes, 0..1000000 (default 20)\n"
+        "  --protect-region RECT  Preserve source ink in X,Y,W,H; repeat for multiple regions\n"
+        "  --fixed-protection     Keep protection rectangles fixed instead of following motion\n"
+        "  --temporal             Motion-aligned stroke selection hysteresis\n"
+        "  --python PATH          Python with NumPy/OpenCV (default bundled local venv or python3)\n"
+        "  --stroke-filter PATH   Override the packaged Python filter\n"
+        "  --frames DIRECTORY     Export grayscale / indexed PNGs and timing.tsv\n"
         "  --size WIDTHxHEIGHT    Explicit resize; otherwise preserve source dimensions\n"
         "  --fps RATE             Explicit resampling, 1..1000; otherwise source timing\n"
         "  --max-frames N         Convert only the first N decoded/output frames\n"
@@ -90,9 +100,10 @@ static void pv_usage(FILE *fp) {
 }
 
 static bool pv_parse(int argc, char **argv, pv_options_t *o) {
-  *o = (pv_options_t){.colors = 32, .threshold = 128, .ffmpeg = getenv("FFMPEG")};
+  *o = (pv_options_t){.colors = 32, .threshold = 170, .min_width = 3.5, .min_length = 20,
+                      .ffmpeg = getenv("FFMPEG"), .python = getenv("PENCILTEST_PYTHON")};
   if (!o->ffmpeg || !*o->ffmpeg) o->ffmpeg = "ffmpeg";
-  bool colors_set = false, palette_set = false, threshold_set = false, positional = false;
+  bool colors_set = false, palette_set = false, ink_set = false, positional = false;
   for (int i = 1; i < argc; i++) {
     const char *arg = argv[i], *v;
     double n;
@@ -101,11 +112,15 @@ static bool pv_parse(int argc, char **argv, pv_options_t *o) {
       if (o->input) return pv_error("only one input video is supported");
       o->input = arg; continue;
     }
+    if (!strcmp(arg, "--fixed-protection")) { o->fixed_protection = true; ink_set = true; continue; }
+    if (!strcmp(arg, "--temporal")) { o->temporal = true; ink_set = true; continue; }
     if (i + 1 == argc) return pv_error("missing option value");
     v = argv[++i];
     if      (!strcmp(arg, "-o") || !strcmp(arg, "--output")) o->output = v;
     else if (!strcmp(arg, "--frames")) o->frames = v;
     else if (!strcmp(arg, "--ffmpeg")) o->ffmpeg = v;
+    else if (!strcmp(arg, "--python")) { o->python = v; ink_set = true; }
+    else if (!strcmp(arg, "--stroke-filter")) { o->filter = v; ink_set = true; }
     else if (!strcmp(arg, "--mode")) {
       if      (!strcmp(v, "pencil"))  o->mode = PV_PENCIL;
       else if (!strcmp(v, "black"))   o->mode = PV_BLACK;
@@ -134,7 +149,29 @@ static bool pv_parse(int argc, char **argv, pv_options_t *o) {
     } else if (!strcmp(arg, "--threshold")) {
       if (!pv_number(v, &n) || n < 0 || n > 255 || n != floor(n))
         return pv_error("--threshold must be an integer in 0..255");
-      o->threshold = (int)n; threshold_set = true;
+      o->threshold = (int)n; ink_set = true;
+    } else if (!strcmp(arg, "--min-width")) {
+      if (!pv_number(v, &o->min_width) || o->min_width < 1 || o->min_width > 63)
+        return pv_error("--min-width must be in 1..63");
+      ink_set = true;
+    } else if (!strcmp(arg, "--min-length")) {
+      if (!pv_number(v, &o->min_length) || o->min_length < 0 || o->min_length > 1000000)
+        return pv_error("--min-length must be in 0..1000000");
+      ink_set = true;
+    } else if (!strcmp(arg, "--protect-region")) {
+      if (o->region_count == 32) return pv_error("at most 32 protected regions are supported");
+      int values[4];
+      const char *p = v;
+      for (int k = 0; k < 4; k++) {
+        char *end;
+        errno = 0;
+        long value = strtol(p, &end, 10);
+        if (errno || end == p || value < (k < 2 ? 0 : 1) || value > 16384 || *end != (k == 3 ? 0 : ','))
+          return pv_error("region must be X,Y,W,H within 0..16384 with positive size");
+        values[k] = (int)value; p = end + (k != 3);
+      }
+      o->regions[o->region_count++] = (pv_region_t){values[0], values[1], values[2], values[3]};
+      ink_set = true;
     } else if (!strcmp(arg, "--fps")) {
       if (!pv_number(v, &o->fps) || o->fps < 1 || o->fps > 1000)
         return pv_error("--fps must be in 1..1000");
@@ -148,7 +185,7 @@ static bool pv_parse(int argc, char **argv, pv_options_t *o) {
   if (colors_set && !palette_set) o->palette_source = PV_GENERATED_PALETTE;
   if (colors_set && o->palette_source != PV_GENERATED_PALETTE)
     return pv_error("--colors applies only to --palette generated");
-  if (threshold_set && o->mode != PV_BLACK) return pv_error("--threshold applies only to --mode black");
+  if (ink_set && o->mode != PV_BLACK) return pv_error("ink cleanup options apply only to --mode black");
   if (o->output && o->frames && !strcmp(o->output, o->frames)) return pv_error("project and frames must have different paths");
   return true;
 }
@@ -368,6 +405,56 @@ static const char *pv_exe_dir(void) {
   return path;
 }
 
+static bool pv_filter_ink(const pv_options_t *o, pv_video_t *v) {
+  if (o->mode != PV_BLACK) return true;
+  const char *dir = pv_exe_dir();
+  char script[PATH_MAX], python[PATH_MAX], numbers[5][32], rectangles[32][64];
+  if (!dir) return pv_error("cannot locate packaged stroke filter");
+  if (snprintf(script, sizeof(script), "%s/simplify_lineart.py", dir) >= (int)sizeof(script) ||
+      snprintf(python, sizeof(python), "%s/../lineart-python/bin/python3", dir) >= (int)sizeof(python))
+    return pv_error("stroke filter path is too long");
+  const char *interpreter = o->python && *o->python ? o->python : !access(python, X_OK) ? python : "python3";
+  char *args[180]; int count = 0;
+  args[count++] = (char *)interpreter; args[count++] = (char *)(o->filter ? o->filter : script);
+  args[count++] = "--video-worker";
+  snprintf(numbers[0], sizeof(numbers[0]), "%d", v->width);
+  snprintf(numbers[1], sizeof(numbers[1]), "%d", v->height);
+  snprintf(numbers[2], sizeof(numbers[2]), "%d", o->threshold);
+  snprintf(numbers[3], sizeof(numbers[3]), "%.9g", o->min_width);
+  snprintf(numbers[4], sizeof(numbers[4]), "%.9g", o->min_length);
+  for (int i = 0; i < 5; i++) args[count++] = numbers[i];
+  for (int i = 0; i < o->region_count; i++) {
+    pv_region_t r = o->regions[i];
+    if (r.x + r.w > v->width || r.y + r.h > v->height) return pv_error("region extends outside decoded video dimensions");
+    snprintf(rectangles[i], sizeof(rectangles[i]), "%d,%d,%d,%d", r.x, r.y, r.w, r.h);
+    args[count++] = "--protect-region"; args[count++] = rectangles[i];
+  }
+  if (o->fixed_protection) args[count++] = "--fixed-protection";
+  if (o->temporal) args[count++] = "--temporal";
+  args[count] = NULL;
+  FILE *filtered = tmpfile();
+  if (!filtered) return pv_error("cannot allocate stroke-filter spool");
+  rewind(v->pixels);
+  pid_t child = fork();
+  if (child < 0) { fclose(filtered); return pv_system_error("stroke filter fork"); }
+  if (!child) {
+    if (dup2(fileno(v->pixels), STDIN_FILENO) < 0 || dup2(fileno(filtered), STDOUT_FILENO) < 0) _exit(126);
+    close(fileno(v->pixels)); close(fileno(filtered));
+    execvp(interpreter, args);
+    fprintf(stderr, "penciltest-video: cannot execute Python %s: %s\n", interpreter, strerror(errno));
+    _exit(127);
+  }
+  int status;
+  pid_t waited;
+  do { waited = waitpid(child, &status, 0); } while (waited < 0 && errno == EINTR);
+  struct stat st;
+  bool ok = waited == child && WIFEXITED(status) && !WEXITSTATUS(status) && !fstat(fileno(filtered), &st) &&
+            (uint64_t)st.st_size == (uint64_t)v->width * v->height * v->count * 3;
+  if (!ok) { fclose(filtered); return pv_error("stroke filter failed or returned incomplete frames; no outputs published"); }
+  fclose(v->pixels); v->pixels = filtered; rewind(v->pixels);
+  return true;
+}
+
 static bool pv_palette(pv_video_t *v, const pv_options_t *o) {
   memset(v->palette, 0, sizeof(v->palette));
   if (o->palette_source == PV_DEFAULT_PALETTE) {
@@ -460,14 +547,19 @@ static bool pv_png(const char *path, const pv_video_t *v, pv_mode_t mode, const 
   if (!fp) return pv_system_error(path);
   png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   png_infop info = png ? png_create_info_struct(png) : NULL;
+  uint8_t *packed = mode == PV_BLACK ? malloc(((size_t)v->width + 7) / 8) : NULL;
   bool ok = false;
-  if (png && info && !setjmp(png_jmpbuf(png))) {
+  if (png && info && (mode != PV_BLACK || packed) && !setjmp(png_jmpbuf(png))) {
     png_init_io(png, fp);
-    png_set_IHDR(png, info, v->width, v->height, 8, mode == PV_PENCIL ? PNG_COLOR_TYPE_GRAY : PNG_COLOR_TYPE_PALETTE,
+    png_set_IHDR(png, info, v->width, v->height, mode == PV_BLACK ? 1 : 8, mode == PV_PENCIL ? PNG_COLOR_TYPE_GRAY : PNG_COLOR_TYPE_PALETTE,
                  PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
     png_set_compression_level(png, 9);
     png_set_sRGB(png, info, PNG_sRGB_INTENT_PERCEPTUAL);
-    if (mode != PV_PENCIL) {
+    if (mode == PV_BLACK) {
+      png_color colors[] = {{0,0,0}, {255,255,255}};
+      uint8_t alpha[] = {255,0};
+      png_set_PLTE(png, info, colors, 2); png_set_tRNS(png, info, alpha, 2, NULL);
+    } else if (mode != PV_PENCIL) {
       png_color colors[256]; uint8_t alpha[256];
       for (int i = 0; i < 256; i++) {
         colors[i] = (png_color){v->palette[i][0], v->palette[i][1], v->palette[i][2]};
@@ -477,10 +569,19 @@ static bool pv_png(const char *path, const pv_video_t *v, pv_mode_t mode, const 
       png_set_PLTE(png, info, colors, 256); png_set_tRNS(png, info, alpha, 256, NULL);
     }
     png_write_info(png, info);
-    for (int y = 0; y < v->height; y++) png_write_row(png, (png_const_bytep)(pixels + (size_t)y * v->width));
+    for (int y = 0; y < v->height; y++) {
+      const uint8_t *row = pixels + (size_t)y * v->width;
+      if (packed) {
+        memset(packed, 0, ((size_t)v->width + 7) / 8);
+        for (int x = 0; x < v->width; x++) if (row[x] == 255) packed[x / 8] |= 0x80 >> (x % 8);
+        row = packed;
+      }
+      png_write_row(png, row);
+    }
     png_write_end(png, info); ok = true;
   }
   if (png) png_destroy_write_struct(&png, info ? &info : NULL);
+  free(packed);
   if (fclose(fp)) ok = false;
   return ok || pv_error("PNG write failed");
 }
@@ -653,6 +754,7 @@ int main(int argc, char **argv) {
   if ((o.output && !pv_absent(o.output)) || (o.frames && !pv_absent(o.frames))) return 1;
   pv_video_t v = {0};
   bool ok = pv_decode(&o, &v);
+  if (ok) ok = pv_filter_ink(&o, &v);
   if (ok) {
     ok = pv_palette(&v, &o);
     if (ok) ok = pv_output(&o, &v);
