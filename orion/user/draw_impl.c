@@ -79,7 +79,7 @@ irect16_t get_opengl_rect(irect16_t r) {
 
 // Get titlebar height
 int window_caption_height(window_t const *win) {
-  return (win && (win->flags & WINDOW_TOOLWINDOW)) ? (FONT_SIZE + 5) : get_theme()->caption_height;
+  return (win && (win->flags & WINDOW_TOOLWINDOW)) ? (FONT_SIZE + 5) : get_theme()->caption.height;
 }
 
 bool caption_merged_into_toolbar(flags_t flags) {
@@ -88,7 +88,7 @@ bool caption_merged_into_toolbar(flags_t flags) {
 
 int caption_extent(flags_t flags) {
   if ((flags & WINDOW_NOTITLE) || caption_merged_into_toolbar(flags)) return 0;
-  return (flags & WINDOW_TOOLWINDOW) ? (FONT_SIZE + 5) : get_theme()->caption_height;
+  return (flags & WINDOW_TOOLWINDOW) ? (FONT_SIZE + 5) : get_theme()->caption.height;
 }
 
 int titlebar_height(window_t const *win) {
@@ -152,7 +152,7 @@ void draw_panel(window_t const *win) {
 // Draw a theme icon centred inside rect r.
 void draw_theme_icon_in_rect(int id, irect16_t r, uint32_t col) {
   int size = (id == THEME_ICON_CLOSE || id == THEME_ICON_MAXIMIZE || id == THEME_ICON_RESTORE)
-    ? MIN(get_theme()->toolbar_compact_icon, MIN(r.w, r.h)) : THEME_ICON_SIZE;
+    ? MIN(get_theme()->toolbar.compact.icon, MIN(r.w, r.h)) : THEME_ICON_SIZE;
   irect16_t icon = rect_center(r, size, size);
   draw_theme_icon(id, icon.x, icon.y, size, col);
 }
@@ -277,12 +277,12 @@ void fill_rounded_rect(uint32_t color, irect16_t r, int radius) {
 
 irect16_t tooltip_bubble_body_rect(irect16_t r, tooltip_tail_side_t side) {
   const theme_t *theme = get_theme();
-  r = rect_inset(r, theme->tooltip_shadow_size);
+  r = rect_inset(r, theme->tooltip.shadow.size);
   switch (side) {
-    case TOOLTIP_TAIL_TOP:    return rect_trim_top(r, theme->tooltip_tail_size);
-    case TOOLTIP_TAIL_BOTTOM: return rect_trim_bottom(r, theme->tooltip_tail_size);
-    case TOOLTIP_TAIL_LEFT:   return rect_trim_left(r, theme->tooltip_tail_size);
-    case TOOLTIP_TAIL_RIGHT:  return rect_trim_right(r, theme->tooltip_tail_size);
+    case TOOLTIP_TAIL_TOP:    return rect_trim_top(r, theme->tooltip.tail_size);
+    case TOOLTIP_TAIL_BOTTOM: return rect_trim_bottom(r, theme->tooltip.tail_size);
+    case TOOLTIP_TAIL_LEFT:   return rect_trim_left(r, theme->tooltip.tail_size);
+    case TOOLTIP_TAIL_RIGHT:  return rect_trim_right(r, theme->tooltip.tail_size);
   }
   fprintf(stderr, "[draw] invalid tooltip tail side=%d\n", side);
   fflush(stderr);
@@ -291,16 +291,16 @@ irect16_t tooltip_bubble_body_rect(irect16_t r, tooltip_tail_side_t side) {
 
 void draw_tooltip_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side) {
   const theme_t *theme = get_theme();
-  int pad = theme->tooltip_shadow_size;
+  int pad = theme->tooltip.shadow.size;
   float scale = ui_surface_scale();
   isize16_t size = { (int)((r.w - 2 * pad) * scale), (int)((r.h - 2 * pad) * scale) };
   if (size.w <= 0 || size.h <= 0) return;
   irect16_t body = tooltip_bubble_body_rect(r, side);
   if (body.w <= 0 || body.h <= 0) return;
-  draw_rect_shadow(body, theme->tooltip_corner_radius, theme->tooltip_shadow_blur,
-                    theme->tooltip_shadow_offset, color_with_alpha(get_sys_color(brDarkEdge), 120));
-  render_tooltip_bubble(r, size, theme->tooltip_corner_radius * scale,
-                       theme->tooltip_tail_size * scale,
+  draw_rect_shadow(body, theme->tooltip.corner_radius, theme->tooltip.shadow.blur,
+                    theme->tooltip.shadow.offset, color_with_alpha(get_sys_color(brDarkEdge), 120));
+  render_tooltip_bubble(r, size, theme->tooltip.corner_radius * scale,
+                       theme->tooltip.tail_size * scale,
                        (tail_offset - pad) * scale, pad * scale, side,
                        get_sys_color(brPanelDark));
 }
@@ -330,7 +330,7 @@ void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_colo
   extern uint32_t ui_white_texture;
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
   const theme_t *theme = get_theme();
-  int radius = theme->card_corner_radius, edge = theme->card_edge_width, ring = theme->card_ring_width;
+  int radius = theme->card.corner_radius, edge = theme->card.edge_width, ring = theme->card.ring_width;
   if (state & CTRL_SELECTED) {
     // The ring matches the accent edge; a card without an edge uses the theme accent.
     uint32_t ring_color = (edge_color >> 24) ? color_with_alpha(edge_color, 0xFF) : get_sys_color(brAccent);
@@ -366,10 +366,10 @@ static plastic_look_t plastic_look(ctrl_state_t state) {
 void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon, uint32_t control_size, bool round) {
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
   const theme_t *theme = get_theme();
-  int shadow = MIN(theme->plastic_shadow_size, MIN(r.w, r.h) / 10);
+  int shadow = MIN(theme->plastic.shadow_size, MIN(r.w, r.h) / 10);
   int glyph_max = theme_control_extent(theme->plastic.glyph_size, control_size);
   int size = MAX(0, MIN(glyph_max, MIN(r.w, r.h) - 2 * shadow - 4));
-  float radius = round || theme->plastic_corner_radius == CORNER_RADIUS_CIRCULAR ? MIN(r.w, r.h) * 0.5f : theme->plastic_corner_radius;
+  float radius = round || theme->plastic.corner_radius == CORNER_RADIUS_CIRCULAR ? MIN(r.w, r.h) * 0.5f : theme->plastic.corner_radius;
   sysicon_resolved_t glyph = {0};
   if (icon && size > 0 && !sysicon_resolve_size(icon, size, &glyph)) {
     fprintf(stderr, "[draw] plastic icon unavailable name=%s\n", icon);
@@ -379,7 +379,7 @@ void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const 
   int extent = MAX(glyph.w, glyph.h);
   if (extent > 0) icon_size = (ipoint16_t){size * glyph.w / extent, size * glyph.h / extent};
   plastic_look_t look = plastic_look(state);
-  render_plastic_surface(r, radius, theme->plastic_bevel_width,
+  render_plastic_surface(r, radius, theme->plastic.bevel_width,
                           shadow, &look, color ? color : get_sys_color(brAccent),
                           theme->plastic.shadow_color, glyph.tex,
                           UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1), icon_size);
@@ -389,19 +389,19 @@ void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color) {
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
   const theme_t *theme = get_theme();
   plastic_look_t look = plastic_look(state);
-  render_plastic_surface(r, theme->card_corner_radius, theme->card_highlight_width,
-                          MIN(2, theme->plastic_shadow_size), &look, color,
+  render_plastic_surface(r, theme->card.corner_radius, theme->card.highlight_width,
+                          MIN(2, theme->plastic.shadow_size), &look, color,
                           theme->plastic.shadow_color, 0, NULL, (ipoint16_t){0, 0});
 }
 
 int measure_badge(ui_font_t font, const char *text) {
-  return text_strwidth(font, text) + 2 * get_theme()->badge_padding;
+  return text_strwidth(font, text) + 2 * get_theme()->badge.padding;
 }
 
 int draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color) {
   int w = measure_badge(font, text);
   draw_badge_ex(font, text, R(x, y, w, height), color,
-                color_with_alpha(color, (uint8_t)get_theme()->badge_tint_alpha), false);
+                color_with_alpha(color, (uint8_t)get_theme()->badge.tint_alpha), false);
   return w;
 }
 
@@ -409,7 +409,7 @@ void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_
   if (r.w <= 0 || r.h <= 0) return;
   const theme_t *theme = get_theme();
   int radius = MIN(r.w, r.h) / 2;
-  if (!round) radius = MIN(theme->badge_corner_radius, radius);
+  if (!round) radius = MIN(theme->badge.corner_radius, radius);
   fill_rounded_rect(background_color, r, radius);
   draw_text_clipped(font, text, &r, text_color, TEXT_ALIGN_CENTER);
 }
@@ -551,8 +551,8 @@ void composite_root_windows(void) {
       .tex = surf->tex, .w = surf->w, .h = surf->h, .frame = w->frame,
       .corner_radius = (float)window_composition_attr(w, WCA_CORNERS) * axGetScaling(),
       .shadow = window_composition_attr(w, WCA_SHADOW) != 0,
-      .shadow_radius = (float)theme->window_corner_radius, .shadow_blur = (float)theme->window_shadow_blur,
-      .shadow_offset = theme->window_shadow_offset, .shadow_color = theme->window_shadow_color,
+      .shadow_radius = (float)theme->window.corner_radius, .shadow_blur = (float)theme->window.shadow.blur,
+      .shadow_offset = theme->window.shadow.offset, .shadow_color = theme->window.shadow.color,
       .border = window_composition_attr(w, WCA_BORDER) != 0, .user = w,
     };
   }

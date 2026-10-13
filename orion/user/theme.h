@@ -182,38 +182,49 @@ typedef struct {
   void (*draw_card)(irect16_t r, ctrl_state_t state, uint32_t edge_color); // card face, selection ring and accent edge in one silhouette
   uint32_t (*foreground)(theme_part_t part, ctrl_state_t state);
 
-  // Scrollbar geometry policy.  scrollbar_overlay=true means Modern overlay
-  // thumbs; no reserved gutter is allocated.
-  int  scrollbar_width;    // reserved gutter width (pixels); 0 = overlay only
-  bool scrollbar_overlay;  // true = overlay thumbs, false = reserved-space bars
+  // Geometry in logical pixels.
+  struct {
+    int width;              // reserved gutter width; 0 = overlay only
+    bool overlay;           // true = overlay thumbs, false = reserved-space bars
+  } scrollbar;
+  struct { int height; } caption;
+  struct { int height; } menubar;
+  struct {
+    int button_size, padding;
+    struct {
+      int padding;          // menu-bar-row toolbar: outer margin
+      int spacing;          // menu-bar-row toolbar: gap between buttons
+      int icon;             // menu-bar-row toolbar: glyph size
+      int menu_gap;         // clearance between a compact toolbar and the menus
+    } compact;
+    int grip_size;          // drag grip thickness of a floating toolbar or menu bar
+    int dropdown_arrow_w;   // width of a split button's arrow zone
+    int large_inset;        // gap a bigger-than-regular button keeps from the band edges
+  } toolbar;
 
-  // Non-client and toolbar geometry in logical pixels.
-  int caption_height;
-  int menubar_height;
-  int toolbar_button_size;
-  int toolbar_padding;
-  int toolbar_compact_padding;   // menu-bar-row toolbar: outer margin
-  int toolbar_compact_spacing;   // menu-bar-row toolbar: gap between buttons
-  int toolbar_compact_icon;      // menu-bar-row toolbar: glyph size
-  int toolbar_compact_menu_gap;  // clearance kept between a compact toolbar and the menus
-  int toolbar_grip_size;         // drag grip thickness of a floating toolbar or menu bar
-  int toolbar_dropdown_arrow_w;  // width of a split button's arrow zone
-  int toolbar_large_inset;       // gap a bigger-than-regular button keeps from the band edges
-
-  // Icon/label press offset in logical pixels.  Classic shifts content by 1
-  // when a button is pressed to simulate physical depression; Modern keeps
-  // content stationary and changes only the background.
-  int press_icon_offset;
-
-  // Per-theme geometry metrics used by draw code to avoid hardcoded literals.
-  int button_corner_radius;  // rounded-corner radius for push buttons (0 = square)
-  int window_corner_radius;  // logical pixels, applied by the SDF compositor
-  int card_corner_radius;    // draw_card(): rounded-corner radius (0 = square)
-  int card_edge_width;       // draw_card(): accent edge width in logical pixels
-  int card_ring_width;       // draw_card(): selection ring thickness (reserved inside the card bounds)
-  int card_highlight_width;  // plastic card bevel width (0 = none)
-  int plastic_corner_radius, plastic_bevel_width, plastic_shadow_size; // procedural button geometry; radius may be CORNER_RADIUS_CIRCULAR
+  struct {
+    int padding;            // standard inset from control frame to content area
+    int press_icon_offset;  // Classic shifts pressed icons/labels by 1; Modern keeps them stationary
+    int size_pct[4];        // CONTROL_SIZE_INDEX order: regular, small, mini, large (% of regular)
+  } control;
+  struct { int corner_radius; } button; // 0 = square
+  struct {
+    int corner_radius;      // applied by the SDF compositor
+    struct {
+      int blur;             // zero disables shadows
+      ipoint16_t offset;
+      uint32_t color;
+    } shadow;
+  } window;
+  struct {
+    int corner_radius;      // draw_card(): 0 = square
+    int edge_width;         // accent edge width
+    int ring_width;         // selection ring thickness, reserved inside the bounds
+    int highlight_width;    // plastic card bevel width (0 = none)
+    int padding_x, padding_y;
+  } card;
   struct {                   // plastic material, handed to the shader as uniforms
+    int corner_radius, bevel_width, shadow_size; // radius may be CORNER_RADIUS_CIRCULAR
     float gloss;             // strength of the top highlight band (1 = reference)
     float rim;               // lit/shaded bevel strength along the silhouette
     float ink;               // glyph darkness: base-colour fraction kept in the engraved glyph
@@ -221,30 +232,35 @@ typedef struct {
     int   glyph_size;        // largest glyph, logical pixels
     uint32_t shadow_color;   // drop shadow tint (alpha = strength)
   } plastic;
-  int control_size_pct[4];   // CONTROL_SIZE_INDEX order: regular, small, mini, large as a percentage of regular
-  int card_padding_x, card_padding_y; // Card control: content inset from the face edge
-  int window_shadow_blur;    // logical pixels; zero disables shadows
-  ipoint16_t window_shadow_offset;
-  uint32_t window_shadow_color;
-  // Drop shadow for a window drawn under the pointer. Offset is usually
-  // downward so the dark part sits under the card, not in a halo the fill hides.
-  int drag_shadow_blur;      // logical pixels; zero disables the lift shadow
-  ipoint16_t drag_shadow_offset;
-  uint32_t drag_shadow_color;
+  struct {
+    struct {
+      int blur;             // zero disables the shadow for a window lifted under the pointer
+      ipoint16_t offset;
+      uint32_t color;
+    } shadow;
+  } drag;
   struct {
     int hover, selected, selected_hover, pressed; // system color roles
   } item_background;
-  int control_padding;       // standard inset from control frame to content area
-  int tab_pane_frame;        // TabView page inset from the tab bar frame (bevel width; 0 = flat)
-  int tab_header_height, tab_min_width, tab_padding;
-  int menu_capsule;          // 1 = menu-bar selection is a padded capsule around the label; 0 = full item cell
-  int badge_padding, badge_corner_radius; // Badge: horizontal text inset and corner radius
-  int badge_tint_alpha;      // Badge: alpha of the tinted face behind the text (0..255)
-  int tooltip_corner_radius, tooltip_tail_size;
-  int multiline_field_corner_radius; // derived from the single-line control height
-  int tooltip_padding_x, tooltip_padding_y, tooltip_gap, tooltip_shadow_size;
-  int tooltip_shadow_blur;
-  ipoint16_t tooltip_shadow_offset;
+  struct {
+    struct { int height, start; } header; // horizontal TabView height and leading inset
+    int min_width, padding;
+    int pane_frame;          // page inset from the tab bar frame (bevel width; 0 = flat)
+  } tab;
+  struct { int capsule; } menu; // 1 = padded selection capsule; 0 = full item cell
+  struct {
+    int padding, corner_radius;
+    int tint_alpha;          // alpha of the tinted face (0..255)
+  } badge;
+  struct { int multiline_corner_radius; } field; // derived from single-line control height
+  struct {
+    int corner_radius, tail_size;
+    int padding_x, padding_y, gap;
+    struct {
+      int size, blur;
+      ipoint16_t offset;
+    } shadow;
+  } tooltip;
 
   // Writes the theme's palette into g_sys_colors.  Called by set_theme()
   // before evThemeChanged is broadcast so controls see the new colors
@@ -270,7 +286,7 @@ bool set_theme(theme_style_t style);
 
 static inline int theme_toolbar_band_height(void) {
   theme_t *theme = get_theme();
-  return theme->toolbar_button_size + 2 * theme->toolbar_padding;
+  return theme->toolbar.button_size + 2 * theme->toolbar.padding;
 }
 
 // Paint semantic parts only inside the established paint path. Disabled state
@@ -282,14 +298,14 @@ typedef struct {
   uint32_t    color;         // plastic face colour (0 = theme accent) / card plastic tint
   uint32_t    edge_color;    // THEME_PART_CARD accent edge (alpha 0 = none)
   const char *icon;          // plastic button glyph (SVG name)
-  uint32_t    control_size;  // CONTROL_SIZE_*: scales the glyph by control_size_pct
+  uint32_t    control_size;  // CONTROL_SIZE_*: scales the glyph by control.size_pct
   bool        round;         // force a circular silhouette (BUTTON_STYLE_ROUND)
 } theme_draw_opts_t;
 // theme_draw() with opts; CTRL_PLASTIC in state selects the plastic material for buttons, toolbar buttons and cards.
 void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const theme_draw_opts_t *opts);
 // The area a part leaves for content (≈ GetThemeBackgroundContentRect).
 irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state);
-// `regular` scaled to the CONTROL_SIZE_* in `style` by the theme's control_size_pct (≈ NSControlSize).
+// `regular` scaled to the CONTROL_SIZE_* in `style` by the theme's control.size_pct (≈ NSControlSize).
 int theme_control_extent(int regular, uint32_t style);
 void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color); // shared card painter for flat themes
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state);

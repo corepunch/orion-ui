@@ -49,15 +49,15 @@ static bool theme_validate(theme_t *t) {
   REQUIRE(draw_combobox)
   REQUIRE(apply_palette)
 #undef REQUIRE
-  if (t->scrollbar_width < 0 || (!t->scrollbar_overlay && t->scrollbar_width == 0) ||
-      (t->scrollbar_overlay && t->scrollbar_width != 0) || t->control_padding < 0 ||
-      t->press_icon_offset < 0 || t->button_corner_radius < 0 || t->window_corner_radius < 0 ||
-      t->caption_height <= 0 || t->menubar_height <= 0 || t->toolbar_button_size <= 0 ||
-      t->toolbar_padding < 0) {
-    fprintf(stderr, "[theme] invalid metrics name=%s gutter=%d overlay=%d padding=%d offset=%d radius=%d window_radius=%d caption=%d menu=%d toolbar=%d toolbar_padding=%d\n",
-            t->name, t->scrollbar_width, t->scrollbar_overlay, t->control_padding,
-            t->press_icon_offset, t->button_corner_radius, t->window_corner_radius,
-            t->caption_height, t->menubar_height, t->toolbar_button_size, t->toolbar_padding);
+  if (t->scrollbar.width < 0 || (!t->scrollbar.overlay && t->scrollbar.width == 0) ||
+      (t->scrollbar.overlay && t->scrollbar.width != 0) || t->control.padding < 0 ||
+      t->control.press_icon_offset < 0 || t->button.corner_radius < 0 || t->window.corner_radius < 0 ||
+      t->caption.height <= 0 || t->menubar.height <= 0 || t->toolbar.button_size <= 0 ||
+      t->toolbar.padding < 0) {
+    fprintf(stderr, "[theme] invalid metrics name=%s gutter=%d overlay=%d padding=%d offset=%d radius=%d window_radius=%d caption=%d menu=%d toolbar=%d toolbar.padding=%d\n",
+            t->name, t->scrollbar.width, t->scrollbar.overlay, t->control.padding,
+            t->control.press_icon_offset, t->button.corner_radius, t->window.corner_radius,
+            t->caption.height, t->menubar.height, t->toolbar.button_size, t->toolbar.padding);
     fflush(stderr);
     return false;
   }
@@ -112,11 +112,11 @@ bool set_theme(theme_style_t style) {
   }
 
   // Track geometry that changes client layout after the switch.
-  int old_scrollbar_width = g_active_theme ? g_active_theme->scrollbar_width : 0;
-  int old_caption_height = g_active_theme ? g_active_theme->caption_height : 0;
-  int old_menubar_height = g_active_theme ? g_active_theme->menubar_height : 0;
-  int old_toolbar_size = g_active_theme ? g_active_theme->toolbar_button_size : 0;
-  int old_toolbar_padding = g_active_theme ? g_active_theme->toolbar_padding : 0;
+  int old_scrollbar_width = g_active_theme ? g_active_theme->scrollbar.width : 0;
+  int old_caption_height = g_active_theme ? g_active_theme->caption.height : 0;
+  int old_menubar_height = g_active_theme ? g_active_theme->menubar.height : 0;
+  int old_toolbar_size = g_active_theme ? g_active_theme->toolbar.button_size : 0;
+  int old_toolbar_padding = g_active_theme ? g_active_theme->toolbar.padding : 0;
 
   s_switching = true;
   g_active_theme = candidate;
@@ -135,11 +135,11 @@ bool set_theme(theme_style_t style) {
     // If the scrollbar gutter width changed the client area of every window
     // shrinks or grows; post evResize to all top-level windows so layout
     // managers recalculate scroll-channel allocations.
-    if (candidate->scrollbar_width != old_scrollbar_width ||
-        candidate->caption_height != old_caption_height ||
-        candidate->menubar_height != old_menubar_height ||
-        candidate->toolbar_button_size != old_toolbar_size ||
-        candidate->toolbar_padding != old_toolbar_padding) {
+    if (candidate->scrollbar.width != old_scrollbar_width ||
+        candidate->caption.height != old_caption_height ||
+        candidate->menubar.height != old_menubar_height ||
+        candidate->toolbar.button_size != old_toolbar_size ||
+        candidate->toolbar.padding != old_toolbar_padding) {
       for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
         post_message(w, evResize, 0, NULL);
       }
@@ -206,13 +206,13 @@ void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const the
 irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state) {
   const theme_t *theme = get_theme();
   if (part != THEME_PART_CARD) return r;
-  int ring = theme->card_ring_width;
-  if (state & CTRL_PLASTIC) ring += MIN(2, theme->plastic_shadow_size);  // the shadow margin is the only gap between neighbours
+  int ring = theme->card.ring_width;
+  if (state & CTRL_PLASTIC) ring += MIN(2, theme->plastic.shadow_size);  // the shadow margin is the only gap between neighbours
   return rect_inset(r, ring);
 }
 
 int theme_control_extent(int regular, uint32_t style) {
-  int pct = get_theme()->control_size_pct[CONTROL_SIZE_INDEX(style)];
+  int pct = get_theme()->control.size_pct[CONTROL_SIZE_INDEX(style)];
   if (pct <= 0) pct = 100;
   return MAX(1, (regular * pct + 50) / 100);
 }

@@ -104,7 +104,7 @@ static void me_ensure_visible(me_state_t *s, int max_w, int vis_h) {
 // the full frame without a title bar; only the vertical scrollbar strip is carved out.
 static void me_text_dims(window_t *win, int *tw, int *th) {
   bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
-  *tw = win->frame.w - (has_v ? get_theme()->scrollbar_width : 0) - TEXTEDIT_PADDING_HORZ * 2;
+  *tw = win->frame.w - (has_v ? get_theme()->scrollbar.width : 0) - TEXTEDIT_PADDING_HORZ * 2;
   *th = win->frame.h - control_text_padding_y(win->flags) * 2;
   if (*tw < 1) *tw = 1;
   if (*th < 1) *th = 1;
@@ -120,7 +120,7 @@ static void me_sync_scrollbar(window_t *win, me_state_t *s) {
   int total_h = calc_text_height(s->buf, tw);
   bool needs_scroll = (total_h > th);
   if (needs_scroll) {
-    tw = MAX(1, tw - get_theme()->scrollbar_width);
+    tw = MAX(1, tw - get_theme()->scrollbar.width);
     total_h = calc_text_height(s->buf, tw);
   }
   int max_scroll = needs_scroll ? (total_h - th) : 0;

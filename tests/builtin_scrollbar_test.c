@@ -56,8 +56,8 @@ void test_builtin_vscroll_click_starts_drag(void) {
   send_message(win, evLeftButtonDown, MAKEDWORD(95, 46), NULL);
 
   ASSERT_TRUE(win->vscroll.dragging);
-  ASSERT_EQUAL(win->vscroll.drag_start_mouse, 26 - get_theme()->scrollbar_width);
-  ASSERT_EQUAL(win->vscroll.drag_mouse, 26 - get_theme()->scrollbar_width);
+  ASSERT_EQUAL(win->vscroll.drag_start_mouse, 26 - get_theme()->scrollbar.width);
+  ASSERT_EQUAL(win->vscroll.drag_mouse, 26 - get_theme()->scrollbar.width);
   ASSERT_EQUAL((int)win->vscroll.pos, 20);
 
   send_message(win, evLeftButtonUp, MAKEDWORD(95, 26), NULL);

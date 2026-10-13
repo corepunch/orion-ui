@@ -203,7 +203,7 @@ static bool dock_grip(window_t *win, ipoint16_t point) {
   if (d->side == DOCK_FILL || (d->flags & DOCK_NOFLOAT) || (win->flags & WINDOW_NODRAG)) return false;
   if (d->flags & DOCK_MENU) {
     bool vertical = d->side == DOCK_FLOAT || dock_vertical(d->side);
-    return vertical ? point.y < get_theme()->toolbar_grip_size : point.x < get_theme()->toolbar_grip_size;
+    return vertical ? point.y < get_theme()->toolbar.grip_size : point.x < get_theme()->toolbar.grip_size;
   }
   if (point.y >= titlebar_height(win)) return false;
   if (win->flags & WINDOW_TOOLBAR) {
@@ -379,7 +379,7 @@ void dock_paint_overlay(window_t *host) {
   }
   if (pane->dock->flags & (DOCK_TOOLBAR | DOCK_MENU)) {
     int size = titlebar_height(pane);
-    if (size <= 0) size = get_theme()->menubar_height;
+    if (size <= 0) size = get_theme()->menubar.height;
     switch (dock_drag.target) {
       case DOCK_TOP:    preview = rect_split_top(area, MIN(size, area.h));    break;
       case DOCK_BOTTOM: preview = rect_split_bottom(area, MIN(size, area.h)); break;

@@ -87,8 +87,8 @@ int window_composition_attr(const window_t *win, window_composition_attr_t attr)
   bool flat = window_is_maximized(win) || (win->flags & WINDOW_TRANSPARENT);
   const theme_t *theme = get_theme();
   switch (attr) {
-    case WCA_CORNERS: return flat ? 0 : theme->window_corner_radius;
-    case WCA_SHADOW:  return !flat && theme->window_shadow_blur > 0;
+    case WCA_CORNERS: return flat ? 0 : theme->window.corner_radius;
+    case WCA_SHADOW:  return !flat && theme->window.shadow.blur > 0;
     case WCA_BORDER:  return !flat;
     default:          return 0;
   }

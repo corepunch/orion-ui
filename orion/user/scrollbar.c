@@ -129,7 +129,7 @@ void set_scroll_content(window_t *win, int width, int height, int x, int y) {
   int extent[] = {width, height}, position[] = {x, y};
   bool allowed[] = {(win->flags & WINDOW_HSCROLL) != 0, (win->flags & WINDOW_VSCROLL) != 0};
   int available[] = {win->frame.w, MAX(0, win->frame.h - titlebar_height(win) - statusbar_height(win))};
-  int gutter[] = {(win->flags & WINDOW_STATUSBAR) ? 0 : get_theme()->scrollbar_width, get_theme()->scrollbar_width};
+  int gutter[] = {(win->flags & WINDOW_STATUSBAR) ? 0 : get_theme()->scrollbar.width, get_theme()->scrollbar.width};
   for (int axis = 0; axis < 2; axis++)
     bars[axis].visible = allowed[axis] && bars[axis].visible_mode == SB_VIS_SHOW;
   // Start without automatic gutters, then converge as either bar can reduce
@@ -206,7 +206,7 @@ static bool sb_try_scroll(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int 
   sb->pos = new_pos;
   send_message(win, scroll_msg, (uint32_t)new_pos, NULL);
   invalidate_window(win);
-  if (get_theme()->scrollbar_overlay)
+  if (get_theme()->scrollbar.overlay)
     sb_overlay_reveal(win, sb);
   // a. Scroll under stationary pointer: re-evaluate hover after content moves
   // under a stationary cursor.  Synthesise an evMouseMove at the last known
@@ -230,7 +230,7 @@ static bool sb_try_scroll(window_t *win, win_sb_t *sb, uint32_t scroll_msg, int 
 static void sb_handle_drag_move(window_t *win, win_sb_t *sb, uint32_t scroll_msg,
                                  int mouse_delta, int track) {
   sb->drag_mouse += mouse_delta;
-  int eff_track = track - 2 * get_theme()->scrollbar_width;
+  int eff_track = track - 2 * get_theme()->scrollbar.width;
   int track_len  = (eff_track > 0 ? eff_track : track);
   int pos_eff    = sb->drag_mouse;
   int tl         = ui_sb_thumb_len(sb, track_len);
@@ -244,17 +244,17 @@ static void sb_handle_drag_move(window_t *win, win_sb_t *sb, uint32_t scroll_msg
 
 static void sb_handle_track_click(window_t *win, win_sb_t *sb, uint32_t scroll_msg,
                                    int pos, int track) {
-  if (track >= 2 * get_theme()->scrollbar_width) {
-    if (pos < get_theme()->scrollbar_width) {
+  if (track >= 2 * get_theme()->scrollbar.width) {
+    if (pos < get_theme()->scrollbar.width) {
       sb_try_scroll(win, sb, scroll_msg, sb->pos - SB_ARROW_STEP);
       return;
     }
-    if (pos >= track - get_theme()->scrollbar_width) {
+    if (pos >= track - get_theme()->scrollbar.width) {
       sb_try_scroll(win, sb, scroll_msg, sb->pos + SB_ARROW_STEP);
       return;
     }
-    int eff_track = track - 2 * get_theme()->scrollbar_width;
-    int pos_eff   = pos - get_theme()->scrollbar_width;
+    int eff_track = track - 2 * get_theme()->scrollbar.width;
+    int pos_eff   = pos - get_theme()->scrollbar.width;
     if (eff_track > 0) {
       int tl = ui_sb_thumb_len(sb, eff_track);
       int to = ui_sb_thumb_off(sb, eff_track, tl);
@@ -334,7 +334,7 @@ bool scrollbar_handle_builtin_mouse(window_t *win, uint32_t msg, uint32_t wparam
 
   bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
 
-  bool overlay = get_theme()->scrollbar_overlay;
+  bool overlay = get_theme()->scrollbar.overlay;
 
   if (overlay) {
     // ── Overlay mode ──────────────────────────────────────────────────────────
@@ -414,11 +414,11 @@ bool scrollbar_handle_builtin_mouse(window_t *win, uint32_t msg, uint32_t wparam
     // ── Classic (reserved-gutter) mode ────────────────────────────────────────
 
     int h_x_min   = h_merged ? SB_STATUS_SPLIT_X(win->frame.w) : 0;
-    int h_y_min   = h_merged ? content_h : content_h - get_theme()->scrollbar_width;
+    int h_y_min   = h_merged ? content_h : content_h - get_theme()->scrollbar.width;
     int h_y_max   = h_merged ? content_h + STATUSBAR_HEIGHT : content_h;
     int h_track   = (win->frame.w - h_x_min) -
-                    (h_merged ? get_theme()->scrollbar_width : (has_v ? get_theme()->scrollbar_width : 0));
-    int v_track = content_h - (has_h && !h_merged ? get_theme()->scrollbar_width : 0);
+                    (h_merged ? get_theme()->scrollbar.width : (has_v ? get_theme()->scrollbar.width : 0));
+    int v_track = content_h - (has_h && !h_merged ? get_theme()->scrollbar.width : 0);
 
     if (msg == evMouseMove || msg == evLeftButtonUp) {
       if (win->hscroll.dragging) {
@@ -462,7 +462,7 @@ bool scrollbar_handle_builtin_mouse(window_t *win, uint32_t msg, uint32_t wparam
       return true;
     }
 
-    if (has_v && cx >= win->frame.w - get_theme()->scrollbar_width && cx < win->frame.w &&
+    if (has_v && cx >= win->frame.w - get_theme()->scrollbar.width && cx < win->frame.w &&
         cy >= 0 && cy < content_h) {
       if (!win->vscroll.enabled) return true;
       if (cy >= v_track) return true;
@@ -631,21 +631,21 @@ bool scrollbar_handle_builtin_gesture(window_t *win, const ax_gesture_t *gesture
 void scrollbar_draw_statusbar_merged_hscroll(window_t *win, irect16_t row, int split_x) {
   if (!win) return;
   win_sb_t *sb = &win->hscroll;
-  irect16_t corner = rect_split_right(row, get_theme()->scrollbar_width);
+  irect16_t corner = rect_split_right(row, get_theme()->scrollbar.width);
   theme_draw(THEME_PART_SCROLLBAR_CORNER, corner, CTRL_NORMAL);
 
-  int bw = row.w - split_x - get_theme()->scrollbar_width;
+  int bw = row.w - split_x - get_theme()->scrollbar.width;
   if (bw <= 0)
     return;
 
   int sx = row.x + split_x;
   theme_draw(THEME_PART_SCROLLBAR_TRACK, R(sx, row.y, bw, row.h), CTRL_NORMAL);
-  if (bw >= 2 * get_theme()->scrollbar_width) {
-    irect16_t left_arr  = {sx, row.y, get_theme()->scrollbar_width, row.h};
-    irect16_t right_arr = {sx + bw - get_theme()->scrollbar_width, row.y, get_theme()->scrollbar_width, row.h};
+  if (bw >= 2 * get_theme()->scrollbar.width) {
+    irect16_t left_arr  = {sx, row.y, get_theme()->scrollbar.width, row.h};
+    irect16_t right_arr = {sx + bw - get_theme()->scrollbar.width, row.y, get_theme()->scrollbar.width, row.h};
     theme_draw(THEME_PART_SCROLLBAR_ARROW_LEFT, left_arr, sb->enabled ? CTRL_NORMAL : CTRL_DISABLED);
     theme_draw(THEME_PART_SCROLLBAR_ARROW_RIGHT, right_arr, sb->enabled ? CTRL_NORMAL : CTRL_DISABLED);
-    int eff_track = bw - 2 * get_theme()->scrollbar_width;
+    int eff_track = bw - 2 * get_theme()->scrollbar.width;
     if (eff_track > 0) {
       int tl = ui_sb_thumb_len(sb, eff_track);
       int to = ui_sb_thumb_off(sb, eff_track, tl);
@@ -682,7 +682,7 @@ void draw_builtin_scrollbars(window_t *win) {
   bool h_merged = has_h && (win->flags & WINDOW_STATUSBAR);
   int content_h = win->frame.h - t - s;
 
-  if (th->scrollbar_overlay) {
+  if (th->scrollbar.overlay) {
     // ── Overlay mode: draw thin transparent thumbs over content ──────────────
     //
     // No gutter fill, no arrow buttons.  Each thumb is SB_OVERLAY_THUMB_W px
@@ -715,54 +715,54 @@ void draw_builtin_scrollbars(window_t *win) {
 
   if (has_h && !h_merged) {
     win_sb_t *sb = &win->hscroll;
-    int bw = win->frame.w - (has_v ? get_theme()->scrollbar_width : 0);
-    irect16_t hbar = {base_x, base_y + content_h - get_theme()->scrollbar_width, bw, get_theme()->scrollbar_width};
+    int bw = win->frame.w - (has_v ? get_theme()->scrollbar.width : 0);
+    irect16_t hbar = {base_x, base_y + content_h - get_theme()->scrollbar.width, bw, get_theme()->scrollbar.width};
     theme_draw(THEME_PART_SCROLLBAR_TRACK, hbar, CTRL_NORMAL);
-    if (bw >= 2 * get_theme()->scrollbar_width) {
-      irect16_t left_arr  = rect_split_left(hbar, get_theme()->scrollbar_width);
-      irect16_t right_arr = rect_split_right(hbar, get_theme()->scrollbar_width);
+    if (bw >= 2 * get_theme()->scrollbar.width) {
+      irect16_t left_arr  = rect_split_left(hbar, get_theme()->scrollbar.width);
+      irect16_t right_arr = rect_split_right(hbar, get_theme()->scrollbar.width);
       theme_draw(THEME_PART_SCROLLBAR_ARROW_LEFT, left_arr, sb->enabled ? CTRL_NORMAL : CTRL_DISABLED);
       theme_draw(THEME_PART_SCROLLBAR_ARROW_RIGHT, right_arr, sb->enabled ? CTRL_NORMAL : CTRL_DISABLED);
-      int eff_track = bw - 2 * get_theme()->scrollbar_width;
+      int eff_track = bw - 2 * get_theme()->scrollbar.width;
       if (eff_track > 0) {
         int tl = ui_sb_thumb_len(sb, eff_track);
         int to = ui_sb_thumb_off(sb, eff_track, tl);
-        theme_draw(THEME_PART_SCROLLBAR_THUMB, R(left_arr.x + left_arr.w + to, hbar.y, tl, get_theme()->scrollbar_width), sb->enabled ? CTRL_NORMAL : CTRL_DISABLED);
+        theme_draw(THEME_PART_SCROLLBAR_THUMB, R(left_arr.x + left_arr.w + to, hbar.y, tl, get_theme()->scrollbar.width), sb->enabled ? CTRL_NORMAL : CTRL_DISABLED);
       }
     } else {
       int tl = ui_sb_thumb_len(sb, bw);
       int to = ui_sb_thumb_off(sb, bw, tl);
-      theme_draw(THEME_PART_SCROLLBAR_THUMB, R(hbar.x + to, hbar.y, tl, get_theme()->scrollbar_width), sb->enabled ? CTRL_NORMAL : CTRL_DISABLED);
+      theme_draw(THEME_PART_SCROLLBAR_THUMB, R(hbar.x + to, hbar.y, tl, get_theme()->scrollbar.width), sb->enabled ? CTRL_NORMAL : CTRL_DISABLED);
     }
   }
 
   if (has_v) {
     win_sb_t *sb = &win->vscroll;
-    int bh = content_h - (has_h && !h_merged ? get_theme()->scrollbar_width : 0);
-    irect16_t vbar = {base_x + win->frame.w - get_theme()->scrollbar_width, base_y, get_theme()->scrollbar_width, bh};
+    int bh = content_h - (has_h && !h_merged ? get_theme()->scrollbar.width : 0);
+    irect16_t vbar = {base_x + win->frame.w - get_theme()->scrollbar.width, base_y, get_theme()->scrollbar.width, bh};
     theme_draw(THEME_PART_SCROLLBAR_TRACK, vbar, CTRL_NORMAL);
-    if (bh >= 2 * get_theme()->scrollbar_width) {
-      irect16_t top_arr = rect_split_top(vbar, get_theme()->scrollbar_width);
-      irect16_t bot_arr = rect_split_bottom(vbar, get_theme()->scrollbar_width);
+    if (bh >= 2 * get_theme()->scrollbar.width) {
+      irect16_t top_arr = rect_split_top(vbar, get_theme()->scrollbar.width);
+      irect16_t bot_arr = rect_split_bottom(vbar, get_theme()->scrollbar.width);
       theme_draw(THEME_PART_SCROLLBAR_ARROW_UP, top_arr, sb->enabled ? CTRL_NORMAL : CTRL_DISABLED);
       theme_draw(THEME_PART_SCROLLBAR_ARROW_DOWN, bot_arr, sb->enabled ? CTRL_NORMAL : CTRL_DISABLED);
-      int eff_track = bh - 2 * get_theme()->scrollbar_width;
+      int eff_track = bh - 2 * get_theme()->scrollbar.width;
       if (eff_track > 0) {
         int tl = ui_sb_thumb_len(sb, eff_track);
         int to = ui_sb_thumb_off(sb, eff_track, tl);
-        theme_draw(THEME_PART_SCROLLBAR_THUMB, R(vbar.x, top_arr.y + top_arr.h + to, get_theme()->scrollbar_width, tl), sb->enabled ? CTRL_NORMAL : CTRL_DISABLED);
+        theme_draw(THEME_PART_SCROLLBAR_THUMB, R(vbar.x, top_arr.y + top_arr.h + to, get_theme()->scrollbar.width, tl), sb->enabled ? CTRL_NORMAL : CTRL_DISABLED);
       }
     } else {
       int tl = ui_sb_thumb_len(sb, bh);
       int to = ui_sb_thumb_off(sb, bh, tl);
-      theme_draw(THEME_PART_SCROLLBAR_THUMB, R(vbar.x, vbar.y + to, get_theme()->scrollbar_width, tl), sb->enabled ? CTRL_NORMAL : CTRL_DISABLED);
+      theme_draw(THEME_PART_SCROLLBAR_THUMB, R(vbar.x, vbar.y + to, get_theme()->scrollbar.width, tl), sb->enabled ? CTRL_NORMAL : CTRL_DISABLED);
     }
   }
 
   if (has_h && !h_merged && has_v) {
-    irect16_t corner = {base_x + win->frame.w - get_theme()->scrollbar_width,
-                        base_y + content_h - get_theme()->scrollbar_width,
-                        get_theme()->scrollbar_width, get_theme()->scrollbar_width};
+    irect16_t corner = {base_x + win->frame.w - get_theme()->scrollbar.width,
+                        base_y + content_h - get_theme()->scrollbar.width,
+                        get_theme()->scrollbar.width, get_theme()->scrollbar.width};
     theme_draw(THEME_PART_SCROLLBAR_CORNER, corner, CTRL_NORMAL);
   }
 }

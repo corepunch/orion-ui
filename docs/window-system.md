@@ -125,8 +125,8 @@ stays visible, as when dragging out of a palette. `window_clear_drag_visual`
 ends either kind. `window_lift_offset()` reports the offset a window paints at
 in the current pass (zero for a drag copy's in-place paint).
 
-A lifted window draws the theme drag shadow (`drag_shadow_blur`,
-`drag_shadow_offset`, `drag_shadow_color`) under that paint. The offset is
+A lifted window draws the theme drag shadow (`drag.shadow.blur`,
+`drag.shadow.offset`, `drag.shadow.color`) under that paint. The offset is
 downward, so the dark part sits underneath the window instead of in a halo
 the fill covers. Zero blur draws none. The window procedure stays clipped to
 the window rectangle. Resting top-level windows keep the separate

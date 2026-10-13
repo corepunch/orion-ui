@@ -200,8 +200,8 @@ static void test_flat_tool_items(void) {
       ASSERT_EQUAL(recorded_radius, 4);
     }
   }
-  ASSERT_EQUAL(theme->window_corner_radius, 8);
-  ASSERT_EQUAL(paint_classic_instance()->window_corner_radius, 0);
+  ASSERT_EQUAL(theme->window.corner_radius, 8);
+  ASSERT_EQUAL(paint_classic_instance()->window.corner_radius, 0);
   PASS();
 }
 

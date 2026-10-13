@@ -71,7 +71,7 @@ static void make_badgef(window_t *parent, sys_color_idx_t role, const char *fmt,
 static void build_card(window_t *grid, const git_summary_t *t) {
   window_t *card = make_view(grid, win_card, 0, 0);
   if (!card) return;
-  int card_inset = get_theme()->card_ring_width + get_theme()->card_padding_y;
+  int card_inset = get_theme()->card.ring_width + get_theme()->card.padding_y;
   card->layout.layout_padding = (irect16_t){card_inset, card_inset, card_inset, card_inset};
   sys_color_idx_t verdict = tile_role(t);
   send_message(card, cdSetEdgeColor, 0, (void *)(uintptr_t)color_with_alpha(get_sys_color(verdict), EDGE_ALPHA));

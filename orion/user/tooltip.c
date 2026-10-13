@@ -60,22 +60,22 @@ static bool tooltip_source_visible(window_t *src) {
 static void tooltip_show(window_t *win) {
   if (!g_tooltip_text[0] || !tooltip_source_visible(g_tooltip_src)) return;
   const theme_t *theme = get_theme();
-  int pad = theme->tooltip_shadow_size;
+  int pad = theme->tooltip.shadow.size;
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
   bool horizontal = g_tooltip_preferred_side == TOOLTIP_TAIL_LEFT || g_tooltip_preferred_side == TOOLTIP_TAIL_RIGHT;
-  int tail = theme->tooltip_tail_size;
-  int max_text = MAX(1, MIN(TOOLTIP_MAX_WIDTH, sw - 2 * (pad + theme->tooltip_padding_x) - (horizontal ? tail : 0)));
+  int tail = theme->tooltip.tail_size;
+  int max_text = MAX(1, MIN(TOOLTIP_MAX_WIDTH, sw - 2 * (pad + theme->tooltip.padding_x) - (horizontal ? tail : 0)));
   int tw = MAX(1, MIN(text_strwidth(FONT_SMALL, g_tooltip_text), max_text));
   int th = calc_text_height_font(FONT_SMALL, g_tooltip_text, tw);
-  int margin = pad + theme->tooltip_corner_radius + tail;
-  int w = tw + 2 * (pad + theme->tooltip_padding_x) + (horizontal ? tail : 0);
-  int h = th + 2 * (pad + theme->tooltip_padding_y) + (horizontal ? 0 : tail);
+  int margin = pad + theme->tooltip.corner_radius + tail;
+  int w = tw + 2 * (pad + theme->tooltip.padding_x) + (horizontal ? tail : 0);
+  int h = th + 2 * (pad + theme->tooltip.padding_y) + (horizontal ? 0 : tail);
   if (horizontal) h = MAX(h, 2 * margin);
   else w = MAX(w, 2 * margin);
   ipoint16_t center = {g_tooltip_anchor.x + g_tooltip_anchor.w / 2, g_tooltip_anchor.y + g_tooltip_anchor.h / 2};
   irect16_t bar = g_tooltip_bar_rect;
-  int gap = theme->tooltip_gap - pad;
+  int gap = theme->tooltip.gap - pad;
   int x = center.x - w / 2, y = center.y - h / 2;
   g_tooltip_tail_side = g_tooltip_preferred_side;
   if (horizontal) {
@@ -112,7 +112,7 @@ static result_t tooltip_win_proc(window_t *win, uint32_t msg, uint32_t wparam, v
       irect16_t bounds = R(0, 0, win->frame.w, win->frame.h);
       draw_tooltip_bubble(bounds, g_tooltip_tail_offset, g_tooltip_tail_side);
       irect16_t text = rect_inset_xy(tooltip_bubble_body_rect(bounds, g_tooltip_tail_side),
-                                     theme->tooltip_padding_x, theme->tooltip_padding_y);
+                                     theme->tooltip.padding_x, theme->tooltip.padding_y);
       draw_text_wrapped(win->title, &text, get_sys_color(brTextNormal));
       return true;
     }

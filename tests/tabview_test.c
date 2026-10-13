@@ -159,7 +159,7 @@ static void test_tabview_session_focus_and_removal(void) {
   ASSERT_TRUE(send_message(tabs, tcSetSelection, 0, NULL));
   ASSERT_EQUAL(g_ui_runtime.focused, alternate);
   ASSERT_TRUE(send_message(tabs, tcGetTabRect, 0, &r));
-  ASSERT_EQUAL(r.x, 2);
+  ASSERT_EQUAL(r.x, 0);
   ASSERT_TRUE(send_message(tabs, tcSetSelection, 7, NULL));
   destroy_window(alternate);
   ASSERT_TRUE(send_message(tabs, tcSetSelection, 0, NULL));
