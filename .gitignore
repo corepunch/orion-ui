@@ -6,6 +6,7 @@ Gmax 1.2
 *.d
 
 # Object files
+__pycache__/
 *.o
 *.ko
 *.obj

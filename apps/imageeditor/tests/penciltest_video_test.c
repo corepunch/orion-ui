@@ -80,6 +80,55 @@ static void video_arguments(void) {
   PASS();
 }
 
+static void video_source_pencil(const char *directory) {
+  TEST("black temporal projects retain all source grayscale levels in an independent visible Pencil layer");
+  char path[PATH_MAX], filtered_path[PATH_MAX], python[PATH_MAX], failed_path[PATH_MAX];
+  snprintf(path, sizeof(path), "%s/source-pencil.ptf", directory);
+  snprintf(filtered_path, sizeof(filtered_path), "%s/filtered.rgb", directory);
+  snprintf(python, sizeof(python), "%s/source-python", directory);
+  snprintf(failed_path, sizeof(failed_path), "%s/truncated-pencil.ptf", directory);
+  uint8_t source[2 * 257 * 3], filtered[sizeof(source)];
+  for (int frame = 0; frame < 2; frame++) for (int p = 0; p < 257; p++) {
+    int index = (frame * 257 + p) * 3;
+    memset(source + index, frame ? 255 - (p & 255) : (p & 255), 3);
+    memset(filtered + index, p % 2 ? 255 : 0, 3);
+  }
+  source[256 * 3] = 255; source[256 * 3 + 1] = source[256 * 3 + 2] = 0;
+  source[(257 + 256) * 3] = source[(257 + 256) * 3 + 1] = 0; source[(257 + 256) * 3 + 2] = 255;
+  FILE *fp = fopen(filtered_path, "wb"); ASSERT_NOT_NULL(fp);
+  ASSERT_TRUE(pv_write(fp, filtered, sizeof(filtered))); fclose(fp);
+  fp = fopen(python, "w"); ASSERT_NOT_NULL(fp);
+  fprintf(fp, "#!/bin/sh\ncat '%s'\n", filtered_path); fclose(fp); ASSERT_EQUAL(chmod(python, 0700), 0);
+  pv_options_t o = {.output = path, .mode = PV_BLACK, .python = python, .threshold = 170,
+                    .min_width = 3.5, .min_length = 20, .temporal = true};
+  pv_video_t v = {.width = 257, .height = 1, .count = 2, .fps = 24};
+  v.pixels = tmpfile(); v.times = calloc(2, sizeof(*v.times));
+  ASSERT_NOT_NULL(v.pixels); ASSERT_NOT_NULL(v.times);
+  v.times[0].delay = 42; v.times[1].delay = 83;
+  ASSERT_TRUE(pv_write(v.pixels, source, sizeof(source)));
+  ASSERT_TRUE(pv_filter_ink(&o, &v)); ASSERT_NOT_NULL(v.source_pixels); ASSERT_TRUE(v.pixels != v.source_pixels);
+  ASSERT_TRUE(pv_palette(&v, &o)); ASSERT_TRUE(pv_output(&o, &v));
+  int w, h; uint32_t palette[256], bg; bool show;
+  pencil_file_layers_t layers;
+  anim_timeline_t *tl = flc_load_layers(path, &w, &h, palette, &bg, &show, &layers);
+  ASSERT_NOT_NULL(tl); ASSERT_EQUAL(w, 257); ASSERT_EQUAL(h, 1); ASSERT_EQUAL(tl->frame_count, 2);
+  ASSERT_EQUAL(layers.active, IE_LAYER_COLOR); ASSERT_EQUAL(layers.visible, 15);
+  for (int frame = 0; frame < 2; frame++) {
+    uint8_t pencil[257], ink[257];
+    for (int p = 0; p < 257; p++) { pencil[p] = frame ? p : 255 - p; ink[p] = p % 2 ? 255 : v.black_index; }
+    pencil[256] = frame ? 226 : 178;
+    ASSERT_TRUE(test_anim_cel_matches(tl->frames[frame], 0, ink, w, h));
+    ASSERT_TRUE(test_anim_cel_matches(tl->frames[frame], 1, pencil, w, h));
+    ASSERT_EQUAL(tl->frames[frame]->delay_ms, frame ? 83 : 42);
+  }
+  o.output = failed_path;
+  ASSERT_EQUAL(ftruncate(fileno(v.source_pixels), sizeof(source) - 1), 0);
+  ASSERT_FALSE(pv_output(&o, &v)); ASSERT_TRUE(access(failed_path, F_OK) != 0);
+  free(layers.background); anim_timeline_free(tl); pv_free(&v);
+  unlink(path); unlink(filtered_path); unlink(python);
+  PASS();
+}
+
 static void video_palette_sources(const char *directory) {
   TEST("default/existing palettes are embedded independently of pencil coverage; black uses its actual index");
   char path[PATH_MAX]; snprintf(path, sizeof(path), "%s/custom.pal", directory);
@@ -248,13 +297,17 @@ static void video_external_projects(const char *directory, bool ink_only) {
   for (int example = ink_only ? 1 : 0; example < (ink_only ? 2 : ARRAY_LEN(names)); example++) {
     int mode = example < 3 ? example : PV_PALETTE;
     char path[PATH_MAX];
-    snprintf(path, sizeof(path), "%s/%s.ptf", directory, names[example]);
+    const char *project_override = ink_only ? getenv("PENCILTEST_VIDEO_INK_PROJECT") : NULL;
+    const char *pencil_frames = ink_only ? getenv("PENCILTEST_VIDEO_PENCIL_FRAMES") : NULL;
+    if (project_override) snprintf(path, sizeof(path), "%s", project_override);
+    else snprintf(path, sizeof(path), "%s/%s.ptf", directory, names[example]);
     int w, h; uint32_t palette[256], bg; bool show;
     pencil_file_layers_t layers;
     anim_timeline_t *tl = flc_load_layers(path, &w, &h, palette, &bg, &show, &layers);
     ASSERT_NOT_NULL(tl);
     if (example != 2) ASSERT_EQUAL(memcmp(palette, pencil_default_colors(), sizeof(palette)), 0);
     ASSERT_EQUAL(palette[255], 0);
+    if (pencil_frames) { ASSERT_EQUAL(layers.active, IE_LAYER_COLOR); ASSERT_EQUAL(layers.visible, 15); }
     size_t n = (size_t)w * h;
     uint8_t *samples = malloc(n); ASSERT_NOT_NULL(samples);
     uint8_t *cel = malloc(n); ASSERT_NOT_NULL(cel);
@@ -281,6 +334,14 @@ static void video_external_projects(const char *directory, bool ink_only) {
           if (mode == PV_BLACK && color[3]) ASSERT_EQUAL(expected, MAKE_COLOR(0,0,0,255));
         }
       }
+      if (pencil_frames) {
+        snprintf(path, sizeof(path), "%s/frame-%06d.png", pencil_frames, i + 1);
+        png_image source = {.version = PNG_IMAGE_VERSION};
+        ASSERT_TRUE(png_image_begin_read_from_file(&source, path)); source.format = PNG_FORMAT_GRAY;
+        ASSERT_TRUE(png_image_finish_read(&source, NULL, samples, 0, NULL)); png_image_free(&source);
+        ASSERT_TRUE(anim_frame_expand_cel(tl->frames[i], 1, cel, w, h));
+        for (size_t p = 0; p < n; p++) ASSERT_EQUAL(cel[p], 255 - samples[p]);
+      }
     }
     printf("\n    %s: %d frames, retained RLE cels %.2f MiB (raw cels %.2f MiB)\n", names[example], tl->frame_count,
            stored_bytes / 1048576.0, 3.0 * n * tl->frame_count / 1048576.0);
@@ -296,6 +357,7 @@ int main(void) {
   if (!mkdtemp(directory)) { perror(directory); return 1; }
   video_grayscale(); video_ink_cleanup(directory); video_arguments(); video_global_palette(); video_timestamps(); video_decoder(directory);
   video_palette_sources(directory);
+  video_source_pencil(directory);
   video_native_roundtrip(directory, PV_PENCIL, PV_DEFAULT_PALETTE);
   video_native_roundtrip(directory, PV_BLACK, PV_DEFAULT_PALETTE);
   video_native_roundtrip(directory, PV_PALETTE, PV_DEFAULT_PALETTE);

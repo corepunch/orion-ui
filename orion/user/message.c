@@ -230,6 +230,10 @@ intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 
 static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   if (!win) return false;
+  if (msg == evMouseZoom && (!lparam || !isfinite(*(const float *)lparam) || *(const float *)lparam <= 0)) {
+    fprintf(stderr, "[input] invalid mouse zoom win=%u scale=%f\n", win->id, lparam ? *(const float *)lparam : 0);
+    fflush(stderr); return false;
+  }
   irect16_t const *frame = &win->frame;
   window_t *root = get_root_window(win);
   intptr_t value = 0;
@@ -385,7 +389,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   if (msg == evLeftButtonDown || msg == evLeftButtonDoubleClick ||
       msg == evLeftButtonUp || msg == evRightButtonDown ||
       msg == evRightButtonUp || msg == evMiddleButtonDown ||
-      msg == evMiddleButtonUp || msg == evMouseMove || msg == evWheel) {
+      msg == evMiddleButtonUp || msg == evMouseMove || msg == evWheel || msg == evMouseZoom) {
     ipoint16_t point = {(int16_t)LOWORD(wparam) - win->hscroll.pos,
                        (int16_t)HIWORD(wparam) - win->vscroll.pos};
     if ((win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL | WINDOW_STATUSBAR)) &&
@@ -418,6 +422,14 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   }
   if (!value) {
     switch (msg) {
+      case evMouseZoom:
+        if (window_has_view(win)) {
+          float x = (int16_t)LOWORD(wparam), y = (int16_t)HIWORD(wparam);
+          ax_gesture_t zoom = {AX_GESTURE_UPDATE, x, y, x, y, *(const float *)lparam, 0};
+          window_view_apply_gesture(win, &zoom);
+          return true;
+        }
+        return false;
       case evGesture:
         if (window_has_view(win)) {
           const ax_gesture_t *gesture = lparam;

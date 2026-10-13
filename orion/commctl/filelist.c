@@ -30,7 +30,6 @@
 #define FL_COLOR_FOLDER 0xffa0d000u
 #define FL_COLOR_GEM    0xff50d050u  // bright green — executable .gem plugin
 #define FL_ICON_TEXT_GAP 2
-#define FL_DUP_DBLCLICK_MS (DOUBLE_CLICK_MS / 2u)
 
 // ---------------------------------------------------------------------------
 // Private state
@@ -42,8 +41,7 @@ typedef struct {
   int        count;
   int        cap;
   int        selected;          // index into items[], -1 when nothing selected
-  uint32_t   last_nav_dbl_time; // suppress duplicate platform double-clicks
-  uint32_t   last_nav_dbl_pos;
+  int        activation_index;  // item pressed in the current click sequence
   fileitem_t notify_item;       // shallow copy used as lparam during send_message
 } filelist_data_t;
 
@@ -66,8 +64,6 @@ typedef struct {
 } fl_collect_ctx_t;
 
 static bool fl_matches_filter(const filelist_data_t *data, const char *name);
-static bool fl_duplicate_nav_double_click(filelist_data_t *data, uint32_t pos,
-                                          uint32_t now);
 
 static int fl_sort_compare(const void *a, const void *b) {
   const fl_sort_entry_t *ea = (const fl_sort_entry_t *)a;
@@ -158,6 +154,7 @@ static void fl_free_items(filelist_data_t *data) {
   data->count    = 0;
   data->cap      = 0;
   data->selected = -1;
+  data->activation_index = -1;
 }
 
 // Append one item; takes ownership of a heap-allocated path string.
@@ -269,14 +266,6 @@ static void fl_navigate(window_t *win, filelist_data_t *data, int index) {
                MAKEDWORD(0, FLN_NAVDIR), data->curpath);
 }
 
-static bool fl_duplicate_nav_double_click(filelist_data_t *data, uint32_t pos,
-                                          uint32_t now) {
-  return data &&
-         data->last_nav_dbl_pos == pos &&
-         data->last_nav_dbl_time != 0 &&
-         now - data->last_nav_dbl_time < FL_DUP_DBLCLICK_MS;
-}
-
 // ---------------------------------------------------------------------------
 // Window procedure
 // ---------------------------------------------------------------------------
@@ -329,6 +318,7 @@ result_t win_filelist(window_t *win, uint32_t msg,
     // routing (which sends to root, bypassing win_filelist when it is a child).
     case evLeftButtonDown: {
       int index = fl_hit_index(win, data, wparam);
+      data->activation_index = index;
       if (index < 0) return true;
 
       // Single click — update selection only.
@@ -357,16 +347,12 @@ result_t win_filelist(window_t *win, uint32_t msg,
     // double navigation bug where two evLeftButtonDown events arrive
     // before evLeftButtonDoubleClick.
     case evLeftButtonDoubleClick: {
-      uint32_t now = axGetMilliseconds();
-      if (fl_duplicate_nav_double_click(data, wparam, now))
-        return true;
-
-      int index = fl_hit_index(win, data, wparam);
-      if (index < 0) return true;
+      // Consume the press before navigation replaces the items and resets scroll.
+      int index = data->activation_index;
+      data->activation_index = -1;
+      if (index < 0 || index != fl_hit_index(win, data, wparam)) return true;
 
       if (data->items[index].is_directory) {
-        data->last_nav_dbl_pos = wparam;
-        data->last_nav_dbl_time = now ? now : 1;
         fl_navigate(win, data, index);
       } else {
         data->notify_item = data->items[index];
@@ -376,6 +362,10 @@ result_t win_filelist(window_t *win, uint32_t msg,
       }
       return true;
     }
+
+    case evPointerCancel:
+      data->activation_index = -1;
+      return true;
 
     // -----------------------------------------------------------------------
     case FLM_SETPATH: {

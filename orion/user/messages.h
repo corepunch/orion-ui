@@ -121,6 +121,10 @@ enum {
   evMeasureScrollContent,
   evMiddleButtonDown, // wparam = MAKEDWORD(x, y) in content space.
   evMiddleButtonUp,
+  // Ctrl+wheel: wparam is the local point before the content-view transform,
+  // including built-in scroll offsets; lparam is const float* incremental scale.
+  // One-shot request, independent of evGesture's begin/update/end lifetime.
+  evMouseZoom,
   evUser = 1000
 };
 

@@ -19,7 +19,7 @@ build/lineart-python/bin/python3 -m pip install -r tools/lineart_requirements.tx
 | Mode | Native layer | Pixel transfer | PNG output |
 |---|---|---|---|
 | `--mode pencil` (default) | Pencil | All 256 luminance levels stored reversibly as `255 - luminance` coverage | Lossless 8-bit grayscale |
-| `--mode black` | Color | Stroke-aware simplification; one exact RGB black entry and transparency, with no antialiasing | 1-bit indexed black/transparency |
+| `--mode black` | Color + source Pencil | Stroke-aware simplification for ink; unfiltered grayscale video retained in the project's Pencil layer | 1-bit indexed black/transparency |
 | `--mode palette` | Color | RGB video quantized into the chosen document palette, without dithering | Indexed colors |
 
 Choose the document palette independently of the conversion mode:
@@ -87,9 +87,18 @@ estimate, not automatic face recognition.
 
 `--temporal` optionally uses motion-aligned previous selection and width
 hysteresis to reduce borderline stroke changes. It is experimental and disabled
-by default. The selected reference frame and restored export use ordinary
-per-frame selection. Soft pencil coverage and full-color palette quantization
+by default. The repeatable export Makefile enables it by default. Soft pencil coverage and full-color palette quantization
 retain their existing behavior.
+
+Native black-mode projects also contain the original decoded video in an independent
+Pencil layer, with all 256 luminance levels stored as `255 - luminance` coverage.
+That source reference is preserved before stroke cleanup and temporal processing.
+It starts visible beneath Color, so source details show through transparent areas
+of the cleaned ink. Toggle Pencil off to inspect the cleaned ink alone. Color
+remains the active layer. Color's empty pixels use transparent palette index 255;
+Pencil uses coverage instead, with 0 transparent and 255 full pencil ink. Source
+white therefore becomes zero Pencil coverage, rather than an opaque white fill.
+Black-mode PNG exports and flattened playback retain the cleaned ink only.
 
 Black PNGs have two 1-bit indices (opaque black and transparent white). Native
 Color cels retain the editable 8-bit document palette, using only its black index
@@ -153,23 +162,36 @@ temporary disk files, so memory does not grow with the movie. Allow disk space f
 that spool, compressed layers and outputs. Outputs are published only after a
 successful conversion; existing files are never replaced by the tool.
 
-## Regenerated video examples
+## Repeatable MP4 export
 
-`build/penciltest-video-example/` contains full-resolution conversions of
-`/Users/igor/Downloads/generated_video-2.mp4`: pencil, black, generated 32-color,
-fixed default-palette color, and fixed existing-palette color. Each project has
-145 frames at 1168×784, 24 fps, and 6042 ms total duration. Every project includes
-its PNG sequence and timing, plus a ZIP of the PTF. These generated assets remain
-untracked. The original examples are preserved in the sibling backup directory.
+Penciltest shares the Image Editor implementation; its export Makefile is
+`apps/imageeditor/penciltest/Makefile`. Run:
 
-`build/penciltest-video-ink-example/` contains the re-export with binary ink
-opening (previous example): `black.ptf`, `black.ptf.zip`, and `black-frames/` with 1-bit PNGs and
-unchanged timing. It uses the same source at 1168×784, 145 frames, and 6042 ms.
+```sh
+make -C apps/imageeditor/penciltest INPUT=/path/to/video.mp4
+make -C apps/imageeditor/penciltest INPUT=/path/to/video.mp4 \
+  MIN_WIDTH=1.25 MIN_LENGTH=10 THRESHOLD=180
+```
 
-`build/penciltest-video-stroke-example/` contains the restored stroke-aware
-export, with the same 145 source frames and timing. Its first frame matches the
-approved `build/lineart-comparison/strong-face-protected.png` pixel for pixel.
-The original comparison assets and all generated exports remain untracked.
+Defaults are `MIN_WIDTH=1.25`, `MIN_LENGTH=10`, `THRESHOLD=180`, and `TEMPORAL=1`.
+Lower width/length settings retain more thin/short details; higher thresholds
+include lighter source marks. Width changes occur in steps on a pixel grid;
+`MIN_WIDTH=1.0` retains most one-pixel strokes, while `MIN_LENGTH` still removes
+short isolated marks. These are export-recipe defaults; the converter's
+standalone CLI defaults remain 3.5/20/170. Every setting uses `?=` and can be
+overridden on the command line. Other settings are `OUTPUT_DIR`, `PALETTE`,
+`FFMPEG`, `PYTHON`, `SIZE`, `FPS`, `MAX_FRAMES`, `PROTECT_REGIONS`, and
+`FIXED_PROTECTION`. Empty size/rate/frame-limit settings preserve the whole clip.
+Protection is empty by default because coordinates depend on the source video.
+For the skateboard clip, add `PROTECT_REGIONS="525,105,165,140"`.
+
+The default output is `build/penciltest-video/black.ptf` with binary PNGs in
+`black-frames/` and settings in `export.json`. Native projects include the original
+Pencil layer, visible beneath Color. Re-running stages the conversion before replacing
+the same project and PNG sequence; it creates no backup PTF or ZIP. A different
+existing PTF in the chosen output folder is rejected to keep one project there.
+Unrelated build files are retained. Failed conversions leave the previous export
+in place. `make -C apps/imageeditor/penciltest help` lists the settings.
 
 ## Validation
 
@@ -179,6 +201,10 @@ build/bin/test_palette_file_test
 PENCILTEST_VIDEO_EXAMPLES=build/penciltest-video-example \
   build/bin/test_penciltest_video_test
 PENCILTEST_VIDEO_INK_EXAMPLE=build/penciltest-video-stroke-example \
+  build/bin/test_penciltest_video_test
+
+PENCILTEST_VIDEO_INK_EXAMPLE=build/penciltest-video \
+PENCILTEST_VIDEO_PENCIL_FRAMES=build/penciltest-video/pencil-frames \
   build/bin/test_penciltest_video_test
 
 make build/bin/test_penciltest_layout_test build/bin/test_penciltest_memory_test

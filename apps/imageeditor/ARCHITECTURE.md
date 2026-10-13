@@ -115,7 +115,10 @@ The tool strip stays one column wide. The four layer buttons are half-size
 color swatches are the same half size, two per row. Pencil hides the color palette and
 uses a fixed configurable pencil color; painting paper on it erases to transparency. Background,
 Color, and FX expose the document palette, with their last tool/color remembered during
-the session. Color fill uses opaque ink on the Color plane as a boundary.
+the session. The canvas shows the active layer and those beneath it in the compositing
+order: Background alone, Background/Pencil, Background/Pencil/Color, or all four for FX.
+The Background starts as white paper. This editing cutoff does not alter layer visibility
+flags or saved/exported compositions. Color fill uses opaque ink on the Color plane as a boundary.
 Onion skin decodes neighboring Pencil planes into a temporary byte buffer, uploads
 an R8 texture, and frees the buffer. Only the textures for visible onion slots
 persist; there is no decoded-frame cache. Document composition and exports likewise

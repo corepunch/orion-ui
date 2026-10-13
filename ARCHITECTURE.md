@@ -194,6 +194,13 @@ publish ordinary `evHScroll` / `evVScroll` notifications; content views use thei
 existing transform. Release, Escape, pointer cancellation, focus loss, or an
 unavailable target ends the drag. Applications need no middle-button handlers.
 
+Ctrl+wheel is a one-shot `evMouseZoom` request routed under the pointer, with
+an incremental scale and the local point before the content-view transform.
+Content views zoom around that point by default through the same transform
+arithmetic as pinch. Procedures can consume it to synchronize dependent UI or
+block zoom during drawing. It does not participate in `evGesture` capture or
+lifetime, and unhandled requests never fall back to scrolling.
+
 One finger scrolls too. Finger samples carry `AX_POINTER_TOUCH` and a
 timestamp; `touch_filter()` in `event.c` holds back a press over content whose
 built-in scrollbars can move. A tap delivers the press and release together;

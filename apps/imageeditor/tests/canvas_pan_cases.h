@@ -96,9 +96,59 @@ static void test_pan_release_and_cancel(void) {
   PASS();
 }
 
+static void test_wheel_zoom(void) {
+  TEST("Ctrl+wheel zooms the shared canvas under the pointer without painting or changing history");
+  canvas_doc_t *doc = create_document(NULL, 128, 128);
+  ASSERT_NOT_NULL(doc);
+  window_t *win = doc->canvas_win;
+  canvas_win_state_t *state = win->userdata;
+  window_view_init(win, doc->canvas_w, doc->canvas_h, 2, true);
+  ax_gesture_t rotation = {AX_GESTURE_UPDATE, 32, 32, 32, 32, 2, 0.8f};
+  window_view_apply_gesture(win, &rotation);
+  ipoint16_t anchor = window_client_to_content(win, (ipoint16_t){32, 32});
+  size_t size = (size_t)doc->canvas_w * doc->canvas_h * DOC_BPP;
+  uint8_t *pixels = malloc(size);
+  ASSERT_NOT_NULL(pixels);
+  memcpy(pixels, doc->pixels, size);
+  int undo_count = doc->undo.count;
+  ui_event_t modifiers = {.message = kEventModifiersChanged, .wParam = AX_MOD_CTRL};
+  dispatch_message(&modifiers);
+  ui_event_t wheel = {.message = kEventScrollWheel,
+    .x = (window_screen_x(win) + 32) * UI_WINDOW_SCALE,
+    .y = (window_screen_y(win) + 32) * UI_WINDOW_SCALE, .dy = 1};
+  dispatch_message(&wheel);
+  ASSERT_TRUE(fabsf(window_view_zoom(win) - 2.093270f) < 0.0001f);
+  ipoint16_t after = window_client_to_content(win, (ipoint16_t){32, 32});
+  ASSERT_TRUE(abs(anchor.x - after.x) <= 1 && abs(anchor.y - after.y) <= 1);
+  ASSERT_FALSE(state->gesture_active);
+  ASSERT_NULL(g_ui_runtime.captured);
+  wheel.dy = -1;
+  dispatch_message(&wheel);
+  ASSERT_TRUE(fabsf(window_view_zoom(win) - 2) < 0.0001f);
+  view_matrix_t matrix = win->view->matrix;
+  doc->drawing = true;
+  dispatch_message(&wheel);
+  ASSERT_TRUE(memcmp(&matrix, &win->view->matrix, sizeof(matrix)) == 0);
+  doc->drawing = false;
+  state->gesture_active = true;
+  dispatch_message(&wheel);
+  ASSERT_TRUE(memcmp(&matrix, &win->view->matrix, sizeof(matrix)) == 0);
+  ASSERT_TRUE(state->gesture_active);
+  state->gesture_active = false;
+  ASSERT_FALSE(doc->modified);
+  ASSERT_EQUAL(doc->undo.count, undo_count);
+  ASSERT_EQUAL(doc->redo.count, 0);
+  ASSERT_TRUE(memcmp(pixels, doc->pixels, size) == 0);
+  free(pixels);
+  modifiers.wParam = 0;
+  dispatch_message(&modifiers);
+  close_document(doc);
+  PASS();
+}
+
 int main(void) {
   TEST_START("Canvas mouse panning");
-  void (*cases[])(void) = {test_middle_pan, test_pan_release_and_cancel};
+  void (*cases[])(void) = {test_middle_pan, test_pan_release_and_cancel, test_wheel_zoom};
   for (int i = 0; i < ARRAY_LEN(cases); i++) {
     test_env_init();
     g_app = calloc(1, sizeof(*g_app));

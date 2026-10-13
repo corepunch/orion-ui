@@ -37,6 +37,7 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 | `evKeyUp` | Key released | Orion `AX_KEY_*` value in `wparam` |
 | `evTextInput` | Text character input | `lparam` = `const char *` UTF-8 |
 | `evWheel` | Mouse wheel | `wparam` = MAKEDWORD(x,y) mouse pos; `lparam` = MAKEDWORD(dx,dy) scroll deltas |
+| `evMouseZoom` | Ctrl+wheel zoom | `wparam` = local point before the content-view transform; `lparam` = `const float *` incremental scale |
 | `evCommand` | Control notification | `LOWORD`=id, `HIWORD`=notification code |
 | `evResize` | Window resized / moved | – |
 | `evStatusBar` | Update status bar text | `lparam` = `(void *)const char *` |
@@ -144,6 +145,22 @@ case evWheel: {
 Windows with `WINDOW_HSCROLL` or `WINDOW_VSCROLL` flags automatically handle wheel scrolling via their built-in scrollbars. The framework extracts deltas from lparam and calls `sb_try_scroll()` to update the scrollbar position and fire `evHScroll`/`evVScroll` notifications.
 
 If a window cannot handle wheel events (no scrollbars or not enabled), the event bubbles to the parent window, following WinAPI behavior.
+
+## Mouse Zoom
+
+Ctrl+wheel produces `evMouseZoom` instead of `evWheel`. Wheel up zooms in;
+wheel down zooms out, with a factor of 1.2 per four wheel units, independent of scroll
+sensitivity. Horizontal-only Ctrl+wheel is ignored. The point follows the same
+local coordinate contract as `evGesture`, including built-in scroll offsets;
+it has not been mapped through a content-view transform. The scale pointer is
+valid only during synchronous delivery.
+
+The request is routed to the window under the pointer, then its ancestors until
+handled. Unhandled requests do not scroll. Content views apply cursor-anchored
+zoom by default, using the same 5%–3200% bounds as pinch gestures. Procedures
+can handle the event to set their own policy or synchronize scrollbars. Unlike
+`evGesture`, this event has no begin/end phases and does not capture the pointer
+or change an active gesture's target.
 
 ## Keyboard Input
 

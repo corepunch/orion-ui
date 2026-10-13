@@ -178,6 +178,7 @@ static int handle_mouse(int msg, window_t *win, int x, int y, void *lparam) {
     if (target && c != target) continue;
     if (!rect_contains_point(c->frame, (ipoint16_t){x, y}))
       continue;
+    if (msg == evMouseZoom && window_has_state(c, WINDOW_STATE_DISABLED)) return true;
     // Hit-test in viewport space, then deliver in the child's content space.
     // Controls should not need to know whether an event came directly from a
     // root window or through one or more nested layout containers.
@@ -1021,6 +1022,19 @@ void dispatch_message(ui_event_t *msg) {
         int16_t ly = (int16_t)LOCAL_Y(px, py, win);
         // Use handle_mouse to find deepest child, just like clicks do
         // lparam contains scroll deltas
+        if (ui_get_mod_state() & AX_MOD_CTRL) {
+          for (window_t *owner = win; owner; owner = owner->parent)
+            if (window_has_state(owner, WINDOW_STATE_DISABLED) || !window_has_state(owner, WINDOW_STATE_VISIBLE)) return;
+          if (!dy) break;
+          float scale = powf(1.2f, CLAMP(dy, -32, 32) / 4.0f);
+          if (!handle_mouse(evMouseZoom, win, lx, ly, &scale)) {
+            for (window_t *owner = win; owner; owner = owner->parent) {
+              uint32_t point = MAKEDWORD((int)LOCAL_X(px, py, owner), (int)LOCAL_Y(px, py, owner));
+              if (send_message(owner, evMouseZoom, point, &scale)) break;
+            }
+          }
+          break;
+        }
         void *scroll_deltas = (void*)(intptr_t)MAKEDWORD((uint16_t)(-dx * SCROLL_SENSITIVITY),
                                                           (uint16_t)(dy * SCROLL_SENSITIVITY));
         if (!handle_mouse(evWheel, win, lx, ly, scroll_deltas)) {

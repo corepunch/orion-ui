@@ -44,7 +44,7 @@ typedef struct { double pts, duration; uint16_t delay; } pv_time_t;
 typedef struct { uint64_t count, sum[3]; } pv_bin_t;
 typedef struct { int start, end, axis, range; uint64_t count; } pv_box_t;
 typedef struct {
-  FILE *pixels;
+  FILE *pixels, *source_pixels;
   int width, height, count, fps, colors, black_index;
   pv_time_t *times;
   pv_bin_t *histogram;
@@ -78,7 +78,7 @@ static void pv_usage(FILE *fp) {
   fputs("Usage: penciltest-video [options] INPUT.mp4\n"
         "  -o, --output FILE.ptf   Native project (optional when --frames is used)\n"
         "  --mode pencil          Lossless 8-bit luminance -> Pencil coverage (default)\n"
-        "  --mode black           Stroke-aware opaque black ink -> Color; other pixels clear\n"
+        "  --mode black           Clean black ink -> Color; source grayscale -> visible Pencil\n"
         "  --mode palette         Quantize RGB video -> Color\n"
         "  --palette SOURCE       default (32 colors), generated, or an existing RIFF .pal\n"
         "  --colors N             Generated budget: 32 (default), 64, 128 or 256\n"
@@ -451,7 +451,8 @@ static bool pv_filter_ink(const pv_options_t *o, pv_video_t *v) {
   bool ok = waited == child && WIFEXITED(status) && !WEXITSTATUS(status) && !fstat(fileno(filtered), &st) &&
             (uint64_t)st.st_size == (uint64_t)v->width * v->height * v->count * 3;
   if (!ok) { fclose(filtered); return pv_error("stroke filter failed or returned incomplete frames; no outputs published"); }
-  fclose(v->pixels); v->pixels = filtered; rewind(v->pixels);
+  if (o->output) v->source_pixels = v->pixels; else fclose(v->pixels);
+  v->pixels = filtered; rewind(v->pixels);
   return true;
 }
 
@@ -668,11 +669,16 @@ static bool pv_output(const pv_options_t *o, pv_video_t *v) {
     }
   }
   rewind(v->pixels);
+  if (v->source_pixels) rewind(v->source_pixels);
   for (int i = 0; ok && i < v->count; i++) {
     ok = fread(rgb, 1, n * 3, v->pixels) == n * 3;
     if (!ok) break;
     pv_convert(v, o, rgb, image, pencil);
     if (project) {
+      if (v->source_pixels) {
+        if (fread(rgb, 1, n * 3, v->source_pixels) != n * 3) { ok = pv_error("truncated source pencil frame"); break; }
+        for (size_t p = 0; p < n; p++) pencil[p] = 255 - pv_gray(rgb + p * 3);
+      }
       if (i == 1) pv_put32(project_header + 84, ftell(project));
       ok = pv_flc_frame(project, v, image, i, previous, i == 0);
       memset(blank, 255, n);
@@ -700,7 +706,8 @@ static bool pv_output(const pv_options_t *o, pv_video_t *v) {
     long layer_size = ftell(layers);
     if (layer_size < 0 || (uint64_t)layer_size > 2u * PV_LIMIT) ok = false;
     pv_put32(header, 16 + layer_size); pv_put16(header + 4, 0x7075); memcpy(header + 8, "PTL5", 4);
-    header[12] = 4; header[13] = o->mode == PV_PENCIL ? 2 : 1; header[14] = 15;
+    header[12] = 4; header[13] = o->mode == PV_PENCIL ? 2 : 1;
+    header[14] = 15;
     if (ok) ok = pv_write(project, header, sizeof(header));
     if (fflush(layers)) ok = false;
     rewind(layers);
@@ -743,6 +750,7 @@ static bool pv_output(const pv_options_t *o, pv_video_t *v) {
 
 static void pv_free(pv_video_t *v) {
   if (v->pixels) fclose(v->pixels);
+  if (v->source_pixels) fclose(v->source_pixels);
   free(v->times); free(v->histogram);
 }
 

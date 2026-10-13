@@ -513,7 +513,15 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           draw_checkerboard(canvas_rect, CANVAS_CHECKER_SQUARE_PX);
         if (!pencil_has_layers(doc)) canvas_draw_animation_trace(win, state, doc, canvas_rect);
         static const int pencil_order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
-        for (int order_i = 0; order_i < doc->layer.count; order_i++) {
+        int layer_count = doc->layer.count;
+        if (pencil_has_layers(doc)) {
+          for (int i = 0; i < IE_LAYER_COUNT; i++) {
+            if (pencil_order[i] != doc->layer.active) continue;
+            layer_count = i + 1;
+            break;
+          }
+        }
+        for (int order_i = 0; order_i < layer_count; order_i++) {
           int li = pencil_has_layers(doc) ? pencil_order[order_i] : order_i;
           if (pencil_has_layers(doc) && li == IE_LAYER_PENCIL)
             canvas_draw_animation_trace(win, state, doc, canvas_rect);
@@ -613,6 +621,17 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
     case evCommand: {
       if (!state) return false;
       return false;
+    }
+
+    case evMouseZoom: {
+      if (!state || !doc) return false;
+      if (doc->drawing || state->pan.active || state->gesture_active) return true;
+      float x = (int16_t)LOWORD(wparam), y = (int16_t)HIWORD(wparam);
+      ax_gesture_t zoom = {AX_GESTURE_UPDATE, x, y, x, y, *(const float *)lparam, 0};
+      window_view_apply_gesture(win, &zoom);
+      state->hover_valid = false;
+      canvas_sync_scrollbars(win, state);
+      return true;
     }
 
     case evWheel: {

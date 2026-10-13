@@ -10,10 +10,12 @@
 app_state_t *g_app;
 int g_bw_retina_scale = 1;
 static int r8_uploads, color_uploads, frame_labels;
+static uint32_t drawn_layers[IE_LAYER_COUNT];
+static int drawn_layer_count;
 static uint32_t render_r8(int w, int h, const void *pixels, R_TextureFilter filter, R_TextureWrap wrap) {
-  r8_uploads++;
-  return 1;
+  return ++r8_uploads;
 }
+static bool render_update_r8(uint32_t tex, int x, int y, int w, int h, const void *pixels) { return true; }
 static uint32_t render_color(int w, int h, const void *pixels, R_TextureFilter filter, R_TextureWrap wrap) {
   color_uploads++;
   return 1;
@@ -21,11 +23,21 @@ static uint32_t render_color(int w, int h, const void *pixels, R_TextureFilter f
 static void render_delete(uint32_t tex) { (void)tex; }
 static void render_theme(theme_part_t part, irect16_t rect, ctrl_state_t state) { (void)part; }
 static void render_text(ui_font_t font, const char *text, int x, int y, uint32_t color) { frame_labels++; }
+static void render_indexed(uint32_t tex, irect16_t rect, const uint32_t palette[256], int transparent, float alpha) {
+  if (drawn_layer_count < IE_LAYER_COUNT) drawn_layers[drawn_layer_count] = tex;
+  drawn_layer_count++;
+}
+static void render_sprite(int tex, irect16_t rect, const frect_t *uv, uint32_t color, uint32_t flags) {
+  render_indexed(tex, rect, NULL, 0, 1.0f);
+}
 #define R_CreateTextureR8 render_r8
+#define R_UpdateTextureR8 render_update_r8
 #define R_CreateTextureSRGBA8 render_color
 #define R_DeleteTexture render_delete
 #define theme_draw render_theme
 #define draw_text render_text
+#define draw_indexed_rect render_indexed
+#define draw_sprite_region render_sprite
 
 static void render_timeline(void) {
   toolbar_state_t *tb = window_toolbar_state(g_app->timeline_win);
@@ -61,6 +73,37 @@ static void test_indexed_render(void) {
     ASSERT_EQUAL(doc->pixels[3], 128);
   }
   ASSERT_EQUAL(color_uploads, 0);
+  close_document(doc); PASS();
+}
+
+static void test_layer_view(void) {
+  TEST("canvas shows the selected stage and layers beneath it without changing export visibility");
+  canvas_doc_t *doc = create_document(NULL, 64, 48); ASSERT_NOT_NULL(doc);
+  ASSERT_EQUAL(doc->layer.active, IE_LAYER_PENCIL);
+  ASSERT_EQUAL(doc->layer.stack[IE_LAYER_BG]->pixels[0], 1);
+  ASSERT_EQUAL(doc->ipal.entries[1], IE_PAPER_COLOR);
+  drawn_layer_count = 0;
+  send_message(doc->canvas_win, evPaint, 0, NULL);
+  ASSERT_EQUAL(drawn_layer_count, 2);
+  ASSERT_EQUAL(drawn_layers[0], doc->layer.stack[IE_LAYER_BG]->tex);
+  ASSERT_EQUAL(drawn_layers[1], doc->layer.stack[IE_LAYER_PENCIL]->tex);
+  const int stages[] = {IE_LAYER_FX, IE_LAYER_BG, IE_LAYER_COLOR, IE_LAYER_PENCIL};
+  const int counts[] = {4, 1, 3, 2};
+  const int order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
+  for (int i = 0; i < 4; i++) {
+    ASSERT_TRUE(cmd_pencil_layer(doc, stages[i]));
+    drawn_layer_count = 0;
+    send_message(doc->canvas_win, evPaint, 0, NULL);
+    ASSERT_EQUAL(drawn_layer_count, counts[i]);
+    for (int j = 0; j < counts[i]; j++)
+      ASSERT_EQUAL(drawn_layers[j], doc->layer.stack[order[j]]->tex);
+    for (int j = 0; j < IE_LAYER_COUNT; j++) ASSERT_TRUE(doc->layer.stack[j]->visible);
+  }
+  doc->layer.stack[IE_LAYER_PENCIL]->visible = false;
+  drawn_layer_count = 0;
+  send_message(doc->canvas_win, evPaint, 0, NULL);
+  ASSERT_EQUAL(drawn_layer_count, 1);
+  ASSERT_EQUAL(drawn_layers[0], doc->layer.stack[IE_LAYER_BG]->tex);
   close_document(doc); PASS();
 }
 
@@ -135,6 +178,7 @@ int main(void) {
   resize_window(g_app->chrome_win, 1080, 758 - window_screen_y(g_app->chrome_win));
   create_timeline_window();
   test_indexed_render();
+  test_layer_view();
   test_frame_shortcuts();
   const char *example = getenv("PENCILTEST_RENDER_EXAMPLE");
   if (example) benchmark_example(example);
