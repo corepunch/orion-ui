@@ -57,6 +57,12 @@ complete rectangle, while a positive radius masks the same fill with one
 antialiased silhouette. Coordinates and radius are logical pixels, including
 Retina scaling. No gradient texture or per-row geometry is allocated.
 
+`fill_gradient_rounded_top_rect(top, bottom, r, radius)` uses the same single-pass
+gradient with rounded top corners and square bottom corners. Modern, Light and
+Navy inactive tabs fade from their current face colour to `brPanelDarker` at the
+bottom, giving a recessed shadow. Selected tabs use equal `brControlBg` endpoints
+to merge with the pane.
+
 Modern and Navy share blue surfaces and cyan selection. Selected/pressed
 toolbar items, list/sidebar rows, and active menu items use `brSelectionTop`
 and `brSelectionBottom` from the active palette. `set_sys_colors()` can override

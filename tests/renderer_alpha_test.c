@@ -193,6 +193,14 @@ static void test_selection_gradient(void) {
     ok &= top[0] > mid[0] && mid[0] > bottom[0] && mid[0] > 170 && mid[0] < 200;
     ok &= top[3] == 255 && bottom[3] == 255 && corner[3] == 0 && outside[3] == 0;
     glClear(GL_COLOR_BUFFER_BIT);
+    render_rounded_top_rect_gradient(ui_white_texture, R(4, 4, 24, 24), 24, 24, 6,
+                                      0xffffffff, 0xff000000);
+    read_card_pixel(16, 8, top); read_card_pixel(16, 23, bottom);
+    read_card_pixel(4, 4, corner); read_card_pixel(2, 16, outside);
+    ok &= top[0] > bottom[0] && top[3] == 255 && bottom[3] == 255 && corner[3] == 0 && outside[3] == 0;
+    read_card_pixel(4, 27, corner); read_card_pixel(16, 27, bottom);
+    ok &= corner[3] > 0 && memcmp(corner, bottom, 4) == 0;
+    glClear(GL_COLOR_BUFFER_BIT);
     render_rounded_rect_gradient(ui_white_texture, R(4, 4, 24, 24), 24, 24, 0,
                                   0x800000ff, 0x8000ff00);
     read_card_pixel(16, 8, top); read_card_pixel(16, 23, bottom); read_card_pixel(4, 4, corner);

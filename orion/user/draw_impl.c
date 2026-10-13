@@ -313,6 +313,14 @@ void fill_gradient_rounded_rect(uint32_t top, uint32_t bottom, irect16_t r, int 
                                (int)(r.h * scale + 0.5f), MAX(0, radius) * scale, top, bottom);
 }
 
+void fill_gradient_rounded_top_rect(uint32_t top, uint32_t bottom, irect16_t r, int radius) {
+  extern uint32_t ui_white_texture;
+  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
+  float scale = MAX(1.0f, axGetScaling());
+  render_rounded_top_rect_gradient(ui_white_texture, r, (int)(r.w * scale + 0.5f),
+                                   (int)(r.h * scale + 0.5f), MAX(0, radius) * scale, top, bottom);
+}
+
 void stroke_rounded_rect(uint32_t color, irect16_t r, int radius, int thickness) {
   extern uint32_t ui_white_texture;
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0 || thickness <= 0) return;

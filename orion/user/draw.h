@@ -20,8 +20,12 @@ void render_tooltip_bubble(irect16_t r, isize16_t face_size, float radius, float
                           float tail_offset, float padding, tooltip_tail_side_t side, uint32_t color);
 // Vertical, linear-light gradient with one rounded silhouette; radius 0 fills a row.
 void fill_gradient_rounded_rect(uint32_t top, uint32_t bottom, irect16_t r, int radius);
+// Same gradient with rounded top corners and square bottom corners, for tabs.
+void fill_gradient_rounded_top_rect(uint32_t top, uint32_t bottom, irect16_t r, int radius);
 void render_rounded_rect_gradient(int tex, irect16_t r, int pixel_w, int pixel_h,
                                   float radius, uint32_t top, uint32_t bottom);
+void render_rounded_top_rect_gradient(int tex, irect16_t r, int pixel_w, int pixel_h,
+                                      float radius, uint32_t top, uint32_t bottom);
 // Inset stroke of `thickness` logical pixels. One silhouette, same radius as a card.
 void stroke_rounded_rect(uint32_t color, irect16_t r, int radius, int thickness);
 // Same colour with a different alpha (0 transparent .. 255 opaque).

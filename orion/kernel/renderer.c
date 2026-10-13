@@ -885,6 +885,11 @@ void render_rounded_rect_gradient(int tex, irect16_t r, int pixel_w, int pixel_h
   render_rounded_box(tex, r, pixel_w, pixel_h, radius, 1, top, 0, 0, false, bottom, 0, 0, 1, 0, 0);
 }
 
+void render_rounded_top_rect_gradient(int tex, irect16_t r, int pixel_w, int pixel_h,
+                                      float radius, uint32_t top, uint32_t bottom) {
+  render_rounded_box(tex, r, pixel_w, pixel_h, radius, 1, top, 0, 0, false, bottom, 0, 0, 1, 1, 0);
+}
+
 void render_rounded_rect_stroke(int tex, irect16_t r, int win_w, int win_h,
                                 float radius, float alpha, uint32_t color, float stroke) {
   render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, 0, 0, stroke, 0, 0, 0);

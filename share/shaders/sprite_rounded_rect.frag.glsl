@@ -68,7 +68,9 @@ vec4 frag() {
   if (radius > 0.0 || stroke > 0.0) {
     vec2 pixel = tex * size;
     vec2 center = size * 0.5;
-    float d = roundedBoxSDF(pixel - center, size * 0.5, max(radius, 0.0));
+    // Gradient tabs round only the top (texture coordinates are flipped).
+    float corner_radius = params0.z > 0.5 && params0.w > 0.5 && tex.y < 0.5 ? 0.0 : max(radius, 0.0);
+    float d = roundedBoxSDF(pixel - center, size * 0.5, corner_radius);
     float outer = 1.0 - smoothstep(-1.5, 1.5, d);
     if (stroke > 0.0) {
       float inner = 1.0 - smoothstep(-1.5, 1.5, d + stroke);

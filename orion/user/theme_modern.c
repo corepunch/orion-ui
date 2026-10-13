@@ -121,18 +121,12 @@ static void modern_draw_panel_bg(irect16_t r) {
 
 }
 
-// Rounded on top only so a selected tab can sit flush on the pane.
-static void fill_rounded_top(uint32_t color, irect16_t r, int radius) {
-  if (radius <= 0 || r.h <= 0) { fill_rect(color, r); return; }
-  fill_rounded_rect(color, r, MIN(radius, MIN(r.w, r.h) / 2));
-  if (r.h > radius) fill_rect(color, rect_split_bottom(r, radius));
-}
-
 static void modern_draw_tab(irect16_t r, ctrl_state_t state) {
   uint32_t color = (state & CTRL_SELECTED) ? get_sys_color(brControlBg) :
                    (state & (CTRL_HOVER | CTRL_PRESSED)) ? get_sys_color(brButtonHover) :
                    get_sys_color(brPanelDark);
-  fill_rounded_top(color, r, RADIUS_TAB);
+  uint32_t bottom = (state & CTRL_SELECTED) ? color : get_sys_color(brPanelDarker);
+  fill_gradient_rounded_top_rect(color, bottom, r, RADIUS_TAB);
 }
 
 // ── Titlebar ─────────────────────────────────────────────────────────────────

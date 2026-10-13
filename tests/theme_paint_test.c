@@ -28,18 +28,29 @@ static void paint_rounded(uint32_t color, irect16_t r, int radius) {
     }
   }
 }
-static void paint_gradient(uint32_t top, uint32_t bottom, irect16_t r, int radius) {
-  paint_rounded(0xffffffff, r, radius);
+static void paint_gradient_shape(uint32_t top, uint32_t bottom, irect16_t r, int radius, bool top_only) {
+  recorded_radius = radius;
   for (int y = MAX(0, r.y); y < MIN(64, r.y + r.h); y++) {
     float t = (y - r.y + 0.5f) / r.h;
     uint32_t color = 0;
     for (int shift = 0; shift < 32; shift += 8)
       color |= (uint32_t)lroundf(((top >> shift) & 255) * (1 - t) + ((bottom >> shift) & 255) * t) << shift;
-    for (int x = MAX(0, r.x); x < MIN(128, r.x + r.w); x++)
-      if (pixels[y][x]) pixels[y][x] = color;
+    float rad = top_only && y >= r.y + r.h * 0.5f ? 0 : MIN(radius, MIN(r.w, r.h) * 0.5f);
+    for (int x = MAX(0, r.x); x < MIN(128, r.x + r.w); x++) {
+      float qx = fabsf(x + 0.5f - r.x - r.w * 0.5f) - r.w * 0.5f + rad;
+      float qy = fabsf(y + 0.5f - r.y - r.h * 0.5f) - r.h * 0.5f + rad;
+      if (hypotf(MAX(qx, 0), MAX(qy, 0)) <= rad) pixels[y][x] = color;
+    }
   }
 }
+static void paint_gradient(uint32_t top, uint32_t bottom, irect16_t r, int radius) {
+  paint_gradient_shape(top, bottom, r, radius, false);
+}
+static void paint_gradient_top(uint32_t top, uint32_t bottom, irect16_t r, int radius) {
+  paint_gradient_shape(top, bottom, r, radius, true);
+}
 #define fill_gradient_rounded_rect paint_gradient
+#define fill_gradient_rounded_top_rect paint_gradient_top
 #define fill_rounded_rect paint_rounded
 #define fill_rect paint_fill
 #define draw_wire_rect paint_wire
@@ -56,6 +67,7 @@ theme_t *paint_light_instance(void);
 #undef draw_wire_rect
 #undef fill_rounded_rect
 #undef fill_gradient_rounded_rect
+#undef fill_gradient_rounded_top_rect
 #undef theme_classic_instance
 #undef theme_modern_instance
 #undef theme_navy_instance
@@ -348,7 +360,13 @@ static void test_panel_shades_and_tabs(void) {
     ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
     memset(pixels, 0, sizeof(pixels));
     theme->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_NORMAL);
-    ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDark));
+    for (int shift = 0; shift < 24; shift += 8) {
+      ASSERT_TRUE(((pixels[10][50] >> shift) & 255) > ((pixels[39][50] >> shift) & 255));
+      ASSERT_TRUE(((pixels[10][50] >> shift) & 255) <= ((get_sys_color(brPanelDark) >> shift) & 255));
+      ASSERT_TRUE(((pixels[39][50] >> shift) & 255) >= ((get_sys_color(brPanelDarker) >> shift) & 255));
+    }
+    ASSERT_EQUAL(pixels[10][10], 0);
+    ASSERT_EQUAL(pixels[39][10], pixels[39][50]);
     memset(pixels, 0, sizeof(pixels));
     theme->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_SELECTED);
     ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
