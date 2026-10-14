@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- lamp: origin is ceiling suspension point; broad warm workshop practical. -->
-<prefab>
+<prefab up="y">
   <cylinder pos="0 -34 0" radius="2" height="68" material="iron"/>
   <cone pos="0 -76 0" radius="34" radiusTop="10" height="24" material="brass"/>
   <sphere pos="0 -85 0" radius="8.5" color="1.0 0.92 0.68" shininess="8" castShadow="0" unlit="1"/>

@@ -1,6 +1,6 @@
 <!-- Mira's woven bed basket with a cushion. Z up; 54 cm across, rim at z=15.
      Round, no front. -->
-<prefab>
+<prefab up="z">
   <attach name="bed" pos="0 0 10" />
   <cylinder pos="0 0 1" rot="90 0 0" radius="25" height="2" material="wicker" />
   <cylinder pos="0 0 7.5" rot="90 0 0" radius="26" height="13" tube="2.2" material="wicker" />

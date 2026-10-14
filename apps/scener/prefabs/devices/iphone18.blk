@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Stylized iPhone 18 promo model. Local +Z is the display/front; center is the device center. Dimensions are illustrative. -->
-<prefab>
+<prefab up="y" front="+z">
   <rounded-rect size="7.6 16.2" radius="1.28" color="0.12 0.14 0.18" shininess="70">
     <extrude amount="0.8"/><bevel amount="0.16" bevelSegments="4"/>
   </rounded-rect>

@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- stocked cubby: footprint 1.42x0.38, baseline y=0, front faces +Z. -->
-<prefab>
-  <prefab source="furniture/shelf_unit" scale="0.90 0.90 0.90"/>
-  <prefab source="items/book" pos="42 6 2" rot="0 -6 0" scale="0.56 0.56 0.56" color="0.55 0.08 0.06"/>
-  <prefab source="items/book" pos="8 6 4" rot="0 4 0" scale="0.62 0.62 0.62" color="0.10 0.25 0.46"/>
-  <prefab source="items/jar" pos="-37 6 2" scale="0.68 0.68 0.68" color="0.48 0.12 0.08"/>
-  <prefab source="items/jar" pos="38 62 2" scale="0.68 0.68 0.68" color="0.12 0.36 0.28"/>
-  <prefab source="items/spool" pos="2 62 3" scale="0.52 0.52 0.52"/>
-  <prefab source="items/parts_tray" pos="-36 62 2" scale="0.50 0.50 0.50" color="0.30 0.16 0.06"/>
-  <prefab source="items/tool_jar" pos="-38 118 2" scale="0.62 0.62 0.62" color="0.42 0.23 0.08"/>
-  <prefab source="items/jar" pos="5 118 2" scale="0.64 0.64 0.64" color="0.52 0.32 0.08"/>
-  <prefab source="items/book" pos="42 118 2" rot="0 7 0" scale="0.54 0.54 0.54" color="0.36 0.16 0.40"/>
+<!-- stocked cubby: footprint 216 x 32.9 cm, baseline y=0, front faces +Z. -->
+<prefab up="y" front="+z">
+  <let name="k" value="0.9"/>  <!-- shelf_unit scale; its shelves are at 6, 68 and 130 -->
+  <prefab source="furniture/shelf_unit" scale="{k} {k} {k}"/>
+  <prefab source="items/book" pos="42 {6*k} 2" rot="0 -6 0" scale="0.56 0.56 0.56" color="0.55 0.08 0.06"/>
+  <prefab source="items/book" pos="8 {6*k} 4" rot="0 4 0" scale="0.62 0.62 0.62" color="0.10 0.25 0.46"/>
+  <prefab source="items/jar" pos="-37 {6*k} 2" scale="0.68 0.68 0.68" color="0.48 0.12 0.08"/>
+  <prefab source="items/jar" pos="38 {68*k} 2" scale="0.68 0.68 0.68" color="0.12 0.36 0.28"/>
+  <prefab source="items/spool" pos="2 {68*k} 3" scale="0.52 0.52 0.52"/>
+  <prefab source="items/parts_tray" pos="-36 {68*k} 2" scale="0.50 0.50 0.50" color="0.30 0.16 0.06"/>
+  <prefab source="items/tool_jar" pos="-38 {130*k} 2" scale="0.62 0.62 0.62" color="0.42 0.23 0.08"/>
+  <prefab source="items/jar" pos="5 {130*k} 2" scale="0.64 0.64 0.64" color="0.52 0.32 0.08"/>
+  <prefab source="items/book" pos="42 {130*k} 2" rot="0 7 0" scale="0.54 0.54 0.54" color="0.36 0.16 0.40"/>
 </prefab>

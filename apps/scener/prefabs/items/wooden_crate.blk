@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- wooden_crate: footprint 0.62x0.48, baseline y=0, no natural front.
+<!-- wooden_crate: footprint 62 x 52 cm, baseline y=0, no natural front.
      tint=1 changes painted slats; iron corner straps remain fixed. -->
-<prefab>
+<prefab up="y">
   <box pos="0 24 0" size="62 48 48" color="0.34 0.19 0.08" shininess="10" tint="1"/>
   <box pos="-27 24 25" size="5 48 3" color="0.20 0.21 0.24" shininess="50"/>
   <box pos="27 24 25" size="5 48 3" color="0.20 0.21 0.24" shininess="50"/>

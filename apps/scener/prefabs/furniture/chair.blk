@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- chair: footprint 0.45x0.45, baseline y=0, backrest at z=-0.2.
+<!-- chair: footprint 45 x 45 cm, baseline y=0, backrest at z=-20.
      Front direction is +Z (backrest = -Z).
      Rotate around Y to change facing: rotY(+90) -> faces +X, rotY(-90) -> faces -X. -->
-<prefab>
+<prefab up="y" front="+z">
   <attach name="seat" pos="0 47.5 0"/>
   <box pos="0 45 0" size="45 5 45" material="wood"/>
   <box pos="0 75 -20" size="45 55 5" material="wood"/>

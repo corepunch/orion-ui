@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- sofa: footprint 2.2x0.9, baseline y=0, backrest at z=-0.4.
-     Front direction is +Z (backrest = -Z); arms are at x=±1.025. -->
-<prefab>
+<!-- sofa: footprint 220 x 92.5 cm, baseline y=0, backrest at z=-40.
+     Front direction is +Z (backrest = -Z); arms are at x=±102.5. -->
+<prefab up="y" front="+z">
   <attach name="seat" pos="0 50 0"/>
   <box pos="0 25 0"   size="190 50 90"  material="fabric"/>
   <box pos="0 75 -40" size="190 50 15" material="fabric"/>

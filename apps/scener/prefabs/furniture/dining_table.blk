@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- dining table: footprint 1.6x1.0, baseline y=0, no front direction.
+<!-- dining table: footprint 160 x 100 cm, baseline y=0, no front direction.
      Centered at origin with 4 wooden cylinder legs. -->
-<prefab>
+<prefab up="y">
   <attach name="center" pos="0 78 0"/>
   <attach name="edge_n" pos="0 78 -53"/>
   <attach name="edge_s" pos="0 78 53"/>

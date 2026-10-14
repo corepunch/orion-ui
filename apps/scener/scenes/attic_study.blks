@@ -111,16 +111,20 @@
   <!-- Window: a deep sill board, curtains on a rod held by two wall brackets, a flower pot. -->
   <box pos="85 186 96" size="130 28 4" material="wood" />
   <box pos="85 199 92" size="130 2 4" material="dark_wood" />
-  <cylinder pos="85 192 220" rot="0 0 90" radius="1.2" height="150" material="brass" />
-  <box pos="12 196 220" size="3 8 3" material="brass" />
-  <box pos="158 196 220" size="3 8 3" material="brass" />
+  <group>
+    <cylinder pos="85 192 220" rot="0 0 90" radius="1.2" height="150" material="brass" />
+    <box pos="12 196 220" size="3 8 3" material="brass" />
+    <box pos="158 196 220" size="3 8 3" material="brass" />
+  </group>
   <box pos="18 192 160" size="22 5 118" material="curtain" />
   <box pos="152 192 160" size="22 5 118" material="curtain" />
-  <cylinder pos="38 188 103" rot="90 0 0" radius="6" height="10" material="terracotta" />
-  <cylinder pos="36 188 116" rot="90 0 -8" radius="0.8" height="18" material="leaf" />
-  <cylinder pos="41 188 114" rot="90 0 12" radius="0.7" height="14" material="leaf" />
-  <ellipsoid pos="34 188 125" radii="4 2 2.5" material="leaf" />
-  <ellipsoid pos="43 188 121" radii="3.5 2 2" material="leaf" />
+  <group>
+    <cylinder pos="38 188 103" rot="90 0 0" radius="6" height="10" material="terracotta" />
+    <cylinder pos="36 188 116" rot="90 0 -8" radius="0.8" height="18" material="leaf" />
+    <cylinder pos="41 188 114" rot="90 0 12" radius="0.7" height="14" material="leaf" />
+    <ellipsoid pos="34 188 125" radii="4 2 2.5" material="leaf" />
+    <ellipsoid pos="43 188 121" radii="3.5 2 2" material="leaf" />
+  </group>
 
   <!-- Grandmother's desk under the window, her chair pushed back but close. -->
   <prefab source="study/desk" pos="85 167 0" />
@@ -142,9 +146,9 @@
   <prefab source="study/basket" pos="-150 120 0" />
   <cylinder pos="-150 120 185.5" rot="90 0 0" radius="0.25" height="101" material="thread" />
   <cylinder pos="-150 120 135" rot="0 0 90" radius="0.6" height="60" material="wood" />
-  <cylinder pos="-176 120 124.4" rot="90 0 0" radius="0.2" height="20" material="thread" />
+  <cylinder pos="-176 120 123.825" rot="90 0 0" radius="0.2" height="21.15" material="thread" />
   <star pos="-176 120 108.4" rot="90 0 0" outerRadius="6" innerRadius="2.8" points="5" material="paper_blue"><extrude amount="0.3" /></star>
-  <cylinder pos="-124 120 124.4" rot="90 0 0" radius="0.2" height="20" material="thread" />
+  <cylinder pos="-124 120 123.825" rot="90 0 0" radius="0.2" height="21.15" material="thread" />
   <star pos="-124 120 108.4" rot="90 0 0" outerRadius="6" innerRadius="2.8" points="5" material="paper"><extrude amount="0.3" /></star>
   <!-- Three empty threads show where the scattered stars hung. -->
   <cylinder pos="-163 120 127.4" rot="90 0 0" radius="0.2" height="14" material="thread" />
@@ -158,7 +162,7 @@
 
   <!-- Room furniture along the walls, clear of the route. -->
   <rounded-rect pos="-10 -45 0.4" size="200 120" radius="12" material="rug"><extrude amount="0.8" /></rounded-rect>
-  <prefab source="study/bookshelf" pos="-244 -40 0" rot="0 0 90" />
+  <prefab source="study/bookshelf" pos="-242.5 -40 0" rot="0 0 90" />
   <prefab source="study/trunk" pos="236 -70 0" rot="0 0 -90" />
   <prefab source="study/book" pos="236 -62 46" rot="0 0 12" color="0.36 0.20 0.34" />
 

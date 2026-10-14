@@ -6,7 +6,7 @@
   <option name="fingers" enabled="0" />
   <option name="gloves" enabled="1" />
   <option name="hair" enabled="1" />
-  <hub name="pelvis" aim="0 90" length="0" radius="1" overlap="0" volume="0" pos="1.307285 1.789542 79.34724" ground="0">
+  <hub name="pelvis" aim="0 90" length="0" radius="1" overlap="0" volume="0" pos="1.307285 1.789542 80.43724" ground="0">
     <spine name="spine" aim="0 75.23438" length="7.659" radius="1" overlap="0" volume="0">
       <hub name="abdomen" aim="0 90" length="0" radius="1" overlap="0" volume="0">
         <spine name="spine_upper" aim="180 66.09375" length="16.146" radius="1" overlap="0" volume="0">

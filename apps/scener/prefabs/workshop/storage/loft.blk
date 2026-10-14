@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- loft: footprint 1.30x7.80, baseline y=0, inner railing is at local +X. -->
-<prefab>
-  <box pos="0 9 0" size="130 18 780" material="dark_wood"/>
+<!-- loft: footprint 130 x 780 cm, baseline y=0, inner railing is at local +X. -->
+<prefab up="y" front="+x">
+  <box pos="2.5 9 0" size="125 18 780" material="dark_wood"/>
   <box pos="-42 -18 -270" size="18 54 22" material="wood"><array count="4" translation="0 0 180"/></box>
-  <box pos="56 62 -295" size="10 124 10" material="wood"><array count="5" translation="0 0 148"/></box>
+  <box pos="56 71 -295" size="10 106 10" material="wood"><array count="5" translation="0 0 148"/></box>
   <box pos="56 120 0" size="12 12 750" material="wood"/>
   <box pos="56 72 0" size="8 8 750" material="dark_wood"/>
   <prefab source="items/wooden_crate" pos="-20 18 -240" rot="0 8 0" scale="0.74 0.74 0.74" color="0.34 0.17 0.06"/>

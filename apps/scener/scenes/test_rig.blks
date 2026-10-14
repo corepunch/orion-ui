@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <scene up="z">
+  <sun dir="-0.5 0.3 -1" intensity="1" castShadows="1"/>
   <camera name="Neutral"/>
   <camera name="Pinned">
     <use-pose instance="A" name="Crouch"/>

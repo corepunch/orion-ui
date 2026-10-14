@@ -231,6 +231,16 @@ def main():
         report = json.loads(run('--check', broken, '--json', success=False).stdout)
         assert sorted(issue['kind'] for issue in report['issues']) == ['attribute', 'expression', 'prefab'], report
         run('--prefab-info', 'furniture/absent', success=False)
+        # Bundled content stays clean; mocap clips are fetched separately and retargeting is approximate.
+        content = Path(__file__).resolve().parents[1]
+        for bundled in sorted((content / 'scenes').rglob('*.blks')):
+            if bundled.name == 'mocap_study.blks':
+                continue
+            report = json.loads(run('--check', bundled, '--json').stdout)
+            assert report['errors'] == 0 and report['warnings'] == 0, report
+        for prefab in sorted((content / 'prefabs').rglob('*.blk')):
+            report = json.loads(run('--check', prefab, '--json').stdout)
+            assert report['errors'] == 0 and report['warnings'] == 0, report
         print('PASS: CLI errors, cameras, JPEG/PNG encoding, output dimensions, batch, selection, layout, legacy screenshot, reels, check, query, prefab info')
 
 

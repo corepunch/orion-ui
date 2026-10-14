@@ -1,6 +1,6 @@
 <!-- Writing desk. Z up; footprint 130 x 64 cm, top surface at z=76.
      Front (drawers) faces local -Y. -->
-<prefab>
+<prefab up="z" front="-y">
   <attach name="top_surface" pos="0 0 76" />
   <box pos="0 0 74" size="130 64 4" material="wood" />
   <box pos="-61 -28 36" size="5 5 72" material="dark_wood" />

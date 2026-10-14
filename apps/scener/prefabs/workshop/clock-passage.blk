@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- clock passage: wall-opening origin at center, 134x206 cm; local +Z faces the workshop. -->
-<prefab>
+<prefab up="y" front="+z">
   <bool-negative-box size="134 206 30"/>
   <box pos="0 0 -48" size="118 190 8" material="shadow"/>
   <box pos="-62 0 2" size="10 206 20" material="dark_wood"/>
   <box pos="62 0 2" size="10 206 20" material="dark_wood"/>
-  <box pos="0 98 2" size="134 10 20" material="dark_wood"/>
-  <box pos="0 -98 2" size="134 10 20" material="dark_wood"/>
+  <box pos="0 98 2" size="114 10 20" material="dark_wood"/>
+  <box pos="0 -98 2" size="114 10 20" material="dark_wood"/>
   <box pos="0 -84 -8" size="106 14 34" material="wood">
     <array count="8" translation="0 22 -12"/>
   </box>

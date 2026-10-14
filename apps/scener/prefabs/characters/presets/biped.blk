@@ -5,7 +5,7 @@
      Legs on the pelvis: Thigh, Calf, Ankle (foot) and a two-knuckle toe digit.
      Arms on the ribcage: Collarbone, Upperarm, Forearm, Palm and five three-knuckle digits.
      Author the left limbs; mirror="1" builds the right ones, as CAT's Paste Mirrored does. -->
-<prefab>
+<prefab up="z" front="-y">
   <option name="gloves" enabled="0" />
   <material id="glove" color="0.07 0.055 0.04" shininess="5" />
   <material id="skin" color="0.86 0.68 0.56" shininess="10" />

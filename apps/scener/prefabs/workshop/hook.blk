@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- hook: wall-mount origin at brass plate center, front faces +Z. -->
-<prefab>
+<prefab up="y" front="+z">
   <arch pos="0 0 4" width="52" height="64" depth="8" segments="3" material="dark_wood"/>
   <torus pos="0 2 12" rot="90 0 0" majorRadius="18" minorRadius="3.5" material="brass"/>
   <cylinder pos="16 2 19" rot="90 0 0" radius="2.8" height="18" material="brass"/>

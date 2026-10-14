@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- tool-rack: width 2.10, wall origin at back center, front faces +Z. -->
-<prefab>
+<!-- tool-rack: width 210 cm, wall origin at back center, front faces +Z. -->
+<prefab up="y" front="+z">
   <box pos="0 0 0" size="210 100 7" material="dark_wood"/>
   <box pos="0 -30 8" size="194 12 12" material="wood"/>
   <cylinder pos="-78 12 11" radius="4.5" height="58" material="wood"/>
@@ -11,5 +11,5 @@
   <box pos="28 6 11" size="6.5 60 5" material="iron"/>
   <box pos="58 4 11" size="6 56 5" material="iron"/>
   <box pos="80 24 11" rot="0 0 -40" size="9 50 5" material="wood"/>
-  <box pos="62 36 11" rot="0 0 40" size="9 34 5" material="iron"/>
+  <box pos="62 36 11" rot="0 0 40" size="9 34 4" material="iron"/>
 </prefab>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- jars shelf: width 1.70, wall origin at back center, front faces +Z. -->
-<prefab>
+<!-- jars shelf: width 170 cm, wall origin at back center, front faces +Z. -->
+<prefab up="y" front="+z">
   <prefab source="fixtures/shelf"/>
   <prefab source="items/jar" pos="-66 5 17" scale="0.82 0.82 0.82" color="0.48 0.12 0.08"/>
   <prefab source="items/tool_jar" pos="-34 5 18" rot="0 -5 0" scale="0.68 0.68 0.68" color="0.42 0.23 0.08"/>

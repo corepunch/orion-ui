@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- sawdust: footprint 1.20x0.78, baseline y=0, irregular low floor cluster. -->
-<prefab>
+<!-- sawdust: footprint 110 x 65.4 cm, baseline y=0, irregular low floor cluster. -->
+<prefab up="y">
   <box pos="-38 1 -18" rot="0 17 0" size="34 2 3.5" material="sawdust"/>
   <box pos="4 0.9 20" rot="0 -24 0" size="28 1.8 3" material="sawdust"/>
   <box pos="39 1.1 -10" rot="0 38 0" size="30 2.2 3.2" material="sawdust"/>

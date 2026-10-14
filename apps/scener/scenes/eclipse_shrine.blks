@@ -17,9 +17,9 @@
 
   <box pos="0 -10 -100" size="1600 20 2000" material="voidstone" castShadow="0"/>
 
-  <box pos="0 20 -200" size="800 40 700" material="slate"/>
+  <box pos="0 20 -250" size="800 40 600" material="slate"/>
   <box pos="0 10 175" size="640 20 50" material="slate"/>
-  <box pos="0 20 125" size="700 40 50" material="slate"/>
+  <box pos="0 20 125" size="800 40 50" material="slate"/>
   <box pos="0 30 75" size="760 60 50" material="slate"/>
 
   <group pos="0 0 -200">
@@ -69,10 +69,10 @@
     <pyramid pos="0 175 0" radius="68" radiusTop="16" height="170" material="ivory"/>
   </group>
 
-  <box pos="-560 160 -540" size="35 320 420" material="voidstone"/>
-  <box pos="560 160 -540" size="35 320 420" material="voidstone"/>
+  <box pos="-560 160 -525" size="35 320 390" material="voidstone"/>
+  <box pos="560 160 -525" size="35 320 390" material="voidstone"/>
   <box pos="0 70 -735" size="1150 140 30" material="voidstone"/>
   <box pos="0 460 -735" size="1150 45 30" material="voidstone"/>
-  <box pos="-435 265 -735" size="280 350 30" material="voidstone"/>
-  <box pos="435 265 -735" size="280 350 30" material="voidstone"/>
+  <box pos="-435 288.75 -735" size="280 297.5 30" material="voidstone"/>
+  <box pos="435 288.75 -735" size="280 297.5 30" material="voidstone"/>
 </scene>

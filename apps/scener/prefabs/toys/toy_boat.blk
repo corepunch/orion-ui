@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- toy_boat: footprint 0.42x0.20, baseline y=0, bow faces +X.
+<!-- toy_boat: footprint 41 x 28 cm, baseline y=0, bow faces +X.
      tint=1 changes the hull; mast and sail keep their materials. -->
-<prefab>
-  <box pos="0 7 0" size="38 12 18" color="0.10 0.28 0.48" shininess="14" tint="1">
+<prefab up="y" front="+x">
+  <box pos="0 8.52 0" size="38 12 18" color="0.10 0.28 0.48" shininess="14" tint="1">
     <taper amount="0.42" axis="x"/>
   </box>
   <cylinder pos="0 28 0" radius="1.4" height="44" color="0.34 0.19 0.08" shininess="10"/>

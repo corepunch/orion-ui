@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <scene>
+  <sun dir="-0.5 -1 -0.3" intensity="1" castShadows="1"/>
   <camera name="ActionA" pos="0 100 400" look="0 50 0" fov="50"/>
   <camera name="ActionB" pos="200 100 400" look="0 50 0" fov="50">
     <transform target="PoseBox" pos="200 0 0" rot="0 90 0"/>

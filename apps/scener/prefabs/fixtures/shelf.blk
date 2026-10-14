@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- shelf: width 1.70, wall origin at back center, front faces +Z, top at y=0.05. -->
-<prefab>
+<!-- shelf: width 170 cm, wall origin at back center, front faces +Z, top at y=5. -->
+<prefab up="y" front="+z">
   <attach name="top_surface" pos="0 5 18"/>
   <box pos="0 0 18" size="170 10 42" material="wood"/>
   <box pos="-64 -22 4" size="9 48 9" material="dark_wood"/>

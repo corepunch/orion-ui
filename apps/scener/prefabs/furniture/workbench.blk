@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- workbench: footprint 2.0x0.9, baseline y=0, top surface at y=0.94.
+<!-- workbench: footprint 200 x 107.8 cm, baseline y=0, top surface at y=94.
      Front is +Z. Work from the +Z side. Drawer handles are climbable visual footholds. -->
-<prefab>
+<prefab up="y" front="+z">
   <attach name="top_surface" pos="0 94 0"/>
   <attach name="under_center" pos="0 12 0"/>
   <box pos="0 90 0" size="200 8 90" material="wood"/>

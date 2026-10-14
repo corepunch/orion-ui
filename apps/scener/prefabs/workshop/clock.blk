@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- clock: wall-mount origin at dial center, footprint 1.46x2.78, front faces +Z. -->
-<prefab>
+<!-- clock: wall-mount origin at dial center, 154 cm wide, 329 cm tall, 54 cm deep, front faces +Z. -->
+<prefab up="y" front="+z">
   <attach name="hinge" pos="-70 0 0"/>
   <cylinder pos="-67 32 -2" radius="6.5" height="24" sides="12" material="brass"/>
   <cylinder pos="-67 -70 -2" radius="6.5" height="24" sides="12" material="brass"/>
@@ -16,7 +16,7 @@
   <sphere pos="66 66 22" radius="11" material="wood"/>
   <prism pos="-66 78 22" radius="7.5" height="22" sides="6" material="brass"/>
   <prism pos="66 78 22" radius="7.5" height="22" sides="6" material="brass"/>
-  <arch pos="0 67 27" width="42" height="52" depth="8" tube="6" segments="3" material="brass"/>
+  <arch pos="0 66.75 28" width="42" height="51.5" depth="7" tube="6" segments="3" material="brass"/>
   <arch pos="0 67 25.5" width="30" height="40" depth="5" segments="3" material="shadow"/>
   <sphere pos="0 67 34" radius="7.5" material="wood"/>
   <cone pos="10 67 39" rot="0 0 -90" radius="3.5" height="16" material="brass"/>

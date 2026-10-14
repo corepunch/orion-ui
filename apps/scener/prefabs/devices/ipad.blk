@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Stylized iPad promo model. Local +Z is the display/front; center is the device center. Dimensions are illustrative. -->
-<prefab>
+<prefab up="y" front="+z">
   <rounded-rect size="19.5 27" radius="1.18" color="0.42 0.47 0.54" shininess="75">
     <extrude amount="0.65"/><bevel amount="0.12" bevelSegments="4"/>
   </rounded-rect>

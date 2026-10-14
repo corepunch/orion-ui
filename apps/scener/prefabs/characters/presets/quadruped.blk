@@ -4,7 +4,7 @@
      Structure: pelvis hub, spine, ribcage hub, neck, head hub; hind legs on the pelvis,
      front legs on the ribcage, tail off the pelvis. Front legs step a quarter cycle after
      the hind legs on the same side; elbows bend backward (bend="180 0"). -->
-<prefab>
+<prefab up="z" front="-y">
   <material id="coat" color="0.62 0.45 0.28" shininess="5" />
   <material id="belly" color="0.86 0.78 0.66" shininess="5" />
   <material id="nose" color="0.10 0.08 0.08" shininess="40" />

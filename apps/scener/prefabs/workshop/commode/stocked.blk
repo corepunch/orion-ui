@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- stocked commode: footprint 1.30x0.62, baseline y=0, front faces +Z. -->
-<prefab>
+<!-- stocked commode: footprint 130 x 64.5 cm, baseline y=0, front faces +Z. -->
+<prefab up="y" front="+z">
   <attach name="top_surface" pos="0 125 0"/>
   <prefab source="furniture/commode"/>
-  <prefab source="items/book" pos="-30 13 5" rot="0 -7 0" scale="0.72 0.72 0.72" color="0.44 0.10 0.08"/>
-  <prefab source="items/book" pos="8 13 2" rot="0 5 0" scale="0.62 0.62 0.62" color="0.10 0.28 0.42"/>
-  <prefab source="items/wooden_crate" pos="33 13 -1" rot="0 -3 0" scale="0.44 0.44 0.44" color="0.30 0.15 0.06"/>
-  <prefab source="items/jar" pos="-37 52 4" scale="0.72 0.72 0.72" color="0.48 0.12 0.08"/>
-  <prefab source="items/spool" pos="-4 52 3" rot="0 12 0" scale="0.58 0.58 0.58"/>
-  <prefab source="items/parts_tray" pos="28 52 2" rot="0 -6 0" scale="0.52 0.52 0.52" color="0.28 0.14 0.05"/>
+  <prefab source="items/book" pos="-30 12 5" rot="0 -7 0" scale="0.72 0.72 0.72" color="0.44 0.10 0.08"/>
+  <prefab source="items/book" pos="8 12 2" rot="0 5 0" scale="0.62 0.62 0.62" color="0.10 0.28 0.42"/>
+  <prefab source="items/wooden_crate" pos="36 12 -1" rot="0 -3 0" scale="0.44 0.44 0.44" color="0.30 0.15 0.06"/>
+  <prefab source="items/jar" pos="-37 51.5 4" scale="0.72 0.72 0.72" color="0.48 0.12 0.08"/>
+  <prefab source="items/spool" pos="-4 51.5 3" rot="0 12 0" scale="0.58 0.58 0.58"/>
+  <prefab source="items/parts_tray" pos="28 51.5 2" rot="0 -6 0" scale="0.52 0.52 0.52" color="0.28 0.14 0.05"/>
   <prefab source="items/tool_jar" pos="-33 125 0" rot="0 -6 0" scale="0.68 0.68 0.68" color="0.40 0.20 0.08"/>
   <prefab source="items/jar" pos="5 125 -1" scale="0.78 0.78 0.78" color="0.12 0.36 0.28"/>
 </prefab>

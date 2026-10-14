@@ -9,6 +9,6 @@
   <box pos="0 230 150" size="900 12 300" color="0.62 0.60 0.56"/>
   <box pos="-260 222 170" size="150 4 130" color="0.55 0.75 0.95"/>
   <prefab source="../prefabs/study/desk" name="Desk" pos="0 100 0"/>
-  <prefab source="../prefabs/devices/ipad" name="Tablet" pos="-5 80 91" rot="-70 0 0"/>
+  <prefab source="../prefabs/devices/ipad" name="Tablet" pos="-5 80 88.8" rot="-70 0 0"/>
   <prefab source="../characters/joe/prefabs/character" name="Joe" pos="20 165 0" rot="0 0 -10" pose="PresentLeft"/>
 </scene>

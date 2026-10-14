@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- door: footprint 1.86x0.24, baseline y=0, front faces +Z, includes pet flap. -->
-<prefab>
+<!-- door: footprint 186 x 31 cm, baseline y=0, front faces +Z, includes pet flap. -->
+<prefab up="y" front="+z">
   <bool-negative-box pos="0 165 0" size="172 330 34"/>
   <box pos="0 160 1" size="152 310 10" material="dark_wood"/>
-  <box pos="-86 165 6" size="14 330 20" material="wood"/>
-  <box pos="86 165 6" size="14 330 20" material="wood"/>
+  <box pos="-86 158.5 6" size="14 317 20" material="wood"/>
+  <box pos="86 158.5 6" size="14 317 20" material="wood"/>
   <box pos="0 325 6" size="186 16 20" material="wood"/>
   <box pos="-50 160 10" size="7 290 5" material="wood"/>
   <box pos="0 160 10" size="7 290 5" material="wood"/>
@@ -12,11 +12,11 @@
   <box pos="0 68 14" size="138 13 7" material="wood"/>
   <box pos="0 168 14" size="138 13 7" material="wood"/>
   <box pos="0 265 14" size="138 13 7" material="wood"/>
-  <box pos="0 168 14" rot="0 0 -34" size="11 152 7" material="wood"/>
+  <box pos="0 168 14" rot="0 0 -34" size="11 152 6" material="wood"/>
   <box pos="-43 82 19" size="62 6 5" material="iron"/>
   <box pos="-43 248 19" size="62 6 5" material="iron"/>
-  <cylinder pos="-72 82 19" rot="90 0 0" radius="6.5" height="5" material="iron"/>
-  <cylinder pos="-72 248 19" rot="90 0 0" radius="6.5" height="5" material="iron"/>
+  <cylinder pos="-72 82 19" rot="90 0 0" radius="6.5" height="6" material="iron"/>
+  <cylinder pos="-72 248 19" rot="90 0 0" radius="6.5" height="6" material="iron"/>
   <arch pos="0 41 20" width="60" height="72" depth="9" tube="8.5" material="brass"/>
   <arch pos="0 41 16" width="43" height="55" depth="5" material="shadow"/>
   <box pos="0 20 25" size="5.5 33 4" material="brass"/>

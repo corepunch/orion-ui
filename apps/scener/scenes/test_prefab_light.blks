@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <scene>
-  <prefab source="fixtures/hanging_lamp" pos="100 400 -200"/>
-  <prefab source="fixtures/hanging_lamp" pos="-100 300 100" scale="0.5 0.5 0.5"/>
+  <!-- Light-transform fixture: the lamps hang from no ceiling on purpose. -->
+  <prefab source="fixtures/hanging_lamp" pos="100 400 -200" sanityIgnore="1"/>
+  <prefab source="fixtures/hanging_lamp" pos="-100 300 100" scale="0.5 0.5 0.5" sanityIgnore="1"/>
 </scene>

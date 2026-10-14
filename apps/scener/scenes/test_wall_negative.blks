@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <scene>
+  <sun dir="-0.5 -1 -0.3" intensity="1" castShadows="1"/>
   <wall pos="100 0 -100" rot="0 90 0" length="400" height="300" thickness="20" material="wall"/>
   <prefab source="architecture/test_wall_cutter" pos="100 150 -150" rot="0 90 0"/>
 </scene>

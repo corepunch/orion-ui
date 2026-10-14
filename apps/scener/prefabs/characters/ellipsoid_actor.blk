@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Ellipsoid actor: about 180 cm tall, front faces local -Y, feet rest on Z=0 in a Z-up scene. -->
-<prefab>
+<prefab up="z" front="-y">
   <group name="rig_root" pos="0 0 92">
     <group name="pelvis">
       <ellipsoid pos="0 0 -1" color="0.13 0.18 0.23" rings="12" slices="16" radii="19 11 14"/>

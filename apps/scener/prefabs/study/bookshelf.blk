@@ -1,6 +1,6 @@
 <!-- Open bookshelf, stocked. Z up; footprint 80 x 30 cm, 150 cm tall.
      The open front faces local -Y. Shelves at z=4, 52, 100, 148. -->
-<prefab>
+<prefab up="z" front="-y">
   <box pos="-39 0 75" size="2 30 150" material="dark_wood" />
   <box pos="39 0 75" size="2 30 150" material="dark_wood" />
   <box pos="0 14.5 75" size="76 1 150" material="dark_wood" />

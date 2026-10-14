@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- window: outer size 2.20x2.35, origin at opening center, local +Z faces room. -->
-<prefab>
+<!-- window: outer size 220 x 235 cm, origin at opening center, local +Z faces room. -->
+<prefab up="y" front="+z">
   <bool-negative-arch width="220" height="235" depth="34"/>
   <box pos="0 -114 15" size="234 14 32" material="dark_wood"/>
   <arch pos="0 0 2" width="220" height="235" depth="9" tube="14" material="dark_wood"/>
   <arch pos="0 0 6" width="190" height="205" depth="10" tube="10" material="wood"/>
   <arch pos="0 0 -4" width="168" height="183" depth="3" material="moon_glass" castShadow="0"/>
-  <box pos="0 -69 8" size="168 7 6" material="dark_wood"/>
+  <box pos="0 -69 8" size="168 7 5" material="dark_wood"/>
   <box pos="0 10.5 8" size="7 159 6" material="dark_wood"/>
   <box pos="-47 2.5 8" size="5 143 6" material="dark_wood"/>
   <box pos="47 2.5 8" size="5 143 6" material="dark_wood"/>
   <torus pos="0 43 10" rot="90 0 0" majorRadius="24" minorRadius="3" material="brass"/>
   <box pos="0 43 10" size="45 2.8 2.8" material="brass"/>
-  <box pos="0 43 10" rot="0 0 45" size="2.8 45 2.8" material="brass"/>
-  <box pos="0 43 10" rot="0 0 -45" size="2.8 45 2.8" material="brass"/>
+  <box pos="0 43 10" rot="0 0 45" size="2.8 45 3.2" material="brass"/>
+  <box pos="0 43 10" rot="0 0 -45" size="2.8 45 3.6" material="brass"/>
 </prefab>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Ecstatica actor 0 study: Z up, front -Y, left +X; ground Z=0, footprint about 45 x 38 cm; roughly 180 cm tall.
      Source radii scaled uniformly by 0.207 cm/unit; split abdomen/ribcage and neutral bone rest pose are adaptations. -->
-<prefab>
+<prefab up="z" front="-y">
   <bone name="pelvis" aim="0 90" length="26.496" radius="13.248 12.42" color=".32 .40 .035" shininess="2" rings="16" slices="24" overlap="0">
     <bone name="left_hip" aim="0 -90" length="39.33" radius="6.624 9.108" color=".32 .40 .035" shininess="2" rings="16" slices="24" at="0.5" from="90 0" sink="4.347" mirror="1" overlap="2.691">
       <bone name="left_knee" aim="0 -90" length="43.056" radius="4.14 4.968" color=".44 .24 .105" shininess="2" rings="16" slices="24" overlap="2.484">

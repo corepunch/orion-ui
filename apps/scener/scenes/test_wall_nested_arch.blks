@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <scene convention="3dsmax">
+  <sun dir="-0.5 -1 -0.3" intensity="1" castShadows="1"/>
   <wall pos="0 0 0" length="600" height="400" thickness="20"/>
   <bool-negative-arch pos="0 0 150" width="200" height="300" depth="40"/>
   <bool-negative-arch pos="0 0 50" width="80" height="100" depth="40"/>

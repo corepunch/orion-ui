@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <scene>
+  <sun dir="-0.5 -1 -0.3" intensity="1" castShadows="1"/>
   <prefab source="items/book" name="red_book" color="0.70 0.10 0.08"/>
   <prefab source="items/book" name="blue_book" pos="100 0 0" scale="2 2 2" color="0.08 0.20 0.70"/>
-  <sphere attach="blue_book:top" radius="2" color="1 1 1"/>
+  <sphere attach="blue_book:top" pos="0 2 0" radius="2" color="1 1 1"/>
   <prefab source="items/repair_book" pos="200 0 0" color="0.10 0.32 0.18"/>
 </scene>

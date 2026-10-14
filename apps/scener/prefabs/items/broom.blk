@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- broom: footprint 0.42x0.18, baseline y=0, bristles spread along X. -->
-<prefab>
+<!-- broom: footprint 54.6 x 20.8 cm, baseline y=0, bristles spread along X. -->
+<prefab up="y">
   <box pos="0 10 0" size="42 20 16" color="0.55 0.37 0.18" shininess="3">
     <taper amount="-0.30" axis="y"/>
   </box>

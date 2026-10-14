@@ -1,7 +1,7 @@
 <!-- Storybook kitten, built from the quadruped preset: body frame Z up, faces local -Y, its left is +X.
      Lowest rest volume sits on local Z=0 through root grounding; about 26 cm to the ear tips,
      38 cm nose to rump. CAT structure: pelvis hub, spine, ribcage hub, neck, head hub. -->
-<prefab>
+<prefab up="z" front="-y">
   <hub name="pelvis" aim="0 0" length="5" radius="7 6.5" material="fur">
     <limb name="left_hind_leg" type="leg" at="0.3" from="90 -50" mirror="1">
       <bone name="left_hip" aim="0 -62" length="7.4" radius="3.4 3.6" material="fur">

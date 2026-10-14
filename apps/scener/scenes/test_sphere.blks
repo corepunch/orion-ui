@@ -20,6 +20,6 @@
   <!-- right wall: receiver only -->
   <box pos="405 140 -300" size="5 280 600" material="wall_mat" castShadow="0"/>
 
-  <!-- sphere: only shadow caster -->
-  <sphere pos="0 50 -300" radius="40" material="sphere_mat" castShadow="1" rings="16" slices="24"/>
+  <!-- sphere: only shadow caster, held above the floor so its shadow separates from it -->
+  <sphere pos="0 50 -300" radius="40" material="sphere_mat" castShadow="1" rings="16" slices="24" sanityIgnore="1"/>
 </scene>

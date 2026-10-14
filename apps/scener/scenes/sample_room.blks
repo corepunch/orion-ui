@@ -33,7 +33,7 @@
   <prefab source="furniture/coffee_table" pos="-150 0 -380"/>
 
   <torus pos="260 5 -360" majorRadius="28" minorRadius="5" material="metal"/>
-  <sphere pos="-150 64 -380" radius="16" material="fabric"/>
+  <sphere pos="-150 65.5 -380" radius="16" material="fabric"/>
   <pyramid pos="-300 25 -90" radius="35" height="50" material="wood"/>
 
   <box pos="-150 49 -380" size="110 1 60" material="glass"/>
@@ -41,10 +41,10 @@
   <!-- dining table with 4 chairs -->
   <prefab source="furniture/dining_table" name="dining_table" pos="0 0 -150"/>
 
-  <cylinder pos="-35 75 -135" radius="4" height="12" material="glass"/>
-  <cylinder pos="35 75 -165" radius="4" height="12" material="glass"/>
+  <cylinder pos="-35 84 -135" radius="4" height="12" material="glass"/>
+  <cylinder pos="35 84 -165" radius="4" height="12" material="glass"/>
 
-  <sphere attach="dining_table:center" radius="14" material="fabric"/>
+  <sphere attach="dining_table:center" pos="0 14 0" radius="14" material="fabric"/>
 
   <prefab source="furniture/chair" pos="0 0 -75" rot="0 180 0"/>
   <prefab source="furniture/chair" pos="0 0 -225"/>

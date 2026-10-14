@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- main desk: dressed workbench, footprint 2.0x0.9, baseline y=0, front faces +Z. -->
-<prefab>
+<!-- main desk: dressed workbench, footprint 200 x 107.8 cm, baseline y=0, front faces +Z. -->
+<prefab up="y" front="+z">
   <attach name="top_surface" pos="0 94 0"/>
   <attach name="under_center" pos="0 12 0"/>
   <prefab source="furniture/workbench"/>
@@ -11,7 +11,7 @@
   <prefab source="items/tool_caddy" pos="42 94 20" rot="0 6 0" scale="0.48 0.48 0.48" color="0.28 0.13 0.05"/>
   <prefab source="items/mug" pos="55 94 -20" scale="0.54 0.54 0.54" color="0.22 0.40 0.42"/>
   <prefab source="items/paper_notes" pos="-18 94 -30" rot="0 -15 0" scale="0.58 0.58 0.58"/>
-  <prefab source="items/shavings" pos="18 94 1" rot="0 24 0" scale="0.46 0.46 0.46"/>
+  <prefab source="items/shavings" pos="12 94 18" rot="0 24 0" scale="0.46 0.46 0.46"/>
   <prefab source="items/oil_can" pos="30 0 24" rot="0 -18 0" scale="0.24 0.24 0.24"/>
   <sphere pos="30 5.5 29.2" radius="0.4" color="1.0 0.72 0.28" unlit="1" castShadow="0"/>
 </prefab>

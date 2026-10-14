@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <scene>
+  <sun dir="-0.5 -1 -0.3" intensity="1" castShadows="1"/>
   <material id="wood" color="0.39 0.18 0.07" shininess="13"/>
   <material id="dark_wood" color="0.16 0.065 0.025" shininess="10"/>
   <material id="brass" color="0.78 0.43 0.08" shininess="58"/>

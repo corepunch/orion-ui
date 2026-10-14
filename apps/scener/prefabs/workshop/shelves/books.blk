@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- books shelf: width 1.70, wall origin at back center, front faces +Z. -->
-<prefab>
+<!-- books shelf: width 170 cm, wall origin at back center, front faces +Z. -->
+<prefab up="y" front="+z">
   <prefab source="fixtures/shelf"/>
   <prefab source="items/book" pos="-62 5 17" rot="0 -6 0" scale="0.66 0.66 0.66" color="0.10 0.25 0.46"/>
   <prefab source="items/book" pos="-30 5 16" rot="0 4 0" scale="0.72 0.72 0.72" color="0.44 0.10 0.08"/>

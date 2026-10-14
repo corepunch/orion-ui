@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- commode: footprint 1.30x0.62, baseline y=0, front faces +Z, top at y=1.25. -->
-<prefab>
+<!-- commode: footprint 130 x 64.5 cm, baseline y=0, front faces +Z, top at y=125. -->
+<prefab up="y" front="+z">
   <attach name="top_surface" pos="0 125 0"/>
   <attach name="shelf_lower" pos="0 12 3"/>
   <attach name="shelf_upper" pos="0 52 3"/>
@@ -10,8 +10,8 @@
   <prism pos="57 61 -24" radius="6.5" height="110" sides="8" material="dark_wood"/>
   <prism pos="-57 61 24" radius="6.5" height="110" sides="8" material="dark_wood"/>
   <prism pos="57 61 24" radius="6.5" height="110" sides="8" material="dark_wood"/>
-  <box pos="0 61 -28.5" size="114 110 5" material="dark_wood"/>
-  <box pos="0 48 0" size="114 7 54" material="wood"/>
+  <box pos="0 64.5 -27.5" size="114 105 3" material="dark_wood"/>
+  <box pos="0 48 0.5" size="114 7 53" material="wood"/>
   <box pos="0 98 23" size="114 38 8" material="dark_wood"/>
   <box pos="-29 98 28.5" size="52 29 5" material="wood"/>
   <box pos="29 98 28.5" size="52 29 5" material="wood"/>

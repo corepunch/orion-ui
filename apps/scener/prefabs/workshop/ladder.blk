@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- ladder: footprint 1.00x0.24, baseline y=0, front faces +Z, initial stuck state. -->
-<prefab>
+<!-- ladder: footprint 159 x 61.5 cm, baseline y=0, front faces +Z, initial stuck state. -->
+<prefab up="y" front="+z">
   <box pos="-38 220 0" size="13 440 18" material="wood"/>
   <box pos="38 220 0" size="13 440 18" material="wood"/>
   <box pos="0 34 1" size="82 8 18" material="wood"><array count="10" translation="0 43 0"/></box>
