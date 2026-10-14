@@ -192,11 +192,11 @@ bool gc_reload_history_log(const char *ref) {
     strncpy(rec.subject, raw[i].subject, sizeof(rec.subject) - 1);
     send_db_message(gc->history_db, dbInsert, ID_DB_COMMITS, &rec);
   }
-  if (gc->log_win)
-    send_message(gc->log_win, tvRefresh, 0, NULL);
   gc->selected_commit = -1;
   gc->selected_file = -1;
   gc_diff_invalidate();
+  if (gc->log_win)
+    send_message(gc->log_win, tvRefresh, 0, NULL);
   gc_diff_refresh();
   return true;
 }

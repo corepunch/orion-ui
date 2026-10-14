@@ -18,6 +18,7 @@
 #include "gitclient_test_helpers.h"
 #include "apps/gitclient/gitclient.h"
 #include "apps/gitclient/gc_actions.h"
+#include "apps/gitclient/components/diff_view.h"
 #include <orion/user/toolbar.h>
 
 #include <stdio.h>
@@ -844,6 +845,74 @@ static void gc_drag_view(window_t *source, int index, window_t *target, ipoint16
   if (release) { event.message = kEventLeftButtonUp; dispatch_message(&event); }
 }
 
+static bool history_diff_contains(const char *text) {
+  gc_diff_state_t *st = g_test_state.history_diff_win->userdata;
+  for (int i = 0; i < st->line_count; i++)
+    if (strstr(st->lines[i], text)) return true;
+  return false;
+}
+
+static void test_history_latest_commit_diff(void) {
+  TEST("history: branch reload and refresh keep the latest commit diff selected");
+  test_env_init();
+  ASSERT_TRUE(test_graphics_init(1200, 800));
+  gc_state_t saved = g_test_state;
+  database_t *saved_db = ui_get_database();
+  memset(&g_test_state, 0, sizeof(g_test_state));
+  g_test_state.ephemeral = true;
+  g_test_state.history_db = make_db(); g_test_state.changes_db = make_changes_db();
+  DB_CLASS(github_database_proc);
+  g_test_state.github_db = create_database("gc-history-github", "github_database_proc", NULL);
+  ui_set_database(g_test_state.history_db);
+  register_database("db", g_test_state.history_db); register_database("github_db", g_test_state.github_db);
+  char plugin[4096];
+  snprintf(plugin, sizeof(plugin), "%s/../lib/gitclient_components%s", ui_get_exe_dir(), AX_DYNLIB_EXT);
+  ASSERT_TRUE(fe_load_component_plugin(plugin));
+  window_t *root = create_window_from_form(&gitclient_main_window_form, 0, 0, NULL, gc_main_proc, 0, NULL);
+  ASSERT_NOT_NULL(root);
+  gc_open_repo(s_repo);
+  gc_set_view_mode(GC_TAB_HISTORY);
+  window_t *branches = g_test_state.branches_win, *log = g_test_state.log_win;
+  window_t *files = g_test_state.history_files_win;
+  int branch = (int)send_message(branches, RVM_GETSELECTION, 0, NULL);
+  send_message(root, evCommand, MAKEDWORD(branch, RVN_SELCHANGE), branches);
+  tableview_handle_master_selection(root, branches);
+  ASSERT_EQUAL(g_test_state.selected_commit, 0);
+  ASSERT_TRUE(history_diff_contains("file2.txt"));
+  ASSERT_TRUE(history_diff_contains("world"));
+
+  send_message(files, RVM_SETSELECTION, 0, NULL);
+  send_message(root, evCommand, MAKEDWORD(0, RVN_SELCHANGE), files);
+  ASSERT_TRUE(history_diff_contains("world"));
+  send_message(log, RVM_SETSELECTION, 1, NULL);
+  send_message(root, evCommand, MAKEDWORD(1, RVN_SELCHANGE), log);
+  tableview_handle_master_selection(root, log);
+  ASSERT_TRUE(history_diff_contains("hello"));
+  send_message(log, RVM_SETSELECTION, 0, NULL);
+  send_message(root, evCommand, MAKEDWORD(0, RVN_SELCHANGE), log);
+  tableview_handle_master_selection(root, log);
+  ASSERT_TRUE(history_diff_contains("world"));
+
+  ASSERT_TRUE(gc_reload_history_log("main"));
+  ASSERT_EQUAL(g_test_state.selected_commit, 0);
+  ASSERT_TRUE(history_diff_contains("world"));
+  gc_refresh_all();
+  ASSERT_EQUAL(g_test_state.selected_commit, 0);
+  ASSERT_TRUE(history_diff_contains("world"));
+  gc_set_view_mode(GC_TAB_CHANGES);
+  ASSERT_EQUAL(g_test_state.selected_commit, -1);
+  gc_refresh_all();
+  ASSERT_EQUAL(g_test_state.selected_commit, -1);
+  gc_set_view_mode(GC_TAB_HISTORY);
+  ASSERT_EQUAL(g_test_state.selected_commit, 0);
+  ASSERT_TRUE(history_diff_contains("world"));
+
+  destroy_window(root);
+  destroy_database(g_test_state.history_db); destroy_database(g_test_state.changes_db); destroy_database(g_test_state.github_db);
+  ui_set_database(saved_db); test_env_shutdown(); test_graphics_shutdown(); g_test_state = saved;
+  PASS();
+}
+
 static void test_gitclient_pane_layout(void) {
   TEST("Git Client pane docking preserves defaults, live views, bindings and drafts");
   test_env_init();
@@ -1014,6 +1083,7 @@ int main(void) {
     test_reload_history_log_invalidates_diff_and_reports_failure();
     test_overview_close_filtered_cards();
     test_activitybar_navigation();
+    test_history_latest_commit_diff();
     test_gitclient_pane_layout();
 
     gct_remove_dir(s_repo);
