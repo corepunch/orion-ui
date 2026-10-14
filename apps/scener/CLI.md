@@ -56,6 +56,11 @@ to END inclusive, named `CAMERA_0000.jpg`, `CAMERA_0001.jpg` …; combine it wit
 joint as `instance joint x y z` in world centimetres, for the given camera and
 time; it needs no graphical session.
 
+Mixamo FBX animations become retargetable clips with
+`blender -b -P apps/scener/tools/mixamo_fbx_to_bvh.py -- IN.fbx apps/scener/mocap/mixamo/OUT.bvh`
+and play through `<layer profile="mixamo">`; see
+[docs/character-authoring.md](docs/character-authoring.md#mixamo-clips).
+
 `--render SCENE --camera NAME --frames START:END:FPS --output FILE.mp4` encodes
 the frames straight to H.264 without writing images (VideoToolbox on macOS,
 `ffmpeg` on PATH elsewhere). `tools/render_mocap_videos.py SCENER OUTPUT_DIR`

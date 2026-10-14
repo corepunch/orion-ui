@@ -142,6 +142,60 @@ static int capture_test_fixture(char *path,int zup){
 	fclose(f); return 1;
 }
 
+/* A Mixamo clip as tools/mixamo_fbx_to_bvh.py writes it: mixamorig names, Z up, centimetres, rest pose as OFFSETs. */
+static int capture_test_mixamo_fixture(char *path){
+	int fd=mkstemp(path); if(fd<0) return 0;
+	FILE *f=fdopen(fd,"w"); if(!f){ close(fd); unlink(path); return 0; }
+	fputs("HIERARCHY ROOT mixamorig:Hips { OFFSET 0 0 90 CHANNELS 6 Xposition Yposition Zposition Xrotation Yrotation Zrotation\n",f);
+	fputs("JOINT mixamorig:Spine { OFFSET 0 0 10 CHANNELS 3 Xrotation Yrotation Zrotation JOINT mixamorig:Spine1 { OFFSET 0 0 10 CHANNELS 3 Xrotation Yrotation Zrotation\n",f);
+	fputs("JOINT mixamorig:Spine2 { OFFSET 0 0 10 CHANNELS 3 Xrotation Yrotation Zrotation JOINT mixamorig:Neck { OFFSET 0 0 10 CHANNELS 3 Xrotation Yrotation Zrotation\n",f);
+	fputs("JOINT mixamorig:Head { OFFSET 0 0 10 CHANNELS 3 Xrotation Yrotation Zrotation End Site { OFFSET 0 0 20 } } }\n",f);
+	for(int side=0;side<2;side++){
+		const char *name=side?"Right":"Left"; int sign=side?-1:1;
+		fprintf(f,"JOINT mixamorig:%sShoulder { OFFSET %d 0 0 CHANNELS 3 Xrotation Yrotation Zrotation JOINT mixamorig:%sArm { OFFSET %d 0 0 CHANNELS 3 Xrotation Yrotation Zrotation\n",name,sign*5,name,sign*10);
+		fprintf(f,"JOINT mixamorig:%sForeArm { OFFSET %d 0 0 CHANNELS 3 Xrotation Yrotation Zrotation JOINT mixamorig:%sHand { OFFSET %d 0 0 CHANNELS 3 Xrotation Yrotation Zrotation\n",name,sign*25,name,sign*25);
+		fprintf(f,"JOINT mixamorig:%sHandMiddle1 { OFFSET %d 0 0 CHANNELS 3 Xrotation Yrotation Zrotation End Site { OFFSET %d 0 0 } } } } } }\n",name,sign*8,sign*5);
+	}
+	fputs("} } }\n",f);
+	for(int side=0;side<2;side++){
+		const char *name=side?"Right":"Left";
+		fprintf(f,"JOINT mixamorig:%sUpLeg { OFFSET %d 0 0 CHANNELS 3 Xrotation Yrotation Zrotation JOINT mixamorig:%sLeg { OFFSET 0 0 -40 CHANNELS 3 Xrotation Yrotation Zrotation\n",name,side?-10:10,name);
+		fprintf(f,"JOINT mixamorig:%sFoot { OFFSET 0 0 -40 CHANNELS 3 Xrotation Yrotation Zrotation JOINT mixamorig:%sToeBase { OFFSET 0 -10 -5 CHANNELS 3 Xrotation Yrotation Zrotation End Site { OFFSET 0 -8 0 } } } } }\n",name,name);
+	}
+	fputs("} MOTION Frames: 3 Frame Time: 0.1\n",f);
+	for(int frame=0;frame<3;frame++){
+		fprintf(f,"0 %d 90 0 0 0",-30*frame);
+		for(int c=0;c<69;c++) fputs(" 0",f);
+		fputc('\n',f);
+	}
+	fclose(f); return 1;
+}
+
+static void test_capture_mixamo_profile(void){
+	TEST("capture: the built-in mixamo profile maps mixamorig names, Z up, OFFSET rest, and walks the clip's travel");
+	Scene s={0}; char path[WINDOW_TEST_MAX_PATH],cwd[WINDOW_TEST_MAX_PATH];
+	ASSERT_TRUE(getcwd(cwd,sizeof(cwd))!=NULL);
+	const char *temp=window_test_temp_dir(); if(!strcmp(temp,".")) temp=cwd;
+	snprintf(path,sizeof(path),"%s/scener-mixamo-XXXXXX",temp);
+	ASSERT_TRUE(capture_test_mixamo_fixture(path));
+	char layer[WINDOW_TEST_MAX_PATH+128];
+	snprintf(layer,sizeof(layer),"<layer profile='mixamo' mocap='%s' contacts='none'/>",path);
+	ASSERT_TRUE(capture_test_load(&s,"",layer)); unlink(path);
+	MocapSource *m=&s.mocap[0];
+	ASSERT_TRUE(m->valid);
+	ASSERT_EQUAL(m->referenceFrame,-1); ASSERT_EQUAL(m->firstFrame,0);
+	ASSERT_TRUE(fabsf(m->legLength-80)<0.001f);
+	ASSERT_TRUE(m->role[MOCAP_COLLAR]>=0 && m->role[MOCAP_COLLAR+1]>=0 && m->role[MOCAP_HAND_END]>=0 && m->role[MOCAP_TOE+1]>=0);
+	ASSERT_TRUE(!strcmp(m->clip->joints[m->role[MOCAP_CHEST]].name,"mixamorig:Spine2"));
+	ASSERT_EQUAL(m->nspine,3); ASSERT_EQUAL(m->nneck,2);
+	vec3 rest=cat_test_joint(&s,"pelvis");
+	scene_set_time(&s,0.2f);
+	vec3 moved=cat_test_joint(&s,"pelvis"),foot=cat_test_joint(&s,"left_foot");
+	ASSERT_TRUE(moved.y<rest.y-40 && fabsf(moved.z-rest.z)<2 && fabsf(moved.x)<1);
+	ASSERT_TRUE(foot.z<12 && foot.y<rest.y-40);
+	scene_free(&s); PASS();
+}
+
 static void test_capture_axis_and_bent_reference(void){
 	TEST("capture: Y/Z-up profiles agree, bent references use segment length, first frame is retained");
 	Scene s[2]={0}; char paths[2][WINDOW_TEST_MAX_PATH],cwd[WINDOW_TEST_MAX_PATH];

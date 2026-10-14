@@ -1178,6 +1178,7 @@ int main(void) {
   test_cat_rig_preset();
   test_timeline_gait_and_layers();
   test_mocap_retarget();
+  test_capture_mixamo_profile();
   test_capture_hand_geometry();
   test_capture_wrist_and_fingers();
   test_capture_knee_poles();

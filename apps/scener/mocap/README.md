@@ -16,3 +16,14 @@ https://github.com/una-dinosauria/cmu-mocap). Every file starts with a T-pose fr
 
 "The data used in this project was obtained from mocap.cs.cmu.edu. The database was created
 with funding from NSF EIA-0196217."
+
+## Mixamo
+
+`mixamo/` holds clips converted from Adobe Mixamo FBX downloads; nothing in it is tracked.
+Convert with Blender and play them with `<layer profile="mixamo" mocap="mocap/mixamo/NAME.bvh"/>`:
+
+```sh
+blender -b -P apps/scener/tools/mixamo_fbx_to_bvh.py -- --output-dir apps/scener/mocap/mixamo ~/Downloads/*.fbx
+```
+
+See [character-authoring.md](../docs/character-authoring.md#mixamo-clips).

@@ -95,10 +95,13 @@ static XmlNode *capture_profile(Scene *s,XmlNode *proot,const char *name){
 		XmlNode *n=roots[r]->kids[i];
 		if(!strcmp(n->tag,"capture-profile") && !strcmp(xml_attr(n,"name",""),name)) return xml_clone(n,NULL);
 	}
-	if(!strcmp(name,"bvh") || !strcmp(name,"cmu")){
+	/* Built-in profiles: bvh (OFFSET rest, Y up), cmu (frame 0 is a T-pose) and mixamo
+	   (tools/mixamo_fbx_to_bvh.py output: Blender's Z-up frame, the Mixamo rest pose as OFFSETs). */
+	if(!strcmp(name,"bvh") || !strcmp(name,"cmu") || !strcmp(name,"mixamo")){
 		XmlNode *n=xml_new("capture-profile");
 		xml_set_attr(n,"name",name);
 		if(!strcmp(name,"cmu")){ xml_set_attr(n,"referenceFrame","0"); xml_set_attr(n,"firstFrame","1"); }
+		if(!strcmp(name,"mixamo")) xml_set_attr(n,"up","z");
 		return n;
 	}
 	char path[MOCAP_PATH_CAPACITY];

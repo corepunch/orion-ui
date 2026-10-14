@@ -234,7 +234,7 @@ def main():
         # Bundled content stays clean; mocap clips are fetched separately and retargeting is approximate.
         content = Path(__file__).resolve().parents[1]
         for bundled in sorted((content / 'scenes').rglob('*.blks')):
-            if bundled.name == 'mocap_study.blks':
+            if bundled.name in ('mocap_study.blks', 'mixamo_study.blks'):
                 continue
             report = json.loads(run('--check', bundled, '--json').stdout)
             assert report['errors'] == 0 and report['warnings'] == 0, report

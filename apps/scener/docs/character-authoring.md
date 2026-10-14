@@ -290,6 +290,36 @@ Use `profile="cmu"` for the supplied CMU conversion: frame 0 is calibration and
 playback starts at frame 1. The default `profile="bvh"` uses the hierarchy's
 OFFSET rest pose and plays frame 0; it does not assume the first frame is a T-pose.
 
+### Mixamo clips
+
+Adobe Mixamo animations arrive as FBX. Convert one with Blender, headless, then
+play it with the built-in `mixamo` profile:
+
+```sh
+blender -b -P apps/scener/tools/mixamo_fbx_to_bvh.py -- ~/Downloads/Walking.fbx apps/scener/mocap/mixamo/walking.bvh
+./build/bin/scener --list-joints apps/scener/scenes/mixamo_study.blks --time 0.8
+./build/bin/scener --render apps/scener/scenes/mixamo_study.blks --camera Side --frames 0:4:30 --output render/walking.mp4
+```
+
+```xml
+<prefab source="characters/presets/biped" name="Adam">
+  <layer profile="mixamo" mocap="mocap/mixamo/walking.bvh"/>
+</prefab>
+```
+
+The converter imports the FBX, applies the armature's object transform so the
+clip is in Blender's Z-up frame, and exports every frame of the action with
+Blender's BVH exporter in centimetres, keeping the `mixamorig:` joint names and
+the Mixamo rest pose as the OFFSET hierarchy; only the root carries position
+channels, stored as a delta from its OFFSET as other BVH readers expect. The `mixamo` profile is
+`up="z"` with the OFFSET rest as reference and playback from frame 0; the
+retargeter already recognises Mixamo's names (`LeftUpLeg`, `LeftForeArm`,
+`LeftToeBase`, `LeftHandMiddle1`, finger joints), so no `<map>` entries are
+needed for the standard skeleton. Pass `--output-dir apps/scener/mocap/mixamo`
+with several FBX files to batch-convert. Download clips "without skin" at 30
+fps; the folder is not tracked, and the Mixamo licence covers using the motion
+in your own work, not redistributing the clips.
+
 A saved `<capture-profile>` in the scene, character prefab, or separate XML file
 can specify `up`, `forward`, `referenceFrame`, `firstFrame`, and `<map>` entries
 for source names, target joints and orientation offsets. Scale derives from the

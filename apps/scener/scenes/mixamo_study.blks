@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A Mixamo clip retargeted onto the CAT biped preset. Convert a downloaded Mixamo FBX first:
+     blender -b -P apps/scener/tools/mixamo_fbx_to_bvh.py -- "Samba Dancing.fbx" apps/scener/mocap/mixamo/samba_dancing.bvh
+     The three.js repository ships this Mixamo sample (examples/models/fbx/Samba Dancing.fbx, 547 frames at 30 fps).
+     The mocap/mixamo folder is not tracked; see mocap/README.md. -->
+<scene up="z" duration="18" ambient="0.38 0.38 0.42" background="neutral">
+  <camera name="Front" follow="Adam" pos="-260 -420 170" look="0 0 90" fov="40" />
+  <camera name="Side" follow="Adam" pos="-480 0 120" look="0 0 90" fov="40" />
+  <material id="tile" color="0.62 0.62 0.64" shininess="4" />
+  <material id="grout" color="0.36 0.36 0.40" shininess="2" />
+  <sun dir="-0.5 0.4 -1" color="1 0.95 0.9" intensity="1" castShadows="1" />
+  <floor style="squares" width="2400" depth="2400" tileWidth="50" gap="1" thickness="4" tileDepth="1" colorVariation="0.08" material="tile" groutMaterial="grout" rot="90 0 0" />
+  <prefab source="characters/presets/biped" name="Adam">
+    <layer profile="mixamo" mocap="mocap/mixamo/samba_dancing.bvh" />
+  </prefab>
+</scene>

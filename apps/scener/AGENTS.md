@@ -40,6 +40,7 @@ deployed command from the consuming project's working directory.
 | `motion.c` | Quaternions for pose blending and the CATMotion-style gait curves |
 | `mocap.c` | BVH motion capture loading and forward kinematics |
 | `mocap/`, `tools/fetch_cmu_mocap.py`, `tools/render_mocap_videos.py` | CMU clips (fetched), batch mocap videos |
+| `tools/mixamo_fbx_to_bvh.py`, `scenes/mixamo_study.blks` | Blender-headless Mixamo FBX to BVH conversion, played with the built-in `mixamo` profile |
 | `reel.h`, `reel.c`, `reel_expr.c`, `reel_draw.c`, `reel_video.c` | Reels: XML motion graphics, expression compiler/VM, GL 2D renderer with SDF text, H.264 MP4 writer |
 | `docs/reels.md`, `docs/infographic-studio.md`, `scenes/infographics/` | Reel reference, infographic direction, IK/FK example reel |
 | `scene_motion.h`, `scene_capture.h` | Private timeline/gait and capture-profile/contact implementation included by scene.c |

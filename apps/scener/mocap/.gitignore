@@ -1,3 +1,6 @@
 # Clips are downloaded by tools/fetch_cmu_mocap.py; only the small walk used by tests is kept.
 cmu/*.bvh
 !cmu/02_01.bvh
+# Mixamo clips are converted locally by tools/mixamo_fbx_to_bvh.py and never committed.
+mixamo/*.bvh
+mixamo/*.fbx
