@@ -1103,7 +1103,9 @@ the last key back into the first; otherwise the last key holds.
 A profile is a scene/prefab child, or the root of an external XML file named by
 `layer.profile` (asset-root-relative or absolute). Built-in `bvh` uses OFFSET
 rest transforms with `referenceFrame="-1" firstFrame="0"`; `cmu` uses
-`referenceFrame="0" firstFrame="1"`. Both default to Y-up.
+`referenceFrame="0" firstFrame="1"`. Both are Y-up. Built-in `mixamo` is `bvh`
+with `up="z"`, matching clips written by `tools/mixamo_fbx_to_bvh.py`; Mixamo's
+`mixamorig:` joint names map to every role without `<map>` entries.
 
 | Profile attribute | Default | Meaning |
 |---|---|---|
@@ -1460,11 +1462,14 @@ The `<array>` modifier duplicates the mesh rather than deforming it. Place it la
 
 ### `<taper>`
 
-Scales the two perpendicular axes along the chosen axis.
+Scales the two perpendicular axes along the chosen axis. The bottom of the
+axis range is scaled by `1 - amount` and the top by `1 + amount`: a positive
+amount widens the top and narrows the base, so a rock or column that should
+stand on its wider end takes a negative amount.
 
 | Attribute    | Type   | Default | Description |
 |--------------|--------|---------|-------------|
-| `amount`     | float  | 0.0     | Taper intensity (± values, positive = narrow top along axis) |
+| `amount`     | float  | 0.0     | Taper intensity (± values, positive = wide top and narrow base along axis) |
 | `curvature`  | float  | 1.0     | Non-linearity exponent (1 = linear, >1 = bowed, <1 = pinched) |
 | `axis`       | char   | y       | Axis along which taper varies (x, y, or z) |
 

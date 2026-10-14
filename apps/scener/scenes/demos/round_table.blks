@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Parametric cafe corner: every dimension derives from a handful of <let> values, and the chairs
+     sit on a ring around a lathed pedestal table at angles computed with expressions.
+     Z up, X east, Y north, centimetres. Interior x -180..180, y -160..160, floor z=0, ceiling z=260.
+     Resident story: a small bakery's back room where the owner and three regulars take coffee after
+     closing. One chair is pushed back where someone just stood up. -->
+<scene up="z" ambient="0.26 0.25 0.28" background="dusk">
+  <let name="W" value="360"/>
+  <let name="D" value="320"/>
+  <let name="H" value="260"/>
+  <let name="T" value="16"/>
+  <let name="R" value="55"/>
+  <let name="TOP" value="74"/>
+  <let name="RC" value="R + 34"/>
+  <let name="A1" value="20"/>
+  <let name="A2" value="110"/>
+  <let name="A3" value="200"/>
+  <let name="A4" value="290"/>
+  <let name="RUG" value="0.8"/>
+
+  <camera name="corner" comment="Establishing view from the south-west corner: table, chairs, window and lamp" pos="-150 -135 165" look="25 40 68" fov="64"/>
+  <camera name="table" comment="Low three-quarter view across the table top: mugs, vase and the pushed-back chair" pos="110 -140 105" look="0 0 72" fov="40"/>
+  <camera name="plan" comment="Overhead plan of the seating ring under the ceiling" pos="0 -30 {H - 12}" look="0 0 0" fov="78"/>
+
+  <material id="plaster" color="0.78 0.74 0.66" shininess="3"/>
+  <material id="wood" color="0.56 0.38 0.22" shininess="18"/>
+  <material id="dark_wood" color="0.34 0.22 0.15" shininess="14"/>
+  <material id="tile" color="0.62 0.36 0.26" shininess="10"/>
+  <material id="rug" color="0.30 0.36 0.42" shininess="2"/>
+  <material id="rug_border" color="0.74 0.66 0.48" shininess="2"/>
+  <material id="brass" color="0.72 0.50 0.20" shininess="40"/>
+  <material id="book_pages" color="0.80 0.73 0.58" shininess="2"/>
+  <material id="paper" color="0.84 0.79 0.66" shininess="2"/>
+  <material id="ceramic" color="0.86 0.84 0.78" shininess="36"/>
+  <material id="leaf" color="0.28 0.46 0.26" shininess="8"/>
+  <material id="petal" color="0.86 0.48 0.30" shininess="6"/>
+  <material id="trunk_fabric" color="0.40 0.27 0.20" shininess="5"/>
+
+  <!-- Evening sun enters through the north window and rakes across the table. -->
+  <sun dir="0.45 -1 -0.8" color="1.0 0.82 0.62" intensity="1.15" castShadows="1"/>
+
+  <!-- Shell: tiled floor, four plastered walls, ceiling slab. The floor's walkable top is z=0. -->
+  <floor rot="90 0 0" width="{W}" depth="{D}" style="squares" tileWidth="30" gap="0.6" material="tile" colorVariation="0.14" seed="11" groutColor="0.30 0.22 0.18"/>
+  <box pos="0 0 {H + T/2}" size="{W + 2*T} {D + 2*T} {T}" material="plaster"/>
+  <group pos="0 {D/2 + T/2} 0" rot="90 0 0">
+    <wall length="{W + 2*T}" height="{H}" thickness="{T}" material="plaster" bottomTrimHeight="9" trimMaterial="dark_wood"/>
+    <window preset="cottage" pos="20 150 0" width="140" height="120" frameMaterial="wood" sill="1"/>
+  </group>
+  <group pos="{-W/2 - T/2} 0 0" rot="90 0 90">
+    <wall length="{D}" height="{H}" thickness="{T}" material="plaster" bottomTrimHeight="9" trimMaterial="dark_wood"/>
+  </group>
+  <group pos="{W/2 + T/2} 0 0" rot="90 0 -90">
+    <wall length="{D}" height="{H}" thickness="{T}" material="plaster" bottomTrimHeight="9" trimMaterial="dark_wood"/>
+  </group>
+  <group pos="0 {-D/2 - T/2} 0" rot="90 0 180">
+    <wall length="{W + 2*T}" height="{H}" thickness="{T}" material="plaster" bottomTrimHeight="9" trimMaterial="dark_wood"/>
+  </group>
+
+  <!-- Pendant over the table centre; its cord top meets the ceiling. -->
+  <prefab source="fixtures/hanging_lamp" pos="0 0 {H}" rot="90 0 0"/>
+
+  <!-- Round rug under the seating ring; table and chairs stand on it. Then the pedestal table turned on the lathe. -->
+  <circle pos="0 0 {RUG/2}" radius="{RC + 56}" segments="64" material="rug"><extrude amount="{RUG}"/></circle>
+  <shape id="pedestal" closed="0">
+    <v x="0" y="0"/>
+    <v x="32" y="0"/>
+    <v x="32" y="3"/>
+    <v x="7" y="5"/>
+    <v x="5.5" y="12"/>
+    <v x="5.5" y="{TOP - 9}"/>
+    <v x="10" y="{TOP - 4}"/>
+    <v x="{R}" y="{TOP - 4}"/>
+    <v x="{R}" y="{TOP + RUG}"/>
+    <v x="0" y="{TOP + RUG}"/>
+  </shape>
+  <lathe shape="pedestal" segments="40" pos="0 0 {RUG}" rot="90 0 0" material="dark_wood"/>
+
+  <!-- Chairs on the ring: a chair faces local -Y, so rot.z = angle - 90 points it at the table.
+       The fourth chair is pushed back and turned, as if someone just got up. -->
+  <prefab source="study/chair" pos="{RC*cos(rad(A1))} {RC*sin(rad(A1))} {RUG}" rot="0 0 {A1 - 90}"/>
+  <prefab source="study/chair" pos="{RC*cos(rad(A2))} {RC*sin(rad(A2))} {RUG}" rot="0 0 {A2 - 90}"/>
+  <prefab source="study/chair" pos="{RC*cos(rad(A3))} {RC*sin(rad(A3))} {RUG}" rot="0 0 {A3 - 90}"/>
+  <prefab source="study/chair" pos="{(RC + 26)*cos(rad(A4))} {(RC + 26)*sin(rad(A4))} {RUG}" rot="0 0 {A4 - 90 + 28}"/>
+
+  <!-- On the table: three mugs (Y-up prefab, so rot 90 0 0), a vase with stems, a folded newspaper. -->
+  <prefab source="items/mug" pos="{0.55*R*cos(rad(A1))} {0.55*R*sin(rad(A1))} {TOP + RUG}" rot="90 0 {A1 + 60}" color="0.24 0.38 0.42"/>
+  <prefab source="items/mug" pos="{0.55*R*cos(rad(A2))} {0.55*R*sin(rad(A2))} {TOP + RUG}" rot="90 0 {A2 + 75}" color="0.58 0.22 0.18"/>
+  <prefab source="items/mug" pos="{0.55*R*cos(rad(A3))} {0.55*R*sin(rad(A3))} {TOP + RUG}" rot="90 0 {A3 + 50}" color="0.30 0.42 0.28"/>
+  <group name="vase" pos="-8 6 {TOP + RUG}">
+    <shape id="vase" closed="0">
+      <v x="0" y="0"/>
+      <v x="5" y="0"/>
+      <v x="6" y="2"/>
+      <v x="3.4" y="9"/>
+      <v x="2.6" y="16"/>
+      <v x="3.6" y="21"/>
+      <v x="3" y="22.5"/>
+      <v x="0" y="22.5"/>
+    </shape>
+    <lathe shape="vase" segments="28" rot="90 0 0" material="ceramic"/>
+    <cylinder pos="0.4 0.3 31" rot="96 0 0" radius="0.35" height="22" material="leaf"/>
+    <cylinder pos="-0.9 -0.5 30" rot="85 0 8" radius="0.35" height="20" material="leaf"/>
+    <cylinder pos="1.2 -0.8 29" rot="94 0 -9" radius="0.35" height="18" material="leaf"/>
+    <sphere pos="0.4 -0.9 43.4" radius="2.6" material="petal"/>
+    <sphere pos="-1.9 0.4 41.3" radius="2.3" material="petal"/>
+    <sphere pos="2.4 -1.1 39.2" radius="2.1" material="petal"/>
+  </group>
+  <box pos="{0.5*R*cos(rad(A4))} {0.5*R*sin(rad(A4))} {TOP + RUG + 0.6}" rot="0 0 {A4 + 12}" size="30 21 1.2" material="paper"/>
+
+  <!-- Bookshelf against the east wall, a trunk by the south wall, a stray book on it. -->
+  <prefab source="study/bookshelf" pos="{W/2 - 17} 40 0" rot="0 0 90"/>
+  <prefab source="study/trunk" pos="-150 {-D/2 + 43} 0" rot="0 0 90"/>
+  <prefab source="study/book" pos="-150 {-D/2 + 43} 46" rot="0 0 6" color="0.18 0.30 0.44"/>
+</scene>

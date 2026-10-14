@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Timeline demo: Adam walks across a lamplit sitting room to greet the kitten on a chair, then waves.
+     Z up, centimetres. Interior x -300..300, y -220..220, floor z=0, ceiling z=270. Duration 7 s:
+     the gait runs 0.3 s to about 5 s, the wave fades in at 5.0 and out by 6.6.
+     Check any moment without rendering with the query and list-joints CLI modes and a time of 2.5 s. -->
+<scene up="z" duration="7" ambient="0.26 0.25 0.30" background="midnight">
+  <let name="W" value="600"/>
+  <let name="D" value="440"/>
+  <let name="H" value="270"/>
+  <let name="T" value="16"/>
+  <let name="CHAIR_X" value="150"/>
+  <let name="CHAIR_Y" value="40"/>
+
+  <camera name="wide" comment="Fixed wide shot of the whole walk from the south wall" pos="-40 -200 170" look="-10 40 80" fov="64"/>
+  <camera name="track" comment="Follows Adam from his left side as he crosses the room" follow="Adam" pos="-40 -175 140" look="0 0 90" fov="50"/>
+  <camera name="meet" comment="The chair and the kitten, Adam arriving from the left" pos="-10 -195 120" look="130 40 60" fov="40"/>
+
+  <material id="plaster" color="0.74 0.70 0.62" shininess="3"/>
+  <material id="dark_wood" color="0.34 0.22 0.15" shininess="14"/>
+  <material id="wood" color="0.56 0.38 0.22" shininess="18"/>
+  <material id="floorboards" color="0.48 0.34 0.22" shininess="8"/>
+  <material id="rug" color="0.40 0.22 0.24" shininess="2"/>
+  <material id="brass" color="0.72 0.50 0.20" shininess="40"/>
+  <material id="book_pages" color="0.80 0.73 0.58" shininess="2"/>
+  <material id="lamp_shade" color="0.36 0.44 0.34" shininess="20"/>
+  <material id="fur" color="0.56 0.56 0.58" shininess="4"/>
+  <material id="paw" color="0.90 0.88 0.85" shininess="4"/>
+  <material id="ear" color="0.82 0.56 0.56" shininess="4"/>
+  <material id="eye" color="0.14 0.18 0.10" shininess="60"/>
+  <material id="muzzle" color="0.90 0.88 0.85" shininess="4"/>
+  <material id="nose" color="0.82 0.44 0.48" shininess="20"/>
+  <material id="shirt" color="0.62 0.30 0.24" shininess="6"/>
+  <material id="trousers" color="0.24 0.26 0.34" shininess="6"/>
+  <material id="trunk_fabric" color="0.40 0.27 0.20" shininess="5"/>
+
+  <!-- Moonlight through the west window; the pendant does the real work. -->
+  <sun dir="1 -0.45 -1.1" color="0.45 0.55 0.90" intensity="0.55" castShadows="1"/>
+
+  <floor rot="90 0 0" width="{W}" depth="{D}" style="boards" tileWidth="18" tileLength="150" gap="0.3" material="floorboards" colorVariation="0.16" seed="5" groutColor="0.12 0.08 0.05"/>
+  <box pos="0 0 {H + T/2}" size="{W + 2*T} {D + 2*T} {T}" material="plaster"/>
+  <group pos="0 {D/2 + T/2} 0" rot="90 0 0">
+    <wall length="{W + 2*T}" height="{H}" thickness="{T}" material="plaster" bottomTrimHeight="9" trimMaterial="dark_wood"/>
+  </group>
+  <group pos="{-W/2 - T/2} 0 0" rot="90 0 90">
+    <wall length="{D}" height="{H}" thickness="{T}" material="plaster" bottomTrimHeight="9" trimMaterial="dark_wood"/>
+    <window preset="round-arch" pos="30 150 0" width="110" height="170" frameMaterial="wood"/>
+  </group>
+  <group pos="{W/2 + T/2} 0 0" rot="90 0 -90">
+    <wall length="{D}" height="{H}" thickness="{T}" material="plaster" bottomTrimHeight="9" trimMaterial="dark_wood"/>
+  </group>
+  <group pos="0 {-D/2 - T/2} 0" rot="90 0 180">
+    <wall length="{W + 2*T}" height="{H}" thickness="{T}" material="plaster" bottomTrimHeight="9" trimMaterial="dark_wood"/>
+  </group>
+
+  <prefab source="study/pendant_lamp" pos="0 0 {H}"/>
+  <rounded-rect pos="-60 -10 0.3" size="300 220" radius="18" material="rug"><extrude amount="0.6"/></rounded-rect>
+
+  <!-- The kitten's chair, a side table with a lamp, a bookshelf and a trunk along the walls. -->
+  <prefab source="study/chair" name="chair" pos="{CHAIR_X} {CHAIR_Y} 0" rot="0 0 -90"/>
+  <prefab source="characters/kitten" name="Kit" attach="chair:seat" rot="0 0 -70" pose="Alert"/>
+  <prefab source="furniture/stool" pos="{CHAIR_X + 10} {CHAIR_Y + 80} 0" rot="90 0 0"/>
+  <prefab source="study/desk_lamp" pos="{CHAIR_X + 10} {CHAIR_Y + 80} 62" rot="0 0 -110"/>
+  <prefab source="study/bookshelf" pos="60 {D/2 - 17} 0"/>
+  <prefab source="study/trunk" pos="{-W/2 + 24} -120 0" rot="0 0 90"/>
+  <prefab source="study/book" pos="{-W/2 + 26} -112 46" rot="0 0 100" color="0.18 0.30 0.44"/>
+
+  <pose name="Alert">
+    <joint target="neck" aim="0 35"/>
+    <joint target="head" aim="-15 -5"/>
+    <joint target="tail_2" aim="160 70"/>
+  </pose>
+
+  <!-- Adam starts by the west window, faces +X (rot 90 from his -Y front) and walks 300 cm. -->
+  <prefab source="characters/presets/biped" name="Adam" pos="-230 -20 0" rot="0 0 90">
+    <gait start="0.3" distance="300"/>
+    <layer pose="WaveRight" start="5.0" end="6.6" fadeIn="0.35" fadeOut="0.4"/>
+  </prefab>
+</scene>

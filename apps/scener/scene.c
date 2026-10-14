@@ -51,7 +51,7 @@
 #define WINDOW_DEFAULT_SEGMENTS 32
 #define WINDOW_MIN_SEGMENTS 8
 #define WINDOW_MAX_SEGMENTS 128
-#define WINDOW_JOIN_OVERLAP 0.0001f
+#define WINDOW_JOIN_OVERLAP 0.0005f
 #define WINDOW_EPSILON 0.000001f
 #define WINDOW_ALIGNMENT_EPSILON 0.0001f
 #define DOOR_DEFAULT_WIDTH 1.0f
@@ -830,7 +830,7 @@ static void collect_shapes_from_tree(Scene *s,XmlNode *root){
 			strncpy(sh.name,id,31);
 			for(int k=0;k<n->nkids;k++){
 				if(!strcmp(n->kids[k]->tag,"v")){
-					float x=xml_attr_f(n->kids[k],"x",0), y=xml_attr_f(n->kids[k],"y",0);
+					float x=xml_attr_f_cm(n->kids[k],"x",0), y=xml_attr_f_cm(n->kids[k],"y",0);
 					vec3 p=v3(x,y,0); DA_PUSH(sh.pts,sh.npts,sh.cpts,p);
 				}
 			}
@@ -2172,8 +2172,11 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 	vec3 travel=v3(0,0,0);
 	XmlNode *timeline=rig_timeline_pose(s,n,proot,(XmlNode*)s->activeRigPose,&travel);
 	if(timeline) s->activeRigPose=timeline;
-	/* A gait carries the instance through its body frame. */
-	if(vlen(travel)>0) M=mat4_mul(M,mat4_translate(vscale(travel,1.0f/CM_PER_METRE)));
+	/* A gait carries the instance through its body frame; its scene record travels with it. */
+	if(vlen(travel)>0){
+		M=mat4_mul(M,mat4_translate(vscale(travel,1.0f/CM_PER_METRE)));
+		if(s->activeRecord>=0 && s->records[s->activeRecord].node==n) s->records[s->activeRecord].transform=M;
+	}
 	const char *name=xml_attr(n,"name",NULL);
 	if(name){
 		InstanceDef inst; memset(&inst,0,sizeof(inst));
@@ -2506,6 +2509,7 @@ static void warn_unknown_children(Scene *s, XmlNode *parent, const char *path, i
 		else if(!strcmp(parent->tag,"capture-profile")) supported=!strcmp(n->tag,"map");
 		else if(!strcmp(parent->tag,"layer")) supported=!strcmp(n->tag,"contact");
 		else if(!strcmp(parent->tag,"clip")) supported=!strcmp(n->tag,"key");
+		else if(!strcmp(parent->tag,"shape")) supported=!strcmp(n->tag,"v");
 		else if(!strcmp(parent->tag,"wall")||!strcmp(parent->tag,"floor")||!strcmp(parent->tag,"window")||!strcmp(parent->tag,"door")) supported=0;
 		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array") || !strcmp(n->tag,"joint") || !strcmp(n->tag,"ik") || !strcmp(n->tag,"gait") || !strcmp(n->tag,"layer") || !strcmp(n->tag,"option");
 		else if(has_shape_parser(parent->tag)) supported=has_modifier_parser(n->tag);

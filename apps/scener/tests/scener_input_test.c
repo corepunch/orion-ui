@@ -464,6 +464,35 @@ static void test_scene_query_records(void){
 	scene_free(&s); PASS();
 }
 
+static void test_lathe_profiles_in_centimetres(void){
+	TEST("scene shapes: <v> vertices are supported and authored in centimetres");
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene up=\"z\"><light pos=\"0 0 100\"/><shape id=\"cup\" closed=\"0\">"
+		"<v x=\"0\" y=\"0\"/><v x=\"4\" y=\"0\"/><v x=\"4\" y=\"10\"/><v x=\"0\" y=\"10\"/></shape>"
+		"<lathe shape=\"cup\" segments=\"16\" rot=\"90 0 0\" material=\"wood\"/></scene>"));
+	ASSERT_EQUAL(s.nissues,0);
+	ASSERT_EQUAL(s.nobjs,1);
+	vec3 lo,hi;
+	scene_get_obj_bounds(&s,0,&lo,&hi);
+	ASSERT_TRUE(fabsf(hi.x-0.04f)<0.001f && fabsf(lo.x+0.04f)<0.001f && fabsf(hi.z-0.1f)<0.001f && fabsf(lo.z)<0.001f);
+	scene_free(&s); PASS();
+}
+
+static void test_query_records_follow_gait_travel(void){
+	TEST("scene query: a walking instance's record moves with its gait travel");
+	Scene s={0};
+	ASSERT_TRUE(load_scene("apps/scener/scenes/biped_walk.blks",&s));
+	scene_set_time(&s,2.5f);
+	int adam=-1;
+	for(int r=0;r<s.nrecords;r++) if(scene_node_attr(s.records[r].node,"source")) adam=r;
+	ASSERT_TRUE(adam>=0);
+	vec3 origin=mat4_xform_point(s.records[adam].transform,v3(0,0,0));
+	float lo=INFINITY,hi=-INFINITY;
+	for(int i=0;i<s.nobjs;i++) if(s.objs[i].record==adam){ vec3 a,b; scene_get_obj_bounds(&s,i,&a,&b); lo=fminf(lo,a.y); hi=fmaxf(hi,b.y); }
+	ASSERT_TRUE(origin.y<-0.5f && origin.y>lo && origin.y<hi);
+	scene_free(&s); PASS();
+}
+
 static void test_nested_arch_emits_wall_parts_once(void) {
   TEST("scener walls: a contained arch does not duplicate wall geometry");
   Scene scene = {0};
@@ -1168,6 +1197,8 @@ int main(void) {
   test_scene_expressions();
   test_scene_check_geometry();
   test_scene_query_records();
+  test_lathe_profiles_in_centimetres();
+  test_query_records_follow_gait_travel();
   test_nested_arch_emits_wall_parts_once();
   test_explicit_scene_up_axis();
   test_scene_coordinate_conventions();

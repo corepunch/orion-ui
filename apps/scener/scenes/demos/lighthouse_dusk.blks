@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lighthouse island at dusk: a lathed tower on a stepped rock, gallery posts placed by trigonometry,
+     a keeper's cottage, and a lantern that is a real point light. Z up, centimetres; sea level is z=0.
+     Resident story: the keeper has just lit the lamp and left the cottage door open behind him. -->
+<scene up="z" ambient="0.10 0.11 0.17" background="0.20 0.12 0.18">
+  <let name="TH" value="1150"/>
+  <let name="RB" value="230"/>
+  <let name="RT" value="150"/>
+  <let name="LOW" value="170"/>
+  <let name="ROCK" value="270"/>
+  <let name="GAL" value="ROCK + TH"/>
+  <let name="RAIL" value="RT + 50"/>
+  <let name="POST" value="95"/>
+
+  <camera name="approach" comment="From the water to the south-west, the whole island against the dusk" pos="-2000 -1650 240" look="0 0 760" fov="50"/>
+  <camera name="gallery" comment="Up at the gallery and the lit lantern" pos="-480 -360 {GAL + 40}" look="0 0 {GAL + 120}" fov="50"/>
+  <camera name="cottage" comment="The keeper's cottage with the tower rising behind it" pos="900 -640 300" look="300 60 300" fov="48"/>
+
+  <material id="sea" color="0.10 0.20 0.26" shininess="70"/>
+  <material id="rock" color="0.32 0.30 0.28" shininess="6"/>
+  <material id="whitewash" color="0.86 0.84 0.78" shininess="10"/>
+  <material id="red_band" color="0.70 0.16 0.12" shininess="14"/>
+  <material id="iron" color="0.20 0.20 0.22" shininess="40"/>
+  <material id="copper" color="0.30 0.42 0.36" shininess="30"/>
+  <material id="slate" color="0.24 0.26 0.30" shininess="18"/>
+  <material id="timber" color="0.42 0.28 0.18" shininess="12"/>
+  <material id="lamp_glass" color="1.0 0.93 0.72" shininess="60"/>
+  <material id="window_glow" color="1.0 0.78 0.42" shininess="4"/>
+
+  <!-- Low sun from the west, almost on the horizon, with a cool shadowless fill from the east. -->
+  <sun dir="0.8 0.35 -0.32" color="1.0 0.60 0.36" intensity="1.25" castShadows="1"/>
+  <sun dir="-0.5 -0.4 -1" color="0.28 0.36 0.66" intensity="0.40" castShadows="0"/>
+
+  <!-- Sea, its surface at z=0, and the island as two tapered rock steps. -->
+  <box pos="0 0 -10" size="7000 7000 20" material="sea"/>
+  <group name="island">
+    <prism pos="0 0 {LOW/2}" rot="90 0 7" radius="1100" height="{LOW}" sides="16" material="rock"><taper amount="-0.2"/></prism>
+    <prism pos="0 0 {LOW + (ROCK - LOW)/2}" rot="90 0 23" radius="380" height="{ROCK - LOW}" sides="9" material="rock"><taper amount="-0.25"/></prism>
+  </group>
+
+  <!-- Tower: lathe profile with a flared base, a red band, and the gallery floor at its top. -->
+  <shape id="tower" closed="0">
+    <v x="0" y="0"/>
+    <v x="{RB}" y="0"/>
+    <v x="{RB}" y="24"/>
+    <v x="{RB - 30}" y="50"/>
+    <v x="{RT}" y="{TH - 60}"/>
+    <v x="{RT + 48}" y="{TH - 36}"/>
+    <v x="{RT + 48}" y="{TH}"/>
+    <v x="0" y="{TH}"/>
+  </shape>
+  <group name="tower">
+    <lathe shape="tower" segments="48" pos="0 0 {ROCK}" rot="90 0 0" material="whitewash"/>
+    <cylinder pos="0 0 {ROCK + 560}" rot="90 0 0" radius="{RT + (RB - RT)*0.5 + 1.5}" height="110" tube="2" material="red_band"/>
+    <!-- Gallery: eight posts on the rail circle, a top rail torus, then the lantern. -->
+    <cylinder pos="{RAIL*cos(rad(0))} {RAIL*sin(rad(0))} {GAL + POST/2}" rot="90 0 0" radius="2.2" height="{POST}" material="iron"/>
+    <cylinder pos="{RAIL*cos(rad(45))} {RAIL*sin(rad(45))} {GAL + POST/2}" rot="90 0 0" radius="2.2" height="{POST}" material="iron"/>
+    <cylinder pos="{RAIL*cos(rad(90))} {RAIL*sin(rad(90))} {GAL + POST/2}" rot="90 0 0" radius="2.2" height="{POST}" material="iron"/>
+    <cylinder pos="{RAIL*cos(rad(135))} {RAIL*sin(rad(135))} {GAL + POST/2}" rot="90 0 0" radius="2.2" height="{POST}" material="iron"/>
+    <cylinder pos="{RAIL*cos(rad(180))} {RAIL*sin(rad(180))} {GAL + POST/2}" rot="90 0 0" radius="2.2" height="{POST}" material="iron"/>
+    <cylinder pos="{RAIL*cos(rad(225))} {RAIL*sin(rad(225))} {GAL + POST/2}" rot="90 0 0" radius="2.2" height="{POST}" material="iron"/>
+    <cylinder pos="{RAIL*cos(rad(270))} {RAIL*sin(rad(270))} {GAL + POST/2}" rot="90 0 0" radius="2.2" height="{POST}" material="iron"/>
+    <cylinder pos="{RAIL*cos(rad(315))} {RAIL*sin(rad(315))} {GAL + POST/2}" rot="90 0 0" radius="2.2" height="{POST}" material="iron"/>
+    <torus pos="0 0 {GAL + POST}" rot="90 0 0" majorRadius="{RAIL}" minorRadius="2.4" majorSegments="48" minorSegments="10" material="iron"/>
+    <torus pos="0 0 {GAL + POST/2}" rot="90 0 0" majorRadius="{RAIL}" minorRadius="1.6" majorSegments="48" minorSegments="8" material="iron"/>
+    <cylinder pos="0 0 {GAL + 8}" rot="90 0 0" radius="{RT - 10}" height="16" material="iron"/>
+    <cylinder pos="{(RT - 14)*cos(rad(22.5))} {(RT - 14)*sin(rad(22.5))} {GAL + 16 + 90}" rot="90 0 0" radius="5" height="180" material="iron"/>
+    <cylinder pos="{(RT - 14)*cos(rad(82.5))} {(RT - 14)*sin(rad(82.5))} {GAL + 16 + 90}" rot="90 0 0" radius="5" height="180" material="iron"/>
+    <cylinder pos="{(RT - 14)*cos(rad(142.5))} {(RT - 14)*sin(rad(142.5))} {GAL + 16 + 90}" rot="90 0 0" radius="5" height="180" material="iron"/>
+    <cylinder pos="{(RT - 14)*cos(rad(202.5))} {(RT - 14)*sin(rad(202.5))} {GAL + 16 + 90}" rot="90 0 0" radius="5" height="180" material="iron"/>
+    <cylinder pos="{(RT - 14)*cos(rad(262.5))} {(RT - 14)*sin(rad(262.5))} {GAL + 16 + 90}" rot="90 0 0" radius="5" height="180" material="iron"/>
+    <cylinder pos="{(RT - 14)*cos(rad(322.5))} {(RT - 14)*sin(rad(322.5))} {GAL + 16 + 90}" rot="90 0 0" radius="5" height="180" material="iron"/>
+    <cylinder pos="0 0 {GAL + 16 + 180 + 8}" rot="90 0 0" radius="{RT - 4}" height="16" material="iron"/>
+    <cone pos="0 0 {GAL + 16 + 180 + 16 + 60}" rot="90 0 0" radius="{RT + 6}" height="120" sides="32" material="copper"/>
+    <sphere pos="0 0 {GAL + 16 + 180 + 16 + 120 + 14}" radius="15" material="iron"/>
+    <!-- The lamp: an unlit emitter and the point light inside it, open to the sea on every side. -->
+    <sphere pos="0 0 {GAL + 16 + 90}" radius="34" material="lamp_glass" unlit="1" castShadow="0"/>
+    <light pos="0 0 {GAL + 16 + 90}" color="1.0 0.86 0.60" intensity="3.2" radius="2600" castShadows="1"/>
+  </group>
+
+  <!-- Keeper's cottage on the lower shelf east of the tower, door to the south. -->
+  <group name="cottage" pos="650 40 {LOW}" rot="0 0 -8">
+    <box pos="0 0 100" size="260 220 200" material="whitewash"/>
+    <pyramid pos="0 0 {200 + 75}" rot="90 0 45" radius="{hypot(145, 125)}" height="150" sides="4" material="slate"/>
+    <box pos="70 0 288" size="34 34 90" material="rock"/>
+    <box pos="-40 -111.5 90" size="70 3 180" material="timber"/>
+    <box pos="55 -111 140" size="60 2 60" material="window_glow" unlit="1" castShadow="0"/>
+    <box pos="55 -113.5 140" size="4 3 64" material="timber"/>
+    <box pos="55 -113 140" size="64 3 4" material="timber"/>
+    <box pos="-131 40 140" size="2 60 60" material="window_glow" unlit="1" castShadow="0"/>
+    <box pos="-133.5 40 140" size="3 4 64" material="timber"/>
+    <box pos="-133 40 140" size="3 64 4" material="timber"/>
+  </group>
+
+  <!-- A worn flagstone path from the door toward the slope up to the tower. -->
+  <box pos="606 -110 {LOW + 1}" rot="0 0 -20" size="50 40 2" material="slate"/>
+  <box pos="558 -168 {LOW + 1}" rot="0 0 -32" size="48 42 2" material="slate"/>
+  <box pos="502 -218 {LOW + 1}" rot="0 0 -38" size="52 40 2" material="slate"/>
+  <box pos="440 -262 {LOW + 1}" rot="0 0 -30" size="50 38 2" material="slate"/>
+  <box pos="404 -302 {LOW + 1}" rot="0 0 -18" size="48 40 2" material="slate"/>
+</scene>
