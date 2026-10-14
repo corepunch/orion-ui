@@ -16,6 +16,37 @@ build/lineart-python/bin/python3 -m pip install -r tools/lineart_requirements.tx
 
 ## Conversion and palette choices
 
+### Layered PNG sequences
+
+Use `--sequence` to pack existing drawings directly, without FFmpeg. The input
+is a UTF-8 TSV with one row per frame: a name of 1–31 bytes, one tab, and a PNG
+path. Relative PNG paths resolve beside the TSV; absolute paths also work.
+All images must have equal dimensions. RGBA transparency is composited over
+white before conversion to pencil coverage. Names are stored in native frame
+metadata. `--fps` controls exposure (default one second per drawing); fractional
+rates use cumulative millisecond rounding. `--size` is rejected for sequences.
+
+For pencil projects, `--background guides.png` stores a separate shared
+Background layer and selects Pencil for editing. Background dimensions must
+match the drawings. Its RGB pixels map to the nearest opaque document swatch,
+with white mapped to transparent paper. Supply a suitable RIFF palette when
+guide shades need exact preservation. The Color and FX cels remain empty.
+Native playback frames and exported PNGs include the guides; Pencil cels retain
+only the drawing coverage, so hiding Background hides the guides independently.
+
+```sh
+build/bin/penciltest-video --sequence --mode pencil --fps 1 \
+  --palette grayscale.pal --background guides.png \
+  --output character-blockouts.ptf --frames previews frames.tsv
+```
+
+Example TSV rows (the separator shown here is a literal tab):
+
+```tsv
+Front	front.png
+Front 3/4	front-three-quarter.png
+```
+
 | Mode | Native layer | Pixel transfer | PNG output |
 |---|---|---|---|
 | `--mode pencil` (default) | Pencil | All 256 luminance levels stored reversibly as `255 - luminance` coverage | Lossless 8-bit grayscale |

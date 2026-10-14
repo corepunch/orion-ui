@@ -77,6 +77,11 @@ static void video_arguments(void) {
   char *existing[] = {"converter", "--palette", "colors.pal", "--frames", "out", "input.mp4"};
   ASSERT_TRUE(pv_parse(ARRAY_LEN(existing), existing, &o));
   ASSERT_EQUAL(o.palette_source, PV_EXISTING_PALETTE); ASSERT_STR_EQUAL(o.palette_path, "colors.pal");
+  char *sequence[] = {"converter", "--sequence", "--size", "10x10", "-o", "out.ptf", "frames.tsv"};
+  ASSERT_FALSE(pv_parse(ARRAY_LEN(sequence), sequence, &o));
+  sequence[2] = "--background"; sequence[3] = "guides.png";
+  ASSERT_TRUE(pv_parse(ARRAY_LEN(sequence), sequence, &o)); ASSERT_TRUE(o.sequence);
+  sequence[4] = "--frames"; ASSERT_FALSE(pv_parse(ARRAY_LEN(sequence), sequence, &o));
   PASS();
 }
 
@@ -351,6 +356,91 @@ static void video_external_projects(const char *directory, bool ink_only) {
   PASS();
 }
 
+static void video_sequence_verify(const char *path, pv_video_t *v) {
+  int w, h; uint32_t palette[256], bg; bool show;
+  pencil_file_layers_t layers;
+  anim_timeline_t *tl = flc_load_layers(path, &w, &h, palette, &bg, &show, &layers);
+  ASSERT_NOT_NULL(tl); ASSERT_EQUAL(w, v->width); ASSERT_EQUAL(h, v->height);
+  ASSERT_EQUAL(tl->frame_count, v->count); ASSERT_EQUAL(layers.active, IE_LAYER_PENCIL);
+  ASSERT_EQUAL(layers.visible, 15); ASSERT_TRUE(show);
+  size_t n = (size_t)w * h;
+  ASSERT_EQUAL(memcmp(layers.background, v->background, n), 0);
+  ASSERT_EQUAL(memcmp(palette, v->palette, sizeof(palette)), 0);
+  uint8_t *rgb = malloc(n * 3), *image = malloc(n), *pencil = malloc(n), *playback = calloc(1, n);
+  ASSERT_NOT_NULL(rgb); ASSERT_NOT_NULL(image); ASSERT_NOT_NULL(pencil); ASSERT_NOT_NULL(playback);
+  FILE *file = fopen(path, "rb"); ASSERT_NOT_NULL(file); ASSERT_EQUAL(fseek(file, 128, SEEK_SET), 0);
+  pv_options_t o = {.mode = PV_PENCIL}; rewind(v->pixels);
+  for (int i = 0; i < v->count; i++) {
+    ASSERT_EQUAL(fread(rgb, 1, n * 3, v->pixels), n * 3);
+    pv_convert(v, &o, rgb, image, pencil);
+    ASSERT_TRUE(test_anim_cel_matches(tl->frames[i], 1, pencil, w, h));
+    ASSERT_STR_EQUAL(tl->frames[i]->name, v->names[i]);
+    ASSERT_EQUAL(tl->frames[i]->delay_ms, v->times[i].delay);
+    for (int cel = 0; cel < 3; cel += 2) {
+      memset(image, 255, n); ASSERT_TRUE(test_anim_cel_matches(tl->frames[i], cel, image, w, h));
+    }
+    uint8_t header[16]; ASSERT_EQUAL(fread(header, 1, 16, file), 16);
+    ASSERT_EQUAL(flc_codec_u16(header + 4), 0xf1fa);
+    for (int chunk = 0; chunk < flc_codec_u16(header + 6); chunk++) {
+      uint8_t ch[6]; ASSERT_EQUAL(fread(ch, 1, 6, file), 6);
+      size_t size = flc_codec_u32(ch); ASSERT_TRUE(size >= 6);
+      uint8_t *data = malloc(size); ASSERT_NOT_NULL(data); memcpy(data, ch, 6);
+      ASSERT_EQUAL(fread(data + 6, 1, size - 6, file), size - 6);
+      if (flc_codec_u16(ch + 4) != 4) ASSERT_TRUE(flc_codec_decode(data, size, playback, playback, w, h));
+      free(data);
+    }
+    pv_composite_background(v, image, pencil);
+    ASSERT_EQUAL(memcmp(image, playback, n), 0);
+  }
+  fclose(file); free(rgb); free(image); free(pencil); free(playback); free(layers.background); anim_timeline_free(tl);
+}
+
+static void video_png_sequence(const char *directory) {
+  TEST("named PNG sequence retains transparent pencil coverage and separate shared guides after native reload");
+  char manifest[PATH_MAX], png_path[PATH_MAX], background[PATH_MAX], output[PATH_MAX];
+  snprintf(manifest, sizeof(manifest), "%s/poses.tsv", directory);
+  snprintf(png_path, sizeof(png_path), "%s/pose with spaces.png", directory);
+  snprintf(background, sizeof(background), "%s/guides.png", directory);
+  snprintf(output, sizeof(output), "%s/poses.ptf", directory);
+  uint8_t rgba[] = {0,0,0,255, 0,0,0,128, 0,0,0,0};
+  png_image png = {.version = PNG_IMAGE_VERSION, .width = 3, .height = 1, .format = PNG_FORMAT_RGBA};
+  ASSERT_TRUE(png_image_write_to_file(&png, png_path, 0, rgba, 0, NULL));
+  uint8_t guides[] = {128,128,128, 255,255,255, 0,0,0}; png.format = PNG_FORMAT_RGB;
+  ASSERT_TRUE(png_image_write_to_file(&png, background, 0, guides, 0, NULL));
+  FILE *fp = fopen(manifest, "w"); ASSERT_NOT_NULL(fp);
+  fputs("Front\tpose with spaces.png\nBack 3/4\tpose with spaces.png\n", fp); fclose(fp);
+  pv_options_t o = {.input = manifest, .sequence = true, .output = output, .background = background, .fps = 2};
+  pv_video_t v = {0};
+  ASSERT_TRUE(pv_decode(&o, &v)); ASSERT_EQUAL(v.count, 2); ASSERT_EQUAL(v.fps, 2);
+  ASSERT_TRUE(pv_palette(&v, &o)); ASSERT_TRUE(pv_background(&o, &v));
+  ASSERT_TRUE(pv_output(&o, &v)); video_sequence_verify(output, &v);
+  uint8_t image[3] = {0}, pencil[] = {255,128,0};
+  pv_composite_background(&v, image, pencil);
+  ASSERT_EQUAL(image[0], 0); ASSERT_EQUAL(image[1], 127); ASSERT_EQUAL(image[2], 0);
+  pv_free(&v); unlink(output);
+  png.width = 1; ASSERT_TRUE(png_image_write_to_file(&png, background, 0, guides, 0, NULL));
+  ASSERT_TRUE(pv_decode(&o, &v)); ASSERT_TRUE(pv_palette(&v, &o)); ASSERT_FALSE(pv_background(&o, &v)); pv_free(&v);
+  fp = fopen(manifest, "w"); ASSERT_NOT_NULL(fp); fputs("Malformed row\n", fp); fclose(fp);
+  v = (pv_video_t){0}; ASSERT_FALSE(pv_decode(&o, &v)); pv_free(&v);
+  unlink(manifest); unlink(png_path); unlink(background);
+  PASS();
+}
+
+static void video_sequence_example(const char *directory) {
+  TEST("character study project reopens with every named pencil cel and shared guide pixel intact");
+  char manifest[PATH_MAX], background[PATH_MAX], palette[PATH_MAX], output[PATH_MAX];
+  snprintf(manifest, sizeof(manifest), "%s/frames.tsv", directory);
+  snprintf(background, sizeof(background), "%s/background.png", directory);
+  snprintf(palette, sizeof(palette), "%s/grayscale.pal", directory);
+  snprintf(output, sizeof(output), "%s/character-blockouts.ptf", directory);
+  pv_options_t o = {.input = manifest, .sequence = true, .output = output, .background = background,
+                    .palette_source = PV_EXISTING_PALETTE, .palette_path = palette, .fps = 1};
+  pv_video_t v = {0};
+  ASSERT_TRUE(pv_decode(&o, &v)); ASSERT_TRUE(pv_palette(&v, &o)); ASSERT_TRUE(pv_background(&o, &v));
+  ASSERT_EQUAL(v.count, 10); video_sequence_verify(output, &v); pv_free(&v);
+  PASS();
+}
+
 int main(void) {
   TEST_START("Penciltest video conversion");
   char directory[] = "/tmp/orion-video-test-XXXXXX";
@@ -358,6 +448,7 @@ int main(void) {
   video_grayscale(); video_ink_cleanup(directory); video_arguments(); video_global_palette(); video_timestamps(); video_decoder(directory);
   video_palette_sources(directory);
   video_source_pencil(directory);
+  video_png_sequence(directory);
   video_native_roundtrip(directory, PV_PENCIL, PV_DEFAULT_PALETTE);
   video_native_roundtrip(directory, PV_BLACK, PV_DEFAULT_PALETTE);
   video_native_roundtrip(directory, PV_PALETTE, PV_DEFAULT_PALETTE);
@@ -369,6 +460,8 @@ int main(void) {
   if (examples) video_external_projects(examples, false);
   const char *ink_example = getenv("PENCILTEST_VIDEO_INK_EXAMPLE");
   if (ink_example) video_external_projects(ink_example, true);
+  const char *sequence_example = getenv("PENCILTEST_SEQUENCE_EXAMPLE");
+  if (sequence_example) video_sequence_example(sequence_example);
   char palette_path[PATH_MAX]; snprintf(palette_path, sizeof(palette_path), "%s/custom.pal", directory); unlink(palette_path);
   rmdir(directory);
   TEST_END();

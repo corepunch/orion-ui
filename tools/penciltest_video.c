@@ -31,13 +31,13 @@ typedef enum { PV_PENCIL, PV_BLACK, PV_PALETTE } pv_mode_t;
 typedef enum { PV_DEFAULT_PALETTE, PV_GENERATED_PALETTE, PV_EXISTING_PALETTE } pv_palette_source_t;
 typedef struct { int x, y, w, h; } pv_region_t;
 typedef struct {
-  const char *input, *output, *frames, *ffmpeg, *python, *filter;
+  const char *input, *output, *frames, *ffmpeg, *python, *filter, *background;
   pv_mode_t mode;
   pv_palette_source_t palette_source;
   const char *palette_path;
   int colors, threshold, width, height, max_frames, region_count;
   double fps, min_width, min_length;
-  bool fixed_protection, temporal;
+  bool fixed_protection, temporal, sequence;
   pv_region_t regions[32];
 } pv_options_t;
 typedef struct { double pts, duration; uint16_t delay; } pv_time_t;
@@ -48,6 +48,8 @@ typedef struct {
   int width, height, count, fps, colors, black_index;
   pv_time_t *times;
   pv_bin_t *histogram;
+  char (*names)[32];
+  uint8_t *background;
   uint8_t palette[256][4], playback_palette[256][4], lookup[PV_BINS];
 } pv_video_t;
 
@@ -91,6 +93,8 @@ static void pv_usage(FILE *fp) {
         "  --python PATH          Python with NumPy/OpenCV (default bundled local venv or python3)\n"
         "  --stroke-filter PATH   Override the packaged Python filter\n"
         "  --frames DIRECTORY     Export grayscale / indexed PNGs and timing.tsv\n"
+        "  --sequence             INPUT is a TSV: frame name<TAB>PNG path, relative to TSV\n"
+        "  --background FILE.png  Shared guide image for pencil projects (same dimensions)\n"
         "  --size WIDTHxHEIGHT    Explicit resize; otherwise preserve source dimensions\n"
         "  --fps RATE             Explicit resampling, 1..1000; otherwise source timing\n"
         "  --max-frames N         Convert only the first N decoded/output frames\n"
@@ -108,6 +112,7 @@ static bool pv_parse(int argc, char **argv, pv_options_t *o) {
     const char *arg = argv[i], *v;
     double n;
     if (!positional && !strcmp(arg, "--")) { positional = true; continue; }
+    if (!positional && !strcmp(arg, "--sequence")) { o->sequence = true; continue; }
     if (positional || arg[0] != '-') {
       if (o->input) return pv_error("only one input video is supported");
       o->input = arg; continue;
@@ -118,6 +123,7 @@ static bool pv_parse(int argc, char **argv, pv_options_t *o) {
     v = argv[++i];
     if      (!strcmp(arg, "-o") || !strcmp(arg, "--output")) o->output = v;
     else if (!strcmp(arg, "--frames")) o->frames = v;
+    else if (!strcmp(arg, "--background")) o->background = v;
     else if (!strcmp(arg, "--ffmpeg")) o->ffmpeg = v;
     else if (!strcmp(arg, "--python")) { o->python = v; ink_set = true; }
     else if (!strcmp(arg, "--stroke-filter")) { o->filter = v; ink_set = true; }
@@ -186,6 +192,8 @@ static bool pv_parse(int argc, char **argv, pv_options_t *o) {
   if (colors_set && o->palette_source != PV_GENERATED_PALETTE)
     return pv_error("--colors applies only to --palette generated");
   if (ink_set && o->mode != PV_BLACK) return pv_error("ink cleanup options apply only to --mode black");
+  if (o->sequence && o->width) return pv_error("--size is not supported for PNG sequences; prepare equal-sized images");
+  if (o->background && (!o->output || o->mode != PV_PENCIL)) return pv_error("--background requires a native pencil project");
   if (o->output && o->frames && !strcmp(o->output, o->frames)) return pv_error("project and frames must have different paths");
   return true;
 }
@@ -283,7 +291,82 @@ static bool pv_timing(FILE *log, pv_video_t *v, const pv_options_t *o) {
   return true;
 }
 
+static uint8_t *pv_read_png(const char *path, int *w, int *h) {
+  png_image png = {.version = PNG_IMAGE_VERSION};
+  if (!png_image_begin_read_from_file(&png, path)) { pv_error(png.message); png_image_free(&png); return NULL; }
+  if (!png.width || !png.height || png.width > 16384 || png.height > 16384 ||
+      (uint64_t)png.width * png.height * 4 > PV_LIMIT) {
+    png_image_free(&png); pv_error("PNG dimensions exceed the working-layer limit"); return NULL;
+  }
+  png.format = PNG_FORMAT_RGBA;
+  size_t n = (size_t)png.width * png.height;
+  uint8_t *pixels = malloc(n * 4);
+  if (!pixels || !png_image_finish_read(&png, NULL, pixels, 0, NULL)) {
+    pv_error(pixels ? png.message : "cannot allocate PNG pixels"); free(pixels); png_image_free(&png); return NULL;
+  }
+  *w = png.width; *h = png.height;
+  for (size_t p = 0; p < n; p++) {
+    uint8_t rgba[4]; memcpy(rgba, pixels + p * 4, 4);
+    for (int ch = 0; ch < 3; ch++) pixels[p * 3 + ch] = (rgba[ch] * rgba[3] + 255u * (255 - rgba[3]) + 127) / 255;
+  }
+  png_image_free(&png);
+  return pixels;
+}
+
+static bool pv_decode_sequence(const pv_options_t *o, pv_video_t *v) {
+  FILE *manifest = fopen(o->input, "r");
+  if (!manifest) return pv_system_error(o->input);
+  v->pixels = tmpfile();
+  bool histogram = o->mode == PV_PALETTE || o->palette_source == PV_GENERATED_PALETTE;
+  if (histogram) v->histogram = calloc(PV_BINS, sizeof(*v->histogram));
+  bool ok = v->pixels && (!histogram || v->histogram);
+  double rate = o->fps ? o->fps : 1;
+  v->fps = (int)round(rate);
+  char *line = NULL; size_t capacity = 0; ssize_t length;
+  while (ok && (length = getline(&line, &capacity, manifest)) >= 0) {
+    while (length && (line[length - 1] == '\n' || line[length - 1] == '\r')) line[--length] = 0;
+    if (!length) continue;
+    char *path = strchr(line, '\t');
+    if (!path || path == line || path - line > 31 || !path[1] || strchr(path + 1, '\t')) {
+      ok = pv_error("sequence rows must contain a 1..31 byte name and PNG path separated by one tab"); break;
+    }
+    *path++ = 0;
+    char resolved[PATH_MAX];
+    const char *slash = strrchr(o->input, '/');
+    int prefix = slash && path[0] != '/' ? (int)(slash - o->input + 1) : 0;
+    if (snprintf(resolved, sizeof(resolved), "%.*s%s", prefix, o->input, path) >= (int)sizeof(resolved)) {
+      ok = pv_error("sequence PNG path is too long"); break;
+    }
+    int w, h; uint8_t *rgb = pv_read_png(resolved, &w, &h);
+    if (!rgb) { ok = false; break; }
+    size_t n = (size_t)w * h;
+    if ((v->count && (w != v->width || h != v->height)) || v->count == 65535 || n * 3 > PV_LIMIT) {
+      free(rgb); ok = pv_error("sequence dimensions differ or native project limits are exceeded"); break;
+    }
+    pv_time_t *times = realloc(v->times, (v->count + 1u) * sizeof(*times));
+    if (times) v->times = times;
+    char (*names)[32] = realloc(v->names, (v->count + 1u) * sizeof(*names));
+    if (names) v->names = names;
+    int64_t delay = llround((v->count + 1) * 1000.0 / rate) - llround(v->count * 1000.0 / rate);
+    if (!times || !names || delay < 1 || delay > 65535) { free(rgb); ok = pv_error("cannot allocate sequence metadata or represent timing"); break; }
+    if (v->histogram) for (size_t p = 0; p < n; p++) {
+      pv_bin_t *bin = &v->histogram[pv_bin_index(rgb + p * 3)]; bin->count++;
+      for (int ch = 0; ch < 3; ch++) bin->sum[ch] += rgb[p * 3 + ch];
+    }
+    v->width = w; v->height = h;
+    v->times[v->count] = (pv_time_t){.pts = v->count / rate, .duration = 1 / rate, .delay = delay};
+    memset(v->names[v->count], 0, 32); snprintf(v->names[v->count], 32, "%s", line);
+    ok = pv_write(v->pixels, rgb, n * 3); free(rgb);
+    if (ok) v->count++;
+    if (o->max_frames && v->count == o->max_frames) break;
+  }
+  if (ferror(manifest)) ok = pv_system_error(o->input);
+  free(line); fclose(manifest);
+  return (ok && v->count) || pv_error("PNG sequence decoding failed or sequence is empty");
+}
+
 static bool pv_decode(const pv_options_t *o, pv_video_t *v) {
+  if (o->sequence) return pv_decode_sequence(o, v);
   FILE *log = tmpfile();
   v->pixels = tmpfile();
   bool histogram = o->mode == PV_PALETTE || o->palette_source == PV_GENERATED_PALETTE;
@@ -543,6 +626,37 @@ static void pv_convert(const pv_video_t *v, const pv_options_t *o, const uint8_t
   }
 }
 
+static bool pv_background(const pv_options_t *o, pv_video_t *v) {
+  if (!o->background) return true;
+  int w, h; uint8_t *rgb = pv_read_png(o->background, &w, &h);
+  if (!rgb) return false;
+  if (w != v->width || h != v->height) { free(rgb); return pv_error("background must match frame dimensions"); }
+  size_t n = (size_t)w * h;
+  v->background = malloc(n);
+  if (!v->background) { free(rgb); return pv_error("cannot allocate shared background"); }
+  for (size_t p = 0; p < n; p++) {
+    const uint8_t *pixel = rgb + p * 3;
+    int best = 255, distance = 0;
+    for (int ch = 0; ch < 3; ch++) { int d = pixel[ch] - 255; distance += d * d; }
+    for (int i = 0; i < v->colors; i++) if (v->palette[i][3] == 255) {
+      int d = 0;
+      for (int ch = 0; ch < 3; ch++) { int diff = pixel[ch] - v->palette[i][ch]; d += diff * diff; }
+      if (d < distance) { best = i; distance = d; }
+    }
+    v->background[p] = best;
+  }
+  free(rgb);
+  return true;
+}
+
+static void pv_composite_background(const pv_video_t *v, uint8_t *image, const uint8_t *pencil) {
+  if (!v->background) return;
+  for (size_t p = 0, n = (size_t)v->width * v->height; p < n; p++) {
+    int gray = v->background[p] == 255 ? 255 : pv_gray(v->palette[v->background[p]]);
+    image[p] = (gray * (255 - pencil[p]) + 127) / 255;
+  }
+}
+
 static bool pv_png(const char *path, const pv_video_t *v, pv_mode_t mode, const uint8_t *pixels) {
   FILE *fp = fopen(path, "wb");
   if (!fp) return pv_system_error(path);
@@ -611,7 +725,9 @@ static bool pv_metadata(FILE *fp, const pv_video_t *v) {
   if (!pv_write(fp, header, sizeof(header))) return false;
   for (int i = 0; i < v->count; i++) {
     uint8_t m[PV_META_SIZE] = {0};
-    memcpy(m, "PTF1", 4); snprintf((char *)m + 4, 32, "Frame %d", i + 1);
+    memcpy(m, "PTF1", 4);
+    if (v->names) memcpy(m + 4, v->names[i], 32);
+    else snprintf((char *)m + 4, 32, "Frame %d", i + 1);
     pv_put32(m + 36, v->fps); pv_put32(m + 40, v->times[i].delay);
     m[44] = m[45] = 1; pv_put32(m + 48, 0xffffffff);
     memcpy(m + 60, v->palette, sizeof(v->palette));
@@ -651,7 +767,8 @@ static bool pv_output(const pv_options_t *o, pv_video_t *v) {
       pv_put16(project_header + 12, 8); pv_put16(project_header + 14, 3); pv_put32(project_header + 16, 1000 / v->fps);
       pv_put16(project_header + 38, 1); pv_put16(project_header + 40, 1); pv_put32(project_header + 80, 128);
       memset(blank, 255, n);
-      ok = pv_write(project, project_header, sizeof(project_header)) && flc_codec_write(layers, blank, NULL, v->width, v->height);
+      ok = pv_write(project, project_header, sizeof(project_header)) &&
+           flc_codec_write(layers, v->background ? v->background : blank, NULL, v->width, v->height);
     }
   }
   if (ok && o->frames) {
@@ -674,6 +791,7 @@ static bool pv_output(const pv_options_t *o, pv_video_t *v) {
     ok = fread(rgb, 1, n * 3, v->pixels) == n * 3;
     if (!ok) break;
     pv_convert(v, o, rgb, image, pencil);
+    pv_composite_background(v, image, pencil);
     if (project) {
       if (v->source_pixels) {
         if (fread(rgb, 1, n * 3, v->source_pixels) != n * 3) { ok = pv_error("truncated source pencil frame"); break; }
@@ -700,6 +818,7 @@ static bool pv_output(const pv_options_t *o, pv_video_t *v) {
     rewind(v->pixels);
     ok = fread(rgb, 1, n * 3, v->pixels) == n * 3;
     pv_convert(v, o, rgb, image, pencil);
+    pv_composite_background(v, image, pencil);
     if (v->count == 1) pv_put32(project_header + 84, ftell(project));
     if (ok) ok = pv_flc_frame(project, v, image, 0, previous, false) && pv_metadata(project, v);
     uint8_t header[16] = {0};
@@ -751,7 +870,8 @@ static bool pv_output(const pv_options_t *o, pv_video_t *v) {
 static void pv_free(pv_video_t *v) {
   if (v->pixels) fclose(v->pixels);
   if (v->source_pixels) fclose(v->source_pixels);
-  free(v->times); free(v->histogram);
+  free(v->times); free(v->histogram); free(v->names); free(v->background);
+  *v = (pv_video_t){0};
 }
 
 #ifndef PENCILTEST_VIDEO_NO_MAIN
@@ -765,6 +885,7 @@ int main(int argc, char **argv) {
   if (ok) ok = pv_filter_ink(&o, &v);
   if (ok) {
     ok = pv_palette(&v, &o);
+    if (ok) ok = pv_background(&o, &v);
     if (ok) ok = pv_output(&o, &v);
   }
   if (ok) printf("Converted %d frames, %dx%d, %s%s%s\n", v.count, v.width, v.height,
