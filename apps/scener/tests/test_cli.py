@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise the deployed Scener CLI and actual JPEG/PNG outputs."""
 import argparse
+import json
 import shutil
 from pathlib import Path
 import struct
@@ -160,7 +161,7 @@ def main():
 <text style="label" x="10" y="110">t={t:%.1f}</text>
 <check name="time stays in range" value="t" min="0" max="0.5"/>
 </reel>''')
-        for arguments in [('--reel', reel), ('--reel', reel, '--check', '--output', 'x.png'), ('--check', scene)]:
+        for arguments in [('--reel', reel), ('--reel', reel, '--check', '--output', 'x.png'), ('--json', scene), ('--check', scene, '--query'), ('--strict', '--reel', reel, '--check')]:
             run(*arguments, success=False)
         assert 'check time stays in range' in run('--reel', reel, '--check').stdout
         run('--reel', reel, '--output', 'reel.png', '--time', '0.4', *extra)
@@ -185,7 +186,52 @@ def main():
         failing.write_text('<reel fps="10" duration="1"><check name="early" value="t" max="0.5"/></reel>')
         assert 'check early failed' in run('--reel', failing, '--check', success=False).stderr
         assert not (work / 'never.png').exists() and run('--reel', failing, '--output', 'never.png', success=False)
-        print('PASS: CLI errors, cameras, JPEG/PNG encoding, output dimensions, batch, selection, layout, legacy screenshot, reels')
+
+        assert 'check' in run('--check', scene).stdout
+        report = json.loads(run('--check', scene, '--json').stdout)
+        assert report['errors'] == 0 and report['issues'] == [], report
+        (work / 'prefabs/furniture').mkdir(parents=True)
+        (work / 'prefabs/furniture/stool.blk').write_text('''<!-- stool: seat top at z=45 -->
+<prefab up="z" front="-y">
+<let name="seat" value="45"/>
+<attach name="seat" pos="0 0 {seat}"/>
+<box pos="0 0 {seat - 2}" size="40 40 4" material="wood"/>
+<box pos="0 0 {(seat - 4) / 2}" size="6 6 {seat - 4}" material="wood"/>
+</prefab>''')
+        room = work / 'room.blks'
+        room.write_text('''<scene up="z">
+<let name="W" value="300"/>
+<camera name="Main" pos="0 {-W} 150" look="0 0 50"/>
+<light pos="0 0 250" radius="{W * 3}"/>
+<box pos="0 0 -5" size="{W} {W} 10" material="floor"/>
+<prefab name="stool" source="furniture/stool" pos="50 0 0" rot="0 0 90"/>
+<box attach="stool:seat" pos="0 0 5" size="10 10 10" material="wood"/>
+<box pos="-100 0 80" size="10 10 10"/>
+<box pos="100 100 10" size="20 20 20" material="metal"/>
+<box pos="110 100 10" size="20 20 20" material="metal"/>
+</scene>''')
+        report = json.loads(run('--check', room, '--json').stdout)
+        kinds = sorted(issue['kind'] for issue in report['issues'])
+        assert report['errors'] == 0 and kinds == ['coplanar', 'floating', 'intersection'], report
+        floating = next(issue for issue in report['issues'] if issue['kind'] == 'floating')
+        assert floating['line'] == 8 and floating['file'] == str(room), floating
+        run('--check', room, '--strict', success=False)
+        query = json.loads(run('--query', room).stdout)
+        assert query['up'] == 'z' and query['cameras'][0]['pos'] == [0, -300, 150]
+        stool = next(node for node in query['nodes'] if node.get('name') == 'stool')
+        assert stool['source'] == 'furniture/stool' and stool['line'] == 6, stool
+        assert stool['attach']['seat'] == [50, 0, 45] and stool['front'] == [1, 0, 0], stool
+        assert stool['bounds']['max'][2] == 45, stool
+        assert query['prefabs']['furniture/stool']['description'] == 'stool: seat top at z=45'
+        info = json.loads(run('--prefab-info', 'furniture/stool').stdout)
+        assert info['kind'] == 'prefab' and info['front'] == '-y' and info['attach'] == {'seat': [0, 0, 45]}, info
+        assert info['bounds']['size'] == [40, 40, 45], info
+        broken = work / 'broken.blks'
+        broken.write_text('<scene><light pos="0 0 1"/><box size="{W} 1 1" colour="1 0 0"/><prefab source="nowhere"/></scene>')
+        report = json.loads(run('--check', broken, '--json', success=False).stdout)
+        assert sorted(issue['kind'] for issue in report['issues']) == ['attribute', 'expression', 'prefab'], report
+        run('--prefab-info', 'furniture/absent', success=False)
+        print('PASS: CLI errors, cameras, JPEG/PNG encoding, output dimensions, batch, selection, layout, legacy screenshot, reels, check, query, prefab info')
 
 
 if __name__ == '__main__':

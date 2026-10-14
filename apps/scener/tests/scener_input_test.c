@@ -363,6 +363,107 @@ static void test_enclosed_light_reported(void){
 	scene_free(&s); PASS();
 }
 
+static int issues_of_kind(Scene *s,const char *kind){
+	int n=0;
+	for(int i=0;i<s->nissues;i++) if(!strcmp(s->issues[i].kind,kind)) n++;
+	return n;
+}
+
+static void test_scene_expressions(void){
+	TEST("scene expressions: lets scope to later siblings, {expr} resolves, source text is kept");
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene up=\"z\"><let name=\"W\" value=\"200\"/><let name=\"H\" value=\"W / 4\"/>"
+		"<light pos=\"0 0 {H*4}\" radius=\"{W*3}\"/><box pos=\"0 0 {H/2}\" size=\"{W} 20 {H}\"/>"
+		"<group pos=\"{W}\"><let name=\"H\" value=\"10\"/><box pos=\"0 0 {H/2}\" size=\"10 10 {H}\"/></group>"
+		"<box pos=\"0 100 {H/2}\" size=\"10 10 {H}\"/></scene>"));
+	ASSERT_EQUAL(s.nissues,0);
+	ASSERT_EQUAL(s.nobjs,3);
+	vec3 lo,hi;
+	scene_get_obj_bounds(&s,0,&lo,&hi);
+	ASSERT_TRUE(fabsf(hi.x-lo.x-2.0f)<0.001f && fabsf(hi.z-0.5f)<0.001f);
+	scene_get_obj_bounds(&s,1,&lo,&hi);
+	ASSERT_TRUE(fabsf(hi.z-0.1f)<0.001f && fabsf(lo.x-1.95f)<0.001f);
+	scene_get_obj_bounds(&s,2,&lo,&hi);
+	ASSERT_TRUE(fabsf(hi.z-0.5f)<0.001f);
+	ASSERT_TRUE(fabsf(s.lights[0].pos.z-2.0f)<0.001f && fabsf(s.lights[0].radius-6.0f)<0.001f);
+	const char *raw=NULL;
+	for(int i=0;i<scene_node_attr_count(s.objs[0].editNode);i++)
+		if(!strcmp(scene_node_attr_name(s.objs[0].editNode,i),"size")) raw=scene_node_attr_value(s.objs[0].editNode,i);
+	ASSERT_TRUE(raw && !strcmp(raw,"{W} 20 {H}"));
+	ASSERT_TRUE(!strcmp(scene_node_attr(s.objs[0].editNode,"size"),"200 20 50"));
+	scene_free(&s);
+
+	ASSERT_TRUE(window_test_load(&s,"<scene up=\"z\"><light pos=\"0 0 100\"/><box size=\"{missing} 1 1\"/>"
+		"<box size=\"{t} 1 1\"/><box size=\"{1 1 1\"/><let name=\"2x\" value=\"1\"/></scene>"));
+	ASSERT_EQUAL(issues_of_kind(&s,"expression"),4);
+	ASSERT_EQUAL(s.issues[0].line,1);
+	scene_free(&s); PASS();
+}
+
+static void test_scene_check_geometry(void){
+	TEST("scene check: floating, intersecting and coplanar geometry, assembly groups and sanityIgnore");
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene up=\"z\">\n<light pos=\"0 0 300\" radius=\"900\"/>\n"
+		"<box pos=\"0 0 -5\" size=\"1000 1000 10\"/>\n"
+		"<box pos=\"0 0 50\" size=\"20 20 20\"/>\n"
+		"<box pos=\"100 0 10\" size=\"20 20 20\"/>\n<box pos=\"110 0 10\" size=\"20 20 20\"/>\n"
+		"<box pos=\"200 0 10\" size=\"20 20 20\"/>\n<box pos=\"200 0 20\" size=\"10 10 20\"/>\n"
+		"<group><box pos=\"300 0 10\" size=\"20 20 20\"/><box pos=\"305 0 10\" size=\"20 20 20\"/></group>\n"
+		"<box pos=\"400 0 60\" size=\"5 5 5\" sanityIgnore=\"1\"/>\n</scene>"));
+	FILE *sink=fopen("/dev/null","w");
+	SceneCheckResult result=scene_check(&s,sink,0);
+	fclose(sink);
+	ASSERT_EQUAL(result.errors,0);
+	ASSERT_EQUAL(issues_of_kind(&s,"floating"),1);
+	ASSERT_EQUAL(issues_of_kind(&s,"intersection"),2);
+	ASSERT_EQUAL(issues_of_kind(&s,"coplanar"),2);
+	for(int i=0;i<s.nissues;i++){
+		if(!strcmp(s.issues[i].kind,"floating")) ASSERT_EQUAL(s.issues[i].line,4);
+		if(!strcmp(s.issues[i].kind,"intersection")) ASSERT_TRUE(s.issues[i].line==5 || s.issues[i].line==7);
+		if(!strcmp(s.issues[i].kind,"coplanar")) ASSERT_TRUE(s.issues[i].line==5 || s.issues[i].line==9);
+	}
+	ASSERT_EQUAL(result.warnings,5);
+	scene_free(&s);
+
+	ASSERT_TRUE(window_test_load(&s,"<scene><box size=\"1 1 1\" material=\"nonesuch\"/><bogus/><prefab source=\"absent/thing\"/></scene>"));
+	ASSERT_EQUAL(issues_of_kind(&s,"material"),1);
+	ASSERT_EQUAL(issues_of_kind(&s,"element"),1);
+	ASSERT_EQUAL(issues_of_kind(&s,"prefab"),1);
+	ASSERT_EQUAL(issues_of_kind(&s,"light"),1);
+	scene_free(&s);
+
+	/* An open prefab is one body whose materials come from the placing scene; unlit glints need no support. */
+	ASSERT_TRUE(window_test_load(&s,"<prefab up=\"y\" front=\"+z\"><box pos=\"0 45 0\" size=\"40 5 40\" material=\"lacquer\"/>"
+		"<box pos=\"0 22.5 0\" size=\"5 45 5\"/><sphere pos=\"0 90 0\" radius=\"1\" unlit=\"1\" castShadow=\"0\"/></prefab>"));
+	sink=fopen("/dev/null","w");
+	result=scene_check(&s,sink,0);
+	fclose(sink);
+	ASSERT_EQUAL(result.errors,0);
+	ASSERT_EQUAL(result.warnings,0);
+	scene_free(&s); PASS();
+}
+
+static void test_scene_query_records(void){
+	TEST("scene query: records name scene nodes and nested prefab instances with world bounds");
+	Scene s={0};
+	ASSERT_TRUE(load_scene("apps/scener/scenes/sample_room.blks",&s));
+	int table=-1;
+	for(int r=0;r<s.nrecords;r++) if(scene_node_attr(s.records[r].node,"name") && !strcmp(scene_node_attr(s.records[r].node,"name"),"dining_table")) table=r;
+	ASSERT_TRUE(table>=0);
+	ASSERT_EQUAL(s.records[table].parent,-1);
+	int parts=0;
+	for(int i=0;i<s.nobjs;i++) if(s.objs[i].record==table) parts++;
+	ASSERT_EQUAL(parts,5);
+	char *text=NULL; size_t size=0;
+	FILE *out=open_memstream(&text,&size);
+	scene_query(&s,out);
+	fclose(out);
+	ASSERT_TRUE(strstr(text,"\"source\": \"furniture/dining_table\"") && strstr(text,"\"center\": [0, 78, -150]"));
+	ASSERT_TRUE(strstr(text,"\"furniture/chair\": {") && strstr(text,"\"seat\": [0, 47.5, 0]"));
+	free(text);
+	scene_free(&s); PASS();
+}
+
 static void test_nested_arch_emits_wall_parts_once(void) {
   TEST("scener walls: a contained arch does not duplicate wall geometry");
   Scene scene = {0};
@@ -1064,6 +1165,9 @@ int main(void) {
   test_segmented_joint_only_volumes();
   test_ignored_attributes_reported();
   test_enclosed_light_reported();
+  test_scene_expressions();
+  test_scene_check_geometry();
+  test_scene_query_records();
   test_nested_arch_emits_wall_parts_once();
   test_explicit_scene_up_axis();
   test_scene_coordinate_conventions();

@@ -212,11 +212,20 @@ typedef struct {
 typedef struct { vec3 pos,color,dir; float intensity,radius; int castsShadow,isDirectional; } Light;
 typedef struct { float x,y,z,w; } ShadowVertex;
 typedef struct { ShadowVertex *verts; int nverts,cverts; } ShadowVolume;
-typedef struct { Mesh mesh; vec3 color; float shininess; int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
+typedef struct { Mesh mesh; vec3 color; float shininess; int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
 typedef struct { char path[1024]; unsigned char *pixels; int width,height; unsigned int texture; } ScreenTexture;
 typedef struct { char name[32]; vec3 pos; } AttachPoint;
 #define SCENE_PREFAB_PATH_CAPACITY 1024
-typedef struct { char ref[SCENE_PREFAB_PATH_CAPACITY]; char path[SCENE_PREFAB_PATH_CAPACITY]; void *root; AttachPoint *attaches; int nattaches, cattaches; } PrefabDef;
+#define SCENE_DESCRIPTION_CAPACITY 1024
+typedef struct { char ref[SCENE_PREFAB_PATH_CAPACITY]; char path[SCENE_PREFAB_PATH_CAPACITY]; void *root; AttachPoint *attaches; int nattaches, cattaches; char description[SCENE_DESCRIPTION_CAPACITY]; } PrefabDef;
+/* Load diagnostics, kept for scener --check. */
+enum { SCENE_ISSUE_WARNING, SCENE_ISSUE_ERROR };
+#define SCENE_ISSUE_KIND_CAPACITY 24
+#define SCENE_ISSUE_MESSAGE_CAPACITY 512
+typedef struct { int severity; char kind[SCENE_ISSUE_KIND_CAPACITY]; char file[SCENE_PREFAB_PATH_CAPACITY]; int line; char message[SCENE_ISSUE_MESSAGE_CAPACITY]; } SceneIssue;
+/* One per authored scene node and per prefab instance (also nested ones) in the built view;
+   objects point at their innermost record, so bounds and diagnostics name what the author wrote. */
+typedef struct { void *node; int parent; mat4 transform; } SceneRecord;
 typedef struct { char name[32]; char ref[SCENE_PREFAB_PATH_CAPACITY]; mat4 transform, rotMatrix; } InstanceDef;
 typedef struct { mat4 transform; Shape2D profile; float depth; } negative_profile_t;
 typedef struct { mat4 transform; vec3 size; } NegativeBox;
@@ -258,6 +267,11 @@ typedef struct {
 	ShadowVolume *svols;
 	PrefabDef *prefabs; int nprefabs,cprefabs;
 	int ignoredAttributes,enclosedLights;
+	SceneIssue *issues; int nissues,cissues;
+	SceneRecord *records; int nrecords,crecords;
+	int activeRecord, prefabDepth, defaultLights;
+	void *activeSourceNode;
+	char description[SCENE_DESCRIPTION_CAPACITY]; /* leading XML comment of the document */
 	InstanceDef *instances; int ninstances,cinstances;
 	negative_profile_t *negativeProfiles; int nnegativeProfiles,cnegativeProfiles;
 	NegativeBox *negativeBoxes; int nnegativeBoxes,cnegativeBoxes;
@@ -309,7 +323,9 @@ int load_scene(const char *path,Scene *s);
 void scene_free(Scene *s);
 void scene_select_camera(Scene *s,const char *name);
 void scene_add_obj(Scene *s,Mesh mesh,mat4 M,mat4 R,vec3 color,float shin,int castsShadow,int renderable,int unlit);
-int scene_sanity_check(Scene *s);
+typedef struct { int errors, warnings; } SceneCheckResult;
+SceneCheckResult scene_check(Scene *s,FILE *out,int json);
+void scene_query(Scene *s,FILE *out);
 vec3 light_to_source(Light *light,vec3 point);
 void scene_rebuild_camera_gizmos(Scene *s,float aspect);
 int scene_pick_object(Scene *s, vec3 rayOrigin, vec3 rayDir, float *tOut);

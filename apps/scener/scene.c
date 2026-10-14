@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include "simplegl.h"
 #include "materials.h"
+#include "reel.h"
 
 #define SURFACE_EPSILON 0.000001f
 #define SURFACE_NAME_CAPACITY 64
@@ -106,12 +107,16 @@
 #define ENCLOSURE_RAY_Y 0.6211f
 #define ENCLOSURE_RAY_Z 0.5303f
 #define ENCLOSURE_EPSILON 0.0000001f
+#define XML_NAME_CAPACITY 64
+#define XML_VALUE_CAPACITY 2048
 
 /* -------------------------------------------------------------- Tiny XML */
 
-typedef struct XmlAttr { char *name, *value; int used; } XmlAttr;
+/* value is what the author wrote and what saving writes back; resolved holds it with {expressions} evaluated. */
+typedef struct XmlAttr { char *name, *value, *resolved; int used; } XmlAttr;
 typedef struct XmlNode {
 	char *tag;
+	int line;
 	XmlAttr *attrs; int nattrs,cattrs;
 	struct XmlNode *parent;
 	struct XmlNode **kids; int nkids,ckids;
@@ -122,14 +127,16 @@ static XmlNode* xml_new(const char*tag){
 }
 static void xml_free(XmlNode*n){
 	if(!n) return;
-	for(int i=0;i<n->nattrs;i++){ free(n->attrs[i].name); free(n->attrs[i].value); }
+	for(int i=0;i<n->nattrs;i++){ free(n->attrs[i].name); free(n->attrs[i].value); free(n->attrs[i].resolved); }
 	free(n->attrs);
 	for(int i=0;i<n->nkids;i++) xml_free(n->kids[i]);
 	free(n->kids); free(n->tag); free(n);
 }
 /* Every lookup marks the attribute used, so load can report typos and ignored attributes. */
 static const char* xml_attr(XmlNode*n,const char*name,const char*def){
-	for(int i=0;i<n->nattrs;i++) if(!strcmp(n->attrs[i].name,name)){ n->attrs[i].used=1; return n->attrs[i].value; }
+	for(int i=0;i<n->nattrs;i++) if(!strcmp(n->attrs[i].name,name)){
+		n->attrs[i].used=1; return n->attrs[i].resolved?n->attrs[i].resolved:n->attrs[i].value;
+	}
 	return def;
 }
 const char *scene_node_tag(const void *node){
@@ -180,9 +187,10 @@ static int xml_attr_2f(XmlNode*n,const char*name,float defX,float defY,float *ou
 }
 static void xml_set_attr(XmlNode *n,const char *name,const char *value){
 	for(int i=0;i<n->nattrs;i++) if(!strcmp(n->attrs[i].name,name)){
-		free(n->attrs[i].value); n->attrs[i].value=strdup(value); return;
+		free(n->attrs[i].value); free(n->attrs[i].resolved);
+		n->attrs[i].value=strdup(value); n->attrs[i].resolved=NULL; return;
 	}
-	XmlAttr a={strdup(name),strdup(value)};
+	XmlAttr a={strdup(name),strdup(value),NULL,0};
 	DA_PUSH(n->attrs,n->nattrs,n->cattrs,a);
 }
 static void xml_set_attr_v3(XmlNode *n,const char *name,vec3 v){
@@ -394,7 +402,7 @@ static vec3 node_position(Scene *s,XmlNode *n){
 
 static void xml_remove_attr(XmlNode *n,const char *name){
 	for(int i=0;i<n->nattrs;i++) if(!strcmp(n->attrs[i].name,name)){
-		free(n->attrs[i].name); free(n->attrs[i].value);
+		free(n->attrs[i].name); free(n->attrs[i].value); free(n->attrs[i].resolved);
 		memmove(n->attrs+i,n->attrs+i+1,(size_t)(n->nattrs-i-1)*sizeof(*n->attrs));
 		n->nattrs--; return;
 	}
@@ -407,8 +415,9 @@ static void rig_mirror_name(const char *name,char *out,size_t size){
 }
 
 static XmlNode *xml_clone(XmlNode *n,XmlNode *parent){
-	XmlNode *copy=xml_new(n->tag); copy->parent=parent;
-	for(int i=0;i<n->nattrs;i++) xml_set_attr(copy,n->attrs[i].name,n->attrs[i].value);
+	XmlNode *copy=xml_new(n->tag); copy->parent=parent; copy->line=n->line;
+	/* Clones are generated and never saved, so they carry evaluated values. */
+	for(int i=0;i<n->nattrs;i++) xml_set_attr(copy,n->attrs[i].name,n->attrs[i].resolved?n->attrs[i].resolved:n->attrs[i].value);
 	for(int i=0;i<n->nkids;i++){ XmlNode *kid=xml_clone(n->kids[i],copy); DA_PUSH(copy->kids,copy->nkids,copy->ckids,kid); }
 	return copy;
 }
@@ -513,6 +522,13 @@ static mat4 xml_node_transform(Scene *s,XmlNode *n){
 		mat4_mul(mat4_rot_xyz(rot),mat4_mul(mat4_translate(vscale(pvt,-1.0f)),mat4_scale(scl)))));
 }
 static void xp_skip_ws(const char**p){ while(**p && isspace((unsigned char)**p)) (*p)++; }
+/* Parsing moves forward only, so line numbers are counted incrementally from the last element. */
+static const char *xp_cursor; static int xp_line;
+static char xp_comment[SCENE_DESCRIPTION_CAPACITY];
+static int xp_line_at(const char *p){
+	for(;xp_cursor<p;xp_cursor++) if(*xp_cursor=='\n') xp_line++;
+	return xp_line;
+}
 
 static XmlNode* xml_parse_node(const char **p);
 
@@ -541,32 +557,37 @@ static XmlNode* xml_parse_node(const char **p){
 	if(**p!='<') return NULL;
 	if(!strncmp(*p,"<?",2)){ const char*e=strstr(*p,"?>"); *p=e?e+2:*p+strlen(*p); return xml_parse_node(p); }
 	if(!strncmp(*p,"<!--",4)){ const char*e=strstr(*p,"-->"); *p=e?e+3:*p+strlen(*p); return xml_parse_node(p); }
+	int line=xp_line_at(*p);
 	(*p)++;
-	char tag[64]; int ti=0;
-	while(**p && !isspace((unsigned char)**p) && **p!='>' && **p!='/' && ti<63) tag[ti++]=*(*p)++;
+	char tag[XML_NAME_CAPACITY]; int ti=0;
+	while(**p && !isspace((unsigned char)**p) && **p!='>' && **p!='/' && ti<XML_NAME_CAPACITY-1) tag[ti++]=*(*p)++;
 	tag[ti]=0;
-	XmlNode *n=xml_new(tag);
+	XmlNode *n=xml_new(tag); n->line=line;
 	for(;;){
 		xp_skip_ws(p);
 		if(!**p) return n;
 		if(**p=='/' && (*p)[1]=='>'){ (*p)+=2; return n; }
 		if(**p=='>'){ (*p)++; break; }
-		char aname[64]; int ai=0;
-		while(**p && **p!='=' && !isspace((unsigned char)**p) && **p!='>' && **p!='/' && ai<63) aname[ai++]=*(*p)++;
+		char aname[XML_NAME_CAPACITY]; int ai=0;
+		while(**p && **p!='=' && !isspace((unsigned char)**p) && **p!='>' && **p!='/' && ai<XML_NAME_CAPACITY-1) aname[ai++]=*(*p)++;
 		aname[ai]=0;
 		xp_skip_ws(p);
-		char aval[256]={0};
+		char aval[XML_VALUE_CAPACITY]={0};
 		if(**p=='='){
 			(*p)++; xp_skip_ws(p);
 			if(**p=='"'||**p=='\''){
 				char q=*(*p)++; int vi=0;
-				while(**p && **p!=q && vi<255) aval[vi++]=*(*p)++;
+				while(**p && **p!=q && vi<XML_VALUE_CAPACITY-1) aval[vi++]=*(*p)++;
+				if(**p!=q){
+					fprintf(stderr,"[scener] line %d: <%s %s> value exceeds %d bytes; truncated\n",line,tag,aname,XML_VALUE_CAPACITY-1); fflush(stderr);
+					while(**p && **p!=q) (*p)++;
+				}
 				if(**p==q) (*p)++;
 				aval[vi]=0;
 			}
 		}
 		if(ai>0){
-			XmlAttr a={ strdup(aname), strdup(aval) };
+			XmlAttr a={ strdup(aname), strdup(aval), NULL, 0 };
 			DA_PUSH(n->attrs,n->nattrs,n->cattrs,a);
 		}
 	}
@@ -578,13 +599,25 @@ static XmlNode* xml_parse_node(const char **p){
 	}
 	return n;
 }
+/* The first comment before the root element documents the file (a prefab's footprint and front). */
 static XmlNode* xml_parse(const char *buf){
 	const char *p=buf;
+	xp_cursor=buf; xp_line=1; xp_comment[0]=0;
 	for(;;){
 		xp_skip_ws(&p);
 		if(!*p) return NULL;
 		if(!strncmp(p,"<?",2)){ const char*e=strstr(p,"?>"); p=e?e+2:p+strlen(p); continue; }
-		if(!strncmp(p,"<!--",4)){ const char*e=strstr(p,"-->"); p=e?e+3:p+strlen(p); continue; }
+		if(!strncmp(p,"<!--",4)){
+			const char*e=strstr(p,"-->");
+			if(!xp_comment[0]){
+				const char *start=p+4; size_t n=e?(size_t)(e-start):strlen(start);
+				while(n && isspace((unsigned char)*start)){ start++; n--; }
+				while(n && isspace((unsigned char)start[n-1])) n--;
+				if(n>=sizeof(xp_comment)) n=sizeof(xp_comment)-1;
+				memcpy(xp_comment,start,n); xp_comment[n]=0;
+			}
+			p=e?e+3:p+strlen(p); continue;
+		}
 		break;
 	}
 	return xml_parse_node(&p);
@@ -613,6 +646,7 @@ void scene_free(Scene *s){
 	free(s->prefabs); free(s->instances); free(s->rigRotations); free(s->rigTargets); free(s->rigJointWorlds); free(s->negativeBoxes); free(s->negativeArches);
 	free(s->negativeCylinders); free(s->overlayLines); free(s->charDefs); free(s->shapes);
 	free(s->dragStartVerts); free(s->dragObjIndices); free(s->dragVertOffsets);
+	free(s->records); free(s->issues);
 	for(int i=0;i<s->nscreenTextures;i++) image_free(s->screenTextures[i].pixels);
 	free(s->screenTextures);
 	memset(s,0,sizeof(*s));
@@ -649,15 +683,53 @@ void scene_add_obj(Scene *s, Mesh mesh, mat4 M, mat4 R, vec3 color, float shin, 
 	o.renderable=renderable; o.unlit=unlit; o.sanityIgnore=s->sanityIgnoreActive;
 	o.sanityFloor=s->sanityFloorActive; o.sanityCheck=s->sanityCheckActive;
 	o.editNode=s->activeEditNode; o.editMatrix=s->activeEditMatrix;
+	o.sourceNode=s->activeSourceNode; o.record=s->activeRecord;
 	o.texIndex=s->activeTexIndex;
 	o.screenTexture=s->activeScreenTexture>=0&&s->activeScreenTexture<s->nscreenTextures?s->activeScreenTexture:-1;
 	DA_PUSH(s->objs,s->nobjs,s->cobjs,o);
 }
 
+/* ---------------------------------------------------- Diagnostics ------- */
+
+static const char *node_file(Scene *s,XmlNode *n){
+	while(n && n->parent) n=n->parent;
+	if(n && n==s->sceneRoot) return s->scenePath;
+	for(int i=0;i<s->nprefabs;i++) if(s->prefabs[i].root==n) return s->prefabs[i].path;
+	return "";
+}
+
+/* Logs a rejected or suspicious authored input once and keeps it for scener --check.
+   Views rebuild on every timeline change, so repeats of the same message stay silent. */
+static void scene_issue(Scene *s,int severity,const char *kind,const char *file,int line,const char *fmt,...){
+	SceneIssue issue; memset(&issue,0,sizeof(issue));
+	issue.severity=severity; issue.line=line;
+	snprintf(issue.kind,sizeof(issue.kind),"%s",kind);
+	snprintf(issue.file,sizeof(issue.file),"%s",file?file:"");
+	va_list ap; va_start(ap,fmt); vsnprintf(issue.message,sizeof(issue.message),fmt,ap); va_end(ap);
+	for(int i=0;i<s->nissues;i++){
+		SceneIssue *o=&s->issues[i];
+		if(o->severity==issue.severity && o->line==issue.line && !strcmp(o->kind,issue.kind) && !strcmp(o->file,issue.file) && !strcmp(o->message,issue.message)) return;
+	}
+	DA_PUSH(s->issues,s->nissues,s->cissues,issue);
+	if(line>0) fprintf(stderr,"%s: %s:%d: %s\n",severity==SCENE_ISSUE_ERROR?"error":"warning",issue.file,line,issue.message);
+	else fprintf(stderr,"%s: %s: %s\n",severity==SCENE_ISSUE_ERROR?"error":"warning",issue.file,issue.message);
+	fflush(stderr);
+}
+
+#include "scene_expr.h"
+
+static int axis_vector(const char *text,vec3 *out);
+/* A prefab may declare its authored up axis and the direction its front faces at rot 0. */
+static void check_prefab_axes(Scene *s,XmlNode *root,const char *path){
+	const char *up=xml_attr(root,"up",NULL),*front=xml_attr(root,"front",NULL); vec3 v;
+	if(up && strcmp(up,"y") && strcmp(up,"z")) scene_issue(s,SCENE_ISSUE_ERROR,"prefab",path,root->line,"<prefab up=\"%s\">: use y or z",up);
+	if(front && !axis_vector(front,&v)) scene_issue(s,SCENE_ISSUE_ERROR,"prefab",path,root->line,"<prefab front=\"%s\">: use +x, -x, +y, -y, +z or -z",front);
+}
+
 /* ---------------------------------------------------- Modifiers ---------- */
 
 static char* read_file(const char*path);
-static void warn_unknown_elements(XmlNode *root, const char *path, int prefab);
+static void warn_unknown_elements(Scene *s, XmlNode *root, const char *path, int prefab);
 
 typedef void (*modifier_parser_fn)(Mesh *m, XmlNode *n);
 
@@ -1533,7 +1605,7 @@ static surface_material_t surface_material(Scene *s,XmlNode *n,const char *prefi
 	snprintf(key,sizeof(key),"%sMaterial",prefix);
 	const char *name=xml_attr(n,key,NULL);
 	Material *m=find_material(s,name);
-	if(name&&!m) fprintf(stderr,"[scener] %s: unknown %s '%s'\n",n->tag,key,name);
+	if(name&&!m&&!s->prefabDocument) scene_issue(s,SCENE_ISSUE_ERROR,"material",node_file(s,n),n->line,"<%s> uses undefined %s '%s'",n->tag,key,name);
 	if(m){ fallback.color=m->color; fallback.shin=m->shininess; fallback.texture=materials_index_for_name(m->id); }
 	snprintf(key,sizeof(key),"%sColor",prefix);
 	fallback.color=xml_attr_v3(n,key,fallback.color);
@@ -1753,12 +1825,15 @@ static XmlNode* load_prefab(Scene *s, const char *name){
 	if(!buf) return NULL;
 	XmlNode *root=xml_parse(buf);
 	free(buf);
-	if(!root) return NULL;
-	warn_unknown_elements(root,path,1);
-	rig_expand_segments(root);
-	rig_expand_mirrors(root);
+	if(!root){ scene_issue(s,SCENE_ISSUE_ERROR,"xml",path,0,"cannot parse prefab"); return NULL; }
 	PrefabDef pd; memset(&pd,0,sizeof(pd)); snprintf(pd.ref,sizeof(pd.ref),"%s",name); pd.root=root;
 	strncpy(pd.path,path,sizeof(pd.path)-1);
+	snprintf(pd.description,sizeof(pd.description),"%s",xp_comment);
+	scene_resolve_expressions(s,root,path);
+	if(!strcmp(root->tag,"prefab")) check_prefab_axes(s,root,path);
+	warn_unknown_elements(s,root,path,1);
+	rig_expand_segments(root);
+	rig_expand_mirrors(root);
 	for(int i=0;i<root->nkids;i++){
 		if(!strcmp(root->kids[i]->tag,"attach")){
 			AttachPoint ap;
@@ -2088,7 +2163,7 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 	const char *source=xml_attr(n,"source",NULL);
 	if(!source) return;
 	XmlNode *proot=load_prefab(s,source);
-	if(!proot){ fprintf(stderr,"prefab not found: %s\n",source); return; }
+	if(!proot){ scene_issue(s,SCENE_ISSUE_ERROR,"prefab",node_file(s,n),n->line,"prefab not found: %s",source); return; }
 	/* A character file carries its own materials; a scene restyles one by defining the same id. */
 	for(int i=0;i<proot->nkids;i++) if(!strcmp(proot->kids[i]->tag,"material") && !find_material(s,xml_attr(proot->kids[i],"id","")))
 		parse_material_tag(s,proot->kids[i]);
@@ -2136,7 +2211,9 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 		if(pose) for(int i=0;i<pose->nkids;i++) if(!strcmp(pose->kids[i]->tag,"ik") &&
 			!rig_ik_for_tip(proot,n,rig_ik_tip_name(proot,pose->kids[i]))) rig_solve_ik(s,pose->kids[i],proot,stepM);
 		for(int i=0;i<n->nkids;i++) if(!strcmp(n->kids[i]->tag,"ik")) rig_solve_ik(s,n->kids[i],proot,stepM);
+		s->prefabDepth++;
 		parse_nodes(s, proot, stepM, R);
+		s->prefabDepth--;
 	}
 	s->nrigRotations=0;
 	s->activeRigInstance=oldRigInstance; s->activeRigPose=oldRigPose; s->activeRigRoot=oldRigRoot;
@@ -2273,8 +2350,18 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 			}
 		}
 		if(ownsEditNode) s->activeEditMatrix=M;
+		int oldRecord=s->activeRecord; void *oldSource=s->activeSourceNode;
+		if(has_shape_parser(tag) && (!s->prefabDepth || !strcmp(tag,"prefab"))){
+			SceneRecord record={n,oldRecord,M};
+			DA_PUSH(s->records,s->nrecords,s->crecords,record);
+			s->activeRecord=s->nrecords-1;
+		}
+		s->activeSourceNode=n;
 		const char *matName = xml_attr(n,"material",NULL);
 		Material *mat = find_material(s, matName);
+		/* An open prefab takes its materials from whichever scene places it. */
+		if(matName && !mat && materials_index_for_name(matName)<0 && !s->prefabDocument)
+			scene_issue(s,SCENE_ISSUE_ERROR,"material",node_file(s,n),n->line,"<%s> uses undefined material '%s'",tag,matName);
 		s->activeTexIndex = materials_index_for_name(mat ? mat->id : matName);
 		vec3 color = mat? mat->color : xml_attr_v3(n,"color",v3(0.8f,0.8f,0.8f));
 		int tint=xml_attr_i(n,"tint",0);
@@ -2293,6 +2380,7 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 		s->sanityIgnoreActive=oldIgnore;
 		s->sanityFloorActive=oldFloor;
 		s->sanityCheckActive=oldCheck;
+		s->activeRecord=oldRecord; s->activeSourceNode=oldSource;
 		s->activeEditNode=oldEditNode;
 		s->activeEditMatrix=oldEditMatrix;
 	}
@@ -2399,16 +2487,17 @@ static int has_modifier_parser(const char *tag){
 	return 0;
 }
 
-static void warn_unsupported_tree(XmlNode *n, const char *path, const char *parent){
-	fprintf(stderr,"warning: %s: unsupported XML element <%s> in <%s>\n",path,n->tag,parent);
-	for(int i=0;i<n->nkids;i++) warn_unsupported_tree(n->kids[i],path,n->tag);
+static void warn_unsupported_tree(Scene *s, XmlNode *n, const char *path, const char *parent){
+	scene_issue(s,SCENE_ISSUE_ERROR,"element",path,n->line,"unsupported XML element <%s> in <%s>",n->tag,parent);
+	for(int i=0;i<n->nkids;i++) warn_unsupported_tree(s,n->kids[i],path,n->tag);
 }
 
-static void warn_unknown_children(XmlNode *parent, const char *path, int root, int prefab){
+static void warn_unknown_children(Scene *s, XmlNode *parent, const char *path, int root, int prefab){
 	for(int i=0;i<parent->nkids;i++){
 		XmlNode *n=parent->kids[i];
 		int supported=0;
-		if(root) supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") ||
+		if(!strcmp(n->tag,"let")) supported=root || !strcmp(parent->tag,"group") || xml_is_bone(parent);
+		else if(root) supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") ||
 			(prefab ? (!strcmp(n->tag,"attach") || !strcmp(n->tag,"shape")) : has_scene_parser(n->tag)) || !strcmp(n->tag,"pose") || !strcmp(n->tag,"clip") || !strcmp(n->tag,"capture-profile") || (prefab && (!strcmp(n->tag,"material") || !strcmp(n->tag,"option")));
 		else if(!strcmp(parent->tag,"group") || xml_is_bone(parent))
 			supported=has_shape_parser(n->tag) || !strcmp(n->tag,"bool-negative-box") || !strcmp(n->tag,"bool-negative-arch") || !strcmp(n->tag,"bool-negative-cylinder") || !strcmp(n->tag,"shape");
@@ -2421,20 +2510,20 @@ static void warn_unknown_children(XmlNode *parent, const char *path, int root, i
 		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array") || !strcmp(n->tag,"joint") || !strcmp(n->tag,"ik") || !strcmp(n->tag,"gait") || !strcmp(n->tag,"layer") || !strcmp(n->tag,"option");
 		else if(has_shape_parser(parent->tag)) supported=has_modifier_parser(n->tag);
 		if(!supported){
-			warn_unsupported_tree(n,path,parent->tag);
+			warn_unsupported_tree(s,n,path,parent->tag);
 			continue;
 		}
-		warn_unknown_children(n,path,0,prefab);
+		warn_unknown_children(s,n,path,0,prefab);
 	}
 }
 
-static void warn_unknown_elements(XmlNode *root, const char *path, int prefab){
+static void warn_unknown_elements(Scene *s, XmlNode *root, const char *path, int prefab){
 	const char *expected=prefab?"prefab":"scene";
 	if(strcmp(root->tag,expected)){
-		warn_unsupported_tree(root,path,"document");
+		warn_unsupported_tree(s,root,path,"document");
 		return;
 	}
-	warn_unknown_children(root,path,1,prefab);
+	warn_unknown_children(s,root,path,1,prefab);
 }
 
 /* Pose data applies only in the cameras that select it, and books read per-camera
@@ -2472,7 +2561,7 @@ static int attribute_deferred(const char *tag,const char *name){
 static void warn_unused_attributes(Scene *s,XmlNode *n,const char *path){
 	if(xml_attr(n,"generated",NULL) || xml_attr(n,"_option_hidden",NULL) || (!rig_node_enabled(n,0) && !xml_attr_i(n,"_finger_active",0))) return;
 	for(int i=0;i<n->nattrs;i++) if(!n->attrs[i].used && !attribute_deferred(n->tag,n->attrs[i].name) && ++s->ignoredAttributes)
-		fprintf(stderr,"warning: %s: <%s> ignores attribute '%s' (unknown, misspelled or overridden)\n",path,n->tag,n->attrs[i].name);
+		scene_issue(s,SCENE_ISSUE_ERROR,"attribute",path,n->line,"<%s> ignores attribute '%s' (unknown, misspelled or overridden)",n->tag,n->attrs[i].name);
 	for(int i=0;i<n->nkids;i++) warn_unused_attributes(s,n->kids[i],path);
 }
 
@@ -2503,15 +2592,17 @@ static void warn_unlit_scene(Scene *s,const char *path){
 			SceneObj *o=&s->objs[i];
 			if(!o->castsShadow || !mesh_encloses(&o->mesh,light->pos)) continue;
 			s->enclosedLights++;
-			fprintf(stderr,"warning: %s: light at %.1f %.1f %.1f cm is sealed inside a shadow-casting <%s>; open the shade "
-				"(cylinder tube=), move the light below it, or set castShadow=\"0\" on the enclosure\n",path,
+			XmlNode *enclosure=(XmlNode*)o->sourceNode;
+			scene_issue(s,SCENE_ISSUE_ERROR,"light",enclosure?node_file(s,enclosure):path,enclosure?enclosure->line:0,
+				"light at %.1f %.1f %.1f cm is sealed inside a shadow-casting <%s>; open the shade "
+				"(cylinder tube=), move the light below it, or set castShadow=\"0\" on the enclosure",
 				light->pos.x*CM_PER_METRE,light->pos.y*CM_PER_METRE,light->pos.z*CM_PER_METRE,
-				o->editNode?scene_node_tag(o->editNode):"shape");
+				enclosure?enclosure->tag:"shape");
 			break;
 		}
 	}
 	if(!lights && s->nobjs && !s->prefabDocument)
-		fprintf(stderr,"warning: %s: scene has no <light> or <sun>; it is lit by ambient only\n",path);
+		scene_issue(s,SCENE_ISSUE_ERROR,"light",path,0,"scene has no <light> or <sun>; it is lit by ambient only");
 }
 
 /* --------------------------------------------------------------- IO & load */
@@ -2572,7 +2663,8 @@ static void scene_clear_view(Scene *s){
 	for(int i=0;i<s->ncameras;i++) free(s->cameras[i].transforms);
 	free(s->lights); free(s->mats); free(s->objs); free(s->svols); free(s->cameras);
 	free(s->instances); free(s->rigRotations); free(s->rigTargets); free(s->rigJointWorlds); free(s->negativeBoxes); free(s->negativeArches);
-	free(s->negativeCylinders); free(s->overlayLines); free(s->charDefs); free(s->shapes);
+	free(s->negativeCylinders); free(s->overlayLines); free(s->charDefs); free(s->shapes); free(s->records);
+	s->records=NULL; s->nrecords=s->crecords=0; s->activeRecord=-1; s->prefabDepth=0; s->activeSourceNode=NULL;
 	s->lights=NULL; s->mats=NULL; s->objs=NULL; s->svols=NULL; s->cameras=NULL;
 	s->negativeProfiles=NULL; s->nnegativeProfiles=s->cnegativeProfiles=0;
 	s->rigRotations=NULL; s->nrigRotations=s->crigRotations=0;
@@ -2631,7 +2723,8 @@ static void scene_rebuild_view(Scene *s){
 	s->activeEditNode=NULL;
 	parse_nodes(s,root,I,I);
 	for(int i=0;i<s->ncameras;i++) if(!strcmp(s->cameras[i].name,s->activeCamera) && s->cameras[i].follow[0]) scene_apply_camera(s,i);
-	if(prefabMode && s->nlights==0){
+	s->defaultLights=prefabMode && s->nlights==0;
+	if(s->defaultLights){
 		vec3 bmin={1e30f,1e30f,1e30f},bmax={-1e30f,-1e30f,-1e30f};
 		for(int i=0;i<s->nobjs;i++) if(s->objs[i].renderable){
 			for(int v=0;v<s->objs[i].mesh.nverts;v++){
@@ -2784,10 +2877,14 @@ int load_scene(const char *path, Scene *s){
 	char *buf=read_file(path); if(!buf) return 0;
 	XmlNode *root=xml_parse(buf); free(buf);
 	if(!root){ fprintf(stderr,"failed to parse %s\n",path); return 0; }
+	snprintf(s->description,sizeof(s->description),"%s",xp_comment);
+	s->sceneRoot=s->editRoot=root;
+	scene_resolve_expressions(s,root,path);
 	const char *up=xml_attr(root,"up","y");
-	if(strcmp(up,"y") && strcmp(up,"z")){ fprintf(stderr,"invalid scene up axis: %s\n",up); xml_free(root); return 0; }
+	if(strcmp(up,"y") && strcmp(up,"z")){ fprintf(stderr,"invalid scene up axis: %s\n",up); scene_free(s); return 0; }
 	s->prefabDocument=!strcmp(root->tag,"prefab");
-	warn_unknown_elements(root,path,s->prefabDocument);
+	if(s->prefabDocument) check_prefab_axes(s,root,path);
+	warn_unknown_elements(s,root,path,s->prefabDocument);
 	rig_expand_segments(root);
 	rig_expand_mirrors(root);
 	s->sceneRoot=root; s->editRoot=root;
@@ -3165,45 +3262,7 @@ static Bounds scene_obj_bounds(SceneObj *o){
 	return b;
 }
 
-static float bounds_overlap(float amin,float amax,float bmin,float bmax){
-	float lo=amin>bmin?amin:bmin, hi=amax<bmax?amax:bmax;
-	return hi-lo;
-}
-
-int scene_sanity_check(Scene *s){
-	Bounds *bounds=calloc((size_t)s->nobjs,sizeof(*bounds));
-	int errors=0;
-	for(int i=0;i<s->nobjs;i++) bounds[i]=scene_obj_bounds(&s->objs[i]);
-	for(int i=0;i<s->nobjs;i++){
-		SceneObj *a=&s->objs[i];
-		if(a->sanityIgnore || a->sanityFloor || !a->sanityCheck) continue;
-		for(int j=i+1;j<s->nobjs;j++){
-			SceneObj *b=&s->objs[j];
-			if(b->sanityIgnore || b->sanityFloor || !b->sanityCheck) continue;
-			float x=bounds_overlap(bounds[i].min.x,bounds[i].max.x,bounds[j].min.x,bounds[j].max.x);
-			float y=bounds_overlap(bounds[i].min.y,bounds[i].max.y,bounds[j].min.y,bounds[j].max.y);
-			float z=bounds_overlap(bounds[i].min.z,bounds[i].max.z,bounds[j].min.z,bounds[j].max.z);
-			if(x>0.025f && y>0.025f && z>0.025f){
-				fprintf(stderr,"sanity: intersecting objects %d and %d (%.3f %.3f %.3f)\n",i,j,x,y,z);
-				errors++;
-			}
-		}
-		if(bounds[i].min.y>0.015f){
-			int supported=0;
-			for(int j=0;j<s->nobjs;j++){
-				SceneObj *b=&s->objs[j];
-				if(i==j || b->sanityIgnore || (!b->sanityCheck && !b->sanityFloor)) continue;
-				if(fabsf(bounds[i].min.y-bounds[j].max.y)>0.025f) continue;
-				if(bounds_overlap(bounds[i].min.x,bounds[i].max.x,bounds[j].min.x,bounds[j].max.x)>0.025f &&
-				   bounds_overlap(bounds[i].min.z,bounds[i].max.z,bounds[j].min.z,bounds[j].max.z)>0.025f){ supported=1; break; }
-			}
-			if(!supported){ fprintf(stderr,"sanity: floating object %d, base y=%.3f\n",i,bounds[i].min.y); errors++; }
-		}
-	}
-	free(bounds);
-	if(!errors) fprintf(stderr,"sanity: ok (%d objects)\n",s->nobjs);
-	return !errors;
-}
+#include "scene_inspect.h"
 
 void scene_get_obj_bounds(Scene *s, int idx, vec3 *outMin, vec3 *outMax){
 	if(idx<0 || idx>=s->nobjs){ *outMin=v3(0,0,0); *outMax=v3(0,0,0); return; }

@@ -302,7 +302,16 @@ static bool rx_name(reel_parser_t *ps) {
 	if (n == 1 && !fixed) {
 		const char *name = parts[0];
 		if (rx_accept(ps, "(")) return rx_call(ps, name);
-		if (!strcmp(name, "t"))        { rx_byte(ps, RX_T); ps->dynamic = true; ps->pushes++; return true; }
+		static const char *const reel_names[] = {"t", "frame", "duration", "fps", "width", "height", "st", "sdur"};
+		if (r->scene_scope) {
+			for (int i = r->nlets - 1; i >= 0; i--) if (!strcmp(r->let_names[i], name)) {
+				rx_byte(ps, RX_LET); rx_u16(ps, i); ps->dynamic = true; ps->pushes++;
+				return true;
+			}
+			for (size_t i = 0; i < sizeof(reel_names) / sizeof(reel_names[0]); i++)
+				if (!strcmp(name, reel_names[i])) { ps->p = start; return rx_fail(ps, "%s is a reel name, not available in scene expressions", name); }
+		}
+		if (!strcmp(name, "t"))      { rx_byte(ps, RX_T); ps->dynamic = true; ps->pushes++; return true; }
 		if (!strcmp(name, "frame"))    { rx_byte(ps, RX_FRAME); ps->dynamic = true; ps->pushes++; return true; }
 		if (!strcmp(name, "pi"))       { rx_const(ps, M_PIf); return true; }
 		if (!strcmp(name, "duration")) { rx_const(ps, r->duration); return true; }

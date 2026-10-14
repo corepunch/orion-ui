@@ -284,7 +284,7 @@ Before completion, verify:
 11. Lived-in prop clusters use deliberate variation without floating, penetration, overlap, or accidental overhang.
 12. Edited XML files pass `xmllint --noout`.
 13. Every practical point light remains inside its emitter and below the shade lip after instance transforms and scale.
-14. The scene loads with `scener --list-cameras`; code changes also build and pass relevant tests.
+14. `scener --check` reports no errors and every warning is fixed or a documented `sanityIgnore`; code changes also build and pass relevant tests.
 15. Each procedural window matches a parallel wall slab and owns its exact outer-profile cut. Legacy custom-insert cutters must cross their wall completely. No duplicate cuts or accidental frame/reveal gaps remain.
 16. Every visible RGB value is authored directly as sRGB, while light
     intensity remains a separate, unmodified linear scalar.

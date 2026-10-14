@@ -28,7 +28,8 @@ typedef struct {
 	bool screenshot_mode;
 	bool batch, layout, list_cameras, list_joints, help, version, invalid;
 	float time, frame_start, frame_end, fps;
-	bool frames, time_set, check, output_dir_set;
+	bool frames, time_set, check, output_dir_set, query, json, strict;
+	char prefab_source[1024];
 	char reel_path[1024], poster_path[1024], sheet_path[1024];
 	int sheet_columns, nsheet_times; float sheet_times[64];
 	char output_dir[1024], format[8];
@@ -71,6 +72,9 @@ static void cli_usage(void) {
 	     "scener --list-cameras SCENE\n"
 	     "scener SCENE --screenshot FILE [--cam NAME] [--size WIDTHxHEIGHT]\n"
 	     "scener --list-joints SCENE [--camera NAME] [--time SECONDS]\n"
+	     "scener --check SCENE [--json] [--strict]   load diagnostics plus floating, intersecting and z-fighting geometry\n"
+	     "scener --query SCENE [--time SECONDS]       JSON: cameras, lights, prefabs, every node with world bounds and attach points\n"
+	     "scener --prefab-info SOURCE|FILE.blk        JSON for one prefab: bounds, attach points, up, front, description\n"
 	     "scener --reel REEL (--output FILE.mp4|FILE.png | --output-dir DIR) [--time SECONDS] [--poster FILE.png]\n"
 	     "scener --reel REEL --check\n"
 	     "scener --reel REEL --sheet FILE.png [--columns N] [--sheet-times T1,T2,...]   one thumbnail per shot (or 12 across the reel)\n"
@@ -97,6 +101,9 @@ static void cli_parse(int argc, char *argv[]) {
 		if(!strcmp(arg,"-no-shadows")){g_cli.debug_flags|=DBG_NO_SHADOWS;continue;}
 		if(!strcmp(arg,"-wireframe")){g_cli.debug_flags|=DBG_WIREFRAME;continue;}
 		if(!strcmp(arg,"--check")){g_cli.check=true;continue;}
+		if(!strcmp(arg,"--query")){g_cli.query=true;continue;}
+		if(!strcmp(arg,"--json")){g_cli.json=true;continue;}
+		if(!strcmp(arg,"--strict")){g_cli.strict=true;continue;}
 		if(arg[0]!='-'){
 			if(g_cli.scene_path[0]){fprintf(stderr,"unexpected argument: %s\n",arg);g_cli.invalid=true;}
 			else snprintf(g_cli.scene_path,sizeof(g_cli.scene_path),"%s",arg);
@@ -106,11 +113,12 @@ static void cli_parse(int argc, char *argv[]) {
 		bool output_dir=!strcmp(arg,"--output-dir")||(!strcmp(arg,"-o")&&(g_cli.batch||g_cli.layout));
 		if(output_dir)output=false;
 		bool camera=!strcmp(arg,"--camera")||!strcmp(arg,"--cam")||!strcmp(arg,"-cam");
-		bool known=output||output_dir||camera||!strcmp(arg,"--reel")||!strcmp(arg,"--poster")||!strcmp(arg,"--sheet")||!strcmp(arg,"--columns")||!strcmp(arg,"--sheet-times")||!strcmp(arg,"--size")||!strcmp(arg,"--format")||!strcmp(arg,"--output-dir")||!strcmp(arg,"--scale")||!strcmp(arg,"--supersample")||!strcmp(arg,"-d")||!strcmp(arg,"--time")||!strcmp(arg,"--frames");
+		bool known=output||output_dir||camera||!strcmp(arg,"--reel")||!strcmp(arg,"--prefab-info")||!strcmp(arg,"--poster")||!strcmp(arg,"--sheet")||!strcmp(arg,"--columns")||!strcmp(arg,"--sheet-times")||!strcmp(arg,"--size")||!strcmp(arg,"--format")||!strcmp(arg,"--output-dir")||!strcmp(arg,"--scale")||!strcmp(arg,"--supersample")||!strcmp(arg,"-d")||!strcmp(arg,"--time")||!strcmp(arg,"--frames");
 		if(!known){fprintf(stderr,"unsupported option: %s\n",arg);g_cli.invalid=true;continue;}
 		if(i+1>=argc){fprintf(stderr,"missing value for %s\n",arg);g_cli.invalid=true;continue;}
 		value=argv[++i];
 		if(!strcmp(arg,"--reel")){snprintf(g_cli.reel_path,sizeof(g_cli.reel_path),"%s",value);continue;}
+		if(!strcmp(arg,"--prefab-info")){snprintf(g_cli.prefab_source,sizeof(g_cli.prefab_source),"%s",value);continue;}
 		if(!strcmp(arg,"--poster")){snprintf(g_cli.poster_path,sizeof(g_cli.poster_path),"%s",value);continue;}
 		if(!strcmp(arg,"--sheet")){snprintf(g_cli.sheet_path,sizeof(g_cli.sheet_path),"%s",value);continue;}
 		if(!strcmp(arg,"--columns")){g_cli.sheet_columns=atoi(value);if(g_cli.sheet_columns<1||g_cli.sheet_columns>16){fprintf(stderr,"invalid columns: %s\n",value);g_cli.invalid=true;}continue;}
@@ -147,6 +155,9 @@ static void cli_parse(int argc, char *argv[]) {
 			else{g_cli.frames=true;g_cli.frame_start=a;g_cli.frame_end=b;g_cli.fps=f;}
 		}else if(!strcmp(arg,"-d")) g_cli.debug_flags=atoi(value);
 	}
+	if(g_cli.json&&!g_cli.check){fprintf(stderr,"--json applies to --check\n");g_cli.invalid=true;}
+	if(g_cli.strict&&(!g_cli.check||g_cli.reel_path[0])){fprintf(stderr,"--strict applies to a scene --check\n");g_cli.invalid=true;}
+	if(g_cli.reel_path[0]&&(g_cli.query||g_cli.prefab_source[0])){fprintf(stderr,"--reel takes no scene or other mode\n");g_cli.invalid=true;}
 	if(g_cli.reel_path[0]){
 		bool output=g_cli.output_path[0]||g_cli.output_dir_set||g_cli.sheet_path[0];
 		if(g_cli.scene_path[0]||g_cli.batch||g_cli.layout||g_cli.list_cameras||g_cli.list_joints||g_cli.frames){fprintf(stderr,"--reel takes no scene or other mode\n");g_cli.invalid=true;}
@@ -155,7 +166,14 @@ static void cli_parse(int argc, char *argv[]) {
 		g_cli.screenshot_mode=!g_cli.check;
 		return;
 	}
-	if(g_cli.check||g_cli.poster_path[0]||g_cli.sheet_path[0]){fprintf(stderr,"--check, --poster and --sheet require --reel\n");g_cli.invalid=true;}
+	if(g_cli.poster_path[0]||g_cli.sheet_path[0]){fprintf(stderr,"--poster and --sheet require --reel\n");g_cli.invalid=true;}
+	int inspections=g_cli.check+g_cli.query+(g_cli.prefab_source[0]!=0);
+	if(inspections){
+		if(inspections>1||g_cli.screenshot_mode||g_cli.list_cameras||g_cli.list_joints||g_cli.frames){fprintf(stderr,"select one CLI mode\n");g_cli.invalid=true;}
+		else if(g_cli.prefab_source[0]&&g_cli.scene_path[0]){fprintf(stderr,"--prefab-info takes a prefab source or file, not a scene\n");g_cli.invalid=true;}
+		else if(!g_cli.prefab_source[0]&&!g_cli.scene_path[0]){fprintf(stderr,"%s requires a scene\n",g_cli.check?"--check":"--query");g_cli.invalid=true;}
+		return;
+	}
 	if(g_cli.screenshot_mode&&!g_cli.scene_path[0]){fprintf(stderr,"rendering requires a scene\n");g_cli.invalid=true;}
 	if(g_cli.list_cameras&&!g_cli.scene_path[0]){fprintf(stderr,"camera listing requires a scene\n");g_cli.invalid=true;}
 	if(g_cli.list_joints&&(!g_cli.scene_path[0]||g_cli.screenshot_mode||g_cli.list_cameras)){fprintf(stderr,"joint listing requires a scene and no other mode\n");g_cli.invalid=true;}
@@ -268,6 +286,35 @@ static bool cli_run_reel(void){
 	reel_gl_free(r);reel_free(r);
 	return ok;
 }
+
+#ifndef BUILD_AS_GEM
+/* A prefab source such as furniture/chair resolves under ./prefabs, like a scene's <prefab source>. */
+static bool cli_prefab_path(char *path,size_t size){
+	const char *source=g_cli.prefab_source;
+	if(cli_has_extension(source,".blk")){snprintf(path,size,"%s",source);return true;}
+	snprintf(path,size,"prefabs/%s.blk",source);
+	if(axPathExists(path))return true;
+	fprintf(stderr,"prefab not found: %s (looked for %s; pass the .blk path)\n",source,path);
+	return false;
+}
+
+/* --check, --query and --prefab-info load the scene without a graphics context. */
+static int cli_inspect(void){
+	char path[1024];
+	if(g_cli.prefab_source[0]){if(!cli_prefab_path(path,sizeof(path)))return 1;}
+	else snprintf(path,sizeof(path),"%s",g_cli.scene_path);
+	Scene scene={0};
+	if(!load_scene(path,&scene))return 1;
+	if(g_cli.time_set)scene_set_time(&scene,g_cli.time);
+	int status=0;
+	if(g_cli.check){
+		SceneCheckResult result=scene_check(&scene,stdout,g_cli.json);
+		status=result.errors||(g_cli.strict&&result.warnings)?1:0;
+	}else scene_query(&scene,stdout);
+	scene_free(&scene);
+	return status;
+}
+#endif
 
 static void create_app_windows(hinstance_t hinstance) {
 #ifdef BUILD_AS_GEM
@@ -537,6 +584,7 @@ int main(int argc, char *argv[]) {
     bool ok=r&&reel_sample(r,stdout);
     reel_free(r);return ok?0:1;
   }
+  if(g_cli.check||g_cli.query||g_cli.prefab_source[0])return cli_inspect();
   if(g_cli.list_joints){
     Scene scene={0};if(!load_scene(g_cli.scene_path,&scene))return 1;
     if(g_cli.camera_name[0]&&!cli_select_camera(&scene,g_cli.camera_name)){scene_free(&scene);return 1;}

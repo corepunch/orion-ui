@@ -115,6 +115,7 @@ struct reel_s {
 	bool has_trails;
 	float t; int frame;
 	void *gl;
+	bool scene_scope; /* static scene XML: no time, canvas or joint names */
 	char error[512];
 };
 

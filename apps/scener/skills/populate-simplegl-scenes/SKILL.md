@@ -118,7 +118,8 @@ for the complete attribute classification and renderer data flow.
 - Align the smallest dimension of a thin insert with the wall's local Z thickness axis.
 - Prefer `<window preset="round-arch|cottage|gothic">` for supported fixed windows; choose one literal preset, not the pipe-separated list. Its outer profile already cuts matching walls. Do not add a duplicate `<opening>` or negative shape. For custom door/other inserts, keep the correctly shaped cutter and visible geometry together in one prefab.
 - Keep inserts smaller than their opening only when visible construction clearance is intentional.
-- Treat a gap or penetration larger than `0.001` scene units as an error unless the design explicitly requires it.
+- Read positions from `scener --query` (world bounds, attach points, instance `front`) instead of computing them by hand, and express related dimensions with `<let>` and `{expr}` so one change propagates.
+- Treat a gap or penetration larger than 0.1 cm as an error unless the design explicitly requires it; `scener --check` reports floating units, interpenetration over 1 cm and z-fighting coplanar faces.
 - Make structural and decorative members terminate deliberately. Bars, mullions, rails, legs, cords, and similar joined parts must meet their intended frame or support within `0.001`; never leave endpoints floating visibly inside open space. For a member ending at a curved boundary, calculate the curve intersection at the member's full width instead of extending or shortening it by eye.
 - Distinguish physical assemblies from unrelated neighbors. Parts meant to function together may touch or visually overlap where construction requires it; separate unrelated fixtures, furniture, and decorations with readable negative space. Avoid silhouette tangencies, near-tangencies, and shadow mergers that make separate objects look accidentally grouped.
 - Evaluate spacing in both world space and the affected camera views. As a starting point, give unrelated neighboring silhouettes a visible gap at least as wide as the smaller object's nearby trim or structural member, then increase it when perspective or cast shadows close the gap.
@@ -154,17 +155,19 @@ project's working directory (replace paths/camera names with the actual target):
 ```sh
 xmllint --noout scenes/scene.blks
 xmllint --xpath 'count(/scene/ambient | /scene/background)' scenes/scene.blks
-scener --list-cameras scenes/scene.blks
+scener --check scenes/scene.blks --json
+scener --query scenes/scene.blks
 scener --render scenes/scene.blks --camera CameraName --size 1536x1024 --format jpg --output-dir /tmp/scene-review
 ```
 
 Run `xmllint` on every edited scene and prefab. The XPath count must be `0`.
-The active CLI has no `-test` mode; camera listing loads the scene but is not a
-layout/geometry audit. Inspect stderr as well as exit status: unsupported tags,
-invalid window parameters, unresolved materials or prefabs are failures even
-when loading returns zero. Inspect affected raster views to validate actual
-contacts, silhouettes and through-wall openings. Use the GPU-backed shadow
-rendering described in [../../CLI.md](../../CLI.md).
+`--check` needs no graphics context. Fix every error before rendering; it exits
+nonzero on unsupported elements, ignored attributes, missing prefabs or
+materials, broken expressions, sealed lights and unlit scenes. Review each
+warning (floating, intersection, coplanar) and either fix it or mark a
+deliberate exception `sanityIgnore="1"`. A raster check is still required for
+composition, silhouettes and light; use the GPU-backed shadow rendering
+described in [../../CLI.md](../../CLI.md).
 
 When Scener code changes, build from the Orion UI root and run the focused tests:
 
@@ -191,7 +194,7 @@ unchanged engine. Do not rerender unrelated artwork to verify instructions.
 - Keep a practical light, its unlit emitter, and its shadow-casting shade in one prefab. Verify transformed and scaled instances keep the point light inside the emitter and on the emitting side of the shade lip.
 - A window prefab contains `<window>` as its insert and cutter. Keep it centred on the opening, with local Z aligned to wall thickness. For custom inserts without a procedural window, keep the cutter and visible frame in one prefab and size the cutter to cross the wall. Repeat window prefabs with explicit instances: prefab `<array>` copies do not repeat cutters. Do not use attach-based placement for window assemblies.
 - Use `source=` on `<prefab>` to specify the file; `name=` only when something references this instance via `attach`.
-- Use `sanityIgnore="1"` only for a documented intentional overlap that the proxy checker cannot model, such as a wall insert owning its cutter. Never exempt a hero, furniture assembly, traversal mechanism, or practical light merely to obtain a passing scene test; correct its placement or explain the exact checker limitation.
+- Use `sanityIgnore="1"` only for a documented intentional overlap that `scener --check` cannot model, such as a wall insert owning its cutter. Never exempt a hero, furniture assembly, traversal mechanism, or practical light merely to obtain a passing scene test; correct its placement or explain the exact checker limitation.
 - Verify a directional prefab's `0`, `90`, `-90`, and `180` orientation mappings numerically before using it repeatedly.
 - Prefer a prefab over copied groups so later corrections propagate to every instance.
 - Make visible storage believable. An open commode, cubby, shelf, drawer, bin, rack, or under-desk bay should contain grouped objects with varied scale, yaw, depth, and silhouette unless its emptiness is a deliberate focal statement.

@@ -43,6 +43,7 @@ deployed command from the consuming project's working directory.
 | `reel.h`, `reel.c`, `reel_expr.c`, `reel_draw.c`, `reel_video.c` | Reels: XML motion graphics, expression compiler/VM, GL 2D renderer with SDF text, H.264 MP4 writer |
 | `docs/reels.md`, `docs/infographic-studio.md`, `scenes/infographics/` | Reel reference, infographic direction, IK/FK example reel |
 | `scene_motion.h`, `scene_capture.h` | Private timeline/gait and capture-profile/contact implementation included by scene.c |
+| `scene_expr.h`, `scene_inspect.h` | Private `<let>`/`{expr}` resolution and `--check`/`--query` geometry diagnostics and JSON, included by scene.c |
 | `scene.c` | Tiny XML parser, scene loading, named cameras, modifier dispatch, **prefab loading** |
 | `render.c` | OpenGL core-profile shader/VBO renderer with stencil shadows |
 | `shadow.c` | Stencil shadow volume construction (silhouette detection + edge extrusion) |
@@ -84,7 +85,8 @@ After editing a scene or referenced prefab:
 ```sh
 xmllint --noout apps/scener/scenes/sample_room.blks
 make scener
-./build/bin/scener --list-cameras apps/scener/scenes/sample_room.blks
+./build/bin/scener --check apps/scener/scenes/sample_room.blks --json
+./build/bin/scener --query apps/scener/scenes/sample_room.blks
 ./build/bin/scener --render apps/scener/scenes/sample_room.blks --output-dir render
 ```
 
@@ -129,10 +131,23 @@ instance. `<layer mocap>` goes through `mocap_retarget()`: clips load once into
 `Scene.mocap`, joints map to rig roles by name, and the walk over the rig
 (`mocap_walk()`) preserves calibrated limb rotations and available finger tracks; cached support intervals and source knee planes feed IK.
 
-After loading, `load_scene()` reports attributes no parser read
+Every authored-input problem goes through `scene_issue()`, which logs it once to
+stderr with `file:line` (the XML parser records each element's line) and keeps
+it in `Scene.issues` for `scener --check`. After loading, `load_scene()`
+reports attributes no parser read
 (`warn_unused_attributes()`: typos, and values overridden such as `color` beside
 `material`), shadow-casting lights sealed inside shadow-casting meshes, and
-scenes with no lights (`warn_unlit_scene()`). Parsers read attributes through
+scenes with no lights (`warn_unlit_scene()`). `parse_nodes()` pushes a
+`SceneRecord` for each scene-document node and each prefab instance; every
+`SceneObj` keeps its innermost record and source node, so diagnostics and
+`--query` bounds name what the author wrote. `check_geometry()` in
+`scene_inspect.h` adds floating, intersection and coplanar warnings.
+
+`scene_resolve_expressions()` (`scene_expr.h`) runs right after parsing each
+scene and prefab file: `<let>` values and `{expr}` substrings are evaluated
+with the reel expression compiler in scene scope and stored in
+`XmlAttr.resolved`. `xml_attr()` returns the resolved text; saving writes the
+authored `value`, and `xml_set_attr()` drops the resolution. Parsers read attributes through
 `xml_attr()`, which records use; read an optional attribute unconditionally when
 a later branch may ignore it, and list attributes only consumed later (pose data,
 book metadata) in `deferred_attributes[]`.

@@ -31,7 +31,23 @@ scener /absolute/path/room.blks --cam room-main --screenshot /tmp/preview.png
 scener --render /absolute/path/walk.blks --camera Track --frames 0:7.5:24 --output-dir render/walk
 scener --render /absolute/path/walk.blks --camera Side --time 2.2 --output-dir render/still
 scener --list-joints /absolute/path/walk.blks --camera Side --time 2.2
+scener --check /absolute/path/room.blks [--json] [--strict]
+scener --query /absolute/path/room.blks [--time 2.2]
+scener --prefab-info furniture/chair
 ```
+
+`--check`, `--query` and `--prefab-info` load the scene without a graphical
+session. `--check` prints a summary line (or, with `--json`, every issue as
+`severity`, `kind`, `file`, `line`, `message`) covering load errors (unsupported
+elements, ignored attributes, missing prefabs and materials, broken
+expressions, sealed lights, unlit scenes) and geometry warnings (floating
+units, interpenetration, z-fighting coplanar faces). It exits 1 on any error,
+and with `--strict` also on warnings. `--query` prints the built scene as JSON
+in authored centimetres: cameras, lights, materials, loaded prefabs and every
+scene node and prefab instance with its file, line, world origin, bounds and
+attach points. `--prefab-info SOURCE` resolves `prefabs/SOURCE.blk` from the
+working directory (or takes a `.blk` path) and prints the same for one prefab.
+See the [scene format reference](skills/populate-simplegl-scenes/references/scene-format.md#checking-and-querying-without-a-render).
 
 `--time SECONDS` evaluates character gaits, layers and clips at that moment.
 `--frames START:END:FPS` with `--render` writes one image per frame from START

@@ -35,9 +35,10 @@ The complete supported element inventory is:
 | Transformable content | `<box>`, `<rect>`, `<rounded-rect>`, `<circle>`, `<ellipse>`, `<star>`, `<rounded-box>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
 | Wall cutters | `<bool-negative-box>`, `<bool-negative-arch>`, `<bool-negative-cylinder>` |
 | Mesh modifiers | `<taper>`, `<twist>`, `<bend>`, `<stretch>`, `<skew>`, `<array>`, `<extrude>`, `<bevel>`, `<mirror>`, `<noise>`, `<shell>` |
+| Expressions | `<let>` in `<scene>`, `<prefab>`, `<group>` and bones; `{expr}` in any attribute value |
 | Context-only children | `<camera><transform>`, `<camera><use-pose>`, `<pose><joint>`, `<pose><ik>`, `<clip><key>`, `<key><joint>`, `<key><ik>`, `<prefab><joint>`, `<prefab><ik>`, `<prefab><gait>`, `<prefab><layer>`, `<shape><v>`, `<prefab><attach>` |
 
-Unknown elements produce an `unsupported XML element` warning. Element names
+Unknown elements produce an `unsupported XML element` error. Element names
 and attribute names are case-sensitive.
 
 ## Build, edit, validate, and render
@@ -45,7 +46,8 @@ and attribute names are case-sensitive.
 ```sh
 xmllint --noout apps/scener/scenes/sample_room.blks
 make scener
-./build/bin/scener --list-cameras apps/scener/scenes/sample_room.blks
+./build/bin/scener --check apps/scener/scenes/sample_room.blks
+./build/bin/scener --query apps/scener/scenes/sample_room.blks
 ./build/bin/scener --render apps/scener/scenes/sample_room.blks
 ./build/bin/scener --render apps/scener/scenes/sample_room.blks \
   --size 1600x900 --camera Main --output-dir render/sample-room
@@ -61,6 +63,78 @@ For scenes authored against the 3ds Max conversion on upstream main, use
 `<scene convention="3dsmax">`: position/rotation `(x,y,z)` maps to `(x,z,-y)`
 and box size maps to `(x,z,y)` in the Y-up renderer. This takes precedence
 over `up`. Omit it to keep native axes and the explicit `up="z"` view mode.
+
+## Checking and querying without a render
+
+`scener --check SCENE` loads the scene without a graphics context and reports
+every problem with `file:line`:
+
+| Kind | Severity | Meaning |
+|------|----------|---------|
+| `element`, `attribute` | error | Unsupported element; attribute that no parser read (typo, or overridden as `color` beside `material`) |
+| `prefab`, `material` | error | Missing prefab file; material that is neither defined nor a preset; invalid prefab `up`/`front` |
+| `expression` | error | `{expr}` or `<let>` that does not evaluate |
+| `light` | error | No `<light>`/`<sun>`, or a shadow-casting light sealed in a closed shadow-casting mesh |
+| `floating` | warning | A unit above the ground plane whose bounds touch no other unit (gap over 0.5 cm) |
+| `intersection` | warning | A unit penetrating another closed mesh by more than 1 cm |
+| `coplanar` | warning | Same-facing faces on one plane (within 0.01 cm) overlapping by over 1 cm: they z-fight |
+
+A *unit* is the innermost prefab instance, else a `<group>` that holds only
+primitives (an authored assembly such as a lamp or a potted plant), else the
+shape itself. A prefab checked on its own is one unit (its nested instances
+stay separate), takes its materials from whichever scene places it, and unlit
+emitters such as bulbs and glints never count as floating. Parts of one unit may interlock; units may only touch. Walls and
+`<floor>` are not compared with each other. `sanityIgnore="1"` exempts a
+deliberate exception. Coplanar faces are also reported inside one prefab, with
+the prefab's own file and lines.
+
+`--check` exits 1 on errors (`--strict`: also on warnings) and prints a one-line
+summary; `--json` prints `{"errors", "warnings", "issues": [{"severity", "kind",
+"file", "line", "message"}]}` instead.
+
+`scener --query SCENE` prints the built scene as JSON in authored centimetres
+and axes: `cameras`, `lights`, scene `materials`, every loaded prefab (file,
+leading comment, declared `up`/`front`, local `bounds`, local `attach` points)
+and `nodes`. A node is each authored scene element and every prefab instance,
+nested ones included, with `id`, `parent`, `tag`, `name`, `source`, `file`,
+`line`, world `origin`, world `bounds` (`min`, `max`, `size`), and for prefab
+instances world `attach` points and the world `front` vector. `--time SECONDS`
+poses characters first. `scener --prefab-info furniture/chair` (resolved under
+`./prefabs`) or `--prefab-info path/to/chair.blk` prints the same for one
+prefab document.
+
+Use the query instead of hand arithmetic: read the table's `attach.top` or
+`bounds.max` to place a cup, the wall's `bounds` to set a shelf flush, and the
+instance `front` to aim a chair.
+
+## Expressions
+
+`<let name="W" value="400"/>` defines a number. `{expr}` inside any attribute
+value is replaced by the evaluated number, so `pos="0 {W/2} {H - T/2}"` is three
+expressions in one vector. A let is visible to the siblings after it and to
+their descendants; an inner let of the same name shadows an outer one. A
+prefab's lets belong to the prefab file.
+
+```xml
+<scene up="z">
+  <let name="W" value="400"/>   <!-- room width -->
+  <let name="H" value="250"/>
+  <let name="T" value="16"/>
+  <group pos="0 {W/2} 0" rot="90 0 0">
+    <let name="L" value="W - T"/>
+    <wall length="{L}" height="{H}" thickness="{T}" material="wall"/>
+  </group>
+  <let name="seat" value="max(40, H / 6)"/>
+  <box pos="0 0 {seat/2}" size="50 50 {seat}" material="wood"/>
+</scene>
+```
+
+Expressions use the reel language (`+ - * / % ^`, comparisons, `a ? b : c`,
+`pi`, `sin cos tan asin acos atan atan2 sqrt pow abs floor ceil round min max
+clamp mix hypot rad deg`). Scene expressions are static: reel names such as
+`t`, `width` and joint references are rejected. They are evaluated once at
+load; the editor and saving keep the source text, and dragging an object
+replaces its expression with the dragged value.
 
 ## Quick example
 
@@ -1570,6 +1644,12 @@ light, allowing one fixture definition to keep its cord, shade, bulb, and light
 source aligned under translation, rotation, and scale.
 
 **Orientation convention:** every prefab that has a natural "front" (e.g. chair, sofa) must document which direction it faces at default rotation. Use the rotation convention above to place and orient prefabs.
+
+Declare the orientation on the root as data as well: `<prefab up="z" front="-y">`.
+`up` is `y` or `z` (the axis the prefab was authored with) and `front` is one
+of `+x -x +y -y +z -z`. They do not change geometry; `scener --query` reports
+them and each instance's world `front` vector, and `--check` rejects other
+values. The leading comment is reported as the prefab's `description`.
 
 ### `<prefab>`
 
