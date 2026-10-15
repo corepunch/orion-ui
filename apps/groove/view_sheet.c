@@ -4,7 +4,7 @@
 // a clip; holding the clip, then moving, picks it up. A mouse drag still
 // picks a clip up as soon as it moves. A tap plays the sample; picking one up
 // stops that audition. Holding the last two fractions of a clip, then moving,
-// resizes it in beat fractions (four per beat) instead of moving it. A mouse
+// resizes it on the same beat grid as positioning instead of moving it. A mouse
 // drag from that end resizes immediately. A longer span loops the source, and
 // a shorter one plays the prefix. Each clip is a child window.
 // Dragging one lifts that window with window_set_drag_visual, and dropping
@@ -182,8 +182,8 @@ static void resize_clip(window_t *win, int mx) {
   sheet_t *st = win->userdata;
   int idx = st->press_clip;
   if (idx < 0 || idx >= g_app->song.nclips) return;
-  int delta = (mx - st->press.x) * GR_TICKS_BAR / BAR_W, step = GR_FRACTION_TICKS;
-  int steps = delta >= 0 ? delta / step : -((-delta) / step);
+  int step = GR_SNAP_TICKS;
+  int steps = floordiv(mx - st->press.x + SNAP_W / 2, SNAP_W);
   int ticks = st->resize_ticks + steps * step, limit = resize_limit(idx);
   if (limit < step) return;
   ticks = CLAMP(ticks, step, limit);

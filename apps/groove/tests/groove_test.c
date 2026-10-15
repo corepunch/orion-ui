@@ -948,7 +948,7 @@ static void finger(uint32_t message, int x, int y, uint32_t time) {
 }
 
 static void test_sheet_gestures(void) {
-  TEST("a clip swipe scrolls, a hold moves, a tap plays, and the trailing fractions resize");
+  TEST("a clip swipe scrolls, a hold moves, a tap plays, and the trailing edge resizes on the positioning grid");
   test_env_init();
   g_app = app_init();
   ASSERT_NOT_NULL(g_app);
@@ -1001,8 +1001,13 @@ static void test_sheet_gestures(void) {
   send_message(sheet, evLeftButtonUp, MAKEDWORD(hx, hy), NULL);
   ASSERT(g_app->song.preview_block == 0 && g_app->song.clips[0].length == 0, "a tap on the end still plays the sample");
 
-  int grown = natural + (20 * GR_TICKS_BAR / 88) / GR_FRACTION_TICKS * GR_FRACTION_TICKS;
+  int grown = natural + GR_SNAP_TICKS;
   send_message(sheet, evLeftButtonDown, MAKEDWORD(hx, hy), NULL);
+  send_message(sheet, evMouseMove, MAKEDWORD(hx + 8, hy), NULL);
+  ASSERT_EQUAL(song_clip_ticks(&g_app->song, 0), natural);
+  ASSERT_EQUAL(card->frame.w, natural * 88 / GR_TICKS_BAR);
+  send_message(sheet, evMouseMove, MAKEDWORD(hx + 12, hy), NULL);
+  ASSERT_EQUAL(song_clip_ticks(&g_app->song, 0), grown);
   send_message(sheet, evMouseMove, MAKEDWORD(hx + 20, hy), NULL);
   ASSERT(g_app->song.nclips == 1 && !g_app->drag.active && g_app->song.clips[0].position == 0, "the end drag resizes in place");
   ASSERT_EQUAL(g_app->song.clips[0].length, grown);
@@ -1026,22 +1031,26 @@ static void test_sheet_gestures(void) {
   ASSERT(g_app->song.clips[0].length == grown && g_app->song.nclips == 1 && !g_app->drag.active, "releasing keeps the new length");
   ASSERT_NULL(g_ui_runtime.captured);
 
-  int shrunk = grown + ((-40) * GR_TICKS_BAR / 88) / GR_FRACTION_TICKS * GR_FRACTION_TICKS;
+  int shrunk = grown - 2 * GR_SNAP_TICKS;
   hx = card->frame.x + card->frame.w - 2;
   send_message(sheet, evLeftButtonDown, MAKEDWORD(hx, hy), NULL);
+  send_message(sheet, evMouseMove, MAKEDWORD(hx - 8, hy), NULL);
+  ASSERT_EQUAL(song_clip_ticks(&g_app->song, 0), grown);
+  send_message(sheet, evMouseMove, MAKEDWORD(hx - 12, hy), NULL);
+  ASSERT_EQUAL(song_clip_ticks(&g_app->song, 0), natural);
   send_message(sheet, evMouseMove, MAKEDWORD(hx - 40, hy), NULL);
   send_message(sheet, evLeftButtonUp, MAKEDWORD(hx - 40, hy), NULL);
   ASSERT_EQUAL(g_app->song.clips[0].length, shrunk);
-  ASSERT(shrunk < natural && shrunk % GR_FRACTION_TICKS == 0, "dragging the end back trims by fractions");
+  ASSERT(shrunk < natural && shrunk % GR_SNAP_TICKS == 0, "dragging the end back trims on the positioning grid");
 
   hx = card->frame.x + card->frame.w - 2;
   int tx = window_screen_x(sheet) + hx, ty = window_screen_y(sheet) + hy;
-  int extended = shrunk + (30 * GR_TICKS_BAR / 88) / GR_FRACTION_TICKS * GR_FRACTION_TICKS;
+  int extended = shrunk + 2 * GR_SNAP_TICKS;
   finger(kEventLeftButtonDown, tx, ty, 6000);
-  finger(kEventLeftButtonDragged, tx + 30, ty, 6000 + TOUCH_LONG_PRESS_MS);
+  finger(kEventLeftButtonDragged, tx + 40, ty, 6000 + TOUCH_LONG_PRESS_MS);
   ASSERT(g_app->song.nclips == 1 && !g_app->drag.active && g_app->song.clips[0].position == 0, "a hold on the end resizes instead of moving");
   ASSERT_EQUAL(g_app->song.clips[0].length, extended);
-  finger(kEventLeftButtonUp, tx + 30, ty, 6000 + TOUCH_LONG_PRESS_MS + 40);
+  finger(kEventLeftButtonUp, tx + 40, ty, 6000 + TOUCH_LONG_PRESS_MS + 40);
   ASSERT_EQUAL(g_app->song.clips[0].length, extended);
   ASSERT_NULL(g_ui_runtime.captured);
 
