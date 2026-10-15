@@ -1,0 +1,414 @@
+{
+  "batch": "vocal-revision-2026-10-15",
+  "samples": [
+    {
+      "title": "Turn It Up Crew",
+      "slug": "turn_it_up_crew",
+      "filename": "male_rap_turn_it_up_crew_140bpm_4bars.mp3",
+      "role": "continuous dense rap verse",
+      "lyrics": "Turn it up crew, put the spark in the street; Hit with the kick, never miss that beat; Run through the night with the fire in your feet; Push to the front, bring the heat on repeat",
+      "lines": [
+        "Turn it up crew, put the spark in the street",
+        "Hit with the kick, never miss that beat",
+        "Run through the night with the fire in your feet",
+        "Push to the front, bring the heat on repeat"
+      ],
+      "syllables": [
+        "Turn",
+        "it",
+        "up",
+        "crew",
+        "put",
+        "the",
+        "spark",
+        "in",
+        "the",
+        "street",
+        "Hit",
+        "with",
+        "the",
+        "kick",
+        "nev",
+        "er",
+        "miss",
+        "that",
+        "beat",
+        "Run",
+        "through",
+        "the",
+        "night",
+        "with",
+        "the",
+        "fi",
+        "re",
+        "in",
+        "your",
+        "feet",
+        "Push",
+        "to",
+        "the",
+        "front",
+        "bring",
+        "the",
+        "heat",
+        "on",
+        "re",
+        "peat"
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice.",
+      "bpm": 140,
+      "bars": 4,
+      "attack_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "attack_seconds": [
+        0,
+        1.7142857142857142,
+        3.4285714285714284,
+        5.142857142857143
+      ],
+      "slot_seconds": 6.857142857142857,
+      "full_prompt": "DRY SOLO A CAPPELLA DENSE POWERFUL EURODANCE RAP VERSE. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice. 140 BPM straight 4/4. Four bars, 6.857143 seconds. Deliver these four lines continuously, one line each bar, fast flowing eighth and sixteenth note syllables: Turn it up crew, put the spark in the street / Hit with the kick, never miss that beat / Run through the night with the fire in your feet / Push to the front, bring the heat on repeat. Strong driving rhythmic momentum, tightly packed syllables, aggressive chest projection, punchy consonants, small natural breaths only. No spaced-out chant, no pauses between individual words, no drawn-out words. Start immediately on first consonant at time zero. Each line flows straight into next. Last word releases before 6.75 seconds. Exactly these words, once only. Entirely dry isolated human voice; no instruments, drums, beatboxing, bass, accompaniment, harmonies, doubling, reverb, delay, count-in, metronome or extra words. Silence after final release."
+    },
+    {
+      "title": "Yeah Keep Moving",
+      "slug": "yeah_keep_moving",
+      "filename": "male_rap_yeah_keep_moving_140bpm_4bars.mp3",
+      "role": "continuous dense rap verse",
+      "lyrics": "Yeah keep moving, bring the force to the floor; Step with the sound, give it more and then more; Ride every rhythm, let the whole room roar; Break through the night, kick it straight through the door",
+      "lines": [
+        "Yeah keep moving, bring the force to the floor",
+        "Step with the sound, give it more and then more",
+        "Ride every rhythm, let the whole room roar",
+        "Break through the night, kick it straight through the door"
+      ],
+      "syllables": [
+        "Yeah",
+        "keep",
+        "mov",
+        "ing",
+        "bring",
+        "the",
+        "force",
+        "to",
+        "the",
+        "floor",
+        "Step",
+        "with",
+        "the",
+        "sound",
+        "give",
+        "it",
+        "more",
+        "and",
+        "then",
+        "more",
+        "Ride",
+        "ev",
+        "er",
+        "y",
+        "rhyth",
+        "m",
+        "let",
+        "the",
+        "whole",
+        "room",
+        "roar",
+        "Break",
+        "through",
+        "the",
+        "night",
+        "kick",
+        "it",
+        "straight",
+        "through",
+        "the",
+        "door"
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice.",
+      "bpm": 140,
+      "bars": 4,
+      "attack_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "attack_seconds": [
+        0,
+        1.7142857142857142,
+        3.4285714285714284,
+        5.142857142857143
+      ],
+      "slot_seconds": 6.857142857142857,
+      "full_prompt": "DRY SOLO A CAPPELLA DENSE POWERFUL EURODANCE RAP VERSE. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice. 140 BPM straight 4/4. Four bars, 6.857143 seconds. Deliver these four lines continuously, one line each bar, fast flowing eighth and sixteenth note syllables: Yeah keep moving, bring the force to the floor / Step with the sound, give it more and then more / Ride every rhythm, let the whole room roar / Break through the night, kick it straight through the door. Strong driving rhythmic momentum, tightly packed syllables, aggressive chest projection, punchy consonants, small natural breaths only. No spaced-out chant, no pauses between individual words, no drawn-out words. Start immediately on first consonant at time zero. Each line flows straight into next. Last word releases before 6.75 seconds. Exactly these words, once only. Entirely dry isolated human voice; no instruments, drums, beatboxing, bass, accompaniment, harmonies, doubling, reverb, delay, count-in, metronome or extra words. Silence after final release."
+    },
+    {
+      "title": "Rock This Place",
+      "slug": "rock_this_place",
+      "filename": "male_rap_rock_this_place_140bpm_4bars.mp3",
+      "role": "continuous dense rap verse",
+      "lyrics": "Rock this place with a rush from the ground; Jump with the crew when the kick comes round; Hands to the sky, let the whole block bounce; Bring that power till the last beat pounds",
+      "lines": [
+        "Rock this place with a rush from the ground",
+        "Jump with the crew when the kick comes round",
+        "Hands to the sky, let the whole block bounce",
+        "Bring that power till the last beat pounds"
+      ],
+      "syllables": [
+        "Rock",
+        "this",
+        "place",
+        "with",
+        "a",
+        "rush",
+        "from",
+        "the",
+        "ground",
+        "Jump",
+        "with",
+        "the",
+        "crew",
+        "when",
+        "the",
+        "kick",
+        "comes",
+        "round",
+        "Hands",
+        "to",
+        "the",
+        "sky",
+        "let",
+        "the",
+        "whole",
+        "block",
+        "bounce",
+        "Bring",
+        "that",
+        "pow",
+        "er",
+        "till",
+        "the",
+        "last",
+        "beat",
+        "pounds"
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice.",
+      "bpm": 140,
+      "bars": 4,
+      "attack_beats": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "attack_seconds": [
+        0,
+        1.7142857142857142,
+        3.4285714285714284,
+        5.142857142857143
+      ],
+      "slot_seconds": 6.857142857142857,
+      "full_prompt": "DRY SOLO A CAPPELLA DENSE POWERFUL EURODANCE RAP VERSE. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice. 140 BPM straight 4/4. Four bars, 6.857143 seconds. Deliver these four lines continuously, one line each bar, fast flowing eighth and sixteenth note syllables: Rock this place with a rush from the ground / Jump with the crew when the kick comes round / Hands to the sky, let the whole block bounce / Bring that power till the last beat pounds. Strong driving rhythmic momentum, tightly packed syllables, aggressive chest projection, punchy consonants, small natural breaths only. No spaced-out chant, no pauses between individual words, no drawn-out words. Start immediately on first consonant at time zero. Each line flows straight into next. Last word releases before 6.75 seconds. Exactly these words, once only. Entirely dry isolated human voice; no instruments, drums, beatboxing, bass, accompaniment, harmonies, doubling, reverb, delay, count-in, metronome or extra words. Silence after final release."
+    },
+    {
+      "title": "Come On",
+      "slug": "come_on",
+      "filename": "male_call_come_on_140bpm_1bar.mp3",
+      "role": "short hype call",
+      "lyrics": "Come on",
+      "vocalization": null,
+      "syllables": [
+        "Come",
+        "on"
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice.",
+      "bpm": 140,
+      "bars": 1,
+      "attack_beats": [
+        0.0,
+        0.5
+      ],
+      "attack_seconds": [
+        0.0,
+        0.21428571428571427
+      ],
+      "slot_seconds": 1.7142857142857142,
+      "full_prompt": "DRY SOLO ISOLATED VOCAL SAMPLER ONE-SHOT. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice. Exact 140 BPM 4/4. Perform only \"Come on\" once. One forceful compact rhythmic shouted rap call, crisp and urgent. Start immediately at zero. Syllables on consecutive eighth notes, complete phrase in under 0.9 seconds with a clean natural release. One-bar slot 1.714286 seconds, remaining tail silence. No elongated syllables, repeats, music, instruments, backing, drums, click, reverb, delay, doubling or count-in."
+    },
+    {
+      "title": "Lets Go",
+      "slug": "lets_go",
+      "filename": "male_call_lets_go_140bpm_1bar.mp3",
+      "role": "short hype call",
+      "lyrics": "Let\u2019s go",
+      "vocalization": null,
+      "syllables": [
+        "Let\u2019s",
+        "go"
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice.",
+      "bpm": 140,
+      "bars": 1,
+      "attack_beats": [
+        0.0,
+        0.5
+      ],
+      "attack_seconds": [
+        0.0,
+        0.21428571428571427
+      ],
+      "slot_seconds": 1.7142857142857142,
+      "full_prompt": "DRY SOLO ISOLATED VOCAL SAMPLER ONE-SHOT. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice. Exact 140 BPM 4/4. Perform only \"Let\u2019s go\" once. One forceful compact rhythmic shouted rap call, crisp and urgent. Start immediately at zero. Syllables on consecutive eighth notes, complete phrase in under 0.9 seconds with a clean natural release. One-bar slot 1.714286 seconds, remaining tail silence. No elongated syllables, repeats, music, instruments, backing, drums, click, reverb, delay, doubling or count-in."
+    },
+    {
+      "title": "Hey Yo",
+      "slug": "hey_yo",
+      "filename": "male_call_hey_yo_140bpm_1bar.mp3",
+      "role": "short hype call",
+      "lyrics": "Hey yo",
+      "vocalization": null,
+      "syllables": [
+        "Hey",
+        "yo"
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice.",
+      "bpm": 140,
+      "bars": 1,
+      "attack_beats": [
+        0.0,
+        0.5
+      ],
+      "attack_seconds": [
+        0.0,
+        0.21428571428571427
+      ],
+      "slot_seconds": 1.7142857142857142,
+      "full_prompt": "DRY SOLO ISOLATED VOCAL SAMPLER ONE-SHOT. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice. Exact 140 BPM 4/4. Perform only \"Hey yo\" once. One forceful compact rhythmic shouted rap call, crisp and urgent. Start immediately at zero. Syllables on consecutive eighth notes, complete phrase in under 0.9 seconds with a clean natural release. One-bar slot 1.714286 seconds, remaining tail silence. No elongated syllables, repeats, music, instruments, backing, drums, click, reverb, delay, doubling or count-in."
+    },
+    {
+      "title": "Move Now",
+      "slug": "move_now",
+      "filename": "male_call_move_now_140bpm_1bar.mp3",
+      "role": "short hype call",
+      "lyrics": "Move now",
+      "vocalization": null,
+      "syllables": [
+        "Move",
+        "now"
+      ],
+      "voice": "One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice.",
+      "bpm": 140,
+      "bars": 1,
+      "attack_beats": [
+        0.0,
+        0.5
+      ],
+      "attack_seconds": [
+        0.0,
+        0.21428571428571427
+      ],
+      "slot_seconds": 1.7142857142857142,
+      "full_prompt": "DRY SOLO ISOLATED VOCAL SAMPLER ONE-SHOT. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice. Exact 140 BPM 4/4. Perform only \"Move now\" once. One forceful compact rhythmic shouted rap call, crisp and urgent. Start immediately at zero. Syllables on consecutive eighth notes, complete phrase in under 0.9 seconds with a clean natural release. One-bar slot 1.714286 seconds, remaining tail silence. No elongated syllables, repeats, music, instruments, backing, drums, click, reverb, delay, doubling or count-in."
+    },
+    {
+      "title": "Scat Ba Da Bap",
+      "slug": "scat_ba_da_bap",
+      "filename": "short_scat_scat_ba_da_bap_140bpm_1bar.mp3",
+      "role": "short wordless scat",
+      "lyrics": null,
+      "vocalization": "Ba da bap",
+      "syllables": [
+        "Ba",
+        "da",
+        "bap"
+      ],
+      "voice": "One adult female warm slightly husky alto, clear chest voice, open vowels, restrained vibrato, intimate dry microphone.",
+      "bpm": 140,
+      "bars": 1,
+      "attack_beats": [
+        0.0,
+        0.5,
+        1.0
+      ],
+      "attack_seconds": [
+        0.0,
+        0.21428571428571427,
+        0.42857142857142855
+      ],
+      "slot_seconds": 1.7142857142857142,
+      "full_prompt": "DRY SOLO ISOLATED VOCAL SAMPLER ONE-SHOT. One adult female warm slightly husky alto, clear chest voice, open vowels, restrained vibrato, intimate dry microphone. Exact 140 BPM 4/4. Perform only \"Ba da bap\" once. Sing these nonlexical syllables with a bouncy descending tune; no speech, beatboxing or real words. Start immediately at zero. Syllables on consecutive eighth notes, complete phrase in under 0.9 seconds with a clean natural release. One-bar slot 1.714286 seconds, remaining tail silence. No elongated syllables, repeats, music, instruments, backing, drums, click, reverb, delay, doubling or count-in."
+    },
+    {
+      "title": "Scat Doo Yah",
+      "slug": "scat_doo_yah",
+      "filename": "short_scat_scat_doo_yah_140bpm_1bar.mp3",
+      "role": "short wordless scat",
+      "lyrics": null,
+      "vocalization": "Doo yah",
+      "syllables": [
+        "Doo",
+        "yah"
+      ],
+      "voice": "One adult female warm slightly husky alto, clear chest voice, open vowels, restrained vibrato, intimate dry microphone.",
+      "bpm": 140,
+      "bars": 1,
+      "attack_beats": [
+        0.0,
+        0.5
+      ],
+      "attack_seconds": [
+        0.0,
+        0.21428571428571427
+      ],
+      "slot_seconds": 1.7142857142857142,
+      "full_prompt": "DRY SOLO ISOLATED VOCAL SAMPLER ONE-SHOT. One adult female warm slightly husky alto, clear chest voice, open vowels, restrained vibrato, intimate dry microphone. Exact 140 BPM 4/4. Perform only \"Doo yah\" once. Sing these nonlexical syllables with a bouncy descending tune; no speech, beatboxing or real words. Start immediately at zero. Syllables on consecutive eighth notes, complete phrase in under 0.9 seconds with a clean natural release. One-bar slot 1.714286 seconds, remaining tail silence. No elongated syllables, repeats, music, instruments, backing, drums, click, reverb, delay, doubling or count-in."
+    }
+  ],
+  "takes": [
+    {
+      "name": "turn_it_up_crew",
+      "samples": [
+        "turn_it_up_crew"
+      ],
+      "prompt": "DRY SOLO A CAPPELLA DENSE POWERFUL EURODANCE RAP VERSE. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice. 140 BPM straight 4/4. Four bars, 6.857143 seconds. Deliver these four lines continuously, one line each bar, fast flowing eighth and sixteenth note syllables: Turn it up crew, put the spark in the street / Hit with the kick, never miss that beat / Run through the night with the fire in your feet / Push to the front, bring the heat on repeat. Strong driving rhythmic momentum, tightly packed syllables, aggressive chest projection, punchy consonants, small natural breaths only. No spaced-out chant, no pauses between individual words, no drawn-out words. Start immediately on first consonant at time zero. Each line flows straight into next. Last word releases before 6.75 seconds. Exactly these words, once only. Entirely dry isolated human voice; no instruments, drums, beatboxing, bass, accompaniment, harmonies, doubling, reverb, delay, count-in, metronome or extra words. Silence after final release."
+    },
+    {
+      "name": "yeah_keep_moving",
+      "samples": [
+        "yeah_keep_moving"
+      ],
+      "prompt": "DRY SOLO A CAPPELLA DENSE POWERFUL EURODANCE RAP VERSE. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice. 140 BPM straight 4/4. Four bars, 6.857143 seconds. Deliver these four lines continuously, one line each bar, fast flowing eighth and sixteenth note syllables: Yeah keep moving, bring the force to the floor / Step with the sound, give it more and then more / Ride every rhythm, let the whole room roar / Break through the night, kick it straight through the door. Strong driving rhythmic momentum, tightly packed syllables, aggressive chest projection, punchy consonants, small natural breaths only. No spaced-out chant, no pauses between individual words, no drawn-out words. Start immediately on first consonant at time zero. Each line flows straight into next. Last word releases before 6.75 seconds. Exactly these words, once only. Entirely dry isolated human voice; no instruments, drums, beatboxing, bass, accompaniment, harmonies, doubling, reverb, delay, count-in, metronome or extra words. Silence after final release."
+    },
+    {
+      "name": "rock_this_place",
+      "samples": [
+        "rock_this_place"
+      ],
+      "prompt": "DRY SOLO A CAPPELLA DENSE POWERFUL EURODANCE RAP VERSE. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice. 140 BPM straight 4/4. Four bars, 6.857143 seconds. Deliver these four lines continuously, one line each bar, fast flowing eighth and sixteenth note syllables: Rock this place with a rush from the ground / Jump with the crew when the kick comes round / Hands to the sky, let the whole block bounce / Bring that power till the last beat pounds. Strong driving rhythmic momentum, tightly packed syllables, aggressive chest projection, punchy consonants, small natural breaths only. No spaced-out chant, no pauses between individual words, no drawn-out words. Start immediately on first consonant at time zero. Each line flows straight into next. Last word releases before 6.75 seconds. Exactly these words, once only. Entirely dry isolated human voice; no instruments, drums, beatboxing, bass, accompaniment, harmonies, doubling, reverb, delay, count-in, metronome or extra words. Silence after final release."
+    },
+    {
+      "name": "short_calls",
+      "samples": [
+        "come_on",
+        "lets_go",
+        "hey_yo",
+        "move_now"
+      ],
+      "prompt": "Record a sampler of 4 separate dry isolated vocal one-shots. Exactly two seconds silence between complete one-shots. No music anywhere. Same voice for all. Do not announce numbers or labels. One-shot 1 (times relative to its own start): DRY SOLO ISOLATED VOCAL SAMPLER ONE-SHOT. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice. Exact 140 BPM 4/4. Perform only \"Come on\" once. One forceful compact rhythmic shouted rap call, crisp and urgent. Start immediately at zero. Syllables on consecutive eighth notes, complete phrase in under 0.9 seconds with a clean natural release. One-bar slot 1.714286 seconds, remaining tail silence. No elongated syllables, repeats, music, instruments, backing, drums, click, reverb, delay, doubling or count-in. One-shot 2 (times relative to its own start): DRY SOLO ISOLATED VOCAL SAMPLER ONE-SHOT. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice. Exact 140 BPM 4/4. Perform only \"Let\u2019s go\" once. One forceful compact rhythmic shouted rap call, crisp and urgent. Start immediately at zero. Syllables on consecutive eighth notes, complete phrase in under 0.9 seconds with a clean natural release. One-bar slot 1.714286 seconds, remaining tail silence. No elongated syllables, repeats, music, instruments, backing, drums, click, reverb, delay, doubling or count-in. One-shot 3 (times relative to its own start): DRY SOLO ISOLATED VOCAL SAMPLER ONE-SHOT. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice. Exact 140 BPM 4/4. Perform only \"Hey yo\" once. One forceful compact rhythmic shouted rap call, crisp and urgent. Start immediately at zero. Syllables on consecutive eighth notes, complete phrase in under 0.9 seconds with a clean natural release. One-bar slot 1.714286 seconds, remaining tail silence. No elongated syllables, repeats, music, instruments, backing, drums, click, reverb, delay, doubling or count-in. One-shot 4 (times relative to its own start): DRY SOLO ISOLATED VOCAL SAMPLER ONE-SHOT. One adult male rapper, resonant low baritone, gravelly chest resonance, sharp consonants, commanding upbeat energy, emphatic rhythmic spoken rap, clear English, close dry microphone, one solo voice. Exact 140 BPM 4/4. Perform only \"Move now\" once. One forceful compact rhythmic shouted rap call, crisp and urgent. Start immediately at zero. Syllables on consecutive eighth notes, complete phrase in under 0.9 seconds with a clean natural release. One-bar slot 1.714286 seconds, remaining tail silence. No elongated syllables, repeats, music, instruments, backing, drums, click, reverb, delay, doubling or count-in."
+    },
+    {
+      "name": "short_scats",
+      "samples": [
+        "scat_ba_da_bap",
+        "scat_doo_yah"
+      ],
+      "prompt": "Record a sampler of 2 separate dry isolated vocal one-shots. Exactly two seconds silence between complete one-shots. No music anywhere. Same voice for all. Do not announce numbers or labels. One-shot 1 (times relative to its own start): DRY SOLO ISOLATED VOCAL SAMPLER ONE-SHOT. One adult female warm slightly husky alto, clear chest voice, open vowels, restrained vibrato, intimate dry microphone. Exact 140 BPM 4/4. Perform only \"Ba da bap\" once. Sing these nonlexical syllables with a bouncy descending tune; no speech, beatboxing or real words. Start immediately at zero. Syllables on consecutive eighth notes, complete phrase in under 0.9 seconds with a clean natural release. One-bar slot 1.714286 seconds, remaining tail silence. No elongated syllables, repeats, music, instruments, backing, drums, click, reverb, delay, doubling or count-in. One-shot 2 (times relative to its own start): DRY SOLO ISOLATED VOCAL SAMPLER ONE-SHOT. One adult female warm slightly husky alto, clear chest voice, open vowels, restrained vibrato, intimate dry microphone. Exact 140 BPM 4/4. Perform only \"Doo yah\" once. Sing these nonlexical syllables with a bouncy descending tune; no speech, beatboxing or real words. Start immediately at zero. Syllables on consecutive eighth notes, complete phrase in under 0.9 seconds with a clean natural release. One-bar slot 1.714286 seconds, remaining tail silence. No elongated syllables, repeats, music, instruments, backing, drums, click, reverb, delay, doubling or count-in."
+    }
+  ],
+  "policy": "Natural contiguous phrasing; no phoneme-by-phoneme stretching. Short calls are one-bar assets with less than one second of active voice.",
+  "qa_limits": "PCM/waveform/spectrogram and advisory ASR; listening only if an audio perception tool is available."
+}

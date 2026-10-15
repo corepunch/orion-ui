@@ -3,6 +3,7 @@
 // synth.c. docs/sound-synthesis.md explains the recipe notation.
 
 #include "synth.h"
+#include "sample_levels.h"
 
 #define SR  SY_SR
 #define TAU SY_TAU
@@ -403,16 +404,16 @@ static const def_t kDefs[] = {
   N("Ping Echo",       CAT_FX,     DAN | RAV | TEC, 1, I_BLEEP, X_ECHO | X_HALL | X_FOLD, 4, 1.0f, "A5 - - - - - - - - - - - - - - -"),
 
   // ── Hip Hop: 808 and break kits with swing, sub bass, Rhodes, wah guitar, scratches ──
-  D("Head Nod",        CAT_DRUMS,  HIP,         1, KIT_BREAK,  X_SWING | X_ROOM, "k=x......x..x..... s=....x.......x... h=x.x.x.x.x.x.x.x."),
+  D("Head Nod",        CAT_DRUMS,  HIP,         1, KIT_BREAK,  X_SWING | X_ROOM, "k=x......x..x..... s=....x.......x... h=o.o.o.o.o.o.o.o."),
   D("Dusty Break",     CAT_DRUMS,  HIP,         1, KIT_LOFI,   X_SWING | X_CRUSH, "k=x.x.......xx.... s=....x..o.o..x..o h=x.x.x.x.x.x.x.x."),
   D("808 Bounce",      CAT_DRUMS,  HIP,         1, KIT_808,    0,               "k=x..x..x...x..x.. c=....x.......x... h=x.x.x.rx.x.x.xrx"),
-  D("Laid Back",       CAT_DRUMS,  HIP,         1, KIT_BREAK,  X_SWING,         "k=x.........x.x... s=....x.......x... h=x.xxx.x.x.xxx.x. m=..o...o...o...o."),
+  D("Laid Back",       CAT_DRUMS,  HIP,         1, KIT_BREAK,  X_SWING,         "k=x.........x.x... s=....x.......x... h=o.ooo.o.o.ooo.o. m=..o...o...o...o."),
   D("G-Funk Beat",     CAT_DRUMS,  HIP,         1, KIT_808,    X_SWING,         "k=x..x....x.x..... c=....x.......x... o=..x...x...x...x. h=xx.xxx.xxx.xxx.x"),
   D("Slow Jam",        CAT_DRUMS,  HIP,         1, KIT_808,    X_ROOM,          "k=x.......x.x..... r=....x.......x... m=x.x.x.x.x.x.x.x. h=..x...x...x...x."),
-  D("Backyard Funk",   CAT_DRUMS,  HIP,         1, KIT_BREAK,  X_SWING | X_ROOM, "k=x.x...x...x..x.. s=....x..o.o..x..o h=xoxoxoxoxoxoxoxo"),
+  D("Backyard Funk",   CAT_DRUMS,  HIP,         1, KIT_BREAK,  X_SWING | X_ROOM, "k=x.x...x...x..x.. s=....x..o.o..x..o h=oooooooooooooooo"),
   D("Hat Roll Beat",   CAT_DRUMS,  HIP,         1, KIT_808,    0,               "k=x.....x..x...... c=........x....... h=x.x.rrx.x.x.RRrx"),
   D("Old School",      CAT_DRUMS,  HIP,         1, KIT_808,    0,               "k=x..x..x.....x... s=....x.......x... c=....x.......x... b=x.x.x.x.x.x.x.x."),
-  D("Jeep Beat",       CAT_DRUMS,  HIP,         2, KIT_BREAK,  X_SWING | X_ROOM, "k=x......x..x.....x.x....x..x..... s=....x.......x.......x.......x.xx h=x.x."),
+  D("Jeep Beat",       CAT_DRUMS,  HIP,         2, KIT_BREAK,  X_SWING | X_ROOM, "k=x......x..x.....x.x....x..x..... s=....x.......x.......x.......x.xx h=o.o."),
   D("808 Boom",        CAT_KICK,   HIP,         1, KIT_808,    0,               "k=x.........x....."),
   D("808 Skip",        CAT_KICK,   HIP,         1, KIT_808,    0,               "k=x..x......x..x.."),
   D("Dusty Kick",      CAT_KICK,   HIP,         1, KIT_LOFI,   X_CRUSH,         "k=x......x..x....."),
@@ -485,9 +486,9 @@ static const def_t kDefs[] = {
 
   // ── Rave: overdriven kit, breakbeats, hoovers, stabs, rave piano ──
   D("Hardcore Floor",  CAT_DRUMS,  RAV,         1, KIT_HARD,   0,               "k=x...x...x...x... o=..x...x...x...x. c=....x.......x..."),
-  D("Breakbeat Rush",  CAT_DRUMS,  RAV,         1, KIT_BREAK,  X_ROOM,          "k=x.x.......xx.... s=....x..x.x..x... h=x.x.x.x.x.x.x.x."),
+  D("Breakbeat Rush",  CAT_DRUMS,  RAV,         1, KIT_BREAK,  X_ROOM,          "k=x.x.......xx.... s=....x..x.x..x... h=o.o.o.o.o.o.o.o."),
   D("Happy Break",     CAT_DRUMS,  RAV,         1, KIT_HARD,   0,               "k=x...x...x...x... s=....x..o.o..x.o. h=xoxoxoxoxoxoxoxo"),
-  D("Jungle Chop",     CAT_DRUMS,  RAV,         2, KIT_BREAK,  X_ROOM,          "k=x.x.......x.....x.x......xx..... s=....x..x.x..x.......x..x.x.xx.x. h=x.x."),
+  D("Jungle Chop",     CAT_DRUMS,  RAV,         2, KIT_BREAK,  X_ROOM,          "k=x.x.......x.....x.x......xx..... s=....x..x.x..x.......x..x.x.xx.x. h=o.o."),
   D("Gabber Stomp",    CAT_DRUMS,  RAV,         1, KIT_HARD,   X_DRIVE,         "k=x...x...x...x... d=x.x.x.x.x.x.x.x."),
   D("Stomp Clap",      CAT_DRUMS,  RAV,         1, KIT_HARD,   0,               "k=x...x...x...x... c=x...x...x...x... o=..x...x...x...x."),
   D("Rolling Break",   CAT_DRUMS,  RAV,         1, KIT_BREAK,  0,               "k=x..x..x...x..x.. s=....x.......x..x d=x.x.x.x.x.x.x.x."),
@@ -692,17 +693,26 @@ static const def_t kDefs[] = {
   D("Velvet House", CAT_DRUMS, DAN, 2, KIT_909, X_SWING, "k=x...x...x...x...x...x...x..ox... c=....x.......x.......x.......x... h=x.o.x.o.x.o.x.o.x.o.x.o.x.o.x.oo o=..x...x...x...x...x...x...x...x. m=...o...o..o...o....o..o....o..o."),
   D("Neon Two Step", CAT_DRUMS, DAN | HIP, 2, KIT_909, X_SWING, "k=x.....x...x.....x..o....x.....x. s=....x.......x.......x.......x..o h=x.o.x.o.x.o.x.o.x.o.x.o.x.oo..x. o=......x.......x...x.......x....."),
   D("Conga Club", CAT_DRUMS, DAN | TEC, 2, KIT_909, 0, "k=x...x...x...x...x...x...x...x... c=....x.......x.......x.......x... g=..o..x....o..x....x..o...x...o.. G=x......o.x......x.....o.x.....o. h=x...x...x...x...x...x...x...x.o. o=..x...x...x...x...x...x...x...x."),
-  D("Pocket Break", CAT_DRUMS, HIP, 2, KIT_BREAK, X_SWING | X_ROOM, "k=x.....x...x.....x..o..x...x..o.. s=....X..o....X.......X.....o.X..o h=X.o.x.o.X.o.x.o.X.o.x.o.X.o.x.oo o=..............x.......x........."),
+  D("Pocket Break", CAT_DRUMS, HIP, 2, KIT_BREAK, X_SWING | X_ROOM, "k=x.....x...x.....x..o..x...x..o.. s=....X..o....X.......X.....o.X..o h=o.o.o.o.o.o.o.o.o.o.o.o.o.o.o.oo o=..............o.......o........."),
   D("Subway Funk", CAT_DRUMS, HIP, 2, KIT_LOFI, X_SWING, "k=x..o....x.x.....x.....x..o..x... s=....x.....o.x.......x..o....x..o h=x.oox.o.x.oox.o.x.o.x.oox.o.x.oo r=..........o.......o............."),
   D("Lowrider Bounce", CAT_DRUMS, HIP, 2, KIT_808, 0, "k=x..x..x.........x.....x..x....x. c=....x.......x.......x.......x... h=x.o.x.o.x.o.x.o.x.o.x.o.x.o.r.x. o=..........x.......x............. b=.......o...............o......o."),
-  D("Cutback Break", CAT_DRUMS, RAV | HIP, 2, KIT_BREAK, X_ROOM, "k=x.x.......xx....x.....x..x...... s=....X..o.o..X.......X..x..o.X..x h=x.o.x.o.x.o.x.o.x.o.x.o.x.o.x.oo o=..............x.......x........."),
-  D("Rush Hour Break", CAT_DRUMS, RAV, 2, KIT_BREAK, 0, "k=x.....x...x..o..x.x.......xx.... s=....x..x.o..x.......x..o.x..x.rr h=x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x. d=x.......x.......x.......x......."),
+  D("Cutback Break", CAT_DRUMS, RAV | HIP, 2, KIT_BREAK, X_ROOM, "k=x.x.......xx....x.....x..x...... s=....X..o.o..X.......X..x..o.X..x h=o.o.o.o.o.o.o.o.o.o.o.o.o.o.o.oo o=..............o.......o........."),
+  D("Rush Hour Break", CAT_DRUMS, RAV, 2, KIT_BREAK, 0, "k=x.....x...x..o..x.x.......xx.... s=....x..x.o..x.......x..o.x..x.rr h=o.o.o.o.o.o.o.o.o.o.o.o.o.o.o.o. d=x.......x.......x.......x......."),
   D("Brightside Rave", CAT_DRUMS, RAV | DAN, 2, KIT_HARD, 0, "k=x...x...x...x...x...x...x...x..o c=....x.......x.......x.......x... s=.......o..o............o..o...oo h=x...x...x...x...x...x...x...x... o=..x...x...x...x...x...x...x...x."),
   D("Machine Shuffle", CAT_DRUMS, TEC, 2, KIT_TECHNO, X_SWING, "k=x...x...x...x...x...x...x...x... r=....x.......x.......x.......x..o h=x.oox.o.x.oox.o.x.o.x.oox.o.x.oo o=......x.......x...x.......x..... t=...o......o............o.....o.."),
   D("Copper Motor", CAT_DRUMS, TEC, 2, KIT_TECHNO, 0, "k=x...x...x...x...x...x...x..ox... c=....x.......x.......x.......x... h=x.o.x.o.x.o.x.o.x.o.x.o.x.o.x.oo T=..o......o...........o....o..... l=.......x......o....o........x... o=......x.......x...x.......x....."),
   D("Grid Runner", CAT_DRUMS, TEC | HIP, 2, KIT_808, 0, "k=x.....x...x.....x..x....x.....x. s=....x.......x.......x.......x..o h=x.oxx.oxx.oxx.oxx.oxx.oxx.oxx.or o=......x...................x..... r=.........o........o............."),
+  // Original compact vocal calls and scat.
+  M("Come On",         ANY, 1, "male_call_come_on_140bpm_1bar.mp3"),
+  M("Let's Go",        ANY, 1, "male_call_lets_go_140bpm_1bar.mp3"),
+  M("Hey Yo",          ANY, 1, "male_call_hey_yo_140bpm_1bar.mp3"),
+  M("Move Now",        ANY, 1, "male_call_move_now_140bpm_1bar.mp3"),
+  M("Scat Ba Da Bap",  ANY, 1, "short_scat_scat_ba_da_bap_140bpm_1bar.mp3"),
+  M("Scat Doo Yah",    ANY, 1, "short_scat_scat_doo_yah_140bpm_1bar.mp3"),
+#include "demo_phrases.h"
 };
 #define NUM_DEFS ((int)(sizeof(kDefs) / sizeof(kDefs[0])))
+typedef char library_capacity_check_t[NUM_DEFS <= GR_MAX_BLOCKS ? 1 : -1];
 
 static block_t g_blocks[GR_MAX_BLOCKS];
 static bool    g_meta;
@@ -735,9 +745,8 @@ int blocks_in_family(family_t family, int *ids, int max) {
   return n;
 }
 
-// Level: peak at 0.85 unless that would leave a sustained sound much louder
-// than a drum loop; then its RMS is capped instead.
-static void level(float *buf, int n, category_t cat) {
+// Prepare sources as before, then balance their library roles independently.
+static int level(float *buf, int n, category_t cat) {
   float peak = 1e-6f, dc = 0, prev = 0;
   double power = 0;
   for (int i = 0; i < n; i++) { // 15 Hz high-pass: pulse-width and drive stages leave an offset
@@ -751,6 +760,7 @@ static void level(float *buf, int n, category_t cat) {
   if (cat == CAT_HAT) gain *= 0.5f;
   for (int i = 0; i < n; i++) buf[i] *= gain;
   for (int i = 0; i < 128 && i < n; i++) buf[n - 1 - i] *= i / 128.0f; // de-click the cut tail
+  return sample_balance(buf, n, cat);
 }
 
 // A pattern must fill its block or repeat evenly inside it.
@@ -783,7 +793,7 @@ bool block_render(int id, int bpm, block_pcm_t *out) {
   if (d->sample) {
     if (!groove_mp3_load(d->sample, n, &out->pcm)) return false;
     out->frames = n;
-    level(out->pcm, n, d->cat);
+    out->balance_db = level(out->pcm, n, d->cat);
     out->npeaks = d->bars * GR_PEAKS_BAR;
     for (int k = 0; k < out->npeaks; k++) {
       int a = (int)((int64_t)n * k / out->npeaks), b = (int)((int64_t)n * (k + 1) / out->npeaks);
@@ -798,10 +808,11 @@ bool block_render(int id, int bpm, block_pcm_t *out) {
   if (d->fn)       d->fn(&c);
   else if (d->spb) sy_seq(&c, d->pat, d->spb, d->hold, (sy_inst_t)d->voice, d->arg);
   else             sy_drums(&c, (sy_kit_t)d->voice, d->pat);
+  if (c.failed) { free(c.buf); return false; }
   sy_fx(&c, d->fx);
   if (d->fx & X_FOLD) for (int i = 0; i < SY_TAIL; i++) c.buf[i % n] += c.buf[n + i];
   if (d->fx & X_REVERSE) for (int i = 0; i < n / 2; i++) { float t = c.buf[i]; c.buf[i] = c.buf[n - 1 - i]; c.buf[n - 1 - i] = t; }
-  level(c.buf, n, d->cat);
+  out->balance_db = level(c.buf, n, d->cat);
   float *fit = realloc(c.buf, (size_t)n * sizeof(float)); // drop the tail
   out->pcm = fit ? fit : c.buf;
   out->frames = n;
@@ -838,6 +849,7 @@ float *block_release(int id) {
 }
 
 void blocks_free(void) {
+  sy_samples_free();
   for (int i = 0; i < NUM_DEFS; i++) {
     free(g_blocks[i].audio.pcm);
     g_blocks[i].audio = (block_pcm_t){0};

@@ -18,6 +18,7 @@ typedef struct {
   double   bar;   // frames per bar
   uint32_t rng;
   float    swing; // lateness of every second 16th, as a fraction of a 16th
+  bool     failed;
 } sy_ctx_t;
 
 typedef enum {
@@ -40,6 +41,8 @@ typedef enum {
   I_WAH, I_DIST, I_CLEAN,                                                 // guitars
   I_VOX, I_ROBOT,                                                         // formant voices; arg = vowel words
 } sy_inst_t;
+
+void sy_samples_free(void);
 
 // Post effects, applied to the whole block in this order.
 enum {

@@ -21,31 +21,6 @@ static void audio_cb(void *userdata, uint8_t *stream, int len) {
   }
 }
 
-static int find_block(const char *name) {
-  for (int i = 0; i < blocks_count(); i++) if (strcmp(block_get(i)->name, name) == 0) return i;
-  fprintf(stderr, "[gr] seed: unknown block '%s'\n", name);
-  fflush(stderr);
-  return -1;
-}
-
-static void seed(song_t *s, const char *name, int track, int bar, int count) {
-  int b = find_block(name);
-  if (b < 0 || !app_block_audio(b)) return;
-  app_lock();
-  for (int i = 0; i < count; i++) song_add_clip(s, b, track, (bar + i * block_get(b)->bars) * GR_TICKS_BAR);
-  app_unlock();
-}
-
-static void seed_demo(song_t *s) {
-  seed(s, "Four Floor", 0, 0, 8);
-  seed(s, "Hat Groove", 1, 2, 5);  seed(s, "Snare Fill", 1, 7, 1);
-  seed(s, "Root Pulse", 2, 0, 4);  seed(s, "Funk Bass", 2, 4, 4);
-  seed(s, "Am - F", 3, 0, 1);      seed(s, "C - G", 3, 2, 1);      seed(s, "Am - F", 3, 4, 1);  seed(s, "C - G", 3, 6, 1);
-  seed(s, "Pad Am", 4, 0, 1);      seed(s, "Pad F - G", 4, 2, 1);  seed(s, "Pad Am", 4, 4, 1);  seed(s, "Pad F - G", 4, 6, 1);
-  seed(s, "Am Strum", 5, 4, 4);
-  seed(s, "Pluck Arp", 6, 4, 4);
-}
-
 static bool block_in_song(int id) {
   for (int i = 0; i < g_app->song.nclips; i++) if (g_app->song.clips[i].block == id) return true;
   return false;
@@ -107,8 +82,33 @@ void app_new_song(void) {
   invalidate_window(g_app->sheet);
 }
 
+bool app_load_demo_song(int demo) {
+  static const char *const files[GR_DEMO_COUNT] = { "neon-skyline.groove", "afterglow-avenue.groove", "victory-lights.groove" };
+  if (!g_app || demo < 0 || demo >= GR_DEMO_COUNT) {
+    fprintf(stderr, "[gr] demo rejected index=%d count=%d app=%p\n", demo, GR_DEMO_COUNT, (void *)g_app);
+    fflush(stderr);
+    return false;
+  }
+  char path[1024];
+  int n = snprintf(path, sizeof(path), "%s/../share/groove/demos/%s", ui_get_exe_dir(), files[demo]);
+  FILE *f = n > 0 && (size_t)n < sizeof(path) ? fopen(path, "rb") : NULL;
+  if (f) fclose(f);
+  else snprintf(path, sizeof(path), "apps/groove/share/demos/%s", files[demo]);
+  if (!app_open_song(path)) {
+    fprintf(stderr, "[gr] demo load failed index=%d path=%s\n", demo, path);
+    fflush(stderr);
+    return false;
+  }
+  g_app->filename[0] = 0;
+  if (g_app->sheet) {
+    set_scroll_info(g_app->sheet, SB_HORZ, &(scroll_info_t){ .fMask = SIF_POS, .nPos = 0 }, false);
+    send_message(g_app->sheet, evHScroll, 0, NULL);
+  }
+  return true;
+}
+
 void app_load_demo(void) {
-  seed_demo(&g_app->song);
+  app_load_demo_song(GR_DEMO_SKYLINE);
 }
 
 groove_t *app_init(void) {
@@ -156,7 +156,7 @@ void app_set_playing(bool playing) {
 
 void app_seek_position(int position) {
   app_lock();
-  g_app->song.pos = position_frames_for_bpm(CLAMP(position, 0, GR_BARS * GR_TICKS_BAR - GR_SNAP_TICKS), g_app->song.bpm);
+  g_app->song.pos = position_frames_for_bpm(CLAMP(position, 0, GR_BARS * GR_TICKS_BAR), g_app->song.bpm);
   app_unlock();
   invalidate_window(g_app->sheet);
 }
@@ -331,7 +331,13 @@ void app_command(uint16_t id) {
       } else save_song_as_dialog();
       break;
     case ID_FILE_SAVEAS: save_song_as_dialog(); break;
-    case ID_FILE_DEMO: app_new_song(); app_load_demo(); invalidate_window(g_app->sheet); break;
+    case ID_FILE_DEMO:
+    case ID_FILE_DEMO_AFTERGLOW:
+    case ID_FILE_DEMO_VICTORY: {
+      int demo = id == ID_FILE_DEMO ? GR_DEMO_SKYLINE : id == ID_FILE_DEMO_AFTERGLOW ? GR_DEMO_AFTERGLOW : GR_DEMO_VICTORY;
+      if (!app_load_demo_song(demo)) message_box(g_app->menubar_win, "Could not load this demo song. Check that Groove's demo files are installed.", "Demo unavailable", MB_OK);
+      break;
+    }
     case ID_FILE_QUIT: ui_request_quit(); break;
     case ID_DELETE:
       if (g_app->selected_clip < 0 || g_app->selected_clip >= s->nclips) break;

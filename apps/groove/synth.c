@@ -2,6 +2,7 @@
 // See docs/sound-synthesis.md.
 
 #include "synth.h"
+#include "synth_samples.h"
 
 #define SR  SY_SR
 #define TAU SY_TAU
@@ -328,32 +329,6 @@ void sy_drums(sy_ctx_t *c, sy_kit_t kit, const char *lanes) {
 }
 
 // ── Starter pitched voices ───────────────────────────────────────────────
-static void v_piano(sy_ctx_t *c, int s, int g, float hz, float a) {
-  static const float hamp[5] = { 1.0f, 0.55f, 0.3f, 0.18f, 0.1f };
-  int n = g + (int)(0.45f * SR);
-  for (int h = 0; h < 5; h++) {
-    float f = hz * (float)(h + 1) * (1.0f + 0.0004f * h * h), dec = 2.0f + 1.7f * h;
-    double ph = 0;
-    if (f > SR / 2.2f) break;
-    for (int i = 0; i < n; i++, ph += TAU * f / SR) {
-      float t = i / SR, e = expf(-t * dec) * fmin1(i / (0.003f * SR));
-      if (i > g) e *= expf(-(i - g) / SR * 9.0f);
-      if (e < 1e-4f && i > g) break;
-      sy_mix(c, s + i, a * hamp[h] * 0.33f * sinf((float)ph) * e);
-    }
-  }
-  float tri = 0.3f, prev = 0;
-  for (int i = 0; i < n; i++) {
-    float t = i / SR, e = expf(-t * 2.0f) * fmin1(i / (0.003f * SR));
-    if (i > g) e *= expf(-(i - g) / SR * 9.0f);
-    sy_mix(c, s + i, a * 0.16f * osc_tri(&tri, hz / SR) * e);
-  }
-  for (int i = 0, len = (int)(0.012f * SR); i < len; i++) { // hammer
-    float x = sy_rnd(c), y = x - prev;
-    prev = x;
-    sy_mix(c, s + i, a * 0.2f * y * (1.0f - (float)i / len));
-  }
-}
 static void v_bass(sy_ctx_t *c, int s, int g, float hz, float a, bool bright) {
   int n = g + (int)(0.06f * SR);
   float tri = 0.15f, pul = 0.4f, saw = 0.72f, sub = 0.05f;
@@ -477,23 +452,6 @@ static void v_partials(sy_ctx_t *c, const sy_note_t *n, int count, const float *
       sy_mix(c, n->s + i, sine_next(&o) * e * fmin1(i / (attack * SR)) * (1.0f + trem * sine_next(&lfo)));
       e *= i < n->g ? ek : ek * rel;
     }
-  }
-}
-static void v_hpiano(sy_ctx_t *c, const sy_note_t *n) {
-  static const float mult[7] = { 1.0f, 2.001f, 3.003f, 4.006f, 5.01f, 6.015f, 7.02f };
-  static const float amp[7]  = { 0.42f, 0.25f, 0.18f, 0.15f, 0.12f, 0.10f, 0.08f };
-  static const float dec[7]  = { 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f };
-  float tri = 0.25f, prev = 0;
-  v_partials(c, n, 7, mult, amp, dec, 0.002f, 11.0f, 0.45f, 1.0f, 0.0f);
-  for (int i = 0, len = n->g + (int)(0.4f * SR); i < len; i++) {
-    float e = expf(-i / SR * 3.0f) * fmin1(i / (0.002f * SR));
-    if (i > n->g) e *= expf(-(i - n->g) / SR * 11.0f);
-    sy_mix(c, n->s + i, n->a * 0.14f * osc_tri(&tri, n->hz / SR) * e);
-  }
-  for (int i = 0, len = (int)(0.01f * SR); i < len; i++) {
-    float x = sy_rnd(c), y = x - prev;
-    prev = x;
-    sy_mix(c, n->s + i, n->a * 0.16f * y * (1.0f - (float)i / len));
   }
 }
 static void v_organ(sy_ctx_t *c, const sy_note_t *n) {
@@ -640,44 +598,6 @@ static void v_whistle(sy_ctx_t *c, const sy_note_t *n) {
 }
 
 // ── Guitar strings ──────────────────────────────────────────────────────
-static void v_guitar(sy_ctx_t *c, const sy_note_t *n, sy_inst_t inst) {
-  bool mute = inst == I_MUTE, acoustic = inst == I_PLUCK;
-  sine_t modes[32];
-  float amp[32], decay[32];
-  float pick = (acoustic ? 0.19f : 0.15f) + 0.012f * sinf(n->step * 1.7f + n->idx);
-  float release = mute ? 65.0f : 32.0f, rel = expf(-release / SR), e = 1;
-  int count = 0, len = MIN(n->g + (int)(0.35f * SR), c->n + SY_TAIL - n->s);
-  svf_t body = {0}, air = {0}, pickup = {0}, cabinet = {0}, wah = {0};
-  svf_set(&body, 190.0f, 1.2f); svf_set(&air, 105.0f, 0.8f);
-  svf_set(&pickup, acoustic ? 7200.0f : 4800.0f, 0.7f);
-  svf_set(&cabinet, 3600.0f, 0.7f);
-  // Pluck-position and pickup-position notches; upper string modes decay first.
-  for (int h = 1; h <= 32 && n->hz * h < SR * 0.42f; h++) {
-    float stiffness = acoustic ? 0.000015f : 0.000005f;
-    sine_init(&modes[count], n->hz * h * sqrtf(1.0f + stiffness * (h * h - 1)), 0);
-    amp[count] = sinf(SY_PI * h * pick) / (h * powf((float)h, acoustic ? 0.30f : 0.18f));
-    if (!acoustic) amp[count] *= sinf(SY_PI * h * 0.19f);
-    decay[count] = expf(-(mute ? 22.0f + 1.8f * h : 0.7f + 0.028f * h * h + n->hz * 0.0007f) / SR);
-    count++;
-  }
-  float scrape = 1, scrape_decay = expf(-650.0f / SR);
-  for (int i = 0; i < len; i++) {
-    float y = 0;
-    for (int h = 0; h < count; h++) { y += amp[h] * sine_next(&modes[h]); amp[h] *= decay[h]; }
-    y += 0.05f * sy_rnd(c) * scrape;
-    scrape *= scrape_decay;
-    if (acoustic) y += 0.16f * svf_run(&body, y, F_BP) + 0.04f * svf_run(&air, y, F_BP);
-    y = svf_run(&pickup, y, F_LP);
-    if (inst == I_WAH) {
-      if (!(i & 31)) svf_set(&wah, 550.0f + 1750.0f * expf(-i / (0.09f * SR)), 2.0f);
-      y = 0.35f * y + 1.8f * svf_run(&wah, y, F_BP);
-    } else if (inst == I_DIST) {
-      y = svf_run(&cabinet, tanhf(y * 3.2f), F_LP) * 0.65f;
-    }
-    if (i >= n->g) e *= rel;
-    sy_mix(c, n->s + i, n->a * y * e * fmin1(i / (0.001f * SR)) * tail_window(i, len));
-  }
-}
 
 // ── Pizzicato (Karplus-Strong) ───────────────────────────────────────────
 static void v_string(sy_ctx_t *c, const sy_note_t *n) {
@@ -753,15 +673,17 @@ void sy_voice(sy_ctx_t *c, sy_inst_t inst, const sy_note_t *note) {
             : inst == I_PIANO || inst == I_HPIANO || inst == I_EPIANO || inst == I_DIST ? (int)(0.003f * SR) : 0;
   n.s += n.idx * strum;
   switch (inst) {
-    case I_PIANO:    v_piano(c, n.s, n.g, n.hz, n.a);                                       break;
-    case I_BASS:     v_bass(c, n.s, n.g, n.hz, n.a, true);                                  break;
+    case I_PIANO:    sampled_instrument(c, &n, inst, 0);                                    break;
+    case I_BASS:     sampled_instrument(c, &n, inst, 33);                                   break;
     case I_SUB:      v_bass(c, n.s, n.g, n.hz, n.a, false);                                 break;
-    case I_PLUCK: case I_MUTE: case I_WAH: case I_DIST: case I_CLEAN:
-                    v_guitar(c, &n, inst);                                               break;
+    case I_PLUCK:    sampled_instrument(c, &n, inst, 25);                                   break;
+    case I_CLEAN: case I_WAH: sampled_instrument(c, &n, inst, 27);                            break;
+    case I_MUTE:     sampled_instrument(c, &n, inst, 28);                                   break;
+    case I_DIST:     sampled_instrument(c, &n, inst, 30);                                   break;
     case I_ACID:     v_acid(c, &n);                                                         break;
     case I_PAD:      v_pad(c, n.s, n.g, n.hz, n.a);                                         break;
     case I_ARP:      v_arp(c, n.s, n.hz, n.a);                                              break;
-    case I_HPIANO:   v_hpiano(c, &n);                                                       break;
+    case I_HPIANO:   sampled_instrument(c, &n, inst, 1);                                    break;
     case I_EPIANO:   v_fm(c, &n, 1.0f, 1.2f, 5.0f, 0.2f, 1.6f, 12.0f, 0.4f, 0.07f);         break;
     case I_ORGAN:    v_organ(c, &n);                                                        break;
     case I_VIBES:    v_vibes(c, &n);                                                        break;

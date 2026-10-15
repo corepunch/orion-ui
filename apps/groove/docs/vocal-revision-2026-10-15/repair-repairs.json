@@ -1,0 +1,502 @@
+[
+  {
+    "file": "06_pulse_in_my_heart_140bpm_2bars.mp3",
+    "original_sha256": "134eaddef31c3bddb2170e9660d267bb7726aaf32ce61f83c2bd9fecc5514a0d",
+    "new_sha256": "b87ae0b321b4d33437eac9dd737f3faadc845ffd7b52e61fe6ff55fac908be0c",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 36221,
+        "end_frame": 37976,
+        "source_start_frame": 34274,
+        "gap_start_frame": 36750,
+        "gap_end_frame": 37801,
+        "before_gap_rms": 0.017096198453338773,
+        "after_gap_rms": 0.08619955830337014
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943283319473267
+  },
+  {
+    "file": "08_stay_close_to_me_140bpm_2bars.mp3",
+    "original_sha256": "28f768bcf7c44c1a54c4225a8a45fda73a311fb2f4f7aaf7c5249fb8f1aed381",
+    "new_sha256": "c3bccafefa725eb51ccfdcc2fc94a8539e9e67520ec27b8a0835068d2c454ae4",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 36466,
+        "end_frame": 37976,
+        "source_start_frame": 34608,
+        "gap_start_frame": 36995,
+        "gap_end_frame": 37801,
+        "before_gap_rms": 0.010353296744411674,
+        "after_gap_rms": 0.02015000294883295
+      },
+      {
+        "start_frame": 74287,
+        "end_frame": 75776,
+        "source_start_frame": 69909,
+        "gap_start_frame": 74816,
+        "gap_end_frame": 75601,
+        "before_gap_rms": 0.09220714231408608,
+        "after_gap_rms": 0.12928324256671545
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943282804471993
+  },
+  {
+    "file": "09_turn_up_the_glow_140bpm_2bars.mp3",
+    "original_sha256": "867a2364e1db6a25ac8f9d21e12fb53a38d59c3aa6f2f3a9dc2ecec9f9bde81e",
+    "new_sha256": "ecb4fc9b9bb2c1e0826dcce537b005c3d8adb6772934c5e4d0b7572bdf967b48",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 36131,
+        "end_frame": 37976,
+        "source_start_frame": 33038,
+        "gap_start_frame": 36660,
+        "gap_end_frame": 37801,
+        "before_gap_rms": 0.016604684086256198,
+        "after_gap_rms": 0.03054931858224393
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943283319473267
+  },
+  {
+    "file": "11_make_it_shine_140bpm_2bars.mp3",
+    "original_sha256": "7445e07f70267ff6220c3e9e79f0996c202d1d05580a18dc799a177399b90ed7",
+    "new_sha256": "a96e5616c8d27b62e46a6d36a86a67fae2f5daaced7d17e8d522900fd15e84f6",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 36160,
+        "end_frame": 37976,
+        "source_start_frame": 173216,
+        "gap_start_frame": 36689,
+        "gap_end_frame": 37801,
+        "before_gap_rms": 0.0818563520152217,
+        "after_gap_rms": 0.10823489940369228
+      },
+      {
+        "start_frame": 74049,
+        "end_frame": 75776,
+        "source_start_frame": 205499,
+        "gap_start_frame": 74578,
+        "gap_end_frame": 75601,
+        "before_gap_rms": 0.058965888755357285,
+        "after_gap_rms": 0.1156010205690348
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943282127380371
+  },
+  {
+    "file": "12_all_night_alive_140bpm_2bars.mp3",
+    "original_sha256": "48581c72694db12a63747151dd44fd13813367ff67a435ed0f8028f0cd8dec58",
+    "new_sha256": "48a227ad2fe2c3a8f456d34e1388882c6fc27c19f109ef519f4942550e91fb6f",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 54823,
+        "end_frame": 56876,
+        "source_start_frame": 127115,
+        "gap_start_frame": 55352,
+        "gap_end_frame": 56701,
+        "before_gap_rms": 0.1271402550247822,
+        "after_gap_rms": 0.2576632015841566
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943282127380371
+  },
+  {
+    "file": "13_feel_the_rush_140bpm_2bars.mp3",
+    "original_sha256": "593855faf733b7e2b7c790ef84e7c121a0a0a11379b03d6449d17eac9d48d8cd",
+    "new_sha256": "e3696c326d44e15e0c8e40007e02bf8c2a3e78a2a2c25f89fa5771891a5ae0da",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 36580,
+        "end_frame": 37976,
+        "source_start_frame": 39264,
+        "gap_start_frame": 37109,
+        "gap_end_frame": 37801,
+        "before_gap_rms": 0.12417208831996378,
+        "after_gap_rms": 0.21194136356937168
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943651676177979
+  },
+  {
+    "file": "16_never_let_go_140bpm_2bars.mp3",
+    "original_sha256": "8283c410b5eeab2a67993995431a50d8385a4a5ca61123f65622ba22685b054d",
+    "new_sha256": "3de3dd284a96e86e7f46ec4a0da335a7145162335f6554436b1201ed0a130bdd",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 73878,
+        "end_frame": 75776,
+        "source_start_frame": 61694,
+        "gap_start_frame": 74407,
+        "gap_end_frame": 75601,
+        "before_gap_rms": 0.020341976658949813,
+        "after_gap_rms": 0.032879549859055744
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.817618727684021
+  },
+  {
+    "file": "18_can_you_hear_my_heartbeat_140bpm_4bars.mp3",
+    "original_sha256": "a1ee38f2f6a86a8b4e8017f257fccacfc6d8b4c4a9032338fda8c0cff068ccf3",
+    "new_sha256": "afadbd9d4b1e67cd181ef2a570a90df41bb0b2e620f95767e1270104bab472bd",
+    "frames": 302400,
+    "patches": [
+      {
+        "start_frame": 187646,
+        "end_frame": 189176,
+        "source_start_frame": 183204,
+        "gap_start_frame": 188175,
+        "gap_end_frame": 189001,
+        "before_gap_rms": 0.11590593044548522,
+        "after_gap_rms": 0.21619291501454807
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943282127380371
+  },
+  {
+    "file": "19_we_can_dance_until_the_morning_140bpm_2bars.mp3",
+    "original_sha256": "a0e88258d4bdf24e96f862c4b64fbe9985cccdb4ca43ccde9b7cf3e906ceddf3",
+    "new_sha256": "366681430fec877b91d0ebdc46094c16203f7906bd7af7a7a8fa7f6c91134706",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 65125,
+        "end_frame": 66326,
+        "source_start_frame": 71652,
+        "gap_start_frame": 65654,
+        "gap_end_frame": 66151,
+        "before_gap_rms": 0.06026615712825559,
+        "after_gap_rms": 0.09382807776932778
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.8380701541900635
+  },
+  {
+    "file": "21_let_the_colours_carry_you_140bpm_4bars.mp3",
+    "original_sha256": "ec0ea75f747a5c03318a5a1d731391f0d93b0c03c44542046fa8c4d3702e7be4",
+    "new_sha256": "2230c3b95190be49295f1af1b9abfd6166b9addf4a50be19fd1971aad95cab9e",
+    "frames": 302400,
+    "patches": [
+      {
+        "start_frame": 36748,
+        "end_frame": 37976,
+        "source_start_frame": 43577,
+        "gap_start_frame": 37277,
+        "gap_end_frame": 37801,
+        "before_gap_rms": 0.02334838483091567,
+        "after_gap_rms": 0.031267750206728194
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943282127380371
+  },
+  {
+    "file": "22_lift_your_voice_and_touch_the_sky_140bpm_4bars.mp3",
+    "original_sha256": "fdbc253d9d00bf86c750e4fcc1550b7c949017c5a6615bac075b5afbe4936181",
+    "new_sha256": "73043289af40ff958c372ad51821d30a01f1fa25d858269514632f9cdd1b3758",
+    "frames": 302400,
+    "patches": [
+      {
+        "start_frame": 149863,
+        "end_frame": 151376,
+        "source_start_frame": 149485,
+        "gap_start_frame": 150392,
+        "gap_end_frame": 151201,
+        "before_gap_rms": 0.11359903656699692,
+        "after_gap_rms": 0.19538587452905226
+      },
+      {
+        "start_frame": 187679,
+        "end_frame": 189176,
+        "source_start_frame": 178298,
+        "gap_start_frame": 188208,
+        "gap_end_frame": 189001,
+        "before_gap_rms": 0.1378298794598436,
+        "after_gap_rms": 0.25222574200359754
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943283319473267
+  },
+  {
+    "file": "24_scat_doo_ba_dee_dah_140bpm_2bars.mp3",
+    "original_sha256": "1fb90c70ea29b48c9b34610b4f00a2e0524f7647b64be148e4b2f55a0d6ff672",
+    "new_sha256": "2e42cee0ed1598af2fedd05eb4a9f18ca0f527f12996bb41c23caac8e65420e8",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 74201,
+        "end_frame": 75776,
+        "source_start_frame": 70705,
+        "gap_start_frame": 74730,
+        "gap_end_frame": 75601,
+        "before_gap_rms": 0.017078305824629516,
+        "after_gap_rms": 0.03292453579800825
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.794518232345581
+  },
+  {
+    "file": "25_scat_sha_bee_doo_wah_140bpm_2bars.mp3",
+    "original_sha256": "78c06b3ae0a7aa8432d9c37704a981a24604c6f8625de39588ef85adc9ce2bd1",
+    "new_sha256": "3a3bf3209705a51731fcac2bfed13a70759e31cea79a1533121f575eda2ef566",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 8309,
+        "end_frame": 9626,
+        "source_start_frame": 10545,
+        "gap_start_frame": 8838,
+        "gap_end_frame": 9451,
+        "before_gap_rms": 0.02681396606488803,
+        "after_gap_rms": 0.05357746691052627
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943283319473267
+  },
+  {
+    "file": "26_scat_ba_da_bop_140bpm_2bars.mp3",
+    "original_sha256": "63dc4cb55b964bd6c86fc77670b46624ee78df86747661eab015e53930cb2866",
+    "new_sha256": "e0b2adfb7950191de21e7b69ff51890277c42d4960f6c5109b203b37a5ba44d9",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 17629,
+        "end_frame": 19076,
+        "source_start_frame": 18883,
+        "gap_start_frame": 18158,
+        "gap_end_frame": 18901,
+        "before_gap_rms": 0.09214156800999194,
+        "after_gap_rms": 0.13241192652000106
+      },
+      {
+        "start_frame": 36655,
+        "end_frame": 37976,
+        "source_start_frame": 35546,
+        "gap_start_frame": 37184,
+        "gap_end_frame": 37801,
+        "before_gap_rms": 0.13197605519417144,
+        "after_gap_rms": 0.19322905184492462
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.8011581308687135
+  },
+  {
+    "file": "28_scat_da_ya_da_ya_140bpm_2bars.mp3",
+    "original_sha256": "2e1febbba4adf72082456b3ad40dfad86591278805d9b1c60674698b090fdb72",
+    "new_sha256": "c0b965fd439b2fb7b06946902df7e7a4fef4f5480cc3e950765808dfa734cab1",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 74241,
+        "end_frame": 75776,
+        "source_start_frame": 86885,
+        "gap_start_frame": 74770,
+        "gap_end_frame": 75601,
+        "before_gap_rms": 0.0471586168302,
+        "after_gap_rms": 0.0960908087546192
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943282127380371
+  },
+  {
+    "file": "31_scat_sha_ba_dee_ya_sha_ba_doo_140bpm_2bars.mp3",
+    "original_sha256": "b9189bebe01867e4772d0599559c97e3d3cdb56dbefdeeee5c31b23ec7f3cc7a",
+    "new_sha256": "e7250d56dea49db9353d74ab914d5fa8b6dce38b5f143250ae49c5e24e1e5ae7",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 101646,
+        "end_frame": 104126,
+        "source_start_frame": 117904,
+        "gap_start_frame": 102175,
+        "gap_end_frame": 103951,
+        "before_gap_rms": 0.010252551847236842,
+        "after_gap_rms": 0.02835722236820669
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943282127380371
+  },
+  {
+    "file": "32_scat_da_ba_da_ba_dee_yah_140bpm_2bars.mp3",
+    "original_sha256": "e9b4be65e38a6ee4eb9eaa4adf6d3656f4ec42ab20416232415fcfa7c38431f1",
+    "new_sha256": "5032a6cb2b8ad461bca5960b4c186b93f19795c71812af0762d164a149737d83",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 17478,
+        "end_frame": 19076,
+        "source_start_frame": 21510,
+        "gap_start_frame": 18007,
+        "gap_end_frame": 18901,
+        "before_gap_rms": 0.06285913670562246,
+        "after_gap_rms": 0.20753053819859638
+      },
+      {
+        "start_frame": 36562,
+        "end_frame": 37976,
+        "source_start_frame": 41980,
+        "gap_start_frame": 37091,
+        "gap_end_frame": 37801,
+        "before_gap_rms": 0.022727517098171866,
+        "after_gap_rms": 0.03118793738749581
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943283319473267
+  },
+  {
+    "file": "34_scat_ba_doo_bee_ba_doo_wah_140bpm_2bars.mp3",
+    "original_sha256": "b7b22564a4c0e74cd00cf9f5a0518a4444f423c5592f622fd15c6aa63fb31284",
+    "new_sha256": "e3cede44faef53c54ca0c982a83267fc969443c7533fac374a58bf910476aaed",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 112256,
+        "end_frame": 113576,
+        "source_start_frame": 120307,
+        "gap_start_frame": 112785,
+        "gap_end_frame": 113401,
+        "before_gap_rms": 0.14652018564497962,
+        "after_gap_rms": 0.2590704760419368
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943282127380371
+  },
+  {
+    "file": "male_rap_all_right_tonight_140bpm_2bars.mp3",
+    "original_sha256": "9700d175e2d5846c2afc79747da376d355224c4b185466e050a9f319f476d725",
+    "new_sha256": "698513a74a8aabe40a54435802f0ae9f202371dc2c688f07cb9cf44b66041e2a",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 74048,
+        "end_frame": 75776,
+        "source_start_frame": 68567,
+        "gap_start_frame": 74577,
+        "gap_end_frame": 75601,
+        "before_gap_rms": 0.03262009355683676,
+        "after_gap_rms": 0.06722301727862055
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943282127380371
+  },
+  {
+    "file": "male_rap_come_on_move_140bpm_2bars.mp3",
+    "original_sha256": "2ad5dab64c7d505d22fca17608fb61770a4d37b8127063df8b45070dd3b68afd",
+    "new_sha256": "0aff7920d1c6ae265cdf6cc6ee3130f3f280082973495dc171eb4bed788faf09",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 73975,
+        "end_frame": 75776,
+        "source_start_frame": 74668,
+        "gap_start_frame": 74504,
+        "gap_end_frame": 75601,
+        "before_gap_rms": 0.0018197345440343347,
+        "after_gap_rms": 0.006103857831973737
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943283319473267
+  },
+  {
+    "file": "male_rap_go_go_move_fast_140bpm_2bars.mp3",
+    "original_sha256": "d71c1d78a769005f2e5fce221d5606fd6d7f8f20b903f5e8991edad6bd485297",
+    "new_sha256": "69a7423f27dd30988596d8182b40c6110dc668cf1dd7a8a397c213f20d41e957",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 74470,
+        "end_frame": 75776,
+        "source_start_frame": 79352,
+        "gap_start_frame": 74999,
+        "gap_end_frame": 75601,
+        "before_gap_rms": 0.007244201306974135,
+        "after_gap_rms": 0.01034628046425456
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.6523087024688721
+  },
+  {
+    "file": "male_rap_one_more_time_crew_140bpm_2bars.mp3",
+    "original_sha256": "aadce7c6b3b7ed483f68ad055b129a67fcd98df741c504fa34448bc102dc2289",
+    "new_sha256": "a62706831e8baa37085ae4dea9d74a728e410c4a225625f02c3a421eb9b0c158",
+    "frames": 151200,
+    "patches": [
+      {
+        "start_frame": 36829,
+        "end_frame": 37976,
+        "source_start_frame": 38283,
+        "gap_start_frame": 37358,
+        "gap_end_frame": 37801,
+        "before_gap_rms": 0.008016888114691978,
+        "after_gap_rms": 0.01422076934337808
+      },
+      {
+        "start_frame": 112207,
+        "end_frame": 113576,
+        "source_start_frame": 111041,
+        "gap_start_frame": 112736,
+        "gap_end_frame": 113401,
+        "before_gap_rms": 0.003713887087886293,
+        "after_gap_rms": 0.009449801262896384
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943282127380371
+  },
+  {
+    "file": "male_rap_room_to_rise_140bpm_4bars.mp3",
+    "original_sha256": "7803e0e58b439bad2ed7c8291f384f720b3299b2e13a4e84ce904b3e29fe3985",
+    "new_sha256": "05f7073b5a6a94a0ec90ca96daeef5821671138f3d6b2b5a87903d78283c3c21",
+    "frames": 302400,
+    "patches": [
+      {
+        "start_frame": 74036,
+        "end_frame": 75776,
+        "source_start_frame": 242530,
+        "gap_start_frame": 74565,
+        "gap_end_frame": 75601,
+        "before_gap_rms": 0.007489323584383294,
+        "after_gap_rms": 0.022396360377522323
+      },
+      {
+        "start_frame": 149880,
+        "end_frame": 151376,
+        "source_start_frame": 302970,
+        "gap_start_frame": 150409,
+        "gap_end_frame": 151201,
+        "before_gap_rms": 0.03151873177147959,
+        "after_gap_rms": 0.11213175488503083
+      }
+    ],
+    "unchanged_pcm_outside_patches": true,
+    "peak": 0.7943282127380371
+  }
+]

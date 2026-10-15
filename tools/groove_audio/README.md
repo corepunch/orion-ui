@@ -22,6 +22,12 @@ and stages verified gapless MP3s without replacing app assets. The plan and
 before/after evidence for the existing 55 vocals are in
 [the vocal cleanup report](../../apps/groove/docs/vocal-cleanup-2026-10-10/README.md).
 
+`repair_vocal_dropouts.py` stages original-source patches for reviewed internal
+zero-padding defects. `process_vocal_phrases.py` fits complete rap lines and short
+calls with pitch preserved; it flushes the stretcher after the phrase and never
+pads an interval inside a word. See the
+[vocal revision report](../../apps/groove/docs/vocal-revision-2026-10-15/README.md).
+
 The selected vocal extraction for the `song2` library is documented in
 [Selected Take Me Higher extraction](selected-vocal-extraction.md). That recipe
 reproduces the approved `01-existing-mel.wav` audition from the untouched
@@ -32,6 +38,26 @@ different processing paths.
 The pipeline runs locally. Model weights are downloaded on first use. The synth
 study compiles the repository's current `apps/groove/synth.c`; it does not alter the
 application or maintain a second copy of the engine.
+
+## Library balance audit
+
+`audit_library.c` renders every app block, including decoded MP3 vocals, through
+the production engine and library levelling. It reports peak, whole-block RMS,
+gated active RMS, maximum 400-ms RMS and the constant library trim in dB. Run from
+the repository root with the normal instrument bank and vocal assets present:
+
+```sh
+mkdir -p build/groove-library-balance
+cc -O2 -I. -Iapps/groove tools/groove_audio/audit_library.c -lm -o build/groove-library-balance/audit
+build/groove-library-balance/audit 140 > build/groove-library-balance/after-140.csv
+```
+
+Repeat with 70 and 180 for the tempo endpoints. `sample_levels.h` contains the
+role targets; active energy ignores 100-ms windows more than 20 dB below the
+loudest such window. This is an amplitude/energy audit, not a LUFS measurement.
+The app tests also check the ceilings, silent-padding behavior, unchanged
+envelopes, and saved demo mix levels. No reference-library audio is copied into
+the app, and this audit does not modify any asset.
 
 ## Setup
 

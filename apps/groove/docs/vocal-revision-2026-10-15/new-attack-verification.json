@@ -1,0 +1,146 @@
+[
+  {
+    "file": "male_rap_turn_it_up_crew_140bpm_4bars.mp3",
+    "source_start_seconds": 0.09,
+    "target_beat": 0,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999841110296296,
+    "passed": true
+  },
+  {
+    "file": "male_rap_turn_it_up_crew_140bpm_4bars.mp3",
+    "source_start_seconds": 3.5,
+    "target_beat": 4,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999995110355197,
+    "passed": true
+  },
+  {
+    "file": "male_rap_turn_it_up_crew_140bpm_4bars.mp3",
+    "source_start_seconds": 6.96,
+    "target_beat": 8,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999451978274427,
+    "passed": true
+  },
+  {
+    "file": "male_rap_turn_it_up_crew_140bpm_4bars.mp3",
+    "source_start_seconds": 10.395,
+    "target_beat": 12,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999881062066432,
+    "passed": true
+  },
+  {
+    "file": "male_rap_yeah_keep_moving_140bpm_4bars.mp3",
+    "source_start_seconds": 0.1,
+    "target_beat": 0,
+    "measured_offset_frames": 0,
+    "correlation": 0.999991476316295,
+    "passed": true
+  },
+  {
+    "file": "male_rap_yeah_keep_moving_140bpm_4bars.mp3",
+    "source_start_seconds": 3.44,
+    "target_beat": 4,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999722637229926,
+    "passed": true
+  },
+  {
+    "file": "male_rap_yeah_keep_moving_140bpm_4bars.mp3",
+    "source_start_seconds": 6.95,
+    "target_beat": 8,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999989923141781,
+    "passed": true
+  },
+  {
+    "file": "male_rap_yeah_keep_moving_140bpm_4bars.mp3",
+    "source_start_seconds": 10.43,
+    "target_beat": 12,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999316508692156,
+    "passed": true
+  },
+  {
+    "file": "male_rap_rock_this_place_140bpm_4bars.mp3",
+    "source_start_seconds": 0.05,
+    "target_beat": 0,
+    "measured_offset_frames": 0,
+    "correlation": 0.999905902629226,
+    "passed": true
+  },
+  {
+    "file": "male_rap_rock_this_place_140bpm_4bars.mp3",
+    "source_start_seconds": 1.925,
+    "target_beat": 4,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999458928927545,
+    "passed": true
+  },
+  {
+    "file": "male_rap_rock_this_place_140bpm_4bars.mp3",
+    "source_start_seconds": 3.635,
+    "target_beat": 8,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999920517005223,
+    "passed": true
+  },
+  {
+    "file": "male_rap_rock_this_place_140bpm_4bars.mp3",
+    "source_start_seconds": 5.375,
+    "target_beat": 12,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999880014142364,
+    "passed": true
+  },
+  {
+    "file": "male_call_come_on_140bpm_1bar.mp3",
+    "source_start_seconds": 0.09,
+    "target_beat": 0,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999731817574959,
+    "passed": true
+  },
+  {
+    "file": "male_call_lets_go_140bpm_1bar.mp3",
+    "source_start_seconds": 5.925,
+    "target_beat": 0,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999988035077759,
+    "passed": true
+  },
+  {
+    "file": "male_call_hey_yo_140bpm_1bar.mp3",
+    "source_start_seconds": 11.96,
+    "target_beat": 0,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999753415805638,
+    "passed": true
+  },
+  {
+    "file": "male_call_move_now_140bpm_1bar.mp3",
+    "source_start_seconds": 18.045,
+    "target_beat": 0,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999995541545303,
+    "passed": true
+  },
+  {
+    "file": "short_scat_scat_ba_da_bap_140bpm_1bar.mp3",
+    "source_start_seconds": 3.525,
+    "target_beat": 0,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999978328887884,
+    "passed": true
+  },
+  {
+    "file": "short_scat_scat_doo_yah_140bpm_1bar.mp3",
+    "source_start_seconds": 10.905,
+    "target_beat": 0,
+    "measured_offset_frames": 0,
+    "correlation": 0.9999693968101971,
+    "passed": true
+  }
+]

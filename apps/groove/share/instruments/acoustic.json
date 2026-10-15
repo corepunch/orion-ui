@@ -1,0 +1,44 @@
+{
+  "source_sha256": "74594e8f4250680adf590507a306655a299935343583256f3b722c48a1bc1cb0",
+  "output_sha256": "cbe6b1e3d7fee0c428c624353bfb9227f7363b1e175ef776c9c43fb4dc4e82d1",
+  "bytes": 14722398,
+  "instruments": 7,
+  "samples": 90,
+  "presets": [
+    {
+      "bank": 0,
+      "program": 30,
+      "name": "Distortion Guitar"
+    },
+    {
+      "bank": 0,
+      "program": 27,
+      "name": "Clean Guitar"
+    },
+    {
+      "bank": 0,
+      "program": 33,
+      "name": "Fingered Bass"
+    },
+    {
+      "bank": 0,
+      "program": 25,
+      "name": "Steel String Guitar"
+    },
+    {
+      "bank": 0,
+      "program": 1,
+      "name": "Bright Yamaha Grand"
+    },
+    {
+      "bank": 0,
+      "program": 0,
+      "name": "Yamaha Grand Piano"
+    },
+    {
+      "bank": 0,
+      "program": 28,
+      "name": "Palm Muted Guitar"
+    }
+  ]
+}

@@ -1,14 +1,34 @@
 # How Groove makes its sounds
 
-Groove synthesizes its instrumental library in C and plays original generated MP3 vocal samples. This document explains how recipes and samples become blocks, how blocks are tagged, and what the approach cannot do.
+Groove combines synthesized drums and electronic voices with sampled piano, bass guitar and guitar, plus original generated MP3 vocal samples. This document explains how recipes and samples become blocks, how blocks are tagged, and what the approach cannot do.
 
-The code is in three files:
+The main sound code is:
 
 | file | what it holds |
 |---|---|
 | `synth.c` | the engine: drum kits, pitched voices, effects |
 | `synth.h` | the engine's interface and the names used in recipes |
 | `library.c` | the block table (one row per block) and the block cache |
+| `sample_levels.h` | library role levels and active/short-window energy checks |
+| `synth_samples.h` | the focused sample adapter for piano, bass guitar and guitar |
+| `share/instruments/` | the seven-preset bank, provenance manifest and license |
+
+## EuroDance demo songs
+
+Three new EuroDance projects ship in `share/demos/`: Neon Skyline and Afterglow
+Avenue (88 bars, 2:31 each), and Victory Lights (96 bars, 2:45). They all run at
+140 BPM with the sampled piano, bass guitar and guitars described below. The
+[demo guide](../share/demos/README.md) documents their original eight-bar hooks,
+section development, builds, breakdowns, full renders and source files.
+
+The 83 additional recipes live in `demo_phrases.h`, included at the end of
+`kDefs`. They preserve every preceding recipe and source ID. The sound generator,
+kit definitions, sample bank and effects are unchanged by this demo pass.
+The timeline supports 128 bars, and File offers the three editable native songs.
+Each demo placement now has a saved gain in dB. The mixer applies it after source
+levelling, keeping piano and harmony beneath the rhythm section without changing
+the instruments or the library's audition levels. Version 4 projects preserve
+these levels; versions 2 and 3 retain their original unity gain when opened.
 
 ## From a table row to a waveform
 
@@ -28,20 +48,20 @@ The row names the block, its family tab, its genre tags, its length in bars, a k
 5. Level the block (see [Levelling](#levelling)) and fade the last 128 samples so a cut tail does not click.
 6. Reduce the result to 128 peak values per bar. The cards draw their waveform from those.
 
-The output is 44.1 kHz mono `float`, exactly `bars * bar_frames` long, so blocks sit on the grid without stretching. The mixer in `mixer.c` only copies and adds these buffers.
+The output is 44.1 kHz mono `float`, exactly `bars * bar_frames` long, so blocks sit on the grid without stretching. The mixer in `mixer.c` scales each placement by its saved gain, then copies and adds these buffers.
 
 Rendering is deterministic. The noise generator is seeded from the block's index, so a block sounds the same on every run.
 
 ## The building blocks
 
-There are six ways the engine produces a signal. Every voice combines a few of them.
+The synthesized voices combine the techniques below. Piano, bass guitar and guitar instead play licensed multisamples through TinySoundFont, retaining their key and velocity zones, tuning, loops and envelopes.
 
 | technique | what it is | used for |
 |---|---|---|
 | Sine with a moving pitch | `sin` of a phase that advances faster or slower over time | kicks, toms, sub bass, zaps, sirens |
 | Triangle, pulse and saw | three channels on one note. The triangle is the body, the pulse the hollow mid, the saw the edge. Pulse and saw edges are rounded (PolyBLEP) so high notes do not alias | basses, leads, stabs, pads, strings, organ, hoover |
 | Filtered noise | random samples through a low-, band- or high-pass filter | snares, claps, shakers, risers, breath |
-| Additive | sine partials, each with its own decay; guitar modes use pluck/pickup-position notches and slight string stiffness | piano, organ, vibes, guitars |
+| Additive | sine partials, each with its own decay | organ, vibes, upright bass |
 | FM | one sine bends the phase of another; a falling amount gives a bright attack and a dull tail | electric piano, bells, FM bass |
 | Plucked string | a short burst of noise circulating in a delay line that loses a little each pass (Karplus-Strong) | pizzicato |
 
@@ -75,14 +95,9 @@ A kit is a table of numbers for these voices (`kKits` in `synth.c`). The same pa
 
 ### Guitar and drum-loop revision (October 11, 2026)
 
-All 21 existing guitar blocks now use a tuned, 32-mode plucked-string model.
-The pluck position shapes the harmonic notches; upper modes decay faster, and
-slight string stiffness separates the upper partials. Acoustic parts add body
-resonance. Electric parts use pickup filtering, with a separate wah sweep or
-soft drive and cabinet roll-off where requested. Palm muting damps the string
-quickly. Sustained notes follow their recipe gate instead of ending after a
-fixed 0.5–1.4 seconds. The short pick transient stays below the pitched body.
-These remain synthesized approximations, pending listening review.
+The October 11 revision introduced modeled guitar strings and the drum-loop
+work below. The guitar model was superseded by the focused sampled-instrument
+revision described next; the drum models and choke behavior are retained.
 
 Closed-hat steps now choke preceding open hats, including rolls, swing and the
 next loop's first closed hit. A four-millisecond end ramp avoids a hard cut.
@@ -109,6 +124,45 @@ Commercial reference audio is not included in the app.
 decay and hat choking in both lane orders and across the loop seam. The library
 suite checks rendered lengths, levels and finite output. These checks do not
 establish perceived realism or musical quality.
+
+### Piano, bass guitar and guitar (October 15, 2026)
+
+After reverting the game-inspired phrase and demo experiment, the user explicitly
+authorized improving these instrument sounds. The catalogue retains the original
+pre-experiment notes, drum patterns and demo, with nine quieter breakbeat-hat
+adjustments, removal of the starter demo's redundant hat layer, and the
+independently produced compact vocals. The game-themed
+library additions, long demos and their menu entries are removed.
+
+Only `I_PIANO`, `I_HPIANO`, `I_BASS`, `I_PLUCK`, `I_CLEAN`, `I_MUTE`, `I_WAH`
+and `I_DIST` use the new 14.7 MB, seven-preset FluidR3 subset. The bank contains
+90 samples. Steel-string, clean, muted and distorted guitars retain their own
+patches; wah applies a filter to the clean-guitar recording. House piano uses the
+bright grand and normal piano uses the regular grand. `I_BASS` is fingered bass;
+FM/analog/sub basses, electric piano, drums, pads, brass and other voices keep
+their original synthesis. No commercial reference or game sample is shipped.
+
+Each note has its own sample-player instance and gate. Recorded attacks and
+natural decays replace the oscillator approximations; muted guitar still damps
+quickly. Existing strum offsets, recipe effects and block levelling are retained;
+the mixer also supports the per-placement gains described above. Notes fade at
+the end of the available release. An unavailable
+bank/preset fails rendering with a diagnostic instead of silently changing tone.
+The immutable bank is shared until `blocks_free()` releases it.
+
+[Bank provenance and rebuild command](../share/instruments/SOURCE.txt) and
+[the MIT license](../share/instruments/FLUID-LICENSE) ship with the samples.
+The source manifest records input/output hashes. The original source IDs stay
+unchanged; the six compact vocal additions follow the restored catalogue.
+Projects can resolve moved IDs by an unambiguous internal name. Removed game
+blocks remain unavailable, and files referencing them fail without replacing
+the current song.
+
+Tests cover sampled playing registers, attack velocity, tuning, gate/release,
+missing presets and the unchanged drum choke behavior. A sample-render comparison
+confirms all seven drum kits produce identical PCM before/after this voice change.
+These checks do not establish perceptual realism; listening approval remains a
+separate check. Matched before/after clips are in `build/groove-instrument-review/`.
 
 ### Vocals
 
@@ -244,7 +298,33 @@ Blocks are rendered at the project tempo, whatever their genre. The bar lengths 
 
 ## Levelling
 
-Each block is scaled so its peak is 0.85. A sustained sound at that peak is far louder than a drum loop at the same peak, so if the scaled block's RMS would exceed 0.2, the RMS is brought to 0.2 instead, but never so far that the peak falls under 0.4. A 15 Hz high-pass first removes any offset left by pulse-width modulation or clipping.
+The source preparation retains the 15 Hz DC filter, peak/RMS normalization and
+128-sample tail fade. A second stage in `sample_levels.h` balances the complete
+library by musical role. It applies one constant gain to each rendered block;
+it does not compress attacks, change envelopes, EQ sounds or edit drum lanes.
+MP3 vocals pass through the same stage. Both audition and song playback use the
+balanced PCM, and waveform overviews are generated afterwards.
+
+Nominal trims are 5 dB for keys, organ and synth; 4 dB for pads, stabs, scratch
+and cymbals; 3 dB for percussion and FX; and 2 dB for guitar, vocals, snares,
+claps and hats. The hat trim follows the existing quieter-hat treatment. Full
+drum loops, fills and bass have no nominal trim. Every category also has its
+own peak, active RMS and loudest-400-ms RMS ceiling. Outliers receive additional
+attenuation, rounded down to whole dB. No block is boosted by this stage.
+
+Active RMS uses 100-ms windows with a relative -20 dB energy gate, so silent
+tails do not justify making a short accent louder. The peak ceiling protects
+transients; the 400-ms ceiling catches particularly loud passages within a
+phrase. The old minimum-peak floor cannot override these role limits. These are
+amplitude/energy measurements, not LUFS or a guarantee about arbitrary stacked
+arrangements. Per-clip mix gain remains available in saved projects.
+
+All 583 blocks were audited at 70, 140 and 180 BPM (1,749 renders), including
+the 61 decoded vocal samples. All meet their role's ceilings. At 140 BPM, 146
+blocks require attenuation beyond their nominal role trim. The three shipped
+demos compensate for the new source gains at their native 140 BPM, preserving
+the approved mix rather than applying the reduction twice. The audit tool and
+reproduction command are documented in [the audio tools guide](../../../tools/groove_audio/README.md#library-balance-audit).
 
 ## When blocks are rendered
 
@@ -261,8 +341,8 @@ A typical synthesized block renders in about 10 ms unoptimized. The slowest, a f
 
 ## Limitations
 
-- **Vocals are the exception to synthesis.** The 55 blocks in the Vocals family decode MP3 clips from `share/vocals/`; every other family is synthesized. The family remains grouped as a vocal sample bin, like the voice group in eJay.
-- **Electronic sounds are close; acoustic ones are sketches.** Drum machines, acid, FM bass, saw stacks and noise sweeps are what the original hardware did, so they hold up. Piano, guitar, strings, brass and choir are simple models and sound like it.
+- **Sampled voices need their bank.** Piano, bass guitar and guitars use the bundled bank in `share/instruments/`. The 61 vocal blocks use MP3s from `share/vocals/`. The rest of the library uses synthesis.
+- **Electronic sounds are close; acoustic ones are sketches.** Drum machines, acid, FM bass, saw stacks and noise sweeps are what the original hardware did, so they hold up. Strings, brass, choir and upright bass remain simple models. Piano, bass guitar and guitar now use multisamples; their perceived quality still requires listening review.
 - **Mono.** A block is one channel. The reference also stored mono clips and split wide sounds into L and R halves; Groove has no stereo pairs, and chorus here only thickens the sound.
 - **One fixed sound per block.** There is no per-clip pitch, filter or volume. A block in another key needs another row.
 - **One key.** Everything tonal is in A minor. That keeps blocks compatible and limits harmony to the chords of that key.
@@ -271,7 +351,7 @@ A typical synthesized block renders in about 10 ms unoptimized. The slowest, a f
 - **Decay times do not follow tempo.** Envelopes are in seconds, so at 180 BPM long kicks overlap and at 70 BPM short sounds leave gaps.
 - **Folded tails.** A `LOOP` or `WIDE` block starts with the tail of its own ending, which is right when it repeats and slightly wrong the first time it plays.
 - **A small pause on first use.** A block that was never rendered is rendered on click or drop. On a slow machine a long pad can take a noticeable moment.
-- **Fewer blocks than the reference.** Dance eJay has 1352 clip files under 484 titles; many are L/R halves and numbered variations of one idea. Groove has 494 blocks, including 55 vocal samples available in every genre. Guitar, organ and scratch are tagged only for the genres whose reference product has them. Numbered variations of one idea are not reproduced.
+- **Fewer blocks than the reference.** Dance eJay has 1352 clip files under 484 titles; many are L/R halves and numbered variations of one idea. Groove has 583 blocks, including 61 vocal samples available in every genre. Guitar, organ and scratch are tagged only for the genres whose reference product has them. Numbered variations of one idea are not reproduced.
 - **Not checked by ear in CI.** The tests verify that every block renders, is finite, levelled and the right length. They cannot tell whether it sounds good.
 
 ## Adding a block
@@ -286,4 +366,4 @@ A typical synthesized block renders in about 10 ms unoptimized. The slowest, a f
 The [audio study tools](../../../tools/groove_audio/README.md) document local vocal
 separation, automatic WAV chops, and an approximate eight-bar reconstruction with
 this engine. Their source recordings, generated samples and model caches are kept
-out of Git. These tools do not add sample playback to Groove.
+out of Git. Those study tools are independent of the focused sampled voices shipped above.

@@ -1,0 +1,133 @@
+ORION_GROOVE 4
+140 0 0 0 37 94
+B 500	Club Foundation
+B 547	Afterglow Signal
+B 552	Afterglow Chorus Pad
+B 501	Club Floor
+B 533	Afterglow Verse Bass
+B 548	Afterglow Verse Guitar
+B 494	Come On
+B 536	Afterglow Verse Piano
+B 502	Club Motion
+B 550	Afterglow Guitar Answer
+B 551	Afterglow Verse Pad
+B 503	Club Turnaround
+B 535	Afterglow Lift Bass
+B 537	Afterglow Lift Piano
+B 553	Afterglow Lift Pad
+B 504	Club Lift One
+B 545	Afterglow Build Bass
+B 546	Afterglow Build Piano
+B 505	Club Lift Two
+B 22	Riser
+B 495	Let's Go
+B 534	Afterglow Chorus Bass
+B 539	Afterglow Hook A
+B 549	Afterglow Chorus Guitar
+B 86	Crash Down
+B 540	Afterglow Hook B
+B 543	Afterglow Break Piano
+B 544	Afterglow Break Guitar
+B 538	Afterglow Lift Guitar
+B 496	Hey Yo
+B 541	Afterglow Final A
+B 542	Afterglow Final B
+B 554	Afterglow Final Chords
+B 507	Club Landing
+B 555	Afterglow Closing Bass
+B 556	Afterglow Closing Piano
+B 557	Afterglow Closing Guitar
+0 0 0 1 0 0
+1 2 0 2 0 0
+2 4 0 3 0 0
+3 0 1024 4 0 0
+4 1 1024 5 0 0
+5 3 1024 6 0 0
+6 6 1792 7 0 0
+3 0 2048 8 0 0
+4 1 2048 9 0 0
+7 2 2048 10 0 -2
+5 3 2048 11 0 0
+8 0 3072 12 0 0
+4 1 3072 13 0 0
+7 2 3072 14 0 -2
+9 6 3072 15 0 -1
+3 0 4096 16 0 0
+4 1 4096 17 0 0
+7 2 4096 18 0 -2
+10 4 4096 19 0 0
+11 0 5120 20 0 0
+4 1 5120 21 0 0
+5 3 5120 22 0 0
+10 4 5120 23 0 0
+0 0 6144 24 0 0
+12 1 6144 25 0 0
+13 2 6144 26 0 -1
+14 4 6144 27 0 0
+15 0 7168 28 0 0
+16 1 7168 29 0 0
+17 2 7168 30 0 -1
+18 0 7680 31 0 1
+19 7 7680 32 0 0
+20 6 7936 33 0 0
+3 0 8192 34 0 0
+21 1 8192 35 0 0
+22 2 8192 36 0 0
+23 3 8192 37 0 0
+24 7 8192 38 0 3
+8 0 9216 39 0 0
+21 1 9216 40 0 0
+25 2 9216 41 0 0
+2 4 9216 42 0 0
+3 0 10240 43 0 0
+21 1 10240 44 0 0
+22 2 10240 45 0 0
+23 3 10240 46 0 0
+2 4 10240 47 0 0
+11 0 11264 48 0 0
+21 1 11264 49 0 0
+25 2 11264 50 0 0
+23 3 11264 51 0 0
+26 2 12288 52 0 2
+2 4 12288 53 0 0
+23 3 13312 54 0 0
+2 4 13312 55 0 0
+27 6 13312 56 0 0
+0 0 14336 57 0 0
+12 1 14336 58 0 0
+13 2 14336 59 0 -1
+28 3 14336 60 0 0
+14 4 14336 61 0 0
+15 0 15360 62 0 0
+16 1 15360 63 0 0
+17 2 15360 64 0 -1
+18 0 15872 65 0 1
+19 7 15872 66 0 0
+29 6 16128 67 0 0
+8 0 16384 68 0 0
+21 1 16384 69 0 0
+30 2 16384 70 0 -1
+23 3 16384 71 0 0
+2 4 16384 72 0 0
+24 7 16384 73 0 3
+3 0 17408 74 0 0
+21 1 17408 75 0 0
+31 2 17408 76 0 -1
+23 3 17408 77 0 0
+32 5 17408 78 0 0
+8 0 18432 79 0 0
+21 1 18432 80 0 0
+22 2 18432 81 0 0
+2 4 18432 82 0 0
+32 5 18432 83 0 0
+11 0 19456 84 0 0
+21 1 19456 85 0 0
+31 2 19456 86 0 -1
+2 4 19456 87 0 0
+3 0 20480 88 0 0
+21 1 20480 89 0 0
+23 3 20480 90 0 0
+33 0 21504 91 0 2
+34 1 21504 92 0 0
+35 2 21504 93 0 0
+36 3 21504 94 0 0

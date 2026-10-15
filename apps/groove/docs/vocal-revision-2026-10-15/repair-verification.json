@@ -1,0 +1,1000 @@
+[
+  {
+    "file": "male_rap_come_on_move_140bpm_2bars.mp3",
+    "sha256": "0aff7920d1c6ae265cdf6cc6ee3130f3f280082973495dc171eb4bed788faf09",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999997,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9999772014026431,
+        "passed": true
+      },
+      {
+        "frame": 113400,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "31_scat_sha_ba_dee_ya_sha_ba_doo_140bpm_2bars.mp3",
+    "sha256": "e7250d56dea49db9353d74ab914d5fa8b6dce38b5f143250ae49c5e24e1e5ae7",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999997,
+        "passed": true
+      },
+      {
+        "frame": 18900,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999993,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      },
+      {
+        "frame": 56700,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      },
+      {
+        "frame": 94500,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 103950,
+        "offset_frames": 0,
+        "correlation": 0.9999998531691532,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "male_rap_one_more_time_crew_140bpm_2bars.mp3",
+    "sha256": "a62706831e8baa37085ae4dea9d74a728e410c4a225625f02c3a421eb9b0c158",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.9999998792991123,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999994,
+        "passed": true
+      },
+      {
+        "frame": 113400,
+        "offset_frames": 0,
+        "correlation": 0.9999985277524547,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "21_let_the_colours_carry_you_140bpm_4bars.mp3",
+    "sha256": "2230c3b95190be49295f1af1b9abfd6166b9addf4a50be19fd1971aad95cab9e",
+    "frames": 302400,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 18900,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999997,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.9999998165272252,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 113400,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 151200,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "male_rap_all_right_tonight_140bpm_2bars.mp3",
+    "sha256": "698513a74a8aabe40a54435802f0ae9f202371dc2c688f07cb9cf44b66041e2a",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9998640161214215,
+        "passed": true
+      },
+      {
+        "frame": 113400,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "06_pulse_in_my_heart_140bpm_2bars.mp3",
+    "sha256": "b87ae0b321b4d33437eac9dd737f3faadc845ffd7b52e61fe6ff55fac908be0c",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 1.0000000000000002,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.9999976392474454,
+        "passed": true
+      },
+      {
+        "frame": 56700,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "32_scat_da_ba_da_ba_dee_yah_140bpm_2bars.mp3",
+    "sha256": "5032a6cb2b8ad461bca5960b4c186b93f19795c71812af0762d164a149737d83",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999994,
+        "passed": true
+      },
+      {
+        "frame": 9450,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 18900,
+        "offset_frames": 0,
+        "correlation": 0.9999998032216143,
+        "passed": true
+      },
+      {
+        "frame": 28350,
+        "offset_frames": 0,
+        "correlation": 1.0000000000000002,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.9999993941527553,
+        "passed": true
+      },
+      {
+        "frame": 47250,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "09_turn_up_the_glow_140bpm_2bars.mp3",
+    "sha256": "ecb4fc9b9bb2c1e0826dcce537b005c3d8adb6772934c5e4d0b7572bdf967b48",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 18900,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999997,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.999998584536831,
+        "passed": true
+      },
+      {
+        "frame": 47250,
+        "offset_frames": 0,
+        "correlation": 1.0000000000000002,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "16_never_let_go_140bpm_2bars.mp3",
+    "sha256": "3de3dd284a96e86e7f46ec4a0da335a7145162335f6554436b1201ed0a130bdd",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 18900,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9999997476965711,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "18_can_you_hear_my_heartbeat_140bpm_4bars.mp3",
+    "sha256": "afadbd9d4b1e67cd181ef2a570a90df41bb0b2e620f95767e1270104bab472bd",
+    "frames": 302400,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 18900,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 1.0000000000000002,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      },
+      {
+        "frame": 113400,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      },
+      {
+        "frame": 189000,
+        "offset_frames": 0,
+        "correlation": 0.9999998584976174,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "08_stay_close_to_me_140bpm_2bars.mp3",
+    "sha256": "c3bccafefa725eb51ccfdcc2fc94a8539e9e67520ec27b8a0835068d2c454ae4",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.9999998155693607,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9999535908964254,
+        "passed": true
+      },
+      {
+        "frame": 94500,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "male_rap_room_to_rise_140bpm_4bars.mp3",
+    "sha256": "05f7073b5a6a94a0ec90ca96daeef5821671138f3d6b2b5a87903d78283c3c21",
+    "frames": 302400,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9999663672535767,
+        "passed": true
+      },
+      {
+        "frame": 151200,
+        "offset_frames": 0,
+        "correlation": 0.9999908765481229,
+        "passed": true
+      },
+      {
+        "frame": 226800,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "12_all_night_alive_140bpm_2bars.mp3",
+    "sha256": "48a227ad2fe2c3a8f456d34e1388882c6fc27c19f109ef519f4942550e91fb6f",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      },
+      {
+        "frame": 18900,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999996,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      },
+      {
+        "frame": 56700,
+        "offset_frames": 0,
+        "correlation": 0.9999982338146801,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "22_lift_your_voice_and_touch_the_sky_140bpm_4bars.mp3",
+    "sha256": "73043289af40ff958c372ad51821d30a01f1fa25d858269514632f9cdd1b3758",
+    "frames": 302400,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      },
+      {
+        "frame": 18900,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 113400,
+        "offset_frames": 0,
+        "correlation": 1.0000000000000002,
+        "passed": true
+      },
+      {
+        "frame": 151200,
+        "offset_frames": 0,
+        "correlation": 0.9999991943807742,
+        "passed": true
+      },
+      {
+        "frame": 189000,
+        "offset_frames": 0,
+        "correlation": 0.9999995676749044,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "male_rap_go_go_move_fast_140bpm_2bars.mp3",
+    "sha256": "69a7423f27dd30988596d8182b40c6110dc668cf1dd7a8a397c213f20d41e957",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9999999198070947,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "25_scat_sha_bee_doo_wah_140bpm_2bars.mp3",
+    "sha256": "3a3bf3209705a51731fcac2bfed13a70759e31cea79a1533121f575eda2ef566",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 9450,
+        "offset_frames": 0,
+        "correlation": 0.9999987586667245,
+        "passed": true
+      },
+      {
+        "frame": 47250,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      },
+      {
+        "frame": 66150,
+        "offset_frames": 0,
+        "correlation": 1.0000000000000002,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "28_scat_da_ya_da_ya_140bpm_2bars.mp3",
+    "sha256": "c0b965fd439b2fb7b06946902df7e7a4fef4f5480cc3e950765808dfa734cab1",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      },
+      {
+        "frame": 18900,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9999993879702271,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "13_feel_the_rush_140bpm_2bars.mp3",
+    "sha256": "e3696c326d44e15e0c8e40007e02bf8c2a3e78a2a2c25f89fa5771891a5ae0da",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 18900,
+        "offset_frames": 0,
+        "correlation": 1.0000000000000002,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.999999923742098,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "19_we_can_dance_until_the_morning_140bpm_2bars.mp3",
+    "sha256": "366681430fec877b91d0ebdc46094c16203f7906bd7af7a7a8fa7f6c91134706",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 9450,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 28350,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      },
+      {
+        "frame": 47250,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 66150,
+        "offset_frames": 0,
+        "correlation": 0.9999939722208722,
+        "passed": true
+      },
+      {
+        "frame": 85050,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 94500,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999996,
+        "passed": true
+      },
+      {
+        "frame": 122850,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "34_scat_ba_doo_bee_ba_doo_wah_140bpm_2bars.mp3",
+    "sha256": "e3cede44faef53c54ca0c982a83267fc969443c7533fac374a58bf910476aaed",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 18900,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999999,
+        "passed": true
+      },
+      {
+        "frame": 56700,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      },
+      {
+        "frame": 113400,
+        "offset_frames": 0,
+        "correlation": 0.9999995069312194,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "11_make_it_shine_140bpm_2bars.mp3",
+    "sha256": "a96e5616c8d27b62e46a6d36a86a67fae2f5daaced7d17e8d522900fd15e84f6",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 1.0000000000000004,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.9999979699091814,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9999656759533967,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "24_scat_doo_ba_dee_dah_140bpm_2bars.mp3",
+    "sha256": "2e42cee0ed1598af2fedd05eb4a9f18ca0f527f12996bb41c23caac8e65420e8",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      },
+      {
+        "frame": 18900,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.9999999999999998,
+        "passed": true
+      },
+      {
+        "frame": 75600,
+        "offset_frames": 0,
+        "correlation": 0.9999999589375458,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "file": "26_scat_ba_da_bop_140bpm_2bars.mp3",
+    "sha256": "e0b2adfb7950191de21e7b69ff51890277c42d4960f6c5109b203b37a5ba44d9",
+    "frames": 151200,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "preserved_attacks": true
+    },
+    "matches": [
+      {
+        "frame": 0,
+        "offset_frames": 0,
+        "correlation": 1.0,
+        "passed": true
+      },
+      {
+        "frame": 18900,
+        "offset_frames": 0,
+        "correlation": 0.9999991316319221,
+        "passed": true
+      },
+      {
+        "frame": 37800,
+        "offset_frames": 0,
+        "correlation": 0.9999996791435329,
+        "passed": true
+      }
+    ],
+    "passed": true
+  }
+]

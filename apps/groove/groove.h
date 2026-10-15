@@ -29,8 +29,8 @@
 #define GR_RULER_H      22
 #define GR_MIN_ROW      26
 #define GR_MAX_ROW      64
-#define GR_BARS         32
-#define GR_MAX_BLOCKS   512
+#define GR_BARS         128
+#define GR_MAX_BLOCKS   1024
 #define GR_MAX_CLIPS    256
 #define GR_BPM_MIN      70
 #define GR_BPM_MAX      180
@@ -73,6 +73,7 @@ typedef struct {
   int      frames;
   uint8_t  peaks[GR_PEAKS_MAX]; // waveform overview, GR_PEAKS_BAR columns per bar
   int      npeaks;
+  int      balance_db;     // constant library trim, after source levelling
 } block_pcm_t;
 
 typedef struct {
@@ -115,7 +116,7 @@ void           blocks_free(void);
 int            bar_frames_for_bpm(int bpm);
 
 // ── Song + mixer ─────────────────────────────────────────────────────────
-typedef struct { int block, track, position; uint64_t order; int length; } clip_t; // position, and length when not the block's own bars, in ticks
+typedef struct { int block, track, position; uint64_t order; int length, gain_db; } clip_t; // ticks; gain_db is 0 for unity
 
 typedef struct {
   clip_t   clips[GR_MAX_CLIPS];
@@ -137,6 +138,7 @@ int  song_clip_at(const song_t *s, int track, int position);    // clip index or
 bool song_can_place(const song_t *s, int track, int position, int ticks, int ignore_clip);
 int  song_add_clip(song_t *s, int block, int track, int position); // clip index or -1
 bool song_resize_clip(song_t *s, int idx, int ticks); // beat fractions; the block's own length clears the override
+bool song_set_clip_gain(song_t *s, int idx, int gain_db); // -60 to +6 dB, independent of the source block
 bool song_move_clip(song_t *s, int idx, int track, int position);
 int64_t position_frames_for_bpm(int position, int bpm);
 void song_remove_clip(song_t *s, int idx);
@@ -186,6 +188,8 @@ typedef struct {
 
 extern groove_t *g_app;
 
+enum { GR_DEMO_SKYLINE, GR_DEMO_AFTERGLOW, GR_DEMO_VICTORY, GR_DEMO_COUNT };
+
 // Private messages.
 enum {
   shDragOver = evUser + 5000, // wparam = MAKEDWORD(screen_x, screen_y)
@@ -220,6 +224,7 @@ enum {
 groove_t *app_init(void);
 void      app_shutdown(groove_t *app);
 void      app_load_demo(void);
+bool      app_load_demo_song(int demo);
 void      app_new_song(void);
 bool      app_open_song(const char *path);
 bool      app_save_song(const char *path);

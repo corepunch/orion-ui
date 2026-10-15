@@ -1,0 +1,23 @@
+Groove piano, bass guitar and guitar samples
+
+Upstream: FluidR3 3.1, Frank Wen
+Archive: https://deb.debian.org/debian/pool/main/f/fluid-soundfont/fluid-soundfont_3.1.orig.tar.gz
+Source: fluid-soundfont-3.1/FluidR3_GM.sf2
+License: FLUID-LICENSE (upstream COPYING, MIT)
+
+acoustic.sf2 contains only the seven presets listed in acoustic.json:
+Yamaha Grand Piano, Bright Yamaha Grand, Fingered Bass, Steel String Guitar,
+Clean Guitar, Palm Muted Guitar and Distortion Guitar.
+No drum, synth, pad or choir preset is included. Wah uses Clean Guitar with a
+filter in Groove. The remaining Groove instruments retain their original models.
+
+The subset preserves the original PCM samples and key/velocity zones, envelopes,
+loop points and tuning. acoustic.json records source/output SHA-256 values.
+Rebuild from the upstream source:
+
+python3 tools/groove_audio/subset_soundfont.py FluidR3_GM.sf2 apps/groove/share/instruments/acoustic.sf2 --preset 0:0 --preset 0:1 --preset 0:25 --preset 0:27 --preset 0:28 --preset 0:30 --preset 0:33 --manifest apps/groove/share/instruments/acoustic.json
+
+Playback: TinySoundFont; source revision and MIT license are in
+apps/groove/third_party/TSF-SOURCE.txt and TSF-LICENSE.
+
+No eJay, MTV Music Generator or game recording is included in this bank.

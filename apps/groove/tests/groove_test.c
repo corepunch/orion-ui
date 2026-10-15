@@ -4,6 +4,7 @@
 #include "test_framework.h"
 #include "test_env.h"
 #include "apps/groove/groove.h"
+#include "apps/groove/sample_levels.h"
 #include <orion/user/toolbar.h>
 #include <orion/commctl/appchrome.h>
 #include <unistd.h>
@@ -16,6 +17,93 @@ static window_t *tracks_find(uint32_t id) {
     for (window_t *b = row->children; b; b = b->next)
       if (b->id == id) return b;
   return NULL;
+}
+
+static bool same_demo_section(const song_t *s, int first, int second) {
+  for (int at = 0; at < 8 * GR_TICKS_BAR; at += GR_SNAP_TICKS) for (int t = 1; t < 7; t++) {
+    int a = song_clip_at(s, t, first + at), b = song_clip_at(s, t, second + at);
+    if ((a < 0) != (b < 0)) return false;
+    if (a >= 0 && (s->clips[a].block != s->clips[b].block ||
+        first + at - s->clips[a].position != second + at - s->clips[b].position)) return false;
+  }
+  return true;
+}
+
+static void test_eurodance_demos(void) {
+  TEST("three EuroDance demos last two to three minutes, develop their sections, and round-trip as editable songs");
+  test_env_init();
+  g_app = app_init();
+  ASSERT_NOT_NULL(g_app);
+  const int commands[] = { ID_FILE_DEMO, ID_FILE_DEMO_AFTERGLOW, ID_FILE_DEMO_VICTORY };
+  const int bars[] = { 88, 88, 96 };
+  for (int demo = 0; demo < GR_DEMO_COUNT; demo++) {
+    app_command(commands[demo]);
+    song_t expected = g_app->song;
+    ASSERT_EQUAL(expected.bpm, 140);
+    ASSERT(expected.nclips > 80, "a full arrangement is loaded");
+    ASSERT_EQUAL(song_length_ticks(&expected), bars[demo] * GR_TICKS_BAR);
+    int64_t frames = position_frames_for_bpm(song_length_ticks(&expected), expected.bpm);
+    ASSERT(frames >= 120 * GR_SAMPLE_RATE && frames <= 180 * GR_SAMPLE_RATE, "the complete song is two to three minutes");
+    ASSERT_FALSE(expected.loop);
+    ASSERT_FALSE(expected.playing);
+    ASSERT_EQUAL(expected.pos, 0);
+    ASSERT_EQUAL(expected.preview_block, -1);
+    ASSERT_EQUAL(g_app->filename[0], 0);
+    for (int i = 0; i < expected.nclips; i++) {
+      clip_t *a = &expected.clips[i];
+      const block_t *b = block_get(a->block);
+      ASSERT(b && b->audio.pcm && b->audio_bpm == 140, "all sources are ready at native tempo");
+      ASSERT(b->cat != CAT_HAT, "full loops have no extra hat-only layer");
+      int mix_db = a->gain_db + b->audio.balance_db;
+      if (b->cat == CAT_KEYS) ASSERT(mix_db <= -3 && mix_db >= -7, "piano retains its approved total arrangement level");
+      if (b->cat == CAT_DRUMS || b->cat == CAT_BASS) ASSERT_EQUAL(mix_db, 0);
+      ASSERT(b->cat != CAT_KEYS && b->cat != CAT_BASS && b->cat != CAT_GUITAR || a->block >= 500, "tonal parts use the new original scores");
+      ASSERT_EQUAL(a->position % GR_TICKS_BAR, 0);
+      for (int j = i + 1; j < expected.nclips; j++) {
+        clip_t *c = &expected.clips[j];
+        ASSERT(a->track != c->track || a->position + song_clip_ticks(&expected, i) <= c->position ||
+               c->position + song_clip_ticks(&expected, j) <= a->position, "no hidden overlapping loops, fills or calls");
+      }
+    }
+    ASSERT(song_clip_at(&expected, 0, 48 * GR_TICKS_BAR) < 0, "the breakdown removes the beat");
+    ASSERT(song_clip_at(&expected, 0, 72 * GR_TICKS_BAR) >= 0, "the final chorus restores the floor");
+    for (int a = 0; a < bars[demo]; a += 8) for (int b = a + 8; b < bars[demo]; b += 8)
+      ASSERT_FALSE(same_demo_section(&expected, a * GR_TICKS_BAR, b * GR_TICKS_BAR));
+    int bar_frames = bar_frames_for_bpm(140);
+    float *lr = malloc((size_t)bar_frames * 2 * sizeof(*lr));
+    ASSERT_NOT_NULL(lr);
+    song_t playing = expected;
+    playing.playing = true;
+    for (int bar = 0; bar < bars[demo]; bar++) {
+      song_render(&playing, lr, bar_frames);
+      double power = 0;
+      for (int i = 0; i < bar_frames * 2; i++) { ASSERT_TRUE(isfinite(lr[i])); power += lr[i] * lr[i]; }
+      ASSERT(power > 0.001, "every arranged bar contains audio");
+    }
+    song_render(&playing, lr, 1);
+    ASSERT_FALSE(playing.playing);
+    ASSERT_EQUAL(playing.pos, 0);
+    ASSERT_EQUAL(lr[0], 0);
+    free(lr);
+    char copy[160];
+    snprintf(copy, sizeof(copy), "/tmp/orion-eurodance-%ld-%d.groove", (long)getpid(), demo);
+    ASSERT_TRUE(app_save_song(copy));
+    ASSERT_TRUE(app_open_song(copy));
+    ASSERT_EQUAL(g_app->song.nclips, expected.nclips);
+    for (int i = 0; i < expected.nclips; i++) {
+      clip_t *a = &g_app->song.clips[i], *b = &expected.clips[i];
+      ASSERT(a->block == b->block && a->track == b->track && a->position == b->position && a->length == b->length && a->order == b->order && a->gain_db == b->gain_db,
+             "saved projects preserve every editable placement and level");
+    }
+    remove(copy);
+  }
+  int clips = g_app->song.nclips;
+  ASSERT_FALSE(app_load_demo_song(-1));
+  ASSERT_FALSE(app_load_demo_song(GR_DEMO_COUNT));
+  ASSERT_EQUAL(g_app->song.nclips, clips);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
 }
 
 static void test_project_io(void) {
@@ -34,6 +122,8 @@ static void test_project_io(void) {
   ASSERT(song_add_clip(&g_app->song, 0, 3, 6 * GR_TICKS_BAR) == 3, "a second clip reuses its source");
   int resized = block_get(0)->bars * GR_TICKS_BAR + 2 * GR_FRACTION_TICKS;
   ASSERT_TRUE(song_resize_clip(&g_app->song, 3, resized));
+  ASSERT_TRUE(song_set_clip_gain(&g_app->song, 0, -7));
+  ASSERT_TRUE(song_set_clip_gain(&g_app->song, 3, -3));
   char path[128];
   snprintf(path, sizeof(path), "/tmp/orion-groove-project-%ld", (long)getpid());
   char saved[140]; snprintf(saved, sizeof(saved), "%s.groove", path);
@@ -41,7 +131,7 @@ static void test_project_io(void) {
   ASSERT_TRUE(app_save_song(path));
   ASSERT(access(saved, F_OK) == 0, "save appends the project extension");
   FILE *f = fopen(saved, "rb"); ASSERT_NOT_NULL(f);
-  char line[256]; ASSERT(fgets(line, sizeof(line), f) && strcmp(line, "ORION_GROOVE 3\n") == 0, "saves the source-table format");
+  char line[256]; ASSERT(fgets(line, sizeof(line), f) && strcmp(line, "ORION_GROOVE 4\n") == 0, "saves clip levels with the source table");
   int bpm, loop, assets, clips; uint32_t mute, solo;
   ASSERT(fscanf(f, "%d %d %u %u %d %d", &bpm, &loop, &mute, &solo, &assets, &clips) == 6 && assets == 3 && clips == 4, "writes one table entry per distinct source");
   fclose(f);
@@ -53,6 +143,8 @@ static void test_project_io(void) {
   ASSERT(g_app->song.clips[0].order == 1 && g_app->song.clips[1].order == 2 && g_app->song.clip_order == 4, "same-position stacking order is restored");
   ASSERT(g_app->song.clips[0].length == 0 && g_app->song.clips[3].length == resized, "only a resized clip stores a duration");
   ASSERT_EQUAL(song_clip_ticks(&g_app->song, 3), resized);
+  ASSERT(g_app->song.clips[0].gain_db == -7 && g_app->song.clips[3].gain_db == -3 && g_app->song.clips[1].gain_db == 0,
+         "copies of one source retain independent saved levels");
   ASSERT(block_get(0)->audio.pcm && block_get(0)->audio_bpm == 128, "loaded arrangement audio is ready at its saved tempo");
   f = fopen(bad, "wb"); ASSERT_NOT_NULL(f);
   fprintf(f, "ORION_GROOVE 2\n140 1 0 0 1 1\nB 0\t%s\n0 2 0 9\n", block_get(0)->name);
@@ -61,6 +153,25 @@ static void test_project_io(void) {
   ASSERT(g_app->song.nclips == 1 && g_app->song.clips[0].length == 0 && g_app->song.clips[0].track == 2, "a version 2 clip keeps its block length");
   ASSERT_EQUAL(song_clip_ticks(&g_app->song, 0), block_get(0)->bars * GR_TICKS_BAR);
   ASSERT_EQUAL(g_app->song.bpm, 140);
+  ASSERT_EQUAL(g_app->song.clips[0].gain_db, 0);
+  f = fopen(bad, "wb"); ASSERT_NOT_NULL(f);
+  fputs("ORION_GROOVE 3\n140 0 0 0 1 1\nB 512\tCome On\n0 2 0 1 0\n", f);
+  fclose(f);
+  ASSERT_TRUE(app_open_song(bad));
+  ASSERT_STR_EQUAL(block_get(g_app->song.clips[0].block)->name, "Come On");
+  ASSERT_EQUAL(g_app->song.clips[0].gain_db, 0);
+  for (int db = -61; db <= 7; db += 68) {
+    f = fopen(bad, "wb"); ASSERT_NOT_NULL(f);
+    fprintf(f, "ORION_GROOVE 4\n140 0 0 0 1 1\nB 0\t%s\n0 2 0 1 0 %d\n", block_get(0)->name, db);
+    fclose(f);
+    ASSERT_FALSE(app_open_song(bad));
+    ASSERT_STR_EQUAL(block_get(g_app->song.clips[0].block)->name, "Come On");
+  }
+  f = fopen(bad, "wb"); ASSERT_NOT_NULL(f);
+  fputs("ORION_GROOVE 3\n140 0 0 0 1 1\nB 527\tCanopy Sprint\n0 0 0 1 0\n", f);
+  fclose(f);
+  ASSERT_FALSE(app_open_song(bad));
+  ASSERT_STR_EQUAL(block_get(g_app->song.clips[0].block)->name, "Come On");
   f = fopen(bad, "wb"); ASSERT_NOT_NULL(f); fputs("ORION_GROOVE 1\n70 1 0 0 1\n99999 0 0 1\n", f); fclose(f);
   int old_clips = g_app->song.nclips;
   ASSERT_FALSE(app_open_song(bad));
@@ -96,6 +207,33 @@ static const block_t *named_block(const char *name) {
   return NULL;
 }
 
+static void test_library_levels(void) {
+  TEST("library levelling ignores silent padding and preserves each sound's envelope");
+  int short_frames = GR_SAMPLE_RATE * 4 / 10, long_frames = GR_SAMPLE_RATE * 4;
+  float *short_note = calloc((size_t)short_frames, sizeof(float)), *padded = calloc((size_t)long_frames, sizeof(float));
+  ASSERT_NOT_NULL(short_note); ASSERT_NOT_NULL(padded);
+  for (int i = 0; i < short_frames; i++) short_note[i] = .8f * sinf(i * 6.28318530718f * 440 / GR_SAMPLE_RATE);
+  memcpy(padded, short_note, (size_t)short_frames * sizeof(float));
+  int short_db = sample_balance(short_note, short_frames, CAT_KEYS), long_db = sample_balance(padded, long_frames, CAT_KEYS);
+  ASSERT_EQUAL(short_db, long_db);
+  ASSERT(short_db < kSampleLevels[CAT_KEYS].gain_db, "sustained energy overrides the nominal trim for an outlier");
+  ASSERT(memcmp(short_note, padded, (size_t)short_frames * sizeof(float)) == 0, "padding with silence cannot make a note louder");
+  float gain = powf(10, short_db * .05f);
+  for (int i = 0; i < short_frames; i++) {
+    float expected = .8f * sinf(i * 6.28318530718f * 440 / GR_SAMPLE_RATE) * gain;
+    ASSERT(short_note[i] == expected, "the trim is constant, with no compression or attack changes");
+  }
+  memset(padded, 0, (size_t)long_frames * sizeof(float));
+  padded[0] = .85f;
+  ASSERT_EQUAL(sample_balance(padded, long_frames, CAT_KEYS), kSampleLevels[CAT_KEYS].gain_db);
+  ASSERT_EQUAL(padded[0], .85f * powf(10, kSampleLevels[CAT_KEYS].gain_db * .05f));
+  memset(padded, 0, (size_t)long_frames * sizeof(float));
+  sample_balance(padded, long_frames, CAT_VOX);
+  ASSERT_EQUAL(peak_of(padded, long_frames), 0);
+  free(short_note); free(padded);
+  PASS();
+}
+
 static void test_blocks(void) {
   TEST("every block renders finite, non-silent, bar-aligned audio at the slowest, default and fastest tempo");
   ASSERT(blocks_count() > 400 && blocks_count() <= GR_MAX_BLOCKS, "library size");
@@ -112,8 +250,11 @@ static void test_blocks(void) {
     ASSERT(pcm.pcm && pcm.frames == b->bars * bar_frames_for_bpm(bpm), "frame count");
     ASSERT(pcm.npeaks == b->bars * GR_PEAKS_BAR, "overview size");
     for (int k = 0; k < pcm.frames; k++) ASSERT(isfinite(pcm.pcm[k]), "NaN or inf sample");
-    float gain = b->cat == CAT_HAT ? 0.5f : 1.0f;
-    ASSERT(peak_of(pcm.pcm, pcm.frames) >= 0.39f * gain && peak_of(pcm.pcm, pcm.frames) <= 0.86f * gain, "levelled peak with quieter hats");
+    const level_profile_t *profile = &kSampleLevels[b->cat];
+    level_measure_t m = sample_measure(pcm.pcm, pcm.frames);
+    ASSERT(m.peak > .001f && m.peak <= profile->peak + .00001f, "role-specific peak headroom");
+    ASSERT(m.active_rms <= profile->active_rms + .00001f && m.window_rms <= profile->window_rms + .00001f, "active sound and loud passages stay within their role's limits");
+    ASSERT(pcm.balance_db <= profile->gain_db, "library balance never boosts an outlier");
     ASSERT(fabsf(pcm.pcm[pcm.frames - 1]) < 0.01f, "tail is faded");
     free(pcm.pcm);
   }
@@ -277,6 +418,44 @@ static void test_mixer(void) {
   s.preview_block = blk; s.preview_pos = 0; s.playing = false;
   song_render(&s, lr, 512);
   ASSERT(peak_of(lr, 1024) > 0.0f && s.preview_pos == 512, "audition plays while stopped");
+  PASS();
+}
+
+static void test_clip_gain(void) {
+  TEST("clip gain changes only that placement, survives edits, and leaves source audition intact");
+  song_t s;
+  song_init(&s);
+  load_block(0, s.bpm);
+  ASSERT_EQUAL(song_add_clip(&s, 0, 0, 0), 0);
+  ASSERT_EQUAL(s.clips[0].gain_db, 0);
+  float original[2048], mixed[2048];
+  s.playing = true;
+  song_render(&s, original, 1024);
+  ASSERT(peak_of(original, 2048) > 0, "the source is audible at default gain");
+  ASSERT_TRUE(song_set_clip_gain(&s, 0, -6));
+  s.pos = 0;
+  song_render(&s, mixed, 1024);
+  float scale = powf(10.0f, -6 * 0.05f);
+  for (int i = 0; i < 2048; i++) ASSERT(fabsf(mixed[i] - original[i] * scale) < 0.0000001f, "gain is applied after source levelling");
+  ASSERT_EQUAL(song_add_clip(&s, 0, 1, 0), 1);
+  ASSERT_EQUAL(s.clips[1].gain_db, 0);
+  s.pos = 0;
+  song_render(&s, mixed, 1024);
+  for (int i = 0; i < 2048; i++) ASSERT(fabsf(mixed[i] - original[i] * (1 + scale)) < 0.0000001f, "another placement of the same source stays at unity");
+  ASSERT_TRUE(song_move_clip(&s, 0, 2, GR_TICKS_BAR));
+  ASSERT_TRUE(song_resize_clip(&s, 0, 2 * GR_TICKS_BAR));
+  ASSERT_EQUAL(s.clips[0].gain_db, -6);
+  ASSERT_FALSE(song_set_clip_gain(&s, 0, -61));
+  ASSERT_FALSE(song_set_clip_gain(&s, 0, 7));
+  ASSERT_FALSE(song_set_clip_gain(&s, -1, 0));
+  ASSERT_FALSE(song_set_clip_gain(&s, s.nclips, 0));
+  ASSERT_FALSE(song_set_clip_gain(NULL, 0, 0));
+  ASSERT_EQUAL(s.clips[0].gain_db, -6);
+  ASSERT_TRUE(song_set_clip_gain(&s, 0, -60));
+  ASSERT_TRUE(song_set_clip_gain(&s, 0, 6));
+  s.playing = false; s.preview_block = 0; s.preview_pos = 0;
+  song_render(&s, mixed, 1024);
+  for (int i = 0; i < 1024; i++) ASSERT(mixed[i * 2] == block_get(0)->audio.pcm[i] * 0.7f, "audition keeps its existing source level");
   PASS();
 }
 
@@ -567,11 +746,26 @@ static void test_fractional_selection(void) {
   dispatch_message(&event);
   ASSERT_EQUAL(g_app->song.nclips, 0);
   app_load_demo();
-  ASSERT(g_app->song.nclips > 0 && song_length_ticks(&g_app->song) == 8 * GR_TICKS_BAR, "demo timing retains its original length");
+  ASSERT(g_app->song.nclips > 0 && song_length_ticks(&g_app->song) == 88 * GR_TICKS_BAR, "the complete demo is loaded");
   for (int i = 0; i < g_app->song.nclips; i++) ASSERT_EQUAL(g_app->song.clips[i].position % GR_TICKS_BAR, 0);
   app_command(ID_FORWARD);
-  ASSERT(g_app->song.pos == position_frames_for_bpm(8 * GR_TICKS_BAR, g_app->song.bpm), "forward jumps to the end of the song");
+  ASSERT(g_app->song.pos == position_frames_for_bpm(88 * GR_TICKS_BAR, g_app->song.bpm), "forward jumps to the end of the song");
   app_command(ID_REWIND);
+  ASSERT_EQUAL(g_app->song.pos, 0);
+  int late = song_clip_at(&g_app->song, 2, 72 * GR_TICKS_BAR);
+  ASSERT(late >= 0, "the final hook lies beyond the former timeline limit");
+  set_scroll_info(sheet, SB_HORZ, &(scroll_info_t){ .fMask = SIF_POS, .nPos = 71 * 88 }, false);
+  send_message(sheet, evHScroll, 0, NULL);
+  ASSERT_EQUAL(get_scroll_pos(sheet, SB_HORZ), 71 * 88);
+  event = (ui_event_t){.message = kEventLeftButtonDown,
+    .x = (window_screen_x(sheet) + 98) * UI_WINDOW_SCALE,
+    .y = (window_screen_y(sheet) + GR_RULER_H + 2 * sheet_row_h(sheet) + 8) * UI_WINDOW_SCALE};
+  dispatch_message(&event);
+  event.message = kEventLeftButtonUp;
+  dispatch_message(&event);
+  ASSERT_EQUAL(g_app->selected_clip, late);
+  ASSERT_TRUE(app_load_demo_song(GR_DEMO_AFTERGLOW));
+  ASSERT_EQUAL(get_scroll_pos(sheet, SB_HORZ), 0);
   ASSERT_EQUAL(g_app->song.pos, 0);
   destroy_window(win);
   app_shutdown(g_app);
@@ -1274,12 +1468,15 @@ static void test_family_filter(void) {
 
 int main(void) {
   TEST_START("Groove");
+  test_library_levels();
   test_blocks();
   test_genres();
   test_tempo();
   test_project_io();
+  test_eurodance_demos();
   test_song_rules();
   test_mixer();
+  test_clip_gain();
   test_overlap_audio();
   test_clip_resize();
   test_sheet_drop();

@@ -1,0 +1,10 @@
+TinySoundFont v0.9
+Upstream: https://github.com/schellingb/TinySoundFont
+Revision: 853a0a171759f1ddba0de1442133a75912bbeffa
+File: tsf.h
+License: TSF-LICENSE (MIT; also embedded in the header)
+
+Local modifications: _TSFREGIONOFFSET and _TSFREGIONENVOFFSET use offsetof / sizeof
+instead of subtraction from null pointers, preserving their type-index units
+without undefined pointer arithmetic. The adapter includes stddef.h.
+Line endings normalized to LF. No upstream contribution is being made.

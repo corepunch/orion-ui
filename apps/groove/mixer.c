@@ -91,6 +91,16 @@ bool song_resize_clip(song_t *s, int idx, int ticks) {
   return true;
 }
 
+bool song_set_clip_gain(song_t *s, int idx, int gain_db) {
+  if (!s || idx < 0 || idx >= s->nclips || gain_db < -60 || gain_db > 6) {
+    fprintf(stderr, "[mx] set_clip_gain rejected idx=%d nclips=%d gain_db=%d\n", idx, s ? s->nclips : -1, gain_db);
+    fflush(stderr);
+    return false;
+  }
+  s->clips[idx].gain_db = gain_db;
+  return true;
+}
+
 int song_add_clip(song_t *s, int block, int track, int position) {
   const block_t *b = block_get(block);
   if (!b || s->nclips >= GR_MAX_CLIPS || !song_can_place(s, track, position, b->bars * GR_TICKS_BAR, -1)) {
@@ -157,10 +167,11 @@ void song_render(song_t *s, float *lr, int frames) {
       int64_t start = position_frames_for_bpm(c->position, s->bpm);
       int64_t from = MAX(s->pos, start), to = MIN(s->pos + chunk, clip_ends[i]), src_len = b->audio.frames;
       if (to <= from || src_len <= 0) continue;
+      float gain = CLIP_GAIN * powf(10.0f, c->gain_db * 0.05f);
       for (int64_t at = from; at < to; ) { // past the source, the same clip loops; a shorter span plays the prefix
         int64_t off = (at - start) % src_len;
         int n = (int)MIN(to - at, src_len - off);
-        add_mono(lr + 2 * (done + (int)(at - s->pos)), b->audio.pcm + off, n, CLIP_GAIN);
+        add_mono(lr + 2 * (done + (int)(at - s->pos)), b->audio.pcm + off, n, gain);
         at += n;
       }
     }

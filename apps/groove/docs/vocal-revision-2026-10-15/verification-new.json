@@ -1,0 +1,353 @@
+[
+  {
+    "file": "male_rap_turn_it_up_crew_140bpm_4bars.mp3",
+    "title": "Turn It Up Crew",
+    "bars": 4,
+    "source_sha256": "6d5b8d0b6a8fc8a7c6a68f86c0dc4219006795e967f75504cbff09cd63aeec03",
+    "raw_take": "turn_it_up_crew_retry",
+    "source_regions": [
+      {
+        "source_start": 0.09,
+        "source_end": 3.26,
+        "target_frame": 0,
+        "target_active_frames": 73647,
+        "atempo_rate": 1.9129678701556807
+      },
+      {
+        "source_start": 3.5,
+        "source_end": 6.65,
+        "target_frame": 75600,
+        "target_active_frames": 73647,
+        "atempo_rate": 1.9007949652202716
+      },
+      {
+        "source_start": 6.96,
+        "source_end": 9.95,
+        "target_frame": 151200,
+        "target_active_frames": 73647,
+        "atempo_rate": 1.803411725736999
+      },
+      {
+        "source_start": 10.395,
+        "source_end": 13.48,
+        "target_frame": 226800,
+        "target_active_frames": 73647,
+        "atempo_rate": 1.8612261234404328
+      }
+    ],
+    "delivery_sha256": "11e4538d9549da879f645d7482625dbb949b0a8a0c173aec430b240f2b49a32f",
+    "master_sha256": "259dd54a5c59b70507893145f80816ec40b21d5cf86c74d58b0bbd3a56ea5fce",
+    "gain": 1.8926161657489202,
+    "frames": 302400,
+    "peak": 0.79388427734375,
+    "leading_signal_ms": 0.3401360544217687,
+    "activity_ratio": 0.9017467248908297,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "quiet_endpoints": true
+    },
+    "passed": true
+  },
+  {
+    "file": "male_rap_yeah_keep_moving_140bpm_4bars.mp3",
+    "title": "Yeah Keep Moving",
+    "bars": 4,
+    "source_sha256": "0eb837446ae06ad73e6a9e55118a1e42c6222bf6aecb6514530083ef54f7cfd0",
+    "raw_take": "yeah_keep_moving",
+    "source_regions": [
+      {
+        "source_start": 0.1,
+        "source_end": 3.335,
+        "target_frame": 0,
+        "target_active_frames": 74529,
+        "atempo_rate": 1.9290545147127
+      },
+      {
+        "source_start": 3.44,
+        "source_end": 6.67,
+        "target_frame": 75600,
+        "target_active_frames": 74529,
+        "atempo_rate": 1.92604107011372
+      },
+      {
+        "source_start": 6.95,
+        "source_end": 10.16,
+        "target_frame": 151200,
+        "target_active_frames": 74529,
+        "atempo_rate": 1.9140145627096457
+      },
+      {
+        "source_start": 10.43,
+        "source_end": 13.7,
+        "target_frame": 226800,
+        "target_active_frames": 74529,
+        "atempo_rate": 1.9500940849218686
+      }
+    ],
+    "delivery_sha256": "72a7869d8b791a95f4194b8423d41ae2d22234640e4528670aa21ae9c47379a0",
+    "master_sha256": "016974823f36cf1ef11200452ce267799196fbee0930e860e61a4efc8dd0148c",
+    "gain": 1.7587501717451062,
+    "frames": 302400,
+    "peak": 0.794189453125,
+    "leading_signal_ms": 0.13605442176870747,
+    "activity_ratio": 0.9061135371179039,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "quiet_endpoints": true
+    },
+    "passed": true
+  },
+  {
+    "file": "male_rap_rock_this_place_140bpm_4bars.mp3",
+    "title": "Rock This Place",
+    "bars": 4,
+    "source_sha256": "0074b56c55235848067585cb236c90960623eafff646f37ea72c07bb70f435c6",
+    "raw_take": "rock_this_place",
+    "source_regions": [
+      {
+        "source_start": 0.05,
+        "source_end": 1.9,
+        "target_frame": 0,
+        "target_active_frames": 74529,
+        "atempo_rate": 1.0962120592325943
+      },
+      {
+        "source_start": 1.925,
+        "source_end": 3.61,
+        "target_frame": 75600,
+        "target_active_frames": 74529,
+        "atempo_rate": 0.9970001908969429
+      },
+      {
+        "source_start": 3.635,
+        "source_end": 5.35,
+        "target_frame": 151200,
+        "target_active_frames": 74529,
+        "atempo_rate": 1.0150263165071314
+      },
+      {
+        "source_start": 5.375,
+        "source_end": 7.035,
+        "target_frame": 226800,
+        "target_active_frames": 74529,
+        "atempo_rate": 0.9819602388938886
+      }
+    ],
+    "delivery_sha256": "b909f2b197055df4124058611dcb2dd870a7c9857f393ec1bf19b57a28d77fb8",
+    "master_sha256": "ba379048258c351b07b9d462ac47e1f3e7fae005daf96aae61a6338d2c933f6b",
+    "gain": 1.036520318846155,
+    "frames": 302400,
+    "peak": 0.794403076171875,
+    "leading_signal_ms": 0.06802721088435373,
+    "activity_ratio": 0.895924308588064,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "quiet_endpoints": true
+    },
+    "passed": true
+  },
+  {
+    "file": "male_call_come_on_140bpm_1bar.mp3",
+    "title": "Come On",
+    "bars": 1,
+    "source_sha256": "009ff2d3c52e11a171996ba4d274896356d722a20a11b1d04eae89f83180c7e8",
+    "raw_take": "short_calls",
+    "source_regions": [
+      {
+        "source_start": 0.09,
+        "source_end": 0.565,
+        "target_frame": 0,
+        "target_active_frames": 20948,
+        "atempo_rate": 0.9999493850280913
+      }
+    ],
+    "delivery_sha256": "1c30c9ec935a3c89b7dee599b4a7b702debcde29af17bc35a0e741e47b86d7b4",
+    "master_sha256": "1bc3f3c60959eb974fb86362f843af9f204f60e5867b42527220673bc617b68a",
+    "gain": 0.9551328581997275,
+    "frames": 75600,
+    "peak": 0.795654296875,
+    "leading_signal_ms": 0.6802721088435374,
+    "activity_ratio": 0.26822157434402333,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "quiet_endpoints": true
+    },
+    "passed": true
+  },
+  {
+    "file": "male_call_lets_go_140bpm_1bar.mp3",
+    "title": "Lets Go",
+    "bars": 1,
+    "source_sha256": "009ff2d3c52e11a171996ba4d274896356d722a20a11b1d04eae89f83180c7e8",
+    "raw_take": "short_calls",
+    "source_regions": [
+      {
+        "source_start": 5.925,
+        "source_end": 6.9,
+        "target_frame": 0,
+        "target_active_frames": 33075,
+        "atempo_rate": 1.3112219294944172
+      }
+    ],
+    "delivery_sha256": "e97c8696d3089815d2e282431a25664043131e2fc5eb4d13ba9435bc1f4910a6",
+    "master_sha256": "703a6fd3f722a4d5fcd86df13aa8e39be184e992253f5bd513c99fcc8b258d64",
+    "gain": 1.7773935979002986,
+    "frames": 75600,
+    "peak": 0.794403076171875,
+    "leading_signal_ms": 0.13605442176870747,
+    "activity_ratio": 0.4314868804664723,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "quiet_endpoints": true
+    },
+    "passed": true
+  },
+  {
+    "file": "male_call_hey_yo_140bpm_1bar.mp3",
+    "title": "Hey Yo",
+    "bars": 1,
+    "source_sha256": "009ff2d3c52e11a171996ba4d274896356d722a20a11b1d04eae89f83180c7e8",
+    "raw_take": "short_calls",
+    "source_regions": [
+      {
+        "source_start": 11.96,
+        "source_end": 12.72,
+        "target_frame": 0,
+        "target_active_frames": 29106,
+        "atempo_rate": 1.1579795808704998
+      }
+    ],
+    "delivery_sha256": "b8cf123c8f4f2ea114ce4fc0574f1eca569ccae0a844ccbfdd291b51fd9d1d4a",
+    "master_sha256": "de5f5c7bc35d547463c41ddf188206e54019d41a6e31bcf1fa55cf8ac0e8067f",
+    "gain": 1.4913816284144827,
+    "frames": 75600,
+    "peak": 0.794097900390625,
+    "leading_signal_ms": 0.8843537414965986,
+    "activity_ratio": 0.37317784256559766,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "quiet_endpoints": true
+    },
+    "passed": true
+  },
+  {
+    "file": "male_call_move_now_140bpm_1bar.mp3",
+    "title": "Move Now",
+    "bars": 1,
+    "source_sha256": "009ff2d3c52e11a171996ba4d274896356d722a20a11b1d04eae89f83180c7e8",
+    "raw_take": "short_calls",
+    "source_regions": [
+      {
+        "source_start": 18.045,
+        "source_end": 19.48,
+        "target_frame": 0,
+        "target_active_frames": 38808,
+        "atempo_rate": 1.6506366802243666
+      }
+    ],
+    "delivery_sha256": "2ec2bb9f18c2a2403ded9d4338a8538c1b9e53161801d91ee15528fe825d364c",
+    "master_sha256": "c834891ef29e65d33d10f5169d202b063c84074086febf7dfb2316af9b3d648b",
+    "gain": 1.4759074587987107,
+    "frames": 75600,
+    "peak": 0.794403076171875,
+    "leading_signal_ms": 2.403628117913832,
+    "activity_ratio": 0.49854227405247814,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "quiet_endpoints": true
+    },
+    "passed": true
+  },
+  {
+    "file": "short_scat_scat_ba_da_bap_140bpm_1bar.mp3",
+    "title": "Scat Ba Da Bap",
+    "bars": 1,
+    "source_sha256": "c4e5c5bfe99cbe2f96b806f85f1e62e4f78e9844dbb69bbb5414cd90754c5d72",
+    "raw_take": "short_scats",
+    "source_regions": [
+      {
+        "source_start": 3.525,
+        "source_end": 4.26,
+        "target_frame": 0,
+        "target_active_frames": 32414,
+        "atempo_rate": 1.0
+      }
+    ],
+    "delivery_sha256": "1b56c7b449900bd7637368bb152c95911b63aaaa217cc807b85c2f05ebd4d651",
+    "master_sha256": "9b3a1840695b717d450cfc3ad8a81b8b0c0b8b1a8b3e7e1d4300c6736fae5333",
+    "gain": 0.8630338913178034,
+    "frames": 75600,
+    "peak": 0.7933349609375,
+    "leading_signal_ms": 0.4308390022675737,
+    "activity_ratio": 0.4198250728862974,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "quiet_endpoints": true
+    },
+    "passed": true
+  },
+  {
+    "file": "short_scat_scat_doo_yah_140bpm_1bar.mp3",
+    "title": "Scat Doo Yah",
+    "bars": 1,
+    "source_sha256": "c4e5c5bfe99cbe2f96b806f85f1e62e4f78e9844dbb69bbb5414cd90754c5d72",
+    "raw_take": "short_scats",
+    "source_regions": [
+      {
+        "source_start": 10.905,
+        "source_end": 11.88,
+        "target_frame": 0,
+        "target_active_frames": 38367,
+        "atempo_rate": 1.1245696148052506
+      }
+    ],
+    "delivery_sha256": "010a594c2f91aa26d023e73f9b03f55f1a1a1ec987cd2dcc1b5eb718890087cf",
+    "master_sha256": "3550cacb17e15a1118399b2626da9c17c7a107dfe01d6c2d200d8ffa0904edc3",
+    "gain": 0.9091322131227685,
+    "frames": 75600,
+    "peak": 0.795196533203125,
+    "leading_signal_ms": 1.4512471655328798,
+    "activity_ratio": 0.47230320699708456,
+    "checks": {
+      "exact_frames": true,
+      "mono_44100": true,
+      "finite_nonzero": true,
+      "no_clipping": true,
+      "signal_within_5ms": true,
+      "quiet_endpoints": true
+    },
+    "passed": true
+  }
+]

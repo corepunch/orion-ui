@@ -37,7 +37,13 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (n > 0 && (size_t)n < sizeof(icons_path)) svg_add_icons_dir(hinstance, icons_path);
   g_app = app_init();
   if (!g_app) return false;
-  for (int i = 1; i < argc; i++) if (!strcmp(argv[i], "--demo")) app_load_demo();
+  for (int i = 1; i < argc; i++) {
+    int demo = -1;
+    if (!strcmp(argv[i], "--demo") || !strcmp(argv[i], "--demo=skyline")) demo = GR_DEMO_SKYLINE;
+    else if (!strcmp(argv[i], "--demo=afterglow")) demo = GR_DEMO_AFTERGLOW;
+    else if (!strcmp(argv[i], "--demo=victory")) demo = GR_DEMO_VICTORY;
+    if (demo >= 0 && !app_load_demo_song(demo)) { app_shutdown(g_app); return false; }
+  }
   g_app->hinstance = hinstance;
   g_app->library_db = create_database("library", "groove_library_db", NULL);
   if (!g_app->library_db) { app_shutdown(g_app); g_app = NULL; return false; }

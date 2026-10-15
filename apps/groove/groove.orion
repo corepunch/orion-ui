@@ -16,7 +16,9 @@
         <item name="save" label="Save Song" shortcut="Ctrl+S" />
         <item name="saveas" label="Save Song As..." />
         <Separator />
-        <item name="demo" label="Load Demo Song" />
+        <item name="demo" label="Demo: Neon Skyline" />
+        <item name="demo_afterglow" label="Demo: Afterglow Avenue" />
+        <item name="demo_victory" label="Demo: Victory Lights" />
         <Separator />
         <item name="quit" label="Quit" shortcut="Ctrl+Q" />
       </menu>
