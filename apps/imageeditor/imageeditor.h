@@ -125,7 +125,7 @@ extern int g_bw_retina_scale;
 #define TOOL_WIN_H    (TITLEBAR_HEIGHT + TOOL_TOOLBAR_H)
 
 // Floating options toolbar, initially beside the left tool strip.
-// Content height accommodates brush, shape, and magic-wand option panels.
+// Content height accommodates shape, fill, and magic-wand option panels.
 #define TOOL_OPTIONS_PANEL_H   TOOLBAR_BAND_HEIGHT
 #define TOOL_OPTIONS_WIN_W     PALETTE_WIN_W
 #define TOOL_OPTIONS_WIN_H     TOOL_OPTIONS_PANEL_H
@@ -417,7 +417,6 @@ typedef struct {
   accel_table_t *accel;
   uint32_t       user_palette[NUM_USER_COLORS];
   int            num_user_colors;
-  int            brush_tool;
   int            shape_tool;
   int            brush_size;    // current brush radius (index into kBrushSizes)
   bool           shape_filled;  // true = solid fg fill, no outline; false = outline only
@@ -694,9 +693,12 @@ bool doc_confirm_close(canvas_doc_t *doc, window_t *parent_win);
 result_t editor_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_canvas_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
  result_t win_tool_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-enum { IE_OPT_AA = 9001, IE_OPT_SPREAD, IE_OPT_COLOR, IE_OPT_SIZE, IE_OPT_FILLED, IE_OPT_GAP };
+enum { IE_OPT_AA = 9001, IE_OPT_SPREAD, IE_OPT_COLOR, IE_OPT_FILLED, IE_OPT_GAP };
+#define IE_OPT_SIZE ID_PENCIL_TOOLS_SIZE
+void imageeditor_sync_brush_size(window_t *win);
 void imageeditor_sync_tool_options(void);
 int imageeditor_tool_group(int tool);
+int imageeditor_layer_tool(int tool);
 result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_color_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
@@ -786,6 +788,16 @@ bool show_image_resize_dialog(window_t *parent, int *out_w, int *out_h,
 
 // Grid Options dialog – returns true if accepted.
 bool show_grid_options_dialog(window_t *parent, int *out_x, int *out_y);
+bool cmd_anim_fps(canvas_doc_t *doc, int fps, bool retime);
+bool cmd_frame_duration(canvas_doc_t *doc, int delay_ms, bool all);
+bool cmd_frame_reuse(canvas_doc_t *doc, uint32_t cel_id);
+bool cmd_frame_unique(canvas_doc_t *doc);
+bool cmd_exposure_edit(canvas_doc_t *doc, uint32_t cel_id, int delay_ms, const char *note);
+bool cmd_cel_rename(canvas_doc_t *doc, uint32_t cel_id, const char *name);
+bool cmd_cel_delete(canvas_doc_t *doc, uint32_t cel_id);
+void show_animation_timing(window_t *parent, canvas_doc_t *doc, bool duration);
+void show_exposure_sheet(window_t *parent, canvas_doc_t *doc);
+
 bool show_onion_skin_dialog(window_t *parent);
 
 // Selection Modify dialog – returns true if accepted.
@@ -1001,6 +1013,11 @@ bool cmd_pencil_color(canvas_doc_t *doc, int index);
 bool pencil_has_layers(const canvas_doc_t *doc);
 bool cmd_pencil_layer(canvas_doc_t *doc, int layer);
 void imageeditor_sync_tool_palette(void);
+#if IMAGEEDITOR_BW
+void imageeditor_sync_frame_controls(void);
+window_t *create_pencil_color_toolbar(void);
+#endif
+window_t *imageeditor_animation_timer_window(void);
 bool doc_anim_commit(canvas_doc_t *doc);
 bool doc_anim_load(canvas_doc_t *doc, int index);
 bool doc_anim_switch(canvas_doc_t *doc, int index);

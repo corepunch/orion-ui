@@ -1,36 +1,7 @@
 #include "imageeditor.h"
 #include <orion/user/rect.h>
 
-#define ID_TOOL_SWATCH 0x7ffe
-
-static const toolbar_item_t k_tools[] = {
-#if IMAGEEDITOR_BW
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_BRUSH, .icon = "ie-pencil", .tooltip = "Pencil / Brush", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ERASER, .icon = "ie-eraser", .tooltip = "Eraser", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_FILL, .icon = "ie-fill", .tooltip = "Fill", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_EYEDROPPER, .icon = "ie-eyedropper", .tooltip = "Eyedropper", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_SELECT, .icon = "ie-select", .tooltip = "Select", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MOVE, .icon = "ie-move", .tooltip = "Move", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_HAND, .icon = "ie-hand", .tooltip = "Hand", .style = TBSTYLE_CHECKGROUP},
-#else
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_SELECT, .icon = "ie-select", .tooltip = "Select", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MOVE, .icon = "ie-move", .tooltip = "Move", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MAGIC_WAND, .icon = "ie-magic-wand", .tooltip = "Magic Wand", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_CROP, .icon = "ie-crop", .tooltip = "Crop", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_HAND, .icon = "ie-hand", .tooltip = "Hand", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_EYEDROPPER, .icon = "ie-eyedropper", .tooltip = "Eyedropper", .style = TBSTYLE_CHECKGROUP},
-#ifndef AX_PLATFORM_IOS
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ZOOM, .icon = "ie-zoom-in", .tooltip = "Zoom", .style = TBSTYLE_CHECKGROUP},
-#endif
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_BRUSH, .icon = "ie-brush", .tooltip = "Brush", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_FILL, .icon = "ie-fill", .tooltip = "Fill", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_ERASER, .icon = "ie-eraser", .tooltip = "Eraser", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_TEXT, .icon = "ie-text", .tooltip = "Text", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_RECT, .icon = "ie-rect", .tooltip = "Shapes", .style = TBSTYLE_CHECKGROUP},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_MAGNIFIER, .icon = "ie-zoom-out", .tooltip = "Magnifier", .style = TBSTYLE_CHECKGROUP},
-#endif
-  {.type = TOOLBAR_ITEM_CUSTOM, .ident = ID_TOOL_SWATCH, .tooltip = "Foreground / background colors"},
-};
+#define ID_TOOL_SWATCH ID_IMAGE_TOOLS_SWATCH
 
 #if IMAGEEDITOR_BW
 typedef struct {
@@ -127,30 +98,39 @@ static void pencil_toolbar_items(window_t *win) {
   int layer = pencil_has_layers(doc) ? doc->layer.active : IE_LAYER_PENCIL;
   static const int order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
   static const char *const tips[] = {"Background — shared by all frames", "Ink and color — above pencil", "Pencil — soft alpha strokes", "FX — above pencil"};
-  pencil_palette_state_t *st = win->userdata;
-  toolbar_item_t items[4 + 4 + ARRAY_LEN(k_tools) + IE_PENCIL_COLORS];
-  char color_tips[IE_PENCIL_COLORS][40];
+  toolbar_item_t items[5 + ARRAY_LEN(imageeditor_pencil_tools_toolbar)];
   int count = 0;
   for (int i = 0; i < 4; i++)
     items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_CUSTOM,
       .ident = IE_PENCIL_LAYER_BASE + order[i], .tooltip = tips[order[i]],
       .style = TOOLBAR_ITEM_FLAG_SMALL};
   items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SEPARATOR};
-  for (int i = 0; i < ARRAY_LEN(k_tools); i++) {
-    if (k_tools[i].ident == ID_TOOL_SWATCH) continue;
-    if (layer == IE_LAYER_PENCIL && (k_tools[i].ident == ID_TOOL_FILL || k_tools[i].ident == ID_TOOL_EYEDROPPER)) continue;
-    toolbar_item_t tool = k_tools[i];
-    tool.style |= CONTROL_SIZE_SMALL;
-    tool.w = TOOL_PALETTE_BTN_SIZE;
-    items[count++] = tool;
+  for (int i = 0; i < ARRAY_LEN(imageeditor_pencil_tools_toolbar); i++) {
+    toolbar_item_t item = imageeditor_pencil_tools_toolbar[i];
+    if (layer == IE_LAYER_PENCIL && (item.ident == ID_TOOL_BRUSH || item.ident == ID_TOOL_FILL || item.ident == ID_TOOL_EYEDROPPER)) continue;
+    if (layer != IE_LAYER_PENCIL && item.ident == ID_TOOL_PENCIL) continue;
+    if (item.ident == ID_PENCIL_TOOLS_FRAME) item.type = TOOLBAR_ITEM_CUSTOM;
+    if (g_app && item.ident == imageeditor_tool_group(imageeditor_layer_tool(g_app->current_tool))) item.state |= TBSTATE_CHECKED;
+    items[count++] = item;
   }
+  send_message(win, tbSetItems, count, items);
+  imageeditor_sync_brush_size(win);
+  win->value = layer + 1;
+}
+
+static void pencil_color_items(window_t *win) {
+  canvas_doc_t *doc = g_app ? g_app->active_doc : NULL;
+  int layer = pencil_has_layers(doc) ? doc->layer.active : IE_LAYER_PENCIL;
+  pencil_palette_state_t *st = win->userdata;
+  toolbar_item_t items[IE_PENCIL_COLORS + 2];
+  char color_tips[IE_PENCIL_COLORS][40];
+  int count = 0;
   if (layer != IE_LAYER_PENCIL && doc) {
     int indices[255], colors = 0;
     for (int i = 0; i < MIN(256, doc->ipal.count); i++)
       if (i != doc->ipal.transparent && COLOR_A(doc->ipal.entries[i])) indices[colors++] = i;
     int pages = MAX(1, (colors + IE_PENCIL_COLORS - 1) / IE_PENCIL_COLORS);
     st->page = CLAMP(st->page, 0, pages - 1);
-    items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SEPARATOR};
     for (int n = st->page * IE_PENCIL_COLORS; n < MIN(colors, (st->page + 1) * IE_PENCIL_COLORS); n++) {
       int i = indices[n], slot = n % IE_PENCIL_COLORS;
       uint32_t c = doc->ipal.entries[i];
@@ -169,7 +149,10 @@ static void pencil_toolbar_items(window_t *win) {
     }
   }
   send_message(win, tbSetItems, count, items);
-  send_message(win, tbCheckButton, g_app ? imageeditor_tool_group(g_app->current_tool) : ID_TOOL_BRUSH, (void *)(intptr_t)1);
+  if (count && dock_is_floating(win)) {
+    isize16_t size = {0};
+    if (send_message(win, tbGetIdealSize, 0, &size)) dock_resize_float(win, MAX(PALETTE_WIN_W, size.w), size.h);
+  }
   win->value = layer + 1;
 }
 #endif
@@ -179,7 +162,13 @@ void imageeditor_sync_tool_palette(void) {
   if (!g_app || !g_app->tool_win) return;
   canvas_doc_t *doc = g_app->active_doc;
   int layer = pencil_has_layers(doc) ? doc->layer.active : IE_LAYER_PENCIL;
-  pencil_palette_state_t *st = g_app->tool_win->userdata;
+  int tool = imageeditor_layer_tool(g_app->current_tool);
+  if (tool != g_app->current_tool) handle_menu_command(tool);
+  if (g_app->tool_win->value != (uint32_t)(layer + 1)) pencil_toolbar_items(g_app->tool_win);
+  if (layer != IE_LAYER_PENCIL) send_message(g_app->tool_win, tbSetItemColor, ID_TOOL_BRUSH, &g_app->fg_color);
+  imageeditor_sync_frame_controls();
+  window_t *colors = g_app->color_win;
+  pencil_palette_state_t *st = colors ? colors->userdata : NULL;
   if (!st) return;
   uint64_t key = 1469598103934665603ull;
   if (doc) for (int i = 0; i < 256; i++) key = (key ^ doc->ipal.entries[i]) * 1099511628211ull;
@@ -201,7 +190,10 @@ void imageeditor_sync_tool_palette(void) {
     st->page = page;
   }
   st->doc = doc; st->palette_key = key; st->selected = g_app->fg_palette_idx;
-  if (changed || g_app->tool_win->value != (uint32_t)(layer + 1)) pencil_toolbar_items(g_app->tool_win);
+  bool layer_changed = colors->value != (uint32_t)(layer + 1);
+  if (changed || layer_changed) pencil_color_items(colors);
+  if (changed || layer_changed) show_window(colors, doc && layer != IE_LAYER_PENCIL);
+  invalidate_window(colors);
   invalidate_window(g_app->tool_win);
 #endif
 }
@@ -210,22 +202,36 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
                                uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate: {
-#if IMAGEEDITOR_BW
-      if (!allocate_window_data(win, sizeof(pencil_palette_state_t))) return false;
-#endif
       send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
       send_message(win, tbSetButtonSize, TOOL_PALETTE_BTN_SIZE, NULL);
 #if IMAGEEDITOR_BW
       send_message(win, tbSetColumns, 1, NULL);
       pencil_toolbar_items(win);
 #else
-      send_message(win, tbSetItems, ARRAY_LEN(k_tools), (void *)k_tools);
+      toolbar_item_t items[ARRAY_LEN(imageeditor_image_tools_toolbar)];
+      memcpy(items, imageeditor_image_tools_toolbar, sizeof(items));
+      for (int i = 0; i < ARRAY_LEN(items); i++)
+        if (items[i].ident == ID_TOOL_SWATCH) items[i].type = TOOLBAR_ITEM_CUSTOM;
+      send_message(win, tbSetItems, ARRAY_LEN(items), items);
+      imageeditor_sync_brush_size(win);
 #endif
+#if !IMAGEEDITOR_BW
       send_message(win, tbCheckButton, g_app ? imageeditor_tool_group(g_app->current_tool) : ID_TOOL_SELECT, (void *)(intptr_t)1);
+#endif
       return true;
     }
     case tbDrawItem:
 #if IMAGEEDITOR_BW
+      if (wparam == ID_PENCIL_TOOLS_FRAME && lparam) {
+        canvas_doc_t *doc = g_app ? g_app->active_doc : NULL;
+        char number[16];
+        if (doc && doc->anim) snprintf(number, sizeof(number), "%d", doc->anim->active_frame + 1);
+        else snprintf(number, sizeof(number), "—");
+        toolbar_draw_item_t *draw = lparam;
+        irect16_t r = rect_center(draw->rect, text_strwidth(FONT_SMALLEST, number), text_char_height(FONT_SMALLEST));
+        draw_text(FONT_SMALLEST, number, r.x, r.y, get_sys_color(brTextNormal));
+        return true;
+      }
       if (wparam >= IE_PENCIL_LAYER_BASE && wparam < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT && lparam) {
         int layer = wparam - IE_PENCIL_LAYER_BASE;
         toolbar_draw_item_t *draw = lparam;
@@ -237,40 +243,22 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         draw_text(FONT_SMALLEST, code, text.x, text.y, get_sys_color(brTextNormal));
         return true;
       }
-      if ((wparam == IE_PENCIL_PALETTE_PREV || wparam == IE_PENCIL_PALETTE_NEXT) && lparam) {
-        toolbar_draw_item_t *draw = lparam;
-        theme_draw(THEME_PART_TOOLBAR_BUTTON, draw->rect, draw->state);
-        const char *label = wparam == IE_PENCIL_PALETTE_PREV ? "<" : ">";
-        irect16_t r = rect_center(draw->rect, text_strwidth(FONT_SMALL, label), text_char_height(FONT_SMALL));
-        draw_text(FONT_SMALL, label, r.x, r.y, theme_foreground(THEME_PART_TOOLBAR_BUTTON, draw->state));
-        return true;
-      }
-      if (wparam >= IE_PENCIL_PALETTE_BASE && wparam < IE_PENCIL_PALETTE_BASE + 256 && lparam) {
-        pencil_palette_draw(wparam - IE_PENCIL_PALETTE_BASE, lparam);
-        return true;
-      }
 #endif
       if (wparam != ID_TOOL_SWATCH || !lparam) return false;
       palette_draw_swatches(((toolbar_draw_item_t *)lparam)->rect);
       return true;
     case evCommand:
+      if (g_app && HIWORD(wparam) == sliderValueChanged && LOWORD(wparam) == IE_OPT_SIZE && lparam) {
+        g_app->brush_size = CLAMP((int)send_message(lparam, slGetPos, 0, NULL), 0, NUM_BRUSH_SIZES - 1);
+        imageeditor_sync_brush_size(win);
+        return true;
+      }
       if (HIWORD(wparam) != btnClicked) return false;
       wparam = LOWORD(wparam);
       if (!g_app) return true;
 #if IMAGEEDITOR_BW
       if (wparam >= IE_PENCIL_LAYER_BASE && wparam < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT) {
         cmd_pencil_layer(g_app->active_doc, wparam - IE_PENCIL_LAYER_BASE);
-        return true;
-      }
-      if (wparam == IE_PENCIL_PALETTE_PREV || wparam == IE_PENCIL_PALETTE_NEXT) {
-        pencil_palette_state_t *st = win->userdata;
-        st->page += wparam == IE_PENCIL_PALETTE_PREV ? -1 : 1;
-        pencil_toolbar_items(win);
-        invalidate_window(win);
-        return true;
-      }
-      if (wparam >= IE_PENCIL_PALETTE_BASE && wparam < IE_PENCIL_PALETTE_BASE + 256) {
-        cmd_pencil_color(g_app->active_doc, wparam - IE_PENCIL_PALETTE_BASE);
         return true;
       }
 #endif
@@ -283,10 +271,14 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
 #endif
         return true;
       }
-      if (wparam == ID_TOOL_BRUSH && g_app->brush_tool) wparam = g_app->brush_tool;
       if (wparam == ID_TOOL_RECT && g_app->shape_tool) wparam = g_app->shape_tool;
       handle_menu_command((uint16_t)wparam);
       return true;
+#if IMAGEEDITOR_BW
+    case evTimer:
+      if (g_app && g_app->active_doc) anim_tick(g_app->active_doc);
+      return true;
+#endif
     case evPaint:
       return true;
     case evDestroy:
@@ -296,3 +288,94 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       return false;
   }
 }
+
+#if IMAGEEDITOR_BW
+void imageeditor_sync_frame_controls(void) {
+  if (!g_app || !g_app->tool_win) return;
+  window_t *win = g_app->tool_win;
+  canvas_doc_t *doc = g_app->active_doc;
+  anim_timeline_t *anim = doc ? doc->anim : NULL;
+  bool ready = anim && anim->frame_count > 0;
+  const int commands[] = {ID_ANIM_PREV_FRAME, ID_ANIM_NEXT_FRAME, ID_ANIM_PLAY, ID_ANIM_TRACE,
+                          ID_ANIM_NEW_FRAME, ID_ANIM_DUPLICATE_FRAME, ID_ANIM_DELETE_FRAME};
+  for (int i = 0; i < ARRAY_LEN(commands); i++) {
+    bool enabled = ready;
+    if (ready && commands[i] == ID_ANIM_PREV_FRAME) enabled = anim->active_frame > 0 || anim->playing;
+    if (ready && commands[i] == ID_ANIM_NEXT_FRAME) enabled = anim->active_frame < anim->frame_count - 1 || anim->playing;
+    if (ready && commands[i] == ID_ANIM_DELETE_FRAME) enabled = anim->frame_count > 1;
+    send_message(win, tbEnableItem, commands[i], (void *)(intptr_t)enabled);
+  }
+  send_message(win, tbCheckButton, ID_ANIM_PLAY, (void *)(intptr_t)(ready && anim->playing));
+  send_message(win, tbCheckButton, ID_ANIM_TRACE, (void *)(intptr_t)g_app->anim_trace_enabled);
+  char tip[128];
+  if (ready) snprintf(tip, sizeof(tip), "Frame %d of %d · Cel %u · %d ms · %d FPS", anim->active_frame + 1,
+    anim->frame_count, anim->frames[anim->active_frame].cel->id, anim->frames[anim->active_frame].delay_ms, anim->fps);
+  else snprintf(tip, sizeof(tip), "No animation");
+  toolbar_button_info_t info = {.ident = ID_PENCIL_TOOLS_FRAME, .mask = TBIF_TOOLTIP, .tooltip = tip};
+  send_message(win, tbSetButtonInfo, 0, &info);
+  invalidate_window(win);
+}
+
+static result_t pencil_color_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  switch (msg) {
+    case evCreate:
+      if (!allocate_window_data(win, sizeof(pencil_palette_state_t))) return false;
+      send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
+      send_message(win, tbSetButtonSize, TOOL_PALETTE_BTN_SIZE, NULL);
+      send_message(win, tbSetColumns, 1, NULL);
+      send_message(win, tbSetStyle, TOOLBAR_STYLE_GRIP, NULL);
+      pencil_color_items(win);
+      return true;
+    case evPaint: return true;
+    case evDestroy:
+      if (g_app && g_app->color_win == win) g_app->color_win = NULL;
+      return true;
+    case evClose:
+      show_window(win, false);
+      return true;
+    case tbDrawItem:
+      if ((wparam == IE_PENCIL_PALETTE_PREV || wparam == IE_PENCIL_PALETTE_NEXT) && lparam) {
+        toolbar_draw_item_t *draw = lparam;
+        theme_draw(THEME_PART_TOOLBAR_BUTTON, draw->rect, draw->state);
+        const char *label = wparam == IE_PENCIL_PALETTE_PREV ? "<" : ">";
+        irect16_t r = rect_center(draw->rect, text_strwidth(FONT_SMALL, label), text_char_height(FONT_SMALL));
+        draw_text(FONT_SMALL, label, r.x, r.y, theme_foreground(THEME_PART_TOOLBAR_BUTTON, draw->state));
+        return true;
+      }
+      if (wparam >= IE_PENCIL_PALETTE_BASE && wparam < IE_PENCIL_PALETTE_BASE + 256 && lparam) {
+        pencil_palette_draw(wparam - IE_PENCIL_PALETTE_BASE, lparam);
+        return true;
+      }
+      return false;
+    case evCommand:
+      if (HIWORD(wparam) != btnClicked || !g_app) return false;
+      wparam = LOWORD(wparam);
+      if (wparam == IE_PENCIL_PALETTE_PREV || wparam == IE_PENCIL_PALETTE_NEXT) {
+        pencil_palette_state_t *st = win->userdata;
+        st->page += wparam == IE_PENCIL_PALETTE_PREV ? -1 : 1;
+        pencil_color_items(win);
+        invalidate_window(win);
+        return true;
+      }
+      if (wparam >= IE_PENCIL_PALETTE_BASE && wparam < IE_PENCIL_PALETTE_BASE + 256) {
+        cmd_pencil_color(g_app->active_doc, wparam - IE_PENCIL_PALETTE_BASE);
+        return true;
+      }
+      return false;
+    default: return false;
+  }
+}
+
+window_t *create_pencil_color_toolbar(void) {
+  if (!g_app) return NULL;
+  if (g_app->color_win) return g_app->color_win;
+  window_t *win = create_window("Colors", WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE | WINDOW_NOTITLE | WINDOW_TOOLBAR,
+      MAKERECT(0, 0, PALETTE_WIN_W, 400), g_app->chrome_win, pencil_color_proc, g_app->hinstance, NULL);
+  if (!win) return NULL;
+  g_app->color_win = win;
+  dock_window(win, DOCK_FLOAT, DOCK_EDGE(DOCK_LEFT) | DOCK_EDGE(DOCK_RIGHT), DOCK_TOOLBAR, 0, 0);
+  dock_float_aligned(win, DOCK_ALIGN_END, DOCK_ALIGN_START);
+  imageeditor_sync_tool_palette();
+  return win;
+}
+#endif

@@ -4,3 +4,7 @@ Revision: 2b75f3ad12b420c9504ef05df8d2564a28f8500e
 Asset: assets/fill/pause-fill.svg
 Copied from Groove's vendored upstream asset. Original path geometry and
 256-unit viewBox preserved; 24px dimensions and currentColor fill.
+
+Asset: assets/fill/circle-fill.svg
+Used by Pencil Test for the indexed-color brush. Original path geometry and
+256-unit viewBox preserved; 24px dimensions and currentColor fill.

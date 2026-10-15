@@ -6,7 +6,6 @@ bool cmd_pencil_layer(canvas_doc_t *doc, int layer) {
   }
   imageeditor_finish_canvas_interaction(doc, g_app ? g_app->current_tool : ID_TOOL_PENCIL);
   anim_stop_playback(doc);
-  int old_layer = doc->layer.active;
   int old_tool = g_app ? g_app->current_tool : ID_TOOL_PENCIL;
 
   if (doc->sel.move.active) return false;
@@ -25,15 +24,7 @@ bool cmd_pencil_layer(canvas_doc_t *doc, int layer) {
 #endif
     }
     g_app->bg_color = IE_PAPER_COLOR;
-    int tool = old_tool;
-    if (old_layer == IE_LAYER_PENCIL && layer == IE_LAYER_COLOR && tool == ID_TOOL_PENCIL)
-      tool = ID_TOOL_BRUSH;
-    else if (old_layer == IE_LAYER_COLOR && layer == IE_LAYER_PENCIL && tool == ID_TOOL_BRUSH)
-      tool = ID_TOOL_PENCIL;
-    else if (layer == IE_LAYER_PENCIL && (tool == ID_TOOL_FILL || tool == ID_TOOL_EYEDROPPER))
-      tool = ID_TOOL_PENCIL;
-
-    handle_menu_command(tool);
+    handle_menu_command(old_tool);
   }
   imageeditor_sync_tool_palette();
   ie_doc_invalidate_all(doc);

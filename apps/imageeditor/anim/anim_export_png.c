@@ -269,15 +269,13 @@ bool anim_export_apng(canvas_doc_t *doc, const char *path) {
   uint32_t seq = 0;
 
   for (int fi = 0; fi < tl->frame_count && ok; fi++) {
-    anim_frame_t *frame = tl->frames[fi];
-
     if (fi > 0) {
       if (!doc_anim_rgba(doc, fi, rgba)) { ok = false; break; }
     }
 
     // fcTL: sequence, width, height, delay_num/den, disposal, blend.
     uint8_t fctl[26];
-    uint16_t delay_num = (uint16_t)(frame->delay_ms > 0 ? frame->delay_ms : 80);
+    uint16_t delay_num = (uint16_t)(tl->frames[fi].delay_ms > 0 ? tl->frames[fi].delay_ms : anim_default_delay(tl->fps));
     uint16_t delay_den = 1000;
     build_fctl(fctl, seq++, (uint32_t)w, (uint32_t)h, delay_num, delay_den);
     write_png_chunk(fp, APNG_MAGIC_fcTL, fctl, 26);

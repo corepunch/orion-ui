@@ -134,9 +134,9 @@ static void video_source_pencil(const char *directory) {
       uint8_t pencil[257], ink[257];
       for (int p = 0; p < 257; p++) { pencil[p] = frame ? p : 255 - p; ink[p] = p % 2 ? 255 : v.black_index; }
       pencil[256] = frame ? 226 : 178;
-      ASSERT_TRUE(test_anim_cel_matches(tl->frames[frame], 0, ink, w, h));
-      ASSERT_TRUE(test_anim_cel_matches(tl->frames[frame], 1, pencil, w, h));
-      ASSERT_EQUAL(tl->frames[frame]->delay_ms, frame ? 83 : 42);
+      ASSERT_TRUE(test_anim_cel_matches(tl->frames[frame].cel, 0, ink, w, h));
+      ASSERT_TRUE(test_anim_cel_matches(tl->frames[frame].cel, 1, pencil, w, h));
+      ASSERT_EQUAL(tl->frames[frame].delay_ms, frame ? 83 : 42);
     }
     free(layers.background); anim_timeline_free(tl); unlink(path);
   }
@@ -219,7 +219,7 @@ static void video_native_roundtrip(const char *directory, pv_mode_t mode, pv_pal
   anim_timeline_t *tl = flc_load_layers(path, &w, &h, palette, &bg, &show, &layers);
   ASSERT_NOT_NULL(tl); ASSERT_EQUAL(w, 3); ASSERT_EQUAL(h, 1);
   ASSERT_EQUAL(tl->frame_count, 2); ASSERT_EQUAL(tl->fps, 24);
-  ASSERT_EQUAL(tl->frames[0]->delay_ms, 42); ASSERT_EQUAL(tl->frames[1]->delay_ms, 83);
+  ASSERT_EQUAL(tl->frames[0].delay_ms, 42); ASSERT_EQUAL(tl->frames[1].delay_ms, 83);
   ASSERT_EQUAL(layers.active, mode == PV_PENCIL ? IE_LAYER_PENCIL : IE_LAYER_COLOR);
   ASSERT_EQUAL(layers.visible, 15); ASSERT_TRUE(show); ASSERT_EQUAL(bg, MAKE_COLOR(255,255,255,255));
   ASSERT_EQUAL(memcmp(palette, v.palette, sizeof(palette)), 0);
@@ -227,12 +227,12 @@ static void video_native_roundtrip(const char *directory, pv_mode_t mode, pv_pal
   for (int i = 0; i < 2; i++) {
     uint8_t expected[3], pencil[3];
     pv_convert(&v, &o, rgb + i * 9, expected, pencil);
-    ASSERT_NULL(tl->frames[i]->data);
-    ASSERT_EQUAL(tl->frames[i]->format, FRAME_FORMAT_RLE_INDEXED);
-    ASSERT_TRUE(test_anim_cel_matches(tl->frames[i], 1, pencil, 3, 1));
-    ASSERT_EQUAL(test_anim_cel_pixel(tl->frames[i], 2, 0, 3, 1), 255);
-    if (mode == PV_PENCIL) { ASSERT_EQUAL(test_anim_cel_pixel(tl->frames[i], 0, 0, 3, 1), 255); }
-    else { ASSERT_TRUE(test_anim_cel_matches(tl->frames[i], 0, expected, 3, 1)); }
+    ASSERT_NULL(tl->frames[i].cel->data);
+    ASSERT_EQUAL(tl->frames[i].cel->format, FRAME_FORMAT_RLE_INDEXED);
+    ASSERT_TRUE(test_anim_cel_matches(tl->frames[i].cel, 1, pencil, 3, 1));
+    ASSERT_EQUAL(test_anim_cel_pixel(tl->frames[i].cel, 2, 0, 3, 1), 255);
+    if (mode == PV_PENCIL) { ASSERT_EQUAL(test_anim_cel_pixel(tl->frames[i].cel, 0, 0, 3, 1), 255); }
+    else { ASSERT_TRUE(test_anim_cel_matches(tl->frames[i].cel, 0, expected, 3, 1)); }
     snprintf(png_path, sizeof(png_path), "%s/frame-%06d.png", frames, i + 1);
     FILE *png_file = fopen(png_path, "rb"); ASSERT_NOT_NULL(png_file);
     uint8_t header[26]; ASSERT_EQUAL(fread(header, 1, sizeof(header), png_file), sizeof(header)); fclose(png_file);
@@ -339,9 +339,9 @@ static void video_external_projects(const char *directory, bool ink_only) {
       png.format = mode == PV_PENCIL ? PNG_FORMAT_GRAY : PNG_FORMAT_RGBA_COLORMAP;
       ASSERT_TRUE(png_image_finish_read(&png, NULL, samples, 0, colormap));
       png_image_free(&png);
-      ASSERT_NULL(tl->frames[i]->data);
-      ASSERT_TRUE(anim_frame_expand_cel(tl->frames[i], mode == PV_PENCIL ? 1 : 0, cel, w, h));
-      stored_bytes += tl->frames[i]->cels_size;
+      ASSERT_NULL(tl->frames[i].cel->data);
+      ASSERT_TRUE(anim_frame_expand_cel(tl->frames[i].cel, mode == PV_PENCIL ? 1 : 0, cel, w, h));
+      stored_bytes += tl->frames[i].cel->cels_size;
       if (mode == PV_PENCIL) {
         for (size_t p = 0; p < n; p++) ASSERT_EQUAL(cel[p], 255 - samples[p]);
       } else {
@@ -358,7 +358,7 @@ static void video_external_projects(const char *directory, bool ink_only) {
         png_image source = {.version = PNG_IMAGE_VERSION};
         ASSERT_TRUE(png_image_begin_read_from_file(&source, path)); source.format = PNG_FORMAT_GRAY;
         ASSERT_TRUE(png_image_finish_read(&source, NULL, samples, 0, NULL)); png_image_free(&source);
-        ASSERT_TRUE(anim_frame_expand_cel(tl->frames[i], 1, cel, w, h));
+        ASSERT_TRUE(anim_frame_expand_cel(tl->frames[i].cel, 1, cel, w, h));
         for (size_t p = 0; p < n; p++) ASSERT_EQUAL(cel[p], 255 - samples[p]);
       }
     }
@@ -387,11 +387,11 @@ static void video_sequence_verify(const char *path, pv_video_t *v) {
   for (int i = 0; i < v->count; i++) {
     ASSERT_EQUAL(fread(rgb, 1, n * 3, v->pixels), n * 3);
     pv_convert(v, &o, rgb, image, pencil);
-    ASSERT_TRUE(test_anim_cel_matches(tl->frames[i], 1, pencil, w, h));
-    ASSERT_STR_EQUAL(tl->frames[i]->name, v->names[i]);
-    ASSERT_EQUAL(tl->frames[i]->delay_ms, v->times[i].delay);
+    ASSERT_TRUE(test_anim_cel_matches(tl->frames[i].cel, 1, pencil, w, h));
+    ASSERT_STR_EQUAL(tl->frames[i].cel->name, v->names[i]);
+    ASSERT_EQUAL(tl->frames[i].delay_ms, v->times[i].delay);
     for (int cel = 0; cel < 3; cel += 2) {
-      memset(image, 255, n); ASSERT_TRUE(test_anim_cel_matches(tl->frames[i], cel, image, w, h));
+      memset(image, 255, n); ASSERT_TRUE(test_anim_cel_matches(tl->frames[i].cel, cel, image, w, h));
     }
     uint8_t header[16]; ASSERT_EQUAL(fread(header, 1, 16, file), 16);
     ASSERT_EQUAL(flc_codec_u16(header + 4), 0xf1fa);

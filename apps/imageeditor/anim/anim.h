@@ -22,7 +22,7 @@ typedef enum {
 } frame_format_t;
 
 // ============================================================
-// Single animation frame
+// Reusable drawing cel
 // ============================================================
 
 typedef struct {
@@ -32,7 +32,7 @@ typedef struct {
   size_t         cels_size;     // encoded byte count; NULL for blank/imported single-plane frames
   frame_format_t format;
   uint32_t       palette[256];  // RGBA entries (for FRAME_FORMAT_INDEXED only)
-  int            delay_ms;      // per-frame display duration in milliseconds
+  uint32_t       id;            // stable identity in the cel bank
   uint32_t       revision;      // bumped on compress; onion-skin cache key
   char           name[32];      // human-readable frame name
 } anim_frame_t;
@@ -41,8 +41,17 @@ typedef struct {
 // Animation timeline
 // ============================================================
 
+typedef struct {
+  anim_frame_t *cel;            // borrowed from the bank
+  int delay_ms;
+  char note[128];
+} anim_exposure_t;
+
 struct anim_timeline_s {
-  anim_frame_t **frames;       // heap array of frame pointers
+  anim_exposure_t *frames;
+  anim_frame_t **bank;          // owns each drawing exactly once
+  int cel_count;
+  uint32_t next_cel_id;
   int            frame_count;
   int            active_frame; // index of the currently active frame
   int            fps;          // default playback speed (default 12)
@@ -87,27 +96,36 @@ bool anim_frame_expand_cel(const anim_frame_t *frame, int cel, uint8_t *pixels, 
 // Timeline CRUD
 // ============================================================
 
-// Allocate and initialise a new timeline with one empty RGBA frame.
+// Allocate a timeline with one bank drawing and one exposure.
 anim_timeline_t *anim_timeline_new(int w, int h);
 
-// Free the timeline and all its frames.
+// Free exposure records and every owned bank drawing.
 void anim_timeline_free(anim_timeline_t *tl);
 
-// Allocate a new frame; pixels start zeroed (transparent black).
-anim_frame_t *anim_frame_new(const char *name, int delay_ms);
+// Allocate an unowned drawing without pixel storage.
+anim_frame_t *anim_frame_new(const char *name);
+anim_frame_t *anim_frame_clone(const anim_frame_t *src);
+anim_timeline_t *anim_timeline_clone(const anim_timeline_t *src);
+int anim_default_delay(int fps);
+anim_frame_t *anim_find_cel(const anim_timeline_t *tl, uint32_t id);
+int anim_cel_uses(const anim_timeline_t *tl, uint32_t id);
+bool anim_bank_add(anim_timeline_t *tl, anim_frame_t *cel);
+bool anim_bank_delete(anim_timeline_t *tl, uint32_t id);
+int anim_timeline_reuse(anim_timeline_t *tl, int after, uint32_t cel_id);
+bool anim_timeline_make_unique(anim_timeline_t *tl, int index);
 
 // Free a single frame.
 void anim_frame_free(anim_frame_t *f);
 
-// Insert a new blank frame after position `after` (-1 = prepend).
+// Insert a blank drawing/exposure after `after` (-1 = prepend).
 // Returns the index of the new frame, or -1 on failure.
 int anim_timeline_insert_frame(anim_timeline_t *tl, int after);
 
-// Duplicate frame at index `idx`.
+// Duplicate an exposure into a new independent drawing.
 // Returns the index of the new frame, or -1 on failure.
 int anim_timeline_duplicate_frame(anim_timeline_t *tl, int idx);
 
-// Delete frame at index `idx`.  Returns false if only one frame remains.
+// Delete an exposure, retaining its bank drawing. Keep at least one exposure.
 bool anim_timeline_delete_frame(anim_timeline_t *tl, int idx);
 
 // Move frame from `from` to `to` (shift frames between them).

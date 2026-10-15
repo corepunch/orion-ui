@@ -3,11 +3,6 @@
 
 const int kBrushSizes[NUM_BRUSH_SIZES] = {0, 1, 2, 3, 4};
 
-static const toolbar_item_t brush_tools[] = {
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_PENCIL, .icon = "ie-pencil", .tooltip = "Pencil"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_BRUSH,  .icon = "ie-brush",  .tooltip = "Brush"},
-  {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_SPRAY,  .icon = "ie-spray",  .tooltip = "Spraypaint"},
-};
 static const toolbar_item_t shape_tools[] = {
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_LINE,         .icon = "ie-line",         .tooltip = "Line"},
   {.type = TOOLBAR_ITEM_BUTTON, .ident = ID_TOOL_RECT,         .icon = "ie-rect",         .tooltip = "Rectangle"},
@@ -17,10 +12,19 @@ static const toolbar_item_t shape_tools[] = {
 };
 
 int imageeditor_tool_group(int tool) {
-  for (int i = 0; i < ARRAY_LEN(brush_tools); i++)
-    if (tool == brush_tools[i].ident) return ID_TOOL_BRUSH;
   for (int i = 0; i < ARRAY_LEN(shape_tools); i++)
     if (tool == shape_tools[i].ident) return ID_TOOL_RECT;
+  return tool;
+}
+
+int imageeditor_layer_tool(int tool) {
+#if IMAGEEDITOR_BW
+  canvas_doc_t *doc = g_app ? g_app->active_doc : NULL;
+  int layer = pencil_has_layers(doc) ? doc->layer.active : IE_LAYER_PENCIL;
+  if (tool == ID_TOOL_PENCIL || tool == ID_TOOL_BRUSH || tool == ID_TOOL_SPRAY ||
+      (layer == IE_LAYER_PENCIL && (tool == ID_TOOL_FILL || tool == ID_TOOL_EYEDROPPER)))
+    return layer == IE_LAYER_PENCIL ? ID_TOOL_PENCIL : ID_TOOL_BRUSH;
+#endif
   return tool;
 }
 
@@ -29,6 +33,17 @@ static void options_slider_tooltip(window_t *win, int ident, const char *name, i
   snprintf(tip, sizeof(tip), "%s: %d", name, value);
   toolbar_button_info_t info = {.mask = TBIF_TOOLTIP, .ident = ident, .tooltip = tip};
   send_message(win, tbSetButtonInfo, 0, &info);
+}
+
+void imageeditor_sync_brush_size(window_t *win) {
+  if (!g_app || !win) return;
+  window_t *slider = get_window_item(win, IE_OPT_SIZE);
+  if (!slider) return;
+  slider_range_t range = {0, NUM_BRUSH_SIZES - 1};
+  send_message(slider, slSetRange, 0, &range);
+  send_message(slider, slSetPos, 0, (void *)(intptr_t)g_app->brush_size);
+  options_slider_tooltip(win, IE_OPT_SIZE, "Size (px)",
+                         2 * kBrushSizes[CLAMP(g_app->brush_size, 0, NUM_BRUSH_SIZES - 1)] + 1);
 }
 
 static int fill_gap_to_index(int gap) {
@@ -56,19 +71,12 @@ void imageeditor_sync_tool_options(void) {
   int group = imageeditor_tool_group(tool);
   toolbar_item_t items[6] = {0};
   int count = 0;
-  if (group == ID_TOOL_BRUSH || group == ID_TOOL_RECT) {
-    const toolbar_item_t *choices = group == ID_TOOL_BRUSH ? brush_tools : shape_tools;
-    int n = group == ID_TOOL_BRUSH ? ARRAY_LEN(brush_tools) : ARRAY_LEN(shape_tools);
-    for (int i = 0; i < n; i++) {
-      items[count] = choices[i];
+  if (group == ID_TOOL_RECT) {
+    for (int i = 0; i < ARRAY_LEN(shape_tools); i++) {
+      items[count] = shape_tools[i];
       items[count].style |= TBSTYLE_CHECKGROUP;
-      items[count++].state = choices[i].ident == tool ? TBSTATE_CHECKED : 0;
+      items[count++].state = shape_tools[i].ident == tool ? TBSTATE_CHECKED : 0;
     }
-  }
-  if (group == ID_TOOL_BRUSH || tool == ID_TOOL_ERASER) {
-    items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SLIDER, .ident = IE_OPT_SIZE,
-                                    .tooltip = "Brush size"};
-  } else if (group == ID_TOOL_RECT) {
     items[count++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = IE_OPT_FILLED,
                                     .icon = "ie-fill", .tooltip = g_app->shape_filled ? "Filled — click for outline" : "Outline — click to fill",
                                     .style = TBSTYLE_CHECK, .state = g_app->shape_filled ? TBSTATE_CHECKED : 0};
@@ -86,25 +94,25 @@ void imageeditor_sync_tool_options(void) {
   }
   window_t *focus = g_ui_runtime.focused;
   send_message(win, tbSetItems, count, items);
-  int slider_id = IE_OPT_SIZE;
+  int slider_id = 0;
   if (tool == ID_TOOL_MAGIC_WAND) slider_id = IE_OPT_SPREAD;
   else if (tool == ID_TOOL_FILL) slider_id = IE_OPT_GAP;
   window_t *slider = get_window_item(win, slider_id);
   if (slider) {
     bool wand = tool == ID_TOOL_MAGIC_WAND, fill = tool == ID_TOOL_FILL;
-    slider_range_t range = {0, wand ? 255 : fill ? 3 : NUM_BRUSH_SIZES - 1};
+    slider_range_t range = {0, wand ? 255 : 3};
     send_message(slider, slSetRange, 0, &range);
-    send_message(slider, slSetPos, 0, (void *)(intptr_t)(wand ? g_app->wand.spread : fill ? fill_gap_to_index(g_app->fill.gap) : g_app->brush_size));
+    send_message(slider, slSetPos, 0, (void *)(intptr_t)(wand ? g_app->wand.spread : fill_gap_to_index(g_app->fill.gap)));
     if (fill) {
       int idx = fill_gap_to_index(g_app->fill.gap);
       char label[32];
       snprintf(label, sizeof(label), "Gap %s", fill_gap_name(idx));
       options_slider_tooltip(win, IE_OPT_GAP, label, fill_gap_from_index(idx));
     } else {
-      options_slider_tooltip(win, slider->id, wand ? "Tolerance" : "Size (px)",
-                             wand ? g_app->wand.spread : 2 * kBrushSizes[CLAMP(g_app->brush_size, 0, NUM_BRUSH_SIZES - 1)] + 1);
+      options_slider_tooltip(win, slider->id, "Tolerance", g_app->wand.spread);
     }
   }
+  show_window(win, count > 0);
   int height = toolbar_effective_item_height(win) + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
   if (dock_is_floating(win)) {
     dock_resize_float(win, PALETTE_WIN_W, height);
@@ -128,7 +136,7 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
       if (g_app && HIWORD(wparam) == btnClicked) {
         int ident = LOWORD(wparam);
         int group = imageeditor_tool_group(g_app->current_tool);
-        if (imageeditor_tool_group(ident) == group && (group == ID_TOOL_BRUSH || group == ID_TOOL_RECT)) {
+        if (imageeditor_tool_group(ident) == group && group == ID_TOOL_RECT) {
           handle_menu_command(ident);
           return true;
         }
@@ -153,10 +161,6 @@ result_t win_tool_options_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
       window_t *slider = lparam;
       int value = (int)send_message(slider, slGetPos, 0, NULL);
       switch (LOWORD(wparam)) {
-        case IE_OPT_SIZE:
-          g_app->brush_size = CLAMP(value, 0, NUM_BRUSH_SIZES - 1);
-          options_slider_tooltip(win, IE_OPT_SIZE, "Size (px)", 2 * kBrushSizes[g_app->brush_size] + 1);
-          break;
         case IE_OPT_SPREAD:
           g_app->wand.spread = CLAMP(value, 0, 255);
           options_slider_tooltip(win, IE_OPT_SPREAD, "Tolerance", g_app->wand.spread);

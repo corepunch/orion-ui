@@ -244,7 +244,7 @@ bool anim_export_gif(canvas_doc_t *doc, const char *path) {
   uint8_t *rgba_tmp = NULL;
 
   for (int fi = 0; fi < tl->frame_count && ok; fi++) {
-    anim_frame_t *frame = tl->frames[fi];
+    anim_frame_t *frame = tl->frames[fi].cel;
 
     // Per-frame palette and index data.
     const uint8_t  *indices    = NULL;
@@ -278,7 +278,7 @@ bool anim_export_gif(canvas_doc_t *doc, const char *path) {
       lct_size = pal_sz;
     }
 
-    int delay_cs = frame->delay_ms / 10;
+    int delay_cs = tl->frames[fi].delay_ms / 10;
     if (delay_cs < 2) delay_cs = 2; // GIF minimum
 
     write_graphic_ctrl(&gw, delay_cs);

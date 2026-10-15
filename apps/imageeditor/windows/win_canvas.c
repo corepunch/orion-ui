@@ -402,7 +402,7 @@ static void canvas_draw_animation_trace(window_t *win,
   for (int step = prev_steps; step >= 1; step--) {
     int idx = doc->anim->active_frame - step;
     if (idx < 0) continue;
-    canvas_draw_onion_slot(state, doc, step - 1, doc->anim->frames[idx],
+    canvas_draw_onion_slot(state, doc, step - 1, doc->anim->frames[idx].cel,
                            IE_ONION_PREV_COLOR,
                            (float)g_app->anim_trace_prev_opacity[step - 1] / 100.0f,
                            canvas_rect);
@@ -412,7 +412,7 @@ static void canvas_draw_animation_trace(window_t *win,
     int idx = doc->anim->active_frame + step;
     if (idx >= doc->anim->frame_count) continue;
     canvas_draw_onion_slot(state, doc, ONION_SKIN_MAX_STEPS + step - 1,
-                           doc->anim->frames[idx], IE_ONION_NEXT_COLOR,
+                           doc->anim->frames[idx].cel, IE_ONION_NEXT_COLOR,
                            (float)g_app->anim_trace_next_opacity[step - 1] / 100.0f,
                            canvas_rect);
   }

@@ -42,7 +42,7 @@ pixel buffer for a checkpoint. A checkpoint contains:
 - Canvas dimensions, background properties, layers, names, visibility, opacity,
   blending, active layer, and mask editing state.
 - Selection mask, bounds, and floating selection pixels and mask.
-- Every animation frame's bytes, format, palette, name, delay, frame order,
+- Every bank drawing's bytes, format, palette and name, stable cel IDs, exposure references, durations, notes and order,
   active frame, playback rate, and loop setting.
 - The indexed document palette, when applicable.
 
@@ -97,10 +97,76 @@ Build the applications with `make build/bin/imageeditor penciltest`. Build tests
 with `make build/bin/test_history_test build/bin/test_penciltest_history_test
 build/bin/test_history_indexed_test`, then run each executable.
 
+## Timing, reusable cels and exposure sheet
+
+`anim_timeline_t.bank` owns drawings once; `frames` is an array of
+`anim_exposure_t` entries that borrow a bank cel and own a duration and a
+127-byte note. Drawings have stable, monotonically allocated IDs. Removing or
+reordering an exposure does not renumber or destroy its drawing. The bank retains
+unused drawings until Delete Unused Cel; deletion rejects any referenced cel.
+New Frame creates a blank drawing and an exposure. Duplicate Frame copies pixels
+into a new independent drawing. Repeat Current Cel inserts another reference;
+Make Cel Unique clones a shared drawing for the active exposure. Editing a shared
+cel updates every reference, while durations and notes stay independent.
+
+The Anim menu exposes Set FPS (Ctrl+Shift+F), Frame Duration (Ctrl+Shift+D), and
+Cel Bank & Exposure Sheet (F6 in Pencil Test). The two tables and their editing
+fields/actions are declared in `imageeditor.orion` and use the `animation`
+datasource. `anim/animation_db.c` supplies temporary presentation records for the
+modal document binding; the registered database instance has process lifetime,
+and releases its row buffers when the dialog closes. Explicit `source="db.table"`
+form bindings override the inherited database through the generic form engine.
+Sheet refresh suppresses its own selection notifications before restoring the
+active row, because TableView selects its first row on refresh.
+
+The sheet edits one row at a time: choose a row, enter a cel ID/duration/note,
+then Apply Row. Choosing a bank cel fills the cel ID for Apply Row or Insert Cel.
+New Drawing creates a blank cel/exposure; Rename Cel updates its shared name.
+Move Up/Down moves complete exposure records. Changes apply immediately through
+named document commands, with Undo/Redo available in the dialog. Block selection,
+copy/paste, range markers, sheet search and sound events remain future work.
+
+Durations are the playback/export source of truth, in integer milliseconds
+(1–65535). FPS (1–1000) sets the default for new exposures as nearest `1000/fps`
+ms (12 FPS starts at 83 ms). Changing FPS can retime every duration by
+`old_fps/new_fps`, rounded to nearest ms with a minimum of 1 ms, preserving holds
+within that granularity. Unchecking Retime keeps existing durations. A retime
+that would exceed 65535 ms is rejected before editing. Frame Duration changes
+the active exposure or all exposures. Both controls stop playback and are
+undoable. GIF export retains its centisecond format granularity.
+
+History clones each bank drawing once and remaps exposure pointers by stable ID;
+it preserves both sharing and unused cels. Resize/crop transforms each bank cel
+once, including unused drawings. The active cel uses its live working layers,
+including when another exposure of that cel is exported. Onion skin follows
+exposure order. Existing independent plane compression remains unchanged.
+
+New Pencil Test saves write `PTL6` planes in bank order, preceded by a `0x7076`
+`PTB1` trailer. Its 16-byte header contains chunk length/type/magic; payload begins
+with little-endian u32 cel count, exposure count and next cel ID. Each bank record
+is a u32 ID plus a 32-byte name. Each exposure record is u32 cel ID, u32 duration,
+and a 128-byte note. The loader validates exact lengths, IDs, references and
+durations before adopting the bank. `PTL6` then contains shared Background followed
+by three independent planes per bank cel. Both PTL5 projects (one drawing per
+exposure) and external FLIC imports still open. New bank projects require this
+version of Pencil Test for editing; their flattened FLC stream remains playable
+by other readers. `PTA1` metadata still describes playback exposures.
+
+`test_penciltest_exposure_test` covers timing validation/retiming/history,
+three-way shared edits, Make Unique, reference-aware deletion, note/duration
+reordering, PTF round trips with unused cels, invalid saved references, resize,
+and real declarative table bindings/action dispatch.
+
+Validation on 2026-10-15: Pencil Test and Image Editor builds succeed; 195 tests
+across 15 targeted suites pass, covering the new features plus history in all
+three pixel modes, UI/layout, layers, persistence, compression, large-project
+memory, video import and generic form-source binding. Native screenshots were
+inspected for the FPS dialog and combined cel-bank/exposure-sheet form.
+
 ## Pencil Test layers and animation files
 
 Pencil Test has four fixed byte planes, composited bottom to top: Background,
-Pencil, Color, FX. Background is shared by all frames. Each `anim_frame_t` stores
+Pencil, Color, FX. Background is shared by all frames. Each bank drawing (`anim_frame_t`) stores
 three independent RLE chunks in `cels` (Color, Pencil, FX), with an encoded
 `cels_size`. Layered frames have no retained flattened `data` copy. Single-plane
 FLIC imports use `FRAME_FORMAT_RLE_INDEXED` until committed into the fixed layers.
@@ -111,11 +177,15 @@ Rendering and export compose against the live shared background,
 rather than trusting a preview from before the background changed.
 
 The tool strip stays one column wide. The four layer buttons are half-size
-(`TOOLBAR_ITEM_FLAG_SMALL`) and pack 2×2 into a single button cell; the document
-color swatches are the same half size, two per row. Pencil hides the color palette and
+(`TOOLBAR_ITEM_FLAG_SMALL`) and pack 2×2 into a single button cell; the floating color toolbar
+uses the same half-size swatches, two per row. Pencil hides the color palette and
 uses a fixed configurable pencil color; painting paper on it erases to transparency. Background,
-Color, and FX expose the document palette, with their last tool/color remembered during
-the session. The canvas shows the active layer and those beneath it in the compositing
+Color, and FX use the solid indexed-color brush and expose the document palette,
+with their last color remembered during the session. Pencil uses only the pencil
+drawing tool. The drawing button follows the active layer; keyboard tool commands
+use the same constraint. Brush size lives in the left toolbar, and drawing tools
+never open the floating options panel. Image Editor exposes pencil, brush, and
+spraypaint as separate toolbar buttons beside the shared size control. The canvas shows the active layer and those beneath it in the compositing
 order: Background alone, Background/Pencil, Background/Pencil/Color, or all four for FX.
 The Background starts as white paper. This editing cutoff does not alter layer visibility
 flags or saved/exported compositions. Color fill uses opaque ink on the Color plane as a boundary.
@@ -125,20 +195,25 @@ persist; there is no decoded-frame cache. Document composition and exports likew
 decode one plane at a time, then release the temporary buffer. Resize transforms
 and recompresses one stored frame at a time; history copies encoded frame bytes.
 Each frame is independently decodable, so arbitrary selection, reordering and
-deletion never need a prior frame. The timeline retains one shared frame timing.
+deletion never need a prior frame. Each exposure carries its own duration in milliseconds; drawing pixels are shared by reference.
 
-The timeline uses numbered frame buttons with selection and drag reordering.
-Document creation, activation and closing synchronize the frame buttons, including
-the initial selected frame. Shortcuts come from `imageeditor.orion`: Left/Right
-(also Page Up/Down) navigate; Home/End select the first/last frame; Space plays or
-pauses at the displayed frame; N adds, D duplicates, and Shift+Delete or
-Shift+Backspace deletes a frame. Stop during playback restores the frame selected
-when playback began. Text-editing controls suppress these shortcuts.
-It does not generate thumbnails or retain preview textures: painting the strip
-never decodes frames, composites full-resolution images over paper, or runs CPU
-downscaling. Indexed canvas layers remain R8 textures resolved/tinted on the GPU.
-`test_penciltest_render_test` checks this boundary and optionally benchmarks
-opening and selecting frames via `PENCILTEST_RENDER_EXAMPLE=/path/to/project.ptf`.
+Pencil Test has no timeline window or numbered frame strip. Its frame controls live
+below the drawing tools in the left sidebar: current frame number, previous/next
+(`<<` / `>>`), play/pause, onion skin, new, duplicate, and delete. The current frame's
+tooltip includes the total frame count. Playback timers target the tool window,
+including when frame delays change. Frame edits, navigation, document activation,
+and closing refresh the controls and their enabled/checked states. Image Editor
+retains its numbered timeline and drag reordering.
+
+Shortcuts come from `imageeditor.orion`: Left/Right (also Page Up/Down) navigate;
+Home/End select the first/last frame; Space plays or pauses at the displayed frame;
+N adds, D duplicates, and Shift+Delete or Shift+Backspace deletes a frame. Stop during
+playback restores the frame selected when playback began. Text-editing controls
+suppress these shortcuts.
+Frame controls never decode frames, composite full-resolution images over paper,
+or retain preview textures. Indexed canvas layers remain R8 textures resolved/tinted
+on the GPU. `test_penciltest_render_test` checks this boundary and optionally
+benchmarks opening and selecting frames via `PENCILTEST_RENDER_EXAMPLE=/path/to/project.ptf`.
 The benchmark stubs drawing/upload calls; its times exclude canvas GPU rendering.
 
 For the 145-frame, 1168×784 example, retained Pencil/Color/FX frame payloads occupy
@@ -163,10 +238,13 @@ with 32 colors arranged as 16 dark/light pairs. App and converter share its read
 projects embed their own palette. No tool swatch is substituted on import.
 Color selection chooses an existing document index without adding colors, scanning
 frames or touching history. Duplicate RGB entries retain their distinct indices.
-Selections are remembered per document and painting layer. All 32 default colors
-fit in the single-column tool strip; larger palettes use pages of 32 defined
-colors, skipping unused/transparent entries. Tool buttons use the theme's small
-control size to leave room for the complete default palette.
+Selections are remembered per document and painting layer. Colors occupy a separate
+floating toolbar aligned to the upper right of the canvas. Its half-size swatches pack two per row; larger palettes use pages of 32
+defined colors, skipping unused/transparent entries. The toolbar hides on Pencil
+and shows on Background, Color, and FX. Framework docking preserves a dragged
+position across layer changes and display resizing. Static drawing and frame
+commands are declared in the `pencil_tools` form in `imageeditor.orion`; C adds the
+runtime layer buttons, current-frame display, and document color swatches.
 
 File > Save / Save As writes `.ptf` (Pencil Test project). It retains an FLC
 playback stream with a COLOR256 palette, compressed flattened frames and a ring frame, followed
@@ -186,7 +264,7 @@ header. It contains one 1084-byte little-endian record per frame: `PTF1` at 0,
 name at 4 (32 bytes), FPS at 36, delay at 40, loop/show-paper at 44/45, paper RGBA
 at 48, and 256 packed RGBA palette entries at 60. Other bytes are reserved.
 
-The new `0x7075` top-level trailer follows it. Its 16-byte header holds total
+The legacy `0x7075` PTL5 top-level trailer follows it in older projects. New saves use the PTB1/PTL6 extension described above. Its 16-byte header holds total
 chunk length at 0, type at 4, `PTL5` at 8, layer count 4 at 12, active layer at
 13, a four-bit visibility mask at 14, and reserved zero at 15. Its payload is
 one shared Background plane, then Color/Pencil/FX planes for every frame in

@@ -62,22 +62,8 @@ static doc_snapshot_t *make_snapshot(const canvas_doc_t *doc) {
   s->ipal = doc->ipal;
 #endif
   if (doc->anim) {
-    s->anim = calloc(1, sizeof(*s->anim));
+    s->anim = anim_timeline_clone(doc->anim);
     if (!s->anim) goto fail;
-    *s->anim = *doc->anim;
-    s->anim->frame_count = 0;
-    s->anim->playing = false;
-    s->anim->frames = calloc(doc->anim->frame_count, sizeof(anim_frame_t *));
-    if (!s->anim->frames) goto fail;
-    for (int i = 0; i < doc->anim->frame_count; i++) {
-      anim_frame_t *frame = calloc(1, sizeof(*frame));
-      if (!frame) goto fail;
-      s->anim->frames[s->anim->frame_count++] = frame;
-      *frame = *doc->anim->frames[i];
-      frame->cels = NULL;
-      if (!copy_bytes(&frame->data, doc->anim->frames[i]->data, frame->data_size) ||
-          !copy_bytes(&frame->cels, doc->anim->frames[i]->cels, frame->cels_size)) goto fail;
-    }
   }
   return snap;
 fail:
@@ -170,13 +156,15 @@ static bool snapshot_matches(const canvas_doc_t *doc, const canvas_doc_t *s) {
   if (doc->anim) {
     anim_timeline_t *a = doc->anim, *b = s->anim;
     if (a->frame_count != b->frame_count || a->active_frame != b->active_frame ||
-        a->fps != b->fps || a->loop != b->loop) return false;
-    for (int i = 0; i < a->frame_count; i++) {
-      anim_frame_t *af = a->frames[i], *bf = b->frames[i];
-      if (af->format != bf->format || af->data_size != bf->data_size ||
+        a->fps != b->fps || a->loop != b->loop || a->cel_count != b->cel_count || a->next_cel_id != b->next_cel_id) return false;
+    for (int i = 0; i < a->frame_count; i++)
+      if (a->frames[i].cel->id != b->frames[i].cel->id || a->frames[i].delay_ms != b->frames[i].delay_ms ||
+          strcmp(a->frames[i].note, b->frames[i].note)) return false;
+    for (int i = 0; i < a->cel_count; i++) {
+      anim_frame_t *af = a->bank[i], *bf = b->bank[i];
+      if (af->id != bf->id || af->format != bf->format || af->data_size != bf->data_size ||
           af->cels_size != bf->cels_size || !bytes_equal(af->cels, bf->cels, af->cels_size) ||
-          af->delay_ms != bf->delay_ms || strcmp(af->name, bf->name) ||
-          memcmp(af->palette, bf->palette, sizeof(af->palette)) ||
+          strcmp(af->name, bf->name) || memcmp(af->palette, bf->palette, sizeof(af->palette)) ||
           !bytes_equal(af->data, bf->data, af->data_size)) return false;
     }
   }

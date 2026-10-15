@@ -14,11 +14,11 @@ static bool pencil_expand_stored_layer(const anim_frame_t *frame, int layer, uin
 bool pencil_read_frame_layer(const canvas_doc_t *doc, int frame, int layer, uint8_t *pixels) {
   if (!pencil_has_layers(doc) || !pixels || !doc->anim || frame < 0 || frame >= doc->anim->frame_count ||
       layer < 0 || layer >= IE_LAYER_COUNT) return false;
-  if (layer == IE_LAYER_BG || frame == doc->anim->active_frame) {
+  if (layer == IE_LAYER_BG || doc->anim->frames[frame].cel == doc->anim->frames[doc->anim->active_frame].cel) {
     memcpy(pixels, doc->layer.stack[layer]->pixels, (size_t)doc->canvas_w * doc->canvas_h);
     return true;
   }
-  return pencil_expand_stored_layer(doc->anim->frames[frame], layer, pixels, doc->canvas_w, doc->canvas_h);
+  return pencil_expand_stored_layer(doc->anim->frames[frame].cel, layer, pixels, doc->canvas_w, doc->canvas_h);
 }
 
 bool pencil_composite_frame(const canvas_doc_t *doc, int frame, uint8_t *pixels) {
@@ -87,7 +87,7 @@ static bool pencil_composite_frame_rgba(const canvas_doc_t *doc, int frame, uint
 
 bool doc_anim_commit(canvas_doc_t *doc) {
   if (!doc || !doc->anim) return false;
-  anim_frame_t *frame = doc->anim->frames[doc->anim->active_frame];
+  anim_frame_t *frame = doc->anim->frames[doc->anim->active_frame].cel;
   if (!pencil_has_layers(doc)) return anim_frame_compress(frame, doc->pixels, doc->canvas_w, doc->canvas_h, IE_FRAME_FORMAT);
   const uint8_t *planes[3];
   for (int i = 0; i < 3; i++) planes[i] = doc->layer.stack[i + 1]->pixels;
@@ -96,7 +96,7 @@ bool doc_anim_commit(canvas_doc_t *doc) {
 
 bool doc_anim_load(canvas_doc_t *doc, int index) {
   if (!doc || !doc->anim || index < 0 || index >= doc->anim->frame_count) return false;
-  anim_frame_t *frame = doc->anim->frames[index];
+  anim_frame_t *frame = doc->anim->frames[index].cel;
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   if (pencil_has_layers(doc)) {
     uint8_t *decoded = malloc(3 * n);
@@ -130,7 +130,7 @@ bool doc_anim_rgba(const canvas_doc_t *doc, int index, uint8_t *rgba) {
     uint8_t *pixels = malloc(n);
     if (!pixels) return false;
     ok = index == doc->anim->active_frame ? (memcpy(pixels, doc->pixels, n), true) :
-         anim_frame_expand(doc->anim->frames[index], pixels, doc->canvas_w, doc->canvas_h);
+         anim_frame_expand(doc->anim->frames[index].cel, pixels, doc->canvas_w, doc->canvas_h);
     if (ok) for (size_t p = 0; p < n; p++) {
       uint32_t c = doc->ipal.entries[pixels[p]];
       rgba[4*p] = COLOR_R(c); rgba[4*p+1] = COLOR_G(c); rgba[4*p+2] = COLOR_B(c);
@@ -141,6 +141,6 @@ bool doc_anim_rgba(const canvas_doc_t *doc, int index, uint8_t *rgba) {
   if (ok) canvas_composite_over_bg(doc, rgba);
   return ok;
 #else
-  return anim_frame_expand(doc->anim->frames[index], rgba, doc->canvas_w, doc->canvas_h);
+  return anim_frame_expand(doc->anim->frames[index].cel, rgba, doc->canvas_w, doc->canvas_h);
 #endif
 }

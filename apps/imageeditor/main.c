@@ -62,8 +62,8 @@ static void create_app_windows(hinstance_t hinstance) {
 #if !IMAGEEDITOR_BW
   create_color_palette_window();
   create_layers_window();
-#endif
   create_timeline_window();
+#endif
 }
 
 // ============================================================
@@ -130,7 +130,6 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
 #endif
 
   g_app->current_tool = ID_TOOL_PENCIL;
-  g_app->brush_tool = ID_TOOL_PENCIL;
   g_app->shape_tool = ID_TOOL_RECT;
   g_app->hinstance    = hinstance;
 #if IMAGEEDITOR_BW

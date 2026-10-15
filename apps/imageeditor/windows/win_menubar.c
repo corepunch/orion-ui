@@ -168,6 +168,10 @@ window_t *create_tool_palette_window(void) {
   }
   window_t *tp = app_chrome_add_toolbar(g_app->chrome_win, TOOLBAR_DOCK_LEFT, win_tool_palette_proc);
   g_app->tool_win = tp;
+#if IMAGEEDITOR_BW
+  create_pencil_color_toolbar();
+  imageeditor_sync_frame_controls();
+#endif
   return tp;
 }
 
@@ -192,6 +196,9 @@ window_t *create_tool_options_window(void) {
 }
 
 window_t *create_color_palette_window(void) {
+#if IMAGEEDITOR_BW
+  return create_pencil_color_toolbar();
+#else
   window_t *cp = create_window(
       "Colors",
       WINDOW_ALWAYSONTOP | WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE,
@@ -200,6 +207,7 @@ window_t *create_color_palette_window(void) {
   show_window(cp, true);
   g_app->color_win = cp;
   return cp;
+#endif
 }
 
 result_t main_toolbar_proc(window_t *win, uint32_t msg,
@@ -366,7 +374,7 @@ bool imageeditor_open_file_path(const char *path) {
     px = malloc((size_t)img_w * img_h);
     if (px) {
       if (loaded_layers.background) memset(px, 255, (size_t)img_w * img_h);
-      else if (!anim_frame_expand_indices(loaded_anim->frames[0], px, img_w, img_h)) { free(px); px = NULL; }
+      else if (!anim_frame_expand_indices(loaded_anim->frames[0].cel, px, img_w, img_h)) { free(px); px = NULL; }
     }
   } else px = image_io_load(path, &img_w, &img_h, pal, &pal_count);
 #else
@@ -782,20 +790,24 @@ void handle_menu_command(uint16_t id) {
     case ID_TOOL_TEXT:
     case ID_TOOL_MAGIC_WAND:
     case ID_TOOL_MOVE: {
+      id = imageeditor_layer_tool(id);
       int old_tool = g_app->current_tool;
       if (doc && old_tool != (int)id && imageeditor_finish_canvas_interaction(doc, old_tool)) {
         invalidate_window(doc->canvas_win);
       }
       g_app->current_tool = id;
       int group = imageeditor_tool_group(id);
-      if (group == ID_TOOL_BRUSH) g_app->brush_tool = id;
       if (group == ID_TOOL_RECT) g_app->shape_tool = id;
       IE_DEBUG("tool_switch doc=%p %s -> %s",
                (void *)doc,
                tool_id_name(old_tool),
                tool_id_name((int)id));
-      if (g_app->tool_win)
-        send_message(g_app->tool_win, tbCheckButton, (uint32_t)group, (void *)(intptr_t)1);
+      toolbar_state_t *tools = window_toolbar_state(g_app->tool_win);
+      for (int i = 0; tools && i < tools->item_count; i++)
+        if (tools->items[i].ident == group) {
+          send_message(g_app->tool_win, tbCheckButton, (uint32_t)group, (void *)(intptr_t)1);
+          break;
+        }
       imageeditor_sync_tool_options();
       break;
     }
@@ -809,7 +821,6 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
-#if !IMAGEEDITOR_BW
     case ID_WINDOW_COLORS:
       if (g_app->color_win) {
         show_window(g_app->color_win, true);
@@ -818,6 +829,7 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
+#if !IMAGEEDITOR_BW
     case ID_WINDOW_LAYERS:
       if (g_app->layers_win) {
         show_window(g_app->layers_win, true);
@@ -920,6 +932,15 @@ void handle_menu_command(uint16_t id) {
       }
       break;
 
+    case ID_ANIM_SET_FPS: show_animation_timing(doc && doc->win ? doc->win : g_app->menubar_win, doc, false); break;
+    case ID_ANIM_FRAME_DURATION: show_animation_timing(doc && doc->win ? doc->win : g_app->menubar_win, doc, true); break;
+#if IMAGEEDITOR_BW
+    case ID_ANIM_EXPOSURE_SHEET: show_exposure_sheet(doc && doc->win ? doc->win : g_app->menubar_win, doc); break;
+    case ID_ANIM_REUSE_CEL:
+      if (doc && doc->anim) cmd_frame_reuse(doc, doc->anim->frames[doc->anim->active_frame].cel->id);
+      break;
+    case ID_ANIM_MAKE_UNIQUE: cmd_frame_unique(doc); break;
+#endif
     case ID_ANIM_NEW_FRAME:       cmd_frame_add(doc, false); break;
     case ID_ANIM_DUPLICATE_FRAME: cmd_frame_add(doc, true);  break;
     case ID_ANIM_DELETE_FRAME:    cmd_frame_delete(doc);     break;
@@ -950,22 +971,27 @@ void handle_menu_command(uint16_t id) {
         break;
       }
       if (doc && doc->anim && !doc->anim->playing) {
-        // Ensure the timeline window exists; recreate it if it was closed.
-        if (g_app && !g_app->timeline_win)
+        if (!imageeditor_animation_timer_window()) {
+#if IMAGEEDITOR_BW
+          create_tool_palette_window();
+#else
           create_timeline_window();
-        if (!g_app || !g_app->timeline_win) break;
+#endif
+        }
+        window_t *timer_window = imageeditor_animation_timer_window();
+        if (!timer_window) break;
         // Start a repeating timer; interval = frame period at current FPS.
         // Default to 12 fps (≈83 ms) if fps is 0 or unset.
         static const uint32_t kDefaultFrameIntervalMs = 83u; // ≈12 fps
         uint32_t interval = (doc->anim->fps > 0)
                             ? (uint32_t)(1000 / doc->anim->fps)
                             : kDefaultFrameIntervalMs;
-        int delay = doc->anim->frames[doc->anim->active_frame]->delay_ms;
+        int delay = doc->anim->frames[doc->anim->active_frame].delay_ms;
         if (delay > 0) interval = (uint32_t)delay;
         if (g_app->anim_timer_id)
           axCancelTimer(g_app->anim_timer_id);
         g_app->anim_timer_id = axSetTimer(
-            g_app->timeline_win, interval, NULL, (bool_t)1);
+            timer_window, interval, NULL, (bool_t)1);
         if (g_app->anim_timer_id) {
           if (!doc_anim_commit(doc)) {
             axCancelTimer(g_app->anim_timer_id);

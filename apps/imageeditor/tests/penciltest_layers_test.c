@@ -13,7 +13,7 @@ static char layer_test_dir[512];
 static canvas_doc_t *layers_setup(void) {
   test_env_init();
   g_app = calloc(1, sizeof(*g_app));
-  g_app->current_tool = g_app->brush_tool = ID_TOOL_PENCIL;
+  g_app->current_tool = ID_TOOL_PENCIL;
   g_app->fg_color = IE_INK_COLOR;
   create_tool_palette_window();
   return create_document(NULL, 16, 16);
@@ -32,7 +32,7 @@ static bool layer_pixel(canvas_doc_t *doc, int layer, int x, int y, int swatch) 
 }
 
 static int color_button_count(void) {
-  toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
+  toolbar_state_t *tb = window_toolbar_state(g_app->color_win);
   int count = 0;
   for (int i = 0; i < tb->item_count; i++)
     if (tb->items[i].ident >= IE_PENCIL_PALETTE_BASE && tb->items[i].ident < IE_PENCIL_PALETTE_BASE + IE_PENCIL_COLORS) count++;
@@ -46,6 +46,7 @@ static void test_layer_sidebar(void) {
   ASSERT_EQUAL(doc->layer.count, 4);
   ASSERT_EQUAL(doc->layer.active, IE_LAYER_PENCIL);
   ASSERT_EQUAL(color_button_count(), 0);
+  ASSERT_FALSE(window_has_state(g_app->color_win, WINDOW_STATE_VISIBLE));
   const int order[] = {IE_LAYER_BG, IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
   for (int i = 0; i < 4; i++) {
     toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
@@ -59,6 +60,7 @@ static void test_layer_sidebar(void) {
     ASSERT_EQUAL(doc->layer.active, order[i]);
     ASSERT_TRUE(doc->pixels == doc->layer.stack[order[i]]->pixels);
     ASSERT_EQUAL(color_button_count(), order[i] == IE_LAYER_PENCIL ? 0 : IE_PENCIL_COLORS);
+    ASSERT_EQUAL(window_has_state(g_app->color_win, WINDOW_STATE_VISIBLE), order[i] != IE_LAYER_PENCIL);
   }
   ASSERT_TRUE(cmd_pencil_color(doc, 12));
   ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_PENCIL));
@@ -148,8 +150,8 @@ static void test_layer_resize(void) {
   cmd_frame_add(doc, true);
   cmd_resize_image(doc, 8, 8, IMAGE_RESIZE_NEAREST);
   uint8_t resized[8 * 8];
-  ASSERT_TRUE(anim_frame_expand_cel(doc->anim->frames[0], 1, resized, 8, 8));
-  ASSERT_TRUE(anim_frame_expand_cel(doc->anim->frames[1], 1, resized, 8, 8));
+  ASSERT_TRUE(anim_frame_expand_cel(doc->anim->frames[0].cel, 1, resized, 8, 8));
+  ASSERT_TRUE(anim_frame_expand_cel(doc->anim->frames[1].cel, 1, resized, 8, 8));
   cmd_undo(doc);
   for (int i = 0; i < 4; i++) ASSERT_EQUAL(doc->layer.stack[i]->pixels[4 * 16 + 4], i == IE_LAYER_PENCIL ? 255 : i + 3);
   ASSERT_TRUE(cmd_frame_select(doc, 0));
@@ -183,10 +185,10 @@ static void test_layer_project(void) {
   ASSERT_EQUAL(again->pixels[12], 16);
   uint8_t composite[256];
   ASSERT_TRUE(pencil_composite_frame(again, 0, composite)); ASSERT_EQUAL(composite[10], 14);
-  again->anim->frames[0]->cels_size = 1;
+  again->anim->frames[0].cel->cels_size = 1;
   ASSERT_FALSE(image_io_save(path, again));
   ASSERT_TRUE(imageeditor_open_file_path(path));
-  ASSERT_EQUAL(test_anim_cel_pixel(g_app->active_doc->anim->frames[0], 1, 2, 16, 16), 255);
+  ASSERT_EQUAL(test_anim_cel_pixel(g_app->active_doc->anim->frames[0].cel, 1, 2, 16, 16), 255);
   FILE *fp = fopen(path, "r+b"); ASSERT_NOT_NULL(fp);
   ASSERT_EQUAL(fseek(fp, 128, SEEK_SET), 0);
   uint8_t header[16];
@@ -195,7 +197,7 @@ static void test_layer_project(void) {
     if (flc_codec_u16(header + 4) == 0x7075) break;
     ASSERT_EQUAL(fseek(fp, flc_codec_u32(header) - 16, SEEK_CUR), 0);
   }
-  ASSERT_EQUAL(memcmp(header + 8, "PTL5", 4), 0);
+  ASSERT_EQUAL(memcmp(header + 8, "PTL6", 4), 0);
   header[11] = '9';
   ASSERT_EQUAL(fseek(fp, -16, SEEK_CUR), 0);
   ASSERT_EQUAL(fwrite(header, 1, 16, fp), 16); fclose(fp);

@@ -115,8 +115,8 @@
       <menu name="window" label="Window" dynamic="true">
         <item name="tools" label="Tools" />
         <item name="colors" label="Colors" />
-        <item name="layers" label="Layers" />
-        <item name="timeline" label="Frames" />
+        <item name="layers" label="Layers" if="!IMAGEEDITOR_BW" />
+        <item name="timeline" label="Frames" if="!IMAGEEDITOR_BW" />
         <Separator />
       </menu>
 
@@ -139,7 +139,12 @@
         <item name="export_gif" label="Export GIF..." />
         <item name="export_apng" label="Export APNG..." />
         <item name="export_spritesheet" label="Export Sprite Sheet..." />
-        <item name="set_fps" label="Set FPS..." />
+        <item name="set_fps" label="Set FPS..." shortcut="Ctrl+Shift+F" />
+        <item name="frame_duration" label="Frame Duration..." shortcut="Ctrl+Shift+D" />
+        <Separator />
+        <item name="exposure_sheet" label="Cel Bank &amp; Exposure Sheet..." shortcut="F6" if="IMAGEEDITOR_BW" />
+        <item name="reuse_cel" label="Repeat Current Cel" if="IMAGEEDITOR_BW" />
+        <item name="make_unique" label="Make Cel Unique" if="IMAGEEDITOR_BW" />
       </menu>
 
       <menu name="help" label="Help">
@@ -191,7 +196,146 @@
         <Button name="mask_only" command="view.mask_only" icon="square-dashed" flags="BUTTON_PUSHLIKE" text="Mask" tooltip="Toggle mask view" />
     </toolbar>
 
+    <databases>
+      <database name="animation" class="animation_db">
+        <table name="cel_bank">
+          <field name="id" type="integer" key="YES" />
+          <field name="cel" type="integer" />
+          <field name="delay" type="integer" />
+          <field name="uses" type="integer" />
+          <field name="name" type="string" length="32" />
+          <field name="note" type="string" length="128" />
+        </table>
+        <table name="exposure_sheet">
+          <field name="id" type="integer" key="YES" />
+          <field name="cel" type="integer" />
+          <field name="delay" type="integer" />
+          <field name="uses" type="integer" />
+          <field name="name" type="string" length="32" />
+          <field name="note" type="string" length="128" />
+        </table>
+      </database>
+    </databases>
+
     <forms>
+      <form name="animation_fps" title="Animation Speed" width="300" spacing="8" padding="8">
+        <GridView name="fields" spacing="4">
+          <Column name="labels" width="auto"><Label name="label" text="Frames per second (1–1000):" /></Column>
+          <Column name="inputs"><TextBox name="value" text="" /></Column>
+        </GridView>
+        <CheckBox name="scope" text="Retime existing exposures (preserve holds)" />
+        <Label name="error" text="" />
+        <StackView name="actions" orientation="horizontal" spacing="6">
+          <Space /><Button name="ok" text="OK" flags="BUTTON_DEFAULT" /><Button name="cancel" text="Cancel" role="cancel" />
+        </StackView>
+      </form>
+
+      <form name="frame_duration" title="Frame Duration" width="300" spacing="8" padding="8">
+        <GridView name="fields" spacing="4">
+          <Column name="labels" width="auto"><Label name="label" text="Milliseconds (1–65535):" /></Column>
+          <Column name="inputs"><TextBox name="value" text="" /></Column>
+        </GridView>
+        <CheckBox name="scope" text="Apply to all exposures" />
+        <Label name="error" text="" />
+        <StackView name="actions" orientation="horizontal" spacing="6">
+          <Space /><Button name="ok" text="OK" flags="BUTTON_DEFAULT" /><Button name="cancel" text="Cancel" role="cancel" />
+        </StackView>
+      </form>
+
+      <form name="exposure_sheet" title="Cel Bank &amp; Exposure Sheet" width="650" height="440" spacing="6" padding="8">
+        <Label name="summary" text="" />
+        <GridView name="tables" spacing="8" flags="WINDOW_FLEXSPACE">
+          <Column name="bank_column">
+            <Label text="Drawing cels" />
+            <TableView name="bank" source="animation.cel_bank" flags="WINDOW_NOTITLE | WINDOW_VSCROLL | WINDOW_FLEXSPACE">
+              <Column field="cel" title="Cel" width="42" />
+              <Column field="name" title="Drawing" width="0" />
+              <Column field="uses" title="Uses" width="42" />
+            </TableView>
+          </Column>
+          <Column name="sheet_column">
+            <Label text="Exposure sheet" />
+            <TableView name="sheet" source="animation.exposure_sheet" flags="WINDOW_NOTITLE | WINDOW_VSCROLL | WINDOW_FLEXSPACE">
+              <Column field="id" title="Row" width="42" />
+              <Column field="cel" title="Cel" width="42" />
+              <Column field="delay" title="ms" width="55" />
+              <Column field="note" title="Note" width="0" />
+            </TableView>
+          </Column>
+        </GridView>
+        <GridView name="fields" spacing="4">
+          <Column name="labels" width="auto">
+            <Label text="Cel ID:" /><Label text="Duration (ms):" /><Label text="Exposure note:" /><Label text="Cel name:" />
+          </Column>
+          <Column name="inputs">
+            <TextBox name="cel" /><TextBox name="duration" /><TextBox name="note" /><TextBox name="name" />
+          </Column>
+        </GridView>
+        <StackView name="row_actions" orientation="horizontal" spacing="4">
+          <Button name="apply" text="Apply Row" /><Button name="insert" text="Insert Cel" />
+          <Button name="unique" text="Make Unique" /><Button name="remove" text="Remove Row" />
+          <Button name="up" text="Move Up" /><Button name="down" text="Move Down" />
+        </StackView>
+        <StackView name="bank_actions" orientation="horizontal" spacing="4">
+          <Button name="new" text="New Drawing" /><Button name="rename" text="Rename Cel" />
+          <Button name="delete_cel" text="Delete Unused Cel" />
+          <Space /><Button name="undo" text="Undo" /><Button name="redo" text="Redo" />
+        </StackView>
+        <Label name="status" text="Select a row to edit; choose a cel to reuse. Changes apply immediately." />
+        <StackView name="actions" orientation="horizontal" spacing="6">
+          <Space /><Button name="close" text="Close" role="cancel" />
+        </StackView>
+      </form>
+
+
+      <form name="image_tools" title="Tools" width="40" flags="WINDOW_NOTITLE | WINDOW_NORESIZE" spacing="0" padding="0">
+        <Toolbar>
+          <Button name="select" command="tool.select" icon="ie-select" tooltip="Select" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="move" command="tool.move" icon="ie-move" tooltip="Move" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="wand" command="tool.magic_wand" icon="ie-magic-wand" tooltip="Magic Wand" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="crop" command="tool.crop" icon="ie-crop" tooltip="Crop" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="hand" command="tool.hand" icon="ie-hand" tooltip="Hand" flags="TBSTYLE_CHECKGROUP" if="!defined(AX_PLATFORM_IOS)" />
+          <Button name="eyedropper" command="tool.eyedropper" icon="ie-eyedropper" tooltip="Eyedropper" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="zoom" command="tool.zoom" icon="ie-zoom-in" tooltip="Zoom" flags="TBSTYLE_CHECKGROUP" if="!defined(AX_PLATFORM_IOS)" />
+          <Button name="pencil" command="tool.pencil" icon="ie-pencil" tooltip="Pencil" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="brush" command="tool.brush" icon="ie-brush" tooltip="Brush" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="spray" command="tool.spray" icon="ie-spray" tooltip="Spraypaint" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="fill" command="tool.fill" icon="ie-fill" tooltip="Fill" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="eraser" command="tool.eraser" icon="ie-eraser" tooltip="Eraser" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="text" command="tool.text" icon="ie-text" tooltip="Text" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="shapes" command="tool.rect" icon="ie-rect" tooltip="Shapes" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="magnifier" command="tool.magnifier" icon="ie-zoom-out" tooltip="Magnifier" flags="TBSTYLE_CHECKGROUP" if="!defined(AX_PLATFORM_IOS)" />
+          <Label name="swatch" tooltip="Foreground / background colors" />
+          <Separator />
+          <Slider name="size" command="pencil_tools.size" tooltip="Brush size" />
+        </Toolbar>
+      </form>
+
+      <form name="pencil_tools" title="Tools" width="40" flags="WINDOW_NOTITLE | WINDOW_NORESIZE" spacing="0" padding="0">
+        <Toolbar>
+          <Button name="pencil" command="tool.pencil" icon="ie-pencil" tooltip="Pencil" flags="TBSTYLE_CHECKGROUP" control-size="small" />
+          <Button name="brush" command="tool.brush" icon="phosphor-circle-fill" tooltip="Brush" flags="TBSTYLE_CHECKGROUP" control-size="small" />
+          <Button name="eraser" command="tool.eraser" icon="ie-eraser" tooltip="Eraser" flags="TBSTYLE_CHECKGROUP" control-size="small" />
+          <Button name="fill" command="tool.fill" icon="ie-fill" tooltip="Fill" flags="TBSTYLE_CHECKGROUP" control-size="small" />
+          <Button name="eyedropper" command="tool.eyedropper" icon="ie-eyedropper" tooltip="Eyedropper" flags="TBSTYLE_CHECKGROUP" control-size="small" />
+          <Button name="select" command="tool.select" icon="ie-select" tooltip="Select" flags="TBSTYLE_CHECKGROUP" control-size="small" />
+          <Button name="move" command="tool.move" icon="ie-move" tooltip="Move" flags="TBSTYLE_CHECKGROUP" control-size="small" />
+          <Button name="hand" command="tool.hand" icon="ie-hand" tooltip="Hand" flags="TBSTYLE_CHECKGROUP" control-size="small" if="!defined(AX_PLATFORM_IOS)" />
+          <Separator />
+          <Slider name="size" w="2 * TOOL_PALETTE_BTN_SIZE + TOOLBAR_SPACING" tooltip="Brush size" />
+          <Separator />
+          <Label name="frame" text="1" w="TOOL_PALETTE_BTN_SIZE" tooltip="Current frame" />
+          <Button name="prev" command="anim.prev_frame" icon="fast-arrow-left" tooltip="Previous frame (Left)" control-size="small" />
+          <Button name="next" command="anim.next_frame" icon="fast-arrow-right" tooltip="Next frame (Right)" control-size="small" />
+          <Button name="play" command="anim.play" icon="play" checked-icon="phosphor-pause-fill" tooltip="Play / pause (Space)" control-size="small" />
+          <Button name="trace" command="anim.trace" icon="eye" tooltip="Onion skin" control-size="small" />
+          <Separator />
+          <Button name="new" command="anim.new_frame" icon="plus" tooltip="New frame (N)" control-size="small" />
+          <Button name="duplicate" command="anim.duplicate_frame" icon="copy" tooltip="Duplicate frame (D)" control-size="small" />
+          <Button name="delete" command="anim.delete_frame" icon="trash" tooltip="Delete frame (Shift+Delete / Shift+Backspace)" control-size="small" />
+        </Toolbar>
+      </form>
+
       <form name="new_image" title="New Image" width="180" spacing="8" padding="8">
         <GridView name="fields" spacing="4">
           <Column name="labels" width="auto">

@@ -42,16 +42,16 @@ static void memory_long_animation(void) {
   for (int i = 0; i < 150; i++) {
     if (i) ASSERT_EQUAL(anim_timeline_insert_frame(doc->anim, i - 1), i);
     memset(coverage, 0, n); coverage[i * 37] = i + 1;
-    ASSERT_TRUE(anim_frame_pack_cels(doc->anim->frames[i], planes, 320, 200));
-    ASSERT_TRUE(memory_independent(doc->anim->frames[i]));
-    bytes += doc->anim->frames[i]->cels_size;
+    ASSERT_TRUE(anim_frame_pack_cels(doc->anim->frames[i].cel, planes, 320, 200));
+    ASSERT_TRUE(memory_independent(doc->anim->frames[i].cel));
+    bytes += doc->anim->frames[i].cel->cels_size;
   }
   ASSERT_TRUE(bytes < 150 * 3 * n / 20);
   for (int i = 0; i < 150; i++) {
     int index = i * 73 % 150;
     ASSERT_TRUE(doc_anim_load(doc, index));
     ASSERT_EQUAL(doc->pixels[index * 37], index + 1);
-    ASSERT_TRUE(memory_independent(doc->anim->frames[index]));
+    ASSERT_TRUE(memory_independent(doc->anim->frames[index].cel));
   }
   printf("\n    150 frames: %zu encoded bytes, %zu raw cel bytes\n", bytes, 150 * 3 * n);
   free(coverage); free(clear); close_document(doc); PASS();
@@ -70,7 +70,7 @@ static void memory_edit_history(void) {
   ASSERT_TRUE(cmd_frame_select(doc, 1)); ASSERT_EQUAL(doc->pixels[9], 17);
   cmd_resize_canvas(doc, 80, 60); ASSERT_EQUAL(doc->pixels[9], 17);
   ASSERT_TRUE(cmd_frame_select(doc, 0)); ASSERT_EQUAL(doc->pixels[9], 231);
-  for (int i = 0; i < 2; i++) ASSERT_TRUE(memory_independent(doc->anim->frames[i]));
+  for (int i = 0; i < 2; i++) ASSERT_TRUE(memory_independent(doc->anim->frames[i].cel));
   close_document(doc); PASS();
 }
 
@@ -86,8 +86,8 @@ static void memory_large_project(void) {
   int w, h; uint32_t palette[256], background; bool show;
   anim_timeline_t *loaded = flc_load(path, &w, &h, palette, &background, &show);
   ASSERT_NOT_NULL(loaded); ASSERT_EQUAL(loaded->frame_count, 180);
-  ASSERT_TRUE(memory_independent(loaded->frames[179]));
-  ASSERT_EQUAL(test_anim_cel_pixel(loaded->frames[179], 1, 0, w, h), 64);
+  ASSERT_TRUE(memory_independent(loaded->frames[179].cel));
+  ASSERT_EQUAL(test_anim_cel_pixel(loaded->frames[179].cel, 1, 0, w, h), 64);
   anim_timeline_free(loaded); close_document(doc); unlink(path); PASS();
 }
 
@@ -95,7 +95,7 @@ static void memory_onion(void) {
   TEST("onion textures decode temporary coverage without changing stored bytes or working layers");
   canvas_doc_t *doc = create_document(NULL, 64, 48); ASSERT_NOT_NULL(doc);
   doc->pixels[11] = 93; cmd_frame_add(doc, false); doc->pixels[11] = 201;
-  anim_frame_t *previous = doc->anim->frames[0];
+  anim_frame_t *previous = doc->anim->frames[0].cel;
   uint8_t *stored = malloc(previous->cels_size); ASSERT_NOT_NULL(stored);
   memcpy(stored, previous->cels, previous->cels_size);
   uint32_t texture = 0;
@@ -122,8 +122,8 @@ static void memory_example(const char *path) {
   canvas_doc_t *doc = g_app->active_doc;
   size_t bytes = 0, n = (size_t)doc->canvas_w * doc->canvas_h;
   for (int i = 0; i < doc->anim->frame_count; i++) {
-    ASSERT_TRUE(memory_independent(doc->anim->frames[i]));
-    bytes += doc->anim->frames[i]->cels_size;
+    ASSERT_TRUE(memory_independent(doc->anim->frames[i].cel));
+    bytes += doc->anim->frames[i].cel->cels_size;
   }
   ASSERT_TRUE(bytes < n * 3 * doc->anim->frame_count / 2);
   printf("\n    %d frames: RLE storage %.2f MiB, working layers %.2f MiB, previous raw frame storage %.2f MiB\n",

@@ -39,37 +39,36 @@ static void render_sprite(int tex, irect16_t rect, const frect_t *uv, uint32_t c
 #define draw_indexed_rect render_indexed
 #define draw_sprite_region render_sprite
 
-static void render_timeline(void) {
-  toolbar_state_t *tb = window_toolbar_state(g_app->timeline_win);
-  for (int i = 0; i < tb->item_count; i++) if (tb->items[i].type == TOOLBAR_ITEM_CUSTOM) {
+static void render_frame_controls(void) {
+  toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
+  for (int i = 0; i < tb->item_count; i++) if (tb->items[i].ident == ID_PENCIL_TOOLS_FRAME) {
     toolbar_draw_item_t draw = {tb->item_rects[i], 0, i};
-    g_app->timeline_win->proc(g_app->timeline_win, tbDrawItem, tb->items[i].ident, &draw);
+    g_app->tool_win->proc(g_app->tool_win, tbDrawItem, tb->items[i].ident, &draw);
   }
 }
 
 static void test_indexed_render(void) {
-  TEST("indexed canvas uploads byte planes; timeline paints numbers without RGBA previews");
+  TEST("indexed canvas uploads byte planes; sidebar paints the current frame without RGBA previews");
   canvas_doc_t *doc = create_document(NULL, 64, 48); ASSERT_NOT_NULL(doc);
-  toolbar_state_t *tb = window_toolbar_state(g_app->timeline_win);
+  toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
   int frames = 0;
-  for (int i = 0; i < tb->item_count; i++) if (tb->items[i].type == TOOLBAR_ITEM_CUSTOM) {
+  for (int i = 0; i < tb->item_count; i++) if (tb->items[i].ident == ID_PENCIL_TOOLS_FRAME) {
     frames++;
-    ASSERT_TRUE(tb->items[i].state & TBSTATE_CHECKED);
     ASSERT_TRUE(tb->item_rects[i].w > 0);
   }
   ASSERT_EQUAL(frames, 1);
-  render_timeline();
+  render_frame_controls();
   ASSERT_EQUAL(frame_labels, 1);
   doc->pixels[3] = 128;
   for (int i = 1; i < 20; i++) cmd_frame_add(doc, true);
   r8_uploads = color_uploads = frame_labels = 0;
   canvas_upload(doc);
   ASSERT_EQUAL(r8_uploads, 4); ASSERT_EQUAL(color_uploads, 0);
-  render_timeline();
+  render_frame_controls();
   ASSERT_TRUE(frame_labels > 0); ASSERT_EQUAL(color_uploads, 0);
   for (int i = 0; i < 20; i++) {
     ASSERT_TRUE(cmd_frame_select(doc, i));
-    render_timeline();
+    render_frame_controls();
     ASSERT_EQUAL(doc->pixels[3], 128);
   }
   ASSERT_EQUAL(color_uploads, 0);
@@ -155,16 +154,16 @@ static void benchmark_example(const char *path) {
   clock_t start = clock();
   ASSERT_TRUE(imageeditor_open_file_path(path));
   canvas_doc_t *doc = g_app->active_doc;
-  render_timeline();
+  render_frame_controls();
   double open_seconds = (double)(clock() - start) / CLOCKS_PER_SEC;
   start = clock();
   for (int i = 0; i < 100; i++) {
     ASSERT_TRUE(cmd_frame_select(doc, (i * 73) % doc->anim->frame_count));
-    render_timeline();
+    render_frame_controls();
   }
   double switch_ms = (double)(clock() - start) * 1000 / CLOCKS_PER_SEC / 100;
   ASSERT_EQUAL(color_uploads, 0);
-  printf("\n    %d frames at %dx%d: open %.3f s; select and timeline paint %.3f ms/frame\n",
+  printf("\n    %d frames at %dx%d: open %.3f s; select and sidebar paint %.3f ms/frame\n",
          doc->anim->frame_count, doc->canvas_w, doc->canvas_h, open_seconds, switch_ms);
   close_document(doc); PASS();
 }
@@ -173,10 +172,9 @@ int main(void) {
   TEST_START("Penciltest render work");
   test_env_init(); g_app = calloc(1, sizeof(*g_app));
   if (!g_app) return 1;
-  g_app->current_tool = g_app->brush_tool = ID_TOOL_PENCIL;
+  g_app->current_tool = ID_TOOL_PENCIL;
   create_tool_palette_window();
   resize_window(g_app->chrome_win, 1080, 758 - window_screen_y(g_app->chrome_win));
-  create_timeline_window();
   test_indexed_render();
   test_layer_view();
   test_frame_shortcuts();

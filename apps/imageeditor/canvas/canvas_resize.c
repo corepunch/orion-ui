@@ -186,9 +186,9 @@ static void layer_replace_pixels(layer_t *lay, uint8_t *pixels) {
 bool canvas_resize_frames(canvas_doc_t *doc, int x, int y, int w, int h,
                            bool resample, image_resize_filter_t filter) {
   if (!doc->anim) return true;
-  for (int i = 0; i < doc->anim->frame_count; i++) {
-    if (i == doc->anim->active_frame) continue;
-    anim_frame_t *frame = doc->anim->frames[i];
+  for (int i = 0; i < doc->anim->cel_count; i++) {
+    if (doc->anim->bank[i] == doc->anim->frames[doc->anim->active_frame].cel) continue;
+    anim_frame_t *frame = doc->anim->bank[i];
     if (pencil_has_layers(doc) && frame->cels) {
       size_t old_n = (size_t)doc->canvas_w * doc->canvas_h, new_n = (size_t)w * h;
       uint8_t *cels = malloc(3 * new_n);

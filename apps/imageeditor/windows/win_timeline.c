@@ -1,6 +1,7 @@
 #include "imageeditor.h"
 #include <orion/user/toolbar.h>
 
+#if !IMAGEEDITOR_BW
 #define FRAME_ITEM_BASE 0x8000u // item idents travel in LOWORD(wparam)
 #define FRAME_MAX_VISIBLE 8
 
@@ -167,13 +168,10 @@ window_t *create_timeline_window(void) {
     MAKERECT(0, 0, 500, TIMELINE_WIN_H), g_app->chrome_win, timeline_proc, g_app->hinstance, NULL);
   if (!win) return NULL;
   g_app->timeline_win = win;
-  if (win->parent) dock_window(win, IMAGEEDITOR_BW ? DOCK_FLOAT : DOCK_BOTTOM,
+  if (win->parent) dock_window(win, DOCK_BOTTOM,
                               DOCK_EDGE(DOCK_TOP) | DOCK_EDGE(DOCK_BOTTOM), DOCK_TOOLBAR, 0, 0);
-#if IMAGEEDITOR_BW
-  if (win->parent) dock_float_aligned(win, DOCK_ALIGN_CENTER, DOCK_ALIGN_END);
-#endif
   timeline_toolbar_sync();
-  show_window(win, IMAGEEDITOR_BW || (tl_doc() && tl_doc()->anim && tl_doc()->anim->frame_count > 1));
+  show_window(win, tl_doc() && tl_doc()->anim && tl_doc()->anim->frame_count > 1);
   return win;
 }
 
@@ -196,11 +194,26 @@ void timeline_win_refresh(void) {
   invalidate_window(g_app->timeline_win);
 }
 
+#else
+window_t *create_timeline_window(void) { return NULL; }
+void timeline_toolbar_sync(void) { imageeditor_sync_frame_controls(); }
+void timeline_win_refresh(void) { imageeditor_sync_frame_controls(); }
+#endif
+
+window_t *imageeditor_animation_timer_window(void) {
+  if (!g_app) return NULL;
+#if IMAGEEDITOR_BW
+  return g_app->tool_win;
+#else
+  return g_app->timeline_win;
+#endif
+}
+
 void anim_tick(canvas_doc_t *doc) {
   if (!doc || !doc->anim) return;
   anim_timeline_t *tl = doc->anim;
   if (!tl->playing || tl->frame_count < 1) return;
-  int old_delay = tl->frames[tl->active_frame]->delay_ms;
+  int old_delay = tl->frames[tl->active_frame].delay_ms;
 
   int next = tl->active_frame + 1;
   if (next >= tl->frame_count) {
@@ -215,10 +228,10 @@ void anim_tick(canvas_doc_t *doc) {
     if (doc->layer.count > 0)
       doc->layer.stack[doc->layer.active]->pixels = doc->pixels;
     doc->canvas_dirty = true;
-    int delay = tl->frames[next]->delay_ms;
-    if (delay != old_delay && delay > 0 && g_app && g_app->anim_timer_id && g_app->timeline_win) {
+    int delay = tl->frames[next].delay_ms;
+    if (delay != old_delay && delay > 0 && g_app && g_app->anim_timer_id && imageeditor_animation_timer_window()) {
       axCancelTimer(g_app->anim_timer_id);
-      g_app->anim_timer_id = axSetTimer(g_app->timeline_win, delay, NULL, (bool_t)1);
+      g_app->anim_timer_id = axSetTimer(imageeditor_animation_timer_window(), delay, NULL, (bool_t)1);
       if (!g_app->anim_timer_id) {
         anim_stop_playback(doc);
       }

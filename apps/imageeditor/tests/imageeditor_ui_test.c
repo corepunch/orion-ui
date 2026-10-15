@@ -346,7 +346,7 @@ void test_ie_anim_compress_bumps_revision(void) {
     ie_setup();
     canvas_doc_t *doc = create_document(NULL, 4, 4);
     ASSERT_NOT_NULL(doc);
-    anim_frame_t *f = doc->anim->frames[0];
+    anim_frame_t *f = doc->anim->frames[0].cel;
     uint32_t rev0 = f->revision;
     ASSERT_TRUE(anim_frame_compress(f, doc->pixels, 4, 4, IE_FRAME_FORMAT));
     ASSERT_TRUE(f->revision > rev0);
@@ -455,11 +455,11 @@ static void test_ie_floating_frames(void) {
   send_message(win->toolbar, evLeftButtonDown, pa, NULL);
   send_message(win->toolbar, evLeftButtonUp, pa, NULL);
   ASSERT_EQUAL(doc->anim->active_frame, 0);
-  anim_frame_t *selected = doc->anim->frames[0];
+  anim_frame_t *selected = doc->anim->frames[0].cel;
   doc->modified = false;
   send_message(win->toolbar, evLeftButtonDown, pa, NULL);
   send_message(win->toolbar, evLeftButtonUp, pb, NULL);
-  ASSERT_TRUE(doc->anim->frames[1] == selected);
+  ASSERT_TRUE(doc->anim->frames[1].cel == selected);
   ASSERT_EQUAL(doc->anim->active_frame, 1);
   ASSERT_TRUE(doc->modified);
   for (int i = 0; i < 12; i++) handle_menu_command(ID_ANIM_NEW_FRAME);
@@ -1091,29 +1091,30 @@ void test_ie_close_tool_options_window_clears_pointer(void) {
 }
 
 void test_ie_grouped_tool_options(void) {
-    TEST("grouped tools: visible icons, vertical size drag, remembered selection");
+    TEST("drawing tools and size are in the toolbar; contextual options stay hidden");
     ie_setup();
+    create_tool_palette_window();
     create_tool_options_window();
-    handle_menu_command(ID_TOOL_BRUSH);
-    window_t *options = g_app->tool_options_win;
+    window_t *tools = g_app->tool_win, *options = g_app->tool_options_win;
     toolbar_state_t *tb = toolbar_get_state(options);
     ASSERT_NOT_NULL(tb);
     ASSERT_EQUAL(tb->orientation, TOOLBAR_VERTICAL);
-    ASSERT_EQUAL(tb->item_count, 4);
-    const int brushes[] = {ID_TOOL_PENCIL, ID_TOOL_BRUSH, ID_TOOL_SPRAY};
-    for (int i = 0; i < 3; i++) {
-      ASSERT_EQUAL(tb->items[i].type, TOOLBAR_ITEM_BUTTON);
-      ASSERT_EQUAL(tb->items[i].ident, brushes[i]);
-      send_message(options, evCommand, MAKEDWORD(brushes[i], btnClicked), NULL);
+    const int brushes[] = {ID_TOOL_PENCIL, ID_TOOL_BRUSH, ID_TOOL_SPRAY, ID_TOOL_ERASER};
+    for (int i = 0; i < ARRAY_LEN(brushes); i++) {
+      irect16_t r = {0};
+      ASSERT_TRUE(send_message(tools, tbGetItemRect, brushes[i], &r));
+      uint32_t point = MAKEDWORD(r.x + r.w / 2, r.y + r.h / 2);
+      send_message(tools->toolbar, evLeftButtonDown, point, NULL);
+      send_message(tools->toolbar, evLeftButtonUp, point, NULL);
       ASSERT_EQUAL(g_app->current_tool, brushes[i]);
-      ASSERT_TRUE(tb->items[i].state & TBSTATE_CHECKED);
+      ASSERT_TRUE(send_message(tools, tbGetState, brushes[i], NULL) & TBSTATE_CHECKED);
+      ASSERT_EQUAL(imageeditor_tool_group(brushes[i]), brushes[i]);
+      ASSERT_EQUAL(tb->item_count, 0);
+      ASSERT_FALSE(window_has_state(options, WINDOW_STATE_VISIBLE));
     }
-    ASSERT_EQUAL(tb->items[3].type, TOOLBAR_ITEM_SLIDER);
-    ASSERT_EQUAL(g_app->current_tool, ID_TOOL_SPRAY);
-    ASSERT_EQUAL(g_app->brush_tool, ID_TOOL_SPRAY);
-    ASSERT_EQUAL(imageeditor_tool_group(g_app->current_tool), ID_TOOL_BRUSH);
-    window_t *slider = get_window_item(options, IE_OPT_SIZE);
+    window_t *slider = get_window_item(tools, IE_OPT_SIZE);
     ASSERT_NOT_NULL(slider);
+    ASSERT_NULL(get_window_item(options, IE_OPT_SIZE));
     ASSERT_TRUE(slider->flags & SLIDER_VERTICAL);
     send_message(slider, evLeftButtonDown, MAKEDWORD(slider->frame.w / 2, slider->frame.h - SLIDER_TRACK_PAD), NULL);
     send_message(slider, evMouseMove, MAKEDWORD(slider->frame.w / 2, SLIDER_TRACK_PAD), NULL);
@@ -1184,7 +1185,7 @@ void test_ie_tool_switch_updates_options_panel(void) {
     ie_setup();
     ie_create_palette_windows();
 
-    // Switch to a brush tool — brush-size panel should be active.
+    // Drawing controls stay in the main tool strip.
     handle_menu_command(ID_TOOL_BRUSH);
     ASSERT_EQUAL(g_app->current_tool, ID_TOOL_BRUSH);
     ASSERT_TRUE(is_window(g_app->tool_options_win));

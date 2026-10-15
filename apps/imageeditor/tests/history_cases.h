@@ -93,14 +93,14 @@ static void history_polygon_crop_and_limit(void) {
   // Repeated edits exercise eviction and both history stacks at capacity.
   for (int i = 0; i < UNDO_MAX + 3; i++) {
     ASSERT_TRUE(ie_doc_begin_op(doc, "Timing"));
-    doc->anim->frames[0]->delay_ms = 1000 + i;
+    doc->anim->frames[0].delay_ms = 1000 + i;
     ie_doc_commit_op(doc, true);
   }
   ASSERT_EQUAL(doc->undo.count, UNDO_MAX);
   for (int i = 0; i < UNDO_MAX; i++) ASSERT_TRUE(doc_undo(doc));
   ASSERT_FALSE(doc_undo(doc));
   for (int i = 0; i < UNDO_MAX; i++) ASSERT_TRUE(doc_redo(doc));
-  ASSERT_EQUAL(doc->anim->frames[0]->delay_ms, 1000 + UNDO_MAX + 2);
+  ASSERT_EQUAL(doc->anim->frames[0].delay_ms, 1000 + UNDO_MAX + 2);
   ASSERT_FALSE(doc_redo(doc));
   close_document(doc);
   PASS();
@@ -129,8 +129,8 @@ static void history_frames(void) {
   ASSERT_EQUAL(doc->undo.count, count);
   ASSERT_EQUAL(canvas_get_pixel(doc, 4, 4), ink);
   ASSERT_TRUE(ie_doc_begin_op(doc, "Frame Timing"));
-  doc->anim->frames[0]->delay_ms = 170;
-  strcpy(doc->anim->frames[0]->name, "Drawing");
+  doc->anim->frames[0].delay_ms = 170;
+  strcpy(doc->anim->frames[0].cel->name, "Drawing");
   ie_doc_commit_op(doc, true);
   handle_menu_command(ID_ANIM_DUPLICATE_FRAME);
   ASSERT_EQUAL(doc->anim->frame_count, 3);
@@ -153,8 +153,8 @@ static void history_frames(void) {
   ASSERT_EQUAL(doc->anim->frame_count, 3);
   ASSERT_EQUAL(doc->anim->active_frame, 2);
   ASSERT_EQUAL(canvas_get_pixel(doc, 4, 4), ink);
-  ASSERT_EQUAL(doc->anim->frames[2]->delay_ms, 170);
-  ASSERT_EQUAL(strcmp(doc->anim->frames[0]->name, "Drawing"), 0);
+  ASSERT_EQUAL(doc->anim->frames[2].delay_ms, 170);
+  ASSERT_EQUAL(strcmp(doc->anim->frames[0].cel->name, "Drawing"), 0);
   cmd_redo(doc);
   ASSERT_EQUAL(doc->anim->frame_count, 2);
   // Editing an earlier frame then navigating elsewhere must undo that edit.
@@ -229,10 +229,10 @@ static void history_selection_resize_layers(void) {
   ASSERT_TRUE(cmd_frame_select(doc, 0));
   #if IMAGEEDITOR_BW
   uint8_t decoded[16 * 20];
-  ASSERT_TRUE(anim_frame_expand_cel(doc->anim->frames[0], 1, decoded, 16, 20));
-  ASSERT_NULL(doc->anim->frames[0]->data);
+  ASSERT_TRUE(anim_frame_expand_cel(doc->anim->frames[0].cel, 1, decoded, 16, 20));
+  ASSERT_NULL(doc->anim->frames[0].cel->data);
 #else
-  ASSERT_EQUAL(doc->anim->frames[0]->data_size, (size_t)16 * 20 * DOC_BPP);
+  ASSERT_EQUAL(doc->anim->frames[0].cel->data_size, (size_t)16 * 20 * DOC_BPP);
 #endif
   ASSERT_EQUAL(doc->canvas_w, 16);
   cmd_undo(doc);

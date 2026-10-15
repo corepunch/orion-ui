@@ -14,6 +14,7 @@
 // Keep it outside frames for readers that reject unknown frame subchunks.
 #define FLC_META 0x7074
 #define FLC_LAYERS 0x7075
+#define FLC_BANK 0x7076
 #define FLC_LIMIT (512u * 1024u * 1024u)
 #define FLC_META_SIZE 1084
 
@@ -99,11 +100,51 @@ static bool flc_decode(uint16_t type, const uint8_t *p, size_t size,
   return true;
 }
 
+static bool flc_read_bank(anim_timeline_t *tl, const uint8_t *p, size_t size) {
+  if (size < 12) return false;
+  uint32_t count = flc_u32(p), exposures = flc_u32(p + 4), next = flc_u32(p + 8);
+  if (!count || count > 65535 || exposures != (uint32_t)tl->frame_count || !next || next > INT32_MAX ||
+      size != 12u + count * 36u + exposures * 136u) return false;
+  anim_timeline_t *bank = calloc(1, sizeof(*bank));
+  if (!bank) return false;
+  bank->next_cel_id = next;
+  bool ok = true;
+  p += 12;
+  for (uint32_t i = 0; ok && i < count; i++, p += 36) {
+    anim_frame_t *cel = anim_frame_new(NULL);
+    if (!cel) { ok = false; break; }
+    cel->id = flc_u32(p); memcpy(cel->name, p + 4, 32); cel->name[31] = 0;
+    ok = cel->id && cel->id < next && anim_bank_add(bank, cel);
+    if (!ok) anim_frame_free(cel);
+  }
+  if (ok) {
+    bank->frames = calloc(exposures, sizeof(*bank->frames));
+    ok = bank->frames != NULL;
+  }
+  for (uint32_t i = 0; ok && i < exposures; i++, p += 136) {
+    anim_exposure_t *row = &bank->frames[i];
+    row->cel = anim_find_cel(bank, flc_u32(p)); row->delay_ms = flc_u32(p + 4);
+    memcpy(row->note, p + 8, 128); row->note[127] = 0;
+    ok = row->cel && row->delay_ms > 0 && row->delay_ms <= 65535;
+    bank->frame_count++;
+  }
+  if (ok) {
+    for (int i = 0; i < tl->cel_count; i++) anim_frame_free(tl->bank[i]);
+    free(tl->bank); free(tl->frames);
+    tl->bank = bank->bank; tl->cel_count = bank->cel_count; tl->next_cel_id = next;
+    tl->frames = bank->frames;
+    bank->bank = NULL; bank->cel_count = 0; bank->frames = NULL;
+  }
+  anim_timeline_free(bank);
+  return ok;
+}
+
 anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
                                  uint32_t out_pal[256], uint32_t *background, bool *show_bg,
                                  pencil_file_layers_t *layers) {
   FILE *fp = fopen(path, "rb");
-  uint8_t header[128], *pixels = NULL, *block = NULL, *metadata = NULL, *cel_buffers = NULL;
+  uint8_t header[128], *pixels = NULL, *block = NULL, *metadata = NULL, *cel_buffers = NULL, *bank_meta = NULL;
+  size_t bank_size = 0; bool bank_layers = false;
   anim_timeline_t *tl = NULL;
   long layer_offset = 0;
   uint32_t layer_length = 0;
@@ -135,23 +176,27 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
       metadata = malloc(length - 16);
       if (!metadata || fread(metadata, 1, length - 16, fp) != length - 16) goto fail;
     } else if (flc_u16(chunk + 4) == FLC_LAYERS) {
-      if (layer_offset || memcmp(chunk + 8, "PTL5", 4) || chunk[12] != IE_LAYER_COUNT ||
+      if (layer_offset || (memcmp(chunk + 8, "PTL5", 4) && memcmp(chunk + 8, "PTL6", 4)) || chunk[12] != IE_LAYER_COUNT ||
           chunk[13] >= IE_LAYER_COUNT || chunk[14] > 15 || chunk[15] != 0 ||
-          length < 16 + 6u * (1 + 3u * frames)) goto fail;
+          length < 22) goto fail;
+      bank_layers = !memcmp(chunk + 8, "PTL6", 4);
       layer_offset = ftell(fp); layer_length = length - 16;
       if (layer_offset < 0 || fseek(fp, layer_length, SEEK_CUR)) goto fail;
       active_layer = chunk[13]; visible_layers = chunk[14];
+    } else if (flc_u16(chunk + 4) == FLC_BANK) {
+      if (bank_meta || memcmp(chunk + 8, "PTB1", 4) || length < 28 || length > FLC_LIMIT) goto fail;
+      bank_size = length - 16; bank_meta = malloc(bank_size);
+      if (!bank_meta || fread(bank_meta, 1, bank_size, fp) != bank_size) goto fail;
     } else if (fseek(fp, length - 16, SEEK_CUR)) goto fail;
     pos += length;
   }
   const char *ext = strrchr(path, '.');
-  if ((layer_offset && !metadata) || (ext && !strcasecmp(ext, ".ptf") && !layer_offset)) goto fail;
+  if ((bank_layers != (bank_meta != NULL)) || (bank_meta && !layer_offset) || (layer_offset && !metadata) || (ext && !strcasecmp(ext, ".ptf") && !layer_offset)) goto fail;
   if (fseek(fp, 128, SEEK_SET)) goto fail;
   pixels = calloc((size_t)w, h);
   tl = calloc(1, sizeof(*tl));
   if (!pixels || !tl) goto fail;
-  tl->frames = calloc(frames, sizeof(*tl->frames));
-  if (!tl->frames) goto fail;
+  tl->next_cel_id = 1;
   tl->fps = MAX(1, (1000 + speed / 2) / speed); tl->loop = true;
   *background = IE_PAPER_COLOR; *show_bg = true;
   size_t position = 128, budget = 0;
@@ -177,9 +222,13 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
       pos += len;
     }
     int delay = magic == 0xaf12 ? flc_u16(fh + 8) : 0;
-    anim_frame_t *frame = anim_frame_new(NULL, delay ? delay : (int)speed);
+    anim_frame_t *frame = anim_frame_new(NULL);
     if (!frame) goto fail;
-    tl->frames[tl->frame_count++] = frame;
+    if (!anim_bank_add(tl, frame)) { anim_frame_free(frame); goto fail; }
+    int added = anim_timeline_reuse(tl, tl->frame_count - 1, frame->id);
+    if (added < 0) goto fail;
+    tl->active_frame = 0;
+    tl->frames[added].delay_ms = delay ? delay : (int)speed;
     frame->format = IE_FRAME_FORMAT;
     if (!layer_offset) {
       frame->data_size = (size_t)w * h;
@@ -189,7 +238,7 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
       uint32_t fps = flc_u32(meta + 36), saved_delay = flc_u32(meta + 40);
       if (memcmp(meta, "PTF1", 4) || !fps || fps > 1000 || !saved_delay || saved_delay > 65535) goto fail;
       memcpy(frame->name, meta + 4, 32); frame->name[31] = 0;
-      frame->delay_ms = saved_delay;
+      tl->frames[added].delay_ms = saved_delay;
       tl->fps = fps; tl->loop = meta[44] != 0;
       *show_bg = meta[45] != 0; *background = flc_u32(meta + 48);
       for (int i = 0; i < 256; i++) editing_pal[i] = flc_u32(meta + 60 + i * 4);
@@ -227,6 +276,7 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
     out_pal[255] = 0;
   }
 #endif
+  if (bank_meta && !flc_read_bank(tl, bank_meta, bank_size)) goto fail;
   if (layer_offset) {
     size_t n = (size_t)w * h;
     if (fseek(fp, layer_offset, SEEK_SET)) goto fail;
@@ -235,7 +285,7 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
     budget += n;
     uint32_t remaining = layer_length;
     // File deltas use two temporary frames; retained cels are independent RLE.
-    for (int plane = 0; plane < 1 + 3 * frames; plane++) {
+    for (int plane = 0; plane < 1 + 3 * tl->cel_count; plane++) {
       uint8_t ch[6];
       if (remaining < 6 || fread(ch, 1, 6, fp) != 6) goto fail;
       uint32_t size = flc_u32(ch);
@@ -256,8 +306,8 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
       if (plane && (plane - 1) % 3 == 2) {
         int index = (plane - 1) / 3;
         const uint8_t *planes[] = {cel_buffers, cel_buffers + n, cel_buffers + 2 * n};
-        if (!anim_frame_pack_cels(tl->frames[index], planes, w, h)) goto fail;
-        budget += tl->frames[index]->cels_size;
+        if (!anim_frame_pack_cels(tl->bank[index], planes, w, h)) goto fail;
+        budget += tl->bank[index]->cels_size;
         if (budget > FLC_LIMIT) goto fail;
         memcpy(cel_buffers + 3 * n, cel_buffers, 3 * n);
       }
@@ -270,12 +320,12 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
       layers->active = active_layer; layers->visible = visible_layers;
     }
   }
-  fclose(fp); free(pixels); free(metadata); free(cel_buffers);
+  fclose(fp); free(pixels); free(metadata); free(cel_buffers); free(bank_meta);
   *out_w = w; *out_h = h;
   return tl;
 fail:
   if (fp) fclose(fp);
-  free(pixels); free(block); free(metadata); free(cel_buffers); anim_timeline_free(tl);
+  free(pixels); free(block); free(metadata); free(cel_buffers); free(bank_meta); anim_timeline_free(tl);
   return NULL;
 }
 
@@ -285,7 +335,7 @@ anim_timeline_t *flc_load(const char *path, int *w, int *h, uint32_t palette[256
 }
 
 static bool flc_write_frame(FILE *fp, const canvas_doc_t *doc, int index, uint8_t *previous, bool first) {
-  const anim_frame_t *frame = doc->anim->frames[index];
+  const anim_frame_t *frame = doc->anim->frames[index].cel;
   size_t n = (size_t)doc->canvas_w * doc->canvas_h;
   uint8_t *composite = NULL;
   const uint8_t *pixels = doc->pixels;
@@ -298,13 +348,13 @@ static bool flc_write_frame(FILE *fp, const canvas_doc_t *doc, int index, uint8_
     if (!composite || !anim_frame_expand_indices(frame, composite, doc->canvas_w, doc->canvas_h)) { free(composite); return false; }
     pixels = composite;
   }
-  if (!pixels || frame->delay_ms < 1 || frame->delay_ms > 65535) { free(composite); return false; }
+  if (!pixels || doc->anim->frames[index].delay_ms < 1 || doc->anim->frames[index].delay_ms > 65535) { free(composite); return false; }
   size_t size;
   uint8_t *chunk = flc_codec_encode(pixels, first ? NULL : previous, doc->canvas_w, doc->canvas_h, &size);
   if (!chunk) { free(composite); return false; }
   uint8_t header[16] = {0}, palette[778] = {0};
   flc_put32(header, 16 + (first ? sizeof(palette) : 0) + size);
-  flc_put16(header + 4, 0xf1fa); flc_put16(header + 6, first ? 2 : 1); flc_put16(header + 8, frame->delay_ms);
+  flc_put16(header + 4, 0xf1fa); flc_put16(header + 6, first ? 2 : 1); flc_put16(header + 8, doc->anim->frames[index].delay_ms);
   flc_put32(palette, sizeof(palette)); flc_put16(palette + 4, 4); flc_put16(palette + 6, 1);
   for (int i = 0; i < 256; i++) {
     uint32_t c = doc->ipal.entries[i];
@@ -326,14 +376,34 @@ static bool flc_write_metadata(FILE *fp, const canvas_doc_t *doc) {
   flc_put16(header + 4, FLC_META); memcpy(header + 8, "PTA1", 4);
   if (fwrite(header, 1, 16, fp) != 16) return false;
   for (int f = 0; f < doc->anim->frame_count; f++) {
-    const anim_frame_t *frame = doc->anim->frames[f];
+    const anim_frame_t *frame = doc->anim->frames[f].cel;
     uint8_t m[FLC_META_SIZE] = {0};
     memcpy(m, "PTF1", 4); memcpy(m + 4, frame->name, 32);
-    flc_put32(m + 36, doc->anim->fps); flc_put32(m + 40, frame->delay_ms);
+    flc_put32(m + 36, doc->anim->fps); flc_put32(m + 40, doc->anim->frames[f].delay_ms);
     m[44] = doc->anim->loop; m[45] = doc->background.show;
     flc_put32(m + 48, doc->background.color);
     for (int i = 0; i < 256; i++) flc_put32(m + 60 + i * 4, doc->ipal.entries[i]);
     if (fwrite(m, 1, sizeof(m), fp) != sizeof(m)) return false;
+  }
+  return true;
+}
+
+static bool flc_write_bank(FILE *fp, const anim_timeline_t *tl) {
+  uint8_t header[28] = {0};
+  flc_put32(header, 28u + tl->cel_count * 36u + tl->frame_count * 136u);
+  flc_put16(header + 4, FLC_BANK); memcpy(header + 8, "PTB1", 4);
+  flc_put32(header + 16, tl->cel_count); flc_put32(header + 20, tl->frame_count); flc_put32(header + 24, tl->next_cel_id);
+  if (fwrite(header, 1, sizeof(header), fp) != sizeof(header)) return false;
+  for (int i = 0; i < tl->cel_count; i++) {
+    uint8_t record[36] = {0};
+    flc_put32(record, tl->bank[i]->id); memcpy(record + 4, tl->bank[i]->name, 32);
+    if (fwrite(record, 1, sizeof(record), fp) != sizeof(record)) return false;
+  }
+  for (int i = 0; i < tl->frame_count; i++) {
+    uint8_t record[136] = {0};
+    flc_put32(record, tl->frames[i].cel->id); flc_put32(record + 4, tl->frames[i].delay_ms);
+    memcpy(record + 8, tl->frames[i].note, 128);
+    if (fwrite(record, 1, sizeof(record), fp) != sizeof(record)) return false;
   }
   return true;
 }
@@ -343,7 +413,7 @@ static bool flc_write_layers(FILE *fp, const canvas_doc_t *doc) {
   long start = ftell(fp);
   if (start < 0) return false;
   uint8_t header[16] = {0};
-  flc_put16(header + 4, FLC_LAYERS); memcpy(header + 8, "PTL5", 4);
+  flc_put16(header + 4, FLC_LAYERS); memcpy(header + 8, "PTL6", 4);
   header[12] = IE_LAYER_COUNT; header[13] = doc->layer.active;
   for (int i = 0; i < IE_LAYER_COUNT; i++) if (doc->layer.stack[i]->visible) header[14] |= 1u << i;
   if (fwrite(header, 1, 16, fp) != 16 ||
@@ -353,9 +423,15 @@ static bool flc_write_layers(FILE *fp, const canvas_doc_t *doc) {
   uint8_t *blank = calloc(1, n);
   if (!blank) return false;
   bool ok = true;
-  for (int f = 0; ok && f < doc->anim->frame_count; f++)
+  for (int f = 0; ok && f < doc->anim->cel_count; f++)
     for (int layer = 1; ok && layer < IE_LAYER_COUNT; layer++) {
-      ok = pencil_read_frame_layer(doc, f, layer, blank) && flc_codec_write(fp, blank, NULL, doc->canvas_w, doc->canvas_h);
+      const anim_frame_t *cel = doc->anim->bank[f];
+      if (cel == doc->anim->frames[doc->anim->active_frame].cel)
+        memcpy(blank, doc->layer.stack[layer]->pixels, n);
+      else if (cel->cels) ok = anim_frame_expand_cel(cel, layer - 1, blank, doc->canvas_w, doc->canvas_h);
+      else if (layer == IE_LAYER_COLOR && cel->data) ok = anim_frame_expand_indices(cel, blank, doc->canvas_w, doc->canvas_h);
+      else memset(blank, layer == IE_LAYER_PENCIL ? 0 : 255, n);
+      ok = ok && flc_codec_write(fp, blank, NULL, doc->canvas_w, doc->canvas_h);
       long pos = ftell(fp);
       if (pos < cel_start || (uint64_t)(pos - cel_start) + n > FLC_LIMIT) ok = false;
     }
@@ -406,7 +482,7 @@ bool flc_save(const char *path, const canvas_doc_t *doc) {
   if (doc->anim->frame_count == 1) flc_put32(header + 84, ftell(fp));
   if (ok) ok = flc_write_frame(fp, doc, 0, previous, false); // Ring frame restores the start.
   if (ok) ok = flc_write_metadata(fp, doc);
-  if (ok && pencil_has_layers(doc)) ok = flc_write_layers(fp, doc);
+  if (ok && pencil_has_layers(doc)) ok = flc_write_bank(fp, doc->anim) && flc_write_layers(fp, doc);
   long total = ftell(fp);
   if (total < 128 || (uint64_t)total > 2u * FLC_LIMIT) ok = false;
   flc_put32(header, total);

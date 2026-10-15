@@ -30,7 +30,12 @@ bool cmd_pencil_color(canvas_doc_t *doc, int index) {
   g_app->fg_palette_idx = index;
   g_app->fg_color = doc->ipal.entries[index];
   doc->pencil_color_index[doc->layer.active] = index;
-  if (g_app->tool_win) invalidate_window(g_app->tool_win);
+  if (g_app->tool_win) {
+    if (doc->layer.active != IE_LAYER_PENCIL && g_app->tool_win->value == (uint32_t)(doc->layer.active + 1))
+      send_message(g_app->tool_win, tbSetItemColor, ID_TOOL_BRUSH, &g_app->fg_color);
+    invalidate_window(g_app->tool_win);
+  }
+  if (g_app->color_win) invalidate_window(g_app->color_win);
   return true;
 #else
   (void)doc; (void)index;

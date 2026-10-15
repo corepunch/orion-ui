@@ -2,7 +2,7 @@
 
 #include "imageeditor.h"
 
-#ifdef AX_PLATFORM_IOS
+#if defined(AX_PLATFORM_IOS) && !IMAGEEDITOR_BW
 static void imageeditor_layout_ipad_palettes(void) {
   if (!g_app) return;
   irect16_t screen = R(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth),
@@ -101,7 +101,9 @@ static result_t doc_win_proc(window_t *win, uint32_t msg,
       return true;
 #ifdef AX_PLATFORM_IOS
     case evDisplayChange: {
+#if !IMAGEEDITOR_BW
       if (doc == g_app->active_doc) imageeditor_layout_ipad_palettes();
+#endif
       return true;
     }
 #endif

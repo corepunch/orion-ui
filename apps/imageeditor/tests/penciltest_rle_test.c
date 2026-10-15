@@ -107,7 +107,7 @@ static void rle_native(void) {
   ASSERT_TRUE(flc_save(path, doc));
   FILE *fp = fopen(path, "rb"); ASSERT_NOT_NULL(fp);
   uint8_t header[128]; ASSERT_EQUAL(fread(header, 1, 128, fp), 128);
-  ASSERT_TRUE(flc_codec_u32(header) < 4096);
+  ASSERT_TRUE(flc_codec_u32(header) < 4096 + 28 + 2 * 36 + 2 * 136);
   ASSERT_EQUAL(flc_codec_u32(header + 80), 128);
   ASSERT_TRUE(flc_codec_u32(header + 84) > 128);
   long layers = 0;
@@ -119,14 +119,14 @@ static void rle_native(void) {
   fclose(fp);
   int w, h; uint32_t palette[256], bg; bool show;
   anim_timeline_t *tl = flc_load(path, &w, &h, palette, &bg, &show);
-  ASSERT_NOT_NULL(tl); ASSERT_EQUAL(test_anim_cel_pixel(tl->frames[0], 1, 0, 1025, 5), 123);
-  ASSERT_EQUAL(test_anim_cel_pixel(tl->frames[1], 1, 2 * 1025 + 800, 1025, 5), 201);
+  ASSERT_NOT_NULL(tl); ASSERT_EQUAL(test_anim_cel_pixel(tl->frames[0].cel, 1, 0, 1025, 5), 123);
+  ASSERT_EQUAL(test_anim_cel_pixel(tl->frames[1].cel, 1, 2 * 1025 + 800, 1025, 5), 201);
   anim_timeline_free(tl);
   fp = fopen(path, "r+b"); ASSERT_NOT_NULL(fp);
   ASSERT_EQUAL(fseek(fp, layers + 11, SEEK_SET), 0); fputc('4', fp); fclose(fp);
   ASSERT_NULL(flc_load(path, &w, &h, palette, &bg, &show));
   fp = fopen(path, "r+b"); ASSERT_NOT_NULL(fp);
-  ASSERT_EQUAL(fseek(fp, layers + 11, SEEK_SET), 0); fputc('5', fp);
+  ASSERT_EQUAL(fseek(fp, layers + 11, SEEK_SET), 0); fputc('6', fp);
   ASSERT_EQUAL(fseek(fp, layers + 16, SEEK_SET), 0); fputc(0xff, fp); fclose(fp);
   ASSERT_NULL(flc_load(path, &w, &h, palette, &bg, &show));
   close_document(doc); free(g_app); g_app = NULL; test_env_shutdown(); unlink(path);

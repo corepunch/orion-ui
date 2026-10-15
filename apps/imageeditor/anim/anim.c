@@ -380,162 +380,181 @@ bool anim_frame_expand_cel(const anim_frame_t *frame, int cel, uint8_t *pixels, 
 // Frame / timeline lifecycle
 // ============================================================
 
-anim_frame_t *anim_frame_new(const char *name, int delay_ms) {
-  anim_frame_t *f = calloc(1, sizeof(anim_frame_t));
+int anim_default_delay(int fps) {
+  return fps > 0 ? MAX(1, (1000 + fps / 2) / fps) : 83;
+}
+
+anim_frame_t *anim_frame_new(const char *name) {
+  anim_frame_t *f = calloc(1, sizeof(*f));
   if (!f) return NULL;
-  f->delay_ms = delay_ms > 0 ? delay_ms : 80; // default ~12 fps
-  f->format   = IMAGEEDITOR_BW ? FRAME_FORMAT_RLE_INDEXED : FRAME_FORMAT_INDEXED;
-  if (name)
-    strncpy(f->name, name, sizeof(f->name) - 1);
-  else
-    strncpy(f->name, "Frame", sizeof(f->name) - 1);
+  f->format = IMAGEEDITOR_BW ? FRAME_FORMAT_RLE_INDEXED : FRAME_FORMAT_INDEXED;
+  snprintf(f->name, sizeof(f->name), "%s", name ? name : "Drawing");
   return f;
 }
 
 void anim_frame_free(anim_frame_t *f) {
   if (!f) return;
-  free(f->data);
-  free(f->cels);
-  free(f);
+  free(f->data); free(f->cels); free(f);
+}
+
+anim_frame_t *anim_frame_clone(const anim_frame_t *src) {
+  anim_frame_t *copy = malloc(sizeof(*copy));
+  if (!copy) return NULL;
+  *copy = *src; copy->data = copy->cels = NULL;
+  if (src->data_size) {
+    copy->data = malloc(src->data_size);
+    if (!copy->data) goto fail;
+    memcpy(copy->data, src->data, src->data_size);
+  }
+  if (src->cels_size) {
+    copy->cels = malloc(src->cels_size);
+    if (!copy->cels) goto fail;
+    memcpy(copy->cels, src->cels, src->cels_size);
+  }
+  return copy;
+fail:
+  anim_frame_free(copy);
+  return NULL;
+}
+
+anim_frame_t *anim_find_cel(const anim_timeline_t *tl, uint32_t id) {
+  if (tl) for (int i = 0; i < tl->cel_count; i++) if (tl->bank[i]->id == id) return tl->bank[i];
+  return NULL;
+}
+
+int anim_cel_uses(const anim_timeline_t *tl, uint32_t id) {
+  int count = 0;
+  if (tl) for (int i = 0; i < tl->frame_count; i++) if (tl->frames[i].cel->id == id) count++;
+  return count;
+}
+
+bool anim_bank_add(anim_timeline_t *tl, anim_frame_t *cel) {
+  if (!tl || !cel || tl->cel_count >= 65535 || (cel->id && anim_find_cel(tl, cel->id))) return false;
+  if (!cel->id && (!tl->next_cel_id || tl->next_cel_id >= INT32_MAX)) return false;
+  anim_frame_t **bank = realloc(tl->bank, (tl->cel_count + 1) * sizeof(*bank));
+  if (!bank) return false;
+  tl->bank = bank;
+  if (!cel->id) cel->id = tl->next_cel_id++;
+  tl->bank[tl->cel_count++] = cel;
+  return true;
+}
+
+bool anim_bank_delete(anim_timeline_t *tl, uint32_t id) {
+  if (!tl || anim_cel_uses(tl, id)) return false;
+  for (int i = 0; i < tl->cel_count; i++) if (tl->bank[i]->id == id) {
+    anim_frame_free(tl->bank[i]);
+    memmove(tl->bank + i, tl->bank + i + 1, (--tl->cel_count - i) * sizeof(*tl->bank));
+    return true;
+  }
+  return false;
+}
+
+int anim_timeline_reuse(anim_timeline_t *tl, int after, uint32_t cel_id) {
+  anim_frame_t *cel = anim_find_cel(tl, cel_id);
+  if (!cel || tl->frame_count >= 65535 || after < -1 || after >= tl->frame_count) return -1;
+  anim_exposure_t *frames = realloc(tl->frames, (tl->frame_count + 1) * sizeof(*frames));
+  if (!frames) return -1;
+  tl->frames = frames;
+  int ins = after + 1;
+  memmove(frames + ins + 1, frames + ins, (tl->frame_count - ins) * sizeof(*frames));
+  frames[ins] = (anim_exposure_t){.cel = cel, .delay_ms = anim_default_delay(tl->fps)};
+  tl->frame_count++;
+  if (tl->active_frame >= ins) tl->active_frame++;
+  return ins;
 }
 
 anim_timeline_t *anim_timeline_new(int w, int h) {
-  anim_timeline_t *tl = calloc(1, sizeof(anim_timeline_t));
+  anim_timeline_t *tl = calloc(1, sizeof(*tl));
   if (!tl) return NULL;
-
-  tl->frames = malloc(sizeof(anim_frame_t *));
-  if (!tl->frames) { free(tl); return NULL; }
-
-  anim_frame_t *f = anim_frame_new("Frame 1", 80);
-  if (!f) { free(tl->frames); free(tl); return NULL; }
-
-#if !IMAGEEDITOR_BW
-  // Allocate an initial blank (transparent) RGBA frame so the first
-  // frame's pixels are valid RGBA that can be committed later.
-  size_t sz = (size_t)w * (size_t)h * 4;
-  f->data = calloc(1, sz);
-  if (!f->data) { anim_frame_free(f); free(tl->frames); free(tl); return NULL; }
-  f->data_size = sz;
-  f->format    = FRAME_FORMAT_RGBA;
-#endif
-
-  tl->frames[0]    = f;
-  tl->frame_count  = 1;
+  tl->next_cel_id = 1; tl->fps = 12; tl->loop = true;
+  if (anim_timeline_insert_frame(tl, -1) < 0) { anim_timeline_free(tl); return NULL; }
   tl->active_frame = 0;
-  tl->fps          = 12;
-  tl->loop         = true;
+#if !IMAGEEDITOR_BW
+  anim_frame_t *f = tl->frames[0].cel;
+  f->data_size = (size_t)w * h * 4;
+  f->data = calloc(1, f->data_size); f->format = FRAME_FORMAT_RGBA;
+  if (!f->data) { anim_timeline_free(tl); return NULL; }
+#endif
   return tl;
 }
 
 void anim_timeline_free(anim_timeline_t *tl) {
   if (!tl) return;
-  for (int i = 0; i < tl->frame_count; i++)
-    anim_frame_free(tl->frames[i]);
-  free(tl->frames);
-  free(tl);
+  for (int i = 0; i < tl->cel_count; i++) anim_frame_free(tl->bank[i]);
+  free(tl->bank); free(tl->frames); free(tl);
 }
 
-// ============================================================
-// Timeline frame manipulation
-// ============================================================
+anim_timeline_t *anim_timeline_clone(const anim_timeline_t *src) {
+  anim_timeline_t *copy = calloc(1, sizeof(*copy));
+  if (!copy) return NULL;
+  *copy = *src; copy->bank = NULL; copy->frames = NULL; copy->cel_count = 0; copy->playing = false;
+  for (int i = 0; i < src->cel_count; i++) {
+    anim_frame_t *cel = anim_frame_clone(src->bank[i]);
+    if (!cel || !anim_bank_add(copy, cel)) { anim_frame_free(cel); goto fail; }
+  }
+  copy->frames = malloc(src->frame_count * sizeof(*copy->frames));
+  if (!copy->frames) goto fail;
+  memcpy(copy->frames, src->frames, src->frame_count * sizeof(*copy->frames));
+  for (int i = 0; i < src->frame_count; i++) copy->frames[i].cel = anim_find_cel(copy, src->frames[i].cel->id);
+  return copy;
+fail:
+  anim_timeline_free(copy);
+  return NULL;
+}
 
 int anim_timeline_insert_frame(anim_timeline_t *tl, int after) {
-  if (!tl) return -1;
-  anim_frame_t **nf = realloc(tl->frames,
-                               sizeof(anim_frame_t *) * (tl->frame_count + 1));
-  if (!nf) return -1;
-  tl->frames = nf;
-
-  char name[32];
-  snprintf(name, sizeof(name), "Frame %d", tl->frame_count + 1);
-  anim_frame_t *f = anim_frame_new(name, 80);
-  if (!f) return -1;
-
-  int ins = (after < 0 || after >= tl->frame_count) ? tl->frame_count : after + 1;
-  memmove(&tl->frames[ins + 1], &tl->frames[ins],
-          sizeof(anim_frame_t *) * (tl->frame_count - ins));
-  tl->frames[ins] = f;
-  tl->frame_count++;
-  if (tl->active_frame >= ins)
-    tl->active_frame++;
-  return ins;
+  if (!tl || after < -1 || after >= tl->frame_count) return -1;
+  char name[32]; snprintf(name, sizeof(name), "Drawing %u", tl->next_cel_id);
+  anim_frame_t *cel = anim_frame_new(name);
+  if (!cel || !anim_bank_add(tl, cel)) { anim_frame_free(cel); return -1; }
+  int index = anim_timeline_reuse(tl, after, cel->id);
+  if (index < 0) anim_bank_delete(tl, cel->id);
+  return index;
 }
 
 int anim_timeline_duplicate_frame(anim_timeline_t *tl, int idx) {
   if (!tl || idx < 0 || idx >= tl->frame_count) return -1;
-  const anim_frame_t *src = tl->frames[idx];
-
-  anim_frame_t **nf = realloc(tl->frames,
-                               sizeof(anim_frame_t *) * (tl->frame_count + 1));
-  if (!nf) return -1;
-  tl->frames = nf;
-
-  anim_frame_t *copy = anim_frame_new(src->name, src->delay_ms);
-  if (!copy) return -1;
-  copy->format = src->format;
-  memcpy(copy->palette, src->palette, sizeof(src->palette));
-  if (src->data_size > 0) {
-    copy->data = malloc(src->data_size);
-    if (!copy->data) { anim_frame_free(copy); return -1; }
-    memcpy(copy->data, src->data, src->data_size);
-    copy->data_size = src->data_size;
+  anim_frame_t *cel = anim_frame_clone(tl->frames[idx].cel);
+  if (!cel) return -1;
+  cel->id = 0;
+  if (!anim_bank_add(tl, cel)) { anim_frame_free(cel); return -1; }
+  int index = anim_timeline_reuse(tl, idx, cel->id);
+  if (index < 0) anim_bank_delete(tl, cel->id);
+  else {
+    tl->frames[index].delay_ms = tl->frames[idx].delay_ms;
+    memcpy(tl->frames[index].note, tl->frames[idx].note, sizeof(tl->frames[index].note));
   }
+  return index;
+}
 
-  if (src->cels_size) {
-    copy->cels = malloc(src->cels_size);
-    if (!copy->cels) { anim_frame_free(copy); return -1; }
-    memcpy(copy->cels, src->cels, src->cels_size);
-    copy->cels_size = src->cels_size;
-  }
-
-  int ins = idx + 1;
-  memmove(&tl->frames[ins + 1], &tl->frames[ins],
-          sizeof(anim_frame_t *) * (tl->frame_count - ins));
-  tl->frames[ins] = copy;
-  tl->frame_count++;
-  if (tl->active_frame >= ins)
-    tl->active_frame++;
-  return ins;
+bool anim_timeline_make_unique(anim_timeline_t *tl, int index) {
+  if (!tl || index < 0 || index >= tl->frame_count) return false;
+  if (anim_cel_uses(tl, tl->frames[index].cel->id) <= 1) return true;
+  anim_frame_t *cel = anim_frame_clone(tl->frames[index].cel);
+  if (!cel) return false;
+  cel->id = 0;
+  if (!anim_bank_add(tl, cel)) { anim_frame_free(cel); return false; }
+  tl->frames[index].cel = cel;
+  return true;
 }
 
 bool anim_timeline_delete_frame(anim_timeline_t *tl, int idx) {
-  if (!tl || tl->frame_count <= 1) return false;
-  if (idx < 0 || idx >= tl->frame_count) return false;
-
-  anim_frame_free(tl->frames[idx]);
-  memmove(&tl->frames[idx], &tl->frames[idx + 1],
-          sizeof(anim_frame_t *) * (tl->frame_count - idx - 1));
-  tl->frame_count--;
-
-  if (tl->active_frame >= tl->frame_count)
-    tl->active_frame = tl->frame_count - 1;
+  if (!tl || tl->frame_count <= 1 || idx < 0 || idx >= tl->frame_count) return false;
+  memmove(tl->frames + idx, tl->frames + idx + 1, (--tl->frame_count - idx) * sizeof(*tl->frames));
+  if (tl->active_frame > idx) tl->active_frame--;
+  tl->active_frame = MIN(tl->active_frame, tl->frame_count - 1);
   return true;
 }
 
 void anim_timeline_move_frame(anim_timeline_t *tl, int from, int to) {
-  if (!tl || from == to) return;
-  if (from < 0 || from >= tl->frame_count) return;
-  if (to   < 0 || to   >= tl->frame_count) return;
-
-  anim_frame_t *f = tl->frames[from];
-  if (from < to) {
-    memmove(&tl->frames[from], &tl->frames[from + 1],
-            sizeof(anim_frame_t *) * (to - from));
-  } else {
-    memmove(&tl->frames[to + 1], &tl->frames[to],
-            sizeof(anim_frame_t *) * (from - to));
-  }
+  if (!tl || from == to || from < 0 || from >= tl->frame_count || to < 0 || to >= tl->frame_count) return;
+  anim_exposure_t f = tl->frames[from];
+  if (from < to) memmove(tl->frames + from, tl->frames + from + 1, (to - from) * sizeof(f));
+  else memmove(tl->frames + to + 1, tl->frames + to, (from - to) * sizeof(f));
   tl->frames[to] = f;
-
-  if (tl->active_frame == from) {
-    tl->active_frame = to;
-  } else if (from < to) {
-    if (tl->active_frame > from && tl->active_frame <= to)
-      tl->active_frame--;
-  } else {
-    if (tl->active_frame >= to && tl->active_frame < from)
-      tl->active_frame++;
-  }
+  if (tl->active_frame == from) tl->active_frame = to;
+  else if (from < to && tl->active_frame > from && tl->active_frame <= to) tl->active_frame--;
+  else if (from > to && tl->active_frame >= to && tl->active_frame < from) tl->active_frame++;
 }
 
 bool anim_timeline_switch_frame(anim_timeline_t *tl, int idx,
@@ -547,13 +566,13 @@ bool anim_timeline_switch_frame(anim_timeline_t *tl, int idx,
 
   // Playback only displays stored frames; do not recompress.
   if (!tl->playing) {
-    anim_frame_t *cur = tl->frames[tl->active_frame];
+    anim_frame_t *cur = tl->frames[tl->active_frame].cel;
     if (!anim_frame_compress(cur, *working_buf, w, h, commit_fmt))
       return false;
   }
 
   // Load the new frame: expand into working_buf.
-  anim_frame_t *next = tl->frames[idx];
+  anim_frame_t *next = tl->frames[idx].cel;
   if (next->data && next->data_size > 0) {
     if (!anim_frame_expand(next, *working_buf, w, h))
       return false;
