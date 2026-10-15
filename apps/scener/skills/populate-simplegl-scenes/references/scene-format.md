@@ -73,6 +73,7 @@ every problem with `file:line`:
 |------|----------|---------|
 | `element`, `attribute` | error | Unsupported element; attribute that no parser read (typo, or overridden as `color` beside `material`) |
 | `prefab`, `material` | error | Missing prefab file; material that is neither defined nor a preset; invalid prefab `up`/`front` |
+| `shape` | error | `<lathe>` or `<loft>` naming a `<shape>` that no scene or loaded prefab defines |
 | `expression` | error | `{expr}` or `<let>` that does not evaluate |
 | `light` | error | No `<light>`/`<sun>`, or a shadow-casting light sealed in a closed shadow-casting mesh |
 | `floating` | warning | A unit above the ground plane whose bounds touch no other unit (gap over 0.5 cm) |
@@ -92,8 +93,18 @@ the prefab's own file and lines.
 summary; `--json` prints `{"errors", "warnings", "issues": [{"severity", "kind",
 "file", "line", "message"}]}` instead.
 
-`scener --query SCENE` prints the built scene as JSON in authored centimetres
-and axes: `cameras`, `lights`, scene `materials`, every loaded prefab (file,
+Geometry is judged in a built view, and each camera's `<transform>` and
+`<use-pose>` children build a different one. By default the first camera's view
+is checked. `--camera NAME` checks the view of one camera and `--all-cameras`
+rebuilds and checks every camera in turn; an issue found that way carries the
+camera's name (`"camera"` in JSON, `(camera NAME)` in the text log) and is
+reported once, for the first camera whose view shows it. `--time SECONDS`
+applies to every view checked. Checking a large scene for every camera costs one
+geometry pass per camera.
+
+`scener --query SCENE [--camera NAME] [--time SECONDS]` prints the built scene
+as JSON in authored centimetres and axes, in the view of the first camera, or of
+the named one: `cameras`, `lights`, scene `materials`, every loaded prefab (file,
 leading comment, declared `up`/`front`, local `bounds`, local `attach` points)
 and `nodes`. A node is each authored scene element and every prefab instance,
 nested ones included, with `id`, `parent`, `tag`, `name`, `source`, `file`,
@@ -278,16 +289,20 @@ When no `<camera>` tag is present, a default "Camera1" is created with the defau
 
 A camera may contain additive `<transform>` overrides for named shapes, groups,
 or prefab instances. The target keeps its authored transform in every other
-camera. Override translation is local to the target, rotation uses the target's
-authored `pivotOffset`, and scale multiplies the authored scale. Camera changes
+camera. An override edits the target the way its author would: `pos` moves it
+along its parent's axes (the scene axes for a top-level node) whatever the
+target's own rotation, `rot` turns it about its authored position plus
+`pivotOffset` using the parent's axes, so a yaw stays a yaw on a tipped or
+flying instance, and `scale` multiplies the authored local scale. Camera changes
 restore the scene from XML before applying the selected shot's overrides, so a
-pose cannot leak between shots.
+pose cannot leak between shots. `scener --check --camera NAME` or
+`--all-cameras` validates the geometry each camera builds.
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `target` | string | (required) | `name` of the shape, group, or prefab to transform |
-| `pos` | vec3 | 0 0 0 | Additive local translation |
-| `rot` | vec3 | 0 0 0 | Additive local Euler rotation |
+| `pos` | vec3 | 0 0 0 | Additive translation in the parent's frame, centimetres |
+| `rot` | vec3 | 0 0 0 | Additive Euler rotation about the target's pivot, parent axes |
 | `scale` | vec3 | 1 1 1 | Multiplicative local scale |
 
 ```xml
@@ -1615,8 +1630,11 @@ foliage. Seeded for deterministic output.
 
 | Attribute  | Type  | Default | Description |
 |------------|-------|---------|-------------|
-| `strength` | float | 0.1     | Maximum displacement magnitude per axis |
+| `strength` | float | 1       | Maximum displacement per axis, in centimetres |
 | `seed`     | int   | 1       | Random seed for reproducible noise |
+
+The displacement is a hash of each vertex's position, so the corners a box or
+prism repeats for every face move together and the surface stays sealed.
 
 ```xml
 <sphere radius="50">
@@ -1670,7 +1688,11 @@ inheritance are not currently implemented; define those on child shapes.
 | `screenImage` | path | (none) | Override descendant `<screen image="...">` for this instance |
 
 Prefab `scale` applies to its complete local transform, including named attach
-points. A prefab-level `color` selectively replaces the diffuse color of
+points. An `<array>` child repeats the instance in its own local frame: each
+step's `translation` runs along the instance's rotated, scaled axes, like the
+`<array>` modifier on a shape. A `<shape>` declared inside a prefab is available
+to its lathes and lofts in every view; shape ids are shared across the scene and
+its prefabs, and the first definition of an id wins. A prefab-level `color` selectively replaces the diffuse color of
 descendant shapes marked `tint="1"`; unmarked parts keep their own material or
 color. Tinting does not replace material shininess. This lets one book prefab
 produce different cover colors while its page block remains paper-colored:

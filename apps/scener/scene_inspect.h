@@ -415,8 +415,19 @@ void scene_query(Scene *s,FILE *f){
 	free(rb);
 }
 
-SceneCheckResult scene_check(Scene *s,FILE *f,int json){
+/* Geometry is judged in the built view: the active camera's transforms, poses and time. */
+void scene_check_geometry(Scene *s,const char *camera){
+	snprintf(s->checkCamera,sizeof(s->checkCamera),"%s",camera?camera:"");
 	check_geometry(s);
+	s->checkCamera[0]=0;
+}
+
+SceneCheckResult scene_check(Scene *s,FILE *f,int json){
+	scene_check_geometry(s,NULL);
+	return scene_check_report(s,f,json);
+}
+
+SceneCheckResult scene_check_report(Scene *s,FILE *f,int json){
 	SceneCheckResult result={0,0};
 	for(int i=0;i<s->nissues;i++) if(s->issues[i].severity==SCENE_ISSUE_ERROR) result.errors++; else result.warnings++;
 	if(!json){
@@ -430,7 +441,9 @@ SceneCheckResult scene_check(Scene *s,FILE *f,int json){
 		SceneIssue *issue=&s->issues[i];
 		fputs(i?",\n    {\"severity\": ":"\n    {\"severity\": ",f); json_str(f,issue->severity==SCENE_ISSUE_ERROR?"error":"warning");
 		fputs(", \"kind\": ",f); json_str(f,issue->kind); fputs(", \"file\": ",f); json_str(f,issue->file);
-		fprintf(f,", \"line\": %d, \"message\": ",issue->line); json_str(f,issue->message); fputc('}',f);
+		fprintf(f,", \"line\": %d, \"message\": ",issue->line); json_str(f,issue->message);
+		if(issue->camera[0]){ fputs(", \"camera\": ",f); json_str(f,issue->camera); }
+		fputc('}',f);
 	}
 	fputs(s->nissues?"\n  ]\n}\n":"]\n}\n",f);
 	return result;

@@ -87,7 +87,8 @@ After editing a scene or referenced prefab:
 xmllint --noout apps/scener/scenes/sample_room.blks
 make scener
 ./build/bin/scener --check apps/scener/scenes/sample_room.blks --json
-./build/bin/scener --query apps/scener/scenes/sample_room.blks
+./build/bin/scener --check apps/scener/scenes/sample_room.blks --all-cameras --strict
+./build/bin/scener --query apps/scener/scenes/sample_room.blks --camera Cam2
 ./build/bin/scener --render apps/scener/scenes/sample_room.blks --output-dir render
 ```
 

@@ -28,7 +28,7 @@ typedef struct {
 	bool screenshot_mode;
 	bool batch, layout, list_cameras, list_joints, help, version, invalid;
 	float time, frame_start, frame_end, fps;
-	bool frames, time_set, check, output_dir_set, query, json, strict;
+	bool frames, time_set, check, output_dir_set, query, json, strict, all_cameras;
 	char prefab_source[1024];
 	char reel_path[1024], poster_path[1024], sheet_path[1024];
 	int sheet_columns, nsheet_times; float sheet_times[64];
@@ -72,8 +72,9 @@ static void cli_usage(void) {
 	     "scener --list-cameras SCENE\n"
 	     "scener SCENE --screenshot FILE [--cam NAME] [--size WIDTHxHEIGHT]\n"
 	     "scener --list-joints SCENE [--camera NAME] [--time SECONDS]\n"
-	     "scener --check SCENE [--json] [--strict]   load diagnostics plus floating, intersecting and z-fighting geometry\n"
-	     "scener --query SCENE [--time SECONDS]       JSON: cameras, lights, prefabs, every node with world bounds and attach points\n"
+	     "scener --check SCENE [--camera NAME | --all-cameras] [--time SECONDS] [--json] [--strict]\n"
+	     "                                            load diagnostics plus floating, intersecting and z-fighting geometry in that camera's view\n"
+	     "scener --query SCENE [--camera NAME] [--time SECONDS]  JSON: cameras, lights, prefabs, every node with world bounds and attach points\n"
 	     "scener --prefab-info SOURCE|FILE.blk        JSON for one prefab: bounds, attach points, up, front, description\n"
 	     "scener --reel REEL (--output FILE.mp4|FILE.png | --output-dir DIR) [--time SECONDS] [--poster FILE.png]\n"
 	     "scener --reel REEL --check\n"
@@ -104,6 +105,7 @@ static void cli_parse(int argc, char *argv[]) {
 		if(!strcmp(arg,"--query")){g_cli.query=true;continue;}
 		if(!strcmp(arg,"--json")){g_cli.json=true;continue;}
 		if(!strcmp(arg,"--strict")){g_cli.strict=true;continue;}
+		if(!strcmp(arg,"--all-cameras")){g_cli.all_cameras=true;continue;}
 		if(arg[0]!='-'){
 			if(g_cli.scene_path[0]){fprintf(stderr,"unexpected argument: %s\n",arg);g_cli.invalid=true;}
 			else snprintf(g_cli.scene_path,sizeof(g_cli.scene_path),"%s",arg);
@@ -157,6 +159,7 @@ static void cli_parse(int argc, char *argv[]) {
 	}
 	if(g_cli.json&&!g_cli.check){fprintf(stderr,"--json applies to --check\n");g_cli.invalid=true;}
 	if(g_cli.strict&&(!g_cli.check||g_cli.reel_path[0])){fprintf(stderr,"--strict applies to a scene --check\n");g_cli.invalid=true;}
+	if(g_cli.all_cameras&&(!g_cli.check||g_cli.reel_path[0]||g_cli.camera_name[0])){fprintf(stderr,"--all-cameras applies to a scene --check without --camera\n");g_cli.invalid=true;}
 	if(g_cli.reel_path[0]&&(g_cli.query||g_cli.prefab_source[0])){fprintf(stderr,"--reel takes no scene or other mode\n");g_cli.invalid=true;}
 	if(g_cli.reel_path[0]){
 		bool output=g_cli.output_path[0]||g_cli.output_dir_set||g_cli.sheet_path[0];
@@ -305,10 +308,18 @@ static int cli_inspect(void){
 	else snprintf(path,sizeof(path),"%s",g_cli.scene_path);
 	Scene scene={0};
 	if(!load_scene(path,&scene))return 1;
+	if(g_cli.camera_name[0]&&!cli_select_camera(&scene,g_cli.camera_name)){scene_free(&scene);return 1;}
 	if(g_cli.time_set)scene_set_time(&scene,g_cli.time);
 	int status=0;
 	if(g_cli.check){
-		SceneCheckResult result=scene_check(&scene,stdout,g_cli.json);
+		/* Each camera's transforms and poses build a different view, so each is checked in turn. */
+		if(g_cli.all_cameras&&scene.ncameras) for(int i=0;i<scene.ncameras;i++){
+			scene_select_camera(&scene,scene.cameras[i].name);
+			if(g_cli.time_set)scene_set_time(&scene,g_cli.time);
+			scene_check_geometry(&scene,scene.cameras[i].name);
+		}
+		else scene_check_geometry(&scene,g_cli.camera_name[0]?g_cli.camera_name:NULL);
+		SceneCheckResult result=scene_check_report(&scene,stdout,g_cli.json);
 		status=result.errors||(g_cli.strict&&result.warnings)?1:0;
 	}else scene_query(&scene,stdout);
 	scene_free(&scene);

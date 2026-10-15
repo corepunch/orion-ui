@@ -11,6 +11,7 @@
 #include "reel.h"
 
 #define SURFACE_EPSILON 0.000001f
+#define NOISE_DEFAULT_STRENGTH_CM 1.0f
 #define SURFACE_NAME_CAPACITY 64
 #define WALL_DEFAULT_LENGTH 4.0f
 #define WALL_DEFAULT_HEIGHT 2.7f
@@ -706,13 +707,16 @@ static void scene_issue(Scene *s,int severity,const char *kind,const char *file,
 	snprintf(issue.kind,sizeof(issue.kind),"%s",kind);
 	snprintf(issue.file,sizeof(issue.file),"%s",file?file:"");
 	va_list ap; va_start(ap,fmt); vsnprintf(issue.message,sizeof(issue.message),fmt,ap); va_end(ap);
+	snprintf(issue.camera,sizeof(issue.camera),"%s",s->checkCamera);
 	for(int i=0;i<s->nissues;i++){
 		SceneIssue *o=&s->issues[i];
 		if(o->severity==issue.severity && o->line==issue.line && !strcmp(o->kind,issue.kind) && !strcmp(o->file,issue.file) && !strcmp(o->message,issue.message)) return;
 	}
 	DA_PUSH(s->issues,s->nissues,s->cissues,issue);
-	if(line>0) fprintf(stderr,"%s: %s:%d: %s\n",severity==SCENE_ISSUE_ERROR?"error":"warning",issue.file,line,issue.message);
-	else fprintf(stderr,"%s: %s: %s\n",severity==SCENE_ISSUE_ERROR?"error":"warning",issue.file,issue.message);
+	const char *label=severity==SCENE_ISSUE_ERROR?"error":"warning";
+	if(line>0) fprintf(stderr,"%s: %s:%d: %s",label,issue.file,line,issue.message);
+	else fprintf(stderr,"%s: %s: %s",label,issue.file,issue.message);
+	fprintf(stderr,issue.camera[0]?" (camera %s)\n":"\n",issue.camera);
 	fflush(stderr);
 }
 
@@ -762,7 +766,7 @@ static void parse_mod_mirror(Mesh *m, XmlNode *n){
 	mesh_apply_mirror(m,mod_axis(n),xml_attr_f(n,"weld",0.001f));
 }
 static void parse_mod_noise(Mesh *m, XmlNode *n){
-	mesh_apply_noise(m,xml_attr_f(n,"strength",0.1f),xml_attr_i(n,"seed",1));
+	mesh_apply_noise(m,xml_attr_f_cm(n,"strength",NOISE_DEFAULT_STRENGTH_CM),xml_attr_i(n,"seed",1));
 }
 static void parse_mod_shell(Mesh *m, XmlNode *n){
 	mesh_apply_shell(m,xml_attr_f(n,"amount",0.05f));
@@ -852,7 +856,7 @@ static void parse_lathe(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,
 	(void)parentM; (void)pos; (void)rot;
 	const char *sid=xml_attr(n,"shape",NULL);
 	Shape2D *sh=find_shape(s,sid);
-	if(!sh){ fprintf(stderr,"lathe: shape '%s' not found\n",sid?sid:"(null)"); return; }
+	if(!sh){ scene_issue(s,SCENE_ISSUE_ERROR,"shape",node_file(s,n),n->line,"<lathe> uses undefined shape '%s'",sid?sid:""); return; }
 	Mesh mesh=gen_lathe(sh,xml_attr_i(n,"segments",24));
 	apply_modifiers(&mesh,n);
 	scene_add_obj(s,mesh,M,R,color,shin,castsShadow,renderable,unlit);
@@ -864,7 +868,7 @@ static void parse_loft(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,v
 	const char *cs=xml_attr(n,"crossShape",NULL);
 	Shape2D *pathS=find_shape(s,ps), *crossS=find_shape(s,cs);
 	if(!pathS||!crossS){
-		fprintf(stderr,"loft: shapes '%s'/'%s' not found\n",ps?ps:"(null)",cs?cs:"(null)");
+		scene_issue(s,SCENE_ISSUE_ERROR,"shape",node_file(s,n),n->line,"<loft> uses undefined shape '%s'",!pathS?(ps?ps:""):(cs?cs:""));
 		return;
 	}
 	int lclosed=xml_attr_i(n,"closed",0);
@@ -878,18 +882,16 @@ static void parse_loft(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,v
 		vec3 p=v3(pathS->pts[idx].x,0,pathS->pts[idx].y);
 		DA_PUSH(lp.pts,lp.npts,lp.cpts,p);
 	}
-	Shape2D tmp=crossS->closed?*crossS:(Shape2D){0};
-	if(!crossS->closed){
-		tmp.pts=malloc(sizeof(vec3)*(size_t)crossS->npts);
-		memcpy(tmp.pts,crossS->pts,sizeof(vec3)*(size_t)crossS->npts);
-		tmp.npts=crossS->npts; tmp.cpts=crossS->npts;
-		tmp.closed=1;
-	}
-	shape2d_compute_normals(&tmp);
-	Mesh mesh=gen_loft(&lp,&tmp,lclosed);
+	/* The cross-section is swept closed; a private copy keeps the shared shape's own normals intact. */
+	Shape2D cross={0};
+	cross.pts=malloc(sizeof(vec3)*(size_t)crossS->npts);
+	memcpy(cross.pts,crossS->pts,sizeof(vec3)*(size_t)crossS->npts);
+	cross.npts=cross.cpts=crossS->npts; cross.closed=1;
+	shape2d_compute_normals(&cross);
+	Mesh mesh=gen_loft(&lp,&cross,lclosed);
 	apply_modifiers(&mesh,n);
 	scene_add_obj(s,mesh,M,R,color,shin,castsShadow,renderable,unlit);
-	if(!crossS->closed){ free(tmp.pts); free(tmp.nrm); }
+	shape2d_free(&cross);
 	free(lp.pts);
 }
 
@@ -1847,21 +1849,25 @@ static XmlNode* load_prefab(Scene *s, const char *name){
 	return root;
 }
 
-static void apply_camera_transform(Scene *s,XmlNode *n,mat4 *M,mat4 *R){
+/* A camera <transform> edits its target as the author would: pos moves it along the parent's axes, rot turns
+   it about its pivot with the parent's axes, and scale multiplies the authored local scale. */
+static void apply_camera_transform(Scene *s,XmlNode *n,mat4 base,mat4 local,vec3 pivot,mat4 *M,mat4 baseR,mat4 localR,mat4 *R){
+	*M=mat4_mul(base,local);
+	if(R) *R=mat4_mul(baseR,localR);
 	const char *name=xml_attr(n,"name",NULL);
 	if(!name) return;
-	vec3 pvt=xml_attr_v3_cm(n,"pivotOffset",v3(0,0,0));
 	for(int c=0;c<s->ncameras;c++){
 		Camera *cam=&s->cameras[c];
 		if(strcmp(cam->name,s->activeCamera)) continue;
 		for(int t=0;t<cam->ntransforms;t++){
 			CameraTransform *x=&cam->transforms[t];
 			if(strcmp(x->target,name)) continue;
-			mat4 Tp=mat4_translate(pvt),Tn=mat4_translate(vscale(pvt,-1));
-			mat4 D=mat4_mul(mat4_translate(x->pos),mat4_mul(Tp,
-				mat4_mul(mat4_rot_xyz(x->rot),mat4_mul(Tn,mat4_scale(x->scale)))));
-			*M=mat4_mul(*M,D);
-			if(R) *R=mat4_mul(*R,mat4_rot_xyz(x->rot));
+			mat4 Tp=mat4_translate(pivot),Tn=mat4_translate(vscale(pivot,-1));
+			mat4 D=mat4_mul(mat4_translate(x->pos),mat4_mul(Tp,mat4_mul(mat4_rot_xyz(x->rot),Tn)));
+			base=mat4_mul(base,D); baseR=mat4_mul(baseR,mat4_rot_xyz(x->rot));
+			local=mat4_mul(local,mat4_scale(x->scale));
+			*M=mat4_mul(base,local);
+			if(R) *R=mat4_mul(baseR,localR);
 		}
 		break;
 	}
@@ -2108,8 +2114,8 @@ static void collect_negative_boxes(Scene *s, XmlNode *parent, mat4 parentM){
 		mat4 Tp=mat4_translate(pvt), Tn=mat4_translate(v3(-pvt.x,-pvt.y,-pvt.z));
 		mat4 local=mat4_mul(mat4_translate(pos),
 			mat4_mul(Tp,mat4_mul(mat4_rot_xyz(rot),mat4_mul(Tn,mat4_scale(scl)))));
-		mat4 M=mat4_mul(parentM,local);
-		apply_camera_transform(s,n,&M,NULL);
+		mat4 M;
+		apply_camera_transform(s,n,parentM,local,vadd(pos,pvt),&M,mat4_identity(),mat4_identity(),NULL);
 		if(!strcmp(n->tag,"window")){
 			window_spec_t w;
 			if(window_spec(n,&w)){
@@ -2326,19 +2332,16 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 				}
 			}
 		}
-		mat4 R = mat4_mul(parentR, mat4_mul(attachRmat, mat4_rot_xyz(rot)));
+		mat4 baseR=mat4_mul(parentR,attachRmat), localR=mat4_rot_xyz(rot);
 		vec3 pvt=xml_attr_v3_cm(n,"pivotOffset",v3(0,0,0));
-		mat4 M;
+		mat4 local;
 		if(pvt.x!=0.0f||pvt.y!=0.0f||pvt.z!=0.0f){
 			mat4 Tp=mat4_translate(pvt);
 			mat4 Tn=mat4_translate(v3(-pvt.x,-pvt.y,-pvt.z));
-			M=mat4_mul(parentM, mat4_mul(attachM, mat4_mul(mat4_translate(pos),
-				mat4_mul(Tp, mat4_mul(mat4_rot_xyz(rot), mat4_mul(Tn, mat4_scale(scl)))))));
-		} else {
-			M=mat4_mul(parentM, mat4_mul(attachM, mat4_mul(mat4_translate(pos),
-				mat4_mul(mat4_rot_xyz(rot), mat4_scale(scl)))));
-		}
-		apply_camera_transform(s,n,&M,&R);
+			local=mat4_mul(mat4_translate(pos),mat4_mul(Tp,mat4_mul(localR,mat4_mul(Tn,mat4_scale(scl)))));
+		} else local=mat4_mul(mat4_translate(pos),mat4_mul(localR,mat4_scale(scl)));
+		mat4 M,R;
+		apply_camera_transform(s,n,mat4_mul(parentM,attachM),local,vadd(pos,pvt),&M,baseR,localR,&R);
 		if(s->activeRigInstance && (!strcmp(tag,"group") || xml_is_bone(n))){
 			const char *name=xml_attr(n,"name",NULL);
 			if(name){
@@ -2403,8 +2406,8 @@ static void parse_camera_tag(Scene *s, XmlNode *n){
 	for(int i=0;i<n->nkids;i++) if(!strcmp(n->kids[i]->tag,"transform")){
 		CameraTransform x={0};
 		strncpy(x.target,xml_attr(n->kids[i],"target",""),31);
-		x.pos=xml_attr_v3_cm(n->kids[i],"pos",v3(0,0,0));
-		x.rot=xml_attr_v3(n->kids[i],"rot",v3(0,0,0));
+		x.pos=cvt3ds(s,xml_attr_v3_cm(n->kids[i],"pos",v3(0,0,0)));
+		x.rot=cvt3ds(s,xml_attr_v3(n->kids[i],"rot",v3(0,0,0)));
 		x.scale=xml_attr_v3(n->kids[i],"scale",v3(1,1,1));
 		if(x.target[0]) DA_PUSH(cam.transforms,cam.ntransforms,cam.ctransforms,x);
 	}
@@ -2712,6 +2715,8 @@ static void scene_rebuild_view(Scene *s){
 	}
 	mat4 I=mat4_identity();
 	collect_shapes_from_tree(s,root);
+	/* Prefabs load once, so their <shape> profiles are gathered again for every rebuilt view. */
+	for(int i=0;i<s->nprefabs;i++) collect_shapes_from_tree(s,(XmlNode*)s->prefabs[i].root);
 	if(s->editDepth){
 		for(int i=0;i<sceneRoot->nkids;i++) if(!strcmp(sceneRoot->kids[i]->tag,"material"))
 			parse_material_tag(s,sceneRoot->kids[i]);

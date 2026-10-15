@@ -226,6 +226,23 @@ def main():
         info = json.loads(run('--prefab-info', 'furniture/stool').stdout)
         assert info['kind'] == 'prefab' and info['front'] == '-y' and info['attach'] == {'seat': [0, 0, 45]}, info
         assert info['bounds']['size'] == [40, 40, 45], info
+        staged = work / 'staged.blks'
+        staged.write_text('''<scene up="z">
+<camera name="rest" pos="0 -300 150" look="0 0 50"/>
+<camera name="lifted" pos="0 -300 150" look="0 0 50"><transform target="crate" pos="0 0 60"/></camera>
+<light pos="0 0 250" radius="900"/>
+<box pos="0 0 -5" size="300 300 10" material="floor"/>
+<box name="crate" pos="0 0 10" size="20 20 20" material="wood"/>
+</scene>''')
+        assert json.loads(run('--check', staged, '--json').stdout)['warnings'] == 0
+        lifted = json.loads(run('--check', staged, '--camera', 'lifted', '--json').stdout)
+        assert [(i['kind'], i['camera']) for i in lifted['issues']] == [('floating', 'lifted')], lifted
+        every = json.loads(run('--check', staged, '--all-cameras', '--json').stdout)
+        assert [(i['kind'], i['camera']) for i in every['issues']] == [('floating', 'lifted')], every
+        run('--check', staged, '--all-cameras', '--camera', 'rest', success=False)
+        run('--check', staged, '--camera', 'absent', success=False)
+        moved = json.loads(run('--query', staged, '--camera', 'lifted').stdout)
+        assert next(n for n in moved['nodes'] if n.get('name') == 'crate')['bounds']['min'][2] == 60, moved
         broken = work / 'broken.blks'
         broken.write_text('<scene><light pos="0 0 1"/><box size="{W} 1 1" colour="1 0 0"/><prefab source="nowhere"/></scene>')
         report = json.loads(run('--check', broken, '--json', success=False).stdout)
@@ -241,7 +258,7 @@ def main():
         for prefab in sorted((content / 'prefabs').rglob('*.blk')):
             report = json.loads(run('--check', prefab, '--json').stdout)
             assert report['errors'] == 0 and report['warnings'] == 0, report
-        print('PASS: CLI errors, cameras, JPEG/PNG encoding, output dimensions, batch, selection, layout, legacy screenshot, reels, check, query, prefab info')
+        print('PASS: CLI errors, cameras, JPEG/PNG encoding, output dimensions, batch, selection, layout, legacy screenshot, reels, check, per-camera check, query, prefab info')
 
 
 if __name__ == '__main__':

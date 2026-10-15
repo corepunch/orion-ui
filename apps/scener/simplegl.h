@@ -222,7 +222,7 @@ typedef struct { char ref[SCENE_PREFAB_PATH_CAPACITY]; char path[SCENE_PREFAB_PA
 enum { SCENE_ISSUE_WARNING, SCENE_ISSUE_ERROR };
 #define SCENE_ISSUE_KIND_CAPACITY 24
 #define SCENE_ISSUE_MESSAGE_CAPACITY 512
-typedef struct { int severity; char kind[SCENE_ISSUE_KIND_CAPACITY]; char file[SCENE_PREFAB_PATH_CAPACITY]; int line; char message[SCENE_ISSUE_MESSAGE_CAPACITY]; } SceneIssue;
+typedef struct { int severity; char kind[SCENE_ISSUE_KIND_CAPACITY]; char file[SCENE_PREFAB_PATH_CAPACITY]; int line; char message[SCENE_ISSUE_MESSAGE_CAPACITY]; char camera[MAX_CAMERA_NAME]; } SceneIssue;
 /* One per authored scene node and per prefab instance (also nested ones) in the built view;
    objects point at their innermost record, so bounds and diagnostics name what the author wrote. */
 typedef struct { void *node; int parent; mat4 transform; } SceneRecord;
@@ -288,6 +288,7 @@ typedef struct {
 	RigJointWorld *rigJointWorlds; int nrigJointWorlds, crigJointWorlds;
 	struct MocapSource *mocap; int nmocap, cmocap; /* loaded BVH clips, kept across rebuilds */
 	char activeCamera[MAX_CAMERA_NAME];
+	char checkCamera[MAX_CAMERA_NAME]; /* names the camera whose view a geometry check is reporting */
 	float time; /* seconds on the scene timeline; drives gaits, clips and layers */
 	float duration; /* <scene duration>: playback loops after it; 0 plays on */
 	char scenePath[512];
@@ -325,6 +326,8 @@ void scene_select_camera(Scene *s,const char *name);
 void scene_add_obj(Scene *s,Mesh mesh,mat4 M,mat4 R,vec3 color,float shin,int castsShadow,int renderable,int unlit);
 typedef struct { int errors, warnings; } SceneCheckResult;
 SceneCheckResult scene_check(Scene *s,FILE *out,int json);
+void scene_check_geometry(Scene *s,const char *camera);
+SceneCheckResult scene_check_report(Scene *s,FILE *out,int json);
 void scene_query(Scene *s,FILE *out);
 vec3 light_to_source(Light *light,vec3 point);
 void scene_rebuild_camera_gizmos(Scene *s,float aspect);

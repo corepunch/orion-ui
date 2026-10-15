@@ -32,7 +32,9 @@ scener --render /absolute/path/walk.blks --camera Track --frames 0:7.5:24 --outp
 scener --render /absolute/path/walk.blks --camera Side --time 2.2 --output-dir render/still
 scener --list-joints /absolute/path/walk.blks --camera Side --time 2.2
 scener --check /absolute/path/room.blks [--json] [--strict]
-scener --query /absolute/path/room.blks [--time 2.2]
+scener --check /absolute/path/room.blks --all-cameras --strict
+scener --check /absolute/path/room.blks --camera room-main --time 2.2
+scener --query /absolute/path/room.blks [--camera room-main] [--time 2.2]
 scener --prefab-info furniture/chair
 ```
 
@@ -42,7 +44,10 @@ session. `--check` prints a summary line (or, with `--json`, every issue as
 elements, ignored attributes, missing prefabs and materials, broken
 expressions, sealed lights, unlit scenes) and geometry warnings (floating
 units, interpenetration, z-fighting coplanar faces). It exits 1 on any error,
-and with `--strict` also on warnings. `--query` prints the built scene as JSON
+and with `--strict` also on warnings. Geometry is checked in the first camera's
+view unless `--camera NAME` selects another or `--all-cameras` checks each
+camera's transforms and poses in turn, naming the camera on every issue it adds.
+`--query` prints the built scene as JSON
 in authored centimetres: cameras, lights, materials, loaded prefabs and every
 scene node and prefab instance with its file, line, world origin, bounds and
 attach points. `--prefab-info SOURCE` resolves `prefabs/SOURCE.blk` from the

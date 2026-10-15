@@ -1,6 +1,7 @@
 #include "test_framework.h"
 #include "scener.h"
 #include <unistd.h>
+#include <sys/stat.h>
 
 app_state_t *g_app;
 static const char *window_test_temp_dir(void);
@@ -661,9 +662,10 @@ static void test_window_cut_transforms_and_union(void){
 		"</scene>"));
 	ASSERT_FALSE(window_test_wall_at(&s,v3(0,WINDOW_TEST_MID_HEIGHT,0)));
 	ASSERT_FALSE(window_test_wall_at(&s,v3(1-WINDOW_TEST_FRAME,WINDOW_TEST_MID_HEIGHT,0)));
+	/* The override moves the mirrored insert along the scene's +X, not its own flipped axis. */
 	scene_select_camera(&s,"moved");
-	ASSERT_TRUE(window_test_wall_at(&s,v3(0,WINDOW_TEST_MID_HEIGHT,0)));
-	ASSERT_FALSE(window_test_wall_at(&s,v3(-2+WINDOW_TEST_FRAME,WINDOW_TEST_MID_HEIGHT,0)));
+	ASSERT_TRUE(window_test_wall_at(&s,v3(-0.5f,WINDOW_TEST_MID_HEIGHT,0)));
+	ASSERT_FALSE(window_test_wall_at(&s,v3(2-WINDOW_TEST_FRAME,WINDOW_TEST_MID_HEIGHT,0)));
 	scene_select_camera(&s,"base");
 	ASSERT_FALSE(window_test_wall_at(&s,v3(0,WINDOW_TEST_MID_HEIGHT,0)));
 	scene_free(&s);
@@ -679,6 +681,121 @@ static void test_window_cut_transforms_and_union(void){
 	ASSERT_FALSE(window_test_wall_at(&s,v3(2-WINDOW_TEST_FRAME,2,0)));
 	scene_free(&s);
 	PASS();
+}
+
+static int window_test_write_prefab(const char *name,const char *xml){
+	char dir[WINDOW_TEST_MAX_PATH],path[WINDOW_TEST_MAX_PATH];
+	snprintf(dir,sizeof(dir),"%s/prefabs",window_test_temp_dir());
+	mkdir(dir,0777);
+	snprintf(path,sizeof(path),"%s/%s.blk",dir,name);
+	FILE *file=fopen(path,"w"); if(!file) return 0;
+	fputs(xml,file); fclose(file); return 1;
+}
+
+static void test_far_meshes_keep_their_winding(void){
+	TEST("scene check: boxes stored far from the origin keep outward normals and touching faces are not coplanar");
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene up=\"z\"><light pos=\"0 0 100\"/>\n"
+		"<group pos=\"0 0 -40000\"><group pos=\"-380 -330 140\" rot=\"0 0 93.9\"><box pos=\"0 2 11\" size=\"13 30 18\"/>\n"
+		"<box pos=\"-6.65 6 12\" size=\"0.3 10 5\"/><box pos=\"0 11 22.5\" size=\"3 2 5\"/></group></group></scene>"));
+	ASSERT_EQUAL(s.nobjs,3);
+	for(int i=0;i<s.nobjs;i++) ASSERT_TRUE(mesh_signed_volume(&s.objs[i].mesh)>0);
+	FILE *sink=fopen("/dev/null","w"); scene_check(&s,sink,0); fclose(sink);
+	ASSERT_EQUAL(issues_of_kind(&s,"coplanar"),0);
+	ASSERT_EQUAL(issues_of_kind(&s,"intersection"),0);
+	scene_free(&s); PASS();
+}
+
+static void test_noise_in_centimetres_keeps_corners_joined(void){
+	TEST("noise modifier: strength is centimetres and a box's repeated corners move together");
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene up=\"z\"><light pos=\"0 0 100\"/>"
+		"<box pos=\"0 0 20\" size=\"40 40 40\"><noise strength=\"2\" seed=\"3\"/></box></scene>"));
+	ASSERT_EQUAL(s.nobjs,1);
+	vec3 lo,hi; scene_get_obj_bounds(&s,0,&lo,&hi);
+	ASSERT_TRUE(hi.x-lo.x>0.4f && hi.x-lo.x<0.44f && hi.z-lo.z>0.4f && hi.z-lo.z<0.44f);
+	Mesh *m=&s.objs[0].mesh; int distinct=0;
+	for(int i=0;i<m->nverts;i++){
+		int seen=0;
+		for(int j=0;j<i && !seen;j++) seen=vlen(vsub(m->verts[i].pos,m->verts[j].pos))<WINDOW_TEST_EPSILON;
+		distinct+=!seen;
+	}
+	ASSERT_EQUAL(distinct,8);
+	scene_free(&s); PASS();
+}
+
+static void test_lofts_share_a_cross_shape(void){
+	TEST("lofts: several sweeps of one closed cross-section leave the shape's normals intact");
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene up=\"z\"><light pos=\"0 0 100\"/>"
+		"<shape id=\"path\"><v x=\"0\" y=\"0\"/><v x=\"50\" y=\"20\"/><v x=\"100\" y=\"0\"/></shape>"
+		"<shape id=\"cross\" closed=\"1\"><v x=\"-5\" y=\"-5\"/><v x=\"5\" y=\"-5\"/><v x=\"5\" y=\"5\"/><v x=\"-5\" y=\"5\"/></shape>"
+		"<loft pathShape=\"path\" crossShape=\"cross\"/><loft pathShape=\"path\" crossShape=\"cross\" pos=\"0 50 0\"/>"
+		"<loft pathShape=\"path\" crossShape=\"cross\" pos=\"0 100 0\"/><lathe shape=\"absent\"/></scene>"));
+	ASSERT_EQUAL(s.nobjs,3);
+	for(int i=0;i<s.nobjs;i++) ASSERT_TRUE(s.objs[i].mesh.nverts>0);
+	ASSERT_EQUAL(s.nshapes,2);
+	for(int i=0;i<s.nshapes;i++) ASSERT_TRUE(s.shapes[i].nrm!=NULL);
+	ASSERT_EQUAL(issues_of_kind(&s,"shape"),1);
+	scene_free(&s); PASS();
+}
+
+static void test_prefab_shapes_survive_camera_changes(void){
+	TEST("prefab <shape> profiles stay available when a camera rebuilds the view");
+	ASSERT_TRUE(window_test_write_prefab("vase","<prefab up=\"z\" front=\"-y\"><shape id=\"vase_profile\">"
+		"<v x=\"0\" y=\"0\"/><v x=\"10\" y=\"0\"/><v x=\"8\" y=\"20\"/><v x=\"0\" y=\"20\"/></shape>"
+		"<lathe shape=\"vase_profile\" segments=\"12\" rot=\"90 0 0\"/></prefab>"));
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene up=\"z\"><light pos=\"0 0 100\"/>"
+		"<camera name=\"a\" pos=\"-100 -100 60\" look=\"0 0 15\"/>"
+		"<camera name=\"b\" pos=\"-100 -100 60\" look=\"0 0 15\"><transform target=\"Vase\" pos=\"0 0 10\"/></camera>"
+		"<prefab source=\"vase\" name=\"Vase\"/></scene>"));
+	ASSERT_EQUAL(s.nobjs,1);
+	scene_select_camera(&s,"b");
+	ASSERT_EQUAL(s.nobjs,1);
+	ASSERT_EQUAL(issues_of_kind(&s,"shape"),0);
+	vec3 lo,hi; scene_get_obj_bounds(&s,0,&lo,&hi);
+	ASSERT_TRUE(fabsf(lo.z-0.1f)<WINDOW_TEST_EPSILON && fabsf(hi.z-0.3f)<WINDOW_TEST_EPSILON);
+	scene_free(&s); PASS();
+}
+
+static void test_camera_transforms_use_the_parent_frame(void){
+	TEST("camera transforms move along the parent's axes and turn about the target's pivot");
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene up=\"z\"><light pos=\"0 0 100\"/>"
+		"<camera name=\"a\" pos=\"-150 -150 100\" look=\"0 0 20\"/>"
+		"<camera name=\"b\" pos=\"-150 -150 100\" look=\"0 0 20\"><transform target=\"Crate\" pos=\"100 0 0\"/></camera>"
+		"<camera name=\"c\" pos=\"-150 -150 100\" look=\"0 0 20\"><transform target=\"Crate\" rot=\"0 0 90\"/></camera>"
+		"<group name=\"Crate\" rot=\"0 0 90\"><box pos=\"0 0 10\" size=\"40 20 20\"/></group></scene>"));
+	vec3 lo,hi; scene_get_obj_bounds(&s,0,&lo,&hi);
+	ASSERT_TRUE(fabsf(lo.x+0.1f)<WINDOW_TEST_EPSILON && fabsf(hi.y-0.2f)<WINDOW_TEST_EPSILON);
+	scene_select_camera(&s,"b");
+	scene_get_obj_bounds(&s,0,&lo,&hi);
+	ASSERT_TRUE(fabsf(lo.x-0.9f)<WINDOW_TEST_EPSILON && fabsf(hi.x-1.1f)<WINDOW_TEST_EPSILON && fabsf(hi.y-0.2f)<WINDOW_TEST_EPSILON);
+	scene_select_camera(&s,"c");
+	scene_get_obj_bounds(&s,0,&lo,&hi);
+	ASSERT_TRUE(fabsf(lo.x+0.2f)<WINDOW_TEST_EPSILON && fabsf(hi.x-0.2f)<WINDOW_TEST_EPSILON && fabsf(hi.y-0.1f)<WINDOW_TEST_EPSILON);
+	scene_free(&s); PASS();
+}
+
+static void test_check_reports_each_camera_view(void){
+	TEST("scene check: a camera's transforms are checked in that camera's view and the issue names it");
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene up=\"z\"><light pos=\"0 0 100\"/>"
+		"<camera name=\"a\" pos=\"-150 -150 100\" look=\"0 0 20\"/>"
+		"<camera name=\"b\" pos=\"-150 -150 100\" look=\"0 0 20\"><transform target=\"Crate\" pos=\"0 0 50\"/></camera>"
+		"<box name=\"Crate\" pos=\"0 0 10\" size=\"20 20 20\"/><box pos=\"0 0 -5\" size=\"400 400 10\"/></scene>"));
+	FILE *sink=fopen("/dev/null","w");
+	SceneCheckResult result=scene_check(&s,sink,0);
+	ASSERT_EQUAL(result.warnings,0);
+	scene_select_camera(&s,"b");
+	scene_check_geometry(&s,"b");
+	result=scene_check_report(&s,sink,0);
+	fclose(sink);
+	ASSERT_EQUAL(result.warnings,1);
+	ASSERT_EQUAL(issues_of_kind(&s,"floating"),1);
+	for(int i=0;i<s.nissues;i++) if(!strcmp(s.issues[i].kind,"floating")) ASSERT_TRUE(!strcmp(s.issues[i].camera,"b"));
+	scene_free(&s); PASS();
 }
 
 static void test_window_invalid_and_opt_out(void){
@@ -1200,6 +1317,12 @@ int main(void) {
   test_scene_query_records();
   test_lathe_profiles_in_centimetres();
   test_query_records_follow_gait_travel();
+  test_far_meshes_keep_their_winding();
+  test_noise_in_centimetres_keeps_corners_joined();
+  test_lofts_share_a_cross_shape();
+  test_prefab_shapes_survive_camera_changes();
+  test_camera_transforms_use_the_parent_frame();
+  test_check_reports_each_camera_view();
   test_nested_arch_emits_wall_parts_once();
   test_explicit_scene_up_axis();
   test_scene_coordinate_conventions();

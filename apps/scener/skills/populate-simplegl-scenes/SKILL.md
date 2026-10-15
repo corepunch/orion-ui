@@ -156,12 +156,15 @@ project's working directory (replace paths/camera names with the actual target):
 xmllint --noout scenes/scene.blks
 xmllint --xpath 'count(/scene/ambient | /scene/background)' scenes/scene.blks
 scener --check scenes/scene.blks --json
-scener --query scenes/scene.blks
+scener --check scenes/scene.blks --all-cameras --strict
+scener --query scenes/scene.blks --camera CameraName
 scener --render scenes/scene.blks --camera CameraName --size 1536x1024 --format jpg --output-dir /tmp/scene-review
 ```
 
 Run `xmllint` on every edited scene and prefab. The XPath count must be `0`.
-`--check` needs no graphics context. Fix every error before rendering; it exits
+`--check` needs no graphics context. It judges the first camera's view; when
+cameras carry `<transform>` or `<use-pose>` children, finish with
+`--all-cameras` so every staged moment is checked. Fix every error before rendering; it exits
 nonzero on unsupported elements, ignored attributes, missing prefabs or
 materials, broken expressions, sealed lights and unlit scenes. Review each
 warning (floating, intersection, coplanar) and either fix it or mark a

@@ -12,6 +12,12 @@
 #define ROUNDED_BOX_MAX_BEVEL_SEGMENTS 8
 #define ROUNDED_BOX_POINT_EPSILON 1e-6f
 #define EDGE_HASH_A 0x9e3779b1u
+#define NOISE_HASH_SEED 0x27d4eb2fu
+#define NOISE_HASH_MIX 0x165667b1u
+#define NOISE_QUANTUM 1e-5f /* vertices this close share one displacement, so unwelded corners stay joined */
+#define NOISE_LCG_A 1103515245u
+#define NOISE_LCG_C 12345u
+#define NOISE_RANDOM_MASK 0xFFFFu
 #define EDGE_HASH_B 0x85ebca77u
 #define EDGE_HASH_C 0xc2b2ae3du
 #define MESH_EDGE_WELD_MAX 1e-4f
@@ -129,14 +135,17 @@ void mesh_update_edge_positions(Mesh *m){
     }
 }
 
+/* Tetrahedra are taken against the first vertex: against the origin, a small mesh far from it
+   sums to rounding noise, and a wrong sign turns it inside out when the winding is corrected. */
 float mesh_signed_volume(Mesh *m){
-    float vol = 0.0f;
+    if(!m->nverts) return 0.0f;
+    vec3 o=m->verts[0].pos; double vol=0;
     for(int i=0;i<m->ntris;i++){
         Tri t=m->tris[i];
-        vec3 a=m->verts[t.a].pos, b=m->verts[t.b].pos, c=m->verts[t.c].pos;
+        vec3 a=vsub(m->verts[t.a].pos,o), b=vsub(m->verts[t.b].pos,o), c=vsub(m->verts[t.c].pos,o);
         vol += vdot(vcross(a,b),c);
     }
-    return vol / 6.0f;
+    return (float)(vol / 6.0);
 }
 void mesh_flip_winding(Mesh *m){
     for(int i=0;i<m->ntris;i++){ int t=m->tris[i].b; m->tris[i].b=m->tris[i].c; m->tris[i].c=t; }
@@ -1219,16 +1228,25 @@ void mesh_apply_mirror(Mesh *m, char axis, float weldThreshold){
 	}
 }
 
+static unsigned int noise_hash(unsigned int h,float value){
+	unsigned int q=(unsigned int)(int)lrintf(value/NOISE_QUANTUM);
+	h^=q+NOISE_HASH_SEED+(h<<6)+(h>>2);
+	return h*NOISE_HASH_MIX;
+}
+
+static float noise_random(unsigned int *state){
+	*state=*state*NOISE_LCG_A+NOISE_LCG_C;
+	return ((float)(*state&NOISE_RANDOM_MASK)/(float)NOISE_RANDOM_MASK-0.5f)*2.0f;
+}
+
+/* The displacement is a hash of the vertex position, so the corners a box or prism repeats for each
+   face move together and the surface stays sealed. */
 void mesh_apply_noise(Mesh *m, float strength, int seed){
-	unsigned int s=(unsigned int)seed;
 	for(int i=0;i<m->nverts;i++){
-		s=s*1103515245+12345;
-		float rx=((float)(s&0xFFFF)/65535.0f-0.5f)*2.0f;
-		s=s*1103515245+12345;
-		float ry=((float)(s&0xFFFF)/65535.0f-0.5f)*2.0f;
-		s=s*1103515245+12345;
-		float rz=((float)(s&0xFFFF)/65535.0f-0.5f)*2.0f;
-		m->verts[i].pos=vadd(m->verts[i].pos,v3(rx*strength,ry*strength,rz*strength));
+		vec3 p=m->verts[i].pos;
+		unsigned int s=noise_hash(noise_hash(noise_hash((unsigned int)seed,p.x),p.y),p.z);
+		float rx=noise_random(&s),ry=noise_random(&s),rz=noise_random(&s);
+		m->verts[i].pos=vadd(p,v3(rx*strength,ry*strength,rz*strength));
 	}
 }
 
