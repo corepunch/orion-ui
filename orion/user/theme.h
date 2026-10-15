@@ -222,6 +222,7 @@ typedef struct {
     int edge_width;         // accent edge width
     int ring_width;         // selection ring thickness, reserved inside the bounds
     int highlight_width;    // plastic card bevel width (0 = none)
+    int shadow_size;        // plastic card margin reserved inside the bounds
     int padding_x, padding_y;
   } card;
   struct {                   // plastic material, handed to the shader as uniforms

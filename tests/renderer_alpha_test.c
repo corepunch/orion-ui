@@ -297,7 +297,7 @@ static void test_plastic_surface(void) {
 }
 
 static void test_selection_gradient(void) {
-  TEST("Selection gradients interpolate in linear light, preserve alpha and share one silhouette");
+  TEST("Rounded gradients and alternating bands preserve alpha and share one silhouette");
   CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
     (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
   CGLPixelFormatObj format = NULL;
@@ -342,6 +342,19 @@ static void test_selection_gradient(void) {
                                   0x800000ff, 0x8000ff00);
     read_card_pixel(16, 8, top); read_card_pixel(16, 23, bottom); read_card_pixel(4, 4, corner);
     ok &= top[0] > bottom[0] && bottom[1] > top[1] && top[3] == 128 && bottom[3] == 128 && corner[3] == 128;
+    glClear(GL_COLOR_BUFFER_BIT);
+    render_rounded_rect_bands(R(4, 4, 24, 24), (isize16_t){24, 24}, 6, 0x33000000, 6, 0);
+    uint8_t bands[4][4];
+    for (int i = 0; i < 4; i++) {
+      read_card_pixel(7 + i * 6, 16, bands[i]);
+      ok &= bands[i][3] == (i % 2 ? 51 : 0) && bands[i][0] == 0 && bands[i][1] == 0 && bands[i][2] == 0;
+    }
+    read_card_pixel(27, 4, corner); read_card_pixel(28, 16, outside);
+    ok &= corner[3] == 0 && outside[3] == 0;
+    glClear(GL_COLOR_BUFFER_BIT);
+    render_rounded_rect_bands(R(4, 4, 24, 24), (isize16_t){48, 48}, 12, 0x33000000, 12, 4);
+    read_card_pixel(7, 16, top); read_card_pixel(8, 16, mid); read_card_pixel(14, 16, bottom);
+    ok &= top[3] == 0 && mid[3] == 51 && bottom[3] == 0;
     glClear(GL_COLOR_BUFFER_BIT);
     render_rounded_rect(ui_white_texture, R(4, 4, 24, 24), 24, 24, 0, 1, 0xffff0000);
     read_card_pixel(16, 8, top); read_card_pixel(16, 23, bottom);

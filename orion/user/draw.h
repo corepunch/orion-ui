@@ -11,6 +11,9 @@
 // Color arguments are packed 0xAABBGGRR with sRGB RGB and linear alpha.
 void fill_rect(uint32_t color, irect16_t r);
 void fill_rounded_rect(uint32_t color, irect16_t r, int radius);
+// Alternating vertical bands inside one rounded silhouette; band zero is transparent.
+void fill_rounded_rect_bands(uint32_t color, irect16_t r, int radius, int band_width, int offset);
+void render_rounded_rect_bands(irect16_t r, isize16_t size, float radius, uint32_t color, float band_width, float offset);
 // One rounded bubble face and tail over the existing rounded rectangle shadow.
 typedef enum { TOOLTIP_TAIL_TOP, TOOLTIP_TAIL_BOTTOM, TOOLTIP_TAIL_LEFT, TOOLTIP_TAIL_RIGHT } tooltip_tail_side_t;
 // r includes tooltip.shadow.size on every side; tail_offset is measured along that side within r.

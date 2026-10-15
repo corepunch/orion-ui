@@ -737,7 +737,7 @@ int blocks_in_family(family_t family, int *ids, int max) {
 
 // Level: peak at 0.85 unless that would leave a sustained sound much louder
 // than a drum loop; then its RMS is capped instead.
-static void level(float *buf, int n) {
+static void level(float *buf, int n, category_t cat) {
   float peak = 1e-6f, dc = 0, prev = 0;
   double power = 0;
   for (int i = 0; i < n; i++) { // 15 Hz high-pass: pulse-width and drive stages leave an offset
@@ -748,6 +748,7 @@ static void level(float *buf, int n) {
   }
   for (int i = 0; i < n; i++) { if (fabsf(buf[i]) > peak) peak = fabsf(buf[i]); power += (double)buf[i] * buf[i]; }
   float rms = (float)sqrt(power / n) + 1e-6f, gain = fmaxf(0.4f / peak, fminf(0.85f / peak, 0.2f / rms));
+  if (cat == CAT_HAT) gain *= 0.5f;
   for (int i = 0; i < n; i++) buf[i] *= gain;
   for (int i = 0; i < 128 && i < n; i++) buf[n - 1 - i] *= i / 128.0f; // de-click the cut tail
 }
@@ -782,7 +783,7 @@ bool block_render(int id, int bpm, block_pcm_t *out) {
   if (d->sample) {
     if (!groove_mp3_load(d->sample, n, &out->pcm)) return false;
     out->frames = n;
-    level(out->pcm, n);
+    level(out->pcm, n, d->cat);
     out->npeaks = d->bars * GR_PEAKS_BAR;
     for (int k = 0; k < out->npeaks; k++) {
       int a = (int)((int64_t)n * k / out->npeaks), b = (int)((int64_t)n * (k + 1) / out->npeaks);
@@ -800,7 +801,7 @@ bool block_render(int id, int bpm, block_pcm_t *out) {
   sy_fx(&c, d->fx);
   if (d->fx & X_FOLD) for (int i = 0; i < SY_TAIL; i++) c.buf[i % n] += c.buf[n + i];
   if (d->fx & X_REVERSE) for (int i = 0; i < n / 2; i++) { float t = c.buf[i]; c.buf[i] = c.buf[n - 1 - i]; c.buf[n - 1 - i] = t; }
-  level(c.buf, n);
+  level(c.buf, n, d->cat);
   float *fit = realloc(c.buf, (size_t)n * sizeof(float)); // drop the tail
   out->pcm = fit ? fit : c.buf;
   out->frames = n;

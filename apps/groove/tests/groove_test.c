@@ -112,7 +112,8 @@ static void test_blocks(void) {
     ASSERT(pcm.pcm && pcm.frames == b->bars * bar_frames_for_bpm(bpm), "frame count");
     ASSERT(pcm.npeaks == b->bars * GR_PEAKS_BAR, "overview size");
     for (int k = 0; k < pcm.frames; k++) ASSERT(isfinite(pcm.pcm[k]), "NaN or inf sample");
-    ASSERT(peak_of(pcm.pcm, pcm.frames) >= 0.39f && peak_of(pcm.pcm, pcm.frames) <= 0.86f, "levelled peak");
+    float gain = b->cat == CAT_HAT ? 0.5f : 1.0f;
+    ASSERT(peak_of(pcm.pcm, pcm.frames) >= 0.39f * gain && peak_of(pcm.pcm, pcm.frames) <= 0.86f * gain, "levelled peak with quieter hats");
     ASSERT(fabsf(pcm.pcm[pcm.frames - 1]) < 0.01f, "tail is faded");
     free(pcm.pcm);
   }
@@ -450,6 +451,68 @@ static void test_overlap_sheet(void) {
   ASSERT_EQUAL(original->frame.w, 2 * 88);
   ASSERT_EQUAL(g_app->song.clips[0].position, start);
   ASSERT_EQUAL(g_app->song.clips[0].block, long_block);
+  destroy_window(win);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
+}
+
+static void test_resized_clip_drag(void) {
+  TEST("resized clip drags retain their stored length through layout, scrolling, cancellation and drop");
+  test_env_init();
+  g_app = app_init();
+  window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  show_window(win, true);
+  window_t *sheet = g_app->sheet;
+  int natural = block_get(0)->bars * GR_TICKS_BAR, start = 2 * GR_TICKS_BAR;
+  int lengths[] = {2 * natural + GR_SNAP_TICKS, natural - GR_SNAP_TICKS};
+  ASSERT_EQUAL(song_add_clip(&g_app->song, 0, 0, start), 0);
+  for (int i = 0; i < ARRAY_LEN(lengths); i++) {
+    int ticks = lengths[i], width = ticks * 88 / GR_TICKS_BAR;
+    ASSERT_TRUE(app_resize_clip(0, ticks));
+    send_message(sheet, evResize, 0, NULL);
+    window_t *card = sheet->children;
+    ASSERT_EQUAL(card->frame.w, width);
+    int hx = card->frame.x + 4, hy = card->frame.y + 4;
+    send_message(sheet, evLeftButtonDown, MAKEDWORD(hx, hy), NULL);
+    send_message(sheet, evMouseMove, MAKEDWORD(hx + 12, hy), NULL);
+    ASSERT_TRUE(window_is_lifted(card));
+    ASSERT_EQUAL(card->frame.w, width);
+    send_message(sheet, evResize, 0, NULL);
+    ASSERT_EQUAL(card->frame.w, width);
+    int screen_x = window_screen_x(card) + window_lift_delta(card).x;
+    set_scroll_info(sheet, SB_HORZ, &(scroll_info_t){ .fMask = SIF_POS, .nPos = 83 }, false);
+    send_message(sheet, evHScroll, 0, NULL);
+    ASSERT_EQUAL(card->frame.w, width);
+    ASSERT_EQUAL(window_screen_x(card) + window_lift_delta(card).x, screen_x);
+    send_message(sheet, evPointerCancel, 0, NULL);
+    send_message(sheet, evResize, 0, NULL);
+    ASSERT_FALSE(window_is_lifted(card));
+    ASSERT_EQUAL(card->frame.w, width);
+    ASSERT_EQUAL(g_app->song.clips[0].position, start);
+    ASSERT_EQUAL(song_clip_ticks(&g_app->song, 0), ticks);
+    set_scroll_info(sheet, SB_HORZ, &(scroll_info_t){ .fMask = SIF_POS, .nPos = 0 }, false);
+    send_message(sheet, evHScroll, 0, NULL);
+
+    ASSERT_EQUAL(song_add_clip(&g_app->song, 1, 0, start + GR_SNAP_TICKS), 1);
+    send_message(sheet, evResize, 0, NULL);
+    ASSERT_EQUAL(card->frame.w, 22);
+    hx = card->frame.x + 4;
+    send_message(sheet, evLeftButtonDown, MAKEDWORD(hx, hy), NULL);
+    send_message(sheet, evMouseMove, MAKEDWORD(hx + 12, hy), NULL);
+    send_message(sheet, evResize, 0, NULL);
+    ASSERT_TRUE(window_is_lifted(card));
+    ASSERT_EQUAL(card->frame.w, width);
+    send_message(sheet, evLeftButtonUp, MAKEDWORD(hx + 12, hy + sheet_row_h(sheet)), NULL);
+    send_message(sheet, evResize, 0, NULL);
+    ASSERT_FALSE(window_is_lifted(card));
+    ASSERT_EQUAL(card->frame.w, width);
+    ASSERT_EQUAL(g_app->song.clips[0].track, 1);
+    ASSERT_EQUAL(song_clip_ticks(&g_app->song, 0), ticks);
+    song_remove_clip(&g_app->song, 1);
+    ASSERT_TRUE(song_move_clip(&g_app->song, 0, 0, start));
+  }
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();
@@ -1221,6 +1284,7 @@ int main(void) {
   test_clip_resize();
   test_sheet_drop();
   test_overlap_sheet();
+  test_resized_clip_drag();
   test_fractional_selection();
   test_two_finger_sheet_pan();
   test_genre_filter();

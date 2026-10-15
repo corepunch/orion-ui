@@ -35,6 +35,15 @@ float bubbleSDF(vec2 p) {
 
 vec4 frag() {
   vec4 outColor;
+  if (params0.z > 3.5) {
+    vec2 p = tex * size;
+    float d = roundedBoxSDF(p - size * 0.5, size * 0.5, radius);
+    float face = radius > 0.0 ? 1.0 - smoothstep(-1.5, 1.5, d) : 1.0;
+    float band = mod(floor((p.x + params1.w) / params1.y), 2.0);
+    float a = tint.a * alpha * face * band * col.a;
+    vec3 rgb = vec3(srgb_to_linear(tint.r), srgb_to_linear(tint.g), srgb_to_linear(tint.b));
+    return vec4(rgb * col.rgb * a, a);
+  }
   if (params0.z > 1.5) {
     vec2 p = vec2(tex.x, 1.0 - tex.y) * (size + 2.0 * params0.y) - params0.y;
     float d = bubbleSDF(p);

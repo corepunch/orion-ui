@@ -296,6 +296,19 @@ void fill_rounded_rect(uint32_t color, irect16_t r, int radius) {
                       (int)(r.h * scale + 0.5f), radius * scale, 1.0f, color);
 }
 
+void fill_rounded_rect_bands(uint32_t color, irect16_t r, int radius, int band_width, int offset) {
+  if (band_width <= 0) {
+    fprintf(stderr, "[draw] rounded bands rejected width=%d offset=%d rect=%d,%d,%d,%d\n",
+            band_width, offset, r.x, r.y, r.w, r.h);
+    fflush(stderr);
+    return;
+  }
+  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
+  float scale = ui_surface_scale();
+  isize16_t size = {(int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f)};
+  render_rounded_rect_bands(r, size, radius * scale, color, band_width * scale, offset * scale);
+}
+
 irect16_t tooltip_bubble_body_rect(irect16_t r, tooltip_tail_side_t side) {
   const theme_t *theme = get_theme();
   r = rect_inset(r, theme->tooltip.shadow.size);
@@ -419,7 +432,7 @@ void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color) {
   const theme_t *theme = get_theme();
   plastic_look_t look = plastic_look(state);
   render_plastic_surface(r, theme->card.corner_radius, theme->card.highlight_width,
-                          MIN(2, theme->plastic.shadow_size), &look, color,
+                          theme->card.shadow_size, &look, color,
                           theme->plastic.shadow_color, 0, NULL, (ipoint16_t){0, 0});
 }
 

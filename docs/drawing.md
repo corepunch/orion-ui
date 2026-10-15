@@ -98,6 +98,11 @@ there is nothing to align or mask by hand. Geometry lives in `theme_t` (`card.co
 `card.edge_width`, `card.ring_width`). Pass an edge colour with zero alpha for no edge.
 The hovered card face is the 50% midpoint of `brControlBg` and `brButtonHover`.
 
+`fill_rounded_rect_bands(color, rect, radius, band_width, offset)` overlays every
+other vertical band inside one rounded silhouette. Band zero is transparent;
+`offset` anchors the bands to a source wider than the visible content, so padding
+and cropping preserve their positions. Width, offset and radius use logical pixels.
+
 Status colours come from the theme: `brTextError`, `brTextWarning`, `brTextInfo`, `brTextSuccess`, `brTextDisabled`.
 
 A rounded outline is one stroke, not two stacked fills. `thickness` is the inside band in logical pixels; `radius` 0 is a square stroke.
@@ -265,7 +270,9 @@ AppKit's circular bezel. SDF
 antialiasing uses screen derivatives to follow display density and transforms.
 
 `draw_plastic_card(rect, state, color)` (also reached via `THEME_PART_CARD`) uses the same shader with the theme's
-card radius and a shallow bevel, without a glyph. Waveforms and labels remain
+card radius and a shallow bevel, without a glyph. `card.shadow_size` reserves the
+shadow margin inside the bounds; `theme_content_rect()` excludes that margin and
+the selection ring. Waveforms and labels remain
 ordinary content drawn over the procedural surface.
 
 ## Bitmaps and block transfers (`user/gdi.h`)

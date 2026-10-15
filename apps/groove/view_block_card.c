@@ -7,6 +7,7 @@
 #define CARD_LABEL_PADDING 4
 #define CARD_TAG_INSET 2
 #define CARD_LABEL_BG 0xB8000000u
+#define CARD_REPEAT_OVERLAY 0x54000000u
 
 bool block_pictograms_load(groove_t *app) {
   if (!g_ui_runtime.running || app->pictograms) return true;
@@ -112,14 +113,18 @@ static int sheet_card_index(window_t *win) {
 static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state, int period) {
   theme_draw_ex(THEME_PART_CARD, r, state | CTRL_PLASTIC, &(theme_draw_opts_t){.color = color}); // its shadow margin is the only gap between neighbouring cards
   int icon_size = r.h * 3 / 4;
+  int source_width = period > 0 ? period : r.w, source_x = r.x;
   r = theme_content_rect(THEME_PART_CARD, r, state | CTRL_PLASTIC);
   int radius = MAX(0, get_theme()->card.corner_radius - get_theme()->card.ring_width);
   irect16_t wave = r;
   uint32_t ink = color_with_alpha(get_sys_color(brTextOnColor), (color >> 24) * 0x99 / 255);
   if (wave.w > 0 && wave.h > 0) {
-    if (period > 0) draw_waveform(b, wave, period, radius, ink);
-    else {
-      uint32_t texture = waveform_texture(g_app, block, (ipoint16_t){wave.w, wave.h}, radius);
+    int offset = wave.x - source_x;
+    if (period > 0) {
+      draw_waveform(b, wave, source_width, offset, radius, ink);
+      fill_rounded_rect_bands(CARD_REPEAT_OVERLAY, wave, radius, source_width, offset);
+    } else {
+      uint32_t texture = waveform_texture(g_app, block, (ipoint16_t){wave.w, wave.h}, radius, source_width, offset);
       if (texture) draw_sprite_region(texture, wave, NULL, ink, 0);
     }
   }
@@ -164,7 +169,7 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         int stored_w = idx >= 0 && idx < g_app->song.nclips
           ? song_clip_ticks(&g_app->song, idx) * natural_w / (bars * GR_TICKS_BAR) : natural_w;
         if (stored_w != natural_w) {
-          period = theme_content_rect(THEME_PART_CARD, R(r.x, r.y, natural_w, r.h), state | CTRL_PLASTIC).w;
+          period = natural_w;
         } else r.w = natural_w; // an overlap crops the full card; the window clips the tail
       }
       if (win->parent && card_on_screen(win)) app_block_peaks(st->block); // a stale overview stays up until the new one is ready

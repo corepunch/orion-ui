@@ -414,7 +414,7 @@ static theme_t g_modern_theme = {
     .shadow = { .blur = 8, .offset = {0, 4}, .color = 0x80000000 },
   },
   .card = {
-    .corner_radius = 7, .edge_width = 4, .ring_width = 1, .highlight_width = 1,
+    .corner_radius = 7, .edge_width = 4, .ring_width = 1, .highlight_width = 1, .shadow_size = 1,
     .padding_x = 12, .padding_y = 8,
   },
   .plastic = {

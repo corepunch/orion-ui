@@ -207,7 +207,7 @@ irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state)
   const theme_t *theme = get_theme();
   if (part != THEME_PART_CARD) return r;
   int ring = theme->card.ring_width;
-  if (state & CTRL_PLASTIC) ring += MIN(2, theme->plastic.shadow_size);  // the shadow margin is the only gap between neighbours
+  if (state & CTRL_PLASTIC) ring += theme->card.shadow_size;
   return rect_inset(r, ring);
 }
 

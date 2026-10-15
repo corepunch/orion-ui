@@ -360,7 +360,7 @@ static theme_t g_classic_theme = {
   .button = { .corner_radius = 0 },
   .window = { .corner_radius = 0 },
   .card = {
-    .corner_radius = 0, .edge_width = 4, .ring_width = 1, .highlight_width = 0,
+    .corner_radius = 0, .edge_width = 4, .ring_width = 1, .highlight_width = 0, .shadow_size = 1,
     .padding_x = 8, .padding_y = 6,
   },
   .plastic = {

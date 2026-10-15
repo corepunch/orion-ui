@@ -120,8 +120,8 @@ static void sync_clips(window_t *win) {
     layout_measure_t measure = {0};
     send_message(c, evMeasure, 0, &measure);
     ipoint16_t size = {measure.desired_w, measure.desired_h};
-    int end = song_clip_end(&g_app->song, i);
-    if (!window_is_lifted(c)) size.x = position_x(win, end) - position_x(win, cl->position);
+    int end = window_is_lifted(c) ? cl->position + song_clip_ticks(&g_app->song, i) : song_clip_end(&g_app->song, i);
+    size.x = position_x(win, end) - position_x(win, cl->position);
     if (window_has_state(c, WINDOW_STATE_VISIBLE) != (size.x > 0)) show_window(c, size.x > 0);
     size.x = MAX(1, size.x);
     card_place(c, R(position_x(win, cl->position), track_y(win, cl->track), size.x, size.y));
@@ -303,10 +303,8 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           app_preview_stop();
           window_t *card = child_at(win, st->press_clip);
           if (card) {
-            ipoint16_t size = clip_cell_size(win, block_get(g_app->drag.block));
-            size.x = MAX(1, drag_span(&g_app->drag) * BAR_W / GR_TICKS_BAR);
-            resize_window(card, size.x, size.y);
             window_set_drag_visual(card, mx - st->press.x, my - st->press.y);
+            sync_clips(win);
           }
         }
         if (st->own_drag) {
