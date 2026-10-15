@@ -45,6 +45,16 @@ scener --render apps/scener/imports/ecstatica/ecstatica2/actors/02500-0000-joe/s
 
 The large generated library is a local artifact (about 1 GiB for both supplied discs), excluded from Git. The tool, tests, format notes and small review examples belong in Git. No ISO or extracted executable is copied into the repository.
 
+## Palette ramps in Scener
+
+```xml
+<material id="palette_3" color="0.83 0.72 0.64" shininess="4"
+  ramp="0.12 0.06 0 0.14 0.07 0 … 0.87 0.80 0.73"/>   <!-- sixteen "r g b" shades -->
+<ellipsoid radii="8.5 7.5 10.4" material="palette_3"/>
+```
+
+`color` is the ramp's lit tone (entry 13), used by the ambient fill and flat views; the lit passes ignore it and pick a shade from the ramp. The calibrated rigs, recipe characters and the neutral CAT adaptation (`skin`, `shirt`, `trousers`, `shoes`, `hair`, `glove`) all carry ramps, so a scene can still restyle a character by redefining a material id, with or without a `ramp`.
+
 ## Cosmetic options in any CAT character
 
 Options are per prefab, with per-instance overrides. Conditions select decorative volumes, keeping the underlying joints and IK endpoints intact. The standard biped preset now declares `gloves` off by default.
@@ -66,7 +76,8 @@ Options are per prefab, with per-instance overrides. Conditions select decorativ
 ## What is exact, and what is adapted
 
 - **Exact decoded data:** part IDs, parent IDs, names, raw halfaxes/centres/offsets/rotations, palette indices, flags, triangle/point commands, all source action events, unsigned key phases and repertoire associations. Unknown v55 commands keep their numeric opcode and operands. Full byte consumption is claimed only for the parsed prefix, not for the unparsed scene/script/audio tail.
-- **Source geometry preview:** uses each original ellipsoid's local halfaxes and centre, at one uniform scale. Zero axes receive a 0.35-source-unit thickness to avoid degenerate meshes. Triangle meshes, textures, and the original shade-map renderer are not reproduced. Palette indices are preserved, but displayed RGB values are an authored 16-colour approximation.
+- **Source geometry preview:** uses each original ellipsoid's local halfaxes and centre, at one uniform scale. Zero axes receive a 0.35-source-unit thickness to avoid degenerate meshes. Triangle meshes, textures, and the original shade-map renderer are not reproduced.
+- **Colours:** each disc carries one 256-colour palette laid out as 16 ramps of 16 shades, dark to light (`PALLETTE.RAW` on Ecstatica II; the `GRAPHICS/TITLE2.RAW` title graphic on Ecstatica I, which has no separate palette file). A part's `COLOUR` word is the ramp index. The importer stores the ramps in `palette.json` and in every actor's `source.json`, and writes one `<material id="palette_N" ramp="…">` per used ramp into each prefab; Scener's ramp shading walks that run by its own lighting. The original rule mapping the stored shade-map value into a ramp entry is not recovered, so shading is Ecstatica-like, not byte-exact. Records without a disc palette (`"palette": "approximate"` in `conversion.json`) fall back to a guessed tone per ramp.
 - **Source pose:** an inferred forward-kinematics model attaches each child at its parent's centre plus OFFSET. Angle words use a 65,536-unit turn with XYZ Euler order. Flag `0x2000` is treated as actor-relative orientation; flagged two-link limbs use end POSITION targets and an analytic solve. These interpretations produce useful previews but are not a verified implementation of either game's runtime. The source basis maps `(x,y,z)` to `(-x,-z,-y)`, followed by uniform scale, centering and a floor offset.
 - **CAT adaptation:** a neutral, symmetric Base Human preset with source-derived core girths/limb lengths, original face/hair details, and optional costume pieces. Spine, attachments, some joint lengths and auxiliary masses remain authored preset choices. It supplies Scener's CAT role tags, gait, pose library and limb IK; it does not claim the source rest pose or exact full-body dimensions. Non-bipeds still receive source prefabs and data, but no misleading biped conversion.
 - **Animations:** repertoire entries associate actors and action IDs. ROTATE, OFFSET and POSITION update the inferred source rig; keys are emitted as Scener joint transforms with linear quaternion interpolation. Each action's unsigned phase is normalized to the requested duration. Original frame rate, easing, transition rules, scripts, dynamic constraints, root travel, changes of shape/colour, and runtime visibility commands are not emulated. Every unsupported command and missing target part is counted in `conversion.json`; the exact command remains in the shared action JSON. Imported clips animate `source.blk`; `--cat-animations` additionally exports equivalent inferred motion to `controlled.blk`. The older neutral `cat.blk` is not a target. They are experimental previews, not faithful game playback.

@@ -9,6 +9,32 @@ from lineart_strokes import simplify_strokes, skeletonize, temporal_support
 
 
 class StrokeTests(unittest.TestCase):
+    def test_outline_worker_removes_fills_and_exposes_darkness_threshold(self):
+        script = str(Path(__file__).with_name('simplify_lineart.py'))
+        gray = np.full((80, 100), 255, np.uint8)
+        gray[10:70, 10:90] = 100
+        gray[40, 25:75] = 80
+        rgb = np.repeat(gray[:, :, None], 3, axis=2).tobytes()
+        args = [sys.executable, script, '--video-worker', '100', '80', '170', '1', '0',
+                '--outlines', '--outline-window', '15', '--outline-threshold']
+        outputs = []
+        for threshold in ('10', '25'):
+            result = subprocess.run(args + [threshold], input=rgb + rgb, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            frames = np.frombuffer(result.stdout, np.uint8).reshape(2, 80, 100, 3)
+            self.assertTrue(np.array_equal(frames[0], frames[1]))
+            outputs.append(frames[0, :, :, 0])
+        low, high = outputs
+        self.assertEqual(low[25, 50], 255, 'Uniform colored interiors must become empty paper')
+        self.assertEqual(low[10, 50], 0, 'Outer contour must remain')
+        self.assertEqual(low[40, 50], 0, 'Low threshold must retain the faint detail')
+        self.assertEqual(high[40, 50], 255, 'Higher threshold must omit the faint detail')
+        self.assertFalse(np.any((high == 0) & (low != 0)))
+        failed = subprocess.run(args[:-1] + ['--outline-threshold', '256'], input=rgb, capture_output=True)
+        self.assertNotEqual(failed.returncode, 0)
+        failed = subprocess.run(args + ['10', '--outline-window', '14'], input=rgb, capture_output=True)
+        self.assertNotEqual(failed.returncode, 0)
+
     def test_video_worker_stream_and_errors(self):
         script = str(Path(__file__).with_name('simplify_lineart.py'))
         args = [sys.executable, script, '--video-worker', '80', '60', '170', '3.5', '20',

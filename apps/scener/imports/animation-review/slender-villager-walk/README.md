@@ -4,7 +4,7 @@ Actor `w_vil3`, record 2567, action 960.
 
 [Scene](scenes/motion.blks) · [Decoded action](actions/0960-vilwalk3.json) · [Conversion report](conversion.json)
 
-Experimental decoded motion: inferred transforms, normalized timing, approximate palette. Unsupported commands remain recorded in the conversion report.
+Experimental decoded motion: inferred transforms, normalized timing, disc palette ramps. Unsupported commands remain recorded in the conversion report.
 
 ![Motion](motion.gif)
 

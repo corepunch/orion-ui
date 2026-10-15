@@ -11,6 +11,7 @@
 #include "reel.h"
 
 #define SURFACE_EPSILON 0.000001f
+#define MATERIAL_EPSILON 0.000001f
 #define NOISE_DEFAULT_STRENGTH_CM 1.0f
 #define SURFACE_NAME_CAPACITY 64
 #define WALL_DEFAULT_LENGTH 4.0f
@@ -643,7 +644,7 @@ void scene_free(Scene *s){
 	for(int i=0;i<s->nnegativeProfiles;i++) shape2d_free(&s->negativeProfiles[i].profile);
 	free(s->negativeProfiles);
 	for(int i=0;i<s->ncameras;i++) free(s->cameras[i].transforms);
-	free(s->lights); free(s->mats); free(s->objs); free(s->svols); free(s->cameras);
+	free(s->lights); free(s->mats); free(s->ramps); free(s->objs); free(s->svols); free(s->cameras);
 	free(s->prefabs); free(s->instances); free(s->rigRotations); free(s->rigTargets); free(s->rigJointWorlds); free(s->negativeBoxes); free(s->negativeArches);
 	free(s->negativeCylinders); free(s->overlayLines); free(s->charDefs); free(s->shapes);
 	free(s->dragStartVerts); free(s->dragObjIndices); free(s->dragVertOffsets);
@@ -654,16 +655,16 @@ void scene_free(Scene *s){
 }
 
 static Material preset_materials[] = {
-	{ "wall",     {0.80f,0.78f,0.72f}, 6.0f },
-	{ "floor",    {0.35f,0.28f,0.22f}, 12.0f },
-	{ "wood",     {0.50f,0.32f,0.18f}, 20.0f },
-	{ "metal",    {0.70f,0.70f,0.75f}, 60.0f },
-	{ "glass",    {0.65f,0.80f,0.85f}, 90.0f },
-	{ "stone",    {0.38f,0.36f,0.33f}, 8.0f },
-	{ "concrete", {0.52f,0.50f,0.46f}, 4.0f },
-	{ "plaster",  {0.90f,0.88f,0.80f}, 3.0f },
-	{ "bronze",   {0.48f,0.30f,0.14f}, 40.0f },
-	{ "iron",     {0.28f,0.28f,0.30f}, 55.0f },
+	{ "wall",     {0.80f,0.78f,0.72f}, 6.0f, -1 },
+	{ "floor",    {0.35f,0.28f,0.22f}, 12.0f, -1 },
+	{ "wood",     {0.50f,0.32f,0.18f}, 20.0f, -1 },
+	{ "metal",    {0.70f,0.70f,0.75f}, 60.0f, -1 },
+	{ "glass",    {0.65f,0.80f,0.85f}, 90.0f, -1 },
+	{ "stone",    {0.38f,0.36f,0.33f}, 8.0f, -1 },
+	{ "concrete", {0.52f,0.50f,0.46f}, 4.0f, -1 },
+	{ "plaster",  {0.90f,0.88f,0.80f}, 3.0f, -1 },
+	{ "bronze",   {0.48f,0.30f,0.14f}, 40.0f, -1 },
+	{ "iron",     {0.28f,0.28f,0.30f}, 55.0f, -1 },
 };
 static const int npreset_mats = (int)(sizeof(preset_materials)/sizeof(preset_materials[0]));
 
@@ -680,7 +681,7 @@ void scene_add_obj(Scene *s, Mesh mesh, mat4 M, mat4 R, vec3 color, float shin, 
 	mesh_compute_face_normals(&mesh);
 	if(castsShadow) mesh_build_edges(&mesh);
 	SceneObj o={0};
-	o.mesh=mesh; o.color=color; o.shininess=shin; o.castsShadow=castsShadow;
+	o.mesh=mesh; o.color=color; o.shininess=shin; o.ramp=s->activeRamp; o.castsShadow=castsShadow;
 	o.renderable=renderable; o.unlit=unlit; o.sanityIgnore=s->sanityIgnoreActive;
 	o.sanityFloor=s->sanityFloorActive; o.sanityCheck=s->sanityCheckActive;
 	o.editNode=s->activeEditNode; o.editMatrix=s->activeEditMatrix;
@@ -1600,7 +1601,7 @@ static void add_negative_profile_openings(Scene *s,mat4 wallM,float L,float H,fl
 	}
 }
 
-typedef struct { vec3 color; float shin; int texture; } surface_material_t;
+typedef struct { vec3 color; float shin; int texture, ramp; } surface_material_t;
 
 static surface_material_t surface_material(Scene *s,XmlNode *n,const char *prefix,surface_material_t fallback){
 	char key[SURFACE_NAME_CAPACITY];
@@ -1608,7 +1609,7 @@ static surface_material_t surface_material(Scene *s,XmlNode *n,const char *prefi
 	const char *name=xml_attr(n,key,NULL);
 	Material *m=find_material(s,name);
 	if(name&&!m&&!s->prefabDocument) scene_issue(s,SCENE_ISSUE_ERROR,"material",node_file(s,n),n->line,"<%s> uses undefined %s '%s'",n->tag,key,name);
-	if(m){ fallback.color=m->color; fallback.shin=m->shininess; fallback.texture=materials_index_for_name(m->id); }
+	if(m){ fallback.color=m->color; fallback.shin=m->shininess; fallback.texture=materials_index_for_name(m->id); fallback.ramp=m->ramp; }
 	snprintf(key,sizeof(key),"%sColor",prefix);
 	fallback.color=xml_attr_v3(n,key,fallback.color);
 	return fallback;
@@ -1616,9 +1617,9 @@ static surface_material_t surface_material(Scene *s,XmlNode *n,const char *prefi
 
 static void surface_add(Scene *s,Mesh mesh,mat4 M,mat4 R,surface_material_t material,int shadow,int visible,int unlit){
 	if(!mesh.ntris){ mesh_free(&mesh); return; }
-	int texture=s->activeTexIndex; s->activeTexIndex=material.texture;
+	int texture=s->activeTexIndex, ramp=s->activeRamp; s->activeTexIndex=material.texture; s->activeRamp=material.ramp;
 	scene_add_obj(s,mesh,M,R,material.color,material.shin,shadow,visible,unlit);
-	s->activeTexIndex=texture;
+	s->activeTexIndex=texture; s->activeRamp=ramp;
 }
 
 static Shape2D wall_opening_profile(const Opening *o,float length){
@@ -1678,7 +1679,7 @@ static void parse_wall(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,v
 		shape2d_free(&op[i].profile);
 	}
 	free(op);
-	surface_material_t base={color,shin,s->activeTexIndex};
+	surface_material_t base={color,shin,s->activeTexIndex,s->activeRamp};
 	wall_band(s,M,R,L,0,lower,T,0,holes,nholes,surface_material(s,n,"lower",base),castsShadow,renderable,unlit);
 	wall_band(s,M,R,L,lower,H,T,0,holes,nholes,surface_material(s,n,"upper",base),castsShadow,renderable,unlit);
 	surface_material_t trim=surface_material(s,n,"trim",base);
@@ -1750,7 +1751,7 @@ static void parse_floor(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,
 	double rows=ceil((double)depth/step)+2,columns=ceil((double)width/across)+2;
 	valid&=isfinite(rows)&&isfinite(columns)&&rows*columns<=FLOOR_MAX_CELLS;
 	if(!valid){ fprintf(stderr,"[scener] floor: invalid style/dimensions, children, colorVariation or cell count (limit %d)\n",FLOOR_MAX_CELLS); return; }
-	surface_material_t base={color,shin,s->activeTexIndex};
+	surface_material_t base={color,shin,s->activeTexIndex,s->activeRamp};
 	surface_material_t grout=surface_material(s,n,"grout",base);
 	surface_add(s,gen_box(width,thickness-tileDepth,depth),mat4_mul(M,mat4_translate(v3(0,-(thickness+tileDepth)/2,0))),R,grout,castsShadow,renderable,unlit);
 	mat4 plane=mat4_rot_xyz(v3(FLOOR_PLANE_ROTATION,0,0));
@@ -2163,6 +2164,7 @@ static void collect_negative_boxes(Scene *s, XmlNode *parent, mat4 parentM){
 }
 
 static void parse_material_tag(Scene *s, XmlNode *n);
+static void parse_prefab_material(Scene *s, XmlNode *n);
 
 static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)parentM; (void)pos; (void)rot; (void)shin; (void)castsShadow; (void)renderable; (void)unlit;
@@ -2171,8 +2173,7 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 	XmlNode *proot=load_prefab(s,source);
 	if(!proot){ scene_issue(s,SCENE_ISSUE_ERROR,"prefab",node_file(s,n),n->line,"prefab not found: %s",source); return; }
 	/* A character file carries its own materials; a scene restyles one by defining the same id. */
-	for(int i=0;i<proot->nkids;i++) if(!strcmp(proot->kids[i]->tag,"material") && !find_material(s,xml_attr(proot->kids[i],"id","")))
-		parse_material_tag(s,proot->kids[i]);
+	for(int i=0;i<proot->nkids;i++) if(!strcmp(proot->kids[i]->tag,"material")) parse_prefab_material(s,proot->kids[i]);
 	void *oldRigInstance=s->activeRigInstance,*oldRigPose=s->activeRigPose,*oldRigRoot=s->activeRigRoot;
 	s->activeRigInstance=n; s->activeRigRoot=proot; s->activeRigPose=rig_pose_for_instance(s,n);
 	vec3 travel=v3(0,0,0);
@@ -2369,6 +2370,7 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 		if(matName && !mat && materials_index_for_name(matName)<0 && !s->prefabDocument)
 			scene_issue(s,SCENE_ISSUE_ERROR,"material",node_file(s,n),n->line,"<%s> uses undefined material '%s'",tag,matName);
 		s->activeTexIndex = materials_index_for_name(mat ? mat->id : matName);
+		s->activeRamp = mat ? mat->ramp : -1;
 		vec3 color = mat? mat->color : xml_attr_v3(n,"color",v3(0.8f,0.8f,0.8f));
 		int tint=xml_attr_i(n,"tint",0);
 		if(s->prefabTintActive && tint) color=s->prefabTint;
@@ -2430,11 +2432,54 @@ static const struct { const char *id; vec3 color; } preset_bgs[] = {
 };
 static const int npreset_bgs = (int)(sizeof(preset_bgs)/sizeof(preset_bgs[0]));
 
+/* A ramp is 16 "r g b" shades, dark to light; the shader picks one by lighting instead of shading the colour. */
+static int parse_material_ramp(Scene *s, XmlNode *n, const char *text){
+	MaterialRamp ramp={0}; const char *cursor=text; int count=0;
+	for(;;){
+		char *end; float v=strtof(cursor,&end);
+		if(end==cursor) break;
+		if(count<MATERIAL_RAMP_SHADES*3) (&ramp.shade[count/3].x)[count%3]=v;
+		count++; cursor=end;
+	}
+	while(*cursor==' '||*cursor=='\t'||*cursor=='\n'||*cursor=='\r') cursor++;
+	if(count!=MATERIAL_RAMP_SHADES*3 || *cursor){
+		scene_issue(s,SCENE_ISSUE_ERROR,"material",node_file(s,n),n->line,"<material id=\"%s\"> ramp needs %d shades of \"r g b\" (%d numbers), got %d%s",
+			xml_attr(n,"id","mat"),MATERIAL_RAMP_SHADES,MATERIAL_RAMP_SHADES*3,count,*cursor?" and trailing text":"");
+		return -1;
+	}
+	DA_PUSH(s->ramps,s->nramps,s->cramps,ramp);
+	return s->nramps-1;
+}
+
+static void read_material(Scene *s, XmlNode *n, Material *m){
+	strncpy(m->id, xml_attr(n,"id","mat"), 31);
+	m->color = xml_attr_v3(n,"color",v3(0.8f,0.8f,0.8f));
+	m->shininess = xml_attr_f(n,"shininess",8.0f);
+	const char *ramp=xml_attr(n,"ramp",NULL);
+	m->ramp = ramp ? parse_material_ramp(s,n,ramp) : -1;
+}
+
+static int material_equal(const Scene *s, const Material *a, const Material *b){
+	if(vlen(vsub(a->color,b->color))>MATERIAL_EPSILON || fabsf(a->shininess-b->shininess)>MATERIAL_EPSILON || (a->ramp<0)!=(b->ramp<0)) return 0;
+	if(a->ramp>=0) for(int k=0;k<MATERIAL_RAMP_SHADES;k++)
+		if(vlen(vsub(s->ramps[a->ramp].shade[k],s->ramps[b->ramp].shade[k]))>MATERIAL_EPSILON) return 0;
+	return 1;
+}
+
 static void parse_material_tag(Scene *s, XmlNode *n){
-	Material m={0}; strncpy(m.id, xml_attr(n,"id","mat"), 31);
-	m.color = xml_attr_v3(n,"color",v3(0.8f,0.8f,0.8f));
-	m.shininess = xml_attr_f(n,"shininess",8.0f);
+	Material m={0}; read_material(s,n,&m);
 	DA_PUSH(s->mats,s->nmats,s->cmats,m);
+}
+
+/* A prefab's material yields to the scene's definition or an earlier prefab's. It is still read in full, so
+   two characters sharing an id do not report ignored attributes; only prefabs that disagree are flagged. */
+static void parse_prefab_material(Scene *s, XmlNode *n){
+	Material m={0}; read_material(s,n,&m); m.prefabDefined=1;
+	Material *existing=find_material(s,m.id);
+	if(!existing){ DA_PUSH(s->mats,s->nmats,s->cmats,m); return; }
+	if(existing->prefabDefined && !material_equal(s,existing,&m))
+		scene_issue(s,SCENE_ISSUE_WARNING,"material",node_file(s,n),n->line,"<material id=\"%s\"> differs from the definition another prefab already loaded; the first definition is used",m.id);
+	if(m.ramp>=0) s->nramps--; /* the duplicate's ramp was the last one pushed */
 }
 
 static void parse_sun_tag(Scene *s, XmlNode *n){
@@ -2668,11 +2713,11 @@ static void scene_clear_view(Scene *s){
 	for(int i=0;i<s->nnegativeProfiles;i++) shape2d_free(&s->negativeProfiles[i].profile);
 	free(s->negativeProfiles);
 	for(int i=0;i<s->ncameras;i++) free(s->cameras[i].transforms);
-	free(s->lights); free(s->mats); free(s->objs); free(s->svols); free(s->cameras);
+	free(s->lights); free(s->mats); free(s->ramps); free(s->objs); free(s->svols); free(s->cameras);
 	free(s->instances); free(s->rigRotations); free(s->rigTargets); free(s->rigJointWorlds); free(s->negativeBoxes); free(s->negativeArches);
 	free(s->negativeCylinders); free(s->overlayLines); free(s->charDefs); free(s->shapes); free(s->records);
 	s->records=NULL; s->nrecords=s->crecords=0; s->activeRecord=-1; s->prefabDepth=0; s->activeSourceNode=NULL;
-	s->lights=NULL; s->mats=NULL; s->objs=NULL; s->svols=NULL; s->cameras=NULL;
+	s->lights=NULL; s->mats=NULL; s->ramps=NULL; s->nramps=s->cramps=0; s->activeRamp=-1; s->objs=NULL; s->svols=NULL; s->cameras=NULL;
 	s->negativeProfiles=NULL; s->nnegativeProfiles=s->cnegativeProfiles=0;
 	s->rigRotations=NULL; s->nrigRotations=s->crigRotations=0;
 	s->rigTargets=NULL; s->nrigTargets=s->crigTargets=0;
@@ -2866,7 +2911,7 @@ int scene_create_door(Scene *s,const char *preset,vec3 ground){ return scene_cre
 int load_scene(const char *path, Scene *s){
 	memset(s,0,sizeof(*s));
 	s->selectedObj=-1; s->editMode=EDIT_W_MOVE;
-	s->activeTexIndex=-1;
+	s->activeTexIndex=-1; s->activeRamp=-1;
 	s->activeScreenTexture=-1;
 	strncpy(s->scenePath,path,sizeof(s->scenePath)-1);
 	const char *content=strstr(path,"/scenes/");

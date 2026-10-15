@@ -429,6 +429,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
             for (int i = 0; i < s->nobjs; i++) {
                 if (!s->objs[i].renderable || s->objs[i].unlit) continue;
                 shader_set_material(s->objs[i].color, s->objs[i].shininess);
+                shader_set_ramp(s->objs[i].ramp >= 0 ? s->ramps[s->objs[i].ramp].shade : NULL);
 #ifdef SCENER_USE_TEXTURES
                 shader_set_texture(s->objs[i].texIndex >= 0
                                    ? s->materialTextures[s->objs[i].texIndex]
@@ -446,6 +447,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
             for (int i = 0; i < s->nobjs; i++) {
                 if (!s->objs[i].renderable || s->objs[i].unlit) continue;
                 shader_set_material(s->objs[i].color, s->objs[i].shininess);
+                shader_set_ramp(s->objs[i].ramp >= 0 ? s->ramps[s->objs[i].ramp].shade : NULL);
 #ifdef SCENER_USE_TEXTURES
                 shader_set_texture(s->objs[i].texIndex >= 0
                                    ? s->materialTextures[s->objs[i].texIndex]

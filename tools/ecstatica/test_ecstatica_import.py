@@ -34,7 +34,11 @@ def record(name,block,size,flags=0):
     return data
 
 
-def make_iso(path):
+def graphic(palette):
+    return b'mhwanh\0\4'+struct.pack('>HH',1,1)+bytes(20)+palette+b'\0'
+
+
+def make_iso(path,palette=None):
     main=fant(main=True)
     actor=fant(actor=event(8,0,(0,1,2))+event(10,0,(0,1,2))+event(4,0,(10,20,30))+event(3,0,(3,0,0)))
     offsets=[0xffffffff]*3525;offsets[1000]=0
@@ -45,9 +49,13 @@ def make_iso(path):
     def directory(block,entries):
         content=record(b'\0',block,2048,2)+record(b'\1',20,2048,2)+b''.join(entries)
         data[block*2048:block*2048+len(content)]=content
-    directory(20,[record('CODE',21,2048,2),record('FILES',22,2048,2),record('OFFSETS;1',23,len(table))])
+    entries=[record('CODE',21,2048,2),record('FILES',22,2048,2),record('OFFSETS;1',23,len(table))]
+    payloads=[(23,table),(31,main),(32,actor)]
+    if palette is not None:
+        image=graphic(palette);entries.append(record('PALLETTE.RAW;1',33,len(image)));payloads.append((33,image))
+    directory(20,entries)
     directory(21,[record('ECSTATIC.FAN;1',31,len(main))]);directory(22,[record('ECSTATIC;1',32,len(actor))])
-    for block,payload in [(23,table),(31,main),(32,actor)]:data[block*2048:block*2048+len(payload)]=payload
+    for block,payload in payloads:data[block*2048:block*2048+len(payload)]=payload
     path.write_bytes(data)
 
 
@@ -108,6 +116,32 @@ class ImportTests(unittest.TestCase):
             self.assertTrue((dest/'prefabs'/(scene.find('prefab').get('source')+'.blk')).is_file())
             ET.parse(dest/'prefabs/source.blk')
             with self.assertRaisesRegex(DecodeError,'already contains'):import_disc(path,out,Path('unused.blk'))
+
+    def test_disc_palette_ramps_become_materials(self):
+        palette=bytes((ramp*16+shade)%256 for ramp in range(16) for shade in range(16) for _ in range(3))
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'disc.iso';make_iso(path,palette);out=Path(tmp)/'out'
+            d=read_disc(path)
+            self.assertEqual(d['palette']['file'],'PALLETTE.RAW')
+            self.assertEqual(d['actors'][0]['palette'][3][13],[61,61,61])
+            result=import_disc(path,out,Path('unused.blk'))
+            self.assertEqual(result['actors'][0]['palette'],'disc')
+            self.assertTrue((out/'ecstatica1/palette.json').is_file())
+            prefab=ET.parse(out/'ecstatica1'/result['actors'][0]['path']/'prefabs/source.blk').getroot()
+            material=prefab.find("material[@id='palette_3']")
+            self.assertEqual(material.get('color'),fmt((61/255,)*3))
+            self.assertEqual(len(material.get('ramp').split()),48)
+            self.assertEqual(prefab.find('.//ellipsoid').get('material'),'palette_3')
+            self.assertEqual(list(prefab).index(material),0)
+            bad=Path(tmp)/'bad.iso';make_iso(bad,b'x'*768);data=bytearray(bad.read_bytes())
+            data[33*2048:33*2048+8]=b'notmhwan';bad.write_bytes(data)
+            with self.assertRaisesRegex(DecodeError,'palette'):read_disc(bad)
+
+    def test_records_without_a_palette_fall_back_to_approximate_ramps(self):
+        actor={'parts':[{'id':0,'name':'Body','parent':None,'fields':{'halfaxes':{'values':[2,3,4]},'colour':{'values':[12,0,0]}}}]}
+        prefab,_,_,_=source_prefab(actor,.2,{})
+        self.assertEqual(prefab.find('material').get('id'),'palette_12')
+        self.assertEqual(prefab.find('.//ellipsoid').get('material'),'palette_12')
 
     def test_unclassified_flag_never_hides_anatomy(self):
         actor={'parts':[{'id':i,'name':name,'parent':None,'fields':{

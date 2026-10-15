@@ -13,6 +13,10 @@ from ecstatica_decode import DecodeError, Reader, NAMES, OPCODES, FIELDS, actors
 
 BLOCK = 2048
 MAX_MEMBER = 256 * 1024 * 1024
+GRAPHIC_MAGIC = b'mhwanh\0\4'
+GRAPHIC_HEADER = 32
+PALETTE_FILES = ('PALLETTE.RAW', 'GRAPHICS/TITLE2.RAW')  # Ecstatica II ships a dedicated palette; I uses its title graphic
+RAMPS, SHADES = 16, 16
 
 
 class Iso9660:
@@ -171,8 +175,23 @@ def action_defs(events, names):
     return result
 
 
+def read_palette(iso):
+    """The 256-colour palette is 16 ramps of 16 shades, dark to light; a part's COLOUR word selects a ramp."""
+    for name in PALETTE_FILES:
+        if name not in iso.members:
+            continue
+        data = iso.read(name)
+        if data[:len(GRAPHIC_MAGIC)] != GRAPHIC_MAGIC or len(data) < GRAPHIC_HEADER + RAMPS * SHADES * 3:
+            raise DecodeError(f'{name} is not an mhwanh graphic carrying a palette')
+        rgb = data[GRAPHIC_HEADER:GRAPHIC_HEADER + RAMPS * SHADES * 3]
+        ramps = [[list(rgb[(r * SHADES + s) * 3:(r * SHADES + s) * 3 + 3]) for s in range(SHADES)] for r in range(RAMPS)]
+        return dict(file=name, sha256=hashlib.sha256(data).hexdigest(), ramps=ramps)
+    return None
+
+
 def read_disc(path):
     with contextlib.closing(Iso9660(path)) as iso:
+        palette = read_palette(iso)
         main_data = iso.read('CODE/ECSTATIC.FAN')
         main = prefix(main_data)
         names = main.get('names')
@@ -190,7 +209,7 @@ def read_disc(path):
         ends = dict(zip(occupied, occupied[1:] + [len(blob)]))
         result = dict(game='ecstatica1' if version == 30 else 'ecstatica2', version=version,
                       iso_name=Path(path).name, names=names, actors=[], actions=[],
-                      records=[], repertoires=[], members=len(iso.members),
+                      records=[], repertoires=[], members=len(iso.members), palette=palette,
                       source_sha256={name: hashlib.sha256(data).hexdigest() for name, data in
                           [('CODE/ECSTATIC.FAN', main_data), ('OFFSETS', offsets_data), ('FILES/ECSTATIC', blob)]})
         for index, offset in enumerate(offsets):
@@ -218,6 +237,8 @@ def read_disc(path):
                             repertoire['entries'].append(event['values'])
                 for actor in actors(decoded['actor_events'], names):
                     actor.update(record=record, name=lookup(names['actors'], actor['slot']))
+                    if palette:
+                        actor['palette'] = palette['ramps']
                     result['actors'].append(actor)
                 for action in action_defs(decoded['action_events'], names):
                     action['record'] = record

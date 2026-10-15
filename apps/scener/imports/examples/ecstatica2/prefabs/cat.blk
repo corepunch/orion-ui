@@ -1,12 +1,17 @@
 <?xml version='1.0' encoding='utf-8'?>
-<prefab fingers="0">
+<prefab up="z" front="-y" fingers="0">
+  <material id="palette_1" color="0.4980392 0.1686275 0.09019608" ramp="0.2 0.0745098 0.04313725 0.2156863 0.0745098 0.04313725 0.2470588 0.09019608 0.04313725 0.2627451 0.09019608 0.04313725 0.2941176 0.1058824 0.05882353 0.3098039 0.1058824 0.05882353 0.3411765 0.1215686 0.05882353 0.3568627 0.1215686 0.05882353 0.3882353 0.1372549 0.0745098 0.4039216 0.1372549 0.0745098 0.4352941 0.1529412 0.0745098 0.4509804 0.1529412 0.0745098 0.4823529 0.1686275 0.09019608 0.4980392 0.1686275 0.09019608 0.5294118 0.1843137 0.09019608 0.545098 0.1843137 0.09019608" shininess="4" />
+  <material id="palette_3" color="0.827451 0.7176471 0.6392157" ramp="0.4980392 0.3568627 0.2156863 0.5294118 0.372549 0.2313725 0.545098 0.4039216 0.2627451 0.5764706 0.4196078 0.2941176 0.6078431 0.4509804 0.3254902 0.6235294 0.4823529 0.3568627 0.654902 0.5137255 0.3882353 0.6705882 0.5294118 0.4196078 0.7019608 0.5607843 0.4509804 0.7176471 0.5921569 0.4823529 0.7372549 0.627451 0.5333333 0.7647059 0.654902 0.5607843 0.7960784 0.6862745 0.5921569 0.827451 0.7176471 0.6392157 0.8431373 0.7490196 0.6862745 0.8745098 0.7960784 0.7333333" shininess="4" />
+  <material id="palette_6" color="0.3568627 0.3568627 0.3568627" ramp="0 0 0 0.02745098 0.02745098 0.02745098 0.04313725 0.04313725 0.04313725 0.0745098 0.0745098 0.0745098 0.1058824 0.1058824 0.1058824 0.1372549 0.1372549 0.1372549 0.1686275 0.1529412 0.1529412 0.1843137 0.1843137 0.1843137 0.2156863 0.2156863 0.2156863 0.2470588 0.2470588 0.2470588 0.2784314 0.2627451 0.2627451 0.3098039 0.2941176 0.2941176 0.3254902 0.3254902 0.3254902 0.3568627 0.3568627 0.3568627 0.3882353 0.372549 0.372549 0.4196078 0.4039216 0.4039216" shininess="4" />
+  <material id="palette_7" color="0.8117647 0.7803922 0.7803922" ramp="0.4509804 0.4352941 0.4352941 0.4666667 0.4509804 0.4509804 0.4980392 0.4823529 0.4823529 0.5294118 0.5137255 0.5137255 0.5607843 0.545098 0.545098 0.5921569 0.5607843 0.5607843 0.6078431 0.5921569 0.5921569 0.6392157 0.6235294 0.6235294 0.6705882 0.654902 0.654902 0.7019608 0.6705882 0.6705882 0.7333333 0.7019608 0.7019608 0.7490196 0.7333333 0.7333333 0.7803922 0.7490196 0.7490196 0.8117647 0.7803922 0.7803922 0.8431373 0.8117647 0.8117647 0.8745098 0.8431373 0.8431373" shininess="4" />
+  <material id="palette_12" color="0.3411765 0.1215686 0.1215686" ramp="0.02745098 0 0 0.04313725 0 0 0.0745098 0 0 0.09019608 0 0 0.1215686 0 0 0.1529412 0 0.02745098 0.1686275 0.02745098 0.02745098 0.2 0.02745098 0.02745098 0.2156863 0.04313725 0.04313725 0.2470588 0.05882353 0.05882353 0.2627451 0.05882353 0.0745098 0.2941176 0.0745098 0.09019608 0.3254902 0.1058824 0.1058824 0.3411765 0.1215686 0.1215686 0.372549 0.1372549 0.1529412 0.3882353 0.1529412 0.1686275" shininess="4" />
   <!--CAT adaptation generated from source dimensions. Attachments and neutral pose follow the editable preset; face volumes come from the source.-->
   <material id="glove" color="0.07 0.055 0.04" shininess="5" />
-  <material id="skin" color="0.92 0.63 0.35" shininess="10" />
-  <material id="shirt" color="0.72 0.025 0.05" shininess="6" />
-  <material id="trousers" color="0.92 0.63 0.35" shininess="6" />
-  <material id="shoes" color="0.07 0.055 0.04" shininess="8" />
-  <material id="hair" color="0.07 0.055 0.04" shininess="12" />
+  <material id="skin" color="0.827451 0.7176471 0.6392157" shininess="4" ramp="0.4980392 0.3568627 0.2156863 0.5294118 0.372549 0.2313725 0.545098 0.4039216 0.2627451 0.5764706 0.4196078 0.2941176 0.6078431 0.4509804 0.3254902 0.6235294 0.4823529 0.3568627 0.654902 0.5137255 0.3882353 0.6705882 0.5294118 0.4196078 0.7019608 0.5607843 0.4509804 0.7176471 0.5921569 0.4823529 0.7372549 0.627451 0.5333333 0.7647059 0.654902 0.5607843 0.7960784 0.6862745 0.5921569 0.827451 0.7176471 0.6392157 0.8431373 0.7490196 0.6862745 0.8745098 0.7960784 0.7333333" />
+  <material id="shirt" color="0.3411765 0.1215686 0.1215686" shininess="4" ramp="0.02745098 0 0 0.04313725 0 0 0.0745098 0 0 0.09019608 0 0 0.1215686 0 0 0.1529412 0 0.02745098 0.1686275 0.02745098 0.02745098 0.2 0.02745098 0.02745098 0.2156863 0.04313725 0.04313725 0.2470588 0.05882353 0.05882353 0.2627451 0.05882353 0.0745098 0.2941176 0.0745098 0.09019608 0.3254902 0.1058824 0.1058824 0.3411765 0.1215686 0.1215686 0.372549 0.1372549 0.1529412 0.3882353 0.1529412 0.1686275" />
+  <material id="trousers" color="0.827451 0.7176471 0.6392157" shininess="4" ramp="0.4980392 0.3568627 0.2156863 0.5294118 0.372549 0.2313725 0.545098 0.4039216 0.2627451 0.5764706 0.4196078 0.2941176 0.6078431 0.4509804 0.3254902 0.6235294 0.4823529 0.3568627 0.654902 0.5137255 0.3882353 0.6705882 0.5294118 0.4196078 0.7019608 0.5607843 0.4509804 0.7176471 0.5921569 0.4823529 0.7372549 0.627451 0.5333333 0.7647059 0.654902 0.5607843 0.7960784 0.6862745 0.5921569 0.827451 0.7176471 0.6392157 0.8431373 0.7490196 0.6862745 0.8745098 0.7960784 0.7333333" />
+  <material id="shoes" color="0.4980392 0.1686275 0.09019608" shininess="4" ramp="0.2 0.0745098 0.04313725 0.2156863 0.0745098 0.04313725 0.2470588 0.09019608 0.04313725 0.2627451 0.09019608 0.04313725 0.2941176 0.1058824 0.05882353 0.3098039 0.1058824 0.05882353 0.3411765 0.1215686 0.05882353 0.3568627 0.1215686 0.05882353 0.3882353 0.1372549 0.0745098 0.4039216 0.1372549 0.0745098 0.4352941 0.1529412 0.0745098 0.4509804 0.1529412 0.0745098 0.4823529 0.1686275 0.09019608 0.4980392 0.1686275 0.09019608 0.5294118 0.1843137 0.09019608 0.545098 0.1843137 0.09019608" />
+  <material id="hair" color="0.4980392 0.1686275 0.09019608" shininess="4" ramp="0.2 0.0745098 0.04313725 0.2156863 0.0745098 0.04313725 0.2470588 0.09019608 0.04313725 0.2627451 0.09019608 0.04313725 0.2941176 0.1058824 0.05882353 0.3098039 0.1058824 0.05882353 0.3411765 0.1215686 0.05882353 0.3568627 0.1215686 0.05882353 0.3882353 0.1372549 0.0745098 0.4039216 0.1372549 0.0745098 0.4352941 0.1529412 0.0745098 0.4509804 0.1529412 0.0745098 0.4823529 0.1686275 0.09019608 0.4980392 0.1686275 0.09019608 0.5294118 0.1843137 0.09019608 0.545098 0.1843137 0.09019608" />
   <material id="eye" color="0.08 0.08 0.10" shininess="60" />
   <hub name="pelvis" aim="0 90" length="14" radius="10.764 8.901" material="trousers">
     <ellipsoid on="120 -15" at="0.25" radii="9 8 10" sink="4.5" material="trousers" />
@@ -50,66 +55,66 @@
         <spine name="neck" aim="0 90" aimEnd="0 80" length="9" radius="5.5" material="skin">
           <hub name="head" aim="0 90" length="21" radius="8.487 10.35" material="skin" volume="0">
             <group name="p2_head" pos="0 12.78231 -1.311527" rot="-110.3906 -0 180" scale="0.207 0.207 0.207">
-              <ellipsoid radii="41 36 50" pos="0 -75 38" color="0.92 0.63 0.35" rings="10" slices="16" />
+              <ellipsoid radii="41 36 50" pos="0 -75 38" material="palette_3" rings="10" slices="16" />
               <group name="p39_jaw" pos="0 -43 31" rot="-48.51562 -0 0">
-                <ellipsoid radii="28 26 37" pos="0 -4 22" color="0.92 0.63 0.35" rings="10" slices="16" />
+                <ellipsoid radii="28 26 37" pos="0 -4 22" material="palette_3" rings="10" slices="16" />
                 <group name="p55_lower_lip" pos="0 -13 38" rot="44.29688 -0 0">
-                  <ellipsoid radii="18 6 17" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                  <ellipsoid radii="18 6 17" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                 </group>
               </group>
               <group name="p46_cheeks" pos="0 -41 50" rot="56.95313 -0 0">
-                <ellipsoid radii="34 33 33" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                <ellipsoid radii="34 33 33" pos="0 0 0" material="palette_3" rings="10" slices="16" />
               </group>
               <group name="p50_left_eyeball" pos="12 -56 73" rot="0 28.125 -1.803197e-15">
-                <ellipsoid radii="13 10 5" pos="0 0 0" color="0.9 0.88 0.75" rings="10" slices="16" />
+                <ellipsoid radii="13 10 5" pos="0 0 0" material="palette_7" rings="10" slices="16" />
               </group>
               <group name="p49_right_eyeball" pos="-14 -56 73" rot="0 -28.125 1.803197e-15">
-                <ellipsoid radii="13 10 5" pos="0 0 0" color="0.9 0.88 0.75" rings="10" slices="16" />
+                <ellipsoid radii="13 10 5" pos="0 0 0" material="palette_7" rings="10" slices="16" />
               </group>
               <group name="p41_right_pupil" pos="-15 -56 62" rot="4.921875 0.703125 0">
-                <ellipsoid radii="4 4 13" pos="0 0 8" color="0.07 0.055 0.04" rings="10" slices="16" />
+                <ellipsoid radii="4 4 13" pos="0 0 8" material="palette_1" rings="10" slices="16" />
               </group>
               <group name="p42_left_pupil" pos="13 -56 62" rot="4.921875 -0.703125 0">
-                <ellipsoid radii="4 4 13" pos="0 0 8" color="0.07 0.055 0.04" rings="10" slices="16" />
+                <ellipsoid radii="4 4 13" pos="0 0 8" material="palette_1" rings="10" slices="16" />
               </group>
               <group name="p47_left_brow" pos="7 -75 47" rot="-18.28125 2.109375 9.84375">
-                <ellipsoid radii="25 8 39" pos="0 0 3" color="0.72 0.025 0.05" rings="10" slices="16" />
+                <ellipsoid radii="25 8 39" pos="0 0 3" material="palette_12" rings="10" slices="16" />
               </group>
               <group name="p48_right_brow" pos="-7 -75 47" rot="-18.28125 -2.109375 -9.84375">
-                <ellipsoid radii="25 8 39" pos="0 0 3" color="0.72 0.025 0.05" rings="10" slices="16" />
+                <ellipsoid radii="25 8 39" pos="0 0 3" material="palette_12" rings="10" slices="16" />
               </group>
               <group name="p38_nose" pos="0 -66 62" rot="-46.40625 -0 0">
-                <ellipsoid radii="8 11 43" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                <ellipsoid radii="8 11 43" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                 <group name="p52_tipnose" pos="0 3.552714e-15 36" rot="20.39062 -0 0">
-                  <ellipsoid radii="5 5 8" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                  <ellipsoid radii="5 5 8" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                 </group>
               </group>
               <group name="p51_nostrils" pos="0 -39 79" rot="-6.328125 -0 0">
-                <ellipsoid radii="11 4 10" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                <ellipsoid radii="11 4 10" pos="0 0 0" material="palette_3" rings="10" slices="16" />
               </group>
               <group name="p54_upper_lip" pos="0 -31 57" rot="18.28125 -0 0">
-                <ellipsoid radii="24 18 28" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                <ellipsoid radii="24 18 28" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                 <group name="p44_mouth" pos="0 19 6" rot="24.60937 -0 0">
-                  <ellipsoid radii="13 3 15" pos="0 0 0" color="0.07 0.055 0.04" rings="10" slices="16" />
+                  <ellipsoid radii="13 3 15" pos="0 0 0" material="palette_1" rings="10" slices="16" />
                 </group>
                 <group name="p53_teeth" pos="0 14 15" rot="-7.03125 -0 0">
-                  <ellipsoid radii="10 2 5" pos="0 0 0" color="0.9 0.88 0.75" rings="10" slices="16" />
+                  <ellipsoid radii="10 2 5" pos="0 0 0" material="palette_7" rings="10" slices="16" />
                 </group>
               </group>
               <group name="p18_right_ear" pos="-35 -51 33" rot="3.518354e-15 25.3125 -11.95313">
-                <ellipsoid radii="5 14 13" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                <ellipsoid radii="5 14 13" pos="0 0 0" material="palette_3" rings="10" slices="16" />
               </group>
               <group name="p17_left_ear" pos="34 -51 33" rot="3.518354e-15 -25.3125 11.95313">
-                <ellipsoid radii="5 14 13" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                <ellipsoid radii="5 14 13" pos="0 0 0" material="palette_3" rings="10" slices="16" />
               </group>
               <group name="p43_hair" pos="0 -79 33" rot="20.39062 -0 0">
-                <ellipsoid radii="45 42 53" pos="0 0 0" color="0.07 0.055 0.04" rings="10" slices="16" if-feature="hair" />
+                <ellipsoid radii="45 42 53" pos="0 0 0" material="palette_1" rings="10" slices="16" if-feature="hair" />
                 <group name="p64_bob" pos="1 16 -50" rot="16.875 -0 0">
-                  <ellipsoid radii="22 20 12" pos="0 0 0" color="0.5 0.025 0.02" rings="10" slices="16" if-feature="hair" />
+                  <ellipsoid radii="22 20 12" pos="0 0 0" material="palette_6" rings="10" slices="16" if-feature="hair" />
                 </group>
               </group>
               <group name="p45_toupee" pos="0 -46 -9" rot="45.70312 -0 0">
-                <ellipsoid radii="15 14 43" pos="0 0 -34" color="0.07 0.055 0.04" rings="10" slices="16" if-feature="hair" />
+                <ellipsoid radii="15 14 43" pos="0 0 -34" material="palette_1" rings="10" slices="16" if-feature="hair" />
               </group>
             </group>
           </hub>
@@ -225,8 +230,8 @@
     <joint target="right_thumb" rot="0 -27.5 0" />
   </pose>
   <option name="boots" enabled="1" />
+  <option name="effects" enabled="0" />
   <option name="fingers" enabled="0" />
   <option name="gloves" enabled="1" />
   <option name="hair" enabled="1" />
-  <option name="effects" enabled="0" />
 </prefab>

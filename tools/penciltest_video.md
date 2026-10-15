@@ -100,6 +100,17 @@ contours. Surviving source pixels are assigned to their closest skeleton sample.
 No hatch filling, weak-connection pruning, SDF or morphological-opening mode is
 included. This is the restored pre-fill variant.
 
+For filled, colored animation, add `--outlines --outline-threshold 10 --outline-window 15`.
+Before stroke cleanup, this extracts local dark contours
+with OpenCV's adaptive Gaussian threshold, leaving flat colored interiors empty.
+The outline threshold is the required darkness below the local Gaussian mean
+(0–255): lower values retain fainter marks, higher values keep fewer marks.
+The window is an odd number of pixels from 3 to 255. The ordinary `--threshold`
+still applies to the extracted binary image during cleanup; use a value from
+1 to 255 to retain its black pixels. Protection preserves extracted contours
+when outlines are enabled. Source Pencil retains the original video and starts
+hidden with `--outlines`, so the project opens with black ink alone.
+
 `make penciltest-video` packages both Python files beside the executable. The
 converter finds `build/lineart-python/bin/python3` when installed as above,
 otherwise uses `python3`. Override this with `--python PATH` or
@@ -125,7 +136,8 @@ Native black-mode projects also contain the original decoded video in an indepen
 Pencil layer, with all 256 luminance levels stored as `255 - luminance` coverage.
 That source reference is preserved before stroke cleanup and temporal processing.
 It starts visible beneath Color, so source details show through transparent areas
-of the cleaned ink. Toggle Pencil off to inspect the cleaned ink alone. Color
+of the cleaned ink, except with `--outlines`, which starts Pencil hidden.
+Toggle Pencil off to inspect the cleaned ink alone. Color
 remains the active layer. Color's empty pixels use transparent palette index 255;
 Pencil uses coverage instead, with 0 transparent and 255 full pencil ink. Source
 white therefore becomes zero Pencil coverage, rather than an opaque white fill.
@@ -202,9 +214,20 @@ Penciltest shares the Image Editor implementation; its export Makefile is
 make -C apps/imageeditor/penciltest INPUT=/path/to/video.mp4
 make -C apps/imageeditor/penciltest INPUT=/path/to/video.mp4 \
   MIN_WIDTH=1.25 MIN_LENGTH=10 THRESHOLD=180
+
+# Colored animation to black outlines, preserving source size and timing:
+make -C apps/imageeditor/penciltest INPUT=/path/to/colored-animation.mp4 \
+  OUTPUT_DIR=/path/to/export OUTLINES=1 OUTLINE_THRESHOLD=10 OUTLINE_WINDOW=15
 ```
 
 Defaults are `MIN_WIDTH=1.25`, `MIN_LENGTH=10`, `THRESHOLD=180`, and `TEMPORAL=1`.
+`OUTLINES=1` enables the colored-animation outline extraction used above, and
+changes the defaults to `MIN_WIDTH=1` and `TEMPORAL=0` to retain thin contours.
+`OUTLINE_THRESHOLD=10` controls when a pixel becomes black relative to its local
+surroundings; increase it for fewer marks, decrease it for more detail.
+`OUTLINE_WINDOW=15` controls the local neighborhood size. `THRESHOLD` is the
+absolute luminance cutoff in ordinary black mode; increasing it includes lighter
+pixels. Both thresholds, the window and layer visibility are saved in `export.json`.
 Lower width/length settings retain more thin/short details; higher thresholds
 include lighter source marks. Width changes occur in steps on a pixel grid;
 `MIN_WIDTH=1.0` retains most one-pixel strokes, while `MIN_LENGTH` still removes
@@ -218,7 +241,7 @@ For the skateboard clip, add `PROTECT_REGIONS="525,105,165,140"`.
 
 The default output is `build/penciltest-video/black.ptf` with binary PNGs in
 `black-frames/` and settings in `export.json`. Native projects include the original
-Pencil layer, visible beneath Color. Re-running stages the conversion before replacing
+Pencil layer, visible beneath Color unless `OUTLINES=1`. Re-running stages the conversion before replacing
 the same project and PNG sequence; it creates no backup PTF or ZIP. A different
 existing PTF in the chosen output folder is rejected to keep one project there.
 Unrelated build files are retained. Failed conversions leave the previous export

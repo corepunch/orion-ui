@@ -48,7 +48,9 @@ class FrameFilter:
                 if self.protect is not None:
                     self.protect = cv2.remap(self.protect, map_x, map_y, cv2.INTER_NEAREST, borderValue=0)
         support = temporal_support(gray, self.previous_gray, self.previous_ink, alignment) if args.temporal and alignment is not None else None
-        ink, _ = simplify_strokes(gray, args.threshold, args.min_width, args.min_length,
+        drawing = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,
+                                        args.outline_window, args.outline_threshold) if args.outlines else gray
+        ink, _ = simplify_strokes(drawing, args.threshold, args.min_width, args.min_length,
                                  protect_mask=self.protect, support=support)
         self.previous_gray, self.previous_ink = gray, ink
         return ink
@@ -60,9 +62,17 @@ def add_regions(parser):
     parser.add_argument('--temporal', action='store_true', help='Motion-aligned selection hysteresis for a frame sequence')
 
 
+def add_outlines(parser):
+    parser.add_argument('--outlines', action='store_true', help='Extract dark contours from filled artwork')
+    parser.add_argument('--outline-threshold', type=int, default=10, help='Darkness below local Gaussian mean; higher keeps less ink')
+    parser.add_argument('--outline-window', type=int, default=15, help='Odd local Gaussian window in pixels, 3..255')
+
+
 def validate(parser, args):
     if not 0 <= args.threshold <= 255 or not 1 <= args.min_width <= 63 or not 0 <= args.min_length <= 1000000:
         parser.error('Threshold must be 0..255, width 1..63, length 0..1000000')
+    if not 0 <= args.outline_threshold <= 255 or not 3 <= args.outline_window <= 255 or args.outline_window % 2 != 1:
+        parser.error('Outline threshold must be 0..255 and window must be odd, 3..255')
 
 
 def video_worker(argv):
@@ -71,6 +81,7 @@ def video_worker(argv):
                              ('min_length', float)]:
         parser.add_argument(name, type=value_type)
     add_regions(parser)
+    add_outlines(parser)
     args = parser.parse_args(argv)
     validate(parser, args)
     if not 1 <= args.width <= 16384 or not 1 <= args.height <= 16384 or args.width * args.height > 16000000:
@@ -102,6 +113,7 @@ def main():
     parser.add_argument('--min-width', type=float, default=3.5)
     parser.add_argument('--min-length', type=float, default=20)
     add_regions(parser)
+    add_outlines(parser)
     args = parser.parse_args()
     validate(parser, args)
     if not args.input.exists():

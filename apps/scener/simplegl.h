@@ -200,7 +200,9 @@ Mesh gen_arch(float width,float height,float depth,float wall,int segments,float
 Mesh gen_box_hole_cylinder(float w,float h,float depth,float r,int sides);
 Mesh gen_box_hole_arch(float w,float h,float depth,int sides);
 
-typedef struct { char id[32]; vec3 color; float shininess; } Material;
+#define MATERIAL_RAMP_SHADES 16
+typedef struct { vec3 shade[MATERIAL_RAMP_SHADES]; } MaterialRamp; /* dark to light; replaces diffuse and specular */
+typedef struct { char id[32]; vec3 color; float shininess; int ramp, prefabDefined; } Material; /* ramp: index into Scene.ramps, -1 for none */
 typedef struct { char target[32]; vec3 pos,rot,scale; } CameraTransform;
 #define MAX_CAMERA_NAME 128
 
@@ -212,7 +214,7 @@ typedef struct {
 typedef struct { vec3 pos,color,dir; float intensity,radius; int castsShadow,isDirectional; } Light;
 typedef struct { float x,y,z,w; } ShadowVertex;
 typedef struct { ShadowVertex *verts; int nverts,cverts; } ShadowVolume;
-typedef struct { Mesh mesh; vec3 color; float shininess; int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
+typedef struct { Mesh mesh; vec3 color; float shininess; int ramp; int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
 typedef struct { char path[1024]; unsigned char *pixels; int width,height; unsigned int texture; } ScreenTexture;
 typedef struct { char name[32]; vec3 pos; } AttachPoint;
 #define SCENE_PREFAB_PATH_CAPACITY 1024
@@ -263,6 +265,7 @@ typedef struct {
 	vec3 ambient,bg;
 	Light *lights; int nlights,clights;
 	Material *mats; int nmats,cmats;
+	MaterialRamp *ramps; int nramps,cramps;
 	SceneObj *objs; int nobjs,cobjs;
 	ShadowVolume *svols;
 	PrefabDef *prefabs; int nprefabs,cprefabs;
@@ -297,6 +300,7 @@ typedef struct {
 	void *sceneRoot, *editRoot, *selectedNode, *activeEditNode;
 	mat4 activeEditMatrix;
 	int activeTexIndex;
+	int activeRamp; /* ramp of the material being placed, -1 for none; mirrors activeTexIndex */
 	const char *activeScreenImage;
 	int activeScreenTexture;
 	ScreenTexture *screenTextures; int nscreenTextures,cscreenTextures;

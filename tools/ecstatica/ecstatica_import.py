@@ -8,7 +8,7 @@ import sys
 from ecstatica_archive import read_disc, DecodeError
 from ecstatica_cat import calibrated_cat, calibrated_clip
 from ecstatica_convert import (SCALE, slug, source_prefab, source_clip, cat_prefab, reconstruct_shoulders,
-                              study, write_xml, options)
+                              study, write_xml, options, palette_source)
 
 
 def save_json(path,data):
@@ -32,12 +32,14 @@ def import_disc(iso,output,preset,actor_ids=None,animations=True,duration=1,scal
     manifest=dict(schema=1,game=game,version=decoded['version'],source_sha256=decoded['source_sha256'],
                   scale_cm_per_source_unit=scale,animation_duration_seconds=duration,
                   limitations=['Source pose uses an inferred FK/two-link solver, not the game executable.',
-                    'Palette RGB is an authored approximation; exact palette indices remain in source.json.',
+                    'Colours are the disc palette ramps (16 ramps of 16 shades) selected by each part COLOUR word; the shade-to-ramp-entry rule of the original renderer is not recovered, so Scener walks the ramp by its own lighting.',
                     'Animation uses normalized phase and requested duration, not recovered FPS.',
                     'Clips convert ROTATE/OFFSET/POSITION; remaining commands are reported and preserved in action JSON.',
                     'Triangle/texture/zero-axis geometry is retained in source data but not exactly reproduced in previews.',
                     'CAT rigs are neutral preset adaptations, not the original hierarchy or a faithful animation retarget.'],
+                  palette=decoded['palette'],
                   actors=[],actions=len(actions),source_parts=0,clips=0,cat_rigs=0,controlled_rigs=0,controlled_clips=0)
+    if decoded['palette']:save_json(folder/'palette.json',decoded['palette'])
     repmap={r['id']:{e[1] for e in r['entries']} for r in repertoires}
     for number,actor in enumerate(actors):
         key=f'{actor["record"]["record"]:05d}-{actor["slot"]:04d}-{slug(actor["name"])}'
@@ -81,7 +83,7 @@ def import_disc(iso,output,preset,actor_ids=None,animations=True,duration=1,scal
                 entry['controlled_file']='scenes/cat-animations/'+name;manifest['controlled_clips']+=1
             clips.append(entry)
         info=dict(id=actor['slot'],name=actor['name'],record=actor['record']['record'],path='actors/'+key,
-                  parts=len(actor['parts']),preview_repairs=[p['name'] for p in reconstruct_shoulders(actor)['parts'] if p.get('reconstructed')],cat=bool(adapted),controlled=bool(controlled),features=options(actor,overrides or {}),
+                  parts=len(actor['parts']),palette=palette_source(actor),preview_repairs=[p['name'] for p in reconstruct_shoulders(actor)['parts'] if p.get('reconstructed')],cat=bool(adapted),controlled=bool(controlled),features=options(actor,overrides or {}),
                   control_source_mapping={k:v['source'] for k,v in controlled[1]['controls'].items()} if controlled else {},
                   repertoire=rep,action_ids=ids,missing_action_ids=[i for i in ids if i not in by_action],
                   clips=clips,cat_source_mapping=adapted[1] if adapted else {})

@@ -41,6 +41,7 @@ def calibrated_cat(actor,scale=SCALE,overrides=None):
     root=ET.Element('prefab')
     root.append(ET.Comment('Calibrated CAT rig; original ellipsoid volumes retained. Z up, front -Y, centimetres.'))
     for option in source.findall('option'):root.append(copy.deepcopy(option))
+    for material in source.findall('material'):root.append(copy.deepcopy(material))
     nodes={};controls={}
     def bone(tag,name,parent,position,endpoint=None,source_id=None,attach=False):
         target=positions.get(endpoint,position) if isinstance(endpoint,str) else endpoint or position

@@ -105,5 +105,6 @@
     "right_upperarm": 8,
     "right_forearm": 9,
     "right_palm": 0
-  }
+  },
+  "palette": "disc"
 }

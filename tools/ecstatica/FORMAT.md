@@ -386,6 +386,8 @@ stored_depth = 32767                               otherwise
 
 The external renderer research describes mapping the shade lookup through material-specific palette ramps. Actor `COLOUR` IDs select these ramps; they are not RGB triples. `GRAPHICS/TITLE2.RAW` contains a 256×3 palette with full 8-bit RGB components. Do not assume a VGA 6-bit palette and multiply all channels by four. This lookup-based renderer is materially different from smooth modern PBR ellipsoids; copying only dimensions does not recreate Ecstatica's shading.
 
+**Palette layout, verified 2026-10-15 on both discs:** the 256 entries are 16 ramps of 16 shades, each ramp running dark to light, and a part's `COLOUR` first word is the ramp index (0–15). Ramp 0 is the fixed system row (black, white, pure red, yellow, greys, blue); ramp 1 is dark brown; ramps 2–3 skin; 4–5 green (teal on Ecstatica II); 6–7 grey to white; 8–9 blue; 10–11 yellow; 12–13 red; 14–15 magenta. Ecstatica I has no separate palette file and uses the same palette as its title graphics; Ecstatica II ships `PALLETTE.RAW` (an `mhwanh` graphic whose 768 palette bytes follow the 32-byte header) and uses it in every `GRAPHICS/*.RAW` file. On Ecstatica II the shade map's lit sphere spans values 52–97, so the original renderer used only part of a ramp pair; which part is still unknown. The importer reads the palette with `ecstatica_archive.read_palette` and the Scener ramp material consumes it.
+
 ### Background views
 
 All 220 supplied `VIEWS/*.RAW` have:

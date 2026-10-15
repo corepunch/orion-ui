@@ -382,7 +382,13 @@ void scene_query(Scene *s,FILE *f){
 	fputs(nlights?"\n  ],\n  \"materials\": [":"],\n  \"materials\": [",f);
 	for(int i=0;i<s->nmats;i++){
 		fputs(i?", ":"",f); fputs("{\"id\": ",f); json_str(f,s->mats[i].id);
-		fputs(", \"color\": ",f); json_vec(f,s->mats[i].color); fputs(", \"shininess\": ",f); json_num(f,s->mats[i].shininess); fputc('}',f);
+		fputs(", \"color\": ",f); json_vec(f,s->mats[i].color); fputs(", \"shininess\": ",f); json_num(f,s->mats[i].shininess);
+		if(s->mats[i].ramp>=0){
+			fputs(", \"ramp\": [",f);
+			for(int k=0;k<MATERIAL_RAMP_SHADES;k++){ fputs(k?", ":"",f); json_vec(f,s->ramps[s->mats[i].ramp].shade[k]); }
+			fputc(']',f);
+		}
+		fputc('}',f);
 	}
 	fputs("],\n  \"prefabs\": {",f);
 	for(int i=0;i<s->nprefabs;i++){

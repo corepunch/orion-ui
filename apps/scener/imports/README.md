@@ -16,7 +16,7 @@ These small examples are included in Git, with decoded provenance and one origin
 | [Ecstatica I](ecstatica/ecstatica1/README.md) | 323 | 6,678 | 669 | 1,456 | 93 |
 | [Ecstatica II](ecstatica/ecstatica2/README.md) | 1,923 | 50,570 | 1,333 | 7,877 | 519 |
 
-Use the inventories to browse characters; `manifest.json` is available for scripts. Source part fields and commands are preserved in JSON. Visible colours and pose interpretation are approximate. Clips use inferred transforms and normalized timing; they are not an emulation of the game runtime. CAT adaptations retain the source face but use Scener's neutral biped rig; imported clips currently target the source rig.
+Use the inventories to browse characters; `manifest.json` is available for scripts. Source part fields and commands are preserved in JSON. Colours come from the disc palette ramps; pose interpretation is approximate. Clips use inferred transforms and normalized timing; they are not an emulation of the game runtime. CAT adaptations retain the source face but use Scener's neutral biped rig; imported clips currently target the source rig.
 
 Gloves, boots, hair, fingers and explicitly named accessory volumes have per-instance XML options where present. Fingers and effects default off. See the importer guide for syntax and conversion limits.
 

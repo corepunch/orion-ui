@@ -4,6 +4,12 @@
   <option name="boots" enabled="1" />
   <option name="fingers" enabled="0" />
   <option name="hair" enabled="1" />
+  <material id="palette_1" color="0.4980392 0.1686275 0.09019608" ramp="0.2 0.0745098 0.04313725 0.2156863 0.0745098 0.04313725 0.2470588 0.09019608 0.04313725 0.2627451 0.09019608 0.04313725 0.2941176 0.1058824 0.05882353 0.3098039 0.1058824 0.05882353 0.3411765 0.1215686 0.05882353 0.3568627 0.1215686 0.05882353 0.3882353 0.1372549 0.0745098 0.4039216 0.1372549 0.0745098 0.4352941 0.1529412 0.0745098 0.4509804 0.1529412 0.0745098 0.4823529 0.1686275 0.09019608 0.4980392 0.1686275 0.09019608 0.5294118 0.1843137 0.09019608 0.545098 0.1843137 0.09019608" shininess="4" />
+  <material id="palette_2" color="0.4352941 0.2784314 0.1529412" ramp="0.1215686 0.05882353 0 0.1372549 0.0745098 0 0.1686275 0.0745098 0 0.1843137 0.09019608 0 0.2156863 0.1058824 0.02745098 0.2313725 0.1215686 0.02745098 0.2627451 0.1372549 0.02745098 0.2784314 0.1686275 0.04313725 0.3098039 0.1843137 0.05882353 0.3411765 0.2 0.0745098 0.3568627 0.2156863 0.09019608 0.3882353 0.2313725 0.1058824 0.4039216 0.2627451 0.1215686 0.4352941 0.2784314 0.1529412 0.4509804 0.3098039 0.1686275 0.4823529 0.3254902 0.1843137" shininess="4" />
+  <material id="palette_3" color="0.827451 0.7176471 0.6392157" ramp="0.4980392 0.3568627 0.2156863 0.5294118 0.372549 0.2313725 0.545098 0.4039216 0.2627451 0.5764706 0.4196078 0.2941176 0.6078431 0.4509804 0.3254902 0.6235294 0.4823529 0.3568627 0.654902 0.5137255 0.3882353 0.6705882 0.5294118 0.4196078 0.7019608 0.5607843 0.4509804 0.7176471 0.5921569 0.4823529 0.7372549 0.627451 0.5333333 0.7647059 0.654902 0.5607843 0.7960784 0.6862745 0.5921569 0.827451 0.7176471 0.6392157 0.8431373 0.7490196 0.6862745 0.8745098 0.7960784 0.7333333" shininess="4" />
+  <material id="palette_7" color="0.8117647 0.7803922 0.7803922" ramp="0.4509804 0.4352941 0.4352941 0.4666667 0.4509804 0.4509804 0.4980392 0.4823529 0.4823529 0.5294118 0.5137255 0.5137255 0.5607843 0.545098 0.545098 0.5921569 0.5607843 0.5607843 0.6078431 0.5921569 0.5921569 0.6392157 0.6235294 0.6235294 0.6705882 0.654902 0.654902 0.7019608 0.6705882 0.6705882 0.7333333 0.7019608 0.7019608 0.7490196 0.7333333 0.7333333 0.7803922 0.7490196 0.7490196 0.8117647 0.7803922 0.7803922 0.8431373 0.8117647 0.8117647 0.8745098 0.8431373 0.8431373" shininess="4" />
+  <material id="palette_8" color="0.1215686 0.2313725 0.3882353" ramp="0 0.02745098 0.0745098 0 0.02745098 0.09019608 0 0.04313725 0.1215686 0 0.05882353 0.1372549 0 0.0745098 0.1686275 0.02745098 0.09019608 0.2 0.02745098 0.1058824 0.2156863 0.04313725 0.1215686 0.2470588 0.04313725 0.1372549 0.2627451 0.05882353 0.1529412 0.2941176 0.0745098 0.1686275 0.3098039 0.09019608 0.1843137 0.3411765 0.1058824 0.2 0.372549 0.1215686 0.2313725 0.3882353 0.1372549 0.2470588 0.4196078 0.1686275 0.2627451 0.4352941" shininess="4" />
+  <material id="palette_9" color="0.5764706 0.654902 0.7803922" ramp="0.1843137 0.2941176 0.4666667 0.2156863 0.3098039 0.4823529 0.2313725 0.3411765 0.5137255 0.2627451 0.3568627 0.545098 0.2784314 0.3882353 0.5607843 0.3098039 0.4196078 0.5921569 0.3411765 0.4509804 0.6078431 0.372549 0.4666667 0.6392157 0.4039216 0.4980392 0.6705882 0.4352941 0.5294118 0.6862745 0.4666667 0.5607843 0.7176471 0.5137255 0.5921569 0.7333333 0.545098 0.6235294 0.7647059 0.5764706 0.654902 0.7803922 0.6235294 0.6862745 0.8117647 0.6705882 0.7333333 0.8431373" shininess="4" />
   <hub name="pelvis" aim="0 90" length="0" radius="1" overlap="0" volume="0" pos="-0.008822583 3.48342 60.63237" ground="0">
     <spine name="spine" aim="180 89.9802" length="8.497092" radius="1" overlap="0" volume="0">
       <hub name="abdomen" aim="0 90" length="0" radius="1" overlap="0" volume="0">
@@ -16,7 +22,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-108.2812 -0 180">
-                          <ellipsoid radii="8.487 7.452 10.35" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                          <ellipsoid radii="8.487 7.452 10.35" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -27,7 +33,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-149.7656 -0 180">
-                          <ellipsoid radii="6.417 4.554 7.659" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                          <ellipsoid radii="6.417 4.554 7.659" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -38,7 +44,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-105.4688 -0 180">
-                          <ellipsoid radii="3.726 1.242 3.519" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                          <ellipsoid radii="3.726 1.242 3.519" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -49,7 +55,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-51.32813 -0 180">
-                          <ellipsoid radii="8.694 6.417 6.831" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                          <ellipsoid radii="8.694 6.417 6.831" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -60,7 +66,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-106.7176 -7.505788 156.495">
-                          <ellipsoid radii="2.691 3.312 1.035" pos="0 0 0" color="0.9 0.88 0.75" rings="10" slices="16" />
+                          <ellipsoid radii="2.691 3.312 1.035" pos="0 0 0" material="palette_7" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -71,7 +77,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-106.7176 7.505788 -156.495">
-                          <ellipsoid radii="2.691 3.312 1.035" pos="0 0 0" color="0.9 0.88 0.75" rings="10" slices="16" />
+                          <ellipsoid radii="2.691 3.312 1.035" pos="0 0 0" material="palette_7" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -82,7 +88,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-103.3581 -0.2205525 179.3324">
-                          <ellipsoid radii="0.828 0.828 2.691" pos="0 0 0" color="0.2 0.24 0.22" rings="10" slices="16" />
+                          <ellipsoid radii="0.828 0.828 2.691" pos="0 0 0" material="palette_8" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -93,7 +99,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-103.3581 0.2205525 -179.3324">
-                          <ellipsoid radii="0.828 0.828 2.691" pos="0 0 0" color="0.2 0.24 0.22" rings="10" slices="16" />
+                          <ellipsoid radii="0.828 0.828 2.691" pos="0 0 0" material="palette_8" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -104,7 +110,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-118.6963 8.666184 174.8615">
-                          <ellipsoid radii="5.175 1.656 8.073" pos="0 0 0" color="0.07 0.055 0.04" rings="10" slices="16" />
+                          <ellipsoid radii="5.175 1.656 8.073" pos="0 0 0" material="palette_1" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -115,7 +121,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-118.6963 -8.666184 -174.8615">
-                          <ellipsoid radii="5.175 1.656 8.073" pos="0 0 0" color="0.07 0.055 0.04" rings="10" slices="16" />
+                          <ellipsoid radii="5.175 1.656 8.073" pos="0 0 0" material="palette_1" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -126,7 +132,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-154.6875 -0 180">
-                          <ellipsoid radii="1.656 2.277 8.901" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                          <ellipsoid radii="1.656 2.277 8.901" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -137,7 +143,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-134.2969 -0 180">
-                          <ellipsoid radii="1.863 1.863 2.484" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                          <ellipsoid radii="1.863 1.863 2.484" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -148,7 +154,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-114.6094 -0 180">
-                          <ellipsoid radii="2.691 1.242 2.07" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                          <ellipsoid radii="2.691 1.242 2.07" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -159,7 +165,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-90 -0 180">
-                          <ellipsoid radii="4.968 3.726 5.796" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                          <ellipsoid radii="4.968 3.726 5.796" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -170,7 +176,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-65.39062 -0 180">
-                          <ellipsoid radii="2.691 0.621 3.105" pos="0 0 0" color="0.07 0.055 0.04" rings="10" slices="16" />
+                          <ellipsoid radii="2.691 0.621 3.105" pos="0 0 0" material="palette_1" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -181,7 +187,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-97.03125 -0 180">
-                          <ellipsoid radii="2.07 0.414 1.035" pos="0 0 0" color="0.9 0.88 0.75" rings="10" slices="16" />
+                          <ellipsoid radii="2.07 0.414 1.035" pos="0 0 0" material="palette_7" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -192,7 +198,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-102.1198 -18.17335 158.5631">
-                          <ellipsoid radii="1.035 2.898 2.691" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                          <ellipsoid radii="1.035 2.898 2.691" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -203,7 +209,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-102.1198 18.17335 -158.5631">
-                          <ellipsoid radii="1.035 2.898 2.691" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                          <ellipsoid radii="1.035 2.898 2.691" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -214,7 +220,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-135 -0 180">
-                          <ellipsoid radii="7.452 10.35 5.796" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                          <ellipsoid radii="7.452 10.35 5.796" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -225,7 +231,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-87.89062 -0 180">
-                          <ellipsoid radii="10.971 6.417 10.557" pos="0 0 0" color="0.4 0.22 0.09" rings="10" slices="16" if-feature="hair" />
+                          <ellipsoid radii="10.971 6.417 10.557" pos="0 0 0" material="palette_2" rings="10" slices="16" if-feature="hair" />
                         </group>
                       </group>
                     </group>
@@ -236,7 +242,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-87.89062 -0 180">
-                          <ellipsoid radii="4.968 4.968 9.936" pos="0 0 0" color="0.4 0.22 0.09" rings="10" slices="16" />
+                          <ellipsoid radii="4.968 4.968 9.936" pos="0 0 0" material="palette_2" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -247,7 +253,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-59.76563 -0 180">
-                          <ellipsoid radii="3.312 4.968 7.452" pos="0 0 0" color="0.4 0.22 0.09" rings="10" slices="16" />
+                          <ellipsoid radii="3.312 4.968 7.452" pos="0 0 0" material="palette_2" rings="10" slices="16" />
                         </group>
                       </group>
                     </group>
@@ -258,7 +264,7 @@
                     <group rot="0 -0 0" scale="1 1 1">
                       <group scale="1 1 1">
                         <group rot="-89.29688 -0 180">
-                          <ellipsoid radii="8.901 7.452 10.557" pos="0 0 0" color="0.4 0.22 0.09" rings="10" slices="16" if-feature="hair" />
+                          <ellipsoid radii="8.901 7.452 10.557" pos="0 0 0" material="palette_2" rings="10" slices="16" if-feature="hair" />
                         </group>
                       </group>
                     </group>
@@ -278,7 +284,7 @@
                         <group rot="0 -0 0" scale="1 1 1">
                           <group scale="1 1 1">
                             <group rot="174.3637 -11.24141 -130.9358">
-                              <ellipsoid radii="4.347 2.07 4.761" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                              <ellipsoid radii="4.347 2.07 4.761" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                             </group>
                           </group>
                         </group>
@@ -289,7 +295,7 @@
                         <group rot="0 -0 0" scale="1 1 1">
                           <group scale="1 1 1">
                             <group rot="149.026 -44.77341 -114.1108">
-                              <ellipsoid radii="4.968 4.14 3.105" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" if-feature="fingers" />
+                              <ellipsoid radii="4.968 4.14 3.105" pos="0 0 0" material="palette_3" rings="10" slices="16" if-feature="fingers" />
                             </group>
                           </group>
                         </group>
@@ -300,7 +306,7 @@
                         <group rot="0 -0 0" scale="1 1 1">
                           <group scale="1 1 1">
                             <group rot="156.6353 -45.47491 -126.3911">
-                              <ellipsoid radii="1.242 1.449 4.14" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" if-feature="fingers" />
+                              <ellipsoid radii="1.242 1.449 4.14" pos="0 0 0" material="palette_3" rings="10" slices="16" if-feature="fingers" />
                             </group>
                           </group>
                         </group>
@@ -314,7 +320,7 @@
                           <group scale="1 1 1">
                             <group rot="-136.725 -18.81085 0">
                               <group rot="-135.1535 13.57766 -166.8565">
-                                <ellipsoid radii="5.382 4.347 10.557" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                                <ellipsoid radii="5.382 4.347 10.557" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                               </group>
                             </group>
                           </group>
@@ -330,7 +336,7 @@
                         <group scale="1 1 1">
                           <group rot="156.1498 -23.16665 0">
                             <group rot="154.3183 21.08867 170.1836">
-                              <ellipsoid radii="5.796 7.038 13.662" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                              <ellipsoid radii="5.796 7.038 13.662" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                             </group>
                           </group>
                         </group>
@@ -345,7 +351,7 @@
                         <group scale="1 1 1">
                           <group rot="156.1498 -23.16665 0">
                             <group rot="165.4468 32.60237 -164.2474">
-                              <ellipsoid radii="6.831 7.659 11.799" pos="0 0 0" color="0.5 0.3 0.1" rings="10" slices="16" />
+                              <ellipsoid radii="6.831 7.659 11.799" pos="0 0 0" material="palette_9" rings="10" slices="16" />
                             </group>
                           </group>
                         </group>
@@ -364,7 +370,7 @@
                         <group rot="0 -0 0" scale="1 1 1">
                           <group scale="1 1 1">
                             <group rot="174.3637 11.24141 130.9358">
-                              <ellipsoid radii="4.347 2.07 4.761" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                              <ellipsoid radii="4.347 2.07 4.761" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                             </group>
                           </group>
                         </group>
@@ -375,7 +381,7 @@
                         <group rot="0 -0 0" scale="1 1 1">
                           <group scale="1 1 1">
                             <group rot="149.026 44.77341 114.1108">
-                              <ellipsoid radii="4.968 4.14 3.105" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" if-feature="fingers" />
+                              <ellipsoid radii="4.968 4.14 3.105" pos="0 0 0" material="palette_3" rings="10" slices="16" if-feature="fingers" />
                             </group>
                           </group>
                         </group>
@@ -386,7 +392,7 @@
                         <group rot="0 -0 0" scale="1 1 1">
                           <group scale="1 1 1">
                             <group rot="156.6353 45.47491 126.3911">
-                              <ellipsoid radii="1.242 1.449 4.14" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" if-feature="fingers" />
+                              <ellipsoid radii="1.242 1.449 4.14" pos="0 0 0" material="palette_3" rings="10" slices="16" if-feature="fingers" />
                             </group>
                           </group>
                         </group>
@@ -400,7 +406,7 @@
                           <group scale="1 1 1">
                             <group rot="-137.4817 19.02651 0">
                               <group rot="-135.8752 -13.90343 166.8811">
-                                <ellipsoid radii="5.382 4.347 10.557" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                                <ellipsoid radii="5.382 4.347 10.557" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                               </group>
                             </group>
                           </group>
@@ -416,7 +422,7 @@
                         <group scale="1 1 1">
                           <group rot="156.4849 23.21985 0">
                             <group rot="154.6634 -21.19351 -170.2867">
-                              <ellipsoid radii="5.796 7.038 13.662" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                              <ellipsoid radii="5.796 7.038 13.662" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                             </group>
                           </group>
                         </group>
@@ -431,7 +437,7 @@
                         <group scale="1 1 1">
                           <group rot="156.4849 23.21985 0">
                             <group rot="165.8451 -32.55773 164.0543">
-                              <ellipsoid radii="6.831 7.659 11.799" pos="0 0 0" color="0.5 0.3 0.1" rings="10" slices="16" />
+                              <ellipsoid radii="6.831 7.659 11.799" pos="0 0 0" material="palette_9" rings="10" slices="16" />
                             </group>
                           </group>
                         </group>
@@ -446,7 +452,7 @@
                 <group rot="0 -0 0" scale="1 1 1">
                   <group scale="1 1 1">
                     <group rot="-73.0209 -13.56121 -161.018">
-                      <ellipsoid radii="13.662 16.56 14.283" pos="0 0 0" color="0.5 0.3 0.1" rings="10" slices="16" />
+                      <ellipsoid radii="13.662 16.56 14.283" pos="0 0 0" material="palette_9" rings="10" slices="16" />
                     </group>
                   </group>
                 </group>
@@ -457,7 +463,7 @@
                 <group rot="0 -0 0" scale="1 1 1">
                   <group scale="1 1 1">
                     <group rot="-73.0209 13.56121 161.018">
-                      <ellipsoid radii="13.662 16.56 14.283" pos="0 0 0" color="0.5 0.3 0.1" rings="10" slices="16" />
+                      <ellipsoid radii="13.662 16.56 14.283" pos="0 0 0" material="palette_9" rings="10" slices="16" />
                     </group>
                   </group>
                 </group>
@@ -468,7 +474,7 @@
                 <group rot="0 -0 0" scale="1 1 1">
                   <group scale="1 1 1">
                     <group rot="-90 -0 180">
-                      <ellipsoid radii="22.563 11.178 6.624" pos="0 0 0" color="0.5 0.3 0.1" rings="10" slices="16" />
+                      <ellipsoid radii="22.563 11.178 6.624" pos="0 0 0" material="palette_9" rings="10" slices="16" />
                     </group>
                   </group>
                 </group>
@@ -481,7 +487,7 @@
                 <group rot="0 -0 0" scale="1 1 1">
                   <group scale="1 1 1">
                     <group rot="-77.34375 -0 180">
-                      <ellipsoid radii="17.388 15.318 16.146" pos="0 0 0" color="0.5 0.3 0.1" rings="10" slices="16" />
+                      <ellipsoid radii="17.388 15.318 16.146" pos="0 0 0" material="palette_9" rings="10" slices="16" />
                     </group>
                   </group>
                 </group>
@@ -492,7 +498,7 @@
                 <group rot="0 -0 0" scale="1 1 1">
                   <group scale="1 1 1">
                     <group rot="-14.0625 -0 180">
-                      <ellipsoid radii="15.732 8.694 3.726" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                      <ellipsoid radii="15.732 8.694 3.726" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                     </group>
                   </group>
                 </group>
@@ -503,7 +509,7 @@
                 <group rot="0 -0 0" scale="1 1 1">
                   <group scale="1 1 1">
                     <group rot="-25.9606 -19.19014 175.5174">
-                      <ellipsoid radii="10.764 12.42 7.452" pos="0 0 0" color="0.5 0.3 0.1" rings="10" slices="16" if-feature="boots" />
+                      <ellipsoid radii="10.764 12.42 7.452" pos="0 0 0" material="palette_9" rings="10" slices="16" if-feature="boots" />
                     </group>
                   </group>
                 </group>
@@ -514,7 +520,7 @@
                 <group rot="0 -0 0" scale="1 1 1">
                   <group scale="1 1 1">
                     <group rot="-25.9606 19.19014 -175.5174">
-                      <ellipsoid radii="10.764 12.42 7.452" pos="0 0 0" color="0.5 0.3 0.1" rings="10" slices="16" if-feature="boots" />
+                      <ellipsoid radii="10.764 12.42 7.452" pos="0 0 0" material="palette_9" rings="10" slices="16" if-feature="boots" />
                     </group>
                   </group>
                 </group>
@@ -527,7 +533,7 @@
             <group rot="0 -0 0" scale="1 1 1">
               <group scale="1 1 1">
                 <group rot="-77.34375 -0 180">
-                  <ellipsoid radii="16.353 20.493 11.799" pos="0 0 0" color="0.5 0.3 0.1" rings="10" slices="16" />
+                  <ellipsoid radii="16.353 20.493 11.799" pos="0 0 0" material="palette_9" rings="10" slices="16" />
                 </group>
               </group>
             </group>
@@ -544,7 +550,7 @@
                 <group rot="0 -0 0" scale="1 1 1">
                   <group scale="1 1 1">
                     <group rot="-94.83887 -4.173007 -171.5399">
-                      <ellipsoid radii="4.968 3.312 11.178" pos="0 0 0" color="0.07 0.055 0.04" rings="10" slices="16" />
+                      <ellipsoid radii="4.968 3.312 11.178" pos="0 0 0" material="palette_1" rings="10" slices="16" />
                     </group>
                   </group>
                 </group>
@@ -555,7 +561,7 @@
                 <group rot="0 -0 0" scale="1 1 1">
                   <group scale="1 1 1">
                     <group rot="-83.37861 -4.405156 -174.3507">
-                      <ellipsoid radii="4.14 3.312 7.452" pos="0 0 0" color="0.07 0.055 0.04" rings="10" slices="16" />
+                      <ellipsoid radii="4.14 3.312 7.452" pos="0 0 0" material="palette_1" rings="10" slices="16" />
                     </group>
                   </group>
                 </group>
@@ -569,7 +575,7 @@
                   <group scale="1 1 1">
                     <group rot="148.3556 0.5875869 -4.969878e-17">
                       <group rot="148.3543 -0.5002224 -179.6917">
-                        <ellipsoid radii="4.14 6.417 14.904" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                        <ellipsoid radii="4.14 6.417 14.904" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                       </group>
                     </group>
                   </group>
@@ -584,7 +590,7 @@
                   <group scale="1 1 1">
                     <group rot="148.3556 0.5875869 -4.969878e-17">
                       <group rot="148.3543 -0.5002224 -179.6917">
-                        <ellipsoid radii="6.624 6.21 8.694" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                        <ellipsoid radii="6.624 6.21 8.694" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                       </group>
                     </group>
                   </group>
@@ -600,7 +606,7 @@
                 <group scale="1 1 1">
                   <group rot="-177.7477 0.6896639 3.106235e-18">
                     <group rot="-177.7476 -0.6891311 179.9729">
-                      <ellipsoid radii="7.659 11.385 20.907" pos="0 0 0" color="0.4 0.22 0.09" rings="10" slices="16" />
+                      <ellipsoid radii="7.659 11.385 20.907" pos="0 0 0" material="palette_2" rings="10" slices="16" />
                     </group>
                   </group>
                 </group>
@@ -619,7 +625,7 @@
                 <group rot="0 -0 0" scale="1 1 1">
                   <group scale="1 1 1">
                     <group rot="-94.83887 4.173007 171.5399">
-                      <ellipsoid radii="4.968 3.312 11.178" pos="0 0 0" color="0.07 0.055 0.04" rings="10" slices="16" />
+                      <ellipsoid radii="4.968 3.312 11.178" pos="0 0 0" material="palette_1" rings="10" slices="16" />
                     </group>
                   </group>
                 </group>
@@ -630,7 +636,7 @@
                 <group rot="0 -0 0" scale="1 1 1">
                   <group scale="1 1 1">
                     <group rot="-83.37861 4.405156 174.3507">
-                      <ellipsoid radii="4.14 3.312 7.452" pos="0 0 0" color="0.07 0.055 0.04" rings="10" slices="16" />
+                      <ellipsoid radii="4.14 3.312 7.452" pos="0 0 0" material="palette_1" rings="10" slices="16" />
                     </group>
                   </group>
                 </group>
@@ -645,7 +651,7 @@
                   <group scale="1 1 1">
                     <group rot="151.1625 -0.403084 0">
                       <group rot="151.1619 0.3530974 179.8056">
-                        <ellipsoid radii="4.14 6.417 14.904" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                        <ellipsoid radii="4.14 6.417 14.904" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                       </group>
                     </group>
                   </group>
@@ -660,7 +666,7 @@
                   <group scale="1 1 1">
                     <group rot="151.1625 -0.403084 0">
                       <group rot="151.1619 0.3530974 179.8056">
-                        <ellipsoid radii="6.624 6.21 8.694" pos="0 0 0" color="0.92 0.63 0.35" rings="10" slices="16" />
+                        <ellipsoid radii="6.624 6.21 8.694" pos="0 0 0" material="palette_3" rings="10" slices="16" />
                       </group>
                     </group>
                   </group>
@@ -676,7 +682,7 @@
                 <group scale="1 1 1">
                   <group rot="-172.2842 -0.4559779 -1.242444e-17">
                     <group rot="-172.284 0.4518495 -179.9388">
-                      <ellipsoid radii="7.659 11.385 20.907" pos="0 0 0" color="0.4 0.22 0.09" rings="10" slices="16" />
+                      <ellipsoid radii="7.659 11.385 20.907" pos="0 0 0" material="palette_2" rings="10" slices="16" />
                     </group>
                   </group>
                 </group>
@@ -691,7 +697,7 @@
         <group rot="0 -0 0" scale="1 1 1">
           <group scale="1 1 1">
             <group rot="-87.1875 -0 180">
-              <ellipsoid radii="15.732 13.662 12.213" pos="0 0 0" color="0.4 0.22 0.09" rings="10" slices="16" />
+              <ellipsoid radii="15.732 13.662 12.213" pos="0 0 0" material="palette_2" rings="10" slices="16" />
             </group>
           </group>
         </group>
@@ -702,7 +708,7 @@
         <group rot="0 -0 0" scale="1 1 1">
           <group scale="1 1 1">
             <group rot="85.07812 -0 180">
-              <ellipsoid radii="11.592 13.041 10.971" pos="0 0 0" color="0.4 0.22 0.09" rings="10" slices="16" />
+              <ellipsoid radii="11.592 13.041 10.971" pos="0 0 0" material="palette_2" rings="10" slices="16" />
             </group>
           </group>
         </group>
@@ -713,7 +719,7 @@
         <group rot="0 -0 0" scale="1 1 1">
           <group scale="1 1 1">
             <group rot="85.07812 -0 180">
-              <ellipsoid radii="11.592 13.041 10.971" pos="0 0 0" color="0.4 0.22 0.09" rings="10" slices="16" />
+              <ellipsoid radii="11.592 13.041 10.971" pos="0 0 0" material="palette_2" rings="10" slices="16" />
             </group>
           </group>
         </group>
@@ -724,7 +730,7 @@
         <group rot="0 -0 0" scale="1 1 1">
           <group scale="1 1 1">
             <group rot="-116.7188 -0 180">
-              <ellipsoid radii="16.767 4.554 15.732" pos="0 0 0" color="0.4 0.22 0.09" rings="10" slices="16" />
+              <ellipsoid radii="16.767 4.554 15.732" pos="0 0 0" material="palette_2" rings="10" slices="16" />
             </group>
           </group>
         </group>

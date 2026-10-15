@@ -9,7 +9,42 @@ from pathlib import Path
 
 SCALE = .207
 IDENTITY = ((1,0,0),(0,1,0),(0,0,1))
-PALETTE = [(0.03,.03,.035),(.07,.055,.04),(.40,.22,.09),(.92,.63,.35),(.15,.25,.6),(.4,.25,.6),(.5,.025,.02),(.9,.88,.75),(.2,.24,.22),(.5,.3,.1),(.33,.4,.035),(.2,.45,.4),(.72,.025,.05),(.65,.035,.04),(.75,.7,.25),(.7,.7,.7)]
+RAMPS, SHADES = 16, 16
+LIT_SHADE = 13          # the ramp entry a flat-lit surface shows; the shader walks the whole ramp
+SKIN_RAMP, GLOVE_RAMP = 3, 1
+RAMP_SHININESS = '4'
+# Fallback only, for records without a disc palette: a guessed tone per ramp, stretched dark to light.
+APPROXIMATE_PALETTE = [(0.03,.03,.035),(.07,.055,.04),(.40,.22,.09),(.92,.63,.35),(.15,.25,.6),(.4,.25,.6),(.5,.025,.02),(.9,.88,.75),(.2,.24,.22),(.5,.3,.1),(.33,.4,.035),(.2,.45,.4),(.72,.025,.05),(.65,.035,.04),(.75,.7,.25),(.7,.7,.7)]
+APPROXIMATE_RAMPS = [[[round(255*v*(.2+.8*i/(SHADES-1))) for v in rgb] for i in range(SHADES)] for rgb in APPROXIMATE_PALETTE]
+
+
+def palette_ramps(actor):
+    """The actor's disc palette (16 ramps × 16 shades, 0–255) or the approximate fallback."""
+    ramps=actor.get('palette') if isinstance(actor,dict) else None
+    return ramps if ramps else APPROXIMATE_RAMPS
+
+
+def palette_source(actor):
+    return 'disc' if isinstance(actor,dict) and actor.get('palette') else 'approximate'
+
+
+def ramp_id(index):return f'palette_{index%RAMPS}'
+
+
+def ramp_attributes(ramps,index):
+    """`color` is the lit tone for flat and ambient passes; `ramp` is the full shade run for the ramp shader."""
+    ramp=ramps[index%RAMPS]
+    return dict(color=fmt(tuple(v/255 for v in ramp[LIT_SHADE])),ramp=fmt(tuple(v/255 for shade in ramp for v in shade)),shininess=RAMP_SHININESS)
+
+
+def part_ramp(state,part_id):return get(state,part_id,'colour')[0]%RAMPS
+
+
+def add_ramp_materials(root,ramps,indices,position=0):
+    """One <material> per used ramp, inserted after any leading <option> elements."""
+    while position<len(root) and root[position].tag=='option':position+=1
+    for index in sorted(set(indices)):
+        root.insert(position,ET.Element('material',id=ramp_id(index),**ramp_attributes(ramps,index)));position+=1
 
 
 def slug(name):
@@ -195,7 +230,7 @@ def source_prefab(actor,scale,overrides):
     opts=options(actor,overrides)
     for name,enabled in opts.items():ET.SubElement(root,'option',name=name,enabled=str(int(enabled)))
     basis=ET.SubElement(root,'group',name='source_basis',rot='-90 0 180',scale=fmt((scale,)*3),pos=fmt(((lo[0]+hi[0])*.5*scale,(lo[2]+hi[2])*.5*scale,hi[1]*scale)))
-    nodes={}
+    nodes={};used=set()
     for p in actor['parts']:
         r,o=local[p['id']]
         parent=basis if p['parent'] is None else nodes[p['parent']]
@@ -203,14 +238,15 @@ def source_prefab(actor,scale,overrides):
         nodes[p['id']]=node
         axes=get(state,p['id'],'halfaxes')
         if max(map(abs,axes))==0 or p['name'].lower()=='shadow':continue
-        colour=PALETTE[get(state,p['id'],'colour')[0]%len(PALETTE)]
+        ramp=part_ramp(state,p['id']);used.add(ramp)
         shape=ET.SubElement(node,'ellipsoid',radii=fmt(tuple(max(abs(v),.35) for v in axes)),
-            pos=fmt(get(state,p['id'],'centre')),color=fmt(colour),rings='10',slices='16')
+            pos=fmt(get(state,p['id'],'centre')),material=ramp_id(ramp),rings='10',slices='16')
         f=feature(p['name'])
         if f:shape.set('if-feature',f)
         if 'hand' in p['name'].lower() and 'gloves' in opts:
             shape.set('if-feature','gloves');bare=copy.deepcopy(shape);bare.attrib.pop('if-feature')
-            bare.set('unless-feature','gloves');bare.set('color',fmt(PALETTE[3]));node.append(bare)
+            bare.set('unless-feature','gloves');bare.set('material',ramp_id(SKIN_RAMP));node.append(bare);used.add(SKIN_RAMP)
+    add_ramp_materials(root,palette_ramps(actor),used)
     return root,state,local,(lo,hi)
 
 
@@ -267,11 +303,11 @@ def cat_prefab(actor,preset,scale,overrides):
     opts=options(actor,overrides)
     opts.setdefault('gloves',False);opts.setdefault('boots',True);opts.setdefault('hair',True)
     for name,enabled in opts.items():ET.SubElement(root,'option',name=name,enabled=str(int(enabled)))
-    materials={m.get('id'):m for m in root.findall('material')}
+    materials={m.get('id'):m for m in root.findall('material')};ramps=palette_ramps(actor)
     def recolour(material,part):
-        if part in parts:materials[material].set('color',fmt(PALETTE[parts[part]['fields']['colour']['values'][0]%16]))
+        if part in parts:materials[material].attrib.update(ramp_attributes(ramps,parts[part]['fields']['colour']['values'][0]))
     for m,p in [('skin','head'),('shirt','chest'),('trousers','body'),('shoes','left foot'),('hair','hair')]:recolour(m,p)
-    if 'glove' not in materials:ET.SubElement(root,'material',id='glove',color=fmt(PALETTE[1]),shininess='5')
+    if 'glove' not in materials:ET.SubElement(root,'material',id='glove',**ramp_attributes(ramps,GLOVE_RAMP))
     mapped={}
     for target,part,axes in [('pelvis','body',(0,2,1)),('ribcage','chest',(0,2,1)),('head','head',(0,2,1)),
         ('left_thigh','left thigh',(0,1,2)),('left_calf','left shin',(0,1,2)),
@@ -317,6 +353,8 @@ def cat_prefab(actor,preset,scale,overrides):
                 neck=source_head.find(f'./*[@name="{joint_name(p)}"]')
                 if neck is not None:source_head.remove(neck)
         head.append(copy.deepcopy(source_head))
+        # The copied face keeps its source ramp materials; the preset's own skin/shirt ramps were set above.
+        add_ramp_materials(root,ramps,{int(m.split('_')[1]) for m in (n.get('material') for n in source_head.iter()) if m and m.startswith('palette_')})
     # Gloves do not enable fingers: the user's default remains a single mitten.
     root.set('fingers',str(int(overrides.get('fingers',False))))
     return root,mapped

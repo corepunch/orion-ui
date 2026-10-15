@@ -202,8 +202,8 @@ def appearance(recipe):
         center=mv(mm(height_transform(owner),turns[owner]),center)
         container=ET.SubElement(nodes[owner],'group',name='source_villager_belly',pos=fmt(center),scale=fmt((frame,frame,body_length)))
         container=ET.SubElement(container,'group',rot=fmt(euler(mm(turns[owner],r))))
-        color=next(n.get('color') for n in root.find('.//group[@name="p1_chest"]').iter('ellipsoid'))
-        ET.SubElement(container,'ellipsoid',radii=fmt(vmul(get(bs,p['id'],'halfaxes'),SCALE*full)),color=color,rings='10',slices='16')
+        material=next(n.get('material') for n in root.find('.//group[@name="p1_chest"]').iter('ellipsoid'))
+        ET.SubElement(container,'ellipsoid',radii=fmt(vmul(get(bs,p['id'],'halfaxes'),SCALE*full)),material=material,rings='10',slices='16')
     for pose_node in root.findall('pose'):
         for ik in pose_node.findall('ik'):
             side=ik.get('limb').split('_')[0]

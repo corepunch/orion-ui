@@ -370,6 +370,24 @@ static int issues_of_kind(Scene *s,const char *kind){
 	return n;
 }
 
+static void test_material_ramps(void){
+	TEST("material ramps: 16 shades route to placed objects; a short ramp is rejected and logged");
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene up=\"z\"><material id=\"skin\" color=\"0.9 0.7 0.6\" ramp=\""
+		"0 0 0 .1 .1 .1 .2 .2 .2 .3 .3 .3 .4 .4 .4 .5 .5 .5 .6 .6 .6 .7 .7 .7 .8 .8 .8 .9 .9 .9 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 .5 .5\"/>"
+		"<material id=\"flat\" color=\"0.5 0.5 0.5\"/><material id=\"short\" color=\"1 1 1\" ramp=\"0 0 0 1 1 1\"/>"
+		"<sphere radius=\"2\" material=\"skin\"/><box size=\"1 1 1\" material=\"flat\"/><sphere pos=\"5 0 0\" radius=\"2\" material=\"short\"/>"
+		"<wall length=\"10\" height=\"5\" thickness=\"1\" material=\"skin\"/></scene>"));
+	ASSERT_EQUAL(s.nramps,1);
+	ASSERT_EQUAL(s.mats[0].ramp,0); ASSERT_EQUAL(s.mats[1].ramp,-1); ASSERT_EQUAL(s.mats[2].ramp,-1);
+	ASSERT_EQUAL(issues_of_kind(&s,"material"),1);
+	ASSERT_TRUE(fabsf(s.ramps[0].shade[15].y-0.5f)<1e-6f && fabsf(s.ramps[0].shade[3].x-0.3f)<1e-6f);
+	int ramped=0, plain=0;
+	for(int i=0;i<s.nobjs;i++){ if(s.objs[i].ramp==0) ramped++; else if(s.objs[i].ramp==-1) plain++; else ASSERT_TRUE(0); }
+	ASSERT_TRUE(ramped>=2 && plain>=2); /* the sphere and every wall band carry the ramp; box and rejected sphere do not */
+	scene_free(&s); PASS();
+}
+
 static void test_scene_expressions(void){
 	TEST("scene expressions: lets scope to later siblings, {expr} resolves, source text is kept");
 	Scene s={0};
@@ -1312,6 +1330,7 @@ int main(void) {
   test_segmented_joint_only_volumes();
   test_ignored_attributes_reported();
   test_enclosed_light_reported();
+  test_material_ramps();
   test_scene_expressions();
   test_scene_check_geometry();
   test_scene_query_records();

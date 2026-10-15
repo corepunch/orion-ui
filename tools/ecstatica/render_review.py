@@ -48,7 +48,7 @@ def main():
         shutil.copy2(frames[len(frames)//2],dest/'poster.png')
         detail|=dict(name=name,frames=len(frames),fps=24,duration=duration)
         inventory.append(detail)
-        (dest/'README.md').write_text(f'# {name}\n\nActor `{report["name"]}`, record {report["record"]}, action {action}.\n\n[Scene](scenes/motion.blks) · [Decoded action](actions/{action_file.name}) · [Conversion report](conversion.json)\n\nExperimental decoded motion: inferred transforms, normalized timing, approximate palette. Unsupported commands remain recorded in the conversion report.\n\n![Motion](motion.gif)\n\n[MP4](motion.mp4)\n')
+        (dest/'README.md').write_text(f'# {name}\n\nActor `{report["name"]}`, record {report["record"]}, action {action}.\n\n[Scene](scenes/motion.blks) · [Decoded action](actions/{action_file.name}) · [Conversion report](conversion.json)\n\nExperimental decoded motion: inferred transforms, normalized timing, disc palette ramps. Unsupported commands remain recorded in the conversion report.\n\n![Motion](motion.gif)\n\n[MP4](motion.mp4)\n')
     (args.output/'manifest.json').write_text(json.dumps(inventory,indent=2)+'\n')
 
 

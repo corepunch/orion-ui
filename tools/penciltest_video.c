@@ -35,9 +35,9 @@ typedef struct {
   pv_mode_t mode;
   pv_palette_source_t palette_source;
   const char *palette_path;
-  int colors, threshold, width, height, max_frames, region_count;
+  int colors, threshold, outline_window, outline_threshold, width, height, max_frames, region_count;
   double fps, min_width, min_length;
-  bool fixed_protection, temporal, sequence;
+  bool fixed_protection, temporal, sequence, outlines;
   pv_region_t regions[32];
 } pv_options_t;
 typedef struct { double pts, duration; uint16_t delay; } pv_time_t;
@@ -85,6 +85,9 @@ static void pv_usage(FILE *fp) {
         "  --palette SOURCE       default (32 colors), generated, or an existing RIFF .pal\n"
         "  --colors N             Generated budget: 32 (default), 64, 128 or 256\n"
         "  --threshold N          Black when luminance < N, 0..255 (default 170)\n"
+        "  --outlines             Extract outlines from filled colors; hide source Pencil\n"
+        "  --outline-threshold N  Darkness below local mean, 0..255 (default 10); higher = less ink\n"
+        "  --outline-window N     Local Gaussian window, odd 3..255 pixels (default 15)\n"
         "  --min-width N          Estimated stroke width, 1..63 pixels (default 3.5)\n"
         "  --min-length N         Remove short isolated strokes, 0..1000000 (default 20)\n"
         "  --protect-region RECT  Preserve source ink in X,Y,W,H; repeat for multiple regions\n"
@@ -104,10 +107,11 @@ static void pv_usage(FILE *fp) {
 }
 
 static bool pv_parse(int argc, char **argv, pv_options_t *o) {
-  *o = (pv_options_t){.colors = 32, .threshold = 170, .min_width = 3.5, .min_length = 20,
+  *o = (pv_options_t){.colors = 32, .threshold = 170, .outline_window = 15, .outline_threshold = 10,
+                      .min_width = 3.5, .min_length = 20,
                       .ffmpeg = getenv("FFMPEG"), .python = getenv("PENCILTEST_PYTHON")};
   if (!o->ffmpeg || !*o->ffmpeg) o->ffmpeg = "ffmpeg";
-  bool colors_set = false, palette_set = false, ink_set = false, positional = false;
+  bool colors_set = false, palette_set = false, ink_set = false, outline_set = false, positional = false;
   for (int i = 1; i < argc; i++) {
     const char *arg = argv[i], *v;
     double n;
@@ -119,6 +123,7 @@ static bool pv_parse(int argc, char **argv, pv_options_t *o) {
     }
     if (!strcmp(arg, "--fixed-protection")) { o->fixed_protection = true; ink_set = true; continue; }
     if (!strcmp(arg, "--temporal")) { o->temporal = true; ink_set = true; continue; }
+    if (!strcmp(arg, "--outlines")) { o->outlines = true; ink_set = true; continue; }
     if (i + 1 == argc) return pv_error("missing option value");
     v = argv[++i];
     if      (!strcmp(arg, "-o") || !strcmp(arg, "--output")) o->output = v;
@@ -156,6 +161,14 @@ static bool pv_parse(int argc, char **argv, pv_options_t *o) {
       if (!pv_number(v, &n) || n < 0 || n > 255 || n != floor(n))
         return pv_error("--threshold must be an integer in 0..255");
       o->threshold = (int)n; ink_set = true;
+    } else if (!strcmp(arg, "--outline-threshold")) {
+      if (!pv_number(v, &n) || n < 0 || n > 255 || n != floor(n))
+        return pv_error("--outline-threshold must be an integer in 0..255");
+      o->outline_threshold = (int)n; outline_set = true;
+    } else if (!strcmp(arg, "--outline-window")) {
+      if (!pv_number(v, &n) || n < 3 || n > 255 || n != floor(n) || !((int)n & 1))
+        return pv_error("--outline-window must be an odd integer in 3..255");
+      o->outline_window = (int)n; outline_set = true;
     } else if (!strcmp(arg, "--min-width")) {
       if (!pv_number(v, &o->min_width) || o->min_width < 1 || o->min_width > 63)
         return pv_error("--min-width must be in 1..63");
@@ -192,6 +205,7 @@ static bool pv_parse(int argc, char **argv, pv_options_t *o) {
   if (colors_set && o->palette_source != PV_GENERATED_PALETTE)
     return pv_error("--colors applies only to --palette generated");
   if (ink_set && o->mode != PV_BLACK) return pv_error("ink cleanup options apply only to --mode black");
+  if (outline_set && !o->outlines) return pv_error("outline options require --outlines");
   if (o->sequence && o->width) return pv_error("--size is not supported for PNG sequences; prepare equal-sized images");
   if (o->background && (!o->output || o->mode != PV_PENCIL)) return pv_error("--background requires a native pencil project");
   if (o->output && o->frames && !strcmp(o->output, o->frames)) return pv_error("project and frames must have different paths");
@@ -491,7 +505,7 @@ static const char *pv_exe_dir(void) {
 static bool pv_filter_ink(const pv_options_t *o, pv_video_t *v) {
   if (o->mode != PV_BLACK) return true;
   const char *dir = pv_exe_dir();
-  char script[PATH_MAX], python[PATH_MAX], numbers[5][32], rectangles[32][64];
+  char script[PATH_MAX], python[PATH_MAX], numbers[7][32], rectangles[32][64];
   if (!dir) return pv_error("cannot locate packaged stroke filter");
   if (snprintf(script, sizeof(script), "%s/simplify_lineart.py", dir) >= (int)sizeof(script) ||
       snprintf(python, sizeof(python), "%s/../lineart-python/bin/python3", dir) >= (int)sizeof(python))
@@ -506,6 +520,13 @@ static bool pv_filter_ink(const pv_options_t *o, pv_video_t *v) {
   snprintf(numbers[3], sizeof(numbers[3]), "%.9g", o->min_width);
   snprintf(numbers[4], sizeof(numbers[4]), "%.9g", o->min_length);
   for (int i = 0; i < 5; i++) args[count++] = numbers[i];
+  if (o->outlines) {
+    snprintf(numbers[5], sizeof(numbers[5]), "%d", o->outline_threshold);
+    snprintf(numbers[6], sizeof(numbers[6]), "%d", o->outline_window);
+    args[count++] = "--outlines";
+    args[count++] = "--outline-threshold"; args[count++] = numbers[5];
+    args[count++] = "--outline-window"; args[count++] = numbers[6];
+  }
   for (int i = 0; i < o->region_count; i++) {
     pv_region_t r = o->regions[i];
     if (r.x + r.w > v->width || r.y + r.h > v->height) return pv_error("region extends outside decoded video dimensions");
@@ -826,7 +847,7 @@ static bool pv_output(const pv_options_t *o, pv_video_t *v) {
     if (layer_size < 0 || (uint64_t)layer_size > 2u * PV_LIMIT) ok = false;
     pv_put32(header, 16 + layer_size); pv_put16(header + 4, 0x7075); memcpy(header + 8, "PTL5", 4);
     header[12] = 4; header[13] = o->mode == PV_PENCIL ? 2 : 1;
-    header[14] = 15;
+    header[14] = o->outlines ? 11 : 15;
     if (ok) ok = pv_write(project, header, sizeof(header));
     if (fflush(layers)) ok = false;
     rewind(layers);

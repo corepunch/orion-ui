@@ -10,7 +10,7 @@
 static GLuint prog, s_mesh_vao, s_mesh_vbo, s_mesh_ebo;
 static GLuint vlocPos, vlocNrm;
 static GLint ulocViewProj, ulocViewPos, ulocLightPos, ulocLightColor, ulocLightRadius;
-static GLint ulocColor, ulocShininess;
+static GLint ulocColor, ulocShininess, ulocRamp, ulocRampOn;
 #ifdef SCENER_USE_TEXTURES
 static GLint ulocTex;
 #endif
@@ -47,6 +47,9 @@ static const char *fs_src =
 "#define NOISE_PARAM vec2(0.06711056,0.00583715)\n"
 "#define NOISE_SEED vec3(17.0,59.0,113.0)\n"
 "#define NOISE_DIV 255.0\n"
+"#define RAMP_SHADES 16\n"
+"#define RAMP_DITHER 0.5\n"
+"#define LUMA vec3(0.2126,0.7152,0.0722)\n"
 "in vec3 vWorldPos;\n"
 "in vec3 vWorldNrm;\n"
 "in vec2 vWorldUV;\n"
@@ -57,6 +60,8 @@ static const char *fs_src =
 "uniform float uLightRadius;\n"
 "uniform vec3 uColor;\n"
 "uniform float uShininess;\n"
+"uniform vec3 uRamp[RAMP_SHADES];\n"
+"uniform int uRampOn;\n"
 #ifdef SCENER_USE_TEXTURES
 "uniform sampler2D uTex;\n"
 #endif
@@ -90,9 +95,16 @@ static const char *fs_src =
 "        float dist=length(uLightPos.xyz-vWorldPos);\n"
 "        att=1.0/(1.0+LIGHT_ATT_QUAD*dist/uLightRadius+(dist*dist)/(uLightRadius*uLightRadius));\n"
 "    }\n"
-"    vec3 lit=(diff+spec)*att;\n"
 "    float seed=dot(uLightPos.xyz,NOISE_SEED);\n"
 "    float noise=fract(NOISE_SCALE*fract(dot(gl_FragCoord.xy+seed,NOISE_PARAM)))-0.5;\n"
+"    vec3 lit;\n"
+"    if(uRampOn>0){\n"
+"        /* A ramp material is a palette run: the light's brightness picks the shade, its hue only tints. */\n"
+"        float luma=dot(uLightColor,LUMA);\n"
+"        float shade=clamp(NdotL*att*luma,0.0,1.0)*float(RAMP_SHADES-1);\n"
+"        int step=int(clamp(floor(shade+0.5+noise*RAMP_DITHER),0.0,float(RAMP_SHADES-1)));\n"
+"        lit=uRamp[step]*texColor*(luma>0.0?uLightColor/luma:vec3(1.0));\n"
+"    } else lit=(diff+spec)*att;\n"
 "    vec3 encoded=clamp(lit + noise/NOISE_DIV,0.0,1.0);\n"
 "    fragColor=vec4(encoded,1.0);\n"
 "}\n";
@@ -113,6 +125,8 @@ void shader_init(void){
 	ulocLightRadius = glGetUniformLocation(prog, "uLightRadius");
 	ulocColor       = glGetUniformLocation(prog, "uColor");
 	ulocShininess   = glGetUniformLocation(prog, "uShininess");
+	ulocRamp        = glGetUniformLocation(prog, "uRamp");
+	ulocRampOn      = glGetUniformLocation(prog, "uRampOn");
 #ifdef SCENER_USE_TEXTURES
 	ulocTex         = glGetUniformLocation(prog, "uTex");
 #endif
@@ -157,6 +171,14 @@ void shader_set_material(vec3 color, float shininess){
 	color=srgb_to_linear(color);
 	glUniform3f(ulocColor, color.x, color.y, color.z);
 	glUniform1f(ulocShininess, shininess);
+}
+
+void shader_set_ramp(const vec3 *shades){
+	if(!shades){ glUniform1i(ulocRampOn, 0); return; }
+	float linear[MATERIAL_RAMP_SHADES*3];
+	for(int i=0;i<MATERIAL_RAMP_SHADES;i++){ vec3 c=srgb_to_linear(shades[i]); linear[i*3]=c.x; linear[i*3+1]=c.y; linear[i*3+2]=c.z; }
+	glUniform3fv(ulocRamp, MATERIAL_RAMP_SHADES, linear);
+	glUniform1i(ulocRampOn, 1);
 }
 
 #ifdef SCENER_USE_TEXTURES

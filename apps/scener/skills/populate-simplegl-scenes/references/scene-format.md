@@ -347,6 +347,17 @@ Named material referenced by shapes via the `material` attribute. Scene-defined 
 | `id`         | string | (required)     | Unique material name |
 | `color`      | vec3   | 0.8 0.8 0.8    | Diffuse sRGB colour |
 | `shininess`  | float  | 8.0            | Phong specular exponent |
+| `ramp`       | 16 × vec3 | (none)      | Palette ramp: 48 numbers, sixteen sRGB shades from dark to light |
+
+A material with a `ramp` is lit like an Ecstatica palette run: for each light,
+the surface brightness (N·L, attenuation and light intensity) picks one of the
+sixteen shades, with a half-step dither between neighbours, and the light's hue
+only tints it. There is no diffuse or specular term; `color` still drives the
+ambient fill and flat rendering, so set it to the shade a lit surface should
+show. A ramp with the wrong count of numbers is an error (`material`) and the
+material falls back to `color`. The Ecstatica importer writes one
+`palette_N` ramp material per source colour ID (see
+[`tools/ecstatica/IMPORT.md`](../../../../../tools/ecstatica/IMPORT.md)).
 
 Built-in presets (always available, no `<material>` tag needed):
 
@@ -536,7 +547,7 @@ All shapes share common attributes plus shape-specific ones. Shapes may contain 
 | `attach`     | string | (none)           | Snap to a named instance's attach point: `instanceName:slotName` |
 | `tint`       | int    | 0                | On prefab children, allow instance `color` to replace this part's diffuse color |
 
-If a `material` attribute is given, `color` and `shininess` are taken from the referenced material definition.
+If a `material` attribute is given, `color`, `shininess` and any `ramp` are taken from the referenced material definition.
 
 An unlit object still renders into the depth buffer. Its `castShadow` setting is
 independent, although visible emitter geometry normally uses
