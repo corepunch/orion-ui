@@ -86,11 +86,11 @@ typedef struct {
   toolbar_item_type_t type;    // BUTTON, LABEL, COMBOBOX, TEXTEDIT, SEGMENTED, SEPARATOR, SPACER, DROPDOWN
   int                 ident;   // command ID / button identifier
   const char         *icon;    // named icon or "strip:N" atlas index; NULL = missing icon
-  int                 w;       // explicit width in pixels (0 = automatic)
+  int                 w;       // width, or slider length along toolbar orientation (0 = automatic)
   uint32_t            style;   // TBSTYLE_CHECK, TBSTYLE_CHECKGROUP, TOOLBAR_ITEM_FLAG_*, CONTROL_SIZE_*
   const char         *text;    // label text, or combobox/textedit initial text
   const char         *tooltip; // hover tooltip; NULL = none
-  uint32_t            color;   // plastic face colour; 0 = theme accent
+  uint32_t            color;   // plastic face or SVG icon tint; 0 = theme default
   const char         *checked_icon; // icon while TBSTATE_CHECKED; NULL = same icon
   uint32_t            state;   // initial TBSTATE_CHECKED / TBSTATE_DISABLED
 } toolbar_item_t;
@@ -104,7 +104,7 @@ Item types:
 | `TOOLBAR_ITEM_LABEL` | Static text label |
 | `TOOLBAR_ITEM_COMBOBOX` | Drop-down combobox (embedded child window) |
 | `TOOLBAR_ITEM_TEXTEDIT` | Single-line text input (embedded child window) |
-| `TOOLBAR_ITEM_SLIDER` | Slider occupying exactly three icon slots along the toolbar orientation |
+| `TOOLBAR_ITEM_SLIDER` | Slider occupying three icon slots by default; `w` sets its length along the toolbar orientation |
 | `TOOLBAR_ITEM_SEGMENTED` | `SegmentedControl` radio group (embedded child window); `text` holds the labels, `"One|Two|Three"` |
 | `TOOLBAR_ITEM_SEPARATOR` | Narrow vertical divider |
 | `TOOLBAR_ITEM_SPACER` | Invisible gap (no interaction) |
@@ -117,9 +117,13 @@ movable options toolbar. Set `tbSetOrientation` to `TOOLBAR_VERTICAL` and
 `tbSetStyle` to `TOOLBAR_STYLE_GRIP` to reserve a drag grip above its items.
 Use the same button size and padding as the main tool strip.
 
+Toolbar button `color` also tints its SVG icon in standard and compact toolbars;
+zero uses the theme foreground and disabled buttons use the disabled foreground.
+
 `TOOLBAR_ITEM_SLIDER` creates a framework-owned `Slider` in the toolbar's
-embedded child list. Its length is fixed at three icon slots, including the
-two inter-icon gaps; its width matches one icon in a vertical toolbar.
+embedded child list. Its default length is three icon slots, including the
+two inter-icon gaps; `w` overrides that length in either orientation. Its width
+matches one icon in a vertical toolbar.
 Orientation follows the toolbar automatically. Configure its range and value
 through `slSetRange` / `slSetPos` on `get_window_item(toolbar, ident)` and handle
 `sliderValueChanged` through `evCommand`. Declarative toolbars can use `<slider>`.

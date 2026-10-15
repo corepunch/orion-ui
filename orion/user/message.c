@@ -205,7 +205,7 @@ static bool bind_root_surface(window_t *root) {
 
 // Paint orchestration for lifted windows lives in paint.c.
 bool paint_lifted_now(const window_t *win);
-void paint_lift_shadow(window_t *root, window_t *win, irect16_t clip);
+void paint_lift_shadow(window_t *root, window_t *win);
 void paint_drag_visuals(window_t *root);
 #define lifted_now paint_lifted_now
 
@@ -238,7 +238,6 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   window_t *root = get_root_window(win);
   intptr_t value = 0;
   irect16_t paint_clip = {0};
-  bool paint_ready = false;
   window_t *previous_surface = NULL;
   bool rounded_pane = msg == evPaint && g_ui_runtime.running && win->parent &&
                       get_theme()->tab.corner_radius > 0 && page_is_pane(win);
@@ -278,7 +277,8 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
       // Skip OpenGL calls if graphics aren't initialized (e.g., in tests)
       if (g_ui_runtime.running) {
         if (!bind_root_surface(root)) return false;
-        if (win == root && (win->flags & WINDOW_TRANSPARENT)) R_ClearWindowTarget(window_surface(root)->fbo);
+        if (win == root && (win->flags & WINDOW_TRANSPARENT) && wparam == 0)
+          R_ClearWindowTarget(window_surface(root)->fbo);
         R_BindWindowTarget(window_surface(get_draw_surface(root))->fbo);
         set_viewport_for_fbo(root);
         if (!(win->flags&WINDOW_TRANSPARENT) && wparam == 0) {
@@ -302,6 +302,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
           return false;
         }
         if (rounded_pane) R_ClearWindowTarget(window_surface(win)->fbo);
+        if (lifted_now(win)) paint_lift_shadow(root, win);
         if (win->parent && (win->flags & WINDOW_TOOLBAR)) toolbar_draw_non_client(win);
         int t = titlebar_height(root);
         // Shift projection so that (0,0) in drawing space maps to the top-left
@@ -341,7 +342,6 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
           }
         }
         paint_clip = clip;
-        paint_ready = true;
         set_scissor_fbo(root, clip);
         if (win->role == WINDOW_ROLE_PAGE) theme_draw(THEME_PART_PAGE, get_client_rect(win), CTRL_NORMAL);
       }
@@ -409,8 +409,6 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
     if (send_message(win->parent, evParentNotify, 0, &pn))
       return true;
   }
-  if (paint_ready && lifted_now(win))
-    paint_lift_shadow(root, win, paint_clip);
   // The same window-owned matrix defines painting and pointer delivery.
   float saved_projection[16];
   bool view_paint = msg == evPaint && g_ui_runtime.running && window_has_view(win);

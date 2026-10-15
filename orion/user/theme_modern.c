@@ -22,6 +22,7 @@
 #define RADIUS_TOOLBAR_ITEM  4
 #define RADIUS_BUTTON        ((BUTTON_HEIGHT + 1) / 2)
 #define RADIUS_MENU_ITEM     6
+#define MODERN_CAPTION_TEXT_INSET 8
 
 // Secondary-button resting border. Navy uses the palette hairline;
 // default keeps the original quiet gray outline.
@@ -247,7 +248,8 @@ static void modern_draw_window_chrome(irect16_t titlebar, irect16_t caption,
                             title_color);
     caption = rect_trim_right(caption, caption.h);
   }
-  draw_text_small_clipped(title, &caption, title_color, TEXT_PADDING_LEFT);
+  caption = rect_trim_left(caption, MODERN_CAPTION_TEXT_INSET);
+  draw_text_small_clipped(title, &caption, title_color, 0);
 }
 
 static void modern_draw_statusbar_text(irect16_t r, const char *text) {

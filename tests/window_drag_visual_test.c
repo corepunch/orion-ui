@@ -1,6 +1,7 @@
 // A visual drag paints the real child under the cursor and leaves its frame put.
 #include "test_framework.h"
 #include <orion/ui.h>
+#include <orion/user/dock.h>
 #include <orion/user/gl_compat.h>
 
 #if defined(__APPLE__) && !TARGET_OS_IOS
@@ -25,6 +26,62 @@ static void read_logical(window_t *root, int x, int y, uint8_t px[4]) {
 static bool is_red(const uint8_t px[4])   { return px[0] == 255 && px[1] == 0 && px[2] == 0; }
 static bool is_green(const uint8_t px[4]) { return px[0] == 0 && px[1] == 255 && px[2] == 0; }
 static bool is_blue(const uint8_t px[4])  { return px[0] == 0 && px[1] == 0 && px[2] == 255; }
+
+static result_t drag_toolbar_proc(window_t *win, uint32_t msg, uint32_t wp, void *lp) {
+  return msg == evCreate || msg == evDestroy || msg == evPaint;
+}
+
+static void test_toolbar_drag_shadow(void) {
+  TEST("Undocked toolbar drag shadow follows the compact toolbar, including its gripper");
+  if (!ui_init_graphics(UI_INIT_HIDDEN, "toolbar-drag-shadow", 400, 500)) {
+    SKIP("Offscreen graphics unavailable");
+  }
+  register_commctl_classes();
+  window_t *root = create_window("root", WINDOW_NOTITLE | WINDOW_NOFILL,
+    MAKERECT(0, 0, 400, 500), NULL, paint_color, 0, NULL);
+  root->userdata = (void *)(uintptr_t)0xFF0000FF;
+  window_t *bar = create_docked_toolbar(root, TOOLBAR_DOCK_LEFT, drag_toolbar_proc);
+  toolbar_item_t items[] = {
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 1},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 2},
+    {.type = TOOLBAR_ITEM_SLIDER, .ident = 3},
+  };
+  send_message(bar, tbSetItems, ARRAY_LEN(items), items);
+  isize16_t ideal = {0};
+  send_message(bar, tbGetIdealSize, 0, &ideal);
+  show_window(root, true);
+  bool compact = true, shadow = true, clear = true;
+  // First undock, then drag the already compact floating toolbar again.
+  for (int i = 0; i < 2; i++) {
+    int x = window_screen_x(bar) + bar->frame.w / 2, y = window_screen_y(bar) + 1;
+    ui_event_t down = {.message = kEventLeftButtonDown, .x = x * UI_WINDOW_SCALE, .y = y * UI_WINDOW_SCALE};
+    dispatch_message(&down);
+    ui_event_t move = {.message = kEventLeftButtonDragged, .x = (x + 100) * UI_WINDOW_SCALE, .y = (y + 50) * UI_WINDOW_SCALE};
+    dispatch_message(&move);
+    compact &= bar->frame.w == ideal.w && bar->frame.h == ideal.h;
+    send_message(root, evNCPaint, 0, NULL);
+    send_message(root, evPaint, 0, NULL);
+    int left = window_screen_x(bar) - root->frame.x + 100;
+    int top = window_screen_y(bar) - root->frame.y + 50;
+    uint8_t beside_grip[4], below[4], far_below[4];
+    read_logical(root, left - 2, top + 6, beside_grip);
+    read_logical(root, left + ideal.w / 2, top + ideal.h + 4, below);
+    read_logical(root, left + ideal.w / 2, top + ideal.h + 80, far_below);
+    fprintf(stderr, "[toolbar-drag] pass=%d frame=%d,%d %dx%d ideal=%dx%d grip=%u,%u,%u below=%u,%u,%u far=%u,%u,%u\n",
+            i, left, top, bar->frame.w, bar->frame.h, ideal.w, ideal.h,
+            beside_grip[0], beside_grip[1], beside_grip[2], below[0], below[1], below[2],
+            far_below[0], far_below[1], far_below[2]);
+    shadow &= beside_grip[0] < 255 && below[0] < 180;
+    clear &= is_red(far_below);
+    move.message = kEventLeftButtonUp;
+    dispatch_message(&move);
+  }
+  ui_shutdown_graphics();
+  ASSERT_TRUE(compact);
+  ASSERT_TRUE(shadow);
+  ASSERT_TRUE(clear);
+  PASS();
+}
 
 static void test_drag_visual_moves_paint_only(void) {
   TEST("Drag visual hides the child in place and paints it past its parent");
@@ -107,6 +164,10 @@ static void test_drag_visual_moves_paint_only(void) {
   PASS();
 }
 #else
+static void test_toolbar_drag_shadow(void) {
+  TEST("Undocked toolbar drag shadow follows the compact toolbar, including its gripper");
+  SKIP("Requires the macOS offscreen platform framebuffer");
+}
 static void test_drag_visual_moves_paint_only(void) {
   TEST("Drag visual hides the child in place and paints it past its parent");
   SKIP("Requires the macOS offscreen platform framebuffer");
@@ -116,5 +177,6 @@ static void test_drag_visual_moves_paint_only(void) {
 int main(void) {
   TEST_START("Window drag visual");
   test_drag_visual_moves_paint_only();
+  test_toolbar_drag_shadow();
   TEST_END();
 }

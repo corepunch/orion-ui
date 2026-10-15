@@ -435,7 +435,7 @@ enum {
   tbSetButtonInfo,             // lparam=toolbar_button_info_t* (TB_SETBUTTONINFO): applies the fields named by mask
   tbGetButtonInfo,             // lparam=toolbar_button_info_t* (TB_GETBUTTONINFO): fills the fields named by mask
   tbModifyStyle,               // wparam=TOOLBAR_STYLE_* mask, lparam=(void *)(uintptr_t)new bit values; other bits keep (TB_SETEXTENDEDSTYLE)
-  tbGetIdealSize,              // lparam=isize16_t* receives the band size that fits every item (TB_GETMAXSIZE)
+  tbGetIdealSize,              // lparam=isize16_t* receives the unwrapped band size that fits every item (TB_GETMAXSIZE)
   tbGetItemRect,               // wparam=item ident, lparam=irect16_t* in toolbar-band coordinates (TB_GETITEMRECT)
 };
 // PageHost selection: wparam = command ID, lparam = selected page.
@@ -487,7 +487,7 @@ typedef enum {
   TOOLBAR_ITEM_SPACER    = 5,  // invisible gap (owner-drawn, no interaction)
   TOOLBAR_ITEM_DROPDOWN  = 6,  // split button: left half fires btnClicked, right arrow fires tbDropdown
   TOOLBAR_ITEM_CUSTOM,        // drawn by the owner during tbDrawItem
-  TOOLBAR_ITEM_SLIDER,        // embedded Slider; occupies three icon slots
+  TOOLBAR_ITEM_SLIDER,        // embedded Slider; defaults to three icon slots; w overrides length
   TOOLBAR_ITEM_SEGMENTED,     // embedded SegmentedControl; text = "One|Two|Three", w = 0 fits the labels
 } toolbar_item_type_t;
 
@@ -496,11 +496,11 @@ typedef struct {
   toolbar_item_type_t type;   // item type
   int                 ident;  // command ID / button identifier
   const char         *icon;   // SVG base name; TEXTEDIT uses it as a leading icon; NULL = none
-  int                 w;      // explicit width in pixels (0 = automatic)
+  int                 w;      // width, or slider length along toolbar orientation (0 = automatic)
   uint32_t            style;  // TBSTYLE_CHECK / TBSTYLE_CHECKGROUP, TOOLBAR_ITEM_FLAG_*, CONTROL_SIZE_*
   const char         *text;   // label text, or combobox/textedit initial text
   const char         *tooltip; // tooltip text shown on hover; NULL = none
-  uint32_t            color;  // packed 0xAABBGGRR plastic face colour; 0 uses theme accent
+  uint32_t            color;  // packed 0xAABBGGRR plastic face or SVG icon tint; 0 uses theme default
   const char         *checked_icon; // shown instead of icon while TBSTATE_CHECKED
   uint32_t            state;  // initial TBSTATE_* bits; live state is read back through tbGetState
   int                 alt_ident; // alternate command while Alt is held; 0 disables

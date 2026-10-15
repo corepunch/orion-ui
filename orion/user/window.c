@@ -1065,6 +1065,26 @@ static void create_form_children_flat(window_t *parent, const form_ctrl_def_t *c
   }
 }
 
+static void bind_form_source_databases(window_t *win, const form_ctrl_def_t *children, int count) {
+  for (int i = 0; i < count; i++) {
+    const form_ctrl_def_t *cd = &children[i];
+    const char *dot = cd->source ? strchr(cd->source, '.') : NULL;
+    if (cd->children && cd->child_count) bind_form_source_databases(win, cd->children, cd->child_count);
+    if (!dot || dot == cd->source) continue;
+    size_t length = (size_t)(dot - cd->source);
+    char name[128];
+    if (length >= sizeof(name)) {
+      fprintf(stderr, "[window] invalid form database source win=%u id=%u source=%s\n", win->id, cd->id, cd->source);
+      fflush(stderr);
+      continue;
+    }
+    memcpy(name, cd->source, length); name[length] = 0;
+    database_t *db = get_database_by_name(name);
+    window_t *control = get_window_item(win, cd->id);
+    if (db && control) send_message(control, evSetDatabase, 0, db);
+  }
+}
+
 window_t *create_window_from_form(form_def_t const *def, int x, int y,
                                   window_t *parent, winproc_t proc,
                                   hinstance_t hinstance, void *lparam) {
@@ -1147,6 +1167,9 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
     for (window_t *child = win->children; child; child = child->next)
       propagate_database_message(child, effective_db);
   }
+
+  // Explicit sources take precedence over the inherited database.
+  bind_form_source_databases(win, def->children, def->child_count);
 
   if (win->flags & WINDOW_AUTO_LAYOUT)
     window_layout_sync(win);

@@ -69,7 +69,20 @@ static int toolbar_state_item_height(const toolbar_state_t *tb) {
   return toolbar_state_bsz(tb) + toolbar_label_extra(tb);
 }
 
-static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
+static void toolbar_center_column(toolbar_state_t *tb, int first, int end, int x, int width) {
+  for (int i = first; i < end;) {
+    int next = i + 1;
+    while (next < end && tb->item_rects[next].y == tb->item_rects[i].y) next++;
+    irect16_t last = tb->item_rects[next - 1];
+    int row_width = last.x + last.w - tb->item_rects[i].x;
+    if (tb->items[i].style & TOOLBAR_ITEM_FLAG_SMALL) row_width = MAX(row_width, toolbar_state_bsz(tb));
+    int offset = x + (width - row_width) / 2 - tb->item_rects[i].x;
+    for (int j = i; j < next; j++) tb->item_rects[j].x += offset;
+    i = next;
+  }
+}
+
+static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_t *tb, bool ideal) {
   if (!tb) return;
 
   free(tb->item_rects);
@@ -93,7 +106,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
   int base_y = padding + grip_h;
   int field_y = base_y + 2;
   int field_h = bsz > 4 ? (bsz - 4) : bsz;
-  int column_w = 0;
+  int column_w = bsz, column_start = 0;
 
   for (int i = 0; i < tb->item_count; i++) {
     toolbar_item_t *item = &tb->items[i];
@@ -123,8 +136,8 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         h = field_h;
         break;
       case TOOLBAR_ITEM_SLIDER:
-        w = vertical ? bsz : bsz * 3 + TOOLBAR_SPACING * 2;
-        h = vertical ? item_h * 3 + TOOLBAR_SPACING * 2 : item_h;
+        w = vertical ? bsz : item->w > 0 ? item->w : bsz * 3 + TOOLBAR_SPACING * 2;
+        h = vertical ? (item->w > 0 ? item->w : item_h * 3 + TOOLBAR_SPACING * 2) : item_h;
         break;
       case TOOLBAR_ITEM_TEXTEDIT:
         w = item->w > 0 ? item->w : (bsz * 8);
@@ -164,10 +177,12 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
             pair = 2;
         }
         if ((tb->style & TOOLBAR_STYLE_WRAPABLE) && cursor > base_y &&
-            cursor + mini + base_y > parent->frame.h) {
+            cursor + mini + padding > parent->frame.h) {
+          toolbar_center_column(tb, column_start, i, x, column_w);
+          column_start = i;
           x += column_w + vertical_spacing;
           cursor = base_y;
-          column_w = 0;
+          column_w = bsz;
         }
         column_w = MAX(column_w, pair == 2 ? mini * 2 + vertical_spacing : mini);
         for (int col = 0; col < pair; col++)
@@ -183,10 +198,12 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         w = bsz;
       }
       if (tb->columns <= 1 && (tb->style & TOOLBAR_STYLE_WRAPABLE) && cursor > base_y &&
-          cursor + h + base_y > parent->frame.h) {
+          cursor + h + padding > parent->frame.h) {
+        toolbar_center_column(tb, column_start, i, x, column_w);
+        column_start = i;
         x += column_w + vertical_spacing;
         cursor = base_y;
-        column_w = 0;
+        column_w = bsz;
       }
       column_w = MAX(column_w, w);
       y += cursor - base_y;
@@ -197,7 +214,10 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
     if (!vertical) x += w + spacing;
   }
 
-  if (!vertical && tb->item_rects) {
+  if (vertical && tb->columns <= 1 && tb->item_rects)
+    toolbar_center_column(tb, column_start, tb->item_count, x, column_w);
+
+  if (!ideal && !vertical && tb->item_rects) {
     int flex_count = 0, offset = 0;
     for (int i = 0; i < tb->item_count; i++)
       if (tb->items[i].type == TOOLBAR_ITEM_SPACER && (tb->items[i].style & TOOLBAR_ITEM_FLAG_FLEXSPACE)) flex_count++;
@@ -231,7 +251,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
         count++;
       }
       if ((tb->style & TOOLBAR_STYLE_WRAPABLE) && cursor > base_y &&
-          cursor + row_h + base_y > parent->frame.h) {
+          cursor + row_h + padding > parent->frame.h) {
         x += grid_w + spacing;
         cursor = base_y;
       }
@@ -243,7 +263,7 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
     }
   }
 
-  if (!vertical && toolbar_merged_title(parent) && tb->item_rects) {
+  if (!ideal && !vertical && toolbar_merged_title(parent) && tb->item_rects) {
     int end = MAX(0, parent->frame.w - padding);
     for (int i = tb->item_count - 1; i >= 0; i--) {
       if (tb->items[i].ident != TB_WINDOW_CLOSE && tb->items[i].ident != TB_WINDOW_COLLAPSE) continue;
@@ -273,7 +293,11 @@ static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
 
 }
 
-static void draw_toolbar_icon_in_rect(window_t *win, toolbar_state_t *tb, const char *icon_name, irect16_t r, int offset, bool disabled) {
+static void compute_toolbar_item_rects(window_t *parent, toolbar_state_t *tb) {
+  compute_toolbar_item_rects_for_size(parent, tb, false);
+}
+
+static void draw_toolbar_icon_in_rect(window_t *win, toolbar_state_t *tb, const char *icon_name, irect16_t r, int offset, bool disabled, uint32_t color) {
   sysicon_resolved_t res = {0};
   bool from_strip = icon_name && strncmp(icon_name, "strip:", 6) == 0;
   if (from_strip) {
@@ -306,7 +330,8 @@ static void draw_toolbar_icon_in_rect(window_t *win, toolbar_state_t *tb, const 
   draw_sprite_region((int)res.tex, icon,
                      UV_RECT(res.u0, res.v0, res.u1, res.v1),
                      from_strip ? (disabled ? 0x80ffffffu : 0xffffffffu) :
-                     get_sys_color(disabled ? brTextDisabled : (compact ? brTextNormal : brToolbarForeground)), 0);
+                     disabled ? get_sys_color(brTextDisabled) : color ? color :
+                     get_sys_color(compact ? brTextNormal : brToolbarForeground), 0);
 }
 
 static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int i) {
@@ -362,7 +387,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       if (item->ident == TB_WINDOW_CLOSE || item->ident == TB_WINDOW_COLLAPSE)
         draw_theme_icon_in_rect(item->ident == TB_WINDOW_CLOSE ? THEME_ICON_CLOSE : THEME_ICON_RESTORE,
                                 icon_rect, get_sys_color(brTextNormal));
-      else if (!plastic) draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, poff, disabled);
+      else if (!plastic) draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, poff, disabled, item->color);
       if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
         int tx = (local.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + poff;
         int ty = local.h - text_char_height(FONT_SMALLEST) - 2 + poff;
@@ -388,7 +413,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       const char *icon_name = icon ? icon : "missing";
       irect16_t icon_rect = btn_part;
       icon_rect.h -= toolbar_label_extra(tb);
-      draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, btn_poff, disabled);
+      draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, btn_poff, disabled, item->color);
       if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
         int tx = (btn_part.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + btn_poff;
         int ty = btn_part.h - text_char_height(FONT_SMALLEST) - 2 + btn_poff;
@@ -856,13 +881,21 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
     case tbGetIdealSize: {
       toolbar_state_t *tb = toolbar_get_state(win);
       isize16_t *size = lparam;
-      if (!tb || !size || !tb->item_rects) {
+      if (!tb || !size || (tb->item_count && !tb->item_rects)) {
         fprintf(stderr, "[tb] ideal size rejected win=%u state=%p out=%p\n", win->id, (void *)tb, lparam);
         fflush(stderr);
         return false;
       }
-      int pad = toolbar_effective_padding(win), w = 2 * pad, h = 2 * pad;
+      toolbar_state_t measure = *tb;
       bool vertical = tb->orientation == TOOLBAR_VERTICAL;
+      measure.style &= ~TOOLBAR_STYLE_WRAPABLE;
+      measure.item_rects = NULL;
+      measure.children = NULL;
+      compute_toolbar_item_rects_for_size(win, &measure, true);
+      if (measure.item_count && !measure.item_rects) return false;
+      tb = &measure;
+      int pad = toolbar_effective_padding(win), w = 2 * pad, h = 2 * pad;
+      if (vertical && tb->item_count) w += toolbar_state_bsz(tb);
       if (!vertical) h = toolbar_state_item_height(tb) + 2 * pad; // the band; large cells stay inside it
       for (int i = 0; i < tb->item_count; i++) {
         irect16_t r = tb->item_rects[i];
@@ -870,6 +903,7 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         h = MAX(h, vertical ? r.y + r.h + pad : r.y + r.h);
       }
       *size = (isize16_t){w, h};
+      free(measure.item_rects);
       return true;
     }
     case tbGetItemRect: {

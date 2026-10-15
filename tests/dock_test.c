@@ -337,6 +337,81 @@ static void test_dock_fixed_pane(void) {
   PASS();
 }
 
+static void test_toolbar_undock_size(void) {
+  TEST("toolbar drags and double clicks float at content size without changing the sidebar");
+  test_env_init();
+  window_t *host = dock_test_host();
+  toolbar_item_t items[] = {
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 51},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 52},
+    {.type = TOOLBAR_ITEM_SLIDER, .ident = 53},
+  };
+  window_t *sidebar = create_docked_toolbar(host, TOOLBAR_DOCK_LEFT, dock_test_proc);
+  send_message(sidebar, tbSetItems, 2, items);
+  window_t *options = create_docked_toolbar(host, TOOLBAR_DOCK_LEFT, dock_test_proc);
+  send_message(options, tbSetItems, ARRAY_LEN(items), items);
+  dock_content_rect(host);
+  int sidebar_width = sidebar->frame.w;
+  window_t *slider = get_window_item(options, 53);
+  send_message(slider, slSetPos, 0, (void *)(intptr_t)37);
+  isize16_t ideal = {0};
+  ASSERT_TRUE(send_message(options, tbGetIdealSize, 0, &ideal));
+  ASSERT_TRUE(ideal.h < options->frame.h);
+  irect16_t docked = options->frame, content = dock_content_rect(host);
+  int grab_x = window_screen_x(options) + options->frame.w / 2, grab_y = window_screen_y(options) + 1;
+  dock_mouse(kEventLeftButtonDown, grab_x, grab_y);
+  dock_mouse(kEventLeftButtonDragged, grab_x + 200, grab_y + 100);
+  ASSERT_EQUAL(options->frame.w, ideal.w);
+  ASSERT_EQUAL(options->frame.h, ideal.h);
+  irect16_t during = dock_content_rect(host);
+  ASSERT_EQUAL(memcmp(&content, &during, sizeof(content)), 0);
+  ASSERT_EQUAL(options->frame.h, ideal.h);
+  dock_mouse(kEventPointerCancel, grab_x + 200, grab_y + 100);
+  ASSERT_FALSE(window_is_lifted(options));
+  ASSERT_EQUAL(memcmp(&docked, &options->frame, sizeof(docked)), 0);
+  for (int i = 0; i < 3; i++) {
+    int x = window_screen_x(options) + options->frame.w / 2;
+    int y = window_screen_y(options) + 1;
+    dock_mouse(kEventLeftButtonDown, x, y);
+    dock_mouse(kEventLeftButtonDragged, x + 200, y + 100);
+    ASSERT_EQUAL(options->frame.w, ideal.w);
+    ASSERT_EQUAL(options->frame.h, ideal.h);
+    dock_mouse(kEventLeftButtonUp, x + 200, y + 100);
+    ASSERT_TRUE(dock_is_floating(options));
+    ASSERT_EQUAL(options->frame.w, ideal.w);
+    ASSERT_EQUAL(options->frame.h, ideal.h);
+    ASSERT_EQUAL(sidebar->frame.w, sidebar_width);
+    ASSERT_TRUE(get_window_item(options, 53) == slider);
+    ASSERT_EQUAL(send_message(slider, slGetPos, 0, NULL), 37);
+    ASSERT_TRUE(dock_set_side(options, DOCK_LEFT));
+  }
+  dock_mouse(kEventLeftDoubleClick, window_screen_x(options) + options->frame.w / 2, window_screen_y(options) + 1);
+  ASSERT_TRUE(dock_is_floating(options));
+  ASSERT_EQUAL(options->frame.w, ideal.w);
+  ASSERT_EQUAL(options->frame.h, ideal.h);
+  toolbar_item_t flex_items[] = {
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 61},
+    {.type = TOOLBAR_ITEM_SPACER, .style = TOOLBAR_ITEM_FLAG_FLEXSPACE},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 62},
+  };
+  send_message(options, tbSetItems, ARRAY_LEN(flex_items), flex_items);
+  ASSERT_TRUE(dock_set_side(options, DOCK_TOP));
+  ASSERT_TRUE(send_message(options, tbGetIdealSize, 0, &ideal));
+  ASSERT_TRUE(ideal.w < options->frame.w);
+  grab_x = window_screen_x(options) + 1; grab_y = window_screen_y(options) + options->frame.h / 2;
+  dock_mouse(kEventLeftButtonDown, grab_x, grab_y);
+  dock_mouse(kEventLeftButtonDragged, grab_x + 200, grab_y + 100);
+  ASSERT_EQUAL(options->frame.w, ideal.w);
+  ASSERT_EQUAL(options->frame.h, ideal.h);
+  dock_mouse(kEventPointerCancel, grab_x + 200, grab_y + 100);
+  ASSERT_EQUAL(options->dock->side, DOCK_TOP);
+  dock_mouse(kEventLeftDoubleClick, window_screen_x(options) + 1, window_screen_y(options) + options->frame.h / 2);
+  ASSERT_TRUE(dock_is_floating(options));
+  ASSERT_EQUAL(options->frame.w, ideal.w);
+  ASSERT_EQUAL(options->frame.h, ideal.h);
+  test_env_shutdown(); PASS();
+}
+
 int main(void) {
   TEST_START("Workspace docking");
   test_dock_ownership_and_layout();
@@ -348,5 +423,6 @@ int main(void) {
   test_dock_menu();
   test_dock_floating_resize_and_close();
   test_dock_fixed_pane();
+  test_toolbar_undock_size();
   TEST_END();
 }

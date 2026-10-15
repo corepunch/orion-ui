@@ -1,6 +1,7 @@
 #include "test_framework.h"
 #include <orion/ui.h>
 #include <orion/user/gl_compat.h>
+#include <string.h>
 
 #if defined(__APPLE__) && !TARGET_OS_IOS
 static result_t composite_test_proc(window_t *win, uint32_t msg, uint32_t wp, void *lp) {
@@ -144,6 +145,55 @@ static void test_paint_binds_own_surface(void) {
   PASS();
 }
 
+static void test_focus_preserves_transparent_chrome(void) {
+  TEST("Focus changes preserve toolbar contents on a transparent chrome surface");
+  if (!ui_init_graphics(UI_INIT_HIDDEN, "chrome-focus-test", 256, 256)) {
+    SKIP("Offscreen graphics unavailable");
+  }
+  window_t *document = create_window("document", WINDOW_NOTITLE,
+    MAKERECT(0, 0, 256, 256), NULL, composite_test_proc, 0, NULL);
+  window_t *chrome = create_window("chrome", WINDOW_NOTITLE | WINDOW_TRANSPARENT | WINDOW_NOFILL,
+    MAKERECT(0, 0, 256, 256), NULL, status_host_proc, 0, NULL);
+  ASSERT_NOT_NULL(document);
+  ASSERT_NOT_NULL(chrome);
+  const irect16_t frames[] = {R(0, 0, 256, 24), R(0, 24, 24, 232), R(128, 80, 24, 96)};
+  const ipoint16_t points[] = {{8, 8}, {8, 64}, {136, 88}};
+  window_t *bars[3];
+  for (int i = 0; i < 3; i++) {
+    bars[i] = create_window("bar", WINDOW_NOTITLE, &frames[i], chrome, color_paint_proc, 0, NULL);
+    ASSERT_NOT_NULL(bars[i]);
+    show_window(bars[i], true);
+  }
+  g_paint_color = 0xFF0000FF;
+  show_window(document, true);
+  show_window(chrome, true);
+  set_focus(bars[1]);
+  repost_messages();
+  repost_messages();
+  int scale = window_surface(chrome)->w / chrome->frame.w;
+  uint8_t before[3][4], after[3][4], cleared[4];
+  bool painted = true, preserved = true;
+  for (int i = 0; i < 3; i++) {
+    read_window_pixel(chrome, points[i].x * scale, window_surface(chrome)->h - points[i].y * scale - 1, before[i]);
+    painted &= before[i][0] == 255 && before[i][3] == 255;
+  }
+  set_focus(document);
+  repost_messages();
+  for (int i = 0; i < 3; i++) {
+    read_window_pixel(chrome, points[i].x * scale, window_surface(chrome)->h - points[i].y * scale - 1, after[i]);
+    preserved &= memcmp(before[i], after[i], 4) == 0;
+  }
+  show_window(bars[2], false);
+  invalidate_window(chrome);
+  repost_messages();
+  read_window_pixel(chrome, points[2].x * scale, window_surface(chrome)->h - points[2].y * scale - 1, cleared);
+  ui_shutdown_graphics();
+  ASSERT_TRUE(painted);
+  ASSERT_TRUE(preserved);
+  ASSERT_EQUAL(cleared[3], 0);
+  PASS();
+}
+
 #else
 static void test_platform_framebuffer(void) {
   TEST("Window compositing draws into the platform's nonzero framebuffer");
@@ -154,11 +204,16 @@ static void test_paint_binds_own_surface(void) {
   TEST("Interleaved root paints stay in each window's own surface");
   SKIP("Requires the macOS offscreen platform framebuffer");
 }
+static void test_focus_preserves_transparent_chrome(void) {
+  TEST("Focus changes preserve toolbar contents on a transparent chrome surface");
+  SKIP("Requires the macOS offscreen platform framebuffer");
+}
 #endif
 
 int main(void) {
   TEST_START("Window compositing");
   test_platform_framebuffer();
   test_paint_binds_own_surface();
+  test_focus_preserves_transparent_chrome();
   TEST_END();
 }

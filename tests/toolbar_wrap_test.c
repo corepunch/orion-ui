@@ -1133,6 +1133,13 @@ void test_toolbar_embedded_slider_drag(void) {
   send_message(win, tbSetOrientation, TOOLBAR_HORIZONTAL, NULL);
   ASSERT_FALSE(slider->flags & SLIDER_VERTICAL);
   ASSERT_EQUAL(slider->frame.w, 3 * TB_SPACING + 2 * TOOLBAR_SPACING);
+  item.w = 2 * TB_SPACING + TOOLBAR_SPACING;
+  send_message(win, tbSetItems, 1, &item);
+  slider = get_window_item(win, 42);
+  ASSERT_EQUAL(slider->frame.w, item.w);
+  send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
+  ASSERT_EQUAL(slider->frame.h, item.w);
+  ASSERT_EQUAL(slider->frame.w, TB_SPACING);
   destroy_window(win);
   test_env_shutdown();
   PASS();
@@ -1397,6 +1404,79 @@ void test_toolbar_check_button(void) {
     PASS();
 }
 
+static void test_vertical_column_alignment(void) {
+  TEST("vertical toolbar centers smaller buttons and mini pairs within each wrapped column");
+  test_env_init();
+  window_t *win = create_window("Alignment", WINDOW_TOOLBAR | WINDOW_NOTITLE,
+      MAKERECT(0, 0, 100, 90), NULL, noop_proc, 0, NULL);
+  toolbar_item_t items[] = {
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 1, .style = CONTROL_SIZE_SMALL},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 2},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 3, .style = CONTROL_SIZE_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 4, .style = TOOLBAR_ITEM_FLAG_SMALL},
+    {.type = TOOLBAR_ITEM_CUSTOM, .ident = 5, .style = TOOLBAR_ITEM_FLAG_SMALL},
+  };
+  send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
+  send_message(win, tbSetStyle, TOOLBAR_STYLE_GRIP | TOOLBAR_STYLE_WRAPABLE, NULL);
+  send_message(win, tbSetItems, ARRAY_LEN(items), items);
+  toolbar_state_t *tb = toolbar_get_state(win);
+  int pad = toolbar_effective_padding(win), bsz = toolbar_effective_bsz(win);
+  irect16_t small = tb->item_rects[0], regular = tb->item_rects[1];
+  ASSERT_TRUE(small.w < regular.w);
+  ASSERT_TRUE(abs((small.x - pad) - (pad + bsz - small.x - small.w)) <= 1);
+  ASSERT_EQUAL(regular.x, pad);
+  small = tb->item_rects[2];
+  int start = pad + bsz + TOOLBAR_SPACING;
+  ASSERT_TRUE(abs((small.x - start) - (start + bsz - small.x - small.w)) <= 1);
+  ASSERT_EQUAL(tb->item_rects[3].y, tb->item_rects[4].y);
+  ASSERT_TRUE(tb->item_rects[3].x + tb->item_rects[3].w < tb->item_rects[4].x);
+  send_message(win, tbSetItems, 1, items);
+  isize16_t ideal = {0};
+  ASSERT_TRUE(send_message(win, tbGetIdealSize, 0, &ideal));
+  ASSERT_EQUAL(ideal.w, bsz + 2 * pad);
+  destroy_window(win); test_env_shutdown(); PASS();
+}
+
+static void test_vertical_ideal_size(void) {
+  TEST("vertical ideal size ignores wrapping and preserves live item and editor geometry");
+  test_env_init();
+  window_t *win = create_window("Measure", WINDOW_TOOLBAR | WINDOW_NOTITLE,
+      MAKERECT(0, 0, 80, 120), NULL, noop_proc, 0, NULL);
+  ASSERT_NOT_NULL(win);
+  toolbar_item_t items[] = {
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 1},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 2},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 3},
+    {.type = TOOLBAR_ITEM_TEXTEDIT, .ident = 4, .w = 60},
+  };
+  send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
+  send_message(win, tbSetStyle, TOOLBAR_STYLE_GRIP | TOOLBAR_STYLE_WRAPABLE, NULL);
+  send_message(win, tbSetItems, ARRAY_LEN(items), items);
+  toolbar_state_t *tb = toolbar_get_state(win);
+  ASSERT_TRUE(tb->item_rects[3].x > tb->item_rects[0].x);
+  irect16_t live[ARRAY_LEN(items)];
+  memcpy(live, tb->item_rects, sizeof(live));
+  window_t *editor = get_window_item(win, 4);
+  ASSERT_NOT_NULL(editor);
+  irect16_t editor_frame = editor->frame;
+  isize16_t ideal = {0};
+  ASSERT_TRUE(send_message(win, tbGetIdealSize, 0, &ideal));
+  ASSERT_TRUE(ideal.h > win->frame.h);
+  ASSERT_EQUAL(ideal.w, 60 + 2 * toolbar_effective_padding(win));
+  ASSERT_EQUAL(memcmp(live, tb->item_rects, sizeof(live)), 0);
+  ASSERT_EQUAL(memcmp(&editor_frame, &editor->frame, sizeof(editor_frame)), 0);
+  resize_window(win, ideal.w, ideal.h);
+  for (int i = 0; i < ARRAY_LEN(items); i++)
+    ASSERT_TRUE(abs(tb->item_rects[i].x - (ideal.w - tb->item_rects[i].x - tb->item_rects[i].w)) <= 1);
+  isize16_t resized = {0};
+  ASSERT_TRUE(send_message(win, tbGetIdealSize, 0, &resized));
+  ASSERT_EQUAL(resized.w, ideal.w); ASSERT_EQUAL(resized.h, ideal.h);
+  send_message(win, tbSetItems, 0, NULL);
+  ASSERT_TRUE(send_message(win, tbGetIdealSize, 0, &ideal));
+  ASSERT_TRUE(ideal.w > 0 && ideal.h > 0);
+  destroy_window(win); test_env_shutdown(); PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -1407,6 +1487,8 @@ int main(int argc, char *argv[]) {
     test_toolbar_flexible_spacers();
     test_toolbar_set_item_icon();
     test_vertical_grid_columns();
+    test_vertical_ideal_size();
+    test_vertical_column_alignment();
     test_vertical_small_items_pack();
     test_toolbar_embedded_slider_drag();
     test_toolbar_vertical_custom_item();

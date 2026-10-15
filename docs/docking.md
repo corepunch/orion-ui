@@ -12,7 +12,7 @@ children of the same workspace. Docking changes geometry and presentation withou
 recreating controls, transferring ownership, or losing text, selection, or focus.
 Groove uses a fill arrangement and a bottom Library pane. Pencil Test uses the same
 manager through application chrome for its menu, command toolbar, tools, options,
-and animation timeline.
+and floating color palette. Its frame controls share the left tool strip.
 
 The model borrows allowed-edge masks and frame-owned layout from
 [MFC control-bar docking](https://learn.microsoft.com/en-us/cpp/mfc/docking-and-floating-toolbars?view=msvc-170),
@@ -84,6 +84,16 @@ of 4 logical pixels at aligned edges. For example, center/end places a toolbar
 at bottom center; start/none places it beside the left sidebar without changing
 its vertical position. Alignment follows host resizing and docked-band changes.
 `dock_resize_float` changes its preferred size while retaining alignment.
+`tbGetIdealSize` measures vertical toolbar contents without wrapping, so a hidden
+or constrained palette can resize to its natural column height before showing.
+Measuring leaves live item rectangles and embedded controls unchanged.
+Dragging or double-clicking a docked toolbar to float measures its natural content
+size rather than carrying the full dock band into the floating frame. Ideal-size
+measurement ignores wrapping, expanded flexible spacers, and caption-button
+anchoring. Smaller vertical buttons are centered within their column; mini pairs
+retain their shared row and input geometry.
+During dragging, the toolbar and its shadow use that same natural frame size.
+The host retains the dock band until drop; cancelling restores the docked frame.
 Dragging to a free position with `dock_float`, or docking with `dock_set_side`,
 clears alignment so subsequent layout preserves the user's placement.
 

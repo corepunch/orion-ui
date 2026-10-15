@@ -147,6 +147,16 @@ static int64_t dock_order(window_t *win) {
   return (int64_t)win->dock->order + (dock_vertical(win->dock->side) ? (INT64_C(1) << 32) : 0);
 }
 
+static irect16_t dock_undock_frame(window_t *win, irect16_t frame) {
+  if (win->dock->flags & DOCK_TOOLBAR) {
+    isize16_t size = {0};
+    if (send_message(win, tbGetIdealSize, 0, &size)) {
+      frame.w = size.w; frame.h = size.h;
+    }
+  }
+  return frame;
+}
+
 static void dock_place_float(window_t *win, irect16_t content) {
   dock_state_t *d = win->dock;
   irect16_t r = d->floating, bounds = get_client_rect(win->parent);
@@ -214,6 +224,8 @@ irect16_t dock_layout(window_t *host, irect16_t area) {
       default: break;
     }
     d->splitter = splitter;
+    if (dock_drag.win == pane && dock_drag.moved && !dock_drag.resize && !dock_drag.floating_resize)
+      band = dock_undock_frame(pane, band);
     dock_place(pane, band);
   }
   host->dock_host->content = area;
@@ -303,6 +315,7 @@ bool dock_handle_event(ui_event_t *event) {
     } else if (dock_drag.moved) {
       dock_drag.target = dock_target(win, screen);
       window_set_drag_visual(win, dx, dy);
+      if (!dock_is_floating(win)) dock_place(win, dock_undock_frame(win, win->frame));
     }
     if (msg == kEventLeftButtonUp) {
       bool move = dock_drag.moved && !dock_drag.resize && !dock_drag.floating_resize;
@@ -311,7 +324,7 @@ bool dock_handle_event(ui_event_t *event) {
       window_clear_drag_visual(win);
       if (move) {
         dock_side_t target = dock_target(win, screen);
-        if (target == DOCK_FLOAT) dock_float(win, frame);
+        if (target == DOCK_FLOAT) dock_float(win, dock_is_floating(win) ? frame : dock_undock_frame(win, frame));
         else dock_set_side(win, target);
       }
     }
@@ -357,7 +370,7 @@ bool dock_handle_event(ui_event_t *event) {
     if (dock_grip(hit, point)) {
       if (msg == kEventLeftDoubleClick) {
         if (dock_is_floating(hit)) dock_set_side(hit, hit->dock->last_side);
-        else dock_float(hit, hit->dock->floating);
+        else dock_float(hit, dock_undock_frame(hit, hit->dock->floating));
         return true;
       }
       dock_drag.win = hit; dock_drag.anchor = screen; dock_drag.original = hit->frame; dock_drag.extent = hit->dock->extent;
