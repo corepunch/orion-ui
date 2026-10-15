@@ -6,7 +6,7 @@ import math
 from pathlib import Path
 import sys
 from ecstatica_archive import read_disc, DecodeError
-from ecstatica_cat import calibrated_cat, calibrated_clip
+from ecstatica_cat import calibrated_cat, calibrated_clip, authored_rest
 from ecstatica_convert import (SCALE, slug, source_prefab, source_clip, cat_prefab, reconstruct_shoulders,
                               study, write_xml, options, palette_source)
 
@@ -36,7 +36,8 @@ def import_disc(iso,output,preset,actor_ids=None,animations=True,duration=1,scal
                     'Animation uses normalized phase and requested duration, not recovered FPS.',
                     'Clips convert ROTATE/OFFSET/POSITION; remaining commands are reported and preserved in action JSON.',
                     'Triangle/texture/zero-axis geometry is retained in source data but not exactly reproduced in previews.',
-                    'CAT rigs are neutral preset adaptations, not the original hierarchy or a faithful animation retarget.'],
+                    'CAT rigs are neutral preset adaptations, not the original hierarchy or a faithful animation retarget.',
+                    'Calibrated rigs rest in the definition pose, except that raised arms are lowered to the sides (source.json "rest"); the source preview keeps the raw definition.'],
                   palette=decoded['palette'],
                   actors=[],actions=len(actions),source_parts=0,clips=0,cat_rigs=0,controlled_rigs=0,controlled_clips=0)
     if decoded['palette']:save_json(folder/'palette.json',decoded['palette'])
@@ -44,6 +45,7 @@ def import_disc(iso,output,preset,actor_ids=None,animations=True,duration=1,scal
     for number,actor in enumerate(actors):
         key=f'{actor["record"]["record"]:05d}-{actor["slot"]:04d}-{slug(actor["name"])}'
         dest=folder/'actors'/key;dest.mkdir(parents=True)
+        actor['rest']=authored_rest(actor)
         save_json(dest/'source.json',actor)
         (dest/'prefabs').mkdir();(dest/'scenes').mkdir()
         prefab,state,local,box=source_prefab(actor,scale,overrides or {})
@@ -83,7 +85,7 @@ def import_disc(iso,output,preset,actor_ids=None,animations=True,duration=1,scal
                 entry['controlled_file']='scenes/cat-animations/'+name;manifest['controlled_clips']+=1
             clips.append(entry)
         info=dict(id=actor['slot'],name=actor['name'],record=actor['record']['record'],path='actors/'+key,
-                  parts=len(actor['parts']),palette=palette_source(actor),preview_repairs=[p['name'] for p in reconstruct_shoulders(actor)['parts'] if p.get('reconstructed')],cat=bool(adapted),controlled=bool(controlled),features=options(actor,overrides or {}),
+                  parts=len(actor['parts']),palette=palette_source(actor),rest=actor['rest']['source'],preview_repairs=[p['name'] for p in reconstruct_shoulders(actor)['parts'] if p.get('reconstructed')],cat=bool(adapted),controlled=bool(controlled),features=options(actor,overrides or {}),
                   control_source_mapping={k:v['source'] for k,v in controlled[1]['controls'].items()} if controlled else {},
                   repertoire=rep,action_ids=ids,missing_action_ids=[i for i in ids if i not in by_action],
                   clips=clips,cat_source_mapping=adapted[1] if adapted else {})

@@ -19279,5 +19279,24 @@
         179
       ]
     ]
-  ]
+  ],
+  "rest": {
+    "source": "authored: arms lowered to hang 12 degrees from the sides",
+    "fields": {
+      "7": {
+        "position": [
+          -98,
+          -343,
+          -37
+        ]
+      },
+      "27": {
+        "position": [
+          94,
+          -345,
+          -37
+        ]
+      }
+    }
+  }
 }

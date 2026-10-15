@@ -42,6 +42,17 @@ def png_pixels(path):
 
 
 class SourceCharacterTests(unittest.TestCase):
+    def test_every_source_rests_with_arms_at_the_sides(self):
+        from ecstatica_cat import calibrated_cat
+        from ecstatica_convert import vsub,norm
+        for base in BASES:
+            actor=reference(base);self.assertIn(actor['rest']['source'].split(':')[0],('definition','authored'))
+            _,cal=calibrated_cat(actor)
+            for side in ('left','right'):
+                arm=vsub(cal['controls'][side+'_palm']['position'],cal['controls'][side+'_upperarm']['position'])
+                self.assertLess(math.degrees(math.acos(-arm[2]/norm(arm))),32,f'{base} {side} arm rests raised')
+        self.assertTrue(reference('freegirl')['rest']['fields'])
+
     def test_rejects_obsolete_and_invalid_controls(self):
         for spec in ({'age':40},{'body_fat':.4},{'base':'missing'},{'height_heads':float('nan')},{'shoulders':True},{'youth':2},{'hair':1}):
             with self.subTest(spec=spec),self.assertRaises(ValueError):validate(spec)

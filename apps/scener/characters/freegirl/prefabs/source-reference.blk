@@ -8,7 +8,7 @@
   <material id="palette_7" color="0.8117647 0.7803922 0.7803922" ramp="0.4509804 0.4352941 0.4352941 0.4666667 0.4509804 0.4509804 0.4980392 0.4823529 0.4823529 0.5294118 0.5137255 0.5137255 0.5607843 0.545098 0.545098 0.5921569 0.5607843 0.5607843 0.6078431 0.5921569 0.5921569 0.6392157 0.6235294 0.6235294 0.6705882 0.654902 0.654902 0.7019608 0.6705882 0.6705882 0.7333333 0.7019608 0.7019608 0.7490196 0.7333333 0.7333333 0.7803922 0.7490196 0.7490196 0.8117647 0.7803922 0.7803922 0.8431373 0.8117647 0.8117647 0.8745098 0.8431373 0.8431373" shininess="4" />
   <material id="palette_10" color="0.3568627 0.3568627 0.1372549" ramp="0.05882353 0.05882353 0 0.0745098 0.0745098 0 0.1058824 0.1058824 0 0.1215686 0.1215686 0 0.1529412 0.1529412 0 0.1686275 0.1686275 0.02745098 0.2 0.2 0.02745098 0.2156863 0.2156863 0.04313725 0.2470588 0.2470588 0.04313725 0.2627451 0.2627451 0.05882353 0.2941176 0.2941176 0.0745098 0.3098039 0.3098039 0.09019608 0.3411765 0.3411765 0.1058824 0.3568627 0.3568627 0.1372549 0.3882353 0.3882353 0.1529412 0.4039216 0.4039216 0.1686275" shininess="4" />
   <material id="palette_13" color="0.7333333 0.5764706 0.5921569" ramp="0.4196078 0.1686275 0.1843137 0.4352941 0.2 0.2156863 0.4666667 0.2313725 0.2470588 0.4980392 0.2470588 0.2627451 0.5137255 0.2784314 0.2941176 0.545098 0.3098039 0.3254902 0.5607843 0.3411765 0.3568627 0.5921569 0.372549 0.3882353 0.6235294 0.4039216 0.4196078 0.6392157 0.4352941 0.4509804 0.6705882 0.4666667 0.4823529 0.6862745 0.4980392 0.5294118 0.7176471 0.545098 0.5607843 0.7333333 0.5764706 0.5921569 0.7647059 0.6235294 0.6392157 0.7960784 0.6705882 0.6862745" shininess="4" />
-  <hub name="pelvis" aim="0 90" length="0" radius="1" overlap="0" volume="0" pos="0.2489039 2.980386 94.39838" ground="0">
+  <hub name="pelvis" aim="0 90" length="0" radius="1" overlap="0" volume="0" pos="0.9315 -7.91382 94.39838" ground="0">
     <spine name="spine" aim="0 64.77309" length="8.321297" radius="1" overlap="0" volume="0">
       <hub name="abdomen" aim="0 90" length="0" radius="1" overlap="0" volume="0">
         <spine name="spine_upper" aim="-177.1875 42.1875" length="14.49" radius="1" overlap="0" volume="0">
@@ -72,8 +72,8 @@
               </hub>
             </spine>
             <limb name="left_arm" aim="0 90" radius="1" overlap="0" volume="0" at="0" from="133.7628 20.99105" sink="-17.4938" type="arm" bend="180 0">
-              <bone name="left_upperarm" aim="26.61 -20.73168" length="21.114" radius="1" overlap="0" volume="0">
-                <bone name="left_forearm" aim="26.57975 -20.71169" length="24.426" radius="1" overlap="0" volume="0">
+              <bone name="left_upperarm" aim="133.9319 -73.42686" length="21.114" radius="1" overlap="0" volume="0">
+                <bone name="left_forearm" aim="49.83642 -74.33376" length="24.426" radius="1" overlap="0" volume="0">
                   <palm name="left_palm" aim="0 90" length="0" radius="1" overlap="0" volume="0">
                     <group name="p7_left_hand" pos="0 0 0" rot="-33.7641 18.22997 -175.5579" scale="0.207 0.207 0.207">
                       <ellipsoid radii="14 26 18" pos="0 14 0" material="palette_3" rings="10" slices="16" />
@@ -88,21 +88,21 @@
                       <ellipsoid radii="6 20 6" pos="0 20 0" material="palette_3" rings="10" slices="16" if-feature="fingers" />
                     </group>
                   </palm>
-                  <group name="p5_left_forearm" pos="0 0 0" rot="-111.0056 9.379839 -157.0011" scale="0.207 0.207 0.207">
+                  <group name="p5_left_forearm" pos="0 0 0" rot="-169.5264 11.71629 -177.8502" scale="0.207 0.207 0.207">
                     <ellipsoid radii="0.35 7 66" pos="0 0 56" material="palette_3" rings="10" slices="16" />
                   </group>
                 </bone>
-                <group name="p3_left_upper_arm" pos="0 0 0" rot="-111.0271 9.399176 -156.9822" scale="0.207 0.207 0.207">
+                <group name="p3_left_upper_arm" pos="0 0 0" rot="168.0866 11.60571 177.5696" scale="0.207 0.207 0.207">
                   <ellipsoid radii="19 20 70" pos="0 0 51" material="palette_13" rings="10" slices="16" />
                 </group>
-                <group name="p32_left_shoulder" pos="0.2024936 1.151475 -1.310813" rot="-99.92995 4.152104 -170.1261" scale="0.207 0.207 0.207">
+                <group name="p32_left_shoulder" pos="0.3201276 1.522663 0.8149509" rot="-179.0185 -2.162819 -179.5532" scale="0.207 0.207 0.207">
                   <ellipsoid radii="21 24 32" pos="0 0 0" material="palette_13" rings="10" slices="16" />
                 </group>
               </bone>
             </limb>
             <limb name="right_arm" aim="0 90" radius="1" overlap="0" volume="0" at="0" from="-128.1378 20.99105" sink="-17.4938" type="arm" bend="180 0">
-              <bone name="right_upperarm" aim="-24.76948 -21.6608" length="21.528" radius="1" overlap="0" volume="0">
-                <bone name="right_forearm" aim="-24.74017 -21.63901" length="23.184" radius="1" overlap="0" volume="0">
+              <bone name="right_upperarm" aim="-134.441 -73.50347" length="21.528" radius="1" overlap="0" volume="0">
+                <bone name="right_forearm" aim="-47.4984 -73.99745" length="23.184" radius="1" overlap="0" volume="0">
                   <palm name="right_palm" aim="0 90" length="0" radius="1" overlap="0" volume="0">
                     <group name="p27_right_hand" pos="0 0 0" rot="-33.7641 -18.22997 175.5579" scale="0.207 0.207 0.207">
                       <ellipsoid radii="14 26 18" pos="0 14 0" material="palette_3" rings="10" slices="16" />
@@ -118,14 +118,14 @@
                       <ellipsoid radii="6 20 6" pos="0 20 0" material="palette_3" rings="10" slices="16" if-feature="fingers" />
                     </group>
                   </palm>
-                  <group name="p6_right_forearm" pos="0 0 0" rot="-111.92 -8.958298 158.8453" scale="0.207 0.207 0.207">
+                  <group name="p6_right_forearm" pos="0 0 0" rot="-168.8063 -11.50985 177.7388" scale="0.207 0.207 0.207">
                     <ellipsoid radii="0.35 7 66" pos="0 0 51" material="palette_3" rings="10" slices="16" />
                   </group>
                 </bone>
-                <group name="p4_right_upper_arm" pos="0 0 0" rot="-111.9433 -8.977178 158.8277" scale="0.207 0.207 0.207">
+                <group name="p4_right_upper_arm" pos="0 0 0" rot="168.0441 -11.45012 -177.5929" scale="0.207 0.207 0.207">
                   <ellipsoid radii="19 20 70" pos="0 0 52" material="palette_13" rings="10" slices="16" />
                 </group>
-                <group name="p29_right_shoulder" pos="-0.3007231 0.986002 -1.376207" rot="-100.717 -3.536134 171.878" scale="0.207 0.207 0.207">
+                <group name="p29_right_shoulder" pos="-0.3634359 1.56331 0.6168922" rot="-179.068 2.31612 179.5195" scale="0.207 0.207 0.207">
                   <ellipsoid radii="21 24 32" pos="0 0 0" material="palette_13" rings="10" slices="16" />
                 </group>
               </bone>

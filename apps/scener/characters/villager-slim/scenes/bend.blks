@@ -7,5 +7,5 @@
   <light pos="180 -180 180" color=".8 .87 1" intensity=".7" radius="900" castShadows="0" />
   <box pos="0 0 -2" size="540 540 4" color=".28 .29 .27" />
   <prefab source="character" name="Character" pose="Bend" />
-  <camera name="Portrait" pos="-23.344 -93.96402 152.3407" look="1.656 6.035982 137.3407" fov="30" />
+  <camera name="Portrait" pos="-23.758 -96.03349 152.3407" look="1.242 3.966511 137.3407" fov="30" />
 </scene>

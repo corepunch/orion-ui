@@ -10,6 +10,8 @@ from ecstatica_archive import Iso9660, DecodeError, prefix, event_stream, action
 from ecstatica_decode import Reader, NAMES
 from ecstatica_convert import rotation, euler, fmt, slug, source_prefab, source_clip, fields
 from ecstatica_import import import_disc
+from ecstatica_cat import authored_rest, rest_state, ARM_REST_LIMIT
+from ecstatica_convert import pose, mv, unit
 
 
 def event(op=0,index=0,values=(0,0,0)):
@@ -142,6 +144,26 @@ class ImportTests(unittest.TestCase):
         prefab,_,_,_=source_prefab(actor,.2,{})
         self.assertEqual(prefab.find('material').get('id'),'palette_12')
         self.assertEqual(prefab.find('.//ellipsoid').get('material'),'palette_12')
+
+    def test_raised_arms_rest_lowered_for_targeted_and_free_limbs(self):
+        def part(i,name,parent,rotation=(0,0,0),offset=(0,0,0),flags=0,position=(0,0,0)):
+            return {'id':i,'name':name,'parent':parent,'fields':{'halfaxes':{'values':[10,10,40]},'centre':{'values':[0,0,0]},
+                'rotation':{'values':list(rotation)},'offset':{'values':list(offset)},'position':{'values':list(position)},'flags_command':{'values':[flags,-1,0]}}}
+        # Left arm: plain FK, held horizontal (rotated 90 degrees about y). Right arm: a hand-targeted limb.
+        actor={'parts':[part(0,'Body',None),part(1,'Chest',0,offset=(0,-60,0)),
+            part(3,'Left upper arm',1,rotation=(0,16384,0),offset=(-40,0,0)),part(5,'Left forearm',3,offset=(0,0,40)),part(7,'Left hand',5,offset=(0,0,40)),
+            part(4,'Right upper arm',1,offset=(40,0,0),flags=0x20),part(6,'Right forearm',4,offset=(0,0,40)),
+            part(8,'Right hand',6,offset=(0,0,40),flags=0x2000,position=(120,-60,0))]}
+        rest=actor['rest']=authored_rest(actor)
+        self.assertIn('authored',rest['source']);self.assertEqual(set(rest['fields']),{'3','5','8'})
+        world=pose(actor,rest_state(actor))
+        for arm in (3,4):
+            down=unit(mv(world[arm][0],(0,0,1)))
+            self.assertLess(math.degrees(math.acos(down[1])),ARM_REST_LIMIT)
+        self.assertLess(unit(mv(world[3][0],(0,0,1)))[0],0)   # the left arm leans to the character's left (source -x)
+        self.assertGreater(unit(mv(world[4][0],(0,0,1)))[0],0)
+        hanging={'parts':[part(0,'Body',None),part(1,'Chest',0),part(3,'Left upper arm',1,rotation=(-16384,0,0)),part(5,'Left forearm',3),part(7,'Left hand',5)]}
+        self.assertEqual(authored_rest(hanging),dict(source='definition',fields={}))
 
     def test_unclassified_flag_never_hides_anatomy(self):
         actor={'parts':[{'id':i,'name':name,'parent':None,'fields':{

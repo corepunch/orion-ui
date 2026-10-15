@@ -22,7 +22,7 @@ Open `http://127.0.0.1:8765/`. Choose a source, adjust controls, then export. Th
 | `villager-slim` | w_vil3 | Slender elder; narrow arms and chest |
 | `freegirl` | freegirl | Slender woman, original facial setup |
 
-Source features are offered only when the model actually contains those parts. Hands stay fingerless. Unknown source flags do not suppress anatomy: thighs, knees, calves and feet are preserved.
+Every base rests with its arms at the sides: the importer lowers arms that the actor definition holds raised and records the override in the reference record's `rest` field (`source.json` on the disc library), so morphs, IK poses, gaits and mocap all start from a stance. Source features are offered only when the model actually contains those parts. Hands stay fingerless. Unknown source flags do not suppress anatomy: thighs, knees, calves and feet are preserved.
 
 ## Recipe controls
 

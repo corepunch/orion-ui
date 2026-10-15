@@ -3,9 +3,53 @@ import copy
 import math
 import xml.etree.ElementTree as ET
 from ecstatica_convert import (SCALE, IDENTITY, source_prefab, reconstruct_shoulders, fields, pose, get, bounds,
-    joint_name, fmt, mm, mv, transpose, vadd, vsub, vmul, norm, euler)
+    joint_name, fmt, mm, mv, transpose, vadd, vsub, vmul, norm, unit, euler, orient_z)
 
 BASIS = ((-1,0,0),(0,0,-1),(0,-1,0))
+ARM_REST_LIMIT = 30      # degrees from hanging; an upper arm resting higher than this is lowered
+ARM_HANG = 12            # degrees the lowered arm leans away from the body
+WORD = 65536 / 360
+FLAG_LIMB_TARGET, FLAG_UNTARGETED, FLAG_ACTOR_FRAME = 0x20, 0x1000, 0x2000
+
+
+def rest_state(actor):
+    """The definition fields with the actor's recorded rest overrides applied (see authored_rest)."""
+    state=fields(actor)
+    for part,values in ((actor.get('rest') or {}).get('fields') or {}).items():
+        state[int(part)].update({key:list(value) for key,value in values.items()})
+    return state
+
+
+def authored_rest(actor):
+    """Lower arms that the definition holds raised, so the calibrated rig rests in a stance.
+
+    Actions only carry incremental deltas, so the definition is the only full pose. Nearly half the
+    bipeds define it with the arms out. A limb driven by a hand target gets a new target; otherwise
+    the upper arm is re-aimed and the forearm straightened. Source y points down, source -x is the
+    character's left. Returns the rest record stored in the actor's source.json.
+    """
+    byname={p['name'].lower():p for p in actor['parts']}
+    state=fields(actor);world=pose(actor,state);out={}
+    for side,sign in (('left',-1),('right',1)):
+        names=[f'{side} upper arm',f'{side} forearm',f'{side} hand']
+        if any(n not in byname for n in names):continue
+        arm,fore,hand=(byname[n]['id'] for n in names)
+        r,origin=world[arm];down=unit(mv(r,(0,0,1)))
+        if math.degrees(math.acos(max(-1,min(1,down[1]))))<=ARM_REST_LIMIT:continue
+        hang=(sign*math.sin(math.radians(ARM_HANG)),math.cos(math.radians(ARM_HANG)),0)
+        flags=get(state,arm,'flags_command')[0]
+        if flags&FLAG_LIMB_TARGET and get(state,hand,'flags_command')[0]&FLAG_ACTOR_FRAME and norm(get(state,hand,'position'))>0:
+            upper=abs(get(state,arm,'centre')[2]+get(state,fore,'offset')[2])
+            lower=abs(get(state,fore,'centre')[2]+get(state,hand,'offset')[2])
+            out[hand]={'position':[round(v) for v in vadd(origin,vmul(hang,(upper+lower)*.98))]}
+            continue
+        aimed=orient_z(hang,mv(r,(1,0,0)))
+        parent=byname[names[0]]['parent']
+        frame=lambda part,flag:IDENTITY if flag&FLAG_ACTOR_FRAME or part is None else world[part][0]
+        out[arm]={'rotation':[round(v*WORD) for v in euler(mm(transpose(frame(parent,flags)),aimed))]}
+        out[fore]={'rotation':[round(v*WORD) for v in euler(mm(transpose(IDENTITY if get(state,fore,'flags_command')[0]&FLAG_ACTOR_FRAME else aimed),aimed))]}
+    if not out:return dict(source='definition',fields={})
+    return dict(source=f'authored: arms lowered to hang {ARM_HANG} degrees from the sides',fields={str(k):v for k,v in out.items()})
 
 
 def aim(delta):
@@ -24,8 +68,9 @@ def calibrated_cat(actor,scale=SCALE,overrides=None):
                           ('upperarm','upper arm'),('forearm','forearm'),('palm','hand')]:
             roles[f'{side}_{role}']=f'{side} {part}'
     if any(n not in byname for n in roles.values()):return None
-    source,state,_,box=source_prefab(actor,scale,overrides or {})
-    world=pose(actor,state);lo,hi=box
+    source,_,_,_=source_prefab(actor,scale,overrides or {})
+    # The rig rests in the recorded stance, not the raw definition the source preview shows.
+    state=rest_state(actor);world=pose(actor,state);lo,hi=bounds(actor,state,world)
     shift=((lo[0]+hi[0])*.5*scale,(lo[2]+hi[2])*.5*scale,hi[1]*scale)
     def point(i):return vadd(vmul(mv(BASIS,world[i][1]),scale),shift)
     ids={role:byname[name]['id'] for role,name in roles.items()}
@@ -106,7 +151,7 @@ def calibrated_cat(actor,scale=SCALE,overrides=None):
 def calibrated_clip(actor,action,calibration,duration=1):
     """Preserve the inferred source playback in the calibrated rig's different rest frames."""
     actor=reconstruct_shoulders(actor)
-    state=fields(actor);parts={p['id']:p for p in actor['parts']}
+    state=rest_state(actor);parts={p['id']:p for p in actor['parts']}
     controls=calibration['controls'];bindings=calibration['bindings'];scale=calibration['scale']
     shift=calibration['shift'];rest=calibration['source_world']
     clip=ET.Element('clip',name=f'cat_action_{action["id"]}',length=fmt(duration),ease='linear',loop='0')

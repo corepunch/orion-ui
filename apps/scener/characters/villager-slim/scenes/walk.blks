@@ -9,5 +9,5 @@
   <prefab source="character" name="Character">
     <gait mode="spot" stride="24" lift="5" speed="36" footRoll="0" armSwing="6" armBend="8" />
   </prefab>
-  <camera name="Portrait" pos="-23.344 -93.96402 152.3407" look="1.656 6.035982 137.3407" fov="30" />
+  <camera name="Portrait" pos="-23.758 -96.03349 152.3407" look="1.242 3.966511 137.3407" fov="30" />
 </scene>
