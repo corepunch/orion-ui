@@ -82,11 +82,20 @@ static void video_arguments(void) {
   sequence[2] = "--background"; sequence[3] = "guides.png";
   ASSERT_TRUE(pv_parse(ARRAY_LEN(sequence), sequence, &o)); ASSERT_TRUE(o.sequence);
   sequence[4] = "--frames"; ASSERT_FALSE(pv_parse(ARRAY_LEN(sequence), sequence, &o));
+  char *outlines[] = {"converter", "--mode", "black", "--outlines", "--outline-threshold", "10",
+                      "--outline-window", "15", "-o", "out.ptf", "input.mp4"};
+  ASSERT_TRUE(pv_parse(ARRAY_LEN(outlines), outlines, &o)); ASSERT_TRUE(o.outlines);
+  ASSERT_EQUAL(o.outline_threshold, 10); ASSERT_EQUAL(o.outline_window, 15);
+  outlines[5] = "256"; ASSERT_FALSE(pv_parse(ARRAY_LEN(outlines), outlines, &o));
+  outlines[5] = "10.5"; ASSERT_FALSE(pv_parse(ARRAY_LEN(outlines), outlines, &o));
+  outlines[5] = "10"; outlines[7] = "14"; ASSERT_FALSE(pv_parse(ARRAY_LEN(outlines), outlines, &o));
+  outlines[7] = "15"; outlines[2] = "pencil"; ASSERT_FALSE(pv_parse(ARRAY_LEN(outlines), outlines, &o));
+  outlines[2] = "black"; outlines[3] = "--temporal"; ASSERT_FALSE(pv_parse(ARRAY_LEN(outlines), outlines, &o));
   PASS();
 }
 
 static void video_source_pencil(const char *directory) {
-  TEST("black temporal projects retain all source grayscale levels in an independent visible Pencil layer");
+  TEST("black projects retain source Pencil coverage and timing; outline projects hide the reference");
   char path[PATH_MAX], filtered_path[PATH_MAX], python[PATH_MAX], failed_path[PATH_MAX];
   snprintf(path, sizeof(path), "%s/source-pencil.ptf", directory);
   snprintf(filtered_path, sizeof(filtered_path), "%s/filtered.rgb", directory);
@@ -112,24 +121,29 @@ static void video_source_pencil(const char *directory) {
   v.times[0].delay = 42; v.times[1].delay = 83;
   ASSERT_TRUE(pv_write(v.pixels, source, sizeof(source)));
   ASSERT_TRUE(pv_filter_ink(&o, &v)); ASSERT_NOT_NULL(v.source_pixels); ASSERT_TRUE(v.pixels != v.source_pixels);
-  ASSERT_TRUE(pv_palette(&v, &o)); ASSERT_TRUE(pv_output(&o, &v));
-  int w, h; uint32_t palette[256], bg; bool show;
-  pencil_file_layers_t layers;
-  anim_timeline_t *tl = flc_load_layers(path, &w, &h, palette, &bg, &show, &layers);
-  ASSERT_NOT_NULL(tl); ASSERT_EQUAL(w, 257); ASSERT_EQUAL(h, 1); ASSERT_EQUAL(tl->frame_count, 2);
-  ASSERT_EQUAL(layers.active, IE_LAYER_COLOR); ASSERT_EQUAL(layers.visible, 15);
-  for (int frame = 0; frame < 2; frame++) {
-    uint8_t pencil[257], ink[257];
-    for (int p = 0; p < 257; p++) { pencil[p] = frame ? p : 255 - p; ink[p] = p % 2 ? 255 : v.black_index; }
-    pencil[256] = frame ? 226 : 178;
-    ASSERT_TRUE(test_anim_cel_matches(tl->frames[frame], 0, ink, w, h));
-    ASSERT_TRUE(test_anim_cel_matches(tl->frames[frame], 1, pencil, w, h));
-    ASSERT_EQUAL(tl->frames[frame]->delay_ms, frame ? 83 : 42);
+  ASSERT_TRUE(pv_palette(&v, &o));
+  for (int outlines = 0; outlines < 2; outlines++) {
+    o.outlines = outlines;
+    ASSERT_TRUE(pv_output(&o, &v));
+    int w, h; uint32_t palette[256], bg; bool show;
+    pencil_file_layers_t layers;
+    anim_timeline_t *tl = flc_load_layers(path, &w, &h, palette, &bg, &show, &layers);
+    ASSERT_NOT_NULL(tl); ASSERT_EQUAL(w, 257); ASSERT_EQUAL(h, 1); ASSERT_EQUAL(tl->frame_count, 2);
+    ASSERT_EQUAL(layers.active, IE_LAYER_COLOR); ASSERT_EQUAL(layers.visible, outlines ? 11 : 15);
+    for (int frame = 0; frame < 2; frame++) {
+      uint8_t pencil[257], ink[257];
+      for (int p = 0; p < 257; p++) { pencil[p] = frame ? p : 255 - p; ink[p] = p % 2 ? 255 : v.black_index; }
+      pencil[256] = frame ? 226 : 178;
+      ASSERT_TRUE(test_anim_cel_matches(tl->frames[frame], 0, ink, w, h));
+      ASSERT_TRUE(test_anim_cel_matches(tl->frames[frame], 1, pencil, w, h));
+      ASSERT_EQUAL(tl->frames[frame]->delay_ms, frame ? 83 : 42);
+    }
+    free(layers.background); anim_timeline_free(tl); unlink(path);
   }
   o.output = failed_path;
   ASSERT_EQUAL(ftruncate(fileno(v.source_pixels), sizeof(source) - 1), 0);
   ASSERT_FALSE(pv_output(&o, &v)); ASSERT_TRUE(access(failed_path, F_OK) != 0);
-  free(layers.background); anim_timeline_free(tl); pv_free(&v);
+  pv_free(&v);
   unlink(path); unlink(filtered_path); unlink(python);
   PASS();
 }

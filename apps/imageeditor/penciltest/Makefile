@@ -4,11 +4,15 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../../..)
 INPUT ?= input.mp4
 OUTPUT_DIR ?= $(ROOT)/build/penciltest-video
+# Extract contours from colored artwork instead of thresholding its filled regions.
+OUTLINES ?= 0
+OUTLINE_THRESHOLD ?= 10
+OUTLINE_WINDOW ?= 15
 THRESHOLD ?= 180
 # Lower width/length values preserve more detail; higher threshold includes lighter ink.
-MIN_WIDTH ?= 1.25
+MIN_WIDTH ?= $(if $(filter 1,$(OUTLINES)),1,1.25)
 MIN_LENGTH ?= 10
-TEMPORAL ?= 1
+TEMPORAL ?= $(if $(filter 1,$(OUTLINES)),0,1)
 # Space-separated X,Y,W,H rectangles, in source/output pixels; empty for other clips.
 PROTECT_REGIONS ?=
 FIXED_PROTECTION ?= 0
@@ -19,6 +23,7 @@ SIZE ?=
 FPS ?=
 MAX_FRAMES ?=
 export ROOT INPUT OUTPUT_DIR THRESHOLD MIN_WIDTH MIN_LENGTH TEMPORAL
+export OUTLINES OUTLINE_THRESHOLD OUTLINE_WINDOW
 export PROTECT_REGIONS FIXED_PROTECTION PALETTE FFMPEG PYTHON SIZE FPS MAX_FRAMES
 
 define EXPORT_METADATA
@@ -27,13 +32,16 @@ e = os.environ
 stage = pathlib.Path(sys.argv[1])
 settings = {
     "source": str(pathlib.Path(e["INPUT"]).resolve()), "mode": "black",
+    "outlines": e["OUTLINES"] == "1",
+    "outline_threshold": int(e["OUTLINE_THRESHOLD"]) if e["OUTLINES"] == "1" else None,
+    "outline_window": int(e["OUTLINE_WINDOW"]) if e["OUTLINES"] == "1" else None,
     "threshold": int(e["THRESHOLD"]), "min_width": float(e["MIN_WIDTH"]),
     "min_length": float(e["MIN_LENGTH"]), "temporal": e["TEMPORAL"] == "1",
     "protect_regions": [list(map(int, r.split(","))) for r in e["PROTECT_REGIONS"].split()],
     "fixed_protection": e["FIXED_PROTECTION"] == "1", "palette": e["PALETTE"],
     "size": e["SIZE"] or None, "fps": e["FPS"] or None,
     "max_frames": e["MAX_FRAMES"] or None, "ffmpeg": e["FFMPEG"],
-    "source_pencil": True, "pencil_layer_visible": True, "shadow_fill": False,
+    "source_pencil": True, "pencil_layer_visible": e["OUTLINES"] != "1", "shadow_fill": False,
     "output": "black.ptf", "frames": "black-frames", "status": "converted",
     "frame_count": len(list((stage / "black-frames").glob("frame-*.png"))),
 }
@@ -47,6 +55,7 @@ converter:
 
 export: converter
 	@set -eu; \
+	case "$$OUTLINES" in 0|1) ;; *) echo 'OUTLINES must be 0 or 1' >&2; exit 1 ;; esac; \
 	test -f "$$INPUT" || { echo "Input video not found: $$INPUT" >&2; exit 1; }; \
 	mkdir -p "$$OUTPUT_DIR"; \
 	for project in "$$OUTPUT_DIR"/*.ptf; do \
@@ -59,6 +68,9 @@ export: converter
 	  --min-width "$$MIN_WIDTH" --min-length "$$MIN_LENGTH" \
 	  --ffmpeg "$$FFMPEG" --python "$$PYTHON" \
 	  --output "$$stage/black.pending" --frames "$$stage/black-frames"; \
+	if test "$$OUTLINES" = 1; then \
+	  set -- "$$@" --outlines --outline-threshold "$$OUTLINE_THRESHOLD" --outline-window "$$OUTLINE_WINDOW"; \
+	fi; \
 	if test "$$TEMPORAL" = 1; then set -- "$$@" --temporal; fi; \
 	if test "$$FIXED_PROTECTION" = 1; then set -- "$$@" --fixed-protection; fi; \
 	for region in $$PROTECT_REGIONS; do set -- "$$@" --protect-region "$$region"; done; \
@@ -76,5 +88,8 @@ export: converter
 help:
 	@echo 'make -C apps/imageeditor/penciltest INPUT=/path/to/video.mp4 [SETTING=value ...]'
 	@echo 'Defaults: THRESHOLD=180 MIN_WIDTH=1.25 MIN_LENGTH=10 TEMPORAL=1'
+	@echo 'Colored artwork: OUTLINES=1 OUTLINE_THRESHOLD=10 OUTLINE_WINDOW=15 (defaults MIN_WIDTH=1 TEMPORAL=0)'
+	@echo 'OUTLINE_THRESHOLD: darkness below the local mean, 0..255; higher keeps fewer marks.'
+	@echo 'THRESHOLD: luminance cutoff, 0..255; higher keeps more ink (after outline extraction if enabled).'
 	@echo 'Other settings: OUTPUT_DIR PROTECT_REGIONS FIXED_PROTECTION PALETTE FFMPEG PYTHON SIZE FPS MAX_FRAMES'
-	@echo 'Color: cleaned ink on transparency; Pencil: original grayscale, visible beneath Color. Re-export replaces black.ptf.'
+	@echo 'Color: cleaned ink on transparency; Pencil: original grayscale, hidden with OUTLINES=1. Re-export replaces black.ptf.'
