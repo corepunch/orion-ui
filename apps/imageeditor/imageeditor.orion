@@ -164,7 +164,7 @@
         <item name="eraser" label="Eraser" shortcut="E;Shift+E" />
         <item name="fill" label="Fill" shortcut="K;Shift+K" />
         <item name="select" label="Select" shortcut="S;Shift+S" />
-        <item name="hand" label="Hand" />
+        <item name="hand" label="Hand" if="!defined(AX_PLATFORM_IOS)" />
         <item name="zoom" label="Zoom" />
         <item name="line" label="Line" />
         <item name="rect" label="Rectangle" />
