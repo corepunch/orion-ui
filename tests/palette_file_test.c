@@ -1,28 +1,12 @@
 #include "test_framework.h"
 #include <orion/kernel/kernel.h>
-#include "apps/imageeditor/palette.h"
+#include <orion/user/palette_file.h>
 #include <unistd.h>
 
 static const uint8_t fixture[] = {
   'R','I','F','F', 28,0,0,0, 'P','A','L',' ', 'd','a','t','a', 16,0,0,0,
   0,3,3,0, 255,0,0,0, 0,0,0,0, 0,0,255,0,
 };
-
-static void test_default_palette(void) {
-  TEST("shared binary palette preserves the original colors and provides 16 dark/light pairs");
-  uint8_t colors[256][4]; int count;
-  ASSERT_TRUE(pencil_palette_load_default(ui_get_exe_dir(), colors, &count));
-  ASSERT_EQUAL(count, 32);
-  ASSERT_EQUAL(colors[0][0], 0x4a); ASSERT_EQUAL(colors[0][1], 0x28); ASSERT_EQUAL(colors[0][2], 0x78);
-  ASSERT_EQUAL(colors[1][0], 0xfb); ASSERT_EQUAL(colors[1][1], 0xfc); ASSERT_EQUAL(colors[1][2], 0xff);
-  for (int i = 0; i < 32; i += 2) {
-    int dark = 77 * colors[i][0] + 150 * colors[i][1] + 29 * colors[i][2];
-    int light = 77 * colors[i + 1][0] + 150 * colors[i + 1][1] + 29 * colors[i + 1][2];
-    ASSERT_TRUE(dark < light); ASSERT_EQUAL(colors[i][3], 255); ASSERT_EQUAL(colors[i + 1][3], 255);
-  }
-  ASSERT_EQUAL(colors[255][3], 0);
-  PASS();
-}
 
 static void test_riff_validation(void) {
   TEST("RIFF PAL decodes RGB/flags and rejects malformed files without modifying output");
@@ -53,6 +37,6 @@ static void test_riff_validation(void) {
 
 int main(void) {
   TEST_START("RIFF palette files");
-  test_default_palette(); test_riff_validation();
+  test_riff_validation();
   TEST_END();
 }

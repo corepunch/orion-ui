@@ -41,7 +41,7 @@ settings = {
     "fixed_protection": e["FIXED_PROTECTION"] == "1", "palette": e["PALETTE"],
     "size": e["SIZE"] or None, "fps": e["FPS"] or None,
     "max_frames": e["MAX_FRAMES"] or None, "ffmpeg": e["FFMPEG"],
-    "source_pencil": True, "pencil_layer_visible": e["OUTLINES"] != "1", "shadow_fill": False,
+    "source_pencil": e["OUTLINES"] != "1", "pencil_layer_visible": e["OUTLINES"] != "1", "shadow_fill": False,
     "output": "black.ptf", "frames": "black-frames", "status": "converted",
     "frame_count": len(list((stage / "black-frames").glob("frame-*.png"))),
 }
@@ -92,4 +92,4 @@ help:
 	@echo 'OUTLINE_THRESHOLD: darkness below the local mean, 0..255; higher keeps fewer marks.'
 	@echo 'THRESHOLD: luminance cutoff, 0..255; higher keeps more ink (after outline extraction if enabled).'
 	@echo 'Other settings: OUTPUT_DIR PROTECT_REGIONS FIXED_PROTECTION PALETTE FFMPEG PYTHON SIZE FPS MAX_FRAMES'
-	@echo 'Color: cleaned ink on transparency; Pencil: original grayscale, hidden with OUTLINES=1. Re-export replaces black.ptf.'
+	@echo 'Color: cleaned ink on transparency; Pencil: original grayscale, empty with OUTLINES=1. Re-export replaces black.ptf.'

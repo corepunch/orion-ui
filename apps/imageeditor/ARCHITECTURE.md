@@ -233,8 +233,11 @@ grain and opacity are configured in `imageeditor.h`.
 Background and Color store palette indices in `GL_R8`, resolved by the renderer's
 palette shader. Index 255 is transparent; ink and paper occupy indices 0 and 1.
 New Background pixels contain paper, new Color pixels contain 255, and new
-Pencil pixels contain zero alpha. The default palette is loaded from `share/palettes/default.pal` (binary RIFF PAL),
-with 32 colors arranged as 16 dark/light pairs. App and converter share its reader;
+Pencil pixels contain zero alpha. The default palette is compiled from `palette.c`,
+with the 16 Disney screenshot-based colors followed by four light-to-dark
+ramps of four colors each: gray, brown, rose and violet. Each ramp holds its
+hue and saturation nearly constant. Ink and paper remain at indices 0 and 1.
+Image Editor, Pencil Test and the converter link the same C table;
 projects embed their own palette. No tool swatch is substituted on import.
 Color selection chooses an existing document index without adding colors, scanning
 frames or touching history. Duplicate RGB entries retain their distinct indices.

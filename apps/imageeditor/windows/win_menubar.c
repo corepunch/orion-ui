@@ -448,22 +448,15 @@ bool imageeditor_open_file_path(const char *path) {
   imageeditor_sync_tool_palette();
   doc_update_title(ndoc);
   send_message(ndoc->win, evStatusBar, 0, (void *)path);
-  // Large images open in a bird's-eye view using the maximum reasonable
-  // center workspace, but small images stay at 1x instead of being enlarged.
-  int max_view_w = 1;
-  int max_view_h = 1;
-  imageeditor_max_canvas_viewport_size(&max_view_w, &max_view_h);
-  float open_scale = imageeditor_fit_scale_for_viewport(img_w, img_h,
-                                                        max_view_w, max_view_h,
-                                                        false);
-  int wrapped_view_w = MAX(1, (int)lroundf((float)img_w * open_scale));
-  int wrapped_view_h = MAX(1, (int)lroundf((float)img_h * open_scale));
-  int wrapped_frame_w = 1;
-  int wrapped_frame_h = 1;
-  imageeditor_document_frame_for_viewport(wrapped_view_w, wrapped_view_h,
-                                          &wrapped_frame_w, &wrapped_frame_h);
-  resize_window(ndoc->win, wrapped_frame_w, wrapped_frame_h);
+  // Fit the image inside the maximized viewport; window geometry belongs to the framework.
+  irect16_t viewport = get_client_rect(ndoc->canvas_win);
+  int retina_scale = MAX(1, g_bw_retina_scale);
+  float open_scale = imageeditor_fit_scale_for_viewport(MAX(1, img_w / retina_scale),
+                                                        MAX(1, img_h / retina_scale),
+                                                        viewport.w, viewport.h, false);
   canvas_win_set_scale(ndoc->canvas_win, open_scale);
+  window_view_center(ndoc->canvas_win);
+  canvas_win_sync_scrollbars(ndoc->canvas_win);
   invalidate_window(ndoc->canvas_win);
   timeline_win_refresh();
   return true;

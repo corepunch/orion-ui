@@ -95,7 +95,7 @@ static void video_arguments(void) {
 }
 
 static void video_source_pencil(const char *directory) {
-  TEST("black projects retain source Pencil coverage and timing; outline projects hide the reference");
+  TEST("black projects retain source Pencil coverage and timing; outline projects discard the reference");
   char path[PATH_MAX], filtered_path[PATH_MAX], python[PATH_MAX], failed_path[PATH_MAX];
   snprintf(path, sizeof(path), "%s/source-pencil.ptf", directory);
   snprintf(filtered_path, sizeof(filtered_path), "%s/filtered.rgb", directory);
@@ -115,15 +115,17 @@ static void video_source_pencil(const char *directory) {
   fprintf(fp, "#!/bin/sh\ncat '%s'\n", filtered_path); fclose(fp); ASSERT_EQUAL(chmod(python, 0700), 0);
   pv_options_t o = {.output = path, .mode = PV_BLACK, .python = python, .threshold = 170,
                     .min_width = 3.5, .min_length = 20, .temporal = true};
-  pv_video_t v = {.width = 257, .height = 1, .count = 2, .fps = 24};
-  v.pixels = tmpfile(); v.times = calloc(2, sizeof(*v.times));
-  ASSERT_NOT_NULL(v.pixels); ASSERT_NOT_NULL(v.times);
-  v.times[0].delay = 42; v.times[1].delay = 83;
-  ASSERT_TRUE(pv_write(v.pixels, source, sizeof(source)));
-  ASSERT_TRUE(pv_filter_ink(&o, &v)); ASSERT_NOT_NULL(v.source_pixels); ASSERT_TRUE(v.pixels != v.source_pixels);
-  ASSERT_TRUE(pv_palette(&v, &o));
   for (int outlines = 0; outlines < 2; outlines++) {
-    o.outlines = outlines;
+    o.outlines = outlines; o.output = path;
+    pv_video_t v = {.width = 257, .height = 1, .count = 2, .fps = 24};
+    v.pixels = tmpfile(); v.times = calloc(2, sizeof(*v.times));
+    ASSERT_NOT_NULL(v.pixels); ASSERT_NOT_NULL(v.times);
+    v.times[0].delay = 42; v.times[1].delay = 83;
+    ASSERT_TRUE(pv_write(v.pixels, source, sizeof(source)));
+    ASSERT_TRUE(pv_filter_ink(&o, &v));
+    if (outlines) { ASSERT_NULL(v.source_pixels); }
+    else { ASSERT_NOT_NULL(v.source_pixels); ASSERT_TRUE(v.pixels != v.source_pixels); }
+    ASSERT_TRUE(pv_palette(&v, &o));
     ASSERT_TRUE(pv_output(&o, &v));
     int w, h; uint32_t palette[256], bg; bool show;
     pencil_file_layers_t layers;
@@ -134,16 +136,19 @@ static void video_source_pencil(const char *directory) {
       uint8_t pencil[257], ink[257];
       for (int p = 0; p < 257; p++) { pencil[p] = frame ? p : 255 - p; ink[p] = p % 2 ? 255 : v.black_index; }
       pencil[256] = frame ? 226 : 178;
+      if (outlines) memset(pencil, 0, sizeof(pencil));
       ASSERT_TRUE(test_anim_cel_matches(tl->frames[frame].cel, 0, ink, w, h));
       ASSERT_TRUE(test_anim_cel_matches(tl->frames[frame].cel, 1, pencil, w, h));
       ASSERT_EQUAL(tl->frames[frame].delay_ms, frame ? 83 : 42);
     }
     free(layers.background); anim_timeline_free(tl); unlink(path);
+    if (!outlines) {
+      o.output = failed_path;
+      ASSERT_EQUAL(ftruncate(fileno(v.source_pixels), sizeof(source) - 1), 0);
+      ASSERT_FALSE(pv_output(&o, &v)); ASSERT_TRUE(access(failed_path, F_OK) != 0);
+    }
+    pv_free(&v);
   }
-  o.output = failed_path;
-  ASSERT_EQUAL(ftruncate(fileno(v.source_pixels), sizeof(source) - 1), 0);
-  ASSERT_FALSE(pv_output(&o, &v)); ASSERT_TRUE(access(failed_path, F_OK) != 0);
-  pv_free(&v);
   unlink(path); unlink(filtered_path); unlink(python);
   PASS();
 }
@@ -159,10 +164,17 @@ static void video_palette_sources(const char *directory) {
   pv_options_t o = {.mode = PV_PENCIL};
   ASSERT_TRUE(pv_palette(&v, &o)); ASSERT_EQUAL(v.colors, 32);
   ASSERT_EQUAL(memcmp(v.palette, pencil_default_colors(), sizeof(v.palette)), 0);
+  const uint8_t black[] = {0, 0, 0, 255}, gray[] = {196, 196, 196, 255};
+  ASSERT_EQUAL(memcmp(v.palette[0], black, sizeof(black)), 0);
+  ASSERT_EQUAL(memcmp(v.palette[16], gray, sizeof(gray)), 0);
   ASSERT_EQUAL(v.playback_palette[128][0], 128); ASSERT_EQUAL(v.palette[128][3], 0);
+  o.mode = PV_BLACK; o.threshold = 128;
+  ASSERT_TRUE(pv_palette(&v, &o)); ASSERT_EQUAL(v.black_index, 0);
+  uint8_t rgb[] = {127,127,127}, image, coverage;
+  pv_convert(&v, &o, rgb, &image, &coverage); ASSERT_EQUAL(image, 0);
+  o.mode = PV_PENCIL;
   o.palette_source = PV_EXISTING_PALETTE; o.palette_path = path;
   ASSERT_TRUE(pv_palette(&v, &o)); ASSERT_EQUAL(v.colors, 3);
-  uint8_t rgb[] = {127,127,127}, image, coverage;
   pv_convert(&v, &o, rgb, &image, &coverage); ASSERT_EQUAL(image, 127); ASSERT_EQUAL(coverage, 128);
   o.mode = PV_BLACK; o.threshold = 128;
   ASSERT_TRUE(pv_palette(&v, &o)); ASSERT_EQUAL(v.black_index, 1);
@@ -360,6 +372,10 @@ static void video_external_projects(const char *directory, bool ink_only) {
         ASSERT_TRUE(png_image_finish_read(&source, NULL, samples, 0, NULL)); png_image_free(&source);
         ASSERT_TRUE(anim_frame_expand_cel(tl->frames[i].cel, 1, cel, w, h));
         for (size_t p = 0; p < n; p++) ASSERT_EQUAL(cel[p], 255 - samples[p]);
+      }
+      if (mode == PV_BLACK && !(layers.visible & (1 << IE_LAYER_PENCIL))) {
+        ASSERT_TRUE(anim_frame_expand_cel(tl->frames[i].cel, 1, cel, w, h));
+        for (size_t p = 0; p < n; p++) ASSERT_EQUAL(cel[p], 0);
       }
     }
     printf("\n    %s: %d frames, retained RLE cels %.2f MiB (raw cels %.2f MiB)\n", names[example], tl->frame_count,

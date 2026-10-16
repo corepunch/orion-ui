@@ -12,8 +12,14 @@ int g_bw_retina_scale = 1;
 static int r8_uploads, color_uploads, frame_labels;
 static uint32_t drawn_layers[IE_LAYER_COUNT];
 static int drawn_layer_count;
+static uint8_t uploaded_samples[256][4];
+static uint32_t onion_texture, pencil_onion_texture, onion_palette[256];
+static int onion_transparent;
+static float onion_alpha;
 static uint32_t render_r8(int w, int h, const void *pixels, R_TextureFilter filter, R_TextureWrap wrap) {
-  return ++r8_uploads;
+  uint32_t tex = ++r8_uploads;
+  if (tex < ARRAY_LEN(uploaded_samples)) memcpy(uploaded_samples[tex], pixels, 4);
+  return tex;
 }
 static bool render_update_r8(uint32_t tex, int x, int y, int w, int h, const void *pixels) { return true; }
 static uint32_t render_color(int w, int h, const void *pixels, R_TextureFilter filter, R_TextureWrap wrap) {
@@ -24,10 +30,16 @@ static void render_delete(uint32_t tex) { (void)tex; }
 static void render_theme(theme_part_t part, irect16_t rect, ctrl_state_t state) { (void)part; }
 static void render_text(ui_font_t font, const char *text, int x, int y, uint32_t color) { frame_labels++; }
 static void render_indexed(uint32_t tex, irect16_t rect, const uint32_t palette[256], int transparent, float alpha) {
+  if (palette && COLOR_R(palette[0]) == COLOR_R(IE_ONION_PREV_COLOR) &&
+      COLOR_G(palette[0]) == COLOR_G(IE_ONION_PREV_COLOR) && COLOR_B(palette[0]) == COLOR_B(IE_ONION_PREV_COLOR)) {
+    onion_texture = tex; memcpy(onion_palette, palette, sizeof(onion_palette));
+    onion_transparent = transparent; onion_alpha = alpha;
+  }
   if (drawn_layer_count < IE_LAYER_COUNT) drawn_layers[drawn_layer_count] = tex;
   drawn_layer_count++;
 }
 static void render_sprite(int tex, irect16_t rect, const frect_t *uv, uint32_t color, uint32_t flags) {
+  if (color == IE_ONION_PREV_COLOR) pencil_onion_texture = tex;
   render_indexed(tex, rect, NULL, 0, 1.0f);
 }
 #define R_CreateTextureR8 render_r8
@@ -106,6 +118,52 @@ static void test_layer_view(void) {
   close_document(doc); PASS();
 }
 
+static void test_onion_visible_layers(void) {
+  TEST("onion skin ignores hidden source fills and follows visible stage layers, palette and opacity");
+  canvas_doc_t *doc = create_document(NULL, 64, 48); ASSERT_NOT_NULL(doc);
+  int black = canvas_nearest_palette_index(doc, MAKE_COLOR(0,0,0,255));
+  int white = canvas_nearest_palette_index(doc, MAKE_COLOR(255,255,255,255));
+  doc->pixels[0] = 180; doc->pixels[1] = 180;
+  doc->layer.stack[IE_LAYER_COLOR]->pixels[2] = black;
+  doc->layer.stack[IE_LAYER_COLOR]->pixels[3] = white;
+  cmd_frame_add(doc, false);
+  ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_COLOR));
+  doc->layer.stack[IE_LAYER_PENCIL]->visible = false;
+  g_app->anim_trace_enabled = true;
+  memset(g_app->anim_trace_prev_opacity, 0, sizeof(g_app->anim_trace_prev_opacity));
+  memset(g_app->anim_trace_next_opacity, 0, sizeof(g_app->anim_trace_next_opacity));
+  g_app->anim_trace_prev_opacity[0] = 100;
+  onion_texture = pencil_onion_texture = 0;
+  send_message(doc->canvas_win, evPaint, 0, NULL);
+  ASSERT_TRUE(onion_texture > 0); ASSERT_EQUAL(pencil_onion_texture, 0);
+  ASSERT_EQUAL(uploaded_samples[onion_texture][0], doc->ipal.transparent);
+  ASSERT_EQUAL(uploaded_samples[onion_texture][1], doc->ipal.transparent);
+  ASSERT_EQUAL(uploaded_samples[onion_texture][2], black);
+  ASSERT_EQUAL(COLOR_A(onion_palette[black]), 255);
+  ASSERT_EQUAL(COLOR_A(onion_palette[white]), 0);
+  ASSERT_EQUAL(onion_transparent, doc->ipal.transparent);
+  uint32_t cached = onion_texture;
+  doc->layer.stack[IE_LAYER_COLOR]->opacity = 128;
+  doc->ipal.entries[black] = MAKE_COLOR(0,0,0,128);
+  send_message(doc->canvas_win, evPaint, 0, NULL);
+  ASSERT_EQUAL(onion_texture, cached); ASSERT_EQUAL(COLOR_A(onion_palette[black]), 128);
+  ASSERT_TRUE(fabsf(onion_alpha - 128 / 255.0f) < 0.001f);
+  doc->layer.stack[IE_LAYER_PENCIL]->visible = true;
+  send_message(doc->canvas_win, evPaint, 0, NULL);
+  ASSERT_TRUE(pencil_onion_texture > 0);
+  ASSERT_EQUAL(uploaded_samples[pencil_onion_texture][0], 180);
+  ASSERT_TRUE(cmd_pencil_layer(doc, IE_LAYER_PENCIL));
+  onion_texture = 0;
+  send_message(doc->canvas_win, evPaint, 0, NULL);
+  ASSERT_EQUAL(onion_texture, 0);
+  doc->layer.stack[IE_LAYER_PENCIL]->visible = false;
+  pencil_onion_texture = 0;
+  send_message(doc->canvas_win, evPaint, 0, NULL);
+  ASSERT_EQUAL(pencil_onion_texture, 0);
+  g_app->anim_trace_enabled = false;
+  close_document(doc); PASS();
+}
+
 static void test_frame_shortcuts(void) {
   TEST("canvas-focused frame shortcuts navigate, pause/resume and edit frames with undo");
   canvas_doc_t *doc = create_document(NULL, 64, 48); ASSERT_NOT_NULL(doc);
@@ -177,6 +235,7 @@ int main(void) {
   resize_window(g_app->chrome_win, 1080, 758 - window_screen_y(g_app->chrome_win));
   test_indexed_render();
   test_layer_view();
+  test_onion_visible_layers();
   test_frame_shortcuts();
   const char *example = getenv("PENCILTEST_RENDER_EXAMPLE");
   if (example) benchmark_example(example);

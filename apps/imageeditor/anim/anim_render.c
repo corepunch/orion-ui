@@ -68,13 +68,14 @@ void anim_onion_tint_rgba(uint8_t *rgba, size_t npx, uint32_t tint) {
   }
 }
 
-bool anim_render_pencil_onion(const anim_frame_t *frame, int w, int h, uint32_t *tex) {
-  if (!frame || !tex || w < 1 || h < 1) return false;
+bool anim_render_pencil_onion(const anim_frame_t *frame, int layer, int w, int h, uint32_t *tex) {
+  if (!frame || !tex || layer < IE_LAYER_COLOR || layer > IE_LAYER_FX || w < 1 || h < 1) return false;
   uint8_t *coverage = malloc((size_t)w * h);
   if (!coverage) return false;
   bool ok = true;
-  if (frame->cels) ok = anim_frame_expand_cel(frame, 1, coverage, w, h);
-  else memset(coverage, 0, (size_t)w * h);
+  if (frame->cels) ok = anim_frame_expand_cel(frame, layer - 1, coverage, w, h);
+  else if (layer == IE_LAYER_COLOR && frame->data) ok = anim_frame_expand_indices(frame, coverage, w, h);
+  else memset(coverage, layer == IE_LAYER_PENCIL ? 0 : 255, (size_t)w * h);
   uint32_t texture = ok ? R_CreateTextureR8(w, h, coverage, R_FILTER_NEAREST, R_WRAP_CLAMP) : 0;
   free(coverage);
   if (!texture) return false;

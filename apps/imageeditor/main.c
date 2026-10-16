@@ -18,18 +18,6 @@ int g_bw_retina_scale = 1;
 // Application accelerators are generated from menu shortcuts in
 // imageeditor.orion and loaded during application initialization.
 
-// Resurrect 64 palette from LoSpec.com
-static const uint32_t kDefaultPalette[NUM_COLORS] = {
-  0xff2f222e, 0xff46353e, 0xff655562, 0xff624f69, 0xff8a707f, 0xffb2ab9b, 0xffd0dcc7, 0xffffffff,
-  0xff27276e, 0xff3423ae, 0xff3138b3, 0xff3b3be8, 0xff364fea, 0xff4a7df5, 0xff1d6bfb, 0xff1796f7,
-  0xff45307a, 0xff39459e, 0xff6c6c96, 0xff3d68cd, 0xff4e90e6, 0xff7a94ab, 0xff54b9fb, 0xff2bc2f9,
-  0xff243e4c, 0xff336667, 0xff47a9a2, 0xff4be0d5, 0xff86fffb, 0xff6cdfcd, 0xff69db91, 0xff73bc1e,
-  0xff4c5a16, 0xff639023, 0xff383631, 0xff4a4e37, 0xff647e54, 0xff84a992, 0xff90bab2, 0xff655e0b,
-  0xff8f8a0b, 0xff9baf0e, 0xffb9e130, 0xffe2f88f, 0xff533332, 0xff774a48, 0xffb4654d, 0xffe69b4d,
-  0xffffd38f, 0xff3f2945, 0xff753e6b, 0xffa95e90, 0xfff384a8, 0xffedadea, 0xff543c75, 0xff6f4ba2,
-  0xff7f65cf, 0xff9980ed, 0xff5d1c83, 0xff5424c3, 0xff784ff0, 0xff8181f6, 0xff90a7fc, 0xffb0cbfd,
-};
-
 #ifndef BUILD_AS_GEM
 static bool image_editor_open_file_handler(const char *path) {
   return imageeditor_open_file_path(path);
@@ -108,6 +96,7 @@ static int open_startup_documents(int argc, char *argv[]) {
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_app = calloc(1, sizeof(app_state_t));
   if (!g_app) return false;
+  memcpy(g_app->palette, pencil_default_colors(), sizeof(g_app->palette));
 
   {
     char icons_path[4096];
@@ -142,9 +131,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_bw_retina_scale = MAX(1, (int)(axGetScaling() + 0.5f));
   #endif
 #else
-  memcpy(g_app->palette, kDefaultPalette, sizeof(kDefaultPalette));
-  g_app->fg_color = g_app->palette[4];
-  g_app->bg_color = g_app->palette[0];
+  g_app->fg_color = g_app->palette[0];
+  g_app->bg_color = g_app->palette[1];
 #endif
   // Keep the initial drawing weight here so pencil, brush, and shape tools
   // start consistently. Change this index if the preferred default evolves.

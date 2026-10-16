@@ -15,6 +15,7 @@
 
 #include <orion/ui.h>
 #include "image-editor.h"
+#include "palette.h"
 
 #ifndef IMAGEEDITOR_DEBUG
 #define IMAGEEDITOR_DEBUG 0
@@ -155,7 +156,7 @@ extern const int kBrushSizes[NUM_BRUSH_SIZES];
 #define DOC_START_Y   (APP_TOOLBAR_Y + APP_TOOLBAR_H + DOC_PALETTE_GAP)
 #define DOC_WORKSPACE_MARGIN 16
 
-#define NUM_COLORS 64
+#define NUM_COLORS PENCILTEST_DEFAULT_COLORS
 #define NUM_TOOLS  19
 #define NUM_USER_COLORS  8
 
@@ -195,22 +196,15 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define COLOR_B(c) ((uint8_t)(((c) >> 16) & 0xFF))
 #define COLOR_A(c) ((uint8_t)(((c) >> 24) & 0xFF))
 
-// Pencil Test paper/ink: cool off-white and dark purple lineart, not #FFF/#000.
-// #332B3B is too close to charcoal (B-R is 8) and reads brown in a thin stroke.
-// Ink stays in the accent-purple family (#7357F6) but dark enough for lineart.
-#if IMAGEEDITOR_BW
-#define IE_PAPER_COLOR MAKE_COLOR(0xFB, 0xFC, 0xFF, 0xFF)  /* #FBFCFF */
-#define IE_INK_COLOR   MAKE_COLOR(0x4A, 0x28, 0x78, 0xFF)  /* #4A2878 */
-#else
+// Paper and ink match the first two shared palette entries: black, white.
 #define IE_PAPER_COLOR MAKE_COLOR(0xFF, 0xFF, 0xFF, 0xFF)
 #define IE_INK_COLOR   MAKE_COLOR(0x00, 0x00, 0x00, 0xFF)
-#endif
 // Onion overlays use the old gray fade (25% / 12.5% / 6.25%), with #000000
 // replaced by these inks so nearer ghosts stay darker.
 #define IE_ONION_PREV_COLOR MAKE_COLOR(0x4C, 0x91, 0xF5, 0xFF)  /* #4C91F5 */
 #define IE_ONION_NEXT_COLOR MAKE_COLOR(0xF0, 0x8D, 0xB4, 0xFF)  /* #F08DB4 */
 
-#define IE_PENCIL_COLORS 32
+#define IE_PENCIL_COLORS PENCILTEST_DEFAULT_COLORS
 #define IE_PENCIL_PALETTE_BASE 0x7f00
 #define IE_PENCIL_LAYER_BASE 0x7e00
 #define IE_PENCIL_PALETTE_PREV 0x7df0
@@ -367,6 +361,7 @@ typedef struct canvas_doc_s {
 } canvas_doc_t;
 
 #define ONION_SKIN_MAX_STEPS 4
+#define ONION_SKIN_CACHE_SLOTS (ONION_SKIN_MAX_STEPS * 2 * (IE_LAYER_COUNT - 1))
 
 typedef struct {
   canvas_doc_t *doc;
@@ -377,9 +372,9 @@ typedef struct {
   ipoint16_t    hover;       // canvas pixel coords under the cursor
   bool          hover_valid; // true when hover is on the canvas (for magnifier overlay)
   GLuint        mag_tex;     // GL texture for magnifier loupe (created once, updated each paint)
-  GLuint        onion_tex[ONION_SKIN_MAX_STEPS * 2];
-  const void   *onion_key[ONION_SKIN_MAX_STEPS * 2];
-  uint32_t      onion_rev[ONION_SKIN_MAX_STEPS * 2];
+  GLuint        onion_tex[ONION_SKIN_CACHE_SLOTS];
+  const void   *onion_key[ONION_SKIN_CACHE_SLOTS];
+  uint32_t      onion_rev[ONION_SKIN_CACHE_SLOTS];
   int           onion_tex_w;
   int           onion_tex_h;
   char          last_sb[64]; // last text sent to status bar — avoids redundant updates

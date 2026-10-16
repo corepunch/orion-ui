@@ -145,7 +145,7 @@ bool anim_timeline_switch_frame(anim_timeline_t *tl, int idx,
 // GL rendering helpers (anim_render.c)
 // ============================================================
 
-bool anim_render_pencil_onion(const anim_frame_t *frame, int w, int h, uint32_t *tex);
+bool anim_render_pencil_onion(const anim_frame_t *frame, int layer, int w, int h, uint32_t *tex);
 
 // Expand a frame to an onion texture tinted while preserving stroke coverage.
 bool anim_render_onion(const anim_frame_t *frame, int w, int h,

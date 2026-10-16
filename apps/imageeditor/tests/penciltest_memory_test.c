@@ -100,7 +100,7 @@ static void memory_onion(void) {
   memcpy(stored, previous->cels, previous->cels_size);
   uint32_t texture = 0;
   for (int i = 0; i < 20; i++) {
-    ASSERT_TRUE(anim_render_pencil_onion(previous, 64, 48, &texture));
+    ASSERT_TRUE(anim_render_pencil_onion(previous, IE_LAYER_PENCIL, 64, 48, &texture));
     ASSERT_TRUE(texture != 0); ASSERT_EQUAL(doc->pixels[11], 201);
     ASSERT_EQUAL(uploaded_coverage[11], 93);
     ASSERT_EQUAL(memcmp(stored, previous->cels, previous->cels_size), 0);
@@ -109,7 +109,7 @@ static void memory_onion(void) {
   ASSERT_EQUAL(uploads, 20);
   size_t valid = previous->cels_size;
   previous->cels_size = 1;
-  ASSERT_FALSE(anim_render_pencil_onion(previous, 64, 48, &texture));
+  ASSERT_FALSE(anim_render_pencil_onion(previous, IE_LAYER_PENCIL, 64, 48, &texture));
   uint8_t current = doc->pixels[11]; int index = doc->anim->active_frame;
   ASSERT_FALSE(doc_anim_load(doc, 0)); ASSERT_EQUAL(doc->pixels[11], current); ASSERT_EQUAL(doc->anim->active_frame, index);
   previous->cels_size = valid;

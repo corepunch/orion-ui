@@ -19,6 +19,7 @@
 #include <png.h>
 #include "../apps/imageeditor/io/flc_codec.h"
 #include "../apps/imageeditor/palette.h"
+#include "../orion/user/palette_file.h"
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
 #endif
@@ -85,7 +86,7 @@ static void pv_usage(FILE *fp) {
         "  --palette SOURCE       default (32 colors), generated, or an existing RIFF .pal\n"
         "  --colors N             Generated budget: 32 (default), 64, 128 or 256\n"
         "  --threshold N          Black when luminance < N, 0..255 (default 170)\n"
-        "  --outlines             Extract outlines from filled colors; hide source Pencil\n"
+        "  --outlines             Extract outlines from filled colors; omit source Pencil\n"
         "  --outline-threshold N  Darkness below local mean, 0..255 (default 10); higher = less ink\n"
         "  --outline-window N     Local Gaussian window, odd 3..255 pixels (default 15)\n"
         "  --min-width N          Estimated stroke width, 1..63 pixels (default 3.5)\n"
@@ -107,7 +108,8 @@ static void pv_usage(FILE *fp) {
 }
 
 static bool pv_parse(int argc, char **argv, pv_options_t *o) {
-  *o = (pv_options_t){.colors = 32, .threshold = 170, .outline_window = 15, .outline_threshold = 10,
+  *o = (pv_options_t){.palette_source = PV_DEFAULT_PALETTE,
+                      .colors = 32, .threshold = 170, .outline_window = 15, .outline_threshold = 10,
                       .min_width = 3.5, .min_length = 20,
                       .ffmpeg = getenv("FFMPEG"), .python = getenv("PENCILTEST_PYTHON")};
   if (!o->ffmpeg || !*o->ffmpeg) o->ffmpeg = "ffmpeg";
@@ -555,7 +557,7 @@ static bool pv_filter_ink(const pv_options_t *o, pv_video_t *v) {
   bool ok = waited == child && WIFEXITED(status) && !WEXITSTATUS(status) && !fstat(fileno(filtered), &st) &&
             (uint64_t)st.st_size == (uint64_t)v->width * v->height * v->count * 3;
   if (!ok) { fclose(filtered); return pv_error("stroke filter failed or returned incomplete frames; no outputs published"); }
-  if (o->output) v->source_pixels = v->pixels; else fclose(v->pixels);
+  if (o->output && !o->outlines) v->source_pixels = v->pixels; else fclose(v->pixels);
   v->pixels = filtered; rewind(v->pixels);
   return true;
 }
@@ -563,9 +565,8 @@ static bool pv_filter_ink(const pv_options_t *o, pv_video_t *v) {
 static bool pv_palette(pv_video_t *v, const pv_options_t *o) {
   memset(v->palette, 0, sizeof(v->palette));
   if (o->palette_source == PV_DEFAULT_PALETTE) {
-    const char *dir = pv_exe_dir();
-    if (!dir || !pencil_palette_load_default(dir, v->palette, &v->colors))
-      return pv_error("cannot load the shared default palette");
+    pencil_palette_copy_default(v->palette);
+    v->colors = PENCILTEST_DEFAULT_COLORS;
   } else if (o->palette_source == PV_EXISTING_PALETTE) {
     if (!riff_palette_load(o->palette_path, v->palette, &v->colors)) return false;
     if (v->colors > 255) return pv_error("Penciltest reserves index 255 for transparency; existing palettes must have 1..255 colors");
@@ -807,14 +808,14 @@ static bool pv_output(const pv_options_t *o, pv_video_t *v) {
     }
   }
   rewind(v->pixels);
-  if (v->source_pixels) rewind(v->source_pixels);
+  if (v->source_pixels && !o->outlines) rewind(v->source_pixels);
   for (int i = 0; ok && i < v->count; i++) {
     ok = fread(rgb, 1, n * 3, v->pixels) == n * 3;
     if (!ok) break;
     pv_convert(v, o, rgb, image, pencil);
     pv_composite_background(v, image, pencil);
     if (project) {
-      if (v->source_pixels) {
+      if (v->source_pixels && !o->outlines) {
         if (fread(rgb, 1, n * 3, v->source_pixels) != n * 3) { ok = pv_error("truncated source pencil frame"); break; }
         for (size_t p = 0; p < n; p++) pencil[p] = 255 - pv_gray(rgb + p * 3);
       }

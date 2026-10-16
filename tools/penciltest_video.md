@@ -50,22 +50,25 @@ Front 3/4	front-three-quarter.png
 | Mode | Native layer | Pixel transfer | PNG output |
 |---|---|---|---|
 | `--mode pencil` (default) | Pencil | All 256 luminance levels stored reversibly as `255 - luminance` coverage | Lossless 8-bit grayscale |
-| `--mode black` | Color + source Pencil | Stroke-aware simplification for ink; unfiltered grayscale video retained in the project's Pencil layer | 1-bit indexed black/transparency |
+| `--mode black` | Color + optional source Pencil | Stroke-aware simplification for ink; unfiltered grayscale retained unless `--outlines` removes colored fills | 1-bit indexed black/transparency |
 | `--mode palette` | Color | RGB video quantized into the chosen document palette, without dithering | Indexed colors |
 
 Choose the document palette independently of the conversion mode:
 
 | Option | Behavior |
 |---|---|
-| `--palette default` (default) | Load the same 32-color RIFF palette used by Penciltest. |
+| `--palette default` (default) | Use the same compiled 32-color palette as the app. |
 | `--palette FILE.pal` | Use the ordered RGB entries in an existing binary RIFF PAL file. |
 | `--palette generated --colors 32` | Derive one adaptive palette from the entire video. |
 
-The shared resource is `apps/imageeditor/share/palettes/default.pal`, packaged
-beside the binaries in `build/share/imageeditor/palettes/`. It contains 16 dark/light
-pairs; the original eight pairs are unchanged. No palette RGB table is duplicated
-in the app or converter. Every project embeds its editing palette, so later
-changes to the default resource cannot recolor an existing project.
+The shared C table is `disney_extended_32` in `apps/imageeditor/palette.c`.
+It contains the 16 Disney screenshot-based colors followed by four four-color
+ramps (gray, brown, rose and violet), each ordered from light to dark;
+index 0 is black (`#000000`), index 1 is white (`#FFFFFF`) and index 16 is
+light gray (`#C4C4C4`). Black mode uses index 0 with this default palette.
+App and converter link this table directly; no default palette file is required.
+Every project embeds its editing palette, so later default changes cannot
+recolor an existing project.
 
 RIFF PAL files contain RGB and Windows flags, not alpha. Existing palettes may
 have 1–255 entries; native index 255 remains reserved for transparency. Unused
@@ -108,8 +111,8 @@ The outline threshold is the required darkness below the local Gaussian mean
 The window is an odd number of pixels from 3 to 255. The ordinary `--threshold`
 still applies to the extracted binary image during cleanup; use a value from
 1 to 255 to retain its black pixels. Protection preserves extracted contours
-when outlines are enabled. Source Pencil retains the original video and starts
-hidden with `--outlines`, so the project opens with black ink alone.
+when outlines are enabled. With `--outlines`, the original grayscale video is
+discarded and Pencil remains empty and hidden, so the project contains black ink alone.
 
 `make penciltest-video` packages both Python files beside the executable. The
 converter finds `build/lineart-python/bin/python3` when installed as above,
@@ -132,11 +135,11 @@ hysteresis to reduce borderline stroke changes. It is experimental and disabled
 by default. The repeatable export Makefile enables it by default. Soft pencil coverage and full-color palette quantization
 retain their existing behavior.
 
-Native black-mode projects also contain the original decoded video in an independent
+Ordinary black-mode projects also contain the original decoded video in an independent
 Pencil layer, with all 256 luminance levels stored as `255 - luminance` coverage.
 That source reference is preserved before stroke cleanup and temporal processing.
 It starts visible beneath Color, so source details show through transparent areas
-of the cleaned ink, except with `--outlines`, which starts Pencil hidden.
+of the cleaned ink. Color-removal exports with `--outlines` omit this source reference.
 Toggle Pencil off to inspect the cleaned ink alone. Color
 remains the active layer. Color's empty pixels use transparent palette index 255;
 Pencil uses coverage instead, with 0 transparent and 255 full pencil ink. Source
@@ -174,7 +177,7 @@ build/bin/penciltest-video --mode palette --palette default \
   --output build/palette-default.ptf input.mp4
 
 build/bin/penciltest-video --mode palette \
-  --palette apps/imageeditor/share/palettes/default.pal \
+  --palette /path/to/custom.pal \
   --output build/palette-existing.ptf input.mp4
 ```
 
@@ -240,8 +243,9 @@ Protection is empty by default because coordinates depend on the source video.
 For the skateboard clip, add `PROTECT_REGIONS="525,105,165,140"`.
 
 The default output is `build/penciltest-video/black.ptf` with binary PNGs in
-`black-frames/` and settings in `export.json`. Native projects include the original
-Pencil layer, visible beneath Color unless `OUTLINES=1`. Re-running stages the conversion before replacing
+`black-frames/` and settings in `export.json`. Ordinary black-mode projects include the
+original Pencil reference beneath Color; `OUTLINES=1` leaves Pencil empty and hidden.
+Re-running stages the conversion before replacing
 the same project and PNG sequence; it creates no backup PTF or ZIP. A different
 existing PTF in the chosen output folder is rejected to keep one project there.
 Unrelated build files are retained. Failed conversions leave the previous export
@@ -270,7 +274,8 @@ PENCILTEST_MEMORY_EXAMPLE=build/penciltest-video-example/pencil.ptf \
 Tests cover all grayscale levels, threshold boundaries, worker failures and
 truncation, true 1-bit PNG round trips, palette sources and
 budgets, corrupt RIFF files, fractional/variable timing, decoder failures, quoted
-paths, native/PNG round trips, and existing-output protection. Full-example
+paths, native/PNG round trips, source-reference retention for ordinary cleanup,
+empty Pencil cels for color-removal exports, and existing-output protection. Full-example
 verification decodes every cel and compares it with its PNG. Sidebar tests verify
 all 32 default swatches fit, larger document palettes page, duplicate colors
 retain their selected index, and selection never mutates palettes or history.

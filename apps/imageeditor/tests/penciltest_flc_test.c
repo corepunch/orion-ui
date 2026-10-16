@@ -65,6 +65,40 @@ static void flc_roundtrip(void) {
   PASS();
 }
 
+static void flc_open_covers_previous_document(void) {
+  TEST("Opening PTF covers the previous maximized document at normal and Retina scale");
+  resize_window(g_app->chrome_win, 1080, 758 - window_screen_y(g_app->chrome_win));
+  for (int scale = 1; scale <= 2; scale++) {
+    g_bw_retina_scale = scale;
+    int w, h;
+    imageeditor_default_canvas_size(&w, &h);
+    canvas_doc_t *blank = create_document(NULL, w, h);
+    ASSERT_NOT_NULL(blank);
+    ASSERT_TRUE(imageeditor_open_file_path(flc_test_path));
+    canvas_doc_t *doc = g_app->active_doc;
+    ASSERT_TRUE(doc != blank);
+    ASSERT_TRUE(window_is_maximized(blank->win));
+    ASSERT_TRUE(window_is_maximized(doc->win));
+    irect16_t area = imageeditor_document_workspace_rect();
+    ASSERT_EQUAL(doc->win->frame.x, area.x);
+    ASSERT_EQUAL(doc->win->frame.y, area.y);
+    ASSERT_EQUAL(doc->win->frame.w, area.w);
+    ASSERT_EQUAL(doc->win->frame.h, area.h);
+    window_t *left = find_window(area.x, area.y + area.h - 1);
+    window_t *right = find_window(area.x + area.w - 1, area.y + area.h - 1);
+    ASSERT_NOT_NULL(left); ASSERT_NOT_NULL(right);
+    ASSERT_TRUE(get_root_window(left) == doc->win);
+    ASSERT_TRUE(get_root_window(right) == doc->win);
+    irect16_t client = get_client_rect(doc->win);
+    ASSERT_EQUAL(doc->canvas_win->frame.w, client.w);
+    ASSERT_EQUAL(doc->canvas_win->frame.h, client.h);
+    ASSERT_EQUAL(window_view_zoom(doc->canvas_win), 1);
+    close_document(doc); close_document(blank);
+  }
+  g_bw_retina_scale = 1;
+  PASS();
+}
+
 static void flc_menu_and_retina(void) {
   TEST("Open preserves physical dimensions at Retina scale; File Save persists edited frames");
   g_bw_retina_scale = 2;
@@ -238,7 +272,7 @@ int main(void) {
   if (!mkdtemp(flc_test_dir)) { perror(flc_test_dir); return 1; }
   snprintf(flc_test_path, sizeof(flc_test_path), "%s/animation.ptf", flc_test_dir);
   test_env_init(); g_app = calloc(1, sizeof(*g_app));
-  flc_roundtrip(); flc_menu_and_retina(); flc_save_as(); flc_external_compression(); flc_reject_corruption();
+  flc_roundtrip(); flc_open_covers_previous_document(); flc_menu_and_retina(); flc_save_as(); flc_external_compression(); flc_reject_corruption();
   flc_color_palette_roundtrip();
   while (g_app->docs) close_document(g_app->docs);
   free(g_app); g_app = NULL; test_env_shutdown();

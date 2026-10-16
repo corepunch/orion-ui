@@ -5,8 +5,8 @@ const uint32_t *pencil_default_colors(void) {
   static uint32_t colors[256];
   static bool loaded;
   if (!loaded) {
-    uint8_t rgba[256][4]; int count;
-    if (!pencil_palette_load_default(ui_get_exe_dir(), rgba, &count)) return NULL;
+    uint8_t rgba[256][4];
+    pencil_palette_copy_default(rgba);
     for (int i = 0; i < 256; i++)
       colors[i] = MAKE_COLOR(rgba[i][0], rgba[i][1], rgba[i][2], rgba[i][3]);
     loaded = true;

@@ -335,7 +335,7 @@ static void canvas_draw_selection_mask_overlay(canvas_doc_t *doc,
 
 static void onion_cache_reset(canvas_win_state_t *state) {
   if (!state) return;
-  for (int i = 0; i < ONION_SKIN_MAX_STEPS * 2; i++) {
+  for (int i = 0; i < ONION_SKIN_CACHE_SLOTS; i++) {
     if (state->onion_tex[i]) {
       R_DeleteTexture(state->onion_tex[i]);
       state->onion_tex[i] = 0;
@@ -345,8 +345,8 @@ static void onion_cache_reset(canvas_win_state_t *state) {
   }
 }
 
-static void canvas_draw_onion_slot(canvas_win_state_t *state, canvas_doc_t *doc,
-                                   int slot, const anim_frame_t *frame,
+static void canvas_draw_onion_layer(canvas_win_state_t *state, canvas_doc_t *doc,
+                                   int slot, int layer, const anim_frame_t *frame,
                                    uint32_t tint, float alpha, irect16_t canvas_rect) {
   if (!frame || alpha <= 0.0f) return;
   bool stale = state->onion_key[slot] != frame ||
@@ -355,7 +355,7 @@ static void canvas_draw_onion_slot(canvas_win_state_t *state, canvas_doc_t *doc,
   bool live = g_ui_runtime.dragging || doc->drawing;
   if (stale && !live) {
     if (pencil_has_layers(doc)) {
-      if (!anim_render_pencil_onion(frame, doc->canvas_w, doc->canvas_h, &state->onion_tex[slot])) return;
+      if (!anim_render_pencil_onion(frame, layer, doc->canvas_w, doc->canvas_h, &state->onion_tex[slot])) return;
     } else if (!anim_render_onion(frame, doc->canvas_w, doc->canvas_h,
                                                    &state->onion_tex[slot],
 #if IMAGEEDITOR_INDEXED
@@ -369,10 +369,41 @@ static void canvas_draw_onion_slot(canvas_win_state_t *state, canvas_doc_t *doc,
   }
   if (state->onion_tex[slot]) {
     if (pencil_has_layers(doc)) {
-      uint8_t opacity = (uint8_t)lroundf(COLOR_A(tint) * CLAMP(alpha, 0.0f, 1.0f));
-      draw_sprite_region(state->onion_tex[slot], canvas_rect, NULL,
-                         MAKE_COLOR(COLOR_R(tint), COLOR_G(tint), COLOR_B(tint), opacity), 0);
+      const layer_t *lay = doc->layer.stack[layer];
+      float opacity = CLAMP(alpha, 0.0f, 1.0f) * lay->opacity / 255.0f;
+      if (layer == IE_LAYER_PENCIL) {
+        draw_sprite_region(state->onion_tex[slot], canvas_rect, NULL,
+                           MAKE_COLOR(COLOR_R(tint), COLOR_G(tint), COLOR_B(tint), lroundf(COLOR_A(tint) * opacity)), 0);
+      } else {
+#if IMAGEEDITOR_INDEXED
+        uint32_t palette[256];
+        for (int i = 0; i < 256; i++) {
+          uint32_t color = doc->ipal.entries[i];
+          int luma = (COLOR_R(color) * 77 + COLOR_G(color) * 150 + COLOR_B(color) * 29) >> 8;
+          palette[i] = MAKE_COLOR(COLOR_R(tint), COLOR_G(tint), COLOR_B(tint),
+                                 luma >= 248 ? 0 : COLOR_A(color) * COLOR_A(tint) / 255);
+        }
+        draw_indexed_rect(state->onion_tex[slot], canvas_rect, palette, doc->ipal.transparent, opacity);
+#endif
+      }
     } else draw_rect_ex((int)state->onion_tex[slot], canvas_rect, 0, CLAMP(alpha, 0.0f, 1.0f));
+  }
+}
+
+static void canvas_draw_onion_slot(canvas_win_state_t *state, canvas_doc_t *doc,
+                                   int slot, const anim_frame_t *frame,
+                                   uint32_t tint, float alpha, irect16_t canvas_rect) {
+  if (!pencil_has_layers(doc)) {
+    canvas_draw_onion_layer(state, doc, slot, -1, frame, tint, alpha, canvas_rect);
+    return;
+  }
+  static const int order[] = {IE_LAYER_PENCIL, IE_LAYER_COLOR, IE_LAYER_FX};
+  for (int i = 0; i < ARRAY_LEN(order); i++) {
+    int layer = order[i];
+    const layer_t *lay = doc->layer.stack[layer];
+    if (lay && lay->visible && lay->opacity)
+      canvas_draw_onion_layer(state, doc, slot * 3 + layer - 1, layer, frame, tint, alpha, canvas_rect);
+    if (layer == doc->layer.active) break;
   }
 }
 
