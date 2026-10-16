@@ -268,7 +268,13 @@ notifications:
 
 * `win_iconview` for the small-icon list
 * `win_reportview` for the multi-column report view
-* `win_icongrid` for the thumbnail grid, using bitmap strip tile indices
+* `win_icongrid` for the thumbnail grid, using bitmap strip tile indices.
+  `RVM_VIEW_LARGE_ICON` puts a label under each fixed-width cell;
+  `RVM_VIEW_THUMBNAIL` is a photo grid (UICollectionView grid layout, SwiftUI
+  `LazyVGrid` with an adaptive item): unlabeled square tiles, as many columns as
+  fit the `RVM_SETICONSIZE` minimum, stretched to fill the width with the
+  theme's `thumbnail.gap` between them. The selected tile gets an accent ring
+  of `thumbnail.ring_width`.
 
 Used by the file manager, file-picker dialog, and several editor palettes.
 

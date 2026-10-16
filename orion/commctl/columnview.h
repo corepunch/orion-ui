@@ -63,6 +63,7 @@ enum {
   RVM_VIEW_ICON = 0,        // Small-icon list (icon-left, label-right, one row per item)
   RVM_VIEW_REPORT = 1,      // Multi-column report with sortable header
   RVM_VIEW_LARGE_ICON = 2,  // Large-thumbnail grid (icon-above, label-below) — WinAPI LVS_ICON
+  RVM_VIEW_THUMBNAIL = 3,   // Photo grid: unlabeled square tiles that fill the width (RVM_SETICONSIZE = minimum tile)
 };
 
 typedef enum {

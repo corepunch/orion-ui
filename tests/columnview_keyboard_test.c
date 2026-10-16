@@ -869,6 +869,47 @@ void test_cv_large_icon_fixed_columns_stable_scroll(void) {
     PASS();
 }
 
+static int thumb_hit(window_t *cv, int x, int y) {
+    return (int)send_message(cv, RVM_HITTEST, MAKEDWORD((uint16_t)x, (uint16_t)y), NULL);
+}
+
+// The photo grid stretches square tiles to fill the row and adds a column only
+// once another minimum-size tile fits, with the theme gap between tiles.
+void test_cv_thumbnail_fills_width_and_adds_columns(void) {
+    TEST("win_icongrid thumbnail: tiles fill the width, columns grow with it");
+
+    test_env_init();
+    reset_cmd_state();
+
+    window_t *parent = test_env_create_window("P", 0, 0, 400, 300,
+                                               cmd_capture_proc, NULL);
+    ASSERT_NOT_NULL(parent);
+    irect16_t fr = {0, 0, 240, 240};
+    window_t *cv = create_window("th", WINDOW_NOTITLE | WINDOW_NOFILL,
+                                 &fr, parent, win_icongrid, 0, NULL);
+    ASSERT_NOT_NULL(cv);
+    ASSERT_TRUE(send_message(cv, RVM_SETVIEWMODE, RVM_VIEW_THUMBNAIL, NULL));
+    ASSERT_TRUE(send_message(cv, RVM_SETICONSIZE, 70, NULL));
+    add_items(cv, 8);
+
+    int gap = get_theme()->thumbnail.gap;
+    int cols = (240 + gap) / (70 + gap);
+    int tile = (240 - (cols - 1) * gap) / cols;
+    ASSERT_EQUAL(cols, 3);
+    ASSERT_TRUE(tile > 70);
+    ASSERT_EQUAL(thumb_hit(cv, 0, 0), 0);
+    ASSERT_EQUAL(thumb_hit(cv, 239, 1), 2);       // last column reaches the right edge
+    ASSERT_EQUAL(thumb_hit(cv, 1, tile + gap), 3); // square rows, gap below
+    if (gap > 0) ASSERT_EQUAL(thumb_hit(cv, tile, 1), -1);
+
+    resize_window(cv, 300, 240);
+    ASSERT_EQUAL(thumb_hit(cv, 299, 1), 3);       // a fourth column now fits
+
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc; (void)argv;
     TEST_START("win_reportview keyboard navigation");
@@ -898,6 +939,7 @@ int main(int argc, char *argv[]) {
     test_cv_large_icon_left_right();
     test_cv_large_icon_stretches_columns_to_width();
     test_cv_large_icon_fixed_columns_stable_scroll();
+    test_cv_thumbnail_fills_width_and_adds_columns();
 
     TEST_END();
 }

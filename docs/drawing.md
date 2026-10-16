@@ -402,7 +402,7 @@ and `lparam = control`. It consumes the second release so it cannot also fire
 `btnClicked`. Without this flag, ordinary click behavior is unchanged.
 
 Theme settings are grouped in inline structs by component: `scrollbar`, `caption`,
-`menubar`, `toolbar`, `control`, `button`, `window`, `card`, `plastic`, `drag`,
+`menubar`, `toolbar`, `control`, `button`, `window`, `card`, `thumbnail`, `plastic`, `drag`,
 `tab`, `menu`, `badge`, `field`, and `tooltip`. Shadows live under `window.shadow`,
 `drag.shadow`, and `tooltip.shadow`; shared control sizes use `control.size_pct`.
 

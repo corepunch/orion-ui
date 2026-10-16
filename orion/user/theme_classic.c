@@ -375,6 +375,7 @@ static theme_t g_classic_theme = {
     .corner_radius = 0, .edge_width = 4, .ring_width = 1, .highlight_width = 0, .shadow_size = 1,
     .padding_x = 8, .padding_y = 6,
   },
+  .thumbnail = { .gap = 2, .ring_width = 2 },
   .plastic = {
     .corner_radius = CORNER_RADIUS_CIRCULAR, .bevel_width = 2, .shadow_size = 3,
     .gloss = 0.7f, .rim = 0.7f, .ink = 0.12f, .lift = 0.08f, .glyph_size = 20, .shadow_color = 0xE0000000,

@@ -6,42 +6,51 @@
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
 
+// RVM_VIEW_LARGE_ICON: fixed-width cells with a label under each icon, spread across the row.
+// RVM_VIEW_THUMBNAIL: a photo grid. As many columns as fit icon_size (the minimum tile), stretched
+// to fill the width with the theme's thumbnail.gap between square tiles and no labels.
 typedef struct {
   int ncol;
-  int cell_w;
-  int cell_h;
+  int cell_w;    // thumbnail: nominal tile side; columns absorb the remainder
+  int cell_h;    // row pitch
   int usable_w;
   int origin_x;
+  int gap;
+  bool thumbnail;
 } icon_grid_geom_t;
 
-static int grid_column_count(reportview_data_t *data, int width) {
+static icon_grid_geom_t grid_geom_for(reportview_data_t *data, int origin_x, int width) {
+  int usable = MAX(1, width);
+  if (data->view_mode == RVM_VIEW_THUMBNAIL) {
+    int gap = get_theme()->thumbnail.gap;
+    int ncol = data->fixed_large_icon_cols > 0 ? data->fixed_large_icon_cols
+                                               : MAX(1, (usable + gap) / (data->icon_size + gap));
+    int tile = MAX(1, (usable - (ncol - 1) * gap) / ncol);
+    return (icon_grid_geom_t){ncol, tile, tile + gap, usable, origin_x, gap, true};
+  }
   int cell_w = data->column_width > 0 ? data->column_width : DEFAULT_COLUMN_WIDTH;
-  return data->fixed_large_icon_cols > 0 ? data->fixed_large_icon_cols : MAX(1, width / cell_w);
+  int ncol = data->fixed_large_icon_cols > 0 ? data->fixed_large_icon_cols : MAX(1, usable / cell_w);
+  return (icon_grid_geom_t){ncol, cell_w, rv_large_icon_cell_h(data), usable, origin_x, 0, false};
 }
 
 static icon_grid_geom_t grid_geom(window_t *win, reportview_data_t *data) {
   irect16_t content = window_scroll_content_rect(win);
-  int cell_w = data->column_width > 0 ? data->column_width : DEFAULT_COLUMN_WIDTH;
-  return (icon_grid_geom_t){
-    .ncol = grid_column_count(data, content.w),
-    .cell_w = cell_w,
-    .cell_h = rv_large_icon_cell_h(data),
-    .usable_w = MAX(1, content.w),
-    .origin_x = content.x,
-  };
+  return grid_geom_for(data, content.x, content.w);
+}
+
+static int grid_content_h(const icon_grid_geom_t *g, int count) {
+  return count ? (count + g->ncol - 1) / g->ncol * g->cell_h - g->gap : 0;
+}
+
+// Thumbnail columns split usable_w + gap evenly, so the row ends flush with the right edge.
+static int grid_thumb_x(const icon_grid_geom_t *g, int col) {
+  return g->origin_x + col * (g->usable_w + g->gap) / g->ncol;
 }
 
 static int grid_col_x(const icon_grid_geom_t *g, int col) {
-  if (!g || col <= 0) {
-    int usable = g ? g->usable_w : 0;
-    int cell_w = g ? g->cell_w : 0;
-    if (g && g->ncol == 1)
-      return g->origin_x + MAX(0, (usable - cell_w) / 2);
-    return g ? g->origin_x : 0;
-  }
-  if (g->ncol <= 1)
-    return g->origin_x + MAX(0, (g->usable_w - g->cell_w) / 2);
-
+  if (g->thumbnail) return grid_thumb_x(g, col);
+  if (col <= 0 || g->ncol <= 1)
+    return g->origin_x + (g->ncol == 1 ? MAX(0, (g->usable_w - g->cell_w) / 2) : 0);
   int min_span = (g->ncol - 1) * g->cell_w;
   int fill_span = g->usable_w - g->cell_w;
   int span = MAX(min_span, fill_span);
@@ -56,7 +65,9 @@ static void grid_sync_scroll(window_t *win) {
 static irect16_t grid_item_rect(window_t *win, reportview_data_t *data, int index) {
   icon_grid_geom_t g = grid_geom(win, data);
   irect16_t content = window_scroll_content_rect(win);
-  return R(grid_col_x(&g, index % g.ncol), content.y + index / g.ncol * g.cell_h, g.cell_w, g.cell_h);
+  int col = index % g.ncol, x = grid_col_x(&g, col), y = content.y + index / g.ncol * g.cell_h;
+  if (g.thumbnail) return R(x, y, grid_thumb_x(&g, col + 1) - g.gap - x, g.cell_w);
+  return R(x, y, g.cell_w, g.cell_h);
 }
 
 static int grid_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam) {
@@ -75,7 +86,22 @@ static int grid_hit_index(window_t *win, reportview_data_t *data, uint32_t wpara
   return RV_INVALID_SELECTION;
 }
 
+static void grid_paint_thumbnails(window_t *win, reportview_data_t *data) {
+  irect16_t cr = get_client_rect(win);
+  int ring = get_theme()->thumbnail.ring_width;
+  fill_rect(get_sys_color(brColumnViewBg), R(0, 0, cr.w, cr.h));
+  for (uint32_t i = 0; i < data->count; i++) {
+    irect16_t tile = window_scroll_rect_to_client(win, grid_item_rect(win, data, i));
+    if (tile.y + tile.h <= 0) continue;
+    if (tile.y >= cr.h) break;
+    rv_draw_item_icon(data->icon_strip, data->items[i].icon, &tile, 0xFFFFFFFF);
+    if ((int)i == data->selected && ring > 0)
+      stroke_rounded_rect(get_sys_color(brAccent), tile, 0, ring);
+  }
+}
+
 static void grid_paint(window_t *win, reportview_data_t *data) {
+  if (data->view_mode == RVM_VIEW_THUMBNAIL) { grid_paint_thumbnails(win, data); return; }
   irect16_t cr = get_client_rect(win);
   icon_grid_geom_t g = grid_geom(win, data);
   int icon_sz = data->icon_size;
@@ -138,6 +164,7 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       data->redraw_dirty = false;
       data->column_titles_visible = true;
       data->preserve_icon_colors = false;
+      data->view_mode = RVM_VIEW_LARGE_ICON;
       window_set_scroll_content(win, 0, 0,
                                 (irect16_t){RV_LARGE_ICON_PAD, RV_LARGE_ICON_PAD, RV_LARGE_ICON_PAD, RV_LARGE_ICON_PAD},
                                 (irect16_t){0});
@@ -145,9 +172,9 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     }
     case evMeasureScrollContent: {
       layout_measure_t *m = lparam;
-      int ncol = grid_column_count(data, m->avail_w);
+      icon_grid_geom_t g = grid_geom_for(data, 0, m->avail_w);
       m->desired_w = 0;
-      m->desired_h = ((int)data->count + ncol - 1) / ncol * rv_large_icon_cell_h(data);
+      m->desired_h = grid_content_h(&g, (int)data->count);
       return true;
     }
     case evMeasure: {
@@ -155,8 +182,8 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (!m) return true;
       icon_grid_geom_t g = grid_geom(win, data);
       irect16_t pad = win->scroll_content.padding;
-      int min_h = pad.y + pad.h + rv_large_icon_cell_h(data);
-      int min_w = MAX(1, pad.x + pad.w + g.ncol * g.cell_w);
+      int min_h = pad.y + pad.h + (g.thumbnail ? data->icon_size : g.cell_h);
+      int min_w = MAX(1, pad.x + pad.w + (g.thumbnail ? data->icon_size : g.ncol * g.cell_w));
       m->desired_w = MAX(m->desired_w, min_w);
       m->desired_h = MAX(m->desired_h, min_h);
       return true;
@@ -253,8 +280,14 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       rv_invalidate(win, data);
       return true;
     }
-    case RVM_SETVIEWMODE:
-      return wparam == RVM_VIEW_LARGE_ICON;
+    case RVM_SETVIEWMODE: {
+      if (wparam != RVM_VIEW_LARGE_ICON && wparam != RVM_VIEW_THUMBNAIL) return false;
+      int pad = wparam == RVM_VIEW_THUMBNAIL ? 0 : RV_LARGE_ICON_PAD;
+      data->view_mode = (int)wparam;
+      window_set_scroll_content(win, 0, 0, (irect16_t){pad, pad, pad, pad}, (irect16_t){0});
+      rv_invalidate(win, data);
+      return true;
+    }
     case RVM_SETREDRAW:
       if (wparam) {
         data->redraw_enabled = true;

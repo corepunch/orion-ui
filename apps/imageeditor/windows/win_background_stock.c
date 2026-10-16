@@ -1,5 +1,5 @@
 // Stock background browser: square thumbnails of the bundled plates in an
-// IconGrid, packed into one texture sheet. Choosing a plate or a photo sets
+// IconGrid photo grid, packed into one texture sheet. Choosing a plate or a photo sets
 // the Background layer's picture through the background commands.
 
 #include "imageeditor.h"
@@ -8,11 +8,10 @@
 
 #if IMAGEEDITOR_BW
 
-#define BG_STOCK_MAX     256
-#define BG_STOCK_THUMB   128  // pixels per square tile in share/.../thumbs
-#define BG_STOCK_ICON    96
-#define BG_STOCK_CELL_W  112
-#define BG_STOCK_COLS    8
+#define BG_STOCK_MAX      256
+#define BG_STOCK_THUMB    128  // pixels per square tile in share/.../thumbs
+#define BG_STOCK_MIN_TILE 100  // photo-grid columns stretch from this to fill the width
+#define BG_STOCK_COLS     8
 
 typedef struct {
   canvas_doc_t  *doc;
@@ -130,9 +129,8 @@ static result_t bg_stock_proc(window_t *win, uint32_t msg, uint32_t wparam, void
       bg_stock_bake(st);
       window_t *grid = get_window_item(win, ID_BACKGROUND_STOCK_PLATES);
       if (grid) {
-        send_message(grid, RVM_SETVIEWMODE, RVM_VIEW_LARGE_ICON, NULL);
-        send_message(grid, RVM_SETCOLUMNWIDTH, BG_STOCK_CELL_W, NULL);
-        send_message(grid, RVM_SETICONSIZE, BG_STOCK_ICON, NULL);
+        send_message(grid, RVM_SETVIEWMODE, RVM_VIEW_THUMBNAIL, NULL);
+        send_message(grid, RVM_SETICONSIZE, BG_STOCK_MIN_TILE, NULL);
         if (st->strip.tex) send_message(grid, RVM_SETICONSTRIP, 0, &st->strip);
         send_message(grid, RVM_SETREDRAW, 0, NULL);
         for (int i = 0; i < st->count; i++) {

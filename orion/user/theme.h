@@ -250,6 +250,10 @@ typedef struct {
     int face;               // sys colour role of the face, 0 = brControlBg (a tile on a panel)
     int outline;            // sys colour role of a hairline along the silhouette, 0 = none
   } card;
+  struct {
+    int gap;                // space between photo-grid tiles (IconGrid RVM_VIEW_THUMBNAIL)
+    int ring_width;         // selected tile's accent ring, inside the tile
+  } thumbnail;
   struct {                   // plastic material, handed to the shader as uniforms
     int corner_radius, bevel_width, shadow_size; // radius may be CORNER_RADIUS_CIRCULAR
     float gloss;             // strength of the top highlight band (1 = reference)

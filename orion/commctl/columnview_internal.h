@@ -52,6 +52,7 @@ typedef struct {
   int icon_size;
   int icon_text_gap;
   int fixed_large_icon_cols;
+  int view_mode;          // win_icongrid: RVM_VIEW_LARGE_ICON or RVM_VIEW_THUMBNAIL
   bool redraw_enabled;
   bool redraw_dirty;
   bool column_titles_visible;
