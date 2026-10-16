@@ -113,15 +113,20 @@ static void test_layer_tools_and_size(void) {
     send_message(slider, evMouseMove, MAKEDWORD(slider->frame.w / 2, SLIDER_TRACK_PAD), NULL);
     send_message(slider, evLeftButtonUp, 0, NULL);
     ASSERT_EQUAL(g_app->brush_size, NUM_BRUSH_SIZES - 1);
+    ASSERT_TRUE(slider->flags & SLIDER_TROUGH);
     window_t *opacity = get_window_item(g_app->tool_win, IE_OPT_OPACITY);
-    ASSERT_NOT_NULL(opacity);
-    ASSERT_TRUE((slider->flags & SLIDER_TROUGH) && (opacity->flags & SLIDER_TROUGH));
-    ASSERT_EQUAL((int)send_message(opacity, slGetPos, 0, NULL), pencil_opacity());
-    send_message(opacity, evLeftButtonDown, MAKEDWORD(opacity->frame.w / 2, SLIDER_TRACK_PAD), NULL);
-    send_message(opacity, evLeftButtonUp, 0, NULL);
-    ASSERT_EQUAL(pencil_opacity(), 255);
-    g_app->pencil_opacity = IE_PENCIL_DEFAULT_OPACITY;
-    imageeditor_sync_brush_sliders(g_app->tool_win);
+    if (tool == ID_TOOL_BRUSH) {
+      ASSERT_NULL(opacity);
+    } else {
+      ASSERT_NOT_NULL(opacity);
+      ASSERT_TRUE(opacity->flags & SLIDER_TROUGH);
+      ASSERT_EQUAL((int)send_message(opacity, slGetPos, 0, NULL), pencil_opacity());
+      send_message(opacity, evLeftButtonDown, MAKEDWORD(opacity->frame.w / 2, SLIDER_TRACK_PAD), NULL);
+      send_message(opacity, evLeftButtonUp, 0, NULL);
+      ASSERT_EQUAL(pencil_opacity(), 255);
+      g_app->pencil_opacity = IE_PENCIL_DEFAULT_OPACITY;
+      imageeditor_sync_brush_sliders(g_app->tool_win);
+    }
     handle_menu_command(ID_TOOL_SPRAY);
     ASSERT_EQUAL(g_app->current_tool, tool);
     handle_menu_command(tool == ID_TOOL_PENCIL ? ID_TOOL_BRUSH : ID_TOOL_PENCIL);
