@@ -137,6 +137,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   // Keep the initial drawing weight here so pencil, brush, and shape tools
   // start consistently. Change this index if the preferred default evolves.
   g_app->brush_size = 2;  // default: radius 2 (5px diameter)
+  g_app->pencil_opacity = IE_PENCIL_DEFAULT_OPACITY;
   g_app->text_tool.font_size = 16;
   g_app->text_tool.antialias = true;
   g_app->wand.antialias = true;

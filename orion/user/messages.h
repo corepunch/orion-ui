@@ -309,6 +309,7 @@ enum {
 #define WINDOW_LAYOUT_CONTAINER (1 << 22)  // window arranges children (stack/grid/flow/column)
 #define WINDOW_NOCLOSE      (1 << 16)  // movable palette without a close button
 #define SLIDER_VERTICAL     (1 << 13)  // slider values increase upward
+#define SLIDER_TROUGH       (1 << 14)  // theme-shaped trough filling the control; slider.* metrics in theme_t
 #define WINDOW_NODRAG       (1 << 23)  // fixed chrome/panel: never initiate a window drag
 #define WINDOW_TOOLWINDOW   (1u << 31) // WinAPI WS_EX_TOOLWINDOW: compact palette/tool window
 #define WINDOW_STACK_VERTICAL   0
@@ -468,7 +469,7 @@ enum {
 // Half-size cell: in a single-column vertical toolbar consecutive SMALL
 // buttons/customs pack 2 per row, so 2x2 of them fills one normal button cell.
 #define TOOLBAR_ITEM_FLAG_SMALL      (1u << 4)
-#define TOOLBAR_ITEM_FLAG_FLEXSPACE  (1u << 5) // horizontal spacer shares remaining width
+#define TOOLBAR_ITEM_FLAG_FLEXSPACE  (1u << 5) // spacer or slider shares the remaining length along the toolbar axis
 #define TOOLBAR_ITEM_FLAG_ARTWORK    (1u << 6) // button icon is full-colour artwork filling the button; no plastic body
 // Item flags also take CONTROL_SIZE_*: the button cell and its glyph scale by the theme's
 // control.size_pct; a bigger cell spreads into the band padding (toolbar.large_inset short of

@@ -224,6 +224,8 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
     case THEME_PART_STATUSBAR:           classic_draw_statusbar_bg(r); break;
     case THEME_PART_LIST_ITEM:           classic_draw_list_item_bg(r, state); break;
     case THEME_PART_SLIDER_THUMB:        classic_draw_slider_thumb(r, state & CTRL_PRESSED); break;
+    case THEME_PART_SLIDER_TROUGH:       classic_draw_button_bg(r, CTRL_PRESSED); break;
+    case THEME_PART_SLIDER_KNOB:         classic_draw_button_bg(r, state & (CTRL_HOVER | CTRL_DISABLED)); break;
     case THEME_PART_SEGMENTED_TRACK:     fill_rect(get_sys_color(brControlBg), r); break;
     case THEME_PART_SEGMENT:             classic_draw_button_bg(r, state); break; // push-like row: the chosen one stays sunken
     case THEME_PART_MENU_ITEM:           if (!disabled) classic_draw_menu_item_bg(r, state); break;
@@ -376,6 +378,7 @@ static theme_t g_classic_theme = {
     .padding_x = 8, .padding_y = 6,
   },
   .thumbnail = { .gap = 2, .ring_width = 2 },
+  .slider = { .trough_inset = 3, .trough_radius = 0, .thumb_inset = 2, .thumb_length = 12, .thumb_radius = 0 },
   .plastic = {
     .corner_radius = CORNER_RADIUS_CIRCULAR, .bevel_width = 2, .shadow_size = 3,
     .gloss = 0.7f, .rim = 0.7f, .ink = 0.12f, .lift = 0.08f, .glyph_size = 20, .shadow_color = 0xE0000000,

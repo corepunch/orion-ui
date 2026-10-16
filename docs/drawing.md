@@ -403,8 +403,18 @@ and `lparam = control`. It consumes the second release so it cannot also fire
 
 Theme settings are grouped in inline structs by component: `scrollbar`, `caption`,
 `menubar`, `toolbar`, `control`, `button`, `window`, `card`, `thumbnail`, `plastic`, `drag`,
-`tab`, `menu`, `badge`, `field`, and `tooltip`. Shadows live under `window.shadow`,
+`tab`, `menu`, `badge`, `field`, `slider`, and `tooltip`. Shadows live under `window.shadow`,
 `drag.shadow`, and `tooltip.shadow`; shared control sizes use `control.size_pct`.
+
+`slider` shapes `SLIDER_TROUGH` sliders in both orientations: `trough_inset` and
+`thumb_inset` separate the control edge, trough and thumb on every side,
+`thumb_length` is the thumb's extent along the axis, and `trough_radius` /
+`thumb_radius` round them (`CORNER_RADIUS_CIRCULAR` makes a capsule;
+`THEME_CORNER_RADIUS()` resolves a metric for given bounds). Themes paint
+`THEME_PART_SLIDER_TROUGH` and `THEME_PART_SLIDER_KNOB`; the Slider derives
+painting, hit-testing and value mapping from the same rects. A press anywhere
+in the trough moves the nearest thumb under the pointer; a press on a thumb
+drags it without a jump.
 
 TabView header geometry uses `theme_t.tab.header.height`, `tab.header.start`,
 `tab.min_width`, and `tab.padding`. Bundled themes use `TITLEBAR_HEIGHT` for the

@@ -35,15 +35,22 @@ static void options_slider_tooltip(window_t *win, int ident, const char *name, i
   send_message(win, tbSetButtonInfo, 0, &info);
 }
 
-void imageeditor_sync_brush_size(window_t *win) {
+void imageeditor_sync_brush_sliders(window_t *win) {
   if (!g_app || !win) return;
   window_t *slider = get_window_item(win, IE_OPT_SIZE);
-  if (!slider) return;
-  slider_range_t range = {0, NUM_BRUSH_SIZES - 1};
-  send_message(slider, slSetRange, 0, &range);
-  send_message(slider, slSetPos, 0, (void *)(intptr_t)g_app->brush_size);
-  options_slider_tooltip(win, IE_OPT_SIZE, "Size (px)",
-                         2 * kBrushSizes[CLAMP(g_app->brush_size, 0, NUM_BRUSH_SIZES - 1)] + 1);
+  if (slider) {
+    slider_range_t range = {0, NUM_BRUSH_SIZES - 1};
+    send_message(slider, slSetRange, 0, &range);
+    send_message(slider, slSetPos, 0, (void *)(intptr_t)g_app->brush_size);
+    options_slider_tooltip(win, IE_OPT_SIZE, "Size (px)",
+                           2 * kBrushSizes[CLAMP(g_app->brush_size, 0, NUM_BRUSH_SIZES - 1)] + 1);
+  }
+  if ((slider = get_window_item(win, IE_OPT_OPACITY))) {
+    slider_range_t range = {1, 255};
+    send_message(slider, slSetRange, 0, &range);
+    send_message(slider, slSetPos, 0, (void *)(intptr_t)pencil_opacity());
+    options_slider_tooltip(win, IE_OPT_OPACITY, "Opacity (%)", (pencil_opacity() * 100 + 127) / 255);
+  }
 }
 
 static int fill_gap_to_index(int gap) {

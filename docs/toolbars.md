@@ -137,7 +137,11 @@ zero uses the theme foreground and disabled buttons use the disabled foreground.
 embedded child list. Its default length is three icon slots, including the
 two inter-icon gaps; `w` overrides that length in either orientation. Its width
 matches one icon in a vertical toolbar.
-Orientation follows the toolbar automatically. Configure its range and value
+Orientation follows the toolbar automatically. Put `SLIDER_TROUGH` in the
+item's `style` (`flags="SLIDER_TROUGH"` in `.orion`) for the trough look: a
+rounded well filling the cell with an inset thumb, as in a painting app's
+size and opacity sidebar. Item style bits meant for the embedded control never
+join a `TBSTYLE_CHECKGROUP` run. Configure its range and value
 through `slSetRange` / `slSetPos` on `get_window_item(toolbar, ident)` and handle
 `sliderValueChanged` through `evCommand`. Declarative toolbars can use `<slider>`.
 
@@ -297,10 +301,12 @@ Use `TOOLBAR_ITEM_TEXTEDIT` for a search field. Its `icon` names an optional
 SVG drawn inside the field before the placeholder and entered text (for
 example, `"search"`). The text edit reserves that space for text and cursor
 placement; standalone fields can use `edSetLeadingIcon` for the same behavior.
-A `TOOLBAR_ITEM_SPACER` with
-`TOOLBAR_ITEM_FLAG_FLEXSPACE` shares the remaining horizontal width with other
-flexible spacers, keeping following items aligned to the right as the toolbar
-resizes. Vertical toolbars retain the spacer's ordinary size.
+A `TOOLBAR_ITEM_SPACER` or `TOOLBAR_ITEM_SLIDER` with
+`TOOLBAR_ITEM_FLAG_FLEXSPACE` shares the remaining length along the toolbar's
+axis with the other flexible items, keeping following items aligned to the far
+end as the toolbar resizes. The item's ordinary size (a slider's `w`) is its
+minimum and is what the ideal size measures. A vertical toolbar flexes only
+while its items fit one column.
 
 To change a button's icon without recreating embedded controls, send
 `tbSetItemIcon` with the command ID in `wparam` and an icon name in `lparam`

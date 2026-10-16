@@ -165,7 +165,7 @@ static void canvas_blend_pixel(canvas_doc_t *doc, int x, int y, uint32_t c,
 #if IMAGEEDITOR_INDEXED
   if (pencil_has_layers(doc) && doc->layer.active == IE_LAYER_PENCIL) {
     if (!canvas_in_bounds(doc, x, y) || !canvas_in_selection(doc, x, y)) return;
-    uint32_t opacity = (uint32_t)IE_PENCIL_MAX_OPACITY * COLOR_A(c) * coverage;
+    uint32_t opacity = (uint32_t)pencil_opacity() * COLOR_A(c) * coverage;
     uint8_t value = (uint8_t)((opacity + 32512) / 65025);
     size_t at = (size_t)y * doc->canvas_w + x;
     if (value && doc->pixels[at] < 255) {

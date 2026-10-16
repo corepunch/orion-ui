@@ -364,6 +364,15 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
     case THEME_PART_SLIDER_TRACK:
       fill_rect(get_sys_color(modern_navy() ? brLightEdge : brButtonInner), r);
       break;
+    case THEME_PART_SLIDER_TROUGH:
+      fill_rounded_rect(get_sys_color(brControlBg), r, THEME_CORNER_RADIUS(get_theme()->slider.trough_radius, r));
+      break;
+    case THEME_PART_SLIDER_KNOB: {
+      int role = disabled ? brTextDisabled : (state & CTRL_PRESSED) ? brAccent :
+                 (state & CTRL_HOVER) ? brTextNormal : brTextSecondary;
+      fill_rounded_rect(get_sys_color(role), r, THEME_CORNER_RADIUS(get_theme()->slider.thumb_radius, r));
+      break;
+    }
     case THEME_PART_SCROLLBAR_TRACK:     fill_rect(get_sys_color(brStatusbarBg), r); break;
     case THEME_PART_SCROLLBAR_THUMB:
       r = rect_inset(r, (SCROLLBAR_WIDTH - SCROLLBAR_THUMB_WIDTH) / 2);
@@ -468,6 +477,7 @@ static theme_t g_modern_theme = {
     .padding_x = 12, .padding_y = 8,
   },
   .thumbnail = { .gap = 2, .ring_width = 3 },
+  .slider = { .trough_inset = 3, .trough_radius = 9, .thumb_inset = 3, .thumb_length = 12, .thumb_radius = 6 },
   .plastic = {
     .corner_radius = CORNER_RADIUS_CIRCULAR, .bevel_width = 2, .shadow_size = 3,
     .gloss = 1.0f, .rim = 0.55f, .ink = 0.10f, .lift = 0.10f, .glyph_size = 20, .shadow_color = 0xE0000000,

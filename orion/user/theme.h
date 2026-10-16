@@ -47,6 +47,10 @@ typedef enum {
   THEME_ICON_COUNT        = 12,
 } theme_icon_t;
 
+// Resolve a corner-radius metric for bounds r.
+#define THEME_CORNER_RADIUS(metric, r) \
+  ((metric) == CORNER_RADIUS_CIRCULAR ? MIN((r).w, (r).h) / 2 : MIN((metric), MIN((r).w, (r).h) / 2))
+
 // Default logical size for compact control glyphs.
 #define THEME_ICON_SIZE  9
 
@@ -162,6 +166,8 @@ typedef enum {
   THEME_PART_LIST_ITEM,
   THEME_PART_SLIDER_TRACK,
   THEME_PART_SLIDER_THUMB,
+  THEME_PART_SLIDER_TROUGH,   // SLIDER_TROUGH: rounded well filling the control across its axis
+  THEME_PART_SLIDER_KNOB,     // SLIDER_TROUGH: thumb inset in the trough; CTRL_PRESSED while dragged
   THEME_PART_SEGMENTED_TRACK, // trough behind a SegmentedControl's segments
   THEME_PART_SEGMENT,         // one segment; CTRL_SELECTED marks the chosen one
   THEME_PART_SCROLLBAR_TRACK,
@@ -293,6 +299,13 @@ typedef struct {
     int multiline_corner_radius;  // derived from single-line control height
     int padding_x;                // text inset from the ends, clearing the corner (FIELD_PADDING_X)
   } field;
+  struct {                   // SLIDER_TROUGH geometry; radii may be CORNER_RADIUS_CIRCULAR
+    int trough_inset;        // control edge to trough, on every side
+    int trough_radius;
+    int thumb_inset;         // trough edge to thumb, on every side
+    int thumb_length;        // thumb extent along the axis
+    int thumb_radius;
+  } slider;
   struct {
     int corner_radius, tail_size;
     int padding_x, padding_y, gap;

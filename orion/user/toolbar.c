@@ -78,6 +78,12 @@ static int toolbar_state_item_height(const toolbar_state_t *tb) {
   return toolbar_state_bsz(tb) + toolbar_label_extra(tb);
 }
 
+// Spacers and sliders marked FLEXSPACE share leftover length along the toolbar's axis.
+static bool toolbar_item_flexes(const toolbar_item_t *item) {
+  return (item->type == TOOLBAR_ITEM_SPACER || item->type == TOOLBAR_ITEM_SLIDER) &&
+         (item->style & TOOLBAR_ITEM_FLAG_FLEXSPACE);
+}
+
 static void toolbar_center_column(toolbar_state_t *tb, int first, int end, int x, int width) {
   if (tb->style & TOOLBAR_STYLE_LIST) {  // list rows fill the column, captions aligned
     for (int i = first; i < end; i++)
@@ -269,16 +275,20 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
   if (vertical && tb->columns <= 1 && tb->item_rects)
     toolbar_center_column(tb, column_start, tb->item_count, x, column_w);
 
-  if (!ideal && !vertical && tb->item_rects) {
+  // A vertical toolbar flexes only while its items fit one column.
+  if (!ideal && tb->item_rects && (!vertical || (tb->columns <= 1 && x == padding + grip_w))) {
     int flex_count = 0, offset = 0;
     for (int i = 0; i < tb->item_count; i++)
-      if (tb->items[i].type == TOOLBAR_ITEM_SPACER && (tb->items[i].style & TOOLBAR_ITEM_FLAG_FLEXSPACE)) flex_count++;
-    int extra = MAX(0, parent->frame.w - padding - (x - spacing));
+      if (toolbar_item_flexes(&tb->items[i])) flex_count++;
+    int extra = MAX(0, vertical ? parent->frame.h - padding - (cursor - vertical_spacing)
+                                : parent->frame.w - padding - (x - spacing));
     for (int i = 0; i < tb->item_count; i++) {
-      tb->item_rects[i].x += offset;
-      if (tb->items[i].type != TOOLBAR_ITEM_SPACER || !(tb->items[i].style & TOOLBAR_ITEM_FLAG_FLEXSPACE)) continue;
+      if (vertical) tb->item_rects[i].y += offset;
+      else          tb->item_rects[i].x += offset;
+      if (!toolbar_item_flexes(&tb->items[i])) continue;
       int share = extra / flex_count;
-      tb->item_rects[i].w += share;
+      if (vertical) tb->item_rects[i].h += share;
+      else          tb->item_rects[i].w += share;
       offset += share;
       extra -= share;
       flex_count--;
@@ -827,7 +837,17 @@ void toolbar_draw_non_client(window_t *win) {
   set_fullscreen();
 }
 
+// Items backed by an embedded child window; their style holds that control's class bits.
+static bool toolbar_item_embeds_control(const toolbar_item_t *item) {
+  return item->type == TOOLBAR_ITEM_COMBOBOX || item->type == TOOLBAR_ITEM_TEXTEDIT ||
+         item->type == TOOLBAR_ITEM_SLIDER || item->type == TOOLBAR_ITEM_SEGMENTED;
+}
+
 // TBSTYLE_CHECKGROUP buttons form a radio run: consecutive items that carry the style.
+static bool toolbar_item_grouped(const toolbar_item_t *item) {
+  return (item->style & TBSTYLE_CHECKGROUP) && !toolbar_item_embeds_control(item);
+}
+
 // TBSTATE_* bits of the item with this ident, or -1 when absent (TB_GETSTATE).
 int toolbar_item_state(window_t *win, int ident) {
   toolbar_state_t *tb = toolbar_get_state(win);
@@ -846,10 +866,10 @@ bool toolbar_is_button_checked(window_t *win, int ident) {
 static bool toolbar_set_checked(toolbar_state_t *tb, int i, bool checked) {
   toolbar_item_t *item = &tb->items[i];
   bool changed = ((item->state & TBSTATE_CHECKED) != 0) != checked;
-  if (checked && (item->style & TBSTYLE_CHECKGROUP)) {
+  if (checked && toolbar_item_grouped(item)) {
     int lo = i, hi = i;
-    while (lo > 0 && (tb->items[lo - 1].style & TBSTYLE_CHECKGROUP)) lo--;
-    while (hi + 1 < tb->item_count && (tb->items[hi + 1].style & TBSTYLE_CHECKGROUP)) hi++;
+    while (lo > 0 && toolbar_item_grouped(&tb->items[lo - 1])) lo--;
+    while (hi + 1 < tb->item_count && toolbar_item_grouped(&tb->items[hi + 1])) hi++;
     for (int j = lo; j <= hi; j++)
       if (j != i && (tb->items[j].state & TBSTATE_CHECKED)) { tb->items[j].state &= ~TBSTATE_CHECKED; changed = true; }
   }
@@ -1188,9 +1208,7 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         bool refit = false;
         for (int i = 0; tb->items && i < n && tb->item_rects; i++) {
           toolbar_item_t *item = &tb->items[i];
-          if (item->type != TOOLBAR_ITEM_COMBOBOX && item->type != TOOLBAR_ITEM_TEXTEDIT &&
-              item->type != TOOLBAR_ITEM_SLIDER && item->type != TOOLBAR_ITEM_SEGMENTED)
-            continue;
+          if (!toolbar_item_embeds_control(item)) continue;
 
           const char *cls = item->type == TOOLBAR_ITEM_COMBOBOX ? "ComboBox"
                             : item->type == TOOLBAR_ITEM_SLIDER ? "Slider"
@@ -1199,7 +1217,8 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
           irect16_t rf = {r.x, r.y, r.w, r.h};
           window_t *tc = create_window(item->text ? item->text : "",
                                        WINDOW_NOTITLE | WINDOW_NOFILL |
-                                       ((item->type == TOOLBAR_ITEM_SLIDER && tb->orientation == TOOLBAR_VERTICAL) ? SLIDER_VERTICAL : 0),
+                                       ((item->type == TOOLBAR_ITEM_SLIDER && tb->orientation == TOOLBAR_VERTICAL) ? SLIDER_VERTICAL : 0) |
+                                       (item->type == TOOLBAR_ITEM_SLIDER ? item->style & SLIDER_TROUGH : 0),
                                        &rf, win, cls, win->hinstance, NULL);
           if (!tc) {
             fprintf(stderr, "[tb] embedded control allocation failed win=%u ident=%d class=%s\n", win->id, item->ident, cls);

@@ -117,7 +117,7 @@ static void pencil_toolbar_items(window_t *win) {
     items[count++] = item;
   }
   send_message(win, tbSetItems, count, items);
-  imageeditor_sync_brush_size(win);
+  imageeditor_sync_brush_sliders(win);
   win->value = layer + 1;
 }
 
@@ -216,7 +216,7 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       for (int i = 0; i < ARRAY_LEN(items); i++)
         if (items[i].ident == ID_TOOL_SWATCH) items[i].type = TOOLBAR_ITEM_CUSTOM;
       send_message(win, tbSetItems, ARRAY_LEN(items), items);
-      imageeditor_sync_brush_size(win);
+      imageeditor_sync_brush_sliders(win);
 #endif
 #if !IMAGEEDITOR_BW
       send_message(win, tbCheckButton, g_app ? imageeditor_tool_group(g_app->current_tool) : ID_TOOL_SELECT, (void *)(intptr_t)1);
@@ -252,9 +252,12 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
       palette_draw_swatches(((toolbar_draw_item_t *)lparam)->rect);
       return true;
     case evCommand:
-      if (g_app && HIWORD(wparam) == sliderValueChanged && LOWORD(wparam) == IE_OPT_SIZE && lparam) {
-        g_app->brush_size = CLAMP((int)send_message(lparam, slGetPos, 0, NULL), 0, NUM_BRUSH_SIZES - 1);
-        imageeditor_sync_brush_size(win);
+      if (g_app && HIWORD(wparam) == sliderValueChanged && lparam &&
+          (LOWORD(wparam) == IE_OPT_SIZE || LOWORD(wparam) == IE_OPT_OPACITY)) {
+        int v = (int)send_message(lparam, slGetPos, 0, NULL);
+        if (LOWORD(wparam) == IE_OPT_SIZE) g_app->brush_size     = CLAMP(v, 0, NUM_BRUSH_SIZES - 1);
+        else                               g_app->pencil_opacity = CLAMP(v, 1, 255);
+        imageeditor_sync_brush_sliders(win);
         return true;
       }
       if (HIWORD(wparam) != btnClicked) return false;

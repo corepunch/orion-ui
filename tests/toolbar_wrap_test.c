@@ -3,6 +3,7 @@
 // Buttons/labels/separators/spacers are owner-drawn toolbar items stored in
 // toolbar_state_t. Only combobox/textedit items create embedded child windows.
 
+#include <math.h>
 #include "test_framework.h"
 #include "test_env.h"
 #include <orion/ui.h>
@@ -1132,6 +1133,80 @@ static void test_toolbar_vertical_custom_item(void) {
   PASS();
 }
 
+void test_toolbar_trough_slider(void) {
+  TEST("SLIDER_TROUGH slider: theme geometry, grab offset, jump-to-pointer, separate check groups");
+  test_env_init();
+  set_theme(THEME_MODERN);
+  window_t *win = create_window("", WINDOW_TOOLBAR | WINDOW_NOTITLE | WINDOW_NORESIZE,
+                                MAKERECT(50, 60, 40, 260), NULL, noop_proc, 0, NULL);
+  send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
+  toolbar_item_t items[] = {
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 41, .style = TBSTYLE_CHECKGROUP, .state = TBSTATE_CHECKED},
+    {.type = TOOLBAR_ITEM_SLIDER, .ident = 42, .style = SLIDER_TROUGH},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 43, .style = TBSTYLE_CHECKGROUP},
+  };
+  send_message(win, tbSetItems, ARRAY_LEN(items), items);
+  send_message(win, tbCheckButton, 43, (void *)(intptr_t)1);
+  ASSERT_TRUE(toolbar_is_button_checked(win, 41));
+  ASSERT_TRUE(toolbar_is_button_checked(win, 43));
+  window_t *slider = get_window_item(win, 42);
+  ASSERT_NOT_NULL(slider);
+  ASSERT_TRUE(slider->flags & SLIDER_TROUGH);
+  ASSERT_TRUE(slider->flags & SLIDER_VERTICAL);
+  const theme_t *t = get_theme();
+  int h = slider->frame.h, cx = slider->frame.w / 2;
+  int edge = t->slider.trough_inset + t->slider.thumb_inset + t->slider.thumb_length / 2, span = h - 2 * edge;
+  // Outside the trough: not a slider press.
+  ASSERT_FALSE(send_message(slider, evLeftButtonDown, MAKEDWORD(t->slider.trough_inset - 1, h / 2), NULL));
+  // On the thumb, 3px above its centre: dragging keeps the offset, so the value stays put.
+  ASSERT_TRUE(send_message(slider, evLeftButtonDown, MAKEDWORD(cx, h - edge - 3), NULL));
+  send_message(slider, evMouseMove, MAKEDWORD(cx, h - edge - 3), NULL);
+  ASSERT_EQUAL((int)send_message(slider, slGetPos, 0, NULL), 0);
+  send_message(slider, evMouseMove, MAKEDWORD(cx, h - edge - 3 - span / 2), NULL);
+  ASSERT_EQUAL((int)send_message(slider, slGetPos, 0, NULL), (int)lroundf((float)(span / 2) * 255.0f / span));
+  send_message(slider, evLeftButtonUp, 0, NULL);
+  // Elsewhere in the trough: the thumb jumps under the pointer.
+  ASSERT_TRUE(send_message(slider, evLeftButtonDown, MAKEDWORD(cx, edge), NULL));
+  ASSERT_EQUAL((int)send_message(slider, slGetPos, 0, NULL), 255);
+  send_message(slider, evLeftButtonUp, 0, NULL);
+  send_message(win, tbSetOrientation, TOOLBAR_HORIZONTAL, NULL);
+  ASSERT_FALSE(slider->flags & SLIDER_VERTICAL);
+  ASSERT_TRUE(slider->flags & SLIDER_TROUGH);
+  ASSERT_TRUE(send_message(slider, evLeftButtonDown, MAKEDWORD(edge, slider->frame.h / 2), NULL));
+  ASSERT_EQUAL((int)send_message(slider, slGetPos, 0, NULL), 0);
+  send_message(slider, evLeftButtonUp, 0, NULL);
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
+void test_toolbar_vertical_flex_slider(void) {
+  TEST("FLEXSPACE sliders share a vertical toolbar's leftover height");
+  test_env_init();
+  int heights[2], next_y[2];
+  for (int k = 0; k < 2; k++) {
+    window_t *win = create_window("", WINDOW_TOOLBAR | WINDOW_NOTITLE | WINDOW_NORESIZE,
+                                  MAKERECT(0, 0, 40, 200 + 100 * k), NULL, noop_proc, 0, NULL);
+    send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
+    toolbar_item_t items[] = {
+      {.type = TOOLBAR_ITEM_SLIDER, .ident = 42, .w = TB_SPACING, .style = TOOLBAR_ITEM_FLAG_FLEXSPACE},
+      {.type = TOOLBAR_ITEM_BUTTON, .ident = 43},
+    };
+    send_message(win, tbSetItems, ARRAY_LEN(items), items);
+    heights[k] = get_window_item(win, 42)->frame.h;
+    next_y[k] = window_toolbar_state(win)->item_rects[1].y;
+    isize16_t ideal = {0};
+    send_message(win, tbGetIdealSize, 0, &ideal);
+    ASSERT_TRUE(ideal.h < 200);
+    destroy_window(win);
+  }
+  ASSERT_TRUE(heights[0] > TB_SPACING);
+  ASSERT_EQUAL(heights[1] - heights[0], 100);
+  ASSERT_EQUAL(next_y[1] - next_y[0], 100);
+  test_env_shutdown();
+  PASS();
+}
+
 void test_toolbar_embedded_slider_drag(void) {
   TEST("toolbar slider routes captured dragging in both orientations");
   test_env_init();
@@ -1556,6 +1631,8 @@ int main(int argc, char *argv[]) {
     test_vertical_column_alignment();
     test_vertical_small_items_pack();
     test_toolbar_embedded_slider_drag();
+    test_toolbar_trough_slider();
+    test_toolbar_vertical_flex_slider();
     test_toolbar_vertical_custom_item();
     test_toolbar_set_items_creates_children();
     test_toolbar_spacer_skipped();

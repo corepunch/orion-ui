@@ -210,13 +210,14 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define IE_PENCIL_PALETTE_PREV 0x7df0
 #define IE_PENCIL_PALETTE_NEXT 0x7df1
 #define IE_PENCIL_COLOR_SWATCH 0
-#define IE_PENCIL_MAX_OPACITY 64       // 25% of 255; pencil coverage is stored as a byte.
+#define IE_PENCIL_DEFAULT_OPACITY 64   // 25% of 255; pencil coverage is stored as a byte.
 #define IE_PENCIL_FADE_LENGTH 16.0f   // Logical pixels from each stroke endpoint to full opacity.
 #define IE_PENCIL_DAB_SPACING 0.5f    // Backing pixels; flow is normalized by brush width.
 #define IE_PENCIL_GRAIN_VARIATION 32  // Deterministic 0–12.5% paper-grain variation.
 enum { IE_LAYER_BG, IE_LAYER_COLOR, IE_LAYER_PENCIL, IE_LAYER_FX, IE_LAYER_COUNT };
 const uint32_t *pencil_default_colors(void);
 uint32_t pencil_configured_color(void);
+int pencil_opacity(void);
 
 // ============================================================
 // Types
@@ -350,6 +351,7 @@ typedef struct canvas_doc_s {
     struct { ipoint16_t point; float radius, distance; } *samples;
     int count, capacity;
     float length, max_radius;
+    float opacity;  // coverage a straight pass deposits, fixed when the stroke begins
   } pencil_stroke;
   // Polygon tool in-progress vertices
   struct {
@@ -425,6 +427,7 @@ typedef struct {
   int            num_user_colors;
   int            shape_tool;
   int            brush_size;    // current brush radius (index into kBrushSizes)
+  int            pencil_opacity; // pencil coverage per pass, 1..255; 0 = IE_PENCIL_DEFAULT_OPACITY
   bool           shape_filled;  // true = solid fg fill, no outline; false = outline only
   // Text tool persistent settings (font size, antialias flag).
   struct {
@@ -704,7 +707,8 @@ result_t win_canvas_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
  result_t win_tool_palette_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 enum { IE_OPT_AA = 9001, IE_OPT_SPREAD, IE_OPT_COLOR, IE_OPT_FILLED, IE_OPT_GAP };
 #define IE_OPT_SIZE ID_PENCIL_TOOLS_SIZE
-void imageeditor_sync_brush_size(window_t *win);
+#define IE_OPT_OPACITY ID_PENCIL_TOOLS_OPACITY
+void imageeditor_sync_brush_sliders(window_t *win);
 void imageeditor_sync_tool_options(void);
 int imageeditor_tool_group(int tool);
 int imageeditor_layer_tool(int tool);

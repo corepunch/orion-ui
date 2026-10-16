@@ -145,12 +145,16 @@ static bool pencil_path_append(canvas_doc_t *doc, ipoint16_t point, float radius
   return true;
 }
 
-static float pencil_profile(float distance, float total) {
+int pencil_opacity(void) {
+  return g_app && g_app->pencil_opacity > 0 ? MIN(g_app->pencil_opacity, 255) : IE_PENCIL_DEFAULT_OPACITY;
+}
+
+static float pencil_profile(const canvas_doc_t *doc, float distance, float total) {
   if (total <= 0.0f) return 0;
   float fade = MAX(1.0f, IE_PENCIL_FADE_LENGTH * (float)MAX(1, g_bw_retina_scale));
   float t = MIN(distance / fade, (total - distance) / fade);
   t = CLAMP(t, 0.0f, 1.0f);
-  return (float)IE_PENCIL_MAX_OPACITY * t;
+  return doc->pencil_stroke.opacity * t;
 }
 
 static int pencil_grain(int x, int y) {
@@ -179,8 +183,8 @@ static void pencil_stamp(canvas_doc_t *doc, float cx, float cy, float along,
     float pixel_along = CLAMP(along + dx * tangent_x + dy * tangent_y, 0.0f, total);
     int grain = pencil_grain(x, y);
     float grain_factor = (255.0f - IE_PENCIL_GRAIN_VARIATION + grain) / 255.0f;
-    float previous = along < previous_total ? pencil_profile(pixel_along, previous_total) : 0.0f;
-    float alpha = (pencil_profile(pixel_along, total) - previous) * radial * grain_factor * flow;
+    float previous = along < previous_total ? pencil_profile(doc, pixel_along, previous_total) : 0.0f;
+    float alpha = (pencil_profile(doc, pixel_along, total) - previous) * radial * grain_factor * flow;
     if (alpha <= 0.0f) continue;
     size_t at = (size_t)y * doc->canvas_w + x;
     doc->pencil_stroke.coverage[at] = fminf(255.0f, doc->pencil_stroke.coverage[at] + alpha);
@@ -264,6 +268,7 @@ static bool pencil_path_begin(canvas_doc_t *doc, ipoint16_t point, float radius)
   }
   for (size_t i = 0; i < area; i++) doc->pencil_stroke.coverage[i] = doc->pixels[i];
   doc->pencil_stroke.active = true;
+  doc->pencil_stroke.opacity = (float)pencil_opacity();
   doc->stroke.active = true;
   doc->stroke.soft = true;
   doc->stroke.radius = radius;
