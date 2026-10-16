@@ -910,6 +910,17 @@ bool get_open_filename(openfilename_t *ofn) {
   return fp_run(ofn, false, ui_tr("Open File"));
 }
 
+bool get_open_image_filename(openfilename_t *ofn) {
+#ifdef AX_PLATFORM_IOS
+  if (!ofn) { fprintf(stderr, "[fp] photo open rejected: null request\n"); fflush(stderr); return false; }
+  AXopenfilename native = { .lpstrFile = ofn->lpstrFile, .nMaxFile = ofn->nMaxFile,
+                           .lpstrFilter = ofn->lpstrFilter };
+  return axGetOpenImageName(&native);
+#else
+  return fp_run(ofn, false, "Open Picture");
+#endif
+}
+
 bool get_save_filename(openfilename_t *ofn) {
   return fp_run(ofn, true, ui_tr("Save File"));
 }

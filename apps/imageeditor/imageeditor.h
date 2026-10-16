@@ -264,6 +264,15 @@ typedef struct {
   int      count;
 } undo_t;
 
+// Immutable straight-alpha sRGB RGBA8 picture under the Background layer's paint.
+// Checkpoints share it by reference; edits replace it with a new image.
+typedef struct bg_image_s {
+  int      refs;
+  uint32_t id;               // unique per image; keys the render cache
+  int      w, h;
+  uint8_t  pixels[];
+} bg_image_t;
+
 typedef struct canvas_doc_s {
   uint8_t *pixels;           // convenience alias → layer.stack[layer.active]->pixels
   int      canvas_w;         // image width in pixels
@@ -271,7 +280,9 @@ typedef struct canvas_doc_s {
   struct {
     uint32_t color;          // document background color used by preview/display paths
     bool     show;           // true = paint the document background behind pixels
+    bg_image_t *image;       // Pencil Test: picture under the Background plane, or NULL
   } background;
+  struct { GLuint tex; uint32_t id; } background_cache; // texture of background.image
   bool     canvas_dirty; // full upload required; overrides layer damage
   bool     drawing;
   bool     close_prompt_open;
@@ -672,6 +683,9 @@ bool     image_io_save(const char *path, const canvas_doc_t *doc);
 
 // Native file picker wrapper used by the menu commands.
 bool show_file_picker(window_t *parent, bool save_mode, char *out_path, size_t out_sz);
+bool show_image_picker(window_t *parent, char *out_path, size_t out_sz);
+// Stock background browser (Pencil Test); applies the chosen picture as a command.
+bool show_background_stock_dialog(window_t *parent, canvas_doc_t *doc);
 
 // Forward declarations for document management
 canvas_doc_t *create_document(const char *filename, int w, int h);
@@ -916,6 +930,7 @@ void swap_foreground_background_colors(void);
 #if IMAGEEDITOR_INDEXED
 typedef struct {
   uint8_t *background; // owned by caller, one indexed canvas
+  bg_image_t *image;   // owned by caller; NULL when the project has no picture
   int active;
   uint8_t visible;
 } pencil_file_layers_t;
@@ -1018,6 +1033,22 @@ bool doc_anim_load(canvas_doc_t *doc, int index);
 bool doc_anim_switch(canvas_doc_t *doc, int index);
 bool pencil_read_frame_layer(const canvas_doc_t *doc, int frame, int layer, uint8_t *pixels);
 bool pencil_composite_frame(const canvas_doc_t *doc, int frame, uint8_t *pixels);
+
+// Background image (canvas/canvas_background.c).
+bg_image_t *bg_image_new(int w, int h);
+bg_image_t *bg_image_retain(bg_image_t *img);
+void        bg_image_release(bg_image_t *img);
+// Scale an RGBA picture to cover w x h, cropping the centered excess.
+bg_image_t *bg_image_cover(const uint8_t *rgba, int src_w, int src_h, int w, int h);
+bg_image_t *bg_image_load(const char *path, int w, int h);
+// Crop/expand at (x, y) or resample to w x h, matching a canvas resize.
+bg_image_t *bg_image_transform(const bg_image_t *img, int x, int y, int w, int h, bool resample);
+// Replace the picture (retained) inside an open command; clears the Background plane.
+bool doc_set_background_image(canvas_doc_t *doc, bg_image_t *img);
+void doc_background_upload(canvas_doc_t *doc);
+void doc_background_free(canvas_doc_t *doc);
+// Blend the picture into a composite at Background opacity.
+void doc_background_composite(const canvas_doc_t *doc, uint8_t *rgba);
 bool doc_anim_rgba(const canvas_doc_t *doc, int frame, uint8_t *rgba);
 bool pencil_color_fill(canvas_doc_t *doc, int x, int y, uint32_t color, int gap);
 void cmd_redo(canvas_doc_t *doc);

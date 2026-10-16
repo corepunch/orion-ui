@@ -47,4 +47,9 @@ void cmd_layer_remove_mask(canvas_doc_t *doc);
 canvas_doc_t *cmd_layer_extract_mask(canvas_doc_t *doc);
 void cmd_layer_edit_mask(canvas_doc_t *doc, bool enable);
 
+// Pencil Test background image (picture under the Background layer's paint)
+bool cmd_background_set_image(canvas_doc_t *doc, bg_image_t *img);
+bool cmd_background_load(canvas_doc_t *doc, const char *path);
+void cmd_background_remove(canvas_doc_t *doc);
+
 #endif // __IMAGEEDITOR_COMMANDS_H__

@@ -34,6 +34,8 @@ def main():
     (target / 'bin').mkdir()  # bin/../share paths resolve inside the bundle.
     shutil.copytree(root / 'share', target / 'share/orion')
     shutil.copytree(root / 'apps' / source / 'share', target / 'share' / source)
+    if source != args.app and (root / 'apps' / source / args.app / 'share').is_dir():
+        shutil.copytree(root / 'apps' / source / args.app / 'share', target / 'share' / source / args.app)
     shutil.copy2(args.binary, target / args.app)
     catalog = target.parent / 'AppIcon.xcassets'
     appicons = catalog / 'AppIcon.appiconset'

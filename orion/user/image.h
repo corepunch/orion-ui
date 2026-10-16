@@ -35,4 +35,19 @@ bool save_image_png(const char *path, const uint8_t *pixels, int w, int h);
 bool save_image_jpg(const char *path, const uint8_t *pixels, int w, int h,
                     int quality);
 
+// Encode straight-alpha sRGB RGBA8 pixels as an in-memory PNG.
+// Release with free(); NULL on failure.
+uint8_t *encode_image_png(const uint8_t *pixels, int w, int h, size_t *out_size);
+
+// Largest centered x,y,w,h area of a src_w x src_h image with the aspect ratio
+// of dst_w x dst_h: the part a "cover" fit keeps.
+void image_cover_rect(int src_w, int src_h, int dst_w, int dst_h, int rect[4]);
+
+// Resample the rect (x, y, w, h) of straight-alpha sRGB RGBA8 pixels to
+// dst_w x dst_h. Filtering is done in linear light on premultiplied alpha:
+// downscaling averages every covered source pixel, upscaling interpolates
+// linearly. Release with free(); NULL on invalid arguments or allocation failure.
+uint8_t *image_resample_srgba8(const uint8_t *src, int src_w, int src_h,
+                               const int rect[4], int dst_w, int dst_h);
+
 #endif

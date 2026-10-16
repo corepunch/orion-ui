@@ -1,6 +1,6 @@
 # Pencil Test background plates
 
-Stock animation backgrounds for Pencil Test. They live in `apps/imageeditor/penciltest/share/` as JPEG files. Pencil Test does not list the folder in a menu. Open a file when you want it as the shared background.
+Stock animation backgrounds for Pencil Test. They live in `apps/imageeditor/penciltest/share/` as JPEG files and ship in `share/imageeditor/penciltest/`. Layer > Background Image... lists them as square thumbnails from `share/thumbs/`; choosing one makes it the shared Background picture.
 
 When asked to "draw N backgrounds" and pointed at this file, follow it exactly. Do not invent a smoother, more rendered look.
 
@@ -12,6 +12,7 @@ When asked to "draw N backgrounds" and pointed at this file, follow it exactly. 
 - Name: `kebab-case` of the place, one plate per file, in `apps/imageeditor/penciltest/share/`. Example: `wheat-field.jpg`.
 - One original location per file. No contact sheets, no captions, no borders, no signatures.
 - Add each new filename to the catalog at the bottom of this file.
+- Regenerate the browser thumbnails with `make -C apps/imageeditor/penciltest thumbs`: a centered square crop, area-averaged in linear light to 128×128, JPEG quality 85.
 
 ## What they are for
 
@@ -79,7 +80,7 @@ Each call is one new place. Change the place, the time of day, and the light. Do
 3. Open each result and check it against the list below before saving. If it fails, edit that plate again from the anchor. Do not save a near miss. Two tries, then keep the better one and note the defect in the reply.
 4. If a white or tan mat surrounds the paint, crop to the painted rectangle and scale back to 1280×720 with a high-quality resample. Paper is a near-white edge whose median luminance stays above about 190. Stop the crop where the median falls below that, then step one more pixel into the paint.
 5. Save as JPEG RGB quality 92, optimize, `chmod 644`, into `share/`. Overwrite only when redrawing that exact plate.
-6. Append the new names to the catalog.
+6. Append the new names to the catalog and run `make -C apps/imageeditor/penciltest thumbs`.
 
 ```python
 from PIL import Image

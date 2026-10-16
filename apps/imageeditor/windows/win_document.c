@@ -414,6 +414,7 @@ void close_document(canvas_doc_t *doc) {
   canvas_clear_selection_mask(doc);
 
   doc_free_layers(doc);
+  doc_background_free(doc);
   free(doc->layer.composite_buf);
   doc->layer.composite_buf = NULL;
 

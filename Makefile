@@ -404,6 +404,12 @@ share: | $(SHARE_DIR)
 	  mkdir -p $(SHARE_DIR)/$$name; \
 	  cp -R $$dir/. $(SHARE_DIR)/$$name/; \
 	done
+	@for dir in $(APPS)/*/*/share; do \
+	  [ -d "$$dir" ] || continue; \
+	  variant=$$(basename $$(dirname "$$dir")); name=$$(basename $$(dirname $$(dirname "$$dir"))); \
+	  mkdir -p $(SHARE_DIR)/$$name/$$variant; \
+	  cp -R $$dir/. $(SHARE_DIR)/$$name/$$variant/; \
+	done
 	@cp $(LEDGER_ASSISTANT_VOCABULARY) $(SHARE_DIR)/ledger/addons/assistant/vocabulary.lua
 
 # ── Core libraries ───────────────────────────────────────────────────────

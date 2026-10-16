@@ -54,6 +54,13 @@ typedef struct {
 // Returns true when the user confirms, false when cancelled.
 bool get_open_filename(openfilename_t *ofn);
 
+// Show a modal picker for one picture from the user's photos.
+// iOS presents the Photos library and writes a temporary sRGB JPEG copy (owned
+// by the platform, replaced on the next call); elsewhere it is the "Open File"
+// dialog, starting where ofn->lpstrFile points, with the caller's filter.
+// Returns true when a picture was chosen, false when cancelled.
+bool get_open_image_filename(openfilename_t *ofn);
+
 // Show a modal "Save File" dialog.
 // Writes the selected/entered absolute path into ofn->lpstrFile on success.
 // Returns true when the user confirms, false when cancelled.

@@ -26,6 +26,10 @@ static menu_item_t s_pencil_layer_items[] = {
   {NULL, 0, NULL, 0},
   {"Fill with Foreground Color\tAlt+Backspace", ID_LAYER_FILL_FOREGROUND, NULL, 0},
   {"Fill with Background Color\tCtrl+Backspace", ID_LAYER_FILL_BACKGROUND, NULL, 0},
+  {NULL, 0, NULL, 0},
+  {"Background Image...", ID_LAYER_BACKGROUND_STOCK, NULL, 0},
+  {"Background from Photo...", ID_LAYER_BACKGROUND_PHOTO, NULL, 0},
+  {"Remove Background Image", ID_LAYER_BACKGROUND_REMOVE, NULL, 0},
 };
 #endif
 static menu_item_t s_view_items[VIEW_ITEM_COUNT];
@@ -367,7 +371,7 @@ bool imageeditor_open_file_path(const char *path) {
     loaded_anim = flc_load_layers(path, &img_w, &img_h, pal, &background, &show_bg, &loaded_layers);
     if (!loaded_anim) return false;
     if (loaded_layers.background && !IMAGEEDITOR_BW) {
-      anim_timeline_free(loaded_anim); free(loaded_layers.background);
+      anim_timeline_free(loaded_anim); free(loaded_layers.background); bg_image_release(loaded_layers.image);
       return false;
     }
     pal_count = 256;
@@ -384,7 +388,7 @@ bool imageeditor_open_file_path(const char *path) {
     free(px);
 #if IMAGEEDITOR_INDEXED
     anim_timeline_free(loaded_anim);
-    free(loaded_layers.background);
+    free(loaded_layers.background); bg_image_release(loaded_layers.image);
 #endif
     return false;
   }
@@ -394,7 +398,7 @@ bool imageeditor_open_file_path(const char *path) {
     free(px);
 #if IMAGEEDITOR_INDEXED
     anim_timeline_free(loaded_anim);
-    free(loaded_layers.background);
+    free(loaded_layers.background); bg_image_release(loaded_layers.image);
 #endif
     return false;
   }
@@ -432,6 +436,8 @@ bool imageeditor_open_file_path(const char *path) {
         free(ndoc->layer.stack[IE_LAYER_BG]->pixels);
         ndoc->layer.stack[IE_LAYER_BG]->pixels = loaded_layers.background;
         loaded_layers.background = NULL;
+        ndoc->background.image = loaded_layers.image;
+        loaded_layers.image = NULL;
         for (int i = 0; i < IE_LAYER_COUNT; i++) ndoc->layer.stack[i]->visible = (loaded_layers.visible >> i) & 1;
         doc_set_active_layer(ndoc, loaded_layers.active);
       } else doc_set_active_layer(ndoc, IE_LAYER_COLOR);
@@ -442,7 +448,7 @@ bool imageeditor_open_file_path(const char *path) {
 #endif
 
 #if IMAGEEDITOR_INDEXED
-  free(loaded_layers.background);
+  free(loaded_layers.background); bg_image_release(loaded_layers.image);
 #endif
   if (!doc_anim_commit(ndoc)) { close_document(ndoc); return false; }
   imageeditor_sync_tool_palette();
@@ -872,6 +878,25 @@ void handle_menu_command(uint16_t id) {
       if (doc && g_app)
         cmd_layer_fill(doc, g_app->bg_color);
       break;
+
+#if IMAGEEDITOR_BW
+    case ID_LAYER_BACKGROUND_STOCK:
+      if (pencil_has_layers(doc)) show_background_stock_dialog(doc->win ? doc->win : g_app->menubar_win, doc);
+      break;
+
+    case ID_LAYER_BACKGROUND_PHOTO:
+      if (pencil_has_layers(doc)) {
+        char path[MAX_FILENAME];
+        window_t *owner = doc->win ? doc->win : g_app->menubar_win;
+        if (show_image_picker(owner, path, sizeof(path)) && !cmd_background_load(doc, path))
+          message_box(owner, "This picture could not be opened.", "Background Image", MB_OK);
+      }
+      break;
+
+    case ID_LAYER_BACKGROUND_REMOVE:
+      cmd_background_remove(doc);
+      break;
+#endif
 
     case ID_LAYER_FILL_FOREGROUND:
       if (doc && g_app)

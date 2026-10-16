@@ -46,3 +46,28 @@ bool show_file_picker(window_t *parent, bool save_mode,
   else
     return get_open_filename(&ofn);
 }
+
+// Picture picker for backgrounds: the Photos library on iOS, else the
+// Open dialog starting in the user's Pictures folder.
+bool show_image_picker(window_t *parent, char *out_path, size_t out_sz) {
+  if (!out_path || !out_sz) return false;
+  const char *home = getenv("HOME");
+  struct stat st;
+  char pictures[MAX_FILENAME];
+  if (home && snprintf(pictures, sizeof(pictures), "%s/Pictures", home) < (int)sizeof(pictures) &&
+      !stat(pictures, &st) && S_ISDIR(st.st_mode))
+    snprintf(out_path, out_sz, "%s/", pictures);
+  else out_path[0] = '\0';
+  openfilename_t ofn = {0};
+  ofn.lStructSize  = sizeof(ofn);
+  ofn.hwndOwner    = parent;
+  ofn.lpstrFile    = out_path;
+  ofn.nMaxFile     = (uint32_t)out_sz;
+  ofn.lpstrFilter  = "Pictures\0*.jpg;*.jpeg;*.png;*.bmp\0"
+                     "JPEG Files\0*.jpg;*.jpeg\0"
+                     "PNG Files\0*.png\0"
+                     "All Files\0*.*\0";
+  ofn.nFilterIndex = 1;
+  ofn.Flags        = OFN_FILEMUSTEXIST;
+  return get_open_image_filename(&ofn);
+}

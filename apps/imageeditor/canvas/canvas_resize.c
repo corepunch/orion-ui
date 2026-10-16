@@ -185,6 +185,12 @@ static void layer_replace_pixels(layer_t *lay, uint8_t *pixels) {
 // Resize stored frames alongside the working layers, inside the same command.
 bool canvas_resize_frames(canvas_doc_t *doc, int x, int y, int w, int h,
                            bool resample, image_resize_filter_t filter) {
+  if (doc->background.image) {
+    bg_image_t *img = bg_image_transform(doc->background.image, x, y, w, h, resample);
+    if (!img) return false;
+    bg_image_release(doc->background.image);
+    doc->background.image = img;
+  }
   if (!doc->anim) return true;
   for (int i = 0; i < doc->anim->cel_count; i++) {
     if (doc->anim->bank[i] == doc->anim->frames[doc->anim->active_frame].cel) continue;

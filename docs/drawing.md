@@ -317,6 +317,15 @@ dirty = false;
 draw_rect(tex, 0, 0, W * SCALE, H * SCALE);
 ```
 
+## Resampling pictures (`user/image.h`)
+
+`image_resample_srgba8(src, w, h, rect, dst_w, dst_h)` scales the `rect` area of
+straight-alpha sRGB RGBA8 pixels in linear light on premultiplied alpha:
+downscaling averages every covered source pixel and upscaling interpolates
+linearly. `image_cover_rect(src_w, src_h, dst_w, dst_h, rect)` returns the
+centered crop a "cover" fit keeps, e.g. a square thumbnail of a 16:9 plate.
+`encode_image_png` produces an in-memory PNG for embedding pictures in files.
+
 ## Status Bar Text
 
 ```c

@@ -561,6 +561,9 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           if (!lay->tex) continue;
           if (pencil_has_layers(doc)) {
 #if IMAGEEDITOR_BW
+            if (li == IE_LAYER_BG && doc->background_cache.tex)
+              draw_rect_blend(doc->background_cache.tex, canvas_rect.x, canvas_rect.y, canvas_rect.w, canvas_rect.h,
+                              lay->opacity / 255.0f, UI_LAYER_BLEND_NORMAL);
             if (li == IE_LAYER_PENCIL) {
               uint32_t c = pencil_configured_color();
               draw_sprite_region(lay->tex, canvas_rect, NULL,

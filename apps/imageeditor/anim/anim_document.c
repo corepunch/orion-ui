@@ -66,6 +66,7 @@ static bool pencil_composite_frame_rgba(const canvas_doc_t *doc, int frame, uint
     int layer = order[i];
     const layer_t *lay = doc->layer.stack[layer];
     if (!lay->visible) continue;
+    if (layer == IE_LAYER_BG) doc_background_composite(doc, rgba);
     ok = pencil_read_frame_layer(doc, frame, layer, plane);
     if (!ok) break;
     for (size_t p = 0; p < n; p++) {

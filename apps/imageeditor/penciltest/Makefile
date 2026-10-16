@@ -49,7 +49,7 @@ settings = {
 endef
 export EXPORT_METADATA
 
-.PHONY: export converter help
+.PHONY: export converter help thumbs
 converter:
 	@$(MAKE) -C "$(ROOT)" penciltest-video
 
@@ -85,8 +85,13 @@ export: converter
 	mv -f "$$stage/export.json" "$$OUTPUT_DIR/export.json"; \
 	echo "Project: $$OUTPUT_DIR/black.ptf"
 
+# Square 128px stock-background thumbnails for the background browser.
+thumbs:
+	"$(PYTHON)" "$(ROOT)/tools/penciltest_thumbnails.py" "$(ROOT)/apps/imageeditor/penciltest/share"
+
 help:
 	@echo 'make -C apps/imageeditor/penciltest INPUT=/path/to/video.mp4 [SETTING=value ...]'
+	@echo 'make -C apps/imageeditor/penciltest thumbs: regenerate stock background thumbnails'
 	@echo 'Defaults: THRESHOLD=180 MIN_WIDTH=1.25 MIN_LENGTH=10 TEMPORAL=1'
 	@echo 'Colored artwork: OUTLINES=1 OUTLINE_THRESHOLD=10 OUTLINE_WINDOW=15 (defaults MIN_WIDTH=1 TEMPORAL=0)'
 	@echo 'OUTLINE_THRESHOLD: darkness below the local mean, 0..255; higher keeps fewer marks.'

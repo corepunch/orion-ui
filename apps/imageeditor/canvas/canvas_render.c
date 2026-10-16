@@ -18,6 +18,7 @@ void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
     int li = pencil_has_layers(doc) ? pencil_order[order_i] : order_i;
     const layer_t *lay = doc->layer.stack[li];
     if (!lay->visible) continue;
+    if (pencil_has_layers(doc) && li == IE_LAYER_BG) doc_background_composite(doc, dst);
     const uint8_t *idx_buf = lay->pixels;
     for (size_t i = 0; i < n; i++) {
       uint8_t pidx = idx_buf[i];
@@ -186,6 +187,7 @@ static bool layer_upload_texture(canvas_doc_t *doc, layer_t *lay, irect16_t r) {
 
 void canvas_upload(canvas_doc_t *doc) {
   if (!doc) return;
+  doc_background_upload(doc);
   bool complete = true;
   for (int i = 0; i < doc->layer.count; i++) {
     layer_t *lay = doc->layer.stack[i];

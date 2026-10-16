@@ -83,6 +83,9 @@
         <item name="flatten" label="Flatten Image" />
         <item name="fill_foreground" label="Fill with Foreground Color" shortcut="Alt+Backspace" />
         <item name="fill_background" label="Fill with Background Color" shortcut="Ctrl+Backspace" />
+        <item name="background_stock" label="Background Image..." if="IMAGEEDITOR_BW" />
+        <item name="background_photo" label="Background from Photo..." if="IMAGEEDITOR_BW" />
+        <item name="background_remove" label="Remove Background Image" if="IMAGEEDITOR_BW" />
         <Separator />
         <item name="add_mask" label="Add Mask" />
         <item name="apply_mask" label="Apply Mask" />
@@ -518,6 +521,16 @@
           </Column>
         </GridView>
         <StackView name="actions" orientation="horizontal" spacing="6">
+          <Space name="flex" />
+          <Button name="ok" text="OK" flags="BUTTON_DEFAULT" />
+          <Button name="cancel" text="Cancel" />
+        </StackView>
+      </form>
+
+      <form name="background_stock" title="Background Image" width="600" height="440" flags="WINDOW_DIALOG | WINDOW_NOTRAYBUTTON" spacing="8" padding="8">
+        <IconGrid name="plates" text="" flags="WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_VSCROLL | WINDOW_FLEXSPACE" />
+        <StackView name="actions" orientation="horizontal" spacing="6">
+          <Button name="photo" text="From Photo..." />
           <Space name="flex" />
           <Button name="ok" text="OK" flags="BUTTON_DEFAULT" />
           <Button name="cancel" text="Cancel" />

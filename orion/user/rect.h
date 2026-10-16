@@ -106,4 +106,15 @@ static inline irect16_t rect_trim_bottom(irect16_t r, int h) {
   return (irect16_t){ r.x, r.y, r.w, r.h - h };
 }
 
+// ── Set operations ────────────────────────────────────────────────────────
+
+// Overlap of a and b (IntersectRect); an empty overlap has zero width and height.
+static inline irect16_t rect_intersect(irect16_t a, irect16_t b) {
+  int x0 = a.x > b.x ? a.x : b.x, y0 = a.y > b.y ? a.y : b.y;
+  int x1 = a.x + a.w < b.x + b.w ? a.x + a.w : b.x + b.w;
+  int y1 = a.y + a.h < b.y + b.h ? a.y + a.h : b.y + b.h;
+  if (x1 <= x0 || y1 <= y0) return (irect16_t){ x0, y0, 0, 0 };
+  return (irect16_t){ x0, y0, x1 - x0, y1 - y0 };
+}
+
 #endif /* __UI_RECT_H__ */

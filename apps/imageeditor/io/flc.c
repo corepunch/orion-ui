@@ -15,6 +15,7 @@
 #define FLC_META 0x7074
 #define FLC_LAYERS 0x7075
 #define FLC_BANK 0x7076
+#define FLC_IMAGE 0x7077
 #define FLC_LIMIT (512u * 1024u * 1024u)
 #define FLC_META_SIZE 1084
 
@@ -143,8 +144,8 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
                                  uint32_t out_pal[256], uint32_t *background, bool *show_bg,
                                  pencil_file_layers_t *layers) {
   FILE *fp = fopen(path, "rb");
-  uint8_t header[128], *pixels = NULL, *block = NULL, *metadata = NULL, *cel_buffers = NULL, *bank_meta = NULL;
-  size_t bank_size = 0; bool bank_layers = false;
+  uint8_t header[128], *pixels = NULL, *block = NULL, *metadata = NULL, *cel_buffers = NULL, *bank_meta = NULL, *png = NULL;
+  size_t bank_size = 0, png_size = 0; bool bank_layers = false;
   anim_timeline_t *tl = NULL;
   long layer_offset = 0;
   uint32_t layer_length = 0;
@@ -187,11 +188,15 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
       if (bank_meta || memcmp(chunk + 8, "PTB1", 4) || length < 28 || length > FLC_LIMIT) goto fail;
       bank_size = length - 16; bank_meta = malloc(bank_size);
       if (!bank_meta || fread(bank_meta, 1, bank_size, fp) != bank_size) goto fail;
+    } else if (flc_u16(chunk + 4) == FLC_IMAGE) {
+      if (png || memcmp(chunk + 8, "PTI1", 4) || length <= 16 || length > FLC_LIMIT) goto fail;
+      png_size = length - 16; png = malloc(png_size);
+      if (!png || fread(png, 1, png_size, fp) != png_size) goto fail;
     } else if (fseek(fp, length - 16, SEEK_CUR)) goto fail;
     pos += length;
   }
   const char *ext = strrchr(path, '.');
-  if ((bank_layers != (bank_meta != NULL)) || (bank_meta && !layer_offset) || (layer_offset && !metadata) || (ext && !strcasecmp(ext, ".ptf") && !layer_offset)) goto fail;
+  if ((png && !layer_offset) || (bank_layers != (bank_meta != NULL)) || (bank_meta && !layer_offset) || (layer_offset && !metadata) || (ext && !strcasecmp(ext, ".ptf") && !layer_offset)) goto fail;
   if (fseek(fp, 128, SEEK_SET)) goto fail;
   pixels = calloc((size_t)w, h);
   tl = calloc(1, sizeof(*tl));
@@ -318,14 +323,27 @@ anim_timeline_t *flc_load_layers(const char *path, int *out_w, int *out_h,
       if (!layers->background) goto fail;
       memcpy(layers->background, pixels, n);
       layers->active = active_layer; layers->visible = visible_layers;
+      if (png) {
+        int iw = 0, ih = 0;
+        uint8_t *rgba = load_image_memory(png, png_size, &iw, &ih);
+        if (rgba && iw == w && ih == h && (layers->image = bg_image_new(w, h)))
+          memcpy(layers->image->pixels, rgba, n * 4);
+        if (rgba) image_free(rgba);
+        if (!layers->image) {
+          fprintf(stderr, "[flc] background image rejected path=%s image=%dx%d canvas=%dx%d\n", path, iw, ih, w, h);
+          fflush(stderr);
+          free(layers->background); layers->background = NULL;
+          goto fail;
+        }
+      }
     }
   }
-  fclose(fp); free(pixels); free(metadata); free(cel_buffers); free(bank_meta);
+  fclose(fp); free(pixels); free(metadata); free(cel_buffers); free(bank_meta); free(png);
   *out_w = w; *out_h = h;
   return tl;
 fail:
   if (fp) fclose(fp);
-  free(pixels); free(block); free(metadata); free(cel_buffers); free(bank_meta); anim_timeline_free(tl);
+  free(pixels); free(block); free(metadata); free(cel_buffers); free(bank_meta); free(png); anim_timeline_free(tl);
   return NULL;
 }
 
@@ -443,6 +461,19 @@ static bool flc_write_layers(FILE *fp, const canvas_doc_t *doc) {
   return ok;
 }
 
+// Lossless PNG of the background image; old readers skip the unknown chunk.
+static bool flc_write_image(FILE *fp, const bg_image_t *img) {
+  size_t size = 0;
+  uint8_t *png = encode_image_png(img->pixels, img->w, img->h, &size);
+  if (!png || 16u + size > FLC_LIMIT) { free(png); return false; }
+  uint8_t header[16] = {0};
+  flc_put32(header, (uint32_t)(16 + size));
+  flc_put16(header + 4, FLC_IMAGE); memcpy(header + 8, "PTI1", 4);
+  bool ok = fwrite(header, 1, 16, fp) == 16 && fwrite(png, 1, size, fp) == size;
+  free(png);
+  return ok;
+}
+
 bool flc_save(const char *path, const canvas_doc_t *doc) {
   if (!path || !doc || !doc->anim || doc->command.before || (doc->layer.count != 1 && !pencil_has_layers(doc)) ||
       doc->anim->playing || doc->anim->fps < 1 || doc->anim->fps > 1000 ||
@@ -483,6 +514,7 @@ bool flc_save(const char *path, const canvas_doc_t *doc) {
   if (ok) ok = flc_write_frame(fp, doc, 0, previous, false); // Ring frame restores the start.
   if (ok) ok = flc_write_metadata(fp, doc);
   if (ok && pencil_has_layers(doc)) ok = flc_write_bank(fp, doc->anim) && flc_write_layers(fp, doc);
+  if (ok && pencil_has_layers(doc) && doc->background.image) ok = flc_write_image(fp, doc->background.image);
   long total = ftell(fp);
   if (total < 128 || (uint64_t)total > 2u * FLC_LIMIT) ok = false;
   flc_put32(header, total);

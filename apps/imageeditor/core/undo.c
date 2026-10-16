@@ -9,6 +9,7 @@ static void free_snapshot(doc_snapshot_t *blob) {
   if (!blob) return;
   canvas_doc_t *s = &blob->state;
   doc_free_layers(s);
+  bg_image_release(s->background.image);
   free(s->layer.composite_buf);
   free(s->sel.mask.data);
   free(s->sel.floating.pixels);
@@ -35,6 +36,7 @@ static doc_snapshot_t *make_snapshot(const canvas_doc_t *doc) {
   s->canvas_w = doc->canvas_w;
   s->canvas_h = doc->canvas_h;
   s->background = doc->background;
+  bg_image_retain(s->background.image);
   s->modified = doc->modified;
   s->layer.active = doc->layer.active;
   s->layer.editing_mask = doc->layer.editing_mask;
@@ -85,6 +87,7 @@ static void restore_snapshot(canvas_doc_t *doc, doc_snapshot_t *blob) {
   doc->poly.count = 0;
   doc->canvas_w = s->canvas_w;
   doc->canvas_h = s->canvas_h;
+  bg_image_release(doc->background.image);
   doc->background = s->background;
   doc->layer = s->layer;
   doc->sel = s->sel;
@@ -132,6 +135,7 @@ static bool snapshot_matches(const canvas_doc_t *doc, const canvas_doc_t *s) {
       doc->layer.count != s->layer.count || doc->layer.active != s->layer.active ||
       doc->layer.editing_mask != s->layer.editing_mask ||
       doc->background.color != s->background.color || doc->background.show != s->background.show ||
+      doc->background.image != s->background.image ||
       doc->sel.active != s->sel.active || doc->sel.move.active != s->sel.move.active) return false;
   size_t area = (size_t)doc->canvas_w * doc->canvas_h;
   for (int i = 0; i < doc->layer.count; i++) {

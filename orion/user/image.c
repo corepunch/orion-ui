@@ -8,10 +8,19 @@
 #include "stb_image_write.h"
 
 #include "image.h"
+#include "color.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+#ifndef MAX
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif
 
 static uint16_t image_read16_be(const uint8_t *p) {
   return (uint16_t)((p[0] << 8) | p[1]);
@@ -352,6 +361,109 @@ bool save_image_png(const char *path, const uint8_t *pixels, int w, int h) {
 bool save_image_jpg(const char *path, const uint8_t *pixels, int w, int h,
                     int quality) {
   return stbi_write_jpg(path, w, h, 4, pixels, quality) != 0;
+}
+
+uint8_t *encode_image_png(const uint8_t *pixels, int w, int h, size_t *out_size) {
+  int len = 0;
+  if (out_size) *out_size = 0;
+  if (!pixels || w < 1 || h < 1 || !out_size) return NULL;
+  uint8_t *png = stbi_write_png_to_mem(pixels, w * 4, w, h, 4, &len);
+  if (!png) {
+    fprintf(stderr, "[image] PNG encode failed w=%d h=%d\n", w, h);
+    fflush(stderr);
+    return NULL;
+  }
+  *out_size = (size_t)len;
+  return png;
+}
+
+void image_cover_rect(int src_w, int src_h, int dst_w, int dst_h, int rect[4]) {
+  rect[0] = rect[1] = 0; rect[2] = src_w; rect[3] = src_h;
+  if (src_w < 1 || src_h < 1 || dst_w < 1 || dst_h < 1) return;
+  if ((int64_t)src_w * dst_h > (int64_t)src_h * dst_w)
+    rect[2] = (int)MAX(1, ((int64_t)src_h * dst_w + dst_h / 2) / dst_h);
+  else
+    rect[3] = (int)MAX(1, ((int64_t)src_w * dst_h + dst_w / 2) / dst_w);
+  rect[0] = (src_w - rect[2]) / 2;
+  rect[1] = (src_h - rect[3]) / 2;
+}
+
+// One output sample's source taps: a box of max(1, scale) source pixels
+// centered on the sample, clipped to the image and weighted by overlap.
+typedef struct { int first, count; float *weights; } image_taps_t;
+
+static image_taps_t *image_build_taps(int src_n, int start, int len, int dst_n, float **storage) {
+  float scale = (float)len / (float)dst_n, radius = MAX(scale, 1.0f) * 0.5f;
+  int max_taps = (int)ceilf(radius * 2.0f) + 2;
+  image_taps_t *taps = malloc((size_t)dst_n * sizeof(*taps));
+  *storage = malloc((size_t)dst_n * max_taps * sizeof(float));
+  if (!taps || !*storage) { free(taps); free(*storage); *storage = NULL; return NULL; }
+  for (int i = 0; i < dst_n; i++) {
+    float center = start + (i + 0.5f) * scale;
+    float lo = MAX(0.0f, center - radius), hi = MIN((float)src_n, center + radius);
+    image_taps_t *t = &taps[i];
+    t->first = MIN(src_n - 1, (int)floorf(lo));
+    t->weights = *storage + (size_t)i * max_taps;
+    t->count = 0;
+    float total = 0.0f;
+    for (int j = t->first; j < src_n && j < hi && t->count < max_taps; j++) {
+      float w = MIN(hi, (float)(j + 1)) - MAX(lo, (float)j);
+      t->weights[t->count++] = MAX(0.0f, w);
+      total += MAX(0.0f, w);
+    }
+    if (!t->count) { t->weights[0] = 1.0f; t->count = 1; total = 1.0f; }
+    for (int k = 0; k < t->count; k++) t->weights[k] /= total;
+  }
+  return taps;
+}
+
+uint8_t *image_resample_srgba8(const uint8_t *src, int src_w, int src_h,
+                               const int rect[4], int dst_w, int dst_h) {
+  if (!src || !rect || src_w < 1 || src_h < 1 || dst_w < 1 || dst_h < 1 ||
+      dst_w > 16384 || dst_h > 16384 || rect[2] < 1 || rect[3] < 1 ||
+      rect[0] < 0 || rect[1] < 0 || rect[0] > src_w - rect[2] || rect[1] > src_h - rect[3]) {
+    fprintf(stderr, "[image] resample rejected src=%dx%d rect=%d,%d,%d,%d dst=%dx%d\n", src_w, src_h,
+            rect ? rect[0] : 0, rect ? rect[1] : 0, rect ? rect[2] : 0, rect ? rect[3] : 0, dst_w, dst_h);
+    fflush(stderr);
+    return NULL;
+  }
+  float lut[256], *xs_storage = NULL, *ys_storage = NULL;
+  for (int i = 0; i < 256; i++) lut[i] = ui_srgb8_to_linear((uint8_t)i);
+  image_taps_t *xs = image_build_taps(src_w, rect[0], rect[2], dst_w, &xs_storage);
+  image_taps_t *ys = image_build_taps(src_h, rect[1], rect[3], dst_h, &ys_storage);
+  float *acc = malloc((size_t)dst_w * 4 * sizeof(float));
+  uint8_t *dst = malloc((size_t)dst_w * dst_h * 4);
+  if (!xs || !ys || !acc || !dst) {
+    fprintf(stderr, "[image] resample allocation failed dst=%dx%d\n", dst_w, dst_h);
+    fflush(stderr);
+    free(dst); dst = NULL;
+    goto done;
+  }
+  for (int oy = 0; oy < dst_h; oy++) {
+    memset(acc, 0, (size_t)dst_w * 4 * sizeof(float));
+    for (int ty = 0; ty < ys[oy].count; ty++) {
+      const uint8_t *row = src + (size_t)(ys[oy].first + ty) * src_w * 4;
+      float wy = ys[oy].weights[ty];
+      for (int ox = 0; ox < dst_w; ox++) {
+        float *a = acc + (size_t)ox * 4;
+        for (int tx = 0; tx < xs[ox].count; tx++) {
+          const uint8_t *p = row + (size_t)(xs[ox].first + tx) * 4;
+          float w = wy * xs[ox].weights[tx] * (p[3] / 255.0f);
+          a[0] += lut[p[0]] * w; a[1] += lut[p[1]] * w; a[2] += lut[p[2]] * w; a[3] += w;
+        }
+      }
+    }
+    uint8_t *out = dst + (size_t)oy * dst_w * 4;
+    for (int ox = 0; ox < dst_w; ox++, out += 4) {
+      const float *a = acc + (size_t)ox * 4;
+      if (a[3] <= 0.0f) { memset(out, 0, 4); continue; }
+      for (int c = 0; c < 3; c++) out[c] = ui_linear_to_srgb8(a[c] / a[3]);
+      out[3] = (uint8_t)(MIN(1.0f, a[3]) * 255.0f + 0.5f);
+    }
+  }
+done:
+  free(xs); free(ys); free(xs_storage); free(ys_storage); free(acc);
+  return dst;
 }
 
 uint8_t *load_image_memory(const void *data, size_t size, int *out_w, int *out_h) {
