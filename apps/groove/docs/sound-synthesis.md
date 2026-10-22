@@ -59,10 +59,10 @@ The synthesized voices combine the techniques below. Piano, bass guitar and guit
 | technique | what it is | used for |
 |---|---|---|
 | Sine with a moving pitch | `sin` of a phase that advances faster or slower over time | kicks, toms, sub bass, zaps, sirens |
-| Triangle, pulse and saw | three channels on one note. The triangle is the body, the pulse the hollow mid, the saw the edge. Pulse and saw edges are rounded (PolyBLEP) so high notes do not alias | basses, leads, stabs, pads, strings, organ, hoover |
+| Triangle, pulse and saw | band-limited (PolyBLEP) saw and pulse layers supply harmonics, with detuning and moving low-pass filters shaping the tone. Triangle supplies body in sub, reese and stacked voices | basses, leads, stabs, pads, strings, hoover |
 | Filtered noise | random samples through a low-, band- or high-pass filter | snares, claps, shakers, risers, breath |
 | Additive | sine partials, each with its own decay | organ, vibes, upright bass |
-| FM | one sine bends the phase of another; a falling amount gives a bright attack and a dull tail | electric piano, bells, FM bass |
+| FM | one sine bends the phase of another; a falling amount gives a bright attack and a dull tail. Rendered at four times the output rate and filtered before downsampling to reduce folded sidebands | electric piano, bells, FM bass |
 | Plucked string | a short burst of noise circulating in a delay line that loses a little each pass (Karplus-Strong) | pizzicato |
 
 Two more pieces shape those signals:
@@ -163,6 +163,47 @@ missing presets and the unchanged drum choke behavior. A sample-render compariso
 confirms all seven drum kits produce identical PCM before/after this voice change.
 These checks do not establish perceptual realism; listening approval remains a
 separate check. Matched before/after clips are in `build/groove-instrument-review/`.
+
+### Electronic timbres (October 22, 2026)
+
+The arpeggio now uses two slightly detuned saws, a sine body and a closing
+four-pole filter. It follows the recipe's note gate instead of always ending at
+300 ms. Pads use three detuned saw/pulse layers with seeded starting phases,
+gentle pulse-width movement and a longer, faded release. Mono leads, stabs,
+brass and basses no longer receive an extra triangle and an implicit pulse when
+the patch requests no pulse. Their noise layer is quieter and their saw phases
+vary reproducibly from the block seed.
+
+Both organ entry points now use the same drawbar-style additive voice, including
+sub-octave and fifth drawbars, a decaying percussion harmonic and a filtered key
+click. The old unfiltered triangle/pulse/saw overlay is removed. Notes released
+during a slow attack decay from their current envelope level instead of continuing
+to swell. Revised voices fade their truncated tails to avoid hard note endings.
+
+FM voices render at 176.4 kHz, through an eighth-order Butterworth low-pass at
+16.758 kHz, before decimating to 44.1 kHz. This reduces aliasing; it does not make
+all possible pitches and modulation depths alias-free. In the regression case
+(5 kHz carrier, 1:1 ratio, constant index 3.2), the measured folded fifth through
+eighth harmonics fall from -16.58 dB to -47.76 dB relative to the first three
+harmonics. This is a stress-case measurement, not a whole-library quality score.
+
+The approach follows [FabFilter's filter/envelope guidance](https://www.fabfilter.com/help/one/using/filter)
+and the oversampling and pre-decimation filtering principles documented by
+[JUCE](https://docs.juce.com/develop/classjuce_1_1dsp_1_1Oversampling.html) and
+[MathWorks](https://www.mathworks.com/help/signal/ug/signal-filtering-before-downsampling.html).
+The filters and synthesis remain implemented in Groove; no new DSP dependency
+or audio asset is added.
+
+Validation: all six synth tests pass, including alias suppression, early release,
+arpeggio gate length, deterministic output and clean tails across registers.
+All 583 blocks pass finite-output and role-level checks at 70, 140 and 180 BPM.
+The local review folder `build/groove-timbre-review/` contains nine production
+recipes before/after, pairwise RMS-matched WAVs, a combined `before-after.wav`
+and audit CSVs. Each comparison plays the old loop twice, then the revised loop
+twice, separated by half a second. The two commercial reference libraries were
+absent from this checkout, so reference listening and subjective approval have
+not been performed. Recipe notes, source IDs, sampled instruments, vocal files
+and drum models are unchanged by this revision.
 
 ### Vocals
 
