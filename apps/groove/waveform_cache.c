@@ -18,15 +18,27 @@ static float waveform_peak(const block_t *b, int x, int w) {
   return b->audio.peaks[k] + (b->audio.peaks[k1] - b->audio.peaks[k]) * t;
 }
 
+static irect16_t waveform_column(const block_t *b, int x, ipoint16_t size, int radius, int period, int offset) {
+  float peak = waveform_peak(b, (x + offset) % period, period);
+  int bottom = waveform_bottom(x, size.x, size.y, radius);
+#if GROOVE_WAVEFORM_CENTERED
+  int half = size.y / 2, odd = size.y % 2;
+  int extent = CLAMP((int)(peak * half / 255 + 0.5f), 1 - odd, half);
+  int top = MAX(half - extent, size.y - 1 - bottom);
+  return R(x, top, 1, size.y - 2 * top);
+#else
+  int height = CLAMP((int)(peak * size.y / 255 + 0.5f), 1, size.y);
+  int top = MAX(size.y - height, size.y - 1 - bottom);
+  return R(x, top, 1, MAX(0, bottom - top + 1));
+#endif
+}
+
 void draw_waveform(const block_t *b, irect16_t wave, int period, int offset, int radius, uint32_t color) {
   if (!b || b->audio.npeaks < 2 || wave.w <= 0 || wave.h <= 0 || period <= 0 || offset < 0) return;
   radius = CLAMP(radius, 0, MIN(wave.w, wave.h) / 2);
   for (int x = 0; x < wave.w; x++) {
-    int src = (x + offset) % period;
-    int h = MAX(1, (int)(waveform_peak(b, src, period) * MAX(1, wave.h - 14) / 255));
-    int bottom = waveform_bottom(x, wave.w, wave.h, radius);
-    int top = MAX(0, bottom + 1 - h);
-    if (bottom >= top) fill_rect(color, R(wave.x + x, wave.y + top, 1, bottom - top + 1));
+    irect16_t column = waveform_column(b, x, (ipoint16_t){wave.w, wave.h}, radius, period, offset);
+    if (column.h > 0) fill_rect(color, rect_offset(column, wave.x, wave.y));
   }
 }
 
@@ -50,10 +62,8 @@ uint32_t waveform_texture(groove_t *app, int block, ipoint16_t size, int radius,
     return 0;
   }
   for (int x = 0; x < size.x; x++) {
-    int src = (x + offset) % period;
-    int h = MAX(1, (int)(waveform_peak(b, src, period) * MAX(1, size.y - 14) / 255));
-    int bottom = waveform_bottom(x, size.x, size.y, radius);
-    for (int y = MAX(0, bottom + 1 - h); y <= bottom; y++) mask[(size_t)y * size.x + x] = 255;
+    irect16_t column = waveform_column(b, x, size, radius, period, offset);
+    for (int y = column.y; y < column.y + column.h; y++) mask[(size_t)y * size.x + x] = 255;
   }
   uint32_t texture = R_CreateTextureR8(size.x, size.y, mask, R_FILTER_NEAREST, R_WRAP_CLAMP);
   free(mask);

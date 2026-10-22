@@ -171,7 +171,7 @@ TEST_BINS = $(patsubst %,$(BIN_DIR)/test_%$(EXE_EXT),$(basename $(notdir $(TEST_
 
 # Tests unity-include app implementations; edits must rebuild their executables.
 $(foreach n,$(EXAMPLES),$(foreach t,$(wildcard $(APPS)/$(n)/tests/*.c),$(eval $(BIN_DIR)/test_$(basename $(notdir $(t)))$(EXE_EXT): $(call app_srcs,$(n)) $(wildcard $(APPS)/$(n)/tests/*.h))))
-$(BIN_DIR)/test_groove_waveform_cache_test$(EXE_EXT): $(APPS)/groove/waveform_cache.c $(APPS)/groove/groove.h
+$(BIN_DIR)/test_groove_waveform_cache_test$(EXE_EXT) $(BIN_DIR)/test_groove_waveform_centered_test$(EXE_EXT): $(APPS)/groove/waveform_cache.c $(APPS)/groove/groove.h $(TEST_DIR)/groove_waveform_cache_test.c
 $(BIN_DIR)/test_groove_synth_test$(EXE_EXT): $(APPS)/groove/synth.c $(wildcard $(APPS)/groove/synth*.h) $(APPS)/groove/third_party/tsf.h $(APPS)/groove/groove.h
 
 # Shell fragment emitting the unity translation unit for example dir $(1):

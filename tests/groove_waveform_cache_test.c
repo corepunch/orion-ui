@@ -44,7 +44,7 @@ static void test_shared_cache(void) {
   for (int i = 0; i < 100; i++) ASSERT_EQUAL(waveform_texture(&app, 0, (ipoint16_t){20, 32}, 0, 20, 0), first);
   ASSERT_EQUAL(uploads, 1);
   ASSERT_EQUAL(deletes, 0);
-  ASSERT_EQUAL(uploaded_mask[13 * uploaded_w + 10], 0);
+  ASSERT_EQUAL(uploaded_mask[10], 255);
   ASSERT_EQUAL(uploaded_mask[14 * uploaded_w + 10], 255);
   ASSERT_EQUAL(uploaded_mask[(uploaded_h - 1) * uploaded_w + 10], 255);
   ASSERT_NOT_EQUAL(waveform_texture(&app, 1, (ipoint16_t){20, 32}, 0, 20, 0), first);
@@ -55,7 +55,9 @@ static void test_shared_cache(void) {
   ASSERT_EQUAL(uploads, 3);
   ASSERT_EQUAL(deletes, 1);
   ASSERT_EQUAL(uploaded_mask[14 * uploaded_w + 10], 0);
-  ASSERT_EQUAL(uploaded_mask[(uploaded_h - 1) * uploaded_w + 10], 255);
+  ASSERT_EQUAL(uploaded_mask[15 * uploaded_w + 10], GROOVE_WAVEFORM_CENTERED ? 255 : 0);
+  ASSERT_EQUAL(uploaded_mask[16 * uploaded_w + 10], GROOVE_WAVEFORM_CENTERED ? 255 : 0);
+  ASSERT_EQUAL(uploaded_mask[(uploaded_h - 1) * uploaded_w + 10], GROOVE_WAVEFORM_CENTERED ? 0 : 255);
   ASSERT_NOT_EQUAL(waveform_texture(&app, 0, (ipoint16_t){21, 33}, 0, 21, 0), 0);
   ASSERT_EQUAL(uploaded_w, 21);
   ASSERT_EQUAL(uploaded_h, 33);
@@ -63,7 +65,7 @@ static void test_shared_cache(void) {
   ASSERT_NOT_EQUAL(waveform_texture(&app, 0, (ipoint16_t){21, 33}, 8, 21, 0), 0);
   ASSERT_EQUAL(uploads, 5);
   ASSERT_EQUAL(uploaded_mask[(uploaded_h - 1) * uploaded_w], 0);
-  ASSERT_EQUAL(uploaded_mask[(uploaded_h - 1) * uploaded_w + 10], 255);
+  ASSERT_EQUAL(uploaded_mask[(GROOVE_WAVEFORM_CENTERED ? uploaded_h / 2 : uploaded_h - 1) * uploaded_w + 10], 255);
   waveform_cache_free(&app);
   ASSERT_EQUAL(deletes, uploads);
   ASSERT_EQUAL(app.waveforms[0].texture, 0);
@@ -153,12 +155,49 @@ static void test_card_margin(void) {
   PASS();
 }
 
+static void test_waveform_alignment(void) {
+  TEST("cached and repeated waveforms share alignment and rounded clipping at odd, even and minimal heights");
+  groove_t app = {0};
+  cache_blocks[0] = (block_t){ .audio = {.npeaks = 4, .peaks = {0, 64, 128, 255}}, .audio_revision = 1 };
+  g_ui_runtime.running = true;
+  const int heights[] = {1, 2, 17, 31, 32};
+  for (int i = 0; i < ARRAY_LEN(heights); i++) {
+    int height = heights[i];
+    for (int radius = 0; radius <= 8; radius += 8) {
+      ASSERT_NOT_EQUAL(waveform_texture(&app, 0, (ipoint16_t){20, height}, radius, 20, 0), 0);
+      memset(drawn_mask, 0, sizeof(drawn_mask));
+      draw_waveform(&cache_blocks[0], R(0, 0, 20, height), 20, 0, radius, 0xFFFFFFFFu);
+      for (int y = 0; y < height; y++) {
+        for (int x = 0; x < 20; x++) {
+          ASSERT_EQUAL(drawn_mask[y * 512 + x], uploaded_mask[y * 20 + x]);
+#if GROOVE_WAVEFORM_CENTERED
+          ASSERT_EQUAL(uploaded_mask[y * 20 + x], uploaded_mask[(height - y - 1) * 20 + x]);
+#else
+          int bottom = waveform_bottom(x, 20, height, MIN(radius, MIN(20, height) / 2));
+          if (y < height - 1 - bottom || y > bottom) ASSERT_EQUAL(uploaded_mask[y * 20 + x], 0);
+          if (uploaded_mask[y * 20 + x] && y < bottom) ASSERT_EQUAL(uploaded_mask[(y + 1) * 20 + x], 255);
+#endif
+        }
+      }
+      ASSERT_EQUAL(uploaded_mask[(GROOVE_WAVEFORM_CENTERED ? height / 2 : height - 1) * 20 + 10], 255);
+      if (!radius && !GROOVE_WAVEFORM_CENTERED) {
+        for (int y = 0; y < height; y++) ASSERT_EQUAL(uploaded_mask[y * 20], y == height - 1 ? 255 : 0);
+      }
+      if (!radius) ASSERT_EQUAL(uploaded_mask[19], 255);
+    }
+  }
+  waveform_cache_free(&app);
+  g_ui_runtime.running = false;
+  PASS();
+}
+
 int main(void) {
   TEST_START("Groove waveform cache");
   test_shared_cache();
   test_failed_refresh();
   test_grid_viewport();
   test_card_margin();
+  test_waveform_alignment();
   free(uploaded_mask);
   TEST_END();
 }

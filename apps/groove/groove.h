@@ -36,6 +36,10 @@
 #define GR_BPM_MAX      180
 #define GR_BPM_DEFAULT  140
 
+#ifndef GROOVE_WAVEFORM_CENTERED
+#define GROOVE_WAVEFORM_CENTERED 0 // 0: grow from the bottom; 1: mirror around the center
+#endif
+
 // ── Block library ────────────────────────────────────────────────────────
 // A block has one instrument family and any number of genre tags; the
 // library filters on both. Families follow the roles in apps/groove/docs/dance-ejay-pxd.md.
