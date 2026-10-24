@@ -71,8 +71,8 @@ bool app_save_song(const char *path) {
   return true;
 }
 
-bool app_open_song(const char *path) {
-  if (!g_app || !path || !path[0] || strlen(path) >= sizeof(g_app->filename)) return false;
+bool song_read(const char *path, song_t *out) {
+  if (!path || !path[0] || !out) return false;
   FILE *f = fopen(path, "rb");
   if (!f) return false;
   char magic[32];
@@ -127,7 +127,16 @@ bool app_open_song(const char *path) {
   }
   if (ok) { int c; do c = fgetc(f); while (c != EOF && isspace((unsigned char)c)); ok = c == EOF && !ferror(f); }
   if (fclose(f) != 0) ok = false;
-  if (!ok) return false;
+  if (ok) *out = next;
+  return ok;
+}
+
+bool app_open_song(const char *path) {
+  if (!g_app || !path || !path[0] || strlen(path) >= sizeof(g_app->filename)) return false;
+  song_t next;
+  if (!song_read(path, &next)) return false;
+  int bpm = next.bpm;
+  bool ok = true;
 
   block_pcm_t prepared[GR_MAX_CLIPS] = {{0}};
   bool needs_render[GR_MAX_BLOCKS] = {0};
@@ -162,4 +171,28 @@ bool app_open_song(const char *path) {
   if (g_app->library) invalidate_window(g_app->library);
   transport_refresh();
   return true;
+}
+
+// ── Groove's own song storage ────────────────────────────────────────────
+// Songs live in the app's private settings area (Application Support on
+// Apple platforms), like a reader app's library, never in Files or iCloud.
+
+bool song_path_for_name(const char *name, char *path, size_t cap) {
+  if (!g_app || !name || !path || !cap || !g_app->songs_dir[0]) return false;
+  while (isspace((unsigned char)*name)) name++;
+  size_t n = strlen(name);
+  while (n && isspace((unsigned char)name[n - 1])) n--;
+  if (!n || name[0] == '.' || n >= 128) return false;
+  for (size_t i = 0; i < n; i++) if (strchr("/\\:", name[i]) || (unsigned char)name[i] < 0x20) return false;
+  int written = snprintf(path, cap, "%s/%.*s", g_app->songs_dir, (int)n, name);
+  return written > 0 && (size_t)written < cap && append_extension(path, cap);
+}
+
+void song_name_from_path(const char *path, char *name, size_t cap) {
+  if (!name || !cap) return;
+  const char *slash = path ? strrchr(path, '/') : NULL, *backslash = path ? strrchr(path, '\\') : NULL;
+  const char *base = path ? MAX(slash ? slash + 1 : path, backslash ? backslash + 1 : path) : "";
+  const char *dot = strrchr(base, '.');
+  size_t n = dot && !strcasecmp(dot, ".groove") ? (size_t)(dot - base) : strlen(base);
+  snprintf(name, cap, "%.*s", (int)n, base);
 }

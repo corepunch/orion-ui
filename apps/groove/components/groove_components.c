@@ -18,6 +18,11 @@ static const fe_component_desc_t kGrooveComponents[] = {
     .proc = win_card, .default_layout_size = { 0, 0 },
     .default_flags = WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NODRAG | WINDOW_NOACTIVATE | WINDOW_NOTABSTOP,
     .default_h_align = LAYOUT_ALIGN_STRETCH, .default_v_align = LAYOUT_ALIGN_STRETCH },
+  { .class_name = "GrooveSongPreview", .name_prefix = "IDC_GSP", .toolbar_icon = "Card",
+    .default_size = { 220, 84 }, .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR,
+    .proc = win_image, .default_layout_size = { 0, 0 },
+    .default_flags = WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOACTIVATE | WINDOW_NOTABSTOP,
+    .default_h_align = LAYOUT_ALIGN_STRETCH, .default_v_align = LAYOUT_ALIGN_STRETCH },
 };
 
 GEM_CLASSES(kGrooveComponents, "Groove component previews", FE_PLUGIN_VERSION)
