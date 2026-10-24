@@ -410,6 +410,19 @@ window.
 <Button name="new_rate" text="New Rate..." target="rates" action="insert" />
 ```
 
+TableView presents values the way a ledger does: numeric columns align
+right (their type comes from the schema, through join paths too), boolean
+fields read "Yes" or nothing instead of 1 and 0, and text that does not fit
+ends in an ellipsis. `zeros="blank"` leaves numeric zeros empty, as
+accounting reports print them:
+
+```xml
+<TableView name="balances" source="ib.balances" zeros="blank">
+```
+
+A TableView shows up to `MAX_REPORTVIEW_COLUMNS` (16) columns; more are
+reported on stderr.
+
 ## ComboBox
 
 A ComboBox with `source=`, `display=` and `value=` lists a table and binds the
@@ -441,6 +454,13 @@ page index. User selection sends `evCommand` with `tcnSelChange` and the
 
 The sidebar style (`tcSetStyle` with `TAB_STYLE_SIDEBAR`) marks the selected
 row with `THEME_PART_MENU_ITEM`, the same capsule the menus draw.
+
+`tab-style="sidebar"` lists the tabs down the left edge, for views with more
+pages than fit across, such as a set of reports:
+
+```xml
+<TabView name="report_tabs" tab-style="sidebar" flags="flexspace">
+```
 
 ## SegmentedControl
 

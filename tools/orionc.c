@@ -906,12 +906,12 @@ static void emit_tableviews(FILE *f, xmlNodePtr parent, xmlNodePtr form_node,
       // so only integer FK values work.  String FKs (UUID, hash) would
       // be converted to 0 by the runtime's strtol() call.
       // form="doc_line": the database form that edits one row (EODisplayGroup).
-      char *record_form = attr(c, "form"), record_form_ref[256] = "NULL";
+      char *record_form = attr(c, "form"), record_form_ref[256] = "NULL", *zeros = attr(c, "zeros");
       if (record_form && *record_form) { char rf[128]; ident(rf, sizeof(rf), record_form, false); snprintf(record_form_ref, sizeof(record_form_ref), "&%s_%s_form", prefix, rf); }
-      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = %d, .filter_value = %d, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s, .record_form = %s };\n\n",
+      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = %d, .filter_value = %d, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s, .record_form = %s, .blank_zeros = %s };\n\n",
           param, table_id, filter_index, filter_value ? atoi(filter_value) : 0, param, param, param, param, check_field_q, master_id,
-          relation_field, master_key_q, cell_style_value, column_titles && eq(column_titles, "false") ? "true" : "false", record_form_ref);
-      free(record_form);
+          relation_field, master_key_q, cell_style_value, column_titles && eq(column_titles, "false") ? "true" : "false", record_form_ref, eq(zeros, "blank") ? "true" : "false");
+      free(record_form); free(zeros);
       free(column_titles);
       free(cell_style);
       free(check_field);
@@ -1036,10 +1036,14 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
     if (elem(c, "activitybar") && child(c, "toolbar")) snprintf(lparam, sizeof(lparam), "&%s_%s_activity_params", form, nz(a.v[A_NAME], "unnamed"));
     if (elem(c, "combobox") && attr(c, "source")) snprintf(lparam, sizeof(lparam), "&%s_%s_combobox_params", form, nz(a.v[A_NAME], "unnamed"));
     if (elem(c, "tabview")) {
-      char *hide = attr(c, "hide-single-tab");
-      if (eq(hide, "true") || eq(hide, "1"))
-        snprintf(lparam, sizeof(lparam), "&(const tabview_params_t){ .style = TAB_STYLE_HIDE_SINGLE_TAB }");
-      free(hide);
+      // tab-style="sidebar": the tabs as a list down the left edge, for many pages.
+      char *hide = attr(c, "hide-single-tab"), *style = attr(c, "tab-style");
+      bool single = eq(hide, "true") || eq(hide, "1"), sidebar = eq(style, "sidebar");
+      if (style && !sidebar) fprintf(stderr, "orionc: TabView '%s': unknown tab-style '%s' (sidebar)\n", nz(a.v[A_NAME], ""), style);
+      if (single || sidebar)
+        snprintf(lparam, sizeof(lparam), "&(const tabview_params_t){ .style = %s%s%s }", single ? "TAB_STYLE_HIDE_SINGLE_TAB" : "",
+                 single && sidebar ? " | " : "", sidebar ? "TAB_STYLE_SIDEBAR" : "");
+      free(hide); free(style);
     }
     if (elem(c, "SplitView")) {
       const char *orientation = eq(a.v[A_ORIENT], "vertical") ? "SPLIT_HORZ" : "SPLIT_VERT";

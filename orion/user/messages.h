@@ -183,6 +183,7 @@ enum {
   edGetText,        // wparam=buf_size; lparam=char* dst → copies text, returns length
   edSetText,        // wparam=0; lparam=const char* src → replaces text
   edSetPlaceholder, // lparam=const char* cue text shown while the field is empty (EM_SETCUEBANNER)
+  edGetPlaceholder, // returns const char* cue text, "" when none (EM_GETCUEBANNER)
   // List (popup) messages
   lstSetItem,             // wparam=item index to pre-select in the dropdown list
   // Individual desktop-style icon control (commctl/icon.c).

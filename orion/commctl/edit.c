@@ -197,6 +197,11 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
     }
 
+    case edGetPlaceholder: {
+      textedit_t *te = win->userdata;
+      return (result_t)(intptr_t)(te ? te->placeholder : "");
+    }
+
     case evGetCursor:
       return curIBeam;
   }

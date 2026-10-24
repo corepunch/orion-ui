@@ -33,6 +33,7 @@
       <item name="new_assets" label="Put Assets into Service..." />
       <item name="close_month" label="Close Month..." shortcut="Ctrl+E" />
       <item name="open" label="Open Document..." shortcut="Ctrl+O" />
+      <item name="open_entry" label="Open Entry's Document" />
       <Separator />
       <item name="post" label="Post" shortcut="F9" />
       <item name="unpost" label="Cancel Posting" />
@@ -78,6 +79,8 @@
       <item name="settings" label="Report Settings..." shortcut="Ctrl+R" />
       <item name="recalc" label="Recalculate Totals" shortcut="F5" />
       <item name="print" label="Print Report Forms" shortcut="Ctrl+Shift+P" />
+      <Separator />
+      <item name="card" label="Account Card" shortcut="Ctrl+K" />
     </menu>
     <menu name="help" label="Help">
       <item name="about" label="About Ledger" />
@@ -501,7 +504,7 @@
               <Column field="vat" title="Tax Amount" width="80" />
               <Column field="total" title="Total" width="84" />
             </TableView>
-            <TableView name="doc_entries" text="Entries" source="ib.entries" flags="notitle,nofill,vscroll">
+            <TableView name="doc_entries" zeros="blank" text="Entries" source="ib.entries" flags="notitle,nofill,vscroll">
               <Column field="debit.code" title="Dr" width="56" />
               <Column field="debit_subconto.name" title="Dr Analytics" width="0" />
               <Column field="credit.code" title="Cr" width="56" />
@@ -556,12 +559,16 @@
           checked-icon="ledger-nav-accounts-fill" tooltip="Chart of accounts (Ctrl+4)"
           focus="accounts" width="900" height="560" role="page" flags="nofill,flexspace"
           spacing="4" padding="4">
+      <Toolbar>
+        <Button command="report.card" icon="ledger-card" text="Card" tooltip="Account card of the selected account (Ctrl+K)" />
+        <Button command="report.settings" icon="ledger-settings" text="Settings" tooltip="Period and account (Ctrl+R)" />
+      </Toolbar>
       <TableView name="accounts" source="cfg.accounts" flags="notitle,nofill,vscroll,flexspace">
         <Column field="code" title="Code" width="56" />
         <Column field="name" title="Account" width="0" min-width="200" />
         <Column field="kind" title="Kind" width="44" />
-        <Column field="subconto_kind.name" title="Analytics" width="104" />
-        <Column field="currency" title="Currency" width="60" />
+        <Column field="subconto_kind.name" title="Analytics" width="136" />
+        <Column field="currency" title="Currency" width="64" />
         <Column field="section" title="Section" width="0" />
       </TableView>
     </form>
@@ -640,7 +647,11 @@
           checked-icon="ledger-nav-entries-fill" tooltip="All accounting entries (Ctrl+5)"
           focus="entries" width="900" height="560" role="page" flags="nofill,flexspace"
           spacing="4" padding="4">
-      <TableView name="entries" source="ib.entries" master="none" flags="notitle,nofill,vscroll,flexspace">
+      <Toolbar>
+        <Button command="doc.open_entry" icon="ledger-open" text="Document" tooltip="Open the entry's document" />
+        <Button command="report.card" icon="ledger-card" text="Card" tooltip="Account card of the entry's debit account (Ctrl+K)" />
+      </Toolbar>
+      <TableView name="entries" zeros="blank" source="ib.entries" master="none" flags="notitle,nofill,vscroll,flexspace">
         <Column field="date" title="Date" width="76" />
         <Column field="document.number" title="Document" width="80" />
         <Column field="debit.code" title="Dr" width="56" />
@@ -649,7 +660,7 @@
         <Column field="credit_subconto.name" title="Cr Analytics" width="0" />
         <Column field="quantity" title="Qty" width="64" />
         <Column field="currency.code" title="Cur." width="40" />
-        <Column field="currency_amount" title="Cur. Amount" width="84" />
+        <Column field="currency_amount" title="Cur. Amount" width="100" />
         <Column field="amount" title="Amount" width="96" />
         <Column field="content" title="Content" width="0" />
       </TableView>
@@ -667,81 +678,81 @@
         <Button command="report.print" icon="ledger-print" text="Print" tooltip="Print report forms: cash book (Ctrl+Shift+P)" />
       </Toolbar>
       <StackView name="reports" spacing="0" flags="flexspace">
-        <TabView name="report_tabs" flags="flexspace">
-          <TableView name="balances" text="Trial Balance" source="ib.balances" flags="notitle,nofill,vscroll">
-            <Column field="account.code" title="Account" width="56" />
-            <Column field="account.name" title="Name" width="0" min-width="140" />
-            <Column field="opening_dr" title="Opening Dr" width="104" />
-            <Column field="opening_cr" title="Opening Cr" width="104" />
-            <Column field="debit_turnover" title="Turnover Dr" width="104" />
-            <Column field="credit_turnover" title="Turnover Cr" width="104" />
-            <Column field="balance_dr" title="Closing Dr" width="104" />
-            <Column field="balance_cr" title="Closing Cr" width="104" />
+        <TabView name="report_tabs" tab-style="sidebar" flags="flexspace">
+          <TableView name="balances" zeros="blank" text="Trial Balance" source="ib.balances" flags="notitle,nofill,vscroll">
+            <Column field="account.code" title="Account" width="48" />
+            <Column field="account.name" title="Name" width="0" min-width="100" />
+            <Column field="opening_dr" title="Opening Dr" width="86" />
+            <Column field="opening_cr" title="Opening Cr" width="86" />
+            <Column field="debit_turnover" title="Turnover Dr" width="86" />
+            <Column field="credit_turnover" title="Turnover Cr" width="86" />
+            <Column field="balance_dr" title="Closing Dr" width="86" />
+            <Column field="balance_cr" title="Closing Cr" width="86" />
           </TableView>
-          <TableView name="card" text="Account Card" source="ib.card" flags="notitle,nofill,vscroll">
-            <Column field="date" title="Date" width="76" />
-            <Column field="document.number" title="Document" width="80" />
-            <Column field="content" title="Content" width="0" min-width="120" />
-            <Column field="account.code" title="Account" width="56" />
-            <Column field="subconto.name" title="Analytics" width="0" />
-            <Column field="corr.code" title="Corr." width="56" />
+          <TableView name="card" zeros="blank" text="Account Card" source="ib.card" flags="notitle,nofill,vscroll">
+            <Column field="date" title="Date" width="72" />
+            <Column field="document.number" title="Document" width="72" />
+            <Column field="content" title="Content" width="0" min-width="100" />
+            <Column field="account.code" title="Account" width="48" />
+            <Column field="subconto.name" title="Analytics" width="0" min-width="80" />
+            <Column field="corr.code" title="Corr." width="48" />
             <Column field="debit" title="Debit" width="90" />
             <Column field="credit" title="Credit" width="90" />
-            <Column field="balance" title="Balance" width="96" />
+            <Column field="balance" title="Balance" width="86" />
           </TableView>
-          <TableView name="analysis" text="Account Analysis" source="ib.analysis_rows" flags="notitle,nofill,vscroll">
+          <TableView name="analysis" zeros="blank" text="Account Analysis" source="ib.analysis_rows" flags="notitle,nofill,vscroll">
             <Column field="subconto.name" title="Analytics" width="0" min-width="140" />
-            <Column field="opening_dr" title="Opening Dr" width="104" />
-            <Column field="opening_cr" title="Opening Cr" width="104" />
-            <Column field="debit_turnover" title="Turnover Dr" width="104" />
-            <Column field="credit_turnover" title="Turnover Cr" width="104" />
-            <Column field="balance_dr" title="Closing Dr" width="104" />
-            <Column field="balance_cr" title="Closing Cr" width="104" />
+            <Column field="opening_dr" title="Opening Dr" width="86" />
+            <Column field="opening_cr" title="Opening Cr" width="86" />
+            <Column field="debit_turnover" title="Turnover Dr" width="86" />
+            <Column field="credit_turnover" title="Turnover Cr" width="86" />
+            <Column field="balance_dr" title="Closing Dr" width="86" />
+            <Column field="balance_cr" title="Closing Cr" width="86" />
           </TableView>
-          <TableView name="sales_book" text="Sales Book" source="ib.vat_book" filter-field="book" filter-value="1" flags="notitle,nofill,vscroll">
+          <TableView name="sales_book" zeros="blank" text="Sales Book" source="ib.vat_book" filter-field="book" filter-value="1" flags="notitle,nofill,vscroll">
             <Column field="date" title="Date" width="76" />
             <Column field="document.number" title="Document" width="80" />
             <Column field="counterparty.name" title="Counterparty" width="0" min-width="140" />
             <Column field="counterparty.tax_id" title="Tax ID" width="100" />
-            <Column field="total" title="Total" width="104" />
-            <Column field="amount" title="Net" width="104" />
+            <Column field="total" title="Total" width="86" />
+            <Column field="amount" title="Net" width="86" />
             <Column field="vat" title="Tax" width="84" />
           </TableView>
-          <TableView name="purchase_book" text="Purchase Book" source="ib.vat_book" filter-field="book" filter-value="2" flags="notitle,nofill,vscroll">
+          <TableView name="purchase_book" zeros="blank" text="Purchase Book" source="ib.vat_book" filter-field="book" filter-value="2" flags="notitle,nofill,vscroll">
             <Column field="date" title="Date" width="76" />
             <Column field="document.number" title="Document" width="80" />
             <Column field="counterparty.name" title="Counterparty" width="0" min-width="140" />
             <Column field="counterparty.tax_id" title="Tax ID" width="100" />
-            <Column field="total" title="Total" width="104" />
-            <Column field="amount" title="Net" width="104" />
+            <Column field="total" title="Total" width="86" />
+            <Column field="amount" title="Net" width="86" />
             <Column field="vat" title="Tax" width="84" />
           </TableView>
-          <TableView name="cash_book" text="Cash Book" source="ib.cash_book" flags="notitle,nofill,vscroll">
-            <Column field="date" title="Date" width="76" />
-            <Column field="document.number" title="Document" width="80" />
-            <Column field="content" title="Content" width="0" min-width="140" />
-            <Column field="subconto.name" title="Received from / Paid to" width="0" />
-            <Column field="corr.code" title="Corr." width="56" />
-            <Column field="receipt" title="Receipt" width="96" />
-            <Column field="expense" title="Expense" width="96" />
-            <Column field="balance" title="Balance" width="96" />
+          <TableView name="cash_book" zeros="blank" text="Cash Book" source="ib.cash_book" flags="notitle,nofill,vscroll">
+            <Column field="date" title="Date" width="72" />
+            <Column field="document.number" title="Document" width="72" />
+            <Column field="content" title="Content" width="0" min-width="100" />
+            <Column field="subconto.name" title="Received from / Paid to" width="0" min-width="80" />
+            <Column field="corr.code" title="Corr." width="48" />
+            <Column field="receipt" title="Receipt" width="86" />
+            <Column field="expense" title="Expense" width="86" />
+            <Column field="balance" title="Balance" width="86" />
           </TableView>
-          <TableView name="asset_rows" text="Fixed Assets" source="ib.asset_rows" flags="notitle,nofill,vscroll">
+          <TableView name="asset_rows" zeros="blank" text="Fixed Assets" source="ib.asset_rows" flags="notitle,nofill,vscroll">
             <Column field="asset.inventory" title="Inv. No." width="64" />
             <Column field="asset.name" title="Fixed Asset" width="0" min-width="140" />
             <Column field="asset.commissioned" title="In Service" width="80" />
-            <Column field="cost" title="Cost" width="96" />
+            <Column field="cost" title="Cost" width="86" />
             <Column field="monthly" title="Monthly" width="84" />
-            <Column field="depreciation" title="Depreciation" width="96" />
-            <Column field="residual" title="Residual Value" width="104" />
+            <Column field="depreciation" title="Depreciation" width="86" />
+            <Column field="residual" title="Residual Value" width="86" />
           </TableView>
-          <TableView name="payroll_rows" text="Payroll Statement" source="ib.payroll_rows" flags="notitle,nofill,vscroll">
+          <TableView name="payroll_rows" zeros="blank" text="Payroll Statement" source="ib.payroll_rows" flags="notitle,nofill,vscroll">
             <Column field="employee.name" title="Employee" width="0" min-width="140" />
             <Column field="employee.position" title="Position" width="0" />
-            <Column field="opening" title="Owed at Start" width="104" />
-            <Column field="accrued" title="Accrued" width="96" />
-            <Column field="deducted" title="Withheld and Paid" width="120" />
-            <Column field="closing" title="Owed at End" width="104" />
+            <Column field="opening" title="Owed at Start" width="86" />
+            <Column field="accrued" title="Accrued" width="86" />
+            <Column field="deducted" title="Withheld and Paid" width="96" />
+            <Column field="closing" title="Owed at End" width="86" />
           </TableView>
         </TabView>
       </StackView>
@@ -752,8 +763,12 @@
           checked-icon="ledger-nav-config-fill" tooltip="Active configuration (Ctrl+7)"
           focus="doc_types" width="900" height="560" role="page" flags="nofill,flexspace"
           spacing="4" padding="4">
+      <Toolbar>
+        <Button command="file.configuration" icon="ledger-configuration" text="Configuration" tooltip="Select configuration" />
+        <Button command="file.language" icon="ledger-language" text="Language" tooltip="Interface language" />
+      </Toolbar>
       <StackView name="metadata_stack" spacing="0" flags="flexspace">
-        <TabView name="metadata" flags="flexspace">
+        <TabView name="metadata" tab-style="sidebar" flags="flexspace">
           <TableView name="settings" text="Configuration" source="cfg.settings" flags="notitle,nofill,vscroll">
             <Column field="name" title="Configuration" width="0" min-width="160" />
             <Column field="country" title="Country" width="140" />
@@ -1032,7 +1047,7 @@
           <TextBox name="comment" field="ib.documents.comment" />
         </Column>
       </GridView>
-      <TableView name="entries" source="ib.entries" form="entry" flags="notitle,nofill,vscroll,flexspace">
+      <TableView name="entries" zeros="blank" source="ib.entries" form="entry" flags="notitle,nofill,vscroll,flexspace">
         <Column field="debit.code" title="Dr" width="56" />
         <Column field="debit_subconto.name" title="Dr Analytics" width="0" />
         <Column field="credit.code" title="Cr" width="56" />
@@ -1224,7 +1239,7 @@
         </Column>
       </GridView>
       <Label name="hint" text="Posting charges depreciation, revalues currency accounts and closes the month's expenses and result." />
-      <TableView name="entries" source="ib.entries" flags="notitle,nofill,vscroll,flexspace">
+      <TableView name="entries" zeros="blank" source="ib.entries" flags="notitle,nofill,vscroll,flexspace">
         <Column field="debit.code" title="Dr" width="56" />
         <Column field="debit_subconto.name" title="Dr Analytics" width="0" />
         <Column field="credit.code" title="Cr" width="56" />
