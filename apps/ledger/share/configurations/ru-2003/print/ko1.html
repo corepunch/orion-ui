@@ -19,7 +19,7 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 <table class="grid" style="width:100%"><tr><th rowspan="2">Дебет</th><th colspan="4">Кредит</th><th rowspan="2">Сумма,<br>руб. коп.</th><th rowspan="2">Код целе-<br>вого назна-<br>чения</th><th rowspan="2"></th></tr>
 <tr><th>код струк-<br>турного под-<br>разделения</th><th>корреспон-<br>дирующий<br>счет, субсчет</th><th>код анали-<br>тического<br>учета</th><th></th></tr>
 <tr><td class="c">{{doc_type.debit.code}}</td><td></td><td class="c">{{doc_type.credit.code}}</td><td></td><td></td><td class="r">{{total}}</td><td></td><td></td></tr></table>
-<p>Принято от <span class="line" style="width:75%">{{counterparty.name}}</span></p>
+<p>Принято от <span class="line" style="width:75%">{{counterparty.name|gen}}</span></p>
 <p>Основание: <span class="line" style="width:78%">{{comment}}</span></p>
 <p>Сумма <span class="line" style="width:80%">{{total|words}}</span><br><span class="small" style="margin-left:40%">прописью</span></p>
 <p>В том числе <span class="line" style="width:70%">НДС {{vat}} {{cfg.currency}}</span></p>
@@ -27,7 +27,7 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 <table class="sign" style="width:100%"><tr><td>Главный бухгалтер <span class="line">{{org.accountant}}</span></td></tr><tr><td>Получил кассир <span class="line">&nbsp;</span></td></tr></table></td>
 <td style="padding-left:8px"><div class="c"><span class="line" style="width:100%">{{org.name}}</span><div class="cap">организация</div>
 <h1>КВИТАНЦИЯ</h1>к приходному кассовому ордеру № {{number}}<br>от {{date|dmy}}</div>
-<p>Принято от <span class="line">{{counterparty.name}}</span></p><p>Основание: <span class="line">{{comment}}</span></p>
+<p>Принято от <span class="line">{{counterparty.name|gen}}</span></p><p>Основание: <span class="line">{{comment}}</span></p>
 <p>Сумма <span class="line">{{total}} {{cfg.currency}}</span></p><p>В том числе <span class="line">НДС {{vat}} {{cfg.currency}}</span></p>
 <p>&laquo;___&raquo; ____________ 20__ г.</p><p>М.П. (штампа)</p>
 <p>Главный бухгалтер <span class="line">{{org.accountant}}</span></p><p>Кассир <span class="line">&nbsp;</span></p></td></tr></table>

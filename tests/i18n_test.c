@@ -1,6 +1,6 @@
 // i18n_test.c — string catalogs: layers, MUI-style fallback, contexts,
-// pseudo-locale, number/date formats, spelled-out numbers, and translation of
-// declarative forms.
+// pseudo-locale, number/date formats, spelled-out numbers, names in cases,
+// and translation of declarative forms.
 
 #include "test_framework.h"
 #include "test_env.h"
@@ -125,6 +125,27 @@ static void test_spellout(void) {
   PASS();
 }
 
+static void test_inflect_names(void) {
+  TEST("names: Russian surname, first name and patronymic in every case; initials, ИП and organizations");
+  char buf[256];
+  ASSERT_STR_EQUAL(ui_inflect_name("ru", "Петров Петр Петрович", UI_CASE_DATIVE, buf, sizeof(buf)), "Петрову Петру Петровичу");
+  ASSERT_STR_EQUAL(ui_inflect_name("ru", "Петров Петр Петрович", UI_CASE_INSTRUMENTAL, buf, sizeof(buf)), "Петровым Петром Петровичем");
+  ASSERT_STR_EQUAL(ui_inflect_name("ru", "Сидорова Анна Викторовна", UI_CASE_GENITIVE, buf, sizeof(buf)), "Сидоровой Анны Викторовны");
+  ASSERT_STR_EQUAL(ui_inflect_name("ru", "Сидорова Анна Викторовна", UI_CASE_ACCUSATIVE, buf, sizeof(buf)), "Сидорову Анну Викторовну");
+  ASSERT_STR_EQUAL(ui_inflect_name("ru", "Достоевский Фёдор Михайлович", UI_CASE_DATIVE, buf, sizeof(buf)), "Достоевскому Фёдору Михайловичу");
+  ASSERT_STR_EQUAL(ui_inflect_name("ru", "Толстой Лев Николаевич", UI_CASE_GENITIVE, buf, sizeof(buf)), "Толстого Льва Николаевича");
+  ASSERT_STR_EQUAL(ui_inflect_name("ru", "Шмидт Анна Карловна", UI_CASE_DATIVE, buf, sizeof(buf)), "Шмидт Анне Карловне");
+  ASSERT_STR_EQUAL(ui_inflect_name("ru", "Шевченко Тарас Григорьевич", UI_CASE_DATIVE, buf, sizeof(buf)), "Шевченко Тарасу Григорьевичу");
+  ASSERT_STR_EQUAL(ui_inflect_name("ru", "Ильин Илья Ильич", UI_CASE_INSTRUMENTAL, buf, sizeof(buf)), "Ильиным Ильёй Ильичем");
+  ASSERT_STR_EQUAL(ui_inflect_name("ru", "Ковальская Наталия Сергеевна", UI_CASE_PREPOSITIONAL, buf, sizeof(buf)), "Ковальской Наталии Сергеевне");
+  ASSERT_STR_EQUAL(ui_inflect_name("ru", "Римский-Корсаков Николай Андреевич", UI_CASE_GENITIVE, buf, sizeof(buf)), "Римского-Корсакова Николая Андреевича");
+  ASSERT_STR_EQUAL(ui_inflect_name("ru", "Сидорова А.В.", UI_CASE_DATIVE, buf, sizeof(buf)), "Сидоровой А.В.");
+  ASSERT_STR_EQUAL(ui_inflect_name("ru", "ИП Иванов Иван Иванович", UI_CASE_GENITIVE, buf, sizeof(buf)), "ИП Иванова Ивана Ивановича");
+  ASSERT_STR_EQUAL(ui_inflect_name("ru", "ООО \"Ромашка\"", UI_CASE_DATIVE, buf, sizeof(buf)), "ООО \"Ромашка\"");
+  ASSERT_STR_EQUAL(ui_inflect_name("de", "Anna Schmidt", UI_CASE_DATIVE, buf, sizeof(buf)), "Anna Schmidt");
+  PASS();
+}
+
 static void test_forms_translate(void) {
   TEST("instantiation: generated form texts translate in their context; plain windows keep their text");
   test_env_init();
@@ -157,6 +178,7 @@ int main(int argc, char **argv) {
   test_pseudo_locale();
   test_system_language();
   test_spellout();
+  test_inflect_names();
   test_forms_translate();
   TEST_END();
 }
