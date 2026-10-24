@@ -494,7 +494,7 @@ static bool fp_prompt_new_folder(window_t *parent, char *out, size_t out_sz) {
 
   if (!out || out_sz == 0) return false;
 
-  result = show_dialog_from_form(&kNewFolderForm, "Create Folder", parent,
+  result = show_dialog_from_form(&kNewFolderForm, ui_tr("Create Folder"), parent,
                                  fp_newfolder_proc, &st);
   if (result == 0 || !st.name[0]) return false;
 
@@ -515,7 +515,7 @@ static void fp_create_folder(window_t *win, fp_state_t *ps) {
   if (!fp_prompt_new_folder(win, name, sizeof(name))) return;
 
   if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0 || strchr(name, '/')) {
-    message_box(win, "Enter a valid folder name.", "Create Folder", MB_OK);
+    message_box(win, ui_tr("Enter a valid folder name."), ui_tr("Create Folder"), MB_OK);
     return;
   }
 
@@ -526,9 +526,8 @@ static void fp_create_folder(window_t *win, fp_state_t *ps) {
 
   if (!axMkDir(full)) {
     char text[320];
-    snprintf(text, sizeof(text), "Could not create folder:\n%.*s",
-             (int)(sizeof(text) - strlen("Could not create folder:\n") - 1), full);
-    message_box(win, text, "Create Folder", MB_OK);
+    snprintf(text, sizeof(text), "%s\n%.200s", ui_tr("Could not create folder:"), full);
+    message_box(win, text, ui_tr("Create Folder"), MB_OK);
     return;
   }
 
@@ -588,8 +587,8 @@ static bool fp_confirm_overwrite(window_t *win, const char *path) {
 
   if (!path || !axPathExists(path)) return true;
 
-  snprintf(text, sizeof(text), "File already exists:\n%s\n\nWant to replace it?", path);
-  return message_box(win, text, "Confirm Save As", MB_YESNO) == IDYES;
+  snprintf(text, sizeof(text), "%s\n%s\n\n%s", ui_tr("File already exists:"), path, ui_tr("Do you want to replace it?"));
+  return message_box(win, text, ui_tr("Confirm Save As"), MB_YESNO) == IDYES;
 }
 
 // Build the full path from the selected filelist item or the edit box + cwd.
@@ -706,7 +705,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       }
 
       set_window_item_text(win, FP_ID_OK, "%s",
-          ps->pick_folder ? "Select" : (ps->save_mode ? "Save" : "Open"));
+          ui_tr(ps->pick_folder ? "Select" : (ps->save_mode ? "Save" : "Open")));
       register_window_hook(evTextInput, fp_edit_watch_hook, ps);
       register_window_hook(evKeyDown, fp_edit_watch_hook, ps);
       fp_sync_accept_button(ps);
@@ -865,7 +864,7 @@ bool get_open_filename(openfilename_t *ofn) {
                            .lpstrFilter = ofn->lpstrFilter };
   return axGetOpenFileName(&native);
 #else
-  return fp_run(ofn, false, "Open File");
+  return fp_run(ofn, false, ui_tr("Open File"));
 #endif
 }
 
@@ -876,11 +875,11 @@ bool get_save_filename(openfilename_t *ofn) {
                            .lpstrFilter = ofn->lpstrFilter };
   return axGetSaveFileName(&native);
 #else
-  return fp_run(ofn, true, "Save File");
+  return fp_run(ofn, true, ui_tr("Save File"));
 #endif
 }
 
 bool get_folder_name(openfilename_t *ofn) {
   if (ofn) ofn->Flags |= OFN_PICKFOLDER;
-  return fp_run(ofn, false, "Select Folder");
+  return fp_run(ofn, false, ui_tr("Select Folder"));
 }

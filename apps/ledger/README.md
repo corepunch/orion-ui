@@ -32,6 +32,32 @@ means adding a configuration directory, not changing code.
 configuration opens its own infobase on the next start. A new infobase starts
 from the configuration's `demo.xml` and is posted on first open.
 
+## Languages
+
+The interface is written in English and translated by string catalogs
+([docs/localization.md](../../docs/localization.md)). Three layers stack:
+
+1. the framework's catalog (`share/locale/` → message boxes, file picker);
+2. Ledger's own, `share/locale/ru.xml` — every menu, form, column and message;
+3. the configuration's, `configurations/<code>/locale/` — national terms. The
+   platform says "Tax ID" and "Tax"; `ru-2003` turns them into "ИНН" and "НДС"
+   in Russian and "INN" and "VAT" in English.
+
+The language is the one chosen in `File > Language...`, otherwise the
+configuration's (`ru` for `ru-2003`), otherwise the system's (`LANG`).
+`--lang ru|en|qps-ploc` overrides it for one run; `qps-ploc` is the
+pseudo-locale for checking layouts. Numbers and dates follow the catalog:
+`16 656,00` and `10.03.2003` in Russian.
+
+![Ledger in Russian](../../docs/screenshots/ledger_document.jpg)
+
+After changing texts in `ledger.orion`, refresh the catalog and translate the
+new entries:
+
+```bash
+build/bin/orionc --input apps/ledger/ledger.orion --strings apps/ledger/share/locale/ru.xml
+```
+
 ## Adding a configuration
 
 1. Copy `share/configurations/ru-2003` to `share/configurations/<code>`.
@@ -40,6 +66,8 @@ from the configuration's `demo.xml` and is posted on first open.
 3. Write the print templates in `print/` (HTML, see below) and a `demo.xml`
    infobase, or leave the demo empty.
 4. Add a `<configuration>` row to `index.xml`.
+5. Set `language` in `settings` and, if the country has its own terms, add
+   `locale/<language>.xml` catalogs that rename the platform's neutral ones.
 
 Print templates are HTML files filled from the document:
 

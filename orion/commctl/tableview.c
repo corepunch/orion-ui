@@ -339,6 +339,10 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       s->column_titles = params->column_titles
         ? copy_string_array(params->column_titles, s->column_count)
         : copy_string_array(params->field_names, s->column_count);  // Use field names as titles
+      for (int i = 0; s->column_titles && i < s->column_count; i++) {
+        const char *title = ui_tr(s->column_titles[i]);
+        if (title && title != s->column_titles[i]) { free(s->column_titles[i]); s->column_titles[i] = strdup(title); }
+      }
       s->column_widths = copy_int_array(params->column_widths, s->column_count);
       s->column_min_widths = copy_int_array(params->column_min_widths, s->column_count);
       

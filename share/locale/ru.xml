@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Orion framework strings, Russian. Applications and their data add layers
+     on top (see orion/user/i18n.h). -->
+<strings language="ru" decimal="," group=" " date="dd.MM.yyyy">
+  <string source="OK">ОК</string>
+  <string source="Cancel">Отмена</string>
+  <string source="Yes">Да</string>
+  <string source="No">Нет</string>
+  <string source="Message">Сообщение</string>
+  <string source="Open">Открыть</string>
+  <string source="Save">Сохранить</string>
+  <string source="Select">Выбрать</string>
+  <string source="Open File">Открыть файл</string>
+  <string source="Save File">Сохранить файл</string>
+  <string source="Select Folder">Выбрать папку</string>
+  <string source="File Picker">Выбор файла</string>
+  <string source="Location:">Папка:</string>
+  <string source="Up one folder">На уровень вверх</string>
+  <string source="Create new folder">Создать папку</string>
+  <string source="Create Folder">Создание папки</string>
+  <string source="Folder name:">Имя папки:</string>
+  <string source="Enter a valid folder name.">Введите допустимое имя папки.</string>
+  <string source="Could not create folder:">Не удалось создать папку:</string>
+  <string source="Confirm Save As">Подтверждение сохранения</string>
+  <string source="File already exists:">Файл уже существует:</string>
+  <string source="Do you want to replace it?">Заменить его?</string>
+  <string source="Collapse / restore">Свернуть / развернуть</string>
+  <string source="Hide window">Скрыть окно</string>
+  <string source="Split Right (Alt: Split Down)">Разделить вправо (Alt: вниз)</string>
+  <string source="Split Down (release Alt: Split Right)">Разделить вниз (отпустите Alt: вправо)</string>
+  <string source="Close active tab">Закрыть вкладку</string>
+</strings>

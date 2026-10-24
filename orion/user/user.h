@@ -7,6 +7,7 @@
 
 #include "messages.h"
 #include "text.h"
+#include "i18n.h"
 #include <orion/kernel/kernel.h>
 
 // Forward declarations
@@ -189,6 +190,8 @@ void ddx_push_combo(window_t *dlg, const ctrl_binding_t *b, const void *state);
 void ddx_pull_combo(window_t *dlg, const ctrl_binding_t *b, void *state);
 void ddx_push_check(window_t *dlg, const ctrl_binding_t *b, const void *state);
 void ddx_pull_check(window_t *dlg, const ctrl_binding_t *b, void *state);
+void ddx_push_date(window_t *dlg, const ctrl_binding_t *b, const void *state);
+void ddx_pull_date(window_t *dlg, const ctrl_binding_t *b, void *state);
 void ddx_push_double(window_t *dlg, const ctrl_binding_t *b, const void *state);
 void ddx_pull_double(window_t *dlg, const ctrl_binding_t *b, void *state);
 // Database-bound ComboBox: exchanges the value field (an id); 0 = none.
@@ -282,6 +285,7 @@ typedef struct form_ctrl_def_s {
 // OK / Cancel buttons end the dialog automatically.
 typedef struct form_def_s {
   const char             *name;        // window title
+  const char             *id;          // form name; string-catalog context for its texts
   int                     width, height; // client area dimensions
   flags_t                 flags;       // window flags
   window_role_t           role;        // normal, page host, or hosted page
