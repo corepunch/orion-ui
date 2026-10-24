@@ -722,8 +722,11 @@ static void emit_database_schema(FILE *f, xmlNodePtr db, const char *prefix) {
     int join_count = 0;
     EACH_ELEMENT(field, t) if (elem(field, "field")) { char *rel = attr(field, "relation"); if (rel && strchr(rel, '.')) join_count++; free(rel); }
     if (join_count) snprintf(joins, sizeof(joins), "%s_%s_joins, %d", db_id, lower, join_count);
-    OUT("  { TABLE_%s, \"%s\", %s%s%s, %s_%s_schema_fields, ARRAY_LEN(%s_%s_schema_fields), %s, sizeof(%s), %s_fields, ARRAY_LEN(%s_fields) },\n",
-        up, table, model ? "\"" : "", model ? model : "NULL", model ? "\"" : "", db_id, lower, db_id, lower, joins, type, meta, meta);
+    char *transient = attr(t, "transient");
+    OUT("  { TABLE_%s, \"%s\", %s%s%s, %s_%s_schema_fields, ARRAY_LEN(%s_%s_schema_fields), %s, sizeof(%s), %s_fields, ARRAY_LEN(%s_fields), %s },\n",
+        up, table, model ? "\"" : "", model ? model : "NULL", model ? "\"" : "", db_id, lower, db_id, lower, joins, type, meta, meta,
+        transient && (eq(transient, "true") || eq(transient, "1")) ? "true" : "false");
+    free(transient);
     free(table); free(model);
   }
   LINE("};\n");
@@ -873,15 +876,29 @@ static void emit_tableviews(FILE *f, xmlNodePtr parent, xmlNodePtr form_node,
       char check_field_q[ORIONC_STRING_SIZE];
       if (check_field && *check_field) cstr(check_field_q, sizeof(check_field_q), check_field);
       else snprintf(check_field_q, sizeof(check_field_q), "NULL");
+      // A static filter: filter-field="book" filter-value="1" shows only the
+      // rows whose integer/boolean field equals the value.
+      char *filter_name = attrs_first(c, "filter-field", "filter_field"), *filter_value = attrs_first(c, "filter-value", "filter_value");
+      int filter_index = 0;
+      if (filter_name) {
+        int index = 0;
+        EACH_ELEMENT(field, find_table_node(database, table)) if (elem(field, "field")) {
+          char *n = attr(field, "name"); bool match = eq(n, filter_name); free(n);
+          if (match) { filter_index = index; break; }
+          index++;
+        }
+        if (!filter_index) fprintf(stderr, "orionc: TableView '%s': unknown or key filter-field '%s'\n", nz(name, ""), filter_name);
+      }
       // LIMITATION: master_filter_field / filter_value are int-based,
       // so only integer FK values work.  String FKs (UUID, hash) would
       // be converted to 0 by the runtime's strtol() call.
-      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = 0, .filter_value = 0, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s };\n\n",
-          param, table_id, param, param, param, param, check_field_q, master_id,
+      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = %d, .filter_value = %d, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s };\n\n",
+          param, table_id, filter_index, filter_value ? atoi(filter_value) : 0, param, param, param, param, check_field_q, master_id,
           relation_field, master_key_q, cell_style_value, column_titles && eq(column_titles, "false") ? "true" : "false");
       free(column_titles);
       free(cell_style);
       free(check_field);
+      free(filter_name); free(filter_value);
       free(master_name_attr);
       free(name); free(source);
     }
@@ -900,8 +917,8 @@ static void emit_comboboxes(FILE *f, xmlNodePtr parent, const char *form) {
         char param[256], table[128], table_id[128];
         char display_q[ORIONC_STRING_SIZE], value_q[ORIONC_STRING_SIZE];
         char filter_field_q[ORIONC_STRING_SIZE], filter_value_q[ORIONC_STRING_SIZE];
-        char *filter_field = attr(c, "filter_field");
-        char *filter_value_attr = attr(c, "filter_value");
+        char *filter_field = attrs_first(c, "filter-field", "filter_field");
+        char *filter_value_attr = attrs_first(c, "filter-value", "filter_value");
 
         snprintf(param, sizeof(param), "%s_%s_combobox_params", form, nz(name, "unnamed"));
         table_name_from_source(table, sizeof(table), source);

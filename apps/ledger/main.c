@@ -44,7 +44,7 @@ static database_t *open_infobase(void) {
     ledger_repost_all(ib, g_ledger->cfg);
     send_db_message(ib, dbSave, 0, NULL);
   } else {
-    ledger_recalc_balances(ib, g_ledger->cfg);
+    ledger_build_reports(ib, g_ledger->cfg);
     ib->dirty = false;  // totals are derived; nothing new to save
   }
   return ib;

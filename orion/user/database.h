@@ -87,6 +87,7 @@ typedef struct {
   size_t record_size;                   // sizeof the generated record struct
   const db_field_meta_t *meta;          // Field offsets for reflection
   int meta_count;
+  bool transient;                       // derived data: never saved, never dirties the database
 } db_table_schema_t;
 
 typedef struct {

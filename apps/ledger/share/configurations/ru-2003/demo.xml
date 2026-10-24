@@ -18,6 +18,7 @@
     <item id="5" sku="00005" name="Доставка товара" unit_id="6" vat_rate_id="1" price="500" />
   </items>
   <documents>
+    <document id="8" doc_type_id="9" counterparty_id="0" number="ВО-0001" date="2003-03-01" comment="Остатки на 01.03.2003" posted="1" />
     <document id="1" doc_type_id="6" counterparty_id="2" number="ПВ-0001" date="2003-03-02" comment="Предоплата по договору № 12/03" total="60000" posted="1" />
     <document id="2" doc_type_id="1" counterparty_id="1" number="ПТ-0001" date="2003-03-03" comment="Накладная № 118 от 03.03.2003" posted="1" />
     <document id="3" doc_type_id="5" counterparty_id="1" number="ПП-0001" date="2003-03-04" comment="Оплата по счету № 118" total="51120" posted="1" />
@@ -35,4 +36,9 @@
     <doc_line id="6" document_id="7" item_id="1" vat_rate_id="1" quantity="40" price="120" />
     <doc_line id="7" document_id="7" item_id="2" vat_rate_id="1" quantity="5" price="1690" />
   </doc_lines>
+  <entries>
+    <entry id="1" document_id="8" debit_id="19" credit_id="60" amount="100000" content="Остаток на расчетном счете" />
+    <entry id="2" document_id="8" debit_id="60" credit_id="40" amount="10000" content="Уставный капитал" />
+    <entry id="3" document_id="8" debit_id="60" credit_id="43" amount="90000" content="Нераспределенная прибыль прошлых лет" />
+  </entries>
 </ib>

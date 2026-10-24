@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Configuration layer: German accounting terms in English. The platform's KPP and BIK fields hold the
+     USt-IdNr. and the Bankleitzahl here. -->
+<strings language="en">
+  <string source="Tax ID">Tax number</string>
+  <string source="Tax ID:">Tax number:</string>
+  <string source="KPP">VAT ID</string>
+  <string source="KPP:">VAT ID:</string>
+  <string source="Tax">VAT</string>
+  <string source="Tax:">VAT:</string>
+  <string source="Tax Amount">VAT Amount</string>
+  <string source="Tax rate:">VAT rate:</string>
+  <string source="Tax Rates">VAT Rates</string>
+  <string source="Tax Dr">VAT Dr</string>
+  <string source="Tax Cr">VAT Cr</string>
+  <string source="Bank ID (BIK):">Bank code (BLZ):</string>
+  <string source="Corr. account:">BIC:</string>
+  <string source="Sales Book">Output VAT</string>
+  <string source="Purchase Book">Input VAT</string>
+</strings>

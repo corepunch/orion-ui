@@ -3,10 +3,12 @@
 <catalog>
   <configurations>
     <configuration id="1" code="ru-2003" name="Бухгалтерский учет (Россия, 2003)" country="Российская Федерация" />
+    <configuration id="2" code="de-2003" name="Buchhaltung Deutschland 2003 (SKR 03)" country="Deutschland" />
   </configurations>
   <languages>
     <language id="1" code="en" name="English" />
     <language id="2" code="ru" name="Русский" />
+    <language id="4" code="de" name="Deutsch" />
     <language id="3" code="qps-ploc" name="Pseudo-locale (layout testing)" />
   </languages>
 </catalog>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Configuration layer: German accounting terms. The platform's KPP and BIK fields hold the
+     USt-IdNr. and the Bankleitzahl here. -->
+<strings language="de">
+  <string source="Tax ID">Steuernummer</string>
+  <string source="Tax ID:">Steuernummer:</string>
+  <string source="KPP">USt-IdNr.</string>
+  <string source="KPP:">USt-IdNr.:</string>
+  <string source="Tax">USt</string>
+  <string source="Tax:">USt:</string>
+  <string source="Tax Amount">USt-Betrag</string>
+  <string source="Tax rate:">USt-Satz:</string>
+  <string source="Tax Rates">USt-Sätze</string>
+  <string source="Tax Dr">USt Soll</string>
+  <string source="Tax Cr">USt Haben</string>
+  <string source="Bank ID (BIK):">BLZ:</string>
+  <string source="Corr. account:">BIC:</string>
+  <string source="Net">Netto</string>
+  <string source="Sales Book">Umsatzsteuer (Ausgangsrechnungen)</string>
+  <string source="Purchase Book">Vorsteuer (Eingangsrechnungen)</string>
+</strings>

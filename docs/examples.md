@@ -74,15 +74,19 @@ build/bin/socialfeed
 ![Ledger trial balance in the Russia 2003 configuration](screenshots/ledger_balance.jpg)
 
 Double-entry bookkeeping in the style of early-2000s desktop accounting
-suites: documents with lines, posting to entries, catalogs, a chart of
-accounts, a trial balance and printed legal forms. The platform is
+suites: documents with lines, posting to entries with analytics, manual
+operations, catalogs, a chart of accounts, period reports (trial balance,
+account card, analysis, VAT books) and printed legal forms. The platform is
 country-neutral; accounts, tax rates, posting rules and forms come from a
-swappable configuration. It demonstrates schema-driven databases with no
-adaptor code, cross-database joins, declarative master–detail tables and
-database dialogs with numeric bindings.
+swappable configuration (Russia 2003, Germany 2003), and the interface is
+translated by string catalogs (English, Russian, German). It demonstrates
+schema-driven databases with no adaptor code, cross-database joins,
+declarative master–detail tables, transient report tables and database
+dialogs with numeric and date bindings.
 
 ```bash
 build/bin/ledger
+build/bin/ledger --config de-2003 --lang de
 ```
 
 ## Task Manager

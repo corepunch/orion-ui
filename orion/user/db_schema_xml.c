@@ -12,6 +12,9 @@
 // dbFind and dbFetch stay valid until the record is deleted. A missing
 // source file loads as an empty database; dbSave writes it.
 //
+// Tables declared transient="true" hold derived data (report results): they
+// are never written and changing them does not mark the database dirty.
+//
 // File format (same shape as SimpleXMLDatabase seeds):
 //   <db><accounts><account id="1" code="01" .../></accounts>...</db>
 
@@ -155,6 +158,7 @@ static bool dbs_save(database_t *db, dbs_context_t *ctx) {
   xmlDocSetRootElement(doc, root);
   for (int i = 0; i < db->schema->table_count; i++) {
     const db_table_schema_t *t = &db->schema->tables[i];
+    if (t->transient) continue;
     char tag[128];
     dbs_row_tag(t->name, tag, sizeof(tag));
     xmlNodePtr tn = xmlNewChild(root, NULL, (const xmlChar *)t->name, NULL);
@@ -238,7 +242,7 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
     case dbInsert: {
       if (!lparam) return 0;
       void *record = dbs_append(db, t, &ctx->tables[ti], lparam);
-      if (record) db->dirty = true;
+      if (record && !t->transient) db->dirty = true;
       return (lresult_t)record;
     }
     case dbUpdate: {
@@ -251,7 +255,7 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
         return 0;
       }
       memmove(ctx->tables[ti].rows[row], lparam, t->record_size);
-      db->dirty = true;
+      db->dirty |= !t->transient;
       return 1;
     }
     case dbDelete: {
@@ -261,7 +265,7 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
       free(rows->rows[row]);
       memmove(&rows->rows[row], &rows->rows[row + 1], (size_t)(rows->count - row - 1) * sizeof(void *));
       rows->count--;
-      db->dirty = true;
+      db->dirty |= !t->transient;
       return 1;
     }
     case dbFetch: return dbs_fetch(db, ctx, ti, HIWORD(wparam), lparam);
