@@ -86,7 +86,9 @@ accent fill (selected rows, the default button, the hovered menu item) use
 `brAccentText`, which is dark here and white in the other palettes. Buttons and
 fields take their corner radii from `button.corner_radius` and
 `field.corner_radius` (`CORNER_RADIUS_CIRCULAR` for capsules; Amber uses small
-rounded rectangles). Build an app with it via `make THEME_<app>=amber`.
+rounded rectangles). A field's text inset, `field.padding_x`, follows its
+roundness: a capsule keeps `TEXTEDIT_PADDING_CAPSULE` clear of its round ends,
+a squarer field takes `FIELD_PADDING_X(radius)`. Build an app with it via `make THEME_<app>=amber`.
 
 ```c
 // Card with an optional accent edge; the theme rounds (or squares) card and edge together.

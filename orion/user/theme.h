@@ -262,6 +262,7 @@ typedef struct {
   struct {
     int corner_radius;            // single-line fields; CORNER_RADIUS_CIRCULAR = capsule
     int multiline_corner_radius;  // derived from single-line control height
+    int padding_x;                // text inset from the ends, clearing the corner (FIELD_PADDING_X)
   } field;
   struct {
     int corner_radius, tail_size;

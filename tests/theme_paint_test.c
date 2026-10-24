@@ -439,6 +439,8 @@ static void test_amber_business_surfaces(void) {
   theme->draw_part(THEME_PART_FIELD, R(10, 10, 100, 34), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[27][60], get_sys_color(brColumnViewBg));
   ASSERT_NOT_EQUAL(pixels[10][18], 0);   // a capsule would leave the top row empty here
+  ASSERT_EQUAL(get_theme()->field.padding_x, FIELD_PADDING_X(get_theme()->field.corner_radius));
+  ASSERT_TRUE(get_theme()->field.padding_x < theme_modern_instance()->field.padding_x);  // squarer ends, text nearer the edge
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 20), CTRL_FOCUSED);
   ASSERT_EQUAL(pixels[20][50], get_sys_color(brActiveTitlebar));
