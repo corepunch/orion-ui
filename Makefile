@@ -176,7 +176,7 @@ $(BIN_DIR)/test_groove_synth_test$(EXE_EXT): $(APPS)/groove/synth.c $(wildcard $
 
 # Shell fragment emitting the unity translation unit for example dir $(1):
 # every .c outside $(COMPS), main.c last.  ('#' is backslash-escaped for make.)
-unity_tu = find $(1) -name '*.c' ! -name main.c ! -path '*/$(COMPS)/*' ! -path '*/tests/*' | sort | sed 's/.*/\#include "&"/'; echo '\#include "$(1)/main.c"'
+unity_tu = find $(1) -name '*.c' ! -name main.c ! -path '*/$(COMPS)/*' ! -path '*/tests/*' ! -path '*/reel/*' | sort | sed 's/.*/\#include "&"/'; echo '\#include "$(1)/main.c"'
 app_inc  = -I. -I$(call appdir,$*) -I$(call appdir,$*)/$(COMPS) -DSHAREDIR='"../share/$(notdir $(call appdir,$*))"'
 app_libs = $(LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(call app_plugin,$*) $(LIBS) $(if $(findstring scener,$*),$(SCENER_LIBS))
 
@@ -367,7 +367,7 @@ $(TEST_BINS): $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_SRCS) $(wildcard $(TEST_DIR)/*
 	  printf '#include "%s"\n' "$$src"; \
 	  printf '#include "$(TEST_DIR)/test_env.c"\n'; \
 	  if [ -n "$$app_dir" ] && [ -d "$(APPS)/$$app_dir" ]; then \
-	    find "$(APPS)/$$app_dir" -name '*.c' ! -name main.c ! -path '*/$(COMPS)/*' ! -path '*/tests/*' | sort | sed 's/.*/#include "&"/'; \
+	    find "$(APPS)/$$app_dir" -name '*.c' ! -name main.c ! -path '*/$(COMPS)/*' ! -path '*/tests/*' ! -path '*/reel/*' | sort | sed 's/.*/#include "&"/'; \
 	  fi; \
 	  if [ -n "$$app_dir" ] && [ -d "$(APPS)/$$app_dir/tests/support" ]; then \
 	    find "$(APPS)/$$app_dir/tests/support" -name '*.c' | sort | sed 's/.*/#include "&"/'; \
