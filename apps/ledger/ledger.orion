@@ -454,7 +454,7 @@
 
   <forms>
     <form name="main_window" title="Ledger" width="1200" height="700"
-          role="host" active-page="journal_page" flags="statusbar,toolbar,titletoolbar" spacing="0">
+          role="host" active-page="journal_page" flags="statusbar,toolbar,titletoolbar,toolbartitle" spacing="0">
       <ActivityBar name="activity" flags="notitle" labels="right">
         <Page form="journal_page" command="view.journal" />
         <Page form="counterparties_page" command="view.counterparties" />

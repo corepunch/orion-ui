@@ -44,11 +44,8 @@ void ledger_update_status(void) {
   bool dirty = send_db_message(g_ledger->ib, dbGetDirty, 0, NULL);
   snprintf(text, sizeof(text), "%s   |   %s   |   %s%s%s", org, cfg, period, dirty ? "   |   " : "", dirty ? ui_tr("modified") : "");
   send_message(g_ledger->main_win, evStatusBar, 0, text);
-  // The caption names the company being kept, as accounting programs do.
-  window_t *win = g_ledger->main_win;
-  if (org[0]) snprintf(win->title, sizeof(win->title), "%s — %s", ui_tr("Ledger"), org);
-  else snprintf(win->title, sizeof(win->title), "%s", ui_tr("Ledger"));
-  invalidate_window(win);
+  // The title bar names the company being kept, as Finder names the folder.
+  set_window_title(g_ledger->main_win, org[0] ? org : ui_tr("Ledger"));
 }
 
 

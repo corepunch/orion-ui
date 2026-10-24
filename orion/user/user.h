@@ -694,6 +694,7 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
 bool set_host_page(window_t *host, window_t *page);
 void *allocate_window_data(window_t *win, size_t size);
 void show_window(window_t *win, bool visible);
+void set_window_title(window_t *win, const char *title);  // ≈ SetWindowText: caption, or the merged toolbar title
 void destroy_window(window_t *win);
 void clear_window_children(window_t *win);
 void clear_toolbar_children(window_t *win);

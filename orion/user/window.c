@@ -1318,6 +1318,17 @@ static bool window_contains_window(window_t *owner, window_t *child) {
 }
 
 // Show or hide window
+void set_window_title(window_t *win, const char *title) {
+  if (!win) {
+    fprintf(stderr, "[window] set_window_title rejected: no window title=%s\n", title ? title : "");
+    fflush(stderr);
+    return;
+  }
+  snprintf(win->title, sizeof(win->title), "%s", title ? title : "");
+  if (toolbar_merged_title(win)) toolbar_relayout(win);  // the title is an item of the merged row
+  invalidate_window(win);
+}
+
 void show_window(window_t *win, bool visible) {
   if (!visible) {
     dock_cancel_window(win);

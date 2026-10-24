@@ -28,6 +28,7 @@ int toolbar_effective_padding(window_t const *win);
 irect16_t toolbar_band_rect(const window_t *win);           // window-local painted band, excluding the caption
 
 bool toolbar_merged_title(const window_t *win);
+void toolbar_relayout(window_t *win);  // after something its items measure changed, e.g. the merged title
 int toolbar_content_offset(const window_t *win);
 
 void toolbar_draw_non_client(window_t *win);

@@ -1005,7 +1005,7 @@ static const char *binding_getter(const char *klass) {
 static const kv_t kWindowFlags[] = {
   {"notitle", "WINDOW_NOTITLE"}, {"nofill", "WINDOW_NOFILL"},
   {"vscroll", "WINDOW_VSCROLL"}, {"flexspace", "WINDOW_FLEXSPACE"},
-  {"toolbar", "WINDOW_TOOLBAR"}, {"titletoolbar", "WINDOW_TITLETOOLBAR"}, {"statusbar", "WINDOW_STATUSBAR"},
+  {"toolbar", "WINDOW_TOOLBAR"}, {"titletoolbar", "WINDOW_TITLETOOLBAR"}, {"toolbartitle", "WINDOW_TOOLBARTITLE"}, {"statusbar", "WINDOW_STATUSBAR"},
   {"notitlebar", "WINDOW_NOTITLE"}, {"default", "0"},
 };
 
