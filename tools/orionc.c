@@ -652,7 +652,14 @@ static const field_type_t *field_type(const char *type) { for (int i = 0; i < AR
 static void singular_type(char *out, size_t cap, const char *table, const char *model) {
   if (model && *model) { snprintf(out, cap, "%s", model); return; }
   char id[96]; ident(id, sizeof(id), table, false); size_t n = strlen(id);
+  static const char *es[] = { "xes", "ches", "shes", "sses", "zes" };  // taxes -> tax
+  bool sibilant = false;
+  for (size_t i = 0; i < sizeof(es) / sizeof(es[0]); i++) {
+    size_t k = strlen(es[i]);
+    if (n > k && !strcmp(id + n - k, es[i])) sibilant = true;
+  }
   if (n > 3 && !strcmp(id + n - 3, "ies")) strcpy(id + n - 3, "y");
+  else if (sibilant) id[n - 2] = 0;
   else if (n > 1 && id[n - 1] == 's') id[n - 1] = 0;
   snprintf(out, cap, "db_%s_t", id);
 }
@@ -691,11 +698,17 @@ static void emit_database_schema(FILE *f, xmlNodePtr db, const char *prefix) {
     OUT("static const db_field_schema_t %s_%s_schema_fields[] = {\n", db_id, meta);
     EACH_ELEMENT(field, t) if (elem(field, "field")) {
       char *name = attr(field, "name"), *kind = attr(field, "type"), *len = attr(field, "length"), *key = attr(field, "key"), *rel = attr(field, "relation");
+      char *def = attr(field, "default"), *on_delete = attrs_first(field, "on-delete", "on_delete"), defq[ORIONC_STRING_SIZE];
       const field_type_t *ft = field_type(kind); char *dot = rel ? strrchr(rel, '.') : NULL;
       bool pk = key && (eq(key, "YES") || eq(key, "yes") || eq(key, "true") || eq(key, "1"));
-      if (dot) { *dot = 0; OUT("  { \"%s\", %s, %d, %s, \"%s\", \"%s\" },\n", name, ft->db, eq(ft->c, "char") ? (len ? atoi(len) : ft->size) : 0, pk ? "true" : "false", rel, dot + 1); joins++; }
-      else OUT("  { \"%s\", %s, %d, %s, NULL, NULL },\n", name, ft->db, eq(ft->c, "char") ? (len ? atoi(len) : ft->size) : 0, pk ? "true" : "false");
-      free(name); free(kind); free(len); free(key); free(rel);
+      cstr(defq, sizeof(defq), def);
+      // EOF delete rules: what deleting the referenced record does to this one.
+      const char *rule = !on_delete ? "DB_DELETE_NO_ACTION" : eq(on_delete, "cascade") ? "DB_DELETE_CASCADE"
+                       : eq(on_delete, "nullify") ? "DB_DELETE_NULLIFY" : eq(on_delete, "deny") ? "DB_DELETE_DENY" : NULL;
+      if (!rule) { fprintf(stderr, "orionc: field '%s': unknown on-delete '%s' (cascade, nullify, deny)\n", nz(name, ""), on_delete); rule = "DB_DELETE_NO_ACTION"; }
+      if (dot) { *dot = 0; OUT("  { \"%s\", %s, %d, %s, \"%s\", \"%s\", %s, %s },\n", name, ft->db, eq(ft->c, "char") ? (len ? atoi(len) : ft->size) : 0, pk ? "true" : "false", rel, dot + 1, defq, rule); joins++; }
+      else OUT("  { \"%s\", %s, %d, %s, NULL, NULL, %s, %s },\n", name, ft->db, eq(ft->c, "char") ? (len ? atoi(len) : ft->size) : 0, pk ? "true" : "false", defq, rule);
+      free(name); free(kind); free(len); free(key); free(rel); free(def); free(on_delete);
     }
     LINE("};\n");
     if (joins) {

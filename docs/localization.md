@@ -95,6 +95,25 @@ snprintf(text, sizeof(text), ui_tr("This item is used by %d document line(s)."),
   order.
 - Do not translate data: record names, file names and user input.
 
+## Plural forms and numbers in words
+
+Legal forms write amounts in words, in the language of their country rather
+than the UI language, so these functions take the language explicitly
+(`NULL` = UI language). Like ICU's spellout rules and CLDR plural categories:
+
+```c
+ui_plural_pick("ru", 22, "рубль|рубля|рублей", buf, sz);         // "рубля"
+ui_spell_number("de", 5021, UI_GENDER_MASCULINE, buf, sz);       // "fünftausendeinundzwanzig"
+ui_money_words_t rub = { "рубль|рубля|рублей", UI_GENDER_MASCULINE,
+                         "копейка|копейки|копеек", UI_GENDER_FEMININE };
+ui_spell_amount("ru", 1234.05, &rub, buf, sz);
+// "Одна тысяча двести тридцать четыре рубля 05 копеек"
+```
+
+Russian numerals agree in gender with the counted noun ("одна тысяча", "две
+копейки"). Rules exist for Russian, German and English; other languages get
+digits.
+
 ## Extracting strings
 
 `orionc` lists every translatable text in a `.orion` file, like `lupdate`:

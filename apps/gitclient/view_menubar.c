@@ -15,7 +15,7 @@ static bool gc_get_selected_branch(char *buf, int buf_sz, bool *is_current) {
   bool found = false;
   for (result_node_t *n = rows; n; n = n->next, row++) {
     if (row == sel) {
-      db_branche_t *b = *(db_branche_t **)n->data;
+      db_branch_t *b = *(db_branch_t **)n->data;
       strncpy(buf, b->name, (size_t)buf_sz - 1);
       if (is_current) *is_current = b->is_current;
       found = true;

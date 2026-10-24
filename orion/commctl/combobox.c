@@ -356,6 +356,15 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       }
       invalidate_window(win);
       return true;
+    case cbSetSource:
+      if (!state) return false;
+      state->params.table_id = (int)wparam;
+      if (lparam) state->params.db = (database_t *)lparam;
+      state->params.filter_field = state->params.filter_value = NULL;
+      send_message(win, cbClear, 0, NULL);
+      cb_populate_from_database(win, &state->params);
+      invalidate_window(win);
+      return true;
     case evSetDatabase:
       // Set database pointer and populate combobox
       if (state && lparam) {

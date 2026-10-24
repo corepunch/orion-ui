@@ -13,6 +13,7 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 <h1>Quittung Nr. {{number}}</h1>
 <table class="grid" style="width:160mm">
 <tr><td style="width:40mm">Betrag</td><td class="b">{{total}} {{cfg.currency}}</td></tr>
+<tr><td>Betrag in Worten</td><td>{{total|words}}</td></tr>
 <tr><td>darin enthaltene USt</td><td>{{vat}} {{cfg.currency}}</td></tr>
 <tr><td>in Worten</td><td>&nbsp;</td></tr>
 <tr><td>von</td><td>{{counterparty.name}}, {{counterparty.address}}</td></tr>

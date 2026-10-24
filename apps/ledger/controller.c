@@ -114,6 +114,34 @@ static result_t document_hook(window_t *win, uint32_t msg, uint32_t wparam, void
   return true;
 }
 
+// ── Entry dialog: the analytics boxes follow the chosen accounts ───────────
+
+// Lists the catalog the account is analysed by; empty and disabled without one.
+static void source_subconto(window_t *dlg, uint32_t account_id, uint32_t subconto_id, int value) {
+  window_t *account = get_window_item(dlg, account_id), *subconto = get_window_item(dlg, subconto_id);
+  int account_value = (int)send_message(account, cbGetCurrentValue, 0, NULL);
+  const char *table = account_value == kComboBoxError ? "" : ledger_subconto_table(g_ledger->cfg, account_value);
+  const db_table_schema_t *schema = table[0] ? db_schema_table_named(g_ledger->ib->schema, table) : NULL;
+  if (schema) send_message(subconto, cbSetSource, (uint32_t)schema->table_id, g_ledger->ib);
+  else send_message(subconto, cbClear, 0, NULL);
+  send_message(subconto, cbSetCurrentValue, (uint32_t)value, NULL);
+  enable_window(subconto, schema != NULL);
+}
+
+static result_t entry_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  (void)lparam;
+  if (msg == evCreate) {
+    const db_entry_t *e = db_dialog_record(win);
+    source_subconto(win, ID_ENTRY_DEBIT, ID_ENTRY_DEBIT_SUBCONTO, e ? e->debit_subconto_id : 0);
+    source_subconto(win, ID_ENTRY_CREDIT, ID_ENTRY_CREDIT_SUBCONTO, e ? e->credit_subconto_id : 0);
+    return true;
+  }
+  if (msg != evCommand || HIWORD(wparam) != cbSelectionChange) return false;
+  if (LOWORD(wparam) == ID_ENTRY_DEBIT)  source_subconto(win, ID_ENTRY_DEBIT, ID_ENTRY_DEBIT_SUBCONTO, 0);
+  if (LOWORD(wparam) == ID_ENTRY_CREDIT) source_subconto(win, ID_ENTRY_CREDIT, ID_ENTRY_CREDIT_SUBCONTO, 0);
+  return true;
+}
+
 // ── Manual operation dialog: the accountant's entries ──────────────────────
 
 static result_t operation_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -127,10 +155,11 @@ static result_t operation_hook(window_t *win, uint32_t msg, uint32_t wparam, voi
   uint16_t code = HIWORD(wparam);
   if (code == edUpdate) return true;
   db_entry_t *entry = (db_entry_t *)send_message(entries, tvGetSelectedRecord, 0, NULL);
+  db_dialog_opts_t add_opts = { "document_id", doc_id, entry_hook }, edit_opts = { .hook = entry_hook };
   uint32_t id = code == RVN_DBLCLK ? ID_OPERATION_EDIT_ENTRY : (code == btnClicked && lparam ? ((window_t *)lparam)->id : 0);
   switch (id) {
-    case ID_OPERATION_ADD_ENTRY:    show_db_dialog_ex(&ledger_entry_form, "Add Entry", win, 0, "document_id", doc_id); break;
-    case ID_OPERATION_EDIT_ENTRY:   if (entry) show_db_dialog(&ledger_entry_form, "Entry", win, entry->id);           break;
+    case ID_OPERATION_ADD_ENTRY:    show_db_dialog_opts(&ledger_entry_form, "Add Entry", win, 0, &add_opts); break;
+    case ID_OPERATION_EDIT_ENTRY:   if (entry) show_db_dialog_opts(&ledger_entry_form, "Entry", win, entry->id, &edit_opts); break;
     case ID_OPERATION_DELETE_ENTRY: if (entry) send_db_message(g_ledger->ib, dbDelete, TABLE_ENTRIES, (void *)(intptr_t)entry->id); break;
     default: return false;
   }
@@ -141,18 +170,100 @@ static result_t operation_hook(window_t *win, uint32_t msg, uint32_t wparam, voi
   return true;
 }
 
+// ── Payroll dialog: employees' lines ───────────────────────────────────────
+
+static result_t payroll_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  int doc_id = db_dialog_record_id(win);
+  window_t *lines = get_window_item(win, ID_PAYROLL_LINES);
+  if (msg == evCreate) {
+    send_message(lines, tvSetFilter, (uint32_t)ledger_field(g_ledger->ib, TABLE_PAYROLL_LINES, "document_id"), (void *)(intptr_t)doc_id);
+    return true;
+  }
+  if (msg != evCommand) return false;
+  uint16_t code = HIWORD(wparam);
+  if (code == edUpdate) return true;
+  db_payroll_line_t *line = (db_payroll_line_t *)send_message(lines, tvGetSelectedRecord, 0, NULL);
+  uint32_t id = code == RVN_DBLCLK ? ID_PAYROLL_EDIT_LINE : (code == btnClicked && lparam ? ((window_t *)lparam)->id : 0);
+  switch (id) {
+    case ID_PAYROLL_FILL: {
+      // The dialog's header may name another type or date than the stored record.
+      db_document_t *doc = find_document(doc_id), *edited = db_dialog_record(win);
+      if (doc && edited) {
+        dialog_pull(win, edited, ledger_payroll_form.bindings, ledger_payroll_form.binding_count);
+        doc->doc_type_id = edited->doc_type_id;
+        snprintf(doc->date, sizeof(doc->date), "%s", edited->date);
+      }
+      ledger_fill_payroll(g_ledger->ib, g_ledger->cfg, doc_id);
+      break;
+    }
+    case ID_PAYROLL_ADD_LINE:    show_db_dialog_ex(&ledger_payroll_line_form, "Add Line", win, 0, "document_id", doc_id); break;
+    case ID_PAYROLL_EDIT_LINE:   if (line) show_db_dialog(&ledger_payroll_line_form, "Edit Line", win, line->id); break;
+    case ID_PAYROLL_DELETE_LINE: if (line) send_db_message(g_ledger->ib, dbDelete, TABLE_PAYROLL_LINES, (void *)(intptr_t)line->id); break;
+    default: return false;
+  }
+  ledger_recalc_document(g_ledger->ib, g_ledger->cfg, doc_id);
+  send_message(lines, tvRefresh, 0, NULL);
+  db_document_t *doc = find_document(doc_id);
+  if (doc) show_amount(win, ID_PAYROLL_TOTAL, doc->total);
+  return true;
+}
+
+// ── Assets put into service ────────────────────────────────────────────────
+
+static result_t asset_document_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  int doc_id = db_dialog_record_id(win);
+  window_t *lines = get_window_item(win, ID_ASSET_DOCUMENT_LINES);
+  if (msg == evCreate) {
+    send_message(lines, tvSetFilter, (uint32_t)ledger_field(g_ledger->ib, TABLE_ASSET_LINES, "document_id"), (void *)(intptr_t)doc_id);
+    return true;
+  }
+  if (msg != evCommand) return false;
+  uint16_t code = HIWORD(wparam);
+  if (code == edUpdate) return true;
+  db_asset_line_t *line = (db_asset_line_t *)send_message(lines, tvGetSelectedRecord, 0, NULL);
+  uint32_t id = code == btnClicked && lparam ? ((window_t *)lparam)->id : 0;
+  switch (id) {
+    case ID_ASSET_DOCUMENT_ADD_LINE:    show_db_dialog_ex(&ledger_asset_line_form, "Add Asset", win, 0, "document_id", doc_id); break;
+    case ID_ASSET_DOCUMENT_DELETE_LINE: if (line) send_db_message(g_ledger->ib, dbDelete, TABLE_ASSET_LINES, (void *)(intptr_t)line->id); break;
+    default: return false;
+  }
+  ledger_recalc_document(g_ledger->ib, g_ledger->cfg, doc_id);
+  send_message(lines, tvRefresh, 0, NULL);
+  return true;
+}
+
+// Month-end closing shows the entries its last posting made.
+static result_t closing_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  (void)lparam;
+  if (msg == evCreate) {
+    send_message(get_window_item(win, ID_CLOSING_ENTRIES), tvSetFilter,
+                 (uint32_t)ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id"), (void *)(intptr_t)db_dialog_record_id(win));
+    return true;
+  }
+  return msg == evCommand && HIWORD(wparam) == edUpdate;
+}
+
 static void today(char *out, size_t sz) {
   time_t now = time(NULL);
   strftime(out, sz, "%Y-%m-%d", localtime(&now));
 }
 
+// Each form of document type has its dialog.
+static const struct { const char *form; const form_def_t *def; winproc_t hook; const char *title, *new_title; } kDocumentForms[] = {
+  { "document",  &ledger_document_form,       document_hook,       "Document",         "New Document" },
+  { "operation", &ledger_operation_form,      operation_hook,      "Manual Operation", "New Manual Operation" },
+  { "payroll",   &ledger_payroll_form,        payroll_hook,        "Payroll",          "New Payroll Document" },
+  { "assets",    &ledger_asset_document_form, asset_document_hook, "Put into Service", "Put Assets into Service" },
+  { "closing",   &ledger_closing_form,        closing_hook,        "Close Month",      "Close Month" },
+};
+
 static void edit_document(int doc_id, bool is_new) {
   db_doc_type_t *type = document_type(find_document(doc_id));
-  uint32_t ok = type && type->manual
-    ? show_db_dialog_hook(&ledger_operation_form, is_new ? "New Manual Operation" : "Manual Operation",
-                          g_ledger->main_win, doc_id, operation_hook)
-    : show_db_dialog_hook(&ledger_document_form, is_new ? "New Document" : "Document",
-                          g_ledger->main_win, doc_id, document_hook);
+  size_t f = 0;
+  for (size_t i = 0; type && i < ARRAY_LEN(kDocumentForms); i++) if (!strcmp(type->form, kDocumentForms[i].form)) f = i;
+  db_dialog_opts_t opts = { .hook = kDocumentForms[f].hook };
+  uint32_t ok = show_db_dialog_opts(kDocumentForms[f].def, is_new ? kDocumentForms[f].new_title : kDocumentForms[f].title,
+                                    g_ledger->main_win, doc_id, &opts);
   if (!ok && is_new) {
     ledger_delete_document(g_ledger->ib, doc_id);
     ledger_refresh_views();
@@ -162,23 +273,37 @@ static void edit_document(int doc_id, bool is_new) {
 }
 
 // New documents start as the selected document's type, or the first type of
-// the wanted kind in the configuration.
-static int first_doc_type(bool manual) {
+// the wanted form in the configuration.
+static int first_doc_type(const char *form) {
   int id = 0;
   result_node_t *types = (result_node_t *)send_db_message(g_ledger->cfg, dbFetch, MAKEDWORD(TABLE_DOC_TYPES, 0), NULL);
   for (result_node_t *n = types; n && !id; n = n->next) {
     db_doc_type_t *t = *(db_doc_type_t **)n->data;
-    if (t->manual == manual) id = t->id;
+    if (!strcmp(t->form, form)) id = t->id;
   }
   free_result_list(types);
   return id;
 }
 
-static void new_document(bool manual) {
+// Month-end closing is dated the last day of the current month.
+static void month_end(char *date) {
+  int y, m;
+  if (sscanf(date, "%d-%d", &y, &m) != 2) return;
+  static const int days[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+  int d = days[(m - 1) % 12] + (m == 2 && y % 4 == 0 && (y % 100 != 0 || y % 400 == 0));
+  snprintf(date + 8, 3, "%02d", d);
+}
+
+static void new_document(const char *form) {
   db_document_t *last = selected(ID_JOURNAL_PAGE_DOCUMENTS);
   db_doc_type_t *last_type = document_type(last);
-  db_document_t blank = { .doc_type_id = last_type && last_type->manual == manual ? last->doc_type_id : first_doc_type(manual) };
+  db_document_t blank = { .doc_type_id = last_type && !strcmp(last_type->form, form) ? last->doc_type_id : first_doc_type(form) };
+  if (!blank.doc_type_id) {
+    message_box(g_ledger->main_win, ui_tr("The configuration defines no document type of this kind."), ui_tr("New Document"), MB_OK);
+    return;
+  }
   today(blank.date, sizeof(blank.date));
+  if (!strcmp(form, "closing")) month_end(blank.date);
   db_document_t *doc = (db_document_t *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &blank);
   if (doc) edit_document(doc->id, true);
 }
@@ -256,8 +381,11 @@ void ledger_command(uint16_t id) {
     case ID_FILE_LANGUAGE:      select_language();      break;
     case ID_FILE_QUIT:          ui_request_quit();      break;
 
-    case ID_DOC_NEW:           new_document(false); break;
-    case ID_DOC_NEW_OPERATION: new_document(true);  break;
+    case ID_DOC_NEW:           new_document("document");  break;
+    case ID_DOC_NEW_OPERATION: new_document("operation"); break;
+    case ID_DOC_NEW_PAYROLL:   new_document("payroll");   break;
+    case ID_DOC_NEW_ASSETS:    new_document("assets");    break;
+    case ID_DOC_CLOSE_MONTH:   new_document("closing");   break;
     case ID_DOC_OPEN: if (doc) edit_document(doc->id, false); break;
     case ID_DOC_POST:
       if (doc && ledger_post(g_ledger->ib, g_ledger->cfg, doc->id)) after_change(0, false);
@@ -303,7 +431,51 @@ void ledger_command(uint16_t id) {
                             TABLE_DOC_LINES, "item_id");
       break;
 
+    case ID_CATALOG_NEW_EMPLOYEE:
+      if (show_db_dialog(&ledger_employee_form, "New Employee", parent, 0)) ledger_refresh_views();
+      break;
+    case ID_CATALOG_EDIT_EMPLOYEE:
+      edit_catalog_record(ID_EMPLOYEES_PAGE_EMPLOYEES, &ledger_employee_form, "Employee");
+      break;
+    case ID_CATALOG_DELETE_EMPLOYEE:
+      delete_catalog_record(ID_EMPLOYEES_PAGE_EMPLOYEES, TABLE_EMPLOYEES, "Delete the selected employee?",
+                            "This employee is used by %d payroll line(s) and cannot be deleted.",
+                            TABLE_PAYROLL_LINES, "employee_id");
+      break;
+    case ID_CATALOG_NEW_ASSET:
+      if (show_db_dialog(&ledger_asset_form, "New Fixed Asset", parent, 0)) ledger_refresh_views();
+      break;
+    case ID_CATALOG_EDIT_ASSET:
+      edit_catalog_record(ID_ASSETS_PAGE_ASSETS, &ledger_asset_form, "Fixed Asset");
+      break;
+    case ID_CATALOG_DELETE_ASSET:
+      delete_catalog_record(ID_ASSETS_PAGE_ASSETS, TABLE_ASSETS, "Delete the selected fixed asset?",
+                            "This fixed asset is used by %d document line(s) and cannot be deleted.",
+                            TABLE_ASSET_LINES, "asset_id");
+      break;
+    case ID_CATALOG_NEW_CURRENCY:
+      if (show_db_dialog(&ledger_currency_form, "New Currency", parent, 0)) ledger_refresh_views();
+      break;
+    case ID_CATALOG_EDIT_CURRENCY:
+      edit_catalog_record(ID_CURRENCIES_PAGE_CURRENCIES, &ledger_currency_form, "Currency");
+      break;
+    case ID_CATALOG_NEW_RATE: {
+      db_currency_t *currency = selected(ID_CURRENCIES_PAGE_CURRENCIES);
+      if (show_db_dialog_ex(&ledger_rate_form, "New Exchange Rate", parent, 0, "currency_id", currency ? currency->id : 0))
+        ledger_refresh_views();
+      break;
+    }
+    case ID_CATALOG_DELETE_RATE: {
+      db_rate_t *rate = selected(ID_CURRENCIES_PAGE_RATES);
+      if (rate && message_box(parent, ui_tr("Delete the selected exchange rate?"), ui_tr("Delete"), MB_YESNO) == IDYES) {
+        send_db_message(g_ledger->ib, dbDelete, TABLE_RATES, (void *)(intptr_t)rate->id);
+        ledger_refresh_views();
+      }
+      break;
+    }
+
     case ID_VIEW_JOURNAL: case ID_VIEW_COUNTERPARTIES: case ID_VIEW_ITEMS: case ID_VIEW_ACCOUNTS:
+    case ID_VIEW_EMPLOYEES: case ID_VIEW_ASSETS: case ID_VIEW_CURRENCIES:
     case ID_VIEW_ENTRIES: case ID_VIEW_REPORTS: case ID_VIEW_CONFIG:
       page_host_select(parent, id);
       break;
@@ -314,6 +486,12 @@ void ledger_command(uint16_t id) {
     case ID_REPORT_RECALC:
       ledger_repost_all(g_ledger->ib, g_ledger->cfg);
       ledger_refresh_views();
+      break;
+    case ID_REPORT_PRINT:
+      if (ledger_print_reports(report, sizeof(report)))
+        message_box(parent, report, ui_tr("Print Forms Written"), MB_OK);
+      else
+        message_box(parent, ui_tr("The configuration defines no report forms."), ui_tr("Print"), MB_OK);
       break;
     case ID_HELP_ABOUT:
       message_box(parent, ui_tr("Ledger 1.0\n\nDouble-entry bookkeeping on Orion.\n"
@@ -339,6 +517,9 @@ result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
         if (src->id == ID_JOURNAL_PAGE_DOCUMENTS)             ledger_command(ID_DOC_OPEN);
         if (src->id == ID_COUNTERPARTIES_PAGE_COUNTERPARTIES) ledger_command(ID_CATALOG_EDIT_COUNTERPARTY);
         if (src->id == ID_ITEMS_PAGE_ITEMS)                   ledger_command(ID_CATALOG_EDIT_ITEM);
+        if (src->id == ID_EMPLOYEES_PAGE_EMPLOYEES)           ledger_command(ID_CATALOG_EDIT_EMPLOYEE);
+        if (src->id == ID_ASSETS_PAGE_ASSETS)                 ledger_command(ID_CATALOG_EDIT_ASSET);
+        if (src->id == ID_CURRENCIES_PAGE_CURRENCIES)         ledger_command(ID_CATALOG_EDIT_CURRENCY);
         return true;
       }
       // The posted checkbox in the journal posts or cancels posting.

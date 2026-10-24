@@ -21,7 +21,7 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 <tr><td class="c">{{doc_type.debit.code}}</td><td></td><td class="c">{{doc_type.credit.code}}</td><td></td><td></td><td class="r">{{total}}</td><td></td><td></td></tr></table>
 <p>Принято от <span class="line" style="width:75%">{{counterparty.name}}</span></p>
 <p>Основание: <span class="line" style="width:78%">{{comment}}</span></p>
-<p>Сумма <span class="line" style="width:80%">{{total}} {{cfg.currency}}</span><br><span class="small" style="margin-left:40%">прописью</span></p>
+<p>Сумма <span class="line" style="width:80%">{{total|words}}</span><br><span class="small" style="margin-left:40%">прописью</span></p>
 <p>В том числе <span class="line" style="width:70%">НДС {{vat}} {{cfg.currency}}</span></p>
 <p>Приложение <span class="line" style="width:75%">&nbsp;</span></p>
 <table class="sign" style="width:100%"><tr><td>Главный бухгалтер <span class="line">{{org.accountant}}</span></td></tr><tr><td>Получил кассир <span class="line">&nbsp;</span></td></tr></table></td>

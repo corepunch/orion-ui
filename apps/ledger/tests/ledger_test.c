@@ -1,5 +1,6 @@
-// ledger_test.c — schema-driven database, posting rules and print forms,
-// exercised on the ru-2003 configuration and its demo infobase.
+// ledger_test.c — schema-driven database, posting rules, payroll, fixed
+// assets, currencies, month-end closing, reports and print forms, exercised
+// on the ru-2003 and de-2003 configurations and their demo infobases.
 
 #include "test_framework.h"
 #include "apps/ledger/ledger.h"
@@ -88,22 +89,147 @@ static void test_posting_rules(void) {
   db_entry_t *e = *(db_entry_t **)entries->data;
   db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "debit.code", dr, sizeof(dr));
   db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "credit.code", cr, sizeof(cr));
-  db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "item.sku", item, sizeof(item));
-  db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "counterparty.tax_id", party, sizeof(party));
+  db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "debit_subconto.sku", item, sizeof(item));
+  db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "credit_subconto.tax_id", party, sizeof(party));
   bool ok = !strcmp(dr, "41.01") && !strcmp(cr, "60.01") && near(e->amount, 9500) && near(e->quantity, 100) &&
             !strcmp(item, "00001") && !strcmp(party, "7705123456");
   free_result_list(entries);
-  ASSERT(ok, "net amount entry carries item, quantity and supplier");
+  ASSERT(ok, "net amount entry carries the item on the debit side and the supplier on the credit side");
+  PASS();
+}
+
+static double entry_sum(const char *debit, const char *credit) {
+  db_account_t *dr = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", debit), *cr = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", credit);
+  double sum = 0;
+  result_node_t *entries = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ENTRIES, 0), NULL);
+  for (result_node_t *n = entries; n; n = n->next) {
+    db_entry_t *e = *(db_entry_t **)n->data;
+    if (dr && cr && e->debit_id == dr->id && e->credit_id == cr->id) sum += e->amount;
+  }
+  free_result_list(entries);
+  return sum;
+}
+
+static void test_cost_of_sales(void) {
+  TEST("sale: goods leave 41.01 for 90.02 at average cost, item and quantity on the credit side");
+  ASSERT(near(entry_sum("90.02", "41.01"), 2 * 6200 + 150), "two monitors at 6 200 and a keyboard from opening stock");
+  const db_balance_t *goods = balance("41.01");
+  ASSERT(goods && near(goods->balance_dr, 1500 + 42600 + 15750 - 12550), "stock after the sale");
+  PASS();
+}
+
+static void test_payroll(void) {
+  TEST("payroll: accrual with income tax withheld and unified social tax; payout of net pay; fill");
+  db_document_t *accrual = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "НЗ-0001");
+  ASSERT(accrual && near(accrual->total, 36000), "gross payroll");
+  db_payroll_line_t *line = (db_payroll_line_t *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_PAYROLL_LINES, 0), (void *)(intptr_t)1);
+  ASSERT(line && near(line->withheld, (15000 - 400) * 0.13) && near(line->contributions, 15000 * 0.356) && near(line->net, 13102),
+         "13 % after the 400 allowance; 35.6 % on top");
+  ASSERT(near(balance("68.01")->balance_cr, 4524) && near(balance("69")->balance_cr, 12816), "taxes owed");
+  ASSERT(near(balance("70")->balance_cr, 0) && near(balance("70")->debit_turnover, 36000), "net pay paid out from the till");
+  char buf[128];
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_PAYROLL_ROWS, 0), NULL);
+  ASSERT(count_result_list(rows) == 3, "payroll statement per employee");
+  db_get_field_text(g_ledger->ib, TABLE_PAYROLL_ROWS, *(void **)rows->data, "employee.position", buf, sizeof(buf));
+  free_result_list(rows);
+  ASSERT_STR_EQUAL(buf, "Генеральный директор");
+  db_document_t blank = { .doc_type_id = 10 };
+  snprintf(blank.date, sizeof(blank.date), "2003-04-30");
+  db_document_t *april = (db_document_t *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &blank);
+  int id = april->id;
+  ledger_fill_payroll(g_ledger->ib, g_ledger->cfg, id);
+  ASSERT(ledger_count_references(g_ledger->ib, TABLE_PAYROLL_LINES, "document_id", id) == 3 && near(april->total, 36000), "filled with salaries");
+  ledger_delete_document(g_ledger->ib, id);
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_PAYROLL_LINES, "document_id", id), 0);
+  PASS();
+}
+
+static void test_polymorphic_analytics(void) {
+  TEST("analytics: each side names the catalog its account is analysed by");
+  db_document_t *payout = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ВЗ-0001");
+  result_node_t *entries = (result_node_t *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)payout->id);
+  char dr[128], cr[128];
+  db_entry_t *e = *(db_entry_t **)entries->data;
+  db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "debit_subconto.name", dr, sizeof(dr));
+  db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "credit_subconto.name", cr, sizeof(cr));
+  free_result_list(entries);
+  ASSERT_STR_EQUAL(dr, "Петров Петр Петрович");
+  ASSERT_STR_EQUAL(cr, "");
+  ASSERT_STR_EQUAL(ledger_subconto_table(g_ledger->cfg, ((db_account_t *)find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "02"))->id), "assets");
+  PASS();
+}
+
+static void test_fixed_assets(void) {
+  TEST("fixed assets: put into service, straight-line depreciation from the next month");
+  db_asset_t *printer = (db_asset_t *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_ASSETS, 0), (void *)(intptr_t)2);
+  ASSERT_STR_EQUAL(printer->commissioned, "2003-03-14");
+  ASSERT(near(balance("01")->balance_dr, 48000) && near(balance("02")->balance_cr, 3000), "computer depreciated for March only");
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ASSET_ROWS, 0), NULL);
+  db_asset_row_t *computer = *(db_asset_row_t **)rows->data, *second = *(db_asset_row_t **)((result_node_t *)rows->next)->data;
+  bool ok = near(computer->depreciation, 3000) && near(computer->residual, 33000) && near(second->monthly, 500) && near(second->depreciation, 0);
+  free_result_list(rows);
+  ASSERT(ok, "asset register");
+  db_document_t blank = { .doc_type_id = 14 };
+  snprintf(blank.date, sizeof(blank.date), "2003-04-30");
+  db_document_t *april = (db_document_t *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &blank);
+  int id = april->id;
+  ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+  ASSERT(near(balance("02")->balance_cr, 3000 + 1000 + 500), "April charges both assets");
+  ledger_delete_document(g_ledger->ib, id);
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+  PASS();
+}
+
+static void test_currency(void) {
+  TEST("currencies: documents post at the day's rate; closing revalues currency accounts");
+  db_document_t *import = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ПИ-0001");
+  ASSERT(import && near(import->rate, 31.5) && near(import->total, 500), "rate on the document date");
+  ASSERT(near(entry_sum("41.01", "60.21"), 15750), "500 USD at 31.50");
+  const db_balance_t *account = balance("52");
+  ASSERT(account && near(account->balance_dr, 500 * 31.38), "500 USD left, restated at the month-end rate");
+  ASSERT(near(entry_sum("91.02", "52"), 165) && near(entry_sum("60.21", "91.01"), 25), "exchange differences");
+  ASSERT(near(balance("60.21")->balance_dr, 0) && near(balance("60.21")->balance_cr, 0), "settled supplier");
+  PASS();
+}
+
+static void test_month_closing(void) {
+  TEST("closing: expenses close to 90, the month's result to 99");
+  ASSERT(near(balance("26")->balance_dr, 0) && near(balance("44")->balance_dr, 0), "26 and 44 closed");
+  ASSERT(near(balance("90")->balance_dr, 0) && near(balance("90")->balance_cr, 0), "90 nets to zero");
+  ASSERT(near(entry_sum("99", "90.09"), 48486) && near(entry_sum("99", "91.09"), 140), "loss from sales and other expenses");
+  PASS();
+}
+
+static void test_cash_book(void) {
+  TEST("cash book: day opening, cash orders with payee, day totals; KO-4 report form");
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_CASH_BOOK, 0), NULL);
+  int count = count_result_list(rows);
+  db_cash_book_t *last = NULL;
+  for (result_node_t *n = rows; n; n = n->next) last = *(db_cash_book_t **)n->data;
+  bool ok = count == 12 && last && near(last->balance, 18656) && near(last->receipt, 31476) && near(last->expense, 31476);
+  free_result_list(rows);
+  ASSERT(ok, "three days with movements");
+  char report[1024];
+  ASSERT_EQUAL(ledger_print_reports(report, sizeof(report)), 1);
+  FILE *f = fopen(TMP_DIR "/print/ko4.html", "rb");
+  ASSERT_NOT_NULL(f);
+  static char html[65536];
+  size_t n = fread(html, 1, sizeof(html) - 1, f);
+  fclose(f);
+  html[n] = '\0';
+  ASSERT(strstr(html, "КАССОВАЯ КНИГА") && strstr(html, "Сидорова Анна Викторовна") && !strstr(html, "{{"), "filled cash book");
   PASS();
 }
 
 static void test_unpost_and_trial_balance(void) {
   TEST("trial balance: subaccounts roll up; opening balances; unposting removes entries");
   const db_balance_t *bank = balance("51"), *goods = balance("41"), *vat = balance("68"), *aux = balance("000");
-  ASSERT(bank && near(bank->balance_dr, 100000 + 60000 - 51120), "bank balance");
+  ASSERT(bank && near(bank->balance_dr, 100000 + 60000 - 51120 - 31476), "bank balance");
   ASSERT(aux && near(aux->balance_dr, 0) && near(aux->balance_cr, 0), "opening entries balance through 000");
-  ASSERT(goods && near(goods->debit_turnover, 42600), "41 includes 41.01");
-  ASSERT(vat && near(vat->debit_turnover, 8520) && near(vat->credit_turnover, 2776), "VAT 68.02 rolls into 68");
+  ASSERT(goods && near(goods->debit_turnover, 1500 + 42600 + 15750), "41 includes 41.01");
+  ASSERT(vat && near(vat->debit_turnover, 8520) && near(vat->credit_turnover, 2776 + 4524), "68.02 and 68.01 roll into 68");
   db_document_t *sale = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "РТ-0002");
   ASSERT(sale && !sale->posted, "second sale is a draft");
   ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, sale->id));
@@ -130,36 +256,39 @@ static void test_period_reports(void) {
   const db_balance_t *bank = balance("51");
   ASSERT(bank && near(bank->opening_dr, 100000 + 60000 - 51120) && near(bank->debit_turnover, 0), "bank opens with earlier movements");
   result_node_t *card = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_CARD, 0), NULL);
-  ASSERT_EQUAL(count_result_list(card), 0);  // no bank movement in the period
+  ASSERT_EQUAL(count_result_list(card), 1);  // cash drawn for the payroll
   free_result_list(card);
   set_period("", "", "60");
   card = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_CARD, 0), NULL);
   double last = -1; int rows = count_result_list(card);
   for (result_node_t *n = card; n; n = n->next) last = (*(db_card_t **)n->data)->balance;
   free_result_list(card);
-  ASSERT(rows == 7 && near(last, 0), "supplier card: six receipt entries and the payment settle to zero");
+  ASSERT(rows == 12 && near(last, -14400), "supplier card: receipts, payments, the unpaid printer");
   result_node_t *rows_ = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ANALYSIS_ROWS, 0), NULL);
   db_analysis_row_t *alfa = rows_ ? *(db_analysis_row_t **)rows_->data : NULL;
-  bool ok = count_result_list(rows_) == 1 && alfa && near(alfa->credit_turnover, 51120) && near(alfa->debit_turnover, 51120);
+  char name[128] = "";
+  if (alfa) db_get_field_text(g_ledger->ib, TABLE_ANALYSIS_ROWS, alfa, "subconto.name", name, sizeof(name));
+  bool ok = count_result_list(rows_) == 2 && alfa && near(alfa->credit_turnover, 51120 + 14400) && near(alfa->debit_turnover, 51120) &&
+            !strcmp(name, "ООО \"Торговый дом Альфа\"");
   free_result_list(rows_);
-  ASSERT(ok, "analysis of 60 lists the one supplier");
+  ASSERT(ok, "analysis of 60 lists the suppliers");
   int sales = ledger_count_references(g_ledger->ib, TABLE_VAT_BOOK, "book", 1);
   int purchases = ledger_count_references(g_ledger->ib, TABLE_VAT_BOOK, "book", 2);
-  ASSERT(sales == 1 && purchases == 1, "posted sale and receipt are in the books");
+  ASSERT(sales == 1 && purchases == 2, "posted sale, goods and equipment receipts are in the books");
   PASS();
 }
 
 static void test_manual_operation(void) {
   TEST("manual operation: typed entries count while posted and stay when unposted");
   db_document_t *op = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ВО-0001");
-  ASSERT(op && op->posted && near(op->total, 200000), "opening balances total their entries");
+  ASSERT(op && op->posted && near(op->total, 342160), "opening balances total their entries");
   ledger_unpost(g_ledger->ib, g_ledger->cfg, op->id);
-  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", op->id), 3);
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", op->id), 8);
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
-  ASSERT(near(balance("51")->balance_dr, 60000 - 51120), "unposted operation leaves the reports");
+  ASSERT(near(balance("51")->balance_cr, 51120 + 31476 - 60000), "unposted operation leaves the reports");
   ledger_post(g_ledger->ib, g_ledger->cfg, op->id);
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
-  ASSERT(near(balance("51")->balance_dr, 100000 + 60000 - 51120), "posted again");
+  ASSERT(near(balance("51")->balance_dr, 100000 + 60000 - 51120 - 31476), "posted again");
   PASS();
 }
 
@@ -229,6 +358,20 @@ static void test_print_forms(void) {
   ASSERT(strstr(html, "Монитор 17&quot; Samsung SyncMaster 753s"), "escaped line item");
   ASSERT(strstr(html, "7701234567/770101001"), "seller tax id and KPP");
   ASSERT(!strstr(html, "{{"), "no unfilled tags");
+  f = fopen(TMP_DIR "/print/РТ-0001-torg12.html", "rb");
+  ASSERT_NOT_NULL(f);
+  n = fread(html, 1, sizeof(html) - 1, f);
+  fclose(f);
+  html[n] = '\0';
+  ASSERT(strstr(html, "Шестнадцать тысяч шестьсот пятьдесят шесть рублей 00 копеек"), "amount in words, in Russian whatever the UI language");
+  db_document_t *payroll = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "НЗ-0001");
+  ASSERT_EQUAL(ledger_print_document(payroll->id, report, sizeof(report)), 1);
+  f = fopen(TMP_DIR "/print/НЗ-0001-t49.html", "rb");
+  ASSERT_NOT_NULL(f);
+  n = fread(html, 1, sizeof(html) - 1, f);
+  fclose(f);
+  html[n] = '\0';
+  ASSERT(strstr(html, "Кузнецова Елена Николаевна") && strstr(html, "Тридцать шесть тысяч рублей 00 копеек"), "T-49 lists employees");
   PASS();
 }
 
@@ -282,8 +425,11 @@ static void test_german_configuration(void) {
   snprintf(g_ledger->ib->source_path, sizeof(g_ledger->ib->source_path), TMP_DIR "/infobase-de.xml");
   ledger_repost_all(g_ledger->ib, g_ledger->cfg);
   const db_balance_t *bank = balance("1200"), *ust = balance("1775"), *receivables = balance("1400");
-  bool ok = bank && near(bank->balance_dr, 25000 - 2003.32) && ust && near(ust->balance_cr, 96.48) &&
+  bool ok = bank && near(bank->balance_dr, 25000 - 2003.32 - 1633.54 - 1450.54) && ust && near(ust->balance_cr, 96.48) &&
             receivables && near(receivables->balance_dr, 0);
+  ok = ok && near(balance("1741")->balance_cr, (2500 - 603 + 2200 - 603) * 0.18) && near(balance("1740")->balance_cr, 0);
+  ok = ok && near(balance("4830")->balance_dr, 41.67) && near(balance("0490")->balance_dr, 1500 - 166.68 - 41.67);  // AfA from the month of purchase
+  ok = ok && near(balance("1210")->balance_dr, 2000 * 0.917) && near(balance("2150")->balance_dr, 1852 - 1834);
   ui_set_language("de");
   ui_add_string_catalog_dir("apps/ledger/share/locale");
   ui_add_string_catalog_dir(SHARE "/de-2003/locale");
@@ -308,6 +454,13 @@ int main(int argc, char **argv) {
   test_configuration_loads();
   test_joins_cross_databases();
   test_posting_rules();
+  test_cost_of_sales();
+  test_payroll();
+  test_polymorphic_analytics();
+  test_fixed_assets();
+  test_currency();
+  test_month_closing();
+  test_cash_book();
   test_unpost_and_trial_balance();
   test_period_reports();
   test_manual_operation();

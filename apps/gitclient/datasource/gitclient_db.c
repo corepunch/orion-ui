@@ -220,7 +220,7 @@ static const db_field_msg_binding_t worktree_field_bindings[] = {
 typedef struct {
   git_repo_t *repo;
 
-  db_branche_t *branches;
+  db_branch_t *branches;
   int branch_count;
   int branch_capacity;
   int next_branch_id;
@@ -411,8 +411,8 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
         int count = git_get_branches(repo, raw_branches, 256);
         branch_count = count;
         for (int i = 0; i < count; i++) {
-          db_branche_t *rec = append_row((void **)&ctx->branches, &ctx->branch_count,
-                                         &ctx->branch_capacity, sizeof(db_branche_t),
+          db_branch_t *rec = append_row((void **)&ctx->branches, &ctx->branch_count,
+                                         &ctx->branch_capacity, sizeof(db_branch_t),
                                          &ctx->next_branch_id, 32);
           strncpy(rec->name, raw_branches[i].name, sizeof(rec->name) - 1);
           strncpy(rec->hash, raw_branches[i].hash, sizeof(rec->hash) - 1);
@@ -522,10 +522,10 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
       const void *data = lparam;
 
       if (table_id == ID_DB_BRANCHES) {
-        db_branche_t *rec = append_row((void **)&ctx->branches, &ctx->branch_count,
-                                       &ctx->branch_capacity, sizeof(db_branche_t),
+        db_branch_t *rec = append_row((void **)&ctx->branches, &ctx->branch_count,
+                                       &ctx->branch_capacity, sizeof(db_branch_t),
                                        &ctx->next_branch_id, 32);
-        memcpy(rec, data, sizeof(db_branche_t));
+        memcpy(rec, data, sizeof(db_branch_t));
         rec->id = ctx->next_branch_id - 1;
         return (lresult_t)rec;
       }
@@ -649,10 +649,10 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
       if (table_id == ID_DB_BRANCHES) {
         if (filter_field == ID_DB_BRANCHES_IS_REMOTE)
           return fetch_filtered_bool(ctx->branches, ctx->branch_count,
-                                     sizeof(db_branche_t),
-                                     offsetof(db_branche_t, is_remote),
+                                     sizeof(db_branch_t),
+                                     offsetof(db_branch_t, is_remote),
                                      (bool)filter_value);
-        return fetch_all(ctx->branches, ctx->branch_count, sizeof(db_branche_t));
+        return fetch_all(ctx->branches, ctx->branch_count, sizeof(db_branch_t));
       }
       if (table_id == ID_DB_COMMITS) {
         if (filter_field == ID_DB_COMMITS_BRANCH_ID) {
@@ -661,8 +661,8 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
             if (ctx->commits[i].branch_id == filter_value) { loaded = true; break; }
           }
           if (!loaded && ctx->repo) {
-            db_branche_t *br = (db_branche_t *)find_by_id(ctx->branches,
-                               ctx->branch_count, sizeof(db_branche_t), filter_value);
+            db_branch_t *br = (db_branch_t *)find_by_id(ctx->branches,
+                               ctx->branch_count, sizeof(db_branch_t), filter_value);
             if (br && br->name[0]) {
               git_commit_t raw[500];
               int count = git_get_log_ref(ctx->repo, br->name, raw, 500);
@@ -749,7 +749,7 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
       if (table_id == ID_DB_BRANCHES) {
         if (search_field == 0 || search_field == ID_DB_BRANCHES_ID)
           return (lresult_t)find_by_id(ctx->branches, ctx->branch_count,
-                                        sizeof(db_branche_t), (int)value);
+                                        sizeof(db_branch_t), (int)value);
         if (search_field == ID_DB_BRANCHES_NAME)
           return (lresult_t)find_branch_by_name(ctx, (const char *)value);
         return (lresult_t)NULL;

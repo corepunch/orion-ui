@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><title>Lohnjournal {{number}}</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;margin:12mm;color:#000}
+table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
+.grid td,.grid th{border:1px solid #000}.grid th{font-weight:normal;font-size:8pt;text-align:center}
+.r{text-align:right}.c{text-align:center}.small{font-size:7.5pt}.b{font-weight:bold}
+.line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
+.sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
+h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
+@media print{body{margin:6mm}}
+</style></head><body>
+<h1>Lohnjournal {{number}} vom {{date|dmy}}</h1>
+<p>{{org.name}}, {{org.address}}<br>{{comment}}</p>
+<table class="grid" style="width:100%">
+<tr><th>Nr.</th><th>Name</th><th>Tätigkeit</th><th>Steuer-ID</th><th>Brutto, EUR</th><th>Abzüge, EUR</th><th>Arbeitgeberanteil, EUR</th><th>Netto, EUR</th></tr>
+{{#payroll_lines}}<tr><td class="c">{{n}}</td><td>{{employee.name}}</td><td>{{employee.position}}</td><td>{{employee.tax_id}}</td><td class="r">{{amount}}</td><td class="r">{{withheld}}</td><td class="r">{{contributions}}</td><td class="r b">{{net}}</td></tr>
+{{/payroll_lines}}<tr><td colspan="4" class="r b" style="border:0">Summe Brutto</td><td class="r b">{{total}}</td><td colspan="3" style="border:0"></td></tr></table>
+<table class="sign" style="width:100%"><tr><td>Geschäftsführung <span class="line">{{org.director}}</span></td><td>Lohnbuchhaltung <span class="line">{{org.accountant}}</span></td></tr></table>
+</body></html>

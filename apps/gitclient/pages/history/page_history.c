@@ -102,7 +102,7 @@ bool page_history_handle(window_t *main_win, uint32_t msg,
       int row = 0;
       for (result_node_t *n = rows; n; n = n->next, row++) {
         if (row == sel) {
-          db_branche_t *b = *(db_branche_t **)n->data;
+          db_branch_t *b = *(db_branch_t **)n->data;
           if (b && b->name[0])
             gc_reload_history_log(b->name);
           break;

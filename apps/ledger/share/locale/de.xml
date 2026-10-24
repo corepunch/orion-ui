@@ -35,7 +35,7 @@
   <string source="About Ledger" where="menu">Über Ledger</string>
   <string source="Ledger" where="main_window">Buchhaltung</string>
   <string source="Document journal (Ctrl+1)" where="journal_page">Belegjournal (Strg+1)</string>
-  <string source="New" where="journal_page,counterparties_page,items_page">Neu</string>
+  <string source="New" where="journal_page,counterparties_page,items_page,employees_page,assets_page">Neu</string>
   <string source="New document (Ctrl+N)" where="journal_page">Neuer Beleg (Strg+N)</string>
   <string source="Operation" where="journal_page">Umbuchung</string>
   <string source="New manual operation (Ctrl+M)" where="journal_page">Neue Umbuchung, Buchungen manuell (Strg+M)</string>
@@ -44,35 +44,35 @@
   <string source="Post: write accounting entries (F9)" where="journal_page">Buchen: Buchungssätze erzeugen (F9)</string>
   <string source="Unpost" where="journal_page">Stornieren</string>
   <string source="Cancel posting" where="journal_page">Buchung stornieren</string>
-  <string source="Print" where="journal_page">Drucken</string>
+  <string source="Print" where="journal_page,reports_page">Drucken</string>
   <string source="Print forms (Ctrl+P)" where="journal_page">Druckformulare (Strg+P)</string>
-  <string source="Delete" where="journal_page,counterparties_page,items_page">Löschen</string>
+  <string source="Delete" where="journal_page,counterparties_page,items_page,employees_page,assets_page">Löschen</string>
   <string source="Delete document" where="journal_page">Beleg löschen</string>
-  <string source="Date" where="journal_page,entries_page,reports_page">Datum</string>
+  <string source="Date" where="journal_page,currencies_page,entries_page,reports_page">Datum</string>
   <string source="Number" where="journal_page">Nummer</string>
   <string source="Document" where="journal_page,entries_page,reports_page,config_page,document">Beleg</string>
-  <string source="Counterparty" where="journal_page,entries_page,reports_page,counterparty,operation">Geschäftspartner</string>
-  <string source="Amount" where="journal_page,entries_page,document,operation">Betrag</string>
+  <string source="Counterparty" where="journal_page,reports_page,counterparty">Geschäftspartner</string>
+  <string source="Amount" where="journal_page,entries_page,document,operation,payroll,closing">Betrag</string>
   <string source="Comment" where="journal_page">Bemerkung</string>
   <string source="Lines" where="journal_page">Positionen</string>
-  <string source="Item" where="journal_page,entries_page,document,item,operation">Artikel</string>
+  <string source="Item" where="journal_page,document,item">Artikel</string>
   <string source="Unit" where="journal_page,items_page,config_page,document">Einheit</string>
   <string source="Qty" where="journal_page,entries_page,document,operation">Menge</string>
   <string source="Price" where="journal_page,items_page,document">Preis</string>
-  <string source="Tax" where="journal_page,items_page,reports_page,document">Steuer</string>
+  <string source="Tax" where="journal_page,items_page,reports_page,config_page,document">Steuer</string>
   <string source="Tax Amount" where="journal_page,document">Steuerbetrag</string>
   <string source="Total" where="journal_page,reports_page,document">Gesamt</string>
   <string source="Entries" where="journal_page">Buchungen</string>
-  <string source="Dr" where="journal_page,entries_page,config_page,operation">Soll</string>
-  <string source="Cr" where="journal_page,entries_page,config_page,operation">Haben</string>
-  <string source="Content" where="journal_page,entries_page,reports_page,operation">Buchungstext</string>
+  <string source="Dr" where="journal_page,entries_page,config_page,operation,closing">Soll</string>
+  <string source="Cr" where="journal_page,entries_page,config_page,operation,closing">Haben</string>
+  <string source="Content" where="journal_page,entries_page,reports_page,operation,closing">Buchungstext</string>
   <string source="Counterparties (Ctrl+2)" where="counterparties_page">Geschäftspartner (Strg+2)</string>
   <string source="New counterparty" where="counterparties_page">Neuer Geschäftspartner</string>
-  <string source="Edit" where="counterparties_page,items_page">Bearbeiten</string>
+  <string source="Edit" where="counterparties_page,items_page,employees_page,assets_page,currencies_page">Bearbeiten</string>
   <string source="Edit counterparty" where="counterparties_page">Geschäftspartner bearbeiten</string>
   <string source="Delete counterparty" where="counterparties_page">Geschäftspartner löschen</string>
-  <string source="Name" where="counterparties_page,items_page,reports_page">Name</string>
-  <string source="Tax ID" where="counterparties_page,reports_page">Steuernummer</string>
+  <string source="Name" where="counterparties_page,items_page,employees_page,assets_page,reports_page">Name</string>
+  <string source="Tax ID" where="counterparties_page,employees_page,reports_page">Steuernummer</string>
   <string source="KPP" where="counterparties_page">Steuer-Zusatznummer</string>
   <string source="Phone" where="counterparties_page">Telefon</string>
   <string source="Address" where="counterparties_page">Anschrift</string>
@@ -80,11 +80,11 @@
   <string source="New item" where="items_page">Neuer Artikel</string>
   <string source="Edit item" where="items_page">Artikel bearbeiten</string>
   <string source="Delete item" where="items_page">Artikel löschen</string>
-  <string source="Code" where="items_page,accounts_page,config_page">Nummer</string>
+  <string source="Code" where="items_page,accounts_page,currencies_page,config_page">Nummer</string>
   <string source="Chart of accounts (Ctrl+4)" where="accounts_page">Kontenplan (Strg+4)</string>
-  <string source="Account" where="accounts_page,reports_page">Konto</string>
-  <string source="Kind" where="accounts_page">Art</string>
-  <string source="Analytics" where="accounts_page">Nebenbuch</string>
+  <string source="Account" where="accounts_page,assets_page,reports_page,config_page">Konto</string>
+  <string source="Kind" where="accounts_page,config_page">Art</string>
+  <string source="Analytics" where="accounts_page,reports_page,config_page">Nebenbuch</string>
   <string source="Section" where="accounts_page">Kontenklasse</string>
   <string source="All accounting entries (Ctrl+5)" where="entries_page">Alle Buchungen (Strg+5)</string>
   <string source="Reports (Ctrl+6)" where="reports_page">Auswertungen (Strg+6)</string>
@@ -110,50 +110,49 @@
   <string source="Purchase Book" where="reports_page">Eingangsrechnungen</string>
   <string source="Active configuration (Ctrl+7)" where="config_page">Aktive Konfiguration (Strg+7)</string>
   <string source="Country" where="config_page">Land</string>
-  <string source="Currency" where="config_page">Währung</string>
+  <string source="Currency" where="accounts_page,currencies_page,config_page,currency">Währung</string>
   <string source="Version" where="config_page">Version</string>
   <string source="Legal Basis" where="config_page">Rechtsgrundlage</string>
   <string source="Document Types" where="config_page">Belegarten</string>
   <string source="Prefix" where="config_page">Präfix</string>
   <string source="Tax Dr" where="config_page">Steuer Soll</string>
   <string source="Tax Cr" where="config_page">Steuer Haben</string>
-  <string source="Manual" where="config_page">Manuell</string>
   <string source="Description" where="config_page">Beschreibung</string>
   <string source="Form" where="config_page">Formular</string>
   <string source="Tax Rates" where="config_page">Steuersätze</string>
-  <string source="Rate" where="config_page">Satz</string>
+  <string source="Rate" where="currencies_page,config_page">Satz</string>
   <string source="Percent" where="config_page">Prozent</string>
   <string source="Units" where="config_page">Einheiten</string>
-  <string source="Document:" where="document">Beleg:</string>
-  <string source="Number:" where="document,operation">Nummer:</string>
-  <string source="Date:" where="document,operation">Datum:</string>
-  <string source="Counterparty:" where="document,entry">Geschäftspartner:</string>
-  <string source="Comment:" where="document,operation">Bemerkung:</string>
-  <string source="Assigned when saved" where="document,operation">wird beim Speichern vergeben</string>
-  <string source="Add Line..." where="document">Position hinzufügen...</string>
-  <string source="Edit Line..." where="document">Position bearbeiten...</string>
-  <string source="Delete Line" where="document">Position löschen</string>
-  <string source="Amount:" where="document,entry">Betrag:</string>
+  <string source="Document:" where="document,payroll,asset_document,closing">Beleg:</string>
+  <string source="Number:" where="document,operation,payroll,asset_document,closing">Nummer:</string>
+  <string source="Date:" where="document,operation,payroll,asset_document,rate">Datum:</string>
+  <string source="Counterparty:" where="document">Geschäftspartner:</string>
+  <string source="Comment:" where="document,operation,payroll,asset_document,closing">Bemerkung:</string>
+  <string source="Assigned when saved" where="document,operation,payroll,asset_document,closing">wird beim Speichern vergeben</string>
+  <string source="Add Line..." where="document,payroll">Position hinzufügen...</string>
+  <string source="Edit Line..." where="document,payroll">Position bearbeiten...</string>
+  <string source="Delete Line" where="document,payroll">Position löschen</string>
+  <string source="Amount:" where="document,entry,payroll_line">Betrag:</string>
   <string source="Tax:" where="document">Steuer:</string>
-  <string source="Total:" where="document,operation">Gesamt:</string>
-  <string source="OK and Post" where="document">OK und buchen</string>
-  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,operation,entry,report_settings">Abbrechen</string>
+  <string source="Total:" where="document,operation,payroll">Gesamt:</string>
+  <string source="OK and Post" where="document,payroll,asset_document,closing">OK und buchen</string>
+  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,report_settings">Abbrechen</string>
   <string source="Document Line" where="doc_line">Belegposition</string>
-  <string source="Item:" where="doc_line,entry">Artikel:</string>
+  <string source="Item:" where="doc_line">Artikel:</string>
   <string source="Quantity:" where="doc_line,entry">Menge:</string>
   <string source="Price:" where="doc_line,item">Preis:</string>
   <string source="Tax rate:" where="doc_line,item">Steuersatz:</string>
   <string source="Item price" where="doc_line">Artikelpreis</string>
-  <string source="OK" where="doc_line,counterparty,item,organization,select_configuration,select_language,operation,entry,report_settings">OK</string>
-  <string source="Name:" where="counterparty,item,organization">Name:</string>
-  <string source="Tax ID:" where="counterparty,organization">Steuernummer:</string>
+  <string source="OK" where="doc_line,counterparty,item,organization,select_configuration,select_language,operation,entry,payroll_line,asset_line,employee,currency,rate,report_settings">OK</string>
+  <string source="Name:" where="counterparty,item,organization,employee,asset,currency">Name:</string>
+  <string source="Tax ID:" where="counterparty,organization,employee">Steuernummer:</string>
   <string source="KPP:" where="counterparty,organization">Steuer-Zusatznummer:</string>
   <string source="Address:" where="counterparty,organization">Anschrift:</string>
   <string source="Bank:" where="counterparty,organization">Bank:</string>
   <string source="Bank account:" where="counterparty,organization">Kontonummer:</string>
   <string source="Bank ID (BIK):" where="counterparty,organization">Bankleitzahl:</string>
   <string source="Phone:" where="counterparty">Telefon:</string>
-  <string source="Code:" where="item">Nummer:</string>
+  <string source="Code:" where="item,currency">Nummer:</string>
   <string source="Unit:" where="item">Einheit:</string>
   <string source="Organization Details" where="organization">Firmendaten</string>
   <string source="Corr. account:" where="organization">Korrespondenzkonto:</string>
@@ -180,7 +179,6 @@
   <string source="Account:" where="report_settings">Konto:</string>
   <string source="Beginning" where="report_settings">Beginn der Buchführung</string>
   <string source="End" where="report_settings">heute</string>
-  <string source="The account card and analysis show the chosen account." where="report_settings">Kontoblatt und Partneranalyse zeigen das gewählte Konto.</string>
   <string source="modified" where="code">geändert</string>
   <string source="Add Line" where="code">Position hinzufügen</string>
   <string source="Edit Line" where="code">Position bearbeiten</string>
@@ -205,4 +203,137 @@ stammen aus der aktiven Konfiguration.</string>
   <string source="Report period: %s – %s" where="code">Zeitraum: %s – %s</string>
   <string source="Add Entry" where="code">Neue Buchung</string>
   <string source="New Manual Operation" where="code">Neue Umbuchung</string>
+  <string source="New Payroll Document..." where="menu">Neue Lohnabrechnung...</string>
+  <string source="Put Assets into Service..." where="menu">Anlagenzugang...</string>
+  <string source="Close Month..." where="menu">Monatsabschluss...</string>
+  <string source="New Employee..." where="menu">Neuer Mitarbeiter...</string>
+  <string source="Edit Employee..." where="menu">Mitarbeiter bearbeiten...</string>
+  <string source="Delete Employee..." where="menu">Mitarbeiter löschen...</string>
+  <string source="New Fixed Asset..." where="menu">Neues Anlagegut...</string>
+  <string source="Edit Fixed Asset..." where="menu">Anlagegut bearbeiten...</string>
+  <string source="Delete Fixed Asset..." where="menu">Anlagegut löschen...</string>
+  <string source="New Currency..." where="menu">Neue Währung...</string>
+  <string source="Edit Currency..." where="menu">Währung bearbeiten...</string>
+  <string source="New Exchange Rate..." where="menu">Neuer Wechselkurs...</string>
+  <string source="Delete Exchange Rate..." where="menu">Wechselkurs löschen...</string>
+  <string source="Employees" where="menu,employees_page">Mitarbeiter</string>
+  <string source="Fixed Assets" where="menu,assets_page,reports_page">Anlagevermögen</string>
+  <string source="Currencies" where="menu,currencies_page">Währungen</string>
+  <string source="Print Report Forms" where="menu">Berichtsformulare drucken</string>
+  <string source="Payroll" where="journal_page,employees_page,payroll">Lohn</string>
+  <string source="New payroll document (Ctrl+W)" where="journal_page,employees_page">Lohnabrechnung oder Lohnzahlung (Strg+W)</string>
+  <string source="Close Month" where="journal_page,closing">Monatsabschluss</string>
+  <string source="Month-end closing (Ctrl+E)" where="journal_page">Monatsabschluss (Strg+E)</string>
+  <string source="Dr Analytics" where="journal_page,entries_page,operation,closing">Soll-Objekt</string>
+  <string source="Cr Analytics" where="journal_page,entries_page,operation,closing">Haben-Objekt</string>
+  <string source="Employees (Ctrl+5)" where="employees_page">Mitarbeiter (Strg+5)</string>
+  <string source="New employee" where="employees_page">Neuer Mitarbeiter</string>
+  <string source="Edit employee" where="employees_page">Mitarbeiter bearbeiten</string>
+  <string source="Delete employee" where="employees_page">Mitarbeiter löschen</string>
+  <string source="Position" where="employees_page,reports_page,payroll">Tätigkeit</string>
+  <string source="Hired" where="employees_page">Eintritt</string>
+  <string source="Salary" where="employees_page,payroll_line">Gehalt</string>
+  <string source="Allowance" where="employees_page">Freibetrag</string>
+  <string source="Expense" where="employees_page,assets_page,reports_page">Aufwand</string>
+  <string source="Fixed assets (Ctrl+6)" where="assets_page">Anlagevermögen (Strg+6)</string>
+  <string source="New fixed asset" where="assets_page">Neues Anlagegut</string>
+  <string source="Edit fixed asset" where="assets_page">Anlagegut bearbeiten</string>
+  <string source="Into Service" where="assets_page">Zugang</string>
+  <string source="Put assets into service" where="assets_page">Anlagenzugang buchen</string>
+  <string source="Delete fixed asset" where="assets_page">Anlagegut löschen</string>
+  <string source="Inv. No." where="assets_page,reports_page,asset_document">Inv.-Nr.</string>
+  <string source="Cost" where="assets_page,reports_page,asset_document">Anschaffungskosten</string>
+  <string source="Life, months" where="assets_page,asset_document">Nutzungsdauer, Monate</string>
+  <string source="In Service" where="assets_page,reports_page">Zugang am</string>
+  <string source="Depr." where="assets_page">AfA</string>
+  <string source="Currencies and exchange rates (Ctrl+7)" where="currencies_page">Währungen und Kurse (Strg+7)</string>
+  <string source="New currency" where="currencies_page">Neue Währung</string>
+  <string source="Edit currency" where="currencies_page">Währung bearbeiten</string>
+  <string source="New exchange rate" where="currencies_page">Neuer Kurs</string>
+  <string source="Delete Rate" where="currencies_page">Kurs löschen</string>
+  <string source="Delete exchange rate" where="currencies_page">Kurs löschen</string>
+  <string source="Cur." where="journal_page,entries_page">Whg.</string>
+  <string source="Cur. Amount" where="entries_page">Betrag in Währung</string>
+  <string source="Print report forms: cash book (Ctrl+Shift+P)" where="reports_page">Berichtsformulare drucken: Kassenbuch (Strg+Umschalt+P)</string>
+  <string source="Cash Book" where="reports_page">Kassenbuch</string>
+  <string source="Received from / Paid to" where="reports_page">Von / an</string>
+  <string source="Receipt" where="reports_page">Einnahme</string>
+  <string source="Fixed Asset" where="reports_page,asset_document,asset_line">Anlagegut</string>
+  <string source="Monthly" where="reports_page">Monatlich</string>
+  <string source="Depreciation" where="reports_page">Abschreibung</string>
+  <string source="Residual Value" where="reports_page">Restbuchwert</string>
+  <string source="Payroll Statement" where="reports_page">Lohnkonten</string>
+  <string source="Employee" where="reports_page,payroll,employee">Mitarbeiter</string>
+  <string source="Owed at Start" where="reports_page">Offen am Anfang</string>
+  <string source="Accrued" where="reports_page">Brutto</string>
+  <string source="Withheld and Paid" where="reports_page">Abzüge und Zahlungen</string>
+  <string source="Owed at End" where="reports_page">Offen am Ende</string>
+  <string source="Report" where="config_page">Bericht</string>
+  <string source="Payroll Taxes" where="config_page">Lohnabgaben</string>
+  <string source="Withheld" where="config_page,payroll">Einbehalten</string>
+  <string source="Closing Rules" where="config_page">Abschlussregeln</string>
+  <string source="Step" where="config_page">Schritt</string>
+  <string source="Target" where="config_page">Ziel</string>
+  <string source="Via" where="config_page">Über</string>
+  <string source="Gain" where="config_page">Ertrag</string>
+  <string source="Loss" where="config_page">Aufwand</string>
+  <string source="Analytics Kinds" where="config_page">Objektarten</string>
+  <string source="Catalog" where="config_page">Stammdaten</string>
+  <string source="Currency:" where="document,entry,rate">Währung:</string>
+  <string source="Exchange rate:" where="document">Wechselkurs:</string>
+  <string source="Rate on the document date" where="document">Kurs am Belegdatum</string>
+  <string source="Cashier:" where="organization">Kassierer/in:</string>
+  <string source="Debit analytics:" where="entry">Soll-Objekt:</string>
+  <string source="Credit analytics:" where="entry">Haben-Objekt:</string>
+  <string source="Currency amount:" where="entry">Betrag in Währung:</string>
+  <string source="Contributions" where="payroll">AG-Anteil</string>
+  <string source="Net Pay" where="payroll">Netto</string>
+  <string source="Fill" where="payroll">Füllen</string>
+  <string source="Payroll Line" where="payroll_line">Lohnzeile</string>
+  <string source="Employee:" where="payroll_line">Mitarbeiter:</string>
+  <string source="Put into Service" where="asset_document">Anlagenzugang</string>
+  <string source="Add Asset..." where="asset_document">Anlagegut hinzufügen...</string>
+  <string source="Remove Asset" where="asset_document">Anlagegut entfernen</string>
+  <string source="Fixed asset:" where="asset_line">Anlagegut:</string>
+  <string source="Last day of month:" where="closing">Letzter Tag des Monats:</string>
+  <string source="Posting charges depreciation, revalues currency accounts and closes the month's expenses and result." where="closing">Beim Buchen werden die AfA gebucht, Fremdwährungskonten bewertet und Aufwände und Ergebnis des Monats abgeschlossen.</string>
+  <string source="Position:" where="employee">Tätigkeit:</string>
+  <string source="Hired:" where="employee">Eintritt:</string>
+  <string source="Monthly salary:" where="employee">Monatsgehalt:</string>
+  <string source="Tax allowance:" where="employee">Freibetrag:</string>
+  <string source="Expense account:" where="employee,asset">Aufwandskonto:</string>
+  <string source="Monthly, before allowance taxes" where="employee">Monatlich, vor Lohnsteuer</string>
+  <string source="Inventory number:" where="asset">Inventarnummer:</string>
+  <string source="Cost:" where="asset">Anschaffungskosten:</string>
+  <string source="Useful life, months:" where="asset">Nutzungsdauer, Monate:</string>
+  <string source="In service since:" where="asset">Zugang am:</string>
+  <string source="Asset account:" where="asset">Anlagekonto:</string>
+  <string source="Depreciation account:" where="asset">AfA-Gegenkonto:</string>
+  <string source="Set when put into service" where="asset">Wird beim Zugang gesetzt</string>
+  <string source="USD" where="currency">USD</string>
+  <string source="Exchange Rate" where="rate">Wechselkurs</string>
+  <string source="Rate:" where="rate">Kurs:</string>
+  <string source="The account card and analysis show the chosen account; the cash book, assets and payroll use the period." where="report_settings">Kontenblatt und Analyse zeigen das gewählte Konto; Kassenbuch, Anlagen und Lohn den Zeitraum.</string>
+  <string source="Balance at start of day" where="code">Anfangsbestand</string>
+  <string source="Day total and closing balance" where="code">Tagessumme und Endbestand</string>
+  <string source="The configuration defines no document type of this kind." where="code">Die Konfiguration enthält keine Belegart dieser Art.</string>
+  <string source="The configuration defines no report forms." where="code">Die Konfiguration enthält keine Berichtsformulare.</string>
+  <string source="Delete the selected employee?" where="code">Den gewählten Mitarbeiter löschen?</string>
+  <string source="This employee is used by %d payroll line(s) and cannot be deleted." where="code">Der Mitarbeiter steht in %d Lohnzeile(n) und kann nicht gelöscht werden.</string>
+  <string source="Delete the selected fixed asset?" where="code">Das gewählte Anlagegut löschen?</string>
+  <string source="This fixed asset is used by %d document line(s) and cannot be deleted." where="code">Das Anlagegut steht in %d Belegzeile(n) und kann nicht gelöscht werden.</string>
+  <string source="Delete the selected exchange rate?" where="code">Den gewählten Wechselkurs löschen?</string>
+  <string source="New Payroll Document" where="code">Neuer Lohnbeleg</string>
+  <string source="Put Assets into Service" where="code">Anlagenzugang</string>
+  <string source="Add Asset" where="code">Anlagegut hinzufügen</string>
+  <string source="New Employee" where="code">Neuer Mitarbeiter</string>
+  <string source="New Fixed Asset" where="code">Neues Anlagegut</string>
+  <string source="New Currency" where="code">Neue Währung</string>
+  <string source="New Exchange Rate" where="code">Neuer Wechselkurs</string>
+  <context name="currencies_page">
+    <string source="Rate">Kurs</string>
+  </context>
+  <context name="reports_page">
+    <string source="Expense">Ausgabe</string>
+  </context>
 </strings>

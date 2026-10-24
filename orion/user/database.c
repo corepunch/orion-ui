@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -244,6 +245,36 @@ bool db_format_field(const db_field_meta_t *field, const void *record, char *buf
   return false;
 }
 
+bool db_parse_field(const db_field_meta_t *field, void *record, const char *text) {
+  if (!field || !record || !text) return false;
+  char *p = (char *)record + field->offset;
+  switch (field->type) {
+    case DB_TYPE_INT:    *(int *)p = atoi(text);                                                    return true;
+    case DB_TYPE_BOOL:   *(bool *)p = text[0] == '1' || text[0] == 't' || text[0] == 'Y';           return true;
+    case DB_TYPE_FLOAT:  *(float *)p = (float)atof(text);                                           return true;
+    case DB_TYPE_DOUBLE: *(double *)p = atof(text);                                                 return true;
+    case DB_TYPE_DATE:
+      if (!strcmp(text, "today")) {
+        time_t now = time(NULL);
+        if (field->length > 0) strftime(p, (size_t)field->length, "%Y-%m-%d", localtime(&now));
+        return true;
+      }
+      // fall through: stored as ISO text
+    case DB_TYPE_STRING: {
+      const char *start = text, *end = text + strlen(text);
+      while (*start && isspace((unsigned char)*start)) start++;
+      while (end > start && isspace((unsigned char)*(end - 1))) end--;
+      size_t len = (size_t)(end - start), cap = (size_t)field->length;
+      if (cap == 0) return false;
+      if (len >= cap) len = cap - 1;
+      memcpy(p, start, len);
+      p[len] = '\0';
+      return true;
+    }
+  }
+  return false;
+}
+
 static const db_join_schema_t *db_schema_join(const db_table_schema_t *table, const char *name, size_t len) {
   for (int i = 0; table && i < table->join_count; i++)
     if (strlen(table->joins[i].name) == len && !strncmp(table->joins[i].name, name, len))
@@ -273,7 +304,7 @@ bool db_schema_field_text(database_t *db, const db_table_schema_t *table,
   // "db.table" relations cross into another registered database.
   database_t *foreign_db = db;
   const char *foreign_name = join->foreign_table;
-  const char *qualified = strchr(foreign_name, '.');
+  const char *qualified = foreign_name[0] == '{' ? NULL : strchr(foreign_name, '.');
   if (qualified) {
     char db_name[64];
     size_t n = (size_t)(qualified - foreign_name);
@@ -281,6 +312,22 @@ bool db_schema_field_text(database_t *db, const db_table_schema_t *table,
     memcpy(db_name, foreign_name, n); db_name[n] = '\0';
     foreign_db = get_database_by_name(db_name);
     foreign_name = qualified + 1;
+  }
+  // A polymorphic relation names its table by a path on the same record:
+  // relation="ib.{debit.subconto_kind.table}.id".
+  char target_table[64];
+  if (foreign_name[0] == '{') {
+    const char *end = strchr(foreign_name, '}');
+    char path[128];
+    if (!end || (size_t)(end - foreign_name - 1) >= sizeof(path)) {
+      fprintf(stderr, "[database] malformed polymorphic relation db=%s table=%s relation=%s\n",
+              db->name, table->name, join->foreign_table);
+      return false;
+    }
+    snprintf(path, sizeof(path), "%.*s", (int)(end - foreign_name - 1), foreign_name + 1);
+    if (!db_schema_field_text(db, table, record, path, target_table, sizeof(target_table))) return false;
+    if (!target_table[0]) return true;  // the record names no table: nothing to show
+    foreign_name = target_table;
   }
   const db_schema_def_t *schema = foreign_db
     ? (const db_schema_def_t *)send_db_message(foreign_db, dbGetSchema, 0, NULL) : NULL;
@@ -360,51 +407,9 @@ bool db_load_field_from_xml(xmlNodePtr node, void *record_base,
   
   if (!value) return false;
   
-  void *field_ptr = (char *)record_base + field->offset;
-  
-  switch (field->type) {
-    case DB_TYPE_INT:
-      *(int *)field_ptr = atoi((const char *)value);
-      break;
-      
-    case DB_TYPE_STRING:
-    case DB_TYPE_DATE:
-      {
-        const char *src = (const char *)value;
-        const char *start = src;
-        const char *end = src + strlen(src);
-        while (*start && isspace((unsigned char)*start))
-          start++;
-        while (end > start && isspace((unsigned char)*(end - 1)))
-          end--;
-        size_t len = (size_t)(end - start);
-        size_t cap = (size_t)field->length;
-        if (cap == 0) break;
-        if (len >= cap) len = cap - 1;
-        memcpy((char *)field_ptr, start, len);
-        ((char *)field_ptr)[len] = '\0';
-      }
-      break;
-      
-    case DB_TYPE_BOOL:
-      *(bool *)field_ptr = (value[0] == '1' || value[0] == 't' || value[0] == 'Y');
-      break;
-      
-    case DB_TYPE_FLOAT:
-      *(float *)field_ptr = (float)atof((const char *)value);
-      break;
-      
-    case DB_TYPE_DOUBLE:
-      *(double *)field_ptr = atof((const char *)value);
-      break;
-      
-    default:
-      xmlFree(value);
-      return false;
-  }
-  
+  bool ok = db_parse_field(field, record_base, (const char *)value);
   xmlFree(value);
-  return true;
+  return ok;
 }
 
 bool db_load_record_from_xml(xmlNodePtr node, void *record,

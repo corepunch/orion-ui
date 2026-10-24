@@ -24,6 +24,6 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 <table style="margin-left:auto"><tr><td class="r b">Итого:</td><td class="r b">{{amount}}</td></tr>
 <tr><td class="r b">Сумма НДС:</td><td class="r b">{{vat}}</td></tr>
 <tr><td class="r b">Всего к оплате:</td><td class="r b">{{total}}</td></tr></table>
-<p>Всего на сумму {{total}} {{cfg.currency}}</p>
+<p>Всего на сумму {{total}} {{cfg.currency}}<br><b>{{total|words}}</b></p>
 <table style="width:100%" class="sign"><tr><td>Руководитель <span class="line">{{org.director}}</span></td><td>Бухгалтер <span class="line">{{org.accountant}}</span></td></tr></table>
 </body></html>

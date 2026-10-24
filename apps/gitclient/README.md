@@ -214,7 +214,7 @@ result_node_t *commits = send_db_message(gc->db, dbFetch,
     MAKEDWORD(ID_DB_COMMITS, 0), (void*)(intptr_t)0);
 
 // Find specific record
-db_branche_t *branch = send_db_message(gc->db, dbFind,
+db_branch_t *branch = send_db_message(gc->db, dbFind,
     MAKEDWORD(ID_DB_BRANCHES, ID_DB_BRANCHES_NAME), (void*)"main");
 
 // Free result lists

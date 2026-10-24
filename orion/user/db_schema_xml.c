@@ -58,7 +58,14 @@ static int dbs_key(const db_table_schema_t *t, const void *record) {
 // Row element name: the singular of the table name (entries → entry).
 static void dbs_row_tag(const char *table, char *out, size_t cap) {
   size_t n = strlen(table);
+  static const char *es[] = { "xes", "ches", "shes", "sses", "zes" };  // taxes → tax, as orionc names the record type
+  bool sibilant = false;
+  for (size_t i = 0; i < sizeof(es) / sizeof(es[0]); i++) {
+    size_t k = strlen(es[i]);
+    if (n > k && !strcmp(table + n - k, es[i])) sibilant = true;
+  }
   if (n > 3 && !strcmp(table + n - 3, "ies")) snprintf(out, cap, "%.*sy", (int)(n - 3), table);
+  else if (sibilant) snprintf(out, cap, "%.*s", (int)(n - 2), table);
   else if (n > 1 && table[n - 1] == 's') snprintf(out, cap, "%.*s", (int)(n - 1), table);
   else snprintf(out, cap, "%s_row", table);
 }

@@ -74,13 +74,16 @@ build/bin/socialfeed
 ![Ledger trial balance in the Russia 2003 configuration](screenshots/ledger_balance.jpg)
 
 Double-entry bookkeeping in the style of early-2000s desktop accounting
-suites: documents with lines, posting to entries with analytics, manual
-operations, catalogs, a chart of accounts, period reports (trial balance,
-account card, analysis, VAT books) and printed legal forms. The platform is
+suites: documents with lines, posting to entries with debit and credit
+analytics, manual operations, payroll, fixed assets with depreciation,
+currencies with revaluation, month-end closing, period reports (trial
+balance, account card, analysis, VAT books, cash book) and printed legal
+forms with amounts in words. The platform is
 country-neutral; accounts, tax rates, posting rules and forms come from a
 swappable configuration (Russia 2003, Germany 2003), and the interface is
 translated by string catalogs (English, Russian, German). It demonstrates
-schema-driven databases with no adaptor code, cross-database joins,
+schema-driven databases with no adaptor code, cross-database and
+polymorphic joins,
 declarative master–detail tables, transient report tables and database
 dialogs with numeric and date bindings.
 

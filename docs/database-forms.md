@@ -1020,3 +1020,30 @@ static result_t document_hook(window_t *win, uint32_t msg, uint32_t wparam, void
 show_db_dialog_hook(&ledger_document_form, NULL, parent, doc_id, document_hook);
 ```
 
+`show_db_dialog_opts()` takes every option at once — a foreign key preset on
+a new record and a hook — and `db_dialog_record(win)` returns the record
+buffer the dialog edits, so a hook can read or prefill it before the
+controls are pushed back:
+
+```c
+db_dialog_opts_t opts = { .fk_field = "document_id", .fk_value = doc_id, .hook = entry_hook };
+show_db_dialog_opts(&ledger_entry_form, "Add Entry", parent, 0, &opts);
+```
+
+## Polymorphic Relations
+
+A relation may take its table from the record itself. The table segment is
+then a path in braces, evaluated on the same record:
+
+```xml
+<!-- cfg.accounts: subconto_kind_id -> subconto_kinds (code, name, table) -->
+<field name="debit_subconto_id" type="integer" relation="ib.{debit.subconto_kind.table}.id" />
+```
+
+`debit_subconto.name` shows the counterparty, item, employee or asset the
+entry's debit account is analysed by; a record whose path is empty shows
+nothing. This is the polymorphic association of ORMs (a type column plus an
+id) with the type looked up through ordinary joins. A ComboBox editing such a
+field changes its list with `cbSetSource` when the account changes (see
+[Controls](controls.md#combobox)).
+

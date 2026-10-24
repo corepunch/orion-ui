@@ -158,6 +158,7 @@ enum {
   cbGetListBoxText,
   cbClear,            // clear all items and reset title
   cbSetCurrentValue,  // wparam = value_field data (e.g. ID); unknown value clears the selection
+  cbSetSource,        // wparam = table id, lparam = database_t* (NULL keeps it); repopulates, drops the filter
   sbAddWindow,
   tbSetStrip,         // wparam=0, lparam=bitmap_strip_t* (or NULL to clear)
   sbSetInfo,        // lparam = scrollbar_info_t*
