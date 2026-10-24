@@ -270,6 +270,7 @@ static const char *toolbar_type(xmlNodePtr n) {
   if (elem(n, "textedit")) return "TOOLBAR_ITEM_TEXTEDIT";
   if (elem(n, "separator")) return "TOOLBAR_ITEM_SEPARATOR";
   if (elem(n, "spacer")) return "TOOLBAR_ITEM_SPACER";
+  if (elem(n, "title")) return "TOOLBAR_ITEM_TITLE";
   return NULL;
 }
 
@@ -527,7 +528,7 @@ static void emit_toolbar(FILE *f, xmlNodePtr toolbar, const char *symbol,
     EACH_ELEMENT(it, toolbar) if (toolbar_type(it)) {
       char *command = attr(it, "command"), *menu = attr(it, "menu"), *name = attr(it, "name"), *icon = attr(it, "icon"), *w = attr(it, "w"), *flags = attr(it, "flags"), *text = attr(it, "text"), *tooltip = attr(it, "tooltip"), *checked = attr(it, "checked-icon");
       char id[256] = "0", textq[ORIONC_STRING_SIZE], tipq[ORIONC_STRING_SIZE], iconq[256], checkedq[260] = "";
-      if (!elem(it, "separator") && !elem(it, "spacer"))
+      if (!elem(it, "separator") && !elem(it, "spacer") && !elem(it, "title"))
         resolve_action(id, sizeof(id), command, menu, scope, name, text);
       if (text && *text) cstr(textq, sizeof(textq), text); else snprintf(textq, sizeof(textq), "NULL");
       if (tooltip && *tooltip) cstr(tipq, sizeof(tipq), tooltip); else snprintf(tipq, sizeof(tipq), "NULL");
@@ -1005,7 +1006,7 @@ static const char *binding_getter(const char *klass) {
 static const kv_t kWindowFlags[] = {
   {"notitle", "WINDOW_NOTITLE"}, {"nofill", "WINDOW_NOFILL"},
   {"vscroll", "WINDOW_VSCROLL"}, {"flexspace", "WINDOW_FLEXSPACE"},
-  {"toolbar", "WINDOW_TOOLBAR"}, {"titletoolbar", "WINDOW_TITLETOOLBAR"}, {"toolbartitle", "WINDOW_TOOLBARTITLE"}, {"statusbar", "WINDOW_STATUSBAR"},
+  {"toolbar", "WINDOW_TOOLBAR"}, {"titletoolbar", "WINDOW_TITLETOOLBAR"}, {"statusbar", "WINDOW_STATUSBAR"},
   {"notitlebar", "WINDOW_NOTITLE"}, {"default", "0"},
 };
 

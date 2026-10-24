@@ -287,7 +287,6 @@ enum {
 #define WINDOW_TOOLBAR      (1 << 11)
 #define WINDOW_TITLETOOLBAR (1ull << 32) // with WINDOW_TOOLBAR: caption and actions share one band
 #define WINDOW_NOCOLLAPSE   (1ull << 33) // with WINDOW_TITLETOOLBAR: no collapse/restore button; dock_collapse refuses
-#define WINDOW_TOOLBARTITLE (1ull << 38) // with WINDOW_TITLETOOLBAR: the merged row leads with the title, items after a flexible gap (Finder)
 #define WINDOW_STATUSBAR    (1 << 12)
 // Button style flags (analogous to WinAPI BS_* styles)
 // BUTTON_PUSHLIKE: button stays visually pressed while win->value == true (like a toggle/check button)
@@ -494,6 +493,7 @@ typedef enum {
   TOOLBAR_ITEM_CUSTOM,        // drawn by the owner during tbDrawItem
   TOOLBAR_ITEM_SLIDER,        // embedded Slider; defaults to three icon slots; w overrides length
   TOOLBAR_ITEM_SEGMENTED,     // embedded SegmentedControl; text = "One|Two|Three", w = 0 fits the labels
+  TOOLBAR_ITEM_TITLE,         // the window's title in the caption font; starts past panes docked on the left edge
 } toolbar_item_type_t;
 
 // Descriptor for a single toolbar item (used with tbSetItems).

@@ -1229,8 +1229,17 @@ bool set_host_page(window_t *host, window_t *page) {
     window_active_page(host)->pages->host = NULL;
   }
   host->pages->active_page = page;
-  send_message(host, tbSetItems, page ? (uint32_t)page->pages->toolbar_count : 0,
-               page ? (void *)page->pages->toolbar_items : NULL);
+  // The host's own items (a title, say) lead; the active page contributes the rest.
+  int own = host->pages->toolbar_count, contributed = page ? page->pages->toolbar_count : 0;
+  toolbar_item_t *items = own + contributed ? calloc((size_t)(own + contributed), sizeof(*items)) : NULL;
+  if (own + contributed && !items) {
+    fprintf(stderr, "[window] set_host_page toolbar allocation failed host=%u count=%d\n", host->id, own + contributed);
+    fflush(stderr);
+  }
+  if (items && own) memcpy(items, host->pages->toolbar_items, (size_t)own * sizeof(*items));
+  if (items && contributed) memcpy(items + own, page->pages->toolbar_items, (size_t)contributed * sizeof(*items));
+  send_message(host, tbSetItems, items ? (uint32_t)(own + contributed) : 0, items);
+  free(items);
   if (page) {
     page->pages->host = host;
     send_message(page, evActivate, 0, host);
@@ -1325,7 +1334,7 @@ void set_window_title(window_t *win, const char *title) {
     return;
   }
   snprintf(win->title, sizeof(win->title), "%s", title ? title : "");
-  if (toolbar_merged_title(win)) toolbar_relayout(win);  // the title is an item of the merged row
+  toolbar_relayout(win);  // a TOOLBAR_ITEM_TITLE measures the title
   invalidate_window(win);
 }
 

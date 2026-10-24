@@ -271,6 +271,31 @@ static void test_page_toolbar_commands(void) {
   destroy_window(host); test_env_shutdown(); PASS();
 }
 
+static void test_host_toolbar_leads_page_items(void) {
+  TEST("Host toolbar items (a title) lead the active Page's items");
+  test_env_init();
+  const toolbar_item_t page_items[] = {{.type = TOOLBAR_ITEM_BUTTON, .ident = 2200, .text = "Run"}};
+  const toolbar_item_t host_items[] = {{.type = TOOLBAR_ITEM_TITLE}};
+  form_def_t page_form = activity_page_form;
+  page_form.toolbar_items = page_items; page_form.toolbar_count = ARRAY_LEN(page_items);
+  form_def_t other_form = activity_page_form;  // a Page without a toolbar
+  page_binding_t bindings[] = {{ACT_FIRST, RAIL, "first", &page_form, 0}, {ACT_SECOND, RAIL, "second", &other_form, 0}};
+  form_def_t form = page_host_form;
+  form.flags |= WINDOW_TOOLBAR; form.page_bindings = bindings; form.initial_page = ACT_FIRST;
+  form.toolbar_items = host_items; form.toolbar_count = ARRAY_LEN(host_items);
+  window_t *host = create_window_from_form(&form, 0, 0, NULL, test_page_host_proc, 0, NULL);
+  ASSERT_TRUE(page_host_init(host, &form, NULL, 0));
+  toolbar_state_t *tb = toolbar_get_state(host);
+  ASSERT_EQUAL(tb->item_count, 2);
+  ASSERT_EQUAL(tb->items[0].type, TOOLBAR_ITEM_TITLE);
+  ASSERT_EQUAL(tb->items[1].ident, 2200);
+  ASSERT_TRUE(page_host_select(host, ACT_SECOND));
+  tb = toolbar_get_state(host);
+  ASSERT_EQUAL(tb->item_count, 1);  // the title stays; the Page adds nothing
+  ASSERT_EQUAL(tb->items[0].type, TOOLBAR_ITEM_TITLE);
+  destroy_window(host); test_env_shutdown(); PASS();
+}
+
 int main(void) {
   TEST_START("Activity page host");
   test_activity_lifecycle();
@@ -278,5 +303,6 @@ int main(void) {
   test_activity_validation();
   test_page_navigation_and_orientation();
   test_page_toolbar_commands();
+  test_host_toolbar_leads_page_items();
   TEST_END();
 }

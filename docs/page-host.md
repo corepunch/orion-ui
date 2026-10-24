@@ -94,7 +94,8 @@ Invalid initialization or selection logs a framework diagnostic to stderr.
 
 Declare `<Toolbar>` inside the `role="page"` form and give the host the `toolbar`
 flag. PageHost projects the active Page's items into that standard toolbar band;
-the Page itself does not reserve a second toolbar. Toolbar items use the same
+the Page itself does not reserve a second toolbar. Items in the host's own
+`<Toolbar>` (a `<title />`, say) lead, and the active Page's follow them. Toolbar items use the same
 `command` IDs as menus and accelerators. Commands are offered to the active Page
 before the host's app handler, including commands absent from the toolbar.
 Unhandled commands fall back to the host. A routing guard prevents recursion

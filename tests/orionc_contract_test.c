@@ -317,7 +317,7 @@ static void test_accounting_presentation_declaration(void) {
   const char *fixture = "<orion><databases><database name=\"db\" class=\"db_schema_xml\"><table name=\"rows\">"
     "<field name=\"id\" type=\"integer\" key=\"YES\"/><field name=\"amount\" type=\"double\"/>"
     "<field name=\"sub\" type=\"boolean\"/></table></database></databases>"
-    "<forms><form name=\"main\" width=\"400\" role=\"host\" toolbar-style=\"list\" flags=\"toolbar\">"
+    "<forms><form name=\"main\" width=\"400\" role=\"host\" toolbar-style=\"list\" flags=\"toolbar\"><Toolbar><title/></Toolbar>"
     "<ActivityBar name=\"activity\" labels=\"right\"><Page form=\"list\"/></ActivityBar></form>"
     "<form name=\"list\" label=\"Rows\" width=\"400\" role=\"page\">"
     "<TableView name=\"rows\" source=\"db.rows\" totals-skip=\"sub\">"
@@ -333,6 +333,7 @@ static void test_accounting_presentation_declaration(void) {
   ASSERT_TRUE(contains(out, "{ NULL, 0, TOOLBAR_STYLE_LIST }"));
   ASSERT_TRUE(contains(out, ".toolbar_style = TOOLBAR_STYLE_LIST"));
   ASSERT_TRUE(contains(out, ".label = \"Rows\""));
+  ASSERT_TRUE(contains(out, "{ TOOLBAR_ITEM_TITLE, 0, NULL"));
   ASSERT_FALSE(contains(out, "\"RowIcon\""));  // not a child window
   PASS();
 }
