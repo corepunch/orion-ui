@@ -8,6 +8,7 @@
 #include <orion/user/toolbar.h>
 #include <orion/commctl/appchrome.h>
 #include <unistd.h>
+#include <utime.h>
 
 static float peak_of(const float *p, int n) { float m = 0; for (int i = 0; i < n; i++) m = fmaxf(m, fabsf(p[i])); return m; }
 
@@ -188,6 +189,124 @@ static void test_project_io(void) {
   ASSERT_EQUAL(g_app->song.nclips, old_clips);
   ASSERT_EQUAL(g_app->song.bpm, 140);
   remove(saved); remove(bad);
+  destroy_window(win);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
+}
+
+// Dialog procs live later in this unity build.
+static result_t songs_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+static result_t save_song_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+static void set_mtime(const char *path, time_t when) {
+  struct utimbuf t = { when, when };
+  utime(path, &t);
+}
+
+static void test_song_library(void) {
+  TEST("songs save into Groove's own storage; My Songs lists them newest first with previews read from the files");
+  test_env_init();
+  g_app = app_init();
+  ASSERT_NOT_NULL(g_app);
+  const char *settings = axSettingsDirectory();
+  ASSERT(g_app->songs_dir[0] && !strncmp(g_app->songs_dir, settings, strlen(settings)) && axPathExists(g_app->songs_dir),
+         "song storage is a folder inside the app's own settings area, not the shared Documents");
+  window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  char dir[128], path[512], other[512], broken[512], notes[512], name[128];
+  snprintf(dir, sizeof(dir), "/tmp/orion-groove-songs-%ld", (long)getpid());
+  ASSERT_TRUE(axMkDir(dir));
+  snprintf(g_app->songs_dir, sizeof(g_app->songs_dir), "%s", dir);
+  static const fe_component_desc_t preview_class = { .class_name = "GrooveSongPreview", .proc = win_song_preview };
+  register_window_class(&preview_class);
+  DB_CLASS(groove_songs_db);
+  g_app->songs_db = create_database("songs", "groove_songs_db", dir);
+  ASSERT_NOT_NULL(g_app->songs_db);
+
+  const char *rejected[] = { "", "   ", "a/b", "a\\b", "C:song", ".hidden" };
+  for (int i = 0; i < ARRAY_LEN(rejected); i++)
+    ASSERT(!song_path_for_name(rejected[i], path, sizeof(path)), "empty names and names with path separators are rejected");
+  ASSERT_TRUE(song_path_for_name("  Night Drive ", path, sizeof(path)));
+  char expected[512]; snprintf(expected, sizeof(expected), "%s/Night Drive.groove", dir);
+  ASSERT_STR_EQUAL(path, expected);
+  song_name_from_path(path, name, sizeof(name));
+  ASSERT_STR_EQUAL(name, "Night Drive");
+
+  g_app->song.bpm = 128;
+  ASSERT(song_add_clip(&g_app->song, 0, 1, 0) == 0 && song_add_clip(&g_app->song, 2, 4, 4 * GR_TICKS_BAR) == 1, "two clips placed");
+  window_t *dlg = create_window_from_form(&groove_save_song_form, 0, 0, NULL, save_song_proc, 0, "Untitled");
+  ASSERT_NOT_NULL(dlg);
+  ASSERT_STR_EQUAL(get_window_item(dlg, ID_SAVE_SONG_NAME)->title, "Untitled");
+  set_window_item_text(dlg, ID_SAVE_SONG_NAME, "%s", "Night Drive");
+  send_message(dlg, evCommand, MAKEDWORD(ID_SAVE_SONG_OK, btnClicked), get_window_item(dlg, ID_SAVE_SONG_OK));
+  ASSERT(!is_window(dlg) && !strcmp(g_app->filename, path) && access(path, F_OK) == 0, "Save Song writes <songs>/<name>.groove and closes");
+
+  song_t probe;
+  ASSERT_TRUE(song_read(path, &probe));
+  ASSERT(probe.bpm == 128 && probe.nclips == 2 && probe.clips[1].track == 4, "song_read parses the arrangement");
+  app_new_song();
+  ASSERT(g_app->song.nclips == 0 && !g_app->filename[0], "song_read leaves the open song alone");
+  g_app->song.bpm = 100;
+  ASSERT(song_add_clip(&g_app->song, 1, 0, 0) == 0, "clip placed");
+  ASSERT_TRUE(song_path_for_name("Afterglow", other, sizeof(other)));
+  ASSERT_TRUE(app_save_song(other));
+  dlg = create_window_from_form(&groove_save_song_form, 0, 0, NULL, save_song_proc, 0, "Afterglow");
+  set_window_item_text(dlg, ID_SAVE_SONG_NAME, "%s", "Night Drive");
+  send_message(dlg, evCommand, MAKEDWORD(ID_SAVE_SONG_OK, btnClicked), get_window_item(dlg, ID_SAVE_SONG_OK));
+  ASSERT(is_window(dlg) && song_read(path, &probe) && probe.bpm == 128 && !strcmp(g_app->filename, other),
+         "another song's name is only replaced after confirmation");
+  send_message(dlg, evCommand, MAKEDWORD(ID_SAVE_SONG_CANCEL, btnClicked), get_window_item(dlg, ID_SAVE_SONG_CANCEL));
+  ASSERT_FALSE(is_window(dlg));
+
+  snprintf(broken, sizeof(broken), "%s/Broken.groove", dir);
+  snprintf(notes, sizeof(notes), "%s/notes.txt", dir);
+  FILE *f = fopen(broken, "wb"); ASSERT_NOT_NULL(f); fputs("not a song\n", f); fclose(f);
+  f = fopen(notes, "wb"); ASSERT_NOT_NULL(f); fputs("ignored\n", f); fclose(f);
+  time_t now = time(NULL);
+  set_mtime(path, now); set_mtime(broken, now - 100); set_mtime(other, now - 200);
+
+  window_t *songs = create_window_from_form(&groove_song_browser_form, 0, 0, NULL, songs_proc, 0, NULL);
+  ASSERT_NOT_NULL(songs);
+  window_t *grid = get_window_item(songs, ID_SONG_BROWSER_SONGS);
+  const char *order[] = { "Night Drive", "Broken", "Afterglow" };
+  int tiles = 0;
+  for (window_t *card = grid->children; card; card = card->next, tiles++) {
+    ASSERT(tiles < 3 && !strcmp(get_window_item(card, ID_SONG_CARD_TITLE)->title, order[tiles]), "cards are the saved songs, newest first");
+    window_t *preview = get_window_item(card, ID_SONG_CARD_PREVIEW);
+    const song_t *shown = preview ? preview->userdata : NULL;
+    ASSERT(tiles == 1 ? !shown : shown && shown->nclips == (tiles ? 1 : 2), "each preview parses its own file; an unreadable one draws none");
+  }
+  ASSERT_EQUAL(tiles, 3);
+  ASSERT(strstr(get_window_item(grid->children, ID_SONG_CARD_DETAIL)->title, "128 BPM") &&
+         strstr(get_window_item(grid->children->next, ID_SONG_CARD_DETAIL)->title, "Unreadable"), "details show tempo or the read failure");
+  ASSERT(!window_has_state(get_window_item(songs, ID_SONG_BROWSER_EMPTY), WINDOW_STATE_VISIBLE) &&
+         send_message(grid, tgGetSelection, 0, NULL) == 0, "the newest song is selected");
+  show_window(songs, true);
+  window_t *third = get_window_item(grid->children->next->next, ID_SONG_CARD_PREVIEW);
+  ui_event_t press = { .message = kEventLeftButtonDown,
+    .x = (window_screen_x(third) + third->frame.w / 2) * UI_WINDOW_SCALE, .y = (window_screen_y(third) + third->frame.h / 2) * UI_WINDOW_SCALE };
+  dispatch_message(&press);
+  press.message = kEventLeftButtonUp;
+  dispatch_message(&press);
+  ASSERT_EQUAL(send_message(grid, tgGetSelection, 0, NULL), 2);
+  send_message(songs, evCommand, MAKEDWORD(2, tgnActivate), grid);
+  ASSERT(!is_window(songs) && !strcmp(g_app->filename, other) && g_app->song.bpm == 100 && g_app->song.nclips == 1,
+         "activating a card opens that song and closes the screen");
+
+  result_node_t *rows = (result_node_t *)send_db_message(g_app->songs_db, dbFetch, MAKEDWORD(TABLE_SONGS, 0), NULL);
+  ASSERT(count_result_list(rows) == 3, "the datasource lists only .groove files");
+  for (result_node_t *row = rows; row; row = row->next)
+    ASSERT_TRUE(send_db_message(g_app->songs_db, dbDelete, TABLE_SONGS, (void *)(intptr_t)((song_entry_t *)row->data)->id));
+  free_result_list(rows);
+  ASSERT(access(path, F_OK) != 0 && access(other, F_OK) != 0 && access(broken, F_OK) != 0, "deleting a row removes its file");
+  ASSERT_FALSE(send_db_message(g_app->songs_db, dbDelete, TABLE_SONGS, (void *)(intptr_t)1));
+  songs = create_window_from_form(&groove_song_browser_form, 0, 0, NULL, songs_proc, 0, NULL);
+  ASSERT(!get_window_item(songs, ID_SONG_BROWSER_SONGS)->children && window_has_state(get_window_item(songs, ID_SONG_BROWSER_EMPTY), WINDOW_STATE_VISIBLE) &&
+         window_has_state(get_window_item(songs, ID_SONG_BROWSER_OPEN), WINDOW_STATE_DISABLED), "an empty library says how to add songs");
+  destroy_window(songs);
+
+  remove(notes); rmdir(dir);
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();
@@ -1473,6 +1592,7 @@ int main(void) {
   test_genres();
   test_tempo();
   test_project_io();
+  test_song_library();
   test_eurodance_demos();
   test_song_rules();
   test_mixer();

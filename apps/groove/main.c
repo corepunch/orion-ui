@@ -22,6 +22,11 @@ static const fe_component_desc_t kGrooveComponents[] = {
     .proc = win_block_card, .default_layout_size = { 0, 0 },
     .default_flags = GR_CARD_FLAGS,
     .default_h_align = LAYOUT_ALIGN_STRETCH, .default_v_align = LAYOUT_ALIGN_STRETCH },
+  { .class_name = "GrooveSongPreview", .name_prefix = "IDC_GSP", .toolbar_icon = "Card",
+    .default_size = { 220, 84 }, .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR,
+    .proc = win_song_preview, .default_layout_size = { 0, 0 },
+    .default_flags = WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOACTIVATE | WINDOW_NOTABSTOP,
+    .default_h_align = LAYOUT_ALIGN_STRETCH, .default_v_align = LAYOUT_ALIGN_STRETCH },
 };
 
 static void register_groove_components(void) {
@@ -32,6 +37,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   register_commctl_classes();
   register_groove_components();
   DB_CLASS(groove_library_db);
+  DB_CLASS(groove_songs_db);
   char icons_path[1024];
   int n = snprintf(icons_path, sizeof(icons_path), "%s/../share/groove/icons", ui_get_exe_dir());
   if (n > 0 && (size_t)n < sizeof(icons_path)) svg_add_icons_dir(hinstance, icons_path);
@@ -49,6 +55,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (!g_app->library_db) { app_shutdown(g_app); g_app = NULL; return false; }
   ui_set_database(g_app->library_db);
   register_database("library", g_app->library_db);
+  if (g_app->songs_dir[0] && (g_app->songs_db = create_database("songs", "groove_songs_db", g_app->songs_dir)))
+    register_database("songs", g_app->songs_db);
   window_t *win = create_window_from_form(&groove_main_window_form, 0, 0, NULL, main_win_proc, hinstance, g_app);
   if (!win) { app_shutdown(g_app); return false; }
   show_window(win, true);

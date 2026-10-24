@@ -40,7 +40,7 @@ COMMCTL_SRCS := $(filter-out orion/commctl/tray.c,$(wildcard orion/commctl/*.c))
 COMMDLG_SRCS := $(wildcard orion/commdlg/*.c)
 COMPONENT_SRCS := $(wildcard $(APP_DIR)/components/*.c)
 OBJECTS := $(addprefix $(BUILD_ROOT)/,user.o kernel.o commctl.o) $(addprefix $(BUILD_ROOT)/,$(COMMDLG_SRCS:.c=.o) $(COMPONENT_SRCS:.c=.o))
-APP_SRCS := $(shell find $(APP_DIR) -name '*.c' ! -path '*/components/*' ! -path '*/tests/*' ! -name main.c | sort) $(APP_DIR)/main.c
+APP_SRCS := $(shell find $(APP_DIR) -name '*.c' ! -path '*/components/*' ! -path '*/tests/*' ! -path '*/reel/*' ! -name main.c | sort) $(APP_DIR)/main.c
 APP_HEADERS := $(shell find $(APP_DIR) -name '*.h' ! -path '*/tests/*')
 PLATFORM_LIB := $(BUILD_ROOT)/platform/libplatform.a
 HOST_TOOL := $(abspath $(BUILD_DIR))/host/orionc

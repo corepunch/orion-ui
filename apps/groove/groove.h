@@ -167,7 +167,7 @@ typedef struct {
 
 typedef struct {
   window_t     *win, *chrome, *menubar_win, *toolbar, *sheet, *tracks, *library, *bin; // chrome: menu bar with the compact toolbar
-  database_t   *library_db;
+  database_t   *library_db, *songs_db;
   accel_table_t *accel;
   hinstance_t   hinstance;
   song_t        song;
@@ -175,6 +175,7 @@ typedef struct {
   uint32_t      timer;
   int           selected_clip;
   char          filename[512];
+  char          songs_dir[512]; // Groove's own song storage; never the shared Files/Documents area
   drag_t        drag;
   uint8_t       genre;      // library filter: 0 = every genre, else one GENRE_* flag
   family_t      family;     // library filter
@@ -200,6 +201,7 @@ enum {
   binFilter,                  // re-apply the family and genre filters to the bin
   grCardSetBlock,              // wparam = block id
   grCardSetState,              // wparam = ctrl_state_t
+  grPreviewSetSong,            // lparam = path of a .groove file; NULL clears
 };
 
 #define ID_PLAY      ID_TRANSPORT_PLAY
@@ -228,6 +230,13 @@ bool      app_load_demo_song(int demo);
 void      app_new_song(void);
 bool      app_open_song(const char *path);
 bool      app_save_song(const char *path);
+// Parses a song file without touching the app's song or audio (persistence.c).
+bool      song_read(const char *path, song_t *out);
+// "name" -> <songs_dir>/name.groove; false for an empty name or one with path separators.
+bool      song_path_for_name(const char *name, char *path, size_t cap);
+void      song_name_from_path(const char *path, char *name, size_t cap);
+bool      app_save_song_as(window_t *owner);  // asks for a name, saves into songs_dir
+bool      app_show_songs(window_t *owner);    // the My Songs screen; true when a song was opened
 void      create_menubar(void);
 void      app_lock(void);
 void      app_unlock(void);
@@ -244,6 +253,7 @@ void      app_set_genre(uint8_t genre);        // 0 = every genre, else one GENR
 void      app_set_family(int family);
 bool      block_visible(int id);               // passes the family and genre filters
 lresult_t groove_library_db(database_t *db, uint32_t msg, uint32_t wparam, void *lparam);
+lresult_t groove_songs_db(database_t *db, uint32_t msg, uint32_t wparam, void *lparam);
 // Blocks load lazily. Audio stays loaded for blocks in the song and the one
 // being auditioned; a card that only draws a waveform keeps the overview alone.
 bool      app_block_audio(int id);
@@ -255,6 +265,7 @@ extern result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lp
 extern result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 extern result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+extern result_t win_song_preview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void transport_refresh(void);
 ipoint16_t clip_cell_size(window_t *sheet, const block_t *b);
 bool block_pictograms_load(groove_t *app);
