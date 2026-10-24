@@ -2,7 +2,7 @@
 <!-- Ledger configuration "Buchhaltung Deutschland 2003" (SKR 03). -->
 <cfg>
   <settings>
-    <setting id="1" cash_account_id="4" payroll_account_id="23" currency_units="Euro" currency_gender="m" cents_units="Cent" cents_gender="m" code="de-2003" name="Buchhaltung Deutschland 2003 (SKR 03)" country="Deutschland" currency="EUR" language="de" tax_name="USt" tax_id_name="Steuernummer" version="1.0.2003" basis="Kontenrahmen SKR 03 (DATEV). Umsatzsteuer 16 % / 7 % (§ 12 UStG, Stand 2003; 19 % ab 01.01.2007). Rechnungsangaben nach § 14 UStG. Lohnsteuer vereinfacht als Pauschalsatz nach Grundfreibetrag; Sozialversicherung 2003 rund 42 % je zur Hälfte." />
+    <setting id="1" opening_account_id="21" currency_code="EUR" cash_account_id="4" payroll_account_id="23" currency_units="Euro" currency_gender="m" cents_units="Cent" cents_gender="m" code="de-2003" name="Buchhaltung Deutschland 2003 (SKR 03)" country="Deutschland" currency="EUR" language="de" tax_name="USt" tax_id_name="Steuernummer" version="1.0.2003" basis="Kontenrahmen SKR 03 (DATEV). Umsatzsteuer 16 % / 7 % (§ 12 UStG, Stand 2003; 19 % ab 01.01.2007). Rechnungsangaben nach § 14 UStG. Lohnsteuer vereinfacht als Pauschalsatz nach Grundfreibetrag; Sozialversicherung 2003 rund 42 % je zur Hälfte." />
   </settings>
   <subconto_kinds>
     <subconto_kind id="1" code="counterparty" name="Geschäftspartner" table="counterparties" />

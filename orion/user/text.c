@@ -381,47 +381,38 @@ text_wrap_result_t text_wrap_layout_font(ui_font_t font, const char *text,
   int lines = 1;
   font_atlas_t *cur_atlas = NULL;
 
+#define NEW_LINE() do { if (line_w > max_line_w) max_line_w = line_w; \
+                       line_w = 0; cx = x; cy += lh; lines++; out.wrapped = true; } while (0)
   int text_length = (int)strlen(text);
+  bool word_start = true;
   for (int i = 0; i < text_length;) {
     int length;
     uint32_t codepoint = utf8_codepoint(text + i, text_length - i, &length);
     i += length;
 
-    if (codepoint == '\n') {
-      if (line_w > max_line_w) max_line_w = line_w;
-      line_w = 0;
-      cx = x;
-      cy += lh;
-      lines++;
-      out.wrapped = true;
-      continue;
-    }
+    if (codepoint == '\n') { NEW_LINE(); word_start = true; continue; }
 
     if (codepoint == ' ') {
-      int cw = sw;
-      if (cx + cw > x + w) {
-        if (line_w > max_line_w) max_line_w = line_w;
-        line_w = 0;
-        cx = x;
-        cy += lh;
-        lines++;
-        out.wrapped = true;
-      } else {
-        cx += cw;
-        line_w += cw;
-      }
+      if (cx + sw > x + w) NEW_LINE();
+      else { cx += sw; line_w += sw; }
+      word_start = true;
       continue;
     }
 
-    int cw = wrap_char_advance(font, codepoint);
-    if (cx + cw > x + w) {
-      if (line_w > max_line_w) max_line_w = line_w;
-      line_w = 0;
-      cx = x;
-      cy += lh;
-      lines++;
-      out.wrapped = true;
+    // Lines break between words; only a word longer than the line breaks inside.
+    if (word_start && cx > x) {
+      int word_w = 0;
+      for (int j = i - length, l; j < text_length; j += l) {
+        uint32_t cp = utf8_codepoint(text + j, text_length - j, &l);
+        if (cp == ' ' || cp == '\n') break;
+        word_w += wrap_char_advance(font, cp);
+      }
+      if (cx + word_w > x + w) NEW_LINE();
     }
+    word_start = false;
+
+    int cw = wrap_char_advance(font, codepoint);
+    if (cx + cw > x + w) NEW_LINE();
 
     if (draw && vc < MAX_TEXT_LENGTH * VERTICES_PER_CHAR - VERTICES_PER_CHAR) {
       font_atlas_t *atlas = font_for_role(font);
@@ -436,6 +427,7 @@ text_wrap_result_t text_wrap_layout_font(ui_font_t font, const char *text,
     line_w += cw;
   }
 
+#undef NEW_LINE
   if (line_w > max_line_w) max_line_w = line_w;
   out.width = max_line_w;
   out.height = lines * lh;
