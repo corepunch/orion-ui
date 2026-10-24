@@ -30,6 +30,7 @@ static struct {
   font_atlas_t big;
   font_atlas_t small;
   font_atlas_t smallest;
+  font_atlas_t title;
 } text_state = {0};
 
 // ── Dynamic metric accessors ──────────────────────────────────────────────────
@@ -37,6 +38,7 @@ static struct {
 
 static inline font_atlas_t *font_for_role(ui_font_t font) {
   if (font == FONT_SMALLEST) return &text_state.smallest;
+  if (font == FONT_TITLE) return &text_state.title;
   if (font == FONT_SMALL) return &text_state.small;
   return &text_state.big;
 }
@@ -88,15 +90,16 @@ void init_text_rendering(void) {
   snprintf(compact_path, sizeof(compact_path), "%s/../share/orion/fonts/NotoSans-Regular.ttf", exe);
 
 #if defined(AX_PLATFORM_IOS)
-  const float system_size = 14.4f, small_size = 14.4f, smallest_size = 10.8f;
+  const float system_size = 14.4f, small_size = 14.4f, smallest_size = 10.8f, title_size = 19.2f;
 #elif UI_WINDOW_SCALE == 1
-  const float system_size = 12.0f, small_size = 12.0f, smallest_size = 9.0f;
+  const float system_size = 12.0f, small_size = 12.0f, smallest_size = 9.0f, title_size = 16.0f;
 #else
-  const float system_size = 8.0f, small_size = 8.0f, smallest_size = 7.0f;
+  const float system_size = 8.0f, small_size = 8.0f, smallest_size = 7.0f, title_size = 10.5f;
 #endif
   bool loaded = load_atlas(&text_state.big, system_path, system_size);
   loaded = load_atlas(&text_state.small, compact_path, small_size) && loaded;
   loaded = load_atlas(&text_state.smallest, compact_path, smallest_size) && loaded;
+  loaded = load_atlas(&text_state.title, system_path, title_size) && loaded;
   if (!loaded) {
     fprintf(stderr, "[text] required font assets failed to load:\n  %s\n  %s\n",
             system_path, compact_path);
@@ -303,13 +306,10 @@ void draw_text(ui_font_t font, const char *text, int x, int y, uint32_t col) {
   int text_length = (int)strlen(text);
   if (text_length > MAX_TEXT_LENGTH) text_length = MAX_TEXT_LENGTH;
 
-  // Static vertex buffers — one per atlas.
-  // FONT_SMALL and FONT_SMALLEST use their role atlases. FONT_SYSTEM uses the
-  // system atlas for text and the small atlas for characters 128-255.
-  static text_vertex_t buf_big  [MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
-  static text_vertex_t buf_small[MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
-  static text_vertex_t buf_smallest[MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
-  int vc_big = 0, vc_small = 0, vc_smallest = 0;
+  // Each font role has its own atlas; a string is one batch of that atlas.
+  static text_vertex_t buf[MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
+  font_atlas_t *atlas = font_for_role(font);
+  int vc = 0;
 
   int sw = font_space(font);
   int lh = font_line(font);
@@ -322,23 +322,11 @@ void draw_text(ui_font_t font, const char *text, int x, int y, uint32_t col) {
     if (codepoint == ' ')  { cursor_x += sw; continue; }
     if (codepoint == '\n') { cursor_x = x; y += lh; continue; }
 
-    font_atlas_t *atlas = font_for_role(font);
-
-    bool use_smallest = atlas == &text_state.smallest;
-    bool use_small = atlas == &text_state.small;
-    text_vertex_t *buf = use_smallest ? buf_smallest : (use_small ? buf_small : buf_big);
-    int           *vc  = use_smallest ? &vc_smallest : (use_small ? &vc_small : &vc_big);
-
-    *vc += emit_char_verts(buf + *vc, cursor_x, y, codepoint, col, atlas);
+    vc += emit_char_verts(buf + vc, cursor_x, y, codepoint, col, atlas);
     cursor_x += codepoint_advance(font, codepoint);
   }
 
-  if (vc_big > 0)
-    flush_batch(&text_state.big,   buf_big,   vc_big);
-  if (vc_small > 0)
-    flush_batch(&text_state.small, buf_small, vc_small);
-  if (vc_smallest > 0)
-    flush_batch(&text_state.smallest, buf_smallest, vc_smallest);
+  if (vc > 0) flush_batch(atlas, buf, vc);
 }
 
 void draw_text_clipped(ui_font_t font, const char *text,
@@ -495,6 +483,9 @@ void shutdown_text_rendering(void) {
 
   font_cache_destroy(text_state.smallest.cache);
   R_MeshDestroy(&text_state.smallest.mesh);
+
+  font_cache_destroy(text_state.title.cache);
+  R_MeshDestroy(&text_state.title.mesh);
 
   memset(&text_state, 0, sizeof(text_state));
 }

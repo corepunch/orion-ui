@@ -425,8 +425,9 @@ static void test_merged_title(void) {
   toolbar_state_t *tb = toolbar_get_state(win);
   ASSERT_FALSE(toolbar_hit_action(tb, tb->item_rects[0].x + 2, tb->item_rects[0].y + 2));  // the title drags the window
   irect16_t title = tb->item_rects[0], play = tb->item_rects[2], close = tb->item_rects[3];
-  ASSERT_TRUE(title.x >= list->frame.x + list->frame.w);
-  ASSERT_TRUE(title.w >= text_strwidth(FONT_SYSTEM, "ACME Ltd"));
+  int top = title.y + (title.h - text_char_height(FONT_TITLE)) / 2;  // the text's distance from the window top
+  ASSERT_EQUAL(title.x, list->frame.x + list->frame.w + top);       // equals its distance from the content's edge
+  ASSERT_TRUE(title.w >= text_strwidth(FONT_TITLE, "ACME Ltd"));
   ASSERT_TRUE(play.x > win->frame.w / 2);              // pushed to the far side
   ASSERT_TRUE(play.x + play.w <= close.x);
   set_window_title(win, "ACME Holdings International Ltd");
