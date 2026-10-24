@@ -4,6 +4,7 @@
 
 #include "ledger.h"
 #include <orion/commdlg/msgbox.h>
+#include <orion/commdlg/filepicker.h>
 #include <time.h>
 
 ledger_t *g_ledger = NULL;
@@ -211,6 +212,32 @@ static void select_language(void) {
               ui_tr("Language"), MB_OK);
 }
 
+// Catalogs and opening balances from a 1C:Enterprise 8 exchange file, with a
+// summary of what was added, found, and left out.
+static void import_from_1c(void) {
+  char path[LEDGER_PATH_MAX] = "", money_dr[32], money_cr[32], text[1024];
+  openfilename_t ofn = { .lStructSize = sizeof(ofn), .hwndOwner = g_ledger->main_win, .lpstrFile = path, .nMaxFile = sizeof(path),
+                         .lpstrFilter = "1C EnterpriseData (*.xml)\0*.xml\0All Files\0*.*\0", .Flags = OFN_FILEMUSTEXIST };
+  if (!get_open_filename(&ofn)) return;
+  ledger_import_t r;
+  if (!ledger_import_enterprisedata(g_ledger->ib, g_ledger->cfg, path, &r)) {
+    message_box(g_ledger->main_win, r.error, ui_tr("Import from 1C"), MB_OK);
+    return;
+  }
+  after_save(0);
+  ledger_update_status();
+  ui_format_number(r.debit, 2, money_dr, sizeof(money_dr));
+  ui_format_number(r.credit, 2, money_cr, sizeof(money_cr));
+  int n = snprintf(text, sizeof(text), ui_tr("Counterparties: %d\nItems: %d\nEmployees: %d\nFixed assets: %d\nCurrencies: %d\n"
+                                             "Already in the infobase: %d\nOpening entries: %d (debit %s, credit %s)"),
+                   r.counterparties, r.items, r.employees, r.assets, r.currencies, r.matched, r.entries, money_dr, money_cr);
+  if (r.balances_present && n > 0 && n < (int)sizeof(text))
+    n += snprintf(text + n, sizeof(text) - (size_t)n, "\n\n%s", ui_tr("The balances of this date were imported before and were not entered again."));
+  if (r.skipped[0] && n > 0 && n < (int)sizeof(text))
+    snprintf(text + n, sizeof(text) - (size_t)n, ui_tr("\n\nAccounts not in the configuration, left out: %s"), r.skipped);
+  message_box(g_ledger->main_win, text, ui_tr("Import from 1C"), MB_OK);
+}
+
 void ledger_command(uint16_t id) {
   if (!g_ledger) return;
   window_t *parent = g_ledger->main_win;
@@ -226,6 +253,7 @@ void ledger_command(uint16_t id) {
       break;
     case ID_FILE_CONFIGURATION: select_configuration(); break;
     case ID_FILE_LANGUAGE:      select_language();      break;
+    case ID_FILE_IMPORT_1C:     import_from_1c();       break;
     case ID_FILE_QUIT:          ui_request_quit();      break;
 
     case ID_DOC_NEW:           new_document("document");  break;

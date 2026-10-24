@@ -441,6 +441,7 @@ case evCommand:
 | `show_dialog_from_form(def, title, parent, proc, param)` | Show a form-based modal dialog (preferred) |
 | `create_window_from_form(def, x, y, parent, proc, param)` | Instantiate a form as a modeless window |
 | `end_dialog(win, code)` | Close the nearest dialog ancestor and return a result code |
+| `message_box(parent, text, caption, MB_OK)` | WinAPI-style message: grows as tall as its text needs; lines break between words and at `\n` |
 | `dialog_push(win, state, bindings, n)` | Copy state fields → dialog controls |
 | `dialog_pull(win, state, bindings, n)` | Copy dialog controls → state fields |
 

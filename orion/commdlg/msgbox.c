@@ -14,13 +14,11 @@
 // Layout
 // ---------------------------------------------------------------------------
 
-#define MB_WIN_W   240
-#define MB_TEXT_H   34   // room for two lines of text without touching buttons
+#define MB_WIN_W   240  // the height follows the wrapped message
 #define MB_PAD       8
 #define MB_BTN_GAP   8
 #define MB_BTN_W    50
 #define MB_BTN_H   BUTTON_HEIGHT
-#define MB_CLIENT_H (MB_PAD + MB_TEXT_H + MB_BTN_GAP + MB_BTN_H + MB_PAD)
 
 enum {
   MB_ID_TEXT = 1,
@@ -64,7 +62,7 @@ static const form_ctrl_def_t kMsgBoxYesNoCancelActions[] = {
 };
 
 static const form_ctrl_def_t kMsgBoxOkChildren[] = {
-  { .class_name = "Label", .id = MB_ID_TEXT, .size = {0, MB_TEXT_H},
+  { .class_name = "Label", .id = MB_ID_TEXT, .size = {0, 0},
     .text = "", .name = "message", .h_align = LAYOUT_ALIGN_STRETCH, .v_align = LAYOUT_ALIGN_START },
   { .class_name = "StackView", .name = "actions",
     .flags = WINDOW_STACK_HORIZONTAL, .layout_spacing = MB_BTN_GAP,
@@ -73,7 +71,7 @@ static const form_ctrl_def_t kMsgBoxOkChildren[] = {
 };
 
 static const form_ctrl_def_t kMsgBoxOkCancelChildren[] = {
-  { .class_name = "Label", .id = MB_ID_TEXT, .size = {0, MB_TEXT_H},
+  { .class_name = "Label", .id = MB_ID_TEXT, .size = {0, 0},
     .text = "", .name = "message", .h_align = LAYOUT_ALIGN_STRETCH, .v_align = LAYOUT_ALIGN_START },
   { .class_name = "StackView", .name = "actions",
     .flags = WINDOW_STACK_HORIZONTAL, .layout_spacing = MB_BTN_GAP,
@@ -82,7 +80,7 @@ static const form_ctrl_def_t kMsgBoxOkCancelChildren[] = {
 };
 
 static const form_ctrl_def_t kMsgBoxYesNoChildren[] = {
-  { .class_name = "Label", .id = MB_ID_TEXT, .size = {0, MB_TEXT_H},
+  { .class_name = "Label", .id = MB_ID_TEXT, .size = {0, 0},
     .text = "", .name = "message", .h_align = LAYOUT_ALIGN_STRETCH, .v_align = LAYOUT_ALIGN_START },
   { .class_name = "StackView", .name = "actions",
     .flags = WINDOW_STACK_HORIZONTAL, .layout_spacing = MB_BTN_GAP,
@@ -91,7 +89,7 @@ static const form_ctrl_def_t kMsgBoxYesNoChildren[] = {
 };
 
 static const form_ctrl_def_t kMsgBoxYesNoCancelChildren[] = {
-  { .class_name = "Label", .id = MB_ID_TEXT, .size = {0, MB_TEXT_H},
+  { .class_name = "Label", .id = MB_ID_TEXT, .size = {0, 0},
     .text = "", .name = "message", .h_align = LAYOUT_ALIGN_STRETCH, .v_align = LAYOUT_ALIGN_START },
   { .class_name = "StackView", .name = "actions",
     .flags = WINDOW_STACK_HORIZONTAL, .layout_spacing = MB_BTN_GAP,
@@ -103,7 +101,6 @@ static const form_def_t kMsgBoxOkForm = {
   .name = "Message",
   .flags = WINDOW_AUTO_LAYOUT,
   .width = MB_WIN_W,
-  .height = MB_CLIENT_H,
   .layout_spacing = MB_BTN_GAP,
   .padding = {MB_PAD, MB_PAD, MB_PAD, MB_PAD},
   .children = kMsgBoxOkChildren,
@@ -114,7 +111,6 @@ static const form_def_t kMsgBoxOkCancelForm = {
   .name = "Message",
   .flags = WINDOW_AUTO_LAYOUT,
   .width = MB_WIN_W,
-  .height = MB_CLIENT_H,
   .layout_spacing = MB_BTN_GAP,
   .padding = {MB_PAD, MB_PAD, MB_PAD, MB_PAD},
   .children = kMsgBoxOkCancelChildren,
@@ -125,7 +121,6 @@ static const form_def_t kMsgBoxYesNoForm = {
   .name = "Message",
   .flags = WINDOW_AUTO_LAYOUT,
   .width = MB_WIN_W,
-  .height = MB_CLIENT_H,
   .layout_spacing = MB_BTN_GAP,
   .padding = {MB_PAD, MB_PAD, MB_PAD, MB_PAD},
   .children = kMsgBoxYesNoChildren,
@@ -136,7 +131,6 @@ static const form_def_t kMsgBoxYesNoCancelForm = {
   .name = "Message",
   .flags = WINDOW_AUTO_LAYOUT,
   .width = MB_WIN_W,
-  .height = MB_CLIENT_H,
   .layout_spacing = MB_BTN_GAP,
   .padding = {MB_PAD, MB_PAD, MB_PAD, MB_PAD},
   .children = kMsgBoxYesNoCancelChildren,
