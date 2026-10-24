@@ -454,7 +454,12 @@
 
   <forms>
     <form name="main_window" title="Ledger" width="1200" height="700"
-          role="host" active-page="journal_page" flags="statusbar,toolbar,titletoolbar,toolbartitle" spacing="0">
+          role="host" active-page="journal_page" flags="statusbar,toolbar,titletoolbar" spacing="0">
+      <!-- The organization's name, as Finder names the folder; the active page's buttons follow on the far side. -->
+      <Toolbar>
+        <title />
+        <spacer flags="TOOLBAR_ITEM_FLAG_FLEXSPACE" />
+      </Toolbar>
       <ActivityBar name="activity" flags="notitle" labels="right">
         <Page form="journal_page" command="view.journal" />
         <Page form="counterparties_page" command="view.counterparties" />

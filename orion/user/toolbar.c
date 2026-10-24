@@ -11,8 +11,7 @@
 
 #define TB_WINDOW_CLOSE    (-102)
 #define TB_WINDOW_COLLAPSE (-103)
-#define TB_WINDOW_TITLE    (-104)
-#define TB_TITLE_GAP       16  // between the merged title and the first item
+#define TB_TITLE_GAP       16  // after a title item
 
 static bool toolbar_set_checked(toolbar_state_t *tb, int i, bool checked);
 
@@ -42,7 +41,7 @@ int toolbar_item_hit(const toolbar_state_t *tb, int tx, int ty) {
 bool toolbar_hit_action(const toolbar_state_t *tb, int x, int y) {
   for (int i = 0; tb && tb->item_rects && i < tb->item_count; i++) {
     int type = tb->items[i].type;
-    if (type != TOOLBAR_ITEM_LABEL && type != TOOLBAR_ITEM_SPACER && type != TOOLBAR_ITEM_SEPARATOR &&
+    if (type != TOOLBAR_ITEM_LABEL && type != TOOLBAR_ITEM_TITLE && type != TOOLBAR_ITEM_SPACER && type != TOOLBAR_ITEM_SEPARATOR &&
         rect_contains_point(tb->item_rects[i], (ipoint16_t){x, y})) return true;
   }
   return false;
@@ -97,8 +96,8 @@ static void toolbar_center_column(toolbar_state_t *tb, int first, int end, int x
   }
 }
 
-// The merged title starts over the content, past the panes docked on the
-// left edge (a source list), the way Finder's starts past its sidebar.
+// A title item starts over the content, past the panes docked on the left
+// edge (a source list), the way Finder's starts past its sidebar.
 static int toolbar_title_lead(window_t *win) {
   int lead = 0;
   for (window_t *c = win->children; c; c = c->next)
@@ -154,10 +153,12 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
         break;
       }
       case TOOLBAR_ITEM_LABEL:
-        if (item->ident == TB_WINDOW_TITLE && !vertical) x = MAX(x, toolbar_title_lead(parent) + padding);
-        w = item->ident == TB_WINDOW_TITLE ? text_strwidth(FONT_SYSTEM, parent->title) + TB_TITLE_GAP
-          : item->w > 0 ? item->w
+        w = item->w > 0 ? item->w
                         : (text_strwidth(FONT_SMALLEST, item->text ? item->text : "") + TOOLBAR_LABEL_PADDING);
+        break;
+      case TOOLBAR_ITEM_TITLE:
+        if (!vertical) x = MAX(x, toolbar_title_lead(parent) + padding);
+        w = item->w > 0 ? item->w : text_strwidth(FONT_SYSTEM, parent->title) + TB_TITLE_GAP;
         break;
       case TOOLBAR_ITEM_COMBOBOX:
         w = item->w > 0 ? item->w : (bsz * TOOLBAR_COMBOBOX_DEFAULT_WIDTH_MULT);
@@ -466,12 +467,12 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
     case TOOLBAR_ITEM_SEPARATOR:
       theme_draw(THEME_PART_TOOLBAR_SEPARATOR, R(0, 0, r.w, r.h), CTRL_NORMAL);
       break;
+    case TOOLBAR_ITEM_TITLE: {
+      int ty = (r.h - text_char_height(FONT_SYSTEM)) / 2;
+      draw_text_ellipsized(FONT_SYSTEM, win->title, 0, ty, MAX(0, r.w - TB_TITLE_GAP), get_sys_color(brTextNormal));
+      break;
+    }
     case TOOLBAR_ITEM_LABEL: {
-      if (item->ident == TB_WINDOW_TITLE) {  // the merged caption's title, in the caption font
-        int ty = (r.h - text_char_height(FONT_SYSTEM)) / 2;
-        draw_text_ellipsized(FONT_SYSTEM, win->title, 0, ty, MAX(0, r.w - TB_TITLE_GAP), get_sys_color(brTextNormal));
-        break;
-      }
       int ty = (r.h - text_char_height(FONT_SMALLEST)) / 2;
       draw_text_ellipsized(FONT_SMALLEST, item->text ? item->text : "", 2, ty, MAX(0, r.w - 4), get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
       break;
@@ -998,22 +999,16 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         toolbar_item_t *input = lparam;
         for (int i = 0; i < count; i++)
           if (input[i].type == TOOLBAR_ITEM_SPACER && (input[i].style & TOOLBAR_ITEM_FLAG_FLEXSPACE)) flex = true;
-        bool title = (win->flags & WINDOW_TOOLBARTITLE) != 0;
-        int n = count + !flex + title + !(win->flags & WINDOW_NOCLOSE) + collapse;
+        int n = count + !flex + !(win->flags & WINDOW_NOCLOSE) + collapse;
         merged = calloc(n, sizeof(*merged));
         if (!merged) {
           fprintf(stderr, "[tb] title toolbar allocation failed win=%u count=%d\n", win->id, n);
           fflush(stderr);
           return false;
         }
-        // The caption shows only the window controls, or with WINDOW_TOOLBARTITLE
-        // leads with the title and moves the items to the far side, as Finder does.
-        int i = 0;
-        if (title) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_LABEL, .ident = TB_WINDOW_TITLE};
-        if (title && !flex) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SPACER, .style = TOOLBAR_ITEM_FLAG_FLEXSPACE};
-        if (count) memcpy(merged + i, lparam, count * sizeof(*merged));
-        i += count;
-        if (!title && !flex) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SPACER, .style = TOOLBAR_ITEM_FLAG_FLEXSPACE};
+        if (count) memcpy(merged, lparam, count * sizeof(*merged)); // the caption shows a title only as a TOOLBAR_ITEM_TITLE item
+        int i = count;
+        if (!flex) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SPACER, .style = TOOLBAR_ITEM_FLAG_FLEXSPACE};
         if (collapse) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = TB_WINDOW_COLLAPSE, .tooltip = "Collapse / restore"};
         if (!(win->flags & WINDOW_NOCLOSE)) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = TB_WINDOW_CLOSE, .tooltip = "Hide window"};
         wparam = n;

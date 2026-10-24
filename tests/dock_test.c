@@ -413,16 +413,17 @@ static void test_toolbar_undock_size(void) {
 }
 
 static void test_merged_title(void) {
-  TEST("WINDOW_TOOLBARTITLE: the merged row leads with the title past a left source list; items move to the far side");
+  TEST("TOOLBAR_ITEM_TITLE: the merged row shows the title past a left source list; items after a flexible gap");
   test_env_init();
-  window_t *win = create_window("ACME Ltd", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_TOOLBARTITLE | WINDOW_NOCOLLAPSE,
+  window_t *win = create_window("ACME Ltd", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NOCOLLAPSE,
                                 MAKERECT(40, 50, 800, 500), NULL, dock_test_proc, 0, NULL);
   window_t *list = create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 150, 100), win, dock_test_proc, 0, NULL);
   ASSERT_TRUE(dock_window(list, DOCK_LEFT, DOCK_EDGE(DOCK_LEFT), DOCK_NOFLOAT, 150, 0));
-  toolbar_item_t items[] = { {.type = TOOLBAR_ITEM_BUTTON, .ident = 41, .icon = "play"} };
+  toolbar_item_t items[] = { {.type = TOOLBAR_ITEM_TITLE}, {.type = TOOLBAR_ITEM_SPACER, .style = TOOLBAR_ITEM_FLAG_FLEXSPACE},
+                             {.type = TOOLBAR_ITEM_BUTTON, .ident = 41, .icon = "play"} };
   send_message(win, tbSetItems, ARRAY_LEN(items), items);
   toolbar_state_t *tb = toolbar_get_state(win);
-  ASSERT_EQUAL(tb->items[0].type, TOOLBAR_ITEM_LABEL);  // the title, ahead of the app's items
+  ASSERT_FALSE(toolbar_hit_action(tb, tb->item_rects[0].x + 2, tb->item_rects[0].y + 2));  // the title drags the window
   irect16_t title = tb->item_rects[0], play = tb->item_rects[2], close = tb->item_rects[3];
   ASSERT_TRUE(title.x >= list->frame.x + list->frame.w);
   ASSERT_TRUE(title.w >= text_strwidth(FONT_SYSTEM, "ACME Ltd"));

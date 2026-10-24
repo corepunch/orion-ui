@@ -50,8 +50,9 @@ yellow for the current row, the current section and the default button
   on the ActivityBar, `label=` on each page).
 - **Unified title bar.** One row holds the organization's name, the icon
   buttons and the window controls, as Finder shows a folder's name above its
-  contents (`flags="toolbar,titletoolbar,toolbartitle"`). The name starts over
-  the content, past the section panel; the tables start right under the row.
+  contents: the host's toolbar holds a `<title />` item and the active page
+  adds its buttons (`flags="toolbar,titletoolbar"`). The name starts over the
+  content, past the section panel; the tables start right under the row.
   Tooltips name each command.
 - **Status icons.** Posted documents show a green seal and drafts a dashed
   sheet. Catalogs, the chart of accounts and the entry journal have their
