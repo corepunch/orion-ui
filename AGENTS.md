@@ -32,6 +32,24 @@ module prefix, window id when available, and the relevant values so the caller
 can identify the bad request and its current state. Flush after diagnostics
 that precede an early return.
 
+# Localization
+
+User-visible text is written in English and translated by XML string
+catalogs; see [docs/localization.md](docs/localization.md).
+
+- Texts declared in `.orion` (titles, labels, buttons, columns, menus,
+  tooltips, placeholders) translate automatically. Do not translate them
+  again in C.
+- Pass every other user-visible string through `ui_tr()`, as a whole
+  sentence. Never build a message from translated fragments; keep format
+  conversions identical in translations.
+- Never translate data (record values, file names, user input).
+- Format numbers and dates with `ui_format_number` / `ui_format_date` (or
+  bind `double`/`date` fields), never with hard-coded separators.
+- After changing an app's `.orion` texts, regenerate its catalogs with
+  `orionc --strings` and translate the new entries; check layouts with
+  `--lang qps-ploc` where the app supports it.
+
 # Window input architecture
 
 Before changing mouse hit-testing, scrolling, scrollbars, toolbars, or nested

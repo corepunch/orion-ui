@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Configuration layer: Russian accounting terms. Loaded after Ledger's own catalog, so the
+     platform's neutral wording ("Tax ID", "Tax") becomes the national term. -->
+<strings language="ru">
+  <string source="Tax ID">ИНН</string>
+  <string source="Tax ID:">ИНН:</string>
+  <string source="Tax">НДС</string>
+  <string source="Tax:">НДС:</string>
+  <string source="Tax Amount">Сумма НДС</string>
+  <string source="Tax rate:">Ставка НДС:</string>
+  <string source="Tax Rates">Ставки НДС</string>
+  <string source="Tax Dr">Дт НДС</string>
+  <string source="Tax Cr">Кт НДС</string>
+  <string source="Bank ID (BIK):">БИК:</string>
+  <string source="Account:">Расчетный счет:</string>
+</strings>

@@ -99,7 +99,8 @@ static bool dbs_field_matches(const db_field_meta_t *f, const void *record, cons
   switch (f->type) {
     case DB_TYPE_INT:    return *(const int *)p == (int)(intptr_t)value;
     case DB_TYPE_BOOL:   return *(const bool *)p == ((intptr_t)value != 0);
-    case DB_TYPE_STRING: return value && !strcmp(p, (const char *)value);
+    case DB_TYPE_STRING:
+    case DB_TYPE_DATE:   return value && !strcmp(p, (const char *)value);
     default:             return false;
   }
 }

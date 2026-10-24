@@ -52,7 +52,7 @@ typedef struct {
 
 static const field_type_t kFieldTypes[] = {
   { "integer", "int", "DB_TYPE_INT", 0 }, { "int", "int", "DB_TYPE_INT", 0 },
-  { "string", "char", "DB_TYPE_STRING", 256 }, { "boolean", "bool", "DB_TYPE_BOOL", 0 },
+  { "string", "char", "DB_TYPE_STRING", 256 }, { "date", "char", "DB_TYPE_DATE", 11 }, { "boolean", "bool", "DB_TYPE_BOOL", 0 },
   { "bool", "bool", "DB_TYPE_BOOL", 0 }, { "float", "float", "DB_TYPE_FLOAT", 0 },
   { "real", "float", "DB_TYPE_FLOAT", 0 }, { "double", "double", "DB_TYPE_DOUBLE", 0 },
 };
@@ -1067,7 +1067,8 @@ static void emit_bindings(FILE *f, const char *prefix, const char *form, const b
     const char *getter = binding_getter(x->klass);
     char *kind = attr(find_field_node(databases, x->table, x->field), "type");
     const field_type_t *ft = field_type(kind);
-    const char *ddx = eq(getter, "edGetText") && eq(ft->c, "int") ? "int" :
+    const char *ddx = eq(getter, "edGetText") && eq(ft->db, "DB_TYPE_DATE") ? "date" :
+                      eq(getter, "edGetText") && eq(ft->c, "int") ? "int" :
                       eq(getter, "edGetText") && eq(ft->c, "double") ? "double" :
                       eq(getter, "edGetText") && eq(ft->c, "float") ? "float" :
                       eq(getter, "cbGetCurrentValue") ? "combo_value" :
@@ -1250,8 +1251,8 @@ static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr d
   char initial[256];
   int activity_count = emit_page_bindings(f, form, prefix, form_id, initial, sizeof(initial));
   if (activity_count < 0) { free(name); free(title); free(flags_raw); free(role); free(spacing); return false; }
-  OUT("static const form_def_t %s_%s_form = { .name = %s, .width = %d, .height = %d, .flags = (%s)%s | WINDOW_AUTO_LAYOUT, .role = %s, .layout_spacing = %u, .padding = { %d, %d, %d, %d }, .margin = { %d, %d, %d, %d }, .children = %s_%s_children, .child_count = %d",
-      prefix, form_id, titleq, sz.w, sz.h, flags,
+  OUT("static const form_def_t %s_%s_form = { .name = %s, .id = \"%s\", .width = %d, .height = %d, .flags = (%s)%s | WINDOW_AUTO_LAYOUT, .role = %s, .layout_spacing = %u, .padding = { %d, %d, %d, %d }, .margin = { %d, %d, %d, %d }, .children = %s_%s_children, .child_count = %d",
+      prefix, form_id, titleq, form_id, sz.w, sz.h, flags,
       toolbar && !eq(role, "page") ? " | WINDOW_TOOLBAR" : "", role_name,
       byte_attr(spacing, ORIONC_DEFAULT_SPACING),
       pad.x, pad.y, pad.w, pad.h, mar.x, mar.y, mar.w, mar.h, prefix, form_id, count);
@@ -1290,21 +1291,115 @@ static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr d
   return true;
 }
 
-static void usage(const char *argv0) { fprintf(stderr, "usage: %s --input file.orion --output forms.h --prefix name [--form id]\n", argv0); }
+static void usage(const char *argv0) { fprintf(stderr, "usage: %s --input file.orion --output forms.h --prefix name [--form id]\n"
+                                                     "       %s --input file.orion --strings catalog.xml [--language ru]\n", argv0, argv0); }
+
+// ── String catalog template (like lupdate) ──────────────────────────────────
+// Lists every user-visible text once, noting where it appears. Existing
+// translations in the output file are kept; sources no longer used are kept
+// with obsolete="true" so no translator work is lost. Entries marked
+// where="code" (strings the app passes to ui_tr) and <context> sections are
+// hand-written and carried over unchanged.
+
+typedef struct { char *source, *where, *text; bool used; } catalog_entry_t;
+typedef struct { catalog_entry_t *v; int n, cap; } catalog_t;
+
+static catalog_entry_t *catalog_find(catalog_t *c, const char *source) {
+  for (int i = 0; i < c->n; i++) if (eq(c->v[i].source, source)) return &c->v[i];
+  return NULL;
+}
+
+static void catalog_add(catalog_t *c, const char *source, const char *where) {
+  if (!source || !*source) return;
+  char label[ORIONC_STRING_SIZE]; snprintf(label, sizeof(label), "%s", source);
+  char *tab = strchr(label, '\t'); if (tab) *tab = 0;  // shortcuts are not translated
+  catalog_entry_t *e = catalog_find(c, label);
+  if (!e) {
+    if (c->n == c->cap) { c->cap = c->cap ? c->cap * 2 : 128; c->v = realloc(c->v, (size_t)c->cap * sizeof(*c->v)); }
+    e = &c->v[c->n++]; *e = (catalog_entry_t){ strdup(label), strdup(""), NULL, false };
+  }
+  e->used = true;
+  if (where && !strstr(e->where, where)) {
+    size_t n = strlen(e->where) + strlen(where) + 2; char *w = malloc(n);
+    snprintf(w, n, "%s%s%s", e->where, e->where[0] ? "," : "", where); free(e->where); e->where = w;
+  }
+}
+
+static void catalog_collect(catalog_t *c, xmlNodePtr n, const char *where) {
+  static const char *attrs[] = { "text", "title", "label", "tooltip", "placeholder" };
+  EACH_ELEMENT(child, n) {
+    const char *scope = where;
+    char *name = attr(child, "name");
+    if (elem(child, "form")) scope = name;
+    if (elem(child, "menu") || elem(child, "contextmenu")) scope = "menu";
+    for (size_t i = 0; i < ARRAY_LEN(attrs) && !elem(child, "database"); i++) {
+      char *v = attr(child, attrs[i]);
+      catalog_add(c, v, scope); free(v);
+    }
+    catalog_collect(c, child, scope);
+    free(name);
+  }
+}
+
+static int emit_strings(xmlNodePtr root, const char *path, const char *language) {
+  catalog_t c = {0};
+  FILE *existing = fopen(path, "rb");
+  if (existing) fclose(existing);
+  xmlDocPtr old = existing ? xmlReadFile(path, NULL, XML_PARSE_NONET) : NULL;
+  xmlNodePtr old_root = old ? xmlDocGetRootElement(old) : NULL;
+  EACH_ELEMENT(s, old_root) if (elem(s, "string")) {
+    char *source = attr(s, "source"), *where = attr(s, "where"); xmlChar *text = xmlNodeGetContent(s);
+    if (source && !catalog_find(&c, source)) {
+      // where="code" marks strings the app translates with ui_tr(); they stay current.
+      bool code = eq(where, "code");
+      if (c.n == c.cap) { c.cap = c.cap ? c.cap * 2 : 128; c.v = realloc(c.v, (size_t)c.cap * sizeof(*c.v)); }
+      c.v[c.n++] = (catalog_entry_t){ strdup(source), strdup(code ? "code" : ""), strdup(text ? (char *)text : ""), code };
+    }
+    free(source); free(where); if (text) xmlFree(text);
+  }
+  catalog_collect(&c, root, NULL);
+  xmlDocPtr doc = xmlNewDoc(BAD_CAST "1.0");
+  xmlNodePtr out = xmlNewNode(NULL, BAD_CAST "strings");
+  xmlDocSetRootElement(doc, out);
+  char *lang = old_root ? attr(old_root, "language") : NULL;
+  xmlNewProp(out, BAD_CAST "language", BAD_CAST (lang ? lang : nz(language, "xx")));
+  static const char *keep[] = { "decimal", "group", "date" };
+  for (size_t i = 0; old_root && i < ARRAY_LEN(keep); i++) { char *v = attr(old_root, keep[i]); if (v) xmlNewProp(out, BAD_CAST keep[i], BAD_CAST v); free(v); }
+  free(lang);
+  int fresh = 0;
+  for (int i = 0; i < c.n; i++) {
+    xmlNodePtr s = xmlNewTextChild(out, NULL, BAD_CAST "string", BAD_CAST (c.v[i].text ? c.v[i].text : ""));
+    xmlNewProp(s, BAD_CAST "source", BAD_CAST c.v[i].source);
+    if (c.v[i].where[0]) xmlNewProp(s, BAD_CAST "where", BAD_CAST c.v[i].where);
+    if (!c.v[i].used) xmlNewProp(s, BAD_CAST "obsolete", BAD_CAST "true");
+    if (!c.v[i].text || !c.v[i].text[0]) fresh++;
+    free(c.v[i].source); free(c.v[i].where); free(c.v[i].text);
+  }
+  EACH_ELEMENT(ctx, old_root) if (elem(ctx, "context")) xmlAddChild(out, xmlCopyNode(ctx, 1));
+  free(c.v);
+  int ok = xmlSaveFormatFileEnc(path, doc, "UTF-8", 1) >= 0;
+  xmlFreeDoc(doc); if (old) xmlFreeDoc(old);
+  if (!ok) { perror(path); return 1; }
+  fprintf(stderr, "orionc: %s: %d strings, %d untranslated\n", path, c.n, fresh);
+  return 0;
+}
 
 int main(int argc, char **argv) {
-  const char *input = NULL, *output = NULL, *prefix = "orion", *only = NULL;
+  const char *input = NULL, *output = NULL, *prefix = "orion", *only = NULL, *strings = NULL, *language = NULL;
   for (int i = 1; i < argc; i++) {
     if (eq(argv[i], "--input") && i + 1 < argc) input = argv[++i];
     else if (eq(argv[i], "--output") && i + 1 < argc) output = argv[++i];
     else if (eq(argv[i], "--prefix") && i + 1 < argc) prefix = argv[++i];
     else if (eq(argv[i], "--form") && i + 1 < argc) only = argv[++i];
+    else if (eq(argv[i], "--strings") && i + 1 < argc) strings = argv[++i];
+    else if (eq(argv[i], "--language") && i + 1 < argc) language = argv[++i];
     else { usage(argv[0]); return 2; }
   }
-  if (!input || !output) { usage(argv[0]); return 2; }
+  if (!input || (!output && !strings)) { usage(argv[0]); return 2; }
   xmlDocPtr doc = xmlReadFile(input, NULL, XML_PARSE_NONET);
   xmlNodePtr root = doc ? xmlDocGetRootElement(doc) : NULL;
   if (!elem(root, "orion")) { fprintf(stderr, "orionc_alt: %s is not an <orion> document\n", input); if (doc) xmlFreeDoc(doc); return 1; }
+  if (strings) { int rc = emit_strings(root, strings, language); xmlFreeDoc(doc); return rc; }
   FILE *f = fopen(output, "wb"); if (!f) { perror(output); xmlFreeDoc(doc); return 1; }
   char guard[256], pre[128]; ident(guard, sizeof(guard), output, true); ident(pre, sizeof(pre), prefix, false);
   xmlNodePtr menus = child(root, "menus"), contexts = child(root, "contextmenus"), forms = child(root, "forms"), databases = child(root, "databases"), database = databases ? child(databases, "database") : child(root, "database");

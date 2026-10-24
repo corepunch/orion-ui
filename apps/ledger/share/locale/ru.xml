@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="ru" decimal="," group=" " date="dd.MM.yyyy">
+  <string source="File" where="menu">Файл</string>
+  <string source="Save Infobase" where="menu">Сохранить информационную базу</string>
+  <string source="Organization Details..." where="menu">Сведения об организации...</string>
+  <string source="Select Configuration..." where="menu">Выбрать конфигурацию...</string>
+  <string source="Language..." where="menu">Язык...</string>
+  <string source="Exit" where="menu">Выход</string>
+  <string source="Documents" where="menu">Документы</string>
+  <string source="New Document..." where="menu">Новый документ...</string>
+  <string source="Open Document..." where="menu">Открыть документ...</string>
+  <string source="Post" where="menu,journal_page">Провести</string>
+  <string source="Cancel Posting" where="menu">Отменить проведение</string>
+  <string source="Print Forms" where="menu,config_page">Печатные формы</string>
+  <string source="Delete Document..." where="menu">Удалить документ...</string>
+  <string source="Catalogs" where="menu">Справочники</string>
+  <string source="New Counterparty..." where="menu">Новый контрагент...</string>
+  <string source="Edit Counterparty..." where="menu">Изменить контрагента...</string>
+  <string source="Delete Counterparty..." where="menu">Удалить контрагента...</string>
+  <string source="New Item..." where="menu">Новая номенклатура...</string>
+  <string source="Edit Item..." where="menu">Изменить номенклатуру...</string>
+  <string source="Delete Item..." where="menu">Удалить номенклатуру...</string>
+  <string source="View" where="menu">Вид</string>
+  <string source="Document Journal" where="menu,journal_page">Журнал документов</string>
+  <string source="Counterparties" where="menu,counterparties_page">Контрагенты</string>
+  <string source="Items" where="menu,items_page">Номенклатура</string>
+  <string source="Chart of Accounts" where="menu,accounts_page">План счетов</string>
+  <string source="Entry Journal" where="menu,entries_page">Журнал проводок</string>
+  <string source="Trial Balance" where="menu,balance_page">Оборотно-сальдовая ведомость</string>
+  <string source="Configuration" where="menu,config_page">Конфигурация</string>
+  <string source="Reports" where="menu">Отчеты</string>
+  <string source="Recalculate Totals" where="menu">Пересчитать итоги</string>
+  <string source="Help" where="menu">Помощь</string>
+  <string source="About Ledger" where="menu">О программе</string>
+  <string source="Ledger" where="main_window">Бухгалтерия</string>
+  <string source="Document journal (Ctrl+1)" where="journal_page">Журнал документов (Ctrl+1)</string>
+  <string source="New" where="journal_page,counterparties_page,items_page">Новый</string>
+  <string source="New document (Ctrl+N)" where="journal_page">Новый документ (Ctrl+N)</string>
+  <string source="Open" where="journal_page">Открыть</string>
+  <string source="Open document (Ctrl+O)" where="journal_page">Открыть документ (Ctrl+O)</string>
+  <string source="Post: write accounting entries (F9)" where="journal_page">Провести: сформировать проводки (F9)</string>
+  <string source="Unpost" where="journal_page">Отменить</string>
+  <string source="Cancel posting" where="journal_page">Отменить проведение</string>
+  <string source="Print" where="journal_page">Печать</string>
+  <string source="Print forms (Ctrl+P)" where="journal_page">Печатные формы (Ctrl+P)</string>
+  <string source="Delete" where="journal_page,counterparties_page,items_page">Удалить</string>
+  <string source="Delete document" where="journal_page">Удалить документ</string>
+  <string source="Date" where="journal_page,entries_page">Дата</string>
+  <string source="Number" where="journal_page">Номер</string>
+  <string source="Document" where="journal_page,entries_page,config_page,document">Документ</string>
+  <string source="Counterparty" where="journal_page,counterparty">Контрагент</string>
+  <string source="Amount" where="journal_page,entries_page,document">Сумма</string>
+  <string source="Comment" where="journal_page">Комментарий</string>
+  <string source="Lines" where="journal_page">Товары</string>
+  <string source="Item" where="journal_page,document,item">Номенклатура</string>
+  <string source="Unit" where="journal_page,items_page,config_page,document">Ед.</string>
+  <string source="Qty" where="journal_page,document">Кол-во</string>
+  <string source="Price" where="journal_page,items_page,document">Цена</string>
+  <string source="Tax" where="journal_page,items_page,document">Налог</string>
+  <string source="Tax Amount" where="journal_page,document">Сумма налога</string>
+  <string source="Total" where="journal_page,document">Всего</string>
+  <string source="Entries" where="journal_page">Проводки</string>
+  <string source="Dr" where="journal_page,entries_page,config_page">Дт</string>
+  <string source="Cr" where="journal_page,entries_page,config_page">Кт</string>
+  <string source="Content" where="journal_page,entries_page">Содержание</string>
+  <string source="Counterparties (Ctrl+2)" where="counterparties_page">Контрагенты (Ctrl+2)</string>
+  <string source="New counterparty" where="counterparties_page">Новый контрагент</string>
+  <string source="Edit" where="counterparties_page,items_page">Изменить</string>
+  <string source="Edit counterparty" where="counterparties_page">Изменить контрагента</string>
+  <string source="Delete counterparty" where="counterparties_page">Удалить контрагента</string>
+  <string source="Name" where="counterparties_page,items_page,balance_page">Наименование</string>
+  <string source="Tax ID" where="counterparties_page">Налоговый номер</string>
+  <string source="KPP" where="counterparties_page">КПП</string>
+  <string source="Phone" where="counterparties_page">Телефон</string>
+  <string source="Address" where="counterparties_page">Адрес</string>
+  <string source="Goods and services (Ctrl+3)" where="items_page">Товары и услуги (Ctrl+3)</string>
+  <string source="New item" where="items_page">Новая номенклатура</string>
+  <string source="Edit item" where="items_page">Изменить номенклатуру</string>
+  <string source="Delete item" where="items_page">Удалить номенклатуру</string>
+  <string source="Code" where="items_page,accounts_page,config_page">Код</string>
+  <string source="Chart of accounts (Ctrl+4)" where="accounts_page">План счетов (Ctrl+4)</string>
+  <string source="Account" where="accounts_page,balance_page">Счет</string>
+  <string source="Kind" where="accounts_page">Вид</string>
+  <string source="Section" where="accounts_page">Раздел</string>
+  <string source="All accounting entries (Ctrl+5)" where="entries_page">Все проводки (Ctrl+5)</string>
+  <string source="Trial balance (Ctrl+6)" where="balance_page">Оборотно-сальдовая ведомость (Ctrl+6)</string>
+  <string source="Recalculate" where="balance_page">Пересчитать</string>
+  <string source="Rebuild totals from entries (F5)" where="balance_page">Пересчитать итоги по проводкам (F5)</string>
+  <string source="Turnover Dr" where="balance_page">Оборот Дт</string>
+  <string source="Turnover Cr" where="balance_page">Оборот Кт</string>
+  <string source="Balance Dr" where="balance_page">Сальдо Дт</string>
+  <string source="Balance Cr" where="balance_page">Сальдо Кт</string>
+  <string source="Active configuration (Ctrl+7)" where="config_page">Текущая конфигурация (Ctrl+7)</string>
+  <string source="Country" where="config_page">Страна</string>
+  <string source="Currency" where="config_page">Валюта</string>
+  <string source="Version" where="config_page">Версия</string>
+  <string source="Legal Basis" where="config_page">Нормативная база</string>
+  <string source="Document Types" where="config_page">Виды документов</string>
+  <string source="Prefix" where="config_page">Префикс</string>
+  <string source="Tax Dr" where="config_page">Дт налога</string>
+  <string source="Tax Cr" where="config_page">Кт налога</string>
+  <string source="Description" where="config_page">Описание</string>
+  <string source="Form" where="config_page">Форма</string>
+  <string source="Tax Rates" where="config_page">Ставки налога</string>
+  <string source="Rate" where="config_page">Ставка</string>
+  <string source="Percent" where="config_page">Процент</string>
+  <string source="Units" where="config_page">Единицы измерения</string>
+  <string source="Document:" where="document">Документ:</string>
+  <string source="Number:" where="document">Номер:</string>
+  <string source="Date:" where="document">Дата:</string>
+  <string source="Counterparty:" where="document">Контрагент:</string>
+  <string source="Comment:" where="document">Комментарий:</string>
+  <string source="Assigned when saved" where="document">Присваивается при записи</string>
+  <string source="Add Line..." where="document">Добавить строку...</string>
+  <string source="Edit Line..." where="document">Изменить строку...</string>
+  <string source="Delete Line" where="document">Удалить строку</string>
+  <string source="Amount:" where="document">Сумма:</string>
+  <string source="Tax:" where="document">Налог:</string>
+  <string source="Total:" where="document">Всего:</string>
+  <string source="OK and Post" where="document">ОК и провести</string>
+  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language">Отмена</string>
+  <string source="Document Line" where="doc_line">Строка документа</string>
+  <string source="Item:" where="doc_line">Номенклатура:</string>
+  <string source="Quantity:" where="doc_line">Количество:</string>
+  <string source="Price:" where="doc_line,item">Цена:</string>
+  <string source="Tax rate:" where="doc_line,item">Ставка налога:</string>
+  <string source="Item price" where="doc_line">Цена номенклатуры</string>
+  <string source="OK" where="doc_line,counterparty,item,organization,select_configuration,select_language">ОК</string>
+  <string source="Name:" where="counterparty,item,organization">Наименование:</string>
+  <string source="Tax ID:" where="counterparty,organization">Налоговый номер:</string>
+  <string source="KPP:" where="counterparty,organization">КПП:</string>
+  <string source="Address:" where="counterparty,organization">Адрес:</string>
+  <string source="Bank:" where="counterparty,organization">Банк:</string>
+  <string source="Account:" where="counterparty,organization">Расчетный счет:</string>
+  <string source="Bank ID (BIK):" where="counterparty,organization">БИК банка:</string>
+  <string source="Phone:" where="counterparty">Телефон:</string>
+  <string source="Code:" where="item">Код:</string>
+  <string source="Unit:" where="item">Единица:</string>
+  <string source="Organization Details" where="organization">Сведения об организации</string>
+  <string source="Corr. account:" where="organization">Корр. счет:</string>
+  <string source="Director:" where="organization">Руководитель:</string>
+  <string source="Chief accountant:" where="organization">Главный бухгалтер:</string>
+  <string source="Select Configuration" where="select_configuration">Выбор конфигурации</string>
+  <string source="Ledger opens the infobase of the chosen configuration on next start." where="select_configuration">При следующем запуске откроется информационная база выбранной конфигурации.</string>
+  <string source="Configuration:" where="select_configuration">Конфигурация:</string>
+  <string source="Language" where="select_language">Язык</string>
+  <string source="The new language applies the next time Ledger starts." where="select_language">Новый язык будет применен при следующем запуске.</string>
+  <string source="Language:" where="select_language">Язык:</string>
+  <string source="modified" where="code">изменено</string>
+  <string source="Add Line" where="code">Добавление строки</string>
+  <string source="Edit Line" where="code">Строка документа</string>
+  <string source="New Document" where="code">Новый документ</string>
+  <string source="New Counterparty" where="code">Новый контрагент</string>
+  <string source="New Item" where="code">Новая номенклатура</string>
+  <string source="Print Forms Written" where="code">Печатные формы сохранены</string>
+  <string source="The configuration defines no print forms for this document type." where="code">Для этого вида документа в конфигурации нет печатных форм.</string>
+  <string source="Delete the selected document and its entries?" where="code">Удалить выбранный документ и его проводки?</string>
+  <string source="Delete Document" where="code">Удаление документа</string>
+  <string source="Delete the selected counterparty?" where="code">Удалить выбранного контрагента?</string>
+  <string source="This counterparty is used by %d document(s) and cannot be deleted." where="code">Контрагент используется в документах (%d) и не может быть удален.</string>
+  <string source="Delete the selected item?" where="code">Удалить выбранную номенклатуру?</string>
+  <string source="This item is used by %d document line(s) and cannot be deleted." where="code">Номенклатура используется в строках документов (%d) и не может быть удалена.</string>
+  <string source="The selected configuration opens with its own infobase&#10;the next time Ledger starts." where="code">Выбранная конфигурация откроется со своей
+информационной базой при следующем запуске.</string>
+  <string source="Ledger 1.0&#10;&#10;Double-entry bookkeeping on Orion.&#10;National rules, accounts and legal forms come from&#10;the active configuration." where="code">Бухгалтерия 1.0
+
+Бухгалтерский учет методом двойной записи на Orion.
+Национальные правила, план счетов и формы документов
+задает текущая конфигурация.</string>
+</strings>

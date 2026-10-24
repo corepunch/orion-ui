@@ -1027,7 +1027,7 @@ static void create_form_children_flat(window_t *parent, const form_ctrl_def_t *c
     }
 
     irect16_t child_frame = {0, 0, child_w, child_h};
-    window_t *child = create_window(cd->text ? cd->text : "", child_flags,
+    window_t *child = create_window(cd->text ? ui_tr(cd->text) : "", child_flags,
                                     &child_frame, parent, cp, 0, (void *)cd);
     if (!child) continue;
     
@@ -1039,7 +1039,7 @@ static void create_form_children_flat(window_t *parent, const form_ctrl_def_t *c
     child->layout.layout_margin = cd->margin;
     child->layout.layout_padding = cd->padding;
     child->layout.layout_spacing = cd->layout_spacing;
-    if (cd->placeholder) send_message(child, edSetPlaceholder, 0, (void *)cd->placeholder);
+    if (cd->placeholder) send_message(child, edSetPlaceholder, 0, (void *)ui_tr(cd->placeholder));
 
     if (form_children_have_parent(children, child_count, child->id))
       create_form_children_flat(child, children, child_count, child->id);
@@ -1123,8 +1123,14 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
   irect16_t r = {x, y, def->width, def->height};
 
   // Allocate the parent window without sending evCreate yet.
-  window_t *win = alloc_window(def->name ? def->name : "", def->flags, &r, parent, proc, hinstance);
-  if (!win) return NULL;
+  // Declarative forms (those with an id) are resources: their title and
+  // texts translate in the form's catalog context. Plain create_window()
+  // titles are the caller's text and stay as given.
+  const char *outer_context = ui_get_string_context();
+  if (def->id) ui_set_string_context(def->id);
+  const char *title = def->name ? def->name : "";
+  window_t *win = alloc_window(def->id ? ui_tr(title) : title, def->flags, &r, parent, proc, hinstance);
+  if (!win) { ui_set_string_context(outer_context); return NULL; }
 
   win->role = def->role;
   if (def->toolbar_items || def->toolbar_count || def->pane_toolbar_count || def->pane_toolbar_replace) {
@@ -1159,6 +1165,7 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
   if (def->toolbar_items && def->toolbar_count > 0 && (win->flags & WINDOW_TOOLBAR)) {
     send_message(win, tbSetItems, (uint32_t)def->toolbar_count, (void *)def->toolbar_items);
   }
+  ui_set_string_context(outer_context);
 
   // Propagate the global database context through the full child tree.
   // Controls that care consume evSetDatabase; all other recipients ignore it.
@@ -1268,7 +1275,7 @@ static void create_form_children(window_t *parent, const form_ctrl_def_t *childr
     }
 
     irect16_t child_frame = {0, 0, effective_w, effective_h};
-    window_t *child = create_window(cd->text ? cd->text : "", child_flags,
+    window_t *child = create_window(cd->text ? ui_tr(cd->text) : "", child_flags,
                                     &child_frame, parent, cp, 0, (void *)cd);
     if (!child) continue;
     child->id = cd->id;
@@ -1279,7 +1286,7 @@ static void create_form_children(window_t *parent, const form_ctrl_def_t *childr
     child->layout.layout_margin = cd->margin;
     child->layout.layout_padding = cd->padding;
     child->layout.layout_spacing = cd->layout_spacing;
-    if (cd->placeholder) send_message(child, edSetPlaceholder, 0, (void *)cd->placeholder);
+    if (cd->placeholder) send_message(child, edSetPlaceholder, 0, (void *)ui_tr(cd->placeholder));
 
     if (cd->children && cd->child_count > 0)
       create_form_children(child, cd->children, cd->child_count);

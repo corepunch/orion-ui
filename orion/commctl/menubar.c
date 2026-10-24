@@ -369,11 +369,13 @@ static window_t *create_popup_window(window_t *mb_win, window_t *parent_popup,
   pd->item_count = item_count;
   pd->hovered = -1;
   pd->pressed = -1;
-  for (int i = 0; i < item_count; i++)
+  for (int i = 0; i < item_count; i++) {
     pd->items[i] = items[i];
+    pd->items[i].label = ui_tr(items[i].label);
+  }
 
-  int pw = popup_items_width(items, item_count, accel);
-  int ph = popup_items_height(items, item_count);
+  int pw = popup_items_width(pd->items, item_count, accel);
+  int ph = popup_items_height(pd->items, item_count);
 
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
@@ -491,8 +493,9 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       // Compute label x positions (window-local)
       int x = 4;
       for (int i = 0; i < count; i++) {
+        data->menus[i].label = ui_tr(defs[i].label);
         data->menu_x[i] = x;
-        x += strwidth(defs[i].label) + MENU_LABEL_PAD;
+        x += strwidth(data->menus[i].label) + MENU_LABEL_PAD;
       }
       invalidate_window(win);
       return true;

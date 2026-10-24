@@ -178,6 +178,35 @@ static void test_generated_bindings(void) {
   PASS();
 }
 
+static void test_russian_catalogs(void) {
+  TEST("localization: Russian catalog is complete; the configuration renames national terms");
+  xmlDocPtr doc = xmlReadFile("apps/ledger/share/locale/ru.xml", NULL, XML_PARSE_NONET);
+  ASSERT_NOT_NULL(doc);
+  int empty = 0, total = 0;
+  for (xmlNodePtr n = xmlDocGetRootElement(doc)->children; n; n = n->next) {
+    if (n->type != XML_ELEMENT_NODE) continue;
+    xmlChar *text = xmlNodeGetContent(n);
+    total++; empty += !text || !text[0];
+    xmlFree(text);
+  }
+  xmlFreeDoc(doc);
+  ASSERT(total > 100 && empty == 0, "every Ledger string has a Russian translation");
+  ui_set_language("ru");
+  ui_add_string_catalog_dir("apps/ledger/share/locale");
+  ASSERT_STR_EQUAL(ui_tr("Tax ID:"), "Налоговый номер:");
+  ui_add_string_catalog_dir(SHARE "/ru-2003/locale");
+  ASSERT_STR_EQUAL(ui_tr("Tax ID:"), "ИНН:");
+  ASSERT_STR_EQUAL(ui_tr("Trial Balance"), "Оборотно-сальдовая ведомость");
+  char buf[64];
+  db_document_t *doc_rec = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ПТ-0001");
+  ASSERT_TRUE(db_get_field_text(g_ledger->ib, TABLE_DOCUMENTS, doc_rec, "total", buf, sizeof(buf)));
+  ASSERT_STR_EQUAL(buf, "51 120,00");
+  ASSERT_TRUE(db_get_field_text(g_ledger->ib, TABLE_DOCUMENTS, doc_rec, "date", buf, sizeof(buf)));
+  ASSERT_STR_EQUAL(buf, "03.03.2003");
+  ui_set_language("en");
+  PASS();
+}
+
 int main(int argc, char **argv) {
   (void)argc; (void)argv;
   TEST_START("Ledger");
@@ -190,6 +219,7 @@ int main(int argc, char **argv) {
   test_save_and_reload();
   test_print_forms();
   test_generated_bindings();
+  test_russian_catalogs();
   destroy_database(g_ledger->ib);
   destroy_database(g_ledger->cfg);
   TEST_END();

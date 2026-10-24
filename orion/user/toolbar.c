@@ -992,6 +992,11 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
         if (tb->items) {
           memcpy(tb->items, lparam, (size_t)n * sizeof(toolbar_item_t));
           tb->item_count = n;
+          for (int i = 0; i < n; i++) {
+            tb->items[i].text = ui_tr(tb->items[i].text);
+            tb->items[i].tooltip = ui_tr(tb->items[i].tooltip);
+            tb->items[i].alt_tooltip = ui_tr(tb->items[i].alt_tooltip);
+          }
         }
 
         size_t text_size = 0;

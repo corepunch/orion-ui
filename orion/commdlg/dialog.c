@@ -408,7 +408,9 @@ uint32_t show_dialog(char const *title,
 // Children are instantiated (via create_window_from_form) before
 // evCreate fires, so the window proc can find them already in
 // place — analogous to WinAPI DialogBoxIndirectParam.
-// title overrides def->name when non-NULL.  The dialog is centered on owner.
+// title overrides def->name when non-NULL; like def->name it is source text,
+// translated through the string catalogs when the form is a generated one
+// (def->id set).  The dialog is centered on owner.
 uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
                                   window_t *parent, flags_t flags,
                                   winproc_t proc, void *param)
@@ -589,21 +591,35 @@ void ddx_pull_float(window_t *dlg, const ctrl_binding_t *b, void *state) {
 }
 
 void ddx_push_double(window_t *dlg, const ctrl_binding_t *b, const void *state) {
-  double v = *(const double *)((const char *)state + b->offset);
-  double cents = v * 100.0;
-  if (cents - (double)(long long)cents == 0.0) set_window_item_text(dlg, b->ctrl_id, "%.2f", v);
-  else set_window_item_text(dlg, b->ctrl_id, "%.6g", v);
+  double v = *(const double *)((const char *)state + b->offset), scale = 100.0;
+  int decimals = 2;  // money shows cents; fractions keep only the digits they need
+  while (decimals < 6 && v * scale != (double)(long long)(v * scale)) { decimals++; scale *= 10.0; }
+  char text[64];
+  set_window_item_text(dlg, b->ctrl_id, "%s", ui_format_number(v, decimals, text, sizeof(text)));
 }
 
-// Accepts "1 234,50" as well as "1234.50".
+// Dates are stored as ISO "YYYY-MM-DD" and edited in the catalog's format.
+void ddx_push_date(window_t *dlg, const ctrl_binding_t *b, const void *state) {
+  char text[32];
+  set_window_item_text(dlg, b->ctrl_id, "%s", ui_format_date((const char *)state + b->offset, text, sizeof(text)));
+}
+
+void ddx_pull_date(window_t *dlg, const ctrl_binding_t *b, void *state) {
+  window_t *ctrl = get_window_item(dlg, b->ctrl_id);
+  char iso[16];
+  if (!ctrl) return;
+  if (ui_parse_date(ctrl->title, iso, sizeof(iso)))
+    snprintf((char *)state + b->offset, b->wparam ? b->wparam : 11, "%s", iso);
+  else if (ctrl->title[0]) {
+    fprintf(stderr, "[dialog] date rejected ctrl=%u text='%s'; keeping the previous value\n", b->ctrl_id, ctrl->title);
+    fflush(stderr);
+  }
+}
+
+// Accepts the catalog's number format ("1 234,50") as well as "1234.50".
 void ddx_pull_double(window_t *dlg, const ctrl_binding_t *b, void *state) {
   window_t *ctrl = get_window_item(dlg, b->ctrl_id);
-  char clean[64]; size_t n = 0;
-  if (!ctrl) return;
-  for (const char *p = ctrl->title; *p && n + 1 < sizeof(clean); p++)
-    if (*p != ' ') clean[n++] = *p == ',' ? '.' : *p;
-  clean[n] = '\0';
-  *(double *)((char *)state + b->offset) = strtod(clean, NULL);
+  if (ctrl) *(double *)((char *)state + b->offset) = ui_parse_number(ctrl->title);
 }
 
 void ddx_push_combo_value(window_t *dlg, const ctrl_binding_t *b, const void *state) {

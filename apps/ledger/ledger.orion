@@ -22,6 +22,7 @@
       <Separator />
       <item name="organization" label="Organization Details..." />
       <item name="configuration" label="Select Configuration..." />
+      <item name="language" label="Language..." />
       <Separator />
       <item name="quit" label="Exit" />
     </menu>
@@ -70,6 +71,7 @@
         <field name="name" type="string" length="128" />
         <field name="country" type="string" length="64" />
         <field name="currency" type="string" length="16" />
+        <field name="language" type="string" length="16" />
         <field name="tax_name" type="string" length="32" />
         <field name="tax_id_name" type="string" length="32" />
         <field name="version" type="string" length="32" />
@@ -124,9 +126,15 @@
         <field name="name" type="string" length="128" />
         <field name="country" type="string" length="64" />
       </table>
+      <table name="languages">
+        <field name="id" type="integer" key="YES" />
+        <field name="code" type="string" length="16" />
+        <field name="name" type="string" length="64" />
+      </table>
       <table name="choices">
         <field name="id" type="integer" key="YES" />
         <field name="configuration_id" type="integer" relation="configurations.id" />
+        <field name="language_id" type="integer" relation="languages.id" />
       </table>
     </database>
 
@@ -169,7 +177,7 @@
         <field name="doc_type_id" type="integer" relation="cfg.doc_types.id" />
         <field name="counterparty_id" type="integer" relation="counterparties.id" />
         <field name="number" type="string" length="24" />
-        <field name="date" type="string" length="11" />
+        <field name="date" type="date" />
         <field name="comment" type="string" length="256" />
         <field name="amount" type="double" />
         <field name="vat" type="double" />
@@ -192,7 +200,7 @@
         <field name="document_id" type="integer" relation="documents.id" />
         <field name="debit_id" type="integer" relation="cfg.accounts.id" />
         <field name="credit_id" type="integer" relation="cfg.accounts.id" />
-        <field name="date" type="string" length="11" />
+        <field name="date" type="date" />
         <field name="amount" type="double" />
         <field name="content" type="string" length="160" />
       </table>
@@ -401,7 +409,7 @@
         <Column name="inputs">
           <ComboBox name="doc_type" field="ib.documents.doc_type_id" source="cfg.doc_types" display="name" value="id" />
           <TextBox name="number" field="ib.documents.number" placeholder="Assigned when saved" />
-          <TextBox name="date" field="ib.documents.date" placeholder="YYYY-MM-DD" />
+          <TextBox name="date" field="ib.documents.date" />
           <ComboBox name="counterparty" field="ib.documents.counterparty_id" source="ib.counterparties" display="name" value="id" />
           <TextBox name="comment" field="ib.documents.comment" />
         </Column>
@@ -561,6 +569,24 @@
         </Column>
         <Column name="inputs">
           <ComboBox name="configuration" field="catalog.choices.configuration_id" source="catalog.configurations" display="name" value="id" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="catalog.choices.update" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="select_language" title="Language" width="320" spacing="6" padding="8">
+      <Label name="hint" text="The new language applies the next time Ledger starts." />
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_language" text="Language:" />
+        </Column>
+        <Column name="inputs">
+          <ComboBox name="language" field="catalog.choices.language_id" source="catalog.languages" display="name" value="id" />
         </Column>
       </GridView>
       <Separator name="sep" />

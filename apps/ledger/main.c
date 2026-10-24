@@ -5,6 +5,8 @@
 // Options:
 //   --config CODE   open configuration CODE (default: last selected, ru-2003)
 //   --data DIR      infobase directory (default: <settings>/ledger/CODE)
+//   --lang CODE     UI language (default: last selected, the configuration's,
+//                   then the system's)
 
 #include "ledger.h"
 #include <orion/gem.h>
@@ -48,18 +50,36 @@ static database_t *open_infobase(void) {
   return ib;
 }
 
+// String catalogs stack: framework, Ledger's own, then the configuration's,
+// which renames national terms ("Tax ID" -> "ИНН") and may do so in any language.
+static void choose_ui_language(const char *requested, const char *share) {
+  char lang[32] = {0}, path[LEDGER_PATH_MAX * 2];
+  size_t loaded = 0;
+  db_setting_t *settings = (db_setting_t *)send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_SETTINGS, 0), (void *)(intptr_t)1);
+  if (requested) snprintf(lang, sizeof(lang), "%s", requested);
+  else if (axSettingsLoad("ledger_language", lang, sizeof(lang) - 1, &loaded) && loaded) lang[loaded] = '\0';
+  else if (settings && settings->language[0]) snprintf(lang, sizeof(lang), "%s", settings->language);
+  else ui_system_language(lang, sizeof(lang));
+  ui_set_language(lang);
+  snprintf(path, sizeof(path), "%s/locale", share);
+  ui_add_string_catalog_dir(path);
+  snprintf(path, sizeof(path), "%s/locale", g_ledger->config_dir);
+  ui_add_string_catalog_dir(path);
+}
+
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   memset(&g_ledger_state, 0, sizeof(g_ledger_state));
   g_ledger = &g_ledger_state;
   g_ledger->hinstance = hinstance;
 
-  const char *data_dir = NULL;
+  const char *data_dir = NULL, *language = NULL;
   size_t loaded = 0;
   if (!axSettingsLoad("ledger_configuration", g_ledger->configuration, sizeof(g_ledger->configuration) - 1, &loaded) || !loaded)
     snprintf(g_ledger->configuration, sizeof(g_ledger->configuration), "%s", LEDGER_DEFAULT_CONFIGURATION);
   for (int i = 1; i + 1 < argc; i++) {
     if (!strcmp(argv[i], "--config")) snprintf(g_ledger->configuration, sizeof(g_ledger->configuration), "%s", argv[++i]);
     else if (!strcmp(argv[i], "--data")) data_dir = argv[++i];
+    else if (!strcmp(argv[i], "--lang")) language = argv[++i];
   }
 
   char share[LEDGER_PATH_MAX], path[LEDGER_PATH_MAX * 3];
@@ -90,6 +110,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (!g_ledger->catalog || !g_ledger->cfg) return false;
   register_database("catalog", g_ledger->catalog);
   register_database("cfg", g_ledger->cfg);
+  choose_ui_language(language, share);
   if (!(g_ledger->ib = open_infobase())) return false;
 
   g_ledger->menubar_win = set_app_menu(ledger_menubar_proc, kLedgerMenus, kLedgerMenuCount,

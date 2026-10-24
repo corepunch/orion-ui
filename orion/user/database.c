@@ -236,9 +236,10 @@ bool db_format_field(const db_field_meta_t *field, const void *record, char *buf
   switch (field->type) {
     case DB_TYPE_INT:    snprintf(buf, buf_sz, "%d", *(const int *)p);                    return true;
     case DB_TYPE_STRING: snprintf(buf, buf_sz, "%s", p);                                  return true;
+    case DB_TYPE_DATE:   ui_format_date(p, buf, buf_sz);                                  return true;
     case DB_TYPE_BOOL:   snprintf(buf, buf_sz, "%d", *(const bool *)p ? 1 : 0);           return true;
-    case DB_TYPE_FLOAT:  snprintf(buf, buf_sz, "%.*f", decimals, (double)*(const float *)p); return true;
-    case DB_TYPE_DOUBLE: snprintf(buf, buf_sz, "%.*f", decimals, *(const double *)p);     return true;
+    case DB_TYPE_FLOAT:  ui_format_number(*(const float *)p, decimals, buf, buf_sz);       return true;
+    case DB_TYPE_DOUBLE: ui_format_number(*(const double *)p, decimals, buf, buf_sz);      return true;
   }
   return false;
 }
@@ -367,6 +368,7 @@ bool db_load_field_from_xml(xmlNodePtr node, void *record_base,
       break;
       
     case DB_TYPE_STRING:
+    case DB_TYPE_DATE:
       {
         const char *src = (const char *)value;
         const char *start = src;
@@ -411,7 +413,7 @@ bool db_load_record_from_xml(xmlNodePtr node, void *record,
   
   // Zero the record first
   memset(record, 0, fields[field_count - 1].offset +
-         (fields[field_count - 1].type == DB_TYPE_STRING ?
+         (fields[field_count - 1].type == DB_TYPE_STRING || fields[field_count - 1].type == DB_TYPE_DATE ?
           fields[field_count - 1].length : sizeof(int)));
   
   // Load each field
@@ -436,6 +438,10 @@ bool db_save_field_to_xml(xmlNodePtr node, const void *record_base,
       snprintf(buf, sizeof(buf), "%d", *(const int *)field_ptr);
       break;
       
+    case DB_TYPE_DATE:
+      snprintf(buf, sizeof(buf), "%s", (const char *)field_ptr);
+      break;
+
     case DB_TYPE_STRING: {
       const char *str = (const char *)field_ptr;
       // For body/text fields with potentially large content, use element content

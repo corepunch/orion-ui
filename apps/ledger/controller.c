@@ -35,8 +35,8 @@ void ledger_update_status(void) {
   if (o) snprintf(org, sizeof(org), "%s", (*(db_organization_t **)o->data)->name);
   if (s) snprintf(cfg, sizeof(cfg), "%s", (*(db_setting_t **)s->data)->name);
   free_result_list(o); free_result_list(s);
-  snprintf(text, sizeof(text), "%s   |   %s%s", org, cfg,
-           send_db_message(g_ledger->ib, dbGetDirty, 0, NULL) ? "   |   modified" : "");
+  bool dirty = send_db_message(g_ledger->ib, dbGetDirty, 0, NULL);
+  snprintf(text, sizeof(text), "%s   |   %s%s%s", org, cfg, dirty ? "   |   " : "", dirty ? ui_tr("modified") : "");
   send_message(g_ledger->main_win, evStatusBar, 0, text);
 }
 
@@ -120,19 +120,19 @@ static void new_document(void) {
   if (doc) edit_document(doc->id, true);
 }
 
-static void delete_catalog_record(uint32_t table_view, int table_id, const char *what,
-                                  int ref_table, const char *ref_field) {
+// confirm and in_use are whole sentences so each translates on its own.
+static void delete_catalog_record(uint32_t table_view, int table_id, const char *confirm,
+                                  const char *in_use, int ref_table, const char *ref_field) {
   int *record = selected(table_view);  // every record starts with its integer key
   if (!record) return;
   char text[256];
   int refs = ledger_count_references(g_ledger->ib, ref_table, ref_field, *record);
   if (refs) {
-    snprintf(text, sizeof(text), "This %s is used by %d record(s) and cannot be deleted.", what, refs);
-    message_box(g_ledger->main_win, text, "Delete", MB_OK);
+    snprintf(text, sizeof(text), ui_tr(in_use), refs);
+    message_box(g_ledger->main_win, text, ui_tr("Delete"), MB_OK);
     return;
   }
-  snprintf(text, sizeof(text), "Delete the selected %s?", what);
-  if (message_box(g_ledger->main_win, text, "Delete", MB_YESNO) != IDYES) return;
+  if (message_box(g_ledger->main_win, ui_tr(confirm), ui_tr("Delete"), MB_YESNO) != IDYES) return;
   send_db_message(g_ledger->ib, dbDelete, (uint32_t)table_id, (void *)(intptr_t)*record);
   ledger_refresh_views();
 }
@@ -155,8 +155,25 @@ static void select_configuration(void) {
     MAKEDWORD(TABLE_CONFIGURATIONS, 0), (void *)(intptr_t)choice.configuration_id);
   if (!c || !strcmp(c->code, g_ledger->configuration)) return;
   axSettingsSave("ledger_configuration", c->code, strlen(c->code) + 1);
-  message_box(g_ledger->main_win, "The selected configuration opens with its own infobase\n"
-              "the next time Ledger starts.", "Select Configuration", MB_OK);
+  message_box(g_ledger->main_win, ui_tr("The selected configuration opens with its own infobase\n"
+              "the next time Ledger starts."), ui_tr("Select Configuration"), MB_OK);
+}
+
+static void select_language(void) {
+  db_choice_t choice = {0};
+  result_node_t *all = (result_node_t *)send_db_message(g_ledger->catalog, dbFetch, MAKEDWORD(TABLE_LANGUAGES, 0), NULL);
+  for (result_node_t *n = all; n; n = n->next) {
+    db_language_t *l = *(db_language_t **)n->data;
+    if (!strcmp(l->code, ui_get_language())) choice.language_id = l->id;
+  }
+  free_result_list(all);
+  if (!show_ddx_dialog(&ledger_select_language_form, NULL, g_ledger->main_win, &choice)) return;
+  db_language_t *l = (db_language_t *)send_db_message(g_ledger->catalog, dbFind,
+    MAKEDWORD(TABLE_LANGUAGES, 0), (void *)(intptr_t)choice.language_id);
+  if (!l || !strcmp(l->code, ui_get_language())) return;
+  axSettingsSave("ledger_language", l->code, strlen(l->code) + 1);
+  message_box(g_ledger->main_win, ui_tr("The new language applies the next time Ledger starts."),
+              ui_tr("Language"), MB_OK);
 }
 
 void ledger_command(uint16_t id) {
@@ -173,6 +190,7 @@ void ledger_command(uint16_t id) {
       if (show_db_dialog(&ledger_organization_form, NULL, parent, 1)) ledger_update_status();
       break;
     case ID_FILE_CONFIGURATION: select_configuration(); break;
+    case ID_FILE_LANGUAGE:      select_language();      break;
     case ID_FILE_QUIT:          ui_request_quit();      break;
 
     case ID_DOC_NEW:  new_document(); break;
@@ -186,12 +204,12 @@ void ledger_command(uint16_t id) {
     case ID_DOC_PRINT:
       if (!doc) break;
       if (ledger_print_document(doc->id, report, sizeof(report)))
-        message_box(parent, report, "Print Forms Written", MB_OK);
+        message_box(parent, report, ui_tr("Print Forms Written"), MB_OK);
       else
-        message_box(parent, "The configuration defines no print forms for this document type.", "Print", MB_OK);
+        message_box(parent, ui_tr("The configuration defines no print forms for this document type."), ui_tr("Print"), MB_OK);
       break;
     case ID_DOC_DELETE:
-      if (doc && message_box(parent, "Delete the selected document and its entries?", "Delete Document", MB_YESNO) == IDYES) {
+      if (doc && message_box(parent, ui_tr("Delete the selected document and its entries?"), ui_tr("Delete Document"), MB_YESNO) == IDYES) {
         ledger_delete_document(g_ledger->ib, doc->id);
         after_change(0, false);
       }
@@ -204,7 +222,9 @@ void ledger_command(uint16_t id) {
       edit_catalog_record(ID_COUNTERPARTIES_PAGE_COUNTERPARTIES, &ledger_counterparty_form, "Counterparty");
       break;
     case ID_CATALOG_DELETE_COUNTERPARTY:
-      delete_catalog_record(ID_COUNTERPARTIES_PAGE_COUNTERPARTIES, TABLE_COUNTERPARTIES, "counterparty",
+      delete_catalog_record(ID_COUNTERPARTIES_PAGE_COUNTERPARTIES, TABLE_COUNTERPARTIES,
+                            "Delete the selected counterparty?",
+                            "This counterparty is used by %d document(s) and cannot be deleted.",
                             TABLE_DOCUMENTS, "counterparty_id");
       break;
     case ID_CATALOG_NEW_ITEM:
@@ -214,7 +234,9 @@ void ledger_command(uint16_t id) {
       edit_catalog_record(ID_ITEMS_PAGE_ITEMS, &ledger_item_form, "Item");
       break;
     case ID_CATALOG_DELETE_ITEM:
-      delete_catalog_record(ID_ITEMS_PAGE_ITEMS, TABLE_ITEMS, "item", TABLE_DOC_LINES, "item_id");
+      delete_catalog_record(ID_ITEMS_PAGE_ITEMS, TABLE_ITEMS, "Delete the selected item?",
+                            "This item is used by %d document line(s) and cannot be deleted.",
+                            TABLE_DOC_LINES, "item_id");
       break;
 
     case ID_VIEW_JOURNAL: case ID_VIEW_COUNTERPARTIES: case ID_VIEW_ITEMS: case ID_VIEW_ACCOUNTS:
@@ -227,9 +249,9 @@ void ledger_command(uint16_t id) {
       ledger_refresh_views();
       break;
     case ID_HELP_ABOUT:
-      message_box(parent, "Ledger 1.0\n\nDouble-entry bookkeeping on Orion.\n"
+      message_box(parent, ui_tr("Ledger 1.0\n\nDouble-entry bookkeeping on Orion.\n"
                   "National rules, accounts and legal forms come from\n"
-                  "the active configuration.", "About Ledger", MB_OK);
+                  "the active configuration."), ui_tr("About Ledger"), MB_OK);
       break;
   }
 }

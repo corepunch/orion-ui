@@ -973,7 +973,9 @@ register_database("ib", ib);
   `dbFind` searches the key (index 0) or any other field.
 - `dbSave` writes `<db><table><row .../></table></db>`; a missing file loads
   empty.
-- `dbGetFieldText` formats fields for views. A `relation=` field becomes a
+- `dbGetFieldText` formats fields for views: numbers and `type="date"` fields
+  follow the active [string catalog](localization.md) (`16 656,00`,
+  `10.03.2003` in Russian). A `relation=` field becomes a
   join named after it without `_id`, so columns can show `author.name` or
   nested paths such as `item.unit.name`. A relation may name another
   registered database: `relation="cfg.accounts.id"`.
@@ -993,7 +995,8 @@ orionc chooses the DDX exchange from the bound field's declared type:
 |---|---|---|
 | `TextBox` / `MultiEdit` | `string` | `edGetText` / `edSetText` |
 | `TextBox` | `integer` | `ddx_push_int` / `ddx_pull_int` |
-| `TextBox` | `double` | `ddx_push_double` / `ddx_pull_double` (accepts `1 234,50`) |
+| `TextBox` | `double` | `ddx_push_double` / `ddx_pull_double` (catalog number format; also accepts `1234.50`) |
+| `TextBox` | `date` | `ddx_push_date` / `ddx_pull_date` (stored `YYYY-MM-DD`, edited in the catalog's date format) |
 | `ComboBox` with `source=` | `integer` | `ddx_push_combo_value` / `ddx_pull_combo_value` (record id, 0 = none) |
 | `CheckBox` | `boolean` | `ddx_push_check` / `ddx_pull_check` |
 

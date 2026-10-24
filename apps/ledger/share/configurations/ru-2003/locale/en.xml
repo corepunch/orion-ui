@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Configuration layer: Russian accounting terms in English. Loaded after Ledger's own catalog, so the
+     platform's neutral wording ("Tax ID", "Tax") becomes the national term. -->
+<strings language="en">
+  <string source="Tax ID">INN</string>
+  <string source="Tax ID:">INN:</string>
+  <string source="Tax">VAT</string>
+  <string source="Tax:">VAT:</string>
+  <string source="Tax Amount">VAT Amount</string>
+  <string source="Tax rate:">VAT rate:</string>
+  <string source="Tax Rates">VAT Rates</string>
+  <string source="Tax Dr">VAT Dr</string>
+  <string source="Tax Cr">VAT Cr</string>
+</strings>
