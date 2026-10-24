@@ -23,6 +23,9 @@ The normal `build/generated/` headers and Makefile-built binaries/libraries are
 not used. Framework code is statically linked, using the SDK's libxml2; no
 Homebrew packages, XcodeGen or CocoaPods are required. App resources, fonts,
 shaders, demos and icons are bundled for running and debugging in Xcode.
+Both targets use `AppIcon`, generated from `apps/groove/share/icon.png` in
+DerivedData. Xcode compiles the asset catalog and merges its icon metadata into
+the app's Info.plist; replacing the source PNG updates both targets on the next build.
 
 Only Groove is supported initially. Regenerate to refresh the navigator after
 adding/removing sources, or to update separately compiled common-dialog files.

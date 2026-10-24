@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Xcode build phases, independent of the Makefile's outputs."""
-import importlib.util
 import os
 import json
 from pathlib import Path
@@ -13,6 +12,30 @@ from generate import unity_sources, write
 
 def run(*args):
     subprocess.run([str(a) for a in args], check=True)
+
+
+def app_icon(root, output):
+    source = root / 'apps/groove/share/icon.png'
+    catalog = output / 'Assets.xcassets'
+    appicons = catalog / 'AppIcon.appiconset'
+    appicons.mkdir(parents=True, exist_ok=True)
+    images = []
+    for idiom, sizes in (
+        ('mac', ((size, scale) for size in (16, 32, 128, 256, 512) for scale in (1, 2))),
+        ('ipad', ((20, 1), (20, 2), (29, 1), (29, 2), (40, 1), (40, 2), (76, 1), (76, 2), (83.5, 2))),
+        ('ios-marketing', ((1024, 1),)),
+    ):
+        for size, scale in sizes:
+            pixels = int(size * scale)
+            filename = f'icon-{pixels}.png'
+            target = appicons / filename
+            if not target.exists() or target.stat().st_mtime < source.stat().st_mtime:
+                subprocess.run(['sips', '-z', str(pixels), str(pixels), str(source), '--out', str(target)],
+                               check=True, stdout=subprocess.DEVNULL)
+            images.append(dict(idiom=idiom, size=f'{size}x{size}', scale=f'{scale}x', filename=filename))
+    info = dict(version=1, author='Orion')
+    write(catalog / 'Contents.json', json.dumps(dict(info=info), indent=2) + '\n')
+    write(appicons / 'Contents.json', json.dumps(dict(images=images, info=info), indent=2) + '\n')
 
 
 def forms(root, output):
@@ -33,6 +56,7 @@ def forms(root, output):
     if not header.exists() or max(form.stat().st_mtime, tool.stat().st_mtime) > header.stat().st_mtime:
         header.parent.mkdir(parents=True, exist_ok=True)
         run(tool, '--input', form, '--output', header, '--prefix', 'groove')
+    app_icon(root, output)
 
 
 def resources(root, output):
@@ -46,31 +70,10 @@ def resources(root, output):
         shutil.copytree(source, target)
     if ipad:
         (bundle / 'bin').mkdir(exist_ok=True)
-        catalog = output / 'icons/ipad/AppIcon.xcassets/AppIcon.appiconset'
-        catalog.mkdir(parents=True, exist_ok=True)
-        images = []
-        for size, scale in ((20, 1), (20, 2), (29, 1), (29, 2), (40, 1), (40, 2), (76, 1), (76, 2), (83.5, 2), (1024, 1)):
-            pixels = int(size * scale)
-            filename = f'icon-{pixels}.png'
-            if not (catalog / filename).exists() or (catalog / filename).stat().st_mtime < (root / 'apps/groove/share/icon.png').stat().st_mtime:
-                subprocess.run(['sips', '-z', str(pixels), str(pixels), str(root / 'apps/groove/share/icon.png'),
-                                '--out', str(catalog / filename)], check=True, stdout=subprocess.DEVNULL)
-            images.append(dict(idiom='ios-marketing' if size == 1024 else 'ipad', size=f'{size}x{size}', scale=f'{scale}x', filename=filename))
-        (catalog / 'Contents.json').write_text(json.dumps(dict(images=images, info=dict(version=1, author='Orion'))))
-        partial = Path(os.environ['DERIVED_FILE_DIR']) / 'icon-info.plist'
-        run('xcrun', 'actool', catalog.parent, '--compile', bundle, '--output-partial-info-plist', partial,
-            '--app-icon', 'AppIcon', '--target-device', 'ipad', '--minimum-deployment-target', '16.0',
-            '--platform', os.environ['PLATFORM_NAME'])
     else:
         link = bundle / 'Contents/share'
         if not link.is_symlink():
             link.symlink_to('Resources/share')
-        spec = importlib.util.spec_from_file_location('macos_bundle', root / 'packaging/macos/bundle.py')
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        icon = destination / 'groove.icns'
-        if not icon.exists() or icon.stat().st_mtime < (root / 'apps/groove/share/icon.png').stat().st_mtime:
-            module.make_icon(root / 'apps/groove/share/icon.png', destination, 'groove')
 
 
 if __name__ == '__main__':

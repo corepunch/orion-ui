@@ -151,6 +151,8 @@ def generate(args):
         'ENABLE_HARDENED_RUNTIME': 'NO',
     }
     root_configs = project.configurations('project', common)
+    icon_ref = project.add('app-icon', 'PBXFileReference', path='Assets.xcassets',
+                           sourceTree='DERIVED_FILE_DIR', lastKnownFileType='folder.assetcatalog')
     units = unity_sources(ROOT, args.app)
     source_refs = {}
     for name in units:
@@ -179,6 +181,7 @@ def generate(args):
         name = args.app + '-' + platform
         ipad = platform == 'ipad'
         settings = dict(INFOPLIST_FILE='$(PROJECT_FILE_PATH)/Generated/' + platform + '-Info.plist',
+                        ASSETCATALOG_COMPILER_APPICON_NAME='AppIcon',
                         OTHER_LDFLAGS=['$(inherited)', '-lxml2', '-lm'])
         if ipad:
             settings.update(signing, SDKROOT='iphoneos', SUPPORTED_PLATFORMS='iphoneos iphonesimulator',
@@ -197,9 +200,6 @@ def generate(args):
                     CFBundleVersion='$(CURRENT_PROJECT_VERSION)', CFBundleDevelopmentRegion='en')
         if ipad:
             info.update(LSRequiresIPhoneOS=True, UIFileSharingEnabled=True, LSSupportsOpeningDocumentsInPlace=True,
-                        CFBundleIcons={'CFBundlePrimaryIcon': {'CFBundleIconName': 'AppIcon'}},
-                        **{'CFBundleIcons~ipad': {'CFBundlePrimaryIcon': {
-                            'CFBundleIconName': 'AppIcon', 'CFBundleIconFiles': ['AppIcon76x76']}}},
                         UIRequiredDeviceCapabilities=['opengles-3'],
                         UILaunchScreen={}, UIRequiresFullScreen=False,
                         UISupportedInterfaceOrientations=['UIInterfaceOrientation' + s for s in
@@ -208,7 +208,7 @@ def generate(args):
                             'UISceneConfigurations': {'UIWindowSceneSessionRoleApplication': [
                                 {'UISceneConfigurationName': 'Orion', 'UISceneDelegateClassName': 'AXSceneDelegate'}]}})
         else:
-            info.update(NSHighResolutionCapable=True, NSPrincipalClass='NSApplication', CFBundleIconFile='groove.icns',
+            info.update(NSHighResolutionCapable=True, NSPrincipalClass='NSApplication',
                         LSApplicationCategoryType='public.app-category.music')
         write(bundle / 'Generated' / (platform + '-Info.plist'), plistlib.dumps(info).decode())
         build_files = []
@@ -222,15 +222,20 @@ def generate(args):
         forms = project.add(name + '/forms', 'PBXShellScriptBuildPhase', buildActionMask=2147483647,
             name='Prepare Orion sources and forms', shellPath='/bin/sh',
             shellScript='set -eu\n/usr/bin/python3 "$ORION_ROOT/tools/xcode/build.py" forms\n',
-            inputPaths=['$(ORION_ROOT)/tools/orionc.c', '$(ORION_ROOT)/apps/groove/groove.orion'],
-            outputPaths=['$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h'] +
+            inputPaths=['$(ORION_ROOT)/tools/orionc.c', '$(ORION_ROOT)/apps/groove/groove.orion',
+                        '$(ORION_ROOT)/apps/groove/share/icon.png'],
+            outputPaths=['$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h',
+                         '$(DERIVED_FILE_DIR)/Assets.xcassets'] +
                         ['$(DERIVED_FILE_DIR)/' + filename for filename in units if not filename.endswith('.m') or filename == platform + '.m'],
             runOnlyForDeploymentPostprocessing=0,
             alwaysOutOfDate=1)
         sources = project.add(name + '/sources', 'PBXSourcesBuildPhase', buildActionMask=2147483647,
                               files=build_files, runOnlyForDeploymentPostprocessing=0)
+        icon_file = project.add(name + '/app-icon', 'PBXBuildFile', fileRef=icon_ref)
+        icons = project.add(name + '/icons', 'PBXResourcesBuildPhase', buildActionMask=2147483647,
+                            files=[icon_file], runOnlyForDeploymentPostprocessing=0)
         resources = project.add(name + '/resources', 'PBXShellScriptBuildPhase', buildActionMask=2147483647,
-            name='Bundle Orion resources and app icon', shellPath='/bin/sh',
+            name='Bundle Orion resources', shellPath='/bin/sh',
             shellScript='set -eu\n/usr/bin/python3 "$ORION_ROOT/tools/xcode/build.py" resources\n',
             runOnlyForDeploymentPostprocessing=0, alwaysOutOfDate=1)
         product = project.add(name + '/product', 'PBXFileReference', path='groove.app', sourceTree='BUILT_PRODUCTS_DIR',
@@ -238,7 +243,7 @@ def generate(args):
         products.append(product)
         target = project.add(name, 'PBXNativeTarget', name=name, productName=args.app, productReference=product,
             productType='com.apple.product-type.application', buildConfigurationList=configs,
-            buildPhases=[forms, sources, resources], buildRules=[], dependencies=[])
+            buildPhases=[forms, sources, icons, resources], buildRules=[], dependencies=[])
         targets.append(target)
         scheme_path = bundle / 'xcshareddata/xcschemes' / (name + '.xcscheme')
         if not scheme_path.exists():

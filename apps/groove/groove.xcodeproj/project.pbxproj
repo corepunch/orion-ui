@@ -91,6 +91,11 @@
 "defaultConfigurationIsVisible" = 0;
 "defaultConfigurationName" = "Debug";
 };
+"4D6FC5A1736DCA577CF68A90" = {"isa" = "PBXFileReference";
+"path" = "Assets.xcassets";
+"sourceTree" = "DERIVED_FILE_DIR";
+"lastKnownFileType" = "folder.assetcatalog";
+};
 "1D5F697BC138CDFCA9EA7238" = {"isa" = "PBXFileReference";
 "path" = "user.c";
 "sourceTree" = "DERIVED_FILE_DIR";
@@ -1706,6 +1711,7 @@
 "E24A74F719BBAF7988950630" = {"isa" = "XCBuildConfiguration";
 "name" = "Debug";
 "buildSettings" = {"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/macos-Info.plist";
+"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
 "OTHER_LDFLAGS" = ("$(inherited)",
 "-lxml2",
 "-lm",
@@ -1735,6 +1741,7 @@
 "8DA105EA2DF0CD7AB348891C" = {"isa" = "XCBuildConfiguration";
 "name" = "Release";
 "buildSettings" = {"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/macos-Info.plist";
+"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
 "OTHER_LDFLAGS" = ("$(inherited)",
 "-lxml2",
 "-lm",
@@ -1802,8 +1809,10 @@
 "shellScript" = "set -eu\n/usr/bin/python3 \"$ORION_ROOT/tools/xcode/build.py\" forms\n";
 "inputPaths" = ("$(ORION_ROOT)/tools/orionc.c",
 "$(ORION_ROOT)/apps/groove/groove.orion",
+"$(ORION_ROOT)/apps/groove/share/icon.png",
 );
 "outputPaths" = ("$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h",
+"$(DERIVED_FILE_DIR)/Assets.xcassets",
 "$(DERIVED_FILE_DIR)/user.c",
 "$(DERIVED_FILE_DIR)/kernel.c",
 "$(DERIVED_FILE_DIR)/commctl.c",
@@ -1827,9 +1836,18 @@
 );
 "runOnlyForDeploymentPostprocessing" = 0;
 };
+"51DC8E05C5D2821B45E883F5" = {"isa" = "PBXBuildFile";
+"fileRef" = "4D6FC5A1736DCA577CF68A90";
+};
+"D55723F9321E0BBA611435AA" = {"isa" = "PBXResourcesBuildPhase";
+"buildActionMask" = 2147483647;
+"files" = ("51DC8E05C5D2821B45E883F5",
+);
+"runOnlyForDeploymentPostprocessing" = 0;
+};
 "826DC0AED76CBDA0CB72A068" = {"isa" = "PBXShellScriptBuildPhase";
 "buildActionMask" = 2147483647;
-"name" = "Bundle Orion resources and app icon";
+"name" = "Bundle Orion resources";
 "shellPath" = "/bin/sh";
 "shellScript" = "set -eu\n/usr/bin/python3 \"$ORION_ROOT/tools/xcode/build.py\" resources\n";
 "runOnlyForDeploymentPostprocessing" = 0;
@@ -1848,6 +1866,7 @@
 "buildConfigurationList" = "5365AE4A7C261CF60BD1BC20";
 "buildPhases" = ("CF7AB7229AFF63CA1DD36A9B",
 "352DC67FC91E8B656D15E805",
+"D55723F9321E0BBA611435AA",
 "826DC0AED76CBDA0CB72A068",
 );
 "buildRules" = ();
@@ -1856,6 +1875,7 @@
 "98D3065E6E0C71346686088B" = {"isa" = "XCBuildConfiguration";
 "name" = "Debug";
 "buildSettings" = {"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/ipad-Info.plist";
+"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
 "OTHER_LDFLAGS" = ("$(inherited)",
 "-lxml2",
 "-lm",
@@ -1890,6 +1910,7 @@
 "77433336E0FB714CBFDEEB41" = {"isa" = "XCBuildConfiguration";
 "name" = "Release";
 "buildSettings" = {"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/ipad-Info.plist";
+"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
 "OTHER_LDFLAGS" = ("$(inherited)",
 "-lxml2",
 "-lm",
@@ -1964,8 +1985,10 @@
 "shellScript" = "set -eu\n/usr/bin/python3 \"$ORION_ROOT/tools/xcode/build.py\" forms\n";
 "inputPaths" = ("$(ORION_ROOT)/tools/orionc.c",
 "$(ORION_ROOT)/apps/groove/groove.orion",
+"$(ORION_ROOT)/apps/groove/share/icon.png",
 );
 "outputPaths" = ("$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h",
+"$(DERIVED_FILE_DIR)/Assets.xcassets",
 "$(DERIVED_FILE_DIR)/user.c",
 "$(DERIVED_FILE_DIR)/kernel.c",
 "$(DERIVED_FILE_DIR)/commctl.c",
@@ -1989,9 +2012,18 @@
 );
 "runOnlyForDeploymentPostprocessing" = 0;
 };
+"F9EC25448562F064542B16CE" = {"isa" = "PBXBuildFile";
+"fileRef" = "4D6FC5A1736DCA577CF68A90";
+};
+"59964872DF048002767C1F7F" = {"isa" = "PBXResourcesBuildPhase";
+"buildActionMask" = 2147483647;
+"files" = ("F9EC25448562F064542B16CE",
+);
+"runOnlyForDeploymentPostprocessing" = 0;
+};
 "332B1557BCECA383303F7D73" = {"isa" = "PBXShellScriptBuildPhase";
 "buildActionMask" = 2147483647;
-"name" = "Bundle Orion resources and app icon";
+"name" = "Bundle Orion resources";
 "shellPath" = "/bin/sh";
 "shellScript" = "set -eu\n/usr/bin/python3 \"$ORION_ROOT/tools/xcode/build.py\" resources\n";
 "runOnlyForDeploymentPostprocessing" = 0;
@@ -2010,6 +2042,7 @@
 "buildConfigurationList" = "4E40E8A910B9BC71F50362C8";
 "buildPhases" = ("4E46F7B1B0DE6B87A9FE094B",
 "CBD0805A39FF8AC6A4E1D68C",
+"59964872DF048002767C1F7F",
 "332B1557BCECA383303F7D73",
 );
 "buildRules" = ();
