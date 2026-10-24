@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><title>Rechnung {{number}}</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;margin:12mm;color:#000}
+table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
+.grid td,.grid th{border:1px solid #000}.grid th{font-weight:normal;font-size:8pt;text-align:center}
+.r{text-align:right}.c{text-align:center}.small{font-size:7.5pt}.b{font-weight:bold}
+.line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
+.sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
+h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
+@media print{body{margin:6mm}}
+</style></head><body>
+<p class="small">{{org.name}} · {{org.address}}</p>
+<table style="width:100%"><tr>
+<td style="width:60%">{{counterparty.name}}<br>{{counterparty.address}}</td>
+<td><table>
+<tr><td>Rechnungsnummer:</td><td class="b">{{number}}</td></tr>
+<tr><td>Rechnungsdatum:</td><td>{{date}}</td></tr>
+<tr><td>Lieferdatum:</td><td>{{date}}</td></tr>
+<tr><td>Steuernummer:</td><td>{{org.tax_id}}</td></tr>
+<tr><td>USt-IdNr.:</td><td>{{org.kpp}}</td></tr>
+<tr><td>Ihre USt-IdNr.:</td><td>{{counterparty.kpp}}</td></tr>
+</table></td></tr></table>
+<h1>Rechnung {{number}}</h1>
+<p>{{comment}}</p>
+<table class="grid" style="width:100%">
+<tr><th>Pos.</th><th>Art.-Nr.</th><th>Bezeichnung</th><th>Menge</th><th>Einheit</th><th>Einzelpreis</th><th>USt</th><th>Gesamt netto</th></tr>
+{{#lines}}<tr><td class="c">{{n}}</td><td class="c">{{item.sku}}</td><td>{{item.name}}</td><td class="r">{{quantity}}</td><td class="c">{{item.unit.name}}</td><td class="r">{{price}}</td><td class="c">{{vat_rate.name}}</td><td class="r">{{amount}}</td></tr>
+{{/lines}}</table>
+<table style="margin-left:auto;margin-top:6px">
+<tr><td class="r">Summe netto:</td><td class="r">{{amount}} {{cfg.currency}}</td></tr>
+<tr><td class="r">zzgl. Umsatzsteuer:</td><td class="r">{{vat}} {{cfg.currency}}</td></tr>
+<tr><td class="r b">Rechnungsbetrag:</td><td class="r b">{{total}} {{cfg.currency}}</td></tr>
+</table>
+<p>Zahlbar innerhalb von 14 Tagen ohne Abzug.</p>
+<p class="small" style="border-top:1px solid #000;padding-top:4px">{{org.name}} · {{org.address}} · Geschäftsführer: {{org.director}} ·
+Bankverbindung: {{org.bank}}, Konto {{org.bank_account}}, BLZ {{org.bik}} · Steuernummer {{org.tax_id}} · USt-IdNr. {{org.kpp}}</p>
+</body></html>

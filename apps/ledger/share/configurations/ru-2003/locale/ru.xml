@@ -12,5 +12,5 @@
   <string source="Tax Dr">Дт НДС</string>
   <string source="Tax Cr">Кт НДС</string>
   <string source="Bank ID (BIK):">БИК:</string>
-  <string source="Account:">Расчетный счет:</string>
+  <string source="Net">Без НДС</string>
 </strings>

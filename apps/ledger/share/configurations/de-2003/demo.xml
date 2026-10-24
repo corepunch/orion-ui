@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Demo-Mandant für die Konfiguration de-2003. -->
+<ib>
+  <organizations>
+    <organization id="1" name="Musterfirma GmbH" tax_id="27/123/45678" kpp="DE123456789" address="Musterstraße 1, 10115 Berlin" bank="Berliner Sparkasse" bank_account="1234567890" bik="10050000" corr_account="BELADEBEXXX" director="Max Mustermann" accountant="Erika Mustermann" />
+  </organizations>
+  <counterparties>
+    <counterparty id="1" name="Bürotechnik Schmidt KG" tax_id="43/765/43210" kpp="DE234567890" address="Mönckebergstraße 7, 20095 Hamburg" bank="Hamburger Sparkasse" bank_account="9876543210" bik="20050550" phone="040 123456" />
+    <counterparty id="2" name="Weber Handels GmbH" tax_id="143/222/33333" kpp="DE345678901" address="Leopoldstraße 12, 80802 München" bank="Stadtsparkasse München" bank_account="1122334455" bik="70150000" phone="089 987654" />
+    <counterparty id="3" name="Hans Meier e.K." tax_id="21/555/66666" kpp="" address="Schillerstraße 3, 04109 Leipzig" bank="" bank_account="" bik="" phone="0341 445566" />
+  </counterparties>
+  <items>
+    <item id="1" sku="10001" name="Kopierpapier A4, 500 Blatt" unit_id="2" vat_rate_id="1" price="4.5" />
+    <item id="2" sku="10002" name="Toner HP C4092A" unit_id="1" vat_rate_id="1" price="59" />
+    <item id="3" sku="10003" name="Monitor 17&quot; Samsung SyncMaster 753s" unit_id="1" vat_rate_id="1" price="229" />
+    <item id="4" sku="10004" name="Tastatur Cherry G83" unit_id="1" vat_rate_id="1" price="19.9" />
+  </items>
+  <documents>
+    <document id="1" doc_type_id="8" counterparty_id="0" number="EB-0001" date="2003-03-01" comment="Eröffnungsbilanz 01.03.2003" posted="1" />
+    <document id="2" doc_type_id="1" counterparty_id="1" number="ER-0001" date="2003-03-03" comment="Rechnung Nr. 4711" posted="1" />
+    <document id="3" doc_type_id="5" counterparty_id="1" number="UE-0001" date="2003-03-04" comment="Zahlung Rechnung Nr. 4711" total="2003.32" posted="1" />
+    <document id="4" doc_type_id="2" counterparty_id="3" number="AR-0001" date="2003-03-10" comment="" posted="1" />
+    <document id="5" doc_type_id="3" counterparty_id="3" number="KE-0001" date="2003-03-11" comment="Barzahlung AR-0001" total="699.48" posted="1" />
+    <document id="6" doc_type_id="2" counterparty_id="2" number="AR-0002" date="2003-03-14" comment="Lieferung laut Auftrag 12/03" posted="0" />
+  </documents>
+  <doc_lines>
+    <doc_line id="1" document_id="2" item_id="1" vat_rate_id="1" quantity="100" price="4.5" />
+    <doc_line id="2" document_id="2" item_id="2" vat_rate_id="1" quantity="10" price="59" />
+    <doc_line id="3" document_id="2" item_id="3" vat_rate_id="1" quantity="3" price="229" />
+    <doc_line id="4" document_id="4" item_id="3" vat_rate_id="1" quantity="2" price="289" />
+    <doc_line id="5" document_id="4" item_id="4" vat_rate_id="1" quantity="1" price="25" />
+    <doc_line id="6" document_id="6" item_id="1" vat_rate_id="1" quantity="40" price="6.9" />
+    <doc_line id="7" document_id="6" item_id="2" vat_rate_id="1" quantity="5" price="79" />
+  </doc_lines>
+  <entries>
+    <entry id="1" document_id="1" debit_id="5" credit_id="21" amount="25000" content="Bankguthaben" />
+    <entry id="2" document_id="1" debit_id="21" credit_id="2" amount="25000" content="Stammkapital" />
+  </entries>
+</ib>

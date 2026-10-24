@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Orion framework strings, German. -->
+<strings language="de" decimal="," group="." date="dd.MM.yyyy">
+  <string source="OK">OK</string>
+  <string source="Cancel">Abbrechen</string>
+  <string source="Yes">Ja</string>
+  <string source="No">Nein</string>
+  <string source="Message">Meldung</string>
+  <string source="Open">Öffnen</string>
+  <string source="Save">Speichern</string>
+  <string source="Select">Auswählen</string>
+  <string source="Open File">Datei öffnen</string>
+  <string source="Save File">Datei speichern</string>
+  <string source="Select Folder">Ordner wählen</string>
+  <string source="File Picker">Dateiauswahl</string>
+  <string source="Location:">Ordner:</string>
+  <string source="Up one folder">Übergeordneter Ordner</string>
+  <string source="Create new folder">Neuen Ordner erstellen</string>
+  <string source="Create Folder">Ordner erstellen</string>
+  <string source="Folder name:">Ordnername:</string>
+  <string source="Enter a valid folder name.">Geben Sie einen gültigen Ordnernamen ein.</string>
+  <string source="Could not create folder:">Ordner konnte nicht erstellt werden:</string>
+  <string source="Confirm Save As">Speichern bestätigen</string>
+  <string source="File already exists:">Die Datei existiert bereits:</string>
+  <string source="Do you want to replace it?">Möchten Sie sie ersetzen?</string>
+  <string source="Collapse / restore">Einklappen / wiederherstellen</string>
+  <string source="Hide window">Fenster ausblenden</string>
+  <string source="Split Right (Alt: Split Down)">Rechts teilen (Alt: unten teilen)</string>
+  <string source="Split Down (release Alt: Split Right)">Unten teilen (Alt loslassen: rechts teilen)</string>
+  <string source="Close active tab">Aktiven Tab schließen</string>
+</strings>

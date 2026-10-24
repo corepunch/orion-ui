@@ -389,6 +389,14 @@ name to bind it, or `none` for an unfiltered working-set view:
 <TableView name="commit_files" source="db.files" master="commits" />
 ```
 
+A static filter shows one slice of a table. Two views can share the same
+source and differ only by filter, like the sales and purchase VAT books:
+
+```xml
+<TableView name="sales_book"    source="ib.vat_book" filter-field="book" filter-value="1" />
+<TableView name="purchase_book" source="ib.vat_book" filter-field="book" filter-value="2" />
+```
+
 ## TabView
 
 `TabView` is a Win32-style tab container. Its direct children are pages, each

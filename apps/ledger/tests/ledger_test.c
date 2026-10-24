@@ -77,37 +77,104 @@ static void test_joins_cross_databases(void) {
 }
 
 static void test_posting_rules(void) {
-  TEST("posting: receipt writes Dt 41.01 Kt 60.01 net and Dt 19.03 Kt 60.01 tax");
+  TEST("posting: receipt lines write Dt 41.01 Kt 60.01 and Dt 19.03 Kt 60.01 with subconto");
   db_document_t *doc = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ПТ-0001");
   ASSERT(doc && doc->posted, "demo receipt is posted");
   ASSERT(near(doc->amount, 42600) && near(doc->vat, 8520) && near(doc->total, 51120), "receipt totals");
   result_node_t *entries = (result_node_t *)send_db_message(g_ledger->ib, dbFetch,
     MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)doc->id);
-  ASSERT_EQUAL(count_result_list(entries), 2);
-  char dr[16], cr[16];
+  ASSERT_EQUAL(count_result_list(entries), 6);  // goods and tax entry per line
+  char dr[16], cr[16], item[64], party[64];
   db_entry_t *e = *(db_entry_t **)entries->data;
   db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "debit.code", dr, sizeof(dr));
   db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "credit.code", cr, sizeof(cr));
-  bool ok = !strcmp(dr, "41.01") && !strcmp(cr, "60.01") && near(e->amount, 42600);
+  db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "item.sku", item, sizeof(item));
+  db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "counterparty.tax_id", party, sizeof(party));
+  bool ok = !strcmp(dr, "41.01") && !strcmp(cr, "60.01") && near(e->amount, 9500) && near(e->quantity, 100) &&
+            !strcmp(item, "00001") && !strcmp(party, "7705123456");
   free_result_list(entries);
-  ASSERT(ok, "net amount entry");
+  ASSERT(ok, "net amount entry carries item, quantity and supplier");
   PASS();
 }
 
 static void test_unpost_and_trial_balance(void) {
-  TEST("trial balance: subaccounts roll up; unposting removes entries");
-  const db_balance_t *bank = balance("51"), *goods = balance("41"), *vat = balance("68");
-  ASSERT(bank && near(bank->balance_dr, 60000 - 51120), "bank balance");
+  TEST("trial balance: subaccounts roll up; opening balances; unposting removes entries");
+  const db_balance_t *bank = balance("51"), *goods = balance("41"), *vat = balance("68"), *aux = balance("000");
+  ASSERT(bank && near(bank->balance_dr, 100000 + 60000 - 51120), "bank balance");
+  ASSERT(aux && near(aux->balance_dr, 0) && near(aux->balance_cr, 0), "opening entries balance through 000");
   ASSERT(goods && near(goods->debit_turnover, 42600), "41 includes 41.01");
   ASSERT(vat && near(vat->debit_turnover, 8520) && near(vat->credit_turnover, 2776), "VAT 68.02 rolls into 68");
   db_document_t *sale = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "РТ-0002");
   ASSERT(sale && !sale->posted, "second sale is a draft");
   ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, sale->id));
-  ledger_recalc_balances(g_ledger->ib, g_ledger->cfg);
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   ASSERT(near(balance("90.01")->credit_turnover, 16656 + sale->total), "revenue includes the new sale");
-  ledger_unpost(g_ledger->ib, sale->id);
-  ledger_recalc_balances(g_ledger->ib, g_ledger->cfg);
+  ledger_unpost(g_ledger->ib, g_ledger->cfg, sale->id);
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   ASSERT(near(balance("90.01")->credit_turnover, 16656), "unpost restores revenue");
+  PASS();
+}
+
+static void set_period(const char *from, const char *to, const char *account) {
+  db_report_setting_t *rs = ledger_report_settings(g_ledger->ib, g_ledger->cfg);
+  db_account_t *a = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", account);
+  snprintf(rs->date_from, sizeof(rs->date_from), "%s", from);
+  snprintf(rs->date_to, sizeof(rs->date_to), "%s", to);
+  rs->account_id = a ? a->id : 0;
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+}
+
+static void test_period_reports(void) {
+  TEST("reports: period opening/turnover, account card, analysis by counterparty, VAT books");
+  set_period("2003-03-05", "2003-03-31", "51");
+  const db_balance_t *bank = balance("51");
+  ASSERT(bank && near(bank->opening_dr, 100000 + 60000 - 51120) && near(bank->debit_turnover, 0), "bank opens with earlier movements");
+  result_node_t *card = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_CARD, 0), NULL);
+  ASSERT_EQUAL(count_result_list(card), 0);  // no bank movement in the period
+  free_result_list(card);
+  set_period("", "", "60");
+  card = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_CARD, 0), NULL);
+  double last = -1; int rows = count_result_list(card);
+  for (result_node_t *n = card; n; n = n->next) last = (*(db_card_t **)n->data)->balance;
+  free_result_list(card);
+  ASSERT(rows == 7 && near(last, 0), "supplier card: six receipt entries and the payment settle to zero");
+  result_node_t *rows_ = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ANALYSIS_ROWS, 0), NULL);
+  db_analysis_row_t *alfa = rows_ ? *(db_analysis_row_t **)rows_->data : NULL;
+  bool ok = count_result_list(rows_) == 1 && alfa && near(alfa->credit_turnover, 51120) && near(alfa->debit_turnover, 51120);
+  free_result_list(rows_);
+  ASSERT(ok, "analysis of 60 lists the one supplier");
+  int sales = ledger_count_references(g_ledger->ib, TABLE_VAT_BOOK, "book", 1);
+  int purchases = ledger_count_references(g_ledger->ib, TABLE_VAT_BOOK, "book", 2);
+  ASSERT(sales == 1 && purchases == 1, "posted sale and receipt are in the books");
+  PASS();
+}
+
+static void test_manual_operation(void) {
+  TEST("manual operation: typed entries count while posted and stay when unposted");
+  db_document_t *op = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ВО-0001");
+  ASSERT(op && op->posted && near(op->total, 200000), "opening balances total their entries");
+  ledger_unpost(g_ledger->ib, g_ledger->cfg, op->id);
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", op->id), 3);
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+  ASSERT(near(balance("51")->balance_dr, 60000 - 51120), "unposted operation leaves the reports");
+  ledger_post(g_ledger->ib, g_ledger->cfg, op->id);
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+  ASSERT(near(balance("51")->balance_dr, 100000 + 60000 - 51120), "posted again");
+  PASS();
+}
+
+static void test_transient_tables(void) {
+  TEST("db_schema_xml: transient report tables do not dirty the database or reach the file");
+  send_db_message(g_ledger->ib, dbSave, 0, NULL);
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbGetDirty, 0, NULL));
+  FILE *f = fopen(TMP_DIR "/infobase.xml", "rb");
+  ASSERT_NOT_NULL(f);
+  static char xml[1 << 18];
+  size_t n = fread(xml, 1, sizeof(xml) - 1, f);
+  fclose(f);
+  xml[n] = '\0';
+  ASSERT(!strstr(xml, "<balances") && strstr(xml, "<entries"), "only stored tables are written");
   PASS();
 }
 
@@ -207,6 +274,33 @@ static void test_russian_catalogs(void) {
   PASS();
 }
 
+static void test_german_configuration(void) {
+  TEST("de-2003: SKR 03 postings, 16 % USt and German formats from the same platform");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  g_ledger->cfg = open_db("cfg", &ledger_cfg_schema, SHARE "/de-2003/configuration.xml");
+  g_ledger->ib = open_db("ib", &ledger_ib_schema, SHARE "/de-2003/demo.xml");
+  snprintf(g_ledger->ib->source_path, sizeof(g_ledger->ib->source_path), TMP_DIR "/infobase-de.xml");
+  ledger_repost_all(g_ledger->ib, g_ledger->cfg);
+  const db_balance_t *bank = balance("1200"), *ust = balance("1775"), *receivables = balance("1400");
+  bool ok = bank && near(bank->balance_dr, 25000 - 2003.32) && ust && near(ust->balance_cr, 96.48) &&
+            receivables && near(receivables->balance_dr, 0);
+  ui_set_language("de");
+  ui_add_string_catalog_dir("apps/ledger/share/locale");
+  ui_add_string_catalog_dir(SHARE "/de-2003/locale");
+  char buf[64];
+  ok = ok && !strcmp(ui_tr("Tax ID:"), "Steuernummer:") && !strcmp(ui_tr("Tax"), "USt") &&
+       !strcmp(ui_tr("Trial Balance"), "Summen- und Saldenliste");
+  ok = ok && !strcmp(ui_format_number(2003.32, 2, buf, sizeof(buf)), "2.003,32");
+  ui_set_language("en");
+  destroy_database(g_ledger->ib);
+  destroy_database(g_ledger->cfg);
+  g_ledger->cfg = cfg; g_ledger->ib = ib;
+  register_database("cfg", cfg);
+  register_database("ib", ib);
+  ASSERT(ok, "German books balance and speak German");
+  PASS();
+}
+
 int main(int argc, char **argv) {
   (void)argc; (void)argv;
   TEST_START("Ledger");
@@ -215,11 +309,15 @@ int main(int argc, char **argv) {
   test_joins_cross_databases();
   test_posting_rules();
   test_unpost_and_trial_balance();
+  test_period_reports();
+  test_manual_operation();
+  test_transient_tables();
   test_numbering_and_delete();
   test_save_and_reload();
   test_print_forms();
   test_generated_bindings();
   test_russian_catalogs();
+  test_german_configuration();
   destroy_database(g_ledger->ib);
   destroy_database(g_ledger->cfg);
   TEST_END();

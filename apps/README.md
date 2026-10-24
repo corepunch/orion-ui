@@ -111,7 +111,7 @@ Read [Architecture](../ARCHITECTURE.md) for the full boundary rules.
 |---|---|
 | Minimal lifecycle | `helloworld` |
 | Database-bound forms and tables | `socialfeed` |
-| Schema-driven databases, master–detail, swappable configuration | `ledger` |
+| Schema-driven databases, master–detail, swappable configuration, localization | `ledger` |
 | Multi-document editing and canvas tools | `imageeditor` |
 | Tabs, report views, staging, and diffs | `gitclient` |
 | Declarative authoring and component plugins | `formeditor` |

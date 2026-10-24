@@ -5,65 +5,66 @@
     <setting id="1" code="ru-2003" name="Бухгалтерский учет (Россия, 2003)" country="Российская Федерация" currency="руб." language="ru" tax_name="НДС" tax_id_name="ИНН" version="1.0.2003" basis="План счетов: приказ Минфина РФ от 31.10.2000 № 94н. НДС 20% (ст. 164 НК РФ, до 01.01.2004). Первичные документы: постановления Госкомстата № 132 и № 88, счет-фактура по постановлению Правительства РФ № 914." />
   </settings>
   <accounts>
-    <account id="1" code="01" name="Основные средства" kind="А" section="I. Внеоборотные активы" />
-    <account id="2" code="02" name="Амортизация основных средств" kind="П" section="I. Внеоборотные активы" />
-    <account id="3" code="04" name="Нематериальные активы" kind="А" section="I. Внеоборотные активы" />
-    <account id="4" code="05" name="Амортизация нематериальных активов" kind="П" section="I. Внеоборотные активы" />
-    <account id="5" code="07" name="Оборудование к установке" kind="А" section="I. Внеоборотные активы" />
-    <account id="6" code="08" name="Вложения во внеоборотные активы" kind="А" section="I. Внеоборотные активы" />
-    <account id="7" code="10" name="Материалы" kind="А" section="II. Производственные запасы" />
-    <account id="8" code="19" name="Налог на добавленную стоимость по приобретенным ценностям" kind="А" section="II. Производственные запасы" />
-    <account id="9" code="19.03" name="НДС по приобретенным материально-производственным запасам" kind="А" section="II. Производственные запасы" />
-    <account id="10" code="20" name="Основное производство" kind="А" section="III. Затраты на производство" />
-    <account id="11" code="25" name="Общепроизводственные расходы" kind="А" section="III. Затраты на производство" />
-    <account id="12" code="26" name="Общехозяйственные расходы" kind="А" section="III. Затраты на производство" />
-    <account id="13" code="41" name="Товары" kind="А" section="IV. Готовая продукция и товары" />
-    <account id="14" code="41.01" name="Товары на складах" kind="А" section="IV. Готовая продукция и товары" />
-    <account id="15" code="43" name="Готовая продукция" kind="А" section="IV. Готовая продукция и товары" />
-    <account id="16" code="44" name="Расходы на продажу" kind="А" section="IV. Готовая продукция и товары" />
-    <account id="17" code="50" name="Касса" kind="А" section="V. Денежные средства" />
-    <account id="18" code="50.01" name="Касса организации" kind="А" section="V. Денежные средства" />
-    <account id="19" code="51" name="Расчетные счета" kind="А" section="V. Денежные средства" />
-    <account id="20" code="52" name="Валютные счета" kind="А" section="V. Денежные средства" />
-    <account id="21" code="57" name="Переводы в пути" kind="А" section="V. Денежные средства" />
-    <account id="22" code="58" name="Финансовые вложения" kind="А" section="V. Денежные средства" />
-    <account id="23" code="60" name="Расчеты с поставщиками и подрядчиками" kind="АП" section="VI. Расчеты" />
-    <account id="24" code="60.01" name="Расчеты с поставщиками и подрядчиками" kind="АП" section="VI. Расчеты" />
-    <account id="25" code="60.02" name="Расчеты по авансам выданным" kind="А" section="VI. Расчеты" />
-    <account id="26" code="62" name="Расчеты с покупателями и заказчиками" kind="АП" section="VI. Расчеты" />
-    <account id="27" code="62.01" name="Расчеты с покупателями и заказчиками" kind="АП" section="VI. Расчеты" />
-    <account id="28" code="62.02" name="Расчеты по авансам полученным" kind="П" section="VI. Расчеты" />
-    <account id="29" code="66" name="Расчеты по краткосрочным кредитам и займам" kind="П" section="VI. Расчеты" />
-    <account id="30" code="67" name="Расчеты по долгосрочным кредитам и займам" kind="П" section="VI. Расчеты" />
-    <account id="31" code="68" name="Расчеты по налогам и сборам" kind="АП" section="VI. Расчеты" />
-    <account id="32" code="68.01" name="Налог на доходы физических лиц" kind="П" section="VI. Расчеты" />
-    <account id="33" code="68.02" name="Налог на добавленную стоимость" kind="АП" section="VI. Расчеты" />
-    <account id="34" code="68.04" name="Налог на прибыль" kind="АП" section="VI. Расчеты" />
-    <account id="35" code="69" name="Расчеты по социальному страхованию и обеспечению" kind="АП" section="VI. Расчеты" />
-    <account id="36" code="70" name="Расчеты с персоналом по оплате труда" kind="П" section="VI. Расчеты" />
-    <account id="37" code="71" name="Расчеты с подотчетными лицами" kind="АП" section="VI. Расчеты" />
-    <account id="38" code="75" name="Расчеты с учредителями" kind="АП" section="VI. Расчеты" />
-    <account id="39" code="76" name="Расчеты с разными дебиторами и кредиторами" kind="АП" section="VI. Расчеты" />
-    <account id="40" code="80" name="Уставный капитал" kind="П" section="VII. Капитал" />
-    <account id="41" code="82" name="Резервный капитал" kind="П" section="VII. Капитал" />
-    <account id="42" code="83" name="Добавочный капитал" kind="П" section="VII. Капитал" />
-    <account id="43" code="84" name="Нераспределенная прибыль (непокрытый убыток)" kind="АП" section="VII. Капитал" />
-    <account id="44" code="90" name="Продажи" kind="АП" section="VIII. Финансовые результаты" />
-    <account id="45" code="90.01" name="Выручка" kind="П" section="VIII. Финансовые результаты" />
-    <account id="46" code="90.02" name="Себестоимость продаж" kind="А" section="VIII. Финансовые результаты" />
-    <account id="47" code="90.03" name="Налог на добавленную стоимость" kind="А" section="VIII. Финансовые результаты" />
-    <account id="48" code="90.09" name="Прибыль / убыток от продаж" kind="АП" section="VIII. Финансовые результаты" />
-    <account id="49" code="91" name="Прочие доходы и расходы" kind="АП" section="VIII. Финансовые результаты" />
-    <account id="50" code="91.01" name="Прочие доходы" kind="П" section="VIII. Финансовые результаты" />
-    <account id="51" code="91.02" name="Прочие расходы" kind="А" section="VIII. Финансовые результаты" />
-    <account id="52" code="94" name="Недостачи и потери от порчи ценностей" kind="А" section="VIII. Финансовые результаты" />
-    <account id="53" code="96" name="Резервы предстоящих расходов" kind="П" section="VIII. Финансовые результаты" />
-    <account id="54" code="97" name="Расходы будущих периодов" kind="А" section="VIII. Финансовые результаты" />
-    <account id="55" code="98" name="Доходы будущих периодов" kind="П" section="VIII. Финансовые результаты" />
-    <account id="56" code="99" name="Прибыли и убытки" kind="АП" section="VIII. Финансовые результаты" />
-    <account id="57" code="001" name="Арендованные основные средства" kind="А" section="Забалансовые счета" />
-    <account id="58" code="002" name="Товарно-материальные ценности, принятые на ответственное хранение" kind="А" section="Забалансовые счета" />
-    <account id="59" code="006" name="Бланки строгой отчетности" kind="А" section="Забалансовые счета" />
+    <account id="60" code="000" name="Вспомогательный счет" kind="АП" section="Вспомогательные счета" subconto="" />
+    <account id="1" code="01" name="Основные средства" kind="А" section="I. Внеоборотные активы" subconto="" />
+    <account id="2" code="02" name="Амортизация основных средств" kind="П" section="I. Внеоборотные активы" subconto="" />
+    <account id="3" code="04" name="Нематериальные активы" kind="А" section="I. Внеоборотные активы" subconto="" />
+    <account id="4" code="05" name="Амортизация нематериальных активов" kind="П" section="I. Внеоборотные активы" subconto="" />
+    <account id="5" code="07" name="Оборудование к установке" kind="А" section="I. Внеоборотные активы" subconto="" />
+    <account id="6" code="08" name="Вложения во внеоборотные активы" kind="А" section="I. Внеоборотные активы" subconto="" />
+    <account id="7" code="10" name="Материалы" kind="А" section="II. Производственные запасы" subconto="item" />
+    <account id="8" code="19" name="Налог на добавленную стоимость по приобретенным ценностям" kind="А" section="II. Производственные запасы" subconto="" />
+    <account id="9" code="19.03" name="НДС по приобретенным материально-производственным запасам" kind="А" section="II. Производственные запасы" subconto="" />
+    <account id="10" code="20" name="Основное производство" kind="А" section="III. Затраты на производство" subconto="" />
+    <account id="11" code="25" name="Общепроизводственные расходы" kind="А" section="III. Затраты на производство" subconto="" />
+    <account id="12" code="26" name="Общехозяйственные расходы" kind="А" section="III. Затраты на производство" subconto="" />
+    <account id="13" code="41" name="Товары" kind="А" section="IV. Готовая продукция и товары" subconto="item" />
+    <account id="14" code="41.01" name="Товары на складах" kind="А" section="IV. Готовая продукция и товары" subconto="item" />
+    <account id="15" code="43" name="Готовая продукция" kind="А" section="IV. Готовая продукция и товары" subconto="item" />
+    <account id="16" code="44" name="Расходы на продажу" kind="А" section="IV. Готовая продукция и товары" subconto="" />
+    <account id="17" code="50" name="Касса" kind="А" section="V. Денежные средства" subconto="" />
+    <account id="18" code="50.01" name="Касса организации" kind="А" section="V. Денежные средства" subconto="" />
+    <account id="19" code="51" name="Расчетные счета" kind="А" section="V. Денежные средства" subconto="" />
+    <account id="20" code="52" name="Валютные счета" kind="А" section="V. Денежные средства" subconto="" />
+    <account id="21" code="57" name="Переводы в пути" kind="А" section="V. Денежные средства" subconto="" />
+    <account id="22" code="58" name="Финансовые вложения" kind="А" section="V. Денежные средства" subconto="" />
+    <account id="23" code="60" name="Расчеты с поставщиками и подрядчиками" kind="АП" section="VI. Расчеты" subconto="counterparty" />
+    <account id="24" code="60.01" name="Расчеты с поставщиками и подрядчиками" kind="АП" section="VI. Расчеты" subconto="counterparty" />
+    <account id="25" code="60.02" name="Расчеты по авансам выданным" kind="А" section="VI. Расчеты" subconto="counterparty" />
+    <account id="26" code="62" name="Расчеты с покупателями и заказчиками" kind="АП" section="VI. Расчеты" subconto="counterparty" />
+    <account id="27" code="62.01" name="Расчеты с покупателями и заказчиками" kind="АП" section="VI. Расчеты" subconto="counterparty" />
+    <account id="28" code="62.02" name="Расчеты по авансам полученным" kind="П" section="VI. Расчеты" subconto="counterparty" />
+    <account id="29" code="66" name="Расчеты по краткосрочным кредитам и займам" kind="П" section="VI. Расчеты" subconto="" />
+    <account id="30" code="67" name="Расчеты по долгосрочным кредитам и займам" kind="П" section="VI. Расчеты" subconto="" />
+    <account id="31" code="68" name="Расчеты по налогам и сборам" kind="АП" section="VI. Расчеты" subconto="" />
+    <account id="32" code="68.01" name="Налог на доходы физических лиц" kind="П" section="VI. Расчеты" subconto="" />
+    <account id="33" code="68.02" name="Налог на добавленную стоимость" kind="АП" section="VI. Расчеты" subconto="" />
+    <account id="34" code="68.04" name="Налог на прибыль" kind="АП" section="VI. Расчеты" subconto="" />
+    <account id="35" code="69" name="Расчеты по социальному страхованию и обеспечению" kind="АП" section="VI. Расчеты" subconto="" />
+    <account id="36" code="70" name="Расчеты с персоналом по оплате труда" kind="П" section="VI. Расчеты" subconto="" />
+    <account id="37" code="71" name="Расчеты с подотчетными лицами" kind="АП" section="VI. Расчеты" subconto="" />
+    <account id="38" code="75" name="Расчеты с учредителями" kind="АП" section="VI. Расчеты" subconto="" />
+    <account id="39" code="76" name="Расчеты с разными дебиторами и кредиторами" kind="АП" section="VI. Расчеты" subconto="counterparty" />
+    <account id="40" code="80" name="Уставный капитал" kind="П" section="VII. Капитал" subconto="" />
+    <account id="41" code="82" name="Резервный капитал" kind="П" section="VII. Капитал" subconto="" />
+    <account id="42" code="83" name="Добавочный капитал" kind="П" section="VII. Капитал" subconto="" />
+    <account id="43" code="84" name="Нераспределенная прибыль (непокрытый убыток)" kind="АП" section="VII. Капитал" subconto="" />
+    <account id="44" code="90" name="Продажи" kind="АП" section="VIII. Финансовые результаты" subconto="" />
+    <account id="45" code="90.01" name="Выручка" kind="П" section="VIII. Финансовые результаты" subconto="" />
+    <account id="46" code="90.02" name="Себестоимость продаж" kind="А" section="VIII. Финансовые результаты" subconto="" />
+    <account id="47" code="90.03" name="Налог на добавленную стоимость" kind="А" section="VIII. Финансовые результаты" subconto="" />
+    <account id="48" code="90.09" name="Прибыль / убыток от продаж" kind="АП" section="VIII. Финансовые результаты" subconto="" />
+    <account id="49" code="91" name="Прочие доходы и расходы" kind="АП" section="VIII. Финансовые результаты" subconto="" />
+    <account id="50" code="91.01" name="Прочие доходы" kind="П" section="VIII. Финансовые результаты" subconto="" />
+    <account id="51" code="91.02" name="Прочие расходы" kind="А" section="VIII. Финансовые результаты" subconto="" />
+    <account id="52" code="94" name="Недостачи и потери от порчи ценностей" kind="А" section="VIII. Финансовые результаты" subconto="" />
+    <account id="53" code="96" name="Резервы предстоящих расходов" kind="П" section="VIII. Финансовые результаты" subconto="" />
+    <account id="54" code="97" name="Расходы будущих периодов" kind="А" section="VIII. Финансовые результаты" subconto="" />
+    <account id="55" code="98" name="Доходы будущих периодов" kind="П" section="VIII. Финансовые результаты" subconto="" />
+    <account id="56" code="99" name="Прибыли и убытки" kind="АП" section="VIII. Финансовые результаты" subconto="" />
+    <account id="57" code="001" name="Арендованные основные средства" kind="А" section="Забалансовые счета" subconto="" />
+    <account id="58" code="002" name="Товарно-материальные ценности, принятые на ответственное хранение" kind="А" section="Забалансовые счета" subconto="" />
+    <account id="59" code="006" name="Бланки строгой отчетности" kind="А" section="Забалансовые счета" subconto="" />
   </accounts>
   <units>
     <unit id="1" code="796" name="шт" />
@@ -80,13 +81,15 @@
     <vat_rate id="4" name="Без НДС" rate="0" />
   </vat_rates>
   <doc_types>
-    <doc_type id="1" code="receipt" name="Поступление товаров" prefix="ПТ-" base="net" lines="1" debit_id="14" credit_id="24" vat_debit_id="9" vat_credit_id="24" description="Товары от поставщика по накладной ТОРГ-12 и счету-фактуре: Дт 41.01 Кт 60.01 на стоимость без НДС, Дт 19.03 Кт 60.01 на НДС." />
-    <doc_type id="2" code="sale" name="Реализация товаров" prefix="РТ-" base="total" lines="1" debit_id="27" credit_id="45" vat_debit_id="47" vat_credit_id="33" description="Отгрузка покупателю: выручка Дт 62.01 Кт 90.01 с НДС, начисление НДС Дт 90.03 Кт 68.02." />
-    <doc_type id="3" code="cash_in" name="Приходный кассовый ордер" prefix="ПКО-" base="total" lines="0" debit_id="18" credit_id="27" vat_debit_id="0" vat_credit_id="0" description="Оплата от покупателя наличными в кассу (форма КО-1): Дт 50.01 Кт 62.01." />
-    <doc_type id="4" code="cash_out" name="Расходный кассовый ордер" prefix="РКО-" base="total" lines="0" debit_id="24" credit_id="18" vat_debit_id="0" vat_credit_id="0" description="Оплата поставщику наличными из кассы (форма КО-2): Дт 60.01 Кт 50.01." />
-    <doc_type id="5" code="bank_out" name="Платежное поручение исходящее" prefix="ПП-" base="total" lines="0" debit_id="24" credit_id="19" vat_debit_id="0" vat_credit_id="0" description="Оплата поставщику с расчетного счета (форма 0401060): Дт 60.01 Кт 51." />
-    <doc_type id="6" code="bank_in" name="Поступление на расчетный счет" prefix="ПВ-" base="total" lines="0" debit_id="19" credit_id="27" vat_debit_id="0" vat_credit_id="0" description="Оплата от покупателя по выписке банка: Дт 51 Кт 62.01." />
-    <doc_type id="7" code="vat_deduction" name="Вычет НДС (книга покупок)" prefix="ВН-" base="total" lines="0" debit_id="33" credit_id="9" vat_debit_id="0" vat_credit_id="0" description="Принятие к вычету НДС по оплаченным и оприходованным ценностям (ст. 171, 172 НК РФ): Дт 68.02 Кт 19.03." />
+    <doc_type id="1" code="receipt" name="Поступление товаров" prefix="ПТ-" base="net" lines="1" debit_id="14" credit_id="24" vat_debit_id="9" vat_credit_id="24" manual="0" vat_book="2" description="Товары от поставщика по накладной ТОРГ-12 и счету-фактуре: Дт 41.01 Кт 60.01 на стоимость без НДС, Дт 19.03 Кт 60.01 на НДС." />
+    <doc_type id="2" code="sale" name="Реализация товаров" prefix="РТ-" base="total" lines="1" debit_id="27" credit_id="45" vat_debit_id="47" vat_credit_id="33" manual="0" vat_book="1" description="Отгрузка покупателю: выручка Дт 62.01 Кт 90.01 с НДС, начисление НДС Дт 90.03 Кт 68.02." />
+    <doc_type id="3" code="cash_in" name="Приходный кассовый ордер" prefix="ПКО-" base="total" lines="0" debit_id="18" credit_id="27" vat_debit_id="0" vat_credit_id="0" manual="0" vat_book="0" description="Оплата от покупателя наличными в кассу (форма КО-1): Дт 50.01 Кт 62.01." />
+    <doc_type id="4" code="cash_out" name="Расходный кассовый ордер" prefix="РКО-" base="total" lines="0" debit_id="24" credit_id="18" vat_debit_id="0" vat_credit_id="0" manual="0" vat_book="0" description="Оплата поставщику наличными из кассы (форма КО-2): Дт 60.01 Кт 50.01." />
+    <doc_type id="5" code="bank_out" name="Платежное поручение исходящее" prefix="ПП-" base="total" lines="0" debit_id="24" credit_id="19" vat_debit_id="0" vat_credit_id="0" manual="0" vat_book="0" description="Оплата поставщику с расчетного счета (форма 0401060): Дт 60.01 Кт 51." />
+    <doc_type id="6" code="bank_in" name="Поступление на расчетный счет" prefix="ПВ-" base="total" lines="0" debit_id="19" credit_id="27" vat_debit_id="0" vat_credit_id="0" manual="0" vat_book="0" description="Оплата от покупателя по выписке банка: Дт 51 Кт 62.01." />
+    <doc_type id="7" code="vat_deduction" name="Вычет НДС (книга покупок)" prefix="ВН-" base="total" lines="0" debit_id="33" credit_id="9" vat_debit_id="0" vat_credit_id="0" manual="0" vat_book="0" description="Принятие к вычету НДС по оплаченным и оприходованным ценностям (ст. 171, 172 НК РФ): Дт 68.02 Кт 19.03." />
+    <doc_type id="8" code="operation" name="Операция (бухгалтерская справка)" prefix="ОП-" base="total" lines="0" debit_id="0" credit_id="0" vat_debit_id="0" vat_credit_id="0" manual="1" vat_book="0" description="Проводки вводятся бухгалтером вручную, с указанием субконто." />
+    <doc_type id="9" code="opening" name="Ввод начальных остатков" prefix="ВО-" base="total" lines="0" debit_id="0" credit_id="0" vat_debit_id="0" vat_credit_id="0" manual="1" vat_book="0" description="Остатки на начало учета в корреспонденции со вспомогательным счетом 000." />
   </doc_types>
   <print_forms>
     <print_form id="1" doc_type_id="2" name="Товарная накладная ТОРГ-12" template="torg12.html" basis="Постановление Госкомстата России от 25.12.1998 № 132" />

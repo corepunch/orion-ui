@@ -35,8 +35,13 @@ void ledger_update_status(void) {
   if (o) snprintf(org, sizeof(org), "%s", (*(db_organization_t **)o->data)->name);
   if (s) snprintf(cfg, sizeof(cfg), "%s", (*(db_setting_t **)s->data)->name);
   free_result_list(o); free_result_list(s);
+  char from[16] = "", to[16] = "", period[128];
+  const db_report_setting_t *rs = ledger_report_settings(g_ledger->ib, g_ledger->cfg);
+  ui_format_date(rs ? rs->date_from : "", from, sizeof(from));
+  ui_format_date(rs ? rs->date_to : "", to, sizeof(to));
+  snprintf(period, sizeof(period), ui_tr("Report period: %s – %s"), from[0] ? from : "…", to[0] ? to : "…");
   bool dirty = send_db_message(g_ledger->ib, dbGetDirty, 0, NULL);
-  snprintf(text, sizeof(text), "%s   |   %s%s%s", org, cfg, dirty ? "   |   " : "", dirty ? ui_tr("modified") : "");
+  snprintf(text, sizeof(text), "%s   |   %s   |   %s%s%s", org, cfg, period, dirty ? "   |   " : "", dirty ? ui_tr("modified") : "");
   send_message(g_ledger->main_win, evStatusBar, 0, text);
 }
 
@@ -48,19 +53,32 @@ static void after_change(int doc_id, bool post) {
       MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)doc_id);
     if (doc && (post || doc->posted)) ledger_post(g_ledger->ib, g_ledger->cfg, doc_id);
   }
-  ledger_recalc_balances(g_ledger->ib, g_ledger->cfg);
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   ledger_refresh_views();
 }
 
 // ── Document dialog: header via bindings, lines managed here ───────────────
 
+static db_document_t *find_document(int doc_id) {
+  return (db_document_t *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)doc_id);
+}
+
+static db_doc_type_t *document_type(const db_document_t *doc) {
+  return doc ? (db_doc_type_t *)send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_DOC_TYPES, 0),
+                                               (void *)(intptr_t)doc->doc_type_id) : NULL;
+}
+
+static void show_amount(window_t *dlg, uint32_t id, double value) {
+  char text[64];
+  set_window_item_text(dlg, id, "%s", ui_format_number(value, 2, text, sizeof(text)));
+}
+
 static void show_document_totals(window_t *dlg, int doc_id) {
-  db_document_t *doc = (db_document_t *)send_db_message(g_ledger->ib, dbFind,
-    MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)doc_id);
+  db_document_t *doc = find_document(doc_id);
   if (!doc) return;
-  set_window_item_text(dlg, ID_DOCUMENT_AMOUNT, "%.2f", doc->amount);
-  set_window_item_text(dlg, ID_DOCUMENT_VAT, "%.2f", doc->vat);
-  set_window_item_text(dlg, ID_DOCUMENT_TOTAL, "%.2f", doc->total);
+  show_amount(dlg, ID_DOCUMENT_AMOUNT, doc->amount);
+  show_amount(dlg, ID_DOCUMENT_VAT, doc->vat);
+  show_amount(dlg, ID_DOCUMENT_TOTAL, doc->total);
 }
 
 static result_t document_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -96,14 +114,45 @@ static result_t document_hook(window_t *win, uint32_t msg, uint32_t wparam, void
   return true;
 }
 
+// ── Manual operation dialog: the accountant's entries ──────────────────────
+
+static result_t operation_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  int doc_id = db_dialog_record_id(win);
+  window_t *entries = get_window_item(win, ID_OPERATION_ENTRIES);
+  if (msg == evCreate) {
+    send_message(entries, tvSetFilter, (uint32_t)ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id"), (void *)(intptr_t)doc_id);
+    return true;
+  }
+  if (msg != evCommand) return false;
+  uint16_t code = HIWORD(wparam);
+  if (code == edUpdate) return true;
+  db_entry_t *entry = (db_entry_t *)send_message(entries, tvGetSelectedRecord, 0, NULL);
+  uint32_t id = code == RVN_DBLCLK ? ID_OPERATION_EDIT_ENTRY : (code == btnClicked && lparam ? ((window_t *)lparam)->id : 0);
+  switch (id) {
+    case ID_OPERATION_ADD_ENTRY:    show_db_dialog_ex(&ledger_entry_form, "Add Entry", win, 0, "document_id", doc_id); break;
+    case ID_OPERATION_EDIT_ENTRY:   if (entry) show_db_dialog(&ledger_entry_form, "Entry", win, entry->id);           break;
+    case ID_OPERATION_DELETE_ENTRY: if (entry) send_db_message(g_ledger->ib, dbDelete, TABLE_ENTRIES, (void *)(intptr_t)entry->id); break;
+    default: return false;
+  }
+  ledger_recalc_document(g_ledger->ib, g_ledger->cfg, doc_id);
+  send_message(entries, tvRefresh, 0, NULL);
+  db_document_t *doc = find_document(doc_id);
+  if (doc) show_amount(win, ID_OPERATION_TOTAL, doc->total);
+  return true;
+}
+
 static void today(char *out, size_t sz) {
   time_t now = time(NULL);
   strftime(out, sz, "%Y-%m-%d", localtime(&now));
 }
 
 static void edit_document(int doc_id, bool is_new) {
-  uint32_t ok = show_db_dialog_hook(&ledger_document_form, is_new ? "New Document" : "Document",
-                                    g_ledger->main_win, doc_id, document_hook);
+  db_doc_type_t *type = document_type(find_document(doc_id));
+  uint32_t ok = type && type->manual
+    ? show_db_dialog_hook(&ledger_operation_form, is_new ? "New Manual Operation" : "Manual Operation",
+                          g_ledger->main_win, doc_id, operation_hook)
+    : show_db_dialog_hook(&ledger_document_form, is_new ? "New Document" : "Document",
+                          g_ledger->main_win, doc_id, document_hook);
   if (!ok && is_new) {
     ledger_delete_document(g_ledger->ib, doc_id);
     ledger_refresh_views();
@@ -112,9 +161,23 @@ static void edit_document(int doc_id, bool is_new) {
   after_change(doc_id, ok != 0);
 }
 
-static void new_document(void) {
+// New documents start as the selected document's type, or the first type of
+// the wanted kind in the configuration.
+static int first_doc_type(bool manual) {
+  int id = 0;
+  result_node_t *types = (result_node_t *)send_db_message(g_ledger->cfg, dbFetch, MAKEDWORD(TABLE_DOC_TYPES, 0), NULL);
+  for (result_node_t *n = types; n && !id; n = n->next) {
+    db_doc_type_t *t = *(db_doc_type_t **)n->data;
+    if (t->manual == manual) id = t->id;
+  }
+  free_result_list(types);
+  return id;
+}
+
+static void new_document(bool manual) {
   db_document_t *last = selected(ID_JOURNAL_PAGE_DOCUMENTS);
-  db_document_t blank = { .doc_type_id = last ? last->doc_type_id : 1 };
+  db_doc_type_t *last_type = document_type(last);
+  db_document_t blank = { .doc_type_id = last_type && last_type->manual == manual ? last->doc_type_id : first_doc_type(manual) };
   today(blank.date, sizeof(blank.date));
   db_document_t *doc = (db_document_t *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &blank);
   if (doc) edit_document(doc->id, true);
@@ -193,13 +256,14 @@ void ledger_command(uint16_t id) {
     case ID_FILE_LANGUAGE:      select_language();      break;
     case ID_FILE_QUIT:          ui_request_quit();      break;
 
-    case ID_DOC_NEW:  new_document(); break;
+    case ID_DOC_NEW:           new_document(false); break;
+    case ID_DOC_NEW_OPERATION: new_document(true);  break;
     case ID_DOC_OPEN: if (doc) edit_document(doc->id, false); break;
     case ID_DOC_POST:
       if (doc && ledger_post(g_ledger->ib, g_ledger->cfg, doc->id)) after_change(0, false);
       break;
     case ID_DOC_UNPOST:
-      if (doc) { ledger_unpost(g_ledger->ib, doc->id); after_change(0, false); }
+      if (doc) { ledger_unpost(g_ledger->ib, g_ledger->cfg, doc->id); after_change(0, false); }
       break;
     case ID_DOC_PRINT:
       if (!doc) break;
@@ -240,10 +304,13 @@ void ledger_command(uint16_t id) {
       break;
 
     case ID_VIEW_JOURNAL: case ID_VIEW_COUNTERPARTIES: case ID_VIEW_ITEMS: case ID_VIEW_ACCOUNTS:
-    case ID_VIEW_ENTRIES: case ID_VIEW_BALANCE: case ID_VIEW_CONFIG:
+    case ID_VIEW_ENTRIES: case ID_VIEW_REPORTS: case ID_VIEW_CONFIG:
       page_host_select(parent, id);
       break;
 
+    case ID_REPORT_SETTINGS:
+      if (show_db_dialog(&ledger_report_settings_form, NULL, parent, 1)) after_change(0, false);
+      break;
     case ID_REPORT_RECALC:
       ledger_repost_all(g_ledger->ib, g_ledger->cfg);
       ledger_refresh_views();
@@ -277,7 +344,7 @@ result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
       // The posted checkbox in the journal posts or cancels posting.
       if (code == RVN_ITEMCHECK && src && src->id == ID_JOURNAL_PAGE_DOCUMENTS) {
         db_document_t *doc = (db_document_t *)send_message(src, tvGetRecord, LOWORD(wparam), NULL);
-        if (doc && doc->posted) ledger_unpost(g_ledger->ib, doc->id);
+        if (doc && doc->posted) ledger_unpost(g_ledger->ib, g_ledger->cfg, doc->id);
         else if (doc) ledger_post(g_ledger->ib, g_ledger->cfg, doc->id);
         after_change(0, false);
         return true;

@@ -3,14 +3,31 @@
 ![Ledger document journal](../../docs/screenshots/ledger_journal.jpg)
 
 Double-entry bookkeeping in the spirit of the early-2000s desktop accounting
-suites: a document journal with posting, catalogs of counterparties and goods,
-a chart of accounts, an entry journal, a trial balance and printed legal forms.
+suites (1C:Accounting 7.7, its German contemporaries). Two country
+configurations ship: Russia 2003 and Germany 2003 (SKR 03), each usable in
+Russian, German and English.
 
 ```bash
 make build/bin/ledger share
 build/bin/ledger                       # last selected configuration (ru-2003)
-build/bin/ledger --config ru-2003 --data /tmp/books
+build/bin/ledger --config de-2003 --lang de --data /tmp/books
 ```
+
+## Features
+
+| Area | What Ledger does |
+|---|---|
+| Documents | Journal of typed documents with numbering by prefix, lines, totals with VAT, post / unpost / delete; posting rules come from the configuration |
+| Manual operations | `Documents > New Operation` (Ctrl+M): entries typed by the accountant; opening balances are an operation of that kind |
+| Entries | Entry journal with debit, credit, analytic object (counterparty or item), quantity and amount |
+| Catalogs | Counterparties, items, organization details; chart of accounts, units, VAT rates and document types from the configuration |
+| Analytics | Accounts carry a subconto kind: payables and receivables by counterparty, goods by item |
+| Reports | Trial balance for a period (opening balance, turnovers, closing balance, with roll-up to parent accounts), account card with running balance, analysis by counterparty, sales and purchase VAT books |
+| Print forms | HTML templates per document type: TORG-12, VAT invoice, invoice for payment, KO-1/KO-2, payment order (ru-2003); Rechnung, Quittung (de-2003) |
+| Storage | One XML infobase per configuration, saved on `File > Save` or on exit |
+
+The report period and the account for the card are set in
+`Reports > Settings...` (Ctrl+R); `Reports > Recalculate` (F5) rebuilds them.
 
 ## Platform and configuration
 
@@ -45,7 +62,7 @@ The interface is written in English and translated by string catalogs
 
 The language is the one chosen in `File > Language...`, otherwise the
 configuration's (`ru` for `ru-2003`), otherwise the system's (`LANG`).
-`--lang ru|en|qps-ploc` overrides it for one run; `qps-ploc` is the
+`--lang ru|de|en|qps-ploc` overrides it for one run; `qps-ploc` is the
 pseudo-locale for checking layouts. Numbers and dates follow the catalog:
 `16 656,00` and `10.03.2003` in Russian.
 
@@ -93,12 +110,17 @@ Almost everything is declared in `ledger.orion`:
   databases (`relation="cfg.accounts.id"`).
 - A page host with seven pages; master–detail tables (documents → lines and
   entries) are linked by `relation=` alone.
-- Database dialogs for documents, lines, counterparties, items and the
-  organization. Numeric fields bind through typed DDX; ComboBoxes bind by id.
+- Database dialogs for documents, lines, operations, entries, counterparties,
+  items, the organization and report settings. Numeric and date fields bind
+  through typed DDX; ComboBoxes bind by id, and a ComboBox may filter its
+  source (`filter-field="manual" filter-value="0"`).
+- Reports are `transient` tables: the posting engine fills them, the
+  `.orion` declares their columns, they are never saved. The two VAT books are
+  one table shown by two TableViews with different static filters.
 
-The C code holds what declarations cannot express: posting rules
-(`posting.c`), the print engine (`print.c`), and command routing plus the
-document's line buttons (`controller.c`).
+The C code holds what declarations cannot express: posting rules and report
+building (`posting.c`), the print engine (`print.c`), and command routing plus
+the line and entry buttons of the document dialogs (`controller.c`).
 
 ## First configuration: Russia, 2003
 
@@ -117,4 +139,30 @@ document's line buttons (`controller.c`).
 
 Simplifications: no cost-of-sales write-off (90.02) on sales, advances
 received are kept on 62.01 rather than 62.02, and amounts in words are left
-for the signer to write in, as on hand-filled forms.
+for the signer to write in, as on hand-filled forms. Opening balances are
+entered against the auxiliary account 000, as typical configurations did.
+
+## Second configuration: Germany, 2003
+
+`de-2003` shows that the platform carries no Russian assumptions:
+
+- A subset of DATEV's SKR 03 chart of accounts (1000 Kasse, 1200 Bank, 1400
+  receivables, 1600 payables, 1575/1775 input and output tax, 3400 purchases,
+  8400 revenue, 9000 opening balances).
+- Umsatzsteuer 16 % and 7 % (§ 12 UStG as of 2003; 19 % from 01.01.2007).
+- Document types Eingangsrechnung, Ausgangsrechnung, Kasseneinnahme /
+  -ausgabe, Überweisung, Zahlungseingang and the manual Umbuchung and
+  Eröffnungsbuchungen.
+- Print forms Rechnung with the invoice details required by § 14 UStG, and
+  Quittung.
+- Its catalogs rename the platform's terms: "Tax ID" becomes "Steuernummer",
+  the KPP field becomes "USt-IdNr." and BIK becomes "BLZ".
+
+Simplifications: one revenue account per document type (8400), so 7 % sales
+are posted with the 16 % revenue account but the correct tax amount.
+
+## Not covered
+
+Payroll, fixed assets and depreciation, the cash book, month-end closing,
+multiple currencies, separate analytics for the debit and credit side of an
+entry, and amounts in words.

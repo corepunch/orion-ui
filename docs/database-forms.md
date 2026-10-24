@@ -980,6 +980,10 @@ register_database("ib", ib);
   nested paths such as `item.unit.name`. A relation may name another
   registered database: `relation="cfg.accounts.id"`.
 
+A `<table transient="true">` holds derived rows (report results, computed
+balances): it is never saved and changing it does not mark the database
+modified. The app fills it from C and the forms show it like any other table.
+
 TableView and ComboBox format cells through `db_get_field_text()`, which uses
 `dbGetFieldText` when the database implements it and falls back to object
 procs and field bindings otherwise.

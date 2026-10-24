@@ -17,6 +17,8 @@ GitClient). Upstream paths: `assets/regular/<name>.svg` and
 | ledger-nav-balance(-fill).svg | scales |
 | ledger-nav-config(-fill).svg | gear-six |
 | ledger-new.svg | plus |
+| ledger-operation.svg | note-pencil |
+| ledger-settings.svg | sliders-horizontal |
 | ledger-edit.svg | pencil-simple |
 | ledger-post.svg | check-circle |
 | ledger-unpost.svg | x-circle |

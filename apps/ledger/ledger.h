@@ -40,11 +40,13 @@ extern ledger_t *g_ledger;
 int  ledger_field(database_t *db, int table_id, const char *field);
 void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id);
 bool ledger_post(database_t *ib, database_t *cfg, int doc_id);
-void ledger_unpost(database_t *ib, int doc_id);
+void ledger_unpost(database_t *ib, database_t *cfg, int doc_id);
 void ledger_delete_document(database_t *ib, int doc_id);
 void ledger_number_document(database_t *ib, database_t *cfg, int doc_id);
 void ledger_repost_all(database_t *ib, database_t *cfg);
-void ledger_recalc_balances(database_t *ib, database_t *cfg);
+// Rebuilds the transient report tables for the period in report settings.
+void ledger_build_reports(database_t *ib, database_t *cfg);
+db_report_setting_t *ledger_report_settings(database_t *ib, database_t *cfg);
 int  ledger_count_references(database_t *ib, int table_id, const char *field, int id);
 
 // print.c — fills the configuration's HTML print-form templates.

@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="de" decimal="," group="." date="dd.MM.yyyy">
+  <string source="File" where="menu">Datei</string>
+  <string source="Save Infobase" where="menu">Mandant speichern</string>
+  <string source="Organization Details..." where="menu">Firmendaten...</string>
+  <string source="Select Configuration..." where="menu">Konfiguration wählen...</string>
+  <string source="Language..." where="menu">Sprache...</string>
+  <string source="Exit" where="menu">Beenden</string>
+  <string source="Documents" where="menu">Belege</string>
+  <string source="New Document..." where="menu">Neuer Beleg...</string>
+  <string source="New Manual Operation..." where="menu">Neue Umbuchung...</string>
+  <string source="Open Document..." where="menu">Beleg öffnen...</string>
+  <string source="Post" where="menu,journal_page">Buchen</string>
+  <string source="Cancel Posting" where="menu">Buchung stornieren</string>
+  <string source="Print Forms" where="menu,config_page">Druckformulare</string>
+  <string source="Delete Document..." where="menu">Beleg löschen...</string>
+  <string source="Catalogs" where="menu">Stammdaten</string>
+  <string source="New Counterparty..." where="menu">Neuer Geschäftspartner...</string>
+  <string source="Edit Counterparty..." where="menu">Geschäftspartner bearbeiten...</string>
+  <string source="Delete Counterparty..." where="menu">Geschäftspartner löschen...</string>
+  <string source="New Item..." where="menu">Neuer Artikel...</string>
+  <string source="Edit Item..." where="menu">Artikel bearbeiten...</string>
+  <string source="Delete Item..." where="menu">Artikel löschen...</string>
+  <string source="View" where="menu">Ansicht</string>
+  <string source="Document Journal" where="menu,journal_page">Belegjournal</string>
+  <string source="Counterparties" where="menu,counterparties_page">Geschäftspartner</string>
+  <string source="Items" where="menu,items_page">Artikel</string>
+  <string source="Chart of Accounts" where="menu,accounts_page">Kontenplan</string>
+  <string source="Entry Journal" where="menu,entries_page">Buchungsjournal</string>
+  <string source="Reports" where="menu,reports_page">Auswertungen</string>
+  <string source="Configuration" where="menu,config_page">Konfiguration</string>
+  <string source="Report Settings..." where="menu">Auswertungszeitraum...</string>
+  <string source="Recalculate Totals" where="menu">Summen neu berechnen</string>
+  <string source="Help" where="menu">Hilfe</string>
+  <string source="About Ledger" where="menu">Über Ledger</string>
+  <string source="Ledger" where="main_window">Buchhaltung</string>
+  <string source="Document journal (Ctrl+1)" where="journal_page">Belegjournal (Strg+1)</string>
+  <string source="New" where="journal_page,counterparties_page,items_page">Neu</string>
+  <string source="New document (Ctrl+N)" where="journal_page">Neuer Beleg (Strg+N)</string>
+  <string source="Operation" where="journal_page">Umbuchung</string>
+  <string source="New manual operation (Ctrl+M)" where="journal_page">Neue Umbuchung, Buchungen manuell (Strg+M)</string>
+  <string source="Open" where="journal_page">Öffnen</string>
+  <string source="Open document (Ctrl+O)" where="journal_page">Beleg öffnen (Strg+O)</string>
+  <string source="Post: write accounting entries (F9)" where="journal_page">Buchen: Buchungssätze erzeugen (F9)</string>
+  <string source="Unpost" where="journal_page">Stornieren</string>
+  <string source="Cancel posting" where="journal_page">Buchung stornieren</string>
+  <string source="Print" where="journal_page">Drucken</string>
+  <string source="Print forms (Ctrl+P)" where="journal_page">Druckformulare (Strg+P)</string>
+  <string source="Delete" where="journal_page,counterparties_page,items_page">Löschen</string>
+  <string source="Delete document" where="journal_page">Beleg löschen</string>
+  <string source="Date" where="journal_page,entries_page,reports_page">Datum</string>
+  <string source="Number" where="journal_page">Nummer</string>
+  <string source="Document" where="journal_page,entries_page,reports_page,config_page,document">Beleg</string>
+  <string source="Counterparty" where="journal_page,entries_page,reports_page,counterparty,operation">Geschäftspartner</string>
+  <string source="Amount" where="journal_page,entries_page,document,operation">Betrag</string>
+  <string source="Comment" where="journal_page">Bemerkung</string>
+  <string source="Lines" where="journal_page">Positionen</string>
+  <string source="Item" where="journal_page,entries_page,document,item,operation">Artikel</string>
+  <string source="Unit" where="journal_page,items_page,config_page,document">Einheit</string>
+  <string source="Qty" where="journal_page,entries_page,document,operation">Menge</string>
+  <string source="Price" where="journal_page,items_page,document">Preis</string>
+  <string source="Tax" where="journal_page,items_page,reports_page,document">Steuer</string>
+  <string source="Tax Amount" where="journal_page,document">Steuerbetrag</string>
+  <string source="Total" where="journal_page,reports_page,document">Gesamt</string>
+  <string source="Entries" where="journal_page">Buchungen</string>
+  <string source="Dr" where="journal_page,entries_page,config_page,operation">Soll</string>
+  <string source="Cr" where="journal_page,entries_page,config_page,operation">Haben</string>
+  <string source="Content" where="journal_page,entries_page,reports_page,operation">Buchungstext</string>
+  <string source="Counterparties (Ctrl+2)" where="counterparties_page">Geschäftspartner (Strg+2)</string>
+  <string source="New counterparty" where="counterparties_page">Neuer Geschäftspartner</string>
+  <string source="Edit" where="counterparties_page,items_page">Bearbeiten</string>
+  <string source="Edit counterparty" where="counterparties_page">Geschäftspartner bearbeiten</string>
+  <string source="Delete counterparty" where="counterparties_page">Geschäftspartner löschen</string>
+  <string source="Name" where="counterparties_page,items_page,reports_page">Name</string>
+  <string source="Tax ID" where="counterparties_page,reports_page">Steuernummer</string>
+  <string source="KPP" where="counterparties_page">Steuer-Zusatznummer</string>
+  <string source="Phone" where="counterparties_page">Telefon</string>
+  <string source="Address" where="counterparties_page">Anschrift</string>
+  <string source="Goods and services (Ctrl+3)" where="items_page">Waren und Leistungen (Strg+3)</string>
+  <string source="New item" where="items_page">Neuer Artikel</string>
+  <string source="Edit item" where="items_page">Artikel bearbeiten</string>
+  <string source="Delete item" where="items_page">Artikel löschen</string>
+  <string source="Code" where="items_page,accounts_page,config_page">Nummer</string>
+  <string source="Chart of accounts (Ctrl+4)" where="accounts_page">Kontenplan (Strg+4)</string>
+  <string source="Account" where="accounts_page,reports_page">Konto</string>
+  <string source="Kind" where="accounts_page">Art</string>
+  <string source="Analytics" where="accounts_page">Nebenbuch</string>
+  <string source="Section" where="accounts_page">Kontenklasse</string>
+  <string source="All accounting entries (Ctrl+5)" where="entries_page">Alle Buchungen (Strg+5)</string>
+  <string source="Reports (Ctrl+6)" where="reports_page">Auswertungen (Strg+6)</string>
+  <string source="Settings" where="reports_page">Einstellungen</string>
+  <string source="Period and account (Ctrl+R)" where="reports_page">Zeitraum und Konto (Strg+R)</string>
+  <string source="Recalculate" where="reports_page">Neu berechnen</string>
+  <string source="Rebuild reports from entries (F5)" where="reports_page">Auswertungen neu aus den Buchungen erstellen (F5)</string>
+  <string source="Trial Balance" where="reports_page">Summen- und Saldenliste</string>
+  <string source="Opening Dr" where="reports_page">EB-Wert Soll</string>
+  <string source="Opening Cr" where="reports_page">EB-Wert Haben</string>
+  <string source="Turnover Dr" where="reports_page">Verkehrszahlen Soll</string>
+  <string source="Turnover Cr" where="reports_page">Verkehrszahlen Haben</string>
+  <string source="Closing Dr" where="reports_page">Saldo Soll</string>
+  <string source="Closing Cr" where="reports_page">Saldo Haben</string>
+  <string source="Account Card" where="reports_page">Kontoblatt</string>
+  <string source="Corr." where="reports_page">Gegenkonto</string>
+  <string source="Debit" where="reports_page">Soll</string>
+  <string source="Credit" where="reports_page">Haben</string>
+  <string source="Balance" where="reports_page">Saldo</string>
+  <string source="Account Analysis" where="reports_page">Offene Posten nach Partner</string>
+  <string source="Sales Book" where="reports_page">Ausgangsrechnungen</string>
+  <string source="Net" where="reports_page">Netto</string>
+  <string source="Purchase Book" where="reports_page">Eingangsrechnungen</string>
+  <string source="Active configuration (Ctrl+7)" where="config_page">Aktive Konfiguration (Strg+7)</string>
+  <string source="Country" where="config_page">Land</string>
+  <string source="Currency" where="config_page">Währung</string>
+  <string source="Version" where="config_page">Version</string>
+  <string source="Legal Basis" where="config_page">Rechtsgrundlage</string>
+  <string source="Document Types" where="config_page">Belegarten</string>
+  <string source="Prefix" where="config_page">Präfix</string>
+  <string source="Tax Dr" where="config_page">Steuer Soll</string>
+  <string source="Tax Cr" where="config_page">Steuer Haben</string>
+  <string source="Manual" where="config_page">Manuell</string>
+  <string source="Description" where="config_page">Beschreibung</string>
+  <string source="Form" where="config_page">Formular</string>
+  <string source="Tax Rates" where="config_page">Steuersätze</string>
+  <string source="Rate" where="config_page">Satz</string>
+  <string source="Percent" where="config_page">Prozent</string>
+  <string source="Units" where="config_page">Einheiten</string>
+  <string source="Document:" where="document">Beleg:</string>
+  <string source="Number:" where="document,operation">Nummer:</string>
+  <string source="Date:" where="document,operation">Datum:</string>
+  <string source="Counterparty:" where="document,entry">Geschäftspartner:</string>
+  <string source="Comment:" where="document,operation">Bemerkung:</string>
+  <string source="Assigned when saved" where="document,operation">wird beim Speichern vergeben</string>
+  <string source="Add Line..." where="document">Position hinzufügen...</string>
+  <string source="Edit Line..." where="document">Position bearbeiten...</string>
+  <string source="Delete Line" where="document">Position löschen</string>
+  <string source="Amount:" where="document,entry">Betrag:</string>
+  <string source="Tax:" where="document">Steuer:</string>
+  <string source="Total:" where="document,operation">Gesamt:</string>
+  <string source="OK and Post" where="document">OK und buchen</string>
+  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,operation,entry,report_settings">Abbrechen</string>
+  <string source="Document Line" where="doc_line">Belegposition</string>
+  <string source="Item:" where="doc_line,entry">Artikel:</string>
+  <string source="Quantity:" where="doc_line,entry">Menge:</string>
+  <string source="Price:" where="doc_line,item">Preis:</string>
+  <string source="Tax rate:" where="doc_line,item">Steuersatz:</string>
+  <string source="Item price" where="doc_line">Artikelpreis</string>
+  <string source="OK" where="doc_line,counterparty,item,organization,select_configuration,select_language,operation,entry,report_settings">OK</string>
+  <string source="Name:" where="counterparty,item,organization">Name:</string>
+  <string source="Tax ID:" where="counterparty,organization">Steuernummer:</string>
+  <string source="KPP:" where="counterparty,organization">Steuer-Zusatznummer:</string>
+  <string source="Address:" where="counterparty,organization">Anschrift:</string>
+  <string source="Bank:" where="counterparty,organization">Bank:</string>
+  <string source="Bank account:" where="counterparty,organization">Kontonummer:</string>
+  <string source="Bank ID (BIK):" where="counterparty,organization">Bankleitzahl:</string>
+  <string source="Phone:" where="counterparty">Telefon:</string>
+  <string source="Code:" where="item">Nummer:</string>
+  <string source="Unit:" where="item">Einheit:</string>
+  <string source="Organization Details" where="organization">Firmendaten</string>
+  <string source="Corr. account:" where="organization">Korrespondenzkonto:</string>
+  <string source="Director:" where="organization">Geschäftsführer:</string>
+  <string source="Chief accountant:" where="organization">Buchhalter:</string>
+  <string source="Select Configuration" where="select_configuration">Konfiguration wählen</string>
+  <string source="Ledger opens the infobase of the chosen configuration on next start." where="select_configuration">Beim nächsten Start öffnet Ledger den Mandanten der gewählten Konfiguration.</string>
+  <string source="Configuration:" where="select_configuration">Konfiguration:</string>
+  <string source="Language" where="select_language">Sprache</string>
+  <string source="The new language applies the next time Ledger starts." where="select_language">Die neue Sprache gilt ab dem nächsten Start.</string>
+  <string source="Language:" where="select_language">Sprache:</string>
+  <string source="Manual Operation" where="operation">Umbuchung</string>
+  <string source="Operation:" where="operation">Buchungsart:</string>
+  <string source="Add Entry..." where="operation">Buchung hinzufügen...</string>
+  <string source="Edit Entry..." where="operation">Buchung bearbeiten...</string>
+  <string source="Delete Entry" where="operation">Buchung löschen</string>
+  <string source="Entry" where="entry">Buchung</string>
+  <string source="Debit:" where="entry">Soll:</string>
+  <string source="Credit:" where="entry">Haben:</string>
+  <string source="Content:" where="entry">Buchungstext:</string>
+  <string source="Report Settings" where="report_settings">Auswertungszeitraum</string>
+  <string source="From:" where="report_settings">Von:</string>
+  <string source="To:" where="report_settings">Bis:</string>
+  <string source="Account:" where="report_settings">Konto:</string>
+  <string source="Beginning" where="report_settings">Beginn der Buchführung</string>
+  <string source="End" where="report_settings">heute</string>
+  <string source="The account card and analysis show the chosen account." where="report_settings">Kontoblatt und Partneranalyse zeigen das gewählte Konto.</string>
+  <string source="modified" where="code">geändert</string>
+  <string source="Add Line" where="code">Position hinzufügen</string>
+  <string source="Edit Line" where="code">Position bearbeiten</string>
+  <string source="New Document" where="code">Neuer Beleg</string>
+  <string source="New Counterparty" where="code">Neuer Geschäftspartner</string>
+  <string source="New Item" where="code">Neuer Artikel</string>
+  <string source="Print Forms Written" where="code">Druckformulare gespeichert</string>
+  <string source="The configuration defines no print forms for this document type." where="code">Die Konfiguration enthält für diese Belegart keine Druckformulare.</string>
+  <string source="Delete the selected document and its entries?" where="code">Den gewählten Beleg und seine Buchungen löschen?</string>
+  <string source="Delete Document" where="code">Beleg löschen</string>
+  <string source="Delete the selected counterparty?" where="code">Den gewählten Geschäftspartner löschen?</string>
+  <string source="This counterparty is used by %d document(s) and cannot be deleted." where="code">Der Geschäftspartner wird in %d Beleg(en) verwendet und kann nicht gelöscht werden.</string>
+  <string source="Delete the selected item?" where="code">Den gewählten Artikel löschen?</string>
+  <string source="This item is used by %d document line(s) and cannot be deleted." where="code">Der Artikel wird in %d Belegposition(en) verwendet und kann nicht gelöscht werden.</string>
+  <string source="The selected configuration opens with its own infobase&#10;the next time Ledger starts." where="code">Die gewählte Konfiguration wird beim nächsten Start
+mit ihrem eigenen Mandanten geöffnet.</string>
+  <string source="Ledger 1.0&#10;&#10;Double-entry bookkeeping on Orion.&#10;National rules, accounts and legal forms come from&#10;the active configuration." where="code">Ledger 1.0
+
+Doppelte Buchführung mit Orion.
+Länderspezifische Regeln, Konten und Formulare
+stammen aus der aktiven Konfiguration.</string>
+  <string source="Report period: %s – %s" where="code">Zeitraum: %s – %s</string>
+  <string source="Add Entry" where="code">Neue Buchung</string>
+  <string source="New Manual Operation" where="code">Neue Umbuchung</string>
+</strings>
