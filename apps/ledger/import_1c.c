@@ -1,8 +1,10 @@
 // import_1c.c — reads a 1C:Enterprise 8 exchange file in the EnterpriseData
 // format (Администрирование → Обмен данными → Выгрузка в файл) into the
 // infobase: counterparties, items, employees, fixed assets and currencies,
-// and the opening balances of its ВводОстатков documents as one opening
-// operation against the configuration's opening account (000).
+// and the opening balances of its Остатки... documents (ОстаткиСобственныхТМЦ,
+// ОстаткиРасчетовСПоставщикамиДолги, ...) as one opening operation against
+// the configuration's opening account (000). The documents name what they
+// hold, not an account: the configuration's balance rules give the account.
 //
 // Objects are recognized by their element names and properties are read by
 // name, inside КлючевыеСвойства or on the object, so the format's versions all
@@ -63,11 +65,14 @@ static void ed_text(xmlNodePtr n, char *buf, size_t sz) {
   xmlFree(v);
 }
 
-// A property: in КлючевыеСвойства, on the object, or the first one below it.
-static bool ed_prop(xmlNodePtr obj, const char *name, char *buf, size_t sz) {
+// A part of an object: in its КлючевыеСвойства or on the object itself.
+static xmlNodePtr ed_part(xmlNodePtr obj, const char *name) {
   xmlNodePtr n = ed_child(ed_child(obj, "КлючевыеСвойства"), name);
-  if (!n) n = ed_child(obj, name);
-  if (!n) n = ed_descendant(obj, name);
+  return n ? n : ed_child(obj, name);
+}
+
+static bool ed_prop(xmlNodePtr obj, const char *name, char *buf, size_t sz) {
+  xmlNodePtr n = ed_part(obj, name);
   ed_text(n && !ed_has_elements(n) ? n : NULL, buf, sz);
   return buf[0] != '\0';
 }
@@ -161,8 +166,12 @@ static int ed_counterparty(ed_import_t *im, xmlNodePtr obj) {
   return ed_remember(im, TABLE_COUNTERPARTIES, ref, id);
 }
 
-// БезНДС, НДС0, НДС10, НДС20 or "20%": the configuration's rate of that value.
-static int ed_vat_rate(database_t *cfg, const char *text) {
+// БезНДС, НДС0, НДС10, НДС20 or "20%", given as the value or as its
+// ВидСтавки: the configuration's rate of that value.
+static int ed_vat_rate(database_t *cfg, xmlNodePtr n) {
+  char text[32];
+  ed_text(ed_has_elements(n) ? ed_child(n, "ВидСтавки") : n, text, sizeof(text));
+  if (!text[0]) return 0;
   bool exempt = strstr(text, "Без") != NULL;
   int value = 0;
   for (const char *p = text; *p; p++) if (*p >= '0' && *p <= '9') value = value * 10 + (*p - '0');
@@ -177,8 +186,10 @@ static int ed_vat_rate(database_t *cfg, const char *text) {
   return id;
 }
 
+// The unit and VAT rate are the item's, or those of the balance row naming it
+// (ДанныеНоменклатуры/Номенклатура).
 static int ed_item(ed_import_t *im, xmlNodePtr obj) {
-  char ref[48] = "", name[160], sku[16] = "", unit[32] = "", unit_code[8] = "", vat[32] = "";
+  char ref[48] = "", name[160], sku[16] = "", unit[32] = "", unit_code[8] = "";
   ed_prop(obj, "Ссылка", ref, sizeof(ref));
   int id = ed_ref(im, TABLE_ITEMS, ref);
   if (id) return id;
@@ -191,13 +202,17 @@ static int ed_item(ed_import_t *im, xmlNodePtr obj) {
   send_db_message(im->ib, dbInitRecord, TABLE_ITEMS, &it);
   snprintf(it.name, sizeof(it.name), "%s", name);
   snprintf(it.sku, sizeof(it.sku), "%s", sku);
-  xmlNodePtr u = ed_child(obj, "ЕдиницаИзмерения");  // its classifier code (ОКЕИ) and short name
-  ed_prop(u, "Код", unit_code, sizeof(unit_code));
-  ed_prop(u, "Наименование", unit, sizeof(unit));
+  xmlNodePtr row = ed_is(obj->parent, "ДанныеНоменклатуры") ? obj->parent->parent : NULL;
+  xmlNodePtr u = ed_part(obj, "ЕдиницаИзмерения"), vat = ed_part(obj, "СтавкаНДС");
+  if (!u) u = ed_child(row, "ЕдиницаИзмерения");
+  if (!vat) vat = ed_child(row, "СтавкаНДС");
+  xmlNodePtr classifier = ed_child(u, "ДанныеКлассификатора");  // its code (ОКЕИ) and short name
+  ed_prop(classifier ? classifier : u, "Код", unit_code, sizeof(unit_code));
+  ed_prop(classifier ? classifier : u, "Наименование", unit, sizeof(unit));
   db_unit_t *un = ed_find(im->cfg, TABLE_UNITS, "code", unit_code);
   if (!un) un = ed_find(im->cfg, TABLE_UNITS, "name", unit);
   it.unit_id = un ? un->id : 0;
-  if (ed_prop(obj, "СтавкаНДС", vat, sizeof(vat))) it.vat_rate_id = ed_vat_rate(im->cfg, vat);
+  if (vat) it.vat_rate_id = ed_vat_rate(im->cfg, vat);
   if ((id = ed_insert(im, TABLE_ITEMS, &it))) im->out->items++;
   return ed_remember(im, TABLE_ITEMS, ref, id);
 }
@@ -210,8 +225,10 @@ static int ed_employee(ed_import_t *im, xmlNodePtr obj) {
   int id = ed_ref(im, TABLE_EMPLOYEES, ref);
   if (id) return id;
   if (!ed_prop(obj, "Наименование", name, sizeof(name))) {
-    char last[48] = "", first[48] = "", middle[48] = "";
-    ed_prop(obj, "Фамилия", last, sizeof(last)); ed_prop(obj, "Имя", first, sizeof(first)); ed_prop(obj, "Отчество", middle, sizeof(middle));
+    char last[40] = "", first[40] = "", middle[40] = "";
+    xmlNodePtr fio = ed_part(obj, "ФИО");
+    if (!fio) fio = obj;
+    ed_prop(fio, "Фамилия", last, sizeof(last)); ed_prop(fio, "Имя", first, sizeof(first)); ed_prop(fio, "Отчество", middle, sizeof(middle));
     snprintf(name, sizeof(name), "%s%s%s%s%s", last, first[0] ? " " : "", first, middle[0] ? " " : "", middle);
   }
   if (!name[0]) return 0;
@@ -269,7 +286,7 @@ static int ed_currency(ed_import_t *im, xmlNodePtr obj) {
   if (old) { im->out->matched++; return ed_remember(im, TABLE_CURRENCIES, ref, old->id); }
   db_currency_t c = {0};
   send_db_message(im->ib, dbInitRecord, TABLE_CURRENCIES, &c);
-  snprintf(c.code, sizeof(c.code), "%s", code);
+  snprintf(c.code, sizeof(c.code), "%.3s", code);
   if (!ed_prop(obj, "НаименованиеПолное", name, sizeof(name))) snprintf(name, sizeof(name), "%s", code);
   snprintf(c.name, sizeof(c.name), "%s", name);
   if ((id = ed_insert(im, TABLE_CURRENCIES, &c))) im->out->currencies++;
@@ -284,26 +301,27 @@ static const struct { const char *element; int (*import)(ed_import_t *, xmlNodeP
 
 // ── Opening balances ─────────────────────────────────────────────────────────
 
-// The analytics object a balance row names for the account's analytics kind.
+// The analytics object a balance row names for the account's analytics kind:
+// on the row, or inside its ДанныеНоменклатуры / ДанныеВзаиморасчетов.
 static int ed_subconto(ed_import_t *im, xmlNodePtr row, const char *table) {
   static const struct { const char *table, *element; int (*import)(ed_import_t *, xmlNodePtr); } kinds[] = {
-    { "counterparties", "Контрагент",      ed_counterparty }, { "items",     "Номенклатура",   ed_item },
-    { "employees",      "Сотрудник",       ed_employee },     { "employees", "ФизическоеЛицо", ed_employee },
-    { "assets",         "ОсновноеСредство", ed_asset },
+    { "counterparties", "Контрагент",       ed_counterparty }, { "items",     "Номенклатура",   ed_item },
+    { "employees",      "ПодотчетноеЛицо",  ed_employee },     { "employees", "ФизическоеЛицо", ed_employee },
+    { "employees",      "Сотрудник",        ed_employee },     { "assets",    "ОсновноеСредство", ed_asset },
   };
   for (size_t i = 0; i < ARRAY_LEN(kinds); i++) {
-    xmlNodePtr ref = strcmp(kinds[i].table, table) ? NULL : ed_child(row, kinds[i].element);
+    xmlNodePtr ref = strcmp(kinds[i].table, table) ? NULL : ed_descendant(row, kinds[i].element);
     if (ref) return kinds[i].import(im, ref);
   }
   return 0;
 }
 
-static void ed_skip_account(ed_import_t *im, const char *code) {
+static void ed_skip(ed_import_t *im, const char *what) {
   char *list = im->out->skipped;
-  size_t len = strlen(list), n = strlen(code);
-  for (const char *p = list; (p = strstr(p, code)); p += n)
+  size_t len = strlen(list), n = strlen(what);
+  for (const char *p = list; (p = strstr(p, what)); p += n)
     if ((p == list || p[-1] == ' ') && (p[n] == ',' || !p[n])) return;
-  if (len + n + 3 < sizeof(im->out->skipped)) snprintf(list + len, sizeof(im->out->skipped) - len, "%s%s", len ? ", " : "", code);
+  if (len + n + 3 < sizeof(im->out->skipped)) snprintf(list + len, sizeof(im->out->skipped) - len, "%s%s", len ? ", " : "", what);
 }
 
 // One opening operation holds every balance of the file. Balances of a date
@@ -328,63 +346,56 @@ static int ed_opening_document(ed_import_t *im, xmlNodePtr doc) {
   return im->out->balances_present ? 0 : (im->opening_doc = ed_insert(im, TABLE_DOCUMENTS, &d));
 }
 
-// A balance row is any element with an account (СчетУчета, Счет...) and an
-// amount. СуммаДт / СуммаКт give the side; otherwise Сумма with ВидОстатка
-// (Дебет / Кредит), or the account's kind: passive accounts are credit.
-static void ed_balance_row(ed_import_t *im, xmlNodePtr doc, xmlNodePtr row, xmlNodePtr account_ref) {
-  char code[16] = "", side[32] = "";
-  ed_text(ed_descendant(account_ref, "Код"), code, sizeof(code));
-  if (!code[0] && !ed_has_elements(account_ref)) ed_text(account_ref, code, sizeof(code));
-  double dr = 0, cr = 0, amount = 0, quantity = 0, foreign = 0;
-  bool split = ed_number(row, "СуммаДт", &dr) | ed_number(row, "СуммаКт", &cr);
-  bool single = ed_number(row, "Сумма", &amount) || ed_number(row, "СуммаБУ", &amount) || ed_number(row, "СуммаОстатка", &amount) ||
-                ed_number(row, "Остаток", &amount) || ed_number(row, "СтоимостьБУ", &amount) || ed_number(row, "Стоимость", &amount);
-  if (!code[0] || (!split && !single)) return;
-  const db_account_t *account = ed_find(im->cfg, TABLE_ACCOUNTS, "code", code);
-  const db_setting_t *s = (const db_setting_t *)send_db_message(im->cfg, dbFind, MAKEDWORD(TABLE_SETTINGS, 0), (void *)(intptr_t)1);
-  if (!account || !s || !s->opening_account_id) { ed_skip_account(im, code); return; }
-  if (!split) {
-    ed_text(ed_child(row, "ВидОстатка"), side, sizeof(side));
-    if (!side[0]) ed_text(ed_child(row, "ДтКт"), side, sizeof(side));
-    bool credit = side[0] ? (strstr(side, "Кредит") || strstr(side, "Кт")) : !strcmp(account->kind, "П");
-    if (amount < 0) { amount = -amount; credit = !credit; }
-    if (credit) cr = amount; else dr = amount;
-  }
-  int doc_id = ed_opening_document(im, doc);
-  if (!doc_id) return;
-  ed_number(row, "Количество", &quantity);
-  if (!ed_number(row, "СуммаВВалюте", &foreign)) ed_number(row, "ВалютнаяСумма", &foreign);
-  int subconto = ed_subconto(im, row, ledger_subconto_table(im->cfg, account->id));
-  xmlNodePtr currency = ed_child(row, "Валюта");
-  for (int pass = 0; pass < 2; pass++) {
-    double value = pass ? cr : dr;
-    if (value == 0) continue;
-    db_entry_t e = {0};
-    send_db_message(im->ib, dbInitRecord, TABLE_ENTRIES, &e);
-    e.document_id = doc_id;
-    e.debit_id = pass ? s->opening_account_id : account->id;
-    e.credit_id = pass ? account->id : s->opening_account_id;
-    if (pass) e.credit_subconto_id = subconto; else e.debit_subconto_id = subconto;
-    e.quantity = quantity;
-    e.amount = value;
-    if (currency && foreign) { e.currency_id = ed_currency(im, currency); e.currency_amount = foreign; }
-    snprintf(e.content, sizeof(e.content), "%s", account->name);
-    if (ed_insert(im, TABLE_ENTRIES, &e)) {
-      im->out->entries++;
-      if (pass) im->out->credit += value; else im->out->debit += value;
-    }
-  }
+static const db_account_t *ed_account(ed_import_t *im, int id) {
+  return id ? (const db_account_t *)send_db_message(im->cfg, dbFind, MAKEDWORD(TABLE_ACCOUNTS, 0), (void *)(intptr_t)id) : NULL;
 }
 
-static void ed_balances(ed_import_t *im, xmlNodePtr doc, xmlNodePtr n) {
-  for (xmlNodePtr c = n->children; c; c = c->next) {
-    if (c->type != XML_ELEMENT_NODE || ed_is(c, "КлючевыеСвойства")) continue;
-    xmlNodePtr account = NULL;
-    for (xmlNodePtr p = c->children; p && !account; p = p->next)
-      if (p->type == XML_ELEMENT_NODE && !strncmp((const char *)p->name, "Счет", strlen("Счет"))) account = p;
-    if (account) ed_balance_row(im, doc, c, account);
-    else ed_balances(im, doc, c);
-  }
+// A row's Сумма is in the settlement currency and СуммаРегл in the national
+// one; a row of goods may give only their Количество.
+static void ed_balance_row(ed_import_t *im, xmlNodePtr doc, xmlNodePtr row, const db_balance_rule_t *rule, int opening_id) {
+  double amount = 0, national = 0, quantity = 0;
+  bool has_amount = ed_number(row, "Сумма", &amount), has_national = ed_number(row, "СуммаРегл", &national);
+  ed_number(row, "Количество", &quantity);
+  if (!has_national) national = amount;
+  if (national == 0 && quantity == 0) return;
+  xmlNodePtr currency = ed_descendant(row, "ВалютаВзаиморасчетов");
+  if (!currency) currency = ed_descendant(row, "Валюта");
+  int currency_id = currency && has_amount ? ed_currency(im, currency) : 0;
+  const db_account_t *account = ed_account(im, currency_id && rule->currency_account_id ? rule->currency_account_id : rule->account_id);
+  if (!account) return;
+  int doc_id = ed_opening_document(im, doc);
+  if (!doc_id) return;
+  bool credit = rule->credit;
+  if (national < 0) { national = -national; amount = -amount; credit = !credit; }
+  db_entry_t e = {0};
+  send_db_message(im->ib, dbInitRecord, TABLE_ENTRIES, &e);
+  const db_document_t *d = (const db_document_t *)send_db_message(im->ib, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)doc_id);
+  e.document_id = doc_id;
+  snprintf(e.date, sizeof(e.date), "%s", d ? d->date : "");
+  e.debit_id = credit ? opening_id : account->id;
+  e.credit_id = credit ? account->id : opening_id;
+  int subconto = ed_subconto(im, row, ledger_subconto_table(im->cfg, account->id));
+  if (credit) e.credit_subconto_id = subconto; else e.debit_subconto_id = subconto;
+  e.quantity = quantity;
+  e.amount = national;
+  if (currency_id && account->currency) { e.currency_id = currency_id; e.currency_amount = amount; }
+  snprintf(e.content, sizeof(e.content), "%s", account->name);
+  if (!ed_insert(im, TABLE_ENTRIES, &e)) return;
+  im->out->entries++;
+  if (credit) im->out->credit += national; else im->out->debit += national;
+}
+
+// The rows of an Остатки... document are the Строка elements of its tables
+// (ТМЦ, Расчеты, ДенежныеСредства, ...). A document the configuration has no
+// rule for is named in the summary.
+static void ed_balances(ed_import_t *im, xmlNodePtr doc) {
+  const char *kind = (const char *)doc->name + strlen("Документ.");
+  const db_balance_rule_t *rule = ed_find(im->cfg, TABLE_BALANCE_RULES, "document", kind);
+  const db_setting_t *s = (const db_setting_t *)send_db_message(im->cfg, dbFind, MAKEDWORD(TABLE_SETTINGS, 0), (void *)(intptr_t)1);
+  if (!rule || !s || !s->opening_account_id) { ed_skip(im, kind); return; }
+  for (xmlNodePtr t = doc->children; t; t = t->next)
+    for (xmlNodePtr row = ed_child(t, "Строка"); row; row = row->next)
+      if (ed_is(row, "Строка")) ed_balance_row(im, doc, row, rule, s->opening_account_id);
 }
 
 // ── Entry point ──────────────────────────────────────────────────────────────
@@ -414,7 +425,7 @@ bool ledger_import_enterprisedata(database_t *ib, database_t *cfg, const char *p
     bool known = false;
     for (size_t i = 0; i < ARRAY_LEN(kCatalogs); i++)
       if (!strcmp(name, kCatalogs[i].element)) { kCatalogs[i].import(&im, obj); known = true; }
-    if (!strncmp(name, "Документ.ВводОстатков", strlen("Документ.ВводОстатков"))) { ed_balances(&im, obj, obj); known = true; }
+    if (!strncmp(name, "Документ.Остатки", strlen("Документ.Остатки"))) { ed_balances(&im, obj); known = true; }
     if (!known) out->ignored++;
   }
   if (!out->error[0] && im.opening_doc) ledger_post(ib, cfg, im.opening_doc);

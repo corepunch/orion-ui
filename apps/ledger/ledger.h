@@ -69,7 +69,7 @@ typedef struct {
   int ignored;            // objects of other kinds in the file
   double debit, credit;   // the opening entries' totals
   bool balances_present;  // the file's balances were imported before
-  char skipped[256];      // account codes the configuration lacks
+  char skipped[256];      // balance documents the configuration has no rule for
   char error[256];
 } ledger_import_t;
 bool ledger_import_enterprisedata(database_t *ib, database_t *cfg, const char *path, ledger_import_t *out);

@@ -115,9 +115,12 @@ build/bin/orionc --input apps/ledger/ledger.orion --strings apps/ledger/share/lo
 ## Import from 1C
 
 `File > Import from 1C (EnterpriseData)...` reads the exchange file that
-1C:Enterprise 8 writes in the EnterpriseData format: in BP 3.0, Администрирование →
-Синхронизация данных → Выгрузка данных в файл, with the catalogs and the
-ВводОстатков documents of the start date. Ledger takes:
+1C:Enterprise 8 writes in the EnterpriseData format (Администрирование →
+Синхронизация данных → Выгрузка данных в файл, or the «Выгрузка загрузка
+EnterpriseData» processor). Catalogs come from any configuration that speaks
+the format. Opening balances come from those that send them in it: Trade
+Management 11, Integrated Automation, ERP and Small Business. Accounting 3.0
+exchanges catalogs only. Ledger takes:
 
 | 1C object | Ledger |
 |---|---|
@@ -126,15 +129,24 @@ build/bin/orionc --input apps/ledger/ledger.orion --strings apps/ledger/share/lo
 | Справочник.ФизическиеЛица, Сотрудники | Employees: full name, INN; the expense account of the others |
 | Справочник.ОсновныеСредства | Fixed assets: name, inventory number; accounts and life of the others |
 | Справочник.Валюты | Currencies by ISO code; the national one is left out |
-| Документ.ВводОстатков.* | One posted «Ввод начальных остатков» operation against the opening account (000) |
+| Документ.Остатки… | One posted «Ввод начальных остатков» operation against the opening account (000) |
 
-A balance row is read from its account (`СчетУчета`) and amount: `СуммаДт` /
-`СуммаКт`, or `Сумма` with `ВидОстатка`, or else by the account's kind. A
-row's counterparty, item, employee or asset becomes the entry's analytics,
-and is added to its catalog if new. Records already kept are matched by INN,
-code or name; balances of a date imported before are not entered twice. The
+The balance documents name what they hold, not an account:
+ОстаткиРасчетовСПоставщикамиДолги, ОстаткиСобственныхТМЦ,
+ОстаткиБезналичныхДенежныхСредств and so on. The configuration's
+`balance_rules` give each one its account and side, plus a currency account
+for rows in a foreign currency. In ru-2003 these are 50.01, 51/52, 62.01,
+62.02, 60.01/60.21, 60.02, 71, 41.01 and 66. A row's `СуммаРегл` is the entry
+amount and its `Сумма` the currency amount. Rows of goods may carry only a
+`Количество`, as Trade Management sends them without cost.
+
+A row's counterparty, item or employee becomes the entry's analytics. It is
+read from the row or from its `ДанныеНоменклатуры` / `ДанныеВзаиморасчетов`,
+and added to its catalog if new. Records already kept are matched by INN,
+code or name. Balances of a date imported before are not entered twice. The
 whole file is one change: a file that fails leaves the infobase as it was.
-A summary lists what was added and the accounts the configuration lacks.
+A summary lists what was added and the balance documents the configuration
+has no account for.
 
 ## Adding a configuration
 
@@ -143,8 +155,8 @@ A summary lists what was added and the accounts the configuration lacks.
    words, the national currency's ISO code, cash, payroll and opening-balance
    accounts), `subconto_kinds`, `accounts`, `units`,
    `vat_rates`, `doc_types` (posting rules reference account ids; `form`
-   picks the dialog and the posting), `payroll_taxes`, `closing_rules` and
-   `print_forms`.
+   picks the dialog and the posting), `payroll_taxes`, `closing_rules`,
+   `balance_rules` (1C import) and `print_forms`.
 3. Write the print templates in `print/` (HTML, see below) and a `demo.xml`
    infobase, or leave the demo empty.
 4. Add a `<configuration>` row to `index.xml`.

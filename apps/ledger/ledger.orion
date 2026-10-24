@@ -204,6 +204,17 @@
         <field name="start" type="string" length="8" />
         <field name="name" type="string" length="96" />
       </table>
+      <!-- Opening balances in a 1C EnterpriseData file come as documents named
+           by what they hold (Документ.ОстаткиРасчетовСПоставщикамиДолги): each
+           opens its rows on account (Dt, or Kt when credit), on
+           currency_account_id when the row is in a foreign currency. -->
+      <table name="balance_rules">
+        <field name="id" type="integer" key="YES" />
+        <field name="account_id" type="integer" relation="accounts.id" />
+        <field name="currency_account_id" type="integer" relation="accounts.id" />
+        <field name="document" type="string" length="128" />
+        <field name="credit" type="boolean" />
+      </table>
       <!-- Document print forms; report forms name a report table instead. -->
       <table name="print_forms">
         <field name="id" type="integer" key="YES" />

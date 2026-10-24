@@ -519,32 +519,38 @@ static void test_import_enterprisedata(void) {
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   double bank = balance("51")->balance_dr;
   ASSERT_TRUE(ledger_import_enterprisedata(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/enterprisedata_sample.xml", &r));
-  ASSERT(r.counterparties == 2 && r.items == 1 && r.employees == 1 && r.assets == 1 && r.currencies == 0, "new catalog objects added");
+  ASSERT(r.counterparties == 2 && r.items == 2 && r.employees == 1 && r.assets == 1 && r.currencies == 0, "new catalog objects added");
   ASSERT(r.matched == 2 && r.ignored == 1, "Alfa (by tax ID) and EUR matched; other documents ignored");
-  ASSERT(r.entries == 6 && near(r.debit, 66108) && near(r.credit, 66108), "opening entries balance");
-  ASSERT_STR_EQUAL(r.skipped, "99.99");
+  ASSERT(r.entries == 6 && near(r.debit, 66108) && near(r.credit, 16108), "opening entries of every balance row");
+  ASSERT_STR_EQUAL(r.skipped, "ОстаткиОсновныхСредств");  // no balance rule in the configuration
   ASSERT_NULL(find_by(g_ledger->ib, TABLE_CURRENCIES, "code", "RUB"));  // the national currency is no catalog entry
   db_counterparty_t *gamma = find_by(g_ledger->ib, TABLE_COUNTERPARTIES, "tax_id", "7714000001");
   ASSERT(gamma && strstr(gamma->address, "Арбат") && !strcmp(gamma->phone, "(095) 241-00-01"), "contact information read");
   db_item_t *toner = find_by(g_ledger->ib, TABLE_ITEMS, "sku", "00077");
   ASSERT(toner && toner->unit_id == 1 && toner->vat_rate_id == 1, "unit by OKEI code, VAT rate by value");
+  db_item_t *paper = find_by(g_ledger->ib, TABLE_ITEMS, "name", "Бумага SvetoCopy A4");
+  ASSERT(paper && !paper->sku[0] && paper->unit_id == 1 && paper->vat_rate_id && paper->vat_rate_id != toner->vat_rate_id,
+         "an item created from a balance row takes the row's unit and VAT rate, not its group's code");
   db_employee_t *smirnova = find_by(g_ledger->ib, TABLE_EMPLOYEES, "name", "Смирнова Ольга Петровна");
   ASSERT(smirnova && smirnova->account_id, "employee named from ФИО, with the usual expense account");
   db_document_t *opening = find_by(g_ledger->ib, TABLE_DOCUMENTS, "comment", ui_tr("Opening balances imported from 1C"));
   ASSERT(opening && opening->posted && !strcmp(opening->date, "2003-02-28"), "one posted opening operation on the 1C date");
   db_counterparty_t *delta = find_by(g_ledger->ib, TABLE_COUNTERPARTIES, "tax_id", "7714000002");
   ASSERT_NOT_NULL(delta);  // created from the reference in a balance row
-  bool delta_row = false, toner_row = false, eur_row = false;
+  bool delta_row = false, alfa_row = false, toner_row = false, paper_row = false, eur_row = false;
+  db_counterparty_t *alfa = find_by(g_ledger->ib, TABLE_COUNTERPARTIES, "tax_id", "7705123456");
   result_node_t *entries = (result_node_t *)send_db_message(g_ledger->ib, dbFetch,
     MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)opening->id);
   for (result_node_t *n = entries; n; n = n->next) {
     const db_entry_t *e = *(db_entry_t **)n->data;
     delta_row |= e->debit_subconto_id == delta->id && near(e->amount, 12000);
-    toner_row |= e->debit_subconto_id == toner->id && near(e->quantity, 10);
-    eur_row |= e->currency_id != 0 && near(e->currency_amount, 100);
+    alfa_row |= e->credit_subconto_id == alfa->id && near(e->amount, 16108);
+    toner_row |= e->debit_subconto_id == toner->id && near(e->quantity, 10) && near(e->amount, 950);
+    paper_row |= e->debit_subconto_id == paper->id && near(e->quantity, 2) && e->amount == 0;
+    eur_row |= e->currency_id != 0 && near(e->currency_amount, 100) && near(e->amount, 3158);
   }
   free_result_list(entries);
-  ASSERT(delta_row && toner_row && eur_row, "analytics, quantity and currency amount on the entries");
+  ASSERT(delta_row && alfa_row && toner_row && paper_row && eur_row, "side, analytics, quantity and currency amount on the entries");
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   ASSERT(near(balance("51")->balance_dr, bank + 50000), "the opening balance reaches the trial balance");
   ASSERT_TRUE(ledger_import_enterprisedata(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/enterprisedata_sample.xml", &r));

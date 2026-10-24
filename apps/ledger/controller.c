@@ -234,7 +234,7 @@ static void import_from_1c(void) {
   if (r.balances_present && n > 0 && n < (int)sizeof(text))
     n += snprintf(text + n, sizeof(text) - (size_t)n, "\n\n%s", ui_tr("The balances of this date were imported before and were not entered again."));
   if (r.skipped[0] && n > 0 && n < (int)sizeof(text))
-    snprintf(text + n, sizeof(text) - (size_t)n, ui_tr("\n\nAccounts not in the configuration, left out: %s"), r.skipped);
+    snprintf(text + n, sizeof(text) - (size_t)n, ui_tr("\n\nBalances the configuration has no account for, left out: %s"), r.skipped);
   message_box(g_ledger->main_win, text, ui_tr("Import from 1C"), MB_OK);
 }
 
