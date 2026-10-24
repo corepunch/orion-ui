@@ -161,6 +161,11 @@ bool db_parse_field(const db_field_meta_t *field, void *record, const char *text
 bool db_schema_field_text(database_t *db, const db_table_schema_t *table,
                           const void *record, const char *field,
                           char *buf, size_t buf_sz);
+// The type of a field or join path ("item.price") of a schema table, or -1
+// when it cannot be resolved (unknown field, polymorphic relation).
+int db_schema_field_type(database_t *db, const db_table_schema_t *table, const char *field);
+// The metadata (type, display precision) of the same field or join path, or NULL.
+const db_field_meta_t *db_schema_field_meta(database_t *db, const db_table_schema_t *table, const char *field);
 // Formats a record field for display: dbGetFieldText when the database
 // implements it, otherwise the table's object proc and field bindings.
 bool db_get_field_text(database_t *db, int table_id, const void *record,

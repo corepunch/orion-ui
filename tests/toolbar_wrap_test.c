@@ -764,6 +764,31 @@ void test_toolbar_labels_increase_button_and_band_size(void) {
     PASS();
 }
 
+void test_toolbar_list_labels_follow_icons(void) {
+    TEST("TOOLBAR_STYLE_LIST: captions sit right of icons; a vertical bar's rows share its width");
+    test_env_init();
+    irect16_t frame = {0, 0, 300, 300};
+    window_t *root = create_window("W", WINDOW_NORESIZE, &frame, NULL, noop_proc, 0, NULL);
+    toolbar_item_t items[] = {
+        {TOOLBAR_ITEM_BUTTON, 1, 0, 0, 0, "Journal", NULL},
+        {TOOLBAR_ITEM_BUTTON, 2, 0, 0, 0, "Chart of Accounts", NULL},
+    };
+    activitybar_params_t params = { items, 2, TOOLBAR_STYLE_LIST };
+    form_ctrl_def_t def = { .class_name = "ActivityBar", .lparam = &params };
+    window_t *win = create_window("", 0, MAKERECT(0, 0, 200, 300), root, win_activitybar, 0, &def);
+    toolbar_state_t *tb = toolbar_get_state(win);
+    ASSERT_NOT_NULL(tb);
+    int widest = TB_SPACING + text_strwidth(FONT_SMALL, "Chart of Accounts") + 8;
+    ASSERT_EQUAL(tb->item_rects[1].w, widest);
+    ASSERT_EQUAL(tb->item_rects[0].w, widest);           // rows fill the column
+    ASSERT_EQUAL(tb->item_rects[0].x, tb->item_rects[1].x);
+    ASSERT_EQUAL(tb->item_rects[0].h, TB_SPACING);         // no caption band under the icon
+    ASSERT_TRUE(tb->item_rects[1].y > tb->item_rects[0].y);
+    destroy_window(root);
+    test_env_shutdown();
+    PASS();
+}
+
 // ---- main -------------------------------------------------------------------
 
 void test_toolbar_button_click_cancelled_if_released_outside(void) {
@@ -1512,6 +1537,7 @@ int main(int argc, char *argv[]) {
     test_toolbar_move_shifts_children();
     test_titlebar_height_single_row();
     test_toolbar_labels_increase_button_and_band_size();
+    test_toolbar_list_labels_follow_icons();
     test_toolbar_button_click_cancelled_if_released_outside();
     test_toolbar_disabled_item();
     test_toolbar_item_button_frame_clamped();

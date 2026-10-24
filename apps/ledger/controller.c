@@ -39,10 +39,13 @@ void ledger_update_status(void) {
   const db_report_setting_t *rs = ledger_report_settings(g_ledger->ib, g_ledger->cfg);
   ui_format_date(rs ? rs->date_from : "", from, sizeof(from));
   ui_format_date(rs ? rs->date_to : "", to, sizeof(to));
-  snprintf(period, sizeof(period), ui_tr("Report period: %s – %s"), from[0] ? from : "…", to[0] ? to : "…");
+  if (!from[0] && !to[0]) snprintf(period, sizeof(period), "%s", ui_tr("Report period: all dates"));
+  else snprintf(period, sizeof(period), ui_tr("Report period: %s – %s"), from[0] ? from : "…", to[0] ? to : "…");
   bool dirty = send_db_message(g_ledger->ib, dbGetDirty, 0, NULL);
   snprintf(text, sizeof(text), "%s   |   %s   |   %s%s%s", org, cfg, period, dirty ? "   |   " : "", dirty ? ui_tr("modified") : "");
   send_message(g_ledger->main_win, evStatusBar, 0, text);
+  // The title bar names the company being kept, as Finder names the folder.
+  set_window_title(g_ledger->main_win, org[0] ? org : ui_tr("Ledger"));
 }
 
 
@@ -98,10 +101,18 @@ static void after_save(int doc_id) {
   ledger_refresh_views();
 }
 
+// The dialog is captioned like the document it edits: "Sale RT-0001 dated 10.03.2003".
 static void edit_document(int doc_id) {
-  size_t f = document_form(document_type(find_document(doc_id)));
+  const db_document_t *doc = find_document(doc_id);
+  const db_doc_type_t *type = document_type(doc);
+  size_t f = document_form(type);
+  char date[16] = "", title[256];
+  if (doc && type) {
+    ui_format_date(doc->date, date, sizeof(date));
+    snprintf(title, sizeof(title), ui_tr("%s %s dated %s"), type->name, doc->number, date);
+  } else snprintf(title, sizeof(title), "%s", ui_tr(kDocumentForms[f].title));
   db_dialog_opts_t opts = { .hook = kDocumentForms[f].hook };
-  if (show_db_dialog_opts(kDocumentForms[f].def, kDocumentForms[f].title, g_ledger->main_win, doc_id, &opts)) after_save(doc_id);
+  if (show_db_dialog_opts(kDocumentForms[f].def, title, g_ledger->main_win, doc_id, &opts)) after_save(doc_id);
 }
 
 // New documents start as the selected document's type, or the first type of
@@ -143,6 +154,22 @@ static void new_document(const char *form) {
   int doc_id = 0;
   db_dialog_opts_t opts = { .hook = kDocumentForms[f].hook, .defaults = defaults, .saved_id = &doc_id };
   if (show_db_dialog_opts(kDocumentForms[f].def, kDocumentForms[f].new_title, g_ledger->main_win, 0, &opts)) after_save(doc_id);
+}
+
+// The account card of the account chosen on the current page: the selected
+// account, or the debit account of the selected entry.
+static void show_account_card(void) {
+  window_t *page = window_active_page(g_ledger->main_win);
+  db_entry_t *entry = page && get_window_item(page, ID_ENTRIES_PAGE_ENTRIES) ? selected(ID_ENTRIES_PAGE_ENTRIES) : NULL;
+  db_account_t *account = entry ? NULL : selected(ID_ACCOUNTS_PAGE_ACCOUNTS);
+  int account_id = entry ? entry->debit_id : account ? account->id : 0;
+  db_report_setting_t *rs = ledger_report_settings(g_ledger->ib, g_ledger->cfg);
+  if (!account_id || !rs) return;
+  rs->account_id = account_id;
+  send_db_message(g_ledger->ib, dbUpdate, TABLE_REPORT_SETTINGS, rs);
+  after_save(0);
+  page_host_select(g_ledger->main_win, ID_VIEW_REPORTS);
+  send_message(view(ID_REPORTS_PAGE_REPORT_TABS), tcSetSelection, 1, NULL);  // the card tab
 }
 
 // Catalog commands act on the page's TableView, which owns the row form.
@@ -207,6 +234,11 @@ void ledger_command(uint16_t id) {
     case ID_DOC_NEW_ASSETS:    new_document("assets");    break;
     case ID_DOC_CLOSE_MONTH:   new_document("closing");   break;
     case ID_DOC_OPEN: if (doc) edit_document(doc->id); break;
+    case ID_DOC_OPEN_ENTRY: {
+      db_entry_t *entry = selected(ID_ENTRIES_PAGE_ENTRIES);
+      if (entry) edit_document(entry->document_id);
+      break;
+    }
     case ID_DOC_POST:
       if (doc && ledger_post(g_ledger->ib, g_ledger->cfg, doc->id)) after_save(0);
       break;
@@ -257,6 +289,7 @@ void ledger_command(uint16_t id) {
       ledger_repost_all(g_ledger->ib, g_ledger->cfg);
       ledger_refresh_views();
       break;
+    case ID_REPORT_CARD: show_account_card(); break;
     case ID_REPORT_PRINT:
       if (ledger_print_reports(report, sizeof(report)))
         message_box(parent, report, ui_tr("Print Forms Written"), MB_OK);
@@ -290,14 +323,6 @@ result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
         return true;
       }
       if (code == tvnChanged) { ledger_refresh_views(); return true; }
-      // The posted checkbox in the journal posts or cancels posting.
-      if (code == RVN_ITEMCHECK && src && src->id == ID_JOURNAL_PAGE_DOCUMENTS) {
-        db_document_t *doc = (db_document_t *)send_message(src, tvGetRecord, LOWORD(wparam), NULL);
-        if (doc && doc->posted) ledger_unpost(g_ledger->ib, g_ledger->cfg, doc->id);
-        else if (doc) ledger_post(g_ledger->ib, g_ledger->cfg, doc->id);
-        after_save(0);
-        return true;
-      }
       if (code == btnClicked || code == kMenuBarNotificationItemClick || code == kAcceleratorNotification || code == 0) {
         ledger_command(LOWORD(wparam));
         return true;

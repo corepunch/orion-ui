@@ -183,6 +183,7 @@ enum {
   edGetText,        // wparam=buf_size; lparam=char* dst → copies text, returns length
   edSetText,        // wparam=0; lparam=const char* src → replaces text
   edSetPlaceholder, // lparam=const char* cue text shown while the field is empty (EM_SETCUEBANNER)
+  edGetPlaceholder, // returns const char* cue text, "" when none (EM_GETCUEBANNER)
   // List (popup) messages
   lstSetItem,             // wparam=item index to pre-select in the dropdown list
   // Individual desktop-style icon control (commctl/icon.c).
@@ -473,6 +474,7 @@ enum {
 #define TOOLBAR_COMPACT_ICON_SIZE   16
 #endif
 #define TOOLBAR_STYLE_SHOW_LABELS    (1u << 0) // WinAPI-style text below button icons
+#define TOOLBAR_STYLE_LIST           (1u << 8) // text right of button icons; a vertical bar's buttons share its width (TBSTYLE_LIST)
 
 typedef enum {
   TOOLBAR_HORIZONTAL = 0,
@@ -491,6 +493,7 @@ typedef enum {
   TOOLBAR_ITEM_CUSTOM,        // drawn by the owner during tbDrawItem
   TOOLBAR_ITEM_SLIDER,        // embedded Slider; defaults to three icon slots; w overrides length
   TOOLBAR_ITEM_SEGMENTED,     // embedded SegmentedControl; text = "One|Two|Three", w = 0 fits the labels
+  TOOLBAR_ITEM_TITLE,         // the window's title in the caption font; starts past panes docked on the left edge
 } toolbar_item_type_t;
 
 // Descriptor for a single toolbar item (used with tbSetItems).
@@ -669,7 +672,8 @@ typedef enum {
   brSelectionBottom      = 32,
   brPlasticNeutral       = 33,  // neutral plastic face (transport buttons): silver
   brTabBarBg             = 34,  // tab strip: between Page background and inactive tab face
-  brCount                = 35
+  brAccentText           = 35,  // text and icons on accent fills: selection, default button, hovered menu item
+  brCount                = 36
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).

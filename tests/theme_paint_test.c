@@ -58,9 +58,11 @@ static void paint_gradient_top(uint32_t top, uint32_t bottom, irect16_t r, int r
 #define theme_modern_instance paint_modern_instance
 #define theme_navy_instance paint_navy_instance
 #define theme_light_instance paint_light_instance
+#define theme_amber_instance paint_amber_instance
 theme_t *paint_modern_instance(void);
 theme_t *paint_navy_instance(void);
 theme_t *paint_light_instance(void);
+theme_t *paint_amber_instance(void);
 #include <orion/user/theme_classic.c>
 #include <orion/user/theme_modern.c>
 #undef fill_rect
@@ -72,6 +74,7 @@ theme_t *paint_light_instance(void);
 #undef theme_modern_instance
 #undef theme_navy_instance
 #undef theme_light_instance
+#undef theme_amber_instance
 
 static theme_t *paint_with_theme(theme_style_t style) {
   if (get_theme()->style != style) set_theme(style);
@@ -237,10 +240,10 @@ static void test_palette_overrides(void) {
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
   theme->draw_part(THEME_PART_PANEL, R(10, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
-  g_sys_colors[brAccent] = 0xffabcdef;
+  g_sys_colors[brActiveTitlebar] = 0xffabcdef;
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
-  ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brActiveTitlebar));
   ASSERT_NOT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
   get_theme()->apply_palette();
   PASS();
@@ -346,7 +349,7 @@ static void test_navy_caption_bar(void) {
 
 static void test_panel_shades_and_tabs(void) {
   TEST("Page, tab strip and tab faces have distinct shades; active tab merges with the pane");
-  theme_style_t styles[] = {THEME_MODERN, THEME_LIGHT, THEME_NAVY, THEME_CLASSIC};
+  theme_style_t styles[] = {THEME_MODERN, THEME_LIGHT, THEME_NAVY, THEME_AMBER, THEME_CLASSIC};
   for (int i = 0; i < ARRAY_LEN(styles); i++) {
     theme_t *theme = paint_with_theme(styles[i]);
     ASSERT_NOT_EQUAL(get_sys_color(brControlBg), get_sys_color(brPanelDark));
@@ -427,6 +430,28 @@ static void test_field_capsules(void) {
   PASS();
 }
 
+static int luma(uint32_t c) { return ((c & 255) * 3 + ((c >> 8) & 255) * 6 + ((c >> 16) & 255)) / 10; }
+
+static void test_amber_business_surfaces(void) {
+  TEST("Amber: white rounded-rect fields, graphite caption, dark text on amber");
+  theme_t *theme = paint_with_theme(THEME_AMBER);
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_FIELD, R(10, 10, 100, 34), CTRL_NORMAL);
+  ASSERT_EQUAL(pixels[27][60], get_sys_color(brColumnViewBg));
+  ASSERT_NOT_EQUAL(pixels[10][18], 0);   // a capsule would leave the top row empty here
+  ASSERT_EQUAL(get_theme()->field.padding_x, FIELD_PADDING_X(get_theme()->field.corner_radius));
+  ASSERT_TRUE(get_theme()->field.padding_x < theme_modern_instance()->field.padding_x);  // squarer ends, text nearer the edge
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 20), CTRL_FOCUSED);
+  ASSERT_EQUAL(pixels[20][50], get_sys_color(brActiveTitlebar));
+  ASSERT_NOT_EQUAL(get_sys_color(brActiveTitlebar), get_sys_color(brAccent));
+  ASSERT_TRUE(luma(get_sys_color(brAccent)) > 160);
+  ASSERT_TRUE(luma(theme_foreground(THEME_PART_BUTTON, CTRL_DEFAULT)) < 64);
+  ASSERT_TRUE(luma(theme_foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED)) < 64);
+  ASSERT_TRUE(luma(get_sys_color(brSelectionBottom)) > 160);
+  PASS();
+}
+
 int main(void) {
   TEST_START("theme paint output");
   test_modern_surfaces();
@@ -445,5 +470,6 @@ int main(void) {
   test_light_chrome();
   test_navy_caption_bar();
   test_panel_shades_and_tabs();
+  test_amber_business_surfaces();
   TEST_END();
 }

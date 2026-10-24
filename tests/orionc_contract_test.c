@@ -311,6 +311,33 @@ static void test_activitybar_declaration(void) {
   PASS();
 }
 
+static void test_accounting_presentation_declaration(void) {
+  TEST("orionc: RowIcon, total=sum, totals-skip, list labels and page labels reach the generated params");
+  char out[16000] = {0};
+  const char *fixture = "<orion><databases><database name=\"db\" class=\"db_schema_xml\"><table name=\"rows\">"
+    "<field name=\"id\" type=\"integer\" key=\"YES\"/><field name=\"amount\" type=\"double\"/>"
+    "<field name=\"sub\" type=\"boolean\"/></table></database></databases>"
+    "<forms><form name=\"main\" width=\"400\" role=\"host\" toolbar-style=\"list\" flags=\"toolbar\"><Toolbar><title/></Toolbar>"
+    "<ActivityBar name=\"activity\" labels=\"right\"><Page form=\"list\"/></ActivityBar></form>"
+    "<form name=\"list\" label=\"Rows\" width=\"400\" role=\"page\">"
+    "<TableView name=\"rows\" source=\"db.rows\" totals-skip=\"sub\">"
+    "<RowIcon field=\"sub\" icon=\"folder\" color=\"secondary\"/><RowIcon icon=\"row\"/>"
+    "<Column field=\"id\" title=\"No.\"/><Column field=\"amount\" title=\"Amount\" total=\"sum\"/>"
+    "</TableView></form></forms></orion>";
+  ASSERT_EQUAL(run_orionc(fixture, "accounting", out, sizeof(out)), 0);
+  ASSERT_TRUE(contains(out, "{ \"sub\", NULL, \"folder\", brTextSecondary },"));
+  ASSERT_TRUE(contains(out, "{ NULL, NULL, \"row\", -1 },"));
+  ASSERT_TRUE(contains(out, "_totals[] = { false, true, };"));
+  ASSERT_TRUE(contains(out, ".row_icon_count = 2"));
+  ASSERT_TRUE(contains(out, ".totals_skip = \"sub\""));
+  ASSERT_TRUE(contains(out, "{ NULL, 0, TOOLBAR_STYLE_LIST }"));
+  ASSERT_TRUE(contains(out, ".toolbar_style = TOOLBAR_STYLE_LIST"));
+  ASSERT_TRUE(contains(out, ".label = \"Rows\""));
+  ASSERT_TRUE(contains(out, "{ TOOLBAR_ITEM_TITLE, 0, NULL"));
+  ASSERT_FALSE(contains(out, "\"RowIcon\""));  // not a child window
+  PASS();
+}
+
 static void test_pane_toolbar_declaration(void) {
   TEST("Page pane toolbars share menu commands and declare alternate actions");
   const char *xml = "<orion name=\"test\"><menus><menu name=\"pane\" label=\"Pane\">"
@@ -342,6 +369,7 @@ int main(void) {
     test_pane_toolbar_declaration();
     test_content_column_width();
     test_activitybar_declaration();
+    test_accounting_presentation_declaration();
     test_application_toolbar_declaration();
     test_top_level_toolbars_rejected();
     test_toolbar_reference_rejected();

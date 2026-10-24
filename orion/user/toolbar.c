@@ -11,6 +11,7 @@
 
 #define TB_WINDOW_CLOSE    (-102)
 #define TB_WINDOW_COLLAPSE (-103)
+#define TB_TITLE_GAP       16  // after a title item
 
 static bool toolbar_set_checked(toolbar_state_t *tb, int i, bool checked);
 
@@ -40,7 +41,7 @@ int toolbar_item_hit(const toolbar_state_t *tb, int tx, int ty) {
 bool toolbar_hit_action(const toolbar_state_t *tb, int x, int y) {
   for (int i = 0; tb && tb->item_rects && i < tb->item_count; i++) {
     int type = tb->items[i].type;
-    if (type != TOOLBAR_ITEM_LABEL && type != TOOLBAR_ITEM_SPACER && type != TOOLBAR_ITEM_SEPARATOR &&
+    if (type != TOOLBAR_ITEM_LABEL && type != TOOLBAR_ITEM_TITLE && type != TOOLBAR_ITEM_SPACER && type != TOOLBAR_ITEM_SEPARATOR &&
         rect_contains_point(tb->item_rects[i], (ipoint16_t){x, y})) return true;
   }
   return false;
@@ -52,7 +53,14 @@ static int toolbar_state_bsz(const toolbar_state_t *tb) {
 
 // Caption band under the icon of a TOOLBAR_STYLE_SHOW_LABELS button.
 static int toolbar_label_extra(const toolbar_state_t *tb) {
-  return (tb && (tb->style & TOOLBAR_STYLE_SHOW_LABELS)) ? text_char_height(FONT_SMALLEST) + 2 : 0;
+  return (tb && (tb->style & TOOLBAR_STYLE_SHOW_LABELS) && !(tb->style & TOOLBAR_STYLE_LIST))
+       ? text_char_height(FONT_SMALLEST) + 2 : 0;
+}
+
+// TOOLBAR_STYLE_LIST: the caption follows the icon cell on the same line.
+#define TOOLBAR_LIST_TEXT_PAD 8
+static bool toolbar_lists_text(const toolbar_state_t *tb, const toolbar_item_t *item) {
+  return tb && (tb->style & TOOLBAR_STYLE_LIST) && item->text && item->text[0];
 }
 
 // Square cell of a button-like item: the regular button size scaled by the item's CONTROL_SIZE_*.
@@ -70,6 +78,12 @@ static int toolbar_state_item_height(const toolbar_state_t *tb) {
 }
 
 static void toolbar_center_column(toolbar_state_t *tb, int first, int end, int x, int width) {
+  if (tb->style & TOOLBAR_STYLE_LIST) {  // list rows fill the column, captions aligned
+    for (int i = first; i < end; i++)
+      if (tb->items[i].type == TOOLBAR_ITEM_BUTTON || tb->items[i].type == TOOLBAR_ITEM_CUSTOM)
+        tb->item_rects[i] = R(x, tb->item_rects[i].y, width, tb->item_rects[i].h);
+    return;
+  }
   for (int i = first; i < end;) {
     int next = i + 1;
     while (next < end && tb->item_rects[next].y == tb->item_rects[i].y) next++;
@@ -80,6 +94,16 @@ static void toolbar_center_column(toolbar_state_t *tb, int first, int end, int x
     for (int j = i; j < next; j++) tb->item_rects[j].x += offset;
     i = next;
   }
+}
+
+// A title item starts over the content, past the panes docked on the left
+// edge (a source list), the way Finder's starts past its sidebar.
+static int toolbar_title_lead(window_t *win) {
+  int lead = 0;
+  for (window_t *c = win->children; c; c = c->next)
+    if (c->dock && c->dock->side == DOCK_LEFT && !c->dock->collapsed && window_has_state(c, WINDOW_STATE_VISIBLE))
+      lead = MAX(lead, c->frame.x + c->frame.w);
+  return lead;
 }
 
 static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_t *tb, bool ideal) {
@@ -120,7 +144,9 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
       case TOOLBAR_ITEM_DROPDOWN: {
         int cell = toolbar_item_cell(tb, item, padding);
         w = item->w > 0 ? item->w : cell;
-        if (!item->w && (tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text)
+        if (!item->w && toolbar_lists_text(tb, item))
+          w = cell + text_strwidth(FONT_SMALL, item->text) + TOOLBAR_LIST_TEXT_PAD;
+        else if (!item->w && (tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text)
           w = MAX(w, text_strwidth(FONT_SMALLEST, item->text) + 8);
         if (item->type == TOOLBAR_ITEM_DROPDOWN) w += get_theme()->toolbar.dropdown_arrow_w;
         h = cell + toolbar_label_extra(tb);
@@ -129,6 +155,11 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
       case TOOLBAR_ITEM_LABEL:
         w = item->w > 0 ? item->w
                         : (text_strwidth(FONT_SMALLEST, item->text ? item->text : "") + TOOLBAR_LABEL_PADDING);
+        break;
+      case TOOLBAR_ITEM_TITLE:
+        // As far in from the content's edge as the text is down from the window's top.
+        if (!vertical) x = MAX(x, toolbar_title_lead(parent) + base_y + (item_h - text_char_height(FONT_TITLE)) / 2);
+        w = item->w > 0 ? item->w : text_strwidth(FONT_TITLE, parent->title) + TB_TITLE_GAP;
         break;
       case TOOLBAR_ITEM_COMBOBOX:
         w = item->w > 0 ? item->w : (bsz * TOOLBAR_COMBOBOX_DEFAULT_WIDTH_MULT);
@@ -384,11 +415,18 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       int poff = is_pressed ? th->control.press_icon_offset : 0;
       irect16_t icon_rect = local;
       icon_rect.h -= toolbar_label_extra(tb);
+      if (toolbar_lists_text(tb, item)) {
+        icon_rect.w = MIN(icon_rect.w, icon_rect.h);
+        irect16_t caption = rect_offset(rect_trim_left(local, icon_rect.w), poff, poff);
+        uint32_t ink = disabled ? get_sys_color(brTextDisabled)
+                     : is_active ? theme_foreground(part, CTRL_SELECTED) : get_sys_color(brToolbarForeground);
+        draw_text_clipped(FONT_SMALL, item->text, &caption, ink, 0);
+      }
       if (item->ident == TB_WINDOW_CLOSE || item->ident == TB_WINDOW_COLLAPSE)
         draw_theme_icon_in_rect(item->ident == TB_WINDOW_CLOSE ? THEME_ICON_CLOSE : THEME_ICON_RESTORE,
                                 icon_rect, get_sys_color(brTextNormal));
       else if (!plastic) draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, poff, disabled, item->color);
-      if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
+      if (toolbar_label_extra(tb) && item->text) {
         int tx = (local.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + poff;
         int ty = local.h - text_char_height(FONT_SMALLEST) - 2 + poff;
         draw_text(FONT_SMALLEST, item->text, tx, ty, get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
@@ -414,7 +452,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       irect16_t icon_rect = btn_part;
       icon_rect.h -= toolbar_label_extra(tb);
       draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, btn_poff, disabled, item->color);
-      if ((tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text) {
+      if (toolbar_label_extra(tb) && item->text) {
         int tx = (btn_part.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + btn_poff;
         int ty = btn_part.h - text_char_height(FONT_SMALLEST) - 2 + btn_poff;
         draw_text(FONT_SMALLEST, item->text, tx, ty, get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
@@ -430,6 +468,11 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
     case TOOLBAR_ITEM_SEPARATOR:
       theme_draw(THEME_PART_TOOLBAR_SEPARATOR, R(0, 0, r.w, r.h), CTRL_NORMAL);
       break;
+    case TOOLBAR_ITEM_TITLE: {
+      int ty = (r.h - text_char_height(FONT_TITLE)) / 2;
+      draw_text_ellipsized(FONT_TITLE, win->title, 0, ty, MAX(0, r.w - TB_TITLE_GAP), get_sys_color(brTextNormal));
+      break;
+    }
     case TOOLBAR_ITEM_LABEL: {
       int ty = (r.h - text_char_height(FONT_SMALLEST)) / 2;
       draw_text_ellipsized(FONT_SMALLEST, item->text ? item->text : "", 2, ty, MAX(0, r.w - 4), get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
@@ -641,6 +684,14 @@ toolbar_state_t *toolbar_ensure_state(window_t *win) {
   }
 
   return window_toolbar_state(win);
+}
+
+void toolbar_relayout(window_t *win) {
+  toolbar_state_t *tb = window_toolbar_state(win);
+  if (!tb) return;
+  compute_toolbar_item_rects(win, tb);
+  post_message(win, evRefreshStencil, 0, NULL);
+  invalidate_window(get_root_window(win));
 }
 
 uint8_t toolbar_dock_hint(const window_t *win) {
@@ -956,7 +1007,7 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
           fflush(stderr);
           return false;
         }
-        if (count) memcpy(merged, lparam, count * sizeof(*merged)); // the caption shows no title, only the window controls
+        if (count) memcpy(merged, lparam, count * sizeof(*merged)); // the caption shows a title only as a TOOLBAR_ITEM_TITLE item
         int i = count;
         if (!flex) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_SPACER, .style = TOOLBAR_ITEM_FLAG_FLEXSPACE};
         if (collapse) merged[i++] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = TB_WINDOW_COLLAPSE, .tooltip = "Collapse / restore"};

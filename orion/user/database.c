@@ -344,6 +344,34 @@ bool db_schema_field_text(database_t *db, const db_table_schema_t *table,
                 : true;
 }
 
+const db_field_meta_t *db_schema_field_meta(database_t *db, const db_table_schema_t *table, const char *field) {
+  while (db && table && field) {
+    const char *dot = strchr(field, '.');
+    if (!dot) {
+      int index = db_schema_field_index(table, field);
+      return index >= 0 && table->meta ? &table->meta[index] : NULL;
+    }
+    const db_join_schema_t *join = db_schema_join(table, field, (size_t)(dot - field));
+    const char *name = join ? join->foreign_table : NULL, *qualified = name ? strchr(name, '.') : NULL;
+    if (!name || name[0] == '{' || (qualified && qualified[1] == '{')) return NULL;
+    if (qualified) {
+      char db_name[64];
+      snprintf(db_name, sizeof(db_name), "%.*s", (int)(qualified - name), name);
+      db = get_database_by_name(db_name);
+      name = qualified + 1;
+    }
+    const db_schema_def_t *schema = db ? (const db_schema_def_t *)send_db_message(db, dbGetSchema, 0, NULL) : NULL;
+    table = db_schema_table_named(schema, name);
+    field = dot + 1;
+  }
+  return NULL;
+}
+
+int db_schema_field_type(database_t *db, const db_table_schema_t *table, const char *field) {
+  const db_field_meta_t *meta = db_schema_field_meta(db, table, field);
+  return meta ? (int)meta->type : -1;
+}
+
 bool db_get_field_text(database_t *db, int table_id, const void *record,
                        const char *field, char *buf, size_t buf_sz) {
   if (!db || !record || !field || !buf || buf_sz == 0) return false;

@@ -1161,6 +1161,8 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
 
   create_form_children(win, def->children, def->child_count);
 
+  if (def->toolbar_style && (win->flags & WINDOW_TOOLBAR))
+    send_message(win, tbModifyStyle, def->toolbar_style, (void *)(uintptr_t)def->toolbar_style);
   // Auto-populate toolbar if defined
   if (def->toolbar_items && def->toolbar_count > 0 && (win->flags & WINDOW_TOOLBAR)) {
     send_message(win, tbSetItems, (uint32_t)def->toolbar_count, (void *)def->toolbar_items);
@@ -1227,8 +1229,17 @@ bool set_host_page(window_t *host, window_t *page) {
     window_active_page(host)->pages->host = NULL;
   }
   host->pages->active_page = page;
-  send_message(host, tbSetItems, page ? (uint32_t)page->pages->toolbar_count : 0,
-               page ? (void *)page->pages->toolbar_items : NULL);
+  // The host's own items (a title, say) lead; the active page contributes the rest.
+  int own = host->pages->toolbar_count, contributed = page ? page->pages->toolbar_count : 0;
+  toolbar_item_t *items = own + contributed ? calloc((size_t)(own + contributed), sizeof(*items)) : NULL;
+  if (own + contributed && !items) {
+    fprintf(stderr, "[window] set_host_page toolbar allocation failed host=%u count=%d\n", host->id, own + contributed);
+    fflush(stderr);
+  }
+  if (items && own) memcpy(items, host->pages->toolbar_items, (size_t)own * sizeof(*items));
+  if (items && contributed) memcpy(items + own, page->pages->toolbar_items, (size_t)contributed * sizeof(*items));
+  send_message(host, tbSetItems, items ? (uint32_t)(own + contributed) : 0, items);
+  free(items);
   if (page) {
     page->pages->host = host;
     send_message(page, evActivate, 0, host);
@@ -1316,6 +1327,17 @@ static bool window_contains_window(window_t *owner, window_t *child) {
 }
 
 // Show or hide window
+void set_window_title(window_t *win, const char *title) {
+  if (!win) {
+    fprintf(stderr, "[window] set_window_title rejected: no window title=%s\n", title ? title : "");
+    fflush(stderr);
+    return;
+  }
+  snprintf(win->title, sizeof(win->title), "%s", title ? title : "");
+  toolbar_relayout(win);  // a TOOLBAR_ITEM_TITLE measures the title
+  invalidate_window(win);
+}
+
 void show_window(window_t *win, bool visible) {
   if (!visible) {
     dock_cancel_window(win);

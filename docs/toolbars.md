@@ -45,6 +45,17 @@ supplies `title`, `icon`, `checked-icon`, `tooltip`, and `focus`. The host's
 synchronizes selection and focus, and docks the bar left in landscape or bottom
 in portrait. Standalone activity bars retain their ordinary toolbar behavior.
 
+`labels="right"` captions each button beside its icon, a section panel in the
+manner of business applications; `labels="below"` puts the caption under the
+icon. A page's `label=` is its short caption there (the `title` otherwise):
+
+```xml
+<ActivityBar name="activity" labels="right">
+  <Page form="journal_page" command="view.journal" />
+</ActivityBar>
+<form name="journal_page" label="Journal" title="Document Journal" role="page" ...>
+```
+
 ### Toolbar bands
 
 ```text
@@ -311,6 +322,12 @@ widths expand to fit their captions and the non-client toolbar band grows by
 one small-font text row; client layout and input routing use the new height
 automatically.
 
+`TOOLBAR_STYLE_LIST` (WinAPI `TBSTYLE_LIST`) draws the caption to the right of
+the icon instead, without a caption band; the buttons of a vertical bar share
+its width, so the captions line up. In `.orion`, a form's own toolbar takes
+`toolbar-style="labels"` or `toolbar-style="list"`; a host form's style also
+applies to the toolbars its pages contribute.
+
 ## Loading items
 
 Bitmap artwork is supplied as a caller-owned strip texture through `tbSetStrip`;
@@ -486,8 +503,23 @@ standalone and GEM builds; its tools are no longer a floating palette window.
 Toolbars use the shared [workspace docking manager](docking.md). Existing
 `create_docked_toolbar` callers automatically participate. Add
 `WINDOW_TITLETOOLBAR` alongside `WINDOW_TOOLBAR` to share a single row between the
-app items and the window controls. The merged row shows no window title. Configure
-app items with `tbSetItems` as usual; the framework appends the window controls. Locate items by command ID,
+app items and the window controls. The merged row shows no window title of its
+own; place a `TOOLBAR_ITEM_TITLE` item (`<title />` in `.orion`) where the title
+belongs. It draws the window's title in `FONT_TITLE` (the caption font, larger),
+starts past any pane docked on the left edge (a source list) as far in as the
+text is down from the window's top, and drags the window like the caption,
+the way Finder shows a folder's name:
+
+```xml
+<Toolbar>
+  <title />
+  <spacer flags="TOOLBAR_ITEM_FLAG_FLEXSPACE" />
+  <Button command="doc.new" icon="new" tooltip="New" />
+</Toolbar>
+```
+
+`set_window_title()` (≈ `SetWindowText`) changes the title and lays the toolbar
+out again. Configure app items with `tbSetItems` as usual; the framework appends the window controls. Locate items by command ID,
 because framework items also occupy positions in the toolbar state.
 
 ### Control sizes

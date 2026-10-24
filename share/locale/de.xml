@@ -31,4 +31,5 @@
   <string source="Delete">Löschen</string>
   <string source="Delete the selected record?">Den gewählten Datensatz löschen?</string>
   <string source="This record is used by %d other record(s) and cannot be deleted.">Auf den Datensatz verweisen %d andere Datensätze; er kann nicht gelöscht werden.</string>
+  <string source="Totals">Summe</string>
 </strings>

@@ -33,7 +33,11 @@ typedef struct {
     uint32_t width_spec;  // Original width specification: 0 = flex, >0 = fixed pixels
     uint32_t width;       // Current effective width (calculated for flex, same as spec for fixed)
     uint32_t min_width;   // Per-column minimum width, 0 = default (20px)
+    uint32_t align;       // 0 = left, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER
   } columns[MAX_REPORTVIEW_COLUMNS];
+
+  char footer[MAX_REPORTVIEW_COLUMNS][MAX_REPORTVIEW_TITLE]; // totals row pinned under the rows
+  bool footer_visible;
 
   uint32_t count;
   int selected;
@@ -77,6 +81,7 @@ void rv_rebind_item_refs(reportview_data_t *data, uint32_t start);
 void rv_reset_view_state(window_t *win, reportview_data_t *data);
 int rv_content_width(window_t *win);
 int rv_report_header_height(const reportview_data_t *data);
+int rv_report_footer_height(const reportview_data_t *data);
 int rv_get_report_column_width(reportview_data_t *data, int col, int avail_w);
 int rv_report_total_width(reportview_data_t *data, int avail_w);
 int rv_large_icon_cell_h(const reportview_data_t *data);

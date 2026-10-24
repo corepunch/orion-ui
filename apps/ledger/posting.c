@@ -551,7 +551,8 @@ static void build_trial_balance(const report_t *r) {
                  account_within(r->cfg, e->credit_id, a->id) ? e->amount : 0);
     }
     if (totals_empty(&t)) continue;
-    db_balance_t row = { .account_id = a->id, .debit_turnover = t.turn_dr, .credit_turnover = t.turn_cr };
+    db_balance_t row = { .account_id = a->id, .subaccount = strchr(a->code, '.') != NULL,
+                         .debit_turnover = t.turn_dr, .credit_turnover = t.turn_cr };
     split_saldo(t.open_dr, t.open_cr, &row.opening_dr, &row.opening_cr);
     split_saldo(t.open_dr + t.turn_dr, t.open_cr + t.turn_cr, &row.balance_dr, &row.balance_cr);
     send_db_message(r->ib, dbInsert, TABLE_BALANCES, &row);
@@ -625,7 +626,7 @@ static void build_vat_books(const report_t *r) {
 }
 
 static void cash_day_total(const report_t *r, const char *date, double receipt, double expense, double balance) {
-  db_cash_book_t row = { .receipt = receipt, .expense = expense, .balance = round2(balance) };
+  db_cash_book_t row = { .receipt = receipt, .expense = expense, .balance = round2(balance), .summary = true };
   snprintf(row.date, sizeof(row.date), "%.10s", date);
   snprintf(row.content, sizeof(row.content), "%s", ui_tr("Day total and closing balance"));
   send_db_message(r->ib, dbInsert, TABLE_CASH_BOOK, &row);
@@ -647,7 +648,7 @@ static void build_cash_book(const report_t *r) {
       if (day[0]) cash_day_total(r, day, receipt, expense, balance);
       snprintf(day, sizeof(day), "%s", e->date);
       receipt = expense = 0;
-      db_cash_book_t open = { .balance = round2(balance) };
+      db_cash_book_t open = { .balance = round2(balance), .summary = true };
       snprintf(open.date, sizeof(open.date), "%.10s", day);
       snprintf(open.content, sizeof(open.content), "%s", ui_tr("Balance at start of day"));
       send_db_message(r->ib, dbInsert, TABLE_CASH_BOOK, &open);

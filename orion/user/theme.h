@@ -110,13 +110,15 @@ typedef enum {
   THEME_MODERN  = 1,  // flat + dark palette (process default)
   THEME_LIGHT   = 2,  // flat + light WinUI palette
   THEME_NAVY    = 3,  // flat + blue palette
+  THEME_AMBER   = 4,  // flat + light business palette: white wells, amber selection
 } theme_style_t;
 
-// Makefile THEME_<app>=classic|modern|light|navy → -DORION_THEME=<name>
+// Makefile THEME_<app>=classic|modern|light|navy|amber → -DORION_THEME=<name>
 #define THEME_classic  THEME_CLASSIC
 #define THEME_modern   THEME_MODERN
 #define THEME_light    THEME_LIGHT
 #define THEME_navy     THEME_NAVY
+#define THEME_amber    THEME_AMBER
 
 // Semantic class/part identifiers, flattened into one enum to prevent invalid
 // class/part pairs. Bounds and interaction state come from the caller.
@@ -208,7 +210,7 @@ typedef struct {
     int press_icon_offset;  // Classic shifts pressed icons/labels by 1; Modern keeps them stationary
     int size_pct[4];        // CONTROL_SIZE_INDEX order: regular, small, mini, large (% of regular)
   } control;
-  struct { int corner_radius; } button; // 0 = square
+  struct { int corner_radius; } button; // 0 = square; CORNER_RADIUS_CIRCULAR = capsule
   struct {
     int corner_radius;      // applied by the SDF compositor
     struct {
@@ -257,7 +259,11 @@ typedef struct {
     int padding, corner_radius;
     int tint_alpha;          // alpha of the tinted face (0..255)
   } badge;
-  struct { int multiline_corner_radius; } field; // derived from single-line control height
+  struct {
+    int corner_radius;            // single-line fields; CORNER_RADIUS_CIRCULAR = capsule
+    int multiline_corner_radius;  // derived from single-line control height
+    int padding_x;                // text inset from the ends, clearing the corner (FIELD_PADDING_X)
+  } field;
   struct {
     int corner_radius, tail_size;
     int padding_x, padding_y, gap;
@@ -315,11 +321,12 @@ int theme_control_extent(int regular, uint32_t style);
 void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color); // shared card painter for flat themes
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state);
 
-// Built-in theme singletons. Light and Navy share Modern drawing.
+// Built-in theme singletons. Light, Navy and Amber share Modern drawing.
 theme_t *theme_classic_instance(void);
 theme_t *theme_modern_instance(void);
 theme_t *theme_light_instance(void);
 theme_t *theme_navy_instance(void);
+theme_t *theme_amber_instance(void);
 
 // Standalone binaries compiled with -DORION_THEME=<name> select that theme
 // before main(). Gems omit the define, so get_theme() is the shell's theme.

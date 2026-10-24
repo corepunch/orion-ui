@@ -41,7 +41,8 @@
   [brTextOnColor]          = 0xff101010, \
   [brSelectionTop]         = 0xffD77800, \
   [brSelectionBottom]      = 0xffD77800, \
-  [brPlasticNeutral]       = 0xffbcbcbc
+  [brPlasticNeutral]       = 0xffbcbcbc, \
+  [brAccentText]           = 0xffffffff
 
 static const uint32_t k_theme_palette_light[brCount]
   __attribute__((unused)) = { THEME_PALETTE_LIGHT_INIT };

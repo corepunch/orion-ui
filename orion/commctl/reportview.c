@@ -5,10 +5,11 @@
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
+#include <orion/user/svg_icon_loader.h>
 
 static void report_sync_scroll(window_t *win, reportview_data_t *data) {
-  window_set_scroll_content(win, 0, 0,
-                            (irect16_t){0}, (irect16_t){0, rv_report_header_height(data), 0, 0});
+  window_set_scroll_content(win, 0, 0, (irect16_t){0},
+                            (irect16_t){0, rv_report_header_height(data), 0, rv_report_footer_height(data)});
 }
 
 static irect16_t report_item_rect(window_t *win, reportview_data_t *data, int index) {
@@ -19,8 +20,8 @@ static irect16_t report_item_rect(window_t *win, reportview_data_t *data, int in
 static int report_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam) {
   int my = (int)(int16_t)HIWORD(wparam);
   int origin = window_scroll_content_rect(win).y;
-  irect16_t point = window_scroll_rect_to_client(win, R(0, my, 0, 0));
-  if (my < origin || point.y < window_scroll_viewport(win).y) return -1;
+  irect16_t point = window_scroll_rect_to_client(win, R(0, my, 0, 0)), viewport = window_scroll_viewport(win);
+  if (my < origin || point.y < viewport.y || point.y >= viewport.y + viewport.h) return -1;
   int row = (my - origin) / rv_entry_height(data);
   return rv_valid_index(data, row) ? row : RV_INVALID_SELECTION;
 }
@@ -82,6 +83,8 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   irect16_t cr = get_client_rect(win);
   int eff_w = cr.w;
   int header_h = rv_report_header_height(data);
+  int footer_h = rv_report_footer_height(data);
+  int body_bottom = cr.h - footer_h;
   int body_h = window_scroll_viewport(win).h;
   int entry_h = rv_entry_height(data);
   int scroll_y = (int)win->vscroll.pos;
@@ -101,7 +104,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
 
   if (data->selected >= first_row && data->selected < last_row) {
     int y = window_scroll_rect_to_client(win, report_item_rect(win, data, data->selected)).y;
-    int top = MAX(y, header_h), bottom = MIN(y + entry_h, cr.h);
+    int top = MAX(y, header_h), bottom = MIN(y + entry_h, body_bottom);
     theme_draw(THEME_PART_LIST_ITEM, R(0, top, eff_w, bottom - top), CTRL_SELECTED);
   }
 
@@ -121,13 +124,16 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     if (header_h > 0) {
       set_clip_rect(win, (irect16_t){clip_x, 0, clip_w, header_h});
       theme_draw(THEME_PART_HEADER, R(draw_x, 0, col_w, header_h), CTRL_NORMAL);
-      draw_text_small_clipped(data->columns[col].title,
-                              &(irect16_t){draw_x, 0, col_w, header_h},
-                              hdr_fg, TEXT_PADDING_LEFT);
+      char title[MAX_REPORTVIEW_TITLE + 4];
+      const char *shown = data->columns[col].title;
+      int title_w = col_w - 2 * WIN_PADDING;
+      if (strwidth(shown) > title_w) { text_ellipsize(FONT_SYSTEM, shown, MAX(0, title_w), title, sizeof(title)); shown = title; }
+      draw_text_small_clipped(shown,
+                              &(irect16_t){draw_x, 0, col_w - (data->columns[col].align ? WIN_PADDING : 0), header_h},
+                              hdr_fg, data->columns[col].align ? data->columns[col].align : TEXT_PADDING_LEFT);
     }
 
-    int body_h_local = cr.h - header_h;
-    set_clip_rect(win, (irect16_t){clip_x, header_h, clip_w, body_h_local});
+    set_clip_rect(win, (irect16_t){clip_x, header_h, clip_w, MAX(0, body_bottom - header_h)});
     for (int row = first_row; row < last_row; row++) {
       reportview_item_t *it = &data->items[row];
       uint32_t fg = (row == data->selected) ? theme_foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED)
@@ -141,6 +147,14 @@ static void report_paint(window_t *win, reportview_data_t *data) {
         src = (idx < it->subitem_count && it->subitems[idx]) ? it->subitems[idx] : "";
       }
       int text_x = draw_x + WIN_PADDING;
+      if (col == 0 && it->icon_name && data->cell_style != REPORTVIEW_CELL_TWO_LINE) {
+        sysicon_resolved_t res;
+        irect16_t icon = {text_x, y + (entry_h - ICON_OFFSET) / 2, ICON_OFFSET, ICON_OFFSET};
+        if (sysicon_resolve(it->icon_name, &res))
+          draw_sprite_region((int)res.tex, icon, UV_RECT(res.u0, res.v0, res.u1, res.v1),
+                             it->icon_color ? it->icon_color : fg, 0);
+        text_x += ICON_OFFSET + WIN_PADDING;
+      }
       if (col == 0 && (data->extended_style & RVS_EX_CHECKBOXES)) {
         irect16_t box = {text_x,
                          y + MAX(0, (entry_h - CHECKBOX_BOX_SIZE) / 2),
@@ -167,9 +181,21 @@ static void report_paint(window_t *win, reportview_data_t *data) {
         draw_text_clipped(FONT_SMALLEST, subtitle, &subtitle_rect,
                           row == data->selected ? fg : get_sys_color(brTextDisabled), 0);
       } else {
-        irect16_t text_rect = {text_x, y, text_w, entry_h};
-        draw_text_clipped(FONT_SMALL, src, &text_rect, fg, 0);
+        // Text that does not fit ends in an ellipsis; numbers align right.
+        char fitted[MAX_COLUMNVIEW_ITEM_NAME];
+        int pad = data->columns[col].align ? WIN_PADDING : 0;
+        if (text_strwidth(FONT_SMALL, src) > text_w - pad) {
+          text_ellipsize(FONT_SMALL, src, MAX(0, text_w - pad), fitted, sizeof(fitted));
+          src = fitted;
+        }
+        irect16_t text_rect = {text_x, y, MAX(0, text_w - pad), entry_h};
+        draw_text_clipped(FONT_SMALL, src, &text_rect, fg, data->columns[col].align);
       }
+    }
+
+    if (footer_h > 0) {  // totals band: a header face pinned under the rows
+      set_clip_rect(win, (irect16_t){clip_x, body_bottom, clip_w, footer_h});
+      theme_draw(THEME_PART_HEADER, R(draw_x, body_bottom, col_w, footer_h), CTRL_NORMAL);
     }
 
     col_x += col_w;
@@ -202,6 +228,30 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     }
 #endif
   }
+
+  // Totals text, aligned like its column. A left-aligned caption runs on
+  // into the empty cells after it, as in a spreadsheet, over their dividers.
+  col_x = 0;
+  for (uint32_t col = 0; footer_h > 0 && col < draw_columns; col++) {
+    int col_w = data->cell_style == REPORTVIEW_CELL_TWO_LINE ? eff_w : rv_get_report_column_width(data, (int)col, eff_w);
+    int span_w = col_w;
+    for (uint32_t next = col + 1; !data->columns[col].align && next < draw_columns && !data->footer[next][0]; next++)
+      span_w += rv_get_report_column_width(data, (int)next, eff_w);
+    int draw_x = window_scroll_rect_to_client(win, R(col_x, 0, 0, 0)).x;
+    col_x += col_w;
+    if (!data->footer[col][0]) continue;
+    int clip_x = MAX(0, draw_x), clip_r = MIN(eff_w, draw_x + span_w);
+    if (clip_r <= clip_x) continue;
+    set_clip_rect(win, (irect16_t){clip_x, body_bottom, clip_r - clip_x, footer_h});
+    if (span_w > col_w) theme_draw(THEME_PART_HEADER, R(draw_x, body_bottom, span_w - 1, footer_h), CTRL_NORMAL);
+    char total[MAX_REPORTVIEW_TITLE + 4];
+    const char *shown = data->footer[col];
+    int pad = data->columns[col].align ? WIN_PADDING : 0, total_w = span_w - 2 * WIN_PADDING;
+    if (text_strwidth(FONT_SMALL, shown) > total_w) { text_ellipsize(FONT_SMALL, shown, MAX(0, total_w), total, sizeof(total)); shown = total; }
+    irect16_t total_rect = {draw_x + WIN_PADDING, body_bottom, MAX(0, span_w - WIN_PADDING - pad), footer_h};
+    draw_text_clipped(FONT_SMALL, shown, &total_rect, hdr_fg, data->columns[col].align);
+  }
+  set_clip_rect(win, (irect16_t){0, 0, eff_w, cr.h});
 }
 
 result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -240,7 +290,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (!m) return true;
-      int min_h = rv_report_header_height(data) + rv_entry_height(data);
+      int min_h = rv_report_header_height(data) + rv_entry_height(data) + rv_report_footer_height(data);
       int min_w = 1;
       if (data && data->column_count > 0) {
         int cols_w = 0;
@@ -444,6 +494,21 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       return true;
     case RVM_GETCELLSTYLE:
       return (result_t)data->cell_style;
+    case RVM_SETFOOTER: {
+      const char *const *texts = lparam;
+      if (texts && wparam > MAX_REPORTVIEW_COLUMNS) {
+        fprintf(stderr, "[reportview] footer texts beyond the column limit are dropped win=%u count=%u max=%d\n",
+                win->id, (unsigned)wparam, MAX_REPORTVIEW_COLUMNS);
+        fflush(stderr);
+      }
+      memset(data->footer, 0, sizeof(data->footer));
+      for (uint32_t i = 0; texts && i < wparam && i < MAX_REPORTVIEW_COLUMNS; i++)
+        snprintf(data->footer[i], sizeof(data->footer[i]), "%s", texts[i] ? texts[i] : "");
+      data->footer_visible = texts != NULL;
+      report_sync_scroll(win, data);
+      rv_invalidate(win, data);
+      return true;
+    }
     case RVM_SETITEMSTATE: {
       reportview_item_state_t *st = (reportview_item_state_t *)lparam;
       if (!st) return false;
@@ -462,14 +527,19 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       return wparam == RVM_VIEW_REPORT;
     case RVM_ADDCOLUMN: {
       reportview_column_t *col = (reportview_column_t *)lparam;
-      if (!col || data->column_count >= MAX_REPORTVIEW_COLUMNS)
+      if (!col || data->column_count >= MAX_REPORTVIEW_COLUMNS) {
+        fprintf(stderr, "[reportview] add column rejected win=%u count=%u max=%d title=%s\n", win->id,
+                data->column_count, MAX_REPORTVIEW_COLUMNS, col && col->title ? col->title : "");
+        fflush(stderr);
         return -1;
+      }
       uint32_t i = data->column_count;
       strncpy(data->columns[i].title, col->title ? col->title : "", MAX_REPORTVIEW_TITLE - 1);
       data->columns[i].title[MAX_REPORTVIEW_TITLE - 1] = '\0';
       data->columns[i].width_spec = col->width;  // Store original spec
       data->columns[i].width = col->width;        // Initial effective width
       data->columns[i].min_width = col->min_width;
+      data->columns[i].align = col->align;
       data->column_count++;
 
       // Keep effective widths in sync when columns are added after layout.

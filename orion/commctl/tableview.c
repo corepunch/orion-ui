@@ -67,6 +67,13 @@ typedef struct {
   void **rows;
   int row_count;
   const form_def_t *record_form;
+  bool blank_zeros;
+  const db_field_meta_t **metas;  // field metadata per column (NULL unknown), resolved with the database
+  tableview_row_icon_t *row_icons;
+  int row_icon_count;
+  bool *totals;        // per column, NULL = no totals row
+  char *totals_label;
+  char *totals_skip;
 } tableview_state_t;
 
 // Forward declarations
@@ -137,6 +144,76 @@ static bool tv_get_field_text(tableview_state_t *s, void *record,
   return db_get_field_text(s->db, s->table_id, record, field, buf, buf_sz);
 }
 
+static bool tv_zero_text(const char *text) {
+  bool digit = false;
+  for (const char *p = text; *p; p++) {
+    if (*p >= '1' && *p <= '9') return false;
+    digit |= *p == '0';
+  }
+  return digit;
+}
+
+// Booleans read "Yes" or nothing instead of 1 and 0; with zeros="blank",
+// numeric zeros are left empty.
+static int tv_type(const tableview_state_t *s, int col) {
+  return s->metas && s->metas[col] ? (int)s->metas[col]->type : -1;
+}
+
+static bool tv_numeric(int type) { return type == DB_TYPE_INT || type == DB_TYPE_FLOAT || type == DB_TYPE_DOUBLE; }
+
+static void tv_present_cell(tableview_state_t *s, int col, char *text, size_t sz) {
+  int type = tv_type(s, col);
+  if (type == DB_TYPE_BOOL) snprintf(text, sz, "%s", atoi(text) ? ui_tr("Yes") : "");
+  else if (s->blank_zeros && tv_numeric(type) && tv_zero_text(text))
+    text[0] = '\0';
+}
+
+// A field is set when it is non-empty and not zero or false.
+static bool tv_field_set(tableview_state_t *s, void *record, const char *field) {
+  char text[256] = "";
+  db_get_field_text(s->db, s->table_id, record, field, text, sizeof(text));
+  return text[0] && !tv_zero_text(text) && strcmp(text, "false");
+}
+
+static const tableview_row_icon_t *tv_row_icon(tableview_state_t *s, void *record) {
+  for (int i = 0; i < s->row_icon_count; i++) {
+    const tableview_row_icon_t *rule = &s->row_icons[i];
+    char text[256] = "";
+    if (!rule->field) return rule;
+    if (!rule->value) { if (tv_field_set(s, record, rule->field)) return rule; continue; }
+    db_get_field_text(s->db, s->table_id, record, rule->field, text, sizeof(text));
+    if (!strcmp(text, rule->value)) return rule;
+  }
+  return NULL;
+}
+
+// The totals row: sums in their columns, the caption in the first other one.
+static void tv_set_footer(window_t *win, tableview_state_t *s, const double *sums) {
+  if (!s->totals) return;
+  char (*text)[64] = calloc((size_t)s->column_count, sizeof(*text));
+  const char **texts = calloc((size_t)s->column_count, sizeof(*texts));
+  if (!text || !texts) {
+    fprintf(stderr, "[tableview] totals allocation failed win=%u columns=%d\n", win->id, s->column_count);
+    fflush(stderr);
+    free(text); free(texts); return;
+  }
+  bool labelled = false;
+  for (int col = 0; col < s->column_count; col++) {
+    texts[col] = text[col];
+    if (!s->totals[col]) {
+      if (!labelled) snprintf(text[col], sizeof(text[col]), "%s", s->totals_label ? s->totals_label : ui_tr("Totals"));
+      labelled = true;
+      continue;
+    }
+    const db_field_meta_t *meta = s->metas ? s->metas[col] : NULL;
+    int decimals = !meta || meta->type == DB_TYPE_INT ? 0 : meta->precision > 0 ? meta->precision : 2;
+    ui_format_number(sums ? sums[col] : 0, decimals, text[col], sizeof(text[col]));
+    if (s->blank_zeros && tv_zero_text(text[col])) text[col][0] = '\0';
+  }
+  send_message(win, RVM_SETFOOTER, (uint32_t)s->column_count, texts);
+  free(text); free(texts);
+}
+
 // The database can format this table: schema-driven or object-proc adaptor.
 static bool tv_db_supports(database_t *db, int table_id) {
   if (!db) return false;
@@ -171,15 +248,29 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
   s->rows = NULL;
   s->row_count = 0;
   
-  // Setup columns (on first refresh or if column count changed)
+  // Setup columns (on first refresh or if column count changed). Numbers
+  // align right, as in a ledger.
   int existing_cols = (int)send_message(win, RVM_GETCOLUMNCOUNT, 0, NULL);
   if (existing_cols != s->column_count) {
+    if (s->column_count > MAX_REPORTVIEW_COLUMNS) {
+      fprintf(stderr, "[tableview] columns beyond the limit are not shown win=%u table=%d columns=%d max=%d\n",
+              win->id, s->table_id, s->column_count, MAX_REPORTVIEW_COLUMNS);
+      fflush(stderr);
+      s->column_count = MAX_REPORTVIEW_COLUMNS;
+    }
+    const db_schema_def_t *schema = (const db_schema_def_t *)send_db_message(s->db, dbGetSchema, 0, NULL);
+    const db_table_schema_t *table = db_schema_table(schema, s->table_id);
+    free(s->metas);
+    s->metas = calloc((size_t)s->column_count, sizeof(*s->metas));
     send_message(win, RVM_CLEARCOLUMNS, 0, NULL);
     for (int i = 0; i < s->column_count; i++) {
+      if (s->metas && table) s->metas[i] = db_schema_field_meta(s->db, table, s->field_names[i]);
+      bool number = tv_numeric(tv_type(s, i));
       reportview_column_t col = {
         .title = s->column_titles[i] ? s->column_titles[i] : s->field_names[i],
         .width = (uint32_t)((s->column_widths && s->column_widths[i] > 0) ? s->column_widths[i] : 0),
         .min_width = (uint32_t)((s->column_min_widths && s->column_min_widths[i] > 0) ? s->column_min_widths[i] : 0),
+        .align = number ? TEXT_ALIGN_RIGHT : 0,
       };
       send_message(win, RVM_ADDCOLUMN, 0, &col);
     }
@@ -193,12 +284,17 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
   if (!results) {
     TV_LOG("fetch returned no rows: id=%u table=%d", (unsigned)win->id,
            s->table_id);
+    tv_set_footer(win, s, NULL);
     return;
   }
   
   // Allocate cell buffers
   char (*cell_buf)[256] = calloc((size_t)s->column_count, sizeof(*cell_buf));
-  if (!cell_buf) {
+  double *sums = s->totals ? calloc((size_t)s->column_count, sizeof(double)) : NULL;
+  if (!cell_buf || (s->totals && !sums)) {
+    fprintf(stderr, "[tableview] row buffer allocation failed win=%u columns=%d\n", win->id, s->column_count);
+    fflush(stderr);
+    free(cell_buf); free(sums);
     free_result_list(results);
     return;
   }
@@ -214,11 +310,14 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
     s->rows[s->row_count++] = record;
     
     // Extract field values for all columns
+    bool counted = !s->totals_skip || !tv_field_set(s, record, s->totals_skip);
     for (int col = 0; col < s->column_count; col++) {
       if (!tv_get_field_text(s, record, s->field_names[col],
                              cell_buf[col], sizeof(cell_buf[col]))) {
         cell_buf[col][0] = '\0';
       }
+      if (sums && s->totals[col] && counted) sums[col] += ui_parse_number(cell_buf[col]);
+      tv_present_cell(s, col, cell_buf[col], sizeof(cell_buf[col]));
     }
     
     // Create row
@@ -229,6 +328,11 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
       .userdata = (uint32_t)row_idx,
       .subitem_count = (uint32_t)((s->column_count > 1) ? (s->column_count - 1) : 0),
     };
+    const tableview_row_icon_t *rule = s->row_icons ? tv_row_icon(s, record) : NULL;
+    if (rule) {
+      item.icon_name = rule->icon;
+      item.icon_color = rule->color >= 0 && rule->color < brCount ? get_sys_color((sys_color_idx_t)rule->color) : 0;
+    }
     if (s->check_field) {
       char checked[16] = {0};
       tv_get_field_text(s, record, s->check_field, checked, sizeof(checked));
@@ -243,7 +347,9 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
     row_idx++;
   }
   
+  tv_set_footer(win, s, sums);
   free(cell_buf);
+  free(sums);
   free_result_list(results);
   TV_LOG("refresh complete: id=%u table=%d rows=%d",
          (unsigned)win->id, s->table_id, row_idx);
@@ -317,6 +423,7 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       s->check_field = params->check_field && params->check_field[0] ? strdup(params->check_field) : NULL;
       s->cell_style = params->cell_style;
       s->record_form = params->record_form;
+      s->blank_zeros = params->blank_zeros;
       TV_LOG("create: id=%u table=%d db=%p columns=%d", (unsigned)win->id,
              s->table_id, (void *)s->db, count_strings(params->field_names));
       
@@ -363,6 +470,26 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         return true;
       }
       
+      if (params->row_icon_count > 0 && params->row_icons) {
+        s->row_icons = calloc((size_t)params->row_icon_count, sizeof(*s->row_icons));
+        for (int i = 0; s->row_icons && i < params->row_icon_count; i++) {
+          const tableview_row_icon_t *src = &params->row_icons[i];
+          s->row_icons[i] = (tableview_row_icon_t){ src->field ? strdup(src->field) : NULL, src->value ? strdup(src->value) : NULL,
+                                                    src->icon ? strdup(src->icon) : NULL, src->color };
+          s->row_icon_count++;
+        }
+      }
+      if (params->column_totals) {
+        s->totals = calloc((size_t)s->column_count, sizeof(bool));
+        if (s->totals) memcpy(s->totals, params->column_totals, (size_t)s->column_count * sizeof(bool));
+        s->totals_label = params->totals_label ? strdup(ui_tr(params->totals_label)) : NULL;
+        s->totals_skip = params->totals_skip ? strdup(params->totals_skip) : NULL;
+      }
+      if ((params->row_icon_count > 0 && !s->row_icons) || (params->column_totals && !s->totals)) {
+        fprintf(stderr, "[tableview] row icon/totals allocation failed win=%u\n", win->id);
+        fflush(stderr);
+      }
+
       // Setup as reportview
       send_message(win, RVM_SETVIEWMODE, RVM_VIEW_REPORT, NULL);
       send_message(win, RVM_SETCELLSTYLE, s->cell_style, NULL);
@@ -388,6 +515,14 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         free(s->master_key);
         free(s->check_field);
         free(s->rows);
+        free(s->metas);
+        for (int i = 0; i < s->row_icon_count; i++) {
+          free((char *)s->row_icons[i].field); free((char *)s->row_icons[i].value); free((char *)s->row_icons[i].icon);
+        }
+        free(s->row_icons);
+        free(s->totals);
+        free(s->totals_label);
+        free(s->totals_skip);
         free(s);
         win->userdata = NULL;
       }

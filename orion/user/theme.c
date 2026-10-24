@@ -24,6 +24,7 @@ static theme_t *theme_for_style(theme_style_t style) {
     case THEME_MODERN:  return theme_modern_instance();
     case THEME_LIGHT:   return theme_light_instance();
     case THEME_NAVY:    return theme_navy_instance();
+    case THEME_AMBER:   return theme_amber_instance();
     default:            return NULL;
   }
 }
@@ -51,7 +52,9 @@ static bool theme_validate(theme_t *t) {
 #undef REQUIRE
   if (t->scrollbar.width < 0 || (!t->scrollbar.overlay && t->scrollbar.width == 0) ||
       (t->scrollbar.overlay && t->scrollbar.width != 0) || t->control.padding < 0 ||
-      t->control.press_icon_offset < 0 || t->button.corner_radius < 0 || t->window.corner_radius < 0 ||
+      t->control.press_icon_offset < 0 || t->window.corner_radius < 0 ||
+      (t->button.corner_radius < 0 && t->button.corner_radius != CORNER_RADIUS_CIRCULAR) ||
+      (t->field.corner_radius < 0 && t->field.corner_radius != CORNER_RADIUS_CIRCULAR) || t->field.padding_x <= 0 ||
       t->caption.height <= 0 || t->menubar.height <= 0 || t->toolbar.button_size <= 0 ||
       t->toolbar.padding < 0 || t->tab.corner_radius < 0 || t->tab.pane_margin < 0 || t->splitter.spacing < 0) {
     fprintf(stderr, "[theme] invalid metrics name=%s gutter=%d overlay=%d padding=%d offset=%d radius=%d window_radius=%d caption=%d menu=%d toolbar=%d toolbar.padding=%d tab.radius=%d pane.margin=%d splitter.spacing=%d\n",

@@ -79,6 +79,17 @@ and `brSelectionBottom` from the active palette. `set_sys_colors()` can override
 either endpoint. Light keeps equal endpoints for a solid selection; Classic
 keeps its original palette and drawing.
 
+Amber is a light business palette for data-entry applications: white wells
+(`brColumnViewBg`) for lists and fields, warm grey chrome, a graphite caption
+(`brActiveTitlebar`), and pale amber selection. Text and icons drawn on an
+accent fill (selected rows, the default button, the hovered menu item) use
+`brAccentText`, which is dark here and white in the other palettes. Buttons and
+fields take their corner radii from `button.corner_radius` and
+`field.corner_radius` (`CORNER_RADIUS_CIRCULAR` for capsules; Amber uses small
+rounded rectangles). A field's text inset, `field.padding_x`, follows its
+roundness: a capsule keeps `TEXTEDIT_PADDING_CAPSULE` clear of its round ends,
+a squarer field takes `FIELD_PADDING_X(radius)`. Build an app with it via `make THEME_<app>=amber`.
+
 ```c
 // Card with an optional accent edge; the theme rounds (or squares) card and edge together.
 draw_card(r, CTRL_HOVER | CTRL_SELECTED | CTRL_FOCUSED, color_with_alpha(get_sys_color(brTextWarning), 0x78));

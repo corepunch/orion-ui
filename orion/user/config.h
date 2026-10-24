@@ -71,8 +71,12 @@
 // Button horizontal padding (space between text and edges)
 #define BUTTON_PADDING          8
 
-// Textedit horizontal padding (between frame and text)
-#define TEXTEDIT_PADDING_HORZ   12
+// Textedit horizontal padding (between frame and text): the theme's
+// field.padding_x. Text clears the field's corner, so a capsule's end takes
+// TEXTEDIT_PADDING_CAPSULE and a squarer field less: FIELD_PADDING_X(radius).
+#define TEXTEDIT_PADDING_CAPSULE 12
+#define FIELD_PADDING_X(radius) ((radius) > 6 ? (radius) : 6)
+#define TEXTEDIT_PADDING_HORZ   (get_theme()->field.padding_x)
 #define COMBOBOX_ICON_SIZE      16
 // The chevrons SVG has a quarter-tile inset on each side, including its stroke.
 #define COMBOBOX_ICON_PADDING   (TEXTEDIT_PADDING_HORZ - COMBOBOX_ICON_SIZE / 4)

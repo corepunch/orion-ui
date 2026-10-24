@@ -76,6 +76,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
 typedef struct {
   const toolbar_item_t *items;
   int count;
+  uint32_t style;  // TOOLBAR_STYLE_* added to the bar's own (TOOLBAR_STYLE_SHOW_LABELS: captions under icons)
 } activitybar_params_t;
 result_t win_activitybar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
@@ -181,6 +182,14 @@ enum {
 // evCommand notification (HIWORD) sent by a TableView after a record action.
 #define tvnChanged 0x7401
 
+// <RowIcon field= value= icon= color=>: the first matching rule draws its icon
+// before a row's first column. A rule without field always matches; without
+// value it matches a set field (non-empty, non-zero).
+typedef struct {
+  const char *field, *value, *icon;
+  int color;                   // sys colour role (brTextSuccess, ...), -1 = the text colour
+} tableview_row_icon_t;
+
 typedef struct {
   database_t *db;              // Database instance
   int table_id;                // TABLE_* enum value
@@ -197,6 +206,12 @@ typedef struct {
   reportview_cell_style_t cell_style; // REPORTVIEW_CELL_COLUMNS (default) or TWO_LINE
   bool hide_column_titles;
   const struct form_def_s *record_form; // database form editing one row (form=); double-click edits
+  bool blank_zeros;            // zeros="blank": numeric zeros show empty, as accounting reports do
+  const tableview_row_icon_t *row_icons; // status icons by record state (NULL = none)
+  int row_icon_count;
+  const bool *column_totals;   // total="sum" per column: a totals row under the rows (NULL = none)
+  const char *totals_label;    // caption in the first column without a total (NULL = "Totals")
+  const char *totals_skip;     // rows with this field set stay out of the totals (subaccounts repeating their parent)
 } tableview_params_t;
 
 result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);

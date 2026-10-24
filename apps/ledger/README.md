@@ -38,6 +38,33 @@ the reports; `Reports > Print Report Forms` writes the cash book.
 
 ![Cash book](../../docs/screenshots/ledger_cash_book.jpg)
 
+## Look and feel
+
+Ledger is built for people who keep books in 1C all day, so it looks the way
+they expect. It uses the Amber theme (`THEME_ledger=amber`, the default here):
+white tables and fields, warm grey chrome, graphite dialog captions, and pale
+yellow for the current row, the current section and the default button
+(`OK and Post`).
+
+- **Section panel.** Every section has an icon and a caption (`labels="right"`
+  on the ActivityBar, `label=` on each page).
+- **Unified title bar.** One row holds the organization's name, the icon
+  buttons and the window controls, as Finder shows a folder's name above its
+  contents: the host's toolbar holds a `<title />` item and the active page
+  adds its buttons (`flags="toolbar,titletoolbar"`). The name starts over the
+  content, past the section panel; the tables start right under the row.
+  Tooltips name each command.
+- **Status icons.** Posted documents show a green seal and drafts a dashed
+  sheet. Catalogs, the chart of accounts and the entry journal have their
+  own row icons, and an asset not yet in service shows a clock (`<RowIcon>`).
+- **Totals.** Document lines, entries and every report end in a pinned
+  `Totals` row (`total="sum"`). The trial balance totals count top-level
+  accounts only, so debit and credit agree (`totals-skip="subaccount"`).
+- **Document captions.** A document dialog is titled like the document,
+  e.g. «Реализация товаров РТ-0001 от 10.03.2003».
+
+![Trial balance with totals](../../docs/screenshots/ledger_balance.jpg)
+
 ## Platform and configuration
 
 Ledger separates the **platform** from the **configuration**, the way 1C:Enterprise
@@ -109,6 +136,7 @@ Print templates are HTML files filled from the document:
 | `{{#cash_book}} ... {{/cash_book}}`, `{{period.date_from}}` | Report forms (`print_forms.report`) repeat a report's rows |
 | `{{date\|dmy}}` | ISO date as DD.MM.YYYY |
 | `{{total\|words}}` | Amount in words in the configuration's language |
+| `{{counterparty.name\|dat}}` | A person's name in a case: `gen`, `dat`, `acc`, `ins`, `pre` ("Выдать Петрову Петру Петровичу"); organizations stay as they are |
 
 `Documents > Print Forms` writes every form of the document's type to
 `<infobase dir>/print/` for printing from a browser.

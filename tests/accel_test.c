@@ -188,6 +188,8 @@ void test_accel_format_bare_key(void) {
     ASSERT_NULL(strstr(buf, "Ctrl+"));
     ASSERT_NULL(strstr(buf, "Shift+"));
     ASSERT_NULL(strstr(buf, "Alt+"));
+    ASSERT_STR_EQUAL(buf, "F5");  // key names read as labels, not the platform's "f5"
+    ASSERT_EQUAL(n, 2);
     PASS();
 }
 

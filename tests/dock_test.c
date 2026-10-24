@@ -412,6 +412,32 @@ static void test_toolbar_undock_size(void) {
   test_env_shutdown(); PASS();
 }
 
+static void test_merged_title(void) {
+  TEST("TOOLBAR_ITEM_TITLE: the merged row shows the title past a left source list; items after a flexible gap");
+  test_env_init();
+  window_t *win = create_window("ACME Ltd", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NOCOLLAPSE,
+                                MAKERECT(40, 50, 800, 500), NULL, dock_test_proc, 0, NULL);
+  window_t *list = create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 150, 100), win, dock_test_proc, 0, NULL);
+  ASSERT_TRUE(dock_window(list, DOCK_LEFT, DOCK_EDGE(DOCK_LEFT), DOCK_NOFLOAT, 150, 0));
+  toolbar_item_t items[] = { {.type = TOOLBAR_ITEM_TITLE}, {.type = TOOLBAR_ITEM_SPACER, .style = TOOLBAR_ITEM_FLAG_FLEXSPACE},
+                             {.type = TOOLBAR_ITEM_BUTTON, .ident = 41, .icon = "play"} };
+  send_message(win, tbSetItems, ARRAY_LEN(items), items);
+  toolbar_state_t *tb = toolbar_get_state(win);
+  ASSERT_FALSE(toolbar_hit_action(tb, tb->item_rects[0].x + 2, tb->item_rects[0].y + 2));  // the title drags the window
+  irect16_t title = tb->item_rects[0], play = tb->item_rects[2], close = tb->item_rects[3];
+  int top = title.y + (title.h - text_char_height(FONT_TITLE)) / 2;  // the text's distance from the window top
+  ASSERT_EQUAL(title.x, list->frame.x + list->frame.w + top);       // equals its distance from the content's edge
+  ASSERT_TRUE(title.w >= text_strwidth(FONT_TITLE, "ACME Ltd"));
+  ASSERT_TRUE(play.x > win->frame.w / 2);              // pushed to the far side
+  ASSERT_TRUE(play.x + play.w <= close.x);
+  set_window_title(win, "ACME Holdings International Ltd");
+  ASSERT_STR_EQUAL(win->title, "ACME Holdings International Ltd");
+  ASSERT_TRUE(tb->item_rects[0].w > title.w);           // the row is laid out again
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Workspace docking");
   test_dock_ownership_and_layout();
@@ -424,5 +450,6 @@ int main(void) {
   test_dock_floating_resize_and_close();
   test_dock_fixed_pane();
   test_toolbar_undock_size();
+  test_merged_title();
   TEST_END();
 }

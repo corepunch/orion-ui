@@ -32,4 +32,5 @@
   <string source="Delete">Удалить</string>
   <string source="Delete the selected record?">Удалить выбранную запись?</string>
   <string source="This record is used by %d other record(s) and cannot be deleted.">На запись ссылаются другие записи (%d), ее нельзя удалить.</string>
+  <string source="Totals">Итого</string>
 </strings>

@@ -66,9 +66,9 @@ Everything declared in `.orion`, when it is instantiated:
 
 - form titles (`<form title>`) and every control's `text`;
 - `placeholder` cue text;
-- `TableView` column titles;
+- `TableView` column titles and `totals-label`;
 - menu and context-menu labels (shortcuts after `\t` are kept);
-- toolbar button text, tooltips and ActivityBar page tooltips;
+- toolbar button text, tooltips and ActivityBar page labels and tooltips;
 - framework dialogs (message box buttons, file picker).
 
 Generated forms carry their name as `form_def_t.id`; that is both the
@@ -113,6 +113,27 @@ ui_spell_amount("ru", 1234.05, &rub, buf, sz);
 Russian numerals agree in gender with the counted noun ("одна тысяча", "две
 копейки"). Rules exist for Russian, German and English; other languages get
 digits.
+
+## Names in grammatical cases
+
+Russian documents address people in oblique cases: "Выдать Петрову Петру
+Петровичу" (dative), "Принято от Сидоровой Анны Викторовны" (genitive).
+`ui_inflect_name` declines a full name written surname first:
+
+```c
+ui_inflect_name("ru", "Петров Петр Петрович", UI_CASE_DATIVE, buf, sz);  // "Петрову Петру Петровичу"
+ui_inflect_name("ru", "ИП Иванов Иван Иванович", UI_CASE_GENITIVE, buf, sz);  // "ИП Иванова Ивана Ивановича"
+ui_inflect_name("ru", "Сидорова А.В.", UI_CASE_DATIVE, buf, sz);  // "Сидоровой А.В."
+```
+
+- Surnames in -ов/-ин and -ский/-ой decline like adjectives; women's
+  surnames ending in a consonant (Шмидт) and surnames in -ко, -их/-ых do not.
+- First names and patronymics follow the noun declensions, with the usual
+  exceptions (Павел → Павла, Лев → Льва) and spelling rules (Маши, Машей).
+- The gender comes from the patronymic, else the first name, else the
+  surname. Initials and a leading abbreviation such as "ИП" stay as they are.
+- Names with quotes — organizations — and languages other than Russian are
+  returned unchanged.
 
 ## Extracting strings
 

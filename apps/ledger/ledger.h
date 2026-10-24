@@ -16,8 +16,8 @@
 // Schemas, forms, menus and command IDs generated from ledger.orion.
 #include "build/generated/apps/ledger/ledger.h"
 
-#define LEDGER_SCREEN_W   1024
-#define LEDGER_SCREEN_H   680
+#define LEDGER_SCREEN_W   1280
+#define LEDGER_SCREEN_H   800
 #define LEDGER_PATH_MAX   1024
 #define LEDGER_DEFAULT_CONFIGURATION "ru-2003"
 

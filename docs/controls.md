@@ -410,6 +410,51 @@ window.
 <Button name="new_rate" text="New Rate..." target="rates" action="insert" />
 ```
 
+TableView presents values the way a ledger does: numeric columns align
+right (their type comes from the schema, through join paths too), boolean
+fields read "Yes" or nothing instead of 1 and 0, and text that does not fit
+ends in an ellipsis. `zeros="blank"` leaves numeric zeros empty, as
+accounting reports print them:
+
+```xml
+<TableView name="balances" source="ib.balances" zeros="blank">
+```
+
+`<RowIcon>` rules draw a status icon before each row's first column; the first
+rule that matches a record wins. `field=` matches a set field (non-empty,
+non-zero), `field=` with `value=` an exact value, and a rule without `field`
+any row. `color=` is a theme role: `success`, `error`, `warning`, `info`,
+`secondary`, `disabled` or `accent` (the text colour otherwise). Give each
+state its own shape, not only its own colour:
+
+```xml
+<TableView name="documents" source="ib.documents">
+  <RowIcon field="posted" icon="ledger-doc-posted" color="success" />
+  <RowIcon icon="ledger-doc-draft" color="secondary" />
+  ...
+</TableView>
+```
+
+`total="sum"` on numeric columns adds a totals row pinned under the rows,
+formatted like the column; the first column without a total carries
+`totals-label` (default "Totals"). Rows whose `totals-skip` field is set stay
+out of the sums, for a report that lists subaccounts beneath the accounts
+that already include them:
+
+```xml
+<TableView name="balances" source="ib.balances" zeros="blank" totals-skip="subaccount">
+  <Column field="account.code" title="Account" width="48" />
+  <Column field="debit_turnover" title="Turnover Dr" width="86" total="sum" />
+</TableView>
+```
+
+ReportView takes the row as `RVM_SETFOOTER` (wparam = text count, lparam =
+`const char *const *` per column, NULL to remove it); a row's icon is
+`reportview_item_t.icon_name`, tinted by `icon_color`.
+
+A TableView shows up to `MAX_REPORTVIEW_COLUMNS` (16) columns; more are
+reported on stderr.
+
 ## ComboBox
 
 A ComboBox with `source=`, `display=` and `value=` lists a table and binds the
@@ -441,6 +486,13 @@ page index. User selection sends `evCommand` with `tcnSelChange` and the
 
 The sidebar style (`tcSetStyle` with `TAB_STYLE_SIDEBAR`) marks the selected
 row with `THEME_PART_MENU_ITEM`, the same capsule the menus draw.
+
+`tab-style="sidebar"` lists the tabs down the left edge, for views with more
+pages than fit across, such as a set of reports:
+
+```xml
+<TabView name="report_tabs" tab-style="sidebar" flags="flexspace">
+```
 
 ## SegmentedControl
 

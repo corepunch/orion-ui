@@ -11,7 +11,8 @@ result_t win_activitybar(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       const activitybar_params_t *params = def ? def->lparam : NULL;
       send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
       send_message(win, tbSetButtonSize, TB_SPACING, NULL);
-      if (params) send_message(win, tbSetItems, params->count, (void *)params->items);
+      if (params && params->style) send_message(win, tbModifyStyle, params->style, (void *)(uintptr_t)params->style);
+      if (params && params->count) send_message(win, tbSetItems, params->count, (void *)params->items);
       toolbar_state_t *tb = toolbar_get_state(win);
       for (int i = 0; tb && i < tb->item_count; i++)
         if (tb->items[i].type == TOOLBAR_ITEM_BUTTON) {
