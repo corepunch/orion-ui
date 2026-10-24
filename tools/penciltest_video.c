@@ -808,7 +808,9 @@ static bool pv_output(const pv_options_t *o, pv_video_t *v) {
     }
   }
   rewind(v->pixels);
-  if (v->source_pixels && !o->outlines) rewind(v->source_pixels);
+  // fflush drops buffered input so the frames are re-read from the file itself;
+  // glibc's rewind alone may reuse stale buffered bytes.
+  if (v->source_pixels && !o->outlines) { fflush(v->source_pixels); rewind(v->source_pixels); }
   for (int i = 0; ok && i < v->count; i++) {
     ok = fread(rgb, 1, n * 3, v->pixels) == n * 3;
     if (!ok) break;
