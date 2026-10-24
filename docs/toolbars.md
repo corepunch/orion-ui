@@ -45,6 +45,17 @@ supplies `title`, `icon`, `checked-icon`, `tooltip`, and `focus`. The host's
 synchronizes selection and focus, and docks the bar left in landscape or bottom
 in portrait. Standalone activity bars retain their ordinary toolbar behavior.
 
+`labels="right"` captions each button beside its icon, a section panel in the
+manner of business applications; `labels="below"` puts the caption under the
+icon. A page's `label=` is its short caption there (the `title` otherwise):
+
+```xml
+<ActivityBar name="activity" labels="right">
+  <Page form="journal_page" command="view.journal" />
+</ActivityBar>
+<form name="journal_page" label="Journal" title="Document Journal" role="page" ...>
+```
+
 ### Toolbar bands
 
 ```text
@@ -310,6 +321,12 @@ The existing `toolbar_item_t.text` supplies each caption. In this mode button
 widths expand to fit their captions and the non-client toolbar band grows by
 one small-font text row; client layout and input routing use the new height
 automatically.
+
+`TOOLBAR_STYLE_LIST` (WinAPI `TBSTYLE_LIST`) draws the caption to the right of
+the icon instead, without a caption band; the buttons of a vertical bar share
+its width, so the captions line up. In `.orion`, a form's own toolbar takes
+`toolbar-style="labels"` or `toolbar-style="list"`; a host form's style also
+applies to the toolbars its pages contribute.
 
 ## Loading items
 

@@ -474,6 +474,7 @@ enum {
 #define TOOLBAR_COMPACT_ICON_SIZE   16
 #endif
 #define TOOLBAR_STYLE_SHOW_LABELS    (1u << 0) // WinAPI-style text below button icons
+#define TOOLBAR_STYLE_LIST           (1u << 8) // text right of button icons; a vertical bar's buttons share its width (TBSTYLE_LIST)
 
 typedef enum {
   TOOLBAR_HORIZONTAL = 0,
@@ -670,7 +671,8 @@ typedef enum {
   brSelectionBottom      = 32,
   brPlasticNeutral       = 33,  // neutral plastic face (transport buttons): silver
   brTabBarBg             = 34,  // tab strip: between Page background and inactive tab face
-  brCount                = 35
+  brAccentText           = 35,  // text and icons on accent fills: selection, default button, hovered menu item
+  brCount                = 36
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).

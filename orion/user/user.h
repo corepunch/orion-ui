@@ -299,6 +299,7 @@ typedef struct form_def_s {
   // ── Toolbar fields ───────────────────────────────────────────────────────
   const void             *toolbar_items;  // toolbar_item_t array (may be NULL)
   int                     toolbar_count;  // number of toolbar items
+  uint32_t                toolbar_style;  // TOOLBAR_STYLE_* for the window's own toolbar (0 = default)
   const toolbar_item_t   *pane_toolbar_items; // PAGE: shared TabBar actions
   int                     pane_toolbar_count;
   bool                    pane_toolbar_replace;
@@ -318,6 +319,7 @@ typedef struct form_def_s {
   int                     page_binding_count;
   uint32_t                initial_page;
   const char             *icon, *checked_icon, *tooltip; // page navigation metadata
+  const char             *label;       // page: short caption under its icon in a labelled ActivityBar (default: title)
 } form_def_t;
 
 // Declarative database API metadata emitted from .orion documents.

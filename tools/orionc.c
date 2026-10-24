@@ -226,7 +226,7 @@ static void read_control_attrs(xmlNodePtr n, attrs_t *a) {
 static void free_attrs(attrs_t *a) { for (int i = 0; i < ARRAY_LEN(a->v); i++) free(a->v[i]); }
 static bool is_control(xmlNodePtr parent, xmlNodePtr n) {
   return n && n->type == XML_ELEMENT_NODE && !elem(n, "requires") && !elem(n, "toolbar") && !elem(n, "panetoolbar") &&
-         !(elem(parent, "tableview") && elem(n, "column")) &&
+         !(elem(parent, "tableview") && (elem(n, "column") || elem(n, "rowicon"))) &&
          !(elem(parent, "activitybar") && elem(n, "page"));
 }
 static bool has_controls(xmlNodePtr n) { EACH_ELEMENT(c, n) if (is_control(n, c)) return true; return false; }
@@ -559,10 +559,17 @@ static void emit_activitybars(FILE *f, xmlNodePtr parent, const char *form) {
       char *name = attr(c, "name"), symbol[256];
       snprintf(symbol, sizeof(symbol), "%s_%s_activity_items", form, nz(name, "unnamed"));
       xmlNodePtr toolbar = child(c, "toolbar");
+      char *labels = attr(c, "labels");
+      const char *style = eq(labels, "true") || eq(labels, "1") || eq(labels, "below") ? "TOOLBAR_STYLE_SHOW_LABELS" :
+                          eq(labels, "right") ? "TOOLBAR_STYLE_LIST" : "0";
+      if (labels && eq(style, "0")) fprintf(stderr, "orionc: warning: ActivityBar '%s': unknown labels '%s' (want below or right)\n", nz(name, ""), labels);
       if (toolbar) {
         emit_toolbar(f, toolbar, symbol, form);
-        OUT("static const activitybar_params_t %s_%s_activity_params = { %s, ARRAY_LEN(%s) };\n\n", form, nz(name, "unnamed"), symbol, symbol);
+        OUT("static const activitybar_params_t %s_%s_activity_params = { %s, ARRAY_LEN(%s), %s };\n\n", form, nz(name, "unnamed"), symbol, symbol, style);
+      } else if (labels) {
+        OUT("static const activitybar_params_t %s_%s_activity_params = { NULL, 0, %s };\n\n", form, nz(name, "unnamed"), style);
       }
+      free(labels);
       free(name);
     }
     emit_activitybars(f, c, form);
@@ -908,10 +915,42 @@ static void emit_tableviews(FILE *f, xmlNodePtr parent, xmlNodePtr form_node,
       // form="doc_line": the database form that edits one row (EODisplayGroup).
       char *record_form = attr(c, "form"), record_form_ref[256] = "NULL", *zeros = attr(c, "zeros");
       if (record_form && *record_form) { char rf[128]; ident(rf, sizeof(rf), record_form, false); snprintf(record_form_ref, sizeof(record_form_ref), "&%s_%s_form", prefix, rf); }
-      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = %d, .filter_value = %d, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s, .record_form = %s, .blank_zeros = %s };\n\n",
+      // <RowIcon field= value= icon= color=>: status icons, first match wins.
+      int row_icons = 0;
+      EACH_ELEMENT(ri, c) if (elem(ri, "rowicon")) {
+        char *field = attr(ri, "field"), *value = attr(ri, "value"), *icon = attr(ri, "icon"), *color = attr(ri, "color");
+        char fq[ORIONC_STRING_SIZE], vq[ORIONC_STRING_SIZE], iq[ORIONC_STRING_SIZE];
+        static const char *roles[][2] = { {"success", "brTextSuccess"}, {"error", "brTextError"}, {"warning", "brTextWarning"},
+                                          {"info", "brTextInfo"}, {"secondary", "brTextSecondary"}, {"disabled", "brTextDisabled"},
+                                          {"accent", "brAccent"} };
+        const char *role = "-1";
+        for (int i = 0; color && i < ARRAY_LEN(roles); i++) if (eq(color, roles[i][0])) role = roles[i][1];
+        if (color && eq(role, "-1")) fprintf(stderr, "orionc: warning: TableView '%s': unknown RowIcon color '%s'\n", nz(name, ""), color);
+        if (!icon) fprintf(stderr, "orionc: warning: TableView '%s': RowIcon requires icon=\n", nz(name, ""));
+        if (field) cstr(fq, sizeof(fq), field); else snprintf(fq, sizeof(fq), "NULL");
+        if (value) cstr(vq, sizeof(vq), value); else snprintf(vq, sizeof(vq), "NULL");
+        cstr(iq, sizeof(iq), nz(icon, "missing"));
+        if (!row_icons++) OUT("static const tableview_row_icon_t %s_row_icons[] = {\n", param);
+        OUT("  { %s, %s, %s, %s },\n", fq, vq, iq, role);
+        free(field); free(value); free(icon); free(color);
+      }
+      if (row_icons) LINE("};\n");
+      // total="sum" on a Column: a totals row under the rows.
+      bool totals = false;
+      EACH_ELEMENT(col, c) if (elem(col, "column")) { char *v = attr(col, "total"); totals |= eq(v, "sum"); if (v && !eq(v, "sum")) fprintf(stderr, "orionc: warning: TableView '%s': unknown total '%s' (want sum)\n", nz(name, ""), v); free(v); }
+      if (totals) { OUT("static const bool %s_totals[] = { ", param); EACH_ELEMENT(col, c) if (elem(col, "column")) { char *v = attr(col, "total"); OUT("%s, ", eq(v, "sum") ? "true" : "false"); free(v); } LINE("};\n"); }
+      char *totals_label = attr(c, "totals-label"), totals_label_q[ORIONC_STRING_SIZE] = "NULL";
+      char *totals_skip = attr(c, "totals-skip"), totals_skip_q[ORIONC_STRING_SIZE] = "NULL";
+      if (totals_label) cstr(totals_label_q, sizeof(totals_label_q), totals_label);
+      if (totals_skip) cstr(totals_skip_q, sizeof(totals_skip_q), totals_skip);
+      char row_icons_ref[300] = "NULL", totals_ref[300] = "NULL";
+      if (row_icons) snprintf(row_icons_ref, sizeof(row_icons_ref), "%s_row_icons", param);
+      if (totals) snprintf(totals_ref, sizeof(totals_ref), "%s_totals", param);
+      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = %d, .filter_value = %d, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s, .record_form = %s, .blank_zeros = %s, .row_icons = %s, .row_icon_count = %d, .column_totals = %s, .totals_label = %s, .totals_skip = %s };\n\n",
           param, table_id, filter_index, filter_value ? atoi(filter_value) : 0, param, param, param, param, check_field_q, master_id,
-          relation_field, master_key_q, cell_style_value, column_titles && eq(column_titles, "false") ? "true" : "false", record_form_ref, eq(zeros, "blank") ? "true" : "false");
-      free(record_form); free(zeros);
+          relation_field, master_key_q, cell_style_value, column_titles && eq(column_titles, "false") ? "true" : "false", record_form_ref, eq(zeros, "blank") ? "true" : "false",
+          row_icons_ref, row_icons, totals_ref, totals_label_q, totals_skip_q);
+      free(record_form); free(zeros); free(totals_label); free(totals_skip);
       free(column_titles);
       free(cell_style);
       free(check_field);
@@ -1033,7 +1072,7 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
     snprintf(font, sizeof(font), "%s", eq(a.v[A_FONT], "system") ? "FONT_SYSTEM" : eq(a.v[A_FONT], "smallest") ? "FONT_SMALLEST" : "FONT_SMALL");
     snprintf(color, sizeof(color), "%u", (unsigned)enum_parse_token(a.v[A_COLOR], kColors, ARRAY_LEN(kColors), brTextNormal));
     if (elem(c, "tableview")) snprintf(lparam, sizeof(lparam), "&%s_%s_tableview_params", form, nz(a.v[A_NAME], "unnamed"));
-    if (elem(c, "activitybar") && child(c, "toolbar")) snprintf(lparam, sizeof(lparam), "&%s_%s_activity_params", form, nz(a.v[A_NAME], "unnamed"));
+    if (elem(c, "activitybar") && (child(c, "toolbar") || xmlHasProp(c, BAD_CAST "labels"))) snprintf(lparam, sizeof(lparam), "&%s_%s_activity_params", form, nz(a.v[A_NAME], "unnamed"));
     if (elem(c, "combobox") && attr(c, "source")) snprintf(lparam, sizeof(lparam), "&%s_%s_combobox_params", form, nz(a.v[A_NAME], "unnamed"));
     if (elem(c, "tabview")) {
       // tab-style="sidebar": the tabs as a list down the left edge, for many pages.
@@ -1311,8 +1350,13 @@ static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr d
   if (eq(pane_replace, "true") || eq(pane_replace, "1")) OUT(", .pane_toolbar_replace = true");
   free(pane_replace);
   if (activity_count) OUT(", .page_bindings = %s_%s_page_bindings, .page_binding_count = %d, .initial_page = %s", prefix, form_id, activity_count, initial);
-  const char *page_attrs[] = {"icon", "checked-icon", "tooltip"};
-  const char *page_fields[] = {"icon", "checked_icon", "tooltip"};
+  char *toolbar_style = attr(form, "toolbar-style");
+  if (eq(toolbar_style, "labels")) LINE(", .toolbar_style = TOOLBAR_STYLE_SHOW_LABELS");
+  else if (eq(toolbar_style, "list")) LINE(", .toolbar_style = TOOLBAR_STYLE_LIST");
+  else if (toolbar_style) fprintf(stderr, "orionc: warning: form '%s': unknown toolbar-style '%s' (want labels or list)\n", nz(name, ""), toolbar_style);
+  free(toolbar_style);
+  const char *page_attrs[] = {"icon", "checked-icon", "tooltip", "label"};
+  const char *page_fields[] = {"icon", "checked_icon", "tooltip", "label"};
   for (int i = 0; i < ARRAY_LEN(page_attrs); i++) {
     char *value = attr(form, page_attrs[i]), quoted[ORIONC_STRING_SIZE];
     if (value) { cstr(quoted, sizeof(quoted), value); OUT(", .%s = %s", page_fields[i], quoted); }
@@ -1374,7 +1418,7 @@ static void catalog_add(catalog_t *c, const char *source, const char *where) {
 }
 
 static void catalog_collect(catalog_t *c, xmlNodePtr n, const char *where) {
-  static const char *attrs[] = { "text", "title", "label", "tooltip", "placeholder" };
+  static const char *attrs[] = { "text", "title", "label", "tooltip", "placeholder", "totals-label" };
   EACH_ELEMENT(child, n) {
     const char *scope = where;
     char *name = attr(child, "name");

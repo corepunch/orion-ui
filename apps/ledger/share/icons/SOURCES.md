@@ -33,3 +33,13 @@ GitClient). Upstream paths: `assets/regular/<name>.svg` and
 | ledger-unpost.svg | x-circle |
 | ledger-print.svg | printer |
 | ledger-delete.svg | trash |
+| ledger-doc-posted.svg | seal-check (fill) |
+| ledger-doc-draft.svg | file-dashed |
+| ledger-row-counterparty.svg | buildings |
+| ledger-row-item.svg | package |
+| ledger-row-account.svg | book-open |
+| ledger-row-employee.svg | user |
+| ledger-row-currency.svg | coins |
+| ledger-row-entry.svg | arrows-left-right |
+| ledger-row-in-service.svg | check-circle (fill) |
+| ledger-row-pending.svg | clock |

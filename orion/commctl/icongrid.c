@@ -112,7 +112,7 @@ static void grid_paint(window_t *win, reportview_data_t *data) {
                         selected ? 0xFFFFFFFF : data->items[i].color;
     rv_draw_item_icon(strip, data->items[i].icon, &icon_r, icon_col);
 
-    uint32_t txt_col = selected ? get_sys_color(brActiveTitlebarText)
+    uint32_t txt_col = selected ? get_sys_color(brAccentText)
                                 : get_sys_color(brTextNormal);
     draw_text_clipped(FONT_SMALLEST, data->items[i].text, &label_r,
                       txt_col, TEXT_ALIGN_CENTER);

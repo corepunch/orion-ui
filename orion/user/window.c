@@ -1161,6 +1161,8 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
 
   create_form_children(win, def->children, def->child_count);
 
+  if (def->toolbar_style && (win->flags & WINDOW_TOOLBAR))
+    send_message(win, tbModifyStyle, def->toolbar_style, (void *)(uintptr_t)def->toolbar_style);
   // Auto-populate toolbar if defined
   if (def->toolbar_items && def->toolbar_count > 0 && (win->flags & WINDOW_TOOLBAR)) {
     send_message(win, tbSetItems, (uint32_t)def->toolbar_count, (void *)def->toolbar_items);
