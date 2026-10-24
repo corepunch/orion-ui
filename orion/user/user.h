@@ -189,6 +189,11 @@ void ddx_push_combo(window_t *dlg, const ctrl_binding_t *b, const void *state);
 void ddx_pull_combo(window_t *dlg, const ctrl_binding_t *b, void *state);
 void ddx_push_check(window_t *dlg, const ctrl_binding_t *b, const void *state);
 void ddx_pull_check(window_t *dlg, const ctrl_binding_t *b, void *state);
+void ddx_push_double(window_t *dlg, const ctrl_binding_t *b, const void *state);
+void ddx_pull_double(window_t *dlg, const ctrl_binding_t *b, void *state);
+// Database-bound ComboBox: exchanges the value field (an id); 0 = none.
+void ddx_push_combo_value(window_t *dlg, const ctrl_binding_t *b, const void *state);
+void ddx_pull_combo_value(window_t *dlg, const ctrl_binding_t *b, void *state);
 
 // DDX_TEXT — binds a textedit control; _Generic dispatches push/pull by field type.
 //   int field          -> ddx_push_int   / ddx_pull_int
@@ -302,6 +307,7 @@ typedef struct form_def_s {
   int                     db_table_id;   // TABLE_* enum value
   const void             *db_fields;     // db_field_meta_t array for this table
   int                     db_field_count; // number of fields in db_fields[]
+  size_t                  db_record_size; // sizeof the bound record struct
   const struct page_binding_s *page_bindings;
   int                     page_binding_count;
   uint32_t                initial_page;
@@ -519,7 +525,7 @@ struct window_s {
   winproc_t proc;
   uint32_t value;
   char title[512];
-  char statusbar_text[64];
+  char statusbar_text[256];
   uint32_t cursor_pos;
   layout_t layout;
   void *userdata;
@@ -828,6 +834,13 @@ uint32_t show_ddx_dialog(form_def_t const *def, const char *title,
 // Returns the dialog end code (1 = accepted/saved, 0 = cancelled).
 uint32_t show_db_dialog(form_def_t const *def, const char *title,
                         window_t *parent, int record_id);
+
+// Like show_db_dialog, forwarding evCreate (after the record is pushed) and
+// unhandled messages to hook, e.g. buttons managing a detail table.
+uint32_t show_db_dialog_hook(form_def_t const *def, const char *title,
+                             window_t *parent, int record_id, winproc_t hook);
+// Record id edited by the database dialog containing win (0 when new).
+int db_dialog_record_id(window_t *win);
 
 // Extended version with FK parent ID support (e.g., post_id for comments)
 // fk_field: name of FK field to populate (e.g., "post_id")

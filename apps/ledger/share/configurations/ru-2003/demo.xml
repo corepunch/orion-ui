@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Demo infobase for the ru-2003 configuration. Copied to the user's
+     settings directory on first start; posted documents are posted then. -->
+<ib>
+  <organizations>
+    <organization id="1" name="ООО &quot;Ромашка&quot;" tax_id="7701234567" kpp="770101001" address="125009, г. Москва, ул. Тверская, д. 7, оф. 12" bank="ОАО &quot;Банк Москвы&quot; г. Москва" bank_account="40702810400000012345" bik="044525219" corr_account="30101810500000000219" director="Петров П.П." accountant="Сидорова А.В." />
+  </organizations>
+  <counterparties>
+    <counterparty id="1" name="ООО &quot;Торговый дом Альфа&quot;" tax_id="7705123456" kpp="770501001" address="115054, г. Москва, ул. Валовая, д. 21" bank="АКБ &quot;Возрождение&quot; г. Москва" bank_account="40702810900000054321" bik="044525181" phone="(095) 235-12-34" />
+    <counterparty id="2" name="ЗАО &quot;Бета-Снаб&quot;" tax_id="7814012345" kpp="781401001" address="197183, г. Санкт-Петербург, ул. Савушкина, д. 3" bank="ОАО &quot;Промстройбанк&quot; г. Санкт-Петербург" bank_account="40702810200000067890" bik="044030791" phone="(812) 430-55-66" />
+    <counterparty id="3" name="ИП Иванов Иван Иванович" tax_id="771512345678" kpp="" address="127282, г. Москва, ул. Широкая, д. 5, кв. 40" bank="" bank_account="" bik="" phone="(095) 470-11-22" />
+  </counterparties>
+  <items>
+    <item id="1" sku="00001" name="Бумага офисная А4 &quot;Снегурочка&quot;, 500 л." unit_id="2" vat_rate_id="1" price="95" />
+    <item id="2" sku="00002" name="Картридж HP C4092A" unit_id="1" vat_rate_id="1" price="1450" />
+    <item id="3" sku="00003" name="Монитор 17&quot; Samsung SyncMaster 753s" unit_id="1" vat_rate_id="1" price="6200" />
+    <item id="4" sku="00004" name="Клавиатура Genius KB-06XE" unit_id="1" vat_rate_id="1" price="210" />
+    <item id="5" sku="00005" name="Доставка товара" unit_id="6" vat_rate_id="1" price="500" />
+  </items>
+  <documents>
+    <document id="1" doc_type_id="6" counterparty_id="2" number="ПВ-0001" date="2003-03-02" comment="Предоплата по договору № 12/03" total="60000" posted="1" />
+    <document id="2" doc_type_id="1" counterparty_id="1" number="ПТ-0001" date="2003-03-03" comment="Накладная № 118 от 03.03.2003" posted="1" />
+    <document id="3" doc_type_id="5" counterparty_id="1" number="ПП-0001" date="2003-03-04" comment="Оплата по счету № 118" total="51120" posted="1" />
+    <document id="4" doc_type_id="7" counterparty_id="1" number="ВН-0001" date="2003-03-05" comment="НДС по накладной ПТ-0001, оплачено ПП-0001" total="8520" posted="1" />
+    <document id="5" doc_type_id="2" counterparty_id="3" number="РТ-0001" date="2003-03-10" comment="" posted="1" />
+    <document id="6" doc_type_id="3" counterparty_id="3" number="ПКО-0001" date="2003-03-11" comment="Оплата по накладной РТ-0001" total="16656" posted="1" />
+    <document id="7" doc_type_id="2" counterparty_id="2" number="РТ-0002" date="2003-03-14" comment="Отгрузка по договору № 12/03" posted="0" />
+  </documents>
+  <doc_lines>
+    <doc_line id="1" document_id="2" item_id="1" vat_rate_id="1" quantity="100" price="95" />
+    <doc_line id="2" document_id="2" item_id="2" vat_rate_id="1" quantity="10" price="1450" />
+    <doc_line id="3" document_id="2" item_id="3" vat_rate_id="1" quantity="3" price="6200" />
+    <doc_line id="4" document_id="5" item_id="3" vat_rate_id="1" quantity="2" price="6800" />
+    <doc_line id="5" document_id="5" item_id="4" vat_rate_id="1" quantity="1" price="280" />
+    <doc_line id="6" document_id="7" item_id="1" vat_rate_id="1" quantity="40" price="120" />
+    <doc_line id="7" document_id="7" item_id="2" vat_rate_id="1" quantity="5" price="1690" />
+  </doc_lines>
+</ib>

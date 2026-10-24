@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>Счет на оплату {{number}}</title>
+<style>
+body{font-family:"Times New Roman",serif;font-size:10pt;margin:12mm;color:#000}
+table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
+.grid td,.grid th{border:1px solid #000}.grid th{font-weight:normal;font-size:8pt;text-align:center}
+.r{text-align:right}.c{text-align:center}.small{font-size:7.5pt}.b{font-weight:bold}
+.line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
+.sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
+h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
+@media print{body{margin:6mm}}
+</style></head><body>
+<table class="grid" style="width:100%">
+<tr><td colspan="2" rowspan="2">{{org.bank}}<br><span class="small">Банк получателя</span></td><td>БИК</td><td>{{org.bik}}</td></tr>
+<tr><td>Сч. №</td><td>{{org.corr_account}}</td></tr>
+<tr><td>ИНН {{org.tax_id}}</td><td>КПП {{org.kpp}}</td><td rowspan="2">Сч. №</td><td rowspan="2">{{org.bank_account}}</td></tr>
+<tr><td colspan="2">{{org.name}}<br><span class="small">Получатель</span></td></tr></table>
+<h1 style="border-bottom:2px solid #000;padding-bottom:4px">Счет на оплату № {{number}} от {{date|dmy}}</h1>
+<table><tr><td>Поставщик:</td><td class="b">{{org.name}}, ИНН {{org.tax_id}}, КПП {{org.kpp}}, {{org.address}}</td></tr>
+<tr><td>Покупатель:</td><td class="b">{{counterparty.name}}, ИНН {{counterparty.tax_id}}, КПП {{counterparty.kpp}}, {{counterparty.address}}</td></tr></table>
+<table class="grid" style="width:100%;margin-top:8px"><tr><th>№</th><th>Товары (работы, услуги)</th><th>Кол-во</th><th>Ед.</th><th>Цена</th><th>Сумма</th></tr>
+{{#lines}}<tr><td class="c">{{n}}</td><td>{{item.name}}</td><td class="r">{{quantity}}</td><td class="c">{{item.unit.name}}</td><td class="r">{{price}}</td><td class="r">{{amount}}</td></tr>
+{{/lines}}</table>
+<table style="margin-left:auto"><tr><td class="r b">Итого:</td><td class="r b">{{amount}}</td></tr>
+<tr><td class="r b">Сумма НДС:</td><td class="r b">{{vat}}</td></tr>
+<tr><td class="r b">Всего к оплате:</td><td class="r b">{{total}}</td></tr></table>
+<p>Всего на сумму {{total}} {{cfg.currency}}</p>
+<table style="width:100%" class="sign"><tr><td>Руководитель <span class="line">{{org.director}}</span></td><td>Бухгалтер <span class="line">{{org.accountant}}</span></td></tr></table>
+</body></html>

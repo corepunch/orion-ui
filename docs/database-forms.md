@@ -950,3 +950,66 @@ All bindings generated at compile time. No runtime reflection, parsing, or strin
 - [Dialogs](dialogs.md) - Modal dialog system overview
 - [Controls](controls.md) - Available control types and attributes
 - [Messages](messages.md) - Window message reference
+
+---
+
+## Schema-Driven Databases (`db_schema_xml`)
+
+For data that lives in XML, an app needs no adaptor at all. orionc emits a
+`db_schema_def_t` for every `<database>` (`<prefix>_<db>_schema`) with record
+sizes, field offsets, keys and joins, and the framework's `db_schema_xml`
+class implements the whole message set from it:
+
+```c
+DB_CLASS(db_schema_xml);
+database_t *ib = create_database_with_schema("ib", "db_schema_xml",
+                                             &ledger_ib_schema, path);
+register_database("ib", ib);
+```
+
+- `dbInsert` assigns the next key; records are individually allocated, so
+  pointers stay valid until the record is deleted.
+- `dbFetch` filters on any integer, boolean or string field by index;
+  `dbFind` searches the key (index 0) or any other field.
+- `dbSave` writes `<db><table><row .../></table></db>`; a missing file loads
+  empty.
+- `dbGetFieldText` formats fields for views. A `relation=` field becomes a
+  join named after it without `_id`, so columns can show `author.name` or
+  nested paths such as `item.unit.name`. A relation may name another
+  registered database: `relation="cfg.accounts.id"`.
+
+TableView and ComboBox format cells through `db_get_field_text()`, which uses
+`dbGetFieldText` when the database implements it and falls back to object
+procs and field bindings otherwise.
+
+A detail TableView follows its master's selection as soon as both are bound,
+and `tvRefresh` keeps the current selection.
+
+## Typed Bindings
+
+orionc chooses the DDX exchange from the bound field's declared type:
+
+| Control | Field type | Exchange |
+|---|---|---|
+| `TextBox` / `MultiEdit` | `string` | `edGetText` / `edSetText` |
+| `TextBox` | `integer` | `ddx_push_int` / `ddx_pull_int` |
+| `TextBox` | `double` | `ddx_push_double` / `ddx_pull_double` (accepts `1 234,50`) |
+| `ComboBox` with `source=` | `integer` | `ddx_push_combo_value` / `ddx_pull_combo_value` (record id, 0 = none) |
+| `CheckBox` | `boolean` | `ddx_push_check` / `ddx_pull_check` |
+
+Generated forms carry `db_record_size`, which `show_db_dialog` uses to size
+and copy the record. `show_db_dialog_hook()` forwards `evCreate` and unhandled
+messages to an app procedure, for dialogs that manage a detail table:
+
+```c
+static result_t document_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == evCreate) {
+    send_message(get_window_item(win, ID_DOCUMENT_LINES), tvSetFilter,
+                 DOC_LINES_DOCUMENT_ID_FIELD, (void *)(intptr_t)db_dialog_record_id(win));
+    return true;
+  }
+  return false;
+}
+show_db_dialog_hook(&ledger_document_form, NULL, parent, doc_id, document_hook);
+```
+

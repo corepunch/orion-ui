@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>Счет-фактура {{number}}</title>
+<style>
+body{font-family:"Times New Roman",serif;font-size:10pt;margin:12mm;color:#000}
+table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
+.grid td,.grid th{border:1px solid #000}.grid th{font-weight:normal;font-size:8pt;text-align:center}
+.r{text-align:right}.c{text-align:center}.small{font-size:7.5pt}.b{font-weight:bold}
+.line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
+.sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
+h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
+@media print{body{margin:6mm}}
+</style></head><body>
+<div class="r small">Приложение № 1<br>к Правилам ведения журналов учета полученных и выставленных счетов-фактур,<br>книг покупок и книг продаж при расчетах по налогу на добавленную стоимость,<br>утвержденным постановлением Правительства Российской Федерации<br>от 2 декабря 2000 г. № 914</div>
+<h1>СЧЕТ-ФАКТУРА № {{number}} от {{date|dmy}}</h1>
+<table>
+<tr><td>Продавец</td><td><span class="line">{{org.name}}</span></td><td class="small">(2)</td></tr>
+<tr><td>Адрес</td><td><span class="line">{{org.address}}</span></td><td class="small">(2а)</td></tr>
+<tr><td>ИНН/КПП продавца</td><td><span class="line">{{org.tax_id}}/{{org.kpp}}</span></td><td class="small">(2б)</td></tr>
+<tr><td>Грузоотправитель и его адрес</td><td><span class="line">он же</span></td><td class="small">(3)</td></tr>
+<tr><td>Грузополучатель и его адрес</td><td><span class="line">{{counterparty.name}}, {{counterparty.address}}</span></td><td class="small">(4)</td></tr>
+<tr><td>К платежно-расчетному документу №</td><td><span class="line">&nbsp;</span> от <span class="line" style="min-width:80px">&nbsp;</span></td><td class="small">(5)</td></tr>
+<tr><td>Покупатель</td><td><span class="line">{{counterparty.name}}</span></td><td class="small">(6)</td></tr>
+<tr><td>Адрес</td><td><span class="line">{{counterparty.address}}</span></td><td class="small">(6а)</td></tr>
+<tr><td>ИНН/КПП покупателя</td><td><span class="line">{{counterparty.tax_id}}/{{counterparty.kpp}}</span></td><td class="small">(6б)</td></tr>
+</table>
+<table class="grid" style="width:100%;margin-top:8px">
+<tr><th>Наименование товара<br>(описание выполненных<br>работ, оказанных услуг)</th><th>Единица<br>изме-<br>рения</th><th>Коли-<br>чество</th><th>Цена (тариф)<br>за единицу<br>измерения</th><th>Стоимость<br>товаров (работ,<br>услуг), всего<br>без налога</th><th>В том<br>числе<br>акциз</th><th>Налоговая<br>ставка</th><th>Сумма<br>налога</th><th>Стоимость<br>товаров (работ,<br>услуг), всего с<br>учетом налога</th><th>Страна<br>проис-<br>хождения</th><th>Номер<br>грузовой<br>таможенной<br>декларации</th></tr>
+<tr><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th></tr>
+{{#lines}}<tr><td>{{item.name}}</td><td class="c">{{item.unit.name}}</td><td class="r">{{quantity}}</td><td class="r">{{price}}</td><td class="r">{{amount}}</td><td class="c">без акциза</td><td class="c">{{vat_rate.name}}</td><td class="r">{{vat}}</td><td class="r">{{total}}</td><td class="c">-</td><td class="c">-</td></tr>
+{{/lines}}<tr><td colspan="7" class="b">Всего к оплате</td><td class="r b">{{vat}}</td><td class="r b">{{total}}</td><td colspan="2" style="border:0"></td></tr>
+</table>
+<table style="width:100%" class="sign"><tr>
+<td>Руководитель организации <span class="line">{{org.director}}</span></td>
+<td>Главный бухгалтер <span class="line">{{org.accountant}}</span></td></tr>
+<tr><td colspan="2">Индивидуальный предприниматель <span class="line">&nbsp;</span> <span class="line">&nbsp;</span><br><span class="small">(подпись) (ф.и.о.) (реквизиты свидетельства о государственной регистрации индивидуального предпринимателя)</span></td></tr></table>
+<p class="small">Примечание. Первый экземпляр &mdash; покупателю, второй экземпляр &mdash; продавцу.</p>
+</body></html>

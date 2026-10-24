@@ -1,0 +1,574 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ledger — a double-entry bookkeeping platform in the spirit of early-2000s
+  desktop accounting suites.
+
+  The platform (this file) is country-neutral. Everything national — chart of
+  accounts, tax rates, units, document types with their posting rules and the
+  printed legal forms — comes from a *configuration* directory under
+  share/configurations/<code>/ and is loaded into the read-only `cfg`
+  database. User data lives in the `ib` (infobase) database, one per
+  configuration. Swapping the configuration swaps the country.
+-->
+<orion
+    version="1"
+    name="ledger"
+    title="Ledger"
+    root="apps/ledger">
+
+  <menus var="kLedgerMenus" count="kLedgerMenuCount">
+    <menu name="file" label="File">
+      <item name="save" label="Save Infobase" shortcut="Ctrl+S" />
+      <Separator />
+      <item name="organization" label="Organization Details..." />
+      <item name="configuration" label="Select Configuration..." />
+      <Separator />
+      <item name="quit" label="Exit" />
+    </menu>
+    <menu name="doc" label="Documents">
+      <item name="new" label="New Document..." shortcut="Ctrl+N" />
+      <item name="open" label="Open Document..." shortcut="Ctrl+O" />
+      <Separator />
+      <item name="post" label="Post" shortcut="F9" />
+      <item name="unpost" label="Cancel Posting" />
+      <item name="print" label="Print Forms" shortcut="Ctrl+P" />
+      <Separator />
+      <item name="delete" label="Delete Document..." />
+    </menu>
+    <menu name="catalog" label="Catalogs">
+      <item name="new_counterparty" label="New Counterparty..." />
+      <item name="edit_counterparty" label="Edit Counterparty..." />
+      <item name="delete_counterparty" label="Delete Counterparty..." />
+      <Separator />
+      <item name="new_item" label="New Item..." />
+      <item name="edit_item" label="Edit Item..." />
+      <item name="delete_item" label="Delete Item..." />
+    </menu>
+    <menu name="view" label="View">
+      <item name="journal" label="Document Journal" shortcut="Ctrl+1" />
+      <item name="counterparties" label="Counterparties" shortcut="Ctrl+2" />
+      <item name="items" label="Items" shortcut="Ctrl+3" />
+      <item name="accounts" label="Chart of Accounts" shortcut="Ctrl+4" />
+      <item name="entries" label="Entry Journal" shortcut="Ctrl+5" />
+      <item name="balance" label="Trial Balance" shortcut="Ctrl+6" />
+      <item name="config" label="Configuration" shortcut="Ctrl+7" />
+    </menu>
+    <menu name="report" label="Reports">
+      <item name="recalc" label="Recalculate Totals" shortcut="F5" />
+    </menu>
+    <menu name="help" label="Help">
+      <item name="about" label="About Ledger" />
+    </menu>
+  </menus>
+
+  <databases>
+    <!-- Configuration: national metadata and predefined data. Read-only. -->
+    <database name="cfg" class="db_schema_xml">
+      <table name="settings">
+        <field name="id" type="integer" key="YES" />
+        <field name="code" type="string" length="32" />
+        <field name="name" type="string" length="128" />
+        <field name="country" type="string" length="64" />
+        <field name="currency" type="string" length="16" />
+        <field name="tax_name" type="string" length="32" />
+        <field name="tax_id_name" type="string" length="32" />
+        <field name="version" type="string" length="32" />
+        <field name="basis" type="string" length="512" />
+      </table>
+      <table name="accounts">
+        <field name="id" type="integer" key="YES" />
+        <field name="code" type="string" length="16" />
+        <field name="name" type="string" length="160" />
+        <field name="kind" type="string" length="8" />
+        <field name="section" type="string" length="96" />
+      </table>
+      <table name="units">
+        <field name="id" type="integer" key="YES" />
+        <field name="code" type="string" length="8" />
+        <field name="name" type="string" length="32" />
+      </table>
+      <table name="vat_rates">
+        <field name="id" type="integer" key="YES" />
+        <field name="name" type="string" length="32" />
+        <field name="rate" type="double" />
+      </table>
+      <!-- Posting rules: amount Dt debit / Kt credit, tax Dt vat_debit / Kt vat_credit.
+           base is "net" (amount without tax) or "total" (with tax). -->
+      <table name="doc_types">
+        <field name="id" type="integer" key="YES" />
+        <field name="debit_id" type="integer" relation="accounts.id" />
+        <field name="credit_id" type="integer" relation="accounts.id" />
+        <field name="vat_debit_id" type="integer" relation="accounts.id" />
+        <field name="vat_credit_id" type="integer" relation="accounts.id" />
+        <field name="code" type="string" length="32" />
+        <field name="name" type="string" length="96" />
+        <field name="prefix" type="string" length="8" />
+        <field name="base" type="string" length="8" />
+        <field name="lines" type="boolean" />
+        <field name="description" type="string" length="512" />
+      </table>
+      <table name="print_forms">
+        <field name="id" type="integer" key="YES" />
+        <field name="doc_type_id" type="integer" relation="doc_types.id" />
+        <field name="name" type="string" length="96" />
+        <field name="template" type="string" length="64" />
+        <field name="basis" type="string" length="256" />
+      </table>
+    </database>
+
+    <!-- Index of installed configurations (share/configurations/index.xml). -->
+    <database name="catalog" class="db_schema_xml">
+      <table name="configurations">
+        <field name="id" type="integer" key="YES" />
+        <field name="code" type="string" length="32" />
+        <field name="name" type="string" length="128" />
+        <field name="country" type="string" length="64" />
+      </table>
+      <table name="choices">
+        <field name="id" type="integer" key="YES" />
+        <field name="configuration_id" type="integer" relation="configurations.id" />
+      </table>
+    </database>
+
+    <!-- Infobase: the organization's own data, one per configuration. -->
+    <database name="ib" class="db_schema_xml">
+      <table name="organizations">
+        <field name="id" type="integer" key="YES" />
+        <field name="name" type="string" length="160" />
+        <field name="tax_id" type="string" length="16" />
+        <field name="kpp" type="string" length="16" />
+        <field name="address" type="string" length="256" />
+        <field name="bank" type="string" length="160" />
+        <field name="bank_account" type="string" length="32" />
+        <field name="bik" type="string" length="16" />
+        <field name="corr_account" type="string" length="32" />
+        <field name="director" type="string" length="96" />
+        <field name="accountant" type="string" length="96" />
+      </table>
+      <table name="counterparties">
+        <field name="id" type="integer" key="YES" />
+        <field name="name" type="string" length="160" />
+        <field name="tax_id" type="string" length="16" />
+        <field name="kpp" type="string" length="16" />
+        <field name="address" type="string" length="256" />
+        <field name="bank" type="string" length="160" />
+        <field name="bank_account" type="string" length="32" />
+        <field name="bik" type="string" length="16" />
+        <field name="phone" type="string" length="32" />
+      </table>
+      <table name="items">
+        <field name="id" type="integer" key="YES" />
+        <field name="unit_id" type="integer" relation="cfg.units.id" />
+        <field name="vat_rate_id" type="integer" relation="cfg.vat_rates.id" />
+        <field name="sku" type="string" length="16" />
+        <field name="name" type="string" length="160" />
+        <field name="price" type="double" />
+      </table>
+      <table name="documents">
+        <field name="id" type="integer" key="YES" />
+        <field name="doc_type_id" type="integer" relation="cfg.doc_types.id" />
+        <field name="counterparty_id" type="integer" relation="counterparties.id" />
+        <field name="number" type="string" length="24" />
+        <field name="date" type="string" length="11" />
+        <field name="comment" type="string" length="256" />
+        <field name="amount" type="double" />
+        <field name="vat" type="double" />
+        <field name="total" type="double" />
+        <field name="posted" type="boolean" />
+      </table>
+      <table name="doc_lines">
+        <field name="id" type="integer" key="YES" />
+        <field name="document_id" type="integer" relation="documents.id" />
+        <field name="item_id" type="integer" relation="items.id" />
+        <field name="vat_rate_id" type="integer" relation="cfg.vat_rates.id" />
+        <field name="quantity" type="double" precision="3" />
+        <field name="price" type="double" />
+        <field name="amount" type="double" />
+        <field name="vat" type="double" />
+        <field name="total" type="double" />
+      </table>
+      <table name="entries">
+        <field name="id" type="integer" key="YES" />
+        <field name="document_id" type="integer" relation="documents.id" />
+        <field name="debit_id" type="integer" relation="cfg.accounts.id" />
+        <field name="credit_id" type="integer" relation="cfg.accounts.id" />
+        <field name="date" type="string" length="11" />
+        <field name="amount" type="double" />
+        <field name="content" type="string" length="160" />
+      </table>
+      <!-- Totals register, rebuilt from entries by "Recalculate Totals". -->
+      <table name="balances">
+        <field name="id" type="integer" key="YES" />
+        <field name="account_id" type="integer" relation="cfg.accounts.id" />
+        <field name="debit_turnover" type="double" />
+        <field name="credit_turnover" type="double" />
+        <field name="balance_dr" type="double" />
+        <field name="balance_cr" type="double" />
+      </table>
+    </database>
+  </databases>
+
+  <forms>
+    <form name="main_window" title="Ledger" width="980" height="600"
+          role="host" active-page="journal_page" flags="statusbar,toolbar" spacing="0">
+      <ActivityBar name="activity" flags="notitle">
+        <Page form="journal_page" command="view.journal" />
+        <Page form="counterparties_page" command="view.counterparties" />
+        <Page form="items_page" command="view.items" />
+        <Page form="accounts_page" command="view.accounts" />
+        <Page form="entries_page" command="view.entries" />
+        <Page form="balance_page" command="view.balance" />
+        <Page form="config_page" command="view.config" />
+      </ActivityBar>
+    </form>
+
+    <!-- Document journal: documents with their lines and entries below. -->
+    <form name="journal_page" title="Document Journal" icon="ledger-nav-journal"
+          checked-icon="ledger-nav-journal-fill" tooltip="Document journal (Ctrl+1)"
+          focus="documents" width="900" height="560" role="page" flags="nofill,flexspace"
+          spacing="4" padding="4">
+      <Toolbar>
+        <Button command="doc.new" icon="ledger-new" text="New" tooltip="New document (Ctrl+N)" />
+        <Button command="doc.open" icon="ledger-edit" text="Open" tooltip="Open document (Ctrl+O)" />
+        <Button command="doc.post" icon="ledger-post" text="Post" tooltip="Post: write accounting entries (F9)" />
+        <Button command="doc.unpost" icon="ledger-unpost" text="Unpost" tooltip="Cancel posting" />
+        <Button command="doc.print" icon="ledger-print" text="Print" tooltip="Print forms (Ctrl+P)" />
+        <spacer />
+        <Button command="doc.delete" icon="ledger-delete" text="Delete" tooltip="Delete document" />
+      </Toolbar>
+      <StackView name="journal" spacing="0" flags="flexspace">
+        <SplitView name="journal_split" orientation="vertical" split-ratio="0.58" flags="flexspace">
+          <TableView name="documents" source="ib.documents" check-field="posted" flags="notitle,nofill,vscroll,flexspace">
+            <Column field="date" title="Date" width="96" />
+            <Column field="number" title="Number" width="80" />
+            <Column field="doc_type.name" title="Document" width="0" min-width="120" />
+            <Column field="counterparty.name" title="Counterparty" width="0" min-width="120" />
+            <Column field="total" title="Amount" width="90" />
+            <Column field="comment" title="Comment" width="0" />
+          </TableView>
+          <TabView name="details" flags="flexspace">
+            <TableView name="lines" text="Lines" source="ib.doc_lines" flags="notitle,nofill,vscroll">
+              <Column field="item.name" title="Item" width="0" min-width="120" />
+              <Column field="item.unit.name" title="Unit" width="44" />
+              <Column field="quantity" title="Qty" width="64" />
+              <Column field="price" title="Price" width="80" />
+              <Column field="amount" title="Amount" width="84" />
+              <Column field="vat_rate.name" title="Tax" width="48" />
+              <Column field="vat" title="Tax Amount" width="80" />
+              <Column field="total" title="Total" width="84" />
+            </TableView>
+            <TableView name="doc_entries" text="Entries" source="ib.entries" flags="notitle,nofill,vscroll">
+              <Column field="debit.code" title="Dr" width="56" />
+              <Column field="credit.code" title="Cr" width="56" />
+              <Column field="amount" title="Amount" width="90" />
+              <Column field="content" title="Content" width="0" />
+            </TableView>
+          </TabView>
+        </SplitView>
+      </StackView>
+    </form>
+
+    <form name="counterparties_page" title="Counterparties" icon="ledger-nav-counterparties"
+          checked-icon="ledger-nav-counterparties-fill" tooltip="Counterparties (Ctrl+2)"
+          focus="counterparties" width="900" height="560" role="page" flags="nofill,flexspace"
+          spacing="4" padding="4">
+      <Toolbar>
+        <Button command="catalog.new_counterparty" icon="ledger-new" text="New" tooltip="New counterparty" />
+        <Button command="catalog.edit_counterparty" icon="ledger-edit" text="Edit" tooltip="Edit counterparty" />
+        <spacer />
+        <Button command="catalog.delete_counterparty" icon="ledger-delete" text="Delete" tooltip="Delete counterparty" />
+      </Toolbar>
+      <TableView name="counterparties" source="ib.counterparties" flags="notitle,nofill,vscroll,flexspace">
+        <Column field="name" title="Name" width="0" min-width="160" />
+        <Column field="tax_id" title="Tax ID" width="100" />
+        <Column field="kpp" title="KPP" width="84" />
+        <Column field="phone" title="Phone" width="100" />
+        <Column field="address" title="Address" width="0" />
+      </TableView>
+    </form>
+
+    <form name="items_page" title="Items" icon="ledger-nav-items" checked-icon="ledger-nav-items-fill"
+          tooltip="Goods and services (Ctrl+3)" focus="items" width="900" height="560" role="page"
+          flags="nofill,flexspace" spacing="4" padding="4">
+      <Toolbar>
+        <Button command="catalog.new_item" icon="ledger-new" text="New" tooltip="New item" />
+        <Button command="catalog.edit_item" icon="ledger-edit" text="Edit" tooltip="Edit item" />
+        <spacer />
+        <Button command="catalog.delete_item" icon="ledger-delete" text="Delete" tooltip="Delete item" />
+      </Toolbar>
+      <TableView name="items" source="ib.items" flags="notitle,nofill,vscroll,flexspace">
+        <Column field="sku" title="Code" width="64" />
+        <Column field="name" title="Name" width="0" min-width="160" />
+        <Column field="unit.name" title="Unit" width="56" />
+        <Column field="vat_rate.name" title="Tax" width="56" />
+        <Column field="price" title="Price" width="90" />
+      </TableView>
+    </form>
+
+    <form name="accounts_page" title="Chart of Accounts" icon="ledger-nav-accounts"
+          checked-icon="ledger-nav-accounts-fill" tooltip="Chart of accounts (Ctrl+4)"
+          focus="accounts" width="900" height="560" role="page" flags="nofill,flexspace"
+          spacing="4" padding="4">
+      <TableView name="accounts" source="cfg.accounts" flags="notitle,nofill,vscroll,flexspace">
+        <Column field="code" title="Code" width="56" />
+        <Column field="name" title="Account" width="0" min-width="200" />
+        <Column field="kind" title="Kind" width="44" />
+        <Column field="section" title="Section" width="0" />
+      </TableView>
+    </form>
+
+    <form name="entries_page" title="Entry Journal" icon="ledger-nav-entries"
+          checked-icon="ledger-nav-entries-fill" tooltip="All accounting entries (Ctrl+5)"
+          focus="entries" width="900" height="560" role="page" flags="nofill,flexspace"
+          spacing="4" padding="4">
+      <TableView name="entries" source="ib.entries" master="none" flags="notitle,nofill,vscroll,flexspace">
+        <Column field="date" title="Date" width="76" />
+        <Column field="document.number" title="Document" width="80" />
+        <Column field="debit.code" title="Dr" width="56" />
+        <Column field="credit.code" title="Cr" width="56" />
+        <Column field="amount" title="Amount" width="96" />
+        <Column field="content" title="Content" width="0" />
+      </TableView>
+    </form>
+
+    <form name="balance_page" title="Trial Balance" icon="ledger-nav-balance"
+          checked-icon="ledger-nav-balance-fill" tooltip="Trial balance (Ctrl+6)"
+          focus="balances" width="900" height="560" role="page" flags="nofill,flexspace"
+          spacing="4" padding="4">
+      <Toolbar>
+        <Button command="report.recalc" icon="ledger-post" text="Recalculate" tooltip="Rebuild totals from entries (F5)" />
+      </Toolbar>
+      <TableView name="balances" source="ib.balances" flags="notitle,nofill,vscroll,flexspace">
+        <Column field="account.code" title="Account" width="64" />
+        <Column field="account.name" title="Name" width="0" min-width="160" />
+        <Column field="debit_turnover" title="Turnover Dr" width="100" />
+        <Column field="credit_turnover" title="Turnover Cr" width="100" />
+        <Column field="balance_dr" title="Balance Dr" width="100" />
+        <Column field="balance_cr" title="Balance Cr" width="100" />
+      </TableView>
+    </form>
+
+    <!-- What the active configuration defines: document types, tax rates, units. -->
+    <form name="config_page" title="Configuration" icon="ledger-nav-config"
+          checked-icon="ledger-nav-config-fill" tooltip="Active configuration (Ctrl+7)"
+          focus="doc_types" width="900" height="560" role="page" flags="nofill,flexspace"
+          spacing="4" padding="4">
+      <StackView name="metadata_stack" spacing="0" flags="flexspace">
+        <TabView name="metadata" flags="flexspace">
+          <TableView name="settings" text="Configuration" source="cfg.settings" flags="notitle,nofill,vscroll">
+            <Column field="name" title="Configuration" width="0" min-width="160" />
+            <Column field="country" title="Country" width="140" />
+            <Column field="currency" title="Currency" width="64" />
+            <Column field="version" title="Version" width="72" />
+            <Column field="basis" title="Legal Basis" width="0" />
+          </TableView>
+          <TableView name="doc_types" text="Document Types" source="cfg.doc_types" master="none" flags="notitle,nofill,vscroll">
+            <Column field="name" title="Document" width="0" min-width="140" />
+            <Column field="prefix" title="Prefix" width="44" />
+            <Column field="debit.code" title="Dr" width="48" />
+            <Column field="credit.code" title="Cr" width="48" />
+            <Column field="vat_debit.code" title="Tax Dr" width="52" />
+            <Column field="vat_credit.code" title="Tax Cr" width="52" />
+            <Column field="description" title="Description" width="0" />
+          </TableView>
+          <TableView name="print_forms" text="Print Forms" source="cfg.print_forms" master="none" flags="notitle,nofill,vscroll">
+            <Column field="doc_type.name" title="Document" width="0" />
+            <Column field="name" title="Form" width="0" />
+            <Column field="basis" title="Legal Basis" width="0" />
+          </TableView>
+          <TableView name="vat_rates" text="Tax Rates" source="cfg.vat_rates" flags="notitle,nofill,vscroll">
+            <Column field="name" title="Rate" width="0" />
+            <Column field="rate" title="Percent" width="80" />
+          </TableView>
+          <TableView name="units" text="Units" source="cfg.units" flags="notitle,nofill,vscroll">
+            <Column field="code" title="Code" width="56" />
+            <Column field="name" title="Unit" width="0" />
+          </TableView>
+        </TabView>
+      </StackView>
+    </form>
+
+    <!-- Document form: header bound to ib.documents, lines below. -->
+    <form name="document" title="Document" width="620" height="440" spacing="6" padding="8">
+      <GridView name="header" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_type" text="Document:" />
+          <Label name="lbl_number" text="Number:" />
+          <Label name="lbl_date" text="Date:" />
+          <Label name="lbl_counterparty" text="Counterparty:" />
+          <Label name="lbl_comment" text="Comment:" />
+        </Column>
+        <Column name="inputs">
+          <ComboBox name="doc_type" field="ib.documents.doc_type_id" source="cfg.doc_types" display="name" value="id" />
+          <TextBox name="number" field="ib.documents.number" placeholder="Assigned when saved" />
+          <TextBox name="date" field="ib.documents.date" placeholder="YYYY-MM-DD" />
+          <ComboBox name="counterparty" field="ib.documents.counterparty_id" source="ib.counterparties" display="name" value="id" />
+          <TextBox name="comment" field="ib.documents.comment" />
+        </Column>
+      </GridView>
+      <TableView name="lines" source="ib.doc_lines" flags="notitle,nofill,vscroll,flexspace">
+        <Column field="item.name" title="Item" width="0" min-width="120" />
+        <Column field="item.unit.name" title="Unit" width="44" />
+        <Column field="quantity" title="Qty" width="64" />
+        <Column field="price" title="Price" width="76" />
+        <Column field="amount" title="Amount" width="80" />
+        <Column field="vat_rate.name" title="Tax" width="44" />
+        <Column field="vat" title="Tax Amount" width="76" />
+        <Column field="total" title="Total" width="80" />
+      </TableView>
+      <StackView name="line_actions" orientation="horizontal" spacing="4">
+        <Button name="add_line" text="Add Line..." />
+        <Button name="edit_line" text="Edit Line..." />
+        <Button name="delete_line" text="Delete Line" />
+        <Space name="line_flex" />
+      </StackView>
+      <GridView name="totals" spacing="4">
+        <Column name="col_amount_label" width="auto"><Label name="lbl_amount" text="Amount:" /></Column>
+        <Column name="col_amount"><TextBox name="amount" field="ib.documents.amount" /></Column>
+        <Column name="col_vat_label" width="auto"><Label name="lbl_vat" text="Tax:" /></Column>
+        <Column name="col_vat"><TextBox name="vat" field="ib.documents.vat" /></Column>
+        <Column name="col_total_label" width="auto"><Label name="lbl_total" text="Total:" /></Column>
+        <Column name="col_total"><TextBox name="total" field="ib.documents.total" /></Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK and Post" action="ib.documents.update" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="doc_line" title="Document Line" width="340" spacing="6" padding="8">
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_item" text="Item:" />
+          <Label name="lbl_quantity" text="Quantity:" />
+          <Label name="lbl_price" text="Price:" />
+          <Label name="lbl_vat_rate" text="Tax rate:" />
+        </Column>
+        <Column name="inputs">
+          <ComboBox name="item" field="ib.doc_lines.item_id" source="ib.items" display="name" value="id" />
+          <TextBox name="quantity" field="ib.doc_lines.quantity" />
+          <TextBox name="price" field="ib.doc_lines.price" placeholder="Item price" />
+          <ComboBox name="vat_rate" field="ib.doc_lines.vat_rate_id" source="cfg.vat_rates" display="name" value="id" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="ib.doc_lines.insert" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="counterparty" title="Counterparty" width="420" spacing="6" padding="8">
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_name" text="Name:" />
+          <Label name="lbl_tax_id" text="Tax ID:" />
+          <Label name="lbl_kpp" text="KPP:" />
+          <Label name="lbl_address" text="Address:" />
+          <Label name="lbl_bank" text="Bank:" />
+          <Label name="lbl_bank_account" text="Account:" />
+          <Label name="lbl_bik" text="Bank ID (BIK):" />
+          <Label name="lbl_phone" text="Phone:" />
+        </Column>
+        <Column name="inputs">
+          <TextBox name="name" field="ib.counterparties.name" />
+          <TextBox name="tax_id" field="ib.counterparties.tax_id" />
+          <TextBox name="kpp" field="ib.counterparties.kpp" />
+          <TextBox name="address" field="ib.counterparties.address" />
+          <TextBox name="bank" field="ib.counterparties.bank" />
+          <TextBox name="bank_account" field="ib.counterparties.bank_account" />
+          <TextBox name="bik" field="ib.counterparties.bik" />
+          <TextBox name="phone" field="ib.counterparties.phone" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="ib.counterparties.insert" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="item" title="Item" width="360" spacing="6" padding="8">
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_sku" text="Code:" />
+          <Label name="lbl_name" text="Name:" />
+          <Label name="lbl_unit" text="Unit:" />
+          <Label name="lbl_vat_rate" text="Tax rate:" />
+          <Label name="lbl_price" text="Price:" />
+        </Column>
+        <Column name="inputs">
+          <TextBox name="sku" field="ib.items.sku" />
+          <TextBox name="name" field="ib.items.name" />
+          <ComboBox name="unit" field="ib.items.unit_id" source="cfg.units" display="name" value="id" />
+          <ComboBox name="vat_rate" field="ib.items.vat_rate_id" source="cfg.vat_rates" display="name" value="id" />
+          <TextBox name="price" field="ib.items.price" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="ib.items.insert" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="organization" title="Organization Details" width="440" spacing="6" padding="8">
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_name" text="Name:" />
+          <Label name="lbl_tax_id" text="Tax ID:" />
+          <Label name="lbl_kpp" text="KPP:" />
+          <Label name="lbl_address" text="Address:" />
+          <Label name="lbl_bank" text="Bank:" />
+          <Label name="lbl_bank_account" text="Account:" />
+          <Label name="lbl_bik" text="Bank ID (BIK):" />
+          <Label name="lbl_corr_account" text="Corr. account:" />
+          <Label name="lbl_director" text="Director:" />
+          <Label name="lbl_accountant" text="Chief accountant:" />
+        </Column>
+        <Column name="inputs">
+          <TextBox name="name" field="ib.organizations.name" />
+          <TextBox name="tax_id" field="ib.organizations.tax_id" />
+          <TextBox name="kpp" field="ib.organizations.kpp" />
+          <TextBox name="address" field="ib.organizations.address" />
+          <TextBox name="bank" field="ib.organizations.bank" />
+          <TextBox name="bank_account" field="ib.organizations.bank_account" />
+          <TextBox name="bik" field="ib.organizations.bik" />
+          <TextBox name="corr_account" field="ib.organizations.corr_account" />
+          <TextBox name="director" field="ib.organizations.director" />
+          <TextBox name="accountant" field="ib.organizations.accountant" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="ib.organizations.update" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <!-- The choice is a catalog record; the next start opens its infobase. -->
+    <form name="select_configuration" title="Select Configuration" width="360" spacing="6" padding="8">
+      <Label name="hint" text="Ledger opens the infobase of the chosen configuration on next start." />
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_configuration" text="Configuration:" />
+        </Column>
+        <Column name="inputs">
+          <ComboBox name="configuration" field="catalog.choices.configuration_id" source="catalog.configurations" display="name" value="id" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="catalog.choices.update" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+  </forms>
+</orion>

@@ -60,10 +60,6 @@ typedef struct {
   int column_count;
   char *check_field;
   
-  // DDX-style field extraction
-  db_object_proc_t obj_proc;          // Object handler proc for this table
-  const db_field_msg_binding_t *bindings;  // Field bindings for this table
-  int binding_count;
   uint32_t master_id;
   int master_filter_field;
   char *master_key;
@@ -72,7 +68,9 @@ typedef struct {
 } tableview_state_t;
 
 // Forward declarations
-static void tv_refresh(window_t *win, tableview_state_t *s);
+static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row);
+static void tv_refresh_dependents(window_t *win, window_t *master);
+static bool tv_selected_field(window_t *win, const char *field, char *buf, size_t buf_sz);
 
 // ══════════════════════════════════════════════════════════════════════════
 // Helper: Count NULL-terminated string array
@@ -133,9 +131,17 @@ static bool tv_get_field_text(tableview_state_t *s, void *record,
                                  const char *field, char *buf, size_t buf_sz) {
   if (!s || !record || !field || !buf || buf_sz == 0) return false;
   
-  // Use DDX-style field extraction via database object proc
-  return db_object_get_field_text(s->bindings, s->binding_count,
-                                  s->obj_proc, record, field, buf, buf_sz);
+  return db_get_field_text(s->db, s->table_id, record, field, buf, buf_sz);
+}
+
+// The database can format this table: schema-driven or object-proc adaptor.
+static bool tv_db_supports(database_t *db, int table_id) {
+  if (!db) return false;
+  const db_schema_def_t *schema = (const db_schema_def_t *)send_db_message(db, dbGetSchema, 0, NULL);
+  const db_table_schema_t *t = db_schema_table(schema, table_id);
+  if (t && t->meta) return true;
+  return send_db_message(db, dbGetObjectProc, (uint32_t)table_id, NULL) &&
+         send_db_message(db, dbGetFieldBindings, (uint32_t)table_id, NULL);
 }
 
 // Removed: tv_apply_column_widths() - now inherited from reportview evResize
@@ -144,7 +150,8 @@ static bool tv_get_field_text(tableview_state_t *s, void *record,
 // Refresh: Fetch records from database and populate reportview
 // ══════════════════════════════════════════════════════════════════════════
 
-static void tv_refresh(window_t *win, tableview_state_t *s) {
+// keep_row: row to reselect after reloading (clamped), or 0 for the first.
+static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
   if (!win || !s || !s->db) {
     TV_LOG("refresh skipped: win=%p state=%p db=%p", (void *)win, (void *)s,
            s ? (void *)s->db : NULL);
@@ -238,11 +245,12 @@ static void tv_refresh(window_t *win, tableview_state_t *s) {
   TV_LOG("refresh complete: id=%u table=%d rows=%d",
          (unsigned)win->id, s->table_id, row_idx);
 
-  // Auto-select first row to trigger cascading updates in dependent views
+  // Select a row to trigger cascading updates in dependent views
   if (row_idx > 0) {
     reportview_data_t *rv = (reportview_data_t *)win->userdata2;
-    send_message(win, RVM_SETSELECTION, 0, NULL);
-    rv_notify(win, rv, 0, RVN_SELCHANGE);
+    int row = keep_row < 0 ? 0 : keep_row >= row_idx ? row_idx - 1 : keep_row;
+    send_message(win, RVM_SETSELECTION, (uint32_t)row, NULL);
+    rv_notify(win, rv, row, RVN_SELCHANGE);
   }
 }
 
@@ -308,26 +316,15 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       TV_LOG("create: id=%u table=%d db=%p columns=%d", (unsigned)win->id,
              s->table_id, (void *)s->db, count_strings(params->field_names));
       
-      // Get object proc and field bindings from database (DDX pattern!)
-      // Skip if db is NULL (will be set later)
-      if (s->db) {
-        s->obj_proc = (db_object_proc_t)send_db_message(s->db, dbGetObjectProc,
-                                                         (uint32_t)s->table_id, NULL);
-        s->bindings = (const db_field_msg_binding_t *)send_db_message(s->db, dbGetFieldBindings,
-                                                                       (uint32_t)s->table_id, &s->binding_count);
-        
-        if (!s->obj_proc || !s->bindings) {
-          TV_LOG("create metadata missing: id=%u table=%d object_proc=%p bindings=%p count=%d",
-                 (unsigned)win->id, s->table_id, (void *)s->obj_proc,
-                 (void *)s->bindings, s->binding_count);
-          free(s->master_key);
-          free(s->check_field);
-          free(s);
-          win->userdata = NULL;
-          return true;
-        }
+      if (s->db && !tv_db_supports(s->db, s->table_id)) {
+        TV_LOG("create metadata missing: id=%u table=%d", (unsigned)win->id, s->table_id);
+        free(s->master_key);
+        free(s->check_field);
+        free(s);
+        win->userdata = NULL;
+        return true;
       }
-      
+
       // Copy column metadata
       s->column_count = count_strings(params->field_names);
       if (s->column_count <= 0) {
@@ -368,7 +365,7 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       
       // Initial refresh (only if db is set)
       if (s->db) {
-        tv_refresh(win, s);
+        tv_refresh(win, s, 0);
       }
       
       return true;
@@ -391,27 +388,24 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     
     case tvRefresh:
       if (s) {
-        tv_refresh(win, s);
+        tv_refresh(win, s, (int)send_message(win, RVM_GETSELECTION, 0, NULL));
       }
       return true;
     
     case evSetDatabase:
       if (s && lparam) {
         s->db = (database_t *)lparam;
-        // Get object proc and field bindings
-        s->obj_proc = (db_object_proc_t)send_db_message(s->db, dbGetObjectProc,
-                                                         (uint32_t)s->table_id, NULL);
-        s->bindings = (const db_field_msg_binding_t *)send_db_message(s->db, dbGetFieldBindings,
-                                                                       (uint32_t)s->table_id, &s->binding_count);
-        TV_LOG("database attached: id=%u table=%d db=%p object_proc=%p bindings=%p count=%d",
-               (unsigned)win->id, s->table_id, (void *)s->db,
-               (void *)s->obj_proc, (void *)s->bindings, s->binding_count);
-        // Refresh from database
-        if (s->obj_proc && s->bindings) {
-          tv_refresh(win, s);
-        } else {
+        TV_LOG("database attached: id=%u table=%d db=%p", (unsigned)win->id,
+               s->table_id, (void *)s->db);
+        window_t *master = s->master_id ? get_window_item(get_root_window(win), s->master_id) : NULL;
+        if (!tv_db_supports(s->db, s->table_id)) {
           TV_LOG("database API incomplete: id=%u table=%d", (unsigned)win->id,
                  s->table_id);
+        } else if (master && master->userdata) {
+          // A detail bound after its master follows the master's selection.
+          tv_refresh_dependents(get_root_window(win), master);
+        } else {
+          tv_refresh(win, s, 0);
         }
       } else {
         TV_LOG("database attach skipped: id=%u state=%p db=%p",
@@ -423,7 +417,7 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       if (s) {
         s->filter_field = (int)wparam;
         s->filter_value = (intptr_t)lparam;
-        tv_refresh(win, s);
+        tv_refresh(win, s, 0);
       }
       return true;
 
