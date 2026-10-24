@@ -2,6 +2,14 @@
 xcuserdata
 Gmax 1.2
 
+# Archives and rendered video
+*.zip
+*.mp4
+
+# Local promo originals and generated SVG intermediates
+/apps/groove/promo/**/*.png
+/apps/groove/promo/**/*.svg
+
 # Local Xcode workspaces (app projects and shared schemes are committed)
 *.xcworkspace/
 

@@ -1,0 +1,10 @@
+{
+  "name": "groove-app-store-promo",
+  "private": true,
+  "scripts": {
+    "render": "node render.cjs"
+  },
+  "dependencies": {
+    "sharp": "0.35.5"
+  }
+}

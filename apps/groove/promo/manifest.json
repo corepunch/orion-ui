@@ -1,0 +1,78 @@
+{
+  "locale": "en-US",
+  "source_platform": "macOS",
+  "source_capture_size": [
+    2360,
+    1520
+  ],
+  "source_capture_command": "build/bin/groove --demo=<skyline|afterglow|victory> --screenshot <path.png>",
+  "notes": [
+    "Screens are real, unmodified app captures; enlarged details are cropped excerpts.",
+    "Frames are presentation panels, not representations of Apple hardware.",
+    "Replace source captures with actual iPad captures and rerender before uploading the iPad set."
+  ],
+  "references": [
+    "https://apps.apple.com/us/app/zillow-real-estate-rentals/id310738695",
+    "https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications"
+  ],
+  "sets": [
+    {
+      "name": "macos",
+      "w": 2880,
+      "h": 1800,
+      "status": "ready",
+      "target": "Mac App Store",
+      "screenshots": [
+        {
+          "file": "macos/en-US/01-make-great-music.jpg",
+          "title": "Make great music."
+        },
+        {
+          "file": "macos/en-US/02-find-your-sound.jpg",
+          "title": "Find your sound."
+        },
+        {
+          "file": "macos/en-US/03-layer-your-ideas.jpg",
+          "title": "Layer your ideas."
+        },
+        {
+          "file": "macos/en-US/04-editable-demos.jpg",
+          "title": "A head start. Your own finish."
+        },
+        {
+          "file": "macos/en-US/05-keep-the-spark.jpg",
+          "title": "Keep the spark."
+        }
+      ]
+    },
+    {
+      "name": "ipad-13-draft",
+      "w": 2752,
+      "h": 2064,
+      "status": "awaiting-ipad-captures",
+      "target": "iPad 13-inch",
+      "screenshots": [
+        {
+          "file": "ipad-13-draft/en-US/01-make-great-music.jpg",
+          "title": "Make great music."
+        },
+        {
+          "file": "ipad-13-draft/en-US/02-find-your-sound.jpg",
+          "title": "Find your sound."
+        },
+        {
+          "file": "ipad-13-draft/en-US/03-layer-your-ideas.jpg",
+          "title": "Layer your ideas."
+        },
+        {
+          "file": "ipad-13-draft/en-US/04-editable-demos.jpg",
+          "title": "A head start. Your own finish."
+        },
+        {
+          "file": "ipad-13-draft/en-US/05-keep-the-spark.jpg",
+          "title": "Keep the spark."
+        }
+      ]
+    }
+  ]
+}

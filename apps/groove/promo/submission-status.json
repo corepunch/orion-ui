@@ -1,0 +1,16 @@
+{
+  "app_id": "6821380428",
+  "version": "1.0",
+  "locale": "en-US",
+  "macos": {
+    "uploaded_screenshots": 5,
+    "verified_ui": "5 of 10 App Screenshots",
+    "url": "https://appstoreconnect.apple.com/apps/6821380428/distribution/macos/version/inflight"
+  },
+  "ipad": {
+    "status": "draft: replace macOS source captures with actual iPad captures before upload"
+  },
+  "submitted_for_review": false,
+  "source_commit": "78702e94",
+  "waveform_alignment": "bottom"
+}
