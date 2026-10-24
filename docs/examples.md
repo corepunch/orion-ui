@@ -69,6 +69,22 @@ orion install socialfeed
 build/bin/socialfeed
 ```
 
+## Ledger
+
+![Ledger trial balance in the Russia 2003 configuration](screenshots/ledger_balance.jpg)
+
+Double-entry bookkeeping in the style of early-2000s desktop accounting
+suites: documents with lines, posting to entries, catalogs, a chart of
+accounts, a trial balance and printed legal forms. The platform is
+country-neutral; accounts, tax rates, posting rules and forms come from a
+swappable configuration. It demonstrates schema-driven databases with no
+adaptor code, cross-database joins, declarative master–detail tables and
+database dialogs with numeric bindings.
+
+```bash
+build/bin/ledger
+```
+
 ## Task Manager
 
 ![Task Manager with a seeded project backlog](screenshots/taskmanager_backlog.jpg)

@@ -118,19 +118,6 @@ static void cb_populate_from_database(window_t *win, const combobox_params_t *pa
     return;
   }
   
-  // Get object proc and field bindings for this table
-  db_object_proc_t obj_proc = (db_object_proc_t)send_db_message(db, dbGetObjectProc,
-    (uint32_t)params->table_id, NULL);
-  
-  int binding_count = 0;
-  const db_field_msg_binding_t *bindings = (const db_field_msg_binding_t *)send_db_message(
-    db, dbGetFieldBindings, (uint32_t)params->table_id, &binding_count);
-  
-  if (!obj_proc || !bindings) {
-    free_result_list(results);
-    return;
-  }
-  
   combobox_state_t *state = (combobox_state_t *)win->userdata;
   if (!state) {
     free_result_list(results);
@@ -153,25 +140,25 @@ static void cb_populate_from_database(window_t *win, const combobox_params_t *pa
     // Example: *(db_author_t **)node->data = &ctx->authors[i];
     // So we must dereference to get the actual record pointer.
     void *record = *(void **)node->data;
-    bool success = db_object_get_field_text(bindings, binding_count, obj_proc,
-                                  record, params->display_field,
-                                  display_buf, sizeof(display_buf));
+    bool success = db_get_field_text(db, params->table_id, record,
+                                     params->display_field,
+                                     display_buf, sizeof(display_buf));
     
     if (success && display_buf[0] != '\0') {
       if (params->filter_field && params->filter_field[0] &&
           params->filter_value && params->filter_value[0]) {
         char filter_buf[64] = {0};
-        if (!db_object_get_field_text(bindings, binding_count, obj_proc,
-                                      record, params->filter_field,
-                                      filter_buf, sizeof(filter_buf)) ||
+        if (!db_get_field_text(db, params->table_id, record,
+                               params->filter_field,
+                               filter_buf, sizeof(filter_buf)) ||
             strcmp(filter_buf, params->filter_value) != 0)
           continue;
       }
       send_message(win, cbAddString, 0, display_buf);
       char value_buf[64];
-      if (db_object_get_field_text(bindings, binding_count, obj_proc,
-                                    record, params->value_field,
-                                    value_buf, sizeof(value_buf))) {
+      if (db_get_field_text(db, params->table_id, record,
+                            params->value_field,
+                            value_buf, sizeof(value_buf))) {
         state->values[count] = atoi(value_buf);
       }
       count++;
@@ -359,6 +346,16 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (lparam)
         *(int *)lparam = kComboBoxError;
       return kComboBoxError;
+    case cbSetCurrentValue:
+      win->title[0] = '\0';
+      for (uint32_t i = 0; state && state->values && i < win->cursor_pos; i++) {
+        if (state->values[i] != (int)wparam) continue;
+        strncpy(win->title, texts[i], sizeof(win->title));
+        win->title[sizeof(win->title) - 1] = '\0';
+        break;
+      }
+      invalidate_window(win);
+      return true;
     case evSetDatabase:
       // Set database pointer and populate combobox
       if (state && lparam) {

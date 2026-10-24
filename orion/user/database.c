@@ -87,6 +87,12 @@ database_t *get_database_by_name(const char *name) {
 }
 
 database_t *create_database(const char *name, const char *class_name, const char *source_path) {
+  return create_database_with_schema(name, class_name, NULL, source_path);
+}
+
+database_t *create_database_with_schema(const char *name, const char *class_name,
+                                        const db_schema_def_t *schema,
+                                        const char *source_path) {
   if (!name || !class_name) return NULL;
   
   dbproc_t proc = find_database_class_proc(class_name);
@@ -102,6 +108,7 @@ database_t *create_database(const char *name, const char *class_name, const char
   db->class_name = class_name;
   db->proc = proc;
   db->dirty = false;
+  db->schema = schema;
   
   if (source_path)
     strncpy(db->source_path, source_path, sizeof(db->source_path) - 1);
@@ -200,6 +207,105 @@ bool db_object_get_field_text(const db_field_msg_binding_t *bindings, int bindin
   }
   
   return false;
+}
+
+// ── Schema-driven field formatting ──────────────────────────────────────────
+
+const db_table_schema_t *db_schema_table(const db_schema_def_t *schema, int table_id) {
+  for (int i = 0; schema && i < schema->table_count; i++)
+    if (schema->tables[i].table_id == table_id) return &schema->tables[i];
+  return NULL;
+}
+
+const db_table_schema_t *db_schema_table_named(const db_schema_def_t *schema, const char *name) {
+  for (int i = 0; schema && name && i < schema->table_count; i++)
+    if (db_streq(schema->tables[i].name, name)) return &schema->tables[i];
+  return NULL;
+}
+
+int db_schema_field_index(const db_table_schema_t *table, const char *field) {
+  for (int i = 0; table && field && i < table->meta_count; i++)
+    if (db_streq(table->meta[i].name, field)) return i;
+  return -1;
+}
+
+bool db_format_field(const db_field_meta_t *field, const void *record, char *buf, size_t buf_sz) {
+  if (!field || !record || !buf || buf_sz == 0) return false;
+  const char *p = (const char *)record + field->offset;
+  int decimals = field->precision > 0 ? field->precision : 2;
+  switch (field->type) {
+    case DB_TYPE_INT:    snprintf(buf, buf_sz, "%d", *(const int *)p);                    return true;
+    case DB_TYPE_STRING: snprintf(buf, buf_sz, "%s", p);                                  return true;
+    case DB_TYPE_BOOL:   snprintf(buf, buf_sz, "%d", *(const bool *)p ? 1 : 0);           return true;
+    case DB_TYPE_FLOAT:  snprintf(buf, buf_sz, "%.*f", decimals, (double)*(const float *)p); return true;
+    case DB_TYPE_DOUBLE: snprintf(buf, buf_sz, "%.*f", decimals, *(const double *)p);     return true;
+  }
+  return false;
+}
+
+static const db_join_schema_t *db_schema_join(const db_table_schema_t *table, const char *name, size_t len) {
+  for (int i = 0; table && i < table->join_count; i++)
+    if (strlen(table->joins[i].name) == len && !strncmp(table->joins[i].name, name, len))
+      return &table->joins[i];
+  return NULL;
+}
+
+bool db_schema_field_text(database_t *db, const db_table_schema_t *table,
+                          const void *record, const char *field,
+                          char *buf, size_t buf_sz) {
+  if (!db || !table || !record || !field || !buf || buf_sz == 0) return false;
+  buf[0] = '\0';
+  const char *dot = strchr(field, '.');
+  if (!dot) {
+    int index = db_schema_field_index(table, field);
+    return index >= 0 && db_format_field(&table->meta[index], record, buf, buf_sz);
+  }
+  const db_join_schema_t *join = db_schema_join(table, field, (size_t)(dot - field));
+  int local = join ? db_schema_field_index(table, join->local_field) : -1;
+  if (local < 0 || table->meta[local].type != DB_TYPE_INT) {
+    fprintf(stderr, "[database] unknown join path db=%s table=%s field=%s\n",
+            db->name, table->name, field);
+    return false;
+  }
+  int key = *(const int *)((const char *)record + table->meta[local].offset);
+  if (key == 0) return true;  // unset reference displays as empty
+  // "db.table" relations cross into another registered database.
+  database_t *foreign_db = db;
+  const char *foreign_name = join->foreign_table;
+  const char *qualified = strchr(foreign_name, '.');
+  if (qualified) {
+    char db_name[64];
+    size_t n = (size_t)(qualified - foreign_name);
+    if (n >= sizeof(db_name)) return false;
+    memcpy(db_name, foreign_name, n); db_name[n] = '\0';
+    foreign_db = get_database_by_name(db_name);
+    foreign_name = qualified + 1;
+  }
+  const db_schema_def_t *schema = foreign_db
+    ? (const db_schema_def_t *)send_db_message(foreign_db, dbGetSchema, 0, NULL) : NULL;
+  const db_table_schema_t *foreign = db_schema_table_named(schema, foreign_name);
+  int search = db_schema_field_index(foreign, join->foreign_field);
+  if (!foreign || search < 0) {
+    fprintf(stderr, "[database] join target missing db=%s relation=%s.%s\n",
+            db->name, join->foreign_table, join->foreign_field);
+    return false;
+  }
+  const void *target = (const void *)send_db_message(foreign_db, dbFind,
+    MAKEDWORD(foreign->table_id, search), (void *)(intptr_t)key);
+  return target ? db_get_field_text(foreign_db, foreign->table_id, target, dot + 1, buf, buf_sz)
+                : true;
+}
+
+bool db_get_field_text(database_t *db, int table_id, const void *record,
+                       const char *field, char *buf, size_t buf_sz) {
+  if (!db || !record || !field || !buf || buf_sz == 0) return false;
+  db_field_text_t req = { record, field, buf, buf_sz };
+  if (send_db_message(db, dbGetFieldText, (uint32_t)table_id, &req)) return true;
+  int count = 0;
+  db_object_proc_t proc = (db_object_proc_t)send_db_message(db, dbGetObjectProc, (uint32_t)table_id, NULL);
+  const db_field_msg_binding_t *bindings = (const db_field_msg_binding_t *)send_db_message(
+    db, dbGetFieldBindings, (uint32_t)table_id, &count);
+  return db_object_get_field_text(bindings, count, proc, record, field, buf, buf_sz);
 }
 
 // ── Result list helpers ──────────────────────────────────────────────────────
@@ -352,7 +458,7 @@ bool db_save_field_to_xml(xmlNodePtr node, const void *record_base,
       break;
       
     case DB_TYPE_DOUBLE:
-      snprintf(buf, sizeof(buf), "%g", *(const double *)field_ptr);
+      snprintf(buf, sizeof(buf), "%.15g", *(const double *)field_ptr);
       break;
       
     default:

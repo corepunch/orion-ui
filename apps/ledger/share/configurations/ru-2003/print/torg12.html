@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>ТОРГ-12 {{number}}</title>
+<style>
+body{font-family:"Times New Roman",serif;font-size:10pt;margin:12mm;color:#000}
+table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
+.grid td,.grid th{border:1px solid #000}.grid th{font-weight:normal;font-size:8pt;text-align:center}
+.r{text-align:right}.c{text-align:center}.small{font-size:7.5pt}.b{font-weight:bold}
+.line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
+.sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
+h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
+@media print{body{margin:6mm}}
+</style></head><body>
+<div class="r small">Унифицированная форма № ТОРГ-12<br>Утверждена постановлением Госкомстата России от 25.12.98 № 132</div>
+<table style="width:100%"><tr><td style="width:75%">
+<table style="width:100%">
+<tr><td><span class="line" style="width:100%">{{org.name}}, ИНН {{org.tax_id}}, {{org.address}}, р/с {{org.bank_account}} в {{org.bank}}, БИК {{org.bik}}, к/с {{org.corr_account}}</span><div class="cap">грузоотправитель, адрес, номер телефона, банковские реквизиты</div></td></tr>
+<tr><td><span class="line" style="width:100%">&nbsp;</span><div class="cap">структурное подразделение</div></td></tr>
+<tr><td>Грузополучатель <span class="line" style="width:80%">{{counterparty.name}}, ИНН {{counterparty.tax_id}}, {{counterparty.address}}</span></td></tr>
+<tr><td>Поставщик <span class="line" style="width:85%">{{org.name}}, ИНН {{org.tax_id}}, {{org.address}}, р/с {{org.bank_account}} в {{org.bank}}, БИК {{org.bik}}</span></td></tr>
+<tr><td>Плательщик <span class="line" style="width:84%">{{counterparty.name}}, ИНН {{counterparty.tax_id}}, {{counterparty.address}}, р/с {{counterparty.bank_account}} в {{counterparty.bank}}, БИК {{counterparty.bik}}</span></td></tr>
+<tr><td>Основание <span class="line" style="width:85%">{{comment}}</span><div class="cap">наименование документа (договор, контракт, заказ-наряд)</div></td></tr>
+</table></td><td>
+<table class="box small"><tr><td></td><td class="b">Коды</td></tr>
+<tr><td style="border:0;text-align:right">Форма по ОКУД</td><td>0330212</td></tr>
+<tr><td style="border:0;text-align:right">по ОКПО</td><td>&nbsp;</td></tr>
+<tr><td style="border:0;text-align:right">Вид деятельности по ОКДП</td><td>&nbsp;</td></tr>
+<tr><td style="border:0;text-align:right">номер</td><td>&nbsp;</td></tr>
+<tr><td style="border:0;text-align:right">дата</td><td>&nbsp;</td></tr>
+<tr><td style="border:0;text-align:right">Вид операции</td><td>&nbsp;</td></tr></table>
+</td></tr></table>
+<table class="box" style="margin:8px auto"><tr><td style="border:0"><h1>ТОВАРНАЯ НАКЛАДНАЯ</h1></td><td class="small">Номер документа<br><b>{{number}}</b></td><td class="small">Дата составления<br><b>{{date|dmy}}</b></td></tr></table>
+<table class="grid" style="width:100%">
+<tr><th rowspan="2">Но-<br>мер<br>по по-<br>рядку</th><th colspan="2">Товар</th><th colspan="2">Единица измерения</th><th rowspan="2">Вид<br>упа-<br>ковки</th><th colspan="2">Количество</th><th rowspan="2">Масса<br>брутто</th><th rowspan="2">Количе-<br>ство<br>(масса<br>нетто)</th><th rowspan="2">Цена,<br>руб. коп.</th><th rowspan="2">Сумма без<br>учета НДС,<br>руб. коп.</th><th colspan="2">НДС</th><th rowspan="2">Сумма с<br>учетом НДС,<br>руб. коп.</th></tr>
+<tr><th>наименование, характеристика, сорт, артикул товара</th><th>код</th><th>наиме-<br>нование</th><th>код по<br>ОКЕИ</th><th>в одном<br>месте</th><th>мест,<br>штук</th><th>ставка,<br>%</th><th>сумма,<br>руб. коп.</th></tr>
+<tr><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th></tr>
+{{#lines}}<tr><td class="c">{{n}}</td><td>{{item.name}}</td><td class="c">{{item.sku}}</td><td class="c">{{item.unit.name}}</td><td class="c">{{item.unit.code}}</td><td></td><td></td><td></td><td></td><td class="r">{{quantity}}</td><td class="r">{{price}}</td><td class="r">{{amount}}</td><td class="c">{{vat_rate.name}}</td><td class="r">{{vat}}</td><td class="r">{{total}}</td></tr>
+{{/lines}}<tr><td colspan="9" class="r" style="border:0">Итого</td><td></td><td class="c">X</td><td class="r">{{amount}}</td><td class="c">X</td><td class="r">{{vat}}</td><td class="r">{{total}}</td></tr>
+<tr><td colspan="9" class="r" style="border:0">Всего по накладной</td><td></td><td class="c">X</td><td class="r b">{{amount}}</td><td class="c">X</td><td class="r b">{{vat}}</td><td class="r b">{{total}}</td></tr>
+</table>
+<p>Всего отпущено на сумму <span class="line" style="width:60%">{{total}} {{cfg.currency}}</span><span class="small"> (прописью)</span></p>
+<table style="width:100%" class="sign"><tr>
+<td style="width:50%">Отпуск груза разрешил <span class="line">{{org.director}}</span><br><span class="small">должность / подпись / расшифровка подписи</span><br><br>
+Главный (старший) бухгалтер <span class="line">{{org.accountant}}</span><br><br>
+Отпуск груза произвел <span class="line">&nbsp;</span><br><br>М.П. &nbsp; &laquo;___&raquo; ____________ 20__ года</td>
+<td>По доверенности № <span class="line" style="min-width:60px">&nbsp;</span> от <span class="line" style="min-width:80px">&nbsp;</span><br>выданной <span class="line">&nbsp;</span><br><br>
+Груз принял <span class="line">&nbsp;</span><br><br>Груз получил грузополучатель <span class="line">&nbsp;</span><br><br>М.П. &nbsp; &laquo;___&raquo; ____________ 20__ года</td>
+</tr></table>
+</body></html>

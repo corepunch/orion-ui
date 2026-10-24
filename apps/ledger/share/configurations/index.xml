@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Installed Ledger configurations. Each code names a directory beside this file. -->
+<catalog>
+  <configurations>
+    <configuration id="1" code="ru-2003" name="Бухгалтерский учет (Россия, 2003)" country="Российская Федерация" />
+  </configurations>
+</catalog>

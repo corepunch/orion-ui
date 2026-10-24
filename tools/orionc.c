@@ -651,8 +651,86 @@ static void emit_accelerators(FILE *f, const char *prefix, const action_meta_lis
 static const field_type_t *field_type(const char *type) { for (int i = 0; i < ARRAY_LEN(kFieldTypes); i++) if (eq(type, kFieldTypes[i].xml)) return &kFieldTypes[i]; return &kFieldTypes[0]; }
 static void singular_type(char *out, size_t cap, const char *table, const char *model) {
   if (model && *model) { snprintf(out, cap, "%s", model); return; }
-  char id[96]; ident(id, sizeof(id), table, false); size_t n = strlen(id); if (n > 1 && id[n - 1] == 's') id[n - 1] = 0;
+  char id[96]; ident(id, sizeof(id), table, false); size_t n = strlen(id);
+  if (n > 3 && !strcmp(id + n - 3, "ies")) strcpy(id + n - 3, "y");
+  else if (n > 1 && id[n - 1] == 's') id[n - 1] = 0;
   snprintf(out, cap, "db_%s_t", id);
+}
+
+// Finds <table name=...> in a <database>, or across every database of a
+// <databases> block (table names are unique application-wide).
+static xmlNodePtr find_table_node(xmlNodePtr scope, const char *name) {
+  if (!scope || !name) return NULL;
+  EACH_ELEMENT(n, scope) {
+    if (elem(n, "database")) { xmlNodePtr t = find_table_node(n, name); if (t) return t; }
+    if (!elem(n, "table")) continue;
+    char *candidate = attr(n, "name"); bool match = eq(candidate, name); free(candidate);
+    if (match) return n;
+  }
+  return NULL;
+}
+
+static xmlNodePtr find_field_node(xmlNodePtr scope, const char *table, const char *field) {
+  EACH_ELEMENT(n, find_table_node(scope, table)) if (elem(n, "field")) {
+    char *candidate = attr(n, "name"); bool match = eq(candidate, field); free(candidate);
+    if (match) return n;
+  }
+  return NULL;
+}
+
+// Emits the generated schema for one <database>: per-table field schema,
+// joins derived from relation= fields, record sizes and reflection metadata.
+// Relations may name another database: relation="cfg.accounts.id".
+static void emit_database_schema(FILE *f, xmlNodePtr db, const char *prefix) {
+  char *db_name = attr(db, "name"), *klass = attr(db, "class"), *source = attr(db, "source");
+  char db_id[128]; ident(db_id, sizeof(db_id), nz(db_name, "db"), false);
+  int tables = 0;
+  EACH_ELEMENT(t, db) if (elem(t, "table")) {
+    char *table = attr(t, "name"), meta[128]; ident(meta, sizeof(meta), nz(table, "table"), false);
+    int joins = 0;
+    OUT("static const db_field_schema_t %s_%s_schema_fields[] = {\n", db_id, meta);
+    EACH_ELEMENT(field, t) if (elem(field, "field")) {
+      char *name = attr(field, "name"), *kind = attr(field, "type"), *len = attr(field, "length"), *key = attr(field, "key"), *rel = attr(field, "relation");
+      const field_type_t *ft = field_type(kind); char *dot = rel ? strrchr(rel, '.') : NULL;
+      bool pk = key && (eq(key, "YES") || eq(key, "yes") || eq(key, "true") || eq(key, "1"));
+      if (dot) { *dot = 0; OUT("  { \"%s\", %s, %d, %s, \"%s\", \"%s\" },\n", name, ft->db, eq(ft->c, "char") ? (len ? atoi(len) : ft->size) : 0, pk ? "true" : "false", rel, dot + 1); joins++; }
+      else OUT("  { \"%s\", %s, %d, %s, NULL, NULL },\n", name, ft->db, eq(ft->c, "char") ? (len ? atoi(len) : ft->size) : 0, pk ? "true" : "false");
+      free(name); free(kind); free(len); free(key); free(rel);
+    }
+    LINE("};\n");
+    if (joins) {
+      OUT("static const db_join_schema_t %s_%s_joins[] = {\n", db_id, meta);
+      EACH_ELEMENT(field, t) if (elem(field, "field")) {
+        char *name = attr(field, "name"), *rel = attr(field, "relation"), *join = attr(field, "join"), *dot = rel ? strrchr(rel, '.') : NULL;
+        if (dot) {
+          char alias[128]; snprintf(alias, sizeof(alias), "%s", join && *join ? join : name);
+          size_t n = strlen(alias); if (!(join && *join) && n > 3 && !strcmp(alias + n - 3, "_id")) alias[n - 3] = 0;
+          *dot = 0; OUT("  { \"%s\", \"%s\", \"%s\", \"%s\" },\n", alias, name, rel, dot + 1);
+        }
+        free(name); free(rel); free(join);
+      }
+      LINE("};\n");
+    }
+    tables++; free(table);
+  }
+  if (!tables) { free(db_name); free(klass); free(source); return; }
+  OUT("static const db_table_schema_t %s_%s_tables[] = {\n", prefix, db_id);
+  EACH_ELEMENT(t, db) if (elem(t, "table")) {
+    char *table = attr(t, "name"), *model = attr(t, "model"), type[128], meta[128], up[128];
+    singular_type(type, sizeof(type), table, model); ident(meta, sizeof(meta), nz(model, table), false); ident(up, sizeof(up), table, true);
+    char lower[128], joins[192] = "NULL, 0"; ident(lower, sizeof(lower), table, false);
+    int join_count = 0;
+    EACH_ELEMENT(field, t) if (elem(field, "field")) { char *rel = attr(field, "relation"); if (rel && strchr(rel, '.')) join_count++; free(rel); }
+    if (join_count) snprintf(joins, sizeof(joins), "%s_%s_joins, %d", db_id, lower, join_count);
+    OUT("  { TABLE_%s, \"%s\", %s%s%s, %s_%s_schema_fields, ARRAY_LEN(%s_%s_schema_fields), %s, sizeof(%s), %s_fields, ARRAY_LEN(%s_fields) },\n",
+        up, table, model ? "\"" : "", model ? model : "NULL", model ? "\"" : "", db_id, lower, db_id, lower, joins, type, meta, meta);
+    free(table); free(model);
+  }
+  LINE("};\n");
+  char klassq[ORIONC_STRING_SIZE], sourceq[ORIONC_STRING_SIZE]; cstr(klassq, sizeof(klassq), klass); cstr(sourceq, sizeof(sourceq), source);
+  OUT("static const db_schema_def_t %s_%s_schema = { \"%s\", %s, %s, %s_%s_tables, ARRAY_LEN(%s_%s_tables) };\n\n",
+      prefix, db_id, nz(db_name, "db"), klassq, sourceq, prefix, db_id, prefix, db_id);
+  free(db_name); free(klass); free(source);
 }
 
 // Emits one <database> block. `primary` selects the original, unqualified
@@ -681,9 +759,9 @@ static void emit_database(FILE *f, xmlNodePtr db, const char *prefix, bool prima
     }
     OUT("} %s;\n\nstatic const db_field_meta_t %s_fields[] = {\n", type, meta);
     EACH_ELEMENT(field, t) if (elem(field, "field")) {
-      char *name = attr(field, "name"), *kind = attr(field, "type"), *len = attr(field, "length"); const field_type_t *ft = field_type(kind);
-      OUT("  { \"%s\", %s, offsetof(%s, %s), %d },\n", name, ft->db, type, name, eq(ft->c, "char") ? (len ? atoi(len) : ft->size) : 0);
-      free(name); free(kind); free(len);
+      char *name = attr(field, "name"), *kind = attr(field, "type"), *len = attr(field, "length"), *precision = attr(field, "precision"); const field_type_t *ft = field_type(kind);
+      OUT("  { \"%s\", %s, offsetof(%s, %s), %d, %d },\n", name, ft->db, type, name, eq(ft->c, "char") ? (len ? atoi(len) : ft->size) : 0, precision ? atoi(precision) : 0);
+      free(name); free(kind); free(len); free(precision);
     }
     OUT("};\n");
     char up[128]; ident(up, sizeof(up), table, true); OUT("#define TABLE_%s %d\n", up, table_i++);
@@ -695,6 +773,7 @@ static void emit_database(FILE *f, xmlNodePtr db, const char *prefix, bool prima
   }
   if (primary) OUT("static const db_api_def_t %s_database_api = { NULL, 0, NULL, 0, NULL, 0 };\n\n", prefix);
   else OUT("static const db_api_def_t %s_%s_database_api = { NULL, 0, NULL, 0, NULL, 0 };\n\n", prefix, db_up);
+  emit_database_schema(f, db, prefix);
   free(db_name);
 }
 
@@ -705,18 +784,9 @@ static void table_name_from_source(char *out, size_t cap, const char *source) {
 
 // count_table_fields — count number of fields in a database table
 static int count_table_fields(xmlNodePtr db, const char *table_name) {
-  if (!db || !table_name) return 0;
-  EACH_ELEMENT(t, db) if (elem(t, "table")) {
-    char *name = attr(t, "name");
-    if (eq(name, table_name)) {
-      int count = 0;
-      EACH_ELEMENT(field, t) if (elem(field, "field")) count++;
-      free(name);
-      return count;
-    }
-    free(name);
-  }
-  return 0;
+  int count = 0;
+  EACH_ELEMENT(field, find_table_node(db, table_name)) if (elem(field, "field")) count++;
+  return count;
 }
 
 static xmlNodePtr find_tableview_for_table(xmlNodePtr parent, const char *table) {
@@ -748,27 +818,18 @@ static xmlNodePtr find_tableview_by_name(xmlNodePtr parent, const char *name) {
 static bool table_relation(xmlNodePtr db, const char *table, int *field_index,
                            char *foreign_table, size_t table_cap,
                            char *foreign_field, size_t field_cap) {
-  if (!db) return false;
-  EACH_ELEMENT(t, db) if (elem(t, "table")) {
-    char *name = attr(t, "name");
-    bool match = eq(name, table); free(name);
-    if (!match) continue;
-    int index = 0;
-    EACH_ELEMENT(field, t) if (elem(field, "field")) {
-      char *relation = attr(field, "relation");
-      if (relation && *relation) {
-        char *dot = strchr(relation, '.');
-        if (dot) {
-          *dot = 0;
-          snprintf(foreign_table, table_cap, "%s", relation);
-          snprintf(foreign_field, field_cap, "%s", dot + 1);
-          *field_index = index;
-          free(relation);
-          return true;
-        }
-      }
-      free(relation); index++;
+  int index = 0;
+  EACH_ELEMENT(field, find_table_node(db, table)) if (elem(field, "field")) {
+    char *relation = attr(field, "relation"), *dot = relation ? strrchr(relation, '.') : NULL;
+    if (dot) {
+      *dot = 0;
+      snprintf(foreign_table, table_cap, "%s", relation);
+      snprintf(foreign_field, field_cap, "%s", dot + 1);
+      *field_index = index;
+      free(relation);
+      return true;
     }
+    free(relation); index++;
   }
   return false;
 }
@@ -862,9 +923,9 @@ static void emit_comboboxes(FILE *f, xmlNodePtr parent, const char *form) {
 }
 
 static const char *binding_getter(const char *klass) {
-  if (eq(klass, "textedit") || eq(klass, "multiedit")) return "edGetText";
-  if (eq(klass, "combobox")) return "cbGetCurrentValue";  // Use value_field (ID) not row index
-  if (eq(klass, "checkbox")) return "chkIsChecked";
+  if (!strcasecmp(klass, "textedit") || !strcasecmp(klass, "textbox") || !strcasecmp(klass, "multiedit")) return "edGetText";
+  if (!strcasecmp(klass, "combobox")) return "cbGetCurrentValue";  // Use value_field (ID) not row index
+  if (!strcasecmp(klass, "checkbox")) return "chkIsChecked";
   return "0";
 }
 
@@ -910,9 +971,7 @@ static void resolve_flags(char *out, size_t cap, const char *raw) {
 }
 
 static void binding_record_type(char *out, size_t cap, const char *table) {
-  char id[96]; ident(id, sizeof(id), table, false);
-  size_t n = strlen(id); if (n > 1 && id[n - 1] == 's') id[n - 1] = 0;
-  snprintf(out, cap, "db_%s_t", id);
+  singular_type(out, cap, table, NULL);
 }
 
 static void add_binding(bindings_t *b, const char *ctrl, const char *path, const char *klass) {
@@ -997,17 +1056,29 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
   }
 }
 
-static void emit_bindings(FILE *f, const char *prefix, const char *form, const bindings_t *b) {
+// Text controls bound to numeric fields convert through typed DDX callbacks;
+// ComboBoxes exchange their value field (0 = no selection).
+static void emit_bindings(FILE *f, const char *prefix, const char *form, const bindings_t *b, xmlNodePtr databases) {
   if (!b || !b->n) return;
   char type[128]; binding_record_type(type, sizeof(type), b->table);
   OUT("static const ctrl_binding_t %s_%s_bindings[] = {\n", prefix, form);
   for (int i = 0; i < b->n; i++) {
     const binding_t *x = &b->v[i];
-    OUT("  { %s, 0, %s, offsetof(%s, %s), ", x->ctrl, binding_getter(x->klass), type, x->field);
-    if (eq(x->klass, "textedit") || eq(x->klass, "multiedit")) OUT("sizeof_field(%s, %s)", type, x->field);
-    else if (eq(x->klass, "combobox")) LINE("(size_t)-1");
+    const char *getter = binding_getter(x->klass);
+    char *kind = attr(find_field_node(databases, x->table, x->field), "type");
+    const field_type_t *ft = field_type(kind);
+    const char *ddx = eq(getter, "edGetText") && eq(ft->c, "int") ? "int" :
+                      eq(getter, "edGetText") && eq(ft->c, "double") ? "double" :
+                      eq(getter, "edGetText") && eq(ft->c, "float") ? "float" :
+                      eq(getter, "cbGetCurrentValue") ? "combo_value" :
+                      eq(getter, "chkIsChecked") ? "check" : NULL;
+    if (eq(getter, "edGetText") && !ddx) getter = "edGetText";
+    OUT("  { %s, 0, %s, offsetof(%s, %s), ", x->ctrl, ddx ? "0" : getter, type, x->field);
+    if (eq(getter, "edGetText")) OUT("sizeof_field(%s, %s)", type, x->field);
     else LINE("0");
-    LINE(", NULL, NULL },\n");
+    if (ddx) OUT(", ddx_push_%s, ddx_pull_%s },\n", ddx, ddx);
+    else LINE(", NULL, NULL },\n");
+    free(kind);
   }
   LINE("};\n\n");
 }
@@ -1175,7 +1246,7 @@ static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr d
   OUT("static const form_ctrl_def_t %s_%s_children[] = {\n", prefix, form_id);
   int count = 0; bindings_t bindings = {0}; button_ids_t btn_ids = {0}; 
   emit_controls_ex(f, form, form_id, "0", &bindings, &count, &btn_ids); LINE("};\n\n");
-  emit_bindings(f, prefix, form_id, &bindings);
+  emit_bindings(f, prefix, form_id, &bindings, database);
   char initial[256];
   int activity_count = emit_page_bindings(f, form, prefix, form_id, initial, sizeof(initial));
   if (activity_count < 0) { free(name); free(title); free(flags_raw); free(role); free(spacing); return false; }
@@ -1203,11 +1274,12 @@ static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr d
     ident(table_id, sizeof(table_id), bindings.table, true);
     ident(meta, sizeof(meta), bindings.table, false);
     int field_count = count_table_fields(database, bindings.table);
-    OUT(", .bindings = %s_%s_bindings, .binding_count = %d, .ok_id = %s, .cancel_id = %s, .db_name = \"%s\", .db_table = \"%s\", .db_table_id = TABLE_%s, .db_fields = %s_fields, .db_field_count = %d",
+    char record_type[128]; binding_record_type(record_type, sizeof(record_type), bindings.table);
+    OUT(", .bindings = %s_%s_bindings, .binding_count = %d, .ok_id = %s, .cancel_id = %s, .db_name = \"%s\", .db_table = \"%s\", .db_table_id = TABLE_%s, .db_fields = %s_fields, .db_field_count = %d, .db_record_size = sizeof(%s)",
         prefix, form_id, bindings.n, 
         btn_ids.ok_id[0] ? btn_ids.ok_id : "0",
         btn_ids.cancel_id[0] ? btn_ids.cancel_id : "0",
-        bindings.db, bindings.table, table_id, meta, field_count);
+        bindings.db, bindings.table, table_id, meta, field_count, record_type);
   } else {
     OUT(", .bindings = NULL, .binding_count = 0, .ok_id = %s, .cancel_id = %s, .db_name = NULL, .db_table = NULL, .db_table_id = 0, .db_fields = NULL, .db_field_count = 0",
         btn_ids.ok_id[0] ? btn_ids.ok_id : "0",
@@ -1291,7 +1363,7 @@ int main(int argc, char **argv) {
     OUT("static const form_def_t %s_%s_form;\n", pre, id); free(name);
   }
   EACH_ELEMENT(form, forms) if (elem(form, "form") && activity_form_needed(form, forms, only)) {
-    if (!emit_form(f, form, pre, database)) { fclose(f); xmlFreeDoc(doc); return 1; }
+    if (!emit_form(f, form, pre, databases ? databases : database)) { fclose(f); xmlFreeDoc(doc); return 1; }
   }
   OUT("#endif /* %s */\n", guard);
   fclose(f); xmlFreeDoc(doc);

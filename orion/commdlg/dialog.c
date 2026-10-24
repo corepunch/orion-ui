@@ -11,6 +11,7 @@ typedef struct {
   bool              is_new;
   const char       *fk_field;
   int               fk_value;
+  winproc_t         hook;
 } db_dlg_ctx_t;
 
 static result_t dialog_db_proc(window_t *win, uint32_t msg,
@@ -31,8 +32,7 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
           (void *)(intptr_t)ctx->record_id);
         void *fetched = (void *)result;
         if (fetched) {
-          size_t struct_size = 512;
-          memcpy(ctx->record_buf, fetched, struct_size);
+          memcpy(ctx->record_buf, fetched, ctx->def->db_record_size);
           ctx->is_new = false;
         } else {
           ctx->is_new = true;
@@ -54,11 +54,13 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
         dialog_push(win, ctx->record_buf,
                     ctx->def->bindings, ctx->def->binding_count);
       }
+      if (ctx->hook) ctx->hook(win, evCreate, 0, NULL);
       return true;
     }
     case evCommand: {
       if (!ctx) return false;
       uint16_t notif = HIWORD(wparam);
+      if (notif == edUpdate && ctx->hook) return ctx->hook(win, msg, wparam, lparam);
       if (notif == edUpdate) {
         if (ctx->def->bindings) {
           dialog_pull(win, ctx->record_buf,
@@ -75,7 +77,7 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
         end_dialog(win, 1);
         return true;
       }
-      if (notif != btnClicked) return false;
+      if (notif != btnClicked) return ctx->hook ? ctx->hook(win, msg, wparam, lparam) : false;
       window_t *src = (window_t *)lparam;
       if (!src) return false;
       if (ctx->def->ok_id && src->id == ctx->def->ok_id) {
@@ -98,11 +100,42 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
         end_dialog(win, 0);
         return true;
       }
-      return false;
+      return ctx->hook ? ctx->hook(win, msg, wparam, lparam) : false;
     }
     default:
-      return false;
+      return ctx && ctx->hook ? ctx->hook(win, msg, wparam, lparam) : false;
   }
+}
+
+int db_dialog_record_id(window_t *win) {
+  window_t *root = win ? get_root_window(win) : NULL;
+  if (!root || root->proc != dialog_db_proc || !root->userdata) {
+    fprintf(stderr, "[dialog] db_dialog_record_id: win=%u is not a database dialog\n",
+            win ? win->id : 0);
+    fflush(stderr);
+    return 0;
+  }
+  return ((db_dlg_ctx_t *)root->userdata)->record_id;
+}
+
+uint32_t show_db_dialog_hook(form_def_t const *def, const char *title,
+                             window_t *parent, int record_id, winproc_t hook) {
+  if (!def || !def->db_name || !def->db_table) return 0;
+  database_t *db = get_database_by_name(def->db_name);
+  if (!db || !def->db_record_size) {
+    fprintf(stderr, "show_db_dialog: database '%s' not found or form has no record size\n", def->db_name);
+    fflush(stderr);
+    return 0;
+  }
+  void *record_buf = calloc(1, def->db_record_size);
+  if (!record_buf) return 0;
+  db_dlg_ctx_t ctx = { .def = def, .db = db, .record_id = record_id, .record_buf = record_buf,
+                       .is_new = (record_id == 0), .hook = hook };
+  uint32_t result = show_dialog_from_form_ex(def, title, parent,
+                                             WINDOW_VSCROLL | WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,
+                                             dialog_db_proc, &ctx);
+  free(record_buf);
+  return result;
 }
 
 uint32_t show_db_dialog_ex(form_def_t const *def, const char *title,
@@ -114,7 +147,12 @@ uint32_t show_db_dialog_ex(form_def_t const *def, const char *title,
     fprintf(stderr, "show_db_dialog: database '%s' not found\n", def->db_name);
     return 0;
   }
-  void *record_buf = calloc(1, 1024);
+  if (!def->db_record_size) {
+    fprintf(stderr, "show_db_dialog: form '%s' has no record size\n", def->name ? def->name : "");
+    fflush(stderr);
+    return 0;
+  }
+  void *record_buf = calloc(1, def->db_record_size);
   if (!record_buf) return 0;
   db_dlg_ctx_t ctx = {
     .def = def,
@@ -548,6 +586,35 @@ void ddx_pull_float(window_t *dlg, const ctrl_binding_t *b, void *state) {
   if (!ctrl) return;
   v = strtof(ctrl->title, NULL);
   *(float *)(base + b->offset) = v;
+}
+
+void ddx_push_double(window_t *dlg, const ctrl_binding_t *b, const void *state) {
+  double v = *(const double *)((const char *)state + b->offset);
+  double cents = v * 100.0;
+  if (cents - (double)(long long)cents == 0.0) set_window_item_text(dlg, b->ctrl_id, "%.2f", v);
+  else set_window_item_text(dlg, b->ctrl_id, "%.6g", v);
+}
+
+// Accepts "1 234,50" as well as "1234.50".
+void ddx_pull_double(window_t *dlg, const ctrl_binding_t *b, void *state) {
+  window_t *ctrl = get_window_item(dlg, b->ctrl_id);
+  char clean[64]; size_t n = 0;
+  if (!ctrl) return;
+  for (const char *p = ctrl->title; *p && n + 1 < sizeof(clean); p++)
+    if (*p != ' ') clean[n++] = *p == ',' ? '.' : *p;
+  clean[n] = '\0';
+  *(double *)((char *)state + b->offset) = strtod(clean, NULL);
+}
+
+void ddx_push_combo_value(window_t *dlg, const ctrl_binding_t *b, const void *state) {
+  window_t *ctrl = get_window_item(dlg, b->ctrl_id);
+  if (ctrl) send_message(ctrl, cbSetCurrentValue, (uint32_t)*(const int *)((const char *)state + b->offset), NULL);
+}
+
+void ddx_pull_combo_value(window_t *dlg, const ctrl_binding_t *b, void *state) {
+  window_t *ctrl = get_window_item(dlg, b->ctrl_id);
+  int v = ctrl ? (int)send_message(ctrl, cbGetCurrentValue, 0, NULL) : 0;
+  *(int *)((char *)state + b->offset) = v == kComboBoxError ? 0 : v;
 }
 
 void ddx_push_u8(window_t *dlg, const ctrl_binding_t *b, const void *state) {
