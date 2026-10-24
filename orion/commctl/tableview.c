@@ -67,6 +67,8 @@ typedef struct {
   void **rows;
   int row_count;
   const form_def_t *record_form;
+  bool blank_zeros;
+  int *types;  // field type per column (-1 unknown), resolved with the database
 } tableview_state_t;
 
 // Forward declarations
@@ -137,6 +139,24 @@ static bool tv_get_field_text(tableview_state_t *s, void *record,
   return db_get_field_text(s->db, s->table_id, record, field, buf, buf_sz);
 }
 
+static bool tv_zero_text(const char *text) {
+  bool digit = false;
+  for (const char *p = text; *p; p++) {
+    if (*p >= '1' && *p <= '9') return false;
+    digit |= *p == '0';
+  }
+  return digit;
+}
+
+// Booleans read "Yes" or nothing instead of 1 and 0; with zeros="blank",
+// numeric zeros are left empty.
+static void tv_present_cell(tableview_state_t *s, int col, char *text, size_t sz) {
+  int type = s->types ? s->types[col] : -1;
+  if (type == DB_TYPE_BOOL) snprintf(text, sz, "%s", atoi(text) ? ui_tr("Yes") : "");
+  else if (s->blank_zeros && (type == DB_TYPE_INT || type == DB_TYPE_FLOAT || type == DB_TYPE_DOUBLE) && tv_zero_text(text))
+    text[0] = '\0';
+}
+
 // The database can format this table: schema-driven or object-proc adaptor.
 static bool tv_db_supports(database_t *db, int table_id) {
   if (!db) return false;
@@ -171,15 +191,30 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
   s->rows = NULL;
   s->row_count = 0;
   
-  // Setup columns (on first refresh or if column count changed)
+  // Setup columns (on first refresh or if column count changed). Numbers
+  // align right, as in a ledger.
   int existing_cols = (int)send_message(win, RVM_GETCOLUMNCOUNT, 0, NULL);
   if (existing_cols != s->column_count) {
+    if (s->column_count > MAX_REPORTVIEW_COLUMNS) {
+      fprintf(stderr, "[tableview] columns beyond the limit are not shown win=%u table=%d columns=%d max=%d\n",
+              win->id, s->table_id, s->column_count, MAX_REPORTVIEW_COLUMNS);
+      fflush(stderr);
+      s->column_count = MAX_REPORTVIEW_COLUMNS;
+    }
+    const db_schema_def_t *schema = (const db_schema_def_t *)send_db_message(s->db, dbGetSchema, 0, NULL);
+    const db_table_schema_t *table = db_schema_table(schema, s->table_id);
+    free(s->types);
+    s->types = malloc((size_t)s->column_count * sizeof(int));
     send_message(win, RVM_CLEARCOLUMNS, 0, NULL);
     for (int i = 0; i < s->column_count; i++) {
+      int type = table ? db_schema_field_type(s->db, table, s->field_names[i]) : -1;
+      if (s->types) s->types[i] = type;
+      bool number = type == DB_TYPE_INT || type == DB_TYPE_FLOAT || type == DB_TYPE_DOUBLE;
       reportview_column_t col = {
         .title = s->column_titles[i] ? s->column_titles[i] : s->field_names[i],
         .width = (uint32_t)((s->column_widths && s->column_widths[i] > 0) ? s->column_widths[i] : 0),
         .min_width = (uint32_t)((s->column_min_widths && s->column_min_widths[i] > 0) ? s->column_min_widths[i] : 0),
+        .align = number ? TEXT_ALIGN_RIGHT : 0,
       };
       send_message(win, RVM_ADDCOLUMN, 0, &col);
     }
@@ -219,6 +254,7 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
                              cell_buf[col], sizeof(cell_buf[col]))) {
         cell_buf[col][0] = '\0';
       }
+      tv_present_cell(s, col, cell_buf[col], sizeof(cell_buf[col]));
     }
     
     // Create row
@@ -317,6 +353,7 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       s->check_field = params->check_field && params->check_field[0] ? strdup(params->check_field) : NULL;
       s->cell_style = params->cell_style;
       s->record_form = params->record_form;
+      s->blank_zeros = params->blank_zeros;
       TV_LOG("create: id=%u table=%d db=%p columns=%d", (unsigned)win->id,
              s->table_id, (void *)s->db, count_strings(params->field_names));
       
@@ -388,6 +425,7 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         free(s->master_key);
         free(s->check_field);
         free(s->rows);
+        free(s->types);
         free(s);
         win->userdata = NULL;
       }

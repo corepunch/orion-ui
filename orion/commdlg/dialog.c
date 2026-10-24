@@ -718,10 +718,20 @@ void end_dialog(window_t *win, uint32_t code) {
 // ── Dialog Data Exchange (DDX) ────────────────────────────────────────────
 // Push state → controls (populate on open); pull controls → state (read on OK).
 
+// A zero in a field with cue text means "not given": the field stays empty
+// and shows its cue ("Rate on the document date").
+static bool ddx_zero_shows_cue(window_t *dlg, const ctrl_binding_t *b, double v) {
+  window_t *ctrl = v == 0 ? get_window_item(dlg, b->ctrl_id) : NULL;
+  const char *cue = ctrl ? (const char *)(intptr_t)send_message(ctrl, edGetPlaceholder, 0, NULL) : NULL;
+  if (!cue || !cue[0]) return false;
+  set_window_item_text(dlg, b->ctrl_id, "%s", "");
+  return true;
+}
+
 void ddx_push_int(window_t *dlg, const ctrl_binding_t *b, const void *state) {
   const char *base = (const char *)state;
   int v = *(const int *)(base + b->offset);
-  set_window_item_text(dlg, b->ctrl_id, "%d", v);
+  if (!ddx_zero_shows_cue(dlg, b, v)) set_window_item_text(dlg, b->ctrl_id, "%d", v);
 }
 
 void ddx_pull_int(window_t *dlg, const ctrl_binding_t *b, void *state) {
@@ -753,7 +763,7 @@ void ddx_push_double(window_t *dlg, const ctrl_binding_t *b, const void *state) 
   int decimals = 2;  // money shows cents; fractions keep only the digits they need
   while (decimals < 6 && v * scale != (double)(long long)(v * scale)) { decimals++; scale *= 10.0; }
   char text[64];
-  set_window_item_text(dlg, b->ctrl_id, "%s", ui_format_number(v, decimals, text, sizeof(text)));
+  if (!ddx_zero_shows_cue(dlg, b, v)) set_window_item_text(dlg, b->ctrl_id, "%s", ui_format_number(v, decimals, text, sizeof(text)));
 }
 
 // Dates are stored as ISO "YYYY-MM-DD" and edited in the catalog's format.

@@ -11,7 +11,7 @@
 #define REPORTVIEW_TWO_LINE_ENTRY_HEIGHT (FONT_SIZE_SMALL * 2 + 5)
 #define COLUMNVIEW_HEADER_HEIGHT (FONT_SIZE + 6)        // header uses FONT_SYSTEM
 #define COLUMNVIEW_WIN_PADDING   4
-#define REPORTVIEW_MAX_SUBITEMS  8
+#define REPORTVIEW_MAX_SUBITEMS  (MAX_REPORTVIEW_COLUMNS - 1)  // every column after the first
 
 // ReportView messages (WinAPI-style report/list view naming).
 enum {
@@ -72,6 +72,7 @@ typedef struct {
   const char *title;
   uint32_t width;
   uint32_t min_width;  // 0 = use default (20px), >0 = per-column minimum
+  uint32_t align;      // 0 = left, TEXT_ALIGN_RIGHT (numbers), TEXT_ALIGN_CENTER
 } reportview_column_t;
 
 typedef struct {

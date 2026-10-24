@@ -197,6 +197,7 @@ typedef struct {
   reportview_cell_style_t cell_style; // REPORTVIEW_CELL_COLUMNS (default) or TWO_LINE
   bool hide_column_titles;
   const struct form_def_s *record_form; // database form editing one row (form=); double-click edits
+  bool blank_zeros;            // zeros="blank": numeric zeros show empty, as accounting reports do
 } tableview_params_t;
 
 result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
