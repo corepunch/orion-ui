@@ -164,13 +164,13 @@ static void test_control_parts(void) {
 static void test_all_parts(void) {
   TEST("both themes implement every part/state combination and selection foreground policy");
   test_env_init();
-  for (int style = THEME_CLASSIC; style <= THEME_NAVY; style++) {
+  for (int style = THEME_CLASSIC; style <= THEME_AMBER; style++) {
     set_theme((theme_style_t)style);
     for (int part = 0; part < THEME_PART_COUNT; part++)
       for (int state = 0; state < 64; state++)
         theme_draw((theme_part_t)part, R(5, 7, 60, 24), (ctrl_state_t)state);
     ASSERT_EQUAL(theme_foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED),
-                 get_sys_color(style == THEME_CLASSIC ? brWindowDarkBg : brActiveTitlebarText));
+                 get_sys_color(style == THEME_CLASSIC ? brWindowDarkBg : brAccentText));
     ASSERT_EQUAL(theme_foreground(THEME_PART_BUTTON, CTRL_DISABLED | CTRL_DEFAULT), get_sys_color(brTextDisabled));
   }
   test_env_shutdown();

@@ -36,6 +36,9 @@ typedef struct {
     uint32_t align;       // 0 = left, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER
   } columns[MAX_REPORTVIEW_COLUMNS];
 
+  char footer[MAX_REPORTVIEW_COLUMNS][MAX_REPORTVIEW_TITLE]; // totals row pinned under the rows
+  bool footer_visible;
+
   uint32_t count;
   int selected;
   int column_width;
@@ -78,6 +81,7 @@ void rv_rebind_item_refs(reportview_data_t *data, uint32_t start);
 void rv_reset_view_state(window_t *win, reportview_data_t *data);
 int rv_content_width(window_t *win);
 int rv_report_header_height(const reportview_data_t *data);
+int rv_report_footer_height(const reportview_data_t *data);
 int rv_get_report_column_width(reportview_data_t *data, int col, int avail_w);
 int rv_report_total_width(reportview_data_t *data, int avail_w);
 int rv_large_icon_cell_h(const reportview_data_t *data);

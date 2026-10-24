@@ -111,6 +111,10 @@ int rv_report_header_height(const reportview_data_t *data) {
   return (!data || data->column_titles_visible) ? HEADER_HEIGHT : 0;
 }
 
+int rv_report_footer_height(const reportview_data_t *data) {
+  return data && data->footer_visible ? HEADER_HEIGHT : 0;
+}
+
 int rv_get_report_column_width(reportview_data_t *data, int col, int avail_w) {
   if (!data || col < 0 || col >= (int)data->column_count)
     return 80;

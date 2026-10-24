@@ -210,7 +210,7 @@ bool page_host_init(window_t *host, const form_def_t *form,
     for (int i = 0; i < form->page_binding_count; i++) {
       const form_def_t *page = defs[i].form;
       items[i] = (toolbar_item_t){.type = TOOLBAR_ITEM_BUTTON, .ident = defs[i].command,
-        .style = TBSTYLE_CHECKGROUP, .text = page->name, .icon = page->icon,
+        .style = TBSTYLE_CHECKGROUP, .text = page->label ? page->label : page->name, .icon = page->icon,
         .checked_icon = page->checked_icon, .tooltip = page->tooltip ? page->tooltip : page->name};
     }
     send_message(bar, tbSetItems, form->page_binding_count, items);

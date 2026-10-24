@@ -62,7 +62,7 @@
   <string source="Tax" where="journal_page,items_page,reports_page,config_page,document">Steuer</string>
   <string source="Tax Amount" where="journal_page,document">Steuerbetrag</string>
   <string source="Total" where="journal_page,reports_page,document">Gesamt</string>
-  <string source="Entries" where="journal_page">Buchungen</string>
+  <string source="Entries" where="journal_page,entries_page">Buchungen</string>
   <string source="Dr" where="journal_page,entries_page,config_page,operation,closing">Soll</string>
   <string source="Cr" where="journal_page,entries_page,config_page,operation,closing">Haben</string>
   <string source="Content" where="journal_page,entries_page,reports_page,operation,closing">Buchungstext</string>
@@ -86,8 +86,6 @@
   <string source="Kind" where="accounts_page,config_page">Art</string>
   <string source="Analytics" where="accounts_page,reports_page,config_page">Nebenbuch</string>
   <string source="Section" where="accounts_page">Kontenklasse</string>
-  <string source="All accounting entries (Ctrl+5)" where="entries_page">Alle Buchungen (Strg+5)</string>
-  <string source="Reports (Ctrl+6)" where="reports_page">Auswertungen (Strg+6)</string>
   <string source="Settings" where="accounts_page,reports_page">Einstellungen</string>
   <string source="Period and account (Ctrl+R)" where="accounts_page,reports_page">Zeitraum und Konto (Strg+R)</string>
   <string source="Recalculate" where="reports_page">Neu berechnen</string>
@@ -108,7 +106,6 @@
   <string source="Sales Book" where="reports_page">Ausgangsrechnungen</string>
   <string source="Net" where="reports_page">Netto</string>
   <string source="Purchase Book" where="reports_page">Eingangsrechnungen</string>
-  <string source="Active configuration (Ctrl+7)" where="config_page">Aktive Konfiguration (Strg+7)</string>
   <string source="Country" where="config_page">Land</string>
   <string source="Currency" where="accounts_page,currencies_page,config_page,currency">Währung</string>
   <string source="Version" where="config_page">Version</string>
@@ -319,6 +316,14 @@ stammen aus der aktiven Konfiguration.</string>
   <string source="Select configuration" where="config_page">Konfiguration wählen</string>
   <string source="Interface language" where="config_page">Sprache der Oberfläche</string>
   <string source="Report period: all dates" where="code">Berichtszeitraum: alle Daten</string>
+  <string source="%s %s dated %s" where="code">%s %s vom %s</string>
+  <string source="Journal" where="journal_page">Journal</string>
+  <string source="Accounts" where="accounts_page">Kontenplan</string>
+  <string source="Assets" where="assets_page">Anlagen</string>
+  <string source="All accounting entries (Ctrl+8)" where="entries_page">Alle Buchungen (Strg+8)</string>
+  <string source="Reports (Ctrl+9)" where="reports_page">Auswertungen (Strg+9)</string>
+  <string source="Setup" where="config_page">Einstellungen</string>
+  <string source="Active configuration (Ctrl+0)" where="config_page">Aktive Konfiguration (Strg+0)</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

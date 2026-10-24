@@ -66,9 +66,9 @@ Everything declared in `.orion`, when it is instantiated:
 
 - form titles (`<form title>`) and every control's `text`;
 - `placeholder` cue text;
-- `TableView` column titles;
+- `TableView` column titles and `totals-label`;
 - menu and context-menu labels (shortcuts after `\t` are kept);
-- toolbar button text, tooltips and ActivityBar page tooltips;
+- toolbar button text, tooltips and ActivityBar page labels and tooltips;
 - framework dialogs (message box buttons, file picker).
 
 Generated forms carry their name as `form_def_t.id`; that is both the

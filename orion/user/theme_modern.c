@@ -1,8 +1,9 @@
 // Modern drawing — flat, borderless toolbar controls; rounded hover backgrounds.
 // Palettes live in theme_palette_*.h. THEME_MODERN applies dark (process default,
 // matching pre-navy launch). THEME_LIGHT is the old light WinUI table. THEME_NAVY
-// is navy/purple. Drawing consults get_theme()->style so Navy keeps chrome
-// titlebars; Modern and Light keep accent titlebars.
+// is navy/purple. THEME_AMBER is a light business palette with white fields,
+// softly rounded buttons and amber selection. Drawing consults get_theme()->style
+// where a variant's surfaces differ; corner radii come from the theme metrics.
 //
 // Toolbar item states (per issue #216):
 //   Normal    — icon/text only, no permanent frame
@@ -17,10 +18,10 @@
 #include <orion/user/theme_palette_dark.h>
 #include <orion/user/theme_palette_light.h>
 #include <orion/user/theme_palette_navy.h>
+#include <orion/user/theme_palette_amber.h>
 
 // Radius constants (logical pixels).
 #define RADIUS_TOOLBAR_ITEM  4
-#define RADIUS_BUTTON        ((BUTTON_HEIGHT + 1) / 2)
 #define RADIUS_MENU_ITEM     6
 #define MODERN_CAPTION_TEXT_INSET 8
 
@@ -35,15 +36,22 @@
 #endif
 
 static bool modern_navy(void) { return get_theme()->style == THEME_NAVY; }
+static bool modern_amber(void) { return get_theme()->style == THEME_AMBER; }
 
 static uint32_t modern_secondary_border(void) {
-  return modern_navy() ? get_sys_color(brLightEdge) : MODERN_DEFAULT_SECONDARY_BORDER;
+  return modern_navy() || modern_amber() ? get_sys_color(brLightEdge) : MODERN_DEFAULT_SECONDARY_BORDER;
+}
+
+// A corner radius metric applied to r: CORNER_RADIUS_CIRCULAR rounds the short side fully.
+static int modern_radius(int metric, irect16_t r) {
+  int full = (MIN(r.w, r.h) + 1) / 2;
+  return metric == CORNER_RADIUS_CIRCULAR ? full : MIN(metric, full);
 }
 
 // ── Buttons ──────────────────────────────────────────────────────────────────
 
 static void modern_draw_button_bg(irect16_t r, ctrl_state_t state) {
-  int radius = (MIN(r.w, r.h) + 1) / 2;
+  int radius = modern_radius(get_theme()->button.corner_radius, r);
   if (state & CTRL_DISABLED) {
     fill_rounded_rect(get_sys_color(brWindowDarkBg), r, radius);
     return;
@@ -132,8 +140,9 @@ static void modern_draw_tab(irect16_t r, ctrl_state_t state) {
 // ── Titlebar ─────────────────────────────────────────────────────────────────
 
 static void modern_draw_titlebar_bg(irect16_t r, bool focused) {
-  // Win95/XP: active caption is the accent; inactive is a distinct dull bar.
-  fill_rect(get_sys_color(focused ? brAccent : brInactiveTitlebar), r);
+  // Win95/XP: active caption is a distinct colour (the accent in most palettes);
+  // inactive is a dull bar.
+  fill_rect(get_sys_color(focused ? brActiveTitlebar : brInactiveTitlebar), r);
 }
 
 // ── Statusbar ────────────────────────────────────────────────────────────────
@@ -175,9 +184,14 @@ static uint32_t modern_surface_midpoint(uint32_t a, uint32_t b) {
 
 static void modern_draw_field_bg(irect16_t r, ctrl_state_t state) {
   bool focused = (state & CTRL_FOCUSED) && !(state & CTRL_DISABLED);
-  int radius = (state & CTRL_MULTILINE) ? get_theme()->field.multiline_corner_radius : (MIN(r.w, r.h) + 1) / 2;
+  int radius = (state & CTRL_MULTILINE) ? get_theme()->field.multiline_corner_radius
+                                         : modern_radius(get_theme()->field.corner_radius, r);
   uint32_t border, fill;
-  if (modern_navy()) {
+  if (modern_amber()) {
+    // White well like the lists, with a hairline that turns amber on focus.
+    border = focused ? get_sys_color(brBorderFocus) : get_sys_color(brLightEdge);
+    fill = get_sys_color(brColumnViewBg);
+  } else if (modern_navy()) {
     border = focused ? get_sys_color(brAccent) : get_sys_color(brLightEdge);
     fill = get_sys_color(brWindowDarkBg);
   } else {
@@ -230,6 +244,7 @@ static void modern_draw_menu_item_bg(irect16_t r, ctrl_state_t state) {
 static void modern_apply_palette(void) { theme_copy_palette(k_theme_palette_dark); }
 static void light_apply_palette(void)  { theme_copy_palette(k_theme_palette_light); }
 static void navy_apply_palette(void)   { theme_copy_palette(k_theme_palette_navy); }
+static void amber_apply_palette(void)  { theme_copy_palette(k_theme_palette_amber); }
 
 // ── Singleton ────────────────────────────────────────────────────────────────
 
@@ -353,11 +368,11 @@ static uint32_t modern_foreground(theme_part_t part, ctrl_state_t state) {
   if (state & CTRL_DISABLED) return get_sys_color(brTextDisabled);
   if ((state & CTRL_SELECTED) && (part == THEME_PART_LIST_ITEM || part == THEME_PART_SEGMENT ||
       part == THEME_PART_TOOLBAR_BUTTON || part == THEME_PART_TOOLBAR_LABELED_BUTTON))
-    return get_sys_color(brActiveTitlebarText);
+    return get_sys_color(brAccentText);
   if (part == THEME_PART_BUTTON && (state & CTRL_DEFAULT))
-    return get_sys_color(brActiveTitlebarText);
+    return get_sys_color(brAccentText);
   if (part == THEME_PART_MENU_ITEM && (state & (CTRL_HOVER | CTRL_SELECTED | CTRL_PRESSED)))
-    return get_sys_color(brActiveTitlebarText);
+    return get_sys_color(brAccentText);
   return get_sys_color(brTextNormal);
 }
 
@@ -408,9 +423,9 @@ static theme_t g_modern_theme = {
     .corner_radius = 6, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,
     .shadow = { .size = 10, .blur = 2, .offset = {0, 3} },
   },
-  .field = { .multiline_corner_radius = (CONTROL_HEIGHT_REGULAR + 1) / 2 },
+  .field = { .corner_radius = CORNER_RADIUS_CIRCULAR, .multiline_corner_radius = (CONTROL_HEIGHT_REGULAR + 1) / 2 },
   .control = { .padding = BUTTON_PADDING, .press_icon_offset = 0, .size_pct = { 100, 84, 71, 133 } },
-  .button = { .corner_radius = RADIUS_BUTTON },
+  .button = { .corner_radius = CORNER_RADIUS_CIRCULAR },
   .window = {
     .corner_radius = 8,
     .shadow = { .blur = 8, .offset = {0, 4}, .color = 0x80000000 },
@@ -437,8 +452,8 @@ theme_t *theme_modern_instance(void) { return &g_modern_theme; }
 
 static theme_t *modern_variant(theme_style_t style, const char *name,
                                 void (*apply)(void)) {
-  static theme_t light, navy;
-  theme_t *slot = (style == THEME_NAVY) ? &navy : &light;
+  static theme_t light, navy, amber;
+  theme_t *slot = style == THEME_NAVY ? &navy : style == THEME_AMBER ? &amber : &light;
   if (!slot->draw_part) {
     *slot = g_modern_theme;
     slot->style = style;
@@ -454,4 +469,16 @@ theme_t *theme_light_instance(void) {
 
 theme_t *theme_navy_instance(void) {
   return modern_variant(THEME_NAVY, "Navy", navy_apply_palette);
+}
+
+// Amber: softly rounded rectangles instead of capsules, like a business form.
+theme_t *theme_amber_instance(void) {
+  theme_t *theme = modern_variant(THEME_AMBER, "Amber", amber_apply_palette);
+  theme->button.corner_radius = 4;
+  theme->field.corner_radius = 3;
+  theme->field.multiline_corner_radius = 3;
+  theme->tab.corner_radius = 4;
+  theme->card.corner_radius = 5;
+  theme->window.corner_radius = 6;
+  return theme;
 }

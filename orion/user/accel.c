@@ -82,9 +82,12 @@ const accel_t *accel_find_cmd(const accel_table_t *table, uint16_t cmd) {
 int accel_format(const accel_t *a, char *buf, int bufsize) {
   if (!a || !buf || bufsize <= 0) return 0;
   const char *kname = axKeynumToString((uint32_t)a->key);
-  return snprintf(buf, (size_t)bufsize, "%s%s%s%s",
-                  (a->fVirt & FCONTROL) ? "Ctrl+"  : "",
-                  (a->fVirt & FSHIFT)   ? "Shift+" : "",
-                  (a->fVirt & FALT)     ? "Alt+"   : "",
-                  kname ? kname : "");
+  int prefix = snprintf(buf, (size_t)bufsize, "%s%s%s",
+                        (a->fVirt & FCONTROL) ? "Ctrl+"  : "",
+                        (a->fVirt & FSHIFT)   ? "Shift+" : "",
+                        (a->fVirt & FALT)     ? "Alt+"   : "");
+  int n = snprintf(buf + MIN(prefix, bufsize - 1), (size_t)(bufsize - MIN(prefix, bufsize - 1)), "%s", kname ? kname : "");
+  // Platform key names are lower case ("f9", "escape"); labels read "F9", "Escape".
+  if (prefix < bufsize - 1 && buf[prefix] >= 'a' && buf[prefix] <= 'z') buf[prefix] = (char)(buf[prefix] - 'a' + 'A');
+  return prefix + n;
 }

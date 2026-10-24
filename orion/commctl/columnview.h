@@ -46,6 +46,7 @@ enum {
   RVM_GETITEMSTATE,        // wparam = item index; lparam = state mask
   RVM_SETCELLSTYLE,        // wparam = reportview_cell_style_t
   RVM_GETCELLSTYLE,
+  RVM_SETFOOTER,           // wparam = text count; lparam = const char *const * per column (NULL = no footer row)
 };
 
 // WinAPI list-view compatible state-image model. State image indices are
@@ -79,6 +80,7 @@ typedef struct {
   const char *text;
   int         icon;       // strip tile index; icon_name overrides it outside icon grid
   const char *icon_name;  // SVG icon for report/icon lists; icon grid always uses strip index
+  uint32_t    icon_color; // report rows: tint of icon_name (0 = text colour)
   uint32_t    color;
   uint32_t    userdata;
   uint32_t    state;

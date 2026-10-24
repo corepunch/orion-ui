@@ -208,10 +208,15 @@ static void test_cash_book(void) {
   result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_CASH_BOOK, 0), NULL);
   int count = count_result_list(rows);
   db_cash_book_t *last = NULL;
-  for (result_node_t *n = rows; n; n = n->next) last = *(db_cash_book_t **)n->data;
-  bool ok = count == 12 && last && near(last->balance, 18656) && near(last->receipt, 31476) && near(last->expense, 31476);
+  double receipts = 0;  // what the totals row adds up: the orders, not the day rows
+  for (result_node_t *n = rows; n; n = n->next) {
+    last = *(db_cash_book_t **)n->data;
+    if (!last->summary) receipts += last->receipt;
+  }
+  bool ok = count == 12 && last && last->summary && near(last->balance, 18656) && near(last->receipt, 31476) && near(last->expense, 31476);
   free_result_list(rows);
   ASSERT(ok, "three days with movements");
+  ASSERT(near(receipts, 2000 + 16656 + 31476), "orders alone sum to the receipts");
   char report[1024];
   ASSERT_EQUAL(ledger_print_reports(report, sizeof(report)), 1);
   FILE *f = fopen(TMP_DIR "/print/ko4.html", "rb");
@@ -231,6 +236,18 @@ static void test_unpost_and_trial_balance(void) {
   ASSERT(aux && near(aux->balance_dr, 0) && near(aux->balance_cr, 0), "opening entries balance through 000");
   ASSERT(goods && near(goods->debit_turnover, 1500 + 42600 + 15750), "41 includes 41.01");
   ASSERT(vat && near(vat->debit_turnover, 8520) && near(vat->credit_turnover, 2776 + 4524), "68.02 and 68.01 roll into 68");
+  // The totals row counts top-level accounts only: debit and credit agree.
+  double dr = 0, cr = 0, open_dr = 0, open_cr = 0, close_dr = 0, close_cr = 0;
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_BALANCES, 0), NULL);
+  for (result_node_t *n = rows; n; n = n->next) {
+    const db_balance_t *b = *(db_balance_t **)n->data;
+    if (b->subaccount) continue;
+    dr += b->debit_turnover; cr += b->credit_turnover; open_dr += b->opening_dr; open_cr += b->opening_cr;
+    close_dr += b->balance_dr; close_cr += b->balance_cr;
+  }
+  free_result_list(rows);
+  ASSERT(near(dr, cr) && near(open_dr, open_cr) && near(close_dr, close_cr), "trial balance totals agree");
+  ASSERT(balance("41.01") && balance("41.01")->subaccount && !goods->subaccount, "subaccount rows are marked");
   db_document_t *sale = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "РТ-0002");
   ASSERT(sale && !sale->posted, "second sale is a draft");
   ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, sale->id));

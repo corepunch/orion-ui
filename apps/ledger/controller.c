@@ -44,6 +44,11 @@ void ledger_update_status(void) {
   bool dirty = send_db_message(g_ledger->ib, dbGetDirty, 0, NULL);
   snprintf(text, sizeof(text), "%s   |   %s   |   %s%s%s", org, cfg, period, dirty ? "   |   " : "", dirty ? ui_tr("modified") : "");
   send_message(g_ledger->main_win, evStatusBar, 0, text);
+  // The caption names the company being kept, as accounting programs do.
+  window_t *win = g_ledger->main_win;
+  if (org[0]) snprintf(win->title, sizeof(win->title), "%s — %s", ui_tr("Ledger"), org);
+  else snprintf(win->title, sizeof(win->title), "%s", ui_tr("Ledger"));
+  invalidate_window(win);
 }
 
 
@@ -99,10 +104,18 @@ static void after_save(int doc_id) {
   ledger_refresh_views();
 }
 
+// The dialog is captioned like the document it edits: "Sale RT-0001 dated 10.03.2003".
 static void edit_document(int doc_id) {
-  size_t f = document_form(document_type(find_document(doc_id)));
+  const db_document_t *doc = find_document(doc_id);
+  const db_doc_type_t *type = document_type(doc);
+  size_t f = document_form(type);
+  char date[16] = "", title[256];
+  if (doc && type) {
+    ui_format_date(doc->date, date, sizeof(date));
+    snprintf(title, sizeof(title), ui_tr("%s %s dated %s"), type->name, doc->number, date);
+  } else snprintf(title, sizeof(title), "%s", ui_tr(kDocumentForms[f].title));
   db_dialog_opts_t opts = { .hook = kDocumentForms[f].hook };
-  if (show_db_dialog_opts(kDocumentForms[f].def, kDocumentForms[f].title, g_ledger->main_win, doc_id, &opts)) after_save(doc_id);
+  if (show_db_dialog_opts(kDocumentForms[f].def, title, g_ledger->main_win, doc_id, &opts)) after_save(doc_id);
 }
 
 // New documents start as the selected document's type, or the first type of
@@ -313,14 +326,6 @@ result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
         return true;
       }
       if (code == tvnChanged) { ledger_refresh_views(); return true; }
-      // The posted checkbox in the journal posts or cancels posting.
-      if (code == RVN_ITEMCHECK && src && src->id == ID_JOURNAL_PAGE_DOCUMENTS) {
-        db_document_t *doc = (db_document_t *)send_message(src, tvGetRecord, LOWORD(wparam), NULL);
-        if (doc && doc->posted) ledger_unpost(g_ledger->ib, g_ledger->cfg, doc->id);
-        else if (doc) ledger_post(g_ledger->ib, g_ledger->cfg, doc->id);
-        after_save(0);
-        return true;
-      }
       if (code == btnClicked || code == kMenuBarNotificationItemClick || code == kAcceleratorNotification || code == 0) {
         ledger_command(LOWORD(wparam));
         return true;
