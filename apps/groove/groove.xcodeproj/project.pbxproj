@@ -153,11 +153,35 @@
 "sourceTree" = "SOURCE_ROOT";
 "lastKnownFileType" = "sourcecode.c.c";
 };
+"0C5E2FCA7AC84D0FF7D847BA" = {"isa" = "PBXFileReference";
+"name" = "datasource/groove_library_db.c";
+"path" = "datasource/groove_library_db.c";
+"sourceTree" = "SOURCE_ROOT";
+"lastKnownFileType" = "sourcecode.c.c";
+};
+"63FC8C5BB9D00E0D7A1D0E9A" = {"isa" = "PBXFileReference";
+"name" = "datasource/groove_songs_db.c";
+"path" = "datasource/groove_songs_db.c";
+"sourceTree" = "SOURCE_ROOT";
+"lastKnownFileType" = "sourcecode.c.c";
+};
 "ED89282AB95A42E6871A5819" = {"isa" = "PBXFileReference";
 "name" = "demo_phrases.h";
 "path" = "demo_phrases.h";
 "sourceTree" = "SOURCE_ROOT";
 "lastKnownFileType" = "sourcecode.c.h";
+};
+"A380D6D0FF657BB6DC0BDF4C" = {"isa" = "PBXFileReference";
+"name" = "dialogs/dlg_save_song.c";
+"path" = "dialogs/dlg_save_song.c";
+"sourceTree" = "SOURCE_ROOT";
+"lastKnownFileType" = "sourcecode.c.c";
+};
+"5AFD3ABE439665E45DDF59D9" = {"isa" = "PBXFileReference";
+"name" = "dialogs/dlg_songs.c";
+"path" = "dialogs/dlg_songs.c";
+"sourceTree" = "SOURCE_ROOT";
+"lastKnownFileType" = "sourcecode.c.c";
 };
 "AACA4FCFC17BC54CBAA36968" = {"isa" = "PBXFileReference";
 "name" = "groove.h";
@@ -170,12 +194,6 @@
 "path" = "groove.orion";
 "sourceTree" = "SOURCE_ROOT";
 "lastKnownFileType" = "text.xml";
-};
-"10E3B165781458C96718A941" = {"isa" = "PBXFileReference";
-"name" = "groove_library_db.c";
-"path" = "groove_library_db.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
 };
 "86BB2C0A00EDDA1CC016EB96" = {"isa" = "PBXFileReference";
 "name" = "library.c";
@@ -273,6 +291,12 @@
 "sourceTree" = "SOURCE_ROOT";
 "lastKnownFileType" = "sourcecode.c.c";
 };
+"74B79DE27D735D4243E4A432" = {"isa" = "PBXFileReference";
+"name" = "view_song_preview.c";
+"path" = "view_song_preview.c";
+"sourceTree" = "SOURCE_ROOT";
+"lastKnownFileType" = "sourcecode.c.c";
+};
 "627CEE5B020A8CBB1A8494CC" = {"isa" = "PBXFileReference";
 "name" = "view_tracks.c";
 "path" = "view_tracks.c";
@@ -295,10 +319,13 @@
 "name" = "apps/groove";
 "children" = ("912ADBA08D8978182B0FB013",
 "8AE26297468B6D9B6D97DEFA",
+"0C5E2FCA7AC84D0FF7D847BA",
+"63FC8C5BB9D00E0D7A1D0E9A",
 "ED89282AB95A42E6871A5819",
+"A380D6D0FF657BB6DC0BDF4C",
+"5AFD3ABE439665E45DDF59D9",
 "AACA4FCFC17BC54CBAA36968",
 "ACE1BDA22AE52DE17F891F3E",
-"10E3B165781458C96718A941",
 "86BB2C0A00EDDA1CC016EB96",
 "0B13544757BC77EA20BC0839",
 "C294A2530578CA5BEC3264DE",
@@ -315,6 +342,7 @@
 "6C2C37A91886518DBC915016",
 "618BF41811F1A8A268A3DE69",
 "237F3D3259238AD906DE3D8C",
+"74B79DE27D735D4243E4A432",
 "627CEE5B020A8CBB1A8494CC",
 "6EF168DD20CF7BB19D86AB8E",
 "828741F0F9D39D80E83B68F3",
