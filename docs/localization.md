@@ -114,6 +114,27 @@ Russian numerals agree in gender with the counted noun ("одна тысяча",
 копейки"). Rules exist for Russian, German and English; other languages get
 digits.
 
+## Names in grammatical cases
+
+Russian documents address people in oblique cases: "Выдать Петрову Петру
+Петровичу" (dative), "Принято от Сидоровой Анны Викторовны" (genitive).
+`ui_inflect_name` declines a full name written surname first:
+
+```c
+ui_inflect_name("ru", "Петров Петр Петрович", UI_CASE_DATIVE, buf, sz);  // "Петрову Петру Петровичу"
+ui_inflect_name("ru", "ИП Иванов Иван Иванович", UI_CASE_GENITIVE, buf, sz);  // "ИП Иванова Ивана Ивановича"
+ui_inflect_name("ru", "Сидорова А.В.", UI_CASE_DATIVE, buf, sz);  // "Сидоровой А.В."
+```
+
+- Surnames in -ов/-ин and -ский/-ой decline like adjectives; women's
+  surnames ending in a consonant (Шмидт) and surnames in -ко, -их/-ых do not.
+- First names and patronymics follow the noun declensions, with the usual
+  exceptions (Павел → Павла, Лев → Льва) and spelling rules (Маши, Машей).
+- The gender comes from the patronymic, else the first name, else the
+  surname. Initials and a leading abbreviation such as "ИП" stay as they are.
+- Names with quotes — organizations — and languages other than Russian are
+  returned unchanged.
+
 ## Extracting strings
 
 `orionc` lists every translatable text in a `.orion` file, like `lupdate`:

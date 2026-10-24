@@ -106,4 +106,20 @@ typedef struct {
 const char *ui_spell_amount(const char *language, double amount, const ui_money_words_t *words,
                             char *buf, size_t buf_sz);
 
+// ── Personal names in grammatical cases (inflect.c) ───────────────────────
+
+typedef enum {
+  UI_CASE_NOMINATIVE, UI_CASE_GENITIVE, UI_CASE_DATIVE,
+  UI_CASE_ACCUSATIVE, UI_CASE_INSTRUMENTAL, UI_CASE_PREPOSITIONAL
+} ui_case_t;
+
+// A person's name in a case: "Петров Петр Петрович" -> dative "Петрову Петру
+// Петровичу", "Сидорова А.В." -> genitive "Сидоровой А.В.". The name reads
+// surname, first name, patronymic; initials and a leading abbreviation
+// ("ИП") stay, and the gender comes from the patronymic, the first name or
+// the surname. Names with quotes (organizations) and languages without rules
+// (anything but Russian) are returned unchanged.
+const char *ui_inflect_name(const char *language, const char *name, ui_case_t gcase,
+                            char *buf, size_t buf_sz);
+
 #endif // __UI_I18N_H__

@@ -12,6 +12,8 @@
 //                          (report tables: {{#cash_book}}); {{n}} is the row number
 //   {{field|dmy}}          ISO date as DD.MM.YYYY
 //   {{field|words}}        amount in words in the configuration's language
+//   {{field|dat}}          a person's name in a case: gen, dat, acc, ins, pre
+//                          ("Выдать {{counterparty.name|dat}}"); organizations stay
 #include "ledger.h"
 
 #define PRINT_FIELD_MAX 512
@@ -94,6 +96,14 @@ static void put_tag(const print_ctx_t *ctx, const char *tag, size_t len) {
   int y, m, d;
   if (filter && !strcmp(filter, "dmy") && sscanf(value, "%d-%d-%d", &y, &m, &d) == 3)
     snprintf(value, sizeof(value), "%02d.%02d.%04d", d, m, y);
+  static const char *cases[] = { "nom", "gen", "dat", "acc", "ins", "pre" };
+  for (size_t c = 0; filter && c < ARRAY_LEN(cases); c++) {
+    if (strcmp(filter, cases[c])) continue;
+    const db_setting_t *settings = first_record(g_ledger->cfg, TABLE_SETTINGS);
+    char name[PRINT_FIELD_MAX];
+    ui_inflect_name(settings ? settings->language : NULL, value, (ui_case_t)c, name, sizeof(name));
+    snprintf(value, sizeof(value), "%s", name);
+  }
   if (filter && !strcmp(filter, "words")) {
     char words[PRINT_FIELD_MAX];
     amount_in_words(value, words, sizeof(words));

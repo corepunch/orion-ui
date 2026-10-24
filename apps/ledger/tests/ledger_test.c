@@ -411,6 +411,14 @@ static void test_print_forms(void) {
   fclose(f);
   html[n] = '\0';
   ASSERT(strstr(html, "Кузнецова Елена Николаевна") && strstr(html, "Тридцать шесть тысяч рублей 00 копеек"), "T-49 lists employees");
+  db_document_t *cash_in = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ПКО-0001");
+  ASSERT_EQUAL(ledger_print_document(cash_in->id, report, sizeof(report)), 1);
+  f = fopen(TMP_DIR "/print/ПКО-0001-ko1.html", "rb");
+  ASSERT_NOT_NULL(f);
+  n = fread(html, 1, sizeof(html) - 1, f);
+  fclose(f);
+  html[n] = '\0';
+  ASSERT(strstr(html, "Принято от <span class=\"line\" style=\"width:75%\">ИП Иванова Ивана Ивановича</span>"), "the payer in the genitive");
   PASS();
 }
 
