@@ -287,6 +287,7 @@ enum {
 #define WINDOW_TOOLBAR      (1 << 11)
 #define WINDOW_TITLETOOLBAR (1ull << 32) // with WINDOW_TOOLBAR: caption and actions share one band
 #define WINDOW_NOCOLLAPSE   (1ull << 33) // with WINDOW_TITLETOOLBAR: no collapse/restore button; dock_collapse refuses
+#define WINDOW_TOOLBARTITLE (1ull << 38) // with WINDOW_TITLETOOLBAR: the merged row leads with the title, items after a flexible gap (Finder)
 #define WINDOW_STATUSBAR    (1 << 12)
 // Button style flags (analogous to WinAPI BS_* styles)
 // BUTTON_PUSHLIKE: button stays visually pressed while win->value == true (like a toggle/check button)

@@ -412,6 +412,30 @@ static void test_toolbar_undock_size(void) {
   test_env_shutdown(); PASS();
 }
 
+static void test_merged_title(void) {
+  TEST("WINDOW_TOOLBARTITLE: the merged row leads with the title past a left source list; items move to the far side");
+  test_env_init();
+  window_t *win = create_window("ACME Ltd", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_TOOLBARTITLE | WINDOW_NOCOLLAPSE,
+                                MAKERECT(40, 50, 800, 500), NULL, dock_test_proc, 0, NULL);
+  window_t *list = create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 150, 100), win, dock_test_proc, 0, NULL);
+  ASSERT_TRUE(dock_window(list, DOCK_LEFT, DOCK_EDGE(DOCK_LEFT), DOCK_NOFLOAT, 150, 0));
+  toolbar_item_t items[] = { {.type = TOOLBAR_ITEM_BUTTON, .ident = 41, .icon = "play"} };
+  send_message(win, tbSetItems, ARRAY_LEN(items), items);
+  toolbar_state_t *tb = toolbar_get_state(win);
+  ASSERT_EQUAL(tb->items[0].type, TOOLBAR_ITEM_LABEL);  // the title, ahead of the app's items
+  irect16_t title = tb->item_rects[0], play = tb->item_rects[2], close = tb->item_rects[3];
+  ASSERT_TRUE(title.x >= list->frame.x + list->frame.w);
+  ASSERT_TRUE(title.w >= text_strwidth(FONT_SYSTEM, "ACME Ltd"));
+  ASSERT_TRUE(play.x > win->frame.w / 2);              // pushed to the far side
+  ASSERT_TRUE(play.x + play.w <= close.x);
+  set_window_title(win, "ACME Holdings International Ltd");
+  ASSERT_STR_EQUAL(win->title, "ACME Holdings International Ltd");
+  ASSERT_TRUE(tb->item_rects[0].w > title.w);           // the row is laid out again
+  destroy_window(win);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Workspace docking");
   test_dock_ownership_and_layout();
@@ -424,5 +448,6 @@ int main(void) {
   test_dock_floating_resize_and_close();
   test_dock_fixed_pane();
   test_toolbar_undock_size();
+  test_merged_title();
   TEST_END();
 }

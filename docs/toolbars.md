@@ -503,8 +503,13 @@ standalone and GEM builds; its tools are no longer a floating palette window.
 Toolbars use the shared [workspace docking manager](docking.md). Existing
 `create_docked_toolbar` callers automatically participate. Add
 `WINDOW_TITLETOOLBAR` alongside `WINDOW_TOOLBAR` to share a single row between the
-app items and the window controls. The merged row shows no window title. Configure
-app items with `tbSetItems` as usual; the framework appends the window controls. Locate items by command ID,
+app items and the window controls. The merged row shows no window title unless
+the window also has `WINDOW_TOOLBARTITLE` (`toolbartitle` in `.orion`): then the
+row leads with the title in the caption font, starting past any pane docked on
+the left edge (a source list), and the app items follow a flexible gap on the
+far side, as Finder shows a folder's name. `set_window_title()` (≈
+`SetWindowText`) changes the title and lays the row out again. Configure
+app items with `tbSetItems` as usual; the framework adds the title and appends the window controls. Locate items by command ID,
 because framework items also occupy positions in the toolbar state.
 
 ### Control sizes

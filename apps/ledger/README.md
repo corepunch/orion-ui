@@ -48,9 +48,11 @@ yellow for the current row, the current section and the default button
 
 - **Section panel.** Every section has an icon and a caption (`labels="right"`
   on the ActivityBar, `label=` on each page).
-- **Unified title bar.** The toolbar's icon buttons share one row with the
-  window controls (`flags="toolbar,titletoolbar"`), as in a macOS window, so
-  the tables start right under it. Tooltips name each command.
+- **Unified title bar.** One row holds the organization's name, the icon
+  buttons and the window controls, as Finder shows a folder's name above its
+  contents (`flags="toolbar,titletoolbar,toolbartitle"`). The name starts over
+  the content, past the section panel; the tables start right under the row.
+  Tooltips name each command.
 - **Status icons.** Posted documents show a green seal and drafts a dashed
   sheet. Catalogs, the chart of accounts and the entry journal have their
   own row icons, and an asset not yet in service shows a clock (`<RowIcon>`).
