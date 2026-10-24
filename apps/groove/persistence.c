@@ -173,9 +173,9 @@ bool app_open_song(const char *path) {
   return true;
 }
 
-// ── Groove's own song storage ────────────────────────────────────────────
-// Songs live in the app's private settings area (Application Support on
-// Apple platforms), like a reader app's library, never in Files or iCloud.
+// ── Groove's own song storage (iPad) ─────────────────────────────────────
+// iPad songs live in the app's private Application Support area, like a
+// reader app's library, never in Files or iCloud. Desktop saves anywhere on disk.
 
 bool song_path_for_name(const char *name, char *path, size_t cap) {
   if (!g_app || !name || !path || !cap || !g_app->songs_dir[0]) return false;

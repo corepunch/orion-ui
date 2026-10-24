@@ -1,4 +1,4 @@
-// Save Song: asks for a name and saves into Groove's own song storage.
+// iPad Save Song: asks for a name and saves into Groove's own song storage.
 
 #include "groove.h"
 

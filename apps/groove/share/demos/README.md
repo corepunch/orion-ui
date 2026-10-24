@@ -1,10 +1,11 @@
 # Groove EuroDance demos
 
 Choose a song from **File → Demo**, then press **Play**. Each is a normal,
-editable `.groove` project. **Save Song** asks for a name and keeps the copy in
-Groove's own song library, so the bundled project is preserved. **File → My Songs**
-shows every saved song with a preview drawn from the file. The songs play once by
-default; enable **Loop** to repeat.
+editable `.groove` project. **Save Song** asks for a new filename so the bundled
+project is preserved. On iPad it asks for a name instead and keeps the copy in
+Groove's own song library; **File → Open Song** there shows every saved song with
+a preview drawn from the file. The songs play once by default; enable **Loop** to
+repeat.
 
 | Song | Arrangement inspiration | Tempo | Length | Project |
 |---|---|---:|---:|---|

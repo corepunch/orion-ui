@@ -175,7 +175,7 @@ typedef struct {
   uint32_t      timer;
   int           selected_clip;
   char          filename[512];
-  char          songs_dir[512]; // Groove's own song storage; never the shared Files/Documents area
+  char          songs_dir[512]; // iPad: Groove's own song storage, never Files/iCloud; empty on desktop
   drag_t        drag;
   uint8_t       genre;      // library filter: 0 = every genre, else one GENRE_* flag
   family_t      family;     // library filter
@@ -235,6 +235,7 @@ bool      song_read(const char *path, song_t *out);
 // "name" -> <songs_dir>/name.groove; false for an empty name or one with path separators.
 bool      song_path_for_name(const char *name, char *path, size_t cap);
 void      song_name_from_path(const char *path, char *name, size_t cap);
+// iPad song library (dialogs/): desktop keeps the ordinary file dialogs.
 bool      app_save_song_as(window_t *owner);  // asks for a name, saves into songs_dir
 bool      app_show_songs(window_t *owner);    // the My Songs screen; true when a song was opened
 void      create_menubar(void);

@@ -121,7 +121,8 @@ groove_t *app_init(void) {
   app->auditioned = -1;
   app->family = FAMILY_LOOP;
   app->peak_credit = GR_PEAKS_PER_TICK;
-  // Songs stay in the app's private storage, like a reader app's library.
+#ifdef AX_PLATFORM_IOS
+  // iPad songs stay in the app's private storage, like a reader app's library.
   const char *settings = axSettingsDirectory();
   int n = settings && settings[0] ? snprintf(app->songs_dir, sizeof(app->songs_dir), "%s/Songs", settings) : -1;
   if (n <= 0 || (size_t)n >= sizeof(app->songs_dir) || !axMkDir(settings) || !axMkDir(app->songs_dir)) {
@@ -129,6 +130,7 @@ groove_t *app_init(void) {
     fflush(stderr);
     app->songs_dir[0] = 0;
   }
+#endif
   if (axAudioInit()) {
     AXaudiospec want = { GR_SAMPLE_RATE, AX_AUDIO_S16, 2, 1024, audio_cb, app }, got;
     app->audio_dev = axAudioOpen(&want, &got);
@@ -263,6 +265,39 @@ void app_select_clip(int idx) {
   invalidate_window(g_app->sheet);
 }
 
+#ifdef AX_PLATFORM_IOS
+// iPad: songs live in Groove's own library (My Songs), never in Files.
+static void open_song_dialog(void)    { app_show_songs(g_app->menubar_win); }
+static void save_song_as_dialog(void) { app_save_song_as(g_app->menubar_win); }
+#else
+static void open_song_dialog(void) {
+  char path[512] = {0};
+  openfilename_t ofn = {0};
+  ofn.lStructSize = sizeof(ofn);
+  ofn.hwndOwner = g_app->menubar_win;
+  ofn.lpstrFile = path;
+  ofn.nMaxFile = sizeof(path);
+  ofn.lpstrFilter = "Groove Songs\0*.groove\0All Files\0*.*\0";
+  ofn.Flags = OFN_FILEMUSTEXIST;
+  if (get_open_filename(&ofn) && !app_open_song(path))
+    message_box(g_app->menubar_win, "Could not open this Groove song. The file may be damaged or use an unsupported version.", "Open failed", MB_OK);
+}
+
+static void save_song_as_dialog(void) {
+  char path[512] = {0};
+  snprintf(path, sizeof(path), "%s", g_app->filename[0] ? g_app->filename : "Untitled.groove");
+  openfilename_t ofn = {0};
+  ofn.lStructSize = sizeof(ofn);
+  ofn.hwndOwner = g_app->menubar_win;
+  ofn.lpstrFile = path;
+  ofn.nMaxFile = sizeof(path);
+  ofn.lpstrFilter = "Groove Song\0*.groove\0";
+  ofn.Flags = OFN_OVERWRITEPROMPT;
+  if (get_save_filename(&ofn) && !app_save_song(path))
+    message_box(g_app->menubar_win, "Could not save the Groove song. Check the filename and available space.", "Save failed", MB_OK);
+}
+#endif
+
 bool app_resize_clip(int idx, int ticks) {
   if (!g_app) return false;
   app_lock();
@@ -306,12 +341,12 @@ void app_command(uint16_t id) {
       if (g_app->menubar_win) dock_set_side(g_app->menubar_win, DOCK_TOP);
       break;
     case ID_FILE_NEW:  app_new_song(); break;
-    case ID_FILE_OPEN: app_show_songs(g_app->menubar_win); break;
+    case ID_FILE_OPEN: open_song_dialog(); break;
     case ID_FILE_SAVE:
-      if (!g_app->filename[0]) app_save_song_as(g_app->menubar_win);
+      if (!g_app->filename[0]) save_song_as_dialog();
       else if (!app_save_song(g_app->filename)) message_box(g_app->menubar_win, "Could not save the Groove song. Check the available space.", "Save failed", MB_OK);
       break;
-    case ID_FILE_SAVEAS: app_save_song_as(g_app->menubar_win); break;
+    case ID_FILE_SAVEAS: save_song_as_dialog(); break;
     case ID_FILE_DEMO:
     case ID_FILE_DEMO_AFTERGLOW:
     case ID_FILE_DEMO_VICTORY: {
