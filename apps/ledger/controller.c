@@ -39,7 +39,8 @@ void ledger_update_status(void) {
   const db_report_setting_t *rs = ledger_report_settings(g_ledger->ib, g_ledger->cfg);
   ui_format_date(rs ? rs->date_from : "", from, sizeof(from));
   ui_format_date(rs ? rs->date_to : "", to, sizeof(to));
-  snprintf(period, sizeof(period), ui_tr("Report period: %s – %s"), from[0] ? from : "…", to[0] ? to : "…");
+  if (!from[0] && !to[0]) snprintf(period, sizeof(period), "%s", ui_tr("Report period: all dates"));
+  else snprintf(period, sizeof(period), ui_tr("Report period: %s – %s"), from[0] ? from : "…", to[0] ? to : "…");
   bool dirty = send_db_message(g_ledger->ib, dbGetDirty, 0, NULL);
   snprintf(text, sizeof(text), "%s   |   %s   |   %s%s%s", org, cfg, period, dirty ? "   |   " : "", dirty ? ui_tr("modified") : "");
   send_message(g_ledger->main_win, evStatusBar, 0, text);
@@ -145,6 +146,22 @@ static void new_document(const char *form) {
   if (show_db_dialog_opts(kDocumentForms[f].def, kDocumentForms[f].new_title, g_ledger->main_win, 0, &opts)) after_save(doc_id);
 }
 
+// The account card of the account chosen on the current page: the selected
+// account, or the debit account of the selected entry.
+static void show_account_card(void) {
+  window_t *page = window_active_page(g_ledger->main_win);
+  db_entry_t *entry = page && get_window_item(page, ID_ENTRIES_PAGE_ENTRIES) ? selected(ID_ENTRIES_PAGE_ENTRIES) : NULL;
+  db_account_t *account = entry ? NULL : selected(ID_ACCOUNTS_PAGE_ACCOUNTS);
+  int account_id = entry ? entry->debit_id : account ? account->id : 0;
+  db_report_setting_t *rs = ledger_report_settings(g_ledger->ib, g_ledger->cfg);
+  if (!account_id || !rs) return;
+  rs->account_id = account_id;
+  send_db_message(g_ledger->ib, dbUpdate, TABLE_REPORT_SETTINGS, rs);
+  after_save(0);
+  page_host_select(g_ledger->main_win, ID_VIEW_REPORTS);
+  send_message(view(ID_REPORTS_PAGE_REPORT_TABS), tcSetSelection, 1, NULL);  // the card tab
+}
+
 // Catalog commands act on the page's TableView, which owns the row form.
 static void catalog_action(uint32_t table_view, uint32_t action) {
   if (send_message(view(table_view), action, 0, NULL)) ledger_refresh_views();
@@ -207,6 +224,11 @@ void ledger_command(uint16_t id) {
     case ID_DOC_NEW_ASSETS:    new_document("assets");    break;
     case ID_DOC_CLOSE_MONTH:   new_document("closing");   break;
     case ID_DOC_OPEN: if (doc) edit_document(doc->id); break;
+    case ID_DOC_OPEN_ENTRY: {
+      db_entry_t *entry = selected(ID_ENTRIES_PAGE_ENTRIES);
+      if (entry) edit_document(entry->document_id);
+      break;
+    }
     case ID_DOC_POST:
       if (doc && ledger_post(g_ledger->ib, g_ledger->cfg, doc->id)) after_save(0);
       break;
@@ -257,6 +279,7 @@ void ledger_command(uint16_t id) {
       ledger_repost_all(g_ledger->ib, g_ledger->cfg);
       ledger_refresh_views();
       break;
+    case ID_REPORT_CARD: show_account_card(); break;
     case ID_REPORT_PRINT:
       if (ledger_print_reports(report, sizeof(report)))
         message_box(parent, report, ui_tr("Print Forms Written"), MB_OK);

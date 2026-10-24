@@ -109,6 +109,7 @@ Print templates are HTML files filled from the document:
 | `{{#cash_book}} ... {{/cash_book}}`, `{{period.date_from}}` | Report forms (`print_forms.report`) repeat a report's rows |
 | `{{date\|dmy}}` | ISO date as DD.MM.YYYY |
 | `{{total\|words}}` | Amount in words in the configuration's language |
+| `{{counterparty.name\|dat}}` | A person's name in a case: `gen`, `dat`, `acc`, `ins`, `pre` ("Выдать Петрову Петру Петровичу"); organizations stay as they are |
 
 `Documents > Print Forms` writes every form of the document's type to
 `<infobase dir>/print/` for printing from a browser.

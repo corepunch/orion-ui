@@ -23,6 +23,10 @@ GitClient). Upstream paths: `assets/regular/<name>.svg` and
 | ledger-operation.svg | note-pencil |
 | ledger-payroll.svg | money |
 | ledger-close-month.svg | calendar-check |
+| ledger-card.svg | list-magnifying-glass |
+| ledger-open.svg | arrow-square-out |
+| ledger-language.svg | translate |
+| ledger-configuration.svg | swap |
 | ledger-settings.svg | sliders-horizontal |
 | ledger-edit.svg | pencil-simple |
 | ledger-post.svg | check-circle |

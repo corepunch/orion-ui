@@ -139,7 +139,7 @@
   <string source="Select Configuration" where="select_configuration">Выбор конфигурации</string>
   <string source="Ledger opens the infobase of the chosen configuration on next start." where="select_configuration">При следующем запуске откроется информационная база выбранной конфигурации.</string>
   <string source="Configuration:" where="select_configuration">Конфигурация:</string>
-  <string source="Language" where="select_language">Язык</string>
+  <string source="Language" where="config_page,select_language">Язык</string>
   <string source="The new language applies the next time Ledger starts." where="select_language">Новый язык будет применен при следующем запуске.</string>
   <string source="Language:" where="select_language">Язык:</string>
   <string source="modified" where="code">изменено</string>
@@ -154,14 +154,14 @@
   <string source="New manual operation (Ctrl+M)" where="journal_page">Новая операция, проводки вручную (Ctrl+M)</string>
   <string source="Analytics" where="accounts_page,reports_page,config_page">Субконто</string>
   <string source="Reports (Ctrl+6)" where="reports_page">Отчеты (Ctrl+6)</string>
-  <string source="Settings" where="reports_page">Настройка</string>
-  <string source="Period and account (Ctrl+R)" where="reports_page">Период и счет (Ctrl+R)</string>
+  <string source="Settings" where="accounts_page,reports_page">Настройка</string>
+  <string source="Period and account (Ctrl+R)" where="accounts_page,reports_page">Период и счет (Ctrl+R)</string>
   <string source="Rebuild reports from entries (F5)" where="reports_page">Пересчитать отчеты по проводкам (F5)</string>
   <string source="Opening Dr" where="reports_page">Сальдо нач. Дт</string>
   <string source="Opening Cr" where="reports_page">Сальдо нач. Кт</string>
   <string source="Closing Dr" where="reports_page">Сальдо кон. Дт</string>
   <string source="Closing Cr" where="reports_page">Сальдо кон. Кт</string>
-  <string source="Account Card" where="reports_page">Карточка счета</string>
+  <string source="Account Card" where="menu,reports_page">Карточка счета</string>
   <string source="Corr." where="reports_page">Корр. счет</string>
   <string source="Debit" where="reports_page">Дебет</string>
   <string source="Credit" where="reports_page">Кредит</string>
@@ -311,6 +311,14 @@
 Бухгалтерский учет методом двойной записи на Orion.
 Национальные правила, план счетов и формы документов
 задает текущая конфигурация.</string>
+  <string source="Open Entry's Document" where="menu">Открыть документ проводки</string>
+  <string source="Card" where="accounts_page,entries_page">Карточка</string>
+  <string source="Account card of the selected account (Ctrl+K)" where="accounts_page">Карточка выбранного счета (Ctrl+K)</string>
+  <string source="Open the entry's document" where="entries_page">Открыть документ проводки</string>
+  <string source="Account card of the entry's debit account (Ctrl+K)" where="entries_page">Карточка счета дебета проводки (Ctrl+K)</string>
+  <string source="Select configuration" where="config_page">Выбрать конфигурацию</string>
+  <string source="Interface language" where="config_page">Язык интерфейса</string>
+  <string source="Report period: all dates" where="code">Период отчетов: все даты</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>

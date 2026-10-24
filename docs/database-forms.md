@@ -1004,6 +1004,11 @@ orionc chooses the DDX exchange from the bound field's declared type:
 | `ComboBox` with `source=` | `integer` | `ddx_push_combo_value` / `ddx_pull_combo_value` (record id, 0 = none) |
 | `CheckBox` | `boolean` | `ddx_push_check` / `ddx_pull_check` |
 
+A numeric field whose TextBox has a `placeholder` shows an empty box with
+the cue text when its value is zero, as zero there means "not given" (a rate
+taken from the document date, an item's own price); an empty box reads back
+as zero.
+
 Generated forms carry `db_record_size`, which `show_db_dialog` uses to size
 and copy the record. `show_db_dialog_hook()` forwards `evCreate` and unhandled
 messages to an app procedure, for dialogs that manage a detail table:

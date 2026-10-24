@@ -88,8 +88,8 @@
   <string source="Section" where="accounts_page">Kontenklasse</string>
   <string source="All accounting entries (Ctrl+5)" where="entries_page">Alle Buchungen (Strg+5)</string>
   <string source="Reports (Ctrl+6)" where="reports_page">Auswertungen (Strg+6)</string>
-  <string source="Settings" where="reports_page">Einstellungen</string>
-  <string source="Period and account (Ctrl+R)" where="reports_page">Zeitraum und Konto (Strg+R)</string>
+  <string source="Settings" where="accounts_page,reports_page">Einstellungen</string>
+  <string source="Period and account (Ctrl+R)" where="accounts_page,reports_page">Zeitraum und Konto (Strg+R)</string>
   <string source="Recalculate" where="reports_page">Neu berechnen</string>
   <string source="Rebuild reports from entries (F5)" where="reports_page">Auswertungen neu aus den Buchungen erstellen (F5)</string>
   <string source="Trial Balance" where="reports_page">Summen- und Saldenliste</string>
@@ -99,7 +99,7 @@
   <string source="Turnover Cr" where="reports_page">Verkehrszahlen Haben</string>
   <string source="Closing Dr" where="reports_page">Saldo Soll</string>
   <string source="Closing Cr" where="reports_page">Saldo Haben</string>
-  <string source="Account Card" where="reports_page">Kontoblatt</string>
+  <string source="Account Card" where="menu,reports_page">Kontoblatt</string>
   <string source="Corr." where="reports_page">Gegenkonto</string>
   <string source="Debit" where="reports_page">Soll</string>
   <string source="Credit" where="reports_page">Haben</string>
@@ -161,7 +161,7 @@
   <string source="Select Configuration" where="select_configuration">Konfiguration wählen</string>
   <string source="Ledger opens the infobase of the chosen configuration on next start." where="select_configuration">Beim nächsten Start öffnet Ledger den Mandanten der gewählten Konfiguration.</string>
   <string source="Configuration:" where="select_configuration">Konfiguration:</string>
-  <string source="Language" where="select_language">Sprache</string>
+  <string source="Language" where="config_page,select_language">Sprache</string>
   <string source="The new language applies the next time Ledger starts." where="select_language">Die neue Sprache gilt ab dem nächsten Start.</string>
   <string source="Language:" where="select_language">Sprache:</string>
   <string source="Manual Operation" where="operation">Umbuchung</string>
@@ -311,6 +311,14 @@ mit ihrem eigenen Mandanten geöffnet.</string>
 Doppelte Buchführung mit Orion.
 Länderspezifische Regeln, Konten und Formulare
 stammen aus der aktiven Konfiguration.</string>
+  <string source="Open Entry's Document" where="menu">Beleg der Buchung öffnen</string>
+  <string source="Card" where="accounts_page,entries_page">Kontenblatt</string>
+  <string source="Account card of the selected account (Ctrl+K)" where="accounts_page">Kontenblatt des gewählten Kontos (Strg+K)</string>
+  <string source="Open the entry's document" where="entries_page">Beleg der Buchung öffnen</string>
+  <string source="Account card of the entry's debit account (Ctrl+K)" where="entries_page">Kontenblatt des Sollkontos der Buchung (Strg+K)</string>
+  <string source="Select configuration" where="config_page">Konfiguration wählen</string>
+  <string source="Interface language" where="config_page">Sprache der Oberfläche</string>
+  <string source="Report period: all dates" where="code">Berichtszeitraum: alle Daten</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

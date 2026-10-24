@@ -121,9 +121,13 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     if (header_h > 0) {
       set_clip_rect(win, (irect16_t){clip_x, 0, clip_w, header_h});
       theme_draw(THEME_PART_HEADER, R(draw_x, 0, col_w, header_h), CTRL_NORMAL);
-      draw_text_small_clipped(data->columns[col].title,
-                              &(irect16_t){draw_x, 0, col_w, header_h},
-                              hdr_fg, TEXT_PADDING_LEFT);
+      char title[MAX_REPORTVIEW_TITLE + 4];
+      const char *shown = data->columns[col].title;
+      int title_w = col_w - 2 * WIN_PADDING;
+      if (strwidth(shown) > title_w) { text_ellipsize(FONT_SYSTEM, shown, MAX(0, title_w), title, sizeof(title)); shown = title; }
+      draw_text_small_clipped(shown,
+                              &(irect16_t){draw_x, 0, col_w - (data->columns[col].align ? WIN_PADDING : 0), header_h},
+                              hdr_fg, data->columns[col].align ? data->columns[col].align : TEXT_PADDING_LEFT);
     }
 
     int body_h_local = cr.h - header_h;
@@ -167,8 +171,15 @@ static void report_paint(window_t *win, reportview_data_t *data) {
         draw_text_clipped(FONT_SMALLEST, subtitle, &subtitle_rect,
                           row == data->selected ? fg : get_sys_color(brTextDisabled), 0);
       } else {
-        irect16_t text_rect = {text_x, y, text_w, entry_h};
-        draw_text_clipped(FONT_SMALL, src, &text_rect, fg, 0);
+        // Text that does not fit ends in an ellipsis; numbers align right.
+        char fitted[MAX_COLUMNVIEW_ITEM_NAME];
+        int pad = data->columns[col].align ? WIN_PADDING : 0;
+        if (text_strwidth(FONT_SMALL, src) > text_w - pad) {
+          text_ellipsize(FONT_SMALL, src, MAX(0, text_w - pad), fitted, sizeof(fitted));
+          src = fitted;
+        }
+        irect16_t text_rect = {text_x, y, MAX(0, text_w - pad), entry_h};
+        draw_text_clipped(FONT_SMALL, src, &text_rect, fg, data->columns[col].align);
       }
     }
 
@@ -462,14 +473,19 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       return wparam == RVM_VIEW_REPORT;
     case RVM_ADDCOLUMN: {
       reportview_column_t *col = (reportview_column_t *)lparam;
-      if (!col || data->column_count >= MAX_REPORTVIEW_COLUMNS)
+      if (!col || data->column_count >= MAX_REPORTVIEW_COLUMNS) {
+        fprintf(stderr, "[reportview] add column rejected win=%u count=%u max=%d title=%s\n", win->id,
+                data->column_count, MAX_REPORTVIEW_COLUMNS, col && col->title ? col->title : "");
+        fflush(stderr);
         return -1;
+      }
       uint32_t i = data->column_count;
       strncpy(data->columns[i].title, col->title ? col->title : "", MAX_REPORTVIEW_TITLE - 1);
       data->columns[i].title[MAX_REPORTVIEW_TITLE - 1] = '\0';
       data->columns[i].width_spec = col->width;  // Store original spec
       data->columns[i].width = col->width;        // Initial effective width
       data->columns[i].min_width = col->min_width;
+      data->columns[i].align = col->align;
       data->column_count++;
 
       // Keep effective widths in sync when columns are added after layout.
