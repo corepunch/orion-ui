@@ -851,7 +851,7 @@ static bool table_relation(xmlNodePtr db, const char *table, int *field_index,
 }
 
 static void emit_tableviews(FILE *f, xmlNodePtr parent, xmlNodePtr form_node,
-                            xmlNodePtr database, const char *form) {
+                            xmlNodePtr database, const char *form, const char *prefix) {
   EACH_ELEMENT(c, parent) {
     if (elem(c, "tableview")) {
       char *name = attr(c, "name"), *source = attrs_first(c, "source", "database");
@@ -905,9 +905,13 @@ static void emit_tableviews(FILE *f, xmlNodePtr parent, xmlNodePtr form_node,
       // LIMITATION: master_filter_field / filter_value are int-based,
       // so only integer FK values work.  String FKs (UUID, hash) would
       // be converted to 0 by the runtime's strtol() call.
-      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = %d, .filter_value = %d, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s };\n\n",
+      // form="doc_line": the database form that edits one row (EODisplayGroup).
+      char *record_form = attr(c, "form"), record_form_ref[256] = "NULL";
+      if (record_form && *record_form) { char rf[128]; ident(rf, sizeof(rf), record_form, false); snprintf(record_form_ref, sizeof(record_form_ref), "&%s_%s_form", prefix, rf); }
+      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = %d, .filter_value = %d, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s, .record_form = %s };\n\n",
           param, table_id, filter_index, filter_value ? atoi(filter_value) : 0, param, param, param, param, check_field_q, master_id,
-          relation_field, master_key_q, cell_style_value, column_titles && eq(column_titles, "false") ? "true" : "false");
+          relation_field, master_key_q, cell_style_value, column_titles && eq(column_titles, "false") ? "true" : "false", record_form_ref);
+      free(record_form);
       free(column_titles);
       free(cell_style);
       free(check_field);
@@ -915,7 +919,7 @@ static void emit_tableviews(FILE *f, xmlNodePtr parent, xmlNodePtr form_node,
       free(master_name_attr);
       free(name); free(source);
     }
-    emit_tableviews(f, c, form_node, database, form);
+    emit_tableviews(f, c, form_node, database, form, prefix);
   }
 }
 
@@ -1074,12 +1078,22 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
     char *placeholder = attr(c, "placeholder"), placeholderq[ORIONC_STRING_SIZE] = "NULL";
     if (placeholder) cstr(placeholderq, sizeof(placeholderq), placeholder);
     cstr(classq, sizeof(classq), klass); cstr(textq, sizeof(textq), a.v[A_TEXT]); cstr(nameq, sizeof(nameq), a.v[A_NAME]);
-    OUT("  { %s, %s, { %d, %d }, %s, %s, %s, %u, %u, NULL, 0, %s, { %d, %d, %d, %d }, { %d, %d, %d, %d }, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s },\n",
+    // <Button target="lines" action="insert"> sends the TableView a record action.
+    char *target = attr(c, "target"), *taction = attr(c, "action"), target_id[256] = "0";
+    const char *target_msg = "0";
+    if (target && *target) {
+      control_id(target_id, sizeof(target_id), form, target, "control", 0);
+      target_msg = eq(taction, "insert") ? "tvInsertRecord" : eq(taction, "edit") ? "tvEditRecord" : eq(taction, "delete") ? "tvDeleteRecord" : NULL;
+      if (!target_msg) { fprintf(stderr, "orionc: control '%s': unknown action '%s' for target '%s' (insert, edit, delete)\n", nz(a.v[A_NAME], ""), nz(taction, ""), target); target_msg = "0"; snprintf(target_id, sizeof(target_id), "0"); }
+    }
+    OUT("  { %s, %s, { %d, %d }, %s, %s, %s, %u, %u, NULL, 0, %s, { %d, %d, %d, %d }, { %d, %d, %d, %d }, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s },\n",
         classq, id, sz.w, sz.h, flags, textq, nameq,
         (unsigned)enum_parse_token(a.v[A_HA], kAlignH, ARRAY_LEN(kAlignH), 0),
         (unsigned)enum_parse_token(a.v[A_VA], kAlignV, ARRAY_LEN(kAlignV), 0),
         spacing, pad.x, pad.y, pad.w, pad.h, mar.x, mar.y, mar.w, mar.h,
-        nz(parent_id, "0"), font, a.v[A_FONT] ? "true" : "false", color, a.v[A_COLOR] ? "true" : "false", lparam, context_items, context_count, sourceq, placeholderq);
+        nz(parent_id, "0"), font, a.v[A_FONT] ? "true" : "false", color, a.v[A_COLOR] ? "true" : "false", lparam, context_items, context_count, sourceq, placeholderq,
+        target_id, target_msg);
+    free(target); free(taction);
     (*count)++;
     emit_controls_ex(f, c, form, id, bindings, count, btn_ids);
     free(context); free(source); free(placeholder); free_attrs(&a);
@@ -1269,7 +1283,7 @@ static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr d
   }
   rect_attr(form, "padding", &pad) || rect_attr(form, "layout_padding", &pad); rect_attr(form, "margin", &mar) || rect_attr(form, "layout_margin", &mar);
   resolve_flags(flags, sizeof(flags), nz(flags_raw, "0"));
-  emit_tableviews(f, form, form, database, form_id);
+  emit_tableviews(f, form, form, database, form_id, prefix);
   emit_comboboxes(f, form, form_id);
   emit_toolbar(f, toolbar, toolbar_symbol, name);
   emit_toolbar(f, pane_toolbar, pane_symbol, name);

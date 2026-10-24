@@ -12,13 +12,14 @@
 static ledger_t g_test_ledger;
 
 static database_t *open_db(const char *name, const db_schema_def_t *schema, const char *path) {
-  database_t *db = create_database_with_schema(name, "db_schema_xml", schema, path);
+  database_t *db = create_database_with_schema(name, strcmp(name, "ib") ? "db_schema_xml" : "ledger_ib", schema, path);
   if (db) register_database(name, db);
   return db;
 }
 
 static void setup(void) {
   DB_CLASS(db_schema_xml);
+  DB_CLASS(ledger_ib);
   memset(&g_test_ledger, 0, sizeof(g_test_ledger));
   g_ledger = &g_test_ledger;
   snprintf(g_ledger->config_dir, sizeof(g_ledger->config_dir), SHARE "/ru-2003");
@@ -139,7 +140,7 @@ static void test_payroll(void) {
   int id = april->id;
   ledger_fill_payroll(g_ledger->ib, g_ledger->cfg, id);
   ASSERT(ledger_count_references(g_ledger->ib, TABLE_PAYROLL_LINES, "document_id", id) == 3 && near(april->total, 36000), "filled with salaries");
-  ledger_delete_document(g_ledger->ib, id);
+  send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_PAYROLL_LINES, "document_id", id), 0);
   PASS();
 }
@@ -177,7 +178,7 @@ static void test_fixed_assets(void) {
   ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   ASSERT(near(balance("02")->balance_cr, 3000 + 1000 + 500), "April charges both assets");
-  ledger_delete_document(g_ledger->ib, id);
+  send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   PASS();
 }
@@ -321,9 +322,47 @@ static void test_numbering_and_delete(void) {
   ledger_recalc_document(g_ledger->ib, g_ledger->cfg, id);
   ASSERT(near(doc->amount, 2900) && near(doc->vat, 580), "line takes the item's price and tax rate");
   ledger_post(g_ledger->ib, g_ledger->cfg, id);
-  ledger_delete_document(g_ledger->ib, id);
+  send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_DOC_LINES, "document_id", id), 0);
   ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", id), 0);
+  PASS();
+}
+
+static void test_record_lifecycle(void) {
+  TEST("datasource: defaults on insert, numbering and recalculation by ledger_ib, delete rules, change scopes");
+  database_t *ib = g_ledger->ib;
+  db_document_t blank;
+  ASSERT_TRUE(send_db_message(ib, dbInitRecord, TABLE_DOCUMENTS, &blank));
+  ASSERT(strlen(blank.date) == 10 && !blank.number[0], "date defaults to today");
+  ASSERT_TRUE(send_db_message(ib, dbBeginChanges, 0, NULL));
+  blank.doc_type_id = 1;  // receipt
+  snprintf(blank.date, sizeof(blank.date), "2003-03-25");
+  db_document_t *doc = (db_document_t *)send_db_message(ib, dbInsert, TABLE_DOCUMENTS, &blank);
+  ASSERT(doc && !strcmp(doc->number, "ПТ-0002"), "numbered when inserted");
+  int id = doc->id;
+  db_doc_line_t line;
+  send_db_message(ib, dbInitRecord, TABLE_DOC_LINES, &line);
+  ASSERT(near(line.quantity, 1), "quantity defaults to one");
+  line.document_id = id; line.item_id = 1;
+  send_db_message(ib, dbInsert, TABLE_DOC_LINES, &line);
+  ASSERT(near(doc->amount, 95) && near(doc->vat, 19), "a new line recalculates its document");
+  ASSERT_TRUE(send_db_message(ib, dbRevertChanges, 0, NULL));
+  ASSERT(!send_db_message(ib, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)id), "revert removes the document");
+  ASSERT_EQUAL(ledger_count_references(ib, TABLE_DOC_LINES, "document_id", id), 0);
+  db_document_t *receipt = find_by(ib, TABLE_DOCUMENTS, "number", "ПТ-0001");
+  ASSERT(receipt && near(receipt->total, 51120), "surviving records keep their address and contents");
+  int referrers = (int)send_db_message(ib, dbCountReferrers, TABLE_COUNTERPARTIES, (void *)(intptr_t)1);
+  ASSERT(referrers >= 3, "documents refer to the supplier");
+  ASSERT_FALSE(send_db_message(ib, dbDelete, TABLE_COUNTERPARTIES, (void *)(intptr_t)1));  // on-delete="deny"
+  ASSERT_NOT_NULL((void *)send_db_message(ib, dbFind, MAKEDWORD(TABLE_COUNTERPARTIES, 0), (void *)(intptr_t)1));
+  int receipt_id = receipt->id;  // a deleted record comes back at a new address
+  send_db_message(ib, dbBeginChanges, 0, NULL);
+  ASSERT_TRUE(send_db_message(ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)receipt_id));  // cascade
+  ASSERT_EQUAL(ledger_count_references(ib, TABLE_DOC_LINES, "document_id", receipt_id), 0);
+  ASSERT_EQUAL(ledger_count_references(ib, TABLE_ENTRIES, "document_id", receipt_id), 0);
+  send_db_message(ib, dbRevertChanges, 0, NULL);
+  ASSERT_EQUAL(ledger_count_references(ib, TABLE_DOC_LINES, "document_id", receipt_id), 3);
+  ASSERT_EQUAL(ledger_count_references(ib, TABLE_ENTRIES, "document_id", receipt_id), 6);
   PASS();
 }
 
@@ -466,6 +505,7 @@ int main(int argc, char **argv) {
   test_manual_operation();
   test_transient_tables();
   test_numbering_and_delete();
+  test_record_lifecycle();
   test_save_and_reload();
   test_print_forms();
   test_generated_bindings();

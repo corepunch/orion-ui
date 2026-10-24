@@ -2,6 +2,7 @@
 #include <orion/ui.h>
 #include <orion/user/user.h>
 #include <orion/kernel/kernel.h>
+#include <orion/commctl/commctl.h>
 
 typedef struct {
   form_def_t const *def;
@@ -12,7 +13,118 @@ typedef struct {
   const char       *fk_field;
   int               fk_value;
   winproc_t         hook;
+  void             *synced;     // the record as last shown, to spot what the database changed
+  struct { uint32_t ctrl_id; int table_id; } sources[8];  // polymorphic combos' current tables
 } db_dlg_ctx_t;
+
+static size_t db_field_size(const db_field_meta_t *f) {
+  switch (f->type) {
+    case DB_TYPE_INT:    return sizeof(int);
+    case DB_TYPE_BOOL:   return sizeof(bool);
+    case DB_TYPE_FLOAT:  return sizeof(float);
+    case DB_TYPE_DOUBLE: return sizeof(double);
+    default:             return (size_t)f->length;
+  }
+}
+
+// Shows what the database changed since the record was last shown — totals a
+// detail table recomputed — and keeps what the user is typing elsewhere.
+static void db_dialog_resync(window_t *win, db_dlg_ctx_t *ctx) {
+  const void *stored = ctx->record_id > 0 ? (const void *)send_db_message(ctx->db, dbFind,
+    MAKEDWORD(ctx->def->db_table_id, 0), (void *)(intptr_t)ctx->record_id) : NULL;
+  if (!stored || !ctx->synced) return;
+  const db_field_meta_t *fields = (const db_field_meta_t *)ctx->def->db_fields;
+  for (int i = 0; i < ctx->def->db_field_count; i++) {
+    size_t off = fields[i].offset, n = db_field_size(&fields[i]);
+    if (!memcmp((const char *)stored + off, (char *)ctx->synced + off, n)) continue;
+    memcpy((char *)ctx->record_buf + off, (const char *)stored + off, n);
+    memcpy((char *)ctx->synced + off, (const char *)stored + off, n);
+    for (int b = 0; b < ctx->def->binding_count; b++)
+      if (ctx->def->bindings[b].offset == off) dialog_push(win, ctx->record_buf, &ctx->def->bindings[b], 1);
+  }
+}
+
+// Detail tables of the edited record follow it, as EODetailDataSource does:
+// a TableView whose table refers to the dialog's table shows that record's rows.
+static void db_dialog_bind_details(window_t *root, window_t *win, db_dlg_ctx_t *ctx, const db_schema_def_t *schema) {
+  for (window_t *c = win ? win->children : NULL; c; c = c->next) {
+    int table_id = 0;
+    if (c->proc == win_tableview && send_message(c, tvGetTable, 0, &table_id)) {
+      const db_table_schema_t *t = db_schema_table(schema, table_id);
+      for (int i = 0; t && i < t->field_count; i++) {
+        const char *rel = t->fields[i].relation_table, *dot = rel ? strchr(rel, '.') : NULL;
+        if (!rel || rel[0] == '{' || strcmp(dot && strncmp(rel, ctx->db->name, (size_t)(dot - rel)) == 0 ? dot + 1 : rel, ctx->def->db_table)) continue;
+        int f = db_schema_field_index(t, t->fields[i].name);
+        if (f > 0) send_message(c, tvSetFilter, (uint32_t)f, (void *)(intptr_t)ctx->record_id);
+        break;
+      }
+    }
+    db_dialog_bind_details(root, c, ctx, schema);
+  }
+}
+
+// A ComboBox bound to a polymorphic relation (relation="ib.{debit.subconto_kind.table}.id")
+// lists the table the record's path names: the analytics of the chosen account.
+static void db_dialog_sync_sources(window_t *win, db_dlg_ctx_t *ctx, bool keep_values) {
+  const db_schema_def_t *schema = (const db_schema_def_t *)send_db_message(ctx->db, dbGetSchema, 0, NULL);
+  const db_table_schema_t *t = db_schema_table(schema, ctx->def->db_table_id);
+  if (!t) return;
+  void *current = malloc(ctx->def->db_record_size);
+  if (!current) return;
+  memcpy(current, ctx->record_buf, ctx->def->db_record_size);
+  dialog_pull(win, current, ctx->def->bindings, ctx->def->binding_count);
+  for (int b = 0; b < ctx->def->binding_count; b++) {
+    const ctrl_binding_t *binding = &ctx->def->bindings[b];
+    int f = 0;
+    while (f < t->meta_count && t->meta[f].offset != binding->offset) f++;
+    const db_field_schema_t *fs = NULL;
+    for (int i = 0; f < t->meta_count && i < t->field_count; i++) if (!strcmp(t->fields[i].name, t->meta[f].name)) fs = &t->fields[i];
+    const char *rel = fs ? fs->relation_table : NULL, *open = rel ? strchr(rel, '{') : NULL, *close = open ? strchr(open, '}') : NULL;
+    if (!close) continue;
+    database_t *target_db = ctx->db;
+    if (open > rel) {
+      char name[64];
+      snprintf(name, sizeof(name), "%.*s", (int)(open - rel - 1), rel);
+      target_db = get_database_by_name(name);
+    }
+    char path[128], table[64] = "";
+    snprintf(path, sizeof(path), "%.*s", (int)(close - open - 1), open + 1);
+    db_schema_field_text(ctx->db, t, current, path, table, sizeof(table));
+    const db_schema_def_t *target_schema = target_db ? (const db_schema_def_t *)send_db_message(target_db, dbGetSchema, 0, NULL) : NULL;
+    const db_table_schema_t *target = table[0] ? db_schema_table_named(target_schema, table) : NULL;
+    int slot = 0;
+    while (slot < 7 && ctx->sources[slot].ctrl_id && ctx->sources[slot].ctrl_id != binding->ctrl_id) slot++;
+    int table_id = target ? target->table_id : -1;
+    if (ctx->sources[slot].ctrl_id == binding->ctrl_id && ctx->sources[slot].table_id == table_id) continue;
+    ctx->sources[slot].ctrl_id = binding->ctrl_id;
+    ctx->sources[slot].table_id = table_id;
+    window_t *combo = get_window_item(win, binding->ctrl_id);
+    if (target) send_message(combo, cbSetSource, (uint32_t)target->table_id, target_db);
+    else send_message(combo, cbClear, 0, NULL);
+    send_message(combo, cbSetCurrentValue, keep_values ? (uint32_t)*(const int *)((const char *)current + binding->offset) : 0, NULL);
+    enable_window(combo, target != NULL);
+  }
+  free(current);
+}
+
+// Applies "field=value;field=value" to a record through the field metadata.
+static void db_apply_defaults(const form_def_t *def, void *record, const char *defaults) {
+  const db_field_meta_t *fields = (const db_field_meta_t *)def->db_fields;
+  for (const char *p = defaults; p && *p; ) {
+    const char *end = strchr(p, ';'), *eq = strchr(p, '=');
+    size_t len = end ? (size_t)(end - p) : strlen(p);
+    if (eq && eq < p + len) {
+      char name[64], value[256];
+      snprintf(name, sizeof(name), "%.*s", (int)(eq - p), p);
+      snprintf(value, sizeof(value), "%.*s", (int)(p + len - eq - 1), eq + 1);
+      int i = 0;
+      while (i < def->db_field_count && strcmp(fields[i].name, name)) i++;
+      if (i < def->db_field_count) db_parse_field(&fields[i], record, value);
+      else { fprintf(stderr, "[dialog] unknown default field form=%s field=%s\n", def->name ? def->name : "", name); fflush(stderr); }
+    }
+    p += len + (end ? 1 : 0);
+  }
+}
 
 static result_t dialog_db_proc(window_t *win, uint32_t msg,
                                uint32_t wparam, void *lparam) {
@@ -54,12 +166,21 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
         dialog_push(win, ctx->record_buf,
                     ctx->def->bindings, ctx->def->binding_count);
       }
+      if (ctx->synced) memcpy(ctx->synced, ctx->record_buf, ctx->def->db_record_size);
+      db_dialog_sync_sources(win, ctx, true);
+      if (ctx->record_id > 0)
+        db_dialog_bind_details(win, win, ctx, (const db_schema_def_t *)send_db_message(ctx->db, dbGetSchema, 0, NULL));
       if (ctx->hook) ctx->hook(win, evCreate, 0, NULL);
       return true;
     }
     case evCommand: {
       if (!ctx) return false;
       uint16_t notif = HIWORD(wparam);
+      if (notif == cbSelectionChange) db_dialog_sync_sources(win, ctx, false);
+      if (notif == tvnChanged) {
+        db_dialog_resync(win, ctx);
+        return ctx->hook ? ctx->hook(win, msg, wparam, lparam) : true;
+      }
       if (notif == edUpdate && ctx->hook) return ctx->hook(win, msg, wparam, lparam);
       if (notif == edUpdate) {
         if (ctx->def->bindings) {
@@ -80,6 +201,7 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
       if (notif != btnClicked) return ctx->hook ? ctx->hook(win, msg, wparam, lparam) : false;
       window_t *src = (window_t *)lparam;
       if (!src) return false;
+      if (form_dispatch_target_action(win, ctx->def, src)) return true;
       if (ctx->def->ok_id && src->id == ctx->def->ok_id) {
         if (ctx->def->bindings) {
           dialog_pull(win, ctx->record_buf,
@@ -105,6 +227,22 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
     default:
       return ctx && ctx->hook ? ctx->hook(win, msg, wparam, lparam) : false;
   }
+}
+
+bool form_dispatch_target_action(window_t *root, const form_def_t *def, window_t *control) {
+  for (int i = 0; def && control && i < def->child_count; i++) {
+    const form_ctrl_def_t *cd = &def->children[i];
+    if (cd->id != control->id || !cd->target) continue;
+    window_t *target = get_window_item(root, cd->target);
+    if (!target) {
+      fprintf(stderr, "[dialog] action target missing form=%s control=%u target=%u\n", def->id ? def->id : "", cd->id, cd->target);
+      fflush(stderr);
+      return true;
+    }
+    send_message(target, cd->target_message, 0, NULL);
+    return true;
+  }
+  return false;
 }
 
 int db_dialog_record_id(window_t *win) {
@@ -138,15 +276,42 @@ uint32_t show_db_dialog_opts(form_def_t const *def, const char *title, window_t 
     fflush(stderr);
     return 0;
   }
-  void *record_buf = calloc(1, def->db_record_size);
-  if (!record_buf) return 0;
+  void *record_buf = calloc(1, def->db_record_size), *synced = calloc(1, def->db_record_size);
+  if (!record_buf || !synced) { free(record_buf); free(synced); return 0; }
   db_dlg_ctx_t ctx = { .def = def, .db = db, .record_id = record_id, .record_buf = record_buf,
                        .is_new = (record_id == 0), .fk_field = opts ? opts->fk_field : NULL,
-                       .fk_value = opts ? opts->fk_value : 0, .hook = opts ? opts->hook : NULL };
+                       .fk_value = opts ? opts->fk_value : 0, .hook = opts ? opts->hook : NULL, .synced = synced };
+  bool scoped = send_db_message(db, dbBeginChanges, 0, NULL) != 0;
+  if (record_id == 0) {
+    // A new record: the database's defaults, the caller's, then the foreign key.
+    send_db_message(db, dbInitRecord, (uint32_t)def->db_table_id, record_buf);
+    if (opts) db_apply_defaults(def, record_buf, opts->defaults);
+    if (ctx.fk_field && ctx.fk_value > 0) {
+      char fk[96];
+      snprintf(fk, sizeof(fk), "%s=%d", ctx.fk_field, ctx.fk_value);
+      db_apply_defaults(def, record_buf, fk);
+    }
+    // In an editing context the record exists while the dialog is open, so
+    // detail tables can refer to it; Cancel reverts the insert.
+    const db_field_meta_t *key = (const db_field_meta_t *)def->db_fields;
+    void *inserted = scoped ? (void *)send_db_message(db, dbInsert, (uint32_t)def->db_table_id, record_buf) : NULL;
+    if (inserted && key && key[0].type == DB_TYPE_INT) {
+      ctx.record_id = *(const int *)((const char *)inserted + key[0].offset);
+      ctx.is_new = false;
+    }
+    ctx.fk_field = NULL;  // already applied
+  }
   uint32_t result = show_dialog_from_form_ex(def, title, parent,
                                              WINDOW_VSCROLL | WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,
                                              dialog_db_proc, &ctx);
+  if (scoped) send_db_message(db, result ? dbCommitChanges : dbRevertChanges, 0, NULL);
+  if (opts && opts->saved_id) {
+    const db_field_meta_t *key = (const db_field_meta_t *)def->db_fields;
+    *opts->saved_id = !result ? 0 : ctx.record_id > 0 ? ctx.record_id
+                    : key && key[0].type == DB_TYPE_INT ? *(const int *)((const char *)record_buf + key[0].offset) : 0;
+  }
   free(record_buf);
+  free(synced);
   return result;
 }
 

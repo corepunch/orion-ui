@@ -250,6 +250,13 @@ do not recreate control behavior or a small UI framework inside the app.
   datasource when toolbar contents are genuinely data-driven and the engine can
   render that source. Extend the engine generically if the needed binding is
   missing.
+- Keep the record lifecycle in the data layer, the way NeXTSTEP DBKit and
+  EOF did: defaults (`default=`) and delete rules (`on-delete=`) in the
+  schema, row editing through a TableView `form=` and `target`/`action`
+  buttons, and business rules (numbering, recalculation) in a datasource
+  class that subclasses `db_schema_xml`. Dialogs over schema databases are
+  editing contexts; do not insert, delete or recompute records by hand in
+  window procs. See [docs/database-forms.md](docs/database-forms.md#record-lifecycle-dbkit-and-eof).
 - Separate the concepts: a **form** defines a screen or document view; a
   **FlowView** or other layout control arranges its children; a repeated-item
   template defines each record's presentation; a **datasource** supplies those

@@ -397,13 +397,26 @@ source and differ only by filter, like the sales and purchase VAT books:
 <TableView name="purchase_book" source="ib.vat_book" filter-field="book" filter-value="2" />
 ```
 
+A TableView with `form=` edits its rows through that database form:
+double-click edits a row, and `tvInsertRecord`, `tvEditRecord` and
+`tvDeleteRecord` (from code or from `<Button target="..." action="insert|edit|delete">`)
+insert, edit and delete. A new row takes the view's filter — its master's
+key — as its foreign key. Deleting asks for confirmation and respects the
+schema's delete rules. After a change the view sends `tvnChanged` to its
+window.
+
+```xml
+<TableView name="rates" source="ib.rates" form="rate" />
+<Button name="new_rate" text="New Rate..." target="rates" action="insert" />
+```
+
 ## ComboBox
 
 A ComboBox with `source=`, `display=` and `value=` lists a table and binds the
 selected record's id. `filter-field` / `filter-value` keep only matching rows.
 `cbSetSource` (wparam = table id, lparam = database or NULL) lists another
-table at run time and drops the filter — for a field whose table depends on
-another choice, such as the analytics of the chosen account:
+table at run time and drops the filter. Database dialogs use it for fields
+with a polymorphic relation; code can too:
 
 ```c
 send_message(combo, cbSetSource, (uint32_t)schema->table_id, ib);

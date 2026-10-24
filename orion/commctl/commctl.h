@@ -169,7 +169,17 @@ enum {
   tvSetFilter,
   tvGetSelectedRecord,
   tvGetRecord,              // wparam = row index; returns bound record pointer
+  // Record actions, like EODisplayGroup insert/delete over a detail data
+  // source: the record form edits the record, and a new record takes the
+  // view's filter (its master's key) as its foreign key. Each returns 1 when
+  // the data changed; the view then notifies its window with tvnChanged.
+  tvInsertRecord,           // lparam = "field=value;..." defaults or NULL
+  tvEditRecord,             // the selected record
+  tvDeleteRecord,           // the selected record, after confirmation; delete rules apply
+  tvGetTable,               // lparam = int* table id; returns 1 when bound
 };
+// evCommand notification (HIWORD) sent by a TableView after a record action.
+#define tvnChanged 0x7401
 
 typedef struct {
   database_t *db;              // Database instance
@@ -186,10 +196,14 @@ typedef struct {
   const char *master_key;      // Parent field referenced by the FK (must be integer)
   reportview_cell_style_t cell_style; // REPORTVIEW_CELL_COLUMNS (default) or TWO_LINE
   bool hide_column_titles;
+  const struct form_def_s *record_form; // database form editing one row (form=); double-click edits
 } tableview_params_t;
 
 result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void tableview_handle_master_selection(window_t *root, window_t *master);
+// A double-clicked TableView with a record form edits the row; returns true
+// when it handled the activation.
+bool tableview_handle_activate(window_t *view);
 
 // Auto-layout container windows.
 typedef struct {

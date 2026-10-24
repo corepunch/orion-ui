@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include "columnview_internal.h"
 #include "menubar.h"
+#include <orion/commdlg/msgbox.h>
 
 #ifndef TABLEVIEW_DEBUG
 #define TABLEVIEW_DEBUG 0
@@ -65,12 +66,14 @@ typedef struct {
   char *master_key;
   void **rows;
   int row_count;
+  const form_def_t *record_form;
 } tableview_state_t;
 
 // Forward declarations
 static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row);
 static void tv_refresh_dependents(window_t *win, window_t *master);
 static bool tv_selected_field(window_t *win, const char *field, char *buf, size_t buf_sz);
+static bool tv_record_action(window_t *win, tableview_state_t *s, uint32_t msg, const char *defaults);
 
 // ══════════════════════════════════════════════════════════════════════════
 // Helper: Count NULL-terminated string array
@@ -313,6 +316,7 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       s->master_key = params->master_key && params->master_key[0] ? strdup(params->master_key) : NULL;
       s->check_field = params->check_field && params->check_field[0] ? strdup(params->check_field) : NULL;
       s->cell_style = params->cell_style;
+      s->record_form = params->record_form;
       TV_LOG("create: id=%u table=%d db=%p columns=%d", (unsigned)win->id,
              s->table_id, (void *)s->db, count_strings(params->field_names));
       
@@ -435,6 +439,12 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       return (s && (int)wparam >= 0 && (int)wparam < s->row_count)
         ? (result_t)(intptr_t)s->rows[wparam] : 0;
 
+    case tvGetTable:
+      if (s && lparam) *(int *)lparam = s->table_id;
+      return s != NULL;
+    case tvInsertRecord: case tvEditRecord: case tvDeleteRecord:
+      return s && tv_record_action(win, s, msg, (const char *)lparam);
+
     // evArrange and evResize now inherited from reportview
     // (reportview evResize automatically recalculates column widths)
     
@@ -442,6 +452,58 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     default:
       return win_reportview(win, msg, wparam, lparam);
   }
+}
+
+// ── Record actions ─────────────────────────────────────────────────────────
+
+static int tv_record_key(tableview_state_t *s, const void *record) {
+  char key[32];
+  return record && tv_get_field_text(s, record, "id", key, sizeof(key)) ? atoi(key) : 0;
+}
+
+static bool tv_record_action(window_t *win, tableview_state_t *s, uint32_t msg, const char *defaults) {
+  window_t *root = get_root_window(win);
+  void *selected = (void *)(intptr_t)send_message(win, tvGetSelectedRecord, 0, NULL);
+  int id = tv_record_key(s, selected);
+  bool changed = false;
+  if (msg == tvDeleteRecord) {
+    if (!id || !s->db) return false;
+    int referrers = (int)send_db_message(s->db, dbCountReferrers, (uint32_t)s->table_id, (void *)(intptr_t)id);
+    char text[256];
+    if (referrers > 0) {
+      snprintf(text, sizeof(text), ui_tr("This record is used by %d other record(s) and cannot be deleted."), referrers);
+      message_box(root, text, ui_tr("Delete"), MB_OK);
+      return false;
+    }
+    if (message_box(root, ui_tr("Delete the selected record?"), ui_tr("Delete"), MB_YESNO) != IDYES) return false;
+    changed = send_db_message(s->db, dbDelete, (uint32_t)s->table_id, (void *)(intptr_t)id) != 0;
+  } else {
+    if (!s->record_form) {
+      fprintf(stderr, "[tableview] record action rejected win=%u table=%d: no record form (form=)\n", win->id, s->table_id);
+      fflush(stderr);
+      return false;
+    }
+    if (msg == tvEditRecord && !id) return false;
+    // A detail view's filter is its master's key: new records take it.
+    const db_field_meta_t *meta = NULL;
+    int count = 0;
+    if (s->db) meta = (const db_field_meta_t *)send_db_message(s->db, dbGetFieldMeta, (uint32_t)s->table_id, &count);
+    db_dialog_opts_t opts = { .defaults = defaults };
+    if (s->filter_field > 0 && meta && s->filter_field < count) {
+      opts.fk_field = meta[s->filter_field].name;
+      opts.fk_value = (int)s->filter_value;
+    }
+    changed = show_db_dialog_opts(s->record_form, NULL, root, msg == tvEditRecord ? id : 0, &opts) != 0;
+  }
+  if (!changed) return false;
+  tv_refresh(win, s, (int)send_message(win, RVM_GETSELECTION, 0, NULL));
+  send_message(root, evCommand, MAKEDWORD(win->id, tvnChanged), win);
+  return true;
+}
+
+bool tableview_handle_activate(window_t *view) {
+  tableview_state_t *s = view && view->proc == win_tableview ? (tableview_state_t *)view->userdata : NULL;
+  return s && s->record_form && (send_message(view, tvEditRecord, 0, NULL), true);
 }
 
 static bool tv_selected_field(window_t *win, const char *field,

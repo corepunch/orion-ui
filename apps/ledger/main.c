@@ -31,7 +31,7 @@ static database_t *open_infobase(void) {
   snprintf(path, sizeof(path), "%s/infobase.xml", g_ledger->data_dir);
   bool fresh = !axPathExists(path);
   snprintf(demo, sizeof(demo), "%s/demo.xml", g_ledger->config_dir);
-  database_t *ib = create_database_with_schema("ib", "db_schema_xml", &ledger_ib_schema, fresh ? demo : path);
+  database_t *ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, fresh ? demo : path);
   if (!ib) return NULL;
   register_database("ib", ib);
   if (fresh) {
@@ -98,6 +98,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   svg_add_icons_dir(hinstance, path);
   register_commctl_classes();
   DB_CLASS(db_schema_xml);
+  DB_CLASS(ledger_ib);
 
   snprintf(path, sizeof(path), "%s/configurations/index.xml", share);
   g_ledger->catalog = create_database_with_schema("catalog", "db_schema_xml", &ledger_catalog_schema, path);

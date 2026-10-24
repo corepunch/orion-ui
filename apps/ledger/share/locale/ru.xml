@@ -143,26 +143,11 @@
   <string source="The new language applies the next time Ledger starts." where="select_language">Новый язык будет применен при следующем запуске.</string>
   <string source="Language:" where="select_language">Язык:</string>
   <string source="modified" where="code">изменено</string>
-  <string source="Add Line" where="code">Добавление строки</string>
-  <string source="Edit Line" where="code">Строка документа</string>
   <string source="New Document" where="code">Новый документ</string>
-  <string source="New Counterparty" where="code">Новый контрагент</string>
-  <string source="New Item" where="code">Новая номенклатура</string>
   <string source="Print Forms Written" where="code">Печатные формы сохранены</string>
   <string source="The configuration defines no print forms for this document type." where="code">Для этого вида документа в конфигурации нет печатных форм.</string>
   <string source="Delete the selected document and its entries?" where="code">Удалить выбранный документ и его проводки?</string>
   <string source="Delete Document" where="code">Удаление документа</string>
-  <string source="Delete the selected counterparty?" where="code">Удалить выбранного контрагента?</string>
-  <string source="This counterparty is used by %d document(s) and cannot be deleted." where="code">Контрагент используется в документах (%d) и не может быть удален.</string>
-  <string source="Delete the selected item?" where="code">Удалить выбранную номенклатуру?</string>
-  <string source="This item is used by %d document line(s) and cannot be deleted." where="code">Номенклатура используется в строках документов (%d) и не может быть удалена.</string>
-  <string source="The selected configuration opens with its own infobase&#10;the next time Ledger starts." where="code">Выбранная конфигурация откроется со своей
-информационной базой при следующем запуске.</string>
-  <string source="Ledger 1.0&#10;&#10;Double-entry bookkeeping on Orion.&#10;National rules, accounts and legal forms come from&#10;the active configuration." where="code">Бухгалтерия 1.0
-
-Бухгалтерский учет методом двойной записи на Orion.
-Национальные правила, план счетов и формы документов
-задает текущая конфигурация.</string>
   <string source="New Manual Operation..." where="menu">Новая операция...</string>
   <string source="Report Settings..." where="menu">Настройка отчетов...</string>
   <string source="Operation" where="journal_page">Операция</string>
@@ -200,7 +185,6 @@
   <string source="Beginning" where="report_settings">с начала учета</string>
   <string source="End" where="report_settings">по текущую дату</string>
   <string source="Report period: %s – %s" where="code">Период отчетов: %s – %s</string>
-  <string source="Add Entry" where="code">Новая проводка</string>
   <string source="New Manual Operation" where="code">Новая операция</string>
   <string source="Bank account:" where="counterparty,organization">Расчетный счет:</string>
   <string source="New Payroll Document..." where="menu">Начисление зарплаты...</string>
@@ -318,18 +302,15 @@
   <string source="Day total and closing balance" where="code">Итого за день, остаток на конец дня</string>
   <string source="The configuration defines no document type of this kind." where="code">В конфигурации нет видов документов этого типа.</string>
   <string source="The configuration defines no report forms." where="code">В конфигурации нет отчетных печатных форм.</string>
-  <string source="Delete the selected employee?" where="code">Удалить выбранного сотрудника?</string>
-  <string source="This employee is used by %d payroll line(s) and cannot be deleted." where="code">Сотрудник указан в строках ведомостей (%d) и не может быть удален.</string>
-  <string source="Delete the selected fixed asset?" where="code">Удалить выбранное основное средство?</string>
-  <string source="This fixed asset is used by %d document line(s) and cannot be deleted." where="code">Основное средство указано в строках документов (%d) и не может быть удалено.</string>
-  <string source="Delete the selected exchange rate?" where="code">Удалить выбранный курс валюты?</string>
   <string source="New Payroll Document" where="code">Новый документ по зарплате</string>
   <string source="Put Assets into Service" where="code">Ввод ОС в эксплуатацию</string>
-  <string source="Add Asset" where="code">Добавить основное средство</string>
-  <string source="New Employee" where="code">Новый сотрудник</string>
-  <string source="New Fixed Asset" where="code">Новое основное средство</string>
-  <string source="New Currency" where="code">Новая валюта</string>
-  <string source="New Exchange Rate" where="code">Новый курс валюты</string>
+  <string source="The selected configuration opens with its own infobase&#10;the next time Ledger starts." where="code">Выбранная конфигурация откроется со своей
+информационной базой при следующем запуске.</string>
+  <string source="Ledger 1.0&#10;&#10;Double-entry bookkeeping on Orion.&#10;National rules, accounts and legal forms come from&#10;the active configuration." where="code">Бухгалтерия 1.0
+
+Бухгалтерский учет методом двойной записи на Orion.
+Национальные правила, план счетов и формы документов
+задает текущая конфигурация.</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>

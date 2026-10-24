@@ -117,8 +117,8 @@ Print templates are HTML files filled from the document:
 
 Almost everything is declared in `ledger.orion`:
 
-- Three `db_schema_xml` databases — `cfg` (configuration), `ib` (infobase) and
-  `catalog` (installed configurations). The schema-driven class needs no
+- Three schema databases — `cfg` (configuration), `catalog` (installed
+  configurations) and `ib` (infobase, class `ledger_ib`). The schema-driven class needs no
   adaptor code: CRUD, filtering, persistence and join paths such as
   `item.unit.name` come from the generated schema. Relations may cross
   databases (`relation="cfg.accounts.id"`).
@@ -137,9 +137,18 @@ Almost everything is declared in `ledger.orion`:
   `.orion` declares their columns, they are never saved. The two VAT books are
   one table shown by two TableViews with different static filters.
 
+- Records live like EOF enterprise objects: `default=` values, `on-delete`
+  rules (a document takes its lines and entries along; a counterparty in use
+  cannot be deleted), document dialogs that are editing contexts (Cancel
+  undoes the new document and its lines), and detail tables with `form=` and
+  declarative Add / Edit / Delete buttons.
+- The `ledger_ib` datasource (`ledger_ib.c`) subclasses `db_schema_xml`:
+  it numbers documents and recalculates them whenever they or their lines
+  change, so no dialog has to.
+
 The C code holds what declarations cannot express: posting rules and report
-building (`posting.c`), the print engine (`print.c`), and command routing plus
-the line and entry buttons of the document dialogs (`controller.c`).
+building (`posting.c`), the datasource rules (`ledger_ib.c`), the print engine
+(`print.c`), and command routing plus the payroll Fill button (`controller.c`).
 Configuration data drives all of it: taxes, closing steps, analytics kinds
 and print forms are rows, not code.
 

@@ -274,6 +274,8 @@ typedef struct form_ctrl_def_s {
   int               context_menu_count;
   const char       *source; // optional datasource reference, e.g. "library.blocks"
   const char       *placeholder; // cue text for empty edit controls
+  uint32_t          target;  // Button: control receiving target_message when clicked (0 = none)
+  uint32_t          target_message; // e.g. tvInsertRecord for <Button target="lines" action="insert">
 } form_ctrl_def_t;
 
 // Describes a complete form (window + children) as a serializable definition
@@ -843,18 +845,34 @@ uint32_t show_db_dialog(form_def_t const *def, const char *title,
 // unhandled messages to hook, e.g. buttons managing a detail table.
 uint32_t show_db_dialog_hook(form_def_t const *def, const char *title,
                              window_t *parent, int record_id, winproc_t hook);
+// Sends a clicked control's declared target message (target= / action=) to
+// its target; returns true when the control declares one. Database dialogs
+// call it for every button; other form windows may call it from their proc.
+bool form_dispatch_target_action(window_t *root, const form_def_t *def, window_t *control);
+
 // Record id edited by the database dialog containing win (0 when new).
 int db_dialog_record_id(window_t *win);
 // The record buffer the dialog edits: controls are pushed from it on open and
 // pulled into it on OK. Hooks may read or prefill it.
 void *db_dialog_record(window_t *win);
 
-// All options of a database dialog: a foreign key preset on new records and a
-// hook receiving evCreate and the messages the dialog does not handle.
+// All options of a database dialog: a foreign key preset on new records,
+// other defaults as "field=value;field=value" (EODisplayGroup's inserted
+// object default values), a hook receiving evCreate and the messages the
+// dialog does not handle, and where to store the saved record's id.
+//
+// When the database supports change scopes (dbBeginChanges), the dialog is an
+// editing context: a new record is inserted when the dialog opens, so detail
+// tables can refer to it; OK keeps every change made while it was open,
+// including those of nested dialogs, and Cancel reverts them all. A detail
+// TableView's tvnChanged refreshes the fields the database changed meanwhile
+// (totals recomputed by the adaptor).
 typedef struct {
   const char *fk_field;
   int         fk_value;
   winproc_t   hook;
+  const char *defaults;
+  int        *saved_id;
 } db_dialog_opts_t;
 uint32_t show_db_dialog_opts(form_def_t const *def, const char *title, window_t *parent,
                              int record_id, const db_dialog_opts_t *opts);

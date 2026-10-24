@@ -38,6 +38,8 @@ bool rv_valid_index(const reportview_data_t *data, int index) {
 void rv_notify(window_t *win, reportview_data_t *data, int index, uint16_t code) {
   if (!rv_valid_index(data, index))
     return;
+  if (code == RVN_DBLCLK && tableview_handle_activate(win))
+    return;
   window_t *target = get_root_window(win);
   if (win->parent && win->parent->proc == win_column_browser)
     target = win->parent;
