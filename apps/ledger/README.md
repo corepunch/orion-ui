@@ -42,14 +42,15 @@ the reports; `Reports > Print Report Forms` writes the cash book.
 
 Ledger is built for people who keep books in 1C all day, so it looks the way
 they expect. It uses the Amber theme (`THEME_ledger=amber`, the default here):
-white tables and fields, warm grey chrome, a graphite caption that names the
-organization, and pale yellow for the current row, the current section and
-the default button (`OK and Post`).
+white tables and fields, warm grey chrome, graphite dialog captions, and pale
+yellow for the current row, the current section and the default button
+(`OK and Post`).
 
 - **Section panel.** Every section has an icon and a caption (`labels="right"`
   on the ActivityBar, `label=` on each page).
-- **Captioned commands.** Toolbar buttons carry captions under their icons
-  (`toolbar-style="labels"`).
+- **Unified title bar.** The toolbar's icon buttons share one row with the
+  window controls (`flags="toolbar,titletoolbar"`), as in a macOS window, so
+  the tables start right under it. Tooltips name each command.
 - **Status icons.** Posted documents show a green seal and drafts a dashed
   sheet. Catalogs, the chart of accounts and the entry journal have their
   own row icons, and an asset not yet in service shows a clock (`<RowIcon>`).
