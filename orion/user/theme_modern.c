@@ -423,7 +423,8 @@ static theme_t g_modern_theme = {
     .corner_radius = 6, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,
     .shadow = { .size = 10, .blur = 2, .offset = {0, 3} },
   },
-  .field = { .corner_radius = CORNER_RADIUS_CIRCULAR, .multiline_corner_radius = (CONTROL_HEIGHT_REGULAR + 1) / 2 },
+  .field = { .corner_radius = CORNER_RADIUS_CIRCULAR, .multiline_corner_radius = (CONTROL_HEIGHT_REGULAR + 1) / 2,
+             .padding_x = TEXTEDIT_PADDING_CAPSULE },
   .control = { .padding = BUTTON_PADDING, .press_icon_offset = 0, .size_pct = { 100, 84, 71, 133 } },
   .button = { .corner_radius = CORNER_RADIUS_CIRCULAR },
   .window = {
@@ -477,6 +478,7 @@ theme_t *theme_amber_instance(void) {
   theme->button.corner_radius = 4;
   theme->field.corner_radius = 3;
   theme->field.multiline_corner_radius = 3;
+  theme->field.padding_x = FIELD_PADDING_X(theme->field.corner_radius);
   theme->tab.corner_radius = 4;
   theme->card.corner_radius = 5;
   theme->window.corner_radius = 6;

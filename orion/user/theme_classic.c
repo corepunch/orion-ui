@@ -358,6 +358,7 @@ static theme_t g_classic_theme = {
   },
   .control = { .padding = BUTTON_PADDING, .press_icon_offset = 1, .size_pct = { 100, 84, 71, 133 } },
   .button = { .corner_radius = 0 },
+  .field = { .padding_x = TEXTEDIT_PADDING_CAPSULE },  // bevelled, unchanged
   .window = { .corner_radius = 0 },
   .card = {
     .corner_radius = 0, .edge_width = 4, .ring_width = 1, .highlight_width = 0, .shadow_size = 1,
