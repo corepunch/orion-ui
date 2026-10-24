@@ -29,4 +29,7 @@
   <string source="Split Right (Alt: Split Down)">Разделить вправо (Alt: вниз)</string>
   <string source="Split Down (release Alt: Split Right)">Разделить вниз (отпустите Alt: вправо)</string>
   <string source="Close active tab">Закрыть вкладку</string>
+  <string source="Delete">Удалить</string>
+  <string source="Delete the selected record?">Удалить выбранную запись?</string>
+  <string source="This record is used by %d other record(s) and cannot be deleted.">На запись ссылаются другие записи (%d), ее нельзя удалить.</string>
 </strings>

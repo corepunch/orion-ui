@@ -437,14 +437,6 @@ void ledger_unpost(database_t *ib, database_t *cfg, int doc_id) {
   send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, doc);
 }
 
-void ledger_delete_document(database_t *ib, int doc_id) {
-  delete_entries(ib, doc_id);
-  delete_rows(ib, TABLE_DOC_LINES, doc_id);
-  delete_rows(ib, TABLE_PAYROLL_LINES, doc_id);
-  delete_rows(ib, TABLE_ASSET_LINES, doc_id);
-  send_db_message(ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)doc_id);
-}
-
 // Numbers follow the configuration's prefix per document type: ПТ-0001, ...
 void ledger_number_document(database_t *ib, database_t *cfg, int doc_id) {
   db_document_t *doc = find(ib, TABLE_DOCUMENTS, doc_id);

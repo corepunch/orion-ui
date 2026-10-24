@@ -180,28 +180,12 @@
   <string source="Beginning" where="report_settings">Beginn der Buchführung</string>
   <string source="End" where="report_settings">heute</string>
   <string source="modified" where="code">geändert</string>
-  <string source="Add Line" where="code">Position hinzufügen</string>
-  <string source="Edit Line" where="code">Position bearbeiten</string>
   <string source="New Document" where="code">Neuer Beleg</string>
-  <string source="New Counterparty" where="code">Neuer Geschäftspartner</string>
-  <string source="New Item" where="code">Neuer Artikel</string>
   <string source="Print Forms Written" where="code">Druckformulare gespeichert</string>
   <string source="The configuration defines no print forms for this document type." where="code">Die Konfiguration enthält für diese Belegart keine Druckformulare.</string>
   <string source="Delete the selected document and its entries?" where="code">Den gewählten Beleg und seine Buchungen löschen?</string>
   <string source="Delete Document" where="code">Beleg löschen</string>
-  <string source="Delete the selected counterparty?" where="code">Den gewählten Geschäftspartner löschen?</string>
-  <string source="This counterparty is used by %d document(s) and cannot be deleted." where="code">Der Geschäftspartner wird in %d Beleg(en) verwendet und kann nicht gelöscht werden.</string>
-  <string source="Delete the selected item?" where="code">Den gewählten Artikel löschen?</string>
-  <string source="This item is used by %d document line(s) and cannot be deleted." where="code">Der Artikel wird in %d Belegposition(en) verwendet und kann nicht gelöscht werden.</string>
-  <string source="The selected configuration opens with its own infobase&#10;the next time Ledger starts." where="code">Die gewählte Konfiguration wird beim nächsten Start
-mit ihrem eigenen Mandanten geöffnet.</string>
-  <string source="Ledger 1.0&#10;&#10;Double-entry bookkeeping on Orion.&#10;National rules, accounts and legal forms come from&#10;the active configuration." where="code">Ledger 1.0
-
-Doppelte Buchführung mit Orion.
-Länderspezifische Regeln, Konten und Formulare
-stammen aus der aktiven Konfiguration.</string>
   <string source="Report period: %s – %s" where="code">Zeitraum: %s – %s</string>
-  <string source="Add Entry" where="code">Neue Buchung</string>
   <string source="New Manual Operation" where="code">Neue Umbuchung</string>
   <string source="New Payroll Document..." where="menu">Neue Lohnabrechnung...</string>
   <string source="Put Assets into Service..." where="menu">Anlagenzugang...</string>
@@ -318,18 +302,15 @@ stammen aus der aktiven Konfiguration.</string>
   <string source="Day total and closing balance" where="code">Tagessumme und Endbestand</string>
   <string source="The configuration defines no document type of this kind." where="code">Die Konfiguration enthält keine Belegart dieser Art.</string>
   <string source="The configuration defines no report forms." where="code">Die Konfiguration enthält keine Berichtsformulare.</string>
-  <string source="Delete the selected employee?" where="code">Den gewählten Mitarbeiter löschen?</string>
-  <string source="This employee is used by %d payroll line(s) and cannot be deleted." where="code">Der Mitarbeiter steht in %d Lohnzeile(n) und kann nicht gelöscht werden.</string>
-  <string source="Delete the selected fixed asset?" where="code">Das gewählte Anlagegut löschen?</string>
-  <string source="This fixed asset is used by %d document line(s) and cannot be deleted." where="code">Das Anlagegut steht in %d Belegzeile(n) und kann nicht gelöscht werden.</string>
-  <string source="Delete the selected exchange rate?" where="code">Den gewählten Wechselkurs löschen?</string>
   <string source="New Payroll Document" where="code">Neuer Lohnbeleg</string>
   <string source="Put Assets into Service" where="code">Anlagenzugang</string>
-  <string source="Add Asset" where="code">Anlagegut hinzufügen</string>
-  <string source="New Employee" where="code">Neuer Mitarbeiter</string>
-  <string source="New Fixed Asset" where="code">Neues Anlagegut</string>
-  <string source="New Currency" where="code">Neue Währung</string>
-  <string source="New Exchange Rate" where="code">Neuer Wechselkurs</string>
+  <string source="The selected configuration opens with its own infobase&#10;the next time Ledger starts." where="code">Die gewählte Konfiguration wird beim nächsten Start
+mit ihrem eigenen Mandanten geöffnet.</string>
+  <string source="Ledger 1.0&#10;&#10;Double-entry bookkeeping on Orion.&#10;National rules, accounts and legal forms come from&#10;the active configuration." where="code">Ledger 1.0
+
+Doppelte Buchführung mit Orion.
+Länderspezifische Regeln, Konten und Formulare
+stammen aus der aktiven Konfiguration.</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

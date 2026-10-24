@@ -43,7 +43,6 @@ const char *ledger_subconto_table(database_t *cfg, int account_id);
 void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id);
 bool ledger_post(database_t *ib, database_t *cfg, int doc_id);
 void ledger_unpost(database_t *ib, database_t *cfg, int doc_id);
-void ledger_delete_document(database_t *ib, int doc_id);
 void ledger_number_document(database_t *ib, database_t *cfg, int doc_id);
 void ledger_repost_all(database_t *ib, database_t *cfg);
 // Fills a payroll document: salaries for an accrual, what is owed for a payout.
@@ -52,6 +51,9 @@ void ledger_fill_payroll(database_t *ib, database_t *cfg, int doc_id);
 void ledger_build_reports(database_t *ib, database_t *cfg);
 db_report_setting_t *ledger_report_settings(database_t *ib, database_t *cfg);
 int  ledger_count_references(database_t *ib, int table_id, const char *field, int id);
+
+// ledger_ib.c — the infobase datasource class (db_schema_xml with Ledger's rules).
+lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam);
 
 // print.c — fills the configuration's HTML print-form templates.
 int  ledger_print_document(int doc_id, char *report, size_t report_sz);

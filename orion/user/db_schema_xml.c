@@ -15,6 +15,14 @@
 // Tables declared transient="true" hold derived data (report results): they
 // are never written and changing them does not mark the database dirty.
 //
+// The record lifecycle follows NeXTSTEP DBKit and EOF:
+//   dbInitRecord      fills a new record with the schema's default="" values
+//   dbDelete          applies the referring fields' on-delete rules: cascade,
+//                     nullify or deny (dbCountReferrers counts the denials)
+//   dbBeginChanges    nested change scopes, like editing contexts: commit
+//   dbCommitChanges   keeps a scope's changes, revert restores every record
+//   dbRevertChanges   as it was, keeping the pointers of surviving records
+//
 // File format (same shape as SimpleXMLDatabase seeds):
 //   <db><accounts><account id="1" code="01" .../></accounts>...</db>
 
@@ -32,8 +40,21 @@ typedef struct {
   int count, capacity, next_id;
 } dbs_table_t;
 
+// A change scope's snapshot of the stored tables.
+typedef struct {
+  void **copies;
+  int count, next_id;
+} dbs_snapshot_t;
+
+typedef struct dbs_scope_s {
+  dbs_snapshot_t *tables;  // parallel to db->schema->tables; transient ones empty
+  bool dirty;
+  struct dbs_scope_s *outer;
+} dbs_scope_t;
+
 typedef struct {
   dbs_table_t *tables;  // parallel to db->schema->tables
+  dbs_scope_t *scope;   // innermost open change scope
 } dbs_context_t;
 
 static int dbs_table_index(database_t *db, int table_id) {
@@ -100,7 +121,7 @@ static void *dbs_append(database_t *db, const db_table_schema_t *t, dbs_table_t 
 
 static int dbs_find_row(const db_table_schema_t *t, dbs_table_t *rows, int id) {
   for (int i = 0; i < rows->count; i++)
-    if (dbs_key(t, rows->rows[i]) == id) return i;
+    if (rows->rows[i] && dbs_key(t, rows->rows[i]) == id) return i;  // a revert in progress leaves gaps
   return -1;
 }
 
@@ -183,6 +204,199 @@ static bool dbs_save(database_t *db, dbs_context_t *ctx) {
   return true;
 }
 
+// ── Defaults and delete rules ──────────────────────────────────────────────
+
+static void dbs_init_record(const db_table_schema_t *t, void *record) {
+  memset(record, 0, t->record_size);
+  for (int i = 0; i < t->field_count; i++) {
+    const char *value = t->fields[i].default_value;
+    int f = db_schema_field_index(t, t->fields[i].name);
+    if (value && value[0] && f >= 0) db_parse_field(&t->meta[f], record, value);
+  }
+}
+
+// Whether a relation ("documents", "ib.documents") names table t of db.
+static bool dbs_relation_to(database_t *db, const char *relation, const db_table_schema_t *t) {
+  if (!relation || relation[0] == '{') return false;  // polymorphic relations carry no rule
+  const char *dot = strchr(relation, '.');
+  if (dot) {
+    size_t n = (size_t)(dot - relation);
+    if (strlen(db->name) != n || strncmp(db->name, relation, n)) return false;
+    relation = dot + 1;
+  }
+  return !strcmp(relation, t->name);
+}
+
+typedef bool (*dbs_referrer_fn)(database_t *db, dbs_context_t *ctx, int ti, int field, void *record, void *user);
+
+// Calls fn for each record of this database whose relation field refers to
+// record id of table t and whose delete rule is rule.
+static void dbs_each_referrer(database_t *db, dbs_context_t *ctx, const db_table_schema_t *t, int id,
+                              db_delete_rule_t rule, dbs_referrer_fn fn, void *user) {
+  for (int ti = 0; ti < db->schema->table_count; ti++) {
+    const db_table_schema_t *r = &db->schema->tables[ti];
+    for (int i = 0; i < r->field_count; i++) {
+      if (r->fields[i].delete_rule != rule || !dbs_relation_to(db, r->fields[i].relation_table, t)) continue;
+      int f = db_schema_field_index(r, r->fields[i].name);
+      if (f < 0 || r->meta[f].type != DB_TYPE_INT) continue;
+      for (int row = 0; row < ctx->tables[ti].count; row++) {
+        void *record = ctx->tables[ti].rows[row];
+        if (*(int *)((char *)record + r->meta[f].offset) == id && !fn(db, ctx, ti, f, record, user)) return;
+      }
+    }
+  }
+}
+
+static bool dbs_count(database_t *db, dbs_context_t *ctx, int ti, int field, void *record, void *user) {
+  (void)db; (void)ctx; (void)ti; (void)field; (void)record;
+  (*(int *)user)++;
+  return true;
+}
+
+static bool dbs_nullify(database_t *db, dbs_context_t *ctx, int ti, int field, void *record, void *user) {
+  (void)ctx; (void)user;
+  *(int *)((char *)record + db->schema->tables[ti].meta[field].offset) = 0;
+  db->dirty |= !db->schema->tables[ti].transient;
+  return true;
+}
+
+typedef struct { int table_id[64], id[64], count; } dbs_cascade_t;
+
+static bool dbs_collect(database_t *db, dbs_context_t *ctx, int ti, int field, void *record, void *user) {
+  (void)ctx; (void)field;
+  dbs_cascade_t *c = user;
+  if (c->count >= (int)(sizeof(c->id) / sizeof(c->id[0]))) return false;
+  c->table_id[c->count] = db->schema->tables[ti].table_id;
+  c->id[c->count++] = dbs_key(&db->schema->tables[ti], record);
+  return true;
+}
+
+static int dbs_count_referrers(database_t *db, dbs_context_t *ctx, const db_table_schema_t *t, int id) {
+  int count = 0;
+  dbs_each_referrer(db, ctx, t, id, DB_DELETE_DENY, dbs_count, &count);
+  return count;
+}
+
+static bool dbs_delete(database_t *db, dbs_context_t *ctx, int ti, int id) {
+  const db_table_schema_t *t = &db->schema->tables[ti];
+  dbs_table_t *rows = &ctx->tables[ti];
+  int row = dbs_find_row(t, rows, id);
+  if (row < 0) return false;
+  int denied = dbs_count_referrers(db, ctx, t, id);
+  if (denied) {
+    fprintf(stderr, "[db_schema_xml] delete denied db=%s table=%s id=%d: %d record(s) refer to it\n",
+            db->name, t->name, id, denied);
+    fflush(stderr);
+    return false;
+  }
+  // Cascades go through the database proc, so a subclassing adaptor sees them.
+  dbs_cascade_t cascade = { .count = 0 };
+  do {
+    cascade.count = 0;
+    dbs_each_referrer(db, ctx, t, id, DB_DELETE_CASCADE, dbs_collect, &cascade);
+    for (int i = 0; i < cascade.count; i++)
+      if (!send_db_message(db, dbDelete, (uint32_t)cascade.table_id[i], (void *)(intptr_t)cascade.id[i])) return false;
+  } while (cascade.count == (int)(sizeof(cascade.id) / sizeof(cascade.id[0])));
+  dbs_each_referrer(db, ctx, t, id, DB_DELETE_NULLIFY, dbs_nullify, NULL);
+  row = dbs_find_row(t, rows, id);
+  if (row < 0) return true;
+  free(rows->rows[row]);
+  memmove(&rows->rows[row], &rows->rows[row + 1], (size_t)(rows->count - row - 1) * sizeof(void *));
+  rows->count--;
+  db->dirty |= !t->transient;
+  return true;
+}
+
+// ── Change scopes ──────────────────────────────────────────────────────────
+
+static void dbs_free_scope(database_t *db, dbs_scope_t *scope) {
+  for (int i = 0; i < db->schema->table_count; i++) {
+    for (int r = 0; r < scope->tables[i].count; r++) free(scope->tables[i].copies[r]);
+    free(scope->tables[i].copies);
+  }
+  free(scope->tables);
+  free(scope);
+}
+
+static bool dbs_begin(database_t *db, dbs_context_t *ctx) {
+  dbs_scope_t *scope = calloc(1, sizeof(*scope));
+  if (scope) scope->tables = calloc((size_t)db->schema->table_count, sizeof(dbs_snapshot_t));
+  if (!scope || !scope->tables) {
+    fprintf(stderr, "[db_schema_xml] change scope allocation failed db=%s\n", db->name);
+    free(scope);
+    return false;
+  }
+  for (int i = 0; i < db->schema->table_count; i++) {
+    const db_table_schema_t *t = &db->schema->tables[i];
+    dbs_table_t *rows = &ctx->tables[i];
+    dbs_snapshot_t *snap = &scope->tables[i];
+    snap->next_id = rows->next_id;
+    if (t->transient || !rows->count) continue;
+    snap->copies = malloc((size_t)rows->count * sizeof(void *));
+    for (int r = 0; snap->copies && r < rows->count; r++) {
+      void *copy = malloc(t->record_size);
+      if (!copy) break;
+      memcpy(copy, rows->rows[r], t->record_size);
+      snap->copies[snap->count++] = copy;
+    }
+    if (snap->count != rows->count) {
+      fprintf(stderr, "[db_schema_xml] change scope snapshot failed db=%s table=%s\n", db->name, t->name);
+      dbs_free_scope(db, scope);
+      return false;
+    }
+  }
+  scope->dirty = db->dirty;
+  scope->outer = ctx->scope;
+  ctx->scope = scope;
+  return true;
+}
+
+// Restores each stored table to the snapshot; records that survive keep
+// their addresses, so pointers held by views and callers stay valid.
+static void dbs_restore(database_t *db, dbs_context_t *ctx, dbs_scope_t *scope) {
+  for (int i = 0; i < db->schema->table_count; i++) {
+    const db_table_schema_t *t = &db->schema->tables[i];
+    if (t->transient) continue;
+    dbs_table_t *rows = &ctx->tables[i];
+    dbs_snapshot_t *snap = &scope->tables[i];
+    void **restored = snap->count ? malloc((size_t)snap->count * sizeof(void *)) : NULL;
+    if (snap->count && !restored) {
+      fprintf(stderr, "[db_schema_xml] revert failed db=%s table=%s\n", db->name, t->name);
+      continue;
+    }
+    for (int r = 0; r < snap->count; r++) {
+      int row = dbs_key_index(t) >= 0 ? dbs_find_row(t, rows, dbs_key(t, snap->copies[r])) : -1;
+      if (row >= 0) {
+        restored[r] = rows->rows[row];
+        rows->rows[row] = NULL;
+        memcpy(restored[r], snap->copies[r], t->record_size);
+      } else {
+        restored[r] = snap->copies[r];  // deleted in the scope: the copy comes back
+        snap->copies[r] = NULL;
+      }
+    }
+    for (int r = 0; r < rows->count; r++) free(rows->rows[r]);  // inserted in the scope
+    free(rows->rows);
+    rows->rows = restored;
+    rows->count = rows->capacity = snap->count;
+    rows->next_id = snap->next_id;
+  }
+  db->dirty = scope->dirty;
+}
+
+static bool dbs_end(database_t *db, dbs_context_t *ctx, bool revert) {
+  dbs_scope_t *scope = ctx->scope;
+  if (!scope) {
+    fprintf(stderr, "[db_schema_xml] %s without an open change scope db=%s\n", revert ? "revert" : "commit", db->name);
+    fflush(stderr);
+    return false;
+  }
+  if (revert) dbs_restore(db, ctx, scope);
+  ctx->scope = scope->outer;
+  dbs_free_scope(db, scope);
+  return true;
+}
+
 static lresult_t dbs_fetch(database_t *db, dbs_context_t *ctx, int ti, int field, const void *value) {
   const db_table_schema_t *t = &db->schema->tables[ti];
   if (field < 0 || field >= t->meta_count) {
@@ -229,7 +443,7 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
   int ti = -1;
   switch (msg) {
     case dbInsert: case dbUpdate: case dbDelete: case dbFetch: case dbFind:
-    case dbGetFieldMeta: case dbGetFieldText:
+    case dbGetFieldMeta: case dbGetFieldText: case dbInitRecord: case dbCountReferrers:
       if ((ti = dbs_table_index(db, LOWORD(wparam))) < 0) return 0;
       break;
   }
@@ -237,6 +451,7 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
 
   switch (msg) {
     case dbDestroy:
+      while (ctx->scope) dbs_end(db, ctx, false);
       dbs_clear(db, ctx);
       free(ctx->tables);
       free(ctx);
@@ -265,16 +480,12 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
       db->dirty |= !t->transient;
       return 1;
     }
-    case dbDelete: {
-      dbs_table_t *rows = &ctx->tables[ti];
-      int row = dbs_find_row(t, rows, (int)(intptr_t)lparam);
-      if (row < 0) return 0;
-      free(rows->rows[row]);
-      memmove(&rows->rows[row], &rows->rows[row + 1], (size_t)(rows->count - row - 1) * sizeof(void *));
-      rows->count--;
-      db->dirty |= !t->transient;
-      return 1;
-    }
+    case dbDelete:         return dbs_delete(db, ctx, ti, (int)(intptr_t)lparam);
+    case dbCountReferrers: return dbs_count_referrers(db, ctx, t, (int)(intptr_t)lparam);
+    case dbInitRecord:     if (lparam) dbs_init_record(t, lparam); return lparam != NULL;
+    case dbBeginChanges:   return dbs_begin(db, ctx);
+    case dbCommitChanges:  return dbs_end(db, ctx, false);
+    case dbRevertChanges:  return dbs_end(db, ctx, true);
     case dbFetch: return dbs_fetch(db, ctx, ti, HIWORD(wparam), lparam);
     case dbFind: {
       int field = HIWORD(wparam) ? HIWORD(wparam) : dbs_key_index(t);

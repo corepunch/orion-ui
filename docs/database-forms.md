@@ -1030,6 +1030,70 @@ db_dialog_opts_t opts = { .fk_field = "document_id", .fk_value = doc_id, .hook =
 show_db_dialog_opts(&ledger_entry_form, "Add Entry", parent, 0, &opts);
 ```
 
+## Record Lifecycle (DBKit and EOF)
+
+NeXTSTEP's DBKit and its successor EOF (Enterprise Objects Framework) kept
+the life of a record in the model and the data source, not in each window:
+new objects got their defaults on insertion, relationships carried delete
+rules, an editing context collected changes until it saved or reverted them,
+and a display group over a detail data source inserted rows already linked
+to their master. Orion's schema databases work the same way.
+
+| EOF | Orion |
+|---|---|
+| `awakeFromInsertion`, attribute defaults | `default="today"` / `default="1"` on a `<field>`; `dbInitRecord` fills a new record |
+| Relationship delete rule (cascade, nullify, deny) | `on-delete="cascade|nullify|deny"` on the referring field; `dbDelete` applies it, `dbCountReferrers` counts the denials |
+| `EOEditingContext` save / revert, nested contexts | `dbBeginChanges`, `dbCommitChanges`, `dbRevertChanges`; every database dialog is one |
+| `EODisplayGroup` insert / delete, `insertedObjectDefaultValues` | `tvInsertRecord`, `tvEditRecord`, `tvDeleteRecord` on a TableView with `form=` |
+| `EODetailDataSource` | a TableView inside a database dialog shows the edited record's rows; new rows take its key |
+| Enterprise object business logic | a database class that subclasses `db_schema_xml` |
+
+```xml
+<table name="doc_lines">
+  <field name="document_id" type="integer" relation="documents.id" on-delete="cascade" />
+  <field name="item_id" type="integer" relation="items.id" on-delete="deny" />
+  <field name="quantity" type="double" default="1" />
+</table>
+
+<form name="document" ...>                       <!-- bound to ib.documents -->
+  <TableView name="lines" source="ib.doc_lines" form="doc_line" />
+  <Button name="add_line" text="Add Line..." target="lines" action="insert" />
+  <Button name="edit_line" text="Edit Line..." target="lines" action="edit" />
+  <Button name="delete_line" text="Delete Line" target="lines" action="delete" />
+</form>
+```
+
+The document dialog needs no code: `lines` follows the document being
+edited, Add Line opens `doc_line` for a new row whose `document_id` is that
+document, and double-clicking a row edits it. When the database supports
+change scopes, a dialog for a new record inserts it when it opens, so its
+lines can refer to it; OK keeps every change made meanwhile (nested dialogs
+included) and Cancel reverts them all. After a detail table changes, the
+dialog shows the fields the database recomputed, such as totals.
+
+Business rules live in the data source. Ledger's `ledger_ib` class numbers a
+document when it is inserted and recalculates it whenever it or one of its
+lines changes; everything else goes to `db_schema_xml`, the way a WinAPI
+window subclass passes messages on:
+
+```c
+lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam) {
+  lresult_t result = db_schema_xml(db, msg, wparam, lparam);
+  if (result && msg == dbInsert && LOWORD(wparam) == TABLE_DOC_LINES)
+    recalculate(db, ((const db_doc_line_t *)result)->document_id);
+  return result;
+}
+DB_CLASS(ledger_ib);   // <database name="ib" class="ledger_ib">
+```
+
+A caller creating a record supplies the rest of its defaults like EOF's
+inserted-object default values:
+
+```c
+db_dialog_opts_t opts = { .defaults = "doc_type_id=14;date=2003-03-31", .saved_id = &doc_id };
+show_db_dialog_opts(&ledger_closing_form, NULL, parent, 0, &opts);
+```
+
 ## Polymorphic Relations
 
 A relation may take its table from the record itself. The table segment is
@@ -1043,7 +1107,7 @@ then a path in braces, evaluated on the same record:
 `debit_subconto.name` shows the counterparty, item, employee or asset the
 entry's debit account is analysed by; a record whose path is empty shows
 nothing. This is the polymorphic association of ORMs (a type column plus an
-id) with the type looked up through ordinary joins. A ComboBox editing such a
-field changes its list with `cbSetSource` when the account changes (see
-[Controls](controls.md#combobox)).
+id) with the type looked up through ordinary joins. In a database dialog, a
+ComboBox bound to such a field lists the table the path names and follows
+every change of the account; it is disabled when the path names none.
 

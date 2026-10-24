@@ -226,8 +226,12 @@
       </table>
     </database>
 
-    <!-- Infobase: the organization's own data, one per configuration. -->
-    <database name="ib" class="db_schema_xml">
+    <!-- Infobase: the organization's own data, one per configuration. The
+         ledger_ib datasource (ledger_ib.c) adds Ledger's rules to the schema
+         class: numbering, recalculation of documents when they or their lines
+         change. default= fills new records; on-delete= says what deleting a
+         referenced record does: cascade, nullify or deny. -->
+    <database name="ib" class="ledger_ib">
       <table name="organizations">
         <field name="id" type="integer" key="YES" />
         <field name="name" type="string" length="160" />
@@ -269,7 +273,7 @@
         <field name="name" type="string" length="128" />
         <field name="position" type="string" length="96" />
         <field name="tax_id" type="string" length="16" />
-        <field name="hired" type="date" />
+        <field name="hired" type="date" default="today" />
         <field name="salary" type="double" />
         <field name="allowance" type="double" />
       </table>
@@ -283,7 +287,7 @@
         <field name="inventory" type="string" length="16" />
         <field name="name" type="string" length="160" />
         <field name="cost" type="double" />
-        <field name="life" type="integer" />
+        <field name="life" type="integer" default="36" />
         <field name="commissioned" type="date" />
       </table>
       <table name="currencies">
@@ -294,8 +298,8 @@
       <!-- Exchange rates: units of national currency per unit of currency. -->
       <table name="rates">
         <field name="id" type="integer" key="YES" />
-        <field name="currency_id" type="integer" relation="currencies.id" />
-        <field name="date" type="date" />
+        <field name="currency_id" type="integer" relation="currencies.id" on-delete="cascade" />
+        <field name="date" type="date" default="today" />
         <field name="rate" type="double" precision="4" />
       </table>
       <!-- Amounts are in the document's currency; posting converts them at
@@ -303,10 +307,10 @@
       <table name="documents">
         <field name="id" type="integer" key="YES" />
         <field name="doc_type_id" type="integer" relation="cfg.doc_types.id" />
-        <field name="counterparty_id" type="integer" relation="counterparties.id" />
-        <field name="currency_id" type="integer" relation="currencies.id" />
+        <field name="counterparty_id" type="integer" relation="counterparties.id" on-delete="deny" />
+        <field name="currency_id" type="integer" relation="currencies.id" on-delete="deny" />
         <field name="number" type="string" length="24" />
-        <field name="date" type="date" />
+        <field name="date" type="date" default="today" />
         <field name="comment" type="string" length="256" />
         <field name="rate" type="double" precision="4" />
         <field name="amount" type="double" />
@@ -316,10 +320,10 @@
       </table>
       <table name="doc_lines">
         <field name="id" type="integer" key="YES" />
-        <field name="document_id" type="integer" relation="documents.id" />
-        <field name="item_id" type="integer" relation="items.id" />
+        <field name="document_id" type="integer" relation="documents.id" on-delete="cascade" />
+        <field name="item_id" type="integer" relation="items.id" on-delete="deny" />
         <field name="vat_rate_id" type="integer" relation="cfg.vat_rates.id" />
-        <field name="quantity" type="double" precision="3" />
+        <field name="quantity" type="double" precision="3" default="1" />
         <field name="price" type="double" />
         <field name="amount" type="double" />
         <field name="vat" type="double" />
@@ -328,8 +332,8 @@
       <!-- amount: accrued pay, or the sum paid out by a payout document. -->
       <table name="payroll_lines">
         <field name="id" type="integer" key="YES" />
-        <field name="document_id" type="integer" relation="documents.id" />
-        <field name="employee_id" type="integer" relation="employees.id" />
+        <field name="document_id" type="integer" relation="documents.id" on-delete="cascade" />
+        <field name="employee_id" type="integer" relation="employees.id" on-delete="deny" />
         <field name="amount" type="double" />
         <field name="withheld" type="double" />
         <field name="contributions" type="double" />
@@ -337,15 +341,15 @@
       </table>
       <table name="asset_lines">
         <field name="id" type="integer" key="YES" />
-        <field name="document_id" type="integer" relation="documents.id" />
-        <field name="asset_id" type="integer" relation="assets.id" />
+        <field name="document_id" type="integer" relation="documents.id" on-delete="cascade" />
+        <field name="asset_id" type="integer" relation="assets.id" on-delete="deny" />
         <field name="amount" type="double" />
       </table>
       <!-- Each side keeps the analytics its account asks for: the subconto's
            table comes from the account's subconto kind. -->
       <table name="entries">
         <field name="id" type="integer" key="YES" />
-        <field name="document_id" type="integer" relation="documents.id" />
+        <field name="document_id" type="integer" relation="documents.id" on-delete="cascade" />
         <field name="debit_id" type="integer" relation="cfg.accounts.id" />
         <field name="credit_id" type="integer" relation="cfg.accounts.id" />
         <field name="debit_subconto_id" type="integer" relation="ib.{debit.subconto_kind.table}.id" />
@@ -521,7 +525,7 @@
         <spacer />
         <Button command="catalog.delete_counterparty" icon="ledger-delete" text="Delete" tooltip="Delete counterparty" />
       </Toolbar>
-      <TableView name="counterparties" source="ib.counterparties" flags="notitle,nofill,vscroll,flexspace">
+      <TableView name="counterparties" source="ib.counterparties" form="counterparty" flags="notitle,nofill,vscroll,flexspace">
         <Column field="name" title="Name" width="0" min-width="160" />
         <Column field="tax_id" title="Tax ID" width="100" />
         <Column field="kpp" title="KPP" width="84" />
@@ -539,7 +543,7 @@
         <spacer />
         <Button command="catalog.delete_item" icon="ledger-delete" text="Delete" tooltip="Delete item" />
       </Toolbar>
-      <TableView name="items" source="ib.items" flags="notitle,nofill,vscroll,flexspace">
+      <TableView name="items" source="ib.items" form="item" flags="notitle,nofill,vscroll,flexspace">
         <Column field="sku" title="Code" width="64" />
         <Column field="name" title="Name" width="0" min-width="160" />
         <Column field="unit.name" title="Unit" width="56" />
@@ -573,7 +577,7 @@
         <spacer />
         <Button command="catalog.delete_employee" icon="ledger-delete" text="Delete" tooltip="Delete employee" />
       </Toolbar>
-      <TableView name="employees" source="ib.employees" flags="notitle,nofill,vscroll,flexspace">
+      <TableView name="employees" source="ib.employees" form="employee" flags="notitle,nofill,vscroll,flexspace">
         <Column field="name" title="Name" width="0" min-width="160" />
         <Column field="position" title="Position" width="0" />
         <Column field="tax_id" title="Tax ID" width="100" />
@@ -595,7 +599,7 @@
         <spacer />
         <Button command="catalog.delete_asset" icon="ledger-delete" text="Delete" tooltip="Delete fixed asset" />
       </Toolbar>
-      <TableView name="assets" source="ib.assets" flags="notitle,nofill,vscroll,flexspace">
+      <TableView name="assets" source="ib.assets" form="asset" flags="notitle,nofill,vscroll,flexspace">
         <Column field="inventory" title="Inv. No." width="64" />
         <Column field="name" title="Name" width="0" min-width="160" />
         <Column field="account.code" title="Account" width="56" />
@@ -620,11 +624,11 @@
       </Toolbar>
       <StackView name="currency_stack" spacing="0" flags="flexspace">
         <SplitView name="currency_split" orientation="horizontal" split-ratio="0.4" flags="flexspace">
-          <TableView name="currencies" source="ib.currencies" flags="notitle,nofill,vscroll,flexspace">
+          <TableView name="currencies" source="ib.currencies" form="currency" flags="notitle,nofill,vscroll,flexspace">
             <Column field="code" title="Code" width="56" />
             <Column field="name" title="Currency" width="0" />
           </TableView>
-          <TableView name="rates" source="ib.rates" flags="notitle,nofill,vscroll,flexspace">
+          <TableView name="rates" source="ib.rates" form="rate" flags="notitle,nofill,vscroll,flexspace">
             <Column field="date" title="Date" width="96" />
             <Column field="rate" title="Rate" width="0" />
           </TableView>
@@ -827,7 +831,7 @@
           <TextBox name="comment" field="ib.documents.comment" />
         </Column>
       </GridView>
-      <TableView name="lines" source="ib.doc_lines" flags="notitle,nofill,vscroll,flexspace">
+      <TableView name="lines" source="ib.doc_lines" form="doc_line" flags="notitle,nofill,vscroll,flexspace">
         <Column field="item.name" title="Item" width="0" min-width="120" />
         <Column field="item.unit.name" title="Unit" width="44" />
         <Column field="quantity" title="Qty" width="64" />
@@ -838,9 +842,9 @@
         <Column field="total" title="Total" width="80" />
       </TableView>
       <StackView name="line_actions" orientation="horizontal" spacing="4">
-        <Button name="add_line" text="Add Line..." />
-        <Button name="edit_line" text="Edit Line..." />
-        <Button name="delete_line" text="Delete Line" />
+        <Button name="add_line" text="Add Line..." target="lines" action="insert" />
+        <Button name="edit_line" text="Edit Line..." target="lines" action="edit" />
+        <Button name="delete_line" text="Delete Line" target="lines" action="delete" />
         <Space name="line_flex" />
       </StackView>
       <GridView name="totals" spacing="4">
@@ -1028,7 +1032,7 @@
           <TextBox name="comment" field="ib.documents.comment" />
         </Column>
       </GridView>
-      <TableView name="entries" source="ib.entries" flags="notitle,nofill,vscroll,flexspace">
+      <TableView name="entries" source="ib.entries" form="entry" flags="notitle,nofill,vscroll,flexspace">
         <Column field="debit.code" title="Dr" width="56" />
         <Column field="debit_subconto.name" title="Dr Analytics" width="0" />
         <Column field="credit.code" title="Cr" width="56" />
@@ -1038,9 +1042,9 @@
         <Column field="content" title="Content" width="0" />
       </TableView>
       <StackView name="entry_actions" orientation="horizontal" spacing="4">
-        <Button name="add_entry" text="Add Entry..." />
-        <Button name="edit_entry" text="Edit Entry..." />
-        <Button name="delete_entry" text="Delete Entry" />
+        <Button name="add_entry" text="Add Entry..." target="entries" action="insert" />
+        <Button name="edit_entry" text="Edit Entry..." target="entries" action="edit" />
+        <Button name="delete_entry" text="Delete Entry" target="entries" action="delete" />
         <Space name="entry_flex" />
       </StackView>
       <GridView name="totals" spacing="4">
@@ -1055,7 +1059,8 @@
       </StackView>
     </form>
 
-    <!-- The analytics boxes list the catalog the chosen account is analysed by. -->
+    <!-- The analytics boxes are bound to polymorphic relations: each lists
+         the catalog its account is analysed by. -->
     <form name="entry" title="Entry" width="400" spacing="6" padding="8">
       <GridView name="fields" spacing="4">
         <Column name="labels" width="auto">
@@ -1105,7 +1110,7 @@
           <TextBox name="comment" field="ib.documents.comment" />
         </Column>
       </GridView>
-      <TableView name="lines" source="ib.payroll_lines" flags="notitle,nofill,vscroll,flexspace">
+      <TableView name="lines" source="ib.payroll_lines" form="payroll_line" flags="notitle,nofill,vscroll,flexspace">
         <Column field="employee.name" title="Employee" width="0" min-width="140" />
         <Column field="employee.position" title="Position" width="0" />
         <Column field="amount" title="Amount" width="90" />
@@ -1115,9 +1120,9 @@
       </TableView>
       <StackView name="line_actions" orientation="horizontal" spacing="4">
         <Button name="fill" text="Fill" />
-        <Button name="add_line" text="Add Line..." />
-        <Button name="edit_line" text="Edit Line..." />
-        <Button name="delete_line" text="Delete Line" />
+        <Button name="add_line" text="Add Line..." target="lines" action="insert" />
+        <Button name="edit_line" text="Edit Line..." target="lines" action="edit" />
+        <Button name="delete_line" text="Delete Line" target="lines" action="delete" />
         <Space name="line_flex" />
       </StackView>
       <GridView name="totals" spacing="4">
@@ -1166,15 +1171,15 @@
           <TextBox name="comment" field="ib.documents.comment" />
         </Column>
       </GridView>
-      <TableView name="lines" source="ib.asset_lines" flags="notitle,nofill,vscroll,flexspace">
+      <TableView name="lines" source="ib.asset_lines" form="asset_line" flags="notitle,nofill,vscroll,flexspace">
         <Column field="asset.inventory" title="Inv. No." width="64" />
         <Column field="asset.name" title="Fixed Asset" width="0" min-width="160" />
         <Column field="asset.life" title="Life, months" width="84" />
         <Column field="amount" title="Cost" width="96" />
       </TableView>
       <StackView name="line_actions" orientation="horizontal" spacing="4">
-        <Button name="add_line" text="Add Asset..." />
-        <Button name="delete_line" text="Remove Asset" />
+        <Button name="add_line" text="Add Asset..." target="lines" action="insert" />
+        <Button name="delete_line" text="Remove Asset" target="lines" action="delete" />
         <Space name="line_flex" />
       </StackView>
       <Separator name="sep" />
