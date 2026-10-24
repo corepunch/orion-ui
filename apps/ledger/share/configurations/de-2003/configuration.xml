@@ -2,30 +2,45 @@
 <!-- Ledger configuration "Buchhaltung Deutschland 2003" (SKR 03). -->
 <cfg>
   <settings>
-    <setting id="1" code="de-2003" name="Buchhaltung Deutschland 2003 (SKR 03)" country="Deutschland" currency="EUR" language="de" tax_name="USt" tax_id_name="Steuernummer" version="1.0.2003" basis="Kontenrahmen SKR 03 (DATEV). Umsatzsteuer 16 % / 7 % (§ 12 UStG, Stand 2003; 19 % ab 01.01.2007). Rechnungsangaben nach § 14 UStG." />
+    <setting id="1" cash_account_id="4" payroll_account_id="23" currency_units="Euro" currency_gender="m" cents_units="Cent" cents_gender="m" code="de-2003" name="Buchhaltung Deutschland 2003 (SKR 03)" country="Deutschland" currency="EUR" language="de" tax_name="USt" tax_id_name="Steuernummer" version="1.0.2003" basis="Kontenrahmen SKR 03 (DATEV). Umsatzsteuer 16 % / 7 % (§ 12 UStG, Stand 2003; 19 % ab 01.01.2007). Rechnungsangaben nach § 14 UStG. Lohnsteuer vereinfacht als Pauschalsatz nach Grundfreibetrag; Sozialversicherung 2003 rund 42 % je zur Hälfte." />
   </settings>
+  <subconto_kinds>
+    <subconto_kind id="1" code="counterparty" name="Geschäftspartner" table="counterparties" />
+    <subconto_kind id="2" code="item" name="Artikel" table="items" />
+    <subconto_kind id="3" code="employee" name="Mitarbeiter" table="employees" />
+    <subconto_kind id="4" code="asset" name="Anlagegüter" table="assets" />
+  </subconto_kinds>
   <accounts>
-    <account id="1" code="0490" name="Sonstige Betriebs- und Geschäftsausstattung" kind="Aktiv" section="Klasse 0: Anlage- und Kapitalkonten" subconto="" />
-    <account id="2" code="0800" name="Gezeichnetes Kapital" kind="Passiv" section="Klasse 0: Anlage- und Kapitalkonten" subconto="" />
-    <account id="3" code="0860" name="Gewinnvortrag vor Verwendung" kind="Passiv" section="Klasse 0: Anlage- und Kapitalkonten" subconto="" />
-    <account id="4" code="1000" name="Kasse" kind="Aktiv" section="Klasse 1: Finanz- und Privatkonten" subconto="" />
-    <account id="5" code="1200" name="Bank" kind="Aktiv" section="Klasse 1: Finanz- und Privatkonten" subconto="" />
-    <account id="6" code="1400" name="Forderungen aus Lieferungen und Leistungen" kind="Aktiv" section="Klasse 1: Finanz- und Privatkonten" subconto="counterparty" />
-    <account id="7" code="1571" name="Abziehbare Vorsteuer 7 %" kind="Aktiv" section="Klasse 1: Finanz- und Privatkonten" subconto="" />
-    <account id="8" code="1575" name="Abziehbare Vorsteuer 16 %" kind="Aktiv" section="Klasse 1: Finanz- und Privatkonten" subconto="" />
-    <account id="9" code="1600" name="Verbindlichkeiten aus Lieferungen und Leistungen" kind="Passiv" section="Klasse 1: Finanz- und Privatkonten" subconto="counterparty" />
-    <account id="10" code="1771" name="Umsatzsteuer 7 %" kind="Passiv" section="Klasse 1: Finanz- und Privatkonten" subconto="" />
-    <account id="11" code="1775" name="Umsatzsteuer 16 %" kind="Passiv" section="Klasse 1: Finanz- und Privatkonten" subconto="" />
-    <account id="12" code="1780" name="Umsatzsteuer-Vorauszahlungen" kind="Aktiv" section="Klasse 1: Finanz- und Privatkonten" subconto="" />
-    <account id="13" code="3200" name="Wareneingang" kind="Aufwand" section="Klasse 3: Wareneingangs- und Bestandskonten" subconto="item" />
-    <account id="14" code="3400" name="Wareneingang 16 % Vorsteuer" kind="Aufwand" section="Klasse 3: Wareneingangs- und Bestandskonten" subconto="item" />
-    <account id="15" code="3980" name="Bestand Waren" kind="Aktiv" section="Klasse 3: Wareneingangs- und Bestandskonten" subconto="item" />
-    <account id="16" code="4100" name="Löhne und Gehälter" kind="Aufwand" section="Klasse 4: Betriebliche Aufwendungen" subconto="" />
-    <account id="17" code="4210" name="Miete" kind="Aufwand" section="Klasse 4: Betriebliche Aufwendungen" subconto="" />
-    <account id="18" code="4930" name="Bürobedarf" kind="Aufwand" section="Klasse 4: Betriebliche Aufwendungen" subconto="" />
-    <account id="19" code="8300" name="Erlöse 7 % USt" kind="Ertrag" section="Klasse 8: Erlöskonten" subconto="" />
-    <account id="20" code="8400" name="Erlöse 16 % USt" kind="Ertrag" section="Klasse 8: Erlöskonten" subconto="" />
-    <account id="21" code="9000" name="Saldenvorträge, Sachkonten" kind="Vortrag" section="Klasse 9: Vortrags- und statistische Konten" subconto="" />
+    <account id="1" code="0490" name="Sonstige Betriebs- und Geschäftsausstattung" kind="Aktiv" section="Klasse 0: Anlage- und Kapitalkonten" subconto_kind_id="4" currency="0" />
+    <account id="2" code="0800" name="Gezeichnetes Kapital" kind="Passiv" section="Klasse 0: Anlage- und Kapitalkonten" subconto_kind_id="0" currency="0" />
+    <account id="3" code="0860" name="Gewinnvortrag vor Verwendung" kind="Passiv" section="Klasse 0: Anlage- und Kapitalkonten" subconto_kind_id="0" currency="0" />
+    <account id="4" code="1000" name="Kasse" kind="Aktiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="0" currency="0" />
+    <account id="5" code="1200" name="Bank" kind="Aktiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="0" currency="0" />
+    <account id="22" code="1210" name="Bank (Fremdwährungskonto)" kind="Aktiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="0" currency="1" />
+    <account id="6" code="1400" name="Forderungen aus Lieferungen und Leistungen" kind="Aktiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="1" currency="0" />
+    <account id="7" code="1571" name="Abziehbare Vorsteuer 7 %" kind="Aktiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="0" currency="0" />
+    <account id="8" code="1575" name="Abziehbare Vorsteuer 16 %" kind="Aktiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="0" currency="0" />
+    <account id="9" code="1600" name="Verbindlichkeiten aus Lieferungen und Leistungen" kind="Passiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="1" currency="0" />
+    <account id="23" code="1740" name="Verbindlichkeiten aus Lohn und Gehalt" kind="Passiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="3" currency="0" />
+    <account id="24" code="1741" name="Verbindlichkeiten aus Lohn- und Kirchensteuer" kind="Passiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="0" currency="0" />
+    <account id="25" code="1742" name="Verbindlichkeiten im Rahmen der sozialen Sicherheit" kind="Passiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="0" currency="0" />
+    <account id="10" code="1771" name="Umsatzsteuer 7 %" kind="Passiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="0" currency="0" />
+    <account id="11" code="1775" name="Umsatzsteuer 16 %" kind="Passiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="0" currency="0" />
+    <account id="12" code="1780" name="Umsatzsteuer-Vorauszahlungen" kind="Aktiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="0" currency="0" />
+    <account id="29" code="2150" name="Aufwendungen aus Kursdifferenzen" kind="Aufwand" section="Klasse 2: Abgrenzungskonten" subconto_kind_id="0" currency="0" />
+    <account id="30" code="2660" name="Erträge aus Kursdifferenzen" kind="Ertrag" section="Klasse 2: Abgrenzungskonten" subconto_kind_id="0" currency="0" />
+    <account id="13" code="3200" name="Wareneingang" kind="Aufwand" section="Klasse 3: Wareneingangs- und Bestandskonten" subconto_kind_id="2" currency="0" />
+    <account id="14" code="3400" name="Wareneingang 16 % Vorsteuer" kind="Aufwand" section="Klasse 3: Wareneingangs- und Bestandskonten" subconto_kind_id="2" currency="0" />
+    <account id="15" code="3980" name="Bestand Waren" kind="Aktiv" section="Klasse 3: Wareneingangs- und Bestandskonten" subconto_kind_id="2" currency="0" />
+    <account id="16" code="4100" name="Löhne und Gehälter" kind="Aufwand" section="Klasse 4: Betriebliche Aufwendungen" subconto_kind_id="0" currency="0" />
+    <account id="26" code="4120" name="Gehälter" kind="Aufwand" section="Klasse 4: Betriebliche Aufwendungen" subconto_kind_id="0" currency="0" />
+    <account id="27" code="4130" name="Gesetzliche soziale Aufwendungen" kind="Aufwand" section="Klasse 4: Betriebliche Aufwendungen" subconto_kind_id="0" currency="0" />
+    <account id="17" code="4210" name="Miete" kind="Aufwand" section="Klasse 4: Betriebliche Aufwendungen" subconto_kind_id="0" currency="0" />
+    <account id="28" code="4830" name="Abschreibungen auf Sachanlagen" kind="Aufwand" section="Klasse 4: Betriebliche Aufwendungen" subconto_kind_id="0" currency="0" />
+    <account id="18" code="4930" name="Bürobedarf" kind="Aufwand" section="Klasse 4: Betriebliche Aufwendungen" subconto_kind_id="0" currency="0" />
+    <account id="19" code="8300" name="Erlöse 7 % USt" kind="Ertrag" section="Klasse 8: Erlöskonten" subconto_kind_id="0" currency="0" />
+    <account id="20" code="8400" name="Erlöse 16 % USt" kind="Ertrag" section="Klasse 8: Erlöskonten" subconto_kind_id="0" currency="0" />
+    <account id="21" code="9000" name="Saldenvorträge, Sachkonten" kind="Vortrag" section="Klasse 9: Vortrags- und statistische Konten" subconto_kind_id="0" currency="0" />
   </accounts>
   <units>
     <unit id="1" code="C62" name="Stk" />
@@ -39,17 +54,32 @@
     <vat_rate id="3" name="0 %" rate="0" />
   </vat_rates>
   <doc_types>
-    <doc_type id="1" code="incoming_invoice" name="Eingangsrechnung" prefix="ER-" base="net" lines="1" debit_id="14" credit_id="9" vat_debit_id="8" vat_credit_id="9" manual="0" vat_book="2" description="Wareneinkauf auf Rechnung: 3400 an 1600 netto, Vorsteuer 1575 an 1600." />
-    <doc_type id="2" code="outgoing_invoice" name="Ausgangsrechnung" prefix="AR-" base="net" lines="1" debit_id="6" credit_id="20" vat_debit_id="6" vat_credit_id="11" manual="0" vat_book="1" description="Verkauf auf Rechnung: 1400 an 8400 netto, Umsatzsteuer 1400 an 1775." />
-    <doc_type id="3" code="cash_in" name="Kasseneinnahme" prefix="KE-" base="total" lines="0" debit_id="4" credit_id="6" vat_debit_id="0" vat_credit_id="0" manual="0" vat_book="0" description="Barzahlung eines Kunden: 1000 an 1400." />
-    <doc_type id="4" code="cash_out" name="Kassenausgabe" prefix="KA-" base="total" lines="0" debit_id="9" credit_id="4" vat_debit_id="0" vat_credit_id="0" manual="0" vat_book="0" description="Barzahlung an einen Lieferanten: 1600 an 1000." />
-    <doc_type id="5" code="bank_out" name="Überweisung" prefix="UE-" base="total" lines="0" debit_id="9" credit_id="5" vat_debit_id="0" vat_credit_id="0" manual="0" vat_book="0" description="Zahlung an einen Lieferanten vom Bankkonto: 1600 an 1200." />
-    <doc_type id="6" code="bank_in" name="Zahlungseingang Bank" prefix="ZE-" base="total" lines="0" debit_id="5" credit_id="6" vat_debit_id="0" vat_credit_id="0" manual="0" vat_book="0" description="Zahlung eines Kunden auf das Bankkonto: 1200 an 1400." />
-    <doc_type id="7" code="journal" name="Umbuchung" prefix="UB-" base="total" lines="0" debit_id="0" credit_id="0" vat_debit_id="0" vat_credit_id="0" manual="1" vat_book="0" description="Buchungen werden manuell erfasst." />
-    <doc_type id="8" code="opening" name="Eröffnungsbuchungen" prefix="EB-" base="total" lines="0" debit_id="0" credit_id="0" vat_debit_id="0" vat_credit_id="0" manual="1" vat_book="0" description="Eröffnungsbilanz über das Saldenvortragskonto 9000." />
+    <doc_type id="1" code="incoming_invoice" name="Eingangsrechnung" prefix="ER-" base="net" debit_id="14" credit_id="9" vat_debit_id="8" vat_credit_id="9" form="document" vat_book="2" description="Wareneinkauf auf Rechnung: 3400 an 1600 netto, Vorsteuer 1575 an 1600." />
+    <doc_type id="2" code="outgoing_invoice" name="Ausgangsrechnung" prefix="AR-" base="net" debit_id="6" credit_id="20" vat_debit_id="6" vat_credit_id="11" form="document" vat_book="1" description="Verkauf auf Rechnung: 1400 an 8400 netto, Umsatzsteuer 1400 an 1775." />
+    <doc_type id="3" code="cash_in" name="Kasseneinnahme" prefix="KE-" base="total" debit_id="4" credit_id="6" vat_debit_id="0" vat_credit_id="0" form="document" vat_book="0" description="Barzahlung eines Kunden: 1000 an 1400." />
+    <doc_type id="4" code="cash_out" name="Kassenausgabe" prefix="KA-" base="total" debit_id="9" credit_id="4" vat_debit_id="0" vat_credit_id="0" form="document" vat_book="0" description="Barzahlung an einen Lieferanten: 1600 an 1000." />
+    <doc_type id="5" code="bank_out" name="Überweisung" prefix="UE-" base="total" debit_id="9" credit_id="5" vat_debit_id="0" vat_credit_id="0" form="document" vat_book="0" description="Zahlung an einen Lieferanten vom Bankkonto: 1600 an 1200." />
+    <doc_type id="6" code="bank_in" name="Zahlungseingang Bank" prefix="ZE-" base="total" debit_id="5" credit_id="6" vat_debit_id="0" vat_credit_id="0" form="document" vat_book="0" description="Zahlung eines Kunden auf das Bankkonto: 1200 an 1400." />
+    <doc_type id="7" code="journal" name="Umbuchung" prefix="UB-" base="total" debit_id="0" credit_id="0" vat_debit_id="0" vat_credit_id="0" form="operation" vat_book="0" description="Buchungen werden manuell erfasst." />
+    <doc_type id="8" code="opening" name="Eröffnungsbuchungen" prefix="EB-" base="total" debit_id="0" credit_id="0" vat_debit_id="0" vat_credit_id="0" form="operation" vat_book="0" description="Eröffnungsbilanz über das Saldenvortragskonto 9000." />
+    <doc_type id="9" code="payroll" name="Lohnabrechnung" prefix="LA-" base="gross" debit_id="26" credit_id="23" vat_debit_id="0" vat_credit_id="0" form="payroll" vat_book="0" description="Bruttolohn 4120 an 1740, Lohnsteuer 1740 an 1741, Sozialversicherung 1740 an 1742, Arbeitgeberanteil 4130 an 1742." />
+    <doc_type id="10" code="payout" name="Lohnzahlung" prefix="LZ-" base="net" debit_id="23" credit_id="5" vat_debit_id="0" vat_credit_id="0" form="payroll" vat_book="0" description="Überweisung der Nettolöhne: 1740 an 1200." />
+    <doc_type id="11" code="asset_in" name="Anlagenzugang" prefix="AZ-" base="total" debit_id="0" credit_id="9" vat_debit_id="0" vat_credit_id="0" form="assets" vat_book="0" description="Anschaffung von Anlagegütern auf Rechnung: Anlagekonto an 1600 (netto; die Vorsteuer per Umbuchung 1575 an 1600)." />
+    <doc_type id="12" code="closing" name="Monatsabschluss" prefix="MA-" base="total" debit_id="0" credit_id="0" vat_debit_id="0" vat_credit_id="0" form="closing" vat_book="0" description="Lineare AfA (§ 7 Abs. 1 EStG, monatsgenau ab Anschaffung) und Bewertung der Fremdwährungskonten." />
   </doc_types>
+  <payroll_taxes>
+    <payroll_tax id="1" code="lst" name="Lohnsteuer (vereinfacht)" rate="18" withheld="1" allowance="1" debit_id="23" credit_id="24" />
+    <payroll_tax id="2" code="sv_an" name="Sozialversicherung Arbeitnehmeranteil" rate="21" withheld="1" allowance="0" debit_id="23" credit_id="25" />
+    <payroll_tax id="3" code="sv_ag" name="Sozialversicherung Arbeitgeberanteil" rate="21" withheld="0" allowance="0" debit_id="27" credit_id="25" />
+  </payroll_taxes>
+  <closing_rules>
+    <closing_rule id="1" kind="depreciation" start="same" name="AfA" account_id="0" target_id="0" via_id="0" gain_id="0" loss_id="0" />
+    <closing_rule id="2" kind="revaluation" start="" name="Kursdifferenz" account_id="0" target_id="0" via_id="0" gain_id="30" loss_id="29" />
+  </closing_rules>
   <print_forms>
-    <print_form id="1" doc_type_id="2" name="Rechnung" template="rechnung.html" basis="§ 14 UStG" />
-    <print_form id="2" doc_type_id="3" name="Quittung" template="quittung.html" basis="Kassenbeleg" />
+    <print_form id="1" report="" doc_type_id="2" name="Rechnung" template="rechnung.html" basis="§ 14 UStG" />
+    <print_form id="2" report="" doc_type_id="3" name="Quittung" template="quittung.html" basis="Kassenbeleg" />
+    <print_form id="3" report="" doc_type_id="9" name="Lohnjournal" template="lohnjournal.html" basis="§ 41 EStG, Lohnkonto" />
+    <print_form id="4" report="cash_book" doc_type_id="0" name="Kassenbuch" template="kassenbuch.html" basis="§ 146 AO" />
   </print_forms>
 </cfg>

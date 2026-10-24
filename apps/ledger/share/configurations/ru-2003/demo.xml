@@ -3,12 +3,13 @@
      settings directory on first start; posted documents are posted then. -->
 <ib>
   <organizations>
-    <organization id="1" name="ООО &quot;Ромашка&quot;" tax_id="7701234567" kpp="770101001" address="125009, г. Москва, ул. Тверская, д. 7, оф. 12" bank="ОАО &quot;Банк Москвы&quot; г. Москва" bank_account="40702810400000012345" bik="044525219" corr_account="30101810500000000219" director="Петров П.П." accountant="Сидорова А.В." />
+    <organization id="1" name="ООО &quot;Ромашка&quot;" tax_id="7701234567" kpp="770101001" address="125009, г. Москва, ул. Тверская, д. 7, оф. 12" bank="ОАО &quot;Банк Москвы&quot; г. Москва" bank_account="40702810400000012345" bik="044525219" corr_account="30101810500000000219" director="Петров П.П." accountant="Сидорова А.В." cashier="Кузнецова Е.Н." />
   </organizations>
   <counterparties>
     <counterparty id="1" name="ООО &quot;Торговый дом Альфа&quot;" tax_id="7705123456" kpp="770501001" address="115054, г. Москва, ул. Валовая, д. 21" bank="АКБ &quot;Возрождение&quot; г. Москва" bank_account="40702810900000054321" bik="044525181" phone="(095) 235-12-34" />
     <counterparty id="2" name="ЗАО &quot;Бета-Снаб&quot;" tax_id="7814012345" kpp="781401001" address="197183, г. Санкт-Петербург, ул. Савушкина, д. 3" bank="ОАО &quot;Промстройбанк&quot; г. Санкт-Петербург" bank_account="40702810200000067890" bik="044030791" phone="(812) 430-55-66" />
     <counterparty id="3" name="ИП Иванов Иван Иванович" tax_id="771512345678" kpp="" address="127282, г. Москва, ул. Широкая, д. 5, кв. 40" bank="" bank_account="" bik="" phone="(095) 470-11-22" />
+    <counterparty id="4" name="Intertrade Ltd." tax_id="" kpp="" address="12 Harbour Road, Limassol, Cyprus" bank="Bank of Cyprus" bank_account="CY0012345678" bik="BCYPCY2N" phone="+357 25 123456" />
   </counterparties>
   <items>
     <item id="1" sku="00001" name="Бумага офисная А4 &quot;Снегурочка&quot;, 500 л." unit_id="2" vat_rate_id="1" price="95" />
@@ -17,6 +18,27 @@
     <item id="4" sku="00004" name="Клавиатура Genius KB-06XE" unit_id="1" vat_rate_id="1" price="210" />
     <item id="5" sku="00005" name="Доставка товара" unit_id="6" vat_rate_id="1" price="500" />
   </items>
+  <employees>
+    <employee id="1" account_id="12" name="Петров Петр Петрович" position="Генеральный директор" tax_id="770112345678" hired="2001-06-01" salary="15000" allowance="400" />
+    <employee id="2" account_id="12" name="Сидорова Анна Викторовна" position="Главный бухгалтер" tax_id="770298765432" hired="2001-06-01" salary="12000" allowance="400" />
+    <employee id="3" account_id="16" name="Кузнецова Елена Николаевна" position="Менеджер по продажам, кассир" tax_id="771355512345" hired="2002-09-16" salary="9000" allowance="400" />
+  </employees>
+  <assets>
+    <asset id="1" account_id="1" depreciation_id="2" expense_id="12" inventory="00001" name="Компьютер Pentium 4 2,4 ГГц" cost="36000" life="36" commissioned="2002-12-10" />
+    <asset id="2" account_id="1" depreciation_id="2" expense_id="12" inventory="00002" name="Принтер HP LaserJet 1200" cost="12000" life="24" commissioned="" />
+  </assets>
+  <currencies>
+    <currency id="1" code="USD" name="Доллар США" />
+    <currency id="2" code="EUR" name="Евро" />
+  </currencies>
+  <rates>
+    <rate id="1" currency_id="1" date="2003-03-01" rate="31.58" />
+    <rate id="2" currency_id="1" date="2003-03-17" rate="31.5" />
+    <rate id="3" currency_id="1" date="2003-03-20" rate="31.45" />
+    <rate id="4" currency_id="1" date="2003-03-31" rate="31.38" />
+    <rate id="5" currency_id="2" date="2003-03-01" rate="34.08" />
+    <rate id="6" currency_id="2" date="2003-03-31" rate="34.12" />
+  </rates>
   <documents>
     <document id="8" doc_type_id="9" counterparty_id="0" number="ВО-0001" date="2003-03-01" comment="Остатки на 01.03.2003" posted="1" />
     <document id="1" doc_type_id="6" counterparty_id="2" number="ПВ-0001" date="2003-03-02" comment="Предоплата по договору № 12/03" total="60000" posted="1" />
@@ -25,7 +47,15 @@
     <document id="4" doc_type_id="7" counterparty_id="1" number="ВН-0001" date="2003-03-05" comment="НДС по накладной ПТ-0001, оплачено ПП-0001" total="8520" posted="1" />
     <document id="5" doc_type_id="2" counterparty_id="3" number="РТ-0001" date="2003-03-10" comment="" posted="1" />
     <document id="6" doc_type_id="3" counterparty_id="3" number="ПКО-0001" date="2003-03-11" comment="Оплата по накладной РТ-0001" total="16656" posted="1" />
+    <document id="9" doc_type_id="12" counterparty_id="1" number="ПО-0001" date="2003-03-12" comment="Принтер HP LaserJet 1200, счет-фактура № 131" amount="12000" vat="2400" total="14400" posted="1" />
     <document id="7" doc_type_id="2" counterparty_id="2" number="РТ-0002" date="2003-03-14" comment="Отгрузка по договору № 12/03" posted="0" />
+    <document id="10" doc_type_id="13" counterparty_id="0" number="ОС-0001" date="2003-03-14" comment="Акт ОС-1 № 1" posted="1" />
+    <document id="11" doc_type_id="15" counterparty_id="4" currency_id="1" number="ПИ-0001" date="2003-03-17" comment="Invoice 2003/117" posted="1" />
+    <document id="12" doc_type_id="16" counterparty_id="4" currency_id="1" number="ВС-0001" date="2003-03-20" comment="Оплата Invoice 2003/117" total="500" posted="1" />
+    <document id="13" doc_type_id="10" counterparty_id="0" number="НЗ-0001" date="2003-03-31" comment="Зарплата за март 2003 г." posted="1" />
+    <document id="14" doc_type_id="17" counterparty_id="0" number="ПКО-0002" date="2003-03-31" comment="Чек № 4711123 на выплату зарплаты" total="31476" posted="1" />
+    <document id="15" doc_type_id="11" counterparty_id="0" number="ВЗ-0001" date="2003-03-31" comment="Зарплата за март 2003 г." posted="1" />
+    <document id="16" doc_type_id="14" counterparty_id="0" number="ЗМ-0001" date="2003-03-31" comment="Март 2003 г." posted="1" />
   </documents>
   <doc_lines>
     <doc_line id="1" document_id="2" item_id="1" vat_rate_id="1" quantity="100" price="95" />
@@ -35,10 +65,27 @@
     <doc_line id="5" document_id="5" item_id="4" vat_rate_id="1" quantity="1" price="280" />
     <doc_line id="6" document_id="7" item_id="1" vat_rate_id="1" quantity="40" price="120" />
     <doc_line id="7" document_id="7" item_id="2" vat_rate_id="1" quantity="5" price="1690" />
+    <doc_line id="8" document_id="11" item_id="2" vat_rate_id="4" quantity="10" price="50" />
   </doc_lines>
+  <payroll_lines>
+    <payroll_line id="1" document_id="13" employee_id="1" amount="15000" />
+    <payroll_line id="2" document_id="13" employee_id="2" amount="12000" />
+    <payroll_line id="3" document_id="13" employee_id="3" amount="9000" />
+    <payroll_line id="4" document_id="15" employee_id="1" amount="13102" />
+    <payroll_line id="5" document_id="15" employee_id="2" amount="10492" />
+    <payroll_line id="6" document_id="15" employee_id="3" amount="7882" />
+  </payroll_lines>
+  <asset_lines>
+    <asset_line id="1" document_id="10" asset_id="2" />
+  </asset_lines>
   <entries>
     <entry id="1" document_id="8" debit_id="19" credit_id="60" amount="100000" content="Остаток на расчетном счете" />
-    <entry id="2" document_id="8" debit_id="60" credit_id="40" amount="10000" content="Уставный капитал" />
-    <entry id="3" document_id="8" debit_id="60" credit_id="43" amount="90000" content="Нераспределенная прибыль прошлых лет" />
+    <entry id="2" document_id="8" debit_id="18" credit_id="60" amount="2000" content="Остаток в кассе" />
+    <entry id="3" document_id="8" debit_id="20" credit_id="60" currency_id="1" currency_amount="1000" amount="31580" content="Остаток на валютном счете, 1000 USD" />
+    <entry id="4" document_id="8" debit_id="14" debit_subconto_id="4" credit_id="60" quantity="10" amount="1500" content="Остаток товаров" />
+    <entry id="5" document_id="8" debit_id="1" debit_subconto_id="1" credit_id="60" amount="36000" content="Первоначальная стоимость ОС" />
+    <entry id="6" document_id="8" debit_id="60" credit_id="2" credit_subconto_id="1" amount="2000" content="Амортизация за январь – февраль 2003 г." />
+    <entry id="7" document_id="8" debit_id="60" credit_id="40" amount="10000" content="Уставный капитал" />
+    <entry id="8" document_id="8" debit_id="60" credit_id="43" amount="159080" content="Нераспределенная прибыль прошлых лет" />
   </entries>
 </ib>

@@ -397,6 +397,19 @@ source and differ only by filter, like the sales and purchase VAT books:
 <TableView name="purchase_book" source="ib.vat_book" filter-field="book" filter-value="2" />
 ```
 
+## ComboBox
+
+A ComboBox with `source=`, `display=` and `value=` lists a table and binds the
+selected record's id. `filter-field` / `filter-value` keep only matching rows.
+`cbSetSource` (wparam = table id, lparam = database or NULL) lists another
+table at run time and drops the filter — for a field whose table depends on
+another choice, such as the analytics of the chosen account:
+
+```c
+send_message(combo, cbSetSource, (uint32_t)schema->table_id, ib);
+send_message(combo, cbSetCurrentValue, (uint32_t)record->debit_subconto_id, NULL);
+```
+
 ## TabView
 
 `TabView` is a Win32-style tab container. Its direct children are pages, each

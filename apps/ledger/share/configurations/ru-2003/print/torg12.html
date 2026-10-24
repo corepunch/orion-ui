@@ -37,7 +37,7 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 {{/lines}}<tr><td colspan="9" class="r" style="border:0">Итого</td><td></td><td class="c">X</td><td class="r">{{amount}}</td><td class="c">X</td><td class="r">{{vat}}</td><td class="r">{{total}}</td></tr>
 <tr><td colspan="9" class="r" style="border:0">Всего по накладной</td><td></td><td class="c">X</td><td class="r b">{{amount}}</td><td class="c">X</td><td class="r b">{{vat}}</td><td class="r b">{{total}}</td></tr>
 </table>
-<p>Всего отпущено на сумму <span class="line" style="width:60%">{{total}} {{cfg.currency}}</span><span class="small"> (прописью)</span></p>
+<p>Всего отпущено на сумму <span class="line" style="width:60%">{{total|words}}</span><span class="small"> (прописью)</span></p>
 <table style="width:100%" class="sign"><tr>
 <td style="width:50%">Отпуск груза разрешил <span class="line">{{org.director}}</span><br><span class="small">должность / подпись / расшифровка подписи</span><br><br>
 Главный (старший) бухгалтер <span class="line">{{org.accountant}}</span><br><br>

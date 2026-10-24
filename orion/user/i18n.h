@@ -75,4 +75,35 @@ bool ui_parse_date(const char *text, char *iso, size_t iso_sz);
 // spaces and grouping separators are ignored.
 double ui_parse_number(const char *text);
 
+// ── Plural forms and spelled-out numbers (spellout.c) ─────────────────────
+// These take the language explicitly: a legal form spells amounts in the
+// language of its country, whatever the UI language is. NULL = UI language.
+
+typedef enum { UI_GENDER_MASCULINE, UI_GENDER_FEMININE, UI_GENDER_NEUTER } ui_gender_t;
+
+// CLDR plural category of n: Russian 0 = one, 1 = few, 2 = many;
+// English and German 0 = one, 1 = other.
+int ui_plural_index(const char *language, long long n);
+// Picks the form for n from "рубль|рубля|рублей" by ui_plural_index; the last
+// form serves when fewer are given.
+const char *ui_plural_pick(const char *language, long long n, const char *forms,
+                           char *buf, size_t buf_sz);
+// Cardinal number in words agreeing with the gender of the counted noun:
+// "двадцать одна", "einundzwanzig", "twenty-one". Languages without rules
+// (anything but ru, de, en) get digits.
+const char *ui_spell_number(const char *language, long long n, ui_gender_t gender,
+                            char *buf, size_t buf_sz);
+
+// Currency nouns for ui_spell_amount: plural forms as for ui_plural_pick.
+typedef struct {
+  const char *units;        // "рубль|рубля|рублей", "Euro"
+  ui_gender_t unit_gender;
+  const char *cents;        // "копейка|копейки|копеек", "Cent"
+  ui_gender_t cent_gender;
+} ui_money_words_t;
+// An amount as legal forms write it: units in words, cents in digits.
+// 1234.05 -> "Одна тысяча двести тридцать четыре рубля 05 копеек".
+const char *ui_spell_amount(const char *language, double amount, const ui_money_words_t *words,
+                            char *buf, size_t buf_sz);
+
 #endif // __UI_I18N_H__

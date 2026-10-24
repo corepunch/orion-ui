@@ -118,19 +118,31 @@ int db_dialog_record_id(window_t *win) {
   return ((db_dlg_ctx_t *)root->userdata)->record_id;
 }
 
-uint32_t show_db_dialog_hook(form_def_t const *def, const char *title,
-                             window_t *parent, int record_id, winproc_t hook) {
+void *db_dialog_record(window_t *win) {
+  window_t *root = win ? get_root_window(win) : NULL;
+  if (!root || root->proc != dialog_db_proc || !root->userdata) {
+    fprintf(stderr, "[dialog] db_dialog_record: win=%u is not a database dialog\n", win ? win->id : 0);
+    fflush(stderr);
+    return NULL;
+  }
+  return ((db_dlg_ctx_t *)root->userdata)->record_buf;
+}
+
+uint32_t show_db_dialog_opts(form_def_t const *def, const char *title, window_t *parent,
+                             int record_id, const db_dialog_opts_t *opts) {
   if (!def || !def->db_name || !def->db_table) return 0;
   database_t *db = get_database_by_name(def->db_name);
   if (!db || !def->db_record_size) {
-    fprintf(stderr, "show_db_dialog: database '%s' not found or form has no record size\n", def->db_name);
+    fprintf(stderr, "show_db_dialog: database '%s' not found or form '%s' has no record size\n",
+            def->db_name, def->name ? def->name : "");
     fflush(stderr);
     return 0;
   }
   void *record_buf = calloc(1, def->db_record_size);
   if (!record_buf) return 0;
   db_dlg_ctx_t ctx = { .def = def, .db = db, .record_id = record_id, .record_buf = record_buf,
-                       .is_new = (record_id == 0), .hook = hook };
+                       .is_new = (record_id == 0), .fk_field = opts ? opts->fk_field : NULL,
+                       .fk_value = opts ? opts->fk_value : 0, .hook = opts ? opts->hook : NULL };
   uint32_t result = show_dialog_from_form_ex(def, title, parent,
                                              WINDOW_VSCROLL | WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,
                                              dialog_db_proc, &ctx);
@@ -138,36 +150,17 @@ uint32_t show_db_dialog_hook(form_def_t const *def, const char *title,
   return result;
 }
 
+uint32_t show_db_dialog_hook(form_def_t const *def, const char *title,
+                             window_t *parent, int record_id, winproc_t hook) {
+  db_dialog_opts_t opts = { .hook = hook };
+  return show_db_dialog_opts(def, title, parent, record_id, &opts);
+}
+
 uint32_t show_db_dialog_ex(form_def_t const *def, const char *title,
                            window_t *parent, int record_id,
                            const char *fk_field, int fk_value) {
-  if (!def || !def->db_name || !def->db_table) return 0;
-  database_t *db = get_database_by_name(def->db_name);
-  if (!db) {
-    fprintf(stderr, "show_db_dialog: database '%s' not found\n", def->db_name);
-    return 0;
-  }
-  if (!def->db_record_size) {
-    fprintf(stderr, "show_db_dialog: form '%s' has no record size\n", def->name ? def->name : "");
-    fflush(stderr);
-    return 0;
-  }
-  void *record_buf = calloc(1, def->db_record_size);
-  if (!record_buf) return 0;
-  db_dlg_ctx_t ctx = {
-    .def = def,
-    .db = db,
-    .record_id = record_id,
-    .record_buf = record_buf,
-    .is_new = (record_id == 0),
-    .fk_field = fk_field,
-    .fk_value = fk_value
-  };
-  uint32_t result = show_dialog_from_form_ex(def, title, parent,
-                                             WINDOW_VSCROLL | WINDOW_DIALOG | WINDOW_NOTRAYBUTTON,
-                                             dialog_db_proc, &ctx);
-  free(record_buf);
-  return result;
+  db_dialog_opts_t opts = { .fk_field = fk_field, .fk_value = fk_value };
+  return show_db_dialog_opts(def, title, parent, record_id, &opts);
 }
 
 uint32_t show_db_dialog(form_def_t const *def, const char *title,

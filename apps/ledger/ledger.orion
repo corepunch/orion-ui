@@ -29,6 +29,9 @@
     <menu name="doc" label="Documents">
       <item name="new" label="New Document..." shortcut="Ctrl+N" />
       <item name="new_operation" label="New Manual Operation..." shortcut="Ctrl+M" />
+      <item name="new_payroll" label="New Payroll Document..." shortcut="Ctrl+W" />
+      <item name="new_assets" label="Put Assets into Service..." />
+      <item name="close_month" label="Close Month..." shortcut="Ctrl+E" />
       <item name="open" label="Open Document..." shortcut="Ctrl+O" />
       <Separator />
       <item name="post" label="Post" shortcut="F9" />
@@ -45,19 +48,36 @@
       <item name="new_item" label="New Item..." />
       <item name="edit_item" label="Edit Item..." />
       <item name="delete_item" label="Delete Item..." />
+      <Separator />
+      <item name="new_employee" label="New Employee..." />
+      <item name="edit_employee" label="Edit Employee..." />
+      <item name="delete_employee" label="Delete Employee..." />
+      <Separator />
+      <item name="new_asset" label="New Fixed Asset..." />
+      <item name="edit_asset" label="Edit Fixed Asset..." />
+      <item name="delete_asset" label="Delete Fixed Asset..." />
+      <Separator />
+      <item name="new_currency" label="New Currency..." />
+      <item name="edit_currency" label="Edit Currency..." />
+      <item name="new_rate" label="New Exchange Rate..." />
+      <item name="delete_rate" label="Delete Exchange Rate..." />
     </menu>
     <menu name="view" label="View">
       <item name="journal" label="Document Journal" shortcut="Ctrl+1" />
       <item name="counterparties" label="Counterparties" shortcut="Ctrl+2" />
       <item name="items" label="Items" shortcut="Ctrl+3" />
       <item name="accounts" label="Chart of Accounts" shortcut="Ctrl+4" />
-      <item name="entries" label="Entry Journal" shortcut="Ctrl+5" />
-      <item name="reports" label="Reports" shortcut="Ctrl+6" />
-      <item name="config" label="Configuration" shortcut="Ctrl+7" />
+      <item name="employees" label="Employees" shortcut="Ctrl+5" />
+      <item name="assets" label="Fixed Assets" shortcut="Ctrl+6" />
+      <item name="currencies" label="Currencies" shortcut="Ctrl+7" />
+      <item name="entries" label="Entry Journal" shortcut="Ctrl+8" />
+      <item name="reports" label="Reports" shortcut="Ctrl+9" />
+      <item name="config" label="Configuration" shortcut="Ctrl+0" />
     </menu>
     <menu name="report" label="Reports">
       <item name="settings" label="Report Settings..." shortcut="Ctrl+R" />
       <item name="recalc" label="Recalculate Totals" shortcut="F5" />
+      <item name="print" label="Print Report Forms" shortcut="Ctrl+Shift+P" />
     </menu>
     <menu name="help" label="Help">
       <item name="about" label="About Ledger" />
@@ -67,26 +87,43 @@
   <databases>
     <!-- Configuration: national metadata and predefined data. Read-only. -->
     <database name="cfg" class="db_schema_xml">
+      <!-- currency_units / cents_units: plural forms for amounts in words,
+           "рубль|рубля|рублей"; *_gender is m, f or n. -->
       <table name="settings">
         <field name="id" type="integer" key="YES" />
+        <field name="cash_account_id" type="integer" relation="accounts.id" />
+        <field name="payroll_account_id" type="integer" relation="accounts.id" />
         <field name="code" type="string" length="32" />
         <field name="name" type="string" length="128" />
         <field name="country" type="string" length="64" />
         <field name="currency" type="string" length="16" />
+        <field name="currency_units" type="string" length="64" />
+        <field name="currency_gender" type="string" length="4" />
+        <field name="cents_units" type="string" length="64" />
+        <field name="cents_gender" type="string" length="4" />
         <field name="language" type="string" length="16" />
         <field name="tax_name" type="string" length="32" />
         <field name="tax_id_name" type="string" length="32" />
         <field name="version" type="string" length="32" />
         <field name="basis" type="string" length="512" />
       </table>
+      <!-- Kinds of analytics (subconto): each names the infobase table whose
+           records an account is analysed by. -->
+      <table name="subconto_kinds">
+        <field name="id" type="integer" key="YES" />
+        <field name="code" type="string" length="16" />
+        <field name="name" type="string" length="64" />
+        <field name="table" type="string" length="32" />
+      </table>
       <table name="accounts">
         <field name="id" type="integer" key="YES" />
+        <field name="subconto_kind_id" type="integer" relation="subconto_kinds.id" />
         <field name="code" type="string" length="16" />
         <field name="name" type="string" length="160" />
         <field name="kind" type="string" length="8" />
         <field name="section" type="string" length="96" />
-        <!-- Analytics kept on entries to this account: counterparty or item. -->
-        <field name="subconto" type="string" length="16" />
+        <!-- Kept in foreign currency too; revalued when the month is closed. -->
+        <field name="currency" type="boolean" />
       </table>
       <table name="units">
         <field name="id" type="integer" key="YES" />
@@ -98,28 +135,71 @@
         <field name="name" type="string" length="32" />
         <field name="rate" type="double" />
       </table>
-      <!-- Posting rules: amount Dt debit / Kt credit, tax Dt vat_debit / Kt vat_credit.
-           base is "net" (amount without tax) or "total" (with tax). A manual
-           type's entries are typed by the accountant instead. vat_book: 1 lists
-           the document in the sales book, 2 in the purchase book. -->
+      <!-- Posting rules. form picks the dialog and the posting:
+             document  lines of goods or a total: amount Dt debit / Kt credit,
+                       tax Dt vat_debit / Kt vat_credit, and the average cost of
+                       goods sold Dt cost_debit / Kt cost_credit;
+             operation entries typed by the accountant;
+             payroll   employees: base "gross" accrues pay and payroll taxes,
+                       "net" pays it out (Dt debit / Kt credit);
+             assets    fixed assets put into service: Dt asset account / Kt credit;
+             closing   month-end closing by the configuration's closing rules.
+           base is "net" (amount without tax) or "total" for documents.
+           vat_book: 1 lists the document in the sales book, 2 in the purchase book. -->
       <table name="doc_types">
         <field name="id" type="integer" key="YES" />
         <field name="debit_id" type="integer" relation="accounts.id" />
         <field name="credit_id" type="integer" relation="accounts.id" />
         <field name="vat_debit_id" type="integer" relation="accounts.id" />
         <field name="vat_credit_id" type="integer" relation="accounts.id" />
+        <field name="cost_debit_id" type="integer" relation="accounts.id" />
+        <field name="cost_credit_id" type="integer" relation="accounts.id" />
         <field name="code" type="string" length="32" />
         <field name="name" type="string" length="96" />
         <field name="prefix" type="string" length="8" />
+        <field name="form" type="string" length="16" />
         <field name="base" type="string" length="8" />
-        <field name="lines" type="boolean" />
-        <field name="manual" type="boolean" />
         <field name="vat_book" type="integer" />
         <field name="description" type="string" length="512" />
       </table>
+      <!-- Payroll taxes on accrued pay: withheld ones reduce the employee's
+           net pay (Dt debit / Kt credit), the others are the employer's cost
+           (Dt the employee's expense account when debit is empty). allowance
+           taxes apply after the employee's monthly allowance. -->
+      <table name="payroll_taxes">
+        <field name="id" type="integer" key="YES" />
+        <field name="debit_id" type="integer" relation="accounts.id" />
+        <field name="credit_id" type="integer" relation="accounts.id" />
+        <field name="code" type="string" length="16" />
+        <field name="name" type="string" length="96" />
+        <field name="rate" type="double" />
+        <field name="withheld" type="boolean" />
+        <field name="allowance" type="boolean" />
+      </table>
+      <!-- Month-end closing, in id order:
+             depreciation  each asset's monthly straight-line depreciation;
+             transfer      the balance of account (with subaccounts) to target,
+                           written against via (default: the account itself);
+             revaluation   currency accounts at the closing date's rate, the
+                           difference to gain or loss. -->
+      <table name="closing_rules">
+        <field name="id" type="integer" key="YES" />
+        <field name="account_id" type="integer" relation="accounts.id" />
+        <field name="target_id" type="integer" relation="accounts.id" />
+        <field name="via_id" type="integer" relation="accounts.id" />
+        <field name="gain_id" type="integer" relation="accounts.id" />
+        <field name="loss_id" type="integer" relation="accounts.id" />
+        <field name="kind" type="string" length="16" />
+        <!-- depreciation: "next" starts in the month after the asset is put
+             into service, "same" in that month. -->
+        <field name="start" type="string" length="8" />
+        <field name="name" type="string" length="96" />
+      </table>
+      <!-- Document print forms; report forms name a report table instead. -->
       <table name="print_forms">
         <field name="id" type="integer" key="YES" />
         <field name="doc_type_id" type="integer" relation="doc_types.id" />
+        <field name="report" type="string" length="32" />
         <field name="name" type="string" length="96" />
         <field name="template" type="string" length="64" />
         <field name="basis" type="string" length="256" />
@@ -160,6 +240,7 @@
         <field name="corr_account" type="string" length="32" />
         <field name="director" type="string" length="96" />
         <field name="accountant" type="string" length="96" />
+        <field name="cashier" type="string" length="96" />
       </table>
       <table name="counterparties">
         <field name="id" type="integer" key="YES" />
@@ -180,13 +261,54 @@
         <field name="name" type="string" length="160" />
         <field name="price" type="double" />
       </table>
+      <!-- account_id: where the employee's pay is expensed (26, 44, ...).
+           allowance: monthly amount exempt from allowance taxes. -->
+      <table name="employees">
+        <field name="id" type="integer" key="YES" />
+        <field name="account_id" type="integer" relation="cfg.accounts.id" />
+        <field name="name" type="string" length="128" />
+        <field name="position" type="string" length="96" />
+        <field name="tax_id" type="string" length="16" />
+        <field name="hired" type="date" />
+        <field name="salary" type="double" />
+        <field name="allowance" type="double" />
+      </table>
+      <!-- Fixed assets: straight-line depreciation over life months from the
+           month after the asset is put into service. -->
+      <table name="assets">
+        <field name="id" type="integer" key="YES" />
+        <field name="account_id" type="integer" relation="cfg.accounts.id" />
+        <field name="depreciation_id" type="integer" relation="cfg.accounts.id" />
+        <field name="expense_id" type="integer" relation="cfg.accounts.id" />
+        <field name="inventory" type="string" length="16" />
+        <field name="name" type="string" length="160" />
+        <field name="cost" type="double" />
+        <field name="life" type="integer" />
+        <field name="commissioned" type="date" />
+      </table>
+      <table name="currencies">
+        <field name="id" type="integer" key="YES" />
+        <field name="code" type="string" length="8" />
+        <field name="name" type="string" length="64" />
+      </table>
+      <!-- Exchange rates: units of national currency per unit of currency. -->
+      <table name="rates">
+        <field name="id" type="integer" key="YES" />
+        <field name="currency_id" type="integer" relation="currencies.id" />
+        <field name="date" type="date" />
+        <field name="rate" type="double" precision="4" />
+      </table>
+      <!-- Amounts are in the document's currency; posting converts them at
+           its rate (the rate on the document date when left empty). -->
       <table name="documents">
         <field name="id" type="integer" key="YES" />
         <field name="doc_type_id" type="integer" relation="cfg.doc_types.id" />
         <field name="counterparty_id" type="integer" relation="counterparties.id" />
+        <field name="currency_id" type="integer" relation="currencies.id" />
         <field name="number" type="string" length="24" />
         <field name="date" type="date" />
         <field name="comment" type="string" length="256" />
+        <field name="rate" type="double" precision="4" />
         <field name="amount" type="double" />
         <field name="vat" type="double" />
         <field name="total" type="double" />
@@ -203,15 +325,35 @@
         <field name="vat" type="double" />
         <field name="total" type="double" />
       </table>
+      <!-- amount: accrued pay, or the sum paid out by a payout document. -->
+      <table name="payroll_lines">
+        <field name="id" type="integer" key="YES" />
+        <field name="document_id" type="integer" relation="documents.id" />
+        <field name="employee_id" type="integer" relation="employees.id" />
+        <field name="amount" type="double" />
+        <field name="withheld" type="double" />
+        <field name="contributions" type="double" />
+        <field name="net" type="double" />
+      </table>
+      <table name="asset_lines">
+        <field name="id" type="integer" key="YES" />
+        <field name="document_id" type="integer" relation="documents.id" />
+        <field name="asset_id" type="integer" relation="assets.id" />
+        <field name="amount" type="double" />
+      </table>
+      <!-- Each side keeps the analytics its account asks for: the subconto's
+           table comes from the account's subconto kind. -->
       <table name="entries">
         <field name="id" type="integer" key="YES" />
         <field name="document_id" type="integer" relation="documents.id" />
         <field name="debit_id" type="integer" relation="cfg.accounts.id" />
         <field name="credit_id" type="integer" relation="cfg.accounts.id" />
-        <field name="counterparty_id" type="integer" relation="counterparties.id" />
-        <field name="item_id" type="integer" relation="items.id" />
+        <field name="debit_subconto_id" type="integer" relation="ib.{debit.subconto_kind.table}.id" />
+        <field name="credit_subconto_id" type="integer" relation="ib.{credit.subconto_kind.table}.id" />
+        <field name="currency_id" type="integer" relation="currencies.id" />
         <field name="date" type="date" />
         <field name="quantity" type="double" precision="3" />
+        <field name="currency_amount" type="double" />
         <field name="amount" type="double" />
         <field name="content" type="string" length="160" />
       </table>
@@ -236,8 +378,9 @@
       <table name="card" transient="true">
         <field name="id" type="integer" key="YES" />
         <field name="document_id" type="integer" relation="documents.id" />
+        <field name="account_id" type="integer" relation="cfg.accounts.id" />
+        <field name="subconto_id" type="integer" relation="ib.{account.subconto_kind.table}.id" />
         <field name="corr_id" type="integer" relation="cfg.accounts.id" />
-        <field name="counterparty_id" type="integer" relation="counterparties.id" />
         <field name="date" type="date" />
         <field name="debit" type="double" />
         <field name="credit" type="double" />
@@ -246,7 +389,8 @@
       </table>
       <table name="analysis_rows" transient="true">
         <field name="id" type="integer" key="YES" />
-        <field name="counterparty_id" type="integer" relation="counterparties.id" />
+        <field name="account_id" type="integer" relation="cfg.accounts.id" />
+        <field name="subconto_id" type="integer" relation="ib.{account.subconto_kind.table}.id" />
         <field name="opening_dr" type="double" />
         <field name="opening_cr" type="double" />
         <field name="debit_turnover" type="double" />
@@ -264,6 +408,36 @@
         <field name="amount" type="double" />
         <field name="vat" type="double" />
       </table>
+      <!-- Cash book: per day the opening balance, the cash orders, the day's
+           totals and the closing balance. -->
+      <table name="cash_book" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="document_id" type="integer" relation="documents.id" />
+        <field name="corr_id" type="integer" relation="cfg.accounts.id" />
+        <field name="subconto_id" type="integer" relation="ib.{corr.subconto_kind.table}.id" />
+        <field name="date" type="date" />
+        <field name="content" type="string" length="160" />
+        <field name="receipt" type="double" />
+        <field name="expense" type="double" />
+        <field name="balance" type="double" />
+      </table>
+      <table name="asset_rows" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="asset_id" type="integer" relation="assets.id" />
+        <field name="cost" type="double" />
+        <field name="monthly" type="double" />
+        <field name="depreciation" type="double" />
+        <field name="residual" type="double" />
+      </table>
+      <!-- Payroll statement: what each employee is owed on the payroll account. -->
+      <table name="payroll_rows" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="employee_id" type="integer" relation="employees.id" />
+        <field name="opening" type="double" />
+        <field name="accrued" type="double" />
+        <field name="deducted" type="double" />
+        <field name="closing" type="double" />
+      </table>
     </database>
   </databases>
 
@@ -275,6 +449,9 @@
         <Page form="counterparties_page" command="view.counterparties" />
         <Page form="items_page" command="view.items" />
         <Page form="accounts_page" command="view.accounts" />
+        <Page form="employees_page" command="view.employees" />
+        <Page form="assets_page" command="view.assets" />
+        <Page form="currencies_page" command="view.currencies" />
         <Page form="entries_page" command="view.entries" />
         <Page form="reports_page" command="view.reports" />
         <Page form="config_page" command="view.config" />
@@ -289,6 +466,8 @@
       <Toolbar>
         <Button command="doc.new" icon="ledger-new" text="New" tooltip="New document (Ctrl+N)" />
         <Button command="doc.new_operation" icon="ledger-operation" text="Operation" tooltip="New manual operation (Ctrl+M)" />
+        <Button command="doc.new_payroll" icon="ledger-payroll" text="Payroll" tooltip="New payroll document (Ctrl+W)" />
+        <Button command="doc.close_month" icon="ledger-close-month" text="Close Month" tooltip="Month-end closing (Ctrl+E)" />
         <Button command="doc.open" icon="ledger-edit" text="Open" tooltip="Open document (Ctrl+O)" />
         <Button command="doc.post" icon="ledger-post" text="Post" tooltip="Post: write accounting entries (F9)" />
         <Button command="doc.unpost" icon="ledger-unpost" text="Unpost" tooltip="Cancel posting" />
@@ -304,6 +483,7 @@
             <Column field="doc_type.name" title="Document" width="0" min-width="120" />
             <Column field="counterparty.name" title="Counterparty" width="0" min-width="120" />
             <Column field="total" title="Amount" width="90" />
+            <Column field="currency.code" title="Cur." width="40" />
             <Column field="comment" title="Comment" width="0" />
           </TableView>
           <TabView name="details" flags="flexspace">
@@ -319,9 +499,9 @@
             </TableView>
             <TableView name="doc_entries" text="Entries" source="ib.entries" flags="notitle,nofill,vscroll">
               <Column field="debit.code" title="Dr" width="56" />
+              <Column field="debit_subconto.name" title="Dr Analytics" width="0" />
               <Column field="credit.code" title="Cr" width="56" />
-              <Column field="counterparty.name" title="Counterparty" width="0" />
-              <Column field="item.name" title="Item" width="0" />
+              <Column field="credit_subconto.name" title="Cr Analytics" width="0" />
               <Column field="quantity" title="Qty" width="64" />
               <Column field="amount" title="Amount" width="90" />
               <Column field="content" title="Content" width="0" />
@@ -376,9 +556,80 @@
         <Column field="code" title="Code" width="56" />
         <Column field="name" title="Account" width="0" min-width="200" />
         <Column field="kind" title="Kind" width="44" />
-        <Column field="subconto" title="Analytics" width="96" />
+        <Column field="subconto_kind.name" title="Analytics" width="104" />
+        <Column field="currency" title="Currency" width="60" />
         <Column field="section" title="Section" width="0" />
       </TableView>
+    </form>
+
+    <form name="employees_page" title="Employees" icon="ledger-nav-employees"
+          checked-icon="ledger-nav-employees-fill" tooltip="Employees (Ctrl+5)"
+          focus="employees" width="900" height="560" role="page" flags="nofill,flexspace"
+          spacing="4" padding="4">
+      <Toolbar>
+        <Button command="catalog.new_employee" icon="ledger-new" text="New" tooltip="New employee" />
+        <Button command="catalog.edit_employee" icon="ledger-edit" text="Edit" tooltip="Edit employee" />
+        <Button command="doc.new_payroll" icon="ledger-payroll" text="Payroll" tooltip="New payroll document (Ctrl+W)" />
+        <spacer />
+        <Button command="catalog.delete_employee" icon="ledger-delete" text="Delete" tooltip="Delete employee" />
+      </Toolbar>
+      <TableView name="employees" source="ib.employees" flags="notitle,nofill,vscroll,flexspace">
+        <Column field="name" title="Name" width="0" min-width="160" />
+        <Column field="position" title="Position" width="0" />
+        <Column field="tax_id" title="Tax ID" width="100" />
+        <Column field="hired" title="Hired" width="80" />
+        <Column field="salary" title="Salary" width="90" />
+        <Column field="allowance" title="Allowance" width="80" />
+        <Column field="account.code" title="Expense" width="60" />
+      </TableView>
+    </form>
+
+    <form name="assets_page" title="Fixed Assets" icon="ledger-nav-assets"
+          checked-icon="ledger-nav-assets-fill" tooltip="Fixed assets (Ctrl+6)"
+          focus="assets" width="900" height="560" role="page" flags="nofill,flexspace"
+          spacing="4" padding="4">
+      <Toolbar>
+        <Button command="catalog.new_asset" icon="ledger-new" text="New" tooltip="New fixed asset" />
+        <Button command="catalog.edit_asset" icon="ledger-edit" text="Edit" tooltip="Edit fixed asset" />
+        <Button command="doc.new_assets" icon="ledger-post" text="Into Service" tooltip="Put assets into service" />
+        <spacer />
+        <Button command="catalog.delete_asset" icon="ledger-delete" text="Delete" tooltip="Delete fixed asset" />
+      </Toolbar>
+      <TableView name="assets" source="ib.assets" flags="notitle,nofill,vscroll,flexspace">
+        <Column field="inventory" title="Inv. No." width="64" />
+        <Column field="name" title="Name" width="0" min-width="160" />
+        <Column field="account.code" title="Account" width="56" />
+        <Column field="cost" title="Cost" width="96" />
+        <Column field="life" title="Life, months" width="84" />
+        <Column field="commissioned" title="In Service" width="80" />
+        <Column field="depreciation.code" title="Depr." width="48" />
+        <Column field="expense.code" title="Expense" width="56" />
+      </TableView>
+    </form>
+
+    <form name="currencies_page" title="Currencies" icon="ledger-nav-currencies"
+          checked-icon="ledger-nav-currencies-fill" tooltip="Currencies and exchange rates (Ctrl+7)"
+          focus="currencies" width="900" height="560" role="page" flags="nofill,flexspace"
+          spacing="4" padding="4">
+      <Toolbar>
+        <Button command="catalog.new_currency" icon="ledger-new" text="Currency" tooltip="New currency" />
+        <Button command="catalog.edit_currency" icon="ledger-edit" text="Edit" tooltip="Edit currency" />
+        <Button command="catalog.new_rate" icon="ledger-new" text="Rate" tooltip="New exchange rate" />
+        <spacer />
+        <Button command="catalog.delete_rate" icon="ledger-delete" text="Delete Rate" tooltip="Delete exchange rate" />
+      </Toolbar>
+      <StackView name="currency_stack" spacing="0" flags="flexspace">
+        <SplitView name="currency_split" orientation="horizontal" split-ratio="0.4" flags="flexspace">
+          <TableView name="currencies" source="ib.currencies" flags="notitle,nofill,vscroll,flexspace">
+            <Column field="code" title="Code" width="56" />
+            <Column field="name" title="Currency" width="0" />
+          </TableView>
+          <TableView name="rates" source="ib.rates" flags="notitle,nofill,vscroll,flexspace">
+            <Column field="date" title="Date" width="96" />
+            <Column field="rate" title="Rate" width="0" />
+          </TableView>
+        </SplitView>
+      </StackView>
     </form>
 
     <form name="entries_page" title="Entry Journal" icon="ledger-nav-entries"
@@ -389,10 +640,12 @@
         <Column field="date" title="Date" width="76" />
         <Column field="document.number" title="Document" width="80" />
         <Column field="debit.code" title="Dr" width="56" />
+        <Column field="debit_subconto.name" title="Dr Analytics" width="0" />
         <Column field="credit.code" title="Cr" width="56" />
-        <Column field="counterparty.name" title="Counterparty" width="0" />
-        <Column field="item.name" title="Item" width="0" />
+        <Column field="credit_subconto.name" title="Cr Analytics" width="0" />
         <Column field="quantity" title="Qty" width="64" />
+        <Column field="currency.code" title="Cur." width="40" />
+        <Column field="currency_amount" title="Cur. Amount" width="84" />
         <Column field="amount" title="Amount" width="96" />
         <Column field="content" title="Content" width="0" />
       </TableView>
@@ -407,6 +660,7 @@
       <Toolbar>
         <Button command="report.settings" icon="ledger-settings" text="Settings" tooltip="Period and account (Ctrl+R)" />
         <Button command="report.recalc" icon="ledger-post" text="Recalculate" tooltip="Rebuild reports from entries (F5)" />
+        <Button command="report.print" icon="ledger-print" text="Print" tooltip="Print report forms: cash book (Ctrl+Shift+P)" />
       </Toolbar>
       <StackView name="reports" spacing="0" flags="flexspace">
         <TabView name="report_tabs" flags="flexspace">
@@ -424,14 +678,15 @@
             <Column field="date" title="Date" width="76" />
             <Column field="document.number" title="Document" width="80" />
             <Column field="content" title="Content" width="0" min-width="120" />
+            <Column field="account.code" title="Account" width="56" />
+            <Column field="subconto.name" title="Analytics" width="0" />
             <Column field="corr.code" title="Corr." width="56" />
-            <Column field="counterparty.name" title="Counterparty" width="0" />
             <Column field="debit" title="Debit" width="90" />
             <Column field="credit" title="Credit" width="90" />
             <Column field="balance" title="Balance" width="96" />
           </TableView>
           <TableView name="analysis" text="Account Analysis" source="ib.analysis_rows" flags="notitle,nofill,vscroll">
-            <Column field="counterparty.name" title="Counterparty" width="0" min-width="140" />
+            <Column field="subconto.name" title="Analytics" width="0" min-width="140" />
             <Column field="opening_dr" title="Opening Dr" width="104" />
             <Column field="opening_cr" title="Opening Cr" width="104" />
             <Column field="debit_turnover" title="Turnover Dr" width="104" />
@@ -456,6 +711,33 @@
             <Column field="total" title="Total" width="104" />
             <Column field="amount" title="Net" width="104" />
             <Column field="vat" title="Tax" width="84" />
+          </TableView>
+          <TableView name="cash_book" text="Cash Book" source="ib.cash_book" flags="notitle,nofill,vscroll">
+            <Column field="date" title="Date" width="76" />
+            <Column field="document.number" title="Document" width="80" />
+            <Column field="content" title="Content" width="0" min-width="140" />
+            <Column field="subconto.name" title="Received from / Paid to" width="0" />
+            <Column field="corr.code" title="Corr." width="56" />
+            <Column field="receipt" title="Receipt" width="96" />
+            <Column field="expense" title="Expense" width="96" />
+            <Column field="balance" title="Balance" width="96" />
+          </TableView>
+          <TableView name="asset_rows" text="Fixed Assets" source="ib.asset_rows" flags="notitle,nofill,vscroll">
+            <Column field="asset.inventory" title="Inv. No." width="64" />
+            <Column field="asset.name" title="Fixed Asset" width="0" min-width="140" />
+            <Column field="asset.commissioned" title="In Service" width="80" />
+            <Column field="cost" title="Cost" width="96" />
+            <Column field="monthly" title="Monthly" width="84" />
+            <Column field="depreciation" title="Depreciation" width="96" />
+            <Column field="residual" title="Residual Value" width="104" />
+          </TableView>
+          <TableView name="payroll_rows" text="Payroll Statement" source="ib.payroll_rows" flags="notitle,nofill,vscroll">
+            <Column field="employee.name" title="Employee" width="0" min-width="140" />
+            <Column field="employee.position" title="Position" width="0" />
+            <Column field="opening" title="Owed at Start" width="104" />
+            <Column field="accrued" title="Accrued" width="96" />
+            <Column field="deducted" title="Withheld and Paid" width="120" />
+            <Column field="closing" title="Owed at End" width="104" />
           </TableView>
         </TabView>
       </StackView>
@@ -482,13 +764,34 @@
             <Column field="credit.code" title="Cr" width="48" />
             <Column field="vat_debit.code" title="Tax Dr" width="52" />
             <Column field="vat_credit.code" title="Tax Cr" width="52" />
-            <Column field="manual" title="Manual" width="52" />
+            <Column field="form" title="Form" width="72" />
             <Column field="description" title="Description" width="0" />
           </TableView>
           <TableView name="print_forms" text="Print Forms" source="cfg.print_forms" master="none" flags="notitle,nofill,vscroll">
             <Column field="doc_type.name" title="Document" width="0" />
+            <Column field="report" title="Report" width="80" />
             <Column field="name" title="Form" width="0" />
             <Column field="basis" title="Legal Basis" width="0" />
+          </TableView>
+          <TableView name="payroll_taxes" text="Payroll Taxes" source="cfg.payroll_taxes" master="none" flags="notitle,nofill,vscroll">
+            <Column field="name" title="Tax" width="0" min-width="160" />
+            <Column field="rate" title="Percent" width="64" />
+            <Column field="withheld" title="Withheld" width="64" />
+            <Column field="debit.code" title="Dr" width="48" />
+            <Column field="credit.code" title="Cr" width="48" />
+          </TableView>
+          <TableView name="closing_rules" text="Closing Rules" source="cfg.closing_rules" master="none" flags="notitle,nofill,vscroll">
+            <Column field="name" title="Step" width="0" min-width="160" />
+            <Column field="kind" title="Kind" width="96" />
+            <Column field="account.code" title="Account" width="56" />
+            <Column field="target.code" title="Target" width="56" />
+            <Column field="via.code" title="Via" width="48" />
+            <Column field="gain.code" title="Gain" width="48" />
+            <Column field="loss.code" title="Loss" width="48" />
+          </TableView>
+          <TableView name="subconto_kinds" text="Analytics Kinds" source="cfg.subconto_kinds" flags="notitle,nofill,vscroll">
+            <Column field="name" title="Analytics" width="0" />
+            <Column field="table" title="Catalog" width="120" />
           </TableView>
           <TableView name="vat_rates" text="Tax Rates" source="cfg.vat_rates" flags="notitle,nofill,vscroll">
             <Column field="name" title="Rate" width="0" />
@@ -510,13 +813,17 @@
           <Label name="lbl_number" text="Number:" />
           <Label name="lbl_date" text="Date:" />
           <Label name="lbl_counterparty" text="Counterparty:" />
+          <Label name="lbl_currency" text="Currency:" />
+          <Label name="lbl_rate" text="Exchange rate:" />
           <Label name="lbl_comment" text="Comment:" />
         </Column>
         <Column name="inputs">
-          <ComboBox name="doc_type" field="ib.documents.doc_type_id" source="cfg.doc_types" display="name" value="id" filter-field="manual" filter-value="0" />
+          <ComboBox name="doc_type" field="ib.documents.doc_type_id" source="cfg.doc_types" display="name" value="id" filter-field="form" filter-value="document" />
           <TextBox name="number" field="ib.documents.number" placeholder="Assigned when saved" />
           <TextBox name="date" field="ib.documents.date" />
           <ComboBox name="counterparty" field="ib.documents.counterparty_id" source="ib.counterparties" display="name" value="id" />
+          <ComboBox name="currency" field="ib.documents.currency_id" source="ib.currencies" display="code" value="id" />
+          <TextBox name="rate" field="ib.documents.rate" placeholder="Rate on the document date" />
           <TextBox name="comment" field="ib.documents.comment" />
         </Column>
       </GridView>
@@ -644,6 +951,7 @@
           <Label name="lbl_corr_account" text="Corr. account:" />
           <Label name="lbl_director" text="Director:" />
           <Label name="lbl_accountant" text="Chief accountant:" />
+          <Label name="lbl_cashier" text="Cashier:" />
         </Column>
         <Column name="inputs">
           <TextBox name="name" field="ib.organizations.name" />
@@ -656,6 +964,7 @@
           <TextBox name="corr_account" field="ib.organizations.corr_account" />
           <TextBox name="director" field="ib.organizations.director" />
           <TextBox name="accountant" field="ib.organizations.accountant" />
+          <TextBox name="cashier" field="ib.organizations.cashier" />
         </Column>
       </GridView>
       <Separator name="sep" />
@@ -713,7 +1022,7 @@
           <Label name="lbl_comment" text="Comment:" />
         </Column>
         <Column name="inputs">
-          <ComboBox name="doc_type" field="ib.documents.doc_type_id" source="cfg.doc_types" display="name" value="id" filter-field="manual" filter-value="1" />
+          <ComboBox name="doc_type" field="ib.documents.doc_type_id" source="cfg.doc_types" display="name" value="id" filter-field="form" filter-value="operation" />
           <TextBox name="number" field="ib.documents.number" placeholder="Assigned when saved" />
           <TextBox name="date" field="ib.documents.date" />
           <TextBox name="comment" field="ib.documents.comment" />
@@ -721,9 +1030,9 @@
       </GridView>
       <TableView name="entries" source="ib.entries" flags="notitle,nofill,vscroll,flexspace">
         <Column field="debit.code" title="Dr" width="56" />
+        <Column field="debit_subconto.name" title="Dr Analytics" width="0" />
         <Column field="credit.code" title="Cr" width="56" />
-        <Column field="counterparty.name" title="Counterparty" width="0" />
-        <Column field="item.name" title="Item" width="0" />
+        <Column field="credit_subconto.name" title="Cr Analytics" width="0" />
         <Column field="quantity" title="Qty" width="64" />
         <Column field="amount" title="Amount" width="90" />
         <Column field="content" title="Content" width="0" />
@@ -746,23 +1055,28 @@
       </StackView>
     </form>
 
-    <form name="entry" title="Entry" width="380" spacing="6" padding="8">
+    <!-- The analytics boxes list the catalog the chosen account is analysed by. -->
+    <form name="entry" title="Entry" width="400" spacing="6" padding="8">
       <GridView name="fields" spacing="4">
         <Column name="labels" width="auto">
           <Label name="lbl_debit" text="Debit:" />
+          <Label name="lbl_debit_subconto" text="Debit analytics:" />
           <Label name="lbl_credit" text="Credit:" />
-          <Label name="lbl_counterparty" text="Counterparty:" />
-          <Label name="lbl_item" text="Item:" />
+          <Label name="lbl_credit_subconto" text="Credit analytics:" />
           <Label name="lbl_quantity" text="Quantity:" />
+          <Label name="lbl_currency" text="Currency:" />
+          <Label name="lbl_currency_amount" text="Currency amount:" />
           <Label name="lbl_amount" text="Amount:" />
           <Label name="lbl_content" text="Content:" />
         </Column>
         <Column name="inputs">
           <ComboBox name="debit" field="ib.entries.debit_id" source="cfg.accounts" display="code" value="id" />
+          <ComboBox name="debit_subconto" field="ib.entries.debit_subconto_id" source="ib.counterparties" display="name" value="id" />
           <ComboBox name="credit" field="ib.entries.credit_id" source="cfg.accounts" display="code" value="id" />
-          <ComboBox name="counterparty" field="ib.entries.counterparty_id" source="ib.counterparties" display="name" value="id" />
-          <ComboBox name="item" field="ib.entries.item_id" source="ib.items" display="name" value="id" />
+          <ComboBox name="credit_subconto" field="ib.entries.credit_subconto_id" source="ib.counterparties" display="name" value="id" />
           <TextBox name="quantity" field="ib.entries.quantity" />
+          <ComboBox name="currency" field="ib.entries.currency_id" source="ib.currencies" display="code" value="id" />
+          <TextBox name="currency_amount" field="ib.entries.currency_amount" />
           <TextBox name="amount" field="ib.entries.amount" />
           <TextBox name="content" field="ib.entries.content" />
         </Column>
@@ -771,6 +1085,252 @@
       <StackView name="actions" orientation="horizontal" spacing="6">
         <Space name="flex" />
         <Button name="ok" text="OK" action="ib.entries.insert" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <!-- Payroll: accrual (pay and payroll taxes) or payout of what is owed. -->
+    <form name="payroll" title="Payroll" width="640" height="420" spacing="6" padding="8">
+      <GridView name="header" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_type" text="Document:" />
+          <Label name="lbl_number" text="Number:" />
+          <Label name="lbl_date" text="Date:" />
+          <Label name="lbl_comment" text="Comment:" />
+        </Column>
+        <Column name="inputs">
+          <ComboBox name="doc_type" field="ib.documents.doc_type_id" source="cfg.doc_types" display="name" value="id" filter-field="form" filter-value="payroll" />
+          <TextBox name="number" field="ib.documents.number" placeholder="Assigned when saved" />
+          <TextBox name="date" field="ib.documents.date" />
+          <TextBox name="comment" field="ib.documents.comment" />
+        </Column>
+      </GridView>
+      <TableView name="lines" source="ib.payroll_lines" flags="notitle,nofill,vscroll,flexspace">
+        <Column field="employee.name" title="Employee" width="0" min-width="140" />
+        <Column field="employee.position" title="Position" width="0" />
+        <Column field="amount" title="Amount" width="90" />
+        <Column field="withheld" title="Withheld" width="84" />
+        <Column field="contributions" title="Contributions" width="90" />
+        <Column field="net" title="Net Pay" width="90" />
+      </TableView>
+      <StackView name="line_actions" orientation="horizontal" spacing="4">
+        <Button name="fill" text="Fill" />
+        <Button name="add_line" text="Add Line..." />
+        <Button name="edit_line" text="Edit Line..." />
+        <Button name="delete_line" text="Delete Line" />
+        <Space name="line_flex" />
+      </StackView>
+      <GridView name="totals" spacing="4">
+        <Column name="col_total_label" width="auto"><Label name="lbl_total" text="Total:" /></Column>
+        <Column name="col_total"><TextBox name="total" field="ib.documents.total" /></Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK and Post" action="ib.documents.update" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="payroll_line" title="Payroll Line" width="340" spacing="6" padding="8">
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_employee" text="Employee:" />
+          <Label name="lbl_amount" text="Amount:" />
+        </Column>
+        <Column name="inputs">
+          <ComboBox name="employee" field="ib.payroll_lines.employee_id" source="ib.employees" display="name" value="id" />
+          <TextBox name="amount" field="ib.payroll_lines.amount" placeholder="Salary" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="ib.payroll_lines.insert" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="asset_document" title="Put into Service" width="560" height="360" spacing="6" padding="8">
+      <GridView name="header" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_type" text="Document:" />
+          <Label name="lbl_number" text="Number:" />
+          <Label name="lbl_date" text="Date:" />
+          <Label name="lbl_comment" text="Comment:" />
+        </Column>
+        <Column name="inputs">
+          <ComboBox name="doc_type" field="ib.documents.doc_type_id" source="cfg.doc_types" display="name" value="id" filter-field="form" filter-value="assets" />
+          <TextBox name="number" field="ib.documents.number" placeholder="Assigned when saved" />
+          <TextBox name="date" field="ib.documents.date" />
+          <TextBox name="comment" field="ib.documents.comment" />
+        </Column>
+      </GridView>
+      <TableView name="lines" source="ib.asset_lines" flags="notitle,nofill,vscroll,flexspace">
+        <Column field="asset.inventory" title="Inv. No." width="64" />
+        <Column field="asset.name" title="Fixed Asset" width="0" min-width="160" />
+        <Column field="asset.life" title="Life, months" width="84" />
+        <Column field="amount" title="Cost" width="96" />
+      </TableView>
+      <StackView name="line_actions" orientation="horizontal" spacing="4">
+        <Button name="add_line" text="Add Asset..." />
+        <Button name="delete_line" text="Remove Asset" />
+        <Space name="line_flex" />
+      </StackView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK and Post" action="ib.documents.update" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="asset_line" title="Fixed Asset" width="320" spacing="6" padding="8">
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_asset" text="Fixed asset:" />
+        </Column>
+        <Column name="inputs">
+          <ComboBox name="asset" field="ib.asset_lines.asset_id" source="ib.assets" display="name" value="id" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="ib.asset_lines.insert" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <!-- Month-end closing: the entries come from the configuration's closing rules. -->
+    <form name="closing" title="Close Month" width="640" height="400" spacing="6" padding="8">
+      <GridView name="header" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_type" text="Document:" />
+          <Label name="lbl_number" text="Number:" />
+          <Label name="lbl_date" text="Last day of month:" />
+          <Label name="lbl_comment" text="Comment:" />
+        </Column>
+        <Column name="inputs">
+          <ComboBox name="doc_type" field="ib.documents.doc_type_id" source="cfg.doc_types" display="name" value="id" filter-field="form" filter-value="closing" />
+          <TextBox name="number" field="ib.documents.number" placeholder="Assigned when saved" />
+          <TextBox name="date" field="ib.documents.date" />
+          <TextBox name="comment" field="ib.documents.comment" />
+        </Column>
+      </GridView>
+      <Label name="hint" text="Posting charges depreciation, revalues currency accounts and closes the month's expenses and result." />
+      <TableView name="entries" source="ib.entries" flags="notitle,nofill,vscroll,flexspace">
+        <Column field="debit.code" title="Dr" width="56" />
+        <Column field="debit_subconto.name" title="Dr Analytics" width="0" />
+        <Column field="credit.code" title="Cr" width="56" />
+        <Column field="credit_subconto.name" title="Cr Analytics" width="0" />
+        <Column field="amount" title="Amount" width="90" />
+        <Column field="content" title="Content" width="0" />
+      </TableView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK and Post" action="ib.documents.update" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="employee" title="Employee" width="380" spacing="6" padding="8">
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_name" text="Name:" />
+          <Label name="lbl_position" text="Position:" />
+          <Label name="lbl_tax_id" text="Tax ID:" />
+          <Label name="lbl_hired" text="Hired:" />
+          <Label name="lbl_salary" text="Monthly salary:" />
+          <Label name="lbl_allowance" text="Tax allowance:" />
+          <Label name="lbl_account" text="Expense account:" />
+        </Column>
+        <Column name="inputs">
+          <TextBox name="name" field="ib.employees.name" />
+          <TextBox name="position" field="ib.employees.position" />
+          <TextBox name="tax_id" field="ib.employees.tax_id" />
+          <TextBox name="hired" field="ib.employees.hired" />
+          <TextBox name="salary" field="ib.employees.salary" />
+          <TextBox name="allowance" field="ib.employees.allowance" placeholder="Monthly, before allowance taxes" />
+          <ComboBox name="account" field="ib.employees.account_id" source="cfg.accounts" display="code" value="id" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="ib.employees.insert" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="asset" title="Fixed Asset" width="400" spacing="6" padding="8">
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_inventory" text="Inventory number:" />
+          <Label name="lbl_name" text="Name:" />
+          <Label name="lbl_cost" text="Cost:" />
+          <Label name="lbl_life" text="Useful life, months:" />
+          <Label name="lbl_commissioned" text="In service since:" />
+          <Label name="lbl_account" text="Asset account:" />
+          <Label name="lbl_depreciation" text="Depreciation account:" />
+          <Label name="lbl_expense" text="Expense account:" />
+        </Column>
+        <Column name="inputs">
+          <TextBox name="inventory" field="ib.assets.inventory" />
+          <TextBox name="name" field="ib.assets.name" />
+          <TextBox name="cost" field="ib.assets.cost" />
+          <TextBox name="life" field="ib.assets.life" />
+          <TextBox name="commissioned" field="ib.assets.commissioned" placeholder="Set when put into service" />
+          <ComboBox name="account" field="ib.assets.account_id" source="cfg.accounts" display="code" value="id" />
+          <ComboBox name="depreciation" field="ib.assets.depreciation_id" source="cfg.accounts" display="code" value="id" />
+          <ComboBox name="expense" field="ib.assets.expense_id" source="cfg.accounts" display="code" value="id" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="ib.assets.insert" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="currency" title="Currency" width="300" spacing="6" padding="8">
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_code" text="Code:" />
+          <Label name="lbl_name" text="Name:" />
+        </Column>
+        <Column name="inputs">
+          <TextBox name="code" field="ib.currencies.code" placeholder="USD" />
+          <TextBox name="name" field="ib.currencies.name" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="ib.currencies.insert" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="rate" title="Exchange Rate" width="300" spacing="6" padding="8">
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_currency" text="Currency:" />
+          <Label name="lbl_date" text="Date:" />
+          <Label name="lbl_rate" text="Rate:" />
+        </Column>
+        <Column name="inputs">
+          <ComboBox name="currency" field="ib.rates.currency_id" source="ib.currencies" display="code" value="id" />
+          <TextBox name="date" field="ib.rates.date" />
+          <TextBox name="rate" field="ib.rates.rate" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="ib.rates.insert" flags="BUTTON_DEFAULT" />
         <Button name="cancel" text="Cancel" />
       </StackView>
     </form>
@@ -788,7 +1348,7 @@
           <ComboBox name="account" field="ib.report_settings.account_id" source="cfg.accounts" display="code" value="id" />
         </Column>
       </GridView>
-      <Label name="hint" text="The account card and analysis show the chosen account." />
+      <Label name="hint" text="The account card and analysis show the chosen account; the cash book, assets and payroll use the period." />
       <Separator name="sep" />
       <StackView name="actions" orientation="horizontal" spacing="6">
         <Space name="flex" />

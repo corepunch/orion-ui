@@ -215,7 +215,7 @@ void gc_refresh_all(void) {
       gc->history_db, dbFetch, MAKEDWORD(ID_DB_BRANCHES, 0), (void *)(intptr_t)0);
     int row = 0;
     for (result_node_t *n = rows; n; n = n->next, row++) {
-      db_branche_t *branch = *(db_branche_t **)n->data;
+      db_branch_t *branch = *(db_branch_t **)n->data;
       if (branch && branch->is_current) {
         send_message(gc->branches_win, RVM_SETSELECTION, (uint32_t)row, NULL);
         break;

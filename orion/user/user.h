@@ -845,6 +845,19 @@ uint32_t show_db_dialog_hook(form_def_t const *def, const char *title,
                              window_t *parent, int record_id, winproc_t hook);
 // Record id edited by the database dialog containing win (0 when new).
 int db_dialog_record_id(window_t *win);
+// The record buffer the dialog edits: controls are pushed from it on open and
+// pulled into it on OK. Hooks may read or prefill it.
+void *db_dialog_record(window_t *win);
+
+// All options of a database dialog: a foreign key preset on new records and a
+// hook receiving evCreate and the messages the dialog does not handle.
+typedef struct {
+  const char *fk_field;
+  int         fk_value;
+  winproc_t   hook;
+} db_dialog_opts_t;
+uint32_t show_db_dialog_opts(form_def_t const *def, const char *title, window_t *parent,
+                             int record_id, const db_dialog_opts_t *opts);
 
 // Extended version with FK parent ID support (e.g., post_id for comments)
 // fk_field: name of FK field to populate (e.g., "post_id")

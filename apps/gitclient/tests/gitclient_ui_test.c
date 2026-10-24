@@ -105,7 +105,7 @@ void test_dbload_populates_branches(void) {
     bool found_feature = false;
     int  current_count = 0;
     for (result_node_t *n = rows; n; n = n->next) {
-        db_branche_t *b = *(db_branche_t **)n->data;
+        db_branch_t *b = *(db_branch_t **)n->data;
         if (strcmp(b->name, "main") == 0 || strcmp(b->name, "master") == 0)
             found_main = true;
         if (strcmp(b->name, "feature") == 0)
@@ -276,7 +276,7 @@ void test_master_detail_branch_to_commits(void) {
     int feature_id = -1;
     int main_id    = -1;
     for (result_node_t *n = branches; n; n = n->next) {
-        db_branche_t *b = *(db_branche_t **)n->data;
+        db_branch_t *b = *(db_branch_t **)n->data;
         if (strcmp(b->name, "feature") == 0)  feature_id = b->id;
         if (strcmp(b->name, "main") == 0 ||
             strcmp(b->name, "master") == 0)   main_id    = b->id;
@@ -325,7 +325,7 @@ void test_master_detail_commit_to_files_lazy_load(void) {
         db, dbFetch, MAKEDWORD(ID_DB_BRANCHES, 0), (void *)(intptr_t)0);
     int main_id = -1;
     for (result_node_t *n = branches; n; n = n->next) {
-        db_branche_t *b = *(db_branche_t **)n->data;
+        db_branch_t *b = *(db_branch_t **)n->data;
         if (strcmp(b->name, "main") == 0 || strcmp(b->name, "master") == 0)
             main_id = b->id;
     }
@@ -383,7 +383,7 @@ void test_files_per_commit_are_independent(void) {
         db, dbFetch, MAKEDWORD(ID_DB_BRANCHES, 0), (void *)(intptr_t)0);
     int main_id = -1;
     for (result_node_t *n = branches; n; n = n->next) {
-        db_branche_t *b = *(db_branche_t **)n->data;
+        db_branch_t *b = *(db_branch_t **)n->data;
         if (strcmp(b->name, "main") == 0 || strcmp(b->name, "master") == 0)
             main_id = b->id;
     }

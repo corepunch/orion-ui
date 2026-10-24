@@ -13,7 +13,7 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 <table style="width:180mm"><tr><td><span class="line" style="min-width:90px">&nbsp;</span><div class="cap">Поступ. в банк плат.</div></td><td><span class="line" style="min-width:90px">&nbsp;</span><div class="cap">Списано со сч. плат.</div></td><td style="width:40%"></td><td class="box"><table class="box"><tr><td>0401060</td></tr></table></td></tr></table>
 <table style="width:180mm;margin-top:8px"><tr><td><h1>ПЛАТЕЖНОЕ ПОРУЧЕНИЕ № {{number}}</h1></td><td><span class="line">{{date|dmy}}</span><div class="cap">Дата</div></td><td><span class="line" style="min-width:80px">электронно</span><div class="cap">Вид платежа</div></td></tr></table>
 <table class="grid" style="width:180mm">
-<tr><td style="width:18mm">Сумма<br>прописью</td><td colspan="5">{{total}} {{cfg.currency}}</td></tr>
+<tr><td style="width:18mm">Сумма<br>прописью</td><td colspan="5">{{total|words}}</td></tr>
 <tr><td colspan="2">ИНН {{org.tax_id}}</td><td colspan="2">КПП {{org.kpp}}</td><td rowspan="2" style="width:14mm">Сумма</td><td rowspan="2" class="b">{{total}}</td></tr>
 <tr><td colspan="4" rowspan="2">{{org.name}}<br><br><span class="small">Плательщик</span></td></tr>
 <tr><td>Сч. №</td><td>{{org.bank_account}}</td></tr>

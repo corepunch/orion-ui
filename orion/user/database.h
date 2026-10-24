@@ -30,6 +30,12 @@ enum {
   dbGetFieldMeta,    // wparam=table_id; lparam=int* count_out → returns (lresult_t)const db_field_meta_t*
   dbGetApi,          // wparam=0; lparam=0 → returns (lresult_t)const db_api_def_t*
   dbGetFieldText,    // wparam=table_id; lparam=db_field_text_t* → returns 1 when formatted
+  // Record lifecycle, after NeXTSTEP DBKit and EOF (Enterprise Objects):
+  dbInitRecord,      // wparam=table_id; lparam=record buffer → fills a new record's defaults (awakeFromInsertion)
+  dbCountReferrers,  // wparam=table_id; lparam=(intptr_t)id → records whose delete rule denies deleting it
+  dbBeginChanges,    // opens a nested change scope (editing context) → returns 1 when supported
+  dbCommitChanges,   // keeps the changes of the innermost scope
+  dbRevertChanges,   // undoes every change of the innermost scope
   dbUser = 1000      // custom database implementations can use dbUser+
 };
 
@@ -59,6 +65,11 @@ typedef struct {
   int precision;           // Display decimals for float/double (0 = 2)
 } db_field_meta_t;
 
+// What deleting a referenced record does to the records referring to it,
+// as EOF's delete rules: nothing, delete them too, clear the reference, or
+// refuse the delete while they exist.
+typedef enum { DB_DELETE_NO_ACTION, DB_DELETE_CASCADE, DB_DELETE_NULLIFY, DB_DELETE_DENY } db_delete_rule_t;
+
 // Design-time schema metadata for editor/database browsers.
 typedef struct {
   const char *name;            // Field name (e.g., "author_id")
@@ -67,6 +78,8 @@ typedef struct {
   bool primary_key;            // true for key fields
   const char *relation_table;  // Foreign table, if this field references one
   const char *relation_field;  // Foreign field, if this field references one
+  const char *default_value;   // Value of a new record (dbInitRecord); "today" for dates
+  db_delete_rule_t delete_rule; // Applied to this record when the referenced one is deleted
 } db_field_schema_t;
 
 typedef struct {
@@ -138,9 +151,13 @@ const db_table_schema_t *db_schema_table(const db_schema_def_t *schema, int tabl
 const db_table_schema_t *db_schema_table_named(const db_schema_def_t *schema, const char *name);
 int db_schema_field_index(const db_table_schema_t *table, const char *field);
 bool db_format_field(const db_field_meta_t *field, const void *record, char *buf, size_t buf_sz);
+// Sets a field from text as it is stored ("12.5", "2003-03-31", "1"); "today"
+// sets a date field to the current date.
+bool db_parse_field(const db_field_meta_t *field, void *record, const char *text);
 // Formats a field (or join path "author.name") using the table schema.
 // Joins resolve through dbFind on the related database ("db.table" relations
-// name another registered database).
+// name another registered database). A polymorphic relation takes its table
+// name from a path on the same record: "ib.{debit.subconto_kind.table}".
 bool db_schema_field_text(database_t *db, const db_table_schema_t *table,
                           const void *record, const char *field,
                           char *buf, size_t buf_sz);

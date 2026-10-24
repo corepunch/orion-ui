@@ -1,5 +1,6 @@
 // i18n_test.c — string catalogs: layers, MUI-style fallback, contexts,
-// pseudo-locale, number/date formats, and translation of declarative forms.
+// pseudo-locale, number/date formats, spelled-out numbers, and translation of
+// declarative forms.
 
 #include "test_framework.h"
 #include "test_env.h"
@@ -105,6 +106,25 @@ static void test_system_language(void) {
   PASS();
 }
 
+static void test_spellout(void) {
+  TEST("spellout: numbers in words agree in gender; plural forms; amounts as legal forms write them");
+  char buf[256];
+  ASSERT_STR_EQUAL(ui_spell_number("ru", 21000, UI_GENDER_MASCULINE, buf, sizeof(buf)), "двадцать одна тысяча");
+  ASSERT_STR_EQUAL(ui_spell_number("ru", 2, UI_GENDER_FEMININE, buf, sizeof(buf)), "две");
+  ASSERT_STR_EQUAL(ui_spell_number("de", 5021, UI_GENDER_MASCULINE, buf, sizeof(buf)), "fünftausendeinundzwanzig");
+  ASSERT_STR_EQUAL(ui_spell_number("de", 2000000, UI_GENDER_MASCULINE, buf, sizeof(buf)), "zwei Millionen");
+  ASSERT_STR_EQUAL(ui_spell_number("en", 342, UI_GENDER_MASCULINE, buf, sizeof(buf)), "three hundred forty-two");
+  ASSERT_STR_EQUAL(ui_spell_number("fr", 342, UI_GENDER_MASCULINE, buf, sizeof(buf)), "342");
+  ASSERT_STR_EQUAL(ui_plural_pick("ru", 12, "рубль|рубля|рублей", buf, sizeof(buf)), "рублей");
+  ASSERT_STR_EQUAL(ui_plural_pick("ru", 22, "рубль|рубля|рублей", buf, sizeof(buf)), "рубля");
+  ASSERT_STR_EQUAL(ui_plural_pick("de", 2, "Euro", buf, sizeof(buf)), "Euro");
+  ui_money_words_t rub = { "рубль|рубля|рублей", UI_GENDER_MASCULINE, "копейка|копейки|копеек", UI_GENDER_FEMININE };
+  ASSERT_STR_EQUAL(ui_spell_amount("ru", 1234.05, &rub, buf, sizeof(buf)), "Одна тысяча двести тридцать четыре рубля 05 копеек");
+  ui_money_words_t eur = { "Euro", UI_GENDER_MASCULINE, "Cent", UI_GENDER_MASCULINE };
+  ASSERT_STR_EQUAL(ui_spell_amount("de", 699.48, &eur, buf, sizeof(buf)), "Sechshundertneunundneunzig Euro 48 Cent");
+  PASS();
+}
+
 static void test_forms_translate(void) {
   TEST("instantiation: generated form texts translate in their context; plain windows keep their text");
   test_env_init();
@@ -136,6 +156,7 @@ int main(int argc, char **argv) {
   test_formats();
   test_pseudo_locale();
   test_system_language();
+  test_spellout();
   test_forms_translate();
   TEST_END();
 }

@@ -34,42 +34,42 @@
   <string source="About Ledger" where="menu">О программе</string>
   <string source="Ledger" where="main_window">Бухгалтерия</string>
   <string source="Document journal (Ctrl+1)" where="journal_page">Журнал документов (Ctrl+1)</string>
-  <string source="New" where="journal_page,counterparties_page,items_page">Новый</string>
+  <string source="New" where="journal_page,counterparties_page,items_page,employees_page,assets_page">Новый</string>
   <string source="New document (Ctrl+N)" where="journal_page">Новый документ (Ctrl+N)</string>
   <string source="Open" where="journal_page">Открыть</string>
   <string source="Open document (Ctrl+O)" where="journal_page">Открыть документ (Ctrl+O)</string>
   <string source="Post: write accounting entries (F9)" where="journal_page">Провести: сформировать проводки (F9)</string>
   <string source="Unpost" where="journal_page">Отменить</string>
   <string source="Cancel posting" where="journal_page">Отменить проведение</string>
-  <string source="Print" where="journal_page">Печать</string>
+  <string source="Print" where="journal_page,reports_page">Печать</string>
   <string source="Print forms (Ctrl+P)" where="journal_page">Печатные формы (Ctrl+P)</string>
-  <string source="Delete" where="journal_page,counterparties_page,items_page">Удалить</string>
+  <string source="Delete" where="journal_page,counterparties_page,items_page,employees_page,assets_page">Удалить</string>
   <string source="Delete document" where="journal_page">Удалить документ</string>
-  <string source="Date" where="journal_page,entries_page,reports_page">Дата</string>
+  <string source="Date" where="journal_page,currencies_page,entries_page,reports_page">Дата</string>
   <string source="Number" where="journal_page">Номер</string>
   <string source="Document" where="journal_page,entries_page,reports_page,config_page,document">Документ</string>
-  <string source="Counterparty" where="journal_page,entries_page,reports_page,counterparty,operation">Контрагент</string>
-  <string source="Amount" where="journal_page,entries_page,document,operation">Сумма</string>
+  <string source="Counterparty" where="journal_page,reports_page,counterparty">Контрагент</string>
+  <string source="Amount" where="journal_page,entries_page,document,operation,payroll,closing">Сумма</string>
   <string source="Comment" where="journal_page">Комментарий</string>
   <string source="Lines" where="journal_page">Товары</string>
-  <string source="Item" where="journal_page,entries_page,document,item,operation">Номенклатура</string>
+  <string source="Item" where="journal_page,document,item">Номенклатура</string>
   <string source="Unit" where="journal_page,items_page,config_page,document">Ед.</string>
   <string source="Qty" where="journal_page,entries_page,document,operation">Кол-во</string>
   <string source="Price" where="journal_page,items_page,document">Цена</string>
-  <string source="Tax" where="journal_page,items_page,reports_page,document">Налог</string>
+  <string source="Tax" where="journal_page,items_page,reports_page,config_page,document">Налог</string>
   <string source="Tax Amount" where="journal_page,document">Сумма налога</string>
   <string source="Total" where="journal_page,reports_page,document">Всего</string>
   <string source="Entries" where="journal_page">Проводки</string>
-  <string source="Dr" where="journal_page,entries_page,config_page,operation">Дт</string>
-  <string source="Cr" where="journal_page,entries_page,config_page,operation">Кт</string>
-  <string source="Content" where="journal_page,entries_page,reports_page,operation">Содержание</string>
+  <string source="Dr" where="journal_page,entries_page,config_page,operation,closing">Дт</string>
+  <string source="Cr" where="journal_page,entries_page,config_page,operation,closing">Кт</string>
+  <string source="Content" where="journal_page,entries_page,reports_page,operation,closing">Содержание</string>
   <string source="Counterparties (Ctrl+2)" where="counterparties_page">Контрагенты (Ctrl+2)</string>
   <string source="New counterparty" where="counterparties_page">Новый контрагент</string>
-  <string source="Edit" where="counterparties_page,items_page">Изменить</string>
+  <string source="Edit" where="counterparties_page,items_page,employees_page,assets_page,currencies_page">Изменить</string>
   <string source="Edit counterparty" where="counterparties_page">Изменить контрагента</string>
   <string source="Delete counterparty" where="counterparties_page">Удалить контрагента</string>
-  <string source="Name" where="counterparties_page,items_page,reports_page">Наименование</string>
-  <string source="Tax ID" where="counterparties_page,reports_page">Налоговый номер</string>
+  <string source="Name" where="counterparties_page,items_page,employees_page,assets_page,reports_page">Наименование</string>
+  <string source="Tax ID" where="counterparties_page,employees_page,reports_page">Налоговый номер</string>
   <string source="KPP" where="counterparties_page">КПП</string>
   <string source="Phone" where="counterparties_page">Телефон</string>
   <string source="Address" where="counterparties_page">Адрес</string>
@@ -77,10 +77,10 @@
   <string source="New item" where="items_page">Новая номенклатура</string>
   <string source="Edit item" where="items_page">Изменить номенклатуру</string>
   <string source="Delete item" where="items_page">Удалить номенклатуру</string>
-  <string source="Code" where="items_page,accounts_page,config_page">Код</string>
+  <string source="Code" where="items_page,accounts_page,currencies_page,config_page">Код</string>
   <string source="Chart of accounts (Ctrl+4)" where="accounts_page">План счетов (Ctrl+4)</string>
-  <string source="Account" where="accounts_page,reports_page">Счет</string>
-  <string source="Kind" where="accounts_page">Вид</string>
+  <string source="Account" where="accounts_page,assets_page,reports_page,config_page">Счет</string>
+  <string source="Kind" where="accounts_page,config_page">Вид</string>
   <string source="Section" where="accounts_page">Раздел</string>
   <string source="All accounting entries (Ctrl+5)" where="entries_page">Все проводки (Ctrl+5)</string>
   <string source="Recalculate" where="reports_page">Пересчитать</string>
@@ -88,7 +88,7 @@
   <string source="Turnover Cr" where="reports_page">Оборот Кт</string>
   <string source="Active configuration (Ctrl+7)" where="config_page">Текущая конфигурация (Ctrl+7)</string>
   <string source="Country" where="config_page">Страна</string>
-  <string source="Currency" where="config_page">Валюта</string>
+  <string source="Currency" where="accounts_page,currencies_page,config_page,currency">Валюта</string>
   <string source="Version" where="config_page">Версия</string>
   <string source="Legal Basis" where="config_page">Нормативная база</string>
   <string source="Document Types" where="config_page">Виды документов</string>
@@ -98,39 +98,39 @@
   <string source="Description" where="config_page">Описание</string>
   <string source="Form" where="config_page">Форма</string>
   <string source="Tax Rates" where="config_page">Ставки налога</string>
-  <string source="Rate" where="config_page">Ставка</string>
+  <string source="Rate" where="currencies_page,config_page">Ставка</string>
   <string source="Percent" where="config_page">Процент</string>
   <string source="Units" where="config_page">Единицы измерения</string>
-  <string source="Document:" where="document">Документ:</string>
-  <string source="Number:" where="document,operation">Номер:</string>
-  <string source="Date:" where="document,operation">Дата:</string>
-  <string source="Counterparty:" where="document,entry">Контрагент:</string>
-  <string source="Comment:" where="document,operation">Комментарий:</string>
-  <string source="Assigned when saved" where="document,operation">Присваивается при записи</string>
-  <string source="Add Line..." where="document">Добавить строку...</string>
-  <string source="Edit Line..." where="document">Изменить строку...</string>
-  <string source="Delete Line" where="document">Удалить строку</string>
-  <string source="Amount:" where="document,entry">Сумма:</string>
+  <string source="Document:" where="document,payroll,asset_document,closing">Документ:</string>
+  <string source="Number:" where="document,operation,payroll,asset_document,closing">Номер:</string>
+  <string source="Date:" where="document,operation,payroll,asset_document,rate">Дата:</string>
+  <string source="Counterparty:" where="document">Контрагент:</string>
+  <string source="Comment:" where="document,operation,payroll,asset_document,closing">Комментарий:</string>
+  <string source="Assigned when saved" where="document,operation,payroll,asset_document,closing">Присваивается при записи</string>
+  <string source="Add Line..." where="document,payroll">Добавить строку...</string>
+  <string source="Edit Line..." where="document,payroll">Изменить строку...</string>
+  <string source="Delete Line" where="document,payroll">Удалить строку</string>
+  <string source="Amount:" where="document,entry,payroll_line">Сумма:</string>
   <string source="Tax:" where="document">Налог:</string>
-  <string source="Total:" where="document,operation">Всего:</string>
-  <string source="OK and Post" where="document">ОК и провести</string>
-  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,operation,entry,report_settings">Отмена</string>
+  <string source="Total:" where="document,operation,payroll">Всего:</string>
+  <string source="OK and Post" where="document,payroll,asset_document,closing">ОК и провести</string>
+  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,report_settings">Отмена</string>
   <string source="Document Line" where="doc_line">Строка документа</string>
-  <string source="Item:" where="doc_line,entry">Номенклатура:</string>
+  <string source="Item:" where="doc_line">Номенклатура:</string>
   <string source="Quantity:" where="doc_line,entry">Количество:</string>
   <string source="Price:" where="doc_line,item">Цена:</string>
   <string source="Tax rate:" where="doc_line,item">Ставка налога:</string>
   <string source="Item price" where="doc_line">Цена номенклатуры</string>
-  <string source="OK" where="doc_line,counterparty,item,organization,select_configuration,select_language,operation,entry,report_settings">ОК</string>
-  <string source="Name:" where="counterparty,item,organization">Наименование:</string>
-  <string source="Tax ID:" where="counterparty,organization">Налоговый номер:</string>
+  <string source="OK" where="doc_line,counterparty,item,organization,select_configuration,select_language,operation,entry,payroll_line,asset_line,employee,currency,rate,report_settings">ОК</string>
+  <string source="Name:" where="counterparty,item,organization,employee,asset,currency">Наименование:</string>
+  <string source="Tax ID:" where="counterparty,organization,employee">Налоговый номер:</string>
   <string source="KPP:" where="counterparty,organization">КПП:</string>
   <string source="Address:" where="counterparty,organization">Адрес:</string>
   <string source="Bank:" where="counterparty,organization">Банк:</string>
   <string source="Account:" where="report_settings">Счет:</string>
   <string source="Bank ID (BIK):" where="counterparty,organization">БИК банка:</string>
   <string source="Phone:" where="counterparty">Телефон:</string>
-  <string source="Code:" where="item">Код:</string>
+  <string source="Code:" where="item,currency">Код:</string>
   <string source="Unit:" where="item">Единица:</string>
   <string source="Organization Details" where="organization">Сведения об организации</string>
   <string source="Corr. account:" where="organization">Корр. счет:</string>
@@ -167,7 +167,7 @@
   <string source="Report Settings..." where="menu">Настройка отчетов...</string>
   <string source="Operation" where="journal_page">Операция</string>
   <string source="New manual operation (Ctrl+M)" where="journal_page">Новая операция, проводки вручную (Ctrl+M)</string>
-  <string source="Analytics" where="accounts_page">Субконто</string>
+  <string source="Analytics" where="accounts_page,reports_page,config_page">Субконто</string>
   <string source="Reports (Ctrl+6)" where="reports_page">Отчеты (Ctrl+6)</string>
   <string source="Settings" where="reports_page">Настройка</string>
   <string source="Period and account (Ctrl+R)" where="reports_page">Период и счет (Ctrl+R)</string>
@@ -185,7 +185,6 @@
   <string source="Sales Book" where="reports_page">Книга продаж</string>
   <string source="Net" where="reports_page">Без налога</string>
   <string source="Purchase Book" where="reports_page">Книга покупок</string>
-  <string source="Manual" where="config_page">Вручную</string>
   <string source="Manual Operation" where="operation">Операция</string>
   <string source="Operation:" where="operation">Операция:</string>
   <string source="Add Entry..." where="operation">Добавить проводку...</string>
@@ -200,9 +199,141 @@
   <string source="To:" where="report_settings">Конец периода:</string>
   <string source="Beginning" where="report_settings">с начала учета</string>
   <string source="End" where="report_settings">по текущую дату</string>
-  <string source="The account card and analysis show the chosen account." where="report_settings">Карточка и анализ строятся по выбранному счету.</string>
   <string source="Report period: %s – %s" where="code">Период отчетов: %s – %s</string>
   <string source="Add Entry" where="code">Новая проводка</string>
   <string source="New Manual Operation" where="code">Новая операция</string>
   <string source="Bank account:" where="counterparty,organization">Расчетный счет:</string>
+  <string source="New Payroll Document..." where="menu">Начисление зарплаты...</string>
+  <string source="Put Assets into Service..." where="menu">Ввод ОС в эксплуатацию...</string>
+  <string source="Close Month..." where="menu">Закрытие месяца...</string>
+  <string source="New Employee..." where="menu">Новый сотрудник...</string>
+  <string source="Edit Employee..." where="menu">Изменить сотрудника...</string>
+  <string source="Delete Employee..." where="menu">Удалить сотрудника...</string>
+  <string source="New Fixed Asset..." where="menu">Новое основное средство...</string>
+  <string source="Edit Fixed Asset..." where="menu">Изменить основное средство...</string>
+  <string source="Delete Fixed Asset..." where="menu">Удалить основное средство...</string>
+  <string source="New Currency..." where="menu">Новая валюта...</string>
+  <string source="Edit Currency..." where="menu">Изменить валюту...</string>
+  <string source="New Exchange Rate..." where="menu">Новый курс валюты...</string>
+  <string source="Delete Exchange Rate..." where="menu">Удалить курс валюты...</string>
+  <string source="Employees" where="menu,employees_page">Сотрудники</string>
+  <string source="Fixed Assets" where="menu,assets_page,reports_page">Основные средства</string>
+  <string source="Currencies" where="menu,currencies_page">Валюты</string>
+  <string source="Print Report Forms" where="menu">Печать отчетных форм</string>
+  <string source="Payroll" where="journal_page,employees_page,payroll">Зарплата</string>
+  <string source="New payroll document (Ctrl+W)" where="journal_page,employees_page">Начисление или выплата зарплаты (Ctrl+W)</string>
+  <string source="Close Month" where="journal_page,closing">Закрытие месяца</string>
+  <string source="Month-end closing (Ctrl+E)" where="journal_page">Закрытие месяца (Ctrl+E)</string>
+  <string source="Dr Analytics" where="journal_page,entries_page,operation,closing">Субконто Дт</string>
+  <string source="Cr Analytics" where="journal_page,entries_page,operation,closing">Субконто Кт</string>
+  <string source="Employees (Ctrl+5)" where="employees_page">Сотрудники (Ctrl+5)</string>
+  <string source="New employee" where="employees_page">Новый сотрудник</string>
+  <string source="Edit employee" where="employees_page">Изменить сотрудника</string>
+  <string source="Delete employee" where="employees_page">Удалить сотрудника</string>
+  <string source="Position" where="employees_page,reports_page,payroll">Должность</string>
+  <string source="Hired" where="employees_page">Принят</string>
+  <string source="Salary" where="employees_page,payroll_line">Оклад</string>
+  <string source="Allowance" where="employees_page">Вычет</string>
+  <string source="Expense" where="employees_page,assets_page,reports_page">Затраты</string>
+  <string source="Fixed assets (Ctrl+6)" where="assets_page">Основные средства (Ctrl+6)</string>
+  <string source="New fixed asset" where="assets_page">Новое основное средство</string>
+  <string source="Edit fixed asset" where="assets_page">Изменить основное средство</string>
+  <string source="Into Service" where="assets_page">Ввод</string>
+  <string source="Put assets into service" where="assets_page">Ввод в эксплуатацию</string>
+  <string source="Delete fixed asset" where="assets_page">Удалить основное средство</string>
+  <string source="Inv. No." where="assets_page,reports_page,asset_document">Инв. №</string>
+  <string source="Cost" where="assets_page,reports_page,asset_document">Стоимость</string>
+  <string source="Life, months" where="assets_page,asset_document">Срок, мес.</string>
+  <string source="In Service" where="assets_page,reports_page">Введено</string>
+  <string source="Depr." where="assets_page">Аморт.</string>
+  <string source="Currencies and exchange rates (Ctrl+7)" where="currencies_page">Валюты и курсы (Ctrl+7)</string>
+  <string source="New currency" where="currencies_page">Новая валюта</string>
+  <string source="Edit currency" where="currencies_page">Изменить валюту</string>
+  <string source="New exchange rate" where="currencies_page">Новый курс</string>
+  <string source="Delete Rate" where="currencies_page">Удалить курс</string>
+  <string source="Delete exchange rate" where="currencies_page">Удалить курс</string>
+  <string source="Cur." where="journal_page,entries_page">Вал.</string>
+  <string source="Cur. Amount" where="entries_page">Сумма в валюте</string>
+  <string source="Print report forms: cash book (Ctrl+Shift+P)" where="reports_page">Печать отчетных форм: кассовая книга (Ctrl+Shift+P)</string>
+  <string source="Cash Book" where="reports_page">Кассовая книга</string>
+  <string source="Received from / Paid to" where="reports_page">От кого получено / кому выдано</string>
+  <string source="Receipt" where="reports_page">Приход</string>
+  <string source="Fixed Asset" where="reports_page,asset_document,asset_line">Основное средство</string>
+  <string source="Monthly" where="reports_page">В месяц</string>
+  <string source="Depreciation" where="reports_page">Амортизация</string>
+  <string source="Residual Value" where="reports_page">Остаточная стоимость</string>
+  <string source="Payroll Statement" where="reports_page">Расчетная ведомость</string>
+  <string source="Employee" where="reports_page,payroll,employee">Сотрудник</string>
+  <string source="Owed at Start" where="reports_page">Долг на начало</string>
+  <string source="Accrued" where="reports_page">Начислено</string>
+  <string source="Withheld and Paid" where="reports_page">Удержано и выплачено</string>
+  <string source="Owed at End" where="reports_page">Долг на конец</string>
+  <string source="Report" where="config_page">Отчет</string>
+  <string source="Payroll Taxes" where="config_page">Налоги с зарплаты</string>
+  <string source="Withheld" where="config_page,payroll">Удержано</string>
+  <string source="Closing Rules" where="config_page">Закрытие месяца</string>
+  <string source="Step" where="config_page">Шаг</string>
+  <string source="Target" where="config_page">Куда</string>
+  <string source="Via" where="config_page">Через</string>
+  <string source="Gain" where="config_page">Доход</string>
+  <string source="Loss" where="config_page">Расход</string>
+  <string source="Analytics Kinds" where="config_page">Виды субконто</string>
+  <string source="Catalog" where="config_page">Справочник</string>
+  <string source="Currency:" where="document,entry,rate">Валюта:</string>
+  <string source="Exchange rate:" where="document">Курс:</string>
+  <string source="Rate on the document date" where="document">Курс на дату документа</string>
+  <string source="Cashier:" where="organization">Кассир:</string>
+  <string source="Debit analytics:" where="entry">Субконто Дт:</string>
+  <string source="Credit analytics:" where="entry">Субконто Кт:</string>
+  <string source="Currency amount:" where="entry">Сумма в валюте:</string>
+  <string source="Contributions" where="payroll">Взносы</string>
+  <string source="Net Pay" where="payroll">К выплате</string>
+  <string source="Fill" where="payroll">Заполнить</string>
+  <string source="Payroll Line" where="payroll_line">Строка ведомости</string>
+  <string source="Employee:" where="payroll_line">Сотрудник:</string>
+  <string source="Put into Service" where="asset_document">Ввод в эксплуатацию</string>
+  <string source="Add Asset..." where="asset_document">Добавить ОС...</string>
+  <string source="Remove Asset" where="asset_document">Убрать ОС</string>
+  <string source="Fixed asset:" where="asset_line">Основное средство:</string>
+  <string source="Last day of month:" where="closing">Последний день месяца:</string>
+  <string source="Posting charges depreciation, revalues currency accounts and closes the month's expenses and result." where="closing">При проведении начисляется амортизация, переоцениваются валютные счета, закрываются затраты и финансовый результат месяца.</string>
+  <string source="Position:" where="employee">Должность:</string>
+  <string source="Hired:" where="employee">Дата приема:</string>
+  <string source="Monthly salary:" where="employee">Оклад:</string>
+  <string source="Tax allowance:" where="employee">Налоговый вычет:</string>
+  <string source="Expense account:" where="employee,asset">Счет затрат:</string>
+  <string source="Monthly, before allowance taxes" where="employee">В месяц, до налога</string>
+  <string source="Inventory number:" where="asset">Инвентарный номер:</string>
+  <string source="Cost:" where="asset">Первоначальная стоимость:</string>
+  <string source="Useful life, months:" where="asset">Срок полезного использования, мес.:</string>
+  <string source="In service since:" where="asset">Дата ввода в эксплуатацию:</string>
+  <string source="Asset account:" where="asset">Счет учета:</string>
+  <string source="Depreciation account:" where="asset">Счет амортизации:</string>
+  <string source="Set when put into service" where="asset">Заполняется при вводе</string>
+  <string source="USD" where="currency">USD</string>
+  <string source="Exchange Rate" where="rate">Курс валюты</string>
+  <string source="Rate:" where="rate">Курс:</string>
+  <string source="The account card and analysis show the chosen account; the cash book, assets and payroll use the period." where="report_settings">Карточка и анализ строятся по выбранному счету; кассовая книга, ОС и зарплата — за период.</string>
+  <string source="Balance at start of day" where="code">Остаток на начало дня</string>
+  <string source="Day total and closing balance" where="code">Итого за день, остаток на конец дня</string>
+  <string source="The configuration defines no document type of this kind." where="code">В конфигурации нет видов документов этого типа.</string>
+  <string source="The configuration defines no report forms." where="code">В конфигурации нет отчетных печатных форм.</string>
+  <string source="Delete the selected employee?" where="code">Удалить выбранного сотрудника?</string>
+  <string source="This employee is used by %d payroll line(s) and cannot be deleted." where="code">Сотрудник указан в строках ведомостей (%d) и не может быть удален.</string>
+  <string source="Delete the selected fixed asset?" where="code">Удалить выбранное основное средство?</string>
+  <string source="This fixed asset is used by %d document line(s) and cannot be deleted." where="code">Основное средство указано в строках документов (%d) и не может быть удалено.</string>
+  <string source="Delete the selected exchange rate?" where="code">Удалить выбранный курс валюты?</string>
+  <string source="New Payroll Document" where="code">Новый документ по зарплате</string>
+  <string source="Put Assets into Service" where="code">Ввод ОС в эксплуатацию</string>
+  <string source="Add Asset" where="code">Добавить основное средство</string>
+  <string source="New Employee" where="code">Новый сотрудник</string>
+  <string source="New Fixed Asset" where="code">Новое основное средство</string>
+  <string source="New Currency" where="code">Новая валюта</string>
+  <string source="New Exchange Rate" where="code">Новый курс валюты</string>
+  <context name="currencies_page">
+    <string source="Rate">Курс</string>
+  </context>
+  <context name="reports_page">
+    <string source="Expense">Расход</string>
+  </context>
 </strings>

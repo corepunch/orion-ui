@@ -13,11 +13,16 @@ GitClient). Upstream paths: `assets/regular/<name>.svg` and
 | ledger-nav-counterparties(-fill).svg | users-three |
 | ledger-nav-items(-fill).svg | package |
 | ledger-nav-accounts(-fill).svg | tree-structure |
+| ledger-nav-employees(-fill).svg | identification-card |
+| ledger-nav-assets(-fill).svg | desktop-tower |
+| ledger-nav-currencies(-fill).svg | currency-circle-dollar |
 | ledger-nav-entries(-fill).svg | list-checks |
 | ledger-nav-balance(-fill).svg | scales |
 | ledger-nav-config(-fill).svg | gear-six |
 | ledger-new.svg | plus |
 | ledger-operation.svg | note-pencil |
+| ledger-payroll.svg | money |
+| ledger-close-month.svg | calendar-check |
 | ledger-settings.svg | sliders-horizontal |
 | ledger-edit.svg | pencil-simple |
 | ledger-post.svg | check-circle |
