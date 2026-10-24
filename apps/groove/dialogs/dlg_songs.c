@@ -1,4 +1,4 @@
-// My Songs: the songs datasource shown as a TileGrid of Cards, one song_card
+// iPad My Songs: the songs datasource shown as a TileGrid of Cards, one song_card
 // form per row, each with a preview drawn from the file. TileGrid has no
 // datasource binding or item template yet, so this bridge fetches the rows and
 // instantiates the declared card form for each one.

@@ -205,13 +205,17 @@ static void set_mtime(const char *path, time_t when) {
 }
 
 static void test_song_library(void) {
-  TEST("songs save into Groove's own storage; My Songs lists them newest first with previews read from the files");
+  TEST("iPad songs save into Groove's own storage; My Songs lists them newest first with previews read from the files");
   test_env_init();
   g_app = app_init();
   ASSERT_NOT_NULL(g_app);
+#ifdef AX_PLATFORM_IOS
   const char *settings = axSettingsDirectory();
   ASSERT(g_app->songs_dir[0] && !strncmp(g_app->songs_dir, settings, strlen(settings)) && axPathExists(g_app->songs_dir),
-         "song storage is a folder inside the app's own settings area, not the shared Documents");
+         "iPad song storage is a folder inside the app's own settings area, not Files");
+#else
+  ASSERT(!g_app->songs_dir[0], "desktop keeps ordinary file dialogs and creates no song library");
+#endif
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   char dir[128], path[512], other[512], broken[512], notes[512], name[128];

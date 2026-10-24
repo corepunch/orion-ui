@@ -12,7 +12,7 @@
     <menus var="kMenus" count="kNumMenus">
       <menu name="file" label="File">
         <item name="new" label="New Song" shortcut="Ctrl+N" />
-        <item name="open" label="My Songs..." shortcut="Ctrl+O" />
+        <item name="open" label="Open Song..." shortcut="Ctrl+O" />
         <item name="save" label="Save Song" shortcut="Ctrl+S" />
         <item name="saveas" label="Save Song As..." />
         <Separator />
@@ -57,7 +57,7 @@
         </table>
       </database>
 
-      <!-- Songs saved in Groove's own storage (axSettingsDirectory()/Songs), newest first. -->
+      <!-- iPad: songs saved in Groove's own storage (axSettingsDirectory()/Songs), newest first. -->
       <database name="songs" class="groove_songs_db">
         <table name="songs" model="song_entry_t">
           <field name="id" type="integer" key="YES" />
@@ -102,7 +102,7 @@
         </GrooveBlockBin>
       </form>
 
-      <!-- File > My Songs: every saved song as a card with a preview drawn from the file itself. -->
+      <!-- iPad File > Open Song: every saved song as a card with a preview drawn from the file itself. -->
       <form name="song_browser" title="My Songs" width="760" height="520" spacing="8" padding="8">
         <TileGrid name="songs" spacing="8" padding="8 8 8 8" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL | WINDOW_FLEXSPACE" />
         <Label name="empty" text="No saved songs yet. Choose File &gt; Save Song to keep the current song here." color="text-disabled" />
