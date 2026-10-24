@@ -119,6 +119,18 @@
     <payroll_tax id="3" code="esn_fss" name="ЕСН в ФСС" rate="4" withheld="0" allowance="0" debit_id="0" credit_id="63" />
     <payroll_tax id="4" code="esn_foms" name="ЕСН в фонды ОМС" rate="3.6" withheld="0" allowance="0" debit_id="0" credit_id="65" />
   </payroll_taxes>
+  <balance_rules>
+    <balance_rule id="1"  document="ОстаткиНаличныхДенежныхСредств"     account_id="18" currency_account_id="0"  credit="0" />
+    <balance_rule id="2"  document="ОстаткиБезналичныхДенежныхСредств"  account_id="19" currency_account_id="20" credit="0" />
+    <balance_rule id="3"  document="ОстаткиРасчетовСПокупателямиДолги"  account_id="27" currency_account_id="0"  credit="0" />
+    <balance_rule id="4"  document="ОстаткиРасчетовСПокупателямиАвансы" account_id="28" currency_account_id="0"  credit="1" />
+    <balance_rule id="5"  document="ОстаткиРасчетовСПоставщикамиДолги"  account_id="24" currency_account_id="61" credit="1" />
+    <balance_rule id="6"  document="ОстаткиРасчетовСПоставщикамиАвансы" account_id="25" currency_account_id="0"  credit="0" />
+    <balance_rule id="7"  document="ОстаткиЗадолженностиПодотчетныхЛиц" account_id="37" currency_account_id="0"  credit="0" />
+    <balance_rule id="8"  document="ОстаткиПерерасходаПодотчетныхЛиц"   account_id="37" currency_account_id="0"  credit="1" />
+    <balance_rule id="9"  document="ОстаткиСобственныхТМЦ"              account_id="14" currency_account_id="0"  credit="0" />
+    <balance_rule id="10" document="ОстаткиРасчетовПоКредитамЗаймам"    account_id="29" currency_account_id="0"  credit="1" />
+  </balance_rules>
   <closing_rules>
     <closing_rule id="1" kind="depreciation" start="next" name="Амортизация ОС" account_id="0" target_id="0" via_id="0" gain_id="0" loss_id="0" />
     <closing_rule id="2" kind="revaluation" start="" name="Курсовая разница" account_id="0" target_id="0" via_id="0" gain_id="50" loss_id="51" />

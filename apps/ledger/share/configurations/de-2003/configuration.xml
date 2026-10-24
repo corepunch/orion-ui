@@ -72,6 +72,13 @@
     <payroll_tax id="2" code="sv_an" name="Sozialversicherung Arbeitnehmeranteil" rate="21" withheld="1" allowance="0" debit_id="23" credit_id="25" />
     <payroll_tax id="3" code="sv_ag" name="Sozialversicherung Arbeitgeberanteil" rate="21" withheld="0" allowance="0" debit_id="27" credit_id="25" />
   </payroll_taxes>
+  <balance_rules>
+    <balance_rule id="1" document="ОстаткиНаличныхДенежныхСредств"    account_id="4"  currency_account_id="0"  credit="0" />
+    <balance_rule id="2" document="ОстаткиБезналичныхДенежныхСредств" account_id="5"  currency_account_id="22" credit="0" />
+    <balance_rule id="3" document="ОстаткиРасчетовСПокупателямиДолги" account_id="6"  currency_account_id="0"  credit="0" />
+    <balance_rule id="4" document="ОстаткиРасчетовСПоставщикамиДолги" account_id="9"  currency_account_id="0"  credit="1" />
+    <balance_rule id="5" document="ОстаткиСобственныхТМЦ"             account_id="15" currency_account_id="0"  credit="0" />
+  </balance_rules>
   <closing_rules>
     <closing_rule id="1" kind="depreciation" start="same" name="AfA" account_id="0" target_id="0" via_id="0" gain_id="0" loss_id="0" />
     <closing_rule id="2" kind="revaluation" start="" name="Kursdifferenz" account_id="0" target_id="0" via_id="0" gain_id="30" loss_id="29" />

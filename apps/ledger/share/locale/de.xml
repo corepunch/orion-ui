@@ -327,9 +327,9 @@ Währungen: %d
 Bereits vorhanden: %d
 Eröffnungsbuchungen: %d (Soll %s, Haben %s)</string>
   <string source="The balances of this date were imported before and were not entered again." where="code">Die Salden dieses Datums wurden bereits importiert und nicht erneut erfasst.</string>
-  <string source="&#10;&#10;Accounts not in the configuration, left out: %s" where="code">
+  <string source="&#10;&#10;Balances the configuration has no account for, left out: %s" where="code">
 
-Konten, die die Konfiguration nicht kennt, ausgelassen: %s</string>
+Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="The file is not a 1C exchange file in the EnterpriseData format." where="code">Die Datei ist keine 1C-Austauschdatei im Format EnterpriseData.</string>
   <string source="The configuration has no opening balances document type." where="code">Die Konfiguration hat keine Belegart für Eröffnungsbuchungen.</string>
   <string source="Opening balances imported from 1C" where="code">Aus 1C importierte Salden</string>

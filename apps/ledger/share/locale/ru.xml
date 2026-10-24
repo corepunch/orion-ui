@@ -327,9 +327,9 @@
 Уже были в базе: %d
 Проводки по остаткам: %d (дебет %s, кредит %s)</string>
   <string source="The balances of this date were imported before and were not entered again." where="code">Остатки на эту дату уже загружались и повторно не введены.</string>
-  <string source="&#10;&#10;Accounts not in the configuration, left out: %s" where="code">
+  <string source="&#10;&#10;Balances the configuration has no account for, left out: %s" where="code">
 
-Счета, которых нет в конфигурации, пропущены: %s</string>
+Остатки, для которых в конфигурации нет счета, пропущены: %s</string>
   <string source="The file is not a 1C exchange file in the EnterpriseData format." where="code">Файл не является файлом обмена 1С в формате EnterpriseData.</string>
   <string source="The configuration has no opening balances document type." where="code">В конфигурации нет вида документа для ввода начальных остатков.</string>
   <string source="Opening balances imported from 1C" where="code">Остатки, загруженные из 1С</string>
