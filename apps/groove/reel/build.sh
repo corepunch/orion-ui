@@ -19,5 +19,5 @@ BLOCKS_DIR="$OUT/blocks" "$OUT/render_blocks" $IDS
 python3 "$REEL/music/compose.py"
 python3 "$REEL/motion/capture.py" 0 1800 "$OUT/video.mp4" 4
 ffmpeg -v error -y -i "$OUT/video.mp4" -i "$OUT/music.wav" -map 0:v -map 1:a -c:v libx264 -preset slow -crf 19 \
-  -pix_fmt yuv420p -c:a aac -b:a 320k -shortest -movflags +faststart "$REEL/groove-reel.mp4"
+  -pix_fmt yuv420p -c:a aac -b:a 320k -t 30 -movflags +faststart "$REEL/groove-reel.mp4"
 echo "$REEL/groove-reel.mp4"

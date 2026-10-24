@@ -8,10 +8,16 @@ Everything in it comes from this app:
   MP3s) renders library blocks at 140 BPM; `music/compose.py` arranges them into a
   17.5-bar edit (intro → verse → snare build → drop → hit) and masters the mix
   (sidechain pump, intro filter sweep, width, limiter to −1 dBFS, about −12.5 LUFS).
-- **Picture**: the app icon cut into character / headphones / spark layers, the
+- **Picture**: a transparent cutout of the complete app icon
+  (`motion/assets/icon-transparent.png`), the
   category pictogram atlas, `category_color()` colours, Phosphor transport icons,
   and cards drawn from real block names and rendered waveforms. The app window is a
   reconstruction of the 1180×760 layout, not a screenshot.
+  The cutout removes the blue backdrop while preserving the full note, headphones,
+  white rim and yellow accent marks, with transparent padding on every side.
+  It is rendered as one RGBA image without cropping or colour-keying. The opening headline is
+  “MAKE MUSIC / IN BLOCKS”, set in the same bold Fredoka sticker lettering as the
+  Groove wordmark.
 - **Sync**: `compose.py` also writes `motion/sync.js` — per-track envelopes at 60 fps,
   kick/snare/vocal onsets and the clip layout. The motion page reads it, so cuts land
   on downbeats, letters on 16ths, clips drop on the snare roll, and the playhead is
@@ -35,5 +41,8 @@ Intermediate files go to `reel/build/` (ignored). The script:
 
 To preview a single frame, open `motion/index.html` in Chromium with file access
 enabled and call `renderFrame(seconds)` in the console.
+
+`capture.py` also accepts `CHROMIUM_EXECUTABLE` and `FFMPEG` environment variables
+for an existing browser or encoder installation.
 
 Fonts: Fredoka and Inter (SIL Open Font License), from Fontsource.

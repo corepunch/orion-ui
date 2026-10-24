@@ -55,7 +55,7 @@ function rgba(h,a){ const [r,g,bb]=hex2rgb(h); return `rgba(${r},${g},${bb},${a}
 // ───────── assets ─────────
 const IMG={};
 function loadImg(k,src){ return new Promise(r=>{const i=new Image(); i.onload=()=>{IMG[k]=i;r();}; i.src=src;}); }
-const loads=[loadImg('hero','assets/icon_hero.png'),loadImg('char','assets/icon_char.png'),loadImg('hp','assets/icon_headphones.png'),loadImg('sparks','assets/icon_sparks.png')];
+const loads=[loadImg('hero','assets/icon-transparent.png')];
 // category pictograms come straight from the app's atlas (6×3 cells of 128 px)
 loads.push(loadImg('atlas','../../share/icons/class-pictograms.png').then(()=>{ for(let i=0;i<18;i++){ const c=mk(128,128);
   c.getContext('2d').drawImage(IMG.atlas,(i%6)*128,Math.floor(i/6)*128,128,128,0,0,128,128); IMG['p'+i]=c; } }));
@@ -171,21 +171,15 @@ function bgBurst(c,t,cx=W/2,cy=H/2,rot=0,cols=['#7fe6ff','#16a8f5','#0753c2']){ 
   for(let i=0;i<n;i++){ const a=i*2*Math.PI/n; c.beginPath(); c.moveTo(0,0); c.arc(0,0,2400,a,a+Math.PI/n); c.closePath(); c.fill(); }
   c.restore(); }
 
-// ───────── hero character (icon split into layers) ─────────
-// icon space 1024²: hero at (92,131), char at (241,131), headphones at (92,429), sparks at (67,200)
-function drawHero(c,o){ // o: x,y (screen pos of icon point 512,560), s scale, rot, sx, sy, hpOff (y), hpAlpha, sparks (0..1), noHp
-  c.save(); c.translate(o.x,o.y); c.rotate(o.rot||0); c.scale((o.s||1)*(o.sx??1),(o.s||1)*(o.sy??1)); c.translate(-512,-700);
-  if(o.sparks>0){ const sp=o.sparks; c.save(); c.translate(188,330); c.scale(sp,sp); c.rotate((1-sp)*-.8); c.drawImage(IMG.sparks,67-188,200-330); c.restore(); }
-  if(o.mode==='split'){ c.drawImage(IMG.char,241,131);
-    if(o.hpOff!==undefined && o.hpOff>-2000){ c.save(); c.translate(0,o.hpOff);
-      if(o.hpSmear){ for(let i=3;i>0;i--){ c.globalAlpha=.18*(4-i)/3; c.drawImage(IMG.hp,92,429-i*o.hpSmear);} c.globalAlpha=1; }
-      c.drawImage(IMG.hp,92,429); c.restore(); } }
-  else c.drawImage(IMG.hero,92,131);
+// ───────── complete app icon ─────────
+function drawHero(c,o){ // x,y anchor icon point 512,700; scale and rotate the intact artwork.
+  c.save(); c.translate(o.x,o.y); c.rotate(o.rot||0); c.scale((o.s??1)*(o.sx??1),(o.s??1)*(o.sy??1)); c.translate(-512,-700);
+  c.drawImage(IMG.hero,0,0,1024,1024);
   c.restore(); }
 
 // ───────── HUD ─────────
 function hud(c,t,alpha){ if(alpha<=0) return; c.save(); c.globalAlpha=alpha; c.fillStyle='rgba(255,255,255,.85)'; c.font='700 17px Int'; c.textBaseline='middle';
-  c.fillText('GROOVE',56,52); c.globalAlpha=alpha*.55; c.font='500 17px Int'; c.fillText('ORION-UI / APPS / GROOVE',150,52);
+  c.fillText('GROOVE',56,52); c.globalAlpha=alpha*.55; c.font='500 17px Int'; c.fillText('MUSIC IN BLOCKS',150,52);
   c.textAlign='right'; c.globalAlpha=alpha*.85; c.font='700 17px Int'; c.fillText('140 BPM',W-130,52);
   const bt=Math.floor(t/b)%4; for(let i=0;i<4;i++){ const on=i===bt; const p=on?beatPulse(t,6):0; c.globalAlpha=alpha*(on?1:.3);
     c.fillStyle=on?'#ffd21e':'#fff'; c.beginPath(); c.arc(W-108+i*18,52,4+p*3,0,7); c.fill(); }
@@ -282,24 +276,25 @@ function scene1(c,t){
   // bokeh
   c.save(); c.globalCompositeOperation='lighter'; for(let i=0;i<26;i++){ const x=(rnd(i,1)*W+t*(20+rnd(i,2)*40))%W, y=(rnd(i,3)*H - t*(15+rnd(i,4)*30)+H)%H, r=8+rnd(i,5)*34;
     const g=c.createRadialGradient(x,y,0,x,y,r); g.addColorStop(0,rgba(CAT[i%18],.35*prog(t,0,1.2))); g.addColorStop(1,'rgba(0,0,0,0)'); c.fillStyle=g; c.fillRect(x-r,y-r,2*r,2*r); } c.restore();
-  // "orion-ui presents"
-  { const a=prog(t,.15,.7)*(1-prog(t,1.45,1.75)); if(a>0){ c.save(); c.globalAlpha=a; c.font='700 26px Int'; c.textAlign='center'; c.fillStyle='#fff';
-      const sp=lerp(26,14,E.outCubic(prog(t,.1,1.6))); const txt='ORION-UI  PRESENTS'; let w=0; for(const ch of txt) w+=c.measureText(ch).width+sp; let x=W/2-w/2;
-      c.textAlign='left'; for(const ch of txt){ c.fillText(ch,x,H*.52+10+ (1-E.outExpo(prog(t,.15,.7)))*20); x+=c.measureText(ch).width+sp; } c.restore(); } }
   // keys onsets → ripples + rising notes
   S.keys.filter(k=>k<2*B-.05).forEach((k,i)=>{ const tt=t-k; const col=CAT[[9,2,0,15,3,12][i%6]];
     ring(c,W/2,H*.52,tt,col,520+i*60,1.4,14); ring(c,W/2,H*.52,tt-.08,'rgba(255,255,255,.6)',380+i*40,1.1,5);
     burst(c,W/2,H*.52,tt,10,i+10,{speed:520,grav:-200,life:1.6,shape:'star',size:16,cols:['#fff',col,'#ffd21e']}); });
+  // Product promise, using the same bold sticker lettering as the Groove wordmark.
+  { const enter=E.outCubic(prog(t,.08,.5)), leave=E.inCubic(prog(t,1.45,1.75));
+    if(enter>0 && leave<1){ c.save(); c.globalAlpha=enter*(1-leave); c.translate(W/2,H/2+(1-enter)*70-leave*50);
+      const scale=.9+.1*enter; c.scale(scale,scale);
+      sticker(c,'MAKE MUSIC',0,-40,168,'#ffffff',{depth:14});
+      sticker(c,'IN BLOCKS',0,155,184,'#ffd21e',{depth:16}); c.restore(); } }
   // char
   const tc=t-B; let hx=W/2, hy=H*.6, s=.62, sx=1, sy=1, rot=0;
   if(tc>0){ const [px,py,ps]=pop(tc,2.1,.42,.07); hy=lerp(H+500,H*.6,ps); sx=px/ps||1; sy=py/ps||1; rot=(1-spring(tc,1.6,.35))*.4;
     rot+=Math.sin(t*Math.PI/b*.5)*.03; hy+=Math.sin(t*Math.PI/b)*6;
     // anticipation crouch before the drop
     const cr=E.inCubic(prog(t,3.0,2*B)); sy*=1-cr*.12; sx*=1+cr*.1; hy+=cr*30;
-    const hpT=prog(t,3.16,2*B); const hpOff=-(1-E.inCubic(hpT))*900;
-    drawHero(c,{x:hx,y:hy,s,sx,sy,rot,mode:'split',hpOff:t<3.16?-9999:hpOff,hpSmear:hpT>0?60*hpT:0,sparks:E.outBack(clamp((t-2.571)/.35),3)}); }
+    drawHero(c,{x:hx,y:hy,s,sx,sy,rot}); }
 }
-// S2 2B → 3B+ : wordmark. Hero lands headphones, burst bg, "Groove"
+// S2 2B → 3B+ : wordmark. Icon lands, burst bg, "Groove"
 function scene2(c,t){
   const t0=2*B, tt=t-t0;
   // burst iris
@@ -311,7 +306,7 @@ function scene2(c,t){
   // hero: impact squash then move left
   const imp=spring(tt,3.2,.28); const sq=1-(1-imp)*.25; const k=kickPulse(t);
   const mv=spring(tt-.06,2.6,.6); const hx=lerp(W/2,560,mv), hy=lerp(H*.6,H*.55,mv), s=lerp(.62,.56,mv)*(1+k*.04);
-  drawHero(c,{x:hx,y:hy+Math.sin(t*Math.PI/b)*8,s,sx:2-sq,sy:sq*(1-k*.03),rot:Math.sin(t*Math.PI/b*.5)*.04,sparks:1+k*.15});
+  drawHero(c,{x:hx,y:hy+Math.sin(t*Math.PI/b)*8,s,sx:2-sq,sy:sq*(1-k*.03),rot:Math.sin(t*Math.PI/b*.5)*.04});
   // wordmark letters on 8ths
   const cols=['#ffd21e','#ff7a2a','#ff4fa0','#36c95c','#1aa6f2','#a047f2'];
   letters(c,'Groove',1290,620,250,t0+.3,b/4,cols,{t,depth:20,pulse:i=>kickPulse(t-i*.03)*.07});
@@ -523,7 +518,7 @@ function scene6(c,t){
   ring(c,W/2,H*.42,tt,'#fff',1000,.8,34); ring(c,W/2,H*.42,tt-.07,'#ffd21e',1200,1,16);
   burst(c,W/2,H*.42,tt,46,99,{speed:1700,grav:1300,life:1.6,size:22});
   const [sx,sy,s]=pop(tt,2.4,.32,.07); const bob=Math.sin(t*Math.PI/b)*7*(1-prog(t,28.8,30)*.6);
-  drawHero(c,{x:W/2,y:H*.5+bob+(1-s)*200,s:.52*s,sx:sx/(s||1),sy:sy/(s||1),rot:(1-spring(tt,1.6,.3))*-.5+Math.sin(t*1.6)*.03,sparks:E.outBack(clamp((tt-.25)/.3),3)});
+  drawHero(c,{x:W/2,y:H*.5+bob+(1-s)*200,s:.52*s,sx:sx/(s||1),sy:sy/(s||1),rot:(1-spring(tt,1.6,.3))*-.5+Math.sin(t*1.6)*.03});
   const cols=['#ffd21e','#ff7a2a','#ff4fa0','#36c95c','#ffffff','#a047f2'];
   letters(c,'Groove',W/2,905,200,t0+.12,b/4,cols,{t,depth:18});
   const tg=E.outExpo(prog(t,t0+.12+b*2,t0+.12+b*2+.5));

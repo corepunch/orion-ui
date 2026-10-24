@@ -2,6 +2,9 @@
 xcuserdata
 Gmax 1.2
 
+# Local Xcode workspaces (app projects and shared schemes are committed)
+*.xcworkspace/
+
 # Prerequisites
 *.d
 
