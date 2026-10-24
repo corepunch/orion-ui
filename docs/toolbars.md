@@ -505,8 +505,9 @@ Toolbars use the shared [workspace docking manager](docking.md). Existing
 `WINDOW_TITLETOOLBAR` alongside `WINDOW_TOOLBAR` to share a single row between the
 app items and the window controls. The merged row shows no window title of its
 own; place a `TOOLBAR_ITEM_TITLE` item (`<title />` in `.orion`) where the title
-belongs. It draws the window's title in the caption font, starts past any pane
-docked on the left edge (a source list), and drags the window like the caption,
+belongs. It draws the window's title in `FONT_TITLE` (the caption font, larger),
+starts past any pane docked on the left edge (a source list) as far in as the
+text is down from the window's top, and drags the window like the caption,
 the way Finder shows a folder's name:
 
 ```xml

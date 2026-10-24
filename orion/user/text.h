@@ -11,6 +11,7 @@ typedef enum {
   FONT_SYSTEM = 0,  // Chrome: titlebars, menus, buttons, dialogs
   FONT_SMALL  = 1,  // Content: list items, column rows, status bar
   FONT_SMALLEST = 2,  // Compact labels in icon/grid views and dense controls
+  FONT_TITLE  = 3,  // A window title shown in its toolbar (the caption font, larger)
 } ui_font_t;
 
 // ── Dynamic metric accessors ─────────────────────────────────────────────────

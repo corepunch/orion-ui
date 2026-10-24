@@ -157,8 +157,9 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
                         : (text_strwidth(FONT_SMALLEST, item->text ? item->text : "") + TOOLBAR_LABEL_PADDING);
         break;
       case TOOLBAR_ITEM_TITLE:
-        if (!vertical) x = MAX(x, toolbar_title_lead(parent) + padding);
-        w = item->w > 0 ? item->w : text_strwidth(FONT_SYSTEM, parent->title) + TB_TITLE_GAP;
+        // As far in from the content's edge as the text is down from the window's top.
+        if (!vertical) x = MAX(x, toolbar_title_lead(parent) + base_y + (item_h - text_char_height(FONT_TITLE)) / 2);
+        w = item->w > 0 ? item->w : text_strwidth(FONT_TITLE, parent->title) + TB_TITLE_GAP;
         break;
       case TOOLBAR_ITEM_COMBOBOX:
         w = item->w > 0 ? item->w : (bsz * TOOLBAR_COMBOBOX_DEFAULT_WIDTH_MULT);
@@ -468,8 +469,8 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       theme_draw(THEME_PART_TOOLBAR_SEPARATOR, R(0, 0, r.w, r.h), CTRL_NORMAL);
       break;
     case TOOLBAR_ITEM_TITLE: {
-      int ty = (r.h - text_char_height(FONT_SYSTEM)) / 2;
-      draw_text_ellipsized(FONT_SYSTEM, win->title, 0, ty, MAX(0, r.w - TB_TITLE_GAP), get_sys_color(brTextNormal));
+      int ty = (r.h - text_char_height(FONT_TITLE)) / 2;
+      draw_text_ellipsized(FONT_TITLE, win->title, 0, ty, MAX(0, r.w - TB_TITLE_GAP), get_sys_color(brTextNormal));
       break;
     }
     case TOOLBAR_ITEM_LABEL: {
