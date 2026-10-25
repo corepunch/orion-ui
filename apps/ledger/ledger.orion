@@ -25,6 +25,7 @@
       <item name="language" label="Language..." />
       <Separator />
       <item name="import_1c" label="Import from 1C (EnterpriseData)..." />
+      <item name="addon" label="Open Add-on..." />
       <Separator />
       <item name="quit" label="Exit" />
     </menu>

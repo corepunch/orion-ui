@@ -33,7 +33,7 @@ static db_setting_t *settings(database_t *cfg) { return find(cfg, TABLE_SETTINGS
 static bool form_is(const db_doc_type_t *type, const char *form) { return type && !strcmp(type->form, form); }
 
 // 41.01 rolls up into 41.
-static bool account_within(database_t *cfg, int account_id, int parent_id) {
+bool ledger_account_within(database_t *cfg, int account_id, int parent_id) {
   if (account_id == parent_id) return account_id != 0;
   const db_account_t *a = find(cfg, TABLE_ACCOUNTS, account_id), *parent = find(cfg, TABLE_ACCOUNTS, parent_id);
   if (!a || !parent) return false;
@@ -114,10 +114,10 @@ turnover_t ledger_turnover(const post_t *p, int account_id, int subconto_id, int
       const db_document_t *d = find(p->ib, TABLE_DOCUMENTS, e->document_id);
       if (!d || !d->posted || doc_order(p->cfg, d, p->doc) >= 0) continue;
     }
-    if (account_within(p->cfg, e->debit_id, account_id) && (subconto_id < 0 || e->debit_subconto_id == subconto_id)) {
+    if (ledger_account_within(p->cfg, e->debit_id, account_id) && (subconto_id < 0 || e->debit_subconto_id == subconto_id)) {
       t.dr += e->amount; t.dr_qty += e->quantity; t.dr_cur += e->currency_amount;
     }
-    if (account_within(p->cfg, e->credit_id, account_id) && (subconto_id < 0 || e->credit_subconto_id == subconto_id)) {
+    if (ledger_account_within(p->cfg, e->credit_id, account_id) && (subconto_id < 0 || e->credit_subconto_id == subconto_id)) {
       t.cr += e->amount; t.cr_qty += e->quantity; t.cr_cur += e->currency_amount;
     }
   }
@@ -666,8 +666,8 @@ static void build_trial_balance(const report_t *r) {
     totals_t t = {0};
     for (int i = 0; i < r->count; i++) {
       const db_entry_t *e = r->entries[i];
-      add_totals(&t, in_period(r->rs, e->date), account_within(r->cfg, e->debit_id, a->id) ? e->amount : 0,
-                 account_within(r->cfg, e->credit_id, a->id) ? e->amount : 0);
+      add_totals(&t, in_period(r->rs, e->date), ledger_account_within(r->cfg, e->debit_id, a->id) ? e->amount : 0,
+                 ledger_account_within(r->cfg, e->credit_id, a->id) ? e->amount : 0);
     }
     if (totals_empty(&t)) continue;
     db_balance_t row = { .account_id = a->id, .subaccount = strchr(a->code, '.') != NULL,
@@ -685,7 +685,7 @@ static void build_card(const report_t *r) {
   double balance = 0;
   for (int i = 0; i < r->count && account; i++) {
     const db_entry_t *e = r->entries[i];
-    bool dr = account_within(r->cfg, e->debit_id, account), cr = account_within(r->cfg, e->credit_id, account);
+    bool dr = ledger_account_within(r->cfg, e->debit_id, account), cr = ledger_account_within(r->cfg, e->credit_id, account);
     if (!dr && !cr) continue;
     balance += (dr ? e->amount : 0) - (cr ? e->amount : 0);
     if (in_period(r->rs, e->date) != WITHIN) continue;
@@ -706,7 +706,7 @@ static void build_analysis(const report_t *r) {
   for (int i = 0; i < r->count && account; i++) {
     const db_entry_t *e = r->entries[i];
     for (int side = 0; side < 2; side++)
-      if (account_within(r->cfg, side ? e->credit_id : e->debit_id, account))
+      if (ledger_account_within(r->cfg, side ? e->credit_id : e->debit_id, account))
         key_set_add(&objects, (id_triple_t){ account, 0, side ? e->credit_subconto_id : e->debit_subconto_id });
   }
   for (int k = 0; k < objects.n; k++) {
@@ -714,8 +714,8 @@ static void build_analysis(const report_t *r) {
     totals_t t = {0};
     for (int i = 0; i < r->count; i++) {
       const db_entry_t *e = r->entries[i];
-      bool dr = account_within(r->cfg, e->debit_id, account) && e->debit_subconto_id == object;
-      bool cr = account_within(r->cfg, e->credit_id, account) && e->credit_subconto_id == object;
+      bool dr = ledger_account_within(r->cfg, e->debit_id, account) && e->debit_subconto_id == object;
+      bool cr = ledger_account_within(r->cfg, e->credit_id, account) && e->credit_subconto_id == object;
       add_totals(&t, in_period(r->rs, e->date), dr ? e->amount : 0, cr ? e->amount : 0);
     }
     if (totals_empty(&t)) continue;
@@ -802,7 +802,7 @@ static void build_cash_book(const report_t *r) {
   char day[16] = "";
   for (int i = 0; i < r->count && cash; i++) {
     const db_entry_t *e = r->entries[i];
-    bool in = account_within(r->cfg, e->debit_id, cash), out = account_within(r->cfg, e->credit_id, cash);
+    bool in = ledger_account_within(r->cfg, e->debit_id, cash), out = ledger_account_within(r->cfg, e->credit_id, cash);
     if (in == out) continue;
     period_pos_t pos = in_period(r->rs, e->date);
     if (pos == WITHIN && strcmp(day, e->date)) {
@@ -834,7 +834,7 @@ static void build_asset_rows(const report_t *r) {
     double charged = 0;
     for (int i = 0; i < r->count; i++) {
       const db_entry_t *e = r->entries[i];
-      if (in_period(r->rs, e->date) != AFTER && e->credit_subconto_id == a->id && account_within(r->cfg, e->credit_id, a->depreciation_id))
+      if (in_period(r->rs, e->date) != AFTER && e->credit_subconto_id == a->id && ledger_account_within(r->cfg, e->credit_id, a->depreciation_id))
         charged += e->amount;
     }
     db_asset_row_t row = { .asset_id = a->id, .cost = a->cost, .monthly = a->life > 0 ? round2(a->cost / a->life) : 0,
@@ -853,8 +853,8 @@ static void build_payroll_rows(const report_t *r) {
     totals_t t = {0};
     for (int i = 0; i < r->count && account; i++) {
       const db_entry_t *e = r->entries[i];
-      bool dr = account_within(r->cfg, e->debit_id, account) && e->debit_subconto_id == emp->id;
-      bool cr = account_within(r->cfg, e->credit_id, account) && e->credit_subconto_id == emp->id;
+      bool dr = ledger_account_within(r->cfg, e->debit_id, account) && e->debit_subconto_id == emp->id;
+      bool cr = ledger_account_within(r->cfg, e->credit_id, account) && e->credit_subconto_id == emp->id;
       add_totals(&t, in_period(r->rs, e->date), dr ? e->amount : 0, cr ? e->amount : 0);
     }
     if (totals_empty(&t)) continue;
@@ -871,6 +871,20 @@ static int by_date(const void *a, const void *b) {
   return c ? c : x->id - y->id;
 }
 
+int ledger_posted_entries(database_t *ib, db_entry_t ***out) {
+  result_node_t *all = fetch(ib, TABLE_ENTRIES, NULL, 0);
+  int n = count_result_list(all), count = 0;
+  db_entry_t **entries = n ? malloc((size_t)n * sizeof(*entries)) : NULL;
+  EACH_RECORD(db_entry_t, e, all) {
+    const db_document_t *doc = find(ib, TABLE_DOCUMENTS, e->document_id);
+    if (entries && doc && doc->posted) entries[count++] = e;
+  }
+  free_result_list(all);
+  if (entries) qsort(entries, (size_t)count, sizeof(*entries), by_date);
+  *out = entries;
+  return count;
+}
+
 // Reports count entries of posted documents only, in date order.
 void ledger_build_reports(database_t *ib, database_t *cfg) {
   const int tables[] = { TABLE_BALANCES, TABLE_CARD, TABLE_ANALYSIS_ROWS, TABLE_VAT_BOOK, TABLE_VAT_SUMMARY, TABLE_JOURNAL_ROWS,
@@ -878,15 +892,8 @@ void ledger_build_reports(database_t *ib, database_t *cfg) {
   for (size_t i = 0; i < ARRAY_LEN(tables); i++) clear_table(ib, tables[i]);
   const db_report_setting_t *rs = ledger_report_settings(ib, cfg);
   if (!rs) return;
-  result_node_t *all = fetch(ib, TABLE_ENTRIES, NULL, 0);
-  int n = count_result_list(all);
-  report_t r = { ib, cfg, rs, n ? malloc((size_t)n * sizeof(db_entry_t *)) : NULL, 0 };
-  EACH_RECORD(db_entry_t, e, all) {
-    const db_document_t *doc = find(ib, TABLE_DOCUMENTS, e->document_id);
-    if (r.entries && doc && doc->posted) r.entries[r.count++] = e;
-  }
-  free_result_list(all);
-  if (r.entries) qsort(r.entries, (size_t)r.count, sizeof(*r.entries), by_date);
+  report_t r = { ib, cfg, rs, NULL, 0 };
+  r.count = ledger_posted_entries(ib, &r.entries);
   build_trial_balance(&r);
   build_card(&r);
   build_analysis(&r);

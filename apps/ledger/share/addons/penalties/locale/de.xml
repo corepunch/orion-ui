@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="de">
+  <string source="Penalties on Overdue Receivables" where="penalties">Verzugszinsen auf überfällige Forderungen</string>
+  <string source="Calculate on:" where="penalties">Berechnen zum:</string>
+  <string source="Payment term, days:" where="penalties">Zahlungsziel, Tage:</string>
+  <string source="Penalty, % per day:" where="penalties">Zinssatz, % pro Tag:</string>
+  <string source="Receivables account:" where="penalties">Forderungskonto:</string>
+  <string source="Debit:" where="penalties">Soll:</string>
+  <string source="Credit:" where="penalties">Haben:</string>
+  <string source="Counterparty" where="penalties">Geschäftspartner</string>
+  <string source="Document" where="penalties">Beleg</string>
+  <string source="Due" where="penalties">Fällig</string>
+  <string source="Days" where="penalties">Tage</string>
+  <string source="Overdue" where="penalties">Überfällig</string>
+  <string source="Penalty" where="penalties">Zinsen</string>
+  <string source="Calculate" where="penalties">Berechnen</string>
+  <string source="Post Penalties" where="penalties">Zinsen buchen</string>
+  <string source="Close" where="penalties">Schließen</string>
+  <string source="Penalties on overdue receivables on %s" where="code">Verzugszinsen auf überfällige Forderungen zum %s</string>
+  <string source="Overdue debts: %d. Penalties: %s." where="code">Überfällige Posten: %d. Zinsen: %s.</string>
+  <string source="Enter the date to calculate on." where="code">Geben Sie das Berechnungsdatum ein.</string>
+  <string source="Choose the receivables account." where="code">Wählen Sie das Forderungskonto.</string>
+  <string source="The payment term cannot be negative." where="code">Das Zahlungsziel kann nicht negativ sein.</string>
+  <string source="Enter the penalty rate." where="code">Geben Sie den Zinssatz ein.</string>
+  <string source="Nothing is overdue on this date." where="code">Zu diesem Datum ist nichts überfällig.</string>
+  <string source="Choose the accounts to post the penalties to." where="code">Wählen Sie die Konten für die Zinsbuchung.</string>
+  <string source="Penalties on this date are already posted in %s." where="code">Die Zinsen zu diesem Datum sind bereits mit %s gebucht.</string>
+  <string source="The configuration has no manual operation." where="code">Die Konfiguration hat keine manuelle Buchung.</string>
+  <string source="Penalty on %s, %d days overdue" where="code">Zinsen auf %s, %d Tage überfällig</string>
+</strings>

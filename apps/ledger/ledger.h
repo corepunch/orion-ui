@@ -32,6 +32,7 @@ typedef struct {
   char configuration[32];               // active configuration code
   char config_dir[LEDGER_PATH_MAX];     // share/configurations/<code>
   char data_dir[LEDGER_PATH_MAX];       // settings/ledger/<code>
+  char share_dir[LEDGER_PATH_MAX];      // share/ledger: configurations, add-ons
 } ledger_t;
 
 extern ledger_t *g_ledger;
@@ -56,6 +57,11 @@ void ledger_add_entry(const ledger_post_t *p, int debit, int credit, double amou
 ledger_turnover_t ledger_turnover(const ledger_post_t *p, int account_id, int subconto_id, int currency_id);
 double ledger_rate_on(database_t *ib, int currency_id, const char *date);
 int  ledger_field(database_t *db, int table_id, const char *field);
+// The account or one of its subaccounts (41.01 is within 41).
+bool ledger_account_within(database_t *cfg, int account_id, int parent_id);
+// Entries of posted documents in date order, as reports count them. The
+// caller frees the array; the entries stay the infobase's.
+int  ledger_posted_entries(database_t *ib, db_entry_t ***out);
 // The infobase table an account is analysed by ("counterparties"), or "".
 const char *ledger_subconto_table(database_t *cfg, int account_id);
 void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id);
@@ -106,6 +112,11 @@ typedef struct {
   char error[256];
 } ledger_import_t;
 bool ledger_import_enterprisedata(database_t *ib, database_t *cfg, const char *path, ledger_import_t *out);
+
+// ledger_addons.c — external processings: an add-on's .orion form driven by
+// its Lua script, with the "ledger" module for accounts, turnovers and posting.
+void ledger_addons_init(void);
+void ledger_open_addon(void);
 
 // controller.c — commands and views.
 void     ledger_command(uint16_t id);

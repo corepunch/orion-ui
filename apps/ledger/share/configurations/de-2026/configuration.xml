@@ -32,6 +32,7 @@
     <account id="17" code="1776" name="Umsatzsteuer 19 %" kind="Passiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="0" currency="0" />
     <account id="18" code="1780" name="Umsatzsteuer-Vorauszahlungen" kind="Aktiv" section="Klasse 1: Finanz- und Privatkonten" subconto_kind_id="0" currency="0" />
     <account id="19" code="2150" name="Aufwendungen aus Kursdifferenzen" kind="Aufwand" section="Klasse 2: Abgrenzungskonten" subconto_kind_id="0" currency="0" />
+    <account id="34" code="2650" name="Sonstige Zinsen und ähnliche Erträge" kind="Ertrag" section="Klasse 2: Abgrenzungskonten" subconto_kind_id="0" currency="0" />
     <account id="20" code="2660" name="Erträge aus Kursdifferenzen" kind="Ertrag" section="Klasse 2: Abgrenzungskonten" subconto_kind_id="0" currency="0" />
     <account id="21" code="3300" name="Wareneingang 7 % Vorsteuer" kind="Aufwand" section="Klasse 3: Wareneingangs- und Bestandskonten" subconto_kind_id="2" currency="0" />
     <account id="22" code="3400" name="Wareneingang 19 % Vorsteuer" kind="Aufwand" section="Klasse 3: Wareneingangs- und Bestandskonten" subconto_kind_id="2" currency="0" />
