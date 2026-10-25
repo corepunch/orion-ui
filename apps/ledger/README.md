@@ -13,6 +13,14 @@ build/bin/ledger                       # last selected configuration (ru-2003)
 build/bin/ledger --config de-2003 --lang de --data /tmp/books
 ```
 
+## Large example data
+
+[Four committed synthetic samples](share/samples/README.md) cover both `ru-2003`
+and `de-2003`: each native infobase has 500 counterparties, 2,000 items, 1,000
+documents and 10,000 entries; each EnterpriseData fixture has 10,000 opening
+rows. The sample instructions include safe launch/import commands, expected
+totals and deterministic regeneration. The small default demos remain available.
+
 ## Features
 
 | Area | What Ledger does |
