@@ -840,9 +840,53 @@ static result_t fp_proc(window_t *win, uint32_t msg,
 // Public API
 // ---------------------------------------------------------------------------
 
+static bool fp_run_native(openfilename_t *ofn, bool save_mode, const char *title) {
+  size_t size = 1;
+  for (const char *p = ofn->lpstrFilter; p && *p;) {
+    size += strlen(ui_tr(p)) + 1;
+    p += strlen(p) + 1;
+    size += strlen(p) + 1;
+    if (*p) p += strlen(p) + 1;
+  }
+  char *filters = calloc(size, 1);
+  if (!filters) {
+    fprintf(stderr, "[fp] native file dialog: filter allocation failed size=%zu\n", size);
+    fflush(stderr);
+    return false;
+  }
+  char *out = filters;
+  for (const char *p = ofn->lpstrFilter; p && *p;) {
+    const char *label = ui_tr(p);
+    strcpy(out, label); out += strlen(label) + 1;
+    p += strlen(p) + 1;
+    strcpy(out, p); out += strlen(p) + 1;
+    if (*p) p += strlen(p) + 1;
+  }
+  AXopenfilename native = { .lpstrFile = ofn->lpstrFile, .nMaxFile = ofn->nMaxFile,
+    .lpstrFilter = filters, .lpstrTitle = title,
+    .Flags = ((ofn->Flags & OFN_FILEMUSTEXIST) ? AX_OFN_FILEMUSTEXIST : 0) |
+             ((ofn->Flags & OFN_PATHMUSTEXIST) ? AX_OFN_PATHMUSTEXIST : 0),
+    .nFilterIndex = ofn->nFilterIndex > 0 ? (uint32_t)ofn->nFilterIndex : 0 };
+  bool accepted = (ofn->Flags & OFN_PICKFOLDER) ? axGetFolderName(&native) :
+    save_mode ? axGetSaveFileName(&native) : axGetOpenFileName(&native);
+  free(filters);
+  return accepted;
+}
+
 static bool fp_run(openfilename_t *ofn, bool save_mode,
                    const char *title) {
-  if (!ofn || !ofn->lpstrFile || ofn->nMaxFile == 0) return false;
+  if (!ofn || !ofn->lpstrFile || !ofn->nMaxFile || !memchr(ofn->lpstrFile, 0, ofn->nMaxFile)) {
+    fprintf(stderr, "[fp] file dialog rejected request=%p buffer=%p size=%u\n",
+      (void *)ofn, ofn ? (void *)ofn->lpstrFile : NULL, ofn ? ofn->nMaxFile : 0);
+    fflush(stderr);
+    return false;
+  }
+#ifdef AX_PLATFORM_IOS
+  bool native = !(ofn->Flags & OFN_PICKFOLDER);
+#else
+  bool native = axFileDialogsRequireNative();
+#endif
+  if (native) return fp_run_native(ofn, save_mode, title);
   flags_t flags = WINDOW_DIALOG | WINDOW_NOTRAYBUTTON | WINDOW_TOOLBAR;
 
   fp_state_t ps = {0};
@@ -863,25 +907,11 @@ static bool fp_run(openfilename_t *ofn, bool save_mode,
 }
 
 bool get_open_filename(openfilename_t *ofn) {
-#ifdef AX_PLATFORM_IOS
-  if (!ofn) { fprintf(stderr, "[fp] open rejected: null request\n"); fflush(stderr); return false; }
-  AXopenfilename native = { .lpstrFile = ofn->lpstrFile, .nMaxFile = ofn->nMaxFile,
-                           .lpstrFilter = ofn->lpstrFilter };
-  return axGetOpenFileName(&native);
-#else
   return fp_run(ofn, false, ui_tr("Open File"));
-#endif
 }
 
 bool get_save_filename(openfilename_t *ofn) {
-#ifdef AX_PLATFORM_IOS
-  if (!ofn) { fprintf(stderr, "[fp] save rejected: null request\n"); fflush(stderr); return false; }
-  AXopenfilename native = { .lpstrFile = ofn->lpstrFile, .nMaxFile = ofn->nMaxFile,
-                           .lpstrFilter = ofn->lpstrFilter };
-  return axGetSaveFileName(&native);
-#else
   return fp_run(ofn, true, ui_tr("Save File"));
-#endif
 }
 
 bool get_folder_name(openfilename_t *ofn) {

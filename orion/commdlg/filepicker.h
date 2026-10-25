@@ -49,6 +49,7 @@ typedef struct {
 // ---------------------------------------------------------------------------
 
 // Show a modal "Open File" dialog.
+// Sandboxed macOS processes use native panels to grant access outside the container.
 // Writes the selected absolute path into ofn->lpstrFile on success.
 // Returns true when the user confirms, false when cancelled.
 bool get_open_filename(openfilename_t *ofn);

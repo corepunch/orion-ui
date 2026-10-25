@@ -189,7 +189,16 @@ def generate(args):
             frameworks = ('UIKit', 'CoreGraphics', 'Foundation', 'OpenGLES', 'QuartzCore', 'Security',
                           'UniformTypeIdentifiers', 'AudioToolbox')
         else:
-            settings.update(SUPPORTED_PLATFORMS='macosx', MACOSX_DEPLOYMENT_TARGET='12.0', CODE_SIGN_IDENTITY='-')
+            settings.update(SUPPORTED_PLATFORMS='macosx', MACOSX_DEPLOYMENT_TARGET='12.0',
+                            CODE_SIGN_STYLE='Automatic', CODE_SIGN_IDENTITY='-',
+                            ENABLE_APP_SANDBOX='YES', ENABLE_USER_SELECTED_FILES='readwrite',
+                            CODE_SIGN_ENTITLEMENTS='$(PROJECT_FILE_PATH)/Generated/macos.entitlements')
+            if args.team:
+                settings['DEVELOPMENT_TEAM'] = args.team
+            write(bundle / 'Generated/macos.entitlements', plistlib.dumps({
+                'com.apple.security.app-sandbox': True,
+                'com.apple.security.files.user-selected.read-write': True,
+            }).decode())
             frameworks = ('AppKit', 'Cocoa', 'OpenGL', 'IOSurface', 'Security', 'CoreFoundation', 'AudioToolbox')
         for framework in frameworks:
             settings['OTHER_LDFLAGS'] += ['-framework', framework]
