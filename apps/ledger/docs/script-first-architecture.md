@@ -219,6 +219,21 @@ process-global active document.
    parameter versions must survive upgrades. Define reload behavior for open
    forms and rule changes; do not hot-reload accounting during an active post.
 
+## First implemented migration
+
+Document numbering and payroll-line filling now live in
+`share/stdplugs/documents/policies.lua`. The former C entry points delegate to a
+shared executor. `executor.cgen` generates public Lua glue and documentation via
+Orion's shared `cgen`; `executors.xml` generates operation capabilities and Lua
+registration. A policy returns a bounded plan, and the native service validates
+and applies it atomically. Existing catalog/posting permissions are not widened.
+
+Numbering failures propagate through the datasource; unnumbered document
+insertions are scoped so a rejected policy does not leave an orphan insertion.
+Commit failure and partial replacement are covered by fault-injection tests.
+This is an implemented first slice, rather than the full lifecycle, posting,
+page-host or action-registry migration described above.
+
 ## Recommended sequence and acceptance gates
 
 1. Publish commands and page/form/query services through the XML contract;

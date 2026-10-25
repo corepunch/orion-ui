@@ -35,16 +35,17 @@ static bool is_line_table(database_t *db, uint32_t table_id, int doc_id) {
   return type && !strcmp(type->form, "operation");
 }
 
-static void recalculate(database_t *db, int doc_id, bool number) {
-  if (!doc_id || !cfg()) return;
+static bool recalculate(database_t *db, int doc_id, bool number) {
+  if (!doc_id || !cfg()) return true;
   g_recalculating++;
   ledger_recalc_document(db, cfg(), doc_id);
-  if (number) ledger_number_document(db, cfg(), doc_id);
+  bool ok = !number || ledger_number_document(db, cfg(), doc_id);
   g_recalculating--;
+  return ok;
 }
 
 lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam) {
-  if (g_recalculating || (msg != dbInsert && msg != dbUpdate && msg != dbDelete))
+  if (g_recalculating || ledger_script_in_executor() || (msg != dbInsert && msg != dbUpdate && msg != dbDelete))
     return db_schema_xml(db, msg, wparam, lparam);
   uint32_t table_id = LOWORD(wparam);
   int doc_id = 0;
@@ -52,14 +53,27 @@ lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam)
     const void *record = (const void *)db_schema_xml(db, dbFind, MAKEDWORD(table_id, 0), lparam);
     doc_id = document_of(db, table_id, record);
   }
+  const db_document_t *input = table_id == TABLE_DOCUMENTS && msg != dbDelete ? lparam : NULL;
+  bool scope = input && !input->number[0];
+  if (scope && !db_schema_xml(db, dbBeginChanges, 0, NULL)) return 0;
   lresult_t result = db_schema_xml(db, msg, wparam, lparam);
-  if (!result) return result;
+  if (!result) {
+    if (scope) db_schema_xml(db, dbRevertChanges, 0, NULL);
+    return 0;
+  }
   if (table_id == TABLE_DOCUMENTS && msg != dbDelete) {
     const db_document_t *doc = msg == dbInsert ? (const db_document_t *)result : (const db_document_t *)lparam;
-    recalculate(db, doc->id, true);
+    if (!recalculate(db, doc->id, true)) {
+      if (scope) db_schema_xml(db, dbRevertChanges, 0, NULL);
+      return 0;
+    }
   } else if (table_id != TABLE_DOCUMENTS) {
     if (msg != dbDelete) doc_id = document_of(db, table_id, msg == dbInsert ? (const void *)result : lparam);
     if (is_line_table(db, table_id, doc_id)) recalculate(db, doc_id, false);
+  }
+  if (scope && !db_schema_xml(db, dbCommitChanges, 0, NULL)) {
+    db_schema_xml(db, dbRevertChanges, 0, NULL);
+    return 0;
   }
   return result;
 }

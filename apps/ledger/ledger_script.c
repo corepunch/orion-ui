@@ -45,7 +45,11 @@ static lua_State *g_lua;
 static const ledger_post_t *g_post;  // the posting a hook runs for
 static int g_handlers;               // registry ref: event name -> array of functions
 static bool g_script_writable;
+static bool g_script_running;
 static int g_script_transactions;
+static int g_executors;
+static bool g_executor_active;
+int ledger_open_executor(lua_State *L);
 
 static database_t *db_named(lua_State *L, int arg) {
   const char *name = luaL_checkstring(L, arg);
@@ -150,7 +154,7 @@ static double opt_number(lua_State *L, int t, const char *key, double dflt) {
 
 // ledger.entry{...}: an entry of the document being posted.
 static int l_entry(lua_State *L) {
-  if (!g_post) return luaL_error(L, "ledger.entry outside a posting");
+  if (!g_post || g_executor_active) return luaL_error(L, "ledger.entry outside a posting");
   luaL_checktype(L, 1, LUA_TTABLE);
   lua_getfield(L, 1, "debit");  int debit = account_id(L, -1);  lua_pop(L, 1);
   lua_getfield(L, 1, "credit"); int credit = account_id(L, -1); lua_pop(L, 1);
@@ -264,32 +268,27 @@ static void script_relation(lua_State *L, database_t *db, const db_table_schema_
     luaL_error(L, "missing reference %s.%s=%d", t->name, t->meta[field].name, id);
 }
 
-static int script_write(lua_State *L, bool insert, bool validate) {
-  if (!validate && (!g_script_writable || !g_script_transactions || g_post))
-    return luaL_error(L, "catalog writes require a writable script and ledger.transaction, outside posting");
-  const char *name = luaL_checkstring(L, 1);
-  if (!automation_table(name)) return luaL_error(L, "table '%s' is not an automation write target", name);
-  database_t *db = get_database_by_name("ib");
-  if (!db) return luaL_error(L, "infobase unavailable");
-  const db_table_schema_t *t = db_schema_table_named(db->schema, name);
-  if (!t) return luaL_error(L, "unknown table '%s'", name);
-  int fields = validate || insert ? 2 : 3;
+static bool executor_field_allowed(const char *allowed, const char *field) {
+  for (const char *p = allowed; p && *p; ) {
+    size_t n = strcspn(p, ",");
+    if (strlen(field) == n && !strncmp(p, field, n)) return true;
+    p += n;
+    if (*p) p++;
+  }
+  return false;
+}
+
+static int script_read_fields(lua_State *L, database_t *db, const db_table_schema_t *t,
+                               int fields, void *record, const char *allowed) {
+  const char *name = t->name;
+  fields = lua_absindex(L, fields);
   luaL_checktype(L, fields, LUA_TTABLE);
-  lua_Integer requested_id = insert ? 0 : luaL_checkinteger(L, validate ? 3 : 2);
-  if (requested_id < 0 || requested_id > INT_MAX) return luaL_error(L, "record ID out of range");
-  int id = (int)requested_id;
-  const void *existing = insert ? NULL : (const void *)send_db_message(db, dbFind, MAKEDWORD(t->table_id, 0), (void *)(intptr_t)id);
-  if (!insert && !existing) return luaL_error(L, "missing record %s:%d", name, id);
-  void *record = lua_newuserdatauv(L, t->record_size, 0);
-  memset(record, 0, t->record_size);
-  if (existing) memcpy(record, existing, t->record_size);
-  else send_db_message(db, dbInitRecord, t->table_id, record);
   lua_pushnil(L);
   while (lua_next(L, fields)) {
     if (lua_type(L, -2) != LUA_TSTRING) return luaL_error(L, "field names must be strings");
     const char *key = lua_tostring(L, -2);
     int index = db_schema_field_index(t, key);
-    if (index < 0 || !strcmp(key, "id")) return luaL_error(L, "unknown or protected field %s.%s", name, key);
+    if (index < 0 || !strcmp(key, "id") || (allowed && !executor_field_allowed(allowed, key))) return luaL_error(L, "unknown or protected field %s.%s", name, key);
     const db_field_meta_t *f = &t->meta[index];
     char *p = (char *)record + f->offset;
     switch (f->type) {
@@ -322,6 +321,30 @@ static int script_write(lua_State *L, bool insert, bool validate) {
     }
     lua_pop(L, 1);
   }
+  return 0;
+}
+
+static int script_write(lua_State *L, bool insert, bool validate) {
+  if (!validate && (!g_script_writable || !g_script_transactions || g_post))
+    return luaL_error(L, "catalog writes require a writable script and ledger.transaction, outside posting");
+  const char *name = luaL_checkstring(L, 1);
+  if (!automation_table(name)) return luaL_error(L, "table '%s' is not an automation write target", name);
+  database_t *db = get_database_by_name("ib");
+  if (!db) return luaL_error(L, "infobase unavailable");
+  const db_table_schema_t *t = db_schema_table_named(db->schema, name);
+  if (!t) return luaL_error(L, "unknown table '%s'", name);
+  int fields = validate || insert ? 2 : 3;
+  luaL_checktype(L, fields, LUA_TTABLE);
+  lua_Integer requested_id = insert ? 0 : luaL_checkinteger(L, validate ? 3 : 2);
+  if (requested_id < 0 || requested_id > INT_MAX) return luaL_error(L, "record ID out of range");
+  int id = (int)requested_id;
+  const void *existing = insert ? NULL : (const void *)send_db_message(db, dbFind, MAKEDWORD(t->table_id, 0), (void *)(intptr_t)id);
+  if (!insert && !existing) return luaL_error(L, "missing record %s:%d", name, id);
+  void *record = lua_newuserdatauv(L, t->record_size, 0);
+  memset(record, 0, t->record_size);
+  if (existing) memcpy(record, existing, t->record_size);
+  else send_db_message(db, dbInitRecord, t->table_id, record);
+  script_read_fields(L, db, t, fields, record, NULL);
   if (!strcmp(name, "items") && ((db_item_t *)record)->price < 0) return luaL_error(L, "price must be nonnegative");
   if (!strcmp(name, "rates")) {
     const db_rate_t *r = record;
@@ -404,7 +427,11 @@ bool ledger_script_open(const char *config_dir, const char *data_dir) {
   if (!g_lua) { fprintf(stderr, "[ledger] script: cannot create the Lua state\n"); return false; }
   luaL_openlibs(g_lua);
   luaL_newlib(g_lua, kLedgerApi);
+  luaL_requiref(g_lua, "ledger.executor", ledger_open_executor, 0);
+  lua_setfield(g_lua, -2, "executor");
   lua_setglobal(g_lua, "ledger");
+  lua_newtable(g_lua);
+  g_executors = luaL_ref(g_lua, LUA_REGISTRYINDEX);
   lua_newtable(g_lua);
   g_handlers = luaL_ref(g_lua, LUA_REGISTRYINDEX);
   char path[LEDGER_PATH_MAX * 2];
@@ -424,7 +451,7 @@ bool ledger_script_open(const char *config_dir, const char *data_dir) {
 
 bool ledger_script_run(const char *path, bool writable, char *error, size_t error_sz) {
   if (error && error_sz) error[0] = '\0';
-  if (!g_lua || g_post || g_script_writable || g_script_transactions) {
+  if (!g_lua || g_post || g_script_running || g_script_transactions) {
     if (error && error_sz) snprintf(error, error_sz, "script runtime unavailable or busy");
     return false;
   }
@@ -432,8 +459,10 @@ bool ledger_script_run(const char *path, bool writable, char *error, size_t erro
   if (!db || !send_db_message(db, dbBeginChanges, 0, NULL)) return false;
   int top = lua_gettop(g_lua);
   g_script_writable = writable;
+  g_script_running = true;
   bool ok = luaL_dofile(g_lua, path) == LUA_OK;
   g_script_writable = false;
+  g_script_running = false;
   if (!ok) {
     if (error && error_sz) snprintf(error, error_sz, "%s", lua_tostring(g_lua, -1));
     send_db_message(db, dbRevertChanges, 0, NULL);
@@ -449,6 +478,7 @@ void ledger_script_close(void) {
   if (g_lua) lua_close(g_lua);
   g_lua = NULL;
   g_post = NULL;
+  g_executor_active = false;
 }
 
 bool ledger_script_has(const char *function) {
@@ -542,3 +572,203 @@ void ledger_script_event(const char *event, const ledger_post_t *p) {
   }
   lua_pop(L, 2);
 }
+
+// The host applies capability-limited plans; workflow policy is a standard plugin.
+typedef struct {
+  const char *name, *document_fields, *replace_table, *parent_field, *line_fields;
+  bool recalculate;
+} ledger_executor_spec_t;
+#include "build/generated/apps/ledger/executor_contract.h"
+
+static const ledger_executor_spec_t *g_executor_spec;
+static bool g_executor_scope;
+
+static const ledger_executor_spec_t *executor_spec(const char *name) {
+  for (size_t i = 0; i < ARRAY_LEN(kExecutorSpecs); i++)
+    if (!strcmp(kExecutorSpecs[i].name, name)) return &kExecutorSpecs[i];
+  return NULL;
+}
+
+bool ledger_script_in_executor(void) { return g_executor_active; }
+
+int ledger_exec_register(lua_State *L, const char *operation, int handler) {
+  if (!executor_spec(operation)) return luaL_error(L, "unknown executor '%s'", operation);
+  if (g_executor_active || g_post || g_script_running) return luaL_error(L, "executor registration is only available during startup");
+  lua_rawgeti(L, LUA_REGISTRYINDEX, g_executors);
+  lua_getfield(L, -1, operation);
+  if (!lua_isnil(L, -1)) return luaL_error(L, "duplicate executor '%s'", operation);
+  lua_pop(L, 1);
+  lua_pushvalue(L, handler);
+  lua_setfield(L, -2, operation);
+  lua_pop(L, 1);
+  return 0;
+}
+
+static void executor_keys(lua_State *L, int table, const char *allowed) {
+  table = lua_absindex(L, table);
+  luaL_checktype(L, table, LUA_TTABLE);
+  lua_pushnil(L);
+  while (lua_next(L, table)) {
+    if (lua_type(L, -2) != LUA_TSTRING || !executor_field_allowed(allowed, lua_tostring(L, -2)))
+      luaL_error(L, "unsupported executor plan field");
+    lua_pop(L, 1);
+  }
+}
+
+static void executor_read_record(lua_State *L, const db_table_schema_t *table, int fields, void *record,
+                                 const char *allowed, bool required) {
+  script_read_fields(L, g_post->ib, table, fields, record, allowed);
+  if (!required) return;
+  for (const char *p = allowed; p && *p; ) {
+    size_t n = strcspn(p, ",");
+    char name[128];
+    snprintf(name, sizeof(name), "%.*s", (int)n, p);
+    lua_getfield(L, fields, name);
+    if (lua_isnil(L, -1)) luaL_error(L, "executor result requires '%s'", name);
+    lua_pop(L, 1);
+    int i = db_schema_field_index(table, name);
+    if (i >= 0 && table->fields[i].relation_table && *(const int *)((const char *)record + table->meta[i].offset) <= 0)
+      luaL_error(L, "executor result requires a nonempty reference '%s'", name);
+    p += n;
+    if (*p) p++;
+  }
+}
+
+static int executor_plan(lua_State *L) {
+  const ledger_executor_spec_t *spec = g_executor_spec;
+  database_t *ib = g_post->ib;
+  lua_rawgeti(L, LUA_REGISTRYINDEX, g_executors);
+  lua_getfield(L, -1, spec->name);
+  lua_remove(L, -2);
+  if (!lua_isfunction(L, -1)) return luaL_error(L, "executor '%s' is not registered", spec->name);
+  push_context(g_post);
+  lua_call(L, 1, 1);
+  executor_keys(L, 1, "document,replace");
+  bool changed = false;
+  lua_getfield(L, 1, "document");
+  if (!lua_isnil(L, -1)) {
+    const db_table_schema_t *table = db_schema_table(ib->schema, TABLE_DOCUMENTS);
+    void *record = lua_newuserdatauv(L, table->record_size, 0);
+    memcpy(record, g_post->doc, table->record_size);
+    executor_read_record(L, table, 2, record, spec->document_fields, false);
+    lua_pop(L, 1);
+    lua_pushnil(L);
+    if (lua_next(L, 2)) { changed = true; lua_pop(L, 2); }
+  }
+  lua_pop(L, 1);
+  lua_getfield(L, 1, "replace");
+  if (!lua_isnil(L, -1)) executor_keys(L, 2, spec->replace_table);
+  const db_table_schema_t *child = spec->replace_table[0] ? db_schema_table_named(ib->schema, spec->replace_table) : NULL;
+  int parent = child ? db_schema_field_index(child, spec->parent_field) : -1;
+  if (child && !lua_isnil(L, 2)) lua_getfield(L, 2, spec->replace_table); else lua_pushnil(L);
+  if (!lua_isnil(L, 3)) {
+    luaL_checktype(L, 3, LUA_TTABLE);
+    changed = true;
+    size_t count = lua_rawlen(L, 3);
+    lua_pushnil(L);
+    while (lua_next(L, 3)) {
+      if (!lua_isinteger(L, -2) || lua_tointeger(L, -2) < 1 || (lua_Unsigned)lua_tointeger(L, -2) > count)
+        return luaL_error(L, "executor rows must be a dense array");
+      lua_pop(L, 1);
+    }
+    for (size_t i = 1; i <= count; i++) {
+      lua_rawgeti(L, 3, i);
+      luaL_checktype(L, 4, LUA_TTABLE);
+      void *record = lua_newuserdatauv(L, child->record_size, 0);
+      send_db_message(ib, dbInitRecord, child->table_id, record);
+      executor_read_record(L, child, 4, record, spec->line_fields, true);
+      lua_pop(L, 2);
+    }
+  }
+  lua_settop(L, 1);
+  if (!changed) return 1;
+  if (!send_db_message(ib, dbBeginChanges, 0, NULL)) return luaL_error(L, "cannot begin executor transaction");
+  g_executor_scope = true;
+  lua_getfield(L, 1, "document");
+  if (!lua_isnil(L, 2)) {
+    const db_table_schema_t *table = db_schema_table(ib->schema, TABLE_DOCUMENTS);
+    void *record = lua_newuserdatauv(L, table->record_size, 0);
+    memcpy(record, g_post->doc, table->record_size);
+    executor_read_record(L, table, 2, record, spec->document_fields, false);
+    if (!send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, record)) return luaL_error(L, "cannot update executor document");
+  }
+  lua_settop(L, 1);
+  lua_getfield(L, 1, "replace");
+  if (child && !lua_isnil(L, 2)) lua_getfield(L, 2, spec->replace_table); else lua_pushnil(L);
+  if (!lua_isnil(L, 3)) {
+    result_node_t *old = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(child->table_id, parent), (void *)(intptr_t)g_post->doc->id);
+    bool ok = true;
+    for (result_node_t *n = old; n; n = n->next) {
+      const void *row = *(void **)n->data;
+      int key_field = db_schema_field_index(child, "id");
+      int key = *(const int *)((const char *)row + child->meta[key_field].offset);
+      if (!send_db_message(ib, dbDelete, child->table_id, (void *)(intptr_t)key)) { ok = false; break; }
+    }
+    free_result_list(old);
+    if (!ok) return luaL_error(L, "cannot replace executor rows");
+    for (size_t i = 1; i <= lua_rawlen(L, 3); i++) {
+      lua_rawgeti(L, 3, i);
+      void *record = lua_newuserdatauv(L, child->record_size, 0);
+      send_db_message(ib, dbInitRecord, child->table_id, record);
+      executor_read_record(L, child, 4, record, spec->line_fields, true);
+      *(int *)((char *)record + child->meta[parent].offset) = g_post->doc->id;
+      if (!send_db_message(ib, dbInsert, child->table_id, record)) return luaL_error(L, "cannot insert executor row");
+      lua_pop(L, 2);
+    }
+  }
+  if (spec->recalculate) ledger_recalc_document(ib, g_post->cfg, g_post->doc->id);
+  lua_settop(L, 1);
+  return 1;
+}
+
+static bool executor_call(lua_State *L, const ledger_post_t *p, const char *operation) {
+  if (g_executor_active || g_post) { lua_pushliteral(L, "nested executor/posting execution is not allowed"); return false; }
+  const ledger_executor_spec_t *spec = executor_spec(operation);
+  if (!spec) { lua_pushfstring(L, "unknown executor '%s'", operation); return false; }
+  g_executor_spec = spec;
+  g_executor_active = true;
+  g_executor_scope = false;
+  g_post = p;
+  lua_pushcfunction(L, executor_plan);
+  bool ok = lua_pcall(L, 0, 1, 0) == LUA_OK;
+  g_post = NULL;
+  g_executor_active = false;
+  if (g_executor_scope) {
+    if (!send_db_message(p->ib, ok ? dbCommitChanges : dbRevertChanges, 0, NULL)) {
+      if (ok) {
+        send_db_message(p->ib, dbRevertChanges, 0, NULL);
+        lua_pop(L, 1); lua_pushliteral(L, "cannot commit executor transaction");
+      }
+      ok = false;
+    }
+  }
+  g_executor_scope = false;
+  return ok;
+}
+
+int ledger_exec_execute(lua_State *L, const char *operation, int document_id) {
+  if (!g_script_writable) return luaL_error(L, "executor requires a writable script");
+  if (document_id <= 0 || lua_tointeger(L, 2) != document_id) return luaL_error(L, "executor document ID out of range");
+  database_t *ib = get_database_by_name("ib"), *cfg = get_database_by_name("cfg");
+  db_document_t *doc = ib ? (db_document_t *)send_db_message(ib, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)document_id) : NULL;
+  if (!doc || !cfg) return luaL_error(L, "executor document not found");
+  const db_doc_type_t *type = (const db_doc_type_t *)send_db_message(cfg, dbFind, MAKEDWORD(TABLE_DOC_TYPES, 0), (void *)(intptr_t)doc->doc_type_id);
+  ledger_post_t p = {ib, cfg, doc, type, doc->rate};
+  if (!executor_call(L, &p, operation)) return lua_error(L);
+  return 1;
+}
+
+bool ledger_execute_document(database_t *ib, database_t *cfg, const char *operation, int document_id) {
+  const db_document_t *doc = (const db_document_t *)send_db_message(ib, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)document_id);
+  if (!doc) return false;
+  if (!g_lua) { fprintf(stderr, "[ledger] executor '%s': script runtime is not open\n", operation); return false; }
+  const db_doc_type_t *type = (const db_doc_type_t *)send_db_message(cfg, dbFind, MAKEDWORD(TABLE_DOC_TYPES, 0), (void *)(intptr_t)doc->doc_type_id);
+  ledger_post_t p = {ib, cfg, (db_document_t *)doc, type, doc->rate};
+  int top = lua_gettop(g_lua);
+  bool ok = executor_call(g_lua, &p, operation);
+  if (!ok) { fprintf(stderr, "[ledger] executor '%s': %s\n", operation, lua_tostring(g_lua, -1)); fflush(stderr); }
+  lua_settop(g_lua, top);
+  return ok;
+}
+
+#include "build/generated/apps/ledger/executor_lua.h"

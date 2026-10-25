@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<executors version="1" schema="apps/ledger/ledger.orion">
+    <operation name="documents.number" impl="number_document" recalculate="false">
+      <summary>Preserve existing numbers; assign the next number across document types sharing the selected prefix.</summary>
+      <document fields="number"/>
+    </operation>
+    <operation name="payroll.fill" impl="fill_payroll" recalculate="true">
+      <summary>Replace payroll lines with positive salaries for accruals or outstanding employee balances for payouts.</summary>
+      <replace table="payroll_lines" parent="document_id" fields="employee_id,amount"/>
+    </operation>
+  </executors>

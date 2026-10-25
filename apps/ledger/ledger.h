@@ -67,10 +67,10 @@ const char *ledger_subconto_table(database_t *cfg, int account_id);
 void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id);
 bool ledger_post(database_t *ib, database_t *cfg, int doc_id);
 void ledger_unpost(database_t *ib, database_t *cfg, int doc_id);
-void ledger_number_document(database_t *ib, database_t *cfg, int doc_id);
+bool ledger_number_document(database_t *ib, database_t *cfg, int doc_id);
 void ledger_repost_all(database_t *ib, database_t *cfg);
 // Fills a payroll document: salaries for an accrual, what is owed for a payout.
-void ledger_fill_payroll(database_t *ib, database_t *cfg, int doc_id);
+bool ledger_fill_payroll(database_t *ib, database_t *cfg, int doc_id);
 // Rebuilds the transient report tables for the period in report settings.
 void ledger_build_reports(database_t *ib, database_t *cfg);
 db_report_setting_t *ledger_report_settings(database_t *ib, database_t *cfg);
@@ -82,6 +82,8 @@ int  ledger_count_references(database_t *ib, int table_id, const char *field, in
 // when no script defines the function.
 bool ledger_script_open(const char *config_dir, const char *data_dir);
 void ledger_script_close(void);
+bool ledger_script_in_executor(void);
+bool ledger_execute_document(database_t *ib, database_t *cfg, const char *operation, int document_id);
 // Execute trusted local Lua; the entire run rolls back on error.
 bool ledger_script_run(const char *path, bool writable, char *error, size_t error_sz);
 bool ledger_script_has(const char *function);

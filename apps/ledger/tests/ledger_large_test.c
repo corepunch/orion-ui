@@ -41,6 +41,8 @@ static void test_large_country(const char *country) {
   ASSERT_NOT_NULL(ib);
   register_database("ib", ib);
   large_state.cfg = cfg; large_state.ib = ib;
+  snprintf(large_state.config_dir, sizeof(large_state.config_dir), "apps/ledger/share/configurations/%s-2003", country);
+  ASSERT_TRUE(ledger_script_open(large_state.config_dir, NULL));
   ASSERT_EQUAL(large_count(ib, TABLE_COUNTERPARTIES), 500);
   ASSERT_EQUAL(large_count(ib, TABLE_ITEMS), 2000);
   ASSERT_EQUAL(large_count(ib, TABLE_DOCUMENTS), 1000);
@@ -88,6 +90,7 @@ static void test_large_country(const char *country) {
   ASSERT(!repeat.entries && !repeat.items && !repeat.counterparties && repeat.balances_present, "large exchange remains idempotent after reload");
   ASSERT_EQUAL(large_count(ib, TABLE_ENTRIES), 10000);
   ASSERT(large_balanced(ib, cfg, first.debit + first.credit), "repeat import preserves report totals");
+  ledger_script_close();
   destroy_database(ib); destroy_database(cfg);
   large_state.ib = large_state.cfg = NULL;
   remove(saved);
