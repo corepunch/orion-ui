@@ -29,6 +29,8 @@ typedef struct {
   bool resize;      // the press landed on the clip's trailing fractions
   int resize_ticks; // stored duration at the press
   groove_drop_anchor_t drop_anchor;
+  uint32_t branding;
+  ipoint16_t branding_size;
 } sheet_t;
 
 static int  hpos(window_t *win)    { return get_scroll_pos(win, SB_HORZ); }
@@ -42,7 +44,43 @@ static int  seek_ticks(int content_x) { return floordiv(content_x, SNAP_W) * GR_
 static int  track_y(window_t *win, int t)  { return RULER_H + t * row_h(win); }
 static irect16_t grid_rect(window_t *win)  { irect16_t cr = get_client_rect(win); return R(0, RULER_H, cr.w, row_h(win) * GR_TRACKS); }
 
-// Hue of the track's earliest clip, so the lane and header match the cards they hold.
+static void sheet_load_branding(window_t *win) {
+  if (!g_ui_runtime.running) return;
+  sheet_t *st = win->userdata;
+  char path[1024];
+  int n = snprintf(path, sizeof(path), "%s/../share/groove/branding/groove.png", ui_get_exe_dir());
+  if (n < 0 || (size_t)n >= sizeof(path)) {
+    fprintf(stderr, "[sh] branding path too long win=%u length=%d capacity=%zu\n", win->id, n, sizeof(path));
+    fflush(stderr);
+    return;
+  }
+  int w = 0, h = 0;
+  uint8_t *pixels = load_image(path, &w, &h);
+  if (!pixels) {
+    fprintf(stderr, "[sh] branding load failed win=%u path=%s\n", win->id, path);
+    fflush(stderr);
+    return;
+  }
+  st->branding = R_CreateTextureSRGBA8(w, h, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
+  st->branding_size = (ipoint16_t){ w, h };
+  image_free(pixels);
+  if (!st->branding) {
+    fprintf(stderr, "[sh] branding texture allocation failed win=%u size=%dx%d\n", win->id, w, h);
+    fflush(stderr);
+  }
+}
+
+static void sheet_paint_branding(window_t *win, irect16_t grid) {
+  const sheet_t *st = win->userdata;
+  if (!st->branding) return;
+  irect16_t bounds = rect_inset_xy(grid, 24, 16);
+  if (bounds.w <= 0 || bounds.h <= 0) return;
+  int width = MIN(700, MIN(bounds.w * 5 / 6, bounds.h * st->branding_size.x / st->branding_size.y));
+  int height = width * st->branding_size.y / st->branding_size.x;
+  draw_rect_ex(st->branding, rect_center(grid, width, height), 0, 0.045f);
+}
+
+// The header accent follows the track's earliest clip.
 uint32_t track_color(int t) {
   static const category_t fallback[GR_TRACKS] = {0, 7, 1, 2, 4, 3, 13, 15};
   const song_t *s = &g_app->song;
@@ -216,9 +254,10 @@ static void paint_sheet(window_t *win) {
   set_clip_rect(win, grid);
   for (int t = 0; t < GR_TRACKS; t++) {
     irect16_t lane = R(grid.x, track_y(win, t), grid.w, row_h(win));
-    fill_rect(get_sys_color(t % 2 ? brColumnViewBg : brWindowDarkBg), lane);
-    fill_rect(color_with_alpha(track_color(t), 0x0e), lane);
+    fill_rect(get_sys_color(brWindowDarkBg), lane);
+    if (t % 2) fill_rect(color_with_alpha(get_sys_color(brTextNormal), 0x08), lane);
   }
+  sheet_paint_branding(win, grid);
   for (int position = 0; position <= GR_BARS * GR_TICKS_BAR; position += GR_SNAP_TICKS) {
     int alpha = position % GR_TICKS_BAR ? 0x0a : position % (4 * GR_TICKS_BAR) ? 0x14 : 0x38;
     fill_rect(color_with_alpha(get_sys_color(brLightEdge), alpha), R(position_x(win, position), grid.y, 1, grid.h));
@@ -256,6 +295,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       g_app->sheet = win;
       st->press_clip = -1;
+      sheet_load_branding(win);
       sync_scroll(win);
       return true;
     case evResize: sync_scroll(win); sync_clips(win); tracks_sync(); invalidate_window(win); return false;
@@ -372,6 +412,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evDestroy:
       if (g_app && g_app->sheet == win) g_app->sheet = NULL;
       if (st && st->press_clip >= 0) set_capture(NULL);
+      if (st && st->branding) R_DeleteTexture(st->branding);
       free(st);
       win->userdata = NULL;
       return true;
