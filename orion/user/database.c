@@ -87,6 +87,11 @@ database_t *get_database_by_name(const char *name) {
   return NULL;
 }
 
+database_t *get_database_at(int index) {
+  if (index < 0 || index >= g_database_instance_count) return NULL;
+  return g_database_instances[index].db;
+}
+
 database_t *create_database(const char *name, const char *class_name, const char *source_path) {
   return create_database_with_schema(name, class_name, NULL, source_path);
 }

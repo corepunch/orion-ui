@@ -918,7 +918,11 @@ Smart defaults based on control types. Override only when needed.
 
 ### 3. Compile-Time over Runtime
 
-All bindings generated at compile time. No runtime reflection, parsing, or string manipulation.
+An application's own forms bind at compile time: orionc writes the offsets and
+DDX functions, and nothing is parsed while the program runs. A `.orion` file
+that arrives at run time (an add-on) loads through `form_library_load()`, which
+applies the same rules to the schemas of the registered databases; see
+[Forms loaded at run time](dialogs.md#forms-loaded-at-run-time).
 
 ---
 

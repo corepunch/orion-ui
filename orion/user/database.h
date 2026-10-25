@@ -203,6 +203,8 @@ dbproc_t find_database_class_proc(const char *class_name);
 // Forms with field="db.table.field" look up the database by name automatically
 bool register_database(const char *name, database_t *db);
 database_t *get_database_by_name(const char *name);
+// The index-th registered database, in registration order, or NULL past the end.
+database_t *get_database_at(int index);
 
 #define DB_CLASS(proc_sym) \
   register_database_class(&(db_class_desc_t){ .class_name = #proc_sym, .proc = (proc_sym) })

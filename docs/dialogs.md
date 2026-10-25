@@ -261,6 +261,38 @@ window_t *win = create_window_from_form(&kMyForm, wr.x, wr.y,
                                         NULL, my_proc, 0, state);
 ```
 
+### Forms loaded at run time
+
+`orionc` compiles an application's own `.orion` file into the header above.
+A `.orion` file that arrives while the program runs, such as a user's add-on
+next to a script, loads into the same `form_def_t` with
+`<orion/commctl/form_loader.h>`, as WinAPI's `CreateDialogIndirect` builds a
+dialog from a template read at run time:
+
+```c
+form_library_t *lib = form_library_load("penalties.orion");
+const form_def_t *form = form_library_form(lib, "penalties");
+uint32_t calculate = form_library_control_id(lib, form, "calculate");
+const char *action = form_library_control_attr(lib, form, calculate, "action");
+show_dialog_from_form(form, NULL, parent, penalties_proc, state);
+form_library_free(lib);  // after every window built from it is destroyed
+```
+
+- The rules are orionc's. `apps/ledger/tests/ledger_runtime_forms_test.c`
+  loads `ledger.orion` at run time and checks every form equals the compiled
+  one field by field.
+- `field="db.table.field"`, TableView and ComboBox `source=` resolve against
+  the schemas of the databases registered when the library loads, so call
+  `register_database()` first.
+- Controls get ids from `FORM_LIBRARY_ID_BASE` up; find them by `name=`.
+  Every declared attribute stays readable, so a layer above can act on an
+  `action=` the framework itself does not interpret.
+- A form that needs compiled command ids (a `<Toolbar>`, `<PaneToolbar>`,
+  ActivityBar pages or a `context-menu=`) is left out with a diagnostic on
+  stderr naming the file, line and reason; the other forms still load.
+- The library owns every definition. Controls keep pointers into them, so
+  free the library only after the windows built from it are gone.
+
 ---
 
 ## 3. Dialog Data Exchange (DDX)
