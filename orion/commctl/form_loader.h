@@ -12,9 +12,9 @@
 //   form_library_free(lib);   // after every window built from it is gone
 //
 // Field bindings (field="ib.documents.number"), TableView and ComboBox
-// sources resolve against the schemas of the databases registered at load
-// time, so load a library after register_database(). Controls get numeric
-// ids from FORM_LIBRARY_ID_BASE up; look them up by name.
+// sources resolve against the databases the document declares and those
+// registered at load time, so load a library after register_database().
+// Controls get numeric ids from FORM_LIBRARY_ID_BASE up; look them up by name.
 //
 // A form that uses what only compiled forms can express (toolbars, activity
 // pages and context menus, whose commands are C identifiers) is rejected
@@ -50,5 +50,13 @@ uint32_t form_library_control_id(const form_library_t *lib, const form_def_t *fo
 const form_ctrl_def_t *form_library_control(const form_library_t *lib, const form_def_t *form, uint32_t id);
 const char *form_library_control_attr(const form_library_t *lib, const form_def_t *form,
                                       uint32_t id, const char *attr);
+
+// The <databases> the document declares, with schemas built at run time:
+// record layouts follow the C structs orionc would declare. Create one with
+// create_database_with_schema() and register it before showing a form that
+// names it; the schema lives as long as the library.
+int form_library_schema_count(const form_library_t *lib);
+const db_schema_def_t *form_library_schema_at(const form_library_t *lib, int index);
+const db_schema_def_t *form_library_schema(const form_library_t *lib, const char *name);
 
 #endif

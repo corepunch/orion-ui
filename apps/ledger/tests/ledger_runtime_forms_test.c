@@ -184,6 +184,50 @@ static void test_runtime_forms_equal_compiled(void) {
   PASS();
 }
 
+static bool schema_same(const db_schema_def_t *g, const db_schema_def_t *r) {
+  if (!str_same(g->name, r->name) || !str_same(g->class_name, r->class_name) || g->table_count != r->table_count) DIFF("database");
+  for (int i = 0; i < g->table_count; i++) {
+    const db_table_schema_t *a = &g->tables[i], *b = &r->tables[i];
+    if (a->table_id != b->table_id || !str_same(a->name, b->name) || !str_same(a->model, b->model) || a->transient != b->transient)
+      DIFF("table %s", a->name);
+    if (a->record_size != b->record_size) DIFF("table %s: record size %zu vs %zu", a->name, a->record_size, b->record_size);
+    if (a->field_count != b->field_count || a->meta_count != b->meta_count || a->join_count != b->join_count) DIFF("table %s: counts", a->name);
+    for (int f = 0; f < a->meta_count; f++) {
+      const db_field_meta_t *x = &a->meta[f], *y = &b->meta[f];
+      if (!str_same(x->name, y->name) || x->type != y->type || x->offset != y->offset || x->length != y->length || x->precision != y->precision)
+        DIFF("table %s: field %s layout", a->name, x->name);
+      const db_field_schema_t *p = &a->fields[f], *q = &b->fields[f];
+      if (!str_same(p->name, q->name) || p->type != q->type || p->length != q->length || p->primary_key != q->primary_key ||
+          !str_same(p->relation_table, q->relation_table) || !str_same(p->relation_field, q->relation_field) ||
+          !str_same(p->default_value, q->default_value) || p->delete_rule != q->delete_rule)
+        DIFF("table %s: field %s schema", a->name, p->name);
+    }
+    for (int k = 0; k < a->join_count; k++) {
+      const db_join_schema_t *x = &a->joins[k], *y = &b->joins[k];
+      if (!str_same(x->name, y->name) || !str_same(x->local_field, y->local_field) ||
+          !str_same(x->foreign_table, y->foreign_table) || !str_same(x->foreign_field, y->foreign_field))
+        DIFF("table %s: join %s", a->name, x->name);
+    }
+  }
+  return true;
+}
+
+static void test_runtime_schemas_equal_compiled(void) {
+  TEST("runtime database schemas lay records out as the compiled structs");
+  form_library_t *lib = form_library_load("apps/ledger/ledger.orion");
+  ASSERT_EQUAL(form_library_schema_count(lib), 3);
+  const db_schema_def_t *compiled[] = { &ledger_cfg_schema, &ledger_catalog_schema, &ledger_ib_schema };
+  for (size_t i = 0; i < ARRAY_LEN(compiled); i++) {
+    const db_schema_def_t *r = form_library_schema(lib, compiled[i]->name);
+    ASSERT_NOT_NULL(r);
+    bool same = schema_same(compiled[i], r);
+    if (!same) fprintf(stderr, "database %s: %s\n", compiled[i]->name, g_why);
+    ASSERT(same, "runtime schema equals the compiled one");
+  }
+  form_library_free(lib);
+  PASS();
+}
+
 static void test_runtime_form_opens_record(void) {
   TEST("a runtime record form opens a dialog bound to the infobase");
   form_library_t *lib = form_library_load("apps/ledger/ledger.orion");
@@ -203,6 +247,7 @@ int main(int argc, char **argv) {
   TEST_START("Ledger runtime forms");
   setup();
   test_runtime_forms_equal_compiled();
+  test_runtime_schemas_equal_compiled();
   test_runtime_form_opens_record();
   destroy_database(g_ledger->ib);
   destroy_database(g_ledger->cfg);

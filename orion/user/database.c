@@ -87,6 +87,19 @@ database_t *get_database_by_name(const char *name) {
   return NULL;
 }
 
+bool unregister_database(const char *name) {
+  for (int i = 0; name && i < g_database_instance_count; i++) {
+    if (!db_streq(g_database_instances[i].name, name)) continue;
+    memmove(&g_database_instances[i], &g_database_instances[i + 1],
+            (size_t)(g_database_instance_count - i - 1) * sizeof(g_database_instances[0]));
+    g_database_instance_count--;
+    return true;
+  }
+  fprintf(stderr, "[database] unregister_database: '%s' is not registered\n", name ? name : "(null)");
+  fflush(stderr);
+  return false;
+}
+
 database_t *get_database_at(int index) {
   if (index < 0 || index >= g_database_instance_count) return NULL;
   return g_database_instances[index].db;

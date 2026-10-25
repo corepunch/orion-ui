@@ -186,6 +186,64 @@ static void test_window_from_runtime_form(void) {
   PASS();
 }
 
+static const char kDeclared[] =
+  "<orion>\n"
+  "  <databases>\n"
+  "    <database name=\"scratch\" class=\"db_schema_xml\">\n"
+  "      <table name=\"debts\" transient=\"true\">\n"
+  "        <field name=\"id\" type=\"integer\" key=\"YES\" />\n"
+  "        <field name=\"overdue\" type=\"boolean\" />\n"
+  "        <field name=\"amount\" type=\"double\" precision=\"2\" />\n"
+  "        <field name=\"person_id\" type=\"integer\" relation=\"club.people.id\" on-delete=\"cascade\" />\n"
+  "        <field name=\"note\" type=\"string\" length=\"40\" default=\"none\" />\n"
+  "      </table>\n"
+  "    </database>\n"
+  "  </databases>\n"
+  "  <forms>\n"
+  "    <form name=\"debts\" width=\"300\">\n"
+  "      <TableView name=\"rows\" source=\"scratch.debts\"><Column field=\"amount\" title=\"Amount\" /></TableView>\n"
+  "    </form>\n"
+  "  </forms>\n"
+  "</orion>\n";
+
+typedef struct { int id; bool overdue; double amount; int person_id; char note[40]; } debt_t;
+
+static void test_declared_database(void) {
+  TEST("form_library: a document's own <database> gets a runtime schema forms can use");
+  form_library_t *lib = form_library_parse(kDeclared, sizeof(kDeclared) - 1, "scratch.orion");
+  ASSERT_EQUAL(form_library_schema_count(lib), 1);
+  const db_schema_def_t *schema = form_library_schema(lib, "scratch");
+  ASSERT_NOT_NULL(schema);
+  ASSERT(schema == form_library_schema_at(lib, 0), "the schema is found by name and by index");
+  const db_table_schema_t *t = &schema->tables[0];
+  ASSERT_TRUE(t->transient);
+  ASSERT_EQUAL((int)t->record_size, (int)sizeof(debt_t));
+  ASSERT_EQUAL((int)t->meta[2].offset, (int)offsetof(debt_t, amount));
+  ASSERT_EQUAL((int)t->meta[4].offset, (int)offsetof(debt_t, note));
+  ASSERT_EQUAL(t->meta[2].precision, 2);
+  ASSERT_STR_EQUAL(t->fields[3].relation_table, "club.people");
+  ASSERT_EQUAL(t->fields[3].delete_rule, DB_DELETE_CASCADE);
+  ASSERT_EQUAL(t->join_count, 1);
+  ASSERT_STR_EQUAL(t->joins[0].name, "person");
+
+  const form_def_t *form = form_library_form(lib, "debts");
+  ASSERT(form != NULL, "a form resolves a table the same document declares");
+  database_t *db = create_database_with_schema("scratch", "db_schema_xml", schema, "");
+  register_database("scratch", db);
+  debt_t row = {0};
+  send_db_message(db, dbInitRecord, 0, &row);
+  ASSERT_STR_EQUAL(row.note, "none");
+  row.amount = 12.5;
+  ASSERT_NOT_NULL((void *)send_db_message(db, dbInsert, 0, &row));
+  debt_t *found = (debt_t *)send_db_message(db, dbFind, 0, (void *)(intptr_t)1);
+  ASSERT_TRUE(found && found->amount == 12.5);
+  ASSERT(unregister_database("scratch"), "a database leaves the registry");
+  ASSERT_NULL(get_database_by_name("scratch"));
+  destroy_database(db);
+  form_library_free(lib);
+  PASS();
+}
+
 int main(int argc, char **argv) {
   (void)argc; (void)argv;
   TEST_START("Runtime form loader");
@@ -198,6 +256,7 @@ int main(int argc, char **argv) {
   test_controls();
   test_bindings();
   test_window_from_runtime_form();
+  test_declared_database();
   destroy_database(g_db);
   test_env_shutdown();
   TEST_END();

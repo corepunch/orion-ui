@@ -203,6 +203,8 @@ dbproc_t find_database_class_proc(const char *class_name);
 // Forms with field="db.table.field" look up the database by name automatically
 bool register_database(const char *name, database_t *db);
 database_t *get_database_by_name(const char *name);
+// Removes a name from the registry (the database itself stays); false when absent.
+bool unregister_database(const char *name);
 // The index-th registered database, in registration order, or NULL past the end.
 database_t *get_database_at(int index);
 
