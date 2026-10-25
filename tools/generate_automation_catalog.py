@@ -88,11 +88,11 @@ def main():
         outputs.append((a.site, '---\nlayout: default\ntitle: Ledger automation catalog\nnav_exclude: true\n---\n\n' + docs))
     for path, content in outputs:
         if a.check:
-            if not path.exists() or path.read_text() != content:
+            if not path.exists() or path.read_text(encoding="utf-8") != content:
                 p.exit(1, 'Generated file is stale: ' + str(path) + '\n')
         else:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(content)
+            path.write_text(content, encoding="utf-8", newline="\n")
 
 
 if __name__ == '__main__':
