@@ -544,8 +544,8 @@ void test_draw_thick_line(void) {
   ASSERT_TRUE(canvas_get_pixel(c, 65, 101) == col); // 1 px below
   ASSERT_TRUE(canvas_get_pixel(c, 65, 102) == col); // 2 px below (r=2)
   // Pixel further away must remain white
-  uint32_t far = canvas_get_pixel(c, 65, 105);
-  ASSERT_EQUAL(COLOR_R(far), 255);
+  uint32_t outside = canvas_get_pixel(c, 65, 105);
+  ASSERT_EQUAL(COLOR_R(outside), 255);
   free(c);
   PASS();
 }
@@ -1133,9 +1133,9 @@ void test_draw_ellipse_filled(void) {
   /* Center must be filled */
   ASSERT_TRUE(canvas_get_pixel(c, 100, 80) == fill);
   /* Point well outside the ellipse must remain white */
-  uint32_t far = canvas_get_pixel(c, 160, 80);
-  ASSERT_EQUAL(COLOR_R(far), 255);
-  ASSERT_EQUAL(COLOR_G(far), 255);
+  uint32_t outside = canvas_get_pixel(c, 160, 80);
+  ASSERT_EQUAL(COLOR_R(outside), 255);
+  ASSERT_EQUAL(COLOR_G(outside), 255);
   free(c);
   PASS();
 }
