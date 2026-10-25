@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>Кассовая книга</title>
+<style>
+body{font-family:"Times New Roman",serif;font-size:10pt;margin:12mm;color:#000}
+table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
+.grid td,.grid th{border:1px solid #000}.grid th{font-weight:normal;font-size:8pt;text-align:center}
+.r{text-align:right}.c{text-align:center}.small{font-size:7.5pt}.b{font-weight:bold}
+.line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
+.sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
+h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
+@media print{body{margin:6mm}}
+</style></head><body>
+<div class="r small">Унифицированная форма № КО-4 (ОКУД 0310004)<br>Утверждена постановлением Госкомстата России от 18.08.98 № 88; ведется в соответствии с указанием Банка России от 11.03.2014 № 3210-У</div>
+<table style="width:100%"><tr><td><span class="line" style="width:100%">{{org.name}}</span><div class="cap">организация</div></td>
+<td><table class="box small"><tr><td></td><td class="b">Код</td></tr><tr><td style="border:0">Форма по ОКУД</td><td>0310004</td></tr><tr><td style="border:0">по ОКПО</td><td>&nbsp;</td></tr></table></td></tr></table>
+<h1 class="c">КАССОВАЯ КНИГА</h1>
+<p class="c">за период с {{period.date_from|dmy}} по {{period.date_to|dmy}}</p>
+<table class="grid" style="width:100%">
+<tr><th>Дата</th><th>Номер<br>документа</th><th>От кого получено<br>или кому выдано</th><th>Содержание</th><th>Номер корреспон-<br>дирующего счета,<br>субсчета</th><th>Приход,<br>руб. коп.</th><th>Расход,<br>руб. коп.</th><th>Остаток,<br>руб. коп.</th></tr>
+<tr><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr>
+{{#cash_book}}<tr><td class="c">{{date|dmy}}</td><td class="c">{{document.number}}</td><td>{{subconto.name}}</td><td>{{content}}</td><td class="c">{{corr.code}}</td><td class="r">{{receipt}}</td><td class="r">{{expense}}</td><td class="r">{{balance}}</td></tr>
+{{/cash_book}}</table>
+<table class="sign" style="width:100%"><tr><td>Кассир <span class="line">{{org.cashier}}</span></td><td>Записи в кассовой книге проверил и документы получил бухгалтер <span class="line">{{org.accountant}}</span></td></tr></table>
+</body></html>

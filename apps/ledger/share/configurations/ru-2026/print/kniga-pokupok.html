@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>Книга покупок</title>
+<style>
+body{font-family:"Times New Roman",serif;font-size:10pt;margin:12mm;color:#000}
+table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
+.grid td,.grid th{border:1px solid #000}.grid th{font-weight:normal;font-size:8pt;text-align:center}
+.r{text-align:right}.c{text-align:center}.small{font-size:7.5pt}.b{font-weight:bold}
+.line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
+.sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
+h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
+@media print{body{margin:6mm}}
+</style></head><body>
+<div class="r small">Приложение № 4 к постановлению Правительства Российской Федерации от 26.12.2011 № 1137 (в ред. 2024 г.)</div>
+<h1 class="c">КНИГА ПОКУПОК</h1>
+<p>Покупатель <span class="line">{{org.name}}</span><br>ИНН/КПП покупателя <span class="line">{{org.tax_id}}/{{org.kpp}}</span><br>Покупки за период с {{period.date_from|dmy}} по {{period.date_to|dmy}}</p>
+<table class="grid" style="width:100%">
+<tr><th>№<br>п/п</th><th>Код<br>вида<br>опера-<br>ции</th><th>Номер и дата<br>счета-фактуры<br>продавца</th><th>Дата принятия<br>на учет товаров<br>(работ, услуг),<br>имущественных прав</th><th>Наименование продавца</th><th>ИНН/КПП<br>продавца</th><th>Ставка<br>НДС</th><th>Стоимость покупок<br>по счету-фактуре,<br>включая НДС (графа 15)</th><th>Сумма НДС,<br>принимаемая<br>к вычету (графа 16)</th></tr>
+<tr><th>1</th><th>2</th><th>3</th><th>8</th><th>9</th><th>10</th><th>—</th><th>15</th><th>16</th></tr>
+{{#vat_book book=2}}<tr><td class="c">{{n}}</td><td class="c">01</td><td>{{document.comment}}</td><td class="c">{{date|dmy}}</td><td>{{counterparty.name}}</td><td class="c">{{counterparty.tax_id}}/{{counterparty.kpp}}</td><td class="c">{{vat_rate.name}}</td><td class="r">{{total}}</td><td class="r">{{vat}}</td></tr>
+{{/vat_book}}</table>
+<h1>Всего по ставкам</h1>
+<table class="grid"><tr><th>Ставка</th><th>Документов</th><th>Стоимость покупок с НДС</th><th>Без НДС</th><th>Сумма НДС</th></tr>
+{{#vat_summary book=2}}<tr><td class="c">{{vat_rate.name}}</td><td class="c">{{documents}}</td><td class="r">{{total}}</td><td class="r">{{amount}}</td><td class="r">{{vat}}</td></tr>
+{{/vat_summary}}</table>
+<table class="sign" style="width:100%"><tr><td>Руководитель организации или иное уполномоченное лицо <span class="line">{{org.director}}</span></td></tr></table>
+</body></html>

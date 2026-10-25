@@ -6,7 +6,7 @@
   <string source="Select Configuration..." where="menu">Выбрать конфигурацию...</string>
   <string source="Language..." where="menu">Язык...</string>
   <string source="Exit" where="menu">Выход</string>
-  <string source="Documents" where="menu">Документы</string>
+  <string source="Documents" where="menu,reports_page">Документы</string>
   <string source="New Document..." where="menu">Новый документ...</string>
   <string source="Open Document..." where="menu">Открыть документ...</string>
   <string source="Post" where="menu,journal_page">Провести</string>
@@ -49,7 +49,7 @@
   <string source="Number" where="journal_page">Номер</string>
   <string source="Document" where="journal_page,entries_page,reports_page,config_page,document">Документ</string>
   <string source="Counterparty" where="journal_page,reports_page,counterparty">Контрагент</string>
-  <string source="Amount" where="journal_page,entries_page,document,operation,payroll,closing">Сумма</string>
+  <string source="Amount" where="journal_page,entries_page,reports_page,document,operation,payroll,closing">Сумма</string>
   <string source="Comment" where="journal_page">Комментарий</string>
   <string source="Lines" where="journal_page">Товары</string>
   <string source="Item" where="journal_page,document,item">Номенклатура</string>
@@ -60,8 +60,8 @@
   <string source="Tax Amount" where="journal_page,document">Сумма налога</string>
   <string source="Total" where="journal_page,reports_page,document">Всего</string>
   <string source="Entries" where="journal_page,entries_page">Проводки</string>
-  <string source="Dr" where="journal_page,entries_page,config_page,operation,closing">Дт</string>
-  <string source="Cr" where="journal_page,entries_page,config_page,operation,closing">Кт</string>
+  <string source="Dr" where="journal_page,entries_page,reports_page,config_page,operation,closing">Дт</string>
+  <string source="Cr" where="journal_page,entries_page,reports_page,config_page,operation,closing">Кт</string>
   <string source="Content" where="journal_page,entries_page,reports_page,operation,closing">Содержание</string>
   <string source="Counterparties (Ctrl+2)" where="counterparties_page">Контрагенты (Ctrl+2)</string>
   <string source="New counterparty" where="counterparties_page">Новый контрагент</string>
@@ -96,7 +96,7 @@
   <string source="Description" where="config_page">Описание</string>
   <string source="Form" where="config_page">Форма</string>
   <string source="Tax Rates" where="config_page">Ставки налога</string>
-  <string source="Rate" where="currencies_page,config_page">Ставка</string>
+  <string source="Rate" where="currencies_page,reports_page,config_page">Ставка</string>
   <string source="Percent" where="config_page">Процент</string>
   <string source="Units" where="config_page">Единицы измерения</string>
   <string source="Document:" where="document,payroll,asset_document,closing">Документ:</string>
@@ -205,8 +205,8 @@
   <string source="New payroll document (Ctrl+W)" where="journal_page,employees_page">Начисление или выплата зарплаты (Ctrl+W)</string>
   <string source="Close Month" where="journal_page,closing">Закрытие месяца</string>
   <string source="Month-end closing (Ctrl+E)" where="journal_page">Закрытие месяца (Ctrl+E)</string>
-  <string source="Dr Analytics" where="journal_page,entries_page,operation,closing">Субконто Дт</string>
-  <string source="Cr Analytics" where="journal_page,entries_page,operation,closing">Субконто Кт</string>
+  <string source="Dr Analytics" where="journal_page,entries_page,reports_page,operation,closing">Субконто Дт</string>
+  <string source="Cr Analytics" where="journal_page,entries_page,reports_page,operation,closing">Субконто Кт</string>
   <string source="Employees (Ctrl+5)" where="employees_page">Сотрудники (Ctrl+5)</string>
   <string source="New employee" where="employees_page">Новый сотрудник</string>
   <string source="Edit employee" where="employees_page">Изменить сотрудника</string>
@@ -215,7 +215,7 @@
   <string source="Hired" where="employees_page">Принят</string>
   <string source="Salary" where="employees_page,payroll_line">Оклад</string>
   <string source="Allowance" where="employees_page">Вычет</string>
-  <string source="Expense" where="employees_page,assets_page,reports_page">Затраты</string>
+  <string source="Expense" where="employees_page,assets_page,reports_page,config_page">Затраты</string>
   <string source="Fixed assets (Ctrl+6)" where="assets_page">Основные средства (Ctrl+6)</string>
   <string source="New fixed asset" where="assets_page">Новое основное средство</string>
   <string source="Edit fixed asset" where="assets_page">Изменить основное средство</string>
@@ -333,7 +333,7 @@
   <string source="The file is not a 1C exchange file in the EnterpriseData format." where="code">Файл не является файлом обмена 1С в формате EnterpriseData.</string>
   <string source="The configuration has no opening balances document type." where="code">В конфигурации нет вида документа для ввода начальных остатков.</string>
   <string source="Opening balances imported from 1C" where="code">Остатки, загруженные из 1С</string>
-  <string source="Journal" where="journal_page">Журнал</string>
+  <string source="Journal" where="journal_page,reports_page">Журнал</string>
   <string source="Accounts" where="accounts_page">План счетов</string>
   <string source="Assets" where="assets_page">Основные средства</string>
   <string source="All accounting entries (Ctrl+8)" where="entries_page">Все проводки (Ctrl+8)</string>
@@ -341,6 +341,24 @@
   <string source="Setup" where="config_page">Настройка</string>
   <string source="Active configuration (Ctrl+0)" where="config_page">Текущая конфигурация (Ctrl+0)</string>
   <string source="Import from 1C (EnterpriseData)..." where="menu">Загрузить из 1С (EnterpriseData)...</string>
+  <string source="Tax Summary" where="reports_page">Налог по ставкам</string>
+  <string source="Book" where="reports_page">Книга</string>
+  <string source="Above Cap" where="config_page">Свыше предела</string>
+  <string source="Cap / Month" where="config_page">Предел в месяц</string>
+  <string source="Cap / Year" where="config_page">Предел за год</string>
+  <string source="Scale" where="config_page">Шкала</string>
+  <string source="From" where="config_page">С</string>
+  <string source="To" where="config_page">По</string>
+  <string source="Tax Scales" where="config_page">Шкалы налогов</string>
+  <string source="Annual Base From" where="config_page">База за год от</string>
+  <string source="Tax at Zone Start" where="config_page">Налог на начало зоны</string>
+  <string source="Curve" where="config_page">Кривизна</string>
+  <string source="Revenue" where="config_page">Выручка</string>
+  <string source="Area" where="config_page">Раздел</string>
+  <string source="Rule" where="config_page">Норма</string>
+  <string source="Act" where="config_page">Нормативный акт</string>
+  <string source="In Force From" where="config_page">Действует с</string>
+  <string source="Script" where="config_page">Скрипт</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>

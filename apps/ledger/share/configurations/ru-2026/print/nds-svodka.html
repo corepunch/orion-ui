@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>НДС по ставкам</title>
+<style>
+body{font-family:"Times New Roman",serif;font-size:10pt;margin:12mm;color:#000}
+table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
+.grid td,.grid th{border:1px solid #000}.grid th{font-weight:normal;font-size:8pt;text-align:center}
+.r{text-align:right}.c{text-align:center}.small{font-size:7.5pt}.b{font-weight:bold}
+.line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
+.sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
+h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
+@media print{body{margin:6mm}}
+</style></head><body>
+<h1>Расчет НДС по ставкам за период с {{period.date_from|dmy}} по {{period.date_to|dmy}}</h1>
+<p>{{org.name}}, ИНН {{org.tax_id}}, КПП {{org.kpp}}. Сводка для заполнения раздела 3 налоговой декларации по НДС (приказ ФНС России от 29.10.2014 № ММВ-7-3/558@): строки 010–020 — по книге продаж, строка 120 — по книге покупок; строка 200/210 — к уплате или к возмещению.</p>
+<h1>Реализация (книга продаж)</h1>
+<table class="grid" style="width:100%"><tr><th>Ставка</th><th>Код строки раздела 3</th><th>Документов</th><th>Налоговая база (без НДС)</th><th>Сумма НДС</th><th>Всего с НДС</th></tr>
+{{#vat_summary book=1}}<tr><td class="c">{{vat_rate.name}}</td><td class="c">010 (22%) / 020 (10%) / 030–040 (расчетные)</td><td class="c">{{documents}}</td><td class="r">{{amount}}</td><td class="r b">{{vat}}</td><td class="r">{{total}}</td></tr>
+{{/vat_summary}}</table>
+<h1>Вычеты (книга покупок)</h1>
+<table class="grid" style="width:100%"><tr><th>Ставка</th><th>Код строки раздела 3</th><th>Документов</th><th>Стоимость без НДС</th><th>НДС к вычету</th><th>Всего с НДС</th></tr>
+{{#vat_summary book=2}}<tr><td class="c">{{vat_rate.name}}</td><td class="c">120</td><td class="c">{{documents}}</td><td class="r">{{amount}}</td><td class="r b">{{vat}}</td><td class="r">{{total}}</td></tr>
+{{/vat_summary}}</table>
+<p class="small">Итог к уплате (строка 200) = сумма НДС по реализации − вычеты; при отрицательном результате — к возмещению (строка 210). Срок уплаты — по 1/3 не позднее 28-го числа каждого из трех месяцев после квартала через ЕНС (ст. 174 НК РФ).</p>
+<table class="sign" style="width:100%"><tr><td>Главный бухгалтер <span class="line">{{org.accountant}}</span></td></tr></table>
+</body></html>

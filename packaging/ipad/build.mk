@@ -9,8 +9,8 @@ BUNDLE_ID ?= com.orion.$(APP)
 TEAM ?=
 PROFILE ?=
 DEVICE ?=
-ifeq ($(filter $(APP),imageeditor penciltest groove winamp),)
-$(error APP must be imageeditor, penciltest, groove or winamp)
+ifeq ($(filter $(APP),imageeditor penciltest groove winamp ledger),)
+$(error APP must be imageeditor, penciltest, groove, winamp or ledger)
 endif
 # Winamp is an iPhone app; the others target iPad.
 FAMILY := $(if $(filter winamp,$(APP)),iphone,ipad)
