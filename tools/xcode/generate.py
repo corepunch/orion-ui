@@ -224,10 +224,10 @@ def generate(args):
             info.update(NSHighResolutionCapable=True, NSPrincipalClass='NSApplication',
                         LSApplicationCategoryType='public.app-category.music')
         write(bundle / 'Generated' / (platform + '-Info.plist'), plistlib.dumps(info).decode())
+        target_sources = {filename: ref for filename, ref in source_refs.items()
+                          if not filename.endswith('.m') or filename in (platform + '.m', 'audio_input.m')}
         build_files = []
-        for filename, ref in source_refs.items():
-            if filename.endswith('.m') and filename not in (platform + '.m', 'audio_input.m'):
-                continue
+        for filename, ref in target_sources.items():
             fields = {'fileRef': ref}
             if filename == 'ipad.m':
                 fields['settings'] = {'COMPILER_FLAGS': '-fobjc-arc'}
@@ -239,7 +239,7 @@ def generate(args):
                         '$(ORION_ROOT)/apps/groove/share/icon.png'],
             outputPaths=['$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h',
                          '$(DERIVED_FILE_DIR)/Assets.xcassets'] +
-                        ['$(DERIVED_FILE_DIR)/' + filename for filename in units if not filename.endswith('.m') or filename == platform + '.m'],
+                        ['$(DERIVED_FILE_DIR)/' + filename for filename in target_sources if filename in units],
             runOnlyForDeploymentPostprocessing=0,
             alwaysOutOfDate=1)
         sources = project.add(name + '/sources', 'PBXSourcesBuildPhase', buildActionMask=2147483647,
