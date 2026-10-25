@@ -227,7 +227,10 @@ static void render(script_page_t *page) {
   lua_rawgeti(L, LUA_REGISTRYINDEX, page->page_ref);
   char msg[1024];
   bool refused = false;
-  if (!script_call(L, 1, 0, msg, sizeof(msg), &refused)) {
+  const char *outer = ui_set_string_context(page->name);
+  bool ok = script_call(L, 1, 0, msg, sizeof(msg), &refused);
+  ui_set_string_context(outer);
+  if (!ok) {
     if (refused) snprintf(page->message, sizeof(page->message), "%s", msg);
     else {
       page_log(page, "data() failed", msg);
@@ -322,7 +325,10 @@ bool script_page_perform(script_page_t *page, const char *action) {
   lua_insert(L, -2);           // action, page
   push_inputs(page);           // action, page, values
   char msg[1024];
-  bool refused = false, ok = script_call(L, 2, 2, msg, sizeof(msg), &refused);
+  bool refused = false;
+  const char *outer = ui_set_string_context(page->name);
+  bool ok = script_call(L, 2, 2, msg, sizeof(msg), &refused);
+  ui_set_string_context(outer);
   if (ok) {
     // An action may answer nil, "message" for a refusal it expected.
     if (lua_isnil(L, -2) && lua_isstring(L, -1)) {
@@ -449,7 +455,7 @@ script_page_t *script_page_open(const char *path, char *error, size_t error_sz) 
   if (!file_exists(orion)) return fail(page, error, error_sz, ui_tr("The add-on form %s is missing."), orion);
   if (!file_exists(lua)) return fail(page, error, error_sz, ui_tr("The add-on script %s is missing."), lua);
   snprintf(locale, sizeof(locale), "%s/locale", page->dir);
-  if (axPathExists(locale)) ui_add_string_catalog_dir(locale);
+  if (axPathExists(locale)) ui_add_scoped_string_catalog_dir(locale, page->name);
 
   page->lib = form_library_load(orion);
   if (!page->lib) return fail(page, error, error_sz, ui_tr("The add-on form %s cannot be read."), orion);
@@ -480,7 +486,10 @@ script_page_t *script_page_open(const char *path, char *error, size_t error_sz) 
     lua_pop(L, 1);
     return fail(page, error, error_sz, ui_tr("The add-on script does not compile: %s"), msg);
   }
-  if (!script_call(L, 0, 1, msg, sizeof(msg), &refused))
+  const char *outer = ui_set_string_context(page->name);  // the script's orion.tr finds its catalog
+  bool ran = script_call(L, 0, 1, msg, sizeof(msg), &refused);
+  ui_set_string_context(outer);
+  if (!ran)
     return fail(page, error, error_sz, ui_tr("The add-on script failed: %s"), strtok(msg, "\n"));
   if (!lua_istable(L, -1)) {
     lua_pop(L, 1);
@@ -505,7 +514,10 @@ script_page_t *script_page_open(const char *path, char *error, size_t error_sz) 
   lua_getfield(L, -1, "init");
   if (lua_isfunction(L, -1)) {
     lua_insert(L, -2);
-    if (!script_call(L, 1, 0, msg, sizeof(msg), &refused))
+    outer = ui_set_string_context(page->name);
+    ran = script_call(L, 1, 0, msg, sizeof(msg), &refused);
+    ui_set_string_context(outer);
+    if (!ran)
       return fail(page, error, error_sz, refused ? "%s" : ui_tr("The add-on script failed: %s"), strtok(msg, "\n"));
   } else {
     lua_pop(L, 2);

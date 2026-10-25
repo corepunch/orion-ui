@@ -26,6 +26,8 @@ static struct {
   int count, capacity;
   locale_pooled_t *pool;       // composed results (shortcut labels, pseudo text)
   const char *context;
+  char **scoped;               // add-on catalogs already loaded, by path
+  int scoped_count;
   char decimal[8], group[8];
   char date[16];               // pattern of dd, MM and yyyy; empty = ISO
 } g_locale = { .language = "en", .decimal = "." };
@@ -39,6 +41,10 @@ static void locale_clear(void) {
   free(g_locale.strings);
   g_locale.strings = NULL;
   g_locale.count = g_locale.capacity = 0;
+  for (int i = 0; i < g_locale.scoped_count; i++) free(g_locale.scoped[i]);
+  free(g_locale.scoped);
+  g_locale.scoped = NULL;
+  g_locale.scoped_count = 0;
   while (g_locale.pool) {
     locale_pooled_t *next = g_locale.pool->next;
     free(g_locale.pool);
@@ -92,7 +98,25 @@ static void locale_add(const char *context, xmlNodePtr node, const char *path) {
     context ? strdup(context) : NULL, source, text };
 }
 
-bool ui_load_string_catalog(const char *path) {
+// A string of an add-on's catalog translates in each form its where= names;
+// where="code" stands for scope, the context the add-on's code runs in.
+static void locale_add_scoped(xmlNodePtr node, const char *path, const char *scope) {
+  char *where = xml_dup(node, "where");
+  const char *p = where ? where : "code";
+  while (*p) {
+    size_t n = strcspn(p, ",");
+    char context[128];
+    snprintf(context, sizeof(context), "%.*s", (int)n, p);
+    locale_add(!strcmp(context, "code") ? scope : context, node, path);
+    p += n + (p[n] == ',');
+  }
+  free(where);
+}
+
+// scope NULL: a catalog of the application, whose formats and strings apply
+// everywhere. Otherwise an add-on's: its strings stay in their contexts and
+// the host's formats are kept.
+static bool load_catalog(const char *path, const char *scope) {
   if (!path || !axPathExists(path)) return false;
   xmlDocPtr doc = xmlReadFile(path, NULL, XML_PARSE_NONET);
   xmlNodePtr root = doc ? xmlDocGetRootElement(doc) : NULL;
@@ -102,14 +126,19 @@ bool ui_load_string_catalog(const char *path) {
     if (doc) xmlFreeDoc(doc);
     return false;
   }
-  char *decimal = xml_dup(root, "decimal"), *group = xml_dup(root, "group"), *date = xml_dup(root, "date");
-  if (decimal) snprintf(g_locale.decimal, sizeof(g_locale.decimal), "%s", decimal);
-  if (group) snprintf(g_locale.group, sizeof(g_locale.group), "%s", group);
-  if (date) snprintf(g_locale.date, sizeof(g_locale.date), "%s", date);
-  free(decimal); free(group); free(date);
+  if (!scope) {
+    char *decimal = xml_dup(root, "decimal"), *group = xml_dup(root, "group"), *date = xml_dup(root, "date");
+    if (decimal) snprintf(g_locale.decimal, sizeof(g_locale.decimal), "%s", decimal);
+    if (group) snprintf(g_locale.group, sizeof(g_locale.group), "%s", group);
+    if (date) snprintf(g_locale.date, sizeof(g_locale.date), "%s", date);
+    free(decimal); free(group); free(date);
+  }
   for (xmlNodePtr n = root->children; n; n = n->next) {
     if (n->type != XML_ELEMENT_NODE) continue;
-    if (!xmlStrcmp(n->name, (const xmlChar *)"string")) { locale_add(NULL, n, path); continue; }
+    if (!xmlStrcmp(n->name, (const xmlChar *)"string")) {
+      if (scope) locale_add_scoped(n, path, scope); else locale_add(NULL, n, path);
+      continue;
+    }
     if (xmlStrcmp(n->name, (const xmlChar *)"context")) continue;
     char *context = xml_dup(n, "name");
     for (xmlNodePtr s = n->children; s; s = s->next)
@@ -121,20 +150,47 @@ bool ui_load_string_catalog(const char *path) {
   return true;
 }
 
-bool ui_add_string_catalog_dir(const char *dir) {
+bool ui_load_string_catalog(const char *path) { return load_catalog(path, NULL); }
+
+// Loads the neutral, then the regional catalog of the current language from dir.
+static bool load_catalog_dir(const char *dir, const char *scope) {
   if (!dir || !strcmp(g_locale.language, UI_PSEUDO_LANGUAGE)) return false;
   char path[1024], neutral[32];
   snprintf(neutral, sizeof(neutral), "%s", g_locale.language);
   char *dash = strchr(neutral, '-');
   if (dash) *dash = '\0';
   snprintf(path, sizeof(path), "%s/%s.xml", dir, neutral);
-  bool loaded = ui_load_string_catalog(path);
+  bool loaded = load_catalog(path, scope);
   if (dash) {
     snprintf(path, sizeof(path), "%s/%s.xml", dir, g_locale.language);
-    loaded |= ui_load_string_catalog(path);
+    loaded |= load_catalog(path, scope);
   }
   return loaded;
 }
+
+bool ui_add_scoped_string_catalog_dir(const char *dir, const char *scope) {
+  if (!dir || !scope || !*scope) {
+    fprintf(stderr, "[locale] ui_add_scoped_string_catalog_dir: dir and scope required\n");
+    fflush(stderr);
+    return false;
+  }
+  for (int i = 0; i < g_locale.scoped_count; i++)
+    if (!strcmp(g_locale.scoped[i], dir)) return true;
+  char **grown = realloc(g_locale.scoped, (size_t)(g_locale.scoped_count + 1) * sizeof(*grown));
+  char *copy = strdup(dir);
+  if (!grown || !copy) {
+    fprintf(stderr, "[locale] add-on catalog allocation failed dir=%s\n", dir);
+    fflush(stderr);
+    if (grown) g_locale.scoped = grown;
+    free(copy);
+    return false;
+  }
+  g_locale.scoped = grown;
+  g_locale.scoped[g_locale.scoped_count++] = copy;
+  return load_catalog_dir(dir, scope);
+}
+
+bool ui_add_string_catalog_dir(const char *dir) { return load_catalog_dir(dir, NULL); }
 
 bool ui_set_language(const char *language) {
   if (!language || !*language || strlen(language) >= sizeof(g_locale.language)) {
