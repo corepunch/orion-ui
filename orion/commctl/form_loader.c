@@ -52,9 +52,15 @@ typedef struct {
   bool rejected;
 } fl_form_t;
 
+typedef struct {
+  db_schema_def_t def;
+} fl_schema_t;
+
 struct form_library_s {
   fl_block_t *arena;
   const char *origin;
+  fl_schema_t *schemas;        // <databases> declared by the document
+  int schema_count;
   fl_form_t *forms;
   int form_count;
   uint32_t next_id;
@@ -70,7 +76,7 @@ typedef struct {
   int count;
   bool ok;
   // The table every field= binding of the form refers to.
-  database_t *bind_db;
+  const char *bind_db;
   const db_table_schema_t *bind_table;
   ctrl_binding_t *bindings;
   int binding_count;
@@ -294,8 +300,10 @@ static flags_t fl_control_size(fl_build_t *b, xmlNodePtr n) {
 
 // ── Databases ───────────────────────────────────────────────────────────────
 
-// "db.table" names a registered database; a bare "table" is looked up in all.
-static const db_table_schema_t *fl_table(const char *source, database_t **db_out) {
+// "db.table" names a registered database or one the document declares; a
+// bare "table" is looked up in all of them. A registered database wins, since
+// the records a form edits come from it.
+static const db_table_schema_t *fl_table(const form_library_t *lib, const char *source, const char **db_out) {
   char db_name[64] = {0}, table[128];
   const char *dot = source ? strchr(source, '.') : NULL;
   if (dot) snprintf(db_name, sizeof(db_name), "%.*s", (int)(dot - source), source);
@@ -307,7 +315,13 @@ static const db_table_schema_t *fl_table(const char *source, database_t **db_out
     if (!db) break;
     if (db_name[0] && !fl_eq(db->name, db_name)) continue;
     const db_table_schema_t *t = db->schema ? db_schema_table_named(db->schema, table) : NULL;
-    if (t) { if (db_out) *db_out = db; return t; }
+    if (t) { if (db_out) *db_out = db->name; return t; }
+  }
+  for (int i = 0; lib && i < lib->schema_count; i++) {
+    const db_schema_def_t *schema = &lib->schemas[i].def;
+    if (db_name[0] && !fl_eq(schema->name, db_name)) continue;
+    const db_table_schema_t *t = db_schema_table_named(schema, table);
+    if (t) { if (db_out) *db_out = schema->name; return t; }
   }
   return NULL;
 }
@@ -385,8 +399,7 @@ static xmlNodePtr fl_tableview_named(form_library_t *lib, xmlNodePtr parent, con
 static const tableview_params_t *fl_tableview(fl_build_t *b, xmlNodePtr c, const char *name) {
   form_library_t *lib = b->lib;
   const char *source = fl_attrs_first(lib, c, "source", "database");
-  database_t *db = NULL;
-  const db_table_schema_t *t = fl_table(source, &db);
+  const db_table_schema_t *t = fl_table(lib, source, NULL);
   if (!t) { fl_error(b, c, "TableView '%s': unknown source '%s'", fl_nz(name, ""), fl_nz(source, "")); return NULL; }
   tableview_params_t *p = fl_alloc(lib, sizeof(*p));
   int columns = 0;
@@ -481,7 +494,7 @@ static const combobox_params_t *fl_combobox(fl_build_t *b, xmlNodePtr c, const c
   const char *source = fl_attr(lib, c, "source"), *display = fl_attr(lib, c, "display"), *value = fl_attr(lib, c, "value");
   if (!source) return NULL;
   if (!display || !value) { fl_error(b, c, "ComboBox '%s': source= needs display= and value=", fl_nz(name, "")); return NULL; }
-  const db_table_schema_t *t = fl_table(source, NULL);
+  const db_table_schema_t *t = fl_table(lib, source, NULL);
   if (!t) { fl_error(b, c, "ComboBox '%s': unknown source '%s'", fl_nz(name, ""), source); return NULL; }
   combobox_params_t *p = fl_alloc(lib, sizeof(*p));
   if (!p) { b->ok = false; return NULL; }
@@ -547,8 +560,8 @@ static void fl_binding(fl_build_t *b, xmlNodePtr c, uint32_t id, const char *kla
   snprintf(field, sizeof(field), "%s", d2 + 1);
   char source[200];
   snprintf(source, sizeof(source), "%s.%s", db_name, table);
-  database_t *db = NULL;
-  const db_table_schema_t *t = fl_table(source, &db);
+  const char *db = NULL;
+  const db_table_schema_t *t = fl_table(b->lib, source, &db);
   if (!t) { fl_error(b, c, "field '%s': unknown table '%s'", path, source); return; }
   if (!b->bind_table) { b->bind_db = db; b->bind_table = t; }
   else if (b->bind_table != t) { fl_error(b, c, "field '%s': a form edits one table, and '%s' came first", path, b->bind_table->name); return; }
@@ -661,6 +674,126 @@ static void fl_controls(fl_build_t *b, xmlNodePtr parent, uint32_t parent_id, in
   }
 }
 
+// ── Databases declared by the document ──────────────────────────────────────
+
+typedef struct { const char *xml; db_field_type_t type; int length; size_t size, align; } fl_type_t;
+
+// orionc's field types. A record lays its fields out as the C struct orionc
+// would declare, so offsets match the compiler's: natural alignment, strings
+// and dates as char arrays.
+static const fl_type_t kTypes[] = {
+  { "integer", DB_TYPE_INT, 0, sizeof(int), _Alignof(int) },     { "int", DB_TYPE_INT, 0, sizeof(int), _Alignof(int) },
+  { "string", DB_TYPE_STRING, 256, 1, 1 },                         { "date", DB_TYPE_DATE, 11, 1, 1 },
+  { "boolean", DB_TYPE_BOOL, 0, sizeof(bool), _Alignof(bool) },    { "bool", DB_TYPE_BOOL, 0, sizeof(bool), _Alignof(bool) },
+  { "float", DB_TYPE_FLOAT, 0, sizeof(float), _Alignof(float) },   { "real", DB_TYPE_FLOAT, 0, sizeof(float), _Alignof(float) },
+  { "double", DB_TYPE_DOUBLE, 0, sizeof(double), _Alignof(double) },
+};
+
+static const fl_type_t *fl_type(const char *xml) {
+  for (size_t i = 0; i < sizeof(kTypes) / sizeof(kTypes[0]); i++)
+    if (fl_eq(xml, kTypes[i].xml)) return &kTypes[i];
+  return &kTypes[0];
+}
+
+static bool fl_table_schema(form_library_t *lib, xmlNodePtr node, int table_id, db_table_schema_t *t) {
+  int fields = 0, joins = 0;
+  FL_EACH_ELEMENT(f, node) if (fl_elem(f, "field")) {
+    fields++;
+    const char *rel = fl_attr(lib, f, "relation");
+    joins += rel && strrchr(rel, '.') != NULL;
+  }
+  db_field_schema_t *schema = fl_alloc(lib, (size_t)(fields ? fields : 1) * sizeof(*schema));
+  db_field_meta_t *meta = fl_alloc(lib, (size_t)(fields ? fields : 1) * sizeof(*meta));
+  db_join_schema_t *join = joins ? fl_alloc(lib, (size_t)joins * sizeof(*join)) : NULL;
+  if (!schema || !meta || (joins && !join)) return false;
+  t->table_id = table_id;
+  t->name = fl_attr(lib, node, "name");
+  t->model = fl_attr(lib, node, "model");
+  const char *transient = fl_attr(lib, node, "transient");
+  t->transient = fl_eq(transient, "true") || fl_eq(transient, "1");
+  size_t offset = 0, align = 1;
+  int i = 0, j = 0;
+  FL_EACH_ELEMENT(f, node) if (fl_elem(f, "field")) {
+    const fl_type_t *type = fl_type(fl_attr(lib, f, "type"));
+    const char *len = fl_attr(lib, f, "length"), *key = fl_attr(lib, f, "key"), *precision = fl_attr(lib, f, "precision");
+    const char *rel = fl_attr(lib, f, "relation"), *on_delete = fl_attrs_first(lib, f, "on-delete", "on_delete");
+    bool chars = type->type == DB_TYPE_STRING || type->type == DB_TYPE_DATE;
+    int length = chars ? (len ? atoi(len) : type->length) : 0;
+    size_t size = chars ? (size_t)length : type->size;
+    offset = (offset + type->align - 1) / type->align * type->align;
+    if (type->align > align) align = type->align;
+    db_field_schema_t *fs = &schema[i];
+    fs->name = fl_attr(lib, f, "name");
+    fs->type = type->type;
+    fs->length = length;
+    fs->primary_key = key && (fl_eq(key, "YES") || fl_eq(key, "yes") || fl_eq(key, "true") || fl_eq(key, "1"));
+    fs->default_value = fl_text(lib, f, "default");
+    fs->delete_rule = !on_delete ? DB_DELETE_NO_ACTION : fl_eq(on_delete, "cascade") ? DB_DELETE_CASCADE
+                    : fl_eq(on_delete, "nullify") ? DB_DELETE_NULLIFY : fl_eq(on_delete, "deny") ? DB_DELETE_DENY : DB_DELETE_NO_ACTION;
+    if (on_delete && fs->delete_rule == DB_DELETE_NO_ACTION) {
+      fprintf(stderr, "[form_loader] %s:%ld: field '%s': unknown on-delete '%s' (cascade, nullify, deny)\n",
+              lib->origin, xmlGetLineNo(f), fl_nz(fs->name, ""), on_delete);
+      fflush(stderr);
+    }
+    const char *dot = rel ? strrchr(rel, '.') : NULL;
+    if (dot) {
+      char *table = fl_alloc(lib, (size_t)(dot - rel) + 1);
+      if (!table) return false;
+      memcpy(table, rel, (size_t)(dot - rel));
+      fs->relation_table = table;
+      fs->relation_field = fl_strdup(lib, dot + 1);
+      // The join alias: join=, or the field name without its _id.
+      const char *alias = fl_attr(lib, f, "join");
+      char buf[128];
+      snprintf(buf, sizeof(buf), "%s", alias && *alias ? alias : fl_nz(fs->name, ""));
+      size_t n = strlen(buf);
+      if (!(alias && *alias) && n > 3 && !strcmp(buf + n - 3, "_id")) buf[n - 3] = 0;
+      join[j++] = (db_join_schema_t){ fl_strdup(lib, buf), fs->name, fs->relation_table, fs->relation_field };
+    }
+    meta[i] = (db_field_meta_t){ fs->name, type->type, offset, length, precision ? atoi(precision) : 0 };
+    offset += size;
+    i++;
+  }
+  t->fields = schema;
+  t->field_count = fields;
+  t->joins = join;
+  t->join_count = joins;
+  t->meta = meta;
+  t->meta_count = fields;
+  t->record_size = (offset + align - 1) / align * align;
+  return true;
+}
+
+static bool fl_schema(form_library_t *lib, xmlNodePtr db, fl_schema_t *out) {
+  int tables = 0;
+  FL_EACH_ELEMENT(t, db) if (fl_elem(t, "table")) tables++;
+  db_table_schema_t *table = fl_alloc(lib, (size_t)(tables ? tables : 1) * sizeof(*table));
+  if (!table) return false;
+  int i = 0;
+  FL_EACH_ELEMENT(t, db) if (fl_elem(t, "table")) {
+    if (!fl_table_schema(lib, t, i, &table[i])) return false;
+    i++;
+  }
+  out->def = (db_schema_def_t){ fl_nz(fl_attr(lib, db, "name"), "db"), fl_attr(lib, db, "class"),
+                                fl_attr(lib, db, "source"), table, tables };
+  return true;
+}
+
+// <databases><database>...</databases>, or a lone <database> under <orion>.
+static bool fl_schemas(form_library_t *lib, xmlNodePtr root) {
+  xmlNodePtr databases = fl_child(root, "databases");
+  xmlNodePtr scope = databases ? databases : root;
+  FL_EACH_ELEMENT(db, scope) if (fl_elem(db, "database")) lib->schema_count++;
+  if (!lib->schema_count) return true;
+  lib->schemas = fl_alloc(lib, (size_t)lib->schema_count * sizeof(*lib->schemas));
+  if (!lib->schemas) return false;
+  int i = 0;
+  FL_EACH_ELEMENT(db, scope) if (fl_elem(db, "database")) {
+    if (!fl_schema(lib, db, &lib->schemas[i++])) return false;
+  }
+  return true;
+}
+
 // ── Forms ───────────────────────────────────────────────────────────────────
 
 static void fl_form(form_library_t *lib, xmlNodePtr node, fl_form_t *form) {
@@ -726,7 +859,7 @@ static void fl_form(form_library_t *lib, xmlNodePtr node, fl_form_t *form) {
   if (b.binding_count) {
     def->bindings = b.bindings;
     def->binding_count = b.binding_count;
-    def->db_name = b.bind_db->name;
+    def->db_name = b.bind_db;
     def->db_table = b.bind_table->name;
     def->db_table_id = b.bind_table->table_id;
     def->db_fields = b.bind_table->meta;
@@ -766,6 +899,7 @@ static form_library_t *fl_build(xmlDocPtr doc, const char *origin) {
   lib->origin = "";
   lib->origin = fl_strdup(lib, origin);
   lib->next_id = FORM_LIBRARY_ID_BASE;
+  if (!fl_schemas(lib, root)) { xmlFreeDoc(doc); form_library_free(lib); return NULL; }
   xmlNodePtr forms = fl_child(root, "forms");
   FL_EACH_ELEMENT(f, forms) if (fl_elem(f, "form")) lib->form_count++;
   lib->forms = lib->form_count ? fl_alloc(lib, (size_t)lib->form_count * sizeof(*lib->forms)) : NULL;
@@ -859,6 +993,18 @@ const form_ctrl_def_t *form_library_control(const form_library_t *lib, const for
   fl_form_t *f = fl_owner(lib, form);
   for (int i = 0; f && i < f->control_count; i++)
     if (f->controls[i].id == id) return &f->controls[i];
+  return NULL;
+}
+
+int form_library_schema_count(const form_library_t *lib) { return lib ? lib->schema_count : 0; }
+
+const db_schema_def_t *form_library_schema_at(const form_library_t *lib, int index) {
+  return lib && index >= 0 && index < lib->schema_count ? &lib->schemas[index].def : NULL;
+}
+
+const db_schema_def_t *form_library_schema(const form_library_t *lib, const char *name) {
+  for (int i = 0; lib && name && i < lib->schema_count; i++)
+    if (fl_eq(lib->schemas[i].def.name, name)) return &lib->schemas[i].def;
   return NULL;
 }
 
