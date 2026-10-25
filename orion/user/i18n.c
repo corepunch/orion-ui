@@ -314,7 +314,7 @@ bool ui_parse_date(const char *text, char *iso, size_t iso_sz) {
     *slot = (int)v; t = end; p += slot == &y ? 4 : 2;
     if (!*p) fields = 3;
   }
-  if (fields != 3 || y < 1000 || m < 1 || m > 12 || d < 1 || d > 31) return false;
+  if (fields != 3 || y < 1000 || y > 9999 || m < 1 || m > 12 || d < 1 || d > 31) return false;
   snprintf(iso, iso_sz, "%04d-%02d-%02d", y, m, d);
   return true;
 }
