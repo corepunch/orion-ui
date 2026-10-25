@@ -13,63 +13,30 @@ permissions:
   contents: write
 
 jobs:
-  package:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: linux-x86_64
-          - os: macos-14
-            platform: macos-arm64
-          - os: windows-latest
-            platform: windows-x86_64
-    runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: ${{ matrix.os == 'windows-latest' && 'msys2 {0}' || 'bash' }}
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libcglm-dev liblua5.4-dev libgl1-mesa-dev libx11-dev libegl-dev libxml2-dev
-      - name: Install macOS dependencies
-        if: runner.os == 'macOS'
-        run: brew install cglm lua@5.4 libxml2
-      - name: Setup MSYS2
-        if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: true
-          install: >-
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-make
-            mingw-w64-x86_64-pkgconf
-            mingw-w64-x86_64-glew
-            mingw-w64-x86_64-lua
-            mingw-w64-x86_64-cglm
-            mingw-w64-x86_64-libxml2
-            make
       - name: Determine version
         id: version
-        shell: bash
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then version="${GITHUB_REF_NAME#v}"; else version="${{ inputs.version }}"; fi
           test "$version" = "$(cat VERSION)"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-      - name: Build release packages
-        run: sh scripts/package-release.sh "${{ steps.version.outputs.version }}" "${{ matrix.platform }}" dist
-      - name: Build and run tests
-        run: make test
-      - uses: actions/upload-artifact@v4
-        with:
-          name: packages-${{ matrix.platform }}
-          path: dist/*
 
+  package:
+    needs: version
+    uses: ./.github/workflows/platform-builds.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+
+  # Each platform contributes orion-<pkg>-<version>-<platform>.tar.gz and
+  # packages-<platform>.tsv for the package manager, plus version-free
+  # <app>-<platform>.{zip,tar.gz} downloads and SHA256SUMS-<platform>.txt.
   release:
-    needs: package
+    needs: [version, package]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -82,6 +49,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then tag="$GITHUB_REF_NAME"; else tag="v${{ inputs.version }}"; fi
+          tag="v${{ needs.version.outputs.version }}"
           gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "Orion ${tag#v}" --generate-notes
           gh release upload "$tag" release/* --clobber

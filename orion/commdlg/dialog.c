@@ -49,7 +49,7 @@ static void db_dialog_resync(window_t *win, db_dlg_ctx_t *ctx) {
 static void db_dialog_bind_details(window_t *root, window_t *win, db_dlg_ctx_t *ctx, const db_schema_def_t *schema) {
   for (window_t *c = win ? win->children : NULL; c; c = c->next) {
     int table_id = 0;
-    if (c->proc == win_tableview && send_message(c, tvGetTable, 0, &table_id)) {
+    if (window_is_class(c, "TableView") && send_message(c, tvGetTable, 0, &table_id)) {
       const db_table_schema_t *t = db_schema_table(schema, table_id);
       for (int i = 0; t && i < t->field_count; i++) {
         const char *rel = t->fields[i].relation_table, *dot = rel ? strchr(rel, '.') : NULL;

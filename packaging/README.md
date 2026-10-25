@@ -114,8 +114,8 @@ make mac-deploy APP=gitclient
 
 The output is `build/macos/<app>.app`. The target builds the app, bundles its
 Orion and app resources and non-system dynamic libraries, converts
-`apps/<app>/share/icon.png` to the Finder `.icns` icon, and ad-hoc signs the
-bundle for local launch. Override the bundle identifier with
+`apps/<app>/share/icon.png` (or the Orion logo for apps without one) to the
+Finder `.icns` icon, and ad-hoc signs the bundle for local launch. Override the bundle identifier with
 `BUNDLE_ID=com.example.myapp`.
 
 The primary headers are:
@@ -141,6 +141,7 @@ Tagged releases publish separate packages for each supported platform:
 |---|---|
 | macOS on Apple silicon | `macos-arm64` |
 | Linux on x86-64 | `linux-x86_64` |
+| Windows on x64 (MinGW) | `windows-x86_64` |
 
 The default channel follows the latest GitHub release. Pin a specific release
 when reproducibility is required:
@@ -182,9 +183,21 @@ it takes precedence over `ORION_RELEASE` and `ORION_REPOSITORY`.
 
 ## Building Release Packages
 
-The release workflow is defined in `.github/workflows/release.yml`. A `v*` tag
-builds macOS and Linux packages, uploads the matrix artifacts, creates the
-corresponding GitHub Release, and attaches each package separately.
+Linux, macOS and Windows builds are defined once, in
+`.github/workflows/platform-builds.yml`. `build.yml` runs it on every push and
+pull request and keeps the app downloads as workflow artifacts for a week.
+`release.yml` runs it for a `v*` tag (or a manual run with a version), which
+must match the `VERSION` file. It then also builds the package-manager
+archives and runs the tests on each platform, creates the GitHub Release and
+attaches every file:
+
+| Asset | For |
+|---|---|
+| `orion-<package>-<version>-<platform>.tar.gz`, `packages-<platform>.tsv` | the `orion` package manager |
+| `<app>-<platform>.zip` / `.tar.gz`, `SHA256SUMS-<platform>.txt` | people downloading one app |
+
+`docs.yml` publishes `docs/` to GitHub Pages for the same tags; it can also be
+started by hand from the Actions tab.
 
 Release archives can be generated locally after building the repository:
 
@@ -195,6 +208,34 @@ sh scripts/package-release.sh 1.0.1 macos-arm64 dist
 The package catalog is `packaging/packages.tsv`. Each row declares the package
 name, description, and optional dependencies. `scripts/package-release.sh`
 stages the normal `make install` output and splits it according to that catalog.
+
+## Downloadable App Builds
+
+`scripts/bundle-apps.sh` turns every application in `packages.tsv` into a
+portable archive that runs without installation:
+
+| Platform | Asset | Contents |
+|---|---|---|
+| Windows | `<app>-windows-x86_64.zip` | `<app>\bin\<app>.exe` with the Orion and MinGW DLLs beside it, `share\` |
+| macOS | `<app>-macos-arm64.zip` | `<Name>.app`, built like `make mac-deploy` and ad-hoc signed |
+| Linux | `<app>-linux-x86_64.tar.gz` | `<app>/bin`, `<app>/lib` (Orion libraries, Lua), `<app>/share` |
+
+The names carry no version, so a page can link to
+`https://github.com/corepunch/orion-ui/releases/latest/download/ledger-windows-x86_64.zip`
+and always get the newest release. Builds are not notarized or code-signed:
+macOS asks for a right-click → Open the first time, and Windows SmartScreen
+may ask for confirmation.
+
+Build them locally for the current platform after `make`:
+
+```sh
+make bundles                           # every app, into build/bundles
+make bundles BUNDLE_APPS="ledger terminal"
+```
+
+A new app gets a download by adding a row to `packages.tsv`; developer tools
+without `apps/<name>/main.c` (such as `orionc`) are skipped. Put a 1024×1024
+`share/icon.png` in the app for its macOS icon.
 
 ## Installing The Complete Suite From Source
 

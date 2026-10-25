@@ -43,3 +43,6 @@ GitClient). Upstream paths: `assets/regular/<name>.svg` and
 | ledger-row-entry.svg | arrows-left-right |
 | ledger-row-in-service.svg | check-circle (fill) |
 | ledger-row-pending.svg | clock |
+
+The application icon `../icon.png` (1024×1024, used for the macOS bundle) is the
+`notebook` fill glyph in graphite on an amber rounded tile.
