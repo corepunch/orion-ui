@@ -368,7 +368,7 @@ ifeq ($(UNAME_S),Darwin)
 $(KERNEL_INPUT_OBJ): orion/kernel/audio_input_apple.m orion/kernel/audio_input.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -fblocks -c $< -o $@
 endif
-$(eval $(call unity_lib,kernel,$(wildcard orion/kernel/*.c),$(KERNEL_INPUT_OBJ),,$(if $(KERNEL_INPUT_OBJ),-x none $(KERNEL_INPUT_OBJ))))
+$(eval $(call unity_lib,kernel,$(wildcard orion/kernel/*.c),$(KERNEL_INPUT_OBJ),,$(if $(KERNEL_INPUT_OBJ),-x none $(KERNEL_INPUT_OBJ) -lobjc)))
 $(eval $(call unity_lib,user,$(USER_SRCS),$(COMMDLG_LIB) $(KERNEL_LIB),,-lcommdlg -lkernel))
 $(eval $(call unity_lib,commctl,$(wildcard orion/commctl/*.c),$(USER_LIB) $(KERNEL_LIB),-Icomponents,-luser -lkernel))
 # Lua add-ons: runtime .orion forms driven by a script (orion/script/script.h).
