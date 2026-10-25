@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Ledger
+Comment=Bookkeeping and business accounting
+Exec=ledger
+Icon=com.orion.ledger
+Terminal=false
+Categories=Office;Finance;
+StartupNotify=true

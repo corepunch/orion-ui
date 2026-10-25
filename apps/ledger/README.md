@@ -332,3 +332,19 @@ are posted with the 16 % revenue account but the correct tax amount.
 Lohnsteuer is a flat rate above the monthly basic allowance instead of the
 official tax tables, and the solidarity surcharge and church tax are left
 out. Anlagenzugang posts the net cost; input tax on assets is an Umbuchung.
+
+## Application icon
+
+Ledger uses the approved A6 identity: an ivory folded **L** on crimson.
+`share/icon.png` is the opaque, square 1024×1024 master for every platform;
+`share/icon.ico` and `share/icon.icns` are matching native desktop assets.
+The source and generation prompt are recorded in `share/icon-prompt.txt`.
+
+- macOS: `make mac-deploy APP=ledger` generates the bundle icon from the master.
+- Windows: the normal Ledger executable build embeds `icon.ico` using windres.
+- Linux: `make install` installs the Ledger desktop launcher and hicolor icon.
+- iPad/iPhone: the SDK bundler accepts `--app ledger` and generates its asset
+  catalog from the same master. `make ipad APP=ledger` targets iPad; the bundler
+  also supports `--family iphone`. Building/signing requires the Apple SDK.
+
+The master has no baked-in rounded corners so native icon masks can be applied.

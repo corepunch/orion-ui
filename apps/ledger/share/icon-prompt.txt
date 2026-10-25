@@ -1,0 +1,13 @@
+Ledger app icon — selected concept 6 (A6), 2026-10-25.
+Generated with the built-in imagegen tool from the approved 4x4 contact sheet.
+
+Prompt: Faithfully recreate concept 6: ivory folded-paper L on deep crimson
+red, preserving the folded geometry, proportions and subtle central shading.
+Center the symbol with comfortable padding. Extend crimson to all four square
+edges. No outer corner mask, border, outside shadow, number or text.
+
+icon.png is the opaque 1024x1024 RGB master. Native Apple bundlers generate
+platform sizes and masks. icon.ico (16, 24, 32, 48, 64, 128, 256) and icon.icns
+are derived from that master with Pillow, without changing the artwork.
+This application identity was explicitly selected by the user; Phosphor remains
+the source for the separate in-app toolbar and navigation SVG icons.
