@@ -1080,6 +1080,11 @@ lines can refer to it; OK keeps every change made meanwhile (nested dialogs
 included) and Cancel reverts them all. After a detail table changes, the
 dialog shows the fields the database recomputed, such as totals.
 
+Change scopes are a single stack per database that snapshots every record,
+and they stay correct only while the editors holding them are modal.
+[Editing contexts](editing-contexts.md) proposes replacing them with
+EOF-style contexts owned by each editor.
+
 Business rules live in the data source. Ledger's `ledger_ib` class numbers a
 document when it is inserted and recalculates it whenever it or one of its
 lines changes; everything else goes to `db_schema_xml`, the way a WinAPI
