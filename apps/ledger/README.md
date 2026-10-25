@@ -46,12 +46,6 @@ totals and deterministic regeneration. The small default demos remain available.
 `Reports > Recalculate` (F5) reposts every document in date order and rebuilds
 the reports; `Reports > Print Report Forms` writes the cash book.
 
-![Month-end closing entries with debit and credit analytics](../../docs/screenshots/ledger_closing.jpg)
-
-![Payroll accrual: income tax withheld, unified social tax](../../docs/screenshots/ledger_payroll.jpg)
-
-![Cash book](../../docs/screenshots/ledger_cash_book.jpg)
-
 ## Look and feel
 
 Ledger is built for people who keep books in 1C all day, so it looks the way
