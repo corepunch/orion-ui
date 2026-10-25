@@ -156,6 +156,45 @@ whole file is one change: a file that fails leaves the infobase as it was.
 A summary lists what was added and the balance documents the configuration
 has no account for.
 
+### Real EnterpriseData export for validation
+
+The original large validation file is inside a public RAR archive, not a
+standalone XML download:
+
+- Repository: [Nekitosha-IT/ostatki](https://github.com/Nekitosha-IT/ostatki).
+- Archive: [Остатки- 15-10-2026.rar](https://github.com/Nekitosha-IT/ostatki/blob/main/%D0%9E%D1%81%D1%82%D0%B0%D1%82%D0%BA%D0%B8-%2015-10-2026.rar), about 352 KB.
+- Contents: `Остатки.xml`, about 26 MB unpacked; EnterpriseData 1.24 from
+  1C:Trade Management, created 2026-10-14.
+- Verified archive SHA-256:
+  `7ce45bdce2d45b24e5212f083b52f6abab7bfb3c7cac1a449994b009961e1076`
+  (351,848 bytes compressed; XML: 26,577,727 bytes).
+
+From the repository root, download and unpack outside the checkout:
+
+```sh
+mkdir -p /tmp/orion-ledger-1c-validation
+curl -fL 'https://github.com/Nekitosha-IT/ostatki/raw/main/%D0%9E%D1%81%D1%82%D0%B0%D1%82%D0%BA%D0%B8-%2015-10-2026.rar' \
+  -o /tmp/orion-ledger-1c-validation/opening-balances.rar
+bsdtar -xf /tmp/orion-ledger-1c-validation/opening-balances.rar \
+  -C /tmp/orion-ledger-1c-validation
+```
+
+`7z x` or `unrar x` can replace `bsdtar -xf`. Import
+`/tmp/orion-ledger-1c-validation/Остатки.xml` through
+`File > Import from 1C (EnterpriseData)...` in a disposable ru-2003 infobase.
+Do not commit the archive, XML or resulting infobase: the public export
+contains a real company's data.
+
+The original validation recorded 10,153 entries, 5,747 items and 67
+counterparties, with supplier debts totalling 31,265,821.36. These are prior
+reference results, not a claim that a later revision has been checked.
+Catalog counts depend on the starting infobase; record that baseline when
+comparing results. Goods rows in this export carry quantities without cost.
+Check posting accounts, analytics and totals against the XML, then repeat
+import and verify that no opening entries are added. Use
+`apps/ledger/tests/enterprisedata_sample.xml` for the small synthetic fixture
+and automated regression tests.
+
 ## Adding a configuration
 
 1. Copy `share/configurations/ru-2003` to `share/configurations/<code>`.
