@@ -50,6 +50,11 @@ const char *ui_system_language(char *buf, size_t buf_sz);
 bool ui_add_string_catalog_dir(const char *dir);
 // Loads one catalog file into the current layer stack.
 bool ui_load_string_catalog(const char *path);
+// Adds an add-on's catalogs from dir, once per language: a string translates
+// only in the forms its where= names, and where="code" strings only in the
+// context `scope`, which the add-on makes current while its code runs. The
+// add-on cannot change the host's own texts or number and date formats.
+bool ui_add_scoped_string_catalog_dir(const char *dir, const char *scope);
 
 // Translation of source in the current context, then without context.
 // "Label\tCtrl+S" translates the label and keeps the shortcut. The result
