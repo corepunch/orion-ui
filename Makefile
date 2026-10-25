@@ -257,6 +257,51 @@ lua-docs-check: $(CGEN_BIN)
 	done
 	@diff -r docs/lua $(BUILD_DIR)/lua-docs > /dev/null || { echo "FAIL docs/lua is out of date: run make lua-docs"; exit 1; }
 
+# Lua bindings, editor metadata and reference share an XML source of truth.
+LEDGER_API_XML = apps/ledger/ledger-api.xml
+LEDGER_API_HEADER = $(GENERATED_DIR)/apps/ledger/ledger_api.h
+LEDGER_API_DOCS = apps/ledger/docs/lua-api.md
+LEDGER_API_SITE = docs/ledger/lua-api.md
+LEDGER_API_ANNOTATIONS = apps/ledger/share/stdplugs/automation/ledger-api.d.lua
+LEDGER_CATALOG = apps/ledger/share/stdplugs/automation/catalog.lua
+LEDGER_CATALOG_DOCS = apps/ledger/docs/automation-catalog.md
+LEDGER_CATALOG_SITE = docs/ledger/automation-catalog.md
+
+$(LEDGER_API_HEADER): $(LEDGER_API_XML) apps/ledger/ledger.orion tools/generate_lua_api.py
+	python3 tools/generate_lua_api.py $(LEDGER_API_XML) --header $(LEDGER_API_HEADER) --docs $(LEDGER_API_DOCS) --annotations $(LEDGER_API_ANNOTATIONS) --site $(LEDGER_API_SITE)
+
+$(LEDGER_CATALOG): apps/ledger/automation.xml tools/generate_automation_catalog.py
+	python3 tools/generate_automation_catalog.py apps/ledger/automation.xml --lua $(LEDGER_CATALOG) --docs $(LEDGER_CATALOG_DOCS) --site $(LEDGER_CATALOG_SITE)
+
+# Secondary outputs are normally written by the primary target above. Recreate
+# them when individually removed, including on older GNU Make versions.
+$(LEDGER_API_DOCS): $(LEDGER_API_HEADER)
+	python3 tools/generate_lua_api.py $(LEDGER_API_XML) --docs $@
+$(LEDGER_API_ANNOTATIONS): $(LEDGER_API_DOCS)
+	python3 tools/generate_lua_api.py $(LEDGER_API_XML) --annotations $@
+$(LEDGER_CATALOG_DOCS): $(LEDGER_CATALOG)
+	python3 tools/generate_automation_catalog.py apps/ledger/automation.xml --lua $(LEDGER_CATALOG) --docs $@
+
+$(LEDGER_API_SITE): $(LEDGER_API_HEADER)
+	python3 tools/generate_lua_api.py $(LEDGER_API_XML) --site $@
+$(LEDGER_CATALOG_SITE): $(LEDGER_CATALOG)
+	python3 tools/generate_automation_catalog.py apps/ledger/automation.xml --lua $(LEDGER_CATALOG) --docs $(LEDGER_CATALOG_DOCS) --site $@
+
+LEDGER_CUSTOM_CATALOG = $(GENERATED_DIR)/apps/ledger/custom_catalog.lua
+$(LEDGER_CUSTOM_CATALOG): apps/ledger/tests/fixtures/custom-plugin.xml tools/generate_automation_catalog.py
+	python3 tools/generate_automation_catalog.py $< --lua $@ --docs $(GENERATED_DIR)/apps/ledger/custom-plugin.md
+$(BIN_DIR)/test_ledger_automation_test$(EXE_EXT): $(LEDGER_CUSTOM_CATALOG)
+
+.PHONY: ledger-api ledger-api-check
+ledger-api: $(LEDGER_API_SITE) $(LEDGER_CATALOG_SITE) $(LEDGER_API_HEADER) $(LEDGER_API_DOCS) $(LEDGER_API_ANNOTATIONS) $(LEDGER_CATALOG) $(LEDGER_CATALOG_DOCS)
+ledger-api-check:
+	python3 tools/generate_lua_api.py $(LEDGER_API_XML) --header $(LEDGER_API_HEADER) --docs $(LEDGER_API_DOCS) --annotations $(LEDGER_API_ANNOTATIONS) --site $(LEDGER_API_SITE) --check
+	python3 tools/generate_automation_catalog.py apps/ledger/automation.xml --lua $(LEDGER_CATALOG) --docs $(LEDGER_CATALOG_DOCS) --site $(LEDGER_CATALOG_SITE) --check
+
+$(BIN_DIR)/ledger-run$(EXE_EXT): $(LEDGER_API_HEADER) $(GENERATED_DIR)/apps/ledger/ledger.h $(call app_srcs,ledger) $(LEDGER_CATALOG)
+$(BIN_DIR)/ledger$(EXE_EXT) $(GEM_DIR)/ledger.gem $(patsubst apps/ledger/tests/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(wildcard apps/ledger/tests/*.c)): $(LEDGER_API_HEADER) $(LEDGER_CATALOG)
+share: $(LEDGER_CATALOG)
+
 # ── Platform submodule ───────────────────────────────────────────────────
 platform: $(PLATFORM_LIB)
 

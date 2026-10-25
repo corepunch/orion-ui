@@ -1,0 +1,261 @@
+<?xml version='1.0' encoding='utf-8'?>
+<automation version="1" id="ledger.automation">
+  <description>Local Lua recipes and typed nodes for Ledger. XML owns IDs, ports, parameters, tags, aliases and descriptions; generated catalog.lua is consumed by the Lua runtime. CSV means UTF-8 CSV, not XLSX. A preview never writes; apply is explicit. Match normalization trims whitespace and folds ASCII and Russian Cyrillic case; it is not full Unicode normalization. Missing match keys are rejected. Counterparty matching requires INN; an explicitly empty KPP is allowed for entrepreneurs.</description>
+  <node id="source.rows" title="Rows" input="none" output="rows" impl="source_rows">
+    <description>Use rows supplied as Lua tables.</description>
+    <param name="rows" type="table" optional="false">Array of records.</param>
+    <tag>source</tag>
+    <tag>rows</tag>
+  </node>
+  <node id="source.table" title="Read table" input="none" output="rows" impl="source_table">
+    <description>Read record copies through ledger.fetch.</description>
+    <param name="table" type="string" optional="false">Schema table name.</param>
+    <param name="db" type="string" optional="true">Database, default ib.</param>
+    <tag>source</tag>
+    <tag>table</tag>
+  </node>
+  <node id="parse.csv" title="Parse CSV" input="text" output="rows" impl="csv">
+    <description>Parse UTF-8 CSV with quoted delimiters, escaped quotes, CRLF and multiline cells.</description>
+    <param name="delimiter" type="string" optional="true">Single separator, default semicolon.</param>
+    <tag>parse</tag>
+    <tag>csv</tag>
+  </node>
+  <node id="rows.map" title="Map columns" input="rows" output="rows" impl="map">
+    <description>Rename columns and convert typed values; invalid conversions fail.</description>
+    <param name="columns" type="table" optional="false">Source column to stored field.</param>
+    <param name="types" type="table" optional="true">Target field to number or integer.</param>
+    <tag>rows</tag>
+    <tag>map</tag>
+  </node>
+  <node id="rows.filter" title="Filter rows" input="rows" output="rows" impl="filter">
+    <description>Keep rows matching every exact equality condition.</description>
+    <param name="equals" type="table" optional="false">Field/value conditions.</param>
+    <tag>rows</tag>
+    <tag>filter</tag>
+  </node>
+  <node id="rows.group" title="Group rows" input="rows" output="rows" impl="group">
+    <description>Count rows and optionally sum a numeric field by nonempty keys.</description>
+    <param name="keys" type="table" optional="false">Grouping fields.</param>
+    <param name="sum" type="string" optional="true">Numeric field to sum.</param>
+    <tag>rows</tag>
+    <tag>group</tag>
+  </node>
+  <node id="check.required" title="Check required fields" input="rows" output="issues" impl="required">
+    <description>Return row IDs, field names and required issue codes.</description>
+    <param name="fields" type="table" optional="false">Fields that must be nonempty.</param>
+    <tag>check</tag>
+    <tag>required</tag>
+  </node>
+  <node id="rows.match" title="Match records" input="rows" output="matches" impl="match">
+    <description>Match by composite key; ambiguous stored matches fail.</description>
+    <param name="table" type="string" optional="false">Infobase table.</param>
+    <param name="keys" type="table" optional="false">Composite key fields.</param>
+    <tag>rows</tag>
+    <tag>match</tag>
+  </node>
+  <node id="plan.upsert" title="Plan import" input="rows" output="plan" impl="upsert">
+    <description>Prepare inserts/updates with before snapshots; duplicate input keys fail.</description>
+    <param name="table" type="string" optional="false">Target table.</param>
+    <param name="keys" type="table" optional="false">Match keys.</param>
+    <param name="existing_only" type="boolean" optional="true">Return not_found errors instead of inserts.</param>
+    <tag>plan</tag>
+    <tag>upsert</tag>
+  </node>
+  <node id="plan.patch" title="Plan field replacement" input="rows" output="plan" impl="patch">
+    <description>Plan a field replacement on selected catalog records.</description>
+    <param name="table" type="string" optional="false">Writable table.</param>
+    <param name="field" type="string" optional="false">Target field.</param>
+    <param name="value" type="any" optional="false">Typed replacement value.</param>
+    <tag>plan</tag>
+    <tag>patch</tag>
+  </node>
+  <node id="check.duplicates" title="Find duplicates" input="rows" output="rows" impl="duplicates">
+    <description>Report candidate groups; never merge records automatically.</description>
+    <param name="keys" type="table" optional="false">Matching fields.</param>
+    <tag>check</tag>
+    <tag>duplicates</tag>
+  </node>
+  <node id="report.stock" title="Stock balances" input="rows" output="rows" impl="stock">
+    <description>Aggregate entries through a cutoff date on exact selected item-analytic accounts; date_from is intentionally not used.</description>
+    <param name="accounts" type="table" optional="false">Exact account codes; include each required subaccount.</param>
+    <param name="date_to" type="string" optional="true">Inclusive ISO cutoff date.</param>
+    <tag>report</tag>
+    <tag>stock</tag>
+  </node>
+  <node id="report.settlements" title="Counterparty settlements" input="rows" output="rows" impl="settlements">
+    <description>Compute opening, period debit/credit and closing by counterparty for selected accounts.</description>
+    <param name="accounts" type="table" optional="false">Exact counterparty-analytic account codes.</param>
+    <param name="date_from" type="string" optional="true">Inclusive ISO start date.</param>
+    <param name="date_to" type="string" optional="true">Inclusive ISO end date.</param>
+    <param name="counterparty_id" type="number" optional="true">Optional counterparty ID.</param>
+    <tag>report</tag>
+    <tag>settlements</tag>
+  </node>
+  <node id="check.month" title="Check period" input="rows" output="issues" impl="month">
+    <description>Report unposted documents and missing exchange rates; not an exhaustive accounting audit.</description>
+    <param name="date_from" type="string" optional="false">Inclusive ISO date.</param>
+    <param name="date_to" type="string" optional="false">Inclusive ISO date.</param>
+    <tag>check</tag>
+    <tag>month</tag>
+  </node>
+  <node id="format.csv" title="Format CSV" input="rows" output="text" impl="export_csv">
+    <description>Return CSV text; the caller chooses whether and where to save it.</description>
+    <param name="columns" type="table" optional="false">Ordered output fields.</param>
+    <param name="delimiter" type="string" optional="true">Single separator, default semicolon.</param>
+    <tag>format</tag>
+    <tag>csv</tag>
+  </node>
+  <recipe id="import.items" title="Import items" impl="import_items">
+    <description>Map sku/name/price columns, match by SKU and preview catalog inserts/updates. Excel files must first be saved as CSV.</description>
+    <alias>Загрузить товары из таблицы</alias>
+    <tag>товары</tag>
+    <tag>импорт</tag>
+    <tag>CSV</tag>
+    <tag>Excel</tag>
+    <param name="rows" type="table" optional="true">Input rows; supply rows or csv.</param>
+    <param name="csv" type="string" optional="true">UTF-8 CSV text; supply rows or csv.</param>
+    <param name="columns" type="table" optional="true">Input header to target field mapping.</param>
+    <param name="delimiter" type="string" optional="true">CSV separator, default semicolon.</param>
+  </recipe>
+  <recipe id="import.counterparties" title="Import counterparties" impl="import_counterparties">
+    <description>Map name/tax_id/kpp columns and match by INN plus KPP; requires INN and allows an explicitly empty KPP.</description>
+    <alias>Загрузить контрагентов ИНН КПП</alias>
+    <tag>контрагенты</tag>
+    <tag>импорт</tag>
+    <tag>ИНН</tag>
+    <tag>КПП</tag>
+    <param name="rows" type="table" optional="true">Input rows; supply rows or csv.</param>
+    <param name="csv" type="string" optional="true">UTF-8 CSV text; supply rows or csv.</param>
+    <param name="columns" type="table" optional="true">Input header to target field mapping.</param>
+    <param name="delimiter" type="string" optional="true">CSV separator, default semicolon.</param>
+  </recipe>
+  <recipe id="import.rates" title="Import exchange rates" impl="import_rates">
+    <description>Map currency_id/date/rate columns and match by currency and date.</description>
+    <alias>Загрузить курсы валют</alias>
+    <tag>валюта</tag>
+    <tag>курсы</tag>
+    <tag>импорт</tag>
+    <param name="rows" type="table" optional="true">Input rows; supply rows or csv.</param>
+    <param name="csv" type="string" optional="true">UTF-8 CSV text; supply rows or csv.</param>
+    <param name="columns" type="table" optional="true">Input header to target field mapping.</param>
+    <param name="delimiter" type="string" optional="true">CSV separator, default semicolon.</param>
+  </recipe>
+  <recipe id="prices.update" title="Update prices" impl="prices_update">
+    <description>Update current item prices by SKU; unknown SKUs are plan errors. Historical documents are unchanged.</description>
+    <alias>Обновить цены из прайса поставщика</alias>
+    <tag>товары</tag>
+    <tag>цены</tag>
+    <tag>прайс</tag>
+    <tag>CSV</tag>
+    <param name="rows" type="table" optional="true">Input rows; supply rows or csv.</param>
+    <param name="csv" type="string" optional="true">UTF-8 CSV text; supply rows or csv.</param>
+    <param name="columns" type="table" optional="true">Input header to target field mapping.</param>
+    <param name="delimiter" type="string" optional="true">CSV separator, default semicolon.</param>
+  </recipe>
+  <recipe id="duplicates.items" title="Find duplicate items" impl="duplicates_items">
+    <description>Report candidate item duplicates by SKU, or supplied keys.</description>
+    <alias>Задвоились товары дубли номенклатуры</alias>
+    <tag>товары</tag>
+    <tag>дубли</tag>
+    <tag>проверка</tag>
+    <param name="keys" type="table" optional="true">Override the documented composite match keys.</param>
+  </recipe>
+  <recipe id="duplicates.counterparties" title="Find duplicate counterparties" impl="duplicates_counterparties">
+    <description>Report candidates by INN/KPP, or supplied keys; empty keys are skipped.</description>
+    <alias>Повторяющиеся контрагенты дубли</alias>
+    <tag>контрагенты</tag>
+    <tag>дубли</tag>
+    <tag>проверка</tag>
+    <param name="keys" type="table" optional="true">Override the documented composite match keys.</param>
+  </recipe>
+  <recipe id="duplicates.documents" title="Find duplicate documents" impl="duplicates_documents">
+    <description>Report candidates by type, counterparty, number, date and total; no automatic deletion.</description>
+    <alias>Повторяющиеся документы задвоились</alias>
+    <tag>документы</tag>
+    <tag>дубли</tag>
+    <tag>проверка</tag>
+    <param name="keys" type="table" optional="true">Override the documented composite match keys.</param>
+  </recipe>
+  <recipe id="check.required" title="Check required fields" impl="check_required">
+    <description>Return empty required fields for a chosen infobase table.</description>
+    <alias>Проверить пустые реквизиты ошибки заполнения</alias>
+    <tag>реквизиты</tag>
+    <tag>проверка</tag>
+    <tag>ошибки</tag>
+    <param name="table" type="string" optional="false">Infobase table.</param>
+    <param name="fields" type="table" optional="false">Required field names.</param>
+  </recipe>
+  <recipe id="fields.replace" title="Replace catalog field" impl="fields_replace">
+    <description>Filter catalog rows by exact equalities and preview replacement of one field.</description>
+    <alias>Массово заполнить заменить реквизит</alias>
+    <tag>реквизиты</tag>
+    <tag>изменение</tag>
+    <tag>заполнение</tag>
+    <param name="table" type="string" optional="false">Writable catalog table.</param>
+    <param name="equals" type="table" optional="false">All exact filter conditions.</param>
+    <param name="field" type="string" optional="false">Stored field to replace.</param>
+    <param name="value" type="any" optional="false">Typed replacement value.</param>
+  </recipe>
+  <recipe id="report.stock" title="Check stock balances" impl="report_stock">
+    <description>Read item-analytic entries on selected account codes; report quantity, value and negative flag.</description>
+    <alias>Отрицательные остатки товары склад</alias>
+    <tag>товары</tag>
+    <tag>остатки</tag>
+    <tag>проверка</tag>
+    <param name="accounts" type="table" optional="false">Exact account codes with the correct analytics kind.</param>
+    <param name="date_from" type="string" optional="true">Inclusive ISO start date (not used for stock).</param>
+    <param name="date_to" type="string" optional="true">Inclusive ISO cutoff date.</param>
+  </recipe>
+  <recipe id="report.settlements" title="Counterparty settlements" impl="report_settlements">
+    <description>Report opening, period movements and closing on selected counterparty-analytic accounts. No contract or overdue analysis is implied.</description>
+    <alias>Сверка взаиморасчетов долги контрагент</alias>
+    <tag>контрагенты</tag>
+    <tag>долги</tag>
+    <tag>сверка</tag>
+    <param name="accounts" type="table" optional="false">Exact account codes with the correct analytics kind.</param>
+    <param name="date_from" type="string" optional="true">Inclusive ISO start date (not used for stock).</param>
+    <param name="date_to" type="string" optional="true">Inclusive ISO cutoff date.</param>
+    <param name="counterparty_id" type="integer" optional="true">Optional counterparty filter.</param>
+  </recipe>
+  <recipe id="check.month" title="Check before closing" impl="check_month">
+    <description>Check period for unposted documents and missing exchange rates. Does not perform closing or repair accounting automatically.</description>
+    <alias>Почему не закрывается месяц проверка</alias>
+    <tag>закрытие</tag>
+    <tag>документы</tag>
+    <tag>проверка</tag>
+    <param name="date_from" type="string" optional="true">Inclusive ISO start date (not used for stock).</param>
+    <param name="date_to" type="string" optional="true">Inclusive ISO cutoff date.</param>
+  </recipe>
+  <api module="ledger.automation">
+    <function name="search" returns="table">
+      <description>Search documented recipe/node titles, aliases and tags. Query terms use AND matching, tags use exact AND matching; kind is recipe or node. Returns catalog metadata.</description>
+      <param name="query" type="string" optional="true">Text query; empty means all.</param>
+      <param name="tags" type="table" optional="true">Exact tag array.</param>
+      <param name="kind" type="string" optional="true">recipe or node.</param>
+    </function>
+    <function name="preview" returns="table">
+      <description>Run a recipe without writes. Import/replacement recipes return a change plan; checks and reports return result arrays.</description>
+      <param name="id" type="string" optional="false">Recipe ID from this XML catalog.</param>
+      <param name="params" type="table" optional="true">Recipe parameters documented below.</param>
+    </function>
+    <function name="execute" returns="table|string">
+      <description>Validate a typed acyclic node graph, then evaluate its output. Graph nodes have id/type/input/params; graph.output names the result node. No apply node exists: graph evaluation never commits data.</description>
+      <param name="graph" type="table" optional="false">Graph data with nodes and output.</param>
+    </function>
+    <function name="apply" returns="table">
+      <description>Apply a prepared change plan atomically. Refuses plan errors, stale snapshots, changed match keys and duplicate targets. Requires a writable host run. Catalog API enforces types and references even for hand-written plans.</description>
+      <param name="plan" type="table" optional="false">Plan returned by preview or a plan node.</param>
+    </function>
+    <function name="register" returns="nil">
+      <description>Register an XML-generated plugin descriptor and its Lua implementations. Standard and custom plugins use the same registry; duplicate plugin, node or recipe IDs are rejected before registration.</description>
+      <param name="descriptor" type="table" optional="false">Generated metadata or Lua implementation table.</param>
+      <param name="nodes" type="table" optional="false">Generated metadata or Lua implementation table.</param>
+      <param name="recipes" type="table" optional="false">Generated metadata or Lua implementation table.</param>
+    </function>
+  </api>
+  <node id="source.text" title="Text" input="none" output="text" impl="source_text">
+    <description>Use supplied text, for example UTF-8 CSV.</description>
+    <param name="text" type="string" optional="false">Input text.</param>
+    <tag>source</tag>
+  </node>
+</automation>

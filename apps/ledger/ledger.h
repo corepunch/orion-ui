@@ -76,6 +76,8 @@ int  ledger_count_references(database_t *ib, int table_id, const char *field, in
 // when no script defines the function.
 bool ledger_script_open(const char *config_dir, const char *data_dir);
 void ledger_script_close(void);
+// Execute trusted local Lua; the entire run rolls back on error.
+bool ledger_script_run(const char *path, bool writable, char *error, size_t error_sz);
 bool ledger_script_has(const char *function);
 bool ledger_script_post(const ledger_post_t *p, const char *function);
 bool ledger_script_closing(const ledger_post_t *p, const db_closing_rule_t *rule);

@@ -208,6 +208,16 @@ import and verify that no opening entries are added. Use
 `apps/ledger/tests/enterprisedata_sample.xml` for the small synthetic fixture
 and automated regression tests.
 
+## Local automation recipes and nodes
+
+[Local Lua automation](AUTOMATION.md) adds 12 ready-made recipes, 16 typed node
+operations, tag/task search, change previews and transactional catalog writes.
+Business logic is Lua. API signatures, registration/argument guards and reference
+are generated from XML; record metadata comes from `ledger.orion`. A headless
+`ledger-run` host defaults to read-only execution. See the
+[generated catalog](docs/automation-catalog.md), [API reference](docs/lua-api.md)
+and [roadmap](ROADMAP.md) for 1C/online work planned separately.
+
 ## Scripting rules and plugins (`rules.lua`)
 
 Tables cover the rules that have a shape the platform knows: rates, caps,
@@ -234,7 +244,7 @@ the infobase. A failing hook is logged with `[ledger] script …` and the
 document is not posted (a failing tax row is skipped).
 
 Loading order, one Lua state per configuration: `<configuration>/rules.lua`,
-then `<configuration>/plugins/*.lua`, then `<infobase dir>/plugins/*.lua` (the
+then shared `stdplugs/*.lua`, then `<configuration>/plugins/*.lua`, then `<infobase dir>/plugins/*.lua` (the
 organization's own plugins), each directory in name order. Shipped examples:
 
 - `ru-2026/rules.lua`: `post_writeoff` (списание товаров at average cost,

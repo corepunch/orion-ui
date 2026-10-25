@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<automation id="test.custom" version="1">
+  <description>Integration fixture: a custom plugin uses the standard XML registration contract.</description>
+  <node id="custom.text" title="Custom text" input="none" output="text" impl="text">
+    <description>Return a supplied text value.</description>
+    <tag>custom</tag><param name="value" type="string">Text value.</param>
+  </node>
+  <recipe id="custom.echo" title="Custom echo" impl="echo">
+    <description>Return a supplied value in a result array.</description>
+    <tag>custom</tag><param name="value" type="string">Text value.</param>
+  </recipe>
+</automation>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lua-api module="ledger" version="1" schema="apps/ledger/ledger.orion">
+  <description>Ledger's local, trusted Lua API. Function signatures, argument guards, registration, editor annotations and this reference are generated from ledger-api.xml. Record fields come from ledger.orion. All reads return copies. User automation writes only items, counterparties and rates, inside a transaction during an explicitly writable script run. Configuration, posted documents and derived entries are never generic write targets. Existing posting hooks keep their dedicated entry API. No arbitrary downloaded code sandbox is claimed.</description>
+  <function name="find" impl="l_find">
+    <description>Read one record by its integer ID. Returns nil if it does not exist.</description>
+    <param name="db" type="string">Registered database name, normally ib or cfg.</param><param name="table" type="string">Schema table name.</param><param name="id" type="integer">Record ID.</param>
+    <returns type="table|nil">A copy of all stored fields.</returns>
+    <example>local item = ledger.find("ib", "items", 1)</example>
+  </function>
+  <function name="fetch" impl="l_fetch">
+    <description>Read records, optionally filtered by one field's exact value. The filter value is required when field is supplied; integer and string filters are supported.</description>
+    <param name="db" type="string">Registered database.</param><param name="table" type="string">Schema table.</param><param name="field" type="string" optional="true">Exact-match field.</param><param name="value" type="string|integer" optional="true">Exact-match value.</param>
+    <returns type="table">Array of record copies.</returns>
+  </function>
+  <function name="field" impl="l_field">
+    <description>Read formatted text of a stored field or a join path. Returns an empty string for a missing record.</description>
+    <param name="db" type="string">Database.</param><param name="table" type="string">Table.</param><param name="id" type="integer">Record ID.</param><param name="path" type="string">Field or path such as counterparty.name.</param><returns type="string">Field text.</returns>
+  </function>
+  <function name="account" impl="l_account">
+    <description>Find an account in the active configuration by its code.</description><param name="code" type="string">Country-specific account code.</param><returns type="table|nil">Account copy.</returns>
+  </function>
+  <function name="entry" impl="l_entry">
+    <description>Add an entry to the document currently being posted. Only available inside posting, closing and post-event hooks. Fields: debit, credit (code or ID), amount, quantity, content, counterparty, item, employee, asset, currency, currency_amount.</description><param name="entry" type="table">Entry fields.</param><returns type="nil">No values.</returns>
+  </function>
+  <function name="turnover" impl="l_turnover">
+    <description>Read cumulative turnovers before the current document plus its entries so far. Only available inside posting context.</description><param name="account" type="string|integer"/><param name="subconto" type="integer" optional="true">Analytics ID; omitted means all.</param><param name="currency" type="integer" optional="true">Currency ID; omitted means all.</param><returns type="table">dr, cr, dr_qty, cr_qty, dr_cur, cr_cur.</returns>
+  </function>
+  <function name="rate" impl="l_rate">
+    <description>Read the exchange rate on a date. Zero means no rate was found.</description><param name="currency_id" type="integer"/><param name="date" type="string">ISO date YYYY-MM-DD.</param><returns type="number">National units per foreign unit.</returns>
+  </function>
+  <function name="round2" impl="l_round2">
+    <description>Round to two decimal places, halves away from zero.</description><param name="value" type="number"/><returns type="number">Rounded value.</returns>
+  </function>
+  <function name="log" impl="l_log">
+    <description>Write a diagnostic to stderr with the Ledger script prefix.</description><param name="text" type="string"/><returns type="nil">No values.</returns>
+  </function>
+  <function name="on" impl="l_on">
+    <description>Register an event subscription in the active configuration's Lua state. Currently the platform emits post; callbacks receive a posting context.</description><param name="event" type="string"/><param name="callback" type="function"/><returns type="nil">No values.</returns>
+  </function>
+  <function name="schema" impl="l_schema">
+    <description>Inspect a table's fields, types, lengths, relations and whether it is an automation write target.</description><param name="db" type="string"/><param name="table" type="string"/><returns type="table">name, writable, fields array (name, type, length, relation).</returns>
+  </function>
+  <function name="insert" impl="l_insert">
+    <description>Create a catalog record through the Ledger datasource lifecycle. Requires a writable script and an active ledger.transaction. Unknown fields, explicit IDs, invalid types, overlong strings, invalid dates and missing foreign references are rejected.</description><param name="table" type="string">items, counterparties or rates.</param><param name="fields" type="table">Typed stored field values, excluding id.</param><returns type="table">Inserted record copy with ID.</returns>
+  </function>
+  <function name="update" impl="l_update">
+    <description>Patch an existing catalog record through its datasource. Same write restrictions and field validation as insert. An ID cannot be changed. Does not repost historical documents.</description><param name="table" type="string">items, counterparties or rates.</param><param name="id" type="integer"/><param name="fields" type="table">Changed field values.</param><returns type="table">Updated record copy.</returns>
+  </function>
+  <function name="transaction" impl="l_transaction">
+    <description>Run a callback atomically in the infobase editing context. A thrown Lua error reverts every change in the scope and is rethrown. Returning false is an ordinary successful return, not a rollback request. Nested transactions are supported. Requires an explicitly writable script run; unavailable during posting hooks.</description><param name="callback" type="function"/><returns type="any">The callback's return values.</returns>
+    <example>ledger.transaction(function()
+  return ledger.update("items", 1, {price = 150})
+end)</example>
+  </function>
+  <function name="validate" impl="l_validate">
+    <description>Validate a catalog insert or patch without writing. Applies the same schema, value, reference and table restrictions as insert/update, and fills datasource defaults. Supplying id validates an update; omitting it validates an insert. Available in read-only runs.</description>
+    <param name="table" type="string">Writable catalog table.</param><param name="fields" type="table">Typed values excluding id.</param><param name="id" type="integer" optional="true">Existing record ID for an update.</param><returns type="table">Validated record copy; a new record has id=0 until insertion.</returns>
+  </function>
+</lua-api>
