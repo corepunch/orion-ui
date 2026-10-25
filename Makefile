@@ -56,7 +56,8 @@ LIBS     += -lGL -lutil
 LDFLAGS_TEST += -lEGL
 CFLAGS   += -fPIC
 LIB_EXT  = so
-LIB_FLAGS = -shared -fPIC
+# Like dylibs and DLLs, a library must resolve every symbol it uses at link time.
+LIB_FLAGS = -shared -fPIC -Wl,--no-undefined
 RPATH_FLAGS = -Wl,-rpath,'$$ORIGIN/../lib'
 GEM_INSTALL_RPATH_FLAGS = -Wl,-rpath,'$$ORIGIN/../..'
 component_id_flags = -Wl,-soname,$(notdir $@)
@@ -262,7 +263,7 @@ USER_SRCS = $(filter-out orion/user/dialog.c orion/user/component_registry.c,$(w
 
 $(eval $(call unity_lib,kernel,$(wildcard orion/kernel/*.c),,,))
 $(eval $(call unity_lib,user,$(USER_SRCS),$(COMMDLG_LIB) $(KERNEL_LIB),,-lcommdlg -lkernel))
-$(eval $(call unity_lib,commctl,$(wildcard orion/commctl/*.c),$(USER_LIB) $(KERNEL_LIB),-Icomponents,-luser -lkernel))
+$(eval $(call unity_lib,commctl,$(wildcard orion/commctl/*.c),$(COMMDLG_LIB) $(USER_LIB) $(KERNEL_LIB),-Icomponents,-lcommdlg -luser -lkernel))
 
 # commdlg is built by its own makefile as a static library
 $(COMMDLG_LIB): $(wildcard orion/commdlg/*.c) $(CORE_HEADERS) | $(LIB_DIR)
