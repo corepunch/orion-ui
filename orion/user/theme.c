@@ -25,6 +25,10 @@ static theme_t *theme_for_style(theme_style_t style) {
     case THEME_LIGHT:   return theme_light_instance();
     case THEME_NAVY:    return theme_navy_instance();
     case THEME_AMBER:   return theme_amber_instance();
+    case THEME_CITRON:    return theme_citron_instance();
+    case THEME_PORCELAIN: return theme_porcelain_instance();
+    case THEME_SAGE:      return theme_sage_instance();
+    case THEME_MIDNIGHT:  return theme_midnight_instance();
     default:            return NULL;
   }
 }

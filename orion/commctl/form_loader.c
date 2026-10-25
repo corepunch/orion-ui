@@ -207,7 +207,7 @@ static const enum_token_t kColors[] = {
   {"border-active", brBorderActive}, {"folder-text", brFolderText},
   {"column-view-bg", brColumnViewBg}, {"modal-overlay", brModalOverlay},
   {"toolbar-foreground", brToolbarForeground},
-  {"panel-dark", brPanelDark}, {"panel-darker", brPanelDarker},
+  {"panel-dark", brPanelDark}, {"panel-darker", brPanelDarker}, {"desktop-bg", brDesktopBg},
 };
 static const enum_token_t kRowIconColors[] = {
   {"success", brTextSuccess}, {"error", brTextError}, {"warning", brTextWarning}, {"info", brTextInfo},

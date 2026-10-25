@@ -164,7 +164,7 @@ static void test_control_parts(void) {
 static void test_all_parts(void) {
   TEST("both themes implement every part/state combination and selection foreground policy");
   test_env_init();
-  for (int style = THEME_CLASSIC; style <= THEME_AMBER; style++) {
+  for (int style = THEME_CLASSIC; style <= THEME_LAST; style++) {
     set_theme((theme_style_t)style);
     for (int part = 0; part < THEME_PART_COUNT; part++)
       for (int state = 0; state < 64; state++)
