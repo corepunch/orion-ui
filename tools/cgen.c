@@ -61,7 +61,7 @@ typedef struct {
 
 typedef struct {
   const char *path;
-  char *name, *prefix, *on_luaopen, *after_luaopen, *summary, *details;
+  char *name, *prefix, *luaopen, *on_luaopen, *after_luaopen, *summary, *details;
   char *includes[MAX_INCLUDES];
   int include_count;
   func_t funcs[MAX_FUNCTIONS];
@@ -233,9 +233,11 @@ static void parse_module(module_t *m, xmlNodePtr root) {
   if (!is_element(root, "module")) fail_at((int)xmlGetLineNo(root), "the root element must be <module>");
   m->name = attr(root, "name");
   m->prefix = attr(root, "prefix");
+  m->luaopen = attr(root, "luaopen");
   m->on_luaopen = attr(root, "on-luaopen");
   m->after_luaopen = attr(root, "after-luaopen");
   if (!m->name || !*m->name) fail_at((int)xmlGetLineNo(root), "<module> needs a name");
+  if (m->luaopen && !is_identifier(m->luaopen)) fail_at((int)xmlGetLineNo(root), "luaopen=\"%s\" is not a C identifier", m->luaopen);
   for (xmlNodePtr c = root->children; c; c = c->next) {
     if (c->type != XML_ELEMENT_NODE) continue;
     if (is_element(c, "summary")) m->summary = text_of(c);
@@ -382,7 +384,9 @@ static void emit_c(FILE *out, const module_t *m) {
     }
     fputs("}\n", out);
   }
-  fprintf(out, "\nint luaopen_%s(lua_State *L) {\n  static const luaL_Reg functions[] = {\n", symbol);
+  if (m->luaopen) fprintf(out, "\nint %s(lua_State *L) {\n", m->luaopen);
+  else fprintf(out, "\nint luaopen_%s(lua_State *L) {\n", symbol);
+  fputs("  static const luaL_Reg functions[] = {\n", out);
   for (int i = 0; i < m->count; i++)
     fprintf(out, "    { \"%s\", cgen_%s_%s },\n", m->funcs[i].lua_name, symbol, m->funcs[i].name);
   fputs("    { NULL, NULL },\n  };\n", out);

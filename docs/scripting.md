@@ -238,7 +238,7 @@ static int ledger_addon_post(lua_State *L, int id) { ... }
 
 | Declaration | Meaning |
 |---|---|
-| `<module name prefix>` | `require(name)`; `luaopen_<name with _ for .>`; C functions are `prefix` + the function's name |
+| `<module name prefix luaopen>` | `require(name)`; the open function is `luaopen`, else `luaopen_<name with _ for .>`; C functions are `prefix` + the function's name |
 | `<function name export call lua>` | Lua name `export`, else the name in camelCase; `call` names another C function; `lua="true"` passes the state first |
 | `<arg type>` | `int`, `number`, `bool`, `string`, or a stack index: `value`, `table`, `function` |
 | `<arg optional default>` | `luaL_opt*`; `nil` gives `NULL` or 0 |
