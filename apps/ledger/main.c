@@ -73,13 +73,15 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_ledger->hinstance = hinstance;
 
   const char *data_dir = NULL, *language = NULL;
+  bool open_assistant = false;
   size_t loaded = 0;
   if (!axSettingsLoad("ledger_configuration", g_ledger->configuration, sizeof(g_ledger->configuration) - 1, &loaded) || !loaded)
     snprintf(g_ledger->configuration, sizeof(g_ledger->configuration), "%s", LEDGER_DEFAULT_CONFIGURATION);
-  for (int i = 1; i + 1 < argc; i++) {
-    if (!strcmp(argv[i], "--config")) snprintf(g_ledger->configuration, sizeof(g_ledger->configuration), "%s", argv[++i]);
-    else if (!strcmp(argv[i], "--data")) data_dir = argv[++i];
-    else if (!strcmp(argv[i], "--lang")) language = argv[++i];
+  for (int i = 1; i < argc; i++) {
+    if (!strcmp(argv[i], "--assistant")) open_assistant = true;
+    else if (i + 1 < argc && !strcmp(argv[i], "--config")) snprintf(g_ledger->configuration, sizeof(g_ledger->configuration), "%s", argv[++i]);
+    else if (i + 1 < argc && !strcmp(argv[i], "--data")) data_dir = argv[++i];
+    else if (i + 1 < argc && !strcmp(argv[i], "--lang")) language = argv[++i];
   }
 
   char share[LEDGER_PATH_MAX], path[LEDGER_PATH_MAX * 3];
@@ -136,11 +138,13 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
                                           NULL, ledger_main_proc, hinstance, NULL);
   if (!win) return false;
   show_window(win, true);
+  if (open_assistant) ledger_open_assistant();
   return true;
 }
 
 void gem_shutdown(void) {
   if (!g_ledger) return;
+  ledger_close_assistant();
   destroy_database(g_ledger->ib);  // saves when modified
   ledger_script_close();
   destroy_database(g_ledger->cfg);

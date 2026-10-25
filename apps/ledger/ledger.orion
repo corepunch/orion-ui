@@ -26,6 +26,7 @@
       <Separator />
       <item name="import_1c" label="Import from 1C (EnterpriseData)..." />
       <item name="addon" label="Open Add-on..." />
+      <item name="assistant" label="Assistant..." shortcut="Ctrl+Shift+A" />
       <Separator />
       <item name="quit" label="Exit" />
     </menu>

@@ -440,6 +440,32 @@ static void test_edit_leading_icon(void) {
   PASS();
 }
 
+static void test_edit_utf8(void) {
+    TEST("win_textedit: UTF-8 keyboard text, dictation chunks and codepoint editing");
+    test_env_init();
+    window_t *parent = test_env_create_window("P", 0, 0, 200, 100, edit_parent_proc, NULL);
+    window_t *ed = make_edit(parent, 1, "");
+    begin_editing(ed);
+    ui_event_t event = {.message = kEventKeyDown, .keyCode = 'A'};
+    memcpy(&event.lParam, "Я", strlen("Я"));
+    dispatch_message(&event);
+    ASSERT_STR_EQUAL(ed->title, "Я");
+    send_message(ed, evTextInput, 0, " должен 50 тысяч 🐉");
+    ASSERT_STR_EQUAL(ed->title, "Я должен 50 тысяч 🐉");
+    send_message(ed, evKeyDown, AX_KEY_BACKSPACE, NULL);
+    ASSERT_STR_EQUAL(ed->title, "Я должен 50 тысяч ");
+    send_message(ed, evKeyDown, AX_KEY_LEFTARROW, NULL);
+    send_message(ed, evKeyDown, AX_KEY_LEFTARROW, NULL);
+    send_message(ed, evKeyDown, AX_KEY_BACKSPACE, NULL);
+    ASSERT_STR_EQUAL(ed->title, "Я должен 50 тысч ");
+    send_message(ed, evKeyDown, AX_KEY_RIGHTARROW, NULL);
+    send_message(ed, evTextInput, 0, "и");
+    ASSERT_STR_EQUAL(ed->title, "Я должен 50 тысчи ");
+    destroy_window(parent);
+    test_env_shutdown();
+    PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc; (void)argv;
     TEST_START("win_textedit tests");
@@ -459,6 +485,7 @@ int main(int argc, char *argv[]) {
     test_edit_tab_noop_when_not_editing();
     test_edit_change_notifies_parent_per_edit();
     test_edit_leading_icon();
+    test_edit_utf8();
 
     TEST_END();
 }

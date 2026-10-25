@@ -143,6 +143,11 @@ static int ledger_addon_unpost(lua_State *L, int id) {
   return 2;
 }
 
+static int ledger_addon_open(lua_State *L, const char *table, int id) {
+  lua_pushboolean(L, ledger_open_record(table, id));
+  return 1;
+}
+
 static void ledger_addon_constants(lua_State *L) {
   lua_pushstring(L, g_ledger->configuration);
   lua_setfield(L, -2, "configuration");
@@ -151,6 +156,35 @@ static void ledger_addon_constants(lua_State *L) {
 #include "build/generated/apps/ledger/ledger_addons_lua.h"
 
 void ledger_addons_init(void) { script_register_module("ledger", luaopen_ledger_addons); }
+
+static script_page_t *assistant_page;
+
+void ledger_close_assistant(void) {
+  script_page_close(assistant_page);
+  assistant_page = NULL;
+}
+
+void ledger_open_assistant(void) {
+  window_t *mascot = assistant_page ? script_page_control(assistant_page, "mascot") : NULL;
+  if (mascot) { set_focus(get_root_window(mascot)); return; }
+  ledger_close_assistant();
+  char path[LEDGER_PATH_MAX + 64], error[1024] = "";
+  snprintf(path, sizeof(path), "%s/addons/assistant/assistant.orion", g_ledger->share_dir);
+  script_page_t *page = script_page_open(path, error, sizeof(error));
+  if (!page) {
+    message_box(g_ledger->main_win, error, ui_tr("Assistant"), MB_OK);
+    return;
+  }
+  // Keep the assistant available alongside the main application.
+  window_t *win = script_page_create(page, NULL);
+  if (!win) { script_page_close(page); return; }
+  assistant_page = page;
+  window_t *parent = g_ledger->main_win;
+  if (parent) move_window(win, parent->frame.x + (parent->frame.w - win->frame.w) / 2,
+                          parent->frame.y + (parent->frame.h - win->frame.h) / 2);
+  show_window(win, true);
+  set_focus(script_page_control(page, "command"));
+}
 
 void ledger_open_addon(void) {
   char path[LEDGER_PATH_MAX * 2], error[1024], filter[256] = "";

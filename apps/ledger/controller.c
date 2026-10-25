@@ -116,6 +116,24 @@ static void edit_document(int doc_id) {
   if (show_db_dialog_opts(kDocumentForms[f].def, title, g_ledger->main_win, doc_id, &opts)) after_save(doc_id);
 }
 
+// A named record, for trusted Lua add-ons. Opening never creates a record.
+bool ledger_open_record(const char *table, int id) {
+  if (!g_ledger || !g_ledger->main_win || id <= 0) return false;
+  if (!strcmp(table, "documents")) {
+    if (!find_document(id)) return false;
+    edit_document(id);
+    return true;
+  }
+  const form_def_t *form = NULL;
+  int table_id = 0;
+  if (!strcmp(table, "counterparties")) { form = &ledger_counterparty_form; table_id = TABLE_COUNTERPARTIES; }
+  else if (!strcmp(table, "items")) { form = &ledger_item_form; table_id = TABLE_ITEMS; }
+  else return false;
+  if (!send_db_message(g_ledger->ib, dbFind, MAKEDWORD(table_id, 0), (void *)(intptr_t)id)) return false;
+  if (show_db_dialog(form, NULL, g_ledger->main_win, id)) ledger_refresh_views();
+  return true;
+}
+
 // New documents start as the selected document's type, or the first type of
 // the wanted form in the configuration.
 static int first_doc_type(const char *form) {
@@ -255,6 +273,7 @@ void ledger_command(uint16_t id) {
     case ID_FILE_LANGUAGE:      select_language();      break;
     case ID_FILE_IMPORT_1C:     import_from_1c();       break;
     case ID_FILE_ADDON:         ledger_open_addon();    break;
+    case ID_FILE_ASSISTANT:     ledger_open_assistant(); break;
     case ID_FILE_QUIT:          ui_request_quit();      break;
 
     case ID_DOC_NEW:           new_document("document");  break;

@@ -119,6 +119,9 @@ bool ledger_import_enterprisedata(database_t *ib, database_t *cfg, const char *p
 // its Lua script, with the "ledger" module for accounts, turnovers and posting.
 void ledger_addons_init(void);
 void ledger_open_addon(void);
+void ledger_open_assistant(void);
+void ledger_close_assistant(void);
+bool ledger_open_record(const char *table, int id);
 
 // controller.c — commands and views.
 void     ledger_command(uint16_t id);

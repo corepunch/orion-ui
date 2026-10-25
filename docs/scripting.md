@@ -187,6 +187,13 @@ an add-on cannot change the host's texts or its number and date formats
 
 ## Hosting add-ons (C)
 
+An add-on's `data()` can also provide `sprites = {mascot = {path = "assets/idle.png",
+columns = 4, rows = 2, count = 8, interval = 125, loop = true, revision = 1}}`.
+The named control must be a `SpriteButton`; the PNG path is relative to the
+add-on directory. The host owns the bitmap and animation timer. Increment
+`revision` to restart the same clip. `self.app.focus("command")` focuses a
+named control, for example to use system dictation in a normal text field.
+
 ```c
 #include <orion/script/script.h>
 
