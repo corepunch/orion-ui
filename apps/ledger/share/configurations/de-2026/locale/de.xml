@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Configuration layer: German accounting terms. The platform's KPP field holds the USt-IdNr., the bank
+     account the IBAN, the bank ID the BIC and the correspondent account the Handelsregister entry. -->
+<strings language="de">
+  <string source="Tax ID">Steuernummer</string>
+  <string source="Tax ID:">Steuernummer:</string>
+  <string source="KPP">USt-IdNr.</string>
+  <string source="KPP:">USt-IdNr.:</string>
+  <string source="Tax">USt</string>
+  <string source="Tax:">USt:</string>
+  <string source="Tax Amount">USt-Betrag</string>
+  <string source="Tax rate:">USt-Satz:</string>
+  <string source="Tax Rates">USt-Sätze</string>
+  <string source="Tax Dr">USt Soll</string>
+  <string source="Tax Cr">USt Haben</string>
+  <string source="Tax Summary">UStVA-Kennzahlen</string>
+  <string source="Bank account:">IBAN:</string>
+  <string source="Bank ID (BIK):">BIC:</string>
+  <string source="Corr. account:">Handelsregister:</string>
+  <string source="Net">Netto</string>
+  <string source="Sales Book">Umsatzsteuer (Ausgangsrechnungen)</string>
+  <string source="Purchase Book">Vorsteuer (Eingangsrechnungen)</string>
+  <string source="Tax allowance:">Freibetrag (monatlich):</string>
+  <string source="Allowance">Freibetrag</string>
+</strings>

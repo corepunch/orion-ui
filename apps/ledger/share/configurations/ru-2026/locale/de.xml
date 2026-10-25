@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Configuration layer: Russian accounting terms in German. -->
+<strings language="de">
+  <string source="Tax ID">INN</string>
+  <string source="Tax ID:">INN:</string>
+  <string source="KPP">KPP</string>
+  <string source="KPP:">KPP:</string>
+  <string source="Tax">MwSt. (NDS)</string>
+  <string source="Tax:">MwSt. (NDS):</string>
+  <string source="Tax Amount">MwSt.-Betrag</string>
+  <string source="Tax rate:">MwSt.-Satz:</string>
+  <string source="Tax Rates">MwSt.-Sätze</string>
+  <string source="Bank ID (BIK):">BIK:</string>
+</strings>

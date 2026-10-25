@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cfg>
+  <settings>
+    <setting id="1" cash_account_id="27" payroll_account_id="52" opening_account_id="1" code="ru-2026" name="Бухгалтерский учет (Россия, 2026)" country="Российская Федерация" currency="руб." currency_code="RUB" currency_units="рубль|рубля|рублей" currency_gender="m" cents_units="копейка|копейки|копеек" cents_gender="f" language="ru" tax_name="НДС" tax_id_name="ИНН" version="2.0.2026" basis="План счетов: приказ Минфина РФ от 31.10.2000 № 94н. НДС 22% с 01.01.2026 (п. 3 ст. 164 НК РФ, Федеральный закон от 28.11.2025 № 425-ФЗ), 10%, 0%. НДФЛ по прогрессивной шкале 13–22% (ст. 224 НК РФ), стандартные вычеты на детей до 450 000 руб. (ст. 218 НК РФ). Страховые взносы по единому тарифу 30% до предельной базы 2 979 000 руб."/>
+  </settings>
+  <subconto_kinds>
+    <subconto_kind id="1" code="counterparty" name="Контрагенты" table="counterparties"/>
+    <subconto_kind id="2" code="item" name="Номенклатура" table="items"/>
+    <subconto_kind id="3" code="employee" name="Сотрудники" table="employees"/>
+    <subconto_kind id="4" code="asset" name="Основные средства" table="assets"/>
+  </subconto_kinds>
+  <accounts>
+    <account id="1" subconto_kind_id="0" code="000" name="Вспомогательный счет" kind="АП" section="Вспомогательные счета" currency="0"/>
+    <account id="2" subconto_kind_id="4" code="01" name="Основные средства" kind="А" section="I. Внеоборотные активы" currency="0"/>
+    <account id="3" subconto_kind_id="4" code="01.01" name="Основные средства в организации" kind="А" section="I. Внеоборотные активы" currency="0"/>
+    <account id="4" subconto_kind_id="4" code="02" name="Амортизация основных средств" kind="П" section="I. Внеоборотные активы" currency="0"/>
+    <account id="5" subconto_kind_id="4" code="02.01" name="Амортизация ОС, учитываемых на счете 01" kind="П" section="I. Внеоборотные активы" currency="0"/>
+    <account id="6" subconto_kind_id="0" code="04" name="Нематериальные активы" kind="А" section="I. Внеоборотные активы" currency="0"/>
+    <account id="7" subconto_kind_id="0" code="05" name="Амортизация нематериальных активов" kind="П" section="I. Внеоборотные активы" currency="0"/>
+    <account id="8" subconto_kind_id="0" code="07" name="Оборудование к установке" kind="А" section="I. Внеоборотные активы" currency="0"/>
+    <account id="9" subconto_kind_id="0" code="08" name="Вложения во внеоборотные активы" kind="А" section="I. Внеоборотные активы" currency="0"/>
+    <account id="10" subconto_kind_id="0" code="08.04" name="Приобретение объектов основных средств" kind="А" section="I. Внеоборотные активы" currency="0"/>
+    <account id="11" subconto_kind_id="2" code="10" name="Материалы" kind="А" section="II. Производственные запасы" currency="0"/>
+    <account id="12" subconto_kind_id="2" code="10.01" name="Сырье и материалы" kind="А" section="II. Производственные запасы" currency="0"/>
+    <account id="13" subconto_kind_id="2" code="10.09" name="Инвентарь и хозяйственные принадлежности" kind="А" section="II. Производственные запасы" currency="0"/>
+    <account id="14" subconto_kind_id="0" code="19" name="НДС по приобретенным ценностям" kind="А" section="II. Производственные запасы" currency="0"/>
+    <account id="15" subconto_kind_id="0" code="19.01" name="НДС при приобретении основных средств" kind="А" section="II. Производственные запасы" currency="0"/>
+    <account id="16" subconto_kind_id="0" code="19.03" name="НДС по приобретенным материально-производственным запасам" kind="А" section="II. Производственные запасы" currency="0"/>
+    <account id="17" subconto_kind_id="0" code="19.04" name="НДС по приобретенным услугам" kind="А" section="II. Производственные запасы" currency="0"/>
+    <account id="18" subconto_kind_id="0" code="20" name="Основное производство" kind="А" section="III. Затраты на производство" currency="0"/>
+    <account id="19" subconto_kind_id="0" code="25" name="Общепроизводственные расходы" kind="А" section="III. Затраты на производство" currency="0"/>
+    <account id="20" subconto_kind_id="0" code="26" name="Общехозяйственные расходы" kind="А" section="III. Затраты на производство" currency="0"/>
+    <account id="21" subconto_kind_id="2" code="41" name="Товары" kind="А" section="IV. Готовая продукция и товары" currency="0"/>
+    <account id="22" subconto_kind_id="2" code="41.01" name="Товары на складах" kind="А" section="IV. Готовая продукция и товары" currency="0"/>
+    <account id="23" subconto_kind_id="2" code="43" name="Готовая продукция" kind="А" section="IV. Готовая продукция и товары" currency="0"/>
+    <account id="24" subconto_kind_id="0" code="44" name="Расходы на продажу" kind="А" section="IV. Готовая продукция и товары" currency="0"/>
+    <account id="25" subconto_kind_id="0" code="44.01" name="Издержки обращения в организациях, осуществляющих торговую деятельность" kind="А" section="IV. Готовая продукция и товары" currency="0"/>
+    <account id="26" subconto_kind_id="0" code="50" name="Касса" kind="А" section="V. Денежные средства" currency="0"/>
+    <account id="27" subconto_kind_id="0" code="50.01" name="Касса организации" kind="А" section="V. Денежные средства" currency="0"/>
+    <account id="28" subconto_kind_id="0" code="51" name="Расчетные счета" kind="А" section="V. Денежные средства" currency="0"/>
+    <account id="29" subconto_kind_id="0" code="52" name="Валютные счета" kind="А" section="V. Денежные средства" currency="1"/>
+    <account id="30" subconto_kind_id="0" code="55" name="Специальные счета в банках" kind="А" section="V. Денежные средства" currency="0"/>
+    <account id="31" subconto_kind_id="0" code="57" name="Переводы в пути" kind="А" section="V. Денежные средства" currency="0"/>
+    <account id="32" subconto_kind_id="0" code="58" name="Финансовые вложения" kind="А" section="V. Денежные средства" currency="0"/>
+    <account id="33" subconto_kind_id="1" code="60" name="Расчеты с поставщиками и подрядчиками" kind="АП" section="VI. Расчеты" currency="0"/>
+    <account id="34" subconto_kind_id="1" code="60.01" name="Расчеты с поставщиками и подрядчиками" kind="АП" section="VI. Расчеты" currency="0"/>
+    <account id="35" subconto_kind_id="1" code="60.02" name="Расчеты по авансам выданным" kind="А" section="VI. Расчеты" currency="0"/>
+    <account id="36" subconto_kind_id="1" code="60.21" name="Расчеты с поставщиками и подрядчиками (в валюте)" kind="АП" section="VI. Расчеты" currency="1"/>
+    <account id="37" subconto_kind_id="1" code="60.22" name="Расчеты по авансам выданным (в валюте)" kind="А" section="VI. Расчеты" currency="1"/>
+    <account id="38" subconto_kind_id="1" code="62" name="Расчеты с покупателями и заказчиками" kind="АП" section="VI. Расчеты" currency="0"/>
+    <account id="39" subconto_kind_id="1" code="62.01" name="Расчеты с покупателями и заказчиками" kind="АП" section="VI. Расчеты" currency="0"/>
+    <account id="40" subconto_kind_id="1" code="62.02" name="Расчеты по авансам полученным" kind="П" section="VI. Расчеты" currency="0"/>
+    <account id="41" subconto_kind_id="1" code="62.21" name="Расчеты с покупателями и заказчиками (в валюте)" kind="АП" section="VI. Расчеты" currency="1"/>
+    <account id="42" subconto_kind_id="0" code="66" name="Расчеты по краткосрочным кредитам и займам" kind="П" section="VI. Расчеты" currency="0"/>
+    <account id="43" subconto_kind_id="0" code="67" name="Расчеты по долгосрочным кредитам и займам" kind="П" section="VI. Расчеты" currency="0"/>
+    <account id="44" subconto_kind_id="0" code="68" name="Расчеты по налогам и сборам" kind="АП" section="VI. Расчеты" currency="0"/>
+    <account id="45" subconto_kind_id="0" code="68.01" name="НДФЛ при исполнении обязанностей налогового агента" kind="П" section="VI. Расчеты" currency="0"/>
+    <account id="46" subconto_kind_id="0" code="68.02" name="Налог на добавленную стоимость" kind="АП" section="VI. Расчеты" currency="0"/>
+    <account id="47" subconto_kind_id="0" code="68.04" name="Налог на прибыль" kind="АП" section="VI. Расчеты" currency="0"/>
+    <account id="48" subconto_kind_id="0" code="68.90" name="Единый налоговый счет" kind="АП" section="VI. Расчеты" currency="0"/>
+    <account id="49" subconto_kind_id="0" code="69" name="Расчеты по социальному страхованию и обеспечению" kind="АП" section="VI. Расчеты" currency="0"/>
+    <account id="50" subconto_kind_id="0" code="69.09" name="Страховые взносы по единому тарифу" kind="П" section="VI. Расчеты" currency="0"/>
+    <account id="51" subconto_kind_id="0" code="69.11" name="Расчеты по обязательному социальному страхованию от несчастных случаев на производст" kind="П" section="VI. Расчеты" currency="0"/>
+    <account id="52" subconto_kind_id="3" code="70" name="Расчеты с персоналом по оплате труда" kind="П" section="VI. Расчеты" currency="0"/>
+    <account id="53" subconto_kind_id="3" code="71" name="Расчеты с подотчетными лицами" kind="АП" section="VI. Расчеты" currency="0"/>
+    <account id="54" subconto_kind_id="3" code="73" name="Расчеты с персоналом по прочим операциям" kind="АП" section="VI. Расчеты" currency="0"/>
+    <account id="55" subconto_kind_id="0" code="75" name="Расчеты с учредителями" kind="АП" section="VI. Расчеты" currency="0"/>
+    <account id="56" subconto_kind_id="1" code="76" name="Расчеты с разными дебиторами и кредиторами" kind="АП" section="VI. Расчеты" currency="0"/>
+    <account id="57" subconto_kind_id="0" code="80" name="Уставный капитал" kind="П" section="VII. Капитал" currency="0"/>
+    <account id="58" subconto_kind_id="0" code="82" name="Резервный капитал" kind="П" section="VII. Капитал" currency="0"/>
+    <account id="59" subconto_kind_id="0" code="83" name="Добавочный капитал" kind="П" section="VII. Капитал" currency="0"/>
+    <account id="60" subconto_kind_id="0" code="84" name="Нераспределенная прибыль (непокрытый убыток)" kind="АП" section="VII. Капитал" currency="0"/>
+    <account id="61" subconto_kind_id="0" code="84.01" name="Прибыль, подлежащая распределению" kind="АП" section="VII. Капитал" currency="0"/>
+    <account id="62" subconto_kind_id="0" code="90" name="Продажи" kind="АП" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="63" subconto_kind_id="0" code="90.01" name="Выручка" kind="П" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="64" subconto_kind_id="0" code="90.02" name="Себестоимость продаж" kind="А" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="65" subconto_kind_id="0" code="90.03" name="Налог на добавленную стоимость" kind="А" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="66" subconto_kind_id="0" code="90.07" name="Расходы на продажу" kind="А" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="67" subconto_kind_id="0" code="90.08" name="Управленческие расходы" kind="А" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="68" subconto_kind_id="0" code="90.09" name="Прибыль / убыток от продаж" kind="АП" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="69" subconto_kind_id="0" code="91" name="Прочие доходы и расходы" kind="АП" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="70" subconto_kind_id="0" code="91.01" name="Прочие доходы" kind="П" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="71" subconto_kind_id="0" code="91.02" name="Прочие расходы" kind="А" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="72" subconto_kind_id="0" code="91.09" name="Сальдо прочих доходов и расходов" kind="АП" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="73" subconto_kind_id="0" code="94" name="Недостачи и потери от порчи ценностей" kind="А" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="74" subconto_kind_id="0" code="96" name="Резервы предстоящих расходов" kind="П" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="75" subconto_kind_id="0" code="97" name="Расходы будущих периодов" kind="А" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="76" subconto_kind_id="0" code="98" name="Доходы будущих периодов" kind="П" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="77" subconto_kind_id="0" code="99" name="Прибыли и убытки" kind="АП" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="78" subconto_kind_id="0" code="99.01" name="Прибыли и убытки (за исключением налога на прибыль)" kind="АП" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="79" subconto_kind_id="0" code="99.02" name="Налог на прибыль" kind="АП" section="VIII. Финансовые результаты" currency="0"/>
+    <account id="80" subconto_kind_id="0" code="001" name="Арендованные основные средства" kind="А" section="Забалансовые счета" currency="0"/>
+    <account id="81" subconto_kind_id="0" code="002" name="Товарно-материальные ценности, принятые на ответственное хранение" kind="А" section="Забалансовые счета" currency="0"/>
+    <account id="82" subconto_kind_id="2" code="004" name="Товары, принятые на комиссию" kind="А" section="Забалансовые счета" currency="0"/>
+    <account id="83" subconto_kind_id="2" code="МЦ.04" name="Инвентарь и хозяйственные принадлежности в эксплуатации" kind="А" section="Забалансовые счета" currency="0"/>
+  </accounts>
+  <units>
+    <unit id="1" code="796" name="шт"/>
+    <unit id="2" code="778" name="упак"/>
+    <unit id="3" code="166" name="кг"/>
+    <unit id="4" code="006" name="м"/>
+    <unit id="5" code="112" name="л"/>
+    <unit id="6" code="876" name="усл. ед."/>
+    <unit id="7" code="356" name="ч"/>
+    <unit id="8" code="362" name="мес"/>
+  </units>
+  <vat_rates>
+    <vat_rate id="1" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="22%" rate="22"/>
+    <vat_rate id="2" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="10%" rate="10"/>
+    <vat_rate id="3" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="0%" rate="0"/>
+    <vat_rate id="4" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="Без НДС" rate="0"/>
+    <vat_rate id="5" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="20% (до 2026)" rate="20"/>
+    <vat_rate id="6" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="5% (УСН)" rate="5"/>
+    <vat_rate id="7" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="7% (УСН)" rate="7"/>
+  </vat_rates>
+  <doc_types>
+    <doc_type id="1" debit_id="22" credit_id="34" vat_debit_id="16" vat_credit_id="34" cost_debit_id="0" cost_credit_id="0" code="receipt" name="Поступление товаров" prefix="ПТ-" form="document" base="net" vat_book="2" auto_accounts="0" script="" description="Товары от поставщика по УПД или накладной и счету-фактуре: Дт 41.01 Кт 60.01 на стоимость без НДС, Дт 19.03 Кт 60.01 на НДС."/>
+    <doc_type id="2" debit_id="39" credit_id="63" vat_debit_id="65" vat_credit_id="46" cost_debit_id="64" cost_credit_id="22" code="sale" name="Реализация товаров" prefix="РТ-" form="document" base="total" vat_book="1" auto_accounts="0" script="" description="Отгрузка покупателю: выручка Дт 62.01 Кт 90.01 с НДС, начисление НДС Дт 90.03 Кт 68.02, списание товаров по средней себестоимости Дт 90.02 Кт 41.01 (ФСБУ 5/2019)."/>
+    <doc_type id="3" debit_id="20" credit_id="34" vat_debit_id="17" vat_credit_id="34" cost_debit_id="0" cost_credit_id="0" code="services" name="Поступление услуг" prefix="ПУ-" form="document" base="net" vat_book="2" auto_accounts="0" script="" description="Услуги сторонних организаций (аренда, связь, консультации): Дт 26 Кт 60.01 без НДС, Дт 19.04 Кт 60.01 на НДС."/>
+    <doc_type id="4" debit_id="27" credit_id="39" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="cash_in" name="Приходный кассовый ордер" prefix="ПКО-" form="document" base="total" vat_book="0" auto_accounts="0" script="" description="Оплата от покупателя наличными в кассу (форма КО-1, указание Банка России № 3210-У): Дт 50.01 Кт 62.01."/>
+    <doc_type id="5" debit_id="34" credit_id="27" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="cash_out" name="Расходный кассовый ордер" prefix="РКО-" form="document" base="total" vat_book="0" auto_accounts="0" script="" description="Оплата поставщику наличными из кассы (форма КО-2): Дт 60.01 Кт 50.01. Лимит расчетов наличными между организациями 100 000 руб. по одному договору (указание Банка России № 5348-У)."/>
+    <doc_type id="6" debit_id="34" credit_id="28" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="bank_out" name="Платежное поручение исходящее" prefix="ПП-" form="document" base="total" vat_book="0" auto_accounts="0" script="" description="Оплата поставщику с расчетного счета (форма 0401060, положение Банка России № 762-П): Дт 60.01 Кт 51."/>
+    <doc_type id="7" debit_id="28" credit_id="39" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="bank_in" name="Поступление на расчетный счет" prefix="ПВ-" form="document" base="total" vat_book="0" auto_accounts="0" script="" description="Оплата от покупателя по выписке банка: Дт 51 Кт 62.01."/>
+    <doc_type id="8" debit_id="46" credit_id="16" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="vat_deduction" name="Вычет НДС (книга покупок)" prefix="ВН-" form="document" base="total" vat_book="0" auto_accounts="0" script="" description="Принятие к вычету НДС по оприходованным ценностям при наличии счета-фактуры (ст. 171, 172 НК РФ; факт оплаты не требуется с 2006 г.): Дт 68.02 Кт 19.03."/>
+    <doc_type id="9" debit_id="0" credit_id="0" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="operation" name="Операция (бухгалтерская справка)" prefix="ОП-" form="operation" base="total" vat_book="0" auto_accounts="0" script="" description="Проводки вводятся бухгалтером вручную, с указанием субконто (ФСБУ 27/2021: бухгалтерская справка — первичный документ)."/>
+    <doc_type id="10" debit_id="0" credit_id="0" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="opening" name="Ввод начальных остатков" prefix="ВО-" form="operation" base="total" vat_book="0" auto_accounts="0" script="" description="Остатки на начало учета в корреспонденции со вспомогательным счетом 000."/>
+    <doc_type id="11" debit_id="20" credit_id="52" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="payroll" name="Начисление зарплаты" prefix="НЗ-" form="payroll" base="gross" vat_book="0" auto_accounts="0" script="" description="Начисление оплаты труда Дт 26 (44 по сотруднику) Кт 70; удержание НДФЛ по прогрессивной шкале с учетом вычетов Дт 70 Кт 68.01; страховые взносы по единому тарифу Дт 26 Кт 69.09 и на травматизм Кт 69.11."/>
+    <doc_type id="12" debit_id="52" credit_id="28" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="payout" name="Выплата зарплаты" prefix="ВЗ-" form="payroll" base="net" vat_book="0" auto_accounts="0" script="" description="Перечисление заработной платы на счета сотрудников по реестру: Дт 70 Кт 51."/>
+    <doc_type id="13" debit_id="10" credit_id="34" vat_debit_id="15" vat_credit_id="34" cost_debit_id="0" cost_credit_id="0" code="equipment" name="Поступление оборудования" prefix="ПО-" form="document" base="net" vat_book="2" auto_accounts="0" script="" description="Приобретение основных средств: Дт 08.04 Кт 60.01 без НДС, Дт 19.01 Кт 60.01 на НДС."/>
+    <doc_type id="14" debit_id="0" credit_id="10" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="commissioning" name="Принятие к учету ОС" prefix="ОС-" form="assets" base="total" vat_book="0" auto_accounts="0" script="" description="Принятие к учету основных средств: Дт 01.01 Кт 08.04 по первоначальной стоимости (ФСБУ 6/2020)."/>
+    <doc_type id="15" debit_id="0" credit_id="0" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="closing" name="Закрытие месяца" prefix="ЗМ-" form="closing" base="total" vat_book="0" auto_accounts="0" script="" description="Амортизация ОС, переоценка валютных счетов, закрытие счетов 26 и 44, финансовый результат на счет 99.01."/>
+    <doc_type id="16" debit_id="22" credit_id="36" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="import" name="Поступление товаров в валюте" prefix="ПИ-" form="document" base="net" vat_book="0" auto_accounts="0" script="" description="Товары от иностранного поставщика: Дт 41.01 Кт 60.21 по курсу Банка России на дату поступления (ПБУ 3/2006)."/>
+    <doc_type id="17" debit_id="36" credit_id="29" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="currency_out" name="Списание с валютного счета" prefix="ВС-" form="document" base="total" vat_book="0" auto_accounts="0" script="" description="Оплата иностранному поставщику с валютного счета: Дт 60.21 Кт 52."/>
+    <doc_type id="18" debit_id="27" credit_id="28" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="cash_from_bank" name="Получение наличных в банке" prefix="ПКО-" form="document" base="total" vat_book="0" auto_accounts="0" script="" description="Наличные с расчетного счета в кассу (форма КО-1): Дт 50.01 Кт 51."/>
+    <doc_type id="20" debit_id="73" credit_id="22" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="writeoff" name="Списание товаров" prefix="СТ-" form="document" base="total" vat_book="0" auto_accounts="0" script="post_writeoff" description="Недостача, порча: Дт 94 Кт 41.01 по средней себестоимости на дату документа (ФСБУ 5/2019). Проводки пишет функция post_writeoff из rules.lua."/>
+    <doc_type id="19" debit_id="48" credit_id="28" vat_debit_id="0" vat_credit_id="0" cost_debit_id="0" cost_credit_id="0" code="tax_payment" name="Уплата налогов (ЕНП)" prefix="УН-" form="document" base="total" vat_book="0" auto_accounts="0" script="" description="Единый налоговый платеж на ЕНС (ст. 11.3 НК РФ): Дт 68.90 Кт 51. Зачет в счет НДС, НДФЛ и взносов — операцией Дт 68.02 (68.01, 69.09) Кт 68.90 по уведомлению."/>
+  </doc_types>
+  <payroll_taxes>
+    <payroll_tax id="1" debit_id="52" credit_id="45" code="ndfl" name="НДФЛ (13–22%)" rate="13" rate_above="0" cap_month="0" cap_year="0" allowance_limit="450000" withheld="1" allowance="1" after_withheld="0" scale="cumulative" rounding="unit" script="" valid_from="2025-01-01" valid_to=""/>
+    <payroll_tax id="2" debit_id="0" credit_id="50" code="contributions_2" name="Страховые взносы по единому тарифу (2025)" rate="30" rate_above="15.1" cap_month="0" cap_year="2759000" allowance_limit="0" withheld="0" allowance="0" after_withheld="0" scale="" rounding="" script="" valid_from="2025-01-01" valid_to="2025-12-31"/>
+    <payroll_tax id="3" debit_id="0" credit_id="50" code="contributions" name="Страховые взносы по единому тарифу" rate="30" rate_above="15.1" cap_month="0" cap_year="2979000" allowance_limit="0" withheld="0" allowance="0" after_withheld="0" scale="" rounding="" script="" valid_from="2026-01-01" valid_to=""/>
+    <payroll_tax id="4" debit_id="0" credit_id="51" code="injury" name="Взносы на травматизм (I класс, 0,2%)" rate="0.2" rate_above="0" cap_month="0" cap_year="0" allowance_limit="0" withheld="0" allowance="0" after_withheld="0" scale="" rounding="" script="" valid_from="2025-01-01" valid_to=""/>
+  </payroll_taxes>
+  <tax_scales>
+    <tax_scale id="1" tax_id="1" base_from="0" rate="13" fixed="0" curve="0"/>
+    <tax_scale id="2" tax_id="1" base_from="2400000" rate="15" fixed="312000" curve="0"/>
+    <tax_scale id="3" tax_id="1" base_from="5000000" rate="18" fixed="702000" curve="0"/>
+    <tax_scale id="4" tax_id="1" base_from="20000000" rate="20" fixed="3402000" curve="0"/>
+    <tax_scale id="5" tax_id="1" base_from="50000000" rate="22" fixed="9402000" curve="0"/>
+  </tax_scales>
+  <closing_rules>
+    <closing_rule id="1" account_id="0" target_id="0" via_id="0" gain_id="0" loss_id="0" kind="depreciation" start="next" script="" name="Амортизация ОС"/>
+    <closing_rule id="2" account_id="0" target_id="0" via_id="0" gain_id="70" loss_id="71" kind="revaluation" start="" script="" name="Курсовая разница"/>
+    <closing_rule id="3" account_id="20" target_id="67" via_id="0" gain_id="0" loss_id="0" kind="transfer" start="" script="" name="Закрытие счета 26"/>
+    <closing_rule id="4" account_id="24" target_id="66" via_id="0" gain_id="0" loss_id="0" kind="transfer" start="" script="" name="Закрытие счета 44"/>
+    <closing_rule id="5" account_id="62" target_id="78" via_id="68" gain_id="0" loss_id="0" kind="transfer" start="" script="" name="Финансовый результат от продаж"/>
+    <closing_rule id="6" account_id="69" target_id="78" via_id="72" gain_id="0" loss_id="0" kind="transfer" start="" script="" name="Сальдо прочих доходов и расходов"/>
+  </closing_rules>
+  <balance_rules>
+    <balance_rule id="1" account_id="27" currency_account_id="0" document="ОстаткиНаличныхДенежныхСредств" credit="0"/>
+    <balance_rule id="2" account_id="28" currency_account_id="29" document="ОстаткиБезналичныхДенежныхСредств" credit="0"/>
+    <balance_rule id="3" account_id="39" currency_account_id="41" document="ОстаткиРасчетовСПокупателямиДолги" credit="0"/>
+    <balance_rule id="4" account_id="40" currency_account_id="0" document="ОстаткиРасчетовСПокупателямиАвансы" credit="1"/>
+    <balance_rule id="5" account_id="34" currency_account_id="36" document="ОстаткиРасчетовСПоставщикамиДолги" credit="1"/>
+    <balance_rule id="6" account_id="35" currency_account_id="37" document="ОстаткиРасчетовСПоставщикамиАвансы" credit="0"/>
+    <balance_rule id="7" account_id="53" currency_account_id="0" document="ОстаткиЗадолженностиПодотчетныхЛиц" credit="0"/>
+    <balance_rule id="8" account_id="53" currency_account_id="0" document="ОстаткиПерерасходаПодотчетныхЛиц" credit="1"/>
+    <balance_rule id="9" account_id="22" currency_account_id="0" document="ОстаткиСобственныхТМЦ" credit="0"/>
+    <balance_rule id="10" account_id="42" currency_account_id="0" document="ОстаткиРасчетовПоКредитамЗаймам" credit="1"/>
+  </balance_rules>
+  <print_forms>
+    <print_form id="1" doc_type_id="2" report="" name="Счет-фактура" template="schet-faktura.html" basis="Постановление Правительства РФ от 26.12.2011 № 1137 (ред. 2024 г.)"/>
+    <print_form id="2" doc_type_id="2" report="" name="Универсальный передаточный документ (УПД)" template="upd.html" basis="Письмо ФНС России от 21.10.2013 № ММВ-20-3/96@; постановление Правительства РФ № 1137"/>
+    <print_form id="3" doc_type_id="2" report="" name="Счет на оплату" template="schet.html" basis="Произвольная форма (ст. 9 402-ФЗ)"/>
+    <print_form id="4" doc_type_id="4" report="" name="Приходный кассовый ордер КО-1" template="ko1.html" basis="Постановление Госкомстата России от 18.08.1998 № 88; указание Банка России от 11.03.2014 № 3210-У"/>
+    <print_form id="5" doc_type_id="5" report="" name="Расходный кассовый ордер КО-2" template="ko2.html" basis="Постановление Госкомстата России от 18.08.1998 № 88; указание Банка России от 11.03.2014 № 3210-У"/>
+    <print_form id="6" doc_type_id="6" report="" name="Платежное поручение 0401060" template="pp0401060.html" basis="Положение Банка России от 29.06.2021 № 762-П"/>
+    <print_form id="7" doc_type_id="18" report="" name="Приходный кассовый ордер КО-1" template="ko1.html" basis="Постановление Госкомстата России от 18.08.1998 № 88; указание Банка России от 11.03.2014 № 3210-У"/>
+    <print_form id="8" doc_type_id="11" report="" name="Расчетная ведомость Т-51" template="t51.html" basis="Постановление Госкомстата России от 05.01.2004 № 1 (форма применяется по выбору организации, ст. 9 402-ФЗ)"/>
+    <print_form id="9" doc_type_id="19" report="" name="Платежное поручение 0401060 (ЕНП)" template="pp0401060.html" basis="Положение Банка России от 29.06.2021 № 762-П; приказ Минфина России от 12.11.2013 № 107н"/>
+    <print_form id="10" doc_type_id="0" report="cash_book" name="Кассовая книга КО-4" template="ko4.html" basis="Постановление Госкомстата России от 18.08.1998 № 88; указание Банка России № 3210-У"/>
+    <print_form id="11" doc_type_id="0" report="vat_book" name="Книга продаж" template="kniga-prodazh.html" basis="Постановление Правительства РФ от 26.12.2011 № 1137, приложение № 5"/>
+    <print_form id="12" doc_type_id="0" report="vat_book" name="Книга покупок" template="kniga-pokupok.html" basis="Постановление Правительства РФ от 26.12.2011 № 1137, приложение № 4"/>
+    <print_form id="13" doc_type_id="0" report="vat_summary" name="НДС: расчет по ставкам (раздел 3 декларации)" template="nds-svodka.html" basis="Приказ ФНС России от 29.10.2014 № ММВ-7-3/558@ (ред. 2025 г.)"/>
+    <print_form id="14" doc_type_id="0" report="balances" name="Оборотно-сальдовая ведомость" template="osv.html" basis="Регистр бухгалтерского учета (ст. 10 402-ФЗ)"/>
+    <print_form id="15" doc_type_id="0" report="journal_rows" name="Журнал операций" template="journal.html" basis="Регистр бухгалтерского учета (ст. 10 402-ФЗ)"/>
+  </print_forms>
+  <regulations>
+    <regulation id="1" area="accounts" title="План счетов бухгалтерского учета и Инструкция по его применению" reference="Приказ Минфина России от 31.10.2000 № 94н (ред. от 08.11.2010)" valid_from="2001-01-01" url="https://minfin.gov.ru/ru/document/?id_4=2293"/>
+    <regulation id="2" area="accounts" title="Бухгалтерская (финансовая) отчетность" reference="ФСБУ 4/2023, приказ Минфина России от 04.10.2023 № 157н" valid_from="2025-01-01" url="https://minfin.gov.ru/ru/perfomance/accounting/accounting/standards/fsbu"/>
+    <regulation id="3" area="vat" title="Ставка НДС 22% (основная), 10%, 0%" reference="П. 3 ст. 164 НК РФ в ред. Федерального закона от 28.11.2025 № 425-ФЗ" valid_from="2026-01-01" url="https://www.nalog.gov.ru/rn77/taxation/taxes/nds/"/>
+    <regulation id="4" area="vat" title="Формы счета-фактуры, книг покупок и продаж" reference="Постановление Правительства РФ от 26.12.2011 № 1137 (с изм.)" valid_from="2012-04-01" url="http://publication.pravo.gov.ru/"/>
+    <regulation id="5" area="vat" title="Электронные форматы счета-фактуры и УПД (версия 5.03)" reference="Приказ ФНС России от 19.12.2023 № ЕД-7-26/970@" valid_from="2025-04-01" url="https://www.nalog.gov.ru/rn77/about_fts/docs/"/>
+    <regulation id="6" area="vat" title="Декларация по НДС" reference="Приказ ФНС России от 29.10.2014 № ММВ-7-3/558@ (ред. 2025 г.)" valid_from="2025-01-01" url="https://www.nalog.gov.ru/rn77/taxation/taxes/nds/"/>
+    <regulation id="7" area="payroll" title="НДФЛ: прогрессивная шкала 13/15/18/20/22%" reference="Ст. 224 НК РФ в ред. Федерального закона от 12.07.2024 № 176-ФЗ" valid_from="2025-01-01" url="https://www.nalog.gov.ru/rn77/taxation/taxes/ndfl/"/>
+    <regulation id="8" area="payroll" title="Стандартные вычеты на детей 1 400 / 2 800 / 6 000 руб., предел дохода 450 000 руб." reference="Ст. 218 НК РФ (176-ФЗ)" valid_from="2025-01-01" url="https://www.nalog.gov.ru/rn77/taxation/taxes/ndfl/nalog_vichet/"/>
+    <regulation id="9" area="payroll" title="Единый тариф страховых взносов 30% / 15,1% свыше предельной базы" reference="Ст. 425 НК РФ" valid_from="2023-01-01" url="https://www.nalog.gov.ru/rn77/taxation/insprem/"/>
+    <regulation id="10" area="payroll" title="Единая предельная база 2 979 000 руб." reference="Постановление Правительства РФ от 31.10.2025 № 1705" valid_from="2026-01-01" url="http://publication.pravo.gov.ru/"/>
+    <regulation id="11" area="payroll" title="Пониженный тариф МСП 15% свыше 1,5 МРОТ — только приоритетные отрасли" reference="Пп. 17 п. 1 ст. 427 НК РФ (425-ФЗ); распоряжение Правительства РФ от 27.12.2025 № 4125-р" valid_from="2026-01-01" url="https://www.nalog.gov.ru/rn77/taxation/insprem/"/>
+    <regulation id="12" area="payroll" title="Тарифы взносов на травматизм 0,2–8,5% по классам риска" reference="Федеральный закон от 22.12.2005 № 179-ФЗ; закон о тарифах на 2026 г. и плановый период" valid_from="2026-01-01" url="https://sfr.gov.ru/"/>
+    <regulation id="13" area="payroll" title="МРОТ 27 093 руб." reference="Федеральный закон от 28.11.2025 № 429-ФЗ" valid_from="2026-01-01" url="http://publication.pravo.gov.ru/"/>
+    <regulation id="14" area="assets" title="Основные средства, амортизация (линейный способ, с месяца после признания)" reference="ФСБУ 6/2020, приказ Минфина России от 17.09.2020 № 204н" valid_from="2022-01-01" url="https://minfin.gov.ru/ru/perfomance/accounting/accounting/standards/fsbu"/>
+    <regulation id="15" area="assets" title="Запасы: оценка по средней себестоимости" reference="ФСБУ 5/2019, приказ Минфина России от 15.11.2019 № 180н" valid_from="2021-01-01" url="https://minfin.gov.ru/ru/perfomance/accounting/accounting/standards/fsbu"/>
+    <regulation id="16" area="cash" title="Порядок ведения кассовых операций, формы КО-1, КО-2, КО-4" reference="Указание Банка России от 11.03.2014 № 3210-У (ред. от 09.01.2024)" valid_from="2014-06-01" url="https://www.cbr.ru/"/>
+    <regulation id="17" area="cash" title="Платежное поручение, форма 0401060" reference="Положение Банка России от 29.06.2021 № 762-П" valid_from="2021-09-10" url="https://www.cbr.ru/"/>
+    <regulation id="18" area="forms" title="Первичные учетные документы: формы утверждает руководитель" reference="Ст. 9 Федерального закона от 06.12.2011 № 402-ФЗ; ФСБУ 27/2021" valid_from="2013-01-01" url="http://publication.pravo.gov.ru/"/>
+    <regulation id="19" area="forms" title="Универсальный передаточный документ" reference="Письмо ФНС России от 21.10.2013 № ММВ-20-3/96@" valid_from="2013-10-21" url="https://www.nalog.gov.ru/"/>
+    <regulation id="20" area="reporting" title="Доходы (замена ПБУ 9/99); обязателен с 2027 г., досрочно — с 2026 г." reference="ФСБУ 9/2025, приказ Минфина России от 16.05.2025 № 56н" valid_from="2027-01-01" url="https://minfin.gov.ru/ru/perfomance/accounting/accounting/standards/fsbu"/>
+    <regulation id="22" area="cash" title="Предельный размер наличных расчетов 100 000 руб. по одному договору (плагин plugins/10-cash-limit.lua)" reference="Указание Банка России от 09.12.2019 № 5348-У" valid_from="2020-04-27" url="https://www.cbr.ru/"/>
+    <regulation id="21" area="tax" title="Единый налоговый счет и единый налоговый платеж" reference="Ст. 11.3, 45 НК РФ (Федеральный закон от 14.07.2022 № 263-ФЗ)" valid_from="2023-01-01" url="https://www.nalog.gov.ru/rn77/ens/"/>
+  </regulations>
+</cfg>

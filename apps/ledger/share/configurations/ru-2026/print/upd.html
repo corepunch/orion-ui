@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>УПД {{number}}</title>
+<style>
+body{font-family:"Times New Roman",serif;font-size:10pt;margin:12mm;color:#000}
+table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
+.grid td,.grid th{border:1px solid #000}.grid th{font-weight:normal;font-size:8pt;text-align:center}
+.r{text-align:right}.c{text-align:center}.small{font-size:7.5pt}.b{font-weight:bold}
+.line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
+.sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
+h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
+@media print{body{margin:6mm}}
+</style></head><body>
+<table style="width:100%"><tr><td style="width:14mm;vertical-align:top"><table class="box"><tr><td class="small">Статус:<br><b>1</b></td></tr></table><p class="small">1 — счет-фактура и передаточный документ (акт)<br>2 — передаточный документ (акт)</p></td>
+<td><div class="r small">Приложение № 1 к письму ФНС России от 21.10.2013 № ММВ-20-3/96@; форма счета-фактуры — приложение № 1 к постановлению Правительства РФ от 26.12.2011 № 1137</div>
+<h1>Счет-фактура № {{number}} от {{date|dmy}} <span class="small">(1)</span>&nbsp;&nbsp; Исправление № -- от -- <span class="small">(1а)</span></h1>
+<table>
+<tr><td>Продавец</td><td><span class="line">{{org.name}}</span></td><td class="small">(2)</td></tr>
+<tr><td>Адрес</td><td><span class="line">{{org.address}}</span></td><td class="small">(2а)</td></tr>
+<tr><td>ИНН/КПП продавца</td><td><span class="line">{{org.tax_id}}/{{org.kpp}}</span></td><td class="small">(2б)</td></tr>
+<tr><td>Грузоотправитель и его адрес</td><td><span class="line">он же</span></td><td class="small">(3)</td></tr>
+<tr><td>Грузополучатель и его адрес</td><td><span class="line">{{counterparty.name}}, {{counterparty.address}}</span></td><td class="small">(4)</td></tr>
+<tr><td>К платежно-расчетному документу №</td><td><span class="line">--</span></td><td class="small">(5)</td></tr>
+<tr><td>Документ об отгрузке</td><td><span class="line">№ п/п 1-{{number}} от {{date|dmy}}</span></td><td class="small">(5а)</td></tr>
+<tr><td>Покупатель</td><td><span class="line">{{counterparty.name}}</span></td><td class="small">(6)</td></tr>
+<tr><td>Адрес</td><td><span class="line">{{counterparty.address}}</span></td><td class="small">(6а)</td></tr>
+<tr><td>ИНН/КПП покупателя</td><td><span class="line">{{counterparty.tax_id}}/{{counterparty.kpp}}</span></td><td class="small">(6б)</td></tr>
+<tr><td>Валюта: наименование, код</td><td><span class="line">Российский рубль, 643</span></td><td class="small">(7)</td></tr>
+<tr><td>Идентификатор государственного контракта, договора (соглашения)</td><td><span class="line">--</span></td><td class="small">(8)</td></tr>
+</table></td></tr></table>
+<table class="grid" style="width:100%;margin-top:6px">
+<tr><th>№<br>п/п</th><th>Код<br>товара/<br>работ,<br>услуг</th><th>Наименование товара (описание выполненных работ,<br>оказанных услуг), имущественного права</th><th>Код<br>вида<br>товара</th><th colspan="2">Единица<br>измерения</th><th>Коли-<br>чество<br>(объем)</th><th>Цена (тариф)<br>за единицу<br>измерения</th><th>Стоимость товаров<br>(работ, услуг),<br>имущественных<br>прав без налога —<br>всего</th><th>В том<br>числе<br>сумма<br>акциза</th><th>Нало-<br>говая<br>ставка</th><th>Сумма налога,<br>предъявляемая<br>покупателю</th><th>Стоимость товаров<br>(работ, услуг),<br>имущественных<br>прав с налогом —<br>всего</th><th colspan="2">Страна<br>происхождения<br>товара</th><th>Регистрационный<br>номер декларации<br>на товары</th></tr>
+<tr><th>А</th><th>Б</th><th>1</th><th>1а</th><th>2</th><th>2а</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>10а</th><th>11</th></tr>
+{{#lines}}<tr><td class="c">{{n}}</td><td class="c">{{item.sku}}</td><td>{{item.name}}</td><td class="c">--</td><td class="c">{{item.unit.code}}</td><td class="c">{{item.unit.name}}</td><td class="r">{{quantity}}</td><td class="r">{{price}}</td><td class="r">{{amount}}</td><td class="c">без акциза</td><td class="c">{{vat_rate.name}}</td><td class="r">{{vat}}</td><td class="r">{{total}}</td><td class="c">--</td><td class="c">--</td><td class="c">--</td></tr>
+{{/lines}}<tr><td colspan="8" class="b">Всего к оплате (9)</td><td class="r b">{{amount}}</td><td class="c">X</td><td class="c">X</td><td class="r b">{{vat}}</td><td class="r b">{{total}}</td><td colspan="3" style="border:0"></td></tr>
+</table>
+<table style="width:100%" class="sign"><tr>
+<td>Руководитель организации или иное уполномоченное лицо <span class="line">{{org.director}}</span></td>
+<td>Главный бухгалтер или иное уполномоченное лицо <span class="line">{{org.accountant}}</span></td></tr></table>
+<table style="width:100%;margin-top:8px"><tr><td style="width:50%;border-right:1px solid #000;padding-right:6px">
+<p>Основание передачи (сдачи) / получения (приемки) <span class="line">{{comment}}</span> <span class="small">[8]</span></p>
+<p>Данные о транспортировке и грузе <span class="line">--</span> <span class="small">[9]</span></p>
+<p>Товар (груз) передал / услуги, результаты работ, права сдал<br><span class="line">{{org.director}}</span> <span class="small">[10]</span><br><span class="small">(должность, подпись, ф.и.о.)</span></p>
+<p>Дата отгрузки, передачи (сдачи) &laquo;{{date|dmy}}&raquo; <span class="small">[11]</span></p>
+<p>Иные сведения об отгрузке, передаче <span class="line">--</span> <span class="small">[12]</span></p>
+<p>Ответственный за правильность оформления факта хозяйственной жизни<br><span class="line">{{org.accountant}}</span> <span class="small">[13]</span></p>
+<p>Наименование экономического субъекта — составителя документа (в т.ч. комиссионера / агента)<br><span class="line">{{org.name}}, ИНН {{org.tax_id}}</span> <span class="small">[14]</span></p>
+</td><td style="padding-left:6px">
+<p>Товар (груз) получил / услуги, результаты работ, права принял<br><span class="line">&nbsp;</span> <span class="small">[15]</span><br><span class="small">(должность, подпись, ф.и.о.)</span></p>
+<p>Дата получения (приемки) &laquo;____&raquo; ____________ 20__ г. <span class="small">[16]</span></p>
+<p>Иные сведения о получении, приемке <span class="line">--</span> <span class="small">[17]</span></p>
+<p>Ответственный за правильность оформления факта хозяйственной жизни<br><span class="line">&nbsp;</span> <span class="small">[18]</span></p>
+<p>Наименование экономического субъекта — составителя документа<br><span class="line">{{counterparty.name}}, ИНН {{counterparty.tax_id}}</span> <span class="small">[19]</span></p>
+<p>М.П.</p></td></tr></table>
+</body></html>
