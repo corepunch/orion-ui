@@ -150,12 +150,13 @@ int script_open_orion(lua_State *L) {
 
 static int l_print(lua_State *L) {
   const char *name = lua_tostring(L, lua_upvalueindex(1));
+  int n = lua_gettop(L);  // the buffer may push a box above the arguments
   luaL_Buffer b;
   luaL_buffinit(L, &b);
-  for (int i = 1; i <= lua_gettop(L); i++) {
+  for (int i = 1; i <= n; i++) {
     if (i > 1) luaL_addchar(&b, '\t');
-    luaL_addstring(&b, luaL_tolstring(L, i, NULL));
-    lua_pop(L, 1);
+    luaL_tolstring(L, i, NULL);
+    luaL_addvalue(&b);
   }
   luaL_pushresult(&b);
   fprintf(stderr, "[script] %s: %s\n", name ? name : "?", lua_tostring(L, -1));
