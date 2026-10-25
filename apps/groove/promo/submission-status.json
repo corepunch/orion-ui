@@ -4,13 +4,120 @@
   "locale": "en-US",
   "macos": {
     "uploaded_screenshots": 5,
-    "verified_ui": "5 of 10 App Screenshots",
-    "url": "https://appstoreconnect.apple.com/apps/6821380428/distribution/macos/version/inflight"
+    "verified_ui": "2 of 3 App Previews; 5 of 10 App Screenshots (both Mac version preview entries failed upload)",
+    "url": "https://appstoreconnect.apple.com/apps/6821380428/distribution/macos/version/inflight",
+    "uploaded_previews": 2,
+    "preview_file": "apps/groove/reel/groove-reel-macos-v2.mp4",
+    "preview_size": [
+      1920,
+      1080
+    ],
+    "preview_fps": 30,
+    "preview_playback_verified": false,
+    "preview_processing_note": "Third Asset Library upload processed as groove-reel-macos-v2.mp4 (11), App Previews, Add for Review. It was not attached to Mac version. User corrected media scope to iPad only; further Mac changes stopped. Attempted approved deletion of original failed asset was blocked by App Store Connect because asset is in use; no deletion occurred.",
+    "selected_build": 13,
+    "build_selection_saved": true,
+    "encryption_answer": "None of the algorithms mentioned above",
+    "encryption_answer_saved": true,
+    "preview_duration_seconds": 29.9,
+    "failed_assets": [
+      "groove-reel-macos.mp4 (2026-10-25 10:12)",
+      "groove-reel-macos-v2.mp4 (2026-10-25 10:33)"
+    ],
+    "out_of_scope_notes": [
+      "Two failed preview placements from earlier attempts remain; no removal occurred.",
+      "Processed third upload remains in Asset Library and is not attached to Mac version."
+    ]
   },
   "ipad": {
-    "status": "draft: replace macOS source captures with actual iPad captures before upload"
+    "status": "Reverified in iPad 13-inch Media Manager: processed preview first, five screenshots, no size error shown.",
+    "uploaded_previews": 1,
+    "uploaded_screenshots": 5,
+    "preview_file": "apps/groove/reel/groove-reel-ipad.mp4",
+    "preview_size": [
+      1600,
+      1200
+    ],
+    "preview_fps": 30,
+    "screenshot_size": [
+      2752,
+      2064
+    ],
+    "preview_playback_verified": true,
+    "video_first": true,
+    "url": "https://appstoreconnect.apple.com/apps/6821380428/distribution/ios/version/inflight/media-manager/ipad",
+    "screenshot_source_note": "Existing marketing set uses macOS source captures, as recorded in manifest.json; no replacement captures made in this session.",
+    "selected_build": 13,
+    "build_selection_saved": true,
+    "encryption_answer": "None of the algorithms mentioned above",
+    "encryption_answer_saved": true,
+    "device_family_verified": "Build 13 metadata in App Store Connect: Device Family = iPad; Binary State = Validated.",
+    "build_metadata_url": "https://appstoreconnect.apple.com/teams/69a6de81-3668-47e3-e053-5b8c7c11a4d1/apps/6821380428/testflight/ios/3aac09eb-cc65-41b9-bbe6-f781064844c5/metadata"
   },
   "submitted_for_review": false,
   "source_commit": "78702e94",
-  "waveform_alignment": "bottom"
+  "waveform_alignment": "bottom",
+  "verified_date": "2026-10-25",
+  "xcode_cloud": {
+    "workflow": "Default",
+    "previous_actions": [
+      "Build - iOS",
+      "Build - macOS"
+    ],
+    "added_actions": [
+      {
+        "action": "Archive - iOS",
+        "scheme": "groove-ipad",
+        "distribution_preparation": "App Store Connect"
+      },
+      {
+        "action": "Archive - macOS",
+        "scheme": "groove-macos",
+        "distribution_preparation": "App Store Connect"
+      }
+    ],
+    "run": 13,
+    "branch": "main",
+    "commit": "f3f4ea5",
+    "status": "Succeeded",
+    "builds": {
+      "ios": "13: Ready to Submit",
+      "macos": "13: Ready to Submit"
+    }
+  },
+  "pending": [
+    "Apple Beta App Review approval for build 17."
+  ],
+  "media_scope": "iPad only, per user correction; further macOS media changes stopped.",
+  "export_compliance_fix": {
+    "key": "ITSAppUsesNonExemptEncryption",
+    "value": false,
+    "targets": [
+      "ipad",
+      "macos"
+    ],
+    "generator_updated": true,
+    "manual_ipad_packager_updated": true,
+    "validation": "Generated both plists in a temporary project, verified only added Boolean false, plutil lint and Python syntax passed.",
+    "state": "Local working-tree changes; not yet in uploaded builds."
+  },
+  "external_testing": {
+    "group_name": "Groove External Testers",
+    "group_id": "bb9212f0-9398-4cac-8989-feaf146ba247",
+    "group_url": "https://appstoreconnect.apple.com/teams/69a6de81-3668-47e3-e053-5b8c7c11a4d1/apps/6821380428/testflight/groups/bb9212f0-9398-4cac-8989-feaf146ba247",
+    "platform": "iOS (iPad)",
+    "build": 17,
+    "compliance": "Ready to Submit; None of the algorithms mentioned above saved.",
+    "state": "Build 17 submitted to Beta App Review; public link enabled without a custom limit. Testers cannot join until the group has an approved build.",
+    "public_link": "https://testflight.apple.com/join/mjw3Atas",
+    "submitted_for_beta_review": true,
+    "beta_description_saved": true,
+    "review_contact_saved": true,
+    "sign_in_required": false,
+    "test_instructions_saved": true,
+    "automatically_notify_testers": true,
+    "public_link_state": "Enabled; Set Limit unchecked and no criteria configured, verified in Manage Public Link.",
+    "public_link_tester_limit": null,
+    "public_link_access": "Open to anyone with the link, subject to Apple TestFlight platform limits."
+  }
 }

@@ -209,7 +209,8 @@ def generate(args):
                     CFBundleName='Groove', CFBundleDisplayName='Groove', CFBundlePackageType='APPL',
                     CFBundleInfoDictionaryVersion='6.0', CFBundleShortVersionString='$(MARKETING_VERSION)',
                     CFBundleVersion='$(CURRENT_PROJECT_VERSION)', CFBundleDevelopmentRegion='en',
-                    NSMicrophoneUsageDescription='Record your own sounds and vocals as samples in Groove songs.')
+                    NSMicrophoneUsageDescription='Record your own sounds and vocals as samples in Groove songs.',
+                    ITSAppUsesNonExemptEncryption=False)
         if ipad:
             info.update(LSRequiresIPhoneOS=True, UIFileSharingEnabled=True, LSSupportsOpeningDocumentsInPlace=True,
                         UIRequiredDeviceCapabilities=['opengles-3'],

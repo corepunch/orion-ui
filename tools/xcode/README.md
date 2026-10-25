@@ -40,6 +40,12 @@ Both targets use `AppIcon`, generated from `apps/groove/share/icon.png` in
 DerivedData. Xcode compiles the asset catalog and merges its icon metadata into
 the app's Info.plist; replacing the source PNG updates both targets on the next build.
 
+Groove's generated Info.plists declare `ITSAppUsesNonExemptEncryption` as Boolean
+`false`: the Apple builds use only system-provided encryption. Keep this declaration
+in the generator so regenerating the project preserves it. Revisit it if Groove or
+its linked libraries gain non-exempt encryption. New uploads include the declaration;
+already-uploaded builds still need their export compliance questionnaire completed.
+
 Only Groove is supported initially. Regenerate to refresh the navigator after
 adding/removing sources, or to update separately compiled common-dialog files.
 Existing source edits and `.orion` changes rebuild normally. IDs and generated

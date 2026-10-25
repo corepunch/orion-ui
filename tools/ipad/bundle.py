@@ -79,6 +79,8 @@ def main():
                                             ['UIInterfaceOrientationLandscapeLeft', 'UIInterfaceOrientationLandscapeRight'],
         'UIApplicationSceneManifest': {'UIApplicationSupportsMultipleScenes': False, 'UISceneConfigurations': {'UIWindowSceneSessionRoleApplication': [{'UISceneConfigurationName': 'Orion', 'UISceneDelegateClassName': 'AXSceneDelegate'}]}},
     })
+    if args.app == 'groove':
+        info['ITSAppUsesNonExemptEncryption'] = False
     if phone:
         info.update({'UIStatusBarHidden': True, 'UIViewControllerBasedStatusBarAppearance': False})
     if args.app == 'groove':
