@@ -271,6 +271,7 @@ static const char *toolbar_type(xmlNodePtr n) {
   if (elem(n, "separator")) return "TOOLBAR_ITEM_SEPARATOR";
   if (elem(n, "spacer")) return "TOOLBAR_ITEM_SPACER";
   if (elem(n, "title")) return "TOOLBAR_ITEM_TITLE";
+  if (elem(n, "sidebar-separator")) return "TOOLBAR_ITEM_SIDEBAR_SEPARATOR";
   return NULL;
 }
 
@@ -374,7 +375,7 @@ static void collect_toolbar_ids(ids_t *ids, cmd_refs_t *refs,
                                 xmlNodePtr toolbar, const char *scope_name) {
   if (toolbar) {
     char tb_scope[128]; ident(tb_scope, sizeof(tb_scope), scope_name, true);
-    EACH_ELEMENT(it, toolbar) if (toolbar_type(it) && !elem(it, "separator") && !elem(it, "spacer")) {
+    EACH_ELEMENT(it, toolbar) if (toolbar_type(it) && !elem(it, "separator") && !elem(it, "spacer") && !elem(it, "sidebar-separator")) {
       char *command = attr(it, "command"), *menu = attr(it, "menu"), *name = attr(it, "name"), *text = attr(it, "text"), id[256];
       if (resolve_action(id, sizeof(id), command, menu, tb_scope, name, text)) {
         if (refs && refs->n < ORIONC_MAX_IDS) {
@@ -528,7 +529,7 @@ static void emit_toolbar(FILE *f, xmlNodePtr toolbar, const char *symbol,
     EACH_ELEMENT(it, toolbar) if (toolbar_type(it)) {
       char *command = attr(it, "command"), *menu = attr(it, "menu"), *name = attr(it, "name"), *icon = attr(it, "icon"), *w = attr(it, "w"), *flags = attr(it, "flags"), *text = attr(it, "text"), *tooltip = attr(it, "tooltip"), *checked = attr(it, "checked-icon");
       char id[256] = "0", textq[ORIONC_STRING_SIZE], tipq[ORIONC_STRING_SIZE], iconq[256], checkedq[260] = "";
-      if (!elem(it, "separator") && !elem(it, "spacer") && !elem(it, "title"))
+      if (!elem(it, "separator") && !elem(it, "spacer") && !elem(it, "title") && !elem(it, "sidebar-separator"))
         resolve_action(id, sizeof(id), command, menu, scope, name, text);
       if (text && *text) cstr(textq, sizeof(textq), text); else snprintf(textq, sizeof(textq), "NULL");
       if (tooltip && *tooltip) cstr(tipq, sizeof(tipq), tooltip); else snprintf(tipq, sizeof(tipq), "NULL");

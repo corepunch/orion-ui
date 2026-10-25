@@ -260,6 +260,7 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
       if (state & CTRL_FOCUSED) draw_wire_rect(r, 1, get_sys_color(brAccent));
       else classic_draw_bevel(r);
       break;
+    case THEME_PART_TITLE_TOOLBAR:
     case THEME_PART_TOOLBAR:
       fill_rect(get_sys_color(brControlBg), r);
       classic_draw_bevel(r);
@@ -330,6 +331,7 @@ static void classic_draw_combobox(irect16_t r, const char *text, ctrl_state_t st
 static theme_t g_classic_theme = {
   .style                  = THEME_CLASSIC,
   .name                   = "Classic",
+  .appearance             = { .dark = true, .counterpart = THEME_CLASSIC },
   .draw_button_label      = classic_draw_button_label,
   .draw_combobox          = classic_draw_combobox,
   .draw_card              = theme_default_draw_card,

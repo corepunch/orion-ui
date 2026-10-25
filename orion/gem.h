@@ -171,6 +171,7 @@ extern hinstance_t g_gem_hinstance;
 //
 // Standard options consumed by the launcher and not passed to gem_init():
 //   --screenshot PATH  Capture the first fully painted frame as JPEG and exit.
+//   --appearance A     light, dark or system (default): see set_appearance().
 //   -rc [PORT]         Start the TCP remote-control server (default 17777).
 // ---------------------------------------------------------------------------
 #ifdef AX_PLATFORM_IOS
@@ -197,6 +198,7 @@ extern hinstance_t g_gem_hinstance;
 #define GEM_STANDALONE_MAIN(title_, flags_, w_, h_, menubar_, accel_)     \
   int main(int argc, char *argv[]) {                                        \
     const char *gem_screenshot_path = NULL;                                 \
+    const char *gem_appearance = NULL;                                      \
     uint16_t gem_rc_port = 0;                                                \
     char *gem_app_argv[argc + 1];                                           \
     int gem_app_argc = 1;                                                   \
@@ -205,6 +207,9 @@ extern hinstance_t g_gem_hinstance;
       if (strcmp(argv[gem_arg_index], "--screenshot") == 0 &&             \
           gem_arg_index + 1 < argc) {                                       \
         gem_screenshot_path = argv[++gem_arg_index];                        \
+      } else if (strcmp(argv[gem_arg_index], "--appearance") == 0 &&      \
+                 gem_arg_index + 1 < argc) {                                \
+        gem_appearance = argv[++gem_arg_index];                             \
       } else if (strcmp(argv[gem_arg_index], "-rc") == 0) {                \
         gem_rc_port = 17777;                                                 \
         if (gem_arg_index + 1 < argc && argv[gem_arg_index + 1][0] != '-') \
@@ -216,6 +221,14 @@ extern hinstance_t g_gem_hinstance;
     gem_app_argv[gem_app_argc] = NULL;                                      \
     if (!ui_init_graphics((flags_), (title_), (w_), (h_)))                 \
       return 1;                                                             \
+    if (gem_appearance) {                                                   \
+      if (!strcmp(gem_appearance, "light")) set_appearance(APPEARANCE_LIGHT); \
+      else if (!strcmp(gem_appearance, "dark")) set_appearance(APPEARANCE_DARK); \
+      else if (strcmp(gem_appearance, "system")) {                          \
+        fprintf(stderr, "[gem] --appearance rejected value=%s (want light, dark or system)\n", gem_appearance); \
+        fflush(stderr);                                                     \
+      }                                                                     \
+    }                                                                       \
     if (!gem_init(gem_app_argc, gem_app_argv, 0)) {                        \
       ui_shutdown_graphics();                                               \
       return 1;                                                             \

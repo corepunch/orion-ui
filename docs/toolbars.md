@@ -18,6 +18,8 @@ as PencilTest's tool palette (`TB_SPACING`), theme painting, tooltips, and
 `TBSTYLE_CHECKGROUP` selection that Groove uses for its instrument filters.
 Buttons send ordinary `evCommand` / `btnClicked` notifications to the parent;
 the app decides whether that command selects a page, a tool, or a filter.
+The bar sets `TOOLBAR_STYLE_SIDEBAR`, so its whole band paints as
+`THEME_PART_SIDEBAR` rather than as a toolbar.
 
 Declare its items in the form, using existing commands when appropriate:
 
@@ -519,8 +521,32 @@ the way Finder shows a folder's name:
 ```
 
 `set_window_title()` (≈ `SetWindowText`) changes the title and lays the toolbar
-out again. Configure app items with `tbSetItems` as usual; the framework appends the window controls. Locate items by command ID,
+out again. `set_window_subtitle()` (≈ `NSWindow.subtitle`) adds a second line in
+the small font and secondary colour under it, the pair centred on the row.
+Configure app items with `tbSetItems` as usual; the framework appends the window controls. Locate items by command ID,
 because framework items also occupy positions in the toolbar state.
+
+### The sidebar column
+
+A `<sidebar-separator />` (`TOOLBAR_ITEM_SIDEBAR_SEPARATOR`, ≈
+`NSTrackingSeparatorToolbarItem`) splits a merged title row at the right edge of
+the pane docked on the left. The items before it lie over that pane, the band
+behind them paints as `THEME_PART_SIDEBAR`, and the items after it start past
+the pane's edge. The rest of the row paints as `THEME_PART_TITLE_TOOLBAR`. The
+sidebar therefore runs from the window's top to its status bar, and the split
+moves when the pane is resized or collapsed. `toolbar_sidebar_width()` reports
+the segment's width; it is 0 without a separator or without a left pane.
+
+```xml
+<Toolbar>
+  <Button command="view.sidebar" icon="sidebar" tooltip="Show or hide the sidebar" />
+  <sidebar-separator />
+  <Button command="view.back" icon="back" tooltip="Back" />
+  <Button command="view.forward" icon="forward" tooltip="Forward" />
+  <title />
+  <spacer flags="TOOLBAR_ITEM_FLAG_FLEXSPACE" />
+</Toolbar>
+```
 
 ### Control sizes
 

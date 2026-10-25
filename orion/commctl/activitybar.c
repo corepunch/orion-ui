@@ -3,7 +3,7 @@
 #include <orion/user/theme.h>
 #include <orion/user/draw.h>
 
-// A navigation toolbar: the same metrics and radio state as the tool palette.
+// A navigation toolbar: the same metrics and radio state as the tool palette, on a sidebar surface.
 result_t win_activitybar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate: {
@@ -11,6 +11,7 @@ result_t win_activitybar(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       const activitybar_params_t *params = def ? def->lparam : NULL;
       send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
       send_message(win, tbSetButtonSize, TB_SPACING, NULL);
+      send_message(win, tbModifyStyle, TOOLBAR_STYLE_SIDEBAR, (void *)(uintptr_t)TOOLBAR_STYLE_SIDEBAR);
       if (params && params->style) send_message(win, tbModifyStyle, params->style, (void *)(uintptr_t)params->style);
       if (params && params->count) send_message(win, tbSetItems, params->count, (void *)params->items);
       toolbar_state_t *tb = toolbar_get_state(win);
@@ -32,7 +33,7 @@ result_t win_activitybar(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
     case evCommand:
       return win->parent ? send_message(win->parent, msg, wparam, HIWORD(wparam) == btnClicked ? win : lparam) : false;
     case evPaint:
-      theme_draw(THEME_PART_TOOLBAR, get_client_rect(win), CTRL_NORMAL);
+      theme_draw(THEME_PART_SIDEBAR, get_client_rect(win), CTRL_NORMAL);
       return true;
     case evDestroy:
       return true; // the window system owns the toolbar's items and host

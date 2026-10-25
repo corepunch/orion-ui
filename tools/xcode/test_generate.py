@@ -11,6 +11,26 @@ import generate
 
 
 class FileReferenceTests(unittest.TestCase):
+    def test_generated_sources_have_declared_build_outputs(self):
+        with tempfile.TemporaryDirectory(prefix='orion xcode ') as directory:
+            output = Path(directory)
+            subprocess.run(['python3', str(Path(generate.__file__)), 'groove', '--unsigned',
+                            '--output', str(output)], check=True, stdout=subprocess.DEVNULL)
+            for bundle in (output / 'groove.xcodeproj', generate.ROOT / 'apps/groove/groove.xcodeproj'):
+                objects = generate.read_project(bundle / 'project.pbxproj')
+                for target in (obj for obj in objects.values() if obj['isa'] == 'PBXNativeTarget'):
+                    outputs = set()
+                    for uid in target['buildPhases']:
+                        phase = objects[uid]
+                        outputs.update(phase.get('outputPaths', []))
+                        if phase['isa'] != 'PBXSourcesBuildPhase':
+                            continue
+                        for source in phase['files']:
+                            ref = objects[objects[source]['fileRef']]
+                            if ref['sourceTree'] == 'DERIVED_FILE_DIR':
+                                self.assertIn('$(DERIVED_FILE_DIR)/' + ref['path'], outputs,
+                                              f"{bundle}: {target['name']}")
+
     def test_microphone_privacy_and_capture_are_in_both_targets(self):
         with tempfile.TemporaryDirectory(prefix='orion microphone ') as directory:
             output = Path(directory)

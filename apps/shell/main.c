@@ -23,6 +23,7 @@
 #define ID_SHELL_APPEARANCE_LIGHT   (ID_SHELL_CMD_BASE + 4)
 #define ID_SHELL_APPEARANCE_NAVY    (ID_SHELL_CMD_BASE + 5)
 #define ID_SHELL_APPEARANCE_AMBER   (ID_SHELL_CMD_BASE + 6)
+#define ID_SHELL_APPEARANCE_PORCELAIN (ID_SHELL_CMD_BASE + 7)
 
 static const menu_item_t kShellFileItems[] = {
     {"Quit", ID_SHELL_QUIT},
@@ -35,10 +36,11 @@ static menu_item_t kShellAppearanceItems[] = {
     {"  Light",   ID_SHELL_APPEARANCE_LIGHT},
     {"  Navy",    ID_SHELL_APPEARANCE_NAVY},
     {"  Amber",   ID_SHELL_APPEARANCE_AMBER},
+    {"  Porcelain", ID_SHELL_APPEARANCE_PORCELAIN},
 };
 static const menu_def_t kShellMenus[] = {
     {"File",       kShellFileItems,       1},
-    {"Appearance", kShellAppearanceItems, 5},
+    {"Appearance", kShellAppearanceItems, 6},
 };
 #define SHELL_MENU_COUNT 2
 
@@ -54,6 +56,7 @@ static void shell_update_appearance_checks(void) {
     kShellAppearanceItems[2].label = (active == THEME_LIGHT)   ? "* Light"   : "  Light";
     kShellAppearanceItems[3].label = (active == THEME_NAVY)    ? "* Navy"    : "  Navy";
     kShellAppearanceItems[4].label = (active == THEME_AMBER)   ? "* Amber"   : "  Amber";
+    kShellAppearanceItems[5].label = (active == THEME_PORCELAIN) ? "* Porcelain" : "  Porcelain";
 }
 
 static bool shell_default_gem_path(char *path, size_t size, const char *name) {
@@ -100,6 +103,8 @@ static result_t shell_menubar_proc(window_t *win, uint32_t msg,
                 set_theme(THEME_NAVY);
             } else if (id == ID_SHELL_APPEARANCE_AMBER) {
                 set_theme(THEME_AMBER);
+            } else if (id == ID_SHELL_APPEARANCE_PORCELAIN) {
+                set_theme(THEME_PORCELAIN);
             } else {
                 // Route to whichever gem owns this command.
                 shell_dispatch_gem_command(id);

@@ -90,6 +90,22 @@ or a visible enabled descendant, falling back to the page itself. Host destructi
 releases navigation metadata; ordinary child ownership destroys the pages.
 Invalid initialization or selection logs a framework diagnostic to stderr.
 
+## History and the sidebar
+
+PageHost records each selection, as a browser records its session history.
+`page_host_can_go(host, -1 or +1)` asks whether there is a page behind or
+ahead, and `page_host_go()` selects it. Navigating sends `evPageChanged` like
+any selection and keeps the recorded entries; a new selection drops the entries
+ahead of the current one. Entries whose page was destroyed are skipped. The app
+binds its own Back and Forward commands (menu items with accelerators, title-row
+buttons) to these calls and enables the buttons from `page_host_can_go()` in its
+`evPageChanged` handler.
+
+`page_host_set_sidebar_collapsed(host, true)` collapses the ActivityBar to an
+icon rail by hiding its labels; `false` restores them. The bar measures again,
+and a merged title row that tracks the sidebar follows its edge (see
+[the sidebar column](toolbars.md#the-sidebar-column)).
+
 ## Page toolbars
 
 Declare `<Toolbar>` inside the `role="page"` form and give the host the `toolbar`

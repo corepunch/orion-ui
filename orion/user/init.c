@@ -274,6 +274,8 @@ bool ui_init_graphics(int flags, const char *title, int width, int height) {
 
   g_ui_runtime.running = true;
   g_graphics_initialized = true;
+  // A visible UI starts in the OS appearance (see set_appearance); headless contexts keep their theme.
+  if (!(flags & UI_INIT_HIDDEN)) theme_system_appearance_changed(axIsDarkTheme());
 
   return true;
 }

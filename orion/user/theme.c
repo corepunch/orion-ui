@@ -25,10 +25,8 @@ static theme_t *theme_for_style(theme_style_t style) {
     case THEME_LIGHT:   return theme_light_instance();
     case THEME_NAVY:    return theme_navy_instance();
     case THEME_AMBER:   return theme_amber_instance();
-    case THEME_CITRON:    return theme_citron_instance();
     case THEME_PORCELAIN: return theme_porcelain_instance();
-    case THEME_SAGE:      return theme_sage_instance();
-    case THEME_MIDNIGHT:  return theme_midnight_instance();
+    case THEME_PORCELAIN_DARK: return theme_porcelain_dark_instance();
     default:            return NULL;
   }
 }
@@ -232,4 +230,42 @@ uint32_t theme_foreground(theme_part_t part, ctrl_state_t state) {
   }
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
   return get_theme()->foreground(part, state);
+}
+
+// ── Appearance ──────────────────────────────────────────────────────────────
+
+static appearance_t g_appearance = APPEARANCE_SYSTEM;
+static int g_system_dark = -1;  // unknown until the window system reports it
+
+// Switch to the active theme's counterpart when its appearance differs from the wanted one.
+static void theme_apply_appearance(void) {
+  if (g_appearance == APPEARANCE_SYSTEM && g_system_dark < 0) return;
+  bool dark = g_appearance == APPEARANCE_SYSTEM ? g_system_dark != 0 : g_appearance == APPEARANCE_DARK;
+  theme_t *theme = get_theme();
+  if (theme->appearance.dark == dark || theme->appearance.counterpart == theme->style) return;
+  theme_t *other = theme_for_style(theme->appearance.counterpart);
+  if (!other || other->appearance.dark != dark) {
+    fprintf(stderr, "[theme] appearance rejected theme=%s counterpart=%d dark=%d\n",
+            theme->name, (int)theme->appearance.counterpart, (int)dark);
+    fflush(stderr);
+    return;
+  }
+  set_theme(other->style);
+}
+
+void set_appearance(appearance_t appearance) {
+  if (appearance != APPEARANCE_SYSTEM && appearance != APPEARANCE_LIGHT && appearance != APPEARANCE_DARK) {
+    fprintf(stderr, "[theme] set_appearance rejected appearance=%d\n", (int)appearance);
+    fflush(stderr);
+    return;
+  }
+  g_appearance = appearance;
+  theme_apply_appearance();
+}
+
+appearance_t get_appearance(void) { return g_appearance; }
+
+void theme_system_appearance_changed(bool dark) {
+  g_system_dark = dark;
+  if (g_appearance == APPEARANCE_SYSTEM) theme_apply_appearance();
 }

@@ -111,24 +111,19 @@ typedef enum {
   THEME_LIGHT   = 2,  // flat + light WinUI palette
   THEME_NAVY    = 3,  // flat + blue palette
   THEME_AMBER   = 4,  // flat + light business palette: white wells, amber selection
-  // Ledger concept palettes on Amber's business drawing (see docs/ledger-chrome-concepts.md).
-  THEME_CITRON    = 5,  // cool neutral greys, lemon default button and selection
-  THEME_PORCELAIN = 6,  // cool white, indigo accent, solid selection
-  THEME_SAGE      = 7,  // neutral, lime accent with forest ink
-  THEME_MIDNIGHT  = 8,  // dark graphite, violet accent
-  THEME_LAST      = THEME_MIDNIGHT,
+  THEME_PORCELAIN = 5,  // flat + cool white business palette: white wells, indigo selection
+  THEME_PORCELAIN_DARK = 6, // Porcelain's dark counterpart: graphite wells, indigo selection
+  THEME_LAST      = THEME_PORCELAIN_DARK,
 } theme_style_t;
 
-// Makefile THEME_<app>=classic|modern|light|navy|amber|citron|porcelain|sage|midnight → -DORION_THEME=<name>
+// Makefile THEME_<app>=classic|modern|light|navy|amber|porcelain|porcelain_dark → -DORION_THEME=<name>
 #define THEME_classic  THEME_CLASSIC
 #define THEME_modern   THEME_MODERN
 #define THEME_light    THEME_LIGHT
 #define THEME_navy     THEME_NAVY
 #define THEME_amber    THEME_AMBER
-#define THEME_citron   THEME_CITRON
 #define THEME_porcelain THEME_PORCELAIN
-#define THEME_sage     THEME_SAGE
-#define THEME_midnight THEME_MIDNIGHT
+#define THEME_porcelain_dark THEME_PORCELAIN_DARK
 
 // Semantic class/part identifiers, flattened into one enum to prevent invalid
 // class/part pairs. Bounds and interaction state come from the caller.
@@ -176,6 +171,7 @@ typedef enum {
   THEME_PART_SCROLLBAR_ARROW_RIGHT,
   THEME_PART_SCROLLBAR_CORNER,
   THEME_PART_PAGE,           // workspace behind a Page's pane tree
+  THEME_PART_TITLE_TOOLBAR,  // merged caption and toolbar row (WINDOW_TITLETOOLBAR), past any sidebar
   THEME_PART_COUNT,
 } theme_part_t;
 
@@ -185,6 +181,10 @@ typedef enum {
 typedef struct {
   theme_style_t  style;
   const char    *name;
+  struct {
+    bool dark;                  // palette is dark (≈ NSAppearanceNameDarkAqua)
+    theme_style_t counterpart;  // same theme in the other appearance; its own style when there is none
+  } appearance;
 
   void (*draw_part)(theme_part_t part, irect16_t r, ctrl_state_t state);
   void (*draw_window_chrome)(irect16_t titlebar, irect16_t caption,
@@ -332,16 +332,34 @@ void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_colo
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state);
 
 // Built-in theme singletons. Every theme but Classic shares Modern drawing;
-// Amber and the concept palettes share its business metrics.
+// Amber and Porcelain share its business metrics.
 theme_t *theme_classic_instance(void);
 theme_t *theme_modern_instance(void);
 theme_t *theme_light_instance(void);
 theme_t *theme_navy_instance(void);
 theme_t *theme_amber_instance(void);
-theme_t *theme_citron_instance(void);
 theme_t *theme_porcelain_instance(void);
-theme_t *theme_sage_instance(void);
-theme_t *theme_midnight_instance(void);
+theme_t *theme_porcelain_dark_instance(void);
+
+// ── Appearance (light / dark) ────────────────────────────────────────────────
+//
+// Each theme names its counterpart in the other appearance (Light ↔ Modern,
+// Porcelain ↔ Porcelain Dark). With APPEARANCE_SYSTEM, the default, a visible
+// UI switches to the variant matching the OS at start-up and whenever the OS
+// appearance changes (kEventAppearanceChanged). LIGHT and DARK pin a variant.
+// Themes without a counterpart (Classic, Navy, Amber) keep their palette.
+// set_theme() chooses the theme; the next OS change or set_appearance() call
+// may switch it to its counterpart. Hidden (headless) contexts never follow the OS.
+typedef enum {
+  APPEARANCE_SYSTEM = 0,
+  APPEARANCE_LIGHT  = 1,
+  APPEARANCE_DARK   = 2,
+} appearance_t;
+
+void set_appearance(appearance_t appearance);
+appearance_t get_appearance(void);
+// Window system: the OS appearance is now dark (true) or light (false).
+void theme_system_appearance_changed(bool dark);
 
 // Standalone binaries compiled with -DORION_THEME=<name> select that theme
 // before main(). Gems omit the define, so get_theme() is the shell's theme.

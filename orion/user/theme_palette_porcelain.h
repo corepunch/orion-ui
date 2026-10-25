@@ -7,6 +7,7 @@
 // Porcelain: cool white surfaces and an indigo accent, after macOS Finder
 // and modern banking dashboards. Selection is a solid indigo row with white
 // text; fields are white wells with a hairline that turns indigo on focus.
+// Its dark counterpart is theme_palette_porcelain_dark.h.
 
 #define THEME_PALETTE_PORCELAIN_INIT \
   [brTransparent]          = 0x00000000, \
@@ -35,7 +36,7 @@
   [brModalOverlay]         = 0x40000000, \
   [brToolbarForeground]    = WEB(0x3B404A), \
   [brPanelDark]            = WEB(0xEEF0F4), \
-  [brPanelDarker]          = WEB(0xF3F4F7), \
+  [brPanelDarker]          = WEB(0xE4E7EC), \
   [brTabBarBg]             = WEB(0xE9ECF0), \
   [brTextWarning]          = WEB(0xB26B00), \
   [brTextInfo]             = WEB(0x2F6FD6), \

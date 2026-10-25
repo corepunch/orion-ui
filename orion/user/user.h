@@ -533,6 +533,7 @@ struct window_s {
   winproc_t proc;
   uint32_t value;
   char title[512];
+  char subtitle[256];     // second line under a merged toolbar title (≈ NSWindow.subtitle)
   char statusbar_text[256];
   uint32_t cursor_pos;
   layout_t layout;
@@ -695,6 +696,7 @@ bool set_host_page(window_t *host, window_t *page);
 void *allocate_window_data(window_t *win, size_t size);
 void show_window(window_t *win, bool visible);
 void set_window_title(window_t *win, const char *title);  // ≈ SetWindowText: caption, or the merged toolbar title
+void set_window_subtitle(window_t *win, const char *subtitle);  // ≈ NSWindow.subtitle: shown under a TOOLBAR_ITEM_TITLE
 void destroy_window(window_t *win);
 void clear_window_children(window_t *win);
 void clear_toolbar_children(window_t *win);

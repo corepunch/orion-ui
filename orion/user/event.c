@@ -734,6 +734,10 @@ void dispatch_message(ui_event_t *msg) {
       g_ui_runtime.running = false;
       break;
 
+    case kEventAppearanceChanged:
+      theme_system_appearance_changed(msg->wParam != 0);
+      break;
+
     case kEventWindowResized: {
       int new_w = (int)LOWORD(msg->wParam);
       int new_h = (int)HIWORD(msg->wParam);

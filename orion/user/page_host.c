@@ -13,15 +13,32 @@ typedef struct {
   window_t *page, *focus;
 } activity_entry_t;
 
+// Back/forward history of selected pages (≈ a browser's session history).
+#define PAGE_HOST_HISTORY 64
+
 typedef struct page_host_s {
   window_t *bar;
   int count;
-  bool changing, routing;
+  bool changing, routing, navigating, collapsed;
+  uint32_t labels;                         // the bar's label style while expanded
+  int history_count, history_pos;
+  uint32_t history[PAGE_HOST_HISTORY];
   activity_entry_t entries[];
 } page_host_t;
 
 static page_host_t *activity_state(window_t *host) {
   return host && host->pages ? host->pages->page_host : NULL;
+}
+
+// A new selection drops the forward entries, as following a link does.
+static void activity_push_history(page_host_t *st, uint32_t command) {
+  st->history_count = st->history_count ? st->history_pos + 1 : 0;
+  if (st->history_count == PAGE_HOST_HISTORY) {
+    memmove(st->history, st->history + 1, (PAGE_HOST_HISTORY - 1) * sizeof(st->history[0]));
+    st->history_count--;
+  }
+  st->history[st->history_count++] = command;
+  st->history_pos = st->history_count - 1;
 }
 
 static bool activity_error(window_t *host, uint32_t command, const char *reason) {
@@ -97,8 +114,59 @@ bool page_host_select(window_t *host, uint32_t command) {
   if (!activity_focusable(entry->page, focus)) focus = activity_first_focus(entry->page, entry->page);
   set_focus(focus ? focus : entry->page);
   st->changing = false;
+  if (changed && !st->navigating) activity_push_history(st, command);
   if (changed) send_message(host, evPageChanged, command, entry->page);
   return true;
+}
+
+// Walks the history past pages destroyed since they were visited.
+static int activity_history_target(window_t *host, int direction) {
+  page_host_t *st = activity_state(host);
+  if (!st) return -1;
+  for (int pos = st->history_pos + direction; pos >= 0 && pos < st->history_count; pos += direction) {
+    activity_entry_t *entry = activity_entry(host, st->history[pos]);
+    if (entry && entry->page) return pos;
+  }
+  return -1;
+}
+
+bool page_host_can_go(window_t *host, int direction) {
+  return (direction == -1 || direction == 1) && activity_history_target(host, direction) >= 0;
+}
+
+bool page_host_go(window_t *host, int direction) {
+  page_host_t *st = activity_state(host);
+  if (!st || (direction != -1 && direction != 1)) return activity_error(host, (uint32_t)direction, "invalid_history_direction");
+  int pos = activity_history_target(host, direction);
+  if (pos < 0) return activity_error(host, (uint32_t)direction, "history_exhausted");
+  int previous = st->history_pos;
+  st->history_pos = pos;  // evPageChanged handlers see the new back/forward state
+  st->navigating = true;
+  bool ok = page_host_select(host, st->history[pos]);
+  if (is_window(host) && activity_state(host) == st) {
+    st->navigating = false;
+    if (!ok) st->history_pos = previous;
+  }
+  return ok;
+}
+
+bool page_host_set_sidebar_collapsed(window_t *host, bool collapsed) {
+  page_host_t *st = activity_state(host);
+  if (!st || !st->bar || !st->bar->dock) return activity_error(host, collapsed, "bar_unavailable");
+  if (st->collapsed == collapsed) return true;
+  toolbar_state_t *tb = toolbar_get_state(st->bar);
+  uint32_t label_styles = TOOLBAR_STYLE_LIST | TOOLBAR_STYLE_SHOW_LABELS;
+  if (collapsed && tb) st->labels = tb->style & label_styles;
+  st->collapsed = collapsed;
+  send_message(st->bar, tbModifyStyle, label_styles, (void *)(uintptr_t)(collapsed ? 0 : st->labels));
+  dock_set_side(st->bar, st->bar->dock->side);  // the bar measures again at its new width
+  toolbar_relayout(host);                        // a merged title row follows the sidebar's edge
+  return true;
+}
+
+bool page_host_sidebar_collapsed(window_t *host) {
+  page_host_t *st = activity_state(host);
+  return st && st->collapsed;
 }
 
 bool page_host_command(window_t *host, uint32_t wparam, void *lparam) {

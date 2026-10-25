@@ -371,6 +371,12 @@
   <string source="Document %d cannot be posted." where="code">Документ %d не удалось провести.</string>
   <string source="There is no document %d." where="code">Документа %d нет.</string>
   <string source="Open Add-on..." where="menu">Открыть внешнюю обработку...</string>
+  <string source="Back" where="menu">Назад</string>
+  <string source="Forward" where="menu">Вперёд</string>
+  <string source="Show or Hide Sidebar" where="menu">Показать или скрыть панель разделов</string>
+  <string source="Show or hide the sidebar (Ctrl+B)" where="main_window">Показать или скрыть панель разделов (Ctrl+B)</string>
+  <string source="Back (Alt+Left)" where="main_window">Назад (Alt+Влево)</string>
+  <string source="Forward (Alt+Right)" where="main_window">Вперёд (Alt+Вправо)</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>
