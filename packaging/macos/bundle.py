@@ -231,6 +231,8 @@ def main():
         'NSHighResolutionCapable': True,
         'NSPrincipalClass': 'NSApplication',
     }
+    if args.app == 'groove':
+        info['NSMicrophoneUsageDescription'] = 'Record your own sounds and vocals as samples in Groove songs.'
     (contents / 'Info.plist').write_bytes(plistlib.dumps(info, fmt=plistlib.FMT_XML))
     (contents / 'PkgInfo').write_bytes(b'APPL????')
     run(['codesign', '--force', '--deep', '--sign', '-', str(bundle)], capture=True)

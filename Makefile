@@ -42,7 +42,8 @@ else ifeq ($(UNAME_S),Darwin)
 ARCH     ?= arm64
 CFLAGS   += -arch $(ARCH)
 LDFLAGS  += -arch $(ARCH)
-LIBS     += -framework OpenGL
+LIBS     += -framework OpenGL -framework AVFoundation -framework AudioToolbox
+KERNEL_INPUT_OBJ = $(BUILD_DIR)/audio_input_apple.o
 # Scener encodes reel videos with VideoToolbox.
 SCENER_LIBS = -framework VideoToolbox -framework CoreMedia -framework CoreVideo -framework CoreFoundation
 LIB_EXT  = dylib
@@ -363,7 +364,11 @@ endef
 USER_SRCS = $(filter-out orion/user/dialog.c orion/user/component_registry.c,$(wildcard orion/user/*.c)) \
             orion/commdlg/msgbox.c
 
-$(eval $(call unity_lib,kernel,$(wildcard orion/kernel/*.c),,,))
+ifeq ($(UNAME_S),Darwin)
+$(KERNEL_INPUT_OBJ): orion/kernel/audio_input_apple.m orion/kernel/audio_input.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -fblocks -c $< -o $@
+endif
+$(eval $(call unity_lib,kernel,$(wildcard orion/kernel/*.c),$(KERNEL_INPUT_OBJ),,$(KERNEL_INPUT_OBJ)))
 $(eval $(call unity_lib,user,$(USER_SRCS),$(COMMDLG_LIB) $(KERNEL_LIB),,-lcommdlg -lkernel))
 $(eval $(call unity_lib,commctl,$(wildcard orion/commctl/*.c),$(USER_LIB) $(KERNEL_LIB),-Icomponents,-luser -lkernel))
 # Lua add-ons: runtime .orion forms driven by a script (orion/script/script.h).

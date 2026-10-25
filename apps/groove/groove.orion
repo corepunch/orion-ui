@@ -16,6 +16,10 @@
         <item name="save" label="Save Song" shortcut="Ctrl+S" />
         <item name="saveas" label="Save Song As..." />
         <Separator />
+        <item name="record" label="Record Sample..." />
+        <item name="import_project" label="Import Song..." />
+        <item name="export_project" label="Export Project..." />
+        <Separator />
         <item name="demo" label="Demo: Neon Skyline" />
         <item name="demo_afterglow" label="Demo: Afterglow Avenue" />
         <item name="demo_victory" label="Demo: Victory Lights" />
@@ -71,6 +75,31 @@
     </databases>
 
     <forms>
+      <form name="record_sample" title="Record Sample" width="460" spacing="8" padding="12">
+        <GridView name="fields" spacing="6">
+          <Column name="labels" width="auto">
+            <Label name="lbl_name" text="Name:" />
+            <Label name="lbl_bars" text="Length:" />
+          </Column>
+          <Column name="inputs">
+            <TextBox name="name" text="Recording" />
+            <ComboBox name="bars" />
+          </Column>
+        </GridView>
+        <Label name="status" text="Record a sample at the current song tempo." height="40" />
+        <Label name="hint" text="Use headphones if the song is playing." />
+        <StackView name="capture_actions" orientation="horizontal" spacing="6">
+          <Button name="record" text="Record" />
+          <Button name="stop" text="Stop" />
+          <Button name="preview" text="Listen" />
+          <Space name="capture_flex" />
+        </StackView>
+        <StackView name="actions" orientation="horizontal" spacing="6">
+          <Space name="flex" />
+          <Button name="save" text="Save Sample" flags="BUTTON_DEFAULT" />
+          <Button name="cancel" text="Cancel" />
+        </StackView>
+      </form>
       <form name="main_window" title="Groove" width="1180" height="760"
             flags="WINDOW_AUTO_LAYOUT" spacing="0" padding="0">
         <GrooveArrangement name="arrangement" flags="WINDOW_FLEXSPACE" />
@@ -94,6 +123,7 @@
           <Button name="family_vox" icon="strip:15" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Vocals" />
           <Button name="family_scratch" icon="strip:16" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Scratch" />
           <Button name="family_fx" icon="strip:17" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Effects" />
+          <Button name="family_samples" icon="phosphor-microphone-fill" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="My Samples" />
         </Toolbar>
         <GrooveBlockBin name="bin" source="library.blocks" flags="WINDOW_FLEXSPACE">
           <FlowView name="blocks" spacing="4" padding="0" flags="WINDOW_FLEXSPACE">

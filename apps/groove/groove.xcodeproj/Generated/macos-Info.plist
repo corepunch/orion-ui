@@ -24,6 +24,8 @@
 	<string>public.app-category.music</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record your own sounds and vocals as samples in Groove songs.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

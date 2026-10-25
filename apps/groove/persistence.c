@@ -49,10 +49,15 @@ bool app_save_song(const char *path) {
   FILE *f = fopen(tmp_path, "wb");
   if (!f) return false;
   uint32_t mute = track_flags(s->mute), solo = track_flags(s->solo);
-  bool ok = fprintf(f, "ORION_GROOVE 4\n%d %d %" PRIu32 " %" PRIu32 " %d %d\n",
-                    s->bpm, s->loop ? 1 : 0, mute, solo, nassets, s->nclips) > 0;
-  for (int i = 0; ok && i < nassets; i++)
-    ok = fprintf(f, "B %d\t%s\n", asset_ids[i], block_get(asset_ids[i])->name) > 0;
+  int version = 4;
+  for (int i = 0; i < nassets; i++) if (sample_get(asset_ids[i])) version = 5;
+  bool ok = fprintf(f, "ORION_GROOVE %d\n%d %d %" PRIu32 " %" PRIu32 " %d %d\n",
+                    version, s->bpm, s->loop ? 1 : 0, mute, solo, nassets, s->nclips) > 0;
+  for (int i = 0; ok && i < nassets; i++) {
+    const sample_t *sample = sample_get(asset_ids[i]);
+    if (sample) ok = fputs("S\n", f) != EOF && sample_write(f, sample) && fputc('\n', f) != EOF;
+    else ok = fprintf(f, "B %d\t%s\n", asset_ids[i], block_get(asset_ids[i])->name) > 0;
+  }
   for (int i = 0; ok && i < s->nclips; i++) {
     const clip_t *c = &s->clips[i];
     int asset = 0;
@@ -80,7 +85,7 @@ bool song_read(const char *path, song_t *out) {
   uint32_t mute = 0, solo = 0;
   song_t next;
   song_init(&next);
-  bool ok = fscanf(f, "%31s %d", magic, &version) == 2 && !strcmp(magic, "ORION_GROOVE") && version >= 2 && version <= 4;
+  bool ok = fscanf(f, "%31s %d", magic, &version) == 2 && !strcmp(magic, "ORION_GROOVE") && version >= 2 && version <= 5;
   if (ok) ok = fscanf(f, "%d %d %" SCNu32 " %" SCNu32 " %d %d", &bpm, &loop, &mute, &solo, &nassets, &nclips) == 6;
   ok = ok && bpm >= GR_BPM_MIN && bpm <= GR_BPM_MAX && (loop == 0 || loop == 1) &&
        !(mute & ~((1u << GR_TRACKS) - 1)) && !(solo & ~((1u << GR_TRACKS) - 1)) &&
@@ -88,46 +93,68 @@ bool song_read(const char *path, song_t *out) {
   next.bpm = bpm;
   next.loop = loop != 0;
   if (ok) { flags_from_bits(next.mute, mute); flags_from_bits(next.solo, solo); }
-  int asset_ids[GR_MAX_CLIPS];
+  int asset_ids[GR_MAX_CLIPS], asset_bars[GR_MAX_CLIPS];
+  sample_t *embedded = ok ? calloc((size_t)MAX(nassets, 1), sizeof(*embedded)) : NULL;
+  if (!embedded) ok = false;
+  size_t embedded_bytes = 0;
   for (int i = 0; ok && i < nassets; i++) {
     char kind = 0, name[256];
     int block = -1;
-    if (fscanf(f, " %c %d", &kind, &block) != 2 || kind != 'B' || fgetc(f) != '\t' || !fgets(name, sizeof(name), f)) { ok = false; break; }
-    name[strcspn(name, "\r\n")] = 0;
-    const block_t *b = block_get(block);
-    if (!b || strcmp(name, b->name)) {
-      block = -1;
-      for (int id = 0; id < blocks_count(); id++) if (!strcmp(name, block_get(id)->name)) {
-        if (block >= 0) { ok = false; break; }
-        block = id;
+    if (fscanf(f, " %c", &kind) != 1) { ok = false; break; }
+    if (kind == 'S' && version == 5) {
+      if (fgetc(f) != '\n' || !sample_read(f, &embedded[i]) || fgetc(f) != '\n') { ok = false; break; }
+      embedded_bytes += (size_t)embedded[i].frames * sizeof(int16_t);
+      if (embedded_bytes > 64u * 1024u * 1024u) { ok = false; break; }
+      asset_ids[i] = -1;
+      asset_bars[i] = embedded[i].bars;
+    } else if (kind == 'B') {
+      if (fscanf(f, "%d", &block) != 1 || fgetc(f) != '\t' || !fgets(name, sizeof(name), f)) { ok = false; break; }
+      name[strcspn(name, "\r\n")] = 0;
+      const block_t *b = block >= 0 && block < blocks_builtin_count() ? block_get(block) : NULL;
+      if (!b || strcmp(name, b->name)) {
+        block = -1;
+        for (int id = 0; id < blocks_builtin_count(); id++) if (!strcmp(name, block_get(id)->name)) {
+          if (block >= 0) { ok = false; break; }
+          block = id;
+        }
+        if (!ok || block < 0) { ok = false; break; }
       }
-      if (!ok || block < 0) { ok = false; break; }
-    }
-    for (int j = 0; j < i; j++) if (asset_ids[j] == block) ok = false;
-    if (ok) asset_ids[i] = block;
+      for (int j = 0; j < i; j++) if (asset_ids[j] == block) ok = false;
+      asset_ids[i] = block;
+      asset_bars[i] = block_get(block)->bars;
+    } else ok = false;
   }
   for (int i = 0; ok && i < nclips; i++) {
     int source, track, position, length = 0, gain_db = 0;
     uint64_t order;
-    int fields = version == 4
+    int fields = version >= 4
       ? fscanf(f, "%d %d %d %" SCNu64 " %d %d", &source, &track, &position, &order, &length, &gain_db)
       : version == 3 ? fscanf(f, "%d %d %d %" SCNu64 " %d", &source, &track, &position, &order, &length)
       : fscanf(f, "%d %d %d %" SCNu64, &source, &track, &position, &order);
-    if (fields != (version == 4 ? 6 : version == 3 ? 5 : 4) || gain_db < -60 || gain_db > 6) { ok = false; break; }
-    int block = source >= 0 && source < nassets ? asset_ids[source] : -1;
-    const block_t *b = block_get(block);
-    int natural = b ? b->bars * GR_TICKS_BAR : 0;
+    if (fields != (version >= 4 ? 6 : version == 3 ? 5 : 4) || gain_db < -60 || gain_db > 6) { ok = false; break; }
+    bool valid_asset = source >= 0 && source < nassets;
+    int natural = valid_asset ? asset_bars[source] * GR_TICKS_BAR : 0;
     int ticks = length > 0 ? length : natural;
     if (length < 0 || (length > 0 && (length < GR_FRACTION_TICKS || length % GR_FRACTION_TICKS))) { ok = false; break; }
-    if (!b || !song_can_place(&next, track, position, ticks, -1) || !order) { ok = false; break; }
+    if (!valid_asset || !song_can_place(&next, track, position, ticks, -1) || !order) { ok = false; break; }
     for (int j = 0; j < next.nclips; j++) if (next.clips[j].order == order) ok = false;
     if (!ok) break;
-    next.clips[next.nclips++] = (clip_t){ block, track, position, order, length, gain_db };
+    next.clips[next.nclips++] = (clip_t){ source, track, position, order, length, gain_db };
     next.clip_order = MAX(next.clip_order, order);
   }
   if (ok) { int c; do c = fgetc(f); while (c != EOF && isspace((unsigned char)c)); ok = c == EOF && !ferror(f); }
   if (fclose(f) != 0) ok = false;
-  if (ok) *out = next;
+  int old_samples = samples_count();
+  for (int i = 0; ok && i < nassets; i++) if (embedded[i].pcm) {
+    asset_ids[i] = sample_add(&embedded[i]);
+    if (asset_ids[i] < 0) ok = false;
+  }
+  if (ok) {
+    for (int i = 0; i < next.nclips; i++) next.clips[i].block = asset_ids[next.clips[i].block];
+    *out = next;
+  } else samples_truncate(old_samples);
+  for (int i = 0; embedded && i < nassets; i++) free(embedded[i].pcm);
+  free(embedded);
   return ok;
 }
 
@@ -170,6 +197,16 @@ bool app_open_song(const char *path) {
   if (g_app->sheet) invalidate_window(g_app->sheet);
   if (g_app->library) invalidate_window(g_app->library);
   transport_refresh();
+  app_samples_refresh();
+  for (int i = 0; i < next.nclips; i++) {
+    bool first = true;
+    for (int j = 0; j < i; j++) if (next.clips[j].block == next.clips[i].block) first = false;
+    const sample_t *sample = first ? sample_get(next.clips[i].block) : NULL;
+    if (sample && g_app->samples_dir[0] && !sample_save(g_app->samples_dir, sample)) {
+      fprintf(stderr, "[gr] could not keep embedded recording in sample library block=%d\n", next.clips[i].block);
+      fflush(stderr); // the opened song retains its embedded sample in memory and on disk
+    }
+  }
   return true;
 }
 

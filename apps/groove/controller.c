@@ -15,6 +15,10 @@ static void audio_cb(void *userdata, uint8_t *stream, int len) {
   for (int frames = len / 4; frames > 0;) {
     int n = MIN(frames, 1024);
     song_render(&app->song, tmp, n);
+    for (int i = 0; i < n && app->sample_preview && app->sample_preview_pos < app->sample_preview_frames; i++) {
+      float v = app->sample_preview[app->sample_preview_pos++] / 32768.0f;
+      tmp[i * 2] += v; tmp[i * 2 + 1] += v;
+    }
     for (int i = 0; i < n * 2; i++) out[i] = (int16_t)(tanhf(tmp[i]) * 32000.0f);
     out += n * 2;
     frames -= n;
@@ -121,6 +125,12 @@ groove_t *app_init(void) {
   app->auditioned = -1;
   app->family = FAMILY_LOOP;
   app->peak_credit = GR_PEAKS_PER_TICK;
+  const char *sample_settings = axSettingsDirectory();
+  int sample_path_n = sample_settings && sample_settings[0] ? snprintf(app->samples_dir, sizeof(app->samples_dir), "%s/Samples", sample_settings) : -1;
+  if (sample_path_n <= 0 || (size_t)sample_path_n >= sizeof(app->samples_dir) || !axMkDir(sample_settings) || !axMkDir(app->samples_dir)) {
+    fprintf(stderr, "[gr] sample storage unavailable\n"); fflush(stderr);
+    app->samples_dir[0] = 0;
+  } else samples_load(app->samples_dir);
 #ifdef AX_PLATFORM_IOS
   // iPad songs stay in the app's private storage, like a reader app's library.
   const char *settings = axSettingsDirectory();
@@ -322,9 +332,29 @@ bool app_drop(const drag_t *d) {
   return ok;
 }
 
+static void project_file_dialog(bool exporting) {
+  char path[512] = {0}, active[sizeof(g_app->filename)];
+  snprintf(active, sizeof(active), "%s", g_app->filename);
+  if (exporting) song_name_from_path(active, path, sizeof(path));
+  if (exporting && !path[0]) snprintf(path, sizeof(path), "Untitled.groove");
+  openfilename_t ofn = {0};
+  ofn.lStructSize = sizeof(ofn); ofn.hwndOwner = g_app->menubar_win;
+  ofn.lpstrFile = path; ofn.nMaxFile = sizeof(path);
+  ofn.lpstrFilter = "Groove Songs\0*.groove\0";
+  ofn.Flags = exporting ? OFN_OVERWRITEPROMPT : OFN_FILEMUSTEXIST;
+  bool accepted = exporting ? get_save_filename(&ofn) : get_open_filename(&ofn);
+  if (!accepted) return;
+  bool ok = exporting ? app_save_song(path) : app_open_song(path);
+  if (exporting) snprintf(g_app->filename, sizeof(g_app->filename), "%s", active);
+  if (!ok) message_box(g_app->menubar_win, ui_tr("Could not read or write the Groove project."), ui_tr("Project unavailable"), MB_OK);
+}
+
 void app_command(uint16_t id) {
   song_t *s = &g_app->song;
   switch (id) {
+    case ID_FILE_RECORD: app_record_sample(g_app->menubar_win); break;
+    case ID_FILE_IMPORT_PROJECT: project_file_dialog(false); break;
+    case ID_FILE_EXPORT_PROJECT: project_file_dialog(true); break;
     case ID_PLAY:     app_set_playing(!s->playing); break;
     case ID_STOP:     app_set_playing(false); app_seek_position(0); break;
     case ID_REWIND:   app_seek_position(0); break;

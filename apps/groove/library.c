@@ -14,7 +14,7 @@ const char *const kCategoryName[CAT_COUNT] = {
 };
 
 const char *const kFamilyName[FAMILY_COUNT] = {
-  "Drum Loops", "Drum Fills", "Bass", "Guitar", "Synth", "Pads", "Stabs", "Vocals", "Scratch", "FX",
+  "Drum Loops", "Drum Fills", "Bass", "Guitar", "Synth", "Pads", "Stabs", "Vocals", "Scratch", "FX", "My Samples",
 };
 
 family_t block_family(category_t cat) {
@@ -728,20 +728,21 @@ static void meta(void) {
   g_meta = true;
 }
 
-int blocks_count(void) { return NUM_DEFS; }
+int blocks_builtin_count(void) { return NUM_DEFS; }
+int blocks_count(void) { return NUM_DEFS + samples_count(); }
 
-const block_t *block_get(int id) { meta(); return id >= 0 && id < NUM_DEFS ? &g_blocks[id] : NULL; }
+const block_t *block_get(int id) { meta(); return id >= 0 && id < NUM_DEFS ? &g_blocks[id] : sample_block_get(id); }
 
 int blocks_in_category(category_t cat, int *ids, int max) {
   int n = 0;
-  for (int i = 0; i < NUM_DEFS && n < max; i++) if (kDefs[i].cat == cat) ids[n++] = i;
+  for (int i = 0; i < blocks_count() && n < max; i++) if (block_get(i)->cat == cat) ids[n++] = i;
   return n;
 }
 
 int blocks_in_family(family_t family, int *ids, int max) {
   meta();
   int n = 0;
-  for (int i = 0; i < NUM_DEFS && n < max; i++) if (g_blocks[i].family == family) ids[n++] = i;
+  for (int i = 0; i < blocks_count() && n < max; i++) if (block_get(i)->family == family) ids[n++] = i;
   return n;
 }
 
@@ -781,6 +782,7 @@ static bool recipe_fits(const def_t *d) {
 }
 
 bool block_render(int id, int bpm, block_pcm_t *out) {
+  if (id >= NUM_DEFS) return sample_render(id, bpm, out);
   if (id < 0 || id >= NUM_DEFS || !out) {
     fprintf(stderr, "[synth] render rejected block=%d out=%p count=%d\n", id, (void *)out, NUM_DEFS);
     fflush(stderr);
@@ -828,27 +830,30 @@ bool block_render(int id, int bpm, block_pcm_t *out) {
 
 void block_install(int id, int bpm, block_pcm_t *io) {
   meta();
-  if (id < 0 || id >= NUM_DEFS || !io) {
+  block_t *block = (block_t *)block_get(id);
+  if (!block || !io) {
     fprintf(stderr, "[synth] install rejected block=%d io=%p count=%d\n", id, (void *)io, NUM_DEFS);
     fflush(stderr);
     return;
   }
-  block_pcm_t old = g_blocks[id].audio;
-  g_blocks[id].audio = *io;
-  g_blocks[id].audio_bpm = bpm;
-  g_blocks[id].audio_revision++;
+  block_pcm_t old = block->audio;
+  block->audio = *io;
+  block->audio_bpm = bpm;
+  block->audio_revision++;
   *io = old;
 }
 
 float *block_release(int id) {
-  if (id < 0 || id >= NUM_DEFS) return NULL;
-  float *pcm = g_blocks[id].audio.pcm;
-  g_blocks[id].audio.pcm = NULL;
-  g_blocks[id].audio.frames = 0;
+  block_t *block = (block_t *)block_get(id);
+  if (!block) return NULL;
+  float *pcm = block->audio.pcm;
+  block->audio.pcm = NULL;
+  block->audio.frames = 0;
   return pcm;
 }
 
 void blocks_free(void) {
+  samples_truncate(0);
   sy_samples_free();
   for (int i = 0; i < NUM_DEFS; i++) {
     free(g_blocks[i].audio.pcm);

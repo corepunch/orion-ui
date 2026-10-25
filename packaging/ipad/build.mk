@@ -39,13 +39,13 @@ KERNEL_SRCS := $(wildcard orion/kernel/*.c)
 COMMCTL_SRCS := $(filter-out orion/commctl/tray.c,$(wildcard orion/commctl/*.c))
 COMMDLG_SRCS := $(wildcard orion/commdlg/*.c)
 COMPONENT_SRCS := $(wildcard $(APP_DIR)/components/*.c)
-OBJECTS := $(addprefix $(BUILD_ROOT)/,user.o kernel.o commctl.o) $(addprefix $(BUILD_ROOT)/,$(COMMDLG_SRCS:.c=.o) $(COMPONENT_SRCS:.c=.o))
+OBJECTS := $(BUILD_ROOT)/audio_input_apple.o $(addprefix $(BUILD_ROOT)/,user.o kernel.o commctl.o) $(addprefix $(BUILD_ROOT)/,$(COMMDLG_SRCS:.c=.o) $(COMPONENT_SRCS:.c=.o))
 APP_SRCS := $(shell find $(APP_DIR) -name '*.c' ! -path '*/components/*' ! -path '*/tests/*' ! -path '*/reel/*' ! -name main.c | sort) $(APP_DIR)/main.c
 APP_HEADERS := $(shell find $(APP_DIR) -name '*.h' ! -path '*/tests/*')
 PLATFORM_LIB := $(BUILD_ROOT)/platform/libplatform.a
 HOST_TOOL := $(abspath $(BUILD_DIR))/host/orionc
 GENERATED := build/generated/$(APP_DIR)/$(APP_SOURCE).h
-LIBS := -lxml2 -lm -framework UIKit -framework CoreGraphics -framework Foundation -framework OpenGLES -framework QuartzCore -framework Security -framework UniformTypeIdentifiers -framework AudioToolbox
+LIBS := -lxml2 -lm -framework UIKit -framework CoreGraphics -framework Foundation -framework OpenGLES -framework QuartzCore -framework Security -framework UniformTypeIdentifiers -framework AudioToolbox -framework AVFoundation
 
 .PHONY: app run deploy mac settings platform
 settings:
@@ -75,6 +75,8 @@ $(eval $(call unity_core,commctl,$(COMMCTL_SRCS)))
 $(BUILD_ROOT)/%.o: %.c $(BUILD_ROOT)/settings $(GENERATED) packaging/ipad/build.mk
 	@mkdir -p "$(@D)"
 	$(COMPILER) $(FLAGS) -I$(APP_DIR) -I$(APP_DIR)/components -c "$<" -o "$@"
+$(BUILD_ROOT)/audio_input_apple.o: orion/kernel/audio_input_apple.m orion/kernel/audio_input.h $(BUILD_ROOT)/settings
+	$(COMPILER) $(FLAGS) -fblocks -c "$<" -o "$@"
 $(APP_ROOT)/app.o: $(APP_SRCS) $(APP_HEADERS) $(GENERATED) $(APP_ROOT)/settings packaging/ipad/build.mk
 	@printf '%s\n' $(APP_SRCS) | sed 's/.*/\#include "&"/' > "$(APP_ROOT)/app.c"
 	$(COMPILER) $(FLAGS) $(APP_FLAGS) -c "$(APP_ROOT)/app.c" -o "$@"

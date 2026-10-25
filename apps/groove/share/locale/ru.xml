@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="ru" decimal="," group=" " date="dd.MM.yyyy">
+  <string source="File" where="menu">Файл</string>
+  <string source="New Song" where="menu">Новая песня</string>
+  <string source="Open Song..." where="menu">Открыть песню...</string>
+  <string source="Save Song" where="menu,save_song">Сохранить песню</string>
+  <string source="Save Song As..." where="menu">Сохранить песню как...</string>
+  <string source="Record Sample..." where="menu">Записать сэмпл...</string>
+  <string source="Demo: Neon Skyline" where="menu">Демо: Neon Skyline</string>
+  <string source="Demo: Afterglow Avenue" where="menu">Демо: Afterglow Avenue</string>
+  <string source="Demo: Victory Lights" where="menu">Демо: Victory Lights</string>
+  <string source="Quit" where="menu">Выход</string>
+  <string source="Edit" where="menu">Правка</string>
+  <string source="Delete Block" where="menu">Удалить блок</string>
+  <string source="Transport" where="menu">Воспроизведение</string>
+  <string source="Play / Pause" where="menu">Пуск / Пауза</string>
+  <string source="Stop" where="menu,record_sample">Стоп</string>
+  <string source="Rewind" where="menu">В начало</string>
+  <string source="Go to End" where="menu">В конец</string>
+  <string source="Loop" where="menu">Повтор</string>
+  <string source="Window" where="menu">Окно</string>
+  <string source="Show Library" where="menu">Показать библиотеку</string>
+  <string source="Reset Workspace" where="menu">Сбросить расположение окон</string>
+  <string source="Delete" where="song_browser">Удалить</string>
+  <string source="Remove selected block (Delete)">Удалить выделенный блок (Delete)</string>
+  <string source="Loop (L)">Повтор (L)</string>
+  <string source="Record Sample" where="record_sample">Запись сэмпла</string>
+  <string source="Name:" where="record_sample,save_song">Название:</string>
+  <string source="Length:" where="record_sample">Длина:</string>
+  <string source="Recording" where="record_sample">Запись</string>
+  <string source="Record a sample at the current song tempo." where="record_sample">Запишите сэмпл в темпе текущей песни.</string>
+  <string source="Use headphones if the song is playing." where="record_sample">При воспроизведении песни используйте наушники.</string>
+  <string source="Record" where="record_sample">Записать</string>
+  <string source="Listen" where="record_sample">Слушать</string>
+  <string source="Save Sample" where="record_sample">Сохранить сэмпл</string>
+  <string source="Cancel" where="record_sample,song_browser,save_song">Отмена</string>
+  <string source="Groove" where="main_window">Groove</string>
+  <string source="Library" where="library_window">Библиотека</string>
+  <string source="Rewind (Home)" where="library_window">В начало (Home)</string>
+  <string source="Play / pause (Space)" where="library_window">Пуск / Пауза (Пробел)</string>
+  <string source="Go to end (End)" where="library_window">В конец (End)</string>
+  <string source="Drum Loops" where="library_window">Ритмы</string>
+  <string source="Drum Fills" where="library_window">Сбивки</string>
+  <string source="Bass" where="library_window">Бас</string>
+  <string source="Guitar" where="library_window">Гитара</string>
+  <string source="Synth" where="library_window">Синтезатор</string>
+  <string source="Pads" where="library_window">Пэды</string>
+  <string source="Stabs" where="library_window">Акценты</string>
+  <string source="Vocals" where="library_window">Вокал</string>
+  <string source="Scratch" where="library_window">Скрэтч</string>
+  <string source="Effects" where="library_window">Эффекты</string>
+  <string source="My Samples" where="library_window">Мои сэмплы</string>
+  <string source="My Songs" where="song_browser">Мои песни</string>
+  <string source="No saved songs yet. Choose File &gt; Save Song to keep the current song here." where="song_browser">Сохранённых песен пока нет. Выберите «Файл → Сохранить песню».</string>
+  <string source="Open" where="song_browser">Открыть</string>
+  <string source="Save" where="save_song">Сохранить</string>
+  <string source="Import Song..." where="menu">Импортировать песню...</string>
+  <string source="Export Project..." where="menu">Экспортировать проект...</string>
+  <string source="1 bar" where="code">1 такт</string>
+  <string source="2 bars" where="code">2 такта</string>
+  <string source="4 bars" where="code">4 такта</string>
+  <string source="Enable Microphone for Groove in system settings." where="code">Разрешите Groove доступ к микрофону в настройках.</string>
+  <string source="Microphone recording is unavailable on this platform." where="code">Запись недоступна на этой платформе.</string>
+  <string source="Allow microphone access, then press Record again." where="code">Разрешите доступ и нажмите «Записать» ещё раз.</string>
+  <string source="Microphone unavailable. Check access and the input device." where="code">Микрофон недоступен. Проверьте доступ и устройство.</string>
+  <string source="Recording..." where="code">Идёт запись...</string>
+  <string source="Ready. Listen or save the sample." where="code">Готово. Прослушайте или сохраните сэмпл.</string>
+  <string source="Stopped. Unrecorded time is kept silent." where="code">Запись остановлена. Оставшееся время заполнено тишиной.</string>
+  <string source="Enter a sample name." where="code">Введите название сэмпла.</string>
+  <string source="Could not save the sample. Check available space." where="code">Не удалось сохранить сэмпл. Проверьте свободное место.</string>
+  <string source="Save failed" where="code">Ошибка сохранения</string>
+  <string source="Could not read or write the Groove project." where="code">Не удалось прочитать или записать проект Groove.</string>
+  <string source="Project unavailable" where="code">Проект недоступен</string>
+</strings>
