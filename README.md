@@ -41,6 +41,21 @@ build/bin/shell
 Build the framework libraries with `make library`, or install the complete
 suite under `/opt/orion` with `make install`.
 
+## Downloads
+
+Every release carries a ready-to-run download of each application for Windows
+(x64), macOS (Apple silicon) and Linux (x86-64). The names do not change between
+releases, so these links always fetch the newest build:
+
+```text
+https://github.com/corepunch/orion-ui/releases/latest/download/<app>-windows-x86_64.zip
+https://github.com/corepunch/orion-ui/releases/latest/download/<app>-macos-arm64.zip
+https://github.com/corepunch/orion-ui/releases/latest/download/<app>-linux-x86_64.tar.gz
+```
+
+`make bundles` produces the same archives for the current platform in
+`build/bundles`; see [packaging/README.md](packaging/README.md#downloadable-app-builds).
+
 ## First Application
 
 Applications expose a `gem_init` entry point and use the standard launcher to

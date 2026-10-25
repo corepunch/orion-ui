@@ -15,9 +15,8 @@ endif
 ifeq ($(wildcard apps/$(APP_SOURCE)/main.c),)
 $(error Unknown app $(APP_SOURCE): expected apps/$(APP_SOURCE)/main.c)
 endif
-ifeq ($(wildcard apps/$(APP_SOURCE)/share/icon.png),)
-$(error Missing app icon: apps/$(APP_SOURCE)/share/icon.png)
-endif
+# Apps without their own icon fall back to the Orion logo.
+APP_ICON ?= $(firstword $(wildcard apps/$(APP_SOURCE)/share/icon.png) images/logo.png)
 
 APP_BINARY := $(BUILD_DIR)/bin/$(APP)
 SHARE_DIR := $(BUILD_DIR)/share
@@ -33,5 +32,5 @@ deploy:
 		--binary "$(APP_BINARY)" \
 		--runtime-libs "$(BUILD_DIR)/lib" \
 		--share "$(SHARE_DIR)" \
-		--icon "apps/$(APP_SOURCE)/share/icon.png" \
+		--icon "$(APP_ICON)" \
 		--bundle-id "$(BUNDLE_ID)"

@@ -55,3 +55,25 @@
   input.addEventListener('input', apply);
   apply();
 })();
+
+// Downloads: highlight the visitor's system; until a release carries an asset,
+// its button leads to the releases page instead of a missing file.
+(function () {
+  var links = document.querySelectorAll('.dl[data-os]');
+  if (!links.length) return;
+  var ua = navigator.userAgent || '';
+  var os = /Windows/.test(ua) ? 'windows' : /Mac/.test(ua) ? 'macos' : /Linux|X11/.test(ua) ? 'linux' : '';
+  Array.prototype.forEach.call(links, function (a) { if (a.getAttribute('data-os') === os) a.classList.add('current'); });
+  if (!window.fetch) return;
+  fetch('https://api.github.com/repos/corepunch/orion-ui/releases/latest')
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (rel) {
+      if (!rel || !rel.assets) return;
+      var names = rel.assets.map(function (x) { return x.name; });
+      Array.prototype.forEach.call(links, function (a) {
+        var asset = a.href.split('/').pop();
+        if (names.indexOf(asset) < 0) a.href = 'https://github.com/corepunch/orion-ui/releases';
+      });
+    })
+    .catch(function () {});
+})();
