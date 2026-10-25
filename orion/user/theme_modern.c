@@ -19,6 +19,10 @@
 #include <orion/user/theme_palette_light.h>
 #include <orion/user/theme_palette_navy.h>
 #include <orion/user/theme_palette_amber.h>
+#include <orion/user/theme_palette_citron.h>
+#include <orion/user/theme_palette_porcelain.h>
+#include <orion/user/theme_palette_sage.h>
+#include <orion/user/theme_palette_midnight.h>
 
 // Radius constants (logical pixels).
 #define RADIUS_TOOLBAR_ITEM  4
@@ -36,7 +40,8 @@
 #endif
 
 static bool modern_navy(void) { return get_theme()->style == THEME_NAVY; }
-static bool modern_amber(void) { return get_theme()->style == THEME_AMBER; }
+// Amber and the concept palettes: white wells with a hairline, business metrics.
+static bool modern_amber(void) { return get_theme()->style == THEME_AMBER || get_theme()->style >= THEME_CITRON; }
 
 static uint32_t modern_secondary_border(void) {
   return modern_navy() || modern_amber() ? get_sys_color(brLightEdge) : MODERN_DEFAULT_SECONDARY_BORDER;
@@ -245,6 +250,10 @@ static void modern_apply_palette(void) { theme_copy_palette(k_theme_palette_dark
 static void light_apply_palette(void)  { theme_copy_palette(k_theme_palette_light); }
 static void navy_apply_palette(void)   { theme_copy_palette(k_theme_palette_navy); }
 static void amber_apply_palette(void)  { theme_copy_palette(k_theme_palette_amber); }
+static void citron_apply_palette(void)    { theme_copy_palette(k_theme_palette_citron); }
+static void porcelain_apply_palette(void) { theme_copy_palette(k_theme_palette_porcelain); }
+static void sage_apply_palette(void)      { theme_copy_palette(k_theme_palette_sage); }
+static void midnight_apply_palette(void)  { theme_copy_palette(k_theme_palette_midnight); }
 
 // ── Singleton ────────────────────────────────────────────────────────────────
 
@@ -453,8 +462,8 @@ theme_t *theme_modern_instance(void) { return &g_modern_theme; }
 
 static theme_t *modern_variant(theme_style_t style, const char *name,
                                 void (*apply)(void)) {
-  static theme_t light, navy, amber;
-  theme_t *slot = style == THEME_NAVY ? &navy : style == THEME_AMBER ? &amber : &light;
+  static theme_t variants[THEME_LAST + 1];
+  theme_t *slot = &variants[style];
   if (!slot->draw_part) {
     *slot = g_modern_theme;
     slot->style = style;
@@ -472,9 +481,9 @@ theme_t *theme_navy_instance(void) {
   return modern_variant(THEME_NAVY, "Navy", navy_apply_palette);
 }
 
-// Amber: softly rounded rectangles instead of capsules, like a business form.
-theme_t *theme_amber_instance(void) {
-  theme_t *theme = modern_variant(THEME_AMBER, "Amber", amber_apply_palette);
+// Business metrics: softly rounded rectangles instead of capsules, like a business form.
+static theme_t *business_variant(theme_style_t style, const char *name, void (*apply)(void)) {
+  theme_t *theme = modern_variant(style, name, apply);
   theme->button.corner_radius = 4;
   theme->field.corner_radius = 3;
   theme->field.multiline_corner_radius = 3;
@@ -482,5 +491,17 @@ theme_t *theme_amber_instance(void) {
   theme->tab.corner_radius = 4;
   theme->card.corner_radius = 5;
   theme->window.corner_radius = 6;
+  return theme;
+}
+
+theme_t *theme_amber_instance(void)     { return business_variant(THEME_AMBER, "Amber", amber_apply_palette); }
+theme_t *theme_citron_instance(void)    { return business_variant(THEME_CITRON, "Citron", citron_apply_palette); }
+theme_t *theme_porcelain_instance(void) { return business_variant(THEME_PORCELAIN, "Porcelain", porcelain_apply_palette); }
+theme_t *theme_sage_instance(void)      { return business_variant(THEME_SAGE, "Sage", sage_apply_palette); }
+
+// Midnight: business metrics with a softer, wider window shadow for dark surroundings.
+theme_t *theme_midnight_instance(void) {
+  theme_t *theme = business_variant(THEME_MIDNIGHT, "Midnight", midnight_apply_palette);
+  theme->window.shadow.color = 0xC0000000;
   return theme;
 }

@@ -111,14 +111,24 @@ typedef enum {
   THEME_LIGHT   = 2,  // flat + light WinUI palette
   THEME_NAVY    = 3,  // flat + blue palette
   THEME_AMBER   = 4,  // flat + light business palette: white wells, amber selection
+  // Ledger concept palettes on Amber's business drawing (see docs/ledger-chrome-concepts.md).
+  THEME_CITRON    = 5,  // cool neutral greys, lemon default button and selection
+  THEME_PORCELAIN = 6,  // cool white, indigo accent, solid selection
+  THEME_SAGE      = 7,  // neutral, lime accent with forest ink
+  THEME_MIDNIGHT  = 8,  // dark graphite, violet accent
+  THEME_LAST      = THEME_MIDNIGHT,
 } theme_style_t;
 
-// Makefile THEME_<app>=classic|modern|light|navy|amber → -DORION_THEME=<name>
+// Makefile THEME_<app>=classic|modern|light|navy|amber|citron|porcelain|sage|midnight → -DORION_THEME=<name>
 #define THEME_classic  THEME_CLASSIC
 #define THEME_modern   THEME_MODERN
 #define THEME_light    THEME_LIGHT
 #define THEME_navy     THEME_NAVY
 #define THEME_amber    THEME_AMBER
+#define THEME_citron   THEME_CITRON
+#define THEME_porcelain THEME_PORCELAIN
+#define THEME_sage     THEME_SAGE
+#define THEME_midnight THEME_MIDNIGHT
 
 // Semantic class/part identifiers, flattened into one enum to prevent invalid
 // class/part pairs. Bounds and interaction state come from the caller.
@@ -321,12 +331,17 @@ int theme_control_extent(int regular, uint32_t style);
 void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color); // shared card painter for flat themes
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state);
 
-// Built-in theme singletons. Light, Navy and Amber share Modern drawing.
+// Built-in theme singletons. Every theme but Classic shares Modern drawing;
+// Amber and the concept palettes share its business metrics.
 theme_t *theme_classic_instance(void);
 theme_t *theme_modern_instance(void);
 theme_t *theme_light_instance(void);
 theme_t *theme_navy_instance(void);
 theme_t *theme_amber_instance(void);
+theme_t *theme_citron_instance(void);
+theme_t *theme_porcelain_instance(void);
+theme_t *theme_sage_instance(void);
+theme_t *theme_midnight_instance(void);
 
 // Standalone binaries compiled with -DORION_THEME=<name> select that theme
 // before main(). Gems omit the define, so get_theme() is the shell's theme.

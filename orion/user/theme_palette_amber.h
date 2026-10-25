@@ -45,7 +45,8 @@
   [brSelectionTop]         = WEB(0xFFF2BF), \
   [brSelectionBottom]      = WEB(0xFBE59A), \
   [brPlasticNeutral]       = WEB(0xC8C8C4), \
-  [brAccentText]           = WEB(0x1A1A1A)
+  [brAccentText]           = WEB(0x1A1A1A), \
+  [brDesktopBg]            = WEB(0x29356B)
 
 static const uint32_t k_theme_palette_amber[brCount]
   __attribute__((unused)) = { THEME_PALETTE_AMBER_INIT };

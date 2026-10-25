@@ -673,7 +673,8 @@ typedef enum {
   brPlasticNeutral       = 33,  // neutral plastic face (transport buttons): silver
   brTabBarBg             = 34,  // tab strip: between Page background and inactive tab face
   brAccentText           = 35,  // text and icons on accent fills: selection, default button, hovered menu item
-  brCount                = 36
+  brDesktopBg            = 36,  // desktop behind root windows (UI_INIT_DESKTOP)
+  brCount                = 37
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).

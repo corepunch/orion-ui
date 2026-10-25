@@ -158,7 +158,7 @@ static result_t win_desktop(window_t *win, uint32_t msg, uint32_t wparam, void *
   (void)lparam;
   switch (msg) {
     case evPaint:
-      fill_rect(0xff6B3529,
+      fill_rect(get_sys_color(brDesktopBg),
                 R(0, 0,
                   ui_get_system_metrics(kSystemMetricScreenWidth),
                   ui_get_system_metrics(kSystemMetricScreenHeight)));
