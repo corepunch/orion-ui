@@ -2,6 +2,7 @@
 layout: default
 title: Lua Add-ons
 nav_order: 15
+has_children: true
 ---
 
 # Lua Add-ons
@@ -152,16 +153,12 @@ A value the datasource cannot store is refused with a message, for example a
 string longer than its field or text that is not a date. An unknown field or
 a value of the wrong type is a mistake in the script and raises an error.
 
-## orion
+## orion and orion.db
 
-| Call | Use |
-|---|---|
-| `orion.fail(message)` | Refuses the action with a message for the user |
-| `orion.assert(value, message)` | Passes `value` on, or refuses with `message` |
-| `orion.tr(text)` | Translates through the string catalogs (whole sentences) |
-| `orion.formatNumber(n, decimals)`, `orion.formatDate(iso)` | Locale formatting |
-| `orion.parseNumber(text)`, `orion.parseDate(text)` | The reverse |
-| `orion.today()` | Today as an ISO date |
+[`orion`](lua/orion.md) (refusals, translation, number and date formats) and
+[`orion.db`](lua/db.md) (the datasource messages orion.model builds on) are
+C modules. Their references are generated from the same `.cgen` files as
+their bindings.
 
 ## The sandbox
 
@@ -201,3 +198,53 @@ if (page) {
 `script_page_create()`, `script_page_perform()`, `script_page_message()` and
 `script_page_control()` run a page without a modal loop, for tests and for
 hosts that embed one.
+
+## Bindings are generated
+
+No Lua binding is written by hand. A module is declared in a `.cgen` file, in
+the schema of orca's code generator: each function with its arguments, their
+types and its results. `tools/cgen.c` writes the wrappers that check the
+arguments and the `luaopen_` function that registers them. The Makefile
+generates `build/generated/<dir>/<stem>_lua.h` for every `orion/*/*.cgen`
+and `apps/*/*.cgen`, and the file implementing the module includes it at its
+end. The header declares each bound C function, so an implementation whose
+signature disagrees with the `.cgen` does not compile.
+
+```xml
+<!-- apps/ledger/ledger_addons.cgen -->
+<module name="ledger" prefix="ledger_addon_">
+  <functions>
+    <function name="post" lua="true">                  <!-- int ledger_addon_post(lua_State *L, int id) -->
+      <summary>Posts a document.</summary>
+      <arg name="id" type="int">The document</arg>
+      <returns type="nresults">true, or nil and a message</returns>
+    </function>
+    <function name="format_number" call="ui_format_number">  <!-- Lua: formatNumber -->
+      <arg name="value" type="number"/>
+      <arg name="decimals" type="int" default="2"/>
+      <arg name="buf" type="string" output="char[64]"/>      <!-- a local buffer -->
+      <arg name="size" type="size" bufsize="buf"/>           <!-- sizeof(buf) -->
+      <returns type="string"/>
+    </function>
+  </functions>
+</module>
+```
+
+```c
+// ledger_addons.c
+static int ledger_addon_post(lua_State *L, int id) { ... }
+#include "build/generated/apps/ledger/ledger_addons_lua.h"   // defines luaopen_ledger
+```
+
+| Declaration | Meaning |
+|---|---|
+| `<module name prefix>` | `require(name)`; `luaopen_<name with _ for .>`; C functions are `prefix` + the function's name |
+| `<function name export call lua>` | Lua name `export`, else the name in camelCase; `call` names another C function; `lua="true"` passes the state first |
+| `<arg type>` | `int`, `number`, `bool`, `string`, or a stack index: `value`, `table`, `function` |
+| `<arg optional default>` | `luaL_opt*`; `nil` gives `NULL` or 0 |
+| `<arg output bufsize>` | A local buffer and its size, not Lua arguments |
+| `<returns type>` | A pushed `int`, `number`, `bool` or `string` (`NULL` gives `nil`); `nresults` when the function pushes its own results; none for nothing |
+| `on-luaopen`, `after-luaopen` | `void f(lua_State *)` called with the new module table on top, to add fields to it |
+
+The generator also writes each framework module's reference: `make lua-docs`
+regenerates `docs/lua/`, and `make test` fails while it is out of date.

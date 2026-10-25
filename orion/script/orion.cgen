@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The "orion" module every add-on can require: refusals, translation and
+     locale formatting. tools/cgen.c generates its Lua bindings
+     (build/generated/orion/script/orion_lua.h) and docs/lua/orion.md. -->
+<module name="orion" namespace="orion" prefix="script_">
+  <summary>Refusals, translation and the catalogue's number and date formats.</summary>
+  <includes>
+    <include file="orion/user/i18n.h"/>
+  </includes>
+  <functions>
+    <function name="fail" lua="true">
+      <summary>Refuses the action: the page stays as it was and the message shows to the user.</summary>
+      <arg name="message" type="string">What the user should know, in a whole sentence</arg>
+      <returns type="nresults">nothing; the action stops here</returns>
+    </function>
+    <function name="assert" lua="true">
+      <summary>Passes its arguments on, or refuses the action when the first is false or nil.</summary>
+      <details>orion.assert(row:update{...}) passes on the message a model returned with nil, as Routes.assert does in lua-objc.</details>
+      <arg name="value" type="value">The value to check</arg>
+      <arg name="message" type="string" optional="true">The refusal; a generic sentence when absent</arg>
+      <returns type="nresults">every argument, when the value holds</returns>
+    </function>
+    <function name="tr" call="ui_tr">
+      <summary>Translates a whole sentence through the string catalogs.</summary>
+      <arg name="text" type="string">The English text</arg>
+      <returns type="string">the translation, or the text itself</returns>
+    </function>
+    <function name="format_number" call="ui_format_number">
+      <summary>A number in the catalogue's format.</summary>
+      <arg name="value" type="number">The number</arg>
+      <arg name="decimals" type="int" default="2">Digits after the separator</arg>
+      <arg name="buf" type="string" output="char[64]"/>
+      <arg name="size" type="size" bufsize="buf"/>
+      <returns type="string">the formatted number</returns>
+    </function>
+    <function name="format_date" call="ui_format_date">
+      <summary>An ISO date ("2026-03-31") in the catalogue's format.</summary>
+      <arg name="iso" type="string">The date</arg>
+      <arg name="buf" type="string" output="char[64]"/>
+      <arg name="size" type="size" bufsize="buf"/>
+      <returns type="string">the formatted date</returns>
+    </function>
+    <function name="parse_number" call="ui_parse_number">
+      <summary>A number typed in the catalogue's format.</summary>
+      <arg name="text" type="string">The text</arg>
+      <returns type="number">the number, 0 when the text is not one</returns>
+    </function>
+    <function name="parse_date" lua="true">
+      <summary>A date typed in the catalogue's format, as an ISO date.</summary>
+      <arg name="text" type="string">The text</arg>
+      <returns type="nresults">the ISO date, or nil when the text is not a date</returns>
+    </function>
+    <function name="today">
+      <summary>Today's date.</summary>
+      <arg name="iso" type="string" output="char[16]"/>
+      <arg name="size" type="size" bufsize="iso"/>
+      <returns type="string">today as an ISO date</returns>
+    </function>
+  </functions>
+</module>

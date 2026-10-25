@@ -262,6 +262,12 @@ metadata. A `.orion` file that arrives at run time loads into the same
 which follows orionc's rules and resolves bindings from the registered
 databases' schemas.
 
+Lua bindings are declarative too. A `.cgen` file (the schema of orca's code
+generator) declares a module's functions with their argument and result types;
+`cgen` generates the wrappers that check them, the `luaopen_` registration and
+the module's reference in `docs/lua/`. No binding is written by hand; see
+[Lua Add-ons](docs/scripting.md#bindings-are-generated).
+
 Declarative resources are self-contained. A field such as
 `field="db.posts.title"` names its database, table, and column; the form resolves
 registered resources by name instead of requiring the caller to pass duplicate

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- "orion.db": the datasource messages C code sends, for orion.model to
+     build on. tools/cgen.c generates its Lua bindings
+     (build/generated/orion/script/db_lua.h) and docs/lua/orion.db.md. -->
+<module name="orion.db" namespace="orion" prefix="script_db_">
+  <summary>Records of any registered datasource, through the messages C code sends: dbFetch, dbFind, dbInsert, dbUpdate, dbDelete and change scopes.</summary>
+  <details>Records cross as plain tables of field values; dates are ISO strings. The database keeps its rules (defaults, numbering, delete rules) as it does for C callers. A value it cannot store comes back as nil and a message; an unknown database, table or field, or a value of the wrong type, raises an error. Scripts usually go through orion.model instead.</details>
+  <functions>
+    <function name="schema" lua="true">
+      <summary>A table's layout.</summary>
+      <arg name="database" type="string">The registered database</arg>
+      <arg name="table" type="string">The table</arg>
+      <returns type="nresults">{name, key, fields = {{name, type, key, length, relation, relationField}, ...}, joins = {{name, field, table, foreignField}, ...}}</returns>
+    </function>
+    <function name="fetch" lua="true">
+      <summary>Rows in the datasource's order, all or those whose field equals a value.</summary>
+      <arg name="database" type="string">The registered database</arg>
+      <arg name="table" type="string">The table</arg>
+      <arg name="field" type="string" optional="true">The field to filter on</arg>
+      <arg name="value" type="value" optional="true">Its value</arg>
+      <returns type="nresults">a list of rows</returns>
+    </function>
+    <function name="find" lua="true">
+      <summary>The first row whose field equals a value.</summary>
+      <arg name="database" type="string">The registered database</arg>
+      <arg name="table" type="string">The table</arg>
+      <arg name="field" type="string" optional="true">The field; nil for the key</arg>
+      <arg name="value" type="value">Its value</arg>
+      <returns type="nresults">the row, or nil</returns>
+    </function>
+    <function name="insert" lua="true">
+      <summary>Inserts a record: defaults first (dbInitRecord), then the given fields.</summary>
+      <arg name="database" type="string">The registered database</arg>
+      <arg name="table" type="string">The table</arg>
+      <arg name="fields" type="table">Field values</arg>
+      <returns type="nresults">the stored row, or nil and a message</returns>
+    </function>
+    <function name="update" lua="true">
+      <summary>Changes fields of a record.</summary>
+      <arg name="database" type="string">The registered database</arg>
+      <arg name="table" type="string">The table</arg>
+      <arg name="key" type="int">The record's key</arg>
+      <arg name="fields" type="table">Field values</arg>
+      <returns type="nresults">the stored row, or nil and a message</returns>
+    </function>
+    <function name="delete" lua="true">
+      <summary>Deletes a record, unless other records refer to it.</summary>
+      <arg name="database" type="string">The registered database</arg>
+      <arg name="table" type="string">The table</arg>
+      <arg name="key" type="int">The record's key</arg>
+      <returns type="nresults">true, or nil and a message</returns>
+    </function>
+    <function name="text" lua="true">
+      <summary>A field or join path of a record as the application displays it.</summary>
+      <arg name="database" type="string">The registered database</arg>
+      <arg name="table" type="string">The table</arg>
+      <arg name="key" type="int">The record's key</arg>
+      <arg name="path" type="string">A field or a join path, such as "item.unit.name"</arg>
+      <returns type="nresults">the text, or nil</returns>
+    </function>
+    <function name="begin" lua="true">
+      <summary>Opens a change scope (dbBeginChanges); scopes nest.</summary>
+      <arg name="database" type="string">The registered database</arg>
+      <returns type="bool">whether the database keeps change scopes</returns>
+    </function>
+    <function name="commit" lua="true">
+      <summary>Keeps the changes of the innermost scope (dbCommitChanges).</summary>
+      <arg name="database" type="string">The registered database</arg>
+      <returns type="bool">whether a scope was open</returns>
+    </function>
+    <function name="revert" lua="true">
+      <summary>Undoes the changes of the innermost scope (dbRevertChanges).</summary>
+      <arg name="database" type="string">The registered database</arg>
+      <returns type="bool">whether a scope was open</returns>
+    </function>
+  </functions>
+</module>
