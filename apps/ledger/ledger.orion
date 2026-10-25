@@ -332,6 +332,7 @@
         <field name="number" type="string" length="24" />
         <field name="date" type="date" default="today" />
         <field name="comment" type="string" length="256" />
+        <field name="import_source" type="string" length="65" />
         <field name="rate" type="double" precision="4" />
         <field name="amount" type="double" />
         <field name="vat" type="double" />

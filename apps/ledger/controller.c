@@ -232,7 +232,7 @@ static void import_from_1c(void) {
                                              "Already in the infobase: %d\nOpening entries: %d (debit %s, credit %s)"),
                    r.counterparties, r.items, r.employees, r.assets, r.currencies, r.matched, r.entries, money_dr, money_cr);
   if (r.balances_present && n > 0 && n < (int)sizeof(text))
-    n += snprintf(text + n, sizeof(text) - (size_t)n, "\n\n%s", ui_tr("The balances of this date were imported before and were not entered again."));
+    n += snprintf(text + n, sizeof(text) - (size_t)n, "\n\n%s", ui_tr("The balances in this exchange file were imported before and were not entered again."));
   if (r.skipped[0] && n > 0 && n < (int)sizeof(text))
     snprintf(text + n, sizeof(text) - (size_t)n, ui_tr("\n\nBalances the configuration has no account for, left out: %s"), r.skipped);
   message_box(g_ledger->main_win, text, ui_tr("Import from 1C"), MB_OK);

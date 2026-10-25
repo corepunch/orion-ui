@@ -359,26 +359,26 @@ static void dbs_restore(database_t *db, dbs_context_t *ctx, dbs_scope_t *scope) 
     if (t->transient) continue;
     dbs_table_t *rows = &ctx->tables[i];
     dbs_snapshot_t *snap = &scope->tables[i];
-    void **restored = snap->count ? malloc((size_t)snap->count * sizeof(void *)) : NULL;
-    if (snap->count && !restored) {
-      fprintf(stderr, "[db_schema_xml] revert failed db=%s table=%s\n", db->name, t->name);
-      continue;
-    }
+    // The snapshot already owns an array of the right size. Reuse it so
+    // rollback cannot fail while trying to allocate memory under pressure.
+    void **restored = snap->copies;
     for (int r = 0; r < snap->count; r++) {
       int row = dbs_key_index(t) >= 0 ? dbs_find_row(t, rows, dbs_key(t, snap->copies[r])) : -1;
       if (row >= 0) {
+        void *copy = snap->copies[r];
         restored[r] = rows->rows[row];
         rows->rows[row] = NULL;
-        memcpy(restored[r], snap->copies[r], t->record_size);
-      } else {
-        restored[r] = snap->copies[r];  // deleted in the scope: the copy comes back
-        snap->copies[r] = NULL;
+        memcpy(restored[r], copy, t->record_size);
+        free(copy);
       }
     }
+    int restored_count = snap->count;
+    snap->copies = NULL;
+    snap->count = 0;
     for (int r = 0; r < rows->count; r++) free(rows->rows[r]);  // inserted in the scope
     free(rows->rows);
     rows->rows = restored;
-    rows->count = rows->capacity = snap->count;
+    rows->count = rows->capacity = restored_count;
     rows->next_id = snap->next_id;
   }
   db->dirty = scope->dirty;

@@ -326,7 +326,7 @@ Anlagen: %d
 Währungen: %d
 Bereits vorhanden: %d
 Eröffnungsbuchungen: %d (Soll %s, Haben %s)</string>
-  <string source="The balances of this date were imported before and were not entered again." where="code">Die Salden dieses Datums wurden bereits importiert und nicht erneut erfasst.</string>
+  <string source="The balances in this exchange file were imported before and were not entered again." where="code">Die Salden dieser Austauschdatei wurden bereits importiert und nicht erneut erfasst.</string>
   <string source="&#10;&#10;Balances the configuration has no account for, left out: %s" where="code">
 
 Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
@@ -347,4 +347,10 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <context name="reports_page">
     <string source="Expense">Ausgabe</string>
   </context>
+  <string source="Cannot write an imported record." where="code">Ein importierter Datensatz konnte nicht gespeichert werden.</string>
+  <string source="Cannot identify the exchange file." where="code">Die Austauschdatei konnte nicht identifiziert werden.</string>
+  <string source="Cannot begin the import transaction." where="code">Die Importtransaktion konnte nicht gestartet werden.</string>
+  <string source="Cannot post the imported opening balances." where="code">Die importierten Eröffnungssalden konnten nicht gebucht werden.</string>
+  <string source="Cannot commit the import transaction." where="code">Die Importtransaktion konnte nicht bestätigt werden.</string>
+  <string source="An older 1C import has no source identifier. Review its opening balances before importing this file." where="code">Ein älterer 1C-Import hat keine Quellkennung. Prüfen Sie dessen Eröffnungssalden vor dem Import dieser Datei.</string>
 </strings>

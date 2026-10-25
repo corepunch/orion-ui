@@ -143,7 +143,15 @@ amount and its `Сумма` the currency amount. Rows of goods may carry only a
 A row's counterparty, item or employee becomes the entry's analytics. It is
 read from the row or from its `ДанныеНоменклатуры` / `ДанныеВзаиморасчетов`,
 and added to its catalog if new. Records already kept are matched by INN,
-code or name. Balances of a date imported before are not entered twice. The
+code or name. Balances with the same exchange-body SHA-256 identifier are not entered twice,
+even if the file is renamed or the UI language changes. Different exchanges
+for the same date are imported separately; overlapping exports are additive,
+so use disjoint exports rather than snapshots of the same balances. The
+identifier is stored on the opening document, independently of its comment.
+Older imports without an identifier cannot be recognized automatically. A
+matching legacy date/type/comment is refused explicitly; check existing opening
+balances before importing legacy files, especially if their comments were edited
+or created in another UI language. The
 whole file is one change: a file that fails leaves the infobase as it was.
 A summary lists what was added and the balance documents the configuration
 has no account for.

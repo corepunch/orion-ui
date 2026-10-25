@@ -425,8 +425,7 @@ bool ledger_post(database_t *ib, database_t *cfg, int doc_id) {
     }
   }
   doc->posted = true;
-  send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, doc);
-  return true;
+  return send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, doc) != 0;
 }
 
 // Unposting a manual operation keeps its entries; reports skip them.
