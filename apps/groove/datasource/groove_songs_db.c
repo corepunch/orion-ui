@@ -7,10 +7,9 @@
 
 typedef struct { song_entry_t rows[GR_MAX_SONGS]; int count; } songs_ctx_t;
 
-static const uint16_t kSongFieldIds[] = { 0x7200, 0x7201, 0x7202, 0x7203, 0x7204, 0x7205 };
 static const db_field_msg_binding_t kSongBindings[] = {
-  { "id", kSongFieldIds[0] }, { "name", kSongFieldIds[1] }, { "path", kSongFieldIds[2] },
-  { "modified", kSongFieldIds[3] }, { "bpm", kSongFieldIds[4] }, { "bars", kSongFieldIds[5] },
+  { "id", 0x7200 }, { "name", 0x7201 }, { "path", 0x7202 },
+  { "modified", 0x7203 }, { "bpm", 0x7204 }, { "bars", 0x7205 },
 };
 static const db_field_schema_t kSongSchema[] = {
   { "id",       DB_TYPE_INT,    0,   true,  NULL, NULL },
