@@ -78,6 +78,7 @@ static void test_formats(void) {
   ASSERT_STR_EQUAL(iso, "2003-03-14");
   ASSERT_TRUE(ui_parse_date("2003-03-14", iso, sizeof(iso)));
   ASSERT_FALSE(ui_parse_date("31.13.2003", iso, sizeof(iso)));
+  ASSERT_FALSE(ui_parse_date("25.10.202630", iso, sizeof(iso)));  // a year has four digits
   ui_set_language("en");
   ASSERT_STR_EQUAL(ui_format_number(1234.5, 2, buf, sizeof(buf)), "1234.50");
   ASSERT_STR_EQUAL(ui_format_date("2003-03-10", buf, sizeof(buf)), "2003-03-10");
