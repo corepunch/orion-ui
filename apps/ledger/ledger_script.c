@@ -3,6 +3,7 @@
 //
 // Loaded in order into one Lua state per configuration:
 //   <config_dir>/rules.lua         the configuration's own rules
+//   <share>/stdplugs/*.lua       standard Lua features
 //   <config_dir>/plugins/*.lua     plugins shipped with the configuration
 //   <data_dir>/plugins/*.lua       the organization's own plugins
 //
@@ -37,10 +38,14 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
+#include <limits.h>
+#include <float.h>
 
 static lua_State *g_lua;
 static const ledger_post_t *g_post;  // the posting a hook runs for
 static int g_handlers;               // registry ref: event name -> array of functions
+static bool g_script_writable;
+static int g_script_transactions;
 
 static database_t *db_named(lua_State *L, int arg) {
   const char *name = luaL_checkstring(L, arg);
@@ -90,7 +95,15 @@ static int l_fetch(lua_State *L) {
   if (!lua_isnoneornil(L, 3)) {
     field = db_schema_field_index(t, luaL_checkstring(L, 3));
     if (field < 0) return luaL_error(L, "unknown field %s.%s", t->name, lua_tostring(L, 3));
-    value = lua_isnumber(L, 4) ? (void *)(intptr_t)lua_tointeger(L, 4) : (void *)luaL_checkstring(L, 4);
+    if (t->meta[field].type == DB_TYPE_INT) {
+      luaL_argcheck(L, lua_isinteger(L, 4), 4, "integer filter expected");
+      value = (void *)(intptr_t)lua_tointeger(L, 4);
+    } else if (t->meta[field].type == DB_TYPE_STRING || t->meta[field].type == DB_TYPE_DATE) {
+      luaL_checktype(L, 4, LUA_TSTRING);
+      value = (void *)lua_tostring(L, 4);
+    } else return luaL_error(L, "filter supports integer, string and date fields only");
+  } else if (!lua_isnoneornil(L, 4)) {
+    return luaL_error(L, "filter value requires a field");
   }
   result_node_t *rows = (result_node_t *)send_db_message(db, dbFetch, MAKEDWORD(t->table_id, field), value);
   lua_newtable(L);
@@ -191,10 +204,161 @@ static int l_on(lua_State *L) {
   return 0;
 }
 
-static const luaL_Reg kLedgerApi[] = {
-  { "find", l_find }, { "fetch", l_fetch }, { "field", l_field }, { "account", l_account }, { "entry", l_entry },
-  { "turnover", l_turnover }, { "rate", l_rate }, { "round2", l_round2 }, { "log", l_log }, { "on", l_on }, { NULL, NULL },
-};
+static bool automation_table(const char *name) {
+  return !strcmp(name, "items") || !strcmp(name, "counterparties") || !strcmp(name, "rates");
+}
+
+static const char *lua_field_type(db_field_type_t type) {
+  switch (type) {
+    case DB_TYPE_INT: return "integer";
+    case DB_TYPE_BOOL: return "boolean";
+    case DB_TYPE_FLOAT: case DB_TYPE_DOUBLE: return "number";
+    default: return "string";
+  }
+}
+
+static int l_schema(lua_State *L) {
+  database_t *db = db_named(L, 1);
+  const db_table_schema_t *t = table_named(L, db, 2);
+  lua_newtable(L);
+  lua_pushstring(L, t->name); lua_setfield(L, -2, "name");
+  lua_pushboolean(L, !strcmp(db->name, "ib") && automation_table(t->name)); lua_setfield(L, -2, "writable");
+  lua_newtable(L);
+  for (int i = 0; i < t->meta_count; i++) {
+    const db_field_meta_t *f = &t->meta[i];
+    lua_newtable(L);
+    lua_pushstring(L, f->name); lua_setfield(L, -2, "name");
+    lua_pushstring(L, lua_field_type(f->type)); lua_setfield(L, -2, "type");
+    lua_pushinteger(L, f->length); lua_setfield(L, -2, "length");
+    if (i < t->field_count && t->fields[i].relation_table) {
+      lua_pushstring(L, t->fields[i].relation_table); lua_setfield(L, -2, "relation");
+    }
+    lua_rawseti(L, -2, i + 1);
+  }
+  lua_setfield(L, -2, "fields");
+  return 1;
+}
+
+static bool script_iso_date(const char *s) {
+  if (!s[0]) return true;
+  int y, m, d, used = 0;
+  if (strlen(s) != 10 || s[4] != '-' || s[7] != '-' || sscanf(s, "%4d-%2d-%2d%n", &y, &m, &d, &used) != 3 || used != 10) return false;
+  for (int i = 0; i < 10; i++) if (i != 4 && i != 7 && (s[i] < '0' || s[i] > '9')) return false;
+  static const int days[] = {0,31,28,31,30,31,30,31,31,30,31,30,31};
+  return y > 0 && m > 0 && m <= 12 && d > 0 && d <= days[m] + (m == 2 && y % 4 == 0 && (y % 100 != 0 || y % 400 == 0));
+}
+
+static void script_relation(lua_State *L, database_t *db, const db_table_schema_t *t, int field, int id) {
+  if (!id || field >= t->field_count || !t->fields[field].relation_table) return;
+  const char *relation = t->fields[field].relation_table, *dot = strchr(relation, '.');
+  database_t *foreign_db = db;
+  const char *table = relation;
+  if (dot) {
+    char name[64];
+    snprintf(name, sizeof(name), "%.*s", (int)(dot - relation), relation);
+    foreign_db = get_database_by_name(name);
+    table = dot + 1;
+  }
+  const db_table_schema_t *foreign = foreign_db ? db_schema_table_named(foreign_db->schema, table) : NULL;
+  if (!foreign || !send_db_message(foreign_db, dbFind, MAKEDWORD(foreign->table_id, 0), (void *)(intptr_t)id))
+    luaL_error(L, "missing reference %s.%s=%d", t->name, t->meta[field].name, id);
+}
+
+static int script_write(lua_State *L, bool insert, bool validate) {
+  if (!validate && (!g_script_writable || !g_script_transactions || g_post))
+    return luaL_error(L, "catalog writes require a writable script and ledger.transaction, outside posting");
+  const char *name = luaL_checkstring(L, 1);
+  if (!automation_table(name)) return luaL_error(L, "table '%s' is not an automation write target", name);
+  database_t *db = get_database_by_name("ib");
+  if (!db) return luaL_error(L, "infobase unavailable");
+  const db_table_schema_t *t = db_schema_table_named(db->schema, name);
+  if (!t) return luaL_error(L, "unknown table '%s'", name);
+  int fields = validate || insert ? 2 : 3;
+  luaL_checktype(L, fields, LUA_TTABLE);
+  lua_Integer requested_id = insert ? 0 : luaL_checkinteger(L, validate ? 3 : 2);
+  if (requested_id < 0 || requested_id > INT_MAX) return luaL_error(L, "record ID out of range");
+  int id = (int)requested_id;
+  const void *existing = insert ? NULL : (const void *)send_db_message(db, dbFind, MAKEDWORD(t->table_id, 0), (void *)(intptr_t)id);
+  if (!insert && !existing) return luaL_error(L, "missing record %s:%d", name, id);
+  void *record = lua_newuserdatauv(L, t->record_size, 0);
+  memset(record, 0, t->record_size);
+  if (existing) memcpy(record, existing, t->record_size);
+  else send_db_message(db, dbInitRecord, t->table_id, record);
+  lua_pushnil(L);
+  while (lua_next(L, fields)) {
+    if (lua_type(L, -2) != LUA_TSTRING) return luaL_error(L, "field names must be strings");
+    const char *key = lua_tostring(L, -2);
+    int index = db_schema_field_index(t, key);
+    if (index < 0 || !strcmp(key, "id")) return luaL_error(L, "unknown or protected field %s.%s", name, key);
+    const db_field_meta_t *f = &t->meta[index];
+    char *p = (char *)record + f->offset;
+    switch (f->type) {
+      case DB_TYPE_INT: {
+        if (!lua_isinteger(L, -1)) return luaL_error(L, "%s requires an integer", key);
+        lua_Integer v = lua_tointeger(L, -1);
+        if (v < 0 || v > INT_MAX) return luaL_error(L, "%s integer out of range", key);
+        script_relation(L, db, t, index, (int)v);
+        *(int *)p = (int)v;
+        break;
+      }
+      case DB_TYPE_BOOL:
+        if (!lua_isboolean(L, -1)) return luaL_error(L, "%s requires a boolean", key);
+        *(bool *)p = lua_toboolean(L, -1); break;
+      case DB_TYPE_FLOAT: case DB_TYPE_DOUBLE: {
+        if (lua_type(L, -1) != LUA_TNUMBER) return luaL_error(L, "%s requires a number", key);
+        double v = lua_tonumber(L, -1);
+        if (!isfinite(v) || fabs(v) > (f->type == DB_TYPE_FLOAT ? FLT_MAX : DBL_MAX)) return luaL_error(L, "%s number out of range", key);
+        if (f->type == DB_TYPE_FLOAT) *(float *)p = (float)v; else *(double *)p = v;
+        break;
+      }
+      default: {
+        if (lua_type(L, -1) != LUA_TSTRING) return luaL_error(L, "%s requires a string", key);
+        size_t len;
+        const char *s = lua_tolstring(L, -1, &len);
+        if (f->length <= 0 || len >= (size_t)f->length || strlen(s) != len) return luaL_error(L, "%s string too long or contains NUL", key);
+        if (f->type == DB_TYPE_DATE && !script_iso_date(s)) return luaL_error(L, "%s requires an ISO date", key);
+        memcpy(p, s, len + 1);
+      }
+    }
+    lua_pop(L, 1);
+  }
+  if (!strcmp(name, "items") && ((db_item_t *)record)->price < 0) return luaL_error(L, "price must be nonnegative");
+  if (!strcmp(name, "rates")) {
+    const db_rate_t *r = record;
+    if (r->rate <= 0 || !r->date[0] || r->currency_id <= 0) return luaL_error(L, "rate requires a currency, date and positive rate");
+  }
+  if (validate) { push_record(L, t, record); return 1; }
+  lresult_t result = send_db_message(db, insert ? dbInsert : dbUpdate, t->table_id, record);
+  if (!result) return luaL_error(L, "cannot write %s", name);
+  push_record(L, t, insert ? (const void *)result : record);
+  return 1;
+}
+
+static int l_insert(lua_State *L) { return script_write(L, true, false); }
+static int l_update(lua_State *L) { return script_write(L, false, false); }
+
+static int l_validate(lua_State *L) { return script_write(L, lua_isnoneornil(L, 3), true); }
+
+static int l_transaction(lua_State *L) {
+  if (!g_script_writable || g_post) return luaL_error(L, "transaction requires a writable script outside posting");
+  database_t *db = get_database_by_name("ib");
+  if (!db || !send_db_message(db, dbBeginChanges, 0, NULL)) return luaL_error(L, "cannot begin transaction");
+  g_script_transactions++;
+  lua_pushvalue(L, 1);
+  int status = lua_pcall(L, 0, LUA_MULTRET, 0);
+  g_script_transactions--;
+  if (status != LUA_OK) {
+    send_db_message(db, dbRevertChanges, 0, NULL);
+    return lua_error(L);
+  }
+  if (!send_db_message(db, dbCommitChanges, 0, NULL)) {
+    send_db_message(db, dbRevertChanges, 0, NULL);
+    return luaL_error(L, "cannot commit transaction");
+  }
+  return lua_gettop(L) - 1;
+}
+
+#include "build/generated/apps/ledger/ledger_api.h"
 
 static void run_file(const char *path) {
   if (luaL_dofile(g_lua, path) != LUA_OK) {
@@ -246,6 +410,9 @@ bool ledger_script_open(const char *config_dir, const char *data_dir) {
   char path[LEDGER_PATH_MAX * 2];
   snprintf(path, sizeof(path), "%s/rules.lua", config_dir);
   if (axPathExists(path)) run_file(path);
+  // Standard and custom plugins use the same deterministic Lua loader.
+  snprintf(path, sizeof(path), "%s/../../stdplugs", config_dir);
+  if (axPathExists(path)) run_plugins(path);
   snprintf(path, sizeof(path), "%s/plugins", config_dir);
   if (axPathExists(path)) run_plugins(path);
   if (data_dir && data_dir[0]) {
@@ -253,6 +420,29 @@ bool ledger_script_open(const char *config_dir, const char *data_dir) {
     if (axPathExists(path)) run_plugins(path);
   }
   return true;
+}
+
+bool ledger_script_run(const char *path, bool writable, char *error, size_t error_sz) {
+  if (error && error_sz) error[0] = '\0';
+  if (!g_lua || g_post || g_script_writable || g_script_transactions) {
+    if (error && error_sz) snprintf(error, error_sz, "script runtime unavailable or busy");
+    return false;
+  }
+  database_t *db = get_database_by_name("ib");
+  if (!db || !send_db_message(db, dbBeginChanges, 0, NULL)) return false;
+  int top = lua_gettop(g_lua);
+  g_script_writable = writable;
+  bool ok = luaL_dofile(g_lua, path) == LUA_OK;
+  g_script_writable = false;
+  if (!ok) {
+    if (error && error_sz) snprintf(error, error_sz, "%s", lua_tostring(g_lua, -1));
+    send_db_message(db, dbRevertChanges, 0, NULL);
+  } else if (!send_db_message(db, writable ? dbCommitChanges : dbRevertChanges, 0, NULL)) {
+    if (error && error_sz) snprintf(error, error_sz, "cannot finish script transaction");
+    ok = false;
+  }
+  lua_settop(g_lua, top);
+  return ok;
 }
 
 void ledger_script_close(void) {

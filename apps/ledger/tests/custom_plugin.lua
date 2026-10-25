@@ -1,0 +1,12 @@
+local A = ledger.automation
+assert(A.plugins["ledger.automation"] == "1" and A.plugins["test.custom"] == "1")
+assert(#A.search("", {"custom"}, "recipe") == 1)
+assert(A.preview("custom.echo", {value="custom"})[1] == "custom")
+assert(A.execute({nodes={{id="value",type="custom.text",params={value="graph"}}},output="value"}) == "graph")
+local descriptor = assert(loadfile("build/generated/apps/ledger/custom_catalog.lua"))()
+local ok, err = pcall(A.register, descriptor, {text=function() end}, {echo=function() end})
+assert(not ok and err:find("duplicate plugin ID",1,true))
+ok, err = pcall(A.preview,"custom.echo",{value=12})
+assert(not ok and err:find("invalid parameter",1,true))
+ok, err = pcall(A.search,12)
+assert(not ok and err:find("invalid argument",1,true))
