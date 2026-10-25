@@ -2,6 +2,8 @@
 <!-- Installed Ledger configurations. Each code names a directory beside this file. -->
 <catalog>
   <configurations>
+    <configuration id="3" code="ru-2026" name="Бухгалтерский учет (Россия, 2026)" country="Российская Федерация" />
+    <configuration id="4" code="de-2026" name="Buchhaltung Deutschland 2026 (SKR 03)" country="Deutschland" />
     <configuration id="1" code="ru-2003" name="Бухгалтерский учет (Россия, 2003)" country="Российская Федерация" />
     <configuration id="2" code="de-2003" name="Buchhaltung Deutschland 2003 (SKR 03)" country="Deutschland" />
   </configurations>

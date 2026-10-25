@@ -52,7 +52,7 @@ const char *ledger_subconto_table(database_t *cfg, int account_id) {
 
 // What a posting is about; each side of an entry takes the object its
 // account is analysed by.
-typedef struct { int counterparty, item, employee, asset; } subjects_t;
+typedef ledger_subjects_t subjects_t;
 
 static int subconto_for(database_t *cfg, int account_id, const subjects_t *s) {
   const char *table = ledger_subconto_table(cfg, account_id);
@@ -77,7 +77,7 @@ static subjects_t subjects_of(database_t *cfg, int account_id, int subconto_id) 
 // ── Currencies ─────────────────────────────────────────────────────────────
 
 // The latest rate on or before date; 0 when none is known.
-static double rate_on(database_t *ib, int currency_id, const char *date) {
+double ledger_rate_on(database_t *ib, int currency_id, const char *date) {
   double rate = 0;
   char best[16] = "";
   result_node_t *rates = fetch(ib, TABLE_RATES, "currency_id", currency_id);
@@ -89,12 +89,7 @@ static double rate_on(database_t *ib, int currency_id, const char *date) {
 
 // ── Posting context and turnovers ──────────────────────────────────────────
 
-typedef struct {
-  database_t *ib, *cfg;
-  db_document_t *doc;
-  const db_doc_type_t *type;
-  double rate;  // national units per document currency unit
-} post_t;
+typedef ledger_post_t post_t;
 
 // Documents post in date order; on one date month-end closing comes last.
 static int doc_order(database_t *cfg, const db_document_t *a, const db_document_t *b) {
@@ -106,11 +101,11 @@ static int doc_order(database_t *cfg, const db_document_t *a, const db_document_
   return a->id - b->id;
 }
 
-typedef struct { double dr, cr, dr_qty, cr_qty, dr_cur, cr_cur; } turnover_t;
+typedef ledger_turnover_t turnover_t;
 
 // Turnovers of account (with subaccounts) on what precedes the document being
 // posted, plus its own entries so far. subconto and currency filter when >= 0.
-static turnover_t turnover(const post_t *p, int account_id, int subconto_id, int currency_id) {
+turnover_t ledger_turnover(const post_t *p, int account_id, int subconto_id, int currency_id) {
   turnover_t t = {0};
   result_node_t *entries = fetch(p->ib, TABLE_ENTRIES, NULL, 0);
   EACH_RECORD(db_entry_t, e, entries) {
@@ -130,7 +125,7 @@ static turnover_t turnover(const post_t *p, int account_id, int subconto_id, int
   return t;
 }
 
-static void add_entry(const post_t *p, int debit, int credit, double amount, const subjects_t *s, double quantity,
+void ledger_add_entry(const post_t *p, int debit, int credit, double amount, const subjects_t *s, double quantity,
                       int currency_id, double currency_amount, const char *content) {
   amount = round2(amount);
   if (!debit || !credit || amount == 0) return;
@@ -146,8 +141,8 @@ static void add_entry(const post_t *p, int debit, int credit, double amount, con
 
 // An amount in the document's currency, kept in both currencies.
 static void add_doc_entry(const post_t *p, int debit, int credit, double amount, const subjects_t *s, double quantity) {
-  if (p->doc->currency_id) add_entry(p, debit, credit, amount * p->rate, s, quantity, p->doc->currency_id, amount, NULL);
-  else add_entry(p, debit, credit, amount, s, quantity, 0, 0, NULL);
+  if (p->doc->currency_id) ledger_add_entry(p, debit, credit, amount * p->rate, s, quantity, p->doc->currency_id, amount, NULL);
+  else ledger_add_entry(p, debit, credit, amount, s, quantity, 0, 0, NULL);
 }
 
 static void delete_entries(database_t *ib, int doc_id) {
@@ -162,20 +157,112 @@ static void delete_rows(database_t *ib, int table_id, int doc_id) {
   free_result_list(rows);
 }
 
+// ── Payroll taxes ──────────────────────────────────────────────────────────
+// The configuration's payroll_taxes rows in force on the document date, in id
+// order, each computed on one accrual line: flat rates with monthly or annual
+// caps, a progressive scale applied to the year's pay so far (cumulative, as
+// НДФЛ) or to twelve monthly bases (annualized, as Lohnsteuer), allowances
+// with an annual limit, and a base net of the taxes withheld before.
+
+static bool tax_in_force(const db_payroll_tax_t *tax, const char *date) {
+  return (!tax->valid_from[0] || strcmp(date, tax->valid_from) >= 0) && (!tax->valid_to[0] || strcmp(date, tax->valid_to) <= 0);
+}
+
+// The employee's accrued pay in the document's year before the document, and
+// how many accruals it came in (each carried one monthly allowance).
+static double ytd_pay(const post_t *p, int employee_id, int *accruals) {
+  char year_start[16];
+  snprintf(year_start, sizeof(year_start), "%.4s-01-01", p->doc->date);
+  double base = 0;
+  *accruals = 0;
+  result_node_t *lines = fetch(p->ib, TABLE_PAYROLL_LINES, "employee_id", employee_id);
+  EACH_RECORD(db_payroll_line_t, l, lines) {
+    if (l->document_id == p->doc->id) continue;
+    const db_document_t *d = find(p->ib, TABLE_DOCUMENTS, l->document_id);
+    const db_doc_type_t *t = d ? find(p->cfg, TABLE_DOC_TYPES, d->doc_type_id) : NULL;
+    if (!d || !d->posted || !form_is(t, "payroll") || strcmp(t->base, "gross") || strcmp(d->date, year_start) < 0 || doc_order(p->cfg, d, p->doc) >= 0) continue;
+    base += l->amount;
+    (*accruals)++;
+  }
+  free_result_list(lines);
+  return base;
+}
+
+// The tax a scale levies on an annual base: the zone with the greatest
+// base_from not above x, then fixed + rate % of the excess + curve * (excess / 10 000)^2.
+static double scale_tax(result_node_t *zones, int tax_id, double x) {
+  const db_tax_scale_t *zone = NULL;
+  EACH_RECORD(db_tax_scale_t, z, zones)
+    if (z->tax_id == tax_id && z->base_from <= x && (!zone || z->base_from > zone->base_from)) zone = z;
+  if (!zone) return 0;
+  double excess = x - zone->base_from, y = excess / 10000.0;
+  return zone->fixed + excess * zone->rate / 100.0 + zone->curve * y * y;
+}
+
+static double round_tax(const db_payroll_tax_t *tax, double v) {
+  return !strcmp(tax->rounding, "unit") ? floor(v + 0.5) : round2(v);
+}
+
+typedef ledger_tax_amount_t tax_line_t;
+#define PAYROLL_TAX_MAX 32
+
+// The taxes of one accrual line, in the configuration's order.
+static int line_taxes(const post_t *p, const db_payroll_line_t *line, tax_line_t *out, int max) {
+  const db_employee_t *emp = find(p->ib, TABLE_EMPLOYEES, line->employee_id);
+  int accruals = 0, count = 0;
+  double ytd = ytd_pay(p, line->employee_id, &accruals), withheld = 0;
+  result_node_t *taxes = fetch(p->cfg, TABLE_PAYROLL_TAXES, NULL, 0), *zones = fetch(p->cfg, TABLE_TAX_SCALES, NULL, 0);
+  EACH_RECORD(db_payroll_tax_t, tax, taxes) {
+    if (!tax_in_force(tax, p->doc->date) || count == max) continue;
+    if (tax->script[0]) {  // the configuration's rules.lua computes this one
+      double scripted = 0;
+      if (ledger_script_tax(p, tax, line, ytd, accruals, withheld, out, count, &scripted)) {
+        scripted = round_tax(tax, scripted);
+        if (tax->withheld) withheld += scripted;
+        out[count++] = (tax_line_t){ tax, scripted };
+      }
+      continue;
+    }
+    double allowance = tax->allowance && emp ? emp->allowance : 0;
+    if (allowance && tax->allowance_limit > 0 && ytd + line->amount > tax->allowance_limit) allowance = 0;  // the month the year's pay passes the limit
+    double base = line->amount - (tax->after_withheld ? withheld : 0) - allowance, amount;
+    if (base < 0) base = 0;
+    if (!strcmp(tax->scale, "cumulative")) {  // the year's taxable pay so far, this month's on top
+      double before = ytd - (tax->allowance && emp ? emp->allowance * accruals : 0);  // earlier months carried the allowance
+      if (before < 0) before = 0;
+      amount = round_tax(tax, scale_tax(zones, tax->id, before + base) - scale_tax(zones, tax->id, before));
+    } else if (!strcmp(tax->scale, "annualized")) {  // the year's tax on twelve such months, one twelfth of it
+      double annual = scale_tax(zones, tax->id, floor(base * 12.0));
+      if (!strcmp(tax->rounding, "floor")) { annual = floor(annual); amount = floor(annual / 12.0 * 100.0 + 1e-6) / 100.0; }
+      else amount = round_tax(tax, annual / 12.0);
+    } else {
+      double within = base, above = 0;
+      if (tax->cap_month > 0 && within > tax->cap_month) { above = within - tax->cap_month; within = tax->cap_month; }
+      if (tax->cap_year > 0) {
+        double room = fmax(tax->cap_year - ytd, 0);
+        if (within > room) { above += within - room; within = room; }
+      }
+      amount = round_tax(tax, within * tax->rate / 100.0 + above * tax->rate_above / 100.0);
+    }
+    if (tax->withheld) withheld += amount;
+    out[count++] = (tax_line_t){ tax, amount };
+  }
+  free_result_list(zones);
+  free_result_list(taxes);
+  return count;
+}
+
 // ── Recalculation ──────────────────────────────────────────────────────────
 
 // Payroll taxes of one accrual line: withheld from the employee, and the
 // employer's contributions on top.
-static void payroll_taxes(database_t *ib, database_t *cfg, const db_payroll_line_t *line, double *withheld, double *contributions) {
-  const db_employee_t *emp = find(ib, TABLE_EMPLOYEES, line->employee_id);
+static void payroll_taxes(const post_t *p, const db_payroll_line_t *line, double *withheld, double *contributions) {
+  tax_line_t taxes[PAYROLL_TAX_MAX];
+  int n = line_taxes(p, line, taxes, PAYROLL_TAX_MAX);
   *withheld = *contributions = 0;
-  result_node_t *taxes = fetch(cfg, TABLE_PAYROLL_TAXES, NULL, 0);
-  EACH_RECORD(db_payroll_tax_t, tax, taxes) {
-    double base = line->amount - (tax->allowance && emp ? emp->allowance : 0);
-    double amount = round2((base > 0 ? base : 0) * tax->rate / 100.0);
-    if (tax->withheld) *withheld += amount; else *contributions += amount;
+  for (int i = 0; i < n; i++) {
+    if (taxes[i].tax->withheld) *withheld += taxes[i].amount; else *contributions += taxes[i].amount;
   }
-  free_result_list(taxes);
 }
 
 static void sum_entries(database_t *ib, db_document_t *doc) {
@@ -224,10 +311,11 @@ static void recalc_goods(database_t *ib, database_t *cfg, db_document_t *doc) {
 static void recalc_payroll(database_t *ib, database_t *cfg, db_document_t *doc, const db_doc_type_t *type) {
   bool payout = !strcmp(type->base, "net");
   double total = 0;
+  post_t p = { ib, cfg, doc, type, 1 };
   result_node_t *lines = fetch(ib, TABLE_PAYROLL_LINES, "document_id", doc->id);
   EACH_RECORD(db_payroll_line_t, line, lines) {
     if (payout) line->withheld = line->contributions = 0;
-    else payroll_taxes(ib, cfg, line, &line->withheld, &line->contributions);
+    else payroll_taxes(&p, line, &line->withheld, &line->contributions);
     line->net = round2(line->amount - line->withheld);
     send_db_message(ib, dbUpdate, TABLE_PAYROLL_LINES, line);
     total += line->amount;
@@ -255,9 +343,10 @@ void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id) {
   db_document_t *doc = find(ib, TABLE_DOCUMENTS, doc_id);
   if (!doc) return;
   db_doc_type_t *type = find(cfg, TABLE_DOC_TYPES, doc->doc_type_id);
-  if (doc->currency_id && doc->rate == 0) doc->rate = rate_on(ib, doc->currency_id, doc->date);
+  if (doc->currency_id && doc->rate == 0) doc->rate = ledger_rate_on(ib, doc->currency_id, doc->date);
   if (!doc->currency_id) doc->rate = 0;
-  if      (form_is(type, "operation")) date_manual_entries(ib, doc);
+  if      (type && type->script[0])    sum_entries(ib, doc);  // a scripted type's entries are its amounts
+  else if (form_is(type, "operation")) date_manual_entries(ib, doc);
   else if (form_is(type, "payroll"))   recalc_payroll(ib, cfg, doc, type);
   else if (form_is(type, "assets"))    recalc_assets(ib, doc);
   else if (form_is(type, "closing"))   sum_entries(ib, doc);
@@ -270,7 +359,7 @@ void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id) {
 // Goods leave stock at their average cost, as desktop suites of the time wrote
 // them off when the sale was posted.
 static void post_cost_of_sales(const post_t *p, const db_doc_line_t *line) {
-  turnover_t t = turnover(p, p->type->cost_credit_id, line->item_id, -1);
+  turnover_t t = ledger_turnover(p, p->type->cost_credit_id, line->item_id, -1);
   double qty = t.dr_qty - t.cr_qty, value = t.dr - t.cr;
   if (qty <= 0) {
     fprintf(stderr, "[ledger] cost of sales skipped: document=%s item=%d has no stock on the date\n", p->doc->number, line->item_id);
@@ -278,7 +367,16 @@ static void post_cost_of_sales(const post_t *p, const db_doc_line_t *line) {
   }
   double cost = line->quantity >= qty ? value : value * line->quantity / qty;
   subjects_t s = { .counterparty = p->doc->counterparty_id, .item = line->item_id };
-  add_entry(p, p->type->cost_debit_id, p->type->cost_credit_id, cost, &s, line->quantity, 0, 0, NULL);
+  ledger_add_entry(p, p->type->cost_debit_id, p->type->cost_credit_id, cost, &s, line->quantity, 0, 0, NULL);
+}
+
+// A tax rate's own account for a side of a sale (book 1) or purchase (book 2),
+// as DATEV's automatic accounts route 7 % and 19 % to different accounts; the
+// document type's account when the rate names none.
+static int rate_account(const db_vat_rate_t *rate, int book, bool tax, int fallback) {
+  int own = !rate ? 0 : book == 1 ? (tax ? rate->output_tax_id : rate->revenue_id)
+                     : book == 2 ? (tax ? rate->input_tax_id : rate->expense_id) : 0;
+  return own ? own : fallback;
 }
 
 static void post_goods(const post_t *p) {
@@ -287,8 +385,14 @@ static void post_goods(const post_t *p) {
   result_node_t *lines = fetch(p->ib, TABLE_DOC_LINES, "document_id", p->doc->id);
   EACH_RECORD(db_doc_line_t, line, lines) {  // one set of entries per line, as goods move per item
     subjects_t s = { .counterparty = p->doc->counterparty_id, .item = line->item_id };
-    add_doc_entry(p, type->debit_id, type->credit_id, net ? line->amount : line->total, &s, line->quantity);
-    add_doc_entry(p, type->vat_debit_id, type->vat_credit_id, line->vat, &s, line->quantity);
+    const db_vat_rate_t *rate = type->auto_accounts ? find(p->cfg, TABLE_VAT_RATES, line->vat_rate_id) : NULL;
+    int book = type->vat_book;
+    add_doc_entry(p, book == 2 ? rate_account(rate, book, false, type->debit_id) : type->debit_id,
+                  book == 1 ? rate_account(rate, book, false, type->credit_id) : type->credit_id,
+                  net ? line->amount : line->total, &s, line->quantity);
+    add_doc_entry(p, book == 2 ? rate_account(rate, book, true, type->vat_debit_id) : type->vat_debit_id,
+                  book == 1 ? rate_account(rate, book, true, type->vat_credit_id) : type->vat_credit_id,
+                  line->vat, &s, line->quantity);
     if (type->cost_debit_id && type->cost_credit_id) post_cost_of_sales(p, line);
   }
   if (!lines) {
@@ -302,22 +406,20 @@ static void post_goods(const post_t *p) {
 static void post_payroll(const post_t *p) {
   bool payout = !strcmp(p->type->base, "net");
   result_node_t *lines = fetch(p->ib, TABLE_PAYROLL_LINES, "document_id", p->doc->id);
-  result_node_t *taxes = payout ? NULL : fetch(p->cfg, TABLE_PAYROLL_TAXES, NULL, 0);
   EACH_RECORD(db_payroll_line_t, line, lines) {
     const db_employee_t *emp = find(p->ib, TABLE_EMPLOYEES, line->employee_id);
     subjects_t s = { .employee = line->employee_id };
-    if (payout) { add_entry(p, p->type->debit_id, p->type->credit_id, line->amount, &s, 0, 0, 0, NULL); continue; }
+    if (payout) { ledger_add_entry(p, p->type->debit_id, p->type->credit_id, line->amount, &s, 0, 0, 0, NULL); continue; }
     int expense = emp && emp->account_id ? emp->account_id : p->type->debit_id;
-    add_entry(p, expense, p->type->credit_id, line->amount, &s, 0, 0, 0, NULL);
-    EACH_RECORD(db_payroll_tax_t, tax, taxes) {
-      double base = line->amount - (tax->allowance && emp ? emp->allowance : 0);
+    ledger_add_entry(p, expense, p->type->credit_id, line->amount, &s, 0, 0, 0, NULL);
+    tax_line_t taxes[PAYROLL_TAX_MAX];
+    int n = line_taxes(p, line, taxes, PAYROLL_TAX_MAX);
+    for (int i = 0; i < n; i++) {
       char content[160];
-      snprintf(content, sizeof(content), "%.60s: %.96s", tax->name, emp ? emp->name : "");
-      add_entry(p, tax->debit_id ? tax->debit_id : expense, tax->credit_id,
-                (base > 0 ? base : 0) * tax->rate / 100.0, &s, 0, 0, 0, content);
+      snprintf(content, sizeof(content), "%.60s: %.96s", taxes[i].tax->name, emp ? emp->name : "");
+      ledger_add_entry(p, taxes[i].tax->debit_id ? taxes[i].tax->debit_id : expense, taxes[i].tax->credit_id, taxes[i].amount, &s, 0, 0, 0, content);
     }
   }
-  free_result_list(taxes);
   free_result_list(lines);
 }
 
@@ -327,7 +429,7 @@ static void post_assets(const post_t *p) {
     db_asset_t *asset = find(p->ib, TABLE_ASSETS, line->asset_id);
     if (!asset) continue;
     subjects_t s = { .asset = asset->id };
-    add_entry(p, asset->account_id, p->type->credit_id, asset->cost, &s, 0, 0, 0, NULL);
+    ledger_add_entry(p, asset->account_id, p->type->credit_id, asset->cost, &s, 0, 0, 0, NULL);
     snprintf(asset->commissioned, sizeof(asset->commissioned), "%s", p->doc->date);
     send_db_message(p->ib, dbUpdate, TABLE_ASSETS, asset);
   }
@@ -341,55 +443,66 @@ static void close_depreciation(const post_t *p, const db_closing_rule_t *rule) {
   EACH_RECORD(db_asset_t, a, assets) {
     int month = a->commissioned[0] ? strncmp(a->commissioned, p->doc->date, 7) : 1;
     if (a->life <= 0 || month > 0 || (month == 0 && strcmp(rule->start, "same"))) continue;
-    double written_off = turnover(p, a->depreciation_id, a->id, -1).cr;
+    double written_off = ledger_turnover(p, a->depreciation_id, a->id, -1).cr;
     double charge = fmin(round2(a->cost / a->life), round2(a->cost - written_off));
     char content[160];
     snprintf(content, sizeof(content), "%.60s: %.96s", rule->name, a->name);
     subjects_t s = { .asset = a->id };
-    if (charge > 0) add_entry(p, a->expense_id, a->depreciation_id, charge, &s, 0, 0, 0, content);
+    if (charge > 0) ledger_add_entry(p, a->expense_id, a->depreciation_id, charge, &s, 0, 0, 0, content);
   }
   free_result_list(assets);
 }
 
 static void close_transfer(const post_t *p, const db_closing_rule_t *rule) {
-  turnover_t t = turnover(p, rule->account_id, -1, -1);
+  turnover_t t = ledger_turnover(p, rule->account_id, -1, -1);
   double balance = round2(t.dr - t.cr);
   int via = rule->via_id ? rule->via_id : rule->account_id;
-  if (balance > 0) add_entry(p, rule->target_id, via, balance, NULL, 0, 0, 0, rule->name);
-  if (balance < 0) add_entry(p, via, rule->target_id, -balance, NULL, 0, 0, 0, rule->name);
+  if (balance > 0) ledger_add_entry(p, rule->target_id, via, balance, NULL, 0, 0, 0, rule->name);
+  if (balance < 0) ledger_add_entry(p, via, rule->target_id, -balance, NULL, 0, 0, 0, rule->name);
+}
+
+// A growing array of distinct keys (account, currency, analytics object).
+typedef struct { int account, currency, subconto; } id_triple_t;
+typedef struct { id_triple_t *v; int n, cap; } key_set_t;
+
+static void key_set_add(key_set_t *s, id_triple_t k) {
+  for (int i = 0; i < s->n; i++) if (!memcmp(&s->v[i], &k, sizeof(k))) return;
+  if (s->n == s->cap) {
+    int cap = s->cap ? s->cap * 2 : 64;
+    id_triple_t *grown = realloc(s->v, (size_t)cap * sizeof(*grown));
+    if (!grown) { fprintf(stderr, "[ledger] out of memory collecting %d keys\n", s->n); return; }
+    s->v = grown; s->cap = cap;
+  }
+  s->v[s->n++] = k;
 }
 
 // Currency accounts are restated at the closing date's rate, per currency and
 // per analytics object.
 static void close_revaluation(const post_t *p, const db_closing_rule_t *rule) {
-  typedef struct { int account, currency, subconto; } reval_key_t;
-  reval_key_t keys[256];
-  int count = 0;
+  key_set_t set = {0};
   result_node_t *entries = fetch(p->ib, TABLE_ENTRIES, NULL, 0);
   EACH_RECORD(db_entry_t, e, entries) {
     for (int side = 0; side < 2 && e->currency_id; side++) {
       int account = side ? e->credit_id : e->debit_id, subconto = side ? e->credit_subconto_id : e->debit_subconto_id;
       const db_account_t *a = find(p->cfg, TABLE_ACCOUNTS, account);
-      if (!a || !a->currency) continue;
-      bool known = false;
-      for (int i = 0; i < count; i++)
-        known |= keys[i].account == account && keys[i].currency == e->currency_id && keys[i].subconto == subconto;
-      if (!known && count < (int)ARRAY_LEN(keys)) keys[count++] = (reval_key_t){ account, e->currency_id, subconto };
+      if (a && a->currency) key_set_add(&set, (id_triple_t){ account, e->currency_id, subconto });
     }
   }
   free_result_list(entries);
-  for (int i = 0; i < count; i++) {
-    double rate = rate_on(p->ib, keys[i].currency, p->doc->date);
+  id_triple_t *keys = set.v;
+  for (int i = 0; i < set.n; i++) {
+    double rate = ledger_rate_on(p->ib, keys[i].currency, p->doc->date);
     if (rate <= 0) {
       fprintf(stderr, "[ledger] revaluation skipped: currency=%d has no rate on %s\n", keys[i].currency, p->doc->date);
       continue;
     }
-    turnover_t t = turnover(p, keys[i].account, keys[i].subconto, keys[i].currency);
+    turnover_t t = ledger_turnover(p, keys[i].account, keys[i].subconto, keys[i].currency);
     double diff = round2((t.dr_cur - t.cr_cur) * rate - (t.dr - t.cr));
     subjects_t s = subjects_of(p->cfg, keys[i].account, keys[i].subconto);
-    if (diff > 0) add_entry(p, keys[i].account, rule->gain_id, diff, &s, 0, keys[i].currency, 0, rule->name);
-    if (diff < 0) add_entry(p, rule->loss_id, keys[i].account, -diff, &s, 0, keys[i].currency, 0, rule->name);
+    if (diff > 0) ledger_add_entry(p, keys[i].account, rule->gain_id, diff, &s, 0, keys[i].currency, 0, rule->name);
+    if (diff < 0) ledger_add_entry(p, rule->loss_id, keys[i].account, -diff, &s, 0, keys[i].currency, 0, rule->name);
   }
+  free(set.v);
 }
 
 static void post_closing(const post_t *p) {
@@ -398,6 +511,7 @@ static void post_closing(const post_t *p) {
     if      (!strcmp(rule->kind, "depreciation")) close_depreciation(p, rule);
     else if (!strcmp(rule->kind, "transfer"))     close_transfer(p, rule);
     else if (!strcmp(rule->kind, "revaluation"))  close_revaluation(p, rule);
+    else if (!strcmp(rule->kind, "script"))       ledger_script_closing(p, rule);
     else fprintf(stderr, "[ledger] closing rule %d has unknown kind '%s'\n", rule->id, rule->kind);
   }
   free_result_list(rules);
@@ -415,7 +529,10 @@ bool ledger_post(database_t *ib, database_t *cfg, int doc_id) {
   if (form_is(type, "operation")) date_manual_entries(ib, doc);
   else {
     delete_entries(ib, doc_id);
-    if      (form_is(type, "document")) post_goods(&p);
+    if (type->script[0]) {  // the configuration's rules.lua posts this type
+      if (!ledger_script_post(&p, type->script)) return false;
+    }
+    else if (form_is(type, "document")) post_goods(&p);
     else if (form_is(type, "payroll"))  post_payroll(&p);
     else if (form_is(type, "assets"))   post_assets(&p);
     else if (form_is(type, "closing"))  post_closing(&p);
@@ -423,10 +540,11 @@ bool ledger_post(database_t *ib, database_t *cfg, int doc_id) {
       fprintf(stderr, "[ledger] post rejected: document=%d type=%d has unknown form '%s'\n", doc_id, type->id, type->form);
       return false;
     }
+    if (type->script[0] || form_is(type, "closing")) sum_entries(ib, doc);
   }
+  ledger_script_event("post", &p);  // plugins see every posted document
   doc->posted = true;
-  send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, doc);
-  return true;
+  return send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, doc) != 0;
 }
 
 // Unposting a manual operation keeps its entries; reports skip them.
@@ -465,7 +583,7 @@ void ledger_fill_payroll(database_t *ib, database_t *cfg, int doc_id) {
   result_node_t *employees = fetch(ib, TABLE_EMPLOYEES, NULL, 0);
   EACH_RECORD(db_employee_t, emp, employees) {
     double amount = emp->salary;
-    if (payout) { turnover_t t = turnover(&p, type->debit_id, emp->id, -1); amount = round2(t.cr - t.dr); }
+    if (payout) { turnover_t t = ledger_turnover(&p, type->debit_id, emp->id, -1); amount = round2(t.cr - t.dr); }
     if (amount <= 0) continue;
     db_payroll_line_t line = { .document_id = doc_id, .employee_id = emp->id, .amount = amount };
     send_db_message(ib, dbInsert, TABLE_PAYROLL_LINES, &line);
@@ -583,47 +701,89 @@ static void build_card(const report_t *r) {
 
 // Account analysis: the chosen account's balance per analytics object.
 static void build_analysis(const report_t *r) {
-  int account = r->rs->account_id, objects[512], count = 0;
+  int account = r->rs->account_id;
+  key_set_t objects = {0};
   for (int i = 0; i < r->count && account; i++) {
     const db_entry_t *e = r->entries[i];
-    for (int side = 0; side < 2; side++) {
-      if (!account_within(r->cfg, side ? e->credit_id : e->debit_id, account)) continue;
-      int id = side ? e->credit_subconto_id : e->debit_subconto_id;
-      bool known = false;
-      for (int k = 0; k < count; k++) known |= objects[k] == id;
-      if (!known && count < (int)ARRAY_LEN(objects)) objects[count++] = id;
-    }
+    for (int side = 0; side < 2; side++)
+      if (account_within(r->cfg, side ? e->credit_id : e->debit_id, account))
+        key_set_add(&objects, (id_triple_t){ account, 0, side ? e->credit_subconto_id : e->debit_subconto_id });
   }
-  for (int k = 0; k < count; k++) {
+  for (int k = 0; k < objects.n; k++) {
+    int object = objects.v[k].subconto;
     totals_t t = {0};
     for (int i = 0; i < r->count; i++) {
       const db_entry_t *e = r->entries[i];
-      bool dr = account_within(r->cfg, e->debit_id, account) && e->debit_subconto_id == objects[k];
-      bool cr = account_within(r->cfg, e->credit_id, account) && e->credit_subconto_id == objects[k];
+      bool dr = account_within(r->cfg, e->debit_id, account) && e->debit_subconto_id == object;
+      bool cr = account_within(r->cfg, e->credit_id, account) && e->credit_subconto_id == object;
       add_totals(&t, in_period(r->rs, e->date), dr ? e->amount : 0, cr ? e->amount : 0);
     }
     if (totals_empty(&t)) continue;
-    db_analysis_row_t row = { .account_id = account, .subconto_id = objects[k], .debit_turnover = t.turn_dr, .credit_turnover = t.turn_cr };
+    db_analysis_row_t row = { .account_id = account, .subconto_id = object, .debit_turnover = t.turn_dr, .credit_turnover = t.turn_cr };
     split_saldo(t.open_dr, t.open_cr, &row.opening_dr, &row.opening_cr);
     split_saldo(t.open_dr + t.turn_dr, t.open_cr + t.turn_cr, &row.balance_dr, &row.balance_cr);
     send_db_message(r->ib, dbInsert, TABLE_ANALYSIS_ROWS, &row);
   }
+  free(objects.v);
+}
+
+static void add_vat_row(const report_t *r, const db_document_t *d, int book, int rate_id, double amount, double vat, double rate) {
+  db_vat_book_t row = { .document_id = d->id, .counterparty_id = d->counterparty_id, .vat_rate_id = rate_id, .book = book,
+                        .total = round2((amount + vat) * rate), .amount = round2(amount * rate), .vat = round2(vat * rate) };
+  snprintf(row.date, sizeof(row.date), "%s", d->date);
+  send_db_message(r->ib, dbInsert, TABLE_VAT_BOOK, &row);
 }
 
 // Sales and purchase books list the posted documents their type assigns them,
-// in national currency.
+// one row per tax rate, in national currency; the summary totals the books
+// per rate, as the tax return's lines do.
 static void build_vat_books(const report_t *r) {
   result_node_t *docs = fetch(r->ib, TABLE_DOCUMENTS, NULL, 0);
   EACH_RECORD(db_document_t, d, docs) {
     const db_doc_type_t *type = find(r->cfg, TABLE_DOC_TYPES, d->doc_type_id);
     if (!d->posted || !type || !type->vat_book || in_period(r->rs, d->date) != WITHIN) continue;
     double rate = d->currency_id && d->rate > 0 ? d->rate : 1;
-    db_vat_book_t row = { .document_id = d->id, .counterparty_id = d->counterparty_id, .book = type->vat_book,
-                          .total = round2(d->total * rate), .amount = round2(d->amount * rate), .vat = round2(d->vat * rate) };
-    snprintf(row.date, sizeof(row.date), "%s", d->date);
-    send_db_message(r->ib, dbInsert, TABLE_VAT_BOOK, &row);
+    result_node_t *lines = fetch(r->ib, TABLE_DOC_LINES, "document_id", d->id);
+    if (!lines) { add_vat_row(r, d, type->vat_book, 0, d->amount, d->vat, rate); continue; }
+    key_set_t rates = {0};
+    EACH_RECORD(db_doc_line_t, line, lines) key_set_add(&rates, (id_triple_t){ line->vat_rate_id, 0, 0 });
+    for (int k = 0; k < rates.n; k++) {
+      double amount = 0, vat = 0;
+      EACH_RECORD(db_doc_line_t, line, lines) if (line->vat_rate_id == rates.v[k].account) { amount += line->amount; vat += line->vat; }
+      add_vat_row(r, d, type->vat_book, rates.v[k].account, amount, vat, rate);
+    }
+    free(rates.v);
+    free_result_list(lines);
   }
   free_result_list(docs);
+  result_node_t *rows = fetch(r->ib, TABLE_VAT_BOOK, NULL, 0);
+  key_set_t groups = {0};
+  EACH_RECORD(db_vat_book_t, row, rows) key_set_add(&groups, (id_triple_t){ row->book, row->vat_rate_id, 0 });
+  for (int k = 0; k < groups.n; k++) {
+    db_vat_summary_t sum = { .book = groups.v[k].account, .vat_rate_id = groups.v[k].currency };
+    EACH_RECORD(db_vat_book_t, row, rows) {
+      if (row->book != sum.book || row->vat_rate_id != sum.vat_rate_id) continue;
+      sum.documents++; sum.total += row->total; sum.amount += row->amount; sum.vat += row->vat;
+    }
+    sum.total = round2(sum.total); sum.amount = round2(sum.amount); sum.vat = round2(sum.vat);
+    send_db_message(r->ib, dbInsert, TABLE_VAT_SUMMARY, &sum);
+  }
+  free(groups.v);
+  free_result_list(rows);
+}
+
+// The journal: every entry of the period, for printing and export.
+static void build_journal(const report_t *r) {
+  for (int i = 0; i < r->count; i++) {
+    const db_entry_t *e = r->entries[i];
+    if (in_period(r->rs, e->date) != WITHIN) continue;
+    db_journal_row_t row = { .document_id = e->document_id, .debit_id = e->debit_id, .credit_id = e->credit_id,
+                             .debit_subconto_id = e->debit_subconto_id, .credit_subconto_id = e->credit_subconto_id,
+                             .currency_id = e->currency_id, .quantity = e->quantity, .currency_amount = e->currency_amount, .amount = e->amount };
+    snprintf(row.date, sizeof(row.date), "%s", e->date);
+    snprintf(row.content, sizeof(row.content), "%s", e->content);
+    send_db_message(r->ib, dbInsert, TABLE_JOURNAL_ROWS, &row);
+  }
 }
 
 static void cash_day_total(const report_t *r, const char *date, double receipt, double expense, double balance) {
@@ -713,7 +873,8 @@ static int by_date(const void *a, const void *b) {
 
 // Reports count entries of posted documents only, in date order.
 void ledger_build_reports(database_t *ib, database_t *cfg) {
-  const int tables[] = { TABLE_BALANCES, TABLE_CARD, TABLE_ANALYSIS_ROWS, TABLE_VAT_BOOK, TABLE_CASH_BOOK, TABLE_ASSET_ROWS, TABLE_PAYROLL_ROWS };
+  const int tables[] = { TABLE_BALANCES, TABLE_CARD, TABLE_ANALYSIS_ROWS, TABLE_VAT_BOOK, TABLE_VAT_SUMMARY, TABLE_JOURNAL_ROWS,
+                         TABLE_CASH_BOOK, TABLE_ASSET_ROWS, TABLE_PAYROLL_ROWS };
   for (size_t i = 0; i < ARRAY_LEN(tables); i++) clear_table(ib, tables[i]);
   const db_report_setting_t *rs = ledger_report_settings(ib, cfg);
   if (!rs) return;
@@ -730,6 +891,7 @@ void ledger_build_reports(database_t *ib, database_t *cfg) {
   build_card(&r);
   build_analysis(&r);
   build_vat_books(&r);
+  build_journal(&r);
   build_cash_book(&r);
   build_asset_rows(&r);
   build_payroll_rows(&r);

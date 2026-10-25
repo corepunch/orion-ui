@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>Платежное поручение {{number}}</title>
+<style>
+body{font-family:"Times New Roman",serif;font-size:10pt;margin:12mm;color:#000}
+table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
+.grid td,.grid th{border:1px solid #000}.grid th{font-weight:normal;font-size:8pt;text-align:center}
+.r{text-align:right}.c{text-align:center}.small{font-size:7.5pt}.b{font-weight:bold}
+.line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
+.sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
+h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
+@media print{body{margin:6mm}}
+</style></head><body>
+<table style="width:180mm"><tr><td><span class="line" style="min-width:90px">&nbsp;</span><div class="cap">Поступ. в банк плат.</div></td><td><span class="line" style="min-width:90px">&nbsp;</span><div class="cap">Списано со сч. плат.</div></td><td style="width:40%"></td><td class="box"><table class="box"><tr><td>0401060</td></tr></table></td></tr></table>
+<table style="width:180mm;margin-top:8px"><tr><td><h1>ПЛАТЕЖНОЕ ПОРУЧЕНИЕ № {{number}}</h1></td><td><span class="line">{{date|dmy}}</span><div class="cap">Дата</div></td><td><span class="line" style="min-width:80px">электронно</span><div class="cap">Вид платежа</div></td></tr></table>
+<table class="grid" style="width:180mm">
+<tr><td style="width:18mm">Сумма<br>прописью</td><td colspan="5">{{total|words}}</td></tr>
+<tr><td colspan="2">ИНН {{org.tax_id}}</td><td colspan="2">КПП {{org.kpp}}</td><td rowspan="2" style="width:14mm">Сумма</td><td rowspan="2" class="b">{{total}}</td></tr>
+<tr><td colspan="4" rowspan="2">{{org.name}}<br><br><span class="small">Плательщик</span></td></tr>
+<tr><td>Сч. №</td><td>{{org.bank_account}}</td></tr>
+<tr><td colspan="4" rowspan="2">{{org.bank}}<br><span class="small">Банк плательщика</span></td><td>БИК</td><td>{{org.bik}}</td></tr>
+<tr><td>Сч. №</td><td>{{org.corr_account}}</td></tr>
+<tr><td colspan="4" rowspan="2">{{counterparty.bank}}<br><span class="small">Банк получателя</span></td><td>БИК</td><td>{{counterparty.bik}}</td></tr>
+<tr><td>Сч. №</td><td>&nbsp;</td></tr>
+<tr><td colspan="2">ИНН {{counterparty.tax_id}}</td><td colspan="2">КПП {{counterparty.kpp}}</td><td rowspan="2">Сч. №</td><td rowspan="2">{{counterparty.bank_account}}</td></tr>
+<tr><td colspan="4" rowspan="3">{{counterparty.name}}<br><br><span class="small">Получатель</span></td></tr>
+<tr><td>Вид оп.</td><td>01 &nbsp; Срок плат.</td></tr>
+<tr><td>Наз. пл.</td><td>Очер. плат. 5</td></tr>
+<tr><td colspan="4" class="small">Код &nbsp; 0 &nbsp;&nbsp;&nbsp;&nbsp; Рез. поле</td><td colspan="2"></td></tr>
+<tr><td colspan="6" style="height:16mm">{{comment}}<br>Сумма {{total}} {{cfg.currency}}, в т.ч. НДС {{vat}} {{cfg.currency}}<br><br><span class="small">Назначение платежа</span></td></tr>
+</table>
+<p class="small">Форма 0401060 по положению Банка России от 29.06.2021 № 762-П. Платежи в бюджет (ЕНП): получатель — Казначейство России (ФНС России), статус плательщика 01, КБК 18201061201010000510, ОКТМО 0, очередность 5.</p>
+<table style="width:180mm" class="sign"><tr><td class="c">Подписи</td><td></td><td class="c">Отметки банка</td></tr>
+<tr><td>М.П.</td><td><span class="line">{{org.director}}</span><br><br><span class="line">{{org.accountant}}</span></td><td></td></tr></table>
+</body></html>

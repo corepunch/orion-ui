@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><title>Umsatzsteuer-Voranmeldung</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;margin:12mm;color:#000}
+table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
+.grid td,.grid th{border:1px solid #000}.grid th{font-weight:normal;font-size:8pt;text-align:center}
+.r{text-align:right}.c{text-align:center}.small{font-size:7.5pt}.b{font-weight:bold}
+.line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
+.sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
+h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
+@media print{body{margin:6mm}}
+</style></head><body>
+<h1>Umsatzsteuer-Voranmeldung — Kennzahlen</h1>
+<p>{{org.name}}, Steuernummer {{org.tax_id}}<br>Voranmeldungszeitraum: {{period.date_from|dmy}} bis {{period.date_to|dmy}} (§ 18 UStG, Übermittlung über ELSTER bis zum 10. Tag nach Ablauf des Zeitraums)</p>
+<h1>Steuerpflichtige Umsätze (Ausgangsrechnungen)</h1>
+<table class="grid" style="width:100%"><tr><th>Steuersatz</th><th>Kennzahl</th><th>Belege</th><th>Bemessungsgrundlage (netto)</th><th>Umsatzsteuer</th></tr>
+{{#vat_summary book=1 vat_rate.rate=19}}<tr><td class="c">{{vat_rate.name}}</td><td class="c">81</td><td class="c">{{documents}}</td><td class="r">{{amount}}</td><td class="r b">{{vat}}</td></tr>
+{{/vat_summary}}{{#vat_summary book=1 vat_rate.rate=7}}<tr><td class="c">{{vat_rate.name}}</td><td class="c">86</td><td class="c">{{documents}}</td><td class="r">{{amount}}</td><td class="r b">{{vat}}</td></tr>
+{{/vat_summary}}{{#vat_summary book=1 vat_rate.rate=0}}<tr><td class="c">{{vat_rate.name}}</td><td class="c">41 / 43</td><td class="c">{{documents}}</td><td class="r">{{amount}}</td><td class="r b">{{vat}}</td></tr>
+{{/vat_summary}}</table>
+<h1>Abziehbare Vorsteuerbeträge (Eingangsrechnungen)</h1>
+<table class="grid" style="width:100%"><tr><th>Steuersatz</th><th>Kennzahl</th><th>Belege</th><th>Entgelt (netto)</th><th>Vorsteuer</th></tr>
+{{#vat_summary book=2}}<tr><td class="c">{{vat_rate.name}}</td><td class="c">66</td><td class="c">{{documents}}</td><td class="r">{{amount}}</td><td class="r b">{{vat}}</td></tr>
+{{/vat_summary}}</table>
+<p class="small">Kennzahl 83 (verbleibende Umsatzsteuer-Vorauszahlung) = Summe der Umsatzsteuer − Summe der Vorsteuer (Kz 66). Bemessungsgrundlagen sind in vollen Euro anzugeben.</p>
+<table class="sign" style="width:100%"><tr><td>Erstellt <span class="line">{{org.accountant}}</span></td></tr></table>
+</body></html>

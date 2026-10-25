@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Demo-Mandant für die Konfiguration de-2026: März 2026 einer kleinen Handels-GmbH. -->
+<ib>
+  <organizations>
+    <organization id="1" name="Musterfirma GmbH" tax_id="27/123/45678" kpp="DE123456789" address="Musterstraße 1, 10115 Berlin" bank="Berliner Sparkasse" bank_account="DE02 1005 0000 0024 2905 61" bik="BELADEBEXXX" corr_account="Amtsgericht Charlottenburg, HRB 123456 B" director="Max Mustermann" accountant="Erika Mustermann" cashier="Erika Mustermann" />
+  </organizations>
+  <counterparties>
+    <counterparty id="1" name="Bürotechnik Schmidt KG" tax_id="43/765/43210" kpp="DE234567890" address="Mönckebergstraße 7, 20095 Hamburg" bank="Hamburger Sparkasse" bank_account="DE91 2005 0550 1234 5678 90" bik="HASPDEHHXXX" phone="040 123456" />
+    <counterparty id="2" name="Weber Handels GmbH" tax_id="143/222/33333" kpp="DE345678901" address="Leopoldstraße 12, 80802 München" bank="Stadtsparkasse München" bank_account="DE12 7015 0000 1122 3344 55" bik="SSKMDEMMXXX" phone="089 987654" />
+    <counterparty id="3" name="Hans Meier e.K." tax_id="21/555/66666" kpp="" address="Schillerstraße 3, 04109 Leipzig" bank="" bank_account="" bik="" phone="0341 445566" />
+    <counterparty id="4" name="Hausverwaltung Krause GbR" tax_id="30/111/22222" kpp="DE456789012" address="Friedrichstraße 100, 10117 Berlin" bank="Deutsche Bank" bank_account="DE55 1007 0000 0987 6543 21" bik="DEUTDEBBXXX" phone="030 2233440" />
+  </counterparties>
+  <items>
+    <item id="1" sku="10001" name="Kopierpapier A4, 500 Blatt" unit_id="2" vat_rate_id="1" price="5.9" />
+    <item id="2" sku="10002" name="Toner HP CF259A" unit_id="1" vat_rate_id="1" price="79" />
+    <item id="3" sku="10003" name="Monitor 27&quot; Samsung S27C390" unit_id="1" vat_rate_id="1" price="249" />
+    <item id="4" sku="10004" name="Tastatur Cherry KC 1000" unit_id="1" vat_rate_id="1" price="24.9" />
+    <item id="5" sku="10005" name="Fachbuch &quot;Buchführung kompakt&quot;" unit_id="1" vat_rate_id="2" price="39.9" />
+    <item id="6" sku="10006" name="Büromiete" unit_id="5" vat_rate_id="1" price="1200" />
+  </items>
+  <employees>
+    <employee id="1" account_id="24" name="Anna Schmidt" position="Buchhalterin" tax_id="12 345 678 901" hired="2019-04-01" salary="2500" allowance="105.5" />
+    <employee id="2" account_id="24" name="Thomas Becker" position="Verkäufer" tax_id="12 345 678 902" hired="2022-08-15" salary="2200" allowance="105.5" />
+  </employees>
+  <assets>
+    <asset id="1" account_id="3" depreciation_id="3" expense_id="27" inventory="A-001" name="PC Fujitsu Esprimo P7012" cost="1500" life="36" commissioned="2025-11-15" />
+  </assets>
+  <currencies>
+    <currency id="1" code="USD" name="US-Dollar" />
+  </currencies>
+  <rates>
+    <rate id="1" currency_id="1" date="2026-03-01" rate="0.926" />
+    <rate id="2" currency_id="1" date="2026-03-31" rate="0.917" />
+  </rates>
+  <documents>
+    <document id="1" doc_type_id="8" counterparty_id="0" number="EB-0001" date="2026-03-01" comment="Eröffnungsbilanz 01.03.2026" posted="1" />
+    <document id="2" doc_type_id="1" counterparty_id="1" number="ER-0001" date="2026-03-03" comment="Rechnung Nr. 4711 vom 03.03.2026" posted="1" />
+    <document id="3" doc_type_id="5" counterparty_id="1" number="UE-0001" date="2026-03-04" comment="Zahlung Rechnung Nr. 4711" total="1557.53" posted="1" />
+    <document id="4" doc_type_id="2" counterparty_id="3" number="AR-0001" date="2026-03-10" comment="Lieferung laut Bestellung vom 05.03.2026" posted="1" />
+    <document id="5" doc_type_id="3" counterparty_id="3" number="KE-0001" date="2026-03-11" comment="Barzahlung AR-0001" total="750.33" posted="1" />
+    <document id="6" doc_type_id="2" counterparty_id="2" number="AR-0002" date="2026-03-14" comment="Lieferung laut Auftrag 12/26" posted="0" />
+    <document id="7" doc_type_id="13" counterparty_id="4" number="EL-0001" date="2026-03-15" comment="Büromiete März 2026" posted="1" />
+    <document id="8" doc_type_id="9" counterparty_id="0" number="LA-0001" date="2026-03-31" comment="Gehälter März 2026" posted="1" />
+    <document id="9" doc_type_id="10" counterparty_id="0" number="LZ-0001" date="2026-03-31" comment="Nettogehälter März 2026" posted="1" />
+    <document id="10" doc_type_id="12" counterparty_id="0" number="MA-0001" date="2026-03-31" comment="März 2026" posted="1" />
+  </documents>
+  <doc_lines>
+    <doc_line id="1" document_id="2" item_id="1" vat_rate_id="1" quantity="100" price="4.5" />
+    <doc_line id="2" document_id="2" item_id="2" vat_rate_id="1" quantity="10" price="59" />
+    <doc_line id="3" document_id="2" item_id="5" vat_rate_id="2" quantity="10" price="29.9" />
+    <doc_line id="4" document_id="4" item_id="3" vat_rate_id="1" quantity="2" price="249" />
+    <doc_line id="5" document_id="4" item_id="4" vat_rate_id="1" quantity="1" price="24.9" />
+    <doc_line id="6" document_id="4" item_id="5" vat_rate_id="2" quantity="3" price="39.9" />
+    <doc_line id="7" document_id="6" item_id="1" vat_rate_id="1" quantity="40" price="6.9" />
+    <doc_line id="8" document_id="6" item_id="2" vat_rate_id="1" quantity="5" price="79" />
+    <doc_line id="9" document_id="7" item_id="6" vat_rate_id="1" quantity="1" price="1200" />
+  </doc_lines>
+  <payroll_lines>
+    <payroll_line id="1" document_id="8" employee_id="1" amount="2500" />
+    <payroll_line id="2" document_id="8" employee_id="2" amount="2200" />
+    <payroll_line id="3" document_id="9" employee_id="1" amount="1790.34" />
+    <payroll_line id="4" document_id="9" employee_id="2" amount="1613.12" />
+  </payroll_lines>
+  <entries>
+    <entry id="1" document_id="1" debit_id="7" credit_id="33" amount="25000" content="Bankguthaben" />
+    <entry id="2" document_id="1" debit_id="8" credit_id="33" currency_id="1" currency_amount="2000" amount="1852" content="Fremdwährungskonto, 2.000 USD" />
+    <entry id="3" document_id="1" debit_id="3" debit_subconto_id="1" credit_id="33" amount="1500" content="PC Fujitsu Esprimo, Anschaffungskosten" />
+    <entry id="4" document_id="1" debit_id="33" credit_id="3" credit_subconto_id="1" amount="166.68" content="AfA November 2025 bis Februar 2026" />
+    <entry id="5" document_id="1" debit_id="33" credit_id="4" amount="25000" content="Stammkapital" />
+    <entry id="6" document_id="1" debit_id="33" credit_id="5" amount="3185.32" content="Gewinnvortrag" />
+  </entries>
+</ib>

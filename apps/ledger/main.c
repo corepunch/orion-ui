@@ -3,7 +3,7 @@
 // window declared in ledger.orion.
 //
 // Options:
-//   --config CODE   open configuration CODE (default: last selected, ru-2003)
+//   --config CODE   open configuration CODE (default: last selected, ru-2026)
 //   --data DIR      infobase directory (default: <settings>/ledger/CODE)
 //   --lang CODE     UI language (default: last selected, the configuration's,
 //                   then the system's)
@@ -103,6 +103,15 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   snprintf(path, sizeof(path), "%s/configurations/index.xml", share);
   g_ledger->catalog = create_database_with_schema("catalog", "db_schema_xml", &ledger_catalog_schema, path);
   snprintf(path, sizeof(path), "%s/configuration.xml", g_ledger->config_dir);
+  if (!axPathExists(path) && strcmp(g_ledger->configuration, LEDGER_DEFAULT_CONFIGURATION)) {
+    // A remembered configuration that was removed or renamed: open the default one.
+    fprintf(stderr, "[ledger] configuration '%s' not found at %s; opening %s\n", g_ledger->configuration, path, LEDGER_DEFAULT_CONFIGURATION);
+    snprintf(g_ledger->configuration, sizeof(g_ledger->configuration), "%s", LEDGER_DEFAULT_CONFIGURATION);
+    snprintf(g_ledger->config_dir, sizeof(g_ledger->config_dir), "%.900s/configurations/%s", share, g_ledger->configuration);
+    if (!data_dir) snprintf(g_ledger->data_dir, sizeof(g_ledger->data_dir), "%.900s/ledger/%s", axSettingsDirectory(), g_ledger->configuration);
+    axMkDir(g_ledger->data_dir);
+    snprintf(path, sizeof(path), "%s/configuration.xml", g_ledger->config_dir);
+  }
   if (!axPathExists(path)) {
     fprintf(stderr, "[ledger] configuration '%s' not found at %s\n", g_ledger->configuration, path);
     return false;
@@ -111,6 +120,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (!g_ledger->catalog || !g_ledger->cfg) return false;
   register_database("catalog", g_ledger->catalog);
   register_database("cfg", g_ledger->cfg);
+  ledger_script_open(g_ledger->config_dir, g_ledger->data_dir);  // rules.lua and plugins
   choose_ui_language(language, share);
   if (!(g_ledger->ib = open_infobase())) return false;
 
@@ -130,6 +140,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
 void gem_shutdown(void) {
   if (!g_ledger) return;
   destroy_database(g_ledger->ib);  // saves when modified
+  ledger_script_close();
   destroy_database(g_ledger->cfg);
   destroy_database(g_ledger->catalog);
   g_ledger = NULL;

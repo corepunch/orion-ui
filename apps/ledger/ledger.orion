@@ -139,8 +139,17 @@
         <field name="code" type="string" length="8" />
         <field name="name" type="string" length="32" />
       </table>
+      <!-- Tax rates. A rate may carry its own accounts, as DATEV's automatic
+           accounts do: sales at the rate post revenue to revenue_id and tax to
+           output_tax_id, purchases post the expense to expense_id and the tax
+           to input_tax_id (SKR 03: 8400/1776 for 19 %, 8300/1771 for 7 %).
+           Empty accounts fall back to the document type's. -->
       <table name="vat_rates">
         <field name="id" type="integer" key="YES" />
+        <field name="revenue_id" type="integer" relation="accounts.id" />
+        <field name="expense_id" type="integer" relation="accounts.id" />
+        <field name="output_tax_id" type="integer" relation="accounts.id" />
+        <field name="input_tax_id" type="integer" relation="accounts.id" />
         <field name="name" type="string" length="32" />
         <field name="rate" type="double" />
       </table>
@@ -154,7 +163,9 @@
              assets    fixed assets put into service: Dt asset account / Kt credit;
              closing   month-end closing by the configuration's closing rules.
            base is "net" (amount without tax) or "total" for documents.
-           vat_book: 1 lists the document in the sales book, 2 in the purchase book. -->
+           vat_book: 1 lists the document in the sales book, 2 in the purchase book.
+           auto_accounts: each line's tax rate may replace the revenue or
+           expense account and the tax account with its own (vat_rates). -->
       <table name="doc_types">
         <field name="id" type="integer" key="YES" />
         <field name="debit_id" type="integer" relation="accounts.id" />
@@ -169,12 +180,32 @@
         <field name="form" type="string" length="16" />
         <field name="base" type="string" length="8" />
         <field name="vat_book" type="integer" />
+        <field name="auto_accounts" type="boolean" />
+        <!-- A function of the configuration's rules.lua that posts the document instead of the form's built-in posting. -->
+        <field name="script" type="string" length="32" />
         <field name="description" type="string" length="512" />
       </table>
-      <!-- Payroll taxes on accrued pay: withheld ones reduce the employee's
-           net pay (Dt debit / Kt credit), the others are the employer's cost
-           (Dt the employee's expense account when debit is empty). allowance
-           taxes apply after the employee's monthly allowance. -->
+      <!-- Payroll taxes on accrued pay, in id order: withheld ones reduce the
+           employee's net pay (Dt debit / Kt credit), the others are the
+           employer's cost (Dt the employee's expense account when debit is
+           empty). Rows are effective-dated: a document applies the rows whose
+           valid_from..valid_to (empty = open) contain its date, so a new year
+           adds rows instead of editing them.
+             allowance        the employee's monthly allowance is deducted from
+                              the base; allowance_limit (annual, 0 = none) ends
+                              it once the year's pay exceeds it (ст. 218 НК РФ)
+             cap_month        monthly base ceiling (Beitragsbemessungsgrenze)
+             cap_year         annual base ceiling (единая предельная база);
+                              rate_above applies to the part above either cap
+             scale            "" flat rate; "cumulative": the tax_scales zones
+                              on the year's base so far (НДФЛ); "annualized":
+                              the zones on twelve monthly bases, one twelfth
+                              of the result (Lohnsteuer, § 39b EStG)
+             after_withheld   the base is reduced by the taxes withheld before
+                              this row (Vorsorgepauschale)
+             rounding         "" to cents; "unit" to whole currency units
+                              (НДФЛ, ст. 52 НК РФ); "floor" the annual tax to
+                              whole units, then the twelfth to cents (§ 39b) -->
       <table name="payroll_taxes">
         <field name="id" type="integer" key="YES" />
         <field name="debit_id" type="integer" relation="accounts.id" />
@@ -182,8 +213,31 @@
         <field name="code" type="string" length="16" />
         <field name="name" type="string" length="96" />
         <field name="rate" type="double" />
+        <field name="rate_above" type="double" />
+        <field name="cap_month" type="double" />
+        <field name="cap_year" type="double" />
+        <field name="allowance_limit" type="double" />
         <field name="withheld" type="boolean" />
         <field name="allowance" type="boolean" />
+        <field name="after_withheld" type="boolean" />
+        <field name="scale" type="string" length="16" />
+        <field name="rounding" type="string" length="8" />
+        <!-- A function of rules.lua that computes this tax from the context (Solidaritätszuschlag, SME tariffs). -->
+        <field name="script" type="string" length="32" />
+        <field name="valid_from" type="date" />
+        <field name="valid_to" type="date" />
+      </table>
+      <!-- Zones of a progressive scale, by base_from ascending. The tax on an
+           annual base x in a zone is fixed + rate % of (x - base_from) +
+           curve * ((x - base_from) / 10000)^2: a marginal bracket (НДФЛ, curve
+           0) or a quadratic progression zone (§ 32a EStG). -->
+      <table name="tax_scales">
+        <field name="id" type="integer" key="YES" />
+        <field name="tax_id" type="integer" relation="payroll_taxes.id" />
+        <field name="base_from" type="double" />
+        <field name="rate" type="double" />
+        <field name="fixed" type="double" />
+        <field name="curve" type="double" precision="2" />
       </table>
       <!-- Month-end closing, in id order:
              depreciation  each asset's monthly straight-line depreciation;
@@ -202,6 +256,8 @@
         <!-- depreciation: "next" starts in the month after the asset is put
              into service, "same" in that month. -->
         <field name="start" type="string" length="8" />
+        <!-- kind="script": the rules.lua function that writes the step's entries. -->
+        <field name="script" type="string" length="32" />
         <field name="name" type="string" length="96" />
       </table>
       <!-- Opening balances in a 1C EnterpriseData file come as documents named
@@ -223,6 +279,17 @@
         <field name="name" type="string" length="96" />
         <field name="template" type="string" length="64" />
         <field name="basis" type="string" length="256" />
+      </table>
+      <!-- The legal acts the configuration implements, by area (accounts,
+           vat, payroll, assets, forms, cash, reporting), with the date the
+           cited wording took effect and where to re-check it. -->
+      <table name="regulations">
+        <field name="id" type="integer" key="YES" />
+        <field name="area" type="string" length="32" />
+        <field name="title" type="string" length="160" />
+        <field name="reference" type="string" length="160" />
+        <field name="valid_from" type="date" />
+        <field name="url" type="string" length="160" />
       </table>
     </database>
 
@@ -332,6 +399,7 @@
         <field name="number" type="string" length="24" />
         <field name="date" type="date" default="today" />
         <field name="comment" type="string" length="256" />
+        <field name="import_source" type="string" length="65" />
         <field name="rate" type="double" precision="4" />
         <field name="amount" type="double" />
         <field name="vat" type="double" />
@@ -424,15 +492,45 @@
         <field name="balance_dr" type="double" />
         <field name="balance_cr" type="double" />
       </table>
+      <!-- Sales (book 1) and purchase (book 2) books: one row per document
+           and tax rate, as the books and the tax return split them. -->
       <table name="vat_book" transient="true">
         <field name="id" type="integer" key="YES" />
         <field name="document_id" type="integer" relation="documents.id" />
         <field name="counterparty_id" type="integer" relation="counterparties.id" />
+        <field name="vat_rate_id" type="integer" relation="cfg.vat_rates.id" />
         <field name="book" type="integer" />
         <field name="date" type="date" />
         <field name="total" type="double" />
         <field name="amount" type="double" />
         <field name="vat" type="double" />
+      </table>
+      <!-- The books totalled per tax rate: the lines of a VAT return
+           (раздел 3 декларации по НДС, Umsatzsteuer-Voranmeldung). -->
+      <table name="vat_summary" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="vat_rate_id" type="integer" relation="cfg.vat_rates.id" />
+        <field name="book" type="integer" />
+        <field name="documents" type="integer" />
+        <field name="total" type="double" />
+        <field name="amount" type="double" />
+        <field name="vat" type="double" />
+      </table>
+      <!-- Entries of posted documents within the report period: the journal
+           printed or exported (DATEV Buchungsstapel, журнал операций). -->
+      <table name="journal_rows" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="document_id" type="integer" relation="documents.id" />
+        <field name="debit_id" type="integer" relation="cfg.accounts.id" />
+        <field name="credit_id" type="integer" relation="cfg.accounts.id" />
+        <field name="debit_subconto_id" type="integer" relation="ib.{debit.subconto_kind.table}.id" />
+        <field name="credit_subconto_id" type="integer" relation="ib.{credit.subconto_kind.table}.id" />
+        <field name="currency_id" type="integer" relation="currencies.id" />
+        <field name="date" type="date" />
+        <field name="quantity" type="double" precision="3" />
+        <field name="currency_amount" type="double" />
+        <field name="amount" type="double" />
+        <field name="content" type="string" length="160" />
       </table>
       <!-- Cash book: per day the opening balance, the cash orders, the day's
            totals and the closing balance. -->
@@ -750,6 +848,7 @@
             <Column field="document.number" title="Document" width="80" />
             <Column field="counterparty.name" title="Counterparty" width="0" min-width="140" />
             <Column field="counterparty.tax_id" title="Tax ID" width="100" />
+            <Column field="vat_rate.name" title="Rate" width="56" />
             <Column field="total" title="Total" width="86" total="sum" />
             <Column field="amount" title="Net" width="86" total="sum" />
             <Column field="vat" title="Tax" width="84" total="sum" />
@@ -759,9 +858,28 @@
             <Column field="document.number" title="Document" width="80" />
             <Column field="counterparty.name" title="Counterparty" width="0" min-width="140" />
             <Column field="counterparty.tax_id" title="Tax ID" width="100" />
+            <Column field="vat_rate.name" title="Rate" width="56" />
             <Column field="total" title="Total" width="86" total="sum" />
             <Column field="amount" title="Net" width="86" total="sum" />
             <Column field="vat" title="Tax" width="84" total="sum" />
+          </TableView>
+          <TableView name="vat_summary" zeros="blank" text="Tax Summary" source="ib.vat_summary" flags="notitle,nofill,vscroll">
+            <Column field="book" title="Book" width="48" />
+            <Column field="vat_rate.name" title="Rate" width="0" min-width="100" />
+            <Column field="documents" title="Documents" width="80" />
+            <Column field="total" title="Total" width="96" total="sum" />
+            <Column field="amount" title="Net" width="96" total="sum" />
+            <Column field="vat" title="Tax" width="96" total="sum" />
+          </TableView>
+          <TableView name="journal" zeros="blank" text="Journal" source="ib.journal_rows" flags="notitle,nofill,vscroll">
+            <Column field="date" title="Date" width="76" />
+            <Column field="document.number" title="Document" width="72" />
+            <Column field="debit.code" title="Dr" width="56" />
+            <Column field="debit_subconto.name" title="Dr Analytics" width="0" />
+            <Column field="credit.code" title="Cr" width="56" />
+            <Column field="credit_subconto.name" title="Cr Analytics" width="0" />
+            <Column field="amount" title="Amount" width="96" total="sum" />
+            <Column field="content" title="Content" width="0" />
           </TableView>
           <TableView name="cash_book" zeros="blank" totals-skip="summary" text="Cash Book" source="ib.cash_book" flags="notitle,nofill,vscroll">
             <Column field="date" title="Date" width="72" />
@@ -820,6 +938,7 @@
             <Column field="vat_debit.code" title="Tax Dr" width="52" />
             <Column field="vat_credit.code" title="Tax Cr" width="52" />
             <Column field="form" title="Form" width="72" />
+            <Column field="script" title="Script" width="96" />
             <Column field="description" title="Description" width="0" />
           </TableView>
           <TableView name="print_forms" text="Print Forms" source="cfg.print_forms" master="none" flags="notitle,nofill,vscroll">
@@ -828,12 +947,26 @@
             <Column field="name" title="Form" width="0" />
             <Column field="basis" title="Legal Basis" width="0" />
           </TableView>
-          <TableView name="payroll_taxes" text="Payroll Taxes" source="cfg.payroll_taxes" master="none" flags="notitle,nofill,vscroll">
+          <TableView name="payroll_taxes" zeros="blank" text="Payroll Taxes" source="cfg.payroll_taxes" master="none" flags="notitle,nofill,vscroll">
             <Column field="name" title="Tax" width="0" min-width="160" />
-            <Column field="rate" title="Percent" width="64" />
+            <Column field="rate" title="Percent" width="56" />
+            <Column field="rate_above" title="Above Cap" width="64" />
+            <Column field="cap_month" title="Cap / Month" width="80" />
+            <Column field="cap_year" title="Cap / Year" width="90" />
+            <Column field="scale" title="Scale" width="72" />
+            <Column field="script" title="Script" width="96" />
             <Column field="withheld" title="Withheld" width="64" />
+            <Column field="valid_from" title="From" width="80" />
+            <Column field="valid_to" title="To" width="80" />
             <Column field="debit.code" title="Dr" width="48" />
             <Column field="credit.code" title="Cr" width="48" />
+          </TableView>
+          <TableView name="tax_scales" zeros="blank" text="Tax Scales" source="cfg.tax_scales" master="none" flags="notitle,nofill,vscroll">
+            <Column field="tax.name" title="Tax" width="0" min-width="160" />
+            <Column field="base_from" title="Annual Base From" width="120" />
+            <Column field="rate" title="Percent" width="64" />
+            <Column field="fixed" title="Tax at Zone Start" width="110" />
+            <Column field="curve" title="Curve" width="72" />
           </TableView>
           <TableView name="closing_rules" text="Closing Rules" source="cfg.closing_rules" master="none" flags="notitle,nofill,vscroll">
             <Column field="name" title="Step" width="0" min-width="160" />
@@ -849,12 +982,22 @@
             <Column field="table" title="Catalog" width="120" />
           </TableView>
           <TableView name="vat_rates" text="Tax Rates" source="cfg.vat_rates" flags="notitle,nofill,vscroll">
-            <Column field="name" title="Rate" width="0" />
-            <Column field="rate" title="Percent" width="80" />
+            <Column field="name" title="Rate" width="0" min-width="100" />
+            <Column field="rate" title="Percent" width="64" />
+            <Column field="revenue.code" title="Revenue" width="64" />
+            <Column field="output_tax.code" title="Tax Cr" width="64" />
+            <Column field="expense.code" title="Expense" width="64" />
+            <Column field="input_tax.code" title="Tax Dr" width="64" />
           </TableView>
           <TableView name="units" text="Units" source="cfg.units" flags="notitle,nofill,vscroll">
             <Column field="code" title="Code" width="56" />
             <Column field="name" title="Unit" width="0" />
+          </TableView>
+          <TableView name="regulations" text="Legal Basis" source="cfg.regulations" master="none" flags="notitle,nofill,vscroll">
+            <Column field="area" title="Area" width="80" />
+            <Column field="title" title="Rule" width="0" min-width="160" />
+            <Column field="reference" title="Act" width="0" min-width="160" />
+            <Column field="valid_from" title="In Force From" width="90" />
           </TableView>
         </TabView>
       </StackView>

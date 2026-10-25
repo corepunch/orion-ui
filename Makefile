@@ -328,6 +328,26 @@ $(EXAMPLE_BINS) $(PHONY_APP_BINS): $(BIN_DIR)/%$(EXE_EXT): $(CORE_LIBS) $(GENERA
 	    $(CC) $(CFLAGS) $(PHONY_APPS_CFLAGS_$*) $(call app_theme_cflags,$*) $(app_inc) -x c -o $@ - \
 	    $(LDFLAGS_EXAMPLE) $(app_libs)
 
+# Ledger's native launcher identity uses the same artwork on every platform.
+ifeq ($(IS_WIN),1)
+WINDRES ?= windres
+$(BUILD_DIR)/ledger-icon.o: apps/ledger/icon.rc apps/ledger/share/icon.ico
+	@mkdir -p "$(@D)"
+	$(WINDRES) -I apps/ledger -i $< -o $@
+$(BIN_DIR)/ledger$(EXE_EXT): $(BUILD_DIR)/ledger-icon.o
+$(BIN_DIR)/ledger$(EXE_EXT): LDFLAGS_EXAMPLE += -x none $(BUILD_DIR)/ledger-icon.o
+endif
+
+ifeq ($(UNAME_S),Linux)
+.PHONY: install-ledger-desktop
+install: install-ledger-desktop
+install-ledger-desktop:
+	@$(INSTALL) -d "$(DESTDIR)$(PREFIX)/share/applications" "$(DESTDIR)$(PREFIX)/share/icons/hicolor/1024x1024/apps"
+	@sed 's|^Exec=ledger|Exec=$(PREFIX)/bin/ledger|' packaging/linux/com.orion.ledger.desktop > "$(DESTDIR)$(PREFIX)/share/applications/com.orion.ledger.desktop"
+	@chmod 644 "$(DESTDIR)$(PREFIX)/share/applications/com.orion.ledger.desktop"
+	@$(INSTALL) -m 644 apps/ledger/share/icon.png "$(DESTDIR)$(PREFIX)/share/icons/hicolor/1024x1024/apps/com.orion.ledger.png"
+endif
+
 # Each .gem is built against the split core libraries so it shares the same
 # runtime infrastructure as the shell.  orion/gem.h is force-included at the
 # top of the unity build so BUILD_AS_GEM macros (running stub, ui_init and

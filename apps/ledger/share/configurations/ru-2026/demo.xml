@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Demo infobase for the ru-2026 configuration: March 2026 of a small trading company. Copied to the
+     user's settings directory on first start; posted documents are posted then. -->
+<ib>
+  <organizations>
+    <organization id="1" name="ООО &quot;Ромашка&quot;" tax_id="7701234567" kpp="770101001" address="125009, г. Москва, ул. Тверская, д. 7, оф. 12" bank="АО &quot;АЛЬФА-БАНК&quot; г. Москва" bank_account="40702810401300012345" bik="044525593" corr_account="30101810200000000593" director="Петров П.П." accountant="Сидорова А.В." cashier="Кузнецова Е.Н." />
+  </organizations>
+  <counterparties>
+    <counterparty id="1" name="ООО &quot;Торговый дом Альфа&quot;" tax_id="7705123456" kpp="770501001" address="115054, г. Москва, ул. Валовая, д. 21" bank="ПАО Сбербанк г. Москва" bank_account="40702810938000054321" bik="044525225" phone="+7 (495) 235-12-34" />
+    <counterparty id="2" name="ООО &quot;Бета-Снаб&quot;" tax_id="7814012345" kpp="781401001" address="197183, г. Санкт-Петербург, ул. Савушкина, д. 3" bank="Банк ВТБ (ПАО) г. Санкт-Петербург" bank_account="40702810200000067890" bik="044030704" phone="+7 (812) 430-55-66" />
+    <counterparty id="3" name="ИП Иванов Иван Иванович" tax_id="771512345678" kpp="" address="127282, г. Москва, ул. Широкая, д. 5, кв. 40" bank="" bank_account="" bik="" phone="+7 (495) 470-11-22" />
+    <counterparty id="4" name="Intertrade Ltd." tax_id="" kpp="" address="12 Harbour Road, Limassol, Cyprus" bank="Bank of Cyprus" bank_account="CY17002001280000001200527600" bik="BCYPCY2N" phone="+357 25 123456" />
+    <counterparty id="5" name="ООО &quot;Облачные сервисы&quot;" tax_id="7707654321" kpp="770701001" address="127006, г. Москва, ул. Долгоруковская, д. 23" bank="АО &quot;Райффайзенбанк&quot; г. Москва" bank_account="40702810700000011223" bik="044525700" phone="+7 (495) 777-00-01" />
+  </counterparties>
+  <items>
+    <item id="1" sku="00001" name="Бумага офисная А4 &quot;Снегурочка&quot;, 500 л." unit_id="2" vat_rate_id="1" price="550" />
+    <item id="2" sku="00002" name="Картридж HP CF259A" unit_id="1" vat_rate_id="1" price="6500" />
+    <item id="3" sku="00003" name="Монитор 27&quot; Samsung S27C390" unit_id="1" vat_rate_id="1" price="28000" />
+    <item id="4" sku="00004" name="Клавиатура Logitech K120" unit_id="1" vat_rate_id="1" price="1900" />
+    <item id="5" sku="00005" name="Доставка товара" unit_id="6" vat_rate_id="1" price="1500" />
+    <item id="6" sku="00006" name="Учебник &quot;Бухгалтерский учет&quot;" unit_id="1" vat_rate_id="2" price="600" />
+    <item id="7" sku="00007" name="Аренда офиса" unit_id="8" vat_rate_id="1" price="60000" />
+  </items>
+  <employees>
+    <employee id="1" account_id="20" name="Петров Петр Петрович" position="Генеральный директор" tax_id="770112345678" hired="2019-06-03" salary="150000" allowance="0" />
+    <employee id="2" account_id="20" name="Сидорова Анна Викторовна" position="Главный бухгалтер" tax_id="770298765432" hired="2019-06-03" salary="120000" allowance="1400" />
+    <employee id="3" account_id="24" name="Кузнецова Елена Николаевна" position="Менеджер по продажам, кассир" tax_id="771355512345" hired="2022-09-12" salary="90000" allowance="4200" />
+  </employees>
+  <assets>
+    <asset id="1" account_id="3" depreciation_id="5" expense_id="20" inventory="00001" name="Компьютер Lenovo ThinkCentre M70q" cost="180000" life="36" commissioned="2025-12-15" />
+    <asset id="2" account_id="3" depreciation_id="5" expense_id="20" inventory="00002" name="Принтер HP LaserJet Pro 4003dn" cost="60000" life="24" commissioned="" />
+  </assets>
+  <currencies>
+    <currency id="1" code="USD" name="Доллар США" />
+    <currency id="2" code="EUR" name="Евро" />
+  </currencies>
+  <rates>
+    <rate id="1" currency_id="1" date="2026-03-01" rate="81.5" />
+    <rate id="2" currency_id="1" date="2026-03-16" rate="80.9" />
+    <rate id="3" currency_id="1" date="2026-03-20" rate="80.6" />
+    <rate id="4" currency_id="1" date="2026-03-31" rate="80.2" />
+    <rate id="5" currency_id="2" date="2026-03-01" rate="88.4" />
+    <rate id="6" currency_id="2" date="2026-03-31" rate="87.9" />
+  </rates>
+  <documents>
+    <document id="1" doc_type_id="10" counterparty_id="0" number="ВО-0001" date="2026-03-01" comment="Остатки на 01.03.2026" posted="1" />
+    <document id="2" doc_type_id="7" counterparty_id="2" number="ПВ-0001" date="2026-03-02" comment="Предоплата по договору № 12/26" total="600000" posted="1" />
+    <document id="3" doc_type_id="1" counterparty_id="1" number="ПТ-0001" date="2026-03-03" comment="УПД № 118 от 03.03.2026" posted="1" />
+    <document id="4" doc_type_id="6" counterparty_id="1" number="ПП-0001" date="2026-03-04" comment="Оплата по УПД № 118 от 03.03.2026" total="213880" posted="1" />
+    <document id="5" doc_type_id="8" counterparty_id="1" number="ВН-0001" date="2026-03-05" comment="НДС по УПД № 118 (ПТ-0001)" total="37880" posted="1" />
+    <document id="6" doc_type_id="3" counterparty_id="5" number="ПУ-0001" date="2026-03-06" comment="Аренда офиса за март 2026 г., акт № 36" posted="1" />
+    <document id="7" doc_type_id="2" counterparty_id="3" number="РТ-0001" date="2026-03-10" comment="" posted="1" />
+    <document id="8" doc_type_id="4" counterparty_id="3" number="ПКО-0001" date="2026-03-11" comment="Оплата по УПД РТ-0001" total="73938" posted="1" />
+    <document id="9" doc_type_id="13" counterparty_id="1" number="ПО-0001" date="2026-03-12" comment="Принтер HP LaserJet Pro 4003dn, УПД № 131" amount="60000" vat="13200" total="73200" posted="1" />
+    <document id="10" doc_type_id="2" counterparty_id="2" number="РТ-0002" date="2026-03-14" comment="Отгрузка по договору № 12/26" posted="0" />
+    <document id="11" doc_type_id="14" counterparty_id="0" number="ОС-0001" date="2026-03-14" comment="Акт о приеме-передаче ОС № 1" posted="1" />
+    <document id="12" doc_type_id="16" counterparty_id="4" currency_id="1" number="ПИ-0001" date="2026-03-17" comment="Invoice 2026/117" posted="1" />
+    <document id="13" doc_type_id="17" counterparty_id="4" currency_id="1" number="ВС-0001" date="2026-03-20" comment="Оплата Invoice 2026/117" total="500" posted="1" />
+    <document id="14" doc_type_id="11" counterparty_id="0" number="НЗ-0001" date="2026-03-31" comment="Зарплата за март 2026 г." posted="1" />
+    <document id="15" doc_type_id="12" counterparty_id="0" number="ВЗ-0001" date="2026-03-31" comment="Зарплата за март 2026 г., реестр № 3" posted="1" />
+    <document id="16" doc_type_id="15" counterparty_id="0" number="ЗМ-0001" date="2026-03-31" comment="Март 2026 г." posted="1" />
+  </documents>
+  <doc_lines>
+    <doc_line id="1" document_id="3" item_id="1" vat_rate_id="1" quantity="100" price="450" />
+    <doc_line id="2" document_id="3" item_id="2" vat_rate_id="1" quantity="10" price="5200" />
+    <doc_line id="3" document_id="3" item_id="3" vat_rate_id="1" quantity="3" price="24000" />
+    <doc_line id="4" document_id="3" item_id="6" vat_rate_id="2" quantity="20" price="350" />
+    <doc_line id="5" document_id="6" item_id="7" vat_rate_id="1" quantity="1" price="60000" />
+    <doc_line id="6" document_id="7" item_id="3" vat_rate_id="1" quantity="2" price="28000" />
+    <doc_line id="7" document_id="7" item_id="4" vat_rate_id="1" quantity="1" price="1900" />
+    <doc_line id="8" document_id="7" item_id="6" vat_rate_id="2" quantity="5" price="600" />
+    <doc_line id="9" document_id="10" item_id="1" vat_rate_id="1" quantity="40" price="600" />
+    <doc_line id="10" document_id="10" item_id="2" vat_rate_id="1" quantity="5" price="7200" />
+    <doc_line id="11" document_id="12" item_id="2" vat_rate_id="4" quantity="10" price="50" />
+  </doc_lines>
+  <payroll_lines>
+    <payroll_line id="1" document_id="14" employee_id="1" amount="150000" />
+    <payroll_line id="2" document_id="14" employee_id="2" amount="120000" />
+    <payroll_line id="3" document_id="14" employee_id="3" amount="90000" />
+    <payroll_line id="4" document_id="15" employee_id="1" amount="130500" />
+    <payroll_line id="5" document_id="15" employee_id="2" amount="104582" />
+    <payroll_line id="6" document_id="15" employee_id="3" amount="78846" />
+  </payroll_lines>
+  <asset_lines>
+    <asset_line id="1" document_id="11" asset_id="2" />
+  </asset_lines>
+  <entries>
+    <entry id="1" document_id="1" debit_id="28" credit_id="1" amount="1500000" content="Остаток на расчетном счете" />
+    <entry id="2" document_id="1" debit_id="27" credit_id="1" amount="20000" content="Остаток в кассе" />
+    <entry id="3" document_id="1" debit_id="29" credit_id="1" currency_id="1" currency_amount="1000" amount="81500" content="Остаток на валютном счете, 1 000 USD" />
+    <entry id="4" document_id="1" debit_id="22" debit_subconto_id="4" credit_id="1" quantity="5" amount="7500" content="Остаток товаров" />
+    <entry id="5" document_id="1" debit_id="3" debit_subconto_id="1" credit_id="1" amount="180000" content="Первоначальная стоимость ОС" />
+    <entry id="6" document_id="1" debit_id="1" credit_id="5" credit_subconto_id="1" amount="10000" content="Амортизация за январь – февраль 2026 г." />
+    <entry id="7" document_id="1" debit_id="1" credit_id="57" amount="100000" content="Уставный капитал" />
+    <entry id="8" document_id="1" debit_id="1" credit_id="60" amount="1679000" content="Нераспределенная прибыль прошлых лет" />
+  </entries>
+</ib>

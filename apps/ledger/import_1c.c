@@ -18,6 +18,48 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
+// SHA-256 of the parsed exchange body: independent of path and UI language.
+static uint32_t ed_rotr(uint32_t x, int n) { return (x >> n) | (x << (32 - n)); }
+
+static void ed_digest(const unsigned char *data, size_t len, char hex[65]) {
+  static const uint32_t k[64] = {
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+  };
+  uint32_t h[8] = {0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19};
+  size_t blocks = len / 64 + (len % 64 < 56 ? 1 : 2);
+  for (size_t block = 0; block < blocks; block++) {
+    unsigned char bytes[64] = {0};
+    for (size_t j = 0; j < 64; j++) {
+      size_t i = block * 64 + j;
+      if (i < len) bytes[j] = data[i];
+      else if (i == len) bytes[j] = 0x80;
+    }
+    if (block == blocks - 1)
+      for (int j = 0; j < 8; j++) bytes[63 - j] = (unsigned char)(((uint64_t)len * 8) >> (j * 8));
+    uint32_t w[64];
+    for (int i = 0; i < 16; i++) w[i] = (uint32_t)bytes[i*4]<<24 | (uint32_t)bytes[i*4+1]<<16 | (uint32_t)bytes[i*4+2]<<8 | bytes[i*4+3];
+    for (int i = 16; i < 64; i++) {
+      uint32_t x = w[i-15], y = w[i-2];
+      w[i] = w[i-16] + (ed_rotr(x,7)^ed_rotr(x,18)^(x>>3)) + w[i-7] + (ed_rotr(y,17)^ed_rotr(y,19)^(y>>10));
+    }
+    uint32_t a=h[0], b=h[1], c=h[2], d=h[3], e=h[4], f=h[5], g=h[6], z=h[7];
+    for (int i = 0; i < 64; i++) {
+      uint32_t t1 = z + (ed_rotr(e,6)^ed_rotr(e,11)^ed_rotr(e,25)) + ((e&f)^(~e&g)) + k[i] + w[i];
+      uint32_t t2 = (ed_rotr(a,2)^ed_rotr(a,13)^ed_rotr(a,22)) + ((a&b)^(a&c)^(b&c));
+      z=g; g=f; f=e; e=d+t1; d=c; c=b; b=a; a=t1+t2;
+    }
+    h[0]+=a; h[1]+=b; h[2]+=c; h[3]+=d; h[4]+=e; h[5]+=f; h[6]+=g; h[7]+=z;
+  }
+  for (int i = 0; i < 8; i++) snprintf(hex + i*8, 9, "%08x", (unsigned)h[i]);
+}
+
 typedef struct { char ref[48]; int table, id; } ed_ref_t;
 
 typedef struct {
@@ -25,6 +67,7 @@ typedef struct {
   ledger_import_t *out;
   ed_ref_t *refs;
   int nrefs, cap;
+  char source[65];
   int opening_doc;     // the opening operation, created by the first balance row
 } ed_import_t;
 
@@ -105,6 +148,7 @@ static void *ed_first(database_t *db, int table) {
 // Every record struct starts with its integer key.
 static int ed_insert(ed_import_t *im, int table, void *record) {
   const void *row = (const void *)send_db_message(im->ib, dbInsert, (uint32_t)table, record);
+  if (!row) snprintf(im->out->error, sizeof(im->out->error), "%s", ui_tr("Cannot write an imported record."));
   return row ? *(const int *)row : 0;
 }
 
@@ -324,8 +368,7 @@ static void ed_skip(ed_import_t *im, const char *what) {
   if (len + n + 3 < sizeof(im->out->skipped)) snprintf(list + len, sizeof(im->out->skipped) - len, "%s%s", len ? ", " : "", what);
 }
 
-// One opening operation holds every balance of the file. Balances of a date
-// already imported from 1C are not entered twice.
+// One opening operation per exchange body; dates and translated comments are not identities.
 static int ed_opening_document(ed_import_t *im, xmlNodePtr doc) {
   if (im->opening_doc || im->out->balances_present) return im->opening_doc;
   const db_doc_type_t *type = ed_find(im->cfg, TABLE_DOC_TYPES, "code", "opening");
@@ -336,14 +379,17 @@ static int ed_opening_document(ed_import_t *im, xmlNodePtr doc) {
   send_db_message(im->ib, dbInitRecord, TABLE_DOCUMENTS, &d);
   d.doc_type_id = type->id;
   if (date[0]) snprintf(d.date, sizeof(d.date), "%.10s", date);
+  snprintf(d.import_source, sizeof(d.import_source), "%s", im->source);
   snprintf(d.comment, sizeof(d.comment), "%s", ui_tr("Opening balances imported from 1C"));
   result_node_t *docs = (result_node_t *)send_db_message(im->ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
   for (result_node_t *n = docs; n; n = n->next) {
     const db_document_t *old = *(db_document_t **)n->data;
-    if (old->doc_type_id == d.doc_type_id && !strcmp(old->date, d.date) && !strcmp(old->comment, d.comment)) im->out->balances_present = true;
+    if (!strcmp(old->import_source, im->source)) im->out->balances_present = true;
+    if (!old->import_source[0] && old->doc_type_id == d.doc_type_id && !strcmp(old->date, d.date) && !strcmp(old->comment, d.comment))
+      snprintf(im->out->error, sizeof(im->out->error), "%s", ui_tr("An older 1C import has no source identifier. Review its opening balances before importing this file."));
   }
   free_result_list(docs);
-  return im->out->balances_present ? 0 : (im->opening_doc = ed_insert(im, TABLE_DOCUMENTS, &d));
+  return im->out->balances_present || im->out->error[0] ? 0 : (im->opening_doc = ed_insert(im, TABLE_DOCUMENTS, &d));
 }
 
 static const db_account_t *ed_account(ed_import_t *im, int id) {
@@ -418,7 +464,20 @@ bool ledger_import_enterprisedata(database_t *ib, database_t *cfg, const char *p
     return false;
   }
   ed_import_t im = { .ib = ib, .cfg = cfg, .out = out };
-  bool scoped = send_db_message(ib, dbBeginChanges, 0, NULL) != 0;
+  xmlBufferPtr buffer = xmlBufferCreate();
+  if (!buffer || xmlNodeDump(buffer, xml, body, 0, 0) < 0) {
+    if (buffer) xmlBufferFree(buffer);
+    xmlFreeDoc(xml);
+    snprintf(out->error, sizeof(out->error), "%s", ui_tr("Cannot identify the exchange file."));
+    return false;
+  }
+  ed_digest(xmlBufferContent(buffer), xmlBufferLength(buffer), im.source);
+  xmlBufferFree(buffer);
+  if (!send_db_message(ib, dbBeginChanges, 0, NULL)) {
+    xmlFreeDoc(xml);
+    snprintf(out->error, sizeof(out->error), "%s", ui_tr("Cannot begin the import transaction."));
+    return false;
+  }
   for (xmlNodePtr obj = body->children; obj && !out->error[0]; obj = obj->next) {
     if (obj->type != XML_ELEMENT_NODE) continue;
     const char *name = (const char *)obj->name;
@@ -428,8 +487,17 @@ bool ledger_import_enterprisedata(database_t *ib, database_t *cfg, const char *p
     if (!strncmp(name, "Документ.Остатки", strlen("Документ.Остатки"))) { ed_balances(&im, obj); known = true; }
     if (!known) out->ignored++;
   }
-  if (!out->error[0] && im.opening_doc) ledger_post(ib, cfg, im.opening_doc);
-  if (scoped) send_db_message(ib, out->error[0] ? dbRevertChanges : dbCommitChanges, 0, NULL);
+  if (!out->error[0] && im.opening_doc && !ledger_post(ib, cfg, im.opening_doc))
+    snprintf(out->error, sizeof(out->error), "%s", ui_tr("Cannot post the imported opening balances."));
+  if (!out->error[0] && !send_db_message(ib, dbCommitChanges, 0, NULL))
+    snprintf(out->error, sizeof(out->error), "%s", ui_tr("Cannot commit the import transaction."));
+  if (out->error[0]) {
+    send_db_message(ib, dbRevertChanges, 0, NULL);
+    char error[sizeof(out->error)];
+    snprintf(error, sizeof(error), "%s", out->error);
+    memset(out, 0, sizeof(*out));
+    snprintf(out->error, sizeof(out->error), "%s", error);
+  }
   free(im.refs);
   xmlFreeDoc(xml);
   return !out->error[0];

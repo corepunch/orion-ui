@@ -19,7 +19,7 @@
 #define LEDGER_SCREEN_W   1280
 #define LEDGER_SCREEN_H   800
 #define LEDGER_PATH_MAX   1024
-#define LEDGER_DEFAULT_CONFIGURATION "ru-2003"
+#define LEDGER_DEFAULT_CONFIGURATION "ru-2026"
 
 typedef struct {
   hinstance_t    hinstance;
@@ -37,6 +37,24 @@ typedef struct {
 extern ledger_t *g_ledger;
 
 // posting.c — accounting rules over the cfg and ib databases.
+// A posting in progress: the document, its type and its currency rate. Scripts
+// and plugins (ledger_script.c) add entries through the same functions.
+typedef struct {
+  database_t *ib, *cfg;
+  db_document_t *doc;
+  const db_doc_type_t *type;
+  double rate;  // national units per document currency unit
+} ledger_post_t;
+// What a posting is about; each side of an entry takes the object its account is analysed by.
+typedef struct { int counterparty, item, employee, asset; } ledger_subjects_t;
+typedef struct { double dr, cr, dr_qty, cr_qty, dr_cur, cr_cur; } ledger_turnover_t;
+typedef struct { const db_payroll_tax_t *tax; double amount; } ledger_tax_amount_t;
+void ledger_add_entry(const ledger_post_t *p, int debit, int credit, double amount, const ledger_subjects_t *s,
+                      double quantity, int currency_id, double currency_amount, const char *content);
+// Turnovers of account (with subaccounts) before the document being posted plus
+// its own entries so far; subconto and currency filter when >= 0.
+ledger_turnover_t ledger_turnover(const ledger_post_t *p, int account_id, int subconto_id, int currency_id);
+double ledger_rate_on(database_t *ib, int currency_id, const char *date);
 int  ledger_field(database_t *db, int table_id, const char *field);
 // The infobase table an account is analysed by ("counterparties"), or "".
 const char *ledger_subconto_table(database_t *cfg, int account_id);
@@ -51,6 +69,19 @@ void ledger_fill_payroll(database_t *ib, database_t *cfg, int doc_id);
 void ledger_build_reports(database_t *ib, database_t *cfg);
 db_report_setting_t *ledger_report_settings(database_t *ib, database_t *cfg);
 int  ledger_count_references(database_t *ib, int table_id, const char *field, int id);
+
+// ledger_script.c — the configuration's rules.lua and plugins/*.lua: document
+// types, payroll taxes and closing steps the configuration scripts (like a 1C
+// configuration's modules), and event subscriptions. Every call is a no-op
+// when no script defines the function.
+bool ledger_script_open(const char *config_dir, const char *data_dir);
+void ledger_script_close(void);
+bool ledger_script_has(const char *function);
+bool ledger_script_post(const ledger_post_t *p, const char *function);
+bool ledger_script_closing(const ledger_post_t *p, const db_closing_rule_t *rule);
+bool ledger_script_tax(const ledger_post_t *p, const db_payroll_tax_t *tax, const db_payroll_line_t *line, double ytd, int accruals,
+                       double withheld, const ledger_tax_amount_t *so_far, int so_far_count, double *amount);
+void ledger_script_event(const char *event, const ledger_post_t *p);
 
 // ledger_ib.c — the infobase datasource class (db_schema_xml with Ledger's rules).
 lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam);

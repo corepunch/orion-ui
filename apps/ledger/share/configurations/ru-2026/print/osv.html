@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>Оборотно-сальдовая ведомость</title>
+<style>
+body{font-family:"Times New Roman",serif;font-size:10pt;margin:12mm;color:#000}
+table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
+.grid td,.grid th{border:1px solid #000}.grid th{font-weight:normal;font-size:8pt;text-align:center}
+.r{text-align:right}.c{text-align:center}.small{font-size:7.5pt}.b{font-weight:bold}
+.line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
+.sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
+h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
+@media print{body{margin:6mm}}
+</style></head><body>
+<h1 class="c">ОБОРОТНО-САЛЬДОВАЯ ВЕДОМОСТЬ</h1>
+<p class="c">{{org.name}}<br>за период с {{period.date_from|dmy}} по {{period.date_to|dmy}}</p>
+<table class="grid" style="width:100%">
+<tr><th rowspan="2">Счет</th><th rowspan="2">Наименование</th><th colspan="2">Сальдо на начало периода</th><th colspan="2">Обороты за период</th><th colspan="2">Сальдо на конец периода</th></tr>
+<tr><th>Дебет</th><th>Кредит</th><th>Дебет</th><th>Кредит</th><th>Дебет</th><th>Кредит</th></tr>
+{{#balances}}<tr><td class="c">{{account.code}}</td><td>{{account.name}}</td><td class="r">{{opening_dr}}</td><td class="r">{{opening_cr}}</td><td class="r">{{debit_turnover}}</td><td class="r">{{credit_turnover}}</td><td class="r">{{balance_dr}}</td><td class="r">{{balance_cr}}</td></tr>
+{{/balances}}</table>
+<p class="small">Субсчета повторяют часть оборотов своего счета первого порядка; итоги считаются по счетам первого порядка. Регистр бухгалтерского учета (ст. 10 Федерального закона от 06.12.2011 № 402-ФЗ).</p>
+<table class="sign" style="width:100%"><tr><td>Главный бухгалтер <span class="line">{{org.accountant}}</span></td></tr></table>
+</body></html>

@@ -6,7 +6,7 @@
   <string source="Select Configuration..." where="menu">Konfiguration wählen...</string>
   <string source="Language..." where="menu">Sprache...</string>
   <string source="Exit" where="menu">Beenden</string>
-  <string source="Documents" where="menu">Belege</string>
+  <string source="Documents" where="menu,reports_page">Belege</string>
   <string source="New Document..." where="menu">Neuer Beleg...</string>
   <string source="New Manual Operation..." where="menu">Neue Umbuchung...</string>
   <string source="Open Document..." where="menu">Beleg öffnen...</string>
@@ -52,7 +52,7 @@
   <string source="Number" where="journal_page">Nummer</string>
   <string source="Document" where="journal_page,entries_page,reports_page,config_page,document">Beleg</string>
   <string source="Counterparty" where="journal_page,reports_page,counterparty">Geschäftspartner</string>
-  <string source="Amount" where="journal_page,entries_page,document,operation,payroll,closing">Betrag</string>
+  <string source="Amount" where="journal_page,entries_page,reports_page,document,operation,payroll,closing">Betrag</string>
   <string source="Comment" where="journal_page">Bemerkung</string>
   <string source="Lines" where="journal_page">Positionen</string>
   <string source="Item" where="journal_page,document,item">Artikel</string>
@@ -63,8 +63,8 @@
   <string source="Tax Amount" where="journal_page,document">Steuerbetrag</string>
   <string source="Total" where="journal_page,reports_page,document">Gesamt</string>
   <string source="Entries" where="journal_page,entries_page">Buchungen</string>
-  <string source="Dr" where="journal_page,entries_page,config_page,operation,closing">Soll</string>
-  <string source="Cr" where="journal_page,entries_page,config_page,operation,closing">Haben</string>
+  <string source="Dr" where="journal_page,entries_page,reports_page,config_page,operation,closing">Soll</string>
+  <string source="Cr" where="journal_page,entries_page,reports_page,config_page,operation,closing">Haben</string>
   <string source="Content" where="journal_page,entries_page,reports_page,operation,closing">Buchungstext</string>
   <string source="Counterparties (Ctrl+2)" where="counterparties_page">Geschäftspartner (Strg+2)</string>
   <string source="New counterparty" where="counterparties_page">Neuer Geschäftspartner</string>
@@ -117,7 +117,7 @@
   <string source="Description" where="config_page">Beschreibung</string>
   <string source="Form" where="config_page">Formular</string>
   <string source="Tax Rates" where="config_page">Steuersätze</string>
-  <string source="Rate" where="currencies_page,config_page">Satz</string>
+  <string source="Rate" where="currencies_page,reports_page,config_page">Satz</string>
   <string source="Percent" where="config_page">Prozent</string>
   <string source="Units" where="config_page">Einheiten</string>
   <string source="Document:" where="document,payroll,asset_document,closing">Beleg:</string>
@@ -205,8 +205,8 @@
   <string source="New payroll document (Ctrl+W)" where="journal_page,employees_page">Lohnabrechnung oder Lohnzahlung (Strg+W)</string>
   <string source="Close Month" where="journal_page,closing">Monatsabschluss</string>
   <string source="Month-end closing (Ctrl+E)" where="journal_page">Monatsabschluss (Strg+E)</string>
-  <string source="Dr Analytics" where="journal_page,entries_page,operation,closing">Soll-Objekt</string>
-  <string source="Cr Analytics" where="journal_page,entries_page,operation,closing">Haben-Objekt</string>
+  <string source="Dr Analytics" where="journal_page,entries_page,reports_page,operation,closing">Soll-Objekt</string>
+  <string source="Cr Analytics" where="journal_page,entries_page,reports_page,operation,closing">Haben-Objekt</string>
   <string source="Employees (Ctrl+5)" where="employees_page">Mitarbeiter (Strg+5)</string>
   <string source="New employee" where="employees_page">Neuer Mitarbeiter</string>
   <string source="Edit employee" where="employees_page">Mitarbeiter bearbeiten</string>
@@ -215,7 +215,7 @@
   <string source="Hired" where="employees_page">Eintritt</string>
   <string source="Salary" where="employees_page,payroll_line">Gehalt</string>
   <string source="Allowance" where="employees_page">Freibetrag</string>
-  <string source="Expense" where="employees_page,assets_page,reports_page">Aufwand</string>
+  <string source="Expense" where="employees_page,assets_page,reports_page,config_page">Aufwand</string>
   <string source="Fixed assets (Ctrl+6)" where="assets_page">Anlagevermögen (Strg+6)</string>
   <string source="New fixed asset" where="assets_page">Neues Anlagegut</string>
   <string source="Edit fixed asset" where="assets_page">Anlagegut bearbeiten</string>
@@ -326,14 +326,14 @@ Anlagen: %d
 Währungen: %d
 Bereits vorhanden: %d
 Eröffnungsbuchungen: %d (Soll %s, Haben %s)</string>
-  <string source="The balances of this date were imported before and were not entered again." where="code">Die Salden dieses Datums wurden bereits importiert und nicht erneut erfasst.</string>
+  <string source="The balances in this exchange file were imported before and were not entered again." where="code">Die Salden dieser Austauschdatei wurden bereits importiert und nicht erneut erfasst.</string>
   <string source="&#10;&#10;Balances the configuration has no account for, left out: %s" where="code">
 
 Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="The file is not a 1C exchange file in the EnterpriseData format." where="code">Die Datei ist keine 1C-Austauschdatei im Format EnterpriseData.</string>
   <string source="The configuration has no opening balances document type." where="code">Die Konfiguration hat keine Belegart für Eröffnungsbuchungen.</string>
   <string source="Opening balances imported from 1C" where="code">Aus 1C importierte Salden</string>
-  <string source="Journal" where="journal_page">Journal</string>
+  <string source="Journal" where="journal_page,reports_page">Journal</string>
   <string source="Accounts" where="accounts_page">Kontenplan</string>
   <string source="Assets" where="assets_page">Anlagen</string>
   <string source="All accounting entries (Ctrl+8)" where="entries_page">Alle Buchungen (Strg+8)</string>
@@ -341,10 +341,34 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Setup" where="config_page">Einstellungen</string>
   <string source="Active configuration (Ctrl+0)" where="config_page">Aktive Konfiguration (Strg+0)</string>
   <string source="Import from 1C (EnterpriseData)..." where="menu">Aus 1C importieren (EnterpriseData)...</string>
+  <string source="Tax Summary" where="reports_page">Steuer nach Sätzen</string>
+  <string source="Book" where="reports_page">Buch</string>
+  <string source="Above Cap" where="config_page">Über Grenze</string>
+  <string source="Cap / Month" where="config_page">Grenze / Monat</string>
+  <string source="Cap / Year" where="config_page">Grenze / Jahr</string>
+  <string source="Scale" where="config_page">Tarif</string>
+  <string source="From" where="config_page">Von</string>
+  <string source="To" where="config_page">Bis</string>
+  <string source="Tax Scales" where="config_page">Steuertarife</string>
+  <string source="Annual Base From" where="config_page">Jahresbasis ab</string>
+  <string source="Tax at Zone Start" where="config_page">Steuer am Zonenanfang</string>
+  <string source="Curve" where="config_page">Krümmung</string>
+  <string source="Revenue" where="config_page">Erlöse</string>
+  <string source="Area" where="config_page">Bereich</string>
+  <string source="Rule" where="config_page">Regelung</string>
+  <string source="Act" where="config_page">Rechtsgrundlage</string>
+  <string source="In Force From" where="config_page">Gültig ab</string>
+  <string source="Script" where="config_page">Skript</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>
   <context name="reports_page">
     <string source="Expense">Ausgabe</string>
   </context>
+  <string source="Cannot write an imported record." where="code">Ein importierter Datensatz konnte nicht gespeichert werden.</string>
+  <string source="Cannot identify the exchange file." where="code">Die Austauschdatei konnte nicht identifiziert werden.</string>
+  <string source="Cannot begin the import transaction." where="code">Die Importtransaktion konnte nicht gestartet werden.</string>
+  <string source="Cannot post the imported opening balances." where="code">Die importierten Eröffnungssalden konnten nicht gebucht werden.</string>
+  <string source="Cannot commit the import transaction." where="code">Die Importtransaktion konnte nicht bestätigt werden.</string>
+  <string source="An older 1C import has no source identifier. Review its opening balances before importing this file." where="code">Ein älterer 1C-Import hat keine Quellkennung. Prüfen Sie dessen Eröffnungssalden vor dem Import dieser Datei.</string>
 </strings>

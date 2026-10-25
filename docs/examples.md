@@ -89,7 +89,7 @@ dialogs with numeric and date bindings.
 
 ```bash
 build/bin/ledger
-build/bin/ledger --config de-2003 --lang de
+build/bin/ledger --config de-2026 --lang de
 ```
 
 ## Task Manager
