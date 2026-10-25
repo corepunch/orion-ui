@@ -35,6 +35,7 @@ def unity_sources(root, app):
         'user.c': [p for p in sorted((root / 'orion/user').glob('*.c'))
                    if p.name not in ('dialog.c', 'component_registry.c')],
         'kernel.c': sorted((root / 'orion/kernel').glob('*.c')),
+        'audio_input.m': [root / 'orion/kernel/audio_input_apple.m'],
         'commctl.c': [p for p in sorted((root / 'orion/commctl').glob('*.c')) if p.name != 'tray.c'],
         'app.c': sorted(p for p in app_dir.rglob('*.c')
                         if p.name != 'main.c' and not {'components', 'tests', 'reel'} & set(p.relative_to(app_dir).parts))
@@ -144,7 +145,7 @@ def generate(args):
         'GCC_PREPROCESSOR_DEFINITIONS': ['$(inherited)', 'ORION_ALLOW_HIGHDPI=1',
                                        'GL_SILENCE_DEPRECATION', 'STBTT_STATIC', 'HAVE_WINDOWING',
                                        'SHAREDIR=\"../share/groove\"'],
-        'OTHER_CFLAGS': ['$(inherited)', '-Wall', '-Wextra', '-Wno-unused-parameter',
+        'OTHER_CFLAGS': ['$(inherited)', '-fblocks', '-Wall', '-Wextra', '-Wno-unused-parameter',
                          '-Wno-unused-function', '-Wno-missing-field-initializers', '-Wno-deprecated-declarations'],
         'PRODUCT_NAME': args.app, 'PRODUCT_BUNDLE_IDENTIFIER': args.bundle_id,
         'MARKETING_VERSION': '1.0', 'CURRENT_PROJECT_VERSION': '1',
@@ -187,7 +188,7 @@ def generate(args):
             settings.update(signing, SDKROOT='iphoneos', SUPPORTED_PLATFORMS='iphoneos iphonesimulator',
                             IPHONEOS_DEPLOYMENT_TARGET='16.0', TARGETED_DEVICE_FAMILY='2', SUPPORTS_MACCATALYST='NO')
             frameworks = ('UIKit', 'CoreGraphics', 'Foundation', 'OpenGLES', 'QuartzCore', 'Security',
-                          'UniformTypeIdentifiers', 'AudioToolbox')
+                          'UniformTypeIdentifiers', 'AudioToolbox', 'AVFoundation')
         else:
             settings.update(SUPPORTED_PLATFORMS='macosx', MACOSX_DEPLOYMENT_TARGET='12.0',
                             CODE_SIGN_STYLE='Automatic', CODE_SIGN_IDENTITY='-',
@@ -197,16 +198,18 @@ def generate(args):
                 settings['DEVELOPMENT_TEAM'] = args.team
             write(bundle / 'Generated/macos.entitlements', plistlib.dumps({
                 'com.apple.security.app-sandbox': True,
+                'com.apple.security.device.audio-input': True,
                 'com.apple.security.files.user-selected.read-write': True,
             }).decode())
-            frameworks = ('AppKit', 'Cocoa', 'OpenGL', 'IOSurface', 'Security', 'CoreFoundation', 'AudioToolbox')
+            frameworks = ('AppKit', 'Cocoa', 'OpenGL', 'IOSurface', 'Security', 'CoreFoundation', 'AudioToolbox', 'AVFoundation')
         for framework in frameworks:
             settings['OTHER_LDFLAGS'] += ['-framework', framework]
         configs = project.configurations(name, settings)
         info = dict(CFBundleExecutable='$(EXECUTABLE_NAME)', CFBundleIdentifier='$(PRODUCT_BUNDLE_IDENTIFIER)',
                     CFBundleName='Groove', CFBundleDisplayName='Groove', CFBundlePackageType='APPL',
                     CFBundleInfoDictionaryVersion='6.0', CFBundleShortVersionString='$(MARKETING_VERSION)',
-                    CFBundleVersion='$(CURRENT_PROJECT_VERSION)', CFBundleDevelopmentRegion='en')
+                    CFBundleVersion='$(CURRENT_PROJECT_VERSION)', CFBundleDevelopmentRegion='en',
+                    NSMicrophoneUsageDescription='Record your own sounds and vocals as samples in Groove songs.')
         if ipad:
             info.update(LSRequiresIPhoneOS=True, UIFileSharingEnabled=True, LSSupportsOpeningDocumentsInPlace=True,
                         UIRequiredDeviceCapabilities=['opengles-3'],
@@ -222,7 +225,7 @@ def generate(args):
         write(bundle / 'Generated' / (platform + '-Info.plist'), plistlib.dumps(info).decode())
         build_files = []
         for filename, ref in source_refs.items():
-            if filename.endswith('.m') and filename != platform + '.m':
+            if filename.endswith('.m') and filename not in (platform + '.m', 'audio_input.m'):
                 continue
             fields = {'fileRef': ref}
             if filename == 'ipad.m':

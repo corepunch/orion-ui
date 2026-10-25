@@ -11,6 +11,24 @@ import generate
 
 
 class FileReferenceTests(unittest.TestCase):
+    def test_microphone_privacy_and_capture_are_in_both_targets(self):
+        with tempfile.TemporaryDirectory(prefix='orion microphone ') as directory:
+            output = Path(directory)
+            subprocess.run(['python3', str(Path(generate.__file__)), 'groove', '--unsigned',
+                            '--output', str(output)], check=True, stdout=subprocess.DEVNULL)
+            bundle = output / 'groove.xcodeproj'
+            objects = generate.read_project(bundle / 'project.pbxproj')
+            for target in (obj for obj in objects.values() if obj['isa'] == 'PBXNativeTarget'):
+                phase = next(objects[uid] for uid in target['buildPhases'] if objects[uid]['isa'] == 'PBXSourcesBuildPhase')
+                files = [objects[objects[uid]['fileRef']]['path'] for uid in phase['files']]
+                self.assertIn('audio_input.m', files)
+                config = objects[objects[target['buildConfigurationList']]['buildConfigurations'][0]]['buildSettings']
+                self.assertIn('AVFoundation', config['OTHER_LDFLAGS'])
+                info = config['INFOPLIST_FILE'].replace('$(PROJECT_FILE_PATH)', str(bundle))
+                self.assertTrue(plistlib.loads(Path(info).read_bytes())['NSMicrophoneUsageDescription'])
+            permissions = plistlib.loads((bundle / 'Generated/macos.entitlements').read_bytes())
+            self.assertIs(permissions['com.apple.security.device.audio-input'], True)
+
     def test_macos_sandbox_entitlements_are_wired_to_both_configurations(self):
         with tempfile.TemporaryDirectory(prefix='orion xcode ') as directory:
             output = Path(directory)

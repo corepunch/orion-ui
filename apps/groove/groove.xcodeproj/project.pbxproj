@@ -27,6 +27,12 @@
 		F5E93593A037E2417DB8606C /* kernel.c in Sources */ = {isa = PBXBuildFile; fileRef = BFF2E1937265DAA06322B2F9 /* kernel.c */; };
 		F80B00E77FC46412A68114BF /* commctl.c in Sources */ = {isa = PBXBuildFile; fileRef = 2AA609CA6254E5E7742A8660 /* commctl.c */; };
 		F9EC25448562F064542B16CE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4D6FC5A1736DCA577CF68A90 /* Assets.xcassets */; };
+		38947AAA6707207FE23F5A57 = {"isa" = "PBXBuildFile";
+"fileRef" = "6C4DC900F558AA1C47B7C325";
+};
+		E18322380DC79D928F4E85F0 = {"isa" = "PBXBuildFile";
+"fileRef" = "6C4DC900F558AA1C47B7C325";
+};
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -265,6 +271,41 @@
 		FEA399A9B9376D6E61ABF19B /* commctl/sprite.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/sprite.c; path = ../../orion/commctl/sprite.c; sourceTree = SOURCE_ROOT; };
 		FF68E44959A235317FB17C80 /* ios/ios_system.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ios/ios_system.m; path = ../../platform/ios/ios_system.m; sourceTree = SOURCE_ROOT; };
 		FFCD43F38BCE037B630B3150 /* user/config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/config.h; path = ../../orion/user/config.h; sourceTree = SOURCE_ROOT; };
+		6C4DC900F558AA1C47B7C325 = {"isa" = "PBXFileReference";
+"path" = "audio_input.m";
+"sourceTree" = "DERIVED_FILE_DIR";
+"lastKnownFileType" = "sourcecode.c.objc";
+};
+		5AAC805EE577CBA812849499 = {"isa" = "PBXFileReference";
+"name" = "dialogs/dlg_record_sample.c";
+"path" = "dialogs/dlg_record_sample.c";
+"sourceTree" = "SOURCE_ROOT";
+"lastKnownFileType" = "sourcecode.c.c";
+};
+		B067F4D8A3E3842EDA5998E0 = {"isa" = "PBXFileReference";
+"name" = "samples.c";
+"path" = "samples.c";
+"sourceTree" = "SOURCE_ROOT";
+"lastKnownFileType" = "sourcecode.c.c";
+};
+		958BE5022CF3C64D46665E88 = {"isa" = "PBXFileReference";
+"name" = "kernel/audio_input.c";
+"path" = "../../orion/kernel/audio_input.c";
+"sourceTree" = "SOURCE_ROOT";
+"lastKnownFileType" = "sourcecode.c.c";
+};
+		93E571FDDC674574E4E5BB84 = {"isa" = "PBXFileReference";
+"name" = "kernel/audio_input.h";
+"path" = "../../orion/kernel/audio_input.h";
+"sourceTree" = "SOURCE_ROOT";
+"lastKnownFileType" = "sourcecode.c.h";
+};
+		94A2B3C132077F83A1E06624 = {"isa" = "PBXFileReference";
+"name" = "kernel/audio_input_apple.m";
+"path" = "../../orion/kernel/audio_input_apple.m";
+"sourceTree" = "SOURCE_ROOT";
+"lastKnownFileType" = "sourcecode.c.objc";
+};
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -329,6 +370,8 @@
 				627CEE5B020A8CBB1A8494CC /* view_tracks.c */,
 				6EF168DD20CF7BB19D86AB8E /* view_transport.c */,
 				828741F0F9D39D80E83B68F3 /* waveform_cache.c */,
+				"5AAC805EE577CBA812849499",
+				"B067F4D8A3E3842EDA5998E0",
 			);
 			name = apps/groove;
 			sourceTree = "<group>";
@@ -545,6 +588,9 @@
 				801C61DDFA2D8166A7664F27 /* user/window.c */,
 				D637FEC2603587B554730520 /* user/zip.c */,
 				155319C93D093C522915463E /* user/zip.h */,
+				"958BE5022CF3C64D46665E88",
+				"93E571FDDC674574E4E5BB84",
+				"94A2B3C132077F83A1E06624",
 			);
 			name = orion;
 			sourceTree = "<group>";
@@ -730,6 +776,7 @@
 				684F8AA2C3BD0782AC47EC60 /* ../../orion/commdlg/filepicker.c in Sources */,
 				A2B4F01E60553FA509352A0A /* ../../orion/commdlg/msgbox.c in Sources */,
 				73A721D9BAD3A3DCCF37ABB6 /* ../../orion/commdlg/splash.c in Sources */,
+				"38947AAA6707207FE23F5A57",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -746,6 +793,7 @@
 				E85D7319069843C4C9E16B7F /* ../../orion/commdlg/filepicker.c in Sources */,
 				C1260B361826813547BD5A83 /* ../../orion/commdlg/msgbox.c in Sources */,
 				33A4615E4243B100EA44AFD2 /* ../../orion/commdlg/splash.c in Sources */,
+				"E18322380DC79D928F4E85F0",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -784,6 +832,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				ORION_ROOT = "$(SRCROOT)/../..";
 				OTHER_CFLAGS = (
+					"-fblocks",
 					"$(inherited)",
 					"-Wall",
 					"-Wextra",
@@ -830,6 +879,7 @@
 				ONLY_ACTIVE_ARCH = NO;
 				ORION_ROOT = "$(SRCROOT)/../..";
 				OTHER_CFLAGS = (
+					"-fblocks",
 					"$(inherited)",
 					"-Wall",
 					"-Wextra",
@@ -875,6 +925,8 @@
 					UniformTypeIdentifiers,
 					"-framework",
 					AudioToolbox,
+				"-framework",
+				"AVFoundation",
 				);
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -916,6 +968,8 @@
 					CoreFoundation,
 					"-framework",
 					AudioToolbox,
+				"-framework",
+				"AVFoundation",
 				);
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = macosx;
@@ -953,6 +1007,8 @@
 					UniformTypeIdentifiers,
 					"-framework",
 					AudioToolbox,
+				"-framework",
+				"AVFoundation",
 				);
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -994,6 +1050,8 @@
 					CoreFoundation,
 					"-framework",
 					AudioToolbox,
+				"-framework",
+				"AVFoundation",
 				);
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = macosx;

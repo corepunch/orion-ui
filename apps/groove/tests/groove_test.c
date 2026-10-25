@@ -420,9 +420,9 @@ static void test_genres(void) {
   for (int i = 0; i < blocks_count(); i++) shared += (block_get(i)->genres & (block_get(i)->genres - 1)) != 0;
   ASSERT(shared > 100, "many blocks belong to more than one genre");
   int ids[GR_MAX_BLOCKS], sum = 0;
-  for (int c = 0; c < FAMILY_COUNT; c++) { int n = blocks_in_family(c, ids, GR_MAX_BLOCKS); ASSERT(n > 0, "no empty family tab"); sum += n; }
+  for (int c = 0; c < FAMILY_COUNT; c++) { int n = blocks_in_family(c, ids, GR_MAX_BLOCKS); ASSERT(n > 0 || c == FAMILY_SAMPLES, "only the user recording family may start empty"); sum += n; }
   ASSERT_EQUAL(sum, blocks_count());
-  ASSERT(FAMILY_COUNT == 10 && block_family(CAT_FILL) == FAMILY_DRUM && block_family(CAT_CYMBAL) == FAMILY_LOOP,
+  ASSERT(FAMILY_COUNT == 11 && block_family(CAT_FILL) == FAMILY_DRUM && block_family(CAT_CYMBAL) == FAMILY_LOOP,
          "percussion has a rhythm tab and a fill tab");
   ASSERT(block_family(CAT_KEYS) == FAMILY_SYNTH && block_family(CAT_ORGAN) == FAMILY_SYNTH && block_family(CAT_SYNTH) == FAMILY_SYNTH,
          "keys, organ and synth share a tab while retaining their sample types");
@@ -1589,6 +1589,79 @@ static void test_family_filter(void) {
   PASS();
 }
 
+
+static void test_portable_recordings(void) {
+  TEST("a song embeds microphone samples once and opens without the source library");
+  test_env_init();
+  g_app = app_init();
+  ASSERT_NOT_NULL(g_app);
+  window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  sample_t sample = { .name = "Recorded voice", .bpm = 140, .bars = 1, .frames = bar_frames_for_bpm(140) };
+  sample.pcm = calloc((size_t)sample.frames, sizeof(int16_t));
+  ASSERT_NOT_NULL(sample.pcm);
+  for (int i = 0; i < sample.frames; i++) sample.pcm[i] = (int16_t)(10000 * sin(i * 0.062));
+  int original_count = samples_count();
+  int id = sample_add(&sample);
+  ASSERT(id >= blocks_builtin_count(), "recording becomes a library block");
+  ASSERT_EQUAL(sample_add(&sample), id);
+  ASSERT_EQUAL(samples_count(), original_count + 1);
+  char dir[] = "/tmp/groove-recordings-XXXXXX";
+  ASSERT_NOT_NULL(mkdtemp(dir));
+  ASSERT_TRUE(sample_save(dir, &sample));
+  char wav[512], song[512], bad[512];
+  snprintf(wav, sizeof(wav), "%s/recording-1.wav", dir);
+  snprintf(song, sizeof(song), "%s/portable.groove", dir);
+  snprintf(bad, sizeof(bad), "%s/bad.groove", dir);
+  FILE *f = fopen(wav, "rb"); ASSERT_NOT_NULL(f);
+  sample_t loaded = {0};
+  ASSERT_TRUE(sample_read(f, &loaded)); fclose(f);
+  ASSERT_EQUAL(loaded.frames, sample.frames);
+  ASSERT(memcmp(loaded.pcm, sample.pcm, (size_t)sample.frames * 2) == 0, "WAV retains exact PCM");
+  free(loaded.pcm);
+  samples_load(dir);
+  ASSERT_EQUAL(samples_count(), original_count + 1);
+  ASSERT_EQUAL(song_add_clip(&g_app->song, id, 0, 0), 0);
+  ASSERT_EQUAL(song_add_clip(&g_app->song, id, 2, GR_TICKS_BAR), 1);
+  ASSERT_TRUE(app_save_song(song));
+  f = fopen(song, "rb"); ASSERT_NOT_NULL(f);
+  char line[64]; ASSERT_NOT_NULL(fgets(line, sizeof(line), f));
+  ASSERT_STR_EQUAL(line, "ORION_GROOVE 5\n"); fclose(f);
+  app_new_song(); samples_truncate(original_count);
+  ASSERT(remove(wav) == 0, "remove the standalone recording");
+  ASSERT_TRUE(app_open_song(song));
+  ASSERT_EQUAL(g_app->song.nclips, 2);
+  ASSERT_EQUAL(g_app->song.clips[0].block, g_app->song.clips[1].block);
+  const sample_t *restored = sample_get(g_app->song.clips[0].block);
+  ASSERT_NOT_NULL(restored);
+  ASSERT(memcmp(restored->pcm, sample.pcm, (size_t)sample.frames * 2) == 0, "only the song file is needed to restore the sample");
+  ASSERT_EQUAL(samples_count(), original_count + 1);
+  ASSERT_TRUE(app_open_song(song));
+  ASSERT_EQUAL(samples_count(), original_count + 1);
+  g_app->song.playing = true;
+  float lr[1024]; song_render(&g_app->song, lr, 512);
+  ASSERT(peak_of(lr, 1024) > .01f, "embedded sample is audible");
+  g_app->song.playing = false;
+  f = fopen(bad, "wb"); ASSERT_NOT_NULL(f);
+  fprintf(f, "ORION_GROOVE 5\n140 1 0 0 1 1\nS\n");
+  ASSERT_TRUE(sample_write(f, &sample));
+  fputs("\n0 0 0 1 0 0\ntrailing garbage", f); fclose(f);
+  int before = samples_count();
+  ASSERT_FALSE(app_open_song(bad));
+  ASSERT_EQUAL(g_app->song.nclips, 2); ASSERT_EQUAL(samples_count(), before);
+  f = fopen(bad, "wb"); ASSERT_NOT_NULL(f);
+  fputs("ORION_GROOVE 5\n140 1 0 0 1 1\nS\nRIFF", f); fclose(f);
+  ASSERT_FALSE(app_open_song(bad));
+  ASSERT_EQUAL(g_app->song.nclips, 2); ASSERT_EQUAL(samples_count(), before);
+  sample_t invalid = sample; invalid.frames++;
+  ASSERT_EQUAL(sample_add(&invalid), -1);
+  invalid = sample; invalid.bars = 128;
+  ASSERT_EQUAL(sample_add(&invalid), -1);
+  free(sample.pcm); remove(song); remove(bad); rmdir(dir);
+  destroy_window(win); app_shutdown(g_app); test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Groove");
   test_library_levels();
@@ -1617,5 +1690,6 @@ int main(void) {
   test_drag_center_boundaries();
   test_sheet_gestures();
   test_drag_off_sheet_removes();
+  test_portable_recordings();
   TEST_END();
 }

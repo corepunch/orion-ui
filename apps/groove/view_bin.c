@@ -140,6 +140,15 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         draw_text(FONT_SYSTEM, "No sounds in this family", TILE_PAD + 4, TILE_PAD + 4, get_sys_color(brTextSecondary));
       return false;
     }
+    case binReload:
+      while (st->count < blocks_count()) {
+        int id = st->count;
+        window_t *card = create_window("", GR_CARD_FLAGS, MAKERECT(0, 0, 1, 1), st->flow ? st->flow : win,
+                                       win_block_card, 0, (void *)(intptr_t)id);
+        if (!card) { fprintf(stderr, "[bin] recording card allocation failed block=%d\n", id); fflush(stderr); break; }
+        st->ids[st->count++] = id;
+      }
+      // fall through
     case binFilter:
       apply_filter(win, st);
       set_scroll_info(win, SB_VERT, &(scroll_info_t){ .fMask = SIF_POS, .nPos = 0 }, false);

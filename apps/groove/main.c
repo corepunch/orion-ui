@@ -41,6 +41,16 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   char icons_path[1024];
   int n = snprintf(icons_path, sizeof(icons_path), "%s/../share/groove/icons", ui_get_exe_dir());
   if (n > 0 && (size_t)n < sizeof(icons_path)) svg_add_icons_dir(hinstance, icons_path);
+  char language[32] = {0};
+#ifndef BUILD_AS_GEM
+  ui_system_language(language, sizeof(language));
+#endif
+  for (int i = 1; i + 1 < argc; i++) if (!strcmp(argv[i], "--lang")) snprintf(language, sizeof(language), "%s", argv[i + 1]);
+  if (language[0]) ui_set_language(language);
+  char locale_path[1024];
+  int locale_n = snprintf(locale_path, sizeof(locale_path), "%s/../share/groove/locale", ui_get_exe_dir());
+  if (locale_n > 0 && (size_t)locale_n < sizeof(locale_path)) ui_add_string_catalog_dir(locale_path);
+  ui_add_string_catalog_dir("apps/groove/share/locale");
   g_app = app_init();
   if (!g_app) return false;
   for (int i = 1; i < argc; i++) {

@@ -50,7 +50,7 @@ typedef enum {
 typedef enum {
   FAMILY_LOOP, FAMILY_DRUM, FAMILY_BASS, FAMILY_GUITAR, FAMILY_SYNTH,
   FAMILY_PAD, FAMILY_STAB, FAMILY_VOX, FAMILY_SCRATCH, FAMILY_FX,
-  FAMILY_COUNT
+  FAMILY_SAMPLES, FAMILY_COUNT
 } family_t;
 
 // Genre tags are bit flags: a dry four-on-the-floor kick serves Dance, Rave
@@ -100,6 +100,7 @@ result_t win_tracks(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void     tracks_sync(void);
 
 int            blocks_count(void);
+int            blocks_builtin_count(void);
 const block_t *block_get(int id);
 int            blocks_in_category(category_t cat, int *ids, int max);
 int            blocks_in_family(family_t family, int *ids, int max);
@@ -114,6 +115,20 @@ void           block_install(int id, int bpm, block_pcm_t *io);
 float         *block_release(int id);
 void           blocks_free(void);
 int            bar_frames_for_bpm(int bpm);
+
+typedef struct { char name[64]; int bpm, bars, frames; int16_t *pcm; } sample_t;
+bool sample_read(FILE *f, sample_t *out);
+bool sample_write(FILE *f, const sample_t *sample);
+bool sample_save(const char *dir, const sample_t *sample);
+void samples_load(const char *dir);
+int samples_count(void);
+int sample_add(const sample_t *sample);
+const sample_t *sample_get(int id);
+const block_t *sample_block_get(int id);
+bool sample_render(int id, int bpm, block_pcm_t *out);
+void samples_truncate(int count);
+void app_record_sample(window_t *owner);
+void app_samples_refresh(void);
 
 // ── Song + mixer ─────────────────────────────────────────────────────────
 typedef struct { int block, track, position; uint64_t order; int length, gain_db; } clip_t; // ticks; gain_db is 0 for unity
@@ -171,11 +186,14 @@ typedef struct {
   accel_table_t *accel;
   hinstance_t   hinstance;
   song_t        song;
+  const int16_t *sample_preview;
+  int           sample_preview_frames, sample_preview_pos;
   int           audio_dev;
   uint32_t      timer;
   int           selected_clip;
   char          filename[512];
   char          songs_dir[512]; // iPad: Groove's own song storage, never Files/iCloud; empty on desktop
+  char          samples_dir[512]; // reusable originals, beside Songs
   drag_t        drag;
   uint8_t       genre;      // library filter: 0 = every genre, else one GENRE_* flag
   family_t      family;     // library filter
@@ -199,6 +217,7 @@ enum {
   shSeekPosition,             // wparam = position in ticks
   shSetDropAnchor,             // wparam = groove_drop_anchor_t; default = sample origin
   binFilter,                  // re-apply the family and genre filters to the bin
+  binReload,                  // append recorded blocks
   grCardSetBlock,              // wparam = block id
   grCardSetState,              // wparam = ctrl_state_t
   grPreviewSetSong,            // lparam = path of a .groove file; NULL clears
