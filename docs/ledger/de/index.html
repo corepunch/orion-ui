@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ledger Buchhaltung</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Ledger ist eine schlanke doppelte Buchführung: Belege, Buchungen, Lohn, Monatsabschluss, Druckformulare und Datenübernahme aus 1C. Ohne Server, ohne Lizenzkosten, ohne Berater.">
+<link rel="alternate" hreflang="ru" href="../">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Unbounded:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="../ledger.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="brand-mark">S</span>Ledger</a>
+    <nav aria-label="Bereiche">
+      <a class="hide-sm" href="#scripts">Skripte</a>
+      <a class="hide-sm" href="#features">Funktionen</a>
+      <a class="hide-sm" href="#print">Druck</a>
+      <a href="../" lang="ru" hreflang="ru">RU</a>
+      <a href="#" aria-current="true" lang="de">DE</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero" id="top">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <div class="eyebrow">Doppelte Buchführung · SKR 03</div>
+        <h1>Buchhaltung, die <em>keinen Berater braucht</em></h1>
+        <p class="lead">Ledger führt Belege, Buchungen, Lohn, Anlagen, Fremdwährungen und den Monatsabschluss. Was sonst ein Berater oder Programmierer anpasst, regeln hier Konfigurationstabellen, fertige Lua-Skripte aus der Bibliothek und Bausteine, die Sie mit der Maus verbinden.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://github.com/corepunch/orion-ui/tree/main/apps/ledger">Quellcode laden</a>
+          <a class="btn btn-ghost" href="#scripts">So geht es ohne Programmierer</a>
+        </div>
+      </div>
+      <div class="entry" role="figure" aria-label="Buchungen zur Einführung: alle Berater- und Lizenzkosten sind null">
+        <div class="entry-cap"><span>Umbuchung UB-0001 · Einführung</span><span aria-hidden="true">✕</span></div>
+        <div class="entry-scroll">
+          <table>
+            <thead><tr><th>Soll</th><th>Haben</th><th class="num">Betrag</th><th>Buchungstext</th></tr></thead>
+            <tbody>
+              <tr class="strike"><td>4950</td><td>1600</td><td class="num">0,00</td><td class="txt">Anpassungen durch das Systemhaus</td></tr>
+              <tr class="strike"><td>4950</td><td>1600</td><td class="num">0,00</td><td class="txt">Beratertage für das Update</td></tr>
+              <tr class="strike"><td>4950</td><td>1600</td><td class="num">0,00</td><td class="txt">Server, Datenbank, Arbeitsplatzlizenzen</td></tr>
+              <tr class="hit"><td>4950</td><td>1600</td><td class="num">0,00</td><td class="txt">Ledger, Lizenz GPL-3</td></tr>
+            </tbody>
+            <tfoot><tr><td colspan="2">Summe</td><td class="num">0,00</td><td></td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="hero-shot">
+      <img src="../img/de/hero.png" width="1198" height="225" alt="Belegjournal von Ledger: Eröffnungsbuchungen, Eingangs- und Ausgangsrechnung, Überweisung, Kasseneinnahme, Lohnabrechnung, Lohnzahlung und Monatsabschluss, gebuchte Belege mit grünem Siegel">
+    </div>
+  </div>
+</section>
+
+<div class="facts">
+  <div class="wrap">
+    <div class="fact"><b>1,7&nbsp;MB</b><span>das ganze Programm samt Oberflächen-Bibliotheken</span></div>
+    <div class="fact"><b>0,7&nbsp;s</b><span>vom Start bis zum fertigen Belegjournal</span></div>
+    <div class="fact"><b>10.000</b><span>Buchungen öffnen in 2 Sekunden, auch ohne Grafikkarte</span></div>
+    <div class="fact"><b>0&nbsp;€</b><span>Lizenzkosten: Open Source unter GPL-3, ohne Server</span></div>
+  </div>
+</div>
+
+<section class="band" id="lite">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Schlank</div>
+      <h2>Ein Programm und eine Datei pro Mandant</h2>
+      <p>Ledger ist in C geschrieben und läuft auf einer eigenen Fenster-Engine. Es braucht keinen Anwendungsserver, keine Datenbank und keine Laufzeitplattform. Der Mandant liegt in einer einzigen XML-Datei: im Cloud-Ordner, als E-Mail-Anhang an den Steuerberater oder auf dem USB-Stick.</p>
+    </div>
+    <div class="vs">
+      <div class="old">
+        <h3>Wie üblich</h3>
+        <ul>
+          <li>Server, Datenbank und Lizenzen für jeden Arbeitsplatz</li>
+          <li>Jede Anpassung ist ein Auftrag an das Systemhaus</li>
+          <li>Nach dem Update werden Anpassungen neu programmiert</li>
+          <li>Ein eigenes Formular oder eine eigene Auswertung kostet extra</li>
+        </ul>
+      </div>
+      <div class="new">
+        <h3>Mit Ledger</h3>
+        <ul class="ticks">
+          <li>Laden, starten, buchen. Der Demo-Mandant mit gebuchten Belegen öffnet sofort</li>
+          <li>Konten, Steuern, Buchungsregeln und Abschluss stehen in Tabellen, nicht im Code</li>
+          <li>Sonderwünsche kommen als fertige Lua-Skripte aus der Bibliothek</li>
+          <li>Druckformulare sind einfaches HTML und lassen sich in jedem Editor ändern</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="scripts">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Skripte <span class="pill">in Entwicklung</span></div>
+      <h2>Eine Lua-Bibliothek statt eines Programmierers</h2>
+      <p>Typische Anpassungen, für die sonst ein Berater kommt, liegen schon in der Bibliothek: Verzugszinsen, Mahnlauf, Kontoauszug, Provisionen, Prüfungen vor dem Buchen. Skript über ein Schlagwort finden, für den Mandanten aktivieren, Parameter anpassen. Lua liest sich wie normaler Text.</p>
+    </div>
+    <div class="lib" data-lib data-count="%1 von %2 gefunden">
+      <div class="lib-bar">
+        <input id="lib-search" type="search" placeholder="Suche: Mahnung, Bank, Lohn, #lager…" aria-label="Skripte durchsuchen" autocomplete="off">
+        <span class="lib-count" aria-live="polite"></span>
+      </div>
+      <div class="tags" role="group" aria-label="Schlagwörter"></div>
+      <div class="cards">
+        <article class="card" data-tags="mahnwesen,zinsen,monatlich"><h3>Verzugszinsen auf offene Posten</h3><p>Berechnet Zinsen auf Forderungen 1400, die älter als N Tage sind, und bucht sie auf 2650.</p></article>
+        <article class="card" data-tags="mahnwesen,druck"><h3>Mahnlauf mit drei Stufen</h3><p>Stellt fällige Posten je Kunde zusammen und druckt Zahlungserinnerung, 1. und 2. Mahnung.</p></article>
+        <article class="card" data-tags="bank,import"><h3>Kontoauszug importieren</h3><p>Liest CSV- oder MT940-Dateien der Bank und legt Zahlungseingänge und Überweisungen an.</p></article>
+        <article class="card" data-tags="bank,zahlungen"><h3>Skonto automatisch buchen</h3><p>Erkennt Zahlungen innerhalb der Skontofrist und bucht die Differenz mit Steuerkorrektur.</p></article>
+        <article class="card" data-tags="lohn,vertrieb"><h3>Provision für den Vertrieb</h3><p>Berechnet die Provision vom Umsatz je Verkäufer und fügt sie der Lohnabrechnung hinzu.</p></article>
+        <article class="card" data-tags="lager,prüfung"><h3>Keine negativen Bestände</h3><p>Verhindert das Buchen einer Ausgangsrechnung, wenn der Artikel nicht mehr am Lager ist.</p></article>
+        <article class="card" data-tags="vertrieb,druck"><h3>Rechnungen per E-Mail</h3><p>Erzeugt die Rechnung aus der Vorlage und sendet sie an die Adresse des Geschäftspartners.</p></article>
+        <article class="card" data-tags="abschluss,forderungen"><h3>Pauschalwertberichtigung</h3><p>Bildet zum Monatsende eine Wertberichtigung auf den Forderungsbestand.</p></article>
+        <article class="card" data-tags="mitarbeiter,kasse"><h3>Reisekostenabrechnung</h3><p>Bucht Belege und Pauschalen einer Dienstreise und erstattet den Rest aus der Kasse.</p></article>
+        <article class="card" data-tags="steuer,abschluss,prüfung"><h3>Umsatzsteuer-Kennzahlen</h3><p>Stellt Umsätze und Vorsteuer des Zeitraums nach Steuersätzen für die Voranmeldung zusammen.</p></article>
+        <article class="card" data-tags="bank,kasse,prüfung"><h3>Kassen- und Bankabgleich</h3><p>Vergleicht die Salden 1000 und 1200 mit dem Auszug und zeigt Abweichungen je Tag.</p></article>
+        <article class="card" data-tags="anlagen,abschluss"><h3>GWG-Sofortabschreibung</h3><p>Schreibt geringwertige Wirtschaftsgüter im Monat der Anschaffung voll ab.</p></article>
+        <div class="lib-empty" hidden>Dieses Skript gibt es noch nicht. Beschreiben Sie die Aufgabe, dann kommt es in die Bibliothek.</div>
+      </div>
+    </div>
+    <div class="two code-wide">
+      <div class="copy">
+        <h3>Ein Skript hat zehn Zeilen, kein Pflichtenheft</h3>
+        <p>Jedes Skript trägt Schlagwörter und eine Beschreibung, die Bibliothek durchsuchen Sie wie einen App-Store. Skripte buchen über dieselbe Buchungslogik wie Belege: Die Buchungen landen im Journal, Auswertungen rechnen neu, „Buchung stornieren“ nimmt alles zurück.</p>
+        <ul class="ticks">
+          <li>Schlagwörter und Suche direkt im Programm</li>
+          <li>Parameter werden im Formular gepflegt, ohne Code</li>
+          <li>Eigene Skripte lassen sich für andere veröffentlichen</li>
+        </ul>
+      </div>
+      <pre class="code" aria-label="Beispiel eines Lua-Skripts"><span class="c">-- @name  Verzugszinsen auf offene Posten</span>
+<span class="c">-- @tags  mahnwesen, zinsen, monatlich</span>
+<span class="k">local</span> zins = ledger.rate(<span class="s">"basiszins"</span>) + <span class="n">0.05</span>
+
+<span class="k">for</span> _, op <span class="k">in</span> ledger.overdue(<span class="s">"1400"</span>, <span class="n">30</span>) <span class="k">do</span>
+  ledger.post{
+    date   = period.last_day,
+    debit  = { <span class="s">"1400"</span>, op.partner },
+    credit = <span class="s">"2650"</span>,
+    amount = op.amount * zins * op.days / <span class="n">365</span>,
+    text   = <span class="s">"Verzugszinsen "</span> .. op.partner.name,
+  }
+<span class="k">end</span></pre>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="nodes">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Visuell zusammenstellen <span class="pill">Roadmap</span></div>
+      <h2>Anpassungen aus Bausteinen bauen</h2>
+      <p>Beleg, Bedingung, Skript aus der Bibliothek, Buchung und Druckformular sind Bausteine. Verbinden Sie sie mit Linien, und es entsteht eine Funktion, für die früher ein Pflichtenheft geschrieben wurde: Rabatt für Großkunden, ein eigenes Formular für einen Kunden, Auswertung nach Projekt.</p>
+    </div>
+    <div class="graph" role="img" aria-label="Schema: Ausgangsrechnung, Bedingung Betrag über 5.000 Euro, Rabattskript für die Gruppe Großhandel, danach Buchungen und Druck der Rechnung">
+      <svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg">
+        <path class="wire" d="M190 88 C 220 88, 220 88, 250 88"/>
+        <path class="wire" d="M420 88 C 450 88, 450 88, 480 88"/>
+        <path class="wire" d="M650 88 C 680 88, 680 68, 710 68"/>
+        <path class="wire" d="M650 88 C 690 88, 670 218, 710 218"/>
+        <path class="wire" d="M420 238 C 460 238, 440 112, 480 112"/>
+        <g class="nd"><rect class="body" x="20" y="40" width="170" height="96" rx="7"/><rect class="cap" x="20" y="40" width="170" height="26" rx="7"/><rect class="cap" x="20" y="56" width="170" height="10"/><text class="t" x="32" y="58">Beleg</text><text x="32" y="92">Ausgangsrechnung</text><text class="m" x="32" y="116">beim Buchen</text></g>
+        <g class="nd"><rect class="body" x="250" y="40" width="170" height="96" rx="7"/><rect class="cap" x="250" y="40" width="170" height="26" rx="7"/><rect class="cap" x="250" y="56" width="170" height="10"/><text class="t" x="262" y="58">Bedingung</text><text x="262" y="92">Betrag &gt; 5.000 €</text><text class="m" x="262" y="116">sonst überspringen</text></g>
+        <g class="nd"><rect class="body" x="250" y="190" width="170" height="96" rx="7"/><rect class="cap" x="250" y="190" width="170" height="26" rx="7"/><rect class="cap" x="250" y="206" width="170" height="10"/><text class="t" x="262" y="208">Stammdaten</text><text x="262" y="242">Geschäftspartner</text><text class="m" x="262" y="266">Gruppe „Großhandel“</text></g>
+        <g class="nd lua"><rect class="body" x="480" y="40" width="170" height="96" rx="7"/><rect class="cap" x="480" y="40" width="170" height="26" rx="7"/><rect class="cap" x="480" y="56" width="170" height="10"/><text class="t" x="492" y="58">Lua · rabatt-gross</text><text x="492" y="92">3 % Großkundenrabatt</text><text class="m" x="492" y="116">#vertrieb #rabatt</text></g>
+        <g class="nd out"><rect class="body" x="710" y="20" width="170" height="96" rx="7"/><rect class="cap" x="710" y="20" width="170" height="26" rx="7"/><rect class="cap" x="710" y="36" width="170" height="10"/><text class="t" x="722" y="38">Buchungen</text><text x="722" y="72">1400 an 8400</text><text class="m" x="722" y="96">USt: 1400 an 1775</text></g>
+        <g class="nd out"><rect class="body" x="710" y="170" width="170" height="96" rx="7"/><rect class="cap" x="710" y="170" width="170" height="26" rx="7"/><rect class="cap" x="710" y="186" width="170" height="10"/><text class="t" x="722" y="188">Druckformular</text><text x="722" y="222">Rechnung, § 14 UStG</text><text class="m" x="722" y="246">HTML-Vorlage</text></g>
+        <circle class="port" cx="190" cy="88" r="5"/><circle class="port" cx="250" cy="88" r="5"/><circle class="port" cx="420" cy="88" r="5"/><circle class="port" cx="480" cy="88" r="5"/><circle class="port" cx="650" cy="88" r="5"/><circle class="port" cx="710" cy="68" r="5"/><circle class="port" cx="710" cy="218" r="5"/><circle class="port" cx="420" cy="238" r="5"/><circle class="port" cx="480" cy="112" r="5"/>
+      </svg>
+    </div>
+    <div class="legend"><span><i style="background:#3a3d45"></i>Daten und Bedingungen</span><span><i style="background:#6b4ea8"></i>Skript aus der Bibliothek</span><span><i style="background:#c9a10f"></i>Ergebnis: Buchungen und Druck</span></div>
+  </div>
+</section>
+
+<section class="band alt" id="config">
+  <div class="wrap row">
+    <div class="copy">
+      <div class="eyebrow">Konfiguration</div>
+      <h2>Buchungsregeln sind Tabellen, kein Programm</h2>
+      <p>Ledger trennt die <strong>Plattform</strong> von der <strong>Konfiguration</strong>. Die Konfiguration sind Daten: Kontenrahmen, Steuersätze, Belegarten mit ihren Buchungen, Lohnabgaben und die Schritte des Monatsabschlusses. Ändert sich ein Satz, ändern Sie eine Zahl. Für ein anderes Land legen Sie einen Ordner an.</p>
+      <ul class="ticks">
+        <li>Die Plattform kennt keine einzige Kontonummer und keinen Steuersatz</li>
+        <li>Mitgeliefert: „Deutschland 2003 (SKR 03)“ und „Russland 2003“</li>
+        <li>Jede Belegart sagt selbst, was im Soll und im Haben steht und was gedruckt wird</li>
+      </ul>
+    </div>
+    <div class="shots">
+      <pre class="code" aria-label="Ausschnitt der Konfiguration"><span class="c">&lt;!-- configuration.xml, gekürzt --&gt;</span>
+&lt;<span class="k">payroll_tax</span> name=<span class="s">"Lohnsteuer (vereinfacht)"</span> rate=<span class="s">"18"</span> withheld=<span class="s">"1"</span> /&gt;
+&lt;<span class="k">payroll_tax</span> name=<span class="s">"SV Arbeitnehmeranteil"</span> rate=<span class="s">"21"</span> withheld=<span class="s">"1"</span> /&gt;
+&lt;<span class="k">payroll_tax</span> name=<span class="s">"SV Arbeitgeberanteil"</span> rate=<span class="s">"21"</span> /&gt;
+
+&lt;<span class="k">closing_rule</span> kind=<span class="s">"depreciation"</span> name=<span class="s">"AfA"</span> start=<span class="s">"same"</span> /&gt;
+&lt;<span class="k">closing_rule</span> kind=<span class="s">"revaluation"</span> name=<span class="s">"Kursdifferenz"</span> /&gt;</pre>
+      <figure class="shot natural">
+        <img src="../img/de/doctypes.png" width="637" height="170" alt="Auswahl der Belegart im Beleg: Eingangsrechnung, Ausgangsrechnung, Kasseneinnahme, Kassenausgabe, Überweisung, Zahlungseingang Bank" loading="lazy">
+        <figcaption>Die Belegarten kommen samt Buchungsregeln aus der Konfiguration.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="features">
+  <div class="wrap row flip">
+    <div class="copy">
+      <div class="eyebrow">Belege</div>
+      <h2>Der Beleg bucht sich selbst</h2>
+      <p>Sie erfassen die Rechnung wie gewohnt: Geschäftspartner, Artikel, Menge, Preis. Mit „OK und buchen“ rechnet Ledger Umsatzsteuer, Erlös und Wareneinsatz zum Durchschnittspreis und schreibt die Buchungen. Nummer, Summen und der Titel „Ausgangsrechnung AR-0001 vom 10.03.2003“ entstehen von selbst.</p>
+      <ul class="ticks">
+        <li>Nummernkreise je Belegart, Summen rechnen bei jeder Positionsänderung neu</li>
+        <li>Fremdwährungsbelege buchen zum Tageskurs und behalten beide Beträge</li>
+        <li>„Abbrechen“ verwirft einen neuen Beleg samt Positionen</li>
+      </ul>
+    </div>
+    <div class="shots">
+      <figure class="shot"><img src="../img/de/document.png" width="637" height="467" alt="Beleg „Ausgangsrechnung AR-0001 vom 10.03.2003“ mit zwei Positionen, Betrag 603,00, USt 96,48, Gesamt 699,48 und Schaltfläche „OK und buchen“" loading="lazy"></figure>
+    </div>
+  </div>
+  <div class="wrap">
+    <figure class="shot wide"><img src="../img/de/doc-entries.png" width="1042" height="123" alt="Buchungen des Belegs AR-0001: 1400 an 8400 Erlös und 1400 an 1775 Umsatzsteuer je Position, Geschäftspartner Hans Meier e.K." loading="lazy"><figcaption>Reiter „Buchungen“ desselben Belegs: Erlös und Umsatzsteuer je Position.</figcaption></figure>
+  </div>
+</section>
+
+<section class="band alt" id="analytics">
+  <div class="wrap">
+    <div class="split">
+      <div class="copy">
+        <div class="eyebrow">Buchungen und Objekte</div>
+        <h2>Jede Buchung weiß, wer und was</h2>
+        <p>Jedes Konto hat eine Objektart: Geschäftspartner, Artikel, Mitarbeiter oder Anlagen. Die Buchung hält das Objekt getrennt für Soll und Haben fest, daher entstehen Kontoblatt und offene Posten ohne Nebenbücher.</p>
+      </div>
+      <ul class="ticks">
+        <li>Menge und Fremdwährungsbetrag neben dem Euro-Betrag</li>
+        <li>Umbuchungen für alles, was in keinen Beleg passt</li>
+        <li>Von jeder Buchung mit einem Klick zum Beleg</li>
+      </ul>
+    </div>
+    <figure class="shot wide"><img src="../img/de/entries.png" width="1040" height="260" alt="Buchungsjournal mit Spalten Soll, Soll-Objekt, Haben, Haben-Objekt, Menge, Währung und Betrag: Eröffnungsbuchungen, Eingangsrechnung von Bürotechnik Schmidt KG, Ausgangsrechnung an Hans Meier e.K." loading="lazy"></figure>
+  </div>
+</section>
+
+<section class="band" id="payroll">
+  <div class="wrap row flip">
+    <div class="copy">
+      <div class="eyebrow">Lohn</div>
+      <h2>Lohnabrechnung per „Füllen“</h2>
+      <p>Mitarbeiter mit Gehalt und Freibetrag stehen in den Stammdaten. „Füllen“ erstellt die Abrechnung für alle, berechnet Lohnsteuer und die Anteile von Arbeitnehmer und Arbeitgeber nach den Sätzen der Konfiguration. Die Lohnzahlung gleicht aus, was offen ist, das Lohnjournal druckt aus demselben Beleg.</p>
+      <ul class="ticks">
+        <li>Abzüge und Arbeitgeberanteile als eigene Buchungen je Mitarbeiter</li>
+        <li>Das Aufwandskonto kommt aus den Mitarbeiterdaten</li>
+        <li>Sätze ändern sich in der Tabelle, ohne Update</li>
+      </ul>
+    </div>
+    <div class="shots">
+      <figure class="shot"><img src="../img/de/payroll.png" width="657" height="447" alt="Beleg „Lohnabrechnung LA-0001 vom 31.03.2003“: zwei Mitarbeiter mit Betrag, Einbehalten, AG-Anteil und Netto, Gesamt 4.700,00" loading="lazy"></figure>
+    </div>
+  </div>
+  <div class="wrap">
+    <figure class="shot wide"><img src="../img/de/payroll-entries.png" width="1042" height="190" alt="Buchungen der Lohnabrechnung: 4120 an 1740 Gehalt, 1740 an 1741 Lohnsteuer, 1740 an 1742 Sozialversicherung Arbeitnehmeranteil, 4130 an 1742 Arbeitgeberanteil je Mitarbeiter" loading="lazy"><figcaption>Lohnsteuer und Sozialversicherung je Mitarbeiter auf 1741 und 1742.</figcaption></figure>
+  </div>
+</section>
+
+<section class="band alt" id="close">
+  <div class="wrap">
+    <div class="split">
+      <div class="copy">
+        <div class="eyebrow">Monatsabschluss</div>
+        <h2>Monatsabschluss in einem Beleg</h2>
+        <p>Strg+E, und Ledger bucht die AfA, bewertet Fremdwährungskonten neu und rechnet den Monat ab. Die Abschlussschritte stehen in der Konfiguration, ihre Reihenfolge ist sichtbar und ohne Programmierer änderbar.</p>
+      </div>
+      <ul class="ticks">
+        <li>Lineare AfA ab dem Monat der Anschaffung</li>
+        <li>Kursdifferenzen auf 2660 und 2150</li>
+        <li>F5 bucht alle Belege nach Datum neu und baut die Auswertungen auf</li>
+      </ul>
+    </div>
+    <figure class="shot wide"><img src="../img/de/closing.png" width="1042" height="89" alt="Buchungen des Monatsabschlusses: 4830 an 0490 AfA auf PC Fujitsu Siemens Scenic, 2150 an 1210 Kursdifferenz" loading="lazy"></figure>
+  </div>
+</section>
+
+<section class="band" id="reports">
+  <div class="wrap">
+    <div class="split">
+      <div class="copy">
+        <div class="eyebrow">Auswertungen</div>
+        <h2>Eine Summen- und Saldenliste, die aufgeht</h2>
+        <p>Alle Auswertungen gelten für den Zeitraum aus den Einstellungen und enden mit einer Summenzeile. Soll und Haben stimmen überein, Unterkonten stehen in eigenen Zeilen.</p>
+      </div>
+      <ul class="ticks">
+        <li>Summen- und Saldenliste, Kontoblatt, offene Posten nach Partner</li>
+        <li>Umsatzsteuer und Vorsteuer, Kassenbuch</li>
+        <li>Anlagevermögen und Lohnkonten</li>
+      </ul>
+    </div>
+    <figure class="shot wide"><img src="../img/de/reports.png" width="1040" height="260" alt="Bereich „Auswertungen“: Liste der Auswertungen und Summen- und Saldenliste nach SKR 03 mit Konten 0490, 0800, 0860, 1000, 1200, 1400, 1575, 1600, 1740, 1775, 3400, 4120, 8400, 9000" loading="lazy"></figure>
+  </div>
+</section>
+
+<section class="band alt" id="print">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Druckformulare</div>
+      <h2>Rechnung nach § 14 UStG aus einer HTML-Vorlage</h2>
+      <p>Ein Druckformular ist eine normale HTML-Datei mit Platzhaltern. Steuernummer, USt-IdNr., Lieferdatum, Positionen und Betrag in Worten setzt Ledger selbst ein. Ein eigenes Briefpapier ist in jedem Editor an einem Abend fertig.</p>
+    </div>
+    <figure class="shot natural"><img src="../img/de/print-rechnung.png" width="1030" height="310" alt="Rechnung AR-0001 an Hans Meier e.K. mit Rechnungsnummer, Rechnungsdatum, Lieferdatum, Steuernummer und USt-IdNr., zwei Positionen, Summe netto 603,00 EUR, Umsatzsteuer 96,48 EUR, Rechnungsbetrag 699,48 EUR" loading="lazy"><figcaption>Rechnung mit den Pflichtangaben, gefüllt aus Beleg und Stammdaten.</figcaption></figure>
+    <div class="two">
+      <figure class="shot natural"><img src="../img/de/print-quittung.png" width="629" height="174" alt="Quittung Nr. KE-0001 über 699,48 EUR, Betrag in Worten „Sechshundertneunundneunzig Euro 48 Cent“" loading="lazy"><figcaption>Quittung mit Betrag in Worten.</figcaption></figure>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th>Platzhalter</th><th>Ergebnis</th></tr></thead>
+          <tbody>
+            <tr><td>{{total|words}}</td><td>Sechshundertneunundneunzig Euro 48 Cent</td></tr>
+            <tr><td>{{org.tax_id}}</td><td>27/123/45678</td></tr>
+            <tr><td>{{#lines}} … {{/lines}}</td><td>Eine Tabellenzeile je Belegposition</td></tr>
+            <tr><td>{{doc_type.debit.code}}</td><td>Sollkonto aus der Konfiguration, z. B. 1400</td></tr>
+            <tr><td>{{date|dmy}}</td><td>10.03.2003</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p style="margin-top:18px;color:var(--muted)">Mitgeliefert: Rechnung, Quittung, Lohnjournal und Kassenbuch.</p>
+  </div>
+</section>
+
+<section class="band" id="migrate">
+  <div class="wrap row">
+    <div class="copy">
+      <div class="eyebrow">Umstieg aus 1C</div>
+      <h2>Stammdaten und Salden aus 1C in einer Datei</h2>
+      <p>Arbeitet Ihre Firma oder Ihre Muttergesellschaft mit 1C:Enterprise 8? Exportieren Sie die Daten im Format EnterpriseData und öffnen Sie die Datei in Ledger. Geschäftspartner, Artikel, Mitarbeiter, Anlagen, Währungen und Eröffnungssalden landen auf den richtigen Konten.</p>
+      <ul class="ticks">
+        <li>Geprüft mit einem echten Export aus 1C:Handelsverwaltung 11: 10.153 Eröffnungsbuchungen, 5.747 Artikel, 67 Geschäftspartner</li>
+        <li>Derselbe Export wird nie doppelt eingelesen</li>
+        <li>Eine fehlerhafte Datei hinterlässt keinen einzigen Datensatz</li>
+      </ul>
+    </div>
+    <div class="shots">
+      <figure class="shot natural"><img src="../img/de/menu-file.png" width="262" height="212" alt="Menü „Datei“ mit dem Eintrag „Aus 1C importieren (EnterpriseData)...“" loading="lazy"><figcaption>Datei → Aus 1C importieren (EnterpriseData).</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="countries">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Länder und Sprachen</div>
+      <h2>Eine Plattform für mehrere Länder</h2>
+      <p>Neben SKR 03 läuft auf derselben Plattform eine russische Konfiguration mit eigenem Kontenplan, Formularen und Lohnabgaben. Die Oberfläche wird über Textkataloge übersetzt, nationale Begriffe benennt die Konfiguration selbst um: Aus „Tax ID“ wird hier „Steuernummer“, aus BIK wird „BLZ“.</p>
+    </div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Bereich</th><th>Deutschland 2003</th><th>Russland 2003</th></tr></thead>
+        <tbody>
+          <tr><td>Kontenrahmen</td><td>DATEV SKR 03 (Auszug)</td><td>Kontenplan nach Erlass Nr. 94n</td></tr>
+          <tr><td>Umsatzsteuer</td><td>16 % und 7 %</td><td>20 %, 10 %, 0 %</td></tr>
+          <tr><td>Lohn</td><td>Lohnsteuer, Sozialversicherung</td><td>Einkommensteuer 13 %, Sozialsteuer</td></tr>
+          <tr><td>Druck</td><td>Rechnung, Quittung, Lohnjournal, Kassenbuch</td><td>TORG-12, Rechnung mit USt, Kassenbelege</td></tr>
+          <tr><td>Sprachen</td><td colspan="2">Deutsch, Russisch, Englisch in jeder Konfiguration</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:18px"><a href="../" hreflang="ru">Diese Seite auf Russisch →</a></p>
+  </div>
+</section>
+
+<section class="band" id="roadmap">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Roadmap</div>
+      <h2>Was schon läuft und was kommt</h2>
+    </div>
+    <ul class="road">
+      <li class="done"><span class="when">Fertig</span><h3>Komplette Buchführung</h3><p>Belege, Buchungen mit Objekten, Lohn, Anlagen, Währungen, Monatsabschluss, Auswertungen, Druckformulare, EnterpriseData-Import.</p></li>
+      <li><span class="when">In Entwicklung</span><h3>Lua-Skripte und Bibliothek</h3><p>Skripte mit Schlagwörtern und Beschreibung, Suche im Programm, Parameter im Formular.</p></li>
+      <li><span class="when">Danach</span><h3>Visueller Baukasten</h3><p>Belege, Bedingungen, Skripte, Buchungen und Druck als Bausteine, mit der Maus verbunden.</p></li>
+    </ul>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap">
+    <h2>Mit dem Demo-Mandanten ausprobieren</h2>
+    <p>Die Musterfirma GmbH ist schon gebucht: Eröffnungsbilanz, Einkauf, Verkauf, Kasse, Lohn für März und Monatsabschluss. Für Lasttests gibt es fertige Mandanten mit 10.000 Buchungen.</p>
+<pre class="code"><span class="c"># bauen und starten</span>
+make build/bin/ledger share
+build/bin/ledger --config de-2003 --lang de</pre>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/corepunch/orion-ui/tree/main/apps/ledger">Ledger auf GitHub</a>
+      <a class="btn btn-ghost" href="https://github.com/corepunch/orion-ui/blob/main/apps/ledger/README.md">Dokumentation</a>
+    </div>
+  </div>
+</section>
+<footer>
+  <div class="wrap"><span>Ledger · Teil von Orion UI · GPL-3</span><span>Punkte mit „in Entwicklung“ und „Roadmap“ sind noch nicht im Release.</span></div>
+</footer>
+
+<script src="../ledger.js"></script>
+</body>
+</html>
