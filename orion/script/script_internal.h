@@ -24,8 +24,9 @@ bool script_call(lua_State *L, int nargs, int nresults, char *msg, size_t msg_sz
 // Raises a refusal: a message for the user, not a bug.
 int script_refuse(lua_State *L, const char *message);
 
-int script_open_orion(lua_State *L);
-int script_open_db(lua_State *L);
+// The "orion" and "orion.db" modules, generated from orion.cgen and db.cgen.
+int luaopen_orion(lua_State *L);
+int luaopen_orion_db(lua_State *L);
 
 // Records as Lua tables, through a table's schema.
 void script_push_record(lua_State *L, const db_table_schema_t *t, const void *record);
