@@ -10,24 +10,36 @@
 //                          document's rows when the table has document_id
 //                          ({{#lines}} is doc_lines), every row otherwise
 //                          (report tables: {{#cash_book}}); {{n}} is the row number
-//   {{field|dmy}}          ISO date as DD.MM.YYYY
+//   {{#table field=value}} only the rows whose field (or join path) shows
+//                          value: {{#vat_book book=1}}, {{#vat_summary vat_rate.rate=19}}
+//   {{field|dmy}}          ISO date as DD.MM.YYYY; |ymd as YYYYMMDD, |ddmm as DDMM
+//   {{field|dot}}          a number as 1234.50, |comma as 1234,50 (exports)
 //   {{field|words}}        amount in words in the configuration's language
 //   {{field|dat}}          a person's name in a case: gen, dat, acc, ins, pre
 //                          ("Выдать {{counterparty.name|dat}}"); organizations stay
+//
+// A template's extension picks the escaping: .html escapes markup, .csv
+// doubles quotes inside quoted fields, anything else writes values as they are.
 #include "ledger.h"
 
 #define PRINT_FIELD_MAX 512
 
+typedef enum { ESCAPE_HTML, ESCAPE_CSV, ESCAPE_NONE } escape_t;
+
 typedef struct {
   FILE *out;
+  escape_t escape;
   const db_document_t *doc;  // NULL for report forms
   int row_table;             // the {{#table}} being repeated, or -1
   const void *row;
   int n;
 } print_ctx_t;
 
-static void put_escaped(FILE *out, const char *s) {
+static void put_escaped(const print_ctx_t *ctx, const char *s) {
+  FILE *out = ctx->out;
   for (; *s; s++) {
+    if (ctx->escape == ESCAPE_CSV) { if (*s == '"') fputc('"', out); fputc(*s, out); continue; }
+    if (ctx->escape == ESCAPE_NONE) { fputc(*s, out); continue; }
     switch (*s) {
       case '<': fputs("&lt;", out);   break;
       case '>': fputs("&gt;", out);   break;
@@ -36,6 +48,13 @@ static void put_escaped(FILE *out, const char *s) {
       default:  fputc(*s, out);       break;
     }
   }
+}
+
+static escape_t escape_for(const char *template) {
+  const char *ext = strrchr(template, '.');
+  if (ext && !strcmp(ext, ".csv")) return ESCAPE_CSV;
+  if (ext && (!strcmp(ext, ".html") || !strcmp(ext, ".htm") || !strcmp(ext, ".xml"))) return ESCAPE_HTML;
+  return ESCAPE_NONE;
 }
 
 static void *first_record(database_t *db, int table_id) {
@@ -93,9 +112,16 @@ static void put_tag(const print_ctx_t *ctx, const char *tag, size_t len) {
     fprintf(stderr, "[ledger] print template field not found: %s\n", name);
     return;
   }
-  int y, m, d;
-  if (filter && !strcmp(filter, "dmy") && sscanf(value, "%d-%d-%d", &y, &m, &d) == 3)
-    snprintf(value, sizeof(value), "%02d.%02d.%04d", d, m, y);
+  // Dates come as stored (2026-03-10) or as the catalog shows them (10.03.2026).
+  int y = 0, m = 0, d = 0;
+  bool date = filter && (sscanf(value, "%d-%d-%d", &y, &m, &d) == 3 || sscanf(value, "%d.%d.%d", &d, &m, &y) == 3) && y > 31;
+  if (date && !strcmp(filter, "dmy"))  snprintf(value, sizeof(value), "%02d.%02d.%04d", d, m, y);
+  if (date && !strcmp(filter, "ymd"))  snprintf(value, sizeof(value), "%04d%02d%02d", y, m, d);
+  if (date && !strcmp(filter, "ddmm")) snprintf(value, sizeof(value), "%02d%02d", d, m);
+  if (filter && (!strcmp(filter, "dot") || !strcmp(filter, "comma"))) {  // plain decimals for exports
+    snprintf(value, sizeof(value), "%.2f", ui_parse_number(value));
+    if (*filter == 'c') for (char *c = value; *c; c++) if (*c == '.') *c = ',';
+  }
   static const char *cases[] = { "nom", "gen", "dat", "acc", "ins", "pre" };
   for (size_t c = 0; filter && c < ARRAY_LEN(cases); c++) {
     if (strcmp(filter, cases[c])) continue;
@@ -109,15 +135,27 @@ static void put_tag(const print_ctx_t *ctx, const char *tag, size_t len) {
     amount_in_words(value, words, sizeof(words));
     snprintf(value, sizeof(value), "%s", words);
   }
-  put_escaped(ctx->out, value);
+  put_escaped(ctx, value);
 }
 
 static void render(print_ctx_t *ctx, const char *s, const char *end);
 
-// {{#table}}: the document's rows of a table with document_id, or all rows.
+// {{#table}}: the document's rows of a table with document_id, or all rows;
+// {{#table field=value}} keeps the rows whose field reads value.
 static const char *render_block(print_ctx_t *ctx, const char *open, const char *close, const char *end) {
-  char name[64], stop_tag[80];
+  char name[160], stop_tag[80];
+  struct { char *field, *value; } filters[4];
+  int nfilters = 0;
   snprintf(name, sizeof(name), "%.*s", (int)(close - open - 3), open + 3);
+  char *cursor = strchr(name, ' ');  // name field=value field=value
+  if (cursor) *cursor++ = '\0';
+  while (cursor && nfilters < (int)ARRAY_LEN(filters)) {
+    char *next = strchr(cursor, ' ');
+    if (next) *next++ = '\0';
+    char *eq = strchr(cursor, '=');
+    if (eq) { *eq = '\0'; filters[nfilters].field = cursor; filters[nfilters++].value = eq + 1; }
+    cursor = next;
+  }
   snprintf(stop_tag, sizeof(stop_tag), "{{/%s}}", name);
   const char *body = close + 2, *stop = strstr(body, stop_tag);
   if (!stop || stop >= end) { fprintf(stderr, "[ledger] print template: unterminated {{#%s}}\n", name); return end; }
@@ -131,6 +169,15 @@ static const char *render_block(print_ctx_t *ctx, const char *open, const char *
   inner.n = 0;
   for (result_node_t *n = rows; n; n = n->next) {
     inner.row = *(void **)n->data;
+    bool kept = true;
+    for (int f = 0; f < nfilters && kept; f++) {
+      char text[PRINT_FIELD_MAX] = "";
+      const char *value = filters[f].value;
+      db_get_field_text(g_ledger->ib, table->table_id, inner.row, filters[f].field, text, sizeof(text));
+      bool number = value[0] && strspn(value, "0123456789.,-") == strlen(value);
+      kept = number ? ui_parse_number(text) == ui_parse_number(value) : !strcmp(text, value);
+    }
+    if (!kept) continue;
     inner.n++;
     render(&inner, body, stop);
   }
@@ -177,7 +224,7 @@ static bool write_form(const db_print_form_t *form, const db_document_t *doc, co
     free(text);
     return false;
   }
-  print_ctx_t ctx = { .out = out, .doc = doc, .row_table = -1 };
+  print_ctx_t ctx = { .out = out, .escape = escape_for(form->template), .doc = doc, .row_table = -1 };
   render(&ctx, text, text + strlen(text));
   fclose(out);
   free(text);

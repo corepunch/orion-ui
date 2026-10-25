@@ -3,14 +3,18 @@
 ![Ledger document journal](../../docs/screenshots/ledger_journal.jpg)
 
 Double-entry bookkeeping in the spirit of the early-2000s desktop accounting
-suites (1C:Accounting 7.7, its German contemporaries). Two country
-configurations ship: Russia 2003 and Germany 2003 (SKR 03), each usable in
-Russian, German and English.
+suites (1C:Accounting 7.7, its German contemporaries), kept current for the
+rules of 2026. Four country configurations ship: **Russia 2026** and
+**Germany 2026 (SKR 03)** for keeping books today, and Russia 2003 and
+Germany 2003 as historical references. Each is usable in Russian, German and
+English. [COMPLIANCE.md](COMPLIANCE.md) records the legal basis of the 2026
+configurations and the yearly process of refreshing them.
 
 ```bash
 make build/bin/ledger share
-build/bin/ledger                       # last selected configuration (ru-2003)
-build/bin/ledger --config de-2003 --lang de --data /tmp/books
+build/bin/ledger                       # last selected configuration (ru-2026)
+build/bin/ledger --config de-2026 --lang de --data /tmp/books
+python3 -I apps/ledger/tools/check_configuration.py --all apps/ledger/share/configurations
 ```
 
 ## Large example data
@@ -29,12 +33,13 @@ totals and deterministic regeneration. The small default demos remain available.
 | Goods | Receipts and sales by item; a sale writes the goods off at average cost (Dt 90.02 Kt 41.01) |
 | Manual operations | `Documents > New Manual Operation` (Ctrl+M): entries typed by the accountant; opening balances are an operation of that kind |
 | Analytics | Each account has an analytics kind (counterparties, items, employees, fixed assets); every entry keeps the debit and the credit object separately |
-| Payroll | Employees with salary, tax allowance and expense account; accrual with withheld income tax and employer contributions from the configuration's payroll taxes; payout of what is owed; payroll statement |
+| Payroll | Employees with salary, allowance and expense account; accrual with withheld income tax and employer contributions from the configuration's payroll taxes: flat rates with monthly or annual caps, progressive scales (cumulative as НДФЛ or annualized as Lohnsteuer), allowances with an income limit, all effective-dated by document date; payout of what is owed; payroll statement |
 | Fixed assets | Asset register; putting assets into service; straight-line depreciation in month-end closing |
 | Currencies | Currencies and exchange rates; documents in a currency post at the day's rate and keep both amounts; currency accounts are revalued at month end |
 | Month-end closing | `Documents > Close Month...` (Ctrl+E) runs the configuration's closing rules: depreciation, revaluation, closing expense accounts and the month's result |
-| Reports | For a period set in `Reports > Settings...` (Ctrl+R): trial balance (opening, turnovers, closing, roll-up to parent accounts), account card, analysis by analytics object, sales and purchase VAT books, cash book, fixed assets, payroll statement |
-| Print forms | HTML templates with amounts in words: TORG-12, VAT invoice, invoice for payment, KO-1/KO-2, payment order, payroll statement T-49 and cash book KO-4 (ru-2003); Rechnung, Quittung, Lohnjournal and Kassenbuch (de-2003) |
+| Reports | For a period set in `Reports > Settings...` (Ctrl+R): trial balance (opening, turnovers, closing, roll-up to parent accounts), account card, analysis by analytics object, sales and purchase VAT books per document and rate, tax summary per rate (the VAT return's lines), journal of the period, cash book, fixed assets, payroll statement |
+| Print forms | HTML templates with amounts in words. ru-2026: счет-фактура and УПД per Decree 1137, invoice for payment, КО-1/КО-2/КО-4, payment order 0401060 (762-П), расчетная ведомость Т-51, books of sales and purchases, VAT summary for the return, trial balance, journal. de-2026: Rechnung per § 14 UStG, Quittung, Lohnjournal, Kassenbuch, Summen- und Saldenliste, UStVA Kennzahlen, Buchungsjournal and a **DATEV Buchungsstapel** CSV export. The 2003 configurations keep their TORG-12, KO forms, T-49, Rechnung and Lohnjournal |
+| Legal basis | `Setup > Legal Basis` lists the acts each configuration implements with the date they took effect and where to re-check them |
 | Storage | One XML infobase per configuration, saved on `File > Save` or on exit |
 | Import from 1C | Catalogs and opening balances from a 1C:Enterprise 8 exchange file (EnterpriseData), see below |
 
@@ -82,7 +87,7 @@ separates its engine from a country's typical configuration.
 | Layer | Where | What it holds |
 |---|---|---|
 | Platform | `ledger.orion`, `*.c` | Schemas, screens, menus, posting engine, print engine |
-| Configuration | `share/configurations/<code>/` | Chart of accounts with analytics kinds, units, tax rates, document types with posting rules, payroll taxes, closing rules, print forms |
+| Configuration | `share/configurations/<code>/` | Chart of accounts with analytics kinds, units, tax rates (with optional automatic accounts), document types with posting rules, effective-dated payroll taxes and tax scales, closing rules, print forms, the regulations behind them |
 | Infobase | `<settings>/ledger/<code>/infobase.xml` | The organization's counterparties, items, documents, entries and totals |
 
 The platform never names an account, a tax rate or a national form. A document
@@ -106,7 +111,7 @@ The interface is written in English and translated by string catalogs
    in Russian and "INN" and "VAT" in English.
 
 The language is the one chosen in `File > Language...`, otherwise the
-configuration's (`ru` for `ru-2003`), otherwise the system's (`LANG`).
+configuration's (`ru` for `ru-2026`), otherwise the system's (`LANG`).
 `--lang ru|de|en|qps-ploc` overrides it for one run; `qps-ploc` is the
 pseudo-locale for checking layouts. Numbers and dates follow the catalog:
 `16 656,00` and `10.03.2003` in Russian.
@@ -203,20 +208,69 @@ import and verify that no opening entries are added. Use
 `apps/ledger/tests/enterprisedata_sample.xml` for the small synthetic fixture
 and automated regression tests.
 
+## Scripting rules and plugins (`rules.lua`)
+
+Tables cover the rules that have a shape the platform knows: rates, caps,
+scales, accounts, forms. Rules of another shape go into the configuration's
+**`rules.lua`**, the way a 1C configuration carries its modules, so a change
+in the law is a change to the configuration directory, never to C:
+
+| Hook | Declared by | The function receives |
+|---|---|---|
+| Posting of a document type (1C: ОбработкаПроведения) | `doc_types … script="post_writeoff"` | `ctx.document`, `ctx.type`, `ctx.rate`; writes entries with `ledger.entry{}` |
+| A payroll tax or contribution | `payroll_taxes … script="soli"` | the above plus `ctx.tax`, `ctx.line`, `ctx.employee`, `ctx.ytd` (the year's pay before this document), `ctx.accruals`, `ctx.withheld`, `ctx.taxes[code]` (rows computed before); returns the amount |
+| A month-end closing step | `closing_rules kind="script" script="…"` | the posting context plus `ctx.rule` |
+| An event subscription (plugins) | `ledger.on("post", fn)` | `fn(ctx)` after every posting |
+
+The `ledger` module offers `find(db, table, id)`, `fetch(db, table[, field, value])`,
+`field(db, table, id, "counterparty.name")`, `account(code)`,
+`entry{debit=, credit=, amount=, quantity=, item=, counterparty=, employee=, asset=, currency=, currency_amount=, content=}`
+(accounts by code or id), `turnover(account[, subconto[, currency]])` with
+the same semantics as the C engine (everything posted before this document
+plus its own entries so far), `rate(currency_id, date)`, `round2(x)` and
+`log(text)`. Records arrive as plain tables of their fields; scripts read the
+databases and write entries, nothing else, so a faulty script cannot corrupt
+the infobase. A failing hook is logged with `[ledger] script …` and the
+document is not posted (a failing tax row is skipped).
+
+Loading order, one Lua state per configuration: `<configuration>/rules.lua`,
+then `<configuration>/plugins/*.lua`, then `<infobase dir>/plugins/*.lua` (the
+organization's own plugins), each directory in name order. Shipped examples:
+
+- `ru-2026/rules.lua`: `post_writeoff` (списание товаров at average cost,
+  ФСБУ 5/2019) and `contributions_sme` (the reduced tariff for SMEs in
+  priority industries, 15 % above 1.5 МРОТ); `plugins/10-cash-limit.lua`
+  warns when a cash settlement exceeds 100 000 ₽ (указание № 5348-У).
+- `de-2026/rules.lua`: `soli` (Solidaritätszuschlag with Freigrenze and
+  Milderungszone, active) and `pv_an_kinderlos` (the childless surcharge in
+  the Pflegeversicherung, opt-in); `plugins/10-kleinbetrag.lua` flags
+  Kleinbetragsrechnungen (§ 33 UStDV).
+
+`check_configuration.py` verifies that every `script=` names a function the
+scripts define; `test_configuration_integrity` does the same with the real
+Lua state.
+
 ## Adding a configuration
 
-1. Copy `share/configurations/ru-2003` to `share/configurations/<code>`.
+1. Copy `share/configurations/ru-2026` to `share/configurations/<code>`.
 2. Edit `configuration.xml`: `settings` (currency names for amounts in
    words, the national currency's ISO code, cash, payroll and opening-balance
-   accounts), `subconto_kinds`, `accounts`, `units`,
-   `vat_rates`, `doc_types` (posting rules reference account ids; `form`
-   picks the dialog and the posting), `payroll_taxes`, `closing_rules`,
-   `balance_rules` (1C import) and `print_forms`.
-3. Write the print templates in `print/` (HTML, see below) and a `demo.xml`
-   infobase, or leave the demo empty.
+   accounts), `subconto_kinds`, `accounts`, `units`, `vat_rates` (a rate
+   may name its own revenue, expense and tax accounts, used by document
+   types with `auto_accounts="1"`), `doc_types` (posting rules reference
+   account ids; `form` picks the dialog and the posting), `payroll_taxes`
+   with `valid_from`/`valid_to`, caps and scales, `tax_scales` for
+   progressive taxes, `closing_rules`, `balance_rules` (1C import),
+   `print_forms` and `regulations`.
+3. Write the print templates in `print/` (HTML or CSV, see below) and a
+   `demo.xml` infobase, or leave the demo empty.
 4. Add a `<configuration>` row to `index.xml`.
 5. Set `language` in `settings` and, if the country has its own terms, add
    `locale/<language>.xml` catalogs that rename the platform's neutral ones.
+6. Run `python3 -I apps/ledger/tools/check_configuration.py share/configurations/<code>`
+   and add the configuration to `test_configuration_integrity` coverage by
+   listing it in `index.xml`; see [COMPLIANCE.md](COMPLIANCE.md) for the
+   yearly refresh.
 
 Print templates are HTML files filled from the document:
 
@@ -227,19 +281,26 @@ Print templates are HTML files filled from the document:
 | `{{org.tax_id}}`, `{{cfg.currency}}` | Organization details, configuration settings |
 | `{{#lines}} {{n}} {{item.unit.code}} {{/lines}}` | One block per document line; any table works: `{{#payroll_lines}}` |
 | `{{#cash_book}} ... {{/cash_book}}`, `{{period.date_from}}` | Report forms (`print_forms.report`) repeat a report's rows |
-| `{{date\|dmy}}` | ISO date as DD.MM.YYYY |
+| `{{#vat_book book=1}}`, `{{#vat_summary book=1 vat_rate.rate=19}}` | Only the rows whose fields (or join paths) read the values |
+| `{{date\|dmy}}`, `{{date\|ymd}}`, `{{date\|ddmm}}` | A date as DD.MM.YYYY, YYYYMMDD or DDMM (exports) |
+| `{{amount\|comma}}`, `{{amount\|dot}}` | A number as 1234,50 or 1234.50 without grouping (exports) |
 | `{{total\|words}}` | Amount in words in the configuration's language |
 | `{{counterparty.name\|dat}}` | A person's name in a case: `gen`, `dat`, `acc`, `ins`, `pre` ("Выдать Петрову Петру Петровичу"); organizations stay as they are |
 
-`Documents > Print Forms` writes every form of the document's type to
-`<infobase dir>/print/` for printing from a browser.
+A template's extension picks the escaping: `.html` escapes markup, `.csv`
+doubles quotes inside quoted fields (the DATEV export), anything else writes
+values as they are. `Documents > Print Forms` writes every form of the
+document's type to `<infobase dir>/print/` for printing from a browser;
+`Reports > Print Report Forms` writes the report forms and exports.
 
 ## How it is built
 
 Almost everything is declared in `ledger.orion`:
 
 - Three schema databases — `cfg` (configuration), `catalog` (installed
-  configurations) and `ib` (infobase, class `ledger_ib`). The schema-driven class needs no
+  configurations) and `ib` (infobase, class `ledger_ib`). `cfg` holds the
+  rules as data, including their validity dates and scales, so a change in
+  the law is a new row, not a new build. The schema-driven class needs no
   adaptor code: CRUD, filtering, persistence and join paths such as
   `item.unit.name` come from the generated schema. Relations may cross
   databases (`relation="cfg.accounts.id"`).
@@ -256,7 +317,9 @@ Almost everything is declared in `ledger.orion`:
   source (`filter-field="manual" filter-value="0"`).
 - Reports are `transient` tables: the posting engine fills them, the
   `.orion` declares their columns, they are never saved. The two VAT books are
-  one table shown by two TableViews with different static filters.
+  one table shown by two TableViews with different static filters; the tax
+  summary and the journal are the same rows regrouped for the return and for
+  export.
 
 - Records live like EOF enterprise objects: `default=` values, `on-delete`
   rules (a document takes its lines and entries along; a counterparty in use
@@ -269,9 +332,59 @@ Almost everything is declared in `ledger.orion`:
 
 The C code holds what declarations cannot express: posting rules and report
 building (`posting.c`), the datasource rules (`ledger_ib.c`), the print engine
-(`print.c`), and command routing plus the payroll Fill button (`controller.c`).
+(`print.c`), the Lua rule engine (`ledger_script.c`), and command routing
+plus the payroll Fill button (`controller.c`).
 Configuration data drives all of it: taxes, closing steps, analytics kinds
-and print forms are rows, not code.
+and print forms are rows, not code. The payroll engine reads the
+`payroll_taxes` rows in force on the document date: a flat rate with a monthly
+or annual cap and a rate above it, a cumulative scale over the year's pay so
+far, or an annualized scale on twelve monthly bases, with allowances and
+their income limit, so one engine computes НДФЛ and Lohnsteuer alike.
+
+## Russia, 2026
+
+`ru-2026` keeps books under the rules in force in 2026 (verified October
+2026; the legal basis of every figure is in [COMPLIANCE.md](COMPLIANCE.md)):
+
+- Chart of accounts per Order No. 94n with the subaccounts of today's 1C
+  configurations: 19.04, 44.01, 68.90 (единый налоговый счет), 69.09
+  (страховые взносы по единому тарифу), 69.11, 90.07–90.09, 99.01–99.02.
+- VAT 22 % from 1 January 2026 (Federal Law No. 425-FZ of 28.11.2025), 10 %,
+  0 %, «Без НДС»; 20 % stays for documents dated before 2026; 5 % and 7 % for
+  УСН payers. Books of sales and purchases per Decree No. 1137 list one row
+  per document and rate, and the tax summary gives the lines of раздел 3.
+- Payroll: НДФЛ on the progressive scale 13/15/18/20/22 % computed on the
+  year's income so far, rounded to roubles, with the standard child deduction
+  until income passes 450 000 ₽; insurance contributions 30 % up to the
+  annual base of 2 979 000 ₽ and 15.1 % above it (Government Decree No. 1705
+  of 31.10.2025); injury insurance 0.2 %. The 2025 base (2 759 000 ₽) is a
+  closed row, so 2025 documents repost correctly.
+- Forms: счет-фактура and УПД with the 2024 column set, КО-1/КО-2/КО-4 per
+  Bank of Russia Instruction 3210-U, payment order 0401060 per Regulation
+  762-P (with an ЕНП payment type), расчетная ведомость Т-51, оборотно-
+  сальдовая ведомость and журнал операций.
+- Fixed assets per ФСБУ 6/2020 (straight-line from the next month); goods at
+  average cost per ФСБУ 5/2019.
+
+## Germany, 2026
+
+`de-2026` follows SKR 03 as DATEV publishes it for 2026:
+
+- Automatic accounts per rate: a 19 % line posts to 8400/1776 (3400/1576 on
+  purchases), a 7 % line to 8300/1771 (3300/1571); a service invoice keeps
+  its own expense account (4210 Miete).
+- Umsatzsteuer 19 % / 7 % with the Umsatzsteuer-Voranmeldung Kennzahlen 81,
+  86 and 66 from the tax summary; Rechnung with the § 14 Abs. 4 UStG
+  Pflichtangaben and the GmbH footer (§ 35a GmbHG).
+- Payroll 2026: KV 7.3 % + 1.45 % Zusatzbeitrag, PV 1.8 %, RV 9.3 %, AV
+  1.3 % for each side, capped at the Beitragsbemessungsgrenzen 5 812.50 €
+  and 8 450 € per month; Insolvenzgeldumlage 0.15 %; Lohnsteuer (Steuerklasse
+  I) from the § 32a EStG tariff 2026 on twelve monthly bases after the
+  Vorsorgepauschale and the Pauschbeträge. The 2025 rows and the 2025 tariff
+  stay in force for 2025 documents.
+- AfA linear and monatsgenau (§ 7 Abs. 1 EStG); Kassenbuch per § 146 AO;
+  Summen- und Saldenliste, Buchungsjournal and a DATEV Buchungsstapel export
+  (EXTF 700) for the Steuerberater.
 
 ## First configuration: Russia, 2003
 

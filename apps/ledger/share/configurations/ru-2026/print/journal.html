@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>Журнал операций</title>
+<style>
+body{font-family:"Times New Roman",serif;font-size:10pt;margin:12mm;color:#000}
+table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
+.grid td,.grid th{border:1px solid #000}.grid th{font-weight:normal;font-size:8pt;text-align:center}
+.r{text-align:right}.c{text-align:center}.small{font-size:7.5pt}.b{font-weight:bold}
+.line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
+.sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
+h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
+@media print{body{margin:6mm}}
+</style></head><body>
+<h1 class="c">ЖУРНАЛ ОПЕРАЦИЙ</h1>
+<p class="c">{{org.name}}<br>за период с {{period.date_from|dmy}} по {{period.date_to|dmy}}</p>
+<table class="grid" style="width:100%">
+<tr><th>№</th><th>Дата</th><th>Документ</th><th>Содержание</th><th>Дебет</th><th>Аналитика Дт</th><th>Кредит</th><th>Аналитика Кт</th><th>Количество</th><th>Сумма, руб.</th></tr>
+{{#journal_rows}}<tr><td class="c">{{n}}</td><td class="c">{{date|dmy}}</td><td>{{document.number}}</td><td>{{content}}</td><td class="c">{{debit.code}}</td><td>{{debit_subconto.name}}</td><td class="c">{{credit.code}}</td><td>{{credit_subconto.name}}</td><td class="r">{{quantity}}</td><td class="r">{{amount}}</td></tr>
+{{/journal_rows}}</table>
+<table class="sign" style="width:100%"><tr><td>Главный бухгалтер <span class="line">{{org.accountant}}</span></td></tr></table>
+</body></html>

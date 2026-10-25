@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Configuration layer: German accounting terms in English. The platform's KPP field holds the USt-IdNr., the
+     bank account the IBAN, the bank ID the BIC and the correspondent account the commercial register entry. -->
+<strings language="en">
+  <string source="Tax ID">Tax number</string>
+  <string source="Tax ID:">Tax number:</string>
+  <string source="KPP">VAT ID</string>
+  <string source="KPP:">VAT ID:</string>
+  <string source="Tax">VAT</string>
+  <string source="Tax:">VAT:</string>
+  <string source="Tax Amount">VAT Amount</string>
+  <string source="Tax rate:">VAT rate:</string>
+  <string source="Tax Rates">VAT Rates</string>
+  <string source="Tax Dr">VAT Dr</string>
+  <string source="Tax Cr">VAT Cr</string>
+  <string source="Tax Summary">VAT Return Figures</string>
+  <string source="Bank account:">IBAN:</string>
+  <string source="Bank ID (BIK):">BIC:</string>
+  <string source="Corr. account:">Commercial register:</string>
+  <string source="Sales Book">Output VAT</string>
+  <string source="Purchase Book">Input VAT</string>
+  <string source="Tax allowance:">Allowance (monthly):</string>
+</strings>
