@@ -107,11 +107,12 @@ USER_LIB    = $(LIB_DIR)/libuser.$(LIB_EXT)
 KERNEL_LIB  = $(LIB_DIR)/libkernel.$(LIB_EXT)
 COMMCTL_LIB = $(LIB_DIR)/libcommctl.$(LIB_EXT)
 COMMDLG_LIB = $(LIB_DIR)/libcommdlg.$(LIB_EXT)
-CORE_LIBS   = $(USER_LIB) $(COMMCTL_LIB) $(COMMDLG_LIB) $(KERNEL_LIB)
+SCRIPT_LIB  = $(LIB_DIR)/libscript.$(LIB_EXT)
+CORE_LIBS   = $(USER_LIB) $(COMMCTL_LIB) $(COMMDLG_LIB) $(KERNEL_LIB) $(SCRIPT_LIB)
 
 # Shared relocatable rpath used exactly once per link command.
 PLATFORM_LDFLAGS = -L$(LIB_DIR) -lplatform
-CORE_LDLIBS      = -L$(LIB_DIR) -lkernel -lcommctl -lcommdlg -luser
+CORE_LDLIBS      = -L$(LIB_DIR) -lscript -lkernel -lcommctl -lcommdlg -luser
 
 # Tools
 ORIONC_BIN   = $(BIN_DIR)/orionc$(EXE_EXT)
@@ -249,7 +250,7 @@ share: | $(SHARE_DIR)
 # ── Core libraries ───────────────────────────────────────────────────────
 library: $(CORE_LIBS)
 
-CORE_HEADERS = $(wildcard vendor/gl_shader/*.[ch]) $(wildcard orion/*.h orion/user/*.h orion/kernel/*.h orion/commctl/*.h orion/commdlg/*.h)
+CORE_HEADERS = $(wildcard vendor/gl_shader/*.[ch]) $(wildcard orion/*.h orion/user/*.h orion/kernel/*.h orion/commctl/*.h orion/commdlg/*.h orion/script/*.h)
 
 # unity_lib <name> <srcs> <lib-deps> <extra-cflags> <link-libs>
 # The sources are #included into a single translation unit fed via stdin.
@@ -269,6 +270,8 @@ USER_SRCS = $(filter-out orion/user/dialog.c orion/user/component_registry.c,$(w
 $(eval $(call unity_lib,kernel,$(wildcard orion/kernel/*.c),,,))
 $(eval $(call unity_lib,user,$(USER_SRCS),$(COMMDLG_LIB) $(KERNEL_LIB),,-lcommdlg -lkernel))
 $(eval $(call unity_lib,commctl,$(wildcard orion/commctl/*.c),$(USER_LIB) $(KERNEL_LIB),-Icomponents,-luser -lkernel))
+# Lua add-ons: runtime .orion forms driven by a script (orion/script/script.h).
+$(eval $(call unity_lib,script,$(wildcard orion/script/*.c),$(COMMCTL_LIB) $(USER_LIB) $(KERNEL_LIB),,-lcommctl -luser -lkernel))
 
 # commdlg is built by its own makefile as a static library
 $(COMMDLG_LIB): $(wildcard orion/commdlg/*.c) $(CORE_HEADERS) | $(LIB_DIR)
@@ -284,7 +287,7 @@ plugins: $(COMPONENT_PLUGIN_BINS)
 scener: $(BIN_DIR)/scener$(EXE_EXT)
 
 INSTALL_BINS = $(EXAMPLE_BINS) $(PHONY_APP_BINS) $(TOOLS_BINS)
-INSTALL_RUNTIME_LIBS = $(KERNEL_LIB) $(USER_LIB) $(COMMCTL_LIB) $(COMMDLG_LIB) $(PLATFORM_LIB)
+INSTALL_RUNTIME_LIBS = $(KERNEL_LIB) $(USER_LIB) $(COMMCTL_LIB) $(COMMDLG_LIB) $(SCRIPT_LIB) $(PLATFORM_LIB)
 INSTALL_GEMS = $(if $(IS_WIN),,$(GEM_BINS) $(PHONY_APP_GEMS))
 
 install: all

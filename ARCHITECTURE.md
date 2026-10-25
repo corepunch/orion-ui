@@ -18,8 +18,9 @@ orion/user/    Windows, messages, input routing, drawing, forms, and resources
 orion/kernel/  Graphics lifecycle, rendering, HTTP, and shared runtime services
 orion/commctl/ Reusable controls and layout containers
 orion/commdlg/ Modal dialogs and common pickers
+orion/script/  Lua add-ons: runtime .orion forms driven by a sandboxed script
 platform/      Native OS windows, events, filesystems, processes, and networking
-share/         Framework fonts, icons, shaders, and deployable assets
+share/         Framework fonts, icons, shaders, Lua modules, and deployable assets
 tests/         Framework behavior and integration tests
 tools/         Resource compilers, generators, and release utilities
 ```
@@ -30,6 +31,8 @@ Dependencies point inward:
 flowchart TD
   App[Application] --> Dialogs[Common dialogs]
   App --> Controls[Common controls]
+  App --> Script[Lua add-ons]
+  Script --> Controls
   Dialogs --> User[Window and message system]
   Controls --> User
   User --> Kernel[Graphics and runtime services]

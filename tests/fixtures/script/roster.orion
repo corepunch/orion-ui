@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A test add-on: a scratch table for its list, typed inputs, actions. -->
+<orion>
+  <databases>
+    <database name="roster" class="db_schema_xml">
+      <table name="lines" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="name" type="string" length="32" />
+        <field name="age" type="integer" />
+      </table>
+    </database>
+  </databases>
+  <forms>
+    <form name="roster" title="Roster" width="400" height="300">
+      <TextBox name="min_age" type="integer" />
+      <TextBox name="born" type="date" />
+      <TextBox name="new_name" />
+      <CheckBox name="active_only" text="Active only" />
+      <Label name="summary" />
+      <Label name="error" />
+      <TableView name="lines" source="roster.lines">
+        <Column field="name" title="Name" />
+        <Column field="age" title="Age" />
+      </TableView>
+      <StackView orientation="horizontal">
+        <Button name="filter" text="Filter" action="filter" />
+        <Button name="add" text="Add" action="add" />
+        <Button name="refuse" text="Refuse" action="refuse" />
+        <Button name="broken" text="Broken" action="broken" />
+        <Button name="done" text="Done" action="done" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+  </forms>
+</orion>

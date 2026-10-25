@@ -32,7 +32,7 @@ archive_package() {
 payload="$stage/core"
 mkdir -p "$payload/bin" "$payload/lib" "$payload/share"
 install -m 755 packaging/orion "$payload/bin/orion"
-cp "$prefix"/lib/libkernel.* "$prefix"/lib/libuser.* "$prefix"/lib/libcommctl.* "$prefix"/lib/libcommdlg.* "$prefix"/lib/libplatform.* "$payload/lib/"
+cp "$prefix"/lib/libkernel.* "$prefix"/lib/libuser.* "$prefix"/lib/libcommctl.* "$prefix"/lib/libcommdlg.* "$prefix"/lib/libscript.* "$prefix"/lib/libplatform.* "$payload/lib/"
 cp -R "$prefix/include" "$payload/"
 cp -R "$prefix/share/orion" "$payload/share/"
 mkdir -p "$payload/share/doc/orion"
