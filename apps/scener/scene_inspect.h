@@ -154,13 +154,13 @@ static int triangles_overlap_2d(const float (*t)[2],const float (*u)[2],float mi
 static int meshes_share_plane(Mesh *a,Bounds ab,Mesh *b,Bounds bb){
 	if(!a->triN) mesh_compute_face_normals(a);
 	if(!b->triN) mesh_compute_face_normals(b);
-	float near=CHECK_COPLANAR_CM/CM_PER_METRE,overlap=CHECK_COPLANAR_OVERLAP_CM/CM_PER_METRE;
+	float reach=CHECK_COPLANAR_CM/CM_PER_METRE,overlap=CHECK_COPLANAR_OVERLAP_CM/CM_PER_METRE;
 	int *bt=malloc(sizeof(int)*(size_t)(b->ntris?b->ntris:1)),nb=0;
-	for(int j=0;j<b->ntris;j++){ Bounds tb=tri_bounds(b,j); if(bounds_gap(tb,ab)<=near) bt[nb++]=j; }
+	for(int j=0;j<b->ntris;j++){ Bounds tb=tri_bounds(b,j); if(bounds_gap(tb,ab)<=reach) bt[nb++]=j; }
 	int found=0;
 	for(int i=0;i<a->ntris && !found && nb;i++){
 		Bounds ta=tri_bounds(a,i);
-		if(bounds_gap(ta,bb)>near) continue;
+		if(bounds_gap(ta,bb)>reach) continue;
 		vec3 n=a->triN[i],a0=a->verts[a->tris[i].a].pos;
 		int axis=fabsf(n.x)>fabsf(n.y)?(fabsf(n.x)>fabsf(n.z)?0:2):(fabsf(n.y)>fabsf(n.z)?1:2);
 		int u=axis==0?1:0,w=axis==2?1:2;
@@ -170,7 +170,7 @@ static int meshes_share_plane(Mesh *a,Bounds ab,Mesh *b,Bounds bb){
 		for(int k=0;k<nb && !found;k++){
 			int j=bt[k];
 			if(vdot(n,b->triN[j])<CHECK_COPLANAR_COS) continue;
-			if(fabsf(vdot(n,vsub(b->verts[b->tris[j].a].pos,a0)))>near || bounds_gap(ta,tri_bounds(b,j))>near) continue;
+			if(fabsf(vdot(n,vsub(b->verts[b->tris[j].a].pos,a0)))>reach || bounds_gap(ta,tri_bounds(b,j))>reach) continue;
 			int ib[3]={b->tris[j].a,b->tris[j].b,b->tris[j].c};
 			float pb[3][2];
 			for(int m=0;m<3;m++){ float *c=&b->verts[ib[m]].pos.x; pb[m][0]=c[u]; pb[m][1]=c[w]; }

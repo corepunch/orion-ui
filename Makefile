@@ -26,6 +26,8 @@ CFLAGS += $(OPT)
 COPY_DLLS = :
 ifneq (,$(filter Windows_NT,$(OS))$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
 IS_WIN   = 1
+# MinGW's math.h declares M_PI under -std=c11 only with _USE_MATH_DEFINES.
+CFLAGS  += -D_USE_MATH_DEFINES
 LIBS    += -lglew32 -lopengl32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -lsetupapi -lxmllite
 LIB_EXT  = dll
 LIB_FLAGS = -shared
@@ -56,7 +58,8 @@ LIBS     += -lGL -lutil
 LDFLAGS_TEST += -lEGL
 CFLAGS   += -fPIC
 LIB_EXT  = so
-LIB_FLAGS = -shared -fPIC
+# Like dylibs and DLLs, a library must resolve every symbol it uses at link time.
+LIB_FLAGS = -shared -fPIC -Wl,--no-undefined
 RPATH_FLAGS = -Wl,-rpath,'$$ORIGIN/../lib'
 GEM_INSTALL_RPATH_FLAGS = -Wl,-rpath,'$$ORIGIN/../..'
 component_id_flags = -Wl,-soname,$(notdir $@)
@@ -259,7 +262,10 @@ $(LIB_DIR)/lib$(1).$(LIB_EXT): $(2) $(3) $(PLATFORM_LIB) $(CORE_HEADERS) | $(LIB
         $(LDFLAGS) $$(RPATH_FLAGS) $(5) $(PLATFORM_LDFLAGS) $(LIBS) $$(IMPLIB_FLAGS)
 endef
 
-USER_SRCS = $(filter-out orion/user/dialog.c orion/user/component_registry.c,$(wildcard orion/user/*.c))
+# libuser already carries commdlg's dialog runtime (event.c ends dialogs); the
+# message box joins it, as MessageBox lives in user32, so controls can use it.
+USER_SRCS = $(filter-out orion/user/dialog.c orion/user/component_registry.c,$(wildcard orion/user/*.c)) \
+            orion/commdlg/msgbox.c
 
 $(eval $(call unity_lib,kernel,$(wildcard orion/kernel/*.c),,,))
 $(eval $(call unity_lib,user,$(USER_SRCS),$(COMMDLG_LIB) $(KERNEL_LIB),,-lcommdlg -lkernel))
@@ -423,6 +429,7 @@ help:
 	@echo "ipad-all  - Build separate Image Editor, Pencil Test and Groove iPad bundles"
 	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - APP=imageeditor|penciltest|groove|winamp (winamp is an iPhone app; ipad-deploy auto-selects one connected device)"
 	@echo "mac-deploy - Build a native macOS app bundle with its app icon (APP=<appname>)"
+	@echo "bundles   - Build portable downloads of every app for this platform into build/bundles (BUNDLE_APPS=\"a b\" for a subset)"
 	@echo "list-devices - List paired devices (see packaging/ipad/README.md)"
 	@echo "ALLOW_HIGHDPI=0 - Disable high-DPI surfaces (use with -B)"
 	@echo "clean     - Remove all build artifacts"
@@ -458,5 +465,13 @@ ipad-all:
 	$(MAKE) -f packaging/ipad/build.mk APP=groove SDK=iphoneos app
 mac-deploy:
 	$(MAKE) -f packaging/macos/build.mk APP=$(APP) APP_SOURCE=$(or $(PHONY_APPS_SRC_$(APP)),$(APP)) deploy
+
+# Portable per-app downloads (zip / tar.gz) for this platform; see packaging/README.md.
+.PHONY: bundles app-source
+bundles: all
+	sh scripts/bundle-apps.sh "" $(BUILD_DIR)/bundles $(BUNDLE_APPS)
+# Source directory name of an app: itself, or the app a phony app is derived from.
+app-source:
+	@echo $(or $(PHONY_APPS_SRC_$(APP)),$(APP))
 list-devices:
 	xcrun devicectl list devices

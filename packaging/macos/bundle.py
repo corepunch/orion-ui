@@ -17,11 +17,16 @@ ICON_SIZES = (
     ('icon_512x512.png', 512), ('icon_512x512@2x.png', 1024),
 )
 DISPLAY_NAMES = {
-    'browser': 'Browser', 'formeditor': 'Form Editor', 'gitclient': 'Git Client',
-    'groove': 'Groove', 'imageeditor': 'Image Editor', 'penciltest': 'Pencil Test',
+    'browser': 'Browser', 'filemanager': 'File Manager', 'formeditor': 'Form Editor',
+    'gitclient': 'Git Client', 'groove': 'Groove', 'helloworld': 'Hello World',
+    'imageeditor': 'Image Editor', 'ledger': 'Ledger', 'penciltest': 'Pencil Test',
     'socialfeed': 'Social Feed', 'taskmanager': 'Task Manager', 'terminal': 'Terminal',
     'vibeoffice': 'Vibe Office',
 }
+
+
+def display_name(app):
+    return DISPLAY_NAMES.get(app, app.replace('-', ' ').title())
 
 
 def run(args, *, capture=False):
@@ -135,10 +140,23 @@ def external_dependencies(executable, frameworks, runtime_libs):
             run(['install_name_tool', '-change', dep, f'@rpath/{dest.name}', str(loader)], capture=True)
 
 
+def square_icon(icon, workdir):
+    # A non-square fallback (the Orion logo) is centred on a square canvas before scaling.
+    info = run(['sips', '-g', 'pixelWidth', '-g', 'pixelHeight', str(icon)], capture=True).stdout
+    width, height = (int(v) for v in re.findall(r'pixel(?:Width|Height): (\d+)', info))
+    if width == height:
+        return icon
+    side = max(width, height)
+    square = workdir / 'icon-square.png'
+    run(['sips', '-p', str(side), str(side), '--padColor', '0D0A1C', str(icon), '--out', str(square)], capture=True)
+    return square
+
+
 def make_icon(icon, resources, app):
     iconset = resources / f'{app}.iconset'
     iconset.mkdir()
     try:
+        icon = square_icon(icon, iconset)
         for filename, pixels in ICON_SIZES:
             run(['sips', '-z', str(pixels), str(pixels), str(icon),
                  '--out', str(iconset / filename)], capture=True)
@@ -157,15 +175,15 @@ def main():
     parser.add_argument('--share', type=Path, required=True)
     parser.add_argument('--icon', type=Path, required=True)
     parser.add_argument('--bundle-id', required=True)
+    parser.add_argument('--version', default='1.0')
     args = parser.parse_args()
 
     if not args.bundle.name.endswith('.app'):
         raise SystemExit('Bundle destination must end in .app')
     if not args.binary.is_file() or not args.icon.is_file():
         raise SystemExit('Expected both the built executable and app icon PNG')
-    for path in (args.share / 'orion', args.share / args.source):
-        if not path.is_dir():
-            raise SystemExit(f'Missing built app resources: {path}')
+    if not (args.share / 'orion').is_dir():
+        raise SystemExit(f'Missing built framework resources: {args.share / "orion"}')
     for tool in ('codesign', 'file', 'iconutil', 'install_name_tool', 'otool', 'sips'):
         if not shutil.which(tool):
             raise SystemExit(f'Required macOS packaging tool not found: {tool}')
@@ -185,7 +203,8 @@ def main():
     shutil.copy2(args.binary, executable)
     share_root = resources / 'share'
     shutil.copytree(args.share / 'orion', share_root / 'orion')
-    shutil.copytree(args.share / args.source, share_root / args.source)
+    if (args.share / args.source).is_dir():
+        shutil.copytree(args.share / args.source, share_root / args.source)
     (contents / 'lib').symlink_to('Frameworks')
     (contents / 'share').symlink_to(Path('Resources') / 'share')
 
@@ -195,17 +214,17 @@ def main():
     external_dependencies(executable, frameworks, args.runtime_libs)
     make_icon(args.icon, resources, args.app)
 
-    display_name = DISPLAY_NAMES.get(args.app, args.app.replace('-', ' ').title())
+    name = display_name(args.app)
     info = {
         'CFBundleDevelopmentRegion': 'en',
-        'CFBundleDisplayName': display_name,
+        'CFBundleDisplayName': name,
         'CFBundleExecutable': args.app,
         'CFBundleIconFile': f'{args.app}.icns',
         'CFBundleIdentifier': args.bundle_id,
         'CFBundleInfoDictionaryVersion': '6.0',
-        'CFBundleName': display_name,
+        'CFBundleName': name,
         'CFBundlePackageType': 'APPL',
-        'CFBundleShortVersionString': '1.0',
+        'CFBundleShortVersionString': args.version,
         'CFBundleVersion': '1',
         'LSApplicationCategoryType': 'public.app-category.developer-tools',
         'LSMinimumSystemVersion': '11.0',

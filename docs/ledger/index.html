@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ledger Бухгалтерия</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Ledger — лёгкая бухгалтерия с двойной записью: документы, проводки, зарплата, закрытие месяца, печатные формы и импорт из 1С. Без сервера, без лицензий и без программиста 1С.">
+<link rel="alternate" hreflang="de" href="de/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Unbounded:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="ledger.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="brand-mark">Дт</span>Ledger</a>
+    <nav aria-label="Разделы">
+      <a href="#download">Скачать</a>
+      <a class="hide-sm" href="#scripts">Скрипты</a>
+      <a class="hide-sm" href="#features">Возможности</a>
+      <a class="hide-sm" href="#migrate">Переезд из 1С</a>
+      <a href="#" aria-current="true" lang="ru">RU</a>
+      <a href="de/" lang="de" hreflang="de">DE</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero" id="top">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <div class="eyebrow">Бухгалтерия с двойной записью · Windows, macOS, Linux</div>
+        <h1>Бухгалтерия, которой <em>не нужен программист&nbsp;1С</em></h1>
+        <p class="lead">Ledger ведёт документы, проводки, зарплату, основные средства, валюту и закрытие месяца. То, что обычно дописывает программист, здесь настраивается таблицами конфигурации, готовыми Lua-скриптами из библиотеки и блоками, которые соединяются мышкой.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#download">Скачать бесплатно</a>
+          <a class="btn btn-ghost" href="#scripts">Как это работает без программиста</a>
+        </div>
+      </div>
+      <div class="entry" role="figure" aria-label="Проводки по статье «Внедрение»: все расходы на программиста равны нулю">
+        <div class="entry-cap"><span>Операция ОП-0001 · Внедрение учёта</span><span aria-hidden="true">✕</span></div>
+        <div class="entry-scroll">
+          <table>
+            <thead><tr><th>Дт</th><th>Кт</th><th class="num">Сумма</th><th>Содержание</th></tr></thead>
+            <tbody>
+              <tr class="strike"><td>26</td><td>60.01</td><td class="num">0,00</td><td class="txt">Доработка конфигурации программистом 1С</td></tr>
+              <tr class="strike"><td>26</td><td>60.01</td><td class="num">0,00</td><td class="txt">Обновление релиза через партнёра</td></tr>
+              <tr class="strike"><td>26</td><td>60.01</td><td class="num">0,00</td><td class="txt">Сервер, СУБД и клиентские лицензии</td></tr>
+              <tr class="hit"><td>26</td><td>60.01</td><td class="num">0,00</td><td class="txt">Ledger, лицензия GPL-3</td></tr>
+            </tbody>
+            <tfoot><tr><td colspan="2">Итого</td><td class="num">0,00</td><td></td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="hero-shot">
+      <img src="img/ru/hero.png" width="1198" height="345" alt="Журнал документов Ledger: ввод остатков, поступление и реализация товаров, кассовые ордера, начисление зарплаты и закрытие месяца с зелёными отметками о проведении">
+    </div>
+  </div>
+</section>
+
+<div class="facts">
+  <div class="wrap">
+    <div class="fact"><b>1,7&nbsp;МБ</b><span>вся программа вместе с библиотеками интерфейса</span></div>
+    <div class="fact"><b>0,7&nbsp;с</b><span>от запуска до готового журнала документов</span></div>
+    <div class="fact"><b>10&nbsp;000</b><span>проводок открываются за 2 секунды даже без видеокарты</span></div>
+    <div class="fact"><b>0&nbsp;₽</b><span>за лицензии: открытый код GPL-3, без сервера и платформы</span></div>
+  </div>
+</div>
+
+<section class="band" id="download">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Скачать</div>
+      <h2>Windows, macOS и Linux</h2>
+      <p>Одна и та же программа на трёх системах, с одинаковыми базами: файл, сохранённый на Windows, открывается на Mac и в Linux. Установка не нужна: распакуйте архив и запустите.</p>
+    </div>
+    <!-- OS logos: Phosphor core fill weight, rev. 2b75f3a (MIT, see PHOSPHOR-LICENSE) -->
+    <div class="downloads">
+      <a class="dl" data-os="windows" href="https://github.com/corepunch/orion-ui/releases/latest/download/ledger-windows-x86_64.zip"><svg viewBox="0 0 256 256" aria-hidden="true"><path d="M104,144v51.64a8,8,0,0,1-8,8,8.54,8.54,0,0,1-1.43-.13l-64-11.64A8,8,0,0,1,24,184V144a8,8,0,0,1,8-8H96A8,8,0,0,1,104,144Zm-2.87-89.78a8,8,0,0,0-6.56-1.73l-64,11.64A8,8,0,0,0,24,72v40a8,8,0,0,0,8,8H96a8,8,0,0,0,8-8V60.36A8,8,0,0,0,101.13,54.22ZM208,136H128a8,8,0,0,0-8,8v57.45a8,8,0,0,0,6.57,7.88l80,14.54A7.61,7.61,0,0,0,208,224a8,8,0,0,0,8-8V144A8,8,0,0,0,208,136Zm5.13-102.14a8,8,0,0,0-6.56-1.73l-80,14.55A8,8,0,0,0,120,54.55V112a8,8,0,0,0,8,8h80a8,8,0,0,0,8-8V40A8,8,0,0,0,213.13,33.86Z"/></svg><span><b>Скачать для Windows</b><small>Windows 10 и 11 · x64 · ZIP</small></span></a>
+      <a class="dl" data-os="macos" href="https://github.com/corepunch/orion-ui/releases/latest/download/ledger-macos-arm64.zip"><svg viewBox="0 0 256 256" aria-hidden="true"><path d="M128.23,30A40,40,0,0,1,167,0h1a8,8,0,0,1,0,16h-1a24,24,0,0,0-23.24,18,8,8,0,1,1-15.5-4ZM223.3,169.59a8.07,8.07,0,0,0-2.8-3.4C203.53,154.53,200,134.64,200,120c0-17.67,13.47-33.06,21.5-40.67a8,8,0,0,0,0-11.62C208.82,55.74,187.82,48,168,48a72.23,72.23,0,0,0-40,12.13,71.56,71.56,0,0,0-90.71,9.09A74.63,74.63,0,0,0,16,123.4a127,127,0,0,0,40.14,89.73A39.8,39.8,0,0,0,83.59,224h87.68a39.84,39.84,0,0,0,29.12-12.57,125,125,0,0,0,17.82-24.6C225.23,174,224.33,172,223.3,169.59Z"/></svg><span><b>Скачать для macOS</b><small>Apple silicon · macOS 11+ · ZIP</small></span></a>
+      <a class="dl" data-os="linux" href="https://github.com/corepunch/orion-ui/releases/latest/download/ledger-linux-x86_64.tar.gz"><svg viewBox="0 0 256 256" aria-hidden="true"><path d="M161.22,209.74a4,4,0,0,1-3.31,6.26H98.1a4,4,0,0,1-3.31-6.26,40,40,0,0,1,66.43,0Zm68.93,3.37a8.29,8.29,0,0,1-6.43,2.89H184.56a4,4,0,0,1-3.76-2.65,56,56,0,0,0-105.59,0A4,4,0,0,1,71.45,216H32.23a8.2,8.2,0,0,1-6.42-2.93A8,8,0,0,1,25.75,203c.06-.07,7.64-9.78,15.12-28.72C47.77,156.8,56,127.64,56,88a72,72,0,0,1,144,0c0,39.64,8.23,68.8,15.13,86.28,7.48,18.94,15.06,28.65,15.13,28.74A8,8,0,0,1,230.15,213.11ZM88,100a12,12,0,1,0,12-12A12,12,0,0,0,88,100Zm79.16,32.42a8,8,0,0,0-10.73-3.58L128,143.06,99.58,128.84a8,8,0,0,0-7.15,14.32l32,16a8,8,0,0,0,7.15,0l32-16A8,8,0,0,0,167.16,132.42ZM168,100a12,12,0,1,0-12,12A12,12,0,0,0,168,100Z"/></svg><span><b>Скачать для Linux</b><small>x86-64 · tar.gz</small></span></a>
+    </div>
+    <div class="dl-notes">
+      <p>Windows: распакуйте и запустите <code>ledger\bin\ledger.exe</code>.</p>
+      <p>macOS: перенесите Ledger в «Программы». Сборка не нотаризована, поэтому первый раз откройте её через правый клик → «Открыть».</p>
+      <p>Linux: <code>tar xzf ledger-linux-x86_64.tar.gz</code> и <code>./ledger/bin/ledger</code>. Нужны OpenGL, X11 или XWayland и libxml2.</p>
+    </div>
+    <p class="dl-more">Все сборки и контрольные суммы SHA-256 — на <a href="https://github.com/corepunch/orion-ui/releases">странице релизов</a>.</p>
+  </div>
+</section>
+
+<section class="band alt" id="lite">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Лёгкость</div>
+      <h2>Одна программа и один файл с базой</h2>
+      <p>Ledger написан на C и работает на собственном оконном движке. Ему не нужны сервер приложений, СУБД и отдельная «платформа». Информационная база хранится в одном XML-файле: её можно положить в облачную папку, отправить бухгалтеру по почте или открыть с флешки.</p>
+    </div>
+    <div class="vs">
+      <div class="old">
+        <h3>Как обычно</h3>
+        <ul>
+          <li>Платформа, сервер и СУБД ставятся отдельно и лицензируются на каждое рабочее место</li>
+          <li>Каждая доработка — заявка программисту и счёт за часы</li>
+          <li>Обновление релиза ломает доработки, их переносят заново</li>
+          <li>Отчёт или печатная форма «как у нас» стоит отдельных денег</li>
+        </ul>
+      </div>
+      <div class="new">
+        <h3>В Ledger</h3>
+        <ul class="ticks">
+          <li>Скачали, запустили, работаете. Демо-база с проведёнными документами открывается сразу</li>
+          <li>Счета, налоги, проводки и закрытие месяца описаны таблицами, а не кодом</li>
+          <li>Нестандартное поведение берётся из библиотеки готовых Lua-скриптов</li>
+          <li>Печатные формы — обычный HTML с подстановками, правится в любом редакторе</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="scripts">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Скрипты <span class="pill">в разработке</span></div>
+      <h2>Библиотека Lua-скриптов вместо программиста</h2>
+      <p>Типовые доработки, за которые платят программисту 1С, уже лежат в библиотеке: пени, акты сверки, загрузка выписки, премии, проверки перед проведением. Найдите скрипт по тегу, включите его для своей базы и поправьте параметры. Lua читается как обычный текст, его понимает бухгалтер и любой студент.</p>
+    </div>
+    <div class="lib" data-lib data-count="Найдено %1 из %2">
+      <div class="lib-bar">
+        <input id="lib-search" type="search" placeholder="Поиск: пени, банк, зарплата, #склад…" aria-label="Поиск скриптов" autocomplete="off">
+        <span class="lib-count" aria-live="polite"></span>
+      </div>
+      <div class="tags" role="group" aria-label="Теги"></div>
+      <div class="cards">
+        <article class="card" data-tags="долги,пени,ежемесячно"><h3>Пени по просроченной дебиторке</h3><p>Считает пени по 62.01 старше N дней по ставке рефинансирования и делает проводку на 91.01.</p></article>
+        <article class="card" data-tags="контрагенты,печать,долги"><h3>Акт сверки взаиморасчётов</h3><p>Собирает обороты по контрагенту за период и печатает акт сверки в двух экземплярах.</p></article>
+        <article class="card" data-tags="банк,импорт"><h3>Загрузка выписки из клиент-банка</h3><p>Читает файл обмена 1CClientBankExchange и создаёт поступления и платёжные поручения.</p></article>
+        <article class="card" data-tags="зарплата,продажи"><h3>Премия менеджерам с продаж</h3><p>Начисляет процент от выручки по каждому менеджеру и добавляет строки в начисление зарплаты.</p></article>
+        <article class="card" data-tags="склад,проверки"><h3>Запрет отрицательных остатков</h3><p>Не даёт провести реализацию, если товара на 41.01 меньше, чем в документе.</p></article>
+        <article class="card" data-tags="продажи,печать"><h3>Счета на оплату по почте</h3><p>Формирует счёт по шаблону и отправляет покупателю на адрес из справочника.</p></article>
+        <article class="card" data-tags="долги,закрытие"><h3>Резерв по сомнительным долгам</h3><p>При закрытии месяца создаёт резерв по долгам старше 45 и 90 дней на 63.</p></article>
+        <article class="card" data-tags="сотрудники,касса"><h3>Авансовый отчёт</h3><p>Списывает подотчётные суммы с 71 по чекам и возвращает остаток в кассу.</p></article>
+        <article class="card" data-tags="склад,закрытие"><h3>Инвентаризация с излишками и недостачей</h3><p>Сравнивает фактические остатки с учётными и проводит разницу на 91 и 94.</p></article>
+        <article class="card" data-tags="ндс,проверки,закрытие"><h3>Контроль книги покупок</h3><p>Ищет поступления без счёта-фактуры и вычеты НДС без оплаты до закрытия квартала.</p></article>
+        <article class="card" data-tags="банк,касса,проверки"><h3>Сверка кассы и банка с выпиской</h3><p>Сравнивает остатки 50 и 51 с выпиской и показывает расхождения по дням.</p></article>
+        <article class="card" data-tags="ос,закрытие"><h3>Ускоренная амортизация</h3><p>Начисляет амортизацию с коэффициентом для выбранной группы основных средств.</p></article>
+        <div class="lib-empty" hidden>Такого скрипта пока нет. Опишите задачу, и он появится в библиотеке.</div>
+      </div>
+    </div>
+    <div class="two code-wide">
+      <div class="copy">
+        <h3>Скрипт — это десять строк, а не проект</h3>
+        <p>Каждый скрипт подписан тегами и описанием, поэтому библиотека ищется как магазин приложений. Скрипт работает через тот же движок проведения, что и документы: проводки попадают в журнал, отчёты пересчитываются, «Отменить проведение» снимает всё целиком.</p>
+        <ul class="ticks">
+          <li>Теги и поиск по библиотеке прямо из программы</li>
+          <li>Параметры скрипта редактируются формой, без правки кода</li>
+          <li>Свой скрипт можно опубликовать для других</li>
+        </ul>
+      </div>
+      <pre class="code" aria-label="Пример Lua-скрипта"><span class="c">-- @name  Пени по просроченной дебиторке</span>
+<span class="c">-- @tags  долги, пени, ежемесячно</span>
+<span class="k">local</span> rate = ledger.rate(<span class="s">"refinancing"</span>) / <span class="n">300</span>
+
+<span class="k">for</span> _, debt <span class="k">in</span> ledger.overdue(<span class="s">"62.01"</span>, <span class="n">30</span>) <span class="k">do</span>
+  ledger.post{
+    date   = period.last_day,
+    debit  = { <span class="s">"76.02"</span>, debt.counterparty },
+    credit = <span class="s">"91.01"</span>,
+    amount = debt.amount * rate * debt.days,
+    text   = <span class="s">"Пени: "</span> .. debt.counterparty.name,
+  }
+<span class="k">end</span></pre>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="nodes">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Визуальная сборка <span class="pill">roadmap</span></div>
+      <h2>Соберите доработку из блоков, как схему</h2>
+      <p>Документ, условие, скрипт из библиотеки, проводка и печатная форма — это блоки. Соедините их линиями, и получится функциональность, ради которой раньше открывали техзадание: скидки оптовикам, особая печать для одного покупателя, отдельный учёт по проекту.</p>
+    </div>
+    <div class="graph" role="img" aria-label="Схема: документ «Реализация товаров» проходит условие «сумма больше 100 000», скрипт скидки для группы «Опт», после чего создаются проводки и печатные формы">
+      <svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg">
+        <path class="wire" d="M190 88 C 220 88, 220 88, 250 88"/>
+        <path class="wire" d="M420 88 C 450 88, 450 88, 480 88"/>
+        <path class="wire" d="M650 88 C 680 88, 680 68, 710 68"/>
+        <path class="wire" d="M650 88 C 690 88, 670 218, 710 218"/>
+        <path class="wire" d="M420 238 C 460 238, 440 112, 480 112"/>
+        <g class="nd"><rect class="body" x="20" y="40" width="170" height="96" rx="7"/><rect class="cap" x="20" y="40" width="170" height="26" rx="7"/><rect class="cap" x="20" y="56" width="170" height="10"/><text class="t" x="32" y="58">Документ</text><text x="32" y="92">Реализация товаров</text><text class="m" x="32" y="116">при проведении</text></g>
+        <g class="nd"><rect class="body" x="250" y="40" width="170" height="96" rx="7"/><rect class="cap" x="250" y="40" width="170" height="26" rx="7"/><rect class="cap" x="250" y="56" width="170" height="10"/><text class="t" x="262" y="58">Условие</text><text x="262" y="92">Сумма &gt; 100 000 ₽</text><text class="m" x="262" y="116">иначе пропустить</text></g>
+        <g class="nd"><rect class="body" x="250" y="190" width="170" height="96" rx="7"/><rect class="cap" x="250" y="190" width="170" height="26" rx="7"/><rect class="cap" x="250" y="206" width="170" height="10"/><text class="t" x="262" y="208">Справочник</text><text x="262" y="242">Контрагенты</text><text class="m" x="262" y="266">группа «Опт»</text></g>
+        <g class="nd lua"><rect class="body" x="480" y="40" width="170" height="96" rx="7"/><rect class="cap" x="480" y="40" width="170" height="26" rx="7"/><rect class="cap" x="480" y="56" width="170" height="10"/><text class="t" x="492" y="58">Lua · скидка-опт</text><text x="492" y="92">Скидка 3 % оптовикам</text><text class="m" x="492" y="116">#продажи #скидки</text></g>
+        <g class="nd out"><rect class="body" x="710" y="20" width="170" height="96" rx="7"/><rect class="cap" x="710" y="20" width="170" height="26" rx="7"/><rect class="cap" x="710" y="36" width="170" height="10"/><text class="t" x="722" y="38">Проводки</text><text x="722" y="72">Дт 62.01 Кт 90.01</text><text class="m" x="722" y="96">НДС: Дт 90.03 Кт 68.02</text></g>
+        <g class="nd out"><rect class="body" x="710" y="170" width="170" height="96" rx="7"/><rect class="cap" x="710" y="170" width="170" height="26" rx="7"/><rect class="cap" x="710" y="186" width="170" height="10"/><text class="t" x="722" y="188">Печатная форма</text><text x="722" y="222">ТОРГ-12, счёт-фактура</text><text class="m" x="722" y="246">HTML-шаблон</text></g>
+        <circle class="port" cx="190" cy="88" r="5"/><circle class="port" cx="250" cy="88" r="5"/><circle class="port" cx="420" cy="88" r="5"/><circle class="port" cx="480" cy="88" r="5"/><circle class="port" cx="650" cy="88" r="5"/><circle class="port" cx="710" cy="68" r="5"/><circle class="port" cx="710" cy="218" r="5"/><circle class="port" cx="420" cy="238" r="5"/><circle class="port" cx="480" cy="112" r="5"/>
+      </svg>
+    </div>
+    <div class="legend"><span><i style="background:#3a3d45"></i>Данные и условия</span><span><i style="background:#6b4ea8"></i>Скрипт из библиотеки</span><span><i style="background:#c9a10f"></i>Результат: проводки и печать</span></div>
+  </div>
+</section>
+
+<section class="band" id="config">
+  <div class="wrap row">
+    <div class="copy">
+      <div class="eyebrow">Конфигурация</div>
+      <h2>Правила учёта — это таблицы, а не программа</h2>
+      <p>Ledger разделяет <strong>платформу</strong> и <strong>конфигурацию</strong>, как это принято в 1С. Только здесь конфигурация — данные: план счетов с видами субконто, ставки НДС, виды документов с их проводками, налоги на зарплату и шаги закрытия месяца. Поменялась ставка — меняете число. Нужна другая страна — добавляете папку.</p>
+      <ul class="ticks">
+        <li>Платформа не знает ни одного номера счёта и ни одной ставки</li>
+        <li>В комплекте конфигурации «Россия 2003» и «Германия 2003 (SKR 03)»</li>
+        <li>Вид документа сам говорит, что дебетовать, что кредитовать и что печатать</li>
+      </ul>
+    </div>
+    <div class="shots">
+      <pre class="code" aria-label="Фрагмент конфигурации"><span class="c">&lt;!-- configuration.xml, сокращено --&gt;</span>
+&lt;<span class="k">payroll_tax</span> name=<span class="s">"НДФЛ"</span> rate=<span class="s">"13"</span> withheld=<span class="s">"1"</span> /&gt;
+&lt;<span class="k">payroll_tax</span> name=<span class="s">"ЕСН в федеральный бюджет"</span> rate=<span class="s">"28"</span> /&gt;
+&lt;<span class="k">payroll_tax</span> name=<span class="s">"ЕСН в ФСС"</span> rate=<span class="s">"4"</span> /&gt;
+
+&lt;<span class="k">closing_rule</span> kind=<span class="s">"depreciation"</span> name=<span class="s">"Амортизация ОС"</span> /&gt;
+&lt;<span class="k">closing_rule</span> kind=<span class="s">"revaluation"</span> name=<span class="s">"Курсовая разница"</span> /&gt;
+&lt;<span class="k">closing_rule</span> kind=<span class="s">"transfer"</span> name=<span class="s">"Закрытие счета 26"</span> /&gt;</pre>
+      <figure class="shot natural">
+        <img src="img/ru/doctypes.png" width="637" height="216" alt="Список видов документов в карточке документа: поступление и реализация товаров, кассовые ордера, платёжное поручение, вычет НДС" loading="lazy">
+        <figcaption>Виды документов приходят из конфигурации вместе со своими проводками.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="features">
+  <div class="wrap row flip">
+    <div class="copy">
+      <div class="eyebrow">Документы</div>
+      <h2>Документ сам делает проводки</h2>
+      <p>Бухгалтер заполняет накладную, как привык: контрагент, товары, количество, цена. По «ОК и провести» Ledger считает НДС, выручку и себестоимость по средней цене и записывает проводки с аналитикой. Номер, итоги и заголовок вида «Реализация товаров РТ-0001 от 10.03.2003» появляются сами.</p>
+      <ul class="ticks">
+        <li>Нумерация по префиксам, пересчёт итогов при каждой правке строки</li>
+        <li>Документы в валюте проводятся по курсу дня и хранят обе суммы</li>
+        <li>«Отмена» откатывает новый документ вместе со строками</li>
+      </ul>
+    </div>
+    <div class="shots">
+      <figure class="shot"><img src="img/ru/document.png" width="637" height="467" alt="Карточка документа «Реализация товаров РТ-0001 от 10.03.2003» с двумя строками товаров, суммой 13 880,00, НДС 2 776,00 и кнопкой «ОК и провести»" loading="lazy"></figure>
+    </div>
+  </div>
+  <div class="wrap">
+    <figure class="shot wide"><img src="img/ru/doc-entries.png" width="1025" height="157" alt="Проводки документа РТ-0001: Дт 62.01 Кт 90.01 выручка, Дт 90.03 Кт 68.02 НДС, Дт 90.02 Кт 41.01 списание товаров по себестоимости" loading="lazy"><figcaption>Вкладка «Проводки» того же документа: выручка, НДС и себестоимость по каждой строке.</figcaption></figure>
+  </div>
+</section>
+
+<section class="band" id="analytics">
+  <div class="wrap">
+    <div class="split">
+      <div class="copy">
+      <div class="eyebrow">Проводки и аналитика</div>
+      <h2>У каждой проводки есть кто и что</h2>
+      <p>У каждого счёта свой вид аналитики: контрагенты, номенклатура, сотрудники или основные средства. Проводка хранит объект отдельно по дебету и по кредиту, поэтому карточка счёта и анализ по субконто строятся без дополнительных регистров.</p>
+      </div>
+      <ul class="ticks">
+        <li>Количество и валютная сумма рядом с суммой в рублях</li>
+        <li>Ручные операции для того, что не укладывается в документы</li>
+        <li>Из любой проводки один клик до её документа</li>
+      </ul>
+    </div>
+    <figure class="shot wide"><img src="img/ru/entries.png" width="1010" height="260" alt="Журнал проводок с колонками Дт, Субконто Дт, Кт, Субконто Кт, количество, валюта и сумма: остатки, поступление товаров от ООО «Торговый дом Альфа», реализация ИП Иванову" loading="lazy"></figure>
+  </div>
+</section>
+
+<section class="band alt" id="payroll">
+  <div class="wrap row flip">
+    <div class="copy">
+      <div class="eyebrow">Зарплата</div>
+      <h2>Зарплата по кнопке «Заполнить»</h2>
+      <p>Сотрудники с окладами и вычетами уже в справочнике. Кнопка «Заполнить» строит начисление на всех, считает НДФЛ с вычетом и взносы работодателя по ставкам конфигурации. Выплата закрывает то, что начислено, а расчётная ведомость Т-49 печатается из того же документа.</p>
+      <ul class="ticks">
+        <li>Удержания и взносы отдельными проводками на каждого сотрудника</li>
+        <li>Счёт затрат берётся из карточки сотрудника: 26 или 44</li>
+        <li>Ставки налогов меняются в таблице, без обновления программы</li>
+      </ul>
+    </div>
+    <div class="shots">
+      <figure class="shot"><img src="img/ru/payroll.png" width="657" height="447" alt="Документ «Начисление зарплаты НЗ-0001 от 31.03.2003»: три сотрудника с суммой, удержанием, взносами и суммой к выплате, итого 36 000,00" loading="lazy"></figure>
+    </div>
+  </div>
+  <div class="wrap">
+    <figure class="shot wide"><img src="img/ru/payroll-entries.png" width="1008" height="241" alt="Проводки начисления зарплаты: Дт 26 Кт 70, НДФЛ Дт 70 Кт 68.01, ЕСН Дт 26 Кт 69.01, 69.02, 69.03 по каждому сотруднику" loading="lazy"><figcaption>НДФЛ и ЕСН расписаны по фондам и по каждому сотруднику.</figcaption></figure>
+  </div>
+</section>
+
+<section class="band" id="close">
+  <div class="wrap">
+    <div class="split">
+      <div class="copy">
+      <div class="eyebrow">Закрытие месяца</div>
+      <h2>Закрытие месяца одним документом</h2>
+      <p>Ctrl+E — и Ledger начисляет амортизацию, переоценивает валютные счета, закрывает 26 и 44 и выводит финансовый результат на 99. Шаги закрытия перечислены в конфигурации, их порядок и состав видны и меняются без программиста.</p>
+      </div>
+      <ul class="ticks">
+        <li>Линейная амортизация с месяца после ввода в эксплуатацию</li>
+        <li>Курсовые разницы на 91.01 и 91.02</li>
+        <li>F5 перепроводит все документы по датам и пересобирает отчёты</li>
+      </ul>
+    </div>
+    <figure class="shot wide"><img src="img/ru/closing.png" width="1025" height="173" alt="Проводки документа «Закрытие месяца»: амортизация ОС, курсовые разницы, закрытие счетов 26 и 44, финансовый результат от продаж и сальдо прочих доходов и расходов" loading="lazy"></figure>
+  </div>
+</section>
+
+<section class="band alt" id="reports">
+  <div class="wrap">
+    <div class="split">
+      <div class="copy">
+      <div class="eyebrow">Отчёты</div>
+      <h2>Оборотно-сальдовая, которая сходится</h2>
+      <p>Все отчёты строятся за период из «Настроек отчётов» и заканчиваются строкой «Итого». Итоги ОСВ считают только счета верхнего уровня, поэтому дебет и кредит совпадают, а субсчета видны отдельными строками.</p>
+      </div>
+      <ul class="ticks">
+        <li>ОСВ, карточка счёта, анализ по субконто</li>
+        <li>Книга продаж и книга покупок, кассовая книга</li>
+        <li>Ведомость основных средств и расчётная ведомость</li>
+      </ul>
+    </div>
+    <figure class="shot wide"><img src="img/ru/reports.png" width="1010" height="372" alt="Раздел «Отчеты»: список отчётов слева и оборотно-сальдовая ведомость по счетам 000, 01, 02, 08, 19, 26, 41, 44, 50, 51, 52, 60, 62, 68, 69, 70, 80, 84, 90" loading="lazy"></figure>
+  </div>
+</section>
+
+<section class="band" id="print">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Печатные формы</div>
+      <h2>ТОРГ-12 и счёт-фактура из HTML-шаблона</h2>
+      <p>Печатная форма — обычный HTML-файл с подстановками. Сумма прописью, ФИО в нужном падеже и строки документа подставляются сами. Свой бланк делается в любом редакторе за вечер, без конфигуратора.</p>
+    </div>
+    <figure class="shot natural"><img src="img/ru/print-torg12.png" width="1030" height="181" alt="Фрагмент товарной накладной ТОРГ-12 № РТ-0001: две строки товаров, итоги с НДС и сумма прописью «Шестнадцать тысяч шестьсот пятьдесят шесть рублей 00 копеек»" loading="lazy"><figcaption>ТОРГ-12: строки документа, итоги и сумма прописью.</figcaption></figure>
+    <div class="two">
+      <figure class="shot natural"><img src="img/ru/print-faktura.png" width="716" height="218" alt="Шапка счёта-фактуры № РТ-0001 от 10.03.2003: продавец ООО «Ромашка», ИНН/КПП, грузополучатель и покупатель ИП Иванов" loading="lazy"><figcaption>Счёт-фактура: реквизиты подставлены из справочников.</figcaption></figure>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Подстановка</th><th>Что получится</th></tr></thead>
+        <tbody>
+          <tr><td>{{total|words}}</td><td>Шестнадцать тысяч шестьсот пятьдесят шесть рублей 00 копеек</td></tr>
+          <tr><td>{{counterparty.name|dat}}</td><td>Выдать Петрову Петру Петровичу</td></tr>
+          <tr><td>{{#lines}} … {{/lines}}</td><td>Одна строка таблицы на каждую строку документа</td></tr>
+          <tr><td>{{doc_type.debit.code}}</td><td>Счёт дебета из конфигурации, например 62.01</td></tr>
+          <tr><td>{{date|dmy}}</td><td>10.03.2003</td></tr>
+        </tbody>
+      </table>
+    </div>
+    </div>
+    <p style="margin-top:18px;color:var(--muted)">В комплекте: ТОРГ-12, счёт-фактура, счёт на оплату, КО-1 и КО-2, платёжное поручение 0401060, расчётная ведомость Т-49 и кассовая книга КО-4.</p>
+  </div>
+</section>
+
+<section class="band alt" id="migrate">
+  <div class="wrap row">
+    <div class="copy">
+      <div class="eyebrow">Переезд из 1С</div>
+      <h2>Справочники и остатки из 1С одним файлом</h2>
+      <p>Выгрузите данные из 1С:Предприятия 8 в формате EnterpriseData и откройте файл в Ledger. Контрагенты с ИНН и КПП, номенклатура, сотрудники, основные средства, валюты и начальные остатки встанут на нужные счета.</p>
+      <ul class="ticks">
+        <li>Проверено на реальной выгрузке 1С:Управление торговлей 11: 10 153 проводки остатков, 5 747 позиций номенклатуры, 67 контрагентов</li>
+        <li>Повторная загрузка того же файла ничего не задвоит</li>
+        <li>Файл с ошибкой не оставит в базе ни одной записи</li>
+      </ul>
+    </div>
+    <div class="shots">
+      <figure class="shot natural"><img src="img/ru/menu-file.png" width="292" height="212" alt="Меню «Файл» с пунктом «Загрузить из 1С (EnterpriseData)...»" loading="lazy"><figcaption>Файл → Загрузить из 1С (EnterpriseData).</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="countries">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Страны и языки</div>
+      <h2>Одна платформа, разные страны</h2>
+      <p>Конфигурация «Германия 2003» на SKR 03 доказывает, что в платформе нет российских допущений: другой план счетов, немецкий НДС, своя зарплата с налогом на заработную плату и соцстрахованием, счёт с реквизитами по § 14 закона об НДС. Интерфейс переводится каталогами строк, а национальные термины переименовывает сама конфигурация: нейтральное поле «налоговый номер» называется «ИНН» в российской конфигурации и «налоговым номером» с немецким форматом в германской.</p>
+    </div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Что</th><th>Россия 2003</th><th>Германия 2003</th></tr></thead>
+        <tbody>
+          <tr><td>План счетов</td><td>Приказ № 94н с типовыми субсчетами</td><td>Стандартный план счетов DATEV SKR 03</td></tr>
+          <tr><td>НДС</td><td>20 %, 10 %, 0 %, без НДС</td><td>16 % и 7 %</td></tr>
+          <tr><td>Зарплата</td><td>НДФЛ 13 %, ЕСН 35,6 %</td><td>Налог на заработную плату, соцстрахование</td></tr>
+          <tr><td>Печать</td><td>ТОРГ-12, счёт-фактура, КО-1/КО-2, Т-49</td><td>Счёт, квитанция, журнал зарплаты, кассовая книга</td></tr>
+          <tr><td>Языки</td><td colspan="2">Русский, немецкий, английский в любой конфигурации</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:18px"><a href="de/" hreflang="de">Эта страница по-немецки →</a></p>
+  </div>
+</section>
+
+<section class="band alt" id="roadmap">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Дорожная карта</div>
+      <h2>Что уже работает и что дальше</h2>
+    </div>
+    <ul class="road">
+      <li class="done"><span class="when">Готово</span><h3>Учёт целиком</h3><p>Документы, проводки с аналитикой, зарплата, ОС, валюта, закрытие месяца, отчёты, печатные формы, импорт EnterpriseData.</p></li>
+      <li><span class="when">В разработке</span><h3>Lua-скрипты и библиотека</h3><p>Скрипты с тегами и описанием, поиск по библиотеке из программы, параметры через форму.</p></li>
+      <li><span class="when">Дальше</span><h3>Визуальный конструктор</h3><p>Документы, условия, скрипты, проводки и печать как блоки, которые соединяются мышкой.</p></li>
+    </ul>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap">
+    <h2>Попробуйте на демо-базе</h2>
+    <p>Демо-база ООО «Ромашка» уже проведена: остатки, поставки, продажи, валюта, зарплата за март и закрытие месяца. Для нагрузки есть готовые базы на 10 000 проводок.</p>
+<pre class="code"><span class="c"># или соберите из исходников</span>
+make build/bin/ledger share
+build/bin/ledger --config ru-2003 --lang ru</pre>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#download">Скачать для Windows, macOS или Linux</a>
+      <a class="btn btn-ghost" href="https://github.com/corepunch/orion-ui/tree/main/apps/ledger">Исходники на GitHub</a>
+      <a class="btn btn-ghost" href="https://github.com/corepunch/orion-ui/blob/main/apps/ledger/README.md">Документация</a>
+    </div>
+  </div>
+</section>
+<footer>
+  <div class="wrap"><span>Ledger · часть Orion UI · GPL-3</span><span>Пункты с пометками «в разработке» и «roadmap» ещё не вошли в выпуск.</span></div>
+</footer>
+
+<script src="ledger.js"></script>
+</body>
+</html>

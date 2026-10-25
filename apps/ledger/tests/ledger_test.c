@@ -45,7 +45,7 @@ static const db_balance_t *balance(const char *code) {
                (void *)(intptr_t)a->id) : NULL;
 }
 
-static bool near(double a, double b) { return fabs(a - b) < 0.005; }
+static bool approx(double a, double b) { return fabs(a - b) < 0.005; }
 
 static void test_configuration_loads(void) {
   TEST("configuration: chart of accounts, rates and document types load from XML");
@@ -57,7 +57,7 @@ static void test_configuration_loads(void) {
   ASSERT_NOT_NULL(goods);
   ASSERT_STR_EQUAL(goods->name, "Товары на складах");
   db_vat_rate_t *vat = (db_vat_rate_t *)send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_VAT_RATES, 0), (void *)(intptr_t)1);
-  ASSERT(vat && near(vat->rate, 20), "2003 VAT rate is 20%");
+  ASSERT(vat && approx(vat->rate, 20), "2003 VAT rate is 20%");
   PASS();
 }
 
@@ -84,7 +84,7 @@ static void test_posting_rules(void) {
   TEST("posting: receipt lines write Dt 41.01 Kt 60.01 and Dt 19.03 Kt 60.01 with subconto");
   db_document_t *doc = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ПТ-0001");
   ASSERT(doc && doc->posted, "demo receipt is posted");
-  ASSERT(near(doc->amount, 42600) && near(doc->vat, 8520) && near(doc->total, 51120), "receipt totals");
+  ASSERT(approx(doc->amount, 42600) && approx(doc->vat, 8520) && approx(doc->total, 51120), "receipt totals");
   result_node_t *entries = (result_node_t *)send_db_message(g_ledger->ib, dbFetch,
     MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)doc->id);
   ASSERT_EQUAL(count_result_list(entries), 6);  // goods and tax entry per line
@@ -94,7 +94,7 @@ static void test_posting_rules(void) {
   db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "credit.code", cr, sizeof(cr));
   db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "debit_subconto.sku", item, sizeof(item));
   db_get_field_text(g_ledger->ib, TABLE_ENTRIES, e, "credit_subconto.tax_id", party, sizeof(party));
-  bool ok = !strcmp(dr, "41.01") && !strcmp(cr, "60.01") && near(e->amount, 9500) && near(e->quantity, 100) &&
+  bool ok = !strcmp(dr, "41.01") && !strcmp(cr, "60.01") && approx(e->amount, 9500) && approx(e->quantity, 100) &&
             !strcmp(item, "00001") && !strcmp(party, "7705123456");
   free_result_list(entries);
   ASSERT(ok, "net amount entry carries the item on the debit side and the supplier on the credit side");
@@ -115,21 +115,21 @@ static double entry_sum(const char *debit, const char *credit) {
 
 static void test_cost_of_sales(void) {
   TEST("sale: goods leave 41.01 for 90.02 at average cost, item and quantity on the credit side");
-  ASSERT(near(entry_sum("90.02", "41.01"), 2 * 6200 + 150), "two monitors at 6 200 and a keyboard from opening stock");
+  ASSERT(approx(entry_sum("90.02", "41.01"), 2 * 6200 + 150), "two monitors at 6 200 and a keyboard from opening stock");
   const db_balance_t *goods = balance("41.01");
-  ASSERT(goods && near(goods->balance_dr, 1500 + 42600 + 15750 - 12550), "stock after the sale");
+  ASSERT(goods && approx(goods->balance_dr, 1500 + 42600 + 15750 - 12550), "stock after the sale");
   PASS();
 }
 
 static void test_payroll(void) {
   TEST("payroll: accrual with income tax withheld and unified social tax; payout of net pay; fill");
   db_document_t *accrual = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "НЗ-0001");
-  ASSERT(accrual && near(accrual->total, 36000), "gross payroll");
+  ASSERT(accrual && approx(accrual->total, 36000), "gross payroll");
   db_payroll_line_t *line = (db_payroll_line_t *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_PAYROLL_LINES, 0), (void *)(intptr_t)1);
-  ASSERT(line && near(line->withheld, (15000 - 400) * 0.13) && near(line->contributions, 15000 * 0.356) && near(line->net, 13102),
+  ASSERT(line && approx(line->withheld, (15000 - 400) * 0.13) && approx(line->contributions, 15000 * 0.356) && approx(line->net, 13102),
          "13 % after the 400 allowance; 35.6 % on top");
-  ASSERT(near(balance("68.01")->balance_cr, 4524) && near(balance("69")->balance_cr, 12816), "taxes owed");
-  ASSERT(near(balance("70")->balance_cr, 0) && near(balance("70")->debit_turnover, 36000), "net pay paid out from the till");
+  ASSERT(approx(balance("68.01")->balance_cr, 4524) && approx(balance("69")->balance_cr, 12816), "taxes owed");
+  ASSERT(approx(balance("70")->balance_cr, 0) && approx(balance("70")->debit_turnover, 36000), "net pay paid out from the till");
   char buf[128];
   result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_PAYROLL_ROWS, 0), NULL);
   ASSERT(count_result_list(rows) == 3, "payroll statement per employee");
@@ -141,7 +141,7 @@ static void test_payroll(void) {
   db_document_t *april = (db_document_t *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &blank);
   int id = april->id;
   ledger_fill_payroll(g_ledger->ib, g_ledger->cfg, id);
-  ASSERT(ledger_count_references(g_ledger->ib, TABLE_PAYROLL_LINES, "document_id", id) == 3 && near(april->total, 36000), "filled with salaries");
+  ASSERT(ledger_count_references(g_ledger->ib, TABLE_PAYROLL_LINES, "document_id", id) == 3 && approx(april->total, 36000), "filled with salaries");
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_PAYROLL_LINES, "document_id", id), 0);
   PASS();
@@ -167,10 +167,10 @@ static void test_fixed_assets(void) {
   TEST("fixed assets: put into service, straight-line depreciation from the next month");
   db_asset_t *printer = (db_asset_t *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_ASSETS, 0), (void *)(intptr_t)2);
   ASSERT_STR_EQUAL(printer->commissioned, "2003-03-14");
-  ASSERT(near(balance("01")->balance_dr, 48000) && near(balance("02")->balance_cr, 3000), "computer depreciated for March only");
+  ASSERT(approx(balance("01")->balance_dr, 48000) && approx(balance("02")->balance_cr, 3000), "computer depreciated for March only");
   result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ASSET_ROWS, 0), NULL);
   db_asset_row_t *computer = *(db_asset_row_t **)rows->data, *second = *(db_asset_row_t **)((result_node_t *)rows->next)->data;
-  bool ok = near(computer->depreciation, 3000) && near(computer->residual, 33000) && near(second->monthly, 500) && near(second->depreciation, 0);
+  bool ok = approx(computer->depreciation, 3000) && approx(computer->residual, 33000) && approx(second->monthly, 500) && approx(second->depreciation, 0);
   free_result_list(rows);
   ASSERT(ok, "asset register");
   db_document_t blank = { .doc_type_id = 14 };
@@ -179,7 +179,7 @@ static void test_fixed_assets(void) {
   int id = april->id;
   ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
-  ASSERT(near(balance("02")->balance_cr, 3000 + 1000 + 500), "April charges both assets");
+  ASSERT(approx(balance("02")->balance_cr, 3000 + 1000 + 500), "April charges both assets");
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   PASS();
@@ -188,20 +188,20 @@ static void test_fixed_assets(void) {
 static void test_currency(void) {
   TEST("currencies: documents post at the day's rate; closing revalues currency accounts");
   db_document_t *import = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ПИ-0001");
-  ASSERT(import && near(import->rate, 31.5) && near(import->total, 500), "rate on the document date");
-  ASSERT(near(entry_sum("41.01", "60.21"), 15750), "500 USD at 31.50");
+  ASSERT(import && approx(import->rate, 31.5) && approx(import->total, 500), "rate on the document date");
+  ASSERT(approx(entry_sum("41.01", "60.21"), 15750), "500 USD at 31.50");
   const db_balance_t *account = balance("52");
-  ASSERT(account && near(account->balance_dr, 500 * 31.38), "500 USD left, restated at the month-end rate");
-  ASSERT(near(entry_sum("91.02", "52"), 165) && near(entry_sum("60.21", "91.01"), 25), "exchange differences");
-  ASSERT(near(balance("60.21")->balance_dr, 0) && near(balance("60.21")->balance_cr, 0), "settled supplier");
+  ASSERT(account && approx(account->balance_dr, 500 * 31.38), "500 USD left, restated at the month-end rate");
+  ASSERT(approx(entry_sum("91.02", "52"), 165) && approx(entry_sum("60.21", "91.01"), 25), "exchange differences");
+  ASSERT(approx(balance("60.21")->balance_dr, 0) && approx(balance("60.21")->balance_cr, 0), "settled supplier");
   PASS();
 }
 
 static void test_month_closing(void) {
   TEST("closing: expenses close to 90, the month's result to 99");
-  ASSERT(near(balance("26")->balance_dr, 0) && near(balance("44")->balance_dr, 0), "26 and 44 closed");
-  ASSERT(near(balance("90")->balance_dr, 0) && near(balance("90")->balance_cr, 0), "90 nets to zero");
-  ASSERT(near(entry_sum("99", "90.09"), 48486) && near(entry_sum("99", "91.09"), 140), "loss from sales and other expenses");
+  ASSERT(approx(balance("26")->balance_dr, 0) && approx(balance("44")->balance_dr, 0), "26 and 44 closed");
+  ASSERT(approx(balance("90")->balance_dr, 0) && approx(balance("90")->balance_cr, 0), "90 nets to zero");
+  ASSERT(approx(entry_sum("99", "90.09"), 48486) && approx(entry_sum("99", "91.09"), 140), "loss from sales and other expenses");
   PASS();
 }
 
@@ -215,10 +215,10 @@ static void test_cash_book(void) {
     last = *(db_cash_book_t **)n->data;
     if (!last->summary) receipts += last->receipt;
   }
-  bool ok = count == 12 && last && last->summary && near(last->balance, 18656) && near(last->receipt, 31476) && near(last->expense, 31476);
+  bool ok = count == 12 && last && last->summary && approx(last->balance, 18656) && approx(last->receipt, 31476) && approx(last->expense, 31476);
   free_result_list(rows);
   ASSERT(ok, "three days with movements");
-  ASSERT(near(receipts, 2000 + 16656 + 31476), "orders alone sum to the receipts");
+  ASSERT(approx(receipts, 2000 + 16656 + 31476), "orders alone sum to the receipts");
   char report[1024];
   ASSERT_EQUAL(ledger_print_reports(report, sizeof(report)), 1);
   FILE *f = fopen(TMP_DIR "/print/ko4.html", "rb");
@@ -234,10 +234,10 @@ static void test_cash_book(void) {
 static void test_unpost_and_trial_balance(void) {
   TEST("trial balance: subaccounts roll up; opening balances; unposting removes entries");
   const db_balance_t *bank = balance("51"), *goods = balance("41"), *vat = balance("68"), *aux = balance("000");
-  ASSERT(bank && near(bank->balance_dr, 100000 + 60000 - 51120 - 31476), "bank balance");
-  ASSERT(aux && near(aux->balance_dr, 0) && near(aux->balance_cr, 0), "opening entries balance through 000");
-  ASSERT(goods && near(goods->debit_turnover, 1500 + 42600 + 15750), "41 includes 41.01");
-  ASSERT(vat && near(vat->debit_turnover, 8520) && near(vat->credit_turnover, 2776 + 4524), "68.02 and 68.01 roll into 68");
+  ASSERT(bank && approx(bank->balance_dr, 100000 + 60000 - 51120 - 31476), "bank balance");
+  ASSERT(aux && approx(aux->balance_dr, 0) && approx(aux->balance_cr, 0), "opening entries balance through 000");
+  ASSERT(goods && approx(goods->debit_turnover, 1500 + 42600 + 15750), "41 includes 41.01");
+  ASSERT(vat && approx(vat->debit_turnover, 8520) && approx(vat->credit_turnover, 2776 + 4524), "68.02 and 68.01 roll into 68");
   // The totals row counts top-level accounts only: debit and credit agree.
   double dr = 0, cr = 0, open_dr = 0, open_cr = 0, close_dr = 0, close_cr = 0;
   result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_BALANCES, 0), NULL);
@@ -248,16 +248,16 @@ static void test_unpost_and_trial_balance(void) {
     close_dr += b->balance_dr; close_cr += b->balance_cr;
   }
   free_result_list(rows);
-  ASSERT(near(dr, cr) && near(open_dr, open_cr) && near(close_dr, close_cr), "trial balance totals agree");
+  ASSERT(approx(dr, cr) && approx(open_dr, open_cr) && approx(close_dr, close_cr), "trial balance totals agree");
   ASSERT(balance("41.01") && balance("41.01")->subaccount && !goods->subaccount, "subaccount rows are marked");
   db_document_t *sale = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "РТ-0002");
   ASSERT(sale && !sale->posted, "second sale is a draft");
   ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, sale->id));
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
-  ASSERT(near(balance("90.01")->credit_turnover, 16656 + sale->total), "revenue includes the new sale");
+  ASSERT(approx(balance("90.01")->credit_turnover, 16656 + sale->total), "revenue includes the new sale");
   ledger_unpost(g_ledger->ib, g_ledger->cfg, sale->id);
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
-  ASSERT(near(balance("90.01")->credit_turnover, 16656), "unpost restores revenue");
+  ASSERT(approx(balance("90.01")->credit_turnover, 16656), "unpost restores revenue");
   PASS();
 }
 
@@ -274,7 +274,7 @@ static void test_period_reports(void) {
   TEST("reports: period opening/turnover, account card, analysis by counterparty, VAT books");
   set_period("2003-03-05", "2003-03-31", "51");
   const db_balance_t *bank = balance("51");
-  ASSERT(bank && near(bank->opening_dr, 100000 + 60000 - 51120) && near(bank->debit_turnover, 0), "bank opens with earlier movements");
+  ASSERT(bank && approx(bank->opening_dr, 100000 + 60000 - 51120) && approx(bank->debit_turnover, 0), "bank opens with earlier movements");
   result_node_t *card = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_CARD, 0), NULL);
   ASSERT_EQUAL(count_result_list(card), 1);  // cash drawn for the payroll
   free_result_list(card);
@@ -283,12 +283,12 @@ static void test_period_reports(void) {
   double last = -1; int rows = count_result_list(card);
   for (result_node_t *n = card; n; n = n->next) last = (*(db_card_t **)n->data)->balance;
   free_result_list(card);
-  ASSERT(rows == 12 && near(last, -14400), "supplier card: receipts, payments, the unpaid printer");
+  ASSERT(rows == 12 && approx(last, -14400), "supplier card: receipts, payments, the unpaid printer");
   result_node_t *rows_ = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ANALYSIS_ROWS, 0), NULL);
   db_analysis_row_t *alfa = rows_ ? *(db_analysis_row_t **)rows_->data : NULL;
   char name[128] = "";
   if (alfa) db_get_field_text(g_ledger->ib, TABLE_ANALYSIS_ROWS, alfa, "subconto.name", name, sizeof(name));
-  bool ok = count_result_list(rows_) == 2 && alfa && near(alfa->credit_turnover, 51120 + 14400) && near(alfa->debit_turnover, 51120) &&
+  bool ok = count_result_list(rows_) == 2 && alfa && approx(alfa->credit_turnover, 51120 + 14400) && approx(alfa->debit_turnover, 51120) &&
             !strcmp(name, "ООО \"Торговый дом Альфа\"");
   free_result_list(rows_);
   ASSERT(ok, "analysis of 60 lists the suppliers");
@@ -301,14 +301,14 @@ static void test_period_reports(void) {
 static void test_manual_operation(void) {
   TEST("manual operation: typed entries count while posted and stay when unposted");
   db_document_t *op = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ВО-0001");
-  ASSERT(op && op->posted && near(op->total, 342160), "opening balances total their entries");
+  ASSERT(op && op->posted && approx(op->total, 342160), "opening balances total their entries");
   ledger_unpost(g_ledger->ib, g_ledger->cfg, op->id);
   ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", op->id), 8);
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
-  ASSERT(near(balance("51")->balance_cr, 51120 + 31476 - 60000), "unposted operation leaves the reports");
+  ASSERT(approx(balance("51")->balance_cr, 51120 + 31476 - 60000), "unposted operation leaves the reports");
   ledger_post(g_ledger->ib, g_ledger->cfg, op->id);
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
-  ASSERT(near(balance("51")->balance_dr, 100000 + 60000 - 51120 - 31476), "posted again");
+  ASSERT(approx(balance("51")->balance_dr, 100000 + 60000 - 51120 - 31476), "posted again");
   PASS();
 }
 
@@ -339,7 +339,7 @@ static void test_numbering_and_delete(void) {
   db_doc_line_t line = { .document_id = id, .item_id = 2, .quantity = 2 };
   ASSERT_NOT_NULL((void *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
   ledger_recalc_document(g_ledger->ib, g_ledger->cfg, id);
-  ASSERT(near(doc->amount, 2900) && near(doc->vat, 580), "line takes the item's price and tax rate");
+  ASSERT(approx(doc->amount, 2900) && approx(doc->vat, 580), "line takes the item's price and tax rate");
   ledger_post(g_ledger->ib, g_ledger->cfg, id);
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_DOC_LINES, "document_id", id), 0);
@@ -361,15 +361,15 @@ static void test_record_lifecycle(void) {
   int id = doc->id;
   db_doc_line_t line;
   send_db_message(ib, dbInitRecord, TABLE_DOC_LINES, &line);
-  ASSERT(near(line.quantity, 1), "quantity defaults to one");
+  ASSERT(approx(line.quantity, 1), "quantity defaults to one");
   line.document_id = id; line.item_id = 1;
   send_db_message(ib, dbInsert, TABLE_DOC_LINES, &line);
-  ASSERT(near(doc->amount, 95) && near(doc->vat, 19), "a new line recalculates its document");
+  ASSERT(approx(doc->amount, 95) && approx(doc->vat, 19), "a new line recalculates its document");
   ASSERT_TRUE(send_db_message(ib, dbRevertChanges, 0, NULL));
   ASSERT(!send_db_message(ib, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)id), "revert removes the document");
   ASSERT_EQUAL(ledger_count_references(ib, TABLE_DOC_LINES, "document_id", id), 0);
   db_document_t *receipt = find_by(ib, TABLE_DOCUMENTS, "number", "ПТ-0001");
-  ASSERT(receipt && near(receipt->total, 51120), "surviving records keep their address and contents");
+  ASSERT(receipt && approx(receipt->total, 51120), "surviving records keep their address and contents");
   int referrers = (int)send_db_message(ib, dbCountReferrers, TABLE_COUNTERPARTIES, (void *)(intptr_t)1);
   ASSERT(referrers >= 3, "documents refer to the supplier");
   ASSERT_FALSE(send_db_message(ib, dbDelete, TABLE_COUNTERPARTIES, (void *)(intptr_t)1));  // on-delete="deny"
@@ -392,7 +392,7 @@ static void test_save_and_reload(void) {
   ASSERT_NOT_NULL(copy);
   db_document_t *doc = (db_document_t *)send_db_message(copy, dbFind,
     MAKEDWORD(TABLE_DOCUMENTS, ledger_field(copy, TABLE_DOCUMENTS, "number")), (void *)"ПТ-0001");
-  bool ok = doc && near(doc->total, 51120) && doc->posted;
+  bool ok = doc && approx(doc->total, 51120) && doc->posted;
   db_document_t fresh = { .doc_type_id = 1 };
   db_document_t *added = (db_document_t *)send_db_message(copy, dbInsert, TABLE_DOCUMENTS, &fresh);
   ok = ok && added && added->id > 7;
@@ -491,11 +491,11 @@ static void test_german_configuration(void) {
   snprintf(g_ledger->ib->source_path, sizeof(g_ledger->ib->source_path), TMP_DIR "/infobase-de.xml");
   ledger_repost_all(g_ledger->ib, g_ledger->cfg);
   const db_balance_t *bank = balance("1200"), *ust = balance("1775"), *receivables = balance("1400");
-  bool ok = bank && near(bank->balance_dr, 25000 - 2003.32 - 1633.54 - 1450.54) && ust && near(ust->balance_cr, 96.48) &&
-            receivables && near(receivables->balance_dr, 0);
-  ok = ok && near(balance("1741")->balance_cr, (2500 - 603 + 2200 - 603) * 0.18) && near(balance("1740")->balance_cr, 0);
-  ok = ok && near(balance("4830")->balance_dr, 41.67) && near(balance("0490")->balance_dr, 1500 - 166.68 - 41.67);  // AfA from the month of purchase
-  ok = ok && near(balance("1210")->balance_dr, 2000 * 0.917) && near(balance("2150")->balance_dr, 1852 - 1834);
+  bool ok = bank && approx(bank->balance_dr, 25000 - 2003.32 - 1633.54 - 1450.54) && ust && approx(ust->balance_cr, 96.48) &&
+            receivables && approx(receivables->balance_dr, 0);
+  ok = ok && approx(balance("1741")->balance_cr, (2500 - 603 + 2200 - 603) * 0.18) && approx(balance("1740")->balance_cr, 0);
+  ok = ok && approx(balance("4830")->balance_dr, 41.67) && approx(balance("0490")->balance_dr, 1500 - 166.68 - 41.67);  // AfA from the month of purchase
+  ok = ok && approx(balance("1210")->balance_dr, 2000 * 0.917) && approx(balance("2150")->balance_dr, 1852 - 1834);
   ui_set_language("de");
   ui_add_string_catalog_dir("apps/ledger/share/locale");
   ui_add_string_catalog_dir(SHARE "/de-2003/locale");
@@ -566,7 +566,7 @@ static const db_vat_summary_t *vat_summary(int book, double rate) {
   for (result_node_t *n = rows; n; n = n->next) {
     const db_vat_summary_t *s = *(db_vat_summary_t **)n->data;
     const db_vat_rate_t *r = (const db_vat_rate_t *)send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_VAT_RATES, 0), (void *)(intptr_t)s->vat_rate_id);
-    if (s->book == book && (r ? near(r->rate, rate) : rate < 0)) found = s;
+    if (s->book == book && (r ? approx(r->rate, rate) : rate < 0)) found = s;
   }
   free_result_list(rows);
   return found;
@@ -587,24 +587,24 @@ static void test_ru_2026(void) {
   database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
   switch_configuration("ru-2026", "infobase-ru-2026.xml");
   db_document_t *receipt = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ПТ-0001");
-  bool ok = receipt && near(receipt->amount, 176000) && near(receipt->vat, 37880) && near(receipt->total, 213880);
-  ok = ok && near(balance("19.04")->balance_dr, 13200);  // input tax on services waits for its deduction document
-  ok = ok && near(balance("68.02")->credit_turnover, 13038) && near(balance("68.02")->debit_turnover, 37880);
+  bool ok = receipt && approx(receipt->amount, 176000) && approx(receipt->vat, 37880) && approx(receipt->total, 213880);
+  ok = ok && approx(balance("19.04")->balance_dr, 13200);  // input tax on services waits for its deduction document
+  ok = ok && approx(balance("68.02")->credit_turnover, 13038) && approx(balance("68.02")->debit_turnover, 37880);
   const db_vat_summary_t *purchases22 = vat_summary(2, 22), *sales10 = vat_summary(1, 10), *purchases_norate = vat_summary(2, -1);
-  ok = ok && purchases22 && near(purchases22->vat, 37180 + 13200) && purchases22->documents == 2;
-  ok = ok && sales10 && near(sales10->amount, 3000) && near(sales10->vat, 300);
-  ok = ok && purchases_norate && near(purchases_norate->vat, 13200);  // the equipment receipt has no lines
+  ok = ok && purchases22 && approx(purchases22->vat, 37180 + 13200) && purchases22->documents == 2;
+  ok = ok && sales10 && approx(sales10->amount, 3000) && approx(sales10->vat, 300);
+  ok = ok && purchases_norate && approx(purchases_norate->vat, 13200);  // the equipment receipt has no lines
   // Payroll: 13 % after the child deduction, rounded to roubles; 30 % and 0.2 % on top.
   const db_payroll_line_t *sidorova = payroll_line(14, 2), *petrov = payroll_line(14, 1);
-  ok = ok && sidorova && near(sidorova->withheld, 15418) && near(sidorova->contributions, 36240) && petrov && near(petrov->net, 130500);
-  ok = ok && near(balance("68.01")->balance_cr, 46072) && near(balance("69.09")->balance_cr, 108000) && near(balance("69.11")->balance_cr, 720);
-  ok = ok && near(balance("70")->balance_cr, 0) && near(balance("02.01")->balance_cr, 15000);
+  ok = ok && sidorova && approx(sidorova->withheld, 15418) && approx(sidorova->contributions, 36240) && petrov && approx(petrov->net, 130500);
+  ok = ok && approx(balance("68.01")->balance_cr, 46072) && approx(balance("69.09")->balance_cr, 108000) && approx(balance("69.11")->balance_cr, 720);
+  ok = ok && approx(balance("70")->balance_cr, 0) && approx(balance("02.01")->balance_cr, 15000);
   ASSERT(ok, "March 2026 of the demo company balances");
   // A high earner in April: the 15 % bracket on the year's income so far and the 15.1 % rate above the cap.
   int id = 0;
   const db_payroll_line_t *rich = accrue(11, "2026-04-30", 1, 3000000, &id);
-  ASSERT(rich && near(rich->withheld, 405000), "cumulative scale: 312 000 + 15 % of the part above 2.4 million, less March's tax");
-  ASSERT(rich && near(rich->contributions, 874521 + 6000), "30 % up to the 2 979 000 base, 15.1 % above, 0.2 % injury insurance");
+  ASSERT(rich && approx(rich->withheld, 405000), "cumulative scale: 312 000 + 15 % of the part above 2.4 million, less March's tax");
+  ASSERT(rich && approx(rich->contributions, 874521 + 6000), "30 % up to the 2 979 000 base, 15.1 % above, 0.2 % injury insurance");
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   // Print forms of 2026: Decree 1137 invoice, UPD, books, VAT summary, trial balance, journal.
@@ -631,24 +631,24 @@ static void test_de_2026(void) {
   TEST("de-2026: automatic accounts per rate, 2026 social insurance caps, § 32a tariff, effective dating, DATEV export");
   database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
   switch_configuration("de-2026", "infobase-de-2026.xml");
-  bool ok = near(balance("1776")->balance_cr, 99.35) && near(balance("1771")->balance_cr, 8.38);
-  ok = ok && near(balance("1576")->balance_dr, 197.60 + 228) && near(balance("1571")->balance_dr, 20.93);
-  ok = ok && near(balance("8400")->balance_cr, 522.90) && near(balance("8300")->balance_cr, 119.70);
-  ok = ok && near(balance("3400")->balance_dr, 1040) && near(balance("3300")->balance_dr, 299) && near(balance("4210")->balance_dr, 1200);
+  bool ok = approx(balance("1776")->balance_cr, 99.35) && approx(balance("1771")->balance_cr, 8.38);
+  ok = ok && approx(balance("1576")->balance_dr, 197.60 + 228) && approx(balance("1571")->balance_dr, 20.93);
+  ok = ok && approx(balance("8400")->balance_cr, 522.90) && approx(balance("8300")->balance_cr, 119.70);
+  ok = ok && approx(balance("3400")->balance_dr, 1040) && approx(balance("3300")->balance_dr, 299) && approx(balance("4210")->balance_dr, 1200);
   ASSERT(ok, "7 % lines post to 3300/1571 and 8300/1771, 19 % lines to 3400/1576 and 8400/1776; a service invoice keeps its expense account");
   const db_payroll_line_t *anna = payroll_line(8, 1), *thomas = payroll_line(8, 2);
-  ok = anna && near(anna->withheld, 528.75 + 180.91) && near(anna->contributions, 532.50) && near(anna->net, 1790.34);
-  ok = ok && thomas && near(thomas->withheld, 465.30 + 121.58) && near(thomas->net, 1613.12);
-  ok = ok && near(balance("1741")->balance_cr, 302.49) && near(balance("1742")->balance_cr, 1995.15) && near(balance("1740")->balance_cr, 0);
+  ok = anna && approx(anna->withheld, 528.75 + 180.91) && approx(anna->contributions, 532.50) && approx(anna->net, 1790.34);
+  ok = ok && thomas && approx(thomas->withheld, 465.30 + 121.58) && approx(thomas->net, 1613.12);
+  ok = ok && approx(balance("1741")->balance_cr, 302.49) && approx(balance("1742")->balance_cr, 1995.15) && approx(balance("1740")->balance_cr, 0);
   ASSERT(ok, "21.15 % employee insurance, Lohnsteuer on twelve monthly bases less Vorsorgepauschale and Pauschbeträge, employer 21.3 %");
   int id = 0;
   const db_payroll_line_t *rich = accrue(9, "2026-04-30", 1, 9000, &id);
-  ASSERT(rich && near(rich->withheld, 508.59 + 104.63 + 785.85 + 109.85 + 2173.91 + 56.89),
+  ASSERT(rich && approx(rich->withheld, 508.59 + 104.63 + 785.85 + 109.85 + 2173.91 + 56.89),
          "insurance capped at 5 812,50 / 8 450; 42 % zone; Solidaritätszuschlag from rules.lua in the Milderungszone");
-  ASSERT(rich && near(rich->contributions, 508.59 + 104.63 + 785.85 + 109.85 + 12.68), "employer shares and Insolvenzgeldumlage capped too");
+  ASSERT(rich && approx(rich->contributions, 508.59 + 104.63 + 785.85 + 109.85 + 12.68), "employer shares and Insolvenzgeldumlage capped too");
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   const db_payroll_line_t *last_year = accrue(9, "2025-06-30", 1, 2500, &id);
-  ASSERT(last_year && near(last_year->withheld, 523.75 + 188.25), "a 2025 document applies the 2025 rows: Zusatzbeitrag 2.5 %, tariff 2025");
+  ASSERT(last_year && approx(last_year->withheld, 523.75 + 188.25), "a 2025 document applies the 2025 rows: Zusatzbeitrag 2.5 %, tariff 2025");
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   ui_set_language("de");
@@ -684,14 +684,14 @@ static void test_scripted_rules(void) {
   send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line);
   ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, doc->id));
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
-  ASSERT(near(entry_sum("94", "41.01"), 4500) && near(doc->total, 4500), "ten sheets of paper written off at 450 each");
+  ASSERT(approx(entry_sum("94", "41.01"), 4500) && approx(doc->total, 4500), "ten sheets of paper written off at 450 each");
   // A scripted tax row: the SME reduced tariff, 30 % up to 1.5 МРОТ and 15 % above it.
   db_payroll_tax_t *tax = find_by(g_ledger->cfg, TABLE_PAYROLL_TAXES, "code", "contributions");
   snprintf(tax->script, sizeof(tax->script), "contributions_sme");
   send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, tax);
   int id = 0;
   const db_payroll_line_t *petrov = accrue(11, "2026-04-30", 1, 150000, &id);
-  ASSERT(petrov && near(petrov->contributions, 40639.50 * 0.30 + (150000 - 40639.50) * 0.15 + 300), "scripted tariff plus the built-in injury row");
+  ASSERT(petrov && approx(petrov->contributions, 40639.50 * 0.30 + (150000 - 40639.50) * 0.15 + 300), "scripted tariff plus the built-in injury row");
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   tax->script[0] = '\0';
   send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, tax);
@@ -700,7 +700,7 @@ static void test_scripted_rules(void) {
   snprintf(injury->script, sizeof(injury->script), "no_such_rule");
   send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, injury);
   petrov = accrue(11, "2026-05-31", 1, 150000, &id);
-  ASSERT(petrov && near(petrov->contributions, 45000), "the broken row contributes nothing, the unified tariff still posts");
+  ASSERT(petrov && approx(petrov->contributions, 45000), "the broken row contributes nothing, the unified tariff still posts");
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   injury->script[0] = '\0';
   send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, injury);
@@ -787,7 +787,7 @@ static void test_import_enterprisedata(void) {
   ASSERT_TRUE(ledger_import_enterprisedata(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/enterprisedata_sample.xml", &r));
   ASSERT(r.counterparties == 2 && r.items == 2 && r.employees == 1 && r.assets == 1 && r.currencies == 0, "new catalog objects added");
   ASSERT(r.matched == 2 && r.ignored == 1, "Alfa (by tax ID) and EUR matched; other documents ignored");
-  ASSERT(r.entries == 6 && near(r.debit, 66108) && near(r.credit, 16108), "opening entries of every balance row");
+  ASSERT(r.entries == 6 && approx(r.debit, 66108) && approx(r.credit, 16108), "opening entries of every balance row");
   ASSERT_STR_EQUAL(r.skipped, "ОстаткиОсновныхСредств");  // no balance rule in the configuration
   ASSERT_NULL(find_by(g_ledger->ib, TABLE_CURRENCIES, "code", "RUB"));  // the national currency is no catalog entry
   db_counterparty_t *gamma = find_by(g_ledger->ib, TABLE_COUNTERPARTIES, "tax_id", "7714000001");
@@ -809,16 +809,16 @@ static void test_import_enterprisedata(void) {
     MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)opening->id);
   for (result_node_t *n = entries; n; n = n->next) {
     const db_entry_t *e = *(db_entry_t **)n->data;
-    delta_row |= e->debit_subconto_id == delta->id && near(e->amount, 12000);
-    alfa_row |= e->credit_subconto_id == alfa->id && near(e->amount, 16108);
-    toner_row |= e->debit_subconto_id == toner->id && near(e->quantity, 10) && near(e->amount, 950);
-    paper_row |= e->debit_subconto_id == paper->id && near(e->quantity, 2) && e->amount == 0;
-    eur_row |= e->currency_id != 0 && near(e->currency_amount, 100) && near(e->amount, 3158);
+    delta_row |= e->debit_subconto_id == delta->id && approx(e->amount, 12000);
+    alfa_row |= e->credit_subconto_id == alfa->id && approx(e->amount, 16108);
+    toner_row |= e->debit_subconto_id == toner->id && approx(e->quantity, 10) && approx(e->amount, 950);
+    paper_row |= e->debit_subconto_id == paper->id && approx(e->quantity, 2) && e->amount == 0;
+    eur_row |= e->currency_id != 0 && approx(e->currency_amount, 100) && approx(e->amount, 3158);
   }
   free_result_list(entries);
   ASSERT(delta_row && alfa_row && toner_row && paper_row && eur_row, "side, analytics, quantity and currency amount on the entries");
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
-  ASSERT(near(balance("51")->balance_dr, bank + 50000), "the opening balance reaches the trial balance");
+  ASSERT(approx(balance("51")->balance_dr, bank + 50000), "the opening balance reaches the trial balance");
   ASSERT_TRUE(ledger_import_enterprisedata(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/enterprisedata_sample.xml", &r));
   ASSERT(r.counterparties + r.items + r.employees + r.assets == 0 && r.entries == 0 && r.balances_present, "a second import adds nothing");
   PASS();
@@ -890,16 +890,16 @@ static void test_import_integrity(void) {
   ledger_build_reports(ib, g_ledger->cfg);
   double bank = balance("51")->balance_dr, suppliers = balance("60.01")->balance_cr;
   ASSERT_TRUE(ledger_import_enterprisedata(ib, g_ledger->cfg, path, &r));
-  ASSERT(r.entries == 2 && r.counterparties == 1 && !r.balances_present && near(r.debit, 725) && near(r.credit, 250),
+  ASSERT(r.entries == 2 && r.counterparties == 1 && !r.balances_present && approx(r.debit, 725) && approx(r.credit, 250),
          "a different exchange of the same date imports both debit and credit");
   ledger_build_reports(ib, g_ledger->cfg);
-  ASSERT(near(balance("51")->balance_dr, bank + 725) && near(balance("60.01")->balance_cr, suppliers + 250),
+  ASSERT(approx(balance("51")->balance_dr, bank + 725) && approx(balance("60.01")->balance_cr, suppliers + 250),
          "existing balances survive and new postings reach their accounts");
   db_document_t *opening = NULL;
   result_node_t *docs = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
   for (result_node_t *n = docs; n; n = n->next) {
     db_document_t *d = *(db_document_t **)n->data;
-    if (d->import_source[0] && near(d->total, 975)) opening = d;
+    if (d->import_source[0] && approx(d->total, 975)) opening = d;
   }
   free_result_list(docs);
   ASSERT_NOT_NULL(opening);
@@ -915,8 +915,8 @@ static void test_import_integrity(void) {
   for (result_node_t *n = entries; n; n = n->next) {
     const db_entry_t *e = *(db_entry_t **)n->data;
     ASSERT_STR_EQUAL(e->date, "2003-02-28");
-    ASSERT((near(e->amount, 725) && e->debit_id == bank_account->id && e->credit_id == offset_account->id) ||
-           (near(e->amount, 250) && e->debit_id == offset_account->id && e->credit_id == supplier_account->id && e->credit_subconto_id == vendor->id),
+    ASSERT((approx(e->amount, 725) && e->debit_id == bank_account->id && e->credit_id == offset_account->id) ||
+           (approx(e->amount, 250) && e->debit_id == offset_account->id && e->credit_id == supplier_account->id && e->credit_subconto_id == vendor->id),
            "balanced bank and supplier postings use the opening account and correct analytics");
   }
   free_result_list(entries);
@@ -938,7 +938,7 @@ static void test_import_integrity(void) {
   opening = NULL;
   for (result_node_t *n = docs; n; n = n->next) {
     db_document_t *d = *(db_document_t **)n->data;
-    if (d->import_source[0] && near(d->total, 975)) opening = d;
+    if (d->import_source[0] && approx(d->total, 975)) opening = d;
   }
   free_result_list(docs);
   ASSERT_NOT_NULL(opening);

@@ -1,11 +1,10 @@
 // Read-only database view over Groove's synthesized block catalogue.
 #include "groove.h"
 
-static const uint16_t kBlockFieldIds[] = { 0x7100, 0x7101, 0x7102, 0x7103, 0x7104, 0x7105 };
 static const db_field_msg_binding_t kBlockBindings[] = {
-  { "id", kBlockFieldIds[0] }, { "name", kBlockFieldIds[1] },
-  { "category", kBlockFieldIds[2] }, { "genres", kBlockFieldIds[3] },
-  { "bars", kBlockFieldIds[4] }, { "variant", kBlockFieldIds[5] },
+  { "id", 0x7100 }, { "name", 0x7101 },
+  { "category", 0x7102 }, { "genres", 0x7103 },
+  { "bars", 0x7104 }, { "variant", 0x7105 },
 };
 static const db_field_schema_t kBlockSchema[] = {
   { "id", DB_TYPE_INT, 0, true, NULL, NULL },

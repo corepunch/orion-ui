@@ -12,6 +12,19 @@ Simulator and physical iPads (iPadOS 16+); the Mac target requires macOS 12+.
 For device builds, select a team in **Signing & Capabilities** and keep automatic
 signing enabled. No team or certificate is needed for macOS or Simulator builds.
 
+The macOS target enables App Sandbox in Debug and Release, with read/write access
+to files selected through Open and Save dialogs. Its signing entitlements live in
+`Generated/macos.entitlements`; commit this file alongside the generated plists.
+After changing entitlements, create and upload a new archive. To verify an archive:
+
+```sh
+codesign -d --entitlements - /path/to/groove.xcarchive/Products/Applications/groove.app
+```
+
+The output must contain `com.apple.security.app-sandbox` with a Boolean `true` value.
+Sandboxed macOS apps automatically use native Open, Save, and folder panels to
+grant access to the selected files; unsandboxed apps retain Orion's custom picker.
+
 The generator is opt-in and does not modify or invoke the Makefile. Each app's
 project lives beside its sources: `apps/<app>/<app>.xcodeproj`. Commit the project,
 its `Generated/` info plists and shared schemes so Xcode Cloud can discover it.

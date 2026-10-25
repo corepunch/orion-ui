@@ -2,6 +2,7 @@
 """Integration checks for Xcode's project navigator file references."""
 import json
 from pathlib import Path
+import plistlib
 import subprocess
 import tempfile
 import unittest
@@ -10,6 +11,30 @@ import generate
 
 
 class FileReferenceTests(unittest.TestCase):
+    def test_macos_sandbox_entitlements_are_wired_to_both_configurations(self):
+        with tempfile.TemporaryDirectory(prefix='orion xcode ') as directory:
+            output = Path(directory)
+            subprocess.run(['python3', str(Path(generate.__file__)), 'groove', '--unsigned',
+                            '--output', str(output)], check=True, stdout=subprocess.DEVNULL)
+            for bundle in (output / 'groove.xcodeproj', generate.ROOT / 'apps/groove/groove.xcodeproj'):
+                objects = generate.read_project(bundle / 'project.pbxproj')
+                targets = [obj for obj in objects.values() if obj['isa'] == 'PBXNativeTarget']
+                for target in targets:
+                    configs = objects[target['buildConfigurationList']]['buildConfigurations']
+                    self.assertEqual({objects[uid]['name'] for uid in configs}, {'Debug', 'Release'})
+                    for uid in configs:
+                        settings = objects[uid]['buildSettings']
+                        if target['name'] == 'groove-ipad':
+                            self.assertNotIn('ENABLE_APP_SANDBOX', settings)
+                            continue
+                        self.assertEqual(settings['CODE_SIGN_STYLE'], 'Automatic')
+                        self.assertEqual(settings['ENABLE_APP_SANDBOX'], 'YES')
+                        self.assertEqual(settings['ENABLE_USER_SELECTED_FILES'], 'readwrite')
+                        path = settings['CODE_SIGN_ENTITLEMENTS'].replace('$(PROJECT_FILE_PATH)', str(bundle))
+                        entitlements = plistlib.loads(Path(path).read_bytes())
+                        self.assertIs(entitlements['com.apple.security.app-sandbox'], True)
+                        self.assertIs(entitlements['com.apple.security.files.user-selected.read-write'], True)
+
     def test_navigator_resolves_sources_without_build_settings(self):
         with tempfile.TemporaryDirectory(prefix='orion xcode ') as directory:
             output = Path(directory) / 'nested' / 'project'

@@ -1,2083 +1,1036 @@
 // !$*UTF8*$!
-{"archiveVersion" = 1;
-"classes" = {};
-"objectVersion" = 56;
-"objects" = {"09AA38CEF3EA53936A20C858" = {"isa" = "XCBuildConfiguration";
-"name" = "Debug";
-"buildSettings" = {"ORION_ROOT" = "$(SRCROOT)/../..";
-"SDKROOT" = "macosx";
-"GCC_C_LANGUAGE_STANDARD" = "c11";
-"CLANG_ENABLE_OBJC_ARC" = "NO";
-"ENABLE_USER_SCRIPT_SANDBOXING" = "NO";
-"ALWAYS_SEARCH_USER_PATHS" = "NO";
-"GCC_WARN_INHIBIT_ALL_WARNINGS" = "NO";
-"GCC_WARN_ABOUT_RETURN_TYPE" = "YES";
-"HEADER_SEARCH_PATHS" = ("$(DERIVED_FILE_DIR)/include",
-"$(ORION_ROOT)",
-"$(ORION_ROOT)/apps/groove",
-"$(ORION_ROOT)/components",
-"$(SDKROOT)/usr/include/libxml2",
-);
-"GCC_PREPROCESSOR_DEFINITIONS" = ("$(inherited)",
-"ORION_ALLOW_HIGHDPI=1",
-"GL_SILENCE_DEPRECATION",
-"STBTT_STATIC",
-"HAVE_WINDOWING",
-"SHAREDIR=\"../share/groove\"",
-);
-"OTHER_CFLAGS" = ("$(inherited)",
-"-Wall",
-"-Wextra",
-"-Wno-unused-parameter",
-"-Wno-unused-function",
-"-Wno-missing-field-initializers",
-"-Wno-deprecated-declarations",
-);
-"PRODUCT_NAME" = "groove";
-"PRODUCT_BUNDLE_IDENTIFIER" = "com.orion.groove";
-"MARKETING_VERSION" = "1.0";
-"CURRENT_PROJECT_VERSION" = "1";
-"ENABLE_HARDENED_RUNTIME" = "NO";
-"GCC_OPTIMIZATION_LEVEL" = "0";
-"DEBUG_INFORMATION_FORMAT" = "dwarf";
-"ONLY_ACTIVE_ARCH" = "YES";
-};
-};
-"2C51B24F1BD0E37CCD3A85CD" = {"isa" = "XCBuildConfiguration";
-"name" = "Release";
-"buildSettings" = {"ORION_ROOT" = "$(SRCROOT)/../..";
-"SDKROOT" = "macosx";
-"GCC_C_LANGUAGE_STANDARD" = "c11";
-"CLANG_ENABLE_OBJC_ARC" = "NO";
-"ENABLE_USER_SCRIPT_SANDBOXING" = "NO";
-"ALWAYS_SEARCH_USER_PATHS" = "NO";
-"GCC_WARN_INHIBIT_ALL_WARNINGS" = "NO";
-"GCC_WARN_ABOUT_RETURN_TYPE" = "YES";
-"HEADER_SEARCH_PATHS" = ("$(DERIVED_FILE_DIR)/include",
-"$(ORION_ROOT)",
-"$(ORION_ROOT)/apps/groove",
-"$(ORION_ROOT)/components",
-"$(SDKROOT)/usr/include/libxml2",
-);
-"GCC_PREPROCESSOR_DEFINITIONS" = ("$(inherited)",
-"ORION_ALLOW_HIGHDPI=1",
-"GL_SILENCE_DEPRECATION",
-"STBTT_STATIC",
-"HAVE_WINDOWING",
-"SHAREDIR=\"../share/groove\"",
-);
-"OTHER_CFLAGS" = ("$(inherited)",
-"-Wall",
-"-Wextra",
-"-Wno-unused-parameter",
-"-Wno-unused-function",
-"-Wno-missing-field-initializers",
-"-Wno-deprecated-declarations",
-);
-"PRODUCT_NAME" = "groove";
-"PRODUCT_BUNDLE_IDENTIFIER" = "com.orion.groove";
-"MARKETING_VERSION" = "1.0";
-"CURRENT_PROJECT_VERSION" = "1";
-"ENABLE_HARDENED_RUNTIME" = "NO";
-"GCC_OPTIMIZATION_LEVEL" = "s";
-"DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
-"ONLY_ACTIVE_ARCH" = "NO";
-};
-};
-"1E4B6209DBC7689E3E7CF89C" = {"isa" = "XCConfigurationList";
-"buildConfigurations" = ("09AA38CEF3EA53936A20C858",
-"2C51B24F1BD0E37CCD3A85CD",
-);
-"defaultConfigurationIsVisible" = 0;
-"defaultConfigurationName" = "Debug";
-};
-"4D6FC5A1736DCA577CF68A90" = {"isa" = "PBXFileReference";
-"path" = "Assets.xcassets";
-"sourceTree" = "DERIVED_FILE_DIR";
-"lastKnownFileType" = "folder.assetcatalog";
-};
-"1D5F697BC138CDFCA9EA7238" = {"isa" = "PBXFileReference";
-"path" = "user.c";
-"sourceTree" = "DERIVED_FILE_DIR";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"BFF2E1937265DAA06322B2F9" = {"isa" = "PBXFileReference";
-"path" = "kernel.c";
-"sourceTree" = "DERIVED_FILE_DIR";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"2AA609CA6254E5E7742A8660" = {"isa" = "PBXFileReference";
-"path" = "commctl.c";
-"sourceTree" = "DERIVED_FILE_DIR";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"0795EAC10AF76482EDE70CC9" = {"isa" = "PBXFileReference";
-"path" = "app.c";
-"sourceTree" = "DERIVED_FILE_DIR";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"3B82E31B5F70E86FD89D3CC4" = {"isa" = "PBXFileReference";
-"path" = "macos.m";
-"sourceTree" = "DERIVED_FILE_DIR";
-"lastKnownFileType" = "sourcecode.c.objc";
-};
-"1B6C3EF18CA8BE0150EA93D1" = {"isa" = "PBXFileReference";
-"path" = "ipad.m";
-"sourceTree" = "DERIVED_FILE_DIR";
-"lastKnownFileType" = "sourcecode.c.objc";
-};
-"9F11DD3FFFD57425C8A1E2EC" = {"isa" = "PBXFileReference";
-"path" = "../../orion/commdlg/dialog.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"E301EC5D96A81B42BD8DFCA4" = {"isa" = "PBXFileReference";
-"path" = "../../orion/commdlg/filepicker.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"1DC94D46FDBFD79094CBAD5C" = {"isa" = "PBXFileReference";
-"path" = "../../orion/commdlg/msgbox.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"BE020873C98EDC5440687727" = {"isa" = "PBXFileReference";
-"path" = "../../orion/commdlg/splash.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"912ADBA08D8978182B0FB013" = {"isa" = "PBXFileReference";
-"name" = "components/groove_components.c";
-"path" = "components/groove_components.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"8AE26297468B6D9B6D97DEFA" = {"isa" = "PBXFileReference";
-"name" = "controller.c";
-"path" = "controller.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"0C5E2FCA7AC84D0FF7D847BA" = {"isa" = "PBXFileReference";
-"name" = "datasource/groove_library_db.c";
-"path" = "datasource/groove_library_db.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"63FC8C5BB9D00E0D7A1D0E9A" = {"isa" = "PBXFileReference";
-"name" = "datasource/groove_songs_db.c";
-"path" = "datasource/groove_songs_db.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"ED89282AB95A42E6871A5819" = {"isa" = "PBXFileReference";
-"name" = "demo_phrases.h";
-"path" = "demo_phrases.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"A380D6D0FF657BB6DC0BDF4C" = {"isa" = "PBXFileReference";
-"name" = "dialogs/dlg_save_song.c";
-"path" = "dialogs/dlg_save_song.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"5AFD3ABE439665E45DDF59D9" = {"isa" = "PBXFileReference";
-"name" = "dialogs/dlg_songs.c";
-"path" = "dialogs/dlg_songs.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"AACA4FCFC17BC54CBAA36968" = {"isa" = "PBXFileReference";
-"name" = "groove.h";
-"path" = "groove.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"ACE1BDA22AE52DE17F891F3E" = {"isa" = "PBXFileReference";
-"name" = "groove.orion";
-"path" = "groove.orion";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "text.xml";
-};
-"86BB2C0A00EDDA1CC016EB96" = {"isa" = "PBXFileReference";
-"name" = "library.c";
-"path" = "library.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"0B13544757BC77EA20BC0839" = {"isa" = "PBXFileReference";
-"name" = "main.c";
-"path" = "main.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"C294A2530578CA5BEC3264DE" = {"isa" = "PBXFileReference";
-"name" = "minimp3.h";
-"path" = "minimp3.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"2E4A03E0ED9A6013CF6483C7" = {"isa" = "PBXFileReference";
-"name" = "minimp3_ex.h";
-"path" = "minimp3_ex.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"51ADBB3D13BFDBCD18475ED7" = {"isa" = "PBXFileReference";
-"name" = "mixer.c";
-"path" = "mixer.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"AE529652FABF4FE3E860AE94" = {"isa" = "PBXFileReference";
-"name" = "mp3_decode.c";
-"path" = "mp3_decode.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"A8AEF5EFCD9D0E866A24A9A5" = {"isa" = "PBXFileReference";
-"name" = "persistence.c";
-"path" = "persistence.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"92230866C54E47B8C56F1B05" = {"isa" = "PBXFileReference";
-"name" = "sample_levels.h";
-"path" = "sample_levels.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"848B3D9A34B5F3F6F9563069" = {"isa" = "PBXFileReference";
-"name" = "synth.c";
-"path" = "synth.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"6CC6C751E2A5B6C4AD93F375" = {"isa" = "PBXFileReference";
-"name" = "synth.h";
-"path" = "synth.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"3A24E77729D5848823A54E1F" = {"isa" = "PBXFileReference";
-"name" = "synth_samples.h";
-"path" = "synth_samples.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"FB50EEC6F33D6F6A2569E35A" = {"isa" = "PBXFileReference";
-"name" = "third_party/tsf.h";
-"path" = "third_party/tsf.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"3B850AD129CB979897A58A1E" = {"isa" = "PBXFileReference";
-"name" = "view_bin.c";
-"path" = "view_bin.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"6C2C37A91886518DBC915016" = {"isa" = "PBXFileReference";
-"name" = "view_block_card.c";
-"path" = "view_block_card.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"618BF41811F1A8A268A3DE69" = {"isa" = "PBXFileReference";
-"name" = "view_main.c";
-"path" = "view_main.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"237F3D3259238AD906DE3D8C" = {"isa" = "PBXFileReference";
-"name" = "view_sheet.c";
-"path" = "view_sheet.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"74B79DE27D735D4243E4A432" = {"isa" = "PBXFileReference";
-"name" = "view_song_preview.c";
-"path" = "view_song_preview.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"627CEE5B020A8CBB1A8494CC" = {"isa" = "PBXFileReference";
-"name" = "view_tracks.c";
-"path" = "view_tracks.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"6EF168DD20CF7BB19D86AB8E" = {"isa" = "PBXFileReference";
-"name" = "view_transport.c";
-"path" = "view_transport.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"828741F0F9D39D80E83B68F3" = {"isa" = "PBXFileReference";
-"name" = "waveform_cache.c";
-"path" = "waveform_cache.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"83CAA00DE494F5600555D745" = {"isa" = "PBXGroup";
-"name" = "apps/groove";
-"children" = ("912ADBA08D8978182B0FB013",
-"8AE26297468B6D9B6D97DEFA",
-"0C5E2FCA7AC84D0FF7D847BA",
-"63FC8C5BB9D00E0D7A1D0E9A",
-"ED89282AB95A42E6871A5819",
-"A380D6D0FF657BB6DC0BDF4C",
-"5AFD3ABE439665E45DDF59D9",
-"AACA4FCFC17BC54CBAA36968",
-"ACE1BDA22AE52DE17F891F3E",
-"86BB2C0A00EDDA1CC016EB96",
-"0B13544757BC77EA20BC0839",
-"C294A2530578CA5BEC3264DE",
-"2E4A03E0ED9A6013CF6483C7",
-"51ADBB3D13BFDBCD18475ED7",
-"AE529652FABF4FE3E860AE94",
-"A8AEF5EFCD9D0E866A24A9A5",
-"92230866C54E47B8C56F1B05",
-"848B3D9A34B5F3F6F9563069",
-"6CC6C751E2A5B6C4AD93F375",
-"3A24E77729D5848823A54E1F",
-"FB50EEC6F33D6F6A2569E35A",
-"3B850AD129CB979897A58A1E",
-"6C2C37A91886518DBC915016",
-"618BF41811F1A8A268A3DE69",
-"237F3D3259238AD906DE3D8C",
-"74B79DE27D735D4243E4A432",
-"627CEE5B020A8CBB1A8494CC",
-"6EF168DD20CF7BB19D86AB8E",
-"828741F0F9D39D80E83B68F3",
-);
-"sourceTree" = "<group>";
-};
-"6882A33D7BC1A2A55D819CBD" = {"isa" = "PBXFileReference";
-"name" = "commctl/activitybar.c";
-"path" = "../../orion/commctl/activitybar.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"C407B02C49D69026B62F5899" = {"isa" = "PBXFileReference";
-"name" = "commctl/appchrome.c";
-"path" = "../../orion/commctl/appchrome.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"8AEE5E6E1261FAD5A0E06F0C" = {"isa" = "PBXFileReference";
-"name" = "commctl/appchrome.h";
-"path" = "../../orion/commctl/appchrome.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"2DF4D16DB4BB6BFBABBAB2DB" = {"isa" = "PBXFileReference";
-"name" = "commctl/button.c";
-"path" = "../../orion/commctl/button.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"A69BB9D0FBEE7D526F277542" = {"isa" = "PBXFileReference";
-"name" = "commctl/card.c";
-"path" = "../../orion/commctl/card.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"5418EBD89B82B11491F8B17F" = {"isa" = "PBXFileReference";
-"name" = "commctl/checkbox.c";
-"path" = "../../orion/commctl/checkbox.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"C2C452908179A9E5032727E2" = {"isa" = "PBXFileReference";
-"name" = "commctl/columnbrowser.c";
-"path" = "../../orion/commctl/columnbrowser.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"55B4EB243F575800EF9482EB" = {"isa" = "PBXFileReference";
-"name" = "commctl/columnview.c";
-"path" = "../../orion/commctl/columnview.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"1147B50CF7A03F3669CE6D7D" = {"isa" = "PBXFileReference";
-"name" = "commctl/columnview.h";
-"path" = "../../orion/commctl/columnview.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"FB35FDFA08F1E20D81BA7DAD" = {"isa" = "PBXFileReference";
-"name" = "commctl/columnview_internal.h";
-"path" = "../../orion/commctl/columnview_internal.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"50728DFF40402483A6B61A3C" = {"isa" = "PBXFileReference";
-"name" = "commctl/combobox.c";
-"path" = "../../orion/commctl/combobox.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"7FC9278C18E511C5B5DDF73E" = {"isa" = "PBXFileReference";
-"name" = "commctl/commctl.h";
-"path" = "../../orion/commctl/commctl.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"4D31916CC1A0905230B833B5" = {"isa" = "PBXFileReference";
-"name" = "commctl/control_size.c";
-"path" = "../../orion/commctl/control_size.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"9A87ADC96577023FF7A55B39" = {"isa" = "PBXFileReference";
-"name" = "commctl/edit.c";
-"path" = "../../orion/commctl/edit.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"20F749DB662A3BC301B8B5CA" = {"isa" = "PBXFileReference";
-"name" = "commctl/filelist.c";
-"path" = "../../orion/commctl/filelist.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"39A12307D5743B6F3D705EEA" = {"isa" = "PBXFileReference";
-"name" = "commctl/filelist.h";
-"path" = "../../orion/commctl/filelist.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"F9C4D59539BC76FBB3BD095C" = {"isa" = "PBXFileReference";
-"name" = "commctl/gradient.c";
-"path" = "../../orion/commctl/gradient.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"03E10B30A7A47EA5540086DA" = {"isa" = "PBXFileReference";
-"name" = "commctl/icon.c";
-"path" = "../../orion/commctl/icon.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"35521F6FC0FCB771BBCF81B0" = {"isa" = "PBXFileReference";
-"name" = "commctl/icongrid.c";
-"path" = "../../orion/commctl/icongrid.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"BC6BECCED6901AE9FA406B27" = {"isa" = "PBXFileReference";
-"name" = "commctl/iconview.c";
-"path" = "../../orion/commctl/iconview.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"0A2201CCFD2BB2763233584F" = {"isa" = "PBXFileReference";
-"name" = "commctl/image.c";
-"path" = "../../orion/commctl/image.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"620398EB54D1722FBC43D084" = {"isa" = "PBXFileReference";
-"name" = "commctl/init.c";
-"path" = "../../orion/commctl/init.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"BEFE221C5E56763576B4A404" = {"isa" = "PBXFileReference";
-"name" = "commctl/label.c";
-"path" = "../../orion/commctl/label.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"D2C52C3E7CC13A47B1FD5264" = {"isa" = "PBXFileReference";
-"name" = "commctl/layout_flow.c";
-"path" = "../../orion/commctl/layout_flow.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"FBF75B8CBA680F744F1E7E05" = {"isa" = "PBXFileReference";
-"name" = "commctl/layout_grid.c";
-"path" = "../../orion/commctl/layout_grid.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"A340BB1858AE25B7967FEFBC" = {"isa" = "PBXFileReference";
-"name" = "commctl/layout_shared.h";
-"path" = "../../orion/commctl/layout_shared.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"186BDA16D9898BDEEB83D42C" = {"isa" = "PBXFileReference";
-"name" = "commctl/layout_stack.c";
-"path" = "../../orion/commctl/layout_stack.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"74903AA8D16D5A7B54843C0E" = {"isa" = "PBXFileReference";
-"name" = "commctl/layout_tilegrid.c";
-"path" = "../../orion/commctl/layout_tilegrid.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"137AEA85A698DDEB1215743C" = {"isa" = "PBXFileReference";
-"name" = "commctl/list.c";
-"path" = "../../orion/commctl/list.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"9B016F383DED6A0CC98DDA80" = {"isa" = "PBXFileReference";
-"name" = "commctl/menubar.c";
-"path" = "../../orion/commctl/menubar.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"4B1A1DF9780731F9E9AA7AFD" = {"isa" = "PBXFileReference";
-"name" = "commctl/menubar.h";
-"path" = "../../orion/commctl/menubar.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"DFA21807A7615240017C161A" = {"isa" = "PBXFileReference";
-"name" = "commctl/multiedit.c";
-"path" = "../../orion/commctl/multiedit.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"4676ADA4840BB1A2EADC0911" = {"isa" = "PBXFileReference";
-"name" = "commctl/popup_item.h";
-"path" = "../../orion/commctl/popup_item.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"6B31DA0187A245FDFD9B9F57" = {"isa" = "PBXFileReference";
-"name" = "commctl/reportview.c";
-"path" = "../../orion/commctl/reportview.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"1880445D3B96D48D19229211" = {"isa" = "PBXFileReference";
-"name" = "commctl/scrollbar.c";
-"path" = "../../orion/commctl/scrollbar.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"F78290273A59821C5FF9D2B9" = {"isa" = "PBXFileReference";
-"name" = "commctl/segmented.c";
-"path" = "../../orion/commctl/segmented.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"4C120D3B19CDE8D3BB2E118F" = {"isa" = "PBXFileReference";
-"name" = "commctl/separator.c";
-"path" = "../../orion/commctl/separator.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"DE6DFAD98EAD417ECA2F1682" = {"isa" = "PBXFileReference";
-"name" = "commctl/slider.c";
-"path" = "../../orion/commctl/slider.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"A11E8E23D1306B6E461042AA" = {"isa" = "PBXFileReference";
-"name" = "commctl/splitter.c";
-"path" = "../../orion/commctl/splitter.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"9D17FC3ADAF28FDE559843FF" = {"isa" = "PBXFileReference";
-"name" = "commctl/splitview.c";
-"path" = "../../orion/commctl/splitview.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"FEA399A9B9376D6E61ABF19B" = {"isa" = "PBXFileReference";
-"name" = "commctl/sprite.c";
-"path" = "../../orion/commctl/sprite.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"74AF1CCBC89E435EB02379C0" = {"isa" = "PBXFileReference";
-"name" = "commctl/tableview.c";
-"path" = "../../orion/commctl/tableview.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"6DA16690D65079941F033290" = {"isa" = "PBXFileReference";
-"name" = "commctl/tabview.c";
-"path" = "../../orion/commctl/tabview.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"09EF961A197B1480DB38F67A" = {"isa" = "PBXFileReference";
-"name" = "commctl/tray.c";
-"path" = "../../orion/commctl/tray.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"51F175BD17ED0431881FE65E" = {"isa" = "PBXFileReference";
-"name" = "commdlg/commdlg.h";
-"path" = "../../orion/commdlg/commdlg.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"ACDDBF32E4925C0B0A201CDD" = {"isa" = "PBXFileReference";
-"name" = "commdlg/dialog.c";
-"path" = "../../orion/commdlg/dialog.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"02072953FD1544803C710C49" = {"isa" = "PBXFileReference";
-"name" = "commdlg/filepicker.c";
-"path" = "../../orion/commdlg/filepicker.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"BEDD9BD7649180F5BB1F8C36" = {"isa" = "PBXFileReference";
-"name" = "commdlg/filepicker.h";
-"path" = "../../orion/commdlg/filepicker.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"130BBDDB4474F9426442CB1F" = {"isa" = "PBXFileReference";
-"name" = "commdlg/msgbox.c";
-"path" = "../../orion/commdlg/msgbox.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"AB02B5C83C3CACD658D4C7DE" = {"isa" = "PBXFileReference";
-"name" = "commdlg/msgbox.h";
-"path" = "../../orion/commdlg/msgbox.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"A6BC174DDB5ED4E929505237" = {"isa" = "PBXFileReference";
-"name" = "commdlg/splash.c";
-"path" = "../../orion/commdlg/splash.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"7D80C74B7BF8B254CCC5070A" = {"isa" = "PBXFileReference";
-"name" = "commdlg/splash.h";
-"path" = "../../orion/commdlg/splash.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"D822D9CB688736005C27F2B1" = {"isa" = "PBXFileReference";
-"name" = "gem.h";
-"path" = "../../orion/gem.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"5D55215C5E3425EEC0B3150F" = {"isa" = "PBXFileReference";
-"name" = "kernel/fmat16.h";
-"path" = "../../orion/kernel/fmat16.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"E51FB2E4C5D5B9E5CE222FCC" = {"isa" = "PBXFileReference";
-"name" = "kernel/http.h";
-"path" = "../../orion/kernel/http.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"E2003630646904E40E0A042A" = {"isa" = "PBXFileReference";
-"name" = "kernel/joystick.c";
-"path" = "../../orion/kernel/joystick.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"F99A1C24D24BD0CB953166E4" = {"isa" = "PBXFileReference";
-"name" = "kernel/joystick.h";
-"path" = "../../orion/kernel/joystick.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"D9DA0279DA3C2C7A4577DCD6" = {"isa" = "PBXFileReference";
-"name" = "kernel/kernel.h";
-"path" = "../../orion/kernel/kernel.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"53DAC69C5399BDB718C6DA2D" = {"isa" = "PBXFileReference";
-"name" = "kernel/renderer.c";
-"path" = "../../orion/kernel/renderer.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"7C83EFBF4C839650597689C5" = {"isa" = "PBXFileReference";
-"name" = "kernel/renderer.h";
-"path" = "../../orion/kernel/renderer.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"6B6124E0A30EF03EC2025557" = {"isa" = "PBXFileReference";
-"name" = "kernel/renderer_impl.c";
-"path" = "../../orion/kernel/renderer_impl.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"D284D689D85BFE8E70DE4D6D" = {"isa" = "PBXFileReference";
-"name" = "ui.h";
-"path" = "../../orion/ui.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"8BDB0D9795658233AEA9F9CB" = {"isa" = "PBXFileReference";
-"name" = "user/accel.c";
-"path" = "../../orion/user/accel.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"AB81634B622C636F7767400E" = {"isa" = "PBXFileReference";
-"name" = "user/accel.h";
-"path" = "../../orion/user/accel.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"35F128A43239AE5181F3DDE1" = {"isa" = "PBXFileReference";
-"name" = "user/ansi.c";
-"path" = "../../orion/user/ansi.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"F5D7EA845A71A40030B385E2" = {"isa" = "PBXFileReference";
-"name" = "user/ansi.h";
-"path" = "../../orion/user/ansi.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"7D350BE7D7E512AC58C1AA14" = {"isa" = "PBXFileReference";
-"name" = "user/bmp_icon_loader.c";
-"path" = "../../orion/user/bmp_icon_loader.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"44814BACB2737E3A090FC239" = {"isa" = "PBXFileReference";
-"name" = "user/bmp_icon_loader.h";
-"path" = "../../orion/user/bmp_icon_loader.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"E9C9EA21F6FE4303430ABA18" = {"isa" = "PBXFileReference";
-"name" = "user/color.h";
-"path" = "../../orion/user/color.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"FFCD43F38BCE037B630B3150" = {"isa" = "PBXFileReference";
-"name" = "user/config.h";
-"path" = "../../orion/user/config.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"9B9F137826F2EBDE51AC8D26" = {"isa" = "PBXFileReference";
-"name" = "user/console.c";
-"path" = "../../orion/user/console.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"EB71A2A73B51032F8206C6F8" = {"isa" = "PBXFileReference";
-"name" = "user/database.c";
-"path" = "../../orion/user/database.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"2C181E6E8CA9FEAC432C3D8B" = {"isa" = "PBXFileReference";
-"name" = "user/database.h";
-"path" = "../../orion/user/database.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"5BFDD59D97013A91217E3153" = {"isa" = "PBXFileReference";
-"name" = "user/db_schema_xml.c";
-"path" = "../../orion/user/db_schema_xml.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"C26E83A4E07C108367E3E122" = {"isa" = "PBXFileReference";
-"name" = "user/db_simple_xml.h";
-"path" = "../../orion/user/db_simple_xml.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"522CC6930F2502C3D6B57840" = {"isa" = "PBXFileReference";
-"name" = "user/dialog.c";
-"path" = "../../orion/user/dialog.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"95E00D556F19A0DF5E6084F3" = {"isa" = "PBXFileReference";
-"name" = "user/dock.c";
-"path" = "../../orion/user/dock.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"5CDCE170D077C9B1D856DD74" = {"isa" = "PBXFileReference";
-"name" = "user/dock.h";
-"path" = "../../orion/user/dock.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"9EAF81FBA93302BD4F2DAB90" = {"isa" = "PBXFileReference";
-"name" = "user/draw.h";
-"path" = "../../orion/user/draw.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"6DC1DDA9EEDBD6B565A662E5" = {"isa" = "PBXFileReference";
-"name" = "user/draw_impl.c";
-"path" = "../../orion/user/draw_impl.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"E8E17FF4DE69902573605D9A" = {"isa" = "PBXFileReference";
-"name" = "user/enum_parse.h";
-"path" = "../../orion/user/enum_parse.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"88CED03DD0A80CC21389E886" = {"isa" = "PBXFileReference";
-"name" = "user/event.c";
-"path" = "../../orion/user/event.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"8CABA128B6BFBBD58547AD29" = {"isa" = "PBXFileReference";
-"name" = "user/font_cache.c";
-"path" = "../../orion/user/font_cache.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"470EFD63B39D58A386AFC1AA" = {"isa" = "PBXFileReference";
-"name" = "user/font_cache.h";
-"path" = "../../orion/user/font_cache.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"4CB1B1FE85423B6E3B6313E5" = {"isa" = "PBXFileReference";
-"name" = "user/font_sdf.c";
-"path" = "../../orion/user/font_sdf.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"EE0697BC78AF41800892ADE4" = {"isa" = "PBXFileReference";
-"name" = "user/font_sdf.h";
-"path" = "../../orion/user/font_sdf.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"E8AE3E91B86B2C62070F8C21" = {"isa" = "PBXFileReference";
-"name" = "user/gdi.c";
-"path" = "../../orion/user/gdi.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"CC78FE29F57D540C4A834404" = {"isa" = "PBXFileReference";
-"name" = "user/gdi.h";
-"path" = "../../orion/user/gdi.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"1DFC09F664884B6B2648DC63" = {"isa" = "PBXFileReference";
-"name" = "user/gl_compat.h";
-"path" = "../../orion/user/gl_compat.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"24044DBC0A10517B647B84CE" = {"isa" = "PBXFileReference";
-"name" = "user/http.c";
-"path" = "../../orion/user/http.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"8DBEE7ABECD3BC971AA3BAF8" = {"isa" = "PBXFileReference";
-"name" = "user/i18n.c";
-"path" = "../../orion/user/i18n.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"6279957F42266995941E5350" = {"isa" = "PBXFileReference";
-"name" = "user/i18n.h";
-"path" = "../../orion/user/i18n.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"60A6BD689D78E3F545137517" = {"isa" = "PBXFileReference";
-"name" = "user/image.c";
-"path" = "../../orion/user/image.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"0676D42D76D001D80541B5E3" = {"isa" = "PBXFileReference";
-"name" = "user/image.h";
-"path" = "../../orion/user/image.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"3CA669163FE999FEA350CA8A" = {"isa" = "PBXFileReference";
-"name" = "user/init.c";
-"path" = "../../orion/user/init.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"B80B8BC1C2CECB5AF717E841" = {"isa" = "PBXFileReference";
-"name" = "user/layout_api.c";
-"path" = "../../orion/user/layout_api.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"7FD87BDD5F2377443CC155C2" = {"isa" = "PBXFileReference";
-"name" = "user/message.c";
-"path" = "../../orion/user/message.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"23944879ECF8A6B86482D023" = {"isa" = "PBXFileReference";
-"name" = "user/messages.h";
-"path" = "../../orion/user/messages.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"2BFB217C07DD95E5B9912FC7" = {"isa" = "PBXFileReference";
-"name" = "user/page.c";
-"path" = "../../orion/user/page.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"7EBEA3419041ECECB40F17BB" = {"isa" = "PBXFileReference";
-"name" = "user/page.h";
-"path" = "../../orion/user/page.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"4775D1C95F46016062C31F78" = {"isa" = "PBXFileReference";
-"name" = "user/page_host.c";
-"path" = "../../orion/user/page_host.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"6FFE01A60BB3077048DC2D43" = {"isa" = "PBXFileReference";
-"name" = "user/page_host.h";
-"path" = "../../orion/user/page_host.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"D1FC1F1C1852862D44ED8E35" = {"isa" = "PBXFileReference";
-"name" = "user/paint.c";
-"path" = "../../orion/user/paint.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"38267A95DFB2C4D2538C35E0" = {"isa" = "PBXFileReference";
-"name" = "user/palette_file.h";
-"path" = "../../orion/user/palette_file.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"F36CA81344E0B8D7A1A8D4C4" = {"isa" = "PBXFileReference";
-"name" = "user/rect.h";
-"path" = "../../orion/user/rect.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"A903468E524654B634214A35" = {"isa" = "PBXFileReference";
-"name" = "user/registry.c";
-"path" = "../../orion/user/registry.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"38C59619C52BC1E8F0C72EFE" = {"isa" = "PBXFileReference";
-"name" = "user/remote.c";
-"path" = "../../orion/user/remote.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"CB16D7AAEF91626610EDB3AA" = {"isa" = "PBXFileReference";
-"name" = "user/scrollbar.c";
-"path" = "../../orion/user/scrollbar.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"DFDCBE80B2AE7F4DEECB89B8" = {"isa" = "PBXFileReference";
-"name" = "user/scrollbar.h";
-"path" = "../../orion/user/scrollbar.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"08719EA2E7A4C50CF95B7439" = {"isa" = "PBXFileReference";
-"name" = "user/stb_image.h";
-"path" = "../../orion/user/stb_image.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"69769B0876B737E626485947" = {"isa" = "PBXFileReference";
-"name" = "user/stb_image_write.h";
-"path" = "../../orion/user/stb_image_write.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"73099FE597D8B324B4A9428F" = {"isa" = "PBXFileReference";
-"name" = "user/surface.c";
-"path" = "../../orion/user/surface.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"82B6436ACCA6BA1FC62DD0E3" = {"isa" = "PBXFileReference";
-"name" = "user/svg_icon_loader.c";
-"path" = "../../orion/user/svg_icon_loader.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"30BA95CE0F3261A9217382C5" = {"isa" = "PBXFileReference";
-"name" = "user/svg_icon_loader.h";
-"path" = "../../orion/user/svg_icon_loader.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"293256AA00B1FB9C492C9FDB" = {"isa" = "PBXFileReference";
-"name" = "user/text.c";
-"path" = "../../orion/user/text.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"A5C8EC8352CCD9FF31982180" = {"isa" = "PBXFileReference";
-"name" = "user/text.h";
-"path" = "../../orion/user/text.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"F459AE59AE2CFEC11B003AE1" = {"isa" = "PBXFileReference";
-"name" = "user/theme.c";
-"path" = "../../orion/user/theme.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"D5413BB545E2DF6EA4213A26" = {"isa" = "PBXFileReference";
-"name" = "user/theme.h";
-"path" = "../../orion/user/theme.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"24EBCBC2665E0877E652C8D3" = {"isa" = "PBXFileReference";
-"name" = "user/theme_classic.c";
-"path" = "../../orion/user/theme_classic.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"0633E8A50D6922A406BB4C48" = {"isa" = "PBXFileReference";
-"name" = "user/theme_modern.c";
-"path" = "../../orion/user/theme_modern.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"B6298FBA2E324A0CD431737A" = {"isa" = "PBXFileReference";
-"name" = "user/theme_palette_dark.h";
-"path" = "../../orion/user/theme_palette_dark.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"8D9E071349CC061E3C2A9D8E" = {"isa" = "PBXFileReference";
-"name" = "user/theme_palette_light.h";
-"path" = "../../orion/user/theme_palette_light.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"8E2E70B52C0D1FDC7012ECD8" = {"isa" = "PBXFileReference";
-"name" = "user/theme_palette_navy.h";
-"path" = "../../orion/user/theme_palette_navy.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"9393AAFA7E167255747CD62C" = {"isa" = "PBXFileReference";
-"name" = "user/toolbar.c";
-"path" = "../../orion/user/toolbar.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"91BD8C5C43D3ADF5801DFA11" = {"isa" = "PBXFileReference";
-"name" = "user/toolbar.h";
-"path" = "../../orion/user/toolbar.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"98989DB6652C77BD71A6E765" = {"isa" = "PBXFileReference";
-"name" = "user/tooltip.c";
-"path" = "../../orion/user/tooltip.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"827C7CB9D6826E913AF317D9" = {"isa" = "PBXFileReference";
-"name" = "user/tray.c";
-"path" = "../../orion/user/tray.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"0D60B3EE5493666F04C573B3" = {"isa" = "PBXFileReference";
-"name" = "user/user.h";
-"path" = "../../orion/user/user.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"5A27698268504E462BF8D8D2" = {"isa" = "PBXFileReference";
-"name" = "user/vga_font.c";
-"path" = "../../orion/user/vga_font.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"88749BB0505F31807FF538E8" = {"isa" = "PBXFileReference";
-"name" = "user/vga_font.h";
-"path" = "../../orion/user/vga_font.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"DD24ABCA6A45EA13E9753C79" = {"isa" = "PBXFileReference";
-"name" = "user/vga_text.c";
-"path" = "../../orion/user/vga_text.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"C8EF24D1A1ED682D124C9BFC" = {"isa" = "PBXFileReference";
-"name" = "user/vga_text.h";
-"path" = "../../orion/user/vga_text.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"5F181FEFC36FA8B94AEF1733" = {"isa" = "PBXFileReference";
-"name" = "user/view.c";
-"path" = "../../orion/user/view.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"801C61DDFA2D8166A7664F27" = {"isa" = "PBXFileReference";
-"name" = "user/window.c";
-"path" = "../../orion/user/window.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"D637FEC2603587B554730520" = {"isa" = "PBXFileReference";
-"name" = "user/zip.c";
-"path" = "../../orion/user/zip.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"155319C93D093C522915463E" = {"isa" = "PBXFileReference";
-"name" = "user/zip.h";
-"path" = "../../orion/user/zip.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"F29CCC9BA46545A9461BEF25" = {"isa" = "PBXGroup";
-"name" = "orion";
-"children" = ("6882A33D7BC1A2A55D819CBD",
-"C407B02C49D69026B62F5899",
-"8AEE5E6E1261FAD5A0E06F0C",
-"2DF4D16DB4BB6BFBABBAB2DB",
-"A69BB9D0FBEE7D526F277542",
-"5418EBD89B82B11491F8B17F",
-"C2C452908179A9E5032727E2",
-"55B4EB243F575800EF9482EB",
-"1147B50CF7A03F3669CE6D7D",
-"FB35FDFA08F1E20D81BA7DAD",
-"50728DFF40402483A6B61A3C",
-"7FC9278C18E511C5B5DDF73E",
-"4D31916CC1A0905230B833B5",
-"9A87ADC96577023FF7A55B39",
-"20F749DB662A3BC301B8B5CA",
-"39A12307D5743B6F3D705EEA",
-"F9C4D59539BC76FBB3BD095C",
-"03E10B30A7A47EA5540086DA",
-"35521F6FC0FCB771BBCF81B0",
-"BC6BECCED6901AE9FA406B27",
-"0A2201CCFD2BB2763233584F",
-"620398EB54D1722FBC43D084",
-"BEFE221C5E56763576B4A404",
-"D2C52C3E7CC13A47B1FD5264",
-"FBF75B8CBA680F744F1E7E05",
-"A340BB1858AE25B7967FEFBC",
-"186BDA16D9898BDEEB83D42C",
-"74903AA8D16D5A7B54843C0E",
-"137AEA85A698DDEB1215743C",
-"9B016F383DED6A0CC98DDA80",
-"4B1A1DF9780731F9E9AA7AFD",
-"DFA21807A7615240017C161A",
-"4676ADA4840BB1A2EADC0911",
-"6B31DA0187A245FDFD9B9F57",
-"1880445D3B96D48D19229211",
-"F78290273A59821C5FF9D2B9",
-"4C120D3B19CDE8D3BB2E118F",
-"DE6DFAD98EAD417ECA2F1682",
-"A11E8E23D1306B6E461042AA",
-"9D17FC3ADAF28FDE559843FF",
-"FEA399A9B9376D6E61ABF19B",
-"74AF1CCBC89E435EB02379C0",
-"6DA16690D65079941F033290",
-"09EF961A197B1480DB38F67A",
-"51F175BD17ED0431881FE65E",
-"ACDDBF32E4925C0B0A201CDD",
-"02072953FD1544803C710C49",
-"BEDD9BD7649180F5BB1F8C36",
-"130BBDDB4474F9426442CB1F",
-"AB02B5C83C3CACD658D4C7DE",
-"A6BC174DDB5ED4E929505237",
-"7D80C74B7BF8B254CCC5070A",
-"D822D9CB688736005C27F2B1",
-"5D55215C5E3425EEC0B3150F",
-"E51FB2E4C5D5B9E5CE222FCC",
-"E2003630646904E40E0A042A",
-"F99A1C24D24BD0CB953166E4",
-"D9DA0279DA3C2C7A4577DCD6",
-"53DAC69C5399BDB718C6DA2D",
-"7C83EFBF4C839650597689C5",
-"6B6124E0A30EF03EC2025557",
-"D284D689D85BFE8E70DE4D6D",
-"8BDB0D9795658233AEA9F9CB",
-"AB81634B622C636F7767400E",
-"35F128A43239AE5181F3DDE1",
-"F5D7EA845A71A40030B385E2",
-"7D350BE7D7E512AC58C1AA14",
-"44814BACB2737E3A090FC239",
-"E9C9EA21F6FE4303430ABA18",
-"FFCD43F38BCE037B630B3150",
-"9B9F137826F2EBDE51AC8D26",
-"EB71A2A73B51032F8206C6F8",
-"2C181E6E8CA9FEAC432C3D8B",
-"5BFDD59D97013A91217E3153",
-"C26E83A4E07C108367E3E122",
-"522CC6930F2502C3D6B57840",
-"95E00D556F19A0DF5E6084F3",
-"5CDCE170D077C9B1D856DD74",
-"9EAF81FBA93302BD4F2DAB90",
-"6DC1DDA9EEDBD6B565A662E5",
-"E8E17FF4DE69902573605D9A",
-"88CED03DD0A80CC21389E886",
-"8CABA128B6BFBBD58547AD29",
-"470EFD63B39D58A386AFC1AA",
-"4CB1B1FE85423B6E3B6313E5",
-"EE0697BC78AF41800892ADE4",
-"E8AE3E91B86B2C62070F8C21",
-"CC78FE29F57D540C4A834404",
-"1DFC09F664884B6B2648DC63",
-"24044DBC0A10517B647B84CE",
-"8DBEE7ABECD3BC971AA3BAF8",
-"6279957F42266995941E5350",
-"60A6BD689D78E3F545137517",
-"0676D42D76D001D80541B5E3",
-"3CA669163FE999FEA350CA8A",
-"B80B8BC1C2CECB5AF717E841",
-"7FD87BDD5F2377443CC155C2",
-"23944879ECF8A6B86482D023",
-"2BFB217C07DD95E5B9912FC7",
-"7EBEA3419041ECECB40F17BB",
-"4775D1C95F46016062C31F78",
-"6FFE01A60BB3077048DC2D43",
-"D1FC1F1C1852862D44ED8E35",
-"38267A95DFB2C4D2538C35E0",
-"F36CA81344E0B8D7A1A8D4C4",
-"A903468E524654B634214A35",
-"38C59619C52BC1E8F0C72EFE",
-"CB16D7AAEF91626610EDB3AA",
-"DFDCBE80B2AE7F4DEECB89B8",
-"08719EA2E7A4C50CF95B7439",
-"69769B0876B737E626485947",
-"73099FE597D8B324B4A9428F",
-"82B6436ACCA6BA1FC62DD0E3",
-"30BA95CE0F3261A9217382C5",
-"293256AA00B1FB9C492C9FDB",
-"A5C8EC8352CCD9FF31982180",
-"F459AE59AE2CFEC11B003AE1",
-"D5413BB545E2DF6EA4213A26",
-"24EBCBC2665E0877E652C8D3",
-"0633E8A50D6922A406BB4C48",
-"B6298FBA2E324A0CD431737A",
-"8D9E071349CC061E3C2A9D8E",
-"8E2E70B52C0D1FDC7012ECD8",
-"9393AAFA7E167255747CD62C",
-"91BD8C5C43D3ADF5801DFA11",
-"98989DB6652C77BD71A6E765",
-"827C7CB9D6826E913AF317D9",
-"0D60B3EE5493666F04C573B3",
-"5A27698268504E462BF8D8D2",
-"88749BB0505F31807FF538E8",
-"DD24ABCA6A45EA13E9753C79",
-"C8EF24D1A1ED682D124C9BFC",
-"5F181FEFC36FA8B94AEF1733",
-"801C61DDFA2D8166A7664F27",
-"D637FEC2603587B554730520",
-"155319C93D093C522915463E",
-);
-"sourceTree" = "<group>";
-};
-"66CB061118F28C53E6A3CA1D" = {"isa" = "PBXFileReference";
-"name" = "audio/audio_backend.c";
-"path" = "../../platform/audio/audio_backend.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"26C6756E4DA3E427F6CA87D5" = {"isa" = "PBXFileReference";
-"name" = "audio/audio_backend.h";
-"path" = "../../platform/audio/audio_backend.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"F50B37E4DE7CB258CC541564" = {"isa" = "PBXFileReference";
-"name" = "audio/audio_wav.c";
-"path" = "../../platform/audio/audio_wav.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"05CF19FC22E44D247F18AE28" = {"isa" = "PBXFileReference";
-"name" = "events.h";
-"path" = "../../platform/events.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"62BC75FCD7A7C4B47BF7EF68" = {"isa" = "PBXFileReference";
-"name" = "ios/ios_event.m";
-"path" = "../../platform/ios/ios_event.m";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.objc";
-};
-"A1296836274E46026A01EE58" = {"isa" = "PBXFileReference";
-"name" = "ios/ios_local.h";
-"path" = "../../platform/ios/ios_local.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"FF68E44959A235317FB17C80" = {"isa" = "PBXFileReference";
-"name" = "ios/ios_system.m";
-"path" = "../../platform/ios/ios_system.m";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.objc";
-};
-"520973BEDF020EA1CEDA5CD4" = {"isa" = "PBXFileReference";
-"name" = "ios/ios_window.m";
-"path" = "../../platform/ios/ios_window.m";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.objc";
-};
-"217C470CA8014076B00C5421" = {"isa" = "PBXFileReference";
-"name" = "macos/macos_event.m";
-"path" = "../../platform/macos/macos_event.m";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.objc";
-};
-"C3404D3E1BCA47FDEE53372A" = {"isa" = "PBXFileReference";
-"name" = "macos/macos_joystick.m";
-"path" = "../../platform/macos/macos_joystick.m";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.objc";
-};
-"1033573296D5B9CC741B2506" = {"isa" = "PBXFileReference";
-"name" = "macos/macos_keymap.h";
-"path" = "../../platform/macos/macos_keymap.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"295A56717F739B33F5562573" = {"isa" = "PBXFileReference";
-"name" = "macos/macos_local.h";
-"path" = "../../platform/macos/macos_local.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"4E36769A6E1AA7255F56F17A" = {"isa" = "PBXFileReference";
-"name" = "macos/macos_menu.m";
-"path" = "../../platform/macos/macos_menu.m";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.objc";
-};
-"40EFB3B2E83DAE715A4590C8" = {"isa" = "PBXFileReference";
-"name" = "macos/macos_system.m";
-"path" = "../../platform/macos/macos_system.m";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.objc";
-};
-"1D27AACCCFC9728673A1DD43" = {"isa" = "PBXFileReference";
-"name" = "macos/macos_window.m";
-"path" = "../../platform/macos/macos_window.m";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.objc";
-};
-"F0810CEFEF76B73C3FB4F055" = {"isa" = "PBXFileReference";
-"name" = "platform.h";
-"path" = "../../platform/platform.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"CF3BEF278E68EA8FB0CD1D8C" = {"isa" = "PBXFileReference";
-"name" = "qnx/qnx_local.h";
-"path" = "../../platform/qnx/qnx_local.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"5051F6F98876009B148674E6" = {"isa" = "PBXFileReference";
-"name" = "qnx/qnx_log.c";
-"path" = "../../platform/qnx/qnx_log.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"602519E38AA5D29666D365B6" = {"isa" = "PBXFileReference";
-"name" = "qnx/qnx_main.c";
-"path" = "../../platform/qnx/qnx_main.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"D307D23BD598F5193C17F95E" = {"isa" = "PBXFileReference";
-"name" = "qnx/qnx_system.c";
-"path" = "../../platform/qnx/qnx_system.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"8AB4AB72ACD5DAE5538AB551" = {"isa" = "PBXFileReference";
-"name" = "rc_server_impl.c";
-"path" = "../../platform/rc_server_impl.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"75C493C01105FC46BC87A080" = {"isa" = "PBXFileReference";
-"name" = "unix/unix_joystick.c";
-"path" = "../../platform/unix/unix_joystick.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"738BDE02D721A11F63D8E05F" = {"isa" = "PBXFileReference";
-"name" = "unix/unix_log.c";
-"path" = "../../platform/unix/unix_log.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"2D861910078871F5EBED7514" = {"isa" = "PBXFileReference";
-"name" = "unix/unix_net.c";
-"path" = "../../platform/unix/unix_net.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"D383B4A82EFA408B652AB62B" = {"isa" = "PBXFileReference";
-"name" = "unix/unix_rc.c";
-"path" = "../../platform/unix/unix_rc.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"AF71F53B8E3A9F73AB702440" = {"isa" = "PBXFileReference";
-"name" = "unix/unix_shared.c";
-"path" = "../../platform/unix/unix_shared.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"849FFC7D493D4818A29362D7" = {"isa" = "PBXFileReference";
-"name" = "unix/unix_thread.c";
-"path" = "../../platform/unix/unix_thread.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"F31C99A2911593C5E5CBC68B" = {"isa" = "PBXFileReference";
-"name" = "wayland/wayland_egl.c";
-"path" = "../../platform/wayland/wayland_egl.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"4D2C747344C6E4D0CD4C028A" = {"isa" = "PBXFileReference";
-"name" = "wayland/wayland_event.c";
-"path" = "../../platform/wayland/wayland_event.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"0BF2F1EAD70F202269C1C809" = {"isa" = "PBXFileReference";
-"name" = "wayland/wayland_local.h";
-"path" = "../../platform/wayland/wayland_local.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"4595BAB4E5E7B15238A43CF3" = {"isa" = "PBXFileReference";
-"name" = "wayland/wayland_system.c";
-"path" = "../../platform/wayland/wayland_system.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"B8F2676348F92570D4192E04" = {"isa" = "PBXFileReference";
-"name" = "wayland/wayland_window.c";
-"path" = "../../platform/wayland/wayland_window.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"BA0A153CB40B50B53C38CBA2" = {"isa" = "PBXFileReference";
-"name" = "wayland/xdg-shell-client.c";
-"path" = "../../platform/wayland/xdg-shell-client.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"837AA5DB553BAA81728C13B3" = {"isa" = "PBXFileReference";
-"name" = "wayland/xdg-shell-client.h";
-"path" = "../../platform/wayland/xdg-shell-client.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"F32581378E13FB15C9E79397" = {"isa" = "PBXFileReference";
-"name" = "webgl/webgl_event.c";
-"path" = "../../platform/webgl/webgl_event.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"2CC60D9CD1FFD2444622B588" = {"isa" = "PBXFileReference";
-"name" = "webgl/webgl_joystick.c";
-"path" = "../../platform/webgl/webgl_joystick.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"6013DA7A422BD1C6D46EC765" = {"isa" = "PBXFileReference";
-"name" = "webgl/webgl_local.h";
-"path" = "../../platform/webgl/webgl_local.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"216665E8D45C3D3292891F2A" = {"isa" = "PBXFileReference";
-"name" = "webgl/webgl_log.c";
-"path" = "../../platform/webgl/webgl_log.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"239F148D7AF2C839EAF29C23" = {"isa" = "PBXFileReference";
-"name" = "webgl/webgl_net.c";
-"path" = "../../platform/webgl/webgl_net.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"B428C9BE5FD1175FB21F6635" = {"isa" = "PBXFileReference";
-"name" = "webgl/webgl_system.c";
-"path" = "../../platform/webgl/webgl_system.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"0DFBA43202D078AC6C196B04" = {"isa" = "PBXFileReference";
-"name" = "webgl/webgl_window.c";
-"path" = "../../platform/webgl/webgl_window.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"0700DF56F00A836F8CD89BD6" = {"isa" = "PBXFileReference";
-"name" = "windows/windows_event.c";
-"path" = "../../platform/windows/windows_event.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"E072A7A69205A7DF4EFB64B5" = {"isa" = "PBXFileReference";
-"name" = "windows/windows_joystick.c";
-"path" = "../../platform/windows/windows_joystick.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"33322330A24484C374CAA643" = {"isa" = "PBXFileReference";
-"name" = "windows/windows_local.h";
-"path" = "../../platform/windows/windows_local.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"639CEB9B7335A720F38EC42D" = {"isa" = "PBXFileReference";
-"name" = "windows/windows_log.c";
-"path" = "../../platform/windows/windows_log.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"6AA8A5E2BD1BD312FD5C3BAD" = {"isa" = "PBXFileReference";
-"name" = "windows/windows_net.c";
-"path" = "../../platform/windows/windows_net.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"360286CB73C4016A70F2F07C" = {"isa" = "PBXFileReference";
-"name" = "windows/windows_rc.c";
-"path" = "../../platform/windows/windows_rc.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"6AF8FFF5BA5E9E55DC2A9BFA" = {"isa" = "PBXFileReference";
-"name" = "windows/windows_shared.c";
-"path" = "../../platform/windows/windows_shared.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"D75AABEFADBF67885DEC7BDB" = {"isa" = "PBXFileReference";
-"name" = "windows/windows_system.c";
-"path" = "../../platform/windows/windows_system.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"CF27BA606DA7EFA59519539C" = {"isa" = "PBXFileReference";
-"name" = "windows/windows_thread.c";
-"path" = "../../platform/windows/windows_thread.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"07C1E267179485CD9644ABDB" = {"isa" = "PBXFileReference";
-"name" = "windows/windows_window.c";
-"path" = "../../platform/windows/windows_window.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"56D2DD62A0EA6C66E3BB2868" = {"isa" = "PBXFileReference";
-"name" = "x11/x11_egl.c";
-"path" = "../../platform/x11/x11_egl.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"930E8A370B7DCB4EE8D95BD5" = {"isa" = "PBXFileReference";
-"name" = "x11/x11_event.c";
-"path" = "../../platform/x11/x11_event.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"0863529696211A771082327E" = {"isa" = "PBXFileReference";
-"name" = "x11/x11_local.h";
-"path" = "../../platform/x11/x11_local.h";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.h";
-};
-"D0FD32889E90EFAC28B8566B" = {"isa" = "PBXFileReference";
-"name" = "x11/x11_system.c";
-"path" = "../../platform/x11/x11_system.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"2979753B4C397754252FBF27" = {"isa" = "PBXFileReference";
-"name" = "x11/x11_window.c";
-"path" = "../../platform/x11/x11_window.c";
-"sourceTree" = "SOURCE_ROOT";
-"lastKnownFileType" = "sourcecode.c.c";
-};
-"C787B08844F12D9C8CFB9AEF" = {"isa" = "PBXGroup";
-"name" = "platform";
-"children" = ("66CB061118F28C53E6A3CA1D",
-"26C6756E4DA3E427F6CA87D5",
-"F50B37E4DE7CB258CC541564",
-"05CF19FC22E44D247F18AE28",
-"62BC75FCD7A7C4B47BF7EF68",
-"A1296836274E46026A01EE58",
-"FF68E44959A235317FB17C80",
-"520973BEDF020EA1CEDA5CD4",
-"217C470CA8014076B00C5421",
-"C3404D3E1BCA47FDEE53372A",
-"1033573296D5B9CC741B2506",
-"295A56717F739B33F5562573",
-"4E36769A6E1AA7255F56F17A",
-"40EFB3B2E83DAE715A4590C8",
-"1D27AACCCFC9728673A1DD43",
-"F0810CEFEF76B73C3FB4F055",
-"CF3BEF278E68EA8FB0CD1D8C",
-"5051F6F98876009B148674E6",
-"602519E38AA5D29666D365B6",
-"D307D23BD598F5193C17F95E",
-"8AB4AB72ACD5DAE5538AB551",
-"75C493C01105FC46BC87A080",
-"738BDE02D721A11F63D8E05F",
-"2D861910078871F5EBED7514",
-"D383B4A82EFA408B652AB62B",
-"AF71F53B8E3A9F73AB702440",
-"849FFC7D493D4818A29362D7",
-"F31C99A2911593C5E5CBC68B",
-"4D2C747344C6E4D0CD4C028A",
-"0BF2F1EAD70F202269C1C809",
-"4595BAB4E5E7B15238A43CF3",
-"B8F2676348F92570D4192E04",
-"BA0A153CB40B50B53C38CBA2",
-"837AA5DB553BAA81728C13B3",
-"F32581378E13FB15C9E79397",
-"2CC60D9CD1FFD2444622B588",
-"6013DA7A422BD1C6D46EC765",
-"216665E8D45C3D3292891F2A",
-"239F148D7AF2C839EAF29C23",
-"B428C9BE5FD1175FB21F6635",
-"0DFBA43202D078AC6C196B04",
-"0700DF56F00A836F8CD89BD6",
-"E072A7A69205A7DF4EFB64B5",
-"33322330A24484C374CAA643",
-"639CEB9B7335A720F38EC42D",
-"6AA8A5E2BD1BD312FD5C3BAD",
-"360286CB73C4016A70F2F07C",
-"6AF8FFF5BA5E9E55DC2A9BFA",
-"D75AABEFADBF67885DEC7BDB",
-"CF27BA606DA7EFA59519539C",
-"07C1E267179485CD9644ABDB",
-"56D2DD62A0EA6C66E3BB2868",
-"930E8A370B7DCB4EE8D95BD5",
-"0863529696211A771082327E",
-"D0FD32889E90EFAC28B8566B",
-"2979753B4C397754252FBF27",
-);
-"sourceTree" = "<group>";
-};
-"E24A74F719BBAF7988950630" = {"isa" = "XCBuildConfiguration";
-"name" = "Debug";
-"buildSettings" = {"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/macos-Info.plist";
-"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
-"OTHER_LDFLAGS" = ("$(inherited)",
-"-lxml2",
-"-lm",
-"-framework",
-"AppKit",
-"-framework",
-"Cocoa",
-"-framework",
-"OpenGL",
-"-framework",
-"IOSurface",
-"-framework",
-"Security",
-"-framework",
-"CoreFoundation",
-"-framework",
-"AudioToolbox",
-);
-"SUPPORTED_PLATFORMS" = "macosx";
-"MACOSX_DEPLOYMENT_TARGET" = "12.0";
-"CODE_SIGN_IDENTITY" = "-";
-"GCC_OPTIMIZATION_LEVEL" = "0";
-"DEBUG_INFORMATION_FORMAT" = "dwarf";
-"ONLY_ACTIVE_ARCH" = "YES";
-};
-};
-"8DA105EA2DF0CD7AB348891C" = {"isa" = "XCBuildConfiguration";
-"name" = "Release";
-"buildSettings" = {"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/macos-Info.plist";
-"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
-"OTHER_LDFLAGS" = ("$(inherited)",
-"-lxml2",
-"-lm",
-"-framework",
-"AppKit",
-"-framework",
-"Cocoa",
-"-framework",
-"OpenGL",
-"-framework",
-"IOSurface",
-"-framework",
-"Security",
-"-framework",
-"CoreFoundation",
-"-framework",
-"AudioToolbox",
-);
-"SUPPORTED_PLATFORMS" = "macosx";
-"MACOSX_DEPLOYMENT_TARGET" = "12.0";
-"CODE_SIGN_IDENTITY" = "-";
-"GCC_OPTIMIZATION_LEVEL" = "s";
-"DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
-"ONLY_ACTIVE_ARCH" = "NO";
-};
-};
-"5365AE4A7C261CF60BD1BC20" = {"isa" = "XCConfigurationList";
-"buildConfigurations" = ("E24A74F719BBAF7988950630",
-"8DA105EA2DF0CD7AB348891C",
-);
-"defaultConfigurationIsVisible" = 0;
-"defaultConfigurationName" = "Debug";
-};
-"8DD7705BC9B2A3D7396A7604" = {"isa" = "PBXBuildFile";
-"fileRef" = "1D5F697BC138CDFCA9EA7238";
-};
-"F5E93593A037E2417DB8606C" = {"isa" = "PBXBuildFile";
-"fileRef" = "BFF2E1937265DAA06322B2F9";
-};
-"F80B00E77FC46412A68114BF" = {"isa" = "PBXBuildFile";
-"fileRef" = "2AA609CA6254E5E7742A8660";
-};
-"C725C87AFFE8763DB0FABFC4" = {"isa" = "PBXBuildFile";
-"fileRef" = "0795EAC10AF76482EDE70CC9";
-};
-"F570DCEC7063DDD501230CFA" = {"isa" = "PBXBuildFile";
-"fileRef" = "3B82E31B5F70E86FD89D3CC4";
-};
-"0B53C8B936005C16E10A35B7" = {"isa" = "PBXBuildFile";
-"fileRef" = "9F11DD3FFFD57425C8A1E2EC";
-};
-"684F8AA2C3BD0782AC47EC60" = {"isa" = "PBXBuildFile";
-"fileRef" = "E301EC5D96A81B42BD8DFCA4";
-};
-"A2B4F01E60553FA509352A0A" = {"isa" = "PBXBuildFile";
-"fileRef" = "1DC94D46FDBFD79094CBAD5C";
-};
-"73A721D9BAD3A3DCCF37ABB6" = {"isa" = "PBXBuildFile";
-"fileRef" = "BE020873C98EDC5440687727";
-};
-"CF7AB7229AFF63CA1DD36A9B" = {"isa" = "PBXShellScriptBuildPhase";
-"buildActionMask" = 2147483647;
-"name" = "Prepare Orion sources and forms";
-"shellPath" = "/bin/sh";
-"shellScript" = "set -eu\n/usr/bin/python3 \"$ORION_ROOT/tools/xcode/build.py\" forms\n";
-"inputPaths" = ("$(ORION_ROOT)/tools/orionc.c",
-"$(ORION_ROOT)/apps/groove/groove.orion",
-"$(ORION_ROOT)/apps/groove/share/icon.png",
-);
-"outputPaths" = ("$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h",
-"$(DERIVED_FILE_DIR)/Assets.xcassets",
-"$(DERIVED_FILE_DIR)/user.c",
-"$(DERIVED_FILE_DIR)/kernel.c",
-"$(DERIVED_FILE_DIR)/commctl.c",
-"$(DERIVED_FILE_DIR)/app.c",
-"$(DERIVED_FILE_DIR)/macos.m",
-);
-"runOnlyForDeploymentPostprocessing" = 0;
-"alwaysOutOfDate" = 1;
-};
-"352DC67FC91E8B656D15E805" = {"isa" = "PBXSourcesBuildPhase";
-"buildActionMask" = 2147483647;
-"files" = ("8DD7705BC9B2A3D7396A7604",
-"F5E93593A037E2417DB8606C",
-"F80B00E77FC46412A68114BF",
-"C725C87AFFE8763DB0FABFC4",
-"F570DCEC7063DDD501230CFA",
-"0B53C8B936005C16E10A35B7",
-"684F8AA2C3BD0782AC47EC60",
-"A2B4F01E60553FA509352A0A",
-"73A721D9BAD3A3DCCF37ABB6",
-);
-"runOnlyForDeploymentPostprocessing" = 0;
-};
-"51DC8E05C5D2821B45E883F5" = {"isa" = "PBXBuildFile";
-"fileRef" = "4D6FC5A1736DCA577CF68A90";
-};
-"D55723F9321E0BBA611435AA" = {"isa" = "PBXResourcesBuildPhase";
-"buildActionMask" = 2147483647;
-"files" = ("51DC8E05C5D2821B45E883F5",
-);
-"runOnlyForDeploymentPostprocessing" = 0;
-};
-"826DC0AED76CBDA0CB72A068" = {"isa" = "PBXShellScriptBuildPhase";
-"buildActionMask" = 2147483647;
-"name" = "Bundle Orion resources";
-"shellPath" = "/bin/sh";
-"shellScript" = "set -eu\n/usr/bin/python3 \"$ORION_ROOT/tools/xcode/build.py\" resources\n";
-"runOnlyForDeploymentPostprocessing" = 0;
-"alwaysOutOfDate" = 1;
-};
-"19E20713A3C1289354BC2FAF" = {"isa" = "PBXFileReference";
-"path" = "groove.app";
-"sourceTree" = "BUILT_PRODUCTS_DIR";
-"explicitFileType" = "wrapper.application";
-};
-"49855EFF9AB8BD0D010F8335" = {"isa" = "PBXNativeTarget";
-"name" = "groove-macos";
-"productName" = "groove";
-"productReference" = "19E20713A3C1289354BC2FAF";
-"productType" = "com.apple.product-type.application";
-"buildConfigurationList" = "5365AE4A7C261CF60BD1BC20";
-"buildPhases" = ("CF7AB7229AFF63CA1DD36A9B",
-"352DC67FC91E8B656D15E805",
-"D55723F9321E0BBA611435AA",
-"826DC0AED76CBDA0CB72A068",
-);
-"buildRules" = ();
-"dependencies" = ();
-};
-"98D3065E6E0C71346686088B" = {"isa" = "XCBuildConfiguration";
-"name" = "Debug";
-"buildSettings" = {"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/ipad-Info.plist";
-"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
-"OTHER_LDFLAGS" = ("$(inherited)",
-"-lxml2",
-"-lm",
-"-framework",
-"UIKit",
-"-framework",
-"CoreGraphics",
-"-framework",
-"Foundation",
-"-framework",
-"OpenGLES",
-"-framework",
-"QuartzCore",
-"-framework",
-"Security",
-"-framework",
-"UniformTypeIdentifiers",
-"-framework",
-"AudioToolbox",
-);
-"CODE_SIGN_STYLE" = "Automatic";
-"SDKROOT" = "iphoneos";
-"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
-"IPHONEOS_DEPLOYMENT_TARGET" = "16.0";
-"TARGETED_DEVICE_FAMILY" = "2";
-"SUPPORTS_MACCATALYST" = "NO";
-"GCC_OPTIMIZATION_LEVEL" = "0";
-"DEBUG_INFORMATION_FORMAT" = "dwarf";
-"ONLY_ACTIVE_ARCH" = "YES";
-};
-};
-"77433336E0FB714CBFDEEB41" = {"isa" = "XCBuildConfiguration";
-"name" = "Release";
-"buildSettings" = {"INFOPLIST_FILE" = "$(PROJECT_FILE_PATH)/Generated/ipad-Info.plist";
-"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
-"OTHER_LDFLAGS" = ("$(inherited)",
-"-lxml2",
-"-lm",
-"-framework",
-"UIKit",
-"-framework",
-"CoreGraphics",
-"-framework",
-"Foundation",
-"-framework",
-"OpenGLES",
-"-framework",
-"QuartzCore",
-"-framework",
-"Security",
-"-framework",
-"UniformTypeIdentifiers",
-"-framework",
-"AudioToolbox",
-);
-"CODE_SIGN_STYLE" = "Automatic";
-"SDKROOT" = "iphoneos";
-"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
-"IPHONEOS_DEPLOYMENT_TARGET" = "16.0";
-"TARGETED_DEVICE_FAMILY" = "2";
-"SUPPORTS_MACCATALYST" = "NO";
-"GCC_OPTIMIZATION_LEVEL" = "s";
-"DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
-"ONLY_ACTIVE_ARCH" = "NO";
-};
-};
-"4E40E8A910B9BC71F50362C8" = {"isa" = "XCConfigurationList";
-"buildConfigurations" = ("98D3065E6E0C71346686088B",
-"77433336E0FB714CBFDEEB41",
-);
-"defaultConfigurationIsVisible" = 0;
-"defaultConfigurationName" = "Debug";
-};
-"102CF1E80B1C1C5A85D112AA" = {"isa" = "PBXBuildFile";
-"fileRef" = "1D5F697BC138CDFCA9EA7238";
-};
-"2FBA9091FF45BB2F27C4C8BF" = {"isa" = "PBXBuildFile";
-"fileRef" = "BFF2E1937265DAA06322B2F9";
-};
-"0A5EAE38F0918F48D6A7C9E0" = {"isa" = "PBXBuildFile";
-"fileRef" = "2AA609CA6254E5E7742A8660";
-};
-"280656E0F09F745E1247E747" = {"isa" = "PBXBuildFile";
-"fileRef" = "0795EAC10AF76482EDE70CC9";
-};
-"83B1B51E24878699D0B16332" = {"isa" = "PBXBuildFile";
-"fileRef" = "1B6C3EF18CA8BE0150EA93D1";
-"settings" = {"COMPILER_FLAGS" = "-fobjc-arc";
-};
-};
-"06D75DD09B20B37159513128" = {"isa" = "PBXBuildFile";
-"fileRef" = "9F11DD3FFFD57425C8A1E2EC";
-};
-"E85D7319069843C4C9E16B7F" = {"isa" = "PBXBuildFile";
-"fileRef" = "E301EC5D96A81B42BD8DFCA4";
-};
-"C1260B361826813547BD5A83" = {"isa" = "PBXBuildFile";
-"fileRef" = "1DC94D46FDBFD79094CBAD5C";
-};
-"33A4615E4243B100EA44AFD2" = {"isa" = "PBXBuildFile";
-"fileRef" = "BE020873C98EDC5440687727";
-};
-"4E46F7B1B0DE6B87A9FE094B" = {"isa" = "PBXShellScriptBuildPhase";
-"buildActionMask" = 2147483647;
-"name" = "Prepare Orion sources and forms";
-"shellPath" = "/bin/sh";
-"shellScript" = "set -eu\n/usr/bin/python3 \"$ORION_ROOT/tools/xcode/build.py\" forms\n";
-"inputPaths" = ("$(ORION_ROOT)/tools/orionc.c",
-"$(ORION_ROOT)/apps/groove/groove.orion",
-"$(ORION_ROOT)/apps/groove/share/icon.png",
-);
-"outputPaths" = ("$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h",
-"$(DERIVED_FILE_DIR)/Assets.xcassets",
-"$(DERIVED_FILE_DIR)/user.c",
-"$(DERIVED_FILE_DIR)/kernel.c",
-"$(DERIVED_FILE_DIR)/commctl.c",
-"$(DERIVED_FILE_DIR)/app.c",
-"$(DERIVED_FILE_DIR)/ipad.m",
-);
-"runOnlyForDeploymentPostprocessing" = 0;
-"alwaysOutOfDate" = 1;
-};
-"CBD0805A39FF8AC6A4E1D68C" = {"isa" = "PBXSourcesBuildPhase";
-"buildActionMask" = 2147483647;
-"files" = ("102CF1E80B1C1C5A85D112AA",
-"2FBA9091FF45BB2F27C4C8BF",
-"0A5EAE38F0918F48D6A7C9E0",
-"280656E0F09F745E1247E747",
-"83B1B51E24878699D0B16332",
-"06D75DD09B20B37159513128",
-"E85D7319069843C4C9E16B7F",
-"C1260B361826813547BD5A83",
-"33A4615E4243B100EA44AFD2",
-);
-"runOnlyForDeploymentPostprocessing" = 0;
-};
-"F9EC25448562F064542B16CE" = {"isa" = "PBXBuildFile";
-"fileRef" = "4D6FC5A1736DCA577CF68A90";
-};
-"59964872DF048002767C1F7F" = {"isa" = "PBXResourcesBuildPhase";
-"buildActionMask" = 2147483647;
-"files" = ("F9EC25448562F064542B16CE",
-);
-"runOnlyForDeploymentPostprocessing" = 0;
-};
-"332B1557BCECA383303F7D73" = {"isa" = "PBXShellScriptBuildPhase";
-"buildActionMask" = 2147483647;
-"name" = "Bundle Orion resources";
-"shellPath" = "/bin/sh";
-"shellScript" = "set -eu\n/usr/bin/python3 \"$ORION_ROOT/tools/xcode/build.py\" resources\n";
-"runOnlyForDeploymentPostprocessing" = 0;
-"alwaysOutOfDate" = 1;
-};
-"B8895C1E824857BCADA8D3A9" = {"isa" = "PBXFileReference";
-"path" = "groove.app";
-"sourceTree" = "BUILT_PRODUCTS_DIR";
-"explicitFileType" = "wrapper.application";
-};
-"94DDD516F63F9990A7927E69" = {"isa" = "PBXNativeTarget";
-"name" = "groove-ipad";
-"productName" = "groove";
-"productReference" = "B8895C1E824857BCADA8D3A9";
-"productType" = "com.apple.product-type.application";
-"buildConfigurationList" = "4E40E8A910B9BC71F50362C8";
-"buildPhases" = ("4E46F7B1B0DE6B87A9FE094B",
-"CBD0805A39FF8AC6A4E1D68C",
-"59964872DF048002767C1F7F",
-"332B1557BCECA383303F7D73",
-);
-"buildRules" = ();
-"dependencies" = ();
-};
-"BEAD8915881B60FC177E63AB" = {"isa" = "PBXGroup";
-"name" = "Products";
-"children" = ("19E20713A3C1289354BC2FAF",
-"B8895C1E824857BCADA8D3A9",
-);
-"sourceTree" = "<group>";
-};
-"664F835B1ED89846DAB355B5" = {"isa" = "PBXGroup";
-"children" = ("83CAA00DE494F5600555D745",
-"F29CCC9BA46545A9461BEF25",
-"C787B08844F12D9C8CFB9AEF",
-"BEAD8915881B60FC177E63AB",
-);
-"sourceTree" = "<group>";
-};
-"244210E48437B6556980A702" = {"isa" = "PBXProject";
-"buildConfigurationList" = "1E4B6209DBC7689E3E7CF89C";
-"compatibilityVersion" = "Xcode 14.0";
-"developmentRegion" = "en";
-"knownRegions" = ("en",
-"Base",
-);
-"mainGroup" = "664F835B1ED89846DAB355B5";
-"productRefGroup" = "BEAD8915881B60FC177E63AB";
-"projectDirPath" = "";
-"projectRoot" = "";
-"targets" = ("49855EFF9AB8BD0D010F8335",
-"94DDD516F63F9990A7927E69",
-);
-};
-};
-"rootObject" = "244210E48437B6556980A702";
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		06D75DD09B20B37159513128 /* ../../orion/commdlg/dialog.c in Sources */ = {isa = PBXBuildFile; fileRef = 9F11DD3FFFD57425C8A1E2EC /* ../../orion/commdlg/dialog.c */; };
+		0A5EAE38F0918F48D6A7C9E0 /* commctl.c in Sources */ = {isa = PBXBuildFile; fileRef = 2AA609CA6254E5E7742A8660 /* commctl.c */; };
+		0B53C8B936005C16E10A35B7 /* ../../orion/commdlg/dialog.c in Sources */ = {isa = PBXBuildFile; fileRef = 9F11DD3FFFD57425C8A1E2EC /* ../../orion/commdlg/dialog.c */; };
+		102CF1E80B1C1C5A85D112AA /* user.c in Sources */ = {isa = PBXBuildFile; fileRef = 1D5F697BC138CDFCA9EA7238 /* user.c */; };
+		280656E0F09F745E1247E747 /* app.c in Sources */ = {isa = PBXBuildFile; fileRef = 0795EAC10AF76482EDE70CC9 /* app.c */; };
+		2FBA9091FF45BB2F27C4C8BF /* kernel.c in Sources */ = {isa = PBXBuildFile; fileRef = BFF2E1937265DAA06322B2F9 /* kernel.c */; };
+		33A4615E4243B100EA44AFD2 /* ../../orion/commdlg/splash.c in Sources */ = {isa = PBXBuildFile; fileRef = BE020873C98EDC5440687727 /* ../../orion/commdlg/splash.c */; };
+		51DC8E05C5D2821B45E883F5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4D6FC5A1736DCA577CF68A90 /* Assets.xcassets */; };
+		684F8AA2C3BD0782AC47EC60 /* ../../orion/commdlg/filepicker.c in Sources */ = {isa = PBXBuildFile; fileRef = E301EC5D96A81B42BD8DFCA4 /* ../../orion/commdlg/filepicker.c */; };
+		73A721D9BAD3A3DCCF37ABB6 /* ../../orion/commdlg/splash.c in Sources */ = {isa = PBXBuildFile; fileRef = BE020873C98EDC5440687727 /* ../../orion/commdlg/splash.c */; };
+		83B1B51E24878699D0B16332 /* ipad.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B6C3EF18CA8BE0150EA93D1 /* ipad.m */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
+		8DD7705BC9B2A3D7396A7604 /* user.c in Sources */ = {isa = PBXBuildFile; fileRef = 1D5F697BC138CDFCA9EA7238 /* user.c */; };
+		A2B4F01E60553FA509352A0A /* ../../orion/commdlg/msgbox.c in Sources */ = {isa = PBXBuildFile; fileRef = 1DC94D46FDBFD79094CBAD5C /* ../../orion/commdlg/msgbox.c */; };
+		C1260B361826813547BD5A83 /* ../../orion/commdlg/msgbox.c in Sources */ = {isa = PBXBuildFile; fileRef = 1DC94D46FDBFD79094CBAD5C /* ../../orion/commdlg/msgbox.c */; };
+		C725C87AFFE8763DB0FABFC4 /* app.c in Sources */ = {isa = PBXBuildFile; fileRef = 0795EAC10AF76482EDE70CC9 /* app.c */; };
+		E85D7319069843C4C9E16B7F /* ../../orion/commdlg/filepicker.c in Sources */ = {isa = PBXBuildFile; fileRef = E301EC5D96A81B42BD8DFCA4 /* ../../orion/commdlg/filepicker.c */; };
+		F570DCEC7063DDD501230CFA /* macos.m in Sources */ = {isa = PBXBuildFile; fileRef = 3B82E31B5F70E86FD89D3CC4 /* macos.m */; };
+		F5E93593A037E2417DB8606C /* kernel.c in Sources */ = {isa = PBXBuildFile; fileRef = BFF2E1937265DAA06322B2F9 /* kernel.c */; };
+		F80B00E77FC46412A68114BF /* commctl.c in Sources */ = {isa = PBXBuildFile; fileRef = 2AA609CA6254E5E7742A8660 /* commctl.c */; };
+		F9EC25448562F064542B16CE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4D6FC5A1736DCA577CF68A90 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		02072953FD1544803C710C49 /* commdlg/filepicker.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commdlg/filepicker.c; path = ../../orion/commdlg/filepicker.c; sourceTree = SOURCE_ROOT; };
+		03E10B30A7A47EA5540086DA /* commctl/icon.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/icon.c; path = ../../orion/commctl/icon.c; sourceTree = SOURCE_ROOT; };
+		05CF19FC22E44D247F18AE28 /* events.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = events.h; path = ../../platform/events.h; sourceTree = SOURCE_ROOT; };
+		0633E8A50D6922A406BB4C48 /* user/theme_modern.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/theme_modern.c; path = ../../orion/user/theme_modern.c; sourceTree = SOURCE_ROOT; };
+		0676D42D76D001D80541B5E3 /* user/image.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/image.h; path = ../../orion/user/image.h; sourceTree = SOURCE_ROOT; };
+		0700DF56F00A836F8CD89BD6 /* windows/windows_event.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = windows/windows_event.c; path = ../../platform/windows/windows_event.c; sourceTree = SOURCE_ROOT; };
+		0795EAC10AF76482EDE70CC9 /* app.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = app.c; sourceTree = DERIVED_FILE_DIR; };
+		07C1E267179485CD9644ABDB /* windows/windows_window.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = windows/windows_window.c; path = ../../platform/windows/windows_window.c; sourceTree = SOURCE_ROOT; };
+		0863529696211A771082327E /* x11/x11_local.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = x11/x11_local.h; path = ../../platform/x11/x11_local.h; sourceTree = SOURCE_ROOT; };
+		08719EA2E7A4C50CF95B7439 /* user/stb_image.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/stb_image.h; path = ../../orion/user/stb_image.h; sourceTree = SOURCE_ROOT; };
+		09EF961A197B1480DB38F67A /* commctl/tray.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/tray.c; path = ../../orion/commctl/tray.c; sourceTree = SOURCE_ROOT; };
+		0A2201CCFD2BB2763233584F /* commctl/image.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/image.c; path = ../../orion/commctl/image.c; sourceTree = SOURCE_ROOT; };
+		0B13544757BC77EA20BC0839 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = SOURCE_ROOT; };
+		0BF2F1EAD70F202269C1C809 /* wayland/wayland_local.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = wayland/wayland_local.h; path = ../../platform/wayland/wayland_local.h; sourceTree = SOURCE_ROOT; };
+		0C5E2FCA7AC84D0FF7D847BA /* datasource/groove_library_db.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = datasource/groove_library_db.c; sourceTree = SOURCE_ROOT; };
+		0D60B3EE5493666F04C573B3 /* user/user.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/user.h; path = ../../orion/user/user.h; sourceTree = SOURCE_ROOT; };
+		0DFBA43202D078AC6C196B04 /* webgl/webgl_window.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = webgl/webgl_window.c; path = ../../platform/webgl/webgl_window.c; sourceTree = SOURCE_ROOT; };
+		1033573296D5B9CC741B2506 /* macos/macos_keymap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = macos/macos_keymap.h; path = ../../platform/macos/macos_keymap.h; sourceTree = SOURCE_ROOT; };
+		1147B50CF7A03F3669CE6D7D /* commctl/columnview.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = commctl/columnview.h; path = ../../orion/commctl/columnview.h; sourceTree = SOURCE_ROOT; };
+		130BBDDB4474F9426442CB1F /* commdlg/msgbox.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commdlg/msgbox.c; path = ../../orion/commdlg/msgbox.c; sourceTree = SOURCE_ROOT; };
+		137AEA85A698DDEB1215743C /* commctl/list.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/list.c; path = ../../orion/commctl/list.c; sourceTree = SOURCE_ROOT; };
+		155319C93D093C522915463E /* user/zip.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/zip.h; path = ../../orion/user/zip.h; sourceTree = SOURCE_ROOT; };
+		186BDA16D9898BDEEB83D42C /* commctl/layout_stack.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/layout_stack.c; path = ../../orion/commctl/layout_stack.c; sourceTree = SOURCE_ROOT; };
+		1880445D3B96D48D19229211 /* commctl/scrollbar.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/scrollbar.c; path = ../../orion/commctl/scrollbar.c; sourceTree = SOURCE_ROOT; };
+		19E20713A3C1289354BC2FAF /* groove.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = groove.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1B6C3EF18CA8BE0150EA93D1 /* ipad.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ipad.m; sourceTree = DERIVED_FILE_DIR; };
+		1D27AACCCFC9728673A1DD43 /* macos/macos_window.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = macos/macos_window.m; path = ../../platform/macos/macos_window.m; sourceTree = SOURCE_ROOT; };
+		1D5F697BC138CDFCA9EA7238 /* user.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = user.c; sourceTree = DERIVED_FILE_DIR; };
+		1DC94D46FDBFD79094CBAD5C /* ../../orion/commdlg/msgbox.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ../../orion/commdlg/msgbox.c; sourceTree = SOURCE_ROOT; };
+		1DFC09F664884B6B2648DC63 /* user/gl_compat.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/gl_compat.h; path = ../../orion/user/gl_compat.h; sourceTree = SOURCE_ROOT; };
+		20F749DB662A3BC301B8B5CA /* commctl/filelist.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/filelist.c; path = ../../orion/commctl/filelist.c; sourceTree = SOURCE_ROOT; };
+		216665E8D45C3D3292891F2A /* webgl/webgl_log.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = webgl/webgl_log.c; path = ../../platform/webgl/webgl_log.c; sourceTree = SOURCE_ROOT; };
+		217C470CA8014076B00C5421 /* macos/macos_event.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = macos/macos_event.m; path = ../../platform/macos/macos_event.m; sourceTree = SOURCE_ROOT; };
+		E9010BA12D957D17BC23B29E /* macos/macos_file_dialog.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = macos/macos_file_dialog.m; path = ../../platform/macos/macos_file_dialog.m; sourceTree = SOURCE_ROOT; };
+		237F3D3259238AD906DE3D8C /* view_sheet.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = view_sheet.c; sourceTree = SOURCE_ROOT; };
+		23944879ECF8A6B86482D023 /* user/messages.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/messages.h; path = ../../orion/user/messages.h; sourceTree = SOURCE_ROOT; };
+		239F148D7AF2C839EAF29C23 /* webgl/webgl_net.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = webgl/webgl_net.c; path = ../../platform/webgl/webgl_net.c; sourceTree = SOURCE_ROOT; };
+		24044DBC0A10517B647B84CE /* user/http.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/http.c; path = ../../orion/user/http.c; sourceTree = SOURCE_ROOT; };
+		24EBCBC2665E0877E652C8D3 /* user/theme_classic.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/theme_classic.c; path = ../../orion/user/theme_classic.c; sourceTree = SOURCE_ROOT; };
+		26C6756E4DA3E427F6CA87D5 /* audio/audio_backend.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = audio/audio_backend.h; path = ../../platform/audio/audio_backend.h; sourceTree = SOURCE_ROOT; };
+		293256AA00B1FB9C492C9FDB /* user/text.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/text.c; path = ../../orion/user/text.c; sourceTree = SOURCE_ROOT; };
+		295A56717F739B33F5562573 /* macos/macos_local.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = macos/macos_local.h; path = ../../platform/macos/macos_local.h; sourceTree = SOURCE_ROOT; };
+		2979753B4C397754252FBF27 /* x11/x11_window.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = x11/x11_window.c; path = ../../platform/x11/x11_window.c; sourceTree = SOURCE_ROOT; };
+		2AA609CA6254E5E7742A8660 /* commctl.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = commctl.c; sourceTree = DERIVED_FILE_DIR; };
+		2BFB217C07DD95E5B9912FC7 /* user/page.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/page.c; path = ../../orion/user/page.c; sourceTree = SOURCE_ROOT; };
+		2C181E6E8CA9FEAC432C3D8B /* user/database.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/database.h; path = ../../orion/user/database.h; sourceTree = SOURCE_ROOT; };
+		2CC60D9CD1FFD2444622B588 /* webgl/webgl_joystick.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = webgl/webgl_joystick.c; path = ../../platform/webgl/webgl_joystick.c; sourceTree = SOURCE_ROOT; };
+		2D861910078871F5EBED7514 /* unix/unix_net.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = unix/unix_net.c; path = ../../platform/unix/unix_net.c; sourceTree = SOURCE_ROOT; };
+		2DF4D16DB4BB6BFBABBAB2DB /* commctl/button.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/button.c; path = ../../orion/commctl/button.c; sourceTree = SOURCE_ROOT; };
+		2E4A03E0ED9A6013CF6483C7 /* minimp3_ex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = minimp3_ex.h; sourceTree = SOURCE_ROOT; };
+		30BA95CE0F3261A9217382C5 /* user/svg_icon_loader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/svg_icon_loader.h; path = ../../orion/user/svg_icon_loader.h; sourceTree = SOURCE_ROOT; };
+		33322330A24484C374CAA643 /* windows/windows_local.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = windows/windows_local.h; path = ../../platform/windows/windows_local.h; sourceTree = SOURCE_ROOT; };
+		35521F6FC0FCB771BBCF81B0 /* commctl/icongrid.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/icongrid.c; path = ../../orion/commctl/icongrid.c; sourceTree = SOURCE_ROOT; };
+		35F128A43239AE5181F3DDE1 /* user/ansi.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/ansi.c; path = ../../orion/user/ansi.c; sourceTree = SOURCE_ROOT; };
+		360286CB73C4016A70F2F07C /* windows/windows_rc.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = windows/windows_rc.c; path = ../../platform/windows/windows_rc.c; sourceTree = SOURCE_ROOT; };
+		38267A95DFB2C4D2538C35E0 /* user/palette_file.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/palette_file.h; path = ../../orion/user/palette_file.h; sourceTree = SOURCE_ROOT; };
+		38C59619C52BC1E8F0C72EFE /* user/remote.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/remote.c; path = ../../orion/user/remote.c; sourceTree = SOURCE_ROOT; };
+		39A12307D5743B6F3D705EEA /* commctl/filelist.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = commctl/filelist.h; path = ../../orion/commctl/filelist.h; sourceTree = SOURCE_ROOT; };
+		3A24E77729D5848823A54E1F /* synth_samples.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = synth_samples.h; sourceTree = SOURCE_ROOT; };
+		3B82E31B5F70E86FD89D3CC4 /* macos.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = macos.m; sourceTree = DERIVED_FILE_DIR; };
+		3B850AD129CB979897A58A1E /* view_bin.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = view_bin.c; sourceTree = SOURCE_ROOT; };
+		3CA669163FE999FEA350CA8A /* user/init.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/init.c; path = ../../orion/user/init.c; sourceTree = SOURCE_ROOT; };
+		40EFB3B2E83DAE715A4590C8 /* macos/macos_system.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = macos/macos_system.m; path = ../../platform/macos/macos_system.m; sourceTree = SOURCE_ROOT; };
+		44814BACB2737E3A090FC239 /* user/bmp_icon_loader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/bmp_icon_loader.h; path = ../../orion/user/bmp_icon_loader.h; sourceTree = SOURCE_ROOT; };
+		4595BAB4E5E7B15238A43CF3 /* wayland/wayland_system.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = wayland/wayland_system.c; path = ../../platform/wayland/wayland_system.c; sourceTree = SOURCE_ROOT; };
+		4676ADA4840BB1A2EADC0911 /* commctl/popup_item.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = commctl/popup_item.h; path = ../../orion/commctl/popup_item.h; sourceTree = SOURCE_ROOT; };
+		470EFD63B39D58A386AFC1AA /* user/font_cache.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/font_cache.h; path = ../../orion/user/font_cache.h; sourceTree = SOURCE_ROOT; };
+		4775D1C95F46016062C31F78 /* user/page_host.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/page_host.c; path = ../../orion/user/page_host.c; sourceTree = SOURCE_ROOT; };
+		4B1A1DF9780731F9E9AA7AFD /* commctl/menubar.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = commctl/menubar.h; path = ../../orion/commctl/menubar.h; sourceTree = SOURCE_ROOT; };
+		4C120D3B19CDE8D3BB2E118F /* commctl/separator.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/separator.c; path = ../../orion/commctl/separator.c; sourceTree = SOURCE_ROOT; };
+		4CB1B1FE85423B6E3B6313E5 /* user/font_sdf.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/font_sdf.c; path = ../../orion/user/font_sdf.c; sourceTree = SOURCE_ROOT; };
+		4D2C747344C6E4D0CD4C028A /* wayland/wayland_event.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = wayland/wayland_event.c; path = ../../platform/wayland/wayland_event.c; sourceTree = SOURCE_ROOT; };
+		4D31916CC1A0905230B833B5 /* commctl/control_size.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/control_size.c; path = ../../orion/commctl/control_size.c; sourceTree = SOURCE_ROOT; };
+		4D6FC5A1736DCA577CF68A90 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = DERIVED_FILE_DIR; };
+		4E36769A6E1AA7255F56F17A /* macos/macos_menu.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = macos/macos_menu.m; path = ../../platform/macos/macos_menu.m; sourceTree = SOURCE_ROOT; };
+		5051F6F98876009B148674E6 /* qnx/qnx_log.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = qnx/qnx_log.c; path = ../../platform/qnx/qnx_log.c; sourceTree = SOURCE_ROOT; };
+		50728DFF40402483A6B61A3C /* commctl/combobox.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/combobox.c; path = ../../orion/commctl/combobox.c; sourceTree = SOURCE_ROOT; };
+		51ADBB3D13BFDBCD18475ED7 /* mixer.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = mixer.c; sourceTree = SOURCE_ROOT; };
+		51F175BD17ED0431881FE65E /* commdlg/commdlg.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = commdlg/commdlg.h; path = ../../orion/commdlg/commdlg.h; sourceTree = SOURCE_ROOT; };
+		520973BEDF020EA1CEDA5CD4 /* ios/ios_window.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ios/ios_window.m; path = ../../platform/ios/ios_window.m; sourceTree = SOURCE_ROOT; };
+		522CC6930F2502C3D6B57840 /* user/dialog.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/dialog.c; path = ../../orion/user/dialog.c; sourceTree = SOURCE_ROOT; };
+		53DAC69C5399BDB718C6DA2D /* kernel/renderer.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = kernel/renderer.c; path = ../../orion/kernel/renderer.c; sourceTree = SOURCE_ROOT; };
+		5418EBD89B82B11491F8B17F /* commctl/checkbox.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/checkbox.c; path = ../../orion/commctl/checkbox.c; sourceTree = SOURCE_ROOT; };
+		55B4EB243F575800EF9482EB /* commctl/columnview.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/columnview.c; path = ../../orion/commctl/columnview.c; sourceTree = SOURCE_ROOT; };
+		56D2DD62A0EA6C66E3BB2868 /* x11/x11_egl.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = x11/x11_egl.c; path = ../../platform/x11/x11_egl.c; sourceTree = SOURCE_ROOT; };
+		5A27698268504E462BF8D8D2 /* user/vga_font.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/vga_font.c; path = ../../orion/user/vga_font.c; sourceTree = SOURCE_ROOT; };
+		5AFD3ABE439665E45DDF59D9 /* dialogs/dlg_songs.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dialogs/dlg_songs.c; sourceTree = SOURCE_ROOT; };
+		5BFDD59D97013A91217E3153 /* user/db_schema_xml.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/db_schema_xml.c; path = ../../orion/user/db_schema_xml.c; sourceTree = SOURCE_ROOT; };
+		5CDCE170D077C9B1D856DD74 /* user/dock.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/dock.h; path = ../../orion/user/dock.h; sourceTree = SOURCE_ROOT; };
+		5D55215C5E3425EEC0B3150F /* kernel/fmat16.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = kernel/fmat16.h; path = ../../orion/kernel/fmat16.h; sourceTree = SOURCE_ROOT; };
+		5F181FEFC36FA8B94AEF1733 /* user/view.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/view.c; path = ../../orion/user/view.c; sourceTree = SOURCE_ROOT; };
+		6013DA7A422BD1C6D46EC765 /* webgl/webgl_local.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = webgl/webgl_local.h; path = ../../platform/webgl/webgl_local.h; sourceTree = SOURCE_ROOT; };
+		602519E38AA5D29666D365B6 /* qnx/qnx_main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = qnx/qnx_main.c; path = ../../platform/qnx/qnx_main.c; sourceTree = SOURCE_ROOT; };
+		60A6BD689D78E3F545137517 /* user/image.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/image.c; path = ../../orion/user/image.c; sourceTree = SOURCE_ROOT; };
+		618BF41811F1A8A268A3DE69 /* view_main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = view_main.c; sourceTree = SOURCE_ROOT; };
+		620398EB54D1722FBC43D084 /* commctl/init.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/init.c; path = ../../orion/commctl/init.c; sourceTree = SOURCE_ROOT; };
+		6279957F42266995941E5350 /* user/i18n.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/i18n.h; path = ../../orion/user/i18n.h; sourceTree = SOURCE_ROOT; };
+		627CEE5B020A8CBB1A8494CC /* view_tracks.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = view_tracks.c; sourceTree = SOURCE_ROOT; };
+		62BC75FCD7A7C4B47BF7EF68 /* ios/ios_event.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ios/ios_event.m; path = ../../platform/ios/ios_event.m; sourceTree = SOURCE_ROOT; };
+		639CEB9B7335A720F38EC42D /* windows/windows_log.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = windows/windows_log.c; path = ../../platform/windows/windows_log.c; sourceTree = SOURCE_ROOT; };
+		63FC8C5BB9D00E0D7A1D0E9A /* datasource/groove_songs_db.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = datasource/groove_songs_db.c; sourceTree = SOURCE_ROOT; };
+		66CB061118F28C53E6A3CA1D /* audio/audio_backend.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = audio/audio_backend.c; path = ../../platform/audio/audio_backend.c; sourceTree = SOURCE_ROOT; };
+		6882A33D7BC1A2A55D819CBD /* commctl/activitybar.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/activitybar.c; path = ../../orion/commctl/activitybar.c; sourceTree = SOURCE_ROOT; };
+		69769B0876B737E626485947 /* user/stb_image_write.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/stb_image_write.h; path = ../../orion/user/stb_image_write.h; sourceTree = SOURCE_ROOT; };
+		6AA8A5E2BD1BD312FD5C3BAD /* windows/windows_net.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = windows/windows_net.c; path = ../../platform/windows/windows_net.c; sourceTree = SOURCE_ROOT; };
+		6AF8FFF5BA5E9E55DC2A9BFA /* windows/windows_shared.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = windows/windows_shared.c; path = ../../platform/windows/windows_shared.c; sourceTree = SOURCE_ROOT; };
+		6B31DA0187A245FDFD9B9F57 /* commctl/reportview.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/reportview.c; path = ../../orion/commctl/reportview.c; sourceTree = SOURCE_ROOT; };
+		6B6124E0A30EF03EC2025557 /* kernel/renderer_impl.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = kernel/renderer_impl.c; path = ../../orion/kernel/renderer_impl.c; sourceTree = SOURCE_ROOT; };
+		6C2C37A91886518DBC915016 /* view_block_card.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = view_block_card.c; sourceTree = SOURCE_ROOT; };
+		6CC6C751E2A5B6C4AD93F375 /* synth.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = synth.h; sourceTree = SOURCE_ROOT; };
+		6DA16690D65079941F033290 /* commctl/tabview.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/tabview.c; path = ../../orion/commctl/tabview.c; sourceTree = SOURCE_ROOT; };
+		6DC1DDA9EEDBD6B565A662E5 /* user/draw_impl.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/draw_impl.c; path = ../../orion/user/draw_impl.c; sourceTree = SOURCE_ROOT; };
+		6EF168DD20CF7BB19D86AB8E /* view_transport.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = view_transport.c; sourceTree = SOURCE_ROOT; };
+		6FFE01A60BB3077048DC2D43 /* user/page_host.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/page_host.h; path = ../../orion/user/page_host.h; sourceTree = SOURCE_ROOT; };
+		73099FE597D8B324B4A9428F /* user/surface.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/surface.c; path = ../../orion/user/surface.c; sourceTree = SOURCE_ROOT; };
+		738BDE02D721A11F63D8E05F /* unix/unix_log.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = unix/unix_log.c; path = ../../platform/unix/unix_log.c; sourceTree = SOURCE_ROOT; };
+		74903AA8D16D5A7B54843C0E /* commctl/layout_tilegrid.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/layout_tilegrid.c; path = ../../orion/commctl/layout_tilegrid.c; sourceTree = SOURCE_ROOT; };
+		74AF1CCBC89E435EB02379C0 /* commctl/tableview.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/tableview.c; path = ../../orion/commctl/tableview.c; sourceTree = SOURCE_ROOT; };
+		74B79DE27D735D4243E4A432 /* view_song_preview.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = view_song_preview.c; sourceTree = SOURCE_ROOT; };
+		75C493C01105FC46BC87A080 /* unix/unix_joystick.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = unix/unix_joystick.c; path = ../../platform/unix/unix_joystick.c; sourceTree = SOURCE_ROOT; };
+		7C83EFBF4C839650597689C5 /* kernel/renderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = kernel/renderer.h; path = ../../orion/kernel/renderer.h; sourceTree = SOURCE_ROOT; };
+		7D350BE7D7E512AC58C1AA14 /* user/bmp_icon_loader.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/bmp_icon_loader.c; path = ../../orion/user/bmp_icon_loader.c; sourceTree = SOURCE_ROOT; };
+		7D80C74B7BF8B254CCC5070A /* commdlg/splash.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = commdlg/splash.h; path = ../../orion/commdlg/splash.h; sourceTree = SOURCE_ROOT; };
+		7EBEA3419041ECECB40F17BB /* user/page.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/page.h; path = ../../orion/user/page.h; sourceTree = SOURCE_ROOT; };
+		7FC9278C18E511C5B5DDF73E /* commctl/commctl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = commctl/commctl.h; path = ../../orion/commctl/commctl.h; sourceTree = SOURCE_ROOT; };
+		7FD87BDD5F2377443CC155C2 /* user/message.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/message.c; path = ../../orion/user/message.c; sourceTree = SOURCE_ROOT; };
+		801C61DDFA2D8166A7664F27 /* user/window.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/window.c; path = ../../orion/user/window.c; sourceTree = SOURCE_ROOT; };
+		827C7CB9D6826E913AF317D9 /* user/tray.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/tray.c; path = ../../orion/user/tray.c; sourceTree = SOURCE_ROOT; };
+		828741F0F9D39D80E83B68F3 /* waveform_cache.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = waveform_cache.c; sourceTree = SOURCE_ROOT; };
+		82B6436ACCA6BA1FC62DD0E3 /* user/svg_icon_loader.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/svg_icon_loader.c; path = ../../orion/user/svg_icon_loader.c; sourceTree = SOURCE_ROOT; };
+		837AA5DB553BAA81728C13B3 /* wayland/xdg-shell-client.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "wayland/xdg-shell-client.h"; path = "../../platform/wayland/xdg-shell-client.h"; sourceTree = SOURCE_ROOT; };
+		848B3D9A34B5F3F6F9563069 /* synth.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = synth.c; sourceTree = SOURCE_ROOT; };
+		849FFC7D493D4818A29362D7 /* unix/unix_thread.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = unix/unix_thread.c; path = ../../platform/unix/unix_thread.c; sourceTree = SOURCE_ROOT; };
+		86BB2C0A00EDDA1CC016EB96 /* library.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = library.c; sourceTree = SOURCE_ROOT; };
+		88749BB0505F31807FF538E8 /* user/vga_font.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/vga_font.h; path = ../../orion/user/vga_font.h; sourceTree = SOURCE_ROOT; };
+		88CED03DD0A80CC21389E886 /* user/event.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/event.c; path = ../../orion/user/event.c; sourceTree = SOURCE_ROOT; };
+		8AB4AB72ACD5DAE5538AB551 /* rc_server_impl.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = rc_server_impl.c; path = ../../platform/rc_server_impl.c; sourceTree = SOURCE_ROOT; };
+		8AE26297468B6D9B6D97DEFA /* controller.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = controller.c; sourceTree = SOURCE_ROOT; };
+		8AEE5E6E1261FAD5A0E06F0C /* commctl/appchrome.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = commctl/appchrome.h; path = ../../orion/commctl/appchrome.h; sourceTree = SOURCE_ROOT; };
+		8BDB0D9795658233AEA9F9CB /* user/accel.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/accel.c; path = ../../orion/user/accel.c; sourceTree = SOURCE_ROOT; };
+		8CABA128B6BFBBD58547AD29 /* user/font_cache.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/font_cache.c; path = ../../orion/user/font_cache.c; sourceTree = SOURCE_ROOT; };
+		8D9E071349CC061E3C2A9D8E /* user/theme_palette_light.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/theme_palette_light.h; path = ../../orion/user/theme_palette_light.h; sourceTree = SOURCE_ROOT; };
+		8DBEE7ABECD3BC971AA3BAF8 /* user/i18n.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/i18n.c; path = ../../orion/user/i18n.c; sourceTree = SOURCE_ROOT; };
+		8E2E70B52C0D1FDC7012ECD8 /* user/theme_palette_navy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/theme_palette_navy.h; path = ../../orion/user/theme_palette_navy.h; sourceTree = SOURCE_ROOT; };
+		912ADBA08D8978182B0FB013 /* components/groove_components.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = components/groove_components.c; sourceTree = SOURCE_ROOT; };
+		91BD8C5C43D3ADF5801DFA11 /* user/toolbar.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/toolbar.h; path = ../../orion/user/toolbar.h; sourceTree = SOURCE_ROOT; };
+		92230866C54E47B8C56F1B05 /* sample_levels.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sample_levels.h; sourceTree = SOURCE_ROOT; };
+		930E8A370B7DCB4EE8D95BD5 /* x11/x11_event.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = x11/x11_event.c; path = ../../platform/x11/x11_event.c; sourceTree = SOURCE_ROOT; };
+		9393AAFA7E167255747CD62C /* user/toolbar.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/toolbar.c; path = ../../orion/user/toolbar.c; sourceTree = SOURCE_ROOT; };
+		95E00D556F19A0DF5E6084F3 /* user/dock.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/dock.c; path = ../../orion/user/dock.c; sourceTree = SOURCE_ROOT; };
+		98989DB6652C77BD71A6E765 /* user/tooltip.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/tooltip.c; path = ../../orion/user/tooltip.c; sourceTree = SOURCE_ROOT; };
+		9A87ADC96577023FF7A55B39 /* commctl/edit.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/edit.c; path = ../../orion/commctl/edit.c; sourceTree = SOURCE_ROOT; };
+		9B016F383DED6A0CC98DDA80 /* commctl/menubar.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/menubar.c; path = ../../orion/commctl/menubar.c; sourceTree = SOURCE_ROOT; };
+		9B9F137826F2EBDE51AC8D26 /* user/console.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/console.c; path = ../../orion/user/console.c; sourceTree = SOURCE_ROOT; };
+		9D17FC3ADAF28FDE559843FF /* commctl/splitview.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/splitview.c; path = ../../orion/commctl/splitview.c; sourceTree = SOURCE_ROOT; };
+		9EAF81FBA93302BD4F2DAB90 /* user/draw.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/draw.h; path = ../../orion/user/draw.h; sourceTree = SOURCE_ROOT; };
+		9F11DD3FFFD57425C8A1E2EC /* ../../orion/commdlg/dialog.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ../../orion/commdlg/dialog.c; sourceTree = SOURCE_ROOT; };
+		A11E8E23D1306B6E461042AA /* commctl/splitter.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/splitter.c; path = ../../orion/commctl/splitter.c; sourceTree = SOURCE_ROOT; };
+		A1296836274E46026A01EE58 /* ios/ios_local.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ios/ios_local.h; path = ../../platform/ios/ios_local.h; sourceTree = SOURCE_ROOT; };
+		A340BB1858AE25B7967FEFBC /* commctl/layout_shared.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = commctl/layout_shared.h; path = ../../orion/commctl/layout_shared.h; sourceTree = SOURCE_ROOT; };
+		A380D6D0FF657BB6DC0BDF4C /* dialogs/dlg_save_song.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dialogs/dlg_save_song.c; sourceTree = SOURCE_ROOT; };
+		A5C8EC8352CCD9FF31982180 /* user/text.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/text.h; path = ../../orion/user/text.h; sourceTree = SOURCE_ROOT; };
+		A69BB9D0FBEE7D526F277542 /* commctl/card.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/card.c; path = ../../orion/commctl/card.c; sourceTree = SOURCE_ROOT; };
+		A6BC174DDB5ED4E929505237 /* commdlg/splash.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commdlg/splash.c; path = ../../orion/commdlg/splash.c; sourceTree = SOURCE_ROOT; };
+		A8AEF5EFCD9D0E866A24A9A5 /* persistence.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = persistence.c; sourceTree = SOURCE_ROOT; };
+		A903468E524654B634214A35 /* user/registry.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/registry.c; path = ../../orion/user/registry.c; sourceTree = SOURCE_ROOT; };
+		AACA4FCFC17BC54CBAA36968 /* groove.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = groove.h; sourceTree = SOURCE_ROOT; };
+		AB02B5C83C3CACD658D4C7DE /* commdlg/msgbox.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = commdlg/msgbox.h; path = ../../orion/commdlg/msgbox.h; sourceTree = SOURCE_ROOT; };
+		AB81634B622C636F7767400E /* user/accel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/accel.h; path = ../../orion/user/accel.h; sourceTree = SOURCE_ROOT; };
+		ACDDBF32E4925C0B0A201CDD /* commdlg/dialog.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commdlg/dialog.c; path = ../../orion/commdlg/dialog.c; sourceTree = SOURCE_ROOT; };
+		ACE1BDA22AE52DE17F891F3E /* groove.orion */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = groove.orion; sourceTree = SOURCE_ROOT; };
+		AE529652FABF4FE3E860AE94 /* mp3_decode.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = mp3_decode.c; sourceTree = SOURCE_ROOT; };
+		AF71F53B8E3A9F73AB702440 /* unix/unix_shared.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = unix/unix_shared.c; path = ../../platform/unix/unix_shared.c; sourceTree = SOURCE_ROOT; };
+		B428C9BE5FD1175FB21F6635 /* webgl/webgl_system.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = webgl/webgl_system.c; path = ../../platform/webgl/webgl_system.c; sourceTree = SOURCE_ROOT; };
+		B6298FBA2E324A0CD431737A /* user/theme_palette_dark.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/theme_palette_dark.h; path = ../../orion/user/theme_palette_dark.h; sourceTree = SOURCE_ROOT; };
+		B80B8BC1C2CECB5AF717E841 /* user/layout_api.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/layout_api.c; path = ../../orion/user/layout_api.c; sourceTree = SOURCE_ROOT; };
+		B8895C1E824857BCADA8D3A9 /* groove.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = groove.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B8F2676348F92570D4192E04 /* wayland/wayland_window.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = wayland/wayland_window.c; path = ../../platform/wayland/wayland_window.c; sourceTree = SOURCE_ROOT; };
+		BA0A153CB40B50B53C38CBA2 /* wayland/xdg-shell-client.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = "wayland/xdg-shell-client.c"; path = "../../platform/wayland/xdg-shell-client.c"; sourceTree = SOURCE_ROOT; };
+		BC6BECCED6901AE9FA406B27 /* commctl/iconview.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/iconview.c; path = ../../orion/commctl/iconview.c; sourceTree = SOURCE_ROOT; };
+		BE020873C98EDC5440687727 /* ../../orion/commdlg/splash.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ../../orion/commdlg/splash.c; sourceTree = SOURCE_ROOT; };
+		BEDD9BD7649180F5BB1F8C36 /* commdlg/filepicker.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = commdlg/filepicker.h; path = ../../orion/commdlg/filepicker.h; sourceTree = SOURCE_ROOT; };
+		BEFE221C5E56763576B4A404 /* commctl/label.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/label.c; path = ../../orion/commctl/label.c; sourceTree = SOURCE_ROOT; };
+		BFF2E1937265DAA06322B2F9 /* kernel.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = kernel.c; sourceTree = DERIVED_FILE_DIR; };
+		C26E83A4E07C108367E3E122 /* user/db_simple_xml.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/db_simple_xml.h; path = ../../orion/user/db_simple_xml.h; sourceTree = SOURCE_ROOT; };
+		C294A2530578CA5BEC3264DE /* minimp3.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = minimp3.h; sourceTree = SOURCE_ROOT; };
+		C2C452908179A9E5032727E2 /* commctl/columnbrowser.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/columnbrowser.c; path = ../../orion/commctl/columnbrowser.c; sourceTree = SOURCE_ROOT; };
+		C3404D3E1BCA47FDEE53372A /* macos/macos_joystick.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = macos/macos_joystick.m; path = ../../platform/macos/macos_joystick.m; sourceTree = SOURCE_ROOT; };
+		C407B02C49D69026B62F5899 /* commctl/appchrome.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/appchrome.c; path = ../../orion/commctl/appchrome.c; sourceTree = SOURCE_ROOT; };
+		C8EF24D1A1ED682D124C9BFC /* user/vga_text.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/vga_text.h; path = ../../orion/user/vga_text.h; sourceTree = SOURCE_ROOT; };
+		CB16D7AAEF91626610EDB3AA /* user/scrollbar.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/scrollbar.c; path = ../../orion/user/scrollbar.c; sourceTree = SOURCE_ROOT; };
+		CC78FE29F57D540C4A834404 /* user/gdi.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/gdi.h; path = ../../orion/user/gdi.h; sourceTree = SOURCE_ROOT; };
+		CF27BA606DA7EFA59519539C /* windows/windows_thread.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = windows/windows_thread.c; path = ../../platform/windows/windows_thread.c; sourceTree = SOURCE_ROOT; };
+		CF3BEF278E68EA8FB0CD1D8C /* qnx/qnx_local.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = qnx/qnx_local.h; path = ../../platform/qnx/qnx_local.h; sourceTree = SOURCE_ROOT; };
+		D0FD32889E90EFAC28B8566B /* x11/x11_system.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = x11/x11_system.c; path = ../../platform/x11/x11_system.c; sourceTree = SOURCE_ROOT; };
+		D1FC1F1C1852862D44ED8E35 /* user/paint.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/paint.c; path = ../../orion/user/paint.c; sourceTree = SOURCE_ROOT; };
+		D284D689D85BFE8E70DE4D6D /* ui.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ui.h; path = ../../orion/ui.h; sourceTree = SOURCE_ROOT; };
+		D2C52C3E7CC13A47B1FD5264 /* commctl/layout_flow.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/layout_flow.c; path = ../../orion/commctl/layout_flow.c; sourceTree = SOURCE_ROOT; };
+		D307D23BD598F5193C17F95E /* qnx/qnx_system.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = qnx/qnx_system.c; path = ../../platform/qnx/qnx_system.c; sourceTree = SOURCE_ROOT; };
+		D383B4A82EFA408B652AB62B /* unix/unix_rc.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = unix/unix_rc.c; path = ../../platform/unix/unix_rc.c; sourceTree = SOURCE_ROOT; };
+		D5413BB545E2DF6EA4213A26 /* user/theme.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/theme.h; path = ../../orion/user/theme.h; sourceTree = SOURCE_ROOT; };
+		D637FEC2603587B554730520 /* user/zip.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/zip.c; path = ../../orion/user/zip.c; sourceTree = SOURCE_ROOT; };
+		D75AABEFADBF67885DEC7BDB /* windows/windows_system.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = windows/windows_system.c; path = ../../platform/windows/windows_system.c; sourceTree = SOURCE_ROOT; };
+		D822D9CB688736005C27F2B1 /* gem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = gem.h; path = ../../orion/gem.h; sourceTree = SOURCE_ROOT; };
+		D9DA0279DA3C2C7A4577DCD6 /* kernel/kernel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = kernel/kernel.h; path = ../../orion/kernel/kernel.h; sourceTree = SOURCE_ROOT; };
+		DD24ABCA6A45EA13E9753C79 /* user/vga_text.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/vga_text.c; path = ../../orion/user/vga_text.c; sourceTree = SOURCE_ROOT; };
+		DE6DFAD98EAD417ECA2F1682 /* commctl/slider.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/slider.c; path = ../../orion/commctl/slider.c; sourceTree = SOURCE_ROOT; };
+		DFA21807A7615240017C161A /* commctl/multiedit.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/multiedit.c; path = ../../orion/commctl/multiedit.c; sourceTree = SOURCE_ROOT; };
+		DFDCBE80B2AE7F4DEECB89B8 /* user/scrollbar.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/scrollbar.h; path = ../../orion/user/scrollbar.h; sourceTree = SOURCE_ROOT; };
+		E072A7A69205A7DF4EFB64B5 /* windows/windows_joystick.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = windows/windows_joystick.c; path = ../../platform/windows/windows_joystick.c; sourceTree = SOURCE_ROOT; };
+		E2003630646904E40E0A042A /* kernel/joystick.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = kernel/joystick.c; path = ../../orion/kernel/joystick.c; sourceTree = SOURCE_ROOT; };
+		E301EC5D96A81B42BD8DFCA4 /* ../../orion/commdlg/filepicker.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ../../orion/commdlg/filepicker.c; sourceTree = SOURCE_ROOT; };
+		E51FB2E4C5D5B9E5CE222FCC /* kernel/http.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = kernel/http.h; path = ../../orion/kernel/http.h; sourceTree = SOURCE_ROOT; };
+		E8AE3E91B86B2C62070F8C21 /* user/gdi.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/gdi.c; path = ../../orion/user/gdi.c; sourceTree = SOURCE_ROOT; };
+		E8E17FF4DE69902573605D9A /* user/enum_parse.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/enum_parse.h; path = ../../orion/user/enum_parse.h; sourceTree = SOURCE_ROOT; };
+		E9C9EA21F6FE4303430ABA18 /* user/color.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/color.h; path = ../../orion/user/color.h; sourceTree = SOURCE_ROOT; };
+		EB71A2A73B51032F8206C6F8 /* user/database.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/database.c; path = ../../orion/user/database.c; sourceTree = SOURCE_ROOT; };
+		ED89282AB95A42E6871A5819 /* demo_phrases.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = demo_phrases.h; sourceTree = SOURCE_ROOT; };
+		EE0697BC78AF41800892ADE4 /* user/font_sdf.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/font_sdf.h; path = ../../orion/user/font_sdf.h; sourceTree = SOURCE_ROOT; };
+		F0810CEFEF76B73C3FB4F055 /* platform.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = platform.h; path = ../../platform/platform.h; sourceTree = SOURCE_ROOT; };
+		F31C99A2911593C5E5CBC68B /* wayland/wayland_egl.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = wayland/wayland_egl.c; path = ../../platform/wayland/wayland_egl.c; sourceTree = SOURCE_ROOT; };
+		F32581378E13FB15C9E79397 /* webgl/webgl_event.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = webgl/webgl_event.c; path = ../../platform/webgl/webgl_event.c; sourceTree = SOURCE_ROOT; };
+		F36CA81344E0B8D7A1A8D4C4 /* user/rect.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/rect.h; path = ../../orion/user/rect.h; sourceTree = SOURCE_ROOT; };
+		F459AE59AE2CFEC11B003AE1 /* user/theme.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = user/theme.c; path = ../../orion/user/theme.c; sourceTree = SOURCE_ROOT; };
+		F50B37E4DE7CB258CC541564 /* audio/audio_wav.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = audio/audio_wav.c; path = ../../platform/audio/audio_wav.c; sourceTree = SOURCE_ROOT; };
+		F5D7EA845A71A40030B385E2 /* user/ansi.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/ansi.h; path = ../../orion/user/ansi.h; sourceTree = SOURCE_ROOT; };
+		F78290273A59821C5FF9D2B9 /* commctl/segmented.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/segmented.c; path = ../../orion/commctl/segmented.c; sourceTree = SOURCE_ROOT; };
+		F99A1C24D24BD0CB953166E4 /* kernel/joystick.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = kernel/joystick.h; path = ../../orion/kernel/joystick.h; sourceTree = SOURCE_ROOT; };
+		F9C4D59539BC76FBB3BD095C /* commctl/gradient.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/gradient.c; path = ../../orion/commctl/gradient.c; sourceTree = SOURCE_ROOT; };
+		FB35FDFA08F1E20D81BA7DAD /* commctl/columnview_internal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = commctl/columnview_internal.h; path = ../../orion/commctl/columnview_internal.h; sourceTree = SOURCE_ROOT; };
+		FB50EEC6F33D6F6A2569E35A /* third_party/tsf.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = third_party/tsf.h; sourceTree = SOURCE_ROOT; };
+		FBF75B8CBA680F744F1E7E05 /* commctl/layout_grid.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/layout_grid.c; path = ../../orion/commctl/layout_grid.c; sourceTree = SOURCE_ROOT; };
+		FEA399A9B9376D6E61ABF19B /* commctl/sprite.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = commctl/sprite.c; path = ../../orion/commctl/sprite.c; sourceTree = SOURCE_ROOT; };
+		FF68E44959A235317FB17C80 /* ios/ios_system.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ios/ios_system.m; path = ../../platform/ios/ios_system.m; sourceTree = SOURCE_ROOT; };
+		FFCD43F38BCE037B630B3150 /* user/config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = user/config.h; path = ../../orion/user/config.h; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		664F835B1ED89846DAB355B5 = {
+			isa = PBXGroup;
+			children = (
+				83CAA00DE494F5600555D745 /* apps/groove */,
+				F29CCC9BA46545A9461BEF25 /* orion */,
+				C787B08844F12D9C8CFB9AEF /* platform */,
+				BEAD8915881B60FC177E63AB /* Products */,
+				7830CA9B308DD6E900968500 /* Recovered References */,
+			);
+			sourceTree = "<group>";
+		};
+		7830CA9B308DD6E900968500 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				1D5F697BC138CDFCA9EA7238 /* user.c */,
+				BFF2E1937265DAA06322B2F9 /* kernel.c */,
+				2AA609CA6254E5E7742A8660 /* commctl.c */,
+				0795EAC10AF76482EDE70CC9 /* app.c */,
+				3B82E31B5F70E86FD89D3CC4 /* macos.m */,
+				9F11DD3FFFD57425C8A1E2EC /* ../../orion/commdlg/dialog.c */,
+				E301EC5D96A81B42BD8DFCA4 /* ../../orion/commdlg/filepicker.c */,
+				1DC94D46FDBFD79094CBAD5C /* ../../orion/commdlg/msgbox.c */,
+				BE020873C98EDC5440687727 /* ../../orion/commdlg/splash.c */,
+				4D6FC5A1736DCA577CF68A90 /* Assets.xcassets */,
+				1B6C3EF18CA8BE0150EA93D1 /* ipad.m */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
+		83CAA00DE494F5600555D745 /* apps/groove */ = {
+			isa = PBXGroup;
+			children = (
+				912ADBA08D8978182B0FB013 /* components/groove_components.c */,
+				8AE26297468B6D9B6D97DEFA /* controller.c */,
+				0C5E2FCA7AC84D0FF7D847BA /* datasource/groove_library_db.c */,
+				63FC8C5BB9D00E0D7A1D0E9A /* datasource/groove_songs_db.c */,
+				ED89282AB95A42E6871A5819 /* demo_phrases.h */,
+				A380D6D0FF657BB6DC0BDF4C /* dialogs/dlg_save_song.c */,
+				5AFD3ABE439665E45DDF59D9 /* dialogs/dlg_songs.c */,
+				AACA4FCFC17BC54CBAA36968 /* groove.h */,
+				ACE1BDA22AE52DE17F891F3E /* groove.orion */,
+				86BB2C0A00EDDA1CC016EB96 /* library.c */,
+				0B13544757BC77EA20BC0839 /* main.c */,
+				C294A2530578CA5BEC3264DE /* minimp3.h */,
+				2E4A03E0ED9A6013CF6483C7 /* minimp3_ex.h */,
+				51ADBB3D13BFDBCD18475ED7 /* mixer.c */,
+				AE529652FABF4FE3E860AE94 /* mp3_decode.c */,
+				A8AEF5EFCD9D0E866A24A9A5 /* persistence.c */,
+				92230866C54E47B8C56F1B05 /* sample_levels.h */,
+				848B3D9A34B5F3F6F9563069 /* synth.c */,
+				6CC6C751E2A5B6C4AD93F375 /* synth.h */,
+				3A24E77729D5848823A54E1F /* synth_samples.h */,
+				FB50EEC6F33D6F6A2569E35A /* third_party/tsf.h */,
+				3B850AD129CB979897A58A1E /* view_bin.c */,
+				6C2C37A91886518DBC915016 /* view_block_card.c */,
+				618BF41811F1A8A268A3DE69 /* view_main.c */,
+				237F3D3259238AD906DE3D8C /* view_sheet.c */,
+				74B79DE27D735D4243E4A432 /* view_song_preview.c */,
+				627CEE5B020A8CBB1A8494CC /* view_tracks.c */,
+				6EF168DD20CF7BB19D86AB8E /* view_transport.c */,
+				828741F0F9D39D80E83B68F3 /* waveform_cache.c */,
+			);
+			name = apps/groove;
+			sourceTree = "<group>";
+		};
+		BEAD8915881B60FC177E63AB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				19E20713A3C1289354BC2FAF /* groove.app */,
+				B8895C1E824857BCADA8D3A9 /* groove.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C787B08844F12D9C8CFB9AEF /* platform */ = {
+			isa = PBXGroup;
+			children = (
+				66CB061118F28C53E6A3CA1D /* audio/audio_backend.c */,
+				26C6756E4DA3E427F6CA87D5 /* audio/audio_backend.h */,
+				F50B37E4DE7CB258CC541564 /* audio/audio_wav.c */,
+				05CF19FC22E44D247F18AE28 /* events.h */,
+				62BC75FCD7A7C4B47BF7EF68 /* ios/ios_event.m */,
+				A1296836274E46026A01EE58 /* ios/ios_local.h */,
+				FF68E44959A235317FB17C80 /* ios/ios_system.m */,
+				520973BEDF020EA1CEDA5CD4 /* ios/ios_window.m */,
+				217C470CA8014076B00C5421 /* macos/macos_event.m */,
+				E9010BA12D957D17BC23B29E /* macos/macos_file_dialog.m */,
+				C3404D3E1BCA47FDEE53372A /* macos/macos_joystick.m */,
+				1033573296D5B9CC741B2506 /* macos/macos_keymap.h */,
+				295A56717F739B33F5562573 /* macos/macos_local.h */,
+				4E36769A6E1AA7255F56F17A /* macos/macos_menu.m */,
+				40EFB3B2E83DAE715A4590C8 /* macos/macos_system.m */,
+				1D27AACCCFC9728673A1DD43 /* macos/macos_window.m */,
+				F0810CEFEF76B73C3FB4F055 /* platform.h */,
+				CF3BEF278E68EA8FB0CD1D8C /* qnx/qnx_local.h */,
+				5051F6F98876009B148674E6 /* qnx/qnx_log.c */,
+				602519E38AA5D29666D365B6 /* qnx/qnx_main.c */,
+				D307D23BD598F5193C17F95E /* qnx/qnx_system.c */,
+				8AB4AB72ACD5DAE5538AB551 /* rc_server_impl.c */,
+				75C493C01105FC46BC87A080 /* unix/unix_joystick.c */,
+				738BDE02D721A11F63D8E05F /* unix/unix_log.c */,
+				2D861910078871F5EBED7514 /* unix/unix_net.c */,
+				D383B4A82EFA408B652AB62B /* unix/unix_rc.c */,
+				AF71F53B8E3A9F73AB702440 /* unix/unix_shared.c */,
+				849FFC7D493D4818A29362D7 /* unix/unix_thread.c */,
+				F31C99A2911593C5E5CBC68B /* wayland/wayland_egl.c */,
+				4D2C747344C6E4D0CD4C028A /* wayland/wayland_event.c */,
+				0BF2F1EAD70F202269C1C809 /* wayland/wayland_local.h */,
+				4595BAB4E5E7B15238A43CF3 /* wayland/wayland_system.c */,
+				B8F2676348F92570D4192E04 /* wayland/wayland_window.c */,
+				BA0A153CB40B50B53C38CBA2 /* wayland/xdg-shell-client.c */,
+				837AA5DB553BAA81728C13B3 /* wayland/xdg-shell-client.h */,
+				F32581378E13FB15C9E79397 /* webgl/webgl_event.c */,
+				2CC60D9CD1FFD2444622B588 /* webgl/webgl_joystick.c */,
+				6013DA7A422BD1C6D46EC765 /* webgl/webgl_local.h */,
+				216665E8D45C3D3292891F2A /* webgl/webgl_log.c */,
+				239F148D7AF2C839EAF29C23 /* webgl/webgl_net.c */,
+				B428C9BE5FD1175FB21F6635 /* webgl/webgl_system.c */,
+				0DFBA43202D078AC6C196B04 /* webgl/webgl_window.c */,
+				0700DF56F00A836F8CD89BD6 /* windows/windows_event.c */,
+				E072A7A69205A7DF4EFB64B5 /* windows/windows_joystick.c */,
+				33322330A24484C374CAA643 /* windows/windows_local.h */,
+				639CEB9B7335A720F38EC42D /* windows/windows_log.c */,
+				6AA8A5E2BD1BD312FD5C3BAD /* windows/windows_net.c */,
+				360286CB73C4016A70F2F07C /* windows/windows_rc.c */,
+				6AF8FFF5BA5E9E55DC2A9BFA /* windows/windows_shared.c */,
+				D75AABEFADBF67885DEC7BDB /* windows/windows_system.c */,
+				CF27BA606DA7EFA59519539C /* windows/windows_thread.c */,
+				07C1E267179485CD9644ABDB /* windows/windows_window.c */,
+				56D2DD62A0EA6C66E3BB2868 /* x11/x11_egl.c */,
+				930E8A370B7DCB4EE8D95BD5 /* x11/x11_event.c */,
+				0863529696211A771082327E /* x11/x11_local.h */,
+				D0FD32889E90EFAC28B8566B /* x11/x11_system.c */,
+				2979753B4C397754252FBF27 /* x11/x11_window.c */,
+			);
+			name = platform;
+			sourceTree = "<group>";
+		};
+		F29CCC9BA46545A9461BEF25 /* orion */ = {
+			isa = PBXGroup;
+			children = (
+				6882A33D7BC1A2A55D819CBD /* commctl/activitybar.c */,
+				C407B02C49D69026B62F5899 /* commctl/appchrome.c */,
+				8AEE5E6E1261FAD5A0E06F0C /* commctl/appchrome.h */,
+				2DF4D16DB4BB6BFBABBAB2DB /* commctl/button.c */,
+				A69BB9D0FBEE7D526F277542 /* commctl/card.c */,
+				5418EBD89B82B11491F8B17F /* commctl/checkbox.c */,
+				C2C452908179A9E5032727E2 /* commctl/columnbrowser.c */,
+				55B4EB243F575800EF9482EB /* commctl/columnview.c */,
+				1147B50CF7A03F3669CE6D7D /* commctl/columnview.h */,
+				FB35FDFA08F1E20D81BA7DAD /* commctl/columnview_internal.h */,
+				50728DFF40402483A6B61A3C /* commctl/combobox.c */,
+				7FC9278C18E511C5B5DDF73E /* commctl/commctl.h */,
+				4D31916CC1A0905230B833B5 /* commctl/control_size.c */,
+				9A87ADC96577023FF7A55B39 /* commctl/edit.c */,
+				20F749DB662A3BC301B8B5CA /* commctl/filelist.c */,
+				39A12307D5743B6F3D705EEA /* commctl/filelist.h */,
+				F9C4D59539BC76FBB3BD095C /* commctl/gradient.c */,
+				03E10B30A7A47EA5540086DA /* commctl/icon.c */,
+				35521F6FC0FCB771BBCF81B0 /* commctl/icongrid.c */,
+				BC6BECCED6901AE9FA406B27 /* commctl/iconview.c */,
+				0A2201CCFD2BB2763233584F /* commctl/image.c */,
+				620398EB54D1722FBC43D084 /* commctl/init.c */,
+				BEFE221C5E56763576B4A404 /* commctl/label.c */,
+				D2C52C3E7CC13A47B1FD5264 /* commctl/layout_flow.c */,
+				FBF75B8CBA680F744F1E7E05 /* commctl/layout_grid.c */,
+				A340BB1858AE25B7967FEFBC /* commctl/layout_shared.h */,
+				186BDA16D9898BDEEB83D42C /* commctl/layout_stack.c */,
+				74903AA8D16D5A7B54843C0E /* commctl/layout_tilegrid.c */,
+				137AEA85A698DDEB1215743C /* commctl/list.c */,
+				9B016F383DED6A0CC98DDA80 /* commctl/menubar.c */,
+				4B1A1DF9780731F9E9AA7AFD /* commctl/menubar.h */,
+				DFA21807A7615240017C161A /* commctl/multiedit.c */,
+				4676ADA4840BB1A2EADC0911 /* commctl/popup_item.h */,
+				6B31DA0187A245FDFD9B9F57 /* commctl/reportview.c */,
+				1880445D3B96D48D19229211 /* commctl/scrollbar.c */,
+				F78290273A59821C5FF9D2B9 /* commctl/segmented.c */,
+				4C120D3B19CDE8D3BB2E118F /* commctl/separator.c */,
+				DE6DFAD98EAD417ECA2F1682 /* commctl/slider.c */,
+				A11E8E23D1306B6E461042AA /* commctl/splitter.c */,
+				9D17FC3ADAF28FDE559843FF /* commctl/splitview.c */,
+				FEA399A9B9376D6E61ABF19B /* commctl/sprite.c */,
+				74AF1CCBC89E435EB02379C0 /* commctl/tableview.c */,
+				6DA16690D65079941F033290 /* commctl/tabview.c */,
+				09EF961A197B1480DB38F67A /* commctl/tray.c */,
+				51F175BD17ED0431881FE65E /* commdlg/commdlg.h */,
+				ACDDBF32E4925C0B0A201CDD /* commdlg/dialog.c */,
+				02072953FD1544803C710C49 /* commdlg/filepicker.c */,
+				BEDD9BD7649180F5BB1F8C36 /* commdlg/filepicker.h */,
+				130BBDDB4474F9426442CB1F /* commdlg/msgbox.c */,
+				AB02B5C83C3CACD658D4C7DE /* commdlg/msgbox.h */,
+				A6BC174DDB5ED4E929505237 /* commdlg/splash.c */,
+				7D80C74B7BF8B254CCC5070A /* commdlg/splash.h */,
+				D822D9CB688736005C27F2B1 /* gem.h */,
+				5D55215C5E3425EEC0B3150F /* kernel/fmat16.h */,
+				E51FB2E4C5D5B9E5CE222FCC /* kernel/http.h */,
+				E2003630646904E40E0A042A /* kernel/joystick.c */,
+				F99A1C24D24BD0CB953166E4 /* kernel/joystick.h */,
+				D9DA0279DA3C2C7A4577DCD6 /* kernel/kernel.h */,
+				53DAC69C5399BDB718C6DA2D /* kernel/renderer.c */,
+				7C83EFBF4C839650597689C5 /* kernel/renderer.h */,
+				6B6124E0A30EF03EC2025557 /* kernel/renderer_impl.c */,
+				D284D689D85BFE8E70DE4D6D /* ui.h */,
+				8BDB0D9795658233AEA9F9CB /* user/accel.c */,
+				AB81634B622C636F7767400E /* user/accel.h */,
+				35F128A43239AE5181F3DDE1 /* user/ansi.c */,
+				F5D7EA845A71A40030B385E2 /* user/ansi.h */,
+				7D350BE7D7E512AC58C1AA14 /* user/bmp_icon_loader.c */,
+				44814BACB2737E3A090FC239 /* user/bmp_icon_loader.h */,
+				E9C9EA21F6FE4303430ABA18 /* user/color.h */,
+				FFCD43F38BCE037B630B3150 /* user/config.h */,
+				9B9F137826F2EBDE51AC8D26 /* user/console.c */,
+				EB71A2A73B51032F8206C6F8 /* user/database.c */,
+				2C181E6E8CA9FEAC432C3D8B /* user/database.h */,
+				5BFDD59D97013A91217E3153 /* user/db_schema_xml.c */,
+				C26E83A4E07C108367E3E122 /* user/db_simple_xml.h */,
+				522CC6930F2502C3D6B57840 /* user/dialog.c */,
+				95E00D556F19A0DF5E6084F3 /* user/dock.c */,
+				5CDCE170D077C9B1D856DD74 /* user/dock.h */,
+				9EAF81FBA93302BD4F2DAB90 /* user/draw.h */,
+				6DC1DDA9EEDBD6B565A662E5 /* user/draw_impl.c */,
+				E8E17FF4DE69902573605D9A /* user/enum_parse.h */,
+				88CED03DD0A80CC21389E886 /* user/event.c */,
+				8CABA128B6BFBBD58547AD29 /* user/font_cache.c */,
+				470EFD63B39D58A386AFC1AA /* user/font_cache.h */,
+				4CB1B1FE85423B6E3B6313E5 /* user/font_sdf.c */,
+				EE0697BC78AF41800892ADE4 /* user/font_sdf.h */,
+				E8AE3E91B86B2C62070F8C21 /* user/gdi.c */,
+				CC78FE29F57D540C4A834404 /* user/gdi.h */,
+				1DFC09F664884B6B2648DC63 /* user/gl_compat.h */,
+				24044DBC0A10517B647B84CE /* user/http.c */,
+				8DBEE7ABECD3BC971AA3BAF8 /* user/i18n.c */,
+				6279957F42266995941E5350 /* user/i18n.h */,
+				60A6BD689D78E3F545137517 /* user/image.c */,
+				0676D42D76D001D80541B5E3 /* user/image.h */,
+				3CA669163FE999FEA350CA8A /* user/init.c */,
+				B80B8BC1C2CECB5AF717E841 /* user/layout_api.c */,
+				7FD87BDD5F2377443CC155C2 /* user/message.c */,
+				23944879ECF8A6B86482D023 /* user/messages.h */,
+				2BFB217C07DD95E5B9912FC7 /* user/page.c */,
+				7EBEA3419041ECECB40F17BB /* user/page.h */,
+				4775D1C95F46016062C31F78 /* user/page_host.c */,
+				6FFE01A60BB3077048DC2D43 /* user/page_host.h */,
+				D1FC1F1C1852862D44ED8E35 /* user/paint.c */,
+				38267A95DFB2C4D2538C35E0 /* user/palette_file.h */,
+				F36CA81344E0B8D7A1A8D4C4 /* user/rect.h */,
+				A903468E524654B634214A35 /* user/registry.c */,
+				38C59619C52BC1E8F0C72EFE /* user/remote.c */,
+				CB16D7AAEF91626610EDB3AA /* user/scrollbar.c */,
+				DFDCBE80B2AE7F4DEECB89B8 /* user/scrollbar.h */,
+				08719EA2E7A4C50CF95B7439 /* user/stb_image.h */,
+				69769B0876B737E626485947 /* user/stb_image_write.h */,
+				73099FE597D8B324B4A9428F /* user/surface.c */,
+				82B6436ACCA6BA1FC62DD0E3 /* user/svg_icon_loader.c */,
+				30BA95CE0F3261A9217382C5 /* user/svg_icon_loader.h */,
+				293256AA00B1FB9C492C9FDB /* user/text.c */,
+				A5C8EC8352CCD9FF31982180 /* user/text.h */,
+				F459AE59AE2CFEC11B003AE1 /* user/theme.c */,
+				D5413BB545E2DF6EA4213A26 /* user/theme.h */,
+				24EBCBC2665E0877E652C8D3 /* user/theme_classic.c */,
+				0633E8A50D6922A406BB4C48 /* user/theme_modern.c */,
+				B6298FBA2E324A0CD431737A /* user/theme_palette_dark.h */,
+				8D9E071349CC061E3C2A9D8E /* user/theme_palette_light.h */,
+				8E2E70B52C0D1FDC7012ECD8 /* user/theme_palette_navy.h */,
+				9393AAFA7E167255747CD62C /* user/toolbar.c */,
+				91BD8C5C43D3ADF5801DFA11 /* user/toolbar.h */,
+				98989DB6652C77BD71A6E765 /* user/tooltip.c */,
+				827C7CB9D6826E913AF317D9 /* user/tray.c */,
+				0D60B3EE5493666F04C573B3 /* user/user.h */,
+				5A27698268504E462BF8D8D2 /* user/vga_font.c */,
+				88749BB0505F31807FF538E8 /* user/vga_font.h */,
+				DD24ABCA6A45EA13E9753C79 /* user/vga_text.c */,
+				C8EF24D1A1ED682D124C9BFC /* user/vga_text.h */,
+				5F181FEFC36FA8B94AEF1733 /* user/view.c */,
+				801C61DDFA2D8166A7664F27 /* user/window.c */,
+				D637FEC2603587B554730520 /* user/zip.c */,
+				155319C93D093C522915463E /* user/zip.h */,
+			);
+			name = orion;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		49855EFF9AB8BD0D010F8335 /* groove-macos */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5365AE4A7C261CF60BD1BC20 /* Build configuration list for PBXNativeTarget "groove-macos" */;
+			buildPhases = (
+				CF7AB7229AFF63CA1DD36A9B /* Prepare Orion sources and forms */,
+				352DC67FC91E8B656D15E805 /* Sources */,
+				D55723F9321E0BBA611435AA /* Resources */,
+				826DC0AED76CBDA0CB72A068 /* Bundle Orion resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "groove-macos";
+			productName = groove;
+			productReference = 19E20713A3C1289354BC2FAF /* groove.app */;
+			productType = "com.apple.product-type.application";
+		};
+		94DDD516F63F9990A7927E69 /* groove-ipad */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4E40E8A910B9BC71F50362C8 /* Build configuration list for PBXNativeTarget "groove-ipad" */;
+			buildPhases = (
+				4E46F7B1B0DE6B87A9FE094B /* Prepare Orion sources and forms */,
+				CBD0805A39FF8AC6A4E1D68C /* Sources */,
+				59964872DF048002767C1F7F /* Resources */,
+				332B1557BCECA383303F7D73 /* Bundle Orion resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "groove-ipad";
+			productName = groove;
+			productReference = B8895C1E824857BCADA8D3A9 /* groove.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		244210E48437B6556980A702 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+			};
+			buildConfigurationList = 1E4B6209DBC7689E3E7CF89C /* Build configuration list for PBXProject "groove" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 664F835B1ED89846DAB355B5;
+			productRefGroup = BEAD8915881B60FC177E63AB /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				49855EFF9AB8BD0D010F8335 /* groove-macos */,
+				94DDD516F63F9990A7927E69 /* groove-ipad */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		59964872DF048002767C1F7F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F9EC25448562F064542B16CE /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D55723F9321E0BBA611435AA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				51DC8E05C5D2821B45E883F5 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		332B1557BCECA383303F7D73 /* Bundle Orion resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle Orion resources";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\n/usr/bin/python3 \"$ORION_ROOT/tools/xcode/build.py\" resources\n";
+		};
+		4E46F7B1B0DE6B87A9FE094B /* Prepare Orion sources and forms */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(ORION_ROOT)/tools/orionc.c",
+				"$(ORION_ROOT)/apps/groove/groove.orion",
+				"$(ORION_ROOT)/apps/groove/share/icon.png",
+			);
+			name = "Prepare Orion sources and forms";
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h",
+				"$(DERIVED_FILE_DIR)/Assets.xcassets",
+				"$(DERIVED_FILE_DIR)/user.c",
+				"$(DERIVED_FILE_DIR)/kernel.c",
+				"$(DERIVED_FILE_DIR)/commctl.c",
+				"$(DERIVED_FILE_DIR)/app.c",
+				"$(DERIVED_FILE_DIR)/ipad.m",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\n/usr/bin/python3 \"$ORION_ROOT/tools/xcode/build.py\" forms\n";
+		};
+		826DC0AED76CBDA0CB72A068 /* Bundle Orion resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle Orion resources";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\n/usr/bin/python3 \"$ORION_ROOT/tools/xcode/build.py\" resources\n";
+		};
+		CF7AB7229AFF63CA1DD36A9B /* Prepare Orion sources and forms */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(ORION_ROOT)/tools/orionc.c",
+				"$(ORION_ROOT)/apps/groove/groove.orion",
+				"$(ORION_ROOT)/apps/groove/share/icon.png",
+			);
+			name = "Prepare Orion sources and forms";
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h",
+				"$(DERIVED_FILE_DIR)/Assets.xcassets",
+				"$(DERIVED_FILE_DIR)/user.c",
+				"$(DERIVED_FILE_DIR)/kernel.c",
+				"$(DERIVED_FILE_DIR)/commctl.c",
+				"$(DERIVED_FILE_DIR)/app.c",
+				"$(DERIVED_FILE_DIR)/macos.m",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\n/usr/bin/python3 \"$ORION_ROOT/tools/xcode/build.py\" forms\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		352DC67FC91E8B656D15E805 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8DD7705BC9B2A3D7396A7604 /* user.c in Sources */,
+				F5E93593A037E2417DB8606C /* kernel.c in Sources */,
+				F80B00E77FC46412A68114BF /* commctl.c in Sources */,
+				C725C87AFFE8763DB0FABFC4 /* app.c in Sources */,
+				F570DCEC7063DDD501230CFA /* macos.m in Sources */,
+				0B53C8B936005C16E10A35B7 /* ../../orion/commdlg/dialog.c in Sources */,
+				684F8AA2C3BD0782AC47EC60 /* ../../orion/commdlg/filepicker.c in Sources */,
+				A2B4F01E60553FA509352A0A /* ../../orion/commdlg/msgbox.c in Sources */,
+				73A721D9BAD3A3DCCF37ABB6 /* ../../orion/commdlg/splash.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBD0805A39FF8AC6A4E1D68C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				102CF1E80B1C1C5A85D112AA /* user.c in Sources */,
+				2FBA9091FF45BB2F27C4C8BF /* kernel.c in Sources */,
+				0A5EAE38F0918F48D6A7C9E0 /* commctl.c in Sources */,
+				280656E0F09F745E1247E747 /* app.c in Sources */,
+				83B1B51E24878699D0B16332 /* ipad.m in Sources */,
+				06D75DD09B20B37159513128 /* ../../orion/commdlg/dialog.c in Sources */,
+				E85D7319069843C4C9E16B7F /* ../../orion/commdlg/filepicker.c in Sources */,
+				C1260B361826813547BD5A83 /* ../../orion/commdlg/msgbox.c in Sources */,
+				33A4615E4243B100EA44AFD2 /* ../../orion/commdlg/splash.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		09AA38CEF3EA53936A20C858 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_ARC = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = c11;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"ORION_ALLOW_HIGHDPI=1",
+					GL_SILENCE_DEPRECATION,
+					STBTT_STATIC,
+					HAVE_WINDOWING,
+					"SHAREDIR=\"../share/groove\"",
+				);
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_INHIBIT_ALL_WARNINGS = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(DERIVED_FILE_DIR)/include",
+					"$(ORION_ROOT)",
+					"$(ORION_ROOT)/apps/groove",
+					"$(ORION_ROOT)/components",
+					"$(SDKROOT)/usr/include/libxml2",
+				);
+				MARKETING_VERSION = 1.0;
+				ONLY_ACTIVE_ARCH = YES;
+				ORION_ROOT = "$(SRCROOT)/../..";
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-Wall",
+					"-Wextra",
+					"-Wno-unused-parameter",
+					"-Wno-unused-function",
+					"-Wno-missing-field-initializers",
+					"-Wno-deprecated-declarations",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.orion.groove;
+				PRODUCT_NAME = groove;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		2C51B24F1BD0E37CCD3A85CD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_ARC = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = c11;
+				GCC_OPTIMIZATION_LEVEL = s;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"ORION_ALLOW_HIGHDPI=1",
+					GL_SILENCE_DEPRECATION,
+					STBTT_STATIC,
+					HAVE_WINDOWING,
+					"SHAREDIR=\"../share/groove\"",
+				);
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_INHIBIT_ALL_WARNINGS = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(DERIVED_FILE_DIR)/include",
+					"$(ORION_ROOT)",
+					"$(ORION_ROOT)/apps/groove",
+					"$(ORION_ROOT)/components",
+					"$(SDKROOT)/usr/include/libxml2",
+				);
+				MARKETING_VERSION = 1.0;
+				ONLY_ACTIVE_ARCH = NO;
+				ORION_ROOT = "$(SRCROOT)/../..";
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-Wall",
+					"-Wextra",
+					"-Wno-unused-parameter",
+					"-Wno-unused-function",
+					"-Wno-missing-field-initializers",
+					"-Wno-deprecated-declarations",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.orion.groove;
+				PRODUCT_NAME = groove;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		77433336E0FB714CBFDEEB41 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = BM2R8F5YHC;
+				GCC_OPTIMIZATION_LEVEL = s;
+				INFOPLIST_FILE = "$(PROJECT_FILE_PATH)/Generated/ipad-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lxml2",
+					"-lm",
+					"-framework",
+					UIKit,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					Foundation,
+					"-framework",
+					OpenGLES,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					Security,
+					"-framework",
+					UniformTypeIdentifiers,
+					"-framework",
+					AudioToolbox,
+				);
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = 2;
+			};
+			name = Release;
+		};
+		8DA105EA2DF0CD7AB348891C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "$(PROJECT_FILE_PATH)/Generated/macos.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = BM2R8F5YHC;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GCC_OPTIMIZATION_LEVEL = s;
+				INFOPLIST_FILE = "$(PROJECT_FILE_PATH)/Generated/macos-Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lxml2",
+					"-lm",
+					"-framework",
+					AppKit,
+					"-framework",
+					Cocoa,
+					"-framework",
+					OpenGL,
+					"-framework",
+					IOSurface,
+					"-framework",
+					Security,
+					"-framework",
+					CoreFoundation,
+					"-framework",
+					AudioToolbox,
+				);
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SUPPORTED_PLATFORMS = macosx;
+			};
+			name = Release;
+		};
+		98D3065E6E0C71346686088B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = BM2R8F5YHC;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INFOPLIST_FILE = "$(PROJECT_FILE_PATH)/Generated/ipad-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lxml2",
+					"-lm",
+					"-framework",
+					UIKit,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					Foundation,
+					"-framework",
+					OpenGLES,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					Security,
+					"-framework",
+					UniformTypeIdentifiers,
+					"-framework",
+					AudioToolbox,
+				);
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = 2;
+			};
+			name = Debug;
+		};
+		E24A74F719BBAF7988950630 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "$(PROJECT_FILE_PATH)/Generated/macos.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = BM2R8F5YHC;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				INFOPLIST_FILE = "$(PROJECT_FILE_PATH)/Generated/macos-Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lxml2",
+					"-lm",
+					"-framework",
+					AppKit,
+					"-framework",
+					Cocoa,
+					"-framework",
+					OpenGL,
+					"-framework",
+					IOSurface,
+					"-framework",
+					Security,
+					"-framework",
+					CoreFoundation,
+					"-framework",
+					AudioToolbox,
+				);
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SUPPORTED_PLATFORMS = macosx;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1E4B6209DBC7689E3E7CF89C /* Build configuration list for PBXProject "groove" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				09AA38CEF3EA53936A20C858 /* Debug */,
+				2C51B24F1BD0E37CCD3A85CD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4E40E8A910B9BC71F50362C8 /* Build configuration list for PBXNativeTarget "groove-ipad" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				98D3065E6E0C71346686088B /* Debug */,
+				77433336E0FB714CBFDEEB41 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5365AE4A7C261CF60BD1BC20 /* Build configuration list for PBXNativeTarget "groove-macos" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E24A74F719BBAF7988950630 /* Debug */,
+				8DA105EA2DF0CD7AB348891C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 244210E48437B6556980A702 /* Project object */;
 }
