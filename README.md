@@ -17,6 +17,35 @@ The framework includes:
 - Native macOS, Linux, and Windows support
 - JPEG screenshot capture for documentation and automated presentation
 
+## Ledger, built with Orion
+
+[Ledger](apps/ledger/README.md) is double-entry bookkeeping in a 1.7 MB
+download: configurations for Russia and Germany (2003 and 2026), documents
+posted by each type's rules, payroll, month-end closing, reports and print
+forms, and import from 1C. Its rules are data and Lua, and add-ons are a `.orion`
+form plus a Lua script, so it is extended without C.
+
+![A Lua add-on over Ledger's document journal: penalties on overdue receivables, calculated and ready to post](docs/screenshots/ledger_addon_penalties.jpg)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/ledger/img/ru/document.png" alt="A sales document with its lines, tax and totals"></td>
+    <td width="50%"><img src="docs/ledger/img/ru/reports.png" alt="The trial balance among Ledger's reports"></td>
+  </tr>
+  <tr>
+    <td>A document: lines, tax and totals, posted on OK</td>
+    <td>Reports: trial balance, account card, analysis, VAT books</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/ledger/img/de/print-rechnung.png" alt="A German invoice printed from the de configuration"></td>
+    <td width="50%"><img src="docs/ledger/img/ru/payroll.png" alt="A payroll document with tax and contributions per employee"></td>
+  </tr>
+  <tr>
+    <td>Print forms from HTML templates: a Rechnung under § 14 UStG</td>
+    <td>Payroll: tax and contributions computed per employee</td>
+  </tr>
+</table>
+
 ## Quick Start
 
 ```bash
@@ -141,6 +170,7 @@ See [Database Forms](docs/database-forms.md) and
 
 The bundled apps are usable programs and architectural references:
 
+- **Ledger**: bookkeeping with configurations, posting rules, reports, print forms, and Lua add-ons
 - **Form Editor**: declarative UI authoring, plugins, inspectors, and live views
 - **Image Editor**: MDI, canvas rendering, tools, layers, palettes, and animation
 - **Git Client**: tabs, report views, staging, history, GitHub data, and diffs
