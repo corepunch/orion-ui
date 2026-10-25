@@ -1,0 +1,534 @@
+// A page: an add-on's form and the Lua table that drives it. The host asks
+// the page for data() and shows it, runs a button's action= as a method of
+// the page with the typed values of the form's inputs, then asks again.
+
+#include "script.h"
+#include "script_internal.h"
+
+#include <ctype.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
+#include <orion/commctl/commctl.h>
+#include <orion/commctl/form_loader.h>
+#include <orion/commdlg/msgbox.h>
+#include <orion/user/i18n.h>
+#include <platform/platform.h>
+
+#define SCRIPT_MAX_DATABASES 8
+
+struct script_page_s {
+  char stem[1024], dir[1024], name[128];
+  form_library_t *lib;
+  const form_def_t *form;
+  database_t *dbs[SCRIPT_MAX_DATABASES];
+  int db_count;
+  lua_State *L;
+  int page_ref;
+  window_t *win;
+  bool modal, owns_window, closing;
+  int result;
+  char title[256];
+  char message[1024];
+};
+
+static void page_log(const script_page_t *page, const char *what, const char *detail) {
+  fprintf(stderr, "[script] %s: %s%s%s\n", page->name, what, detail && *detail ? ": " : "", detail ? detail : "");
+  fflush(stderr);
+}
+
+static bool file_exists(const char *path) {
+  FILE *f = fopen(path, "rb");
+  if (f) fclose(f);
+  return f != NULL;
+}
+
+static const char *control_attr(const script_page_t *page, uint32_t id, const char *attr) {
+  return form_library_control_attr(page->lib, page->form, id, attr);
+}
+
+static bool class_is(const form_ctrl_def_t *d, const char *klass) { return d && !strcasecmp(d->class_name, klass); }
+static bool is_text_input(const form_ctrl_def_t *d) {
+  return class_is(d, "TextBox") || class_is(d, "TextEdit") || class_is(d, "MultiEdit");
+}
+
+// ── Values on the form ──────────────────────────────────────────────────────
+
+// type="integer|number|date" on an input says how its text converts;
+// decimals="N" how a number shows.
+static void format_value(const script_page_t *page, uint32_t id, lua_State *L, int idx, char *buf, size_t sz) {
+  const char *type = control_attr(page, id, "type"), *decimals = control_attr(page, id, "decimals");
+  if (lua_isnil(L, idx)) { buf[0] = 0; return; }
+  if (lua_type(L, idx) == LUA_TNUMBER) {
+    if (type && !strcmp(type, "integer")) { snprintf(buf, sz, "%lld", (long long)llround(lua_tonumber(L, idx))); return; }
+    if (lua_isinteger(L, idx) && !decimals && !(type && !strcmp(type, "number"))) { snprintf(buf, sz, "%lld", (long long)lua_tointeger(L, idx)); return; }
+    ui_format_number(lua_tonumber(L, idx), decimals ? atoi(decimals) : 2, buf, sz);
+    return;
+  }
+  const char *s = luaL_tolstring(L, idx, NULL);
+  if (type && !strcmp(type, "date")) ui_format_date(s, buf, sz);
+  else snprintf(buf, sz, "%s", s);
+  lua_pop(L, 1);
+}
+
+static void set_value(script_page_t *page, const form_ctrl_def_t *d, window_t *ctrl, lua_State *L, int idx) {
+  if (class_is(d, "CheckBox")) { send_message(ctrl, btnSetCheck, lua_toboolean(L, idx), NULL); return; }
+  if (class_is(d, "ComboBox") && d->lparam) {
+    send_message(ctrl, cbSetCurrentValue, (uint32_t)(lua_isinteger(L, idx) ? lua_tointeger(L, idx) : 0), NULL);
+    return;
+  }
+  if (class_is(d, "ComboBox")) {
+    send_message(ctrl, cbSetCurrentSelection, (uint32_t)(lua_isinteger(L, idx) ? lua_tointeger(L, idx) - 1 : -1), NULL);
+    return;
+  }
+  char text[1024];
+  format_value(page, d->id, L, idx, text, sizeof(text));
+  if (is_text_input(d)) send_message(ctrl, edSetText, 0, text);
+  else set_window_title(ctrl, text);
+}
+
+static database_t *page_database(const script_page_t *page, const char *name) {
+  for (int i = 0; i < page->db_count; i++)
+    if (!strcmp(page->dbs[i]->name, name)) return page->dbs[i];
+  return NULL;
+}
+
+static database_t *registered_database(const char *name) {
+  database_t *db = NULL;
+  for (int i = 0; (db = get_database_at(i)) != NULL; i++)
+    if (!strcmp(db->name, name)) return db;
+  return NULL;
+}
+
+// "db.table" of a control's source=, split; false without one.
+static bool source_parts(const form_ctrl_def_t *d, char *db_name, size_t db_sz, char *table, size_t table_sz) {
+  const char *dot = d && d->source ? strchr(d->source, '.') : NULL;
+  if (!dot) return false;
+  snprintf(db_name, db_sz, "%.*s", (int)(dot - d->source), d->source);
+  snprintf(table, table_sz, "%s", dot + 1);
+  return true;
+}
+
+static void clear_table(database_t *db, const db_table_schema_t *t) {
+  int key = 0;
+  for (int i = 0; i < t->field_count; i++) if (t->fields[i].primary_key) key = i;
+  for (;;) {
+    result_node_t *list = (result_node_t *)send_db_message(db, dbFetch, MAKEDWORD(t->table_id, 0), NULL);
+    if (!list) return;
+    int count = 0;
+    for (result_node_t *node = list; node; node = (result_node_t *)node->next) count++;
+    int *ids = malloc((size_t)count * sizeof(*ids));
+    if (!ids) { free_result_list(list); return; }
+    int n = 0;
+    for (result_node_t *node = list; node; node = (result_node_t *)node->next)
+      ids[n++] = *(const int *)((const char *)*(void **)node->data + t->meta[key].offset);
+    free_result_list(list);
+    for (int i = 0; i < n; i++) send_db_message(db, dbDelete, (uint32_t)t->table_id, (void *)(intptr_t)ids[i]);
+    free(ids);
+  }
+}
+
+// lists = {name = rows}: a TableView over one of the add-on's own tables
+// shows exactly these rows.
+static void fill_list(script_page_t *page, const form_ctrl_def_t *d, window_t *ctrl, lua_State *L, int idx) {
+  char db_name[64], table[128];
+  if (!class_is(d, "TableView") || !source_parts(d, db_name, sizeof(db_name), table, sizeof(table)))
+    luaL_error(L, "lists.%s: not a TableView with source=\"db.table\"", d->name);
+  database_t *db = page_database(page, db_name);
+  if (!db) luaL_error(L, "lists.%s: '%s' is not one of the add-on's own databases", d->name, db_name);
+  const db_table_schema_t *t = db_schema_table_named(db->schema, table);
+  if (!t) luaL_error(L, "lists.%s: no table '%s'", d->name, table);
+  luaL_checktype(L, idx, LUA_TTABLE);
+  clear_table(db, t);
+  // The record buffer is a userdata, so a Lua error below cannot leak it.
+  void *buf = lua_newuserdatauv(L, t->record_size, 0);
+  char msg[256];
+  for (lua_Integer i = 1, count = (lua_Integer)luaL_len(L, idx); i <= count; i++) {
+    lua_geti(L, idx, i);
+    memset(buf, 0, t->record_size);
+    send_db_message(db, dbInitRecord, (uint32_t)t->table_id, buf);
+    if (!script_read_record(L, -1, t, buf, msg, sizeof(msg))) luaL_error(L, "lists.%s, row %d: %s", d->name, (int)i, msg);
+    lua_pop(L, 1);
+    send_db_message(db, dbInsert, (uint32_t)t->table_id, buf);
+  }
+  lua_pop(L, 1);
+  send_message(ctrl, tvRefresh, 0, NULL);
+}
+
+static void each_named(script_page_t *page, lua_State *L, int idx, const char *what,
+                       void (*apply)(script_page_t *, const form_ctrl_def_t *, window_t *, lua_State *, int)) {
+  lua_getfield(L, idx, what);
+  if (lua_istable(L, -1)) {
+    lua_pushnil(L);
+    while (lua_next(L, -2)) {
+      const char *name = lua_type(L, -2) == LUA_TSTRING ? lua_tostring(L, -2) : NULL;
+      uint32_t id = name ? form_library_control_id(page->lib, page->form, name) : 0;
+      window_t *ctrl = id && page->win ? get_window_item(page->win, id) : NULL;
+      if (!ctrl) luaL_error(L, "%s.%s: the form has no control named '%s'", what, name ? name : "?", name ? name : "?");
+      apply(page, form_library_control(page->lib, page->form, id), ctrl, L, lua_gettop(L));
+      lua_pop(L, 1);
+    }
+  }
+  lua_pop(L, 1);
+}
+
+static void apply_hidden(script_page_t *page, const form_ctrl_def_t *d, window_t *ctrl, lua_State *L, int idx) {
+  (void)page; (void)d;
+  show_window(ctrl, !lua_toboolean(L, idx));
+}
+static void apply_disabled(script_page_t *page, const form_ctrl_def_t *d, window_t *ctrl, lua_State *L, int idx) {
+  (void)page; (void)d;
+  enable_window(ctrl, !lua_toboolean(L, idx));
+}
+
+// Runs inside script_call: (page) -> applies page:data().
+static int render_data(lua_State *L) {
+  script_page_t *page = (script_page_t *)lua_touserdata(L, lua_upvalueindex(1));
+  lua_getfield(L, 1, "data");
+  if (!lua_isfunction(L, -1)) return 0;
+  lua_pushvalue(L, 1);
+  lua_call(L, 1, 1);
+  if (lua_isnil(L, -1)) return 0;
+  luaL_checktype(L, -1, LUA_TTABLE);
+  int data = lua_gettop(L);
+  each_named(page, L, data, "values", set_value);
+  each_named(page, L, data, "lists", fill_list);
+  each_named(page, L, data, "hidden", apply_hidden);
+  each_named(page, L, data, "disabled", apply_disabled);
+  lua_getfield(L, data, "title");
+  if (lua_isstring(L, -1)) set_window_title(page->win, lua_tostring(L, -1));
+  return 0;
+}
+
+// A control named "error" shows the message in place; otherwise a modal page
+// shows a message box.
+static window_t *error_label(const script_page_t *page) {
+  uint32_t id = page->win ? form_library_control_id(page->lib, page->form, "error") : 0;
+  return id ? get_window_item(page->win, id) : NULL;
+}
+
+static void show_message(script_page_t *page) {
+  window_t *label = error_label(page);
+  if (label) set_window_title(label, page->message);
+  if (!page->message[0] || !page->win) return;
+  if (!label && page->modal) {
+    message_box(page->win, page->message, script_page_title(page), MB_OK);
+  }
+}
+
+static void render(script_page_t *page) {
+  if (!page->win) return;
+  lua_State *L = page->L;
+  lua_pushlightuserdata(L, page);
+  lua_pushcclosure(L, render_data, 1);
+  lua_rawgeti(L, LUA_REGISTRYINDEX, page->page_ref);
+  char msg[1024];
+  bool refused = false;
+  if (!script_call(L, 1, 0, msg, sizeof(msg), &refused)) {
+    if (refused) snprintf(page->message, sizeof(page->message), "%s", msg);
+    else {
+      page_log(page, "data() failed", msg);
+      snprintf(page->message, sizeof(page->message), ui_tr("The add-on stopped with an error: %s"), strtok(msg, "\n"));
+    }
+    show_message(page);
+  }
+  window_layout_sync(page->win);
+  invalidate_window(page->win);
+}
+
+// ── Inputs ──────────────────────────────────────────────────────────────────
+
+static void push_input(script_page_t *page, const form_ctrl_def_t *d, window_t *ctrl) {
+  lua_State *L = page->L;
+  if (class_is(d, "CheckBox")) { lua_pushboolean(L, send_message(ctrl, btnGetCheck, 0, NULL) != 0); return; }
+  if (class_is(d, "ComboBox") && d->lparam) {
+    int value = (int)send_message(ctrl, cbGetCurrentValue, 0, NULL);
+    if (value) lua_pushinteger(L, value); else lua_pushnil(L);
+    return;
+  }
+  if (class_is(d, "ComboBox")) {
+    int index = (int)send_message(ctrl, cbGetCurrentSelection, 0, NULL);
+    if (index >= 0) lua_pushinteger(L, index + 1); else lua_pushnil(L);
+    return;
+  }
+  if (class_is(d, "TableView")) {
+    // The selected row, or nil.
+    const void *record = (const void *)(intptr_t)send_message(ctrl, tvGetSelectedRecord, 0, NULL);
+    char db_name[64], table[128];
+    database_t *db = source_parts(d, db_name, sizeof(db_name), table, sizeof(table)) ? registered_database(db_name) : NULL;
+    const db_table_schema_t *t = record && db && db->schema ? db_schema_table_named(db->schema, table) : NULL;
+    if (t) script_push_record(L, t, record); else lua_pushnil(L);
+    return;
+  }
+  char text[1024] = {0};
+  send_message(ctrl, edGetText, sizeof(text), text);
+  const char *type = control_attr(page, d->id, "type");
+  const char *s = text;
+  while (isspace((unsigned char)*s)) s++;
+  if (type && (!strcmp(type, "integer") || !strcmp(type, "number"))) {
+    if (!*s) { lua_pushnil(L); return; }
+    double v = ui_parse_number(s);
+    if (!strcmp(type, "integer")) lua_pushinteger(L, (lua_Integer)llround(v)); else lua_pushnumber(L, v);
+    return;
+  }
+  if (type && !strcmp(type, "date")) {
+    char iso[16];
+    if (*s && ui_parse_date(s, iso, sizeof(iso))) lua_pushstring(L, iso); else lua_pushnil(L);
+    return;
+  }
+  lua_pushstring(L, text);
+}
+
+// The typed values of every named input, as an action's argument.
+static void push_inputs(script_page_t *page) {
+  lua_State *L = page->L;
+  lua_newtable(L);
+  for (int i = 0; page->win && i < page->form->child_count; i++) {
+    const form_ctrl_def_t *d = &page->form->children[i];
+    if (!d->name || !*d->name) continue;
+    if (!is_text_input(d) && !class_is(d, "CheckBox") && !class_is(d, "ComboBox") && !class_is(d, "TableView")) continue;
+    window_t *ctrl = get_window_item(page->win, d->id);
+    if (!ctrl) continue;
+    push_input(page, d, ctrl);
+    lua_setfield(L, -2, d->name);
+  }
+}
+
+// ── Actions ─────────────────────────────────────────────────────────────────
+
+static void finish(script_page_t *page) {
+  if (page->closing && page->win && page->modal) end_dialog(page->win, (uint32_t)page->result);
+  else if (!page->closing) render(page);
+  show_message(page);
+}
+
+bool script_page_perform(script_page_t *page, const char *action) {
+  if (!page || !action || !*action) return false;
+  lua_State *L = page->L;
+  page->message[0] = 0;
+
+  lua_rawgeti(L, LUA_REGISTRYINDEX, page->page_ref);
+  lua_getfield(L, -1, action);
+  if (!lua_isfunction(L, -1)) {
+    lua_pop(L, 2);
+    page_log(page, "no such action", action);
+    snprintf(page->message, sizeof(page->message), ui_tr("The add-on has no action '%s'."), action);
+    show_message(page);
+    return false;
+  }
+  lua_insert(L, -2);           // action, page
+  push_inputs(page);           // action, page, values
+  char msg[1024];
+  bool refused = false, ok = script_call(L, 2, 2, msg, sizeof(msg), &refused);
+  if (ok) {
+    // An action may answer nil, "message" for a refusal it expected.
+    if (lua_isnil(L, -2) && lua_isstring(L, -1)) {
+      snprintf(page->message, sizeof(page->message), "%s", lua_tostring(L, -1));
+      ok = false;
+    }
+    lua_pop(L, 2);
+  } else if (refused) {
+    snprintf(page->message, sizeof(page->message), "%s", msg);
+  } else {
+    page_log(page, action, msg);
+    snprintf(page->message, sizeof(page->message), ui_tr("The add-on stopped with an error: %s"), strtok(msg, "\n"));
+  }
+  finish(page);
+  return ok;
+}
+
+// ── self.app: what the window offers the page ───────────────────────────────
+
+static int app_close(lua_State *L) {
+  script_page_t *page = (script_page_t *)lua_touserdata(L, lua_upvalueindex(1));
+  page->closing = true;
+  page->result = (int)luaL_optinteger(L, 1, 1);
+  return 0;
+}
+
+static int app_refresh(lua_State *L) {
+  script_page_t *page = (script_page_t *)lua_touserdata(L, lua_upvalueindex(1));
+  (void)page;  // the page is asked for data() again when the action returns
+  return 0;
+}
+
+static void push_app(script_page_t *page) {
+  lua_State *L = page->L;
+  lua_createtable(L, 0, 2);
+  lua_pushlightuserdata(L, page); lua_pushcclosure(L, app_close, 1);   lua_setfield(L, -2, "close");
+  lua_pushlightuserdata(L, page); lua_pushcclosure(L, app_refresh, 1); lua_setfield(L, -2, "refresh");
+}
+
+// ── Window ──────────────────────────────────────────────────────────────────
+
+static result_t script_page_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  script_page_t *page = (script_page_t *)win->userdata;
+  switch (msg) {
+    case evCreate:
+      page = (script_page_t *)lparam;
+      win->userdata = page;
+      page->win = win;
+      render(page);
+      return true;
+    case evCommand: {
+      if (!page || HIWORD(wparam) != btnClicked) return false;
+      uint32_t id = LOWORD(wparam);
+      if (id && id == page->form->cancel_id) {
+        page->closing = true;
+        page->result = 0;
+        finish(page);
+        return true;
+      }
+      const form_ctrl_def_t *d = form_library_control(page->lib, page->form, id);
+      const char *action = d && !d->target ? control_attr(page, id, "action") : NULL;
+      if (!action || strchr(action, '.')) return false;
+      script_page_perform(page, action);
+      return true;
+    }
+    case evDestroy:
+      if (page) page->win = NULL;
+      return true;
+  }
+  return false;
+}
+
+window_t *script_page_create(script_page_t *page, window_t *parent) {
+  if (!page) return NULL;
+  page->modal = false;
+  window_t *win = create_window_from_form(page->form, 0, 0, parent, script_page_proc, 0, page);
+  if (win) {
+    page->owns_window = true;
+    set_window_title(win, script_page_title(page));
+  }
+  return win;
+}
+
+void script_page_run(script_page_t *page, window_t *parent) {
+  if (!page) return;
+  page->modal = true;
+  page->closing = false;
+  show_dialog_from_form(page->form, script_page_title(page), parent, script_page_proc, page);
+  page->win = NULL;
+}
+
+// ── Opening and closing ─────────────────────────────────────────────────────
+
+static script_page_t *fail(script_page_t *page, char *error, size_t error_sz, const char *fmt, const char *detail) {
+  char text[1024];
+  snprintf(text, sizeof(text), fmt, detail ? detail : "");
+  page_log(page, text, NULL);
+  if (error && error_sz) snprintf(error, error_sz, "%s", text);
+  script_page_close(page);
+  return NULL;
+}
+
+script_page_t *script_page_open(const char *path, char *error, size_t error_sz) {
+  if (error && error_sz) error[0] = 0;
+  script_page_t *page = calloc(1, sizeof(*page));
+  if (!page || !path || !*path) {
+    fprintf(stderr, "[script] script_page_open: %s\n", page ? "no path" : "out of memory");
+    fflush(stderr);
+    free(page);
+    return NULL;
+  }
+  page->page_ref = LUA_NOREF;
+  snprintf(page->stem, sizeof(page->stem), "%s", path);
+  size_t n = strlen(page->stem);
+  if (n > 6 && !strcmp(page->stem + n - 6, ".orion")) page->stem[n - 6] = 0;
+  else if (n > 4 && !strcmp(page->stem + n - 4, ".lua")) page->stem[n - 4] = 0;
+  const char *slash = strrchr(page->stem, '/');
+  snprintf(page->dir, sizeof(page->dir), "%.*s", slash ? (int)(slash - page->stem) : 1, slash ? page->stem : ".");
+  snprintf(page->name, sizeof(page->name), "%.127s", slash ? slash + 1 : page->stem);
+
+  char orion[1100], lua[1100], locale[1100];
+  snprintf(orion, sizeof(orion), "%s.orion", page->stem);
+  snprintf(lua, sizeof(lua), "%s.lua", page->stem);
+  if (!file_exists(orion)) return fail(page, error, error_sz, ui_tr("The add-on form %s is missing."), orion);
+  if (!file_exists(lua)) return fail(page, error, error_sz, ui_tr("The add-on script %s is missing."), lua);
+  snprintf(locale, sizeof(locale), "%s/locale", page->dir);
+  if (axPathExists(locale)) ui_add_string_catalog_dir(locale);
+
+  page->lib = form_library_load(orion);
+  if (!page->lib) return fail(page, error, error_sz, ui_tr("The add-on form %s cannot be read."), orion);
+  for (int i = 0; i < form_library_schema_count(page->lib); i++) {
+    const db_schema_def_t *schema = form_library_schema_at(page->lib, i);
+    for (int k = 0; get_database_at(k); k++)
+      if (!strcmp(get_database_at(k)->name, schema->name))
+        return fail(page, error, error_sz, ui_tr("The add-on database '%s' clashes with one already open."), schema->name);
+    if (page->db_count >= SCRIPT_MAX_DATABASES)
+      return fail(page, error, error_sz, ui_tr("The add-on declares too many databases (%s)."), schema->name);
+    database_t *db = create_database_with_schema(schema->name, schema->class_name ? schema->class_name : "db_schema_xml", schema, "");
+    if (!db || !register_database(schema->name, db)) {
+      if (db) destroy_database(db);
+      return fail(page, error, error_sz, ui_tr("The add-on database '%s' cannot be created."), schema->name);
+    }
+    page->dbs[page->db_count++] = db;
+  }
+
+  char chunk[160];
+  snprintf(chunk, sizeof(chunk), "%s.lua", page->name);
+  page->L = script_state_new(page->dir, chunk);
+  if (!page->L) return fail(page, error, error_sz, ui_tr("The add-on script %s cannot run."), lua);
+  lua_State *L = page->L;
+  char msg[1024];
+  bool refused = false;
+  if (luaL_loadfilex(L, lua, "t") != LUA_OK) {
+    snprintf(msg, sizeof(msg), "%s", lua_tostring(L, -1));
+    lua_pop(L, 1);
+    return fail(page, error, error_sz, ui_tr("The add-on script does not compile: %s"), msg);
+  }
+  if (!script_call(L, 0, 1, msg, sizeof(msg), &refused))
+    return fail(page, error, error_sz, ui_tr("The add-on script failed: %s"), strtok(msg, "\n"));
+  if (!lua_istable(L, -1)) {
+    lua_pop(L, 1);
+    return fail(page, error, error_sz, ui_tr("The add-on script %s must return its page table."), lua);
+  }
+  push_app(page);
+  lua_setfield(L, -2, "app");
+  lua_getfield(L, -1, "form");
+  const char *form_name = lua_tostring(L, -1);
+  page->form = form_name ? form_library_form(page->lib, form_name) : form_library_form_at(page->lib, 0);
+  char missing[128];
+  snprintf(missing, sizeof(missing), "%s", form_name ? form_name : "");
+  lua_pop(L, 1);
+  lua_getfield(L, -1, "title");
+  snprintf(page->title, sizeof(page->title), "%s", lua_isstring(L, -1) ? lua_tostring(L, -1) : "");
+  lua_pop(L, 1);
+  page->page_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+  if (!page->form) return fail(page, error, error_sz, ui_tr("The add-on has no form '%s'."), missing);
+  if (!page->title[0]) snprintf(page->title, sizeof(page->title), "%s", page->form->name ? page->form->name : page->name);
+
+  lua_rawgeti(L, LUA_REGISTRYINDEX, page->page_ref);
+  lua_getfield(L, -1, "init");
+  if (lua_isfunction(L, -1)) {
+    lua_insert(L, -2);
+    if (!script_call(L, 1, 0, msg, sizeof(msg), &refused))
+      return fail(page, error, error_sz, refused ? "%s" : ui_tr("The add-on script failed: %s"), strtok(msg, "\n"));
+  } else {
+    lua_pop(L, 2);
+  }
+  return page;
+}
+
+void script_page_close(script_page_t *page) {
+  if (!page) return;
+  if (page->owns_window && page->win) destroy_window(page->win);
+  if (page->L) lua_close(page->L);
+  for (int i = 0; i < page->db_count; i++) {
+    unregister_database(page->dbs[i]->name);
+    destroy_database(page->dbs[i]);
+  }
+  form_library_free(page->lib);
+  free(page);
+}
+
+const char *script_page_title(const script_page_t *page) { return page ? page->title : ""; }
+const char *script_page_message(const script_page_t *page) { return page ? page->message : ""; }
+
+window_t *script_page_control(const script_page_t *page, const char *name) {
+  uint32_t id = page && page->win ? form_library_control_id(page->lib, page->form, name) : 0;
+  return id ? get_window_item(page->win, id) : NULL;
+}
