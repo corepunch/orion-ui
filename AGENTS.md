@@ -350,3 +350,14 @@ layer. The adaptor filename should match the `<database class="...">` attribute 
 `dbGetSchema`, and `dbGetFieldMeta`. The `dbGetApi` message is optional (nothing sends
 it currently). Adaptors that share table IDs (e.g. changes_db reusing `TABLE_FILES`)
 must coordinate column IDs through the app header.
+
+## Ledger EnterpriseData validation
+
+For changes to the 1C importer, see
+[the Ledger validation instructions](apps/ledger/README.md#real-enterprisedata-export-for-validation).
+The original 26 MB `Остатки.xml` is inside the public
+`Остатки- 15-10-2026.rar` archive in
+[Nekitosha-IT/ostatki](https://github.com/Nekitosha-IT/ostatki), not a standalone
+XML download. That section contains the direct download URL, extraction
+commands and reference results. Keep the real-company export and generated
+infobases outside the checkout; use a disposable infobase for checks.
