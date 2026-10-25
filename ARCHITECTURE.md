@@ -254,7 +254,10 @@ the application controller. See [Controls](docs/controls.md).
 
 `.orion` XML is the canonical representation for static forms, menus, toolbars,
 accelerators, databases, and bindings. `orionc` compiles it into typed C
-metadata.
+metadata. A `.orion` file that arrives at run time loads into the same
+`form_def_t` through `form_library_load()` (`orion/commctl/form_loader.h`),
+which follows orionc's rules and resolves bindings from the registered
+databases' schemas.
 
 Declarative resources are self-contained. A field such as
 `field="db.posts.title"` names its database, table, and column; the form resolves

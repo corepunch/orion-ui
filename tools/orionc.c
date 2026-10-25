@@ -1550,6 +1550,14 @@ int main(int argc, char **argv) {
     char *name = attr(form, "name"), id[128]; ident(id, sizeof(id), name, false);
     OUT("static const form_def_t %s_%s_form;\n", pre, id); free(name);
   }
+  // X-macro over every form, for code that walks all of them (tests, editors).
+  char pre_upper[128]; ident(pre_upper, sizeof(pre_upper), pre, true);
+  OUT("#define %s_FORMS(X)", pre_upper);
+  EACH_ELEMENT(form, forms) if (elem(form, "form") && activity_form_needed(form, forms, only)) {
+    char *name = attr(form, "name"), id[128]; ident(id, sizeof(id), name, false);
+    OUT(" X(%s)", id); free(name);
+  }
+  LINE("\n");
   EACH_ELEMENT(form, forms) if (elem(form, "form") && activity_form_needed(form, forms, only)) {
     if (!emit_form(f, form, pre, databases ? databases : database)) { fclose(f); xmlFreeDoc(doc); return 1; }
   }
