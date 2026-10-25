@@ -36,6 +36,18 @@ static void notify_change(window_t *win) {
   if (win->parent) send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, ednChange), win);
 }
 
+static int edit_previous(const char *text, int at) {
+  if (at > 0) at--;
+  while (at > 0 && ((unsigned char)text[at] & 0xc0) == 0x80) at--;
+  return at;
+}
+
+static int edit_next(const char *text, int at) {
+  if (text[at]) at++;
+  while (text[at] && ((unsigned char)text[at] & 0xc0) == 0x80) at++;
+  return at;
+}
+
 // Text edit control window procedure
 result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
@@ -99,26 +111,30 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
 #endif
         int text_x = textedit_text_x(win);
         win->cursor_pos = 0;
-        for (int i = 0; i <= (int)strlen(win->title); i++) {
+        for (int i = 0;; i = edit_next(win->title, i)) {
           int x1 = text_x + text_strnwidth(FONT_SMALL, win->title, i);
           int x2 = text_x + text_strnwidth(FONT_SMALL, win->title, win->cursor_pos);
           if (abs((int)LOWORD(wparam) - x1) < abs((int)LOWORD(wparam) - x2)) {
             win->cursor_pos = i;
           }
+          if (!win->title[i]) break;
         }
       }
       return true;
-    case evTextInput:
-      if (strlen(win->title) + strlen(lparam) < BUFFER_SIZE - 1) {
-        memmove(win->title + win->cursor_pos + 1,
+    case evTextInput: {
+      if (!lparam) return false;
+      size_t added = strlen(lparam);
+      if (strlen(win->title) + added < BUFFER_SIZE) {
+        memmove(win->title + win->cursor_pos + added,
                 win->title + win->cursor_pos,
                 strlen(win->title + win->cursor_pos) + 1);
-        win->title[win->cursor_pos] = *(char *)lparam; // Only handle 1-byte characters
-        win->cursor_pos++;
+        memcpy(win->title + win->cursor_pos, lparam, added);
+        win->cursor_pos += (int)added;
         notify_change(win);
       }
       invalidate_window(win);
       return true;
+    }
     case evKeyDown:
       switch (wparam) {
         case AX_KEY_TAB:
@@ -141,21 +157,22 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
           break;
         case AX_KEY_BACKSPACE:
           if (win->cursor_pos > 0 && window_has_state(win, WINDOW_STATE_EDITING)) {
-            memmove(win->title + win->cursor_pos - 1,
+            int previous = edit_previous(win->title, win->cursor_pos);
+            memmove(win->title + previous,
                     win->title + win->cursor_pos,
                     strlen(win->title + win->cursor_pos) + 1);
-            win->cursor_pos--;
+            win->cursor_pos = previous;
             notify_change(win);
           }
           break;
         case AX_KEY_LEFTARROW:
           if (win->cursor_pos > 0 && window_has_state(win, WINDOW_STATE_EDITING)) {
-            win->cursor_pos--;
+            win->cursor_pos = edit_previous(win->title, win->cursor_pos);
           }
           break;
         case AX_KEY_RIGHTARROW:
           if (win->cursor_pos < strlen(win->title) && window_has_state(win, WINDOW_STATE_EDITING)) {
-            win->cursor_pos++;
+            win->cursor_pos = edit_next(win->title, win->cursor_pos);
           }
           break;
         default:

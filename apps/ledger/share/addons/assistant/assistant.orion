@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<orion>
+  <databases>
+    <database name="assistant" class="db_schema_xml">
+      <table name="results" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="record_id" type="integer" />
+        <field name="name" type="string" length="256" />
+        <field name="amount" type="double" />
+        <field name="date" type="date" />
+      </table>
+    </database>
+  </databases>
+  <forms>
+    <form name="assistant" title="Ledger — помощник" width="760" height="600" spacing="8" padding="12">
+      <StackView name="header" orientation="horizontal" spacing="12">
+        <SpriteButton name="mascot" width="124" height="93" action="greet" />
+        <Label name="summary" text="Покажи должников" />
+      </StackView>
+      <Label name="hint" text="Введите команду или используйте системную диктовку. Например: покажи клиентов, которые задолжали больше 50 тысяч" />
+      <TextBox name="command" />
+      <StackView name="actions" orientation="horizontal" spacing="8">
+        <Button name="submit" text="Выполнить" action="submit" flags="BUTTON_DEFAULT" />
+        <Button name="help" text="Примеры" action="help" />
+        <Space name="flex" />
+        <Button name="cancel" text="Закрыть" />
+      </StackView>
+      <TableView name="results" source="assistant.results" flags="flexspace,vscroll">
+        <Column field="id" title="№" width="40" />
+        <Column field="name" title="Название / документ" width="0" min-width="240" />
+        <Column field="amount" title="Сумма" width="140" />
+        <Column field="date" title="Дата" width="100" />
+      </TableView>
+      <Label name="error" />
+    </form>
+  </forms>
+</orion>

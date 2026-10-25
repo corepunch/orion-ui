@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="de" decimal="," group="." date="dd.MM.yyyy">
+  <string source="Assistant..." where="menu">Assistent...</string>
   <string source="File" where="menu">Datei</string>
   <string source="Save Infobase" where="menu">Mandant speichern</string>
   <string source="Organization Details..." where="menu">Firmendaten...</string>

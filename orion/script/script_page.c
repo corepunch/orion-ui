@@ -16,9 +16,19 @@
 #include <orion/commctl/form_loader.h>
 #include <orion/commdlg/msgbox.h>
 #include <orion/user/i18n.h>
+#include <orion/user/gdi.h>
 #include <platform/platform.h>
 
 #define SCRIPT_MAX_DATABASES 8
+#define SCRIPT_MAX_SPRITES 8
+
+typedef struct {
+  uint32_t control, timer;
+  bitmap_t *bitmap;
+  char path[1024];
+  int columns, rows, count, frame, interval, revision;
+  bool loop;
+} page_sprite_t;
 
 struct script_page_s {
   char stem[1024], dir[1024], name[128];
@@ -33,6 +43,7 @@ struct script_page_s {
   int result;
   char title[256];
   char message[1024];
+  page_sprite_t sprites[SCRIPT_MAX_SPRITES];
 };
 
 static void page_log(const script_page_t *page, const char *what, const char *detail) {
@@ -184,6 +195,78 @@ static void apply_disabled(script_page_t *page, const form_ctrl_def_t *d, window
   enable_window(ctrl, !lua_toboolean(L, idx));
 }
 
+// Lua selects the clip; the host owns bitmap lifetimes and frame timers.
+static void sprite_draw(script_page_t *page, page_sprite_t *s) {
+  window_t *ctrl = page->win ? get_window_item(page->win, s->control) : NULL;
+  if (!ctrl || !s->bitmap) return;
+  isize16_t size = bitmap_size(s->bitmap);
+  int w = size.w / s->columns, h = size.h / s->rows;
+  irect16_t src = R((s->frame % s->columns) * w, (s->frame / s->columns) * h, w, h);
+  sprite_button_t def = {.bm = s->bitmap, .up = src, .down = src};
+  send_message(ctrl, spbSetSprites, 0, &def);
+}
+
+static void sprite_clear(script_page_t *page) {
+  for (int i = 0; i < SCRIPT_MAX_SPRITES; i++) {
+    page_sprite_t *s = &page->sprites[i];
+    if (s->timer) axCancelTimer(s->timer);
+    window_t *ctrl = page->win && s->control ? get_window_item(page->win, s->control) : NULL;
+    if (ctrl) { sprite_button_t empty = {0}; send_message(ctrl, spbSetSprites, 0, &empty); }
+    bitmap_free(s->bitmap);
+    memset(s, 0, sizeof(*s));
+  }
+}
+
+static int sprite_integer(lua_State *L, int idx, const char *key, int fallback, int min, int max) {
+  lua_getfield(L, idx, key);
+  lua_Integer value = lua_isnil(L, -1) ? fallback : luaL_checkinteger(L, -1);
+  lua_pop(L, 1);
+  if (value < min || value > max) luaL_error(L, "sprite %s out of range", key);
+  return (int)value;
+}
+
+static void set_sprite(script_page_t *page, const form_ctrl_def_t *d, window_t *ctrl, lua_State *L, int idx) {
+  (void)ctrl;
+  if (!class_is(d, "SpriteButton")) { luaL_error(L, "sprites need a SpriteButton"); return; }
+  luaL_checktype(L, idx, LUA_TTABLE);
+  lua_getfield(L, idx, "path");
+  const char *path = luaL_checkstring(L, -1);
+  if (!*path || path[0] == '/' || strchr(path, '\\') || strchr(path, ':') || strstr(path, "..")) {
+    luaL_error(L, "sprite path must be relative to the add-on"); return;
+  }
+  char full[1024];
+  if (snprintf(full, sizeof(full), "%s/%s", page->dir, path) >= (int)sizeof(full)) {
+    luaL_error(L, "sprite path too long"); return;
+  }
+  lua_pop(L, 1);
+  int columns = sprite_integer(L, idx, "columns", 1, 1, 64);
+  int rows = sprite_integer(L, idx, "rows", 1, 1, 64);
+  int count = sprite_integer(L, idx, "count", columns * rows, 1, columns * rows);
+  int interval = sprite_integer(L, idx, "interval", 125, 16, 60000);
+  int revision = sprite_integer(L, idx, "revision", 0, 0, 2147483647);
+  lua_getfield(L, idx, "loop"); bool loop = lua_toboolean(L, -1); lua_pop(L, 1);
+  page_sprite_t *s = NULL;
+  for (int i = 0; i < SCRIPT_MAX_SPRITES; i++)
+    if (page->sprites[i].control == d->id) { s = &page->sprites[i]; break; }
+  if (!s) for (int i = 0; i < SCRIPT_MAX_SPRITES; i++)
+    if (!page->sprites[i].control) { s = &page->sprites[i]; break; }
+  if (!s) { luaL_error(L, "too many animated controls"); return; }
+  if (!strcmp(s->path, full) && s->columns == columns && s->rows == rows && s->count == count && s->interval == interval && s->loop == loop && s->revision == revision) return;
+  bitmap_t *bitmap = bitmap_load(full);
+  if (!bitmap) { luaL_error(L, "cannot load sprite %s", full); return; }
+  isize16_t size = bitmap_size(bitmap);
+  if (size.w <= 0 || size.h <= 0 || size.w % columns || size.h % rows) {
+    bitmap_free(bitmap); luaL_error(L, "sprite dimensions do not match grid"); return;
+  }
+  if (s->timer) axCancelTimer(s->timer);
+  bitmap_free(s->bitmap);
+  *s = (page_sprite_t){.control=d->id, .bitmap=bitmap, .columns=columns, .rows=rows,
+                       .count=count, .interval=interval, .loop=loop, .revision=revision};
+  snprintf(s->path, sizeof(s->path), "%s", full);
+  sprite_draw(page, s);
+  if (count > 1) s->timer = axSetTimer(page->win, (uint32_t)interval, NULL, true);
+}
+
 // Runs inside script_call: (page) -> applies page:data().
 static int render_data(lua_State *L) {
   script_page_t *page = (script_page_t *)lua_touserdata(L, lua_upvalueindex(1));
@@ -198,6 +281,7 @@ static int render_data(lua_State *L) {
   each_named(page, L, data, "lists", fill_list);
   each_named(page, L, data, "hidden", apply_hidden);
   each_named(page, L, data, "disabled", apply_disabled);
+  each_named(page, L, data, "sprites", set_sprite);
   lua_getfield(L, data, "title");
   if (lua_isstring(L, -1)) set_window_title(page->win, lua_tostring(L, -1));
   return 0;
@@ -361,11 +445,20 @@ static int app_refresh(lua_State *L) {
   return 0;
 }
 
+static int app_focus(lua_State *L) {
+  script_page_t *page = (script_page_t *)lua_touserdata(L, lua_upvalueindex(1));
+  window_t *ctrl = script_page_control(page, luaL_checkstring(L, 1));
+  if (!ctrl) return luaL_error(L, "unknown control to focus");
+  set_focus(ctrl);
+  return 0;
+}
+
 static void push_app(script_page_t *page) {
   lua_State *L = page->L;
   lua_createtable(L, 0, 2);
   lua_pushlightuserdata(L, page); lua_pushcclosure(L, app_close, 1);   lua_setfield(L, -2, "close");
   lua_pushlightuserdata(L, page); lua_pushcclosure(L, app_refresh, 1); lua_setfield(L, -2, "refresh");
+  lua_pushlightuserdata(L, page); lua_pushcclosure(L, app_focus, 1);   lua_setfield(L, -2, "focus");
 }
 
 // ── Window ──────────────────────────────────────────────────────────────────
@@ -394,8 +487,20 @@ static result_t script_page_proc(window_t *win, uint32_t msg, uint32_t wparam, v
       script_page_perform(page, action);
       return true;
     }
+    case evTimer:
+      if (!page) return false;
+      for (int i = 0; i < SCRIPT_MAX_SPRITES; i++) {
+        page_sprite_t *s = &page->sprites[i];
+        if (!s->timer || s->timer != wparam) continue;
+        if (s->frame + 1 < s->count) s->frame++;
+        else if (s->loop) s->frame = 0;
+        else { axCancelTimer(s->timer); s->timer = 0; }
+        sprite_draw(page, s);
+        return true;
+      }
+      return false;
     case evDestroy:
-      if (page) page->win = NULL;
+      if (page) { sprite_clear(page); page->win = NULL; }
       return true;
   }
   return false;
@@ -528,6 +633,7 @@ script_page_t *script_page_open(const char *path, char *error, size_t error_sz) 
 void script_page_close(script_page_t *page) {
   if (!page) return;
   if (page->owns_window && page->win) destroy_window(page->win);
+  sprite_clear(page);
   if (page->L) lua_close(page->L);
   for (int i = 0; i < page->db_count; i++) {
     unregister_database(page->dbs[i]->name);
