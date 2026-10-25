@@ -475,6 +475,7 @@ enum {
 #endif
 #define TOOLBAR_STYLE_SHOW_LABELS    (1u << 0) // WinAPI-style text below button icons
 #define TOOLBAR_STYLE_LIST           (1u << 8) // text right of button icons; a vertical bar's buttons share its width (TBSTYLE_LIST)
+#define TOOLBAR_STYLE_SIDEBAR        (1u << 9) // band paints THEME_PART_SIDEBAR: a navigation rail beside content (ActivityBar)
 
 typedef enum {
   TOOLBAR_HORIZONTAL = 0,
@@ -493,7 +494,10 @@ typedef enum {
   TOOLBAR_ITEM_CUSTOM,        // drawn by the owner during tbDrawItem
   TOOLBAR_ITEM_SLIDER,        // embedded Slider; defaults to three icon slots; w overrides length
   TOOLBAR_ITEM_SEGMENTED,     // embedded SegmentedControl; text = "One|Two|Three", w = 0 fits the labels
-  TOOLBAR_ITEM_TITLE,         // the window's title in the caption font; starts past panes docked on the left edge
+  TOOLBAR_ITEM_TITLE,         // the window's title in the caption font, its subtitle below; starts past panes docked on the left edge
+  // A merged title row's tracking separator (≈ NSTrackingSeparatorToolbarItem): the items before it lie
+  // over the pane docked on the left edge and the band behind them paints as that sidebar; the rest start past it.
+  TOOLBAR_ITEM_SIDEBAR_SEPARATOR,
 } toolbar_item_type_t;
 
 // Descriptor for a single toolbar item (used with tbSetItems).

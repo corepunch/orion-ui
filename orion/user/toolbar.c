@@ -42,6 +42,7 @@ bool toolbar_hit_action(const toolbar_state_t *tb, int x, int y) {
   for (int i = 0; tb && tb->item_rects && i < tb->item_count; i++) {
     int type = tb->items[i].type;
     if (type != TOOLBAR_ITEM_LABEL && type != TOOLBAR_ITEM_TITLE && type != TOOLBAR_ITEM_SPACER && type != TOOLBAR_ITEM_SEPARATOR &&
+        type != TOOLBAR_ITEM_SIDEBAR_SEPARATOR &&
         rect_contains_point(tb->item_rects[i], (ipoint16_t){x, y})) return true;
   }
   return false;
@@ -106,6 +107,22 @@ static int toolbar_title_lead(window_t *win) {
   return lead;
 }
 
+// Width of the merged title row's sidebar segment: the left pane's edge when a
+// TOOLBAR_ITEM_SIDEBAR_SEPARATOR splits the row, else 0.
+int toolbar_sidebar_width(window_t *win) {
+  toolbar_state_t *tb = window_toolbar_state(win);
+  if (!tb || !toolbar_merged_title(win) || tb->orientation == TOOLBAR_VERTICAL) return 0;
+  for (int i = 0; i < tb->item_count; i++)
+    if (tb->items[i].type == TOOLBAR_ITEM_SIDEBAR_SEPARATOR) return toolbar_title_lead(win);
+  return 0;
+}
+
+static int toolbar_title_width(window_t *win) {
+  int w = text_strwidth(FONT_TITLE, win->title);
+  if (win->subtitle[0]) w = MAX(w, text_strwidth(FONT_SMALLEST, win->subtitle));
+  return w;
+}
+
 static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_t *tb, bool ideal) {
   if (!tb) return;
 
@@ -159,7 +176,11 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
       case TOOLBAR_ITEM_TITLE:
         // As far in from the content's edge as the text is down from the window's top.
         if (!vertical) x = MAX(x, toolbar_title_lead(parent) + base_y + (item_h - text_char_height(FONT_TITLE)) / 2);
-        w = item->w > 0 ? item->w : text_strwidth(FONT_TITLE, parent->title) + TB_TITLE_GAP;
+        w = item->w > 0 ? item->w : toolbar_title_width(parent) + TB_TITLE_GAP;
+        break;
+      case TOOLBAR_ITEM_SIDEBAR_SEPARATOR:
+        if (!vertical) x = MAX(x, toolbar_title_lead(parent) + padding);
+        w = 0;
         break;
       case TOOLBAR_ITEM_COMBOBOX:
         w = item->w > 0 ? item->w : (bsz * TOOLBAR_COMBOBOX_DEFAULT_WIDTH_MULT);
@@ -469,10 +490,15 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       theme_draw(THEME_PART_TOOLBAR_SEPARATOR, R(0, 0, r.w, r.h), CTRL_NORMAL);
       break;
     case TOOLBAR_ITEM_TITLE: {
-      int ty = (r.h - text_char_height(FONT_TITLE)) / 2;
-      draw_text_ellipsized(FONT_TITLE, win->title, 0, ty, MAX(0, r.w - TB_TITLE_GAP), get_sys_color(brTextNormal));
+      // A subtitle stacks under the title, the pair centred on the row like a unified macOS toolbar.
+      int th = text_char_height(FONT_TITLE), sh = win->subtitle[0] ? text_char_height(FONT_SMALLEST) : 0;
+      int ty = (r.h - th - sh) / 2, tw = MAX(0, r.w - TB_TITLE_GAP);
+      draw_text_ellipsized(FONT_TITLE, win->title, 0, ty, tw, get_sys_color(brTextNormal));
+      if (sh) draw_text_ellipsized(FONT_SMALLEST, win->subtitle, 0, ty + th, tw, get_sys_color(brTextSecondary));
       break;
     }
+    case TOOLBAR_ITEM_SIDEBAR_SEPARATOR:
+      break;
     case TOOLBAR_ITEM_LABEL: {
       int ty = (r.h - text_char_height(FONT_SMALLEST)) / 2;
       draw_text_ellipsized(FONT_SMALLEST, item->text ? item->text : "", 2, ty, MAX(0, r.w - 4), get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
@@ -755,8 +781,15 @@ void toolbar_draw_non_client(window_t *win) {
   set_viewport_for_fbo(root);
   set_scissor_fbo(root, R(0, 0, root->frame.w, root->frame.h));
   set_projection(0, 0, root->frame.w, root->frame.h);
-  if (!tb || !(tb->style & TOOLBAR_STYLE_TRANSPARENT))
-    theme_draw(tb && (tb->style & TOOLBAR_STYLE_COMPACT) ? THEME_PART_MENU_BAR : THEME_PART_TOOLBAR,
+  int sidebar_w = MIN(toolbar_sidebar_width(win), tb_rect.w);
+  if (sidebar_w > 0) {
+    // The sidebar column runs up through the title row; the rest of the row is the title bar.
+    theme_draw(THEME_PART_SIDEBAR, rect_split_left(tb_rect, sidebar_w), CTRL_NORMAL);
+    theme_draw(THEME_PART_TITLE_TOOLBAR, rect_trim_left(tb_rect, sidebar_w), CTRL_NORMAL);
+  } else if (!tb || !(tb->style & TOOLBAR_STYLE_TRANSPARENT))
+    theme_draw(tb && (tb->style & TOOLBAR_STYLE_COMPACT) ? THEME_PART_MENU_BAR :
+               tb && (tb->style & TOOLBAR_STYLE_SIDEBAR) ? THEME_PART_SIDEBAR :
+               toolbar_merged_title(win) ? THEME_PART_TITLE_TOOLBAR : THEME_PART_TOOLBAR,
                tb_rect, CTRL_NORMAL);
 
   if (tb && (tb->style & TOOLBAR_STYLE_GRIP)) {

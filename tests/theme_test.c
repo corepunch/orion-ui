@@ -202,6 +202,42 @@ static void test_titlebar_bounds(void) {
   PASS();
 }
 
+static void test_appearance_follows_system(void) {
+  TEST("APPEARANCE_SYSTEM switches a theme to its counterpart; pinned appearances and themes without one stay");
+  test_env_init();
+  set_theme(THEME_PORCELAIN);
+  theme_system_appearance_changed(true);
+  ASSERT_EQUAL(get_theme()->style, THEME_PORCELAIN_DARK);
+  ASSERT_TRUE(get_theme()->appearance.dark);
+  theme_system_appearance_changed(false);
+  ASSERT_EQUAL(get_theme()->style, THEME_PORCELAIN);
+  set_appearance(APPEARANCE_DARK);
+  ASSERT_EQUAL(get_theme()->style, THEME_PORCELAIN_DARK);
+  theme_system_appearance_changed(false);   // pinned: the OS change is ignored
+  ASSERT_EQUAL(get_theme()->style, THEME_PORCELAIN_DARK);
+  set_appearance(APPEARANCE_SYSTEM);        // back to the OS, which is light
+  ASSERT_EQUAL(get_theme()->style, THEME_PORCELAIN);
+  set_theme(THEME_MODERN);
+  theme_system_appearance_changed(false);
+  ASSERT_EQUAL(get_theme()->style, THEME_LIGHT);
+  set_theme(THEME_NAVY);                    // no counterpart
+  theme_system_appearance_changed(false);
+  ASSERT_EQUAL(get_theme()->style, THEME_NAVY);
+  set_appearance((appearance_t)7);          // rejected, preference unchanged
+  ASSERT_EQUAL(get_appearance(), APPEARANCE_SYSTEM);
+  for (int style = THEME_CLASSIC; style <= THEME_LAST; style++) {
+    set_theme((theme_style_t)style);
+    theme_t *theme = get_theme();
+    if (theme->appearance.counterpart == theme->style) continue;
+    set_theme(theme->appearance.counterpart);
+    ASSERT_EQUAL(get_theme()->appearance.counterpart, (theme_style_t)style);
+    ASSERT_NOT_EQUAL(get_theme()->appearance.dark, theme->appearance.dark);
+  }
+  set_theme(THEME_MODERN);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("theme semantic API");
   test_switch_validation();
@@ -211,5 +247,6 @@ int main(void) {
   test_control_parts();
   test_all_parts();
   test_titlebar_bounds();
+  test_appearance_follows_system();
   TEST_END();
 }

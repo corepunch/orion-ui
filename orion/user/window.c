@@ -1338,6 +1338,17 @@ void set_window_title(window_t *win, const char *title) {
   invalidate_window(win);
 }
 
+void set_window_subtitle(window_t *win, const char *subtitle) {
+  if (!win) {
+    fprintf(stderr, "[window] set_window_subtitle rejected: no window subtitle=%s\n", subtitle ? subtitle : "");
+    fflush(stderr);
+    return;
+  }
+  snprintf(win->subtitle, sizeof(win->subtitle), "%s", subtitle ? subtitle : "");
+  toolbar_relayout(win);
+  invalidate_window(win);
+}
+
 void show_window(window_t *win, bool visible) {
   if (!visible) {
     dock_cancel_window(win);

@@ -90,6 +90,27 @@ rounded rectangles). A field's text inset, `field.padding_x`, follows its
 roundness: a capsule keeps `TEXTEDIT_PADDING_CAPSULE` clear of its round ends,
 a squarer field takes `FIELD_PADDING_X(radius)`. Build an app with it via `make THEME_<app>=amber`.
 
+Porcelain shares Amber's metrics with cool white surfaces, white wells and a
+solid indigo selection carrying white text; Porcelain Dark is the same design
+on graphite. In both, a merged title row (`THEME_PART_TITLE_TOOLBAR`) shares
+the window face over a hairline, and a sidebar (`THEME_PART_SIDEBAR`,
+`brPanelDark`) is the tinted column, as in Finder. Other themes paint the title
+row like any toolbar band. `brDesktopBg` colours the desktop behind root windows.
+
+### Light and dark appearance
+
+Each `theme_t` records whether it is dark and names its counterpart in the
+other appearance (`appearance.dark`, `appearance.counterpart`): Light ↔ Modern
+and Porcelain ↔ Porcelain Dark. Classic, Navy and Amber have none.
+`set_appearance(APPEARANCE_SYSTEM)`, the default, follows the OS: a visible UI
+switches to the matching counterpart at start-up and on `kEventAppearanceChanged`,
+which the macOS and Windows platforms post when the user changes the system
+appearance (Linux and WebGL report the appearance at start-up only).
+`APPEARANCE_LIGHT` and `APPEARANCE_DARK` pin a variant. `set_theme()` still
+chooses the theme; the next OS change or `set_appearance()` may switch it to its
+counterpart. Headless (`UI_INIT_HIDDEN`) contexts never follow the OS, so tests
+do not depend on the machine. A standalone app takes `--appearance light|dark|system`.
+
 ```c
 // Card with an optional accent edge; the theme rounds (or squares) card and edge together.
 draw_card(r, CTRL_HOVER | CTRL_SELECTED | CTRL_FOCUSED, color_with_alpha(get_sys_color(brTextWarning), 0x78));

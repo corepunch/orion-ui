@@ -29,6 +29,7 @@ irect16_t toolbar_band_rect(const window_t *win);           // window-local pain
 
 bool toolbar_merged_title(const window_t *win);
 void toolbar_relayout(window_t *win);  // after something its items measure changed, e.g. the window title
+int toolbar_sidebar_width(window_t *win);  // merged title row: width of the segment over the left sidebar, 0 without a TOOLBAR_ITEM_SIDEBAR_SEPARATOR
 int toolbar_content_offset(const window_t *win);
 
 void toolbar_draw_non_client(window_t *win);

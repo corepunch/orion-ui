@@ -296,6 +296,61 @@ static void test_host_toolbar_leads_page_items(void) {
   destroy_window(host); test_env_shutdown(); PASS();
 }
 
+static void test_history_and_sidebar(void) {
+  TEST("Back/forward walk the selected pages; collapsing hides the rail's labels and the title row follows");
+  test_env_init();
+  activity_changes = 0;
+  const activitybar_params_t list_params = {activity_buttons, ARRAY_LEN(activity_buttons), TOOLBAR_STYLE_LIST};
+  const form_ctrl_def_t controls[] = {{.class_name = "ActivityBar", .id = RAIL, .lparam = &list_params}};
+  const toolbar_item_t host_items[] = {
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 2300, .icon = "menu"},
+    {.type = TOOLBAR_ITEM_SIDEBAR_SEPARATOR},
+    {.type = TOOLBAR_ITEM_BUTTON, .ident = 2301, .icon = "nav-arrow-left"},
+    {.type = TOOLBAR_ITEM_TITLE},
+  };
+  form_def_t form = page_host_form;
+  form.flags |= WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR;
+  form.children = controls; form.child_count = ARRAY_LEN(controls);
+  form.toolbar_items = host_items; form.toolbar_count = ARRAY_LEN(host_items);
+  window_t *host = create_window_from_form(&form, 0, 0, NULL, test_page_host_proc, 0, NULL);
+  ASSERT_TRUE(page_host_init(host, &form, activity_handlers, ARRAY_LEN(activity_handlers)));
+  ASSERT_FALSE(page_host_can_go(host, -1));
+  ASSERT_FALSE(page_host_can_go(host, 1));
+  ASSERT_TRUE(page_host_select(host, ACT_FIRST));
+  ASSERT_TRUE(page_host_can_go(host, -1));
+  int changes = activity_changes;
+  ASSERT_TRUE(page_host_go(host, -1));
+  ASSERT_EQUAL(page_host_selection(host), ACT_SECOND);
+  ASSERT_EQUAL(activity_changes, changes + 1);  // navigating notifies once, like a selection
+  ASSERT_FALSE(page_host_can_go(host, -1));
+  ASSERT_TRUE(page_host_can_go(host, 1));
+  ASSERT_TRUE(page_host_go(host, 1));
+  ASSERT_EQUAL(page_host_selection(host), ACT_FIRST);
+  ASSERT_FALSE(page_host_go(host, 1));          // nothing ahead: rejected
+  ASSERT_FALSE(page_host_go(host, 0));
+  ASSERT_TRUE(page_host_go(host, -1));
+  ASSERT_TRUE(page_host_select(host, ACT_FIRST)); // a new selection drops the forward entry
+  ASSERT_FALSE(page_host_can_go(host, 1));
+
+  window_t *bar = get_window_item(host, RAIL);
+  toolbar_state_t *tb = toolbar_get_state(host);
+  int expanded = bar->frame.w;
+  ASSERT_EQUAL(toolbar_sidebar_width(host), bar->frame.x + bar->frame.w);
+  ASSERT_TRUE(tb->item_rects[0].x < expanded);        // the toggle lies over the sidebar
+  ASSERT_TRUE(tb->item_rects[2].x >= expanded);       // back starts past it
+  ASSERT_TRUE(page_host_set_sidebar_collapsed(host, true));
+  ASSERT_TRUE(page_host_sidebar_collapsed(host));
+  ASSERT_FALSE(toolbar_get_state(bar)->style & TOOLBAR_STYLE_LIST);
+  ASSERT_TRUE(toolbar_get_state(bar)->style & TOOLBAR_STYLE_SIDEBAR);
+  ASSERT_TRUE(bar->frame.w < expanded);
+  ASSERT_EQUAL(toolbar_sidebar_width(host), bar->frame.x + bar->frame.w);
+  ASSERT_TRUE(toolbar_get_state(host)->item_rects[2].x < expanded);  // the title row follows the rail
+  ASSERT_TRUE(page_host_set_sidebar_collapsed(host, false));
+  ASSERT_TRUE(toolbar_get_state(bar)->style & TOOLBAR_STYLE_LIST);
+  ASSERT_EQUAL(bar->frame.w, expanded);
+  destroy_window(host); test_env_shutdown(); PASS();
+}
+
 int main(void) {
   TEST_START("Activity page host");
   test_activity_lifecycle();
@@ -304,5 +359,6 @@ int main(void) {
   test_page_navigation_and_orientation();
   test_page_toolbar_commands();
   test_host_toolbar_leads_page_items();
+  test_history_and_sidebar();
   TEST_END();
 }

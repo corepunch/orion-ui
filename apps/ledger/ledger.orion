@@ -68,6 +68,10 @@
       <item name="delete_rate" label="Delete Exchange Rate..." />
     </menu>
     <menu name="view" label="View">
+      <item name="back" label="Back" shortcut="Alt+Left" />
+      <item name="forward" label="Forward" shortcut="Alt+Right" />
+      <item name="sidebar" label="Show or Hide Sidebar" shortcut="Ctrl+B" />
+      <Separator />
       <item name="journal" label="Document Journal" shortcut="Ctrl+1" />
       <item name="counterparties" label="Counterparties" shortcut="Ctrl+2" />
       <item name="items" label="Items" shortcut="Ctrl+3" />
@@ -572,8 +576,13 @@
   <forms>
     <form name="main_window" title="Ledger" width="1200" height="700"
           role="host" active-page="journal_page" flags="statusbar,toolbar,titletoolbar" spacing="0">
-      <!-- The organization's name, as Finder names the folder; the active page's buttons follow on the far side. -->
+      <!-- One row, as in Finder or Mail: the sidebar toggle over the section panel, then back and
+           forward, the page's title over the organization and period, and the active page's buttons. -->
       <Toolbar>
+        <Button command="view.sidebar" icon="ledger-sidebar" tooltip="Show or hide the sidebar (Ctrl+B)" />
+        <sidebar-separator />
+        <Button command="view.back" icon="ledger-back" tooltip="Back (Alt+Left)" />
+        <Button command="view.forward" icon="ledger-forward" tooltip="Forward (Alt+Right)" />
         <title />
         <spacer flags="TOOLBAR_ITEM_FLAG_FLEXSPACE" />
       </Toolbar>

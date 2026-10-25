@@ -45,8 +45,12 @@ void ledger_update_status(void) {
   bool dirty = send_db_message(g_ledger->ib, dbGetDirty, 0, NULL);
   snprintf(text, sizeof(text), "%s   |   %s   |   %s%s%s", org, cfg, period, dirty ? "   |   " : "", dirty ? ui_tr("modified") : "");
   send_message(g_ledger->main_win, evStatusBar, 0, text);
-  // The title bar names the company being kept, as Finder names the folder.
-  set_window_title(g_ledger->main_win, org[0] ? org : ui_tr("Ledger"));
+  // The title row names the page, as Finder names the folder, over the company being kept.
+  window_t *page = window_active_page(g_ledger->main_win);
+  set_window_title(g_ledger->main_win, page && page->title[0] ? page->title : ui_tr("Ledger"));
+  set_window_subtitle(g_ledger->main_win, org);
+  send_message(g_ledger->main_win, tbEnableItem, ID_VIEW_BACK, (void *)(intptr_t)page_host_can_go(g_ledger->main_win, -1));
+  send_message(g_ledger->main_win, tbEnableItem, ID_VIEW_FORWARD, (void *)(intptr_t)page_host_can_go(g_ledger->main_win, 1));
 }
 
 
@@ -329,6 +333,9 @@ void ledger_command(uint16_t id) {
     case ID_VIEW_ENTRIES: case ID_VIEW_REPORTS: case ID_VIEW_CONFIG:
       page_host_select(parent, id);
       break;
+    case ID_VIEW_BACK:    if (page_host_can_go(parent, -1)) page_host_go(parent, -1); break;
+    case ID_VIEW_FORWARD: if (page_host_can_go(parent, 1)) page_host_go(parent, 1);   break;
+    case ID_VIEW_SIDEBAR: page_host_set_sidebar_collapsed(parent, !page_host_sidebar_collapsed(parent)); break;
 
     case ID_REPORT_SETTINGS:
       if (show_db_dialog(&ledger_report_settings_form, NULL, parent, 1)) after_save(0);
@@ -377,6 +384,9 @@ result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
       }
       return false;
     }
+    case evPageChanged:
+      if (g_ledger->main_win == win) ledger_update_status();
+      return true;
     case evClose:
       ui_request_quit();
       return true;

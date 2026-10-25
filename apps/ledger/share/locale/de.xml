@@ -371,6 +371,12 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Document %d cannot be posted." where="code">Beleg %d kann nicht gebucht werden.</string>
   <string source="There is no document %d." where="code">Beleg %d gibt es nicht.</string>
   <string source="Open Add-on..." where="menu">Externe Verarbeitung öffnen...</string>
+  <string source="Back" where="menu">Zurück</string>
+  <string source="Forward" where="menu">Vorwärts</string>
+  <string source="Show or Hide Sidebar" where="menu">Seitenleiste ein- oder ausblenden</string>
+  <string source="Show or hide the sidebar (Ctrl+B)" where="main_window">Seitenleiste ein- oder ausblenden (Strg+B)</string>
+  <string source="Back (Alt+Left)" where="main_window">Zurück (Alt+Links)</string>
+  <string source="Forward (Alt+Right)" where="main_window">Vorwärts (Alt+Rechts)</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

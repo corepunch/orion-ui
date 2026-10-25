@@ -48,20 +48,25 @@ the reports; `Reports > Print Report Forms` writes the cash book.
 
 ## Look and feel
 
-Ledger is built for people who keep books in 1C all day, so it looks the way
-they expect. It uses the Amber theme (`THEME_ledger=amber`, the default here):
-white tables and fields, warm grey chrome, graphite dialog captions, and pale
-yellow for the current row, the current section and the default button
-(`OK and Post`).
+Ledger is built for people who keep books in 1C all day, so its layout is the
+one they expect: a section panel, a journal over the document's lines, and a
+default button that posts. Its look is Porcelain (`THEME_ledger=porcelain`, the
+default here): cool white surfaces, white tables and fields, and indigo for the
+current row, the current section and the default button (`OK and Post`).
+Porcelain follows the system appearance: when macOS or Windows switches to dark
+mode, Ledger switches to Porcelain Dark, and back. `--appearance light|dark`
+pins one.
 
 - **Section panel.** Every section has an icon and a caption (`labels="right"`
-  on the ActivityBar, `label=` on each page).
-- **Unified title bar.** One row holds the organization's name, the icon
-  buttons and the window controls, as Finder shows a folder's name above its
-  contents: the host's toolbar holds a `<title />` item and the active page
-  adds its buttons (`flags="toolbar,titletoolbar"`). The name starts over the
-  content, past the section panel; the tables start right under the row.
-  Tooltips name each command.
+  on the ActivityBar, `label=` on each page). The panel runs from the window's
+  top to its status bar in its own colour. `View > Show or Hide Sidebar`
+  (Ctrl+B) or the button at its top collapses it to an icon rail.
+- **Title row.** One row holds back and forward (Alt+Left, Alt+Right), the
+  page's title over the organization's name, the page's buttons and the window
+  controls, as Finder and Mail do. The host's toolbar declares the sidebar
+  toggle, a `<sidebar-separator />`, back, forward and `<title />`; the active
+  page adds its buttons (`flags="toolbar,titletoolbar"`). Tooltips name each
+  command.
 - **Status icons.** Posted documents show a green seal and drafts a dashed
   sheet. Catalogs, the chart of accounts and the entry journal have their
   own row icons, and an asset not yet in service shows a clock (`<RowIcon>`).

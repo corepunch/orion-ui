@@ -59,10 +59,12 @@ static void paint_gradient_top(uint32_t top, uint32_t bottom, irect16_t r, int r
 #define theme_navy_instance paint_navy_instance
 #define theme_light_instance paint_light_instance
 #define theme_amber_instance paint_amber_instance
+#define theme_porcelain_instance paint_porcelain_instance
 theme_t *paint_modern_instance(void);
 theme_t *paint_navy_instance(void);
 theme_t *paint_light_instance(void);
 theme_t *paint_amber_instance(void);
+theme_t *paint_porcelain_instance(void);
 #include <orion/user/theme_classic.c>
 #include <orion/user/theme_modern.c>
 #undef fill_rect
@@ -75,6 +77,7 @@ theme_t *paint_amber_instance(void);
 #undef theme_navy_instance
 #undef theme_light_instance
 #undef theme_amber_instance
+#undef theme_porcelain_instance
 
 static theme_t *paint_with_theme(theme_style_t style) {
   if (get_theme()->style != style) set_theme(style);
@@ -349,7 +352,7 @@ static void test_navy_caption_bar(void) {
 
 static void test_panel_shades_and_tabs(void) {
   TEST("Page, tab strip and tab faces have distinct shades; active tab merges with the pane");
-  theme_style_t styles[] = {THEME_MODERN, THEME_LIGHT, THEME_NAVY, THEME_AMBER, THEME_CLASSIC};
+  theme_style_t styles[] = {THEME_MODERN, THEME_LIGHT, THEME_NAVY, THEME_AMBER, THEME_PORCELAIN, THEME_PORCELAIN_DARK, THEME_CLASSIC};
   for (int i = 0; i < ARRAY_LEN(styles); i++) {
     theme_t *theme = paint_with_theme(styles[i]);
     ASSERT_NOT_EQUAL(get_sys_color(brControlBg), get_sys_color(brPanelDark));
