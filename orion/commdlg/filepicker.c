@@ -616,7 +616,12 @@ static bool fp_build_path(fp_state_t *ps, char *out, size_t out_sz) {
     return true;
   }
 
-  // Otherwise construct from current directory + edit-box text.
+  // Otherwise the edit-box text: a typed absolute path stands on its own,
+  // a name is in the current directory.
+  if (fname[0] == '/' || fname[0] == '\\' || (fname[0] && fname[1] == ':')) {
+    snprintf(out, out_sz, "%s", fname);
+    return true;
+  }
   char curpath[512] = {0};
   send_message(ps->list_win, FLM_GETPATH, sizeof(curpath), curpath);
   snprintf(out, out_sz, "%s/%s", curpath, fname);

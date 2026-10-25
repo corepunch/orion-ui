@@ -28,6 +28,7 @@ build/bin/ledger --config de-2003 --lang de --data /tmp/books
 | Reports | For a period set in `Reports > Settings...` (Ctrl+R): trial balance (opening, turnovers, closing, roll-up to parent accounts), account card, analysis by analytics object, sales and purchase VAT books, cash book, fixed assets, payroll statement |
 | Print forms | HTML templates with amounts in words: TORG-12, VAT invoice, invoice for payment, KO-1/KO-2, payment order, payroll statement T-49 and cash book KO-4 (ru-2003); Rechnung, Quittung, Lohnjournal and Kassenbuch (de-2003) |
 | Storage | One XML infobase per configuration, saved on `File > Save` or on exit |
+| Import from 1C | Catalogs and opening balances from a 1C:Enterprise 8 exchange file (EnterpriseData), see below |
 
 `Reports > Recalculate` (F5) reposts every document in date order and rebuilds
 the reports; `Reports > Print Report Forms` writes the cash book.
@@ -111,14 +112,51 @@ new entries:
 build/bin/orionc --input apps/ledger/ledger.orion --strings apps/ledger/share/locale/ru.xml
 ```
 
+## Import from 1C
+
+`File > Import from 1C (EnterpriseData)...` reads the exchange file that
+1C:Enterprise 8 writes in the EnterpriseData format (Администрирование →
+Синхронизация данных → Выгрузка данных в файл, or the «Выгрузка загрузка
+EnterpriseData» processor). Catalogs come from any configuration that speaks
+the format. Opening balances come from those that send them in it: Trade
+Management 11, Integrated Automation, ERP and Small Business. Accounting 3.0
+exchanges catalogs only. Ledger takes:
+
+| 1C object | Ledger |
+|---|---|
+| Справочник.Контрагенты | Counterparties: name, INN, KPP, legal address and phone |
+| Справочник.Номенклатура | Items: name, code; unit by its OKEI code, VAT rate by value |
+| Справочник.ФизическиеЛица, Сотрудники | Employees: full name, INN; the expense account of the others |
+| Справочник.ОсновныеСредства | Fixed assets: name, inventory number; accounts and life of the others |
+| Справочник.Валюты | Currencies by ISO code; the national one is left out |
+| Документ.Остатки… | One posted «Ввод начальных остатков» operation against the opening account (000) |
+
+The balance documents name what they hold, not an account:
+ОстаткиРасчетовСПоставщикамиДолги, ОстаткиСобственныхТМЦ,
+ОстаткиБезналичныхДенежныхСредств and so on. The configuration's
+`balance_rules` give each one its account and side, plus a currency account
+for rows in a foreign currency. In ru-2003 these are 50.01, 51/52, 62.01,
+62.02, 60.01/60.21, 60.02, 71, 41.01 and 66. A row's `СуммаРегл` is the entry
+amount and its `Сумма` the currency amount. Rows of goods may carry only a
+`Количество`, as Trade Management sends them without cost.
+
+A row's counterparty, item or employee becomes the entry's analytics. It is
+read from the row or from its `ДанныеНоменклатуры` / `ДанныеВзаиморасчетов`,
+and added to its catalog if new. Records already kept are matched by INN,
+code or name. Balances of a date imported before are not entered twice. The
+whole file is one change: a file that fails leaves the infobase as it was.
+A summary lists what was added and the balance documents the configuration
+has no account for.
+
 ## Adding a configuration
 
 1. Copy `share/configurations/ru-2003` to `share/configurations/<code>`.
 2. Edit `configuration.xml`: `settings` (currency names for amounts in
-   words, cash and payroll accounts), `subconto_kinds`, `accounts`, `units`,
+   words, the national currency's ISO code, cash, payroll and opening-balance
+   accounts), `subconto_kinds`, `accounts`, `units`,
    `vat_rates`, `doc_types` (posting rules reference account ids; `form`
-   picks the dialog and the posting), `payroll_taxes`, `closing_rules` and
-   `print_forms`.
+   picks the dialog and the posting), `payroll_taxes`, `closing_rules`,
+   `balance_rules` (1C import) and `print_forms`.
 3. Write the print templates in `print/` (HTML, see below) and a `demo.xml`
    infobase, or leave the demo empty.
 4. Add a `<configuration>` row to `index.xml`.

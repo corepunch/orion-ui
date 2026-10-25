@@ -60,6 +60,20 @@ int  ledger_print_document(int doc_id, char *report, size_t report_sz);
 // Writes the configuration's report forms (cash book) for the report period.
 int  ledger_print_reports(char *report, size_t report_sz);
 
+// import_1c.c — 1C:Enterprise 8 exchange files (EnterpriseData XML): catalogs
+// and opening balances, in one editing context.
+typedef struct {
+  int counterparties, items, employees, assets, currencies;  // added
+  int matched;            // objects already in the infobase
+  int entries;            // opening entries written
+  int ignored;            // objects of other kinds in the file
+  double debit, credit;   // the opening entries' totals
+  bool balances_present;  // the file's balances were imported before
+  char skipped[256];      // balance documents the configuration has no rule for
+  char error[256];
+} ledger_import_t;
+bool ledger_import_enterprisedata(database_t *ib, database_t *cfg, const char *path, ledger_import_t *out);
+
 // controller.c — commands and views.
 void     ledger_command(uint16_t id);
 void     ledger_refresh_views(void);

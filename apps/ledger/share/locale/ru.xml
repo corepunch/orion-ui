@@ -317,6 +317,22 @@
   <string source="Interface language" where="config_page">Язык интерфейса</string>
   <string source="Report period: all dates" where="code">Период отчетов: все даты</string>
   <string source="%s %s dated %s" where="code">%s %s от %s</string>
+  <string source="Cannot open the file %s." where="code">Не удалось открыть файл %s.</string>
+  <string source="Import from 1C" where="code">Загрузка из 1С</string>
+  <string source="Counterparties: %d&#10;Items: %d&#10;Employees: %d&#10;Fixed assets: %d&#10;Currencies: %d&#10;Already in the infobase: %d&#10;Opening entries: %d (debit %s, credit %s)" where="code">Контрагенты: %d
+Номенклатура: %d
+Сотрудники: %d
+Основные средства: %d
+Валюты: %d
+Уже были в базе: %d
+Проводки по остаткам: %d (дебет %s, кредит %s)</string>
+  <string source="The balances of this date were imported before and were not entered again." where="code">Остатки на эту дату уже загружались и повторно не введены.</string>
+  <string source="&#10;&#10;Balances the configuration has no account for, left out: %s" where="code">
+
+Остатки, для которых в конфигурации нет счета, пропущены: %s</string>
+  <string source="The file is not a 1C exchange file in the EnterpriseData format." where="code">Файл не является файлом обмена 1С в формате EnterpriseData.</string>
+  <string source="The configuration has no opening balances document type." where="code">В конфигурации нет вида документа для ввода начальных остатков.</string>
+  <string source="Opening balances imported from 1C" where="code">Остатки, загруженные из 1С</string>
   <string source="Journal" where="journal_page">Журнал</string>
   <string source="Accounts" where="accounts_page">План счетов</string>
   <string source="Assets" where="assets_page">Основные средства</string>
@@ -324,6 +340,7 @@
   <string source="Reports (Ctrl+9)" where="reports_page">Отчеты (Ctrl+9)</string>
   <string source="Setup" where="config_page">Настройка</string>
   <string source="Active configuration (Ctrl+0)" where="config_page">Текущая конфигурация (Ctrl+0)</string>
+  <string source="Import from 1C (EnterpriseData)..." where="menu">Загрузить из 1С (EnterpriseData)...</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>

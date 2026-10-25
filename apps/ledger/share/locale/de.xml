@@ -317,6 +317,22 @@ stammen aus der aktiven Konfiguration.</string>
   <string source="Interface language" where="config_page">Sprache der Oberfläche</string>
   <string source="Report period: all dates" where="code">Berichtszeitraum: alle Daten</string>
   <string source="%s %s dated %s" where="code">%s %s vom %s</string>
+  <string source="Cannot open the file %s." where="code">Die Datei %s lässt sich nicht öffnen.</string>
+  <string source="Import from 1C" where="code">Import aus 1C</string>
+  <string source="Counterparties: %d&#10;Items: %d&#10;Employees: %d&#10;Fixed assets: %d&#10;Currencies: %d&#10;Already in the infobase: %d&#10;Opening entries: %d (debit %s, credit %s)" where="code">Geschäftspartner: %d
+Artikel: %d
+Mitarbeiter: %d
+Anlagen: %d
+Währungen: %d
+Bereits vorhanden: %d
+Eröffnungsbuchungen: %d (Soll %s, Haben %s)</string>
+  <string source="The balances of this date were imported before and were not entered again." where="code">Die Salden dieses Datums wurden bereits importiert und nicht erneut erfasst.</string>
+  <string source="&#10;&#10;Balances the configuration has no account for, left out: %s" where="code">
+
+Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
+  <string source="The file is not a 1C exchange file in the EnterpriseData format." where="code">Die Datei ist keine 1C-Austauschdatei im Format EnterpriseData.</string>
+  <string source="The configuration has no opening balances document type." where="code">Die Konfiguration hat keine Belegart für Eröffnungsbuchungen.</string>
+  <string source="Opening balances imported from 1C" where="code">Aus 1C importierte Salden</string>
   <string source="Journal" where="journal_page">Journal</string>
   <string source="Accounts" where="accounts_page">Kontenplan</string>
   <string source="Assets" where="assets_page">Anlagen</string>
@@ -324,6 +340,7 @@ stammen aus der aktiven Konfiguration.</string>
   <string source="Reports (Ctrl+9)" where="reports_page">Auswertungen (Strg+9)</string>
   <string source="Setup" where="config_page">Einstellungen</string>
   <string source="Active configuration (Ctrl+0)" where="config_page">Aktive Konfiguration (Strg+0)</string>
+  <string source="Import from 1C (EnterpriseData)..." where="menu">Aus 1C importieren (EnterpriseData)...</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

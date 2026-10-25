@@ -24,6 +24,8 @@
       <item name="configuration" label="Select Configuration..." />
       <item name="language" label="Language..." />
       <Separator />
+      <item name="import_1c" label="Import from 1C (EnterpriseData)..." />
+      <Separator />
       <item name="quit" label="Exit" />
     </menu>
     <menu name="doc" label="Documents">
@@ -96,10 +98,14 @@
         <field name="id" type="integer" key="YES" />
         <field name="cash_account_id" type="integer" relation="accounts.id" />
         <field name="payroll_account_id" type="integer" relation="accounts.id" />
+        <!-- Opening balances are entered against this account (000 in Russia, 9000 in SKR 03). -->
+        <field name="opening_account_id" type="integer" relation="accounts.id" />
         <field name="code" type="string" length="32" />
         <field name="name" type="string" length="128" />
         <field name="country" type="string" length="64" />
         <field name="currency" type="string" length="16" />
+        <!-- ISO 4217 code of the national currency, which the currencies catalog leaves out. -->
+        <field name="currency_code" type="string" length="4" />
         <field name="currency_units" type="string" length="64" />
         <field name="currency_gender" type="string" length="4" />
         <field name="cents_units" type="string" length="64" />
@@ -197,6 +203,17 @@
              into service, "same" in that month. -->
         <field name="start" type="string" length="8" />
         <field name="name" type="string" length="96" />
+      </table>
+      <!-- Opening balances in a 1C EnterpriseData file come as documents named
+           by what they hold (Документ.ОстаткиРасчетовСПоставщикамиДолги): each
+           opens its rows on account (Dt, or Kt when credit), on
+           currency_account_id when the row is in a foreign currency. -->
+      <table name="balance_rules">
+        <field name="id" type="integer" key="YES" />
+        <field name="account_id" type="integer" relation="accounts.id" />
+        <field name="currency_account_id" type="integer" relation="accounts.id" />
+        <field name="document" type="string" length="128" />
+        <field name="credit" type="boolean" />
       </table>
       <!-- Document print forms; report forms name a report table instead. -->
       <table name="print_forms">

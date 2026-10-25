@@ -192,6 +192,7 @@ static void sum_entries(database_t *ib, db_document_t *doc) {
 static void date_manual_entries(database_t *ib, db_document_t *doc) {
   result_node_t *entries = fetch(ib, TABLE_ENTRIES, "document_id", doc->id);
   EACH_RECORD(db_entry_t, e, entries) {
+    if (!strcmp(e->date, doc->date) && e->content[0]) continue;
     snprintf(e->date, sizeof(e->date), "%s", doc->date);
     if (!e->content[0]) snprintf(e->content, sizeof(e->content), "%.*s", (int)sizeof(e->content) - 1, doc->comment);
     send_db_message(ib, dbUpdate, TABLE_ENTRIES, e);
