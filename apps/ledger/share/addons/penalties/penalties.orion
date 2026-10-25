@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Penalties on overdue receivables: an add-on (external processing) that
+     lists what customers owe past the payment term and posts the penalty as
+     a manual operation. Its behaviour is penalties.lua. -->
+<orion>
+  <databases>
+    <database name="penalties" class="db_schema_xml">
+      <!-- One row per overdue debt, oldest first; rebuilt on every calculation. -->
+      <table name="lines" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="counterparty_id" type="integer" relation="ib.counterparties.id" />
+        <field name="number" type="string" length="24" />
+        <field name="due" type="date" />
+        <field name="days" type="integer" />
+        <field name="debt" type="double" />
+        <field name="penalty" type="double" />
+      </table>
+    </database>
+  </databases>
+  <forms>
+    <form name="penalties" title="Penalties on Overdue Receivables" width="640" height="460" spacing="6" padding="8">
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_date" text="Calculate on:" />
+          <Label name="lbl_term" text="Payment term, days:" />
+          <Label name="lbl_rate" text="Penalty, % per day:" />
+          <Label name="lbl_receivable" text="Receivables account:" />
+          <Label name="lbl_debit" text="Debit:" />
+          <Label name="lbl_credit" text="Credit:" />
+        </Column>
+        <Column name="inputs">
+          <TextBox name="date" type="date" />
+          <TextBox name="term" type="integer" />
+          <TextBox name="rate" type="number" decimals="3" />
+          <ComboBox name="receivable" source="cfg.accounts" display="code" value="id" />
+          <ComboBox name="debit" source="cfg.accounts" display="code" value="id" />
+          <ComboBox name="credit" source="cfg.accounts" display="code" value="id" />
+        </Column>
+      </GridView>
+      <TableView name="lines" source="penalties.lines" zeros="blank" flags="flexspace,vscroll">
+        <Column field="counterparty.name" title="Counterparty" width="0" min-width="140" />
+        <Column field="number" title="Document" width="80" />
+        <Column field="due" title="Due" width="84" />
+        <Column field="days" title="Days" width="44" />
+        <Column field="debt" title="Overdue" width="96" total="sum" />
+        <Column field="penalty" title="Penalty" width="90" total="sum" />
+      </TableView>
+      <Label name="summary" />
+      <Label name="error" />
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Button name="calculate" text="Calculate" action="calculate" />
+        <Space name="flex" />
+        <Button name="accrue" text="Post Penalties" action="accrue" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Close" />
+      </StackView>
+    </form>
+  </forms>
+</orion>

@@ -176,8 +176,14 @@ datasources.
 
 An add-on's databases live in memory. They are registered under their
 declared names while the add-on is open, so a second add-on with the same
-database name cannot open alongside it. Texts in its `.orion` file translate
-through catalogs in a `locale/` folder beside it.
+database name cannot open alongside it.
+
+An add-on's catalogs live in a `locale/` folder beside it (`ru.xml`, `de.xml`),
+made with `orionc --strings` from its `.orion` file plus its `orion.tr` texts
+as `where="code"` entries. They are scoped: a form text translates in the forms
+its `where=` names, and code texts only while the add-on's own code runs, so
+an add-on cannot change the host's texts or its number and date formats
+(`ui_add_scoped_string_catalog_dir()`).
 
 ## Hosting add-ons (C)
 

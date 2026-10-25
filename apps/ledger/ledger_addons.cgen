@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The "ledger" module of Ledger's add-ons (ledger_addons.c): what only
+     Ledger knows, next to orion.model's records. tools/cgen.c generates its
+     Lua bindings (build/generated/apps/ledger/ledger_addons_lua.h). -->
+<module name="ledger" namespace="ledger" prefix="ledger_addon_" luaopen="luaopen_ledger_addons" after-luaopen="ledger_addon_constants">
+  <summary>The chart of accounts' hierarchy, posted turnovers and posting, for add-ons. ledger.configuration is the open configuration's code ("ru-2026").</summary>
+  <functions>
+    <function name="account" lua="true">
+      <summary>An account of the open configuration.</summary>
+      <arg name="account" type="value">Its code ("62") or id</arg>
+      <returns type="nresults">{id, code, name, analytics}, analytics naming the catalog its entries are analysed by ("counterparties"), or nil</returns>
+    </function>
+    <function name="movements" lua="true">
+      <summary>Each side of a posted entry on the account or its subaccounts, in date order.</summary>
+      <arg name="account" type="value">Its code or id</arg>
+      <arg name="filter" type="table" optional="true">{from, to} as ISO dates, both included, and subconto, the analytics object</arg>
+      <returns type="nresults">a list of {date, document, number, account, corr, subconto, debit, credit, content}</returns>
+    </function>
+    <function name="turnover" lua="true">
+      <summary>Turnovers of the account and its subaccounts on posted documents.</summary>
+      <arg name="account" type="value">Its code or id</arg>
+      <arg name="filter" type="table" optional="true">{from, to, subconto}, as for movements</arg>
+      <returns type="nresults">{debit, credit, balance}, the balance being debit less credit</returns>
+    </function>
+    <function name="period" lua="true">
+      <summary>The report period set in Reports, Report Settings.</summary>
+      <returns type="nresults">its first and last date, "" where it is open</returns>
+    </function>
+    <function name="post" lua="true">
+      <summary>Posts a document by its type's rules.</summary>
+      <arg name="id" type="int">The document</arg>
+      <returns type="nresults">true, or nil and a message</returns>
+    </function>
+    <function name="unpost" lua="true">
+      <summary>Cancels a document's posting.</summary>
+      <arg name="id" type="int">The document</arg>
+      <returns type="nresults">true, or nil and a message</returns>
+    </function>
+  </functions>
+</module>

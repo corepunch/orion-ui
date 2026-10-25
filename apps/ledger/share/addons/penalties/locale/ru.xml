@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="ru">
+  <string source="Penalties on Overdue Receivables" where="penalties">Пени по просроченной дебиторской задолженности</string>
+  <string source="Calculate on:" where="penalties">Расчет на дату:</string>
+  <string source="Payment term, days:" where="penalties">Срок оплаты, дней:</string>
+  <string source="Penalty, % per day:" where="penalties">Пени, % в день:</string>
+  <string source="Receivables account:" where="penalties">Счет расчетов:</string>
+  <string source="Debit:" where="penalties">Дебет:</string>
+  <string source="Credit:" where="penalties">Кредит:</string>
+  <string source="Counterparty" where="penalties">Контрагент</string>
+  <string source="Document" where="penalties">Документ</string>
+  <string source="Due" where="penalties">Срок</string>
+  <string source="Days" where="penalties">Дней</string>
+  <string source="Overdue" where="penalties">Просрочено</string>
+  <string source="Penalty" where="penalties">Пени</string>
+  <string source="Calculate" where="penalties">Рассчитать</string>
+  <string source="Post Penalties" where="penalties">Начислить пени</string>
+  <string source="Close" where="penalties">Закрыть</string>
+  <string source="Penalties on overdue receivables on %s" where="code">Пени по просроченной дебиторской задолженности на %s</string>
+  <string source="Overdue debts: %d. Penalties: %s." where="code">Просроченных долгов: %d. Пени: %s.</string>
+  <string source="Enter the date to calculate on." where="code">Укажите дату расчета.</string>
+  <string source="Choose the receivables account." where="code">Выберите счет расчетов.</string>
+  <string source="The payment term cannot be negative." where="code">Срок оплаты не может быть отрицательным.</string>
+  <string source="Enter the penalty rate." where="code">Укажите ставку пени.</string>
+  <string source="Nothing is overdue on this date." where="code">На эту дату просроченной задолженности нет.</string>
+  <string source="Choose the accounts to post the penalties to." where="code">Выберите счета для начисления пени.</string>
+  <string source="Penalties on this date are already posted in %s." where="code">Пени на эту дату уже начислены документом %s.</string>
+  <string source="The configuration has no manual operation." where="code">В конфигурации нет ручной операции.</string>
+  <string source="Penalty on %s, %d days overdue" where="code">Пени по %s, просрочка %d дн.</string>
+</strings>

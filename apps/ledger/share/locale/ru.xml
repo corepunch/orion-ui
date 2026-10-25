@@ -359,16 +359,21 @@
   <string source="Act" where="config_page">Нормативный акт</string>
   <string source="In Force From" where="config_page">Действует с</string>
   <string source="Script" where="config_page">Скрипт</string>
-  <context name="currencies_page">
-    <string source="Rate">Курс</string>
-  </context>
-  <context name="reports_page">
-    <string source="Expense">Расход</string>
-  </context>
   <string source="Cannot write an imported record." where="code">Не удалось записать импортируемую запись.</string>
   <string source="Cannot identify the exchange file." where="code">Не удалось определить идентификатор файла обмена.</string>
   <string source="Cannot begin the import transaction." where="code">Не удалось начать транзакцию импорта.</string>
   <string source="Cannot post the imported opening balances." where="code">Не удалось провести импортированные начальные остатки.</string>
   <string source="Cannot commit the import transaction." where="code">Не удалось зафиксировать транзакцию импорта.</string>
   <string source="An older 1C import has no source identifier. Review its opening balances before importing this file." where="code">У старого импорта 1С нет идентификатора источника. Проверьте его начальные остатки перед импортом этого файла.</string>
+  <string source="Ledger add-ons (*.orion)" where="code">Внешние обработки Ledger (*.orion)</string>
+  <string source="Open Add-on" where="code">Внешняя обработка</string>
+  <string source="Document %d cannot be posted." where="code">Документ %d не удалось провести.</string>
+  <string source="There is no document %d." where="code">Документа %d нет.</string>
+  <string source="Open Add-on..." where="menu">Открыть внешнюю обработку...</string>
+  <context name="currencies_page">
+    <string source="Rate">Курс</string>
+  </context>
+  <context name="reports_page">
+    <string source="Expense">Расход</string>
+  </context>
 </strings>

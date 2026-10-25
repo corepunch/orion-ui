@@ -76,7 +76,7 @@ Simplifications and known gaps (ru-2026):
 
 | Area | Rule implemented | Figures | Legal basis |
 |---|---|---|---|
-| Accounts | SKR 03 subset with automatic accounts per rate | 33 accounts | DATEV Standardkontenrahmen SKR 03, Stand 2026 |
+| Accounts | SKR 03 subset with automatic accounts per rate; 2650 for interest on late payment (§ 288 BGB) | 34 accounts | DATEV Standardkontenrahmen SKR 03, Stand 2026 |
 | VAT | 19 % and 7 %; a line's rate routes revenue to 8400/8300, output tax to 1776/1771, purchases to 3400/3300 with input tax 1576/1571 (document types with `auto_accounts`); service invoices keep their expense account | 19, 7, 0 | § 12 UStG; Steueränderungsgesetz 2025 (Speisen 7 % ab 2026) |
 | Invoices | Pflichtangaben incl. Leistungsdatum, Steuernummer and USt-IdNr., Entgelt nach Steuersätzen; GmbH footer | — | § 14 Abs. 4 UStG; § 35a GmbHG |
 | VAT return | Kennzahlen 81, 86, 41/43, 66 from the per-rate summary | — | § 18 UStG; Vordruck USt 1 A |

@@ -87,6 +87,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
     fprintf(stderr, "[ledger] share directory not found (run `make share`)\n");
     return false;
   }
+  snprintf(g_ledger->share_dir, sizeof(g_ledger->share_dir), "%s", share);
   snprintf(g_ledger->config_dir, sizeof(g_ledger->config_dir), "%.900s/configurations/%s", share, g_ledger->configuration);
   if (data_dir) snprintf(g_ledger->data_dir, sizeof(g_ledger->data_dir), "%s", data_dir);
   else snprintf(g_ledger->data_dir, sizeof(g_ledger->data_dir), "%.900s/ledger/%s", axSettingsDirectory(), g_ledger->configuration);
@@ -121,6 +122,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   register_database("catalog", g_ledger->catalog);
   register_database("cfg", g_ledger->cfg);
   ledger_script_open(g_ledger->config_dir, g_ledger->data_dir);  // rules.lua and plugins
+  ledger_addons_init();
   choose_ui_language(language, share);
   if (!(g_ledger->ib = open_infobase())) return false;
 

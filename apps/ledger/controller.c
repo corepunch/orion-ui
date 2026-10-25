@@ -254,6 +254,7 @@ void ledger_command(uint16_t id) {
     case ID_FILE_CONFIGURATION: select_configuration(); break;
     case ID_FILE_LANGUAGE:      select_language();      break;
     case ID_FILE_IMPORT_1C:     import_from_1c();       break;
+    case ID_FILE_ADDON:         ledger_open_addon();    break;
     case ID_FILE_QUIT:          ui_request_quit();      break;
 
     case ID_DOC_NEW:           new_document("document");  break;

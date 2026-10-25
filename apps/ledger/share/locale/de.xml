@@ -359,16 +359,21 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Act" where="config_page">Rechtsgrundlage</string>
   <string source="In Force From" where="config_page">Gültig ab</string>
   <string source="Script" where="config_page">Skript</string>
-  <context name="currencies_page">
-    <string source="Rate">Kurs</string>
-  </context>
-  <context name="reports_page">
-    <string source="Expense">Ausgabe</string>
-  </context>
   <string source="Cannot write an imported record." where="code">Ein importierter Datensatz konnte nicht gespeichert werden.</string>
   <string source="Cannot identify the exchange file." where="code">Die Austauschdatei konnte nicht identifiziert werden.</string>
   <string source="Cannot begin the import transaction." where="code">Die Importtransaktion konnte nicht gestartet werden.</string>
   <string source="Cannot post the imported opening balances." where="code">Die importierten Eröffnungssalden konnten nicht gebucht werden.</string>
   <string source="Cannot commit the import transaction." where="code">Die Importtransaktion konnte nicht bestätigt werden.</string>
   <string source="An older 1C import has no source identifier. Review its opening balances before importing this file." where="code">Ein älterer 1C-Import hat keine Quellkennung. Prüfen Sie dessen Eröffnungssalden vor dem Import dieser Datei.</string>
+  <string source="Ledger add-ons (*.orion)" where="code">Externe Verarbeitungen (*.orion)</string>
+  <string source="Open Add-on" where="code">Externe Verarbeitung</string>
+  <string source="Document %d cannot be posted." where="code">Beleg %d kann nicht gebucht werden.</string>
+  <string source="There is no document %d." where="code">Beleg %d gibt es nicht.</string>
+  <string source="Open Add-on..." where="menu">Externe Verarbeitung öffnen...</string>
+  <context name="currencies_page">
+    <string source="Rate">Kurs</string>
+  </context>
+  <context name="reports_page">
+    <string source="Expense">Ausgabe</string>
+  </context>
 </strings>
