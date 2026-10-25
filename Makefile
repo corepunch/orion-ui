@@ -26,6 +26,8 @@ CFLAGS += $(OPT)
 COPY_DLLS = :
 ifneq (,$(filter Windows_NT,$(OS))$(findstring MINGW,$(UNAME_S))$(findstring MSYS,$(UNAME_S)))
 IS_WIN   = 1
+# MinGW's math.h declares M_PI under -std=c11 only with _USE_MATH_DEFINES.
+CFLAGS  += -D_USE_MATH_DEFINES
 LIBS    += -lglew32 -lopengl32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -lsetupapi -lxmllite
 LIB_EXT  = dll
 LIB_FLAGS = -shared
