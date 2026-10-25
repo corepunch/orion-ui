@@ -420,6 +420,7 @@ help:
 	@echo "ipad-all  - Build separate Image Editor, Pencil Test and Groove iPad bundles"
 	@echo "ipad / ipad-simulator / ipad-run / ipad-deploy / ipad-mac - APP=imageeditor|penciltest|groove|winamp (winamp is an iPhone app; ipad-deploy auto-selects one connected device)"
 	@echo "mac-deploy - Build a native macOS app bundle with its app icon (APP=<appname>)"
+	@echo "bundles   - Build portable downloads of every app for this platform into build/bundles (BUNDLE_APPS=\"a b\" for a subset)"
 	@echo "list-devices - List paired devices (see packaging/ipad/README.md)"
 	@echo "ALLOW_HIGHDPI=0 - Disable high-DPI surfaces (use with -B)"
 	@echo "clean     - Remove all build artifacts"
@@ -455,5 +456,13 @@ ipad-all:
 	$(MAKE) -f packaging/ipad/build.mk APP=groove SDK=iphoneos app
 mac-deploy:
 	$(MAKE) -f packaging/macos/build.mk APP=$(APP) APP_SOURCE=$(or $(PHONY_APPS_SRC_$(APP)),$(APP)) deploy
+
+# Portable per-app downloads (zip / tar.gz) for this platform; see packaging/README.md.
+.PHONY: bundles app-source
+bundles: all
+	sh scripts/bundle-apps.sh "" $(BUILD_DIR)/bundles $(BUNDLE_APPS)
+# Source directory name of an app: itself, or the app a phony app is derived from.
+app-source:
+	@echo $(or $(PHONY_APPS_SRC_$(APP)),$(APP))
 list-devices:
 	xcrun devicectl list devices

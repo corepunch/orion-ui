@@ -4,6 +4,7 @@ formeditor	Declarative UI form editor
 gitclient	Git repository client
 helloworld	Minimal Orion example application
 imageeditor	Layered image editor
+ledger	Double-entry bookkeeping
 orionc	Orion declarative resource compiler
 penciltest	Black-and-white image editor variant
 scener	XML room and scene editor and renderer
