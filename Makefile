@@ -116,8 +116,9 @@ CORE_LDLIBS      = -L$(LIB_DIR) -lscript -lkernel -lcommctl -lcommdlg -luser
 
 # Tools
 ORIONC_BIN   = $(BIN_DIR)/orionc$(EXE_EXT)
-TOOLS_SRCS   = $(filter-out tools/orionc.c tools/penciltest_video.c,$(wildcard tools/*.c))
-TOOLS_BINS   = $(patsubst tools/%.c,$(BIN_DIR)/%$(EXE_EXT),$(TOOLS_SRCS)) $(ORIONC_BIN) $(if $(IS_WIN),,$(BIN_DIR)/penciltest-video)
+CGEN_BIN     = $(BIN_DIR)/cgen$(EXE_EXT)
+TOOLS_SRCS   = $(filter-out tools/orionc.c tools/cgen.c tools/penciltest_video.c,$(wildcard tools/*.c))
+TOOLS_BINS   = $(patsubst tools/%.c,$(BIN_DIR)/%$(EXE_EXT),$(TOOLS_SRCS)) $(ORIONC_BIN) $(CGEN_BIN) $(if $(IS_WIN),,$(BIN_DIR)/penciltest-video)
 TOOLS_CFLAGS = $(CFLAGS) -Wno-unused-function
 PENCILTEST_VIDEO_CFLAGS = $(shell $(PKG_CONFIG) --cflags libpng 2>/dev/null)
 PENCILTEST_VIDEO_LIBS   = $(shell $(PKG_CONFIG) --libs libpng 2>/dev/null)
@@ -165,6 +166,14 @@ $(foreach n,$(filter-out shell,$(EXAMPLES)) $(PHONY_APP_NAMES),$(eval $(GEM_DIR)
 
 GENERATED_HEADERS = $(patsubst $(APPS)/%.orion,$(GENERATED_DIR)/$(APPS)/%.h,$(wildcard $(APPS)/*/*.orion))
 
+# Lua bindings declared in .cgen files (tools/cgen.c); the file implementing
+# a module includes its generated <stem>_lua.h. Framework modules also get a
+# generated reference in docs/lua/.
+CGEN_SRCS      = $(wildcard orion/*/*.cgen) $(wildcard $(APPS)/*/*.cgen)
+CGEN_HEADERS   = $(patsubst %.cgen,$(GENERATED_DIR)/%_lua.h,$(CGEN_SRCS))
+CGEN_DOC_SRCS  = $(wildcard orion/*/*.cgen)
+GENERATED_HEADERS += $(CGEN_HEADERS)
+
 .SECONDEXPANSION:
 
 TEST_SRCS = $(sort $(filter-out $(TEST_DIR)/test_env.c,$(wildcard $(TEST_DIR)/*.c)) \
@@ -206,8 +215,8 @@ $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(CORE_LIBS) | $(BIN_DIR)
 	@$(COPY_DLLS)
 
 # Self-contained tools that don't need the core libraries.
-$(ORIONC_BIN): TOOL_LINK = $(LDFLAGS) $(LIBS)
-$(ORIONC_BIN): $(BIN_DIR)/%$(EXE_EXT): tools/%.c | $(BIN_DIR)
+$(ORIONC_BIN) $(CGEN_BIN): TOOL_LINK = $(LDFLAGS) $(LIBS)
+$(ORIONC_BIN) $(CGEN_BIN): $(BIN_DIR)/%$(EXE_EXT): tools/%.c | $(BIN_DIR)
 	@echo "TOOL    $@"
 	@$(CC) $(TOOLS_CFLAGS) -I. -Itools -o $@ $< $(TOOL_LINK)
 
@@ -228,6 +237,25 @@ $(GENERATED_DIR)/$(APPS)/%.h: $(APPS)/%.orion $(ORIONC_BIN) | $(GENERATED_DIR)
 	@mkdir -p $(dir $@)
 	@echo "GEN     $@"
 	@$(ORIONC_BIN) --input $< --output $@ --prefix $(notdir $(basename $<))
+
+$(GENERATED_DIR)/%_lua.h: %.cgen $(CGEN_BIN) | $(GENERATED_DIR)
+	@mkdir -p $(dir $@)
+	@echo "GEN     $@"
+	@$(CGEN_BIN) --input $< --output $@
+
+# docs/lua/<module>.md, the reference generated from each framework .cgen.
+.PHONY: lua-docs lua-docs-check
+lua-docs: $(CGEN_BIN)
+	@mkdir -p docs/lua
+	@for f in $(CGEN_DOC_SRCS); do \
+	  $(CGEN_BIN) --input $$f --markdown docs/lua/$$(basename $$f .cgen).md --parent "Lua Add-ons" || exit 1; \
+	done
+lua-docs-check: $(CGEN_BIN)
+	@rm -rf $(BUILD_DIR)/lua-docs && mkdir -p $(BUILD_DIR)/lua-docs
+	@for f in $(CGEN_DOC_SRCS); do \
+	  $(CGEN_BIN) --input $$f --markdown $(BUILD_DIR)/lua-docs/$$(basename $$f .cgen).md --parent "Lua Add-ons" || exit 1; \
+	done
+	@diff -r docs/lua $(BUILD_DIR)/lua-docs > /dev/null || { echo "FAIL docs/lua is out of date: run make lua-docs"; exit 1; }
 
 # ── Platform submodule ───────────────────────────────────────────────────
 platform: $(PLATFORM_LIB)
@@ -271,7 +299,7 @@ $(eval $(call unity_lib,kernel,$(wildcard orion/kernel/*.c),,,))
 $(eval $(call unity_lib,user,$(USER_SRCS),$(COMMDLG_LIB) $(KERNEL_LIB),,-lcommdlg -lkernel))
 $(eval $(call unity_lib,commctl,$(wildcard orion/commctl/*.c),$(USER_LIB) $(KERNEL_LIB),-Icomponents,-luser -lkernel))
 # Lua add-ons: runtime .orion forms driven by a script (orion/script/script.h).
-$(eval $(call unity_lib,script,$(wildcard orion/script/*.c),$(COMMCTL_LIB) $(USER_LIB) $(KERNEL_LIB),,-lcommctl -luser -lkernel))
+$(eval $(call unity_lib,script,$(wildcard orion/script/*.c),$(COMMCTL_LIB) $(USER_LIB) $(KERNEL_LIB) $(filter $(GENERATED_DIR)/orion/%,$(CGEN_HEADERS)),,-lcommctl -luser -lkernel))
 
 # commdlg is built by its own makefile as a static library
 $(COMMDLG_LIB): $(wildcard orion/commdlg/*.c) $(CORE_HEADERS) | $(LIB_DIR)
@@ -372,7 +400,7 @@ $(GEM_BINS) $(PHONY_APP_GEMS): $(GEM_DIR)/%.gem: $(CORE_LIBS) $(GENERATED_HEADER
 	@$(GEM_NM) $@ 2>/dev/null | grep -q '$(GEM_SYM)' || { echo 'FAIL missing gem_get_interface'; exit 1; }
 
 # ── Tests ────────────────────────────────────────────────────────────────
-test: share $(TEST_BINS)
+test: share $(TEST_BINS) lua-docs-check
 	@echo "Running tests..."
 	@$(COPY_DLLS)
 	@for t in $(TEST_BINS); do \

@@ -1,7 +1,8 @@
 // "orion.db": the datasource messages C code sends (dbFetch, dbFind, dbInsert,
 // dbUpdate, dbDelete, change scopes), for orion.model to build on. Records
 // cross as plain tables of field values; the database keeps its rules
-// (defaults, numbering, delete rules) as it does for C callers.
+// (defaults, numbering, delete rules) as it does for C callers. db.cgen
+// declares the module; its bindings are generated (tools/cgen.c).
 
 #include "script.h"
 #include "script_internal.h"
@@ -35,18 +36,14 @@ const db_table_schema_t *script_table(lua_State *L, const char *db_name, const c
   return t;
 }
 
-static const db_table_schema_t *check_table(lua_State *L, database_t **db) {
-  return script_table(L, luaL_checkstring(L, 1), luaL_checkstring(L, 2), db);
-}
-
 static int key_index(const db_table_schema_t *t) {
   for (int i = 0; i < t->field_count; i++) if (t->fields[i].primary_key) return i;
   return 0;
 }
 
-static int field_index(lua_State *L, const db_table_schema_t *t, int arg) {
-  if (lua_isnoneornil(L, arg)) return key_index(t);
-  const char *name = luaL_checkstring(L, arg);
+// The field named, or the key when name is NULL.
+static int field_named(lua_State *L, const db_table_schema_t *t, const char *name) {
+  if (!name) return key_index(t);
   for (int i = 0; i < t->meta_count; i++) if (!strcmp(t->meta[i].name, name)) return i;
   return luaL_error(L, "table '%s' has no field '%s'", t->name, name);
 }
@@ -139,9 +136,8 @@ static int refuse_with(lua_State *L, const char *message) {
   return 2;
 }
 
-// db.schema(database, table) -> {name, key, fields = {...}, joins = {...}}
-static int l_schema(lua_State *L) {
-  const db_table_schema_t *t = check_table(L, NULL);
+static int script_db_schema(lua_State *L, const char *database, const char *table) {
+  const db_table_schema_t *t = script_table(L, database, table, NULL);
   lua_createtable(L, 0, 4);
   lua_pushstring(L, t->name); lua_setfield(L, -2, "name");
   lua_pushstring(L, t->meta[key_index(t)].name); lua_setfield(L, -2, "key");
@@ -174,21 +170,20 @@ static int l_schema(lua_State *L) {
   return 1;
 }
 
-// db.fetch(database, table [, field, value]) -> rows in the datasource's order
-static int l_fetch(lua_State *L) {
+static int script_db_fetch(lua_State *L, const char *database, const char *table, const char *field, int value) {
   database_t *db = NULL;
-  const db_table_schema_t *t = check_table(L, &db);
-  bool filtered = !lua_isnoneornil(L, 3);
-  int field = filtered ? field_index(L, t, 3) : 0;
-  void *value = filtered ? lookup_value(L, &t->meta[field], 4) : NULL;
+  const db_table_schema_t *t = script_table(L, database, table, &db);
+  int f = field ? field_named(L, t, field) : 0;
+  if (field && !value) return luaL_error(L, "fetch: field '%s' needs a value to compare", field);
+  void *key = field ? lookup_value(L, &t->meta[f], value) : NULL;
   lua_newtable(L);
   // dbFetch reads field 0 as "no filter"; the key filters through dbFind.
-  if (filtered && field == 0) {
-    const void *record = (const void *)send_db_message(db, dbFind, MAKEDWORD(t->table_id, 0), value);
+  if (field && f == 0) {
+    const void *record = (const void *)send_db_message(db, dbFind, MAKEDWORD(t->table_id, 0), key);
     if (record) { script_push_record(L, t, record); lua_rawseti(L, -2, 1); }
     return 1;
   }
-  result_node_t *list = (result_node_t *)send_db_message(db, dbFetch, MAKEDWORD(t->table_id, field), value);
+  result_node_t *list = (result_node_t *)send_db_message(db, dbFetch, MAKEDWORD(t->table_id, f), key);
   int n = 0;
   for (result_node_t *node = list; node; node = (result_node_t *)node->next) {
     script_push_record(L, t, *(void **)node->data);
@@ -198,56 +193,48 @@ static int l_fetch(lua_State *L) {
   return 1;
 }
 
-// db.find(database, table, field or nil for the key, value) -> row or nil
-static int l_find(lua_State *L) {
+static int script_db_find(lua_State *L, const char *database, const char *table, const char *field, int value) {
   database_t *db = NULL;
-  const db_table_schema_t *t = check_table(L, &db);
-  int field = field_index(L, t, 3);
-  const void *record = (const void *)send_db_message(db, dbFind, MAKEDWORD(t->table_id, field == key_index(t) ? 0 : field),
-                                                     lookup_value(L, &t->meta[field], 4));
+  const db_table_schema_t *t = script_table(L, database, table, &db);
+  int f = field_named(L, t, field);
+  const void *record = (const void *)send_db_message(db, dbFind, MAKEDWORD(t->table_id, f == key_index(t) ? 0 : f),
+                                                     lookup_value(L, &t->meta[f], value));
   if (record) script_push_record(L, t, record);
   else lua_pushnil(L);
   return 1;
 }
 
-// db.insert(database, table, fields) -> row, or nil and a message
-static int l_insert(lua_State *L) {
+static int script_db_insert(lua_State *L, const char *database, const char *table, int fields) {
   database_t *db = NULL;
-  const db_table_schema_t *t = check_table(L, &db);
-  luaL_checktype(L, 3, LUA_TTABLE);
+  const db_table_schema_t *t = script_table(L, database, table, &db);
   void *buf = lua_newuserdatauv(L, t->record_size, 0);
   memset(buf, 0, t->record_size);
   send_db_message(db, dbInitRecord, (uint32_t)t->table_id, buf);
   char msg[256];
-  if (!script_read_record(L, 3, t, buf, msg, sizeof(msg))) return refuse_with(L, msg);
+  if (!script_read_record(L, fields, t, buf, msg, sizeof(msg))) return refuse_with(L, msg);
   const void *record = (const void *)send_db_message(db, dbInsert, (uint32_t)t->table_id, buf);
   if (!record) return refuse_with(L, ui_tr("The record could not be saved."));
   script_push_record(L, t, record);
   return 1;
 }
 
-// db.update(database, table, key, fields) -> row, or nil and a message
-static int l_update(lua_State *L) {
+static int script_db_update(lua_State *L, const char *database, const char *table, int key, int fields) {
   database_t *db = NULL;
-  const db_table_schema_t *t = check_table(L, &db);
-  int key = (int)luaL_checkinteger(L, 3);
-  luaL_checktype(L, 4, LUA_TTABLE);
+  const db_table_schema_t *t = script_table(L, database, table, &db);
   const void *current = (const void *)send_db_message(db, dbFind, MAKEDWORD(t->table_id, 0), (void *)(intptr_t)key);
   if (!current) return refuse_with(L, ui_tr("The record no longer exists."));
   void *buf = lua_newuserdatauv(L, t->record_size, 0);
   memcpy(buf, current, t->record_size);
   char msg[256];
-  if (!script_read_record(L, 4, t, buf, msg, sizeof(msg))) return refuse_with(L, msg);
+  if (!script_read_record(L, fields, t, buf, msg, sizeof(msg))) return refuse_with(L, msg);
   if (!send_db_message(db, dbUpdate, (uint32_t)t->table_id, buf)) return refuse_with(L, ui_tr("The record could not be saved."));
   script_push_record(L, t, (const void *)send_db_message(db, dbFind, MAKEDWORD(t->table_id, 0), (void *)(intptr_t)key));
   return 1;
 }
 
-// db.delete(database, table, key) -> true, or nil and a message
-static int l_delete(lua_State *L) {
+static int script_db_delete(lua_State *L, const char *database, const char *table, int key) {
   database_t *db = NULL;
-  const db_table_schema_t *t = check_table(L, &db);
-  int key = (int)luaL_checkinteger(L, 3);
+  const db_table_schema_t *t = script_table(L, database, table, &db);
   if (send_db_message(db, dbCountReferrers, (uint32_t)t->table_id, (void *)(intptr_t)key) > 0)
     return refuse_with(L, ui_tr("The record is in use and cannot be deleted."));
   if (!send_db_message(db, dbDelete, (uint32_t)t->table_id, (void *)(intptr_t)key))
@@ -256,12 +243,9 @@ static int l_delete(lua_State *L) {
   return 1;
 }
 
-// db.text(database, table, key, path) -> a field or join path as displayed
-static int l_text(lua_State *L) {
+static int script_db_text(lua_State *L, const char *database, const char *table, int key, const char *path) {
   database_t *db = NULL;
-  const db_table_schema_t *t = check_table(L, &db);
-  int key = (int)luaL_checkinteger(L, 3);
-  const char *path = luaL_checkstring(L, 4);
+  const db_table_schema_t *t = script_table(L, database, table, &db);
   const void *record = (const void *)send_db_message(db, dbFind, MAKEDWORD(t->table_id, 0), (void *)(intptr_t)key);
   char buf[512];
   if (record && db_get_field_text(db, t->table_id, record, path, buf, sizeof(buf))) lua_pushstring(L, buf);
@@ -269,23 +253,14 @@ static int l_text(lua_State *L) {
   return 1;
 }
 
-static int change_scope(lua_State *L, uint32_t msg) {
-  database_t *db = find_database(luaL_checkstring(L, 1));
-  if (!db) return luaL_error(L, "no database '%s' is open", lua_tostring(L, 1));
-  lua_pushboolean(L, send_db_message(db, msg, 0, NULL) != 0);
-  return 1;
+static bool change_scope(lua_State *L, const char *database, uint32_t msg) {
+  database_t *db = find_database(database);
+  if (!db) return luaL_error(L, "no database '%s' is open", database);
+  return send_db_message(db, msg, 0, NULL) != 0;
 }
 
-static int l_begin(lua_State *L) { return change_scope(L, dbBeginChanges); }
-static int l_commit(lua_State *L) { return change_scope(L, dbCommitChanges); }
-static int l_revert(lua_State *L) { return change_scope(L, dbRevertChanges); }
+static bool script_db_begin(lua_State *L, const char *database)  { return change_scope(L, database, dbBeginChanges); }
+static bool script_db_commit(lua_State *L, const char *database) { return change_scope(L, database, dbCommitChanges); }
+static bool script_db_revert(lua_State *L, const char *database) { return change_scope(L, database, dbRevertChanges); }
 
-int script_open_db(lua_State *L) {
-  static const luaL_Reg fns[] = {
-    {"schema", l_schema}, {"fetch", l_fetch}, {"find", l_find}, {"insert", l_insert},
-    {"update", l_update}, {"delete", l_delete}, {"text", l_text},
-    {"begin", l_begin}, {"commit", l_commit}, {"revert", l_revert}, {NULL, NULL},
-  };
-  luaL_newlib(L, fns);
-  return 1;
-}
+#include "build/generated/orion/script/db_lua.h"

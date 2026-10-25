@@ -1,7 +1,7 @@
 // The Lua state an add-on runs in: a sandbox without io, native loading or
 // bytecode, whose require() reaches the add-on's folder, Orion's Lua modules
 // and the modules a host registers; and the "orion" module scripts use for
-// refusals, translation and locale formatting.
+// refusals, translation and locale formatting, declared in orion.cgen.
 
 #include "script.h"
 #include "script_internal.h"
@@ -90,61 +90,32 @@ bool script_call(lua_State *L, int nargs, int nresults, char *msg, size_t msg_sz
   return false;
 }
 
-// ── The "orion" module ──────────────────────────────────────────────────────
+// ── The "orion" module (orion.cgen) ─────────────────────────────────────────
 
-// orion.fail(message): stops the action and shows the message to the user.
-static int l_fail(lua_State *L) { return script_refuse(L, luaL_checkstring(L, 1)); }
+static int script_fail(lua_State *L, const char *message) { return script_refuse(L, message); }
 
-// orion.assert(value, message, ...): the value, or a refusal with the message
-// (as Routes.assert in lua-objc: orion.assert(row:update{...}) passes on the
-// message a model returned).
-static int l_assert(lua_State *L) {
-  if (lua_toboolean(L, 1)) return lua_gettop(L);
-  return script_refuse(L, luaL_optstring(L, 2, ui_tr("The action was refused.")));
+// Passes every argument on, as Routes.assert in lua-objc: orion.assert(row:update{...})
+// passes on the message a model returned.
+static int script_assert(lua_State *L, int value, const char *message) {
+  if (lua_toboolean(L, value)) return lua_gettop(L);
+  return script_refuse(L, message ? message : ui_tr("The action was refused."));
 }
 
-static int l_tr(lua_State *L) { lua_pushstring(L, ui_tr(luaL_checkstring(L, 1))); return 1; }
-
-static int l_format_number(lua_State *L) {
-  char buf[64];
-  lua_pushstring(L, ui_format_number(luaL_checknumber(L, 1), (int)luaL_optinteger(L, 2, 2), buf, sizeof(buf)));
-  return 1;
-}
-
-static int l_format_date(lua_State *L) {
-  char buf[64];
-  lua_pushstring(L, ui_format_date(luaL_checkstring(L, 1), buf, sizeof(buf)));
-  return 1;
-}
-
-static int l_parse_number(lua_State *L) { lua_pushnumber(L, ui_parse_number(luaL_checkstring(L, 1))); return 1; }
-
-static int l_parse_date(lua_State *L) {
+static int script_parse_date(lua_State *L, const char *text) {
   char iso[16];
-  if (ui_parse_date(luaL_checkstring(L, 1), iso, sizeof(iso))) lua_pushstring(L, iso);
+  if (ui_parse_date(text, iso, sizeof(iso))) lua_pushstring(L, iso);
   else lua_pushnil(L);
   return 1;
 }
 
-static int l_today(lua_State *L) {
+static const char *script_today(char *iso, size_t size) {
   time_t now = time(NULL);
   struct tm *tm = localtime(&now);
-  char iso[40];
-  snprintf(iso, sizeof(iso), "%04d-%02d-%02d", tm ? tm->tm_year + 1900 : 1970, tm ? tm->tm_mon + 1 : 1, tm ? tm->tm_mday : 1);
-  lua_pushstring(L, iso);
-  return 1;
+  snprintf(iso, size, "%04d-%02d-%02d", tm ? tm->tm_year + 1900 : 1970, tm ? tm->tm_mon + 1 : 1, tm ? tm->tm_mday : 1);
+  return iso;
 }
 
-int script_open_orion(lua_State *L) {
-  static const luaL_Reg fns[] = {
-    {"fail", l_fail}, {"assert", l_assert}, {"tr", l_tr},
-    {"formatNumber", l_format_number}, {"formatDate", l_format_date},
-    {"parseNumber", l_parse_number}, {"parseDate", l_parse_date}, {"today", l_today},
-    {NULL, NULL},
-  };
-  luaL_newlib(L, fns);
-  return 1;
-}
+#include "build/generated/orion/script/orion_lua.h"
 
 // ── Sandbox ─────────────────────────────────────────────────────────────────
 
@@ -244,8 +215,8 @@ lua_State *script_state_new(const char *dir, const char *name) {
   lua_pushstring(L, ""); lua_setfield(L, -2, "path");
   lua_pushstring(L, ""); lua_setfield(L, -2, "cpath");
   lua_getfield(L, -1, "preload");
-  lua_pushcfunction(L, script_open_orion); lua_setfield(L, -2, "orion");
-  lua_pushcfunction(L, script_open_db);    lua_setfield(L, -2, "orion.db");
+  lua_pushcfunction(L, luaopen_orion);    lua_setfield(L, -2, "orion");
+  lua_pushcfunction(L, luaopen_orion_db); lua_setfield(L, -2, "orion.db");
   for (int i = 0; i < g_module_count; i++) {
     lua_pushcfunction(L, g_modules[i].open);
     lua_setfield(L, -2, g_modules[i].name);

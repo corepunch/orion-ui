@@ -52,6 +52,21 @@ local deleted, refusal = ada:delete()
 expect(deleted == nil and refusal and refusal:find("in use", 1, true), "a record in use is not deleted")
 expect(pet:delete() == true and Pets:find(pet.id) == nil, "delete removes the row")
 
+-- The generated bindings check their arguments (orion.cgen, db.cgen).
+local db = require("orion.db")
+ok, err = pcall(function() return db.find("club", "people") end)
+expect(not ok and tostring(err):find("bad argument #4 to 'find'", 1, true), "a missing argument names its position and function")
+ok, err = pcall(function() return db.update("club", "people", "one", {}) end)
+expect(not ok and tostring(err):find("number expected", 1, true), "an integer argument rejects a string")
+ok, err = pcall(function() return db.insert("club", "people", "Ada") end)
+expect(not ok and tostring(err):find("table expected", 1, true), "a table argument rejects a string")
+expect(db.find("club", "people", nil, ada.id).name == "Ada", "an optional argument takes nil")
+expect(#db.fetch("club", "people") == 3 and #db.fetch("club", "people", "name", "Bob") == 1, "trailing optional arguments may be left out")
+expect(orion.formatNumber(2, 0) == "2" and orion.formatNumber(0.5):find("50", 1, true), "a default fills a missing argument")
+expect(orion.today():match("^%d%d%d%d%-%d%d%-%d%d$"), "an output buffer comes back as the result")
+expect(orion.tr("Untranslated sentence") == "Untranslated sentence", "call= binds an existing C function")
+expect(select("#", orion.assert(1, "m", 3)) == 3, "nresults leaves the results to the C function")
+
 -- The sandbox: no files, processes, native code or bytecode.
 expect(io == nil and load == nil and loadfile == nil and dofile == nil, "no io and no loading of code")
 expect(os.execute == nil and os.getenv == nil and os.remove == nil, "os keeps only the clock and dates")
