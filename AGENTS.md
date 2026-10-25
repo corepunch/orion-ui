@@ -361,3 +361,9 @@ The original 26 MB `Остатки.xml` is inside the public
 XML download. That section contains the direct download URL, extraction
 commands and reference results. Keep the real-company export and generated
 infobases outside the checkout; use a disposable infobase for checks.
+
+Large, redistributable synthetic samples for both `ru-2003` and `de-2003` live
+in `apps/ledger/share/samples/`; see its README for native infobase and
+EnterpriseData examples, counts, safe launch commands and regeneration. Run
+`python3 apps/ledger/tests/generate_large_samples.py --check` and
+`build/bin/test_ledger_large_test` when changing these fixtures or their importer.
