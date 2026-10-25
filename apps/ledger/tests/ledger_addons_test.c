@@ -139,12 +139,19 @@ static void set_text(script_page_t *page, const char *name, const char *text) {
 }
 
 // Ten monitors to Альфа on 16 March (341 600 with VAT), 100 000 paid on
-// 25 March; Бета-Снаб's shipment РТ-0002 is covered by its prepayment.
+// 25 March; paper and cartridges to Облачные сервисы on 20 March (29 280 in
+// two lines, one debt); Бета-Снаб's shipment РТ-0002 is covered by its prepayment.
 static int seed_debts(void) {
   int sale = test_document(2, "2026-03-16", 1, 0);
   db_doc_line_t line = { .document_id = sale, .item_id = 3, .vat_rate_id = 1, .quantity = 10, .price = 28000 };
   send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line);
   ledger_post(g_ledger->ib, g_ledger->cfg, sale);
+  int second = test_document(2, "2026-03-20", 5, 0);
+  db_doc_line_t paper = { .document_id = second, .item_id = 1, .vat_rate_id = 1, .quantity = 20, .price = 550 };
+  db_doc_line_t toner = { .document_id = second, .item_id = 2, .vat_rate_id = 1, .quantity = 2, .price = 6500 };
+  send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &paper);
+  send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &toner);
+  ledger_post(g_ledger->ib, g_ledger->cfg, second);
   ledger_post(g_ledger->ib, g_ledger->cfg, test_document(7, "2026-03-25", 1, 100000));
   ledger_post(g_ledger->ib, g_ledger->cfg, 10);
   return sale;
@@ -174,10 +181,13 @@ static void test_penalties(void) {
   ASSERT_TRUE(script_page_perform(page, "calculate"));
   database_t *db = get_database_by_name("penalties");
   result_node_t *rows = (result_node_t *)send_db_message(db, dbFetch, MAKEDWORD(0, 0), NULL);
-  ASSERT_EQUAL(count_result_list(rows), 1);
-  char text[6][128];
+  ASSERT_EQUAL(count_result_list(rows), 2);
+  char text[6][128], second[6][128];
   const char *fields[] = { "counterparty.name", "number", "due", "days", "debt", "penalty" };
-  for (size_t i = 0; i < ARRAY_LEN(fields); i++) db_get_field_text(db, 0, *(void **)rows->data, fields[i], text[i], sizeof(text[i]));
+  for (size_t i = 0; i < ARRAY_LEN(fields); i++) {
+    db_get_field_text(db, 0, *(void **)rows->data, fields[i], text[i], sizeof(text[i]));
+    db_get_field_text(db, 0, *(void **)((result_node_t *)rows->next)->data, fields[i], second[i], sizeof(second[i]));
+  }
   free_result_list(rows);
   ASSERT_STR_EQUAL(text[0], "ООО \"Торговый дом Альфа\"");
   ASSERT_STR_EQUAL(text[1], sale_number);
@@ -185,7 +195,11 @@ static void test_penalties(void) {
   ASSERT_STR_EQUAL(text[3], "35");
   ASSERT_STR_EQUAL(text[4], "241600.00");
   ASSERT_STR_EQUAL(text[5], "8456.00");  // 241 600 × 0.1 % × 35 days
-  ASSERT(strstr(script_page_control(page, "summary")->title, "Overdue debts: 1.") != NULL, "the summary counts the debts");
+  ASSERT_STR_EQUAL(second[0], "ООО \"Облачные сервисы\"");
+  ASSERT_STR_EQUAL(second[4], "29280.00");  // both lines of the document, one debt
+  ASSERT_STR_EQUAL(second[3], "31");
+  ASSERT_STR_EQUAL(second[5], "907.68");
+  ASSERT(strstr(script_page_control(page, "summary")->title, "Overdue debts: 2.") != NULL, "the summary counts the debts");
 
   set_text(page, "term", "50");
   ASSERT_TRUE(script_page_perform(page, "calculate"));
@@ -197,14 +211,15 @@ static void test_penalties(void) {
   double income = ledger_turnover_of("91.01");
   ASSERT_TRUE(script_page_perform(page, "accrue"));
   script_page_close(page);
-  ASSERT(fabs(ledger_turnover_of("91.01") - income - 8456) < 0.005, "91.01 is credited with the penalty");
+  ASSERT(fabs(ledger_turnover_of("91.01") - income - 9363.68) < 0.005, "91.01 is credited with the penalties");
   const db_entry_t *entry = last_entry();
   const db_document_t *op = test_document_at(entry->document_id);
   ASSERT(op && op->posted && !strcmp(op->date, "2026-04-30"), "the operation is posted on the calculation date");
   ASSERT_EQUAL(entry->debit_id, account("76")->id);
-  ASSERT_EQUAL(entry->debit_subconto_id, 1);
+  ASSERT_EQUAL(entry->debit_subconto_id, 5);  // the last entry: Облачные сервисы
+  ASSERT(fabs(entry->amount - 907.68) < 0.005, "each debt is one entry");
   ASSERT_EQUAL(entry->credit_id, account("91.01")->id);
-  ASSERT(fabs(op->total - 8456) < 0.005, "the operation totals its entries");
+  ASSERT(fabs(op->total - 9363.68) < 0.005, "the operation totals its entries");
 
   page = script_page_open(PENALTIES, NULL, 0);
   ASSERT_NOT_NULL(page);

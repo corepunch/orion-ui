@@ -47,7 +47,12 @@ local function openDebts(account, date)
 		end
 		local amount = m.debit - math.min(m.debit, advance[m.subconto])
 		advance[m.subconto] = advance[m.subconto] - (m.debit - amount)
-		if amount > 0 then table.insert(list, {number = m.number, date = m.date, amount = amount}) end
+		local last = list[#list]
+		if amount > 0 and last and last.document == m.document then
+			last.amount = last.amount + amount  -- one debt per document, whatever its lines
+		elseif amount > 0 then
+			table.insert(list, {document = m.document, number = m.number, date = m.date, amount = amount})
+		end
 		local paid = m.credit
 		while paid > 0 and list[1] do
 			local part = math.min(list[1].amount, paid)
