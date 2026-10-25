@@ -259,11 +259,14 @@ $(LIB_DIR)/lib$(1).$(LIB_EXT): $(2) $(3) $(PLATFORM_LIB) $(CORE_HEADERS) | $(LIB
         $(LDFLAGS) $$(RPATH_FLAGS) $(5) $(PLATFORM_LDFLAGS) $(LIBS) $$(IMPLIB_FLAGS)
 endef
 
-USER_SRCS = $(filter-out orion/user/dialog.c orion/user/component_registry.c,$(wildcard orion/user/*.c))
+# libuser already carries commdlg's dialog runtime (event.c ends dialogs); the
+# message box joins it, as MessageBox lives in user32, so controls can use it.
+USER_SRCS = $(filter-out orion/user/dialog.c orion/user/component_registry.c,$(wildcard orion/user/*.c)) \
+            orion/commdlg/msgbox.c
 
 $(eval $(call unity_lib,kernel,$(wildcard orion/kernel/*.c),,,))
 $(eval $(call unity_lib,user,$(USER_SRCS),$(COMMDLG_LIB) $(KERNEL_LIB),,-lcommdlg -lkernel))
-$(eval $(call unity_lib,commctl,$(wildcard orion/commctl/*.c),$(COMMDLG_LIB) $(USER_LIB) $(KERNEL_LIB),-Icomponents,-lcommdlg -luser -lkernel))
+$(eval $(call unity_lib,commctl,$(wildcard orion/commctl/*.c),$(USER_LIB) $(KERNEL_LIB),-Icomponents,-luser -lkernel))
 
 # commdlg is built by its own makefile as a static library
 $(COMMDLG_LIB): $(wildcard orion/commdlg/*.c) $(CORE_HEADERS) | $(LIB_DIR)
