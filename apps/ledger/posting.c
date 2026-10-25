@@ -151,12 +151,6 @@ static void delete_entries(database_t *ib, int doc_id) {
   free_result_list(entries);
 }
 
-static void delete_rows(database_t *ib, int table_id, int doc_id) {
-  result_node_t *rows = fetch(ib, table_id, "document_id", doc_id);
-  EACH_RECORD(int, key, rows) send_db_message(ib, dbDelete, (uint32_t)table_id, (void *)(intptr_t)*key);
-  free_result_list(rows);
-}
-
 // ── Payroll taxes ──────────────────────────────────────────────────────────
 // The configuration's payroll_taxes rows in force on the document date, in id
 // order, each computed on one accrual line: flat rates with monthly or annual
@@ -557,39 +551,14 @@ void ledger_unpost(database_t *ib, database_t *cfg, int doc_id) {
 }
 
 // Numbers follow the configuration's prefix per document type: ПТ-0001, ...
-void ledger_number_document(database_t *ib, database_t *cfg, int doc_id) {
-  db_document_t *doc = find(ib, TABLE_DOCUMENTS, doc_id);
-  db_doc_type_t *type = doc ? find(cfg, TABLE_DOC_TYPES, doc->doc_type_id) : NULL;
-  if (!type || doc->number[0]) return;
-  int last = 0;
-  size_t n = strlen(type->prefix);
-  result_node_t *docs = fetch(ib, TABLE_DOCUMENTS, NULL, 0);  // types may share a prefix: ПКО-
-  EACH_RECORD(db_document_t, d, docs)
-    if (!strncmp(d->number, type->prefix, n) && atoi(d->number + n) > last) last = atoi(d->number + n);
-  free_result_list(docs);
-  snprintf(doc->number, sizeof(doc->number), "%s%04d", type->prefix, last + 1);
-  send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, doc);
+bool ledger_number_document(database_t *ib, database_t *cfg, int doc_id) {
+  return ledger_execute_document(ib, cfg, "documents.number", doc_id);
 }
 
 // Fills a payroll document: an accrual with every employee's salary, a
 // payout with what each employee is owed on the payroll account.
-void ledger_fill_payroll(database_t *ib, database_t *cfg, int doc_id) {
-  db_document_t *doc = find(ib, TABLE_DOCUMENTS, doc_id);
-  db_doc_type_t *type = doc ? find(cfg, TABLE_DOC_TYPES, doc->doc_type_id) : NULL;
-  if (!form_is(type, "payroll")) return;
-  bool payout = !strcmp(type->base, "net");
-  delete_rows(ib, TABLE_PAYROLL_LINES, doc_id);
-  post_t p = { ib, cfg, doc, type, 1 };
-  result_node_t *employees = fetch(ib, TABLE_EMPLOYEES, NULL, 0);
-  EACH_RECORD(db_employee_t, emp, employees) {
-    double amount = emp->salary;
-    if (payout) { turnover_t t = ledger_turnover(&p, type->debit_id, emp->id, -1); amount = round2(t.cr - t.dr); }
-    if (amount <= 0) continue;
-    db_payroll_line_t line = { .document_id = doc_id, .employee_id = emp->id, .amount = amount };
-    send_db_message(ib, dbInsert, TABLE_PAYROLL_LINES, &line);
-  }
-  free_result_list(employees);
-  ledger_recalc_document(ib, cfg, doc_id);
+bool ledger_fill_payroll(database_t *ib, database_t *cfg, int doc_id) {
+  return ledger_execute_document(ib, cfg, "payroll.fill", doc_id);
 }
 
 static database_t *g_sort_cfg;

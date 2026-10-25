@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module name="ledger.executor" prefix="ledger_exec_" luaopen="ledger_open_executor">
+  <summary>Execute document workflows implemented by standard Lua plugins.</summary>
+  <details>The same executor is called by native document lifecycle and writable local scripts. A registered Lua policy reads ctx.document, ctx.type and ctx.rate and returns a plan with optional document field patches and child-table replacements. The host validates the plan against the operation contract and schema before committing it atomically. Policies cannot write through the catalog or posting APIs. Lua handlers are trusted local code. Register handlers during startup; execution does not dynamically replace registered handlers.</details>
+  <functions>
+    <function name="register" lua="true">
+      <summary>Register a handler for an XML-declared operation. Unknown operations and duplicate registrations fail.</summary>
+      <arg name="operation" type="string">Stable operation ID.</arg><arg name="handler" type="function">Function receiving a document context and returning a change plan.</arg>
+      <returns type="nresults">no values</returns>
+    </function>
+    <function name="execute" lua="true">
+      <summary>Apply an operation to a document through the same executor used by the application.</summary>
+      <arg name="operation" type="string">Stable operation ID.</arg><arg name="document_id" type="int">Existing document ID.</arg>
+      <returns type="nresults">the validated applied plan; raises on failure, leaving the executor's changes reverted</returns>
+      <details>Requires the writable local script host. Nested execution and execution from a posting hook are rejected. Existing catalog permissions are unchanged. This first migration does not expose arbitrary document CRUD or posting commands.</details>
+    </function>
+  </functions>
+
+</module>

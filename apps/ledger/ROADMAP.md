@@ -18,13 +18,16 @@
 - [ ] Add package manifests with dependency/API compatibility checks, persisted
   enable/configuration state, migrations and plugin-manager UI (Lite XL and 1C
   extensions are references; standard packages remain vendor-owned).
-- [ ] Move document workflows, reports, posting, payroll and closing from native
+- [x] Move document numbering and payroll fill to standard Lua policies executed
+  through the same validated plan executor as writable scripts.
+- [ ] Move remaining document workflows, reports, posting, payroll taxes and closing from native
   implementations to first-party Lua standard plugins, with parity tests.
 
 ## Script-first application architecture
 
 See the [source audit and 3ds Max-inspired migration plan](docs/script-first-architecture.md).
 
+- [x] Use the shared XML `cgen` for the first document executor module.
 - [ ] Reuse Orion's runtime schemas, script pages and model layer; publish Ledger
   operations to that host with instance-scoped contexts and XML contracts.
 - [ ] Add a shared stable action registry for UI, CLI, Lua and nodes, including

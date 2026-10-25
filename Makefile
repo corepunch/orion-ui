@@ -298,6 +298,29 @@ ledger-api-check:
 	python3 tools/generate_lua_api.py $(LEDGER_API_XML) --header $(LEDGER_API_HEADER) --docs $(LEDGER_API_DOCS) --annotations $(LEDGER_API_ANNOTATIONS) --site $(LEDGER_API_SITE) --check
 	python3 tools/generate_automation_catalog.py apps/ledger/automation.xml --lua $(LEDGER_CATALOG) --docs $(LEDGER_CATALOG_DOCS) --site $(LEDGER_CATALOG_SITE) --check
 
+LEDGER_EXECUTOR_HEADER = $(GENERATED_DIR)/apps/ledger/executor_contract.h
+LEDGER_EXECUTOR_LUA = apps/ledger/share/stdplugs/documents/register.lua
+LEDGER_EXECUTOR_DOCS = docs/ledger/executor-contracts.md
+$(LEDGER_EXECUTOR_HEADER): apps/ledger/executors.xml tools/generate_executor_contract.py apps/ledger/ledger.orion
+	python3 tools/generate_executor_contract.py $< --header $@ --lua $(LEDGER_EXECUTOR_LUA) --docs $(LEDGER_EXECUTOR_DOCS)
+$(LEDGER_EXECUTOR_LUA) $(LEDGER_EXECUTOR_DOCS): $(LEDGER_EXECUTOR_HEADER)
+	python3 tools/generate_executor_contract.py apps/ledger/executors.xml --header $(LEDGER_EXECUTOR_HEADER) --lua $(LEDGER_EXECUTOR_LUA) --docs $(LEDGER_EXECUTOR_DOCS)
+
+.PHONY: ledger-executor ledger-executor-check
+ledger-executor: $(GENERATED_DIR)/apps/ledger/executor_lua.h $(LEDGER_EXECUTOR_HEADER) $(LEDGER_EXECUTOR_LUA) $(LEDGER_EXECUTOR_DOCS) $(CGEN_BIN)
+	$(CGEN_BIN) --input apps/ledger/executor.cgen --markdown docs/ledger/executor.md
+ledger-executor-check: $(CGEN_BIN)
+	python3 tools/generate_executor_contract.py apps/ledger/executors.xml --header $(LEDGER_EXECUTOR_HEADER) --lua $(LEDGER_EXECUTOR_LUA) --docs $(LEDGER_EXECUTOR_DOCS) --check
+	@mkdir -p $(GENERATED_DIR)/apps/ledger
+	$(CGEN_BIN) --input apps/ledger/executor.cgen --markdown $(GENERATED_DIR)/apps/ledger/executor.md
+	@diff docs/ledger/executor.md $(GENERATED_DIR)/apps/ledger/executor.md
+	python3 apps/ledger/tests/executor_codegen_test.py
+ledger-api: ledger-executor
+ledger-api-check: ledger-executor-check
+share: $(LEDGER_EXECUTOR_LUA)
+$(BIN_DIR)/ledger-run$(EXE_EXT) $(BIN_DIR)/ledger$(EXE_EXT) $(GEM_DIR)/ledger.gem $(patsubst apps/ledger/tests/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(wildcard apps/ledger/tests/*.c)): $(LEDGER_EXECUTOR_HEADER)
+
+$(BIN_DIR)/ledger-run$(EXE_EXT): $(GENERATED_DIR)/apps/ledger/executor_lua.h
 $(BIN_DIR)/ledger-run$(EXE_EXT): $(LEDGER_API_HEADER) $(GENERATED_DIR)/apps/ledger/ledger.h $(call app_srcs,ledger) $(LEDGER_CATALOG)
 $(BIN_DIR)/ledger$(EXE_EXT) $(GEM_DIR)/ledger.gem $(patsubst apps/ledger/tests/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(wildcard apps/ledger/tests/*.c)): $(LEDGER_API_HEADER) $(LEDGER_CATALOG)
 share: $(LEDGER_CATALOG)
