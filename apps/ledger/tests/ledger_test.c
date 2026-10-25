@@ -566,7 +566,7 @@ static const db_vat_summary_t *vat_summary(int book, double rate) {
   for (result_node_t *n = rows; n; n = n->next) {
     const db_vat_summary_t *s = *(db_vat_summary_t **)n->data;
     const db_vat_rate_t *r = (const db_vat_rate_t *)send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_VAT_RATES, 0), (void *)(intptr_t)s->vat_rate_id);
-    if (s->book == book && (r ? near(r->rate, rate) : rate < 0)) found = s;
+    if (s->book == book && (r ? approx(r->rate, rate) : rate < 0)) found = s;
   }
   free_result_list(rows);
   return found;
@@ -587,24 +587,24 @@ static void test_ru_2026(void) {
   database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
   switch_configuration("ru-2026", "infobase-ru-2026.xml");
   db_document_t *receipt = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ПТ-0001");
-  bool ok = receipt && near(receipt->amount, 176000) && near(receipt->vat, 37880) && near(receipt->total, 213880);
-  ok = ok && near(balance("19.04")->balance_dr, 13200);  // input tax on services waits for its deduction document
-  ok = ok && near(balance("68.02")->credit_turnover, 13038) && near(balance("68.02")->debit_turnover, 37880);
+  bool ok = receipt && approx(receipt->amount, 176000) && approx(receipt->vat, 37880) && approx(receipt->total, 213880);
+  ok = ok && approx(balance("19.04")->balance_dr, 13200);  // input tax on services waits for its deduction document
+  ok = ok && approx(balance("68.02")->credit_turnover, 13038) && approx(balance("68.02")->debit_turnover, 37880);
   const db_vat_summary_t *purchases22 = vat_summary(2, 22), *sales10 = vat_summary(1, 10), *purchases_norate = vat_summary(2, -1);
-  ok = ok && purchases22 && near(purchases22->vat, 37180 + 13200) && purchases22->documents == 2;
-  ok = ok && sales10 && near(sales10->amount, 3000) && near(sales10->vat, 300);
-  ok = ok && purchases_norate && near(purchases_norate->vat, 13200);  // the equipment receipt has no lines
+  ok = ok && purchases22 && approx(purchases22->vat, 37180 + 13200) && purchases22->documents == 2;
+  ok = ok && sales10 && approx(sales10->amount, 3000) && approx(sales10->vat, 300);
+  ok = ok && purchases_norate && approx(purchases_norate->vat, 13200);  // the equipment receipt has no lines
   // Payroll: 13 % after the child deduction, rounded to roubles; 30 % and 0.2 % on top.
   const db_payroll_line_t *sidorova = payroll_line(14, 2), *petrov = payroll_line(14, 1);
-  ok = ok && sidorova && near(sidorova->withheld, 15418) && near(sidorova->contributions, 36240) && petrov && near(petrov->net, 130500);
-  ok = ok && near(balance("68.01")->balance_cr, 46072) && near(balance("69.09")->balance_cr, 108000) && near(balance("69.11")->balance_cr, 720);
-  ok = ok && near(balance("70")->balance_cr, 0) && near(balance("02.01")->balance_cr, 15000);
+  ok = ok && sidorova && approx(sidorova->withheld, 15418) && approx(sidorova->contributions, 36240) && petrov && approx(petrov->net, 130500);
+  ok = ok && approx(balance("68.01")->balance_cr, 46072) && approx(balance("69.09")->balance_cr, 108000) && approx(balance("69.11")->balance_cr, 720);
+  ok = ok && approx(balance("70")->balance_cr, 0) && approx(balance("02.01")->balance_cr, 15000);
   ASSERT(ok, "March 2026 of the demo company balances");
   // A high earner in April: the 15 % bracket on the year's income so far and the 15.1 % rate above the cap.
   int id = 0;
   const db_payroll_line_t *rich = accrue(11, "2026-04-30", 1, 3000000, &id);
-  ASSERT(rich && near(rich->withheld, 405000), "cumulative scale: 312 000 + 15 % of the part above 2.4 million, less March's tax");
-  ASSERT(rich && near(rich->contributions, 874521 + 6000), "30 % up to the 2 979 000 base, 15.1 % above, 0.2 % injury insurance");
+  ASSERT(rich && approx(rich->withheld, 405000), "cumulative scale: 312 000 + 15 % of the part above 2.4 million, less March's tax");
+  ASSERT(rich && approx(rich->contributions, 874521 + 6000), "30 % up to the 2 979 000 base, 15.1 % above, 0.2 % injury insurance");
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   // Print forms of 2026: Decree 1137 invoice, UPD, books, VAT summary, trial balance, journal.
@@ -631,24 +631,24 @@ static void test_de_2026(void) {
   TEST("de-2026: automatic accounts per rate, 2026 social insurance caps, § 32a tariff, effective dating, DATEV export");
   database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
   switch_configuration("de-2026", "infobase-de-2026.xml");
-  bool ok = near(balance("1776")->balance_cr, 99.35) && near(balance("1771")->balance_cr, 8.38);
-  ok = ok && near(balance("1576")->balance_dr, 197.60 + 228) && near(balance("1571")->balance_dr, 20.93);
-  ok = ok && near(balance("8400")->balance_cr, 522.90) && near(balance("8300")->balance_cr, 119.70);
-  ok = ok && near(balance("3400")->balance_dr, 1040) && near(balance("3300")->balance_dr, 299) && near(balance("4210")->balance_dr, 1200);
+  bool ok = approx(balance("1776")->balance_cr, 99.35) && approx(balance("1771")->balance_cr, 8.38);
+  ok = ok && approx(balance("1576")->balance_dr, 197.60 + 228) && approx(balance("1571")->balance_dr, 20.93);
+  ok = ok && approx(balance("8400")->balance_cr, 522.90) && approx(balance("8300")->balance_cr, 119.70);
+  ok = ok && approx(balance("3400")->balance_dr, 1040) && approx(balance("3300")->balance_dr, 299) && approx(balance("4210")->balance_dr, 1200);
   ASSERT(ok, "7 % lines post to 3300/1571 and 8300/1771, 19 % lines to 3400/1576 and 8400/1776; a service invoice keeps its expense account");
   const db_payroll_line_t *anna = payroll_line(8, 1), *thomas = payroll_line(8, 2);
-  ok = anna && near(anna->withheld, 528.75 + 180.91) && near(anna->contributions, 532.50) && near(anna->net, 1790.34);
-  ok = ok && thomas && near(thomas->withheld, 465.30 + 121.58) && near(thomas->net, 1613.12);
-  ok = ok && near(balance("1741")->balance_cr, 302.49) && near(balance("1742")->balance_cr, 1995.15) && near(balance("1740")->balance_cr, 0);
+  ok = anna && approx(anna->withheld, 528.75 + 180.91) && approx(anna->contributions, 532.50) && approx(anna->net, 1790.34);
+  ok = ok && thomas && approx(thomas->withheld, 465.30 + 121.58) && approx(thomas->net, 1613.12);
+  ok = ok && approx(balance("1741")->balance_cr, 302.49) && approx(balance("1742")->balance_cr, 1995.15) && approx(balance("1740")->balance_cr, 0);
   ASSERT(ok, "21.15 % employee insurance, Lohnsteuer on twelve monthly bases less Vorsorgepauschale and Pauschbeträge, employer 21.3 %");
   int id = 0;
   const db_payroll_line_t *rich = accrue(9, "2026-04-30", 1, 9000, &id);
-  ASSERT(rich && near(rich->withheld, 508.59 + 104.63 + 785.85 + 109.85 + 2173.91 + 56.89),
+  ASSERT(rich && approx(rich->withheld, 508.59 + 104.63 + 785.85 + 109.85 + 2173.91 + 56.89),
          "insurance capped at 5 812,50 / 8 450; 42 % zone; Solidaritätszuschlag from rules.lua in the Milderungszone");
-  ASSERT(rich && near(rich->contributions, 508.59 + 104.63 + 785.85 + 109.85 + 12.68), "employer shares and Insolvenzgeldumlage capped too");
+  ASSERT(rich && approx(rich->contributions, 508.59 + 104.63 + 785.85 + 109.85 + 12.68), "employer shares and Insolvenzgeldumlage capped too");
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   const db_payroll_line_t *last_year = accrue(9, "2025-06-30", 1, 2500, &id);
-  ASSERT(last_year && near(last_year->withheld, 523.75 + 188.25), "a 2025 document applies the 2025 rows: Zusatzbeitrag 2.5 %, tariff 2025");
+  ASSERT(last_year && approx(last_year->withheld, 523.75 + 188.25), "a 2025 document applies the 2025 rows: Zusatzbeitrag 2.5 %, tariff 2025");
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   ui_set_language("de");
@@ -684,14 +684,14 @@ static void test_scripted_rules(void) {
   send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line);
   ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, doc->id));
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
-  ASSERT(near(entry_sum("94", "41.01"), 4500) && near(doc->total, 4500), "ten sheets of paper written off at 450 each");
+  ASSERT(approx(entry_sum("94", "41.01"), 4500) && approx(doc->total, 4500), "ten sheets of paper written off at 450 each");
   // A scripted tax row: the SME reduced tariff, 30 % up to 1.5 МРОТ and 15 % above it.
   db_payroll_tax_t *tax = find_by(g_ledger->cfg, TABLE_PAYROLL_TAXES, "code", "contributions");
   snprintf(tax->script, sizeof(tax->script), "contributions_sme");
   send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, tax);
   int id = 0;
   const db_payroll_line_t *petrov = accrue(11, "2026-04-30", 1, 150000, &id);
-  ASSERT(petrov && near(petrov->contributions, 40639.50 * 0.30 + (150000 - 40639.50) * 0.15 + 300), "scripted tariff plus the built-in injury row");
+  ASSERT(petrov && approx(petrov->contributions, 40639.50 * 0.30 + (150000 - 40639.50) * 0.15 + 300), "scripted tariff plus the built-in injury row");
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   tax->script[0] = '\0';
   send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, tax);
@@ -700,7 +700,7 @@ static void test_scripted_rules(void) {
   snprintf(injury->script, sizeof(injury->script), "no_such_rule");
   send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, injury);
   petrov = accrue(11, "2026-05-31", 1, 150000, &id);
-  ASSERT(petrov && near(petrov->contributions, 45000), "the broken row contributes nothing, the unified tariff still posts");
+  ASSERT(petrov && approx(petrov->contributions, 45000), "the broken row contributes nothing, the unified tariff still posts");
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   injury->script[0] = '\0';
   send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, injury);
