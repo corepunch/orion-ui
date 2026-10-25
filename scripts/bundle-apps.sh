@@ -40,7 +40,7 @@ prefix="$stage/root/orion"
 make install DESTDIR="$stage/root" PREFIX=/orion >/dev/null
 
 if [ $# -gt 0 ]; then apps="$*"; else apps=$(cut -f1 packaging/packages.tsv); fi
-core_libs="libkernel libuser libcommctl libcommdlg libplatform"
+core_libs="libkernel libuser libcommctl libcommdlg libscript libplatform"
 
 sha256_line() {
   if command -v sha256sum >/dev/null 2>&1; then (cd "$output" && sha256sum "$1")
