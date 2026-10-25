@@ -326,7 +326,7 @@
 Валюты: %d
 Уже были в базе: %d
 Проводки по остаткам: %d (дебет %s, кредит %s)</string>
-  <string source="The balances of this date were imported before and were not entered again." where="code">Остатки на эту дату уже загружались и повторно не введены.</string>
+  <string source="The balances in this exchange file were imported before and were not entered again." where="code">Остатки из этого файла обмена уже загружались и повторно не введены.</string>
   <string source="&#10;&#10;Balances the configuration has no account for, left out: %s" where="code">
 
 Остатки, для которых в конфигурации нет счета, пропущены: %s</string>
@@ -347,4 +347,10 @@
   <context name="reports_page">
     <string source="Expense">Расход</string>
   </context>
+  <string source="Cannot write an imported record." where="code">Не удалось записать импортируемую запись.</string>
+  <string source="Cannot identify the exchange file." where="code">Не удалось определить идентификатор файла обмена.</string>
+  <string source="Cannot begin the import transaction." where="code">Не удалось начать транзакцию импорта.</string>
+  <string source="Cannot post the imported opening balances." where="code">Не удалось провести импортированные начальные остатки.</string>
+  <string source="Cannot commit the import transaction." where="code">Не удалось зафиксировать транзакцию импорта.</string>
+  <string source="An older 1C import has no source identifier. Review its opening balances before importing this file." where="code">У старого импорта 1С нет идентификатора источника. Проверьте его начальные остатки перед импортом этого файла.</string>
 </strings>

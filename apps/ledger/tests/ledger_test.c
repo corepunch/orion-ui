@@ -10,6 +10,7 @@
 #define TMP_DIR "build/test-ledger"
 
 static ledger_t g_test_ledger;
+static void ed_digest(const unsigned char *data, size_t len, char hex[65]);
 
 static database_t *open_db(const char *name, const db_schema_def_t *schema, const char *path) {
   database_t *db = create_database_with_schema(name, strcmp(name, "ib") ? "db_schema_xml" : "ledger_ib", schema, path);
@@ -558,6 +559,150 @@ static void test_import_enterprisedata(void) {
   PASS();
 }
 
+// Inject failures at the database boundary, leaving the production API unchanged.
+static dbproc_t import_db_proc;
+static int import_fault, import_writes, import_entry_writes;
+static lresult_t import_fault_proc(database_t *db, uint32_t msg, uint32_t wp, void *lp) {
+  if (msg == dbInsert || msg == dbUpdate || msg == dbDelete) import_writes++;
+  if (import_fault == 1 && msg == dbBeginChanges) return 0;
+  if (import_fault == 2 && msg == dbInsert && wp == TABLE_COUNTERPARTIES) return 0;
+  if (import_fault == 3 && msg == dbInsert && wp == TABLE_ENTRIES && ++import_entry_writes == 2) return 0;
+  if (import_fault == 4 && msg == dbUpdate && wp == TABLE_DOCUMENTS && ((db_document_t *)lp)->posted) return 0;
+  if (import_fault == 5 && msg == dbCommitChanges) return 0;
+  if (import_fault == 6 && msg == dbInsert && wp == TABLE_DOCUMENTS) return 0;
+  return import_db_proc(db, msg, wp, lp);
+}
+
+static char *import_snapshot(database_t *db) {
+  db->dirty = true;
+  if (!send_db_message(db, dbSave, 0, NULL)) return NULL;
+  FILE *f = fopen(db->source_path, "rb");
+  if (!f) return NULL;
+  fseek(f, 0, SEEK_END);
+  long size = ftell(f);
+  rewind(f);
+  char *text = calloc((size_t)size + 1, 1);
+  if (text && fread(text, 1, (size_t)size, f) != (size_t)size) { free(text); text = NULL; }
+  fclose(f);
+  return text;
+}
+
+static void test_import_integrity(void) {
+  TEST("1C import: distinct same-date exchanges, persisted identity and transaction failures");
+  const char *path = TMP_DIR "/distinct.xml";
+  FILE *f = fopen(path, "wb");
+  ASSERT_NOT_NULL(f);
+  fputs("<Message><Header><Format>EnterpriseData</Format></Header><Body>"
+        "<Справочник.Контрагенты><Наименование>Atomic Vendor</Наименование><ИНН>9999999999</ИНН></Справочник.Контрагенты>"
+        "<Документ.ОстаткиБезналичныхДенежныхСредств><Дата>2003-02-28T00:00:00</Дата>"
+        "<ДенежныеСредства><Строка><Сумма>725</Сумма></Строка></ДенежныеСредства>"
+        "</Документ.ОстаткиБезналичныхДенежныхСредств>"
+        "<Документ.ОстаткиРасчетовСПоставщикамиДолги><Дата>2003-02-28T00:00:00</Дата>"
+        "<Расчеты><Строка><Контрагент><Наименование>Atomic Vendor</Наименование><ИНН>9999999999</ИНН></Контрагент>"
+        "<Сумма>250</Сумма></Строка></Расчеты></Документ.ОстаткиРасчетовСПоставщикамиДолги>"
+        "</Body></Message>", f);
+  fclose(f);
+  database_t *ib = g_ledger->ib;
+  char *before = import_snapshot(ib);
+  ASSERT_NOT_NULL(before);
+  ledger_import_t r;
+  import_db_proc = ib->proc;
+  for (int fault = 1; fault <= 6; fault++) {
+    import_fault = fault; import_writes = import_entry_writes = 0;
+    ib->proc = import_fault_proc;
+    bool ok = ledger_import_enterprisedata(ib, g_ledger->cfg, path, &r);
+    ib->proc = import_db_proc;
+    ASSERT_FALSE(ok);
+    ASSERT(r.error[0] && !r.entries && !r.counterparties && !r.debit && !r.credit, "failed import reports no committed records");
+    ASSERT(fault != 1 || !import_writes, "failed begin performs no writes");
+    ASSERT_FALSE(ib->dirty);
+    char *after = import_snapshot(ib);
+    ASSERT_NOT_NULL(after);
+    ASSERT_STR_EQUAL(before, after);
+    free(after);
+  }
+  free(before);
+  ledger_build_reports(ib, g_ledger->cfg);
+  double bank = balance("51")->balance_dr, suppliers = balance("60.01")->balance_cr;
+  ASSERT_TRUE(ledger_import_enterprisedata(ib, g_ledger->cfg, path, &r));
+  ASSERT(r.entries == 2 && r.counterparties == 1 && !r.balances_present && near(r.debit, 725) && near(r.credit, 250),
+         "a different exchange of the same date imports both debit and credit");
+  ledger_build_reports(ib, g_ledger->cfg);
+  ASSERT(near(balance("51")->balance_dr, bank + 725) && near(balance("60.01")->balance_cr, suppliers + 250),
+         "existing balances survive and new postings reach their accounts");
+  db_document_t *opening = NULL;
+  result_node_t *docs = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
+  for (result_node_t *n = docs; n; n = n->next) {
+    db_document_t *d = *(db_document_t **)n->data;
+    if (d->import_source[0] && near(d->total, 975)) opening = d;
+  }
+  free_result_list(docs);
+  ASSERT_NOT_NULL(opening);
+  ASSERT_TRUE(opening->posted);
+  db_account_t *bank_account = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "51");
+  db_account_t *supplier_account = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "60.01");
+  db_account_t *offset_account = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "000");
+  db_counterparty_t *vendor = find_by(ib, TABLE_COUNTERPARTIES, "tax_id", "9999999999");
+  ASSERT(bank_account && supplier_account && offset_account && vendor, "posting references exist");
+  result_node_t *entries = (result_node_t *)send_db_message(ib, dbFetch,
+    MAKEDWORD(TABLE_ENTRIES, ledger_field(ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)opening->id);
+  ASSERT_EQUAL(count_result_list(entries), 2);
+  for (result_node_t *n = entries; n; n = n->next) {
+    const db_entry_t *e = *(db_entry_t **)n->data;
+    ASSERT_STR_EQUAL(e->date, "2003-02-28");
+    ASSERT((near(e->amount, 725) && e->debit_id == bank_account->id && e->credit_id == offset_account->id) ||
+           (near(e->amount, 250) && e->debit_id == offset_account->id && e->credit_id == supplier_account->id && e->credit_subconto_id == vendor->id),
+           "balanced bank and supplier postings use the opening account and correct analytics");
+  }
+  free_result_list(entries);
+  snprintf(opening->comment, sizeof(opening->comment), "Edited comment in another language");
+  ASSERT_TRUE(send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, opening));
+  ASSERT_TRUE(send_db_message(ib, dbSave, 0, NULL));
+  ASSERT_TRUE(send_db_message(ib, dbLoad, 0, NULL));
+  ASSERT(rename(path, TMP_DIR "/renamed.xml") == 0, "rename exchange");
+  before = import_snapshot(ib);
+  ASSERT_NOT_NULL(before);
+  ASSERT_TRUE(ledger_import_enterprisedata(ib, g_ledger->cfg, TMP_DIR "/renamed.xml", &r));
+  ASSERT(!r.entries && !r.counterparties && r.balances_present, "identity survives save/reload, renamed file and edited comment");
+  char *after = import_snapshot(ib);
+  ASSERT_NOT_NULL(after);
+  ASSERT_STR_EQUAL(before, after);
+  free(before); free(after);
+  // Legacy imports lack a digest: refuse ambiguity rather than skip or double it.
+  docs = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
+  opening = NULL;
+  for (result_node_t *n = docs; n; n = n->next) {
+    db_document_t *d = *(db_document_t **)n->data;
+    if (d->import_source[0] && near(d->total, 975)) opening = d;
+  }
+  free_result_list(docs);
+  ASSERT_NOT_NULL(opening);
+  ASSERT_TRUE(send_db_message(ib, dbBeginChanges, 0, NULL));
+  opening->import_source[0] = 0;
+  snprintf(opening->comment, sizeof(opening->comment), "%s", ui_tr("Opening balances imported from 1C"));
+  ASSERT_TRUE(send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, opening));
+  ASSERT_FALSE(ledger_import_enterprisedata(ib, g_ledger->cfg, TMP_DIR "/renamed.xml", &r));
+  ASSERT(r.error[0] && !r.entries, "legacy imports require explicit reconciliation");
+  ASSERT_TRUE(send_db_message(ib, dbRevertChanges, 0, NULL));
+  remove(TMP_DIR "/renamed.xml");
+  PASS();
+}
+
+static void test_import_digest(void) {
+  TEST("1C exchange SHA-256: standard vectors including padding and multiple blocks");
+  char digest[65], text[1001];
+  ed_digest((const unsigned char *)"", 0, digest);
+  ASSERT_STR_EQUAL(digest, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+  ed_digest((const unsigned char *)"abc", 3, digest);
+  ASSERT_STR_EQUAL(digest, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+  memset(text, 'a', 1000);
+  ed_digest((const unsigned char *)text, 1000, digest);
+  ASSERT_STR_EQUAL(digest, "41edece42d63e8d9bf515a9ba6932e1c20cbc9f5a5d134645adb5db1b9737ea3");
+  ed_digest((const unsigned char *)text, 56, digest);
+  ASSERT_STR_EQUAL(digest, "b35439a4ac6f0948b6d6f9e3c6af0f5f590ce20f1bde7090ef7970686ec6738a");
+  PASS();
+}
+
 int main(int argc, char **argv) {
   (void)argc; (void)argv;
   TEST_START("Ledger");
@@ -583,6 +728,8 @@ int main(int argc, char **argv) {
   test_generated_bindings();
   test_russian_catalogs();
   test_import_enterprisedata();
+  test_import_digest();
+  test_import_integrity();
   test_german_configuration();
   destroy_database(g_ledger->ib);
   destroy_database(g_ledger->cfg);
