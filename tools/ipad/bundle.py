@@ -12,7 +12,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('root', 'target', 'binary'):
         parser.add_argument('--' + name, type=Path, required=True)
-    parser.add_argument('--app', choices=('imageeditor', 'penciltest', 'groove', 'winamp'), required=True)
+    parser.add_argument('--app', choices=('imageeditor', 'penciltest', 'groove', 'winamp', 'ledger'), required=True)
     parser.add_argument('--bundle-id', required=True)
     parser.add_argument('--sdk', choices=('iphoneos', 'iphonesimulator'), required=True)
     parser.add_argument('--sdk-version', required=True)
@@ -57,7 +57,7 @@ def main():
         'CFBundleIdentifier': args.bundle_id,
         'CFBundleExecutable': args.app,
         'CFBundleName': args.app,
-        'CFBundleDisplayName': {'penciltest': 'Pencil Test', 'imageeditor': 'Image Editor', 'groove': 'Groove', 'winamp': 'Winamp'}[args.app],
+        'CFBundleDisplayName': {'penciltest': 'Pencil Test', 'imageeditor': 'Image Editor', 'groove': 'Groove', 'winamp': 'Winamp', 'ledger': 'Ledger'}[args.app],
         'CFBundleDevelopmentRegion': 'en',
         'CFBundleInfoDictionaryVersion': '6.0',
         'CFBundlePackageType': 'APPL',

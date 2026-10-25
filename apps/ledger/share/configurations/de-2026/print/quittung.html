@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><title>Quittung {{number}}</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;margin:12mm;color:#000}
+table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
+.grid td,.grid th{border:1px solid #000}.grid th{font-weight:normal;font-size:8pt;text-align:center}
+.r{text-align:right}.c{text-align:center}.small{font-size:7.5pt}.b{font-weight:bold}
+.line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
+.sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
+h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
+@media print{body{margin:6mm}}
+</style></head><body>
+<h1>Quittung Nr. {{number}}</h1>
+<table class="grid" style="width:160mm">
+<tr><td style="width:40mm">Betrag</td><td class="b">{{total}} {{cfg.currency}}</td></tr>
+<tr><td>Betrag in Worten</td><td>{{total|words}}</td></tr>
+<tr><td>darin enthaltene USt</td><td>{{vat}} {{cfg.currency}}</td></tr>
+<tr><td>von</td><td>{{counterparty.name}}, {{counterparty.address}}</td></tr>
+<tr><td>für</td><td>{{comment}}</td></tr>
+<tr><td>Ort, Datum</td><td>Berlin, {{date|dmy}}</td></tr>
+</table>
+<p class="small">Aussteller: {{org.name}}, {{org.address}}, Steuernummer {{org.tax_id}}. Als Kleinbetragsrechnung bis 250 € gelten die Angaben des § 33 UStDV.</p>
+<table style="width:160mm" class="sign"><tr><td>{{org.name}}</td><td class="r"><span class="line">&nbsp;</span><div class="cap">Stempel / Unterschrift des Empfängers</div></td></tr></table>
+</body></html>

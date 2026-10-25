@@ -1,6 +1,6 @@
 // ledger_test.c — schema-driven database, posting rules, payroll, fixed
 // assets, currencies, month-end closing, reports and print forms, exercised
-// on the ru-2003 and de-2003 configurations and their demo infobases.
+// on the ru-2003, de-2003, ru-2026 and de-2026 configurations and their demo infobases.
 
 #include "test_framework.h"
 #include "apps/ledger/ledger.h"
@@ -30,6 +30,7 @@ static void setup(void) {
   g_ledger->cfg = open_db("cfg", &ledger_cfg_schema, SHARE "/ru-2003/configuration.xml");
   g_ledger->ib = open_db("ib", &ledger_ib_schema, SHARE "/ru-2003/demo.xml");
   snprintf(g_ledger->ib->source_path, sizeof(g_ledger->ib->source_path), TMP_DIR "/infobase.xml");
+  ledger_script_open(g_ledger->config_dir, TMP_DIR);
   ledger_repost_all(g_ledger->ib, g_ledger->cfg);
 }
 
@@ -512,6 +513,270 @@ static void test_german_configuration(void) {
   PASS();
 }
 
+// Opens another configuration and its demo infobase in place of the test's.
+static void switch_configuration(const char *code, const char *tmp_ib) {
+  snprintf(g_ledger->config_dir, sizeof(g_ledger->config_dir), SHARE "/%s", code);
+  char path[512];
+  snprintf(path, sizeof(path), SHARE "/%s/configuration.xml", code);
+  g_ledger->cfg = open_db("cfg", &ledger_cfg_schema, path);
+  snprintf(path, sizeof(path), SHARE "/%s/demo.xml", code);
+  g_ledger->ib = open_db("ib", &ledger_ib_schema, path);
+  snprintf(g_ledger->ib->source_path, sizeof(g_ledger->ib->source_path), TMP_DIR "/%s", tmp_ib);
+  ledger_script_open(g_ledger->config_dir, TMP_DIR);
+  ledger_repost_all(g_ledger->ib, g_ledger->cfg);
+}
+
+static void restore_configuration(database_t *cfg, database_t *ib) {
+  destroy_database(g_ledger->ib);
+  destroy_database(g_ledger->cfg);
+  g_ledger->cfg = cfg; g_ledger->ib = ib;
+  register_database("cfg", cfg);
+  register_database("ib", ib);
+  snprintf(g_ledger->config_dir, sizeof(g_ledger->config_dir), SHARE "/ru-2003");
+  ledger_script_open(g_ledger->config_dir, TMP_DIR);
+}
+
+static const db_payroll_line_t *payroll_line(int document_id, int employee_id) {
+  const db_payroll_line_t *found = NULL;
+  result_node_t *lines = (result_node_t *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_PAYROLL_LINES, ledger_field(g_ledger->ib, TABLE_PAYROLL_LINES, "document_id")), (void *)(intptr_t)document_id);
+  for (result_node_t *n = lines; n; n = n->next) {
+    const db_payroll_line_t *l = *(db_payroll_line_t **)n->data;
+    if (l->employee_id == employee_id) found = l;
+  }
+  free_result_list(lines);
+  return found;
+}
+
+// Posts an accrual of amount for employee on date and returns its line.
+static const db_payroll_line_t *accrue(int doc_type_id, const char *date, int employee_id, double amount, int *doc_id) {
+  db_document_t blank = { .doc_type_id = doc_type_id };
+  snprintf(blank.date, sizeof(blank.date), "%s", date);
+  db_document_t *doc = (db_document_t *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &blank);
+  *doc_id = doc->id;
+  db_payroll_line_t line = { .document_id = doc->id, .employee_id = employee_id, .amount = amount };
+  send_db_message(g_ledger->ib, dbInsert, TABLE_PAYROLL_LINES, &line);
+  ledger_post(g_ledger->ib, g_ledger->cfg, doc->id);
+  return payroll_line(doc->id, employee_id);
+}
+
+static const db_vat_summary_t *vat_summary(int book, double rate) {
+  const db_vat_summary_t *found = NULL;
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_VAT_SUMMARY, 0), NULL);
+  for (result_node_t *n = rows; n; n = n->next) {
+    const db_vat_summary_t *s = *(db_vat_summary_t **)n->data;
+    const db_vat_rate_t *r = (const db_vat_rate_t *)send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_VAT_RATES, 0), (void *)(intptr_t)s->vat_rate_id);
+    if (s->book == book && (r ? near(r->rate, rate) : rate < 0)) found = s;
+  }
+  free_result_list(rows);
+  return found;
+}
+
+static bool file_contains(const char *path, const char *a, const char *b) {
+  static char text[1 << 16];
+  FILE *f = fopen(path, "rb");
+  if (!f) return false;
+  size_t n = fread(text, 1, sizeof(text) - 1, f);
+  fclose(f);
+  text[n] = '\0';
+  return strstr(text, a) && (!b || strstr(text, b)) && !strstr(text, "{{");
+}
+
+static void test_ru_2026(void) {
+  TEST("ru-2026: VAT 22 % and 10 % books, progressive income tax, contribution cap, 2026 forms");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  switch_configuration("ru-2026", "infobase-ru-2026.xml");
+  db_document_t *receipt = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ПТ-0001");
+  bool ok = receipt && near(receipt->amount, 176000) && near(receipt->vat, 37880) && near(receipt->total, 213880);
+  ok = ok && near(balance("19.04")->balance_dr, 13200);  // input tax on services waits for its deduction document
+  ok = ok && near(balance("68.02")->credit_turnover, 13038) && near(balance("68.02")->debit_turnover, 37880);
+  const db_vat_summary_t *purchases22 = vat_summary(2, 22), *sales10 = vat_summary(1, 10), *purchases_norate = vat_summary(2, -1);
+  ok = ok && purchases22 && near(purchases22->vat, 37180 + 13200) && purchases22->documents == 2;
+  ok = ok && sales10 && near(sales10->amount, 3000) && near(sales10->vat, 300);
+  ok = ok && purchases_norate && near(purchases_norate->vat, 13200);  // the equipment receipt has no lines
+  // Payroll: 13 % after the child deduction, rounded to roubles; 30 % and 0.2 % on top.
+  const db_payroll_line_t *sidorova = payroll_line(14, 2), *petrov = payroll_line(14, 1);
+  ok = ok && sidorova && near(sidorova->withheld, 15418) && near(sidorova->contributions, 36240) && petrov && near(petrov->net, 130500);
+  ok = ok && near(balance("68.01")->balance_cr, 46072) && near(balance("69.09")->balance_cr, 108000) && near(balance("69.11")->balance_cr, 720);
+  ok = ok && near(balance("70")->balance_cr, 0) && near(balance("02.01")->balance_cr, 15000);
+  ASSERT(ok, "March 2026 of the demo company balances");
+  // A high earner in April: the 15 % bracket on the year's income so far and the 15.1 % rate above the cap.
+  int id = 0;
+  const db_payroll_line_t *rich = accrue(11, "2026-04-30", 1, 3000000, &id);
+  ASSERT(rich && near(rich->withheld, 405000), "cumulative scale: 312 000 + 15 % of the part above 2.4 million, less March's tax");
+  ASSERT(rich && near(rich->contributions, 874521 + 6000), "30 % up to the 2 979 000 base, 15.1 % above, 0.2 % injury insurance");
+  send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+  // Print forms of 2026: Decree 1137 invoice, UPD, books, VAT summary, trial balance, journal.
+  db_document_t *sale = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "РТ-0001");
+  char report[4096];
+  ASSERT_EQUAL(ledger_print_document(sale->id, report, sizeof(report)), 3);
+  ASSERT(file_contains(TMP_DIR "/print/РТ-0001-schet-faktura.html", "СЧЕТ-ФАКТУРА № РТ-0001 от 10.03.2026", "Российский рубль, 643"), "invoice per Decree 1137");
+  ASSERT(file_contains(TMP_DIR "/print/РТ-0001-upd.html", "Статус:", "ИП Иванов Иван Иванович"), "UPD");
+  ASSERT_EQUAL(ledger_print_reports(report, sizeof(report)), 6);
+  ASSERT(file_contains(TMP_DIR "/print/kniga-prodazh.html", "КНИГА ПРОДАЖ", "ИП Иванов Иван Иванович"), "sales book");
+  ASSERT(file_contains(TMP_DIR "/print/kniga-pokupok.html", "КНИГА ПОКУПОК", "Торговый дом Альфа"), "purchase book");
+  ASSERT(file_contains(TMP_DIR "/print/osv.html", "ОБОРОТНО-САЛЬДОВАЯ ВЕДОМОСТЬ", "Расчетные счета"), "trial balance form");
+  ASSERT(file_contains(TMP_DIR "/print/journal.html", "ЖУРНАЛ ОПЕРАЦИЙ", "Реализация товаров РТ-0001"), "journal form");
+  ASSERT(ledger_count_references(g_ledger->cfg, TABLE_REGULATIONS, "area", 0) == 0, "regulations filter by text, not by number");
+  result_node_t *rules = (result_node_t *)send_db_message(g_ledger->cfg, dbFetch, MAKEDWORD(TABLE_REGULATIONS, 0), NULL);
+  int nrules = count_result_list(rules);
+  free_result_list(rules);
+  ASSERT(nrules >= 20, "legal basis listed");
+  restore_configuration(cfg, ib);
+  PASS();
+}
+
+static void test_de_2026(void) {
+  TEST("de-2026: automatic accounts per rate, 2026 social insurance caps, § 32a tariff, effective dating, DATEV export");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  switch_configuration("de-2026", "infobase-de-2026.xml");
+  bool ok = near(balance("1776")->balance_cr, 99.35) && near(balance("1771")->balance_cr, 8.38);
+  ok = ok && near(balance("1576")->balance_dr, 197.60 + 228) && near(balance("1571")->balance_dr, 20.93);
+  ok = ok && near(balance("8400")->balance_cr, 522.90) && near(balance("8300")->balance_cr, 119.70);
+  ok = ok && near(balance("3400")->balance_dr, 1040) && near(balance("3300")->balance_dr, 299) && near(balance("4210")->balance_dr, 1200);
+  ASSERT(ok, "7 % lines post to 3300/1571 and 8300/1771, 19 % lines to 3400/1576 and 8400/1776; a service invoice keeps its expense account");
+  const db_payroll_line_t *anna = payroll_line(8, 1), *thomas = payroll_line(8, 2);
+  ok = anna && near(anna->withheld, 528.75 + 180.91) && near(anna->contributions, 532.50) && near(anna->net, 1790.34);
+  ok = ok && thomas && near(thomas->withheld, 465.30 + 121.58) && near(thomas->net, 1613.12);
+  ok = ok && near(balance("1741")->balance_cr, 302.49) && near(balance("1742")->balance_cr, 1995.15) && near(balance("1740")->balance_cr, 0);
+  ASSERT(ok, "21.15 % employee insurance, Lohnsteuer on twelve monthly bases less Vorsorgepauschale and Pauschbeträge, employer 21.3 %");
+  int id = 0;
+  const db_payroll_line_t *rich = accrue(9, "2026-04-30", 1, 9000, &id);
+  ASSERT(rich && near(rich->withheld, 508.59 + 104.63 + 785.85 + 109.85 + 2173.91 + 56.89),
+         "insurance capped at 5 812,50 / 8 450; 42 % zone; Solidaritätszuschlag from rules.lua in the Milderungszone");
+  ASSERT(rich && near(rich->contributions, 508.59 + 104.63 + 785.85 + 109.85 + 12.68), "employer shares and Insolvenzgeldumlage capped too");
+  send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  const db_payroll_line_t *last_year = accrue(9, "2025-06-30", 1, 2500, &id);
+  ASSERT(last_year && near(last_year->withheld, 523.75 + 188.25), "a 2025 document applies the 2025 rows: Zusatzbeitrag 2.5 %, tariff 2025");
+  send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+  ui_set_language("de");
+  ui_add_string_catalog_dir("apps/ledger/share/locale");
+  db_document_t *sale = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "AR-0001");
+  char report[4096];
+  ASSERT_EQUAL(ledger_print_document(sale->id, report, sizeof(report)), 1);
+  ASSERT(file_contains(TMP_DIR "/print/AR-0001-rechnung.html", "Rechnung AR-0001", "DE123456789"), "Rechnung per § 14 UStG");
+  ASSERT_EQUAL(ledger_print_reports(report, sizeof(report)), 5);
+  ASSERT(file_contains(TMP_DIR "/print/ustva.html", "<td class=\"c\">81</td><td class=\"c\">1</td><td class=\"r\">522,90</td><td class=\"r b\">99,35</td>",
+                       "<td class=\"c\">86</td><td class=\"c\">1</td><td class=\"r\">119,70</td><td class=\"r b\">8,38</td>"), "UStVA figures per rate under their Kennzahl");
+  ASSERT(file_contains(TMP_DIR "/print/datev-buchungsstapel.csv", "\"EXTF\";700;21;\"Buchungsstapel\"", "498,00;\"S\";\"EUR\";;;;1400;8400;;1003;\"AR-0001\""), "DATEV Buchungsstapel rows");
+  ASSERT(file_contains(TMP_DIR "/print/susa.html", "Summen- und Saldenliste", "Umsatzsteuer 19 %"), "SuSa");
+  ui_set_language("en");
+  restore_configuration(cfg, ib);
+  PASS();
+}
+
+// rules.lua of a configuration posts document types, computes taxes and
+// closes the month; plugins subscribe to postings.
+static void test_scripted_rules(void) {
+  TEST("rules.lua: scripted document posting at average cost, scripted payroll tax, plugin event, errors stay contained");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  switch_configuration("ru-2026", "infobase-ru-2026-script.xml");
+  ASSERT(ledger_script_has("post_writeoff") && ledger_script_has("contributions_sme") && !ledger_script_has("no_such_rule"), "rules.lua loaded");
+  // Inventory write-off: Dt 94 Kt 41.01 per line at the average cost on the date (ФСБУ 5/2019).
+  db_doc_type_t *writeoff = find_by(g_ledger->cfg, TABLE_DOC_TYPES, "code", "writeoff");
+  ASSERT(writeoff && !strcmp(writeoff->script, "post_writeoff"), "document type posts by script");
+  db_document_t blank = { .doc_type_id = writeoff->id };
+  snprintf(blank.date, sizeof(blank.date), "2026-03-25");
+  db_document_t *doc = (db_document_t *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &blank);
+  db_doc_line_t line = { .document_id = doc->id, .item_id = 1, .quantity = 10, .price = 0 };  // paper bought at 450
+  send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line);
+  ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, doc->id));
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+  ASSERT(near(entry_sum("94", "41.01"), 4500) && near(doc->total, 4500), "ten sheets of paper written off at 450 each");
+  // A scripted tax row: the SME reduced tariff, 30 % up to 1.5 МРОТ and 15 % above it.
+  db_payroll_tax_t *tax = find_by(g_ledger->cfg, TABLE_PAYROLL_TAXES, "code", "contributions");
+  snprintf(tax->script, sizeof(tax->script), "contributions_sme");
+  send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, tax);
+  int id = 0;
+  const db_payroll_line_t *petrov = accrue(11, "2026-04-30", 1, 150000, &id);
+  ASSERT(petrov && near(petrov->contributions, 40639.50 * 0.30 + (150000 - 40639.50) * 0.15 + 300), "scripted tariff plus the built-in injury row");
+  send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  tax->script[0] = '\0';
+  send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, tax);
+  // A tax naming a missing function is skipped with a diagnostic; the others still apply.
+  db_payroll_tax_t *injury = find_by(g_ledger->cfg, TABLE_PAYROLL_TAXES, "code", "injury");
+  snprintf(injury->script, sizeof(injury->script), "no_such_rule");
+  send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, injury);
+  petrov = accrue(11, "2026-05-31", 1, 150000, &id);
+  ASSERT(petrov && near(petrov->contributions, 45000), "the broken row contributes nothing, the unified tariff still posts");
+  send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  injury->script[0] = '\0';
+  send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, injury);
+  // The cash-limit plugin ran on every posting (it logs; posting is unaffected).
+  db_document_t *cash = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ПКО-0001");
+  ASSERT(cash && cash->posted, "plugins do not block postings");
+  restore_configuration(cfg, ib);
+  PASS();
+}
+
+// Every installed configuration loads and refers only to accounts, templates
+// and scales it defines: the check a compliance refresh must keep passing.
+static void test_configuration_integrity(void) {
+  TEST("configurations: every installed configuration resolves its accounts, templates and tax scales");
+  database_t *catalog = create_database_with_schema("catalog_test", "db_schema_xml", &ledger_catalog_schema, SHARE "/index.xml");
+  ASSERT_NOT_NULL(catalog);
+  result_node_t *configs = (result_node_t *)send_db_message(catalog, dbFetch, MAKEDWORD(TABLE_CONFIGURATIONS, 0), NULL);
+  int checked = 0, problems = 0;
+  for (result_node_t *n = configs; n; n = n->next) {
+    const db_configuration_t *c = *(db_configuration_t **)n->data;
+    char path[512];
+    snprintf(path, sizeof(path), SHARE "/%s/configuration.xml", c->code);
+    database_t *cfg = create_database_with_schema("cfg_check", "db_schema_xml", &ledger_cfg_schema, path);
+    if (!cfg) { problems++; fprintf(stderr, "  %s: configuration.xml missing\n", c->code); continue; }
+    const int account_fields[][2] = { { TABLE_DOC_TYPES, 0 }, { TABLE_PAYROLL_TAXES, 0 }, { TABLE_CLOSING_RULES, 0 }, { TABLE_BALANCE_RULES, 0 }, { TABLE_VAT_RATES, 0 }, { TABLE_SETTINGS, 0 } };
+    for (size_t t = 0; t < ARRAY_LEN(account_fields); t++) {
+      const db_table_schema_t *table = db_schema_table(cfg->schema, account_fields[t][0]);
+      result_node_t *rows = (result_node_t *)send_db_message(cfg, dbFetch, MAKEDWORD(table->table_id, 0), NULL);
+      for (result_node_t *r = rows; r; r = r->next) {
+        for (int j = 0; j < table->join_count; j++) {
+          if (strcmp(table->joins[j].foreign_table, "accounts")) continue;
+          int f = db_schema_field_index(table, table->joins[j].local_field);
+          int id = *(const int *)((const char *)*(void **)r->data + table->meta[f].offset);
+          if (id && !send_db_message(cfg, dbFind, MAKEDWORD(TABLE_ACCOUNTS, 0), (void *)(intptr_t)id)) {
+            problems++; fprintf(stderr, "  %s: %s.%s = %d names no account\n", c->code, table->name, table->joins[j].local_field, id);
+          }
+        }
+      }
+      free_result_list(rows);
+    }
+    result_node_t *forms = (result_node_t *)send_db_message(cfg, dbFetch, MAKEDWORD(TABLE_PRINT_FORMS, 0), NULL);
+    for (result_node_t *r = forms; r; r = r->next) {
+      const db_print_form_t *form = *(db_print_form_t **)r->data;
+      snprintf(path, sizeof(path), SHARE "/%s/print/%s", c->code, form->template);
+      if (!axPathExists(path)) { problems++; fprintf(stderr, "  %s: template %s missing\n", c->code, form->template); }
+      if (form->report[0] && !db_schema_table_named(&ledger_ib_schema, form->report)) { problems++; fprintf(stderr, "  %s: report table %s unknown\n", c->code, form->report); }
+    }
+    free_result_list(forms);
+    snprintf(path, sizeof(path), SHARE "/%s", c->code);
+    ledger_script_open(path, NULL);
+    result_node_t *types = (result_node_t *)send_db_message(cfg, dbFetch, MAKEDWORD(TABLE_DOC_TYPES, 0), NULL);
+    for (result_node_t *r = types; r; r = r->next) {
+      const db_doc_type_t *type = *(db_doc_type_t **)r->data;
+      if (type->script[0] && !ledger_script_has(type->script)) { problems++; fprintf(stderr, "  %s: doc type %s names no rules.lua function %s\n", c->code, type->code, type->script); }
+    }
+    free_result_list(types);
+    result_node_t *taxes = (result_node_t *)send_db_message(cfg, dbFetch, MAKEDWORD(TABLE_PAYROLL_TAXES, 0), NULL);
+    for (result_node_t *r = taxes; r; r = r->next) {
+      const db_payroll_tax_t *tax = *(db_payroll_tax_t **)r->data;
+      if (tax->script[0] && !ledger_script_has(tax->script)) { problems++; fprintf(stderr, "  %s: tax %s names no rules.lua function %s\n", c->code, tax->code, tax->script); }
+      bool scaled = tax->scale[0] != '\0';
+      int zones = ledger_count_references(cfg, TABLE_TAX_SCALES, "tax_id", tax->id);
+      if (scaled != (zones > 0)) { problems++; fprintf(stderr, "  %s: tax %s scale='%s' has %d zones\n", c->code, tax->code, tax->scale, zones); }
+      if (tax->valid_to[0] && strcmp(tax->valid_from, tax->valid_to) > 0) { problems++; fprintf(stderr, "  %s: tax %s valid_from after valid_to\n", c->code, tax->code); }
+    }
+    free_result_list(taxes);
+    destroy_database(cfg);
+    checked++;
+  }
+  free_result_list(configs);
+  destroy_database(catalog);
+  ledger_script_open(SHARE "/ru-2003", TMP_DIR);
+  ASSERT(checked >= 4 && problems == 0, "all configurations consistent");
+  PASS();
+}
+
 static void test_import_enterprisedata(void) {
   TEST("1C import: EnterpriseData catalogs and opening balances, matched records, no double import");
   ledger_import_t r;
@@ -731,7 +996,12 @@ int main(int argc, char **argv) {
   test_import_digest();
   test_import_integrity();
   test_german_configuration();
+  test_ru_2026();
+  test_de_2026();
+  test_scripted_rules();
+  test_configuration_integrity();
   destroy_database(g_ledger->ib);
   destroy_database(g_ledger->cfg);
+  ledger_script_close();
   TEST_END();
 }

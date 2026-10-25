@@ -1,0 +1,4 @@
+"EXTF";700;21;"Buchungsstapel";13;{{period.date_from|ymd}}000000000;;"RE";"";"";0;0;{{period.date_from|ymd}};4;{{period.date_from|ymd}};{{period.date_to|ymd}};"Ledger {{org.name}}";"";1;0;0;"EUR";;"";;;"";;;"";;
+Umsatz (ohne Soll/Haben-Kz);Soll/Haben-Kennzeichen;WKZ Umsatz;Kurs;Basis-Umsatz;WKZ Basis-Umsatz;Konto;Gegenkonto (ohne BU-Schlüssel);BU-Schlüssel;Belegdatum;Belegfeld 1;Belegfeld 2;Skonto;Buchungstext
+{{#journal_rows}}{{amount|comma}};"S";"EUR";;;;{{debit.code}};{{credit.code}};;{{date|ddmm}};"{{document.number}}";"";;"{{content}}"
+{{/journal_rows}}
