@@ -36,9 +36,14 @@ static void test_assistant(void) {
   char error[2048] = "";
   lua_State *L = script_state_new(SHARE "/addons/assistant", "assistant-spec");
   ASSERT_NOT_NULL(L);
-  bool ok = luaL_loadfilex(L, "apps/ledger/tests/assistant_test.lua", "t") == LUA_OK;
-  if (ok) ok = script_call(L, 0, 0, error, sizeof(error), NULL);
-  ASSERT(ok, error[0] ? error : "assistant grammar test failed");
+  const char *specs[] = {"assistant_test.lua", "assistant_examples.lua"};
+  for (size_t i = 0; i < ARRAY_LEN(specs); i++) {
+    char path[256];
+    snprintf(path, sizeof(path), "apps/ledger/tests/%s", specs[i]);
+    bool ok = luaL_loadfilex(L, path, "t") == LUA_OK;
+    if (ok) ok = script_call(L, 0, 0, error, sizeof(error), NULL);
+    ASSERT(ok, error[0] ? error : "assistant grammar test failed");
+  }
   lua_close(L);
   const char *configurations[] = {"ru-2026", "de-2026"};
   for (size_t i = 0; i < ARRAY_LEN(configurations); i++) {

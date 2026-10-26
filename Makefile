@@ -73,6 +73,14 @@ endif
 # ── Dependencies ─────────────────────────────────────────────────────────
 PKG_CONFIG ?= pkg-config
 pc = $(shell $(PKG_CONFIG) --$(1) lua5.4 2>/dev/null || $(PKG_CONFIG) --$(1) lua 2>/dev/null)
+ifneq ($(MAKECMDGOALS),clean)
+ifeq ($(shell $(PKG_CONFIG) --exists lua5.4 2>/dev/null && echo yes || $(PKG_CONFIG) --exists lua 2>/dev/null && echo yes),)
+$(error Lua development files are required (install liblua5.4-dev or lua via your package manager; pkg-config must find lua5.4 or lua))
+endif
+ifeq ($(shell $(PKG_CONFIG) --exists libxml-2.0 2>/dev/null && echo yes),)
+$(error libxml2 development files are required (install libxml2-dev or libxml2 via your package manager; pkg-config must find libxml-2.0))
+endif
+endif
 LIBXML_CFLAGS := $(shell $(PKG_CONFIG) --cflags libxml-2.0 2>/dev/null)
 LIBXML_LIBS   := $(shell $(PKG_CONFIG) --libs libxml-2.0 2>/dev/null)
 
