@@ -22,7 +22,9 @@ Unknown words reject the entire command; user input is never evaluated as Lua.
 
 ## Implementation
 
-- `lexicon.lua`: verbs, nouns, adjectives, fields and synonyms.
+- `lexicon.lua`: authored vocabulary, number words, grammatical roles and aliases.
+- `dictionary.lua`: load-time compilation to interned word records and a phrase trie.
+- `normalize.lua`: shared Unicode normalization for compilation, input and matching.
 - `parser.lua`: UTF-8 normalization, number phrases, grammar and contextual refinements.
 - `engine.lua`: typed commands, filters, sorting, disambiguation and host callbacks.
 - `assistant.lua`: real Ledger models, receivable balances, native record opening
@@ -207,3 +209,69 @@ customers and 2,400 documents. Each customer-review cycle filters posted
 records, sorts them, opens one, changes scope and verifies that `it` still opens
 the same document ID. The native integration test also checks the relationship
 against the actual RU/DE demo document foreign keys and posted flags.
+
+## Compiled dictionary, using Lua tables and functions
+
+The dictionary design was checked against `corepunch/zilscript` at `0edc03f`:
+[`compiler/forms.lua`](https://github.com/corepunch/zilscript/blob/0edc03f/zilscript/compiler/forms.lua)
+lowers vocabulary declarations and synonym forms to Lua;
+[`bootstrap.lua`](https://github.com/corepunch/zilscript/blob/0edc03f/zilscript/bootstrap.lua)
+implements `learn`, `BUZZ`, `SYNONYM` and `merge_dictionary_word`, building
+`cache.words` and preserving grammatical roles. Its packed seven-byte records
+serve the Z-machine parser API. Ledger needs the vocabulary model, without
+that memory representation.
+
+Here, “compile” means transforming authored Lua tables into indexed Lua tables
+once when `parser` is required. There is no bytecode output, binary dictionary,
+code generation, executable generation or extra build step. All behavior stays
+in Lua functions. Lua's `require` cache retains the loaded parser and its compiled
+dictionary; each isolated Ledger Lua state owns its own instance.
+
+```lua
+local dictionary = require('dictionary').compile(require('lexicon'))
+assert(dictionary.words.show.roles.verbs == 'list')
+assert(dictionary.words.zeige.roles.verbs == 'list')
+assert(dictionary.words['покажи'].roles.verbs == 'list')
+-- Separate surface forms, one canonical command meaning.
+```
+
+| Authored input | Compiled representation |
+|---|---|
+| Aliases for a verb, noun, qualifier or field | One interned record per normalized spelling, with its canonical role values |
+| A word used in multiple grammatical roles | A `roles` table retaining every role; the grammar explicitly chooses role precedence |
+| Duplicate aliases with the same meaning | The same interned record |
+| Conflicting meanings in the same role | A compilation error naming the word and role |
+| `at least`, `не меньше`, `mehr als` | Trie paths with terminal word IDs, supporting longest complete phrase matching |
+| Pronouns, ordinals, noise, currency units and number words | Roles in the same dictionary, rather than unrelated parser-local maps |
+
+`words` indexes records by normalized spelling; `entries` indexes the same
+records by numeric ID. IDs are assigned in sorted order, independent of Lua
+source-table iteration order. They identify vocabulary within a compiled
+instance, not Ledger records, and are not a persistence contract across lexicon
+edits. Exact word lookup uses Lua hash tables; phrase lookup follows only the
+input phrase's trie path rather than scanning all aliases. A failed longer
+phrase falls back to the last complete match. Unknown words remain errors,
+and quoted names bypass vocabulary matching.
+
+The compiler and tokenizer share the same Unicode normalizer. Full word
+spellings are retained: there is no six-character truncation or arbitrary
+stemming. A normalized collision such as two incompatible meanings for
+`трёх`/`трех` is diagnosed. German productive compound numbers remain a small
+recognizer function; there is no need to enumerate every possible cardinal
+number. Customer names and accounting records remain runtime host data and
+are never compiled into the language dictionary.
+
+The dictionary compiler validates role names, alias-list shape, UTF-8,
+empty/unreachable aliases, numeric meanings and same-role conflicts.
+`apps/ledger/tests/assistant_dictionary_test.lua` audits every authored alias,
+canonical meanings across languages, ID reproducibility, multi-role records,
+longest-match fallback, quotation boundaries and isolation. It also checks that
+100 commands compile the dictionary only once, and that adding 10,000 aliases
+does not alter existing matches. Both standalone and native sandbox test
+runners execute these checks.
+
+Lua fits this work directly: tables express both the authored vocabulary and
+its compiled indexes, and functions express the grammar and productive rules.
+This compilation model does not create a reason to move the assistant into C.
+The native data access/UI boundary stays in C; a future move of a specific
+operation should follow measured need.

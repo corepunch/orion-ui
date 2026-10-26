@@ -72,7 +72,7 @@ static void test_assistant(void) {
   char error[2048] = "";
   lua_State *L = script_state_new(SHARE "/addons/assistant", "assistant-spec");
   ASSERT_NOT_NULL(L);
-  const char *specs[] = {"assistant_test.lua", "assistant_examples.lua", "assistant_dialogue_test.lua"};
+  const char *specs[] = {"assistant_test.lua", "assistant_examples.lua", "assistant_dialogue_test.lua", "assistant_dictionary_test.lua"};
   for (size_t i = 0; i < ARRAY_LEN(specs); i++) {
     char path[256];
     snprintf(path, sizeof(path), "apps/ledger/tests/%s", specs[i]);
