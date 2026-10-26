@@ -52,4 +52,5 @@ assert(not P.parse(string.char(255)))
 assert(not P.parse(string.rep('x',2049)))
 assert(not P.parse('найди клиента "Альфа'))
 print('assistant grammar, dialogue, filtering and action tests passed')
-dofile('apps/ledger/tests/assistant_examples.lua')
+-- The native test host loads this second chunk explicitly: its sandbox has no dofile.
+if dofile then dofile('apps/ledger/tests/assistant_examples.lua') end
