@@ -67,7 +67,8 @@ def main():
                 p.exit(1, 'Generated file is stale: ' + str(path) + '\n')
         else:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(content, encoding='utf-8', newline='\n')
+            with path.open('w', encoding='utf-8', newline='\n') as output:
+                output.write(content)
 
 
 if __name__ == '__main__':
