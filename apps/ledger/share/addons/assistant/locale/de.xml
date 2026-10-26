@@ -1,63 +1,70 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8"?>
 <strings language="de">
-  <string source="Close the quotes around the name.">Schließen Sie die Anführungszeichen um den Namen.</string>
-  <string source="Enter a command of at most 2048 bytes.">Geben Sie einen Befehl mit höchstens 2048 Bytes ein.</string>
-  <string source="Invalid UTF-8 text.">Ungültiger UTF-8-Text.</string>
-  <string source="What should I show? Try: show debtors.">Was soll ich anzeigen? Beispiel: zeige Schuldner.</string>
-  <string source="Specify one quoted name.">Geben Sie einen Namen in Anführungszeichen an.</string>
-  <string source="Use one command at a time.">Geben Sie jeweils nur einen Befehl ein.</string>
-  <string source="Specify one object type.">Geben Sie einen Objekttyp an.</string>
-  <string source="Which amount should I use?">Welchen Betrag soll ich verwenden?</string>
-  <string source="Enter amounts without a currency, in the accounting currency.">Geben Sie Beträge ohne Währungsangabe in der Buchhaltungswährung ein.</string>
-  <string source="This command takes no parameters.">Dieser Befehl hat keine Parameter.</string>
-  <string source="Find objects first, then open one.">Suchen Sie zuerst Objekte und öffnen Sie dann eines.</string>
-  <string source="Use a whole row number starting at 1.">Geben Sie eine ganze Zeilennummer ab 1 an.</string>
-  <string source="Which object should I open? Try: open first.">Welches Objekt soll ich öffnen? Beispiel: öffne den ersten.</string>
-  <string source="Use a row number with the open command.">Verwenden Sie eine Zeilennummer mit dem Befehl öffne.</string>
-  <string source="What should I find: customers, documents or items?">Was soll ich suchen: Kunden, Belege oder Artikel?</string>
-  <string source="Debt filters apply only to counterparties.">Schuldenfilter gelten nur für Geschäftspartner.</string>
-  <string source="This filter does not apply to these objects.">Dieser Filter gilt nicht für diese Objekte.</string>
-  <string source="This sort field does not apply to these objects.">Dieses Sortierfeld gilt nicht für diese Objekte.</string>
-  <string source="Use the sort command to set a direction.">Verwenden Sie sortiere, um eine Sortierrichtung anzugeben.</string>
-  <string source="Context cleared.">Kontext gelöscht.</string>
-  <string source="Which object type should I open?">Welchen Objekttyp soll ich öffnen?</string>
-  <string source="List objects of this type first.">Zeigen Sie zuerst Objekte dieses Typs an.</string>
-  <string source="That row is not in the current list.">Diese Zeile ist nicht in der aktuellen Liste.</string>
-  <string source="Opening records is unavailable in this interface.">Datensätze können in dieser Oberfläche nicht geöffnet werden.</string>
-  <string source="Could not open the record.">Der Datensatz konnte nicht geöffnet werden.</string>
-  <string source="Hello! Say or type: show debtors.">Hallo! Sagen oder schreiben Sie: zeige Schuldner.</string>
-  <string source="Enter a command or use system dictation in the input field.">Geben Sie einen Befehl ein oder verwenden Sie die Diktierfunktion im Eingabefeld.</string>
-  <string source="The configuration has multiple receivables accounts; specify an account.">Die Konfiguration enthält mehrere Forderungskonten; geben Sie ein Konto an.</string>
-  <string source="No receivables account was found in the configuration.">In der Konfiguration wurde kein Forderungskonto gefunden.</string>
-  <string source="Ledger — Assistant">Ledger — Assistent</string>
-  <string source="Show debtors">Zeige Schuldner</string>
-  <string source="Enter a command or use system dictation. Example: show customers with debt over fifty thousand">Geben Sie einen Befehl ein oder verwenden Sie die Diktierfunktion. Beispiel: zeige Kunden mit Schulden über fünfzigtausend</string>
-  <string source="Run">Ausführen</string>
-  <string source="Examples">Beispiele</string>
-  <string source="Close">Schließen</string>
-  <string source="Name / document">Name / Beleg</string>
-  <string source="Amount">Betrag</string>
-  <string source="Date">Datum</string>
-  <string source="Specify one row number.">Geben Sie eine Zeilennummer an.</string>
-  <string source="Enter a command, for example: show debtors.">Geben Sie einen Befehl ein, zum Beispiel: zeige Schuldner.</string>
-  <string source="Unknown word: %s. Put names in quotes.">Unbekanntes Wort: %s. Schreiben Sie Namen in Anführungszeichen.</string>
-  <string source="Found: %d. Specify a row number.">Gefunden: %d. Geben Sie eine Zeilennummer an.</string>
-  <string source="Opened record: %s">Datensatz geöffnet: %s</string>
-  <string source="Could not retrieve data: %s">Daten konnten nicht abgerufen werden: %s</string>
-  <string source="Found: %d. Amounts are in the accounting currency.">Gefunden: %d. Beträge sind in der Buchhaltungswährung.</string>
-  <string source="Try: show debtors; find customer &quot;Name&quot; → show documents for it → only posted → open first. Missing customer: show documents for. Cancel a question: cancel.">Beispiele: zeige Schuldner; suche Kunde "Name" → zeige Belege für ihn → nur gebuchte → öffne den ersten. Kunden erfragen: zeige Belege für. Rückfrage abbrechen: abbrechen.</string>
-  <string source="Document relations require a customer.">Für die Belegzuordnung ist ein Kunde erforderlich.</string>
-  <string source="Specify one object reference.">Geben Sie genau einen Objektverweis an.</string>
-  <string source="Only documents can be filtered by customer.">Nur Belege können nach Kunde gefiltert werden.</string>
-  <string source="Specify a nonempty name.">Geben Sie einen nicht leeren Namen an.</string>
-  <string source="That object type does not fit this request.">Dieser Objekttyp passt nicht zu dieser Anfrage.</string>
-  <string source="There is no object for this or it yet.">Es ist noch kein Objekt für diesen Verweis bekannt.</string>
-  <string source="The referenced record is no longer available.">Der referenzierte Datensatz ist nicht mehr verfügbar.</string>
-  <string source="No matching records were found.">Keine passenden Datensätze gefunden.</string>
-  <string source="Several records match. Which one? Use a row number or a quoted name.">Mehrere Datensätze passen. Welchen meinen Sie? Geben Sie eine Zeilennummer oder einen Namen in Anführungszeichen an.</string>
-  <string source="Which customer are these documents for? Use a row number or a quoted name.">Für welchen Kunden sind diese Belege? Geben Sie eine Zeilennummer oder einen Namen in Anführungszeichen an.</string>
-  <string source="Opened record: %s (inferred from context).">Datensatz geöffnet: %s (aus dem Kontext ermittelt).</string>
-  <string source="Found: %d. Customer: %s. Amounts are in the accounting currency.">Gefunden: %d. Kunde: %s. Beträge sind in der Buchhaltungswährung.</string>
-  <string source="Pending question cancelled.">Ausstehende Rückfrage abgebrochen.</string>
-  <string source="Answer the pending question or enter a new command.">Beantworten Sie die Rückfrage oder geben Sie einen neuen Befehl ein.</string>
+  <string source="Close the quotes around the name." where="code">Schließen Sie die Anführungszeichen um den Namen.</string>
+  <string source="Enter a command of at most 2048 bytes." where="code">Geben Sie einen Befehl mit höchstens 2048 Bytes ein.</string>
+  <string source="Invalid UTF-8 text." where="code">Ungültiger UTF-8-Text.</string>
+  <string source="What should I show? Try: show debtors." where="code">Was soll ich anzeigen? Beispiel: zeige Schuldner.</string>
+  <string source="Specify one quoted name." where="code">Geben Sie einen Namen in Anführungszeichen an.</string>
+  <string source="Use one command at a time." where="code">Geben Sie jeweils nur einen Befehl ein.</string>
+  <string source="Specify one object type." where="code">Geben Sie einen Objekttyp an.</string>
+  <string source="Which amount should I use?" where="code">Welchen Betrag soll ich verwenden?</string>
+  <string source="Enter amounts without a currency, in the accounting currency." where="code">Geben Sie Beträge ohne Währungsangabe in der Buchhaltungswährung ein.</string>
+  <string source="This command takes no parameters." where="code">Dieser Befehl hat keine Parameter.</string>
+  <string source="Find objects first, then open one." where="code">Suchen Sie zuerst Objekte und öffnen Sie dann eines.</string>
+  <string source="Use a whole row number starting at 1." where="code">Geben Sie eine ganze Zeilennummer ab 1 an.</string>
+  <string source="Which object should I open? Try: open first." where="code">Welches Objekt soll ich öffnen? Beispiel: öffne den ersten.</string>
+  <string source="Use a row number with the open command." where="code">Verwenden Sie eine Zeilennummer mit dem Befehl öffne.</string>
+  <string source="What should I find: customers, documents or items?" where="code">Was soll ich suchen: Kunden, Belege oder Artikel?</string>
+  <string source="Debt filters apply only to counterparties." where="code">Schuldenfilter gelten nur für Geschäftspartner.</string>
+  <string source="This filter does not apply to these objects." where="code">Dieser Filter gilt nicht für diese Objekte.</string>
+  <string source="This sort field does not apply to these objects." where="code">Dieses Sortierfeld gilt nicht für diese Objekte.</string>
+  <string source="Use the sort command to set a direction." where="code">Verwenden Sie sortiere, um eine Sortierrichtung anzugeben.</string>
+  <string source="Context cleared." where="code">Kontext gelöscht.</string>
+  <string source="Which object type should I open?" where="code">Welchen Objekttyp soll ich öffnen?</string>
+  <string source="List objects of this type first." where="code">Zeigen Sie zuerst Objekte dieses Typs an.</string>
+  <string source="That row is not in the current list." where="code">Diese Zeile ist nicht in der aktuellen Liste.</string>
+  <string source="Opening records is unavailable in this interface." where="code">Datensätze können in dieser Oberfläche nicht geöffnet werden.</string>
+  <string source="Could not open the record." where="code">Der Datensatz konnte nicht geöffnet werden.</string>
+  <string source="Hello! Say or type: show debtors." where="assistant">Hallo! Sagen oder schreiben Sie: zeige Schuldner.</string>
+  <string source="Enter a command or use system dictation in the input field." where="code">Geben Sie einen Befehl ein oder verwenden Sie die Diktierfunktion im Eingabefeld.</string>
+  <string source="The configuration has multiple receivables accounts; specify an account." where="code">Die Konfiguration enthält mehrere Forderungskonten; geben Sie ein Konto an.</string>
+  <string source="No receivables account was found in the configuration." where="code">In der Konfiguration wurde kein Forderungskonto gefunden.</string>
+  <string source="Ledger — Assistant" where="assistant">Ledger — Assistent</string>
+  <string source="Show debtors" where="code">Zeige Schuldner</string>
+  <string source="Enter a command or use system dictation. Example: show customers with debt over fifty thousand" where="code">Geben Sie einen Befehl ein oder verwenden Sie die Diktierfunktion. Beispiel: zeige Kunden mit Schulden über fünfzigtausend</string>
+  <string source="Run" where="code">Ausführen</string>
+  <string source="Examples" where="assistant">Beispiele</string>
+  <string source="Close" where="code">Schließen</string>
+  <string source="Name / document" where="assistant">Name / Beleg</string>
+  <string source="Amount" where="assistant">Betrag</string>
+  <string source="Date" where="assistant">Datum</string>
+  <string source="Specify one row number." where="code">Geben Sie eine Zeilennummer an.</string>
+  <string source="Enter a command, for example: show debtors." where="code">Geben Sie einen Befehl ein, zum Beispiel: zeige Schuldner.</string>
+  <string source="Unknown word: %s. Put names in quotes." where="code">Unbekanntes Wort: %s. Schreiben Sie Namen in Anführungszeichen.</string>
+  <string source="Found: %d. Specify a row number." where="code">Gefunden: %d. Geben Sie eine Zeilennummer an.</string>
+  <string source="Opened record: %s" where="code">Datensatz geöffnet: %s</string>
+  <string source="Could not retrieve data: %s" where="code">Daten konnten nicht abgerufen werden: %s</string>
+  <string source="Found: %d. Amounts are in the accounting currency." where="code">Gefunden: %d. Beträge sind in der Buchhaltungswährung.</string>
+  <string source="Try: show debtors; find customer &quot;Name&quot; → show documents for it → only posted → open first. Missing customer: show documents for. Cancel a question: cancel." where="code">Beispiele: zeige Schuldner; suche Kunde "Name" → zeige Belege für ihn → nur gebuchte → öffne den ersten. Kunden erfragen: zeige Belege für. Rückfrage abbrechen: abbrechen.</string>
+  <string source="Document relations require a customer." where="code">Für die Belegzuordnung ist ein Kunde erforderlich.</string>
+  <string source="Specify one object reference." where="code">Geben Sie genau einen Objektverweis an.</string>
+  <string source="Only documents can be filtered by customer." where="code">Nur Belege können nach Kunde gefiltert werden.</string>
+  <string source="Specify a nonempty name." where="code">Geben Sie einen nicht leeren Namen an.</string>
+  <string source="That object type does not fit this request." where="code">Dieser Objekttyp passt nicht zu dieser Anfrage.</string>
+  <string source="There is no object for this or it yet." where="code">Es ist noch kein Objekt für diesen Verweis bekannt.</string>
+  <string source="The referenced record is no longer available." where="code">Der referenzierte Datensatz ist nicht mehr verfügbar.</string>
+  <string source="No matching records were found." where="code">Keine passenden Datensätze gefunden.</string>
+  <string source="Several records match. Which one? Use a row number or a quoted name." where="code">Mehrere Datensätze passen. Welchen meinen Sie? Geben Sie eine Zeilennummer oder einen Namen in Anführungszeichen an.</string>
+  <string source="Which customer are these documents for? Use a row number or a quoted name." where="code">Für welchen Kunden sind diese Belege? Geben Sie eine Zeilennummer oder einen Namen in Anführungszeichen an.</string>
+  <string source="Opened record: %s (inferred from context)." where="code">Datensatz geöffnet: %s (aus dem Kontext ermittelt).</string>
+  <string source="Found: %d. Customer: %s. Amounts are in the accounting currency." where="code">Gefunden: %d. Kunde: %s. Beträge sind in der Buchhaltungswährung.</string>
+  <string source="Pending question cancelled." where="code">Ausstehende Rückfrage abgebrochen.</string>
+  <string source="Answer the pending question or enter a new command." where="code">Beantworten Sie die Rückfrage oder geben Sie einen neuen Befehl ein.</string>
+  <string source="Clippy" where="assistant">Clippy</string>
+  <string source="Collapse" where="assistant">Zuklappen</string>
+  <string source="Hide assistant" where="assistant">Assistent ausblenden</string>
+  <string source="Send" where="assistant">Senden</string>
+  <string source="Ask me, for example: show debtors" where="assistant">Frag mich, zum Beispiel: zeige Schuldner</string>
+  <string source="You: %s" where="code">Du: %s</string>
+  <string source="№" where="assistant">Nr.</string>
 </strings>

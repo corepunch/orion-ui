@@ -31,6 +31,7 @@ typedef struct {
 } page_sprite_t;
 
 struct script_page_s {
+  winproc_t hook;
   char stem[1024], dir[1024], name[128];
   form_library_t *lib;
   const form_def_t *form;
@@ -38,6 +39,7 @@ struct script_page_s {
   int db_count;
   lua_State *L;
   int page_ref;
+  uint32_t focus;
   window_t *win;
   bool modal, owns_window, closing;
   int result;
@@ -323,6 +325,11 @@ static void render(script_page_t *page) {
     show_message(page);
   }
   window_layout_sync(page->win);
+  if (page->focus) {
+    window_t *ctrl = get_window_item(page->win, page->focus);
+    page->focus = 0;
+    if (ctrl) set_focus(ctrl);
+  }
   invalidate_window(page->win);
 }
 
@@ -449,7 +456,7 @@ static int app_focus(lua_State *L) {
   script_page_t *page = (script_page_t *)lua_touserdata(L, lua_upvalueindex(1));
   window_t *ctrl = script_page_control(page, luaL_checkstring(L, 1));
   if (!ctrl) return luaL_error(L, "unknown control to focus");
-  set_focus(ctrl);
+  page->focus = ctrl->id;
   return 0;
 }
 
@@ -465,12 +472,15 @@ static void push_app(script_page_t *page) {
 
 static result_t script_page_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   script_page_t *page = (script_page_t *)win->userdata;
+  if (page && msg != evCreate && msg != evDestroy && page->hook && page->hook(win, msg, wparam, lparam))
+    return true;
   switch (msg) {
     case evCreate:
       page = (script_page_t *)lparam;
       win->userdata = page;
       page->win = win;
       render(page);
+      if (page->hook) page->hook(win, msg, wparam, lparam);
       return true;
     case evCommand: {
       if (!page || HIWORD(wparam) != btnClicked) return false;
@@ -500,6 +510,7 @@ static result_t script_page_proc(window_t *win, uint32_t msg, uint32_t wparam, v
       }
       return false;
     case evDestroy:
+      if (page && page->hook) page->hook(win, msg, wparam, lparam);
       if (page) { sprite_clear(page); page->win = NULL; }
       return true;
   }
@@ -507,7 +518,12 @@ static result_t script_page_proc(window_t *win, uint32_t msg, uint32_t wparam, v
 }
 
 window_t *script_page_create(script_page_t *page, window_t *parent) {
+  return script_page_create_hook(page, parent, NULL);
+}
+
+window_t *script_page_create_hook(script_page_t *page, window_t *parent, winproc_t hook) {
   if (!page) return NULL;
+  page->hook = hook;
   page->modal = false;
   window_t *win = create_window_from_form(page->form, 0, 0, parent, script_page_proc, 0, page);
   if (win) {
@@ -644,6 +660,9 @@ void script_page_close(script_page_t *page) {
 }
 
 const char *script_page_title(const script_page_t *page) { return page ? page->title : ""; }
+isize16_t script_page_preferred_size(const script_page_t *page) {
+  return page && page->form ? (isize16_t){page->form->width, page->form->height} : (isize16_t){0};
+}
 const char *script_page_message(const script_page_t *page) { return page ? page->message : ""; }
 
 window_t *script_page_control(const script_page_t *page, const char *name) {

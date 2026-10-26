@@ -73,12 +73,13 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_ledger->hinstance = hinstance;
 
   const char *data_dir = NULL, *language = NULL;
-  bool open_assistant = false;
+  bool show_assistant = true, open_assistant = false;
   size_t loaded = 0;
   if (!axSettingsLoad("ledger_configuration", g_ledger->configuration, sizeof(g_ledger->configuration) - 1, &loaded) || !loaded)
     snprintf(g_ledger->configuration, sizeof(g_ledger->configuration), "%s", LEDGER_DEFAULT_CONFIGURATION);
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "--assistant")) open_assistant = true;
+    else if (!strcmp(argv[i], "--no-assistant")) show_assistant = false;
     else if (i + 1 < argc && !strcmp(argv[i], "--config")) snprintf(g_ledger->configuration, sizeof(g_ledger->configuration), "%s", argv[++i]);
     else if (i + 1 < argc && !strcmp(argv[i], "--data")) data_dir = argv[++i];
     else if (i + 1 < argc && !strcmp(argv[i], "--lang")) language = argv[++i];
@@ -138,6 +139,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
                                           NULL, ledger_main_proc, hinstance, NULL);
   if (!win) return false;
   show_window(win, true);
+  if (show_assistant || open_assistant) ledger_show_assistant();
   if (open_assistant) ledger_open_assistant();
   return true;
 }

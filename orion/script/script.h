@@ -42,11 +42,15 @@ void script_page_close(script_page_t *page);
 
 // The page's title: its title field, else its form's.
 const char *script_page_title(const script_page_t *page);
+isize16_t script_page_preferred_size(const script_page_t *page);
 
 // For tests and hosts embedding a page in a window of their own: builds the
 // page's window without a modal loop, runs an action as a button would, and
 // reports the last refusal or script error ("" when the last action succeeded).
 window_t *script_page_create(script_page_t *page, window_t *parent);
+// Optional host presentation hook. Return true to consume a message; lifecycle
+// messages are always processed by the page. The page continues to own userdata.
+window_t *script_page_create_hook(script_page_t *page, window_t *parent, winproc_t hook);
 bool script_page_perform(script_page_t *page, const char *action);
 const char *script_page_message(const script_page_t *page);
 // The control named `name` in the page's window, or NULL.

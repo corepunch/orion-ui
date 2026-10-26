@@ -59,6 +59,13 @@ the reports; `Reports > Print Report Forms` writes the cash book.
 
 ## Look and feel
 
+Clippy appears by default in the bottom-right corner, with a speech bubble for
+commands such as `show debtors` or `покажи должников`. Click the character to
+collapse or reopen the bubble; **File > Assistant** (Ctrl+Shift+A) restores it
+after hiding. Dialogue context and unfinished input survive collapsing.
+Use `--no-assistant` to start without him, or `--assistant` to focus his input
+immediately. See the [assistant guide](share/addons/assistant/README.md).
+
 Ledger is built for people who keep books in 1C all day, so its layout is the
 one they expect: a section panel, a journal over the document's lines, and a
 default button that posts. Its look is Porcelain (`THEME_ledger=porcelain`, the

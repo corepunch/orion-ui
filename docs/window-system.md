@@ -137,7 +137,8 @@ the window rectangle. Resting top-level windows keep the separate
 1. `create_window` allocates the window and sends `evCreate`.
 2. `show_window(win, true)` makes it visible.
 3. `invalidate_window` schedules `evPaint`.
-4. `move_window` and `resize_window` update geometry and send layout messages.
+4. `move_window` sends `evMove` synchronously after an origin change;
+   `resize_window` sends `evResize` after a size change and updates layout.
 5. `destroy_window` sends `evDestroy`, destroys children, and releases the
    framework-owned object.
 

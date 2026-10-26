@@ -233,6 +233,7 @@ result_t win_grid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_flow(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_tilegrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t win_speechbubble(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_badge(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 // Backward-compatible aliases for legacy call sites.
 result_t win_stackview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);

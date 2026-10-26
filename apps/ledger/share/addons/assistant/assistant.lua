@@ -46,20 +46,24 @@ end
 
 function Assistant:init()
   self.engine=Engine.new{rows=rows,open=function(entity,id) return ledger.open(entity,id) end}
-  self.animation='RESTPOSE'
+  self.animation='WAVE'
+  self.expanded=true
   self.revision=1
   self.message=tr('Hello! Say or type: show debtors.')
-  self.lines={}; self.command=''
+  self.lines={}; self.command=''; self.request=''
 end
 function Assistant:data()
   local clip=assert(animations[self.animation])
   return {
-    values={command=self.command,summary=self.message},
+    values={command=self.command,summary=self.message,request=self.request},
+    hidden={bubble=not self.expanded},
     lists={results=self.lines},
     sprites={mascot={path=clip.path,columns=clip.columns or 4,rows=clip.rows or 2,count=clip.count or 8,interval=clip.interval,loop=clip.loop,revision=self.revision}},
   }
 end
 function Assistant:submit(values)
+  self.expanded=true
+  self.request=string.format(tr('You: %s'),values.command or '')
   self.revision=self.revision+1
   local result=self.engine:submit(values.command or '')
   self.message,self.animation=result.message,result.animation
@@ -68,16 +72,28 @@ function Assistant:submit(values)
   for i,row in ipairs(result.rows or {}) do
     self.lines[#self.lines+1]={id=i,record_id=row.id,name=row.name,amount=row.amount or 0,date=row.date or ''}
   end
+  self.app.focus('command')
 end
-function Assistant:help()
+function Assistant:help(values)
+  self.command=values.command or ''
   self.revision=self.revision+1
   self.message=self.engine:submit('помощь').message
   self.animation='EXPLAIN'
+  self.app.focus('command')
 end
-function Assistant:greet()
+function Assistant:expand(values)
+  self.command=values.command or ''
+  self.expanded=true
   self.revision=self.revision+1
   self.app.focus('command')
-  self.message=tr('Enter a command or use system dictation in the input field.')
   self.animation='HEARING_1'
+end
+function Assistant:collapse(values)
+  self.command=values.command or ''
+  self.expanded=false
+  self.app.focus('mascot')
+end
+function Assistant:greet(values)
+  if self.expanded then self:collapse(values) else self:expand(values) end
 end
 return Assistant

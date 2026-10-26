@@ -12,26 +12,34 @@
     </database>
   </databases>
   <forms>
-    <form name="assistant" title="Ledger — Assistant" width="760" height="600" spacing="8" padding="12">
-      <StackView name="header" orientation="horizontal" spacing="12">
+    <form name="assistant" title="Ledger — Assistant" width="480" height="520" spacing="0" padding="0"
+          flags="WINDOW_NOTITLE,WINDOW_NORESIZE,WINDOW_NOFILL,WINDOW_TRANSPARENT,WINDOW_NOACTIVATE,WINDOW_NOTRAYBUTTON,WINDOW_ALWAYSONTOP,WINDOW_NODRAG">
+      <SpeechBubble name="bubble" spacing="8" flags="flexspace,WINDOW_NOACTIVATE">
+        <StackView name="header" orientation="horizontal" spacing="8">
+          <Label name="title" text="Clippy" />
+          <Space name="header_flex" />
+          <Button name="collapse" text="Collapse" action="collapse" />
+          <Button name="hide" text="Hide assistant" />
+        </StackView>
+        <Label name="summary" text="Hello! Say or type: show debtors." />
+        <Label name="request" color="secondary" />
+        <TextBox name="command" placeholder="Ask me, for example: show debtors" />
+        <StackView name="actions" orientation="horizontal" spacing="8">
+          <Button name="submit" text="Send" action="submit" flags="BUTTON_DEFAULT" />
+          <Button name="help" text="Examples" action="help" />
+        </StackView>
+        <TableView name="results" source="assistant.results" flags="flexspace,vscroll">
+          <Column field="id" title="№" width="30" />
+          <Column field="name" title="Name / document" width="0" min-width="130" />
+          <Column field="amount" title="Amount" width="100" />
+          <Column field="date" title="Date" width="90" />
+        </TableView>
+        <Label name="error" color="error" />
+      </SpeechBubble>
+      <StackView name="character" orientation="horizontal" spacing="0" margin="0,0,18,0">
+        <Space name="character_flex" />
         <SpriteButton name="mascot" width="124" height="93" action="greet" />
-        <Label name="summary" text="Show debtors" />
       </StackView>
-      <Label name="hint" text="Enter a command or use system dictation. Example: show customers with debt over fifty thousand" />
-      <TextBox name="command" />
-      <StackView name="actions" orientation="horizontal" spacing="8">
-        <Button name="submit" text="Run" action="submit" flags="BUTTON_DEFAULT" />
-        <Button name="help" text="Examples" action="help" />
-        <Space name="flex" />
-        <Button name="cancel" text="Close" />
-      </StackView>
-      <TableView name="results" source="assistant.results" flags="flexspace,vscroll">
-        <Column field="id" title="№" width="40" />
-        <Column field="name" title="Name / document" width="0" min-width="240" />
-        <Column field="amount" title="Amount" width="140" />
-        <Column field="date" title="Date" width="100" />
-      </TableView>
-      <Label name="error" />
     </form>
   </forms>
 </orion>
