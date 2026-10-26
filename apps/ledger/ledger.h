@@ -120,6 +120,8 @@ bool ledger_import_enterprisedata(database_t *ib, database_t *cfg, const char *p
 void ledger_addons_init(void);
 void ledger_open_addon(void);
 void ledger_open_assistant(void);
+void ledger_show_assistant(void);
+void ledger_position_assistant(void);
 void ledger_close_assistant(void);
 bool ledger_open_record(const char *table, int id);
 

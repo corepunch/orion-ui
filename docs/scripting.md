@@ -192,7 +192,14 @@ columns = 4, rows = 2, count = 8, interval = 125, loop = true, revision = 1}}`.
 The named control must be a `SpriteButton`; the PNG path is relative to the
 add-on directory. The host owns the bitmap and animation timer. Increment
 `revision` to restart the same clip. `self.app.focus("command")` focuses a
-named control, for example to use system dictation in a normal text field.
+named control after the action's data has rendered and layout has finished,
+so an action can reveal a hidden panel before focusing its input.
+
+Native hosts can use `script_page_create_hook(page, parent, hook)` for window
+presentation, such as hit-testing the visible parts of a transparent companion.
+The hook may consume ordinary messages; the page keeps its userdata and handles
+its own lifecycle and sprite cleanup. `script_page_preferred_size(page)` returns
+the dimensions declared in the form for fitting the presentation to a display.
 
 ```c
 #include <orion/script/script.h>

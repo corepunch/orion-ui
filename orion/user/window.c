@@ -325,6 +325,7 @@ void move_window(window_t *win, int x, int y) {
   if (!win || (win->frame.x == x && win->frame.y == y)) return;
   win->frame.x = x;
   win->frame.y = y;
+  send_message(win, evMove, 0, NULL);
   // Root windows are already baked into surface_tex; only the compositor
   // needs to blit them at the new frame. Children share the parent FBO.
   if (win->parent) invalidate_window(win);

@@ -6,6 +6,7 @@
 #include <orion/script/script.h>
 #include <orion/script/script_internal.h>
 #include <lauxlib.h>
+#include <orion/kernel/renderer.h>
 #define SHARE "apps/ledger/share"
 static ledger_t state;
 static void open_configuration(const char *code) {
@@ -114,6 +115,94 @@ static void test_assistant(void) {
   PASS();
 }
 
+static window_t *assistant_window(void) {
+  for (window_t *win = g_ui_runtime.windows; win; win = win->next)
+    if (!strcmp(win->title, "Ledger — Assistant")) return win;
+  return NULL;
+}
+
+static window_t *control_with_text(window_t *win, const char *text) {
+  if (!strcmp(win->title, text)) return win;
+  for (window_t *child = win->children; child; child = child->next) {
+    window_t *found = control_with_text(child, text);
+    if (found) return found;
+  }
+  return NULL;
+}
+
+static void test_assistant_companion(void) {
+  TEST("Clippy: greeting without focus theft, click-through, conversation and window lifecycle");
+  ui_update_screen_size(1280, 800);
+  window_t *main = create_window_from_form(&ledger_main_window_form, 20, 40, NULL, ledger_main_proc, 0, NULL);
+  ASSERT_NOT_NULL(main);
+  set_focus(main);
+  ledger_show_assistant();
+  window_t *companion = assistant_window();
+  ASSERT_NOT_NULL(companion);
+  ASSERT_TRUE(window_has_state(companion, WINDOW_STATE_VISIBLE));
+  ASSERT(g_ui_runtime.focused == main, "automatic greeting keeps focus in Ledger");
+  ASSERT_EQUAL(titlebar_height(companion), 0);
+  window_t *bubble = companion->children;
+  ASSERT_TRUE(window_is_class(bubble, "SpeechBubble"));
+  ASSERT_TRUE(window_has_state(bubble, WINDOW_STATE_VISIBLE));
+  ASSERT(companion->frame.x + companion->frame.w <= main->frame.x + main->frame.w,
+         "companion stays at the trailing edge of Ledger");
+  int old_x = companion->frame.x, old_y = companion->frame.y;
+  move_window(main, main->frame.x + 30, main->frame.y + 20);
+  ASSERT_EQUAL(companion->frame.x, old_x + 30);
+  ASSERT_EQUAL(companion->frame.y, old_y + 20);
+  resize_window(main, main->frame.w - 80, main->frame.h - 40);
+  ASSERT_EQUAL(companion->frame.x, old_x - 50);
+  ASSERT_EQUAL(companion->frame.y, old_y - 20);
+
+  ledger_open_assistant();
+  ASSERT(assistant_window() == companion, "menu and shortcut reuse the companion");
+  window_t *command = g_ui_runtime.focused;
+  send_message(command, edSetText, 0, "show customers");
+  window_t *submit = find_default_button(companion);
+  ASSERT_NOT_NULL(submit);
+  send_message(companion, evCommand, MAKEDWORD(submit->id, btnClicked), submit);
+  int count = count_rows("assistant", 0);
+  ASSERT_EQUAL(count, count_rows("ib", TABLE_COUNTERPARTIES));
+  ASSERT(g_ui_runtime.focused == command, "sending keeps the command field focused");
+
+  // The bottom-right control is the mascot, below the speech bubble.
+  window_t *mascot = find_window(companion->frame.x + companion->frame.w - 70,
+                                 companion->frame.y + companion->frame.h - 45);
+  ASSERT_NOT_NULL(mascot);
+  ASSERT(get_root_window(mascot) == companion, "the mascot remains clickable");
+  send_message(command, edSetText, 0, "over fifty thousand");
+  send_message(companion, evCommand, MAKEDWORD(mascot->id, btnClicked), mascot);
+  ASSERT_FALSE(window_has_state(bubble, WINDOW_STATE_VISIBLE));
+  ASSERT(g_ui_runtime.focused == main, "collapsing returns keyboard input to Ledger");
+  window_t *underneath = find_window(companion->frame.x + 50, companion->frame.y + 80);
+  ASSERT(underneath && get_root_window(underneath) == main,
+         "collapsed speech bubble does not intercept the Ledger workspace");
+  ASSERT_EQUAL(count_rows("assistant", 0), count);
+  send_message(companion, evCommand, MAKEDWORD(mascot->id, btnClicked), mascot);
+  ASSERT_TRUE(window_has_state(bubble, WINDOW_STATE_VISIBLE));
+  char text[128] = "";
+  send_message(command, edGetText, sizeof(text), text);
+  ASSERT_STR_EQUAL(text, "over fifty thousand");
+  ASSERT(g_ui_runtime.focused == command, "reopening focuses the input after showing the bubble");
+  send_message(companion, evCommand, MAKEDWORD(submit->id, btnClicked), submit);
+  ASSERT(count_rows("assistant", 0) <= count, "the follow-up still filters the existing customer scope");
+  underneath = find_window(companion->frame.x + 30, companion->frame.y + companion->frame.h - 30);
+  ASSERT(underneath && get_root_window(underneath) == main,
+         "transparent space beside the mascot does not block the document");
+  window_t *hide = control_with_text(companion, "Hide assistant");
+  ASSERT_NOT_NULL(hide);
+  send_message(companion, evCommand, MAKEDWORD(hide->id, btnClicked), hide);
+  ASSERT_FALSE(window_has_state(companion, WINDOW_STATE_VISIBLE));
+  ledger_open_assistant();
+  ASSERT_TRUE(window_has_state(companion, WINDOW_STATE_VISIBLE));
+  ASSERT(assistant_window() == companion, "restoring a hidden assistant retains the same conversation");
+  destroy_window(main);
+  ASSERT_NULL(assistant_window());
+  ASSERT_NULL(get_database_by_name("assistant"));
+  PASS();
+}
+
 int main(void) {
   TEST_START("Ledger assistant"); test_env_init();
   DB_CLASS(db_schema_xml); DB_CLASS(ledger_ib);
@@ -121,6 +210,7 @@ int main(void) {
   snprintf(state.share_dir,sizeof(state.share_dir),SHARE);
   ledger_addons_init();
   test_assistant();
+  test_assistant_companion();
   ledger_close_assistant(); ledger_script_close();
   unregister_database("ib"); unregister_database("cfg");
   destroy_database(state.ib); destroy_database(state.cfg);

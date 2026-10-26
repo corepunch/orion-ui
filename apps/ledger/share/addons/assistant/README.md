@@ -1,12 +1,20 @@
 # Ledger local assistant — prototype
 
-Open **File → Assistant…** or **Ctrl+Shift+A**. The modeless window stays alongside
-Ledger. Click Clippy to focus the command field, type or use system dictation,
-then press **Run**. Clicking Clippy does not start microphone recording;
-offline dictation availability depends on the operating system.
+Clippy appears automatically at the bottom-right of Ledger with a greeting in
+a speech bubble. Type a command and press **Enter** or **Send**. Click Clippy
+or **Collapse** to fold the bubble away; click him again to continue. The
+conversation, results and unfinished input are retained while it is collapsed.
+**Hide assistant** hides the character too; **File → Assistant…** or
+**Ctrl+Shift+A** brings him back and focuses the input. Transparent space beside
+the character passes clicks through to Ledger.
+
+System dictation works in the command field. Clicking Clippy opens the bubble;
+it does not start microphone recording. Offline dictation availability depends
+on the operating system.
 
 The parser and execution run locally, with no LLM, network or API key.
-`build/bin/ledger --assistant --lang ru` opens the assistant on startup.
+`build/bin/ledger --assistant --lang ru` also focuses the input on startup.
+`--no-assistant` starts without the companion; the menu can still show him.
 
 Try a contextual dialogue:
 

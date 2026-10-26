@@ -387,11 +387,19 @@ result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
     case evPageChanged:
       if (g_ledger->main_win == win) ledger_update_status();
       return true;
+    case evMove:
+    case evResize:
+    case evDisplayChange:
+      ledger_position_assistant();
+      return false;
     case evClose:
       ui_request_quit();
       return true;
     case evDestroy:
-      if (g_ledger && g_ledger->main_win == win) g_ledger->main_win = NULL;
+      if (g_ledger && g_ledger->main_win == win) {
+        ledger_close_assistant();
+        g_ledger->main_win = NULL;
+      }
       return false;
     default:
       return false;

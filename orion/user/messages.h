@@ -125,6 +125,7 @@ enum {
   // including built-in scroll offsets; lparam is const float* incremental scale.
   // One-shot request, independent of evGesture's begin/update/end lifetime.
   evMouseZoom,
+  evMove,             // frame origin changed by move_window(); dimensions are unchanged
   evUser = 1000
 };
 
@@ -577,6 +578,7 @@ enum {
   tgClear,                   // destroys every tile and clears the selection
   tgnSelChange,              // tile grid -> root (evCommand): LOWORD = tile index, lparam = grid
   tgnActivate,               // tile grid -> root (evCommand): Enter or double-click on a tile
+  bbSetTailOffset,           // SpeechBubble: wparam = bottom tail position in local pixels (0 = centered)
 };
 // Segmented control messages (NSSegmentedControl / auto-radio group analogue).
 // Segment labels are separated by '|' in the window title or sgSetSegments.

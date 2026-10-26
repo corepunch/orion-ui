@@ -181,6 +181,11 @@ Icon IDs are defined in the `icon8_t` / `icon16_t` enums in `messages.h`.
 
 ### Tooltip bubbles
 
+`SpeechBubble` is a reusable vertical layout container for interactive bubble
+content. It uses the tooltip silhouette and theme padding, reserves the bottom
+tail and shadow outside its children, and accepts `bbSetTailOffset` to point at
+an anchor. It is registered with the runtime and FormEditor like `Card`.
+
 `draw_tooltip_bubble(rect, tail_offset, side)` draws a rounded face and attached
 tail in one fill pass. Its shadow reuses `draw_rect_shadow()` on the rectangular
 body, with a downward offset; the tail does not change shadow rendering.

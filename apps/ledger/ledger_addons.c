@@ -16,6 +16,7 @@
 #include "ledger.h"
 #include <orion/script/script.h>
 #include <lauxlib.h>
+#include <orion/user/draw.h>
 
 static const db_account_t *addon_find_account(lua_State *L, int arg) {
   if (lua_type(L, arg) == LUA_TNUMBER)
@@ -159,15 +160,83 @@ void ledger_addons_init(void) { script_register_module("ledger", luaopen_ledger_
 
 static script_page_t *assistant_page;
 
+void ledger_position_assistant(void) {
+  window_t *mascot = script_page_control(assistant_page, "mascot");
+  if (!mascot) return;
+  window_t *win = get_root_window(mascot);
+  int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
+  int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
+  window_t *parent = g_ledger->main_win;
+  irect16_t area = parent ? rect_offset(get_client_rect(parent), window_screen_x(parent),
+                                       window_screen_y(parent) + titlebar_height(parent)) : R(0, 0, sw, sh);
+  area = rect_inset(area, 12);
+  isize16_t preferred = script_page_preferred_size(assistant_page);
+  int w = MIN(preferred.w, sw), h = MIN(preferred.h, sh);
+  if (w > 0 && h > 0 && (win->frame.w != w || win->frame.h != h)) resize_window(win, w, h);
+  int x = MAX(0, MIN(area.x + area.w - win->frame.w, sw - win->frame.w));
+  int y = MAX(0, MIN(area.y + area.h - win->frame.h, sh - win->frame.h));
+  move_window(win, x, y);
+  window_t *bubble = script_page_control(assistant_page, "bubble");
+  if (bubble) send_message(bubble, bbSetTailOffset,
+    window_screen_x(mascot) + mascot->frame.w / 2 - window_screen_x(bubble), NULL);
+}
+
+static result_t ledger_assistant_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  switch (msg) {
+    case evHitTest: {
+      if (!lparam) return false;
+      ipoint16_t point = {win->frame.x + (int16_t)LOWORD(wparam), win->frame.y + (int16_t)HIWORD(wparam)};
+      const char *parts[] = {"mascot", "bubble"};
+      for (size_t i = 0; i < ARRAY_LEN(parts); i++) {
+        window_t *part = script_page_control(assistant_page, parts[i]);
+        if (!part || !window_has_state(part, WINDOW_STATE_VISIBLE)) continue;
+        irect16_t r = R(0, 0, part->frame.w, part->frame.h);
+        if (i == 1) r = tooltip_bubble_body_rect(r, TOOLTIP_TAIL_BOTTOM);
+        if (rect_contains_point(rect_offset(r, window_screen_x(part), window_screen_y(part)), point)) return false;
+      }
+      *(window_t **)lparam = NULL;
+      return true;
+    }
+    case evDisplayChange:
+      ledger_position_assistant();
+      return true;
+    case evClose:
+      script_page_perform(assistant_page, "collapse");
+      if (g_ledger->main_win) set_focus(g_ledger->main_win);
+      return true;
+    case evCommand: {
+      if (HIWORD(wparam) != btnClicked) return false;
+      window_t *hide = script_page_control(assistant_page, "hide");
+      if (hide && LOWORD(wparam) == hide->id) {
+        show_window(win, false);
+        if (g_ledger->main_win) set_focus(g_ledger->main_win);
+        return true;
+      }
+      window_t *mascot = script_page_control(assistant_page, "mascot");
+      window_t *collapse = script_page_control(assistant_page, "collapse");
+      if ((mascot && LOWORD(wparam) == mascot->id) || (collapse && LOWORD(wparam) == collapse->id)) {
+        script_page_perform(assistant_page, LOWORD(wparam) == mascot->id ? "greet" : "collapse");
+        window_t *bubble = script_page_control(assistant_page, "bubble");
+        if (bubble && !window_has_state(bubble, WINDOW_STATE_VISIBLE) && g_ledger->main_win)
+          set_focus(g_ledger->main_win);
+        return true;
+      }
+      return false;
+    }
+  }
+  return false;
+}
+
 void ledger_close_assistant(void) {
   script_page_close(assistant_page);
   assistant_page = NULL;
 }
 
-void ledger_open_assistant(void) {
+void ledger_show_assistant(void) {
   window_t *mascot = assistant_page ? script_page_control(assistant_page, "mascot") : NULL;
-  if (mascot) { set_focus(get_root_window(mascot)); return; }
+  if (mascot) { show_window(get_root_window(mascot), true); ledger_position_assistant(); return; }
   ledger_close_assistant();
+  window_t *focused = g_ui_runtime.focused;
   char path[LEDGER_PATH_MAX + 64], error[1024] = "";
   snprintf(path, sizeof(path), "%s/addons/assistant/assistant.orion", g_ledger->share_dir);
   script_page_t *page = script_page_open(path, error, sizeof(error));
@@ -175,15 +244,20 @@ void ledger_open_assistant(void) {
     message_box(g_ledger->main_win, error, ui_tr("Assistant"), MB_OK);
     return;
   }
-  // Keep the assistant available alongside the main application.
-  window_t *win = script_page_create(page, NULL);
-  if (!win) { script_page_close(page); return; }
   assistant_page = page;
-  window_t *parent = g_ledger->main_win;
-  if (parent) move_window(win, parent->frame.x + (parent->frame.w - win->frame.w) / 2,
-                          parent->frame.y + (parent->frame.h - win->frame.h) / 2);
+  window_t *win = script_page_create_hook(page, NULL, ledger_assistant_hook);
+  if (!win) { ledger_close_assistant(); return; }
+  win->hinstance = g_ledger->hinstance;
+  ledger_position_assistant();
   show_window(win, true);
-  set_focus(script_page_control(page, "command"));
+  set_focus(is_window(focused) ? focused : g_ledger->main_win);
+}
+
+void ledger_open_assistant(void) {
+  ledger_show_assistant();
+  if (!assistant_page) return;
+  script_page_perform(assistant_page, "expand");
+  set_focus(script_page_control(assistant_page, "command"));
 }
 
 void ledger_open_addon(void) {
