@@ -5,18 +5,7 @@ local vocabulary = require('lexicon')
 local german = require('german_numbers')
 local P = {}
 
-function P.normalize(text)
-  local out = {}
-  for _, c in utf8.codes(text) do
-    if c >= 65 and c <= 90 or c >= 0x410 and c <= 0x42f then c = c + 32 end
-    if c == 0x401 or c == 0x451 then c = 0x435 end -- ё -> е
-    if c == 0xc4 or c == 0xd6 or c == 0xdc then c = c + 32 end
-    if c == 0x1e9e then c = 0xdf end -- capital sharp S
-    if c == 0xa0 or c == 0x202f then c = 32 end
-    out[#out+1] = utf8.char(c)
-  end
-  return table.concat(out)
-end
+P.normalize = require('normalize')
 
 local function tokenize(text)
   local words = {}
@@ -38,55 +27,27 @@ local function tokenize(text)
   return words
 end
 
-local dictionary = {}
-for category, groups in pairs(vocabulary) do
-  if category ~= 'ordinals' and category ~= 'noise' and category ~= 'units' and category ~= 'pronouns' then
-    for value, aliases in pairs(groups) do
-      for _, alias in ipairs(aliases) do
-        local tokens = {}; for token in P.normalize(alias):gmatch('%S+') do tokens[#tokens+1]=token end
-        dictionary[#dictionary+1] = {category=category,value=value,tokens=tokens}
-      end
-    end
-  end
-end
-table.sort(dictionary,function(a,b) return #a.tokens > #b.tokens end)
+local dictionary = require('dictionary').compile(vocabulary)
+local grammar_roles={'verbs','nouns','adjectives','fields','comparisons','relations','directions',
+  'ordinals','pronouns','noise','units'}
 local function lookup(words,i)
-  for _, entry in ipairs(dictionary) do
-    local matches=true
-    for n,t in ipairs(entry.tokens) do
-      if not words[i+n-1] or words[i+n-1].quoted or words[i+n-1].text ~= t then matches=false; break end
-    end
-    if matches then return entry.category,entry.value,#entry.tokens end
+  local entry,n=dictionary:lookup(words,i)
+  if not entry then return end
+  -- Keep all word roles in the dictionary; this grammar defines their precedence.
+  for _,role in ipairs(grammar_roles) do
+    if entry.roles[role]~=nil then return role,entry.roles[role],n end
   end
 end
-local ignored = {}
-for _, w in ipairs(vocabulary.noise) do ignored[P.normalize(w)] = true end
-local units, pronouns = {}, {}
-for _, w in ipairs(vocabulary.units) do units[w] = true end
-for _, w in ipairs(vocabulary.pronouns) do pronouns[w] = true end
+local function numeric_roles(word)
+  local entry=dictionary.words[word]
+  return entry and entry.roles or {}
+end
 
-local numbers = {
-  ['ноль']=0,['один']=1,['одна']=1,['одну']=1,['два']=2,['две']=2,['три']=3,['четыре']=4,['пять']=5,
-  ['шесть']=6,['семь']=7,['восемь']=8,['девять']=9,['десять']=10,['одиннадцать']=11,['двенадцать']=12,
-  ['тринадцать']=13,['четырнадцать']=14,['пятнадцать']=15,['шестнадцать']=16,['семнадцать']=17,['восемнадцать']=18,['девятнадцать']=19,
-  ['двадцать']=20,['тридцать']=30,['сорок']=40,['пятьдесят']=50,['шестьдесят']=60,['семьдесят']=70,['восемьдесят']=80,['девяносто']=90,
-  ['сто']=100,['двести']=200,['триста']=300,['четыреста']=400,['пятьсот']=500,['шестьсот']=600,['семьсот']=700,['восемьсот']=800,['девятьсот']=900,
-  zero=0,one=1,two=2,three=3,four=4,five=5,six=6,seven=7,eight=8,nine=9,ten=10,
-  eleven=11,twelve=12,thirteen=13,fourteen=14,fifteen=15,sixteen=16,seventeen=17,eighteen=18,nineteen=19,
-  twenty=20,thirty=30,forty=40,fifty=50,sixty=60,seventy=70,eighty=80,ninety=90,
-  null=0,ein=1,eins=1,eine=1,zwei=2,drei=3,vier=4,['fünf']=5,sechs=6,sieben=7,acht=8,neun=9,zehn=10,
-  zwanzig=20,['fünfzig']=50,
-}
-local scales = {['тысяча']=1000,['тысячи']=1000,['тысяч']=1000,['тыс']=1000,thousand=1000,tausend=1000,
-  ['миллион']=1000000,['миллиона']=1000000,['миллионов']=1000000,million=1000000,millions=1000000,millionen=1000000}
-for word,value in pairs({['одной']=1,['одного']=1,['двух']=2,['трех']=3,['четырех']=4,['пяти']=5,['шести']=6,['семи']=7,['восьми']=8,['девяти']=9,
-  ['десяти']=10,['одиннадцати']=11,['двенадцати']=12,['тринадцати']=13,['четырнадцати']=14,['пятнадцати']=15,
-  ['двадцати']=20,['тридцати']=30,['сорока']=40,['пятидесяти']=50,['шестидесяти']=60,['семидесяти']=70,['восьмидесяти']=80,['девяноста']=90,
-  ['ста']=100,['двухсот']=200,['трехсот']=300,['четырехсот']=400,['пятисот']=500,['шестисот']=600,['семисот']=700,['восьмисот']=800,['девятисот']=900,['шестнадцати']=16,['семнадцати']=17,['восемнадцати']=18,['девятнадцати']=19}) do numbers[word]=value end
 function P.number(words, start)
   local total,group,i,seen,last = 0,0,start,false,nil
   while words[i] and not words[i].quoted do
     local w=words[i].text
+    local roles=numeric_roles(w)
     -- With multilingual input, 50.000 / 50,000 is ambiguous. Use 50000 or 50 000.
     if w:match('^%d+[.,]%d%d%d$') then return nil end
     local numeric=w:match('^%d+[.,]?%d*$') and tonumber((w:gsub(',','.')))
@@ -97,15 +58,15 @@ function P.number(words, start)
       while words[i+1] and words[i+1].text:match('^%d%d%d$') do
         group=group*1000+tonumber(words[i+1].text); i=i+1
       end
-    elseif not scales[w] and w~='hundert' and (numbers[w] ~= nil or german.number(w) ~= nil) then
-      local n=numbers[w] or german.number(w)
+    elseif not roles.scales and not roles.multipliers and (roles.numbers~=nil or german.number(w)~=nil) then
+      local n=roles.numbers or german.number(w)
       if last and n >= last then break end
       group=group+n; seen=true; last=n
-    elseif w=='hundred' or w=='hundert' then
-      group=(group==0 and 1 or group)*100; seen=true; last=100
-    elseif scales[w] then
-      total=total+(group==0 and 1 or group)*scales[w]; group=0; seen=true; last=nil
-    elseif w=='and' and seen and words[i+1] and numbers[words[i+1].text] then
+    elseif roles.multipliers then
+      group=(group==0 and 1 or group)*roles.multipliers; seen=true; last=roles.multipliers
+    elseif roles.scales then
+      total=total+(group==0 and 1 or group)*roles.scales; group=0; seen=true; last=nil
+    elseif roles.number_conjunctions and seen and words[i+1] and numeric_roles(words[i+1].text).numbers~=nil then
       -- Numeric conjunction, only inside a number.
     else break end
     i=i+1
@@ -167,12 +128,12 @@ function P.parse(text,context)
         end
         ast.for_party=ref; i=#words+1
       elseif category=='directions' then ast.direction=value; i=i+n
-      elseif vocabulary.ordinals[w.text] then
+      elseif category=='ordinals' then
         if ast.ordinal then return nil,tr('Specify one row number.') end
-        ast.ordinal=vocabulary.ordinals[w.text]; i=i+1
-      elseif pronouns[w.text] then ast.pronoun=true; i=i+1
-      elseif ignored[w.text] then i=i+1
-      elseif units[w.text] then
+        ast.ordinal=value; i=i+n
+      elseif category=='pronouns' then ast.pronoun=true; i=i+n
+      elseif category=='noise' then i=i+n
+      elseif category=='units' then
         -- Currency conversion is not implicit; explicit currency amounts need a future grammar.
         return nil,tr('Enter amounts without a currency, in the accounting currency.')
       else
