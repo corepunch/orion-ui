@@ -137,9 +137,9 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
   int bsz = toolbar_state_bsz(tb);
   int item_h = toolbar_state_item_height(tb);
   int padding = toolbar_effective_padding(parent);
-  int spacing = (tb->style & TOOLBAR_STYLE_COMPACT) ? get_theme()->toolbar.compact.spacing : TOOLBAR_SPACING;
+  int spacing = (tb->style & TOOLBAR_STYLE_COMPACT) ? get_theme()->toolbar.compact.spacing : get_theme()->toolbar.spacing;
   bool vertical = tb->orientation == TOOLBAR_VERTICAL;
-  int vertical_spacing = TOOLBAR_SPACING;
+  int vertical_spacing = get_theme()->toolbar.spacing;
   int grip_h = (vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? get_theme()->toolbar.grip_size : 0;
   int grip_w = (!vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? get_theme()->toolbar.grip_size : 0;
   int cursor = padding + grip_h;
@@ -188,8 +188,8 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
         h = field_h;
         break;
       case TOOLBAR_ITEM_SLIDER:
-        w = vertical ? bsz : item->w > 0 ? item->w : bsz * 3 + TOOLBAR_SPACING * 2;
-        h = vertical ? (item->w > 0 ? item->w : item_h * 3 + TOOLBAR_SPACING * 2) : item_h;
+        w = vertical ? bsz : item->w > 0 ? item->w : bsz * 3 + get_theme()->toolbar.spacing * 2;
+        h = vertical ? (item->w > 0 ? item->w : item_h * 3 + get_theme()->toolbar.spacing * 2) : item_h;
         break;
       case TOOLBAR_ITEM_TEXTEDIT:
         w = item->w > 0 ? item->w : (bsz * 8);

@@ -28,12 +28,12 @@ static canvas_doc_t *tl_doc(void) {
 
 static int timeline_fixed_width(void) {
   return get_theme()->toolbar.grip_size + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH) +
-         7 * (40 + TOOLBAR_SPACING) + 6 + TOOLBAR_SPACING;
+         7 * (40 + get_theme()->toolbar.spacing) + 6 + get_theme()->toolbar.spacing;
 }
 
-// Inter-frame TOOLBAR_ITEM_SPACER width: the toolbar also adds TOOLBAR_SPACING
+// Inter-frame TOOLBAR_ITEM_SPACER width: the toolbar also adds get_theme()->toolbar.spacing
 // after the previous frame and after the spacer, so spacer + 2*SPACING = GAP.
-#define TIMELINE_FRAME_SPACER_W (TIMELINE_FRAME_GAP - 2 * TOOLBAR_SPACING)
+#define TIMELINE_FRAME_SPACER_W (TIMELINE_FRAME_GAP - 2 * get_theme()->toolbar.spacing)
 
 static void timeline_layout(window_t *win, bool follow) {
   timeline_state_t *st = win->userdata;

@@ -333,7 +333,7 @@ static void test_coloring_palette(void) {
   toolbar_state_t *tb = window_toolbar_state(g_app->tool_win);
   ASSERT_EQUAL(tb->columns, 1);
   ASSERT_EQUAL(g_app->tool_win->frame.w, PALETTE_WIN_W);
-  int mini = (TOOL_PALETTE_BTN_SIZE - TOOLBAR_SPACING) / 2;
+  int mini = (TOOL_PALETTE_BTN_SIZE - get_theme()->toolbar.spacing) / 2;
   for (int i = 0; i < 4; i++) {
     ASSERT_TRUE(tb->items[i].style & TOOLBAR_ITEM_FLAG_SMALL);
     ASSERT_EQUAL(tb->item_rects[i].w, mini);
@@ -343,8 +343,8 @@ static void test_coloring_palette(void) {
   ASSERT_EQUAL(tb->item_rects[2].y, tb->item_rects[3].y);
   ASSERT_TRUE(tb->item_rects[1].x > tb->item_rects[0].x);
   ASSERT_EQUAL(tb->item_rects[3].y + tb->item_rects[3].h - tb->item_rects[0].y,
-               2 * mini + TOOLBAR_SPACING);
-  ASSERT_TRUE(2 * mini + TOOLBAR_SPACING <= TOOL_PALETTE_BTN_SIZE);
+               2 * mini + get_theme()->toolbar.spacing);
+  ASSERT_TRUE(2 * mini + get_theme()->toolbar.spacing <= TOOL_PALETTE_BTN_SIZE);
   tb = window_toolbar_state(g_app->color_win);
   ASSERT_TRUE(window_has_state(g_app->color_win, WINDOW_STATE_VISIBLE));
   ASSERT_EQUAL(tb->columns, 1);

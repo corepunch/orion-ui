@@ -10,7 +10,7 @@ result_t win_activitybar(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
       const form_ctrl_def_t *def = lparam;
       const activitybar_params_t *params = def ? def->lparam : NULL;
       send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
-      send_message(win, tbSetButtonSize, TB_SPACING, NULL);
+      send_message(win, tbSetButtonSize, 0, NULL);
       send_message(win, tbModifyStyle, TOOLBAR_STYLE_SIDEBAR, (void *)(uintptr_t)TOOLBAR_STYLE_SIDEBAR);
       if (params && params->style) send_message(win, tbModifyStyle, params->style, (void *)(uintptr_t)params->style);
       if (params && params->count) send_message(win, tbSetItems, params->count, (void *)params->items);
@@ -24,7 +24,7 @@ result_t win_activitybar(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
     }
     case evMeasure: {
       layout_measure_t *m = lparam;
-      isize16_t size = {TB_SPACING + 2 * toolbar_effective_padding(win), 1};
+      isize16_t size = {toolbar_effective_bsz(win) + 2 * toolbar_effective_padding(win), 1};
       toolbar_state_t *tb = toolbar_get_state(win);
       if (tb && tb->item_count) send_message(win, tbGetIdealSize, 0, &size);
       if (m) { m->desired_w = size.w; m->desired_h = size.h; }

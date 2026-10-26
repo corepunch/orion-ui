@@ -204,6 +204,7 @@ typedef struct {
   struct { int height; } menubar;
   struct {
     int button_size, padding;
+    int spacing, corner_radius; // inter-item gap and selection rounding
     struct {
       int padding;          // menu-bar-row toolbar: outer margin
       int spacing;          // menu-bar-row toolbar: gap between buttons

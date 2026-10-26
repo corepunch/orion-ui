@@ -114,7 +114,7 @@ extern int g_bw_retina_scale;
 #define PALETTE_WIN_X   4
 #define IMAGEEDITOR_TOOL_ICON_PX 24
 #define TOOL_PALETTE_BTN_SIZE    TB_SPACING
-#define PALETTE_WIN_W   (TOOL_PALETTE_BTN_SIZE + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH))
+#define PALETTE_WIN_W   (TOOL_PALETTE_BTN_SIZE + 2 * get_theme()->toolbar.padding)
 #define TOOL_ICON_W     IMAGEEDITOR_TOOL_ICON_PX
 #define TOOL_ICON_H     IMAGEEDITOR_TOOL_ICON_PX
 #define TOOL_TOOLBAR_H  ((NUM_TOOLS + 1) * TOOL_PALETTE_BTN_SIZE + NUM_TOOLS * TOOLBAR_SPACING + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH))
@@ -930,7 +930,7 @@ anim_timeline_t *flc_load_layers(const char *path, int *w, int *h, uint32_t pale
 // Floating frame strip geometry.
 #define TIMELINE_FRAME_W        TB_SPACING
 #define TIMELINE_WIN_H          TOOLBAR_BAND_HEIGHT
-#define TIMELINE_FRAME_GAP      4   // pixels between adjacent frame buttons
+#define TIMELINE_FRAME_GAP      (2 + 2 * get_theme()->toolbar.spacing)
 
 // Factory helper: create, show, and register the timeline palette window.
 window_t *create_timeline_window(void);

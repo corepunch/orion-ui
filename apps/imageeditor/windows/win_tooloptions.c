@@ -113,7 +113,7 @@ void imageeditor_sync_tool_options(void) {
     }
   }
   show_window(win, count > 0);
-  int height = toolbar_effective_item_height(win) + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
+  int height = toolbar_effective_item_height(win) + 2 * toolbar_effective_padding(win);
   if (dock_is_floating(win)) {
     dock_resize_float(win, PALETTE_WIN_W, height);
   } else if (!win->dock) resize_window(win, PALETTE_WIN_W, height);

@@ -1,6 +1,6 @@
 // Modern drawing — flat, borderless toolbar controls; rounded hover backgrounds.
-// Palettes live in theme_palette_*.h. THEME_MODERN applies dark (process default,
-// matching pre-navy launch). THEME_LIGHT is the old light WinUI table. THEME_NAVY
+// Palettes live in theme_palette_*.h. THEME_MODERN uses layered charcoal surfaces
+// for creative workspaces. THEME_LIGHT is its light counterpart. THEME_NAVY
 // is navy/purple. THEME_AMBER is a light business palette with white fields,
 // softly rounded buttons and amber selection; THEME_PORCELAIN shares its metrics
 // with cool white surfaces and indigo selection. Drawing consults get_theme()->style
@@ -16,7 +16,7 @@
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
-#include <orion/user/theme_palette_dark.h>
+#include <orion/user/theme_palette_studio.h>
 #include <orion/user/theme_palette_light.h>
 #include <orion/user/theme_palette_navy.h>
 #include <orion/user/theme_palette_amber.h>
@@ -24,7 +24,6 @@
 #include <orion/user/theme_palette_porcelain_dark.h>
 
 // Radius constants (logical pixels).
-#define RADIUS_TOOLBAR_ITEM  4
 #define RADIUS_MENU_ITEM     6
 #define MODERN_CAPTION_TEXT_INSET 8
 
@@ -114,8 +113,8 @@ static void modern_draw_toolbar_item_bg(irect16_t r, ctrl_state_t state,
   } else {
     return;  // normal: no permanent background
   }
-  if (state & (CTRL_SELECTED | CTRL_PRESSED)) modern_draw_selection(r, RADIUS_TOOLBAR_ITEM);
-  else fill_rounded_rect(color, r, RADIUS_TOOLBAR_ITEM);
+  if (state & (CTRL_SELECTED | CTRL_PRESSED)) modern_draw_selection(r, get_theme()->toolbar.corner_radius);
+  else fill_rounded_rect(color, r, get_theme()->toolbar.corner_radius);
 }
 
 // ── Segmented control ────────────────────────────────────────────────────────
@@ -254,7 +253,7 @@ static void modern_draw_menu_item_bg(irect16_t r, ctrl_state_t state) {
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
-static void modern_apply_palette(void) { theme_copy_palette(k_theme_palette_dark); }
+static void modern_apply_palette(void) { theme_copy_palette(k_theme_palette_studio); }
 static void light_apply_palette(void)  { theme_copy_palette(k_theme_palette_light); }
 static void navy_apply_palette(void)   { theme_copy_palette(k_theme_palette_navy); }
 static void amber_apply_palette(void)  { theme_copy_palette(k_theme_palette_amber); }
@@ -335,7 +334,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
       fill_rect(get_sys_color(brPanelDarker), r);
       break;
     case THEME_PART_TITLE_TOOLBAR:
-      if (!modern_porcelain()) { fill_rect(get_sys_color(brPanelDarker), r); break; }
+      if (!modern_porcelain()) { fill_rect(get_sys_color(brWindowDarkBg), r); break; }
       fill_rect(get_sys_color(brControlBg), r);
       fill_rect(get_sys_color(brDarkEdge), rect_split_bottom(r, 1));
       break;
@@ -430,7 +429,7 @@ static theme_t g_modern_theme = {
   .caption = { .height = TITLEBAR_HEIGHT },
   .menubar = { .height = MODERN_MENUBAR_HEIGHT },
   .toolbar = {
-    .button_size = TB_SPACING, .padding = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
+    .button_size = TB_SPACING, .padding = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH, .spacing = 2, .corner_radius = 10,
     .compact = { .padding = 2, .spacing = 6, .icon = TOOLBAR_COMPACT_ICON_SIZE, .menu_gap = 8 },
     .grip_size = 12, .dropdown_arrow_w = 12, .large_inset = 2,
   },
@@ -479,6 +478,10 @@ static theme_t *modern_variant(theme_style_t style, const char *name, bool dark,
   theme_t *slot = &variants[style];
   if (!slot->draw_part) {
     *slot = g_modern_theme;
+    if (style != THEME_LIGHT) {
+      slot->toolbar.spacing = TOOLBAR_SPACING;
+      slot->toolbar.corner_radius = 4;
+    }
     slot->style = style;
     slot->name = name;
     slot->appearance.dark = dark;

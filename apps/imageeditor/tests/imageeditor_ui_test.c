@@ -2301,6 +2301,11 @@ void test_ie_open_file_path_large_uses_birdeye_scale(void) {
     canvas_win_state_t *state = (canvas_win_state_t *)g_app->docs->canvas_win->userdata;
     ASSERT_NOT_NULL(state);
     ASSERT_TRUE(window_view_zoom(state->doc->canvas_win) < 1.0f);
+    irect16_t viewport = get_client_rect(state->doc->canvas_win);
+    frect_t bounds = window_view_bounds(state->doc->canvas_win);
+    ASSERT_TRUE(bounds.w <= viewport.w + 1 && bounds.h <= viewport.h + 1);
+    ASSERT_TRUE(fminf(fabsf(viewport.w - bounds.w), fabsf(viewport.h - bounds.h)) <= 1);
+
 
     ie_teardown();
     remove(tmp);

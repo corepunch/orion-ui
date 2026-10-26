@@ -109,7 +109,10 @@ static void pencil_toolbar_items(window_t *win) {
     toolbar_item_t item = imageeditor_pencil_tools_toolbar[i];
     if (layer == IE_LAYER_PENCIL && (item.ident == ID_TOOL_BRUSH || item.ident == ID_TOOL_FILL || item.ident == ID_TOOL_EYEDROPPER)) continue;
     if (layer != IE_LAYER_PENCIL && item.ident == ID_TOOL_PENCIL) continue;
-    if (item.ident == ID_PENCIL_TOOLS_FRAME) item.type = TOOLBAR_ITEM_CUSTOM;
+    if (item.ident == ID_PENCIL_TOOLS_FRAME) {
+      item.type = TOOLBAR_ITEM_CUSTOM;
+      item.style |= TOOLBAR_ITEM_FLAG_SMALL;
+    }
     if (g_app && item.ident == imageeditor_tool_group(imageeditor_layer_tool(g_app->current_tool))) item.state |= TBSTATE_CHECKED;
     items[count++] = item;
   }

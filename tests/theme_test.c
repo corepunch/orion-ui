@@ -61,8 +61,8 @@ static void test_navy_theme_palette(void) {
   test_env_init();
   if (get_theme()->style != THEME_MODERN) ASSERT_TRUE(set_theme(THEME_MODERN));
   ASSERT_EQUAL(get_theme()->style, THEME_MODERN);
-  ASSERT_EQUAL(get_sys_color(brControlBg), 0xff3c3c3c);
-  ASSERT_EQUAL(get_sys_color(brAccent), 0xffD77800);
+  ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x303230));
+  ASSERT_EQUAL(get_sys_color(brAccent), WEB(0x3073C5));
   ASSERT_TRUE(set_theme(THEME_LIGHT));
   ASSERT_EQUAL(get_sys_color(brControlBg), 0xffF3F3F3);
   ASSERT_TRUE(set_theme(THEME_NAVY));
@@ -89,7 +89,7 @@ static void test_navy_theme_palette(void) {
   ASSERT_TRUE(set_theme(THEME_NAVY));
   ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x243D60));
   ASSERT_TRUE(set_theme(THEME_MODERN));
-  ASSERT_EQUAL(get_sys_color(brControlBg), 0xff3c3c3c);
+  ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x303230));
   test_env_shutdown();
   PASS();
 }

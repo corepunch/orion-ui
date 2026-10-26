@@ -322,7 +322,7 @@
           <Button name="move" command="tool.move" icon="ie-move" tooltip="Move" flags="TBSTYLE_CHECKGROUP" control-size="small" />
           <Button name="hand" command="tool.hand" icon="ie-hand" tooltip="Hand" flags="TBSTYLE_CHECKGROUP" control-size="small" if="!defined(AX_PLATFORM_IOS)" />
           <Separator />
-          <Slider name="size" w="2 * TOOL_PALETTE_BTN_SIZE + TOOLBAR_SPACING" tooltip="Brush size" />
+          <Slider name="size" w="40" tooltip="Brush size" />
           <Separator />
           <Label name="frame" text="1" w="TOOL_PALETTE_BTN_SIZE" tooltip="Current frame" />
           <Button name="prev" command="anim.prev_frame" icon="fast-arrow-left" tooltip="Previous frame (Left)" control-size="small" />

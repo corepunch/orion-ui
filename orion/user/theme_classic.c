@@ -344,6 +344,7 @@ static theme_t g_classic_theme = {
   .menubar = { .height = FONT_SIZE + 5 },
   .toolbar = {
     .button_size = SYSICON_SIZE + 4, .padding = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
+    .spacing = TOOLBAR_SPACING, .corner_radius = 0,
     .compact = { .padding = 2, .spacing = 6, .icon = TOOLBAR_COMPACT_ICON_SIZE, .menu_gap = 8 },
     .grip_size = 12, .dropdown_arrow_w = 12, .large_inset = 2,
   },

@@ -449,14 +449,18 @@ bool imageeditor_open_file_path(const char *path) {
   doc_update_title(ndoc);
   send_message(ndoc->win, evStatusBar, 0, (void *)path);
   // Fit the image inside the maximized viewport; window geometry belongs to the framework.
-  irect16_t viewport = get_client_rect(ndoc->canvas_win);
   int retina_scale = MAX(1, g_bw_retina_scale);
-  float open_scale = imageeditor_fit_scale_for_viewport(MAX(1, img_w / retina_scale),
-                                                        MAX(1, img_h / retina_scale),
-                                                        viewport.w, viewport.h, false);
-  canvas_win_set_scale(ndoc->canvas_win, open_scale);
-  window_view_center(ndoc->canvas_win);
-  canvas_win_sync_scrollbars(ndoc->canvas_win);
+  // Fitting can hide scrollbars and enlarge the viewport. Fit once more against
+  // that final area so the vanished scrollbar strips do not become gutters.
+  for (int pass = 0; pass < 2; pass++) {
+    irect16_t viewport = get_client_rect(ndoc->canvas_win);
+    float open_scale = imageeditor_fit_scale_for_viewport(MAX(1, img_w / retina_scale),
+                                                          MAX(1, img_h / retina_scale),
+                                                          viewport.w, viewport.h, false);
+    canvas_win_set_scale(ndoc->canvas_win, open_scale);
+    window_view_center(ndoc->canvas_win);
+    canvas_win_sync_scrollbars(ndoc->canvas_win);
+  }
   invalidate_window(ndoc->canvas_win);
   timeline_win_refresh();
   return true;
