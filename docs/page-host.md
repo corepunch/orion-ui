@@ -105,6 +105,8 @@ buttons) to these calls and enables the buttons from `page_host_can_go()` in its
 icon rail by hiding its labels; `false` restores them. The bar measures again,
 and a merged title row that tracks the sidebar follows its edge (see
 [the sidebar column](toolbars.md#the-sidebar-column)).
+Navigation tooltips appear in the icon rail. Visible labels suppress them, and
+expanding the sidebar dismisses any open hint.
 
 ## Page toolbars
 

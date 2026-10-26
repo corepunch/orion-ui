@@ -252,12 +252,17 @@ frame and title/resize styles. `restore_window(win)` restores them, constraining
 the frame to the current workspace so it remains reachable after display changes.
 The document and its child controls retain their state throughout.
 
-The framework initializes an `irect16_t` to the logical screen bounds and sends
-`evGetWorkspaceRect` with its address in `lparam`. An app can trim this rectangle
-to reserve menus or docked toolbars. Floating palettes overlay the document;
-avoid reserving unused palette columns when maximized. Maximized roots automatically recompute
-these bounds after `evDisplayChange`. Call `update_maximized_window(win)` when
-workspace reservations change without a display resize.
+Application chrome publishes the remaining client rectangle through
+`set_application_workspace()`. Standalone root menu bars publish the screen area
+below the menu strip through the same registry. Maximized documents in that
+application use these bounds automatically, including after menu or display
+resizes. Docked child menu bars leave workspace ownership to their chrome host.
+Floating palettes overlay the document and do not reserve unused columns.
+
+When no workspace is registered, the framework initializes an `irect16_t` to the
+logical screen bounds and sends `evGetWorkspaceRect` with its address in `lparam`.
+Call `update_maximized_window(win)` when such custom workspace bounds change
+without a display resize.
 
 `win->maximized` exposes the current state. Set `win->maximizable = true`
 to opt into the title-bar maximize button; calling `maximize_window` also opts in.

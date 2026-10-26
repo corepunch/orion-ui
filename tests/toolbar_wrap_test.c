@@ -1502,6 +1502,46 @@ static void test_vertical_ideal_size(void) {
   destroy_window(win); test_env_shutdown(); PASS();
 }
 
+static void test_sidebar_label_tooltips(void) {
+  TEST("tooltip: sidebar labels suppress hints, collapsed icons show them, and expansion dismisses them");
+  test_env_init();
+  int old_w = ui_get_system_metrics(kSystemMetricScreenWidth), old_h = ui_get_system_metrics(kSystemMetricScreenHeight);
+  ui_update_screen_size(640 * UI_WINDOW_SCALE, 480 * UI_WINDOW_SCALE);
+  window_t *bar = create_window("Navigation", WINDOW_TOOLBAR | WINDOW_NOTITLE, MAKERECT(100, 100, 200, 100),
+                                  NULL, noop_proc, 0, NULL);
+  toolbar_item_t item = {.type = TOOLBAR_ITEM_BUTTON, .ident = 1, .text = "Items", .tooltip = "Goods and services (Ctrl+3)"};
+  send_message(bar, tbSetStyle, TOOLBAR_STYLE_SIDEBAR | TOOLBAR_STYLE_LIST, NULL);
+  send_message(bar, tbSetItems, 1, &item);
+  toolbar_state_t *tb = toolbar_get_state(bar);
+  irect16_t r = tb->item_rects[0];
+  char text[256] = {0};
+  ASSERT_FALSE(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 1, r.y + 1), text));
+  send_message(bar, tbModifyStyle, TOOLBAR_STYLE_LIST, NULL);
+  r = tb->item_rects[0];
+  ASSERT_TRUE(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 1, r.y + 1), text));
+  ASSERT_STR_EQUAL(text, item.tooltip);
+  tooltip_update(bar->toolbar, text, window_screen_x(bar) + r.x + 1, window_screen_y(bar) + r.y + 1);
+  window_t *tip = NULL;
+  for (window_t *win = g_ui_runtime.windows; win; win = win->next)
+    if ((win->flags & WINDOW_NOACTIVATE) && !strcmp(win->title, item.tooltip)) tip = win;
+  ASSERT_NOT_NULL(tip);
+  ASSERT_TRUE(window_has_state(tip, WINDOW_STATE_VISIBLE));
+  send_message(bar, tbModifyStyle, TOOLBAR_STYLE_LIST, (void *)(uintptr_t)TOOLBAR_STYLE_LIST);
+  ASSERT_FALSE(window_has_state(tip, WINDOW_STATE_VISIBLE));
+  r = tb->item_rects[0];
+  ASSERT_FALSE(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 1, r.y + 1), text));
+  send_message(bar, tbSetStyle, TOOLBAR_STYLE_SIDEBAR | TOOLBAR_STYLE_SHOW_LABELS, NULL);
+  r = tb->item_rects[0];
+  ASSERT_FALSE(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 1, r.y + 1), text));
+  send_message(bar, tbSetStyle, TOOLBAR_STYLE_LIST, NULL);
+  r = tb->item_rects[0];
+  ASSERT_TRUE(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 1, r.y + 1), text));
+  ASSERT_STR_EQUAL(text, item.tooltip);
+  test_env_shutdown();
+  ui_update_screen_size(old_w * UI_WINDOW_SCALE, old_h * UI_WINDOW_SCALE);
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -1545,6 +1585,7 @@ int main(int argc, char *argv[]) {
     test_app_chrome_owns_and_resizes_bands();
     test_compact_application_toolbar();
     test_multiple_docked_toolbars();
+    test_sidebar_label_tooltips();
 
     TEST_END();
 }

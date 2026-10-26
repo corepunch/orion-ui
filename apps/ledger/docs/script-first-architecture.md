@@ -213,8 +213,8 @@ process-global active document.
    in the same refactor.
 6. **Measure queries before choosing their language.** Current fetch calls copy
    complete result arrays into Lua; reports and YTD calculations need batched
-   queries or stable snapshots. Compare the committed large synthetic samples
-   as well as small demos before accepting performance changes.
+   queries or stable snapshots. Compare representative imported infobases
+   as well as the built-in demos before accepting performance changes.
 7. **Persist identifiers and migrate parameters.** Package/action/schema IDs and
    parameter versions must survive upgrades. Define reload behavior for open
    forms and rule changes; do not hot-reload accounting during an active post.

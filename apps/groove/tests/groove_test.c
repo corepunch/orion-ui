@@ -1105,6 +1105,14 @@ static void test_library_transport(void) {
   click_toolbar(ID_FAMILY(FAMILY_GUITAR));
   ASSERT(g_app->family == FAMILY_GUITAR && library_visible() > 0 && library_visible() < blocks_count(), "a routed family click switches the library");
   ASSERT(g_app->song.loop && bar_checked(g_app->toolbar, ID_LOOP) && toolbar_checked(ID_FAMILY(FAMILY_GUITAR)), "the family check leaves Loop checked");
+  irect16_t area = rect_offset(dock_content_rect(g_app->chrome), window_screen_x(g_app->chrome), window_screen_y(g_app->chrome));
+  ASSERT_TRUE(maximize_window(win));
+  ASSERT_EQUAL(win->frame.x, area.x);
+  ASSERT_EQUAL(win->frame.y, area.y);
+  ASSERT_EQUAL(win->frame.w, area.w);
+  ASSERT_EQUAL(win->frame.h, area.h);
+  ASSERT_EQUAL(g_app->sheet->frame.y, 0);
+  ASSERT_TRUE(restore_window(win));
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();

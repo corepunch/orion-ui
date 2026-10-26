@@ -12,6 +12,12 @@
 static ledger_t g_test_ledger;
 static void ed_digest(const unsigned char *data, size_t len, char hex[65]);
 
+static void report_through(const char *date) {
+  db_report_setting_t *rs = ledger_report_settings(g_ledger->ib, g_ledger->cfg);
+  snprintf(rs->date_to, sizeof(rs->date_to), "%s", date);
+  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+}
+
 static database_t *open_db(const char *name, const db_schema_def_t *schema, const char *path) {
   database_t *db = create_database_with_schema(name, strcmp(name, "ib") ? "db_schema_xml" : "ledger_ib", schema, path);
   if (db) register_database(name, db);
@@ -32,6 +38,7 @@ static void setup(void) {
   snprintf(g_ledger->ib->source_path, sizeof(g_ledger->ib->source_path), TMP_DIR "/infobase.xml");
   ledger_script_open(g_ledger->config_dir, TMP_DIR);
   ledger_repost_all(g_ledger->ib, g_ledger->cfg);
+  report_through("2003-03-31");
 }
 
 static void *find_by(database_t *db, int table, const char *field, const char *value) {
@@ -105,8 +112,11 @@ static double entry_sum(const char *debit, const char *credit) {
   db_account_t *dr = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", debit), *cr = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", credit);
   double sum = 0;
   result_node_t *entries = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ENTRIES, 0), NULL);
+  const db_report_setting_t *rs = ledger_report_settings(g_ledger->ib, g_ledger->cfg);
   for (result_node_t *n = entries; n; n = n->next) {
     db_entry_t *e = *(db_entry_t **)n->data;
+    if ((rs->date_from[0] && strcmp(e->date, rs->date_from) < 0) ||
+        (rs->date_to[0] && strcmp(e->date, rs->date_to) > 0)) continue;
     if (dr && cr && e->debit_id == dr->id && e->credit_id == cr->id) sum += e->amount;
   }
   free_result_list(entries);
@@ -178,10 +188,10 @@ static void test_fixed_assets(void) {
   db_document_t *april = (db_document_t *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &blank);
   int id = april->id;
   ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
-  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+  report_through("2003-04-30");
   ASSERT(approx(balance("02")->balance_cr, 3000 + 1000 + 500), "April charges both assets");
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
-  ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+  report_through("2003-03-31");
   PASS();
 }
 
@@ -278,7 +288,7 @@ static void test_period_reports(void) {
   result_node_t *card = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_CARD, 0), NULL);
   ASSERT_EQUAL(count_result_list(card), 1);  // cash drawn for the payroll
   free_result_list(card);
-  set_period("", "", "60");
+  set_period("", "2003-03-31", "60");
   card = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_CARD, 0), NULL);
   double last = -1; int rows = count_result_list(card);
   for (result_node_t *n = card; n; n = n->next) last = (*(db_card_t **)n->data)->balance;
@@ -335,7 +345,7 @@ static void test_numbering_and_delete(void) {
   ASSERT_NOT_NULL(doc);
   int id = doc->id;
   ledger_number_document(g_ledger->ib, g_ledger->cfg, id);
-  ASSERT_STR_EQUAL(doc->number, "РТ-0003");
+  ASSERT_STR_EQUAL(doc->number, "РТ-0007");
   db_doc_line_t line = { .document_id = id, .item_id = 2, .quantity = 2 };
   ASSERT_NOT_NULL((void *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
   ledger_recalc_document(g_ledger->ib, g_ledger->cfg, id);
@@ -357,7 +367,7 @@ static void test_record_lifecycle(void) {
   blank.doc_type_id = 1;  // receipt
   snprintf(blank.date, sizeof(blank.date), "2003-03-25");
   db_document_t *doc = (db_document_t *)send_db_message(ib, dbInsert, TABLE_DOCUMENTS, &blank);
-  ASSERT(doc && !strcmp(doc->number, "ПТ-0002"), "numbered when inserted");
+  ASSERT(doc && !strcmp(doc->number, "ПТ-0005"), "numbered when inserted");
   int id = doc->id;
   db_doc_line_t line;
   send_db_message(ib, dbInitRecord, TABLE_DOC_LINES, &line);
@@ -490,6 +500,7 @@ static void test_german_configuration(void) {
   g_ledger->ib = open_db("ib", &ledger_ib_schema, SHARE "/de-2003/demo.xml");
   snprintf(g_ledger->ib->source_path, sizeof(g_ledger->ib->source_path), TMP_DIR "/infobase-de.xml");
   ledger_repost_all(g_ledger->ib, g_ledger->cfg);
+  report_through("2003-03-31");
   const db_balance_t *bank = balance("1200"), *ust = balance("1775"), *receivables = balance("1400");
   bool ok = bank && approx(bank->balance_dr, 25000 - 2003.32 - 1633.54 - 1450.54) && ust && approx(ust->balance_cr, 96.48) &&
             receivables && approx(receivables->balance_dr, 0);
@@ -534,6 +545,70 @@ static void restore_configuration(database_t *cfg, database_t *ib) {
   register_database("ib", ib);
   snprintf(g_ledger->config_dir, sizeof(g_ledger->config_dir), SHARE "/ru-2003");
   ledger_script_open(g_ledger->config_dir, TMP_DIR);
+}
+
+static int demo_record_count(int table) {
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(table, 0), NULL);
+  int count = count_result_list(rows);
+  free_result_list(rows);
+  return count;
+}
+
+static void test_april_demo(const char *code) {
+  bool ru = !strcmp(code, "ru-2003");
+  TEST(ru ? "ru-2003 demo: April purchases, VAT, stock costs and payments" : "de-2003 demo: April purchases, VAT and payments");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  switch_configuration(code, ru ? "demo-april-ru.xml" : "demo-april-de.xml");
+  bool ok = demo_record_count(TABLE_DOCUMENTS) == (ru ? 32 : 18) &&
+            demo_record_count(TABLE_COUNTERPARTIES) == (ru ? 8 : 6) && demo_record_count(TABLE_ITEMS) == (ru ? 10 : 8);
+  typedef struct { int id; double total, vat; } demo_document_t;
+  const demo_document_t russian[] = {{17, 9480, 1580}, {20, 4068, 678}, {22, 19260, 3210}, {25, 9780, 1630},
+                                     {27, 4140, 690}, {30, 2448, 408}, {32, 3036, 506}};
+  const demo_document_t german[] = {{10, 332.92, 45.92}, {12, 166.46, 22.96}, {14, 887.4, 122.4},
+                                    {16, 469.8, 64.8}, {18, 131.89, 18.19}};
+  const demo_document_t *expected = ru ? russian : german;
+  int expected_count = ru ? ARRAY_LEN(russian) : ARRAY_LEN(german);
+  for (int i = 0; i < expected_count; i++) {
+    const db_document_t *doc = (const db_document_t *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0),
+                                                                      (void *)(intptr_t)expected[i].id);
+    ok &= doc && approx(doc->total, expected[i].total) && approx(doc->vat, expected[i].vat);
+  }
+  result_node_t *docs = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
+  int drafts = 0;
+  for (result_node_t *n = docs; n; n = n->next) {
+    const db_document_t *doc = *(db_document_t **)n->data;
+    int entries = ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", doc->id);
+    ok &= doc->posted ? entries > 0 : entries == 0;
+    drafts += !doc->posted;
+  }
+  free_result_list(docs);
+  ok &= drafts == 2;
+  set_period("2003-04-01", "2003-04-30", ru ? "51" : "1200");
+  const db_balance_t *bank = balance(ru ? "51" : "1200"), *cash = balance(ru ? "50.01" : "1000");
+  ok &= bank && approx(bank->opening_dr, ru ? 77404 : 19912.6) && approx(bank->debit_turnover, ru ? 13848 : 636.26) &&
+        approx(bank->credit_turnover, ru ? 28740 : 1220.32) && approx(bank->balance_dr, ru ? 62512 : 19328.54);
+  ok &= cash && approx(cash->balance_dr, ru ? 16964 : 699.48);
+  if (ru) {
+    const db_balance_t *goods = balance("41.01"), *vat = balance("68.02");
+    ok &= goods && approx(goods->opening_dr, 47300) && approx(goods->debit_turnover, 27400) &&
+          approx(goods->credit_turnover, 10052) && approx(goods->balance_dr, 64648);
+    ok &= vat && approx(vat->debit_turnover, 5480) && approx(vat->credit_turnover, 2716);
+  } else {
+    const db_balance_t *purchases = balance("3400"), *input = balance("1575"), *output = balance("1775");
+    ok &= purchases && approx(purchases->debit_turnover, 1052) && input && approx(input->debit_turnover, 168.32) &&
+          output && approx(output->credit_turnover, 87.76);
+  }
+  double debit = 0, credit = 0;
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_BALANCES, 0), NULL);
+  for (result_node_t *n = rows; n; n = n->next) {
+    const db_balance_t *row = *(db_balance_t **)n->data;
+    if (!row->subaccount) { debit += row->balance_dr; credit += row->balance_cr; }
+  }
+  free_result_list(rows);
+  ok &= debit > 0 && approx(debit, credit);
+  restore_configuration(cfg, ib);
+  ASSERT(ok, "expanded demos post purchases and paid sales, retain drafts, and balance across March and April");
+  PASS();
 }
 
 static const db_payroll_line_t *payroll_line(int document_id, int employee_id) {
@@ -972,6 +1047,8 @@ int main(int argc, char **argv) {
   (void)argc; (void)argv;
   TEST_START("Ledger");
   setup();
+  test_april_demo("ru-2003");
+  test_april_demo("de-2003");
   test_configuration_loads();
   test_joins_cross_databases();
   test_posting_rules();

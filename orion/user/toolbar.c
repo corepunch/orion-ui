@@ -669,6 +669,8 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
           return true;
       if (idx < 0) return false;
       const toolbar_item_t *item = &tb->items[idx];
+      if ((tb->style & TOOLBAR_STYLE_SIDEBAR) && item->text && item->text[0] &&
+          (tb->style & (TOOLBAR_STYLE_LIST | TOOLBAR_STYLE_SHOW_LABELS))) return false;
       const char *tip = item->alt_ident && (ui_get_mod_state() & AX_MOD_ALT) && item->alt_tooltip ? item->alt_tooltip : item->tooltip;
       if (!tip || !tip[0]) return false;
       char *buf = (char *)lparam;
@@ -1339,6 +1341,7 @@ bool toolbar_handle_message(window_t *win, uint32_t msg, uint32_t wparam, void *
       if (!tb) return true;
       uint32_t style = msg == tbSetStyle ? wparam : (tb->style & ~wparam) | ((uint32_t)(uintptr_t)lparam & wparam);
       if (tb->style != style) {
+        tooltip_cancel();
         tb->style = style;
         compute_toolbar_item_rects(win, tb);
         post_message(win, evRefreshStencil, 0, NULL);

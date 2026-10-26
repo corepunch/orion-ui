@@ -10,6 +10,10 @@
     <counterparty id="2" name="ЗАО &quot;Бета-Снаб&quot;" tax_id="7814012345" kpp="781401001" address="197183, г. Санкт-Петербург, ул. Савушкина, д. 3" bank="ОАО &quot;Промстройбанк&quot; г. Санкт-Петербург" bank_account="40702810200000067890" bik="044030791" phone="(812) 430-55-66" />
     <counterparty id="3" name="ИП Иванов Иван Иванович" tax_id="771512345678" kpp="" address="127282, г. Москва, ул. Широкая, д. 5, кв. 40" bank="" bank_account="" bik="" phone="(095) 470-11-22" />
     <counterparty id="4" name="Intertrade Ltd." tax_id="" kpp="" address="12 Harbour Road, Limassol, Cyprus" bank="Bank of Cyprus" bank_account="CY0012345678" bik="BCYPCY2N" phone="+357 25 123456" />
+    <counterparty id="5" name="ООО &quot;ОфисКомплект&quot;" tax_id="7712345678" kpp="771201001" address="125130, г. Москва, ул. Клары Цеткин, д. 18" bank="ОАО &quot;Банк Москвы&quot; г. Москва" bank_account="40702810400000023456" bik="044525219" phone="(095) 156-24-30" />
+    <counterparty id="6" name="ООО &quot;Сетевая техника&quot;" tax_id="7723456789" kpp="772301001" address="109387, г. Москва, ул. Люблинская, д. 42" bank="АКБ &quot;Возрождение&quot; г. Москва" bank_account="40702810900000034567" bik="044525181" phone="(095) 350-18-72" />
+    <counterparty id="7" name="ООО &quot;Архитектурная мастерская&quot;" tax_id="7703456789" kpp="770301001" address="123001, г. Москва, ул. Спиридоновка, д. 9" bank="ОАО &quot;Банк Москвы&quot; г. Москва" bank_account="40702810400000045678" bik="044525219" phone="(095) 290-41-16" />
+    <counterparty id="8" name="ООО &quot;Вектор-Сервис&quot;" tax_id="7714567890" kpp="771401001" address="125040, г. Москва, ул. Правды, д. 15" bank="АКБ &quot;Возрождение&quot; г. Москва" bank_account="40702810900000056789" bik="044525181" phone="(095) 214-63-25" />
   </counterparties>
   <items>
     <item id="1" sku="00001" name="Бумага офисная А4 &quot;Снегурочка&quot;, 500 л." unit_id="2" vat_rate_id="1" price="95" />
@@ -17,6 +21,11 @@
     <item id="3" sku="00003" name="Монитор 17&quot; Samsung SyncMaster 753s" unit_id="1" vat_rate_id="1" price="6200" />
     <item id="4" sku="00004" name="Клавиатура Genius KB-06XE" unit_id="1" vat_rate_id="1" price="210" />
     <item id="5" sku="00005" name="Доставка товара" unit_id="6" vat_rate_id="1" price="500" />
+    <item id="6" sku="00006" name="Бумага цветная А4, 500 л." unit_id="2" vat_rate_id="1" price="160" />
+    <item id="7" sku="00007" name="Мышь оптическая USB" unit_id="1" vat_rate_id="1" price="180" />
+    <item id="8" sku="00008" name="Кабель сетевой Cat 5e, 5 м" unit_id="1" vat_rate_id="1" price="90" />
+    <item id="9" sku="00009" name="Коммутатор Ethernet, 8 портов" unit_id="1" vat_rate_id="1" price="1450" />
+    <item id="10" sku="00010" name="Привод CD-RW 52x/24x/52x" unit_id="1" vat_rate_id="1" price="1100" />
   </items>
   <employees>
     <employee id="1" account_id="12" name="Петров Петр Петрович" position="Генеральный директор" tax_id="770112345678" hired="2001-06-01" salary="15000" allowance="400" />
@@ -56,6 +65,22 @@
     <document id="14" doc_type_id="17" counterparty_id="0" number="ПКО-0002" date="2003-03-31" comment="Чек № 4711123 на выплату зарплаты" total="31476" posted="1" />
     <document id="15" doc_type_id="11" counterparty_id="0" number="ВЗ-0001" date="2003-03-31" comment="Зарплата за март 2003 г." posted="1" />
     <document id="16" doc_type_id="14" counterparty_id="0" number="ЗМ-0001" date="2003-03-31" comment="Март 2003 г." posted="1" />
+    <document id="17" doc_type_id="1" counterparty_id="5" number="ПТ-0002" date="2003-04-01" comment="Бумага и компьютерные принадлежности, накладная № 204" posted="1" />
+    <document id="18" doc_type_id="5" counterparty_id="5" number="ПП-0002" date="2003-04-02" comment="Оплата накладной № 204, ПТ-0002" total="9480" posted="1" />
+    <document id="19" doc_type_id="7" counterparty_id="5" number="ВН-0002" date="2003-04-03" comment="НДС по ПТ-0002, оплачено ПП-0002" total="1580" posted="1" />
+    <document id="20" doc_type_id="2" counterparty_id="7" number="РТ-0003" date="2003-04-04" comment="Принадлежности для рабочих мест, заказ № 21/04" posted="1" />
+    <document id="21" doc_type_id="6" counterparty_id="7" number="ПВ-0002" date="2003-04-07" comment="Оплата по накладной РТ-0003" total="4068" posted="1" />
+    <document id="22" doc_type_id="1" counterparty_id="6" number="ПТ-0003" date="2003-04-08" comment="Сетевое оборудование и приводы, накладная № 87" posted="1" />
+    <document id="23" doc_type_id="5" counterparty_id="6" number="ПП-0003" date="2003-04-09" comment="Оплата накладной № 87, ПТ-0003" total="19260" posted="1" />
+    <document id="24" doc_type_id="7" counterparty_id="6" number="ВН-0003" date="2003-04-10" comment="НДС по ПТ-0003, оплачено ПП-0003" total="3210" posted="1" />
+    <document id="25" doc_type_id="2" counterparty_id="8" number="РТ-0004" date="2003-04-11" comment="Оборудование для локальной сети, заказ № 24/04" posted="1" />
+    <document id="26" doc_type_id="6" counterparty_id="8" number="ПВ-0003" date="2003-04-14" comment="Оплата по накладной РТ-0004" total="9780" posted="1" />
+    <document id="27" doc_type_id="1" counterparty_id="5" number="ПТ-0004" date="2003-04-15" comment="Пополнение склада, накладная № 236" posted="1" />
+    <document id="28" doc_type_id="4" counterparty_id="5" number="РКО-0001" date="2003-04-16" comment="Оплата наличными по накладной № 236, ПТ-0004" total="4140" posted="1" />
+    <document id="29" doc_type_id="7" counterparty_id="5" number="ВН-0004" date="2003-04-17" comment="НДС по ПТ-0004, оплачено РКО-0001" total="690" posted="1" />
+    <document id="30" doc_type_id="2" counterparty_id="3" number="РТ-0005" date="2003-04-18" comment="Комплект принадлежностей для офиса, самовывоз" posted="1" />
+    <document id="31" doc_type_id="3" counterparty_id="3" number="ПКО-0003" date="2003-04-18" comment="Оплата по накладной РТ-0005" total="2448" posted="1" />
+    <document id="32" doc_type_id="2" counterparty_id="7" number="РТ-0006" date="2003-04-23" comment="Заказ № 32/04, ожидает согласования покупателя" posted="0" />
   </documents>
   <doc_lines>
     <doc_line id="1" document_id="2" item_id="1" vat_rate_id="1" quantity="100" price="95" />
@@ -66,6 +91,22 @@
     <doc_line id="6" document_id="7" item_id="1" vat_rate_id="1" quantity="40" price="120" />
     <doc_line id="7" document_id="7" item_id="2" vat_rate_id="1" quantity="5" price="1690" />
     <doc_line id="8" document_id="11" item_id="2" vat_rate_id="4" quantity="10" price="50" />
+    <doc_line id="9" document_id="17" item_id="6" vat_rate_id="1" quantity="10" price="160" />
+    <doc_line id="10" document_id="17" item_id="7" vat_rate_id="1" quantity="20" price="180" />
+    <doc_line id="11" document_id="17" item_id="8" vat_rate_id="1" quantity="30" price="90" />
+    <doc_line id="12" document_id="20" item_id="6" vat_rate_id="1" quantity="4" price="210" />
+    <doc_line id="13" document_id="20" item_id="7" vat_rate_id="1" quantity="5" price="250" />
+    <doc_line id="14" document_id="20" item_id="8" vat_rate_id="1" quantity="10" price="130" />
+    <doc_line id="15" document_id="22" item_id="9" vat_rate_id="1" quantity="5" price="1450" />
+    <doc_line id="16" document_id="22" item_id="10" vat_rate_id="1" quantity="8" price="1100" />
+    <doc_line id="17" document_id="25" item_id="9" vat_rate_id="1" quantity="2" price="1900" />
+    <doc_line id="18" document_id="25" item_id="10" vat_rate_id="1" quantity="3" price="1450" />
+    <doc_line id="19" document_id="27" item_id="7" vat_rate_id="1" quantity="10" price="175" />
+    <doc_line id="20" document_id="27" item_id="8" vat_rate_id="1" quantity="20" price="85" />
+    <doc_line id="21" document_id="30" item_id="7" vat_rate_id="1" quantity="4" price="250" />
+    <doc_line id="22" document_id="30" item_id="8" vat_rate_id="1" quantity="8" price="130" />
+    <doc_line id="23" document_id="32" item_id="6" vat_rate_id="1" quantity="3" price="210" />
+    <doc_line id="24" document_id="32" item_id="9" vat_rate_id="1" quantity="1" price="1900" />
   </doc_lines>
   <payroll_lines>
     <payroll_line id="1" document_id="13" employee_id="1" amount="15000" />

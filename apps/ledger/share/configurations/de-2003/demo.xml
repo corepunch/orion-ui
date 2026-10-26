@@ -8,12 +8,19 @@
     <counterparty id="1" name="Bürotechnik Schmidt KG" tax_id="43/765/43210" kpp="DE234567890" address="Mönckebergstraße 7, 20095 Hamburg" bank="Hamburger Sparkasse" bank_account="9876543210" bik="20050550" phone="040 123456" />
     <counterparty id="2" name="Weber Handels GmbH" tax_id="143/222/33333" kpp="DE345678901" address="Leopoldstraße 12, 80802 München" bank="Stadtsparkasse München" bank_account="1122334455" bik="70150000" phone="089 987654" />
     <counterparty id="3" name="Hans Meier e.K." tax_id="21/555/66666" kpp="" address="Schillerstraße 3, 04109 Leipzig" bank="" bank_account="" bik="" phone="0341 445566" />
+    <counterparty id="4" name="Netzwerkbedarf Krüger OHG" tax_id="27/234/56789" kpp="DE456789012" address="Gewerbestraße 12, 14482 Potsdam" bank="Mittelbrandenburgische Sparkasse" bank_account="2345678901" bik="16050000" phone="0331 245670" />
+    <counterparty id="5" name="Architekturbüro Keller GmbH" tax_id="27/345/67890" kpp="DE567890123" address="Parkstraße 8, 12157 Berlin" bank="Berliner Sparkasse" bank_account="3456789012" bik="10050000" phone="030 7823410" />
+    <counterparty id="6" name="Ingenieurbüro Fischer KG" tax_id="27/456/78901" kpp="DE678901234" address="Bahnhofstraße 24, 14532 Kleinmachnow" bank="Mittelbrandenburgische Sparkasse" bank_account="4567890123" bik="16050000" phone="033203 45670" />
   </counterparties>
   <items>
     <item id="1" sku="10001" name="Kopierpapier A4, 500 Blatt" unit_id="2" vat_rate_id="1" price="4.5" />
     <item id="2" sku="10002" name="Toner HP C4092A" unit_id="1" vat_rate_id="1" price="59" />
     <item id="3" sku="10003" name="Monitor 17&quot; Samsung SyncMaster 753s" unit_id="1" vat_rate_id="1" price="229" />
     <item id="4" sku="10004" name="Tastatur Cherry G83" unit_id="1" vat_rate_id="1" price="19.9" />
+    <item id="5" sku="10005" name="Optische Maus, USB" unit_id="1" vat_rate_id="1" price="8.5" />
+    <item id="6" sku="10006" name="Netzwerkkabel Cat 5e, 5 m" unit_id="1" vat_rate_id="1" price="3.9" />
+    <item id="7" sku="10007" name="Ethernet-Switch, 8 Ports" unit_id="1" vat_rate_id="1" price="49" />
+    <item id="8" sku="10008" name="CD-RW-Laufwerk 52x" unit_id="1" vat_rate_id="1" price="65" />
   </items>
   <employees>
     <employee id="1" account_id="26" name="Anna Schmidt" position="Buchhalterin" tax_id="12/345/67890" hired="2001-04-01" salary="2500" allowance="603" />
@@ -39,6 +46,15 @@
     <document id="7" doc_type_id="9" counterparty_id="0" number="LA-0001" date="2003-03-31" comment="Gehälter März 2003" posted="1" />
     <document id="8" doc_type_id="10" counterparty_id="0" number="LZ-0001" date="2003-03-31" comment="Nettolöhne März 2003" posted="1" />
     <document id="9" doc_type_id="12" counterparty_id="0" number="MA-0001" date="2003-03-31" comment="März 2003" posted="1" />
+    <document id="10" doc_type_id="1" counterparty_id="4" number="ER-0002" date="2003-04-01" comment="Mäuse und Netzwerkkabel, Rechnung Nr. 208" posted="1" />
+    <document id="11" doc_type_id="5" counterparty_id="4" number="UE-0002" date="2003-04-02" comment="Zahlung Rechnung Nr. 208, ER-0002" total="332.92" posted="1" />
+    <document id="12" doc_type_id="2" counterparty_id="5" number="AR-0003" date="2003-04-04" comment="Büroarbeitsplätze, Auftrag 21/04" posted="1" />
+    <document id="13" doc_type_id="6" counterparty_id="5" number="ZE-0001" date="2003-04-07" comment="Zahlung zu AR-0003" total="166.46" posted="1" />
+    <document id="14" doc_type_id="1" counterparty_id="4" number="ER-0003" date="2003-04-08" comment="Switches und CD-RW-Laufwerke, Rechnung Nr. 231" posted="1" />
+    <document id="15" doc_type_id="5" counterparty_id="4" number="UE-0003" date="2003-04-09" comment="Zahlung Rechnung Nr. 231, ER-0003" total="887.4" posted="1" />
+    <document id="16" doc_type_id="2" counterparty_id="6" number="AR-0004" date="2003-04-11" comment="Netzwerkausbau, Auftrag 24/04" posted="1" />
+    <document id="17" doc_type_id="6" counterparty_id="6" number="ZE-0002" date="2003-04-14" comment="Zahlung zu AR-0004" total="469.8" posted="1" />
+    <document id="18" doc_type_id="2" counterparty_id="5" number="AR-0005" date="2003-04-23" comment="Auftrag 32/04, Freigabe durch den Kunden steht aus" posted="0" />
   </documents>
   <doc_lines>
     <doc_line id="1" document_id="2" item_id="1" vat_rate_id="1" quantity="100" price="4.5" />
@@ -48,6 +64,16 @@
     <doc_line id="5" document_id="4" item_id="4" vat_rate_id="1" quantity="1" price="25" />
     <doc_line id="6" document_id="6" item_id="1" vat_rate_id="1" quantity="40" price="6.9" />
     <doc_line id="7" document_id="6" item_id="2" vat_rate_id="1" quantity="5" price="79" />
+    <doc_line id="8" document_id="10" item_id="5" vat_rate_id="1" quantity="20" price="8.5" />
+    <doc_line id="9" document_id="10" item_id="6" vat_rate_id="1" quantity="30" price="3.9" />
+    <doc_line id="10" document_id="12" item_id="5" vat_rate_id="1" quantity="5" price="14.9" />
+    <doc_line id="11" document_id="12" item_id="6" vat_rate_id="1" quantity="10" price="6.9" />
+    <doc_line id="12" document_id="14" item_id="7" vat_rate_id="1" quantity="5" price="49" />
+    <doc_line id="13" document_id="14" item_id="8" vat_rate_id="1" quantity="8" price="65" />
+    <doc_line id="14" document_id="16" item_id="7" vat_rate_id="1" quantity="2" price="69" />
+    <doc_line id="15" document_id="16" item_id="8" vat_rate_id="1" quantity="3" price="89" />
+    <doc_line id="16" document_id="18" item_id="5" vat_rate_id="1" quantity="3" price="14.9" />
+    <doc_line id="17" document_id="18" item_id="7" vat_rate_id="1" quantity="1" price="69" />
   </doc_lines>
   <payroll_lines>
     <payroll_line id="1" document_id="7" employee_id="1" amount="2500" />

@@ -17,13 +17,24 @@ build/bin/ledger --config de-2026 --lang de --data /tmp/books
 python3 -I apps/ledger/tools/check_configuration.py --all apps/ledger/share/configurations
 ```
 
-## Large example data
+## Demo data
 
-[Four committed synthetic samples](share/samples/README.md) cover both `ru-2003`
-and `de-2003`: each native infobase has 500 counterparties, 2,000 items, 1,000
-documents and 10,000 entries; each EnterpriseData fixture has 10,000 opening
-rows. The sample instructions include safe launch/import commands, expected
-totals and deterministic regeneration. The small default demos remain available.
+Launch the Russian or German demo:
+
+```sh
+make run-ledger-ru
+make run-ledger-de
+```
+
+Each target builds Ledger and its shared assets and opens a fresh temporary
+infobase with the configuration's 2003 demo: purchases, sales, payments,
+and their document lines. The Russian demo uses ООО "Ромашка" with 32 documents,
+8 counterparties and 10 products; the German demo uses Musterfirma GmbH with
+18 documents, 6 counterparties and 8 products. March covers opening balances,
+payroll, fixed assets and month-end work; April adds equipment and office-supply
+purchases, paid sales, and draft orders. The target prints the data directory,
+which remains available after closing Ledger so you can reopen your edits with
+`--data`.
 
 ## Features
 
