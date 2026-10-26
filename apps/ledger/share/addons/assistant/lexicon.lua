@@ -6,6 +6,7 @@ return {
     open = {'открой','открыть','open','öffne'},
     sort = {'отсортируй','сортируй','sort','sortiere'},
     help = {'помощь','команды','help','hilfe'},
+    cancel = {'cancel','abbrechen','отмена'},
     reset = {'сброс','сбрось','reset','zurücksetzen'},
   },
   nouns = {
@@ -31,6 +32,7 @@ return {
     le = {'не больше','не более','at most','höchstens','hoechstens'},
     eq = {'равно','ровно','exactly','equals','genau'},
   },
+  relations = {counterparty={'for','für','fuer','для'}},
   directions = {desc={'убыванию','descending','absteigend'}, asc={'возрастанию','ascending','aufsteigend'}},
   ordinals = {
     ['первого']=1, ['первый']=1, ['первую']=1, first=1, erste=1,ersten=1,erstes=1,
@@ -38,7 +40,7 @@ return {
     ['третьего']=3, ['третий']=3, third=3, dritte=3,dritten=3,drittes=3,
     ['четвертого']=4, fourth=4, ['пятого']=5, fifth=5,
   },
-  pronouns = {'его','ее','этого','эту','it','this','ihn','sie','es'},
+  pronouns = {'его','ее','этого','эту','it','this','ihn','sie','es','diesen','diese','dieses','это','этот','этой','нему','ней','него','нее'},
   noise = {'пожалуйста','мне','всех','все','которые','который','с','со','по','на','только','please','the','all','with','by','only','nur','bitte','mit','nach','der','die','das','den','dem','alle'},
   units = {'рублей','рубля','руб','евро','euros','euro','rubles'},
 }

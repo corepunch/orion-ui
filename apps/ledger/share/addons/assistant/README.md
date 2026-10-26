@@ -73,10 +73,10 @@ it does not post, delete or modify accounting data through a command.
 
 This is Zork-inspired, with a deliberately small accounting vocabulary. It has
 longest-phrase lexical matching (`не меньше`, `greater than`, `mehr als`), typed
-verbs and noun phrases, qualifiers, remembered queries, row pronouns and orphan
-completion (`open` → `first`). Ambiguous names produce a numbered result list;
+verbs and noun phrases, qualifiers, remembered queries, stable object pronouns, scoped indirect objects and orphan
+completion (`show documents for` → a customer). Ambiguous names produce a numbered result list;
 `2` completes that pending open. It is not a full Infocom parser: there is no
-world-object scope tree, indirect object grammar, `ALL EXCEPT`, `AGAIN`, `OOPS`,
+world-object scope tree, general indirect-object grammar, `ALL EXCEPT`, `AGAIN`, `OOPS`,
 command chaining, or general natural-language understanding. Unknown words
 reject the complete input. Names must be quoted. Only listing, filtering,
 sorting and opening existing records are supported.
@@ -151,3 +151,59 @@ build/bin/test_ledger_assistant_test
 The existing C integration suite runs the Lua example tables as well as real
 RU/DE configuration queries. The Python check verifies catalog coverage,
 placeholder preservation, translated parser/engine replies and untouched names.
+
+## More from Zork: object memory, missing arguments and inference
+
+The reference routines were inspected with `gh` in
+[`parser.zil`](https://github.com/corepunch/zilscript/blob/main/infocom/zork1/parser.zil)
+(`SYNTAX-CHECK`, `ORPHAN-MERGE`, `GWIM`, `GET-OBJECT`) and
+[`verbs.zil`](https://github.com/corepunch/zilscript/blob/main/infocom/zork1/verbs.zil)
+(`THIS-IS-IT`). The behavior is reimplemented in Ledger's own Lua; no ZIL code
+is embedded.
+
+| Zork idea | Accounting behavior |
+|---|---|
+| `THIS-IS-IT` / `P-IT-OBJECT` | Remember `{entity, id}` after opening or uniquely identifying a record. `it`/`this` does not mean “the row at the old index.” |
+| Accessibility checks | Resolve the ID against current host data before opening. Deleted/unavailable records fail; no fallback to another row. |
+| Missing indirect object | `show posted documents for` asks which customer; the reply fills the saved customer slot without losing `posted`. |
+| `ORPHAN-MERGE` | Reply with `"Alpha AG"`, `customer "Alpha AG"`, a displayed row number or a pronoun. Ambiguous replies narrow the candidate list. Invalid replies retain the pending question. |
+| Typed `GWIM` | Infer an omitted customer from the remembered customer, a unique customer in scope, or the sole eligible customer. Infer an omitted opening target only when unambiguous. |
+| Scope restrictions | Ordinals refer to the displayed list; answers to a question stay inside its offered candidates. Explicit new commands can start a different search. |
+
+The accounting equivalent of choosing a suitable tool is choosing a compatible
+record for a relationship. Documents have a real `counterparty_id`; commands
+use that ID, never a name-based join. This supports `show documents for customer
+"Alpha AG"` and `open document for customer "Alpha GmbH"`. An ambiguous document
+or customer produces a question. Inference is visible in the result message
+(the customer name, or “inferred from context” for an opening).
+
+`this_is_it(entity, row)` is the engine's explicit object-memory operation.
+A unique query result becomes the remembered object. A list with multiple or
+zero matches preserves it; a resolved customer operand becomes the remembered
+object when its document query has no unique result. `open it` may therefore
+refer to a customer even after showing several documents. `open first` always
+uses the currently displayed list. Both revalidate record availability.
+
+| Real request/dialogue | Result |
+|---|---|
+| `find customer "Alpha AG"` → `show documents for it` → `only posted` → `open first` | Review that customer's posted documents and open the first displayed record. |
+| `zeige gebuchte Belege für` → `"Alpha"` → `den zweiten` | Ask for a customer, narrow matching names, use the second offered customer, retaining the posted filter. |
+| `найди клиента "Alpha AG"` → `покажи документы для этого клиента` → `только проведенные` | The same relationship and filter in Russian. |
+| `open customer "Alpha"` → `"Missing"` → `2` | Keep the ambiguity question after a failed answer, then open candidate two. |
+| `show items` → `open` | Open the only item if the result is unique; otherwise ask. |
+| `open customer "Alpha AG"` → `sort customers by debt descending` → `open it` | Reopen the same customer ID despite reordered rows. |
+| `show documents for` → `cancel` | Abandon the pending question. `abbrechen` and `отмена` also work. |
+| `show documents for` → `show items` | A complete new command replaces the pending question. |
+
+English `for`, German `für/fuer` and Russian `для` introduce the customer slot.
+Put document qualifiers before that slot: `show posted documents for customer
+"Alpha AG"`. The relationship grammar currently covers documents → counterparty;
+it does not claim invoice-specific, due-date, payment allocation or bank
+reconciliation semantics. Posting, paying and deleting remain unsupported.
+
+`apps/ledger/tests/assistant_dialogue_test.lua` contains the dialogue tables,
+host-failure/deletion/reassignment cases and a synthetic stress ledger with 120
+customers and 2,400 documents. Each customer-review cycle filters posted
+records, sorts them, opens one, changes scope and verifies that `it` still opens
+the same document ID. The native integration test also checks the relationship
+against the actual RU/DE demo document foreign keys and posted flags.

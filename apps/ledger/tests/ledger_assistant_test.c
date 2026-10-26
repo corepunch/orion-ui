@@ -31,12 +31,48 @@ static int count_rows(const char *name,int table) {
 static void set_text(script_page_t *page,const char *name,const char *text) {
   send_message(script_page_control(page,name),edSetText,0,(void*)text);
 }
+static void test_document_relation(script_page_t *page) {
+  result_node_t *docs = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
+  int party = 0, expected = 0;
+  for (result_node_t *n = docs; n; n = n->next) {
+    const db_document_t *doc = *(db_document_t **)n->data;
+    if (!party && doc->counterparty_id) party = doc->counterparty_id;
+  }
+  ASSERT(party != 0, "demo documents must reference a counterparty");
+  for (result_node_t *n = docs; n; n = n->next) {
+    const db_document_t *doc = *(db_document_t **)n->data;
+    if (doc->counterparty_id == party && doc->posted) expected++;
+  }
+  free_result_list(docs);
+  set_text(page, "command", "show customers");
+  ASSERT_TRUE(script_page_perform(page, "submit"));
+  database_t *assistant = get_database_by_name("assistant");
+  result_node_t *choices = (result_node_t *)send_db_message(assistant, dbFetch, 0, NULL);
+  int ordinal = 0, index = 0;
+  for (result_node_t *n = choices; n; n = n->next) {
+    char value[32] = "";
+    db_get_field_text(assistant, 0, *(void **)n->data, "record_id", value, sizeof(value));
+    index++;
+    if (atoi(value) == party) ordinal = index;
+  }
+  free_result_list(choices);
+  ASSERT(ordinal > 0, "related counterparty is available in the assistant scope");
+  char command[128];
+  snprintf(command, sizeof(command), "show posted documents for %d", ordinal);
+  set_text(page, "command", command);
+  ASSERT_TRUE(script_page_perform(page, "submit"));
+  ASSERT_STR_EQUAL(script_page_message(page), "");
+  ASSERT_EQUAL(count_rows("assistant", 0), expected);
+  set_text(page, "command", "sort by amount descending");
+  ASSERT_TRUE(script_page_perform(page, "submit"));
+  ASSERT_EQUAL(count_rows("assistant", 0), expected);
+}
 static void test_assistant(void) {
   TEST("assistant: Lua grammar and contextual commands, then actual RU/DE datasource queries");
   char error[2048] = "";
   lua_State *L = script_state_new(SHARE "/addons/assistant", "assistant-spec");
   ASSERT_NOT_NULL(L);
-  const char *specs[] = {"assistant_test.lua", "assistant_examples.lua"};
+  const char *specs[] = {"assistant_test.lua", "assistant_examples.lua", "assistant_dialogue_test.lua"};
   for (size_t i = 0; i < ARRAY_LEN(specs); i++) {
     char path[256];
     snprintf(path, sizeof(path), "apps/ledger/tests/%s", specs[i]);
@@ -64,6 +100,7 @@ static void test_assistant(void) {
     set_text(page, "command", "покажи документы");
     ASSERT_TRUE(script_page_perform(page, "submit"));
     ASSERT_EQUAL(count_rows("assistant", 0), count_rows("ib", TABLE_DOCUMENTS));
+    test_document_relation(page);
     script_page_close(page);
     ASSERT_NULL(get_database_by_name("assistant"));
   }

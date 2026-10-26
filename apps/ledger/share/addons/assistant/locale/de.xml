@@ -45,5 +45,19 @@
   <string source="Opened record: %s">Datensatz geöffnet: %s</string>
   <string source="Could not retrieve data: %s">Daten konnten nicht abgerufen werden: %s</string>
   <string source="Found: %d. Amounts are in the accounting currency.">Gefunden: %d. Beträge sind in der Buchhaltungswährung.</string>
-  <string source="Show debtors → over fifty thousand → sort by debt → open first. Also: show documents; only posted; find customer &quot;Name&quot;.">Zeige Schuldner → über fünfzigtausend → sortiere nach Schulden → öffne den ersten. Auch: zeige Belege; nur gebuchte; suche Kunde "Name".</string>
+  <string source="Try: show debtors; find customer &quot;Name&quot; → show documents for it → only posted → open first. Missing customer: show documents for. Cancel a question: cancel.">Beispiele: zeige Schuldner; suche Kunde "Name" → zeige Belege für ihn → nur gebuchte → öffne den ersten. Kunden erfragen: zeige Belege für. Rückfrage abbrechen: abbrechen.</string>
+  <string source="Document relations require a customer.">Für die Belegzuordnung ist ein Kunde erforderlich.</string>
+  <string source="Specify one object reference.">Geben Sie genau einen Objektverweis an.</string>
+  <string source="Only documents can be filtered by customer.">Nur Belege können nach Kunde gefiltert werden.</string>
+  <string source="Specify a nonempty name.">Geben Sie einen nicht leeren Namen an.</string>
+  <string source="That object type does not fit this request.">Dieser Objekttyp passt nicht zu dieser Anfrage.</string>
+  <string source="There is no object for this or it yet.">Es ist noch kein Objekt für diesen Verweis bekannt.</string>
+  <string source="The referenced record is no longer available.">Der referenzierte Datensatz ist nicht mehr verfügbar.</string>
+  <string source="No matching records were found.">Keine passenden Datensätze gefunden.</string>
+  <string source="Several records match. Which one? Use a row number or a quoted name.">Mehrere Datensätze passen. Welchen meinen Sie? Geben Sie eine Zeilennummer oder einen Namen in Anführungszeichen an.</string>
+  <string source="Which customer are these documents for? Use a row number or a quoted name.">Für welchen Kunden sind diese Belege? Geben Sie eine Zeilennummer oder einen Namen in Anführungszeichen an.</string>
+  <string source="Opened record: %s (inferred from context).">Datensatz geöffnet: %s (aus dem Kontext ermittelt).</string>
+  <string source="Found: %d. Customer: %s. Amounts are in the accounting currency.">Gefunden: %d. Kunde: %s. Beträge sind in der Buchhaltungswährung.</string>
+  <string source="Pending question cancelled.">Ausstehende Rückfrage abgebrochen.</string>
+  <string source="Answer the pending question or enter a new command.">Beantworten Sie die Rückfrage oder geben Sie einen neuen Befehl ein.</string>
 </strings>

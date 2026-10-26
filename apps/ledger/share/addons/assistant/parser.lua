@@ -154,6 +154,18 @@ function P.parse(text,context)
         local amount,last=P.number(words,i+n)
         if not amount then return nil,tr('Which amount should I use?') end
         ast.filters[#ast.filters+1]={field=field,op=value,value=amount}; i=last
+      elseif category=='relations' then
+        local parts={}
+        for j=i+n,#words do
+          local token=words[j]
+          parts[#parts+1]=token.quoted and ('"'..token.text..'"') or token.text
+        end
+        local ref,message=P.parse('open '..table.concat(parts,' '),{})
+        if not ref then return nil,message end
+        if ref.for_party or ref.entity and ref.entity~='counterparties' then
+          return nil,tr('Document relations require a customer.')
+        end
+        ast.for_party=ref; i=#words+1
       elseif category=='directions' then ast.direction=value; i=i+n
       elseif vocabulary.ordinals[w.text] then
         if ast.ordinal then return nil,tr('Specify one row number.') end
@@ -176,15 +188,18 @@ function P.parse(text,context)
     return nil,tr('Enter a command, for example: show debtors.')
   end
   ast.verb=ast.verb or 'list'
-  if ast.verb=='help' or ast.verb=='reset' then
+  if ast.verb=='help' or ast.verb=='reset' or ast.verb=='cancel' then
     if #words~=1 then return nil,tr('This command takes no parameters.') end
     return ast
   end
   if ast.verb=='open' then
+    if ast.name=='' then return nil,tr('Specify a nonempty name.') end
     if #ast.filters>0 or ast.field or ast.debtors or ast.direction then return nil,tr('Find objects first, then open one.') end
     if ast.ordinal and (ast.ordinal<1 or ast.ordinal%1~=0) then return nil,tr('Use a whole row number starting at 1.') end
-    if ast.pronoun and not ast.ordinal then ast.ordinal=context and context.selected end
-    if not ast.name and not ast.ordinal then return nil,tr('Which object should I open? Try: open first.'),{verb='open'} end
+    if (ast.pronoun and (ast.name or ast.ordinal)) or (ast.name and ast.ordinal) then
+      return nil,tr('Specify one object reference.')
+    end
+    if ast.for_party and ast.entity~='documents' then return nil,tr('Only documents can be filtered by customer.') end
     return ast
   end
   if ast.ordinal or ast.pronoun then return nil,tr('Use a row number with the open command.') end
@@ -195,10 +210,13 @@ function P.parse(text,context)
     local added=ast.filters; ast.filters=copy(previous.filters)
     for _,f in ipairs(added) do ast.filters[#ast.filters+1]=f end
     ast.debtors=ast.debtors or previous.debtors
+    ast.party_id=previous.party_id
     if ast.verb~='sort' then ast.sort=copy(previous.sort) end
   end
   if ast.debtors and not ast.entity then ast.entity='counterparties' end
   if not ast.entity then return nil,tr('What should I find: customers, documents or items?') end
+  if ast.for_party and ast.entity~='documents' then return nil,tr('Only documents can be filtered by customer.') end
+  if ast.name=='' then return nil,tr('Specify a nonempty name.') end
   if ast.debtors and ast.entity~='counterparties' then return nil,tr('Debt filters apply only to counterparties.') end
   for _, f in ipairs(ast.filters) do
     f.field=f.field or (ast.entity=='counterparties' and 'debt' or 'amount')
@@ -212,5 +230,25 @@ function P.parse(text,context)
     ast.sort={field=key,direction=ast.direction or 'desc'}
   elseif ast.direction then return nil,tr('Use the sort command to set a direction.') end
   return ast
+end
+function P.has_verb(text)
+  if type(text)~='string' or #text>2048 then return false end
+  local ok,words=pcall(tokenize,text)
+  if not ok or not words then return false end
+  for i=1,#words do if lookup(words,i)=='verbs' then return true end end
+  return false
+end
+
+-- An orphan answer is a noun phrase, never another verb or a command fragment.
+function P.reference(text)
+  if type(text)~='string' or #text>2040 then return nil end
+  local ok,words=pcall(tokenize,text)
+  if not ok or not words or #words==0 then return nil end
+  for i=1,#words do
+    local category=lookup(words,i)
+    if category=='verbs' or category=='relations' then return nil end
+  end
+  local ref=P.parse('open '..text,{})
+  if ref and (ref.entity or ref.name or ref.ordinal or ref.pronoun) then return ref end
 end
 return P
