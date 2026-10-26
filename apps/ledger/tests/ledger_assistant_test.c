@@ -203,6 +203,58 @@ static void test_assistant_companion(void) {
   PASS();
 }
 
+static void test_modeless_documents(void) {
+  TEST("Ledger MDI: two real documents, independent Save/Cancel, drafts and assistant isolation");
+  open_configuration("ru-2026");
+  int ids[2] = {0}, count = 0;
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, TABLE_DOCUMENTS, NULL);
+  for (result_node_t *n = rows; n && count < 2; n = n->next) {
+    const db_document_t *doc = *(db_document_t **)n->data;
+    const db_doc_type_t *type = (const db_doc_type_t *)send_db_message(g_ledger->cfg, dbFind, TABLE_DOC_TYPES, (void *)(intptr_t)doc->doc_type_id);
+    if (type && !strcmp(type->form, "document")) ids[count++] = doc->id;
+  }
+  free_result_list(rows); ASSERT_EQUAL(count, 2);
+  window_t *frame = create_window_from_form(&ledger_main_window_form, 10, 30, NULL, ledger_main_proc, 0, NULL);
+  ASSERT_NOT_NULL(frame);
+  window_t *client = get_window_item(frame, ID_MAIN_WINDOW_DOCUMENTS_CLIENT);
+  ASSERT_NOT_NULL(client);
+  ASSERT_TRUE(ledger_open_record("documents", ids[0])); window_t *a = mdi_active_document(client);
+  ASSERT_TRUE(ledger_open_record("documents", ids[1])); window_t *b = mdi_active_document(client);
+  ASSERT_NOT_NULL(a); ASSERT_NOT_NULL(b); ASSERT(a != b, "documents have separate windows");
+  ASSERT_TRUE(window_is_enabled(frame));
+  ASSERT(a->mdi_client == client && b->mdi_client == client, "both documents belong to the common MDI client");
+  ASSERT(db_dialog_database(a) != db_dialog_database(b), "each editor owns a separate working copy");
+  ASSERT_TRUE(ledger_open_record("documents", ids[0])); ASSERT(mdi_active_document(client) == a, "opening again activates the existing document");
+  send_message(get_window_item(a, ID_DOCUMENT_COMMENT), edSetText, 0, "Saved from document A");
+  send_message(get_window_item(b, ID_DOCUMENT_COMMENT), edSetText, 0, "Discarded from document B");
+  ASSERT_TRUE(db_form_save(a, false)); ASSERT_TRUE(is_window(a));
+  db_document_t *stored = (db_document_t *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)ids[0]);
+  ASSERT_STR_EQUAL(stored->comment, "Saved from document A");
+  send_message(get_window_item(a, ID_DOCUMENT_COMMENT), edSetText, 0, "Saved again from document A");
+  ASSERT_TRUE(db_form_save(a, false));
+  ASSERT_STR_EQUAL(stored->comment, "Saved again from document A");
+  window_t *cancel = get_window_item(b, ID_DOCUMENT_CANCEL);
+  send_message(b, evCommand, MAKEDWORD(cancel->id, btnClicked), cancel);
+  ASSERT_FALSE(is_window(b));
+  ASSERT_STR_EQUAL(stored->comment, "Saved again from document A");
+  ledger_open_assistant();
+  window_t *assistant = assistant_window(); ASSERT_NOT_NULL(assistant);
+  ASSERT(assistant->owner == frame && !assistant->mdi_client, "assistant is an owned tool window, not a document");
+  ASSERT_TRUE(assistant->flags & WINDOW_ALWAYSONTOP);
+  int before = count_rows("ib", TABLE_DOCUMENTS);
+  ledger_command(ID_DOC_NEW);
+  window_t *draft = mdi_active_document(client); ASSERT_NOT_NULL(draft); ASSERT(draft != a, "new document opens independently");
+  ASSERT_EQUAL(count_rows("ib", TABLE_DOCUMENTS), before);
+  cancel = get_window_item(draft, ID_DOCUMENT_CANCEL);
+  send_message(draft, evCommand, MAKEDWORD(cancel->id, btnClicked), cancel);
+  ASSERT_EQUAL(count_rows("ib", TABLE_DOCUMENTS), before);
+  cancel = get_window_item(a, ID_DOCUMENT_CANCEL);
+  send_message(a, evCommand, MAKEDWORD(cancel->id, btnClicked), cancel);
+  ASSERT_FALSE(is_window(a));
+  destroy_window(frame);
+  PASS();
+}
+
 int main(void) {
   TEST_START("Ledger assistant"); test_env_init();
   DB_CLASS(db_schema_xml); DB_CLASS(ledger_ib);
@@ -211,6 +263,7 @@ int main(void) {
   ledger_addons_init();
   test_assistant();
   test_assistant_companion();
+  test_modeless_documents();
   ledger_close_assistant(); ledger_script_close();
   unregister_database("ib"); unregister_database("cfg");
   destroy_database(state.ib); destroy_database(state.cfg);

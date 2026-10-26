@@ -6,8 +6,8 @@ nav_exclude: true
 
 # Ledger chrome
 
-Status: the palette and title row are done. Document tabs and the 1C gaps
-below are next.
+Status: the palette, title row and Office-style MDI documents are implemented.
+The 1C-specific gaps below remain.
 
 ![Porcelain](screenshots/ledger-chrome/porcelain-light.jpg)
 ![Porcelain Dark](screenshots/ledger-chrome/porcelain-dark.jpg)
@@ -58,22 +58,15 @@ sidebar and the band shared one colour. Now, as in Finder and Mail:
 - **Window controls** stay at the trailing end, as on Windows. A Finder-style
   leading placement would be a theme metric, not an app option.
 
-## Next: documents as tabs (MDI)
+## Documents as MDI windows
 
-1C 8.3 opens every form in a tab of the main window: journals, documents and
-reports. Ledger opens documents as modal dialogs, so only one is open at a
-time.
-
-- The host gets a **document tab strip** under the title row. The section page
-  is the pinned first tab, and documents and reports open beside it, captioned
-  like the document ("Реализация товаров РТ-0001 от 10.03.2003"). This reuses
-  the TabView-owns-windows model from [page docking](page-docking.md).
-- **Hosted editing contexts:** `db_form_open(host, form, record_id, opts)`
-  creates the same form as `show_db_dialog_opts`, docked as a tab, with the
-  same editing context. OK closes the tab; a modified tab asks before closing.
-  Modal dialogs stay for small row editors.
-- Tab activation joins the navigation history, so Back returns to the
-  previous document.
+Ledger uses the selected Office 97 / Excel 2003 model: several modeless document
+windows inside one common frame. The MDI client confines their paint and hit
+testing to the document workspace. Window commands cycle, cascade, tile and close
+documents. Each editor owns an independent working copy; Save keeps it open and
+Cancel discards only its own work. Small detail editors remain modal. Clippy is
+an owned tool window above the documents, scoped to the application. See
+[the window architecture](ledger-office-windows.md).
 
 ## Next: 1C screens
 
@@ -82,4 +75,4 @@ time.
 | **Остатки товаров** (Бухгалтерия 3.0 report) | No warehouses. Quantities exist on document lines and entries, but no stock report. | `Склады` catalog; warehouse on goods documents; a stock register (quantity and amount by warehouse and item); a report with a date, grouping by warehouse, group totals and a Сформировать/Настройки bar; a balance-entry assistant |
 | **Начисление зарплаты** | Payroll document: employee, position, amount, withheld, contributions, net; Fill | "Зарплата за" period field; department; days and hours worked; line numbers; separate Записать / Провести / Провести и закрыть; Дт/Кт entries view; Начислить and Удержать kinds; Выплатить (a payment statement based on the document); amounts that drill down |
 | **Заказ-наряд** | — | This screen is from **1C:Альфа-Авто**, an auto-service configuration, not Бухгалтерия. It covers customer car, VIN, mileage, works in norm-hours, parts, customer materials and piecework split. It fits a separate Ledger configuration. |
-| Shared form chrome | Modal dialogs with OK and Post / Cancel | Tabs; favourites; a command bar with the default Провести и закрыть; Создать на основании; per-document Отчеты; attachments |
+| Shared form chrome | MDI document editors with OK and Post / Cancel; modal detail dialogs | Favourites; a command bar with the default Провести и закрыть; Создать на основании; per-document Отчеты; attachments |

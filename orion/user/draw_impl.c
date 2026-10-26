@@ -591,6 +591,8 @@ void composite_root_windows(void) {
     const theme_t *theme = get_theme();
     layers[count++] = (R_CompositeLayer){
       .tex = surf->tex, .w = surf->w, .h = surf->h, .frame = w->frame,
+      .clipped = w->mdi_client != NULL,
+      .clip = w->mdi_client ? mdi_client_screen_rect(w->mdi_client) : R(0, 0, 0, 0),
       .corner_radius = (float)window_composition_attr(w, WCA_CORNERS) * axGetScaling(),
       .shadow = window_composition_attr(w, WCA_SHADOW) != 0,
       .shadow_radius = (float)theme->window.corner_radius, .shadow_blur = (float)theme->window.shadow.blur,

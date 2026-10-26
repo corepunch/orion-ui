@@ -326,6 +326,7 @@ void move_window(window_t *win, int x, int y) {
   win->frame.x = x;
   win->frame.y = y;
   send_message(win, evMove, 0, NULL);
+  mdi_layout_clients(win);
   // Root windows are already baked into surface_tex; only the compositor
   // needs to blit them at the new frame. Children share the parent FBO.
   if (win->parent) invalidate_window(win);
@@ -346,6 +347,8 @@ void resize_window(window_t *win, int new_w, int new_h) {
   // dimensions while the parent's border has already moved.
   send_message(win, evResize, 0, NULL);
   window_layout_sync(win);
+
+  mdi_layout_clients(win);
 
   invalidate_window(win);
 }
@@ -390,6 +393,7 @@ void set_application_workspace(window_t *owner, const irect16_t *area) {
 }
 
 static bool window_workspace_rect(window_t *win, irect16_t *area) {
+  if (win->mdi_client) { *area = mdi_client_screen_rect(win->mdi_client); return area->w > 0 && area->h > 0; }
   *area = R(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth),
                          ui_get_system_metrics(kSystemMetricScreenHeight));
   if (!registered_workspace_rect(win->hinstance, area))
@@ -582,6 +586,16 @@ void clear_window_children(window_t *win) {
 
 // Destroy a window
 void destroy_window(window_t *win) {
+  database_t *window_database = win->database_context;
+  db_message_retain(window_database);
+  mdi_forget_document(win);
+  if (g_ui_runtime.modal_window == win) g_ui_runtime.modal_window = NULL;
+  for (;;) {
+    window_t *owned = g_ui_runtime.windows;
+    while (owned && owned->owner != win && owned->mdi_client != win) owned = owned->next;
+    if (!owned) break;
+    destroy_window(owned);
+  }
   bool was_maximized = window_is_maximized(win);
   window_t *dock_parent = win->dock ? win->parent : NULL;
   window_t *root = get_root_window(win);
@@ -634,6 +648,7 @@ void destroy_window(window_t *win) {
     if (window_has_state(w, WINDOW_STATE_VISIBLE))
       invalidate_window(w);
   }
+  db_message_release(window_database);
 }
 
 // Find window at coordinates
@@ -656,6 +671,7 @@ window_t *find_window(int x, int y) {
   window_t *last = NULL;
   for (window_t *win = g_ui_runtime.windows; win; win = win->next) {
     if (!window_has_state(win, WINDOW_STATE_VISIBLE)) continue;
+    if (win->mdi_client && !rect_contains_point(mdi_client_screen_rect(win->mdi_client), (ipoint16_t){x, y})) continue;
     if (CONTAINS(x, y, win->frame.x, win->frame.y, win->frame.w, win->frame.h)) {
       window_t *hit = win;
       int t = titlebar_height(win);
@@ -754,6 +770,7 @@ void set_capture(window_t *win) {
 
 // Set focused window
 void set_focus(window_t* win) {
+  if (win && get_root_window(win)->mdi_client) mdi_activate_document(get_root_window(win));
   if (win == g_ui_runtime.focused) {
     // A newly constructed child can already hold focus before its container selects it.
     for (window_t *p = win ? win->parent : NULL; p; p = p->parent)
@@ -1323,7 +1340,7 @@ static void create_form_children(window_t *parent, const form_ctrl_def_t *childr
 }
 
 static bool window_contains_window(window_t *owner, window_t *child) {
-  for (; child; child = child->parent) if (child == owner) return true;
+  for (; child; child = child->parent ? child->parent : window_lifetime_parent(child)) if (child == owner) return true;
   return false;
 }
 
@@ -1360,8 +1377,9 @@ void show_window(window_t *win, bool visible) {
     }
     if (window_contains_window(win, g_ui_runtime.tracked)) track_mouse(NULL);
   } else {
+    window_set_state(win, WINDOW_STATE_VISIBLE, true);
     move_to_top(win);
-    if (!(win->flags & WINDOW_NOACTIVATE))
+    if (!(win->flags & WINDOW_NOACTIVATE) && window_is_visible(win) && window_is_enabled(win))
       set_focus(win);
   }
   window_set_state(win, WINDOW_STATE_VISIBLE, visible);

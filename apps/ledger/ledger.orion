@@ -18,7 +18,7 @@
 
   <menus var="kLedgerMenus" count="kLedgerMenuCount">
     <menu name="file" label="File">
-      <item name="save" label="Save Infobase" shortcut="Ctrl+S" />
+      <item name="save" label="Save" shortcut="Ctrl+S" />
       <Separator />
       <item name="organization" label="Organization Details..." />
       <item name="configuration" label="Select Configuration..." />
@@ -89,6 +89,14 @@
       <item name="print" label="Print Report Forms" shortcut="Ctrl+Shift+P" />
       <Separator />
       <item name="card" label="Account Card" shortcut="Ctrl+K" />
+    </menu>
+    <menu name="window" label="Window">
+      <item name="next_document" label="Next Document" shortcut="Ctrl+F6" />
+      <item name="previous_document" label="Previous Document" shortcut="Ctrl+Shift+F6" />
+      <item name="close_document" label="Close Document" shortcut="Ctrl+F4" />
+      <Separator />
+      <item name="cascade" label="Cascade Documents" />
+      <item name="tile" label="Tile Documents" />
     </menu>
     <menu name="help" label="Help">
       <item name="about" label="About Ledger" />
@@ -598,6 +606,7 @@
         <Page form="reports_page" command="view.reports" />
         <Page form="config_page" command="view.config" />
       </ActivityBar>
+      <MDIClient name="documents_client" />
     </form>
 
     <!-- Document journal: documents with their lines and entries below. -->

@@ -1858,6 +1858,13 @@ void R_Composite(const R_CompositeLayer *layers, int count, uint32_t clear_color
   for (int i = 0; i < count; i++) {
     const R_CompositeLayer *l = &layers[i];
     if (!l->tex) continue;
+    if (l->clipped) {
+      if (l->clip.w <= 0 || l->clip.h <= 0) continue;
+      float sx = (float)screen_w / logical_w, sy = (float)screen_h / logical_h;
+      glEnable(GL_SCISSOR_TEST);
+      glScissor((int)(l->clip.x * sx), screen_h - (int)((l->clip.y + l->clip.h) * sy),
+                (int)(l->clip.w * sx), (int)(l->clip.h * sy));
+    } else glDisable(GL_SCISSOR_TEST);
     float radius = MIN(l->corner_radius, (float)MIN(l->w, l->h) / 2);   // physical pixels
     if (l->shadow)
       draw_rect_shadow(l->frame, l->shadow_radius, l->shadow_blur, l->shadow_offset, l->shadow_color);
@@ -1865,6 +1872,7 @@ void R_Composite(const R_CompositeLayer *layers, int count, uint32_t clear_color
     if (l->border && draw_border) draw_border(l);
   }
 
+  glDisable(GL_SCISSOR_TEST);
   glDisable(GL_BLEND);
   glEnable(GL_DEPTH_TEST);
   if (composed) {

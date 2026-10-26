@@ -14,8 +14,29 @@ typedef struct {
   int               fk_value;
   winproc_t         hook;
   void             *synced;     // the record as last shown, to spot what the database changed
+  bool modeless;
+  db_form_saved_fn saved;
+  void *saved_userdata;
   struct { uint32_t ctrl_id; int table_id; } sources[8];  // polymorphic combos' current tables
 } db_dlg_ctx_t;
+
+static void db_dialog_finish(window_t *win, db_dlg_ctx_t *ctx, bool save) {
+  if (!ctx->modeless) { end_dialog(win, save ? 1 : 0); return; }
+  if (save) {
+    char error[512];
+    if (!db_edit_context_save(ctx->db, error, sizeof(error))) {
+      message_box(win, error, ui_tr("Save"), MB_OK);
+      return;
+    }
+  }
+  int id = ctx->record_id;
+  db_form_saved_fn callback = save ? ctx->saved : NULL;
+  void *userdata = ctx->saved_userdata;
+  database_t *previous = db_set_message_context(ctx->db->edit_parent);
+  destroy_window(win);
+  if (callback) callback(id, userdata);
+  db_set_message_context(previous);
+}
 
 static size_t db_field_size(const db_field_meta_t *f) {
   switch (f->type) {
@@ -183,6 +204,7 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
       }
       if (notif == edUpdate && ctx->hook) return ctx->hook(win, msg, wparam, lparam);
       if (notif == edUpdate) {
+        if (ctx->modeless) { db_form_save(win, true); return true; }
         if (ctx->def->bindings) {
           dialog_pull(win, ctx->record_buf,
                       ctx->def->bindings, ctx->def->binding_count);
@@ -195,7 +217,7 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
             MAKEDWORD(ctx->def->db_table_id, ctx->record_id),
             ctx->record_buf);
         }
-        end_dialog(win, 1);
+        db_dialog_finish(win, ctx, true);
         return true;
       }
       if (notif != btnClicked) return ctx->hook ? ctx->hook(win, msg, wparam, lparam) : false;
@@ -203,6 +225,7 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
       if (!src) return false;
       if (form_dispatch_target_action(win, ctx->def, src)) return true;
       if (ctx->def->ok_id && src->id == ctx->def->ok_id) {
+        if (ctx->modeless) { db_form_save(win, true); return true; }
         if (ctx->def->bindings) {
           dialog_pull(win, ctx->record_buf,
                       ctx->def->bindings, ctx->def->binding_count);
@@ -215,15 +238,42 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
             MAKEDWORD(ctx->def->db_table_id, ctx->record_id),
             ctx->record_buf);
         }
-        end_dialog(win, 1);
+        db_dialog_finish(win, ctx, true);
         return true;
       }
       if (ctx->def->cancel_id && src->id == ctx->def->cancel_id) {
-        end_dialog(win, 0);
+        db_dialog_finish(win, ctx, false);
         return true;
       }
       return ctx->hook ? ctx->hook(win, msg, wparam, lparam) : false;
     }
+    case evClose:
+      if (ctx && ctx->modeless) {
+        dialog_pull(win, ctx->record_buf, ctx->def->bindings, ctx->def->binding_count);
+        if (ctx->db->dirty || memcmp(ctx->record_buf, ctx->synced, ctx->def->db_record_size)) {
+          uint32_t choice = message_box(win, ui_tr("Save changes to this document?"), ui_tr("Save"), MB_YESNOCANCEL);
+          if (choice == IDCANCEL) return true;
+          if (choice == IDYES) {
+            db_form_save(win, true);
+            return true;
+          }
+        }
+        db_dialog_finish(win, ctx, false);
+        return true;
+      }
+      return false;
+    case evDestroy:
+      if (ctx && ctx->modeless) {
+        if (ctx->hook) ctx->hook(win, msg, wparam, lparam);
+        win->database_context = NULL;
+        destroy_database(ctx->db);
+        free(ctx->record_buf);
+        free(ctx->synced);
+        free(ctx);
+        win->userdata = NULL;
+        return true;
+      }
+      return ctx && ctx->hook ? ctx->hook(win, msg, wparam, lparam) : false;
     default:
       return ctx && ctx->hook ? ctx->hook(win, msg, wparam, lparam) : false;
   }
@@ -264,6 +314,87 @@ void *db_dialog_record(window_t *win) {
     return NULL;
   }
   return ((db_dlg_ctx_t *)root->userdata)->record_buf;
+}
+
+database_t *db_dialog_database(window_t *win) {
+  window_t *root = win ? get_root_window(win) : NULL;
+  return root && root->proc == dialog_db_proc && root->userdata ? ((db_dlg_ctx_t *)root->userdata)->db : NULL;
+}
+
+bool db_form_save(window_t *win, bool close_after_save) {
+  if (!is_window(win) || win->proc != dialog_db_proc || !win->userdata) return false;
+  db_dlg_ctx_t *ctx = win->userdata;
+  if (!ctx->modeless) return false;
+  dialog_pull(win, ctx->record_buf, ctx->def->bindings, ctx->def->binding_count);
+  if (!send_db_message(ctx->db, dbUpdate, (uint32_t)ctx->def->db_table_id, ctx->record_buf)) return false;
+  if (close_after_save) { db_dialog_finish(win, ctx, true); return !is_window(win); }
+  char error[512];
+  if (!db_edit_context_save(ctx->db, error, sizeof(error))) {
+    message_box(win, error, ui_tr("Save"), MB_OK);
+    return false;
+  }
+  database_t *previous = db_set_message_context(ctx->db->edit_parent);
+  if (ctx->saved) ctx->saved(ctx->record_id, ctx->saved_userdata);
+  bool reset = db_edit_context_reset(ctx->db);
+  db_set_message_context(previous);
+  if (reset) send_message(win, evCreate, 0, ctx);
+  return reset;
+}
+
+window_t *db_form_open(form_def_t const *def, const char *title, window_t *owner,
+                       int record_id, const db_dialog_opts_t *opts, db_form_saved_fn saved, void *userdata) {
+  if (!def || !def->db_name || !def->db_table || !def->db_fields || !def->db_record_size) return NULL;
+  database_t *store = get_database_by_name(def->db_name);
+  if (!store) return NULL;
+  for (window_t *win = g_ui_runtime.windows; record_id > 0 && win; win = win->next) {
+    db_dlg_ctx_t *ctx = win->proc == dialog_db_proc ? win->userdata : NULL;
+    if (ctx && ctx->modeless && ctx->def == def && ctx->db->edit_parent == store && ctx->record_id == record_id) {
+      show_window(win, true);
+      return win;
+    }
+  }
+  db_dlg_ctx_t *ctx = calloc(1, sizeof(*ctx));
+  if (!ctx) return NULL;
+  ctx->def = def;
+  ctx->db = db_edit_context_create(store);
+  ctx->record_buf = calloc(1, def->db_record_size);
+  ctx->synced = calloc(1, def->db_record_size);
+  ctx->record_id = record_id;
+  ctx->hook = opts ? opts->hook : NULL;
+  ctx->modeless = true;
+  ctx->saved = saved;
+  ctx->saved_userdata = userdata;
+  if (!ctx->db || !ctx->record_buf || !ctx->synced) goto failed;
+  database_t *previous = db_set_message_context(ctx->db);
+  if (!record_id) {
+    send_db_message(ctx->db, dbInitRecord, (uint32_t)def->db_table_id, ctx->record_buf);
+    if (opts) db_apply_defaults(def, ctx->record_buf, opts->defaults);
+    void *record = (void *)send_db_message(ctx->db, dbInsert, (uint32_t)def->db_table_id, ctx->record_buf);
+    if (!record) { db_set_message_context(previous); goto failed; }
+    const db_field_meta_t *key = def->db_fields;
+    ctx->record_id = *(int *)((char *)record + key[0].offset);
+  }
+  form_def_t form = *def;
+  form.flags &= ~WINDOW_DIALOG;
+  form.flags |= WINDOW_MAXIMIZEBOX;
+  irect16_t frame = R(0, 0, form.width, form.height ? form.height : 500);
+  adjust_window_rect(&frame, form.flags);
+  form.width = frame.w; form.height = frame.h;
+  window_t *win = create_window_from_form(&form, CW_USEDEFAULT, CW_USEDEFAULT, NULL, dialog_db_proc,
+                                         owner ? get_root_window(owner)->hinstance : 0, ctx);
+  db_set_message_context(previous);
+  if (!win) return NULL;
+  win->database_context = ctx->db;
+  if (owner && owner->role == WINDOW_ROLE_MDICLIENT) mdi_attach_document(win, owner);
+  else if (owner) window_set_owner(win, owner);
+  if (title) set_window_title(win, title);
+  show_window(win, true);
+  return win;
+failed:
+  fprintf(stderr, "[dialog] document context creation failed form=%s\n", def->name);
+  fflush(stderr);
+  destroy_database(ctx->db); free(ctx->record_buf); free(ctx->synced); free(ctx);
+  return NULL;
 }
 
 uint32_t show_db_dialog_opts(form_def_t const *def, const char *title, window_t *parent,
@@ -484,7 +615,7 @@ static int calculate_form_height(const form_def_t *def) {
 
 // Shared modal message loop.  Runs until the dialog window is destroyed or the
 // application exits.  Forces a full repaint after the dialog is gone.
-static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
+static uint32_t run_dialog_loop(window_t *dlg, window_t *parent, window_t *previous_focus) {
   // Guard against the window being destroyed during evCreate
   // (e.g. end_dialog called from the window proc's create handler).
   if (!is_window(dlg)) return 0;
@@ -492,7 +623,11 @@ static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
   ui_event_t event;
   window_t *modal_parent = parent ? get_root_window(parent) : NULL;
   window_t *prev_modal_overlay_parent = g_ui_runtime.modal_overlay_parent;
+  window_t *previous_modal = g_ui_runtime.modal_window;
+  bool owner_was_enabled = modal_parent && !(modal_parent->flags & WINDOW_STATE_DISABLED);
   dlg->userdata2 = &result;
+  if (modal_parent) window_set_owner(dlg, modal_parent);
+  g_ui_runtime.modal_window = dlg;
   if (modal_parent) {
     g_ui_runtime.modal_overlay_parent = modal_parent;
     enable_window(modal_parent, false);
@@ -512,10 +647,12 @@ static uint32_t run_dialog_loop(window_t *dlg, window_t *parent) {
   // dialog state does not outlive the call site.
   if (is_window(dlg))
     destroy_window(dlg);
-  if (modal_parent) {
-    enable_window(modal_parent, true);
-    set_focus(modal_parent);
-    g_ui_runtime.modal_overlay_parent = prev_modal_overlay_parent;
+  g_ui_runtime.modal_window = is_window(previous_modal) ? previous_modal : NULL;
+  g_ui_runtime.modal_overlay_parent = is_window(prev_modal_overlay_parent) ? prev_modal_overlay_parent : NULL;
+  if (is_window(modal_parent)) {
+    enable_window(modal_parent, owner_was_enabled);
+    window_t *focus = is_window(previous_focus) ? previous_focus : modal_parent;
+    if (window_is_enabled(focus) && window_is_visible(focus)) set_focus(focus);
   }
   // Force a clean stencil rebuild + full repaint to clear the area the dialog
   // occupied.  destroy_window's recursive child teardown re-queues
@@ -542,12 +679,13 @@ uint32_t show_dialog_ex(char const *title,
                         void *param)
 {
   const char *dialog_title = title ? title : "";
+  window_t *previous_focus = g_ui_runtime.focused;
   irect16_t dlg_frame = {0, 0, width, height};
   dlg_frame = center_window_rect(dlg_frame, parent);
   // Dialogs inherit their owner's hinstance so they belong to the same app.
   hinstance_t hinstance = parent ? get_root_window(parent)->hinstance : 0;
   window_t *dlg = create_window_proc(dialog_title, flags, &dlg_frame, NULL, proc, hinstance, param);
-  return run_dialog_loop(dlg, parent);
+  return run_dialog_loop(dlg, parent, previous_focus);
 }
 
 uint32_t show_dialog(char const *title,
@@ -574,6 +712,7 @@ uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
                                   winproc_t proc, void *param)
 {
   if (!def || !proc) return 0;
+  window_t *previous_focus = g_ui_runtime.focused;
 
   // Merge dialog-specific flags into a local copy of the definition.
   form_def_t dlg_def = *def;
@@ -599,6 +738,7 @@ uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
   window_t *dlg = create_window_from_form(&dlg_def, 0, 0,
                                           NULL, proc, hinstance, param);
   if (!dlg) return 0;
+  if (parent) dlg->database_context = get_root_window(parent)->database_context;
 
   // If auto-height is needed, measure the actual size and reposition
   if (need_auto_height) {
@@ -625,7 +765,7 @@ uint32_t show_dialog_from_form_ex(form_def_t const *def, char const *title,
   dlg->frame.x = centered.x;
   dlg->frame.y = centered.y;
 
-  return run_dialog_loop(dlg, parent);
+  return run_dialog_loop(dlg, parent, previous_focus);
 }
 
 uint32_t show_dialog_from_form(form_def_t const *def, char const *title,

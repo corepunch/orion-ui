@@ -63,7 +63,7 @@ lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam)
   }
   if (table_id == TABLE_DOCUMENTS && msg != dbDelete) {
     const db_document_t *doc = msg == dbInsert ? (const db_document_t *)result : (const db_document_t *)lparam;
-    if (!recalculate(db, doc->id, true)) {
+    if (!recalculate(db, doc->id, !db->edit_parent)) {
       if (scope) db_schema_xml(db, dbRevertChanges, 0, NULL);
       return 0;
     }

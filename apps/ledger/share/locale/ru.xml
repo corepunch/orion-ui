@@ -2,7 +2,7 @@
 <strings language="ru" decimal="," group=" " date="dd.MM.yyyy">
   <string source="File" where="menu">Файл</string>
   <string source="Assistant..." where="menu">Помощник...</string>
-  <string source="Save Infobase" where="menu">Сохранить информационную базу</string>
+  <string source="Save Infobase" obsolete="true">Сохранить информационную базу</string>
   <string source="Organization Details..." where="menu">Сведения об организации...</string>
   <string source="Select Configuration..." where="menu">Выбрать конфигурацию...</string>
   <string source="Language..." where="menu">Язык...</string>
@@ -377,6 +377,13 @@
   <string source="Show or hide the sidebar (Ctrl+B)" where="main_window">Показать или скрыть панель разделов (Ctrl+B)</string>
   <string source="Back (Alt+Left)" where="main_window">Назад (Alt+Влево)</string>
   <string source="Forward (Alt+Right)" where="main_window">Вперёд (Alt+Вправо)</string>
+  <string source="Save" where="menu">Сохранить</string>
+  <string source="Window" where="menu">Окно</string>
+  <string source="Next Document" where="menu">Следующий документ</string>
+  <string source="Previous Document" where="menu">Предыдущий документ</string>
+  <string source="Close Document" where="menu">Закрыть документ</string>
+  <string source="Cascade Documents" where="menu">Расположить каскадом</string>
+  <string source="Tile Documents" where="menu">Расположить рядом</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>

@@ -6,9 +6,38 @@ nav_exclude: true
 
 # Editing contexts: design note
 
-**Status: proposal.** Nothing here is implemented yet. The note says what is wrong
-with change scopes today and proposes editing contexts after EOF's
-`EOEditingContext`, so that the work can be reviewed before it starts.
+**Status: partially implemented for modeless database forms.** `db_form_open()`
+uses independent `db_schema_xml` working copies, snapshot conflict checks and an
+atomic delta save. Ledger's MDI document editors use this API. The overlay design
+below remains a proposal; it is not the current storage implementation.
+
+## Implemented document contexts
+
+`db_edit_context_create(store)` creates a full working copy and an opening
+snapshot using the same schema and database class. `db_edit_context_save(ctx,
+error, size)` validates changed/deleted rows, then applies the delta to the parent
+through its class messages inside one change scope. A conflict or rejected write
+applies no changes. Destroying the context drops its unsaved work. Reserved
+integer keys come from the store, so cancelled drafts can leave harmless gaps.
+
+`db_edit_context_reset(ctx)` reloads the committed parent while preserving the
+database handle. After a successful save, callers must reset or dispose of the
+context before further editing; `db_form_save(window, false)` performs that reset
+and refreshes controls. Record pointers inside the context must be fetched again
+after reset. Contexts borrow their parent, which must outlive them.
+
+Window message dispatch selects the editor's database context for named database
+lookups; nested modal detail editors inherit it. Journals and the assistant use
+the registered committed database. Existing synchronous Lua/import transactions
+and modal-only forms retain the stack API below. They have not migrated to
+copy-on-write contexts or change notifications.
+
+The implementation supports `db_schema_xml` and classes that delegate its storage
+messages, with integer-keyed stored tables. It copies the infobase at open/reset
+and retains a baseline: memory and initial copying cost grow with database size.
+Saving also uses the parent's full snapshot transaction. The sparse overlay,
+O(changes) revert and automatic view notifications proposed below are future work.
+See [Ledger windows](ledger-office-windows.md).
 
 ## How change scopes work today
 
@@ -22,7 +51,7 @@ with change scopes today and proposes editing contexts after EOF's
 - `dbRevertChanges` pops it and restores every table to it. Surviving records keep
   their addresses.
 
-Everything that edits uses this stack:
+The remaining synchronous/modal users use this stack:
 
 | User | Code | Use of the stack |
 |---|---|---|
@@ -57,9 +86,10 @@ Everything that edits uses this stack:
    (`after_save()` → `ledger_refresh_views()`, `tvnChanged`). Each new editor has to
    remember them.
 
-Points 1 to 3 are latent: they bite only when an editor that keeps its scope
-across user interaction stops being modal. Point 4 costs every document dialog
-today, and it grows with the infobase.
+Points 1 to 3 apply when an editor that keeps its scope
+across user interaction stops being modal without an independent working copy.
+Modeless forms now have that isolation. The copying cost still grows with the
+infobase.
 
 ## Proposal: editing contexts
 

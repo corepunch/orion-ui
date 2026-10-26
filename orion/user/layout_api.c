@@ -148,4 +148,5 @@ void window_layout_sync(window_t *win) {
   }
   irect16_t cr = get_client_rect(win);
   layout_arrange_window(win, &cr);
+  mdi_layout_clients(win);
 }

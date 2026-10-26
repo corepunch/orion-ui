@@ -259,6 +259,9 @@ void move_to_top(window_t* _win) {
 
   window_t *win = get_root_window(_win);
   if (!win) return;
+  window_t *lifetime_parent = window_lifetime_parent(win);
+  if (lifetime_parent) move_to_top(lifetime_parent);
+  if (win->mdi_client) mdi_activate_document(win);
   if (g_ui_runtime.running && !window_has_surface(win)) invalidate_window(win);
 
   if (win->flags & WINDOW_ALWAYSINBACK) {
@@ -300,7 +303,7 @@ void move_to_top(window_t* _win) {
       // Insert before the first system (h==0) ALWAYSONTOP window so that
       // system ALWAYSONTOP windows always stay visually on top.
       window_t *prev = NULL, *cur = *head;
-      while (cur && !(cur->hinstance == 0 && (cur->flags & WINDOW_ALWAYSONTOP))) {
+      while (cur && !(cur->hinstance == 0 && !window_lifetime_parent(cur) && (cur->flags & WINDOW_ALWAYSONTOP))) {
         prev = cur;
         cur  = cur->next;
       }
@@ -308,6 +311,7 @@ void move_to_top(window_t* _win) {
       if (prev) prev->next = win;
       else      *head      = win;
     }
+    window_order_owned();
     request_composite();
     return;
   }
@@ -380,7 +384,7 @@ void move_to_top(window_t* _win) {
   // ALWAYSONTOP window so the shell menu bar / popups stay globally on top.
   window_t *ins_prev = NULL;
   cur = g_ui_runtime.windows;
-  while (cur && !(cur->hinstance == 0 && (cur->flags & WINDOW_ALWAYSONTOP))) {
+  while (cur && !(cur->hinstance == 0 && !window_lifetime_parent(cur) && (cur->flags & WINDOW_ALWAYSONTOP))) {
     ins_prev = cur;
     cur = cur->next;
   }
@@ -390,6 +394,7 @@ void move_to_top(window_t* _win) {
   if (ins_prev) ins_prev->next = group_head;
   else          g_ui_runtime.windows        = group_head;
 
+  window_order_owned();
   request_composite();
 }
 
@@ -731,6 +736,10 @@ void dispatch_message(ui_event_t *msg) {
     }
 
     case kEventWindowClosed:
+      if (g_ui_runtime.focused) {
+        window_t *frame = window_owner_root(g_ui_runtime.focused);
+        if (frame && send_message(frame, evClose, 0, NULL)) break;
+      }
       g_ui_runtime.running = false;
       break;
 

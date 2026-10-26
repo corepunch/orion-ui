@@ -247,7 +247,10 @@ void ledger_show_assistant(void) {
   assistant_page = page;
   window_t *win = script_page_create_hook(page, NULL, ledger_assistant_hook);
   if (!win) { ledger_close_assistant(); return; }
-  win->hinstance = g_ledger->hinstance;
+  if (g_ledger->main_win && !window_set_owner(win, g_ledger->main_win)) {
+    ledger_close_assistant();
+    return;
+  }
   ledger_position_assistant();
   show_window(win, true);
   set_focus(is_window(focused) ? focused : g_ledger->main_win);

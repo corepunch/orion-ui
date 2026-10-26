@@ -492,6 +492,15 @@ Lohnsteuer is a flat rate above the monthly basic allowance instead of the
 official tax tables, and the solidarity surcharge and church tax are left
 out. Anlagenzugang posts the net cost; input tax on assets is an Umbuchung.
 
+## Documents and assistant
+
+Document editors use the Office 97 / Excel 2003 MDI model: multiple modeless
+documents inside one frame, with independent Save/Cancel state. The Window menu
+cycles, arranges and closes them; Ctrl+S saves the active document without closing
+it. Clippy starts in an owned tool window with a conversation bubble. See
+[the window architecture](../../docs/ledger-office-windows.md) for lifecycle,
+modality and editing-context details.
+
 ## Application icon
 
 Ledger uses the approved A6 identity: an ivory folded **L** on crimson.

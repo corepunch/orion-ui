@@ -35,6 +35,7 @@ static void dock_place(window_t *win, irect16_t frame) {
 static void dock_refresh(window_t *host) {
   if (!host || (host->dock_host && host->dock_host->busy)) return;
   dock_layout(host, get_client_rect(host));
+  mdi_layout_clients(host);
   send_message(host, evDockChanged, 0, NULL);
   invalidate_window(host);
 }

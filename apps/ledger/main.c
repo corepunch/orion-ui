@@ -146,6 +146,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
 
 void gem_shutdown(void) {
   if (!g_ledger) return;
+  // Editors borrow the infobase; release their working contexts first.
+  if (is_window(g_ledger->main_win)) destroy_window(g_ledger->main_win);
   ledger_close_assistant();
   destroy_database(g_ledger->ib);  // saves when modified
   ledger_script_close();
