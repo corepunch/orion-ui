@@ -386,8 +386,9 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
 
 static uint32_t modern_foreground(theme_part_t part, ctrl_state_t state) {
   if (state & CTRL_DISABLED) return get_sys_color(brTextDisabled);
-  if ((state & CTRL_SELECTED) && (part == THEME_PART_LIST_ITEM || part == THEME_PART_SEGMENT ||
-      part == THEME_PART_TOOLBAR_BUTTON || part == THEME_PART_TOOLBAR_LABELED_BUTTON))
+  if (((state & CTRL_SELECTED) && (part == THEME_PART_LIST_ITEM || part == THEME_PART_SEGMENT)) ||
+      ((state & (CTRL_SELECTED | CTRL_PRESSED)) && (part == THEME_PART_TOOLBAR_BUTTON ||
+       part == THEME_PART_TOOLBAR_LABELED_BUTTON || part == THEME_PART_TOOLBAR_SPLIT_BUTTON)))
     return get_sys_color(brAccentText);
   if (part == THEME_PART_BUTTON && (state & CTRL_DEFAULT))
     return get_sys_color(brAccentText);

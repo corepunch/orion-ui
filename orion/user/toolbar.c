@@ -420,6 +420,9 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       theme_part_t part = (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
                                      ? THEME_PART_TOOLBAR_LABELED_BUTTON
                                      : THEME_PART_TOOLBAR_BUTTON;
+      uint32_t foreground = (state & (CTRL_DISABLED | CTRL_SELECTED | CTRL_PRESSED))
+                          ? theme_foreground(part, state)
+                          : item->color;
       bool plastic = (tb->style & TOOLBAR_STYLE_PLASTIC) && !(item->style & TOOLBAR_ITEM_FLAG_ARTWORK) &&
                      item->ident != TB_WINDOW_CLOSE && item->ident != TB_WINDOW_COLLAPSE;
       if (plastic) {
@@ -439,18 +442,20 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       if (toolbar_lists_text(tb, item)) {
         icon_rect.w = MIN(icon_rect.w, icon_rect.h);
         irect16_t caption = rect_offset(rect_trim_left(local, icon_rect.w), poff, poff);
-        uint32_t ink = disabled ? get_sys_color(brTextDisabled)
-                     : is_active ? theme_foreground(part, CTRL_SELECTED) : get_sys_color(brToolbarForeground);
+        uint32_t ink = (state & (CTRL_DISABLED | CTRL_SELECTED | CTRL_PRESSED))
+                     ? theme_foreground(part, state) : get_sys_color(brToolbarForeground);
         draw_text_clipped(FONT_SMALL, item->text, &caption, ink, 0);
       }
       if (item->ident == TB_WINDOW_CLOSE || item->ident == TB_WINDOW_COLLAPSE)
         draw_theme_icon_in_rect(item->ident == TB_WINDOW_CLOSE ? THEME_ICON_CLOSE : THEME_ICON_RESTORE,
                                 icon_rect, get_sys_color(brTextNormal));
-      else if (!plastic) draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, poff, disabled, item->color);
+      else if (!plastic) draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, poff, disabled, foreground);
       if (toolbar_label_extra(tb) && item->text) {
         int tx = (local.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + poff;
         int ty = local.h - text_char_height(FONT_SMALLEST) - 2 + poff;
-        draw_text(FONT_SMALLEST, item->text, tx, ty, get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
+        draw_text(FONT_SMALLEST, item->text, tx, ty,
+                  (state & (CTRL_DISABLED | CTRL_SELECTED | CTRL_PRESSED))
+                  ? theme_foreground(part, state) : get_sys_color(brToolbarForeground));
       }
       break;
     }
@@ -472,11 +477,15 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       const char *icon_name = icon ? icon : "missing";
       irect16_t icon_rect = btn_part;
       icon_rect.h -= toolbar_label_extra(tb);
-      draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, btn_poff, disabled, item->color);
+      uint32_t foreground = (btn_state & (CTRL_DISABLED | CTRL_SELECTED | CTRL_PRESSED))
+                          ? theme_foreground(THEME_PART_TOOLBAR_SPLIT_BUTTON, btn_state) : item->color;
+      draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, btn_poff, disabled, foreground);
       if (toolbar_label_extra(tb) && item->text) {
         int tx = (btn_part.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + btn_poff;
         int ty = btn_part.h - text_char_height(FONT_SMALLEST) - 2 + btn_poff;
-        draw_text(FONT_SMALLEST, item->text, tx, ty, get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
+        draw_text(FONT_SMALLEST, item->text, tx, ty,
+                  (btn_state & (CTRL_DISABLED | CTRL_SELECTED | CTRL_PRESSED))
+                  ? theme_foreground(THEME_PART_TOOLBAR_SPLIT_BUTTON, btn_state) : get_sys_color(brToolbarForeground));
       }
 
       ctrl_state_t arr_state = disabled ? CTRL_DISABLED : CTRL_NORMAL;

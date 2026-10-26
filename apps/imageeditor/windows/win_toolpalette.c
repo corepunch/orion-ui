@@ -236,11 +236,12 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         int layer = wparam - IE_PENCIL_LAYER_BASE;
         toolbar_draw_item_t *draw = lparam;
         bool active = g_app && pencil_has_layers(g_app->active_doc) && g_app->active_doc->layer.active == layer;
-        theme_draw(THEME_PART_TOOLBAR_BUTTON, draw->rect, draw->state | (active ? CTRL_SELECTED : 0));
+        ctrl_state_t state = draw->state | (active ? CTRL_SELECTED : 0);
+        theme_draw(THEME_PART_TOOLBAR_BUTTON, draw->rect, state);
         const char *code = pencil_layer_code(layer);
         int width = text_strwidth(FONT_SMALLEST, code);
         irect16_t text = rect_center(draw->rect, width, text_char_height(FONT_SMALLEST));
-        draw_text(FONT_SMALLEST, code, text.x, text.y, get_sys_color(brTextNormal));
+        draw_text(FONT_SMALLEST, code, text.x, text.y, theme_foreground(THEME_PART_TOOLBAR_BUTTON, state));
         return true;
       }
 #endif

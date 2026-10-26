@@ -1,0 +1,47 @@
+diff --git a/apps/imageeditor/main.c b/apps/imageeditor/main.c
+index 743e29a2..c82c9354 100644
+--- a/apps/imageeditor/main.c
++++ b/apps/imageeditor/main.c
+@@ -215,6 +215,42 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
+     create_document(NULL, w, h);
+   }
+ 
++  if (getenv("PENCILTEST_SMOKE")) {
++    canvas_doc_t *doc = g_app->active_doc;
++    const double heights[] = {0.2, 0.35, 0.65, 0.8, 0.65, 0.35};
++    for (int f = 0; f < 6; f++) {
++      if (f) cmd_frame_add(doc, false);
++      int cx = doc->canvas_w / 2, cy = (int)(doc->canvas_h * heights[f]);
++      int radius = doc->canvas_h / 18;
++      ipoint16_t first = {cx + radius, cy};
++      pencil_begin(doc, NULL, first);
++      for (int j = 1; j <= 96; j++) {
++        double a = j * 6.28318530718 / 96;
++        ipoint16_t pt = {cx + (int)(radius * cos(a)), cy + (int)(radius * sin(a))};
++        pencil_drag(doc, NULL, pt);
++      }
++      pencil_end(doc, NULL, first);
++    }
++    const char *path = "/workspace/scratch/penciltest-check/bouncing-ball.ptf";
++    bool saved = flc_save(path, doc);
++    int w, h; uint32_t pal[256], bg; bool show;
++    anim_timeline_t *reopened = saved ? flc_load(path, &w, &h, pal, &bg, &show) : NULL;
++    fprintf(stderr, "SMOKE: save=%d reopen=%d frames=%d size=%dx%d\n", saved,
++            reopened != NULL, reopened ? reopened->frame_count : 0, doc->canvas_w, doc->canvas_h);
++    bool same = reopened && reopened->frame_count == 6;
++    size_t n = (size_t)doc->canvas_w * doc->canvas_h;
++    uint8_t *a = malloc(n), *b = malloc(n);
++    for (int f = 0; same && f < 6; f++)
++      same = anim_frame_expand_cel(doc->anim->frames[f].cel, 1, a, doc->canvas_w, doc->canvas_h) &&
++        anim_frame_expand_cel(reopened->frames[f].cel, 1, b, doc->canvas_w, doc->canvas_h) && !memcmp(a, b, n);
++    free(a); free(b);
++    fprintf(stderr, "SMOKE: all six pencil cels byte-identical=%d\n", same);
++    if (reopened) anim_timeline_free(reopened);
++    cmd_frame_select(doc, 2);
++    if (getenv("PENCILTEST_PLAY")) handle_menu_command(ID_ANIM_PLAY);
++    ie_doc_invalidate_all(doc);
++  }
++
+   /* Splash screen disabled for image editor startup.
+ #ifdef SHAREDIR
+   {
