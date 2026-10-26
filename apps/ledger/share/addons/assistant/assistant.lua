@@ -1,3 +1,4 @@
+local tr = require('messages')
 local Model = require('orion.model')
 local ledger = require('ledger')
 local Engine = require('engine')
@@ -8,7 +9,7 @@ local Models = {
   items=Model:extend('ib.items'),
 }
 local DocumentTypes=Model:extend('cfg.doc_types')
-local Assistant={form='assistant',title='Ledger — помощник'}
+local Assistant={form='assistant',title=tr('Ledger — Assistant')}
 
 local function rows(entity)
   local out={}
@@ -22,12 +23,12 @@ local function rows(entity)
           -- Read the chart at runtime, including the configured account's group.
           local parent=ledger.account(configured.code:match('^[^.]+'))
           local id=parent and parent.analytics=='counterparties' and parent.id or configured.id
-          assert(not account or account==id,'В конфигурации несколько счетов расчётов с покупателями; уточните счёт.')
+          assert(not account or account==id,tr('The configuration has multiple receivables accounts; specify an account.'))
           account=id
         end
       end
     end
-    assert(account,'В конфигурации не найден счёт расчётов с покупателями.')
+    assert(account,tr('No receivables account was found in the configuration.'))
     local _,to=ledger.period()
     for _,entry in ipairs(ledger.movements(account,to~='' and {to=to} or {})) do
       debt[entry.subconto]=(debt[entry.subconto] or 0)+entry.debit-entry.credit
@@ -47,7 +48,7 @@ function Assistant:init()
   self.engine=Engine.new{rows=rows,open=function(entity,id) return ledger.open(entity,id) end}
   self.animation='RESTPOSE'
   self.revision=1
-  self.message='Привет! Скажите или напишите: «покажи должников».'
+  self.message=tr('Hello! Say or type: show debtors.')
   self.lines={}; self.command=''
 end
 function Assistant:data()
@@ -76,7 +77,7 @@ end
 function Assistant:greet()
   self.revision=self.revision+1
   self.app.focus('command')
-  self.message='Я слушаю. Введите команду или используйте системную диктовку в поле ввода.'
+  self.message=tr('Enter a command or use system dictation in the input field.')
   self.animation='HEARING_1'
 end
 return Assistant

@@ -12,24 +12,24 @@
     </database>
   </databases>
   <forms>
-    <form name="assistant" title="Ledger — помощник" width="760" height="600" spacing="8" padding="12">
+    <form name="assistant" title="Ledger — Assistant" width="760" height="600" spacing="8" padding="12">
       <StackView name="header" orientation="horizontal" spacing="12">
         <SpriteButton name="mascot" width="124" height="93" action="greet" />
-        <Label name="summary" text="Покажи должников" />
+        <Label name="summary" text="Show debtors" />
       </StackView>
-      <Label name="hint" text="Введите команду или используйте системную диктовку. Например: покажи клиентов, которые задолжали больше 50 тысяч" />
+      <Label name="hint" text="Enter a command or use system dictation. Example: show customers with debt over fifty thousand" />
       <TextBox name="command" />
       <StackView name="actions" orientation="horizontal" spacing="8">
-        <Button name="submit" text="Выполнить" action="submit" flags="BUTTON_DEFAULT" />
-        <Button name="help" text="Примеры" action="help" />
+        <Button name="submit" text="Run" action="submit" flags="BUTTON_DEFAULT" />
+        <Button name="help" text="Examples" action="help" />
         <Space name="flex" />
-        <Button name="cancel" text="Закрыть" />
+        <Button name="cancel" text="Close" />
       </StackView>
       <TableView name="results" source="assistant.results" flags="flexspace,vscroll">
         <Column field="id" title="№" width="40" />
-        <Column field="name" title="Название / документ" width="0" min-width="240" />
-        <Column field="amount" title="Сумма" width="140" />
-        <Column field="date" title="Дата" width="100" />
+        <Column field="name" title="Name / document" width="0" min-width="240" />
+        <Column field="amount" title="Amount" width="140" />
+        <Column field="date" title="Date" width="100" />
       </TableView>
       <Label name="error" />
     </form>
