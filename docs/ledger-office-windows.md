@@ -8,8 +8,11 @@ nav_exclude: true
 
 Ledger follows the Office 97 / Excel 2003 MDI interaction model: one application
 frame, several modeless document editors inside its document workspace, and an
-owned assistant palette. This implements the public WinAPI window contract in
-Orion; it does not reproduce the proprietary Office or Microsoft Agent internals.
+owned assistant palette. Documents and Clippy are rendered inside Ledger's single
+native window-screen. Their Orion windows are logical windows in that screen,
+not additional operating-system windows. This implements the public WinAPI
+window contract in Orion; it does not reproduce the proprietary Office or
+Microsoft Agent internals.
 
 ```text
 Ledger frame
@@ -55,10 +58,11 @@ See [editing contexts](editing-contexts.md) for the cost and API limits.
 
 Clippy uses `WINDOW_TOOLWINDOW | WINDOW_ALWAYSONTOP`, with `owner` set to the
 Ledger frame through `window_set_owner`. Ownership and topmost placement are
-independent properties. Orion currently scopes application palettes to their
-owner family: the palette stays above documents, while another application's
-foreground window can cover the entire group. This is not an OS-wide topmost
-character window as provided by Microsoft Agent.
+independent properties. Here `WINDOW_ALWAYSONTOP` orders the palette above
+documents within Ledger's rendered window-screen. Clippy and its speech bubble
+use the same compositor and native screen as Ledger; they are not a separate
+native overlay. Another operating-system application can cover Ledger, including
+Clippy. OS-wide topmost placement is outside this application's design.
 Owned modal dialogs appear above the palette and block that application's family,
 including Clippy, while leaving other Orion applications usable.
 
@@ -81,8 +85,8 @@ disables automatic startup; `--assistant` opens it and focuses its input.
 - Microsoft: [Window Features — owned windows](https://learn.microsoft.com/en-us/windows/win32/winmsg/window-features).
 - Microsoft Agent: [The Character Window](https://learn.microsoft.com/en-us/windows/win32/lwef/the-character-window).
   Agent's documented character window is topmost; this alone does not establish
-  Office's private assistant implementation. Orion currently scopes its
-  companion to its application; OS-wide Agent window parity is not implemented.
+  Office's private assistant implementation. Ledger deliberately keeps the
+  companion inside its own window-screen, as specified for this application.
 - `owned_window_test`: ownership, lifetime, modal scope, grouping, MDI activation,
   containment, maximizing and frame movement.
 - `db_edit_context_test`: independent Save/Cancel, conflicts, reserved keys and
