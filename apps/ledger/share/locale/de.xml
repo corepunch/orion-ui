@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="de" decimal="," group="." date="dd.MM.yyyy">
-  <string source="Assistant..." where="menu">Assistent...</string>
+  <string source="Assistant..." obsolete="true">Assistent...</string>
   <string source="File" where="menu">Datei</string>
   <string source="Save Infobase" obsolete="true">Mandant speichern</string>
   <string source="Organization Details..." where="menu">Firmendaten...</string>
@@ -384,6 +384,7 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Close Document" where="menu">Beleg schließen</string>
   <string source="Cascade Documents" where="menu">Überlappend anordnen</string>
   <string source="Tile Documents" where="menu">Nebeneinander anordnen</string>
+  <string source="Show Office Assistant" where="menu">Office-Assistenten anzeigen</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

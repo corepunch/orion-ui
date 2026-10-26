@@ -154,6 +154,9 @@ metadata. Create the form with `create_window_from_form()` and continue to use
 `evCommand` for notifications. See [Dialogs & DDX](dialogs),
 [Database Forms](database-forms), and [MDI Application Architecture](mdi).
 
+Optional status labels can use `flags="LABEL_COLLAPSE_EMPTY"`. An empty label
+occupies no layout space or gap; setting its text restores it and updates layout.
+
 ## Add A New Repository App
 
 Use one directory per application:

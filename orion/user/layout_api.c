@@ -17,6 +17,7 @@ static void layout_stack_measure_fallback(window_t *win, layout_measure_t *m) {
   int gap = layout_spacing_for(win);
 
   for (window_t *child = win ? win->children : NULL; child; child = child->next) {
+    if (layout_child_is_collapsed(child)) continue;
     layout_measure_t cm = layout_measure_child(child, content_w, content_h);
     if (layout_is_horizontal(win)) {
       if (count > 0) desired_w += gap;
@@ -50,6 +51,7 @@ static void layout_stack_arrange_fallback(window_t *win, const irect16_t *rect) 
     int total_fixed = 0;
     int stretch_count = 0;
     for (window_t *child = win ? win->children : NULL; child; child = child->next) {
+      if (layout_child_is_collapsed(child)) continue;
       layout_measure_t cm = layout_measure_child(child, content.w, content.h);
       bool stretchable = (child->flags & WINDOW_FLEXSPACE) != 0;
       if (stretchable) stretch_count++;
@@ -62,6 +64,7 @@ static void layout_stack_arrange_fallback(window_t *win, const irect16_t *rect) 
     int x = content.x;
     bool placed_child = false;
     for (window_t *child = win ? win->children : NULL; child; child = child->next) {
+      if (layout_child_is_collapsed(child)) continue;
       if (placed_child) x += gap;
       layout_measure_t cm = layout_measure_child(child, content.w, content.h);
       bool stretchable = (child->flags & WINDOW_FLEXSPACE) != 0;
@@ -81,6 +84,7 @@ static void layout_stack_arrange_fallback(window_t *win, const irect16_t *rect) 
     int stretch_count = 0;
     int count = 0;
     for (window_t *child = win ? win->children : NULL; child; child = child->next) {
+      if (layout_child_is_collapsed(child)) continue;
       layout_measure_t cm = layout_measure_child(child, content.w, content.h);
       bool stretchable = (child->flags & WINDOW_FLEXSPACE) != 0;
       if (stretchable) stretch_count++;
@@ -94,6 +98,7 @@ static void layout_stack_arrange_fallback(window_t *win, const irect16_t *rect) 
 
     int y = content.y;
     for (window_t *child = win ? win->children : NULL; child; child = child->next) {
+      if (layout_child_is_collapsed(child)) continue;
       if (y > content.y) y += gap;
       layout_measure_t cm = layout_measure_child(child, content.w, content.h);
       int cw = layout_apply_alignment(content.w, cm.desired_w, child->layout.h_align);

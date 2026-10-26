@@ -281,6 +281,7 @@ typedef struct {
     struct {
       int size, blur;
       ipoint16_t offset;
+      uint32_t color;
     } shadow;
   } tooltip;
 

@@ -89,9 +89,18 @@ static void test_assistant(void) {
     ASSERT(page != NULL, error);
     ASSERT_NOT_NULL(script_page_create(page, NULL));
     ASSERT_STR_EQUAL(script_page_message(page), "");
+    window_t *summary = script_page_control(page, "summary");
+    window_t *request = script_page_control(page, "request");
+    window_t *command = script_page_control(page, "command");
+    window_t *failure = script_page_control(page, "error");
+    ASSERT_EQUAL(request->frame.h, 0);
+    ASSERT_EQUAL(failure->frame.h, 0);
+    ASSERT_EQUAL(command->frame.y, summary->frame.y + summary->frame.h + 8);
     set_text(page, "command", "покажи клиентов");
     ASSERT_TRUE(script_page_perform(page, "submit"));
     ASSERT_STR_EQUAL(script_page_message(page), "");
+    ASSERT_TRUE(request->frame.h > 0);
+    ASSERT_EQUAL(command->frame.y, request->frame.y + request->frame.h + 8);
     int count = count_rows("assistant", 0);
     ASSERT_EQUAL(count, count_rows("ib", TABLE_COUNTERPARTIES));
     set_text(page, "command", "покажи клиентов и удали всех");
@@ -145,15 +154,21 @@ static void test_assistant_companion(void) {
   window_t *bubble = companion->children;
   ASSERT_TRUE(window_is_class(bubble, "SpeechBubble"));
   ASSERT_TRUE(window_has_state(bubble, WINDOW_STATE_VISIBLE));
-  ASSERT(companion->frame.x + companion->frame.w <= main->frame.x + main->frame.w,
-         "companion stays at the trailing edge of Ledger");
+  ASSERT_EQUAL(companion->frame.x + companion->frame.w, 1280 - 12);
+  ASSERT_EQUAL(companion->frame.y + companion->frame.h, 800 - 12);
   int old_x = companion->frame.x, old_y = companion->frame.y;
   move_window(main, main->frame.x + 30, main->frame.y + 20);
-  ASSERT_EQUAL(companion->frame.x, old_x + 30);
-  ASSERT_EQUAL(companion->frame.y, old_y + 20);
+  ASSERT_EQUAL(companion->frame.x, old_x);
+  ASSERT_EQUAL(companion->frame.y, old_y);
   resize_window(main, main->frame.w - 80, main->frame.h - 40);
-  ASSERT_EQUAL(companion->frame.x, old_x - 50);
-  ASSERT_EQUAL(companion->frame.y, old_y - 20);
+  ASSERT_EQUAL(companion->frame.x, old_x);
+  ASSERT_EQUAL(companion->frame.y, old_y);
+  ui_update_screen_size(1320, 820);
+  send_message(companion, evDisplayChange, 0, NULL);
+  ASSERT_EQUAL(companion->frame.x, old_x + 40);
+  ASSERT_EQUAL(companion->frame.y, old_y + 20);
+  ui_update_screen_size(1280, 800);
+  send_message(companion, evDisplayChange, 0, NULL);
 
   ledger_open_assistant();
   ASSERT(assistant_window() == companion, "menu and shortcut reuse the companion");
@@ -185,18 +200,51 @@ static void test_assistant_companion(void) {
   send_message(command, edGetText, sizeof(text), text);
   ASSERT_STR_EQUAL(text, "over fifty thousand");
   ASSERT(g_ui_runtime.focused == command, "reopening focuses the input after showing the bubble");
+  const uint32_t double_click[] = {kEventLeftButtonDown, kEventLeftButtonUp,
+    kEventLeftButtonDown, kEventLeftDoubleClick, kEventLeftButtonUp};
+  for (int collapsed = 0; collapsed < 2; collapsed++) {
+    if (collapsed) send_message(companion, evCommand, MAKEDWORD(mascot->id, btnClicked), mascot);
+    for (size_t i = 0; i < ARRAY_LEN(double_click); i++) {
+      ui_event_t event = {.message = double_click[i],
+        .x = (window_screen_x(mascot) + mascot->frame.w / 2) * UI_WINDOW_SCALE,
+        .y = (window_screen_y(mascot) + mascot->frame.h / 2) * UI_WINDOW_SCALE};
+      dispatch_message(&event);
+    }
+    ASSERT_TRUE(window_has_state(bubble, WINDOW_STATE_VISIBLE));
+    ASSERT(g_ui_runtime.focused == command, "double-click opens the conversation and focuses input");
+    send_message(command, edGetText, sizeof(text), text);
+    ASSERT_STR_EQUAL(text, "over fifty thousand");
+    ASSERT_EQUAL(count_rows("assistant", 0), count);
+  }
   send_message(companion, evCommand, MAKEDWORD(submit->id, btnClicked), submit);
   ASSERT(count_rows("assistant", 0) <= count, "the follow-up still filters the existing customer scope");
   underneath = find_window(companion->frame.x + 30, companion->frame.y + companion->frame.h - 30);
-  ASSERT(underneath && get_root_window(underneath) == main,
+  ASSERT(!underneath || get_root_window(underneath) != companion,
          "transparent space beside the mascot does not block the document");
   window_t *hide = control_with_text(companion, "Hide assistant");
   ASSERT_NOT_NULL(hide);
+  int filtered_count = count_rows("assistant", 0);
   send_message(companion, evCommand, MAKEDWORD(hide->id, btnClicked), hide);
   ASSERT_FALSE(window_has_state(companion, WINDOW_STATE_VISIBLE));
-  ledger_open_assistant();
+  send_message(main, evCommand, MAKEDWORD(ID_HELP_ASSISTANT, kMenuBarNotificationItemClick), NULL);
   ASSERT_TRUE(window_has_state(companion, WINDOW_STATE_VISIBLE));
   ASSERT(assistant_window() == companion, "restoring a hidden assistant retains the same conversation");
+  ASSERT_EQUAL(count_rows("assistant", 0), filtered_count);
+  send_message(command, edSetText, 0, "show customers");
+  database_t *assistant = get_database_by_name("assistant");
+  for (int i = 0; i < 3; i++) {
+    send_message(companion, evClose, 0, NULL);
+    ASSERT_FALSE(window_has_state(companion, WINDOW_STATE_VISIBLE));
+    ASSERT(g_ui_runtime.focused == main, "closing returns keyboard input to Ledger");
+    send_message(main, evCommand, MAKEDWORD(ID_HELP_ASSISTANT, kAcceleratorNotification), NULL);
+    ASSERT_TRUE(window_has_state(companion, WINDOW_STATE_VISIBLE));
+    ASSERT_TRUE(window_has_state(bubble, WINDOW_STATE_VISIBLE));
+    ASSERT(assistant_window() == companion, "closing and reopening reuse the companion");
+    ASSERT(get_database_by_name("assistant") == assistant, "closing preserves the conversation model");
+    send_message(command, edGetText, sizeof(text), text);
+    ASSERT_STR_EQUAL(text, "show customers");
+    ASSERT(g_ui_runtime.focused == command, "restoring focuses the input");
+  }
   destroy_window(main);
   ASSERT_NULL(assistant_window());
   ASSERT_NULL(get_database_by_name("assistant"));

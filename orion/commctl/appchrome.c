@@ -60,7 +60,7 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
     case evCreate: {
       app_chrome_create_t *cfg = (app_chrome_create_t *)lparam;
       st = allocate_window_data(win, sizeof(*st));
-      if (!st || !cfg || !cfg->toolbar_proc) {
+      if (!st || !cfg) {
         fprintf(stderr, "[chrome] creation failed win=%u state=%p config=%p\n", win->id, (void *)st, (void *)cfg);
         fflush(stderr);
         return false;
@@ -73,10 +73,10 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
         send_message(st->menubar, kMenuBarMessageSetMenus, cfg->menu_count, (void *)cfg->menus);
         dock_window(st->menubar, DOCK_TOP, DOCK_ALL_EDGES, DOCK_MENU, 0, 0);
       }
-      window_t *toolbar = create_docked_toolbar(win, TOOLBAR_DOCK_TOP, cfg->toolbar_proc);
+      window_t *toolbar = cfg->toolbar_proc ? create_docked_toolbar(win, TOOLBAR_DOCK_TOP, cfg->toolbar_proc) : NULL;
       st->toolbar = toolbar;
       app_chrome_resize_children(win);
-      return toolbar != NULL;
+      return (!cfg->menubar_proc || st->menubar) && (!cfg->toolbar_proc || toolbar);
     }
     case evHitTest: {
       ipoint16_t point = {(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)};
@@ -107,6 +107,8 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
     }
     case evPaint:
       return false;
+    case evClose:
+      return st && st->menubar ? send_message(st->menubar, msg, wparam, lparam) : false;
     case evDockChanged:
     case evResize:
       app_chrome_resize_children(win);

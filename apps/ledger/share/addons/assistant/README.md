@@ -1,10 +1,12 @@
 # Ledger local assistant — prototype
 
-Clippy appears automatically at the bottom-right of Ledger with a greeting in
+Clippy appears automatically at the bottom-right of Ledger's application workspace with a greeting in
 a speech bubble. Type a command and press **Enter** or **Send**. Click Clippy
 or **Collapse** to fold the bubble away; click him again to continue. The
 conversation, results and unfinished input are retained while it is collapsed.
-**Hide assistant** hides the character too; **File → Assistant…** or
+Double-click Clippy to open the conversation and focus its input, even when the bubble is already open.
+Closing the assistant or choosing **Hide assistant** hides the character too, preserving the conversation;
+**Help → Show Office Assistant** or
 **Ctrl+Shift+A** brings him back and focuses the input. Transparent space beside
 the character passes clicks through to Ledger.
 

@@ -205,6 +205,35 @@ static void test_tooltip_bubble_tails(void) {
   PASS();
 }
 
+static void test_tooltip_shadow_color(void) {
+  TEST("tooltip shadows stay dark across light and dark palettes");
+  uint32_t fbo = 0, texture = 0;
+  int w = 0, h = 0;
+  ASSERT_TRUE(R_EnsureWindowTarget(&fbo, &texture, &w, &h, 128, 96));
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glViewport(0, 0, 128, 96);
+  set_projection(0, 0, 128, 96);
+  glDisable(GL_SCISSOR_TEST);
+  glClearColor(0, 0, 0, 0);
+  theme_style_t saved = get_theme()->style;
+  const theme_style_t styles[] = {THEME_CLASSIC, THEME_MODERN, THEME_LIGHT, THEME_PORCELAIN, THEME_PORCELAIN_DARK};
+  bool ok = true;
+  for (int i = 0; i < ARRAY_LEN(styles); i++) {
+    set_theme(styles[i]);
+    glClear(GL_COLOR_BUFFER_BIT);
+    draw_tooltip_bubble(R(0, 0, 128, 96), 100, TOOLTIP_TAIL_BOTTOM);
+    uint8_t pixel[4];
+    glReadPixels(40, 95 - 82, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+    ok &= pixel[0] == 0 && pixel[1] == 0 && pixel[2] == 0 && pixel[3] > 0 && pixel[3] < 150;
+  }
+  set_theme(saved);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glViewport(0, 0, 640, 480);
+  R_DestroyWindowTarget(&fbo, &texture, &w, &h);
+  ASSERT_TRUE(ok);
+  PASS();
+}
+
 int main(void) {
   TEST_START("Immediate tooltips");
   if (!test_graphics_init(640, 480)) return 1;
@@ -213,6 +242,7 @@ int main(void) {
   test_toolbar_tooltip_sides();
   test_inherited_tooltip();
   test_tooltip_bubble_tails();
+  test_tooltip_shadow_color();
   test_graphics_shutdown();
   TEST_END();
 }

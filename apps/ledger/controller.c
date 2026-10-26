@@ -287,7 +287,7 @@ void ledger_command(uint16_t id) {
     case ID_FILE_LANGUAGE:      select_language();      break;
     case ID_FILE_IMPORT_1C:     import_from_1c();       break;
     case ID_FILE_ADDON:         ledger_open_addon();    break;
-    case ID_FILE_ASSISTANT:     ledger_open_assistant(); break;
+    case ID_HELP_ASSISTANT:     ledger_open_assistant(); break;
     case ID_FILE_QUIT:          send_message(parent, evClose, 0, NULL); break;
     case ID_WINDOW_NEXT_DOCUMENT: mdi_cycle_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), 1); break;
     case ID_WINDOW_PREVIOUS_DOCUMENT: mdi_cycle_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), -1); break;

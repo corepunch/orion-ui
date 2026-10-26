@@ -442,7 +442,7 @@ static theme_t g_modern_theme = {
   .badge = { .padding = 7, .corner_radius = 5, .tint_alpha = 0x40 },
   .tooltip = {
     .corner_radius = 6, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,
-    .shadow = { .size = 10, .blur = 2, .offset = {0, 3} },
+    .shadow = { .size = 10, .blur = 2, .offset = {0, 3}, .color = 0x78000000 },
   },
   .field = { .corner_radius = CORNER_RADIUS_CIRCULAR, .multiline_corner_radius = (CONTROL_HEIGHT_REGULAR + 1) / 2,
              .padding_x = TEXTEDIT_PADDING_CAPSULE },

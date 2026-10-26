@@ -189,6 +189,7 @@ an anchor. It is registered with the runtime and FormEditor like `Card`.
 `draw_tooltip_bubble(rect, tail_offset, side)` draws a rounded face and attached
 tail in one fill pass. Its shadow reuses `draw_rect_shadow()` on the rectangular
 body, with a downward offset; the tail does not change shadow rendering.
+The tint comes from `theme_t.tooltip.shadow.color`, independently of border colors.
 `rect` includes the theme's shadow margin, and `tail_offset` is relative to that
 rectangle along the arrow's edge. `side` is `TOOLTIP_TAIL_TOP`, `BOTTOM`, `LEFT`,
 or `RIGHT`. `tooltip_bubble_body_rect(rect, side)` returns the body without the
@@ -330,6 +331,11 @@ name. `SpriteButton` and `SpriteSlider` (`commctl/sprite.c`) are the controls bu
 on these calls: sprites are bitmap rects stretched to the control's frame, so a
 skin scales with the window. SpriteSlider answers the Slider messages
 (`slSetRange`, `slSetPos`, `slGetPos`, `sliderValueChanged`) and adds `spsnReleased`.
+
+`SpriteButton` accepts `SPRITE_BUTTON_DOUBLECLICK` to notify its parent with
+`evCommand`, `HIWORD(wparam) = btnDoubleClicked`, `LOWORD(wparam) = control id`,
+and `lparam = control`. It consumes the second release so it cannot also fire
+`btnClicked`. Without this flag, ordinary click behavior is unchanged.
 
 Theme settings are grouped in inline structs by component: `scrollbar`, `caption`,
 `menubar`, `toolbar`, `control`, `button`, `window`, `card`, `plastic`, `drag`,

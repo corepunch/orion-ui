@@ -23,6 +23,7 @@ void layout_stack_measure_window(window_t *win, layout_measure_t *m) {
   int gap = layout_spacing_for(win);
 
   for (window_t *child = win ? win->children : NULL; child; child = child->next) {
+    if (layout_child_is_collapsed(child)) continue;
     layout_measure_t cm = layout_measure_child(child, content_w, content_h);
     if (layout_is_horizontal(win)) {
       if (count > 0) desired_w += gap;
@@ -59,6 +60,7 @@ void layout_stack_arrange_window(window_t *win, const irect16_t *rect) {
     int total_fixed = 0;
     int stretch_count = 0;
     for (window_t *child = win ? win->children : NULL; child; child = child->next) {
+      if (layout_child_is_collapsed(child)) continue;
       layout_measure_t cm = layout_measure_child(child, content.w, content.h);
       bool stretchable = (child->flags & WINDOW_FLEXSPACE) != 0;
       if (stretchable) stretch_count++;
@@ -71,6 +73,7 @@ void layout_stack_arrange_window(window_t *win, const irect16_t *rect) {
     int x = content.x;
     bool placed_child = false;
     for (window_t *child = win ? win->children : NULL; child; child = child->next) {
+      if (layout_child_is_collapsed(child)) continue;
       if (placed_child) x += gap;
       layout_measure_t cm = layout_measure_child(child, content.w, content.h);
       bool stretchable = (child->flags & WINDOW_FLEXSPACE) != 0;
@@ -91,6 +94,7 @@ void layout_stack_arrange_window(window_t *win, const irect16_t *rect) {
     int count = 0;
     
     for (window_t *child = win ? win->children : NULL; child; child = child->next) {
+      if (layout_child_is_collapsed(child)) continue;
       layout_measure_t cm = layout_measure_child(child, content.w, content.h);
       bool stretchable = (child->flags & WINDOW_FLEXSPACE) != 0;
       if (stretchable) stretch_count++;
@@ -104,6 +108,7 @@ void layout_stack_arrange_window(window_t *win, const irect16_t *rect) {
     
     int y = content.y;
     for (window_t *child = win ? win->children : NULL; child; child = child->next) {
+      if (layout_child_is_collapsed(child)) continue;
       if (y > content.y) y += gap;
       layout_measure_t cm = layout_measure_child(child, content.w, content.h);
       int cw = layout_apply_alignment(content.w, cm.desired_w, child->layout.h_align);
@@ -124,6 +129,7 @@ void layout_flow_horizontal(window_t *first, int start_x, int gap) {
   int cur_x = start_x;
   bool placed_child = false;
   for (window_t *child = first; child; child = child->next) {
+    if (layout_child_is_collapsed(child)) continue;
     if (placed_child) cur_x += gap;
     child->frame.x = cur_x;
     cur_x += child->frame.w;
@@ -196,6 +202,7 @@ result_t win_stack(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evPaint:
       layout_paint_children(win);
       return true;
+    case evCommand:
     case evParentNotify:
       return win->parent ? send_message(win->parent, msg, wparam, lparam) : false;
     default:

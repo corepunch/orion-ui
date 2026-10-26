@@ -21,17 +21,23 @@ static inline bool layout_child_is_flex(const window_t *child) {
   return child && (child->flags & WINDOW_FLEXSPACE) != 0;
 }
 
+static inline bool layout_child_is_collapsed(const window_t *child) {
+  return child && (child->flags & LABEL_COLLAPSE_EMPTY) && !child->title[0];
+}
+
 static inline int layout_child_count(const window_t *win) {
   int count = 0;
   for (window_t *child = win ? win->children : NULL; child; child = child->next)
-    count++;
+    if (!layout_child_is_collapsed(child)) count++;
   return count;
 }
 
 static inline window_t *layout_child_at(window_t *win, int index) {
   int i = 0;
-  for (window_t *child = win ? win->children : NULL; child; child = child->next, i++) {
+  for (window_t *child = win ? win->children : NULL; child; child = child->next) {
+    if (layout_child_is_collapsed(child)) continue;
     if (i == index) return child;
+    i++;
   }
   return NULL;
 }
@@ -92,7 +98,8 @@ static inline void layout_arrange_child(window_t *child, irect16_t rect) {
 
 static inline int layout_horizontal_gap_total(window_t *first, int gap) {
   int count = 0;
-  for (window_t *child = first; child; child = child->next) count++;
+  for (window_t *child = first; child; child = child->next)
+    if (!layout_child_is_collapsed(child)) count++;
   return count > 1 ? gap * (count - 1) : 0;
 }
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="ru" decimal="," group=" " date="dd.MM.yyyy">
   <string source="File" where="menu">Файл</string>
-  <string source="Assistant..." where="menu">Помощник...</string>
+  <string source="Assistant..." obsolete="true">Помощник...</string>
   <string source="Save Infobase" obsolete="true">Сохранить информационную базу</string>
   <string source="Organization Details..." where="menu">Сведения об организации...</string>
   <string source="Select Configuration..." where="menu">Выбрать конфигурацию...</string>
@@ -384,6 +384,7 @@
   <string source="Close Document" where="menu">Закрыть документ</string>
   <string source="Cascade Documents" where="menu">Расположить каскадом</string>
   <string source="Tile Documents" where="menu">Расположить рядом</string>
+  <string source="Show Office Assistant" where="menu">Показать помощника</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>

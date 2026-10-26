@@ -59,10 +59,10 @@ the reports; `Reports > Print Report Forms` writes the cash book.
 
 ## Look and feel
 
-Clippy appears by default in the bottom-right corner, with a speech bubble for
+Clippy appears by default in the application's bottom-right corner, with a speech bubble for
 commands such as `show debtors` or `покажи должников`. Click the character to
-collapse or reopen the bubble; **File > Assistant** (Ctrl+Shift+A) restores it
-after hiding. Dialogue context and unfinished input survive collapsing.
+collapse or reopen the bubble; **Help > Show Office Assistant** (Ctrl+Shift+A) restores it
+after closing or hiding. Dialogue context and unfinished input survive both.
 Use `--no-assistant` to start without him, or `--assistant` to focus his input
 immediately. See the [assistant guide](share/addons/assistant/README.md).
 

@@ -4,13 +4,14 @@
 #include "test_env.h"
 #include <orion/ui.h>
 
-static int g_clicks, g_changes, g_releases;
+static int g_clicks, g_double_clicks, g_changes, g_releases;
 static uint32_t g_last_id;
 
 static result_t parent_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   (void)win; (void)lparam;
   if (msg == evCommand) {
     if (HIWORD(wparam) == btnClicked) { g_clicks++; g_last_id = LOWORD(wparam); }
+    if (HIWORD(wparam) == btnDoubleClicked) { g_double_clicks++; g_last_id = LOWORD(wparam); }
     if (HIWORD(wparam) == sliderValueChanged) g_changes++;
     if (HIWORD(wparam) == spsnReleased) g_releases++;
   }
@@ -19,7 +20,7 @@ static result_t parent_proc(window_t *win, uint32_t msg, uint32_t wparam, void *
 
 static window_t *make(window_t **parent, winproc_t proc, irect16_t frame, uint32_t id) {
   test_env_init();
-  g_clicks = g_changes = g_releases = 0;
+  g_clicks = g_double_clicks = g_changes = g_releases = 0;
   *parent = test_env_create_window("P", 0, 0, 300, 200, parent_proc, NULL);
   window_t *w = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL, &frame, *parent, proc, 0, NULL);
   if (w) w->id = id;
@@ -63,6 +64,54 @@ static void test_button_toggle(void) {
   send_message(b, btnSetCheck, 1, NULL);
   ASSERT_TRUE(send_message(b, btnGetCheck, 0, NULL) == 1);
   bitmap_free(bm);
+  test_env_shutdown();
+  PASS();
+}
+
+static void test_button_double_click(void) {
+  TEST("SpriteButton opts into double-click notification without a second release click");
+  window_t *p;
+  window_t *b = make(&p, win_spritebutton, R(10, 10, 46, 36), 7);
+  ASSERT_NOT_NULL(b);
+  click(b, 5, 5, 5, 5);
+  send_message(b, evLeftButtonDown, MAKEDWORD(5, 5), NULL);
+  send_message(b, evLeftButtonDoubleClick, MAKEDWORD(5, 5), NULL);
+  send_message(b, evLeftButtonUp, MAKEDWORD(5, 5), NULL);
+  ASSERT_EQUAL(g_clicks, 2);
+  ASSERT_EQUAL(g_double_clicks, 0);
+  b->flags |= SPRITE_BUTTON_DOUBLECLICK;
+  click(b, 5, 5, 5, 5);
+  send_message(b, evLeftButtonDown, MAKEDWORD(5, 5), NULL);
+  send_message(b, evLeftButtonDoubleClick, MAKEDWORD(5, 5), NULL);
+  ASSERT_NULL(g_ui_runtime.captured);
+  send_message(b, evLeftButtonUp, MAKEDWORD(5, 5), NULL);
+  ASSERT_EQUAL(g_clicks, 3);
+  ASSERT_EQUAL(g_double_clicks, 1);
+  ASSERT_EQUAL(g_last_id, 7);
+  enable_window(b, false);
+  send_message(b, evLeftButtonDoubleClick, MAKEDWORD(5, 5), NULL);
+  ASSERT_EQUAL(g_double_clicks, 1);
+  test_env_shutdown();
+  PASS();
+}
+
+static void test_nested_button_notifications(void) {
+  TEST("SpriteButton click notifications pass through nested layout stacks");
+  window_t *p;
+  window_t *outer = make(&p, win_stack, R(0, 0, 100, 100), 1);
+  ASSERT_NOT_NULL(outer);
+  window_t *inner = create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 100, 100), outer, win_stack, 0, NULL);
+  window_t *b = create_window("", WINDOW_NOTITLE | SPRITE_BUTTON_DOUBLECLICK,
+    MAKERECT(0, 0, 46, 36), inner, win_spritebutton, 0, NULL);
+  ASSERT_NOT_NULL(b);
+  b->id = 7;
+  click(b, 5, 5, 5, 5);
+  send_message(b, evLeftButtonDown, MAKEDWORD(5, 5), NULL);
+  send_message(b, evLeftButtonDoubleClick, MAKEDWORD(5, 5), NULL);
+  send_message(b, evLeftButtonUp, MAKEDWORD(5, 5), NULL);
+  ASSERT_EQUAL(g_clicks, 1);
+  ASSERT_EQUAL(g_double_clicks, 1);
+  ASSERT_EQUAL(g_last_id, 7);
   test_env_shutdown();
   PASS();
 }
@@ -119,6 +168,8 @@ int main(void) {
   TEST_START("Sprite controls");
   test_button_click();
   test_button_toggle();
+  test_button_double_click();
+  test_nested_button_notifications();
   test_slider_drag();
   test_slider_vertical();
   TEST_END();

@@ -1351,7 +1351,13 @@ void set_window_title(window_t *win, const char *title) {
     fflush(stderr);
     return;
   }
+  bool was_empty = !win->title[0];
   snprintf(win->title, sizeof(win->title), "%s", title ? title : "");
+  if ((win->flags & LABEL_COLLAPSE_EMPTY) && was_empty != !win->title[0]) {
+    if (!win->title[0]) win->frame = R(0, 0, 0, 0);
+    for (window_t *parent = win->parent; parent; parent = parent->parent)
+      window_layout_sync(parent);
+  }
   toolbar_relayout(win);  // a TOOLBAR_ITEM_TITLE measures the title
   invalidate_window(win);
 }

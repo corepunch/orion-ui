@@ -65,6 +65,12 @@ result_t win_spritebutton(window_t *win, uint32_t msg, uint32_t wparam, void *lp
       set_capture(win);
       invalidate_window(win);
       return true;
+    case evLeftButtonDoubleClick:
+      if (!(win->flags & SPRITE_BUTTON_DOUBLECLICK)) return false;
+      if (!b || window_has_state(win, WINDOW_STATE_DISABLED) || !spb_hit(win, wparam)) return true;
+      spb_release(win, b);
+      if (win->parent) send_message(win->parent, evCommand, MAKEDWORD(win->id, btnDoubleClicked), win);
+      return true;
     case evMouseMove:
       if (!b || !b->pressed) return false;
       if (b->inside != spb_hit(win, wparam)) { b->inside = !b->inside; invalidate_window(win); }

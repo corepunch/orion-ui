@@ -26,7 +26,6 @@
       <Separator />
       <item name="import_1c" label="Import from 1C (EnterpriseData)..." />
       <item name="addon" label="Open Add-on..." />
-      <item name="assistant" label="Assistant..." shortcut="Ctrl+Shift+A" />
       <Separator />
       <item name="quit" label="Exit" />
     </menu>
@@ -99,6 +98,8 @@
       <item name="tile" label="Tile Documents" />
     </menu>
     <menu name="help" label="Help">
+      <item name="assistant" label="Show Office Assistant" shortcut="Ctrl+Shift+A" />
+      <Separator />
       <item name="about" label="About Ledger" />
     </menu>
   </menus>

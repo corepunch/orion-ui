@@ -160,16 +160,18 @@ void ledger_addons_init(void) { script_register_module("ledger", luaopen_ledger_
 
 static script_page_t *assistant_page;
 
+static void ledger_hide_assistant(window_t *win) {
+  show_window(win, false);
+  if (g_ledger->main_win) set_focus(g_ledger->main_win);
+}
+
 void ledger_position_assistant(void) {
   window_t *mascot = script_page_control(assistant_page, "mascot");
   if (!mascot) return;
   window_t *win = get_root_window(mascot);
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int sh = ui_get_system_metrics(kSystemMetricScreenHeight);
-  window_t *parent = g_ledger->main_win;
-  irect16_t area = parent ? rect_offset(get_client_rect(parent), window_screen_x(parent),
-                                       window_screen_y(parent) + titlebar_height(parent)) : R(0, 0, sw, sh);
-  area = rect_inset(area, 12);
+  irect16_t area = rect_inset(R(0, 0, sw, sh), 12);
   isize16_t preferred = script_page_preferred_size(assistant_page);
   int w = MIN(preferred.w, sw), h = MIN(preferred.h, sh);
   if (w > 0 && h > 0 && (win->frame.w != w || win->frame.h != h)) resize_window(win, w, h);
@@ -201,15 +203,19 @@ static result_t ledger_assistant_hook(window_t *win, uint32_t msg, uint32_t wpar
       ledger_position_assistant();
       return true;
     case evClose:
-      script_page_perform(assistant_page, "collapse");
-      if (g_ledger->main_win) set_focus(g_ledger->main_win);
+      ledger_hide_assistant(win);
       return true;
     case evCommand: {
+      if (HIWORD(wparam) == btnDoubleClicked) {
+        window_t *mascot = script_page_control(assistant_page, "mascot");
+        if (!mascot || LOWORD(wparam) != mascot->id) return false;
+        ledger_open_assistant();
+        return true;
+      }
       if (HIWORD(wparam) != btnClicked) return false;
       window_t *hide = script_page_control(assistant_page, "hide");
       if (hide && LOWORD(wparam) == hide->id) {
-        show_window(win, false);
-        if (g_ledger->main_win) set_focus(g_ledger->main_win);
+        ledger_hide_assistant(win);
         return true;
       }
       window_t *mascot = script_page_control(assistant_page, "mascot");

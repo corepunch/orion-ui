@@ -2,6 +2,7 @@
 #include "test_env.h"
 #include <orion/user/dock.h>
 #include <orion/user/toolbar.h>
+#include <orion/commctl/appchrome.h>
 
 static int dock_clicks;
 static ipoint16_t dock_point;
@@ -438,6 +439,57 @@ static void test_merged_title(void) {
   PASS();
 }
 
+static int menu_chrome_closes;
+static result_t menu_chrome_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == evClose) { menu_chrome_closes++; return true; }
+  return win_menubar(win, msg, wparam, lparam);
+}
+
+static void test_menu_only_chrome(void) {
+  TEST("menu-only chrome docks a square top band, reserves only its height and routes close");
+  test_env_init();
+  theme_style_t saved = get_theme()->style;
+  set_theme(THEME_PORCELAIN);
+  ui_update_screen_size(800 * UI_WINDOW_SCALE, 600 * UI_WINDOW_SCALE);
+  const menu_item_t item = {.label = "Open", .id = 44};
+  const menu_def_t menu = {"File", &item, 1};
+  window_t *chrome = create_app_chrome("Menu chrome", menu_chrome_proc, &menu, 1, NULL, 1);
+  ASSERT_NOT_NULL(chrome);
+  window_t *bar = app_chrome_menubar(chrome);
+  ASSERT_NOT_NULL(bar);
+  ASSERT(bar->parent == chrome && bar->dock && bar->dock->side == DOCK_TOP, "menu belongs to the dock host");
+  ASSERT_NULL(app_chrome_toolbar(chrome));
+  ASSERT_EQUAL(bar->frame.x, 0);
+  ASSERT_EQUAL(bar->frame.y, 0);
+  ASSERT_EQUAL(bar->frame.w, 800);
+  ASSERT_EQUAL(bar->frame.h, get_theme()->menubar.height);
+  ASSERT_EQUAL(window_composition_attr(chrome, WCA_CORNERS), 0);
+  ASSERT_EQUAL(window_composition_attr(chrome, WCA_SHADOW), 0);
+  ASSERT_EQUAL(window_composition_attr(chrome, WCA_BORDER), 0);
+  window_t *doc = create_window("Document", 0, MAKERECT(20, 60, 500, 400), NULL, dock_test_proc, 1, NULL);
+  ASSERT_TRUE(maximize_window(doc));
+  ASSERT_EQUAL(doc->frame.y, bar->frame.h);
+  ASSERT_EQUAL(doc->frame.h, 600 - bar->frame.h);
+  ui_update_screen_size(960 * UI_WINDOW_SCALE, 700 * UI_WINDOW_SCALE);
+  send_message(chrome, evDisplayChange, MAKEDWORD(960, 700), NULL);
+  ASSERT_EQUAL(bar->frame.w, 960);
+  ASSERT_EQUAL(bar->frame.y, 0);
+  ASSERT_EQUAL(doc->frame.w, 960);
+  ASSERT_EQUAL(doc->frame.h, 700 - bar->frame.h);
+  set_theme(THEME_PORCELAIN_DARK);
+  send_message(chrome, evThemeChanged, 0, NULL);
+  ASSERT_EQUAL(window_composition_attr(chrome, WCA_CORNERS), 0);
+  ASSERT_EQUAL(window_composition_attr(chrome, WCA_SHADOW), 0);
+  menu_chrome_closes = 0;
+  ASSERT_TRUE(send_message(chrome, evClose, 0, NULL));
+  ASSERT_EQUAL(menu_chrome_closes, 1);
+  destroy_window(chrome);
+  ASSERT_FALSE(is_window(bar));
+  set_theme(saved);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Workspace docking");
   test_dock_ownership_and_layout();
@@ -447,6 +499,7 @@ int main(void) {
   test_dock_drag_and_resize();
   test_dock_collapse_and_limits();
   test_dock_menu();
+  test_menu_only_chrome();
   test_dock_floating_resize_and_close();
   test_dock_fixed_pane();
   test_toolbar_undock_size();

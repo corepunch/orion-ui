@@ -65,6 +65,7 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           win->frame.w = MAX(win->frame.w, text_strwidth(font, win->title) + TEXT_SHADOW_OFFSET);
       }
       win->flags |= WINDOW_NOTABSTOP;
+      if ((win->flags & LABEL_COLLAPSE_EMPTY) && !win->title[0]) win->frame = R(0, 0, 0, 0);
       return true;
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;

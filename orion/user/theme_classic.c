@@ -357,7 +357,7 @@ static theme_t g_classic_theme = {
   .badge = { .padding = 7, .corner_radius = 5, .tint_alpha = 0x40 },
   .tooltip = {
     .corner_radius = 4, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,
-    .shadow = { .size = 10, .blur = 2, .offset = {0, 3} },
+    .shadow = { .size = 10, .blur = 2, .offset = {0, 3}, .color = 0x78000000 },
   },
   .control = { .padding = BUTTON_PADDING, .press_icon_offset = 1, .size_pct = { 100, 84, 71, 133 } },
   .button = { .corner_radius = 0 },

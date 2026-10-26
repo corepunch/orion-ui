@@ -6,6 +6,7 @@
 
 // Application chrome owns menu and docked toolbar bands. Empty space passes input through.
 // A NULL menubar_proc leaves room for the shell menu.
+// A NULL toolbar_proc creates no toolbar band.
 window_t *create_app_chrome(const char *title, winproc_t menubar_proc,
                             const menu_def_t *menus, int menu_count,
                             winproc_t toolbar_proc, hinstance_t hinstance);

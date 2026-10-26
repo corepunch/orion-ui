@@ -13,6 +13,9 @@ recreating controls, transferring ownership, or losing text, selection, or focus
 Groove uses a fill arrangement and a bottom Library pane. Pencil Test uses the same
 manager through application chrome for its menu, command toolbar, tools, options,
 and floating color palette. Its frame controls share the left tool strip.
+Ledger uses the same chrome with a docked menu and no toolbar band, passing
+`NULL` for `create_app_chrome()`'s toolbar procedure. The bar spans the top edge
+with square corners and no floating-window border or shadow.
 
 The model borrows allowed-edge masks and frame-owned layout from
 [MFC control-bar docking](https://learn.microsoft.com/en-us/cpp/mfc/docking-and-floating-toolbars?view=msvc-170),

@@ -332,7 +332,7 @@ void draw_tooltip_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side)
   irect16_t body = tooltip_bubble_body_rect(r, side);
   if (body.w <= 0 || body.h <= 0) return;
   draw_rect_shadow(body, theme->tooltip.corner_radius, theme->tooltip.shadow.blur,
-                    theme->tooltip.shadow.offset, color_with_alpha(get_sys_color(brDarkEdge), 120));
+                    theme->tooltip.shadow.offset, theme->tooltip.shadow.color);
   render_tooltip_bubble(r, size, theme->tooltip.corner_radius * scale,
                        theme->tooltip.tail_size * scale,
                        (tail_offset - pad) * scale, pad * scale, side,

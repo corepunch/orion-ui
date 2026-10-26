@@ -10,6 +10,7 @@
 
 #include "ledger.h"
 #include <orion/gem.h>
+#include <orion/commctl/appchrome.h>
 #include <platform/platform.h>
 #include <orion/user/svg_icon_loader.h>
 
@@ -129,8 +130,15 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   choose_ui_language(language, share);
   if (!(g_ledger->ib = open_infobase())) return false;
 
+#ifdef BUILD_AS_GEM
   g_ledger->menubar_win = set_app_menu(ledger_menubar_proc, kLedgerMenus, kLedgerMenuCount,
                                        ledger_command, hinstance);
+#else
+  g_ledger->chrome_win = create_app_chrome("Ledger Chrome", ledger_menubar_proc,
+                                         kLedgerMenus, kLedgerMenuCount, NULL, hinstance);
+  if (!g_ledger->chrome_win) return false;
+  g_ledger->menubar_win = app_chrome_menubar(g_ledger->chrome_win);
+#endif
   g_ledger->accel = load_accelerators(ledger_default_accels, ledger_default_accel_count);
   if (g_ledger->menubar_win)
     send_message(g_ledger->menubar_win, kMenuBarMessageSetAccelerators, 0, g_ledger->accel);
@@ -148,6 +156,8 @@ void gem_shutdown(void) {
   if (!g_ledger) return;
   // Editors borrow the infobase; release their working contexts first.
   if (is_window(g_ledger->main_win)) destroy_window(g_ledger->main_win);
+  if (is_window(g_ledger->chrome_win)) destroy_window(g_ledger->chrome_win);
+  g_ledger->chrome_win = g_ledger->menubar_win = NULL;
   ledger_close_assistant();
   destroy_database(g_ledger->ib);  // saves when modified
   ledger_script_close();

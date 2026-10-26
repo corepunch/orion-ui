@@ -22,7 +22,7 @@
           <Button name="hide" text="Hide assistant" />
         </StackView>
         <Label name="summary" text="Hello! Say or type: show debtors." />
-        <Label name="request" color="secondary" />
+        <Label name="request" color="secondary" flags="LABEL_COLLAPSE_EMPTY" />
         <TextBox name="command" placeholder="Ask me, for example: show debtors" />
         <StackView name="actions" orientation="horizontal" spacing="8">
           <Button name="submit" text="Send" action="submit" flags="BUTTON_DEFAULT" />
@@ -34,11 +34,11 @@
           <Column field="amount" title="Amount" width="100" />
           <Column field="date" title="Date" width="90" />
         </TableView>
-        <Label name="error" color="error" />
+        <Label name="error" color="error" flags="LABEL_COLLAPSE_EMPTY" />
       </SpeechBubble>
       <StackView name="character" orientation="horizontal" spacing="0" margin="0,0,18,0">
         <Space name="character_flex" />
-        <SpriteButton name="mascot" width="124" height="93" action="greet" />
+        <SpriteButton name="mascot" width="124" height="93" action="greet" flags="SPRITE_BUTTON_DOUBLECLICK" />
       </StackView>
     </form>
   </forms>

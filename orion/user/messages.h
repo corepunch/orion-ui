@@ -258,6 +258,7 @@ enum {
   // Text edit → parent (evCommand) after every user edit of the text (EN_CHANGE).
   // edUpdate still goes to the root on commit (Enter / Tab). lparam = edit window.
   ednChange,
+  btnDoubleClicked, // SpriteButton with SPRITE_BUTTON_DOUBLECLICK: lparam = source control
 };
 
 // Button state
@@ -323,6 +324,8 @@ enum {
 #define WINDOW_STATE_MAXIMIZED (1ull << 34)  // ≈ WS_MAXIMIZE
 #define WINDOW_PLASTIC         (1ull << 36)  // paint with the theme's plastic material (Button, Card)
 #define WINDOW_ROUND           (1ull << 37)  // Button: circular silhouette (BUTTON_STYLE_ROUND)
+#define LABEL_COLLAPSE_EMPTY    (1ull << 38)  // omit an empty label and its spacing from auto-layout
+#define SPRITE_BUTTON_DOUBLECLICK (1ull << 39) // send btnDoubleClicked instead of a second btnClicked
 #define WINDOW_MAXIMIZEBOX     (1ull << 35)  // ≈ WS_MAXIMIZEBOX: caption exposes a restore/maximize command
 
 // Auto-layout alignment values used by layout_measure_t / layout_arrange_t.
@@ -598,6 +601,7 @@ enum {
 // Sprite controls (SpriteButton / SpriteSlider): bitmap-skinned variants of Button and Slider.
 // SpriteSlider also answers slSetRange / slSetPos / slGetPos and notifies with sliderValueChanged,
 // exactly like Slider; SpriteButton toggles with btnSetCheck / btnGetCheck and notifies btnClicked.
+// SPRITE_BUTTON_DOUBLECLICK enables btnDoubleClicked and consumes the second release.
 enum {
   spbSetSprites = evUser + 500,   // lparam = sprite_button_t* (copied; the bitmap stays caller-owned)
   spsSetSprites,                  // lparam = sprite_slider_t* (copied; the bitmap stays caller-owned)

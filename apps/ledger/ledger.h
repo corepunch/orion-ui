@@ -28,6 +28,7 @@ typedef struct {
   database_t    *catalog;  // installed configurations
   window_t      *main_win;
   window_t      *menubar_win;
+  window_t      *chrome_win;
   accel_table_t *accel;
   char configuration[32];               // active configuration code
   char config_dir[LEDGER_PATH_MAX];     // share/configurations/<code>
