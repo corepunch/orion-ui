@@ -32,6 +32,13 @@ Xcode creates unity sources, the resource compiler and generated form headers in
 DerivedData at build time, so a fresh checkout needs no pre-generated C files.
 The source list is refreshed on every build, including newly added framework
 modules such as localization. No build products are written into the app folder.
+The navigator and Compile Sources phases reference only generated unity files:
+`u_user.c`, `u_kernel.c`, `u_commctl.c`, `u_commdlg.c`, `u_groove.c`,
+`u_audio_input.m` and the target's `u_platform_macos.m` or `u_platform_ipad.m`.
+Each unity file includes the module's sources; individual implementation files
+are not listed or compiled separately. The Engine, Application and Native Sources
+groups follow the same structure as Orca's Xcode projects. Generated files appear
+after the first build; the application form and resources remain directly accessible.
 The normal `build/generated/` headers and Makefile-built binaries/libraries are
 not used. Framework code is statically linked, using the SDK's libxml2; no
 Homebrew packages, XcodeGen or CocoaPods are required. App resources, fonts,
@@ -46,8 +53,9 @@ in the generator so regenerating the project preserves it. Revisit it if Groove 
 its linked libraries gain non-exempt encryption. New uploads include the declaration;
 already-uploaded builds still need their export compliance questionnaire completed.
 
-Only Groove is supported initially. Regenerate to refresh the navigator after
-adding/removing sources, or to update separately compiled common-dialog files.
+Only Groove is supported initially. Adding or removing sources inside existing
+modules needs no project regeneration, including common-dialog sources. Regenerate
+after changing the generator's module layout or build settings.
 Existing source edits and `.orion` changes rebuild normally. IDs and generated
 files are deterministic; unchanged files retain their timestamps. With
 `--unsigned`, regeneration preserves existing signing settings, bundle IDs and

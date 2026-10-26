@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import sys
 
-from generate import unity_sources, write
+from common import unity_sources, write
 
 
 def run(*args):

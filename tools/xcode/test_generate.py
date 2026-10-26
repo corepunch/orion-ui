@@ -41,7 +41,7 @@ class FileReferenceTests(unittest.TestCase):
             for target in (obj for obj in objects.values() if obj['isa'] == 'PBXNativeTarget'):
                 phase = next(objects[uid] for uid in target['buildPhases'] if objects[uid]['isa'] == 'PBXSourcesBuildPhase')
                 files = [objects[objects[uid]['fileRef']]['path'] for uid in phase['files']]
-                self.assertIn('audio_input.m', files)
+                self.assertIn('u_audio_input.m', files)
                 config = objects[objects[target['buildConfigurationList']]['buildConfigurations'][0]]['buildSettings']
                 self.assertIn('AVFoundation', config['OTHER_LDFLAGS'])
                 info = config['INFOPLIST_FILE'].replace('$(PROJECT_FILE_PATH)', str(bundle))
@@ -73,7 +73,7 @@ class FileReferenceTests(unittest.TestCase):
                         self.assertIs(entitlements['com.apple.security.app-sandbox'], True)
                         self.assertIs(entitlements['com.apple.security.files.user-selected.read-write'], True)
 
-    def test_navigator_resolves_sources_without_build_settings(self):
+    def test_navigator_and_build_phases_use_only_unity_sources(self):
         with tempfile.TemporaryDirectory(prefix='orion xcode ') as directory:
             output = Path(directory) / 'nested' / 'project'
             subprocess.run(['python3', str(Path(generate.__file__)), 'groove', '--unsigned',
@@ -81,32 +81,47 @@ class FileReferenceTests(unittest.TestCase):
             project = output / 'groove.xcodeproj/project.pbxproj'
             data = json.loads(subprocess.check_output(['plutil', '-convert', 'json', '-o', '-', str(project)]))
             objects = data['objects']
-            seen = set()
+            seen, generated = set(), set()
 
             def visit(uid, parent):
                 obj = objects[uid]
                 tree = obj.get('sourceTree', '<group>')
                 if tree == 'BUILT_PRODUCTS_DIR':
                     return
+                if tree == 'DERIVED_FILE_DIR':
+                    generated.add(uid)
+                    return
                 self.assertIn(tree, ('SOURCE_ROOT', '<group>'), obj)
                 path = (output if tree == 'SOURCE_ROOT' else parent) / obj.get('path', '')
                 if obj['isa'] == 'PBXFileReference':
-                    self.assertTrue(path.is_file(), f'Missing navigator file: {path}')
+                    self.assertTrue(path.exists(), f'Missing navigator file: {path}')
                     seen.add(path.resolve())
                 for child in obj.get('children', []):
                     visit(child, path)
 
             visit(objects[data['rootObject']]['mainGroup'], output)
-            for folder, pattern in (('apps/groove', '*.c'), ('orion', '*.h'), ('platform/macos', '*.m')):
-                for path in (generate.ROOT / folder).glob(pattern):
-                    self.assertIn(path.resolve(), seen)
             self.assertIn((generate.ROOT / 'apps/groove/groove.orion').resolve(), seen)
-
-            generated = {uid for uid, obj in objects.items() if obj.get('sourceTree') == 'DERIVED_FILE_DIR'}
-            self.assertTrue(generated)
+            self.assertIn((generate.ROOT / 'apps/groove/share').resolve(), seen)
+            self.assertFalse(any(path.suffix in ('.c', '.h', '.m') for path in seen))
+            self.assertEqual(generated, {uid for uid, obj in objects.items() if obj.get('sourceTree') == 'DERIVED_FILE_DIR'})
+            main = objects[objects[data['rootObject']]['mainGroup']]
+            groups = {objects[uid]['name']: objects[uid] for uid in main['children']}
+            self.assertEqual({objects[uid]['path'] for uid in groups['Engine']['children']},
+                             {'u_user.c', 'u_kernel.c', 'u_commctl.c', 'u_commdlg.c'})
+            for target in (obj for obj in objects.values() if obj['isa'] == 'PBXNativeTarget'):
+                phase = next(objects[uid] for uid in target['buildPhases'] if objects[uid]['isa'] == 'PBXSourcesBuildPhase')
+                refs = [objects[objects[uid]['fileRef']] for uid in phase['files']]
+                platform = target['name'].removeprefix('groove-')
+                self.assertEqual({ref['path'] for ref in refs},
+                                 {'u_user.c', 'u_kernel.c', 'u_commctl.c', 'u_commdlg.c', 'u_groove.c',
+                                  'u_audio_input.m', 'u_platform_' + platform + '.m'})
+                self.assertTrue(all(ref['sourceTree'] == 'DERIVED_FILE_DIR' for ref in refs))
+                for uid in phase['files']:
+                    build_file = objects[uid]
+                    ref = objects[build_file['fileRef']]
+                    self.assertEqual(build_file.get('settings', {}).get('COMPILER_FLAGS'),
+                                     '-fobjc-arc' if ref['path'] == 'u_platform_ipad.m' else None)
             self.assertFalse(any(output.rglob('*.c')), 'Generated C sources must stay in DerivedData')
-            self.assertFalse(any(uid in group.get('children', []) for uid in generated for group in objects.values()),
-                             'Unbuilt generated sources must not appear as missing navigator files')
 
     def test_regeneration_preserves_signing_and_shared_schemes(self):
         with tempfile.TemporaryDirectory(prefix='orion xcode ') as directory:

@@ -10,13 +10,7 @@ import plistlib
 import subprocess
 import xml.etree.ElementTree as ET
 
-ROOT = Path(__file__).resolve().parents[2]
-
-
-def write(path, content):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists() or path.read_text() != content:
-        path.write_text(content)
+from common import ROOT, unity_sources, write
 
 
 def encode(value):
@@ -27,25 +21,6 @@ def encode(value):
     if isinstance(value, int):
         return str(value)
     return json.dumps(str(value))
-
-
-def unity_sources(root, app):
-    app_dir = root / 'apps' / app
-    units = {
-        'user.c': [p for p in sorted((root / 'orion/user').glob('*.c'))
-                   if p.name not in ('dialog.c', 'component_registry.c')],
-        'kernel.c': sorted((root / 'orion/kernel').glob('*.c')),
-        'audio_input.m': [root / 'orion/kernel/audio_input_apple.m'],
-        'commctl.c': [p for p in sorted((root / 'orion/commctl').glob('*.c')) if p.name != 'tray.c'],
-        'app.c': sorted(p for p in app_dir.rglob('*.c')
-                        if p.name != 'main.c' and not {'components', 'tests', 'reel'} & set(p.relative_to(app_dir).parts))
-                 + [app_dir / 'main.c'],
-    }
-    for platform, backend in (('macos', 'macos'), ('ipad', 'ios')):
-        units[platform + '.m'] = (sorted((root / 'platform' / backend).glob('*.m'))
-                                  + sorted((root / 'platform/unix').glob('*.c'))
-                                  + sorted((root / 'platform/audio').glob('*.c')))
-    return units
 
 
 def read_project(path):
@@ -159,23 +134,22 @@ def generate(args):
     for name in units:
         source_refs[name] = project.add('unity/' + name, 'PBXFileReference', path=name,
                                        sourceTree='DERIVED_FILE_DIR', lastKnownFileType='sourcecode.c.objc' if name.endswith('.m') else 'sourcecode.c.c')
-    for path in sorted((ROOT / 'orion/commdlg').glob('*.c')):
-        source_refs[str(path.relative_to(ROOT))] = project.add(str(path.relative_to(ROOT)), 'PBXFileReference',
-            path=os.path.relpath(path, output), sourceTree='SOURCE_ROOT', lastKnownFileType='sourcecode.c.c')
-    browse = []
-    for folder in ('apps/groove', 'orion', 'platform'):
-        files = []
-        for path in sorted((ROOT / folder).rglob('*')):
-            if not path.is_file() or path.suffix not in ('.c', '.h', '.m', '.orion'):
-                continue
-            if {'reel', 'promo', 'ejay-samples', 'mtv-samples', 'tests'} & set(path.relative_to(ROOT / folder).parts):
-                continue
-            rel = path.relative_to(ROOT).as_posix()
-            files.append(project.add('browse/' + rel, 'PBXFileReference', name=rel.removeprefix(folder + '/'),
-                                     path=os.path.relpath(path, output), sourceTree='SOURCE_ROOT',
-                                     lastKnownFileType={'.c': 'sourcecode.c.c', '.h': 'sourcecode.c.h',
-                                                        '.m': 'sourcecode.c.objc', '.orion': 'text.xml'}[path.suffix]))
-        browse.append(project.add('group/' + folder, 'PBXGroup', name=folder, children=files, sourceTree='<group>'))
+    app_unit = 'u_' + args.app + '.c'
+    form_ref = project.add('app-form', 'PBXFileReference',
+                           path=os.path.relpath(ROOT / 'apps' / args.app / (args.app + '.orion'), output),
+                           sourceTree='SOURCE_ROOT', lastKnownFileType='text.xml')
+    resource_ref = project.add('app-resources', 'PBXFileReference', name='Application resources',
+                               path=os.path.relpath(ROOT / 'apps' / args.app / 'share', output),
+                               sourceTree='SOURCE_ROOT', lastKnownFileType='folder')
+    browse = [
+        project.add('group/application', 'PBXGroup', name='Application',
+                    children=[source_refs[app_unit], form_ref, resource_ref, icon_ref], sourceTree='<group>'),
+        project.add('group/engine', 'PBXGroup', name='Engine',
+                    children=[ref for name, ref in source_refs.items() if name.endswith('.c') and name != app_unit],
+                    sourceTree='<group>'),
+        project.add('group/native', 'PBXGroup', name='Native Sources',
+                    children=[ref for name, ref in source_refs.items() if name.endswith('.m')], sourceTree='<group>'),
+    ]
     targets, products = [], []
     signing = signing_settings(args, bundle) if not args.unsigned else {'CODE_SIGN_STYLE': 'Automatic'}
     for platform in ('macos', 'ipad'):
@@ -225,17 +199,18 @@ def generate(args):
                         LSApplicationCategoryType='public.app-category.music')
         write(bundle / 'Generated' / (platform + '-Info.plist'), plistlib.dumps(info).decode())
         target_sources = {filename: ref for filename, ref in source_refs.items()
-                          if not filename.endswith('.m') or filename in (platform + '.m', 'audio_input.m')}
+                          if not filename.endswith('.m') or filename in ('u_platform_' + platform + '.m', 'u_audio_input.m')}
         build_files = []
         for filename, ref in target_sources.items():
             fields = {'fileRef': ref}
-            if filename == 'ipad.m':
+            if filename == 'u_platform_ipad.m':
                 fields['settings'] = {'COMPILER_FLAGS': '-fobjc-arc'}
             build_files.append(project.add(name + '/' + filename, 'PBXBuildFile', **fields))
         forms = project.add(name + '/forms', 'PBXShellScriptBuildPhase', buildActionMask=2147483647,
             name='Prepare Orion sources and forms', shellPath='/bin/sh',
             shellScript='set -eu\n/usr/bin/python3 "$ORION_ROOT/tools/xcode/build.py" forms\n',
-            inputPaths=['$(ORION_ROOT)/tools/orionc.c', '$(ORION_ROOT)/apps/groove/groove.orion',
+            inputPaths=['$(ORION_ROOT)/tools/xcode/build.py', '$(ORION_ROOT)/tools/xcode/common.py',
+                        '$(ORION_ROOT)/tools/orionc.c', '$(ORION_ROOT)/apps/groove/groove.orion',
                         '$(ORION_ROOT)/apps/groove/share/icon.png'],
             outputPaths=['$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h',
                          '$(DERIVED_FILE_DIR)/Assets.xcassets'] +
