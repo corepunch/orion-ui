@@ -19,7 +19,7 @@ static void audio_cb(void *userdata, uint8_t *stream, int len) {
       float v = app->sample_preview[app->sample_preview_pos++] / 32768.0f;
       tmp[i * 2] += v; tmp[i * 2 + 1] += v;
     }
-    for (int i = 0; i < n * 2; i++) out[i] = (int16_t)(tanhf(tmp[i]) * 32000.0f);
+    groove_master_pcm(tmp, out, n * 2);
     out += n * 2;
     frames -= n;
   }
@@ -352,6 +352,9 @@ static void project_file_dialog(bool exporting) {
 void app_command(uint16_t id) {
   song_t *s = &g_app->song;
   switch (id) {
+    case ID_FILE_EXPORT_AUDIO: app_export_media(g_app->menubar_win, 0); break;
+    case ID_FILE_SHARE_AUDIO: app_export_media(g_app->menubar_win, 1); break;
+    case ID_FILE_EXPORT_VIDEO: app_export_media(g_app->menubar_win, 2); break;
     case ID_FILE_RECORD: app_record_sample(g_app->menubar_win); break;
     case ID_FILE_IMPORT_PROJECT: project_file_dialog(false); break;
     case ID_FILE_EXPORT_PROJECT: project_file_dialog(true); break;

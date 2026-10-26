@@ -5,19 +5,6 @@
 #include <orion/gem.h>
 #include <orion/commctl/appchrome.h>
 
-static const accel_t kAccel[] = {
-  { FVIRTKEY | FCONTROL, AX_KEY_N,         ID_FILE_NEW  },
-  { FVIRTKEY | FCONTROL, AX_KEY_O,         ID_FILE_OPEN },
-  { FVIRTKEY | FCONTROL, AX_KEY_S,         ID_FILE_SAVE },
-  { FVIRTKEY | FCONTROL, AX_KEY_Q,         ID_FILE_QUIT },
-  { FVIRTKEY,            AX_KEY_SPACE,     ID_PLAY      },
-  { FVIRTKEY,            AX_KEY_HOME,      ID_REWIND    },
-  { FVIRTKEY,            AX_KEY_END,       ID_FORWARD   },
-  { FVIRTKEY,            AX_KEY_L,         ID_LOOP      },
-  { FVIRTKEY,            AX_KEY_BACKSPACE, ID_DELETE    },
-  { FVIRTKEY,            AX_KEY_DEL,       ID_DELETE    },
-};
-
 result_t app_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   if (msg == evCommand && (HIWORD(wparam) == kMenuBarNotificationItemClick || HIWORD(wparam) == kAcceleratorNotification)) {
     app_command((uint16_t)LOWORD(wparam));
@@ -50,7 +37,7 @@ void create_menubar(void) {
   g_app->menubar_win = app_chrome_menubar(g_app->chrome);
 #endif
   g_app->toolbar = app_chrome_toolbar(g_app->chrome);
-  g_app->accel = load_accelerators(kAccel, ARRAY_LEN(kAccel));
+  g_app->accel = load_accelerators(groove_default_accels, ARRAY_LEN(groove_default_accels));
   if (g_app->menubar_win && g_app->accel) send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
 }
 

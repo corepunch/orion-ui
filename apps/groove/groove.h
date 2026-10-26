@@ -1,6 +1,7 @@
 #ifndef __GROOVE_H__
 #define __GROOVE_H__
 
+#include <orion/kernel/media_export.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -297,5 +298,15 @@ void waveform_cache_free(groove_t *app);
 // Moves a card window. A visual drag keeps the painted copy still: the frame
 // delta is added back into the drag offset.
 void card_place(window_t *card, irect16_t cell);
+
+void song_render_with_audio(song_t *song, float *lr, int frames, const block_pcm_t *audio);
+bool song_export_wav_with_audio(const song_t *song, const block_pcm_t *audio, const char *path, ui_media_progress_fn progress, void *userdata);
+// Mixdown and timeline export (export.c / dialogs/dlg_export.c).
+void groove_master_pcm(const float *in, int16_t *out, int samples);
+bool song_export_wav(const song_t *song, const char *path, ui_media_progress_fn progress, void *userdata);
+bool groove_encode_mp3(const char *wav, const char *path, ui_media_progress_fn progress, void *userdata);
+void song_draw_overview(const song_t *song, irect16_t r);
+bool song_export_canvas(const song_t *song, int width, int height, ui_media_video_t *video);
+void app_export_media(window_t *owner, int kind);
 
 #endif

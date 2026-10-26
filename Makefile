@@ -42,8 +42,8 @@ else ifeq ($(UNAME_S),Darwin)
 ARCH     ?= arm64
 CFLAGS   += -arch $(ARCH)
 LDFLAGS  += -arch $(ARCH)
-LIBS     += -framework OpenGL -framework AVFoundation -framework AudioToolbox
-KERNEL_INPUT_OBJ = $(BUILD_DIR)/audio_input_apple.o
+LIBS     += -framework OpenGL -framework AVFoundation -framework AudioToolbox -framework CoreMedia -framework CoreVideo -framework AppKit
+KERNEL_INPUT_OBJ = $(BUILD_DIR)/audio_input_apple.o $(BUILD_DIR)/media_export_apple.o
 # Scener encodes reel videos with VideoToolbox.
 SCENER_LIBS = -framework VideoToolbox -framework CoreMedia -framework CoreVideo -framework CoreFoundation
 LIB_EXT  = dylib
@@ -373,7 +373,7 @@ USER_SRCS = $(filter-out orion/user/dialog.c orion/user/component_registry.c,$(w
             orion/commdlg/msgbox.c
 
 ifeq ($(UNAME_S),Darwin)
-$(KERNEL_INPUT_OBJ): orion/kernel/audio_input_apple.m orion/kernel/audio_input.h | $(BUILD_DIR)
+$(BUILD_DIR)/%_apple.o: orion/kernel/%_apple.m $(wildcard orion/kernel/*.h) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -fblocks -c $< -o $@
 endif
 $(eval $(call unity_lib,kernel,$(wildcard orion/kernel/*.c),$(KERNEL_INPUT_OBJ),,$(if $(KERNEL_INPUT_OBJ),-x none $(KERNEL_INPUT_OBJ) -lobjc)))

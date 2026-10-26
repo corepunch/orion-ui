@@ -758,7 +758,8 @@ void test_activitybar_navigation(void) {
   ASSERT_NOT_NULL(bar);
   toolbar_state_t *tb = toolbar_get_state(bar);
   ASSERT_EQUAL(tb->orientation, TOOLBAR_VERTICAL);
-  ASSERT_EQUAL(tb->btn_size, TB_SPACING);
+  ASSERT_EQUAL(tb->btn_size, 0);
+  ASSERT_EQUAL(toolbar_effective_bsz(bar), get_theme()->toolbar.button_size);
   ASSERT_EQUAL(tb->item_count, 4);
   ASSERT_STR_EQUAL(tb->items[0].checked_icon, "gc-nav-overview-fill");
   ASSERT_STR_EQUAL(tb->items[1].checked_icon, "gc-nav-changes-fill");

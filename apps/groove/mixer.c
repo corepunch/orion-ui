@@ -145,7 +145,7 @@ static void add_mono(float *lr, const float *src, int n, float gain) {
   for (int i = 0; i < n; i++) { float v = src[i] * gain; lr[i * 2] += v; lr[i * 2 + 1] += v; }
 }
 
-void song_render(song_t *s, float *lr, int frames) {
+void song_render_with_audio(song_t *s, float *lr, int frames, const block_pcm_t *audio) {
   int done = 0;
   memset(lr, 0, sizeof(float) * 2 * (size_t)frames);
   int64_t clip_ends[GR_MAX_CLIPS], end = 0;
@@ -163,15 +163,16 @@ void song_render(song_t *s, float *lr, int frames) {
     for (int i = 0; i < s->nclips; i++) {
       const clip_t *c = &s->clips[i];
       const block_t *b = block_get(c->block);
-      if (!b || !b->audio.pcm || !track_audible(s, c->track)) continue;
+      const block_pcm_t *pcm = audio ? &audio[c->block] : b ? &b->audio : NULL;
+      if (!pcm || !pcm->pcm || !track_audible(s, c->track)) continue;
       int64_t start = position_frames_for_bpm(c->position, s->bpm);
-      int64_t from = MAX(s->pos, start), to = MIN(s->pos + chunk, clip_ends[i]), src_len = b->audio.frames;
+      int64_t from = MAX(s->pos, start), to = MIN(s->pos + chunk, clip_ends[i]), src_len = pcm->frames;
       if (to <= from || src_len <= 0) continue;
       float gain = CLIP_GAIN * powf(10.0f, c->gain_db * 0.05f);
       for (int64_t at = from; at < to; ) { // past the source, the same clip loops; a shorter span plays the prefix
         int64_t off = (at - start) % src_len;
         int n = (int)MIN(to - at, src_len - off);
-        add_mono(lr + 2 * (done + (int)(at - s->pos)), b->audio.pcm + off, n, gain);
+        add_mono(lr + 2 * (done + (int)(at - s->pos)), pcm->pcm + off, n, gain);
         at += n;
       }
     }
@@ -184,4 +185,8 @@ void song_render(song_t *s, float *lr, int frames) {
     if (n > 0) { add_mono(lr, b->audio.pcm + s->preview_pos, n, 0.7f); s->preview_pos += n; }
     if (n <= 0 || s->preview_pos >= b->audio.frames) s->preview_block = -1;
   }
+}
+
+void song_render(song_t *s, float *lr, int frames) {
+  song_render_with_audio(s, lr, frames, NULL);
 }

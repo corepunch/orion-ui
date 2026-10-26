@@ -22,6 +22,7 @@ def unity_sources(root, app):
                                  if p.name != 'main.c' and not {'components', 'tests', 'reel'} & set(p.relative_to(app_dir).parts))
                           + [app_dir / 'main.c'],
         'u_audio_input.m': [root / 'orion/kernel/audio_input_apple.m'],
+        'u_media_export.m': [root / 'orion/kernel/media_export_apple.m'],
     }
     for platform, backend in (('macos', 'macos'), ('ipad', 'ios')):
         units['u_platform_' + platform + '.m'] = (sorted((root / 'platform' / backend).glob('*.m'))

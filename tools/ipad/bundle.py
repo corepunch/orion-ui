@@ -85,6 +85,7 @@ def main():
         info.update({'UIStatusBarHidden': True, 'UIViewControllerBasedStatusBarAppearance': False})
     if args.app == 'groove':
         info['NSMicrophoneUsageDescription'] = 'Record your own sounds and vocals as samples in Groove songs.'
+        info['NSPhotoLibraryAddUsageDescription'] = 'Save exported Groove timeline videos to your photo library.'
     (target / 'Info.plist').write_bytes(plistlib.dumps(info))
     (target / 'PkgInfo').write_bytes(b'APPL????')
     print('Packaged ' + str(target))
