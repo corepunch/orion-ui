@@ -37,7 +37,7 @@ local function rows(entity)
   for _,record in ipairs(Models[entity]:all()) do
     local row={id=record.id,name=record.name or record.number or '',number=record.number,date=record.date}
     if entity=='counterparties' then row.debt=debt[record.id] or 0; row.amount=row.debt
-    elseif entity=='documents' then row.amount=record.total; row.posted=record.posted==true or record.posted==1
+    elseif entity=='documents' then row.counterparty_id=record.counterparty_id; row.amount=record.total; row.posted=record.posted==true or record.posted==1
     elseif entity=='items' then row.amount=record.price end
     out[#out+1]=row
   end

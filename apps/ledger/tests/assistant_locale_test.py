@@ -50,6 +50,18 @@ assert(r.message==string.format(catalog['Found: %%d. Amounts are in the accounti
 r=e:submit('open first')
 assert(r.message==string.format(catalog['Opened record: %%s'],'Untouched Ё GmbH'))
 assert(e:submit('reset').message==catalog['Context cleared.'])
+local records={counterparties={{id=1,name='Untouched Ё GmbH'}},
+  documents={{id=2,name='Invoice',counterparty_id=1,amount=5}}}
+local related=E.new{rows=function(entity) return records[entity] end,open=function() return true end}
+r=related:submit('show documents for')
+assert(r.ok and r.message==string.format(catalog['Found: %%d. Customer: %%s. Amounts are in the accounting currency.'],1,'Untouched Ё GmbH'))
+r=related:submit('open')
+assert(r.ok and r.message==string.format(catalog['Opened record: %%s (inferred from context).'],'Invoice'))
+assert(related:submit('cancel').message==catalog['Pending question cancelled.'])
+related:submit('reset')
+records.counterparties[2]={id=3,name='Another customer'}
+r=related:submit('show documents for')
+assert(not r.ok and r.message==catalog['Which customer are these documents for? Use a row number or a quoted name.'])
 ''' % table
                 with tempfile.NamedTemporaryFile('w', suffix='.lua') as test:
                     test.write(script)

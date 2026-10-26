@@ -45,5 +45,19 @@
   <string source="Opened record: %s">Открыта карточка: %s</string>
   <string source="Could not retrieve data: %s">Не удалось получить данные: %s</string>
   <string source="Found: %d. Amounts are in the accounting currency.">Найдено: %d. Суммы — в валюте учёта.</string>
-  <string source="Show debtors → over fifty thousand → sort by debt → open first. Also: show documents; only posted; find customer &quot;Name&quot;.">Покажи должников → больше пятидесяти тысяч → отсортируй по долгу → открой первого. Также: покажи документы; только проведенные; найди клиента "Название".</string>
+  <string source="Try: show debtors; find customer &quot;Name&quot; → show documents for it → only posted → open first. Missing customer: show documents for. Cancel a question: cancel.">Примеры: покажи должников; найди клиента "Название" → покажи документы для него → только проведенные → открой первого. Уточнить клиента: покажи документы для. Отменить вопрос: отмена.</string>
+  <string source="Document relations require a customer.">Для связи с документами укажите клиента.</string>
+  <string source="Specify one object reference.">Укажите одну ссылку на объект.</string>
+  <string source="Only documents can be filtered by customer.">По клиенту можно отбирать только документы.</string>
+  <string source="Specify a nonempty name.">Укажите непустое название.</string>
+  <string source="That object type does not fit this request.">Этот вид объектов не подходит к запросу.</string>
+  <string source="There is no object for this or it yet.">Пока не определено, на какой объект ссылается местоимение.</string>
+  <string source="The referenced record is no longer available.">Запись, на которую вы ссылаетесь, больше недоступна.</string>
+  <string source="No matching records were found.">Подходящие записи не найдены.</string>
+  <string source="Several records match. Which one? Use a row number or a quoted name.">Подходит несколько записей. Какая нужна? Укажите номер строки или название в кавычках.</string>
+  <string source="Which customer are these documents for? Use a row number or a quoted name.">Для какого клиента показать документы? Укажите номер строки или название в кавычках.</string>
+  <string source="Opened record: %s (inferred from context).">Открыта карточка: %s (определено по контексту).</string>
+  <string source="Found: %d. Customer: %s. Amounts are in the accounting currency.">Найдено: %d. Клиент: %s. Суммы — в валюте учёта.</string>
+  <string source="Pending question cancelled.">Уточняющий вопрос отменён.</string>
+  <string source="Answer the pending question or enter a new command.">Ответьте на уточняющий вопрос или введите новую команду.</string>
 </strings>

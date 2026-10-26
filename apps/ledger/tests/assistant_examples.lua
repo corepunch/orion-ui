@@ -29,6 +29,11 @@ local examples={
   {'open first','öffne den ersten','открой первого',{verb='open',ordinal=1}},
   {'open second','öffne die zweite','открой вторую',{verb='open',ordinal=2}},
   {'help','Hilfe','помощь',{verb='help'}},
+  {'show posted documents for customer "Alpha"','zeige gebuchte Belege für Kunde "Alpha"','покажи проведенные документы для клиента "Alpha"',
+    {entity='documents',for_party={verb='open',entity='counterparties',name='alpha',filters={}}}},
+  {'show documents for it','zeige Belege für ihn','покажи документы для него',
+    {entity='documents',for_party={verb='open',pronoun=true,filters={}}}},
+  {'cancel','abbrechen','отмена',{verb='cancel'}},
   {'reset','zurücksetzen','сброс',{verb='reset'}},
 }
 for _,row in ipairs(examples) do
@@ -66,16 +71,16 @@ local function engine()
   return e,opened
 end
 local dialogues={
-  {'show debtors','over fifty thousand','sort by debt descending','open','first','open it'},
-  {'zeige Schuldner','mehr als fünfzigtausend','sortiere nach Schulden absteigend','öffne','den ersten','öffne ihn'},
-  {'покажи должников','больше пятидесяти тысяч','отсортируй по долгу по убыванию','открой','первого','открой его'},
+  {'show debtors','over fifty thousand','sort by debt descending','open','open first','open it'},
+  {'zeige Schuldner','mehr als fünfzigtausend','sortiere nach Schulden absteigend','öffne','öffne den ersten','öffne ihn'},
+  {'покажи должников','больше пятидесяти тысяч','отсортируй по долгу по убыванию','открой','открой первого','открой его'},
 }
 for _,d in ipairs(dialogues) do
   local e,opened=engine()
   for i,text in ipairs(d) do
-    local r=e:submit(text); check(r.ok==(i~=4),text..': '..r.message)
+    local r=e:submit(text); check(r.ok,text..': '..r.message)
   end
-  check(#opened==2 and opened[1].id==2 and opened[2].id==2,'contextual opening')
+  check(#opened==3 and opened[1].id==2 and opened[2].id==2 and opened[3].id==2,'contextual opening')
 end
 for _,text in ipairs({'open customer "Alpha"','öffne Kunde "Alpha"','открой клиента "Alpha"'}) do
   local e,opened=engine()

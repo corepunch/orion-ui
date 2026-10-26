@@ -42,8 +42,8 @@ assert(parse('покажи клиентов больше 50,5 тысяч').filte
 assert(parse('покажи клиентов не меньше 50 тысяч').filters[1].op=='ge')
 r=e:submit('покажи документы'); assert(r.ok,r.message); assert(#r.rows==2)
 r=e:submit('только проведенные'); assert(r.ok,r.message); assert(#r.rows==1 and r.rows[1].id==31)
-r=e:submit('открой'); assert(not r.ok)
-r=e:submit('первого'); assert(r.ok,r.message); assert(opened[#opened][2]==31)
+r=e:submit('открой'); assert(r.ok and r.inferred)
+r=e:submit('открой первого'); assert(r.ok,r.message); assert(opened[#opened][2]==31)
 r=e:submit('найди клиента "Альфа"'); assert(r.ok,r.message); assert(#r.rows==1 and r.rows[1].id==11)
 r=e:submit('открой клиента "Бета"'); assert(r.ok,r.message); assert(opened[#opened][2]==12)
 r=e:submit('сброс'); assert(r.ok); assert(#e.rows==0)
@@ -53,4 +53,7 @@ assert(not P.parse(string.rep('x',2049)))
 assert(not P.parse('найди клиента "Альфа'))
 print('assistant grammar, dialogue, filtering and action tests passed')
 -- The native test host loads this second chunk explicitly: its sandbox has no dofile.
-if dofile then dofile('apps/ledger/tests/assistant_examples.lua') end
+if dofile then
+  dofile('apps/ledger/tests/assistant_examples.lua')
+  dofile('apps/ledger/tests/assistant_dialogue_test.lua')
+end
