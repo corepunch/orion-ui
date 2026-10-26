@@ -765,7 +765,7 @@ void test_activitybar_navigation(void) {
   ASSERT_STR_EQUAL(tb->items[1].checked_icon, "gc-nav-changes-fill");
   ASSERT_STR_EQUAL(tb->items[2].checked_icon, "gc-nav-history-fill");
   ASSERT_STR_EQUAL(tb->items[3].checked_icon, "gc-nav-github-fill");
-  ASSERT_EQUAL(bar->frame.w, TB_SPACING + 2 * toolbar_effective_padding(bar));
+  ASSERT_EQUAL(bar->frame.w, toolbar_effective_bsz(bar) + 2 * toolbar_effective_padding(bar));
   ASSERT_EQUAL(g_test_state.tab, GC_TAB_CHANGES);
   window_t *summary = get_window_item(host, ID_CHANGES_PAGE_COMMIT_SUMMARY);
   send_message(summary, edSetText, 0, "Keep this draft");
