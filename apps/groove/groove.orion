@@ -20,6 +20,10 @@
         <item name="import_project" label="Import Song..." />
         <item name="export_project" label="Export Project..." />
         <Separator />
+        <item name="export_audio" label="Export Audio..." shortcut="Ctrl+E" />
+        <item name="share_audio" label="Share Audio..." />
+        <item name="export_video" label="Export Timeline Video..." shortcut="Ctrl+Shift+E" />
+        <Separator />
         <item name="demo" label="Demo: Neon Skyline" />
         <item name="demo_afterglow" label="Demo: Afterglow Avenue" />
         <item name="demo_victory" label="Demo: Victory Lights" />
@@ -28,7 +32,7 @@
       </menu>
 
       <menu name="edit" label="Edit">
-        <item name="delete" label="Delete Block" shortcut="Delete" />
+        <item name="delete" label="Delete Block" shortcut="Delete;Backspace" />
       </menu>
 
       <menu name="transport" label="Transport">
@@ -75,6 +79,26 @@
     </databases>
 
     <forms>
+      <form name="export_media" title="Export" width="520" spacing="8" padding="12">
+        <GridView name="fields" spacing="6">
+          <Column name="labels" width="auto">
+            <Label name="lbl_format" text="Format:" />
+            <Label name="lbl_aspect" text="Video size:" />
+          </Column>
+          <Column name="inputs">
+            <ComboBox name="format" />
+            <ComboBox name="aspect" />
+          </Column>
+        </GridView>
+        <Label name="details" text="Export the whole song, with current mute, solo and block levels." height="44" />
+        <Label name="status" text="Ready to export." height="44" />
+        <StackView name="actions" orientation="horizontal" spacing="6">
+          <Button name="save" text="Save File..." flags="BUTTON_DEFAULT" />
+          <Button name="share" text="Share..." />
+          <Space name="flex" />
+          <Button name="cancel" text="Close" />
+        </StackView>
+      </form>
       <form name="record_sample" title="Record Sample" width="460" spacing="8" padding="12">
         <GridView name="fields" spacing="6">
           <Column name="labels" width="auto">

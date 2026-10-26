@@ -88,6 +88,8 @@ plans/
 third_party/
 !apps/groove/third_party/
 apps/groove/third_party/*
+!apps/groove/third_party/shine/
+!apps/groove/third_party/shine/**
 !apps/groove/third_party/tsf.h
 !apps/groove/third_party/TSF-SOURCE.txt
 !apps/groove/third_party/TSF-LICENSE

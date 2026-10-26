@@ -71,4 +71,31 @@
   <string source="Save failed" where="code">Ошибка сохранения</string>
   <string source="Could not read or write the Groove project." where="code">Не удалось прочитать или записать проект Groove.</string>
   <string source="Project unavailable" where="code">Проект недоступен</string>
+  <string source="Export Audio..." where="menu">Экспортировать аудио...</string>
+  <string source="Share Audio..." where="menu">Поделиться аудио...</string>
+  <string source="Export Timeline Video..." where="menu">Экспортировать видео таймлайна...</string>
+  <string source="Export" where="export_media">Экспорт</string>
+  <string source="Format:" where="export_media">Формат:</string>
+  <string source="Video size:" where="export_media">Размер видео:</string>
+  <string source="Export the whole song, with current mute, solo and block levels." where="export_media">Экспорт всей песни с учётом mute, solo и громкости блоков.</string>
+  <string source="Ready to export." where="export_media">Всё готово к экспорту.</string>
+  <string source="Save File..." where="export_media">Сохранить файл...</string>
+  <string source="Share..." where="export_media">Поделиться...</string>
+  <string source="Close" where="export_media">Закрыть</string>
+  <string source="Cancel Export" where="code">Отменить экспорт</string>
+  <string source="Could not create the export folder. Try Save File." where="code">Не удалось создать папку экспорта. Используйте «Сохранить файл».</string>
+  <string source="Use the filename extension matching the selected format." where="code">Расширение файла должно соответствовать выбранному формату.</string>
+  <string source="Add blocks to the song before exporting." where="code">Добавьте блоки в песню перед экспортом.</string>
+  <string source="Could not prepare the song audio." where="code">Не удалось подготовить звук песни.</string>
+  <string source="Could not render the timeline." where="code">Не удалось отрисовать таймлайн.</string>
+  <string source="Could not start the export." where="code">Не удалось начать экспорт.</string>
+  <string source="Exporting..." where="code">Экспорт...</string>
+  <string source="Export saved." where="code">Экспорт сохранён.</string>
+  <string source="Export cancelled." where="code">Экспорт отменён.</string>
+  <string source="Export failed. Check available space and encoder availability." where="code">Не удалось выполнить экспорт. Проверьте свободное место и доступность кодировщика.</string>
+  <string source="The export is saved in the Exports folder. Native sharing is unavailable here; use Save File to choose another location." where="code">Файл сохранён в папке Exports. Системная отправка здесь недоступна; выберите «Сохранить файл» для сохранения в другом месте.</string>
+  <string source="Export saved" where="code">Экспорт сохранён</string>
+  <string source="Exporting: %s%%" where="code">Экспорт: %s%%</string>
+  <string source="Cancelling..." where="code">Отмена...</string>
+  <string source="Not enough memory to prepare the export." where="code">Недостаточно памяти для подготовки экспорта.</string>
 </strings>

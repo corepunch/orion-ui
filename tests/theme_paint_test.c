@@ -298,13 +298,13 @@ static void test_scrollbar_thickness(void) {
 }
 
 static void test_default_modern_chrome(void) {
-  TEST("Default Modern uses the dark palette, accent titlebars, and inner slider tracks");
+  TEST("Default Modern uses charcoal creative surfaces, blue selection, and inner slider tracks");
   theme_t *theme = paint_with_theme(THEME_MODERN);
-  ASSERT_EQUAL(get_sys_color(brControlBg), 0xff3c3c3c);
-  ASSERT_EQUAL(get_sys_color(brAccent), 0xffD77800);
+  ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x303230));
+  ASSERT_EQUAL(get_sys_color(brAccent), WEB(0x3073C5));
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
-  ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[25][50], get_sys_color(brActiveTitlebar));
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_TOOLBAR, R(10, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
@@ -351,13 +351,20 @@ static void test_navy_caption_bar(void) {
 }
 
 static void test_panel_shades_and_tabs(void) {
-  TEST("Page, tab strip and tab faces have distinct shades; active tab merges with the pane");
+  TEST("Theme surfaces preserve their palette hierarchy; active tabs merge with the pane");
   theme_style_t styles[] = {THEME_MODERN, THEME_LIGHT, THEME_NAVY, THEME_AMBER, THEME_PORCELAIN, THEME_PORCELAIN_DARK, THEME_CLASSIC};
   for (int i = 0; i < ARRAY_LEN(styles); i++) {
     theme_t *theme = paint_with_theme(styles[i]);
-    ASSERT_NOT_EQUAL(get_sys_color(brControlBg), get_sys_color(brPanelDark));
-    ASSERT_NOT_EQUAL(get_sys_color(brPanelDark), get_sys_color(brPanelDarker));
-    ASSERT_NOT_EQUAL(get_sys_color(brControlBg), get_sys_color(brPanelDarker));
+    if (styles[i] == THEME_MODERN || styles[i] == THEME_LIGHT) {
+      if (styles[i] == THEME_MODERN) { ASSERT_EQUAL(get_sys_color(brControlBg), get_sys_color(brPanelDark)); }
+      else { ASSERT_NOT_EQUAL(get_sys_color(brControlBg), get_sys_color(brPanelDark)); }
+      ASSERT_EQUAL(get_sys_color(brPanelDark), get_sys_color(brPanelDarker));
+      ASSERT_NOT_EQUAL(get_sys_color(brControlBg), get_sys_color(brTabBarBg));
+    } else {
+      ASSERT_NOT_EQUAL(get_sys_color(brControlBg), get_sys_color(brPanelDark));
+      ASSERT_NOT_EQUAL(get_sys_color(brPanelDark), get_sys_color(brPanelDarker));
+      ASSERT_NOT_EQUAL(get_sys_color(brControlBg), get_sys_color(brPanelDarker));
+    }
     memset(pixels, 0, sizeof(pixels));
     theme->draw_part(THEME_PART_TOOLBAR, R(10, 10, 80, 30), CTRL_NORMAL);
     ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
@@ -368,9 +375,13 @@ static void test_panel_shades_and_tabs(void) {
     theme->draw_part(THEME_PART_PAGE, R(10, 10, 80, 30), CTRL_NORMAL);
     ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
     for (int shift = 0; shift < 24; shift += 8) {
-      ASSERT_TRUE(((get_sys_color(brPanelDarker) >> shift) & 255) < ((get_sys_color(brTabBarBg) >> shift) & 255));
-      ASSERT_TRUE(((get_sys_color(brTabBarBg) >> shift) & 255) < ((get_sys_color(brPanelDark) >> shift) & 255));
-      ASSERT_TRUE(((get_sys_color(brPanelDark) >> shift) & 255) < ((get_sys_color(brControlBg) >> shift) & 255));
+      if (styles[i] == THEME_MODERN || styles[i] == THEME_LIGHT) {
+        ASSERT_TRUE(((get_sys_color(brPanelDarker) >> shift) & 255) > ((get_sys_color(brTabBarBg) >> shift) & 255));
+      } else {
+        ASSERT_TRUE(((get_sys_color(brPanelDarker) >> shift) & 255) < ((get_sys_color(brTabBarBg) >> shift) & 255));
+        ASSERT_TRUE(((get_sys_color(brTabBarBg) >> shift) & 255) < ((get_sys_color(brPanelDark) >> shift) & 255));
+        ASSERT_TRUE(((get_sys_color(brPanelDark) >> shift) & 255) < ((get_sys_color(brControlBg) >> shift) & 255));
+      }
     }
     memset(pixels, 0, sizeof(pixels));
     theme->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_NORMAL);

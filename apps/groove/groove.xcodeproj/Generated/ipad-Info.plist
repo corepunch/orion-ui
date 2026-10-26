@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Record your own sounds and vocals as samples in Groove songs.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save exported Groove timeline videos to your photo library.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

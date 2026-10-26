@@ -42,10 +42,13 @@ class FileReferenceTests(unittest.TestCase):
                 phase = next(objects[uid] for uid in target['buildPhases'] if objects[uid]['isa'] == 'PBXSourcesBuildPhase')
                 files = [objects[objects[uid]['fileRef']]['path'] for uid in phase['files']]
                 self.assertIn('u_audio_input.m', files)
+                self.assertIn('u_media_export.m', files)
                 config = objects[objects[target['buildConfigurationList']]['buildConfigurations'][0]]['buildSettings']
                 self.assertIn('AVFoundation', config['OTHER_LDFLAGS'])
                 info = config['INFOPLIST_FILE'].replace('$(PROJECT_FILE_PATH)', str(bundle))
                 self.assertTrue(plistlib.loads(Path(info).read_bytes())['NSMicrophoneUsageDescription'])
+                if target['name'] == 'groove-ipad':
+                    self.assertTrue(plistlib.loads(Path(info).read_bytes())['NSPhotoLibraryAddUsageDescription'])
             permissions = plistlib.loads((bundle / 'Generated/macos.entitlements').read_bytes())
             self.assertIs(permissions['com.apple.security.device.audio-input'], True)
 
@@ -114,7 +117,7 @@ class FileReferenceTests(unittest.TestCase):
                 platform = target['name'].removeprefix('groove-')
                 self.assertEqual({ref['path'] for ref in refs},
                                  {'u_user.c', 'u_kernel.c', 'u_commctl.c', 'u_commdlg.c', 'u_groove.c',
-                                  'u_audio_input.m', 'u_platform_' + platform + '.m'})
+                                  'u_audio_input.m', 'u_media_export.m', 'u_platform_' + platform + '.m'})
                 self.assertTrue(all(ref['sourceTree'] == 'DERIVED_FILE_DIR' for ref in refs))
                 for uid in phase['files']:
                     build_file = objects[uid]

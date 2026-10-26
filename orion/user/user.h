@@ -133,7 +133,7 @@ typedef struct toolbar_state_s {
   window_t       *children;
   // Strip for icon rendering (set via tbSetStrip; caller owns the texture)
   bitmap_strip_t  strip;
-  int             btn_size;     // 0 = TB_SPACING default; >0 = custom square size in px
+  int             btn_size;     // 0 = theme toolbar button size; >0 = custom square size in px
   int             columns;      // vertical grid; 0/1 = single column
   toolbar_orientation_t orientation;
   uint32_t        style;        // TOOLBAR_STYLE_* flags

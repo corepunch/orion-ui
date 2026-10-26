@@ -16,16 +16,7 @@ static void paint_preview(const song_t *song, irect16_t r) {
               r.y + (r.h - text_char_height(FONT_SMALL)) / 2, get_sys_color(brTextSecondary));
     return;
   }
-  int span = MAX(song_length_ticks(song), PREVIEW_MIN_BARS * GR_TICKS_BAR);
-  for (int bar = 4; bar * GR_TICKS_BAR < span; bar += 4)
-    fill_rect(color_with_alpha(get_sys_color(brLightEdge), 0x20), R(r.x + bar * GR_TICKS_BAR * r.w / span, r.y, 1, r.h));
-  for (int i = 0; i < song->nclips; i++) {
-    const clip_t *c = &song->clips[i];
-    const block_t *b = block_get(c->block);
-    int x0 = c->position * r.w / span, x1 = song_clip_end(song, i) * r.w / span;
-    int y0 = c->track * r.h / GR_TRACKS, y1 = (c->track + 1) * r.h / GR_TRACKS;
-    if (b && x1 > x0) fill_rect(category_color(b->cat), R(r.x + x0, r.y + y0 + 1, MAX(1, x1 - x0 - 1), MAX(1, y1 - y0 - 2)));
-  }
+  song_draw_overview(song, r);
 }
 
 result_t win_song_preview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {

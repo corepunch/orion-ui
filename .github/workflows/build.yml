@@ -63,6 +63,30 @@ jobs:
     - name: Check XML-generated Ledger API and documentation
       run: make ledger-api-check
 
+  groove-ipad:
+    name: Build Groove for iPad Simulator
+    runs-on: macos-15
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Build native Groove target
+      run: >-
+        xcodebuild -project apps/groove/groove.xcodeproj
+        -scheme groove-ipad -configuration Debug
+        -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
+        -derivedDataPath build/groove-ipad-ci CODE_SIGNING_ALLOWED=NO build
+
+    - name: Verify native Apple audio and video exports
+      run: |
+        clang -std=c11 -fblocks -I. -Wno-deprecated-declarations \
+          tests/media_export_apple_test.m orion/kernel/media_export_apple.m orion/kernel/media_export.c \
+          -framework AVFoundation -framework AppKit -framework Foundation \
+          -framework CoreMedia -framework CoreVideo -o "$RUNNER_TEMP/groove-media-test"
+        media_test_dir=$(mktemp -d "$RUNNER_TEMP/groove-media.XXXXXX")
+        "$RUNNER_TEMP/groove-media-test" "$media_test_dir"
+
   platforms:
     name: Downloads
     uses: ./.github/workflows/platform-builds.yml

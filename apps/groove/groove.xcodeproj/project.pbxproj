@@ -128,6 +128,11 @@
 "sourceTree" = "DERIVED_FILE_DIR";
 "lastKnownFileType" = "sourcecode.c.objc";
 };
+"CDA93E0D55CAD9347B3B68B8" = {"isa" = "PBXFileReference";
+"path" = "u_media_export.m";
+"sourceTree" = "DERIVED_FILE_DIR";
+"lastKnownFileType" = "sourcecode.c.objc";
+};
 "6AFC5056EE569FE6BA670B77" = {"isa" = "PBXFileReference";
 "path" = "u_platform_macos.m";
 "sourceTree" = "DERIVED_FILE_DIR";
@@ -170,6 +175,7 @@
 "D20ADA84B682F079A05DF86A" = {"isa" = "PBXGroup";
 "name" = "Native Sources";
 "children" = ("C92F773921705A4A14AB975B",
+"CDA93E0D55CAD9347B3B68B8",
 "6AFC5056EE569FE6BA670B77",
 "05FA0772FDFDB095DBDBC5C1",
 );
@@ -198,6 +204,10 @@
 "AudioToolbox",
 "-framework",
 "AVFoundation",
+"-framework",
+"CoreMedia",
+"-framework",
+"CoreVideo",
 );
 "SUPPORTED_PLATFORMS" = "macosx";
 "MACOSX_DEPLOYMENT_TARGET" = "12.0";
@@ -236,6 +246,10 @@
 "AudioToolbox",
 "-framework",
 "AVFoundation",
+"-framework",
+"CoreMedia",
+"-framework",
+"CoreVideo",
 );
 "SUPPORTED_PLATFORMS" = "macosx";
 "MACOSX_DEPLOYMENT_TARGET" = "12.0";
@@ -276,6 +290,9 @@
 "4B00FB7A29471712749C8706" = {"isa" = "PBXBuildFile";
 "fileRef" = "C92F773921705A4A14AB975B";
 };
+"4C01A38B8A841D1D228A4B63" = {"isa" = "PBXBuildFile";
+"fileRef" = "CDA93E0D55CAD9347B3B68B8";
+};
 "139C15DDDDF4FEDFDC7EB6D3" = {"isa" = "PBXBuildFile";
 "fileRef" = "6AFC5056EE569FE6BA670B77";
 };
@@ -298,6 +315,7 @@
 "$(DERIVED_FILE_DIR)/u_commdlg.c",
 "$(DERIVED_FILE_DIR)/u_groove.c",
 "$(DERIVED_FILE_DIR)/u_audio_input.m",
+"$(DERIVED_FILE_DIR)/u_media_export.m",
 "$(DERIVED_FILE_DIR)/u_platform_macos.m",
 );
 "runOnlyForDeploymentPostprocessing" = 0;
@@ -311,6 +329,7 @@
 "B552DEDF67F2D44EECCBBF33",
 "EC3D26CF32F284C3C2614797",
 "4B00FB7A29471712749C8706",
+"4C01A38B8A841D1D228A4B63",
 "139C15DDDDF4FEDFDC7EB6D3",
 );
 "runOnlyForDeploymentPostprocessing" = 0;
@@ -376,6 +395,10 @@
 "AudioToolbox",
 "-framework",
 "AVFoundation",
+"-framework",
+"CoreMedia",
+"-framework",
+"CoreVideo",
 );
 "CODE_SIGN_STYLE" = "Automatic";
 "SDKROOT" = "iphoneos";
@@ -414,6 +437,10 @@
 "AudioToolbox",
 "-framework",
 "AVFoundation",
+"-framework",
+"CoreMedia",
+"-framework",
+"CoreVideo",
 );
 "CODE_SIGN_STYLE" = "Automatic";
 "SDKROOT" = "iphoneos";
@@ -452,6 +479,9 @@
 "E5DB06AFE9B71EF03F1D3B2E" = {"isa" = "PBXBuildFile";
 "fileRef" = "C92F773921705A4A14AB975B";
 };
+"AB773A6BB925B28F37D271DD" = {"isa" = "PBXBuildFile";
+"fileRef" = "CDA93E0D55CAD9347B3B68B8";
+};
 "EB8476BA7832E6EA16443B37" = {"isa" = "PBXBuildFile";
 "fileRef" = "05FA0772FDFDB095DBDBC5C1";
 "settings" = {"COMPILER_FLAGS" = "-fobjc-arc";
@@ -476,6 +506,7 @@
 "$(DERIVED_FILE_DIR)/u_commdlg.c",
 "$(DERIVED_FILE_DIR)/u_groove.c",
 "$(DERIVED_FILE_DIR)/u_audio_input.m",
+"$(DERIVED_FILE_DIR)/u_media_export.m",
 "$(DERIVED_FILE_DIR)/u_platform_ipad.m",
 );
 "runOnlyForDeploymentPostprocessing" = 0;
@@ -489,6 +520,7 @@
 "C8C8BBC8A230477FD269B4F5",
 "92E6E1B327C728B18B5F6643",
 "E5DB06AFE9B71EF03F1D3B2E",
+"AB773A6BB925B28F37D271DD",
 "EB8476BA7832E6EA16443B37",
 );
 "runOnlyForDeploymentPostprocessing" = 0;

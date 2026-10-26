@@ -162,7 +162,7 @@ def generate(args):
             settings.update(signing, SDKROOT='iphoneos', SUPPORTED_PLATFORMS='iphoneos iphonesimulator',
                             IPHONEOS_DEPLOYMENT_TARGET='16.0', TARGETED_DEVICE_FAMILY='2', SUPPORTS_MACCATALYST='NO')
             frameworks = ('UIKit', 'CoreGraphics', 'Foundation', 'OpenGLES', 'QuartzCore', 'Security',
-                          'UniformTypeIdentifiers', 'AudioToolbox', 'AVFoundation')
+                          'UniformTypeIdentifiers', 'AudioToolbox', 'AVFoundation', 'CoreMedia', 'CoreVideo')
         else:
             settings.update(SUPPORTED_PLATFORMS='macosx', MACOSX_DEPLOYMENT_TARGET='12.0',
                             CODE_SIGN_STYLE='Automatic', CODE_SIGN_IDENTITY='-',
@@ -175,7 +175,7 @@ def generate(args):
                 'com.apple.security.device.audio-input': True,
                 'com.apple.security.files.user-selected.read-write': True,
             }).decode())
-            frameworks = ('AppKit', 'Cocoa', 'OpenGL', 'IOSurface', 'Security', 'CoreFoundation', 'AudioToolbox', 'AVFoundation')
+            frameworks = ('AppKit', 'Cocoa', 'OpenGL', 'IOSurface', 'Security', 'CoreFoundation', 'AudioToolbox', 'AVFoundation', 'CoreMedia', 'CoreVideo')
         for framework in frameworks:
             settings['OTHER_LDFLAGS'] += ['-framework', framework]
         configs = project.configurations(name, settings)
@@ -187,6 +187,7 @@ def generate(args):
                     ITSAppUsesNonExemptEncryption=False)
         if ipad:
             info.update(LSRequiresIPhoneOS=True, UIFileSharingEnabled=True, LSSupportsOpeningDocumentsInPlace=True,
+                        NSPhotoLibraryAddUsageDescription='Save exported Groove timeline videos to your photo library.',
                         UIRequiredDeviceCapabilities=['opengles-3'],
                         UILaunchScreen={}, UIRequiresFullScreen=False,
                         UISupportedInterfaceOrientations=['UIInterfaceOrientation' + s for s in
@@ -199,7 +200,7 @@ def generate(args):
                         LSApplicationCategoryType='public.app-category.music')
         write(bundle / 'Generated' / (platform + '-Info.plist'), plistlib.dumps(info).decode())
         target_sources = {filename: ref for filename, ref in source_refs.items()
-                          if not filename.endswith('.m') or filename in ('u_platform_' + platform + '.m', 'u_audio_input.m')}
+                          if not filename.endswith('.m') or filename in ('u_platform_' + platform + '.m', 'u_audio_input.m', 'u_media_export.m')}
         build_files = []
         for filename, ref in target_sources.items():
             fields = {'fileRef': ref}
