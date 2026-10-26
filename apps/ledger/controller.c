@@ -73,12 +73,14 @@ static db_doc_type_t *document_type(const db_document_t *doc) {
 static result_t payroll_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   if (msg != evCommand || HIWORD(wparam) != btnClicked || !lparam || ((window_t *)lparam)->id != ID_PAYROLL_FILL) return false;
   int doc_id = db_dialog_record_id(win);
-  db_document_t *doc = find_document(doc_id), *edited = db_dialog_record(win);
+  database_t *database = db_dialog_database(win);
+  db_document_t *doc = database ? (db_document_t *)send_db_message(database, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)doc_id) : NULL;
+  db_document_t *edited = db_dialog_record(win);
   if (!doc || !edited) return true;
   dialog_pull(win, edited, ledger_payroll_form.bindings, ledger_payroll_form.binding_count);
   doc->doc_type_id = edited->doc_type_id;
   snprintf(doc->date, sizeof(doc->date), "%s", edited->date);
-  ledger_fill_payroll(g_ledger->ib, g_ledger->cfg, doc_id);
+  ledger_fill_payroll(database, g_ledger->cfg, doc_id);
   window_t *lines = get_window_item(win, ID_PAYROLL_LINES);
   send_message(lines, tvRefresh, 0, NULL);
   send_message(win, evCommand, MAKEDWORD(ID_PAYROLL_LINES, tvnChanged), lines);
@@ -106,6 +108,11 @@ static void after_save(int doc_id) {
   ledger_refresh_views();
 }
 
+static void document_saved(int doc_id, void *userdata) {
+  (void)userdata;
+  after_save(doc_id);
+}
+
 // The dialog is captioned like the document it edits: "Sale RT-0001 dated 10.03.2003".
 static void edit_document(int doc_id) {
   const db_document_t *doc = find_document(doc_id);
@@ -117,7 +124,7 @@ static void edit_document(int doc_id) {
     snprintf(title, sizeof(title), ui_tr("%s %s dated %s"), type->name, doc->number, date);
   } else snprintf(title, sizeof(title), "%s", ui_tr(kDocumentForms[f].title));
   db_dialog_opts_t opts = { .hook = kDocumentForms[f].hook };
-  if (show_db_dialog_opts(kDocumentForms[f].def, title, g_ledger->main_win, doc_id, &opts)) after_save(doc_id);
+  db_form_open(kDocumentForms[f].def, title, view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), doc_id, &opts, document_saved, NULL);
 }
 
 // A named record, for trusted Lua add-ons. Opening never creates a record.
@@ -174,9 +181,8 @@ static void new_document(const char *form) {
   if (!strcmp(form, "closing")) month_end(date, sizeof(date));
   snprintf(defaults, sizeof(defaults), "doc_type_id=%d%s%s", type_id, date[0] ? ";date=" : "", date);
   size_t f = document_form(document_type(&(db_document_t){ .doc_type_id = type_id }));
-  int doc_id = 0;
-  db_dialog_opts_t opts = { .hook = kDocumentForms[f].hook, .defaults = defaults, .saved_id = &doc_id };
-  if (show_db_dialog_opts(kDocumentForms[f].def, kDocumentForms[f].new_title, g_ledger->main_win, 0, &opts)) after_save(doc_id);
+  db_dialog_opts_t opts = { .hook = kDocumentForms[f].hook, .defaults = defaults };
+  db_form_open(kDocumentForms[f].def, ui_tr(kDocumentForms[f].new_title), view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), 0, &opts, document_saved, NULL);
 }
 
 // The account card of the account chosen on the current page: the selected
@@ -267,6 +273,10 @@ void ledger_command(uint16_t id) {
   char report[2048];
   switch (id) {
     case ID_FILE_SAVE:
+      if (mdi_active_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT))) {
+        db_form_save(mdi_active_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT)), false);
+        break;
+      }
       send_db_message(g_ledger->ib, dbSave, 0, NULL);
       ledger_update_status();
       break;
@@ -278,7 +288,16 @@ void ledger_command(uint16_t id) {
     case ID_FILE_IMPORT_1C:     import_from_1c();       break;
     case ID_FILE_ADDON:         ledger_open_addon();    break;
     case ID_FILE_ASSISTANT:     ledger_open_assistant(); break;
-    case ID_FILE_QUIT:          ui_request_quit();      break;
+    case ID_FILE_QUIT:          send_message(parent, evClose, 0, NULL); break;
+    case ID_WINDOW_NEXT_DOCUMENT: mdi_cycle_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), 1); break;
+    case ID_WINDOW_PREVIOUS_DOCUMENT: mdi_cycle_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), -1); break;
+    case ID_WINDOW_CASCADE: mdi_arrange_documents(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), false); break;
+    case ID_WINDOW_TILE: mdi_arrange_documents(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), true); break;
+    case ID_WINDOW_CLOSE_DOCUMENT: {
+      window_t *document = mdi_active_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT));
+      if (document) send_message(document, evClose, 0, NULL);
+      break;
+    }
 
     case ID_DOC_NEW:           new_document("document");  break;
     case ID_DOC_NEW_OPERATION: new_document("operation"); break;
@@ -393,6 +412,7 @@ result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
       ledger_position_assistant();
       return false;
     case evClose:
+      if (!mdi_close_all(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT))) return true;
       ui_request_quit();
       return true;
     case evDestroy:
@@ -407,6 +427,8 @@ result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
 }
 
 result_t ledger_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == evClose && g_ledger && is_window(g_ledger->main_win))
+    return send_message(g_ledger->main_win, evClose, 0, NULL);
   if (msg == evCommand && (HIWORD(wparam) == kMenuBarNotificationItemClick ||
                            HIWORD(wparam) == kAcceleratorNotification)) {
     ledger_command(LOWORD(wparam));

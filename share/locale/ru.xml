@@ -33,4 +33,7 @@
   <string source="Delete the selected record?">Удалить выбранную запись?</string>
   <string source="This record is used by %d other record(s) and cannot be deleted.">На запись ссылаются другие записи (%d), ее нельзя удалить.</string>
   <string source="Totals">Итого</string>
+  <string source="The record was changed in another window. Close and reopen this document." where="code">Запись изменена в другом окне. Закройте и заново откройте этот документ.</string>
+  <string source="The document could not be saved. No changes were applied." where="code">Не удалось сохранить документ. Изменения не применены.</string>
+  <string source="Save changes to this document?" where="code">Сохранить изменения в этом документе?</string>
 </strings>

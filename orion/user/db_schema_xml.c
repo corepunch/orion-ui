@@ -32,6 +32,7 @@
 
 #include "user.h"
 #include "database.h"
+#include "i18n.h"
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
@@ -55,7 +56,10 @@ typedef struct dbs_scope_s {
 typedef struct {
   dbs_table_t *tables;  // parallel to db->schema->tables
   dbs_scope_t *scope;   // innermost open change scope
+  dbs_scope_t *baseline; // original rows of an independent document context
 } dbs_context_t;
+
+static database_t *dbs_create_edit_context(database_t *store);
 
 static int dbs_table_index(database_t *db, int table_id) {
   for (int i = 0; db->schema && i < db->schema->table_count; i++)
@@ -112,7 +116,12 @@ static void *dbs_append(database_t *db, const db_table_schema_t *t, dbs_table_t 
   int k = dbs_key_index(t);
   if (k >= 0) {
     int *key = (int *)((char *)record + t->meta[k].offset);
-    if (*key <= 0) *key = rows->next_id;
+    if (*key <= 0) {
+      database_t *store = db->edit_parent;
+      while (store && store->edit_parent) store = store->edit_parent;
+      *key = store ? (int)send_db_message(store, dbReserveKey, (uint32_t)t->table_id, NULL) : rows->next_id;
+      if (*key <= 0) { free(record); return NULL; }
+    }
     if (*key >= rows->next_id) rows->next_id = *key + 1;
   }
   rows->rows[rows->count++] = record;
@@ -444,6 +453,7 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
   switch (msg) {
     case dbInsert: case dbUpdate: case dbDelete: case dbFetch: case dbFind:
     case dbGetFieldMeta: case dbGetFieldText: case dbInitRecord: case dbCountReferrers:
+    case dbReserveKey:
       if ((ti = dbs_table_index(db, LOWORD(wparam))) < 0) return 0;
       break;
   }
@@ -452,6 +462,7 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
   switch (msg) {
     case dbDestroy:
       while (ctx->scope) dbs_end(db, ctx, false);
+      if (ctx->baseline) dbs_free_scope(db, ctx->baseline);
       dbs_clear(db, ctx);
       free(ctx->tables);
       free(ctx);
@@ -460,7 +471,9 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
     case dbLoad: return dbs_load(db, ctx);
     case dbSave: return db->dirty ? dbs_save(db, ctx) : 1;
     case dbGetDirty: return db->dirty;
+    case dbReserveKey: return ctx->tables[ti].next_id++;
     case dbGetSchema: return (lresult_t)db->schema;
+    case dbCreateEditContext: return (lresult_t)dbs_create_edit_context(db);
     case dbInsert: {
       if (!lparam) return 0;
       void *record = dbs_append(db, t, &ctx->tables[ti], lparam);
@@ -504,4 +517,147 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
     }
   }
   return 0;
+}
+
+static database_t *dbs_create_edit_context(database_t *store) {
+  // Delta matching and reserved draft IDs require integer record keys.
+  for (int i = 0; i < store->schema->table_count; i++)
+    if (!store->schema->tables[i].transient && dbs_key_index(&store->schema->tables[i]) < 0) {
+      fprintf(stderr, "[database] document context requires integer keys db=%s table=%s\n",
+              store->name, store->schema->tables[i].name);
+      fflush(stderr);
+      return NULL;
+    }
+  database_t *copy = create_database_with_schema(store->name, store->class_name, store->schema, "");
+  if (!copy || !copy->userdata) { destroy_database(copy); return NULL; }
+  dbs_context_t *source = store->userdata, *target = copy->userdata;
+  for (int i = 0; i < store->schema->table_count; i++) {
+    const db_table_schema_t *table = &store->schema->tables[i];
+    for (int r = 0; r < source->tables[i].count; r++)
+      if (!dbs_append(copy, table, &target->tables[i], source->tables[i].rows[r])) {
+        destroy_database(copy);
+        return NULL;
+      }
+    target->tables[i].next_id = source->tables[i].next_id;
+  }
+  if (!dbs_begin(copy, target)) { destroy_database(copy); return NULL; }
+  target->baseline = target->scope;
+  target->scope = NULL;
+  copy->edit_parent = store;
+  copy->dirty = false;
+  return copy;
+}
+
+database_t *db_edit_context_create(database_t *store) {
+  return (database_t *)send_db_message(store, dbCreateEditContext, 0, NULL);
+}
+
+bool db_edit_context_reset(database_t *context) {
+  if (!context || !context->edit_parent) return false;
+  database_t *fresh = db_edit_context_create(context->edit_parent);
+  if (!fresh) return false;
+  send_db_message(context, dbDestroy, 0, NULL);
+  context->userdata = fresh->userdata;
+  context->dirty = false;
+  fresh->userdata = NULL;
+  free(fresh);
+  return true;
+}
+
+static void *dbs_original(const db_table_schema_t *table, const dbs_snapshot_t *snapshot, int id) {
+  for (int i = 0; i < snapshot->count; i++)
+    if (dbs_key(table, snapshot->copies[i]) == id) return snapshot->copies[i];
+  return NULL;
+}
+
+static bool dbs_edit_relations_unchanged(database_t *db, dbs_context_t *ctx,
+                                        const db_table_schema_t *table, const void *record) {
+  // A stale editor must not resurrect a reference whose target was deleted.
+  for (int f = 0; f < table->field_count; f++) {
+    int field = db_schema_field_index(table, table->fields[f].name);
+    if (field < 0 || table->meta[field].type != DB_TYPE_INT) continue;
+    int id = *(const int *)((const char *)record + table->meta[field].offset);
+    if (id <= 0) continue;
+    for (int i = 0; i < db->schema->table_count; i++) {
+      const db_table_schema_t *target = &db->schema->tables[i];
+      int key = dbs_key_index(target);
+      if (target->transient || key < 0 || !dbs_relation_to(db, table->fields[f].relation_table, target)) continue;
+      const char *foreign = table->fields[f].relation_field;
+      if (foreign && strcmp(foreign, target->meta[key].name)) continue;
+      if (dbs_original(target, &ctx->baseline->tables[i], id) &&
+          !send_db_message(db->edit_parent, dbFind, (uint32_t)target->table_id, (void *)(intptr_t)id)) return false;
+    }
+  }
+  return true;
+}
+
+bool db_edit_context_save(database_t *db, char *error, size_t error_size) {
+  if (error && error_size) error[0] = 0;
+  dbs_context_t *ctx = db ? db->userdata : NULL;
+  if (!db || !db->edit_parent || !ctx || !ctx->baseline || ctx->scope) {
+    fprintf(stderr, "[database] invalid document context save db=%s\n", db ? db->name : "(null)");
+    fflush(stderr);
+    return false;
+  }
+  database_t *store = db->edit_parent;
+  // Validate every changed/deleted row before touching the committed store.
+  for (int i = 0; i < db->schema->table_count; i++) {
+    const db_table_schema_t *table = &db->schema->tables[i];
+    if (table->transient) continue;
+    dbs_snapshot_t *original = &ctx->baseline->tables[i];
+    dbs_table_t *rows = &ctx->tables[i];
+    for (int r = 0; r < original->count; r++) {
+      int id = dbs_key(table, original->copies[r]);
+      int local = dbs_find_row(table, rows, id);
+      if (local >= 0 && !memcmp(rows->rows[local], original->copies[r], table->record_size)) continue;
+      const void *current = (const void *)send_db_message(store, dbFind, (uint32_t)table->table_id, (void *)(intptr_t)id);
+      if (!current || memcmp(current, original->copies[r], table->record_size)) goto conflict;
+    }
+    for (int r = 0; r < rows->count; r++) {
+      int id = dbs_key(table, rows->rows[r]);
+      void *before = dbs_original(table, original, id);
+      if (before && !memcmp(before, rows->rows[r], table->record_size)) continue;
+      if (!dbs_edit_relations_unchanged(db, ctx, table, rows->rows[r])) goto conflict;
+      if (!before &&
+          send_db_message(store, dbFind, (uint32_t)table->table_id, (void *)(intptr_t)id)) goto conflict;
+    }
+  }
+  if (!send_db_message(store, dbBeginChanges, 0, NULL)) goto failed;
+  database_t *previous = db_set_message_context(store);
+  bool ok = true;
+  // Insert masters before their detail tables, following schema order.
+  for (int i = 0; ok && i < db->schema->table_count; i++) {
+    const db_table_schema_t *table = &db->schema->tables[i];
+    if (table->transient) continue;
+    dbs_snapshot_t *original = &ctx->baseline->tables[i];
+    dbs_table_t *rows = &ctx->tables[i];
+    for (int r = 0; ok && r < rows->count; r++) {
+      void *before = dbs_original(table, original, dbs_key(table, rows->rows[r]));
+      if (before && !memcmp(before, rows->rows[r], table->record_size)) continue;
+      ok = send_db_message(store, before ? dbUpdate : dbInsert, (uint32_t)table->table_id, rows->rows[r]) != 0;
+    }
+  }
+  // Delete details first; an earlier cascade may have already removed one.
+  for (int i = db->schema->table_count - 1; ok && i >= 0; i--) {
+    const db_table_schema_t *table = &db->schema->tables[i];
+    if (table->transient) continue;
+    dbs_snapshot_t *original = &ctx->baseline->tables[i];
+    for (int r = 0; ok && r < original->count; r++) {
+      int id = dbs_key(table, original->copies[r]);
+      if (dbs_find_row(table, &ctx->tables[i], id) >= 0) continue;
+      if (send_db_message(store, dbFind, (uint32_t)table->table_id, (void *)(intptr_t)id))
+        ok = send_db_message(store, dbDelete, (uint32_t)table->table_id, (void *)(intptr_t)id) != 0;
+    }
+  }
+  if (ok) ok = send_db_message(store, dbCommitChanges, 0, NULL) != 0;
+  if (!ok) send_db_message(store, dbRevertChanges, 0, NULL);
+  db_set_message_context(previous);
+  if (!ok) goto failed;
+  return true;
+conflict:
+  if (error && error_size) snprintf(error, error_size, "%s", ui_tr("The record was changed in another window. Close and reopen this document."));
+  return false;
+failed:
+  if (error && error_size) snprintf(error, error_size, "%s", ui_tr("The document could not be saved. No changes were applied."));
+  return false;
 }

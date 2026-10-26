@@ -222,9 +222,16 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
 intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   if (!win) return false;
   hinstance_t scope = svg_icon_scope();
+  window_t *context_owner = win;
+  while (context_owner && !context_owner->database_context) context_owner = context_owner->parent;
+  database_t *previous_db = db_set_message_context(context_owner ? context_owner->database_context : NULL);
+  database_t *message_db = context_owner ? context_owner->database_context : NULL;
+  db_message_retain(message_db);
   if (win->hinstance) svg_set_icon_scope(win->hinstance);
   intptr_t result = send_message_impl(win, msg, wparam, lparam);
   svg_set_icon_scope(scope);
+  db_set_message_context(previous_db);
+  db_message_release(message_db);
   return result;
 }
 
@@ -414,6 +421,10 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   bool view_paint = msg == evPaint && g_ui_runtime.running && window_has_view(win);
   if (view_paint) begin_draw_transform(&win->view->matrix, saved_projection);
   value = win->proc(win, msg, wparam, lparam);
+  if (!is_window(win)) {
+    if (view_paint) end_draw_transform(saved_projection);
+    return value;
+  }
   if (view_paint) {
     end_draw_transform(saved_projection);
     win->proc(win, evPaint, WINDOW_PAINT_OVERLAY, NULL);

@@ -28,6 +28,7 @@ typedef enum {
   WINDOW_ROLE_NORMAL = 0,
   WINDOW_ROLE_HOST,
   WINDOW_ROLE_PAGE,
+  WINDOW_ROLE_MDICLIENT,
 } window_role_t;
 
 #define DEFAULT_WINDOW_CASCADE_X 10
@@ -546,6 +547,9 @@ struct window_s {
   struct window_s *next;
   struct window_s *children;
   struct window_s *parent;
+  struct window_s *owner; // owned popup: a root in screen coordinates, not a layout child
+  struct window_s *mdi_client; // logical document parent; surface is redirected independently
+  database_t *database_context; // borrowed document context, inherited by message dispatch
   struct window_s *toolbar; // toolbar host window (win_toolbar); state lives in toolbar->userdata
   struct dock_state_s *dock;
   struct dock_host_s *dock_host; // lazily allocated by dock_layout (hosts only)
@@ -610,7 +614,26 @@ typedef struct window_placement_s {
 
 static inline bool window_has_view(const window_t *win) { return win && win->view && win->view->enabled; }
 
+bool window_is_visible(const window_t *win);
+bool window_is_enabled(const window_t *win);
+window_t *window_owner_root(window_t *win);
+bool window_set_owner(window_t *win, window_t *owner);
+void window_order_owned(void);
+window_t *window_lifetime_parent(window_t *win);
+result_t win_mdi_client(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+bool mdi_attach_document(window_t *document, window_t *client);
+void mdi_layout_clients(window_t *frame);
+irect16_t mdi_client_screen_rect(window_t *client);
+window_t *mdi_active_document(window_t *client);
+void mdi_activate_document(window_t *document);
+void mdi_cycle_document(window_t *client, int direction);
+void mdi_forget_document(window_t *document);
+bool mdi_close_all(window_t *client);
+void mdi_arrange_documents(window_t *client, bool tile);
+
 static inline bool window_has_state(const window_t *win, flags_t state_flag) {
+  if (state_flag == WINDOW_STATE_VISIBLE) return window_is_visible(win);
+  if (state_flag == WINDOW_STATE_DISABLED) return win && !window_is_enabled(win);
   return win && ((win->flags & state_flag) != 0u);
 }
 
@@ -789,6 +812,7 @@ typedef struct {
   window_t *resizing;
   window_t *toolbar_down_win;
   window_t *modal_overlay_parent;
+  window_t *modal_window; // top of the nested owner-modal dialog stack
   int       default_window_x;
   int       default_window_y;
   int       last_mouse_sx;    // last known pointer position in scaled screen pixels
@@ -860,6 +884,7 @@ int db_dialog_record_id(window_t *win);
 // The record buffer the dialog edits: controls are pushed from it on open and
 // pulled into it on OK. Hooks may read or prefill it.
 void *db_dialog_record(window_t *win);
+database_t *db_dialog_database(window_t *win);
 
 // All options of a database dialog: a foreign key preset on new records,
 // other defaults as "field=value;field=value" (EODisplayGroup's inserted
@@ -881,6 +906,13 @@ typedef struct {
 } db_dialog_opts_t;
 uint32_t show_db_dialog_opts(form_def_t const *def, const char *title, window_t *parent,
                              int record_id, const db_dialog_opts_t *opts);
+typedef void (*db_form_saved_fn)(int record_id, void *userdata);
+// Modeless document editor. Its window owns a private data context; small
+// nested row dialogs edit that context. Saving atomically publishes its delta.
+window_t *db_form_open(form_def_t const *def, const char *title, window_t *owner,
+                       int record_id, const db_dialog_opts_t *opts,
+                       db_form_saved_fn saved, void *userdata);
+bool db_form_save(window_t *document, bool close_after_save);
 
 // Extended version with FK parent ID support (e.g., post_id for comments)
 // fk_field: name of FK field to populate (e.g., "post_id")

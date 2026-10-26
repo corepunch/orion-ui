@@ -141,6 +141,8 @@ typedef struct R_CompositeLayer {
   uint32_t tex;
   int w, h;                    // texture size, physical pixels
   irect16_t frame;             // logical screen rect
+  irect16_t clip;              // logical screen clip, when clipped=true
+  bool clipped;
   float corner_radius;         // physical pixels; clamped to half the surface
   bool shadow;
   float shadow_radius, shadow_blur;

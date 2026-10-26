@@ -32,4 +32,7 @@
   <string source="Delete the selected record?">Den gewählten Datensatz löschen?</string>
   <string source="This record is used by %d other record(s) and cannot be deleted.">Auf den Datensatz verweisen %d andere Datensätze; er kann nicht gelöscht werden.</string>
   <string source="Totals">Summe</string>
+  <string source="The record was changed in another window. Close and reopen this document." where="code">Der Datensatz wurde in einem anderen Fenster geändert. Schließen und öffnen Sie diesen Beleg erneut.</string>
+  <string source="The document could not be saved. No changes were applied." where="code">Der Beleg konnte nicht gespeichert werden. Es wurden keine Änderungen übernommen.</string>
+  <string source="Save changes to this document?" where="code">Änderungen an diesem Beleg speichern?</string>
 </strings>

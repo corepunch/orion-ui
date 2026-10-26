@@ -126,6 +126,7 @@ enum {
   // One-shot request, independent of evGesture's begin/update/end lifetime.
   evMouseZoom,
   evMove,             // frame origin changed by move_window(); dimensions are unchanged
+  evMDIActivate,      // wparam=bool active; lparam=the other document
   evUser = 1000
 };
 

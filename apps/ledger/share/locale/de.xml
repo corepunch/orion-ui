@@ -2,7 +2,7 @@
 <strings language="de" decimal="," group="." date="dd.MM.yyyy">
   <string source="Assistant..." where="menu">Assistent...</string>
   <string source="File" where="menu">Datei</string>
-  <string source="Save Infobase" where="menu">Mandant speichern</string>
+  <string source="Save Infobase" obsolete="true">Mandant speichern</string>
   <string source="Organization Details..." where="menu">Firmendaten...</string>
   <string source="Select Configuration..." where="menu">Konfiguration wählen...</string>
   <string source="Language..." where="menu">Sprache...</string>
@@ -377,6 +377,13 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Show or hide the sidebar (Ctrl+B)" where="main_window">Seitenleiste ein- oder ausblenden (Strg+B)</string>
   <string source="Back (Alt+Left)" where="main_window">Zurück (Alt+Links)</string>
   <string source="Forward (Alt+Right)" where="main_window">Vorwärts (Alt+Rechts)</string>
+  <string source="Save" where="menu">Speichern</string>
+  <string source="Window" where="menu">Fenster</string>
+  <string source="Next Document" where="menu">Nächster Beleg</string>
+  <string source="Previous Document" where="menu">Vorheriger Beleg</string>
+  <string source="Close Document" where="menu">Beleg schließen</string>
+  <string source="Cascade Documents" where="menu">Überlappend anordnen</string>
+  <string source="Tile Documents" where="menu">Nebeneinander anordnen</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

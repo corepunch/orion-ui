@@ -13,6 +13,13 @@
 
 static db_class_desc_t g_database_classes[MAX_DATABASE_CLASSES];
 static int g_database_class_count = 0;
+static database_t *g_message_database;
+
+database_t *db_set_message_context(database_t *context) {
+  database_t *previous = g_message_database;
+  g_message_database = context;
+  return previous;
+}
 
 static bool db_streq(const char *a, const char *b) {
   return a && b && strcmp(a, b) == 0;
@@ -79,6 +86,7 @@ bool register_database(const char *name, database_t *db) {
 
 database_t *get_database_by_name(const char *name) {
   if (!name || !*name) return NULL;
+  if (g_message_database && db_streq(name, g_message_database->name)) return g_message_database;
   for (int i = 0; i < g_database_instance_count; i++) {
     if (db_streq(g_database_instances[i].name, name))
       return g_database_instances[i].db;
@@ -143,15 +151,21 @@ database_t *create_database_with_schema(const char *name, const char *class_name
 
 void destroy_database(database_t *db) {
   if (!db) return;
+  if (db->message_refs) { db->destroy_pending = true; return; }
   
   // Save if dirty
-  if (db->dirty)
+  if (db->dirty && !db->edit_parent)
     send_db_message(db, dbSave, 0, NULL);
   
   // Send destroy message (proc can free userdata)
   send_db_message(db, dbDestroy, 0, NULL);
   
   free(db);
+}
+
+void db_message_retain(database_t *db) { if (db) db->message_refs++; }
+void db_message_release(database_t *db) {
+  if (db && db->message_refs && --db->message_refs == 0 && db->destroy_pending) destroy_database(db);
 }
 
 lresult_t send_db_message(database_t *db, uint32_t msg, uint32_t wparam, void *lparam) {
