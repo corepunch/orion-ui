@@ -108,6 +108,8 @@ the client rectangle remaining after its docked menus, toolbars, and utility pan
 the window manager applies that rectangle to every maximized window in the same
 application instance. Floating palettes do not reduce the maximize rectangle;
 applications must not duplicate chrome measurements in `evGetWorkspaceRect`.
+Standalone root menu bars publish the remaining screen rectangle through the
+same workspace registry, keeping maximized documents below the menu strip.
 
 The root `.orion` `<toolbar presentation="normal|compact">` declares the
 application toolbar independently of forms. Application chrome consumes its

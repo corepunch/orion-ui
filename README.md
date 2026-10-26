@@ -48,15 +48,22 @@ form plus a Lua script, so it is extended without C.
 
 ## Quick Start
 
-Native builds require Lua development files (pkg-config package `lua5.4` or
-`lua`) and libxml2 development files (`libxml-2.0`), alongside the platform's
+Native builds require Lua and libxml2 development files, alongside the platform's
 graphics dependencies. On Debian/Ubuntu, install the same dependencies as CI:
 
 ```bash
 sudo apt-get install liblua5.4-dev libxml2-dev libcglm-dev libgl1-mesa-dev libx11-dev libegl-dev libpng-dev
 ```
 
-On macOS: `brew install cglm lua@5.4 libxml2`.
+On macOS:
+
+```bash
+brew install pkgconf cglm lua@5.4 libxml2 libpng
+```
+
+The Makefile detects Homebrew's keg-only `lua@5.4` automatically. For a custom
+Lua installation, add its `lib/pkgconfig` directory to `PKG_CONFIG_PATH`, or pass
+`LUA_CFLAGS` and `LUA_LIBS` to `make`.
 
 ```bash
 git clone https://github.com/corepunch/orion-ui.git

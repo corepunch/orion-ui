@@ -127,10 +127,55 @@ static void test_menubar_restore(void) {
   PASS();
 }
 
+static void test_standalone_menubar_workspace(void) {
+  TEST("Standalone menus reserve maximize space through creation, resize and display changes");
+  test_env_init();
+  workspace = R(0, 0, 800, 600);
+  window_t *doc = create_window("Document", 0, MAKERECT(30, 50, 320, 240),
+                                 NULL, maximize_test_proc, 1, NULL);
+  window_t *other = create_window("Other app", 0, MAKERECT(60, 80, 320, 240),
+                                   NULL, maximize_test_proc, 2, NULL);
+  ASSERT_TRUE(maximize_window(doc));
+  ASSERT_TRUE(maximize_window(other));
+  ASSERT_EQUAL(doc->frame.y, 0);
+  window_t *bar = create_window("Menu", WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_ALWAYSONTOP,
+    MAKERECT(0, 0, 800, get_theme()->menubar.height), NULL, win_menubar, 1, NULL);
+  ASSERT_NOT_NULL(bar);
+  ASSERT_EQUAL(doc->frame.y, bar->frame.h);
+  ASSERT_EQUAL(doc->frame.h, 600 - bar->frame.h);
+  ASSERT_EQUAL(other->frame.y, 0);
+  resize_window(bar, 800, 40);
+  ASSERT_EQUAL(doc->frame.y, 40);
+  ASSERT_EQUAL(doc->frame.h, 560);
+  send_message(bar, evThemeChanged, 0, NULL);
+  ASSERT_EQUAL(doc->frame.y, get_theme()->menubar.height);
+  window_t *child_bar = create_window("Child menu", WINDOW_NOTITLE, MAKERECT(0, 0, 100, 80),
+                                       doc, win_menubar, 0, NULL);
+  ASSERT_NOT_NULL(child_bar);
+  ASSERT_EQUAL(doc->frame.y, bar->frame.h);
+  ui_event_t resize = {.message = kEventWindowResized,
+    .wParam = MAKEDWORD(640 * UI_WINDOW_SCALE, 480 * UI_WINDOW_SCALE)};
+  dispatch_message(&resize);
+  ASSERT_EQUAL(bar->frame.w, 640);
+  ASSERT_EQUAL(doc->frame.y, bar->frame.h);
+  ASSERT_EQUAL(doc->frame.w, 640);
+  ASSERT_EQUAL(doc->frame.h, 480 - bar->frame.h);
+  ASSERT_TRUE(restore_window(doc));
+  ASSERT_EQUAL(doc->frame.x, 30);
+  ASSERT_EQUAL(doc->frame.y, 50);
+  ASSERT_EQUAL(doc->frame.w, 320);
+  ASSERT_EQUAL(doc->frame.h, 240);
+  test_env_shutdown();
+  ui_update_screen_size(800 * UI_WINDOW_SCALE, 600 * UI_WINDOW_SCALE);
+  PASS();
+}
+
 int main(void) {
   TEST_START("Window maximize/restore");
+  ui_update_screen_size(800 * UI_WINDOW_SCALE, 600 * UI_WINDOW_SCALE);
   test_maximize_restore();
   test_desktop_replacement();
   test_menubar_restore();
+  test_standalone_menubar_workspace();
   TEST_END();
 }

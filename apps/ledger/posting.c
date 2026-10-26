@@ -774,6 +774,7 @@ static void build_cash_book(const report_t *r) {
     bool in = ledger_account_within(r->cfg, e->debit_id, cash), out = ledger_account_within(r->cfg, e->credit_id, cash);
     if (in == out) continue;
     period_pos_t pos = in_period(r->rs, e->date);
+    if (pos == AFTER) continue;
     if (pos == WITHIN && strcmp(day, e->date)) {
       if (day[0]) cash_day_total(r, day, receipt, expense, balance);
       snprintf(day, sizeof(day), "%s", e->date);

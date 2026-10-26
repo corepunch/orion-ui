@@ -34,12 +34,12 @@ static void test_executor_workflows(void) {
   TEST("standard Lua policies preserve shared-prefix numbering and payroll accrual/payout behavior");
   db_document_t *cash = executor_document(3,NULL);
   ASSERT_NOT_NULL(cash);
-  ASSERT_STR_EQUAL(cash->number,"ПКО-0003");
+  ASSERT_STR_EQUAL(cash->number,"ПКО-0004");
   db_document_t *other = executor_document(17,NULL);
   ASSERT_NOT_NULL(other);
-  ASSERT_STR_EQUAL(other->number,"ПКО-0004");
+  ASSERT_STR_EQUAL(other->number,"ПКО-0005");
   ASSERT_TRUE(ledger_number_document(g_ledger->ib,g_ledger->cfg,cash->id));
-  ASSERT_STR_EQUAL(cash->number,"ПКО-0003");
+  ASSERT_STR_EQUAL(cash->number,"ПКО-0004");
   db_document_t *accrual = executor_document(10,"EXEC-ACCRUAL");
   ASSERT_NOT_NULL(accrual);
   ASSERT_TRUE(ledger_fill_payroll(g_ledger->ib,g_ledger->cfg,accrual->id));

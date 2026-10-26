@@ -72,20 +72,34 @@ endif
 
 # ── Dependencies ─────────────────────────────────────────────────────────
 PKG_CONFIG ?= pkg-config
-pc = $(shell $(PKG_CONFIG) --$(1) lua5.4 2>/dev/null || $(PKG_CONFIG) --$(1) lua 2>/dev/null)
-ifneq ($(MAKECMDGOALS),clean)
-ifeq ($(shell $(PKG_CONFIG) --exists lua5.4 2>/dev/null && echo yes || $(PKG_CONFIG) --exists lua 2>/dev/null && echo yes),)
-$(error Lua development files are required (install liblua5.4-dev or lua via your package manager; pkg-config must find lua5.4 or lua))
+LUA_PKG_CONFIG = $(PKG_CONFIG)
+find_lua_pkg = $(shell for pkg in lua5.4 lua-5.4 lua54 lua; do \
+  if $(LUA_PKG_CONFIG) --exists "$$pkg >= 5.4" 2>/dev/null; then echo $$pkg; break; fi; done)
+LUA_PKG := $(find_lua_pkg)
+# Homebrew's versioned Lua is keg-only, outside pkg-config's default search path.
+ifeq ($(LUA_PKG),)
+ifeq ($(UNAME_S),Darwin)
+LUA_PREFIX := $(shell brew --prefix lua@5.4 2>/dev/null)
+ifneq ($(wildcard $(LUA_PREFIX)/lib/pkgconfig),)
+LUA_PKG_CONFIG = PKG_CONFIG_PATH="$(LUA_PREFIX)/lib/pkgconfig:$${PKG_CONFIG_PATH}" $(PKG_CONFIG)
+LUA_PKG := $(find_lua_pkg)
 endif
+endif
+endif
+LUA_CFLAGS ?= $(if $(LUA_PKG),$(shell $(LUA_PKG_CONFIG) --cflags $(LUA_PKG)))
+LUA_LIBS   ?= $(if $(LUA_PKG),$(shell $(LUA_PKG_CONFIG) --libs $(LUA_PKG)))
+ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(MAKECMDGOALS),help)
 ifeq ($(shell $(PKG_CONFIG) --exists libxml-2.0 2>/dev/null && echo yes),)
 $(error libxml2 development files are required (install libxml2-dev or libxml2 via your package manager; pkg-config must find libxml-2.0))
+endif
 endif
 endif
 LIBXML_CFLAGS := $(shell $(PKG_CONFIG) --cflags libxml-2.0 2>/dev/null)
 LIBXML_LIBS   := $(shell $(PKG_CONFIG) --libs libxml-2.0 2>/dev/null)
 
-CFLAGS += $(call pc,cflags) $(LIBXML_CFLAGS) -DHAVE_LUA
-LIBS   += $(filter-out -lm,$(call pc,libs) $(LIBXML_LIBS)) -lm
+CFLAGS += $(LUA_CFLAGS) $(LIBXML_CFLAGS) -DHAVE_LUA
+LIBS   += $(filter-out -lm,$(LUA_LIBS) $(LIBXML_LIBS)) -lm
 
 # Compile flags for .gem shared libraries
 GEM_CFLAGS = $(CFLAGS) -DBUILD_AS_GEM
@@ -214,6 +228,17 @@ groove-demo: share $(BIN_DIR)/groove$(EXE_EXT)
 	@cd $(BIN_DIR) && ./groove$(EXE_EXT) --demo
 
 # ── Tools ────────────────────────────────────────────────────────────────
+.PHONY: check-lua
+check-lua:
+	@if [ -z "$(strip $(LUA_LIBS))" ]; then \
+	  echo "Orion: Lua 5.4 development files were not found by $(PKG_CONFIG)." >&2; \
+	  echo "Install lua@5.4 with Homebrew (macOS) or liblua5.4-dev (Debian/Ubuntu)." >&2; \
+	  echo "For a custom installation, set PKG_CONFIG_PATH or LUA_CFLAGS and LUA_LIBS." >&2; \
+	  exit 1; \
+	fi
+
+$(CORE_LIBS) $(ORIONC_BIN) $(CGEN_BIN): | check-lua
+
 tools: $(TOOLS_BINS)
 	@echo "All tools built"
 
@@ -395,6 +420,15 @@ plugins: $(COMPONENT_PLUGIN_BINS)
 
 scener: $(BIN_DIR)/scener$(EXE_EXT)
 
+# Launch localized Ledger demos: make run-ledger-ru / make run-ledger-de.
+# A fresh infobase loads and posts the configuration's original demo documents.
+.PHONY: run-ledger-ru run-ledger-de
+run-ledger-ru run-ledger-de: run-ledger-%: $(BIN_DIR)/ledger$(EXE_EXT) share
+	@set -e; \
+	  sample_dir=$$(mktemp -d "$${TMPDIR:-/tmp}/orion-ledger-$*-XXXXXX"); \
+	  printf 'Ledger demo data: %s\n' "$$sample_dir"; \
+	  "$(BIN_DIR)/ledger$(EXE_EXT)" --config $*-2003 --lang $* --data "$$sample_dir"
+
 INSTALL_BINS = $(EXAMPLE_BINS) $(PHONY_APP_BINS) $(TOOLS_BINS)
 INSTALL_RUNTIME_LIBS = $(KERNEL_LIB) $(USER_LIB) $(COMMCTL_LIB) $(COMMDLG_LIB) $(SCRIPT_LIB) $(PLATFORM_LIB)
 INSTALL_GEMS = $(if $(IS_WIN),,$(GEM_BINS) $(PHONY_APP_GEMS))
@@ -532,6 +566,8 @@ help:
 	@echo "apps      - Build applications"
 	@echo "scener    - Build the Scener application"
 	@echo "groove    - Build and run Groove (empty); groove-demo preloads the demo song"
+	@echo "run-ledger-ru - Build and launch Russian Ledger with the original ru-2003 demo documents"
+	@echo "run-ledger-de - Build and launch German Ledger with the original de-2003 demo documents"
 	@echo "gems      - Build all .gem shared libraries"
 	@echo "tools     - Build command-line tools"
 	@echo "test      - Build and run tests"

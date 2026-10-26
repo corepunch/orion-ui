@@ -468,6 +468,14 @@ static irect16_t menubar_restore_rect(window_t *win) {
   return rect_split_right(client, client.h);
 }
 
+static void menubar_update_workspace(window_t *win) {
+  if (win->parent || win->dock) return;
+  irect16_t screen = R(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth),
+                            ui_get_system_metrics(kSystemMetricScreenHeight));
+  irect16_t area = rect_trim_top(screen, win->frame.y + win->frame.h);
+  set_application_workspace(win, &area);
+}
+
 result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   menubar_data_t *data = (menubar_data_t *)win->userdata;
   switch (msg) {
@@ -476,6 +484,7 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       memset(d, 0, sizeof(menubar_data_t));
       d->active_idx = -1;
       win->userdata = d;
+      menubar_update_workspace(win);
       return true;
     }
 
@@ -526,6 +535,11 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     case evThemeChanged:
       if (!win->dock && !win->parent && win->frame.h != get_theme()->menubar.height)
         resize_window(win, win->frame.w, get_theme()->menubar.height);
+      return true;
+
+    case evResize:
+    case evShowWindow:
+      menubar_update_workspace(win);
       return true;
 
     case evPaint: {
@@ -599,7 +613,8 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     }
 
     case evDisplayChange: {
-      if (!win->dock) win->frame.w = LOWORD(wparam);
+      if (!win->dock && !win->parent)
+        resize_window(win, LOWORD(wparam), get_theme()->menubar.height);
       return false;
     }
 

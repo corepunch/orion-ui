@@ -137,8 +137,8 @@ static void free_string_array(char **arr) {
 // Helper: Get field text from record via DDX-style field interrogation
 // ══════════════════════════════════════════════════════════════════════════
 
-static bool tv_get_field_text(tableview_state_t *s, void *record,
-                                 const char *field, char *buf, size_t buf_sz) {
+static bool tv_get_field_text(tableview_state_t *s, const void *record,
+                              const char *field, char *buf, size_t buf_sz) {
   if (!s || !record || !field || !buf || buf_sz == 0) return false;
   
   return db_get_field_text(s->db, s->table_id, record, field, buf, buf_sz);

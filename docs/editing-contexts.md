@@ -48,11 +48,9 @@ Everything that edits uses this stack:
    anything, and every reader sees that. Today nothing else reads while a modal
    dialog is open. A journal refreshing beside an open document would show the
    half-edited one.
-4. **Cost grows with the infobase.** A scope copies every stored record. On
-   `apps/ledger/share/samples/ru-2003-large.xml` (13,508 records) one
-   `dbBeginChanges` + `dbRevertChanges` takes **82 ms** in this
-   repository's Linux development container. Every document dialog pays it, and it
-   grows linearly with the infobase.
+4. **Cost grows with the infobase.** A scope copies every stored record, even
+   when editing one document. Every document dialog pays this cost, and it grows
+   linearly with the infobase.
 5. **Views are told nothing.** Views learn about changes only through explicit calls
    (`after_save()` → `ledger_refresh_views()`, `tvnChanged`). Each new editor has to
    remember them.
@@ -142,7 +140,7 @@ unchanged.
    - two overlapping scopes closed out of order, the case non-modal editors would
      create;
    - a revert erasing an overlapping editor's insert;
-   - the measured scope cost, as a benchmark kept in `ledger_large_test`.
+   - scope snapshot cost on representative infobases.
 2. **Contexts in `db_schema_xml`:**
    - overlay reads and writes, save and revert, nested contexts, conflict detection;
    - `dbBeginChanges` reimplemented on top of them;
