@@ -1,0 +1,1 @@
+<prefab up="z" front="-y"><shape id="vase_profile"><v x="0" y="0"/><v x="10" y="0"/><v x="8" y="20"/><v x="0" y="20"/></shape><lathe shape="vase_profile" segments="12" rot="90 0 0"/></prefab>
