@@ -231,7 +231,7 @@ static void test_cash_book(void) {
   ASSERT(approx(receipts, 2000 + 16656 + 31476), "orders alone sum to the receipts");
   char report[1024];
   ASSERT_EQUAL(ledger_print_reports(report, sizeof(report)), 1);
-  FILE *f = fopen(TMP_DIR "/print/ko4.html", "rb");
+  FILE *f = fopen(TMP_DIR "/print/cash-book.html", "rb");
   ASSERT_NOT_NULL(f);
   static char html[65536];
   size_t n = fread(html, 1, sizeof(html) - 1, f);
@@ -416,7 +416,7 @@ static void test_print_forms(void) {
   db_document_t *sale = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "РТ-0001");
   char report[2048];
   ASSERT_EQUAL(ledger_print_document(sale->id, report, sizeof(report)), 3);
-  FILE *f = fopen(TMP_DIR "/print/РТ-0001-schet-faktura.html", "rb");
+  FILE *f = fopen(TMP_DIR "/print/РТ-0001-vat-invoice.html", "rb");
   ASSERT_NOT_NULL(f);
   static char html[65536];
   size_t n = fread(html, 1, sizeof(html) - 1, f);
@@ -426,7 +426,7 @@ static void test_print_forms(void) {
   ASSERT(strstr(html, "Монитор 17&quot; Samsung SyncMaster 753s"), "escaped line item");
   ASSERT(strstr(html, "7701234567/770101001"), "seller tax id and KPP");
   ASSERT(!strstr(html, "{{"), "no unfilled tags");
-  f = fopen(TMP_DIR "/print/РТ-0001-torg12.html", "rb");
+  f = fopen(TMP_DIR "/print/РТ-0001-goods-delivery-note.html", "rb");
   ASSERT_NOT_NULL(f);
   n = fread(html, 1, sizeof(html) - 1, f);
   fclose(f);
@@ -434,7 +434,7 @@ static void test_print_forms(void) {
   ASSERT(strstr(html, "Шестнадцать тысяч шестьсот пятьдесят шесть рублей 00 копеек"), "amount in words, in Russian whatever the UI language");
   db_document_t *payroll = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "НЗ-0001");
   ASSERT_EQUAL(ledger_print_document(payroll->id, report, sizeof(report)), 1);
-  f = fopen(TMP_DIR "/print/НЗ-0001-t49.html", "rb");
+  f = fopen(TMP_DIR "/print/НЗ-0001-payroll-payment-statement.html", "rb");
   ASSERT_NOT_NULL(f);
   n = fread(html, 1, sizeof(html) - 1, f);
   fclose(f);
@@ -442,7 +442,7 @@ static void test_print_forms(void) {
   ASSERT(strstr(html, "Кузнецова Елена Николаевна") && strstr(html, "Тридцать шесть тысяч рублей 00 копеек"), "T-49 lists employees");
   db_document_t *cash_in = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ПКО-0001");
   ASSERT_EQUAL(ledger_print_document(cash_in->id, report, sizeof(report)), 1);
-  f = fopen(TMP_DIR "/print/ПКО-0001-ko1.html", "rb");
+  f = fopen(TMP_DIR "/print/ПКО-0001-cash-receipt-order.html", "rb");
   ASSERT_NOT_NULL(f);
   n = fread(html, 1, sizeof(html) - 1, f);
   fclose(f);
@@ -686,13 +686,13 @@ static void test_ru_2026(void) {
   db_document_t *sale = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "РТ-0001");
   char report[4096];
   ASSERT_EQUAL(ledger_print_document(sale->id, report, sizeof(report)), 3);
-  ASSERT(file_contains(TMP_DIR "/print/РТ-0001-schet-faktura.html", "СЧЕТ-ФАКТУРА № РТ-0001 от 10.03.2026", "Российский рубль, 643"), "invoice per Decree 1137");
-  ASSERT(file_contains(TMP_DIR "/print/РТ-0001-upd.html", "Статус:", "ИП Иванов Иван Иванович"), "UPD");
+  ASSERT(file_contains(TMP_DIR "/print/РТ-0001-vat-invoice.html", "СЧЕТ-ФАКТУРА № РТ-0001 от 10.03.2026", "Российский рубль, 643"), "invoice per Decree 1137");
+  ASSERT(file_contains(TMP_DIR "/print/РТ-0001-universal-transfer-document.html", "Статус:", "ИП Иванов Иван Иванович"), "UPD");
   ASSERT_EQUAL(ledger_print_reports(report, sizeof(report)), 6);
-  ASSERT(file_contains(TMP_DIR "/print/kniga-prodazh.html", "КНИГА ПРОДАЖ", "ИП Иванов Иван Иванович"), "sales book");
-  ASSERT(file_contains(TMP_DIR "/print/kniga-pokupok.html", "КНИГА ПОКУПОК", "Торговый дом Альфа"), "purchase book");
-  ASSERT(file_contains(TMP_DIR "/print/osv.html", "ОБОРОТНО-САЛЬДОВАЯ ВЕДОМОСТЬ", "Расчетные счета"), "trial balance form");
-  ASSERT(file_contains(TMP_DIR "/print/journal.html", "ЖУРНАЛ ОПЕРАЦИЙ", "Реализация товаров РТ-0001"), "journal form");
+  ASSERT(file_contains(TMP_DIR "/print/sales-book.html", "КНИГА ПРОДАЖ", "ИП Иванов Иван Иванович"), "sales book");
+  ASSERT(file_contains(TMP_DIR "/print/purchase-book.html", "КНИГА ПОКУПОК", "Торговый дом Альфа"), "purchase book");
+  ASSERT(file_contains(TMP_DIR "/print/trial-balance.html", "ОБОРОТНО-САЛЬДОВАЯ ВЕДОМОСТЬ", "Расчетные счета"), "trial balance form");
+  ASSERT(file_contains(TMP_DIR "/print/general-journal.html", "ЖУРНАЛ ОПЕРАЦИЙ", "Реализация товаров РТ-0001"), "journal form");
   ASSERT(ledger_count_references(g_ledger->cfg, TABLE_REGULATIONS, "area", 0) == 0, "regulations filter by text, not by number");
   result_node_t *rules = (result_node_t *)send_db_message(g_ledger->cfg, dbFetch, MAKEDWORD(TABLE_REGULATIONS, 0), NULL);
   int nrules = count_result_list(rules);
@@ -731,12 +731,12 @@ static void test_de_2026(void) {
   db_document_t *sale = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "AR-0001");
   char report[4096];
   ASSERT_EQUAL(ledger_print_document(sale->id, report, sizeof(report)), 1);
-  ASSERT(file_contains(TMP_DIR "/print/AR-0001-rechnung.html", "Rechnung AR-0001", "DE123456789"), "Rechnung per § 14 UStG");
+  ASSERT(file_contains(TMP_DIR "/print/AR-0001-invoice.html", "Rechnung AR-0001", "DE123456789"), "Rechnung per § 14 UStG");
   ASSERT_EQUAL(ledger_print_reports(report, sizeof(report)), 5);
-  ASSERT(file_contains(TMP_DIR "/print/ustva.html", "<td class=\"c\">81</td><td class=\"c\">1</td><td class=\"r\">522,90</td><td class=\"r b\">99,35</td>",
+  ASSERT(file_contains(TMP_DIR "/print/vat-return.html", "<td class=\"c\">81</td><td class=\"c\">1</td><td class=\"r\">522,90</td><td class=\"r b\">99,35</td>",
                        "<td class=\"c\">86</td><td class=\"c\">1</td><td class=\"r\">119,70</td><td class=\"r b\">8,38</td>"), "UStVA figures per rate under their Kennzahl");
   ASSERT(file_contains(TMP_DIR "/print/datev-buchungsstapel.csv", "\"EXTF\";700;21;\"Buchungsstapel\"", "498,00;\"S\";\"EUR\";;;;1400;8400;;1003;\"AR-0001\""), "DATEV Buchungsstapel rows");
-  ASSERT(file_contains(TMP_DIR "/print/susa.html", "Summen- und Saldenliste", "Umsatzsteuer 19 %"), "SuSa");
+  ASSERT(file_contains(TMP_DIR "/print/trial-balance.html", "Summen- und Saldenliste", "Umsatzsteuer 19 %"), "SuSa");
   ui_set_language("en");
   restore_configuration(cfg, ib);
   PASS();

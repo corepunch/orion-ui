@@ -169,21 +169,21 @@
     <balance_rule id="10" account_id="42" currency_account_id="0" document="ОстаткиРасчетовПоКредитамЗаймам" credit="1"/>
   </balance_rules>
   <print_forms>
-    <print_form id="1" doc_type_id="2" report="" name="Счет-фактура" template="schet-faktura.html" basis="Постановление Правительства РФ от 26.12.2011 № 1137 (ред. 2024 г.)"/>
-    <print_form id="2" doc_type_id="2" report="" name="Универсальный передаточный документ (УПД)" template="upd.html" basis="Письмо ФНС России от 21.10.2013 № ММВ-20-3/96@; постановление Правительства РФ № 1137"/>
-    <print_form id="3" doc_type_id="2" report="" name="Счет на оплату" template="schet.html" basis="Произвольная форма (ст. 9 402-ФЗ)"/>
-    <print_form id="4" doc_type_id="4" report="" name="Приходный кассовый ордер КО-1" template="ko1.html" basis="Постановление Госкомстата России от 18.08.1998 № 88; указание Банка России от 11.03.2014 № 3210-У"/>
-    <print_form id="5" doc_type_id="5" report="" name="Расходный кассовый ордер КО-2" template="ko2.html" basis="Постановление Госкомстата России от 18.08.1998 № 88; указание Банка России от 11.03.2014 № 3210-У"/>
-    <print_form id="6" doc_type_id="6" report="" name="Платежное поручение 0401060" template="pp0401060.html" basis="Положение Банка России от 29.06.2021 № 762-П"/>
-    <print_form id="7" doc_type_id="18" report="" name="Приходный кассовый ордер КО-1" template="ko1.html" basis="Постановление Госкомстата России от 18.08.1998 № 88; указание Банка России от 11.03.2014 № 3210-У"/>
-    <print_form id="8" doc_type_id="11" report="" name="Расчетная ведомость Т-51" template="t51.html" basis="Постановление Госкомстата России от 05.01.2004 № 1 (форма применяется по выбору организации, ст. 9 402-ФЗ)"/>
-    <print_form id="9" doc_type_id="19" report="" name="Платежное поручение 0401060 (ЕНП)" template="pp0401060.html" basis="Положение Банка России от 29.06.2021 № 762-П; приказ Минфина России от 12.11.2013 № 107н"/>
-    <print_form id="10" doc_type_id="0" report="cash_book" name="Кассовая книга КО-4" template="ko4.html" basis="Постановление Госкомстата России от 18.08.1998 № 88; указание Банка России № 3210-У"/>
-    <print_form id="11" doc_type_id="0" report="vat_book" name="Книга продаж" template="kniga-prodazh.html" basis="Постановление Правительства РФ от 26.12.2011 № 1137, приложение № 5"/>
-    <print_form id="12" doc_type_id="0" report="vat_book" name="Книга покупок" template="kniga-pokupok.html" basis="Постановление Правительства РФ от 26.12.2011 № 1137, приложение № 4"/>
-    <print_form id="13" doc_type_id="0" report="vat_summary" name="НДС: расчет по ставкам (раздел 3 декларации)" template="nds-svodka.html" basis="Приказ ФНС России от 29.10.2014 № ММВ-7-3/558@ (ред. 2025 г.)"/>
-    <print_form id="14" doc_type_id="0" report="balances" name="Оборотно-сальдовая ведомость" template="osv.html" basis="Регистр бухгалтерского учета (ст. 10 402-ФЗ)"/>
-    <print_form id="15" doc_type_id="0" report="journal_rows" name="Журнал операций" template="journal.html" basis="Регистр бухгалтерского учета (ст. 10 402-ФЗ)"/>
+    <print_form id="1" doc_type_id="2" report="" name="Счет-фактура" template="vat-invoice.html" basis="Постановление Правительства РФ от 26.12.2011 № 1137 (ред. 2024 г.)"/>
+    <print_form id="2" doc_type_id="2" report="" name="Универсальный передаточный документ (УПД)" template="universal-transfer-document.html" basis="Письмо ФНС России от 21.10.2013 № ММВ-20-3/96@; постановление Правительства РФ № 1137"/>
+    <print_form id="3" doc_type_id="2" report="" name="Счет на оплату" template="invoice.html" basis="Произвольная форма (ст. 9 402-ФЗ)"/>
+    <print_form id="4" doc_type_id="4" report="" name="Приходный кассовый ордер КО-1" template="cash-receipt-order.html" basis="Постановление Госкомстата России от 18.08.1998 № 88; указание Банка России от 11.03.2014 № 3210-У"/>
+    <print_form id="5" doc_type_id="5" report="" name="Расходный кассовый ордер КО-2" template="cash-payment-order.html" basis="Постановление Госкомстата России от 18.08.1998 № 88; указание Банка России от 11.03.2014 № 3210-У"/>
+    <print_form id="6" doc_type_id="6" report="" name="Платежное поручение 0401060" template="payment-order.html" basis="Положение Банка России от 29.06.2021 № 762-П"/>
+    <print_form id="7" doc_type_id="18" report="" name="Приходный кассовый ордер КО-1" template="cash-receipt-order.html" basis="Постановление Госкомстата России от 18.08.1998 № 88; указание Банка России от 11.03.2014 № 3210-У"/>
+    <print_form id="8" doc_type_id="11" report="" name="Расчетная ведомость Т-51" template="payroll-statement.html" basis="Постановление Госкомстата России от 05.01.2004 № 1 (форма применяется по выбору организации, ст. 9 402-ФЗ)"/>
+    <print_form id="9" doc_type_id="19" report="" name="Платежное поручение 0401060 (ЕНП)" template="payment-order.html" basis="Положение Банка России от 29.06.2021 № 762-П; приказ Минфина России от 12.11.2013 № 107н"/>
+    <print_form id="10" doc_type_id="0" report="cash_book" name="Кассовая книга КО-4" template="cash-book.html" basis="Постановление Госкомстата России от 18.08.1998 № 88; указание Банка России № 3210-У"/>
+    <print_form id="11" doc_type_id="0" report="vat_book" name="Книга продаж" template="sales-book.html" basis="Постановление Правительства РФ от 26.12.2011 № 1137, приложение № 5"/>
+    <print_form id="12" doc_type_id="0" report="vat_book" name="Книга покупок" template="purchase-book.html" basis="Постановление Правительства РФ от 26.12.2011 № 1137, приложение № 4"/>
+    <print_form id="13" doc_type_id="0" report="vat_summary" name="НДС: расчет по ставкам (раздел 3 декларации)" template="vat-summary.html" basis="Приказ ФНС России от 29.10.2014 № ММВ-7-3/558@ (ред. 2025 г.)"/>
+    <print_form id="14" doc_type_id="0" report="balances" name="Оборотно-сальдовая ведомость" template="trial-balance.html" basis="Регистр бухгалтерского учета (ст. 10 402-ФЗ)"/>
+    <print_form id="15" doc_type_id="0" report="journal_rows" name="Журнал операций" template="general-journal.html" basis="Регистр бухгалтерского учета (ст. 10 402-ФЗ)"/>
   </print_forms>
   <regulations>
     <regulation id="1" area="accounts" title="План счетов бухгалтерского учета и Инструкция по его применению" reference="Приказ Минфина России от 31.10.2000 № 94н (ред. от 08.11.2010)" valid_from="2001-01-01" url="https://minfin.gov.ru/ru/document/?id_4=2293"/>
