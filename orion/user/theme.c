@@ -74,6 +74,11 @@ static bool theme_validate(theme_t *t) {
     fflush(stderr);
     return false;
   }
+  if (t->report.divider_width <= 0) {
+    fprintf(stderr, "[theme] invalid report metrics name=%s divider_width=%d\n", t->name, t->report.divider_width);
+    fflush(stderr);
+    return false;
+  }
   return true;
 }
 

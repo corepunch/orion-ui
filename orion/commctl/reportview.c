@@ -203,29 +203,21 @@ static void report_paint(window_t *win, reportview_data_t *data) {
 
   set_clip_rect(win, (irect16_t){0, 0, eff_w, cr.h});
   col_x = 0;
+  int divider_w = get_theme()->report.divider_width;
   for (uint32_t col = 0; col < data->column_count; col++) {
-      int col_w = data->cell_style == REPORTVIEW_CELL_TWO_LINE
-                ? eff_w : rv_get_report_column_width(data, (int)col, eff_w);
+    int col_w = data->cell_style == REPORTVIEW_CELL_TWO_LINE
+              ? eff_w : rv_get_report_column_width(data, (int)col, eff_w);
     col_x += col_w;
     int sep_x = window_scroll_rect_to_client(win, R(col_x, 0, 0, 0)).x;
+    ctrl_state_t divider_state = (int)col == data->resize_hot_col && data->resize_col < 0 ? CTRL_HOVER : CTRL_NORMAL;
 #if REPORTVIEW_RESIZE_FULL_HEIGHT
-    if (sep_x >= 0 && sep_x <= eff_w) {
-      uint32_t da = get_sys_color(brDarkEdge);
-      uint32_t ac = get_sys_color((int)col == data->resize_hot_col && data->resize_col < 0
-                                  ? brActiveTitlebar : brBorderActive);
-      fill_rect(da, R(sep_x - 1, 0, 1, cr.h));
-      fill_rect(ac, R(sep_x,     0, 1, cr.h));
-    }
+    if (sep_x >= 0 && sep_x <= eff_w)
+      theme_draw(THEME_PART_COLUMN_DIVIDER, R(sep_x - divider_w / 2, 0, divider_w, cr.h), divider_state);
 #else
     if (sep_x >= 0 && sep_x <= eff_w)
       fill_rect(sep_col, R(sep_x, header_h, 1, cr.h - header_h));
-    if (header_h > 0 && sep_x >= 0 && sep_x <= eff_w) {
-      uint32_t da = get_sys_color(brDarkEdge);
-      uint32_t ac = get_sys_color((int)col == data->resize_hot_col && data->resize_col < 0
-                                  ? brActiveTitlebar : brBorderActive);
-      fill_rect(da, R(sep_x - 1, 0, 1, header_h));
-      fill_rect(ac, R(sep_x,     0, 1, header_h));
-    }
+    if (header_h > 0 && sep_x >= 0 && sep_x <= eff_w)
+      theme_draw(THEME_PART_COLUMN_DIVIDER, R(sep_x - divider_w / 2, 0, divider_w, header_h), divider_state);
 #endif
   }
 

@@ -172,6 +172,7 @@ typedef enum {
   THEME_PART_SCROLLBAR_CORNER,
   THEME_PART_PAGE,           // workspace behind a Page's pane tree
   THEME_PART_TITLE_TOOLBAR,  // merged caption and toolbar row (WINDOW_TITLETOOLBAR), past any sidebar
+  THEME_PART_COLUMN_DIVIDER, // report/table column boundary; CTRL_HOVER marks the resize handle
   THEME_PART_COUNT,
 } theme_part_t;
 
@@ -202,6 +203,7 @@ typedef struct {
   } scrollbar;
   struct { int height; } caption;
   struct { int height; } menubar;
+  struct { int divider_width; } report; // column divider thickness in logical pixels
   struct {
     int button_size, padding;
     int spacing, corner_radius; // inter-item gap and selection rounding

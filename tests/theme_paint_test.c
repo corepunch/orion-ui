@@ -126,6 +126,29 @@ static void test_translated_separator(void) {
   PASS();
 }
 
+static void test_column_dividers(void) {
+  TEST("all themes paint 1pt column dividers, with an accent resize highlight");
+  for (int style = THEME_CLASSIC; style <= THEME_LAST; style++) {
+    set_theme((theme_style_t)style);
+    get_theme()->apply_palette();
+    theme_t *painter = style == THEME_CLASSIC ? paint_classic_instance() : paint_modern_instance();
+    int width = get_theme()->report.divider_width;
+    ASSERT_EQUAL(width, 1);
+    for (int hover = 0; hover <= 1; hover++) {
+      memset(pixels, 0, sizeof(pixels));
+      painter->draw_part(THEME_PART_COLUMN_DIVIDER, R(40, 10, width, 30), hover ? CTRL_HOVER : CTRL_NORMAL);
+      uint32_t color = get_sys_color(hover ? brAccent : brDarkEdge);
+      for (int y = 0; y < 64; y++) for (int x = 0; x < 128; x++) {
+        uint32_t expected = 0;
+        if (y >= 10 && y < 40 && x >= 40 && x < 40 + width)
+          expected = color;
+        ASSERT_EQUAL(pixels[y][x], expected);
+      }
+    }
+  }
+  PASS();
+}
+
 static void test_classic_window_border(void) {
   TEST("Classic paints a bevel outside inactive windows and an accent border outside focused windows");
   theme_t *classic = paint_classic_instance();
@@ -473,6 +496,7 @@ int main(void) {
   test_field_capsules();
   test_modern_button_states();
   test_translated_separator();
+  test_column_dividers();
   test_classic_window_border();
   test_independent_parts();
   test_modern_slider_track_contrasts();

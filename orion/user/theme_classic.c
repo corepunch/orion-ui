@@ -204,6 +204,7 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
       }
       break;
     case THEME_PART_TOOLBAR_SEPARATOR:   classic_draw_toolbar_separator(r); break;
+    case THEME_PART_COLUMN_DIVIDER:      fill_rect(get_sys_color((state & CTRL_HOVER) ? brAccent : brDarkEdge), r); break;
     case THEME_PART_TOOLBAR_GRIP:
       if (r.w > r.h) {
         fill_rect(get_sys_color(brLightEdge), rect_center(r, MIN(16, r.w - 4), 2));
@@ -353,6 +354,7 @@ static theme_t g_classic_theme = {
     .min_width = 80, .padding = 16, .pane_frame = 2, .pane_margin = 2,
   },
   .menu = { .capsule = 0 },
+  .report = { .divider_width = 1 },
   .splitter = { .spacing = 2 },
   .badge = { .padding = 7, .corner_radius = 5, .tint_alpha = 0x40 },
   .tooltip = {

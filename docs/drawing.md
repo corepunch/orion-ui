@@ -97,6 +97,11 @@ the window face over a hairline, and a sidebar (`THEME_PART_SIDEBAR`,
 `brPanelDark`) is the tinted column, as in Finder. Other themes paint the title
 row like any toolbar band. `brDesktopBg` colours the desktop behind root windows.
 
+ReportView and TableView column boundaries use `THEME_PART_COLUMN_DIVIDER` and
+the theme's `report.divider_width`, in logical pixels (points on macOS). All
+themes draw a single 1pt `brDarkEdge` line, changing to `brAccent` while hovered
+for resizing. This drawing metric does not change the column resize hit area.
+
 ### Light and dark appearance
 
 Each `theme_t` records whether it is dark and names its counterpart in the

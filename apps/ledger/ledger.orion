@@ -614,7 +614,7 @@
     <form name="journal_page" label="Journal" title="Document Journal" icon="ledger-nav-journal"
           checked-icon="ledger-nav-journal-fill" tooltip="Document journal (Ctrl+1)"
           focus="documents" width="900" height="560" role="page" flags="nofill,flexspace"
-          spacing="4" padding="4">
+          spacing="4" padding="0">
       <Toolbar>
         <Button command="doc.new" icon="ledger-new" text="New" tooltip="New document (Ctrl+N)" />
         <Button command="doc.new_operation" icon="ledger-operation" text="Operation" tooltip="New manual operation (Ctrl+M)" />
@@ -668,7 +668,7 @@
     <form name="counterparties_page" label="Counterparties" title="Counterparties" icon="ledger-nav-counterparties"
           checked-icon="ledger-nav-counterparties-fill" tooltip="Counterparties (Ctrl+2)"
           focus="counterparties" width="900" height="560" role="page" flags="nofill,flexspace"
-          spacing="4" padding="4">
+          spacing="4" padding="0">
       <Toolbar>
         <Button command="catalog.new_counterparty" icon="ledger-new" text="New" tooltip="New counterparty" />
         <Button command="catalog.edit_counterparty" icon="ledger-edit" text="Edit" tooltip="Edit counterparty" />
@@ -687,7 +687,7 @@
 
     <form name="items_page" label="Items" title="Items" icon="ledger-nav-items" checked-icon="ledger-nav-items-fill"
           tooltip="Goods and services (Ctrl+3)" focus="items" width="900" height="560" role="page"
-          flags="nofill,flexspace" spacing="4" padding="4">
+          flags="nofill,flexspace" spacing="4" padding="0">
       <Toolbar>
         <Button command="catalog.new_item" icon="ledger-new" text="New" tooltip="New item" />
         <Button command="catalog.edit_item" icon="ledger-edit" text="Edit" tooltip="Edit item" />
@@ -707,7 +707,7 @@
     <form name="accounts_page" label="Accounts" title="Chart of Accounts" icon="ledger-nav-accounts"
           checked-icon="ledger-nav-accounts-fill" tooltip="Chart of accounts (Ctrl+4)"
           focus="accounts" width="900" height="560" role="page" flags="nofill,flexspace"
-          spacing="4" padding="4">
+          spacing="4" padding="0">
       <Toolbar>
         <Button command="report.card" icon="ledger-card" text="Card" tooltip="Account card of the selected account (Ctrl+K)" />
         <Button command="report.settings" icon="ledger-settings" text="Settings" tooltip="Period and account (Ctrl+R)" />
@@ -726,7 +726,7 @@
     <form name="employees_page" label="Employees" title="Employees" icon="ledger-nav-employees"
           checked-icon="ledger-nav-employees-fill" tooltip="Employees (Ctrl+5)"
           focus="employees" width="900" height="560" role="page" flags="nofill,flexspace"
-          spacing="4" padding="4">
+          spacing="4" padding="0">
       <Toolbar>
         <Button command="catalog.new_employee" icon="ledger-new" text="New" tooltip="New employee" />
         <Button command="catalog.edit_employee" icon="ledger-edit" text="Edit" tooltip="Edit employee" />
@@ -749,7 +749,7 @@
     <form name="assets_page" label="Assets" title="Fixed Assets" icon="ledger-nav-assets"
           checked-icon="ledger-nav-assets-fill" tooltip="Fixed assets (Ctrl+6)"
           focus="assets" width="900" height="560" role="page" flags="nofill,flexspace"
-          spacing="4" padding="4">
+          spacing="4" padding="0">
       <Toolbar>
         <Button command="catalog.new_asset" icon="ledger-new" text="New" tooltip="New fixed asset" />
         <Button command="catalog.edit_asset" icon="ledger-edit" text="Edit" tooltip="Edit fixed asset" />
@@ -774,7 +774,7 @@
     <form name="currencies_page" label="Currencies" title="Currencies" icon="ledger-nav-currencies"
           checked-icon="ledger-nav-currencies-fill" tooltip="Currencies and exchange rates (Ctrl+7)"
           focus="currencies" width="900" height="560" role="page" flags="nofill,flexspace"
-          spacing="4" padding="4">
+          spacing="4" padding="0">
       <Toolbar>
         <Button command="catalog.new_currency" icon="ledger-new" text="Currency" tooltip="New currency" />
         <Button command="catalog.edit_currency" icon="ledger-edit" text="Edit" tooltip="Edit currency" />
@@ -800,7 +800,7 @@
     <form name="entries_page" label="Entries" title="Entry Journal" icon="ledger-nav-entries"
           checked-icon="ledger-nav-entries-fill" tooltip="All accounting entries (Ctrl+8)"
           focus="entries" width="900" height="560" role="page" flags="nofill,flexspace"
-          spacing="4" padding="4">
+          spacing="4" padding="0">
       <Toolbar>
         <Button command="doc.open_entry" icon="ledger-open" text="Document" tooltip="Open the entry's document" />
         <Button command="report.card" icon="ledger-card" text="Card" tooltip="Account card of the entry's debit account (Ctrl+K)" />
@@ -826,7 +826,7 @@
     <form name="reports_page" label="Reports" title="Reports" icon="ledger-nav-balance"
           checked-icon="ledger-nav-balance-fill" tooltip="Reports (Ctrl+9)"
           focus="balances" width="900" height="560" role="page" flags="nofill,flexspace"
-          spacing="4" padding="4">
+          spacing="4" padding="0">
       <Toolbar>
         <Button command="report.settings" icon="ledger-settings" text="Settings" tooltip="Period and account (Ctrl+R)" />
         <Button command="report.recalc" icon="ledger-post" text="Recalculate" tooltip="Rebuild reports from entries (F5)" />
@@ -937,7 +937,7 @@
     <form name="config_page" label="Setup" title="Configuration" icon="ledger-nav-config"
           checked-icon="ledger-nav-config-fill" tooltip="Active configuration (Ctrl+0)"
           focus="doc_types" width="900" height="560" role="page" flags="nofill,flexspace"
-          spacing="4" padding="4">
+          spacing="4" padding="0">
       <Toolbar>
         <Button command="file.configuration" icon="ledger-configuration" text="Configuration" tooltip="Select configuration" />
         <Button command="file.language" icon="ledger-language" text="Language" tooltip="Interface language" />

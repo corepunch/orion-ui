@@ -307,6 +307,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
       }
       break;
     case THEME_PART_TOOLBAR_SEPARATOR:   break;
+    case THEME_PART_COLUMN_DIVIDER:      fill_rect(get_sys_color((state & CTRL_HOVER) ? brAccent : brDarkEdge), r); break;
     case THEME_PART_PANEL:               modern_draw_panel_bg(r); break;
     case THEME_PART_SIDEBAR:
       fill_rect(get_sys_color(brPanelDark), r);
@@ -438,6 +439,7 @@ static theme_t g_modern_theme = {
     .min_width = 80, .padding = 16, .pane_frame = 0, .corner_radius = 6, .pane_margin = 2,
   },
   .menu = { .capsule = 1 },
+  .report = { .divider_width = 1 },
   .splitter = { .spacing = 0 },
   .badge = { .padding = 7, .corner_radius = 5, .tint_alpha = 0x40 },
   .tooltip = {

@@ -39,6 +39,13 @@ static void test_switch_validation(void) {
   ASSERT_FALSE(result);
   ASSERT_TRUE(get_theme() == light);
   ASSERT_EQUAL(light_color, get_sys_color(brControlBg));
+  int divider_width = classic->report.divider_width;
+  classic->report.divider_width = 0;
+  result = set_theme(THEME_CLASSIC);
+  classic->report.divider_width = divider_width;
+  ASSERT_FALSE(result);
+  ASSERT_TRUE(get_theme() == light);
+  ASSERT_EQUAL(light_color, get_sys_color(brControlBg));
   ASSERT_FALSE(light->scrollbar.overlay);
   ASSERT_EQUAL(light->scrollbar.width, SCROLLBAR_WIDTH);
   ASSERT_TRUE(set_theme(THEME_CLASSIC));
