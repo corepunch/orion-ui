@@ -157,6 +157,10 @@ lresult_t send_db_message(database_t *db, uint32_t msg, uint32_t wparam, void *l
 database_t *db_edit_context_create(database_t *store);
 bool db_edit_context_save(database_t *context, char *error, size_t error_size);
 bool db_edit_context_reset(database_t *context);
+// The clean checkpoint tracks user edits after draft/default initialization;
+// it does not replace the parent baseline used to save or detect conflicts.
+bool db_edit_context_mark_clean(database_t *context);
+bool db_edit_context_has_changes(database_t *context);
 database_t *db_set_message_context(database_t *context); // returns the previous UI-message context
 void db_message_retain(database_t *context);
 void db_message_release(database_t *context);
@@ -166,6 +170,7 @@ const db_table_schema_t *db_schema_table(const db_schema_def_t *schema, int tabl
 const db_table_schema_t *db_schema_table_named(const db_schema_def_t *schema, const char *name);
 int db_schema_field_index(const db_table_schema_t *table, const char *field);
 bool db_format_field(const db_field_meta_t *field, const void *record, char *buf, size_t buf_sz);
+bool db_record_equal(const db_field_meta_t *fields, int count, const void *a, const void *b);
 // Sets a field from text as it is stored ("12.5", "2003-03-31", "1"); "today"
 // sets a date field to the current date.
 bool db_parse_field(const db_field_meta_t *field, void *record, const char *text);

@@ -20,6 +20,14 @@ through its class messages inside one change scope. A conflict or rejected write
 applies no changes. Destroying the context drops its unsaved work. Reserved
 integer keys come from the store, so cancelled drafts can leave harmless gaps.
 
+`db_edit_context_mark_clean(ctx)` records the initialized draft separately from
+the parent baseline. `db_edit_context_has_changes(ctx)` compares stored field
+values with that checkpoint (or the parent baseline when no checkpoint exists),
+ignoring transient tables, struct padding and bytes after string terminators.
+Modeless forms mark their opening state clean and also compare pending control
+values when closing. Opening an untouched draft or reverting edits does not
+prompt to save; an explicit Save still inserts the draft into its parent.
+
 `db_edit_context_reset(ctx)` reloads the committed parent while preserving the
 database handle. After a successful save, callers must reset or dispose of the
 context before further editing; `db_form_save(window, false)` performs that reset
@@ -34,7 +42,8 @@ copy-on-write contexts or change notifications.
 
 The implementation supports `db_schema_xml` and classes that delegate its storage
 messages, with integer-keyed stored tables. It copies the infobase at open/reset
-and retains a baseline: memory and initial copying cost grow with database size.
+and retains a baseline and, for forms, a clean checkpoint: memory and initial
+copying cost grow with database size.
 Saving also uses the parent's full snapshot transaction. The sparse overlay,
 O(changes) revert and automatic view notifications proposed below are future work.
 See [Ledger windows](ledger-office-windows.md).

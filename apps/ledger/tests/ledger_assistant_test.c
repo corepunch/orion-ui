@@ -309,6 +309,37 @@ static void test_modeless_documents(void) {
   PASS();
 }
 
+static int close_prompts;
+static void count_close_prompt(window_t *win, uint32_t msg, uint32_t wp, void *lp, void *userdata) {
+  (void)msg; (void)wp; (void)lp; (void)userdata;
+  if (!win->parent && !strcmp(win->title, ui_tr("Save"))) close_prompts++;
+}
+static void test_untouched_document_close(void) {
+  TEST("Ledger: every untouched new document closes without a save prompt or persisted draft");
+  open_configuration("ru-2003");
+  window_t *frame = create_window_from_form(&ledger_main_window_form, 10, 30, NULL, ledger_main_proc, 0, NULL);
+  ASSERT_NOT_NULL(frame);
+  window_t *client = get_window_item(frame, ID_MAIN_WINDOW_DOCUMENTS_CLIENT);
+  ASSERT_NOT_NULL(client);
+  register_window_hook(evCreate, count_close_prompt, NULL);
+  close_prompts = 0;
+  int before = count_rows("ib", TABLE_DOCUMENTS);
+  const uint32_t commands[] = {ID_DOC_NEW, ID_DOC_NEW_OPERATION, ID_DOC_NEW_PAYROLL, ID_DOC_NEW_ASSETS, ID_DOC_CLOSE_MONTH};
+  for (int i = 0; i < ARRAY_LEN(commands); i++) {
+    ledger_command(commands[i]);
+    window_t *draft = mdi_active_document(client);
+    ASSERT_NOT_NULL(draft);
+    ASSERT_TRUE(window_is_enabled(frame));
+    send_message(draft, evClose, 0, NULL);
+    ASSERT_FALSE(is_window(draft));
+    ASSERT_EQUAL(close_prompts, 0);
+    ASSERT_EQUAL(count_rows("ib", TABLE_DOCUMENTS), before);
+  }
+  deregister_window_hook(evCreate, count_close_prompt, NULL);
+  destroy_window(frame);
+  PASS();
+}
+
 int main(void) {
   TEST_START("Ledger assistant"); test_env_init();
   DB_CLASS(db_schema_xml); DB_CLASS(ledger_ib);
@@ -318,6 +349,7 @@ int main(void) {
   test_assistant();
   test_assistant_companion();
   test_modeless_documents();
+  test_untouched_document_close();
   ledger_close_assistant(); ledger_script_close();
   unregister_database("ib"); unregister_database("cfg");
   destroy_database(state.ib); destroy_database(state.cfg);

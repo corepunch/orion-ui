@@ -250,7 +250,8 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
     case evClose:
       if (ctx && ctx->modeless) {
         dialog_pull(win, ctx->record_buf, ctx->def->bindings, ctx->def->binding_count);
-        if (ctx->db->dirty || memcmp(ctx->record_buf, ctx->synced, ctx->def->db_record_size)) {
+        if (db_edit_context_has_changes(ctx->db) ||
+            !db_record_equal(ctx->def->db_fields, ctx->def->db_field_count, ctx->record_buf, ctx->synced)) {
           uint32_t choice = message_box(win, ui_tr("Save changes to this document?"), ui_tr("Save"), MB_YESNOCANCEL);
           if (choice == IDCANCEL) return true;
           if (choice == IDYES) {
@@ -382,6 +383,7 @@ window_t *db_form_open(form_def_t const *def, const char *title, window_t *owner
   form.width = frame.w; form.height = frame.h;
   window_t *win = create_window_from_form(&form, CW_USEDEFAULT, CW_USEDEFAULT, NULL, dialog_db_proc,
                                          owner ? get_root_window(owner)->hinstance : 0, ctx);
+  if (win && !db_edit_context_mark_clean(ctx->db)) { destroy_window(win); win = NULL; }
   db_set_message_context(previous);
   if (!win) return NULL;
   win->database_context = ctx->db;
@@ -622,16 +624,11 @@ static uint32_t run_dialog_loop(window_t *dlg, window_t *parent, window_t *previ
   uint32_t result = 0;
   ui_event_t event;
   window_t *modal_parent = parent ? get_root_window(parent) : NULL;
-  window_t *prev_modal_overlay_parent = g_ui_runtime.modal_overlay_parent;
   window_t *previous_modal = g_ui_runtime.modal_window;
-  bool owner_was_enabled = modal_parent && !(modal_parent->flags & WINDOW_STATE_DISABLED);
   dlg->userdata2 = &result;
   if (modal_parent) window_set_owner(dlg, modal_parent);
   g_ui_runtime.modal_window = dlg;
-  if (modal_parent) {
-    g_ui_runtime.modal_overlay_parent = modal_parent;
-    enable_window(modal_parent, false);
-  }
+  request_composite();
   show_window(dlg, true);
   while (g_ui_runtime.running && is_window(dlg)) {
     while (get_message(&event)) {
@@ -648,9 +645,8 @@ static uint32_t run_dialog_loop(window_t *dlg, window_t *parent, window_t *previ
   if (is_window(dlg))
     destroy_window(dlg);
   g_ui_runtime.modal_window = is_window(previous_modal) ? previous_modal : NULL;
-  g_ui_runtime.modal_overlay_parent = is_window(prev_modal_overlay_parent) ? prev_modal_overlay_parent : NULL;
+  request_composite();
   if (is_window(modal_parent)) {
-    enable_window(modal_parent, owner_was_enabled);
     window_t *focus = is_window(previous_focus) ? previous_focus : modal_parent;
     if (window_is_enabled(focus) && window_is_visible(focus)) set_focus(focus);
   }

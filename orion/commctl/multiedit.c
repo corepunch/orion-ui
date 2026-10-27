@@ -197,7 +197,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 
       ctrl_state_t state = focused ? CTRL_FOCUSED : CTRL_NORMAL;
       state |= CTRL_MULTILINE;
-      if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
+      if (window_is_disabled(win)) state |= CTRL_DISABLED;
       theme_draw(THEME_PART_FIELD, R(0, 0, win->frame.w, win->frame.h), state);
 
       int tw, th;

@@ -194,6 +194,84 @@ static void test_focus_preserves_transparent_chrome(void) {
   PASS();
 }
 
+static void read_screen_pixel(int x, int y, uint8_t pixel[4]) {
+  axBindFramebuffer();
+  struct AXsize size;
+  axGetSize(&size);
+  float scale = axGetScaling();
+  int width = (int)(size.width * scale + 0.5f), height = (int)(size.height * scale + 0.5f);
+  int logical_w = ui_get_system_metrics(kSystemMetricScreenWidth);
+  int logical_h = ui_get_system_metrics(kSystemMetricScreenHeight);
+  glReadPixels(x * width / logical_w, height - y * height / logical_h - 1,
+               1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+}
+
+static void test_modal_composition(void) {
+  TEST("Modal tint: immediate, stable across repaints, nested, and absent from cached surfaces");
+  if (!ui_init_graphics(UI_INIT_HIDDEN, "modal-composite-test", 512, 512)) {
+    SKIP("Offscreen graphics unavailable");
+  }
+  g_paint_color = 0xFF0000FF;
+  int color_id = brModalOverlay;
+  uint32_t overlay = 0x80FFFFFF;
+  set_sys_colors(1, &color_id, &overlay);
+  window_t *frame = create_window("frame", WINDOW_NOTITLE, MAKERECT(0, 0, 256, 256), NULL, color_paint_proc, 0, NULL);
+  window_t *doc = create_window("document", WINDOW_NOTITLE, MAKERECT(40, 50, 80, 90), NULL, color_paint_proc, 0, NULL);
+  window_t *palette = create_window("palette", WINDOW_NOTITLE, MAKERECT(180, 20, 30, 30), NULL, color_paint_proc, 0, NULL);
+  window_t *dialog = create_window("dialog", WINDOW_NOTITLE | WINDOW_DIALOG, MAKERECT(100, 100, 50, 40), NULL, color_paint_proc, 0, NULL);
+  window_t *other = create_window("other app", WINDOW_NOTITLE, MAKERECT(180, 180, 50, 50), NULL, color_paint_proc, 0, NULL);
+  window_t *chrome = create_window("chrome", WINDOW_NOTITLE | WINDOW_TRANSPARENT | WINDOW_NOFILL,
+                                 MAKERECT(0, 0, 256, 256), NULL, status_host_proc, 0, NULL);
+  window_t *bar = create_window("bar", WINDOW_NOTITLE, MAKERECT(10, 180, 30, 30), chrome, color_paint_proc, 0, NULL);
+  window_set_owner(doc, frame); window_set_owner(palette, frame);
+  window_set_owner(dialog, doc); window_set_owner(chrome, frame);
+  window_t *roots[] = {frame, doc, palette, dialog, other, chrome};
+  for (int i = 0; i < ARRAY_LEN(roots); i++) show_window(roots[i], true);
+  show_window(bar, true);
+  move_to_top(other);
+  repost_messages(); repost_messages();
+  const ipoint16_t points[] = {{20,70}, {60,70}, {195,35}, {25,195}, {150,200}, {120,120}, {200,200}};
+  uint8_t before[7][4], modal[7][4], repainted[7][4], restored[7][4];
+  for (int i = 0; i < ARRAY_LEN(points); i++) read_screen_pixel(points[i].x, points[i].y, before[i]);
+  g_ui_runtime.modal_window = dialog;
+  request_composite(); repost_messages();
+  for (int i = 0; i < ARRAY_LEN(points); i++) read_screen_pixel(points[i].x, points[i].y, modal[i]);
+  for (int i = 0; i < ARRAY_LEN(roots); i++) invalidate_window(roots[i]);
+  repost_messages(); repost_messages();
+  for (int i = 0; i < ARRAY_LEN(points); i++) read_screen_pixel(points[i].x, points[i].y, repainted[i]);
+  // The editor's surface must retain its original red content beneath the tint.
+  uint8_t surface[4];
+  read_window_pixel(doc, window_surface(doc)->w / 2, window_surface(doc)->h / 2, surface);
+  window_t *nested = create_window("nested", WINDOW_NOTITLE | WINDOW_DIALOG,
+                                  MAKERECT(10, 220, 40, 30), NULL, color_paint_proc, 0, NULL);
+  window_set_owner(nested, dialog); show_window(nested, true);
+  g_ui_runtime.modal_window = nested;
+  request_composite(); repost_messages(); repost_messages();
+  uint8_t nested_parent[4]; read_screen_pixel(120, 120, nested_parent);
+  destroy_window(nested);
+  g_ui_runtime.modal_window = dialog;
+  request_composite(); repost_messages();
+  uint8_t outer[4]; read_screen_pixel(120, 120, outer);
+  g_ui_runtime.modal_window = NULL;
+  request_composite(); repost_messages();
+  for (int i = 0; i < ARRAY_LEN(points); i++) read_screen_pixel(points[i].x, points[i].y, restored[i]);
+  GLenum error = glGetError();
+  ui_shutdown_graphics();
+  for (int i = 0; i < ARRAY_LEN(points); i++) {
+    ASSERT_EQUAL(before[i][0], 255); ASSERT_EQUAL(before[i][1], 0);
+    ASSERT(memcmp(modal[i], repainted[i], 4) == 0, "repaint must preserve modal appearance");
+    ASSERT(memcmp(before[i], restored[i], 4) == 0, "closing restores cached content");
+    if (i < 5) {
+      ASSERT(modal[i][1] > 170 && modal[i][1] < 200, "one linear-light overlay");
+    } else ASSERT(memcmp(before[i], modal[i], 4) == 0, "dialog and other app remain untinted");
+  }
+  ASSERT_EQUAL(surface[0], 255); ASSERT_EQUAL(surface[1], 0);
+  ASSERT(memcmp(nested_parent, modal[0], 4) == 0, "nested modal blocks its parent exactly once");
+  ASSERT(memcmp(outer, before[5], 4) == 0, "closing nested modal restores outer dialog");
+  ASSERT_EQUAL(error, GL_NO_ERROR);
+  PASS();
+}
+
 #else
 static void test_platform_framebuffer(void) {
   TEST("Window compositing draws into the platform's nonzero framebuffer");
@@ -208,6 +286,11 @@ static void test_focus_preserves_transparent_chrome(void) {
   TEST("Focus changes preserve toolbar contents on a transparent chrome surface");
   SKIP("Requires the macOS offscreen platform framebuffer");
 }
+static void test_modal_composition(void) {
+  TEST("Modal tint stays independent of cached window painting");
+  SKIP("Requires the macOS offscreen platform framebuffer");
+}
+
 #endif
 
 int main(void) {
@@ -215,5 +298,6 @@ int main(void) {
   test_platform_framebuffer();
   test_paint_binds_own_surface();
   test_focus_preserves_transparent_chrome();
+  test_modal_composition();
   TEST_END();
 }

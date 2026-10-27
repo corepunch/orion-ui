@@ -74,7 +74,7 @@ wall_vertex_t sprite_verts[] = {
 
 typedef struct {
   float projection[16], offset[2], scale[2], uv_offset[2], uv_scale[2];
-  float tint[4], alpha, params0[4], params1[4], size[2], radius, edge[4];
+  float tint[4], alpha, params0[4], params1[4], size[2], radius, edge[4], overlay[4];
   float glyph_uv[4], glyph_box[4], shadow_color[4], material[4], disabled;
   float grid_size[2], cell_size[2];
   int tex0, palette_tex, cell_tex, font_tex, vga_palette_tex;
@@ -107,6 +107,7 @@ static const shaderUniform_t sprite_uniforms[] = {
   SPRITE_UNIFORM(params0, "params0", UT_FLOAT_VEC4), SPRITE_UNIFORM(params1, "params1", UT_FLOAT_VEC4),
   SPRITE_UNIFORM(tex0, "tex0", UT_SAMPLER_2D), SPRITE_UNIFORM(palette_tex, "palette_tex", UT_SAMPLER_2D),
   SPRITE_UNIFORM(size, "size", UT_FLOAT_VEC2), SPRITE_UNIFORM(radius, "radius", UT_FLOAT),
+  SPRITE_UNIFORM(overlay, "overlay", UT_FLOAT_VEC4),
   SPRITE_UNIFORM(edge, "edge", UT_FLOAT_VEC4), SPRITE_UNIFORM(glyph_uv, "glyph_uv", UT_FLOAT_VEC4),
   SPRITE_UNIFORM(glyph_box, "glyph_box", UT_FLOAT_VEC4), SPRITE_UNIFORM(shadow_color, "shadow_color", UT_FLOAT_VEC4), SPRITE_UNIFORM(material, "material", UT_FLOAT_VEC4),
   SPRITE_UNIFORM(disabled, "disabled", UT_FLOAT), SPRITE_UNIFORM(grid_size, "gridSize", UT_FLOAT_VEC2),
@@ -835,7 +836,7 @@ void draw_program_rect(int tex, irect16_t r, uint32_t program, float mix_amount)
 static void render_rounded_box(int tex, irect16_t r, int win_w, int win_h,
                                 float radius, float alpha, uint32_t color,
                                 float blur, float padding, bool premultiplied,
-                                uint32_t edge_color, float edge_width, float stroke, int fill_style, float tail, float tail_x) {
+                                uint32_t edge_color, float edge_width, float stroke, int fill_style, float tail, float tail_x, uint32_t overlay) {
   if (!g_ref.rounded_rect_sprite.shader.progid || (!tex && blur <= 0 && fill_style < 2)) return;
 
   glActiveTexture(GL_TEXTURE0);
@@ -856,6 +857,8 @@ static void render_rounded_box(int tex, irect16_t r, int win_w, int win_h,
   premultiplied = premultiplied || R_TextureIsPremultiplied((uint32_t)tex);
   sprite_vec4(g_ref.rounded_rect_sprite.state.params1, premultiplied ? 1.0f : 0.0f, edge_width, MAX(0.0f, stroke), tail_x);
   sprite_vec4(g_ref.rounded_rect_sprite.state.edge, (edge_color & 255) / 255.0f, ((edge_color >> 8) & 255) / 255.0f, ((edge_color >> 16) & 255) / 255.0f, (edge_color >> 24) / 255.0f);
+  sprite_vec4(g_ref.rounded_rect_sprite.state.overlay, (overlay & 255) / 255.0f, ((overlay >> 8) & 255) / 255.0f,
+              ((overlay >> 16) & 255) / 255.0f, (overlay >> 24) / 255.0f);
   R_BlendPremultiplied();
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
   if (!gs_apply(&g_ref.rounded_rect_sprite.shader, &g_ref.rounded_rect_sprite.state)) return;
@@ -866,7 +869,7 @@ static void render_rounded_box(int tex, irect16_t r, int win_w, int win_h,
 
 void render_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
                           float radius, float alpha, uint32_t color) {
-  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, 0, 0, 0, 0, 0, 0);
+  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void render_rounded_rect_bands(irect16_t r, isize16_t size, float radius, uint32_t color, float band_width, float offset) {
@@ -875,7 +878,7 @@ void render_rounded_rect_bands(irect16_t r, isize16_t size, float radius, uint32
     fflush(stderr);
     return;
   }
-  render_rounded_box(0, r, size.w, size.h, radius, 1, color, 0, 0, false, 0, band_width, 0, 4, 0, offset);
+  render_rounded_box(0, r, size.w, size.h, radius, 1, color, 0, 0, false, 0, band_width, 0, 4, 0, offset, 0);
 }
 
 void render_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
@@ -888,7 +891,7 @@ void render_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
   bool horizontal = side == TOOLTIP_TAIL_LEFT || side == TOOLTIP_TAIL_RIGHT;
   if (side == TOOLTIP_TAIL_BOTTOM || side == TOOLTIP_TAIL_RIGHT) tail = -tail;
   render_rounded_box(0, r, face_size.w, face_size.h, radius, 1, color,
-                     0, padding, false, border, tail_width, border_width, horizontal ? 3 : 2, tail, tail_offset);
+                     0, padding, false, border, tail_width, border_width, horizontal ? 3 : 2, tail, tail_offset, 0);
 }
 
 void render_tooltip_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
@@ -898,22 +901,22 @@ void render_tooltip_bubble(irect16_t r, isize16_t face_size, float radius, float
 
 void render_rounded_rect_gradient(int tex, irect16_t r, int pixel_w, int pixel_h,
                                   float radius, uint32_t top, uint32_t bottom) {
-  render_rounded_box(tex, r, pixel_w, pixel_h, radius, 1, top, 0, 0, false, bottom, 0, 0, 1, 0, 0);
+  render_rounded_box(tex, r, pixel_w, pixel_h, radius, 1, top, 0, 0, false, bottom, 0, 0, 1, 0, 0, 0);
 }
 
 void render_rounded_top_rect_gradient(int tex, irect16_t r, int pixel_w, int pixel_h,
                                       float radius, uint32_t top, uint32_t bottom) {
-  render_rounded_box(tex, r, pixel_w, pixel_h, radius, 1, top, 0, 0, false, bottom, 0, 0, 1, 1, 0);
+  render_rounded_box(tex, r, pixel_w, pixel_h, radius, 1, top, 0, 0, false, bottom, 0, 0, 1, 1, 0, 0);
 }
 
 void render_rounded_rect_stroke(int tex, irect16_t r, int win_w, int win_h,
                                 float radius, float alpha, uint32_t color, float stroke) {
-  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, 0, 0, stroke, 0, 0, 0);
+  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, 0, 0, stroke, 0, 0, 0, 0);
 }
 
 void render_rounded_rect_edged(int tex, irect16_t r, int win_w, int win_h, float radius,
                                float alpha, uint32_t color, uint32_t edge_color, float edge_width) {
-  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, edge_color, edge_width, 0, 0, 0, 0);
+  render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, edge_color, edge_width, 0, 0, 0, 0, 0);
 }
 
 void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, uint32_t color) {
@@ -925,7 +928,7 @@ void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, 
   }
   int padding = (int)(blur * 3 + 1);
   irect16_t bounds = rect_inset(rect_offset(r, offset.x, offset.y), -padding);
-  render_rounded_box(0, bounds, r.w, r.h, radius, 1, color, blur, padding, false, 0, 0, 0, 0, 0, 0);
+  render_rounded_box(0, bounds, r.w, r.h, radius, 1, color, blur, padding, false, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
@@ -936,7 +939,7 @@ void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
 void draw_rounded_rect_premultiplied(int tex, irect16_t r, int win_w, int win_h,
                                      float radius, float alpha) {
   render_rounded_box(tex, r, win_w, win_h, radius, alpha, 0xffffffff,
-                     0, 0, true, 0, 0, 0, 0, 0, 0);
+                     0, 0, true, 0, 0, 0, 0, 0, 0, 0);
 }
 
 bool read_texture_rgba(int src_tex, int w, int h, uint8_t *out_rgba) {
@@ -1873,7 +1876,8 @@ void R_Composite(const R_CompositeLayer *layers, int count, uint32_t clear_color
     float radius = MIN(l->corner_radius, (float)MIN(l->w, l->h) / 2);   // physical pixels
     if (l->shadow)
       draw_rect_shadow(l->frame, l->shadow_radius, l->shadow_blur, l->shadow_offset, l->shadow_color);
-    draw_rounded_rect_premultiplied((int)l->tex, l->frame, l->w, l->h, radius, 1.0f);
+    render_rounded_box((int)l->tex, l->frame, l->w, l->h, radius, 1.0f, 0xffffffff,
+                       0, 0, true, 0, 0, 0, 0, 0, 0, l->overlay_color);
     if (l->border && draw_border) draw_border(l);
   }
 

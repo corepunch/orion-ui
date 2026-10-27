@@ -580,20 +580,13 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
                       (uint16_t)MAX(1, win->frame.h));
   }
   // Draw disabled overlay
-  if (window_has_state(win, WINDOW_STATE_DISABLED) &&
-      msg == evPaint && win != g_ui_runtime.modal_overlay_parent) {
+  if (window_is_disabled(win) && msg == evPaint) {
     uint32_t col = (get_sys_color(brControlBg) & 0x00FFFFFF) | 0x80000000;
     int root_t = titlebar_height(root);
     irect16_t wf = win_frame_in_screen(win, root, root_t);
     // Render in FBO-local coordinates.
     set_viewport_for_fbo(root);
     fill_rect(col, R(wf.x - root->frame.x, wf.y - root->frame.y, wf.w, wf.h));
-  }
-  if (msg == evPaint && win == g_ui_runtime.modal_overlay_parent) {
-    int root_t = titlebar_height(root);
-    irect16_t wf = win_frame_in_screen(win, root, root_t);
-    set_viewport_for_fbo(root);
-    fill_rect(get_sys_color(brModalOverlay), R(wf.x - root->frame.x, wf.y - root->frame.y, wf.w, wf.h));
   }
   // Draw built-in scrollbars on top of window content.
   // Restore the FBO paint state: the overlay above may have changed the

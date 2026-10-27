@@ -262,6 +262,32 @@ int db_schema_field_index(const db_table_schema_t *table, const char *field) {
   return -1;
 }
 
+bool db_record_equal(const db_field_meta_t *fields, int count, const void *a, const void *b) {
+  if (!fields || count < 0 || !a || !b) {
+    fprintf(stderr, "[database] record comparison rejected fields=%p count=%d a=%p b=%p\n",
+            (const void *)fields, count, a, b);
+    fflush(stderr);
+    return false;
+  }
+  for (int i = 0; i < count; i++) {
+    const db_field_meta_t *f = &fields[i];
+    const char *x = (const char *)a + f->offset, *y = (const char *)b + f->offset;
+    switch (f->type) {
+      case DB_TYPE_INT:    if (*(const int *)x != *(const int *)y) return false;       break;
+      case DB_TYPE_BOOL:   if (*(const bool *)x != *(const bool *)y) return false;     break;
+      case DB_TYPE_FLOAT:  if (*(const float *)x != *(const float *)y) return false;   break;
+      case DB_TYPE_DOUBLE: if (*(const double *)x != *(const double *)y) return false; break;
+      case DB_TYPE_STRING:
+      case DB_TYPE_DATE:   if (strncmp(x, y, (size_t)f->length)) return false;         break;
+      default:
+        fprintf(stderr, "[database] record comparison rejected field=%s type=%d\n", f->name, f->type);
+        fflush(stderr);
+        return false;
+    }
+  }
+  return true;
+}
+
 bool db_format_field(const db_field_meta_t *field, const void *record, char *buf, size_t buf_sz) {
   if (!field || !record || !buf || buf_sz == 0) return false;
   const char *p = (const char *)record + field->offset;

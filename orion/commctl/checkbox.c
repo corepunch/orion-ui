@@ -43,7 +43,7 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (g_ui_runtime.focused == win)                  state |= CTRL_FOCUSED;
       if (window_has_state(win, WINDOW_STATE_PRESSED))  state |= CTRL_PRESSED;
       if (window_has_state(win, WINDOW_STATE_HOVERED))  state |= CTRL_HOVER;
-      if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
+      if (window_is_disabled(win)) state |= CTRL_DISABLED;
       theme_draw(THEME_PART_CHECKBOX, box, state | (win->value ? CTRL_SELECTED : 0));
       irect16_t text_rect = {
         box.x + box.w + CHECKBOX_GAP,

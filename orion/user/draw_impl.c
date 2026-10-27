@@ -619,6 +619,7 @@ void composite_root_windows(void) {
       .shadow = window_composition_attr(w, WCA_SHADOW) != 0,
       .shadow_radius = (float)theme->window.corner_radius, .shadow_blur = (float)theme->window.shadow.blur,
       .shadow_offset = theme->window.shadow.offset, .shadow_color = theme->window.shadow.color,
+      .overlay_color = window_is_modal_blocked(w) ? get_sys_color(brModalOverlay) : 0,
       .border = window_composition_attr(w, WCA_BORDER) != 0, .user = w,
     };
   }

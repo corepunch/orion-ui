@@ -129,7 +129,7 @@ result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       if (lparam) control_arrange_predefined_height(win, lparam);
       return true;
     case evPaint: {
-      bool disabled = window_has_state(win, WINDOW_STATE_DISABLED);
+      bool disabled = window_is_disabled(win);
       ctrl_state_t base = disabled ? CTRL_DISABLED : g_ui_runtime.focused == win ? CTRL_FOCUSED : CTRL_NORMAL;
       theme_draw(THEME_PART_SEGMENTED_TRACK, R(0, 0, win->frame.w, win->frame.h), base);
       for (int i = 0; i < s->count; i++) {

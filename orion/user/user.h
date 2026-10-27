@@ -616,6 +616,8 @@ static inline bool window_has_view(const window_t *win) { return win && win->vie
 
 bool window_is_visible(const window_t *win);
 bool window_is_enabled(const window_t *win);
+bool window_is_disabled(const window_t *win); // explicit control state, independent of modality
+bool window_is_modal_blocked(const window_t *win);
 window_t *window_owner_root(window_t *win);
 bool window_set_owner(window_t *win, window_t *owner);
 void window_order_owned(void);
@@ -811,7 +813,6 @@ typedef struct {
   window_t *dragging;
   window_t *resizing;
   window_t *toolbar_down_win;
-  window_t *modal_overlay_parent;
   window_t *modal_window; // top of the nested owner-modal dialog stack
   int       default_window_x;
   int       default_window_y;

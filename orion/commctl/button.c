@@ -102,7 +102,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       if (window_has_state(win, WINDOW_STATE_PRESSED)) state |= CTRL_PRESSED;
       if ((win->flags & BUTTON_PUSHLIKE) && win->value) state |= CTRL_SELECTED;
       if (window_has_state(win, WINDOW_STATE_HOVERED))  state |= CTRL_HOVER;
-      if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
+      if (window_is_disabled(win)) state |= CTRL_DISABLED;
       if (g_ui_runtime.focused == win)                  state |= CTRL_FOCUSED;
       if (win->flags & BUTTON_DEFAULT)                  state |= CTRL_DEFAULT;
       irect16_t local = {0, 0, win->frame.w, win->frame.h};
@@ -215,7 +215,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       if (window_has_state(win, WINDOW_STATE_PRESSED)) state |= CTRL_PRESSED;
       if ((win->flags & BUTTON_PUSHLIKE) && win->value) state |= CTRL_SELECTED;
       if (window_has_state(win, WINDOW_STATE_HOVERED)) state |= CTRL_HOVER;
-      if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
+      if (window_is_disabled(win)) state |= CTRL_DISABLED;
       if (g_ui_runtime.focused == win) state |= CTRL_FOCUSED;
       irect16_t local = {0, 0, win->frame.w, win->frame.h};
       theme_draw(THEME_PART_TOOLBAR_BUTTON, local, state);

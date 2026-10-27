@@ -222,6 +222,13 @@ Close a modal window with `end_dialog(win, result)`. See
 [Dialogs & DDX](dialogs) for forms, state exchange, confirmation semantics, and
 database-backed dialogs.
 
+Owner-modal dialogs block input throughout their owner's window group, including
+MDI documents and palettes. `window_is_enabled()` includes this modal block;
+`window_is_disabled()` reports the explicit disabled state used to paint controls.
+The compositor mixes `brModalOverlay` into blocked surfaces once, preserving
+their alpha and corner mask. Entering or leaving a modal loop recomposes
+immediately; the overlay never becomes part of a cached window surface.
+
 ## Layout
 
 Static multi-control windows should normally be declared in `.orion` XML. For

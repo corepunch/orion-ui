@@ -57,6 +57,7 @@ typedef struct {
   dbs_table_t *tables;  // parallel to db->schema->tables
   dbs_scope_t *scope;   // innermost open change scope
   dbs_scope_t *baseline; // original rows of an independent document context
+  dbs_scope_t *clean;    // opening draft, separate from the delta applied on save
 } dbs_context_t;
 
 static database_t *dbs_create_edit_context(database_t *store);
@@ -463,6 +464,7 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
     case dbDestroy:
       while (ctx->scope) dbs_end(db, ctx, false);
       if (ctx->baseline) dbs_free_scope(db, ctx->baseline);
+      if (ctx->clean) dbs_free_scope(db, ctx->clean);
       dbs_clear(db, ctx);
       free(ctx->tables);
       free(ctx);
@@ -568,6 +570,43 @@ static void *dbs_original(const db_table_schema_t *table, const dbs_snapshot_t *
   for (int i = 0; i < snapshot->count; i++)
     if (dbs_key(table, snapshot->copies[i]) == id) return snapshot->copies[i];
   return NULL;
+}
+
+bool db_edit_context_mark_clean(database_t *db) {
+  dbs_context_t *ctx = db ? db->userdata : NULL;
+  if (!db || !db->edit_parent || !ctx || !ctx->baseline || ctx->scope) {
+    fprintf(stderr, "[database] invalid document clean checkpoint db=%s\n", db ? db->name : "(null)");
+    fflush(stderr);
+    return false;
+  }
+  if (!dbs_begin(db, ctx)) return false;
+  if (ctx->clean) dbs_free_scope(db, ctx->clean);
+  ctx->clean = ctx->scope;
+  ctx->scope = NULL;
+  return true;
+}
+
+bool db_edit_context_has_changes(database_t *db) {
+  dbs_context_t *ctx = db ? db->userdata : NULL;
+  if (!db || !db->edit_parent || !ctx || !ctx->baseline) {
+    fprintf(stderr, "[database] invalid document change query db=%s\n", db ? db->name : "(null)");
+    fflush(stderr);
+    return true;
+  }
+  dbs_scope_t *clean = ctx->clean ? ctx->clean : ctx->baseline;
+  for (int i = 0; i < db->schema->table_count; i++) {
+    const db_table_schema_t *table = &db->schema->tables[i];
+    if (table->transient) continue;
+    dbs_snapshot_t *original = &clean->tables[i];
+    dbs_table_t *rows = &ctx->tables[i];
+    if (rows->count != original->count) return true;
+    for (int r = 0; r < rows->count; r++) {
+      int id = dbs_key(table, rows->rows[r]);
+      const void *before = dbs_key(table, original->copies[r]) == id ? original->copies[r] : dbs_original(table, original, id);
+      if (!before || !db_record_equal(table->meta, table->meta_count, before, rows->rows[r])) return true;
+    }
+  }
+  return false;
 }
 
 static bool dbs_edit_relations_unchanged(database_t *db, dbs_context_t *ctx,

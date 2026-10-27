@@ -69,7 +69,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case evPaint: {
       irect16_t local = {0, 0, win->frame.w, win->frame.h};
       ctrl_state_t state = g_ui_runtime.focused == win ? CTRL_FOCUSED : CTRL_NORMAL;
-      if (window_has_state(win, WINDOW_STATE_DISABLED)) state |= CTRL_DISABLED;
+      if (window_is_disabled(win)) state |= CTRL_DISABLED;
       theme_draw(THEME_PART_FIELD, local, state);
       int th = text_char_height(FONT_SMALL);
       int text_x = textedit_text_x(win);

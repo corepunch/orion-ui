@@ -153,6 +153,7 @@ typedef struct R_CompositeLayer {
   float shadow_radius, shadow_blur;
   ipoint16_t shadow_offset;
   uint32_t shadow_color;
+  uint32_t overlay_color;       // sRGB tint mixed into the surface, preserving its alpha
   bool border;                 // draw_border runs after the surface
   void *user;                  // opaque to the compositor; handed back to draw_border
 } R_CompositeLayer;

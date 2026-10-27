@@ -21,17 +21,26 @@ bool window_is_visible(const window_t *win) {
   return !win->owner || window_is_visible(win->owner);
 }
 
-bool window_is_enabled(const window_t *win) {
+bool window_is_disabled(const window_t *win) {
   if (!win) return false;
   for (const window_t *p = win; p; p = p->parent)
-    if (p->flags & WINDOW_STATE_DISABLED) return false;
+    if (p->flags & WINDOW_STATE_DISABLED) return true;
   window_t *root = get_root_window((window_t *)win);
-  if (root->mdi_client && !window_is_enabled(root->mdi_client)) return false;
+  return root->mdi_client && window_is_disabled(root->mdi_client);
+}
+
+bool window_is_modal_blocked(const window_t *win) {
+  if (!win) return false;
+  window_t *root = get_root_window((window_t *)win);
   window_t *modal = g_ui_runtime.modal_window;
-  if (!modal || !modal->owner) return true;
-  if (window_owner_root(root) != window_owner_root(modal)) return true;
-  for (window_t *p = root; p; p = p->owner) if (p == modal) return true;
-  return false;
+  if (!modal || !modal->owner) return false;
+  if (window_owner_root(root) != window_owner_root(modal)) return false;
+  for (window_t *p = root; p; p = window_lifetime_parent(p)) if (p == modal) return false;
+  return true;
+}
+
+bool window_is_enabled(const window_t *win) {
+  return win && !window_is_disabled(win) && !window_is_modal_blocked(win);
 }
 
 bool window_set_owner(window_t *win, window_t *owner) {

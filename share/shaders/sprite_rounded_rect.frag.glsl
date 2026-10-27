@@ -140,6 +140,8 @@ vec4 frag() {
   float factor = alpha * aa * col.a * tint.a;
   vec3 straight_rgb = src.rgb * col.rgb * tint_linear;
   if (params1.x < 0.5) straight_rgb *= src.a;
+  vec3 overlay_linear = vec3(srgb_to_linear(overlay.r), srgb_to_linear(overlay.g), srgb_to_linear(overlay.b));
+  straight_rgb = mix(straight_rgb, overlay_linear * src.a, overlay.a);
   float src_a = src.a;
   // A plain rectangular edge, clipped by the same rounded silhouette as the fill.
   if (stroke <= 0.0 && params1.y > 0.0 && tex.x * size.x < params1.y) {

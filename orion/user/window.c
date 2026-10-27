@@ -84,7 +84,6 @@ ui_runtime_state_t g_ui_runtime = {
   .dragging = NULL,
   .resizing = NULL,
   .toolbar_down_win = NULL,
-  .modal_overlay_parent = NULL,
   .default_window_x = 20,
   .default_window_y = 20,
   .last_mouse_sx = 0,
