@@ -10,13 +10,16 @@ Closing the assistant window hides the character too, preserving the conversatio
 **Ctrl+Shift+A** brings him back and focuses the input. Transparent space beside
 the character passes clicks through to Ledger.
 
-The greeting is three rows: **How can I help?**, the command field, and
-**Send / Examples / Close**. The yellow bubble sizes itself to its content.
-An answer replaces the greeting; at most three numbered results are previewed
-with amounts, with a count of additional matches. Narrow the request or use
-**open first** to open a result; the full result context remains available.
+The greeting is the Office 97 question balloon: **What would you like to do?**,
+the command field, and **Send / Examples / Close**. The yellow bubble sizes itself
+to its content. An answer adds its message and up to five numbered result labels
+with amounts, then a count of further matches. Click a label to open that row;
+while the assistant is asking a question, the label answers it, like typing its
+number. **Examples** lists clickable example commands. Narrow the request or use
+**open first** to open a result by typing; the full result context remains
+available.
 
-The compact layout follows Office 97's built-in question balloon, documented in
+The layout follows Office 97's built-in question balloon, documented in
 [Microsoft KB 173766 (archived)](https://www.betaarchive.com/wiki/index.php?title=Microsoft_KB_Archive/173766)
 and the [Office Assistant Help API](https://learn.microsoft.com/en-us/dotnet/api/microsoft.office.core.assistant.help).
 The tail proportions follow the [clippy.js 10×16 tail atlas](https://github.com/clippyjs/clippy.js/blob/master/build/clippy.css):
@@ -48,13 +51,68 @@ Other commands: `покажи клиентов`, `найди клиента "А�
 "Intertrade"`, `open first`. The interface and clarifications use the selected UI language (`--lang en`, `de`, or `ru`); command vocabulary is accepted in all three languages.
 Unknown words reject the entire command; user input is never evaluated as Lua.
 
+## The Office 97 balloon model
+
+Office 97 did not draw balloons from dialog templates. Each balloon was a
+record that Office laid out and sized when it was shown, so the same window
+showed tips, questions, alerts and search results. VBA programs built one with
+`Assistant.NewBalloon`, set its properties and called `Show`. The surviving
+Microsoft references describe the Office XP–2010 versions of this object model,
+which carry the Office 97 properties forward
+([Balloon object](https://learn.microsoft.com/en-us/dotnet/api/microsoft.office.core.balloon),
+[Creating and Modifying Balloons](https://learn.microsoft.com/en-us/previous-versions/office/developer/office-2003/aa170979(v=office.11))):
+
+| Balloon property | Office 97 | Ledger |
+|---|---|---|
+| `Heading` | Title line | `heading` Label, “What would you like to do?” |
+| `Text` | Body text | `summary` Label: the engine's reply |
+| `Labels(1..5)`, `BalloonType` | Up to five labels as blue-bullet buttons, bullets or numbers; a label appears when it has text | `choice1`…`choice5`, `BUTTON_COMMANDLINK` with `LABEL_COLLAPSE_EMPTY` |
+| `Show` return value | Number of the label clicked, or the button | The `choose` action receives the clicked control's name |
+| `Checkboxes(1..5)` | Up to five check boxes, read after closing | Not used |
+| `Button` | A button set: OK, Yes/No, Back/Next, Search/Close, Tips/Options/Close… | Fixed Send / Examples / Close row |
+| `Icon`, `Mode`, `Callback` | Alert or tip icon; modal, auto-down or modeless with a callback | Modeless; no icon |
+| `{cf n}`, `{ul}`, `{bmp …}`, `{wmf …}` in text | Inline colour, underline and pictures | Not supported; text is plain |
+
+The built-in help balloon also had a question field and **Search**, which
+the VBA object model did not expose. Ledger's balloon combines this field with
+the label list. The `.orion` form declares the fixed slots, as Office did with
+its five labels. Lua's `self.balloon = {text, labels, more, examples}` is the
+record that `data()` turns into control values. There is no app-specific
+drawing or hit-testing.
+
+### Character files and reverse engineering
+
+No Office Assistant source code is publicly available. The public work is on
+the character file formats:
+
+- Office 97 assistants are Microsoft Actor `.ACT` files (descended from
+  Microsoft Bob). The reader in
+  [agentviewer `actor.rs`](https://github.com/andrewfader/agentviewer/blob/main/crates/acs/src/actor.rs)
+  finds vector metafile frames, sounds and animation sequences, but no balloon
+  data. In Office 97, the balloon belonged entirely to Office.
+- Office 2000 and later use Microsoft Agent `.ACS` files. The character header
+  has a `BALLOONINFO` block: number of lines, characters per line, text,
+  fill and border colours, and the font
+  ([agentviewer `types.rs`](https://github.com/andrewfader/agentviewer/blob/main/crates/acs/src/types.rs),
+  [MSAgentUtils](https://github.com/tkfoss/MSAgentUtils)). The bundled
+  Clippit `CLIPPIT.ACS` declares 2 lines × 28 characters, black text on
+  `#FFFFE1` with a black border, and MS Sans Serif at 13 px. The colour is
+  `#FFFFE1` when read as a `COLORREF`, the Windows tooltip yellow. Agent's own
+  balloon ([IAgentBalloon](https://learn.microsoft.com/en-us/windows/win32/lwef/iagentballoon))
+  only shows spoken text; Office's interactive balloon stayed Office's.
+- [clippy.js](https://github.com/clippyjs/clippy.js) and
+  [Double Agent](https://doubleagent.sourceforge.net/) reimplement the character
+  and a text-only speech balloon. Lebeau Software's MSAgent Decompiler covers
+  Agent 2.0 `.ACS` files only, not Office 97 `.ACT`.
+
 ## Implementation
 
 - `lexicon.lua`: authored vocabulary, number words, grammatical roles and aliases.
 - `dictionary.lua`: load-time compilation to interned word records and a phrase trie.
 - `normalize.lua`: shared Unicode normalization for compilation, input and matching.
 - `parser.lua`: UTF-8 normalization, number phrases, grammar and contextual refinements.
-- `engine.lua`: typed commands, filters, sorting, disambiguation and host callbacks.
+- `engine.lua`: typed commands, filters, sorting, disambiguation, host callbacks
+  and `choose(index)` for a clicked balloon label.
 - `assistant.lua`: real Ledger models, receivable balances, native record opening
   and selection of character animations.
 - `animations.lua`: generated metadata for the bundled Clippy atlases.

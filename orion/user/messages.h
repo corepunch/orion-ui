@@ -324,8 +324,9 @@ enum {
 #define WINDOW_STATE_MAXIMIZED (1ull << 34)  // ≈ WS_MAXIMIZE
 #define WINDOW_PLASTIC         (1ull << 36)  // paint with the theme's plastic material (Button, Card)
 #define WINDOW_ROUND           (1ull << 37)  // Button: circular silhouette (BUTTON_STYLE_ROUND)
-#define LABEL_COLLAPSE_EMPTY    (1ull << 38)  // omit an empty label and its spacing from auto-layout
+#define LABEL_COLLAPSE_EMPTY    (1ull << 38)  // omit an empty Label or BUTTON_COMMANDLINK and its spacing from auto-layout
 #define SPRITE_BUTTON_DOUBLECLICK (1ull << 39) // send btnDoubleClicked instead of a second btnClicked
+#define BUTTON_COMMANDLINK     (1ull << 40)  // ≈ BS_COMMANDLINK: flat, bulleted, left-aligned choice (balloon label)
 #define WINDOW_MAXIMIZEBOX     (1ull << 35)  // ≈ WS_MAXIMIZEBOX: caption exposes a restore/maximize command
 
 // Auto-layout alignment values used by layout_measure_t / layout_arrange_t.

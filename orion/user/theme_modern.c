@@ -450,6 +450,7 @@ static theme_t g_modern_theme = {
     .corner_radius = 5, .tail_width = 10, .tail_length = 16,
     .shadow = { .size = 2, .blur = 1, .offset = {1, 1}, .color = 0x40000000 },
   },
+  .command_link = { .bullet_size = 6, .gap = 8, .padding_y = 2 },
   .field = { .corner_radius = CORNER_RADIUS_CIRCULAR, .multiline_corner_radius = (CONTROL_HEIGHT_REGULAR + 1) / 2,
              .padding_x = TEXTEDIT_PADDING_CAPSULE },
   .control = { .padding = BUTTON_PADDING, .press_icon_offset = 0, .size_pct = { 100, 84, 71, 133 } },

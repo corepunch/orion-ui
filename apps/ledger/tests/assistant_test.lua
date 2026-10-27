@@ -46,7 +46,16 @@ r=e:submit('открой'); assert(r.ok and r.inferred)
 r=e:submit('открой первого'); assert(r.ok,r.message); assert(opened[#opened][2]==31)
 r=e:submit('найди клиента "Альфа"'); assert(r.ok,r.message); assert(#r.rows==1 and r.rows[1].id==11)
 r=e:submit('открой клиента "Бета"'); assert(r.ok,r.message); assert(opened[#opened][2]==12)
+-- A balloon label is its row: clicking it opens the row, or answers a question.
+r=e:submit('покажи должников'); assert(r.ok,r.message)
+r=e:choose(2); assert(r.ok,r.message); assert(opened[#opened][2]==r.rows[2].id and #r.rows==3)
+local count=#opened
+assert(not e:choose(4).ok and #opened==count)
+r=e:submit('открой клиента "а"'); assert(not r.ok and r.clarification=='object')
+local offered=r.rows[2].id
+r=e:choose(2); assert(r.ok,r.message); assert(opened[#opened][2]==offered and not e.pending)
 r=e:submit('сброс'); assert(r.ok); assert(#e.rows==0)
+assert(not e:choose(1).ok)
 assert(not e:submit('больше 100').ok)
 assert(not P.parse(string.char(255)))
 assert(not P.parse(string.rep('x',2049)))

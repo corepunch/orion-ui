@@ -365,6 +365,7 @@ static theme_t g_classic_theme = {
     .corner_radius = 5, .tail_width = 10, .tail_length = 16,
     .shadow = { .size = 2, .blur = 1, .offset = {1, 1}, .color = 0x40000000 },
   },
+  .command_link = { .bullet_size = 7, .gap = 6, .padding_y = 1 },
   .control = { .padding = BUTTON_PADDING, .press_icon_offset = 1, .size_pct = { 100, 84, 71, 133 } },
   .button = { .corner_radius = 0 },
   .field = { .padding_x = TEXTEDIT_PADDING_CAPSULE },  // bevelled, unchanged

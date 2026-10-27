@@ -361,6 +361,24 @@ void draw_speech_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side) 
   draw_bubble(r, tail_offset, side, true);
 }
 
+void draw_command_link(irect16_t r, const char *text, ctrl_state_t state, uint32_t ink) {
+  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
+  const theme_t *theme = get_theme();
+  int size = theme->command_link.bullet_size, gap = theme->command_link.gap;
+  int press = (state & CTRL_PRESSED) && !(state & CTRL_DISABLED) ? theme->control.press_icon_offset : 0;
+  irect16_t row = rect_offset(rect_inset_xy(r, 0, theme->command_link.padding_y), press, press);
+  irect16_t bullet = rect_center(rect_split_left(row, size), size, size);
+  irect16_t label = rect_trim_left(row, size + gap);
+  uint32_t dot = get_sys_color(state & CTRL_DISABLED ? brTextDisabled : brAccent);
+  if (state & CTRL_DISABLED) ink = get_sys_color(brTextDisabled);
+  fill_rounded_rect(dot, bullet, size / 2);
+  int line = text_char_height(FONT_SMALL), y = label.y + (label.h - line) / 2;
+  draw_text_ellipsized(FONT_SMALL, text, label.x, y, label.w, ink);
+  if ((state & CTRL_HOVER) && !(state & CTRL_DISABLED))
+    fill_rect(ink, R(label.x, y + line, MIN(text_strwidth(FONT_SMALL, text), label.w), 1));
+  if (state & CTRL_FOCUSED) draw_sel_rect(r);
+}
+
 void fill_gradient_rounded_rect(uint32_t top, uint32_t bottom, irect16_t r, int radius) {
   extern uint32_t ui_white_texture;
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;

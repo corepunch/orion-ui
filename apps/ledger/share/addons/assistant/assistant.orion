@@ -14,8 +14,15 @@
   <forms>
     <form name="assistant" title="Ledger — Assistant" width="340" height="0" spacing="0" padding="0"
           flags="WINDOW_NOTITLE,WINDOW_NORESIZE,WINDOW_NOFILL,WINDOW_TRANSPARENT,WINDOW_NOACTIVATE,WINDOW_TOOLWINDOW,WINDOW_ALWAYSONTOP,WINDOW_NODRAG">
-      <SpeechBubble name="bubble" spacing="8" flags="WINDOW_NOACTIVATE">
-        <Label name="summary" text="How can I help?" color="info-text" />
+      <SpeechBubble name="bubble" spacing="6" flags="WINDOW_NOACTIVATE">
+        <Label name="heading" text="What would you like to do?" font="system" color="info-text" />
+        <Label name="summary" color="info-text" flags="LABEL_COLLAPSE_EMPTY" />
+        <Button name="choice1" action="choose" color="info-text" flags="BUTTON_COMMANDLINK,LABEL_COLLAPSE_EMPTY" />
+        <Button name="choice2" action="choose" color="info-text" flags="BUTTON_COMMANDLINK,LABEL_COLLAPSE_EMPTY" />
+        <Button name="choice3" action="choose" color="info-text" flags="BUTTON_COMMANDLINK,LABEL_COLLAPSE_EMPTY" />
+        <Button name="choice4" action="choose" color="info-text" flags="BUTTON_COMMANDLINK,LABEL_COLLAPSE_EMPTY" />
+        <Button name="choice5" action="choose" color="info-text" flags="BUTTON_COMMANDLINK,LABEL_COLLAPSE_EMPTY" />
+        <Label name="more" color="info-text" flags="LABEL_COLLAPSE_EMPTY" />
         <TextBox name="command" placeholder="For example: show debtors" />
         <StackView name="actions" orientation="horizontal" spacing="8">
           <Button name="submit" text="Send" action="submit" flags="BUTTON_DEFAULT" />

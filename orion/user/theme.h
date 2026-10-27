@@ -294,6 +294,7 @@ typedef struct {
       uint32_t color;
     } shadow;
   } speechbubble;
+  struct { int bullet_size, gap, padding_y; } command_link; // BUTTON_COMMANDLINK bullet and row
 
   // Writes the theme's palette into g_sys_colors.  Called by set_theme()
   // before evThemeChanged is broadcast so controls see the new colors

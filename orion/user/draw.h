@@ -22,6 +22,9 @@ irect16_t tooltip_bubble_body_rect(irect16_t r, tooltip_tail_side_t side);
 irect16_t speech_bubble_body_rect(irect16_t r, tooltip_tail_side_t side);
 void draw_tooltip_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side);
 void draw_speech_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side);
+// BUTTON_COMMANDLINK face: theme bullet, ellipsized text in `ink`, underline on hover, focus rectangle.
+// Like Office 97 balloon labels, there is no button bevel; `r` is the whole clickable row.
+void draw_command_link(irect16_t r, const char *text, ctrl_state_t state, uint32_t ink);
 void render_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
                           float tail_offset, float padding, tooltip_tail_side_t side, uint32_t color, uint32_t border, float border_width, float tail_width);
 void render_tooltip_bubble(irect16_t r, isize16_t face_size, float radius, float tail,

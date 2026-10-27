@@ -263,6 +263,7 @@ static flags_t runtime_flag_from_name(const char *name) {
   if (str_ieq(name, "default")) return BUTTON_DEFAULT;
   if (str_ieq(name, "autoradio")) return BUTTON_AUTORADIO;
   if (str_ieq(name, "pushlike")) return BUTTON_PUSHLIKE;
+  if (str_ieq(name, "commandlink") || str_ieq(name, "BUTTON_COMMANDLINK")) return BUTTON_COMMANDLINK;
   if (str_ieq(name, "LABEL_COLLAPSE_EMPTY")) return LABEL_COLLAPSE_EMPTY;
   if (str_ieq(name, "SPRITE_BUTTON_DOUBLECLICK")) return SPRITE_BUTTON_DOUBLECLICK;
   if (str_ieq(name, "control_small")) return CONTROL_SIZE_SMALL;

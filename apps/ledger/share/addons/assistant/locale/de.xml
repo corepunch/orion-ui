@@ -67,9 +67,13 @@
   <string source="Ask me, for example: show debtors" obsolete="true">Frag mich, zum Beispiel: zeige Schuldner</string>
   <string source="You: %s" where="code">Du: %s</string>
   <string source="№" obsolete="true">Nr.</string>
-  <string source="How can I help?" where="assistant">Wie kann ich helfen?</string>
+  <string source="How can I help?" obsolete="true">Wie kann ich helfen?</string>
   <string source="For example: show debtors" where="assistant">Zum Beispiel: zeige Schuldner</string>
   <string source="%d. %s — %s" where="code">%d. %s — %s</string>
   <string source="And %d more. Ask to narrow the list." where="code">Und %d weitere. Grenzen Sie die Suche ein.</string>
   <string source="Try “show debtors”, then “open first”." where="code">Versuchen Sie „zeige Schuldner“, dann „öffne ersten“.</string>
+  <string source="What would you like to do?" where="assistant">Was möchten Sie tun?</string>
+  <string source="show debtors" where="code">zeige Schuldner</string>
+  <string source="show customers" where="code">zeige Kunden</string>
+  <string source="show only posted documents" where="code">zeige nur gebuchte Belege</string>
 </strings>

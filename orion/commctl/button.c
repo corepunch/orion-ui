@@ -39,11 +39,17 @@ typedef struct {
   char     icon[64];
   uint32_t face_color;   // plastic face; 0 = theme accent
   char     tooltip[96];
+  uint8_t  ink;          // BUTTON_COMMANDLINK text role from color=; 0 = brTextNormal
 } button_extras_t;
 
 static button_extras_t *button_extras(window_t *win, bool create) {
   if (!win->userdata && create) win->userdata = calloc(1, sizeof(button_extras_t));
   return win->userdata;
+}
+
+static int command_link_height(void) {
+  const theme_t *theme = get_theme();
+  return MAX(text_char_height(FONT_SMALL), theme->command_link.bullet_size) + theme->command_link.padding_y * 2;
 }
 
 // Button control window procedure (text label buttons).
@@ -79,12 +85,32 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       return true;
     }
     case evCreate:
+      if (win->flags & BUTTON_COMMANDLINK) {
+        const form_ctrl_def_t *cd = lparam && (uintptr_t)lparam > 0x1000 ? (const form_ctrl_def_t *)lparam : NULL;
+        if (cd && cd->color_set && cd->color < brCount) {
+          button_extras_t *x = button_extras(win, true);
+          if (!x) {
+            fprintf(stderr, "[button] extras allocation failed win=%u\n", win->id);
+            fflush(stderr);
+            return false;
+          }
+          x->ink = cd->color;
+        }
+        win->frame.h = command_link_height();
+        if ((win->flags & LABEL_COLLAPSE_EMPTY) && !win->title[0]) win->frame = R(0, 0, 0, 0);
+        return true;
+      }
       win->frame.w = MAX(win->frame.w, strwidth(win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2);
       control_apply_predefined_height(win, "button");
       return true;
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
-      if (m) {
+      if (m && (win->flags & BUTTON_COMMANDLINK)) {
+        const theme_t *theme = get_theme();
+        m->desired_w = theme->command_link.bullet_size + theme->command_link.gap + text_strwidth(FONT_SMALL, win->title);
+        if (m->avail_w > 0) m->desired_w = MIN(m->desired_w, m->avail_w);   // long text ellipsizes
+        m->desired_h = command_link_height();
+      } else if (m) {
         m->desired_w = MAX(win->frame.w, strwidth(win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2);
         m->desired_h = control_predefined_height(win->flags);
       }
@@ -92,6 +118,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
     }
     case evArrange: {
       layout_arrange_t *a = (layout_arrange_t *)lparam;
+      if (win->flags & BUTTON_COMMANDLINK) return false;   // a row takes the whole arranged rect
       if (a) {
         control_arrange_predefined_height(win, a);
       }
@@ -107,6 +134,10 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       if (win->flags & BUTTON_DEFAULT)                  state |= CTRL_DEFAULT;
       irect16_t local = {0, 0, win->frame.w, win->frame.h};
       button_extras_t *x = button_extras(win, false);
+      if (win->flags & BUTTON_COMMANDLINK) {
+        draw_command_link(local, win->title, state, get_sys_color(x && x->ink ? (sys_color_idx_t)x->ink : brTextNormal));
+        return true;
+      }
       bool plastic = (win->flags & WINDOW_PLASTIC) != 0;
       theme_draw_ex(THEME_PART_BUTTON, local, plastic ? state | CTRL_PLASTIC : state,
                     &(theme_draw_opts_t){.color = x ? x->face_color : 0, .icon = x && x->icon[0] ? x->icon : NULL,

@@ -62,6 +62,17 @@ related:submit('reset')
 records.counterparties[2]={id=3,name='Another customer'}
 r=related:submit('show documents for')
 assert(not r.ok and r.message==catalog['Which customer are these documents for? Use a row number or a quoted name.'])
+-- A translated balloon example is a command with the same meaning.
+local function same(a,b)
+  if type(a)~='table' or type(b)~='table' then return a==b end
+  for k,v in pairs(a) do if not same(v,b[k]) then return false end end
+  for k in pairs(b) do if a[k]==nil then return false end end
+  return true
+end
+for _,example in ipairs{'show debtors','show customers','show only posted documents'} do
+  local source,translated=P.parse(example,{}),P.parse(catalog[example],{})
+  assert(source and translated and same(source,translated),example)
+end
 ''' % table
                 with tempfile.NamedTemporaryFile('w', suffix='.lua') as test:
                     test.write(script)
