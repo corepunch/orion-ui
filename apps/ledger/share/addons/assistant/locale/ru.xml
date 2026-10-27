@@ -25,7 +25,7 @@
   <string source="That row is not in the current list." where="code">Такой строки нет в текущем списке.</string>
   <string source="Opening records is unavailable in this interface." where="code">Открытие карточек недоступно в этом интерфейсе.</string>
   <string source="Could not open the record." where="code">Не удалось открыть карточку.</string>
-  <string source="Hello! Say or type: show debtors." where="assistant">Привет! Скажите или напишите: «покажи должников».</string>
+  <string source="Hello! Say or type: show debtors." obsolete="true">Привет! Скажите или напишите: «покажи должников».</string>
   <string source="Enter a command or use system dictation in the input field." where="code">Я слушаю. Введите команду или используйте системную диктовку в поле ввода.</string>
   <string source="The configuration has multiple receivables accounts; specify an account." where="code">В конфигурации несколько счетов расчётов с покупателями; уточните счёт.</string>
   <string source="No receivables account was found in the configuration." where="code">В конфигурации не найден счёт расчётов с покупателями.</string>
@@ -34,10 +34,10 @@
   <string source="Enter a command or use system dictation. Example: show customers with debt over fifty thousand" where="code">Введите команду или используйте системную диктовку. Например: покажи клиентов, которые задолжали больше 50 тысяч</string>
   <string source="Run" where="code">Выполнить</string>
   <string source="Examples" where="assistant">Примеры</string>
-  <string source="Close" where="code">Закрыть</string>
-  <string source="Name / document" where="assistant">Название / документ</string>
-  <string source="Amount" where="assistant">Сумма</string>
-  <string source="Date" where="assistant">Дата</string>
+  <string source="Close" where="code,assistant">Закрыть</string>
+  <string source="Name / document" obsolete="true">Название / документ</string>
+  <string source="Amount" obsolete="true">Сумма</string>
+  <string source="Date" obsolete="true">Дата</string>
   <string source="Specify one row number." where="code">Укажите один номер строки.</string>
   <string source="Enter a command, for example: show debtors." where="code">Введите команду, например: покажи должников.</string>
   <string source="Unknown word: %s. Put names in quotes." where="code">Неизвестное слово: %s. Названия пишите в кавычках.</string>
@@ -60,11 +60,16 @@
   <string source="Found: %d. Customer: %s. Amounts are in the accounting currency." where="code">Найдено: %d. Клиент: %s. Суммы — в валюте учёта.</string>
   <string source="Pending question cancelled." where="code">Уточняющий вопрос отменён.</string>
   <string source="Answer the pending question or enter a new command." where="code">Ответьте на уточняющий вопрос или введите новую команду.</string>
-  <string source="Clippy" where="assistant">Клиппи</string>
-  <string source="Collapse" where="assistant">Свернуть</string>
-  <string source="Hide assistant" where="assistant">Скрыть помощника</string>
+  <string source="Clippy" obsolete="true">Клиппи</string>
+  <string source="Collapse" obsolete="true">Свернуть</string>
+  <string source="Hide assistant" obsolete="true">Скрыть помощника</string>
   <string source="Send" where="assistant">Отправить</string>
-  <string source="Ask me, for example: show debtors" where="assistant">Спросите меня, например: покажи должников</string>
+  <string source="Ask me, for example: show debtors" obsolete="true">Спросите меня, например: покажи должников</string>
   <string source="You: %s" where="code">Вы: %s</string>
-  <string source="№" where="assistant">№</string>
+  <string source="№" obsolete="true">№</string>
+  <string source="How can I help?" where="assistant">Чем я могу помочь?</string>
+  <string source="For example: show debtors" where="assistant">Например: покажи должников</string>
+  <string source="%d. %s — %s" where="code">%d. %s — %s</string>
+  <string source="And %d more. Ask to narrow the list." where="code">И ещё %d. Уточните запрос.</string>
+  <string source="Try “show debtors”, then “open first”." where="code">Попробуйте «покажи должников», затем «открой первого».</string>
 </strings>

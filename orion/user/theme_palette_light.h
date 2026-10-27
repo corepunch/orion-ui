@@ -43,6 +43,8 @@
   [brSelectionBottom]      = 0xffD77800, \
   [brPlasticNeutral]       = 0xffbcbcbc, \
   [brAccentText]           = 0xffffffff, \
+  [brInfoBackground]      = 0xffe1ffff, \
+  [brInfoText]            = 0xff253030, \
   [brDesktopBg]            = 0xff6B3529
 
 static const uint32_t k_theme_palette_light[brCount]

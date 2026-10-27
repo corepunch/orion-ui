@@ -685,7 +685,9 @@ typedef enum {
   brTabBarBg             = 34,  // tab strip: between Page background and inactive tab face
   brAccentText           = 35,  // text and icons on accent fills: selection, default button, hovered menu item
   brDesktopBg            = 36,  // desktop behind root windows (UI_INIT_DESKTOP)
-  brCount                = 37
+  brInfoBackground       = 37,  // informational speech balloon surface
+  brInfoText             = 38,  // text on the informational balloon
+  brCount                = 39
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).

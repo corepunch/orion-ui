@@ -324,6 +324,11 @@ static void render(script_page_t *page) {
     }
     show_message(page);
   }
+  if (page->owns_window && !page->form->height) {
+    isize16_t size = script_page_preferred_size(page);
+    if (size.w != page->win->frame.w || size.h != page->win->frame.h)
+      resize_window(page->win, size.w, size.h);
+  }
   window_layout_sync(page->win);
   if (page->focus) {
     window_t *ctrl = get_window_item(page->win, page->focus);
@@ -528,6 +533,10 @@ window_t *script_page_create_hook(script_page_t *page, window_t *parent, winproc
   window_t *win = create_window_from_form(page->form, 0, 0, parent, script_page_proc, 0, page);
   if (win) {
     page->owns_window = true;
+    if (!page->form->height) {
+      isize16_t size = script_page_preferred_size(page);
+      resize_window(win, size.w, size.h);
+    }
     set_window_title(win, script_page_title(page));
   }
   return win;
@@ -661,7 +670,14 @@ void script_page_close(script_page_t *page) {
 
 const char *script_page_title(const script_page_t *page) { return page ? page->title : ""; }
 isize16_t script_page_preferred_size(const script_page_t *page) {
-  return page && page->form ? (isize16_t){page->form->width, page->form->height} : (isize16_t){0};
+  if (!page || !page->form) return (isize16_t){0};
+  isize16_t size = {page->form->width, page->form->height};
+  if (!size.h && page->win) {
+    layout_measure_t measure = {.avail_w = size.w};
+    layout_measure_window(page->win, &measure);
+    size.h = measure.desired_h;
+  }
+  return size;
 }
 const char *script_page_message(const script_page_t *page) { return page ? page->message : ""; }
 
