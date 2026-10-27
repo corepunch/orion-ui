@@ -83,7 +83,8 @@ drawing or hit-testing.
 ### Character files and reverse engineering
 
 No Office Assistant source code is publicly available. The public work is on
-the character file formats:
+the character file formats; the details are in
+[Office Assistant character formats](../../../docs/office-assistant-formats.md):
 
 - Office 97 assistants are Microsoft Actor `.ACT` files (descended from
   Microsoft Bob). The reader in
