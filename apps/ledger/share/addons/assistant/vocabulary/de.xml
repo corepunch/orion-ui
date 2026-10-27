@@ -1,236 +1,90 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- German command words, keyed by the English source words in en.xml.
+     `paradigm` names a table below and applies to the headword and its
+     `synonyms`; `forms` lists irregular forms. -->
 <vocabulary language="de">
-  <aliases role="adjectives" value="draft">
-    <alias>ungebucht</alias>
-    <alias>ungebuchte</alias>
-    <alias>ungebuchten</alias>
-    <alias>ungebuchter</alias>
-    <alias>ungebuchtes</alias>
-  </aliases>
-  <aliases role="adjectives" value="posted">
-    <alias>gebucht</alias>
-    <alias>gebuchte</alias>
-    <alias>gebuchten</alias>
-    <alias>gebuchter</alias>
-    <alias>gebuchtes</alias>
-  </aliases>
-  <aliases role="comparisons" value="eq">
-    <alias>genau</alias>
-  </aliases>
-  <aliases role="comparisons" value="ge">
-    <alias>mindestens</alias>
-  </aliases>
-  <aliases role="comparisons" value="gt">
-    <alias>mehr als</alias>
-    <alias>ueber</alias>
-    <alias>über</alias>
-  </aliases>
-  <aliases role="comparisons" value="le">
-    <alias>hoechstens</alias>
-    <alias>höchstens</alias>
-  </aliases>
-  <aliases role="comparisons" value="lt">
-    <alias>unter</alias>
-    <alias>weniger als</alias>
-  </aliases>
-  <aliases role="directions" value="asc">
-    <alias>aufsteigend</alias>
-  </aliases>
-  <aliases role="directions" value="desc">
-    <alias>absteigend</alias>
-  </aliases>
-  <aliases role="fields" value="amount">
-    <alias>betraege</alias>
-    <alias>betrag</alias>
-    <alias>beträge</alias>
-  </aliases>
-  <aliases role="fields" value="debt">
-    <alias>schulden</alias>
-  </aliases>
-  <aliases role="fields" value="name">
-    <alias>name</alias>
-    <alias>namen</alias>
-  </aliases>
-  <aliases role="multipliers" value="100">
-    <alias>hundert</alias>
-  </aliases>
-  <aliases role="noise">
-    <alias>alle</alias>
-    <alias>bitte</alias>
-    <alias>das</alias>
-    <alias>dem</alias>
-    <alias>den</alias>
-    <alias>der</alias>
-    <alias>die</alias>
-    <alias>mit</alias>
-    <alias>nach</alias>
-    <alias>nur</alias>
-  </aliases>
-  <aliases role="nouns" value="counterparties">
-    <alias>kunde</alias>
-    <alias>kunden</alias>
-  </aliases>
-  <aliases role="nouns" value="debtors">
-    <alias>schuldner</alias>
-  </aliases>
-  <aliases role="nouns" value="documents">
-    <alias>beleg</alias>
-    <alias>belege</alias>
-  </aliases>
-  <aliases role="nouns" value="items">
-    <alias>artikel</alias>
-  </aliases>
-  <aliases role="numbers" value="0">
-    <alias compound="small">null</alias>
-  </aliases>
-  <aliases role="numbers" value="1">
-    <alias compound="ones">ein</alias>
-    <alias>eine</alias>
-    <alias compound="ones" prefix="false">eins</alias>
-  </aliases>
-  <aliases role="numbers" value="10">
-    <alias compound="small">zehn</alias>
-  </aliases>
-  <aliases role="numbers" value="2">
-    <alias compound="ones">zwei</alias>
-  </aliases>
-  <aliases role="numbers" value="20">
-    <alias compound="tens">zwanzig</alias>
-  </aliases>
-  <aliases role="numbers" value="3">
-    <alias compound="ones">drei</alias>
-  </aliases>
-  <aliases role="numbers" value="4">
-    <alias compound="ones">vier</alias>
-  </aliases>
-  <aliases role="numbers" value="5">
-    <alias compound="ones">fünf</alias>
-  </aliases>
-  <aliases role="numbers" value="50">
-    <alias compound="tens">fünfzig</alias>
-  </aliases>
-  <aliases role="numbers" value="6">
-    <alias compound="ones">sechs</alias>
-  </aliases>
-  <aliases role="numbers" value="7">
-    <alias compound="ones">sieben</alias>
-  </aliases>
-  <aliases role="numbers" value="8">
-    <alias compound="ones">acht</alias>
-  </aliases>
-  <aliases role="numbers" value="9">
-    <alias compound="ones">neun</alias>
-  </aliases>
-  <aliases role="numbers" value="18">
-    <alias compound="small">achtzehn</alias>
-  </aliases>
-  <aliases role="numbers" value="13">
-    <alias compound="small">dreizehn</alias>
-  </aliases>
-  <aliases role="numbers" value="11">
-    <alias compound="small">elf</alias>
-  </aliases>
-  <aliases role="numbers" value="15">
-    <alias compound="small">fünfzehn</alias>
-  </aliases>
-  <aliases role="numbers" value="19">
-    <alias compound="small">neunzehn</alias>
-  </aliases>
-  <aliases role="numbers" value="16">
-    <alias compound="small">sechzehn</alias>
-  </aliases>
-  <aliases role="numbers" value="17">
-    <alias compound="small">siebzehn</alias>
-  </aliases>
-  <aliases role="numbers" value="14">
-    <alias compound="small">vierzehn</alias>
-  </aliases>
-  <aliases role="numbers" value="12">
-    <alias compound="small">zwölf</alias>
-  </aliases>
-  <aliases role="numbers" value="80">
-    <alias compound="tens">achtzig</alias>
-  </aliases>
-  <aliases role="numbers" value="30">
-    <alias compound="tens">dreißig</alias>
-  </aliases>
-  <aliases role="numbers" value="90">
-    <alias compound="tens">neunzig</alias>
-  </aliases>
-  <aliases role="numbers" value="60">
-    <alias compound="tens">sechzig</alias>
-  </aliases>
-  <aliases role="numbers" value="70">
-    <alias compound="tens">siebzig</alias>
-  </aliases>
-  <aliases role="numbers" value="40">
-    <alias compound="tens">vierzig</alias>
-  </aliases>
-  <aliases role="ordinals" value="1">
-    <alias>erste</alias>
-    <alias>ersten</alias>
-    <alias>erstes</alias>
-  </aliases>
-  <aliases role="ordinals" value="2">
-    <alias>zweite</alias>
-    <alias>zweiten</alias>
-    <alias>zweites</alias>
-  </aliases>
-  <aliases role="ordinals" value="3">
-    <alias>dritte</alias>
-    <alias>dritten</alias>
-    <alias>drittes</alias>
-  </aliases>
-  <aliases role="pronouns">
-    <alias>diese</alias>
-    <alias>diesen</alias>
-    <alias>dieses</alias>
-    <alias>es</alias>
-    <alias>ihn</alias>
-    <alias>sie</alias>
-  </aliases>
-  <aliases role="relations" value="counterparty">
-    <alias>fuer</alias>
-    <alias>für</alias>
-  </aliases>
-  <aliases role="scales" value="1000">
-    <alias>tausend</alias>
-  </aliases>
-  <aliases role="scales" value="1000000">
-    <alias>millionen</alias>
-  </aliases>
-  <aliases role="units">
-    <alias>euro</alias>
-  </aliases>
-  <aliases role="verbs" value="cancel">
-    <alias>abbrechen</alias>
-  </aliases>
-  <aliases role="verbs" value="find">
-    <alias>suche</alias>
-  </aliases>
-  <aliases role="verbs" value="help">
-    <alias>hilfe</alias>
-  </aliases>
-  <aliases role="verbs" value="list">
-    <alias>anzeigen</alias>
-    <alias>zeige</alias>
-  </aliases>
-  <aliases role="verbs" value="open">
-    <alias>öffne</alias>
-  </aliases>
-  <aliases role="verbs" value="reset">
-    <alias>zurücksetzen</alias>
-  </aliases>
-  <aliases role="verbs" value="sort">
-    <alias>sortiere</alias>
-  </aliases>
+  <!-- Cut `cut` letters, then one ending per slot: "=" is the headword, "0" the
+       bare stem, "-" no form. A spelling adds an ASCII variant of every form. -->
+  <morphology>
+    <class name="noun"      slots="nom gen dat acc  pl.nom pl.gen pl.dat pl.acc"/>
+    <class name="adjective" slots="base e en er es em"/>
+    <paradigm name="noun-weak" class="noun"      cut="0">= n  n n  n n n  n</paradigm> <!-- Kunde -->
+    <paradigm name="noun-er"   class="noun"      cut="0">= s  = =  = = n  =</paradigm> <!-- Schuldner, Artikel -->
+    <paradigm name="noun-e"    class="noun"      cut="0">= es = =  e e en e</paradigm> <!-- Beleg -->
+    <paradigm name="adjective" class="adjective" cut="0">= e en er es em</paradigm>    <!-- gebucht -->
+    <paradigm name="ordinal"   class="adjective" cut="0">- e en er es em</paradigm>    <!-- erst-: erste, ersten -->
+    <spelling from="ä" to="ae"/>
+    <spelling from="ö" to="oe"/>
+    <spelling from="ü" to="ue"/>
+    <spelling from="ß" to="ss"/>
+  </morphology>
+
+  <verb source="show" synonyms="anzeigen">zeige</verb>
+  <verb source="find">suche</verb>
+  <verb source="open">öffne</verb>
+  <verb source="sort">sortiere</verb>
+  <verb source="help">hilfe</verb>
+  <verb source="cancel">abbrechen</verb>
+  <verb source="reset">zurücksetzen</verb>
+
+  <noun source="customer" paradigm="noun-weak">Kunde</noun>
+  <noun source="debtor"   paradigm="noun-er">Schuldner</noun>
+  <noun source="document" paradigm="noun-e" forms="Belegs">Beleg</noun>
+  <noun source="item"     paradigm="noun-er">Artikel</noun>
+
+  <adjective  source="posted" paradigm="adjective">gebucht</adjective>
+  <adjective  source="draft"  paradigm="adjective">ungebucht</adjective>
+  <adjective  source="owing"  paradigm="adjective">schuldend</adjective>
+  <field      source="debt">Schulden</field>
+  <field      source="amount" forms="Betrags Beträge Beträgen">Betrag</field>
+  <field      source="name"   forms="Namens Namen">Name</field>
+  <comparison source="greater than">über</comparison>
+  <comparison source="greater than">mehr als</comparison>
+  <comparison source="less than">unter</comparison>
+  <comparison source="less than">weniger als</comparison>
+  <comparison source="at least">mindestens</comparison>
+  <comparison source="at most">höchstens</comparison>
+  <comparison source="exactly">genau</comparison>
+  <relation   source="for">für</relation>
+  <direction  source="descending">absteigend</direction>
+  <direction  source="ascending">aufsteigend</direction>
+
+  <ordinal value="1" paradigm="ordinal">erst</ordinal>  <ordinal value="2" paradigm="ordinal">zweit</ordinal>
+  <ordinal value="3" paradigm="ordinal">dritt</ordinal> <ordinal value="4" paradigm="ordinal">viert</ordinal>
+  <ordinal value="5" paradigm="ordinal">fünft</ordinal>
+  <pronoun>ihn</pronoun> <pronoun>sie</pronoun> <pronoun>es</pronoun>
+  <pronoun>diesen</pronoun> <pronoun>diese</pronoun> <pronoun>dieses</pronoun>
+  <noise>bitte</noise> <noise>nur</noise> <noise>mit</noise> <noise>nach</noise> <noise>alle</noise>
+  <noise>der</noise> <noise>die</noise> <noise>das</noise> <noise>den</noise> <noise>dem</noise>
+
+  <!-- `compound` numbers are the stems german_numbers.lua composes, as in einhundertfünfundzwanzig. -->
+  <number value="0"  compound="small">null</number>
+  <number value="1"  compound="ones">ein</number>  <number value="1" compound="ones" prefix="false">eins</number>
+  <number value="1">eine</number>
+  <number value="2"  compound="ones">zwei</number>     <number value="3"  compound="ones">drei</number>
+  <number value="4"  compound="ones">vier</number>     <number value="5"  compound="ones">fünf</number>
+  <number value="6"  compound="ones">sechs</number>    <number value="7"  compound="ones">sieben</number>
+  <number value="8"  compound="ones">acht</number>     <number value="9"  compound="ones">neun</number>
+  <number value="10" compound="small">zehn</number>    <number value="11" compound="small">elf</number>
+  <number value="12" compound="small">zwölf</number>   <number value="13" compound="small">dreizehn</number>
+  <number value="14" compound="small">vierzehn</number> <number value="15" compound="small">fünfzehn</number>
+  <number value="16" compound="small">sechzehn</number> <number value="17" compound="small">siebzehn</number>
+  <number value="18" compound="small">achtzehn</number> <number value="19" compound="small">neunzehn</number>
+  <number value="20" compound="tens">zwanzig</number>  <number value="30" compound="tens">dreißig</number>
+  <number value="40" compound="tens">vierzig</number>  <number value="50" compound="tens">fünfzig</number>
+  <number value="60" compound="tens">sechzig</number>  <number value="70" compound="tens">siebzig</number>
+  <number value="80" compound="tens">achtzig</number>  <number value="90" compound="tens">neunzig</number>
+  <multiplier value="100">hundert</multiplier>
+  <scale value="1000">tausend</scale>
+  <scale value="1000000" forms="Millionen">Million</scale>
   <compound-numbers conjunction="und" multiplier="hundert" scale="tausend">
-    <replace source="ae" target="ä" />
-    <replace source="oe" target="ö" />
-    <replace source="ue" target="ü" />
-    <replace source="ss" target="ß" />
+    <replace source="ae" target="ä"/>
+    <replace source="oe" target="ö"/>
+    <replace source="ue" target="ü"/>
+    <replace source="ss" target="ß"/>
   </compound-numbers>
+
   <normalization>
-    <map source="ÄÖÜẞ" target="äöüß" />
+    <map source="ÄÖÜẞ" target="äöüß"/>
   </normalization>
 </vocabulary>

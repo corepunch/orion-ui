@@ -108,7 +108,7 @@ the character file formats; the details are in
 
 ## Implementation
 
-- `vocabulary/en.xml`, `de.xml`, `ru.xml`: command aliases, number stems, spelling substitutions and character maps, one language per file.
+- `vocabulary/en.xml`, `de.xml`, `ru.xml`: command words keyed by English source words, inflection tables, number stems, spelling substitutions and character maps, one language per file.
 - `vocabulary.lua`: generated data packaged by `make share`, loaded directly by the parser and language helpers.
 - `dictionary.lua`: load-time compilation to interned word records and a phrase trie.
 - `normalize.lua`: shared Unicode normalization for compilation, input and matching.
@@ -200,16 +200,19 @@ Lua tests fall back to English when the Orion host is absent.
 | Layer | English | German | Russian |
 |---|---|---|---|
 | Case folding | `SHOW` → `show` | `ÖFFNE` → `öffne`, `ẞ` → `ß` | `ПОКАЖИ` → `покажи`, `ё` → `е` |
-| Noun forms → entity | `customer/customers` | `Kunde/Kunden` | `клиент/клиента/клиентов` |
+| Noun forms → entity | `customer/customers`, generated from `customer` | `Kunde/Kunden`, from `Kunde` | `клиент/клиента/клиентов`, from `клиент` |
 | Posted adjective → boolean | `posted/draft` | `gebucht/gebuchte/gebuchten`, corresponding `ungebucht` forms | `проведенные/проведенных`, corresponding `непроведенные` forms |
 | Comparison → `ge` | `at least` | `mindestens` | `не меньше/не менее` |
 | Number composition | `one hundred and twenty five` → 125 | `einhundertfünfundzwanzig` → 125 | `ста двадцати пяти` → 125 |
 | Thousands | `fifty thousand` → 50000 | `fünfzig tausend/fünfzigtausend` → 50000 | `пятьдесят тысяч/пятидесяти тысяч` → 50000 |
-| ASCII spelling | unchanged | `fuenf/zwoelf/dreissig` → recognized numeric forms | not transliterated |
+| ASCII spelling | unchanged | every form also as `ae/oe/ue/ss`: `fuer`, `oeffne`; `fuenf/zwoelf/dreissig` → numbers | not transliterated |
 
-Russian uses explicit surface-form tables, including genitives after comparisons;
-there is no broad suffix stripping. German uses the same alias-table approach
-for commands and inflections, plus a bounded cardinal-number grammar in
+Inflected forms come from the paradigm tables in each vocabulary file, applied
+to known headwords when `make share` packages the vocabulary (see below). Input
+is matched against those forms exactly: there is no suffix stripping, so
+unknown words are still rejected. Irregular forms, such as Russian number words
+after comparisons (`пятидесяти`), are listed with the headword. German adds a
+bounded cardinal-number grammar in
 `german_numbers.lua`: unit + `und` + tens; unit + `hundert` + remainder;
 under-thousand + `tausend` + remainder. The number stems, particles, prefix
 restrictions and ASCII spelling substitutions are declared in `vocabulary/de.xml`;
@@ -231,7 +234,9 @@ Its staged lexical/grammar processing and explicit case/imperative features are
 useful design references. Its English-to-Russian generation tables are not a
 Russian command analyzer. Do not translate commands through it: map recognized
 surface forms directly to the AST, preserving names and unknown-word rejection.
-No translator code or dictionaries are copied or loaded at runtime.
+The Russian `<morphology>` uses the layout of its `dictionary/paradigms.txt` (cut
+count, one ending per slot, `=` and `-`); the tables are written for this
+vocabulary. No translator code or dictionaries are copied or loaded at runtime.
 
 Run from the repository root (Lua 5.4+):
 
@@ -316,31 +321,64 @@ serve the Z-machine parser API. Ledger needs the vocabulary model, without
 that memory representation.
 
 Command vocabulary lives in `vocabulary/*.xml`, separate from the `locale/*.xml`
-catalogs that translate replies and UI text. Each vocabulary file declares its
-language and maps aliases to canonical grammar roles:
+catalogs that translate replies and UI text. It is collected the way Zork's
+compiler collected its vocabulary: nobody keeps a list of every word or form.
+English is the source language, as in the string catalogs. An entry with
+`means` defines a source word and its meaning, like Zork's `SYNTAX`; any file
+translates it with an entry naming the same `source`:
 
 ```xml
-<vocabulary language="de">
-  <aliases role="verbs" value="list">
-    <alias>zeige</alias>
-    <alias>anzeigen</alias>
-  </aliases>
-  <aliases role="numbers" value="50"><alias compound="tens">fünfzig</alias></aliases>
+<vocabulary language="en">
+  <verb source="show" means="list" synonyms="list"/>
+  <noun source="customer" means="counterparties" paradigm="noun" synonyms="client"/>
+  <comparison source="greater than" means="gt" synonyms="over"/>
+  <comparison source="greater than">more than</comparison>
+</vocabulary>
+
+<vocabulary language="ru">
+  <morphology>
+    <class name="noun" slots="nom gen dat acc inst prep  pl.nom pl.gen pl.dat pl.acc pl.inst pl.prep"/>
+    <paradigm name="noun-m-animate" class="noun" cut="0">= а у а ом е  ы ов ам ов ами ах</paradigm>
+  </morphology>
+  <verb source="show" forms="показать" synonyms="выведи список">покажи</verb>
+  <noun source="customer" paradigm="noun-m-animate" synonyms="контрагент">клиент</noun>
+  <number value="50" forms="пятидесяти">пятьдесят</number>
 </vocabulary>
 ```
 
-Add synonyms, inflections or a language in these XML files. `make share` discovers
+| Entry | Meaning | Keyed by |
+|---|---|---|
+| `verb`, `noun`, `adjective`, `field`, `comparison`, `relation`, `direction` | What the source word means (`means`, once per source) | `source` |
+| `ordinal`, `number`, `scale`, `multiplier` | The number it stands for | `value` |
+| `pronoun`, `noise`, `unit`, `conjunction` | The role alone | — |
+
+The text is the headword; a definition without text uses its source word.
+`synonyms` lists more headwords separated by spaces, like `class=` in HTML. A
+phrase (`more than`) or a word with another paradigm (`покупатель`) gets its
+own entry. `paradigm` expands each headword through the file's `<morphology>`:
+cut `cut` letters, then add one ending per slot of the paradigm's class, where
+`=` is the headword, `0` the bare stem and `-` no form. `forms` lists irregular
+forms (`имя` → `имени`). A `<spelling from="ü" to="ue"/>` adds a variant of
+every form. Animate and inanimate nouns differ only in their accusative, which
+is always a nominative or genitive form, so both recognize the same words. The
+slot names say which case each form is; the parser does not check case
+agreement, so a command with a mistyped case still works.
+
+Add words, inflections or a language in these XML files. `make share` discovers
 all of them and packages their merged data as `vocabulary.lua` in the build's
 assistant resource directory, using `tools/generate_assistant_vocabulary.py`.
 The generated module stays out of the source tree. The sandbox loads ordinary
 Lua data without file access; all command languages remain available regardless
-of the selected UI language. Number roles use integer `value` attributes;
-`pronouns`, `noise`, `units` and `number_conjunctions` omit `value`.
+of the selected UI language. A word whose source is not defined, a source
+defined twice, an unknown paradigm, a paradigm whose endings do not match its
+class, or a word with two meanings in one role stops the build with the file
+and the reason. `assistant_vocabulary_test.py` fails when a language does not
+translate every defined source word.
 
 The German `<compound-numbers conjunction="und" multiplier="hundert" scale="tausend">`
 section names its particles and contains ordered `<replace source="ue" target="ü"/>`
 spelling substitutions. Its multiplier and scale refer to aliases in the same
-file's `multipliers` and `scales` roles. Number aliases marked `compound="ones"`,
+file's `multipliers` and `scales` roles. Number entries marked `compound="ones"`,
 `compound="small"` or `compound="tens"` provide the recognizer's stem tables;
 `prefix="false"` keeps a standalone form such as `eins` out of compound prefixes.
 `<normalization><map source="ÄÖÜẞ" target="äöüß"/></normalization>` declares
@@ -397,10 +435,10 @@ longest-match fallback, quotation boundaries and isolation. It also checks that
 100 commands compile the dictionary only once, and that adding 10,000 aliases
 does not alter existing matches. Both standalone and native sandbox test
 runners execute these checks. `assistant_vocabulary_test.py` checks XML
-validation, preservation of every authored alias and adding a language without
-changing the grammar or loader. It changes XML stems, particles, spelling and
-character maps to verify that the Lua rules use that data, and tests reference
-parsing with no English vocabulary installed.
+validation, preservation of every authored word, paradigm expansion, translation
+coverage and adding a language without changing the grammar or loader. It
+changes XML stems, particles, spelling and character maps to verify that the
+Lua rules use that data, and tests reference parsing without an English `open`.
 
 XML expresses the authored vocabulary; Lua tables hold its loaded data and
 compiled indexes, and functions express the grammar and productive rules.
