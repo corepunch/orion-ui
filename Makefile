@@ -359,6 +359,11 @@ $(BIN_DIR)/ledger-run$(EXE_EXT): $(LEDGER_API_HEADER) $(GENERATED_DIR)/apps/ledg
 $(BIN_DIR)/ledger$(EXE_EXT) $(GEM_DIR)/ledger.gem $(patsubst apps/ledger/tests/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(wildcard apps/ledger/tests/*.c)): $(LEDGER_API_HEADER) $(LEDGER_CATALOG)
 share: $(LEDGER_CATALOG)
 
+LEDGER_ASSISTANT_VOCABULARY = $(GENERATED_DIR)/apps/ledger/assistant/vocabulary.lua
+$(LEDGER_ASSISTANT_VOCABULARY): $(wildcard apps/ledger/share/addons/assistant/vocabulary/*.xml) apps/ledger/share/addons/assistant/vocabulary tools/generate_assistant_vocabulary.py
+	python3 tools/generate_assistant_vocabulary.py apps/ledger/share/addons/assistant/vocabulary --lua $@
+share: $(LEDGER_ASSISTANT_VOCABULARY)
+
 # ── Platform submodule ───────────────────────────────────────────────────
 platform: $(PLATFORM_LIB)
 
@@ -376,6 +381,7 @@ share: | $(SHARE_DIR)
 	  mkdir -p $(SHARE_DIR)/$$name; \
 	  cp -R $$dir/. $(SHARE_DIR)/$$name/; \
 	done
+	@cp $(LEDGER_ASSISTANT_VOCABULARY) $(SHARE_DIR)/ledger/addons/assistant/vocabulary.lua
 
 # ── Core libraries ───────────────────────────────────────────────────────
 library: $(CORE_LIBS)

@@ -1,0 +1,344 @@
+<?xml version='1.0' encoding='utf-8'?>
+<vocabulary language="ru">
+  <aliases role="adjectives" value="debtors">
+    <alias>должен</alias>
+    <alias>должны</alias>
+    <alias>задолжали</alias>
+  </aliases>
+  <aliases role="adjectives" value="draft">
+    <alias>непроведенные</alias>
+    <alias>непроведенных</alias>
+    <alias>черновики</alias>
+  </aliases>
+  <aliases role="adjectives" value="posted">
+    <alias>проведенные</alias>
+    <alias>проведенный</alias>
+    <alias>проведенных</alias>
+  </aliases>
+  <aliases role="comparisons" value="eq">
+    <alias>равно</alias>
+    <alias>ровно</alias>
+  </aliases>
+  <aliases role="comparisons" value="ge">
+    <alias>не менее</alias>
+    <alias>не меньше</alias>
+  </aliases>
+  <aliases role="comparisons" value="gt">
+    <alias>больше</alias>
+    <alias>выше</alias>
+    <alias>свыше</alias>
+  </aliases>
+  <aliases role="comparisons" value="le">
+    <alias>не более</alias>
+    <alias>не больше</alias>
+  </aliases>
+  <aliases role="comparisons" value="lt">
+    <alias>меньше</alias>
+    <alias>ниже</alias>
+  </aliases>
+  <aliases role="directions" value="asc">
+    <alias>возрастанию</alias>
+  </aliases>
+  <aliases role="directions" value="desc">
+    <alias>убыванию</alias>
+  </aliases>
+  <aliases role="fields" value="amount">
+    <alias>сумма</alias>
+    <alias>сумме</alias>
+    <alias>суммой</alias>
+    <alias>сумму</alias>
+    <alias>суммы</alias>
+  </aliases>
+  <aliases role="fields" value="debt">
+    <alias>долг</alias>
+    <alias>долга</alias>
+    <alias>долгом</alias>
+    <alias>долгу</alias>
+    <alias>задолженности</alias>
+    <alias>задолженность</alias>
+    <alias>задолженностью</alias>
+  </aliases>
+  <aliases role="fields" value="name">
+    <alias>имени</alias>
+    <alias>название</alias>
+    <alias>названию</alias>
+  </aliases>
+  <aliases role="noise">
+    <alias>все</alias>
+    <alias>всех</alias>
+    <alias>которые</alias>
+    <alias>который</alias>
+    <alias>мне</alias>
+    <alias>на</alias>
+    <alias>по</alias>
+    <alias>пожалуйста</alias>
+    <alias>с</alias>
+    <alias>со</alias>
+    <alias>только</alias>
+  </aliases>
+  <aliases role="nouns" value="counterparties">
+    <alias>клиент</alias>
+    <alias>клиента</alias>
+    <alias>клиентов</alias>
+    <alias>клиенты</alias>
+    <alias>контрагента</alias>
+    <alias>контрагентов</alias>
+    <alias>контрагенты</alias>
+    <alias>покупателей</alias>
+    <alias>покупатели</alias>
+  </aliases>
+  <aliases role="nouns" value="debtors">
+    <alias>должника</alias>
+    <alias>должники</alias>
+    <alias>должников</alias>
+  </aliases>
+  <aliases role="nouns" value="documents">
+    <alias>документ</alias>
+    <alias>документа</alias>
+    <alias>документов</alias>
+    <alias>документы</alias>
+  </aliases>
+  <aliases role="nouns" value="items">
+    <alias>товар</alias>
+    <alias>товара</alias>
+    <alias>товаров</alias>
+    <alias>товары</alias>
+  </aliases>
+  <aliases role="numbers" value="0">
+    <alias>ноль</alias>
+  </aliases>
+  <aliases role="numbers" value="1">
+    <alias>один</alias>
+    <alias>одна</alias>
+    <alias>одного</alias>
+    <alias>одной</alias>
+    <alias>одну</alias>
+  </aliases>
+  <aliases role="numbers" value="10">
+    <alias>десяти</alias>
+    <alias>десять</alias>
+  </aliases>
+  <aliases role="numbers" value="100">
+    <alias>ста</alias>
+    <alias>сто</alias>
+  </aliases>
+  <aliases role="numbers" value="11">
+    <alias>одиннадцати</alias>
+    <alias>одиннадцать</alias>
+  </aliases>
+  <aliases role="numbers" value="12">
+    <alias>двенадцати</alias>
+    <alias>двенадцать</alias>
+  </aliases>
+  <aliases role="numbers" value="13">
+    <alias>тринадцати</alias>
+    <alias>тринадцать</alias>
+  </aliases>
+  <aliases role="numbers" value="14">
+    <alias>четырнадцати</alias>
+    <alias>четырнадцать</alias>
+  </aliases>
+  <aliases role="numbers" value="15">
+    <alias>пятнадцати</alias>
+    <alias>пятнадцать</alias>
+  </aliases>
+  <aliases role="numbers" value="16">
+    <alias>шестнадцати</alias>
+    <alias>шестнадцать</alias>
+  </aliases>
+  <aliases role="numbers" value="17">
+    <alias>семнадцати</alias>
+    <alias>семнадцать</alias>
+  </aliases>
+  <aliases role="numbers" value="18">
+    <alias>восемнадцати</alias>
+    <alias>восемнадцать</alias>
+  </aliases>
+  <aliases role="numbers" value="19">
+    <alias>девятнадцати</alias>
+    <alias>девятнадцать</alias>
+  </aliases>
+  <aliases role="numbers" value="2">
+    <alias>два</alias>
+    <alias>две</alias>
+    <alias>двух</alias>
+  </aliases>
+  <aliases role="numbers" value="20">
+    <alias>двадцати</alias>
+    <alias>двадцать</alias>
+  </aliases>
+  <aliases role="numbers" value="200">
+    <alias>двести</alias>
+    <alias>двухсот</alias>
+  </aliases>
+  <aliases role="numbers" value="3">
+    <alias>трех</alias>
+    <alias>три</alias>
+  </aliases>
+  <aliases role="numbers" value="30">
+    <alias>тридцати</alias>
+    <alias>тридцать</alias>
+  </aliases>
+  <aliases role="numbers" value="300">
+    <alias>трехсот</alias>
+    <alias>триста</alias>
+  </aliases>
+  <aliases role="numbers" value="4">
+    <alias>четыре</alias>
+    <alias>четырех</alias>
+  </aliases>
+  <aliases role="numbers" value="40">
+    <alias>сорок</alias>
+    <alias>сорока</alias>
+  </aliases>
+  <aliases role="numbers" value="400">
+    <alias>четыреста</alias>
+    <alias>четырехсот</alias>
+  </aliases>
+  <aliases role="numbers" value="5">
+    <alias>пяти</alias>
+    <alias>пять</alias>
+  </aliases>
+  <aliases role="numbers" value="50">
+    <alias>пятидесяти</alias>
+    <alias>пятьдесят</alias>
+  </aliases>
+  <aliases role="numbers" value="500">
+    <alias>пятисот</alias>
+    <alias>пятьсот</alias>
+  </aliases>
+  <aliases role="numbers" value="6">
+    <alias>шести</alias>
+    <alias>шесть</alias>
+  </aliases>
+  <aliases role="numbers" value="60">
+    <alias>шестидесяти</alias>
+    <alias>шестьдесят</alias>
+  </aliases>
+  <aliases role="numbers" value="600">
+    <alias>шестисот</alias>
+    <alias>шестьсот</alias>
+  </aliases>
+  <aliases role="numbers" value="7">
+    <alias>семи</alias>
+    <alias>семь</alias>
+  </aliases>
+  <aliases role="numbers" value="70">
+    <alias>семидесяти</alias>
+    <alias>семьдесят</alias>
+  </aliases>
+  <aliases role="numbers" value="700">
+    <alias>семисот</alias>
+    <alias>семьсот</alias>
+  </aliases>
+  <aliases role="numbers" value="8">
+    <alias>восемь</alias>
+    <alias>восьми</alias>
+  </aliases>
+  <aliases role="numbers" value="80">
+    <alias>восемьдесят</alias>
+    <alias>восьмидесяти</alias>
+  </aliases>
+  <aliases role="numbers" value="800">
+    <alias>восемьсот</alias>
+    <alias>восьмисот</alias>
+  </aliases>
+  <aliases role="numbers" value="9">
+    <alias>девяти</alias>
+    <alias>девять</alias>
+  </aliases>
+  <aliases role="numbers" value="90">
+    <alias>девяноста</alias>
+    <alias>девяносто</alias>
+  </aliases>
+  <aliases role="numbers" value="900">
+    <alias>девятисот</alias>
+    <alias>девятьсот</alias>
+  </aliases>
+  <aliases role="ordinals" value="1">
+    <alias>первого</alias>
+    <alias>первую</alias>
+    <alias>первый</alias>
+  </aliases>
+  <aliases role="ordinals" value="2">
+    <alias>второго</alias>
+    <alias>второй</alias>
+    <alias>вторую</alias>
+  </aliases>
+  <aliases role="ordinals" value="3">
+    <alias>третий</alias>
+    <alias>третьего</alias>
+  </aliases>
+  <aliases role="ordinals" value="4">
+    <alias>четвертого</alias>
+  </aliases>
+  <aliases role="ordinals" value="5">
+    <alias>пятого</alias>
+  </aliases>
+  <aliases role="pronouns">
+    <alias>его</alias>
+    <alias>ее</alias>
+    <alias>него</alias>
+    <alias>нее</alias>
+    <alias>ней</alias>
+    <alias>нему</alias>
+    <alias>это</alias>
+    <alias>этого</alias>
+    <alias>этой</alias>
+    <alias>этот</alias>
+    <alias>эту</alias>
+  </aliases>
+  <aliases role="relations" value="counterparty">
+    <alias>для</alias>
+  </aliases>
+  <aliases role="scales" value="1000">
+    <alias>тыс</alias>
+    <alias>тысяч</alias>
+    <alias>тысяча</alias>
+    <alias>тысячи</alias>
+  </aliases>
+  <aliases role="scales" value="1000000">
+    <alias>миллион</alias>
+    <alias>миллиона</alias>
+    <alias>миллионов</alias>
+  </aliases>
+  <aliases role="units">
+    <alias>евро</alias>
+    <alias>руб</alias>
+    <alias>рублей</alias>
+    <alias>рубля</alias>
+  </aliases>
+  <aliases role="verbs" value="cancel">
+    <alias>отмена</alias>
+  </aliases>
+  <aliases role="verbs" value="find">
+    <alias>найди</alias>
+    <alias>найти</alias>
+  </aliases>
+  <aliases role="verbs" value="help">
+    <alias>команды</alias>
+    <alias>помощь</alias>
+  </aliases>
+  <aliases role="verbs" value="list">
+    <alias>выведи</alias>
+    <alias>покажи</alias>
+    <alias>показать</alias>
+    <alias>список</alias>
+  </aliases>
+  <aliases role="verbs" value="open">
+    <alias>открой</alias>
+    <alias>открыть</alias>
+  </aliases>
+  <aliases role="verbs" value="reset">
+    <alias>сброс</alias>
+    <alias>сбрось</alias>
+  </aliases>
+  <aliases role="verbs" value="sort">
+    <alias>отсортируй</alias>
+    <alias>сортируй</alias>
+  </aliases>
+  <normalization>
+    <map source="АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ" target="абвгдежзийклмнопрстуфхцчшщъыьэюя" />
+    <map source="Ёё" target="ее" />
+  </normalization>
+</vocabulary>

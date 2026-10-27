@@ -1,5 +1,5 @@
--- Run with Lua 5.4+ from the repository root. No network, model or Ledger UI.
-package.path='apps/ledger/share/addons/assistant/?.lua;'..package.path
+-- Run make share, then Lua 5.4+ from the repository root. No network, model or Ledger UI.
+package.path='apps/ledger/share/addons/assistant/?.lua;build/share/ledger/addons/assistant/?.lua;'..package.path
 local P,E=require('parser'),require('engine')
 local function parse(text,ctx)
   local ast,err=P.parse(text,ctx); assert(ast,err); return ast

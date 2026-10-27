@@ -1,7 +1,7 @@
 local tr = require('messages')
 -- Zork-inspired command grammar: verbs, noun phrases, qualifiers and orphans.
 -- Written for Ledger; no Infocom source or VM is embedded.
-local vocabulary = require('lexicon')
+local vocabulary = require('vocabulary').lexicon
 local german = require('german_numbers')
 local P = {}
 
@@ -80,13 +80,13 @@ local function copy(t)
 end
 P.copy=copy
 
-function P.parse(text,context)
+local function parse(text,context,initial_verb)
   if type(text)~='string' or #text>2048 then return nil,tr('Enter a command of at most 2048 bytes.') end
   local ok,words,err=pcall(tokenize,text)
   if not ok then return nil,tr('Invalid UTF-8 text.') end
   if not words then return nil,err end
-  if #words==0 then return nil,tr('What should I show? Try: show debtors.') end
-  local ast, i, field = {filters={}}, 1, nil
+  if #words==0 and not initial_verb then return nil,tr('What should I show? Try: show debtors.') end
+  local ast, i, field = {verb=initial_verb,filters={}}, 1, nil
   -- Keep all parsing local: an invalid suffix must not alter dialogue context.
   i=1
   while i<=#words do
@@ -121,7 +121,7 @@ function P.parse(text,context)
           local token=words[j]
           parts[#parts+1]=token.quoted and ('"'..token.text..'"') or token.text
         end
-        local ref,message=P.parse('open '..table.concat(parts,' '),{})
+        local ref,message=parse(table.concat(parts,' '),{},'open')
         if not ref then return nil,message end
         if ref.for_party or ref.entity and ref.entity~='counterparties' then
           return nil,tr('Document relations require a customer.')
@@ -192,6 +192,7 @@ function P.parse(text,context)
   elseif ast.direction then return nil,tr('Use the sort command to set a direction.') end
   return ast
 end
+function P.parse(text,context) return parse(text,context) end
 function P.has_verb(text)
   if type(text)~='string' or #text>2048 then return false end
   local ok,words=pcall(tokenize,text)
@@ -209,7 +210,7 @@ function P.reference(text)
     local category=lookup(words,i)
     if category=='verbs' or category=='relations' then return nil end
   end
-  local ref=P.parse('open '..text,{})
+  local ref=parse(text,{},'open')
   if ref and (ref.entity or ref.name or ref.ordinal or ref.pronoun) then return ref end
 end
 return P

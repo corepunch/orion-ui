@@ -108,9 +108,11 @@ the character file formats; the details are in
 
 ## Implementation
 
-- `lexicon.lua`: authored vocabulary, number words, grammatical roles and aliases.
+- `vocabulary/en.xml`, `de.xml`, `ru.xml`: command aliases, number stems, spelling substitutions and character maps, one language per file.
+- `vocabulary.lua`: generated data packaged by `make share`, loaded directly by the parser and language helpers.
 - `dictionary.lua`: load-time compilation to interned word records and a phrase trie.
 - `normalize.lua`: shared Unicode normalization for compilation, input and matching.
+- `german_numbers.lua`: number composition using stems and particles from the German XML.
 - `parser.lua`: UTF-8 normalization, number phrases, grammar and contextual refinements.
 - `engine.lua`: typed commands, filters, sorting, disambiguation, host callbacks
   and `choose(index)` for a clicked balloon label.
@@ -209,7 +211,10 @@ Russian uses explicit surface-form tables, including genitives after comparisons
 there is no broad suffix stripping. German uses the same alias-table approach
 for commands and inflections, plus a bounded cardinal-number grammar in
 `german_numbers.lua`: unit + `und` + tens; unit + `hundert` + remainder;
-under-thousand + `tausend` + remainder. Compound forms cover 0–999999;
+under-thousand + `tausend` + remainder. The number stems, particles, prefix
+restrictions and ASCII spelling substitutions are declared in `vocabulary/de.xml`;
+Lua contains the composition rules. Language-specific character mappings also
+come from the vocabulary XML. Compound forms cover 0–999999;
 separate `Million/Millionen` scale tokens support larger values. This is not a
 German compound-noun splitter or a general morphological analyzer.
 
@@ -228,10 +233,12 @@ Russian command analyzer. Do not translate commands through it: map recognized
 surface forms directly to the AST, preserving names and unknown-word rejection.
 No translator code or dictionaries are copied or loaded at runtime.
 
-Run from the repository root (Lua 5.3+; `texlua` also works):
+Run from the repository root (Lua 5.4+):
 
 ```sh
+make share
 lua apps/ledger/tests/assistant_test.lua
+python3 apps/ledger/tests/assistant_vocabulary_test.py
 python3 apps/ledger/tests/assistant_locale_test.py
 make build/bin/test_ledger_assistant_test
 build/bin/test_ledger_assistant_test
@@ -308,14 +315,48 @@ implements `learn`, `BUZZ`, `SYNONYM` and `merge_dictionary_word`, building
 serve the Z-machine parser API. Ledger needs the vocabulary model, without
 that memory representation.
 
-Here, “compile” means transforming authored Lua tables into indexed Lua tables
-once when `parser` is required. There is no bytecode output, binary dictionary,
-code generation, executable generation or extra build step. All behavior stays
-in Lua functions. Lua's `require` cache retains the loaded parser and its compiled
-dictionary; each isolated Ledger Lua state owns its own instance.
+Command vocabulary lives in `vocabulary/*.xml`, separate from the `locale/*.xml`
+catalogs that translate replies and UI text. Each vocabulary file declares its
+language and maps aliases to canonical grammar roles:
+
+```xml
+<vocabulary language="de">
+  <aliases role="verbs" value="list">
+    <alias>zeige</alias>
+    <alias>anzeigen</alias>
+  </aliases>
+  <aliases role="numbers" value="50"><alias compound="tens">fünfzig</alias></aliases>
+</vocabulary>
+```
+
+Add synonyms, inflections or a language in these XML files. `make share` discovers
+all of them and packages their merged data as `vocabulary.lua` in the build's
+assistant resource directory, using `tools/generate_assistant_vocabulary.py`.
+The generated module stays out of the source tree. The sandbox loads ordinary
+Lua data without file access; all command languages remain available regardless
+of the selected UI language. Number roles use integer `value` attributes;
+`pronouns`, `noise`, `units` and `number_conjunctions` omit `value`.
+
+The German `<compound-numbers conjunction="und" multiplier="hundert" scale="tausend">`
+section names its particles and contains ordered `<replace source="ue" target="ü"/>`
+spelling substitutions. Its multiplier and scale refer to aliases in the same
+file's `multipliers` and `scales` roles. Number aliases marked `compound="ones"`,
+`compound="small"` or `compound="tens"` provide the recognizer's stem tables;
+`prefix="false"` keeps a standalone form such as `eins` out of compound prefixes.
+`<normalization><map source="ÄÖÜẞ" target="äöüß"/></normalization>` declares
+character-by-character substitutions shared by dictionary, tokenizer and record
+matching. These language data stay separate from grammar roles in the generated
+module: the parser loads `.lexicon`, while the recognizer and normalizer use
+`.languages` and `.normalization`.
+
+At runtime, “compile” means transforming that vocabulary data into indexed Lua
+tables once when `parser` is required. There is no bytecode output or binary
+dictionary. All behavior stays in Lua functions. Lua's `require` cache retains
+the loaded parser and its compiled dictionary; each isolated Ledger Lua state
+owns its own instance.
 
 ```lua
-local dictionary = require('dictionary').compile(require('lexicon'))
+local dictionary = require('dictionary').compile(require('vocabulary').lexicon)
 assert(dictionary.words.show.roles.verbs == 'list')
 assert(dictionary.words.zeige.roles.verbs == 'list')
 assert(dictionary.words['покажи'].roles.verbs == 'list')
@@ -332,9 +373,9 @@ assert(dictionary.words['покажи'].roles.verbs == 'list')
 | Pronouns, ordinals, noise, currency units and number words | Roles in the same dictionary, rather than unrelated parser-local maps |
 
 `words` indexes records by normalized spelling; `entries` indexes the same
-records by numeric ID. IDs are assigned in sorted order, independent of Lua
-source-table iteration order. They identify vocabulary within a compiled
-instance, not Ledger records, and are not a persistence contract across lexicon
+records by numeric ID. IDs are assigned in sorted order, independent of XML
+file order or Lua source-table iteration order. They identify vocabulary within
+a compiled instance, not Ledger records, and are not a persistence contract across lexicon
 edits. Exact word lookup uses Lua hash tables; phrase lookup follows only the
 input phrase's trie path rather than scanning all aliases. A failed longer
 phrase falls back to the last complete match. Unknown words remain errors,
@@ -355,10 +396,14 @@ canonical meanings across languages, ID reproducibility, multi-role records,
 longest-match fallback, quotation boundaries and isolation. It also checks that
 100 commands compile the dictionary only once, and that adding 10,000 aliases
 does not alter existing matches. Both standalone and native sandbox test
-runners execute these checks.
+runners execute these checks. `assistant_vocabulary_test.py` checks XML
+validation, preservation of every authored alias and adding a language without
+changing the grammar or loader. It changes XML stems, particles, spelling and
+character maps to verify that the Lua rules use that data, and tests reference
+parsing with no English vocabulary installed.
 
-Lua fits this work directly: tables express both the authored vocabulary and
-its compiled indexes, and functions express the grammar and productive rules.
+XML expresses the authored vocabulary; Lua tables hold its loaded data and
+compiled indexes, and functions express the grammar and productive rules.
 This compilation model does not create a reason to move the assistant into C.
 The native data access/UI boundary stays in C; a future move of a specific
 operation should follow measured need.

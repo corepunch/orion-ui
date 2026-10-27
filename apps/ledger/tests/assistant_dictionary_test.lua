@@ -11,7 +11,7 @@ end
 local function lookup(d,text)
   return d:lookup(tokens(text),1)
 end
-local source=require('lexicon')
+local source=require('vocabulary').lexicon
 local dictionary=D.compile(source)
 local function verify(alias,role,value)
   local phrase=tokens(alias)

@@ -1,0 +1,216 @@
+<?xml version='1.0' encoding='utf-8'?>
+<vocabulary language="en">
+  <aliases role="adjectives" value="draft">
+    <alias>draft</alias>
+    <alias>drafts</alias>
+  </aliases>
+  <aliases role="adjectives" value="posted">
+    <alias>posted</alias>
+  </aliases>
+  <aliases role="comparisons" value="eq">
+    <alias>equals</alias>
+    <alias>exactly</alias>
+  </aliases>
+  <aliases role="comparisons" value="ge">
+    <alias>at least</alias>
+  </aliases>
+  <aliases role="comparisons" value="gt">
+    <alias>greater than</alias>
+    <alias>more than</alias>
+    <alias>over</alias>
+  </aliases>
+  <aliases role="comparisons" value="le">
+    <alias>at most</alias>
+  </aliases>
+  <aliases role="comparisons" value="lt">
+    <alias>less than</alias>
+    <alias>under</alias>
+  </aliases>
+  <aliases role="directions" value="asc">
+    <alias>ascending</alias>
+  </aliases>
+  <aliases role="directions" value="desc">
+    <alias>descending</alias>
+  </aliases>
+  <aliases role="fields" value="amount">
+    <alias>amount</alias>
+    <alias>total</alias>
+  </aliases>
+  <aliases role="fields" value="debt">
+    <alias>debt</alias>
+  </aliases>
+  <aliases role="fields" value="name">
+    <alias>name</alias>
+  </aliases>
+  <aliases role="multipliers" value="100">
+    <alias>hundred</alias>
+  </aliases>
+  <aliases role="noise">
+    <alias>all</alias>
+    <alias>by</alias>
+    <alias>only</alias>
+    <alias>please</alias>
+    <alias>the</alias>
+    <alias>with</alias>
+  </aliases>
+  <aliases role="nouns" value="counterparties">
+    <alias>clients</alias>
+    <alias>counterparties</alias>
+    <alias>customer</alias>
+    <alias>customers</alias>
+  </aliases>
+  <aliases role="nouns" value="debtors">
+    <alias>debtors</alias>
+  </aliases>
+  <aliases role="nouns" value="documents">
+    <alias>document</alias>
+    <alias>documents</alias>
+  </aliases>
+  <aliases role="nouns" value="items">
+    <alias>item</alias>
+    <alias>items</alias>
+  </aliases>
+  <aliases role="number_conjunctions">
+    <alias>and</alias>
+  </aliases>
+  <aliases role="numbers" value="0">
+    <alias>zero</alias>
+  </aliases>
+  <aliases role="numbers" value="1">
+    <alias>one</alias>
+  </aliases>
+  <aliases role="numbers" value="10">
+    <alias>ten</alias>
+  </aliases>
+  <aliases role="numbers" value="11">
+    <alias>eleven</alias>
+  </aliases>
+  <aliases role="numbers" value="12">
+    <alias>twelve</alias>
+  </aliases>
+  <aliases role="numbers" value="13">
+    <alias>thirteen</alias>
+  </aliases>
+  <aliases role="numbers" value="14">
+    <alias>fourteen</alias>
+  </aliases>
+  <aliases role="numbers" value="15">
+    <alias>fifteen</alias>
+  </aliases>
+  <aliases role="numbers" value="16">
+    <alias>sixteen</alias>
+  </aliases>
+  <aliases role="numbers" value="17">
+    <alias>seventeen</alias>
+  </aliases>
+  <aliases role="numbers" value="18">
+    <alias>eighteen</alias>
+  </aliases>
+  <aliases role="numbers" value="19">
+    <alias>nineteen</alias>
+  </aliases>
+  <aliases role="numbers" value="2">
+    <alias>two</alias>
+  </aliases>
+  <aliases role="numbers" value="20">
+    <alias>twenty</alias>
+  </aliases>
+  <aliases role="numbers" value="3">
+    <alias>three</alias>
+  </aliases>
+  <aliases role="numbers" value="30">
+    <alias>thirty</alias>
+  </aliases>
+  <aliases role="numbers" value="4">
+    <alias>four</alias>
+  </aliases>
+  <aliases role="numbers" value="40">
+    <alias>forty</alias>
+  </aliases>
+  <aliases role="numbers" value="5">
+    <alias>five</alias>
+  </aliases>
+  <aliases role="numbers" value="50">
+    <alias>fifty</alias>
+  </aliases>
+  <aliases role="numbers" value="6">
+    <alias>six</alias>
+  </aliases>
+  <aliases role="numbers" value="60">
+    <alias>sixty</alias>
+  </aliases>
+  <aliases role="numbers" value="7">
+    <alias>seven</alias>
+  </aliases>
+  <aliases role="numbers" value="70">
+    <alias>seventy</alias>
+  </aliases>
+  <aliases role="numbers" value="8">
+    <alias>eight</alias>
+  </aliases>
+  <aliases role="numbers" value="80">
+    <alias>eighty</alias>
+  </aliases>
+  <aliases role="numbers" value="9">
+    <alias>nine</alias>
+  </aliases>
+  <aliases role="numbers" value="90">
+    <alias>ninety</alias>
+  </aliases>
+  <aliases role="ordinals" value="1">
+    <alias>first</alias>
+  </aliases>
+  <aliases role="ordinals" value="2">
+    <alias>second</alias>
+  </aliases>
+  <aliases role="ordinals" value="3">
+    <alias>third</alias>
+  </aliases>
+  <aliases role="ordinals" value="4">
+    <alias>fourth</alias>
+  </aliases>
+  <aliases role="ordinals" value="5">
+    <alias>fifth</alias>
+  </aliases>
+  <aliases role="pronouns">
+    <alias>it</alias>
+    <alias>this</alias>
+  </aliases>
+  <aliases role="relations" value="counterparty">
+    <alias>for</alias>
+  </aliases>
+  <aliases role="scales" value="1000">
+    <alias>thousand</alias>
+  </aliases>
+  <aliases role="scales" value="1000000">
+    <alias>million</alias>
+    <alias>millions</alias>
+  </aliases>
+  <aliases role="units">
+    <alias>euro</alias>
+    <alias>euros</alias>
+    <alias>rubles</alias>
+  </aliases>
+  <aliases role="verbs" value="cancel">
+    <alias>cancel</alias>
+  </aliases>
+  <aliases role="verbs" value="find">
+    <alias>find</alias>
+  </aliases>
+  <aliases role="verbs" value="help">
+    <alias>help</alias>
+  </aliases>
+  <aliases role="verbs" value="list">
+    <alias>list</alias>
+    <alias>show</alias>
+  </aliases>
+  <aliases role="verbs" value="open">
+    <alias>open</alias>
+  </aliases>
+  <aliases role="verbs" value="reset">
+    <alias>reset</alias>
+  </aliases>
+  <aliases role="verbs" value="sort">
+    <alias>sort</alias>
+  </aliases>
+</vocabulary>

@@ -34,7 +34,7 @@ class AssistantLocaleTest(unittest.TestCase):
                 # json strings are valid Lua strings for these Unicode catalogs.
                 table = ',\n'.join(f'[{json.dumps(k, ensure_ascii=False)}]={json.dumps(v, ensure_ascii=False)}'
                                     for k, v in catalog.items())
-                script = '''package.path='apps/ledger/share/addons/assistant/?.lua;'..package.path
+                script = '''package.path='apps/ledger/share/addons/assistant/?.lua;build/share/ledger/addons/assistant/?.lua;'..package.path
 local catalog={%s}
 local seen={}
 package.preload.orion=function() return {tr=function(text)

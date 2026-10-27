@@ -7,7 +7,8 @@
 #include <orion/script/script_internal.h>
 #include <lauxlib.h>
 #include <orion/kernel/renderer.h>
-#define SHARE "apps/ledger/share"
+#define SHARE "build/share/ledger"
+#define ASSISTANT_SHARE SHARE "/addons/assistant"
 static ledger_t state;
 static void open_configuration(const char *code) {
   if (g_ledger->ib) { unregister_database("ib"); destroy_database(g_ledger->ib); }
@@ -71,7 +72,7 @@ static void test_document_relation(script_page_t *page) {
 static void test_assistant(void) {
   TEST("assistant: Lua grammar and contextual commands, then actual RU/DE datasource queries");
   char error[2048] = "";
-  lua_State *L = script_state_new(SHARE "/addons/assistant", "assistant-spec");
+  lua_State *L = script_state_new(ASSISTANT_SHARE, "assistant-spec");
   ASSERT_NOT_NULL(L);
   const char *specs[] = {"assistant_test.lua", "assistant_examples.lua", "assistant_dialogue_test.lua", "assistant_dictionary_test.lua"};
   for (size_t i = 0; i < ARRAY_LEN(specs); i++) {
@@ -85,7 +86,7 @@ static void test_assistant(void) {
   const char *configurations[] = {"ru-2026", "de-2026"};
   for (size_t i = 0; i < ARRAY_LEN(configurations); i++) {
     open_configuration(configurations[i]);
-    script_page_t *page = script_page_open(SHARE "/addons/assistant/assistant", error, sizeof(error));
+    script_page_t *page = script_page_open(ASSISTANT_SHARE "/assistant", error, sizeof(error));
     ASSERT(page != NULL, error);
     ASSERT_NOT_NULL(script_page_create(page, NULL));
     ASSERT_STR_EQUAL(script_page_message(page), "");
