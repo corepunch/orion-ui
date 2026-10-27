@@ -47,6 +47,17 @@ void mdi_cycle_document(window_t *client, int direction) {
   move_to_top(next); set_focus(next);
 }
 
+// A dragged document stays clipped by the client, but its caption may not
+// leave it: a caption hidden under the frame's toolbar could not be grabbed again.
+ipoint16_t mdi_constrain_document_origin(window_t *document, ipoint16_t origin) {
+  if (!document || !document->mdi_client) return origin;
+  irect16_t area = mdi_client_screen_rect(document->mdi_client);
+  int caption = MAX(1, titlebar_height(document));
+  origin.x = MAX(area.x + MDI_MIN_VISIBLE_CAPTION - document->frame.w, MIN(origin.x, area.x + area.w - MDI_MIN_VISIBLE_CAPTION));
+  origin.y = MAX(area.y, MIN(origin.y, area.y + area.h - caption));
+  return origin;
+}
+
 void mdi_forget_document(window_t *document) {
   if (!document || !document->mdi_client) return;
   mdi_client_t *state = document->mdi_client->userdata;
@@ -89,8 +100,9 @@ bool mdi_attach_document(window_t *document, window_t *client) {
   document->hinstance = client->hinstance;
   document->flags |= WINDOW_NOTRAYBUTTON;
   int offset = (int)(state->cascade++ % 5) * DEFAULT_WINDOW_CASCADE_X;
-  move_window(document, area.x + offset, area.y + offset);
-  resize_window(document, MIN(document->frame.w, area.w), MIN(document->frame.h, area.h));
+  irect16_t frame = rect_center(area, MIN(document->frame.w, area.w), MIN(document->frame.h, area.h));
+  move_window(document, MIN(frame.x + offset, area.x + area.w - frame.w), MIN(frame.y + offset, area.y + area.h - frame.h));
+  resize_window(document, frame.w, frame.h);
   mdi_activate_document(document);
   window_order_owned();
   return true;

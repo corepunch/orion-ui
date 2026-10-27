@@ -15,6 +15,7 @@
 #include "dock.h"
 #include "theme.h"
 #include "scrollbar.h"
+#include "font_sdf.h"
 #include <orion/kernel/kernel.h>
 
 // External functions
@@ -35,6 +36,16 @@ extern bool is_valid_window_ptr(window_t *target, window_t *list);
 
 // Macros for coordinate conversion (platform logical → Orion logical)
 #define SCALE_POINT(x) ((x)/UI_WINDOW_SCALE)
+
+// Key characters for Tab, Backspace, Escape and other control keys are not text input.
+static bool is_printable_text(const char *text) {
+  if (!*text) return false;
+  for (const char *p = text; *p;) {
+    uint32_t cp = font_sdf_utf8_next(&p);
+    if (cp < 0x20 || (cp >= 0x7F && cp < 0xA0)) return false;
+  }
+  return true;
+}
 
 // Absolute screen origin of the client area for a window. Child frames are
 // parent-relative, so nested windows must include every ancestor offset.
@@ -777,24 +788,18 @@ void dispatch_message(ui_event_t *msg) {
 
     case kEventChar: {
       // Some platforms send kEventChar as a separate text-input event.
-      char ch = *(char*)&msg->lParam;
-      if (ch != '\0') {
-        char buf[2] = { ch, '\0' };
-        send_message(g_ui_runtime.focused, evTextInput, 0, buf);
-      }
+      char buf[2] = { *(char*)&msg->lParam, '\0' };
+      if (is_printable_text(buf)) send_message(g_ui_runtime.focused, evTextInput, 0, buf);
       break;
     }
 
     case kEventKeyDown: {
       uint32_t key = normalize_key_code((uint32_t)msg->keyCode);
       // Platforms store UTF-8 bytes inline, not a pointer to the text.
-      unsigned char text_ch = *(unsigned char*)&msg->lParam;
-      if (text_ch >= 0x20 && text_ch != 0x7f) {
-        char buf[sizeof(msg->lParam) + 1];
-        memcpy(buf, &msg->lParam, sizeof(msg->lParam));
-        buf[sizeof(msg->lParam)] = '\0';
-        send_message(g_ui_runtime.focused, evTextInput, 0, buf);
-      }
+      char text[sizeof(msg->lParam) + 1];
+      memcpy(text, &msg->lParam, sizeof(msg->lParam));
+      text[sizeof(msg->lParam)] = '\0';
+      if (is_printable_text(text)) send_message(g_ui_runtime.focused, evTextInput, 0, text);
       if (g_ui_runtime.focused && !send_message(g_ui_runtime.focused, evKeyDown, key, NULL)) {
         if (key == AX_KEY_TAB) {
           if (msg->modflags & (AX_MOD_SHIFT >> 16)) {
@@ -853,9 +858,9 @@ void dispatch_message(ui_event_t *msg) {
       int16_t rdx = msg->dx;
       int16_t rdy = msg->dy;
       if (g_ui_runtime.dragging) {
-        move_window(g_ui_runtime.dragging,
-                    SCALE_POINT(px) - drag_anchor[0],
-                    SCALE_POINT(py) - drag_anchor[1]);
+        ipoint16_t origin = mdi_constrain_document_origin(g_ui_runtime.dragging,
+            (ipoint16_t){SCALE_POINT(px) - drag_anchor[0], SCALE_POINT(py) - drag_anchor[1]});
+        move_window(g_ui_runtime.dragging, origin.x, origin.y);
       } else if (g_ui_runtime.resizing) {
         int new_w = SCALE_POINT(px) - resize_anchor[0] - g_ui_runtime.resizing->frame.x;
         int new_h = SCALE_POINT(py) - resize_anchor[1] - g_ui_runtime.resizing->frame.y;

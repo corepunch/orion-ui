@@ -140,8 +140,25 @@ static void test_mdi_documents(void) {
   destroy_window(frame);
   PASS();
 }
+static void test_mdi_placement(void) {
+  TEST("MDI: new documents open centered and a dragged caption stays inside the client");
+  window_t *frame = create_window("MDI Frame", 0, MAKERECT(30, 40, 600, 400), NULL, owned_test_proc, 0, NULL);
+  window_t *client = create_window("", 0, MAKERECT(0, 0, 600, 400), frame, "MDIClient", 0, NULL);
+  window_t *a = owned_test_window("A", 0), *b = owned_test_window("B", 0);
+  ASSERT_TRUE(mdi_attach_document(a, client)); ASSERT_TRUE(mdi_attach_document(b, client));
+  irect16_t area = mdi_client_screen_rect(client);
+  ASSERT_EQUAL(a->frame.x, area.x + (area.w - 200) / 2); ASSERT_EQUAL(a->frame.y, area.y + (area.h - 160) / 2);
+  ASSERT_EQUAL(b->frame.x, a->frame.x + DEFAULT_WINDOW_CASCADE_X); ASSERT_EQUAL(b->frame.y, a->frame.y + DEFAULT_WINDOW_CASCADE_X);
+  ipoint16_t above = mdi_constrain_document_origin(a, (ipoint16_t){area.x - 500, area.y - 50});
+  ASSERT_EQUAL(above.x, area.x + MDI_MIN_VISIBLE_CAPTION - 200); ASSERT_EQUAL(above.y, area.y);
+  ipoint16_t below = mdi_constrain_document_origin(a, (ipoint16_t){area.x + 2000, area.y + 2000});
+  ASSERT_EQUAL(below.x, area.x + area.w - MDI_MIN_VISIBLE_CAPTION); ASSERT_EQUAL(below.y, area.y + area.h - titlebar_height(a));
+  ASSERT_TRUE(mdi_close_all(client));
+  destroy_window(frame);
+  PASS();
+}
 int main(void) {
   TEST_START("Owned windows"); test_env_init();
-  test_ownership(); test_z_order(); test_modal_scope(); test_mdi_documents();
+  test_ownership(); test_z_order(); test_modal_scope(); test_mdi_documents(); test_mdi_placement();
   test_env_shutdown(); TEST_END();
 }

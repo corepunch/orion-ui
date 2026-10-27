@@ -33,6 +33,7 @@ typedef enum {
 
 #define DEFAULT_WINDOW_CASCADE_X 10
 #define DEFAULT_WINDOW_CASCADE_Y 20
+#define MDI_MIN_VISIBLE_CAPTION  48
 
 // Window procedure callback type
 typedef result_t (*winproc_t)(window_t *, uint32_t, uint32_t, void *);
@@ -630,6 +631,7 @@ window_t *mdi_active_document(window_t *client);
 void mdi_activate_document(window_t *document);
 void mdi_cycle_document(window_t *client, int direction);
 void mdi_forget_document(window_t *document);
+ipoint16_t mdi_constrain_document_origin(window_t *document, ipoint16_t origin);
 bool mdi_close_all(window_t *client);
 void mdi_arrange_documents(window_t *client, bool tile);
 
