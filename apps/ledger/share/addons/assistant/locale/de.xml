@@ -25,7 +25,7 @@
   <string source="That row is not in the current list." where="code">Diese Zeile ist nicht in der aktuellen Liste.</string>
   <string source="Opening records is unavailable in this interface." where="code">Datensätze können in dieser Oberfläche nicht geöffnet werden.</string>
   <string source="Could not open the record." where="code">Der Datensatz konnte nicht geöffnet werden.</string>
-  <string source="Hello! Say or type: show debtors." where="assistant">Hallo! Sagen oder schreiben Sie: zeige Schuldner.</string>
+  <string source="Hello! Say or type: show debtors." obsolete="true">Hallo! Sagen oder schreiben Sie: zeige Schuldner.</string>
   <string source="Enter a command or use system dictation in the input field." where="code">Geben Sie einen Befehl ein oder verwenden Sie die Diktierfunktion im Eingabefeld.</string>
   <string source="The configuration has multiple receivables accounts; specify an account." where="code">Die Konfiguration enthält mehrere Forderungskonten; geben Sie ein Konto an.</string>
   <string source="No receivables account was found in the configuration." where="code">In der Konfiguration wurde kein Forderungskonto gefunden.</string>
@@ -34,10 +34,10 @@
   <string source="Enter a command or use system dictation. Example: show customers with debt over fifty thousand" where="code">Geben Sie einen Befehl ein oder verwenden Sie die Diktierfunktion. Beispiel: zeige Kunden mit Schulden über fünfzigtausend</string>
   <string source="Run" where="code">Ausführen</string>
   <string source="Examples" where="assistant">Beispiele</string>
-  <string source="Close" where="code">Schließen</string>
-  <string source="Name / document" where="assistant">Name / Beleg</string>
-  <string source="Amount" where="assistant">Betrag</string>
-  <string source="Date" where="assistant">Datum</string>
+  <string source="Close" where="code,assistant">Schließen</string>
+  <string source="Name / document" obsolete="true">Name / Beleg</string>
+  <string source="Amount" obsolete="true">Betrag</string>
+  <string source="Date" obsolete="true">Datum</string>
   <string source="Specify one row number." where="code">Geben Sie eine Zeilennummer an.</string>
   <string source="Enter a command, for example: show debtors." where="code">Geben Sie einen Befehl ein, zum Beispiel: zeige Schuldner.</string>
   <string source="Unknown word: %s. Put names in quotes." where="code">Unbekanntes Wort: %s. Schreiben Sie Namen in Anführungszeichen.</string>
@@ -60,11 +60,16 @@
   <string source="Found: %d. Customer: %s. Amounts are in the accounting currency." where="code">Gefunden: %d. Kunde: %s. Beträge sind in der Buchhaltungswährung.</string>
   <string source="Pending question cancelled." where="code">Ausstehende Rückfrage abgebrochen.</string>
   <string source="Answer the pending question or enter a new command." where="code">Beantworten Sie die Rückfrage oder geben Sie einen neuen Befehl ein.</string>
-  <string source="Clippy" where="assistant">Clippy</string>
-  <string source="Collapse" where="assistant">Zuklappen</string>
-  <string source="Hide assistant" where="assistant">Assistent ausblenden</string>
+  <string source="Clippy" obsolete="true">Clippy</string>
+  <string source="Collapse" obsolete="true">Zuklappen</string>
+  <string source="Hide assistant" obsolete="true">Assistent ausblenden</string>
   <string source="Send" where="assistant">Senden</string>
-  <string source="Ask me, for example: show debtors" where="assistant">Frag mich, zum Beispiel: zeige Schuldner</string>
+  <string source="Ask me, for example: show debtors" obsolete="true">Frag mich, zum Beispiel: zeige Schuldner</string>
   <string source="You: %s" where="code">Du: %s</string>
-  <string source="№" where="assistant">Nr.</string>
+  <string source="№" obsolete="true">Nr.</string>
+  <string source="How can I help?" where="assistant">Wie kann ich helfen?</string>
+  <string source="For example: show debtors" where="assistant">Zum Beispiel: zeige Schuldner</string>
+  <string source="%d. %s — %s" where="code">%d. %s — %s</string>
+  <string source="And %d more. Ask to narrow the list." where="code">Und %d weitere. Grenzen Sie die Suche ein.</string>
+  <string source="Try “show debtors”, then “open first”." where="code">Versuchen Sie „zeige Schuldner“, dann „öffne ersten“.</string>
 </strings>

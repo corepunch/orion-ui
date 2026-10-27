@@ -1,4 +1,5 @@
 local tr = require('messages')
+local orion = require('orion')
 local Model = require('orion.model')
 local ledger = require('ledger')
 local Engine = require('engine')
@@ -9,6 +10,7 @@ local Models = {
   items=Model:extend('ib.items'),
 }
 local DocumentTypes=Model:extend('cfg.doc_types')
+local Results=Model:extend('assistant.results')
 local Assistant={form='assistant',title=tr('Ledger — Assistant')}
 
 local function rows(entity)
@@ -49,21 +51,19 @@ function Assistant:init()
   self.animation='WAVE'
   self.expanded=true
   self.revision=1
-  self.message=tr('Hello! Say or type: show debtors.')
-  self.lines={}; self.command=''; self.request=''
+  self.message=tr('How can I help?')
+  self.lines={}; self.command=''
 end
 function Assistant:data()
   local clip=assert(animations[self.animation])
   return {
-    values={command=self.command,summary=self.message,request=self.request},
+    values={command=self.command,summary=self.message},
     hidden={bubble=not self.expanded},
-    lists={results=self.lines},
     sprites={mascot={path=clip.path,columns=clip.columns or 4,rows=clip.rows or 2,count=clip.count or 8,interval=clip.interval,loop=clip.loop,revision=self.revision}},
   }
 end
 function Assistant:submit(values)
   self.expanded=true
-  self.request=string.format(tr('You: %s'),values.command or '')
   self.revision=self.revision+1
   local result=self.engine:submit(values.command or '')
   self.message,self.animation=result.message,result.animation
@@ -72,12 +72,26 @@ function Assistant:submit(values)
   for i,row in ipairs(result.rows or {}) do
     self.lines[#self.lines+1]={id=i,record_id=row.id,name=row.name,amount=row.amount or 0,date=row.date or ''}
   end
+  for _,row in ipairs(Results:all()) do orion.assert(row:delete()) end
+  for _,row in ipairs(self.lines) do orion.assert(Results:create(row)) end
+  if #self.lines>0 then
+    local preview={self.message}
+    for i=1,math.min(3,#self.lines) do
+      local row=self.lines[i]
+      local name=row.name:gsub('[\r\n]+',' ')
+      local cut=utf8.offset(name,35)
+      if cut then name=name:sub(1,cut-1)..'…' end
+      preview[#preview+1]=string.format(tr('%d. %s — %s'),i,name,orion.formatNumber(row.amount))
+    end
+    if #self.lines>3 then preview[#preview+1]=string.format(tr('And %d more. Ask to narrow the list.'),#self.lines-3) end
+    self.message=table.concat(preview,'\n')
+  end
   self.app.focus('command')
 end
 function Assistant:help(values)
   self.command=values.command or ''
   self.revision=self.revision+1
-  self.message=self.engine:submit('помощь').message
+  self.message=tr('Try “show debtors”, then “open first”.')
   self.animation='EXPLAIN'
   self.app.focus('command')
 end

@@ -39,7 +39,7 @@ result_t win_speechbubble(window_t *win, uint32_t msg, uint32_t wparam, void *lp
       int margin = theme->tooltip.shadow.size + theme->tooltip.corner_radius + theme->tooltip.tail_size;
       int offset = win->value ? (int)win->value : win->frame.w / 2;
       offset = MAX(margin, MIN(offset, win->frame.w - margin));
-      draw_tooltip_bubble(get_client_rect(win), offset, TOOLTIP_TAIL_BOTTOM);
+      draw_speech_bubble(get_client_rect(win), offset, TOOLTIP_TAIL_BOTTOM);
       return false; // The window system paints the ordinary child controls.
     }
     case evHitTest: {

@@ -199,6 +199,7 @@ static result_t ledger_assistant_hook(window_t *win, uint32_t msg, uint32_t wpar
       *(window_t **)lparam = NULL;
       return true;
     }
+    case evResize:
     case evDisplayChange:
       ledger_position_assistant();
       return true;

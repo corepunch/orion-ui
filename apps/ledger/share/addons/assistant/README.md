@@ -2,13 +2,23 @@
 
 Clippy appears automatically at the bottom-right of Ledger's application workspace with a greeting in
 a speech bubble. Type a command and press **Enter** or **Send**. Click Clippy
-or **Collapse** to fold the bubble away; click him again to continue. The
+or **Close** to fold the bubble away; click him again to continue. The
 conversation, results and unfinished input are retained while it is collapsed.
 Double-click Clippy to open the conversation and focus its input, even when the bubble is already open.
-Closing the assistant or choosing **Hide assistant** hides the character too, preserving the conversation;
+Closing the assistant window hides the character too, preserving the conversation;
 **Help → Show Office Assistant** or
 **Ctrl+Shift+A** brings him back and focuses the input. Transparent space beside
 the character passes clicks through to Ledger.
+
+The greeting is three rows: **How can I help?**, the command field, and
+**Send / Examples / Close**. The yellow bubble sizes itself to its content.
+An answer replaces the greeting; at most three numbered results are previewed
+with amounts, with a count of additional matches. Narrow the request or use
+**open first** to open a result; the full result context remains available.
+
+The compact layout follows Office 97's built-in question balloon, documented in
+[Microsoft KB 173766 (archived)](https://www.betaarchive.com/wiki/index.php?title=Microsoft_KB_Archive/173766)
+and the [Office Assistant Help API](https://learn.microsoft.com/en-us/dotnet/api/microsoft.office.core.assistant.help).
 
 System dictation works in the command field. Clicking Clippy opens the bubble;
 it does not start microphone recording. Offline dictation availability depends

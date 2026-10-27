@@ -51,6 +51,13 @@ vec4 frag() {
     float face = 1.0 - smoothstep(-aa, aa, d);
     float fa = tint.a * face * alpha;
     vec3 fill_rgb = vec3(srgb_to_linear(tint.r), srgb_to_linear(tint.g), srgb_to_linear(tint.b));
+    if (params1.z > 0.0) {
+      float inner = 1.0 - smoothstep(-aa, aa, d + params1.z);
+      vec3 border_rgb = vec3(srgb_to_linear(edge.r), srgb_to_linear(edge.g), srgb_to_linear(edge.b));
+      float border_alpha = (face - inner) * edge.a * alpha;
+      float inner_alpha = inner * tint.a * alpha;
+      return vec4(fill_rgb * inner_alpha + border_rgb * border_alpha, inner_alpha + border_alpha);
+    }
     return vec4(fill_rgb * fa, fa);
   }
   if (params0.x > 0.0) {

@@ -200,6 +200,8 @@ presentation, such as hit-testing the visible parts of a transparent companion.
 The hook may consume ordinary messages; the page keeps its userdata and handles
 its own lifecycle and sprite cleanup. `script_page_preferred_size(page)` returns
 the dimensions declared in the form for fitting the presentation to a display.
+For a modeless form with `height="0"`, it measures the current content height;
+the page resizes after each render, including when labels wrap or sections hide.
 
 ```c
 #include <orion/script/script.h>
