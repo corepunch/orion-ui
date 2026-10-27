@@ -1,0 +1,1727 @@
+{
+  "schema_version": 1,
+  "retrieval_date": "2026-10-27",
+  "api": "https://api.stackexchange.com/2.3/questions",
+  "query": {
+    "site": "ru.stackoverflow",
+    "tagged": "1с",
+    "sort": "votes",
+    "order": "desc",
+    "pagesize": 100,
+    "pages": [
+      1,
+      2
+    ],
+    "filter": "withbody"
+  },
+  "retrieved_questions": 200,
+  "candidates_after_existing_ids": 197,
+  "selected_questions": 100,
+  "evidence_scope": "Question body text; answers, images, attachments and linked databases not reviewed.",
+  "sources": [
+    {
+      "case_id": 51,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "B",
+      "question_id": 703319,
+      "title": "Как создать собственную асинхронную процедуру в 1С?",
+      "url": "https://ru.stackoverflow.com/questions/703319",
+      "author": "Адександр Мороз",
+      "author_url": "https://ru.stackoverflow.com/users/262754/%d0%90%d0%b4%d0%b5%d0%ba%d1%81%d0%b0%d0%bd%d0%b4%d1%80-%d0%9c%d0%be%d1%80%d0%be%d0%b7",
+      "created_at": "2017-08-08T09:16:12+00:00",
+      "last_activity_at": "2021-10-24T09:16:23+00:00",
+      "tags": [
+        "1с",
+        "асинхронность"
+      ],
+      "body_sha256": "4153e6a346b81bef43f445fa92b8068d743a1d448beb977a84830fc34f14dda1"
+    },
+    {
+      "case_id": 52,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "A",
+      "question_id": 88310,
+      "title": "Передача данных между формами",
+      "url": "https://ru.stackoverflow.com/questions/88310",
+      "author": "teanЫЧ",
+      "author_url": "https://ru.stackoverflow.com/users/5098/tean%d0%ab%d0%a7",
+      "created_at": "2012-03-11T11:48:07+00:00",
+      "last_activity_at": "2012-12-05T12:30:38+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "60ea47e943357641285a80db12c8fb0a90f56e6ac2749b48100caa92a1434e5b"
+    },
+    {
+      "case_id": 53,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "B",
+      "question_id": 121994,
+      "title": "Управляемое и обычное приложение 1с 8.2",
+      "url": "https://ru.stackoverflow.com/questions/121994",
+      "author": "Malus",
+      "author_url": "https://ru.stackoverflow.com/users/4059/malus",
+      "created_at": "2012-06-24T17:23:43+00:00",
+      "last_activity_at": "2012-06-24T17:23:43+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "cb1bd1ee153633d150be1ad53cb7b434c8bfa795283a1ccff24b8e004f9ca033"
+    },
+    {
+      "case_id": 54,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "B",
+      "question_id": 920236,
+      "title": "1C: Предприятие 8.3 Как выдать наименование из разных справочников",
+      "url": "https://ru.stackoverflow.com/questions/920236",
+      "author": "Василий Пупкин",
+      "author_url": "https://ru.stackoverflow.com/users/319539/%d0%92%d0%b0%d1%81%d0%b8%d0%bb%d0%b8%d0%b9-%d0%9f%d1%83%d0%bf%d0%ba%d0%b8%d0%bd",
+      "created_at": "2018-12-15T09:23:29+00:00",
+      "last_activity_at": "2018-12-15T16:54:30+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "d27fd4234d5f13d184ebfbac6b07c8f1f14d043d2e3a430aedb060d917a3ce27"
+    },
+    {
+      "case_id": 55,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "B",
+      "question_id": 607509,
+      "title": "1с платформа: реализовать зависимость двух документов",
+      "url": "https://ru.stackoverflow.com/questions/607509",
+      "author": "Elena",
+      "author_url": "https://ru.stackoverflow.com/users/229024/elena",
+      "created_at": "2016-12-24T20:37:38+00:00",
+      "last_activity_at": "2016-12-26T11:46:33+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "22b7f043c58405b932422fb690e1bf76850fe942696a5bd13b91bc30ac5040c1"
+    },
+    {
+      "case_id": 56,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "A",
+      "question_id": 476834,
+      "title": "1C ошибка при обращении к общему модулю",
+      "url": "https://ru.stackoverflow.com/questions/476834",
+      "author": "Света",
+      "author_url": "https://ru.stackoverflow.com/users/197712/%d0%a1%d0%b2%d0%b5%d1%82%d0%b0",
+      "created_at": "2015-12-22T08:14:45+00:00",
+      "last_activity_at": "2016-03-01T05:00:28+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "a71b44b4b3f92aa7845d0ac52f0ac02126322c82c139e70c1e9a06ff0e011a5d"
+    },
+    {
+      "case_id": 57,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "A",
+      "question_id": 607486,
+      "title": "1с платформа: сравнение с текущей датой",
+      "url": "https://ru.stackoverflow.com/questions/607486",
+      "author": "Elena",
+      "author_url": "https://ru.stackoverflow.com/users/229024/elena",
+      "created_at": "2016-12-24T19:36:36+00:00",
+      "last_activity_at": "2016-12-26T09:28:39+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "703953304f201e18483bb01d6b85374a1494a86b3382566e0593b8d7be67f441"
+    },
+    {
+      "case_id": 58,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "B",
+      "question_id": 1202805,
+      "title": "Добавить команду в командный интерфейс формы элемента справочника",
+      "url": "https://ru.stackoverflow.com/questions/1202805",
+      "author": "Klepov Yura",
+      "author_url": "https://ru.stackoverflow.com/users/334142/klepov-yura",
+      "created_at": "2020-11-10T16:40:31+00:00",
+      "last_activity_at": "2023-03-16T02:52:11+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "891c601e6634c9726328ed7dae1f127b550ff173e7be2482c6315785b6084099"
+    },
+    {
+      "case_id": 59,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "A",
+      "question_id": 1551015,
+      "title": "Как выводить в форме не код, а наименование объекта? 1с",
+      "url": "https://ru.stackoverflow.com/questions/1551015",
+      "author": "Ксения",
+      "author_url": "https://ru.stackoverflow.com/users/536951/%d0%9a%d1%81%d0%b5%d0%bd%d0%b8%d1%8f",
+      "created_at": "2023-11-12T16:04:42+00:00",
+      "last_activity_at": "2023-11-12T16:33:49+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "50105688092ba1aeb58a61cd749ebb626cf8b29bf341c22f4cff062fd6200051"
+    },
+    {
+      "case_id": 60,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "B",
+      "question_id": 1492145,
+      "title": "1С: привязка сообщения к строке табличной части, когда номер строки больше 999-1000",
+      "url": "https://ru.stackoverflow.com/questions/1492145",
+      "author": "Demon-lemon",
+      "author_url": "https://ru.stackoverflow.com/users/434432/demon-lemon",
+      "created_at": "2023-02-01T23:29:19+00:00",
+      "last_activity_at": "2026-01-28T10:55:30+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "81630ecd978e9d6b18eedccbd2d53970f18a2cbe031f15bb1592352a989a7d77"
+    },
+    {
+      "case_id": 61,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "B",
+      "question_id": 1542522,
+      "title": "Как добавить кнопку изменения цвета поля в интерактивном режиме в 1с:Предприятие 8.3?",
+      "url": "https://ru.stackoverflow.com/questions/1542522",
+      "author": "asd123",
+      "author_url": "https://ru.stackoverflow.com/users/524856/asd123",
+      "created_at": "2023-09-25T12:42:45+00:00",
+      "last_activity_at": "2023-09-26T18:37:20+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "049ee8c13c408709fc0cffbc3a5925e54dbf8c54427d2e5149aedf01a4baaf14"
+    },
+    {
+      "case_id": 62,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "B",
+      "question_id": 698431,
+      "title": "Таблица на форме с чекбоксами и картинками",
+      "url": "https://ru.stackoverflow.com/questions/698431",
+      "author": "ekvalizer",
+      "author_url": "https://ru.stackoverflow.com/users/199497/ekvalizer",
+      "created_at": "2017-07-27T10:14:11+00:00",
+      "last_activity_at": "2017-07-30T05:45:08+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "4c145f178b6dea47dde0344895eeeda5495821ffbb3efb84b2abdb3c8045be2d"
+    },
+    {
+      "case_id": 63,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "B",
+      "question_id": 636508,
+      "title": "Один реквизит в два элемента формы с разными данными",
+      "url": "https://ru.stackoverflow.com/questions/636508",
+      "author": "alexanderzhirov",
+      "author_url": "https://ru.stackoverflow.com/users/218876/alexanderzhirov",
+      "created_at": "2017-03-07T11:17:21+00:00",
+      "last_activity_at": "2017-03-09T09:28:43+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "aabec811083d8a78e81edc5822ddec1772eff261e5b77d2d1f16f7764f463f05"
+    },
+    {
+      "case_id": 64,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "B",
+      "question_id": 1497378,
+      "title": "1С 8.3 (обычное). Как получить новое значение строки табличного поля без переоткрывания документа?",
+      "url": "https://ru.stackoverflow.com/questions/1497378",
+      "author": "Вадим Чиркунов",
+      "author_url": "https://ru.stackoverflow.com/users/388344/%d0%92%d0%b0%d0%b4%d0%b8%d0%bc-%d0%a7%d0%b8%d1%80%d0%ba%d1%83%d0%bd%d0%be%d0%b2",
+      "created_at": "2023-02-17T18:45:33+00:00",
+      "last_activity_at": "2026-06-03T12:03:30+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "ee907f6f341b2ff08337b98ac55479a5af24c23d2491aee23a01618adedae832"
+    },
+    {
+      "case_id": 65,
+      "category": "Формы, события и клиент-серверный контекст",
+      "automation_class": "A",
+      "question_id": 769547,
+      "title": "1C: Предприятие Проверка полей перед записью",
+      "url": "https://ru.stackoverflow.com/questions/769547",
+      "author": "Саске",
+      "author_url": "https://ru.stackoverflow.com/users/226692/%d0%a1%d0%b0%d1%81%d0%ba%d0%b5",
+      "created_at": "2018-01-11T17:37:24+00:00",
+      "last_activity_at": "2018-01-12T07:03:13+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "12233c71b73f5abde3e8831b1594bdb56763170cd234a063da571bec03908569"
+    },
+    {
+      "case_id": 66,
+      "category": "Запросы, СКД и представление результатов",
+      "automation_class": "A",
+      "question_id": 722050,
+      "title": "Как получить Имя перечисления в вычисляемом поле СКД?",
+      "url": "https://ru.stackoverflow.com/questions/722050",
+      "author": "ReinRaus",
+      "author_url": "https://ru.stackoverflow.com/users/481/reinraus",
+      "created_at": "2017-09-22T21:45:21+00:00",
+      "last_activity_at": "2017-09-27T07:59:36+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "b6cc989c1e2476109755f2a7d2180af20edb1e370a4376aee9dc299563d82b9f"
+    },
+    {
+      "case_id": 67,
+      "category": "Запросы, СКД и представление результатов",
+      "automation_class": "B",
+      "question_id": 24438,
+      "title": "Вывод результатов запроса в файл",
+      "url": "https://ru.stackoverflow.com/questions/24438",
+      "author": "Glory to usa",
+      "author_url": "https://ru.stackoverflow.com/users/2709/glory-to-usa",
+      "created_at": "2011-08-08T11:47:26+00:00",
+      "last_activity_at": "2015-09-23T00:42:43+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "533f74f16d45988dfbbd85feaefd71d18dcc6bb2567a7afc18e811b6139eac53"
+    },
+    {
+      "case_id": 68,
+      "category": "Запросы, СКД и представление результатов",
+      "automation_class": "A",
+      "question_id": 1588032,
+      "title": "Передача параметра в запрос из клиента к серверу (тонкий клиент УП)",
+      "url": "https://ru.stackoverflow.com/questions/1588032",
+      "author": "Anton",
+      "author_url": "https://ru.stackoverflow.com/users/579064/anton",
+      "created_at": "2024-07-23T06:42:16+00:00",
+      "last_activity_at": "2024-07-23T07:38:03+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "0efeba312c3b002d9125d82a785dc84b70383bbdb4e5b7b5b49c9bf3e26126bd"
+    },
+    {
+      "case_id": 69,
+      "category": "Запросы, СКД и представление результатов",
+      "automation_class": "B",
+      "question_id": 91922,
+      "title": "Дублирование контрагентов в результате запроса",
+      "url": "https://ru.stackoverflow.com/questions/91922",
+      "author": "teanЫЧ",
+      "author_url": "https://ru.stackoverflow.com/users/5098/tean%d0%ab%d0%a7",
+      "created_at": "2012-03-21T08:46:58+00:00",
+      "last_activity_at": "2012-03-22T07:03:18+00:00",
+      "tags": [
+        "1с",
+        "запрос"
+      ],
+      "body_sha256": "2023f208c9ca6fc1bdd55d22e5ed8e3f5a6da9b04ad1de09f5acbd0076015fb5"
+    },
+    {
+      "case_id": 70,
+      "category": "Запросы, СКД и представление результатов",
+      "automation_class": "A",
+      "question_id": 727419,
+      "title": "1С СКД. Повторение шапки отчета на каждой странице",
+      "url": "https://ru.stackoverflow.com/questions/727419",
+      "author": "ReinRaus",
+      "author_url": "https://ru.stackoverflow.com/users/481/reinraus",
+      "created_at": "2017-10-06T09:39:43+00:00",
+      "last_activity_at": "2025-09-16T05:03:05+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "85ad5b6e31c7e8d84de654515b7fdd53909180ac78b2dec7cc0eea55f12121b3"
+    },
+    {
+      "case_id": 71,
+      "category": "Запросы, СКД и представление результатов",
+      "automation_class": "B",
+      "question_id": 549153,
+      "title": "Выгрузка отчета из 1с в Excel",
+      "url": "https://ru.stackoverflow.com/questions/549153",
+      "author": "user208820",
+      "author_url": "https://ru.stackoverflow.com/users/208820/user208820",
+      "created_at": "2016-07-27T14:31:00+00:00",
+      "last_activity_at": "2018-05-08T06:40:14+00:00",
+      "tags": [
+        "excel",
+        "1с",
+        "vba"
+      ],
+      "body_sha256": "4aa92f8e4a64297a8fa75d7ca6eaed8cb10bc636fd7c198740f483394f56a882"
+    },
+    {
+      "case_id": 72,
+      "category": "Запросы, СКД и представление результатов",
+      "automation_class": "A",
+      "question_id": 1065893,
+      "title": "Ценообразование в 1С по формуле",
+      "url": "https://ru.stackoverflow.com/questions/1065893",
+      "author": "ikar",
+      "author_url": "https://ru.stackoverflow.com/users/262946/ikar",
+      "created_at": "2020-01-04T15:20:54+00:00",
+      "last_activity_at": "2020-01-15T12:02:01+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "807eeed77ae07598cefbddfb3d5634f269adffa3e0ccb80438ddfb022fc54b4e"
+    },
+    {
+      "case_id": 73,
+      "category": "Запросы, СКД и представление результатов",
+      "automation_class": "B",
+      "question_id": 208516,
+      "title": "Связь табличной части с документом",
+      "url": "https://ru.stackoverflow.com/questions/208516",
+      "author": "teanЫЧ",
+      "author_url": "https://ru.stackoverflow.com/users/5098/tean%d0%ab%d0%a7",
+      "created_at": "2013-04-01T15:53:34+00:00",
+      "last_activity_at": "2013-04-01T15:53:34+00:00",
+      "tags": [
+        "1с",
+        "sql"
+      ],
+      "body_sha256": "6cddf5d24f11736a97ef44991fe09145c54d7a41560f0ff661ac1a6c2158e4e0"
+    },
+    {
+      "case_id": 74,
+      "category": "Запросы, СКД и представление результатов",
+      "automation_class": "B",
+      "question_id": 697809,
+      "title": "1С Получить дату записи в регистр накопления из таблицы остатков",
+      "url": "https://ru.stackoverflow.com/questions/697809",
+      "author": "Anatol",
+      "author_url": "https://ru.stackoverflow.com/users/183842/anatol",
+      "created_at": "2017-07-26T02:46:10+00:00",
+      "last_activity_at": "2017-07-28T04:38:03+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "10f2171aa41775bce507c20cd72dcd79c4286767a8709baec7dfc445117ecaaa"
+    },
+    {
+      "case_id": 75,
+      "category": "Запросы, СКД и представление результатов",
+      "automation_class": "B",
+      "question_id": 1624631,
+      "title": "не работает формула на дополненных строках 1с",
+      "url": "https://ru.stackoverflow.com/questions/1624631",
+      "author": "eri",
+      "author_url": "https://ru.stackoverflow.com/users/16574/eri",
+      "created_at": "2026-03-04T10:06:44+00:00",
+      "last_activity_at": "2026-03-12T07:04:53+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "37672f987cd5fbd5d6fec712f9fb81b66ca45f967db133b3b08855bf0513f7cf"
+    },
+    {
+      "case_id": 76,
+      "category": "Запросы, СКД и представление результатов",
+      "automation_class": "B",
+      "question_id": 1478309,
+      "title": "Почему в кросс-таблице в СКД не высчитывается значение 1С?",
+      "url": "https://ru.stackoverflow.com/questions/1478309",
+      "author": "fgrd4035",
+      "author_url": "https://ru.stackoverflow.com/users/467433/fgrd4035",
+      "created_at": "2022-12-16T14:10:43+00:00",
+      "last_activity_at": "2022-12-16T14:39:30+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "cd60aa892f6266760b8014ab01d9efc01c1d30dc1dabc178af2c8dca3e572b8b"
+    },
+    {
+      "case_id": 77,
+      "category": "Запросы, СКД и представление результатов",
+      "automation_class": "B",
+      "question_id": 722840,
+      "title": "Вызов общей функции в вычисляемом поле СКД",
+      "url": "https://ru.stackoverflow.com/questions/722840",
+      "author": "ReinRaus",
+      "author_url": "https://ru.stackoverflow.com/users/481/reinraus",
+      "created_at": "2017-09-25T09:50:49+00:00",
+      "last_activity_at": "2017-09-25T09:50:49+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "f3bdb1bc0cc7776c653d82a917421bc82a4c59632018986bb95c1fb661936610"
+    },
+    {
+      "case_id": 78,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "B",
+      "question_id": 742679,
+      "title": "Странное поведение уникального идентификатора во внешнем источнике данных (1С, SQL Server)",
+      "url": "https://ru.stackoverflow.com/questions/742679",
+      "author": "Anatol",
+      "author_url": "https://ru.stackoverflow.com/users/183842/anatol",
+      "created_at": "2017-11-10T02:21:18+00:00",
+      "last_activity_at": "2021-07-02T07:54:51+00:00",
+      "tags": [
+        "sql-server",
+        "1с"
+      ],
+      "body_sha256": "ed3d7dbd07ca49549ae21dddb71065bcf88e2b92f20cb1c73194968fa2e2528f"
+    },
+    {
+      "case_id": 79,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "C",
+      "question_id": 857006,
+      "title": "Оптимизация скрипта-парсера xml",
+      "url": "https://ru.stackoverflow.com/questions/857006",
+      "author": "Alex",
+      "author_url": "https://ru.stackoverflow.com/users/283174/alex",
+      "created_at": "2018-07-18T06:58:05+00:00",
+      "last_activity_at": "2018-07-18T08:00:13+00:00",
+      "tags": [
+        "php",
+        "xml",
+        "парсер",
+        "opencart",
+        "1с"
+      ],
+      "body_sha256": "ecc54582621d7d70f0d5db9666c37b21c8a362cdab92aaa860afb51067c8714e"
+    },
+    {
+      "case_id": 80,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "B",
+      "question_id": 387115,
+      "title": "Импорт данных товара из 1с на сайт",
+      "url": "https://ru.stackoverflow.com/questions/387115",
+      "author": "IntegralAL",
+      "author_url": "https://ru.stackoverflow.com/users/3549/integralal",
+      "created_at": "2014-12-29T03:39:56+00:00",
+      "last_activity_at": "2017-10-05T07:40:14+00:00",
+      "tags": [
+        "modx",
+        "1с"
+      ],
+      "body_sha256": "3565ffa6409e339fe37b1eec9c99e2aed67eea48c0cd9333632efa27b7c1ce8e"
+    },
+    {
+      "case_id": 81,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "B",
+      "question_id": 1410817,
+      "title": "Парсинг платёжного поручения 1С",
+      "url": "https://ru.stackoverflow.com/questions/1410817",
+      "author": "Nigredo499",
+      "author_url": "https://ru.stackoverflow.com/users/500779/nigredo499",
+      "created_at": "2022-05-17T11:10:45+00:00",
+      "last_activity_at": "2022-10-19T07:05:26+00:00",
+      "tags": [
+        "python",
+        "1с",
+        "parse"
+      ],
+      "body_sha256": "a424c9bf82bfabddb5d08162fde3d74a2fa77d574e2403abd7e958dd795172f5"
+    },
+    {
+      "case_id": 82,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "B",
+      "question_id": 979002,
+      "title": "Мультиязык 1С и 1С-Битрикс",
+      "url": "https://ru.stackoverflow.com/questions/979002",
+      "author": "Horde Voafars",
+      "author_url": "https://ru.stackoverflow.com/users/337272/horde-voafars",
+      "created_at": "2019-05-07T13:34:22+00:00",
+      "last_activity_at": "2019-09-10T21:16:00+00:00",
+      "tags": [
+        "битрикс",
+        "1с"
+      ],
+      "body_sha256": "1fa973f4305769338523a70e29d42ee677ed5cf1e70a0569bfc6b73bd71d2a60"
+    },
+    {
+      "case_id": 83,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "B",
+      "question_id": 965517,
+      "title": "Интеграция сайт с 1С, csv файл с 100К строк (товарами)",
+      "url": "https://ru.stackoverflow.com/questions/965517",
+      "author": "sadfsdfsdf",
+      "author_url": "https://ru.stackoverflow.com/users/327391/sadfsdfsdf",
+      "created_at": "2019-04-04T13:35:05+00:00",
+      "last_activity_at": "2019-04-05T12:04:54+00:00",
+      "tags": [
+        "php",
+        "оптимизация",
+        "1с"
+      ],
+      "body_sha256": "53ce7159b8de7f5b0ecab113061387bba3c1d4919175e7382d36df23f34a3a43"
+    },
+    {
+      "case_id": 84,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "B",
+      "question_id": 183933,
+      "title": "Универсальный обмен данными в формате XML",
+      "url": "https://ru.stackoverflow.com/questions/183933",
+      "author": "teanЫЧ",
+      "author_url": "https://ru.stackoverflow.com/users/5098/tean%d0%ab%d0%a7",
+      "created_at": "2013-01-16T06:07:33+00:00",
+      "last_activity_at": "2016-05-24T01:50:24+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "d915a2400898e2dff7083f06dc5cc1bd2b8c035eb692d2e6dc13ff332ae99a35"
+    },
+    {
+      "case_id": 85,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "B",
+      "question_id": 1587700,
+      "title": "Как прочитать 1С файл через StreamReader при 2-х вариантах кодировки",
+      "url": "https://ru.stackoverflow.com/questions/1587700",
+      "author": "Дмитрий",
+      "author_url": "https://ru.stackoverflow.com/users/198377/%d0%94%d0%bc%d0%b8%d1%82%d1%80%d0%b8%d0%b9",
+      "created_at": "2024-07-19T17:12:37+00:00",
+      "last_activity_at": "2024-07-21T14:40:11+00:00",
+      "tags": [
+        "c#",
+        "1с",
+        "потоки-данных"
+      ],
+      "body_sha256": "1d7ce7bbe83a70a5775a5f4597a14eb83fe9d670b42a102e8107d3d9a952cf73"
+    },
+    {
+      "case_id": 86,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "A",
+      "question_id": 852948,
+      "title": "Записать строковое значение в реквизит ссылочного типа",
+      "url": "https://ru.stackoverflow.com/questions/852948",
+      "author": "Саша Лямин",
+      "author_url": "https://ru.stackoverflow.com/users/301599/%d0%a1%d0%b0%d1%88%d0%b0-%d0%9b%d1%8f%d0%bc%d0%b8%d0%bd",
+      "created_at": "2018-07-11T06:01:12+00:00",
+      "last_activity_at": "2018-09-19T07:37:39+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "133a3ee97f2a8b6478af592e55de1f5707cc3afbdf2ce4d186f78572feaf42c4"
+    },
+    {
+      "case_id": 87,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "B",
+      "question_id": 88325,
+      "title": "Как спарсить такой формат от 1С",
+      "url": "https://ru.stackoverflow.com/questions/88325",
+      "author": "chuikoff",
+      "author_url": "https://ru.stackoverflow.com/users/769/chuikoff",
+      "created_at": "2012-03-11T12:38:34+00:00",
+      "last_activity_at": "2012-03-11T12:59:50+00:00",
+      "tags": [
+        "1с",
+        "php"
+      ],
+      "body_sha256": "6106c86fb6a8a73f67b2c0c3645e954d2b5aa066fb6bf40998a232f24c2a7f51"
+    },
+    {
+      "case_id": 88,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "A",
+      "question_id": 701542,
+      "title": "Удаление лишних дефисов из номеров телефонов в выгрузке 1С",
+      "url": "https://ru.stackoverflow.com/questions/701542",
+      "author": "Никос Пападопулос",
+      "author_url": "https://ru.stackoverflow.com/users/262225/%d0%9d%d0%b8%d0%ba%d0%be%d1%81-%d0%9f%d0%b0%d0%bf%d0%b0%d0%b4%d0%be%d0%bf%d1%83%d0%bb%d0%be%d1%81",
+      "created_at": "2017-08-03T13:01:43+00:00",
+      "last_activity_at": "2017-08-03T13:36:04+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "112fc37e095d3f81de98d1be4205f4d41f5679bd942438950377dd284e6e5f00"
+    },
+    {
+      "case_id": 89,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "B",
+      "question_id": 960215,
+      "title": "Как сделать, чтобы плагин интеграции WooCommerce с 1С не пересоздавал товары?",
+      "url": "https://ru.stackoverflow.com/questions/960215",
+      "author": "Moonwolf45",
+      "author_url": "https://ru.stackoverflow.com/users/248292/moonwolf45",
+      "created_at": "2019-03-23T07:33:31+00:00",
+      "last_activity_at": "2019-03-23T12:03:12+00:00",
+      "tags": [
+        "wordpress",
+        "woocommerce",
+        "1с"
+      ],
+      "body_sha256": "06487516620f9eaab2d664a59a5447943de28636ea55ebe49e95d00f3bf2b4fe"
+    },
+    {
+      "case_id": 90,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "B",
+      "question_id": 579181,
+      "title": "Проблема с импортом контрагентов в 1С УТ 11.3",
+      "url": "https://ru.stackoverflow.com/questions/579181",
+      "author": "Anatol",
+      "author_url": "https://ru.stackoverflow.com/users/183842/anatol",
+      "created_at": "2016-10-17T11:46:05+00:00",
+      "last_activity_at": "2016-10-20T07:07:35+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "0b7ee7a8c274953f20bb2ddeec9afd7b100514bfed0cf34c0b046a5b69748d60"
+    },
+    {
+      "case_id": 91,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "B",
+      "question_id": 1326222,
+      "title": "Как в 1с написать запрос который удалит первый символ из определённого поля?",
+      "url": "https://ru.stackoverflow.com/questions/1326222",
+      "author": "SokolovNikolay",
+      "author_url": "https://ru.stackoverflow.com/users/459163/sokolovnikolay",
+      "created_at": "2021-09-07T13:08:01+00:00",
+      "last_activity_at": "2026-07-14T12:10:45+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "0a38f2adf132ad4d4c1dbd847700cfe29f465ecadd526eddfbf15406b98ac33d"
+    },
+    {
+      "case_id": 92,
+      "category": "Импорт, форматы и качество данных",
+      "automation_class": "B",
+      "question_id": 445053,
+      "title": "Как настроить порядок выгрузки картинок из 1С в CommerceML?",
+      "url": "https://ru.stackoverflow.com/questions/445053",
+      "author": "CrewCut",
+      "author_url": "https://ru.stackoverflow.com/users/188997/crewcut",
+      "created_at": "2015-08-25T10:30:23+00:00",
+      "last_activity_at": "2015-08-25T11:11:35+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "e2c8354fb3325baeede2798e1dd48e2ec2c8831380c398822e786227be31057a"
+    },
+    {
+      "case_id": 93,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "C",
+      "question_id": 536296,
+      "title": "Двойное выполнение скрипта php",
+      "url": "https://ru.stackoverflow.com/questions/536296",
+      "author": "Arman",
+      "author_url": "https://ru.stackoverflow.com/users/181548/arman",
+      "created_at": "2016-06-18T11:51:12+00:00",
+      "last_activity_at": "2016-06-18T15:14:35+00:00",
+      "tags": [
+        "php",
+        "1с"
+      ],
+      "body_sha256": "7cb42a71ea764fb9dff5b30d0793c87cf1b649171a7d411f351061d52155f7cd"
+    },
+    {
+      "case_id": 94,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "C",
+      "question_id": 1081533,
+      "title": "(WinHttp.WinHttpRequest): Ошибка поддержки безопасных каналов",
+      "url": "https://ru.stackoverflow.com/questions/1081533",
+      "author": "Anonymouse",
+      "author_url": "https://ru.stackoverflow.com/users/273272/anonymouse",
+      "created_at": "2020-02-12T07:31:18+00:00",
+      "last_activity_at": "2022-10-28T07:00:25+00:00",
+      "tags": [
+        "telegram-bot",
+        "администрирование",
+        "internet-explorer",
+        "1с",
+        "telegram"
+      ],
+      "body_sha256": "83e0f74d577618bd4dc934f4525fd6c0d1b2e067d0a56f1b245f4cec7ef8fc83"
+    },
+    {
+      "case_id": 95,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "B",
+      "question_id": 170797,
+      "title": "Событие создания документа продажи",
+      "url": "https://ru.stackoverflow.com/questions/170797",
+      "author": "lampa",
+      "author_url": "https://ru.stackoverflow.com/users/5030/lampa",
+      "created_at": "2012-12-05T13:36:31+00:00",
+      "last_activity_at": "2012-12-05T13:58:01+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "aabe51e5c6ead63c7fffab6a1c1c1e886b599c4f6d7b4e66d75a2995a92503bc"
+    },
+    {
+      "case_id": 96,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "B",
+      "question_id": 529417,
+      "title": "Интеграция сайта с 1С в режиме real-time",
+      "url": "https://ru.stackoverflow.com/questions/529417",
+      "author": "Vayas",
+      "author_url": "https://ru.stackoverflow.com/users/186302/vayas",
+      "created_at": "2016-06-01T04:47:49+00:00",
+      "last_activity_at": "2016-06-01T14:14:15+00:00",
+      "tags": [
+        "sql-server",
+        "1с"
+      ],
+      "body_sha256": "0937cc014345b58510ac05ea66803c35f2578817ae795b7d1c553b76f0288274"
+    },
+    {
+      "case_id": 97,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "B",
+      "question_id": 1408873,
+      "title": "Распознавание госномеров через API и 1С",
+      "url": "https://ru.stackoverflow.com/questions/1408873",
+      "author": "Фаина Владимирова",
+      "author_url": "https://ru.stackoverflow.com/users/499800/%d0%a4%d0%b0%d0%b8%d0%bd%d0%b0-%d0%92%d0%bb%d0%b0%d0%b4%d0%b8%d0%bc%d0%b8%d1%80%d0%be%d0%b2%d0%b0",
+      "created_at": "2022-05-11T17:31:42+00:00",
+      "last_activity_at": "2022-05-14T23:46:00+00:00",
+      "tags": [
+        "api",
+        "http",
+        "1с"
+      ],
+      "body_sha256": "5d3933b5d6c306eff07c543d76b551fa793015d3e54d842a8e8185bcde82f7fa"
+    },
+    {
+      "case_id": 98,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "C",
+      "question_id": 1243638,
+      "title": "Error 404 веб-сервиса",
+      "url": "https://ru.stackoverflow.com/questions/1243638",
+      "author": "goodsoft",
+      "author_url": "https://ru.stackoverflow.com/users/413636/goodsoft",
+      "created_at": "2021-02-13T16:06:44+00:00",
+      "last_activity_at": "2021-02-14T12:38:16+00:00",
+      "tags": [
+        "apache",
+        "веб-сервер",
+        "1с",
+        "веб-служба",
+        "error404"
+      ],
+      "body_sha256": "6c75798d314282dd92c677ad57640a4cfb3f291a2100e90b362b2528e21629de"
+    },
+    {
+      "case_id": 99,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "B",
+      "question_id": 449237,
+      "title": "SOAP не работает в 1c",
+      "url": "https://ru.stackoverflow.com/questions/449237",
+      "author": "Oldpunk777",
+      "author_url": "https://ru.stackoverflow.com/users/178532/oldpunk777",
+      "created_at": "2015-09-08T14:56:04+00:00",
+      "last_activity_at": "2016-01-09T11:06:25+00:00",
+      "tags": [
+        "php",
+        "1с",
+        "soap"
+      ],
+      "body_sha256": "4a4c0893184f51c85d64f189c9944fb2df3137d5589056ac31d29f8a98f03f68"
+    },
+    {
+      "case_id": 100,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "B",
+      "question_id": 745604,
+      "title": "Оповещение клиента с сервера",
+      "url": "https://ru.stackoverflow.com/questions/745604",
+      "author": "Александр Зарифулли",
+      "author_url": "https://ru.stackoverflow.com/users/274186/%d0%90%d0%bb%d0%b5%d0%ba%d1%81%d0%b0%d0%bd%d0%b4%d1%80-%d0%97%d0%b0%d1%80%d0%b8%d1%84%d1%83%d0%bb%d0%bb%d0%b8",
+      "created_at": "2017-11-16T13:38:13+00:00",
+      "last_activity_at": "2026-06-24T01:01:55+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "3fe1ad06b4fb9a37298349bbbbdbc8f663047080ff147bb40fd70bf0dd3ad37f"
+    },
+    {
+      "case_id": 101,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "C",
+      "question_id": 1325903,
+      "title": "1cfresh api - создание и получение данных",
+      "url": "https://ru.stackoverflow.com/questions/1325903",
+      "author": "Alexander Grek",
+      "author_url": "https://ru.stackoverflow.com/users/459892/alexander-grek",
+      "created_at": "2021-09-06T13:46:44+00:00",
+      "last_activity_at": "2021-09-09T12:51:09+00:00",
+      "tags": [
+        "api",
+        "1с"
+      ],
+      "body_sha256": "f9e733e04eb13e09552d45b7bb331762973e6d2f52457387b8042ac7bb0be6cf"
+    },
+    {
+      "case_id": 102,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "B",
+      "question_id": 1227178,
+      "title": "1С отправка POST запроса с телом base64строка",
+      "url": "https://ru.stackoverflow.com/questions/1227178",
+      "author": "Shih",
+      "author_url": "https://ru.stackoverflow.com/users/311245/shih",
+      "created_at": "2021-01-04T18:43:36+00:00",
+      "last_activity_at": "2021-01-06T14:32:11+00:00",
+      "tags": [
+        "битрикс",
+        "1с"
+      ],
+      "body_sha256": "03debf8f3e45dbbaec923289201d48de7ad0e7bbf962b76cf7ba85d8e30144d7"
+    },
+    {
+      "case_id": 103,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "C",
+      "question_id": 379577,
+      "title": "Экспорт данных о заказах с сайта в 1с",
+      "url": "https://ru.stackoverflow.com/questions/379577",
+      "author": "IntegralAL",
+      "author_url": "https://ru.stackoverflow.com/users/3549/integralal",
+      "created_at": "2014-12-01T04:46:38+00:00",
+      "last_activity_at": "2014-12-03T03:18:06+00:00",
+      "tags": [
+        "modx",
+        "minishop2",
+        "php",
+        "1с"
+      ],
+      "body_sha256": "5d6fe44221fd01f59e20bb71f518b99a2d2498b01ca8f6ef296551ff6ab40c93"
+    },
+    {
+      "case_id": 104,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "C",
+      "question_id": 1413632,
+      "title": "Выгруска заказов с 1С (Не удалось получить ответ сервера. Файл не отправлен)",
+      "url": "https://ru.stackoverflow.com/questions/1413632",
+      "author": "Roman96",
+      "author_url": "https://ru.stackoverflow.com/users/496484/roman96",
+      "created_at": "2022-05-25T11:15:32+00:00",
+      "last_activity_at": "2022-07-15T03:26:23+00:00",
+      "tags": [
+        "php",
+        "битрикс",
+        "1с"
+      ],
+      "body_sha256": "6d1682ea729aca231bf8b62ed2255aefee7e6901d186debb66093f4085a58195"
+    },
+    {
+      "case_id": 105,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "B",
+      "question_id": 893706,
+      "title": "java и XDTO пакет",
+      "url": "https://ru.stackoverflow.com/questions/893706",
+      "author": "alexey romashev",
+      "author_url": "https://ru.stackoverflow.com/users/299690/alexey-romashev",
+      "created_at": "2018-10-16T07:42:29+00:00",
+      "last_activity_at": "2018-10-23T14:39:33+00:00",
+      "tags": [
+        "java",
+        "android",
+        "1с",
+        "soap"
+      ],
+      "body_sha256": "cc1d4abeecb03b3971dcfd77c1d06e22ff76c8e2ab8ef50cf732bec1ad9585f4"
+    },
+    {
+      "case_id": 106,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "B",
+      "question_id": 771176,
+      "title": "Авторизация на удаленном сервере через php+curl",
+      "url": "https://ru.stackoverflow.com/questions/771176",
+      "author": "vjweb",
+      "author_url": "https://ru.stackoverflow.com/users/281240/vjweb",
+      "created_at": "2018-01-15T18:21:19+00:00",
+      "last_activity_at": "2018-01-15T18:51:02+00:00",
+      "tags": [
+        "php",
+        "curl",
+        "авторизация",
+        "1с"
+      ],
+      "body_sha256": "745bbc312177d5bbfb8214df1fa9e719bcc456a3ca8d2f22d1dbe87203ab965f"
+    },
+    {
+      "case_id": 107,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "A",
+      "question_id": 670165,
+      "title": "Обмен данными PHP сайта и 1C",
+      "url": "https://ru.stackoverflow.com/questions/670165",
+      "author": "Lam",
+      "author_url": "https://ru.stackoverflow.com/users/180793/lam",
+      "created_at": "2017-05-24T10:19:59+00:00",
+      "last_activity_at": "2017-05-24T13:53:49+00:00",
+      "tags": [
+        "php",
+        "1с"
+      ],
+      "body_sha256": "fbe349442e51e072b89bb6843e1a8a550ec68162005ce7eeae8739b4c5ae4422"
+    },
+    {
+      "case_id": 108,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "C",
+      "question_id": 436950,
+      "title": "Каким образом тестировать с помощью IDE+Xdebug, http запросы отправляет 1С",
+      "url": "https://ru.stackoverflow.com/questions/436950",
+      "author": "Sergey",
+      "author_url": "https://ru.stackoverflow.com/users/184068/sergey",
+      "created_at": "2015-07-20T18:44:27+00:00",
+      "last_activity_at": "2015-07-22T01:37:04+00:00",
+      "tags": [
+        "php",
+        "1с",
+        "xdebug"
+      ],
+      "body_sha256": "ed5767cc18e76309ecfbbff571252e1a67cd19b023c34efd83ea8defe9f8f609"
+    },
+    {
+      "case_id": 109,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "B",
+      "question_id": 1623411,
+      "title": "1c fresh не возвращает фото номенклатуры по rest api",
+      "url": "https://ru.stackoverflow.com/questions/1623411",
+      "author": "as1andrey1",
+      "author_url": "https://ru.stackoverflow.com/users/554930/as1andrey1",
+      "created_at": "2025-12-22T16:32:25+00:00",
+      "last_activity_at": "2026-02-26T13:06:15+00:00",
+      "tags": [
+        "rest",
+        "1с"
+      ],
+      "body_sha256": "c5fed95846f6f6ffd1013b707dcb46bd42ce587ca2fcc704c66e64cde243700b"
+    },
+    {
+      "case_id": 110,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "B",
+      "question_id": 1615673,
+      "title": "Как можно вывести сообщение при нажатие на кнопку /start в телеграм боте 1С?",
+      "url": "https://ru.stackoverflow.com/questions/1615673",
+      "author": "HDM1MIND",
+      "author_url": "https://ru.stackoverflow.com/users/722159/hdm1mind",
+      "created_at": "2025-08-17T15:41:28+00:00",
+      "last_activity_at": "2025-08-17T16:27:21+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "4cf224d73aa3220a4377b917b391edac2cd8cd87b749eb2a411dd11e4a923477"
+    },
+    {
+      "case_id": 111,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "B",
+      "question_id": 1588175,
+      "title": "Удаление номенклатуры 1С:Управление нашей фирмой",
+      "url": "https://ru.stackoverflow.com/questions/1588175",
+      "author": "auem",
+      "author_url": "https://ru.stackoverflow.com/users/484861/auem",
+      "created_at": "2024-07-24T09:41:57+00:00",
+      "last_activity_at": "2024-07-24T09:41:57+00:00",
+      "tags": [
+        "python",
+        "rest",
+        "1с"
+      ],
+      "body_sha256": "749bbd3c22410f75297a37bda5d54de5e07835a5bbec6c602a68d8228997ff44"
+    },
+    {
+      "case_id": 112,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "B",
+      "question_id": 1510554,
+      "title": "Как отправить GET запрос с пробелами в RequestParam через @FeignClient(ApacheHttpClient) в базу 1С через odata",
+      "url": "https://ru.stackoverflow.com/questions/1510554",
+      "author": "Zakhar Borisov",
+      "author_url": "https://ru.stackoverflow.com/users/464425/zakhar-borisov",
+      "created_at": "2023-04-04T01:54:26+00:00",
+      "last_activity_at": "2023-04-10T11:37:20+00:00",
+      "tags": [
+        "java",
+        "spring-boot",
+        "1с"
+      ],
+      "body_sha256": "afa928da47a3104dcb991adbd988ab39f87fbe1de419293f1c9d4950efe19817"
+    },
+    {
+      "case_id": 113,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "C",
+      "question_id": 1372570,
+      "title": "Проблема с параметром cache_wsdl в PHP 5.4 в SOAP(WSDL) при соединении с 1с. Как решить?",
+      "url": "https://ru.stackoverflow.com/questions/1372570",
+      "author": "skvernoslov",
+      "author_url": "https://ru.stackoverflow.com/users/410868/skvernoslov",
+      "created_at": "2022-01-18T07:07:58+00:00",
+      "last_activity_at": "2022-01-18T08:41:33+00:00",
+      "tags": [
+        "php",
+        "1с",
+        "soap",
+        "wsdl"
+      ],
+      "body_sha256": "a573875bc5dd152f4dbbb2da5d938a9f1ee0e86c7b840780f1d3c6bc19643638"
+    },
+    {
+      "case_id": 114,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "B",
+      "question_id": 1256726,
+      "title": "Ошибка интеграции сайта на Tilda с системой 1с",
+      "url": "https://ru.stackoverflow.com/questions/1256726",
+      "author": "Роксана Гулиева",
+      "author_url": "https://ru.stackoverflow.com/users/434420/%d0%a0%d0%be%d0%ba%d1%81%d0%b0%d0%bd%d0%b0-%d0%93%d1%83%d0%bb%d0%b8%d0%b5%d0%b2%d0%b0",
+      "created_at": "2021-03-16T16:54:13+00:00",
+      "last_activity_at": "2021-03-17T13:18:47+00:00",
+      "tags": [
+        "1с",
+        "tilda",
+        "commerceml"
+      ],
+      "body_sha256": "8969c9d383274f776b05c84dfb869ab0de088bccd70eaff0789d601f71616380"
+    },
+    {
+      "case_id": 115,
+      "category": "HTTP, SOAP, OData и доставка событий",
+      "automation_class": "B",
+      "question_id": 1146862,
+      "title": "Проведение документа 1с используя odata",
+      "url": "https://ru.stackoverflow.com/questions/1146862",
+      "author": "Евгений Романенко",
+      "author_url": "https://ru.stackoverflow.com/users/395947/%d0%95%d0%b2%d0%b3%d0%b5%d0%bd%d0%b8%d0%b9-%d0%a0%d0%be%d0%bc%d0%b0%d0%bd%d0%b5%d0%bd%d0%ba%d0%be",
+      "created_at": "2020-06-29T07:57:36+00:00",
+      "last_activity_at": "2026-08-06T21:04:00+00:00",
+      "tags": [
+        "javascript",
+        "1с"
+      ],
+      "body_sha256": "eb50cf877a82a5c4366cba7996a74d2b23947d6f1e0786e528137eefd72aa643"
+    },
+    {
+      "case_id": 116,
+      "category": "Документы и учётная логика",
+      "automation_class": "B",
+      "question_id": 222637,
+      "title": "Заказ клиента",
+      "url": "https://ru.stackoverflow.com/questions/222637",
+      "author": "lampa",
+      "author_url": "https://ru.stackoverflow.com/users/5030/lampa",
+      "created_at": "2013-05-24T10:06:21+00:00",
+      "last_activity_at": "2013-05-24T10:58:15+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "acfd5f8fcaeb94823bfd556689c7397d58f9b019d8c44f197f1bce2b8562d2ca"
+    },
+    {
+      "case_id": 117,
+      "category": "Документы и учётная логика",
+      "automation_class": "B",
+      "question_id": 1039219,
+      "title": "1C Comconnector - Номер документа",
+      "url": "https://ru.stackoverflow.com/questions/1039219",
+      "author": "Виктор",
+      "author_url": "https://ru.stackoverflow.com/users/313439/%d0%92%d0%b8%d0%ba%d1%82%d0%be%d1%80",
+      "created_at": "2019-10-27T15:46:45+00:00",
+      "last_activity_at": "2022-07-12T08:59:17+00:00",
+      "tags": [
+        "c#",
+        "1с"
+      ],
+      "body_sha256": "4ff1c8126b1d268711eb268f772dc1c8b7cbc9f357d196a8185b29bffed682ad"
+    },
+    {
+      "case_id": 118,
+      "category": "Документы и учётная логика",
+      "automation_class": "B",
+      "question_id": 625983,
+      "title": "Как программно взвести флаг, что \"документ открыт для редактирования другим пользователем\"? 1С Управление торговлей 11.3",
+      "url": "https://ru.stackoverflow.com/questions/625983",
+      "author": "Anatol",
+      "author_url": "https://ru.stackoverflow.com/users/183842/anatol",
+      "created_at": "2017-02-10T05:59:09+00:00",
+      "last_activity_at": "2017-07-02T18:43:26+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "3d3843f6e99784787ca024cdad15e8b3574f1ea03ad0b10f748b480e5de8a75f"
+    },
+    {
+      "case_id": 119,
+      "category": "Документы и учётная логика",
+      "automation_class": "B",
+      "question_id": 1400082,
+      "title": "Как записать параметры построчно в регистр расчета в 1С?",
+      "url": "https://ru.stackoverflow.com/questions/1400082",
+      "author": "Алексей",
+      "author_url": "https://ru.stackoverflow.com/users/451043/%d0%90%d0%bb%d0%b5%d0%ba%d1%81%d0%b5%d0%b9",
+      "created_at": "2022-04-14T05:59:07+00:00",
+      "last_activity_at": "2023-09-12T13:19:46+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "3c5ec41b878b32fe9e169fd42a1654261a27cf9c404e8243a00984195dd04e75"
+    },
+    {
+      "case_id": 120,
+      "category": "Документы и учётная логика",
+      "automation_class": "B",
+      "question_id": 1151876,
+      "title": "Как рассчитать среднюю себестоимость в обработке проведения 1С?",
+      "url": "https://ru.stackoverflow.com/questions/1151876",
+      "author": "Елизавета Плотникова",
+      "author_url": "https://ru.stackoverflow.com/users/386228/%d0%95%d0%bb%d0%b8%d0%b7%d0%b0%d0%b2%d0%b5%d1%82%d0%b0-%d0%9f%d0%bb%d0%be%d1%82%d0%bd%d0%b8%d0%ba%d0%be%d0%b2%d0%b0",
+      "created_at": "2020-07-12T07:32:06+00:00",
+      "last_activity_at": "2020-07-13T08:30:11+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "a136a7aaf1a3c7a6fe69802e47ac98441db7ac66dfdcea3da785fe6cacb4c740"
+    },
+    {
+      "case_id": 121,
+      "category": "Документы и учётная логика",
+      "automation_class": "B",
+      "question_id": 817270,
+      "title": "SMS-оповещения в 1С: Управление торговлей",
+      "url": "https://ru.stackoverflow.com/questions/817270",
+      "author": "romatou",
+      "author_url": "https://ru.stackoverflow.com/users/294313/romatou",
+      "created_at": "2018-04-21T12:25:43+00:00",
+      "last_activity_at": "2019-12-26T20:01:55+00:00",
+      "tags": [
+        "1с",
+        "sms"
+      ],
+      "body_sha256": "099a41339c762b8db3ec12401dfe54f4958b3f84c9f6ef1663ac8e632d47bb70"
+    },
+    {
+      "case_id": 122,
+      "category": "Документы и учётная логика",
+      "automation_class": "B",
+      "question_id": 747319,
+      "title": "Обновлять документ периодически",
+      "url": "https://ru.stackoverflow.com/questions/747319",
+      "author": "  tacticalNuke",
+      "author_url": "https://ru.stackoverflow.com/users/252868/tacticalnuke",
+      "created_at": "2017-11-20T18:09:39+00:00",
+      "last_activity_at": "2017-11-21T06:57:41+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "66df2ae1b2cd02a3ee65efb92d1838f1f16210d89c96714914a106c0f04b38b7"
+    },
+    {
+      "case_id": 123,
+      "category": "Документы и учётная логика",
+      "automation_class": "B",
+      "question_id": 1496810,
+      "title": "Заполнение Регистра сведений данными из документа",
+      "url": "https://ru.stackoverflow.com/questions/1496810",
+      "author": "V1adik",
+      "author_url": "https://ru.stackoverflow.com/users/542854/v1adik",
+      "created_at": "2023-02-16T09:43:28+00:00",
+      "last_activity_at": "2023-02-17T09:32:16+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "7aa86a11c4501b82fe542fe2272b5155e65df3177ecb94cc071a77927b3412d1"
+    },
+    {
+      "case_id": 124,
+      "category": "Документы и учётная логика",
+      "automation_class": "B",
+      "question_id": 1158726,
+      "title": "Как сделать реализацию на весь товар на складе 1с ут 11",
+      "url": "https://ru.stackoverflow.com/questions/1158726",
+      "author": "eri",
+      "author_url": "https://ru.stackoverflow.com/users/16574/eri",
+      "created_at": "2020-07-29T11:41:28+00:00",
+      "last_activity_at": "2020-07-29T11:41:28+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "7318c44b533c0a19b765c52b9cd9edff0bef4f1ae52d5c996a0418c681019cc8"
+    },
+    {
+      "case_id": 125,
+      "category": "Внешние компоненты, COM и оборудование",
+      "automation_class": "B",
+      "question_id": 779524,
+      "title": "Создание dll для 1С",
+      "url": "https://ru.stackoverflow.com/questions/779524",
+      "author": "Максим",
+      "author_url": "https://ru.stackoverflow.com/users/279244/%d0%9c%d0%b0%d0%ba%d1%81%d0%b8%d0%bc",
+      "created_at": "2018-02-02T21:19:29+00:00",
+      "last_activity_at": "2018-02-18T08:32:59+00:00",
+      "tags": [
+        "delphi",
+        "dll",
+        "1с"
+      ],
+      "body_sha256": "05716036be73f4d9ebcaeaac44f90f199e772c98a7d232fbe4def52f425c81e2"
+    },
+    {
+      "case_id": 126,
+      "category": "Внешние компоненты, COM и оборудование",
+      "automation_class": "B",
+      "question_id": 1114022,
+      "title": "Как вызвать статический метод C# в 1С",
+      "url": "https://ru.stackoverflow.com/questions/1114022",
+      "author": "pasha goroshko",
+      "author_url": "https://ru.stackoverflow.com/users/257496/pasha-goroshko",
+      "created_at": "2020-04-22T12:35:12+00:00",
+      "last_activity_at": "2020-06-18T19:51:22+00:00",
+      "tags": [
+        "c#",
+        ".net",
+        "1с"
+      ],
+      "body_sha256": "59765f72a4929df556dbdf60a55013fd48a986de6535c733b8a9e23c20dab8be"
+    },
+    {
+      "case_id": 127,
+      "category": "Внешние компоненты, COM и оборудование",
+      "automation_class": "B",
+      "question_id": 1236053,
+      "title": "Совместимость двухбайтных символьных типов в бинарном представлении",
+      "url": "https://ru.stackoverflow.com/questions/1236053",
+      "author": "megorit",
+      "author_url": "https://ru.stackoverflow.com/users/336315/megorit",
+      "created_at": "2021-01-25T20:27:40+00:00",
+      "last_activity_at": "2021-01-26T07:48:21+00:00",
+      "tags": [
+        "c++",
+        "строки",
+        "1с",
+        "unicode",
+        "типы"
+      ],
+      "body_sha256": "ad6e589eae25bd19074f9210dd1501307a56b570c2fbef260be68780838868cb"
+    },
+    {
+      "case_id": 128,
+      "category": "Внешние компоненты, COM и оборудование",
+      "automation_class": "C",
+      "question_id": 874906,
+      "title": "Внешняя компонента 1с на с#. Освобождение COM-объектов",
+      "url": "https://ru.stackoverflow.com/questions/874906",
+      "author": "Ivan Nazarov",
+      "author_url": "https://ru.stackoverflow.com/users/193160/ivan-nazarov",
+      "created_at": "2018-08-29T11:51:03+00:00",
+      "last_activity_at": "2018-08-31T15:41:36+00:00",
+      "tags": [
+        "c#",
+        "1с",
+        "com"
+      ],
+      "body_sha256": "27dacb82523b056318f3b4e5944a19df4e5a2faa7ffd75a2d3ffdada5909233c"
+    },
+    {
+      "case_id": 129,
+      "category": "Внешние компоненты, COM и оборудование",
+      "automation_class": "B",
+      "question_id": 849427,
+      "title": "IDispatch GetIDsOfNames в Delphi",
+      "url": "https://ru.stackoverflow.com/questions/849427",
+      "author": "Андрей Сычик",
+      "author_url": "https://ru.stackoverflow.com/users/300335/%d0%90%d0%bd%d0%b4%d1%80%d0%b5%d0%b9-%d0%a1%d1%8b%d1%87%d0%b8%d0%ba",
+      "created_at": "2018-07-02T20:46:10+00:00",
+      "last_activity_at": "2018-07-04T00:04:24+00:00",
+      "tags": [
+        "delphi",
+        "1с",
+        "com"
+      ],
+      "body_sha256": "c3781c6356a4562af31f08054b60365fb038a3b784a206061044a5a8dca6331e"
+    },
+    {
+      "case_id": 130,
+      "category": "Внешние компоненты, COM и оборудование",
+      "automation_class": "C",
+      "question_id": 532477,
+      "title": "Проверка подписи ЭЦП в файле. Online проверка сертификата используя C# через библиотеку .NET в 1с",
+      "url": "https://ru.stackoverflow.com/questions/532477",
+      "author": "Albert",
+      "author_url": "https://ru.stackoverflow.com/users/212246/albert",
+      "created_at": "2016-06-07T06:26:56+00:00",
+      "last_activity_at": "2016-06-17T06:10:36+00:00",
+      "tags": [
+        ".net",
+        "1с"
+      ],
+      "body_sha256": "f95e2154b9c681661dfbdef828c43e7a534e966c07e0033de70639f3ff569228"
+    },
+    {
+      "case_id": 131,
+      "category": "Внешние компоненты, COM и оборудование",
+      "automation_class": "B",
+      "question_id": 1408884,
+      "title": "Взаимодействие между модулями Android",
+      "url": "https://ru.stackoverflow.com/questions/1408884",
+      "author": "Treaq",
+      "author_url": "https://ru.stackoverflow.com/users/20094/treaq",
+      "created_at": "2022-05-11T18:06:16+00:00",
+      "last_activity_at": "2022-05-12T09:42:43+00:00",
+      "tags": [
+        "android",
+        "1с",
+        "мобильная-разработка",
+        "мобильные-приложения"
+      ],
+      "body_sha256": "f0208bffa9587c9ef6f1d4d55e780a6fcd35bf8aa2907796d6ef65c32a1fd471"
+    },
+    {
+      "case_id": 132,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "C",
+      "question_id": 486853,
+      "title": "Возможен ли обмен 1c 1c bitrix через связку nginx + php-fpm?",
+      "url": "https://ru.stackoverflow.com/questions/486853",
+      "author": "MasteRus",
+      "author_url": "https://ru.stackoverflow.com/users/2460/masterus",
+      "created_at": "2016-01-28T06:03:54+00:00",
+      "last_activity_at": "2018-11-25T21:02:35+00:00",
+      "tags": [
+        "nginx",
+        "1с",
+        "php-fpm",
+        "битрикс"
+      ],
+      "body_sha256": "6968c5cae3f9802eab872c6e36ff7370af092123e0410441a74ece4765aba845"
+    },
+    {
+      "case_id": 133,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "C",
+      "question_id": 1445898,
+      "title": "Как изменить папку для временных файлов 1с сервера взаимодействия на linux",
+      "url": "https://ru.stackoverflow.com/questions/1445898",
+      "author": "hadlog",
+      "author_url": "https://ru.stackoverflow.com/users/518089/hadlog",
+      "created_at": "2022-09-05T10:34:14+00:00",
+      "last_activity_at": "2023-03-17T00:42:08+00:00",
+      "tags": [
+        "linux",
+        "1с"
+      ],
+      "body_sha256": "ac146c7a73c65080e4d1a1b26d0c931f72f49bb703bb5f6e56733a3c7ec0f0c9"
+    },
+    {
+      "case_id": 134,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "B",
+      "question_id": 1477408,
+      "title": "Что спросить у 1С разработчика перед его уходом из компании?",
+      "url": "https://ru.stackoverflow.com/questions/1477408",
+      "author": "ddsl31",
+      "author_url": "https://ru.stackoverflow.com/users/533692/ddsl31",
+      "created_at": "2022-12-14T06:03:37+00:00",
+      "last_activity_at": "2023-04-15T11:28:57+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "46f2332e65106c25ba7480991023f058530eb372fbdeffce1b4c39dbeaa3974b"
+    },
+    {
+      "case_id": 135,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "A",
+      "question_id": 1036676,
+      "title": "1с разделитель каталогов",
+      "url": "https://ru.stackoverflow.com/questions/1036676",
+      "author": "eri",
+      "author_url": "https://ru.stackoverflow.com/users/16574/eri",
+      "created_at": "2019-10-20T15:21:29+00:00",
+      "last_activity_at": "2019-10-20T18:48:08+00:00",
+      "tags": [
+        "linux",
+        "1с"
+      ],
+      "body_sha256": "f0c4f172e97bef44aa8c656b8a5dfd2a3741b7977c66431638aed7890ea0369b"
+    },
+    {
+      "case_id": 136,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "C",
+      "question_id": 897636,
+      "title": "Сжать или урезать базу данных MS SQL 2012",
+      "url": "https://ru.stackoverflow.com/questions/897636",
+      "author": "Алексей",
+      "author_url": "https://ru.stackoverflow.com/users/272483/%d0%90%d0%bb%d0%b5%d0%ba%d1%81%d0%b5%d0%b9",
+      "created_at": "2018-10-25T06:45:28+00:00",
+      "last_activity_at": "2021-01-11T12:03:05+00:00",
+      "tags": [
+        "sql",
+        "база-данных",
+        "оптимизация",
+        "1с"
+      ],
+      "body_sha256": "74405c870767b4165fe6d02411c849d0deb156fb71c809a9175eae8f02918b8d"
+    },
+    {
+      "case_id": 137,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "B",
+      "question_id": 778076,
+      "title": "Вытащить версию конфигурации внешней обработкой",
+      "url": "https://ru.stackoverflow.com/questions/778076",
+      "author": "  tacticalNuke",
+      "author_url": "https://ru.stackoverflow.com/users/252868/tacticalnuke",
+      "created_at": "2018-01-31T10:00:57+00:00",
+      "last_activity_at": "2018-02-06T06:12:26+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "c95ae85810b05d246f807a7d47e120ebfdc0859240cc8a58c9c062583112e369"
+    },
+    {
+      "case_id": 138,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "C",
+      "question_id": 339239,
+      "title": "1C: проблемы с количеством лицензий",
+      "url": "https://ru.stackoverflow.com/questions/339239",
+      "author": "DemoriaN",
+      "author_url": "https://ru.stackoverflow.com/users/3487/demorian",
+      "created_at": "2011-11-28T13:33:32+00:00",
+      "last_activity_at": "2016-12-05T05:27:19+00:00",
+      "tags": [
+        "1с",
+        "hasp"
+      ],
+      "body_sha256": "dcb4ac82be03eb2612ed6b1e7a0d4289df9164bfec7e6612825488143dc6677c"
+    },
+    {
+      "case_id": 139,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "C",
+      "question_id": 1044159,
+      "title": "Идентификатор клиента 1С пересчитывается на машинах Linux, слетают настройки касс. Как предотвратить?",
+      "url": "https://ru.stackoverflow.com/questions/1044159",
+      "author": "eri",
+      "author_url": "https://ru.stackoverflow.com/users/16574/eri",
+      "created_at": "2019-11-09T12:11:45+00:00",
+      "last_activity_at": "2019-12-26T02:22:04+00:00",
+      "tags": [
+        "linux",
+        "1с"
+      ],
+      "body_sha256": "2008d83a8fcac715f951c427ba940a0b3ad21514795053309eabb78fade56382"
+    },
+    {
+      "case_id": 140,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "C",
+      "question_id": 736445,
+      "title": "Ошибка при установке значения атрибута при переходе MS Server 2003 -> 2008",
+      "url": "https://ru.stackoverflow.com/questions/736445",
+      "author": "игорь88",
+      "author_url": "https://ru.stackoverflow.com/users/32663/%d0%b8%d0%b3%d0%be%d1%80%d1%8c88",
+      "created_at": "2017-10-26T20:51:22+00:00",
+      "last_activity_at": "2026-08-29T17:05:05+00:00",
+      "tags": [
+        "mysql",
+        "1с",
+        "odbc",
+        "oledb"
+      ],
+      "body_sha256": "80f50079f07d080c53f69dc773df8d241e2728d89813fd33c1cabd4019bd288c"
+    },
+    {
+      "case_id": 141,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "C",
+      "question_id": 823357,
+      "title": "Ошибка MS SQL Server 2016",
+      "url": "https://ru.stackoverflow.com/questions/823357",
+      "author": "Александр Зарифулли",
+      "author_url": "https://ru.stackoverflow.com/users/274186/%d0%90%d0%bb%d0%b5%d0%ba%d1%81%d0%b0%d0%bd%d0%b4%d1%80-%d0%97%d0%b0%d1%80%d0%b8%d1%84%d1%83%d0%bb%d0%bb%d0%b8",
+      "created_at": "2018-05-04T17:12:07+00:00",
+      "last_activity_at": "2018-08-31T06:10:03+00:00",
+      "tags": [
+        "sql-server",
+        "1с"
+      ],
+      "body_sha256": "0586b3ed9a77da189884636849d8fcec75cbdba10f8f55e00fe1d20a69d0be42"
+    },
+    {
+      "case_id": 142,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "B",
+      "question_id": 1490410,
+      "title": "Как получить все объекты, на которые роль имеет доступ 1С?",
+      "url": "https://ru.stackoverflow.com/questions/1490410",
+      "author": "fgrd4035",
+      "author_url": "https://ru.stackoverflow.com/users/467433/fgrd4035",
+      "created_at": "2023-01-27T08:48:19+00:00",
+      "last_activity_at": "2023-01-27T13:27:24+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "3972a72c325b39883db969ae8266c34b59019d86f586ad736dc086cc35fea35b"
+    },
+    {
+      "case_id": 143,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "C",
+      "question_id": 1337128,
+      "title": "__init__() takes from 1 to 2 positional arguments but 3 were given (1C: Искусственный интеллект)",
+      "url": "https://ru.stackoverflow.com/questions/1337128",
+      "author": "CRAYS CRAYSOVICH",
+      "author_url": "https://ru.stackoverflow.com/users/465078/crays-craysovich",
+      "created_at": "2021-10-11T07:49:47+00:00",
+      "last_activity_at": "2021-10-11T11:19:00+00:00",
+      "tags": [
+        "python",
+        "нейронные-сети",
+        "1с",
+        "scikit-learn",
+        "искусственный-интеллект"
+      ],
+      "body_sha256": "c2c06b1865d0651b18fda2e97f41cff87f9ac596530257d962f348083c354472"
+    },
+    {
+      "case_id": 144,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "B",
+      "question_id": 1626471,
+      "title": "Проблема с использованием git для 1С",
+      "url": "https://ru.stackoverflow.com/questions/1626471",
+      "author": "Михаил Каргин",
+      "author_url": "https://ru.stackoverflow.com/users/759547/%d0%9c%d0%b8%d1%85%d0%b0%d0%b8%d0%bb-%d0%9a%d0%b0%d1%80%d0%b3%d0%b8%d0%bd",
+      "created_at": "2026-10-11T11:44:57+00:00",
+      "last_activity_at": "2026-10-19T11:31:33+00:00",
+      "tags": [
+        "git",
+        "1с"
+      ],
+      "body_sha256": "8f2ebc8540b688198afdb8fdc4adea8fd96d60247159eb1230b2b223e16d92ac"
+    },
+    {
+      "case_id": 145,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "C",
+      "question_id": 1585254,
+      "title": "Проблема одновременной работы пользователей на win и linux в 1c77",
+      "url": "https://ru.stackoverflow.com/questions/1585254",
+      "author": "sanekfps",
+      "author_url": "https://ru.stackoverflow.com/users/542845/sanekfps",
+      "created_at": "2024-06-26T07:59:10+00:00",
+      "last_activity_at": "2024-06-27T06:17:33+00:00",
+      "tags": [
+        "windows",
+        "1с",
+        "astra-linux"
+      ],
+      "body_sha256": "f79ec7308e14d77aa5200a8e4f248d5d5687745c5af88439214eec5e87cf18af"
+    },
+    {
+      "case_id": 146,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "C",
+      "question_id": 1496775,
+      "title": "Как получить пользователей с помощью LDAP в 1С?",
+      "url": "https://ru.stackoverflow.com/questions/1496775",
+      "author": "fgrd4035",
+      "author_url": "https://ru.stackoverflow.com/users/467433/fgrd4035",
+      "created_at": "2023-02-16T07:52:17+00:00",
+      "last_activity_at": "2023-03-30T06:17:33+00:00",
+      "tags": [
+        "1с",
+        "ldap"
+      ],
+      "body_sha256": "77925c52eb6c3cd494e16a7bab668d6aec26c007f72feb9c72f5d071810d7e73"
+    },
+    {
+      "case_id": 147,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "C",
+      "question_id": 744416,
+      "title": "1С 8.3 (УПП): настройка обмена конфигурациями в РИБ",
+      "url": "https://ru.stackoverflow.com/questions/744416",
+      "author": "Виктория",
+      "author_url": "https://ru.stackoverflow.com/users/274047/%d0%92%d0%b8%d0%ba%d1%82%d0%be%d1%80%d0%b8%d1%8f",
+      "created_at": "2017-11-14T09:20:06+00:00",
+      "last_activity_at": "2017-11-17T08:37:48+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "ff295978c79dc18122ccda00ea9f9e84ac9128f393021e3ed49cdfd0c29230c8"
+    },
+    {
+      "case_id": 148,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "C",
+      "question_id": 619588,
+      "title": "1с отладка \"НаСервере\" у клиента",
+      "url": "https://ru.stackoverflow.com/questions/619588",
+      "author": "alexanderzhirov",
+      "author_url": "https://ru.stackoverflow.com/users/218876/alexanderzhirov",
+      "created_at": "2017-01-26T05:20:31+00:00",
+      "last_activity_at": "2018-05-08T06:31:52+00:00",
+      "tags": [
+        "отладка",
+        "1с"
+      ],
+      "body_sha256": "3ba48e8b17681fbacad8c73c308fc3af812de26ee302ccd57645e8ec676187f4"
+    },
+    {
+      "case_id": 149,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "C",
+      "question_id": 1625670,
+      "title": "Невосстановимая ошибка СУБД 1C",
+      "url": "https://ru.stackoverflow.com/questions/1625670",
+      "author": "Иванов Даниил",
+      "author_url": "https://ru.stackoverflow.com/users/723303/%d0%98%d0%b2%d0%b0%d0%bd%d0%be%d0%b2-%d0%94%d0%b0%d0%bd%d0%b8%d0%b8%d0%bb",
+      "created_at": "2026-06-02T01:49:13+00:00",
+      "last_activity_at": "2026-06-30T19:52:33+00:00",
+      "tags": [
+        "postgresql",
+        "1с"
+      ],
+      "body_sha256": "5b0dd0a36597f6db8e37b6fcb2145688b72bd164965bca9ef6eced7944edba7f"
+    },
+    {
+      "case_id": 150,
+      "category": "Сопровождение, доступ и окружение",
+      "automation_class": "C",
+      "question_id": 1486022,
+      "title": "Нужно ли переносить Ограничения доступа к данным в расширение 1С?",
+      "url": "https://ru.stackoverflow.com/questions/1486022",
+      "author": "ddsl31",
+      "author_url": "https://ru.stackoverflow.com/users/533692/ddsl31",
+      "created_at": "2023-01-13T05:38:22+00:00",
+      "last_activity_at": "2023-01-18T07:44:58+00:00",
+      "tags": [
+        "1с"
+      ],
+      "body_sha256": "7ed3f01b4b887d37be40c1ea8cbf0cc4ef2688152d5c2ce8bac54ad07f9910f3"
+    }
+  ]
+}
