@@ -84,9 +84,9 @@
     <closing_rule id="2" kind="revaluation" start="" name="Kursdifferenz" account_id="0" target_id="0" via_id="0" gain_id="30" loss_id="29" />
   </closing_rules>
   <print_forms>
-    <print_form id="1" report="" doc_type_id="2" name="Rechnung" template="rechnung.html" basis="§ 14 UStG" />
-    <print_form id="2" report="" doc_type_id="3" name="Quittung" template="quittung.html" basis="Kassenbeleg" />
-    <print_form id="3" report="" doc_type_id="9" name="Lohnjournal" template="lohnjournal.html" basis="§ 41 EStG, Lohnkonto" />
-    <print_form id="4" report="cash_book" doc_type_id="0" name="Kassenbuch" template="kassenbuch.html" basis="§ 146 AO" />
+    <print_form id="1" report="" doc_type_id="2" name="Rechnung" template="invoice.html" basis="§ 14 UStG" />
+    <print_form id="2" report="" doc_type_id="3" name="Quittung" template="receipt.html" basis="Kassenbeleg" />
+    <print_form id="3" report="" doc_type_id="9" name="Lohnjournal" template="payroll-journal.html" basis="§ 41 EStG, Lohnkonto" />
+    <print_form id="4" report="cash_book" doc_type_id="0" name="Kassenbuch" template="cash-book.html" basis="§ 146 AO" />
   </print_forms>
 </cfg>

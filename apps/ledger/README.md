@@ -357,6 +357,43 @@ values as they are. `Documents > Print Forms` writes every form of the
 document's type to `<infobase dir>/print/` for printing from a browser;
 `Reports > Print Report Forms` writes the report forms and exports.
 
+HTML template filenames use descriptive English names in lowercase ASCII with
+hyphens between words, consistently across configurations. The file contents
+and the form's display name remain in the configuration's language. For
+example, `invoice.html` is the Russian payment invoice or German Rechnung;
+`vat-invoice.html` is the separate Russian счет-фактура. Country-specific legal
+forms keep distinct English names rather than sharing a filename solely
+because they concern the same transaction.
+
+| Template | Russian form | German form |
+|---|---|---|
+| `invoice.html` | Счет на оплату | Rechnung |
+| `vat-invoice.html` | Счет-фактура | — |
+| `goods-delivery-note.html` | Товарная накладная ТОРГ-12 | — |
+| `universal-transfer-document.html` | Универсальный передаточный документ (УПД) | — |
+| `cash-receipt-order.html` | Приходный кассовый ордер КО-1 | — |
+| `cash-payment-order.html` | Расходный кассовый ордер КО-2 | — |
+| `payment-order.html` | Платежное поручение 0401060 | — |
+| `receipt.html` | — | Quittung |
+| `cash-book.html` | Кассовая книга КО-4 | Kassenbuch |
+| `payroll-payment-statement.html` | Расчетно-платежная ведомость Т-49 | — |
+| `payroll-statement.html` | Расчетная ведомость Т-51 | — |
+| `payroll-journal.html` | — | Lohnjournal |
+| `purchase-book.html` | Книга покупок | — |
+| `sales-book.html` | Книга продаж | — |
+| `vat-summary.html` | НДС: расчет по ставкам | — |
+| `vat-return.html` | — | Umsatzsteuer-Voranmeldung (Kennzahlen) |
+| `trial-balance.html` | Оборотно-сальдовая ведомость | Summen- und Saldenliste |
+| `general-journal.html` | Журнал операций | Buchungsjournal |
+
+These names give automation and future assistant template commands a stable
+English vocabulary. Resolve files through the active configuration's
+`cfg.print_forms` records and their explicit `template` field; the existing Lua
+API exposes them through `ledger.fetch("cfg", "print_forms")`. Document types
+can have multiple forms, and forms can share a template. Updating a filename
+requires updating the configuration's `template` references. Existing generated
+files are not renamed or removed; subsequent printing writes the new filenames.
+
 HTML forms are self-contained and declare A4 paper with 12 mm page margins.
 Invoices, receipts, payment orders and VAT summaries use portrait; wide
 registers, cash books, payroll lists, trial balances and goods/tax forms use

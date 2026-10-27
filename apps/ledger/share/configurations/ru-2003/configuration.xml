@@ -140,14 +140,14 @@
     <closing_rule id="6" kind="transfer" start="" name="Сальдо прочих доходов и расходов" account_id="49" target_id="56" via_id="68" gain_id="0" loss_id="0" />
   </closing_rules>
   <print_forms>
-    <print_form id="1" report="" doc_type_id="2" name="Товарная накладная ТОРГ-12" template="torg12.html" basis="Постановление Госкомстата России от 25.12.1998 № 132" />
-    <print_form id="2" report="" doc_type_id="2" name="Счет-фактура" template="schet-faktura.html" basis="Постановление Правительства РФ от 02.12.2000 № 914 (в ред. 2002 г.)" />
-    <print_form id="3" report="" doc_type_id="2" name="Счет на оплату" template="schet.html" basis="Произвольная форма" />
-    <print_form id="4" report="" doc_type_id="3" name="Приходный кассовый ордер КО-1" template="ko1.html" basis="Постановление Госкомстата России от 18.08.1998 № 88" />
-    <print_form id="5" report="" doc_type_id="4" name="Расходный кассовый ордер КО-2" template="ko2.html" basis="Постановление Госкомстата России от 18.08.1998 № 88" />
-    <print_form id="6" report="" doc_type_id="5" name="Платежное поручение 0401060" template="pp0401060.html" basis="Положение Банка России от 03.10.2002 № 2-П" />
-    <print_form id="7" report="" doc_type_id="17" name="Приходный кассовый ордер КО-1" template="ko1.html" basis="Постановление Госкомстата России от 18.08.1998 № 88" />
-    <print_form id="8" report="" doc_type_id="10" name="Расчетно-платежная ведомость Т-49" template="t49.html" basis="Постановление Госкомстата России от 06.04.2001 № 26" />
-    <print_form id="9" report="cash_book" doc_type_id="0" name="Кассовая книга КО-4" template="ko4.html" basis="Постановление Госкомстата России от 18.08.1998 № 88" />
+    <print_form id="1" report="" doc_type_id="2" name="Товарная накладная ТОРГ-12" template="goods-delivery-note.html" basis="Постановление Госкомстата России от 25.12.1998 № 132" />
+    <print_form id="2" report="" doc_type_id="2" name="Счет-фактура" template="vat-invoice.html" basis="Постановление Правительства РФ от 02.12.2000 № 914 (в ред. 2002 г.)" />
+    <print_form id="3" report="" doc_type_id="2" name="Счет на оплату" template="invoice.html" basis="Произвольная форма" />
+    <print_form id="4" report="" doc_type_id="3" name="Приходный кассовый ордер КО-1" template="cash-receipt-order.html" basis="Постановление Госкомстата России от 18.08.1998 № 88" />
+    <print_form id="5" report="" doc_type_id="4" name="Расходный кассовый ордер КО-2" template="cash-payment-order.html" basis="Постановление Госкомстата России от 18.08.1998 № 88" />
+    <print_form id="6" report="" doc_type_id="5" name="Платежное поручение 0401060" template="payment-order.html" basis="Положение Банка России от 03.10.2002 № 2-П" />
+    <print_form id="7" report="" doc_type_id="17" name="Приходный кассовый ордер КО-1" template="cash-receipt-order.html" basis="Постановление Госкомстата России от 18.08.1998 № 88" />
+    <print_form id="8" report="" doc_type_id="10" name="Расчетно-платежная ведомость Т-49" template="payroll-payment-statement.html" basis="Постановление Госкомстата России от 06.04.2001 № 26" />
+    <print_form id="9" report="cash_book" doc_type_id="0" name="Кассовая книга КО-4" template="cash-book.html" basis="Постановление Госкомстата России от 18.08.1998 № 88" />
   </print_forms>
 </cfg>
