@@ -8,7 +8,18 @@ table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
 .line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
 .sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
 h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
-@media print{body{margin:6mm}}
+@page{size:A4 landscape;margin:12mm}
+@media print{
+  body{margin:0}
+  thead{display:table-header-group;break-inside:avoid;page-break-inside:avoid}
+  tbody{break-inside:auto;page-break-inside:auto}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  h1,h2,h3{break-after:avoid;page-break-after:avoid}
+  p{orphans:3;widows:3}
+  .grid td{overflow-wrap:anywhere}
+  .grid td.r,.grid td.c{white-space:nowrap}
+  .sign,.totals{break-inside:avoid;page-break-inside:avoid;break-before:avoid;page-break-before:avoid}
+}
 </style></head><body>
 <div class="r small">Унифицированная форма № Т-49<br>Утверждена постановлением Госкомстата России от 06.04.01 № 26</div>
 <table style="width:100%"><tr><td><span class="line" style="width:100%">{{org.name}}</span><div class="cap">наименование организации</div></td>
@@ -16,9 +27,10 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 <table class="box" style="margin:6px 0"><tr><td style="border:0"><h1>РАСЧЕТНО-ПЛАТЕЖНАЯ ВЕДОМОСТЬ</h1></td><td class="small">Номер документа<br><b>{{number}}</b></td><td class="small">Дата составления<br><b>{{date|dmy}}</b></td></tr></table>
 <p>{{comment}}</p>
 <table class="grid" style="width:100%">
-<tr><th>Номер<br>по порядку</th><th>Фамилия, инициалы</th><th>Должность<br>(специальность,<br>профессия)</th><th>Оклад</th><th>Начислено,<br>руб.</th><th>Удержано<br>НДФЛ, руб.</th><th>Сумма к выдаче,<br>руб.</th><th>Расписка<br>в получении</th></tr>
-{{#payroll_lines}}<tr><td class="c">{{n}}</td><td>{{employee.name}}</td><td>{{employee.position}}</td><td class="r">{{employee.salary}}</td><td class="r">{{amount}}</td><td class="r">{{withheld}}</td><td class="r b">{{net}}</td><td style="width:25mm"></td></tr>
-{{/payroll_lines}}<tr><td colspan="4" class="r b" style="border:0">Итого начислено</td><td class="r b">{{total}}</td><td colspan="3" style="border:0"></td></tr></table>
+<thead><tr><th>Номер<br>по порядку</th><th>Фамилия, инициалы</th><th>Должность<br>(специальность,<br>профессия)</th><th>Оклад</th><th>Начислено,<br>руб.</th><th>Удержано<br>НДФЛ, руб.</th><th>Сумма к выдаче,<br>руб.</th><th>Расписка<br>в получении</th></tr></thead>
+<tbody>{{#payroll_lines}}<tr><td class="c">{{n}}</td><td>{{employee.name}}</td><td>{{employee.position}}</td><td class="r">{{employee.salary}}</td><td class="r">{{amount}}</td><td class="r">{{withheld}}</td><td class="r b">{{net}}</td><td style="width:25mm"></td></tr>
+{{/payroll_lines}}</tbody>
+<tbody class="totals"><tr><td colspan="4" class="r b" style="border:0">Итого начислено</td><td class="r b">{{total}}</td><td colspan="3" style="border:0"></td></tr></tbody></table>
 <p>Начислено всего: {{total|words}}</p>
 <table class="sign" style="width:100%"><tr><td>Руководитель организации <span class="line">{{org.director}}</span></td><td>Главный бухгалтер <span class="line">{{org.accountant}}</span></td></tr>
 <tr><td>Ведомость составил <span class="line">&nbsp;</span></td><td>Выплату произвел кассир <span class="line">{{org.cashier}}</span></td></tr></table>

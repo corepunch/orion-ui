@@ -8,7 +8,18 @@ table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
 .line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
 .sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
 h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
-@media print{body{margin:6mm}}
+@page{size:A4 portrait;margin:12mm}
+@media print{
+  body{margin:0}
+  thead{display:table-header-group;break-inside:avoid;page-break-inside:avoid}
+  tbody{break-inside:auto;page-break-inside:auto}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  h1,h2,h3{break-after:avoid;page-break-after:avoid}
+  p{orphans:3;widows:3}
+  .grid td{overflow-wrap:anywhere}
+  .grid td.r,.grid td.c{white-space:nowrap}
+  .sign,.totals{break-inside:avoid;page-break-inside:avoid;break-before:avoid;page-break-before:avoid}
+}
 </style></head><body>
 <table style="width:180mm"><tr><td><span class="line" style="min-width:90px">&nbsp;</span><div class="cap">Поступ. в банк плат.</div></td><td><span class="line" style="min-width:90px">&nbsp;</span><div class="cap">Списано со сч. плат.</div></td><td style="width:40%"></td><td class="box"><table class="box"><tr><td>0401060</td></tr></table></td></tr></table>
 <table style="width:180mm;margin-top:8px"><tr><td><h1>ПЛАТЕЖНОЕ ПОРУЧЕНИЕ № {{number}}</h1></td><td><span class="line">{{date|dmy}}</span><div class="cap">Дата</div></td><td><span class="line" style="min-width:80px">электронно</span><div class="cap">Вид платежа</div></td></tr></table>

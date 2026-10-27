@@ -8,13 +8,24 @@ table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
 .line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
 .sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
 h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
-@media print{body{margin:6mm}}
+@page{size:A4 landscape;margin:12mm}
+@media print{
+  body{margin:0}
+  thead{display:table-header-group;break-inside:avoid;page-break-inside:avoid}
+  tbody{break-inside:auto;page-break-inside:auto}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  h1,h2,h3{break-after:avoid;page-break-after:avoid}
+  p{orphans:3;widows:3}
+  .grid td{overflow-wrap:anywhere}
+  .grid td.r,.grid td.c{white-space:nowrap}
+  .sign,.totals{break-inside:avoid;page-break-inside:avoid;break-before:avoid;page-break-before:avoid}
+}
 </style></head><body>
 <h1>Buchungsjournal</h1>
 <p>{{org.name}}<br>Zeitraum: {{period.date_from|dmy}} bis {{period.date_to|dmy}}</p>
 <table class="grid" style="width:100%">
-<tr><th>Nr.</th><th>Datum</th><th>Beleg</th><th>Buchungstext</th><th>Soll</th><th>Soll-Zuordnung</th><th>Haben</th><th>Haben-Zuordnung</th><th>Betrag, EUR</th></tr>
-{{#journal_rows}}<tr><td class="c">{{n}}</td><td class="c">{{date|dmy}}</td><td>{{document.number}}</td><td>{{content}}</td><td class="c">{{debit.code}}</td><td>{{debit_subconto.name}}</td><td class="c">{{credit.code}}</td><td>{{credit_subconto.name}}</td><td class="r">{{amount}}</td></tr>
-{{/journal_rows}}</table>
+<thead><tr><th>Nr.</th><th>Datum</th><th>Beleg</th><th>Buchungstext</th><th>Soll</th><th>Soll-Zuordnung</th><th>Haben</th><th>Haben-Zuordnung</th><th>Betrag, EUR</th></tr></thead>
+<tbody>{{#journal_rows}}<tr><td class="c">{{n}}</td><td class="c">{{date|dmy}}</td><td>{{document.number}}</td><td>{{content}}</td><td class="c">{{debit.code}}</td><td>{{debit_subconto.name}}</td><td class="c">{{credit.code}}</td><td>{{credit_subconto.name}}</td><td class="r">{{amount}}</td></tr>
+{{/journal_rows}}</tbody></table>
 <table class="sign" style="width:100%"><tr><td>Erstellt <span class="line">{{org.accountant}}</span></td></tr></table>
 </body></html>

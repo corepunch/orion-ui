@@ -8,7 +8,18 @@ table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
 .line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
 .sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
 h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
-@media print{body{margin:6mm}}
+@page{size:A4 landscape;margin:12mm}
+@media print{
+  body{margin:0}
+  thead{display:table-header-group;break-inside:avoid;page-break-inside:avoid}
+  tbody{break-inside:auto;page-break-inside:auto}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  h1,h2,h3{break-after:avoid;page-break-after:avoid}
+  p{orphans:3;widows:3}
+  .grid td{overflow-wrap:anywhere}
+  .grid td.r,.grid td.c{white-space:nowrap}
+  .sign,.totals{break-inside:avoid;page-break-inside:avoid;break-before:avoid;page-break-before:avoid}
+}
 </style></head><body>
 <div class="r small">Унифицированная форма № КО-4 (ОКУД 0310004)<br>Утверждена постановлением Госкомстата России от 18.08.98 № 88; ведется в соответствии с указанием Банка России от 11.03.2014 № 3210-У</div>
 <table style="width:100%"><tr><td><span class="line" style="width:100%">{{org.name}}</span><div class="cap">организация</div></td>
@@ -16,9 +27,9 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 <h1 class="c">КАССОВАЯ КНИГА</h1>
 <p class="c">за период с {{period.date_from|dmy}} по {{period.date_to|dmy}}</p>
 <table class="grid" style="width:100%">
-<tr><th>Дата</th><th>Номер<br>документа</th><th>От кого получено<br>или кому выдано</th><th>Содержание</th><th>Номер корреспон-<br>дирующего счета,<br>субсчета</th><th>Приход,<br>руб. коп.</th><th>Расход,<br>руб. коп.</th><th>Остаток,<br>руб. коп.</th></tr>
-<tr><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr>
-{{#cash_book}}<tr><td class="c">{{date|dmy}}</td><td class="c">{{document.number}}</td><td>{{subconto.name}}</td><td>{{content}}</td><td class="c">{{corr.code}}</td><td class="r">{{receipt}}</td><td class="r">{{expense}}</td><td class="r">{{balance}}</td></tr>
-{{/cash_book}}</table>
+<thead><tr><th>Дата</th><th>Номер<br>документа</th><th>От кого получено<br>или кому выдано</th><th>Содержание</th><th>Номер корреспон-<br>дирующего счета,<br>субсчета</th><th>Приход,<br>руб. коп.</th><th>Расход,<br>руб. коп.</th><th>Остаток,<br>руб. коп.</th></tr>
+<tr><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr></thead>
+<tbody>{{#cash_book}}<tr><td class="c">{{date|dmy}}</td><td class="c">{{document.number}}</td><td>{{subconto.name}}</td><td>{{content}}</td><td class="c">{{corr.code}}</td><td class="r">{{receipt}}</td><td class="r">{{expense}}</td><td class="r">{{balance}}</td></tr>
+{{/cash_book}}</tbody></table>
 <table class="sign" style="width:100%"><tr><td>Кассир <span class="line">{{org.cashier}}</span></td><td>Записи в кассовой книге проверил и документы получил бухгалтер <span class="line">{{org.accountant}}</span></td></tr></table>
 </body></html>
