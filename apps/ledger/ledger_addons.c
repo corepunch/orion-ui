@@ -193,7 +193,7 @@ static result_t ledger_assistant_hook(window_t *win, uint32_t msg, uint32_t wpar
         window_t *part = script_page_control(assistant_page, parts[i]);
         if (!part || !window_has_state(part, WINDOW_STATE_VISIBLE)) continue;
         irect16_t r = R(0, 0, part->frame.w, part->frame.h);
-        if (i == 1) r = tooltip_bubble_body_rect(r, TOOLTIP_TAIL_BOTTOM);
+        if (i == 1) r = speech_bubble_body_rect(r, TOOLTIP_TAIL_BOTTOM);
         if (rect_contains_point(rect_offset(r, window_screen_x(part), window_screen_y(part)), point)) return false;
       }
       *(window_t **)lparam = NULL;

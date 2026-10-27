@@ -19,6 +19,9 @@ with amounts, with a count of additional matches. Narrow the request or use
 The compact layout follows Office 97's built-in question balloon, documented in
 [Microsoft KB 173766 (archived)](https://www.betaarchive.com/wiki/index.php?title=Microsoft_KB_Archive/173766)
 and the [Office Assistant Help API](https://learn.microsoft.com/en-us/dotnet/api/microsoft.office.core.assistant.help).
+The tail proportions follow the [clippy.js 10×16 tail atlas](https://github.com/clippyjs/clippy.js/blob/master/build/clippy.css):
+one upright edge and one diagonal edge, with a continuous outline where it joins
+the balloon. Orion renders this geometry as a single vector silhouette.
 
 System dictation works in the command field. Clicking Clippy opens the bubble;
 it does not start microphone recording. Offline dictation availability depends

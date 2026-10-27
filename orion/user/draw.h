@@ -18,10 +18,12 @@ void render_rounded_rect_bands(irect16_t r, isize16_t size, float radius, uint32
 typedef enum { TOOLTIP_TAIL_TOP, TOOLTIP_TAIL_BOTTOM, TOOLTIP_TAIL_LEFT, TOOLTIP_TAIL_RIGHT } tooltip_tail_side_t;
 // r includes tooltip.shadow.size on every side; tail_offset is measured along that side within r.
 irect16_t tooltip_bubble_body_rect(irect16_t r, tooltip_tail_side_t side);
+// The speech variant uses speechbubble geometry and shadow margins.
+irect16_t speech_bubble_body_rect(irect16_t r, tooltip_tail_side_t side);
 void draw_tooltip_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side);
 void draw_speech_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side);
 void render_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
-                          float tail_offset, float padding, tooltip_tail_side_t side, uint32_t color, uint32_t border, float border_width);
+                          float tail_offset, float padding, tooltip_tail_side_t side, uint32_t color, uint32_t border, float border_width, float tail_width);
 void render_tooltip_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
                           float tail_offset, float padding, tooltip_tail_side_t side, uint32_t color);
 // Vertical, linear-light gradient with one rounded silhouette; radius 0 fills a row.

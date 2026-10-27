@@ -879,7 +879,7 @@ void render_rounded_rect_bands(irect16_t r, isize16_t size, float radius, uint32
 }
 
 void render_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
-                          float tail_offset, float padding, tooltip_tail_side_t side, uint32_t color, uint32_t border, float border_width) {
+                          float tail_offset, float padding, tooltip_tail_side_t side, uint32_t color, uint32_t border, float border_width, float tail_width) {
   if (side < TOOLTIP_TAIL_TOP || side > TOOLTIP_TAIL_RIGHT) {
     fprintf(stderr, "[renderer] invalid tooltip tail side=%d\n", side);
     fflush(stderr);
@@ -888,12 +888,12 @@ void render_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
   bool horizontal = side == TOOLTIP_TAIL_LEFT || side == TOOLTIP_TAIL_RIGHT;
   if (side == TOOLTIP_TAIL_BOTTOM || side == TOOLTIP_TAIL_RIGHT) tail = -tail;
   render_rounded_box(0, r, face_size.w, face_size.h, radius, 1, color,
-                     0, padding, false, border, 0, border_width, horizontal ? 3 : 2, tail, tail_offset);
+                     0, padding, false, border, tail_width, border_width, horizontal ? 3 : 2, tail, tail_offset);
 }
 
 void render_tooltip_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
                           float tail_offset, float padding, tooltip_tail_side_t side, uint32_t color) {
-  render_bubble(r, face_size, radius, tail, tail_offset, padding, side, color, 0, 0);
+  render_bubble(r, face_size, radius, tail, tail_offset, padding, side, color, 0, 0, 0);
 }
 
 void render_rounded_rect_gradient(int tex, irect16_t r, int pixel_w, int pixel_h,

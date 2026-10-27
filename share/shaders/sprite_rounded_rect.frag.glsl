@@ -21,9 +21,43 @@ float triangleSDF(vec2 p, vec2 a, vec2 b, vec2 c) {
   return sqrt(min(dot(q0, q0), min(dot(q1, q1), dot(q2, q2)))) * (inside ? -1.0 : 1.0);
 }
 
+float segmentDistance(vec2 p, vec2 a, vec2 b) {
+  vec2 edge = b - a;
+  float t = clamp(dot(p - a, edge) / max(dot(edge, edge), 0.0001), 0.0, 1.0);
+  return length(p - a - t * edge);
+}
+
+// Distance to the exterior path, excluding the tail's internal base edge.
+float speechBubbleSDF(vec2 p, vec2 extent) {
+  float tail = abs(params0.w), bottom = extent.y - tail;
+  if (params0.w > 0.0) p.y = extent.y - p.y;
+  float r = min(radius, min(extent.x, bottom) * 0.5);
+  float width = min(params1.y, max(0.1, (extent.x - 2.0 * r) * 0.5));
+  float tip = clamp(params1.w, r + width, extent.x - r - width);
+  float left = tip < extent.x * 0.5 ? tip : tip - width;
+  float right = left + width;
+  vec2 point = vec2(tip, extent.y);
+  float d = segmentDistance(p, vec2(r, 0.0), vec2(extent.x - r, 0.0));
+  d = min(d, segmentDistance(p, vec2(0.0, r), vec2(0.0, bottom - r)));
+  d = min(d, segmentDistance(p, vec2(extent.x, r), vec2(extent.x, bottom - r)));
+  d = min(d, segmentDistance(p, vec2(r, bottom), vec2(left, bottom)));
+  d = min(d, segmentDistance(p, vec2(right, bottom), vec2(extent.x - r, bottom)));
+  d = min(d, segmentDistance(p, vec2(left, bottom), point));
+  d = min(d, segmentDistance(p, point, vec2(right, bottom)));
+  if (p.x <= r && p.y <= r) d = min(d, abs(length(p - vec2(r, r)) - r));
+  if (p.x >= extent.x - r && p.y <= r) d = min(d, abs(length(p - vec2(extent.x - r, r)) - r));
+  if (p.x <= r && p.y >= bottom - r) d = min(d, abs(length(p - vec2(r, bottom - r)) - r));
+  if (p.x >= extent.x - r && p.y >= bottom - r) d = min(d, abs(length(p - vec2(extent.x - r, bottom - r)) - r));
+  bool inBody = roundedBoxSDF(p - vec2(extent.x, bottom) * 0.5, vec2(extent.x, bottom) * 0.5, r) <= 0.0;
+  float t = (p.y - bottom) / tail;
+  bool inTail = t >= 0.0 && t <= 1.0 && p.x >= mix(left, tip, t) && p.x <= mix(right, tip, t);
+  return inBody || inTail ? -d : d;
+}
+
 float bubbleSDF(vec2 p) {
   vec2 extent = size;
   if (params0.z > 2.5) { p = p.yx; extent = extent.yx; }
+  if (params1.y > 0.0) return speechBubbleSDF(p, extent);
   float tail = abs(params0.w), top = params0.w > 0.0 ? tail : 0.0;
   vec2 body = vec2(extent.x, extent.y - tail);
   float box = roundedBoxSDF(p - vec2(body.x * 0.5, top + body.y * 0.5), body * 0.5, radius);

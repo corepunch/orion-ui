@@ -309,35 +309,48 @@ void fill_rounded_rect_bands(uint32_t color, irect16_t r, int radius, int band_w
   render_rounded_rect_bands(r, size, radius * scale, color, band_width * scale, offset * scale);
 }
 
-irect16_t tooltip_bubble_body_rect(irect16_t r, tooltip_tail_side_t side) {
+static irect16_t bubble_body_rect(irect16_t r, tooltip_tail_side_t side, bool speech) {
   const theme_t *theme = get_theme();
-  r = rect_inset(r, theme->tooltip.shadow.size);
+  r = rect_inset(r, speech ? theme->speechbubble.shadow.size : theme->tooltip.shadow.size);
+  int length = speech ? theme->speechbubble.tail_length : theme->tooltip.tail_size;
   switch (side) {
-    case TOOLTIP_TAIL_TOP:    return rect_trim_top(r, theme->tooltip.tail_size);
-    case TOOLTIP_TAIL_BOTTOM: return rect_trim_bottom(r, theme->tooltip.tail_size);
-    case TOOLTIP_TAIL_LEFT:   return rect_trim_left(r, theme->tooltip.tail_size);
-    case TOOLTIP_TAIL_RIGHT:  return rect_trim_right(r, theme->tooltip.tail_size);
+    case TOOLTIP_TAIL_TOP:    return rect_trim_top(r, length);
+    case TOOLTIP_TAIL_BOTTOM: return rect_trim_bottom(r, length);
+    case TOOLTIP_TAIL_LEFT:   return rect_trim_left(r, length);
+    case TOOLTIP_TAIL_RIGHT:  return rect_trim_right(r, length);
   }
-  fprintf(stderr, "[draw] invalid tooltip tail side=%d\n", side);
+  fprintf(stderr, "[draw] invalid bubble tail side=%d\n", side);
   fflush(stderr);
-  return R(0, 0, 0, 0);
+  return r;
+}
+
+irect16_t tooltip_bubble_body_rect(irect16_t r, tooltip_tail_side_t side) {
+  return bubble_body_rect(r, side, false);
+}
+
+irect16_t speech_bubble_body_rect(irect16_t r, tooltip_tail_side_t side) {
+  return bubble_body_rect(r, side, true);
 }
 
 static void draw_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side, bool speech) {
   const theme_t *theme = get_theme();
-  int pad = theme->tooltip.shadow.size;
+  int pad = speech ? theme->speechbubble.shadow.size : theme->tooltip.shadow.size;
+  int radius = speech ? theme->speechbubble.corner_radius : theme->tooltip.corner_radius;
+  int length = speech ? theme->speechbubble.tail_length : theme->tooltip.tail_size;
   float scale = ui_surface_scale();
   isize16_t size = { (int)((r.w - 2 * pad) * scale), (int)((r.h - 2 * pad) * scale) };
   if (size.w <= 0 || size.h <= 0) return;
-  irect16_t body = tooltip_bubble_body_rect(r, side);
+  irect16_t body = bubble_body_rect(r, side, speech);
   if (body.w <= 0 || body.h <= 0) return;
-  draw_rect_shadow(body, theme->tooltip.corner_radius, theme->tooltip.shadow.blur,
-                    theme->tooltip.shadow.offset, theme->tooltip.shadow.color);
-  render_bubble(r, size, theme->tooltip.corner_radius * scale,
-                       theme->tooltip.tail_size * scale,
-                       (tail_offset - pad) * scale, pad * scale, side,
-                       get_sys_color(speech ? brInfoBackground : brPanelDark),
-                       speech ? get_sys_color(brInfoText) : 0, speech ? scale : 0);
+  draw_rect_shadow(body, radius,
+                   speech ? theme->speechbubble.shadow.blur : theme->tooltip.shadow.blur,
+                   speech ? theme->speechbubble.shadow.offset : theme->tooltip.shadow.offset,
+                   speech ? theme->speechbubble.shadow.color : theme->tooltip.shadow.color);
+  render_bubble(r, size, radius * scale, length * scale,
+                (tail_offset - pad) * scale, pad * scale, side,
+                get_sys_color(speech ? brInfoBackground : brPanelDark),
+                speech ? get_sys_color(brInfoText) : 0, speech ? scale : 0,
+                speech ? theme->speechbubble.tail_width * scale : 0);
 }
 
 void draw_tooltip_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side) {
