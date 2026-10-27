@@ -156,6 +156,8 @@ metadata. Create the form with `create_window_from_form()` and continue to use
 
 Optional status labels can use `flags="LABEL_COLLAPSE_EMPTY"`. An empty label
 occupies no layout space or gap; setting its text restores it and updates layout.
+A `BUTTON_COMMANDLINK` button accepts the same flag, for a fixed set of choice
+slots that appear only when they have text.
 
 ## Add A New Repository App
 

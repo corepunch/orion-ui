@@ -160,18 +160,36 @@ function E:execute(ast,answer_scope)
   return self:result(true,message,{command=ast,inferred=party and party.inferred,animation=#rows>0 and 'EXPLAIN' or 'RESTPOSE'})
 end
 
+-- ORPHAN-MERGE: a reference fills the slot the pending question asked about.
+function E:answer(ref)
+  local ast=P.copy(self.pending.command)
+  if self.pending.slot=='for_party' then ast.for_party=ref
+  else
+    ast.entity=ref.entity or ast.entity; ast.name,ast.ordinal,ast.pronoun=ref.name,ref.ordinal,ref.pronoun
+  end
+  return ast
+end
+
+function E:run(ast,answer_scope)
+  local ok,result=pcall(self.execute,self,ast,answer_scope)
+  if not ok then return self:result(false,string.format(tr('Could not retrieve data: %s'),tostring(result)),{animation='ALERT'}) end
+  return result
+end
+
+-- A balloon label names a displayed row, like typing its number: it answers
+-- the pending question, otherwise it opens that row.
+function E:choose(index)
+  if self.pending then return self:run(self:answer{ordinal=index},self.pending.scope) end
+  if not self.scope then return self:result(false,tr('List objects of this type first.')) end
+  return self:run({verb='open',entity=self.scope.entity,ordinal=index})
+end
+
 function E:submit(text)
   local ast,message
   local answer_scope
   if self.pending then
     local ref=P.reference(text)
-    if ref then
-      ast=P.copy(self.pending.command); answer_scope=self.pending.scope
-      if self.pending.slot=='for_party' then ast.for_party=ref
-      else
-        ast.entity=ref.entity or ast.entity; ast.name,ast.ordinal,ast.pronoun=ref.name,ref.ordinal,ref.pronoun
-      end
-    end
+    if ref then ast,answer_scope=self:answer(ref),self.pending.scope end
   end
   if not ast then
     ast,message=P.parse(text,self.context)
@@ -189,8 +207,6 @@ function E:submit(text)
     self.pending=nil
     return self:result(true,tr('Pending question cancelled.'))
   end
-  local ok,result=pcall(self.execute,self,ast,answer_scope)
-  if not ok then return self:result(false,string.format(tr('Could not retrieve data: %s'),tostring(result)),{animation='ALERT'}) end
-  return result
+  return self:run(ast,answer_scope)
 end
 return E

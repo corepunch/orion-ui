@@ -75,7 +75,9 @@ WinAPI `ShowWindow(owner, SW_HIDE)` has different owned-popup visibility semanti
 
 The assistant opens automatically without taking keyboard focus. The existing
 Lua assistant supplies commands and animation; the SpeechBubble control supplies
-the conversation surface. Its position follows the application's bottom-right corner,
+the conversation surface. Its contents follow the Office 97 Balloon record: a
+heading, text, up to five clickable labels and the command field (see the
+assistant README). Its position follows the application's bottom-right corner,
 independently of the document frame. Collapsing the bubble preserves conversation and input.
 Closing or hiding Clippy also preserves that state; Help → Show Office Assistant /
 Ctrl+Shift+A restores the companion and focuses its input. `--no-assistant`

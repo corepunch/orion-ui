@@ -89,26 +89,63 @@ static void test_assistant(void) {
     ASSERT(page != NULL, error);
     ASSERT_NOT_NULL(script_page_create(page, NULL));
     ASSERT_STR_EQUAL(script_page_message(page), "");
+    window_t *heading = script_page_control(page, "heading");
     window_t *summary = script_page_control(page, "summary");
+    window_t *more = script_page_control(page, "more");
+    window_t *choice[5];
+    for (int c = 0; c < 5; c++) {
+      char name[16];
+      snprintf(name, sizeof(name), "choice%d", c + 1);
+      choice[c] = script_page_control(page, name);
+      ASSERT_NOT_NULL(choice[c]);
+      ASSERT_TRUE(choice[c]->flags & BUTTON_COMMANDLINK);
+    }
     ASSERT_NULL(script_page_control(page, "request"));
     ASSERT_NULL(script_page_control(page, "results"));
     window_t *command = script_page_control(page, "command");
     window_t *failure = script_page_control(page, "error");
-    ASSERT_STR_EQUAL(summary->title, "How can I help?");
+    // Office 97's question balloon: heading, then the field; empty slots take no room.
+    ASSERT_STR_EQUAL(heading->title, "What would you like to do?");
+    ASSERT_STR_EQUAL(summary->title, "");
+    ASSERT_EQUAL(summary->frame.h, 0);
+    ASSERT_EQUAL(choice[0]->frame.h, 0);
     int greeting_height = get_root_window(summary)->frame.h;
     ASSERT_EQUAL(failure->frame.h, 0);
-    ASSERT_EQUAL(command->frame.y, summary->frame.y + summary->frame.h + 8);
+    ASSERT_EQUAL(command->frame.y, heading->frame.y + heading->frame.h + 6);
     set_text(page, "command", "покажи клиентов");
     ASSERT_TRUE(script_page_perform(page, "submit"));
     ASSERT_STR_EQUAL(script_page_message(page), "");
-    ASSERT(strstr(summary->title, "1.") != NULL, "found records appear as a numbered text preview");
-    ASSERT_EQUAL(command->frame.y, summary->frame.y + summary->frame.h + 8);
     int count = count_rows("assistant", 0);
     ASSERT_EQUAL(count, count_rows("ib", TABLE_COUNTERPARTIES));
+    ASSERT(count > 0, "the demo has counterparties");
+    ASSERT(strstr(summary->title, "Found:") == summary->title, "the balloon text reports the query");
+    ASSERT(strncmp(choice[0]->title, "1. ", 3) == 0, "each result is a numbered balloon label");
+    ASSERT(choice[0]->frame.h > 0 && choice[0]->frame.w > 0, "a filled label takes its row");
+    for (int c = 0; c < 5; c++)
+      ASSERT_EQUAL(choice[c]->title[0] != 0, c < count);
+    ASSERT_EQUAL(more->title[0] != 0, count > 5);
+    ASSERT(command->frame.y > choice[MIN(count, 5) - 1]->frame.y, "labels come before the field, as in Office 97");
     int answer_height = get_root_window(summary)->frame.h;
     ASSERT(answer_height > greeting_height, "the bubble grows for a real answer");
+    // Clicking a label is the same as typing its row number.
+    char typed[sizeof(command->title)];
+    snprintf(typed, sizeof(typed), "unsent text");
+    set_text(page, "command", typed);
+    // No Ledger main window here, so the label reaches the open request and the
+    // host declines it; the companion test below opens a record for real.
+    ASSERT_TRUE(script_page_perform_from(page, "choose", "choice1"));
+    ASSERT_STR_EQUAL(summary->title, "Could not open the record.");
+    ASSERT_STR_EQUAL(command->title, typed);
+    ASSERT_EQUAL(count_rows("assistant", 0), count);
     ASSERT_TRUE(script_page_perform(page, "help"));
     ASSERT(get_root_window(summary)->frame.h < answer_height, "the bubble shrinks again for a shorter message");
+    ASSERT_STR_EQUAL(choice[0]->title, "show debtors");
+    ASSERT_EQUAL(choice[3]->frame.h, 0);
+    ASSERT_FALSE(script_page_perform_from(page, "choose", "choice4"));
+    ASSERT_STR_EQUAL(script_page_message(page), "That row is not in the current list.");
+    ASSERT_TRUE(script_page_perform_from(page, "choose", "choice2"));   // an example runs as a command
+    ASSERT_EQUAL(count_rows("assistant", 0), count);
+    ASSERT_STR_EQUAL(command->title, "");
     set_text(page, "command", "покажи клиентов и удали всех");
     ASSERT_TRUE(script_page_perform(page, "submit"));
     ASSERT_EQUAL(count_rows("assistant", 0), count);
@@ -143,6 +180,25 @@ static window_t *control_with_text(window_t *win, const char *text) {
     if (found) return found;
   }
   return NULL;
+}
+
+static window_t *control_with_prefix(window_t *win, const char *prefix) {
+  if (!strncmp(win->title, prefix, strlen(prefix))) return win;
+  for (window_t *child = win->children; child; child = child->next) {
+    window_t *found = control_with_prefix(child, prefix);
+    if (found) return found;
+  }
+  return NULL;
+}
+
+static void click(window_t *win) {
+  const uint32_t events[] = {kEventLeftButtonDown, kEventLeftButtonUp};
+  for (size_t i = 0; i < ARRAY_LEN(events); i++) {
+    ui_event_t event = {.message = events[i],
+      .x = (window_screen_x(win) + win->frame.w / 2) * UI_WINDOW_SCALE,
+      .y = (window_screen_y(win) + win->frame.h / 2) * UI_WINDOW_SCALE};
+    dispatch_message(&event);
+  }
 }
 
 static void test_assistant_companion(void) {
@@ -188,6 +244,24 @@ static void test_assistant_companion(void) {
   int count = count_rows("assistant", 0);
   ASSERT_EQUAL(count, count_rows("ib", TABLE_COUNTERPARTIES));
   ASSERT(g_ui_runtime.focused == command, "sending keeps the command field focused");
+  // A balloon label is clicked like any control and opens its row in Ledger.
+  send_message(command, edSetText, 0, "show documents");
+  send_message(companion, evCommand, MAKEDWORD(submit->id, btnClicked), submit);
+  window_t *label = control_with_prefix(companion, "1. ");
+  ASSERT_NOT_NULL(label);
+  ASSERT_TRUE(label->flags & BUTTON_COMMANDLINK);
+  window_t *client = get_window_item(main, ID_MAIN_WINDOW_DOCUMENTS_CLIENT);
+  ASSERT_NOT_NULL(client);
+  ASSERT_NULL(mdi_active_document(client));
+  click(label);
+  ASSERT_NOT_NULL(control_with_prefix(companion, "Opened record: "));
+  window_t *opened = mdi_active_document(client);
+  ASSERT(opened != NULL, "the row opens as a Ledger document");
+  destroy_window(opened);
+  set_focus(command);
+  send_message(command, edSetText, 0, "show customers");
+  send_message(companion, evCommand, MAKEDWORD(submit->id, btnClicked), submit);
+  ASSERT_EQUAL(count_rows("assistant", 0), count);
 
   // The bottom-right control is the mascot, below the speech bubble.
   window_t *mascot = find_window(companion->frame.x + companion->frame.w - 70,

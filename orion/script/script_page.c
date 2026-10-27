@@ -404,7 +404,9 @@ static void finish(script_page_t *page) {
   show_message(page);
 }
 
-bool script_page_perform(script_page_t *page, const char *action) {
+// `control` names the button that ran the action (nil for a host request), so
+// one action can serve several buttons, as Balloon.Show reports its label.
+static bool perform(script_page_t *page, const char *action, const char *control) {
   if (!page || !action || !*action) return false;
   lua_State *L = page->L;
   page->message[0] = 0;
@@ -420,10 +422,12 @@ bool script_page_perform(script_page_t *page, const char *action) {
   }
   lua_insert(L, -2);           // action, page
   push_inputs(page);           // action, page, values
+  if (control && *control) lua_pushstring(L, control);
+  else lua_pushnil(L);         // action, page, values, control
   char msg[1024];
   bool refused = false;
   const char *outer = ui_set_string_context(page->name);
-  bool ok = script_call(L, 2, 2, msg, sizeof(msg), &refused);
+  bool ok = script_call(L, 3, 2, msg, sizeof(msg), &refused);
   ui_set_string_context(outer);
   if (ok) {
     // An action may answer nil, "message" for a refusal it expected.
@@ -440,6 +444,14 @@ bool script_page_perform(script_page_t *page, const char *action) {
   }
   finish(page);
   return ok;
+}
+
+bool script_page_perform(script_page_t *page, const char *action) {
+  return perform(page, action, NULL);
+}
+
+bool script_page_perform_from(script_page_t *page, const char *action, const char *control) {
+  return perform(page, action, control);
 }
 
 // ── self.app: what the window offers the page ───────────────────────────────
@@ -499,7 +511,7 @@ static result_t script_page_proc(window_t *win, uint32_t msg, uint32_t wparam, v
       const form_ctrl_def_t *d = form_library_control(page->lib, page->form, id);
       const char *action = d && !d->target ? control_attr(page, id, "action") : NULL;
       if (!action || strchr(action, '.')) return false;
-      script_page_perform(page, action);
+      perform(page, action, d->name);
       return true;
     }
     case evTimer:

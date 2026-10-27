@@ -46,52 +46,64 @@ local function rows(entity)
   return out
 end
 
+-- The bubble holds an Office 97 Balloon: a heading, text and up to five
+-- labels. A label is a displayed result or an example command.
+local LABELS=5
+local CHOICES={choice1=1,choice2=2,choice3=3,choice4=4,choice5=5}
+local EXAMPLES={tr('show debtors'),tr('show customers'),tr('show only posted documents')}
+
 function Assistant:init()
   self.engine=Engine.new{rows=rows,open=function(entity,id) return ledger.open(entity,id) end}
   self.animation='WAVE'
   self.expanded=true
   self.revision=1
-  self.message=tr('How can I help?')
+  self.balloon={labels={}}
   self.lines={}; self.command=''
 end
 function Assistant:data()
   local clip=assert(animations[self.animation])
+  local values={command=self.command,summary=self.balloon.text or '',more=self.balloon.more or ''}
+  for name,i in pairs(CHOICES) do values[name]=self.balloon.labels[i] or '' end
   return {
-    values={command=self.command,summary=self.message},
+    values=values,
     hidden={bubble=not self.expanded},
     sprites={mascot={path=clip.path,columns=clip.columns or 4,rows=clip.rows or 2,count=clip.count or 8,interval=clip.interval,loop=clip.loop,revision=self.revision}},
   }
 end
-function Assistant:submit(values)
+function Assistant:show(result)
   self.expanded=true
   self.revision=self.revision+1
-  local result=self.engine:submit(values.command or '')
-  self.message,self.animation=result.message,result.animation
-  self.command=result.ok and '' or values.command
+  self.animation=result.animation
   self.lines={}
   for i,row in ipairs(result.rows or {}) do
     self.lines[#self.lines+1]={id=i,record_id=row.id,name=row.name,amount=row.amount or 0,date=row.date or ''}
   end
   for _,row in ipairs(Results:all()) do orion.assert(row:delete()) end
   for _,row in ipairs(self.lines) do orion.assert(Results:create(row)) end
-  if #self.lines>0 then
-    local preview={self.message}
-    for i=1,math.min(3,#self.lines) do
-      local row=self.lines[i]
-      local name=row.name:gsub('[\r\n]+',' ')
-      local cut=utf8.offset(name,35)
-      if cut then name=name:sub(1,cut-1)..'…' end
-      preview[#preview+1]=string.format(tr('%d. %s — %s'),i,name,orion.formatNumber(row.amount))
-    end
-    if #self.lines>3 then preview[#preview+1]=string.format(tr('And %d more. Ask to narrow the list.'),#self.lines-3) end
-    self.message=table.concat(preview,'\n')
+  self.balloon={text=result.message,labels={}}
+  for i=1,math.min(LABELS,#self.lines) do
+    local row=self.lines[i]
+    self.balloon.labels[i]=string.format(tr('%d. %s — %s'),i,row.name:gsub('[\r\n]+',' '),orion.formatNumber(row.amount))
   end
+  if #self.lines>LABELS then self.balloon.more=string.format(tr('And %d more. Ask to narrow the list.'),#self.lines-LABELS) end
   self.app.focus('command')
+end
+function Assistant:submit(values)
+  local result=self.engine:submit(values.command or '')
+  self.command=result.ok and '' or values.command
+  self:show(result)
+end
+function Assistant:choose(values,control)
+  local index=assert(CHOICES[control],'not a balloon label')
+  if not self.balloon.labels[index] then return nil,tr('That row is not in the current list.') end
+  if self.balloon.examples then return self:submit{command=self.balloon.examples[index]} end
+  self.command=values.command or ''
+  self:show(self.engine:choose(index))
 end
 function Assistant:help(values)
   self.command=values.command or ''
   self.revision=self.revision+1
-  self.message=tr('Try “show debtors”, then “open first”.')
+  self.balloon={text=tr('Try “show debtors”, then “open first”.'),labels=EXAMPLES,examples=EXAMPLES}
   self.animation='EXPLAIN'
   self.app.focus('command')
 end

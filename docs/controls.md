@@ -78,6 +78,18 @@ case evCommand:
         handle_click((window_t *)lparam);
 ```
 
+`BUTTON_COMMANDLINK` (≈ WinAPI `BS_COMMANDLINK`) draws a flat choice row: a
+theme bullet and left-aligned, ellipsized text, underlined on hover, with no
+bevel. It is the balloon label of the Office 97 assistant. `color=` sets the
+text role, for example `info-text` on a `SpeechBubble`. With
+`LABEL_COLLAPSE_EMPTY`, an empty command link takes no layout space, so a form
+can declare a fixed set of choice slots and fill only some of them.
+
+```xml
+<Button name="choice1" action="choose" color="info-text"
+        flags="BUTTON_COMMANDLINK,LABEL_COLLAPSE_EMPTY" />
+```
+
 ## Checkbox
 
 ```c

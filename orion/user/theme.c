@@ -79,6 +79,12 @@ static bool theme_validate(theme_t *t) {
     fflush(stderr);
     return false;
   }
+  if (t->command_link.bullet_size <= 0 || t->command_link.gap < 0 || t->command_link.padding_y < 0) {
+    fprintf(stderr, "[theme] invalid command link metrics name=%s bullet=%d gap=%d padding_y=%d\n",
+            t->name, t->command_link.bullet_size, t->command_link.gap, t->command_link.padding_y);
+    fflush(stderr);
+    return false;
+  }
   return true;
 }
 

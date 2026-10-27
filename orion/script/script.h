@@ -52,6 +52,9 @@ window_t *script_page_create(script_page_t *page, window_t *parent);
 // messages are always processed by the page. The page continues to own userdata.
 window_t *script_page_create_hook(script_page_t *page, window_t *parent, winproc_t hook);
 bool script_page_perform(script_page_t *page, const char *action);
+// As script_page_perform, as if the button named `control` had been clicked:
+// the action receives that name after `values`.
+bool script_page_perform_from(script_page_t *page, const char *action, const char *control);
 const char *script_page_message(const script_page_t *page);
 // The control named `name` in the page's window, or NULL.
 window_t *script_page_control(const script_page_t *page, const char *name);

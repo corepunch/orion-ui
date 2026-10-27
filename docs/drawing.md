@@ -218,6 +218,12 @@ until one supplies tooltip text. That source also supplies the anchor, so moving
 across a card's labels keeps its tooltip stable. A child's own tooltip takes
 precedence over its parent's.
 
+`draw_command_link(rect, text, state, ink)` paints a `BUTTON_COMMANDLINK` row:
+a filled `brAccent` bullet, `FONT_SMALL` text in `ink` ellipsized to the row,
+a one-pixel underline on hover and the focus rectangle when focused. Disabled
+rows use `brTextDisabled`. `theme_t.command_link` sets the bullet size, the gap
+before the text and the vertical padding of the row.
+
 ### Small Bitmap Font (6x8 pixels)
 
 ```c
