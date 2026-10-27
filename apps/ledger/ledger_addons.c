@@ -179,8 +179,9 @@ void ledger_position_assistant(void) {
   int y = MAX(0, MIN(area.y + area.h - win->frame.h, sh - win->frame.h));
   move_window(win, x, y);
   window_t *bubble = script_page_control(assistant_page, "bubble");
+  // Office 97 points at the character's left shoulder, about 30% across its frame.
   if (bubble) send_message(bubble, bbSetTailOffset,
-    window_screen_x(mascot) + mascot->frame.w / 2 - window_screen_x(bubble), NULL);
+    window_screen_x(mascot) + mascot->frame.w * 3 / 10 - window_screen_x(bubble), NULL);
 }
 
 static result_t ledger_assistant_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
