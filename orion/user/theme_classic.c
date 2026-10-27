@@ -359,6 +359,10 @@ static theme_t g_classic_theme = {
     .corner_radius = 4, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,
     .shadow = { .size = 10, .blur = 2, .offset = {0, 3}, .color = 0x78000000 },
   },
+  .speechbubble = {
+    .corner_radius = 5, .tail_width = 10, .tail_length = 16,
+    .shadow = { .size = 2, .blur = 1, .offset = {1, 1}, .color = 0x40000000 },
+  },
   .control = { .padding = BUTTON_PADDING, .press_icon_offset = 1, .size_pct = { 100, 84, 71, 133 } },
   .button = { .corner_radius = 0 },
   .field = { .padding_x = TEXTEDIT_PADDING_CAPSULE },  // bevelled, unchanged

@@ -182,12 +182,19 @@ Icon IDs are defined in the `icon8_t` / `icon16_t` enums in `messages.h`.
 ### Tooltip bubbles
 
 `SpeechBubble` is a reusable vertical layout container for interactive bubble
-content. It uses the tooltip silhouette and theme padding, reserves the bottom
-tail and shadow outside its children, and accepts `bbSetTailOffset` to point at
-an anchor. Its informational surface uses `brInfoBackground` and `brInfoText`: pale
+content. It reserves the bottom tail and shadow outside its children and accepts
+`bbSetTailOffset` to point at an anchor. `theme_t.speechbubble` owns its corner
+radius, tail width/length and shadow independently of ordinary tooltips. Its informational surface uses `brInfoBackground` and `brInfoText`: pale
 yellow in light palettes and a muted warm surface in dark palettes.
 `draw_speech_bubble()` draws the fill, one-pixel outline and tail from one signed
-distance silhouette. It is registered with the runtime and FormEditor like `Card`.
+distance silhouette. The default tail is 10 pixels wide and 16 pixels long, with
+one upright edge and one diagonal edge, mirrored toward the anchor. These
+proportions follow the four 10×16 tail sprites in
+[clippy.js](https://github.com/clippyjs/clippy.js/blob/master/build/clippy.css), an
+open reconstruction of the assistant. The outline follows only the compound
+shape's exterior; the tail's base never becomes an internal stroke.
+`speech_bubble_body_rect()` supplies the matching layout/hit-test body. The
+control is registered with the runtime and FormEditor like `Card`.
 
 `draw_tooltip_bubble(rect, tail_offset, side)` draws a rounded face and attached
 tail in one fill pass. Its shadow reuses `draw_rect_shadow()` on the rectangular

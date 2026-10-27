@@ -284,6 +284,14 @@ typedef struct {
       uint32_t color;
     } shadow;
   } tooltip;
+  struct {
+    int corner_radius, tail_width, tail_length;
+    struct {
+      int size, blur;
+      ipoint16_t offset;
+      uint32_t color;
+    } shadow;
+  } speechbubble;
 
   // Writes the theme's palette into g_sys_colors.  Called by set_theme()
   // before evThemeChanged is broadcast so controls see the new colors

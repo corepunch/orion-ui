@@ -66,6 +66,14 @@ static bool theme_validate(theme_t *t) {
     fflush(stderr);
     return false;
   }
+  if (t->speechbubble.corner_radius < 0 || t->speechbubble.tail_width <= 0 ||
+      t->speechbubble.tail_length <= 0 || t->speechbubble.shadow.size < 0 || t->speechbubble.shadow.blur < 0) {
+    fprintf(stderr, "[theme] invalid speech bubble metrics name=%s radius=%d width=%d length=%d shadow=%d blur=%d\n",
+            t->name, t->speechbubble.corner_radius, t->speechbubble.tail_width,
+            t->speechbubble.tail_length, t->speechbubble.shadow.size, t->speechbubble.shadow.blur);
+    fflush(stderr);
+    return false;
+  }
   return true;
 }
 

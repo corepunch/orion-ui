@@ -205,6 +205,52 @@ static void test_tooltip_bubble_tails(void) {
   PASS();
 }
 
+static ipoint16_t speech_sample(tooltip_tail_side_t side, int x, int y) {
+  if (side == TOOLTIP_TAIL_TOP || side == TOOLTIP_TAIL_LEFT) y = 63 - y;
+  return side == TOOLTIP_TAIL_LEFT || side == TOOLTIP_TAIL_RIGHT ? (ipoint16_t){y, x} : (ipoint16_t){x, y};
+}
+
+static void test_speech_tail_contour(void) {
+  TEST("speech balloon: tall asymmetric tail joins without an internal border at 1x and 2x");
+  uint32_t fbo = 0, texture = 0;
+  int w = 0, h = 0;
+  bool ok = true;
+  for (int scale = 1; scale <= 2; scale++) {
+    ASSERT_TRUE(R_EnsureWindowTarget(&fbo, &texture, &w, &h, 64 * scale, 64 * scale));
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(0, 0, 64 * scale, 64 * scale);
+    set_projection(0, 0, 64, 64);
+    glDisable(GL_SCISSOR_TEST);
+    glClearColor(0, 0, 0, 0);
+    for (int side = TOOLTIP_TAIL_TOP; side <= TOOLTIP_TAIL_RIGHT; side++) {
+      for (int mirror = 0; mirror < 2; mirror++) {
+        glClear(GL_COLOR_BUFFER_BIT);
+        render_bubble(R(0, 0, 64, 64), (isize16_t){64 * scale, 64 * scale}, 5 * scale, 16 * scale,
+                      (mirror ? 20 : 44) * scale, 0, side, 0xffffffff, 0xff000000, scale, 10 * scale);
+        const ipoint16_t samples[] = {{40, 47}, {40, 52}, {32, 54}, {45, 52}};
+        uint8_t pixels[4][4];
+        for (int i = 0; i < ARRAY_LEN(samples); i++) {
+          ipoint16_t point = speech_sample(side, mirror ? 63 - samples[i].x : samples[i].x, samples[i].y);
+          glReadPixels(point.x * scale + scale / 2, (63 - point.y) * scale + scale / 2,
+                       1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixels[i]);
+        }
+        bool contour = pixels[0][0] > 240 && pixels[0][3] == 255 && pixels[1][0] > 200 &&
+                       pixels[1][3] > 240 && pixels[2][3] == 0 && pixels[3][3] == 0;
+        if (!contour) fprintf(stderr, "[speech-tail-test] scale=%d side=%d mirror=%d join=%u/%u tail=%u/%u outside=%u/%u\n",
+                              scale, side, mirror, pixels[0][0], pixels[0][3], pixels[1][0], pixels[1][3], pixels[2][3], pixels[3][3]);
+        ok &= contour;
+      }
+    }
+  }
+  ok &= glGetError() == GL_NO_ERROR;
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glViewport(0, 0, 640, 480);
+  set_projection(0, 0, 640, 480);
+  R_DestroyWindowTarget(&fbo, &texture, &w, &h);
+  ASSERT_TRUE(ok);
+  PASS();
+}
+
 static void test_tooltip_shadow_color(void) {
   TEST("tooltip shadows stay dark across light and dark palettes");
   uint32_t fbo = 0, texture = 0;
@@ -242,6 +288,7 @@ int main(void) {
   test_toolbar_tooltip_sides();
   test_inherited_tooltip();
   test_tooltip_bubble_tails();
+  test_speech_tail_contour();
   test_tooltip_shadow_color();
   test_graphics_shutdown();
   TEST_END();
