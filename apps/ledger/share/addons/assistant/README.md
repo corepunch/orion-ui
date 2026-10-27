@@ -22,6 +22,11 @@ and the [Office Assistant Help API](https://learn.microsoft.com/en-us/dotnet/api
 The tail proportions follow the [clippy.js 10×16 tail atlas](https://github.com/clippyjs/clippy.js/blob/master/build/clippy.css):
 one upright edge and one diagonal edge, with a continuous outline where it joins
 the balloon. Orion renders this geometry as a single vector silhouette.
+The tip points about 30% across the character frame, just left of its head,
+matching the offset visible in the
+[Word 97 Letter Wizard screenshot](https://winworldpc.com/screenshot/c390c3ab-6334-2472-11c3-a4e284a2c3a5)
+and the [Word 97 welcome screenshot](https://s3.amazonaws.com/s3.timetoast.com/public/uploads/photos/10436249/97.png).
+The proportion follows the character frame when the layout changes.
 
 System dictation works in the command field. Clicking Clippy opens the bubble;
 it does not start microphone recording. Offline dictation availability depends
