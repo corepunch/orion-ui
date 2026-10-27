@@ -8,7 +8,18 @@ table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
 .line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
 .sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
 h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
-@media print{body{margin:6mm}}
+@page{size:A4 portrait;margin:12mm}
+@media print{
+  body{margin:0}
+  thead{display:table-header-group;break-inside:avoid;page-break-inside:avoid}
+  tbody{break-inside:auto;page-break-inside:auto}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  h1,h2,h3{break-after:avoid;page-break-after:avoid}
+  p{orphans:3;widows:3}
+  .grid td{overflow-wrap:anywhere}
+  .grid td.r,.grid td.c{white-space:nowrap}
+  .sign,.totals{break-inside:avoid;page-break-inside:avoid;break-before:avoid;page-break-before:avoid}
+}
 </style></head><body>
 <table style="width:100%"><tr><td style="width:70%;border-right:1px dashed #000;padding-right:8px">
 <div class="r small">Унифицированная форма № КО-1 (ОКУД 0310001)<br>Утверждена постановлением Госкомстата России от 18.08.98 № 88; применяется в соответствии с указанием Банка России от 11.03.2014 № 3210-У</div>
@@ -16,9 +27,10 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 <td><table class="box small"><tr><td></td><td class="b">Код</td></tr><tr><td style="border:0">Форма по ОКУД</td><td>0310001</td></tr><tr><td style="border:0">по ОКПО</td><td>&nbsp;</td></tr></table></td></tr>
 <tr><td><span class="line" style="width:100%">&nbsp;</span><div class="cap">структурное подразделение</div></td></tr></table>
 <table class="box" style="margin:6px 0"><tr><td style="border:0"><h1>ПРИХОДНЫЙ КАССОВЫЙ ОРДЕР</h1></td><td class="small">Номер документа<br><b>{{number}}</b></td><td class="small">Дата составления<br><b>{{date|dmy}}</b></td></tr></table>
-<table class="grid" style="width:100%"><tr><th rowspan="2">Дебет</th><th colspan="4">Кредит</th><th rowspan="2">Сумма,<br>руб. коп.</th><th rowspan="2">Код целе-<br>вого назна-<br>чения</th><th rowspan="2"></th></tr>
-<tr><th>код струк-<br>турного под-<br>разделения</th><th>корреспон-<br>дирующий<br>счет, субсчет</th><th>код анали-<br>тического<br>учета</th><th></th></tr>
-<tr><td class="c">{{doc_type.debit.code}}</td><td></td><td class="c">{{doc_type.credit.code}}</td><td></td><td></td><td class="r">{{total}}</td><td></td><td></td></tr></table>
+<table class="grid" style="width:100%">
+<thead><tr><th rowspan="2">Дебет</th><th colspan="4">Кредит</th><th rowspan="2">Сумма,<br>руб. коп.</th><th rowspan="2">Код целе-<br>вого назна-<br>чения</th><th rowspan="2"></th></tr>
+<tr><th>код струк-<br>турного под-<br>разделения</th><th>корреспон-<br>дирующий<br>счет, субсчет</th><th>код анали-<br>тического<br>учета</th><th></th></tr></thead>
+<tbody><tr><td class="c">{{doc_type.debit.code}}</td><td></td><td class="c">{{doc_type.credit.code}}</td><td></td><td></td><td class="r">{{total}}</td><td></td><td></td></tr></tbody></table>
 <p>Принято от <span class="line" style="width:75%">{{counterparty.name|gen}}</span></p>
 <p>Основание: <span class="line" style="width:78%">{{comment}}</span></p>
 <p>Сумма <span class="line" style="width:80%">{{total|words}}</span><br><span class="small" style="margin-left:40%">прописью</span></p>

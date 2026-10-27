@@ -8,7 +8,18 @@ table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
 .line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
 .sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
 h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
-@media print{body{margin:6mm}}
+@page{size:A4 landscape;margin:12mm}
+@media print{
+  body{margin:0}
+  thead{display:table-header-group;break-inside:avoid;page-break-inside:avoid}
+  tbody{break-inside:auto;page-break-inside:auto}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  h1,h2,h3{break-after:avoid;page-break-after:avoid}
+  p{orphans:3;widows:3}
+  .grid td{overflow-wrap:anywhere}
+  .grid td.r,.grid td.c{white-space:nowrap}
+  .sign,.totals{break-inside:avoid;page-break-inside:avoid;break-before:avoid;page-break-before:avoid}
+}
 </style></head><body>
 <table style="width:100%"><tr><td style="width:14mm;vertical-align:top"><table class="box"><tr><td class="small">Статус:<br><b>1</b></td></tr></table><p class="small">1 — счет-фактура и передаточный документ (акт)<br>2 — передаточный документ (акт)</p></td>
 <td><div class="r small">Приложение № 1 к письму ФНС России от 21.10.2013 № ММВ-20-3/96@; форма счета-фактуры — приложение № 1 к постановлению Правительства РФ от 26.12.2011 № 1137</div>
@@ -28,11 +39,12 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 <tr><td>Идентификатор государственного контракта, договора (соглашения)</td><td><span class="line">--</span></td><td class="small">(8)</td></tr>
 </table></td></tr></table>
 <table class="grid" style="width:100%;margin-top:6px">
-<tr><th>№<br>п/п</th><th>Код<br>товара/<br>работ,<br>услуг</th><th>Наименование товара (описание выполненных работ,<br>оказанных услуг), имущественного права</th><th>Код<br>вида<br>товара</th><th colspan="2">Единица<br>измерения</th><th>Коли-<br>чество<br>(объем)</th><th>Цена (тариф)<br>за единицу<br>измерения</th><th>Стоимость товаров<br>(работ, услуг),<br>имущественных<br>прав без налога —<br>всего</th><th>В том<br>числе<br>сумма<br>акциза</th><th>Нало-<br>говая<br>ставка</th><th>Сумма налога,<br>предъявляемая<br>покупателю</th><th>Стоимость товаров<br>(работ, услуг),<br>имущественных<br>прав с налогом —<br>всего</th><th colspan="2">Страна<br>происхождения<br>товара</th><th>Регистрационный<br>номер декларации<br>на товары</th></tr>
-<tr><th>А</th><th>Б</th><th>1</th><th>1а</th><th>2</th><th>2а</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>10а</th><th>11</th></tr>
-{{#lines}}<tr><td class="c">{{n}}</td><td class="c">{{item.sku}}</td><td>{{item.name}}</td><td class="c">--</td><td class="c">{{item.unit.code}}</td><td class="c">{{item.unit.name}}</td><td class="r">{{quantity}}</td><td class="r">{{price}}</td><td class="r">{{amount}}</td><td class="c">без акциза</td><td class="c">{{vat_rate.name}}</td><td class="r">{{vat}}</td><td class="r">{{total}}</td><td class="c">--</td><td class="c">--</td><td class="c">--</td></tr>
-{{/lines}}<tr><td colspan="8" class="b">Всего к оплате (9)</td><td class="r b">{{amount}}</td><td class="c">X</td><td class="c">X</td><td class="r b">{{vat}}</td><td class="r b">{{total}}</td><td colspan="3" style="border:0"></td></tr>
-</table>
+<thead><tr><th>№<br>п/п</th><th>Код<br>товара/<br>работ,<br>услуг</th><th>Наименование товара (описание выполненных работ,<br>оказанных услуг), имущественного права</th><th>Код<br>вида<br>товара</th><th colspan="2">Единица<br>измерения</th><th>Коли-<br>чество<br>(объем)</th><th>Цена (тариф)<br>за единицу<br>измерения</th><th>Стоимость товаров<br>(работ, услуг),<br>имущественных<br>прав без налога —<br>всего</th><th>В том<br>числе<br>сумма<br>акциза</th><th>Нало-<br>говая<br>ставка</th><th>Сумма налога,<br>предъявляемая<br>покупателю</th><th>Стоимость товаров<br>(работ, услуг),<br>имущественных<br>прав с налогом —<br>всего</th><th colspan="2">Страна<br>происхождения<br>товара</th><th>Регистрационный<br>номер декларации<br>на товары</th></tr>
+<tr><th>А</th><th>Б</th><th>1</th><th>1а</th><th>2</th><th>2а</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>10а</th><th>11</th></tr></thead>
+<tbody>{{#lines}}<tr><td class="c">{{n}}</td><td class="c">{{item.sku}}</td><td>{{item.name}}</td><td class="c">--</td><td class="c">{{item.unit.code}}</td><td class="c">{{item.unit.name}}</td><td class="r">{{quantity}}</td><td class="r">{{price}}</td><td class="r">{{amount}}</td><td class="c">без акциза</td><td class="c">{{vat_rate.name}}</td><td class="r">{{vat}}</td><td class="r">{{total}}</td><td class="c">--</td><td class="c">--</td><td class="c">--</td></tr>
+{{/lines}}</tbody>
+<tbody class="totals"><tr><td colspan="8" class="b">Всего к оплате (9)</td><td class="r b">{{amount}}</td><td class="c">X</td><td class="c">X</td><td class="r b">{{vat}}</td><td class="r b">{{total}}</td><td colspan="3" style="border:0"></td></tr>
+</tbody></table>
 <table style="width:100%" class="sign"><tr>
 <td>Руководитель организации или иное уполномоченное лицо <span class="line">{{org.director}}</span></td>
 <td>Главный бухгалтер или иное уполномоченное лицо <span class="line">{{org.accountant}}</span></td></tr></table>

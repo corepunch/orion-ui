@@ -8,7 +8,18 @@ table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
 .line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
 .sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
 h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
-@media print{body{margin:6mm}}
+@page{size:A4 landscape;margin:12mm}
+@media print{
+  body{margin:0}
+  thead{display:table-header-group;break-inside:avoid;page-break-inside:avoid}
+  tbody{break-inside:auto;page-break-inside:auto}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  h1,h2,h3{break-after:avoid;page-break-after:avoid}
+  p{orphans:3;widows:3}
+  .grid td{overflow-wrap:anywhere}
+  .grid td.r,.grid td.c{white-space:nowrap}
+  .sign,.totals{break-inside:avoid;page-break-inside:avoid;break-before:avoid;page-break-before:avoid}
+}
 </style></head><body>
 <div class="r small">Приложение № 1 к постановлению Правительства Российской Федерации от 26 декабря 2011 г. № 1137<br>(в ред. постановлений Правительства РФ от 02.04.2021 № 534, от 16.08.2024 № 1096)</div>
 <h1>СЧЕТ-ФАКТУРА № {{number}} от {{date|dmy}} <span class="small">(1)</span><br>ИСПРАВЛЕНИЕ № <span class="line" style="min-width:40px">--</span> от <span class="line" style="min-width:80px">--</span> <span class="small">(1а)</span></h1>
@@ -27,12 +38,13 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 <tr><td>Идентификатор государственного контракта, договора (соглашения) (при наличии)</td><td><span class="line">--</span></td><td class="small">(8)</td></tr>
 </table>
 <table class="grid" style="width:100%;margin-top:8px">
-<tr><th rowspan="2">Наименование товара<br>(описание выполненных<br>работ, оказанных услуг),<br>имущественного права</th><th rowspan="2">Код<br>вида<br>товара</th><th colspan="2">Единица<br>измерения</th><th rowspan="2">Коли-<br>чество<br>(объем)</th><th rowspan="2">Цена (тариф)<br>за единицу<br>измерения</th><th rowspan="2">Стоимость<br>товаров (работ,<br>услуг), имуще-<br>ственных прав<br>без налога — всего</th><th rowspan="2">В том<br>числе<br>сумма<br>акциза</th><th rowspan="2">Нало-<br>говая<br>ставка</th><th rowspan="2">Сумма<br>налога,<br>предъяв-<br>ляемая<br>покупателю</th><th rowspan="2">Стоимость<br>товаров (работ,<br>услуг), имуще-<br>ственных прав<br>с налогом — всего</th><th colspan="2">Страна<br>происхождения<br>товара</th><th rowspan="2">Регистра-<br>ционный номер<br>декларации на<br>товары или<br>партии товара</th><th colspan="2">Единица<br>измерения товара,<br>используемая<br>в целях прослежи-<br>ваемости</th><th rowspan="2">Коли-<br>чество<br>прослежи-<br>ваемого<br>товара</th><th rowspan="2">Стоимость<br>прослежи-<br>ваемого<br>товара<br>без НДС</th></tr>
+<thead><tr><th rowspan="2">Наименование товара<br>(описание выполненных<br>работ, оказанных услуг),<br>имущественного права</th><th rowspan="2">Код<br>вида<br>товара</th><th colspan="2">Единица<br>измерения</th><th rowspan="2">Коли-<br>чество<br>(объем)</th><th rowspan="2">Цена (тариф)<br>за единицу<br>измерения</th><th rowspan="2">Стоимость<br>товаров (работ,<br>услуг), имуще-<br>ственных прав<br>без налога — всего</th><th rowspan="2">В том<br>числе<br>сумма<br>акциза</th><th rowspan="2">Нало-<br>говая<br>ставка</th><th rowspan="2">Сумма<br>налога,<br>предъяв-<br>ляемая<br>покупателю</th><th rowspan="2">Стоимость<br>товаров (работ,<br>услуг), имуще-<br>ственных прав<br>с налогом — всего</th><th colspan="2">Страна<br>происхождения<br>товара</th><th rowspan="2">Регистра-<br>ционный номер<br>декларации на<br>товары или<br>партии товара</th><th colspan="2">Единица<br>измерения товара,<br>используемая<br>в целях прослежи-<br>ваемости</th><th rowspan="2">Коли-<br>чество<br>прослежи-<br>ваемого<br>товара</th><th rowspan="2">Стоимость<br>прослежи-<br>ваемого<br>товара<br>без НДС</th></tr>
 <tr><th>код</th><th>условное<br>обозначение<br>(национальное)</th><th>цифро-<br>вой код</th><th>краткое<br>наимено-<br>вание</th><th>код</th><th>условное<br>обозна-<br>чение</th></tr>
-<tr><th>1</th><th>1а</th><th>2</th><th>2а</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>10а</th><th>11</th><th>12</th><th>12а</th><th>13</th><th>14</th></tr>
-{{#lines}}<tr><td>{{item.name}}</td><td class="c">--</td><td class="c">{{item.unit.code}}</td><td class="c">{{item.unit.name}}</td><td class="r">{{quantity}}</td><td class="r">{{price}}</td><td class="r">{{amount}}</td><td class="c">без акциза</td><td class="c">{{vat_rate.name}}</td><td class="r">{{vat}}</td><td class="r">{{total}}</td><td class="c">--</td><td class="c">--</td><td class="c">--</td><td class="c">--</td><td class="c">--</td><td class="c">--</td><td class="c">--</td></tr>
-{{/lines}}<tr><td colspan="6" class="b">Всего к оплате (9)</td><td class="r b">{{amount}}</td><td class="c">X</td><td class="c">X</td><td class="r b">{{vat}}</td><td class="r b">{{total}}</td><td colspan="7" style="border:0"></td></tr>
-</table>
+<tr><th>1</th><th>1а</th><th>2</th><th>2а</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>10а</th><th>11</th><th>12</th><th>12а</th><th>13</th><th>14</th></tr></thead>
+<tbody>{{#lines}}<tr><td>{{item.name}}</td><td class="c">--</td><td class="c">{{item.unit.code}}</td><td class="c">{{item.unit.name}}</td><td class="r">{{quantity}}</td><td class="r">{{price}}</td><td class="r">{{amount}}</td><td class="c">без акциза</td><td class="c">{{vat_rate.name}}</td><td class="r">{{vat}}</td><td class="r">{{total}}</td><td class="c">--</td><td class="c">--</td><td class="c">--</td><td class="c">--</td><td class="c">--</td><td class="c">--</td><td class="c">--</td></tr>
+{{/lines}}</tbody>
+<tbody class="totals"><tr><td colspan="6" class="b">Всего к оплате (9)</td><td class="r b">{{amount}}</td><td class="c">X</td><td class="c">X</td><td class="r b">{{vat}}</td><td class="r b">{{total}}</td><td colspan="7" style="border:0"></td></tr>
+</tbody></table>
 <table style="width:100%" class="sign"><tr>
 <td>Руководитель организации<br>или иное уполномоченное лицо <span class="line">{{org.director}}</span></td>
 <td>Главный бухгалтер<br>или иное уполномоченное лицо <span class="line">{{org.accountant}}</span></td></tr>

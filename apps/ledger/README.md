@@ -357,6 +357,20 @@ values as they are. `Documents > Print Forms` writes every form of the
 document's type to `<infobase dir>/print/` for printing from a browser;
 `Reports > Print Report Forms` writes the report forms and exports.
 
+HTML forms are self-contained and declare A4 paper with 12 mm page margins.
+Invoices, receipts, payment orders and VAT summaries use portrait; wide
+registers, cash books, payroll lists, trial balances and goods/tax forms use
+landscape. Use the template's paper size and orientation in the browser's print
+dialog and disable browser-added headers and footers.
+
+Tabular headings use `<thead>` so they repeat on continuation pages, including
+multi-row column headings. Data stays in a breakable `<tbody>`; ordinary rows,
+totals and signature blocks stay together when they fit on a page. Totals use a
+separate `<tbody class="totals">` or `<table class="totals">`, rather than a
+repeating `<tfoot>`, so they print once at the end. Keep these groups when
+customizing a template, and check both short and multi-page documents in print
+preview.
+
 ## How it is built
 
 Almost everything is declared in `ledger.orion`:

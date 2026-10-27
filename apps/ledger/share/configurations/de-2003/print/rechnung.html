@@ -8,7 +8,18 @@ table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
 .line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
 .sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
 h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
-@media print{body{margin:6mm}}
+@page{size:A4 portrait;margin:12mm}
+@media print{
+  body{margin:0}
+  thead{display:table-header-group;break-inside:avoid;page-break-inside:avoid}
+  tbody{break-inside:auto;page-break-inside:auto}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  h1,h2,h3{break-after:avoid;page-break-after:avoid}
+  p{orphans:3;widows:3}
+  .grid td{overflow-wrap:anywhere}
+  .grid td.r,.grid td.c{white-space:nowrap}
+  .sign,.totals{break-inside:avoid;page-break-inside:avoid;break-before:avoid;page-break-before:avoid}
+}
 </style></head><body>
 <p class="small">{{org.name}} · {{org.address}}</p>
 <table style="width:100%"><tr>
@@ -24,10 +35,10 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 <h1>Rechnung {{number}}</h1>
 <p>{{comment}}</p>
 <table class="grid" style="width:100%">
-<tr><th>Pos.</th><th>Art.-Nr.</th><th>Bezeichnung</th><th>Menge</th><th>Einheit</th><th>Einzelpreis</th><th>USt</th><th>Gesamt netto</th></tr>
-{{#lines}}<tr><td class="c">{{n}}</td><td class="c">{{item.sku}}</td><td>{{item.name}}</td><td class="r">{{quantity}}</td><td class="c">{{item.unit.name}}</td><td class="r">{{price}}</td><td class="c">{{vat_rate.name}}</td><td class="r">{{amount}}</td></tr>
-{{/lines}}</table>
-<table style="margin-left:auto;margin-top:6px">
+<thead><tr><th>Pos.</th><th>Art.-Nr.</th><th>Bezeichnung</th><th>Menge</th><th>Einheit</th><th>Einzelpreis</th><th>USt</th><th>Gesamt netto</th></tr></thead>
+<tbody>{{#lines}}<tr><td class="c">{{n}}</td><td class="c">{{item.sku}}</td><td>{{item.name}}</td><td class="r">{{quantity}}</td><td class="c">{{item.unit.name}}</td><td class="r">{{price}}</td><td class="c">{{vat_rate.name}}</td><td class="r">{{amount}}</td></tr>
+{{/lines}}</tbody></table>
+<table class="totals" style="margin-left:auto;margin-top:6px">
 <tr><td class="r">Summe netto:</td><td class="r">{{amount}} {{cfg.currency}}</td></tr>
 <tr><td class="r">zzgl. Umsatzsteuer:</td><td class="r">{{vat}} {{cfg.currency}}</td></tr>
 <tr><td class="r b">Rechnungsbetrag:</td><td class="r b">{{total}} {{cfg.currency}}</td></tr>

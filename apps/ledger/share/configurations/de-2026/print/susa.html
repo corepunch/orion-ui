@@ -8,14 +8,25 @@ table{border-collapse:collapse}td,th{padding:1px 4px;vertical-align:top}
 .line{border-bottom:1px solid #000;min-width:120px;display:inline-block}
 .sign td{padding-top:10px}.cap{font-size:7pt;text-align:center;border-top:1px solid #000}
 h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;min-width:70px}
-@media print{body{margin:6mm}}
+@page{size:A4 landscape;margin:12mm}
+@media print{
+  body{margin:0}
+  thead{display:table-header-group;break-inside:avoid;page-break-inside:avoid}
+  tbody{break-inside:auto;page-break-inside:auto}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  h1,h2,h3{break-after:avoid;page-break-after:avoid}
+  p{orphans:3;widows:3}
+  .grid td{overflow-wrap:anywhere}
+  .grid td.r,.grid td.c{white-space:nowrap}
+  .sign,.totals{break-inside:avoid;page-break-inside:avoid;break-before:avoid;page-break-before:avoid}
+}
 </style></head><body>
 <h1>Summen- und Saldenliste</h1>
 <p>{{org.name}}, {{org.address}}<br>Zeitraum: {{period.date_from|dmy}} bis {{period.date_to|dmy}} · Kontenrahmen SKR 03</p>
 <table class="grid" style="width:100%">
-<tr><th rowspan="2">Konto</th><th rowspan="2">Bezeichnung</th><th colspan="2">Eröffnungsbilanzwert / Saldo zu Beginn</th><th colspan="2">Summen des Zeitraums</th><th colspan="2">Saldo zum Ende</th></tr>
-<tr><th>Soll</th><th>Haben</th><th>Soll</th><th>Haben</th><th>Soll</th><th>Haben</th></tr>
-{{#balances}}<tr><td class="c">{{account.code}}</td><td>{{account.name}}</td><td class="r">{{opening_dr}}</td><td class="r">{{opening_cr}}</td><td class="r">{{debit_turnover}}</td><td class="r">{{credit_turnover}}</td><td class="r">{{balance_dr}}</td><td class="r">{{balance_cr}}</td></tr>
-{{/balances}}</table>
+<thead><tr><th rowspan="2">Konto</th><th rowspan="2">Bezeichnung</th><th colspan="2">Eröffnungsbilanzwert / Saldo zu Beginn</th><th colspan="2">Summen des Zeitraums</th><th colspan="2">Saldo zum Ende</th></tr>
+<tr><th>Soll</th><th>Haben</th><th>Soll</th><th>Haben</th><th>Soll</th><th>Haben</th></tr></thead>
+<tbody>{{#balances}}<tr><td class="c">{{account.code}}</td><td>{{account.name}}</td><td class="r">{{opening_dr}}</td><td class="r">{{opening_cr}}</td><td class="r">{{debit_turnover}}</td><td class="r">{{credit_turnover}}</td><td class="r">{{balance_dr}}</td><td class="r">{{balance_cr}}</td></tr>
+{{/balances}}</tbody></table>
 <table class="sign" style="width:100%"><tr><td>Erstellt <span class="line">{{org.accountant}}</span></td></tr></table>
 </body></html>
