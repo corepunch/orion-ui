@@ -225,6 +225,13 @@ import and verify that no opening entries are added. Use
 `apps/ledger/tests/enterprisedata_sample.xml` for the small synthetic fixture
 and automated regression tests.
 
+## Research on 1C programmer tasks
+
+[50 real forum and Stack Overflow cases](docs/1c-programmer-tasks-research.md)
+(in Russian) map everyday 1C work to assistant scenarios, required checks and
+Ledger's existing APIs and gaps. The study includes implementation priorities
+and a pilot method for measuring task coverage and human time saved.
+
 ## Local automation recipes and nodes
 
 [Local Lua automation](AUTOMATION.md) adds 12 ready-made recipes, 16 typed node
