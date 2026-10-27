@@ -44,6 +44,8 @@
   [brSelectionBottom]      = 0xffD77800, \
   [brPlasticNeutral]       = 0xffd0d0d0, \
   [brAccentText]           = 0xffffffff, \
+  [brTooltipBackground]   = 0xff323232, \
+  [brTooltipText]         = 0xffc0c0c0, \
   [brInfoBackground]      = 0xff233b40, \
   [brInfoText]            = 0xffbdf4ff, \
   [brDesktopBg]            = 0xff6B3529

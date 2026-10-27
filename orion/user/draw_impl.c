@@ -348,7 +348,7 @@ static void draw_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side, 
                    speech ? theme->speechbubble.shadow.color : theme->tooltip.shadow.color);
   render_bubble(r, size, radius * scale, length * scale,
                 (tail_offset - pad) * scale, pad * scale, side,
-                get_sys_color(speech ? brInfoBackground : brPanelDark),
+                get_sys_color(speech ? brInfoBackground : brTooltipBackground),
                 speech ? get_sys_color(brInfoText) : 0, speech ? scale : 0,
                 speech ? theme->speechbubble.tail_width * scale : 0);
 }

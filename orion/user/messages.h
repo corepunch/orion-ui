@@ -688,7 +688,9 @@ typedef enum {
   brDesktopBg            = 36,  // desktop behind root windows (UI_INIT_DESKTOP)
   brInfoBackground       = 37,  // informational speech balloon surface
   brInfoText             = 38,  // text on the informational balloon
-  brCount                = 39
+  brTooltipBackground    = 39,  // ordinary hover tooltip surface
+  brTooltipText          = 40,  // text on the hover tooltip
+  brCount                = 41
 } sys_color_idx_t;
 
 // Runtime-accessible theme table (defined in user/theme.c).

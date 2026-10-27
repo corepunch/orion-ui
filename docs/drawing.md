@@ -204,6 +204,8 @@ control is registered with the runtime and FormEditor like `Card`.
 `draw_tooltip_bubble(rect, tail_offset, side)` draws a rounded face and attached
 tail in one fill pass. Its shadow reuses `draw_rect_shadow()` on the rectangular
 body, with a downward offset; the tail does not change shadow rendering.
+The face and text use `brTooltipBackground` and `brTooltipText`. Porcelain and
+Porcelain Dark use a charcoal face with white text for contrast over the workspace.
 The tint comes from `theme_t.tooltip.shadow.color`, independently of border colors.
 `rect` includes the theme's shadow margin, and `tail_offset` is relative to that
 rectangle along the arrow's edge. `side` is `TOOLTIP_TAIL_TOP`, `BOTTOM`, `LEFT`,

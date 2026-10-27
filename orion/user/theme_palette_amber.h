@@ -46,6 +46,8 @@
   [brSelectionBottom]      = WEB(0xFBE59A), \
   [brPlasticNeutral]       = WEB(0xC8C8C4), \
   [brAccentText]           = WEB(0x1A1A1A), \
+  [brTooltipBackground]   = WEB(0xE7E7E3), \
+  [brTooltipText]         = WEB(0x1E1E1E), \
   [brInfoBackground]      = WEB(0xFFFFE1), \
   [brInfoText]            = WEB(0x303025), \
   [brDesktopBg]            = WEB(0x29356B)

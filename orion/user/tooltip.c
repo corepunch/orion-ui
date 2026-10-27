@@ -113,7 +113,7 @@ static result_t tooltip_win_proc(window_t *win, uint32_t msg, uint32_t wparam, v
       draw_tooltip_bubble(bounds, g_tooltip_tail_offset, g_tooltip_tail_side);
       irect16_t text = rect_inset_xy(tooltip_bubble_body_rect(bounds, g_tooltip_tail_side),
                                      theme->tooltip.padding_x, theme->tooltip.padding_y);
-      draw_text_wrapped(win->title, &text, get_sys_color(brTextNormal));
+      draw_text_wrapped(win->title, &text, get_sys_color(brTooltipText));
       return true;
     }
     // Tooltips do not intercept pointer hit-testing through their shadow.

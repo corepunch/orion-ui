@@ -252,11 +252,12 @@ static void test_speech_tail_contour(void) {
 }
 
 static void test_tooltip_shadow_color(void) {
-  TEST("tooltip shadows stay dark across light and dark palettes");
+  TEST("tooltip faces use their palette role; Porcelain has white text on charcoal and shadows stay dark");
   uint32_t fbo = 0, texture = 0;
   int w = 0, h = 0;
   ASSERT_TRUE(R_EnsureWindowTarget(&fbo, &texture, &w, &h, 128, 96));
   glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  R_SetFramebufferSRGB(true);
   glViewport(0, 0, 128, 96);
   set_projection(0, 0, 128, 96);
   glDisable(GL_SCISSOR_TEST);
@@ -268,11 +269,21 @@ static void test_tooltip_shadow_color(void) {
     set_theme(styles[i]);
     glClear(GL_COLOR_BUFFER_BIT);
     draw_tooltip_bubble(R(0, 0, 128, 96), 100, TOOLTIP_TAIL_BOTTOM);
-    uint8_t pixel[4];
+    uint8_t pixel[4], face[4];
     glReadPixels(40, 95 - 82, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
     ok &= pixel[0] == 0 && pixel[1] == 0 && pixel[2] == 0 && pixel[3] > 0 && pixel[3] < 150;
+    glReadPixels(40, 95 - 40, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, face);
+    uint32_t color = get_sys_color(brTooltipBackground);
+    bool face_matches = abs(face[0] - (int)(color & 255)) <= 1 && abs(face[1] - (int)((color >> 8) & 255)) <= 1 &&
+                        abs(face[2] - (int)((color >> 16) & 255)) <= 1 && face[3] == 255;
+    if (!face_matches)
+      fprintf(stderr, "[tooltip-test] style=%d face=%u,%u,%u,%u palette=%08x\n", styles[i], face[0], face[1], face[2], face[3], color);
+    ok &= face_matches;
+    if (styles[i] == THEME_PORCELAIN || styles[i] == THEME_PORCELAIN_DARK)
+      ok &= face[0] < 48 && face[1] < 48 && face[2] < 48 && get_sys_color(brTooltipText) == WEB(0xFFFFFF);
   }
   set_theme(saved);
+  R_SetFramebufferSRGB(false);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glViewport(0, 0, 640, 480);
   R_DestroyWindowTarget(&fbo, &texture, &w, &h);
