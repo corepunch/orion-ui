@@ -24,6 +24,17 @@ This is the WinAPI equivalent of creating a window with `WS_HSCROLL` /
 `WS_VSCROLL` and calling `SetScrollInfo` / handling `WM_HSCROLL` /
 `WM_VSCROLL`.
 
+### Touch scrolling
+
+A one-finger swipe over overflowing content starts a pan after the framework's
+touch threshold. Release continues with UIKit's normal `0.998` velocity retention
+per millisecond. Coasting integrates the exponential curve over elapsed time,
+so delayed timer delivery does not shorten the scroll. The release threshold is
+50 points/second; a running fling retains its slow tail down to 5 points/second.
+Touching moving content stops its momentum. Cancellation never starts a fling.
+Positions clamp at the normal scroll limits, and updates send the same
+`evHScroll` / `evVScroll` notifications as other scrolling input.
+
 ### Two-finger panning
 
 Built-in scrollbars also handle native multitouch `evGesture` automatically

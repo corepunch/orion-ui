@@ -613,7 +613,7 @@ void scrollbar_fling(window_t *win, float vx, float vy) {
   const float velocity[] = {vx, vy};
   bool any = false;
   for (int axis = 0; axis < 2; axis++) {
-    if (!sb_available(win, axes[axis], flags[axis]) || fabsf(velocity[axis]) < FLING_MIN_SPEED) continue;
+    if (!sb_available(win, axes[axis], flags[axis]) || fabsf(velocity[axis]) < FLING_START_SPEED) continue;
     g_fling.velocity[axis] = velocity[axis];
     g_fling.pos[axis] = (float)axes[axis]->pos;
     any = true;
@@ -631,8 +631,10 @@ void scrollbar_fling(window_t *win, float vx, float vy) {
 
 static void sb_fling_step(window_t *win) {
   uint32_t now = (uint32_t)axGetMilliseconds();
-  float dt = (float)MIN(now - g_fling.time, 50u);
+  float dt = (float)(now - g_fling.time);
   g_fling.time = now;
+  float rate = logf(FLING_DECAY), decay = expf(rate * dt);
+  float travel = expm1f(rate * dt) / rate;
   win_sb_t *axes[] = {&win->hscroll, &win->vscroll};
   const uint32_t flags[] = {WINDOW_HSCROLL, WINDOW_VSCROLL};
   const uint32_t messages[] = {evHScroll, evVScroll};
@@ -642,9 +644,9 @@ static void sb_fling_step(window_t *win) {
     if (g_fling.velocity[axis] == 0) continue;
     if (!sb_available(win, sb, flags[axis])) { g_fling.velocity[axis] = 0; continue; }
     float lo = (float)sb->min_val, hi = (float)(sb->max_val - sb->page);
-    float pos = g_fling.pos[axis] + g_fling.velocity[axis] * dt;
+    float pos = g_fling.pos[axis] + g_fling.velocity[axis] * travel;
     g_fling.pos[axis] = CLAMP(pos, lo, hi);
-    g_fling.velocity[axis] *= powf(FLING_DECAY, dt);
+    g_fling.velocity[axis] *= decay;
     sb_try_scroll(win, sb, messages[axis], (int)lroundf(g_fling.pos[axis]));
     if (g_fling.pos[axis] != pos || fabsf(g_fling.velocity[axis]) < FLING_MIN_SPEED) g_fling.velocity[axis] = 0;
     else live = true;

@@ -29,10 +29,11 @@
 // Touch-and-hold that picks up an item answering DRAG_AFTER_HOLD.
 #define TOUCH_LONG_PRESS_MS     250u
 
-// Momentum after a touch swipe: velocity retained per millisecond, and the
-// speed in points/ms below which the content stops.
+// UIKit normal momentum: velocity retained per millisecond, and the release
+// and stopping speeds in points/ms. Keep the slow tail after a qualifying flick.
 #define FLING_DECAY             0.998f
-#define FLING_MIN_SPEED         0.05f
+#define FLING_START_SPEED       0.05f
+#define FLING_MIN_SPEED         0.005f
 
 // ──────────────────────────────────────────────────────────────────────────
 // Window System
