@@ -356,15 +356,24 @@ void resize_window(window_t *win, int new_w, int new_h) {
 #define MAX_WORKSPACES 16
 static struct { window_t *owner; irect16_t area; } g_workspaces[MAX_WORKSPACES];
 
-static bool registered_workspace_rect(hinstance_t hinstance, irect16_t *area) {
+static int workspace_slot(hinstance_t hinstance) {
   for (int i = 0; i < MAX_WORKSPACES; i++) {
     window_t *owner = g_workspaces[i].owner;
-    if (!owner || !is_window(owner) || owner->parent || owner->hinstance != hinstance ||
-        !window_has_state(owner, WINDOW_STATE_VISIBLE)) continue;
-    *area = g_workspaces[i].area;
-    return true;
+    if (owner && is_window(owner) && !owner->parent && owner->hinstance == hinstance &&
+        window_has_state(owner, WINDOW_STATE_VISIBLE)) return i;
   }
-  return false;
+  return -1;
+}
+
+static bool registered_workspace_rect(hinstance_t hinstance, irect16_t *area) {
+  int slot = workspace_slot(hinstance);
+  if (slot >= 0) *area = g_workspaces[slot].area;
+  return slot >= 0;
+}
+
+window_t *get_application_workspace_owner(hinstance_t hinstance) {
+  int slot = workspace_slot(hinstance);
+  return slot >= 0 ? g_workspaces[slot].owner : NULL;
 }
 
 void set_application_workspace(window_t *owner, const irect16_t *area) {
@@ -434,6 +443,7 @@ bool maximize_window(window_t *win) {
   resize_window(win, area.w, area.h);
   move_to_top(win);
   sync_desktop_window();
+  mdi_window_placement_changed(win);
   return true;
 }
 
@@ -445,12 +455,15 @@ bool restore_window(window_t *win) {
   }
   irect16_t area;
   if (!window_workspace_rect(win, &area)) return false;
+  win->flags = (win->flags & ~(WINDOW_STATE_MAXIMIZED | WINDOW_NOTITLE | WINDOW_NORESIZE)) | win->placement->restore_decorations;
+  // MDI documents leave maximized mode first; their tab band may give workspace back.
+  mdi_window_placement_changed(win);
+  window_workspace_rect(win, &area);
   irect16_t frame = window_restore_frame(win);
   frame.w = MIN(frame.w, area.w);
   frame.h = MIN(frame.h, area.h);
   frame.x = MAX(area.x, MIN(frame.x, area.x + area.w - frame.w));
   frame.y = MAX(area.y, MIN(frame.y, area.y + area.h - frame.h));
-  win->flags = (win->flags & ~(WINDOW_STATE_MAXIMIZED | WINDOW_NOTITLE | WINDOW_NORESIZE)) | win->placement->restore_decorations;
   move_window(win, frame.x, frame.y);
   resize_window(win, frame.w, frame.h);
   sync_desktop_window();
@@ -658,6 +671,8 @@ extern int titlebar_height(window_t const *win);
 extern int statusbar_height(window_t const *win);
 
 window_t *window_child_hit_test(window_t *win, ipoint16_t point) {
+  window_t *mdi = mdi_client_hit_test(win, point);
+  if (mdi) return mdi;
   window_t *hit = (window_t *)send_message(win, evChildHitTest, MAKEDWORD(point.x, point.y), NULL);
   if (!hit) return NULL;
   for (window_t *c = win->children; c; c = c->next)
@@ -1359,6 +1374,7 @@ void set_window_title(window_t *win, const char *title) {
   }
   toolbar_relayout(win);  // a TOOLBAR_ITEM_TITLE measures the title
   invalidate_window(win);
+  mdi_window_changed(win);
 }
 
 void set_window_subtitle(window_t *win, const char *subtitle) {

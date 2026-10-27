@@ -209,6 +209,10 @@ void paint_lift_shadow(window_t *root, window_t *win);
 void paint_drag_visuals(window_t *root);
 #define lifted_now paint_lifted_now
 
+static bool paints_above_siblings(window_t *win) {
+  return dock_is_floating(win) || win->role == WINDOW_ROLE_MDICLIENT;
+}
+
 static irect16_t isect_rect(irect16_t a, irect16_t b) {
   int left = MAX(a.x, b.x), top = MAX(a.y, b.y);
   int right = MIN(a.x + a.w, b.x + b.w), bottom = MIN(a.y + a.h, b.y + b.h);
@@ -458,12 +462,13 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
         return true;
       case evPaint:
         if (g_ui_runtime.running) dock_paint(win);
+        // Floating docks and MDI clients lie over the other children.
         for (window_t *sub = win->children; sub; sub = sub->next) {
-          if (window_has_state(sub, WINDOW_STATE_VISIBLE) && !lifted_now(sub) && !dock_is_floating(sub))
+          if (window_has_state(sub, WINDOW_STATE_VISIBLE) && !lifted_now(sub) && !paints_above_siblings(sub))
             send_message(sub, evPaint, wparam, lparam);
         }
         for (window_t *sub = win->children; sub; sub = sub->next)
-          if (window_has_state(sub, WINDOW_STATE_VISIBLE) && !lifted_now(sub) && dock_is_floating(sub))
+          if (window_has_state(sub, WINDOW_STATE_VISIBLE) && !lifted_now(sub) && paints_above_siblings(sub))
             send_message(sub, evPaint, wparam, lparam);
         break;
       case evWheel:

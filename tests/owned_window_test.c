@@ -157,8 +157,41 @@ static void test_mdi_placement(void) {
   destroy_window(frame);
   PASS();
 }
+static void test_mdi_tabs(void) {
+  TEST("MDI: maximized documents get a home tab and document tabs that switch them");
+  window_t *frame = create_window("Journal", 0, MAKERECT(30, 40, 600, 400), NULL, owned_test_proc, 0, NULL);
+  window_t *client = create_window("", 0, MAKERECT(0, 0, 600, 400), frame, "MDIClient", 0, NULL);
+  window_t *a = owned_test_window("A", WINDOW_MAXIMIZEBOX), *b = owned_test_window("B", WINDOW_MAXIMIZEBOX);
+  ASSERT_TRUE(mdi_attach_document(a, client)); ASSERT_TRUE(mdi_attach_document(b, client));
+  show_window(a, true); show_window(b, true);
+  irect16_t area = mdi_client_screen_rect(client);
+  ASSERT_TRUE(maximize_window(b));
+  window_t *host = client->children, *tabs = host ? host->children : NULL;
+  ASSERT_NOT_NULL(tabs);
+  ASSERT_TRUE(window_has_state(host, WINDOW_STATE_VISIBLE));
+  ASSERT_EQUAL(send_message(tabs, tcGetCount, 0, NULL), 3);
+  ASSERT_EQUAL(send_message(tabs, tcGetItemData, 0, NULL), (result_t)frame);
+  ASSERT_EQUAL(send_message(tabs, tcGetSelection, 0, NULL), 2);
+  ASSERT_EQUAL(b->frame.y, area.y + host->frame.h);
+  irect16_t r;
+  ASSERT_TRUE(send_message(tabs, tcGetTabRect, 0, &r));
+  send_message(tabs, evLeftButtonDown, MAKEDWORD(r.x + 2, r.y + 4), NULL);
+  ASSERT_FALSE(window_has_state(a, WINDOW_STATE_VISIBLE)); ASSERT_FALSE(window_has_state(b, WINDOW_STATE_VISIBLE));
+  ASSERT_TRUE(window_has_state(host, WINDOW_STATE_VISIBLE));
+  ASSERT_TRUE(send_message(tabs, tcGetTabRect, 1, &r));
+  send_message(tabs, evLeftButtonDown, MAKEDWORD(r.x + 2, r.y + 4), NULL);
+  ASSERT(mdi_active_document(client) == a, "a document tab activates its document");
+  ASSERT_TRUE(window_has_state(a, WINDOW_STATE_VISIBLE)); ASSERT_TRUE(window_is_maximized(a));
+  ASSERT_EQUAL(send_message(tabs, tcGetSelection, 0, NULL), 1);
+  destroy_window(b);
+  ASSERT_EQUAL(send_message(tabs, tcGetCount, 0, NULL), 2);
+  destroy_window(a);
+  ASSERT_FALSE(window_has_state(host, WINDOW_STATE_VISIBLE));
+  destroy_window(frame);
+  PASS();
+}
 int main(void) {
   TEST_START("Owned windows"); test_env_init();
-  test_ownership(); test_z_order(); test_modal_scope(); test_mdi_documents(); test_mdi_placement();
+  test_ownership(); test_z_order(); test_modal_scope(); test_mdi_documents(); test_mdi_placement(); test_mdi_tabs();
   test_env_shutdown(); TEST_END();
 }

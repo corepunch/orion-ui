@@ -632,6 +632,9 @@ void mdi_activate_document(window_t *document);
 void mdi_cycle_document(window_t *client, int direction);
 void mdi_forget_document(window_t *document);
 ipoint16_t mdi_constrain_document_origin(window_t *document, ipoint16_t origin);
+window_t *mdi_client_hit_test(window_t *parent, ipoint16_t point);
+void mdi_window_changed(window_t *win);
+void mdi_window_placement_changed(window_t *win);
 bool mdi_close_all(window_t *client);
 void mdi_arrange_documents(window_t *client, bool tile);
 
@@ -731,6 +734,8 @@ bool maximize_window(window_t *win);
 bool restore_window(window_t *win);
 void update_maximized_window(window_t *win);
 void set_application_workspace(window_t *owner, const irect16_t *area);
+// The window that registered the application workspace (its chrome or menu bar), or NULL.
+window_t *get_application_workspace_owner(hinstance_t hinstance);
 void move_window(window_t *win, int x, int y);
 void resize_window(window_t *win, int new_w, int new_h);
 // Draw `win` under the pointer while its frame stays where it is. dx/dy are

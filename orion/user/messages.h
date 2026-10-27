@@ -564,6 +564,8 @@ enum {
   tcShowPages,      // restore hidden tabs, preserving their content and icons
   tcGetHiddenCount,
   tcHideSingleTab = evUser + 361, // wparam=bool; hide single-tab chrome, retaining pane actions
+  tcSetItems,       // wparam=count, lparam=tab_item_t*; copied; header-only tabs, no pages (TCM_INSERTITEM)
+  tcGetItemData,    // wparam=index; returns the item's data
 };
 enum {
   svGetPane = evUser + 360, // wparam = 0 (left/top) or 1 (right/bottom); returns window_t*

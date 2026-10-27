@@ -223,8 +223,33 @@ static void test_tabview_hide_single_tab(void) {
   destroy_window(tabs); test_env_shutdown(); PASS();
 }
 
+static void test_tabview_header_items(void) {
+  TEST("Header-only items: labels with data, selection notifies, pages refuse items");
+  test_env_init();
+  window_t *host = create_window("Host", 0, MAKERECT(0, 0, 400, 200), NULL, host_proc, 0, NULL);
+  window_t *tabs = create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 400, TAB_CONTROL_HEIGHT), host, "TabView", 0, NULL);
+  const tab_item_t items[] = {{"Home", 11}, {"Invoice", 22}, {"Payment", 33}};
+  ASSERT_TRUE(send_message(tabs, tcSetItems, 3, (void *)items));
+  ASSERT_EQUAL(send_message(tabs, tcGetCount, 0, NULL), 3);
+  ASSERT_EQUAL(send_message(tabs, tcGetItemData, 2, NULL), 33);
+  ASSERT_EQUAL(send_message(tabs, tcGetItemData, 3, NULL), 0);
+  irect16_t r;
+  ASSERT_TRUE(send_message(tabs, tcGetTabRect, 1, &r));
+  g_tab_notifications = 0;
+  ASSERT_TRUE(send_message(tabs, evLeftButtonDown, MAKEDWORD(r.x + 2, r.y + 4), NULL));
+  ASSERT_EQUAL(send_message(tabs, tcGetSelection, 0, NULL), 1);
+  ASSERT_EQUAL(g_tab_notifications, 1);
+  ASSERT_TRUE(send_message(tabs, tcSetItems, 1, (void *)items));
+  ASSERT_EQUAL(send_message(tabs, tcGetSelection, 0, NULL), 0);
+  window_t *paged = create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 400, 200), host, "TabView", 0, NULL);
+  create_window("Page", WINDOW_NOTITLE, MAKERECT(0, 0, 1, 1), paged, page_proc, 0, NULL);
+  ASSERT_FALSE(send_message(paged, tcSetItems, 1, (void *)items));
+  destroy_window(host); test_env_shutdown(); PASS();
+}
+
 int main(void) {
   TEST_START("TabView tests");
+  test_tabview_header_items();
   test_tabview_hide_single_tab();
   test_tabview_session_focus_and_removal();
   test_tabview_selects_and_arranges_pages();

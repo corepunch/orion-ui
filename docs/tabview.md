@@ -91,6 +91,15 @@ Page supplies Split and Close automatically; an optional `<PaneToolbar>` adds
 app actions before them. `<PaneToolbar replace="true">` supplies the complete
 action list instead. See [Page docking](page-docking.md).
 
+## Header-only items
+
+`tcSetItems(count, tab_item_t *items)` turns a TabView without pages into a
+tab bar, like WinAPI's `TCM_INSERTITEM`. Each item has a label and caller data;
+labels are copied, and each call replaces the whole list. `tcGetItemData(index)`
+returns the data. Selection, scrolling, the header toolbar and `tcnSelChange`
+work as for pages, and the parent swaps content itself. A TabView that already
+has pages rejects items. The MDI client uses this for its document tabs.
+
 `tcHidePage` removes the indexed tab while retaining its child window and focus
 history. `tcGetHiddenCount` reports retained tabs; `tcShowPages` restores them in
 child order, including their icons. Hidden tabs are excluded from selection,

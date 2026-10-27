@@ -5,6 +5,9 @@
 // (tab_index, icon_index).  When icons are present the tab header height
 // grows to MAX(TAB_CONTROL_HEIGHT, icon_h + 4).
 //
+// tcSetItems turns the control into a header-only tab bar (TCM_INSERTITEM): its
+// tabs are labels with caller data, and the parent swaps content on tcnSelChange.
+//
 // TAB_STYLE_SIDEBAR lists the tabs as rows down the left edge (a source list)
 // instead of a header strip. The list is an internal child window with a
 // built-in vertical scrollbar; it is not a page, so tcGetPage skips it.
@@ -29,6 +32,11 @@ typedef struct tab_hidden_s {
 } tab_hidden_t;
 
 typedef struct {
+  char *text;
+  uintptr_t data;
+} tab_entry_t;
+
+typedef struct {
   int selected, scroll;
   window_t *pressed_page;
   ipoint16_t press_point;
@@ -40,6 +48,9 @@ typedef struct {
   int tab_icon_count;
   window_t *actions;
   window_t *list; // sidebar row list, NULL outside TAB_STYLE_SIDEBAR
+  tab_entry_t *items; // header-only tabs; pages are unused once items are set
+  int item_count;
+  bool item_mode;
 } tabview_state_t;
 
 #define SIDEBAR_PAD 6
@@ -61,6 +72,7 @@ static window_t *page_from(const tabview_state_t *st, window_t *c) {
 
 static int tab_count(window_t *win) {
   tabview_state_t *st = win ? win->userdata : NULL;
+  if (st && st->item_mode) return st->item_count;
   int n = 0;
   if (win) FOR_EACH_PAGE(win, st, c) n++;
   return n;
@@ -71,6 +83,18 @@ static window_t *tab_page(window_t *win, int index) {
   int i = 0;
   FOR_EACH_PAGE(win, st, c) if (i++ == index) return c;
   return NULL;
+}
+
+static const char *tab_title(window_t *win, int index) {
+  tabview_state_t *st = win->userdata;
+  if (st && st->item_mode) return index >= 0 && index < st->item_count ? st->items[index].text : "";
+  window_t *page = tab_page(win, index);
+  return page ? page->title : "";
+}
+
+static void tab_free_items(tabview_state_t *st) {
+  for (int i = 0; i < st->item_count; i++) free(st->items[i].text);
+  free(st->items); st->items = NULL; st->item_count = 0;
 }
 
 static void tab_remember_focus(window_t *win, window_t *focus) {
@@ -151,21 +175,20 @@ static int tab_icon_gap(tabview_state_t *st) {
   (void)st; return 3;
 }
 
-static int tab_width(window_t *page, tabview_state_t *st, int idx) {
+static int tab_width(const char *title, tabview_state_t *st, int idx) {
   if (st && (st->style & TAB_STYLE_ICONS_ONLY))
     return tab_has_icon(st, idx) ? st->strip.icon_w + 8 : TAB_CONTROL_HEIGHT;
-  int w = MAX(get_theme()->tab.min_width, strwidth(page ? page->title : "") + 2 * get_theme()->tab.padding);
+  int w = MAX(get_theme()->tab.min_width, strwidth(title) + 2 * get_theme()->tab.padding);
   if (tab_has_icon(st, idx)) w += st->strip.icon_w + tab_icon_gap(st);
   return w;
 }
 
 // Width of the row column; the list window adds its scrollbar when one shows.
 static int sidebar_rows_width(window_t *win, tabview_state_t *st) {
-  int w = 96, i = 0;
-  FOR_EACH_PAGE(win, st, c) {
+  int w = 96;
+  for (int i = 0, n = tab_count(win); i < n; i++) {
     int iw = tab_has_icon(st, i) ? st->strip.icon_w + tab_icon_gap(st) : 0;
-    w = MAX(w, strwidth(c->title) + iw + 4 * SIDEBAR_PAD);
-    i++;
+    w = MAX(w, strwidth(tab_title(win, i)) + iw + 4 * SIDEBAR_PAD);
   }
   return w;
 }
@@ -201,8 +224,8 @@ static void draw_tab_icon(tabview_state_t *st, int idx, int x, int y, int h) {
                      UV_RECT(u0, v0, u1, v1), 0xFFFFFFFF, 0);
 }
 
-static void draw_tab_item(window_t *page, int x, bool selected, tabview_state_t *st, int idx) {
-  int w = tab_width(page, st, idx);
+static void draw_tab_item(const char *title, int x, bool selected, tabview_state_t *st, int idx) {
+  int w = tab_width(title, st, idx);
   int th = tab_header_height(st);
   int y = (selected ? 0 : 2) + ((st->style & TAB_STYLE_PANE) ? 0 : TAB_TOP_PAD);
   int h = th - y;
@@ -213,11 +236,11 @@ static void draw_tab_item(window_t *page, int x, bool selected, tabview_state_t 
     draw_tab_icon(st, idx, x + (w - st->strip.icon_w) / 2, y, h);
     return;
   }
-  int sw = strwidth(page->title), iw = has_icon ? st->strip.icon_w + tab_icon_gap(st) : 0;
+  int sw = strwidth(title), iw = has_icon ? st->strip.icon_w + tab_icon_gap(st) : 0;
   int content_w = iw + sw;
   int cx = x + (w - content_w) / 2;
   if (has_icon) { draw_tab_icon(st, idx, cx, y, h); cx += iw; }
-  draw_text_small(page->title, cx, y + (h - CHAR_HEIGHT) / 2,
+  draw_text_small(title, cx, y + (h - CHAR_HEIGHT) / 2,
                   theme_foreground(THEME_PART_TAB, state));
 }
 
@@ -269,10 +292,10 @@ static void tab_arrange(window_t *win) {
   if (tab_single_hidden(win, st)) st->scroll = 0;
   else if (!is_sidebar(st)) {
     int start = get_theme()->tab.header.start;
-    int x = start, selected_x = start, selected_w = 0, idx = 0, width = tab_available_width(win, st);
-    FOR_EACH_PAGE(win, st, c) {
-      int w = tab_width(c, st, idx);
-      if (idx++ == st->selected) { selected_x = x; selected_w = w; }
+    int x = start, selected_x = start, selected_w = 0, width = tab_available_width(win, st);
+    for (int idx = 0; idx < count; idx++) {
+      int w = tab_width(tab_title(win, idx), st, idx);
+      if (idx == st->selected) { selected_x = x; selected_w = w; }
       x += w;
     }
     if (selected_x - st->scroll < start) st->scroll = selected_x - start;
@@ -324,9 +347,9 @@ static result_t win_tabview_list(window_t *win, uint32_t msg, uint32_t wparam, v
   if (!st) return false;
   switch (msg) {
     case evPaint: {
-      int h = get_client_rect(win).h, i = 0;
+      int h = get_client_rect(win).h;
       theme_draw(THEME_PART_SIDEBAR, get_client_rect(win), CTRL_NORMAL);
-      FOR_EACH_PAGE(tabs, st, c) {
+      for (int i = 0, n = tab_count(tabs); i < n; i++) {
         irect16_t r = window_scroll_rect_to_client(win, sidebar_row(tabs, st, i));
         if (r.y + r.h >= 0 && r.y <= h) {
           ctrl_state_t state = i == st->selected ? CTRL_SELECTED : CTRL_NORMAL;
@@ -334,10 +357,9 @@ static result_t win_tabview_list(window_t *win, uint32_t msg, uint32_t wparam, v
           if (i == st->selected) theme_draw(THEME_PART_MENU_ITEM, rect_inset_xy(r, -MENU_CAPSULE_INSET, 0), state);
           int x = r.x + SIDEBAR_PAD;
           if (tab_has_icon(st, i)) { draw_tab_icon(st, i, x, r.y, r.h); x += st->strip.icon_w + tab_icon_gap(st); }
-          draw_text_ellipsized(FONT_SYSTEM, c->title, x, r.y + (r.h - text_char_height(FONT_SYSTEM)) / 2,
+          draw_text_ellipsized(FONT_SYSTEM, tab_title(tabs, i), x, r.y + (r.h - text_char_height(FONT_SYSTEM)) / 2,
                                r.x + r.w - SIDEBAR_PAD - x, theme_foreground(THEME_PART_MENU_ITEM, state));
         }
-        i++;
       }
       return true;
     }
@@ -377,21 +399,19 @@ static bool tab_paint(window_t *win) {
 
   set_clip_rect(win, R(0, 0, tab_available_width(win, st), th));
   int selected_x = get_theme()->tab.header.start - st->scroll;
-  window_t *selected = NULL;
-  int x = selected_x, i = 0;
+  int x = selected_x;
   if (tab_single_hidden(win, st)) {
-    window_t *page = tab_page(win, 0);
-    if (th) draw_text_ellipsized(FONT_SMALL, page->title, get_theme()->tab.padding,
+    if (th) draw_text_ellipsized(FONT_SMALL, tab_title(win, 0), get_theme()->tab.padding,
       (th - text_char_height(FONT_SMALL)) / 2, MAX(0, tab_available_width(win, st) - 2 * get_theme()->tab.padding),
       get_sys_color(brTextNormal));
-  } else FOR_EACH_PAGE(win, st, c) {
-    if (i == st->selected) { selected = c; selected_x = x; }
-    else draw_tab_item(c, x, false, st, i);
-    x += tab_width(c, st, i);
-    i++;
+  } else {
+    for (int i = 0, n = tab_count(win); i < n; i++) {
+      if (i == st->selected) selected_x = x;
+      else draw_tab_item(tab_title(win, i), x, false, st, i);
+      x += tab_width(tab_title(win, i), st, i);
+    }
+    if (st->selected < tab_count(win)) draw_tab_item(tab_title(win, st->selected), selected_x, true, st, st->selected);
   }
-
-  if (selected) draw_tab_item(selected, selected_x, true, st, st->selected);
   set_clip_rect(win, cr);
   irect16_t page = rect_trim_top(cr, th);
   theme_draw(THEME_PART_TAB_PANE, page, CTRL_NORMAL);
@@ -547,18 +567,17 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (is_sidebar(st)) return false;
       int th = tab_header_extent(win, st);
       if (my < 0 || my >= th || mx < 0 || mx >= tab_available_width(win, st)) return false;
-      int left = tab_single_hidden(win, st) ? 0 : get_theme()->tab.header.start - st->scroll, i = 0;
-      FOR_EACH_PAGE(win, st, c) {
-        int w = tab_single_hidden(win, st) ? tab_available_width(win, st) - left : tab_width(c, st, i);
+      int left = tab_single_hidden(win, st) ? 0 : get_theme()->tab.header.start - st->scroll;
+      for (int i = 0, n = tab_count(win); i < n; i++) {
+        int w = tab_single_hidden(win, st) ? tab_available_width(win, st) - left : tab_width(tab_title(win, i), st, i);
         if (mx >= left && mx < left + w) {
           tab_remember_focus(win, g_ui_runtime.focused); set_focus(win); tab_select(win, i, true);
-          if (st->style & TAB_STYLE_DRAG_TABS) {
-            st->pressed_page = c; st->press_point = (ipoint16_t){mx, my}; set_capture(win);
+          if ((st->style & TAB_STYLE_DRAG_TABS) && !st->item_mode) {
+            st->pressed_page = tab_page(win, i); st->press_point = (ipoint16_t){mx, my}; set_capture(win);
           }
           return true;
         }
         left += w;
-        i++;
       }
       return true;
     }
@@ -608,6 +627,39 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       }
       tab_arrange(win); invalidate_window(win); return true;
     }
+    case tcSetItems: {
+      const tab_item_t *items = lparam;
+      bool has_pages = page_from(st, win->children) != NULL;
+      if (!st || has_pages || wparam > 4096 || (wparam && !items)) {
+        fprintf(stderr, "[tv] set_items rejected win=%u count=%u reason=%s\n", win->id, wparam,
+                !st ? "no_state" : has_pages ? "has_pages" : "invalid_items");
+        fflush(stderr); return false;
+      }
+      tab_entry_t *entries = wparam ? calloc(wparam, sizeof(*entries)) : NULL;
+      for (uint32_t i = 0; entries && i < wparam; i++) {
+        entries[i] = (tab_entry_t){strdup(items[i].text ? items[i].text : ""), items[i].data};
+        if (!entries[i].text) {
+          while (i--) free(entries[i].text);
+          free(entries); entries = NULL;
+        }
+      }
+      if (wparam && !entries) {
+        fprintf(stderr, "[tv] set_items allocation failed win=%u count=%u\n", win->id, wparam);
+        fflush(stderr); return false;
+      }
+      tab_free_items(st);
+      free(st->tab_icons); st->tab_icons = NULL; st->tab_icon_count = 0;
+      st->items = entries; st->item_count = (int)wparam; st->item_mode = true;
+      tab_arrange(win); invalidate_window(win);
+      return true;
+    }
+    case tcGetItemData: {
+      if (!st || !st->item_mode || (int)wparam < 0 || (int)wparam >= st->item_count) {
+        fprintf(stderr, "[tv] get_item_data rejected win=%u index=%d count=%d\n", win->id, (int)wparam, st ? st->item_count : 0);
+        fflush(stderr); return 0;
+      }
+      return (result_t)st->items[wparam].data;
+    }
     case tcGetStyle: return st ? st->style : 0;
     case tcGetSelection: return st ? st->selected : -1;
     case tcSetSelection: return tab_select(win, (int)wparam, false) || (st && st->selected == (int)wparam);
@@ -635,12 +687,9 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         *(irect16_t *)lparam = st->actions ? R(0, 0, tab_available_width(win, st), tab_header_height(st)) : R(0, 0, 0, 0);
         return true;
       }
-      FOR_EACH_PAGE(win, st, c) {
-        int width = tab_width(c, st, i);
-        if (i++ == index) { *(irect16_t *)lparam = R(x, 0, width, tab_header_extent(win, st)); return true; }
-        x += width;
-      }
-      return false;
+      for (; i < index; i++) x += tab_width(tab_title(win, i), st, i);
+      *(irect16_t *)lparam = R(x, 0, tab_width(tab_title(win, index), st, index), tab_header_extent(win, st));
+      return true;
     }
     case tcMovePage: {
       tab_move_t *move = lparam;
@@ -794,6 +843,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     case evDestroy:
       if (st) {
         tab_cleanup_icons(st);
+        tab_free_items(st);
         while (st->focus) { tab_focus_t *entry = st->focus; st->focus = entry->next; free(entry); }
         while (st->hidden) { tab_hidden_t *entry = st->hidden; st->hidden = entry->next; free(entry); }
         free(st); win->userdata = NULL;

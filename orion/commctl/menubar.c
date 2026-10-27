@@ -456,11 +456,14 @@ static window_t *menubar_maximized_window(window_t *win) {
   menubar_data_t *data = win->userdata;
   if (data && data->vertical) return NULL;
   hinstance_t owner = get_root_window(win)->hinstance;
-  window_t *target = NULL;
+  window_t *target = NULL, *document = NULL;
+  // A maximized frame wins over its maximized MDI documents, which it restores with it.
   for (window_t *root = g_ui_runtime.windows; root; root = root->next)
-    if (root->hinstance == owner && window_is_maximized(root) &&
-        window_has_state(root, WINDOW_STATE_VISIBLE)) target = root;
-  return target;
+    if (root->hinstance == owner && window_is_maximized(root) && window_has_state(root, WINDOW_STATE_VISIBLE)) {
+      if (root->mdi_client) document = root;
+      else target = root;
+    }
+  return target ? target : document;
 }
 
 static irect16_t menubar_restore_rect(window_t *win) {

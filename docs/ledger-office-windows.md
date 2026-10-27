@@ -40,6 +40,19 @@ in the compositor and hit testing, activation, maximization and movement with th
 frame. This differs from creating native `WS_CHILD` HWNDs, while preserving the
 MDI containment contract in Orion's window system.
 
+New documents open centered in the client, cascading from there. A dragged
+document stays clipped by the client, but its caption cannot leave it.
+
+Maximizing the Ledger window puts the client in maximized mode, as in 1C's
+tabbed interface: every document is maximized, new ones open maximized, and a
+tab bar is docked in the application chrome under the menu bar. The first tab is
+the frame itself (the home tab, titled with the current page). Selecting it hides
+the documents to uncover the journal; a document tab shows them again. The
+close button at the right closes the active document. Restoring the window
+restores the documents. Maximizing a single document in a restored window shows
+the same tabs at the top of the client instead. The bar appears once a document
+is open in maximized mode and disappears when none remain.
+
 The Window menu cycles forward/backward (Ctrl+F6 / Ctrl+Shift+F6), closes the active
 editor (Ctrl+F4), and arranges documents in a cascade or side by side. Ctrl+S saves
 the active document and keeps it open; with no document it saves the infobase.
