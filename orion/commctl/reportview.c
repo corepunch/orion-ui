@@ -152,7 +152,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
         irect16_t icon = {text_x, y + (entry_h - ICON_OFFSET) / 2, ICON_OFFSET, ICON_OFFSET};
         if (sysicon_resolve(it->icon_name, &res))
           draw_sprite_region((int)res.tex, icon, UV_RECT(res.u0, res.v0, res.u1, res.v1),
-                             it->icon_color ? it->icon_color : fg, 0);
+                             row != data->selected && it->icon_color ? it->icon_color : fg, 0);
         text_x += ICON_OFFSET + WIN_PADDING;
       }
       if (col == 0 && (data->extended_style & RVS_EX_CHECKBOXES)) {
