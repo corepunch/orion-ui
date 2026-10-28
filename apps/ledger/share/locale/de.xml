@@ -407,11 +407,11 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Partly paid" where="code">Teilweise bezahlt</string>
   <string source="Not paid" where="code">Nicht bezahlt</string>
   <string source="Find a Command..." where="menu">Befehl suchen...</string>
+  <string source="There is no command '%s'." where="code">Es gibt keinen Befehl „%s“.</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>
   <context name="reports_page">
     <string source="Expense">Ausgabe</string>
   </context>
-  <string source="There is no command '%s'." where="code">Es gibt keinen Befehl „%s“.</string>
 </strings>

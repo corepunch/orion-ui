@@ -46,7 +46,7 @@ account.
 ![Document form, Porcelain Dark](images/built-document-dark.jpg)
 
 Concept 6 is implemented too: Clippy's balloon is a command palette (Help,
-Find a Command, Ctrl+K). The answer is followed by grouped rows: records,
+Find a Command, Ctrl+Shift+K). The answer is followed by grouped rows: records,
 related commands, suggestions from the books and examples. The arrow keys move
 through the rows while typing stays in the field, and Enter opens a row. See
 the [assistant guide](../../../apps/ledger/share/addons/assistant/README.md).

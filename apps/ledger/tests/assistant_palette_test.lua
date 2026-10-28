@@ -8,7 +8,7 @@ local catalog=Commands.new{
   {name='doc.close_month',label='Закрыть месяц...',group='doc',shortcut='Ctrl+E'},
   {name='view.counterparties',label='Контрагенты',group='view',shortcut='Ctrl+2'},
   {name='file.quit',label='Выход',group='file',shortcut=''},
-  {name='help.find_command',label='Найти команду...',group='help',shortcut='Ctrl+K'},
+  {name='help.find_command',label='Найти команду...',group='help',shortcut='Ctrl+Shift+K'},
 }
 local found=catalog:search('нов док')
 check(#found==2 and found[1].name=='doc.new','every word starts a word of the caption')

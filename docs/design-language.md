@@ -123,7 +123,7 @@ and never writes it back. Totals are labels, not disabled text boxes.
 ### Assistant
 
 The Office Assistant (`share/addons/assistant`) is a command palette in an
-Office 97 balloon. It opens with Ctrl+K (Help, Find a Command) and has four
+Office 97 balloon. It opens with Ctrl+Shift+K (Help, Find a Command) and has four
 parts:
 
 - the question;

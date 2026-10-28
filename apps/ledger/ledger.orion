@@ -99,7 +99,7 @@
       <item name="tile" label="Tile Documents" />
     </menu>
     <menu name="help" label="Help">
-      <item name="find_command" label="Find a Command..." shortcut="Ctrl+K" />
+      <item name="find_command" label="Find a Command..." shortcut="Ctrl+Shift+K" />
       <item name="assistant" label="Show Office Assistant" shortcut="Ctrl+Shift+A" />
       <Separator />
       <item name="about" label="About Ledger" />

@@ -25,7 +25,7 @@ then rows in groups.
 
 Up and Down move through the rows while typing stays in the field; Enter opens
 the selected row until something new is typed, and then Enter sends the text.
-**Help → Find a Command** (Ctrl+K) opens the balloon with the field focused.
+**Help → Find a Command** (Ctrl+Shift+K) opens the balloon with the field focused.
 Saving, posting or deleting a document refreshes the suggestions; when there
 is a new one while the balloon is closed, Clippy asks for attention. Narrow
 the request or use **open first** to open a result by typing; the full result

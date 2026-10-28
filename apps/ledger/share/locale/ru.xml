@@ -407,11 +407,11 @@
   <string source="Partly paid" where="code">Оплачен частично</string>
   <string source="Not paid" where="code">Не оплачен</string>
   <string source="Find a Command..." where="menu">Найти команду...</string>
+  <string source="There is no command '%s'." where="code">Нет команды «%s».</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>
   <context name="reports_page">
     <string source="Expense">Расход</string>
   </context>
-  <string source="There is no command '%s'." where="code">Нет команды «%s».</string>
 </strings>
