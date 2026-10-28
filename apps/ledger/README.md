@@ -120,6 +120,14 @@ means adding a configuration directory, not changing code.
 configuration opens its own infobase on the next start. A new infobase starts
 from the configuration's `demo.xml` and is posted on first open.
 
+## Large synthetic test infobases
+
+For deterministic 1,000 / 10,000 / 50,000-document RU-2026 and DE-2026
+workloads, engine materialization, persistence/report checks and performance
+commands, see [Synthetic workloads](docs/synthetic-workloads.md). The small
+first-start demos remain unchanged. These synthetic Ledger-native fixtures
+are separate from the real Russian EnterpriseData importer sample below.
+
 ## Languages
 
 The interface is written in English and translated by string catalogs

@@ -410,6 +410,25 @@ static void test_record_lifecycle(void) {
   PASS();
 }
 
+static void test_vat_half_cent(void) {
+  TEST("VAT: a half cent rounds up from integer net cents");
+  database_t *cfg = create_database_with_schema("vat_cfg", "db_schema_xml", &ledger_cfg_schema, SHARE "/ru-2003/configuration.xml");
+  database_t *ib = create_database_with_schema("vat_ib", "db_schema_xml", &ledger_ib_schema, SHARE "/ru-2003/demo.xml");
+  ASSERT(cfg && ib, "isolated databases load");
+  db_vat_rate_t rate = { .id = 9999, .rate = 7 };
+  ASSERT_NOT_NULL(send_db_message(cfg, dbInsert, TABLE_VAT_RATES, &rate));
+  db_document_t doc = { .doc_type_id = 1 };
+  db_document_t *inserted = (void *)send_db_message(ib, dbInsert, TABLE_DOCUMENTS, &doc);
+  ASSERT_NOT_NULL(inserted);
+  db_doc_line_t line = { .document_id = inserted->id, .item_id = 1, .vat_rate_id = 9999, .quantity = 10, .price = 24.45 };
+  ASSERT_NOT_NULL(send_db_message(ib, dbInsert, TABLE_DOC_LINES, &line));
+  ledger_recalc_document(ib, cfg, inserted->id);
+  ASSERT(approx(inserted->amount, 244.50) && approx(inserted->vat, 17.12) && approx(inserted->total, 261.62), "VAT must round half a cent up");
+  cfg->dirty = ib->dirty = false;
+  destroy_database(ib); destroy_database(cfg);
+  PASS();
+}
+
 static void test_save_and_reload(void) {
   TEST("db_schema_xml: save and reload keep records, doubles and ids");
   ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
@@ -1141,6 +1160,7 @@ int main(int argc, char **argv) {
   test_numbering_and_delete();
   test_record_lifecycle();
   test_save_and_reload();
+  test_vat_half_cent();
   test_print_forms();
   test_generated_bindings();
   test_russian_catalogs();

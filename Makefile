@@ -361,6 +361,8 @@ ledger-api-check: ledger-executor-check
 share: $(LEDGER_EXECUTOR_LUA)
 $(BIN_DIR)/ledger-run$(EXE_EXT) $(BIN_DIR)/ledger$(EXE_EXT) $(GEM_DIR)/ledger.gem $(patsubst apps/ledger/tests/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(wildcard apps/ledger/tests/*.c)): $(LEDGER_EXECUTOR_HEADER)
 
+$(BIN_DIR)/ledger-fixture-check$(EXE_EXT): $(LEDGER_EXECUTOR_HEADER) $(GENERATED_DIR)/apps/ledger/executor_lua.h $(LEDGER_API_HEADER) $(GENERATED_DIR)/apps/ledger/ledger.h $(call app_srcs,ledger) $(LEDGER_CATALOG)
+
 $(BIN_DIR)/ledger-run$(EXE_EXT): $(GENERATED_DIR)/apps/ledger/executor_lua.h
 $(BIN_DIR)/ledger-run$(EXE_EXT): $(LEDGER_API_HEADER) $(GENERATED_DIR)/apps/ledger/ledger.h $(call app_srcs,ledger) $(LEDGER_CATALOG)
 $(BIN_DIR)/ledger$(EXE_EXT) $(GEM_DIR)/ledger.gem $(patsubst apps/ledger/tests/%.c,$(BIN_DIR)/test_%$(EXE_EXT),$(wildcard apps/ledger/tests/*.c)): $(LEDGER_API_HEADER) $(LEDGER_CATALOG)
@@ -633,3 +635,8 @@ app-source:
 	@echo $(or $(PHONY_APPS_SRC_$(APP)),$(APP))
 list-devices:
 	xcrun devicectl list devices
+
+.PHONY: ledger-large-test
+ledger-large-test: $(BIN_DIR)/ledger-fixture-check$(EXE_EXT)
+	python3 apps/ledger/tests/large_infobase_test.py
+	python3 apps/ledger/tools/check_large_infobases.py --checker $(BIN_DIR)/ledger-fixture-check$(EXE_EXT)

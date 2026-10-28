@@ -292,7 +292,9 @@ static void recalc_goods(database_t *ib, database_t *cfg, db_document_t *doc) {
     if (item && !line->vat_rate_id) line->vat_rate_id = item->vat_rate_id;
     db_vat_rate_t *rate = find(cfg, TABLE_VAT_RATES, line->vat_rate_id);
     line->amount = round2(line->quantity * line->price);
-    line->vat = round2(line->amount * (rate ? rate->rate : 0) / 100.0);
+    // Calculate tax cents from rounded net cents: avoid a second binary
+    // scaling at half-cent boundaries (244.50 * 7% must be 17.12).
+    line->vat = round(round(line->amount * 100.0) * (rate ? rate->rate : 0) / 100.0) / 100.0;
     line->total = line->amount + line->vat;
     send_db_message(ib, dbUpdate, TABLE_DOC_LINES, line);
     amount += line->amount; vat += line->vat; count++;
