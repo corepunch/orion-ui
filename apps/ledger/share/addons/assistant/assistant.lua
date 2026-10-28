@@ -46,70 +46,166 @@ local function rows(entity)
   return out
 end
 
--- The bubble holds an Office 97 Balloon: a heading, text and up to five
--- labels. A label is a displayed result or an example command.
-local LABELS=5
-local CHOICES={choice1=1,choice2=2,choice3=3,choice4=4,choice5=5}
-local EXAMPLES={tr('show debtors'),tr('show customers'),tr('show only posted documents')}
+-- The balloon is a command palette in Office 97's question balloon: the
+-- answer, then rows in groups (the answer's records, commands, tips,
+-- examples). A row says what choosing it does: choose answers the dialogue
+-- with its ordinal, command runs a Ledger command, submit runs a request,
+-- open opens a record.
+local LIMIT=6
+local Commands=require('commands')
+local Tips=require('tips')
+local SECTIONS={counterparties=tr('Counterparties'),documents=tr('Documents'),items=tr('Items')}
+local EXAMPLES={tr('show debtors'),tr('show customers'),tr('show only posted documents'),tr('show draft documents')}
+-- The empty command box suggests one command the engine understands, a
+-- different one each time the bubble opens or answers.
+local HINTS={tr('Show debtors'),tr('Show draft documents'),tr('Show customers'),tr('Show items'),
+  tr('Show documents under one thousand'),tr('Show debtors over fifty thousand')}
+local function next_hint(previous)
+  local hint
+  repeat hint=HINTS[math.random(#HINTS)] until hint~=previous
+  return hint
+end
+
+local function command_rows(items,list,section)
+  for _,c in ipairs(list) do
+    items[#items+1]={section=section or tr('Commands'),kind='command',name=c.label..(c.shortcut~='' and '  '..c.shortcut or ''),action='command',arg=c.name}
+  end
+end
 
 function Assistant:init()
   self.engine=Engine.new{rows=rows,open=function(entity,id) return ledger.open(entity,id) end}
+  self.catalog=Commands.new(ledger.commands())
   self.animation='WAVE'
   self.expanded=true
   self.revision=1
-  self.balloon={labels={}}
+  self.balloon={}
+  self.items={}
   self.lines={}; self.command=''
+  self.hint=next_hint()
+  self:suggest()
 end
+
+-- Tips from the books for an empty balloon.
+function Assistant:suggest()
+  local documents,sales={},{}
+  for _,t in ipairs(DocumentTypes:all()) do if t.form=='document' and t.vat_book==1 then sales[t.id]=true end end
+  for _,d in ipairs(Models.documents:all()) do
+    documents[#documents+1]={id=d.id,number=d.number,posted=d.posted==true or d.posted==1,counterparty_id=d.counterparty_id,sale=sales[d.doc_type_id]}
+  end
+  local ok,people=pcall(rows,'counterparties')
+  self.tips=Tips.find(documents,ok and people or {})
+  for _,tip in ipairs(self.tips) do tip.section,tip.kind=tr('Suggestions'),'tip' end
+  if not self.balloon.text then self.items=self.tips end
+end
+
 function Assistant:data()
   local clip=assert(animations[self.animation])
-  local values={command=self.command,summary=self.balloon.text or '',more=self.balloon.more or ''}
-  for name,i in pairs(CHOICES) do values[name]=self.balloon.labels[i] or '' end
   return {
-    values=values,
-    hidden={bubble=not self.expanded},
+    values={command=self.command,summary=self.balloon.text or '',more=self.balloon.more or ''},
+    lists={palette=self.items},
+    hidden={bubble=not self.expanded,palette=#self.items==0},
+    placeholders={command=self.hint},
     sprites={mascot={path=clip.path,columns=clip.columns or 4,rows=clip.rows or 2,count=clip.count or 8,interval=clip.interval,loop=clip.loop,revision=self.revision}},
   }
 end
-function Assistant:show(result)
+
+function Assistant:show(result,text)
   self.expanded=true
   self.revision=self.revision+1
   self.animation=result.animation
+  self.hint=next_hint(self.hint)
   self.lines={}
   for i,row in ipairs(result.rows or {}) do
     self.lines[#self.lines+1]={id=i,record_id=row.id,name=row.name,amount=row.amount or 0,date=row.date or ''}
   end
   for _,row in ipairs(Results:all()) do orion.assert(row:delete()) end
   for _,row in ipairs(self.lines) do orion.assert(Results:create(row)) end
-  self.balloon={text=result.message,labels={}}
-  for i=1,math.min(LABELS,#self.lines) do
-    local row=self.lines[i]
-    self.balloon.labels[i]=string.format(tr('%d. %s — %s'),i,row.name:gsub('[\r\n]+',' '),orion.formatNumber(row.amount))
+  -- A refusal keeps the previous list in the engine, but the balloon shows
+  -- records only for an answer or a question about them.
+  local items,entity={},self.engine.scope and self.engine.scope.entity
+  local shown=(result.ok or result.clarification) and result.rows or {}
+  for i,row in ipairs(shown) do
+    if i>LIMIT then break end
+    items[#items+1]={section=SECTIONS[entity] or tr('Results'),kind=entity or 'record',name=(row.name or ''):gsub('[\r\n]+',' '),
+      amount=row.amount or 0,action='choose',ordinal=i}
   end
-  if #self.lines>LABELS then self.balloon.more=string.format(tr('And %d more. Ask to narrow the list.'),#self.lines-LABELS) end
+  local more=#shown>LIMIT and string.format(tr('And %d more. Ask to narrow the list.'),#shown-LIMIT) or nil
+  -- No debtors: who paid in advance is the other side of the same question.
+  local query=self.engine.context.query
+  local message=result.message
+  if result.ok and #(result.rows or {})==0 and query and query.debtors then
+    message=tr('No one owes the company.')
+    for _,row in ipairs(rows('counterparties')) do
+      if (row.debt or 0)<0 then
+        items[#items+1]={section=tr('Advances received'),kind='counterparties',name=row.name,amount=-row.debt,action='open',arg='counterparties',record_id=row.id}
+      end
+    end
+  end
+  if result.ok and entity and not result.opened then command_rows(items,self.catalog:related(entity)) end
+  -- A request the grammar does not know may still name a command.
+  if not result.ok and not result.clarification and text then
+    local found=self.catalog:search(text)
+    if #found>0 then command_rows(items,found); message=tr('These commands match your request.') end
+  end
+  self.balloon={text=message,more=more}
+  self.items=items
   self.app.focus('command')
 end
+
 function Assistant:submit(values)
-  local result=self.engine:submit(values.command or '')
-  self.command=result.ok and '' or values.command
-  self:show(result)
+  local text=values.command or ''
+  local result=self.engine:submit(text)
+  self.command=result.ok and '' or text
+  self:show(result,text)
 end
+
 function Assistant:choose(values,control)
-  local index=assert(CHOICES[control],'not a balloon label')
-  if not self.balloon.labels[index] then return nil,tr('That row is not in the current list.') end
-  if self.balloon.examples then return self:submit{command=self.balloon.examples[index]} end
+  local row=values.palette
+  if control~='palette' or not row then return nil,tr('That row is not in the current list.') end
   self.command=values.command or ''
-  self:show(self.engine:choose(index))
+  if row.action=='choose' then return self:show(self.engine:choose(row.ordinal)) end
+  if row.action=='submit' then return self:submit{command=row.arg} end
+  if row.action=='open' then
+    if not ledger.open(row.arg,row.record_id) then return nil,tr('Could not open the record.') end
+    return
+  end
+  if row.action=='command' then
+    local ok,err=ledger.command(row.arg)
+    if not ok then return nil,err end
+    self.expanded=false   -- step aside for the window the command opens
+    return
+  end
+  return nil,tr('That row is not in the current list.')
 end
+
 function Assistant:help(values)
   self.command=values.command or ''
   self.revision=self.revision+1
-  self.balloon={text=tr('Try “show debtors”, then “open first”.'),labels=EXAMPLES,examples=EXAMPLES}
+  self.balloon={text=tr('Try “show debtors”, then “open first”.')}
+  self.items={}
+  for _,example in ipairs(EXAMPLES) do
+    self.items[#self.items+1]={section=tr('Examples'),kind='example',name=example,action='submit',arg=example}
+  end
   self.animation='EXPLAIN'
   self.app.focus('command')
 end
+
+-- Ledger saved, posted or deleted something: the tips follow the books, and
+-- Clippy asks for attention when there is something new to suggest.
+function Assistant:books_changed(values)
+  self.command=values.command or ''
+  local before=#(self.tips or {})
+  self:suggest()
+  if #self.tips>before and not self.expanded then
+    self.animation='GETATTENTION'
+    self.revision=self.revision+1
+  end
+end
+
 function Assistant:expand(values)
   self.command=values.command or ''
   self.expanded=true
+  self.hint=next_hint(self.hint)
   self.revision=self.revision+1
   self.app.focus('command')
   self.animation='HEARING_1'

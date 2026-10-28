@@ -131,6 +131,21 @@ static void test_cost_of_sales(void) {
   PASS();
 }
 
+static void test_settlement(void) {
+  TEST("settlement: a sale is paid by the customer's receipt, a purchase stays owed, a VAT deduction raises no debt");
+  double due, paid;
+  const db_document_t *sale = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "РТ-0001");
+  const db_document_t *equipment = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ПО-0001");
+  const db_document_t *deduction = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ВН-0001");
+  ASSERT(sale && equipment && deduction, "demo documents");
+  ASSERT_TRUE(ledger_document_settlement(g_ledger->ib, g_ledger->cfg, sale->id, &due, &paid));
+  ASSERT(approx(due, 16656) && approx(paid, 16656), "РТ-0001 is paid by ПКО-0001");
+  ASSERT_TRUE(ledger_document_settlement(g_ledger->ib, g_ledger->cfg, equipment->id, &due, &paid));
+  ASSERT(approx(due, 14400) && approx(paid, 0), "the printer is still owed to the supplier");
+  ASSERT_FALSE(ledger_document_settlement(g_ledger->ib, g_ledger->cfg, deduction->id, &due, &paid));
+  PASS();
+}
+
 static void test_payroll(void) {
   TEST("payroll: accrual with income tax withheld and unified social tax; payout of net pay; fill");
   db_document_t *accrual = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "НЗ-0001");
@@ -452,15 +467,16 @@ static void test_print_forms(void) {
 }
 
 static void test_generated_bindings(void) {
-  TEST("orionc: numeric fields bind through typed DDX, combos by value");
+  TEST("orionc: numeric fields bind through typed DDX, combos by value, labels show without writing back");
   ASSERT(ledger_document_form.db_record_size == sizeof(db_document_t), "record size");
-  bool amount = false, doc_type = false;
+  bool rate = false, amount = false, doc_type = false;
   for (int i = 0; i < ledger_document_form.binding_count; i++) {
     const ctrl_binding_t *b = &ledger_document_form.bindings[i];
-    if (b->ctrl_id == ID_DOCUMENT_AMOUNT) amount = b->push == ddx_push_double && b->pull == ddx_pull_double;
+    if (b->ctrl_id == ID_DOCUMENT_RATE) rate = b->push == ddx_push_double && b->pull == ddx_pull_double;
+    if (b->ctrl_id == ID_DOCUMENT_AMOUNT) amount = b->push == ddx_push_double && !b->pull && !b->getter;
     if (b->ctrl_id == ID_DOCUMENT_DOC_TYPE) doc_type = b->pull == ddx_pull_combo_value;
   }
-  ASSERT(amount && doc_type, "typed bindings");
+  ASSERT(rate && amount && doc_type, "typed bindings");
   PASS();
 }
 
@@ -1053,6 +1069,7 @@ int main(int argc, char **argv) {
   test_joins_cross_databases();
   test_posting_rules();
   test_cost_of_sales();
+  test_settlement();
   test_payroll();
   test_polymorphic_analytics();
   test_fixed_assets();

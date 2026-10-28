@@ -74,7 +74,8 @@ static void test_assistant(void) {
   char error[2048] = "";
   lua_State *L = script_state_new(ASSISTANT_SHARE, "assistant-spec");
   ASSERT_NOT_NULL(L);
-  const char *specs[] = {"assistant_test.lua", "assistant_examples.lua", "assistant_dialogue_test.lua", "assistant_dictionary_test.lua"};
+  const char *specs[] = {"assistant_test.lua", "assistant_examples.lua", "assistant_dialogue_test.lua", "assistant_dictionary_test.lua",
+                         "assistant_palette_test.lua"};
   for (size_t i = 0; i < ARRAY_LEN(specs); i++) {
     char path[256];
     snprintf(path, sizeof(path), "apps/ledger/tests/%s", specs[i]);
@@ -93,26 +94,21 @@ static void test_assistant(void) {
     window_t *heading = script_page_control(page, "heading");
     window_t *summary = script_page_control(page, "summary");
     window_t *more = script_page_control(page, "more");
-    window_t *choice[5];
-    for (int c = 0; c < 5; c++) {
-      char name[16];
-      snprintf(name, sizeof(name), "choice%d", c + 1);
-      choice[c] = script_page_control(page, name);
-      ASSERT_NOT_NULL(choice[c]);
-      ASSERT_TRUE(choice[c]->flags & BUTTON_COMMANDLINK);
-    }
-    ASSERT_NULL(script_page_control(page, "request"));
+    window_t *palette = script_page_control(page, "palette");
+    ASSERT_NOT_NULL(palette);
+    ASSERT_TRUE(window_is_class(palette, "TableView"));
+    ASSERT_NULL(script_page_control(page, "choice1"));
     ASSERT_NULL(script_page_control(page, "results"));
     window_t *command = script_page_control(page, "command");
     window_t *failure = script_page_control(page, "error");
-    // Office 97's question balloon: heading, then the field; empty slots take no room.
+    ASSERT_EQUAL((uint32_t)send_message(command, edGetList, 0, NULL), palette->id);
+    // The palette balloon: the question, the field, then the answer and its groups.
     ASSERT_STR_EQUAL(heading->title, "What would you like to do?");
     ASSERT_STR_EQUAL(summary->title, "");
     ASSERT_EQUAL(summary->frame.h, 0);
-    ASSERT_EQUAL(choice[0]->frame.h, 0);
-    int greeting_height = get_root_window(summary)->frame.h;
     ASSERT_EQUAL(failure->frame.h, 0);
     ASSERT_EQUAL(command->frame.y, heading->frame.y + heading->frame.h + 6);
+    int greeting_height = get_root_window(summary)->frame.h;
     set_text(page, "command", "покажи клиентов");
     ASSERT_TRUE(script_page_perform(page, "submit"));
     ASSERT_STR_EQUAL(script_page_message(page), "");
@@ -120,33 +116,37 @@ static void test_assistant(void) {
     ASSERT_EQUAL(count, count_rows("ib", TABLE_COUNTERPARTIES));
     ASSERT(count > 0, "the demo has counterparties");
     ASSERT(strstr(summary->title, "Found:") == summary->title, "the balloon text reports the query");
-    ASSERT(strncmp(choice[0]->title, "1. ", 3) == 0, "each result is a numbered balloon label");
-    ASSERT(choice[0]->frame.h > 0 && choice[0]->frame.w > 0, "a filled label takes its row");
-    for (int c = 0; c < 5; c++)
-      ASSERT_EQUAL(choice[c]->title[0] != 0, c < count);
-    ASSERT_EQUAL(more->title[0] != 0, count > 5);
-    ASSERT(command->frame.y > choice[MIN(count, 5) - 1]->frame.y, "labels come before the field, as in Office 97");
+    // At most six records, then the commands that belong to counterparties.
+    ASSERT_EQUAL(count_rows("assistant", 1), MIN(count, 6) + 2);
+    ASSERT_EQUAL(more->title[0] != 0, count > 6);
+    ASSERT(palette->frame.h > 0 && palette->frame.y > command->frame.y, "the groups come after the field and the answer");
+    ASSERT_EQUAL((int)send_message(palette, RVM_GETSELECTION, 0, NULL), 0);
     int answer_height = get_root_window(summary)->frame.h;
     ASSERT(answer_height > greeting_height, "the bubble grows for a real answer");
-    // Clicking a label is the same as typing its row number.
+    // Choosing a record row is the same as typing its row number.
     char typed[sizeof(command->title)];
     snprintf(typed, sizeof(typed), "unsent text");
     set_text(page, "command", typed);
-    // No Ledger main window here, so the label reaches the open request and the
+    // No Ledger main window here, so the row reaches the open request and the
     // host declines it; the companion test below opens a record for real.
-    ASSERT_TRUE(script_page_perform_from(page, "choose", "choice1"));
+    ASSERT_TRUE(script_page_perform_from(page, "choose", "palette"));
     ASSERT_STR_EQUAL(summary->title, "Could not open the record.");
     ASSERT_STR_EQUAL(command->title, typed);
     ASSERT_EQUAL(count_rows("assistant", 0), count);
+    ASSERT_FALSE(script_page_perform_from(page, "choose", "submit"));
+    ASSERT_STR_EQUAL(script_page_message(page), "That row is not in the current list.");
     ASSERT_TRUE(script_page_perform(page, "help"));
     ASSERT(get_root_window(summary)->frame.h < answer_height, "the bubble shrinks again for a shorter message");
-    ASSERT_STR_EQUAL(choice[0]->title, "show debtors");
-    ASSERT_EQUAL(choice[3]->frame.h, 0);
-    ASSERT_FALSE(script_page_perform_from(page, "choose", "choice4"));
-    ASSERT_STR_EQUAL(script_page_message(page), "That row is not in the current list.");
-    ASSERT_TRUE(script_page_perform_from(page, "choose", "choice2"));   // an example runs as a command
+    ASSERT_EQUAL(count_rows("assistant", 1), 4);
+    send_message(palette, RVM_SETSELECTION, 1, NULL);   // "show customers"
+    ASSERT_TRUE(script_page_perform_from(page, "choose", "palette"));   // an example runs as a command
     ASSERT_EQUAL(count_rows("assistant", 0), count);
     ASSERT_STR_EQUAL(command->title, "");
+    // A request the grammar does not know may still name a command.
+    set_text(page, "command", "new doc");
+    ASSERT_TRUE(script_page_perform(page, "submit"));
+    ASSERT_EQUAL(count_rows("assistant", 1), 2);   // New Document, New Payroll Document
+    ASSERT_STR_EQUAL(summary->title, "These commands match your request.");
     set_text(page, "command", "покажи клиентов и удали всех");
     ASSERT_TRUE(script_page_perform(page, "submit"));
     ASSERT_EQUAL(count_rows("assistant", 0), count);
@@ -192,15 +192,6 @@ static window_t *control_with_prefix(window_t *win, const char *prefix) {
   return NULL;
 }
 
-static void click(window_t *win) {
-  const uint32_t events[] = {kEventLeftButtonDown, kEventLeftButtonUp};
-  for (size_t i = 0; i < ARRAY_LEN(events); i++) {
-    ui_event_t event = {.message = events[i],
-      .x = (window_screen_x(win) + win->frame.w / 2) * UI_WINDOW_SCALE,
-      .y = (window_screen_y(win) + win->frame.h / 2) * UI_WINDOW_SCALE};
-    dispatch_message(&event);
-  }
-}
 
 static void test_assistant_companion(void) {
   TEST("Clippy: greeting without focus theft, click-through, conversation and window lifecycle");
@@ -214,7 +205,7 @@ static void test_assistant_companion(void) {
   ASSERT_TRUE(window_has_state(companion, WINDOW_STATE_VISIBLE));
   ASSERT(g_ui_runtime.focused == main, "automatic greeting keeps focus in Ledger");
   ASSERT_EQUAL(titlebar_height(companion), 0);
-  ASSERT(companion->frame.w <= 340 && companion->frame.h < 260, "greeting fits a compact three-row bubble and the mascot");
+  ASSERT(companion->frame.w <= 420 && companion->frame.h < 340, "greeting fits a compact bubble, its tips and the mascot");
   ASSERT_NOT_NULL(control_with_text(companion, "Close"));
   window_t *bubble = companion->children;
   ASSERT_TRUE(window_is_class(bubble, "SpeechBubble"));
@@ -245,16 +236,21 @@ static void test_assistant_companion(void) {
   int count = count_rows("assistant", 0);
   ASSERT_EQUAL(count, count_rows("ib", TABLE_COUNTERPARTIES));
   ASSERT(g_ui_runtime.focused == command, "sending keeps the command field focused");
-  // A balloon label is clicked like any control and opens its row in Ledger.
+  // The field drives the result list: Down moves its selection while typing
+  // stays in the field, and Enter opens the selected row in Ledger.
   send_message(command, edSetText, 0, "show documents");
   send_message(companion, evCommand, MAKEDWORD(submit->id, btnClicked), submit);
-  window_t *label = control_with_prefix(companion, "1. ");
-  ASSERT_NOT_NULL(label);
-  ASSERT_TRUE(label->flags & BUTTON_COMMANDLINK);
+  window_t *palette = NULL;
+  for (window_t *c = companion->children->children; c && !palette; c = c->next)
+    if (window_is_class(c, "TableView")) palette = c;
+  ASSERT_NOT_NULL(palette);
   window_t *client = get_window_item(main, ID_MAIN_WINDOW_DOCUMENTS_CLIENT);
   ASSERT_NOT_NULL(client);
   ASSERT_NULL(mdi_active_document(client));
-  click(label);
+  send_message(command, evKeyDown, AX_KEY_DOWNARROW, NULL);
+  ASSERT_EQUAL((int)send_message(palette, RVM_GETSELECTION, 0, NULL), 1);
+  ASSERT(g_ui_runtime.focused == command, "the arrows leave the focus in the field");
+  send_message(command, evKeyDown, AX_KEY_ENTER, NULL);
   ASSERT_NOT_NULL(control_with_prefix(companion, "Opened record: "));
   window_t *opened = mdi_active_document(client);
   ASSERT(opened != NULL, "the row opens as a Ledger document");
@@ -415,6 +411,59 @@ static void test_untouched_document_close(void) {
   PASS();
 }
 
+static int document_entries(database_t *db, int doc_id) {
+  result_node_t *rows = (result_node_t *)send_db_message(db, dbFetch, MAKEDWORD(TABLE_ENTRIES, ledger_field(db, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)doc_id);
+  int count = count_result_list(rows); free_result_list(rows); return count;
+}
+static void press(window_t *document, uint32_t id) {
+  window_t *button = get_window_item(document, id);
+  send_message(document, evCommand, MAKEDWORD(button->id, btnClicked), button);
+}
+static void test_document_postings_preview(void) {
+  TEST("Ledger document form: entries preview in the editing context; Write keeps a draft out of the books, Post writes it");
+  open_configuration("ru-2003");
+  int doc_id = 0;
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, TABLE_DOCUMENTS, NULL);
+  for (result_node_t *n = rows; n && !doc_id; n = n->next) {
+    const db_document_t *doc = *(db_document_t **)n->data;
+    const db_doc_type_t *type = (const db_doc_type_t *)send_db_message(g_ledger->cfg, dbFind, TABLE_DOC_TYPES, (void *)(intptr_t)doc->doc_type_id);
+    if (type && !strcmp(type->form, "document") && doc->posted && document_entries(g_ledger->ib, doc->id) > 0) doc_id = doc->id;
+  }
+  free_result_list(rows); ASSERT(doc_id > 0, "a posted goods document");
+  int posted_entries = document_entries(g_ledger->ib, doc_id);
+  ledger_unpost(g_ledger->ib, g_ledger->cfg, doc_id);
+  ASSERT_EQUAL(document_entries(g_ledger->ib, doc_id), 0);
+  window_t *frame = create_window_from_form(&ledger_main_window_form, 10, 30, NULL, ledger_main_proc, 0, NULL);
+  window_t *client = get_window_item(frame, ID_MAIN_WINDOW_DOCUMENTS_CLIENT);
+  register_window_hook(evCreate, count_close_prompt, NULL);
+  close_prompts = 0;
+  ASSERT_TRUE(ledger_open_record("documents", doc_id));
+  window_t *a = mdi_active_document(client); ASSERT_NOT_NULL(a);
+  ASSERT_EQUAL(document_entries(db_dialog_database(a), doc_id), posted_entries);
+  ASSERT_EQUAL(document_entries(g_ledger->ib, doc_id), 0);
+  ASSERT_STR_EQUAL(get_window_item(a, ID_DOCUMENT_STATE)->title, ui_tr("Not posted"));
+  send_message(a, evClose, 0, NULL);
+  ASSERT_FALSE(is_window(a)); ASSERT_EQUAL(close_prompts, 0);
+  ASSERT_TRUE(ledger_open_record("documents", doc_id)); a = mdi_active_document(client);
+  press(a, ID_DOCUMENT_SAVE);
+  const db_document_t *stored = (const db_document_t *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)doc_id);
+  ASSERT_FALSE(stored->posted); ASSERT_EQUAL(document_entries(g_ledger->ib, doc_id), 0);
+  press(a, ID_DOCUMENT_POST);
+  ASSERT_TRUE(is_window(a));
+  ASSERT_TRUE(stored->posted); ASSERT_EQUAL(document_entries(g_ledger->ib, doc_id), posted_entries);
+  ASSERT_STR_EQUAL(get_window_item(a, ID_DOCUMENT_STATE)->title, ui_tr("Posted"));
+  window_t *pane = get_window_item(a, ID_DOCUMENT_POSTINGS_PANE);
+  press(a, ID_DOCUMENT_ENTRIES_TOGGLE); ASSERT_FALSE(window_is_visible(pane));
+  press(a, ID_DOCUMENT_ENTRIES_TOGGLE); ASSERT_TRUE(window_is_visible(pane));
+  ledger_command(ID_DOC_POST_CLOSE);
+  ASSERT_FALSE(is_window(a));
+  ASSERT_TRUE(stored->posted); ASSERT_EQUAL(document_entries(g_ledger->ib, doc_id), posted_entries);
+  ASSERT_EQUAL(close_prompts, 0);
+  deregister_window_hook(evCreate, count_close_prompt, NULL);
+  destroy_window(frame);
+  PASS();
+}
+
 int main(void) {
   TEST_START("Ledger assistant"); test_env_init();
   DB_CLASS(db_schema_xml); DB_CLASS(ledger_ib);
@@ -425,6 +474,7 @@ int main(void) {
   test_assistant_companion();
   test_modeless_documents();
   test_untouched_document_close();
+  test_document_postings_preview();
   ledger_close_assistant(); ledger_script_close();
   unregister_database("ib"); unregister_database("cfg");
   destroy_database(state.ib); destroy_database(state.cfg);

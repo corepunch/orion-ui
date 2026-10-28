@@ -87,9 +87,114 @@ static result_t payroll_hook(window_t *win, uint32_t msg, uint32_t wparam, void 
   return true;
 }
 
+// The caption names the document as 1C does: "Sale RT-0001 dated 10.03.2003".
+static bool document_caption(const db_document_t *doc, char *out, size_t out_sz) {
+  const db_doc_type_t *type = document_type(doc);
+  char date[16] = "";
+  if (!type || !doc->number[0]) return false;
+  ui_format_date(doc->date, date, sizeof(date));
+  snprintf(out, out_sz, ui_tr("%s %s dated %s"), type->name, doc->number, date);
+  return true;
+}
+
+// The goods form previews the entries posting will write. They are written in
+// the form's own editing context from what the form shows, so the books change
+// only when the document is saved.
+static void preview_entries(window_t *win) {
+  database_t *database = db_dialog_database(win);
+  int doc_id = db_dialog_record_id(win);
+  db_document_t *doc = database ? (db_document_t *)send_db_message(database, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)doc_id) : NULL;
+  db_document_t *edited = db_dialog_record(win);
+  if (!doc || !edited) return;
+  dialog_pull(win, edited, ledger_document_form.bindings, ledger_document_form.binding_count);
+  doc->doc_type_id = edited->doc_type_id;
+  doc->counterparty_id = edited->counterparty_id;
+  doc->currency_id = edited->currency_id;
+  doc->rate = edited->rate;
+  snprintf(doc->date, sizeof(doc->date), "%s", edited->date);
+  ledger_preview_entries(database, g_ledger->cfg, doc_id);
+  send_message(get_window_item(win, ID_DOCUMENT_POSTINGS), tvRefresh, 0, NULL);
+}
+
+// The heading names the document; the badge says whether the books hold it.
+// Saving keeps that state.
+static void show_document_state(window_t *win) {
+  const db_document_t *doc = db_dialog_record(win);
+  window_t *badge = get_window_item(win, ID_DOCUMENT_STATE), *caption = get_window_item(win, ID_DOCUMENT_CAPTION);
+  char title[256];
+  if (!doc || !badge || !caption) return;
+  bool named = document_caption(doc, title, sizeof(title));
+  set_window_title(caption, named ? title : ui_tr("New Document"));
+  if (named) set_window_title(win, title);
+  set_window_title(badge, doc->posted ? ui_tr("Posted") : ui_tr("Not posted"));
+  send_message(badge, bdSetColor, doc->posted ? brTextSuccess : brTextWarning, NULL);
+  send_message(badge, btnSetIconName, 0, doc->posted ? "ledger-doc-posted" : "ledger-doc-draft");
+  // Settlement comes from the books, so a sale shows whether its customer has paid.
+  window_t *payment = get_window_item(win, ID_DOCUMENT_PAYMENT);
+  double due = 0, paid = 0;
+  bool settles = payment && ledger_document_settlement(g_ledger->ib, g_ledger->cfg, db_dialog_record_id(win), &due, &paid);
+  if (payment) show_window(payment, settles);
+  if (settles) {
+    set_window_title(payment, paid >= due ? ui_tr("Paid") : paid > 0 ? ui_tr("Partly paid") : ui_tr("Not paid"));
+    send_message(payment, bdSetColor, paid >= due ? brTextInfo : paid > 0 ? brTextWarning : brTextSecondary, NULL);
+  }
+  window_layout_sync(caption->parent);
+}
+
+// Post and Close, and Post, save the document as posted; Save keeps its state.
+static void save_document(window_t *win, bool post, bool close) {
+  db_document_t *edited = db_dialog_record(win);
+  if (!edited) return;
+  if (post) edited->posted = true;
+  db_form_save(win, close);
+}
+
+static result_t document_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  switch (msg) {
+    case evCreate:
+      preview_entries(win);
+      db_edit_context_mark_clean(db_dialog_database(win));  // opening is not an edit
+      show_document_state(win);
+      return true;
+    case evCommand: {
+      uint16_t code = HIWORD(wparam);
+      window_t *src = (window_t *)lparam;
+      if ((code == tvnChanged && LOWORD(wparam) == ID_DOCUMENT_LINES) || code == cbSelectionChange) {
+        preview_entries(win);
+        return true;
+      }
+      if (code == edUpdate) return true;  // Enter in a field does not close the document
+      if (code != btnClicked || !src) return false;
+      char report[2048];
+      switch (src->id) {
+        case ID_DOCUMENT_POST_CLOSE: save_document(win, true, true);   return true;
+        case ID_DOCUMENT_POST:       save_document(win, true, false);  return true;
+        case ID_DOCUMENT_SAVE:       save_document(win, false, false); return true;
+        case ID_DOCUMENT_ENTRIES_TOGGLE: {  // Dr/Cr: the entries pane, as 1C's button shows them
+          window_t *pane = get_window_item(win, ID_DOCUMENT_POSTINGS_PANE);
+          if (!pane) return true;
+          show_window(pane, !window_is_visible(pane));
+          window_layout_sync(pane->parent);
+          return true;
+        }
+        case ID_DOCUMENT_PRINT: {
+          int doc_id = db_dialog_record_id(win);
+          save_document(win, false, false);
+          if (ledger_print_document(doc_id, report, sizeof(report))) message_box(win, report, ui_tr("Print Forms Written"), MB_OK);
+          else message_box(win, ui_tr("The configuration defines no print forms for this document type."), ui_tr("Print"), MB_OK);
+          return true;
+        }
+      }
+      return false;
+    }
+    default:
+      return false;
+  }
+}
+
 // Each form of document type has its dialog.
 static const struct { const char *form; const form_def_t *def; winproc_t hook; const char *title, *new_title; } kDocumentForms[] = {
-  { "document",  &ledger_document_form,       NULL,         "Document",         "New Document" },
+  { "document",  &ledger_document_form,       document_hook, "Document",        "New Document" },
   { "operation", &ledger_operation_form,      NULL,         "Manual Operation", "New Manual Operation" },
   { "payroll",   &ledger_payroll_form,        payroll_hook, "Payroll",          "New Payroll Document" },
   { "assets",    &ledger_asset_document_form, NULL,         "Put into Service", "Put Assets into Service" },
@@ -106,23 +211,27 @@ static void after_save(int doc_id) {
   if (doc_id) ledger_post(g_ledger->ib, g_ledger->cfg, doc_id);
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   ledger_refresh_views();
+  ledger_assistant_books_changed();
 }
 
+// The goods form also saves drafts: a document saved unposted leaves the books.
 static void document_saved(int doc_id, void *userdata) {
   (void)userdata;
+  const db_document_t *doc = find_document(doc_id);
+  const db_doc_type_t *type = document_type(doc);
+  if (doc && type && !strcmp(type->form, "document") && !doc->posted) {
+    ledger_unpost(g_ledger->ib, g_ledger->cfg, doc_id);
+    after_save(0);
+    return;
+  }
   after_save(doc_id);
 }
 
-// The dialog is captioned like the document it edits: "Sale RT-0001 dated 10.03.2003".
 static void edit_document(int doc_id) {
   const db_document_t *doc = find_document(doc_id);
-  const db_doc_type_t *type = document_type(doc);
-  size_t f = document_form(type);
-  char date[16] = "", title[256];
-  if (doc && type) {
-    ui_format_date(doc->date, date, sizeof(date));
-    snprintf(title, sizeof(title), ui_tr("%s %s dated %s"), type->name, doc->number, date);
-  } else snprintf(title, sizeof(title), "%s", ui_tr(kDocumentForms[f].title));
+  size_t f = document_form(document_type(doc));
+  char title[256];
+  if (!doc || !document_caption(doc, title, sizeof(title))) snprintf(title, sizeof(title), "%s", ui_tr(kDocumentForms[f].title));
   db_dialog_opts_t opts = { .hook = kDocumentForms[f].hook };
   db_form_open(kDocumentForms[f].def, title, view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), doc_id, &opts, document_saved, NULL);
 }
@@ -288,6 +397,7 @@ void ledger_command(uint16_t id) {
     case ID_FILE_IMPORT_1C:     import_from_1c();       break;
     case ID_FILE_ADDON:         ledger_open_addon();    break;
     case ID_HELP_ASSISTANT:     ledger_open_assistant(); break;
+    case ID_HELP_FIND_COMMAND:  ledger_open_assistant(); break;
     case ID_FILE_QUIT:          send_message(parent, evClose, 0, NULL); break;
     case ID_WINDOW_NEXT_DOCUMENT: mdi_cycle_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), 1); break;
     case ID_WINDOW_PREVIOUS_DOCUMENT: mdi_cycle_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), -1); break;
@@ -313,6 +423,14 @@ void ledger_command(uint16_t id) {
     case ID_DOC_POST:
       if (doc && ledger_post(g_ledger->ib, g_ledger->cfg, doc->id)) after_save(0);
       break;
+    case ID_DOC_POST_CLOSE: {  // Ctrl+Enter in the active goods document
+      window_t *document = mdi_active_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT));
+      db_document_t *edited = document ? db_dialog_record(document) : NULL;
+      const db_doc_type_t *type = document_type(edited);
+      window_t *button = type && !strcmp(type->form, "document") ? get_window_item(document, ID_DOCUMENT_POST_CLOSE) : NULL;
+      if (button) send_message(document, evCommand, MAKEDWORD(button->id, btnClicked), button);
+      break;
+    }
     case ID_DOC_UNPOST:
       if (doc) { ledger_unpost(g_ledger->ib, g_ledger->cfg, doc->id); after_save(0); }
       break;

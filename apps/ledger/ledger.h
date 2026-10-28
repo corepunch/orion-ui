@@ -63,10 +63,16 @@ bool ledger_account_within(database_t *cfg, int account_id, int parent_id);
 // Entries of posted documents in date order, as reports count them. The
 // caller frees the array; the entries stay the infobase's.
 int  ledger_posted_entries(database_t *ib, db_entry_t ***out);
+// How far a posted document's counterparty has settled it (FIFO on the
+// settlement account group); false when the document creates no debt.
+bool ledger_document_settlement(database_t *ib, database_t *cfg, int doc_id, double *due, double *paid);
 // The infobase table an account is analysed by ("counterparties"), or "".
 const char *ledger_subconto_table(database_t *cfg, int account_id);
 void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id);
 bool ledger_post(database_t *ib, database_t *cfg, int doc_id);
+// Writes the entries posting would, leaving the posted flag and plugins alone:
+// the document form previews them in its editing context.
+bool ledger_preview_entries(database_t *ib, database_t *cfg, int doc_id);
 void ledger_unpost(database_t *ib, database_t *cfg, int doc_id);
 bool ledger_number_document(database_t *ib, database_t *cfg, int doc_id);
 void ledger_repost_all(database_t *ib, database_t *cfg);
@@ -124,6 +130,7 @@ void ledger_open_assistant(void);
 void ledger_show_assistant(void);
 void ledger_position_assistant(void);
 void ledger_close_assistant(void);
+void ledger_assistant_books_changed(void);
 bool ledger_open_record(const char *table, int id);
 
 // controller.c — commands and views.

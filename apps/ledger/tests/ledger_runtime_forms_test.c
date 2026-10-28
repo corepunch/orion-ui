@@ -57,7 +57,8 @@ static bool tableview_same(const form_def_t *gf, const form_def_t *rf, const tab
   if (!str_same(g->check_field, r->check_field)) DIFF("check_field");
   if (index_of(gf, g->master_id) != index_of(rf, r->master_id)) DIFF("master");
   if (g->master_filter_field != r->master_filter_field || !str_same(g->master_key, r->master_key)) DIFF("master key");
-  if (g->cell_style != r->cell_style || g->hide_column_titles != r->hide_column_titles || g->blank_zeros != r->blank_zeros) DIFF("style");
+  if (g->cell_style != r->cell_style || g->hide_column_titles != r->hide_column_titles || g->blank_zeros != r->blank_zeros || g->framed != r->framed ||
+      g->fit_rows != r->fit_rows || !str_same(g->group_field, r->group_field)) DIFF("style");
   if (!g->record_form != !r->record_form || (g->record_form && !str_same(g->record_form->id, r->record_form->id))) DIFF("record_form");
   if (g->row_icon_count != r->row_icon_count) DIFF("row icon count");
   for (int i = 0; i < g->row_icon_count; i++) {
@@ -114,6 +115,7 @@ static bool control_same(const form_def_t *gf, const form_def_t *rf, int i) {
   if (index_of(gf, g->parent) != index_of(rf, r->parent)) DIFF("parent");
   if (g->font != r->font || g->font_set != r->font_set || g->color != r->color || g->color_set != r->color_set) DIFF("font/color");
   if (!str_same(g->source, r->source) || !str_same(g->placeholder, r->placeholder)) DIFF("source/placeholder");
+  if (!str_same(g->icon, r->icon) || !str_same(g->tooltip, r->tooltip)) DIFF("icon/tooltip");
   if (index_of(gf, g->target) != index_of(rf, r->target) || g->target_message != r->target_message) DIFF("target");
   return lparam_same(gf, rf, g, r);
 }

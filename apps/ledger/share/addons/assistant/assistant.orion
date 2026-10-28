@@ -9,27 +9,51 @@
         <field name="amount" type="double" />
         <field name="date" type="date" />
       </table>
+      <!-- What the balloon lists: the answer's records, commands and tips,
+           grouped by section. action says what choosing a row does. -->
+      <table name="palette" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="section" type="string" length="64" />
+        <field name="kind" type="string" length="16" />
+        <field name="name" type="string" length="256" />
+        <field name="amount" type="double" />
+        <field name="action" type="string" length="16" />
+        <field name="arg" type="string" length="256" />
+        <field name="ordinal" type="integer" />
+        <field name="record_id" type="integer" />
+      </table>
     </database>
   </databases>
   <forms>
-    <form name="assistant" title="Ledger — Assistant" width="340" height="0" spacing="0" padding="0"
+    <form name="assistant" title="Ledger — Assistant" width="420" height="0" spacing="0" padding="0"
           flags="WINDOW_NOTITLE,WINDOW_NORESIZE,WINDOW_NOFILL,WINDOW_TRANSPARENT,WINDOW_NOACTIVATE,WINDOW_TOOLWINDOW,WINDOW_ALWAYSONTOP,WINDOW_NODRAG">
+      <!-- A command palette in the Office 97 balloon: the question, the field,
+           the answer, then the matching records, commands and tips in groups.
+           The arrow keys move through the list while typing stays in the
+           field; Enter opens the selected row. -->
       <SpeechBubble name="bubble" spacing="6" flags="WINDOW_NOACTIVATE">
         <Label name="heading" text="What would you like to do?" font="system" color="info-text" />
+        <TextBox name="command" placeholder="Show debtors" list="palette" />
         <Label name="summary" color="info-text" flags="LABEL_COLLAPSE_EMPTY" />
-        <Button name="choice1" action="choose" color="info-text" flags="BUTTON_COMMANDLINK,LABEL_COLLAPSE_EMPTY" />
-        <Button name="choice2" action="choose" color="info-text" flags="BUTTON_COMMANDLINK,LABEL_COLLAPSE_EMPTY" />
-        <Button name="choice3" action="choose" color="info-text" flags="BUTTON_COMMANDLINK,LABEL_COLLAPSE_EMPTY" />
-        <Button name="choice4" action="choose" color="info-text" flags="BUTTON_COMMANDLINK,LABEL_COLLAPSE_EMPTY" />
-        <Button name="choice5" action="choose" color="info-text" flags="BUTTON_COMMANDLINK,LABEL_COLLAPSE_EMPTY" />
+        <TableView name="palette" source="assistant.palette" group-field="section" fit-rows="true" frame="true"
+                   column-titles="false" zeros="blank" action="choose" flags="notitle,nofill">
+          <RowIcon field="kind" value="tip" icon="ledger-tip" color="warning" />
+          <RowIcon field="kind" value="command" icon="ledger-open" color="info" />
+          <RowIcon field="kind" value="example" icon="ledger-card" color="secondary" />
+          <RowIcon field="kind" value="counterparties" icon="ledger-row-counterparty" color="secondary" />
+          <RowIcon field="kind" value="items" icon="ledger-row-item" color="secondary" />
+          <RowIcon field="kind" value="documents" icon="ledger-nav-journal" color="secondary" />
+          <Column field="name" title="Name" width="0" />
+          <Column field="amount" title="Amount" width="96" />
+        </TableView>
         <Label name="more" color="info-text" flags="LABEL_COLLAPSE_EMPTY" />
-        <TextBox name="command" placeholder="For example: show debtors" />
         <StackView name="actions" orientation="horizontal" spacing="8">
           <Button name="submit" text="Send" action="submit" flags="BUTTON_DEFAULT" />
           <Button name="help" text="Examples" action="help" />
           <Space name="actions_flex" />
           <Button name="collapse" text="Close" action="collapse" />
         </StackView>
+        <Label name="keys" text="Up and Down choose · Enter opens · Ctrl+K finds a command" color="info-text" font="smallest" />
         <Label name="error" color="error" flags="LABEL_COLLAPSE_EMPTY" />
       </SpeechBubble>
       <StackView name="character" orientation="horizontal" spacing="0" margin="0,0,18,0">

@@ -12,12 +12,32 @@ the character passes clicks through to Ledger.
 
 The greeting is the Office 97 question balloon: **What would you like to do?**,
 the command field, and **Send / Examples / Close**. The yellow bubble sizes itself
-to its content. An answer adds its message and up to five numbered result labels
-with amounts, then a count of further matches. Click a label to open that row;
-while the assistant is asking a question, the label answers it, like typing its
-number. **Examples** lists clickable example commands. Narrow the request or use
-**open first** to open a result by typing; the full result context remains
-available.
+to its content. Below the field is a command palette: the answer's message,
+then rows in groups.
+
+| Group | Rows | Choosing a row |
+|---|---|---|
+| Counterparties / Documents / Items | up to six records with amounts, then a count of further matches | opens the record, or answers the assistant's question, as typing its number does |
+| Advances received | when no one owes the company: who paid in advance | opens the counterparty |
+| Commands | the commands that belong with the result, or every menu command whose caption the request names ("нов док" finds New Document) | runs the command; the balloon steps aside |
+| Suggestions | from the books: documents not posted, a draft sale that would offset an advance | lists the drafts, or opens the document |
+| Examples | **Examples** | runs the example |
+
+Up and Down move through the rows while typing stays in the field; Enter opens
+the selected row until something new is typed, and then Enter sends the text.
+**Help → Find a Command** (Ctrl+K) opens the balloon with the field focused.
+Saving, posting or deleting a document refreshes the suggestions; when there
+is a new one while the balloon is closed, Clippy asks for attention. Narrow
+the request or use **open first** to open a result by typing; the full result
+context remains available.
+
+The parts have one job each. `engine.lua` parses and answers, as before.
+`commands.lua` searches the menu tree that Ledger exposes as
+`ledger.commands()`; `ledger.command(name)` runs a command after the
+add-on's action returns. `tips.lua` derives the suggestions, and
+`assistant.lua` turns an answer into palette rows. The balloon is plain Orion:
+a TextBox with `list=`, and a TableView with `group-field`, `fit-rows` and
+`action=`.
 
 The layout follows Office 97's built-in question balloon, documented in
 [Microsoft KB 173766 (archived)](https://www.betaarchive.com/wiki/index.php?title=Microsoft_KB_Archive/173766)
