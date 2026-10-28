@@ -536,7 +536,12 @@ static theme_t *porcelain_variant(theme_style_t style, const char *name, bool da
   theme->field.padding_x = FIELD_PADDING_X(theme->field.corner_radius);
   theme->tab.corner_radius = 5;
   theme->card.corner_radius = 7;
+  theme->card.face = brColumnViewBg;    // white panels with a hairline on the window face
+  theme->card.outline = brLightEdge;
   theme->table.corner_radius = 6;
+  theme->report.row_height = 21;   // the concepts' 21 px rows under a 24 px header, ruled by hairlines
+  theme->report.header_height = 24;
+  theme->report.row_dividers = true;
   return theme;
 }
 

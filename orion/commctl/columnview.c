@@ -106,11 +106,11 @@ int rv_content_width(window_t *win) {
 }
 
 int rv_report_header_height(const reportview_data_t *data) {
-  return (!data || data->column_titles_visible) ? HEADER_HEIGHT : 0;
+  return (!data || data->column_titles_visible) ? MAX(HEADER_HEIGHT, get_theme()->report.header_height) : 0;
 }
 
 int rv_report_footer_height(const reportview_data_t *data) {
-  return data && data->footer_visible ? HEADER_HEIGHT : 0;
+  return data && data->footer_visible ? MAX(HEADER_HEIGHT, get_theme()->report.header_height) : 0;
 }
 
 int rv_get_report_column_width(reportview_data_t *data, int col, int avail_w) {
@@ -118,6 +118,10 @@ int rv_get_report_column_width(reportview_data_t *data, int col, int avail_w) {
     return 80;
   if (data->cell_style == REPORTVIEW_CELL_TWO_LINE)
     return col == 0 ? avail_w : 0;
+  // A stacked row draws its second column under the first, in the first's width.
+  bool stacked = data->cell_style == REPORTVIEW_CELL_STACKED;
+  if (stacked && col == 1)
+    return 0;
   // If column has a fixed width spec (>0), return it
   if (data->columns[col].width_spec != 0)
     return (int)data->columns[col].width_spec;
@@ -126,6 +130,8 @@ int rv_get_report_column_width(reportview_data_t *data, int col, int avail_w) {
   int flex_count = 0;
   int fixed_total = 0;
   for (uint32_t i = 0; i < data->column_count; i++) {
+    if (stacked && i == 1)
+      continue;
     if (data->columns[i].width_spec == 0)
       flex_count++;
     else

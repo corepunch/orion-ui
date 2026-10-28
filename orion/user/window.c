@@ -1069,7 +1069,8 @@ static void create_form_children_flat(window_t *parent, const form_ctrl_def_t *c
     child->layout.h_align = child_h_align;
     child->layout.v_align = child_v_align;
     child->layout.layout_margin = cd->margin;
-    child->layout.layout_padding = cd->padding;
+    // A control's own padding (a Card's, from the theme) stands unless the form declares one.
+    if (cd->padding.x || cd->padding.y || cd->padding.w || cd->padding.h) child->layout.layout_padding = cd->padding;
     child->layout.layout_spacing = cd->layout_spacing;
     if (cd->placeholder) send_message(child, edSetPlaceholder, 0, (void *)ui_tr(cd->placeholder));
     if (cd->target && !cd->target_message) send_message(child, edSetList, cd->target, NULL);
@@ -1330,7 +1331,8 @@ static void create_form_children(window_t *parent, const form_ctrl_def_t *childr
     child->layout.h_align = child_h_align;
     child->layout.v_align = child_v_align;
     child->layout.layout_margin = cd->margin;
-    child->layout.layout_padding = cd->padding;
+    // A control's own padding (a Card's, from the theme) stands unless the form declares one.
+    if (cd->padding.x || cd->padding.y || cd->padding.w || cd->padding.h) child->layout.layout_padding = cd->padding;
     child->layout.layout_spacing = cd->layout_spacing;
     if (cd->placeholder) send_message(child, edSetPlaceholder, 0, (void *)ui_tr(cd->placeholder));
     if (cd->target && !cd->target_message) send_message(child, edSetList, cd->target, NULL);

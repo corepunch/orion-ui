@@ -871,8 +871,10 @@ static void emit_tableviews(FILE *f, xmlNodePtr parent, xmlNodePtr form_node,
       char *name = attr(c, "name"), *source = attrs_first(c, "source", "database");
       char param[256], table[128], table_id[128]; snprintf(param, sizeof(param), "%s_%s_tableview_params", form, nz(name, "unnamed"));
       char *cell_style = attr(c, "cell-style");
-      const char *cell_style_value = cell_style && eq(cell_style, "two-line")
-                                   ? "REPORTVIEW_CELL_TWO_LINE" : "REPORTVIEW_CELL_COLUMNS";
+      const char *cell_style_value = cell_style && eq(cell_style, "two-line") ? "REPORTVIEW_CELL_TWO_LINE"
+                                   : cell_style && eq(cell_style, "stacked") ? "REPORTVIEW_CELL_STACKED" : "REPORTVIEW_CELL_COLUMNS";
+      if (cell_style && !eq(cell_style, "two-line") && !eq(cell_style, "stacked") && !eq(cell_style, "columns"))
+        fprintf(stderr, "orionc: warning: TableView '%s': unknown cell-style '%s' (want columns, two-line or stacked)\n", nz(name, ""), cell_style);
       table_name_from_source(table, sizeof(table), source); ident(table_id, sizeof(table_id), table, true);
       OUT("static const char *%s_fields[] = { ", param); EACH_ELEMENT(col, c) if (elem(col, "column")) { char *v = attr(col, "field"), q[ORIONC_STRING_SIZE]; cstr(q, sizeof(q), v); OUT("%s, ", q); free(v); } LINE("NULL };\n");
       OUT("static const char *%s_titles[] = { ", param); EACH_ELEMENT(col, c) if (elem(col, "column")) { char *v = attr(col, "title"), q[ORIONC_STRING_SIZE]; cstr(q, sizeof(q), v); OUT("%s, ", q); free(v); } LINE("NULL };\n");
@@ -942,6 +944,22 @@ static void emit_tableviews(FILE *f, xmlNodePtr parent, xmlNodePtr form_node,
         free(field); free(value); free(icon); free(color);
       }
       if (row_icons) LINE("};\n");
+      // color="accent" on a Column: its text in a theme role.
+      static const char *column_roles[][2] = { {"success", "brTextSuccess"}, {"error", "brTextError"}, {"warning", "brTextWarning"},
+                                               {"info", "brTextInfo"}, {"secondary", "brTextSecondary"}, {"disabled", "brTextDisabled"},
+                                               {"accent", "brAccent"} };
+      bool colors = false;
+      EACH_ELEMENT(col, c) if (elem(col, "column")) { char *v = attr(col, "color"); colors |= v != NULL; free(v); }
+      if (colors) {
+        OUT("static const int %s_colors[] = { ", param);
+        EACH_ELEMENT(col, c) if (elem(col, "column")) {
+          char *v = attr(col, "color"); const char *role = "0";
+          for (int i = 0; v && i < ARRAY_LEN(column_roles); i++) if (eq(v, column_roles[i][0])) role = column_roles[i][1];
+          if (v && eq(role, "0")) fprintf(stderr, "orionc: warning: TableView '%s': unknown Column color '%s'\n", nz(name, ""), v);
+          OUT("%s, ", role); free(v);
+        }
+        LINE("0 };\n");
+      }
       // total="sum" on a Column: a totals row under the rows.
       bool totals = false;
       EACH_ELEMENT(col, c) if (elem(col, "column")) { char *v = attr(col, "total"); totals |= eq(v, "sum"); if (v && !eq(v, "sum")) fprintf(stderr, "orionc: warning: TableView '%s': unknown total '%s' (want sum)\n", nz(name, ""), v); free(v); }
@@ -952,15 +970,16 @@ static void emit_tableviews(FILE *f, xmlNodePtr parent, xmlNodePtr form_node,
       if (group_field && *group_field) cstr(group_field_q, sizeof(group_field_q), group_field);
       if (totals_label) cstr(totals_label_q, sizeof(totals_label_q), totals_label);
       if (totals_skip) cstr(totals_skip_q, sizeof(totals_skip_q), totals_skip);
-      char row_icons_ref[300] = "NULL", totals_ref[300] = "NULL";
+      char row_icons_ref[300] = "NULL", totals_ref[300] = "NULL", colors_ref[300] = "NULL", *activate = attr(c, "activate");
+      if (colors) snprintf(colors_ref, sizeof(colors_ref), "%s_colors", param);
       if (row_icons) snprintf(row_icons_ref, sizeof(row_icons_ref), "%s_row_icons", param);
       if (totals) snprintf(totals_ref, sizeof(totals_ref), "%s_totals", param);
-      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = %d, .filter_value = %d, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s, .record_form = %s, .blank_zeros = %s, .row_icons = %s, .row_icon_count = %d, .column_totals = %s, .totals_label = %s, .totals_skip = %s, .framed = %s, .group_field = %s, .fit_rows = %s };\n\n",
+      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = %d, .filter_value = %d, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s, .record_form = %s, .blank_zeros = %s, .row_icons = %s, .row_icon_count = %d, .column_totals = %s, .totals_label = %s, .totals_skip = %s, .framed = %s, .group_field = %s, .fit_rows = %s, .column_colors = %s, .click_activates = %s };\n\n",
           param, table_id, filter_index, filter_value ? atoi(filter_value) : 0, param, param, param, param, check_field_q, master_id,
           relation_field, master_key_q, cell_style_value, column_titles && eq(column_titles, "false") ? "true" : "false", record_form_ref, eq(zeros, "blank") ? "true" : "false",
           row_icons_ref, row_icons, totals_ref, totals_label_q, totals_skip_q, eq(frame, "true") ? "true" : "false",
-          group_field_q, eq(fit_rows, "true") ? "true" : "false");
-      free(record_form); free(zeros); free(totals_label); free(totals_skip); free(frame); free(group_field); free(fit_rows);
+          group_field_q, eq(fit_rows, "true") ? "true" : "false", colors_ref, eq(activate, "click") ? "true" : "false");
+      free(activate); free(record_form); free(zeros); free(totals_label); free(totals_skip); free(frame); free(group_field); free(fit_rows);
       free(column_titles);
       free(cell_style);
       free(check_field);
@@ -1079,7 +1098,7 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
     const char *auto_flex = (elem(c, "space") || (elem(c, "multiedit") && sz.h <= 0)) ? " | WINDOW_FLEXSPACE" : "";
     snprintf(flags, sizeof(flags), "(%s)%s%s%s", resolved, enum_parse_token(a.v[A_ORIENT], kOrient, ARRAY_LEN(kOrient), WINDOW_STACK_VERTICAL) & WINDOW_STACK_HORIZONTAL ? " | WINDOW_STACK_HORIZONTAL" : "", auto_flex, control_size_flag(c));
     snprintf(spacing, sizeof(spacing), "%u", byte_attr(a.v[A_SPACING], ORIONC_DEFAULT_SPACING));
-    snprintf(font, sizeof(font), "%s", eq(a.v[A_FONT], "system") ? "FONT_SYSTEM" : eq(a.v[A_FONT], "smallest") ? "FONT_SMALLEST" : eq(a.v[A_FONT], "title") ? "FONT_TITLE" : "FONT_SMALL");
+    snprintf(font, sizeof(font), "%s", eq(a.v[A_FONT], "system") ? "FONT_SYSTEM" : eq(a.v[A_FONT], "smallest") ? "FONT_SMALLEST" : eq(a.v[A_FONT], "title") ? "FONT_TITLE" : eq(a.v[A_FONT], "display") ? "FONT_DISPLAY" : "FONT_SMALL");
     snprintf(color, sizeof(color), "%u", (unsigned)enum_parse_token(a.v[A_COLOR], kColors, ARRAY_LEN(kColors), brTextNormal));
     if (elem(c, "tableview")) snprintf(lparam, sizeof(lparam), "&%s_%s_tableview_params", form, nz(a.v[A_NAME], "unnamed"));
     if (elem(c, "activitybar") && (child(c, "toolbar") || xmlHasProp(c, BAD_CAST "labels"))) snprintf(lparam, sizeof(lparam), "&%s_%s_activity_params", form, nz(a.v[A_NAME], "unnamed"));

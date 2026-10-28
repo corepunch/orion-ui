@@ -203,7 +203,7 @@ typedef struct {
   uint32_t master_id;          // Parent TableView control ID (0 = unbound)
   int master_filter_field;     // Child FK field used by dbFetch (integer FK only)
   const char *master_key;      // Parent field referenced by the FK (must be integer)
-  reportview_cell_style_t cell_style; // REPORTVIEW_CELL_COLUMNS (default) or TWO_LINE
+  reportview_cell_style_t cell_style; // REPORTVIEW_CELL_COLUMNS (default), TWO_LINE or STACKED (cell-style="stacked")
   bool hide_column_titles;
   const struct form_def_s *record_form; // database form editing one row (form=); double-click edits
   bool blank_zeros;            // zeros="blank": numeric zeros show empty, as accounting reports do
@@ -215,6 +215,8 @@ typedef struct {
   bool framed;                 // frame="true": a themed rounded frame that clips the rows (RVS_EX_FRAME)
   const char *group_field;     // group-field="section": consecutive rows sharing its value form a captioned group
   bool fit_rows;               // fit-rows="true": measures to all its rows (RVS_EX_FITROWS), for popovers
+  const int *column_colors;    // Column color="accent": sys colour role per column, 0 = the row's (NULL = none)
+  bool click_activates;        // activate="click": rows are links (RVS_EX_ONECLICK), nothing is selected at first
 } tableview_params_t;
 
 result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);

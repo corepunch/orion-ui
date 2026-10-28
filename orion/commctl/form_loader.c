@@ -417,7 +417,9 @@ static const tableview_params_t *fl_tableview(fl_build_t *b, xmlNodePtr c, const
   int *widths = fl_alloc(lib, (size_t)(columns + 1) * sizeof(*widths));
   int *min_widths = fl_alloc(lib, (size_t)(columns + 1) * sizeof(*min_widths));
   bool *totals = fl_alloc(lib, (size_t)(columns + 1) * sizeof(*totals));
-  if (!p || !fields || !titles || !widths || !min_widths || !totals) { b->ok = false; return NULL; }
+  int *colors = fl_alloc(lib, (size_t)(columns + 1) * sizeof(*colors));
+  if (!p || !fields || !titles || !widths || !min_widths || !totals || !colors) { b->ok = false; return NULL; }
+  bool any_color = false;
   int i = 0;
   bool any_total = false;
   FL_EACH_ELEMENT(col, c) if (fl_elem(col, "column")) {
@@ -428,6 +430,10 @@ static const tableview_params_t *fl_tableview(fl_build_t *b, xmlNodePtr c, const
     min_widths[i] = mw ? atoi(mw) : 0;
     totals[i] = fl_eq(total, "sum");
     any_total |= totals[i];
+    const char *color = fl_attr(lib, col, "color");
+    colors[i] = color ? FL_ENUM(color, kRowIconColors, 0) : 0;
+    if (color && !colors[i]) fl_warn(b, col, "TableView '%s': unknown Column color '%s'", fl_nz(name, ""), color);
+    any_color |= colors[i] != 0;
     if (total && !totals[i]) fl_warn(b, col, "TableView '%s': unknown total '%s' (want sum)", fl_nz(name, ""), total);
     i++;
   }
@@ -463,7 +469,11 @@ static const tableview_params_t *fl_tableview(fl_build_t *b, xmlNodePtr c, const
     if (!p->filter_field) fl_warn(b, c, "TableView '%s': unknown or key filter-field '%s'", fl_nz(name, ""), filter_name);
   }
   p->filter_value = filter_value ? atoi(filter_value) : 0;
-  p->cell_style = fl_eq(fl_attr(lib, c, "cell-style"), "two-line") ? REPORTVIEW_CELL_TWO_LINE : REPORTVIEW_CELL_COLUMNS;
+  const char *cell_style = fl_attr(lib, c, "cell-style");
+  p->cell_style = fl_eq(cell_style, "two-line") ? REPORTVIEW_CELL_TWO_LINE : fl_eq(cell_style, "stacked") ? REPORTVIEW_CELL_STACKED : REPORTVIEW_CELL_COLUMNS;
+  if (cell_style && p->cell_style == REPORTVIEW_CELL_COLUMNS && !fl_eq(cell_style, "columns"))
+    fl_warn(b, c, "TableView '%s': unknown cell-style '%s' (want columns, two-line or stacked)", fl_nz(name, ""), cell_style);
+  p->click_activates = fl_eq(fl_attr(lib, c, "activate"), "click");
   p->hide_column_titles = fl_eq(fl_attr(lib, c, "column-titles"), "false");
   p->blank_zeros = fl_eq(fl_attr(lib, c, "zeros"), "blank");
   p->framed = fl_eq(fl_attr(lib, c, "frame"), "true");
@@ -488,6 +498,7 @@ static const tableview_params_t *fl_tableview(fl_build_t *b, xmlNodePtr c, const
     p->row_icon_count = icons;
   }
   if (any_total) p->column_totals = totals;
+  if (any_color) p->column_colors = colors;
   p->totals_label = fl_attr(lib, c, "totals-label");
   p->totals_skip = fl_attr(lib, c, "totals-skip");
 
@@ -641,7 +652,7 @@ static void fl_control(fl_build_t *b, int i, uint32_t parent) {
   fl_rect(lib, c, "padding", "layout_padding", &d->padding);
   fl_rect(lib, c, "margin", "layout_margin", &d->margin);
   d->parent = parent;
-  d->font = fl_eq(font, "system") ? FONT_SYSTEM : fl_eq(font, "smallest") ? FONT_SMALLEST : fl_eq(font, "title") ? FONT_TITLE : FONT_SMALL;
+  d->font = fl_eq(font, "system") ? FONT_SYSTEM : fl_eq(font, "smallest") ? FONT_SMALLEST : fl_eq(font, "title") ? FONT_TITLE : fl_eq(font, "display") ? FONT_DISPLAY : FONT_SMALL;
   d->font_set = font != NULL;
   d->color = (uint8_t)FL_ENUM(color, kColors, brTextNormal);
   d->color_set = color != NULL;

@@ -17,7 +17,7 @@
 static ui_font_t label_font(const window_t *win) {
   uint32_t packed = (uint32_t)(uintptr_t)(win ? win->userdata : NULL);
   ui_font_t font = (ui_font_t)((packed >> 8) & 0xffu);
-  return font <= FONT_TITLE ? font : FONT_SMALL;
+  return font <= FONT_DISPLAY ? font : FONT_SMALL;
 }
 
 static uint32_t label_color(const window_t *win) {

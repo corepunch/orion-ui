@@ -75,6 +75,9 @@ typedef struct {
   bool *totals;        // per column, NULL = no totals row
   char *totals_label;
   char *totals_skip;
+  int *column_colors;  // per column, NULL = the row's colour
+  bool click_activates;
+  int fitted_rows;     // RVS_EX_FITROWS: the row count the layout last measured
 } tableview_state_t;
 
 // Forward declarations
@@ -272,6 +275,7 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
         .width = (uint32_t)((s->column_widths && s->column_widths[i] > 0) ? s->column_widths[i] : 0),
         .min_width = (uint32_t)((s->column_min_widths && s->column_min_widths[i] > 0) ? s->column_min_widths[i] : 0),
         .align = number ? TEXT_ALIGN_RIGHT : 0,
+        .color = s->column_colors ? s->column_colors[i] : 0,
       };
       send_message(win, RVM_ADDCOLUMN, 0, &col);
     }
@@ -361,8 +365,18 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
   TV_LOG("refresh complete: id=%u table=%d rows=%d",
          (unsigned)win->id, s->table_id, row_idx);
 
-  // Select a row to trigger cascading updates in dependent views
-  if (row_idx > 0) {
+  // A list that measures to its rows grows or shrinks in its layout.
+  reportview_data_t *data = (reportview_data_t *)win->userdata2;
+  if (data && (data->extended_style & RVS_EX_FITROWS) && row_idx != s->fitted_rows) {
+    s->fitted_rows = row_idx;
+    window_t *top = win;   // the containers it sits in, up to the form that lays them out
+    while (top->parent && (top->parent->flags & WINDOW_LAYOUT_CONTAINER)) top = top->parent;
+    if (top->parent) window_layout_sync(top->parent);
+  }
+
+  // Select a row to trigger cascading updates in dependent views; a list of
+  // links has nothing selected until the keyboard moves into it.
+  if (row_idx > 0 && !s->click_activates) {
     reportview_data_t *rv = (reportview_data_t *)win->userdata2;
     int row = keep_row < 0 ? 0 : keep_row >= row_idx ? row_idx - 1 : keep_row;
     send_message(win, RVM_SETSELECTION, (uint32_t)row, NULL);
@@ -463,6 +477,8 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         if (title && title != s->column_titles[i]) { free(s->column_titles[i]); s->column_titles[i] = strdup(title); }
       }
       s->column_widths = copy_int_array(params->column_widths, s->column_count);
+      s->column_colors = params->column_colors ? copy_int_array(params->column_colors, s->column_count) : NULL;
+      s->click_activates = params->click_activates;
       s->column_min_widths = copy_int_array(params->column_min_widths, s->column_count);
       
       if (!s->field_names || !s->column_titles) {
@@ -507,8 +523,12 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
                      (void *)(uintptr_t)RVS_EX_CHECKBOXES);
       if (params->framed)
         send_message(win, RVM_SETEXTENDEDSTYLE, RVS_EX_FRAME, (void *)(uintptr_t)RVS_EX_FRAME);
-      if (params->fit_rows)
+      if (params->fit_rows) {   // exactly its rows: it takes no leftover height
         send_message(win, RVM_SETEXTENDEDSTYLE, RVS_EX_FITROWS, (void *)(uintptr_t)RVS_EX_FITROWS);
+        win->flags &= ~WINDOW_FLEXSPACE;
+      }
+      if (params->click_activates)
+        send_message(win, RVM_SETEXTENDEDSTYLE, RVS_EX_ONECLICK, (void *)(uintptr_t)RVS_EX_ONECLICK);
       
       // Initial refresh (only if db is set)
       if (s->db) {
@@ -523,6 +543,7 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         free_string_array(s->field_names);
         free_string_array(s->column_titles);
         free(s->column_widths);
+        free(s->column_colors);
         free(s->column_min_widths);
         free(s->master_key);
         free(s->check_field); free(s->group_field);

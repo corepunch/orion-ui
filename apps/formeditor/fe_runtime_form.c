@@ -373,6 +373,8 @@ static void runtime_fill_table_params(runtime_build_ctx_t *ctx, xmlNodePtr node,
   char *cell_style = runtime_xml_attr_dup(ctx, node, "cell-style");
   if (cell_style && str_ieq(cell_style, "two-line"))
     rp->table.cell_style = REPORTVIEW_CELL_TWO_LINE;
+  else if (cell_style && str_ieq(cell_style, "stacked"))
+    rp->table.cell_style = REPORTVIEW_CELL_STACKED;
   free(cell_style);
 
   int col = 0;
