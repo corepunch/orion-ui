@@ -46,11 +46,11 @@
   <string source="Print forms (Ctrl+P)" where="journal_page">Печатные формы (Ctrl+P)</string>
   <string source="Delete" where="journal_page,counterparties_page,items_page,employees_page,assets_page,document">Удалить</string>
   <string source="Delete document" where="journal_page">Удалить документ</string>
-  <string source="Date" where="journal_page,currencies_page,entries_page,reports_page">Дата</string>
-  <string source="Number" where="journal_page">Номер</string>
-  <string source="Document" where="journal_page,entries_page,reports_page,config_page,document">Документ</string>
-  <string source="Counterparty" where="journal_page,reports_page,counterparty">Контрагент</string>
-  <string source="Amount" where="journal_page,entries_page,reports_page,document,operation,payroll,closing">Сумма</string>
+  <string source="Date" where="home_page,journal_page,currencies_page,entries_page,reports_page">Дата</string>
+  <string source="Number" where="home_page,journal_page">Номер</string>
+  <string source="Document" where="home_page,journal_page,entries_page,reports_page,config_page,document">Документ</string>
+  <string source="Counterparty" where="home_page,journal_page,reports_page,counterparty">Контрагент</string>
+  <string source="Amount" where="home_page,journal_page,entries_page,reports_page,document,operation,payroll,closing">Сумма</string>
   <string source="Comment" where="journal_page">Комментарий</string>
   <string source="Lines" where="journal_page">Товары</string>
   <string source="Item" where="journal_page,document,item">Номенклатура</string>
@@ -78,9 +78,9 @@
   <string source="New item" where="items_page">Новая номенклатура</string>
   <string source="Edit item" where="items_page">Изменить номенклатуру</string>
   <string source="Delete item" where="items_page">Удалить номенклатуру</string>
-  <string source="Code" where="items_page,accounts_page,currencies_page,config_page">Код</string>
+  <string source="Code" where="home_page,items_page,accounts_page,currencies_page,config_page">Код</string>
   <string source="Chart of accounts (Ctrl+4)" where="accounts_page">План счетов (Ctrl+4)</string>
-  <string source="Account" where="accounts_page,assets_page,reports_page,config_page">Счет</string>
+  <string source="Account" where="home_page,accounts_page,assets_page,reports_page,config_page">Счет</string>
   <string source="Kind" where="accounts_page,config_page">Вид</string>
   <string source="Section" where="accounts_page">Раздел</string>
   <string source="Recalculate" where="reports_page">Пересчитать</string>
@@ -163,7 +163,7 @@
   <string source="Corr." where="reports_page">Корр. счет</string>
   <string source="Debit" where="reports_page">Дебет</string>
   <string source="Credit" where="reports_page">Кредит</string>
-  <string source="Balance" where="reports_page">Сальдо</string>
+  <string source="Balance" where="home_page,reports_page">Сальдо</string>
   <string source="Account Analysis" where="reports_page">Анализ счета по субконто</string>
   <string source="Sales Book" where="reports_page">Книга продаж</string>
   <string source="Net" where="reports_page">Без налога</string>
@@ -408,10 +408,60 @@
   <string source="Not paid" where="code">Не оплачен</string>
   <string source="Find a Command..." where="menu">Найти команду...</string>
   <string source="There is no command '%s'." where="code">Нет команды «%s».</string>
+  <string source="Home" where="menu,home_page">Главное</string>
+  <string source="Home (Ctrl+Shift+H)" where="home_page">Главное (Ctrl+Shift+H)</string>
+  <string source="Needs attention" where="home_page">Требует внимания</string>
+  <string source="Task" where="home_page">Задача</string>
+  <string source="Detail" where="home_page">Подробности</string>
+  <string source="Action" where="home_page">Действие</string>
+  <string source="The books are in order: nothing is waiting." where="code">Учет в порядке: ничего не ждет.</string>
+  <string source="Money" where="home_page">Деньги</string>
+  <string source="Total money" where="home_page">Всего денег</string>
+  <string source="Settlements" where="home_page">Расчеты</string>
+  <string source="Settlement" where="home_page">Расчет</string>
+  <string source="With" where="home_page">С кем</string>
+  <string source="Create" where="home_page">Создать</string>
+  <string source="Latest documents" where="home_page">Последние документы</string>
+  <string source="Document journal" where="home_page">Журнал документов</string>
+  <string source="Open the document journal (Ctrl+1)" where="home_page">Открыть журнал документов (Ctrl+1)</string>
+  <string source="%s and %d more" where="code">%s и еще %d</string>
+  <string source="We owe" where="code">Мы должны</string>
+  <string source="Advances paid" where="code">Авансы выданные</string>
+  <string source="Owed to us" where="code">Нам должны</string>
+  <string source="Advances received" where="code">Авансы полученные</string>
+  <string source="Taxes payable" where="code">Налоги к уплате</string>
+  <string source="Wages to pay" where="code">Зарплата к выплате</string>
+  <string source="Input tax to deduct" where="code">НДС к вычету</string>
+  <string source="%s of %s for %s" where="code">%s от %s на %s</string>
+  <string source="Documents not posted: %d" where="code">Не проведено документов: %d</string>
+  <string source="January|February|March|April|May|June|July|August|September|October|November|December" where="code">январь|февраль|март|апрель|май|июнь|июль|август|сентябрь|октябрь|ноябрь|декабрь</string>
+  <string source="Month not closed: %s" where="code">Не закрыт месяц: %s</string>
+  <string source="%d months are not closed. Not done yet: %s" where="code">Не закрыто месяцев: %d. Не выполнено: %s</string>
+  <string source="Not done yet: %s" where="code">Не выполнено: %s</string>
+  <string source="%s: stock below zero on %s" where="code">%s: отрицательный остаток на %s</string>
+  <string source="%s: balance below zero on %s" where="code">%s: отрицательный остаток на %s</string>
+  <string source="%s on %s after %s" where="code">%s на счете %s после %s</string>
+  <string source="Input tax %s is not deducted" where="code">НДС %s не принят к вычету</string>
+  <string source="It waits on %s. Deduct it with «%s»." where="code">Висит на %s. Примите к вычету документом «%s».</string>
+  <string source="%s: debt and advance are not offset" where="code">%s: долг и аванс не зачтены</string>
+  <string source="%s on %s against an advance on %s" where="code">%s на %s при авансе на %s</string>
+  <string source="Tip: the advance from %s is not offset" where="code">Совет: аванс %s не закрыт</string>
+  <string source="Post %s: it offsets %s of the %s advance" where="code">Проведите %s — она зачтет %s из аванса %s</string>
+  <string source="Post the documents that are not posted (%d)?&#10;&#10;%s" where="code">Провести непроведенные документы (%d)?
+
+%s</string>
+  <string source="Post Documents" where="code">Проведение документов</string>
+  <string source="Documents that could not be posted: %d. Open them to see why." where="code">Не удалось провести документов: %d. Откройте их, чтобы увидеть причину.</string>
+  <string source="Posted: %d · not posted: %d" where="code">Проведено: %d · не проведено: %d</string>
+  <string source="%s · as of %s" where="code">%s · на %s</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>
   <context name="reports_page">
     <string source="Expense">Расход</string>
   </context>
+  <string source="Closing of %s is out of date" where="code">Закрытие месяца за %s устарело</string>
+  <string source="Documents changed after %s: %s are not zero on %s" where="code">Документы изменены после %s: %s не закрыты на %s</string>
+  <string source="Repost" where="code">Перепровести</string>
+  <string source="There is no check %d to settle." where="code">Нет проверки %d.</string>
 </strings>

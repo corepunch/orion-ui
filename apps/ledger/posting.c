@@ -938,6 +938,7 @@ void ledger_build_reports(database_t *ib, database_t *cfg) {
   build_cash_book(&r);
   build_asset_rows(&r);
   build_payroll_rows(&r);
+  ledger_build_home(ib, cfg, r.entries, r.count, rs->date_to);
   free(r.entries);
 }
 

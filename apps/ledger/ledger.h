@@ -83,6 +83,15 @@ void ledger_build_reports(database_t *ib, database_t *cfg);
 db_report_setting_t *ledger_report_settings(database_t *ib, database_t *cfg);
 int  ledger_count_references(database_t *ib, int table_id, const char *field, int id);
 
+// home.c — the start page: the books' checks, money, settlements, documents
+// to create and the latest documents, into ib.home_rows and recent_documents.
+// entries are the posted entries in date order; period_end bounds the
+// balances (empty = the latest document's date, ledger_home_asof()).
+void ledger_build_home(database_t *ib, database_t *cfg, db_entry_t **entries, int count, const char *period_end);
+const char *ledger_home_asof(void);
+// evCommand notification: LOWORD(wparam) names an ib.home_rows row to settle.
+#define LEDGER_HOME_SETTLE 0x7e01
+
 // ledger_script.c — the configuration's rules.lua and plugins/*.lua: document
 // types, payroll taxes and closing steps the configuration scripts (like a 1C
 // configuration's modules), and event subscriptions. Every call is a no-op
@@ -136,6 +145,8 @@ bool ledger_open_record(const char *table, int id);
 // controller.c — commands and views.
 void     ledger_command(uint16_t id);
 void     ledger_refresh_views(void);
+// Does what a row of ib.home_rows offers: the Home page's click, the assistant's choice.
+void     ledger_home_perform(int row_id);
 void     ledger_update_status(void);
 result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t ledger_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
