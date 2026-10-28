@@ -197,6 +197,13 @@ static void apply_disabled(script_page_t *page, const form_ctrl_def_t *d, window
   enable_window(ctrl, !lua_toboolean(L, idx));
 }
 
+// placeholders = { field = "Show debtors" }: the hint a TextBox shows while empty.
+static void apply_placeholder(script_page_t *page, const form_ctrl_def_t *d, window_t *ctrl, lua_State *L, int idx) {
+  (void)page;
+  if (!class_is(d, "TextBox") && !class_is(d, "TextEdit")) { luaL_error(L, "placeholders.%s: not a TextBox", d->name); return; }
+  send_message(ctrl, edSetPlaceholder, 0, (void *)luaL_checkstring(L, idx));
+}
+
 // Lua selects the clip; the host owns bitmap lifetimes and frame timers.
 static void sprite_draw(script_page_t *page, page_sprite_t *s) {
   window_t *ctrl = page->win ? get_window_item(page->win, s->control) : NULL;
@@ -283,6 +290,7 @@ static int render_data(lua_State *L) {
   each_named(page, L, data, "lists", fill_list);
   each_named(page, L, data, "hidden", apply_hidden);
   each_named(page, L, data, "disabled", apply_disabled);
+  each_named(page, L, data, "placeholders", apply_placeholder);
   each_named(page, L, data, "sprites", set_sprite);
   lua_getfield(L, data, "title");
   if (lua_isstring(L, -1)) set_window_title(page->win, lua_tostring(L, -1));
@@ -500,6 +508,24 @@ static result_t script_page_proc(window_t *win, uint32_t msg, uint32_t wparam, v
       if (page->hook) page->hook(win, msg, wparam, lparam);
       return true;
     case evCommand: {
+      // Enter in a text field presses the page's default button, as a dialog's does.
+      if (page && HIWORD(wparam) == edUpdate && page->win) {
+        window_t *button = find_default_button(page->win);
+        const form_ctrl_def_t *d = button ? form_library_control(page->lib, page->form, button->id) : NULL;
+        const char *action = d && !d->target ? control_attr(page, d->id, "action") : NULL;
+        if (!action || strchr(action, '.')) return false;
+        perform(page, action, d->name);
+        return true;
+      }
+      // A TableView with action= runs it when a row is opened (Enter or a
+      // double-click); the action reads the row as the list's value.
+      if (page && HIWORD(wparam) == RVN_DBLCLK && lparam) {
+        const form_ctrl_def_t *list = form_library_control(page->lib, page->form, ((window_t *)lparam)->id);
+        const char *action = class_is(list, "TableView") ? control_attr(page, list->id, "action") : NULL;
+        if (!action || strchr(action, '.')) return false;
+        perform(page, action, list->name);
+        return true;
+      }
       if (!page || HIWORD(wparam) != btnClicked) return false;
       uint32_t id = LOWORD(wparam);
       if (id && id == page->form->cancel_id) {

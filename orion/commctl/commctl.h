@@ -212,6 +212,9 @@ typedef struct {
   const bool *column_totals;   // total="sum" per column: a totals row under the rows (NULL = none)
   const char *totals_label;    // caption in the first column without a total (NULL = "Totals")
   const char *totals_skip;     // rows with this field set stay out of the totals (subaccounts repeating their parent)
+  bool framed;                 // frame="true": a themed rounded frame that clips the rows (RVS_EX_FRAME)
+  const char *group_field;     // group-field="section": consecutive rows sharing its value form a captioned group
+  bool fit_rows;               // fit-rows="true": measures to all its rows (RVS_EX_FITROWS), for popovers
 } tableview_params_t;
 
 result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);

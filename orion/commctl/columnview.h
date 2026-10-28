@@ -52,6 +52,8 @@ enum {
 // WinAPI list-view compatible state-image model. State image indices are
 // one-based: 1 = unchecked, 2 = checked when RVS_EX_CHECKBOXES is enabled.
 #define RVS_EX_CHECKBOXES          0x00000004u
+#define RVS_EX_FRAME               0x00000008u  // themed rounded frame (theme_t.table); rows clip to it
+#define RVS_EX_FITROWS             0x00000010u  // measures to all its rows, for lists in popovers
 #define RVIS_STATEIMAGEMASK        0x0000f000u
 #define RV_INDEXTOSTATEIMAGEMASK(i) ((uint32_t)(i) << 12)
 #define RV_STATEIMAGEINDEX(state)   (((uint32_t)(state) & RVIS_STATEIMAGEMASK) >> 12)
@@ -86,6 +88,7 @@ typedef struct {
   uint32_t    state;
   const char *subitems[REPORTVIEW_MAX_SUBITEMS];
   uint32_t    subitem_count;
+  const char *section;    // report rows: a caption drawn above this row, starting a group (NULL = none)
 } reportview_item_t;
 
 typedef struct {

@@ -108,7 +108,7 @@ vec4 frag() {
                            srgb_to_linear(tint.b));
     float shadow_alpha = tint.a * alpha * coverage;
     outColor = vec4(shadow_rgb * shadow_alpha, shadow_alpha);
-    return outColor;
+    return ui_clipped(outColor);
   }
   vec4 src = texture(tex0, tex);
   vec3 tint_linear = vec3(srgb_to_linear(tint.r), srgb_to_linear(tint.g),
@@ -135,7 +135,7 @@ vec4 frag() {
     float y = clamp(1.0 - tex.y, 0.0, 1.0);
     float a = mix(tint.a, edge.a, y) * alpha * aa * col.a;
     outColor = vec4(mix(tint_linear, bottom, y) * col.rgb * a, a);
-    return outColor;
+    return ui_clipped(outColor);
   }
   float factor = alpha * aa * col.a * tint.a;
   vec3 straight_rgb = src.rgb * col.rgb * tint_linear;
@@ -150,5 +150,5 @@ vec4 frag() {
     src_a = 1.0;
   }
   outColor = vec4(straight_rgb * factor, src_a * factor);
-  return outColor;
+  return ui_clipped(outColor);
 }

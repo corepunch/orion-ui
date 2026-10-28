@@ -54,6 +54,26 @@ fill_rect(COLOR_PANEL_BG, 0, 0, win->frame.w, win->frame.h);
 fill_rect(RGBA(255,0,0,255), 10, 10, 50, 50);
 ```
 
+### Rounded clipping
+
+`set_clip_rounded_rect(win, r, radius)` adds a rounded clip on top of
+`set_clip_rect`: every UI sprite program (`share/shaders/clip.frag.glsl`, put
+in front of each fragment shader) multiplies its output by the coverage of the
+rounded rectangle, computed from `gl_FragCoord` with one pixel of
+antialiasing. The rectangle is in `win`'s client coordinates. A radius of 0
+clears it, and `set_clip_rect` leaves it alone, so a control can still clip
+its columns rectangularly inside the rounded frame. ReportView's
+`RVS_EX_FRAME` style (`frame="true"` on a TableView) uses it: the list's
+header and rows are cut by the same silhouette that `stroke_rounded_rect`
+then outlines.
+
+```c
+set_clip_rounded_rect(win, cr, get_theme()->table.corner_radius);
+/* draw the header and rows as usual */
+set_clip_rounded_rect(win, cr, 0);
+stroke_rounded_rect(get_sys_color(brLightEdge), cr, get_theme()->table.corner_radius, 1);
+```
+
 ### Cards, badges and theme colours
 
 `fill_gradient_rounded_rect(top, bottom, r, radius)` paints a vertical gradient
@@ -127,8 +147,20 @@ int w = draw_badge(FONT_SMALL, "3 modified", x, y, 18, get_sys_color(brTextWarni
 draw_badge_ex(FONT_SMALLEST, "1", R(x, y, 16, 16), get_sys_color(brActiveTitlebarText),
               color_with_alpha(get_sys_color(brModalOverlay), 0xB8), true);
 
+// Status badge ("Posted"): a pill tinted with a theme role, an optional leading
+// icon in that role, and text in the badge ink. The Badge control draws exactly this.
+irect16_t pill = R(x, y, measure_status_badge("Posted", "ledger-doc-posted"), BADGE_HEIGHT);
+draw_status_badge(pill, "Posted", "ledger-doc-posted", get_sys_color(brTextSuccess));
+
 uint32_t soft = color_with_alpha(color, 0x40);   // same colour, different alpha
+uint32_t ink  = color_mix(color, get_sys_color(brTextNormal), 0x50);  // towards body text
 ```
+
+Badge metrics live in `theme_t.badge`: `padding`, `corner_radius`, `tint_alpha`
+(the face), `ink_mix` (how far the text moves from the role towards
+`brTextNormal`, so small type stays readable on the tint), `icon_size` and
+`icon_gap`. `badge_ink(color)` returns the text colour a badge tinted with
+`color` uses.
 
 The accent edge is a plain `card.edge_width` rectangle clipped by the card's silhouette in the shader, so
 there is nothing to align or mask by hand. Geometry lives in `theme_t` (`card.corner_radius`,

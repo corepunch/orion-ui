@@ -5,6 +5,7 @@
 // flow views inside it and it sizes itself from their measure pass, so a tile grid can wrap and
 // align any content. A Badge is a self-measuring tinted label.
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -12,42 +13,69 @@
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
+#include <orion/user/svg_icon_loader.h>
+#include <orion/user/rect.h>
 #include "commctl.h"
 #include "layout_shared.h"
 
 // ── Badge ─────────────────────────────────────────────────────────────────────
 
+// A status pill (draw_status_badge): a theme role from color= or bdSetColor,
+// and an optional leading icon from icon= or btnSetIconName, so the state
+// never relies on colour alone.
+typedef struct {
+  uint32_t role;
+  char     icon[64];
+} badge_t;
+
 result_t win_badge(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  badge_t *b = (badge_t *)win->userdata;
   switch (msg) {
     case evCreate: {
-      uint32_t role = brTextSecondary;
+      b = calloc(1, sizeof(*b));
+      if (!b) {
+        fprintf(stderr, "[badge] win=%u state allocation failed\n", (unsigned)win->id);
+        fflush(stderr);
+        return false;
+      }
+      b->role = brTextSecondary;
       if (lparam && (uintptr_t)lparam > 0x1000) {
         const form_ctrl_def_t *cd = (const form_ctrl_def_t *)lparam;
-        if (cd->color_set && cd->color < brCount) role = cd->color;
+        if (cd->color_set && cd->color < brCount) b->role = cd->color;
       }
-      win->userdata = (void *)(uintptr_t)role;
+      win->userdata = b;
       win->flags |= WINDOW_NOTABSTOP;
       win->layout.h_align = win->layout.v_align = LAYOUT_ALIGN_START;   // keep the intrinsic size
       return true;
     }
+    case evDestroy:
+      free(b);
+      win->userdata = NULL;
+      return true;
     case bdSetColor:
-      if (wparam >= brCount) {
+      if (wparam >= brCount || !b) {
         fprintf(stderr, "[badge] win=%u bdSetColor role=%u out of range\n", (unsigned)win->id, (unsigned)wparam);
         fflush(stderr);
         return false;
       }
-      win->userdata = (void *)(uintptr_t)wparam;
+      b->role = wparam;
+      invalidate_window(win);
+      return true;
+    case btnSetIconName:
+      if (!b) return false;
+      snprintf(b->icon, sizeof(b->icon), "%s", lparam ? (const char *)lparam : "");
+      if (win->parent) window_layout_sync(win->parent);
       invalidate_window(win);
       return true;
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (!m) return true;
-      m->desired_w = measure_badge(FONT_SMALL, win->title);
+      m->desired_w = measure_status_badge(win->title, b ? b->icon : NULL);
       m->desired_h = BADGE_HEIGHT;
       return true;
     }
     case evPaint:
-      draw_badge(FONT_SMALL, win->title, 0, 0, win->frame.h, get_sys_color((sys_color_idx_t)(uintptr_t)win->userdata));
+      if (b) draw_status_badge(R(0, 0, win->frame.w, win->frame.h), win->title, b->icon, get_sys_color((sys_color_idx_t)b->role));
       return true;
     default:
       return false;

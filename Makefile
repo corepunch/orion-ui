@@ -135,7 +135,7 @@ CORE_LIBS   = $(USER_LIB) $(COMMCTL_LIB) $(COMMDLG_LIB) $(KERNEL_LIB) $(SCRIPT_L
 
 # Shared relocatable rpath used exactly once per link command.
 PLATFORM_LDFLAGS = -L$(LIB_DIR) -lplatform
-CORE_LDLIBS      = -L$(LIB_DIR) -lscript -lkernel -lcommctl -lcommdlg -luser
+CORE_LDLIBS      = -L$(LIB_DIR) -lscript -lkernel -lcommctl -luser -lcommdlg
 
 # Tools
 ORIONC_BIN   = $(BIN_DIR)/orionc$(EXE_EXT)

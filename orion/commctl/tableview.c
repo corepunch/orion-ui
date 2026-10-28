@@ -68,6 +68,7 @@ typedef struct {
   int row_count;
   const form_def_t *record_form;
   bool blank_zeros;
+  char *group_field;     // rows sharing this field's text form a captioned group
   const db_field_meta_t **metas;  // field metadata per column (NULL unknown), resolved with the database
   tableview_row_icon_t *row_icons;
   int row_icon_count;
@@ -299,8 +300,9 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
     return;
   }
   
-  // Add each record as a row
+  // Add each record as a row; a change in the group field starts a captioned group.
   int row_idx = 0;
+  char group[MAX_REPORTVIEW_TITLE] = "", previous_group[MAX_REPORTVIEW_TITLE] = "";
   for (result_node_t *n = results; n; n = (result_node_t *)n->next) {
     void *record = *(void **)n->data;
     if (!record) continue;
@@ -341,6 +343,11 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
     
     for (int col = 1; col < s->column_count; col++) {
       item.subitems[col - 1] = cell_buf[col];
+    }
+    if (s->group_field && tv_get_field_text(s, record, s->group_field, group, sizeof(group)) &&
+        group[0] && (row_idx == 0 || strcmp(group, previous_group))) {
+      item.section = group;
+      snprintf(previous_group, sizeof(previous_group), "%s", group);
     }
     
     send_message(win, RVM_ADDITEM, 0, &item);
@@ -424,13 +431,14 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       s->cell_style = params->cell_style;
       s->record_form = params->record_form;
       s->blank_zeros = params->blank_zeros;
+      s->group_field = params->group_field && params->group_field[0] ? strdup(params->group_field) : NULL;
       TV_LOG("create: id=%u table=%d db=%p columns=%d", (unsigned)win->id,
              s->table_id, (void *)s->db, count_strings(params->field_names));
       
       if (s->db && !tv_db_supports(s->db, s->table_id)) {
         TV_LOG("create metadata missing: id=%u table=%d", (unsigned)win->id, s->table_id);
         free(s->master_key);
-        free(s->check_field);
+        free(s->check_field); free(s->group_field);
         free(s);
         win->userdata = NULL;
         return true;
@@ -440,7 +448,7 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       s->column_count = count_strings(params->field_names);
       if (s->column_count <= 0) {
         free(s->master_key);
-        free(s->check_field);
+        free(s->check_field); free(s->group_field);
         free(s);
         win->userdata = NULL;
         return true;
@@ -463,7 +471,7 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         free(s->column_widths);
         free(s->column_min_widths);
         free(s->master_key);
-        free(s->check_field);
+        free(s->check_field); free(s->group_field);
         free(s->rows);
         free(s);
         win->userdata = NULL;
@@ -497,6 +505,10 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       if (s->check_field)
         send_message(win, RVM_SETEXTENDEDSTYLE, RVS_EX_CHECKBOXES,
                      (void *)(uintptr_t)RVS_EX_CHECKBOXES);
+      if (params->framed)
+        send_message(win, RVM_SETEXTENDEDSTYLE, RVS_EX_FRAME, (void *)(uintptr_t)RVS_EX_FRAME);
+      if (params->fit_rows)
+        send_message(win, RVM_SETEXTENDEDSTYLE, RVS_EX_FITROWS, (void *)(uintptr_t)RVS_EX_FITROWS);
       
       // Initial refresh (only if db is set)
       if (s->db) {
@@ -513,7 +525,7 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         free(s->column_widths);
         free(s->column_min_widths);
         free(s->master_key);
-        free(s->check_field);
+        free(s->check_field); free(s->group_field);
         free(s->rows);
         free(s->metas);
         for (int i = 0; i < s->row_icon_count; i++) {

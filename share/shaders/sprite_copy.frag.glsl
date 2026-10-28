@@ -11,5 +11,5 @@ vec4 frag() {
   vec3 rgb = src.rgb * tint_linear;
   if (params1.x > 0.5) rgb *= alpha_scale;
   outColor = vec4(rgb, src.a * alpha_scale);
-  return outColor;
+  return ui_clipped(outColor);
 }

@@ -210,6 +210,9 @@ static const enum_token_t kColors[] = {
   {"info-background", brInfoBackground}, {"info-text", brInfoText},
   {"tooltip-background", brTooltipBackground}, {"tooltip-text", brTooltipText},
   {"panel-dark", brPanelDark}, {"panel-darker", brPanelDarker}, {"desktop-bg", brDesktopBg},
+  {"text-warning", brTextWarning}, {"text-info", brTextInfo}, {"text-secondary", brTextSecondary},
+  {"success", brTextSuccess}, {"warning", brTextWarning}, {"error", brTextError},
+  {"info", brTextInfo}, {"secondary", brTextSecondary},
 };
 static const enum_token_t kRowIconColors[] = {
   {"success", brTextSuccess}, {"error", brTextError}, {"warning", brTextWarning}, {"info", brTextInfo},
@@ -463,6 +466,10 @@ static const tableview_params_t *fl_tableview(fl_build_t *b, xmlNodePtr c, const
   p->cell_style = fl_eq(fl_attr(lib, c, "cell-style"), "two-line") ? REPORTVIEW_CELL_TWO_LINE : REPORTVIEW_CELL_COLUMNS;
   p->hide_column_titles = fl_eq(fl_attr(lib, c, "column-titles"), "false");
   p->blank_zeros = fl_eq(fl_attr(lib, c, "zeros"), "blank");
+  p->framed = fl_eq(fl_attr(lib, c, "frame"), "true");
+  const char *group_field = fl_attr(lib, c, "group-field");
+  p->group_field = group_field && *group_field ? group_field : NULL;
+  p->fit_rows = fl_eq(fl_attr(lib, c, "fit-rows"), "true");
 
   int icons = 0;
   FL_EACH_ELEMENT(ri, c) if (fl_elem(ri, "rowicon")) icons++;
@@ -588,6 +595,16 @@ static void fl_binding(fl_build_t *b, xmlNodePtr c, uint32_t id, const char *kla
       case DB_TYPE_BOOL:   x->wparam = sizeof(bool);         x->getter = edGetText; return;
     }
   }
+  if (!strcasecmp(klass, "label")) {  // shows the field, never writes it back
+    switch (meta->type) {
+      case DB_TYPE_DATE:   x->push = ddx_push_date;       return;
+      case DB_TYPE_INT:    x->push = ddx_push_int;        return;
+      case DB_TYPE_DOUBLE: x->push = ddx_push_double;     return;
+      case DB_TYPE_FLOAT:  x->push = ddx_push_float;      return;
+      case DB_TYPE_STRING: x->push = ddx_push_label_text; return;
+      default: break;
+    }
+  }
   if (!strcasecmp(klass, "combobox")) { x->push = ddx_push_combo_value; x->pull = ddx_pull_combo_value; return; }
   if (!strcasecmp(klass, "checkbox"))  { x->push = ddx_push_check;       x->pull = ddx_pull_check;       return; }
 }
@@ -624,7 +641,7 @@ static void fl_control(fl_build_t *b, int i, uint32_t parent) {
   fl_rect(lib, c, "padding", "layout_padding", &d->padding);
   fl_rect(lib, c, "margin", "layout_margin", &d->margin);
   d->parent = parent;
-  d->font = fl_eq(font, "system") ? FONT_SYSTEM : fl_eq(font, "smallest") ? FONT_SMALLEST : FONT_SMALL;
+  d->font = fl_eq(font, "system") ? FONT_SYSTEM : fl_eq(font, "smallest") ? FONT_SMALLEST : fl_eq(font, "title") ? FONT_TITLE : FONT_SMALL;
   d->font_set = font != NULL;
   d->color = (uint8_t)FL_ENUM(color, kColors, brTextNormal);
   d->color_set = color != NULL;
@@ -632,6 +649,9 @@ static void fl_control(fl_build_t *b, int i, uint32_t parent) {
   const char *source = fl_attr(lib, c, "source");
   d->source = source && *source ? source : NULL;
   d->placeholder = fl_attr(lib, c, "placeholder");
+  const char *icon = fl_attr(lib, c, "icon"), *tooltip = fl_attr(lib, c, "tooltip");
+  d->icon = icon && *icon ? icon : NULL;
+  d->tooltip = tooltip && *tooltip ? tooltip : NULL;
 
   const char *context = fl_attrs_first(lib, c, "context-menu", "context_menu");
   if (context && *context) fl_error(b, c, "control '%s': context menus need compiled command ids; use orionc", fl_nz(m->name, ""));
@@ -653,6 +673,12 @@ static void fl_control(fl_build_t *b, int i, uint32_t parent) {
                           fl_nz(m->name, ""), fl_nz(action, ""), target);
     else if (!target_id) fl_error(b, c, "control '%s': no control named '%s'", fl_nz(m->name, ""), target);
     else { d->target = target_id; d->target_message = message; }
+  }
+  const char *list = fl_elem(c, "textbox") || fl_elem(c, "textedit") ? fl_attr(lib, c, "list") : NULL;
+  if (list && *list) {   // the list the field drives (edSetList)
+    uint32_t list_id = fl_id_named(b, list);
+    if (!list_id) fl_error(b, c, "control '%s': no list named '%s'", fl_nz(m->name, ""), list);
+    else d->target = list_id;
   }
 }
 

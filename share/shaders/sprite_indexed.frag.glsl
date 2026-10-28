@@ -4,5 +4,5 @@ vec4 frag() {
   outColor = texture(palette_tex, vec2((index + 0.5) / 256.0, 0.5)) * col;
   outColor.rgb *= alpha;
   outColor.a *= alpha;
-  return outColor;
+  return ui_clipped(outColor);
 }

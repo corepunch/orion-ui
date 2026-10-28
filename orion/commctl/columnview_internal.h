@@ -27,6 +27,9 @@ typedef struct {
   reportview_item_t items[MAX_COLUMNVIEW_ITEMS];
   char names[MAX_COLUMNVIEW_ITEMS][MAX_COLUMNVIEW_ITEM_NAME];
   char subnames[MAX_COLUMNVIEW_ITEMS][REPORTVIEW_MAX_SUBITEMS][MAX_COLUMNVIEW_ITEM_NAME];
+  char sections[MAX_COLUMNVIEW_ITEMS][MAX_REPORTVIEW_TITLE];  // group captions above rows
+  int  row_tops[MAX_COLUMNVIEW_ITEMS + 1];                    // report rows' tops once captions take room
+  bool has_sections;
 
   struct {
     char title[MAX_REPORTVIEW_TITLE];

@@ -230,6 +230,26 @@ void set_viewport(irect16_t frame) {
   set_scissor_cached(&ogl_rect);
 }
 
+// r in win's client coordinates as framebuffer pixels (GL origin at the bottom left).
+static irect16_t clip_gl_rect(window_t const *win, irect16_t r) {
+  if (g_fbo_root) {
+    ipoint16_t origin = win ? window_origin_in_root(win) : (ipoint16_t){0, 0};
+    return fbo_rect(g_fbo_root, rect_offset(r, origin.x, origin.y));
+  }
+  return get_opengl_rect(win ? rect_offset(r, window_screen_x(win), window_screen_y(win)) : r);
+}
+
+// A rounded clip on top of the rectangular one: every UI draw is cut to the
+// rounded rectangle r (win's client coordinates) until it is cleared with a
+// radius of 0. Content that scrolls under the corners is clipped by the same
+// silhouette the frame draws, so nothing leaks past it.
+void set_clip_rounded_rect(window_t const *win, irect16_t r, int radius) {
+  if (!g_ui_runtime.running) return;
+  if (radius <= 0 || r.w <= 0 || r.h <= 0) { R_SetClipRoundedRect(0, 0, 0, 0, 0); return; }
+  irect16_t gl = clip_gl_rect(win, r);
+  R_SetClipRoundedRect(gl.x, gl.y, gl.w, gl.h, radius * ui_surface_scale());
+}
+
 void set_clip_rect(window_t const *win, irect16_t r) {
   if (!g_ui_runtime.running) return;
   if (g_fbo_root) {
@@ -480,11 +500,38 @@ int measure_badge(ui_font_t font, const char *text) {
   return text_strwidth(font, text) + 2 * get_theme()->badge.padding;
 }
 
+uint32_t badge_ink(uint32_t color) {
+  return color_mix(color, get_sys_color(brTextNormal), (uint8_t)get_theme()->badge.ink_mix);
+}
+
 int draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color) {
   int w = measure_badge(font, text);
-  draw_badge_ex(font, text, R(x, y, w, height), color,
+  draw_badge_ex(font, text, R(x, y, w, height), badge_ink(color),
                 color_with_alpha(color, (uint8_t)get_theme()->badge.tint_alpha), false);
   return w;
+}
+
+static int status_badge_icon_width(const char *icon) {
+  const theme_t *theme = get_theme();
+  return icon && icon[0] ? theme->badge.icon_size + theme->badge.icon_gap : 0;
+}
+
+int measure_status_badge(const char *text, const char *icon) {
+  return measure_badge(FONT_SYSTEM, text) + status_badge_icon_width(icon);
+}
+
+void draw_status_badge(irect16_t r, const char *text, const char *icon, uint32_t color) {
+  const theme_t *theme = get_theme();
+  int icon_w = status_badge_icon_width(icon);
+  draw_badge_ex(FONT_SYSTEM, "", r, color, color_with_alpha(color, (uint8_t)theme->badge.tint_alpha), true);
+  irect16_t content = rect_inset_xy(r, theme->badge.padding, 0);
+  sysicon_resolved_t glyph;
+  if (icon_w && sysicon_resolve_size(icon, theme->badge.icon_size, &glyph)) {
+    irect16_t at = rect_center(rect_split_left(content, theme->badge.icon_size), glyph.w, glyph.h);
+    draw_sprite_region((int)glyph.tex, at, UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1), color, 0);
+  }
+  irect16_t label = rect_trim_left(content, icon_w);
+  draw_text_clipped(FONT_SYSTEM, text, &label, badge_ink(color), TEXT_ALIGN_CENTER);
 }
 
 void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_color, uint32_t background_color, bool round) {

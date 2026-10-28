@@ -4,52 +4,54 @@
 #include <stdint.h>
 #include <orion/user/theme.h>
 
-// Porcelain Dark: Porcelain's dark counterpart. Graphite chrome, near-black
-// wells, the sidebar a step darker than the face; the same indigo selection
-// with white text. Status colours are lifted for contrast on dark surfaces.
+// Porcelain Dark: Porcelain's dark counterpart, in the colours of Atom's One
+// Dark. Charcoal faces with the editor-grey wells a step lighter, soft
+// blue-grey ink instead of white, and muted status hues, so long tables read
+// without glare. Edges are darker than the faces, as One Dark's borders are;
+// the assistant's balloon is a raised One Dark popover with a soft outline.
 
 #define THEME_PALETTE_PORCELAIN_DARK_INIT \
   [brTransparent]          = 0x00000000, \
-  [brControlBg]            = WEB(0x1E1F24), \
-  [brWindowDarkBg]         = WEB(0x18191D), \
-  [brWorkspaceBg]          = WEB(0x121316), \
-  [brActiveTitlebar]       = WEB(0x232429), \
-  [brActiveTitlebarText]   = WEB(0xE8E9ED), \
-  [brInactiveTitlebar]     = WEB(0x1C1D21), \
-  [brInactiveTitlebarText] = WEB(0x71757F), \
-  [brStatusbarBg]          = WEB(0x1A1B1F), \
-  [brLightEdge]            = WEB(0x3A3D46), \
-  [brDarkEdge]             = WEB(0x2A2C33), \
-  [brFlare]                = WEB(0x3E414A), \
-  [brAccent]               = WEB(0x6E7BF2), \
-  [brButtonInner]          = WEB(0x2A2B31), \
-  [brButtonHover]          = WEB(0x31333A), \
-  [brTextNormal]           = WEB(0xE8E9ED), \
-  [brTextDisabled]         = WEB(0x60646E), \
-  [brTextError]            = WEB(0xFF6B5E), \
-  [brTextSuccess]          = WEB(0x4CC38A), \
-  [brBorderFocus]          = WEB(0x8A95FF), \
-  [brBorderActive]         = WEB(0x3E414A), \
-  [brFolderText]           = WEB(0x9AA4FF), \
-  [brColumnViewBg]         = WEB(0x16171B), \
+  [brControlBg]            = WEB(0x21252B), \
+  [brWindowDarkBg]         = WEB(0x1E2227), \
+  [brWorkspaceBg]          = WEB(0x1B1D23), \
+  [brActiveTitlebar]       = WEB(0x21252B), \
+  [brActiveTitlebarText]   = WEB(0xD7DAE0), \
+  [brInactiveTitlebar]     = WEB(0x1E2227), \
+  [brInactiveTitlebarText] = WEB(0x5C6370), \
+  [brStatusbarBg]          = WEB(0x1E2227), \
+  [brLightEdge]            = WEB(0x3A3F4B), \
+  [brDarkEdge]             = WEB(0x181A1F), \
+  [brFlare]                = WEB(0x3E4451), \
+  [brAccent]               = WEB(0x568AF2), \
+  [brButtonInner]          = WEB(0x2C313A), \
+  [brButtonHover]          = WEB(0x353B45), \
+  [brTextNormal]           = WEB(0xABB2BF), \
+  [brTextDisabled]         = WEB(0x4B5263), \
+  [brTextError]            = WEB(0xE06C75), \
+  [brTextSuccess]          = WEB(0x98C379), \
+  [brBorderFocus]          = WEB(0x568AF2), \
+  [brBorderActive]         = WEB(0x3A3F4B), \
+  [brFolderText]           = WEB(0x61AFEF), \
+  [brColumnViewBg]         = WEB(0x282C34), \
   [brModalOverlay]         = 0x60000000, \
-  [brToolbarForeground]    = WEB(0xCDD0D8), \
-  [brPanelDark]            = WEB(0x1A1B20), \
-  [brPanelDarker]          = WEB(0x141518), \
-  [brTabBarBg]             = WEB(0x17181C), \
-  [brTextWarning]          = WEB(0xF2B24C), \
-  [brTextInfo]             = WEB(0x6FA8FF), \
-  [brTextSecondary]        = WEB(0x9DA1AB), \
-  [brTextOnColor]          = WEB(0x101114), \
-  [brSelectionTop]         = WEB(0x5563DC), \
-  [brSelectionBottom]      = WEB(0x4C5BD4), \
-  [brPlasticNeutral]       = WEB(0x5A5D66), \
-  [brAccentText]           = WEB(0xFFFFFF), \
-  [brTooltipBackground]   = WEB(0x1E1F24), \
+  [brToolbarForeground]    = WEB(0x9DA5B4), \
+  [brPanelDark]            = WEB(0x1E2227), \
+  [brPanelDarker]          = WEB(0x1B1D23), \
+  [brTabBarBg]             = WEB(0x1D2025), \
+  [brTextWarning]          = WEB(0xE5C07B), \
+  [brTextInfo]             = WEB(0x61AFEF), \
+  [brTextSecondary]        = WEB(0x7F848E), \
+  [brTextOnColor]          = WEB(0x1B1D23), \
+  [brSelectionTop]         = WEB(0x4D78CC), \
+  [brSelectionBottom]      = WEB(0x4570C2), \
+  [brPlasticNeutral]       = WEB(0x4B5263), \
+  [brAccentText]           = WEB(0xF0F2F5), \
+  [brTooltipBackground]   = WEB(0x1B1D23), \
   [brTooltipText]         = WEB(0xFFFFFF), \
-  [brInfoBackground]      = WEB(0x403B23), \
-  [brInfoText]            = WEB(0xFFF4BD), \
-  [brDesktopBg]            = WEB(0x2B2E36)
+  [brInfoBackground]      = WEB(0x2C313A), \
+  [brInfoText]            = WEB(0xC8CCD4), \
+  [brDesktopBg]            = WEB(0x16181D)
 
 static const uint32_t k_theme_palette_porcelain_dark[brCount]
   __attribute__((unused)) = { THEME_PALETTE_PORCELAIN_DARK_INIT };
