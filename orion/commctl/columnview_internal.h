@@ -11,7 +11,6 @@
 #define DEFAULT_ICON_TEXT_GAP  0
 #define ICON_OFFSET 16
 #define WIN_PADDING 4
-#define RV_DOUBLE_CLICK_MS DOUBLE_CLICK_MS
 #define RV_INVALID_SELECTION (-1)
 
 // Large icon view dimensions:
@@ -45,8 +44,6 @@ typedef struct {
   uint32_t count;
   int selected;
   int column_width;
-  uint32_t last_click_time;
-  int last_click_index;
 
   uint32_t column_count;
   int icon_size;
@@ -78,7 +75,6 @@ typedef struct {
 void rv_invalidate(window_t *win, reportview_data_t *data);
 bool rv_valid_index(const reportview_data_t *data, int index);
 void rv_notify(window_t *win, reportview_data_t *data, int index, uint16_t code);
-void rv_reset_click_state(reportview_data_t *data);
 bool rv_store_item(reportview_data_t *data, uint32_t i, const reportview_item_t *item);
 void rv_rebind_item_refs(reportview_data_t *data, uint32_t start);
 void rv_reset_view_state(window_t *win, reportview_data_t *data);

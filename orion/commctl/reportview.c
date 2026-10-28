@@ -324,7 +324,6 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       win->hscroll.visible_mode = SB_VIS_AUTO;
       win->vscroll.visible_mode = SB_VIS_AUTO;
       data->selected = -1;
-      data->last_click_index = RV_INVALID_SELECTION;
       data->resize_col = -1;
       data->resize_hot_col = -1;
       data->column_width = DEFAULT_COLUMN_WIDTH;
@@ -421,20 +420,11 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       // Otherwise select row; the state image toggles independently of row selection.
       int index = report_hit_index(win, data, wparam);
       if (rv_valid_index(data, index)) {
-        uint32_t now = axGetMilliseconds();
-        if (data->last_click_index == index && (now - data->last_click_time) < RV_DOUBLE_CLICK_MS) {
-          rv_notify(win, data, index, RVN_DBLCLK);
-          rv_reset_click_state(data);
-        } else {
-          int old_selection = data->selected;
-          data->selected = index;
-          data->last_click_time = now;
-          data->last_click_index = index;
-          if (old_selection != data->selected) {
-            rv_notify(win, data, index, RVN_SELCHANGE);
-          }
-          rv_invalidate(win, data);
-        }
+        int old_selection = data->selected;
+        data->selected = index;
+        if (old_selection != data->selected)
+          rv_notify(win, data, index, RVN_SELCHANGE);
+        rv_invalidate(win, data);
         int checked_index = -1;
         if (report_hit_checkbox(win, data, wparam, &checked_index)) {
           report_toggle_check(win, data, checked_index);
@@ -445,7 +435,6 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     case evLeftButtonDoubleClick: {
       int index = report_hit_index(win, data, wparam);
       if (rv_valid_index(data, index)) {
-        rv_reset_click_state(data);
         rv_notify(win, data, index, RVN_DBLCLK);
       }
       return true;

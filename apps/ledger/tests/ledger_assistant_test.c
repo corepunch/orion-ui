@@ -138,9 +138,19 @@ static void test_assistant(void) {
     ASSERT_TRUE(script_page_perform(page, "help"));
     ASSERT(get_root_window(summary)->frame.h < answer_height, "the bubble shrinks again for a shorter message");
     ASSERT_EQUAL(count_rows("assistant", 1), 4);
-    send_message(palette, RVM_SETSELECTION, 1, NULL);   // "show customers"
-    ASSERT_TRUE(script_page_perform_from(page, "choose", "palette"));   // an example runs as a command
+    int row_y = 0;
+    while (row_y < palette->frame.h && (int)send_message(palette, RVM_HITTEST, MAKEDWORD(20, row_y), NULL) != 1) row_y++;
+    ASSERT_TRUE(row_y < palette->frame.h);
+    int click_x = (window_screen_x(palette) + 20) * UI_WINDOW_SCALE;
+    int click_y = (window_screen_y(palette) + row_y) * UI_WINDOW_SCALE;
+    const uint32_t sequence[] = {kEventLeftButtonDown, kEventLeftButtonUp,
+      kEventLeftButtonDown, kEventLeftDoubleClick, kEventLeftButtonUp};
+    for (size_t event = 0; event < ARRAY_LEN(sequence); event++) {
+      ui_event_t click = {.message = sequence[event], .x = click_x, .y = click_y};
+      dispatch_message(&click);
+    }
     ASSERT_EQUAL(count_rows("assistant", 0), count);
+    ASSERT(strstr(summary->title, "Found:") == summary->title, "double-click runs the example without opening a replacement result");
     ASSERT_STR_EQUAL(command->title, "");
     // A request the grammar does not know may still name a command.
     set_text(page, "command", "new doc");
@@ -151,6 +161,10 @@ static void test_assistant(void) {
     ASSERT_TRUE(script_page_perform(page, "submit"));
     ASSERT_EQUAL(count_rows("assistant", 0), count);
     ASSERT_EQUAL(count_rows("ib", TABLE_COUNTERPARTIES), count);
+    ASSERT_FALSE(window_has_state(palette, WINDOW_STATE_VISIBLE));
+    window_t *actions = script_page_control(page, "actions");
+    ASSERT_EQUAL(actions->frame.y, summary->frame.y + summary->frame.h + 6);
+    ASSERT_EQUAL(more->frame.h, 0);
     set_text(page, "command", "покажи документы");
     ASSERT_TRUE(script_page_perform(page, "submit"));
     ASSERT_EQUAL(count_rows("assistant", 0), count_rows("ib", TABLE_DOCUMENTS));
@@ -266,10 +280,12 @@ static void test_assistant_companion(void) {
   ASSERT_NOT_NULL(mascot);
   ASSERT(get_root_window(mascot) == companion, "the mascot remains clickable");
   send_message(command, edSetText, 0, "over fifty thousand");
+  ipoint16_t bubble_point = {window_screen_x(bubble) + 50, window_screen_y(bubble) + 80};
   send_message(companion, evCommand, MAKEDWORD(mascot->id, btnClicked), mascot);
   ASSERT_FALSE(window_has_state(bubble, WINDOW_STATE_VISIBLE));
+  ASSERT_EQUAL(companion->frame.h, mascot->frame.h);
   ASSERT(g_ui_runtime.focused == main, "collapsing returns keyboard input to Ledger");
-  window_t *underneath = find_window(companion->frame.x + 50, companion->frame.y + 80);
+  window_t *underneath = find_window(bubble_point.x, bubble_point.y);
   ASSERT(underneath && get_root_window(underneath) == main,
          "collapsed speech bubble does not intercept the Ledger workspace");
   ASSERT_EQUAL(count_rows("assistant", 0), count);

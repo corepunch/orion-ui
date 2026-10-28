@@ -37,14 +37,10 @@ void layout_stack_measure_window(window_t *win, layout_measure_t *m) {
     count++;
   }
 
-  if (count == 0) {
-    desired_w = content.w;
-    desired_h = content.h;
-  }
   if (m) {
     irect16_t pad = layout_padding_for(win);
-    m->desired_w = desired_w + pad.x + pad.w;
-    m->desired_h = desired_h + pad.y + pad.h;
+    m->desired_w = MAX(1, desired_w + pad.x + pad.w);
+    m->desired_h = MAX(1, desired_h + pad.y + pad.h);
   }
 }
 

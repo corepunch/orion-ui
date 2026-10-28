@@ -131,7 +131,6 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       win->flags |= WINDOW_FLEXSPACE;
       win->vscroll.visible_mode = SB_VIS_AUTO;
       data->selected = -1;
-      data->last_click_index = RV_INVALID_SELECTION;
       data->column_width = DEFAULT_COLUMN_WIDTH;
       data->icon_size = DEFAULT_ICON_SIZE;
       data->icon_text_gap = DEFAULT_ICON_TEXT_GAP;
@@ -168,26 +167,17 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case evLeftButtonDown: {
       int index = grid_hit_index(win, data, wparam);
       if (rv_valid_index(data, index)) {
-        uint32_t now = axGetMilliseconds();
-        if (data->last_click_index == index && (now - data->last_click_time) < RV_DOUBLE_CLICK_MS) {
-          rv_notify(win, data, index, RVN_DBLCLK);
-          rv_reset_click_state(data);
-        } else {
-          int old_selection = data->selected;
-          data->selected = index;
-          data->last_click_time = now;
-          data->last_click_index = index;
-          if (old_selection != data->selected)
-            rv_notify(win, data, index, RVN_SELCHANGE);
-          rv_invalidate(win, data);
-        }
+        int old_selection = data->selected;
+        data->selected = index;
+        if (old_selection != data->selected)
+          rv_notify(win, data, index, RVN_SELCHANGE);
+        rv_invalidate(win, data);
       }
       return true;
     }
     case evLeftButtonDoubleClick: {
       int index = grid_hit_index(win, data, wparam);
       if (rv_valid_index(data, index)) {
-        rv_reset_click_state(data);
         rv_notify(win, data, index, RVN_DBLCLK);
       }
       return true;

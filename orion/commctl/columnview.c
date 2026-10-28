@@ -50,11 +50,6 @@ void rv_notify(window_t *win, reportview_data_t *data, int index, uint16_t code)
     tableview_handle_master_selection(get_root_window(win), win);
 }
 
-void rv_reset_click_state(reportview_data_t *data) {
-  data->last_click_time = 0;
-  data->last_click_index = RV_INVALID_SELECTION;
-}
-
 // Keep contiguous pointer-backed storage valid after insert/update/delete.
 bool rv_store_item(reportview_data_t *data, uint32_t i,
                    const reportview_item_t *item) {
@@ -102,7 +97,6 @@ void rv_rebind_item_refs(reportview_data_t *data, uint32_t start) {
 
 void rv_reset_view_state(window_t *win, reportview_data_t *data) {
   data->selected = RV_INVALID_SELECTION;
-  rv_reset_click_state(data);
   win->vscroll.pos = 0;
 }
 
