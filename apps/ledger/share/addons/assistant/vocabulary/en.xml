@@ -44,6 +44,22 @@
   <direction  source="descending"   means="desc"/>
   <direction  source="ascending"    means="asc"/>
 
+  <!-- Topics: questions about the state of the books. A topic word anywhere in
+       a request picks the answer, the way Office's Answer Wizard read questions. -->
+  <topic source="check"          means="checks"         synonyms="checks problems problem errors error wrong attention"/>
+  <topic source="check">what is wrong</topic>
+  <topic source="money"          means="money"          synonyms="cash bank"/>
+  <topic source="payables"       means="payables"       synonyms="payable creditors creditor suppliers"/>
+  <topic source="payables">we owe</topic>
+  <topic source="receivables"    means="receivables"    synonyms="receivable"/>
+  <topic source="receivables">owe us</topic>
+  <topic source="taxes"          means="taxes"          synonyms="tax vat"/>
+  <topic source="closing"        means="closing"        synonyms="close closed closing"/>
+  <topic source="closing">month end</topic>
+  <topic source="negative"       means="negative"       synonyms="minus overdrawn"/>
+  <topic source="negative">red balance</topic>
+  <topic source="reconciliation" means="reconciliation" synonyms="reconcile statement"/>
+
   <!-- Words whose meaning is their value or their role; they need no source word. -->
   <ordinal value="1">first</ordinal>  <ordinal value="2">second</ordinal>  <ordinal value="3">third</ordinal>
   <ordinal value="4">fourth</ordinal> <ordinal value="5">fifth</ordinal>

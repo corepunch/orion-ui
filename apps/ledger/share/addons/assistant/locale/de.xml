@@ -95,4 +95,33 @@
   <string source="show draft documents" where="code">zeige ungebuchte Belege</string>
   <string source="Up and Down choose · Enter opens · Ctrl+Shift+K finds a command" where="assistant">Auf und Ab wählen · Eingabe öffnet · Strg+Umschalt+K sucht einen Befehl</string>
   <string source="No one owes the company." where="code">Niemand schuldet dem Unternehmen etwas.</string>
+  <string source="check the books" where="code">prüfe die Bücher</string>
+  <string source="who do we owe" where="code">zeige Verbindlichkeiten</string>
+  <string source="how much money do we have" where="code">wie viel Geld haben wir</string>
+  <string source="is the month closed" where="code">ist der Monat abgeschlossen</string>
+  <string source="Check the books" where="code">Prüfe die Bücher</string>
+  <string source="Who do we owe?" where="code">Zeige Verbindlichkeiten</string>
+  <string source="How much money do we have?" where="code">Wie viel Geld haben wir?</string>
+  <string source="Needs attention" where="code">Zu erledigen</string>
+  <string source="Needs attention: %d. Choose a row to settle it." where="code">Zu erledigen: %d. Wählen Sie eine Zeile, um sie zu erledigen.</string>
+  <string source="The books are in order: nothing is waiting." where="code">Die Bücher sind in Ordnung: nichts wartet.</string>
+  <string source="These balances went below zero. Open the document that took each one there." where="code">Diese Salden wurden negativ. Öffnen Sie den Beleg, nach dem es geschah.</string>
+  <string source="No money or stock balance went below zero." where="code">Weder Geld noch Bestand wurden negativ.</string>
+  <string source="Closing needs attention." where="code">Der Monatsabschluss braucht Aufmerksamkeit.</string>
+  <string source="Every finished month is closed." where="code">Alle abgelaufenen Monate sind abgeschlossen.</string>
+  <string source="Money" where="code">Geld</string>
+  <string source="Money in total: %s." where="code">Geld gesamt: %s.</string>
+  <string source="Settlements" where="code">Offene Posten</string>
+  <string source="Taxes and payroll as the books hold them." where="code">Steuern und Löhne laut Buchhaltung.</string>
+  <string source="No taxes are payable." where="code">Es sind keine Steuern zu zahlen.</string>
+  <string source="We owe %s in total." where="code">Wir schulden insgesamt %s.</string>
+  <string source="The company owes no one." where="code">Das Unternehmen schuldet niemandem etwas.</string>
+  <string source="Owed to us: %s in total." where="code">Uns geschuldet: insgesamt %s.</string>
+  <string source="reconcile with &quot;%s&quot;" where="code">Abstimmung mit "%s"</string>
+  <string source="Which counterparty? Choose one." where="code">Welcher Geschäftspartner? Wählen Sie einen.</string>
+  <string source="Reconcile with whom? Name the counterparty, for example: reconcile with &quot;Alpha&quot;." where="code">Mit wem abstimmen? Nennen Sie den Partner, zum Beispiel: Abstimmung mit "Alpha".</string>
+  <string source="Movements" where="code">Bewegungen</string>
+  <string source="%s owes the company %s." where="code">%s schuldet dem Unternehmen %s.</string>
+  <string source="The company owes %s %s, or holds their advance." where="code">Das Unternehmen schuldet %s %s oder hält deren Anzahlung.</string>
+  <string source="Settlements with %s are closed." where="code">Die Posten mit %s sind ausgeglichen.</string>
 </strings>

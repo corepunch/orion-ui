@@ -5,6 +5,7 @@ local schemas={
   verbs='groups',nouns='groups',adjectives='groups',fields='groups',comparisons='groups',
   relations='groups',directions='groups',ordinals='numbers',numbers='numbers',scales='numbers',
   multipliers='numbers',pronouns='list',noise='list',units='list',number_conjunctions='list',
+  topics='groups',
 }
 local function fail(message) error('assistant dictionary: '..message,0) end
 local function sequence(value,label)

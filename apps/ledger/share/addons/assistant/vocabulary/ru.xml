@@ -56,6 +56,24 @@
   <direction  source="descending">убыванию</direction>
   <direction  source="ascending">возрастанию</direction>
 
+  <topic source="check" synonyms="проверку проверки проверь проверить экспресс-проверка проблемы проблема проблем ошибки ошибка ошибок внимание внимания">проверка</topic>
+  <topic source="check">что не так</topic>
+  <topic source="check">требует внимания</topic>
+  <topic source="money" synonyms="денег деньгам деньгами касса кассе кассу кассы">деньги</topic>
+  <topic source="money">расчетный счет</topic>
+  <topic source="money">расчетном счете</topic>
+  <topic source="payables" synonyms="кредиторов кредиторам кредитор кредиторка поставщикам поставщики поставщиков">кредиторы</topic>
+  <topic source="payables">мы должны</topic>
+  <topic source="payables">кому должны</topic>
+  <topic source="receivables" synonyms="дебиторов дебиторка дебиторку">дебиторы</topic>
+  <topic source="receivables">нам должны</topic>
+  <topic source="receivables">нам должен</topic>
+  <topic source="taxes" synonyms="налоги налогов налогам ндс ндфл взносы взносов вычет">налог</topic>
+  <topic source="closing" synonyms="закрытия закрыт закрыть">закрытие</topic>
+  <topic source="negative" synonyms="минусе отрицательный отрицательные отрицательных отрицательное отрицательного">минус</topic>
+  <topic source="negative">красное сальдо</topic>
+  <topic source="reconciliation" synonyms="сверку сверки сверке сверить сверь">сверка</topic>
+
   <ordinal value="1" paradigm="adjective">первый</ordinal>
   <ordinal value="2" paradigm="adjective">второй</ordinal>
   <ordinal value="3" forms="третьего третьему третьим третьем третья третьей третью третье третьи третьих">третий</ordinal>

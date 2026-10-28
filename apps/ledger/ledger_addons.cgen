@@ -46,6 +46,11 @@
       <arg name="name" type="string">Its name, as "doc.new"</arg>
       <returns type="nresults">true, or nil and a message for an unknown command</returns>
     </function>
+    <function name="settle" lua="true">
+      <summary>Does what a row of the books' checks offers (ib.home_rows, card 1, as the Home page lists them): posts the drafts, closes the month, opens or creates the document, shows the account card or reposts the books. It runs once the add-on's action has returned.</summary>
+      <arg name="id" type="int">The row of ib.home_rows</arg>
+      <returns type="nresults">true, or nil and a message when there is no such row</returns>
+    </function>
     <function name="unpost" lua="true">
       <summary>Cancels a document's posting.</summary>
       <arg name="id" type="int">The document</arg>

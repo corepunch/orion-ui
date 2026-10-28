@@ -20,7 +20,8 @@ then rows in groups.
 | Counterparties / Documents / Items | up to six records with amounts, then a count of further matches | opens the record, or answers the assistant's question, as typing its number does |
 | Advances received | when no one owes the company: who paid in advance | opens the counterparty |
 | Commands | the commands that belong with the result, or every menu command whose caption the request names ("нов док" finds New Document) | runs the command; the balloon steps aside |
-| Suggestions | from the books: documents not posted, a draft sale that would offset an advance | lists the drafts, or opens the document |
+| Suggestions | the books' own checks, the first three of the Home page's **Needs attention** list | settles the check as the Home page does: posts the drafts, closes the month, opens or creates the document, reposts the books |
+| Needs attention / Money / Settlements / Movements | the answer to a question about the books (below) | settles the check, opens the counterparty or the document |
 | Examples | **Examples** | runs the example |
 
 Up and Down move through the rows while typing stays in the field; Enter opens
@@ -31,10 +32,35 @@ is a new one while the balloon is closed, Clippy asks for attention. Narrow
 the request or use **open first** to open a result by typing; the full result
 context remains available.
 
+## Questions about the books
+
+The command grammar wants every word to be known. A request it does not
+take is read again for a topic word, the way Office 97's Answer Wizard took
+a question in plain words, so the accountant can ask what they would ask a
+colleague or a 1C programmer:
+
+| Question | Answer |
+|---|---|
+| проверь учет · что не так · требует внимания · check the books | every check of the books (Home's **Needs attention**), each settled by choosing it |
+| почему красное сальдо · где минус · отрицательные остатки | the days cash or stock went below zero, with the document that took it there |
+| закрыт ли месяц · закрытие месяца | a finished month not closed, or a closing that later documents made stale |
+| сколько денег · деньги в кассе · how much money | money accounts as of the period's end and their total |
+| кому мы должны · кредиторы · who do we owe | counterparties the company owes, largest first |
+| кто нам должен · дебиторы | counterparties who owe the company |
+| налоги к уплате · НДС · taxes | taxes and wages payable, input tax to deduct |
+| акт сверки с Альфой · сверка с "Бета" | the counterparty's movements on the receivables and payables groups and who owes whom |
+
+Topic words are `<topic>` entries in `vocabulary/*.xml`, inflected like every
+other word; `topics.lua` finds them and the counterparty a request names
+("альфой" finds ООО "Торговый дом Альфа"). The checks themselves are
+Ledger's (`home.c`, `ib.home_rows`); the balloon and the Home page show the
+same rows, and `ledger.settle(id)` does what a row offers.
+
 The parts have one job each. `engine.lua` parses and answers, as before.
 `commands.lua` searches the menu tree that Ledger exposes as
 `ledger.commands()`; `ledger.command(name)` runs a command after the
-add-on's action returns. `tips.lua` derives the suggestions, and
+add-on's action returns. `tips.lua` turns the books' checks into suggestions,
+`topics.lua` reads questions about the books, and
 `assistant.lua` turns an answer into palette rows. The balloon is plain Orion:
 a TextBox with `list=`, and a TableView with `group-field`, `fit-rows` and
 `action=`.
