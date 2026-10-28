@@ -429,12 +429,22 @@ static void collect_context_ids(ids_t *ids, cmd_refs_t *refs, xmlNodePtr context
   }
 }
 
+// A form Button with command="doc.post" is that command: it takes the
+// command's ID, so a click routes like the menu item and the accelerator.
+static bool button_command_id(xmlNodePtr c, char *out, size_t cap) {
+  if (!elem(c, "button")) return false;
+  char *command = attr(c, "command");
+  bool found = command && *command && resolve_action(out, cap, command, NULL, NULL, NULL, NULL);
+  free(command);
+  return found;
+}
+
 static void collect_control_ids(ids_t *ids, xmlNodePtr parent, const char *form) {
   int ordinal = 0;
   EACH_ELEMENT(c, parent) if (is_control(parent, c)) {
     char *name = attr(c, "name"), id[256];
     control_id(id, sizeof(id), form, name, (char *)c->name, ordinal++);
-    add_id(ids, id);
+    if (!button_command_id(c, id, sizeof(id))) add_id(ids, id);
     collect_control_ids(ids, c, form);
     free(name);
   }
@@ -1102,6 +1112,7 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
   EACH_ELEMENT(c, parent) if (is_control(parent, c)) {
     attrs_t a; rect_t sz = size_attr(c), pad = {0}, mar = {0}; char id[256], klass[128], classq[ORIONC_STRING_SIZE], textq[ORIONC_STRING_SIZE], nameq[ORIONC_STRING_SIZE], flags[256], spacing[16], font[16], color[16], lparam[256] = "NULL";
     read_control_attrs(c, &a); control_id(id, sizeof(id), form, a.v[A_NAME], (char *)c->name, ordinal++); ident(klass, sizeof(klass), (char *)c->name, false);
+    button_command_id(c, id, sizeof(id));
     if (has_controls(c) && !elem(c, "column")) sz = (rect_t){0};
     rect_attr(c, "padding", &pad) || rect_attr(c, "layout_padding", &pad); rect_attr(c, "margin", &mar) || rect_attr(c, "layout_margin", &mar);
     // Auto-add WINDOW_FLEXSPACE for space, and for multiedit without an explicit height (WPF-style)
