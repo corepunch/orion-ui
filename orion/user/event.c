@@ -43,6 +43,8 @@ static bool is_printable_text(const char *text) {
   for (const char *p = text; *p;) {
     uint32_t cp = font_sdf_utf8_next(&p);
     if (cp < 0x20 || (cp >= 0x7F && cp < 0xA0)) return false;
+    // AppKit encodes arrows, function keys and other non-text keys in this range.
+    if (cp >= 0xF700 && cp <= 0xF8FF) return false;
   }
   return true;
 }
