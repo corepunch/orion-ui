@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-GROUPS = {'verbs', 'nouns', 'adjectives', 'fields', 'comparisons', 'relations', 'directions'}
+GROUPS = {'verbs', 'nouns', 'adjectives', 'fields', 'comparisons', 'relations', 'directions', 'topics'}
 NUMBERS = {'ordinals', 'numbers', 'scales', 'multipliers'}
 LISTS = {'pronouns', 'noise', 'units', 'number_conjunctions'}
 # element: role. Group roles are keyed by a source word, number roles by `value`.
@@ -22,6 +22,7 @@ ELEMENTS = {
     'comparison': 'comparisons', 'relation': 'relations', 'direction': 'directions',
     'ordinal': 'ordinals', 'number': 'numbers', 'scale': 'scales', 'multiplier': 'multipliers',
     'pronoun': 'pronouns', 'noise': 'noise', 'unit': 'units', 'conjunction': 'number_conjunctions',
+    'topic': 'topics',
 }
 ENTRY_ATTRIBUTES = {'source', 'means', 'value', 'paradigm', 'synonyms', 'forms', 'compound', 'prefix'}
 

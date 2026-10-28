@@ -95,4 +95,33 @@
   <string source="show draft documents" where="code">покажи непроведенные документы</string>
   <string source="Up and Down choose · Enter opens · Ctrl+Shift+K finds a command" where="assistant">Вверх и вниз — выбор · Enter — открыть · Ctrl+Shift+K — поиск команды</string>
   <string source="No one owes the company." where="code">Должников нет.</string>
+  <string source="check the books" where="code">проверь учет</string>
+  <string source="who do we owe" where="code">кому мы должны</string>
+  <string source="how much money do we have" where="code">сколько у нас денег</string>
+  <string source="is the month closed" where="code">закрыт ли месяц</string>
+  <string source="Check the books" where="code">Проверь учет</string>
+  <string source="Who do we owe?" where="code">Кому мы должны?</string>
+  <string source="How much money do we have?" where="code">Сколько у нас денег?</string>
+  <string source="Needs attention" where="code">Требует внимания</string>
+  <string source="Needs attention: %d. Choose a row to settle it." where="code">Требует внимания: %d. Выберите строку, чтобы закрыть вопрос.</string>
+  <string source="The books are in order: nothing is waiting." where="code">Учет в порядке: ничего не ждет.</string>
+  <string source="These balances went below zero. Open the document that took each one there." where="code">Эти остатки уходили в минус. Откройте документ, после которого это случилось.</string>
+  <string source="No money or stock balance went below zero." where="code">Деньги и товары в минус не уходили.</string>
+  <string source="Closing needs attention." where="code">Закрытие месяца требует внимания.</string>
+  <string source="Every finished month is closed." where="code">Все прошедшие месяцы закрыты.</string>
+  <string source="Money" where="code">Деньги</string>
+  <string source="Money in total: %s." where="code">Всего денег: %s.</string>
+  <string source="Settlements" where="code">Расчеты</string>
+  <string source="Taxes and payroll as the books hold them." where="code">Налоги и зарплата по данным учета.</string>
+  <string source="No taxes are payable." where="code">Налогов к уплате нет.</string>
+  <string source="We owe %s in total." where="code">Мы должны всего %s.</string>
+  <string source="The company owes no one." where="code">Организация никому не должна.</string>
+  <string source="Owed to us: %s in total." where="code">Нам должны всего %s.</string>
+  <string source="reconcile with &quot;%s&quot;" where="code">сверка с "%s"</string>
+  <string source="Which counterparty? Choose one." where="code">С каким контрагентом? Выберите одного.</string>
+  <string source="Reconcile with whom? Name the counterparty, for example: reconcile with &quot;Alpha&quot;." where="code">С кем сверить? Назовите контрагента, например: акт сверки с "Альфа".</string>
+  <string source="Movements" where="code">Движения</string>
+  <string source="%s owes the company %s." where="code">%s должен организации %s.</string>
+  <string source="The company owes %s %s, or holds their advance." where="code">Организация должна %s %s или держит их аванс.</string>
+  <string source="Settlements with %s are closed." where="code">Расчеты с %s закрыты.</string>
 </strings>

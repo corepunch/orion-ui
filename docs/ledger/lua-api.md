@@ -670,3 +670,29 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `accrued` | `double` |  |
 | `deducted` | `double` |  |
 | `closing` | `double` |  |
+
+## `ib.home_rows`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `document_id` | `integer` | documents.id |
+| `doc_type_id` | `integer` | cfg.doc_types.id |
+| `account_id` | `integer` | cfg.accounts.id |
+| `counterparty_id` | `integer` | counterparties.id |
+| `card` | `integer` |  |
+| `date` | `date` |  |
+| `kind` | `string` |  |
+| `title` | `string` |  |
+| `detail` | `string` |  |
+| `amount` | `double` |  |
+| `action` | `string` |  |
+| `command` | `string` |  |
+
+## `ib.recent_documents`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `document_id` | `integer` | documents.id |
+| `posted` | `boolean` |  |

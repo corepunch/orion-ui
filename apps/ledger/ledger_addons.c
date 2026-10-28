@@ -180,6 +180,19 @@ static int ledger_addon_command(lua_State *L, const char *name) {
   return 2;
 }
 
+// Posted like a command: settling may open a dialog or a message box.
+static int ledger_addon_settle(lua_State *L, int id) {
+  const void *row = (const void *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_HOME_ROWS, 0), (void *)(intptr_t)id);
+  if (!row || !g_ledger->main_win || id <= 0 || id > 0xffff) {
+    lua_pushnil(L);
+    lua_pushfstring(L, ui_tr("There is no check %d to settle."), id);
+    return 2;
+  }
+  post_message(g_ledger->main_win, evCommand, MAKEDWORD(id, LEDGER_HOME_SETTLE), NULL);
+  lua_pushboolean(L, 1);
+  return 1;
+}
+
 static void ledger_addon_constants(lua_State *L) {
   lua_pushstring(L, g_ledger->configuration);
   lua_setfield(L, -2, "configuration");
