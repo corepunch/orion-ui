@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gitclient Redesign Concepts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&family=Noto+Serif:wght@500;600&display=swap">
+<style>
+/* Layout: a single reading column; each concept is a full-width screenshot, then three short columns (what / why / Orion work). */
+:root {
+  --bg: #F3F4F7; --paper: #FFFFFF; --ink: #13151A; --muted: #5F6570; --rule: #DDE1E8;
+  --accent: #4C5BD4; --accent-soft: rgba(76,91,212,.10); --ok: #17855A; --warn: #A76400; --note: #FFFFE1; --note-ink: #3A3A2C;
+  --display: "Noto Serif", Georgia, serif; --body: "Noto Sans", -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15171C; --paper: #1D2026; --ink: #E8EAEE; --muted: #9AA0AB; --rule: #30343C;
+  --accent: #8E99F0; --accent-soft: rgba(142,153,240,.14); --ok: #4CC08E; --warn: #E0A040; --note: #33321F; --note-ink: #F0EDC8; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15171C; --paper: #1D2026; --ink: #E8EAEE; --muted: #9AA0AB; --rule: #30343C;
+  --accent: #8E99F0; --accent-soft: rgba(142,153,240,.14); --ok: #4CC08E; --warn: #E0A040; --note: #33321F; --note-ink: #F0EDC8; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.6 var(--body); margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 80px; }
+main { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+h1, h2 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -.01em; }
+h1 { font-size: clamp(30px, 4.5vw, 44px); line-height: 1.1; }
+h2 { font-size: clamp(22px, 3vw, 28px); line-height: 1.2; }
+h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+.lede { font-size: 17px; color: var(--muted); margin-top: 14px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; font-size: 13px; color: var(--muted); }
+.meta b { color: var(--ink); font-weight: 500; }
+.shot { margin: 0; background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.shot img { display: block; width: 100%; height: auto; }
+.shot figcaption { font-size: 13px; color: var(--muted); padding: 10px 14px; border-top: 1px solid var(--rule); }
+.concept { display: flex; flex-direction: column; gap: 18px; }
+.head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.tag { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 10px; }
+.cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.cols ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.cols li::marker { color: var(--muted); }
+.cols .src { font-size: 12.5px; color: var(--muted); }
+.ru { font-style: normal; background: var(--accent-soft); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+.problems { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.prob { background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; font-size: 14px; }
+.prob b { display: block; font-weight: 600; margin-bottom: 2px; }
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.clippy { background: var(--note); color: var(--note-ink); border: 1px solid #8C8C70; border-radius: 10px; padding: 12px 16px; font-size: 14px; }
+.order { counter-reset: s; list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.order li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; }
+.order li::before { content: counter(s); font-family: var(--display); font-weight: 600; font-size: 20px; color: var(--accent); line-height: 1.3; }
+.refs { columns: 2 320px; column-gap: 32px; font-size: 13.5px; }
+.refs p { break-inside: avoid; margin-bottom: 8px; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+@media (max-width: 760px) { .cols, .trio { grid-template-columns: 1fr; gap: 18px; } }
+</style>
+</head>
+<body>
+
+<main>
+<header>
+  <h1>Gitclient: four redesign concepts</h1>
+  <p class="lede">Gitclient gets the same treatment as Ledger, so both apps read as one Orion family: a section sidebar, a title row that states where you are, a command bar with words, status badges, quiet selection in tables without focus, and a calm dark palette. The concepts use this repository's real state: <i class="ru">main</i>, one commit behind <i class="ru">origin/main</i>, 31 changed files and the real diff from the Ledger work.</p>
+  <div class="meta"><span><b>Data</b> orion-ui (Changes, History) and the Northwind demo workspace (Overview)</span><span><b>Baseline</b> live Gitclient screenshots, 28.10.2026</span><span><b>Mockups</b> HTML with Porcelain and One Dark tokens</span></div>
+</header>
+
+<section class="concept">
+  <div class="head"><h2>Where Gitclient is today</h2></div>
+  <div class="trio" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+    <figure class="shot"><img src="images/g0-changes.jpg" alt="Current Changes page"><figcaption>Changes</figcaption></figure>
+    <figure class="shot"><img src="images/g0-overview.jpg" alt="Current Overview"><figcaption>Overview</figcaption></figure>
+  </div>
+  <div class="problems">
+    <div class="prob"><b>Fifteen unlabelled icons in the menu bar</b>Two identical download arrows, a magnifier and several branch glyphs, with no grouping and no primary action.</div>
+    <div class="prob"><b>Pane chrome everywhere</b>Every pane has its own title and close button ("Changes ×", "Diff ×"), which repeats what the sidebar already says.</div>
+    <div class="prob"><b>Status as words in a column</b>"Untracked" and "Modified" take a column. The list has no staged/unstaged split and no line counts.</div>
+    <div class="prob"><b>A terminal in a light app</b>The diff is a black block with the raw <code>diff --git</code> header, no line numbers and no tinted rows.</div>
+    <div class="prob"><b>An unclear commit button</b>"Commit to main" is pale even when there is something to commit, and says nothing about how many files go in.</div>
+    <div class="prob"><b>A cryptic status bar</b>"Branch: main * ^2 v0 origin/main" packs three facts into symbols.</div>
+  </div>
+</section>
+
+<hr>
+
+<section class="concept">
+  <div class="head"><span class="tag">Concept 1</span><h2>Changes: staged and unstaged, a readable diff, a commit that says what it does</h2></div>
+  <figure class="shot"><img src="images/g1.jpg" alt="Concept 1: Changes page"><figcaption>orion-ui with the Ledger work. The staged pair is illustrative; the diff is the real one from <code>posting.c</code>.</figcaption></figure>
+  <div class="cols">
+    <div><h3>What changes</h3><ul>
+      <li>The title row names the repository and states its position as badges: branch, 1 behind origin, 31 changed, 2 staged.</li>
+      <li>Files are grouped Staged / Changes with Stage all and Unstage all. Each row shows a status letter badge and +/− counts.</li>
+      <li>The diff is themed: line-number gutters, tinted added and removed rows, word-level highlights and hunk headers as quiet bars. Unified and Split are offered.</li>
+      <li>The primary button says <i class="ru">Commit 2 files to main</i>, with Amend beside it.</li>
+    </ul></div>
+    <div><h3>Why</h3><ul>
+      <li>GitHub Desktop, Fork, Tower and VS Code all split staged from unstaged, because staging is the decision the page exists for.</li>
+      <li>A button that states its effect avoids empty or wrong commits.</li>
+      <li>A light diff in a light app removes the glare jump, and the gutters make code review possible.</li>
+    </ul></div>
+    <div><h3>Orion work</h3><ul>
+      <li>Grouped sections in TableView (a section header row with an action).</li>
+      <li>DiffView: gutters, tinted rows and intra-line highlights from theme roles.</li>
+      <li>Status letter badges as a <code>draw_status_badge</code> variant.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section class="concept">
+  <div class="head"><span class="tag">Concept 2</span><h2>History: one branch tree, a graph with refs, and a commit inspector</h2></div>
+  <figure class="shot"><img src="images/g2.jpg" alt="Concept 2: History with inspector"><figcaption>Real orion-ui history. The incoming origin/main commit is shown dashed above main.</figcaption></figure>
+  <div class="cols">
+    <div><h3>What changes</h3><ul>
+      <li>Branches, remotes, tags, stashes and worktrees become one sectioned list, replacing four stacked tables.</li>
+      <li>Commits are two-line rows on a graph lane, with refs as badges. Incoming commits from origin are shown dashed until you pull.</li>
+      <li>The right inspector shows the message, author, copyable hash, parent and the changed files with size bars.</li>
+      <li>Branch, All and Reflog sit in one segmented control.</li>
+    </ul></div>
+    <div><h3>Why</h3><ul>
+      <li>The same inspector pattern as Ledger's preview pane: read without opening.</li>
+      <li>Fork and Tower show refs on the graph; Sublime Merge shows file size bars in the commit view.</li>
+    </ul></div>
+    <div><h3>Orion work</h3><ul>
+      <li>A sectioned source list (a TableView or ColumnView with group rows).</li>
+      <li>Graph lanes as a TableView cell renderer.</li>
+      <li>An inspector split pane with a remembered width.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section class="concept">
+  <div class="head"><span class="tag">Concept 3</span><h2>Overview: status badges with icons and a clear filter</h2></div>
+  <figure class="shot"><img src="images/g3.jpg" alt="Concept 3: Overview"><figcaption>The Northwind demo workspace.</figcaption></figure>
+  <div class="cols">
+    <div><h3>What changes</h3><ul>
+      <li>Every badge is the Orion status badge: an icon plus a word in a tinted pill, with the card's stripe kept.</li>
+      <li>"Showing: all" becomes a segmented All / Needs attention control.</li>
+      <li>Per-card close buttons move to the context menu.</li>
+      <li>Fetch all is the primary command.</li>
+    </ul></div>
+    <div><h3>Why</h3><ul>
+      <li>Icons make the state readable without colour: an arrow for push/pull, a pencil for modified, a warning for conflicts.</li>
+      <li>One way to show status across Ledger and Gitclient.</li>
+    </ul></div>
+    <div><h3>Orion work</h3><ul>
+      <li>Done: Badge with icon, pill and tone (this session).</li>
+      <li>A Segmented control bound to a filter.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section class="concept">
+  <div class="head"><span class="tag">Concept 4</span><h2>Porcelain Dark in One Dark colours</h2></div>
+  <figure class="shot"><img src="images/g4.jpg" alt="Concept 4: dark Changes"><figcaption>The same Changes page in the retuned dark palette.</figcaption></figure>
+  <div class="cols">
+    <div><h3>What changes</h3><ul>
+      <li>Charcoal faces with editor-grey wells, blue-grey ink and muted status hues, with no white-on-black glare.</li>
+      <li>The diff and badges use the same tones as Atom's One Dark syntax theme.</li>
+    </ul></div>
+    <div><h3>Why</h3><ul>
+      <li>Developers already know these colours from their editor, so the app sits beside it without contrast shock.</li>
+    </ul></div>
+    <div><h3>Orion work</h3><ul>
+      <li>Done: Porcelain Dark palette retuned, and text shadow made a theme setting (this session).</li>
+    </ul></div>
+  </div>
+</section>
+</main>
+</body>
+</html>

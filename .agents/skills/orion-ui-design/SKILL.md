@@ -67,9 +67,25 @@ Extend framework controls in `orion/commctl/` rather than reimplementing behavio
 - Icons are 24×24 SVG, stroke-based, with proper margins and even coordinates.
 - Dark/light or high-contrast themes are handled by switching the theme; do not hard-code appearance.
 
+## Orion design language (the defaults)
+
+Read [docs/design-language.md](../../../docs/design-language.md) before designing or reviewing a screen. In short:
+
+- **App shell**: section sidebar (`ActivityBar labels="right"`), title row with the page name over its context, a command bar of captioned buttons with one default action, facts-in-words status bar.
+- **State as badges**: `<Badge text=… icon=… color="success|warning|error|info|secondary">` next to the title; never colour alone.
+- **Buttons**: verb captions ("Post and Close", "Commit 2 files to main"), `icon=` for a leading 16 px icon, `tooltip=` on icon-only buttons, exactly one `BUTTON_DEFAULT`.
+- **Read-only values**: `<Label field=…>` (formatted, never written back); headings use `font="title"`.
+- **Tables**: blank zeros, `total="sum"`, row icons for state; strong selection only while focused (quiet tint otherwise is automatic).
+- **Consequences first**: preview what saving or committing will do, computed in the editing context.
+- **Themes**: verify in Porcelain and Porcelain Dark (One Dark colours) with `--appearance light|dark`; flat themes draw no text shadow.
+- **Mockups**: render real demo data with the theme's tokens before building; keep the mockup and the built screen side by side and close the gaps.
+
+If a screen needs something these pieces cannot express, add the piece to Orion (`orion/commctl`, `orion/user`, `tools/orionc.c` and `orion/commctl/form_loader.c` together), document it in `docs/drawing.md` or `docs/design-language.md`, and only then use it.
+
 ## Related skills and docs
 
 - Existing skill: [`orion-app-composition`](../orion-app-composition/SKILL.md)
+- [docs/design-language.md](../../../docs/design-language.md)
 - [AGENTS.md](../../../AGENTS.md)
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md)
 - Theme and drawing docs in `docs/`

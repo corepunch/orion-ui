@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ledger Redesign Concepts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&family=Noto+Serif:wght@500;600&display=swap">
+<style>
+/* Layout: a single reading column; each concept is a full-width screenshot, then three short columns (what / why / Orion work). */
+:root {
+  --bg: #F3F4F7; --paper: #FFFFFF; --ink: #13151A; --muted: #5F6570; --rule: #DDE1E8;
+  --accent: #4C5BD4; --accent-soft: rgba(76,91,212,.10); --ok: #17855A; --warn: #A76400; --note: #FFFFE1; --note-ink: #3A3A2C;
+  --display: "Noto Serif", Georgia, serif; --body: "Noto Sans", -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15171C; --paper: #1D2026; --ink: #E8EAEE; --muted: #9AA0AB; --rule: #30343C;
+  --accent: #8E99F0; --accent-soft: rgba(142,153,240,.14); --ok: #4CC08E; --warn: #E0A040; --note: #33321F; --note-ink: #F0EDC8; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15171C; --paper: #1D2026; --ink: #E8EAEE; --muted: #9AA0AB; --rule: #30343C;
+  --accent: #8E99F0; --accent-soft: rgba(142,153,240,.14); --ok: #4CC08E; --warn: #E0A040; --note: #33321F; --note-ink: #F0EDC8; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.6 var(--body); margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 80px; }
+main { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+h1, h2 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -.01em; }
+h1 { font-size: clamp(30px, 4.5vw, 44px); line-height: 1.1; }
+h2 { font-size: clamp(22px, 3vw, 28px); line-height: 1.2; }
+h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+.lede { font-size: 17px; color: var(--muted); margin-top: 14px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; font-size: 13px; color: var(--muted); }
+.meta b { color: var(--ink); font-weight: 500; }
+.shot { margin: 0; background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.shot img { display: block; width: 100%; height: auto; }
+.shot figcaption { font-size: 13px; color: var(--muted); padding: 10px 14px; border-top: 1px solid var(--rule); }
+.concept { display: flex; flex-direction: column; gap: 18px; }
+.head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.tag { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 10px; }
+.cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.cols ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.cols li::marker { color: var(--muted); }
+.cols .src { font-size: 12.5px; color: var(--muted); }
+.ru { font-style: normal; background: var(--accent-soft); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+.problems { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.prob { background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; font-size: 14px; }
+.prob b { display: block; font-weight: 600; margin-bottom: 2px; }
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.clippy { background: var(--note); color: var(--note-ink); border: 1px solid #8C8C70; border-radius: 10px; padding: 12px 16px; font-size: 14px; }
+.order { counter-reset: s; list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.order li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; }
+.order li::before { content: counter(s); font-family: var(--display); font-weight: 600; font-size: 20px; color: var(--accent); line-height: 1.3; }
+.refs { columns: 2 320px; column-gap: 32px; font-size: 13.5px; }
+.refs p { break-inside: avoid; margin-bottom: 8px; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+@media (max-width: 760px) { .cols, .trio { grid-template-columns: 1fr; gap: 18px; } }
+</style>
+</head>
+<body>
+
+<main>
+<header>
+  <h1>Ledger: six redesign concepts</h1>
+  <p class="lede">The goal: keep the 1C grammar that accountants rely on (journal, <i class="ru">Провести</i>, <i class="ru">Дт/Кт</i>, <i class="ru">№ … от …</i>, <i class="ru">Сформировать</i>), but make the app easier to read, easier to learn, and quicker to use from the keyboard. Every concept keeps Porcelain, Phosphor icons and Clippy.</p>
+  <div class="meta"><span><b>Data</b> real ru-2003 demo infobase (ООО "Ромашка")</span><span><b>Baseline</b> live Ledger screenshots, 27.10.2026</span><span><b>Mockups</b> HTML rendered with Porcelain tokens, Noto Sans and Ledger's own icons</span></div>
+</header>
+
+<section class="concept">
+  <div class="head"><h2>Where Ledger is today</h2></div>
+  <div class="trio">
+    <figure class="shot"><img src="images/c0-journal.jpg" alt="Current Ledger journal"><figcaption>Journal</figcaption></figure>
+    <figure class="shot"><img src="images/c0-document.jpg" alt="Current document dialog"><figcaption>Document form</figcaption></figure>
+    <figure class="shot"><img src="images/c0-balance.jpg" alt="Current trial balance"><figcaption>Trial balance</figcaption></figure>
+  </div>
+  <div class="problems">
+    <div class="prob"><b>Eleven unlabelled icons</b>The toolbar has two pencils, a banknote and a calendar, with no grouping and no primary action. A 1C user looks for the words Создать, Провести and Дт/Кт.</div>
+    <div class="prob"><b>The journal has no period</b>The period appears only in the status bar ("все даты"). There is no search, filter or way to show only drafts.</div>
+    <div class="prob"><b>Empty lower pane</b>Selecting ВО-0001 or ПО-0001 shows an empty grid with "Итого 0,00". The postings are on a hidden tab.</div>
+    <div class="prob"><b>One indigo, three jobs</b>The section, the selected row and the default button all use the same solid accent, so nothing stands out.</div>
+    <div class="prob"><b>A form that reads like a database row</b>Номер and Дата each fill a full-width row, and an empty Валюта and Курс are always shown. The line buttons sit under the grid, and the totals look like editable fields. The form only offers OK and Cancel: no Записать, Печать or Дт/Кт.</div>
+    <div class="prob"><b>Reports cut off their own headers</b>Headers are truncated ("Сальдо нач…"), the account list is flat, and the parameters are hidden behind Ctrl+R.</div>
+  </div>
+</section>
+
+<hr>
+
+<section class="concept">
+  <div class="head"><span class="tag">Concept 1</span><h2>Labelled command bar and saved views</h2></div>
+  <figure class="shot"><img src="images/c1.jpg" alt="Concept 1: journal with labelled command bar and saved views"><figcaption>Journal for March 2003 with РТ-0001 selected. The lower pane shows its lines, with counts on each tab.</figcaption></figure>
+  <div class="cols">
+    <div><h3>What changes</h3><ul>
+      <li>The command bar uses 1C's order: <i class="ru">Создать ▾</i> as the only filled button, then Провести, Отменить проведение, Печать ▾, Дт/Кт, Изменить and Ещё ▾. Search sits on the right.</li>
+      <li>A views row adds Все документы, Не проведённые (1), Продажи, Банк и касса and <i class="ru">+ Сохранить вид</i>.</li>
+      <li>A period chip with ‹ › steps month by month, plus a counterparty filter.</li>
+      <li>The sidebar selection becomes a tint, so the solid indigo is left for the selected row and the primary button.</li>
+      <li>The status bar counts posted and unposted documents with icon and text, so status never relies on colour alone.</li>
+    </ul></div>
+    <div><h3>Why</h3><ul>
+      <li>Recognition beats recall. Taxi-era 1C users already know these words, and a caption removes the guessing between two pencils.</li>
+      <li>Accountants re-run the same slices of the journal. Fiori variant management, Business Central saved views and Odoo favourites all save filters, sort and columns together. In 1C this is buried under Ещё → Настроить список.</li>
+      <li>Carbon recommends at most about five visible table actions, with the rest under overflow.</li>
+    </ul><p class="src">Sources: SAP Fiori, Microsoft Business Central, Odoo, IBM Carbon, buhexpert8 (1C lists).</p></div>
+    <div><h3>Orion work</h3><ul>
+      <li>Toolbar items with a caption beside the icon, and split buttons with a menu.</li>
+      <li>A reusable filter-bar control with chips and a period stepper, bound to the datasource's filter.</li>
+      <li>Saved views stored per user in settings and declared in <code>.orion</code>.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section class="concept">
+  <div class="head"><span class="tag">Concept 2</span><h2>Preview pane for the selected document</h2></div>
+  <figure class="shot"><img src="images/c2.jpg" alt="Concept 2: journal with right-hand preview pane"><figcaption>The sidebar collapses to its icon rail. The preview pane shows the status, total, lines, postings grouped by meaning, and the linked payment.</figcaption></figure>
+  <div class="cols">
+    <div><h3>What changes</h3><ul>
+      <li>On wide screens a right-hand pane replaces the bottom tabs. It always shows something useful, even for documents with no lines.</li>
+      <li>Postings are grouped by account pair, each with a plain caption: Выручка от продажи, НДС с выручки, Списание товаров.</li>
+      <li>Related documents show payment state: "Оплачен полностью" comes from ПКО-0001.</li>
+      <li>The pane toggles with a key, and the bottom pane remains an option.</li>
+    </ul></div>
+    <div><h3>Why</h3><ul>
+      <li>Business Central's FactBox (Alt+F2) and the preview pane in Mail or Finder let people check a record without opening it.</li>
+      <li>It brings 1C's <i class="ru">Дт/Кт</i> and <i class="ru">Структура подчинённости</i> into one glance, which helps people learn the chart of accounts.</li>
+      <li>The trade-off is width. The Comment column moves into the pane, so this works best as a View setting rather than the default.</li>
+    </ul><p class="src">Sources: Business Central personalization, Visma eAccounting journal, 1C practice.</p></div>
+    <div><h3>Orion work</h3><ul>
+      <li>An inspector panel in the split view, with a collapsed state remembered per user.</li>
+      <li>A posting-summary query that groups by Dt/Kt pair (data layer).</li>
+      <li>A Card-based template that repeats over postings.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section class="concept">
+  <div class="head"><span class="tag">Concept 3</span><h2>The document form in 1C grammar, with live postings</h2></div>
+  <figure class="shot"><img src="images/c3.jpg" alt="Concept 3: document form opened as a tab with live postings preview"><figcaption>РТ-0001 opens as a tab (using the new MDI tabs) while the quantity is being edited. The postings below update as the lines change.</figcaption></figure>
+  <div class="cols">
+    <div><h3>What changes</h3><ul>
+      <li>The title reads "Реализация товаров РТ-0001 от 10.03.2003", followed by Проведён and Оплачен badges.</li>
+      <li><i class="ru">Провести и закрыть</i> is the primary button, followed by Записать, Провести, Дт/Кт, Печать ▾, Создать на основании ▾ and Ещё.</li>
+      <li>The header is a two-column grid with Номер and от on one line. Settings that rarely change (currency, settlement terms) become hyperlinks, as in 1C 8.3.</li>
+      <li>Line commands (Добавить, Подбор, ↑ ↓) sit above the grid, and cells edit in place.</li>
+      <li>Totals are read-only figures at the bottom right, with Всего emphasised. The comment sits at the bottom left, where 1C puts it.</li>
+    </ul></div>
+    <div><h3>Why</h3><ul>
+      <li>This is the exact layout 1C users know. Nothing moves away from them, while the form becomes more compact and easier to scan.</li>
+      <li>A live postings preview (freee's 仕訳プレビュー) shows errors before posting. In 1C the postings appear only after posting.</li>
+      <li>Business Central keeps one clear commit action and save-and-close on the keyboard. Xero users complain when the default button has side effects.</li>
+      <li>Clippy now sits above the totals instead of covering them.</li>
+    </ul><p class="src">Sources: Infostart and buhexpert8 (1C forms), freee support, Business Central shortcuts, Xero product ideas.</p></div>
+    <div><h3>Orion work</h3><ul>
+      <li>A form command bar that the <code>.orion</code> form declares, with a default action and Ctrl+Enter.</li>
+      <li>A posting preview: run the configuration's rules on the unsaved editing context, without writing anything.</li>
+      <li>Status badges on the title row, and a hyperlink-style field control.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section class="concept">
+  <div class="head"><span class="tag">Concept 4</span><h2>Reports: parameters, Сформировать and a real tree</h2></div>
+  <figure class="shot"><img src="images/c4.jpg" alt="Concept 4: trial balance with parameter bar and two-row headers"><figcaption>April 2003 trial balance computed from the demo. Columns balance at 259 296,00 · 116 600,00 · 262 824,00.</figcaption></figure>
+  <div class="cols">
+    <div><h3>What changes</h3><ul>
+      <li>The parameters sit on the report itself: period chip, accounts, По субсчетам, Развёрнутое сальдо, then a primary <i class="ru">Сформировать</i>.</li>
+      <li>Two-row headers (Сальдо на начало, Обороты, Сальдо на конец, each over Дебет and Кредит) end the truncation.</li>
+      <li>Accounts form a collapsible tree: parent rows are medium weight and sub-accounts are indented. Zeros stay blank.</li>
+      <li>The report list is grouped (Стандартные, НДС, Касса и кадры) and gains Избранное for saved settings.</li>
+      <li>The status bar sums the selection.</li>
+    </ul></div>
+    <div><h3>Why</h3><ul>
+      <li>"Set parameters, then Сформировать" is how 1C reports work, and Fiori's manual filter bar follows the same model.</li>
+      <li>Fiori recommends a tree table for hierarchies and grouped headers for paired measures.</li>
+      <li>Drill-down on Enter or double-click follows 1C's Расшифровка and Tally's drill path from amount to voucher.</li>
+      <li>Collapsing the sidebar to its rail gives the six money columns room.</li>
+    </ul><p class="src">Sources: ppt.ru (1C ОСВ), SAP Fiori filter bar, tree table and ALV, TallyPrime reports.</p></div>
+    <div><h3>Orion work</h3><ul>
+      <li>TableView or ReportView: grouped column headers and tree rows with expand and collapse. Check <code>reportview.c</code> first.</li>
+      <li>A parameter-bar form per report in <code>.orion</code>, with an "out of date" state after the parameters change.</li>
+      <li>A sum of the selected cells in the status bar.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section class="concept">
+  <div class="head"><span class="tag">Concept 5</span><h2>Главное: a start page and 1C sections</h2></div>
+  <figure class="shot"><img src="images/c5.jpg" alt="Concept 5: start page with attention list, money, settlements and quick create"><figcaption>All figures are as of 30.04.2003 from the demo. Clippy's tip appears as an item in the attention list rather than as a pop-up.</figcaption></figure>
+  <div class="cols">
+    <div><h3>What changes</h3><ul>
+      <li>The sidebar is regrouped into 1C:Бухгалтерия's own sections: Банк и касса, Продажи, Покупки, Склад, ОС и НМА, Зарплата и кадры, Операции, Отчеты, Справочники, Администрирование.</li>
+      <li>The start page has five cards: Требует внимания (drafts, month not closed, advance not offset), Деньги, Расчёты, Создать and Последние документы.</li>
+      <li>A badge on Журнал counts unposted documents.</li>
+    </ul></div>
+    <div><h3>Why</h3><ul>
+      <li>The current sidebar mixes catalogs and journals. 1C users navigate by business area, so this is more familiar, not less.</li>
+      <li>1C's Начальная страница and Business Central's Role Center cues, which open filtered lists, are the proven pattern. Xero users ask for drafts on the home page.</li>
+      <li>Putting Clippy's suggestion in the list keeps the character without interrupting the user, which was the original complaint about Clippy.</li>
+    </ul><p class="src">Sources: 1C ITS (Taxi main window), Business Central Role Centers and cues, Xero product ideas.</p></div>
+    <div><h3>Orion work</h3><ul>
+      <li>ActivityBar group headers and count badges.</li>
+      <li>A Card or TileGrid dashboard form bound to small datasource queries (balances, drafts, period state).</li>
+      <li>An assistant hook that posts suggestions into a list instead of the speech bubble.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section class="concept">
+  <div class="head"><span class="tag">Concept 6</span><h2>Clippy as the command search</h2></div>
+  <figure class="shot"><img src="images/c6.jpg" alt="Concept 6: Clippy balloon as a command palette with grouped results"><figcaption>Ctrl+K opens Clippy's balloon. The typed request returns an answer from the books plus grouped results (reports, counterparties, commands), all selectable with the keyboard.</figcaption></figure>
+  <div class="cols">
+    <div><h3>What changes</h3><ul>
+      <li>The balloon becomes the go-to box. A direct answer comes first, followed by matching reports, records and commands.</li>
+      <li>Keyboard only: ↑↓, ↵ and Esc, with a shortcut hint in the status bar.</li>
+      <li>The answer here is real: there are no debtors; ЗАО "Бета-Снаб" paid a 60 000,00 advance; Ledger owes ООО "Торговый дом Альфа" 14 400,00.</li>
+    </ul></div>
+    <div><h3>Why</h3><ul>
+      <li>Business Central's Tell Me (Alt+Q), Tally's Go To (Alt+G) and 1C 8.5's global search all show that one box beats menus for people who already know what they want.</li>
+      <li>Clippy already parses requests like <i class="ru">покажи должников</i>. Turning the balloon into a palette makes him the fastest route through the app, not a decoration.</li>
+    </ul><p class="src">Sources: Business Central shortcuts, TallyPrime keyboard-first design, buhexpert8 (1C 8.5).</p></div>
+    <div><h3>Orion work</h3><ul>
+      <li>Grouped result rows and keyboard selection inside the speech bubble.</li>
+      <li>A command index built from menus, reports and datasource records.</li>
+      <li>A global accelerator that focuses the assistant.</li>
+    </ul></div>
+  </div>
+</section>
+
+<hr>
+
+<section class="concept">
+  <h2>Suggested order</h2>
+  <ol class="order">
+    <li><div><b>Concept 3, the document form.</b> Accountants spend most of their time in this screen, it gains the most, and it has no familiarity risk. The live postings preview is the strongest idea from the research.</div></li>
+    <li><div><b>Concept 1, the command bar and views.</b> Captions and a period are cheap to add and remove most of the guessing.</div></li>
+    <li><div><b>Concept 4, the reports.</b> Two-row headers and the tree fix visible defects. The tree view also helps the chart of accounts.</div></li>
+    <li><div><b>Concepts 5 and 6, home and command search.</b> These build on Clippy and add the most "modern" feel.</div></li>
+    <li><div><b>Concept 2, the preview pane.</b> Offer it as a View option after the rest are in place.</div></li>
+  </ol>
+  <div class="clippy">Applies to all six concepts: keep about 21–24 px rows, hairline row dividers and blank zeros, and right-align amounts in tabular figures. Never sum RUB and USD in one total. Pair each status colour with an icon shape or a word.</div>
+</section>
+
+<section class="concept">
+  <h2>References</h2>
+  <div class="refs">
+    <p><a href="https://www.sap.com/design-system/fiori-design-web/v1-96/ui-elements/variant-management/usage">SAP Fiori: variant management</a> · <a href="https://www.sap.com/design-system/fiori-design-web/v1-136/ui-elements/filter-bar/usage">filter bar</a> · <a href="https://www.sap.com/design-system/fiori-design-web/v1-136/ui-elements/tree-table/usage">tree table</a> · <a href="https://www.sap.com/design-system/fiori-design-web/v1-84/ui-elements/analytical-table-alv/usage">analytical table</a></p>
+    <p><a href="https://learn.microsoft.com/en-us/dynamics365/business-central/ui-views">Business Central: saved views</a> · <a href="https://learn.microsoft.com/en-us/dynamics365/business-central/keyboard-shortcuts">keyboard shortcuts</a> · <a href="https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/devenv-designing-role-centers">Role Centers</a></p>
+    <p><a href="https://www.odoo.com/documentation/18.0/applications/essentials/search.html">Odoo: search, filters and favourites</a></p>
+    <p><a href="https://carbondesignsystem.com/components/data-table/usage/">IBM Carbon: data table usage</a></p>
+    <p><a href="https://support.freee.co.jp/hc/ja/articles/207362843">freee: journal preview on entry</a> · <a href="https://biz.moneyforward.com/support/account/guide/journal02/jo02.html">Money Forward: journal entry</a></p>
+    <p><a href="https://help.tallysolutions.com/tally-prime/reports-in-tallyprime/working-with-reports/">TallyPrime: working with reports</a> · <a href="https://tallysolutions.com/business-guides/tallyprime-keyboard-first-design-fast-data-entry/">keyboard-first design</a></p>
+    <p><a href="https://www.banana.ch/doc/en/node/3304">Banana Accounting: Smart Fill</a> · <a href="https://www.datev.de/web/de/shop/produkt-details/datev-buchungszeile-mit-hotkeys-18122">DATEV booking line</a></p>
+    <p><a href="https://its.1c.ru/db/v8327doc/content/48/1">1C ITS: Taxi main window</a> · <a href="https://buhexpert8.ru/1s-buhgalteriya/materialy/postuplenie-materialov/kak-nastroit-spiski-dokumentov-spravochnikov-registrov.html">buhexpert8: list settings</a> · <a href="https://ppt.ru/art/1c/kak-rabotat-s-oborotno-saldovoy-vedomostyu-v-1s-8-3">ppt.ru: ОСВ in 1C 8.3</a></p>
+    <p><a href="https://productideas.xero.com/forums/966063-new-homepage/suggestions/50925212-homepage-link-to-drafts-at-top-of-invoice-and-bi?page=2">Xero product ideas: drafts on the home page</a></p>
+    <p>The research found no usable public UI documentation for Kingdee, Yonyou, Kontur, МойСклад, Exact, Pennylane or MYOB, so none of the patterns rely on them.</p>
+  </div>
+</section>
+</main>
+
+</body>
+</html>

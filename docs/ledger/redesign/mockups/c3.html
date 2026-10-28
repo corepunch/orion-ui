@@ -1,0 +1,160 @@
+<!doctype html><html><head><meta charset='utf-8'><style>
+@font-face { font-family: Noto; src: url('../../../../share/fonts/NotoSans-Regular.ttf'); font-weight: 400; }
+@font-face { font-family: Noto; src: url('../../../../share/fonts/NotoSans-Medium.ttf'); font-weight: 500 700; }
+:root {
+  --ctl:#F8F9FB; --win:#F0F2F5; --ws:#E6E9EE; --desk:#C9CFDA; --panel:#EEF0F4; --panel2:#E4E7EC;
+  --edge:#D8DCE3; --edge2:#E3E6EB; --hair:#ECEEF2; --acc:#4C5BD4; --acc2:#5866DC; --accsoft:rgba(76,91,212,.12);
+  --text:#13151A; --sec:#646A75; --dis:#A9AEB8; --ok:#17855A; --warn:#B26B00; --err:#D23B30; --info:#2F6FD6;
+  --sb:#F3F4F7; --info-bg:#FFFFE1; --tb:#3B404A;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+html,body { width:1280px; height:800px; overflow:hidden; }
+body { background:var(--desk); font:13px/1.35 Noto, -apple-system, sans-serif; color:var(--text);
+  -webkit-font-smoothing:antialiased; font-variant-numeric: tabular-nums; position:relative; }
+.ic { fill:currentColor; flex:none; display:block; }
+.menubar { position:absolute; left:0; top:0; right:0; height:24px; background:var(--win); border-bottom:1px solid var(--edge2);
+  display:flex; align-items:center; padding-left:6px; gap:2px; font-size:13px; }
+.menubar span { padding:2px 8px; }
+.menubar .mtab { margin-left:auto; }
+.win { position:absolute; left:16px; top:40px; width:1200px; height:700px; background:#fff; border-radius:9px;
+  box-shadow:0 0 0 1px rgba(0,0,0,.10), 0 10px 30px rgba(20,25,40,.18); overflow:hidden; display:flex; flex-direction:column; }
+.win.max { left:0; top:24px; width:1280px; height:776px; border-radius:0; box-shadow:none; }
+.body { flex:1; display:flex; min-height:0; }
+.side { width:176px; background:var(--panel); border-right:1px solid var(--edge2); display:flex; flex-direction:column; padding:6px 6px; flex:none; }
+.side .tog { height:32px; display:flex; align-items:center; padding-left:6px; color:var(--tb); margin-bottom:6px; }
+.nav { white-space:nowrap; height:30px; display:flex; align-items:center; gap:9px; padding:0 9px; border-radius:6px; color:#30343C; margin-bottom:1px; }
+.nav.sel { background:var(--accsoft); color:var(--acc); font-weight:500; }
+.nav.sel.strong { background:var(--acc); color:#fff; }
+.nav .cnt { margin-left:auto; font-size:11px; color:var(--sec); }
+.nav .cnt.b { background:var(--warn); color:#fff; border-radius:8px; padding:0 6px; font-weight:500; line-height:16px; }
+.navhdr { font-size:11px; color:var(--sec); text-transform:uppercase; letter-spacing:.04em; padding:10px 10px 4px; font-weight:500; }
+.main { flex:1; display:flex; flex-direction:column; min-width:0; background:#fff; }
+.titlerow { height:46px; display:flex; align-items:center; padding:0 10px 0 8px; gap:4px; border-bottom:1px solid var(--edge2); background:#fff; flex:none; }
+.titlerow .t1 { font-size:17px; font-weight:500; line-height:1.1; }
+.titlerow .t2 { font-size:11px; color:var(--sec); }
+.tbtn { width:32px; height:30px; display:flex; align-items:center; justify-content:center; color:var(--tb); border-radius:6px; }
+.tbtn.dim { color:var(--dis); }
+.status { height:24px; background:var(--sb); border-top:1px solid var(--edge2); display:flex; align-items:center; font-size:12px; color:var(--sec); padding:0 10px; gap:18px; flex:none; }
+.status b { font-weight:500; color:var(--text); }
+.status .sp { flex:1; }
+.status > :last-child { margin-right:96px; }
+.status .dot { display:inline-flex; align-items:center; gap:5px; }
+/* command bar */
+.cmdbar { height:40px; display:flex; align-items:center; gap:6px; padding:0 10px; border-bottom:1px solid var(--edge2); flex:none; background:#fff; }
+.btn { height:26px; display:inline-flex; align-items:center; gap:6px; padding:0 10px; border-radius:6px; background:var(--ctl);
+  box-shadow: inset 0 0 0 1px var(--edge); color:var(--text); white-space:nowrap; font-size:13px; }
+.btn.pri { background:var(--acc); color:#fff; box-shadow:none; font-weight:500; }
+.btn.flat { background:transparent; box-shadow:none; }
+.btn .car { opacity:.75; margin-left:-2px; }
+.btn.icon { padding:0 6px; }
+.sep { width:1px; height:20px; background:var(--edge); margin:0 4px; }
+.search { height:26px; display:flex; align-items:center; gap:6px; padding:0 8px; border-radius:6px; background:var(--ctl); box-shadow: inset 0 0 0 1px var(--edge); color:var(--sec); width:230px; }
+.search .k { margin-left:auto; font-size:11px; color:var(--dis); }
+.filterbar { height:36px; display:flex; align-items:center; gap:8px; padding:0 10px; border-bottom:1px solid var(--edge2); background:#FBFBFD; flex:none; font-size:12.5px; }
+.chip { height:24px; display:inline-flex; align-items:center; gap:5px; padding:0 9px; border-radius:12px; background:#fff; box-shadow: inset 0 0 0 1px var(--edge); white-space:nowrap; }
+.chip .l { color:var(--sec); }
+.chip.on { background:var(--accsoft); box-shadow: inset 0 0 0 1px rgba(76,91,212,.35); color:var(--acc); }
+.chip .x { opacity:.7; }
+.lv { color:var(--sec); margin-right:-2px; }
+.vw { height:24px; display:inline-flex; align-items:center; gap:5px; padding:0 9px; border-radius:6px; color:#30343C; white-space:nowrap; }
+.vw.on { background:#fff; box-shadow: inset 0 0 0 1px var(--edge), 0 1px 1px rgba(0,0,0,.04); font-weight:500; }
+.vw.on .ic { color:var(--warn); }
+.vw.add { color:var(--sec); }
+.vw .vc { font-size:11px; background:rgba(178,107,0,.14); color:var(--warn); border-radius:8px; padding:0 6px; line-height:16px; }
+.seg { display:inline-flex; height:24px; border-radius:6px; box-shadow: inset 0 0 0 1px var(--edge); background:#fff; overflow:hidden; }
+.seg > span { padding:0 10px; display:flex; align-items:center; border-left:1px solid var(--edge); }
+.seg > span:first-child { border-left:none; }
+.seg > span.on { background:var(--acc); color:#fff; }
+/* tables */
+table.g { border-collapse:collapse; width:100%; table-layout:fixed; font-size:12.5px; }
+table.g th { height:24px; text-align:left; font-weight:500; color:#3B404A; background:#F7F8FA; border-bottom:1px solid var(--edge); padding:0 7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; position:relative; }
+table.g th + th { box-shadow: inset 1px 0 0 var(--edge2); }
+table.g td { height:21px; padding:0 7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid var(--hair); }
+table.g td:first-child { padding:0 0 0 7px; text-overflow:clip; }
+table.g td.n, table.g th.n { text-align:right; }
+table.g td.c, table.g th.c { text-align:center; }
+table.g td.s { color:var(--sec); }
+table.g tr.sel td { background:var(--acc); color:#fff; border-bottom-color:var(--acc); }
+table.g tr.sel td.s { color:rgba(255,255,255,.85); }
+table.g tr.selsoft td { background:var(--accsoft); }
+table.g tr.draft td { color:var(--sec); }
+table.g tr.tot td { background:#F7F8FA; font-weight:500; border-top:1px solid var(--edge); border-bottom:none; height:24px; }
+table.g td .ic { display:inline-block; vertical-align:-3px; }
+.ok { color:var(--ok); } .warn { color:var(--warn); } .err { color:var(--err); } .sec { color:var(--sec); }
+tr.sel .ok, tr.sel .warn { color:#fff; }
+.badge { display:inline-flex; align-items:center; gap:4px; height:18px; padding:0 7px; border-radius:9px; font-size:11.5px; font-weight:500; line-height:18px; }
+.badge.ok { background:rgba(23,133,90,.12); color:var(--ok); }
+.badge.warn { background:rgba(178,107,0,.13); color:var(--warn); }
+.badge.info { background:rgba(47,111,214,.12); color:var(--info); }
+.badge.neu { background:var(--panel); color:var(--sec); }
+.tabs { height:32px; display:flex; align-items:flex-end; gap:2px; padding:0 8px; background:#FBFBFD; border-bottom:1px solid var(--edge); border-top:1px solid var(--edge); flex:none; }
+.tabs > span { padding:0 12px; height:31px; display:flex; align-items:center; gap:6px; color:var(--sec); border-bottom:2px solid transparent; }
+.tabs > span.on { color:var(--text); border-bottom-color:var(--acc); font-weight:500; }
+.tabs .num { font-size:11px; background:var(--panel2); color:var(--sec); border-radius:8px; padding:0 6px; line-height:16px; font-weight:400; }
+.clippy { position:absolute; width:124px; height:93px; background:url('../../../../apps/ledger/share/addons/assistant/assets/clippy/RESTPOSE.png') no-repeat; background-size:124px 93px; }
+.balloon { position:absolute; background:var(--info-bg); border:1px solid #6E6E58; border-radius:9px; box-shadow:2px 3px 0 rgba(0,0,0,.12);
+  padding:10px 12px; font-size:13px; color:#303025; }
+.balloon:after { content:""; position:absolute; right:48px; bottom:-14px; width:18px; height:14px; background:var(--info-bg);
+  clip-path: polygon(0 0, 100% 0, 85% 100%); }
+.balloon:before { content:""; position:absolute; right:46px; bottom:-16px; width:21px; height:16px; background:#6E6E58;
+  clip-path: polygon(0 0, 100% 0, 86% 100%); }
+.balloon .in { background:#fff; border:1px solid #B9B9A0; border-radius:4px; height:26px; display:flex; align-items:center; padding:0 8px; color:var(--text); }
+.balloon .bbtn { height:24px; padding:0 12px; border-radius:5px; background:#F4F4EA; border:1px solid #B9B9A0; display:inline-flex; align-items:center; }
+.balloon .bbtn.pri { background:var(--acc); color:#fff; border-color:var(--acc); }
+.kbd { font-size:10.5px; padding:0 4px; border-radius:3px; box-shadow: inset 0 0 0 1px var(--edge); color:var(--sec); line-height:15px; }
+.cap { position:absolute; font-size:11px; }
+
+  .mdi { position:absolute; top:24px; left:0; right:0; height:30px; background:var(--panel); border-bottom:1px solid var(--edge); display:flex; align-items:flex-end; gap:1px; padding:0 8px; }
+  .mt { height:26px; display:flex; align-items:center; gap:7px; padding:0 12px; font-size:12.5px; color:var(--sec); border-radius:6px 6px 0 0; }
+  .mt.on { background:#fff; color:var(--text); box-shadow: 0 0 0 1px var(--edge); clip-path: inset(-2px -2px 0 -2px); font-weight:500; }
+  .okc { color:var(--ok); }
+  .mx { margin-left:6px; color:var(--sec); }
+  .doc { position:absolute; top:54px; left:0; right:0; bottom:24px; background:#fff; display:flex; flex-direction:column; }
+  .dhead { padding:12px 16px 0; }
+  .dt { font-size:18px; font-weight:500; }
+  .dcmd { display:flex; align-items:center; gap:6px; margin:10px 0 10px; }
+  .fgrid { display:grid; grid-template-columns: 100px 380px 90px 380px; column-gap:10px; row-gap:7px; padding:6px 16px 12px; align-items:center; }
+  .fgrid label { color:#3B404A; font-size:12.5px; }
+  .lb { color:#3B404A; font-size:12.5px; }
+  .f { height:26px; border-radius:5px; background:#fff; box-shadow: inset 0 0 0 1px var(--edge); display:flex; align-items:center; padding:0 8px; gap:4px; white-space:nowrap; overflow:hidden; }
+  .f.flat { box-shadow:none; padding-left:0; }
+  .f.sel { box-shadow: inset 0 0 0 2px var(--acc); }
+  .f .dd { margin-left:auto; color:var(--sec); }
+  .f .op { color:var(--sec); margin-left:6px; }
+  .f .ph { color:var(--dis); }
+  .ltb { display:flex; gap:6px; align-items:center; padding:8px 16px; }
+  table.g.lines { margin:0 16px; width:calc(100% - 32px); box-shadow: 0 0 0 1px var(--edge); }
+  .lines tr.edit td { background:var(--accsoft); }
+  .lines .cell { display:inline-block; background:#fff; box-shadow: inset 0 0 0 2px var(--acc); padding:0 6px; margin-right:-6px; border-radius:3px; min-width:62px; line-height:19px; }
+  .pv { margin:10px 16px 0; border:1px solid var(--edge2); border-radius:7px; background:#FBFBFD; padding:4px 0 6px; font-size:12.5px; }
+  .pvh { display:flex; align-items:center; gap:7px; padding:4px 12px 4px; } .pvh b { font-weight:500; } .pvh .sec { font-size:12px; }
+  .pvr { display:grid; grid-template-columns: 190px 22px 44px 1fr 22px 44px 1fr 110px; align-items:center; padding:3px 12px; border-top:1px solid var(--hair); }
+  .pvr b { font-weight:500; } .pvr .dk { color:var(--sec); font-size:11.5px; } .pvr .an { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:10px; } .pvr .am { text-align:right; font-weight:500; }
+  .lines tr.empty td { height:40px; border:none; background:repeating-linear-gradient(#fff 0 21px, #fff 21px 22px); }
+  .tot { display:flex; align-items:center; gap:10px; padding:12px 16px; border-top:1px solid var(--edge2); margin-top:auto; background:#FBFBFD; }
+  .tsum { display:flex; flex-direction:column; align-items:flex-end; min-width:110px; }
+  .tsum .sec { font-size:11px; }
+  .tsum b { font-weight:500; font-size:14px; }
+  .tsum.big b { font-size:18px; }
+  </style></head><body><div class='menubar'><span>Файл</span><span>Документы</span><span>Справочники</span><span>Вид</span><span>Отчеты</span><span>Окно</span><span>Помощь</span></div><div class='mdi'><span class='mt'><svg class="ic " width="14" height="14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M184,112a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16h64A8,8,0,0,1,184,112Zm-8,24H112a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16Zm48-88V208a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V48A16,16,0,0,1,48,32H208A16,16,0,0,1,224,48ZM48,208H72V48H48Zm160,0V48H88V208H208Z"/></svg>Журнал документов</span><span class='mt on'><svg class="ic okc" width="14" height="14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M225.86,102.82c-3.77-3.94-7.67-8-9.14-11.57-1.36-3.27-1.44-8.69-1.52-13.94-.15-9.76-.31-20.82-8-28.51s-18.75-7.85-28.51-8c-5.25-.08-10.67-.16-13.94-1.52-3.56-1.47-7.63-5.37-11.57-9.14C146.28,23.51,138.44,16,128,16s-18.27,7.51-25.18,14.14c-3.94,3.77-8,7.67-11.57,9.14C88,40.64,82.56,40.72,77.31,40.8c-9.76.15-20.82.31-28.51,8S41,67.55,40.8,77.31c-.08,5.25-.16,10.67-1.52,13.94-1.47,3.56-5.37,7.63-9.14,11.57C23.51,109.72,16,117.56,16,128s7.51,18.27,14.14,25.18c3.77,3.94,7.67,8,9.14,11.57,1.36,3.27,1.44,8.69,1.52,13.94.15,9.76.31,20.82,8,28.51s18.75,7.85,28.51,8c5.25.08,10.67.16,13.94,1.52,3.56,1.47,7.63,5.37,11.57,9.14C109.72,232.49,117.56,240,128,240s18.27-7.51,25.18-14.14c3.94-3.77,8-7.67,11.57-9.14,3.27-1.36,8.69-1.44,13.94-1.52,9.76-.15,20.82-.31,28.51-8s7.85-18.75,8-28.51c.08-5.25.16-10.67,1.52-13.94,1.47-3.56,5.37-7.63,9.14-11.57C232.49,146.28,240,138.44,240,128S232.49,109.73,225.86,102.82Zm-52.2,6.84-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"/></svg>Реализация товаров РТ-0001 от 10.03.2003<span class='mx'><svg class="ic " width="11" height="11" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></span></span><span class='mt'><svg class="ic " width="14" height="14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M239.43,133l-32-80h0a8,8,0,0,0-9.16-4.84L136,62V40a8,8,0,0,0-16,0V65.58L54.26,80.19A8,8,0,0,0,48.57,85h0v.06L16.57,165a7.92,7.92,0,0,0-.57,3c0,23.31,24.54,32,40,32s40-8.69,40-32a7.92,7.92,0,0,0-.57-3L66.92,93.77,120,82V208H104a8,8,0,0,0,0,16h48a8,8,0,0,0,0-16H136V78.42L187,67.1,160.57,133a7.92,7.92,0,0,0-.57,3c0,23.31,24.54,32,40,32s40-8.69,40-32A7.92,7.92,0,0,0,239.43,133ZM56,184c-7.53,0-22.76-3.61-23.93-14.64L56,109.54l23.93,59.82C78.76,180.39,63.53,184,56,184Zm144-32c-7.53,0-22.76-3.61-23.93-14.64L200,77.54l23.93,59.82C222.76,148.39,207.53,152,200,152Z"/></svg>Оборотно-сальдовая ведомость</span></div><div class='doc'>
+  <div class='dhead'>
+    <div style='display:flex;align-items:center;gap:10px'>
+      <div class='dt'>Реализация товаров <span class='sec' style='font-weight:400'>(акт, накладная)</span> РТ-0001 от 10.03.2003</div>
+      <span class='badge ok'><svg class="ic " width="12" height="12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M225.86,102.82c-3.77-3.94-7.67-8-9.14-11.57-1.36-3.27-1.44-8.69-1.52-13.94-.15-9.76-.31-20.82-8-28.51s-18.75-7.85-28.51-8c-5.25-.08-10.67-.16-13.94-1.52-3.56-1.47-7.63-5.37-11.57-9.14C146.28,23.51,138.44,16,128,16s-18.27,7.51-25.18,14.14c-3.94,3.77-8,7.67-11.57,9.14C88,40.64,82.56,40.72,77.31,40.8c-9.76.15-20.82.31-28.51,8S41,67.55,40.8,77.31c-.08,5.25-.16,10.67-1.52,13.94-1.47,3.56-5.37,7.63-9.14,11.57C23.51,109.72,16,117.56,16,128s7.51,18.27,14.14,25.18c3.77,3.94,7.67,8,9.14,11.57,1.36,3.27,1.44,8.69,1.52,13.94.15,9.76.31,20.82,8,28.51s18.75,7.85,28.51,8c5.25.08,10.67.16,13.94,1.52,3.56,1.47,7.63,5.37,11.57,9.14C109.72,232.49,117.56,240,128,240s18.27-7.51,25.18-14.14c3.94-3.77,8-7.67,11.57-9.14,3.27-1.36,8.69-1.44,13.94-1.52,9.76-.15,20.82-.31,28.51-8s7.85-18.75,8-28.51c.08-5.25.16-10.67,1.52-13.94,1.47-3.56,5.37-7.63,9.14-11.57C232.49,146.28,240,138.44,240,128S232.49,109.73,225.86,102.82Zm-52.2,6.84-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"/></svg>Проведён</span><span class='badge info'>Оплачен</span>
+    </div>
+    <div class='dcmd'>
+      <span class='btn pri'>Провести и закрыть</span><span class='btn'>Записать</span><span class='btn'><svg class="ic " width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"/></svg>Провести</span>
+      <span class='sep'></span><span class='btn'>Дт/Кт</span><span class='btn'><svg class="ic " width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M214.67,72H200V40a8,8,0,0,0-8-8H64a8,8,0,0,0-8,8V72H41.33C27.36,72,16,82.77,16,96v80a8,8,0,0,0,8,8H56v32a8,8,0,0,0,8,8H192a8,8,0,0,0,8-8V184h32a8,8,0,0,0,8-8V96C240,82.77,228.64,72,214.67,72ZM72,48H184V72H72ZM184,208H72V160H184Zm40-40H200V152a8,8,0,0,0-8-8H64a8,8,0,0,0-8,8v16H32V96c0-4.41,4.19-8,9.33-8H214.67c5.14,0,9.33,3.59,9.33,8Zm-24-52a12,12,0,1,1-12-12A12,12,0,0,1,200,116Z"/></svg>Печать<span class='car'><svg class="ic " width="11" height="11" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></span></span>
+      <span class='btn'>Создать на основании<span class='car'><svg class="ic " width="11" height="11" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></span></span>
+      <span style='flex:1'></span><span class='btn flat'><svg class="ic " width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M140,128a12,12,0,1,1-12-12A12,12,0,0,1,140,128Zm56-12a12,12,0,1,0,12,12A12,12,0,0,0,196,116ZM60,116a12,12,0,1,0,12,12A12,12,0,0,0,60,116Z"/></svg>Ещё<svg class="ic " width="11" height="11" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></span>
+    </div>
+  </div><div style='border-top:1px solid var(--edge2)'></div>
+  <div class='fgrid'>
+    <label>Номер:</label><div style='display:flex;gap:8px;align-items:center'><div class='f' style='width:120px'>РТ-0001</div><span class='lb'>от:</span><div class='f' style='width:150px'>10.03.2003 12:00:00<span class='dd'><svg class="ic " width="13" height="13" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z"/></svg></span></div></div>
+    <label>Организация:</label><div class='f'>ООО "Ромашка"<span class='dd'><svg class="ic " width="11" height="11" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></span></div>
+    <label>Контрагент:</label><div class='f sel' style=''><span class='' style=''>ИП Иванов Иван Иванович</span><span class='dd'><svg class="ic " width="11" height="11" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></span><span class='op'><svg class="ic " width="12" height="12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z"/></svg></span></div>
+    <label>Склад:</label><div class='f'>Основной склад<span class='dd'><svg class="ic " width="11" height="11" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></span></div>
+    <label>Договор:</label><div class='f'><span>Основной договор</span><span class='dd'><svg class="ic " width="11" height="11" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></span><span class='op'><svg class="ic " width="12" height="12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z"/></svg></span></div>
+    <label>Расчеты:</label><div class='f flat'><span style='color:var(--info);text-decoration:underline dotted'>Срок 10.03.2003, 62.01, 62.02, зачет аванса автоматически</span></div>
+    <label>Валюта:</label><div class='f flat'><span style='color:var(--info);text-decoration:underline dotted'>руб.</span>&nbsp;<span class='sec'>· НДС сверху · цены включают НДС: нет</span></div>
+  </div><div class='tabs' style='background:#fff;border-top:none;padding-left:16px'><span class='on'>Товары <span class='num'>2</span></span><span>Услуги</span><span>Счет-фактура</span><span>Дополнительно</span></div><div class='ltb'><span class='btn'><svg class="ic " width="14" height="14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></svg>Добавить</span><span class='btn'><svg class="ic " width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M32,64a8,8,0,0,1,8-8H216a8,8,0,0,1,0,16H40A8,8,0,0,1,32,64Zm8,72H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16Zm104,48H40a8,8,0,0,0,0,16H144a8,8,0,0,0,0-16Zm88,0H216V168a8,8,0,0,0-16,0v16H184a8,8,0,0,0,0,16h16v16a8,8,0,0,0,16,0V200h16a8,8,0,0,0,0-16Z"/></svg>Подбор</span><span class='btn icon'><svg class="ic " width="14" height="14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,117.66a8,8,0,0,1-11.32,0L136,59.31V216a8,8,0,0,1-16,0V59.31L61.66,117.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0l72,72A8,8,0,0,1,205.66,117.66Z"/></svg></span><span class='btn icon'><svg class="ic " width="14" height="14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,149.66l-72,72a8,8,0,0,1-11.32,0l-72-72a8,8,0,0,1,11.32-11.32L120,196.69V40a8,8,0,0,1,16,0V196.69l58.34-58.35a8,8,0,0,1,11.32,11.32Z"/></svg></span><span class='btn'>Изменить<span class='car'><svg class="ic " width="11" height="11" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></span></span><span style='flex:1'></span><span class='sec' style='font-size:12px'>Ins — добавить · F2 — изменить · Del — удалить</span></div><table class='g lines'><colgroup><col style='width:32px'><col><col style='width:52px'><col style='width:78px'><col style='width:92px'><col style='width:104px'><col style='width:56px'><col style='width:92px'><col style='width:104px'></colgroup><tr><th class='n'>N</th><th class=''>Номенклатура</th><th class=''>Ед.</th><th class='n'>Кол-во</th><th class='n'>Цена</th><th class='n'>Сумма</th><th class='c'>% НДС</th><th class='n'>НДС</th><th class='n'>Всего</th></tr><tr class='edit'><td class='n s'>1</td><td>Монитор 17" Samsung SyncMaster 753s</td><td class='s'>шт</td><td class='n'><span class=cell>2,000</span></td><td class='n'>6 800,00</td><td class='n'>13 600,00</td><td class='c s'>20%</td><td class='n'>2 720,00</td><td class='n'>16 320,00</td></tr><tr class=''><td class='n s'>2</td><td>Клавиатура Genius KB-06XE</td><td class='s'>шт</td><td class='n'>1,000</td><td class='n'>280,00</td><td class='n'>280,00</td><td class='c s'>20%</td><td class='n'>56,00</td><td class='n'>336,00</td></tr><tr class='empty'><td colspan=9></td></tr></table><div class='pv'><div class='pvh'><svg class="ic " width="11" height="11" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg><b>Проводки</b><span class='sec'>предпросмотр · пересчитываются при изменении строк</span><span class='badge neu' style='margin-left:6px'>автоматически</span><span style='flex:1'></span><span style='color:var(--info)'>Дт/Кт подробно…</span></div><div class='pvr'><span class='sec pw'>Выручка от продажи</span><span class='dk'>Дт</span><b>62.01</b><span class='an'>ИП Иванов Иван Иванович</span><span class='dk'>Кт</span><b>90.01</b><span class='an'>Выручка</span><span class='am'>16 656,00</span></div><div class='pvr'><span class='sec pw'>НДС с выручки</span><span class='dk'>Дт</span><b>90.03</b><span class='an'>НДС</span><span class='dk'>Кт</span><b>68.02</b><span class='an'>НДС</span><span class='am'>2 776,00</span></div><div class='pvr'><span class='sec pw'>Списание товаров по средней</span><span class='dk'>Дт</span><b>90.02</b><span class='an'>Себестоимость продаж</span><span class='dk'>Кт</span><b>41.01</b><span class='an'>Монитор (2 шт), Клавиатура (1 шт)</span><span class='am'>12 550,00</span></div></div><div class='tot'><span class='sec'>Комментарий:</span><div class='f' style='flex:1;max-width:420px'><span class='ph'>Комментарий для документа</span></div><span style='flex:1'></span><div class='tsum'><span class='sec'>Сумма</span><b>13&#8239;880,00</b></div><div class='tsum'><span class='sec'>НДС</span><b>2&#8239;776,00</b></div><div class='tsum big'><span class='sec'>Всего, руб.</span><b>16&#8239;656,00</b></div></div></div><div class='status' style='position:absolute;left:0;right:0;bottom:0'><span>ООО "Ромашка"</span><span>Бухгалтерский учет (Россия, 2003)</span><span class='sp'></span><span>Изменён: Сидорова А. В., 10.03.2003 12:04</span></div><div class='balloon' style='left:690px;top:596px;width:430px'>Проводки ниже уже пересчитаны по новому количеству. Спросите меня, например: <i>«почему 90.02?»</i></div><div class='clippy' style='left:1140px;top:600px'></div></body></html>
