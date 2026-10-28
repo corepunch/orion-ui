@@ -66,4 +66,5 @@ if dofile then
   dofile('apps/ledger/tests/assistant_examples.lua')
   dofile('apps/ledger/tests/assistant_dialogue_test.lua')
   dofile('apps/ledger/tests/assistant_dictionary_test.lua')
+  dofile('apps/ledger/tests/assistant_palette_test.lua')
 end

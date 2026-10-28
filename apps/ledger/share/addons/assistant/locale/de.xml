@@ -30,13 +30,13 @@
   <string source="The configuration has multiple receivables accounts; specify an account." where="code">Die Konfiguration enthält mehrere Forderungskonten; geben Sie ein Konto an.</string>
   <string source="No receivables account was found in the configuration." where="code">In der Konfiguration wurde kein Forderungskonto gefunden.</string>
   <string source="Ledger — Assistant" where="assistant">Ledger — Assistent</string>
-  <string source="Show debtors" where="code">Zeige Schuldner</string>
+  <string source="Show debtors" where="assistant">Zeige Schuldner</string>
   <string source="Enter a command or use system dictation. Example: show customers with debt over fifty thousand" where="code">Geben Sie einen Befehl ein oder verwenden Sie die Diktierfunktion. Beispiel: zeige Kunden mit Schulden über fünfzigtausend</string>
   <string source="Run" where="code">Ausführen</string>
   <string source="Examples" where="assistant">Beispiele</string>
-  <string source="Close" where="code,assistant">Schließen</string>
+  <string source="Close" where="assistant">Schließen</string>
   <string source="Name / document" obsolete="true">Name / Beleg</string>
-  <string source="Amount" obsolete="true">Betrag</string>
+  <string source="Amount" where="assistant">Betrag</string>
   <string source="Date" obsolete="true">Datum</string>
   <string source="Specify one row number." where="code">Geben Sie eine Zeilennummer an.</string>
   <string source="Enter a command, for example: show debtors." where="code">Geben Sie einen Befehl ein, zum Beispiel: zeige Schuldner.</string>
@@ -68,7 +68,7 @@
   <string source="You: %s" where="code">Du: %s</string>
   <string source="№" obsolete="true">Nr.</string>
   <string source="How can I help?" obsolete="true">Wie kann ich helfen?</string>
-  <string source="For example: show debtors" where="assistant">Zum Beispiel: zeige Schuldner</string>
+  <string source="For example: show debtors" obsolete="true">Zum Beispiel: zeige Schuldner</string>
   <string source="%d. %s — %s" where="code">%d. %s — %s</string>
   <string source="And %d more. Ask to narrow the list." where="code">Und %d weitere. Grenzen Sie die Suche ein.</string>
   <string source="Try “show debtors”, then “open first”." where="code">Versuchen Sie „zeige Schuldner“, dann „öffne ersten“.</string>
@@ -76,4 +76,23 @@
   <string source="show debtors" where="code">zeige Schuldner</string>
   <string source="show customers" where="code">zeige Kunden</string>
   <string source="show only posted documents" where="code">zeige nur gebuchte Belege</string>
+  <string source="Show draft documents" where="code">Zeige ungebuchte Belege</string>
+  <string source="Show customers" where="code">Zeige die Kunden</string>
+  <string source="Show items" where="code">Zeige Artikel</string>
+  <string source="Show documents under one thousand" where="code">Zeige Belege weniger als eintausend</string>
+  <string source="Show debtors over fifty thousand" where="code">Zeige Schuldner über fünfzigtausend</string>
+  <string source="Name" where="assistant">Bezeichnung</string>
+  <string source="Counterparties" where="code">Geschäftspartner</string>
+  <string source="Documents" where="code">Belege</string>
+  <string source="Items" where="code">Artikel</string>
+  <string source="Results" where="code">Gefunden</string>
+  <string source="Commands" where="code">Befehle</string>
+  <string source="Suggestions" where="code">Tipps</string>
+  <string source="Advances received" where="code">Erhaltene Anzahlungen</string>
+  <string source="These commands match your request." where="code">Diese Befehle passen.</string>
+  <string source="Documents not posted: %d" where="code">Ungebuchte Belege: %d</string>
+  <string source="%s offsets the advance from %s" where="code">%s verrechnet die Anzahlung von %s</string>
+  <string source="show draft documents" where="code">zeige ungebuchte Belege</string>
+  <string source="Up and Down choose · Enter opens · Ctrl+K finds a command" where="assistant">Auf und Ab wählen · Eingabe öffnet · Strg+K sucht einen Befehl</string>
+  <string source="No one owes the company." where="code">Niemand schuldet dem Unternehmen etwas.</string>
 </strings>

@@ -38,6 +38,7 @@ GitClient). Upstream paths: `assets/regular/<name>.svg` and
 | ledger-delete.svg | trash |
 | ledger-doc-posted.svg | seal-check (fill) |
 | ledger-doc-draft.svg | file-dashed |
+| ledger-tip.svg | lightbulb |
 | ledger-row-counterparty.svg | buildings |
 | ledger-row-item.svg | package |
 | ledger-row-account.svg | book-open |

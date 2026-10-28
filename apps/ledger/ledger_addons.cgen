@@ -37,6 +37,15 @@
       <arg name="id" type="int">The document</arg>
       <returns type="nresults">true, or nil and a message</returns>
     </function>
+    <function name="commands" lua="true">
+      <summary>Ledger's commands: every item of its menu tree, as the assistant's catalog.</summary>
+      <returns type="nresults">a list of {name, label, group, shortcut}: name as "doc.new", label in the interface language, shortcut as "Ctrl+N" or ""</returns>
+    </function>
+    <function name="command" lua="true">
+      <summary>Runs a command of the menu tree, as choosing its menu item does, once the add-on's action has returned.</summary>
+      <arg name="name" type="string">Its name, as "doc.new"</arg>
+      <returns type="nresults">true, or nil and a message for an unknown command</returns>
+    </function>
     <function name="unpost" lua="true">
       <summary>Cancels a document's posting.</summary>
       <arg name="id" type="int">The document</arg>

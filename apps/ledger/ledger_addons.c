@@ -149,6 +149,37 @@ static int ledger_addon_open(lua_State *L, const char *table, int id) {
   return 1;
 }
 
+// The menu tree is the map of Ledger's commands (ledger.orion); captions are
+// the host's own texts, translated outside the add-on's string context.
+static int ledger_addon_commands(lua_State *L) {
+  lua_createtable(L, (int)ARRAY_LEN(ledger_action_meta), 0);
+  for (size_t i = 0; i < ARRAY_LEN(ledger_action_meta); i++) {
+    const ledger_action_meta_t *m = &ledger_action_meta[i];
+    lua_createtable(L, 0, 4);
+    lua_pushstring(L, m->name);              lua_setfield(L, -2, "name");
+    lua_pushstring(L, ui_trc(NULL, m->label)); lua_setfield(L, -2, "label");
+    lua_pushstring(L, m->category);          lua_setfield(L, -2, "group");
+    lua_pushstring(L, m->hotkey ? m->hotkey : ""); lua_setfield(L, -2, "shortcut");
+    lua_rawseti(L, -2, (lua_Integer)i + 1);
+  }
+  return 1;
+}
+
+// Posted, not run: a command may open a modal dialog, which must not start
+// inside the add-on's Lua call.
+static int ledger_addon_command(lua_State *L, const char *name) {
+  for (size_t i = 0; i < ARRAY_LEN(ledger_action_meta); i++) {
+    if (strcmp(ledger_action_meta[i].name, name)) continue;
+    if (!g_ledger->main_win) break;
+    post_message(g_ledger->main_win, evCommand, MAKEDWORD(ledger_action_meta[i].id, 0), NULL);
+    lua_pushboolean(L, 1);
+    return 1;
+  }
+  lua_pushnil(L);
+  lua_pushfstring(L, ui_tr("There is no command '%s'."), name);
+  return 2;
+}
+
 static void ledger_addon_constants(lua_State *L) {
   lua_pushstring(L, g_ledger->configuration);
   lua_setfield(L, -2, "configuration");
@@ -233,6 +264,11 @@ static result_t ledger_assistant_hook(window_t *win, uint32_t msg, uint32_t wpar
     }
   }
   return false;
+}
+
+// Saving, posting or deleting changes what the assistant suggests.
+void ledger_assistant_books_changed(void) {
+  if (assistant_page) script_page_perform(assistant_page, "books_changed");
 }
 
 void ledger_close_assistant(void) {

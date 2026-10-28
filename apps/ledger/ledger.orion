@@ -39,6 +39,7 @@
       <item name="open_entry" label="Open Entry's Document" />
       <Separator />
       <item name="post" label="Post" shortcut="F9" />
+      <item name="post_close" label="Post and Close" shortcut="Ctrl+Enter" />
       <item name="unpost" label="Cancel Posting" />
       <item name="print" label="Print Forms" shortcut="Ctrl+P" />
       <Separator />
@@ -98,6 +99,7 @@
       <item name="tile" label="Tile Documents" />
     </menu>
     <menu name="help" label="Help">
+      <item name="find_command" label="Find a Command..." shortcut="Ctrl+K" />
       <item name="assistant" label="Show Office Assistant" shortcut="Ctrl+Shift+A" />
       <Separator />
       <item name="about" label="About Ledger" />
@@ -1024,57 +1026,104 @@
       </StackView>
     </form>
 
-    <!-- Document form: header bound to ib.documents, lines below. -->
-    <form name="document" title="Document" width="620" height="440" spacing="6" padding="8">
-      <GridView name="header" spacing="4">
+    <!-- Document form, in the order 1C lays one out: the commands, number and
+         date on one line, the lines with their commands above them, the entries
+         posting will write (recomputed as the lines change), then the comment
+         and the totals. -->
+    <form name="document" title="Document" width="820" height="600" spacing="8" padding="12">
+      <StackView name="heading" orientation="horizontal" spacing="10">
+        <Label name="caption" text="New Document" font="title" />
+        <Badge name="state" text="Not posted" icon="ledger-doc-draft" color="warning" v-align="center" />
+        <Badge name="payment" text="Paid" icon="ledger-post" color="info" v-align="center" />
+        <Space name="heading_flex" />
+      </StackView>
+      <StackView name="commands" orientation="horizontal" spacing="6">
+        <Button name="post_close" text="Post and Close" flags="BUTTON_DEFAULT" tooltip="Save, post and close (Ctrl+Enter)" />
+        <Button name="save" text="Write" tooltip="Save without closing (Ctrl+S)" />
+        <Button name="post" text="Post" icon="ledger-post" tooltip="Save and post without closing" />
+        <Button name="entries_toggle" text="Dr/Cr" tooltip="Show or hide the entries this document writes" />
+        <Button name="print" text="Print" icon="ledger-print" tooltip="Save and write the print forms" />
+        <Space name="command_flex" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+      <GridView name="header" spacing="6">
         <Column name="labels" width="auto">
-          <Label name="lbl_type" text="Document:" />
           <Label name="lbl_number" text="Number:" />
-          <Label name="lbl_date" text="Date:" />
           <Label name="lbl_counterparty" text="Counterparty:" />
-          <Label name="lbl_currency" text="Currency:" />
-          <Label name="lbl_rate" text="Exchange rate:" />
-          <Label name="lbl_comment" text="Comment:" />
+          <Label name="lbl_spare" />
         </Column>
         <Column name="inputs">
-          <ComboBox name="doc_type" field="ib.documents.doc_type_id" source="cfg.doc_types" display="name" value="id" filter-field="form" filter-value="document" />
-          <TextBox name="number" field="ib.documents.number" placeholder="Assigned when saved" />
-          <TextBox name="date" field="ib.documents.date" />
+          <StackView name="number_row" orientation="horizontal" spacing="8">
+            <TextBox name="number" field="ib.documents.number" placeholder="Assigned when saved" width="130" />
+            <Label name="lbl_date" text="dated:" />
+            <TextBox name="date" field="ib.documents.date" width="120" />
+            <Space name="number_flex" />
+          </StackView>
           <ComboBox name="counterparty" field="ib.documents.counterparty_id" source="ib.counterparties" display="name" value="id" />
+          <Label name="spare" />
+        </Column>
+        <Column name="labels2" width="auto">
+          <Label name="lbl_type" text="Document:" />
+          <Label name="lbl_currency" text="Currency:" />
+          <Label name="lbl_rate" text="Exchange rate:" />
+        </Column>
+        <Column name="inputs2">
+          <ComboBox name="doc_type" field="ib.documents.doc_type_id" source="cfg.doc_types" display="name" value="id" filter-field="form" filter-value="document" />
           <ComboBox name="currency" field="ib.documents.currency_id" source="ib.currencies" display="code" value="id" />
           <TextBox name="rate" field="ib.documents.rate" placeholder="Rate on the document date" />
-          <TextBox name="comment" field="ib.documents.comment" />
         </Column>
       </GridView>
-      <TableView name="lines" source="ib.doc_lines" form="doc_line" flags="notitle,nofill,vscroll,flexspace">
-        <Column field="item.name" title="Item" width="0" min-width="120" />
-        <Column field="item.unit.name" title="Unit" width="44" />
-        <Column field="quantity" title="Qty" width="64" />
-        <Column field="price" title="Price" width="76" />
-        <Column field="amount" title="Amount" width="80" />
-        <Column field="vat_rate.name" title="Tax" width="44" />
-        <Column field="vat" title="Tax Amount" width="76" />
-        <Column field="total" title="Total" width="80" />
-      </TableView>
-      <StackView name="line_actions" orientation="horizontal" spacing="4">
-        <Button name="add_line" text="Add Line..." target="lines" action="insert" />
-        <Button name="edit_line" text="Edit Line..." target="lines" action="edit" />
-        <Button name="delete_line" text="Delete Line" target="lines" action="delete" />
-        <Space name="line_flex" />
-      </StackView>
-      <GridView name="totals" spacing="4">
-        <Column name="col_amount_label" width="auto"><Label name="lbl_amount" text="Amount:" /></Column>
-        <Column name="col_amount"><TextBox name="amount" field="ib.documents.amount" /></Column>
-        <Column name="col_vat_label" width="auto"><Label name="lbl_vat" text="Tax:" /></Column>
-        <Column name="col_vat"><TextBox name="vat" field="ib.documents.vat" /></Column>
-        <Column name="col_total_label" width="auto"><Label name="lbl_total" text="Total:" /></Column>
-        <Column name="col_total"><TextBox name="total" field="ib.documents.total" /></Column>
-      </GridView>
-      <Separator name="sep" />
-      <StackView name="actions" orientation="horizontal" spacing="6">
-        <Space name="flex" />
-        <Button name="ok" text="OK and Post" action="ib.documents.update" flags="BUTTON_DEFAULT" />
-        <Button name="cancel" text="Cancel" />
+      <SplitView name="body" orientation="vertical" split-ratio="0.58" flags="flexspace">
+        <StackView name="goods" spacing="6" flags="flexspace">
+          <StackView name="line_actions" orientation="horizontal" spacing="6">
+            <Button name="add_line" text="Add" icon="ledger-new" target="lines" action="insert" tooltip="Add a line (Ins)" />
+            <Button name="edit_line" text="Edit" icon="ledger-edit" target="lines" action="edit" tooltip="Edit the line (F2)" />
+            <Button name="delete_line" text="Delete" icon="ledger-delete" target="lines" action="delete" tooltip="Delete the line (Del)" />
+            <Space name="line_flex" />
+            <Label name="line_keys" text="Ins add · F2 edit · Del delete" color="text-secondary" />
+          </StackView>
+          <TableView name="lines" frame="true" source="ib.doc_lines" form="doc_line" flags="notitle,nofill,vscroll,flexspace">
+            <Column field="item.name" title="Item" width="0" min-width="120" />
+            <Column field="item.unit.name" title="Unit" width="44" />
+            <Column field="quantity" title="Qty" width="64" />
+            <Column field="price" title="Price" width="80" />
+            <Column field="amount" title="Amount" width="90" total="sum" />
+            <Column field="vat_rate.name" title="Tax" width="48" />
+            <Column field="vat" title="Tax Amount" width="84" total="sum" />
+            <Column field="total" title="Total" width="90" total="sum" />
+          </TableView>
+        </StackView>
+        <StackView name="postings_pane" spacing="6" flags="flexspace">
+          <StackView name="postings_head" orientation="horizontal" spacing="8">
+            <Label name="lbl_postings" text="Entries" font="system" />
+            <Label name="postings_hint" text="What posting writes, recomputed as you change the lines" color="text-secondary" />
+          </StackView>
+          <TableView name="postings" frame="true" zeros="blank" source="ib.entries" flags="notitle,nofill,vscroll,flexspace">
+            <Column field="debit.code" title="Dr" width="56" />
+            <Column field="debit_subconto.name" title="Dr Analytics" width="0" />
+            <Column field="credit.code" title="Cr" width="56" />
+            <Column field="credit_subconto.name" title="Cr Analytics" width="0" />
+            <Column field="quantity" title="Qty" width="64" />
+            <Column field="amount" title="Amount" width="96" />
+            <Column field="content" title="Content" width="0" />
+          </TableView>
+        </StackView>
+      </SplitView>
+      <StackView name="footer" orientation="horizontal" spacing="16">
+        <Label name="lbl_comment" text="Comment:" />
+        <TextBox name="comment" field="ib.documents.comment" placeholder="Comment for the document" flags="flexspace" />
+        <StackView name="sum_amount" spacing="0">
+          <Label name="lbl_amount" text="Amount" color="text-secondary" h-align="end" />
+          <Label name="amount" field="ib.documents.amount" font="system" h-align="end" />
+        </StackView>
+        <StackView name="sum_vat" spacing="0">
+          <Label name="lbl_vat" text="Tax" color="text-secondary" h-align="end" />
+          <Label name="vat" field="ib.documents.vat" font="system" h-align="end" />
+        </StackView>
+        <StackView name="sum_total" spacing="0">
+          <Label name="lbl_total" text="Total" color="text-secondary" h-align="end" />
+          <Label name="total" field="ib.documents.total" font="title" h-align="end" />
+        </StackView>
       </StackView>
     </form>
 

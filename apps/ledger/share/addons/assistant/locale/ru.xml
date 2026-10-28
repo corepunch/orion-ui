@@ -30,13 +30,13 @@
   <string source="The configuration has multiple receivables accounts; specify an account." where="code">В конфигурации несколько счетов расчётов с покупателями; уточните счёт.</string>
   <string source="No receivables account was found in the configuration." where="code">В конфигурации не найден счёт расчётов с покупателями.</string>
   <string source="Ledger — Assistant" where="assistant">Ledger — помощник</string>
-  <string source="Show debtors" where="code">Покажи должников</string>
+  <string source="Show debtors" where="assistant">Покажи должников</string>
   <string source="Enter a command or use system dictation. Example: show customers with debt over fifty thousand" where="code">Введите команду или используйте системную диктовку. Например: покажи клиентов, которые задолжали больше 50 тысяч</string>
   <string source="Run" where="code">Выполнить</string>
   <string source="Examples" where="assistant">Примеры</string>
-  <string source="Close" where="code,assistant">Закрыть</string>
+  <string source="Close" where="assistant">Закрыть</string>
   <string source="Name / document" obsolete="true">Название / документ</string>
-  <string source="Amount" obsolete="true">Сумма</string>
+  <string source="Amount" where="assistant">Сумма</string>
   <string source="Date" obsolete="true">Дата</string>
   <string source="Specify one row number." where="code">Укажите один номер строки.</string>
   <string source="Enter a command, for example: show debtors." where="code">Введите команду, например: покажи должников.</string>
@@ -68,7 +68,7 @@
   <string source="You: %s" where="code">Вы: %s</string>
   <string source="№" obsolete="true">№</string>
   <string source="How can I help?" obsolete="true">Чем я могу помочь?</string>
-  <string source="For example: show debtors" where="assistant">Например: покажи должников</string>
+  <string source="For example: show debtors" obsolete="true">Например: покажи должников</string>
   <string source="%d. %s — %s" where="code">%d. %s — %s</string>
   <string source="And %d more. Ask to narrow the list." where="code">И ещё %d. Уточните запрос.</string>
   <string source="Try “show debtors”, then “open first”." where="code">Попробуйте «покажи должников», затем «открой первого».</string>
@@ -76,4 +76,23 @@
   <string source="show debtors" where="code">покажи должников</string>
   <string source="show customers" where="code">покажи клиентов</string>
   <string source="show only posted documents" where="code">покажи только проведенные документы</string>
+  <string source="Show draft documents" where="code">Покажи непроведенные документы</string>
+  <string source="Show customers" where="code">Покажи клиентов</string>
+  <string source="Show items" where="code">Покажи товары</string>
+  <string source="Show documents under one thousand" where="code">Покажи документы меньше одной тысячи</string>
+  <string source="Show debtors over fifty thousand" where="code">Покажи должников больше пятидесяти тысяч</string>
+  <string source="Name" where="assistant">Наименование</string>
+  <string source="Counterparties" where="code">Контрагенты</string>
+  <string source="Documents" where="code">Документы</string>
+  <string source="Items" where="code">Товары</string>
+  <string source="Results" where="code">Найдено</string>
+  <string source="Commands" where="code">Команды</string>
+  <string source="Suggestions" where="code">Советы</string>
+  <string source="Advances received" where="code">Авансы полученные</string>
+  <string source="These commands match your request." where="code">Подходящие команды.</string>
+  <string source="Documents not posted: %d" where="code">Не проведено документов: %d</string>
+  <string source="%s offsets the advance from %s" where="code">%s закроет аванс от %s</string>
+  <string source="show draft documents" where="code">покажи непроведенные документы</string>
+  <string source="Up and Down choose · Enter opens · Ctrl+K finds a command" where="assistant">Вверх и вниз — выбор · Enter — открыть · Ctrl+K — поиск команды</string>
+  <string source="No one owes the company." where="code">Должников нет.</string>
 </strings>

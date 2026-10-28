@@ -512,33 +512,56 @@ static void post_closing(const post_t *p) {
   sum_entries(p->ib, p->doc);
 }
 
-bool ledger_post(database_t *ib, database_t *cfg, int doc_id) {
-  db_document_t *doc = find(ib, TABLE_DOCUMENTS, doc_id);
-  db_doc_type_t *type = doc ? find(cfg, TABLE_DOC_TYPES, doc->doc_type_id) : NULL;
-  if (!type) {
-    fprintf(stderr, "[ledger] post rejected: document=%d has no document type in configuration\n", doc_id);
-    return false;
-  }
-  post_t p = { ib, cfg, doc, type, doc->currency_id && doc->rate > 0 ? doc->rate : 1 };
+// Writes the entries the document's type posts; the posted flag is the caller's.
+static bool write_entries(const post_t *p) {
+  database_t *ib = p->ib;
+  db_document_t *doc = p->doc;
+  const db_doc_type_t *type = p->type;
+  int doc_id = doc->id;
   if (form_is(type, "operation")) date_manual_entries(ib, doc);
   else {
     delete_entries(ib, doc_id);
     if (type->script[0]) {  // the configuration's rules.lua posts this type
-      if (!ledger_script_post(&p, type->script)) return false;
+      if (!ledger_script_post(p, type->script)) return false;
     }
-    else if (form_is(type, "document")) post_goods(&p);
-    else if (form_is(type, "payroll"))  post_payroll(&p);
-    else if (form_is(type, "assets"))   post_assets(&p);
-    else if (form_is(type, "closing"))  post_closing(&p);
+    else if (form_is(type, "document")) post_goods(p);
+    else if (form_is(type, "payroll"))  post_payroll(p);
+    else if (form_is(type, "assets"))   post_assets(p);
+    else if (form_is(type, "closing"))  post_closing(p);
     else {
       fprintf(stderr, "[ledger] post rejected: document=%d type=%d has unknown form '%s'\n", doc_id, type->id, type->form);
       return false;
     }
     if (type->script[0] || form_is(type, "closing")) sum_entries(ib, doc);
   }
+  return true;
+}
+
+static bool posting_of(database_t *ib, database_t *cfg, int doc_id, post_t *p, const char *what) {
+  db_document_t *doc = find(ib, TABLE_DOCUMENTS, doc_id);
+  db_doc_type_t *type = doc ? find(cfg, TABLE_DOC_TYPES, doc->doc_type_id) : NULL;
+  if (!type) {
+    fprintf(stderr, "[ledger] %s rejected: document=%d has no document type in configuration\n", what, doc_id);
+    return false;
+  }
+  *p = (post_t){ ib, cfg, doc, type, doc->currency_id && doc->rate > 0 ? doc->rate : 1 };
+  return true;
+}
+
+bool ledger_post(database_t *ib, database_t *cfg, int doc_id) {
+  post_t p;
+  if (!posting_of(ib, cfg, doc_id, &p, "post") || !write_entries(&p)) return false;
   ledger_script_event("post", &p);  // plugins see every posted document
-  doc->posted = true;
-  return send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, doc) != 0;
+  p.doc->posted = true;
+  return send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, p.doc) != 0;
+}
+
+// The document form shows what posting would write. It runs in the form's
+// editing context, so the books change only when the document is saved.
+bool ledger_preview_entries(database_t *ib, database_t *cfg, int doc_id) {
+  post_t p;
+  if (!posting_of(ib, cfg, doc_id, &p, "preview")) return false;
+  return form_is(p.type, "operation") || write_entries(&p);
 }
 
 // Unposting a manual operation keeps its entries; reports skip them.
@@ -853,6 +876,49 @@ int ledger_posted_entries(database_t *ib, db_entry_t ***out) {
   if (entries) qsort(entries, (size_t)count, sizeof(*entries), by_date);
   *out = entries;
   return count;
+}
+
+// The account group an account belongs to: 62 for 62.01.
+static int account_group(database_t *cfg, int account_id) {
+  const db_account_t *a = find(cfg, TABLE_ACCOUNTS, account_id);
+  char code[32];
+  if (!a) return 0;
+  snprintf(code, sizeof(code), "%.*s", (int)strcspn(a->code, "."), a->code);
+  const db_account_t *group = (const db_account_t *)send_db_message(cfg, dbFind,
+    MAKEDWORD(TABLE_ACCOUNTS, ledger_field(cfg, TABLE_ACCOUNTS, "code")), code);
+  return group ? group->id : account_id;
+}
+
+// How far a posted document is settled. Documents in the sales book raise a
+// receivable on their type's debit account, those in the purchase book a
+// payable on its credit account. The document's movements on that account
+// group are matched first in, first out against the counterparty's movements
+// the other way, in posting order.
+bool ledger_document_settlement(database_t *ib, database_t *cfg, int doc_id, double *due, double *paid) {
+  const db_document_t *doc = find(ib, TABLE_DOCUMENTS, doc_id);
+  const db_doc_type_t *type = doc ? find(cfg, TABLE_DOC_TYPES, doc->doc_type_id) : NULL;
+  *due = *paid = 0;
+  if (!type || !doc->posted || !doc->counterparty_id || !type->vat_book) return false;
+  bool debit = type->vat_book == 1;
+  int group = account_group(cfg, debit ? type->debit_id : type->credit_id), cp = doc->counterparty_id;
+  if (!group) return false;
+  db_entry_t **entries = NULL;
+  int count = ledger_posted_entries(ib, &entries);
+  double before = 0, settled = 0;
+  bool reached = false;
+  for (int i = 0; i < count; i++) {
+    const db_entry_t *e = entries[i];
+    bool on_debit = ledger_account_within(cfg, e->debit_id, group) && e->debit_subconto_id == cp;
+    bool on_credit = ledger_account_within(cfg, e->credit_id, group) && e->credit_subconto_id == cp;
+    bool raises = debit ? on_debit : on_credit, settles = debit ? on_credit : on_debit;
+    if (raises && e->document_id == doc_id) { reached = true; *due += e->amount; }
+    else if (raises && !reached) before += e->amount;
+    if (settles) settled += e->amount;
+  }
+  free(entries);
+  if (*due <= 0) return false;
+  *paid = round2(fmin(fmax(settled - before, 0), *due));
+  return true;
 }
 
 // Reports count entries of posted documents only, in date order.
