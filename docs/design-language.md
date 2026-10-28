@@ -82,6 +82,11 @@ metrics are in `theme_t.badge`. Use badges for state ("Posted", "Paid",
   needs a `tooltip=`.
 - One `BUTTON_DEFAULT` per form; Enter in a field does not trigger it in
   document forms.
+- A page with more commands than the title row holds gets its own command
+  bar under it: a horizontal `StackView` of `<Button command=...>` in the
+  1C order (Create, Post, Cancel Posting | Print, Dr/Cr, Edit), the rarer
+  commands as icon buttons with tooltips. Pages with a few commands keep them
+  in the title row, captioned (`toolbar-style="list"` on the host).
 - Porcelain rounds buttons at 6 px and fields at 5 px (`theme_t.button`,
   `theme_t.field`).
 
