@@ -54,6 +54,7 @@ enum {
 #define RVS_EX_CHECKBOXES          0x00000004u
 #define RVS_EX_FRAME               0x00000008u  // themed rounded frame (theme_t.table); rows clip to it
 #define RVS_EX_FITROWS             0x00000010u  // measures to all its rows, for lists in popovers
+#define RVS_EX_ONECLICK            0x00000020u  // rows are links: a click activates (RVN_DBLCLK); the selection shows only with focus
 #define RVIS_STATEIMAGEMASK        0x0000f000u
 #define RV_INDEXTOSTATEIMAGEMASK(i) ((uint32_t)(i) << 12)
 #define RV_STATEIMAGEINDEX(state)   (((uint32_t)(state) & RVIS_STATEIMAGEMASK) >> 12)
@@ -67,6 +68,7 @@ enum {
 typedef enum {
   REPORTVIEW_CELL_COLUMNS = 0, // One line per item, rendered as report columns.
   REPORTVIEW_CELL_TWO_LINE = 1, // First column is title; second is subtitle.
+  REPORTVIEW_CELL_STACKED = 2,  // First column over the second, in secondary text; the others keep their columns.
 } reportview_cell_style_t;
 #define TABLEVIEW_CELL_COLUMNS  REPORTVIEW_CELL_COLUMNS
 #define TABLEVIEW_CELL_TWO_LINE REPORTVIEW_CELL_TWO_LINE
@@ -76,6 +78,7 @@ typedef struct {
   uint32_t width;
   uint32_t min_width;  // 0 = use default (20px), >0 = per-column minimum
   uint32_t align;      // 0 = left, TEXT_ALIGN_RIGHT (numbers), TEXT_ALIGN_CENTER
+  int color;           // sys colour role of the column's text, 0 = the row's colour
 } reportview_column_t;
 
 typedef struct {

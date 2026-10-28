@@ -161,7 +161,19 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     draw_text_clipped(FONT_SMALLEST, data->items[row].section, &caption, get_sys_color(brTextSecondary), 0);
   }
 
-  if (data->selected >= first_row && data->selected < last_row) {
+  // Rows ruled by hairlines, under the selection's face.
+  if (get_theme()->report.row_dividers) {
+    set_clip_rect(win, (irect16_t){0, header_h, eff_w, MAX(0, body_bottom - header_h)});
+    uint32_t rule = color_with_alpha(get_sys_color(brLightEdge), 0x90);
+    for (int row = first_row; row < last_row; row++) {
+      int y = window_scroll_rect_to_client(win, report_item_rect(win, data, row)).y;
+      fill_rect(rule, R(0, y + entry_h - 1, eff_w, 1));
+    }
+  }
+
+  // Rows that act as links show where the keyboard is, and nothing without focus.
+  bool show_selection = !(data->extended_style & RVS_EX_ONECLICK) || !(selection & CTRL_INACTIVE);
+  if (show_selection && data->selected >= first_row && data->selected < last_row) {
     int y = window_scroll_rect_to_client(win, report_item_rect(win, data, data->selected)).y;
     int top = MAX(y, header_h), bottom = MIN(y + entry_h, body_bottom);
     theme_draw(THEME_PART_LIST_ITEM, R(0, top, eff_w, bottom - top), selection);
@@ -197,6 +209,8 @@ static void report_paint(window_t *win, reportview_data_t *data) {
       reportview_item_t *it = &data->items[row];
       bool strong = row == data->selected && !(selection & CTRL_INACTIVE);
       uint32_t fg = strong ? theme_foreground(THEME_PART_LIST_ITEM, selection)
+                  : data->columns[col].color > 0 && data->columns[col].color < brCount
+                  ? get_sys_color((sys_color_idx_t)data->columns[col].color)
                   : it->color ? it->color : get_sys_color(brTextNormal);
       int y = window_scroll_rect_to_client(win, report_item_rect(win, data, row)).y;
       const char *src = "";
@@ -225,7 +239,16 @@ static void report_paint(window_t *win, reportview_data_t *data) {
         text_x += CHECKBOX_BOX_SIZE + CHECKBOX_GAP;
       }
       int text_w = MAX(0, draw_x + col_w - text_x);
-      if (data->cell_style == REPORTVIEW_CELL_TWO_LINE) {
+      if (data->cell_style == REPORTVIEW_CELL_STACKED && col == 0) {
+        // The title over its detail, the pair centred in the row.
+        const char *detail = it->subitem_count && it->subitems[0] ? it->subitems[0] : "";
+        int title_h = text_char_height(FONT_SMALL), detail_h = detail[0] ? text_char_height(FONT_SMALLEST) : 0;
+        int top = y + (entry_h - title_h - detail_h) / 2, pad = WIN_PADDING;
+        draw_text_ellipsized(FONT_SMALL, src, text_x, top, MAX(0, text_w - pad), fg);
+        if (detail[0])
+          draw_text_ellipsized(FONT_SMALLEST, detail, text_x, top + title_h, MAX(0, text_w - pad),
+                               strong ? fg : get_sys_color(brTextSecondary));
+      } else if (data->cell_style == REPORTVIEW_CELL_TWO_LINE) {
         irect16_t title_rect = {text_x, y + 1, text_w, FONT_SIZE_SMALL};
         irect16_t subtitle_rect = {text_x, y + FONT_SIZE_SMALL + 3,
                                    text_w, FONT_SIZE_SMALL};
@@ -271,7 +294,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     int sep_x = window_scroll_rect_to_client(win, R(col_x, 0, 0, 0)).x;
     ctrl_state_t divider_state = (int)col == data->resize_hot_col && data->resize_col < 0 ? CTRL_HOVER : CTRL_NORMAL;
 #if REPORTVIEW_RESIZE_FULL_HEIGHT
-    if (sep_x >= 0 && sep_x <= eff_w && !data->has_sections)   // a grouped list reads as one column of rows
+    if (sep_x >= 0 && sep_x <= eff_w && !data->has_sections && data->cell_style != REPORTVIEW_CELL_STACKED)   // grouped and stacked lists read as rows
       theme_draw(THEME_PART_COLUMN_DIVIDER, R(sep_x - divider_w / 2, 0, divider_w, cr.h), divider_state);
 #else
     if (sep_x >= 0 && sep_x <= eff_w && !data->has_sections)   // a grouped list reads as one column of rows
@@ -326,6 +349,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       data->selected = -1;
       data->resize_col = -1;
       data->resize_hot_col = -1;
+      data->press_row = -1;
       data->column_width = DEFAULT_COLUMN_WIDTH;
       data->icon_size = DEFAULT_ICON_SIZE;
       data->icon_text_gap = DEFAULT_ICON_TEXT_GAP;
@@ -430,11 +454,12 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
           report_toggle_check(win, data, checked_index);
         }
       }
+      data->press_row = (data->extended_style & RVS_EX_ONECLICK) && rv_valid_index(data, index) ? index : -1;
       return true;
     }
     case evLeftButtonDoubleClick: {
       int index = report_hit_index(win, data, wparam);
-      if (rv_valid_index(data, index)) {
+      if (rv_valid_index(data, index) && !(data->extended_style & RVS_EX_ONECLICK)) {
         rv_notify(win, data, index, RVN_DBLCLK);
       }
       return true;
@@ -444,6 +469,12 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         data->resize_col = -1;
         data->resize_hot_col = -1;
         set_capture(NULL);
+        return true;
+      }
+      if (data && data->press_row >= 0) {   // a link row: released where it was pressed
+        int pressed = data->press_row;
+        data->press_row = -1;
+        if (report_hit_index(win, data, wparam) == pressed) rv_notify(win, data, pressed, RVN_DBLCLK);
         return true;
       }
       return false;
@@ -535,8 +566,11 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     case RVM_GETEXTENDEDSTYLE:
       return (result_t)data->extended_style;
     case RVM_SETCELLSTYLE:
-      if (wparam != REPORTVIEW_CELL_COLUMNS && wparam != REPORTVIEW_CELL_TWO_LINE)
+      if (wparam != REPORTVIEW_CELL_COLUMNS && wparam != REPORTVIEW_CELL_TWO_LINE && wparam != REPORTVIEW_CELL_STACKED) {
+        fprintf(stderr, "[reportview] win=%u RVM_SETCELLSTYLE rejected style=%u\n", win->id, (unsigned)wparam);
+        fflush(stderr);
         return false;
+      }
       data->cell_style = (reportview_cell_style_t)wparam;
       if (data->cell_style == REPORTVIEW_CELL_TWO_LINE)
         data->column_titles_visible = false;
@@ -591,6 +625,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       data->columns[i].width = col->width;        // Initial effective width
       data->columns[i].min_width = col->min_width;
       data->columns[i].align = col->align;
+      data->columns[i].color = col->color;
       data->column_count++;
 
       // Keep effective widths in sync when columns are added after layout.

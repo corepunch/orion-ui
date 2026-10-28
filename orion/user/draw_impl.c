@@ -439,7 +439,7 @@ void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_colo
     fill_rounded_rect(ring_color, r, radius + ring);
   }
   r = rect_inset(r, ring);
-  uint32_t face = get_sys_color(brControlBg);
+  uint32_t face = get_sys_color(theme->card.face > 0 && theme->card.face < brCount ? (sys_color_idx_t)theme->card.face : brControlBg);
   if (state & CTRL_HOVER) {
     uint32_t hover = get_sys_color(brButtonHover);
     // Average the packed channels without carries between them.
@@ -454,6 +454,9 @@ void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_colo
   float scale = MAX(1.0f, axGetScaling());
   render_rounded_rect_edged(ui_white_texture, r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
                             radius * scale, 1.0f, face, edge_color, edge * scale);
+  if (theme->card.outline > 0 && theme->card.outline < brCount && !(state & CTRL_SELECTED))   // the same silhouette, stroked
+    render_rounded_rect_stroke(ui_white_texture, r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
+                               radius * scale, 1.0f, get_sys_color((sys_color_idx_t)theme->card.outline), scale);
 }
 
 static plastic_look_t plastic_look(ctrl_state_t state) {

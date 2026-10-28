@@ -206,7 +206,12 @@ typedef struct {
   } scrollbar;
   struct { int height; } caption;
   struct { int height; } menubar;
-  struct { int divider_width; } report; // column divider thickness in logical pixels
+  struct {
+    int divider_width;      // column divider thickness in logical pixels
+    int row_height;         // minimum row height; 0 = from the content font
+    int header_height;      // minimum column-title and totals band height; 0 = from the system font
+    bool row_dividers;      // a hairline under every row, as business tables rule them
+  } report;
   struct {
     int button_size, padding;
     int spacing, corner_radius; // inter-item gap and selection rounding
@@ -242,6 +247,8 @@ typedef struct {
     int highlight_width;    // plastic card bevel width (0 = none)
     int shadow_size;        // plastic card margin reserved inside the bounds
     int padding_x, padding_y;
+    int face;               // sys colour role of the face, 0 = brControlBg (a tile on a panel)
+    int outline;            // sys colour role of a hairline along the silhouette, 0 = none
   } card;
   struct {                   // plastic material, handed to the shader as uniforms
     int corner_radius, bevel_width, shadow_size; // radius may be CORNER_RADIUS_CIRCULAR
