@@ -611,6 +611,7 @@ static void switch_configuration(const char *code, const char *tmp_ib) {
   char path[512];
   snprintf(path, sizeof(path), SHARE "/%s/configuration.xml", code);
   g_ledger->cfg = open_db("cfg", &ledger_cfg_schema, path);
+  snprintf(g_ledger->cfg->source_path, sizeof(g_ledger->cfg->source_path), TMP_DIR "/cfg-%s.xml", code);
   snprintf(path, sizeof(path), SHARE "/%s/demo.xml", code);
   g_ledger->ib = open_db("ib", &ledger_ib_schema, path);
   snprintf(g_ledger->ib->source_path, sizeof(g_ledger->ib->source_path), TMP_DIR "/%s", tmp_ib);
@@ -909,12 +910,14 @@ static void test_scripted_rules(void) {
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   tax->script[0] = '\0';
   send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, tax);
-  // A tax naming a missing function is skipped with a diagnostic; the others still apply.
+  // A missing tax function rejects the whole posting, never silently omits a levy.
   db_payroll_tax_t *injury = find_by(g_ledger->cfg, TABLE_PAYROLL_TAXES, "code", "injury");
   snprintf(injury->script, sizeof(injury->script), "no_such_rule");
   send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, injury);
   petrov = accrue(11, "2026-05-31", 1, 150000, &id);
-  ASSERT(petrov && approx(petrov->contributions, 45000), "the broken row contributes nothing, the unified tariff still posts");
+  db_document_t *failed = (db_document_t *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)id);
+  ASSERT(petrov && failed && !failed->posted, "a broken tax leaves the accrual unposted");
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", id), 0);
   send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   injury->script[0] = '\0';
   send_db_message(g_ledger->cfg, dbUpdate, TABLE_PAYROLL_TAXES, injury);
@@ -922,6 +925,89 @@ static void test_scripted_rules(void) {
   db_document_t *cash = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ПКО-0001");
   ASSERT(cash && cash->posted, "plugins do not block postings");
   restore_configuration(cfg, ib);
+  PASS();
+}
+
+static void test_posting_rollback(void) {
+  TEST("posting failures restore existing entries, flags and amounts; previews and hooks fail atomically");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  switch_configuration("ru-2026", "rollback.xml");
+  char error[512];
+  ASSERT_TRUE(ledger_script_run("apps/ledger/tests/fixtures/posting-failures.lua", false, error, sizeof(error)));
+  db_document_t *doc = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "РТ-0001");
+  db_doc_type_t *type = (db_doc_type_t *)send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_DOC_TYPES, 0), (void *)(intptr_t)doc->doc_type_id);
+  ASSERT_NOT_NULL(doc);
+  int count = ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", doc->id);
+  double total = doc->total, settlements = entry_sum("51", "62.01");
+  snprintf(type->script, sizeof(type->script), "fail_after_entry");
+  ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, doc->id));
+  ASSERT(doc->posted && approx(doc->total, total), "failed repost preserves the previous posted document");
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", doc->id), count);
+  ASSERT(approx(entry_sum("51", "62.01"), settlements), "failed hook leaves no injected entry");
+  ASSERT_FALSE(ledger_preview_entries(g_ledger->ib, g_ledger->cfg, doc->id));
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", doc->id), count);
+  type->script[0] = '\0';
+  db_document_t *closing = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "ЗМ-0001");
+  db_closing_rule_t bad = { .id = 999 };
+  snprintf(bad.kind, sizeof(bad.kind), "script");
+  snprintf(bad.script, sizeof(bad.script), "fail_after_entry");
+  ASSERT_TRUE(send_db_message(g_ledger->cfg, dbInsert, TABLE_CLOSING_RULES, &bad));
+  int closing_count = ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", closing->id);
+  ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, closing->id));
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", closing->id), closing_count);
+  ASSERT(approx(entry_sum("51", "62.01"), settlements), "closing failure reverts earlier closing steps");
+  send_db_message(g_ledger->cfg, dbDelete, TABLE_CLOSING_RULES, (void *)(intptr_t)999);
+  db_payroll_tax_t *injury = find_by(g_ledger->cfg, TABLE_PAYROLL_TAXES, "code", "injury");
+  const char *invalid[] = { "invalid_tax_string", "invalid_tax_nil", "invalid_tax_nan", "invalid_tax_infinite" };
+  for (int i = 0; i < 4; i++) {
+    snprintf(injury->script, sizeof(injury->script), "%s", invalid[i]);
+    int id;
+    accrue(11, "2026-05-31", 1, 150000, &id);
+    const db_document_t *failed = (const db_document_t *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)id);
+    ASSERT(failed && !failed->posted, "invalid tax result rejects the entire posting");
+    ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", id), 0);
+    send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  }
+  injury->script[0] = '\0';
+  ASSERT_TRUE(ledger_script_run("apps/ledger/tests/fixtures/posting-event-failure.lua", false, error, sizeof(error)));
+  ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, doc->id));
+  ASSERT(doc->posted && approx(doc->total, total), "event failure rolls back the full posting");
+  ASSERT(approx(entry_sum("51", "62.01"), settlements), "event entry was reverted");
+  ASSERT_FALSE(ledger_repost_all(g_ledger->ib, g_ledger->cfg));
+  ASSERT(approx(entry_sum("51", "62.01"), settlements), "whole-ledger recalculation rolls back on error");
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", doc->id), count);
+  restore_configuration(cfg, ib);
+  PASS();
+}
+
+static void test_english_configurations(void) {
+  TEST("GB/IE/NZ/MT: standard service taxes, receivables, invoice totals and rejected unsupported cases");
+  const char *codes[] = { "gb-2026", "ie-2026", "nz-2026", "mt-2026" };
+  const double rates[] = { 20, 23, 15, 18 };
+  for (int i = 0; i < 4; i++) {
+    database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+    switch_configuration(codes[i], "english.xml");
+    ASSERT(approx(balance("1100")->balance_dr, 100 + rates[i]), "receivable includes tax once");
+    ASSERT(approx(balance("2100")->balance_cr, rates[i]), "output tax");
+    ASSERT(approx(balance("1200")->balance_dr, rates[i] * 0.4), "input tax");
+    db_document_t *sale = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "SAL-0001");
+    ASSERT(sale && sale->posted, "service invoice posts");
+    ledger_unpost(g_ledger->ib, g_ledger->cfg, sale->id);
+    report_through("2025-12-31");
+    char report[4096];
+    ASSERT_EQUAL(ledger_print_document(sale->id, report, sizeof(report)), 1);
+    char expected[128];
+    snprintf(expected, sizeof(expected), "<td>100.00</td><td>%.2f</td><td>%.2f</td>", rates[i], 100 + rates[i]);
+    ASSERT(file_contains(TMP_DIR "/print/SAL-0001-invoice.html", "Consulting services", expected), "draft invoice tax totals use its lines outside the report period");
+    ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, sale->id));
+    db_doc_line_t *line = (db_doc_line_t *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_DOC_LINES, 0), (void *)(intptr_t)2);
+    line->vat_rate_id = 2;
+    ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, sale->id));
+    line->vat_rate_id = 1;
+    snprintf(sale->date, sizeof(sale->date), "2027-01-01");
+    ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, sale->id));
+    restore_configuration(cfg, ib);
+  }
   PASS();
 }
 
@@ -1218,6 +1304,8 @@ int main(int argc, char **argv) {
   test_ru_2026();
   test_de_2026();
   test_scripted_rules();
+  test_posting_rollback();
+  test_english_configurations();
   test_configuration_integrity();
   destroy_database(g_ledger->ib);
   destroy_database(g_ledger->cfg);

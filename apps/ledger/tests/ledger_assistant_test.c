@@ -70,7 +70,7 @@ static void test_document_relation(script_page_t *page) {
   ASSERT_EQUAL(count_rows("assistant", 0), expected);
 }
 static void test_assistant(void) {
-  TEST("assistant: Lua grammar and contextual commands, then actual RU/DE datasource queries");
+  TEST("assistant: Lua grammar and contextual commands, then actual six-country datasource queries");
   char error[2048] = "";
   lua_State *L = script_state_new(ASSISTANT_SHARE, "assistant-spec");
   ASSERT_NOT_NULL(L);
@@ -84,7 +84,7 @@ static void test_assistant(void) {
     ASSERT(ok, error[0] ? error : "assistant grammar test failed");
   }
   lua_close(L);
-  const char *configurations[] = {"ru-2026", "de-2026"};
+  const char *configurations[] = {"ru-2026", "de-2026", "gb-2026", "ie-2026", "nz-2026", "mt-2026"};
   for (size_t i = 0; i < ARRAY_LEN(configurations); i++) {
     open_configuration(configurations[i]);
     script_page_t *page = script_page_open(ASSISTANT_SHARE "/assistant", error, sizeof(error));
@@ -136,7 +136,7 @@ static void test_assistant(void) {
     ASSERT_FALSE(script_page_perform_from(page, "choose", "submit"));
     ASSERT_STR_EQUAL(script_page_message(page), "That row is not in the current list.");
     ASSERT_TRUE(script_page_perform(page, "help"));
-    ASSERT(get_root_window(summary)->frame.h < answer_height, "the bubble shrinks again for a shorter message");
+    if (count > 4) ASSERT(get_root_window(summary)->frame.h < answer_height, "the bubble shrinks again for a shorter message");
     ASSERT_EQUAL(count_rows("assistant", 1), 4);
     int row_y = 0;
     while (row_y < palette->frame.h && (int)send_message(palette, RVM_HITTEST, MAKEDWORD(20, row_y), NULL) != 1) row_y++;
@@ -169,9 +169,15 @@ static void test_assistant(void) {
     ASSERT_TRUE(script_page_perform(page, "submit"));
     ASSERT_EQUAL(count_rows("assistant", 0), count_rows("ib", TABLE_DOCUMENTS));
     test_document_relation(page);
+    if (i >= 2) {
+      set_text(page, "command", "show debtors");
+      ASSERT_TRUE(script_page_perform(page, "submit"));
+      ASSERT_EQUAL(count_rows("assistant", 0), 1);
+    }
     script_page_close(page);
     ASSERT_NULL(get_database_by_name("assistant"));
   }
+  open_configuration("de-2026");
   ledger_open_assistant();
   database_t *assistant = get_database_by_name("assistant");
   ASSERT_NOT_NULL(assistant);

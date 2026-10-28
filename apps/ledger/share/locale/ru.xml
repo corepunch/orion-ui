@@ -464,4 +464,8 @@
   <string source="Documents changed after %s: %s are not zero on %s" where="code">Документы изменены после %s: %s не закрыты на %s</string>
   <string source="Repost" where="code">Перепровести</string>
   <string source="There is no check %d to settle." where="code">Нет проверки %d.</string>
+  <string source="Posting Failed">Ошибка проведения</string>
+  <string source="Recalculation Failed">Ошибка пересчёта</string>
+  <string source="Posting failed. Previous accounting entries were restored. Check the configuration and document.">Проведение не выполнено. Прежние проводки восстановлены. Проверьте конфигурацию и документ.</string>
+  <string source="Recalculation failed. Previous accounting entries were restored. Check the configuration and documents.">Пересчёт не выполнен. Прежние проводки восстановлены. Проверьте конфигурацию и документы.</string>
 </strings>

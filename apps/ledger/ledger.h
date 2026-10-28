@@ -75,7 +75,7 @@ bool ledger_post(database_t *ib, database_t *cfg, int doc_id);
 bool ledger_preview_entries(database_t *ib, database_t *cfg, int doc_id);
 void ledger_unpost(database_t *ib, database_t *cfg, int doc_id);
 bool ledger_number_document(database_t *ib, database_t *cfg, int doc_id);
-void ledger_repost_all(database_t *ib, database_t *cfg);
+bool ledger_repost_all(database_t *ib, database_t *cfg);
 // Fills a payroll document: salaries for an accrual, what is owed for a payout.
 bool ledger_fill_payroll(database_t *ib, database_t *cfg, int doc_id);
 // Rebuilds the transient report tables for the period in report settings.
@@ -107,7 +107,7 @@ bool ledger_script_post(const ledger_post_t *p, const char *function);
 bool ledger_script_closing(const ledger_post_t *p, const db_closing_rule_t *rule);
 bool ledger_script_tax(const ledger_post_t *p, const db_payroll_tax_t *tax, const db_payroll_line_t *line, double ytd, int accruals,
                        double withheld, const ledger_tax_amount_t *so_far, int so_far_count, double *amount);
-void ledger_script_event(const char *event, const ledger_post_t *p);
+bool ledger_script_event(const char *event, const ledger_post_t *p);
 
 // ledger_ib.c — the infobase datasource class (db_schema_xml with Ledger's rules).
 lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam);

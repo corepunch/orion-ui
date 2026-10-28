@@ -224,7 +224,8 @@ static size_t document_form(const db_doc_type_t *type) {
 
 // OK in a document dialog saves and posts it.
 static void after_save(int doc_id) {
-  if (doc_id) ledger_post(g_ledger->ib, g_ledger->cfg, doc_id);
+  if (doc_id && !ledger_post(g_ledger->ib, g_ledger->cfg, doc_id))
+    message_box(g_ledger->main_win, ui_tr("Posting failed. Previous accounting entries were restored. Check the configuration and document."), ui_tr("Posting Failed"), MB_OK);
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   ledger_refresh_views();
   ledger_assistant_books_changed();
@@ -529,7 +530,7 @@ void ledger_command(uint16_t id) {
       break;
     }
     case ID_DOC_POST:
-      if (doc && ledger_post(g_ledger->ib, g_ledger->cfg, doc->id)) after_save(0);
+      if (doc) after_save(doc->id);
       break;
     case ID_DOC_POST_CLOSE: {  // Ctrl+Enter in the active goods document
       window_t *document = mdi_active_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT));
@@ -587,7 +588,8 @@ void ledger_command(uint16_t id) {
       if (show_db_dialog(&ledger_report_settings_form, NULL, parent, 1)) after_save(0);
       break;
     case ID_REPORT_RECALC:
-      ledger_repost_all(g_ledger->ib, g_ledger->cfg);
+      if (!ledger_repost_all(g_ledger->ib, g_ledger->cfg))
+        message_box(parent, ui_tr("Recalculation failed. Previous accounting entries were restored. Check the configuration and documents."), ui_tr("Recalculation Failed"), MB_OK);
       ledger_refresh_views();
       break;
     case ID_REPORT_CARD: show_account_card(); break;

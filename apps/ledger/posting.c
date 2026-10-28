@@ -213,14 +213,15 @@ static int line_taxes(const post_t *p, const db_payroll_line_t *line, tax_line_t
   double ytd = ytd_pay(p, line->employee_id, &accruals), withheld = 0;
   result_node_t *taxes = fetch(p->cfg, TABLE_PAYROLL_TAXES, NULL, 0), *zones = fetch(p->cfg, TABLE_TAX_SCALES, NULL, 0);
   EACH_RECORD(db_payroll_tax_t, tax, taxes) {
-    if (!tax_in_force(tax, p->doc->date) || count == max) continue;
+    if (!tax_in_force(tax, p->doc->date)) continue;
+    if (count == max) { count = -1; break; }
     if (tax->script[0]) {  // the configuration's rules.lua computes this one
       double scripted = 0;
       if (ledger_script_tax(p, tax, line, ytd, accruals, withheld, out, count, &scripted)) {
         scripted = round_tax(tax, scripted);
         if (tax->withheld) withheld += scripted;
         out[count++] = (tax_line_t){ tax, scripted };
-      }
+      } else { count = -1; break; }
       continue;
     }
     double allowance = tax->allowance && emp ? emp->allowance : 0;
@@ -256,13 +257,15 @@ static int line_taxes(const post_t *p, const db_payroll_line_t *line, tax_line_t
 
 // Payroll taxes of one accrual line: withheld from the employee, and the
 // employer's contributions on top.
-static void payroll_taxes(const post_t *p, const db_payroll_line_t *line, double *withheld, double *contributions) {
+static bool payroll_taxes(const post_t *p, const db_payroll_line_t *line, double *withheld, double *contributions) {
   tax_line_t taxes[PAYROLL_TAX_MAX];
   int n = line_taxes(p, line, taxes, PAYROLL_TAX_MAX);
+  if (n < 0) return false;
   *withheld = *contributions = 0;
   for (int i = 0; i < n; i++) {
     if (taxes[i].tax->withheld) *withheld += taxes[i].amount; else *contributions += taxes[i].amount;
   }
+  return true;
 }
 
 static void sum_entries(database_t *ib, db_document_t *doc) {
@@ -317,7 +320,7 @@ static void recalc_payroll(database_t *ib, database_t *cfg, db_document_t *doc, 
   result_node_t *lines = fetch(ib, TABLE_PAYROLL_LINES, "document_id", doc->id);
   EACH_RECORD(db_payroll_line_t, line, lines) {
     if (payout) line->withheld = line->contributions = 0;
-    else payroll_taxes(&p, line, &line->withheld, &line->contributions);
+    else if (!payroll_taxes(&p, line, &line->withheld, &line->contributions)) { free_result_list(lines); return; }
     line->net = round2(line->amount - line->withheld);
     send_db_message(ib, dbUpdate, TABLE_PAYROLL_LINES, line);
     total += line->amount;
@@ -405,7 +408,7 @@ static void post_goods(const post_t *p) {
   free_result_list(lines);
 }
 
-static void post_payroll(const post_t *p) {
+static bool post_payroll(const post_t *p) {
   bool payout = !strcmp(p->type->base, "net");
   result_node_t *lines = fetch(p->ib, TABLE_PAYROLL_LINES, "document_id", p->doc->id);
   EACH_RECORD(db_payroll_line_t, line, lines) {
@@ -416,6 +419,7 @@ static void post_payroll(const post_t *p) {
     ledger_add_entry(p, expense, p->type->credit_id, line->amount, &s, 0, 0, 0, NULL);
     tax_line_t taxes[PAYROLL_TAX_MAX];
     int n = line_taxes(p, line, taxes, PAYROLL_TAX_MAX);
+    if (n < 0) { free_result_list(lines); return false; }
     for (int i = 0; i < n; i++) {
       char content[160];
       snprintf(content, sizeof(content), "%.60s: %.96s", taxes[i].tax->name, emp ? emp->name : "");
@@ -423,6 +427,7 @@ static void post_payroll(const post_t *p) {
     }
   }
   free_result_list(lines);
+  return true;
 }
 
 static void post_assets(const post_t *p) {
@@ -507,17 +512,23 @@ static void close_revaluation(const post_t *p, const db_closing_rule_t *rule) {
   free(set.v);
 }
 
-static void post_closing(const post_t *p) {
+static bool post_closing(const post_t *p) {
   result_node_t *rules = fetch(p->cfg, TABLE_CLOSING_RULES, NULL, 0);
   EACH_RECORD(db_closing_rule_t, rule, rules) {
     if      (!strcmp(rule->kind, "depreciation")) close_depreciation(p, rule);
     else if (!strcmp(rule->kind, "transfer"))     close_transfer(p, rule);
     else if (!strcmp(rule->kind, "revaluation"))  close_revaluation(p, rule);
-    else if (!strcmp(rule->kind, "script"))       ledger_script_closing(p, rule);
-    else fprintf(stderr, "[ledger] closing rule %d has unknown kind '%s'\n", rule->id, rule->kind);
+    else if (!strcmp(rule->kind, "script")) {
+      if (!ledger_script_closing(p, rule)) { free_result_list(rules); return false; }
+    } else {
+      fprintf(stderr, "[ledger] closing rule %d has unknown kind '%s'\n", rule->id, rule->kind);
+      free_result_list(rules);
+      return false;
+    }
   }
   free_result_list(rules);
   sum_entries(p->ib, p->doc);
+  return true;
 }
 
 // Writes the entries the document's type posts; the posted flag is the caller's.
@@ -533,9 +544,9 @@ static bool write_entries(const post_t *p) {
       if (!ledger_script_post(p, type->script)) return false;
     }
     else if (form_is(type, "document")) post_goods(p);
-    else if (form_is(type, "payroll"))  post_payroll(p);
+    else if (form_is(type, "payroll"))  { if (!post_payroll(p)) return false; }
     else if (form_is(type, "assets"))   post_assets(p);
-    else if (form_is(type, "closing"))  post_closing(p);
+    else if (form_is(type, "closing"))  { if (!post_closing(p)) return false; }
     else {
       fprintf(stderr, "[ledger] post rejected: document=%d type=%d has unknown form '%s'\n", doc_id, type->id, type->form);
       return false;
@@ -556,20 +567,45 @@ static bool posting_of(database_t *ib, database_t *cfg, int doc_id, post_t *p, c
   return true;
 }
 
-bool ledger_post(database_t *ib, database_t *cfg, int doc_id) {
+// Posting hooks and entry replacement share one nested database change scope.
+static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool preview) {
   post_t p;
-  if (!posting_of(ib, cfg, doc_id, &p, "post") || !write_entries(&p)) return false;
-  ledger_script_event("post", &p);  // plugins see every posted document
-  p.doc->posted = true;
-  return send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, p.doc) != 0;
+  if (!posting_of(ib, cfg, doc_id, &p, preview ? "preview" : "post")) return false;
+  if (p.doc->currency_id && (!isfinite(p.doc->rate) || p.doc->rate <= 0)) {
+    fprintf(stderr, "[ledger] post rejected: document=%d has no valid exchange rate\n", doc_id);
+    return false;
+  }
+  result_node_t *lines = fetch(ib, TABLE_DOC_LINES, "document_id", doc_id);
+  bool valid = true;
+  EACH_RECORD(db_doc_line_t, line, lines) {
+    const db_vat_rate_t *rate = find(cfg, TABLE_VAT_RATES, line->vat_rate_id);
+    if ((line->vat_rate_id && !rate) || (rate &&
+        ((rate->valid_from[0] && strcmp(p.doc->date, rate->valid_from) < 0) ||
+         (rate->valid_to[0] && strcmp(p.doc->date, rate->valid_to) > 0)))) valid = false;
+    if (!isfinite(line->quantity) || !isfinite(line->price) || !isfinite(line->amount) || !isfinite(line->vat)) valid = false;
+  }
+  free_result_list(lines);
+  if (!valid) { fprintf(stderr, "[ledger] post rejected: document=%d has invalid amounts or tax validity\n", doc_id); return false; }
+  if (!send_db_message(ib, dbBeginChanges, 0, NULL)) return false;
+  bool ok = !p.type->validate_script[0] || ledger_script_post(&p, p.type->validate_script);
+  if (ok) ok = write_entries(&p);
+  if (ok && !preview) ok = ledger_script_event("post", &p);
+  if (ok && !preview) {
+    p.doc->posted = true;
+    ok = send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, p.doc) != 0;
+  }
+  if (ok && send_db_message(ib, dbCommitChanges, 0, NULL)) return true;
+  send_db_message(ib, dbRevertChanges, 0, NULL);
+  fprintf(stderr, "[ledger] %s rolled back: document=%d\n", preview ? "preview" : "post", doc_id);
+  return false;
 }
 
-// The document form shows what posting would write. It runs in the form's
-// editing context, so the books change only when the document is saved.
+bool ledger_post(database_t *ib, database_t *cfg, int doc_id) {
+  return post_document(ib, cfg, doc_id, false);
+}
+
 bool ledger_preview_entries(database_t *ib, database_t *cfg, int doc_id) {
-  post_t p;
-  if (!posting_of(ib, cfg, doc_id, &p, "preview")) return false;
-  return form_is(p.type, "operation") || write_entries(&p);
+  return post_document(ib, cfg, doc_id, true);
 }
 
 // Unposting a manual operation keeps its entries; reports skip them.
@@ -597,22 +633,28 @@ static int by_posting_order(const void *a, const void *b) {
   return doc_order(g_sort_cfg, *(db_document_t * const *)a, *(db_document_t * const *)b);
 }
 
-void ledger_repost_all(database_t *ib, database_t *cfg) {
+bool ledger_repost_all(database_t *ib, database_t *cfg) {
+  if (!send_db_message(ib, dbBeginChanges, 0, NULL)) return false;
   result_node_t *docs = fetch(ib, TABLE_DOCUMENTS, NULL, 0);
   int n = count_result_list(docs), count = 0;
   db_document_t **order = n ? malloc((size_t)n * sizeof(*order)) : NULL;
   EACH_RECORD(db_document_t, d, docs) if (order) order[count++] = d;
   free_result_list(docs);
+  if (n && !order) { send_db_message(ib, dbRevertChanges, 0, NULL); return false; }
   g_sort_cfg = cfg;
   if (order) qsort(order, (size_t)count, sizeof(*order), by_posting_order);
-  for (int i = 0; i < count; i++) {
+  bool ok = true;
+  for (int i = 0; i < count && ok; i++) {
     int id = order[i]->id;
     ledger_recalc_document(ib, cfg, id);
-    if (order[i]->posted) ledger_post(ib, cfg, id);
+    if (order[i]->posted) ok = ledger_post(ib, cfg, id);
     else ledger_unpost(ib, cfg, id);
   }
   free(order);
+  if (ok) ok = send_db_message(ib, dbCommitChanges, 0, NULL) != 0;
+  if (!ok) send_db_message(ib, dbRevertChanges, 0, NULL);
   ledger_build_reports(ib, cfg);
+  return ok;
 }
 
 // ── Reports ────────────────────────────────────────────────────────────────

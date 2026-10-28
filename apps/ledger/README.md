@@ -4,9 +4,11 @@
 
 Double-entry bookkeeping in the spirit of the early-2000s desktop accounting
 suites (1C:Accounting 7.7, its German contemporaries), kept current for the
-rules of 2026. Four country configurations ship: **Russia 2026** and
-**Germany 2026 (SKR 03)** for keeping books today, and Russia 2003 and
-Germany 2003 as historical references. Each is usable in Russian, German and
+rules of 2026. Eight country configurations ship: **Russia 2026**, **Germany 2026 (SKR 03)**,
+four development profiles (**United Kingdom, Ireland, New Zealand, Malta 2026**),
+and Russia/Germany 2003 as historical references. These are not complete
+statutory accounting solutions; see [the readiness audit](docs/compliance-readiness.md)
+and each new profile's `COVERAGE.md` before using real company data. Each is usable in Russian, German and
 English. [COMPLIANCE.md](COMPLIANCE.md) records the legal basis of the 2026
 configurations and the yearly process of refreshing them.
 
@@ -113,8 +115,7 @@ separates its engine from a country's typical configuration.
 
 The platform never names an account, a tax rate or a national form. A document
 type in the configuration says which accounts it debits and credits, whether
-amounts include tax, and which print forms it has. Supporting another country
-means adding a configuration directory, not changing code.
+amounts include tax, and which print forms it has. Country rules belong in configuration directories. Extend the generic schema or engine when a jurisdiction needs a missing accounting primitive; do not add country branches in C.
 
 `File > Select Configuration...` lists `share/configurations/index.xml`; each
 configuration opens its own infobase on the next start. A new infobase starts
@@ -263,6 +264,7 @@ in the law is a change to the configuration directory, never to C:
 
 | Hook | Declared by | The function receives |
 |---|---|---|
+| Pre-post validation | `doc_types … validate_script="validate_document"` | the posting context; return normally to allow, throw an error to reject posting/preview atomically |
 | Posting of a document type (1C: ОбработкаПроведения) | `doc_types … script="post_writeoff"` | `ctx.document`, `ctx.type`, `ctx.rate`; writes entries with `ledger.entry{}` |
 | A payroll tax or contribution | `payroll_taxes … script="soli"` | the above plus `ctx.tax`, `ctx.line`, `ctx.employee`, `ctx.ytd` (the year's pay before this document), `ctx.accruals`, `ctx.withheld`, `ctx.taxes[code]` (rows computed before); returns the amount |
 | A month-end closing step | `closing_rules kind="script" script="…"` | the posting context plus `ctx.rule` |
@@ -277,7 +279,7 @@ plus its own entries so far), `rate(currency_id, date)`, `round2(x)` and
 `log(text)`. Records arrive as plain tables of their fields; scripts read the
 databases and write entries, nothing else, so a faulty script cannot corrupt
 the infobase. A failing hook is logged with `[ledger] script …` and the
-document is not posted (a failing tax row is skipped).
+posting is rolled back, including failures in taxes, closing hooks and post-event hooks. A scripted tax must return a finite number; missing or invalid results reject the entire posting.
 
 Loading order, one Lua state per configuration: `<configuration>/rules.lua`,
 then shared `stdplugs/*.lua`, then `<configuration>/plugins/*.lua`, then `<infobase dir>/plugins/*.lua` (the

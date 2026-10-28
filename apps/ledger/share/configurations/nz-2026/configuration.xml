@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<cfg>
+  <settings>
+    <setting id="1" code="nz-2026" name="New Zealand 2026 (development)" country="New Zealand" currency="NZD" currency_code="NZD" language="en" tax_name="GST" tax_id_name="GST registration number" version="0.1.2026" cash_account_id="1" opening_account_id="9" basis="Development profile for domestic service invoices on invoice basis. Not a complete statutory accounting or filing solution. See COVERAGE.md. Reviewed 2026-10-28." />
+  </settings>
+  <subconto_kinds>
+    <subconto_kind id="1" code="counterparty" name="Counterparty" table="counterparties" />
+  </subconto_kinds>
+  <accounts>
+    <account id="1" code="1000" name="Bank" kind="Asset" section="Ledger chart (not a statutory chart)" subconto_kind_id="0" currency="0" />
+    <account id="2" code="1100" name="Trade receivables" kind="Asset" section="Ledger chart (not a statutory chart)" subconto_kind_id="1" currency="0" />
+    <account id="3" code="1200" name="Recoverable GST" kind="Asset" section="Ledger chart (not a statutory chart)" subconto_kind_id="0" currency="0" />
+    <account id="4" code="2000" name="Trade payables" kind="Liability" section="Ledger chart (not a statutory chart)" subconto_kind_id="1" currency="0" />
+    <account id="5" code="2100" name="GST payable" kind="Liability" section="Ledger chart (not a statutory chart)" subconto_kind_id="0" currency="0" />
+    <account id="6" code="3000" name="Capital" kind="Equity" section="Ledger chart (not a statutory chart)" subconto_kind_id="0" currency="0" />
+    <account id="7" code="4000" name="Service revenue" kind="Income" section="Ledger chart (not a statutory chart)" subconto_kind_id="0" currency="0" />
+    <account id="8" code="5000" name="Service expenses" kind="Expense" section="Ledger chart (not a statutory chart)" subconto_kind_id="0" currency="0" />
+    <account id="9" code="9000" name="Opening balances" kind="Equity" section="Ledger chart (not a statutory chart)" subconto_kind_id="0" currency="0" />
+  </accounts>
+  <units>
+    <unit id="1" code="HUR" name="hour" />
+  </units>
+  <vat_rates>
+    <vat_rate id="1" code="standard" name="GST 15%" rate="15" treatment="standard" valid_from="2026-01-01" valid_to="2026-12-31" revenue_id="7" expense_id="8" output_tax_id="5" input_tax_id="3" />
+    <vat_rate id="2" code="zero" name="GST 0%" rate="0" treatment="zero" valid_from="2026-01-01" valid_to="2026-12-31" revenue_id="7" expense_id="8" output_tax_id="5" input_tax_id="3" />
+  </vat_rates>
+  <doc_types>
+    <doc_type id="1" code="purchase" name="Service purchase" prefix="PUR-" form="document" base="net" debit_id="8" credit_id="4" vat_debit_id="3" vat_credit_id="4" vat_book="2" auto_accounts="1" validate_script="validate_domestic_service" />
+    <doc_type id="2" code="sale" name="Service invoice" prefix="SAL-" form="document" base="net" debit_id="2" credit_id="7" vat_debit_id="2" vat_credit_id="5" vat_book="1" auto_accounts="1" validate_script="validate_domestic_service" />
+    <doc_type id="3" code="receipt" name="Customer payment" prefix="REC-" form="document" base="total" debit_id="1" credit_id="2" vat_debit_id="0" vat_credit_id="0" vat_book="0" auto_accounts="0" validate_script="validate_domestic_service" />
+    <doc_type id="4" code="payment" name="Supplier payment" prefix="PAY-" form="document" base="total" debit_id="4" credit_id="1" vat_debit_id="0" vat_credit_id="0" vat_book="0" auto_accounts="0" validate_script="validate_domestic_service" />
+    <doc_type id="5" code="operation" name="Manual journal" prefix="JRN-" form="operation" />
+  </doc_types>
+  <print_forms>
+    <print_form id="1" doc_type_id="2" name="Service invoice (development)" template="invoice.html" basis="Domestic service invoice; see COVERAGE.md" />
+    <print_form id="2" doc_type_id="0" report="vat_summary" name="GST working paper (not a return)" template="tax-working-paper.html" basis="Internal reconciliation only; no statutory return mapping" />
+  </print_forms>
+  <regulations>
+    <regulation id="1" area="vat" title="GST rates and guidance" reference="New Zealand tax authority; reviewed 2026-10-28" valid_from="2026-01-01" url="https://www.ird.govt.nz/gst" />
+  </regulations>
+</cfg>

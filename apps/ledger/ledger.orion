@@ -164,6 +164,10 @@
            Empty accounts fall back to the document type's. -->
       <table name="vat_rates">
         <field name="id" type="integer" key="YES" />
+        <field name="code" type="string" length="32" />
+        <field name="treatment" type="string" length="24" />
+        <field name="valid_from" type="date" />
+        <field name="valid_to" type="date" />
         <field name="revenue_id" type="integer" relation="accounts.id" />
         <field name="expense_id" type="integer" relation="accounts.id" />
         <field name="output_tax_id" type="integer" relation="accounts.id" />
@@ -186,6 +190,7 @@
            expense account and the tax account with its own (vat_rates). -->
       <table name="doc_types">
         <field name="id" type="integer" key="YES" />
+        <field name="validate_script" type="string" length="32" />
         <field name="debit_id" type="integer" relation="accounts.id" />
         <field name="credit_id" type="integer" relation="accounts.id" />
         <field name="vat_debit_id" type="integer" relation="accounts.id" />

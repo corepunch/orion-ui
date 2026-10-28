@@ -43,11 +43,11 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 <tr><td class="r">Umsatzsteuer:</td><td class="r">{{vat}} {{cfg.currency}}</td></tr>
 <tr><td class="r b">Rechnungsbetrag:</td><td class="r b">{{total}} {{cfg.currency}}</td></tr>
 </table>
-<p class="small">Entgelt und Steuerbetrag nach Steuersätzen (§ 14 Abs. 4 Nr. 7 und 8 UStG) — aus dem Umsatzsteuerbuch des Auswertungszeitraums:</p>
+<p class="small">Entgelt und Steuerbetrag nach Steuersätzen (§ 14 Abs. 4 Nr. 7 und 8 UStG):</p>
 <table class="grid">
 <thead><tr><th>Steuersatz</th><th>Entgelt (netto)</th><th>Umsatzsteuer</th><th>Brutto</th></tr></thead>
-<tbody>{{#vat_book book=1}}<tr><td class="c">{{vat_rate.name}}</td><td class="r">{{amount}}</td><td class="r">{{vat}}</td><td class="r">{{total}}</td></tr>
-{{/vat_book}}</tbody></table>
+<tbody>{{#tax_totals}}<tr><td class="c">{{vat_rate.name}}</td><td class="r">{{amount}}</td><td class="r">{{vat}}</td><td class="r">{{total}}</td></tr>
+{{/tax_totals}}</tbody></table>
 <p>Zahlbar innerhalb von 14 Tagen ohne Abzug auf das unten genannte Konto. Bei Zahlungsverzug gelten die gesetzlichen Verzugszinsen (§ 288 BGB).</p>
 <p class="small" style="border-top:1px solid #000;padding-top:4px">{{org.name}} · {{org.address}} · {{org.corr_account}} · Geschäftsführer: {{org.director}}<br>
 Bankverbindung: {{org.bank}} · IBAN {{org.bank_account}} · BIC {{org.bik}} · Steuernummer {{org.tax_id}} · USt-IdNr. {{org.kpp}}</p>

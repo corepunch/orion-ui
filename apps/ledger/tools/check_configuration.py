@@ -67,6 +67,12 @@ def check(directory, today=None):
             problems.append(f"print_form id={form.get('id')}: report table {report} unknown")
         if form.get("doc_type_id", "0") not in ("", "0") and form.get("doc_type_id") not in {d.get("id") for d in root.iter("doc_type")}:
             problems.append(f"print_form id={form.get('id')}: doc_type_id names no document type")
+    for rate in root.iter("vat_rate"):
+        start, end = rate.get("valid_from", ""), rate.get("valid_to", "")
+        if start and end and start > end:
+            problems.append(f"vat_rate id={rate.get('id')}: inverted validity range")
+        if rate.get("treatment", "") not in ("", "standard", "reduced", "zero", "exempt", "outside_scope", "reverse_charge"):
+            problems.append(f"vat_rate id={rate.get('id')}: unknown treatment")
     zones = {}
     for z in root.iter("tax_scale"):
         zones.setdefault(z.get("tax_id"), []).append(float(z.get("base_from", "0")))
@@ -101,6 +107,9 @@ def check(directory, today=None):
     functions = lua_functions(directory)
     for tag in ("doc_type", "payroll_tax", "closing_rule"):
         for row in root.iter(tag):
+            validator = row.get("validate_script", "")
+            if validator and validator not in functions:
+                problems.append(f"{tag} id={row.get('id')}: validate_script={validator} is not defined")
             name = row.get("script", "")
             if name and name not in functions:
                 problems.append(f"{tag} id={row.get('id')}: script={name} is not a function of rules.lua or plugins/*.lua")
@@ -140,7 +149,7 @@ def check_template(path):
     if sorted(opened) != sorted(closed):
         problems.append(f"{os.path.basename(path)}: blocks opened {opened} but closed {closed}")
     for name in opened:
-        if name not in REPORT_TABLES and name not in {"lines", "doc_lines", "payroll_lines", "asset_lines", "entries"}:
+        if name not in REPORT_TABLES and name not in {"lines", "doc_lines", "payroll_lines", "asset_lines", "entries", "tax_totals"}:
             problems.append(f"{os.path.basename(path)}: unknown block table {name}")
     return problems
 

@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ib>
+  <organizations>
+    <organization id="1" name="Example Services (SYNTHETIC)" tax_id="TEST-ONLY" address="Synthetic demo address" />
+  </organizations>
+  <counterparties>
+    <counterparty id="1" name="Example Customer (SYNTHETIC)" address="Synthetic customer address" />
+    <counterparty id="2" name="Example Supplier (SYNTHETIC)" address="Synthetic supplier address" />
+  </counterparties>
+  <items>
+    <item id="1" name="Consulting services" sku="SERVICE" unit_id="1" vat_rate_id="1" price="100" />
+  </items>
+  <documents>
+    <document id="1" doc_type_id="1" counterparty_id="2" number="PUR-0001" date="2026-10-01" comment="SYNTHETIC domestic service demo; invoice date equals tax point" posted="1" />
+    <document id="2" doc_type_id="2" counterparty_id="1" number="SAL-0001" date="2026-10-01" comment="SYNTHETIC domestic service demo; invoice date equals tax point" posted="1" />
+  </documents>
+  <doc_lines>
+    <doc_line id="1" document_id="1" item_id="1" quantity="1" price="40" vat_rate_id="1" />
+    <doc_line id="2" document_id="2" item_id="1" quantity="1" price="100" vat_rate_id="1" />
+  </doc_lines>
+</ib>

@@ -249,6 +249,10 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | Field | XML type | Relation |
 |---|---|---|
 | `id` | `integer` |  |
+| `code` | `string` |  |
+| `treatment` | `string` |  |
+| `valid_from` | `date` |  |
+| `valid_to` | `date` |  |
 | `revenue_id` | `integer` | accounts.id |
 | `expense_id` | `integer` | accounts.id |
 | `output_tax_id` | `integer` | accounts.id |
@@ -261,6 +265,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | Field | XML type | Relation |
 |---|---|---|
 | `id` | `integer` |  |
+| `validate_script` | `string` |  |
 | `debit_id` | `integer` | accounts.id |
 | `credit_id` | `integer` | accounts.id |
 | `vat_debit_id` | `integer` | accounts.id |
