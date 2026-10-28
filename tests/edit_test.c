@@ -450,7 +450,8 @@ static void test_edit_utf8(void) {
     memcpy(&event.lParam, "Я", strlen("Я"));
     dispatch_message(&event);
     ASSERT_STR_EQUAL(ed->title, "Я");
-    const char *controls[] = {"\t", "\x1b", "\x7f", "\xc2\x85"};
+    const char *controls[] = {"\t", "\x1b", "\x7f", "\xc2\x85",
+                              "\xef\x9c\x80", "\xef\x9c\x84", "\xef\xa3\xbf"};
     for (size_t i = 0; i < sizeof(controls) / sizeof(controls[0]); i++) {
         ui_event_t key = {.message = kEventKeyDown, .keyCode = 'B'};
         memcpy(&key.lParam, controls[i], strlen(controls[i]));

@@ -70,6 +70,13 @@ jobs:
       - name: Build and run tests
         if: inputs.version != ''
         run: make test
+      - name: Check macOS keyboard input and MDI regressions
+        if: runner.os == 'macOS' && inputs.version == ''
+        run: |
+          make build/bin/test_edit_test build/bin/test_owned_window_test build/bin/test_event_loop_test
+          build/bin/test_edit_test
+          build/bin/test_owned_window_test
+          build/bin/test_event_loop_test
       - name: Bundle downloadable apps
         run: sh scripts/bundle-apps.sh "${{ matrix.platform }}" dist
       - name: Check the Linux download runs outside the checkout
