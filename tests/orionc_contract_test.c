@@ -358,12 +358,24 @@ static void test_pane_toolbar_declaration(void) {
   PASS();
 }
 
+static void test_large_control_manifest(void) {
+  TEST("forms with more than 512 controls retain every identifier");
+  static char fixture[65536], output[400000];
+  size_t used = (size_t)snprintf(fixture, sizeof(fixture), "<orion name=\"large\"><forms><form name=\"large\" title=\"Large\" width=\"400\" height=\"600\">");
+  for (int i = 0; i < 600; i++) used += (size_t)snprintf(fixture + used, sizeof(fixture) - used, "<Label name=\"node_%d\" text=\"Row %d\"/>", i, i);
+  snprintf(fixture + used, sizeof(fixture) - used, "</form></forms></orion>");
+  ASSERT_EQUAL(run_orionc(fixture, "large_controls", output, sizeof(output)), 0);
+  ASSERT_TRUE(contains(output, "#define ID_LARGE_NODE_599 "));
+  PASS();
+}
+
 #endif
 
 int main(void) {
     TEST_START("orionc generator contract");
 #if !defined(_WIN32)
     test_valid_manifest_accepted();
+    test_large_control_manifest();
     test_activity_page_bindings();
     test_page_metadata();
     test_pane_toolbar_declaration();

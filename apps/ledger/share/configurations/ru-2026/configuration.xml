@@ -105,13 +105,13 @@
     <unit id="8" code="362" name="мес"/>
   </units>
   <vat_rates>
-    <vat_rate id="1" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="22%" rate="22"/>
-    <vat_rate id="2" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="10%" rate="10"/>
-    <vat_rate id="3" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="0%" rate="0"/>
-    <vat_rate id="4" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="Без НДС" rate="0"/>
-    <vat_rate id="5" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="20% (до 2026)" rate="20"/>
-    <vat_rate id="6" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="5% (УСН)" rate="5"/>
-    <vat_rate id="7" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="7% (УСН)" rate="7"/>
+    <vat_rate id="1" code="standard_2026" treatment="standard" valid_from="2026-01-01" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="22%" rate="22"/>
+    <vat_rate id="2" code="reduced_10" treatment="reduced" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="10%" rate="10"/>
+    <vat_rate id="3" code="zero" treatment="zero" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="0%" rate="0"/>
+    <vat_rate id="4" code="exempt" treatment="exempt" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="Без НДС" rate="0"/>
+    <vat_rate id="5" code="standard_2025" treatment="standard" valid_to="2025-12-31" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="20% (до 2026)" rate="20"/>
+    <vat_rate id="6" code="usn_5" treatment="reduced" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="5% (УСН)" rate="5"/>
+    <vat_rate id="7" code="usn_7" treatment="reduced" revenue_id="0" expense_id="0" output_tax_id="0" input_tax_id="0" name="7% (УСН)" rate="7"/>
   </vat_rates>
   <doc_types>
     <doc_type id="1" debit_id="22" credit_id="34" vat_debit_id="16" vat_credit_id="34" cost_debit_id="0" cost_credit_id="0" code="receipt" name="Поступление товаров" prefix="ПТ-" form="document" base="net" vat_book="2" auto_accounts="0" script="" description="Товары от поставщика по УПД или накладной и счету-фактуре: Дт 41.01 Кт 60.01 на стоимость без НДС, Дт 19.03 Кт 60.01 на НДС."/>
@@ -169,8 +169,8 @@
     <balance_rule id="10" account_id="42" currency_account_id="0" document="ОстаткиРасчетовПоКредитамЗаймам" credit="1"/>
   </balance_rules>
   <print_forms>
-    <print_form id="1" doc_type_id="2" report="" name="Счет-фактура" template="vat-invoice.html" basis="Постановление Правительства РФ от 26.12.2011 № 1137 (ред. 2024 г.)"/>
-    <print_form id="2" doc_type_id="2" report="" name="Универсальный передаточный документ (УПД)" template="universal-transfer-document.html" basis="Письмо ФНС России от 21.10.2013 № ММВ-20-3/96@; постановление Правительства РФ № 1137"/>
+    <print_form id="1" doc_type_id="2" report="" name="Счет-фактура" template="vat-invoice.html" validate_script="validate_invoice" valid_from="2026-01-01" valid_to="2026-12-31" basis="Постановление Правительства РФ от 26.12.2011 № 1137 (ред. 23.01.2026 № 26); ФНС от 26.12.2025 № СД-4-3/11730@"/>
+    <print_form id="2" doc_type_id="2" report="" name="Универсальный передаточный документ (УПД)" template="universal-transfer-document.html" validate_script="validate_invoice" valid_from="2026-01-01" valid_to="2026-12-31" basis="Письмо ФНС России от 21.10.2013 № ММВ-20-3/96@; постановление Правительства РФ № 1137"/>
     <print_form id="3" doc_type_id="2" report="" name="Счет на оплату" template="invoice.html" basis="Произвольная форма (ст. 9 402-ФЗ)"/>
     <print_form id="4" doc_type_id="4" report="" name="Приходный кассовый ордер КО-1" template="cash-receipt-order.html" basis="Постановление Госкомстата России от 18.08.1998 № 88; указание Банка России от 11.03.2014 № 3210-У"/>
     <print_form id="5" doc_type_id="5" report="" name="Расходный кассовый ордер КО-2" template="cash-payment-order.html" basis="Постановление Госкомстата России от 18.08.1998 № 88; указание Банка России от 11.03.2014 № 3210-У"/>
@@ -208,5 +208,6 @@
     <regulation id="20" area="reporting" title="Доходы (замена ПБУ 9/99); обязателен с 2027 г., досрочно — с 2026 г." reference="ФСБУ 9/2025, приказ Минфина России от 16.05.2025 № 56н" valid_from="2027-01-01" url="https://minfin.gov.ru/ru/perfomance/accounting/accounting/standards/fsbu"/>
     <regulation id="22" area="cash" title="Предельный размер наличных расчетов 100 000 руб. по одному договору (плагин plugins/10-cash-limit.lua)" reference="Указание Банка России от 09.12.2019 № 5348-У" valid_from="2020-04-27" url="https://www.cbr.ru/"/>
     <regulation id="21" area="tax" title="Единый налоговый счет и единый налоговый платеж" reference="Ст. 11.3, 45 НК РФ (Федеральный закон от 14.07.2022 № 263-ФЗ)" valid_from="2023-01-01" url="https://www.nalog.gov.ru/rn77/ens/"/>
+    <regulation id="23" area="forms" title="Счёт-фактура 2026: строка 5б, реквизиты отгрузки и авансов" reference="Постановление Правительства РФ от 23.01.2026 № 26; письмо ФНС от 26.12.2025 № СД-4-3/11730@" valid_from="2026-04-01" url="https://www.nalog.gov.ru/rn77/news/activities_fts/16614411/"/>
   </regulations>
 </cfg>

@@ -105,7 +105,7 @@ def check(directory, today=None):
         if not rule.get("reference") or not rule.get("valid_from"):
             problems.append(f"regulation id={rule.get('id')}: needs a reference and valid_from")
     functions = lua_functions(directory)
-    for tag in ("doc_type", "payroll_tax", "closing_rule"):
+    for tag in ("doc_type", "payroll_tax", "closing_rule", "print_form"):
         for row in root.iter(tag):
             validator = row.get("validate_script", "")
             if validator and validator not in functions:
@@ -149,7 +149,7 @@ def check_template(path):
     if sorted(opened) != sorted(closed):
         problems.append(f"{os.path.basename(path)}: blocks opened {opened} but closed {closed}")
     for name in opened:
-        if name not in REPORT_TABLES and name not in {"lines", "doc_lines", "payroll_lines", "asset_lines", "entries", "tax_totals"}:
+        if name not in REPORT_TABLES and name not in {"lines", "doc_lines", "payroll_lines", "asset_lines", "entries", "tax_totals", "if"}:
             problems.append(f"{os.path.basename(path)}: unknown block table {name}")
     return problems
 

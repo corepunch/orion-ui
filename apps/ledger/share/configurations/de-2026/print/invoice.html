@@ -27,28 +27,28 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
 <td><table>
 <tr><td>Rechnungsnummer:</td><td class="b">{{number}}</td></tr>
 <tr><td>Rechnungsdatum:</td><td>{{date|dmy}}</td></tr>
-<tr><td>Liefer-/Leistungsdatum:</td><td>{{date|dmy}}</td></tr>
+<tr><td>Liefer-/Leistungsdatum:</td><td>{{supply_date|dmy}}</td></tr>
 <tr><td>Steuernummer:</td><td>{{org.tax_id}}</td></tr>
-<tr><td>USt-IdNr.:</td><td>{{org.kpp}}</td></tr>
-<tr><td>USt-IdNr. des Kunden:</td><td>{{counterparty.kpp}}</td></tr>
+<tr><td>USt-IdNr.:</td><td>{{org.vat_id}}</td></tr>
+<tr><td>USt-IdNr. des Kunden:</td><td>{{counterparty.vat_id}}</td></tr>
 </table></td></tr></table>
 <h1>Rechnung {{number}}</h1>
 <p>{{comment}}</p>
 <table class="grid" style="width:100%">
 <thead><tr><th>Pos.</th><th>Art.-Nr.</th><th>Bezeichnung</th><th>Menge</th><th>Einheit</th><th>Einzelpreis</th><th>USt-Satz</th><th>Netto</th><th>USt</th><th>Brutto</th></tr></thead>
-<tbody>{{#lines}}<tr><td class="c">{{n}}</td><td class="c">{{item.sku}}</td><td>{{item.name}}</td><td class="r">{{quantity}}</td><td class="c">{{item.unit.name}}</td><td class="r">{{price}}</td><td class="c">{{vat_rate.name}}</td><td class="r">{{amount}}</td><td class="r">{{vat}}</td><td class="r">{{total}}</td></tr>
+<tbody>{{#lines}}<tr><td class="c">{{n}}</td><td class="c">{{item.sku}}</td><td>{{item.name}}</td><td class="r">{{quantity|decimal3comma}}</td><td class="c">{{item.unit.name}}</td><td class="r">{{price|comma}}</td><td class="c">{{vat_rate.name}}</td><td class="r">{{amount|comma}}</td><td class="r">{{vat|comma}}</td><td class="r">{{total|comma}}</td></tr>
 {{/lines}}</tbody></table>
 <table class="totals" style="margin-left:auto;margin-top:6px">
-<tr><td class="r">Summe netto:</td><td class="r">{{amount}} {{cfg.currency}}</td></tr>
-<tr><td class="r">Umsatzsteuer:</td><td class="r">{{vat}} {{cfg.currency}}</td></tr>
-<tr><td class="r b">Rechnungsbetrag:</td><td class="r b">{{total}} {{cfg.currency}}</td></tr>
+<tr><td class="r">Summe netto:</td><td class="r">{{amount|comma}} {{cfg.currency}}</td></tr>
+<tr><td class="r">Umsatzsteuer:</td><td class="r">{{vat|comma}} {{cfg.currency}}</td></tr>
+<tr><td class="r b">Rechnungsbetrag:</td><td class="r b">{{total|comma}} {{cfg.currency}}</td></tr>
 </table>
 <p class="small">Entgelt und Steuerbetrag nach Steuersätzen (§ 14 Abs. 4 Nr. 7 und 8 UStG):</p>
 <table class="grid">
 <thead><tr><th>Steuersatz</th><th>Entgelt (netto)</th><th>Umsatzsteuer</th><th>Brutto</th></tr></thead>
-<tbody>{{#tax_totals}}<tr><td class="c">{{vat_rate.name}}</td><td class="r">{{amount}}</td><td class="r">{{vat}}</td><td class="r">{{total}}</td></tr>
+<tbody>{{#tax_totals}}<tr><td class="c">{{vat_rate.name}}</td><td class="r">{{amount|comma}}</td><td class="r">{{vat|comma}}</td><td class="r">{{total|comma}}</td></tr>
 {{/tax_totals}}</tbody></table>
-<p>Zahlbar innerhalb von 14 Tagen ohne Abzug auf das unten genannte Konto. Bei Zahlungsverzug gelten die gesetzlichen Verzugszinsen (§ 288 BGB).</p>
-<p class="small" style="border-top:1px solid #000;padding-top:4px">{{org.name}} · {{org.address}} · {{org.corr_account}} · Geschäftsführer: {{org.director}}<br>
-Bankverbindung: {{org.bank}} · IBAN {{org.bank_account}} · BIC {{org.bik}} · Steuernummer {{org.tax_id}} · USt-IdNr. {{org.kpp}}</p>
+<p>Zahlungsziel: {{due_date|dash}}. Vereinbarte Entgeltminderungen: {{discount_terms|dash}}</p><p>{{legal_note}}</p>
+<p class="small" style="border-top:1px solid #000;padding-top:4px">{{org.name}} · {{org.address}} · {{org.legal_details}} · Geschäftsführer: {{org.director}}<br>
+Bankverbindung: {{org.bank}} · IBAN {{org.bank_account}} · BIC {{org.bik}} · Steuernummer {{org.tax_id}} · USt-IdNr. {{org.vat_id}}</p>
 </body></html>

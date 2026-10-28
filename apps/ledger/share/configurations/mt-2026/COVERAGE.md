@@ -5,10 +5,12 @@ Reviewed: 2026-10-28. Status: **development, not production compliance**.
 The working subset is domestic standard-rated service purchases and sales,
 invoice-basis recognition, amounts excluding tax, full input-tax recovery,
 bank receipts/payments, manual journals, and invoice-local tax totals.
-The invoice date must equal the supply/tax point date. These are explicit
-scope restrictions, not automatic eligibility determinations. The caller must
-verify domestic status, registration, full recovery and matching tax point.
-The current schema cannot independently establish those facts.
+Supply and tax-point dates are entered explicitly; the tax point drives tax-book
+periods and rate validity. Supplier/customer country and VAT/GST registration
+are stored separately. These records do not independently prove eligibility or
+full input recovery. The caller must establish the actual tax point and regime.
+The national invoice validates required fields and reconciled amounts; see
+[the form audit](../../../docs/invoice-forms-audit.md) for its official-source audit.
 
 The supplied chart is a Ledger chart, not a government-mandated chart.
 All sample entities, addresses and identifiers are synthetic.
@@ -19,7 +21,7 @@ Foreign currency, negative lines/credit notes and dates outside 2026 are rejecte
 No payroll document types or guessed payroll rates are installed.
 
 Not implemented: special schemes, cash/payment basis, partial exemption,
-imports/exports, reverse charge, cross-border supplies, separate tax points,
+imports/exports, reverse charge, cross-border supplies, automatic time-of-supply determination,
 credit notes, payroll, asset tax depreciation, annual accounts, income/corporate
 tax, statutory return generation, electronic submission and receipts.
 Manual journals are not a statutory filing workflow.

@@ -33,7 +33,7 @@
     <doc_type id="5" code="operation" name="Manual journal" prefix="JRN-" form="operation" />
   </doc_types>
   <print_forms>
-    <print_form id="1" doc_type_id="2" name="Service invoice (development)" template="invoice.html" basis="Domestic service invoice; see COVERAGE.md" />
+    <print_form id="1" doc_type_id="2" name="Service tax invoice" template="invoice.html" validate_script="validate_invoice" valid_from="2026-01-01" valid_to="2026-12-31" basis="Domestic service invoice; see COVERAGE.md" />
     <print_form id="2" doc_type_id="0" report="vat_summary" name="VAT working paper (not a return)" template="tax-working-paper.html" basis="Internal reconciliation only; no statutory return mapping" />
   </print_forms>
   <regulations>

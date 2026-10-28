@@ -26,3 +26,27 @@ function pv_an_kinderlos(ctx)
   if string.find(ctx.employee.position or "", "(kinderlos)", 1, true) then rate = rate + 0.6 end
   return ledger.round2(base * rate / 100)
 end
+
+-- Ordinary domestic invoice output. Special regimes require dedicated forms.
+function validate_invoice(ctx)
+  local org,buyer,lines = ledger.invoice.check(ctx, {country="DE"})
+  assert(org.tax_id~="" or org.vat_id~="", "Supplier tax number or VAT identification number is required")
+  ledger.invoice.required(org.legal_details,"Legal registration details (where applicable)")
+  for _,line in ipairs(lines) do
+    local tax=ledger.find("cfg","vat_rates",line.vat_rate_id)
+    if tax.rate==0 then ledger.invoice.required(ctx.document.legal_note,"Legal basis for a zero-rate or exempt supply") end
+  end
+end
+
+function validate_ubl(ctx)
+  validate_invoice(ctx)
+  ledger.invoice.date(ctx.document.due_date,"Payment due date for the electronic invoice")
+  assert(ctx.document.total>0,"This electronic invoice profile requires a positive payable amount")
+  for _,line in ipairs(ledger.fetch("ib","doc_lines","document_id",ctx.document.id)) do
+    local rate=ledger.find("cfg","vat_rates",line.vat_rate_id)
+    assert(rate and rate.rate>0,"Zero/exempt/reverse-charge invoices require an explicit electronic tax category")
+    local item=ledger.find("ib","items",line.item_id)
+    local unit=item and ledger.find("cfg","units",item.unit_id)
+    assert(unit and unit.code~="","UBL quantity requires a UN/ECE unit code")
+  end
+end

@@ -40,3 +40,46 @@ function post_writeoff(ctx)
     end
   end
 end
+
+-- Ordinary domestic invoice output. Special regimes require dedicated forms.
+function validate_invoice(ctx)
+  local org,buyer,lines = ledger.invoice.check(ctx, {country="RU"})
+  ledger.invoice.required(org.tax_id,"Supplier tax number")
+  assert(org.tax_id:match("^%d+$") and (#org.tax_id==10 or #org.tax_id==12),"Supplier INN must contain 10 or 12 digits")
+  if #org.tax_id==10 then
+    ledger.invoice.required(org.kpp,"Supplier KPP")
+    ledger.invoice.required(org.accountant,"Authorized accounting signatory")
+  else
+    assert(org.kpp=="","Individual entrepreneurs do not have a KPP")
+    ledger.invoice.required(org.legal_details,"Individual entrepreneur registration details")
+  end
+  ledger.invoice.required(buyer.tax_id,"Customer INN")
+  ledger.invoice.required(org.director,"Authorized supplier signatory")
+  assert(ctx.document.supply_kind=="goods" or ctx.document.supply_kind=="services","Supply kind must be goods or services")
+  if ctx.document.supply_kind=="goods" then
+    ledger.invoice.required(ctx.document.shipper,"Actual shipper name and address")
+    ledger.invoice.required(ctx.document.consignee,"Actual consignee name and address")
+  end
+  for _,line in ipairs(lines) do
+    local tax=ledger.find("cfg","vat_rates",line.vat_rate_id)
+    assert(not tax.code:match("^usn_"),"УСН requires its own tax-regime workflow; the ordinary invoice profile cannot establish eligibility")
+    if tax.rate==0 then ledger.invoice.required(ctx.document.legal_note,"Legal basis for a zero-rate or exempt supply") end
+    if line.is_traceable then
+      ledger.invoice.required(line.customs_reference,"Traceable goods batch registration")
+      ledger.invoice.required(line.tracking_unit_code,"Traceability unit code")
+      ledger.invoice.required(line.tracking_unit_name,"Traceability unit name")
+      assert(line.tracking_quantity>0 and line.tracking_value>0,"Traceability quantity and value must be recorded")
+    end
+    if line.origin_code~="" or line.origin_name~="" then
+      ledger.invoice.required(line.origin_code,"Country of origin code")
+      ledger.invoice.required(line.origin_name,"Country of origin name")
+      ledger.invoice.required(line.customs_reference,"Import customs declaration")
+    end
+    local item=ledger.find("ib","items",line.item_id)
+    local unit=ledger.find("cfg","units",item.unit_id)
+    assert(unit and unit.code~="" and unit.name~="","Russian invoice lines require a configured unit")
+  end
+  if ctx.print_form.template=="vat-invoice.html" then
+    ledger.invoice.required(ctx.document.shipment_reference,"Actual shipment document name, number and date")
+  end
+end

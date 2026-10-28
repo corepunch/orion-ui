@@ -107,12 +107,14 @@ bool ledger_script_post(const ledger_post_t *p, const char *function);
 bool ledger_script_closing(const ledger_post_t *p, const db_closing_rule_t *rule);
 bool ledger_script_tax(const ledger_post_t *p, const db_payroll_tax_t *tax, const db_payroll_line_t *line, double ytd, int accruals,
                        double withheld, const ledger_tax_amount_t *so_far, int so_far_count, double *amount);
+bool ledger_script_print(const ledger_post_t *p, const db_print_form_t *form, char *error, size_t error_sz);
 bool ledger_script_event(const char *event, const ledger_post_t *p);
 
 // ledger_ib.c — the infobase datasource class (db_schema_xml with Ledger's rules).
 lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam);
 
 // print.c — fills the configuration's HTML print-form templates.
+int  ledger_print_form(int doc_id, int form_id, char *report, size_t report_sz);
 int  ledger_print_document(int doc_id, char *report, size_t report_sz);
 // Writes the configuration's report forms (cash book) for the report period.
 int  ledger_print_reports(char *report, size_t report_sz);

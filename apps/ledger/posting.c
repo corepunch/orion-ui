@@ -580,8 +580,8 @@ static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool prev
   EACH_RECORD(db_doc_line_t, line, lines) {
     const db_vat_rate_t *rate = find(cfg, TABLE_VAT_RATES, line->vat_rate_id);
     if ((line->vat_rate_id && !rate) || (rate &&
-        ((rate->valid_from[0] && strcmp(p.doc->date, rate->valid_from) < 0) ||
-         (rate->valid_to[0] && strcmp(p.doc->date, rate->valid_to) > 0)))) valid = false;
+        ((rate->valid_from[0] && strcmp(p.doc->tax_date[0] ? p.doc->tax_date : p.doc->date, rate->valid_from) < 0) ||
+         (rate->valid_to[0] && strcmp(p.doc->tax_date[0] ? p.doc->tax_date : p.doc->date, rate->valid_to) > 0)))) valid = false;
     if (!isfinite(line->quantity) || !isfinite(line->price) || !isfinite(line->amount) || !isfinite(line->vat)) valid = false;
   }
   free_result_list(lines);
@@ -769,10 +769,14 @@ static void build_analysis(const report_t *r) {
   free(objects.v);
 }
 
+static const char *tax_date(const db_document_t *doc) {
+  return doc->tax_date[0] ? doc->tax_date : doc->date;
+}
+
 static void add_vat_row(const report_t *r, const db_document_t *d, int book, int rate_id, double amount, double vat, double rate) {
   db_vat_book_t row = { .document_id = d->id, .counterparty_id = d->counterparty_id, .vat_rate_id = rate_id, .book = book,
                         .total = round2((amount + vat) * rate), .amount = round2(amount * rate), .vat = round2(vat * rate) };
-  snprintf(row.date, sizeof(row.date), "%s", d->date);
+  snprintf(row.date, sizeof(row.date), "%s", tax_date(d));
   send_db_message(r->ib, dbInsert, TABLE_VAT_BOOK, &row);
 }
 
@@ -783,7 +787,7 @@ static void build_vat_books(const report_t *r) {
   result_node_t *docs = fetch(r->ib, TABLE_DOCUMENTS, NULL, 0);
   EACH_RECORD(db_document_t, d, docs) {
     const db_doc_type_t *type = find(r->cfg, TABLE_DOC_TYPES, d->doc_type_id);
-    if (!d->posted || !type || !type->vat_book || in_period(r->rs, d->date) != WITHIN) continue;
+    if (!d->posted || !type || !type->vat_book || in_period(r->rs, tax_date(d)) != WITHIN) continue;
     double rate = d->currency_id && d->rate > 0 ? d->rate : 1;
     result_node_t *lines = fetch(r->ib, TABLE_DOC_LINES, "document_id", d->id);
     if (!lines) { add_vat_row(r, d, type->vat_book, 0, d->amount, d->vat, rate); continue; }

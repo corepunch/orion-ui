@@ -1,18 +1,18 @@
 <?xml version='1.0' encoding='utf-8'?>
 <ib>
   <organizations>
-    <organization id="1" name="Example Services (SYNTHETIC)" tax_id="TEST-ONLY" address="Synthetic demo address" />
+    <organization id="1" name="Example Services (SYNTHETIC)" tax_id="TEST-ONLY" address="Synthetic demo address" country_code="NZ" vat_id="999-999-999" registration_kind="vat" legal_details="Synthetic company registration — test data only" />
   </organizations>
   <counterparties>
-    <counterparty id="1" name="Example Customer (SYNTHETIC)" address="Synthetic customer address" />
-    <counterparty id="2" name="Example Supplier (SYNTHETIC)" address="Synthetic supplier address" />
+    <counterparty id="1" name="Example Customer (SYNTHETIC)" address="Synthetic customer address" country_code="NZ" vat_id="999-999-999" registration_kind="vat" vat_verified_on="2026-10-01" />
+    <counterparty id="2" name="Example Supplier (SYNTHETIC)" address="Synthetic supplier address" country_code="NZ" vat_id="999-999-999" registration_kind="vat" vat_verified_on="2026-10-01" />
   </counterparties>
   <items>
     <item id="1" name="Consulting services" sku="SERVICE" unit_id="1" vat_rate_id="1" price="100" />
   </items>
   <documents>
-    <document id="1" doc_type_id="1" counterparty_id="2" number="PUR-0001" date="2026-10-01" comment="SYNTHETIC domestic service demo; invoice date equals tax point" posted="1" />
-    <document id="2" doc_type_id="2" counterparty_id="1" number="SAL-0001" date="2026-10-01" comment="SYNTHETIC domestic service demo; invoice date equals tax point" posted="1" />
+    <document id="1" doc_type_id="1" counterparty_id="2" number="PUR-0001" date="2026-10-01" comment="SYNTHETIC domestic service demo; invoice date equals tax point" posted="1" supply_date="2026-10-01" tax_date="2026-10-01" due_date="2026-10-15" supply_kind="services" tax_scheme="ordinary" />
+    <document id="2" doc_type_id="2" counterparty_id="1" number="SAL-0001" date="2026-10-01" comment="SYNTHETIC domestic service demo; invoice date equals tax point" posted="1" supply_date="2026-10-01" tax_date="2026-10-01" due_date="2026-10-15" supply_kind="services" tax_scheme="ordinary" />
   </documents>
   <doc_lines>
     <doc_line id="1" document_id="1" item_id="1" quantity="1" price="40" vat_rate_id="1" />

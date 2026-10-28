@@ -340,6 +340,10 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | Field | XML type | Relation |
 |---|---|---|
 | `id` | `integer` |  |
+| `optional` | `boolean` |  |
+| `validate_script` | `string` |  |
+| `valid_from` | `date` |  |
+| `valid_to` | `date` |  |
 | `doc_type_id` | `integer` | doc_types.id |
 | `report` | `string` |  |
 | `name` | `string` |  |
@@ -387,6 +391,12 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | Field | XML type | Relation |
 |---|---|---|
 | `id` | `integer` |  |
+| `legal_details` | `string` |  |
+| `country_code` | `string` |  |
+| `vat_id` | `string` |  |
+| `registration_kind` | `string` |  |
+| `vat_verified_on` | `date` |  |
+| `vat_verification_reference` | `string` |  |
 | `name` | `string` |  |
 | `tax_id` | `string` |  |
 | `kpp` | `string` |  |
@@ -404,6 +414,11 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | Field | XML type | Relation |
 |---|---|---|
 | `id` | `integer` |  |
+| `country_code` | `string` |  |
+| `vat_id` | `string` |  |
+| `registration_kind` | `string` |  |
+| `vat_verified_on` | `date` |  |
+| `vat_verification_reference` | `string` |  |
 | `name` | `string` |  |
 | `tax_id` | `string` |  |
 | `kpp` | `string` |  |
@@ -473,6 +488,19 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | Field | XML type | Relation |
 |---|---|---|
 | `id` | `integer` |  |
+| `shipper` | `string` |  |
+| `consignee` | `string` |  |
+| `supply_date` | `date` |  |
+| `tax_date` | `date` |  |
+| `due_date` | `date` |  |
+| `supply_kind` | `string` |  |
+| `tax_scheme` | `string` |  |
+| `shipment_reference` | `string` |  |
+| `payment_reference` | `string` |  |
+| `advance_invoice_refs` | `string` |  |
+| `contract_reference` | `string` |  |
+| `discount_terms` | `string` |  |
+| `legal_note` | `string` |  |
 | `doc_type_id` | `integer` | cfg.doc_types.id |
 | `counterparty_id` | `integer` | counterparties.id |
 | `currency_id` | `integer` | currencies.id |
@@ -491,6 +519,15 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | Field | XML type | Relation |
 |---|---|---|
 | `id` | `integer` |  |
+| `commodity_code` | `string` |  |
+| `origin_code` | `string` |  |
+| `origin_name` | `string` |  |
+| `customs_reference` | `string` |  |
+| `tracking_unit_code` | `string` |  |
+| `tracking_unit_name` | `string` |  |
+| `tracking_quantity` | `double` |  |
+| `tracking_value` | `double` |  |
+| `is_traceable` | `boolean` |  |
 | `document_id` | `integer` | documents.id |
 | `item_id` | `integer` | items.id |
 | `vat_rate_id` | `integer` | cfg.vat_rates.id |
