@@ -110,14 +110,20 @@ turnover_t ledger_turnover(const post_t *p, int account_id, int subconto_id, int
   result_node_t *entries = fetch(p->ib, TABLE_ENTRIES, NULL, 0);
   EACH_RECORD(db_entry_t, e, entries) {
     if (currency_id >= 0 && e->currency_id != currency_id) continue;
+    // Resolve documents only for matching sides; stock/payroll queries are selective.
+    bool debit = (subconto_id < 0 || e->debit_subconto_id == subconto_id) &&
+                 ledger_account_within(p->cfg, e->debit_id, account_id);
+    bool credit = (subconto_id < 0 || e->credit_subconto_id == subconto_id) &&
+                  ledger_account_within(p->cfg, e->credit_id, account_id);
+    if (!debit && !credit) continue;
     if (e->document_id != p->doc->id) {
       const db_document_t *d = find(p->ib, TABLE_DOCUMENTS, e->document_id);
       if (!d || !d->posted || doc_order(p->cfg, d, p->doc) >= 0) continue;
     }
-    if (ledger_account_within(p->cfg, e->debit_id, account_id) && (subconto_id < 0 || e->debit_subconto_id == subconto_id)) {
+    if (debit) {
       t.dr += e->amount; t.dr_qty += e->quantity; t.dr_cur += e->currency_amount;
     }
-    if (ledger_account_within(p->cfg, e->credit_id, account_id) && (subconto_id < 0 || e->credit_subconto_id == subconto_id)) {
+    if (credit) {
       t.cr += e->amount; t.cr_qty += e->quantity; t.cr_cur += e->currency_amount;
     }
   }

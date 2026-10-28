@@ -410,6 +410,52 @@ static void test_record_lifecycle(void) {
   PASS();
 }
 
+static void test_turnover_filters(void) {
+  TEST("turnover: filter each side before document lookup without changing posting order");
+  database_t *ib = create_database_with_schema("turnover_ib", "db_schema_xml", &ledger_ib_schema, "");
+  ASSERT_NOT_NULL(ib);
+  const db_account_t *stock = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "41.01");
+  const db_account_t *parent = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "41");
+  const db_account_t *bank = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "51");
+  const db_doc_type_t *closing = find_by(g_ledger->cfg, TABLE_DOC_TYPES, "code", "closing");
+  ASSERT(stock && parent && bank && closing, "test configuration accounts and closing type");
+  db_document_t docs[] = {
+    { .id = 10, .doc_type_id = 1, .date = "2003-03-09", .posted = true },
+    { .id = 19, .doc_type_id = 1, .date = "2003-03-10", .posted = true },
+    { .id = 20, .doc_type_id = 1, .date = "2003-03-10", .posted = false },
+    { .id = 21, .doc_type_id = 1, .date = "2003-03-10", .posted = true },
+    { .id = 30, .doc_type_id = 1, .date = "2003-03-11", .posted = true },
+    { .id = 11, .doc_type_id = 1, .date = "2003-03-08", .posted = false },
+    { .id = 1, .doc_type_id = closing->id, .date = "2003-03-10", .posted = true }
+  };
+  for (size_t i = 0; i < sizeof(docs) / sizeof(*docs); i++)
+    ASSERT_NOT_NULL(send_db_message(ib, dbInsert, TABLE_DOCUMENTS, &docs[i]));
+  db_entry_t entries[] = {
+    { .document_id = 10, .debit_id = stock->id, .credit_id = bank->id, .debit_subconto_id = 1, .amount = 100, .quantity = 10, .currency_id = 1, .currency_amount = 5 },
+    { .document_id = 19, .debit_id = bank->id, .credit_id = stock->id, .credit_subconto_id = 1, .amount = 20, .quantity = 2, .currency_id = 1, .currency_amount = 2 },
+    { .document_id = 20, .debit_id = stock->id, .credit_id = bank->id, .debit_subconto_id = 1, .amount = 10, .quantity = 1 },
+    { .document_id = 10, .debit_id = stock->id, .credit_id = stock->id, .debit_subconto_id = 2, .credit_subconto_id = 1, .amount = 30, .quantity = 3, .currency_id = 1, .currency_amount = 3 }
+  };
+  for (size_t i = 0; i < sizeof(entries) / sizeof(*entries); i++)
+    ASSERT_NOT_NULL(send_db_message(ib, dbInsert, TABLE_ENTRIES, &entries[i]));
+  const int excluded[] = {21, 30, 11, 1, 999};
+  for (size_t i = 0; i < sizeof(excluded) / sizeof(*excluded); i++) {
+    db_entry_t e = { .document_id = excluded[i], .debit_id = stock->id, .credit_id = bank->id, .debit_subconto_id = 1, .amount = 999, .quantity = 999, .currency_id = 1, .currency_amount = 999 };
+    ASSERT_NOT_NULL(send_db_message(ib, dbInsert, TABLE_ENTRIES, &e));
+  }
+  ledger_post_t p = { .ib = ib, .cfg = g_ledger->cfg, .doc = &docs[2] };
+  ledger_turnover_t t = ledger_turnover(&p, stock->id, 1, -1);
+  ASSERT(approx(t.dr, 110) && approx(t.cr, 50) && approx(t.dr_qty, 11) && approx(t.cr_qty, 5) && approx(t.dr_cur, 5) && approx(t.cr_cur, 5), "filtered debit/credit, quantity and currency sides");
+  t = ledger_turnover(&p, parent->id, -1, -1);
+  ASSERT(approx(t.dr, 140) && approx(t.cr, 50) && approx(t.dr_qty, 14) && approx(t.cr_qty, 5) && approx(t.dr_cur, 8) && approx(t.cr_cur, 5), "parent account and wildcard analytics");
+  t = ledger_turnover(&p, stock->id, 1, 1);
+  ASSERT(approx(t.dr, 100) && approx(t.cr, 50) && approx(t.dr_qty, 10), "currency filter excludes own domestic entry");
+  t = ledger_turnover(&p, stock->id, 2, -1);
+  ASSERT(approx(t.dr, 30) && approx(t.cr, 0), "same account on both sides can have different analytics");
+  ib->dirty = false; destroy_database(ib);
+  PASS();
+}
+
 static void test_vat_half_cent(void) {
   TEST("VAT: a half cent rounds up from integer net cents");
   database_t *cfg = create_database_with_schema("vat_cfg", "db_schema_xml", &ledger_cfg_schema, SHARE "/ru-2003/configuration.xml");
@@ -1146,6 +1192,7 @@ int main(int argc, char **argv) {
   test_joins_cross_databases();
   test_posting_rules();
   test_cost_of_sales();
+  test_turnover_filters();
   test_settlement();
   test_payroll();
   test_polymorphic_analytics();

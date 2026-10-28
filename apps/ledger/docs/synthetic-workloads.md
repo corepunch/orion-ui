@@ -108,3 +108,50 @@ They do not measure interactive scrolling, painting, startup to first frame,
 or printed-page layout. For a manual UI smoke check, open each materialized
 base, find an early/middle/late document by number, inspect invoice/payroll/
 closing entries, select a month and the year in Reports, save, exit and reopen.
+
+
+## Posting profile and optimization
+
+A local Linux `-O2` profile of the 3,000-document RU workload attributed
+5.344 of 5.800 posting CPU seconds (92%) to `ledger_turnover`: each stock or
+payroll balance query scanned all entries and resolved their documents before
+checking account and analytics. Primary-key document lookup is a linear scan,
+so irrelevant entries caused a nested scan of the document table.
+
+Rejecting unmatched account/analytics/currency sides before document lookup
+reduced the same profile to 0.171 seconds in turnover and 0.656 total. It keeps
+entry summation order, parent-account matching, independent debit/credit
+analytics, own-document entries, currency filtering and document ordering.
+All persisted fields of the 3,000-document RU result matched the old engine;
+the 10,000-document DE repost also matched the pre-optimization database
+(except regenerated movement IDs).
+
+Measured 10,000-document CPU seconds on the same local runner:
+
+| Configuration | Initial posting before | After | Reposting before | After |
+|---|---:|---:|---:|---:|
+| RU-2026 | 202.595 | 10.346 | 425.541 | 16.354 |
+| DE-2026 | 57.061 | 11.847 | 14.777 | 12.022 |
+
+The complete three-process test fell from 651.160 to 48.886 wall seconds for
+RU and from 84.238 to 37.496 for DE. These are observations, not CI thresholds.
+
+### Bulk processing boundary
+
+The accounting calculations and database calls above run in C, within one
+process. Lua orchestrates workflows such as payroll filling. Sending arrays
+of commands across Lua/C would not by itself remove repeated journal scans.
+`ledger_repost_all` already sorts documents once and builds reports after the
+loop, but its individual turnover queries still scan the journal.
+
+A further bulk implementation should maintain balances indexed by account,
+analytics and currency while visiting documents chronologically. Each
+completed document updates the balances; queries also include the current
+document's movements so far. Month closing stays after other documents on
+the same date. Reposting must exclude old movements of the current and future
+documents, support unposted/manual operations and scripted entries, preserve
+rollback/edit-context isolation, and fall back correctly when a script asks
+about arbitrary accounts. These requirements make a session-scoped journal
+index preferable to parallel posting or merely buffering commands. This PR
+currently implements the selective-scan optimization, not that incremental
+bulk index.
