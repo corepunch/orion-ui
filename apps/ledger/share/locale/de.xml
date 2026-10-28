@@ -49,11 +49,11 @@
   <string source="Print forms (Ctrl+P)" where="journal_page">Druckformulare (Strg+P)</string>
   <string source="Delete" where="journal_page,counterparties_page,items_page,employees_page,assets_page,document">Löschen</string>
   <string source="Delete document" where="journal_page">Beleg löschen</string>
-  <string source="Date" where="journal_page,currencies_page,entries_page,reports_page">Datum</string>
-  <string source="Number" where="journal_page">Nummer</string>
-  <string source="Document" where="journal_page,entries_page,reports_page,config_page,document">Beleg</string>
-  <string source="Counterparty" where="journal_page,reports_page,counterparty">Geschäftspartner</string>
-  <string source="Amount" where="journal_page,entries_page,reports_page,document,operation,payroll,closing">Betrag</string>
+  <string source="Date" where="home_page,journal_page,currencies_page,entries_page,reports_page">Datum</string>
+  <string source="Number" where="home_page,journal_page">Nummer</string>
+  <string source="Document" where="home_page,journal_page,entries_page,reports_page,config_page,document">Beleg</string>
+  <string source="Counterparty" where="home_page,journal_page,reports_page,counterparty">Geschäftspartner</string>
+  <string source="Amount" where="home_page,journal_page,entries_page,reports_page,document,operation,payroll,closing">Betrag</string>
   <string source="Comment" where="journal_page">Bemerkung</string>
   <string source="Lines" where="journal_page">Positionen</string>
   <string source="Item" where="journal_page,document,item">Artikel</string>
@@ -81,9 +81,9 @@
   <string source="New item" where="items_page">Neuer Artikel</string>
   <string source="Edit item" where="items_page">Artikel bearbeiten</string>
   <string source="Delete item" where="items_page">Artikel löschen</string>
-  <string source="Code" where="items_page,accounts_page,currencies_page,config_page">Nummer</string>
+  <string source="Code" where="home_page,items_page,accounts_page,currencies_page,config_page">Nummer</string>
   <string source="Chart of accounts (Ctrl+4)" where="accounts_page">Kontenplan (Strg+4)</string>
-  <string source="Account" where="accounts_page,assets_page,reports_page,config_page">Konto</string>
+  <string source="Account" where="home_page,accounts_page,assets_page,reports_page,config_page">Konto</string>
   <string source="Kind" where="accounts_page,config_page">Art</string>
   <string source="Analytics" where="accounts_page,reports_page,config_page">Nebenbuch</string>
   <string source="Section" where="accounts_page">Kontenklasse</string>
@@ -102,7 +102,7 @@
   <string source="Corr." where="reports_page">Gegenkonto</string>
   <string source="Debit" where="reports_page">Soll</string>
   <string source="Credit" where="reports_page">Haben</string>
-  <string source="Balance" where="reports_page">Saldo</string>
+  <string source="Balance" where="home_page,reports_page">Saldo</string>
   <string source="Account Analysis" where="reports_page">Offene Posten nach Partner</string>
   <string source="Sales Book" where="reports_page">Ausgangsrechnungen</string>
   <string source="Net" where="reports_page">Netto</string>
@@ -408,10 +408,60 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Not paid" where="code">Nicht bezahlt</string>
   <string source="Find a Command..." where="menu">Befehl suchen...</string>
   <string source="There is no command '%s'." where="code">Es gibt keinen Befehl „%s“.</string>
+  <string source="Home" where="menu,home_page">Startseite</string>
+  <string source="Home (Ctrl+Shift+H)" where="home_page">Startseite (Strg+Umschalt+H)</string>
+  <string source="Needs attention" where="home_page">Zu erledigen</string>
+  <string source="Task" where="home_page">Aufgabe</string>
+  <string source="Detail" where="home_page">Details</string>
+  <string source="Action" where="home_page">Aktion</string>
+  <string source="The books are in order: nothing is waiting." where="code">Die Bücher sind in Ordnung: nichts wartet.</string>
+  <string source="Money" where="home_page">Geld</string>
+  <string source="Total money" where="home_page">Geld gesamt</string>
+  <string source="Settlements" where="home_page">Offene Posten</string>
+  <string source="Settlement" where="home_page">Posten</string>
+  <string source="With" where="home_page">Mit</string>
+  <string source="Create" where="home_page">Erstellen</string>
+  <string source="Latest documents" where="home_page">Letzte Belege</string>
+  <string source="Document journal" where="home_page">Belegjournal</string>
+  <string source="Open the document journal (Ctrl+1)" where="home_page">Belegjournal öffnen (Strg+1)</string>
+  <string source="%s and %d more" where="code">%s und %d weitere</string>
+  <string source="We owe" where="code">Wir schulden</string>
+  <string source="Advances paid" where="code">Geleistete Anzahlungen</string>
+  <string source="Owed to us" where="code">Uns geschuldet</string>
+  <string source="Advances received" where="code">Erhaltene Anzahlungen</string>
+  <string source="Taxes payable" where="code">Zu zahlende Steuern</string>
+  <string source="Wages to pay" where="code">Auszuzahlende Löhne</string>
+  <string source="Input tax to deduct" where="code">Abziehbare Vorsteuer</string>
+  <string source="%s of %s for %s" where="code">%s vom %s über %s</string>
+  <string source="Documents not posted: %d" where="code">Nicht gebuchte Belege: %d</string>
+  <string source="January|February|March|April|May|June|July|August|September|October|November|December" where="code">Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember</string>
+  <string source="Month not closed: %s" where="code">Monat nicht abgeschlossen: %s</string>
+  <string source="%d months are not closed. Not done yet: %s" where="code">Nicht abgeschlossene Monate: %d. Noch offen: %s</string>
+  <string source="Not done yet: %s" where="code">Noch offen: %s</string>
+  <string source="%s: stock below zero on %s" where="code">%s: negativer Bestand am %s</string>
+  <string source="%s: balance below zero on %s" where="code">%s: negativer Saldo am %s</string>
+  <string source="%s on %s after %s" where="code">%s auf %s nach %s</string>
+  <string source="Input tax %s is not deducted" where="code">Vorsteuer %s ist nicht abgezogen</string>
+  <string source="It waits on %s. Deduct it with «%s»." where="code">Sie steht auf %s. Ziehen Sie sie mit „%s“ ab.</string>
+  <string source="%s: debt and advance are not offset" where="code">%s: Forderung und Anzahlung nicht verrechnet</string>
+  <string source="%s on %s against an advance on %s" where="code">%s auf %s gegen eine Anzahlung auf %s</string>
+  <string source="Tip: the advance from %s is not offset" where="code">Tipp: Die Anzahlung von %s ist nicht verrechnet</string>
+  <string source="Post %s: it offsets %s of the %s advance" where="code">Buchen Sie %s: Es verrechnet %s der Anzahlung von %s</string>
+  <string source="Post the documents that are not posted (%d)?&#10;&#10;%s" where="code">Die nicht gebuchten Belege buchen (%d)?
+
+%s</string>
+  <string source="Post Documents" where="code">Belege buchen</string>
+  <string source="Documents that could not be posted: %d. Open them to see why." where="code">Nicht buchbare Belege: %d. Öffnen Sie sie, um den Grund zu sehen.</string>
+  <string source="Posted: %d · not posted: %d" where="code">Gebucht: %d · nicht gebucht: %d</string>
+  <string source="%s · as of %s" where="code">%s · Stand %s</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>
   <context name="reports_page">
     <string source="Expense">Ausgabe</string>
   </context>
+  <string source="Closing of %s is out of date" where="code">Abschluss %s ist veraltet</string>
+  <string source="Documents changed after %s: %s are not zero on %s" where="code">Belege nach %s geändert: %s am %s nicht ausgeglichen</string>
+  <string source="Repost" where="code">Neu buchen</string>
+  <string source="There is no check %d to settle." where="code">Keine Prüfung %d vorhanden.</string>
 </strings>

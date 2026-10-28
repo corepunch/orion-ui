@@ -570,6 +570,45 @@ static int demo_record_count(int table) {
   return count;
 }
 
+// Home rows (home.c) of a card and kind; account 0 matches any.
+static double home_amount(int card, const char *kind, int account_id) {
+  double amount = 0;
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_HOME_ROWS, 0), NULL);
+  for (result_node_t *n = rows; n; n = n->next) {
+    const db_home_row_t *r = *(db_home_row_t **)n->data;
+    if (r->card == card && !strcmp(r->kind, kind) && (!account_id || r->account_id == account_id)) amount += r->amount;
+  }
+  free_result_list(rows);
+  return amount;
+}
+
+static int home_count(int card, const char *kind) {
+  int count = 0;
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_HOME_ROWS, 0), NULL);
+  for (result_node_t *n = rows; n; n = n->next) {
+    const db_home_row_t *r = *(db_home_row_t **)n->data;
+    count += r->card == card && !strcmp(r->kind, kind);
+  }
+  free_result_list(rows);
+  return count;
+}
+
+static double home_total(int card) {
+  double total = 0;
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_HOME_ROWS, 0), NULL);
+  for (result_node_t *n = rows; n; n = n->next) {
+    const db_home_row_t *r = *(db_home_row_t **)n->data;
+    if (r->card == card) total += r->amount;
+  }
+  free_result_list(rows);
+  return total;
+}
+
+static int ledger_account_id(const char *code) {
+  const db_account_t *a = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", code);
+  return a ? a->id : -1;
+}
+
 static void test_april_demo(const char *code) {
   bool ru = !strcmp(code, "ru-2003");
   TEST(ru ? "ru-2003 demo: April purchases, VAT, stock costs and payments" : "de-2003 demo: April purchases, VAT and payments");
@@ -622,6 +661,25 @@ static void test_april_demo(const char *code) {
   }
   free_result_list(rows);
   ok &= debit > 0 && approx(debit, credit);
+  // Home: money as the trial balance holds it, and the books' checks.
+  ok &= approx(home_amount(2, "money", ledger_account_id(ru ? "51" : "1200")), bank ? bank->balance_dr : -1);
+  ok &= approx(home_amount(2, "money", ledger_account_id(ru ? "50.01" : "1000")), cash ? cash->balance_dr : -1);
+  ok &= approx(home_amount(1, "draft", 0), 2) && home_amount(1, "month", 0) == 0 && home_count(1, "month") == 1;
+  if (ru) {
+    ok &= approx(home_total(2), 95166) && home_count(1, "tip") == 1 && approx(home_amount(3, "advance", 0), 60000);
+    ok &= home_count(1, "error") == 0;
+    // Posting the March draft after March was closed leaves 90 open: the closing is out of date until reposted.
+    result_node_t *all = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
+    for (result_node_t *n = all; n; n = n->next) {
+      const db_document_t *doc = *(db_document_t **)n->data;
+      if (!doc->posted) ledger_post(g_ledger->ib, g_ledger->cfg, doc->id);
+    }
+    free_result_list(all);
+    ledger_build_reports(g_ledger->ib, g_ledger->cfg);
+    ok &= home_count(1, "draft") == 0 && home_count(1, "error") == 1 && approx(home_amount(3, "advance", 0), 44100);
+    ledger_repost_all(g_ledger->ib, g_ledger->cfg);
+    ok &= home_count(1, "error") == 0;
+  }
   restore_configuration(cfg, ib);
   ASSERT(ok, "expanded demos post purchases and paid sales, retain drafts, and balance across March and April");
   PASS();

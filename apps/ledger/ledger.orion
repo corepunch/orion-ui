@@ -72,6 +72,7 @@
       <item name="forward" label="Forward" shortcut="Alt+Right" />
       <item name="sidebar" label="Show or Hide Sidebar" shortcut="Ctrl+B" />
       <Separator />
+      <item name="home" label="Home" shortcut="Ctrl+Shift+H" />
       <item name="journal" label="Document Journal" shortcut="Ctrl+1" />
       <item name="counterparties" label="Counterparties" shortcut="Ctrl+2" />
       <item name="items" label="Items" shortcut="Ctrl+3" />
@@ -581,12 +582,39 @@
         <field name="deducted" type="double" />
         <field name="closing" type="double" />
       </table>
+      <!-- The start page (home.c), rebuilt with the reports. card 1: what needs
+           attention, the books' own checks, with the command that settles it;
+           2: money as of the date; 3: settlements; 4: documents to create.
+           command is post (the drafts), close (the month ending on date), open
+           (document_id), new (doc_type_id), card (account_id) or repost (the
+           books in date order). -->
+      <table name="home_rows" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="document_id" type="integer" relation="documents.id" />
+        <field name="doc_type_id" type="integer" relation="cfg.doc_types.id" />
+        <field name="account_id" type="integer" relation="cfg.accounts.id" />
+        <field name="counterparty_id" type="integer" relation="counterparties.id" />
+        <field name="card" type="integer" />
+        <field name="date" type="date" />
+        <field name="kind" type="string" length="16" />
+        <field name="title" type="string" length="160" />
+        <field name="detail" type="string" length="256" />
+        <field name="amount" type="double" />
+        <field name="action" type="string" length="48" />
+        <field name="command" type="string" length="8" />
+      </table>
+      <!-- The latest documents by date, newest first. -->
+      <table name="recent_documents" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="document_id" type="integer" relation="documents.id" />
+        <field name="posted" type="boolean" />
+      </table>
     </database>
   </databases>
 
   <forms>
     <form name="main_window" title="Ledger" width="1200" height="700"
-          role="host" active-page="journal_page" flags="statusbar,toolbar,titletoolbar" spacing="0">
+          role="host" active-page="home_page" flags="statusbar,toolbar,titletoolbar" spacing="0">
       <!-- One row, as in Finder or Mail: the sidebar toggle over the section panel, then back and
            forward, the page's title over the organization and period, and the active page's buttons. -->
       <Toolbar>
@@ -598,6 +626,7 @@
         <spacer flags="TOOLBAR_ITEM_FLAG_FLEXSPACE" />
       </Toolbar>
       <ActivityBar name="activity" flags="notitle" labels="right">
+        <Page form="home_page" command="view.home" />
         <Page form="journal_page" command="view.journal" />
         <Page form="counterparties_page" command="view.counterparties" />
         <Page form="items_page" command="view.items" />
@@ -610,6 +639,91 @@
         <Page form="config_page" command="view.config" />
       </ActivityBar>
       <MDIClient name="documents_client" />
+    </form>
+
+    <!-- Home, 1C's Начальная страница: what needs attention with the command
+         that settles it, money and settlements as of the date, the documents
+         to create and the latest ones. Rows are links: a click acts. The
+         data is ib.home_rows and ib.recent_documents (home.c). -->
+    <form name="home_page" label="Home" title="Home" icon="ledger-nav-home" checked-icon="ledger-nav-home-fill"
+          tooltip="Home (Ctrl+Shift+H)" focus="attention" width="900" height="560" role="page"
+          flags="nofill,flexspace" spacing="12" padding="14">
+      <StackView name="home_top" orientation="horizontal" spacing="12" flags="flexspace">
+        <StackView name="home_left" spacing="12" flags="flexspace">
+          <Card name="attention_card" spacing="4" flags="flexspace">
+            <StackView name="attention_head" orientation="horizontal" spacing="6">
+              <Label name="attention_caption" text="Needs attention" font="system" color="text-secondary" />
+              <Space name="attention_flex" />
+              <Label name="attention_count" color="text-secondary" />
+            </StackView>
+            <TableView name="attention" source="ib.home_rows" filter-field="card" filter-value="1" cell-style="stacked"
+                       column-titles="false" activate="click" flags="notitle,nofill,vscroll,flexspace">
+              <RowIcon field="kind" value="error" icon="ledger-warning" color="error" />
+              <RowIcon field="kind" value="warning" icon="ledger-warning" color="warning" />
+              <RowIcon field="kind" value="draft" icon="ledger-doc-draft" color="warning" />
+              <RowIcon field="kind" value="month" icon="ledger-row-pending" color="info" />
+              <RowIcon field="kind" value="tax" icon="ledger-row-pending" color="info" />
+              <RowIcon field="kind" value="tip" icon="ledger-tip" color="accent" />
+              <Column field="title" title="Task" width="0" />
+              <Column field="detail" title="Detail" />
+              <Column field="action" title="Action" width="124" color="info" />
+            </TableView>
+            <Label name="attention_none" color="text-secondary" flags="LABEL_COLLAPSE_EMPTY" />
+          </Card>
+          <Card name="create_card" spacing="4">
+            <Label name="create_caption" text="Create" font="system" color="text-secondary" />
+            <TableView name="create" source="ib.home_rows" filter-field="card" filter-value="4" column-titles="false"
+                       activate="click" fit-rows="true" flags="notitle,nofill">
+              <RowIcon field="kind" value="operation" icon="ledger-operation" color="accent" />
+              <RowIcon field="kind" value="payroll" icon="ledger-payroll" color="accent" />
+              <RowIcon icon="ledger-new" color="accent" />
+              <Column field="title" title="Document" width="0" />
+            </TableView>
+          </Card>
+        </StackView>
+        <StackView name="home_right" spacing="12" flags="flexspace">
+          <Card name="money_card" spacing="4">
+            <Label name="money_caption" text="Money" font="system" color="text-secondary" />
+            <TableView name="money" source="ib.home_rows" filter-field="card" filter-value="2" cell-style="stacked"
+                       column-titles="false" activate="click" fit-rows="true" flags="notitle,nofill">
+              <Column field="title" title="Account" width="0" />
+              <Column field="detail" title="Code" />
+              <Column field="amount" title="Balance" width="104" />
+            </TableView>
+            <StackView name="money_sum" orientation="horizontal" spacing="8">
+              <Label name="money_total_caption" text="Total money" v-align="center" />
+              <Space name="money_flex" />
+              <Label name="money_total" font="display" h-align="end" />
+            </StackView>
+          </Card>
+          <Card name="settlements_card" spacing="4" flags="flexspace">
+            <Label name="settlements_caption" text="Settlements" font="system" color="text-secondary" />
+            <TableView name="settlements" source="ib.home_rows" filter-field="card" filter-value="3" cell-style="stacked"
+                       column-titles="false" activate="click" fit-rows="true" flags="notitle,nofill">
+              <Column field="title" title="Settlement" width="0" />
+              <Column field="detail" title="With" />
+              <Column field="amount" title="Amount" width="104" />
+            </TableView>
+          </Card>
+        </StackView>
+      </StackView>
+      <Card name="recent_card" spacing="4">
+        <StackView name="recent_head" orientation="horizontal" spacing="6">
+          <Label name="recent_caption" text="Latest documents" font="system" color="text-secondary" />
+          <Space name="recent_flex" />
+          <Button name="all_documents" text="Document journal" flags="BUTTON_COMMANDLINK" color="info" tooltip="Open the document journal (Ctrl+1)" />
+        </StackView>
+        <TableView name="recent" source="ib.recent_documents" column-titles="false" activate="click" fit-rows="true"
+                   zeros="blank" flags="notitle,nofill">
+          <RowIcon field="posted" icon="ledger-doc-posted" color="success" />
+          <RowIcon icon="ledger-doc-draft" color="secondary" />
+          <Column field="document.date" title="Date" width="104" />
+          <Column field="document.number" title="Number" width="84" />
+          <Column field="document.doc_type.name" title="Document" width="0" />
+          <Column field="document.counterparty.name" title="Counterparty" width="0" color="secondary" />
+          <Column field="document.total" title="Amount" width="104" />
+        </TableView>
+      </Card>
     </form>
 
     <!-- Document journal: documents with their lines and entries below. -->

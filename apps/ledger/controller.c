@@ -16,6 +16,8 @@ static void *selected(uint32_t table_view) {
   return tv ? (void *)send_message(tv, tvGetSelectedRecord, 0, NULL) : NULL;
 }
 
+static void update_home(void);
+
 static void refresh_tree(window_t *win) {
   for (window_t *c = win ? win->children : NULL; c; c = c->next) {
     if (c->proc == win_tableview) send_message(c, tvRefresh, 0, NULL);
@@ -43,12 +45,26 @@ void ledger_update_status(void) {
   if (!from[0] && !to[0]) snprintf(period, sizeof(period), "%s", ui_tr("Report period: all dates"));
   else snprintf(period, sizeof(period), ui_tr("Report period: %s – %s"), from[0] ? from : "…", to[0] ? to : "…");
   bool dirty = send_db_message(g_ledger->ib, dbGetDirty, 0, NULL);
-  snprintf(text, sizeof(text), "%s   |   %s   |   %s%s%s", org, cfg, period, dirty ? "   |   " : "", dirty ? ui_tr("modified") : "");
+  // Facts in words: how many documents the books hold and how many wait.
+  int posted = 0, drafts = 0;
+  result_node_t *docs = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
+  for (result_node_t *n = docs; n; n = n->next) { if ((*(db_document_t **)n->data)->posted) posted++; else drafts++; }
+  free_result_list(docs);
+  char counts[96];
+  snprintf(counts, sizeof(counts), ui_tr("Posted: %d · not posted: %d"), posted, drafts);
+  snprintf(text, sizeof(text), "%s   |   %s   |   %s   |   %s%s%s", org, cfg, period, counts, dirty ? "   |   " : "", dirty ? ui_tr("modified") : "");
   send_message(g_ledger->main_win, evStatusBar, 0, text);
+  update_home();
   // The title row names the page, as Finder names the folder, over the company being kept.
   window_t *page = window_active_page(g_ledger->main_win);
   set_window_title(g_ledger->main_win, page && page->title[0] ? page->title : ui_tr("Ledger"));
-  set_window_subtitle(g_ledger->main_win, org);
+  // Home speaks of a date: the figures are as of the period's end.
+  char subtitle[256], asof[16];
+  if (page_host_selection(g_ledger->main_win) == ID_VIEW_HOME && ledger_home_asof()[0]) {
+    ui_format_date(ledger_home_asof(), asof, sizeof(asof));
+    snprintf(subtitle, sizeof(subtitle), ui_tr("%s · as of %s"), org, asof);
+  } else snprintf(subtitle, sizeof(subtitle), "%s", org);
+  set_window_subtitle(g_ledger->main_win, subtitle);
   send_message(g_ledger->main_win, tbEnableItem, ID_VIEW_BACK, (void *)(intptr_t)page_host_can_go(g_ledger->main_win, -1));
   send_message(g_ledger->main_win, tbEnableItem, ID_VIEW_FORWARD, (void *)(intptr_t)page_host_can_go(g_ledger->main_win, 1));
 }
@@ -277,7 +293,15 @@ static void month_end(char *date, size_t sz) {
 }
 
 // The document is created by its dialog, inside the dialog's editing context:
-// Cancel leaves no trace.
+// Cancel leaves no trace. date (ISO) may be empty.
+static void new_document_of(int type_id, const char *date) {
+  char defaults[64];
+  snprintf(defaults, sizeof(defaults), "doc_type_id=%d%s%s", type_id, date && date[0] ? ";date=" : "", date ? date : "");
+  size_t f = document_form(document_type(&(db_document_t){ .doc_type_id = type_id }));
+  db_dialog_opts_t opts = { .hook = kDocumentForms[f].hook, .defaults = defaults };
+  db_form_open(kDocumentForms[f].def, ui_tr(kDocumentForms[f].new_title), view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), 0, &opts, document_saved, NULL);
+}
+
 static void new_document(const char *form) {
   db_document_t *last = selected(ID_JOURNAL_PAGE_DOCUMENTS);
   db_doc_type_t *last_type = document_type(last);
@@ -286,12 +310,19 @@ static void new_document(const char *form) {
     message_box(g_ledger->main_win, ui_tr("The configuration defines no document type of this kind."), ui_tr("New Document"), MB_OK);
     return;
   }
-  char defaults[64], date[16] = "";
+  char date[16] = "";
   if (!strcmp(form, "closing")) month_end(date, sizeof(date));
-  snprintf(defaults, sizeof(defaults), "doc_type_id=%d%s%s", type_id, date[0] ? ";date=" : "", date);
-  size_t f = document_form(document_type(&(db_document_t){ .doc_type_id = type_id }));
-  db_dialog_opts_t opts = { .hook = kDocumentForms[f].hook, .defaults = defaults };
-  db_form_open(kDocumentForms[f].def, ui_tr(kDocumentForms[f].new_title), view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), 0, &opts, document_saved, NULL);
+  new_document_of(type_id, date);
+}
+
+static void open_account_card(int account_id) {
+  db_report_setting_t *rs = ledger_report_settings(g_ledger->ib, g_ledger->cfg);
+  if (!account_id || !rs) return;
+  rs->account_id = account_id;
+  send_db_message(g_ledger->ib, dbUpdate, TABLE_REPORT_SETTINGS, rs);
+  after_save(0);
+  page_host_select(g_ledger->main_win, ID_VIEW_REPORTS);
+  send_message(view(ID_REPORTS_PAGE_REPORT_TABS), tcSetSelection, 1, NULL);  // the card tab
 }
 
 // The account card of the account chosen on the current page: the selected
@@ -300,14 +331,91 @@ static void show_account_card(void) {
   window_t *page = window_active_page(g_ledger->main_win);
   db_entry_t *entry = page && get_window_item(page, ID_ENTRIES_PAGE_ENTRIES) ? selected(ID_ENTRIES_PAGE_ENTRIES) : NULL;
   db_account_t *account = entry ? NULL : selected(ID_ACCOUNTS_PAGE_ACCOUNTS);
-  int account_id = entry ? entry->debit_id : account ? account->id : 0;
-  db_report_setting_t *rs = ledger_report_settings(g_ledger->ib, g_ledger->cfg);
-  if (!account_id || !rs) return;
-  rs->account_id = account_id;
-  send_db_message(g_ledger->ib, dbUpdate, TABLE_REPORT_SETTINGS, rs);
-  after_save(0);
-  page_host_select(g_ledger->main_win, ID_VIEW_REPORTS);
-  send_message(view(ID_REPORTS_PAGE_REPORT_TABS), tcSetSelection, 1, NULL);  // the card tab
+  open_account_card(entry ? entry->debit_id : account ? account->id : 0);
+}
+
+// ── Home ────────────────────────────────────────────────────────────────────
+
+// Posts every draft after saying which, as 1C's group reposting does.
+static void post_drafts(void) {
+  char list[1024] = "", line[160], date[16], total[48], text[1400];
+  int count = 0;
+  result_node_t *docs = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
+  for (result_node_t *n = docs; n; n = n->next) {
+    const db_document_t *d = *(db_document_t **)n->data;
+    if (d->posted) continue;
+    ui_format_date(d->date, date, sizeof(date));
+    snprintf(line, sizeof(line), "%s %s, %s\n", d->number, date, ui_format_number(d->total, 2, total, sizeof(total)));
+    if (++count <= 12) { size_t used = strlen(list); snprintf(list + used, sizeof(list) - used, "%s", line); }
+  }
+  if (!count) { free_result_list(docs); return; }
+  snprintf(text, sizeof(text), ui_tr("Post the documents that are not posted (%d)?\n\n%s"), count, list);
+  if (message_box(g_ledger->main_win, text, ui_tr("Post Documents"), MB_YESNO) == IDYES) {
+    int failed = 0;
+    for (result_node_t *n = docs; n; n = n->next) {
+      const db_document_t *d = *(db_document_t **)n->data;
+      if (!d->posted && !ledger_post(g_ledger->ib, g_ledger->cfg, d->id)) failed++;
+    }
+    after_save(0);
+    if (failed) {
+      snprintf(text, sizeof(text), ui_tr("Documents that could not be posted: %d. Open them to see why."), failed);
+      message_box(g_ledger->main_win, text, ui_tr("Post Documents"), MB_OK);
+    }
+  }
+  free_result_list(docs);
+}
+
+void ledger_home_perform(int row_id) {
+  const db_home_row_t *row = (const db_home_row_t *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_HOME_ROWS, 0), (void *)(intptr_t)row_id);
+  if (!row) {
+    fprintf(stderr, "[ledger] home: no row %d to settle\n", row_id);
+    fflush(stderr);
+    return;
+  }
+  if      (!strcmp(row->command, "post"))  post_drafts();
+  else if (!strcmp(row->command, "close")) { int type = first_doc_type("closing"); if (type) new_document_of(type, row->date); }
+  else if (!strcmp(row->command, "open") && row->document_id) edit_document(row->document_id);
+  else if (!strcmp(row->command, "new") && row->doc_type_id)  new_document_of(row->doc_type_id, "");
+  else if (!strcmp(row->command, "card") && row->account_id)  open_account_card(row->account_id);
+  else if (!strcmp(row->command, "repost"))                    ledger_command(ID_REPORT_RECALC);
+}
+
+// A row of the home page was clicked: do what it offers.
+static void home_activate(window_t *table) {
+  if (table->id == ID_HOME_PAGE_RECENT) {
+    db_recent_document_t *recent = (db_recent_document_t *)send_message(table, tvGetSelectedRecord, 0, NULL);
+    if (recent) edit_document(recent->document_id);
+    return;
+  }
+  db_home_row_t *row = (db_home_row_t *)send_message(table, tvGetSelectedRecord, 0, NULL);
+  if (row) ledger_home_perform(row->id);
+}
+
+static bool is_home_table(uint32_t id) {
+  return id == ID_HOME_PAGE_ATTENTION || id == ID_HOME_PAGE_MONEY || id == ID_HOME_PAGE_SETTLEMENTS ||
+         id == ID_HOME_PAGE_CREATE || id == ID_HOME_PAGE_RECENT;
+}
+
+// The figures the tables cannot show: the money total, the count of tasks.
+static void update_home(void) {
+  window_t *total = view(ID_HOME_PAGE_MONEY_TOTAL), *count = view(ID_HOME_PAGE_ATTENTION_COUNT), *none = view(ID_HOME_PAGE_ATTENTION_NONE);
+  if (!total) return;
+  double money = 0;
+  int tasks = 0;
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_HOME_ROWS, 0), NULL);
+  for (result_node_t *n = rows; n; n = n->next) {
+    const db_home_row_t *r = *(db_home_row_t **)n->data;
+    if (r->card == 2) money += r->amount;
+    if (r->card == 1) tasks++;
+  }
+  free_result_list(rows);
+  char text[64];
+  set_window_title(total, ui_format_number(money, 2, text, sizeof(text)));
+  snprintf(text, sizeof(text), "%d", tasks);
+  set_window_title(count, tasks ? text : "");
+  set_window_title(none, tasks ? "" : ui_tr("The books are in order: nothing is waiting."));
+  window_layout_sync(total->parent);
+  window_layout_sync(count->parent);
 }
 
 // Catalog commands act on the page's TableView, which owns the row form.
@@ -465,7 +573,8 @@ void ledger_command(uint16_t id) {
     case ID_CATALOG_NEW_RATE:            catalog_action(ID_CURRENCIES_PAGE_RATES, tvInsertRecord);              break;
     case ID_CATALOG_DELETE_RATE:         catalog_action(ID_CURRENCIES_PAGE_RATES, tvDeleteRecord);              break;
 
-    case ID_VIEW_JOURNAL: case ID_VIEW_COUNTERPARTIES: case ID_VIEW_ITEMS: case ID_VIEW_ACCOUNTS:
+    case ID_HOME_PAGE_ALL_DOCUMENTS: page_host_select(parent, ID_VIEW_JOURNAL); break;
+    case ID_VIEW_HOME: case ID_VIEW_JOURNAL: case ID_VIEW_COUNTERPARTIES: case ID_VIEW_ITEMS: case ID_VIEW_ACCOUNTS:
     case ID_VIEW_EMPLOYEES: case ID_VIEW_ASSETS: case ID_VIEW_CURRENCIES:
     case ID_VIEW_ENTRIES: case ID_VIEW_REPORTS: case ID_VIEW_CONFIG:
       page_host_select(parent, id);
@@ -512,9 +621,11 @@ result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
       // dialog of its type's form.
       if (code == RVN_DBLCLK && src) {
         if (src->id == ID_JOURNAL_PAGE_DOCUMENTS) ledger_command(ID_DOC_OPEN);
+        else if (is_home_table(src->id)) home_activate(src);
         return true;
       }
       if (code == tvnChanged) { ledger_refresh_views(); return true; }
+      if (code == LEDGER_HOME_SETTLE) { ledger_home_perform(LOWORD(wparam)); return true; }
       if (code == btnClicked || code == kMenuBarNotificationItemClick || code == kAcceleratorNotification || code == 0) {
         ledger_command(LOWORD(wparam));
         return true;

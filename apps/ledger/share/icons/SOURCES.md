@@ -9,6 +9,7 @@ GitClient). Upstream paths: `assets/regular/<name>.svg` and
 
 | Asset | Upstream icon |
 |---|---|
+| ledger-nav-home(-fill).svg | house |
 | ledger-nav-journal(-fill).svg | notebook |
 | ledger-nav-counterparties(-fill).svg | users-three |
 | ledger-nav-items(-fill).svg | package |
@@ -39,6 +40,7 @@ GitClient). Upstream paths: `assets/regular/<name>.svg` and
 | ledger-doc-posted.svg | seal-check (fill) |
 | ledger-doc-draft.svg | file-dashed |
 | ledger-tip.svg | lightbulb |
+| ledger-warning.svg | warning-circle |
 | ledger-row-counterparty.svg | buildings |
 | ledger-row-item.svg | package |
 | ledger-row-account.svg | book-open |
