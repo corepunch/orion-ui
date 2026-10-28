@@ -2,6 +2,8 @@
 ## Design skill
 
 For UI design and review, use the [`orion-ui-design`](.agents/skills/orion-ui-design/SKILL.md) skill (adapted from Apple HIG principles for Orion's retro style).
+The app shell, status badges, buttons, tables and tokens every app shares are
+defined in [docs/design-language.md](docs/design-language.md).
 # Debug macros
 
 These macros control verbose debug logging. Set to `1` at build time to enable,
