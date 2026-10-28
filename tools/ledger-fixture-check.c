@@ -9,6 +9,7 @@ ledger_t *g_ledger;
 #include "apps/ledger/ledger_script.c"
 #include "apps/ledger/posting.c"
 #include "apps/ledger/print.c"
+#include "apps/ledger/home.c"
 
 #define CHECK(x) do { if (!(x)) { fprintf(stderr, "fixture check failed: %s:%d: %s\n", __FILE__, __LINE__, #x); exit(1); } } while (0)
 static double elapsed(clock_t start) { return (double)(clock() - start) / CLOCKS_PER_SEC; }

@@ -7,6 +7,7 @@ ledger_t *g_ledger;
 #include "apps/ledger/ledger_script.c"
 #include "apps/ledger/posting.c"
 #include "apps/ledger/print.c"
+#include "apps/ledger/home.c"
 
 int main(int argc, char **argv) {
   ledger_t state = {0};
