@@ -446,6 +446,10 @@ enum {
   tbModifyStyle,               // wparam=TOOLBAR_STYLE_* mask, lparam=(void *)(uintptr_t)new bit values; other bits keep (TB_SETEXTENDEDSTYLE)
   tbGetIdealSize,              // lparam=isize16_t* receives the unwrapped band size that fits every item (TB_GETMAXSIZE)
   tbGetItemRect,               // wparam=item ident, lparam=irect16_t* in toolbar-band coordinates (TB_GETITEMRECT)
+  edSetList,                   // wparam=control id of a list in the same window (0 unlinks): the field drives it, as a
+                               // command palette's does: up/down move its selection, Enter opens the selected row
+                               // while the text is unchanged since it was submitted
+  edGetList,                   // returns the id of the list the field drives, 0 for none (and from other controls)
 };
 // PageHost selection: wparam = command ID, lparam = selected page.
 enum { evPageChanged = evUser + 920 };

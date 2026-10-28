@@ -1072,6 +1072,9 @@ static void create_form_children_flat(window_t *parent, const form_ctrl_def_t *c
     child->layout.layout_padding = cd->padding;
     child->layout.layout_spacing = cd->layout_spacing;
     if (cd->placeholder) send_message(child, edSetPlaceholder, 0, (void *)ui_tr(cd->placeholder));
+    if (cd->target && !cd->target_message) send_message(child, edSetList, cd->target, NULL);
+    if (cd->icon) send_message(child, btnSetIconName, 0, (void *)cd->icon);
+    if (cd->tooltip) send_message(child, btnSetTooltip, 0, (void *)ui_tr(cd->tooltip));
 
     if (form_children_have_parent(children, child_count, child->id))
       create_form_children_flat(child, children, child_count, child->id);
@@ -1330,6 +1333,9 @@ static void create_form_children(window_t *parent, const form_ctrl_def_t *childr
     child->layout.layout_padding = cd->padding;
     child->layout.layout_spacing = cd->layout_spacing;
     if (cd->placeholder) send_message(child, edSetPlaceholder, 0, (void *)ui_tr(cd->placeholder));
+    if (cd->target && !cd->target_message) send_message(child, edSetList, cd->target, NULL);
+    if (cd->icon) send_message(child, btnSetIconName, 0, (void *)cd->icon);
+    if (cd->tooltip) send_message(child, btnSetTooltip, 0, (void *)ui_tr(cd->tooltip));
 
     if (cd->children && cd->child_count > 0)
       create_form_children(child, cd->children, cd->child_count);

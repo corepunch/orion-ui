@@ -14,7 +14,11 @@
 // Helper function (will be moved to ui/user/window.c later)
 extern window_t *get_root_window(window_t *window);
 
-typedef struct { char placeholder[128], leading_icon[64]; } textedit_t;
+typedef struct {
+  char placeholder[128], leading_icon[64];
+  uint32_t list;   // edSetList: the list this field drives (0 = none)
+  bool edited;     // typed into since the text was last submitted (edUpdate)
+} textedit_t;
 
 #define TEXTEDIT_ICON_GAP 6
 
@@ -33,7 +37,33 @@ static int textedit_text_x(window_t *win) {
 }
 
 static void notify_change(window_t *win) {
+  textedit_t *te = win->userdata;
+  if (te) te->edited = true;
   if (win->parent) send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, ednChange), win);
+}
+
+static window_t *driven_list(window_t *win) {
+  const textedit_t *te = win->userdata;
+  window_t *list = te && te->list ? get_window_item(get_root_window(win), te->list) : NULL;
+  return list && window_is_visible(list) ? list : NULL;
+}
+
+// A field that drives a list moves the list's selection with the arrow keys
+// and opens its selected row with Enter, until something new is typed.
+static bool drive_list(window_t *win, uint32_t key) {
+  window_t *list = driven_list(win);
+  textedit_t *te = win->userdata;
+  if (!list) return false;
+  if (key == AX_KEY_UPARROW || key == AX_KEY_DOWNARROW) return send_message(list, evKeyDown, key, NULL) != 0;
+  if (key == AX_KEY_ENTER && !te->edited && (int)send_message(list, RVM_GETSELECTION, 0, NULL) >= 0)
+    return send_message(list, evKeyDown, key, NULL) != 0;
+  return false;
+}
+
+static void submit(window_t *win) {
+  textedit_t *te = win->userdata;
+  if (te) te->edited = false;
+  send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, edUpdate), win);
 }
 
 static int edit_previous(const char *text, int at) {
@@ -123,6 +153,12 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
     case evTextInput: {
       if (!lparam) return false;
+      // Typing edits, however the field got the focus (a click, Tab, or a
+      // command that focuses it), so Enter submits and Backspace deletes.
+      if (!window_has_state(win, WINDOW_STATE_EDITING)) {
+        win->cursor_pos = (uint32_t)strlen(win->title);
+        window_set_state(win, WINDOW_STATE_EDITING, true);
+      }
       size_t added = strlen(lparam);
       if (strlen(win->title) + added < BUFFER_SIZE) {
         memmove(win->title + win->cursor_pos + added,
@@ -136,10 +172,11 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return true;
     }
     case evKeyDown:
+      if (drive_list(win, wparam)) { invalidate_window(win); return true; }
       switch (wparam) {
         case AX_KEY_TAB:
           if (window_has_state(win, WINDOW_STATE_EDITING)) {
-            send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, edUpdate), win);
+            submit(win);
             window_set_state(win, WINDOW_STATE_EDITING, false);
           }
           return false;
@@ -148,7 +185,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
             win->cursor_pos = (int)strlen(win->title);
             window_set_state(win, WINDOW_STATE_EDITING, true);
           } else {
-            send_message(get_root_window(win), evCommand, MAKEDWORD(win->id, edUpdate), win);
+            submit(win);
             window_set_state(win, WINDOW_STATE_EDITING, false);
           }
           break;
@@ -212,6 +249,21 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       else snprintf(te->placeholder, sizeof(te->placeholder), "%s", lparam ? (const char *)lparam : "");
       invalidate_window(win);
       return true;
+    }
+
+    case edSetList: {
+      textedit_t *te = win->userdata ? win->userdata : allocate_window_data(win, sizeof(textedit_t));
+      if (!te) {
+        fprintf(stderr, "[ed] edSetList failed win=%u list=%u reason=allocation\n", (unsigned)win->id, (unsigned)wparam);
+        fflush(stderr);
+        return false;
+      }
+      te->list = wparam;
+      return true;
+    }
+    case edGetList: {
+      const textedit_t *te = win->userdata;
+      return te ? (result_t)te->list : 0;
     }
 
     case edGetPlaceholder: {

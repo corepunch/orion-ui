@@ -7,23 +7,48 @@
 #include <orion/user/theme.h>
 #include <orion/user/svg_icon_loader.h>
 
+// Rows of a grouped list sit below their section captions, each caption one
+// row tall; row_tops holds every row's top within the content.
+static void report_layout_rows(reportview_data_t *data) {
+  int entry_h = rv_entry_height(data), top = 0;
+  data->has_sections = false;
+  for (uint32_t i = 0; i < data->count; i++) {
+    if (data->items[i].section) { data->has_sections = true; top += entry_h; }
+    data->row_tops[i] = top;
+    top += entry_h;
+  }
+  data->row_tops[data->count] = top;
+}
+
+static int report_row_top(reportview_data_t *data, int index) {
+  return data->has_sections ? data->row_tops[index] : index * rv_entry_height(data);
+}
+
 static void report_sync_scroll(window_t *win, reportview_data_t *data) {
+  report_layout_rows(data);
   window_set_scroll_content(win, 0, 0, (irect16_t){0},
                             (irect16_t){0, rv_report_header_height(data), 0, rv_report_footer_height(data)});
 }
 
 static irect16_t report_item_rect(window_t *win, reportview_data_t *data, int index) {
   irect16_t content = window_scroll_content_rect(win);
-  return R(content.x, content.y + index * rv_entry_height(data), content.w, rv_entry_height(data));
+  return R(content.x, content.y + report_row_top(data, index), content.w, rv_entry_height(data));
 }
 
+// A click on a section caption hits no row.
 static int report_hit_index(window_t *win, reportview_data_t *data, uint32_t wparam) {
   int my = (int)(int16_t)HIWORD(wparam);
   int origin = window_scroll_content_rect(win).y;
   irect16_t point = window_scroll_rect_to_client(win, R(0, my, 0, 0)), viewport = window_scroll_viewport(win);
   if (my < origin || point.y < viewport.y || point.y >= viewport.y + viewport.h) return -1;
-  int row = (my - origin) / rv_entry_height(data);
-  return rv_valid_index(data, row) ? row : RV_INVALID_SELECTION;
+  int y = my - origin, entry_h = rv_entry_height(data);
+  if (!data->has_sections) {
+    int row = y / entry_h;
+    return rv_valid_index(data, row) ? row : RV_INVALID_SELECTION;
+  }
+  for (uint32_t i = 0; i < data->count; i++)
+    if (y >= data->row_tops[i] && y < data->row_tops[i] + entry_h) return (int)i;
+  return RV_INVALID_SELECTION;
 }
 
 static bool report_hit_checkbox(window_t *win, reportview_data_t *data,
@@ -79,6 +104,18 @@ static int report_hit_column_edge(window_t *win, reportview_data_t *data,
   return -1;
 }
 
+// The selection is strong while the list (or the table holding it, or a field
+// driving it with edSetList) has the keyboard focus, and quiet otherwise, so
+// the window shows where typing goes.
+static ctrl_state_t report_selection_state(window_t *win) {
+  for (window_t *f = g_ui_runtime.focused; f; f = f->parent)
+    if (f == win) return CTRL_SELECTED;
+  window_t *focused = g_ui_runtime.focused;
+  if (focused && win->id && get_root_window(focused) == get_root_window(win) &&
+      (uint32_t)send_message(focused, edGetList, 0, NULL) == win->id) return CTRL_SELECTED;
+  return g_ui_runtime.focused && g_ui_runtime.focused == win->parent ? CTRL_SELECTED : CTRL_SELECTED | CTRL_INACTIVE;
+}
+
 static void report_paint(window_t *win, reportview_data_t *data) {
   irect16_t cr = get_client_rect(win);
   int eff_w = cr.w;
@@ -90,8 +127,16 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   int scroll_y = (int)win->vscroll.pos;
   uint32_t bg_col = get_sys_color(brColumnViewBg);
 
-  int first_row = (body_h > 0) ? (scroll_y / entry_h) : 0;
-  int last_row = (body_h > 0) ? ((scroll_y + body_h + entry_h - 1) / entry_h) : 0;
+  report_layout_rows(data);
+  int first_row = 0, last_row = 0;
+  if (body_h > 0 && data->has_sections) {
+    while (first_row < (int)data->count && report_row_top(data, first_row) + entry_h <= scroll_y) first_row++;
+    last_row = first_row;
+    while (last_row < (int)data->count && report_row_top(data, last_row) < scroll_y + body_h) last_row++;
+  } else if (body_h > 0) {
+    first_row = scroll_y / entry_h;
+    last_row = (scroll_y + body_h + entry_h - 1) / entry_h;
+  }
   if (first_row < 0) first_row = 0;
   if (last_row > (int)data->count) last_row = (int)data->count;
 
@@ -100,12 +145,26 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   uint32_t sep_col = get_sys_color(brDarkEdge);
 #endif
 
+  // A framed list clips everything it draws to the frame's silhouette, so
+  // the header and the rows that scroll under the corners stay inside it.
+  int frame_radius = (data->extended_style & RVS_EX_FRAME) ? get_theme()->table.corner_radius : -1;
+  if (frame_radius > 0) set_clip_rounded_rect(win, cr, frame_radius);
   fill_rect(bg_col, rect_trim_top(cr, header_h));
+  ctrl_state_t selection = report_selection_state(win);
+  // Section captions span the columns, in secondary text above their rows.
+  for (int row = first_row; data->has_sections && row <= last_row && row < (int)data->count; row++) {
+    if (!data->items[row].section) continue;
+    int y = window_scroll_rect_to_client(win, report_item_rect(win, data, row)).y - entry_h;
+    if (y + entry_h <= header_h || y >= body_bottom) continue;
+    set_clip_rect(win, (irect16_t){0, header_h, eff_w, MAX(0, body_bottom - header_h)});
+    irect16_t caption = {WIN_PADDING * 2, y, eff_w - WIN_PADDING * 4, entry_h};
+    draw_text_clipped(FONT_SMALLEST, data->items[row].section, &caption, get_sys_color(brTextSecondary), 0);
+  }
 
   if (data->selected >= first_row && data->selected < last_row) {
     int y = window_scroll_rect_to_client(win, report_item_rect(win, data, data->selected)).y;
     int top = MAX(y, header_h), bottom = MIN(y + entry_h, body_bottom);
-    theme_draw(THEME_PART_LIST_ITEM, R(0, top, eff_w, bottom - top), CTRL_SELECTED);
+    theme_draw(THEME_PART_LIST_ITEM, R(0, top, eff_w, bottom - top), selection);
   }
 
   int col_x = 0;
@@ -136,7 +195,8 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     set_clip_rect(win, (irect16_t){clip_x, header_h, clip_w, MAX(0, body_bottom - header_h)});
     for (int row = first_row; row < last_row; row++) {
       reportview_item_t *it = &data->items[row];
-      uint32_t fg = (row == data->selected) ? theme_foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED)
+      bool strong = row == data->selected && !(selection & CTRL_INACTIVE);
+      uint32_t fg = strong ? theme_foreground(THEME_PART_LIST_ITEM, selection)
                   : it->color ? it->color : get_sys_color(brTextNormal);
       int y = window_scroll_rect_to_client(win, report_item_rect(win, data, row)).y;
       const char *src = "";
@@ -152,7 +212,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
         irect16_t icon = {text_x, y + (entry_h - ICON_OFFSET) / 2, ICON_OFFSET, ICON_OFFSET};
         if (sysicon_resolve(it->icon_name, &res))
           draw_sprite_region((int)res.tex, icon, UV_RECT(res.u0, res.v0, res.u1, res.v1),
-                             row != data->selected && it->icon_color ? it->icon_color : fg, 0);
+                             !strong && it->icon_color ? it->icon_color : fg, 0);
         text_x += ICON_OFFSET + WIN_PADDING;
       }
       if (col == 0 && (data->extended_style & RVS_EX_CHECKBOXES)) {
@@ -211,10 +271,10 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     int sep_x = window_scroll_rect_to_client(win, R(col_x, 0, 0, 0)).x;
     ctrl_state_t divider_state = (int)col == data->resize_hot_col && data->resize_col < 0 ? CTRL_HOVER : CTRL_NORMAL;
 #if REPORTVIEW_RESIZE_FULL_HEIGHT
-    if (sep_x >= 0 && sep_x <= eff_w)
+    if (sep_x >= 0 && sep_x <= eff_w && !data->has_sections)   // a grouped list reads as one column of rows
       theme_draw(THEME_PART_COLUMN_DIVIDER, R(sep_x - divider_w / 2, 0, divider_w, cr.h), divider_state);
 #else
-    if (sep_x >= 0 && sep_x <= eff_w)
+    if (sep_x >= 0 && sep_x <= eff_w && !data->has_sections)   // a grouped list reads as one column of rows
       fill_rect(sep_col, R(sep_x, header_h, 1, cr.h - header_h));
     if (header_h > 0 && sep_x >= 0 && sep_x <= eff_w)
       theme_draw(THEME_PART_COLUMN_DIVIDER, R(sep_x - divider_w / 2, 0, divider_w, header_h), divider_state);
@@ -244,6 +304,10 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     draw_text_clipped(FONT_SMALL, shown, &total_rect, hdr_fg, data->columns[col].align);
   }
   set_clip_rect(win, (irect16_t){0, 0, eff_w, cr.h});
+  if (frame_radius >= 0) {
+    set_clip_rounded_rect(win, cr, 0);
+    stroke_rounded_rect(get_sys_color(brLightEdge), cr, frame_radius, 1);
+  }
 }
 
 result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -276,7 +340,8 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
     case evMeasureScrollContent: {
       layout_measure_t *m = lparam;
       m->desired_w = rv_report_total_width(data, m->avail_w);
-      m->desired_h = (int)data->count * rv_entry_height(data);
+      report_layout_rows(data);
+      m->desired_h = report_row_top(data, (int)data->count);
       return true;
     }
     case evMeasure: {
@@ -294,6 +359,10 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       }
       m->desired_w = MAX(m->desired_w, min_w);
       m->desired_h = MAX(m->desired_h, min_h);
+      if (data && (data->extended_style & RVS_EX_FITROWS)) {   // exactly its rows, as a popover shows them
+        report_layout_rows(data);
+        m->desired_h = rv_report_header_height(data) + report_row_top(data, (int)data->count) + rv_report_footer_height(data);
+      }
       return true;
     }
     case evPaint:
@@ -408,6 +477,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       memmove(data->items + wparam, data->items + wparam + 1, (data->count - wparam - 1) * sizeof(data->items[0]));
       memmove(data->names + wparam, data->names + wparam + 1, (data->count - wparam - 1) * sizeof(data->names[0]));
       memmove(data->subnames + wparam, data->subnames + wparam + 1, (data->count - wparam - 1) * sizeof(data->subnames[0]));
+      memmove(data->sections + wparam, data->sections + wparam + 1, (data->count - wparam - 1) * sizeof(data->sections[0]));
       data->count--;
       rv_rebind_item_refs(data, (uint32_t)wparam);
       if (data->selected == (int)wparam) data->selected = RV_INVALID_SELECTION;

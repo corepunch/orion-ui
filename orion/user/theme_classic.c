@@ -128,7 +128,7 @@ static void classic_draw_combobox_bg(irect16_t r, ctrl_state_t state) {
 
 static void classic_draw_list_item_bg(irect16_t r, ctrl_state_t state) {
   if (state & CTRL_SELECTED)
-    fill_rect(get_sys_color(brTextNormal), r);
+    fill_rect(get_sys_color(state & CTRL_INACTIVE ? brDarkEdge : brTextNormal), r);
 }
 
 // ── Slider thumb ─────────────────────────────────────────────────────────────
@@ -301,7 +301,7 @@ static void classic_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state
 
 static uint32_t classic_foreground(theme_part_t part, ctrl_state_t state) {
   if (state & CTRL_DISABLED) return get_sys_color(brTextDisabled);
-  if (part == THEME_PART_LIST_ITEM && (state & CTRL_SELECTED)) return get_sys_color(brWindowDarkBg);
+  if (part == THEME_PART_LIST_ITEM && (state & CTRL_SELECTED) && !(state & CTRL_INACTIVE)) return get_sys_color(brWindowDarkBg);
   if (part == THEME_PART_MENU_ITEM && (state & (CTRL_HOVER | CTRL_SELECTED | CTRL_PRESSED)))
     return get_sys_color(brActiveTitlebarText);
   return get_sys_color(brTextNormal);
@@ -333,6 +333,7 @@ static theme_t g_classic_theme = {
   .style                  = THEME_CLASSIC,
   .name                   = "Classic",
   .appearance             = { .dark = true, .counterpart = THEME_CLASSIC },
+  .text_shadow            = true,
   .draw_button_label      = classic_draw_button_label,
   .draw_combobox          = classic_draw_combobox,
   .draw_card              = theme_default_draw_card,
@@ -356,7 +357,7 @@ static theme_t g_classic_theme = {
   .menu = { .capsule = 0 },
   .report = { .divider_width = 1 },
   .splitter = { .spacing = 2 },
-  .badge = { .padding = 7, .corner_radius = 5, .tint_alpha = 0x40 },
+  .badge = { .padding = 7, .corner_radius = 5, .tint_alpha = 0x40, .ink_mix = 0x30, .icon_size = 12, .icon_gap = 4 },
   .tooltip = {
     .corner_radius = 4, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,
     .shadow = { .size = 10, .blur = 2, .offset = {0, 3}, .color = 0x78000000 },

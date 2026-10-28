@@ -43,6 +43,15 @@ void stroke_rounded_rect(uint32_t color, irect16_t r, int radius, int thickness)
 static inline uint32_t color_with_alpha(uint32_t color, uint8_t alpha) {
   return ((uint32_t)alpha << 24) | (color & 0x00FFFFFFu);
 }
+// a moved `amount`/255 of the way towards b, channel by channel (alpha too).
+static inline uint32_t color_mix(uint32_t a, uint32_t b, uint8_t amount) {
+  uint32_t out = 0;
+  for (int shift = 0; shift < 32; shift += 8) {
+    int ca = (int)((a >> shift) & 0xFF), cb = (int)((b >> shift) & 0xFF);
+    out |= (uint32_t)(ca + (cb - ca) * amount / 255) << shift;
+  }
+  return out;
+}
 // A card: brControlBg, halfway to brButtonHover when hovered, with an optional accent edge on its left side.
 // The edge is a plain `edge_width`-pixel rectangle; the active theme's card.corner_radius rounds (or not)
 // the card and the edge together. CTRL_SELECTED draws a ring in the accent edge's colour (theme accent when there is no edge) in the theme's card.ring_width margin,
@@ -62,13 +71,21 @@ typedef struct {
 void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow,
                             const plastic_look_t *look, uint32_t color, uint32_t shadow_color,
                             uint32_t icon_tex, const frect_t *icon_uv, ipoint16_t icon_size);
-// Small tinted label ("3 modified"): a rounded fill in `color` at low alpha with the text in `color`.
-// Drawn at (x, y) with the given height; returns the badge width so callers can chain badges.
+// Small tinted label ("3 modified"): a rounded fill in `color` at the theme's badge tint with the
+// text in the badge ink (see draw_status_badge). Drawn at (x, y) with the given height; returns the
+// badge width so callers can chain badges.
 int  draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color);
 int  measure_badge(ui_font_t font, const char *text);   // width draw_badge() will use
 // Explicit bounds and independent text/fill colours; round uses capsule or circular ends.
 void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_color, uint32_t background_color, bool round);
 #define BADGE_HEIGHT 18
+// A status badge ("Posted", "Paid"): a pill tinted with `color`, a theme role such as brTextSuccess,
+// an optional leading icon in that colour, and medium-weight (FONT_SYSTEM) text in the badge ink, the role leaning
+// towards brTextNormal so small type stays readable on the tint in light and dark palettes. Padding,
+// tint and icon size come from the theme's badge metrics. The Badge control draws exactly this.
+int  measure_status_badge(const char *text, const char *icon);
+void draw_status_badge(irect16_t r, const char *text, const char *icon, uint32_t color);
+uint32_t badge_ink(uint32_t color);   // the text colour a badge tinted with `color` uses
 // Procedural rounded-box shadow; radius, blur (Gaussian sigma), and offset are logical pixels.
 void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, uint32_t color);
 void draw_gradient_rect(irect16_t r, uint32_t left_color, uint32_t right_color);
@@ -123,6 +140,8 @@ void draw_checkerboard(irect16_t r, int square_px);
 void set_viewport(irect16_t frame);
 void set_projection(int x, int y, int w, int h);
 void set_clip_rect(window_t const *, irect16_t r);
+// Rounded clip in addition to set_clip_rect, for framed content; radius 0 clears it.
+void set_clip_rounded_rect(window_t const *, irect16_t r, int radius);
 void set_viewport_for_fbo(window_t *root);
 // Paint redirection for a child subtree; NULL selects the root surface.
 window_t *set_draw_surface(window_t *win);

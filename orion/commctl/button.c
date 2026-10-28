@@ -47,6 +47,15 @@ static button_extras_t *button_extras(window_t *win, bool create) {
   return win->userdata;
 }
 
+#define BUTTON_ICON_GAP  6
+#define BUTTON_TEXT_ICON 16   // an icon beside a caption is text-sized
+
+// A button with both an icon and a caption shows the icon before the text.
+static int button_icon_width(window_t *win) {
+  button_extras_t *x = button_extras(win, false);
+  return x && x->icon[0] && win->title[0] ? BUTTON_TEXT_ICON + BUTTON_ICON_GAP : 0;
+}
+
 static int command_link_height(void) {
   const theme_t *theme = get_theme();
   return MAX(text_char_height(FONT_SMALL), theme->command_link.bullet_size) + theme->command_link.padding_y * 2;
@@ -111,7 +120,8 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
         if (m->avail_w > 0) m->desired_w = MIN(m->desired_w, m->avail_w);   // long text ellipsizes
         m->desired_h = command_link_height();
       } else if (m) {
-        m->desired_w = MAX(win->frame.w, strwidth(win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2);
+        m->desired_w = MAX(win->frame.w, strwidth(win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2 +
+                                         button_icon_width(win));
         m->desired_h = control_predefined_height(win->flags);
       }
       return true;
@@ -144,18 +154,21 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
                                          .control_size = win->flags & CONTROL_SIZE_MASK,
                                          .round = (win->flags & WINDOW_ROUND) != 0});
       if (plastic && x && x->icon[0]) return true;   // the plastic face engraves the glyph itself
+      int icon_w = button_icon_width(win);
       if (x && x->icon[0]) {
         sysicon_resolved_t glyph;
-        int size = MIN(SYSICON_SIZE, MIN(local.w, local.h) - 4);
+        int size = MIN(icon_w ? BUTTON_TEXT_ICON : SYSICON_SIZE, MIN(local.w, local.h) - 4);
         if (size > 0 && sysicon_resolve_size(x->icon, size, &glyph)) {
-          irect16_t at = rect_center(local, glyph.w, glyph.h);
+          irect16_t at = rect_center(local, icon_w ? icon_w + strwidth(win->title) : glyph.w, glyph.h);
+          at.w = glyph.w;
           draw_sprite_region((int)glyph.tex, at, UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1),
                              theme_foreground(THEME_PART_BUTTON, state), 0);
         }
-        return true;
+        if (!icon_w) return true;
       }
       irect16_t content = rect_inset_xy(local, get_theme()->control.padding, 2);
-      irect16_t label = rect_center(content, strwidth(win->title), CHAR_HEIGHT);
+      irect16_t label = rect_center(content, strwidth(win->title) + icon_w, CHAR_HEIGHT);
+      label = rect_trim_left(label, icon_w);
       get_theme()->draw_button_label(label, win->title, state);
       return true;
     }

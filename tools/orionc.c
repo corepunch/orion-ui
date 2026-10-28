@@ -84,7 +84,12 @@ static const enum_token_t kColors[] = {
   {"border-active", brBorderActive}, {"folder-text", brFolderText},
   {"column-view-bg", brColumnViewBg}, {"modal-overlay", brModalOverlay},
   {"toolbar-foreground", brToolbarForeground},
-  {"panel-dark", brPanelDark}, {"panel-darker", brPanelDarker},
+  {"info-background", brInfoBackground}, {"info-text", brInfoText},
+  {"tooltip-background", brTooltipBackground}, {"tooltip-text", brTooltipText},
+  {"panel-dark", brPanelDark}, {"panel-darker", brPanelDarker}, {"desktop-bg", brDesktopBg},
+  {"text-warning", brTextWarning}, {"text-info", brTextInfo}, {"text-secondary", brTextSecondary},
+  {"success", brTextSuccess}, {"warning", brTextWarning}, {"error", brTextError},
+  {"info", brTextInfo}, {"secondary", brTextSecondary},
 };
 
 static bool eq(const char *a, const char *b) { return a && b && strcmp(a, b) == 0; }
@@ -942,17 +947,20 @@ static void emit_tableviews(FILE *f, xmlNodePtr parent, xmlNodePtr form_node,
       EACH_ELEMENT(col, c) if (elem(col, "column")) { char *v = attr(col, "total"); totals |= eq(v, "sum"); if (v && !eq(v, "sum")) fprintf(stderr, "orionc: warning: TableView '%s': unknown total '%s' (want sum)\n", nz(name, ""), v); free(v); }
       if (totals) { OUT("static const bool %s_totals[] = { ", param); EACH_ELEMENT(col, c) if (elem(col, "column")) { char *v = attr(col, "total"); OUT("%s, ", eq(v, "sum") ? "true" : "false"); free(v); } LINE("};\n"); }
       char *totals_label = attr(c, "totals-label"), totals_label_q[ORIONC_STRING_SIZE] = "NULL";
-      char *totals_skip = attr(c, "totals-skip"), totals_skip_q[ORIONC_STRING_SIZE] = "NULL";
+      char *totals_skip = attr(c, "totals-skip"), totals_skip_q[ORIONC_STRING_SIZE] = "NULL", *frame = attr(c, "frame");
+      char *group_field = attr(c, "group-field"), group_field_q[ORIONC_STRING_SIZE] = "NULL", *fit_rows = attr(c, "fit-rows");
+      if (group_field && *group_field) cstr(group_field_q, sizeof(group_field_q), group_field);
       if (totals_label) cstr(totals_label_q, sizeof(totals_label_q), totals_label);
       if (totals_skip) cstr(totals_skip_q, sizeof(totals_skip_q), totals_skip);
       char row_icons_ref[300] = "NULL", totals_ref[300] = "NULL";
       if (row_icons) snprintf(row_icons_ref, sizeof(row_icons_ref), "%s_row_icons", param);
       if (totals) snprintf(totals_ref, sizeof(totals_ref), "%s_totals", param);
-      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = %d, .filter_value = %d, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s, .record_form = %s, .blank_zeros = %s, .row_icons = %s, .row_icon_count = %d, .column_totals = %s, .totals_label = %s, .totals_skip = %s };\n\n",
+      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = %d, .filter_value = %d, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s, .record_form = %s, .blank_zeros = %s, .row_icons = %s, .row_icon_count = %d, .column_totals = %s, .totals_label = %s, .totals_skip = %s, .framed = %s, .group_field = %s, .fit_rows = %s };\n\n",
           param, table_id, filter_index, filter_value ? atoi(filter_value) : 0, param, param, param, param, check_field_q, master_id,
           relation_field, master_key_q, cell_style_value, column_titles && eq(column_titles, "false") ? "true" : "false", record_form_ref, eq(zeros, "blank") ? "true" : "false",
-          row_icons_ref, row_icons, totals_ref, totals_label_q, totals_skip_q);
-      free(record_form); free(zeros); free(totals_label); free(totals_skip);
+          row_icons_ref, row_icons, totals_ref, totals_label_q, totals_skip_q, eq(frame, "true") ? "true" : "false",
+          group_field_q, eq(fit_rows, "true") ? "true" : "false");
+      free(record_form); free(zeros); free(totals_label); free(totals_skip); free(frame); free(group_field); free(fit_rows);
       free(column_titles);
       free(cell_style);
       free(check_field);
@@ -1071,7 +1079,7 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
     const char *auto_flex = (elem(c, "space") || (elem(c, "multiedit") && sz.h <= 0)) ? " | WINDOW_FLEXSPACE" : "";
     snprintf(flags, sizeof(flags), "(%s)%s%s%s", resolved, enum_parse_token(a.v[A_ORIENT], kOrient, ARRAY_LEN(kOrient), WINDOW_STACK_VERTICAL) & WINDOW_STACK_HORIZONTAL ? " | WINDOW_STACK_HORIZONTAL" : "", auto_flex, control_size_flag(c));
     snprintf(spacing, sizeof(spacing), "%u", byte_attr(a.v[A_SPACING], ORIONC_DEFAULT_SPACING));
-    snprintf(font, sizeof(font), "%s", eq(a.v[A_FONT], "system") ? "FONT_SYSTEM" : eq(a.v[A_FONT], "smallest") ? "FONT_SMALLEST" : "FONT_SMALL");
+    snprintf(font, sizeof(font), "%s", eq(a.v[A_FONT], "system") ? "FONT_SYSTEM" : eq(a.v[A_FONT], "smallest") ? "FONT_SMALLEST" : eq(a.v[A_FONT], "title") ? "FONT_TITLE" : "FONT_SMALL");
     snprintf(color, sizeof(color), "%u", (unsigned)enum_parse_token(a.v[A_COLOR], kColors, ARRAY_LEN(kColors), brTextNormal));
     if (elem(c, "tableview")) snprintf(lparam, sizeof(lparam), "&%s_%s_tableview_params", form, nz(a.v[A_NAME], "unnamed"));
     if (elem(c, "activitybar") && (child(c, "toolbar") || xmlHasProp(c, BAD_CAST "labels"))) snprintf(lparam, sizeof(lparam), "&%s_%s_activity_params", form, nz(a.v[A_NAME], "unnamed"));
@@ -1122,23 +1130,29 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
     if (source && *source) cstr(sourceq, sizeof(sourceq), source);
     char *placeholder = attr(c, "placeholder"), placeholderq[ORIONC_STRING_SIZE] = "NULL";
     if (placeholder) cstr(placeholderq, sizeof(placeholderq), placeholder);
+    char *icon = attr(c, "icon"), *tooltip = attr(c, "tooltip"), iconq[ORIONC_STRING_SIZE] = "NULL", tooltipq[ORIONC_STRING_SIZE] = "NULL";
+    if (icon && *icon) cstr(iconq, sizeof(iconq), icon);
+    if (tooltip && *tooltip) cstr(tooltipq, sizeof(tooltipq), tooltip);
     cstr(classq, sizeof(classq), klass); cstr(textq, sizeof(textq), a.v[A_TEXT]); cstr(nameq, sizeof(nameq), a.v[A_NAME]);
     // <Button target="lines" action="insert"> sends the TableView a record action.
     char *target = attr(c, "target"), *taction = attr(c, "action"), target_id[256] = "0";
     const char *target_msg = "0";
+    char *list = elem(c, "textbox") || elem(c, "textedit") ? attr(c, "list") : NULL;
+    if (list && *list) control_id(target_id, sizeof(target_id), form, list, "control", 0);   // the list the field drives
+    free(list);
     if (target && *target) {
       control_id(target_id, sizeof(target_id), form, target, "control", 0);
       target_msg = eq(taction, "insert") ? "tvInsertRecord" : eq(taction, "edit") ? "tvEditRecord" : eq(taction, "delete") ? "tvDeleteRecord" : NULL;
       if (!target_msg) { fprintf(stderr, "orionc: control '%s': unknown action '%s' for target '%s' (insert, edit, delete)\n", nz(a.v[A_NAME], ""), nz(taction, ""), target); target_msg = "0"; snprintf(target_id, sizeof(target_id), "0"); }
     }
-    OUT("  { %s, %s, { %d, %d }, %s, %s, %s, %u, %u, NULL, 0, %s, { %d, %d, %d, %d }, { %d, %d, %d, %d }, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s },\n",
+    OUT("  { %s, %s, { %d, %d }, %s, %s, %s, %u, %u, NULL, 0, %s, { %d, %d, %d, %d }, { %d, %d, %d, %d }, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s },\n",
         classq, id, sz.w, sz.h, flags, textq, nameq,
         (unsigned)enum_parse_token(a.v[A_HA], kAlignH, ARRAY_LEN(kAlignH), 0),
         (unsigned)enum_parse_token(a.v[A_VA], kAlignV, ARRAY_LEN(kAlignV), 0),
         spacing, pad.x, pad.y, pad.w, pad.h, mar.x, mar.y, mar.w, mar.h,
         nz(parent_id, "0"), font, a.v[A_FONT] ? "true" : "false", color, a.v[A_COLOR] ? "true" : "false", lparam, context_items, context_count, sourceq, placeholderq,
-        target_id, target_msg);
-    free(target); free(taction);
+        target_id, target_msg, iconq, tooltipq);
+    free(target); free(taction); free(icon); free(tooltip);
     (*count)++;
     emit_controls_ex(f, c, form, id, bindings, count, btn_ids);
     free(context); free(source); free(placeholder); free_attrs(&a);
@@ -1146,7 +1160,8 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
 }
 
 // Text controls bound to numeric fields convert through typed DDX callbacks;
-// ComboBoxes exchange their value field (0 = no selection).
+// ComboBoxes exchange their value field (0 = no selection). A Label shows its
+// field formatted and never writes it back.
 static void emit_bindings(FILE *f, const char *prefix, const char *form, const bindings_t *b, xmlNodePtr databases) {
   if (!b || !b->n) return;
   char type[128]; binding_record_type(type, sizeof(type), b->table);
@@ -1156,6 +1171,15 @@ static void emit_bindings(FILE *f, const char *prefix, const char *form, const b
     const char *getter = binding_getter(x->klass);
     char *kind = attr(find_field_node(databases, x->table, x->field), "type");
     const field_type_t *ft = field_type(kind);
+    if (!strcasecmp(x->klass, "label")) {
+      const char *push = eq(ft->db, "DB_TYPE_DATE") ? "date" : eq(ft->c, "int") ? "int" : eq(ft->c, "double") ? "double" :
+                         eq(ft->c, "float") ? "float" : eq(ft->db, "DB_TYPE_STRING") ? "label_text" : NULL;
+      if (!push) fprintf(stderr, "orionc: Label '%s' cannot show field '%s.%s' of this type\n", x->ctrl, x->table, x->field);
+      if (push) OUT("  { %s, 0, 0, offsetof(%s, %s), 0, ddx_push_%s, NULL },\n", x->ctrl, type, x->field, push);
+      else OUT("  { %s, 0, 0, offsetof(%s, %s), 0, NULL, NULL },\n", x->ctrl, type, x->field);
+      free(kind);
+      continue;
+    }
     const char *ddx = eq(getter, "edGetText") && eq(ft->db, "DB_TYPE_DATE") ? "date" :
                       eq(getter, "edGetText") && eq(ft->c, "int") ? "int" :
                       eq(getter, "edGetText") && eq(ft->c, "double") ? "double" :

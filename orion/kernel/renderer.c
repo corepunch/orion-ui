@@ -77,6 +77,7 @@ typedef struct {
   float tint[4], alpha, params0[4], params1[4], size[2], radius, edge[4], overlay[4];
   float glyph_uv[4], glyph_box[4], shadow_color[4], material[4], disabled;
   float grid_size[2], cell_size[2];
+  float clip_rect[4], clip_radius;   // rounded clip (clip.frag.glsl); radius 0 = off
   int tex0, palette_tex, cell_tex, font_tex, vga_palette_tex;
 } sprite_state_t;
 
@@ -113,6 +114,7 @@ static const shaderUniform_t sprite_uniforms[] = {
   SPRITE_UNIFORM(disabled, "disabled", UT_FLOAT), SPRITE_UNIFORM(grid_size, "gridSize", UT_FLOAT_VEC2),
   SPRITE_UNIFORM(cell_size, "cellSize", UT_FLOAT_VEC2), SPRITE_UNIFORM(cell_tex, "cellTex", UT_SAMPLER_2D),
   SPRITE_UNIFORM(font_tex, "fontTex", UT_SAMPLER_2D), SPRITE_UNIFORM(vga_palette_tex, "paletteTex", UT_SAMPLER_2D),
+  SPRITE_UNIFORM(clip_rect, "clip_rect", UT_FLOAT_VEC4), SPRITE_UNIFORM(clip_radius, "clip_radius", UT_FLOAT),
 };
 #undef SPRITE_UNIFORM
 
@@ -274,11 +276,23 @@ bool ui_load_program_from_source(const char *vs_src, const char *fs_src,
 }
 void ui_delete_program(uint32_t program) { if (program) glDeleteProgram(program); }
 
+// A fragment body with the shared rounded clip (clip.frag.glsl) in front.
+static char *read_fragment_with_clip(const char *name) {
+  char *clip = read_shader_file("clip.frag.glsl"), *body = read_shader_file(name), *out = NULL;
+  if (clip && body && (out = malloc(strlen(clip) + strlen(body) + 1))) {
+    strcpy(out, clip);
+    strcat(out, body);
+  }
+  if (!out) { fprintf(stderr, "[renderer] fragment shader %s could not be read with its clip\n", name); fflush(stderr); }
+  free(clip); free(body);
+  return out;
+}
+
 static bool load_sprite_program(sprite_program_t *prog, const char *name) {
   prog->desc = (shader_desc_t){.Name = name,
     .Attributes = {{"position", 0, UT_FLOAT_VEC2}, {"texcoord", 1, UT_FLOAT_VEC2}, {"color", 2, UT_COLOR}},
     .Shared = {{"tex", UT_FLOAT_VEC2}, {"col", UT_COLOR}},
-    .VertexBody = read_shader_file("sprite.vert.glsl"), .FragmentBody = read_shader_file(name)};
+    .VertexBody = read_shader_file("sprite.vert.glsl"), .FragmentBody = read_fragment_with_clip(name)};
   memcpy(prog->desc.Uniforms, sprite_uniforms, sizeof(sprite_uniforms));
   gs_options_t options = renderer_shader_options();
   if (!gs_load(&prog->shader, &prog->desc, &prog->state, sizeof(prog->state), &options)) {
@@ -1822,6 +1836,17 @@ void R_ClearWindowTarget(uint32_t fbo) {
 void R_BindWindowTarget(uint32_t fbo) { glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)fbo); }
 void R_SetViewport(int x, int y, int w, int h) { glViewport(x, y, w, h); }
 void R_SetScissor(int x, int y, int w, int h) { glEnable(GL_SCISSOR_TEST); glScissor(x, y, w, h); }
+
+// The rounded clip every UI sprite program applies (clip.frag.glsl), in
+// framebuffer pixels like the scissor box. A radius of 0 turns it off.
+void R_SetClipRoundedRect(int x, int y, int w, int h, float radius) {
+  sprite_program_t *programs[] = { &g_ref.copy_sprite, &g_ref.gradient_sprite, &g_ref.plastic_sprite,
+                                   &g_ref.rounded_rect_sprite, &g_ref.indexed_sprite };
+  for (size_t i = 0; i < ARRAY_LEN(programs); i++) {
+    sprite_vec4(programs[i]->state.clip_rect, (float)x, (float)y, (float)w, (float)h);
+    programs[i]->state.clip_radius = radius > 0 ? radius : 0;
+  }
+}
 void R_DisableScissor(void) { glDisable(GL_SCISSOR_TEST); }
 
 void R_PrintDeviceInfo(void) {

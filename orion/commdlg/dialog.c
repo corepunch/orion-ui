@@ -60,8 +60,13 @@ static void db_dialog_resync(window_t *win, db_dlg_ctx_t *ctx) {
     if (!memcmp((const char *)stored + off, (char *)ctx->synced + off, n)) continue;
     memcpy((char *)ctx->record_buf + off, (const char *)stored + off, n);
     memcpy((char *)ctx->synced + off, (const char *)stored + off, n);
-    for (int b = 0; b < ctx->def->binding_count; b++)
-      if (ctx->def->bindings[b].offset == off) dialog_push(win, ctx->record_buf, &ctx->def->bindings[b], 1);
+    for (int b = 0; b < ctx->def->binding_count; b++) {
+      if (ctx->def->bindings[b].offset != off) continue;
+      dialog_push(win, ctx->record_buf, &ctx->def->bindings[b], 1);
+      // A bound Label is measured from its text: its row arranges again.
+      window_t *ctrl = get_window_item(win, ctx->def->bindings[b].ctrl_id);
+      if (ctrl && window_is_class(ctrl, "Label") && ctrl->parent) window_layout_sync(ctrl->parent);
+    }
   }
 }
 
@@ -957,6 +962,11 @@ void ddx_push_text(window_t *dlg, const ctrl_binding_t *b, const void *state) {
   window_t *ctrl = get_window_item(dlg, b->ctrl_id);
   if (!ctrl) return;
   send_message(ctrl, edSetText, 0, (void *)(base + b->offset));
+}
+
+// A Label shows a string field as its text; it never writes it back.
+void ddx_push_label_text(window_t *dlg, const ctrl_binding_t *b, const void *state) {
+  set_window_item_text(dlg, b->ctrl_id, "%s", (const char *)state + b->offset);
 }
 
 void ddx_pull_text(window_t *dlg, const ctrl_binding_t *b, void *state) {

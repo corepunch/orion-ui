@@ -103,6 +103,7 @@ typedef enum {
   CTRL_DEFAULT  = 1 << 5,   // primary action / default button
   CTRL_PLASTIC  = 1 << 6,   // paint with the theme's plastic material (≈ SetWindowTheme visual style)
   CTRL_MULTILINE = 1 << 7,  // field contains multiple lines
+  CTRL_INACTIVE = 1 << 8,   // selected, but keyboard focus is elsewhere: a quieter selection
 } ctrl_state_t;
 
 typedef enum {
@@ -186,6 +187,8 @@ typedef struct {
     bool dark;                  // palette is dark (≈ NSAppearanceNameDarkAqua)
     theme_style_t counterpart;  // same theme in the other appearance; its own style when there is none
   } appearance;
+  bool text_shadow;             // labels and checkboxes engrave their text with brDarkEdge (bevelled themes)
+  struct { int corner_radius; } table;  // framed lists (RVS_EX_FRAME): 0 = a square frame
 
   void (*draw_part)(theme_part_t part, irect16_t r, ctrl_state_t state);
   void (*draw_window_chrome)(irect16_t titlebar, irect16_t caption,
@@ -271,6 +274,8 @@ typedef struct {
   struct {
     int padding, corner_radius;
     int tint_alpha;          // alpha of the tinted face (0..255)
+    int ink_mix;             // how far the text moves from the role towards brTextNormal (0..255)
+    int icon_size, icon_gap; // status badge's leading icon
   } badge;
   struct {
     int corner_radius;            // single-line fields; CORNER_RADIUS_CIRCULAR = capsule

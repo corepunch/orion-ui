@@ -82,5 +82,5 @@ vec4 frag() {
   float a = face * tint.a * col.a;
   float sa = shadow * shadow_color.a * tint.a * col.a * (1.0 - face);
   outColor = vec4(rgb * col.rgb * a + shadow_color.rgb * sa, a + sa);
-  return outColor;
+  return ui_clipped(outColor);
 }

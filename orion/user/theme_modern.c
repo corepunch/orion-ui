@@ -231,7 +231,9 @@ static void modern_draw_list_item_bg(irect16_t r, ctrl_state_t state) {
     color = get_sys_color(theme_modern_instance()->item_background.hover);
   else
     return;
-  if (state & (CTRL_SELECTED | CTRL_PRESSED)) modern_draw_selection(r, 0);
+  if ((state & CTRL_SELECTED) && (state & CTRL_INACTIVE) && !(state & CTRL_PRESSED))
+    fill_rect(color_with_alpha(get_sys_color(brAccent), 0x26), r);
+  else if (state & (CTRL_SELECTED | CTRL_PRESSED)) modern_draw_selection(r, 0);
   else fill_rect(color, r);
 }
 
@@ -386,6 +388,7 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
 
 static uint32_t modern_foreground(theme_part_t part, ctrl_state_t state) {
   if (state & CTRL_DISABLED) return get_sys_color(brTextDisabled);
+  if (part == THEME_PART_LIST_ITEM && (state & CTRL_INACTIVE)) return get_sys_color(brTextNormal);
   if (((state & CTRL_SELECTED) && (part == THEME_PART_LIST_ITEM || part == THEME_PART_SEGMENT)) ||
       ((state & (CTRL_SELECTED | CTRL_PRESSED)) && (part == THEME_PART_TOOLBAR_BUTTON ||
        part == THEME_PART_TOOLBAR_LABELED_BUTTON || part == THEME_PART_TOOLBAR_SPLIT_BUTTON)))
@@ -441,7 +444,7 @@ static theme_t g_modern_theme = {
   .menu = { .capsule = 1 },
   .report = { .divider_width = 1 },
   .splitter = { .spacing = 0 },
-  .badge = { .padding = 7, .corner_radius = 5, .tint_alpha = 0x40 },
+  .badge = { .padding = 7, .corner_radius = 5, .tint_alpha = 0x26, .ink_mix = 0x50, .icon_size = 12, .icon_gap = 4 },
   .tooltip = {
     .corner_radius = 6, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,
     .shadow = { .size = 10, .blur = 2, .offset = {0, 3}, .color = 0x78000000 },
@@ -459,6 +462,7 @@ static theme_t g_modern_theme = {
     .corner_radius = 8,
     .shadow = { .blur = 8, .offset = {0, 4}, .color = 0x80000000 },
   },
+  .table = { .corner_radius = 6 },
   .card = {
     .corner_radius = 7, .edge_width = 4, .ring_width = 1, .highlight_width = 1, .shadow_size = 1,
     .padding_x = 12, .padding_y = 8,
@@ -521,9 +525,24 @@ static theme_t *business_variant(theme_style_t style, const char *name, bool dar
 }
 
 theme_t *theme_amber_instance(void)     { return business_variant(THEME_AMBER, "Amber", false, THEME_AMBER, amber_apply_palette); }
+// Porcelain rounds a little more than the business forms: 6 px buttons, 5 px
+// fields, 7 px cards, as its design concepts draw them.
+static theme_t *porcelain_variant(theme_style_t style, const char *name, bool dark,
+                                  theme_style_t counterpart, void (*apply)(void)) {
+  theme_t *theme = business_variant(style, name, dark, counterpart, apply);
+  theme->button.corner_radius = 6;
+  theme->field.corner_radius = 5;
+  theme->field.multiline_corner_radius = 5;
+  theme->field.padding_x = FIELD_PADDING_X(theme->field.corner_radius);
+  theme->tab.corner_radius = 5;
+  theme->card.corner_radius = 7;
+  theme->table.corner_radius = 6;
+  return theme;
+}
+
 theme_t *theme_porcelain_instance(void) {
-  return business_variant(THEME_PORCELAIN, "Porcelain", false, THEME_PORCELAIN_DARK, porcelain_apply_palette);
+  return porcelain_variant(THEME_PORCELAIN, "Porcelain", false, THEME_PORCELAIN_DARK, porcelain_apply_palette);
 }
 theme_t *theme_porcelain_dark_instance(void) {
-  return business_variant(THEME_PORCELAIN_DARK, "Porcelain Dark", true, THEME_PORCELAIN, porcelain_dark_apply_palette);
+  return porcelain_variant(THEME_PORCELAIN_DARK, "Porcelain Dark", true, THEME_PORCELAIN, porcelain_dark_apply_palette);
 }

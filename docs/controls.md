@@ -121,6 +121,14 @@ case evCommand:
 
 ## Form validation (button gating pattern)
 
+A `TextBox` with `list="name"` drives that list, as a command palette's field
+does (`edSetList`, wparam = the list's id; `edGetList` reads it back). Up and
+Down move the list's selection while the focus stays in the field. Enter opens
+the selected row while the text is unchanged since it was last submitted;
+after typing, Enter submits the text (`edUpdate`). The list keeps its strong
+selection while its driving field has the focus. Typing into a field always
+starts editing, however the field got the focus.
+
 `TextEdit` and `MultiEdit` accept `placeholder="..."` in declarative forms, or
 `edSetPlaceholder` with a string in `lparam`. Empty fields display this cue in
 the secondary text colour. A `MultiEdit` with an explicit `height` keeps that
@@ -466,6 +474,32 @@ ReportView takes the row as `RVM_SETFOOTER` (wparam = text count, lparam =
 
 A TableView shows up to `MAX_REPORTVIEW_COLUMNS` (16) columns; more are
 reported on stderr.
+
+### Framed, grouped and popover lists
+
+- `frame="true"` draws a rounded border (`theme_t.table.corner_radius`) and
+  clips the header and rows to it (`RVS_EX_FRAME`). Use it for a table inside
+  a form, not for one that fills a pane.
+- `group-field="section"` starts a group whenever that field's text changes
+  from the previous row. The text is drawn as a caption row above the group,
+  in secondary text, and the column dividers are dropped. The caption is
+  `reportview_item_t.section`: it takes no row index, so selection, keyboard
+  navigation and `tvGetSelectedRecord` still count records only. A click on a
+  caption selects nothing.
+- `fit-rows="true"` makes the list measure to all its rows and captions
+  (`RVS_EX_FITROWS`), for lists in balloons and popovers that size to their
+  content.
+- `action="choose"` on a TableView in an add-on page runs that action when a
+  row is opened (Enter or a double-click), with the row as the list's value.
+
+```xml
+<TextBox name="command" list="palette" />
+<TableView name="palette" source="assistant.palette" group-field="section" fit-rows="true"
+           frame="true" column-titles="false" action="choose" flags="notitle,nofill">
+  <RowIcon field="kind" value="command" icon="ledger-open" color="info" />
+  <Column field="name" title="Name" width="0" />
+</TableView>
+```
 
 ## ComboBox
 

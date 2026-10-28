@@ -178,6 +178,7 @@ void R_SetFramebufferSRGB(bool enabled);
 void R_BindWindowTarget(uint32_t fbo);
 void R_SetViewport(int x, int y, int w, int h);
 void R_SetScissor(int x, int y, int w, int h);   // enables the scissor test
+void R_SetClipRoundedRect(int x, int y, int w, int h, float radius);  // rounded clip of UI sprites; radius 0 = off
 void R_DisableScissor(void);
 void R_PrintDeviceInfo(void);
 

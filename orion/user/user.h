@@ -188,6 +188,7 @@ void ddx_push_u8(window_t *dlg, const ctrl_binding_t *b, const void *state);
 void ddx_pull_u8(window_t *dlg, const ctrl_binding_t *b, void *state);
 void ddx_push_text(window_t *dlg, const ctrl_binding_t *b, const void *state);
 void ddx_pull_text(window_t *dlg, const ctrl_binding_t *b, void *state);
+void ddx_push_label_text(window_t *dlg, const ctrl_binding_t *b, const void *state);  // display only
 void ddx_push_combo(window_t *dlg, const ctrl_binding_t *b, const void *state);
 void ddx_pull_combo(window_t *dlg, const ctrl_binding_t *b, void *state);
 void ddx_push_check(window_t *dlg, const ctrl_binding_t *b, const void *state);
@@ -278,6 +279,8 @@ typedef struct form_ctrl_def_s {
   const char       *placeholder; // cue text for empty edit controls
   uint32_t          target;  // Button: control receiving target_message when clicked (0 = none)
   uint32_t          target_message; // e.g. tvInsertRecord for <Button target="lines" action="insert">
+  const char       *icon;    // Button / Badge: SVG icon name drawn before the text
+  const char       *tooltip; // Button: tooltip text (translated through the string catalog)
 } form_ctrl_def_t;
 
 // Describes a complete form (window + children) as a serializable definition

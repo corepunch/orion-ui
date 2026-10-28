@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -78,6 +79,8 @@ bool rv_store_item(reportview_data_t *data, uint32_t i,
     sub[MAX_COLUMNVIEW_ITEM_NAME - 1] = '\0';
     dst.subitems[s] = sub;
   }
+  snprintf(data->sections[i], sizeof(data->sections[i]), "%s", item->section ? item->section : "");
+  dst.section = data->sections[i][0] ? data->sections[i] : NULL;
 
   data->items[i] = dst;
   return true;
@@ -93,6 +96,7 @@ void rv_rebind_item_refs(reportview_data_t *data, uint32_t start) {
       data->items[i].subitem_count = REPORTVIEW_MAX_SUBITEMS;
     for (uint32_t s = 0; s < REPORTVIEW_MAX_SUBITEMS; s++)
       data->items[i].subitems[s] = data->subnames[i][s];
+    data->items[i].section = data->sections[i][0] ? data->sections[i] : NULL;
   }
 }
 

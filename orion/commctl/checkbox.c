@@ -53,7 +53,7 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       };
       bool disabled = (state & CTRL_DISABLED) != 0;
       uint32_t text_col = disabled ? get_sys_color(brTextDisabled) : get_sys_color(brTextNormal);
-      if (!disabled) {
+      if (!disabled && get_theme()->text_shadow) {
         irect16_t shadow_rect = rect_offset(text_rect, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
         draw_text_clipped(FONT_SMALL, win->title, &shadow_rect, get_sys_color(brDarkEdge), 0);
       }
