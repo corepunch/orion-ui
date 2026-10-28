@@ -464,4 +464,8 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Documents changed after %s: %s are not zero on %s" where="code">Belege nach %s geändert: %s am %s nicht ausgeglichen</string>
   <string source="Repost" where="code">Neu buchen</string>
   <string source="There is no check %d to settle." where="code">Keine Prüfung %d vorhanden.</string>
+  <string source="Posting Failed">Buchung fehlgeschlagen</string>
+  <string source="Recalculation Failed">Neuberechnung fehlgeschlagen</string>
+  <string source="Posting failed. Previous accounting entries were restored. Check the configuration and document.">Buchung fehlgeschlagen. Die bisherigen Buchungen wurden wiederhergestellt. Prüfen Sie die Konfiguration und den Beleg.</string>
+  <string source="Recalculation failed. Previous accounting entries were restored. Check the configuration and documents.">Neuberechnung fehlgeschlagen. Die bisherigen Buchungen wurden wiederhergestellt. Prüfen Sie die Konfiguration und die Belege.</string>
 </strings>

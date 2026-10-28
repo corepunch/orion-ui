@@ -1,4 +1,9 @@
-# Ledger compliance: Russia 2026 and Germany 2026
+# Ledger compliance record: Russia 2026 and Germany 2026
+
+**Not production-complete.** See [the readiness audit](docs/compliance-readiness.md)
+for correctness blockers, outstanding approximations and acceptance evidence.
+The four new English-language configurations are development profiles; their
+coverage is documented separately in their `COVERAGE.md` files.
 
 This file is the compliance record of the `ru-2026` and `de-2026`
 configurations: which rules they implement, where each figure comes from,
@@ -110,8 +115,8 @@ Simplifications and known gaps (de-2026):
   DATEV compute tax themselves; a Steuerberater importing the file should
   map 1776/1771/1576/1571 rows or disable the automatic function of the
   target accounts. Beraternummer and Mandantennummer in the header are 0.
-- Per-rate totals on the Rechnung come from the VAT book of the report
-  period; set the period to cover the invoice date before printing.
+- Invoice per-rate totals are calculated directly from its lines in document
+  currency, independently of the report period and posting status.
 
 ## Refreshing the configurations
 

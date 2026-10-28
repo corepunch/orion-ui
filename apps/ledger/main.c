@@ -42,7 +42,7 @@ static database_t *open_infobase(void) {
       snprintf(org.name, sizeof(org.name), "My Organization");
       send_db_message(ib, dbInsert, TABLE_ORGANIZATIONS, &org);
     }
-    ledger_repost_all(ib, g_ledger->cfg);
+    if (!ledger_repost_all(ib, g_ledger->cfg)) { destroy_database(ib); return NULL; }
     send_db_message(ib, dbSave, 0, NULL);
   } else {
     ledger_build_reports(ib, g_ledger->cfg);

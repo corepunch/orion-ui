@@ -550,27 +550,35 @@ bool ledger_script_tax(const ledger_post_t *p, const db_payroll_tax_t *tax, cons
   for (int i = 0; i < so_far_count; i++) { lua_pushnumber(L, so_far[i].amount); lua_setfield(L, -2, so_far[i].tax->code); }
   lua_setfield(L, -2, "taxes");
   if (!call(p, tax->script, 1)) return false;
-  *amount = lua_isnumber(L, -1) ? lua_tonumber(L, -1) : 0;
+  bool valid = lua_type(L, -1) == LUA_TNUMBER && isfinite(lua_tonumber(L, -1));
+  if (valid) *amount = lua_tonumber(L, -1);
+  else fprintf(stderr, "[ledger] payroll tax '%s' must return a finite number\n", tax->code);
   lua_pop(L, 1);
-  return true;
+  return valid;
 }
 
-void ledger_script_event(const char *event, const ledger_post_t *p) {
-  if (!g_lua) return;
+bool ledger_script_event(const char *event, const ledger_post_t *p) {
+  if (!g_lua) return true;
   lua_State *L = g_lua;
   lua_rawgeti(L, LUA_REGISTRYINDEX, g_handlers);
   lua_getfield(L, -1, event);
-  if (!lua_istable(L, -1)) { lua_pop(L, 2); return; }
+  if (!lua_istable(L, -1)) { lua_pop(L, 2); return true; }
   int n = (int)lua_rawlen(L, -1);
   for (int i = 1; i <= n; i++) {
     lua_rawgeti(L, -1, i);
     push_context(p);
     const ledger_post_t *outer = g_post;
     g_post = p;
-    if (lua_pcall(L, 1, 0, 0) != LUA_OK) { fprintf(stderr, "[ledger] script on %s: %s\n", event, lua_tostring(L, -1)); lua_pop(L, 1); }
+    bool ok = lua_pcall(L, 1, 0, 0) == LUA_OK;
     g_post = outer;
+    if (!ok) {
+      fprintf(stderr, "[ledger] script on %s: %s\n", event, lua_tostring(L, -1));
+      lua_pop(L, 3);
+      return false;
+    }
   }
   lua_pop(L, 2);
+  return true;
 }
 
 // The host applies capability-limited plans; workflow policy is a standard plugin.

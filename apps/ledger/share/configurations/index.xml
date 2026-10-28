@@ -1,11 +1,14 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- Installed Ledger configurations. Each code names a directory beside this file. -->
+<?xml version='1.0' encoding='utf-8'?>
 <catalog>
   <configurations>
     <configuration id="3" code="ru-2026" name="Бухгалтерский учет (Россия, 2026)" country="Российская Федерация" />
     <configuration id="4" code="de-2026" name="Buchhaltung Deutschland 2026 (SKR 03)" country="Deutschland" />
     <configuration id="1" code="ru-2003" name="Бухгалтерский учет (Россия, 2003)" country="Российская Федерация" />
     <configuration id="2" code="de-2003" name="Buchhaltung Deutschland 2003 (SKR 03)" country="Deutschland" />
+    <configuration id="5" code="gb-2026" name="United Kingdom 2026 (development)" country="United Kingdom" />
+    <configuration id="6" code="ie-2026" name="Ireland 2026 (development)" country="Ireland" />
+    <configuration id="7" code="nz-2026" name="New Zealand 2026 (development)" country="New Zealand" />
+    <configuration id="8" code="mt-2026" name="Malta 2026 (development)" country="Malta" />
   </configurations>
   <languages>
     <language id="1" code="en" name="English" />

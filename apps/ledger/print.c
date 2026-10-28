@@ -12,6 +12,7 @@
 //                          (report tables: {{#cash_book}}); {{n}} is the row number
 //   {{#table field=value}} only the rows whose field (or join path) shows
 //                          value: {{#vat_book book=1}}, {{#vat_summary vat_rate.rate=19}}
+//   {{#tax_totals}}       invoice lines grouped by tax code, in document currency
 //   {{field|dmy}}          ISO date as DD.MM.YYYY; |ymd as YYYYMMDD, |ddmm as DDMM
 //   {{field|dot}}          a number as 1234.50, |comma as 1234,50 (exports)
 //   {{field|words}}        amount in words in the configuration's language
@@ -140,10 +141,38 @@ static void put_tag(const print_ctx_t *ctx, const char *tag, size_t len) {
 
 static void render(print_ctx_t *ctx, const char *s, const char *end);
 
+// Invoice tax totals use the invoice's own lines, including unsaved drafts.
+static void render_tax_totals(print_ctx_t *ctx, const char *body, const char *stop) {
+  if (!ctx->doc) return;
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_DOC_LINES, ledger_field(g_ledger->ib, TABLE_DOC_LINES, "document_id")), (void *)(intptr_t)ctx->doc->id);
+  print_ctx_t inner = *ctx;
+  inner.row_table = TABLE_DOC_LINES;
+  inner.n = 0;
+  for (result_node_t *n = rows; n; n = n->next) {
+    const db_doc_line_t *line = *(db_doc_line_t **)n->data;
+    bool seen = false;
+    for (result_node_t *before = rows; before != n; before = before->next)
+      if ((*(db_doc_line_t **)before->data)->vat_rate_id == line->vat_rate_id) { seen = true; break; }
+    if (seen) continue;
+    db_doc_line_t total = { .vat_rate_id = line->vat_rate_id };
+    for (result_node_t *r = n; r; r = r->next) {
+      const db_doc_line_t *row = *(db_doc_line_t **)r->data;
+      if (row->vat_rate_id != line->vat_rate_id) continue;
+      total.amount += row->amount; total.vat += row->vat; total.total += row->total;
+    }
+    inner.row = &total;
+    inner.n++;
+    render(&inner, body, stop);
+  }
+  free_result_list(rows);
+}
+
+
 // {{#table}}: the document's rows of a table with document_id, or all rows;
 // {{#table field=value}} keeps the rows whose field reads value.
 static const char *render_block(print_ctx_t *ctx, const char *open, const char *close, const char *end) {
-  char name[160], stop_tag[80];
+  char name[160], stop_tag[168];
   struct { char *field, *value; } filters[4];
   int nfilters = 0;
   snprintf(name, sizeof(name), "%.*s", (int)(close - open - 3), open + 3);
@@ -159,6 +188,10 @@ static const char *render_block(print_ctx_t *ctx, const char *open, const char *
   snprintf(stop_tag, sizeof(stop_tag), "{{/%s}}", name);
   const char *body = close + 2, *stop = strstr(body, stop_tag);
   if (!stop || stop >= end) { fprintf(stderr, "[ledger] print template: unterminated {{#%s}}\n", name); return end; }
+  if (!strcmp(name, "tax_totals")) {
+    render_tax_totals(ctx, body, stop);
+    return stop + strlen(stop_tag);
+  }
   const db_table_schema_t *table = db_schema_table_named(g_ledger->ib->schema, strcmp(name, "lines") ? name : "doc_lines");
   if (!table) { fprintf(stderr, "[ledger] print template: unknown table {{#%s}}\n", name); return stop + strlen(stop_tag); }
   int by_doc = db_schema_field_index(table, "document_id");

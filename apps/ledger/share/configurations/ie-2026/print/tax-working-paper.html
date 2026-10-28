@@ -1,0 +1,5 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Tax working paper</title>
+<h1>{{cfg.tax_name}} working paper</h1><p>Internal reconciliation — NOT a statutory tax return or electronic submission.</p>
+<p>{{org.name}} · {{period.date_from}} — {{period.date_to}}</p>
+<table><tr><th>Book (1 sales / 2 purchases)</th><th>Rate</th><th>Net</th><th>Tax</th><th>Gross</th></tr>
+{{#vat_summary}}<tr><td>{{book}}</td><td>{{vat_rate.name}}</td><td>{{amount}}</td><td>{{vat}}</td><td>{{total}}</td></tr>{{/vat_summary}}</table></html>

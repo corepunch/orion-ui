@@ -1,0 +1,11 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Invoice {{number}}</title>
+<style>body{font:14px sans-serif;margin:36px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #aaa;padding:8px;text-align:left}</style>
+<h1>Invoice {{number}}</h1><p>DEVELOPMENT PROFILE — verify legal coverage before use.</p>
+<p>{{org.name}}<br>{{org.address}}<br>Tax registration: {{org.tax_id}}</p>
+<p>Bill to: {{counterparty.name}}<br>{{counterparty.address}}</p>
+<p>Invoice / supply date: {{date}} (this profile requires the dates to coincide)</p>
+<table><tr><th>Service</th><th>Quantity</th><th>Unit price</th><th>Tax</th><th>Net</th><th>Gross</th></tr>
+{{#lines}}<tr><td>{{item.name}}</td><td>{{quantity}}</td><td>{{price}}</td><td>{{vat}}</td><td>{{amount}}</td><td>{{total}}</td></tr>{{/lines}}</table>
+<h2>Tax breakdown</h2><table><tr><th>Rate</th><th>Net</th><th>Tax</th><th>Gross</th></tr>
+{{#tax_totals}}<tr><td>{{vat_rate.name}}</td><td>{{amount}}</td><td>{{vat}}</td><td>{{total}}</td></tr>{{/tax_totals}}</table>
+<p>Total: {{total}} {{cfg.currency_code}}</p></html>
