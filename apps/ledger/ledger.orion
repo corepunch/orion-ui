@@ -37,6 +37,7 @@
       <item name="close_month" label="Close Month..." shortcut="Ctrl+E" />
       <item name="open" label="Open Document..." shortcut="Ctrl+O" />
       <item name="open_entry" label="Open Entry's Document" />
+      <item name="entries" label="Show Entries (Dr/Cr)" />
       <Separator />
       <item name="post" label="Post" shortcut="F9" />
       <item name="post_close" label="Post and Close" shortcut="Ctrl+Enter" />
@@ -656,7 +657,7 @@
 
   <forms>
     <form name="main_window" title="Ledger" width="1200" height="700"
-          role="host" active-page="home_page" flags="statusbar,toolbar,titletoolbar" spacing="0">
+          role="host" active-page="home_page" flags="statusbar,toolbar,titletoolbar" toolbar-style="list" spacing="0">
       <!-- One row, as in Finder or Mail: the sidebar toggle over the section panel, then back and
            forward, the page's title over the organization and period, and the active page's buttons. -->
       <Toolbar>
@@ -773,18 +774,24 @@
           checked-icon="ledger-nav-journal-fill" tooltip="Document journal (Ctrl+1)"
           focus="documents" width="900" height="560" role="page" flags="nofill,flexspace"
           spacing="4" padding="0">
-      <Toolbar>
-        <Button command="doc.new" icon="ledger-new" text="New" tooltip="New document (Ctrl+N)" />
-        <Button command="doc.new_operation" icon="ledger-operation" text="Operation" tooltip="New manual operation (Ctrl+M)" />
-        <Button command="doc.new_payroll" icon="ledger-payroll" text="Payroll" tooltip="New payroll document (Ctrl+W)" />
-        <Button command="doc.close_month" icon="ledger-close-month" text="Close Month" tooltip="Month-end closing (Ctrl+E)" />
-        <Button command="doc.open" icon="ledger-edit" text="Open" tooltip="Open document (Ctrl+O)" />
-        <Button command="doc.post" icon="ledger-post" text="Post" tooltip="Post: write accounting entries (F9)" />
-        <Button command="doc.unpost" icon="ledger-unpost" text="Unpost" tooltip="Cancel posting" />
-        <Button command="doc.print" icon="ledger-print" text="Print" tooltip="Print forms (Ctrl+P)" />
-        <spacer />
-        <Button command="doc.delete" icon="ledger-delete" text="Delete" tooltip="Delete document" />
-      </Toolbar>
+      <!-- The command bar in 1C's order, captions first: Create is the view's one
+           filled button; the rarer documents keep their icon and tooltip. -->
+      <StackView name="command_bar" orientation="horizontal" spacing="6" padding="10 8">
+        <Button command="doc.new" text="Create" icon="ledger-new" flags="BUTTON_DEFAULT" tooltip="New document (Ctrl+N)" />
+        <Button command="doc.post" text="Post" icon="ledger-post" tooltip="Post: write accounting entries (F9)" />
+        <Button command="doc.unpost" text="Cancel Posting" icon="ledger-unpost" tooltip="Cancel posting: remove the document's entries" />
+        <Separator name="command_rule1" />
+        <Button command="doc.print" text="Print" icon="ledger-print" tooltip="Print forms (Ctrl+P)" />
+        <Button command="doc.entries" text="Dr/Cr" tooltip="Show the entries the document wrote" />
+        <Button command="doc.open" text="Edit" icon="ledger-edit" tooltip="Open document (Ctrl+O)" />
+        <Separator name="command_rule2" />
+        <Button command="doc.new_operation" icon="ledger-operation" tooltip="New manual operation (Ctrl+M)" />
+        <Button command="doc.new_payroll" icon="ledger-payroll" tooltip="New payroll document (Ctrl+W)" />
+        <Button command="doc.close_month" icon="ledger-close-month" tooltip="Month-end closing (Ctrl+E)" />
+        <Space name="command_flex" />
+        <Button command="doc.delete" icon="ledger-delete" tooltip="Delete document" />
+      </StackView>
+      <Separator name="command_bar_rule" />
       <StackView name="journal" spacing="0" flags="flexspace">
         <SplitView name="journal_split" orientation="vertical" split-ratio="0.58" flags="flexspace">
           <TableView name="documents" source="ib.documents" flags="notitle,nofill,vscroll,flexspace">

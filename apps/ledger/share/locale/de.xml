@@ -12,7 +12,7 @@
   <string source="New Manual Operation..." where="menu">Neue Umbuchung...</string>
   <string source="Open Document..." where="menu">Beleg öffnen...</string>
   <string source="Post" where="menu,journal_page,document">Buchen</string>
-  <string source="Cancel Posting" where="menu">Buchung stornieren</string>
+  <string source="Cancel Posting" where="menu,journal_page">Buchung stornieren</string>
   <string source="Print Forms" where="menu,config_page">Druckformulare</string>
   <string source="Delete Document..." where="menu">Beleg löschen...</string>
   <string source="Catalogs" where="menu">Stammdaten</string>
@@ -36,18 +36,18 @@
   <string source="About Ledger" where="menu">Über Ledger</string>
   <string source="Ledger" where="main_window">Buchhaltung</string>
   <string source="Document journal (Ctrl+1)" where="journal_page">Belegjournal (Strg+1)</string>
-  <string source="New" where="journal_page,counterparties_page,items_page,employees_page,assets_page">Neu</string>
+  <string source="New" where="counterparties_page,items_page,employees_page,assets_page">Neu</string>
   <string source="New document (Ctrl+N)" where="journal_page">Neuer Beleg (Strg+N)</string>
-  <string source="Operation" where="journal_page">Umbuchung</string>
+  <string source="Operation" obsolete="true">Umbuchung</string>
   <string source="New manual operation (Ctrl+M)" where="journal_page">Neue Umbuchung, Buchungen manuell (Strg+M)</string>
-  <string source="Open" where="journal_page">Öffnen</string>
+  <string source="Open" obsolete="true">Öffnen</string>
   <string source="Open document (Ctrl+O)" where="journal_page">Beleg öffnen (Strg+O)</string>
   <string source="Post: write accounting entries (F9)" where="journal_page">Buchen: Buchungssätze erzeugen (F9)</string>
-  <string source="Unpost" where="journal_page">Stornieren</string>
-  <string source="Cancel posting" where="journal_page">Buchung stornieren</string>
+  <string source="Unpost" obsolete="true">Stornieren</string>
+  <string source="Cancel posting" obsolete="true">Buchung stornieren</string>
   <string source="Print" where="journal_page,reports_page,document,select_print_form">Drucken</string>
   <string source="Print forms (Ctrl+P)" where="journal_page">Druckformulare (Strg+P)</string>
-  <string source="Delete" where="journal_page,counterparties_page,items_page,employees_page,assets_page,document">Löschen</string>
+  <string source="Delete" where="counterparties_page,items_page,employees_page,assets_page,document">Löschen</string>
   <string source="Delete document" where="journal_page">Beleg löschen</string>
   <string source="Date" where="home_page,journal_page,currencies_page,entries_page,reports_page">Datum</string>
   <string source="Number" where="home_page,journal_page">Nummer</string>
@@ -69,7 +69,7 @@
   <string source="Content" where="journal_page,entries_page,reports_page,document,operation,closing">Buchungstext</string>
   <string source="Counterparties (Ctrl+2)" where="counterparties_page">Geschäftspartner (Strg+2)</string>
   <string source="New counterparty" where="counterparties_page">Neuer Geschäftspartner</string>
-  <string source="Edit" where="counterparties_page,items_page,employees_page,assets_page,currencies_page,document">Bearbeiten</string>
+  <string source="Edit" where="journal_page,counterparties_page,items_page,employees_page,assets_page,currencies_page,document">Bearbeiten</string>
   <string source="Edit counterparty" where="counterparties_page">Geschäftspartner bearbeiten</string>
   <string source="Delete counterparty" where="counterparties_page">Geschäftspartner löschen</string>
   <string source="Name" where="counterparties_page,items_page,employees_page,assets_page,reports_page">Name</string>
@@ -202,9 +202,9 @@
   <string source="Fixed Assets" where="menu,assets_page,reports_page">Anlagevermögen</string>
   <string source="Currencies" where="menu,currencies_page">Währungen</string>
   <string source="Print Report Forms" where="menu">Berichtsformulare drucken</string>
-  <string source="Payroll" where="journal_page,employees_page,payroll">Lohn</string>
+  <string source="Payroll" where="employees_page,payroll">Lohn</string>
   <string source="New payroll document (Ctrl+W)" where="journal_page,employees_page">Lohnabrechnung oder Lohnzahlung (Strg+W)</string>
-  <string source="Close Month" where="journal_page,closing">Monatsabschluss</string>
+  <string source="Close Month" where="closing">Monatsabschluss</string>
   <string source="Month-end closing (Ctrl+E)" where="journal_page">Monatsabschluss (Strg+E)</string>
   <string source="Dr Analytics" where="journal_page,entries_page,reports_page,document,operation,closing">Soll-Objekt</string>
   <string source="Cr Analytics" where="journal_page,entries_page,reports_page,document,operation,closing">Haben-Objekt</string>
@@ -400,7 +400,7 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Comment for the document" where="document">Kommentar zum Beleg</string>
   <string source="Write" where="document">Speichern</string>
   <string source="Posted" where="code">Gebucht</string>
-  <string source="Dr/Cr" where="document">Soll/Haben</string>
+  <string source="Dr/Cr" where="journal_page,document">Soll/Haben</string>
   <string source="Show or hide the entries this document writes" where="document">Buchungen des Belegs ein- oder ausblenden</string>
   <string source="Ins add · F2 edit · Del delete" where="document">Einfg hinzufügen · F2 bearbeiten · Entf löschen</string>
   <string source="Paid" where="document">Bezahlt</string>
@@ -420,7 +420,7 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Settlements" where="home_page">Offene Posten</string>
   <string source="Settlement" where="home_page">Posten</string>
   <string source="With" where="home_page">Mit</string>
-  <string source="Create" where="home_page">Erstellen</string>
+  <string source="Create" where="home_page,journal_page">Erstellen</string>
   <string source="Latest documents" where="home_page">Letzte Belege</string>
   <string source="Document journal" where="home_page">Belegjournal</string>
   <string source="Open the document journal (Ctrl+1)" where="home_page">Belegjournal öffnen (Strg+1)</string>
@@ -497,14 +497,17 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Select Print Form" where="select_print_form">Druckformular auswählen</string>
   <string source="Choose the document to produce. Each form checks its own required details." where="select_print_form">Wählen Sie das Dokument. Jedes Formular prüft seine erforderlichen Angaben.</string>
   <string source="Legal basis" where="select_print_form">Rechtsgrundlage</string>
+  <string source="Closing of %s is out of date" where="code">Abschluss %s ist veraltet</string>
+  <string source="Documents changed after %s: %s are not zero on %s" where="code">Belege nach %s geändert: %s am %s nicht ausgeglichen</string>
+  <string source="Repost" where="code">Neu buchen</string>
+  <string source="There is no check %d to settle." where="code">Keine Prüfung %d vorhanden.</string>
+  <string source="Show Entries (Dr/Cr)" where="menu">Buchungen anzeigen (Soll/Haben)</string>
+  <string source="Cancel posting: remove the document's entries" where="journal_page">Buchung aufheben: die Buchungen des Belegs entfernen</string>
+  <string source="Show the entries the document wrote" where="journal_page">Die Buchungen des Belegs anzeigen</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>
   <context name="reports_page">
     <string source="Expense">Ausgabe</string>
   </context>
-  <string source="Closing of %s is out of date" where="code">Abschluss %s ist veraltet</string>
-  <string source="Documents changed after %s: %s are not zero on %s" where="code">Belege nach %s geändert: %s am %s nicht ausgeglichen</string>
-  <string source="Repost" where="code">Neu buchen</string>
-  <string source="There is no check %d to settle." where="code">Keine Prüfung %d vorhanden.</string>
 </strings>

@@ -90,6 +90,17 @@ stale closing and offers Перепровести:
 
 ![Stale closing](images/built-home-stale.jpg)
 
+Concept 1's command bar is in place on the journal: Создать (the one filled
+button), Провести, Отменить проведение | Печать, Дт/Кт, Изменить, then
+Operation, Payroll and Close Month as icon buttons, and Delete at the end.
+Дт/Кт (Documents, Show Entries) shows the selected document's entries, and
+selecting an operation, payroll or closing shows its entries instead of an
+empty Lines tab. The other pages keep their few commands in the title row,
+now captioned. Saved views, the period stepper and the journal search are
+still to come.
+
+![Journal with the command bar](images/built-journal.jpg)
+
 Clippy answers questions about the same books: "проверь учет", "кому мы
 должны", "сколько денег", "закрыт ли месяц", "почему красное сальдо", "акт
 сверки с Альфой". His suggestions are the attention list, and choosing one

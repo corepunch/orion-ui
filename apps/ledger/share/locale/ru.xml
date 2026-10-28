@@ -11,7 +11,7 @@
   <string source="New Document..." where="menu">Новый документ...</string>
   <string source="Open Document..." where="menu">Открыть документ...</string>
   <string source="Post" where="menu,journal_page,document">Провести</string>
-  <string source="Cancel Posting" where="menu">Отменить проведение</string>
+  <string source="Cancel Posting" where="menu,journal_page">Отменить проведение</string>
   <string source="Print Forms" where="menu,config_page">Печатные формы</string>
   <string source="Delete Document..." where="menu">Удалить документ...</string>
   <string source="Catalogs" where="menu">Справочники</string>
@@ -35,16 +35,16 @@
   <string source="About Ledger" where="menu">О программе</string>
   <string source="Ledger" where="main_window">Бухгалтерия</string>
   <string source="Document journal (Ctrl+1)" where="journal_page">Журнал документов (Ctrl+1)</string>
-  <string source="New" where="journal_page,counterparties_page,items_page,employees_page,assets_page">Новый</string>
+  <string source="New" where="counterparties_page,items_page,employees_page,assets_page">Новый</string>
   <string source="New document (Ctrl+N)" where="journal_page">Новый документ (Ctrl+N)</string>
-  <string source="Open" where="journal_page">Открыть</string>
+  <string source="Open" obsolete="true">Открыть</string>
   <string source="Open document (Ctrl+O)" where="journal_page">Открыть документ (Ctrl+O)</string>
   <string source="Post: write accounting entries (F9)" where="journal_page">Провести: сформировать проводки (F9)</string>
-  <string source="Unpost" where="journal_page">Отменить</string>
-  <string source="Cancel posting" where="journal_page">Отменить проведение</string>
+  <string source="Unpost" obsolete="true">Отменить</string>
+  <string source="Cancel posting" obsolete="true">Отменить проведение</string>
   <string source="Print" where="journal_page,reports_page,document,select_print_form">Печать</string>
   <string source="Print forms (Ctrl+P)" where="journal_page">Печатные формы (Ctrl+P)</string>
-  <string source="Delete" where="journal_page,counterparties_page,items_page,employees_page,assets_page,document">Удалить</string>
+  <string source="Delete" where="counterparties_page,items_page,employees_page,assets_page,document">Удалить</string>
   <string source="Delete document" where="journal_page">Удалить документ</string>
   <string source="Date" where="home_page,journal_page,currencies_page,entries_page,reports_page">Дата</string>
   <string source="Number" where="home_page,journal_page">Номер</string>
@@ -66,7 +66,7 @@
   <string source="Content" where="journal_page,entries_page,reports_page,document,operation,closing">Содержание</string>
   <string source="Counterparties (Ctrl+2)" where="counterparties_page">Контрагенты (Ctrl+2)</string>
   <string source="New counterparty" where="counterparties_page">Новый контрагент</string>
-  <string source="Edit" where="counterparties_page,items_page,employees_page,assets_page,currencies_page,document">Изменить</string>
+  <string source="Edit" where="journal_page,counterparties_page,items_page,employees_page,assets_page,currencies_page,document">Изменить</string>
   <string source="Edit counterparty" where="counterparties_page">Изменить контрагента</string>
   <string source="Delete counterparty" where="counterparties_page">Удалить контрагента</string>
   <string source="Name" where="counterparties_page,items_page,employees_page,assets_page,reports_page">Наименование</string>
@@ -149,7 +149,7 @@
   <string source="Delete Document" where="code">Удаление документа</string>
   <string source="New Manual Operation..." where="menu">Новая операция...</string>
   <string source="Report Settings..." where="menu">Настройка отчетов...</string>
-  <string source="Operation" where="journal_page">Операция</string>
+  <string source="Operation" obsolete="true">Операция</string>
   <string source="New manual operation (Ctrl+M)" where="journal_page">Новая операция, проводки вручную (Ctrl+M)</string>
   <string source="Analytics" where="accounts_page,reports_page,config_page">Субконто</string>
   <string source="Settings" where="accounts_page,reports_page">Настройка</string>
@@ -202,9 +202,9 @@
   <string source="Fixed Assets" where="menu,assets_page,reports_page">Основные средства</string>
   <string source="Currencies" where="menu,currencies_page">Валюты</string>
   <string source="Print Report Forms" where="menu">Печать отчетных форм</string>
-  <string source="Payroll" where="journal_page,employees_page,payroll">Зарплата</string>
+  <string source="Payroll" where="employees_page,payroll">Зарплата</string>
   <string source="New payroll document (Ctrl+W)" where="journal_page,employees_page">Начисление или выплата зарплаты (Ctrl+W)</string>
-  <string source="Close Month" where="journal_page,closing">Закрытие месяца</string>
+  <string source="Close Month" where="closing">Закрытие месяца</string>
   <string source="Month-end closing (Ctrl+E)" where="journal_page">Закрытие месяца (Ctrl+E)</string>
   <string source="Dr Analytics" where="journal_page,entries_page,reports_page,document,operation,closing">Субконто Дт</string>
   <string source="Cr Analytics" where="journal_page,entries_page,reports_page,document,operation,closing">Субконто Кт</string>
@@ -400,7 +400,7 @@
   <string source="Comment for the document" where="document">Комментарий к документу</string>
   <string source="Write" where="document">Записать</string>
   <string source="Posted" where="code">Проведён</string>
-  <string source="Dr/Cr" where="document">Дт/Кт</string>
+  <string source="Dr/Cr" where="journal_page,document">Дт/Кт</string>
   <string source="Show or hide the entries this document writes" where="document">Показать или скрыть проводки документа</string>
   <string source="Ins add · F2 edit · Del delete" where="document">Ins — добавить · F2 — изменить · Del — удалить</string>
   <string source="Paid" where="document">Оплачен</string>
@@ -420,7 +420,7 @@
   <string source="Settlements" where="home_page">Расчеты</string>
   <string source="Settlement" where="home_page">Расчет</string>
   <string source="With" where="home_page">С кем</string>
-  <string source="Create" where="home_page">Создать</string>
+  <string source="Create" where="home_page,journal_page">Создать</string>
   <string source="Latest documents" where="home_page">Последние документы</string>
   <string source="Document journal" where="home_page">Журнал документов</string>
   <string source="Open the document journal (Ctrl+1)" where="home_page">Открыть журнал документов (Ctrl+1)</string>
@@ -497,14 +497,17 @@
   <string source="Select Print Form" where="select_print_form">Выбор печатной формы</string>
   <string source="Choose the document to produce. Each form checks its own required details." where="select_print_form">Выберите документ для печати. Каждая форма проверяет свои обязательные реквизиты.</string>
   <string source="Legal basis" where="select_print_form">Правовое основание</string>
+  <string source="Closing of %s is out of date" where="code">Закрытие месяца за %s устарело</string>
+  <string source="Documents changed after %s: %s are not zero on %s" where="code">Документы изменены после %s: %s не закрыты на %s</string>
+  <string source="Repost" where="code">Перепровести</string>
+  <string source="There is no check %d to settle." where="code">Нет проверки %d.</string>
+  <string source="Show Entries (Dr/Cr)" where="menu">Показать проводки (Дт/Кт)</string>
+  <string source="Cancel posting: remove the document's entries" where="journal_page">Отменить проведение: удалить проводки документа</string>
+  <string source="Show the entries the document wrote" where="journal_page">Показать проводки документа</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>
   <context name="reports_page">
     <string source="Expense">Расход</string>
   </context>
-  <string source="Closing of %s is out of date" where="code">Закрытие месяца за %s устарело</string>
-  <string source="Documents changed after %s: %s are not zero on %s" where="code">Документы изменены после %s: %s не закрыты на %s</string>
-  <string source="Repost" where="code">Перепровести</string>
-  <string source="There is no check %d to settle." where="code">Нет проверки %d.</string>
 </strings>

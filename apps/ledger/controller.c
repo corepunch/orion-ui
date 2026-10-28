@@ -599,6 +599,10 @@ void ledger_command(uint16_t id) {
     case ID_DOC_POST:
       if (doc) after_save(doc->id);
       break;
+    case ID_DOC_ENTRIES:  // 1C's Дт/Кт: the entries the selected document wrote, below the journal
+      page_host_select(parent, ID_VIEW_JOURNAL);
+      send_message(view(ID_JOURNAL_PAGE_DETAILS), tcSetSelection, 1, NULL);
+      break;
     case ID_DOC_POST_CLOSE: {  // Ctrl+Enter in the active goods document
       window_t *document = mdi_active_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT));
       db_document_t *edited = document ? db_dialog_record(document) : NULL;
@@ -691,6 +695,13 @@ result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
         return true;
       }
       if (code == tvnChanged) { ledger_refresh_views(); return true; }
+      // An operation, payroll or closing has no goods lines: show what it wrote
+      // instead of an empty Lines tab.
+      if (code == RVN_SELCHANGE && src && src->id == ID_JOURNAL_PAGE_DOCUMENTS) {
+        const db_doc_type_t *type = document_type(selected(ID_JOURNAL_PAGE_DOCUMENTS));
+        if (type && strcmp(type->form, "document")) send_message(view(ID_JOURNAL_PAGE_DETAILS), tcSetSelection, 1, NULL);
+        return false;
+      }
       if (code == LEDGER_HOME_SETTLE) { ledger_home_perform(LOWORD(wparam)); return true; }
       if (code == btnClicked || code == kMenuBarNotificationItemClick || code == kAcceleratorNotification || code == 0) {
         ledger_command(LOWORD(wparam));
