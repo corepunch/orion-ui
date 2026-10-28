@@ -23,11 +23,13 @@ result_t win_separator(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m) {
+        // Its length comes from the stack's stretch, not from what is available:
+        // a rule in a row of buttons must not make the row as tall as the page.
         if (separator_is_vertical(win)) {
           m->desired_w = SEPARATOR_BAND;
-          m->desired_h = MAX(1, m->avail_h);
+          m->desired_h = 1;
         } else {
-          m->desired_w = MAX(1, m->avail_w);
+          m->desired_w = 1;
           m->desired_h = SEPARATOR_BAND;
         }
       }

@@ -78,6 +78,22 @@ case evCommand:
         handle_click((window_t *)lparam);
 ```
 
+In a `.orion` form compiled by `orionc`, `command="doc.post"` makes the
+button that command: it takes the command's ID from the menu tree, so a
+click reaches the app as `evCommand` with that ID and `btnClicked`, exactly
+like the menu item and its accelerator. A page's command bar is a
+horizontal `StackView` of such buttons, with `<Separator />` between groups
+(a separator in a row is vertical and as tall as the row):
+
+```xml
+<StackView name="command_bar" orientation="horizontal" spacing="6" padding="10 8">
+  <Button command="doc.new" text="Create" icon="ledger-new" flags="BUTTON_DEFAULT" tooltip="New document (Ctrl+N)" />
+  <Button command="doc.post" text="Post" icon="ledger-post" tooltip="Post (F9)" />
+  <Separator name="rule" />
+  <Button command="doc.print" text="Print" icon="ledger-print" tooltip="Print forms (Ctrl+P)" />
+</StackView>
+```
+
 `BUTTON_COMMANDLINK` (≈ WinAPI `BS_COMMANDLINK`) draws a flat choice row: a
 theme bullet and left-aligned, ellipsized text, underlined on hover, with no
 bevel. It is the balloon label of the Office 97 assistant. `color=` sets the
