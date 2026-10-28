@@ -135,7 +135,14 @@ CORE_LIBS   = $(USER_LIB) $(COMMCTL_LIB) $(COMMDLG_LIB) $(KERNEL_LIB) $(SCRIPT_L
 
 # Shared relocatable rpath used exactly once per link command.
 PLATFORM_LDFLAGS = -L$(LIB_DIR) -lplatform
+CORE_LDLIBS      = -L$(LIB_DIR) -lscript -lkernel -lcommctl -lcommdlg -luser
+# libuser already carries the dialog runtime it links from the static
+# libcommdlg. macOS binds each symbol to the library that resolves it first,
+# so libuser goes first there and binaries share its one copy of the dialog
+# callbacks; GNU ld and MinGW keep the order above, which --as-needed needs.
+ifeq ($(UNAME_S),Darwin)
 CORE_LDLIBS      = -L$(LIB_DIR) -lscript -lkernel -lcommctl -luser -lcommdlg
+endif
 
 # Tools
 ORIONC_BIN   = $(BIN_DIR)/orionc$(EXE_EXT)
