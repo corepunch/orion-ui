@@ -96,6 +96,19 @@ static result_t payroll_hook(window_t *win, uint32_t msg, uint32_t wparam, void 
   dialog_pull(win, edited, ledger_payroll_form.bindings, ledger_payroll_form.binding_count);
   doc->doc_type_id = edited->doc_type_id;
   snprintf(doc->date, sizeof(doc->date), "%s", edited->date);
+  snprintf(doc->shipper, sizeof(doc->shipper), "%s", edited->shipper);
+  snprintf(doc->consignee, sizeof(doc->consignee), "%s", edited->consignee);
+  snprintf(doc->supply_date, sizeof(doc->supply_date), "%s", edited->supply_date);
+  snprintf(doc->tax_date, sizeof(doc->tax_date), "%s", edited->tax_date);
+  snprintf(doc->due_date, sizeof(doc->due_date), "%s", edited->due_date);
+  snprintf(doc->supply_kind, sizeof(doc->supply_kind), "%s", edited->supply_kind);
+  snprintf(doc->tax_scheme, sizeof(doc->tax_scheme), "%s", edited->tax_scheme);
+  snprintf(doc->shipment_reference, sizeof(doc->shipment_reference), "%s", edited->shipment_reference);
+  snprintf(doc->payment_reference, sizeof(doc->payment_reference), "%s", edited->payment_reference);
+  snprintf(doc->advance_invoice_refs, sizeof(doc->advance_invoice_refs), "%s", edited->advance_invoice_refs);
+  snprintf(doc->contract_reference, sizeof(doc->contract_reference), "%s", edited->contract_reference);
+  snprintf(doc->discount_terms, sizeof(doc->discount_terms), "%s", edited->discount_terms);
+  snprintf(doc->legal_note, sizeof(doc->legal_note), "%s", edited->legal_note);
   ledger_fill_payroll(database, g_ledger->cfg, doc_id);
   window_t *lines = get_window_item(win, ID_PAYROLL_LINES);
   send_message(lines, tvRefresh, 0, NULL);
@@ -128,6 +141,19 @@ static void preview_entries(window_t *win) {
   doc->currency_id = edited->currency_id;
   doc->rate = edited->rate;
   snprintf(doc->date, sizeof(doc->date), "%s", edited->date);
+  snprintf(doc->shipper, sizeof(doc->shipper), "%s", edited->shipper);
+  snprintf(doc->consignee, sizeof(doc->consignee), "%s", edited->consignee);
+  snprintf(doc->supply_date, sizeof(doc->supply_date), "%s", edited->supply_date);
+  snprintf(doc->tax_date, sizeof(doc->tax_date), "%s", edited->tax_date);
+  snprintf(doc->due_date, sizeof(doc->due_date), "%s", edited->due_date);
+  snprintf(doc->supply_kind, sizeof(doc->supply_kind), "%s", edited->supply_kind);
+  snprintf(doc->tax_scheme, sizeof(doc->tax_scheme), "%s", edited->tax_scheme);
+  snprintf(doc->shipment_reference, sizeof(doc->shipment_reference), "%s", edited->shipment_reference);
+  snprintf(doc->payment_reference, sizeof(doc->payment_reference), "%s", edited->payment_reference);
+  snprintf(doc->advance_invoice_refs, sizeof(doc->advance_invoice_refs), "%s", edited->advance_invoice_refs);
+  snprintf(doc->contract_reference, sizeof(doc->contract_reference), "%s", edited->contract_reference);
+  snprintf(doc->discount_terms, sizeof(doc->discount_terms), "%s", edited->discount_terms);
+  snprintf(doc->legal_note, sizeof(doc->legal_note), "%s", edited->legal_note);
   ledger_preview_entries(database, g_ledger->cfg, doc_id);
   send_message(get_window_item(win, ID_DOCUMENT_POSTINGS), tvRefresh, 0, NULL);
 }
@@ -165,6 +191,49 @@ static void save_document(window_t *win, bool post, bool close) {
   db_form_save(win, close);
 }
 
+typedef struct { int document_type; } print_picker_t;
+
+static result_t print_picker_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  switch (msg) {
+    case evCreate: {
+      const print_picker_t *picker = lparam;
+      send_message(get_window_item(win, ID_SELECT_PRINT_FORM_FORMS), tvSetFilter,
+        (uint32_t)ledger_field(g_ledger->cfg, TABLE_PRINT_FORMS, "doc_type_id"), (void *)(intptr_t)picker->document_type);
+      return true;
+    }
+    case evCommand:
+      if (LOWORD(wparam) == ID_SELECT_PRINT_FORM_PRINT && HIWORD(wparam) == btnClicked) {
+        const db_print_form_t *form = (const db_print_form_t *)send_message(get_window_item(win, ID_SELECT_PRINT_FORM_FORMS), tvGetSelectedRecord, 0, NULL);
+        if (form) end_dialog(win, (uint32_t)form->id);
+        return true;
+      }
+      if (LOWORD(wparam) == ID_SELECT_PRINT_FORM_CANCEL && HIWORD(wparam) == btnClicked) { end_dialog(win, 0); return true; }
+      return false;
+    case evClose: end_dialog(win, 0); return true;
+    case evPaint: case evDestroy: return false;
+    default: return false;
+  }
+}
+
+static void print_document(window_t *parent, int doc_id) {
+  const db_document_t *doc = find_document(doc_id);
+  if (!doc) return;
+  result_node_t *forms = (result_node_t *)send_db_message(g_ledger->cfg, dbFetch,
+    MAKEDWORD(TABLE_PRINT_FORMS, ledger_field(g_ledger->cfg, TABLE_PRINT_FORMS, "doc_type_id")), (void *)(intptr_t)doc->doc_type_id);
+  int count = count_result_list(forms), selected = forms ? (*(db_print_form_t **)forms->data)->id : 0;
+  free_result_list(forms);
+  if (!count) { message_box(parent, ui_tr("The configuration defines no print forms for this document type."), ui_tr("Print"), MB_OK); return; }
+  if (count > 1) {
+    print_picker_t picker = {doc->doc_type_id};
+    selected = (int)show_dialog_from_form(&ledger_select_print_form_form, NULL, parent, print_picker_proc, &picker);
+  }
+  if (!selected) return;
+  char report[2048];
+  int written = ledger_print_form(doc_id, selected, report, sizeof(report));
+  message_box(parent, report[0] ? report : ui_tr("The print form could not be completed. No incomplete file was published."),
+    written ? ui_tr("Print Forms Written") : ui_tr("Print"), MB_OK);
+}
+
 static result_t document_hook(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate:
@@ -181,7 +250,6 @@ static result_t document_hook(window_t *win, uint32_t msg, uint32_t wparam, void
       }
       if (code == edUpdate) return true;  // Enter in a field does not close the document
       if (code != btnClicked || !src) return false;
-      char report[2048];
       switch (src->id) {
         case ID_DOCUMENT_POST_CLOSE: save_document(win, true, true);   return true;
         case ID_DOCUMENT_POST:       save_document(win, true, false);  return true;
@@ -196,8 +264,7 @@ static result_t document_hook(window_t *win, uint32_t msg, uint32_t wparam, void
         case ID_DOCUMENT_PRINT: {
           int doc_id = db_dialog_record_id(win);
           save_document(win, false, false);
-          if (ledger_print_document(doc_id, report, sizeof(report))) message_box(win, report, ui_tr("Print Forms Written"), MB_OK);
-          else message_box(win, ui_tr("The configuration defines no print forms for this document type."), ui_tr("Print"), MB_OK);
+          print_document(win, doc_id);
           return true;
         }
       }
@@ -545,10 +612,7 @@ void ledger_command(uint16_t id) {
       break;
     case ID_DOC_PRINT:
       if (!doc) break;
-      if (ledger_print_document(doc->id, report, sizeof(report)))
-        message_box(parent, report, ui_tr("Print Forms Written"), MB_OK);
-      else
-        message_box(parent, ui_tr("The configuration defines no print forms for this document type."), ui_tr("Print"), MB_OK);
+      print_document(parent, doc->id);
       break;
     case ID_DOC_DELETE:  // lines and entries go with it (on-delete="cascade")
       if (doc && message_box(parent, ui_tr("Delete the selected document and its entries?"), ui_tr("Delete Document"), MB_YESNO) == IDYES) {
@@ -597,7 +661,7 @@ void ledger_command(uint16_t id) {
       if (ledger_print_reports(report, sizeof(report)))
         message_box(parent, report, ui_tr("Print Forms Written"), MB_OK);
       else
-        message_box(parent, ui_tr("The configuration defines no report forms."), ui_tr("Print"), MB_OK);
+        message_box(parent, report[0] ? report : ui_tr("The configuration defines no report forms."), ui_tr("Print"), MB_OK);
       break;
     case ID_HELP_ABOUT:
       message_box(parent, ui_tr("Ledger 1.0\n\nDouble-entry bookkeeping on Orion.\n"

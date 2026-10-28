@@ -45,7 +45,7 @@
   <string source="Post: write accounting entries (F9)" where="journal_page">Buchen: Buchungssätze erzeugen (F9)</string>
   <string source="Unpost" where="journal_page">Stornieren</string>
   <string source="Cancel posting" where="journal_page">Buchung stornieren</string>
-  <string source="Print" where="journal_page,reports_page,document">Drucken</string>
+  <string source="Print" where="journal_page,reports_page,document,select_print_form">Drucken</string>
   <string source="Print forms (Ctrl+P)" where="journal_page">Druckformulare (Strg+P)</string>
   <string source="Delete" where="journal_page,counterparties_page,items_page,employees_page,assets_page,document">Löschen</string>
   <string source="Delete document" where="journal_page">Beleg löschen</string>
@@ -55,7 +55,7 @@
   <string source="Counterparty" where="home_page,journal_page,reports_page,counterparty">Geschäftspartner</string>
   <string source="Amount" where="home_page,journal_page,entries_page,reports_page,document,operation,payroll,closing">Betrag</string>
   <string source="Comment" where="journal_page">Bemerkung</string>
-  <string source="Lines" where="journal_page">Positionen</string>
+  <string source="Lines" where="journal_page,document">Positionen</string>
   <string source="Item" where="journal_page,document,item">Artikel</string>
   <string source="Unit" where="journal_page,items_page,config_page,document">Einheit</string>
   <string source="Qty" where="journal_page,entries_page,document,operation">Menge</string>
@@ -116,7 +116,7 @@
   <string source="Tax Dr" where="config_page">Steuer Soll</string>
   <string source="Tax Cr" where="config_page">Steuer Haben</string>
   <string source="Description" where="config_page">Beschreibung</string>
-  <string source="Form" where="config_page">Formular</string>
+  <string source="Form" where="config_page,select_print_form">Formular</string>
   <string source="Tax Rates" where="config_page">Steuersätze</string>
   <string source="Rate" where="currencies_page,reports_page,config_page">Satz</string>
   <string source="Percent" where="config_page">Prozent</string>
@@ -134,7 +134,7 @@
   <string source="Tax:" obsolete="true">Steuer:</string>
   <string source="Total:" where="operation,payroll">Gesamt:</string>
   <string source="OK and Post" where="payroll,asset_document,closing">OK und buchen</string>
-  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,report_settings">Abbrechen</string>
+  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,report_settings">Abbrechen</string>
   <string source="Document Line" where="doc_line">Belegposition</string>
   <string source="Item:" where="doc_line">Artikel:</string>
   <string source="Quantity:" where="doc_line,entry">Menge:</string>
@@ -454,6 +454,49 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Documents that could not be posted: %d. Open them to see why." where="code">Nicht buchbare Belege: %d. Öffnen Sie sie, um den Grund zu sehen.</string>
   <string source="Posted: %d · not posted: %d" where="code">Gebucht: %d · nicht gebucht: %d</string>
   <string source="%s · as of %s" where="code">%s · Stand %s</string>
+  <string source="Posting Failed" where="code">Buchung fehlgeschlagen</string>
+  <string source="Recalculation Failed" where="code">Neuberechnung fehlgeschlagen</string>
+  <string source="Posting failed. Previous accounting entries were restored. Check the configuration and document." where="code">Buchung fehlgeschlagen. Die bisherigen Buchungen wurden wiederhergestellt. Prüfen Sie die Konfiguration und den Beleg.</string>
+  <string source="Recalculation failed. Previous accounting entries were restored. Check the configuration and documents." where="code">Neuberechnung fehlgeschlagen. Die bisherigen Buchungen wurden wiederhergestellt. Prüfen Sie die Konfiguration und die Belege.</string>
+  <string source="Invoice Details" where="document">Rechnungsangaben</string>
+  <string source="Supply date:" where="document">Leistungsdatum:</string>
+  <string source="Tax point date:" where="document">Steuerzeitpunkt:</string>
+  <string source="Due date:" where="document">Fällig am:</string>
+  <string source="Supply kind:" where="document">Leistungsart:</string>
+  <string source="Tax scheme:" where="document">Besteuerungsverfahren:</string>
+  <string source="References" where="document">Referenzen</string>
+  <string source="Shipment reference:" where="document">Lieferbeleg:</string>
+  <string source="Payment reference:" where="document">Zahlungsbeleg:</string>
+  <string source="Advance invoice references:" where="document">Anzahlungsrechnungen:</string>
+  <string source="Contract reference:" where="document">Vertragsreferenz:</string>
+  <string source="Shipper name and address:" where="document">Versender und Anschrift:</string>
+  <string source="Consignee name and address:" where="document">Empfänger und Anschrift:</string>
+  <string source="Discount terms:" where="document">Rabattbedingungen:</string>
+  <string source="Legal note:" where="document">Rechtlicher Hinweis:</string>
+  <string source="Line" where="doc_line">Position</string>
+  <string source="Origin" where="doc_line">Herkunft</string>
+  <string source="Commodity code:" where="doc_line">Warencode:</string>
+  <string source="Origin country code:" where="doc_line">Ursprungslandcode:</string>
+  <string source="Origin country name:" where="doc_line">Ursprungsland:</string>
+  <string source="Customs / batch reference:" where="doc_line">Zoll- / Chargenreferenz:</string>
+  <string source="Traceability" where="doc_line">Rückverfolgbarkeit</string>
+  <string source="Traceable goods:" where="doc_line">Rückverfolgungspflichtig:</string>
+  <string source="Tracking unit code:" where="doc_line">Code der Rückverfolgungseinheit:</string>
+  <string source="Tracking unit name:" where="doc_line">Rückverfolgungseinheit:</string>
+  <string source="Tracking quantity:" where="doc_line">Rückverfolgungsmenge:</string>
+  <string source="Tracking value excl. tax:" where="doc_line">Rückverfolgungswert ohne Steuer:</string>
+  <string source="Country code:" where="counterparty,organization">Ländercode:</string>
+  <string source="VAT/GST registration:" where="counterparty,organization">Umsatzsteuer-/GST-Nummer:</string>
+  <string source="Registration kind:" where="counterparty,organization">Art der Steuerregistrierung:</string>
+  <string source="Registration verified on:" where="counterparty,organization">Registrierung geprüft am:</string>
+  <string source="Legal registration details:" where="organization">Gesellschaftsrechtliche Angaben:</string>
+  <string source="Print validation requires the configuration's script runtime." where="code">Die Druckprüfung benötigt die Skriptumgebung der Konfiguration.</string>
+  <string source="The print form could not be completed. No incomplete file was published." where="code">Das Druckformular konnte nicht fertiggestellt werden. Es wurde keine unvollständige Datei ausgegeben.</string>
+  <string source="No verified print form covers this document date." where="code">Für dieses Belegdatum ist kein geprüftes Druckformular verfügbar.</string>
+  <string source="Verification reference:" where="counterparty,organization">Prüfungsnachweis:</string>
+  <string source="Select Print Form" where="select_print_form">Druckformular auswählen</string>
+  <string source="Choose the document to produce. Each form checks its own required details." where="select_print_form">Wählen Sie das Dokument. Jedes Formular prüft seine erforderlichen Angaben.</string>
+  <string source="Legal basis" where="select_print_form">Rechtsgrundlage</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>
@@ -464,8 +507,4 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Documents changed after %s: %s are not zero on %s" where="code">Belege nach %s geändert: %s am %s nicht ausgeglichen</string>
   <string source="Repost" where="code">Neu buchen</string>
   <string source="There is no check %d to settle." where="code">Keine Prüfung %d vorhanden.</string>
-  <string source="Posting Failed">Buchung fehlgeschlagen</string>
-  <string source="Recalculation Failed">Neuberechnung fehlgeschlagen</string>
-  <string source="Posting failed. Previous accounting entries were restored. Check the configuration and document.">Buchung fehlgeschlagen. Die bisherigen Buchungen wurden wiederhergestellt. Prüfen Sie die Konfiguration und den Beleg.</string>
-  <string source="Recalculation failed. Previous accounting entries were restored. Check the configuration and documents.">Neuberechnung fehlgeschlagen. Die bisherigen Buchungen wurden wiederhergestellt. Prüfen Sie die Konfiguration und die Belege.</string>
 </strings>

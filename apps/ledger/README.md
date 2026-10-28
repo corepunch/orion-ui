@@ -128,6 +128,18 @@ workloads, engine materialization, persistence/report checks and performance
 commands, see [Synthetic workloads](docs/synthetic-workloads.md). The small
 first-start demos remain unchanged. These synthetic Ledger-native fixtures
 are separate from the real Russian EnterpriseData importer sample below.
+## Audited invoice forms
+
+The [six-country form audit](docs/invoice-forms-audit.md) records official
+requirements, corrected RU/DE forms, the four new national service invoices
+and DE core EN16931 UBL output. The Print action selects an individual form, each with its own validation.
+The document editor has **Invoice Details**
+and **References** tabs; line metadata has origin and traceability tabs.
+Enter actual supply/tax-point dates, registrations and references before printing.
+Mandatory fields and reconciled totals are checked before a form is emitted.
+Tax books use an explicit tax-point date when present; general-ledger entries
+retain the document date. This does not automatically infer every national
+time-of-supply rule or complete the remaining statutory workflows.
 
 ## Languages
 

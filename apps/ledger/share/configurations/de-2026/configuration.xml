@@ -139,14 +139,15 @@
     <closing_rule id="2" kind="revaluation" start="" name="Kursdifferenz" account_id="0" target_id="0" via_id="0" gain_id="20" loss_id="19" />
   </closing_rules>
   <print_forms>
-    <print_form id="1" report="" doc_type_id="2" name="Rechnung" template="invoice.html" basis="§ 14 Abs. 4 UStG; § 35a GmbHG (Pflichtangaben)" />
-    <print_form id="2" report="" doc_type_id="3" name="Quittung" template="receipt.html" basis="Kassenbeleg; Kleinbetragsrechnung bis 250 € nach § 33 UStDV" />
+    <print_form id="1" report="" doc_type_id="2" name="Rechnung" template="invoice.html" validate_script="validate_invoice" valid_from="2026-01-01" valid_to="2026-12-31" basis="§ 14 Abs. 4 UStG; § 35a GmbHG (Pflichtangaben)" />
+    <print_form id="2" report="" doc_type_id="3" name="Quittung" template="receipt.html" basis="Empfangsbekenntnis nach § 368 BGB; keine Umsatzsteuerrechnung" />
     <print_form id="3" report="" doc_type_id="9" name="Lohnjournal" template="payroll-journal.html" basis="§ 41 EStG (Lohnkonto); § 28f SGB IV (Entgeltunterlagen)" />
     <print_form id="4" report="cash_book" doc_type_id="0" name="Kassenbuch" template="cash-book.html" basis="§ 146 Abs. 1 AO; GoBD (BMF-Schreiben vom 28.11.2019)" />
     <print_form id="5" report="balances" doc_type_id="0" name="Summen- und Saldenliste" template="trial-balance.html" basis="§ 238 HGB, GoBD" />
     <print_form id="6" report="vat_summary" doc_type_id="0" name="Umsatzsteuer-Voranmeldung (Kennzahlen)" template="vat-return.html" basis="§ 18 UStG; Vordruck USt 1 A 2026 (BMF)" />
     <print_form id="7" report="journal_rows" doc_type_id="0" name="DATEV-Buchungsstapel (EXTF)" template="datev-buchungsstapel.csv" basis="DATEV-Format Buchungsstapel, Version 700 / 13" />
     <print_form id="8" report="journal_rows" doc_type_id="0" name="Buchungsjournal" template="general-journal.html" basis="§ 239 HGB (Grundbuch), GoBD" />
+    <print_form id="9" doc_type_id="2" report="" name="EN 16931 UBL invoice" template="invoice-ubl.xml" validate_script="validate_ubl" optional="1" valid_from="2026-01-01" valid_to="2026-12-31" basis="EN 16931 core, UBL 2.1; ordinary domestic positive-rate invoices (not XRechnung CIUS)" />
   </print_forms>
   <regulations>
     <regulation id="1" area="accounts" title="Kontenrahmen SKR 03 (Standardkontenrahmen 2026)" reference="DATEV eG, Kontenrahmenänderungen 2025/2026" valid_from="2026-01-01" url="https://www.datev.de/web/de/service-und-support/wichtige-informationen-zum-jahreswechsel/" />

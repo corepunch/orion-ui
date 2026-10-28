@@ -49,6 +49,8 @@ static bool g_script_running;
 static int g_script_transactions;
 static int g_executors;
 static bool g_executor_active;
+static bool g_readonly_hook;
+static char g_hook_error[512];
 int ledger_open_executor(lua_State *L);
 
 static database_t *db_named(lua_State *L, int arg) {
@@ -154,7 +156,7 @@ static double opt_number(lua_State *L, int t, const char *key, double dflt) {
 
 // ledger.entry{...}: an entry of the document being posted.
 static int l_entry(lua_State *L) {
-  if (!g_post || g_executor_active) return luaL_error(L, "ledger.entry outside a posting");
+  if (!g_post || g_executor_active || g_readonly_hook) return luaL_error(L, "ledger.entry outside a posting");
   luaL_checktype(L, 1, LUA_TTABLE);
   lua_getfield(L, 1, "debit");  int debit = account_id(L, -1);  lua_pop(L, 1);
   lua_getfield(L, 1, "credit"); int credit = account_id(L, -1); lua_pop(L, 1);
@@ -504,6 +506,7 @@ static bool call(const ledger_post_t *p, const char *function, int nresults) {
   lua_getglobal(L, function);
   if (!lua_isfunction(L, -1)) {
     lua_pop(L, 2);
+    snprintf(g_hook_error, sizeof(g_hook_error), "Validation function '%s' was not found.", function);
     fprintf(stderr, "[ledger] script: no function '%s' in the configuration's rules\n", function);
     return false;
   }
@@ -513,7 +516,8 @@ static bool call(const ledger_post_t *p, const char *function, int nresults) {
   bool ok = lua_pcall(L, 1, nresults, 0) == LUA_OK;
   g_post = outer;
   if (!ok) {
-    fprintf(stderr, "[ledger] script %s: %s\n", function, lua_tostring(L, -1));
+    snprintf(g_hook_error, sizeof(g_hook_error), "%s", lua_tostring(L, -1));
+    fprintf(stderr, "[ledger] script %s: %s\n", function, g_hook_error);
     lua_pop(L, 1);
   }
   return ok;
@@ -523,6 +527,23 @@ bool ledger_script_post(const ledger_post_t *p, const char *function) {
   if (!g_lua) { fprintf(stderr, "[ledger] script: document type '%s' needs rules.lua, none loaded\n", p->type->code); return false; }
   push_context(p);
   return call(p, function, 0);
+}
+
+bool ledger_script_print(const ledger_post_t *p, const db_print_form_t *form, char *error, size_t error_sz) {
+  if (!form->validate_script[0]) return true;
+  if (!g_lua) {
+    snprintf(error, error_sz, "%s", ui_tr("Print validation requires the configuration's script runtime."));
+    return false;
+  }
+  push_context(p);
+  push_record(g_lua, db_schema_table(p->cfg->schema, TABLE_PRINT_FORMS), form);
+  lua_setfield(g_lua, -2, "print_form");
+  bool outer = g_readonly_hook;
+  g_readonly_hook = true;
+  bool ok = call(p, form->validate_script, 0);
+  g_readonly_hook = outer;
+  if (!ok) snprintf(error, error_sz, "%s", g_hook_error);
+  return ok;
 }
 
 bool ledger_script_closing(const ledger_post_t *p, const db_closing_rule_t *rule) {

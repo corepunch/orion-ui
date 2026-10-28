@@ -297,6 +297,10 @@
       <!-- Document print forms; report forms name a report table instead. -->
       <table name="print_forms">
         <field name="id" type="integer" key="YES" />
+        <field name="optional" type="boolean" />
+        <field name="validate_script" type="string" length="32" />
+        <field name="valid_from" type="date" />
+        <field name="valid_to" type="date" />
         <field name="doc_type_id" type="integer" relation="doc_types.id" />
         <field name="report" type="string" length="32" />
         <field name="name" type="string" length="96" />
@@ -344,6 +348,12 @@
     <database name="ib" class="ledger_ib">
       <table name="organizations">
         <field name="id" type="integer" key="YES" />
+        <field name="legal_details" type="string" length="512" />
+        <field name="country_code" type="string" length="3" />
+        <field name="vat_id" type="string" length="32" />
+        <field name="registration_kind" type="string" length="24" />
+        <field name="vat_verified_on" type="date" />
+        <field name="vat_verification_reference" type="string" length="256" />
         <field name="name" type="string" length="160" />
         <field name="tax_id" type="string" length="16" />
         <field name="kpp" type="string" length="16" />
@@ -358,6 +368,11 @@
       </table>
       <table name="counterparties">
         <field name="id" type="integer" key="YES" />
+        <field name="country_code" type="string" length="3" />
+        <field name="vat_id" type="string" length="32" />
+        <field name="registration_kind" type="string" length="24" />
+        <field name="vat_verified_on" type="date" />
+        <field name="vat_verification_reference" type="string" length="256" />
         <field name="name" type="string" length="160" />
         <field name="tax_id" type="string" length="16" />
         <field name="kpp" type="string" length="16" />
@@ -416,6 +431,19 @@
            its rate (the rate on the document date when left empty). -->
       <table name="documents">
         <field name="id" type="integer" key="YES" />
+        <field name="shipper" type="string" length="512" />
+        <field name="consignee" type="string" length="512" />
+        <field name="supply_date" type="date" />
+        <field name="tax_date" type="date" />
+        <field name="due_date" type="date" />
+        <field name="supply_kind" type="string" length="16" />
+        <field name="tax_scheme" type="string" length="24" />
+        <field name="shipment_reference" type="string" length="256" />
+        <field name="payment_reference" type="string" length="256" />
+        <field name="advance_invoice_refs" type="string" length="512" />
+        <field name="contract_reference" type="string" length="160" />
+        <field name="discount_terms" type="string" length="256" />
+        <field name="legal_note" type="string" length="512" />
         <field name="doc_type_id" type="integer" relation="cfg.doc_types.id" />
         <field name="counterparty_id" type="integer" relation="counterparties.id" on-delete="deny" />
         <field name="currency_id" type="integer" relation="currencies.id" on-delete="deny" />
@@ -431,6 +459,15 @@
       </table>
       <table name="doc_lines">
         <field name="id" type="integer" key="YES" />
+        <field name="commodity_code" type="string" length="32" />
+        <field name="origin_code" type="string" length="4" />
+        <field name="origin_name" type="string" length="64" />
+        <field name="customs_reference" type="string" length="128" />
+        <field name="tracking_unit_code" type="string" length="8" />
+        <field name="tracking_unit_name" type="string" length="32" />
+        <field name="tracking_quantity" type="double" />
+        <field name="tracking_value" type="double" />
+        <field name="is_traceable" type="boolean" />
         <field name="document_id" type="integer" relation="documents.id" on-delete="cascade" />
         <field name="item_id" type="integer" relation="items.id" on-delete="deny" />
         <field name="vat_rate_id" type="integer" relation="cfg.vat_rates.id" />
@@ -1193,7 +1230,8 @@
         </Column>
       </GridView>
       <SplitView name="body" orientation="vertical" split-ratio="0.58" flags="flexspace">
-        <StackView name="goods" spacing="6" flags="flexspace">
+        <TabView name="content" flags="flexspace">
+        <StackView name="goods" text="Lines" spacing="6" flags="flexspace">
           <StackView name="line_actions" orientation="horizontal" spacing="6">
             <Button name="add_line" text="Add" icon="ledger-new" target="lines" action="insert" tooltip="Add a line (Ins)" />
             <Button name="edit_line" text="Edit" icon="ledger-edit" target="lines" action="edit" tooltip="Edit the line (F2)" />
@@ -1212,6 +1250,45 @@
             <Column field="total" title="Total" width="90" total="sum" />
           </TableView>
         </StackView>
+          <GridView name="invoice_details" text="Invoice Details" spacing="4" padding="8">
+            <Column name="invoice_details_labels" width="auto">
+              <Label name="lbl_supply_date" text="Supply date:" />
+              <Label name="lbl_tax_date" text="Tax point date:" />
+              <Label name="lbl_due_date" text="Due date:" />
+              <Label name="lbl_supply_kind" text="Supply kind:" />
+              <Label name="lbl_tax_scheme" text="Tax scheme:" />
+            </Column>
+            <Column name="invoice_details_inputs">
+              <TextBox name="supply_date" field="ib.documents.supply_date" />
+              <TextBox name="tax_date" field="ib.documents.tax_date" />
+              <TextBox name="due_date" field="ib.documents.due_date" />
+              <TextBox name="supply_kind" field="ib.documents.supply_kind" />
+              <TextBox name="tax_scheme" field="ib.documents.tax_scheme" />
+            </Column>
+          </GridView>
+          <GridView name="invoice_references" text="References" spacing="4" padding="8">
+            <Column name="invoice_references_labels" width="auto">
+              <Label name="lbl_shipment_reference" text="Shipment reference:" />
+              <Label name="lbl_payment_reference" text="Payment reference:" />
+              <Label name="lbl_advance_invoice_refs" text="Advance invoice references:" />
+              <Label name="lbl_contract_reference" text="Contract reference:" />
+              <Label name="lbl_shipper" text="Shipper name and address:" />
+              <Label name="lbl_consignee" text="Consignee name and address:" />
+              <Label name="lbl_discount_terms" text="Discount terms:" />
+              <Label name="lbl_legal_note" text="Legal note:" />
+            </Column>
+            <Column name="invoice_references_inputs">
+              <TextBox name="shipment_reference" field="ib.documents.shipment_reference" />
+              <TextBox name="payment_reference" field="ib.documents.payment_reference" />
+              <TextBox name="advance_invoice_refs" field="ib.documents.advance_invoice_refs" />
+              <TextBox name="contract_reference" field="ib.documents.contract_reference" />
+              <TextBox name="shipper" field="ib.documents.shipper" />
+              <TextBox name="consignee" field="ib.documents.consignee" />
+              <TextBox name="discount_terms" field="ib.documents.discount_terms" />
+              <TextBox name="legal_note" field="ib.documents.legal_note" />
+            </Column>
+          </GridView>
+        </TabView>
         <StackView name="postings_pane" spacing="6" flags="flexspace">
           <StackView name="postings_head" orientation="horizontal" spacing="8">
             <Label name="lbl_postings" text="Entries" font="system" />
@@ -1246,8 +1323,9 @@
       </StackView>
     </form>
 
-    <form name="doc_line" title="Document Line" width="340" spacing="6" padding="8">
-      <GridView name="fields" spacing="4">
+    <form name="doc_line" title="Document Line" width="480" spacing="6" padding="8">
+      <TabView name="metadata" height="240">
+      <GridView name="fields" text="Line" spacing="4">
         <Column name="labels" width="auto">
           <Label name="lbl_item" text="Item:" />
           <Label name="lbl_quantity" text="Quantity:" />
@@ -1261,6 +1339,37 @@
           <ComboBox name="vat_rate" field="ib.doc_lines.vat_rate_id" source="cfg.vat_rates" display="name" value="id" />
         </Column>
       </GridView>
+        <GridView name="origin" text="Origin" spacing="4" padding="8">
+          <Column name="origin_labels" width="auto">
+            <Label name="lbl_commodity_code" text="Commodity code:" />
+            <Label name="lbl_origin_code" text="Origin country code:" />
+            <Label name="lbl_origin_name" text="Origin country name:" />
+            <Label name="lbl_customs_reference" text="Customs / batch reference:" />
+          </Column>
+          <Column name="origin_inputs">
+            <TextBox name="commodity_code" field="ib.doc_lines.commodity_code" />
+            <TextBox name="origin_code" field="ib.doc_lines.origin_code" />
+            <TextBox name="origin_name" field="ib.doc_lines.origin_name" />
+            <TextBox name="customs_reference" field="ib.doc_lines.customs_reference" />
+          </Column>
+        </GridView>
+        <GridView name="tracking" text="Traceability" spacing="4" padding="8">
+          <Column name="tracking_labels" width="auto">
+            <Label name="lbl_is_traceable" text="Traceable goods:" />
+            <Label name="lbl_tracking_unit_code" text="Tracking unit code:" />
+            <Label name="lbl_tracking_unit_name" text="Tracking unit name:" />
+            <Label name="lbl_tracking_quantity" text="Tracking quantity:" />
+            <Label name="lbl_tracking_value" text="Tracking value excl. tax:" />
+          </Column>
+          <Column name="tracking_inputs">
+            <CheckBox name="is_traceable" field="ib.doc_lines.is_traceable" />
+            <TextBox name="tracking_unit_code" field="ib.doc_lines.tracking_unit_code" />
+            <TextBox name="tracking_unit_name" field="ib.doc_lines.tracking_unit_name" />
+            <TextBox name="tracking_quantity" field="ib.doc_lines.tracking_quantity" />
+            <TextBox name="tracking_value" field="ib.doc_lines.tracking_value" />
+          </Column>
+        </GridView>
+      </TabView>
       <Separator name="sep" />
       <StackView name="actions" orientation="horizontal" spacing="6">
         <Space name="flex" />
@@ -1275,6 +1384,11 @@
           <Label name="lbl_name" text="Name:" />
           <Label name="lbl_tax_id" text="Tax ID:" />
           <Label name="lbl_kpp" text="KPP:" />
+          <Label name="lbl_country_code" text="Country code:" />
+          <Label name="lbl_vat_id" text="VAT/GST registration:" />
+          <Label name="lbl_registration_kind" text="Registration kind:" />
+          <Label name="lbl_vat_verified_on" text="Registration verified on:" />
+          <Label name="lbl_vat_verification_reference" text="Verification reference:" />
           <Label name="lbl_address" text="Address:" />
           <Label name="lbl_bank" text="Bank:" />
           <Label name="lbl_bank_account" text="Bank account:" />
@@ -1285,6 +1399,11 @@
           <TextBox name="name" field="ib.counterparties.name" />
           <TextBox name="tax_id" field="ib.counterparties.tax_id" />
           <TextBox name="kpp" field="ib.counterparties.kpp" />
+          <TextBox name="country_code" field="ib.counterparties.country_code" />
+          <TextBox name="vat_id" field="ib.counterparties.vat_id" />
+          <TextBox name="registration_kind" field="ib.counterparties.registration_kind" />
+          <TextBox name="vat_verified_on" field="ib.counterparties.vat_verified_on" />
+          <TextBox name="vat_verification_reference" field="ib.counterparties.vat_verification_reference" />
           <TextBox name="address" field="ib.counterparties.address" />
           <TextBox name="bank" field="ib.counterparties.bank" />
           <TextBox name="bank_account" field="ib.counterparties.bank_account" />
@@ -1331,6 +1450,12 @@
           <Label name="lbl_name" text="Name:" />
           <Label name="lbl_tax_id" text="Tax ID:" />
           <Label name="lbl_kpp" text="KPP:" />
+          <Label name="lbl_country_code" text="Country code:" />
+          <Label name="lbl_vat_id" text="VAT/GST registration:" />
+          <Label name="lbl_registration_kind" text="Registration kind:" />
+          <Label name="lbl_vat_verified_on" text="Registration verified on:" />
+          <Label name="lbl_vat_verification_reference" text="Verification reference:" />
+          <Label name="lbl_legal_details" text="Legal registration details:" />
           <Label name="lbl_address" text="Address:" />
           <Label name="lbl_bank" text="Bank:" />
           <Label name="lbl_bank_account" text="Bank account:" />
@@ -1344,6 +1469,12 @@
           <TextBox name="name" field="ib.organizations.name" />
           <TextBox name="tax_id" field="ib.organizations.tax_id" />
           <TextBox name="kpp" field="ib.organizations.kpp" />
+          <TextBox name="country_code" field="ib.organizations.country_code" />
+          <TextBox name="vat_id" field="ib.organizations.vat_id" />
+          <TextBox name="registration_kind" field="ib.organizations.registration_kind" />
+          <TextBox name="vat_verified_on" field="ib.organizations.vat_verified_on" />
+          <TextBox name="vat_verification_reference" field="ib.organizations.vat_verification_reference" />
+          <TextBox name="legal_details" field="ib.organizations.legal_details" />
           <TextBox name="address" field="ib.organizations.address" />
           <TextBox name="bank" field="ib.organizations.bank" />
           <TextBox name="bank_account" field="ib.organizations.bank_account" />
@@ -1395,6 +1526,19 @@
       <StackView name="actions" orientation="horizontal" spacing="6">
         <Space name="flex" />
         <Button name="ok" text="OK" action="catalog.choices.update" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="select_print_form" title="Select Print Form" width="620" height="280" spacing="8" padding="12">
+      <Label name="hint" text="Choose the document to produce. Each form checks its own required details." />
+      <TableView name="forms" source="cfg.print_forms" flags="notitle,nofill,vscroll,flexspace">
+        <Column field="name" title="Form" width="220" />
+        <Column field="basis" title="Legal basis" width="0" />
+      </TableView>
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="print" text="Print" flags="BUTTON_DEFAULT" />
         <Button name="cancel" text="Cancel" />
       </StackView>
     </form>

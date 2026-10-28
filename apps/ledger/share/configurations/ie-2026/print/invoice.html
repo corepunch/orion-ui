@@ -1,11 +1,14 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><title>Invoice {{number}}</title>
-<style>body{font:14px sans-serif;margin:36px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #aaa;padding:8px;text-align:left}</style>
-<h1>Invoice {{number}}</h1><p>DEVELOPMENT PROFILE — verify legal coverage before use.</p>
-<p>{{org.name}}<br>{{org.address}}<br>Tax registration: {{org.tax_id}}</p>
-<p>Bill to: {{counterparty.name}}<br>{{counterparty.address}}</p>
-<p>Invoice / supply date: {{date}} (this profile requires the dates to coincide)</p>
-<table><tr><th>Service</th><th>Quantity</th><th>Unit price</th><th>Tax</th><th>Net</th><th>Gross</th></tr>
-{{#lines}}<tr><td>{{item.name}}</td><td>{{quantity}}</td><td>{{price}}</td><td>{{vat}}</td><td>{{amount}}</td><td>{{total}}</td></tr>{{/lines}}</table>
-<h2>Tax breakdown</h2><table><tr><th>Rate</th><th>Net</th><th>Tax</th><th>Gross</th></tr>
-{{#tax_totals}}<tr><td>{{vat_rate.name}}</td><td>{{amount}}</td><td>{{vat}}</td><td>{{total}}</td></tr>{{/tax_totals}}</table>
-<p>Total: {{total}} {{cfg.currency_code}}</p></html>
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>VAT INVOICE {{number}}</title>
+<style>body{font:10pt Arial,sans-serif;margin:12mm;color:#111}table{border-collapse:collapse;width:100%;margin:12px 0}th,td{border:1px solid #888;padding:6px;text-align:left;vertical-align:top}.num{text-align:right;white-space:nowrap}.parties td{width:50%}h1{font-size:18pt}.note{white-space:pre-wrap}@page{size:A4;margin:12mm}@media print{body{margin:0}thead{display:table-header-group}tr{break-inside:avoid}h1,h2{break-after:avoid}}.line-items{table-layout:fixed;font-size:9pt}.line-items th{overflow-wrap:anywhere}.line-items td,.line-items th{padding:5px 4px}</style></head><body>
+<h1>VAT INVOICE</h1>
+<table class="parties"><tr><td><strong>Supplier</strong><br>{{org.name}}<br>{{org.address}}<br>VAT registration number: {{org.vat_id}}<br>{{org.legal_details}}</td><td><strong>Customer</strong><br>{{counterparty.name}}<br>{{counterparty.address}}<br>VAT registration number: {{counterparty.vat_id|dash}}</td></tr></table>
+<p>Invoice number: <strong>{{number}}</strong><br>Date of issue: {{date}}<br>Supply date: {{supply_date}}<br>Tax point: {{tax_date}}<br>Payment due: {{due_date|dash}}</p>
+<table class="line-items"><colgroup><col style="width:24%"><col style="width:9%"><col style="width:7%"><col style="width:14%"><col style="width:8%"><col style="width:12%"><col style="width:12%"><col style="width:14%"></colgroup><thead><tr><th>Description of services</th><th>Qty / extent</th><th>Unit</th><th>Unit price excl. VAT</th><th>VAT rate</th><th>Net</th><th>VAT</th><th>Total</th></tr></thead>
+<tbody>{{#lines}}<tr><td>{{item.name}}</td><td class="num">{{quantity|decimal3}}</td><td>{{item.unit.name}}</td><td class="num">{{price|dot}}</td><td>{{vat_rate.name}}</td><td class="num">{{amount|dot}}</td><td class="num">{{vat|dot}}</td><td class="num">{{total|dot}}</td></tr>{{/lines}}</tbody></table>
+<h2>VAT breakdown (EUR)</h2><table><thead><tr><th>Rate</th><th>Taxable value</th><th>VAT payable</th><th>Total</th></tr></thead><tbody>
+{{#tax_totals}}<tr><td>{{vat_rate.name}}</td><td class="num">{{amount|dot}}</td><td class="num">{{vat|dot}}</td><td class="num">{{total|dot}}</td></tr>{{/tax_totals}}</tbody></table>
+<p>Net total: {{amount|dot}} EUR<br>Total VAT: {{vat|dot}} EUR<br><strong>Total payable: {{total|dot}} EUR</strong></p>
+<p class="note">Discount / rebate terms: {{discount_terms|dash}}<br>{{legal_note}}</p>
+<p>Bank: {{org.bank|dash}}<br>Account / IBAN: {{org.bank_account|dash}}<br>Bank identifier: {{org.bik|dash}}</p>
+</body></html>

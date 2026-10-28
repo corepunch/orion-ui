@@ -42,7 +42,7 @@
   <string source="Post: write accounting entries (F9)" where="journal_page">Провести: сформировать проводки (F9)</string>
   <string source="Unpost" where="journal_page">Отменить</string>
   <string source="Cancel posting" where="journal_page">Отменить проведение</string>
-  <string source="Print" where="journal_page,reports_page,document">Печать</string>
+  <string source="Print" where="journal_page,reports_page,document,select_print_form">Печать</string>
   <string source="Print forms (Ctrl+P)" where="journal_page">Печатные формы (Ctrl+P)</string>
   <string source="Delete" where="journal_page,counterparties_page,items_page,employees_page,assets_page,document">Удалить</string>
   <string source="Delete document" where="journal_page">Удалить документ</string>
@@ -52,7 +52,7 @@
   <string source="Counterparty" where="home_page,journal_page,reports_page,counterparty">Контрагент</string>
   <string source="Amount" where="home_page,journal_page,entries_page,reports_page,document,operation,payroll,closing">Сумма</string>
   <string source="Comment" where="journal_page">Комментарий</string>
-  <string source="Lines" where="journal_page">Товары</string>
+  <string source="Lines" where="journal_page,document">Товары</string>
   <string source="Item" where="journal_page,document,item">Номенклатура</string>
   <string source="Unit" where="journal_page,items_page,config_page,document">Ед.</string>
   <string source="Qty" where="journal_page,entries_page,document,operation">Кол-во</string>
@@ -95,7 +95,7 @@
   <string source="Tax Dr" where="config_page">Дт налога</string>
   <string source="Tax Cr" where="config_page">Кт налога</string>
   <string source="Description" where="config_page">Описание</string>
-  <string source="Form" where="config_page">Форма</string>
+  <string source="Form" where="config_page,select_print_form">Форма</string>
   <string source="Tax Rates" where="config_page">Ставки налога</string>
   <string source="Rate" where="currencies_page,reports_page,config_page">Ставка</string>
   <string source="Percent" where="config_page">Процент</string>
@@ -113,7 +113,7 @@
   <string source="Tax:" obsolete="true">Налог:</string>
   <string source="Total:" where="operation,payroll">Всего:</string>
   <string source="OK and Post" where="payroll,asset_document,closing">ОК и провести</string>
-  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,report_settings">Отмена</string>
+  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,report_settings">Отмена</string>
   <string source="Document Line" where="doc_line">Строка документа</string>
   <string source="Item:" where="doc_line">Номенклатура:</string>
   <string source="Quantity:" where="doc_line,entry">Количество:</string>
@@ -454,6 +454,49 @@
   <string source="Documents that could not be posted: %d. Open them to see why." where="code">Не удалось провести документов: %d. Откройте их, чтобы увидеть причину.</string>
   <string source="Posted: %d · not posted: %d" where="code">Проведено: %d · не проведено: %d</string>
   <string source="%s · as of %s" where="code">%s · на %s</string>
+  <string source="Posting Failed" where="code">Ошибка проведения</string>
+  <string source="Recalculation Failed" where="code">Ошибка пересчёта</string>
+  <string source="Posting failed. Previous accounting entries were restored. Check the configuration and document." where="code">Проведение не выполнено. Прежние проводки восстановлены. Проверьте конфигурацию и документ.</string>
+  <string source="Recalculation failed. Previous accounting entries were restored. Check the configuration and documents." where="code">Пересчёт не выполнен. Прежние проводки восстановлены. Проверьте конфигурацию и документы.</string>
+  <string source="Invoice Details" where="document">Реквизиты счёта</string>
+  <string source="Supply date:" where="document">Дата поставки:</string>
+  <string source="Tax point date:" where="document">Дата возникновения налога:</string>
+  <string source="Due date:" where="document">Срок оплаты:</string>
+  <string source="Supply kind:" where="document">Вид поставки:</string>
+  <string source="Tax scheme:" where="document">Налоговый режим:</string>
+  <string source="References" where="document">Основания</string>
+  <string source="Shipment reference:" where="document">Документ об отгрузке:</string>
+  <string source="Payment reference:" where="document">Платёжный документ:</string>
+  <string source="Advance invoice references:" where="document">Авансовые счета-фактуры:</string>
+  <string source="Contract reference:" where="document">Договор:</string>
+  <string source="Shipper name and address:" where="document">Грузоотправитель и адрес:</string>
+  <string source="Consignee name and address:" where="document">Грузополучатель и адрес:</string>
+  <string source="Discount terms:" where="document">Условия скидки:</string>
+  <string source="Legal note:" where="document">Правовое основание:</string>
+  <string source="Line" where="doc_line">Строка</string>
+  <string source="Origin" where="doc_line">Происхождение</string>
+  <string source="Commodity code:" where="doc_line">Код вида товара:</string>
+  <string source="Origin country code:" where="doc_line">Код страны происхождения:</string>
+  <string source="Origin country name:" where="doc_line">Страна происхождения:</string>
+  <string source="Customs / batch reference:" where="doc_line">Декларация / номер партии:</string>
+  <string source="Traceability" where="doc_line">Прослеживаемость</string>
+  <string source="Traceable goods:" where="doc_line">Прослеживаемый товар:</string>
+  <string source="Tracking unit code:" where="doc_line">Код единицы прослеживаемости:</string>
+  <string source="Tracking unit name:" where="doc_line">Единица прослеживаемости:</string>
+  <string source="Tracking quantity:" where="doc_line">Прослеживаемое количество:</string>
+  <string source="Tracking value excl. tax:" where="doc_line">Прослеживаемая стоимость без НДС:</string>
+  <string source="Country code:" where="counterparty,organization">Код страны:</string>
+  <string source="VAT/GST registration:" where="counterparty,organization">Регистрационный номер НДС/GST:</string>
+  <string source="Registration kind:" where="counterparty,organization">Вид налоговой регистрации:</string>
+  <string source="Registration verified on:" where="counterparty,organization">Дата проверки регистрации:</string>
+  <string source="Legal registration details:" where="organization">Юридические регистрационные данные:</string>
+  <string source="Print validation requires the configuration's script runtime." where="code">Для проверки печати необходим модуль правил конфигурации.</string>
+  <string source="The print form could not be completed. No incomplete file was published." where="code">Не удалось сформировать печатную форму. Незавершённый файл не сохранён.</string>
+  <string source="No verified print form covers this document date." where="code">Для даты документа нет проверенной печатной формы.</string>
+  <string source="Verification reference:" where="counterparty,organization">Подтверждение проверки:</string>
+  <string source="Select Print Form" where="select_print_form">Выбор печатной формы</string>
+  <string source="Choose the document to produce. Each form checks its own required details." where="select_print_form">Выберите документ для печати. Каждая форма проверяет свои обязательные реквизиты.</string>
+  <string source="Legal basis" where="select_print_form">Правовое основание</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>
@@ -464,8 +507,4 @@
   <string source="Documents changed after %s: %s are not zero on %s" where="code">Документы изменены после %s: %s не закрыты на %s</string>
   <string source="Repost" where="code">Перепровести</string>
   <string source="There is no check %d to settle." where="code">Нет проверки %d.</string>
-  <string source="Posting Failed">Ошибка проведения</string>
-  <string source="Recalculation Failed">Ошибка пересчёта</string>
-  <string source="Posting failed. Previous accounting entries were restored. Check the configuration and document.">Проведение не выполнено. Прежние проводки восстановлены. Проверьте конфигурацию и документ.</string>
-  <string source="Recalculation failed. Previous accounting entries were restored. Check the configuration and documents.">Пересчёт не выполнен. Прежние проводки восстановлены. Проверьте конфигурацию и документы.</string>
 </strings>

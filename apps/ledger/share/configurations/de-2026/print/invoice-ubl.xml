@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+<cbc:CustomizationID>urn:cen.eu:en16931:2017</cbc:CustomizationID>
+<cbc:ID>{{number}}</cbc:ID><cbc:IssueDate>{{date|iso}}</cbc:IssueDate><cbc:DueDate>{{due_date|iso}}</cbc:DueDate>
+<cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode><cbc:Note>{{org.legal_details}}; Geschäftsführer: {{org.director}}</cbc:Note><cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+<cac:InvoicePeriod><cbc:StartDate>{{supply_date|iso}}</cbc:StartDate><cbc:EndDate>{{supply_date|iso}}</cbc:EndDate></cac:InvoicePeriod>
+<cac:AccountingSupplierParty><cac:Party>
+{{#if org.tax_id!=}}<cac:PartyIdentification><cbc:ID>{{org.tax_id}}</cbc:ID></cac:PartyIdentification>{{/if}}
+<cac:PostalAddress><cbc:StreetName>{{org.address}}</cbc:StreetName><cac:Country><cbc:IdentificationCode>{{org.country_code}}</cbc:IdentificationCode></cac:Country></cac:PostalAddress>
+{{#if org.tax_id!=}}<cac:PartyTaxScheme><cbc:CompanyID>{{org.tax_id}}</cbc:CompanyID><cac:TaxScheme><cbc:ID>FC</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>{{/if}}
+{{#if org.tax_id=}}<cac:PartyTaxScheme><cbc:CompanyID>{{org.vat_id}}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>{{/if}}
+<cac:PartyLegalEntity><cbc:RegistrationName>{{org.name}}</cbc:RegistrationName></cac:PartyLegalEntity>
+</cac:Party></cac:AccountingSupplierParty>
+<cac:AccountingCustomerParty><cac:Party><cac:PostalAddress><cbc:StreetName>{{counterparty.address}}</cbc:StreetName><cac:Country><cbc:IdentificationCode>{{counterparty.country_code}}</cbc:IdentificationCode></cac:Country></cac:PostalAddress><cac:PartyLegalEntity><cbc:RegistrationName>{{counterparty.name}}</cbc:RegistrationName></cac:PartyLegalEntity></cac:Party></cac:AccountingCustomerParty>
+<cac:TaxTotal><cbc:TaxAmount currencyID="EUR">{{vat|dot}}</cbc:TaxAmount>
+{{#tax_totals}}<cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">{{amount|dot}}</cbc:TaxableAmount><cbc:TaxAmount currencyID="EUR">{{vat|dot}}</cbc:TaxAmount><cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>{{vat_rate.rate|dot}}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal>{{/tax_totals}}</cac:TaxTotal>
+<cac:LegalMonetaryTotal><cbc:LineExtensionAmount currencyID="EUR">{{amount|dot}}</cbc:LineExtensionAmount><cbc:TaxExclusiveAmount currencyID="EUR">{{amount|dot}}</cbc:TaxExclusiveAmount><cbc:TaxInclusiveAmount currencyID="EUR">{{total|dot}}</cbc:TaxInclusiveAmount><cbc:PayableAmount currencyID="EUR">{{total|dot}}</cbc:PayableAmount></cac:LegalMonetaryTotal>
+{{#lines}}<cac:InvoiceLine><cbc:ID>{{n}}</cbc:ID><cbc:InvoicedQuantity unitCode="{{item.unit.code}}">{{quantity|decimal3}}</cbc:InvoicedQuantity><cbc:LineExtensionAmount currencyID="EUR">{{amount|dot}}</cbc:LineExtensionAmount><cac:Item><cbc:Name>{{item.name}}</cbc:Name><cac:ClassifiedTaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>{{vat_rate.rate|dot}}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory></cac:Item><cac:Price><cbc:PriceAmount currencyID="EUR">{{price|dot}}</cbc:PriceAmount></cac:Price></cac:InvoiceLine>{{/lines}}
+</Invoice>

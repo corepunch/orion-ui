@@ -5,6 +5,7 @@
 #include "test_framework.h"
 #include "apps/ledger/ledger.h"
 #include <math.h>
+#include <orion/user/file.h>
 
 #define SHARE "apps/ledger/share/configurations"
 #define TMP_DIR "build/test-ledger"
@@ -870,13 +871,18 @@ static void test_de_2026(void) {
   ui_add_string_catalog_dir("apps/ledger/share/locale");
   db_document_t *sale = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "AR-0001");
   char report[4096];
-  ASSERT_EQUAL(ledger_print_document(sale->id, report, sizeof(report)), 1);
+  ASSERT_EQUAL(ledger_print_document(sale->id, report, sizeof(report)), 2);
   ASSERT(file_contains(TMP_DIR "/print/AR-0001-invoice.html", "Rechnung AR-0001", "DE123456789"), "Rechnung per § 14 UStG");
   ASSERT_EQUAL(ledger_print_reports(report, sizeof(report)), 5);
   ASSERT(file_contains(TMP_DIR "/print/vat-return.html", "<td class=\"c\">81</td><td class=\"c\">1</td><td class=\"r\">522,90</td><td class=\"r b\">99,35</td>",
                        "<td class=\"c\">86</td><td class=\"c\">1</td><td class=\"r\">119,70</td><td class=\"r b\">8,38</td>"), "UStVA figures per rate under their Kennzahl");
   ASSERT(file_contains(TMP_DIR "/print/datev-buchungsstapel.csv", "\"EXTF\";700;21;\"Buchungsstapel\"", "498,00;\"S\";\"EUR\";;;;1400;8400;;1003;\"AR-0001\""), "DATEV Buchungsstapel rows");
   ASSERT(file_contains(TMP_DIR "/print/trial-balance.html", "Summen- und Saldenliste", "Umsatzsteuer 19 %"), "SuSa");
+  db_document_t *receipt = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "KE-0001");
+  ASSERT_NOT_NULL(receipt);
+  ASSERT_EQUAL(ledger_print_document(receipt->id, report, sizeof(report)), 1);
+  ASSERT(file_contains(TMP_DIR "/print/KE-0001-receipt.html", "keine Umsatzsteuerrechnung", "§ 368 BGB"), "receipt acknowledges payment without inventing a VAT invoice");
+  ASSERT_FALSE(file_contains(TMP_DIR "/print/KE-0001-receipt.html", "darin enthaltene USt", NULL));
   ui_set_language("en");
   restore_configuration(cfg, ib);
   PASS();
@@ -997,7 +1003,7 @@ static void test_english_configurations(void) {
     char report[4096];
     ASSERT_EQUAL(ledger_print_document(sale->id, report, sizeof(report)), 1);
     char expected[128];
-    snprintf(expected, sizeof(expected), "<td>100.00</td><td>%.2f</td><td>%.2f</td>", rates[i], 100 + rates[i]);
+    snprintf(expected, sizeof(expected), "<td class=\"num\">100.00</td><td class=\"num\">%.2f</td><td class=\"num\">%.2f</td>", rates[i], 100 + rates[i]);
     ASSERT(file_contains(TMP_DIR "/print/SAL-0001-invoice.html", "Consulting services", expected), "draft invoice tax totals use its lines outside the report period");
     ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, sale->id));
     db_doc_line_t *line = (db_doc_line_t *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_DOC_LINES, 0), (void *)(intptr_t)2);
@@ -1006,7 +1012,115 @@ static void test_english_configurations(void) {
     line->vat_rate_id = 1;
     snprintf(sale->date, sizeof(sale->date), "2027-01-01");
     ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, sale->id));
+    char dst[256];
+    snprintf(dst, sizeof(dst), TMP_DIR "/print/%s-invoice.html", codes[i]);
+    ASSERT_EQUAL(rename(TMP_DIR "/print/SAL-0001-invoice.html", dst), 0);
     restore_configuration(cfg, ib);
+  }
+  PASS();
+}
+
+static void test_invoice_requirements(void) {
+  TEST("six-country invoice validation: actual dates, identities, totals, safe output and tax-point periods");
+  const char *codes[] = { "gb-2026", "ie-2026", "nz-2026", "mt-2026", "de-2026", "ru-2026" };
+  for (int i = 0; i < 6; i++) {
+    database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+    switch_configuration(codes[i], "invoice-validation.xml");
+    db_document_t *doc = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", i<4 ? "SAL-0001" : i==4 ? "AR-0001" : "РТ-0001");
+    ASSERT_NOT_NULL(doc);
+    db_organization_t *org = (db_organization_t *)send_db_message(g_ledger->ib, dbFind, TABLE_ORGANIZATIONS, (void *)(intptr_t)1);
+    db_document_t saved = *doc;
+    char name[sizeof(org->name)], report[4096];
+    snprintf(name,sizeof(name),"%s",org->name);
+    int expected = i==4 ? 2 : i==5 ? 3 : 1;
+    ASSERT_EQUAL(ledger_print_document(doc->id,report,sizeof(report)),expected);
+    org->name[0]='\0';
+    ASSERT_EQUAL(ledger_print_document(doc->id,report,sizeof(report)),0);
+    ASSERT(strstr(report,"Supplier name"),"missing mandatory identity is reported");
+    snprintf(org->name,sizeof(org->name),"%s",name);
+    snprintf(doc->supply_date,sizeof(doc->supply_date),"2026-02-30");
+    ASSERT_EQUAL(ledger_print_document(doc->id,report,sizeof(report)),0);
+    *doc=saved;
+    snprintf(doc->tax_scheme,sizeof(doc->tax_scheme),"reverse_charge");
+    ASSERT_EQUAL(ledger_print_document(doc->id,report,sizeof(report)),0);
+    *doc=saved;
+    doc->total += 0.01;
+    ASSERT_EQUAL(ledger_print_document(doc->id,report,sizeof(report)),0);
+    *doc=saved;
+    doc->currency_id=1;
+    ASSERT_EQUAL(ledger_print_document(doc->id,report,sizeof(report)),0);
+    *doc=saved;
+    if (i==3) {
+      db_counterparty_t *buyer=(db_counterparty_t *)send_db_message(g_ledger->ib,dbFind,TABLE_COUNTERPARTIES,(void *)(intptr_t)doc->counterparty_id);
+      char kind[sizeof(buyer->registration_kind)];snprintf(kind,sizeof(kind),"%s",buyer->registration_kind);
+      snprintf(buyer->registration_kind,sizeof(buyer->registration_kind),"article11");
+      ASSERT_EQUAL(ledger_print_document(doc->id,report,sizeof(report)),0);
+      ASSERT(strstr(report,"fiscal receipt"),"Malta Article 11 cannot produce a tax invoice");
+      snprintf(buyer->registration_kind,sizeof(buyer->registration_kind),"%s",kind);
+    }
+    if (i==4) {
+      doc->due_date[0]='\0';
+      ASSERT_EQUAL(ledger_print_document(doc->id,report,sizeof(report)),1);
+      ASSERT(strstr(report,"Payment due date"),"optional electronic output reports its missing prerequisite");
+      *doc=saved;
+    }
+    if (i==5) {
+      snprintf(doc->advance_invoice_refs,sizeof(doc->advance_invoice_refs),"АВ-0007 от 01.03.2026; АВ-0008 от 02.03.2026");
+      snprintf(doc->shipment_reference,sizeof(doc->shipment_reference),"Накладная DELIVERY-123 от 09.03.2026");
+      ASSERT_EQUAL(ledger_print_document(doc->id,report,sizeof(report)),expected);
+      ASSERT(file_contains(TMP_DIR "/print/РТ-0001-vat-invoice.html","АВ-0007 от 01.03.2026; АВ-0008 от 02.03.2026","Накладная DELIVERY-123"),"2026 rows 5a/5b render actual references");
+      *doc=saved;
+      doc->shipment_reference[0]='\0';
+      ASSERT_EQUAL(ledger_print_form(doc->id,1,report,sizeof(report)),0);
+      ASSERT_EQUAL(ledger_print_form(doc->id,3,report,sizeof(report)),1);
+      *doc=saved;
+      db_organization_t saved_org=*org;
+      snprintf(org->tax_id,sizeof(org->tax_id),"771512345678");org->kpp[0]='\0';org->accountant[0]='\0';
+      snprintf(org->legal_details,sizeof(org->legal_details),"ОГРНИП 300000000000001 (synthetic fixture)");
+      ASSERT_EQUAL(ledger_print_form(doc->id,1,report,sizeof(report)),1);
+      ASSERT(file_contains(TMP_DIR "/print/РТ-0001-vat-invoice.html","ОГРНИП 300000000000001",NULL),"individual entrepreneur prints actual registration and signatory without a KPP or chief accountant");
+      *org=saved_org;
+      ASSERT_EQUAL(ledger_print_form(doc->id,1,report,sizeof(report)),1);
+    }
+    if (i<4) {
+      snprintf(doc->tax_date,sizeof(doc->tax_date),"2026-09-30");
+      ASSERT_TRUE(ledger_post(g_ledger->ib,g_ledger->cfg,doc->id));
+      db_report_setting_t *period=ledger_report_settings(g_ledger->ib,g_ledger->cfg);
+      snprintf(period->date_from,sizeof(period->date_from),"2026-09-01");
+      snprintf(period->date_to,sizeof(period->date_to),"2026-09-30");
+      ledger_build_reports(g_ledger->ib,g_ledger->cfg);
+      result_node_t *rows=(result_node_t *)send_db_message(g_ledger->ib,dbFetch,TABLE_VAT_BOOK,NULL);
+      ASSERT_EQUAL(count_result_list(rows),1);
+      ASSERT_STR_EQUAL((*(db_vat_book_t **)rows->data)->date,"2026-09-30");
+      free_result_list(rows);
+      *doc=saved;
+    }
+    if (i==0) {
+      // A slash in an invoice number is valid business data, never a path separator.
+      snprintf(doc->number,sizeof(doc->number),"INV/2026");
+      ASSERT_EQUAL(ledger_print_document(doc->id,report,sizeof(report)),1);
+      ASSERT(file_contains(TMP_DIR "/print/INV%2F2026-invoice.html","INV/2026",NULL),"filename escaping preserves invoice content");
+      *doc=saved;
+      db_print_form_t *form=(db_print_form_t *)send_db_message(g_ledger->cfg,dbFind,TABLE_PRINT_FORMS,(void *)(intptr_t)1);
+      char function[sizeof(form->validate_script)],error[512];snprintf(function,sizeof(function),"%s",form->validate_script);
+      ASSERT_TRUE(ledger_script_run("apps/ledger/tests/fixtures/posting-failures.lua",false,error,sizeof(error)));
+      snprintf(form->validate_script,sizeof(form->validate_script),"print_writes_entry");
+      int entries=demo_record_count(TABLE_ENTRIES);
+      ASSERT_EQUAL(ledger_print_document(doc->id,report,sizeof(report)),0);
+      ASSERT_EQUAL(demo_record_count(TABLE_ENTRIES),entries);
+      snprintf(form->validate_script,sizeof(form->validate_script),"%s",function);
+      char config_dir[LEDGER_PATH_MAX];snprintf(config_dir,sizeof(config_dir),"%s",g_ledger->config_dir);
+      axMkDir(TMP_DIR "/bad-template");axMkDir(TMP_DIR "/bad-template/print");
+      FILE *f=fopen(TMP_DIR "/bad-template/print/invoice.html","wb");ASSERT_NOT_NULL(f);
+      fputs("Incomplete {{unknown_required_field}}",f);fclose(f);
+      snprintf(g_ledger->config_dir,sizeof(g_ledger->config_dir),TMP_DIR "/bad-template");
+      ASSERT_EQUAL(ledger_print_document(doc->id,report,sizeof(report)),0);
+      ASSERT(file_contains(TMP_DIR "/print/SAL-0001-invoice.html","Example Services",NULL),"failed rendering does not replace the previous valid invoice");
+      snprintf(g_ledger->config_dir,sizeof(g_ledger->config_dir),"%s",config_dir);
+      ASSERT_FALSE(file_replace(TMP_DIR "/nonexistent-completed-file",TMP_DIR "/print/SAL-0001-invoice.html"));
+      ASSERT(file_contains(TMP_DIR "/print/SAL-0001-invoice.html","Example Services",NULL),"failed file replacement preserves the valid destination");
+    }
+    restore_configuration(cfg,ib);
   }
   PASS();
 }
@@ -1306,6 +1420,7 @@ int main(int argc, char **argv) {
   test_scripted_rules();
   test_posting_rollback();
   test_english_configurations();
+  test_invoice_requirements();
   test_configuration_integrity();
   destroy_database(g_ledger->ib);
   destroy_database(g_ledger->cfg);

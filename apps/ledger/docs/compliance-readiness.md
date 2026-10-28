@@ -29,7 +29,7 @@ legal completeness. Russia/Germany 2003 remain historical fixtures.
 | P0 | Editable posted documents, unrestricted reposting, no closed-period/audit workflow | Immutable posting revisions, reversals, closed-period controls and audit history, with persistence and failure-recovery tests |
 | P0 | Money uses binary floating point | Defined decimal/minor-unit representation and currency-specific rounding with migration and independent boundary fixtures |
 | P0 | National tax eligibility is not captured fully | Organization registrations, tax/accounting regimes, counterparty jurisdictions, supply/tax/payment dates and recoverability captured and validated |
-| P1 | RU printable forms are not FNS electronic formats; DE HTML is not an EN 16931 invoice | Versioned schema-valid output, mandatory fields, official validation artefacts, correction workflows and acceptance tests |
+| P1 | RU printable forms are not FNS electronic formats; DE now has a separately validated core UBL subset; complete electronic workflows remain outstanding | Versioned schema-valid output, mandatory fields, official validation artefacts, correction workflows and acceptance tests |
 | P1 | DE UStVA and RU VAT summaries cover only selected cases; zero rates do not identify legal reporting categories | Explicit treatment-to-return-box mappings and official expected returns for the supported regimes; no guessed box assignment |
 | P1 | DATEV automatic-account exports can duplicate tax on import | A single documented tax strategy verified through an actual compatible importer with reconciliation |
 | P1 | Four new countries have development bookkeeping profiles only | Country-specific accounting/recognition coverage, statutory returns, corrections, independent accountant review and production integration approvals |
@@ -40,6 +40,13 @@ These gaps are not resolved by relabelling a configuration. Do not promote a
 profile to production or describe it as compliant until its supported scope
 has the evidence above. Existing RU/DE payroll remains demonstrative; this
 revision does not replace it with an official payroll calculation engine.
+
+## Invoice form work
+
+See [the six-country form audit](invoice-forms-audit.md) for implemented
+metadata, printable forms, separate tax-point periods, mandatory-field checks,
+DE core UBL generation and official validation evidence. This closes selected
+form gaps, not the remaining production blockers above.
 
 ## New jurisdiction packages
 

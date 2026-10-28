@@ -2,13 +2,13 @@
 <!-- Demo-Mandant für die Konfiguration de-2026: März 2026 einer kleinen Handels-GmbH. -->
 <ib>
   <organizations>
-    <organization id="1" name="Musterfirma GmbH" tax_id="27/123/45678" kpp="DE123456789" address="Musterstraße 1, 10115 Berlin" bank="Berliner Sparkasse" bank_account="DE02 1005 0000 0024 2905 61" bik="BELADEBEXXX" corr_account="Amtsgericht Charlottenburg, HRB 123456 B" director="Max Mustermann" accountant="Erika Mustermann" cashier="Erika Mustermann" />
+    <organization legal_details="Sitz Berlin; Amtsgericht Charlottenburg, HRB 123456 B" country_code="DE" id="1" name="Musterfirma GmbH" tax_id="27/123/45678" vat_id="DE123456789" kpp="DE123456789" address="Musterstraße 1, 10115 Berlin" bank="Berliner Sparkasse" bank_account="DE02 1005 0000 0024 2905 61" bik="BELADEBEXXX" corr_account="Amtsgericht Charlottenburg, HRB 123456 B" director="Max Mustermann" accountant="Erika Mustermann" cashier="Erika Mustermann" />
   </organizations>
   <counterparties>
-    <counterparty id="1" name="Bürotechnik Schmidt KG" tax_id="43/765/43210" kpp="DE234567890" address="Mönckebergstraße 7, 20095 Hamburg" bank="Hamburger Sparkasse" bank_account="DE91 2005 0550 1234 5678 90" bik="HASPDEHHXXX" phone="040 123456" />
-    <counterparty id="2" name="Weber Handels GmbH" tax_id="143/222/33333" kpp="DE345678901" address="Leopoldstraße 12, 80802 München" bank="Stadtsparkasse München" bank_account="DE12 7015 0000 1122 3344 55" bik="SSKMDEMMXXX" phone="089 987654" />
-    <counterparty id="3" name="Hans Meier e.K." tax_id="21/555/66666" kpp="" address="Schillerstraße 3, 04109 Leipzig" bank="" bank_account="" bik="" phone="0341 445566" />
-    <counterparty id="4" name="Hausverwaltung Krause GbR" tax_id="30/111/22222" kpp="DE456789012" address="Friedrichstraße 100, 10117 Berlin" bank="Deutsche Bank" bank_account="DE55 1007 0000 0987 6543 21" bik="DEUTDEBBXXX" phone="030 2233440" />
+    <counterparty country_code="DE" id="1" name="Bürotechnik Schmidt KG" tax_id="43/765/43210" vat_id="DE234567890" kpp="DE234567890" address="Mönckebergstraße 7, 20095 Hamburg" bank="Hamburger Sparkasse" bank_account="DE91 2005 0550 1234 5678 90" bik="HASPDEHHXXX" phone="040 123456" />
+    <counterparty country_code="DE" id="2" name="Weber Handels GmbH" tax_id="143/222/33333" vat_id="DE345678901" kpp="DE345678901" address="Leopoldstraße 12, 80802 München" bank="Stadtsparkasse München" bank_account="DE12 7015 0000 1122 3344 55" bik="SSKMDEMMXXX" phone="089 987654" />
+    <counterparty country_code="DE" id="3" name="Hans Meier e.K." tax_id="21/555/66666" vat_id="" kpp="" address="Schillerstraße 3, 04109 Leipzig" bank="" bank_account="" bik="" phone="0341 445566" />
+    <counterparty country_code="DE" id="4" name="Hausverwaltung Krause GbR" tax_id="30/111/22222" vat_id="DE456789012" kpp="DE456789012" address="Friedrichstraße 100, 10117 Berlin" bank="Deutsche Bank" bank_account="DE55 1007 0000 0987 6543 21" bik="DEUTDEBBXXX" phone="030 2233440" />
   </counterparties>
   <items>
     <item id="1" sku="10001" name="Kopierpapier A4, 500 Blatt" unit_id="2" vat_rate_id="1" price="5.9" />
@@ -33,16 +33,16 @@
     <rate id="2" currency_id="1" date="2026-03-31" rate="0.917" />
   </rates>
   <documents>
-    <document id="1" doc_type_id="8" counterparty_id="0" number="EB-0001" date="2026-03-01" comment="Eröffnungsbilanz 01.03.2026" posted="1" />
-    <document id="2" doc_type_id="1" counterparty_id="1" number="ER-0001" date="2026-03-03" comment="Rechnung Nr. 4711 vom 03.03.2026" posted="1" />
-    <document id="3" doc_type_id="5" counterparty_id="1" number="UE-0001" date="2026-03-04" comment="Zahlung Rechnung Nr. 4711" total="1557.53" posted="1" />
-    <document id="4" doc_type_id="2" counterparty_id="3" number="AR-0001" date="2026-03-10" comment="Lieferung laut Bestellung vom 05.03.2026" posted="1" />
-    <document id="5" doc_type_id="3" counterparty_id="3" number="KE-0001" date="2026-03-11" comment="Barzahlung AR-0001" total="750.33" posted="1" />
-    <document id="6" doc_type_id="2" counterparty_id="2" number="AR-0002" date="2026-03-14" comment="Lieferung laut Auftrag 12/26" posted="0" />
-    <document id="7" doc_type_id="13" counterparty_id="4" number="EL-0001" date="2026-03-15" comment="Büromiete März 2026" posted="1" />
-    <document id="8" doc_type_id="9" counterparty_id="0" number="LA-0001" date="2026-03-31" comment="Gehälter März 2026" posted="1" />
-    <document id="9" doc_type_id="10" counterparty_id="0" number="LZ-0001" date="2026-03-31" comment="Nettogehälter März 2026" posted="1" />
-    <document id="10" doc_type_id="12" counterparty_id="0" number="MA-0001" date="2026-03-31" comment="März 2026" posted="1" />
+    <document supply_date="2026-03-01" tax_date="2026-03-01" supply_kind="goods" tax_scheme="ordinary" id="1" doc_type_id="8" counterparty_id="0" number="EB-0001" date="2026-03-01" comment="Eröffnungsbilanz 01.03.2026" posted="1" />
+    <document supply_date="2026-03-03" tax_date="2026-03-03" supply_kind="goods" tax_scheme="ordinary" id="2" doc_type_id="1" counterparty_id="1" number="ER-0001" date="2026-03-03" comment="Rechnung Nr. 4711 vom 03.03.2026" posted="1" />
+    <document supply_date="2026-03-04" tax_date="2026-03-04" supply_kind="goods" tax_scheme="ordinary" id="3" doc_type_id="5" counterparty_id="1" number="UE-0001" date="2026-03-04" comment="Zahlung Rechnung Nr. 4711" total="1557.53" posted="1" />
+    <document due_date="2026-03-24" supply_date="2026-03-10" tax_date="2026-03-10" supply_kind="goods" tax_scheme="ordinary" id="4" doc_type_id="2" counterparty_id="3" number="AR-0001" date="2026-03-10" comment="Lieferung laut Bestellung vom 05.03.2026" posted="1" />
+    <document supply_date="2026-03-11" tax_date="2026-03-11" supply_kind="goods" tax_scheme="ordinary" id="5" doc_type_id="3" counterparty_id="3" number="KE-0001" date="2026-03-11" comment="Barzahlung AR-0001" total="750.33" posted="1" />
+    <document due_date="2026-03-28" supply_date="2026-03-14" tax_date="2026-03-14" supply_kind="goods" tax_scheme="ordinary" id="6" doc_type_id="2" counterparty_id="2" number="AR-0002" date="2026-03-14" comment="Lieferung laut Auftrag 12/26" posted="0" />
+    <document supply_date="2026-03-15" tax_date="2026-03-15" supply_kind="goods" tax_scheme="ordinary" id="7" doc_type_id="13" counterparty_id="4" number="EL-0001" date="2026-03-15" comment="Büromiete März 2026" posted="1" />
+    <document supply_date="2026-03-31" tax_date="2026-03-31" supply_kind="goods" tax_scheme="ordinary" id="8" doc_type_id="9" counterparty_id="0" number="LA-0001" date="2026-03-31" comment="Gehälter März 2026" posted="1" />
+    <document supply_date="2026-03-31" tax_date="2026-03-31" supply_kind="goods" tax_scheme="ordinary" id="9" doc_type_id="10" counterparty_id="0" number="LZ-0001" date="2026-03-31" comment="Nettogehälter März 2026" posted="1" />
+    <document supply_date="2026-03-31" tax_date="2026-03-31" supply_kind="goods" tax_scheme="ordinary" id="10" doc_type_id="12" counterparty_id="0" number="MA-0001" date="2026-03-31" comment="März 2026" posted="1" />
   </documents>
   <doc_lines>
     <doc_line id="1" document_id="2" item_id="1" vat_rate_id="1" quantity="100" price="4.5" />

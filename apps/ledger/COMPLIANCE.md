@@ -66,9 +66,10 @@ Simplifications and known gaps (ru-2026):
   accrual document in the year; employees hired mid-year or paid twice a
   month are approximated. The 30 % non-resident rate and the 15 % rate on
   dividends are not modelled.
-- Amounts in words, name declension and the number of the «документ об
-  отгрузке» follow the demo; the electronic formats of счет-фактура and УПД
-  (ФНС, format 5.03) are not produced, only printable forms.
+- Printed invoice/UPD forms have explicit shipment/advance references and the
+  2026 row 5б. Origin and traceability data are stored on invoice lines. This
+  does not implement advance-VAT posting or corrections. FNS electronic XML
+  is not produced; these are printable forms, with manual signatures.
 - Books of purchases and sales list the row's rate instead of the separate
   columns 14–18; totals per rate follow below the rows.
 - ФСБУ 9/2025 «Доходы» (mandatory from 2027) changes revenue recognition
@@ -108,9 +109,11 @@ Simplifications and known gaps (de-2026):
   Change the two KV rows for the actual Kasse.
 - Minijobs (603 €), Gleitzone and the degressive AfA (30 %, acquisitions
   01.07.2025–31.12.2027) are documented in `regulations` but not computed.
-- E-Rechnung (EN 16931 / XRechnung / ZUGFeRD) is not generated; the HTML
-  Rechnung is a printable form. Issuing B2B e-invoices becomes mandatory
-  from 2027 (turnover above 800 000 €) and 2028 for all.
+- A core EN16931 UBL 2.1 invoice is generated for ordinary domestic positive-rate
+  invoices and its demo is checked against official OASIS/CEN artefacts. It
+  does not claim XRechnung CIUS, ZUGFeRD, all tax categories or transport/filing.
+  HTML remains a printable invoice, subject to the applicable transmission rules.
+  See [the form audit](docs/invoice-forms-audit.md) for scope and reproduction.
 - The DATEV export writes tax entries as separate rows. Automatic accounts in
   DATEV compute tax themselves; a Steuerberater importing the file should
   map 1776/1771/1576/1571 rows or disable the automatic function of the

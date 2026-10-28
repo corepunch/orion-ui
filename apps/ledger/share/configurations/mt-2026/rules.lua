@@ -4,6 +4,10 @@ function validate_domestic_service(ctx)
   if ctx.document.date < "2026-01-01" or ctx.document.date > "2026-12-31" then
     error("This configuration has only been reviewed for 2026")
   end
+  if ctx.type.vat_book ~= 0 then
+    ledger.invoice.check(ctx, {country="MT",standard_only=true})
+    assert(ctx.document.supply_kind=="services", "This profile requires a domestic service supply")
+  end
   local lines = ledger.fetch("ib", "doc_lines", "document_id", ctx.document.id)
   if ctx.type.vat_book ~= 0 and #lines == 0 then error("Tax invoices require itemised lines") end
   for _, line in ipairs(lines) do
@@ -13,4 +17,16 @@ function validate_domestic_service(ctx)
     end
     if line.quantity < 0 or line.price < 0 then error("Use a supported correction workflow; credit notes are not implemented") end
   end
+end
+
+function validate_invoice(ctx)
+  local org,buyer = ledger.invoice.check(ctx, {country="MT",standard_only=true})
+  ledger.invoice.required(org.vat_id,"Supplier VAT identification number")
+  assert(ctx.document.supply_kind=="services", "This profile supports domestic services; goods need inventory and classification rules")
+  assert(org.registration_kind=="article10", "A Maltese tax invoice requires an Article 10 supplier")
+  assert(buyer.registration_kind=="article10", "Use a fiscal receipt workflow for an Article 11 customer")
+  ledger.invoice.required(buyer.vat_id,"Customer VAT identification number")
+  ledger.invoice.date(buyer.vat_verified_on,"Customer VAT verification date")
+  ledger.invoice.required(buyer.vat_verification_reference,"Customer VAT verification reference")
+  assert(buyer.vat_verified_on<=ctx.document.date,"Customer VAT verification must not be dated after the invoice")
 end

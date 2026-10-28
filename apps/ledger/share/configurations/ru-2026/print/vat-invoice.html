@@ -20,33 +20,36 @@ h1{font-size:12pt;margin:6px 0}.box td{border:1px solid #000;text-align:center;m
   .grid td.r,.grid td.c{white-space:nowrap}
   .sign,.totals{break-inside:avoid;page-break-inside:avoid;break-before:avoid;page-break-before:avoid}
 }
-</style></head><body>
-<div class="r small">Приложение № 1 к постановлению Правительства Российской Федерации от 26 декабря 2011 г. № 1137<br>(в ред. постановлений Правительства РФ от 02.04.2021 № 534, от 16.08.2024 № 1096)</div>
+
+body{font-size:8.5pt}h1{font-size:11pt}.small{font-size:6.5pt}.grid{table-layout:fixed;font-size:7pt}.grid th{font-size:6.2pt;padding:1px 2px;overflow-wrap:anywhere}.grid td{padding:2px}.invoice-header{width:100%;table-layout:fixed}.invoice-header td:first-child{width:43%}.invoice-header td:nth-child(2){width:55%}.invoice-header td:nth-child(3){width:2%}.invoice-header .line{min-width:0;max-width:100%;overflow-wrap:anywhere}
+@media print{.grid td.c{white-space:normal}}</style></head><body>
+<div class="r small">Приложение № 1 к постановлению Правительства Российской Федерации от 26 декабря 2011 г. № 1137<br>(ред. постановления Правительства РФ от 23.01.2026 № 26; для I квартала — рекомендуемая форма ФНС от 26.12.2025 № СД-4-3/11730@)</div>
 <h1>СЧЕТ-ФАКТУРА № {{number}} от {{date|dmy}} <span class="small">(1)</span><br>ИСПРАВЛЕНИЕ № <span class="line" style="min-width:40px">--</span> от <span class="line" style="min-width:80px">--</span> <span class="small">(1а)</span></h1>
-<table>
+<table class="invoice-header">
 <tr><td>Продавец</td><td><span class="line">{{org.name}}</span></td><td class="small">(2)</td></tr>
 <tr><td>Адрес</td><td><span class="line">{{org.address}}</span></td><td class="small">(2а)</td></tr>
-<tr><td>ИНН/КПП продавца</td><td><span class="line">{{org.tax_id}}/{{org.kpp}}</span></td><td class="small">(2б)</td></tr>
-<tr><td>Грузоотправитель и его адрес</td><td><span class="line">он же</span></td><td class="small">(3)</td></tr>
-<tr><td>Грузополучатель и его адрес</td><td><span class="line">{{counterparty.name}}, {{counterparty.address}}</span></td><td class="small">(4)</td></tr>
-<tr><td>К платежно-расчетному документу №</td><td><span class="line">--</span> от <span class="line" style="min-width:80px">--</span></td><td class="small">(5)</td></tr>
-<tr><td>Документ об отгрузке</td><td><span class="line">№ п/п 1-{{number}} от {{date|dmy}}</span></td><td class="small">(5а)</td></tr>
+<tr><td>ИНН/КПП продавца</td><td><span class="line">{{org.tax_id}}/{{org.kpp|dash}}</span></td><td class="small">(2б)</td></tr>
+<tr><td>Грузоотправитель и его адрес</td><td><span class="line">{{#if supply_kind=goods}}{{shipper}}{{/if}}{{#if supply_kind=services}}—{{/if}}</span></td><td class="small">(3)</td></tr>
+<tr><td>Грузополучатель и его адрес</td><td><span class="line">{{#if supply_kind=goods}}{{consignee}}{{/if}}{{#if supply_kind=services}}—{{/if}}</span></td><td class="small">(4)</td></tr>
+<tr><td>К платежно-расчетному документу №</td><td><span class="line">{{payment_reference|dash}}</span></td><td class="small">(5)</td></tr>
+<tr><td>Документ об отгрузке: наименование, номер и дата</td><td><span class="line">{{shipment_reference|dash}}</span></td><td class="small">(5а)</td></tr>
+<tr><td>К счету-фактуре (счетам-фактурам), выставленному при получении оплаты, частичной оплаты или иных платежей в счет предстоящих поставок: номер, дата, исправление</td><td><span class="line">{{advance_invoice_refs|dash}}</span></td><td class="small">(5б)</td></tr>
 <tr><td>Покупатель</td><td><span class="line">{{counterparty.name}}</span></td><td class="small">(6)</td></tr>
 <tr><td>Адрес</td><td><span class="line">{{counterparty.address}}</span></td><td class="small">(6а)</td></tr>
-<tr><td>ИНН/КПП покупателя</td><td><span class="line">{{counterparty.tax_id}}/{{counterparty.kpp}}</span></td><td class="small">(6б)</td></tr>
+<tr><td>ИНН/КПП покупателя</td><td><span class="line">{{counterparty.tax_id}}/{{counterparty.kpp|dash}}</span></td><td class="small">(6б)</td></tr>
 <tr><td>Валюта: наименование, код</td><td><span class="line">Российский рубль, 643</span></td><td class="small">(7)</td></tr>
-<tr><td>Идентификатор государственного контракта, договора (соглашения) (при наличии)</td><td><span class="line">--</span></td><td class="small">(8)</td></tr>
+<tr><td>Идентификатор государственного контракта, договора (соглашения) (при наличии)</td><td><span class="line">{{contract_reference|dash}}</span></td><td class="small">(8)</td></tr>
 </table>
 <table class="grid" style="width:100%;margin-top:8px">
-<thead><tr><th rowspan="2">Наименование товара<br>(описание выполненных<br>работ, оказанных услуг),<br>имущественного права</th><th rowspan="2">Код<br>вида<br>товара</th><th colspan="2">Единица<br>измерения</th><th rowspan="2">Коли-<br>чество<br>(объем)</th><th rowspan="2">Цена (тариф)<br>за единицу<br>измерения</th><th rowspan="2">Стоимость<br>товаров (работ,<br>услуг), имуще-<br>ственных прав<br>без налога — всего</th><th rowspan="2">В том<br>числе<br>сумма<br>акциза</th><th rowspan="2">Нало-<br>говая<br>ставка</th><th rowspan="2">Сумма<br>налога,<br>предъяв-<br>ляемая<br>покупателю</th><th rowspan="2">Стоимость<br>товаров (работ,<br>услуг), имуще-<br>ственных прав<br>с налогом — всего</th><th colspan="2">Страна<br>происхождения<br>товара</th><th rowspan="2">Регистра-<br>ционный номер<br>декларации на<br>товары или<br>партии товара</th><th colspan="2">Единица<br>измерения товара,<br>используемая<br>в целях прослежи-<br>ваемости</th><th rowspan="2">Коли-<br>чество<br>прослежи-<br>ваемого<br>товара</th><th rowspan="2">Стоимость<br>прослежи-<br>ваемого<br>товара<br>без НДС</th></tr>
+<colgroup><col style="width:2.128%"><col style="width:12.766%"><col style="width:3.191%"><col style="width:3.191%"><col style="width:3.191%"><col style="width:5.319%"><col style="width:6.383%"><col style="width:7.447%"><col style="width:5.319%"><col style="width:4.255%"><col style="width:6.383%"><col style="width:7.447%"><col style="width:3.191%"><col style="width:4.255%"><col style="width:7.447%"><col style="width:3.191%"><col style="width:4.255%"><col style="width:5.319%"><col style="width:5.319%"></colgroup>
+<thead><tr><th rowspan="2">№<br>п/п</th><th rowspan="2">Наименование товара<br>(описание выполненных<br>работ, оказанных услуг),<br>имущественного права</th><th rowspan="2">Код<br>вида<br>товара</th><th colspan="2">Единица<br>измерения</th><th rowspan="2">Коли-<br>чество<br>(объем)</th><th rowspan="2">Цена (тариф)<br>за единицу<br>измерения</th><th rowspan="2">Стоимость<br>товаров (работ,<br>услуг), имуще-<br>ственных прав<br>без налога — всего</th><th rowspan="2">В том<br>числе<br>сумма<br>акциза</th><th rowspan="2">Нало-<br>говая<br>ставка</th><th rowspan="2">Сумма<br>налога,<br>предъяв-<br>ляемая<br>покупателю</th><th rowspan="2">Стоимость<br>товаров (работ,<br>услуг), имуще-<br>ственных прав<br>с налогом — всего</th><th colspan="2">Страна<br>происхождения<br>товара</th><th rowspan="2">Регистра-<br>ционный номер<br>декларации на<br>товары или<br>партии товара</th><th colspan="2">Единица<br>измерения товара,<br>используемая<br>в целях прослежи-<br>ваемости</th><th rowspan="2">Коли-<br>чество<br>прослежи-<br>ваемого<br>товара</th><th rowspan="2">Стоимость<br>прослежи-<br>ваемого<br>товара<br>без НДС</th></tr>
 <tr><th>код</th><th>условное<br>обозначение<br>(национальное)</th><th>цифро-<br>вой код</th><th>краткое<br>наимено-<br>вание</th><th>код</th><th>условное<br>обозна-<br>чение</th></tr>
-<tr><th>1</th><th>1а</th><th>2</th><th>2а</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>10а</th><th>11</th><th>12</th><th>12а</th><th>13</th><th>14</th></tr></thead>
-<tbody>{{#lines}}<tr><td>{{item.name}}</td><td class="c">--</td><td class="c">{{item.unit.code}}</td><td class="c">{{item.unit.name}}</td><td class="r">{{quantity}}</td><td class="r">{{price}}</td><td class="r">{{amount}}</td><td class="c">без акциза</td><td class="c">{{vat_rate.name}}</td><td class="r">{{vat}}</td><td class="r">{{total}}</td><td class="c">--</td><td class="c">--</td><td class="c">--</td><td class="c">--</td><td class="c">--</td><td class="c">--</td><td class="c">--</td></tr>
+<tr><th>1</th><th>1а</th><th>1б</th><th>2</th><th>2а</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>10а</th><th>11</th><th>12</th><th>12а</th><th>13</th><th>14</th></tr></thead>
+<tbody>{{#lines}}<tr><td class="c">{{n}}</td><td>{{item.name}}</td><td class="c">{{commodity_code|dash}}</td><td class="c">{{item.unit.code}}</td><td class="c">{{item.unit.name}}</td><td class="r">{{quantity|decimal3comma}}</td><td class="r">{{price|comma}}</td><td class="r">{{amount|comma}}</td><td class="c">без акциза</td><td class="c">{{vat_rate.name}}</td><td class="r">{{vat|comma}}</td><td class="r">{{total|comma}}</td><td class="c">{{origin_code|dash}}</td><td class="c">{{origin_name|dash}}</td><td class="c">{{customs_reference|dash}}</td><td class="c">{{tracking_unit_code|dash}}</td><td class="c">{{tracking_unit_name|dash}}</td><td class="c">{{tracking_quantity|zero_decimal3comma}}</td><td class="c">{{tracking_value|zero_comma}}</td></tr>
 {{/lines}}</tbody>
-<tbody class="totals"><tr><td colspan="6" class="b">Всего к оплате (9)</td><td class="r b">{{amount}}</td><td class="c">X</td><td class="c">X</td><td class="r b">{{vat}}</td><td class="r b">{{total}}</td><td colspan="7" style="border:0"></td></tr>
+<tbody class="totals"><tr><td colspan="7" class="b">Всего к оплате (9)</td><td class="r b">{{amount|comma}}</td><td class="c">X</td><td class="c">X</td><td class="r b">{{vat|comma}}</td><td class="r b">{{total|comma}}</td><td colspan="7" style="border:0"></td></tr>
 </tbody></table>
-<table style="width:100%" class="sign"><tr>
-<td>Руководитель организации<br>или иное уполномоченное лицо <span class="line">{{org.director}}</span></td>
-<td>Главный бухгалтер<br>или иное уполномоченное лицо <span class="line">{{org.accountant}}</span></td></tr>
-<tr><td colspan="2">Индивидуальный предприниматель<br>или иное уполномоченное лицо <span class="line">&nbsp;</span> <span class="line">&nbsp;</span><br><span class="small">(подпись) (ф.и.о.) (реквизиты свидетельства о государственной регистрации индивидуального предпринимателя)</span></td></tr></table>
+<p class="small">{{legal_note}}</p>
+{{#if org.kpp!=}}<table style="width:100%" class="sign"><tr><td>Руководитель организации или иное уполномоченное лицо<br><span class="line">&nbsp;</span> {{org.director}}</td><td>Главный бухгалтер или иное уполномоченное лицо<br><span class="line">&nbsp;</span> {{org.accountant}}</td></tr></table>{{/if}}
+{{#if org.kpp=}}<p>Индивидуальный предприниматель или иное уполномоченное лицо <span class="line">&nbsp;</span> {{org.director}}<br><span class="small">(подпись, Ф.И.О.) Реквизиты государственной регистрации: {{org.legal_details}}</span></p>{{/if}}
 </body></html>
