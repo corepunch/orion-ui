@@ -22,7 +22,9 @@ static inline bool layout_child_is_flex(const window_t *child) {
 }
 
 static inline bool layout_child_is_collapsed(const window_t *child) {
-  return child && (child->flags & LABEL_COLLAPSE_EMPTY) && !child->title[0];
+  // A hidden ancestor must not change its subtree's intrinsic layout.
+  return child && (!(child->flags & WINDOW_STATE_VISIBLE) ||
+    ((child->flags & LABEL_COLLAPSE_EMPTY) && !child->title[0]));
 }
 
 static inline int layout_child_count(const window_t *win) {

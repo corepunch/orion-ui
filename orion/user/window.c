@@ -1395,6 +1395,7 @@ void set_window_subtitle(window_t *win, const char *subtitle) {
 }
 
 void show_window(window_t *win, bool visible) {
+  bool changed = ((win->flags & WINDOW_STATE_VISIBLE) != 0) != visible;
   if (!visible) {
     dock_cancel_window(win);
     if (window_contains_window(win, g_ui_runtime.focused)) set_focus(NULL);
@@ -1410,6 +1411,11 @@ void show_window(window_t *win, bool visible) {
       set_focus(win);
   }
   window_set_state(win, WINDOW_STATE_VISIBLE, visible);
+  if (changed) {
+    for (window_t *parent = win->parent; parent; parent = parent->parent)
+      window_layout_sync(parent);
+    if (win->parent) invalidate_window(win->parent);
+  }
   if (win->dock && win->parent) {
     dock_layout(win->parent, get_client_rect(win->parent));
     send_message(win->parent, evDockChanged, 0, NULL);

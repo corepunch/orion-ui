@@ -251,6 +251,12 @@ case evCommand:
   return false;
 ```
 
+The platform detects double-clicks and emits a button-down followed by the
+double-click event for the second press. List controls select on button-down
+and activate only on `evLeftButtonDoubleClick`; they must not detect a second
+double-click with their own timer. Activation can synchronously replace the
+rows or open a dialog, so duplicate notifications would act on different content.
+
 This keeps application policy out of reusable controls. A control may expose
 control-specific messages, but model mutation and workflow decisions stay in
 the application controller. See [Controls](docs/controls.md).
@@ -288,6 +294,13 @@ Layout behavior belongs to container classes:
 - `GridView` owns explicit columns; columns without fixed width share available
   width.
 - `Column` stacks its children vertically inside a grid.
+
+Explicitly hidden children and empty `LABEL_COLLAPSE_EMPTY` labels do not participate in
+layout measurement, arrangement, flex distribution, or spacing. `show_window()`
+reflows ancestor layouts when visibility changes. An empty stack measures only
+its padding (with the framework's one-pixel minimum), never its previous frame.
+Hiding a parent preserves the intrinsic layout of its children, allowing forms
+to measure and arrange before they are shown.
 
 Measure computes desired sizes; arrange assigns final rectangles. Use
 `get_client_rect()` for client-space work and the `rect_*` helpers for geometry.

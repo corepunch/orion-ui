@@ -11,11 +11,23 @@
 #include <orion/commctl/commctl.h>
 
 static int g_opened = -1, g_submitted = 0;
+static int g_activations;
+static bool g_replace_on_open;
 
 static result_t root_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   (void)win; (void)lparam;
   if (msg == evCreate || msg == evDestroy) return 1;
-  if (msg == evCommand && HIWORD(wparam) == RVN_DBLCLK) { g_opened = (int)(uint16_t)LOWORD(wparam); return 1; }
+  if (msg == evCommand && HIWORD(wparam) == RVN_DBLCLK) {
+    g_opened = (int)(uint16_t)LOWORD(wparam);
+    g_activations++;
+    if (g_replace_on_open) {
+      window_t *list = lparam;
+      send_message(list, RVM_CLEAR, 0, NULL);
+      reportview_item_t item = {.text = "Replacement result", .icon = -1};
+      send_message(list, RVM_ADDITEM, 0, &item);
+    }
+    return 1;
+  }
   if (msg == evCommand && HIWORD(wparam) == edUpdate) { g_submitted++; return 1; }
   return msg == evCommand;
 }
@@ -91,10 +103,43 @@ static void test_field_drives_list(void) {
   PASS();
 }
 
+static void test_double_click_replaces_rows_once(void) {
+  TEST("platform double-click activates once even when its handler replaces the list");
+  test_env_init();
+  const winproc_t views[] = {win_reportview, win_iconview, win_icongrid};
+  for (size_t v = 0; v < ARRAY_LEN(views); v++) {
+    window_t *root = create_window("P", WINDOW_NOTITLE, MAKERECT(20, 30, 340, 240), NULL, root_proc, 0, NULL);
+    window_t *list = create_window("", WINDOW_NOTITLE, MAKERECT(10, 10, 300, 180), root, views[v], 0, NULL);
+    send_message(list, RVM_SETCOLUMNTITLESVISIBLE, false, NULL);
+    reportview_item_t item = {.text = "Show customers", .icon = -1};
+    send_message(list, RVM_ADDITEM, 0, &item);
+    ipoint16_t point = {150, 0};
+    while (point.y < 180 && (int)send_message(list, RVM_HITTEST, MAKEDWORD(point.x, point.y), NULL) != 0) point.y++;
+    ASSERT_TRUE(point.y < 180);
+    g_activations = 0;
+    g_replace_on_open = true;
+    const uint32_t sequence[] = {kEventLeftButtonDown, kEventLeftButtonUp,
+      kEventLeftButtonDown, kEventLeftDoubleClick, kEventLeftButtonUp};
+    for (size_t i = 0; i < ARRAY_LEN(sequence); i++) {
+      ui_event_t event = {.message = sequence[i],
+        .x = (window_screen_x(list) + point.x) * UI_WINDOW_SCALE,
+        .y = (window_screen_y(list) + point.y) * UI_WINDOW_SCALE};
+      dispatch_message(&event);
+      ASSERT_EQUAL(g_activations, i >= 3 ? 1 : 0);
+    }
+    ASSERT_EQUAL((int)send_message(list, RVM_GETITEMCOUNT, 0, NULL), 1);
+    g_replace_on_open = false;
+    destroy_window(root);
+  }
+  test_env_shutdown();
+  PASS();
+}
+
 int main(int argc, char *argv[]) {
   (void)argc; (void)argv;
   TEST_START("palette list: sections, fit rows and a driving field");
   test_sections_and_fit();
   test_field_drives_list();
+  test_double_click_replaces_rows_once();
   TEST_END();
 }

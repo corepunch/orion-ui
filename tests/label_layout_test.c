@@ -37,8 +37,49 @@ static void test_optional_labels(void) {
   PASS();
 }
 
+static void test_hidden_children(void) {
+  TEST("hidden children release their size and gaps in stack and fallback layouts");
+  test_env_init();
+  for (int fallback = 0; fallback < 2; fallback++) {
+    for (int horizontal = 0; horizontal < 2; horizontal++) {
+      window_t *root = create_window("", WINDOW_NOTITLE | WINDOW_AUTO_LAYOUT,
+        MAKERECT(0, 0, 320, 200), NULL, fallback ? label_layout_proc : win_stack, 0, NULL);
+      window_set_layout(root, horizontal ? WINDOW_STACK_HORIZONTAL : WINDOW_STACK_VERTICAL, 8, R(0, 0, 0, 0));
+      window_t *first = create_window("First", WINDOW_NOTITLE, MAKERECT(0, 0, 0, 0), root, win_label, 0, NULL);
+      window_t *optional = create_window("Optional", WINDOW_NOTITLE | WINDOW_HIDDEN,
+        MAKERECT(0, 0, 80, 50), root, win_textedit, 0, NULL);
+      window_t *last = create_window("Last", WINDOW_NOTITLE, MAKERECT(0, 0, 80, 25), root, win_textedit, 0, NULL);
+      window_layout_sync(root);
+      int compact = horizontal ? last->frame.x : last->frame.y;
+      ASSERT_EQUAL(compact, (horizontal ? first->frame.w : first->frame.h) + 8);
+      show_window(optional, true);
+      ASSERT((horizontal ? last->frame.x : last->frame.y) > compact, "showing restores the layout slot");
+      show_window(optional, false);
+      ASSERT_EQUAL(horizontal ? last->frame.x : last->frame.y, compact);
+      show_window(root, false);
+      window_layout_sync(root);
+      ASSERT_EQUAL(horizontal ? last->frame.x : last->frame.y, compact);
+      show_window(optional, true);
+      ASSERT((horizontal ? last->frame.x : last->frame.y) > compact, "a hidden parent still arranges its visible children");
+      show_window(optional, false);
+      ASSERT_EQUAL(horizontal ? last->frame.x : last->frame.y, compact);
+      show_window(root, true);
+      show_window(first, false);
+      ASSERT_EQUAL(horizontal ? last->frame.x : last->frame.y, 0);
+      show_window(last, false);
+      layout_measure_t measure = {0};
+      send_message(root, evMeasure, 0, &measure);
+      ASSERT_TRUE(measure.desired_w <= 1 && measure.desired_h <= 1);
+      destroy_window(root);
+    }
+  }
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Optional label layout");
   test_optional_labels();
+  test_hidden_children();
   TEST_END();
 }
