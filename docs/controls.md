@@ -188,7 +188,10 @@ Composite tiles are built from controls and laid out by the auto-layout system, 
 - **Card**: a vertical stack with a themed face (`draw_card`), hover, an optional accent edge
   (`cdSetEdgeColor`) and selection state. Children can be Labels, Badges, nested StackViews or FlowViews.
   Clicks on the face, labels, badges and nested layouts are reported to the parent as `cdnClicked` / `cdnActivated`.
-  Interactive children, such as buttons, receive their own input.
+  Interactive children, such as buttons, receive their own input. Its padding comes from the theme
+  (`theme_t.card.padding_x/y`) unless the form declares `padding=`; its face is `theme_t.card.face`
+  (Porcelain: the wells' white) with a hairline `card.outline` along the same silhouette. A `<Card>` in a
+  form is a panel of a start page or dashboard: a caption Label, then a TableView, Labels or a StackView.
 - **Badge**: a self-measuring tinted label; `bdSetColor` takes a theme colour role.
 - **Label** gains single-line truncation: `lbSetStyle` with `label_create_params_t.truncate` cuts with "..." instead
   of wrapping. Give a truncating label `WINDOW_FLEXSPACE` in a horizontal stack so it takes the leftover width.
@@ -487,10 +490,42 @@ reported on stderr.
   navigation and `tvGetSelectedRecord` still count records only. A click on a
   caption selects nothing.
 - `fit-rows="true"` makes the list measure to all its rows and captions
-  (`RVS_EX_FITROWS`), for lists in balloons and popovers that size to their
-  content.
+  (`RVS_EX_FITROWS`), for lists in balloons, popovers and cards that size to
+  their content. Such a list takes no leftover height, and when a refresh
+  changes its row count it lays out the form around it again.
 - `action="choose"` on a TableView in an add-on page runs that action when a
   row is opened (Enter or a double-click), with the row as the list's value.
+
+### Stacked rows and link lists
+
+- `cell-style="stacked"` draws the first column over the second, in smaller
+  secondary text, with the pair centred in a taller row; the other columns
+  keep their widths and alignment beside it (`REPORTVIEW_CELL_STACKED`). It
+  suits summaries such as "Касса организации" over "50.01", with the balance
+  on the right. Stacked lists read as rows and draw no column dividers.
+  (`two-line` instead joins every other column into the subtitle.)
+- `color="info"` on a `<Column>` draws that column's text in a theme role
+  (the RowIcon roles), for an action caption ("Post", "Close Month") or
+  secondary detail. The selected row keeps the selection's text colour.
+- `activate="click"` makes the rows links (`RVS_EX_ONECLICK`): releasing the
+  button on the row it went down on activates it (`RVN_DBLCLK`), nothing is
+  selected after a refresh, and the selection shows only while the list has
+  the keyboard focus, where the arrows and Enter work as usual.
+
+```xml
+<TableView name="attention" source="ib.home_rows" filter-field="card" filter-value="1"
+           cell-style="stacked" column-titles="false" activate="click" flags="notitle,nofill,flexspace">
+  <RowIcon field="kind" value="draft" icon="ledger-doc-draft" color="warning" />
+  <Column field="title" title="Task" width="0" />
+  <Column field="detail" title="Detail" />
+  <Column field="action" title="Action" width="124" color="info" />
+</TableView>
+```
+
+Row and header heights come from the theme: `theme_t.report.row_height` and
+`header_height` set a minimum (Porcelain: 21 and 24 px, as the redesign
+draws them; 0 keeps the font-derived height), and `row_dividers` rules each
+row with a hairline.
 
 ```xml
 <TextBox name="command" list="palette" />
