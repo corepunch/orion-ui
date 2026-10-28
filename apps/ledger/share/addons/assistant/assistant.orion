@@ -53,7 +53,7 @@
           <Space name="actions_flex" />
           <Button name="collapse" text="Close" action="collapse" />
         </StackView>
-        <Label name="keys" text="Up and Down choose · Enter opens · Ctrl+K finds a command" color="info-text" font="smallest" />
+        <Label name="keys" text="Up and Down choose · Enter opens · Ctrl+Shift+K finds a command" color="info-text" font="smallest" />
         <Label name="error" color="error" flags="LABEL_COLLAPSE_EMPTY" />
       </SpeechBubble>
       <StackView name="character" orientation="horizontal" spacing="0" margin="0,0,18,0">

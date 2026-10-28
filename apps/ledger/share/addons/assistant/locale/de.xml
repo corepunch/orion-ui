@@ -93,6 +93,6 @@
   <string source="Documents not posted: %d" where="code">Ungebuchte Belege: %d</string>
   <string source="%s offsets the advance from %s" where="code">%s verrechnet die Anzahlung von %s</string>
   <string source="show draft documents" where="code">zeige ungebuchte Belege</string>
-  <string source="Up and Down choose · Enter opens · Ctrl+K finds a command" where="assistant">Auf und Ab wählen · Eingabe öffnet · Strg+K sucht einen Befehl</string>
+  <string source="Up and Down choose · Enter opens · Ctrl+Shift+K finds a command" where="assistant">Auf und Ab wählen · Eingabe öffnet · Strg+Umschalt+K sucht einen Befehl</string>
   <string source="No one owes the company." where="code">Niemand schuldet dem Unternehmen etwas.</string>
 </strings>

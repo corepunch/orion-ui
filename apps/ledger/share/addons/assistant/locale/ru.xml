@@ -93,6 +93,6 @@
   <string source="Documents not posted: %d" where="code">Не проведено документов: %d</string>
   <string source="%s offsets the advance from %s" where="code">%s закроет аванс от %s</string>
   <string source="show draft documents" where="code">покажи непроведенные документы</string>
-  <string source="Up and Down choose · Enter opens · Ctrl+K finds a command" where="assistant">Вверх и вниз — выбор · Enter — открыть · Ctrl+K — поиск команды</string>
+  <string source="Up and Down choose · Enter opens · Ctrl+Shift+K finds a command" where="assistant">Вверх и вниз — выбор · Enter — открыть · Ctrl+Shift+K — поиск команды</string>
   <string source="No one owes the company." where="code">Должников нет.</string>
 </strings>
