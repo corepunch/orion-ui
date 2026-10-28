@@ -53,6 +53,56 @@ the [assistant guide](../../../apps/ledger/share/addons/assistant/README.md).
 
 ![Palette, light](images/built-palette.jpg) ![Palette, Porcelain Dark](images/built-palette-dark.jpg)
 
+Concept 5 is implemented as Главное, the page Ledger opens on (View, Home,
+Ctrl+Shift+H). It has five cards:
+
+- **Требует внимания**: the books' own checks, each with the command that
+  settles it. A click posts the drafts, closes the month (dated its last day),
+  reposts the books, opens the document or creates the deduction. The checks
+  are the ones accountants otherwise run by hand or call a 1C programmer for:
+  - documents not posted;
+  - a finished month not closed;
+  - a closing that later documents made stale ("нарушена
+    последовательность": the accounts it closes are no longer zero);
+  - cash or stock below zero at the end of a day;
+  - input tax waiting on 19;
+  - a debt and an advance on two subaccounts left unoffset;
+  - Clippy's tip about an advance a draft sale would offset.
+- **Деньги**: the money accounts and their total in the 24 px display face.
+- **Расчеты**: debts both ways, advances, taxes and wages payable, input tax.
+- **Создать**: the document types used most.
+- **Последние документы**.
+
+The status bar counts posted and unposted documents. The page reads
+`ib.home_rows` and `ib.recent_documents`, which `home.c` rebuilds with the
+reports. Accounts come from the configuration's document types, so the same
+page works for de-2003 and de-2026. The layout puts Создать under the
+attention list and the two figure cards one above the other. Orion's stack
+layout has no column weights, so this keeps every account name and amount
+whole at 1200 px.
+
+![Home, light](images/built-home.jpg)
+
+![Home, Porcelain Dark](images/built-home-dark.jpg)
+
+After a March draft is posted with March already closed, the page flags the
+stale closing and offers Перепровести:
+
+![Stale closing](images/built-home-stale.jpg)
+
+Clippy answers questions about the same books: "проверь учет", "кому мы
+должны", "сколько денег", "закрыт ли месяц", "почему красное сальдо", "акт
+сверки с Альфой". His suggestions are the attention list, and choosing one
+settles it.
+
+![Assistant, check the books](images/built-assistant-checks.jpg)
+
+Across every screen, the type and density now match the mockups:
+
+- headings are 18 px;
+- rows are 21 px under a 24 px header, ruled by hairlines;
+- cards are white panels with a hairline.
+
 The framework pieces this needed went into Orion, not into Ledger:
 
 - Labels bound to fields, shown read-only;
@@ -68,4 +118,11 @@ The framework pieces this needed went into Orion, not into Ledger:
 - `placeholders` in add-on page data;
 - grouped lists (`group-field`), lists that size to their rows (`fit-rows`),
   a text field that drives a list (`list=`, `edSetList`), and `action=` on
-  add-on TableViews.
+  add-on TableViews;
+- `font="display"` (`FONT_DISPLAY`, 24 px) and an 18 px `font="title"`;
+- `theme_t.report.row_height`, `header_height` and `row_dividers`;
+- stacked rows (`cell-style="stacked"`), link lists (`activate="click"`) and
+  column colours (`<Column color=>`);
+- card faces and outlines from the theme (`theme_t.card.face`, `outline`),
+  and form children that keep their control's own padding;
+- fit-rows lists that re-lay out their form when their row count changes.

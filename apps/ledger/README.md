@@ -40,6 +40,7 @@ which remains available after closing Ledger so you can reopen your edits with
 
 | Area | What Ledger does |
 |---|---|
+| Home | The start page (Главное): what needs attention with the command that settles it (drafts, an unclosed or stale month, cash or stock below zero, input tax to deduct, unoffset advances), money and settlements as of the period's end, the most used document types and the latest documents |
 | Documents | Journal of typed documents with numbering by prefix, lines, totals with VAT, post / unpost / delete; posting rules come from the configuration |
 | Goods | Receipts and sales by item; a sale writes the goods off at average cost (Dt 90.02 Kt 41.01) |
 | Manual operations | `Documents > New Manual Operation` (Ctrl+M): entries typed by the accountant; opening balances are an operation of that kind |
@@ -60,7 +61,10 @@ the reports; `Reports > Print Report Forms` writes the cash book.
 ## Look and feel
 
 Clippy appears by default in the application's bottom-right corner, with a speech bubble for
-commands such as `show debtors` or `покажи должников`. Click the character to
+commands such as `show debtors` or `покажи должников`, and for questions about
+the books in plain words: `проверь учет`, `кому мы должны`, `сколько денег`,
+`закрыт ли месяц`, `акт сверки с Альфой`. His suggestions are the Home page's
+checks, and choosing one settles it. Click the character to
 collapse or reopen the bubble; **Help > Show Office Assistant** (Ctrl+Shift+A) restores it
 after closing or hiding. Dialogue context and unfinished input survive both.
 Use `--no-assistant` to start without him, or `--assistant` to focus his input

@@ -92,7 +92,11 @@ metrics are in `theme_t.badge`. Use badges for state ("Posted", "Paid",
 <Label name="total" field="ib.documents.total" font="title" h-align="end" />
 ```
 
-`font="title"` is the heading face. A `Label` with `field=` shows the field
+`font="title"` is the heading face: Noto Sans Medium at 18 px, as the
+concepts draw page titles (17 px) and document headings (18 px).
+`font="display"` (24 px, `FONT_DISPLAY`) is for the one figure a view exists
+to show, such as the start page's money total; use it once per card at most.
+Body text stays at 12 px, captions at 9 px. A `Label` with `field=` shows the field
 formatted (numbers through `ui_format_number`, dates through `ui_format_date`)
 and never writes it back. Totals are labels, not disabled text boxes.
 
@@ -111,6 +115,11 @@ and never writes it back. Totals are labels, not disabled text boxes.
 
 - `TableView` with `zeros="blank"`, `total="sum"` totals rows and `RowIcon`
   status icons.
+- Rows are 21 px under a 24 px header, ruled by hairlines
+  (`theme_t.report.row_height`, `header_height`, `row_dividers`).
+- A summary list stacks its name over a secondary detail and keeps the amount
+  on the right (`cell-style="stacked"`); a list of things to do or open is
+  a list of links (`activate="click"`) with the action in `color="info"`.
 - Selection: strong while the table has the focus, quiet tint otherwise
   (`CTRL_INACTIVE`, handled by ReportView).
 - A table placed inside a form gets a frame: `frame="true"` draws a rounded
@@ -119,6 +128,27 @@ and never writes it back. Totals are labels, not disabled text boxes.
   fill a page or pane edge to edge stay unframed.
 - Inspectors and preview panes sit beside or below a list in a `SplitView`.
   They show the selected record without opening it.
+
+### Start page
+
+Ledger's Главное follows 1C's Начальная страница and Business Central's Role
+Center: cards on the window face, each a caption over its rows.
+
+- **Needs attention** lists the books' own checks, each with the command
+  that settles it: documents not posted, a finished month not closed, a
+  closing that later changes made stale, cash or stock below zero, input tax
+  not deducted, a debt and an advance left unoffset, and the assistant's tip.
+  The list and Clippy's suggestions are the same rows.
+- **Money** and **Settlements** show balances as of the period's end, one
+  figure in the display face.
+- **Create** offers the most used document types; **Latest documents** opens
+  any of them.
+
+Every figure comes from the configuration's own document types and chart,
+never from an account code in the platform, so the page works for every
+country.
+
+![Start page](ledger/redesign/images/built-home.jpg)
 
 ### Assistant
 
@@ -138,6 +168,12 @@ when there is a new one while the balloon is closed, Clippy only asks for
 attention. The empty field suggests one real command (`placeholders` in the
 add-on's page data).
 
+Besides commands, the balloon answers questions about the state of the books
+in the user's own words, the way Office's Answer Wizard did: "проверь учет",
+"кому мы должны", "сколько денег", "закрыт ли месяц", "почему красное
+сальдо", "акт сверки с Альфой". Choosing a check settles it as the start
+page does (`ledger.settle`).
+
 ## Tokens
 
 | Token | Porcelain | Porcelain Dark (One Dark) |
@@ -155,6 +191,9 @@ add-on's page data).
 | Metric | Value |
 |---|---|
 | Button / field / card / table radius (Porcelain) | 6 / 5 / 7 / 6 px |
+| Table row / header (Porcelain) | 21 / 24 px, hairline rules |
+| Faces: body / caption / heading / display | 12 / 9 / 18 / 24 px |
+| Card (Porcelain) | white face (`brColumnViewBg`), `brLightEdge` hairline |
 | Badge | 18 px pill, 7 px padding, 12 px icon, face tint `0x26`, ink mix `0x50` |
 | Text shadow | off in flat themes (`theme_t.text_shadow`), on in Classic |
 | Quiet selection | accent at `0x26` alpha, body text colour |
