@@ -5,6 +5,8 @@ parent: Lua Add-ons
 nav_order: 1
 ---
 
+{% raw %}
+
 # Portable Lua plugins
 
 Plugins package small, reusable behavior for any Orion application or add-on.
@@ -102,7 +104,11 @@ public plugins merely to make more files.
 | `money` | None | `minor(number)`, `round(number)` |
 | `intervals` | `calendar` | `valid(first, last)`, `overlap(a, b, c, d)` |
 | `records` | None | `bind("db.table", validate?)` → record commands |
-| `template` | None | `html(value)`, `render(text, fields)` |
+| `text_escape` | None | `html(value)`, `apply(value, format)` |
+| `template_filters` | None | `apply(value, filter, custom?)` |
+| `template` | `text_escape`, `template_filters` | `html(value)`, `render(text, fields, options?)` |
+| `text_normalize` | None | `new(character_mappings)` → normalizer |
+| `lexicon` | None | `compile(vocabulary, options)` → interned words and phrase trie |
 
 Calendar dates use the proleptic Gregorian calendar, years 0001–9999, and
 strict `YYYY-MM-DD` strings. Arithmetic is independent of timezone and DST.
@@ -114,10 +120,68 @@ Money uses a fixed two-decimal scale and rounds half away from zero.
 back only for display/storage. It is not a general foreign-exchange or tax
 engine and does not implement currencies with other decimal scales.
 
-Templates substitute `{{field_name}}`, HTML-escaping every value, and reject
-missing fields. They do not interpret Lua, render loops, support raw HTML
-slots or provide safe substitution into JavaScript, CSS or URL contexts.
-Native hosts own file output and printing; the plugin only returns text.
+### Templates and printing
+
+`template` is the renderer extracted from Ledger's production print forms.
+Ledger and Lodge both call it. Parsing/traversal, row conditions, generic
+formatters and escaping no longer have a parallel C implementation in Ledger.
+The plugin supports nested blocks, including repeated blocks of the same name.
+Missing fields, malformed tags, unknown blocks and mismatched closing tags fail
+before native output is published.
+
+```lua
+local template = Plugins.use("template", 1)
+local html = template.render([[
+<h1>{{title}}</h1>
+{{#lines tax.rate=19}}{{n}}. {{name}}: {{amount|comma}}{{/lines}}
+{{#if comment!=}}<p>{{comment}}</p>{{/if}}
+]], {
+    title = "Invoice", comment = "Thank you",
+    lines = {{name = "Room 101", amount = 110, tax = {rate = 19}}},
+})
+```
+
+Fields accept join paths. Rows override root fields, and `{{n}}` is the
+1-based position among rows kept by the block's conditions. Conditions use
+`field=value` and `field!=value`, separated by spaces. Row conditions compare
+numeric literals numerically; `if` compares the resolved text exactly.
+`options.format` is `html` (default), `xml`, `csv` (double embedded quotes), or
+`none`. Escaping is separate in `text_escape`, and generic formatters are in
+`template_filters`: `dash`, `zero_dash`, `iso`, `dmy`, `ymd`, `ddmm`, `dot`,
+`comma`, `decimal3`, `decimal3comma`, `zero_comma`, `zero_decimal3comma`.
+
+For data that should not be materialized as a plain table, pass
+`options.source = {resolve, rows, filter}`. `resolve(row, field)` returns a
+field's text or nil; `rows(block_name, parent)` returns an array of row handles;
+`filter(name, value)` optionally handles domain formatters. The root handle
+is 0. Ordinary Lua pages can provide Lua functions. Native hosts use
+`script_template_render()` from `orion/script/template.h`; its generated
+[read-only binding](lua/template_source.md) invokes the same plugin.
+The caller owns its row handles until the render finishes and frees the
+returned malloc-owned text. There are no Ledger table names or account codes
+in the framework renderer.
+
+Ledger's adapter supplies document/report rows, organization/configuration
+aliases, invoice tax grouping and the country-specific words/name formatter.
+Template file access, XML validation and atomic publication remain native;
+validation of legal forms remains in Ledger. The template plugin cannot
+interpret Lua expressions or inject raw HTML slots. Escaping is for text and
+quoted HTML attributes, not JavaScript/CSS/URL contexts.
+
+### Vocabulary compilation
+
+`text_normalize.new(mappings)` returns a UTF-8 normalizer with ASCII case
+folding and nonbreaking-space normalization; authored character substitutions
+are supplied by the application. It contains no Ledger vocabulary.
+
+`lexicon.compile(source, {schemas, normalize, positive, label})` interns
+aliases, rejects conflicts, assigns deterministic word IDs and builds a
+longest-phrase trie. `schemas` maps each application-defined role to `groups`
+(canonical value → aliases), `numbers` (alias → integer), or `list` (aliases).
+`positive` names numeric roles that reject zero. `label` prefixes diagnostics.
+The compiled object's `lookup(tokens, start)` returns an entry and consumed
+token count; quoted tokens stop phrase matching. Ledger retains its role
+schema and vocabulary, but no longer owns the compiler or normalizer.
 
 ### Record commands
 
@@ -186,3 +250,5 @@ make share build/bin/test_plugin_test build/bin/test_lodge_test
 build/bin/test_plugin_test
 build/bin/test_lodge_test
 ```
+
+{% endraw %}

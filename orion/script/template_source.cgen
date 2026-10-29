@@ -1,0 +1,9 @@
+<module name="orion.template_source" prefix="template_source_" luaopen="luaopen_orion_template_source">
+  <summary>Read-only callbacks for a native host rendering a Lua template.</summary>
+  <details>Available only during script_template_render. Row handles belong to the host; row 0 is the root. Ordinary Lua pages pass their own source callbacks directly to the template plugin.</details>
+  <functions>
+    <function name="value" lua="true"><summary>Resolves a field or join path.</summary><arg name="row" type="int"/><arg name="name" type="string"/><returns type="nresults">text or nil</returns></function>
+    <function name="rows" lua="true"><summary>Reads child row handles for a named block.</summary><arg name="name" type="string"/><arg name="parent" type="int"/><returns type="nresults">array of row handles</returns></function>
+    <function name="filter" lua="true"><summary>Runs an optional domain formatter.</summary><arg name="name" type="string"/><arg name="value" type="string"/><returns type="nresults">formatted text or nil</returns></function>
+  </functions>
+</module>
