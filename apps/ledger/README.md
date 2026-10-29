@@ -434,6 +434,23 @@ repeating `<tfoot>`, so they print once at the end. Keep these groups when
 customizing a template, and check both short and multi-page documents in print
 preview.
 
+## Shared Orion plugins
+
+Ledger consumes portable [Lua plugins](../../docs/plugins.md) rather than
+keeping private copies of generic engines:
+
+- Print forms use `template`, `template_filters` and `text_escape` for parsing,
+  nested/repeated/conditional blocks, formatting and escaping. `print.c` supplies
+  document/report data, tax grouping, country-specific formatters and native
+  file publication through `script_template_render()`.
+- The assistant delegates dictionary compilation and UTF-8 normalization to
+  `lexicon` and `text_normalize`. Its vocabulary, role schema, grammar and
+  accounting actions stay in Ledger.
+- The penalties add-on uses `calendar` and `money`.
+
+Lodge uses the same template engine for booking confirmations; it does not
+carry a separate renderer. Lua plugins ship in Orion's shared resource folder.
+
 ## How it is built
 
 Almost everything is declared in `ledger.orion`:

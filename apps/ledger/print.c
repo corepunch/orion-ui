@@ -1,65 +1,18 @@
 // Print forms: the configuration ships HTML templates for its legal forms
 // (cfg.print_forms); this fills them from a document or from a report.
 //
-// Template syntax:
-//   {{field}}              document field or join path: {{counterparty.name}}
-//   {{org.field}}          organization details
-//   {{cfg.field}}          configuration settings: {{cfg.currency}}
-//   {{period.date_from}}   report settings
-//   {{#table}}..{{/table}} repeated per row of an infobase table: the
-//                          document's rows when the table has document_id
-//                          ({{#lines}} is doc_lines), every row otherwise
-//                          (report tables: {{#cash_book}}); {{n}} is the row number
-//   {{#table field=value}} only the rows whose field (or join path) shows
-//                          value: {{#vat_book book=1}}, {{#vat_summary vat_rate.rate=19}}
-//   {{#tax_totals}}       invoice lines grouped by tax code, in document currency
-//   {{field|dmy}}          ISO date as DD.MM.YYYY; |ymd as YYYYMMDD, |ddmm as DDMM
-//   {{field|dot}}          a number as 1234.50, |comma as 1234,50 (exports)
-//   {{field|words}}        amount in words in the configuration's language
-//   {{field|dat}}          a person's name in a case: gen, dat, acc, ins, pre
-//                          ("Выдать {{counterparty.name|dat}}"); organizations stay
-//
-// A template's extension picks the escaping: .html escapes markup, .csv
-// doubles quotes inside quoted fields, anything else writes values as they are.
+// Shared syntax, filters and escaping live in Orion's Lua template plugins.
 #include "ledger.h"
 #include <libxml/parser.h>
 #include <orion/user/file.h>
+#include <orion/script/template.h>
 
-#define PRINT_FIELD_MAX 512
-
-typedef enum { ESCAPE_HTML, ESCAPE_CSV, ESCAPE_NONE } escape_t;
-
+typedef struct { int table; const void *record; bool owned; } print_row_t;
 typedef struct {
-  FILE *out;
-  escape_t escape;
-  const db_document_t *doc;  // NULL for report forms
-  int row_table;             // the {{#table}} being repeated, or -1
-  const void *row;
-  int n;
-  bool *failed;
+  const db_document_t *doc;
+  print_row_t *rows;
+  int count, capacity;
 } print_ctx_t;
-
-static void put_escaped(const print_ctx_t *ctx, const char *s) {
-  FILE *out = ctx->out;
-  for (; *s; s++) {
-    if (ctx->escape == ESCAPE_CSV) { if (*s == '"') fputc('"', out); fputc(*s, out); continue; }
-    if (ctx->escape == ESCAPE_NONE) { fputc(*s, out); continue; }
-    switch (*s) {
-      case '<': fputs("&lt;", out);   break;
-      case '>': fputs("&gt;", out);   break;
-      case '&': fputs("&amp;", out);  break;
-      case '"': fputs("&quot;", out); break;
-      default:  fputc(*s, out);       break;
-    }
-  }
-}
-
-static escape_t escape_for(const char *template) {
-  const char *ext = strrchr(template, '.');
-  if (ext && !strcmp(ext, ".csv")) return ESCAPE_CSV;
-  if (ext && (!strcmp(ext, ".html") || !strcmp(ext, ".htm") || !strcmp(ext, ".xml"))) return ESCAPE_HTML;
-  return ESCAPE_NONE;
-}
 
 static void *first_record(database_t *db, int table_id) {
   result_node_t *rows = (result_node_t *)send_db_message(db, dbFetch, MAKEDWORD(table_id, 0), NULL);
@@ -80,17 +33,17 @@ static bool table_has(database_t *db, int table_id, const char *name) {
   return db_schema_field_index(table, field) >= 0;
 }
 
-static bool resolve(const print_ctx_t *ctx, const char *name, char *buf, size_t sz) {
+static bool print_value(void *userdata, int row, const char *name, char *buf, size_t sz) {
+  print_ctx_t *ctx = userdata;
   buf[0] = '\0';
-  if (!strcmp(name, "n")) { snprintf(buf, sz, "%d", ctx->n); return true; }
   if (!strncmp(name, "org.", 4))
     return db_get_field_text(g_ledger->ib, TABLE_ORGANIZATIONS, first_record(g_ledger->ib, TABLE_ORGANIZATIONS), name + 4, buf, sz);
   if (!strncmp(name, "cfg.", 4))
     return db_get_field_text(g_ledger->cfg, TABLE_SETTINGS, first_record(g_ledger->cfg, TABLE_SETTINGS), name + 4, buf, sz);
   if (!strncmp(name, "period.", 7))
     return db_get_field_text(g_ledger->ib, TABLE_REPORT_SETTINGS, ledger_report_settings(g_ledger->ib, g_ledger->cfg), name + 7, buf, sz);
-  if (ctx->row && table_has(g_ledger->ib, ctx->row_table, name))
-    return db_get_field_text(g_ledger->ib, ctx->row_table, ctx->row, name, buf, sz);
+  if (row > 0 && row <= ctx->count && table_has(g_ledger->ib, ctx->rows[row - 1].table, name))
+    return db_get_field_text(g_ledger->ib, ctx->rows[row - 1].table, ctx->rows[row - 1].record, name, buf, sz);
   return ctx->doc && db_get_field_text(g_ledger->ib, TABLE_DOCUMENTS, ctx->doc, name, buf, sz);
 }
 
@@ -107,159 +60,66 @@ static void amount_in_words(const char *value, char *out, size_t sz) {
   ui_spell_amount(s->language, ui_parse_number(value), &words, out, sz);
 }
 
-static void put_tag(const print_ctx_t *ctx, const char *tag, size_t len) {
-  char name[128], value[PRINT_FIELD_MAX];
-  snprintf(name, sizeof(name), "%.*s", (int)len, tag);
-  char *filter = strchr(name, '|');
-  if (filter) *filter++ = '\0';
-  if (!resolve(ctx, name, value, sizeof(value))) {
-    fprintf(stderr, "[ledger] print template field not found: %s\n", name);
-    *ctx->failed = true;
-    return;
-  }
-  if (filter && !strcmp(filter, "dash") && !value[0]) snprintf(value, sizeof(value), "—");
-  if (filter && !strcmp(filter, "zero_dash") && ui_parse_number(value) == 0) snprintf(value, sizeof(value), "—");
-  // Dates come as stored (2026-03-10) or as the catalog shows them (10.03.2026).
-  int y = 0, m = 0, d = 0;
-  bool date = filter && (sscanf(value, "%d-%d-%d", &y, &m, &d) == 3 || sscanf(value, "%d.%d.%d", &d, &m, &y) == 3) && y > 31;
-  if (date && !strcmp(filter, "iso")) snprintf(value, sizeof(value), "%04d-%02d-%02d", y, m, d);
-  if (filter && (!strcmp(filter, "decimal3") || !strcmp(filter, "decimal3comma") ||
-                 !strcmp(filter, "zero_comma") || !strcmp(filter, "zero_decimal3comma"))) {
-    double numeric = ui_parse_number(value);
-    bool zero_dash = !strncmp(filter, "zero_", 5) && numeric == 0;
-    if (zero_dash) snprintf(value, sizeof(value), "—");
-    else {
-      snprintf(value, sizeof(value), strstr(filter, "decimal3") ? "%.3f" : "%.2f", numeric);
-      if (strstr(filter, "comma")) for (char *c = value; *c; c++) if (*c == '.') *c = ',';
-    }
-  }
-  if (date && !strcmp(filter, "dmy"))  snprintf(value, sizeof(value), "%02d.%02d.%04d", d, m, y);
-  if (date && !strcmp(filter, "ymd"))  snprintf(value, sizeof(value), "%04d%02d%02d", y, m, d);
-  if (date && !strcmp(filter, "ddmm")) snprintf(value, sizeof(value), "%02d%02d", d, m);
-  if (filter && (!strcmp(filter, "dot") || !strcmp(filter, "comma"))) {  // plain decimals for exports
-    snprintf(value, sizeof(value), "%.2f", ui_parse_number(value));
-    if (*filter == 'c') for (char *c = value; *c; c++) if (*c == '.') *c = ',';
-  }
-  static const char *cases[] = { "nom", "gen", "dat", "acc", "ins", "pre" };
-  for (size_t c = 0; filter && c < ARRAY_LEN(cases); c++) {
+// Only country-specific language and money nouns belong to Ledger.
+static bool print_filter(void *userdata, const char *filter, const char *value, char *out, size_t size) {
+  if (!strcmp(filter, "words")) { amount_in_words(value, out, size); return true; }
+  static const char *cases[] = {"nom", "gen", "dat", "acc", "ins", "pre"};
+  for (size_t c = 0; c < ARRAY_LEN(cases); c++) {
     if (strcmp(filter, cases[c])) continue;
     const db_setting_t *settings = first_record(g_ledger->cfg, TABLE_SETTINGS);
-    char name[PRINT_FIELD_MAX];
-    ui_inflect_name(settings ? settings->language : NULL, value, (ui_case_t)c, name, sizeof(name));
-    snprintf(value, sizeof(value), "%s", name);
+    ui_inflect_name(settings ? settings->language : NULL, value, (ui_case_t)c, out, size);
+    return true;
   }
-  if (filter && !strcmp(filter, "words")) {
-    char words[PRINT_FIELD_MAX];
-    amount_in_words(value, words, sizeof(words));
-    snprintf(value, sizeof(value), "%s", words);
-  }
-  put_escaped(ctx, value);
+  return false;
 }
 
-static void render(print_ctx_t *ctx, const char *s, const char *end);
-
-// Invoice tax totals use the invoice's own lines, including unsaved drafts.
-static void render_tax_totals(print_ctx_t *ctx, const char *body, const char *stop) {
-  if (!ctx->doc) return;
-  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch,
-    MAKEDWORD(TABLE_DOC_LINES, ledger_field(g_ledger->ib, TABLE_DOC_LINES, "document_id")), (void *)(intptr_t)ctx->doc->id);
-  print_ctx_t inner = *ctx;
-  inner.row_table = TABLE_DOC_LINES;
-  inner.n = 0;
-  for (result_node_t *n = rows; n; n = n->next) {
-    const db_doc_line_t *line = *(db_doc_line_t **)n->data;
-    bool seen = false;
-    for (result_node_t *before = rows; before != n; before = before->next)
-      if ((*(db_doc_line_t **)before->data)->vat_rate_id == line->vat_rate_id) { seen = true; break; }
-    if (seen) continue;
-    db_doc_line_t total = { .vat_rate_id = line->vat_rate_id };
-    for (result_node_t *r = n; r; r = r->next) {
-      const db_doc_line_t *row = *(db_doc_line_t **)r->data;
-      if (row->vat_rate_id != line->vat_rate_id) continue;
-      total.amount += row->amount; total.vat += row->vat; total.total += row->total;
-    }
-    inner.row = &total;
-    inner.n++;
-    render(&inner, body, stop);
+static bool print_emit_row(print_ctx_t *ctx, int table, const void *record, bool owned,
+                           script_template_emit_t emit, void *target) {
+  if (ctx->count == ctx->capacity) {
+    int capacity = ctx->capacity ? ctx->capacity * 2 : 32;
+    print_row_t *rows = realloc(ctx->rows, capacity * sizeof(*rows));
+    if (!rows) { if (owned) free((void *)record); return false; }
+    ctx->rows = rows; ctx->capacity = capacity;
   }
-  free_result_list(rows);
+  ctx->rows[ctx->count++] = (print_row_t){table, record, owned};
+  emit(ctx->count, target);
+  return true;
 }
 
-
-// {{#table}}: the document's rows of a table with document_id, or all rows;
-// {{#table field=value}} keeps the rows whose field reads value.
-static const char *render_block(print_ctx_t *ctx, const char *open, const char *close, const char *end) {
-  char name[160], stop_tag[168];
-  struct { char *field, *value; bool negate; } filters[4];
-  int nfilters = 0;
-  snprintf(name, sizeof(name), "%.*s", (int)(close - open - 3), open + 3);
-  char *cursor = strchr(name, ' ');  // name field=value field=value
-  if (cursor) *cursor++ = '\0';
-  while (cursor && nfilters < (int)ARRAY_LEN(filters)) {
-    char *next = strchr(cursor, ' ');
-    if (next) *next++ = '\0';
-    char *eq = strchr(cursor, '=');
-    if (eq) {
-      filters[nfilters].negate = eq > cursor && eq[-1] == '!';
-      if (filters[nfilters].negate) eq[-1] = '\0';
-      *eq = '\0'; filters[nfilters].field = cursor; filters[nfilters++].value = eq + 1;
-    }
-    cursor = next;
-  }
-  snprintf(stop_tag, sizeof(stop_tag), "{{/%s}}", name);
-  const char *body = close + 2, *stop = strstr(body, stop_tag);
-  if (!stop || stop >= end) { fprintf(stderr, "[ledger] print template: unterminated {{#%s}}\n", name); *ctx->failed = true; return end; }
-  if (!strcmp(name, "if")) {
-    bool keep = nfilters > 0;
-    for (int f = 0; f < nfilters && keep; f++) {
-      char value[PRINT_FIELD_MAX];
-      if (!resolve(ctx, filters[f].field, value, sizeof(value))) { *ctx->failed = true; keep = false; }
-      else keep = (!strcmp(value, filters[f].value)) != filters[f].negate;
-    }
-    if (keep) render(ctx, body, stop);
-    return stop + strlen(stop_tag);
-  }
-  if (!strcmp(name, "tax_totals")) {
-    render_tax_totals(ctx, body, stop);
-    return stop + strlen(stop_tag);
-  }
-  const db_table_schema_t *table = db_schema_table_named(g_ledger->ib->schema, strcmp(name, "lines") ? name : "doc_lines");
-  if (!table) { fprintf(stderr, "[ledger] print template: unknown table {{#%s}}\n", name); *ctx->failed = true; return stop + strlen(stop_tag); }
+// The source maps template blocks to Ledger's tables. Tax grouping is a
+// Ledger invoice rule; iteration and filtering are the shared Lua renderer's.
+static bool print_rows(void *userdata, const char *name, int parent, script_template_emit_t emit, void *target) {
+  print_ctx_t *ctx = userdata;
+  bool tax = !strcmp(name, "tax_totals");
+  const db_table_schema_t *table = db_schema_table_named(g_ledger->ib->schema, tax || !strcmp(name, "lines") ? "doc_lines" : name);
+  if (!table) return false;
+  if (tax && !ctx->doc) return true;
   int by_doc = db_schema_field_index(table, "document_id");
   result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch,
     MAKEDWORD(table->table_id, ctx->doc && by_doc >= 0 ? by_doc : 0), (void *)(intptr_t)(ctx->doc && by_doc >= 0 ? ctx->doc->id : 0));
-  print_ctx_t inner = *ctx;
-  inner.row_table = table->table_id;
-  inner.n = 0;
-  for (result_node_t *n = rows; n; n = n->next) {
-    inner.row = *(void **)n->data;
-    bool kept = true;
-    for (int f = 0; f < nfilters && kept; f++) {
-      char text[PRINT_FIELD_MAX] = "";
-      const char *value = filters[f].value;
-      db_get_field_text(g_ledger->ib, table->table_id, inner.row, filters[f].field, text, sizeof(text));
-      bool number = value[0] && strspn(value, "0123456789.,-") == strlen(value);
-      kept = (number ? ui_parse_number(text) == ui_parse_number(value) : !strcmp(text, value)) != filters[f].negate;
+  bool ok = true;
+  for (result_node_t *node = rows; node && ok; node = node->next) {
+    const void *record = *(void **)node->data;
+    if (tax) {
+      const db_doc_line_t *line = record;
+      bool seen = false;
+      for (result_node_t *before = rows; before != node; before = before->next)
+        if ((*(db_doc_line_t **)before->data)->vat_rate_id == line->vat_rate_id) { seen = true; break; }
+      if (seen) continue;
+      db_doc_line_t *total = calloc(1, sizeof(*total));
+      if (!total) { ok = false; break; }
+      total->vat_rate_id = line->vat_rate_id;
+      for (result_node_t *r = node; r; r = r->next) {
+        const db_doc_line_t *item = *(db_doc_line_t **)r->data;
+        if (item->vat_rate_id != line->vat_rate_id) continue;
+        total->amount += item->amount; total->vat += item->vat; total->total += item->total;
+      }
+      record = total;
     }
-    if (!kept) continue;
-    inner.n++;
-    render(&inner, body, stop);
+    ok = print_emit_row(ctx, table->table_id, record, tax, emit, target);
   }
   free_result_list(rows);
-  return stop + strlen(stop_tag);
-}
-
-static void render(print_ctx_t *ctx, const char *s, const char *end) {
-  while (s < end) {
-    const char *open = strstr(s, "{{");
-    if (!open || open >= end) { fwrite(s, 1, (size_t)(end - s), ctx->out); return; }
-    fwrite(s, 1, (size_t)(open - s), ctx->out);
-    const char *close = strstr(open, "}}");
-    if (!close || close >= end) { *ctx->failed = true; return; }
-    if (open[2] == '#') { s = render_block(ctx, open, close, end); continue; }
-    put_tag(ctx, open + 2, (size_t)(close - open - 2));
-    s = close + 2;
-  }
+  return ok;
 }
 
 static char *read_file(const char *path) {
@@ -304,12 +164,17 @@ static bool write_form(const db_print_form_t *form, const db_document_t *doc, co
     free(text);
     return false;
   }
-  bool failed = false;
-  print_ctx_t ctx = { .out = out, .escape = escape_for(form->template), .doc = doc, .row_table = -1, .failed = &failed };
-  render(&ctx, text, text + strlen(text));
-  failed = ferror(out) || failed;
+  print_ctx_t ctx = {.doc = doc};
+  const script_template_source_t source = {&ctx, print_value, print_rows, print_filter};
+  const char *ext = strrchr(form->template, '.');
+  const char *format = ext && !strcmp(ext, ".csv") ? "csv" :
+    ext && (!strcmp(ext, ".html") || !strcmp(ext, ".htm") || !strcmp(ext, ".xml")) ? "html" : "none";
+  char *rendered = NULL, error[1024];
+  bool failed = !script_template_render(text, format, &source, &rendered, error, sizeof(error));
+  if (!failed) failed = fwrite(rendered, 1, strlen(rendered), out) != strlen(rendered);
   if (fclose(out)) failed = true;
-  free(text);
+  for (int i = 0; i < ctx.count; i++) if (ctx.rows[i].owned) free((void *)ctx.rows[i].record);
+  free(ctx.rows); free(rendered); free(text);
   const char *extension = strrchr(form->template, '.');
   if (!failed && extension && !strcmp(extension, ".xml")) {
     xmlDocPtr xml = xmlReadFile(temp, NULL, XML_PARSE_NONET);
