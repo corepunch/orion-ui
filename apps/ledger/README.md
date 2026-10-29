@@ -628,3 +628,15 @@ The source and generation prompt are recorded in `share/icon-prompt.txt`.
   also supports `--family iphone`. Building/signing requires the Apple SDK.
 
 The master has no baked-in rounded corners so native icon masks can be applied.
+
+## Lua application controller
+
+`share/controller.lua` owns command routing, document-type selection, month-end
+dates, deletion confirmation, catalog/navigation policy and status summaries.
+`controller.cgen` generates its typed native capability API; `controller.c` keeps
+window adapters, document editing hooks and calls into the native accounting engine.
+The large native command switch and private month-end calendar are removed.
+Trusted assistant windows use the same application runtime with package-local
+module scopes and independent controllers. Arbitrary external add-ons and the
+accounting configuration evaluator retain separate trust-domain VMs.
+See [the application architecture](../../docs/declarative-applications.md).

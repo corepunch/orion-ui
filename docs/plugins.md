@@ -220,14 +220,17 @@ plugins do not draw controls or manage window lifetime.
 The host owns persistent database registration, save failures and output
 paths. Native operations must use generated `.cgen` bindings; do not add
 hand-written Lua bindings or expose arbitrary filesystem access. See
-`apps/lodge/main.c`, `apps/lodge/store.cgen`, and `apps/lodge/share/` for a
+`orion/script/application.cgen` and `apps/lodge/share/` for a
 complete host, schema, form and Lua controller.
+
+See [Declarative applications](declarative-applications.md) for VM ownership,
+codeless forms, DisplayGroups, generated capabilities and migration boundaries.
 
 ## Portability and trust
 
 Plugins have the existing add-on sandbox's capabilities: no `io`, `loadfile`,
-bytecode/native module loading or arbitrary OS calls. All plugins in one page
-share that page's Lua state and datasource access. Manifests are executable
+bytecode/native module loading or arbitrary OS calls. Trusted pages in an application share its Lua state and datasource access. Each
+window has its own controller object; unrelated external add-ons keep isolated VMs. Manifests are executable
 trusted Lua, and dependency declarations are an architecture contract, not
 a security boundary against malicious code. There is no remote plugin
 marketplace, automatic download, permission broker or hot unload in this API.

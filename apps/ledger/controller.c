@@ -6,6 +6,7 @@
 #include <orion/commdlg/msgbox.h>
 #include <orion/commdlg/filepicker.h>
 #include <time.h>
+#include <orion/script/script_internal.h>
 
 ledger_t *g_ledger = NULL;
 
@@ -31,44 +32,12 @@ void ledger_refresh_views(void) {
 }
 
 void ledger_update_status(void) {
-  if (!g_ledger->main_win) return;
-  char org[160] = "", cfg[128] = "", text[512];
-  result_node_t *o = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ORGANIZATIONS, 0), NULL);
-  result_node_t *s = (result_node_t *)send_db_message(g_ledger->cfg, dbFetch, MAKEDWORD(TABLE_SETTINGS, 0), NULL);
-  if (o) snprintf(org, sizeof(org), "%s", (*(db_organization_t **)o->data)->name);
-  if (s) snprintf(cfg, sizeof(cfg), "%s", (*(db_setting_t **)s->data)->name);
-  free_result_list(o); free_result_list(s);
-  char from[16] = "", to[16] = "", period[128];
-  const db_report_setting_t *rs = ledger_report_settings(g_ledger->ib, g_ledger->cfg);
-  ui_format_date(rs ? rs->date_from : "", from, sizeof(from));
-  ui_format_date(rs ? rs->date_to : "", to, sizeof(to));
-  if (!from[0] && !to[0]) snprintf(period, sizeof(period), "%s", ui_tr("Report period: all dates"));
-  else snprintf(period, sizeof(period), ui_tr("Report period: %s – %s"), from[0] ? from : "…", to[0] ? to : "…");
-  bool dirty = send_db_message(g_ledger->ib, dbGetDirty, 0, NULL);
-  // Facts in words: how many documents the books hold and how many wait.
-  int posted = 0, drafts = 0;
-  result_node_t *docs = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
-  for (result_node_t *n = docs; n; n = n->next) { if ((*(db_document_t **)n->data)->posted) posted++; else drafts++; }
-  free_result_list(docs);
-  char counts[96];
-  snprintf(counts, sizeof(counts), ui_tr("Posted: %d · not posted: %d"), posted, drafts);
-  snprintf(text, sizeof(text), "%s   |   %s   |   %s   |   %s%s%s", org, cfg, period, counts, dirty ? "   |   " : "", dirty ? ui_tr("modified") : "");
-  send_message(g_ledger->main_win, evStatusBar, 0, text);
-  update_home();
-  // The title row names the page, as Finder names the folder, over the company being kept.
-  window_t *page = window_active_page(g_ledger->main_win);
-  set_window_title(g_ledger->main_win, page && page->title[0] ? page->title : ui_tr("Ledger"));
-  // Home speaks of a date: the figures are as of the period's end.
-  char subtitle[256], asof[16];
-  if (page_host_selection(g_ledger->main_win) == ID_VIEW_HOME && ledger_home_asof()[0]) {
-    ui_format_date(ledger_home_asof(), asof, sizeof(asof));
-    snprintf(subtitle, sizeof(subtitle), ui_tr("%s · as of %s"), org, asof);
-  } else snprintf(subtitle, sizeof(subtitle), "%s", org);
-  set_window_subtitle(g_ledger->main_win, subtitle);
-  send_message(g_ledger->main_win, tbEnableItem, ID_VIEW_BACK, (void *)(intptr_t)page_host_can_go(g_ledger->main_win, -1));
-  send_message(g_ledger->main_win, tbEnableItem, ID_VIEW_FORWARD, (void *)(intptr_t)page_host_can_go(g_ledger->main_win, 1));
+  if (!g_ledger->main_win || !g_ledger->runtime) return;
+  char error[2048];
+  if (!script_runtime_invoke(g_ledger->runtime, g_ledger->controller, "status", NULL, error, sizeof(error))) {
+    fprintf(stderr, "[ledger] status: %s\n", error); fflush(stderr);
+  }
 }
-
 
 // ── Document dialogs ───────────────────────────────────────────────────────
 // Lines, entries and assets are declared in ledger.orion: each detail
@@ -351,15 +320,6 @@ static int first_doc_type(const char *form) {
   return id;
 }
 
-// Month-end closing is dated the last day of the current month.
-static void month_end(char *date, size_t sz) {
-  time_t now = time(NULL);
-  struct tm *t = localtime(&now);
-  static const int days[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
-  int y = t->tm_year + 1900, m = t->tm_mon + 1;
-  snprintf(date, sz, "%04d-%02d-%02d", y, m, days[m - 1] + (m == 2 && y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)));
-}
-
 // The document is created by its dialog, inside the dialog's editing context:
 // Cancel leaves no trace. date (ISO) may be empty.
 static void new_document_of(int type_id, const char *date) {
@@ -368,19 +328,6 @@ static void new_document_of(int type_id, const char *date) {
   size_t f = document_form(document_type(&(db_document_t){ .doc_type_id = type_id }));
   db_dialog_opts_t opts = { .hook = kDocumentForms[f].hook, .defaults = defaults };
   db_form_open(kDocumentForms[f].def, ui_tr(kDocumentForms[f].new_title), view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), 0, &opts, document_saved, NULL);
-}
-
-static void new_document(const char *form) {
-  db_document_t *last = selected(ID_JOURNAL_PAGE_DOCUMENTS);
-  db_doc_type_t *last_type = document_type(last);
-  int type_id = last_type && !strcmp(last_type->form, form) ? last->doc_type_id : first_doc_type(form);
-  if (!type_id) {
-    message_box(g_ledger->main_win, ui_tr("The configuration defines no document type of this kind."), ui_tr("New Document"), MB_OK);
-    return;
-  }
-  char date[16] = "";
-  if (!strcmp(form, "closing")) month_end(date, sizeof(date));
-  new_document_of(type_id, date);
 }
 
 static void open_account_card(int account_id) {
@@ -551,127 +498,117 @@ static void import_from_1c(void) {
   message_box(g_ledger->main_win, text, ui_tr("Import from 1C"), MB_OK);
 }
 
+static bool ledger_ui_dirty(lua_State *L) { return send_db_message(g_ledger->ib, dbGetDirty, 0, NULL); }
+static const char *ledger_ui_asof(lua_State *L) { return page_host_selection(g_ledger->main_win) == ID_VIEW_HOME ? ledger_home_asof() : ""; }
+static void ledger_ui_status(lua_State *L, const char *text, const char *subtitle) {
+  send_message(g_ledger->main_win, evStatusBar, 0, (void *)text);
+  update_home();
+  window_t *page = window_active_page(g_ledger->main_win);
+  set_window_title(g_ledger->main_win, page && page->title[0] ? page->title : ui_tr("Ledger"));
+  set_window_subtitle(g_ledger->main_win, subtitle);
+  send_message(g_ledger->main_win, tbEnableItem, ID_VIEW_BACK, (void *)(intptr_t)page_host_can_go(g_ledger->main_win, -1));
+  send_message(g_ledger->main_win, tbEnableItem, ID_VIEW_FORWARD, (void *)(intptr_t)page_host_can_go(g_ledger->main_win, 1));
+}
+// Native capabilities retain window/storage ownership. Workflow lives in controller.lua.
+static int ledger_ui_selected(lua_State *L, const char *name) {
+  uint32_t id = !strcmp(name, "entries") ? ID_ENTRIES_PAGE_ENTRIES : ID_JOURNAL_PAGE_DOCUMENTS;
+  const int *record = selected(id);
+  return record ? *record : 0;
+}
+static void ledger_ui_new_document(lua_State *L, int type, const char *date) { new_document_of(type, date); }
+static void ledger_ui_edit_document(lua_State *L, int id) { if (id) edit_document(id); }
+static void ledger_ui_print_document(lua_State *L, int id) { if (id) print_document(g_ledger->main_win, id); }
+static void ledger_ui_changed(lua_State *L, int id) { after_save(id); }
+static void ledger_ui_unpost(lua_State *L, int id) { ledger_unpost(g_ledger->ib, g_ledger->cfg, id); }
+static bool ledger_ui_repost(lua_State *L) { return ledger_repost_all(g_ledger->ib, g_ledger->cfg); }
+static bool ledger_ui_confirm(lua_State *L, const char *text, const char *title) { return message_box(g_ledger->main_win, text, title, MB_YESNO) == IDYES; }
+static void ledger_ui_message(lua_State *L, const char *text, const char *title) { message_box(g_ledger->main_win, text, title, MB_OK); }
+static void ledger_ui_save(lua_State *L) {
+  window_t *document = mdi_active_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT));
+  if (document) db_form_save(document, false);
+  else { send_db_message(g_ledger->ib, dbSave, 0, NULL); ledger_update_status(); }
+}
+static void ledger_ui_form(lua_State *L, const char *name) {
+  const form_def_t *form = !strcmp(name, "organization") ? &ledger_organization_form : &ledger_report_settings_form;
+  if (show_db_dialog(form, NULL, g_ledger->main_win, 1)) after_save(0);
+}
+static void ledger_ui_catalog(lua_State *L, const char *name, const char *verb) {
+  static const struct { const char *name; int id; } tables[] = {
+    {"counterparty", ID_COUNTERPARTIES_PAGE_COUNTERPARTIES}, {"item", ID_ITEMS_PAGE_ITEMS},
+    {"employee", ID_EMPLOYEES_PAGE_EMPLOYEES}, {"asset", ID_ASSETS_PAGE_ASSETS},
+    {"currency", ID_CURRENCIES_PAGE_CURRENCIES}, {"rate", ID_CURRENCIES_PAGE_RATES}
+  };
+  for (size_t i = 0; i < ARRAY_LEN(tables); i++) if (!strcmp(name, tables[i].name)) {
+    catalog_action(tables[i].id, !strcmp(verb, "new") ? tvInsertRecord : !strcmp(verb, "edit") ? tvEditRecord : tvDeleteRecord); return;
+  }
+  luaL_error(L, "unknown catalog '%s'", name);
+}
+static void ledger_ui_page(lua_State *L, const char *name) {
+  if (!strcmp(name, "back") || !strcmp(name, "forward")) {
+    int direction = !strcmp(name, "back") ? -1 : 1;
+    if (page_host_can_go(g_ledger->main_win, direction)) page_host_go(g_ledger->main_win, direction);
+  } else if (!strcmp(name, "journal_entries")) {
+    page_host_select(g_ledger->main_win, ID_VIEW_JOURNAL);
+    send_message(view(ID_JOURNAL_PAGE_DETAILS), tcSetSelection, 1, NULL);
+  } else if (!strcmp(name, "sidebar")) page_host_set_sidebar_collapsed(g_ledger->main_win, !page_host_sidebar_collapsed(g_ledger->main_win));
+  else for (int i = 0; i < ledger_action_meta_count; i++) if (!strncmp(ledger_action_meta[i].name, "view.", 5) && !strcmp(ledger_action_meta[i].name + 5, name)) {
+    page_host_select(g_ledger->main_win, ledger_action_meta[i].id); return;
+  }
+}
+static void ledger_ui_window(lua_State *L, const char *operation) {
+  window_t *client = view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), *document = mdi_active_document(client);
+  if (!strcmp(operation, "next_document")) mdi_cycle_document(client, 1);
+  else if (!strcmp(operation, "previous_document")) mdi_cycle_document(client, -1);
+  else if (!strcmp(operation, "cascade")) mdi_arrange_documents(client, false);
+  else if (!strcmp(operation, "tile")) mdi_arrange_documents(client, true);
+  else if (!strcmp(operation, "close_document") && document) send_message(document, evClose, 0, NULL);
+  else if (!strcmp(operation, "quit")) send_message(g_ledger->main_win, evClose, 0, NULL);
+  else if (!strcmp(operation, "post_close")) {
+    db_document_t *edited = document ? db_dialog_record(document) : NULL;
+    const db_doc_type_t *type = document_type(edited);
+    window_t *button = type && !strcmp(type->form, "document") ? get_window_item(document, ID_DOCUMENT_POST_CLOSE) : NULL;
+    if (button) send_message(document, evCommand, MAKEDWORD(button->id, btnClicked), button);
+  }
+}
+static void ledger_ui_configuration(lua_State *L) { select_configuration(); }
+static void ledger_ui_language(lua_State *L) { select_language(); }
+static void ledger_ui_import(lua_State *L) { import_from_1c(); }
+static void ledger_ui_addon(lua_State *L) { ledger_open_addon(); }
+static void ledger_ui_assistant(lua_State *L) { ledger_open_assistant(); }
+static void ledger_ui_account_card(lua_State *L) { show_account_card(); }
+static void ledger_ui_print_reports(lua_State *L) {
+  char report[2048]; bool ok = ledger_print_reports(report, sizeof(report));
+  message_box(g_ledger->main_win, report[0] ? report : ui_tr("The configuration defines no report forms."), ui_tr(ok ? "Print Forms Written" : "Print"), MB_OK);
+}
+#include "build/generated/apps/ledger/controller_lua.h"
+
+bool ledger_ui_open(const char *directory) {
+  if (g_ledger->runtime) return true;
+  script_register_module("ledger.ui", luaopen_ledger_ui);
+  g_ledger->runtime = script_runtime_open(directory, "Ledger");
+  if (!g_ledger->runtime) return false;
+  char path[LEDGER_PATH_MAX * 2], error[2048];
+  snprintf(path, sizeof(path), "%s/controller.lua", directory);
+  g_ledger->controller = script_runtime_controller(g_ledger->runtime, path, error, sizeof(error));
+  if (g_ledger->controller == LUA_NOREF) { fprintf(stderr, "[ledger] %s\n", error); ledger_ui_close(); return false; }
+  return true;
+}
+void ledger_ui_close(void) {
+  if (!g_ledger || !g_ledger->runtime) return;
+  script_runtime_release(g_ledger->runtime, g_ledger->controller);
+  script_runtime_close(g_ledger->runtime); g_ledger->runtime = NULL;
+}
 void ledger_command(uint16_t id) {
   if (!g_ledger) return;
-  window_t *parent = g_ledger->main_win;
-  db_document_t *doc = selected(ID_JOURNAL_PAGE_DOCUMENTS);
-  char report[2048];
-  switch (id) {
-    case ID_FILE_SAVE:
-      if (mdi_active_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT))) {
-        db_form_save(mdi_active_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT)), false);
-        break;
-      }
-      send_db_message(g_ledger->ib, dbSave, 0, NULL);
-      ledger_update_status();
-      break;
-    case ID_FILE_ORGANIZATION:
-      if (show_db_dialog(&ledger_organization_form, NULL, parent, 1)) ledger_update_status();
-      break;
-    case ID_FILE_CONFIGURATION: select_configuration(); break;
-    case ID_FILE_LANGUAGE:      select_language();      break;
-    case ID_FILE_IMPORT_1C:     import_from_1c();       break;
-    case ID_FILE_ADDON:         ledger_open_addon();    break;
-    case ID_HELP_ASSISTANT:     ledger_open_assistant(); break;
-    case ID_HELP_FIND_COMMAND:  ledger_open_assistant(); break;
-    case ID_FILE_QUIT:          send_message(parent, evClose, 0, NULL); break;
-    case ID_WINDOW_NEXT_DOCUMENT: mdi_cycle_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), 1); break;
-    case ID_WINDOW_PREVIOUS_DOCUMENT: mdi_cycle_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), -1); break;
-    case ID_WINDOW_CASCADE: mdi_arrange_documents(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), false); break;
-    case ID_WINDOW_TILE: mdi_arrange_documents(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT), true); break;
-    case ID_WINDOW_CLOSE_DOCUMENT: {
-      window_t *document = mdi_active_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT));
-      if (document) send_message(document, evClose, 0, NULL);
-      break;
-    }
+  if (!g_ledger->runtime && !ledger_ui_open("build/share/ledger")) return;
+  const char *name = id == ID_HOME_PAGE_ALL_DOCUMENTS ? "view.journal" : NULL;
+  for (int i = 0; !name && i < ledger_action_meta_count; i++) if (ledger_action_meta[i].id == id) name = ledger_action_meta[i].name;
+  if (!name) return;
+  char error[2048];
+  if (!script_runtime_invoke(g_ledger->runtime, g_ledger->controller, "command", name, error, sizeof(error))) {
+    fprintf(stderr, "[ledger] command %s: %s\n", name, error); fflush(stderr);
+    message_box(g_ledger->main_win, error, ui_tr("Ledger"), MB_OK);
 
-    case ID_DOC_NEW:           new_document("document");  break;
-    case ID_DOC_NEW_OPERATION: new_document("operation"); break;
-    case ID_DOC_NEW_PAYROLL:   new_document("payroll");   break;
-    case ID_DOC_NEW_ASSETS:    new_document("assets");    break;
-    case ID_DOC_CLOSE_MONTH:   new_document("closing");   break;
-    case ID_DOC_OPEN: if (doc) edit_document(doc->id); break;
-    case ID_DOC_OPEN_ENTRY: {
-      db_entry_t *entry = selected(ID_ENTRIES_PAGE_ENTRIES);
-      if (entry) edit_document(entry->document_id);
-      break;
-    }
-    case ID_DOC_POST:
-      if (doc) after_save(doc->id);
-      break;
-    case ID_DOC_ENTRIES:  // 1C's Дт/Кт: the entries the selected document wrote, below the journal
-      page_host_select(parent, ID_VIEW_JOURNAL);
-      send_message(view(ID_JOURNAL_PAGE_DETAILS), tcSetSelection, 1, NULL);
-      break;
-    case ID_DOC_POST_CLOSE: {  // Ctrl+Enter in the active goods document
-      window_t *document = mdi_active_document(view(ID_MAIN_WINDOW_DOCUMENTS_CLIENT));
-      db_document_t *edited = document ? db_dialog_record(document) : NULL;
-      const db_doc_type_t *type = document_type(edited);
-      window_t *button = type && !strcmp(type->form, "document") ? get_window_item(document, ID_DOCUMENT_POST_CLOSE) : NULL;
-      if (button) send_message(document, evCommand, MAKEDWORD(button->id, btnClicked), button);
-      break;
-    }
-    case ID_DOC_UNPOST:
-      if (doc) { ledger_unpost(g_ledger->ib, g_ledger->cfg, doc->id); after_save(0); }
-      break;
-    case ID_DOC_PRINT:
-      if (!doc) break;
-      print_document(parent, doc->id);
-      break;
-    case ID_DOC_DELETE:  // lines and entries go with it (on-delete="cascade")
-      if (doc && message_box(parent, ui_tr("Delete the selected document and its entries?"), ui_tr("Delete Document"), MB_YESNO) == IDYES) {
-        send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)doc->id);
-        after_save(0);
-      }
-      break;
-
-    case ID_CATALOG_NEW_COUNTERPARTY:    catalog_action(ID_COUNTERPARTIES_PAGE_COUNTERPARTIES, tvInsertRecord); break;
-    case ID_CATALOG_EDIT_COUNTERPARTY:   catalog_action(ID_COUNTERPARTIES_PAGE_COUNTERPARTIES, tvEditRecord);   break;
-    case ID_CATALOG_DELETE_COUNTERPARTY: catalog_action(ID_COUNTERPARTIES_PAGE_COUNTERPARTIES, tvDeleteRecord); break;
-    case ID_CATALOG_NEW_ITEM:            catalog_action(ID_ITEMS_PAGE_ITEMS, tvInsertRecord);                   break;
-    case ID_CATALOG_EDIT_ITEM:           catalog_action(ID_ITEMS_PAGE_ITEMS, tvEditRecord);                     break;
-    case ID_CATALOG_DELETE_ITEM:         catalog_action(ID_ITEMS_PAGE_ITEMS, tvDeleteRecord);                   break;
-    case ID_CATALOG_NEW_EMPLOYEE:        catalog_action(ID_EMPLOYEES_PAGE_EMPLOYEES, tvInsertRecord);           break;
-    case ID_CATALOG_EDIT_EMPLOYEE:       catalog_action(ID_EMPLOYEES_PAGE_EMPLOYEES, tvEditRecord);             break;
-    case ID_CATALOG_DELETE_EMPLOYEE:     catalog_action(ID_EMPLOYEES_PAGE_EMPLOYEES, tvDeleteRecord);           break;
-    case ID_CATALOG_NEW_ASSET:           catalog_action(ID_ASSETS_PAGE_ASSETS, tvInsertRecord);                 break;
-    case ID_CATALOG_EDIT_ASSET:          catalog_action(ID_ASSETS_PAGE_ASSETS, tvEditRecord);                   break;
-    case ID_CATALOG_DELETE_ASSET:        catalog_action(ID_ASSETS_PAGE_ASSETS, tvDeleteRecord);                 break;
-    case ID_CATALOG_NEW_CURRENCY:        catalog_action(ID_CURRENCIES_PAGE_CURRENCIES, tvInsertRecord);         break;
-    case ID_CATALOG_EDIT_CURRENCY:       catalog_action(ID_CURRENCIES_PAGE_CURRENCIES, tvEditRecord);           break;
-    case ID_CATALOG_NEW_RATE:            catalog_action(ID_CURRENCIES_PAGE_RATES, tvInsertRecord);              break;
-    case ID_CATALOG_DELETE_RATE:         catalog_action(ID_CURRENCIES_PAGE_RATES, tvDeleteRecord);              break;
-
-    case ID_HOME_PAGE_ALL_DOCUMENTS: page_host_select(parent, ID_VIEW_JOURNAL); break;
-    case ID_VIEW_HOME: case ID_VIEW_JOURNAL: case ID_VIEW_COUNTERPARTIES: case ID_VIEW_ITEMS: case ID_VIEW_ACCOUNTS:
-    case ID_VIEW_EMPLOYEES: case ID_VIEW_ASSETS: case ID_VIEW_CURRENCIES:
-    case ID_VIEW_ENTRIES: case ID_VIEW_REPORTS: case ID_VIEW_CONFIG:
-      page_host_select(parent, id);
-      break;
-    case ID_VIEW_BACK:    if (page_host_can_go(parent, -1)) page_host_go(parent, -1); break;
-    case ID_VIEW_FORWARD: if (page_host_can_go(parent, 1)) page_host_go(parent, 1);   break;
-    case ID_VIEW_SIDEBAR: page_host_set_sidebar_collapsed(parent, !page_host_sidebar_collapsed(parent)); break;
-
-    case ID_REPORT_SETTINGS:
-      if (show_db_dialog(&ledger_report_settings_form, NULL, parent, 1)) after_save(0);
-      break;
-    case ID_REPORT_RECALC:
-      if (!ledger_repost_all(g_ledger->ib, g_ledger->cfg))
-        message_box(parent, ui_tr("Recalculation failed. Previous accounting entries were restored. Check the configuration and documents."), ui_tr("Recalculation Failed"), MB_OK);
-      ledger_refresh_views();
-      break;
-    case ID_REPORT_CARD: show_account_card(); break;
-    case ID_REPORT_PRINT:
-      if (ledger_print_reports(report, sizeof(report)))
-        message_box(parent, report, ui_tr("Print Forms Written"), MB_OK);
-      else
-        message_box(parent, report[0] ? report : ui_tr("The configuration defines no report forms."), ui_tr("Print"), MB_OK);
-      break;
-    case ID_HELP_ABOUT:
-      message_box(parent, ui_tr("Ledger 1.0\n\nDouble-entry bookkeeping on Orion.\n"
-                  "National rules, accounts and legal forms come from\n"
-                  "the active configuration."), ui_tr("About Ledger"), MB_OK);
-      break;
   }
 }
 

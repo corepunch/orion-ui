@@ -19,11 +19,7 @@ static const char *const kTypeNames[] = {
 };
 
 static database_t *find_database(const char *name) {
-  for (int i = 0; ; i++) {
-    database_t *db = get_database_at(i);
-    if (!db) return NULL;
-    if (db->name && !strcmp(db->name, name)) return db;
-  }
+  return get_database_by_name(name);
 }
 
 const db_table_schema_t *script_table(lua_State *L, const char *db_name, const char *table, database_t **out) {
@@ -80,6 +76,8 @@ bool script_read_record(lua_State *L, int idx, const db_table_schema_t *t, void 
     const char *name = lua_tostring(L, -2);
     const db_field_meta_t *m = NULL;
     for (int i = 0; i < t->meta_count && !m; i++) if (!strcmp(t->meta[i].name, name)) m = &t->meta[i];
+    int schema_field = db_schema_field_index(t, name);
+    if (schema_field >= 0 && t->fields[schema_field].computed && *t->fields[schema_field].computed) luaL_error(L, "computed property '%s' is read-only", name);
     if (!m) luaL_error(L, "table '%s' has no field '%s'", t->name, name);
     char *p = (char *)record + m->offset;
     switch (m->type) {
@@ -213,7 +211,7 @@ static int script_db_insert(lua_State *L, const char *database, const char *tabl
   char msg[256];
   if (!script_read_record(L, fields, t, buf, msg, sizeof(msg))) return refuse_with(L, msg);
   const void *record = (const void *)send_db_message(db, dbInsert, (uint32_t)t->table_id, buf);
-  if (!record) return refuse_with(L, ui_tr("The record could not be saved."));
+  if (!record) return refuse_with(L, db->error[0] ? db->error : ui_tr("The record could not be saved."));
   script_push_record(L, t, record);
   return 1;
 }
@@ -227,7 +225,7 @@ static int script_db_update(lua_State *L, const char *database, const char *tabl
   memcpy(buf, current, t->record_size);
   char msg[256];
   if (!script_read_record(L, fields, t, buf, msg, sizeof(msg))) return refuse_with(L, msg);
-  if (!send_db_message(db, dbUpdate, (uint32_t)t->table_id, buf)) return refuse_with(L, ui_tr("The record could not be saved."));
+  if (!send_db_message(db, dbUpdate, (uint32_t)t->table_id, buf)) return refuse_with(L, db->error[0] ? db->error : ui_tr("The record could not be saved."));
   script_push_record(L, t, (const void *)send_db_message(db, dbFind, MAKEDWORD(t->table_id, 0), (void *)(intptr_t)key));
   return 1;
 }

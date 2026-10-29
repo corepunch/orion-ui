@@ -1,5 +1,6 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
+#include <orion/user/xml_include.h>
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -737,12 +738,14 @@ static void emit_database_schema(FILE *f, xmlNodePtr db, const char *prefix) {
       const field_type_t *ft = field_type(kind); char *dot = rel ? strrchr(rel, '.') : NULL;
       bool pk = key && (eq(key, "YES") || eq(key, "yes") || eq(key, "true") || eq(key, "1"));
       cstr(defq, sizeof(defq), def);
+      char computed[ORIONC_STRING_SIZE]; char *property = attr(field, "computed");
+      cstr(computed, sizeof(computed), property); free(property);
       // EOF delete rules: what deleting the referenced record does to this one.
       const char *rule = !on_delete ? "DB_DELETE_NO_ACTION" : eq(on_delete, "cascade") ? "DB_DELETE_CASCADE"
                        : eq(on_delete, "nullify") ? "DB_DELETE_NULLIFY" : eq(on_delete, "deny") ? "DB_DELETE_DENY" : NULL;
       if (!rule) { fprintf(stderr, "orionc: field '%s': unknown on-delete '%s' (cascade, nullify, deny)\n", nz(name, ""), on_delete); rule = "DB_DELETE_NO_ACTION"; }
-      if (dot) { *dot = 0; OUT("  { \"%s\", %s, %d, %s, \"%s\", \"%s\", %s, %s },\n", name, ft->db, eq(ft->c, "char") ? (len ? atoi(len) : ft->size) : 0, pk ? "true" : "false", rel, dot + 1, defq, rule); joins++; }
-      else OUT("  { \"%s\", %s, %d, %s, NULL, NULL, %s, %s },\n", name, ft->db, eq(ft->c, "char") ? (len ? atoi(len) : ft->size) : 0, pk ? "true" : "false", defq, rule);
+      if (dot) { *dot = 0; OUT("  { \"%s\", %s, %d, %s, \"%s\", \"%s\", %s, %s, %s },\n", name, ft->db, eq(ft->c, "char") ? (len ? atoi(len) : ft->size) : 0, pk ? "true" : "false", rel, dot + 1, defq, rule, computed); joins++; }
+      else OUT("  { \"%s\", %s, %d, %s, NULL, NULL, %s, %s, %s },\n", name, ft->db, eq(ft->c, "char") ? (len ? atoi(len) : ft->size) : 0, pk ? "true" : "false", defq, rule, computed);
       free(name); free(kind); free(len); free(key); free(rel); free(def); free(on_delete);
     }
     LINE("};\n");
@@ -1212,6 +1215,10 @@ static void emit_bindings(FILE *f, const char *prefix, const char *form, const b
     const char *getter = binding_getter(x->klass);
     char *kind = attr(find_field_node(databases, x->table, x->field), "type");
     const field_type_t *ft = field_type(kind);
+    if (!strcasecmp(x->klass, "imageview")) {
+      OUT("  { %s, 0, 0, offsetof(%s, %s), 0, ddx_push_image_path, NULL },\n", x->ctrl, type, x->field);
+      free(kind); continue;
+    }
     if (!strcasecmp(x->klass, "label")) {
       const char *push = eq(ft->db, "DB_TYPE_DATE") ? "date" : eq(ft->c, "int") ? "int" : eq(ft->c, "double") ? "double" :
                          eq(ft->c, "float") ? "float" : eq(ft->db, "DB_TYPE_STRING") ? "label_text" : NULL;
@@ -1558,6 +1565,8 @@ int main(int argc, char **argv) {
   xmlDocPtr doc = xmlReadFile(input, NULL, XML_PARSE_NONET);
   xmlNodePtr root = doc ? xmlDocGetRootElement(doc) : NULL;
   if (!elem(root, "orion")) { fprintf(stderr, "orionc_alt: %s is not an <orion> document\n", input); if (doc) xmlFreeDoc(doc); return 1; }
+  if (!orion_xml_includes(doc, input, 0)) { xmlFreeDoc(doc); return 2; }
+  root = xmlDocGetRootElement(doc);
   if (strings) { int rc = emit_strings(root, strings, language); xmlFreeDoc(doc); return rc; }
   FILE *f = fopen(output, "wb"); if (!f) { perror(output); xmlFreeDoc(doc); return 1; }
   char guard[256], pre[128]; ident(guard, sizeof(guard), output, true); ident(pre, sizeof(pre), prefix, false);

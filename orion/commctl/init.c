@@ -131,6 +131,8 @@ static const fe_component_desc_t k_commctl_classes[] = {
   CLASS_DESC("ActivityBar", "IDC_ABR", "TabView",
              44, 180, 0, 0, WINDOW_TOOLBAR | WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_NODRAG,
              FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR, win_activitybar),
+  CLASS_DESC("ImageView", "IDC_IMV", NULL,
+             160, 120, 0, 0, WINDOW_NOTABSTOP, FE_COMPONENT_PLACEABLE, win_imageview),
   CLASS_DESC("Image", "IDC_IMG", NULL,
              0, 0, 0, 0, 0,
              0, win_image),

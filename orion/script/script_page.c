@@ -18,6 +18,7 @@
 #include <orion/user/i18n.h>
 #include <orion/user/gdi.h>
 #include <platform/platform.h>
+#include <orion/user/display_group.h>
 
 #define SCRIPT_MAX_DATABASES 8
 #define SCRIPT_MAX_SPRITES 8
@@ -31,6 +32,9 @@ typedef struct {
 } page_sprite_t;
 
 struct script_page_s {
+  struct script_page_s *next;
+  int handle;
+  bool borrowed_library;
   winproc_t hook;
   char stem[1024], dir[1024], name[128];
   form_library_t *lib;
@@ -38,6 +42,7 @@ struct script_page_s {
   database_t *dbs[SCRIPT_MAX_DATABASES];
   int db_count;
   lua_State *L;
+  script_runtime_t *runtime;
   int page_ref;
   uint32_t focus;
   window_t *win;
@@ -47,6 +52,14 @@ struct script_page_s {
   char message[1024];
   page_sprite_t sprites[SCRIPT_MAX_SPRITES];
 };
+
+static script_page_t *live_pages;
+static int next_page_handle;
+
+static void page_register(script_page_t *page) {
+  script_runtime_page_retain(page->runtime);
+  page->handle = ++next_page_handle; page->next = live_pages; live_pages = page;
+}
 
 static void page_log(const script_page_t *page, const char *what, const char *detail) {
   fprintf(stderr, "[script] %s: %s%s%s\n", page->name, what, detail && *detail ? ": " : "", detail ? detail : "");
@@ -323,6 +336,16 @@ static void show_message(script_page_t *page) {
 
 static void render(script_page_t *page) {
   if (!page->win) return;
+  if (page->form->bindings && page->form->db_name) {
+    database_t *db = registered_database(page->form->db_name);
+    if (db && !strcmp(db->class_name, "db_display_group")) {
+      result_node_t *rows = (void *)send_db_message(db, dbFetch, page->form->db_table_id, NULL);
+      void *empty = rows ? NULL : calloc(1, page->form->db_record_size);
+      dialog_push(page->win, rows ? *(void **)rows->data : empty, page->form->bindings, page->form->binding_count);
+      free(empty); free_result_list(rows);
+    }
+  }
+  if (!page->L) return;
   lua_State *L = page->L;
   lua_pushlightuserdata(L, page);
   lua_pushcclosure(L, render_data, 1);
@@ -416,6 +439,7 @@ static void push_inputs(script_page_t *page) {
 
 static void finish(script_page_t *page) {
   if (page->closing && page->win && page->modal) end_dialog(page->win, (uint32_t)page->result);
+  else if (page->closing && page->owns_window && page->win) destroy_window(page->win);
   else if (!page->closing) render(page);
   show_message(page);
 }
@@ -423,7 +447,7 @@ static void finish(script_page_t *page) {
 // `control` names the button that ran the action (nil for a host request), so
 // one action can serve several buttons, as Balloon.Show reports its label.
 static bool perform(script_page_t *page, const char *action, const char *control) {
-  if (!page || !action || !*action) return false;
+  if (!page || !page->L || !action || !*action) return false;
   lua_State *L = page->L;
   page->message[0] = 0;
 
@@ -472,33 +496,52 @@ bool script_page_perform_from(script_page_t *page, const char *action, const cha
 
 // ── self.app: what the window offers the page ───────────────────────────────
 
-static int app_close(lua_State *L) {
-  script_page_t *page = (script_page_t *)lua_touserdata(L, lua_upvalueindex(1));
-  page->closing = true;
-  page->result = (int)luaL_optinteger(L, 1, 1);
-  return 0;
+static script_page_t *page_for_handle(lua_State *L, int handle) {
+  lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
+  lua_State *main = lua_tothread(L, -1); lua_pop(L, 1);
+  for (script_page_t *page = live_pages; page; page = page->next)
+    if (page->handle == handle && page->L == main) return page;
+  luaL_error(L, "window handle %d is closed or belongs to another application", handle);
+  return NULL;
 }
-
-static int app_refresh(lua_State *L) {
-  script_page_t *page = (script_page_t *)lua_touserdata(L, lua_upvalueindex(1));
-  (void)page;  // the page is asked for data() again when the action returns
-  return 0;
+static window_t *page_named_control(lua_State *L, int handle, const char *name) {
+  window_t *control = script_page_control(page_for_handle(L, handle), name);
+  if (!control) luaL_error(L, "unknown or closed window control '%s'", name);
+  return control;
 }
-
-static int app_focus(lua_State *L) {
-  script_page_t *page = (script_page_t *)lua_touserdata(L, lua_upvalueindex(1));
-  window_t *ctrl = script_page_control(page, luaL_checkstring(L, 1));
-  if (!ctrl) return luaL_error(L, "unknown control to focus");
-  page->focus = ctrl->id;
-  return 0;
+static void page_window_close(lua_State *L, int handle, int result) {
+  script_page_t *page = page_for_handle(L, handle);
+  page->closing = true; page->result = result;
 }
+static void page_window_focus(lua_State *L, int handle, const char *control) {
+  script_page_t *page = page_for_handle(L, handle);
+  page->focus = page_named_control(L, handle, control)->id;
+}
+static const char *page_window_text(lua_State *L, int handle, const char *control) {
+  return page_named_control(L, handle, control)->title;
+}
+static void page_window_set_text(lua_State *L, int handle, const char *control, const char *text) {
+  script_page_t *page = page_for_handle(L, handle);
+  window_t *window = page_named_control(L, handle, control);
+  const form_ctrl_def_t *def = form_library_control(page->lib, page->form, window->id);
+  if (is_text_input(def)) send_message(window, edSetText, 0, (void *)text);
+  else set_window_title(window, text);
+}
+static void page_window_show(lua_State *L, int handle, const char *control, bool visible) {
+  show_window(page_named_control(L, handle, control), visible);
+}
+static void page_window_enable(lua_State *L, int handle, const char *control, bool enabled) {
+  window_t *window = page_named_control(L, handle, control);
+  enable_window(window, enabled);
+}
+static void page_window_refresh(lua_State *L, int handle) { (void)page_for_handle(L, handle); }
+#include "build/generated/orion/script/window_lua.h"
 
 static void push_app(script_page_t *page) {
   lua_State *L = page->L;
-  lua_createtable(L, 0, 2);
-  lua_pushlightuserdata(L, page); lua_pushcclosure(L, app_close, 1);   lua_setfield(L, -2, "close");
-  lua_pushlightuserdata(L, page); lua_pushcclosure(L, app_refresh, 1); lua_setfield(L, -2, "refresh");
-  lua_pushlightuserdata(L, page); lua_pushcclosure(L, app_focus, 1);   lua_setfield(L, -2, "focus");
+  lua_getglobal(L, "require"); lua_pushliteral(L, "orion.window"); lua_call(L, 1, 1);
+  lua_getfield(L, -1, "new"); lua_pushinteger(L, page->handle); lua_call(L, 1, 1);
+  lua_remove(L, -2);
 }
 
 // ── Window ──────────────────────────────────────────────────────────────────
@@ -516,6 +559,22 @@ static result_t script_page_proc(window_t *win, uint32_t msg, uint32_t wparam, v
       if (page->hook) page->hook(win, msg, wparam, lparam);
       return true;
     case evCommand: {
+      if (page && HIWORD(wparam) == RVN_SELCHANGE && lparam) {
+        window_t *control = lparam;
+        const form_ctrl_def_t *def = form_library_control(page->lib, page->form, control->id);
+        char database[64], table[128];
+        if (source_parts(def, database, sizeof(database), table, sizeof(table))) {
+          database_t *db = registered_database(database);
+          if (db && !strcmp(db->class_name, "db_display_group")) {
+            const void *row = (void *)(intptr_t)send_message(control, tvGetSelectedRecord, 0, NULL);
+            const db_table_schema_t *schema = db_schema_table_named(db->schema, table);
+            int key = 0;
+            for (int i = 0; row && schema && i < schema->field_count; i++) if (schema->fields[i].primary_key) key = *(int *)((const char *)row + schema->meta[i].offset);
+            send_db_message(db, dbSelectRecord, (uint32_t)key, NULL);
+            render(page);
+          }
+        }
+      }
       // Enter in a text field presses the page's default button, as a dialog's does.
       if (page && HIWORD(wparam) == edUpdate && page->win) {
         window_t *button = find_default_button(page->win);
@@ -535,6 +594,9 @@ static result_t script_page_proc(window_t *win, uint32_t msg, uint32_t wparam, v
         return true;
       }
       if (!page || HIWORD(wparam) != btnClicked) return false;
+      if (lparam && form_dispatch_target_action(win, page->form, (window_t *)lparam)) {
+        render(page); return true;
+      }
       uint32_t id = LOWORD(wparam);
       if (id && id == page->form->cancel_id) {
         page->closing = true;
@@ -544,6 +606,11 @@ static result_t script_page_proc(window_t *win, uint32_t msg, uint32_t wparam, v
       }
       const form_ctrl_def_t *d = form_library_control(page->lib, page->form, id);
       const char *action = d && !d->target ? control_attr(page, id, "action") : NULL;
+      const char *target = d ? control_attr(page, id, "target") : NULL;
+      if (target && strchr(target, '.') && action && page->runtime) {
+        script_runtime_action(page->runtime, target, action, control_attr(page, id, "argument"), page->message, sizeof(page->message));
+        finish(page); return true;
+      }
       if (!action || strchr(action, '.')) return false;
       perform(page, action, d->name);
       return true;
@@ -607,7 +674,65 @@ static script_page_t *fail(script_page_t *page, char *error, size_t error_sz, co
   return NULL;
 }
 
-script_page_t *script_page_open(const char *path, char *error, size_t error_sz) {
+static script_page_t *page_load_controller(script_page_t *page, const char *lua, char *error, size_t error_sz) {
+  script_runtime_t *runtime = page->runtime;
+  char chunk[160];
+  snprintf(chunk, sizeof(chunk), "%s.lua", page->name);
+  page->L = runtime ? script_runtime_state(runtime) : script_state_new(page->dir, chunk);
+  if (!page->L) return fail(page, error, error_sz, ui_tr("The add-on script %s cannot run."), lua);
+  lua_State *L = page->L;
+  char msg[1024];
+  bool refused = false, ran;
+  const char *outer;
+  if (runtime) {
+    outer = ui_set_string_context(page->name);
+    page->page_ref = script_runtime_controller(runtime, lua, msg, sizeof(msg));
+    ui_set_string_context(outer);
+    if (page->page_ref == LUA_NOREF) return fail(page, error, error_sz, "%s", msg);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, page->page_ref);
+  } else {
+    if (luaL_loadfilex(L, lua, "t") != LUA_OK) {
+      snprintf(msg, sizeof(msg), "%s", lua_tostring(L, -1)); lua_pop(L, 1);
+      return fail(page, error, error_sz, ui_tr("The add-on script does not compile: %s"), msg);
+    }
+    outer = ui_set_string_context(page->name);
+    ran = script_call(L, 0, 1, msg, sizeof(msg), &refused);
+    ui_set_string_context(outer);
+    if (!ran) return fail(page, error, error_sz, ui_tr("The add-on script failed: %s"), strtok(msg, "\n"));
+    if (!lua_istable(L, -1)) { lua_pop(L, 1); return fail(page, error, error_sz, ui_tr("The add-on script %s must return its page table."), lua); }
+  }
+  push_app(page);
+  lua_setfield(L, -2, "app");
+  lua_getfield(L, -1, "form");
+  const char *form_name = lua_tostring(L, -1);
+  page->form = form_name ? form_library_form(page->lib, form_name) : page->form ? page->form : form_library_form_at(page->lib, 0);
+  char missing[128];
+  snprintf(missing, sizeof(missing), "%s", form_name ? form_name : "");
+  lua_pop(L, 1);
+  lua_getfield(L, -1, "title");
+  snprintf(page->title, sizeof(page->title), "%s", lua_isstring(L, -1) ? lua_tostring(L, -1) : "");
+  lua_pop(L, 1);
+  if (runtime) lua_pop(L, 1);
+  else page->page_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+  if (!page->form) return fail(page, error, error_sz, ui_tr("The add-on has no form '%s'."), missing);
+  if (!page->title[0]) snprintf(page->title, sizeof(page->title), "%s", page->form->name ? page->form->name : page->name);
+
+  lua_rawgeti(L, LUA_REGISTRYINDEX, page->page_ref);
+  lua_getfield(L, -1, "init");
+  if (lua_isfunction(L, -1)) {
+    lua_insert(L, -2);
+    outer = ui_set_string_context(page->name);
+    ran = script_call(L, 1, 0, msg, sizeof(msg), &refused);
+    ui_set_string_context(outer);
+    if (!ran)
+      return fail(page, error, error_sz, refused ? "%s" : ui_tr("The add-on script failed: %s"), strtok(msg, "\n"));
+  } else {
+    lua_pop(L, 2);
+  }
+  return page;
+}
+
+script_page_t *script_page_open_in(script_runtime_t *runtime, const char *path, char *error, size_t error_sz) {
   if (error && error_sz) error[0] = 0;
   script_page_t *page = calloc(1, sizeof(*page));
   if (!page || !path || !*path) {
@@ -617,6 +742,8 @@ script_page_t *script_page_open(const char *path, char *error, size_t error_sz) 
     return NULL;
   }
   page->page_ref = LUA_NOREF;
+  page->runtime = runtime;
+  page_register(page);
   snprintf(page->stem, sizeof(page->stem), "%s", path);
   size_t n = strlen(page->stem);
   if (n > 6 && !strcmp(page->stem + n - 6, ".orion")) page->stem[n - 6] = 0;
@@ -629,7 +756,7 @@ script_page_t *script_page_open(const char *path, char *error, size_t error_sz) 
   snprintf(orion, sizeof(orion), "%s.orion", page->stem);
   snprintf(lua, sizeof(lua), "%s.lua", page->stem);
   if (!file_exists(orion)) return fail(page, error, error_sz, ui_tr("The add-on form %s is missing."), orion);
-  if (!file_exists(lua)) return fail(page, error, error_sz, ui_tr("The add-on script %s is missing."), lua);
+  bool scripted = file_exists(lua);
   snprintf(locale, sizeof(locale), "%s/locale", page->dir);
   if (axPathExists(locale)) ui_add_scoped_string_catalog_dir(locale, page->name);
 
@@ -650,67 +777,50 @@ script_page_t *script_page_open(const char *path, char *error, size_t error_sz) 
     page->dbs[page->db_count++] = db;
   }
 
-  char chunk[160];
-  snprintf(chunk, sizeof(chunk), "%s.lua", page->name);
-  page->L = script_state_new(page->dir, chunk);
-  if (!page->L) return fail(page, error, error_sz, ui_tr("The add-on script %s cannot run."), lua);
-  lua_State *L = page->L;
-  char msg[1024];
-  bool refused = false;
-  if (luaL_loadfilex(L, lua, "t") != LUA_OK) {
-    snprintf(msg, sizeof(msg), "%s", lua_tostring(L, -1));
-    lua_pop(L, 1);
-    return fail(page, error, error_sz, ui_tr("The add-on script does not compile: %s"), msg);
+  if (!scripted) {
+    page->form = form_library_form_at(page->lib, 0);
+    if (!page->form) return fail(page, error, error_sz, "No declarative form in %s", orion);
+    snprintf(page->title, sizeof(page->title), "%s", page->form->name);
+    return page;
   }
-  const char *outer = ui_set_string_context(page->name);  // the script's orion.tr finds its catalog
-  bool ran = script_call(L, 0, 1, msg, sizeof(msg), &refused);
-  ui_set_string_context(outer);
-  if (!ran)
-    return fail(page, error, error_sz, ui_tr("The add-on script failed: %s"), strtok(msg, "\n"));
-  if (!lua_istable(L, -1)) {
-    lua_pop(L, 1);
-    return fail(page, error, error_sz, ui_tr("The add-on script %s must return its page table."), lua);
-  }
-  push_app(page);
-  lua_setfield(L, -2, "app");
-  lua_getfield(L, -1, "form");
-  const char *form_name = lua_tostring(L, -1);
-  page->form = form_name ? form_library_form(page->lib, form_name) : form_library_form_at(page->lib, 0);
-  char missing[128];
-  snprintf(missing, sizeof(missing), "%s", form_name ? form_name : "");
-  lua_pop(L, 1);
-  lua_getfield(L, -1, "title");
-  snprintf(page->title, sizeof(page->title), "%s", lua_isstring(L, -1) ? lua_tostring(L, -1) : "");
-  lua_pop(L, 1);
-  page->page_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-  if (!page->form) return fail(page, error, error_sz, ui_tr("The add-on has no form '%s'."), missing);
-  if (!page->title[0]) snprintf(page->title, sizeof(page->title), "%s", page->form->name ? page->form->name : page->name);
+  return page_load_controller(page, lua, error, error_sz);
+}
 
-  lua_rawgeti(L, LUA_REGISTRYINDEX, page->page_ref);
-  lua_getfield(L, -1, "init");
-  if (lua_isfunction(L, -1)) {
-    lua_insert(L, -2);
-    outer = ui_set_string_context(page->name);
-    ran = script_call(L, 1, 0, msg, sizeof(msg), &refused);
-    ui_set_string_context(outer);
-    if (!ran)
-      return fail(page, error, error_sz, refused ? "%s" : ui_tr("The add-on script failed: %s"), strtok(msg, "\n"));
-  } else {
-    lua_pop(L, 2);
+script_page_t *script_page_open_library(script_runtime_t *runtime, form_library_t *library,
+    const char *form, const char *controller, char *error, size_t size) {
+  script_page_t *page = calloc(1, sizeof(*page));
+  if (!page || !library) { free(page); return NULL; }
+  page->runtime = runtime; page->borrowed_library = true; page->lib = library; page->page_ref = LUA_NOREF;
+  page_register(page);
+  page->form = form ? form_library_form(library, form) : form_library_form_at(library, 0);
+  snprintf(page->name, sizeof(page->name), "%s", form ? form : "application");
+  if (!page->form) return fail(page, error, size, "Unknown form: %s", form);
+  snprintf(page->title, sizeof(page->title), "%s", page->form->name);
+  if (controller && *controller) {
+    if (!runtime) return fail(page, error, size, "Controller needs an application runtime: %s", controller);
+    return page_load_controller(page, controller, error, size);
   }
   return page;
+}
+
+script_page_t *script_page_open(const char *path, char *error, size_t error_sz) {
+  return script_page_open_in(NULL, path, error, error_sz);
 }
 
 void script_page_close(script_page_t *page) {
   if (!page) return;
   if (page->owns_window && page->win) destroy_window(page->win);
   sprite_clear(page);
-  if (page->L) lua_close(page->L);
+  if (page->runtime) { script_runtime_release(page->runtime, page->page_ref); script_runtime_page_release(page->runtime); }
+  else if (page->L) lua_close(page->L);
   for (int i = 0; i < page->db_count; i++) {
     unregister_database(page->dbs[i]->name);
     destroy_database(page->dbs[i]);
   }
-  form_library_free(page->lib);
+  if (!page->borrowed_library) form_library_free(page->lib);
+  script_page_t **link = &live_pages;
+  while (*link && *link != page) link = &(*link)->next;
+  if (*link) *link = page->next;
   free(page);
 }
 
@@ -730,4 +840,19 @@ const char *script_page_message(const script_page_t *page) { return page ? page-
 window_t *script_page_control(const script_page_t *page, const char *name) {
   uint32_t id = page && page->win ? form_library_control_id(page->lib, page->form, name) : 0;
   return id ? get_window_item(page->win, id) : NULL;
+}
+
+int script_page_handle(const script_page_t *page) { return page ? page->handle : 0; }
+window_t *script_page_window(const script_page_t *page) { return page ? page->win : NULL; }
+
+static void page_refresh_controls(window_t *window) {
+  for (window_t *child = window ? window->children : NULL; child; child = child->next) {
+    if (child->proc == win_tableview) send_message(child, tvRefresh, 0, NULL);
+    page_refresh_controls(child);
+  }
+}
+void script_page_update(script_page_t *page) { if (page) render(page); }
+void script_page_refresh(script_page_t *page) {
+  if (!page || !page->win) return;
+  page_refresh_controls(page->win); render(page);
 }

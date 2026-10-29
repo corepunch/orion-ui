@@ -1,0 +1,12 @@
+<module name="orion.window_native" prefix="page_window_" luaopen="luaopen_orion_window_native">
+  <summary>Application-scoped window handles; wrappers are generated, never raw window pointers.</summary>
+  <functions>
+    <function name="close" lua="true"><arg name="handle" type="int"/><arg name="result" type="int" default="1"/></function>
+    <function name="focus" lua="true"><arg name="handle" type="int"/><arg name="control" type="string"/></function>
+    <function name="text" lua="true"><arg name="handle" type="int"/><arg name="control" type="string"/><returns type="string"/></function>
+    <function name="set_text" lua="true"><arg name="handle" type="int"/><arg name="control" type="string"/><arg name="text" type="string"/></function>
+    <function name="show" lua="true"><arg name="handle" type="int"/><arg name="control" type="string"/><arg name="visible" type="bool"/></function>
+    <function name="enable" lua="true"><arg name="handle" type="int"/><arg name="control" type="string"/><arg name="enabled" type="bool"/></function>
+    <function name="refresh" lua="true"><arg name="handle" type="int"/></function>
+  </functions>
+</module>

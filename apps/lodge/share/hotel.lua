@@ -36,6 +36,11 @@ Hotel.reservations = records.bind("lodge.reservations", function(row, previous)
   end
   if not ({reserved = true, checked_in = true, checked_out = true, cancelled = true})[row.status] then return nil, orion.tr("Unknown reservation status.") end
   if previous and (previous.status == "checked_out" or previous.status == "cancelled") then return nil, orion.tr("This reservation is closed.") end
+  if previous and previous.status ~= row.status then
+    local allowed = {reserved = {checked_in = true, cancelled = true}, checked_in = {checked_out = true}}
+    if not (allowed[previous.status] and allowed[previous.status][row.status]) then return nil, orion.tr("This reservation cannot make that transition.") end
+    if row.status == "checked_out" and money.minor(Hotel.balance(row)) ~= 0 then return nil, orion.tr("Settle the balance before checking out.") end
+  elseif not previous and row.status ~= "reserved" then return nil, orion.tr("Unknown reservation status.") end
   if row.status ~= "cancelled" then
     for _, other in ipairs(Hotel.reservations.model:all()) do
       if other.id ~= row.id and other.room_id == row.room_id and other.status ~= "cancelled" and

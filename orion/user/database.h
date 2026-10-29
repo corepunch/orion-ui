@@ -82,6 +82,7 @@ typedef struct {
   const char *relation_field;  // Foreign field, if this field references one
   const char *default_value;   // Value of a new record (dbInitRecord); "today" for dates
   db_delete_rule_t delete_rule; // Applied to this record when the referenced one is deleted
+  const char *computed;        // read-only model property; never persisted
 } db_field_schema_t;
 
 typedef struct {
@@ -139,6 +140,7 @@ struct database_s {
   database_t *edit_parent; // private document working copy; NULL for a committed store
   unsigned message_refs;
   bool destroy_pending;
+  char error[512];
 };
 
 // Database management functions
@@ -164,6 +166,11 @@ bool db_edit_context_has_changes(database_t *context);
 database_t *db_set_message_context(database_t *context); // returns the previous UI-message context
 void db_message_retain(database_t *context);
 void db_message_release(database_t *context);
+
+// Change notifications are batched across nested write calls and transactions.
+typedef void (*db_changed_fn)(database_t *database, void *userdata);
+int db_observe(database_t *database, db_changed_fn callback, void *userdata);
+void db_unobserve(int token);
 
 // Schema helpers
 const db_table_schema_t *db_schema_table(const db_schema_def_t *schema, int table_id);

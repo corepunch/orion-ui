@@ -12,6 +12,8 @@
 typedef struct database_s database_t;
 
 // Register all common controls with the window system.
+#define imageSetPath (evUser + 211)
+result_t win_imageview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void register_commctl_classes(void);
 
 // Intrinsic sizing shared by button-like controls.  Height is framework-owned;

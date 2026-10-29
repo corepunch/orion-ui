@@ -7,6 +7,7 @@
 #include <stdbool.h>
 
 #include <orion/ui.h>
+#include <orion/script/script.h>
 #include <orion/commctl/commctl.h>
 #include <orion/commctl/columnview.h>
 #include <orion/commctl/menubar.h>
@@ -22,6 +23,8 @@
 #define LEDGER_DEFAULT_CONFIGURATION "ru-2026"
 
 typedef struct {
+  script_runtime_t *runtime;
+  int controller;
   hinstance_t    hinstance;
   database_t    *cfg;      // active configuration (read-only)
   database_t    *ib;       // infobase: the organization's data
@@ -145,6 +148,8 @@ void ledger_assistant_books_changed(void);
 bool ledger_open_record(const char *table, int id);
 
 // controller.c — commands and views.
+bool ledger_ui_open(const char *directory);
+void ledger_ui_close(void);
 void     ledger_command(uint16_t id);
 void     ledger_refresh_views(void);
 // Does what a row of ib.home_rows offers: the Home page's click, the assistant's choice.

@@ -4,7 +4,7 @@ return function()
   local Records = {}
   function Records.bind(source, validate)
     local model = Model:extend(source)
-    local records = {model = model}
+    local records = {model = model, validate = validate or function() return true end}
     function records:save(id, fields)
       local row = id and model:find(id)
       if id and not row then return nil, orion.tr("Record no longer exists.") end

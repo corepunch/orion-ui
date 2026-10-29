@@ -15,6 +15,8 @@ make share build/bin/lodge
 build/bin/lodge
 # Or keep a separate hotel database in an existing writable directory:
 build/bin/lodge --data /path/to/hotel --lang en
+# The same app through the generic launcher:
+build/bin/orion-run --app apps/lodge/share/application.orion --data /path/to/hotel
 ```
 
 Without `--data`, Lodge uses `<settings>/lodge/hotel.xml`. New databases start
@@ -37,21 +39,22 @@ The total is nights × nightly rate + extra charges; balance subtracts the
 cumulative paid amount. **Export confirmation** writes an escaped, printable
 `confirmation.html` in the data directory (replacing the previous export).
 Open it in a browser to print. It is a booking confirmation, not a tax invoice.
-All successful mutations save immediately. A save failure rolls the action back and stays visible;
+Reservation actions save immediately; catalog edits save when closing a window. A save failure rolls the action back and stays visible;
 **Retry saving** retries any pending database save; closing is blocked if the final save fails.
 
 ## Architecture
 
-- `lodge.orion`: persistent rooms, guests and reservations, with delete rules.
-- `main.c` / `store.cgen`: native window lifecycle, hotel XML and confirmation output.
-- `share/reception.orion`: standard Orion layouts, inputs and TableView.
+- `share/schema.orion`: persistent records, defaults, delete rules and computed fields.
+- `share/application.orion`: application object graph, DisplayGroup, reception and catalog forms.
+- Orion’s shared application host owns the VM, databases, windows and output. No app C host or bindings.
+- `share/model.lua`: validates native and Lua writes and supplies computed values.
 - `share/reception.lua`: page actions, rendering and user feedback.
 - `share/hotel.lua`: hotel-specific availability, capacity and state transitions.
 - Shared `calendar`, `money`, `intervals`, `records` and `template` plugins:
   [authoring and usage](../../docs/plugins.md).
 
 This first version provides a reservation list, rather than a timeline. It
-supports adding rooms and guests; catalog editing/deleting, housekeeping,
+supports adding, editing and deleting rooms and guests through codeless forms. Housekeeping,
 category-level inventory, per-night rates, multi-room reservations, payment
 ledgers, taxes, online distribution, access control and concurrent reception
 terminals are follow-up work. Use a single process per hotel XML file. The Lua
