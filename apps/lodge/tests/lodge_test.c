@@ -41,7 +41,7 @@ static void test_persistence_and_page(void) {
   ASSERT_NOT_NULL(in); ASSERT_NOT_NULL(out);
   int byte; while ((byte = fgetc(in)) != EOF) fputc(byte, out);
   fclose(in); fclose(out);
-  script_application_t *app = script_application_open("apps/lodge/share/application.orion", directory, error, sizeof(error));
+  script_application_t *app = script_application_open("apps/lodge/share", directory, error, sizeof(error));
   if (!app) fprintf(stderr, "%s\n", error);
   ASSERT_NOT_NULL(app);
   hotel = get_database_by_name("lodge");
