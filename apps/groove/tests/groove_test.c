@@ -1603,6 +1603,12 @@ static void test_portable_recordings(void) {
   test_env_init();
   g_app = app_init();
   ASSERT_NOT_NULL(g_app);
+  char dir[] = "/tmp/groove-recordings-XXXXXX";
+  ASSERT_NOT_NULL(mkdtemp(dir));
+  // app_init loads the user's sample library. Keep this fixture isolated and
+  // route restored recordings into its temporary directory, not that library.
+  samples_truncate(0);
+  snprintf(g_app->samples_dir, sizeof(g_app->samples_dir), "%s", dir);
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   sample_t sample = { .name = "Recorded voice", .bpm = 140, .bars = 1, .frames = bar_frames_for_bpm(140) };
@@ -1614,8 +1620,6 @@ static void test_portable_recordings(void) {
   ASSERT(id >= blocks_builtin_count(), "recording becomes a library block");
   ASSERT_EQUAL(sample_add(&sample), id);
   ASSERT_EQUAL(samples_count(), original_count + 1);
-  char dir[] = "/tmp/groove-recordings-XXXXXX";
-  ASSERT_NOT_NULL(mkdtemp(dir));
   ASSERT_TRUE(sample_save(dir, &sample));
   char wav[512], song[512], bad[512];
   snprintf(wav, sizeof(wav), "%s/recording-1.wav", dir);
@@ -1665,7 +1669,7 @@ static void test_portable_recordings(void) {
   ASSERT_EQUAL(sample_add(&invalid), -1);
   invalid = sample; invalid.bars = 128;
   ASSERT_EQUAL(sample_add(&invalid), -1);
-  free(sample.pcm); remove(song); remove(bad); rmdir(dir);
+  free(sample.pcm); remove(wav); remove(song); remove(bad); rmdir(dir);
   destroy_window(win); app_shutdown(g_app); test_env_shutdown();
   PASS();
 }
