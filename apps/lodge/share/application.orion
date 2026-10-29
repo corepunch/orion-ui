@@ -12,7 +12,8 @@
       </StackView>
       <Separator />
       <Label name="editor" font="title" />
-      <GridView name="booking_fields" spacing="4">
+      <StackView name="booking_fields" orientation="horizontal" spacing="24">
+        <GridView name="stay_fields" spacing="4" flags="WINDOW_FLEXSPACE">
         <Column width="auto">
           <Label text="Room:" /><Label text="Guest:" /><Label text="Arrival:" /><Label text="Departure:" /><Label text="Guests:" />
         </Column>
@@ -21,6 +22,8 @@
           <ComboBox name="guest" source="lodge.guests" display="name" value="id" />
           <TextBox name="arrival" type="date" /><TextBox name="departure" type="date" /><TextBox name="persons" type="integer" />
         </Column>
+        </GridView>
+        <GridView name="payment_fields" spacing="4" flags="WINDOW_FLEXSPACE">
         <Column width="auto">
           <Label text="Nightly rate:" /><Label text="Extra charges:" /><Label text="Paid to date:" /><Label text="Notes:" />
         </Column>
@@ -29,7 +32,8 @@
           <TextBox name="paid" type="number" decimals="2" /><TextBox name="notes" />
           <Button name="room_rate" text="Use room rate" action="room_rate" />
         </Column>
-      </GridView>
+        </GridView>
+      </StackView>
       <StackView name="booking_actions" orientation="horizontal" spacing="6">
         <Button name="reserve" text="Save reservation" action="reserve" flags="BUTTON_DEFAULT" />
         <Button name="new_booking" text="New reservation" action="new_booking" />
