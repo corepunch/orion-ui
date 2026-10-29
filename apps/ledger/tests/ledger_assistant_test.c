@@ -363,6 +363,10 @@ static void test_modeless_documents(void) {
   free_result_list(rows); ASSERT_EQUAL(count, 2);
   window_t *frame = create_window_from_form(&ledger_main_window_form, 10, 30, NULL, ledger_main_proc, 0, NULL);
   ASSERT_NOT_NULL(frame);
+  ledger_command(ID_VIEW_HOME);
+  ledger_command(ID_DOC_ENTRIES);
+  ASSERT_EQUAL(page_host_selection(frame), ID_VIEW_JOURNAL);
+  ASSERT_EQUAL(send_message(get_window_item(frame, ID_JOURNAL_PAGE_DETAILS), tcGetSelection, 0, NULL), 1);
   window_t *client = get_window_item(frame, ID_MAIN_WINDOW_DOCUMENTS_CLIENT);
   ASSERT_NOT_NULL(client);
   ASSERT_TRUE(ledger_open_record("documents", ids[0])); window_t *a = mdi_active_document(client);

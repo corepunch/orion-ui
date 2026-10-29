@@ -71,8 +71,27 @@ nesting. Both the runtime loader and `orionc` expand the same includes.
 
 ```sh
 make share build/bin/orion-run
-build/bin/orion-run --app path/to/application.orion --data /path/to/data
+build/bin/orion-run path/to/app-folder --data /path/to/data
+# Installed runtime (no compiler needed):
+orion path/to/app-folder
 ```
+
+The folder entry point is `application.orion`; it explicitly names the initial
+form and optional model/controller modules. The host loads referenced `.orion`
+includes and Lua modules, rather than executing every file in the directory.
+`--app path/to/application.orion` remains supported. The runtime is compiled once;
+editing or distributing a Lua application's folder requires no C compiler,
+app-specific `main.c`, `.cgen` bindings or generated C schema. Lodge's generated
+schema is used by its native tests, not by the folder launcher.
+
+`make lodge` uses the common entry point automatically. Linux/Windows portable
+bundles keep the application under `share/lodge` beside the shared runtime and
+libraries. macOS bundles put these resources in `Contents/Resources/share/lodge`
+with the existing `Contents/share` compatibility link; the executable discovers
+them relative to itself, independent of the working directory. A generic host also
+accepts `Contents/Resources/application.orion` for a flat application resource
+folder. Persistent data and generated documents live in the writable user data
+directory, never inside the installed application or signed bundle.
 
 No Lua controller is needed for these CRUD windows. `TableView form=` opens a
 native record editing context. Save applies the delta; Cancel discards it.
@@ -188,6 +207,30 @@ posting tests while providing a shared architecture for further migration.
   component scopes informs the VM/window split. Qt also warns that implicit
   context properties hide dependencies from tools; Orion keeps sources/actions
   explicit in `.orion` and generates the native API contract.
+
+## XML preprocessing: Etlua evaluation
+
+The existing [lua-objc renderer](https://github.com/corepunch/lua-objc/blob/main/lua/ui/xml.lua)
+preprocesses XML with Etlua expressions/statements, partials and inheritance.
+Its [retained template boundary](https://github.com/corepunch/lua-objc/blob/main/lua/ui/template.lua)
+then manages native view identity and reconciliation. That is more than string
+substitution: structural changes also need ownership and update semantics.
+
+For Ledger/Lodge, retain declarative forms without Etlua. Datasources already
+supply record values and lists; DisplayGroups supply selection; editing contexts
+own Save/Cancel; includes split large definitions into files. A preprocessing loop
+would generate controls once, not automatically track subsequent database changes.
+Re-rendering that XML would need to preserve selection, focus, unsaved edits and
+native control identity. It would also put executable Lua ahead of static form
+inspection, localization extraction and generated schema/API validation.
+
+Reconsider an optional, explicitly marked template boundary only for a concrete
+need to generate an unknown-at-authoring-time control structure, such as a
+metadata-driven questionnaire. Prefer extending schema-driven forms for database
+fields first. Any future Etlua boundary must define escaping, restricted execution,
+repeatable output, tool support and view-state retention; do not execute templates
+implicitly during schema loading. This decision does not change the existing
+shared Lua template plugin used for printable documents.
 
 ## Verification
 

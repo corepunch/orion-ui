@@ -166,6 +166,7 @@ print_help() {
 Orion package manager
 
 Usage:
+  orion APP_DIRECTORY [--data DIRECTORY] [--lang LANGUAGE]
   orion search [QUERY]
   orion info PACKAGE
   orion install PACKAGE...
@@ -193,5 +194,13 @@ case "$command" in
   update|upgrade) cmd_update "$@" ;;
   --version|-V) printf 'orion %s\n' "$ORION_VERSION" ;;
   --help|-h|help) print_help ;;
-  *) die "unknown command: $command" ;;
+  *)
+    if [ -d "$command" ] || [ -f "$command" ]; then
+      launcher="$(dirname "$0")/orion-run"
+      [ -x "$launcher" ] || launcher="$ORION_PREFIX/bin/orion-run"
+      [ -x "$launcher" ] || die "orion-run is not installed"
+      exec "$launcher" "$command" "$@"
+    fi
+    die "unknown command: $command" ;;
+
 esac

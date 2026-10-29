@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #define APP_CONTEXT "orion.application.context"
 #define APP_MAX_PAGES 64
@@ -107,6 +108,15 @@ script_application_t *script_application_open(const char *manifest, const char *
   char fallback[1024];
   if (!error || !size) { error = fallback; size = sizeof(fallback); }
   error[0] = 0;
+  char application_manifest[1600];
+  struct stat info;
+  if (manifest && stat(manifest, &info) == 0 && S_ISDIR(info.st_mode)) {
+    int length = snprintf(application_manifest, sizeof(application_manifest), "%s/application.orion", manifest);
+    if (length < 0 || (size_t)length >= sizeof(application_manifest)) {
+      snprintf(error, size, "application directory is too long"); return NULL;
+    }
+    manifest = application_manifest;
+  }
   script_application_t *app = calloc(1, sizeof(*app));
   if (!app) return NULL;
   app->model = LUA_NOREF;
