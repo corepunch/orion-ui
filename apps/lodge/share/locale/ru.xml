@@ -1,0 +1,73 @@
+<?xml version='1.0' encoding='utf-8'?>
+<strings language="ru">
+  <string source="Orion Lodge" where="reception">Orion Lodge</string>
+  <string source="Reception" where="reception">Ресепшен</string>
+  <string source="Rooms, guests and reservations · Amounts in your hotel's currency" where="reception">Номера, гости и брони · Суммы в валюте отеля</string>
+  <string source="Add a room" where="reception">Добавить номер</string>
+  <string source="Room name:" where="reception">Название номера:</string>
+  <string source="Category:" where="reception">Категория:</string>
+  <string source="Capacity:" where="reception">Вместимость:</string>
+  <string source="Nightly rate:" where="reception">Цена за ночь:</string>
+  <string source="Add room" where="reception">Добавить номер</string>
+  <string source="Add a guest" where="reception">Добавить гостя</string>
+  <string source="Guest name:" where="reception">Имя гостя:</string>
+  <string source="Phone:" where="reception">Телефон:</string>
+  <string source="Add guest" where="reception">Добавить гостя</string>
+  <string source="Room:" where="reception">Номер:</string>
+  <string source="Guest:" where="reception">Гость:</string>
+  <string source="Arrival:" where="reception">Заезд:</string>
+  <string source="Departure:" where="reception">Выезд:</string>
+  <string source="Guests:" where="reception">Гостей:</string>
+  <string source="Extra charges:" where="reception">Дополнительные услуги:</string>
+  <string source="Paid to date:" where="reception">Уже оплачено:</string>
+  <string source="Notes:" where="reception">Примечания:</string>
+  <string source="Use room rate" where="reception">Взять цену номера</string>
+  <string source="Save reservation" where="reception">Сохранить бронь</string>
+  <string source="New reservation" where="reception">Новая бронь</string>
+  <string source="New reservation discards unsaved editor changes." where="reception">Новая бронь сбрасывает несохранённые изменения.</string>
+  <string source="Room" where="reception">Номер</string>
+  <string source="Guest" where="reception">Гость</string>
+  <string source="Arrival" where="reception">Заезд</string>
+  <string source="Departure" where="reception">Выезд</string>
+  <string source="Status" where="reception">Статус</string>
+  <string source="Total" where="reception">Итого</string>
+  <string source="Paid" where="reception">Оплачено</string>
+  <string source="Balance" where="reception">Остаток</string>
+  <string source="Edit selected" where="reception">Изменить выбранную</string>
+  <string source="Check in" where="reception">Заселить</string>
+  <string source="Check out" where="reception">Выселить</string>
+  <string source="Cancel reservation" where="reception">Отменить бронь</string>
+  <string source="Export confirmation" where="reception">Экспорт подтверждения</string>
+  <string source="Retry saving" where="reception">Повторить сохранение</string>
+  <string source="%d reservations · Outstanding: %s" where="code">Броней: %d · К оплате: %s</string>
+  <string source="Balance:" where="code">Остаток:</string>
+  <string source="Booking confirmation" where="code">Подтверждение бронирования</string>
+  <string source="Cancelled" where="code">Отменено</string>
+  <string source="Capacity must be a positive integer." where="code">Вместимость должна быть положительным целым числом.</string>
+  <string source="Checked in" where="code">Заселён</string>
+  <string source="Checked out" where="code">Выселен</string>
+  <string source="Choose a reservation." where="code">Выберите бронь.</string>
+  <string source="Choose a room and a guest." where="code">Выберите номер и гостя.</string>
+  <string source="Choose a room." where="code">Выберите номер.</string>
+  <string source="Confirmation saved: %s" where="code">Подтверждение сохранено: %s</string>
+  <string source="Departure must follow a valid arrival date." where="code">Дата выезда должна быть позже корректной даты заезда.</string>
+  <string source="Edit reservation %d" where="code">Изменение брони %d</string>
+  <string source="Enter a name." where="code">Введите имя или название.</string>
+  <string source="Enter a nightly rate between 0 and 1000000." where="code">Введите цену за ночь от 0 до 1000000.</string>
+  <string source="Enter amounts between 0 and 1000000." where="code">Введите суммы от 0 до 1000000.</string>
+  <string source="Lodge" where="code">Lodge</string>
+  <string source="Paid:" where="code">Оплачено:</string>
+  <string source="Record no longer exists." where="code">Запись больше не существует.</string>
+  <string source="Reserved" where="code">Забронировано</string>
+  <string source="Settle the balance before checking out." where="code">Перед выездом погасите остаток.</string>
+  <string source="The booking confirmation could not be written." where="code">Не удалось записать подтверждение бронирования.</string>
+  <string source="The guest count exceeds the room capacity." where="code">Количество гостей не соответствует вместимости номера.</string>
+  <string source="The hotel data could not be saved. Retry before closing." where="code">Не удалось сохранить данные отеля. Повторите перед закрытием.</string>
+  <string source="The room is already booked for these dates." where="code">На эти даты номер уже забронирован.</string>
+  <string source="This reservation cannot make that transition." where="code">Этот переход статуса брони недоступен.</string>
+  <string source="This reservation is closed." where="code">Эта бронь закрыта.</string>
+  <string source="Total:" where="code">Итого:</string>
+  <string source="Unknown reservation status." where="code">Неизвестный статус брони.</string>
+  <string source="A room with this name already exists." where="code">Номер с таким названием уже существует.</string>
+  <string source="The reservation total is too large." where="code">Сумма брони слишком велика.</string>
+</strings>

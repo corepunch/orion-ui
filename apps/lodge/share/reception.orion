@@ -1,0 +1,83 @@
+<orion>
+  <databases>
+    <database name="reception" class="db_schema_xml">
+      <table name="bookings" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="booking_id" type="integer" />
+        <field name="room" type="string" length="40" />
+        <field name="guest" type="string" length="100" />
+        <field name="arrival" type="date" />
+        <field name="departure" type="date" />
+        <field name="status" type="string" length="60" />
+        <field name="total" type="double" />
+        <field name="paid" type="double" />
+        <field name="balance" type="double" />
+      </table>
+    </database>
+  </databases>
+  <forms>
+    <form name="reception" title="Orion Lodge" width="1160" height="790" spacing="8" padding="12">
+      <Label name="heading" text="Reception" font="title" />
+      <Label name="context" text="Rooms, guests and reservations · Amounts in your hotel's currency" />
+      <StackView name="catalogs" orientation="horizontal" spacing="16">
+        <StackView name="room_catalog" spacing="4" flags="flexspace">
+          <Label name="room_heading" text="Add a room" font="title" />
+          <GridView name="room_fields" spacing="4">
+            <Column width="auto">
+              <Label text="Room name:" /><Label text="Category:" /><Label text="Capacity:" /><Label text="Nightly rate:" />
+            </Column>
+            <Column>
+              <TextBox name="room_name" /><TextBox name="category" /><TextBox name="capacity" type="integer" /><TextBox name="room_rate" type="number" decimals="2" />
+            </Column>
+          </GridView>
+          <Button name="save_room" text="Add room" action="save_room" />
+        </StackView>
+        <StackView name="guest_catalog" spacing="4" flags="flexspace">
+          <Label name="guest_heading" text="Add a guest" font="title" />
+          <GridView name="guest_fields" spacing="4">
+            <Column width="auto"><Label text="Guest name:" /><Label text="Phone:" /></Column>
+            <Column><TextBox name="guest_name" /><TextBox name="phone" /></Column>
+          </GridView>
+          <Button name="save_guest" text="Add guest" action="save_guest" />
+        </StackView>
+      </StackView>
+      <Separator />
+      <Label name="editor" font="title" />
+      <GridView name="booking_fields" spacing="4">
+        <Column width="auto">
+          <Label text="Room:" /><Label text="Guest:" /><Label text="Arrival:" /><Label text="Departure:" /><Label text="Guests:" />
+        </Column>
+        <Column>
+          <ComboBox name="room" source="lodge.rooms" display="name" value="id" />
+          <ComboBox name="guest" source="lodge.guests" display="name" value="id" />
+          <TextBox name="arrival" type="date" /><TextBox name="departure" type="date" /><TextBox name="persons" type="integer" />
+        </Column>
+        <Column width="auto">
+          <Label text="Nightly rate:" /><Label text="Extra charges:" /><Label text="Paid to date:" /><Label text="Notes:" />
+        </Column>
+        <Column>
+          <TextBox name="rate" type="number" decimals="2" /><TextBox name="extras" type="number" decimals="2" />
+          <TextBox name="paid" type="number" decimals="2" /><TextBox name="notes" />
+          <Button name="room_rate" text="Use room rate" action="room_rate" />
+        </Column>
+      </GridView>
+      <StackView name="booking_actions" orientation="horizontal" spacing="6">
+        <Button name="reserve" text="Save reservation" action="reserve" flags="BUTTON_DEFAULT" />
+        <Button name="new_booking" text="New reservation" action="new_booking" />
+        <Label text="New reservation discards unsaved editor changes." />
+      </StackView>
+      <TableView name="bookings" source="reception.bookings" action="edit" zeros="blank" flags="flexspace,vscroll" frame="true">
+        <Column field="room" title="Room" width="70" /><Column field="guest" title="Guest" width="0" min-width="150" />
+        <Column field="arrival" title="Arrival" width="100" /><Column field="departure" title="Departure" width="100" />
+        <Column field="status" title="Status" width="110" /><Column field="total" title="Total" width="90" />
+        <Column field="paid" title="Paid" width="90" /><Column field="balance" title="Balance" width="90" />
+      </TableView>
+      <StackView name="selection_actions" orientation="horizontal" spacing="6">
+        <Button name="edit" text="Edit selected" action="edit" /><Button name="check_in" text="Check in" action="check_in" />
+        <Button name="check_out" text="Check out" action="check_out" /><Button name="cancel_booking" text="Cancel reservation" action="cancel_booking" />
+        <Button name="confirmation" text="Export confirmation" action="confirmation" /><Button name="save_data" text="Retry saving" action="save_data" />
+      </StackView>
+      <Label name="summary" /><Label name="notice" /><Label name="error" />
+    </form>
+  </forms>
+</orion>

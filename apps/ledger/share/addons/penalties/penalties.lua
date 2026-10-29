@@ -5,6 +5,9 @@
 local orion = require("orion")
 local Model = require("orion.model")
 local ledger = require("ledger")
+local Plugins = require("orion.plugins")
+local calendar = Plugins.use("calendar", 1)
+local money = Plugins.use("money", 1)
 
 local Documents = Model:extend("ib.documents")
 local Entries = Model:extend("ib.entries")
@@ -18,16 +21,7 @@ local ACCOUNTS = {
 	["de-2026"] = {receivable = "1400", debit = "1400", credit = "2650"},
 }
 
-local DAY = 24 * 60 * 60
-
-local function timeOf(iso)
-	local y, m, d = iso:match("^(%d+)-(%d+)-(%d+)$")
-	return os.time{year = tonumber(y), month = tonumber(m), day = tonumber(d), hour = 12}
-end
-
-local function addDays(iso, days) return os.date("%Y-%m-%d", timeOf(iso) + days * DAY) end
-local function daysBetween(from, to) return math.floor(os.difftime(timeOf(to), timeOf(from)) / DAY + 0.5) end
-local function round2(v) return math.floor(v * 100 + 0.5) / 100 end
+local addDays, daysBetween, round2 = calendar.add, calendar.between, money.round
 
 local function accountId(code)
 	local account = code and ledger.account(code)

@@ -90,6 +90,12 @@ static void test_pseudo_locale(void) {
   ui_set_language(UI_PSEUDO_LANGUAGE);
   const char *s = ui_tr("Save\tCtrl+S");
   ASSERT(s[0] == '[' && strstr(s, "Šàvé") && strstr(s, "]\tCtrl+S"), "pseudo text");
+  const char *format = ui_tr("%d reservations: %s, %05.2f, %lld, %%");
+  ASSERT(strstr(format, "%d") && strstr(format, "%s") && strstr(format, "%05.2f") &&
+         strstr(format, "%lld") && strstr(format, "%%"), "format placeholders stay intact");
+  char formatted[256];
+  snprintf(formatted, sizeof(formatted), format, 3, "Ada", 12.5, 42LL);
+  ASSERT(strstr(formatted, "3") && strstr(formatted, "Ada") && strstr(formatted, "12.50"), "pseudo text remains a usable format");
   ui_set_language("en");
   ASSERT_STR_EQUAL(ui_tr("Save"), "Save");
   PASS();

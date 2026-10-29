@@ -253,6 +253,16 @@ static const char *locale_pseudo(const char *s, size_t len, const char *tail) {
   out[n++] = '[';
   for (size_t i = 0; i < len; i++) {
     unsigned char c = (unsigned char)s[i];
+    // Keep C/Lua format placeholders usable while accenting surrounding text.
+    if (c == '%') {
+      size_t end = i + 1;
+      while (end < len && strchr("-+ #0'123456789.*$hljztL", s[end])) end++;
+      if (end < len && strchr("diuoxXfFeEgGaAcspnq%", s[end])) {
+        size_t count = end - i + 1;
+        memcpy(out + n, s + i, count); n += count; i = end;
+        continue;
+      }
+    }
     const char *m = c < 128 ? map[c] : NULL;
     if (m) { memcpy(out + n, m, strlen(m)); n += strlen(m); }
     else out[n++] = (char)c;
