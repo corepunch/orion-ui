@@ -87,9 +87,17 @@ static void format_value(const script_page_t *page, uint32_t id, lua_State *L, i
   lua_pop(L, 1);
 }
 
+static database_t *registered_database(const char *name);
+static bool source_parts(const form_ctrl_def_t *d, char *db_name, size_t db_sz, char *table, size_t table_sz);
+
 static void set_value(script_page_t *page, const form_ctrl_def_t *d, window_t *ctrl, lua_State *L, int idx) {
   if (class_is(d, "CheckBox")) { send_message(ctrl, btnSetCheck, lua_toboolean(L, idx), NULL); return; }
   if (class_is(d, "ComboBox") && d->lparam) {
+    // A page action can create a record used by this selector. Refresh through
+    // evSetDatabase to retain the control's declared filter and field mapping.
+    char database[64], table[128];
+    database_t *db = source_parts(d, database, sizeof(database), table, sizeof(table)) ? registered_database(database) : NULL;
+    if (db) send_message(ctrl, evSetDatabase, 0, db);
     send_message(ctrl, cbSetCurrentValue, (uint32_t)(lua_isinteger(L, idx) ? lua_tointeger(L, idx) : 0), NULL);
     return;
   }

@@ -1,0 +1,73 @@
+<?xml version='1.0' encoding='utf-8'?>
+<strings language="de">
+  <string source="Orion Lodge" where="reception">Orion Lodge</string>
+  <string source="Reception" where="reception">Rezeption</string>
+  <string source="Rooms, guests and reservations · Amounts in your hotel's currency" where="reception">Zimmer, Gäste und Reservierungen · Beträge in der Hotelwährung</string>
+  <string source="Add a room" where="reception">Zimmer hinzufügen</string>
+  <string source="Room name:" where="reception">Zimmername:</string>
+  <string source="Category:" where="reception">Kategorie:</string>
+  <string source="Capacity:" where="reception">Kapazität:</string>
+  <string source="Nightly rate:" where="reception">Preis pro Nacht:</string>
+  <string source="Add room" where="reception">Zimmer hinzufügen</string>
+  <string source="Add a guest" where="reception">Gast hinzufügen</string>
+  <string source="Guest name:" where="reception">Name des Gastes:</string>
+  <string source="Phone:" where="reception">Telefon:</string>
+  <string source="Add guest" where="reception">Gast hinzufügen</string>
+  <string source="Room:" where="reception">Zimmer:</string>
+  <string source="Guest:" where="reception">Gast:</string>
+  <string source="Arrival:" where="reception">Anreise:</string>
+  <string source="Departure:" where="reception">Abreise:</string>
+  <string source="Guests:" where="reception">Gäste:</string>
+  <string source="Extra charges:" where="reception">Zusatzkosten:</string>
+  <string source="Paid to date:" where="reception">Bereits bezahlt:</string>
+  <string source="Notes:" where="reception">Notizen:</string>
+  <string source="Use room rate" where="reception">Zimmerpreis übernehmen</string>
+  <string source="Save reservation" where="reception">Reservierung speichern</string>
+  <string source="New reservation" where="reception">Neue Reservierung</string>
+  <string source="New reservation discards unsaved editor changes." where="reception">Eine neue Reservierung verwirft ungespeicherte Eingaben.</string>
+  <string source="Room" where="reception">Zimmer</string>
+  <string source="Guest" where="reception">Gast</string>
+  <string source="Arrival" where="reception">Anreise</string>
+  <string source="Departure" where="reception">Abreise</string>
+  <string source="Status" where="reception">Status</string>
+  <string source="Total" where="reception">Gesamt</string>
+  <string source="Paid" where="reception">Bezahlt</string>
+  <string source="Balance" where="reception">Restbetrag</string>
+  <string source="Edit selected" where="reception">Auswahl bearbeiten</string>
+  <string source="Check in" where="reception">Einchecken</string>
+  <string source="Check out" where="reception">Auschecken</string>
+  <string source="Cancel reservation" where="reception">Reservierung stornieren</string>
+  <string source="Export confirmation" where="reception">Bestätigung exportieren</string>
+  <string source="Retry saving" where="reception">Speichern wiederholen</string>
+  <string source="%d reservations · Outstanding: %s" where="code">%d Reservierungen · Offen: %s</string>
+  <string source="Balance:" where="code">Restbetrag:</string>
+  <string source="Booking confirmation" where="code">Buchungsbestätigung</string>
+  <string source="Cancelled" where="code">Storniert</string>
+  <string source="Capacity must be a positive integer." where="code">Die Kapazität muss eine positive ganze Zahl sein.</string>
+  <string source="Checked in" where="code">Eingecheckt</string>
+  <string source="Checked out" where="code">Ausgecheckt</string>
+  <string source="Choose a reservation." where="code">Wählen Sie eine Reservierung.</string>
+  <string source="Choose a room and a guest." where="code">Wählen Sie ein Zimmer und einen Gast.</string>
+  <string source="Choose a room." where="code">Wählen Sie ein Zimmer.</string>
+  <string source="Confirmation saved: %s" where="code">Bestätigung gespeichert: %s</string>
+  <string source="Departure must follow a valid arrival date." where="code">Die Abreise muss nach einem gültigen Anreisedatum liegen.</string>
+  <string source="Edit reservation %d" where="code">Reservierung %d bearbeiten</string>
+  <string source="Enter a name." where="code">Geben Sie einen Namen ein.</string>
+  <string source="Enter a nightly rate between 0 and 1000000." where="code">Geben Sie einen Nachtpreis zwischen 0 und 1000000 ein.</string>
+  <string source="Enter amounts between 0 and 1000000." where="code">Geben Sie Beträge zwischen 0 und 1000000 ein.</string>
+  <string source="Lodge" where="code">Lodge</string>
+  <string source="Paid:" where="code">Bezahlt:</string>
+  <string source="Record no longer exists." where="code">Der Datensatz existiert nicht mehr.</string>
+  <string source="Reserved" where="code">Reserviert</string>
+  <string source="Settle the balance before checking out." where="code">Begleichen Sie den Restbetrag vor dem Auschecken.</string>
+  <string source="The booking confirmation could not be written." where="code">Die Buchungsbestätigung konnte nicht gespeichert werden.</string>
+  <string source="The guest count exceeds the room capacity." where="code">Die Gästezahl überschreitet die Zimmerkapazität.</string>
+  <string source="The hotel data could not be saved. Retry before closing." where="code">Die Hoteldaten konnten nicht gespeichert werden. Wiederholen Sie den Vorgang vor dem Schließen.</string>
+  <string source="The room is already booked for these dates." where="code">Das Zimmer ist für diese Daten bereits gebucht.</string>
+  <string source="This reservation cannot make that transition." where="code">Dieser Statuswechsel ist nicht möglich.</string>
+  <string source="This reservation is closed." where="code">Diese Reservierung ist abgeschlossen.</string>
+  <string source="Total:" where="code">Gesamt:</string>
+  <string source="Unknown reservation status." where="code">Unbekannter Reservierungsstatus.</string>
+  <string source="A room with this name already exists." where="code">Ein Zimmer mit diesem Namen existiert bereits.</string>
+  <string source="The reservation total is too large." where="code">Der Gesamtbetrag der Reservierung ist zu hoch.</string>
+</strings>

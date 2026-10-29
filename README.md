@@ -19,6 +19,11 @@ The framework includes:
 
 ## Ledger, built with Orion
 
+[Lodge](apps/lodge/README.md) is a hotel reception app with rooms, guests,
+reservations and check-in/out. It shares small, portable
+[Lua plugins](docs/plugins.md) with Ledger: manifests declare versioned,
+cycle-checked dependencies, while forms and native controls stay in Orion.
+
 [Ledger](apps/ledger/README.md) is double-entry bookkeeping in a 1.7 MB
 download: configurations for Russia and Germany (2003 and 2026), documents
 posted by each type's rules, payroll, month-end closing, reports and print

@@ -7,6 +7,10 @@ has_children: true
 
 # Lua Add-ons
 
+For shared behavior used by several pages or applications, see
+[Portable Lua plugins](plugins.md): small Lua modules with versioned manifests
+and explicit, cycle-checked dependencies.
+
 An add-on is two files side by side, with no C: a `.orion` file declares its
 forms and scratch tables, and a `.lua` file supplies the behaviour. A host
 application opens one with `script_page_open()` and shows it like any dialog.
@@ -88,7 +92,7 @@ The script returns its page table. The host reads these fields:
 
 | Key | Effect |
 |---|---|
-| `values = {name = value}` | Sets controls by `name=`. A text box shows text, a number or a date (as its `type=` says). A CheckBox takes a boolean. A ComboBox bound to a datasource takes a key; any other ComboBox takes a 1-based index. Any other control takes it as its caption. |
+| `values = {name = value}` | Sets controls by `name=`. A text box shows text, a number or a date (as its `type=` says). A CheckBox takes a boolean. A ComboBox bound to a datasource takes a key and refreshes its choices from that datasource; any other ComboBox takes a 1-based index. Any other control takes it as its caption. |
 | `lists = {name = rows}` | Fills the TableView `name` with exactly these rows. Its `source=` must be a table of the add-on's own database. |
 | `hidden = {name = true}` | Hides controls |
 | `disabled = {name = true}` | Disables controls |
