@@ -129,6 +129,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   ledger_addons_init();
   choose_ui_language(language, share);
   if (!(g_ledger->ib = open_infobase())) return false;
+  if (!ledger_ui_open(share)) return false;
 
 #ifdef BUILD_AS_GEM
   g_ledger->menubar_win = set_app_menu(ledger_menubar_proc, kLedgerMenus, kLedgerMenuCount,
@@ -159,6 +160,7 @@ void gem_shutdown(void) {
   if (is_window(g_ledger->chrome_win)) destroy_window(g_ledger->chrome_win);
   g_ledger->chrome_win = g_ledger->menubar_win = NULL;
   ledger_close_assistant();
+  ledger_ui_close();
   destroy_database(g_ledger->ib);  // saves when modified
   ledger_script_close();
   destroy_database(g_ledger->cfg);

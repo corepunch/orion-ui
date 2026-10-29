@@ -21,6 +21,8 @@
 
 #include <stdbool.h>
 #include <lua.h>
+#include "runtime.h"
+#include <orion/commctl/form_loader.h>
 
 #include <orion/user/user.h>
 
@@ -35,12 +37,22 @@ bool script_register_module(const char *name, lua_CFunction open);
 // script and calls its init(). Returns NULL, with the reason on stderr and in
 // *error when given, if any step fails.
 script_page_t *script_page_open(const char *path, char *error, size_t error_sz);
+script_page_t *script_page_open_in(script_runtime_t *runtime, const char *path, char *error, size_t error_sz);
+// A form-only page uses the first declared form and no controller/VM.
+// Shared-runtime pages own controller references, not the application VM.
+// The application owns the library/databases; the page owns only its window/controller.
+script_page_t *script_page_open_library(script_runtime_t *runtime, form_library_t *library,
+    const char *form, const char *controller, char *error, size_t size);
 // Shows the page as a modal dialog over `parent`; returns when it closes.
 void script_page_run(script_page_t *page, window_t *parent);
 // Closes the add-on: destroys its databases and frees the script and forms.
 void script_page_close(script_page_t *page);
 
 // The page's title: its title field, else its form's.
+void script_page_update(script_page_t *page);
+void script_page_refresh(script_page_t *page);
+int script_page_handle(const script_page_t *page);
+window_t *script_page_window(const script_page_t *page);
 const char *script_page_title(const script_page_t *page);
 isize16_t script_page_preferred_size(const script_page_t *page);
 

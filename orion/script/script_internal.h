@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <lua.h>
+#include "runtime.h"
 #include <lauxlib.h>
 
 #include <orion/user/database.h>
@@ -27,6 +28,7 @@ int script_refuse(lua_State *L, const char *message);
 // The "orion" and "orion.db" modules, generated from orion.cgen and db.cgen.
 int luaopen_orion(lua_State *L);
 int luaopen_orion_db(lua_State *L);
+int luaopen_orion_window_native(lua_State *L);
 
 // Records as Lua tables, through a table's schema.
 void script_push_record(lua_State *L, const db_table_schema_t *t, const void *record);
@@ -36,5 +38,8 @@ bool script_read_record(lua_State *L, int idx, const db_table_schema_t *t, void 
                         char *msg, size_t msg_sz);
 // The schema of "db.table", or NULL with a Lua error raised.
 const db_table_schema_t *script_table(lua_State *L, const char *db_name, const char *table, database_t **db);
+
+void script_runtime_page_retain(script_runtime_t *runtime);
+void script_runtime_page_release(script_runtime_t *runtime);
 
 #endif

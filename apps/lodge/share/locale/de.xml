@@ -1,18 +1,17 @@
-<?xml version='1.0' encoding='utf-8'?>
 <strings language="de">
   <string source="Orion Lodge" where="reception">Orion Lodge</string>
   <string source="Reception" where="reception">Rezeption</string>
   <string source="Rooms, guests and reservations · Amounts in your hotel's currency" where="reception">Zimmer, Gäste und Reservierungen · Beträge in der Hotelwährung</string>
-  <string source="Add a room" where="reception">Zimmer hinzufügen</string>
-  <string source="Room name:" where="reception">Zimmername:</string>
-  <string source="Category:" where="reception">Kategorie:</string>
-  <string source="Capacity:" where="reception">Kapazität:</string>
-  <string source="Nightly rate:" where="reception">Preis pro Nacht:</string>
-  <string source="Add room" where="reception">Zimmer hinzufügen</string>
-  <string source="Add a guest" where="reception">Gast hinzufügen</string>
-  <string source="Guest name:" where="reception">Name des Gastes:</string>
-  <string source="Phone:" where="reception">Telefon:</string>
-  <string source="Add guest" where="reception">Gast hinzufügen</string>
+  <string source="Add a room" obsolete="true">Zimmer hinzufügen</string>
+  <string source="Room name:" where="room">Zimmername:</string>
+  <string source="Category:" where="room">Kategorie:</string>
+  <string source="Capacity:" where="room">Kapazität:</string>
+  <string source="Nightly rate:" where="reception,room">Preis pro Nacht:</string>
+  <string source="Add room" obsolete="true">Zimmer hinzufügen</string>
+  <string source="Add a guest" obsolete="true">Gast hinzufügen</string>
+  <string source="Guest name:" where="guest">Name des Gastes:</string>
+  <string source="Phone:" where="guest">Telefon:</string>
+  <string source="Add guest" obsolete="true">Gast hinzufügen</string>
   <string source="Room:" where="reception">Zimmer:</string>
   <string source="Guest:" where="reception">Gast:</string>
   <string source="Arrival:" where="reception">Anreise:</string>
@@ -25,8 +24,8 @@
   <string source="Save reservation" where="reception">Reservierung speichern</string>
   <string source="New reservation" where="reception">Neue Reservierung</string>
   <string source="New reservation discards unsaved editor changes." where="reception">Eine neue Reservierung verwirft ungespeicherte Eingaben.</string>
-  <string source="Room" where="reception">Zimmer</string>
-  <string source="Guest" where="reception">Gast</string>
+  <string source="Room" where="reception,room">Zimmer</string>
+  <string source="Guest" where="reception,guest">Gast</string>
   <string source="Arrival" where="reception">Anreise</string>
   <string source="Departure" where="reception">Abreise</string>
   <string source="Status" where="reception">Status</string>
@@ -70,4 +69,13 @@
   <string source="Unknown reservation status." where="code">Unbekannter Reservierungsstatus.</string>
   <string source="A room with this name already exists." where="code">Ein Zimmer mit diesem Namen existiert bereits.</string>
   <string source="The reservation total is too large." where="code">Der Gesamtbetrag der Reservierung ist zu hoch.</string>
+  <string source="Rooms" where="reception,rooms">Zimmer</string>
+  <string source="Guests" where="reception,guests">Gäste</string>
+  <string source="Name" where="rooms,guests">Name</string>
+  <string source="Add" where="rooms,guests">Hinzufügen</string>
+  <string source="Edit" where="rooms,guests">Bearbeiten</string>
+  <string source="Delete" where="rooms,guests">Löschen</string>
+  <string source="Fetch" where="rooms,guests">Aktualisieren</string>
+  <string source="Save" where="room,guest">Speichern</string>
+  <string source="Cancel" where="room,guest">Abbrechen</string>
 </strings>

@@ -1,0 +1,15 @@
+<orion>
+  <application name="browser" form="browser"/>
+  <databases><database name="people" class="db_schema_xml"><table name="people">
+    <field name="id" type="integer" key="YES"/>
+    <field name="name" type="string" length="80"/>
+    <field name="photo" type="string" length="256"/>
+  </table></database></databases>
+  <display-groups><DisplayGroup name="selection" source="people.people"/></display-groups>
+  <forms><form name="browser" title="People" width="480" height="400">
+    <TableView name="people" source="selection.objects" height="160"><Column field="name" title="Name" width="0"/></TableView>
+    <Label name="name" field="selection.selection.name"/>
+    <ImageView name="photo" field="selection.selection.photo" height="100"/>
+    <Button name="fetch" text="Fetch" target="people" action="fetch"/>
+  </form></forms>
+</orion>

@@ -25,6 +25,7 @@
 #include <stdint.h>
 
 #include <orion/user/user.h>
+#include <orion/user/database.h>
 
 #define FORM_LIBRARY_ID_BASE 20000
 
@@ -38,6 +39,9 @@ form_library_t *form_library_parse(const char *xml, size_t length, const char *o
 // Frees the library and every definition in it. Windows keep pointers into
 // their definitions, so destroy them first.
 void form_library_free(form_library_t *lib);
+
+const char *form_library_application_attr(const form_library_t *lib, const char *name);
+const char *form_library_form_attr(const form_library_t *lib, const form_def_t *form, const char *name);
 
 int form_library_form_count(const form_library_t *lib);
 const form_def_t *form_library_form_at(const form_library_t *lib, int index);

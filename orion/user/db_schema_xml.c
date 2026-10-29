@@ -200,8 +200,11 @@ static bool dbs_save(database_t *db, dbs_context_t *ctx) {
     char tag[128];
     dbs_row_tag(t->name, tag, sizeof(tag));
     xmlNodePtr tn = xmlNewChild(root, NULL, (const xmlChar *)t->name, NULL);
-    for (int r = 0; r < ctx->tables[i].count; r++)
-      db_save_record_to_xml(tn, tag, ctx->tables[i].rows[r], t->meta, t->meta_count);
+    for (int r = 0; r < ctx->tables[i].count; r++) {
+      xmlNodePtr row = db_save_record_to_xml(tn, tag, ctx->tables[i].rows[r], t->meta, t->meta_count);
+      for (int f = 0; row && f < t->field_count; f++)
+        if (t->fields[f].computed && *t->fields[f].computed) xmlUnsetProp(row, BAD_CAST t->fields[f].name);
+    }
   }
   int written = xmlSaveFormatFileEnc(db->source_path, doc, "UTF-8", 1);
   xmlFreeDoc(doc);
@@ -697,6 +700,6 @@ conflict:
   if (error && error_size) snprintf(error, error_size, "%s", ui_tr("The record was changed in another window. Close and reopen this document."));
   return false;
 failed:
-  if (error && error_size) snprintf(error, error_size, "%s", ui_tr("The document could not be saved. No changes were applied."));
+  if (error && error_size) snprintf(error, error_size, "%s", store->error[0] ? store->error : ui_tr("The document could not be saved. No changes were applied."));
   return false;
 }

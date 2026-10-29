@@ -16,6 +16,7 @@
 
 #include <orion/user/database.h>
 #include <orion/user/enum_parse.h>
+#include <orion/user/xml_include.h>
 
 #define FL_DEFAULT_SPACING 4
 #define FL_ARENA_BLOCK 16384
@@ -49,6 +50,7 @@ typedef struct {
   fl_control_t *meta;          // name and declared attributes, parallel to controls
   int control_count;
   const char *name;
+  fl_control_t attributes;
   bool rejected;
 } fl_form_t;
 
@@ -57,6 +59,7 @@ typedef struct {
 } fl_schema_t;
 
 struct form_library_s {
+  fl_control_t application;
   fl_block_t *arena;
   const char *origin;
   fl_schema_t *schemas;        // <databases> declared by the document
@@ -606,6 +609,7 @@ static void fl_binding(fl_build_t *b, xmlNodePtr c, uint32_t id, const char *kla
       case DB_TYPE_BOOL:   x->wparam = sizeof(bool);         x->getter = edGetText; return;
     }
   }
+  if (!strcasecmp(klass, "imageview") && meta->type == DB_TYPE_STRING) { x->push = ddx_push_image_path; return; }
   if (!strcasecmp(klass, "label")) {  // shows the field, never writes it back
     switch (meta->type) {
       case DB_TYPE_DATE:   x->push = ddx_push_date;       return;
@@ -678,12 +682,12 @@ static void fl_control(fl_build_t *b, int i, uint32_t parent) {
   const char *target = fl_attr(lib, c, "target");
   if (target && *target) {
     uint32_t message = fl_eq(action, "insert") ? tvInsertRecord : fl_eq(action, "edit") ? tvEditRecord
-                     : fl_eq(action, "delete") ? tvDeleteRecord : 0;
+                     : fl_eq(action, "delete") ? tvDeleteRecord : fl_eq(action, "fetch") ? tvRefresh : 0;
     uint32_t target_id = fl_id_named(b, target);
-    if (!message) fl_warn(b, c, "control '%s': unknown action '%s' for target '%s' (insert, edit, delete)",
+    if (!message && !strchr(target, '.')) fl_warn(b, c, "control '%s': unknown action '%s' for target '%s' (insert, edit, delete)",
                           fl_nz(m->name, ""), fl_nz(action, ""), target);
-    else if (!target_id) fl_error(b, c, "control '%s': no control named '%s'", fl_nz(m->name, ""), target);
-    else { d->target = target_id; d->target_message = message; }
+    else if (!target_id && !strchr(target, '.')) fl_error(b, c, "control '%s': no control named '%s'", fl_nz(m->name, ""), target);
+    else if (target_id) { d->target = target_id; d->target_message = message; }
   }
   const char *list = fl_elem(c, "textbox") || fl_elem(c, "textedit") ? fl_attr(lib, c, "list") : NULL;
   if (list && *list) {   // the list the field drives (edSetList)
@@ -770,6 +774,7 @@ static bool fl_table_schema(form_library_t *lib, xmlNodePtr node, int table_id, 
     fs->length = length;
     fs->primary_key = key && (fl_eq(key, "YES") || fl_eq(key, "yes") || fl_eq(key, "true") || fl_eq(key, "1"));
     fs->default_value = fl_text(lib, f, "default");
+    fs->computed = fl_attr(lib, f, "computed");
     fs->delete_rule = !on_delete ? DB_DELETE_NO_ACTION : fl_eq(on_delete, "cascade") ? DB_DELETE_CASCADE
                     : fl_eq(on_delete, "nullify") ? DB_DELETE_NULLIFY : fl_eq(on_delete, "deny") ? DB_DELETE_DENY : DB_DELETE_NO_ACTION;
     if (on_delete && fs->delete_rule == DB_DELETE_NO_ACTION) {
@@ -826,12 +831,28 @@ static bool fl_schemas(form_library_t *lib, xmlNodePtr root) {
   xmlNodePtr databases = fl_child(root, "databases");
   xmlNodePtr scope = databases ? databases : root;
   FL_EACH_ELEMENT(db, scope) if (fl_elem(db, "database")) lib->schema_count++;
+  xmlNodePtr groups = fl_child(root, "display-groups");
+  int count = 0;
+  FL_EACH_ELEMENT(group, groups) if (fl_elem(group, "displaygroup")) count++;
+  int original = lib->schema_count;
+  lib->schema_count += count;
   if (!lib->schema_count) return true;
   lib->schemas = fl_alloc(lib, (size_t)lib->schema_count * sizeof(*lib->schemas));
   if (!lib->schemas) return false;
   int i = 0;
   FL_EACH_ELEMENT(db, scope) if (fl_elem(db, "database")) {
     if (!fl_schema(lib, db, &lib->schemas[i++])) return false;
+  }
+  FL_EACH_ELEMENT(group, groups) if (fl_elem(group, "displaygroup")) {
+    const char *source = fl_attr(lib, group, "source"), *name = fl_attr(lib, group, "name");
+    const db_table_schema_t *base = fl_table(lib, source, NULL);
+    if (!base || !name) { fprintf(stderr, "[form_loader] invalid display group\n"); return false; }
+    db_table_schema_t *tables = fl_alloc(lib, 2 * sizeof(*tables));
+    if (!tables) return false;
+    tables[0] = tables[1] = *base;
+    tables[0].name = "objects"; tables[0].table_id = 0; tables[0].transient = true;
+    tables[1].name = "selection"; tables[1].table_id = 1; tables[1].transient = true;
+    lib->schemas[original++].def = (db_schema_def_t){name, "db_display_group", source, tables, 2};
   }
   return true;
 }
@@ -842,6 +863,7 @@ static void fl_form(form_library_t *lib, xmlNodePtr node, fl_form_t *form) {
   fl_build_t b = { .lib = lib, .form = form, .form_node = node, .ok = true };
   form_def_t *def = &form->def;
   form->name = fl_attr(lib, node, "name");
+  fl_keep_attrs(lib, node, &form->attributes);
   const char *title = fl_attr(lib, node, "title"), *role = fl_attr(lib, node, "role");
   char id[128];
   fl_ident(id, sizeof(id), form->name);
@@ -936,9 +958,12 @@ static form_library_t *fl_build(xmlDocPtr doc, const char *origin) {
     if (doc) xmlFreeDoc(doc);
     return NULL;
   }
+  if (!orion_xml_includes(doc, origin, 0)) { xmlFreeDoc(doc); return NULL; }
   form_library_t *lib = calloc(1, sizeof(*lib));
   if (!lib) { xmlFreeDoc(doc); return NULL; }
   lib->origin = "";
+  xmlNodePtr application = fl_child(root, "application");
+  if (application) fl_keep_attrs(lib, application, &lib->application);
   lib->origin = fl_strdup(lib, origin);
   lib->next_id = FORM_LIBRARY_ID_BASE;
   if (!fl_schemas(lib, root)) { xmlFreeDoc(doc); form_library_free(lib); return NULL; }
@@ -1060,4 +1085,17 @@ const char *form_library_control_attr(const form_library_t *lib, const form_def_
     return NULL;
   }
   return NULL;
+}
+
+static const char *fl_metadata_attr(const fl_control_t *metadata, const char *name) {
+  for (int i = 0; metadata && name && i < metadata->attr_count; i++)
+    if (fl_eq(metadata->attrs[i].name, name)) return metadata->attrs[i].value;
+  return NULL;
+}
+const char *form_library_application_attr(const form_library_t *lib, const char *name) {
+  return lib ? fl_metadata_attr(&lib->application, name) : NULL;
+}
+const char *form_library_form_attr(const form_library_t *lib, const form_def_t *form, const char *name) {
+  fl_form_t *owner = fl_owner(lib, form);
+  return owner ? fl_metadata_attr(&owner->attributes, name) : NULL;
 }

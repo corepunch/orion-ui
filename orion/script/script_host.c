@@ -7,6 +7,7 @@
 #include "script_internal.h"
 
 #include <lualib.h>
+#include "build/generated/orion/script/modules.h"
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -215,8 +216,7 @@ lua_State *script_state_new(const char *dir, const char *name) {
   lua_pushstring(L, ""); lua_setfield(L, -2, "path");
   lua_pushstring(L, ""); lua_setfield(L, -2, "cpath");
   lua_getfield(L, -1, "preload");
-  lua_pushcfunction(L, luaopen_orion);    lua_setfield(L, -2, "orion");
-  lua_pushcfunction(L, luaopen_orion_db); lua_setfield(L, -2, "orion.db");
+  script_preload_generated(L);
   for (int i = 0; i < g_module_count; i++) {
     lua_pushcfunction(L, g_modules[i].open);
     lua_setfield(L, -2, g_modules[i].name);

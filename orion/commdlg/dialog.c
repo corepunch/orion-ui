@@ -965,6 +965,11 @@ void ddx_push_text(window_t *dlg, const ctrl_binding_t *b, const void *state) {
 }
 
 // A Label shows a string field as its text; it never writes it back.
+void ddx_push_image_path(window_t *dlg, const ctrl_binding_t *b, const void *state) {
+  window_t *control = get_window_item(dlg, b->ctrl_id);
+  if (control) send_message(control, imageSetPath, 0, (void *)((const char *)state + b->offset));
+}
+
 void ddx_push_label_text(window_t *dlg, const ctrl_binding_t *b, const void *state) {
   set_window_item_text(dlg, b->ctrl_id, "%s", (const char *)state + b->offset);
 }

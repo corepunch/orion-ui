@@ -1,31 +1,3 @@
 <orion>
-  <databases>
-    <database name="lodge" class="db_schema_xml">
-      <table name="rooms">
-        <field name="id" type="integer" key="YES" />
-        <field name="name" type="string" length="40" />
-        <field name="category" type="string" length="40" />
-        <field name="capacity" type="integer" default="2" />
-        <field name="rate" type="double" />
-      </table>
-      <table name="guests">
-        <field name="id" type="integer" key="YES" />
-        <field name="name" type="string" length="100" />
-        <field name="phone" type="string" length="60" />
-      </table>
-      <table name="reservations">
-        <field name="id" type="integer" key="YES" />
-        <field name="room_id" type="integer" relation="rooms.id" on-delete="deny" />
-        <field name="guest_id" type="integer" relation="guests.id" on-delete="deny" />
-        <field name="arrival" type="date" />
-        <field name="departure" type="date" />
-        <field name="persons" type="integer" default="1" />
-        <field name="rate" type="double" />
-        <field name="extras" type="double" />
-        <field name="paid" type="double" />
-        <field name="status" type="string" length="20" default="reserved" />
-        <field name="notes" type="string" length="256" />
-      </table>
-    </database>
-  </databases>
+  <include file="share/schema.orion" />
 </orion>

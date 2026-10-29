@@ -188,6 +188,7 @@ void ddx_push_u8(window_t *dlg, const ctrl_binding_t *b, const void *state);
 void ddx_pull_u8(window_t *dlg, const ctrl_binding_t *b, void *state);
 void ddx_push_text(window_t *dlg, const ctrl_binding_t *b, const void *state);
 void ddx_pull_text(window_t *dlg, const ctrl_binding_t *b, void *state);
+void ddx_push_image_path(window_t *dlg, const ctrl_binding_t *b, const void *state);
 void ddx_push_label_text(window_t *dlg, const ctrl_binding_t *b, const void *state);  // display only
 void ddx_push_combo(window_t *dlg, const ctrl_binding_t *b, const void *state);
 void ddx_pull_combo(window_t *dlg, const ctrl_binding_t *b, void *state);

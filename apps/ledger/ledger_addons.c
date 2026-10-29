@@ -293,10 +293,11 @@ void ledger_show_assistant(void) {
   window_t *mascot = assistant_page ? script_page_control(assistant_page, "mascot") : NULL;
   if (mascot) { show_window(get_root_window(mascot), true); ledger_position_assistant(); return; }
   ledger_close_assistant();
+  if (!g_ledger->runtime && !ledger_ui_open(g_ledger->share_dir)) return;
   window_t *focused = g_ui_runtime.focused;
   char path[LEDGER_PATH_MAX + 64], error[1024] = "";
   snprintf(path, sizeof(path), "%s/addons/assistant/assistant.orion", g_ledger->share_dir);
-  script_page_t *page = script_page_open(path, error, sizeof(error));
+  script_page_t *page = script_page_open_in(g_ledger->runtime, path, error, sizeof(error));
   if (!page) {
     message_box(g_ledger->main_win, error, ui_tr("Assistant"), MB_OK);
     return;

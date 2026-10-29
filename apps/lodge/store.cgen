@@ -1,7 +1,0 @@
-<module name="lodge.store" prefix="lodge_store_" luaopen="luaopen_lodge_store">
-  <summary>Lodge's persistence and booking confirmation output.</summary>
-  <functions>
-    <function name="save" lua="true"><summary>Saves the hotel's database.</summary><returns type="nresults">true or nil and a message</returns></function>
-    <function name="confirmation" lua="true"><summary>Writes the HTML booking confirmation in the data directory.</summary><arg name="html" type="string"/><returns type="nresults">output path or nil and a message</returns></function>
-  </functions>
-</module>

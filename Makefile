@@ -203,7 +203,12 @@ GENERATED_HEADERS = $(patsubst $(APPS)/%.orion,$(GENERATED_DIR)/$(APPS)/%.h,$(wi
 CGEN_SRCS      = $(wildcard orion/*/*.cgen) $(wildcard $(APPS)/*/*.cgen)
 CGEN_HEADERS   = $(patsubst %.cgen,$(GENERATED_DIR)/%_lua.h,$(CGEN_SRCS))
 CGEN_DOC_SRCS  = $(wildcard orion/*/*.cgen)
-GENERATED_HEADERS += $(CGEN_HEADERS)
+SCRIPT_METADATA = $(GENERATED_DIR)/orion/script/modules.h
+GENERATED_HEADERS += $(CGEN_HEADERS) $(SCRIPT_METADATA)
+
+$(SCRIPT_METADATA): tools/script_metadata.py $(wildcard orion/script/*.cgen)
+	@mkdir -p $(dir $@)
+	@python3 tools/script_metadata.py --registry $@ --annotations $(GENERATED_DIR)/lua $(wildcard orion/script/*.cgen)
 
 .SECONDEXPANSION:
 
@@ -221,7 +226,7 @@ $(BIN_DIR)/test_groove_synth_test$(EXE_EXT): $(APPS)/groove/synth.c $(wildcard $
 
 # Shell fragment emitting the unity translation unit for example dir $(1):
 # every .c outside $(COMPS), main.c last.  ('#' is backslash-escaped for make.)
-unity_tu = find $(1) -name '*.c' ! -name main.c ! -path '*/$(COMPS)/*' ! -path '*/tests/*' ! -path '*/reel/*' | sort | sed 's/.*/\#include "&"/'; echo '\#include "$(1)/main.c"'
+unity_tu = find $(1) -name '*.c' ! -name main.c ! -path '*/$(COMPS)/*' ! -path '*/tests/*' ! -path '*/reel/*' | sort | sed 's/.*/\#include "&"/'; if [ -f $(1)/main.c ]; then echo '\#include "$(1)/main.c"'; else echo '\#define ORION_APP_NAME "$(notdir $(1))"'; echo '\#include <orion/script/application_main.h>'; fi
 app_inc  = -I. -I$(call appdir,$*) -I$(call appdir,$*)/$(COMPS) -DSHAREDIR='"../share/$(notdir $(call appdir,$*))"'
 app_libs = $(LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(call app_plugin,$*) $(LIBS) $(if $(findstring scener,$*),$(SCENER_LIBS))
 
@@ -421,7 +426,7 @@ $(eval $(call unity_lib,kernel,$(wildcard orion/kernel/*.c),$(KERNEL_INPUT_OBJ),
 $(eval $(call unity_lib,user,$(USER_SRCS),$(COMMDLG_LIB) $(KERNEL_LIB),,-lcommdlg -lkernel))
 $(eval $(call unity_lib,commctl,$(wildcard orion/commctl/*.c),$(USER_LIB) $(KERNEL_LIB),-Icomponents,-luser -lkernel))
 # Lua add-ons: runtime .orion forms driven by a script (orion/script/script.h).
-$(eval $(call unity_lib,script,$(wildcard orion/script/*.c),$(COMMCTL_LIB) $(USER_LIB) $(KERNEL_LIB) $(filter $(GENERATED_DIR)/orion/%,$(CGEN_HEADERS)),,-lcommctl -luser -lkernel))
+$(eval $(call unity_lib,script,$(wildcard orion/script/*.c),$(COMMCTL_LIB) $(USER_LIB) $(KERNEL_LIB) $(filter $(GENERATED_DIR)/orion/%,$(CGEN_HEADERS)) $(SCRIPT_METADATA),,-lcommctl -luser -lkernel))
 
 # commdlg is built by its own makefile as a static library
 $(COMMDLG_LIB): $(wildcard orion/commdlg/*.c) $(CORE_HEADERS) | $(LIB_DIR)
@@ -641,3 +646,6 @@ list-devices:
 ledger-large-test: $(BIN_DIR)/ledger-fixture-check$(EXE_EXT)
 	python3 apps/ledger/tests/large_infobase_test.py
 	python3 apps/ledger/tools/check_large_infobases.py --checker $(BIN_DIR)/ledger-fixture-check$(EXE_EXT)
+
+# Included schemas are inputs to the generated test/native schema metadata.
+$(GENERATED_DIR)/apps/lodge/lodge.h: apps/lodge/share/schema.orion

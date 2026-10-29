@@ -6,6 +6,7 @@
 
 #include "user.h"
 #include "database.h"
+#include "display_group.h"
 
 // ── Database class registry (analogous to window class registry) ────────────
 
@@ -168,9 +169,70 @@ void db_message_release(database_t *db) {
   if (db && db->message_refs && --db->message_refs == 0 && db->destroy_pending) destroy_database(db);
 }
 
+typedef struct db_observer_s {
+  struct db_observer_s *next;
+  int token;
+  database_t *database;
+  db_changed_fn callback;
+  void *userdata;
+} db_observer_t;
+static db_observer_t *db_observers;
+static int db_observer_token;
+typedef struct { database_t *database; int calls, transactions; bool pending, notifying; } db_change_state_t;
+static db_change_state_t db_changes[64];
+
+int db_observe(database_t *database, db_changed_fn callback, void *userdata) {
+  if (!database || !callback) return 0;
+  db_observer_t *observer = calloc(1, sizeof(*observer));
+  if (!observer) return 0;
+  *observer = (db_observer_t){db_observers, ++db_observer_token, database, callback, userdata};
+  db_observers = observer;
+  return observer->token;
+}
+void db_unobserve(int token) {
+  db_observer_t **link = &db_observers;
+  while (*link && (*link)->token != token) link = &(*link)->next;
+  if (*link) { db_observer_t *old = *link; *link = old->next; free(old); }
+}
+static void db_publish_changes(db_change_state_t *state) {
+  if (!state->pending || state->calls || state->transactions || state->notifying) return;
+  state->pending = false; state->notifying = true;
+  int maximum = db_observer_token, cursor = 0;
+  for (;;) {
+    db_observer_t *chosen = NULL;
+    for (db_observer_t *observer = db_observers; observer; observer = observer->next)
+      if (observer->database == state->database && observer->token > cursor && observer->token <= maximum &&
+          (!chosen || observer->token < chosen->token)) chosen = observer;
+    if (!chosen) break;
+    cursor = chosen->token;
+    chosen->callback(state->database, chosen->userdata);
+  }
+  state->notifying = false;
+}
 lresult_t send_db_message(database_t *db, uint32_t msg, uint32_t wparam, void *lparam) {
   if (!db || !db->proc) return 0;
-  return db->proc(db, msg, wparam, lparam);
+  db_change_state_t *state = NULL;
+  for (int i = 0; i < 64; i++) if (db_changes[i].database == db) { state = &db_changes[i]; break; }
+  if (!state) for (int i = 0; i < 64; i++) if (!db_changes[i].database) { state = &db_changes[i]; state->database = db; break; }
+  if (state) state->calls++;
+  lresult_t result = db->proc(db, msg, wparam, lparam);
+  if (state) {
+    state->calls--;
+    if (result && msg == dbBeginChanges) state->transactions++;
+    if (result && (msg == dbInsert || msg == dbUpdate || msg == dbDelete || msg == dbSelectRecord)) state->pending = true;
+    if (result && (msg == dbCommitChanges || msg == dbRevertChanges)) {
+      if (state->transactions) state->transactions--;
+      if (msg == dbRevertChanges && !state->transactions) state->pending = false;
+    }
+    db_publish_changes(state);
+    if (msg == dbDestroy) {
+      for (db_observer_t *observer = db_observers, *next; observer; observer = next) {
+        next = observer->next; if (observer->database == db) db_unobserve(observer->token);
+      }
+      *state = (db_change_state_t){0};
+    }
+  }
+  return result;
 }
 
 // ── Declarative database API helpers (from .orion metadata) ─────────────────

@@ -1,0 +1,67 @@
+<module name="ledger.ui" prefix="ledger_ui_" luaopen="luaopen_ledger_ui">
+  <functions>
+    <function name="selected" lua="true" export="selected">
+      <arg name="name" type="string" />
+      <returns type="int" />
+    </function>
+    <function name="new_document" lua="true" export="new_document">
+      <arg name="type" type="int" />
+      <arg name="date" type="string" />
+    </function>
+    <function name="edit_document" lua="true" export="edit_document">
+      <arg name="id" type="int" />
+    </function>
+    <function name="print_document" lua="true" export="print_document">
+      <arg name="id" type="int" />
+    </function>
+    <function name="changed" lua="true" export="changed">
+      <arg name="id" type="int" />
+    </function>
+    <function name="unpost" lua="true" export="unpost">
+      <arg name="id" type="int" />
+    </function>
+    <function name="repost" lua="true" export="repost">
+      <returns type="bool" />
+    </function>
+    <function name="confirm" lua="true" export="confirm">
+      <arg name="text" type="string" />
+      <arg name="title" type="string" />
+      <returns type="bool" />
+    </function>
+    <function name="message" lua="true" export="message">
+      <arg name="text" type="string" />
+      <arg name="title" type="string" />
+    </function>
+    <function name="save" lua="true" export="save" />
+    <function name="form" lua="true" export="form">
+      <arg name="name" type="string" />
+    </function>
+    <function name="catalog" lua="true" export="catalog">
+      <arg name="name" type="string" />
+      <arg name="verb" type="string" />
+    </function>
+    <function name="page" lua="true" export="page">
+      <arg name="name" type="string" />
+    </function>
+    <function name="window" lua="true" export="window">
+      <arg name="operation" type="string" />
+    </function>
+    <function name="configuration" lua="true" export="configuration" />
+    <function name="language" lua="true" export="language" />
+    <function name="import" lua="true" export="import" />
+    <function name="addon" lua="true" export="addon" />
+    <function name="assistant" lua="true" export="assistant" />
+    <function name="account_card" lua="true" export="account_card" />
+    <function name="print_reports" lua="true" export="print_reports" />
+    <function name="dirty" lua="true">
+      <returns type="bool" />
+    </function>
+    <function name="asof" lua="true">
+      <returns type="string" />
+    </function>
+    <function name="status" lua="true">
+      <arg name="text" type="string" />
+      <arg name="subtitle" type="string" />
+    </function>
+  </functions>
+</module>

@@ -1,18 +1,17 @@
-<?xml version='1.0' encoding='utf-8'?>
 <strings language="ru">
   <string source="Orion Lodge" where="reception">Orion Lodge</string>
   <string source="Reception" where="reception">Ресепшен</string>
   <string source="Rooms, guests and reservations · Amounts in your hotel's currency" where="reception">Номера, гости и брони · Суммы в валюте отеля</string>
-  <string source="Add a room" where="reception">Добавить номер</string>
-  <string source="Room name:" where="reception">Название номера:</string>
-  <string source="Category:" where="reception">Категория:</string>
-  <string source="Capacity:" where="reception">Вместимость:</string>
-  <string source="Nightly rate:" where="reception">Цена за ночь:</string>
-  <string source="Add room" where="reception">Добавить номер</string>
-  <string source="Add a guest" where="reception">Добавить гостя</string>
-  <string source="Guest name:" where="reception">Имя гостя:</string>
-  <string source="Phone:" where="reception">Телефон:</string>
-  <string source="Add guest" where="reception">Добавить гостя</string>
+  <string source="Add a room" obsolete="true">Добавить номер</string>
+  <string source="Room name:" where="room">Название номера:</string>
+  <string source="Category:" where="room">Категория:</string>
+  <string source="Capacity:" where="room">Вместимость:</string>
+  <string source="Nightly rate:" where="reception,room">Цена за ночь:</string>
+  <string source="Add room" obsolete="true">Добавить номер</string>
+  <string source="Add a guest" obsolete="true">Добавить гостя</string>
+  <string source="Guest name:" where="guest">Имя гостя:</string>
+  <string source="Phone:" where="guest">Телефон:</string>
+  <string source="Add guest" obsolete="true">Добавить гостя</string>
   <string source="Room:" where="reception">Номер:</string>
   <string source="Guest:" where="reception">Гость:</string>
   <string source="Arrival:" where="reception">Заезд:</string>
@@ -25,8 +24,8 @@
   <string source="Save reservation" where="reception">Сохранить бронь</string>
   <string source="New reservation" where="reception">Новая бронь</string>
   <string source="New reservation discards unsaved editor changes." where="reception">Новая бронь сбрасывает несохранённые изменения.</string>
-  <string source="Room" where="reception">Номер</string>
-  <string source="Guest" where="reception">Гость</string>
+  <string source="Room" where="reception,room">Номер</string>
+  <string source="Guest" where="reception,guest">Гость</string>
   <string source="Arrival" where="reception">Заезд</string>
   <string source="Departure" where="reception">Выезд</string>
   <string source="Status" where="reception">Статус</string>
@@ -70,4 +69,13 @@
   <string source="Unknown reservation status." where="code">Неизвестный статус брони.</string>
   <string source="A room with this name already exists." where="code">Номер с таким названием уже существует.</string>
   <string source="The reservation total is too large." where="code">Сумма брони слишком велика.</string>
+  <string source="Rooms" where="reception,rooms">Номера</string>
+  <string source="Guests" where="reception,guests">Гости</string>
+  <string source="Name" where="rooms,guests">Имя</string>
+  <string source="Add" where="rooms,guests">Добавить</string>
+  <string source="Edit" where="rooms,guests">Изменить</string>
+  <string source="Delete" where="rooms,guests">Удалить</string>
+  <string source="Fetch" where="rooms,guests">Обновить</string>
+  <string source="Save" where="room,guest">Сохранить</string>
+  <string source="Cancel" where="room,guest">Отмена</string>
 </strings>
