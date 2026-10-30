@@ -21,6 +21,10 @@ build/bin/imageeditor images/logo.png
 build/bin/shell
 ```
 
+The Doom editor is a standalone app built with `make doom-ed` (also included
+in `make apps`). See [Doom Editor](doom-ed/README.md) for WAD input, tests,
+and the source migration details.
+
 Most apps share one source lifecycle through `gem_init` and
 `GEM_STANDALONE_MAIN`. Application arguments reach `gem_init`; the standard
 launcher owns framework options such as `--screenshot PATH`.

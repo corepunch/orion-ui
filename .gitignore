@@ -86,6 +86,8 @@ test.xml
 *.save
 plans/
 third_party/
+!apps/doom-ed/third_party/
+!apps/doom-ed/third_party/**
 !apps/groove/third_party/
 apps/groove/third_party/*
 !apps/groove/third_party/shine/

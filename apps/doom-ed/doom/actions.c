@@ -1,0 +1,81 @@
+//
+//  actions.c
+//  mapview
+//
+//  Created by Igor Chernakov on 03.05.25.
+//
+
+void A_Light0(void) {}
+void A_WeaponReady(void) {}
+void A_Lower(void) {}
+void A_Raise(void) {}
+void A_Punch(void) {}
+void A_ReFire(void) {}
+void A_FirePistol(void) {}
+void A_Light1(void) {}
+void A_FireShotgun(void) {}
+void A_Light2(void) {}
+void A_FireShotgun2(void) {}
+void A_CheckReload(void) {}
+void A_OpenShotgun2(void) {}
+void A_LoadShotgun2(void) {}
+void A_CloseShotgun2(void) {}
+void A_FireCGun(void) {}
+void A_GunFlash(void) {}
+void A_FireMissile(void) {}
+void A_Saw(void) {}
+void A_FirePlasma(void) {}
+void A_BFGsound(void) {}
+void A_FireBFG(void) {}
+void A_BFGSpray(void) {}
+void A_Explode(void) {}
+void A_Pain(void) {}
+void A_PlayerScream(void) {}
+void A_Fall(void) {}
+void A_XScream(void) {}
+void A_Look(void) {}
+void A_Chase(void) {}
+void A_FaceTarget(void) {}
+void A_PosAttack(void) {}
+void A_Scream(void) {}
+void A_SPosAttack(void) {}
+void A_VileChase(void) {}
+void A_VileStart(void) {}
+void A_VileTarget(void) {}
+void A_VileAttack(void) {}
+void A_StartFire(void) {}
+void A_Fire(void) {}
+void A_FireCrackle(void) {}
+void A_Tracer(void) {}
+void A_SkelWhoosh(void) {}
+void A_SkelFist(void) {}
+void A_SkelMissile(void) {}
+void A_FatRaise(void) {}
+void A_FatAttack1(void) {}
+void A_FatAttack2(void) {}
+void A_FatAttack3(void) {}
+void A_BossDeath(void) {}
+void A_CPosAttack(void) {}
+void A_CPosRefire(void) {}
+void A_TroopAttack(void) {}
+void A_SargAttack(void) {}
+void A_HeadAttack(void) {}
+void A_BruisAttack(void) {}
+void A_SkullAttack(void) {}
+void A_Metal(void) {}
+void A_SpidRefire(void) {}
+void A_BabyMetal(void) {}
+void A_BspiAttack(void) {}
+void A_Hoof(void) {}
+void A_CyberAttack(void) {}
+void A_PainAttack(void) {}
+void A_PainDie(void) {}
+void A_KeenDie(void) {}
+void A_BrainPain(void) {}
+void A_BrainScream(void) {}
+void A_BrainDie(void) {}
+void A_BrainAwake(void) {}
+void A_BrainSpit(void) {}
+void A_SpawnSound(void) {}
+void A_SpawnFly(void) {}
+void A_BrainExplode(void) {}
