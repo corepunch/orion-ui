@@ -13,6 +13,7 @@
 #include <time.h>
 
 #include <orion/user/i18n.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #define SCRIPT_MAX_MODULES 32
@@ -67,7 +68,9 @@ static void script_watchdog(lua_State *L, lua_Debug *ar) {
   script_state_t *state = state_of(L);
   if (!state || clock() <= state->deadline) return;
   lua_sethook(L, NULL, 0, 0);
-  luaL_error(L, "the script ran for more than %.0f seconds of CPU time and was stopped", state->budget);
+  char text[128];  // lua_pushfstring knows no precision, so format the budget here
+  snprintf(text, sizeof(text), "the script ran for more than %.0f seconds of CPU time and was stopped", state->budget);
+  luaL_error(L, "%s", text);
 }
 void script_state_limits(lua_State *L, size_t memory_bytes, double cpu_seconds) {
   script_state_t *state = state_of(L);
@@ -256,7 +259,11 @@ lua_State *script_state_new(const char *dir, const char *name) {
     state->limit = SCRIPT_MEMORY_LIMIT; state->budget = SCRIPT_CPU_BUDGET;
     snprintf(state->name, sizeof(state->name), "%s", name ? name : "?");
   }
+#if LUA_VERSION_NUM >= 505
+  lua_State *L = state ? lua_newstate(script_alloc, state, (unsigned)time(NULL) ^ (unsigned)(uintptr_t)state) : NULL;
+#else
   lua_State *L = state ? lua_newstate(script_alloc, state) : NULL;
+#endif
   if (!L) {
     fprintf(stderr, "[script] %s: cannot create a Lua state\n", name ? name : "?");
     fflush(stderr);
