@@ -27,10 +27,11 @@ struct script_application_s {
 };
 static script_application_t *applications;
 
+static bool app_is_display_group(const database_t *database) { return !strcmp(database->class_name, "db_display_group"); }
 static void app_data_changed(database_t *database, void *userdata) {
   script_application_t *app = userdata;
   for (int i = 0; i < app->page_count; i++) {
-    if (!strcmp(database->class_name, "db_display_group")) script_page_update(app->pages[i]);
+    if (app_is_display_group(database)) script_page_update(app->pages[i]);
     else script_page_refresh(app->pages[i]);
   }
 }
@@ -40,6 +41,7 @@ static bool app_save_all(script_application_t *app) {
   return true;
 }
 static result_t app_window_hook(window_t *window, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg != evClose && msg != evDestroy) return false;  // the page proc forwards every message
   script_application_t *owner = NULL;
   for (script_application_t *app = applications; app && !owner; app = app->next)
     for (int p = 0; p < app->page_count; p++) if (script_page_window(app->pages[p]) == window) { owner = app; break; }
@@ -164,7 +166,7 @@ script_application_t *script_application_open(const char *manifest, const char *
     app->model = script_runtime_controller(app->runtime, path, error, size);
     if (app->model == LUA_NOREF) goto failed;
     for (int i = 0; i < app->database_count; i++)
-      if (strcmp(app->databases[i]->class_name, "db_display_group") && !script_model_attach(app->databases[i], app->runtime, app->model)) goto failed;
+      if (!app_is_display_group(app->databases[i]) && !script_model_attach(app->databases[i], app->runtime, app->model)) goto failed;
   }
   for (int i = 0; i < app->database_count; i++) app->observers[i] = db_observe(app->databases[i], app_data_changed, app);
   if (!app_open_form(app, form, error, size)) goto failed;

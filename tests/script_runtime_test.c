@@ -16,6 +16,12 @@ static void test_runtime(void) {
   ASSERT(first != LUA_NOREF && second != LUA_NOREF, "controllers load");
   ASSERT_TRUE(script_runtime_invoke(runtime, first, "check", "one", error, sizeof(error)));
   ASSERT_TRUE(script_runtime_invoke(runtime, second, "check", "two", error, sizeof(error)));
+  ASSERT_FALSE(script_runtime_invoke(runtime, first, "missing", NULL, error, sizeof(error)));
+  ASSERT_NOT_NULL(strstr(error, "missing"));
+  ASSERT_FALSE(script_runtime_invoke(runtime, first, "refuse", "Choose a record.", error, sizeof(error)));
+  ASSERT_STR_EQUAL(error, "Choose a record.");
+  ASSERT_FALSE(script_runtime_invoke(runtime, first, "check", "wrong", NULL, 0));
+  ASSERT_EQUAL(script_runtime_controller(runtime, "tests/fixtures/runtime/none.lua", NULL, 0), LUA_NOREF);
   ASSERT_FALSE(script_runtime_close(runtime));
   script_runtime_release(runtime, first); script_runtime_release(runtime, second);
   ASSERT_TRUE(script_runtime_close(runtime));

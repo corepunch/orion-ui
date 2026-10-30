@@ -34,9 +34,7 @@ void ledger_refresh_views(void) {
 void ledger_update_status(void) {
   if (!g_ledger->main_win || !g_ledger->runtime) return;
   char error[2048];
-  if (!script_runtime_invoke(g_ledger->runtime, g_ledger->controller, "status", NULL, error, sizeof(error))) {
-    fprintf(stderr, "[ledger] status: %s\n", error); fflush(stderr);
-  }
+  script_runtime_invoke(g_ledger->runtime, g_ledger->controller, "status", NULL, error, sizeof(error));  // the runtime logs faults
 }
 
 // ── Document dialogs ───────────────────────────────────────────────────────
@@ -511,7 +509,8 @@ static void ledger_ui_status(lua_State *L, const char *text, const char *subtitl
 }
 // Native capabilities retain window/storage ownership. Workflow lives in controller.lua.
 static int ledger_ui_selected(lua_State *L, const char *name) {
-  uint32_t id = !strcmp(name, "entries") ? ID_ENTRIES_PAGE_ENTRIES : ID_JOURNAL_PAGE_DOCUMENTS;
+  uint32_t id = !strcmp(name, "entries") ? ID_ENTRIES_PAGE_ENTRIES : !strcmp(name, "documents") ? ID_JOURNAL_PAGE_DOCUMENTS : 0;
+  if (!id) return luaL_error(L, "unknown selection '%s'", name);
   const int *record = selected(id);
   return record ? *record : 0;
 }
@@ -529,7 +528,9 @@ static void ledger_ui_save(lua_State *L) {
   else { send_db_message(g_ledger->ib, dbSave, 0, NULL); ledger_update_status(); }
 }
 static void ledger_ui_form(lua_State *L, const char *name) {
-  const form_def_t *form = !strcmp(name, "organization") ? &ledger_organization_form : &ledger_report_settings_form;
+  const form_def_t *form = !strcmp(name, "organization") ? &ledger_organization_form
+                         : !strcmp(name, "report_settings") ? &ledger_report_settings_form : NULL;
+  if (!form) { luaL_error(L, "unknown form '%s'", name); return; }
   if (show_db_dialog(form, NULL, g_ledger->main_win, 1)) after_save(0);
 }
 static void ledger_ui_catalog(lua_State *L, const char *name, const char *verb) {
@@ -551,8 +552,11 @@ static void ledger_ui_page(lua_State *L, const char *name) {
     page_host_select(g_ledger->main_win, ID_VIEW_JOURNAL);
     send_message(view(ID_JOURNAL_PAGE_DETAILS), tcSetSelection, 1, NULL);
   } else if (!strcmp(name, "sidebar")) page_host_set_sidebar_collapsed(g_ledger->main_win, !page_host_sidebar_collapsed(g_ledger->main_win));
-  else for (int i = 0; i < ledger_action_meta_count; i++) if (!strncmp(ledger_action_meta[i].name, "view.", 5) && !strcmp(ledger_action_meta[i].name + 5, name)) {
-    page_host_select(g_ledger->main_win, ledger_action_meta[i].id); return;
+  else {
+    for (int i = 0; i < ledger_action_meta_count; i++) if (!strncmp(ledger_action_meta[i].name, "view.", 5) && !strcmp(ledger_action_meta[i].name + 5, name)) {
+      page_host_select(g_ledger->main_win, ledger_action_meta[i].id); return;
+    }
+    luaL_error(L, "unknown page '%s'", name);
   }
 }
 static void ledger_ui_window(lua_State *L, const char *operation) {
@@ -568,7 +572,7 @@ static void ledger_ui_window(lua_State *L, const char *operation) {
     const db_doc_type_t *type = document_type(edited);
     window_t *button = type && !strcmp(type->form, "document") ? get_window_item(document, ID_DOCUMENT_POST_CLOSE) : NULL;
     if (button) send_message(document, evCommand, MAKEDWORD(button->id, btnClicked), button);
-  }
+  } else if (strcmp(operation, "close_document")) luaL_error(L, "unknown window operation '%s'", operation);
 }
 static void ledger_ui_configuration(lua_State *L) { select_configuration(); }
 static void ledger_ui_language(lua_State *L) { select_language(); }
@@ -600,16 +604,13 @@ void ledger_ui_close(void) {
 }
 void ledger_command(uint16_t id) {
   if (!g_ledger) return;
-  if (!g_ledger->runtime && !ledger_ui_open("build/share/ledger")) return;
+  if (!g_ledger->runtime && !ledger_ui_open(g_ledger->share_dir)) return;
   const char *name = id == ID_HOME_PAGE_ALL_DOCUMENTS ? "view.journal" : NULL;
   for (int i = 0; !name && i < ledger_action_meta_count; i++) if (ledger_action_meta[i].id == id) name = ledger_action_meta[i].name;
   if (!name) return;
-  char error[2048];
-  if (!script_runtime_invoke(g_ledger->runtime, g_ledger->controller, "command", name, error, sizeof(error))) {
-    fprintf(stderr, "[ledger] command %s: %s\n", name, error); fflush(stderr);
+  char error[2048];  // the runtime logs script faults; refusals are answers for the user
+  if (!script_runtime_invoke(g_ledger->runtime, g_ledger->controller, "command", name, error, sizeof(error)))
     message_box(g_ledger->main_win, error, ui_tr("Ledger"), MB_OK);
-
-  }
 }
 
 // ── Windows ─────────────────────────────────────────────────────────────────

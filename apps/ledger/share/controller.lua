@@ -4,6 +4,7 @@ local orion = require("orion")
 local Model = require("orion.model")
 local calendar = require("orion.plugins").use("calendar", 1)
 local documents, types, entries = Model:extend("ib.documents"), Model:extend("cfg.doc_types"), Model:extend("ib.entries")
+local organizations, configurations, report_settings = Model:extend("ib.organizations"), Model:extend("cfg.settings"), Model:extend("ib.report_settings")
 local Controller = {}
 function Controller:new_document(form)
   local last = documents:find(ui.selected("documents"))
@@ -13,20 +14,10 @@ function Controller:new_document(form)
     for _, row in ipairs(types:all()) do if row.form == form then kind = row; break end end
   end
   if not kind then return ui.message(orion.tr("The configuration defines no document type of this kind."), orion.tr("New Document")) end
-  local date = ""
-  if form == "closing" then
-    local today = orion.today()
-    local year, month = today:match("^(%d+)%-(%d+)")
-    year, month = tonumber(year), tonumber(month) + 1
-    if month == 13 then year, month = year + 1, 1 end
-    date = calendar.add(string.format("%04d-%02d-01", year, month), -1)
-  end
-  ui.new_document(kind.id, date)
+  ui.new_document(kind.id, form == "closing" and calendar.month_end(orion.today()) or "")
 end
 function Controller:status()
-  local organization = Model:extend("ib.organizations"):all()[1]
-  local configuration = Model:extend("cfg.settings"):all()[1]
-  local settings = Model:extend("ib.report_settings"):all()[1]
+  local organization, configuration, settings = organizations:all()[1], configurations:all()[1], report_settings:all()[1]
   local from = settings and settings.date_from ~= "" and orion.formatDate(settings.date_from) or ""
   local to = settings and settings.date_to ~= "" and orion.formatDate(settings.date_to) or ""
   local period = from == "" and to == "" and orion.tr("Report period: all dates") or

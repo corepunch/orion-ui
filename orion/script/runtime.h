@@ -13,6 +13,9 @@ lua_State *script_runtime_state(script_runtime_t *runtime);
 // Loads a fresh controller object with package-local require/cache. Shared
 // Orion/native modules retain application-wide identity.
 int script_runtime_controller(script_runtime_t *runtime, const char *path, char *error, size_t size);
+// On failure `error` holds the message. Script faults (a missing method, a raised
+// error) are also logged; a refusal (orion.assert, orion.fail) is only returned,
+// for the caller to show to the user.
 bool script_runtime_invoke(script_runtime_t *runtime, int controller, const char *method, const char *argument,
                            char *error, size_t size);
 bool script_runtime_action(script_runtime_t *runtime, const char *module, const char *method, const char *argument, char *error, size_t size);

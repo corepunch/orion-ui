@@ -29,6 +29,7 @@ local intervals = Plugins.use("intervals", 1)
 
 local tomorrow = calendar.add("2026-10-28", 1)
 local nights = calendar.between("2026-10-28", "2026-10-31") -- 3
+local closing = calendar.month_end("2026-02-10")           -- "2026-02-28"
 assert(not intervals.overlap("2026-10-28", "2026-10-31",
                              "2026-10-31", "2026-11-02"))
 ```
