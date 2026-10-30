@@ -812,7 +812,7 @@ void script_page_close(script_page_t *page) {
   if (page->owns_window && page->win) destroy_window(page->win);
   sprite_clear(page);
   if (page->runtime) { script_runtime_release(page->runtime, page->page_ref); script_runtime_page_release(page->runtime); }
-  else if (page->L) lua_close(page->L);
+  else if (page->L) script_state_close(page->L);
   for (int i = 0; i < page->db_count; i++) {
     unregister_database(page->dbs[i]->name);
     destroy_database(page->dbs[i]);

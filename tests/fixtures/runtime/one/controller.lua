@@ -4,4 +4,5 @@ return {check = function(self, expected)
   assert(helper.name == expected)
   assert(calendar == require("orion.plugins").use("calendar", 1))
   self.calls = (self.calls or 0) + 1
-end, refuse = function(self, message) require("orion").assert(false, message) end}
+end, refuse = function(self, message) require("orion").assert(false, message) end,
+leak = function() leaked = 1 end}  -- luacheck: ignore 111

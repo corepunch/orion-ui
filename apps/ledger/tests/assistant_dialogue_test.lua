@@ -65,7 +65,7 @@ local dialogues={
     {'find customer "Beta"',true,1}, {'show documents for it',true,0}, {'open it',true,nil,13}}},
 }
 for _,dialogue in ipairs(dialogues) do
-  local e,records,opened=fixture()
+  local e,records=fixture()
   local original=P.copy(records)
   for _,step in ipairs(dialogue.steps) do
     local r=e:submit(step[1]); local label=dialogue.name..' / '..step[1]..' / '..r.message
@@ -85,7 +85,7 @@ for _,text in ipairs({'open customer','öffne Kunden','открой клиент
 end
 -- Stable identity, rather than a positional alias: sorting must never retarget it.
 for _,text in ipairs({'sort customers by debt ascending','sort customers by debt descending','show documents','show items'}) do
-  local e,records,opened=fixture()
+  local e=fixture()
   check(e:submit('open customer "Alpha AG"').ok,'select Alpha')
   check(e:submit(text).ok,text)
   local expected=text=='show items' and 31 or 11 -- a singleton becomes THIS-IS-IT

@@ -18,9 +18,8 @@ function I.register(descriptor, node_impl, recipe_impl)
   assert(type(descriptor.id) == "string" and descriptor.version == "1", "unsupported plugin descriptor")
   assert(not A.plugins[descriptor.id], "duplicate plugin ID")
   local pending_nodes, pending_recipes = descriptor.bind_nodes(node_impl), descriptor.bind_recipes(recipe_impl)
-  local seen = {}
   for _, group in ipairs({{rows=descriptor.nodes, registered=A.nodes, impl=pending_nodes}, {rows=descriptor.recipes, registered=A.recipes, impl=pending_recipes}}) do
-    seen = {}
+    local seen = {}
     for _, item in ipairs(group.rows) do
       assert(not seen[item.id] and type(group.impl[item.id]) == "function", "invalid plugin implementation")
       seen[item.id] = true

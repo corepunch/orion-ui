@@ -252,6 +252,14 @@ check-lua:
 
 $(CORE_LIBS) $(ORIONC_BIN) $(CGEN_BIN): | check-lua
 
+# Static checks of every Lua source against .luacheckrc: undeclared globals,
+# unused values and shadowing. Needs luacheck (lua-check on Debian/Ubuntu,
+# `luarocks install luacheck` elsewhere).
+.PHONY: lua-check
+lua-check:
+	@command -v luacheck >/dev/null 2>&1 || { echo "luacheck is required: apt install lua-check, or luarocks install luacheck" >&2; exit 1; }
+	@luacheck --quiet --codes .
+
 tools: $(TOOLS_BINS)
 	@echo "All tools built"
 

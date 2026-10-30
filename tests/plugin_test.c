@@ -12,7 +12,7 @@ static void test_plugins(void) {
   bool ok = script_call(L, 0, 0, message, sizeof(message), &refused);
   if (!ok) fprintf(stderr, "%s\n", message);
   ASSERT_TRUE(ok);
-  lua_close(L);
+  script_state_close(L);
   PASS();
 }
 
@@ -38,6 +38,12 @@ static void test_native_template(void) {
   char *output = NULL, error[1024];
   ASSERT_TRUE(script_template_render("{{title}}{{#items}}{{n}}={{name|custom}};{{/items}}", "html", &source, &output, error, sizeof(error)));
   ASSERT_STR_EQUAL(output, "&lt;Native&gt;1=[Row 1];2=[Row 2];");
+  free(output);
+  // The renderer state is reused; a second source and format render cleanly in it.
+  int second = 2;
+  script_template_source_t other = {&second, native_value, native_rows, NULL};
+  ASSERT_TRUE(script_template_render("\"{{title}}\" {{#items}}{{name|custom}} {{/items}}", "csv", &other, &output, error, sizeof(error)));
+  ASSERT_STR_EQUAL(output, "\"<Native>\" Row 1 Row 2 ");
   free(output);
   ASSERT_FALSE(script_template_render("{{#items}}broken", "html", &source, &output, error, sizeof(error)));
   ASSERT_NULL(output); ASSERT_NOT_NULL(strstr(error, "unterminated"));

@@ -29,7 +29,7 @@ end
 
 -- Ordinary domestic invoice output. Special regimes require dedicated forms.
 function validate_invoice(ctx)
-  local org,buyer,lines = ledger.invoice.check(ctx, {country="DE"})
+  local org,_,lines = ledger.invoice.check(ctx, {country="DE"})
   assert(org.tax_id~="" or org.vat_id~="", "Supplier tax number or VAT identification number is required")
   ledger.invoice.required(org.legal_details,"Legal registration details (where applicable)")
   for _,line in ipairs(lines) do

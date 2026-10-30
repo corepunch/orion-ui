@@ -20,7 +20,7 @@ function validate_domestic_service(ctx)
 end
 
 function validate_invoice(ctx)
-  local org,buyer = ledger.invoice.check(ctx, {country="GB",standard_only=true})
+  local org = ledger.invoice.check(ctx, {country="GB",standard_only=true})
   ledger.invoice.required(org.vat_id,"Supplier VAT registration number")
   assert(ctx.document.supply_kind=="services", "This profile supports domestic services; goods need inventory and classification rules")
 end

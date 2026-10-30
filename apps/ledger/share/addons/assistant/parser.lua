@@ -66,9 +66,9 @@ function P.number(words, start)
       group=(group==0 and 1 or group)*roles.multipliers; seen=true; last=roles.multipliers
     elseif roles.scales then
       total=total+(group==0 and 1 or group)*roles.scales; group=0; seen=true; last=nil
-    elseif roles.number_conjunctions and seen and words[i+1] and numeric_roles(words[i+1].text).numbers~=nil then
-      -- Numeric conjunction, only inside a number.
-    else break end
+    elseif not (roles.number_conjunctions and seen and words[i+1] and numeric_roles(words[i+1].text).numbers~=nil) then
+      break  -- only a numeric conjunction inside a number continues it
+    end
     i=i+1
   end
   if seen then return total+group,i end
@@ -88,7 +88,6 @@ local function parse(text,context,initial_verb)
   if #words==0 and not initial_verb then return nil,tr('What should I show? Try: show debtors.') end
   local ast, i, field = {verb=initial_verb,filters={}}, 1, nil
   -- Keep all parsing local: an invalid suffix must not alter dialogue context.
-  i=1
   while i<=#words do
     local w=words[i]
     if w.quoted then

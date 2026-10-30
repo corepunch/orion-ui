@@ -21,6 +21,8 @@ static void test_runtime(void) {
   ASSERT_FALSE(script_runtime_invoke(runtime, first, "refuse", "Choose a record.", error, sizeof(error)));
   ASSERT_STR_EQUAL(error, "Choose a record.");
   ASSERT_FALSE(script_runtime_invoke(runtime, first, "check", "wrong", NULL, 0));
+  ASSERT_FALSE(script_runtime_invoke(runtime, first, "leak", NULL, error, sizeof(error)));
+  ASSERT_NOT_NULL(strstr(error, "undeclared global 'leaked'"));
   ASSERT_EQUAL(script_runtime_controller(runtime, "tests/fixtures/runtime/none.lua", NULL, 0), LUA_NOREF);
   ASSERT_FALSE(script_runtime_close(runtime));
   script_runtime_release(runtime, first); script_runtime_release(runtime, second);

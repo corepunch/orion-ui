@@ -182,6 +182,16 @@ types. This initial action syntax passes zero or one string argument. General
 expression evaluation, arbitrary C function calls, async tasks, undo coordination
 and hot reload are not part of this contract.
 
+## Limits and diagnostics
+
+An application's state is the add-on sandbox: a memory cap, a CPU budget per
+host call, warnings on stderr and no undeclared globals, in the shared state
+and in every controller's package scope. The runtime logs a script fault (a
+raised error, a missing controller method) to stderr with the controller's
+path or method and hands the message to the host; a refusal from `orion.assert`
+or `orion.fail` is only handed over, for the host to show. The native template
+renderer keeps one state for the process and renders every document in it.
+
 ## Ledger migration boundary
 
 Ledger's former C command switch, document-kind selection, status aggregation
