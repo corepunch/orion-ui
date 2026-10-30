@@ -1,5 +1,6 @@
 .DEFAULT_GOAL := app
 .DELETE_ON_ERROR:
+include tools/app_sources.mk
 BUILD_DIR ?= build/ipad
 APP ?= imageeditor
 SDK ?= iphoneos
@@ -40,8 +41,8 @@ COMMCTL_SRCS := $(filter-out orion/commctl/tray.c,$(wildcard orion/commctl/*.c))
 COMMDLG_SRCS := $(wildcard orion/commdlg/*.c)
 COMPONENT_SRCS := $(wildcard $(APP_DIR)/components/*.c)
 OBJECTS := $(BUILD_ROOT)/media_export_apple.o $(BUILD_ROOT)/audio_input_apple.o $(addprefix $(BUILD_ROOT)/,user.o kernel.o commctl.o) $(addprefix $(BUILD_ROOT)/,$(COMMDLG_SRCS:.c=.o) $(COMPONENT_SRCS:.c=.o))
-APP_SRCS := $(shell find $(APP_DIR) -name '*.c' ! -path '*/components/*' ! -path '*/tests/*' ! -path '*/reel/*' ! -name main.c | sort) $(APP_DIR)/main.c
-APP_HEADERS := $(shell find $(APP_DIR) -name '*.h' ! -path '*/tests/*')
+APP_SRCS := $(shell $(call app_unity_sources,$(APP_DIR))) $(APP_DIR)/main.c
+APP_HEADERS := $(shell $(call find_app_sources,$(APP_DIR),-name '*.h' ! -path '*/tests/*'))
 PLATFORM_LIB := $(BUILD_ROOT)/platform/libplatform.a
 HOST_TOOL := $(abspath $(BUILD_DIR))/host/orionc
 GENERATED := build/generated/$(APP_DIR)/$(APP_SOURCE).h
@@ -77,7 +78,7 @@ $(BUILD_ROOT)/%.o: %.c $(BUILD_ROOT)/settings $(GENERATED) packaging/ipad/build.
 	$(COMPILER) $(FLAGS) -I$(APP_DIR) -I$(APP_DIR)/components -c "$<" -o "$@"
 $(BUILD_ROOT)/%_apple.o: orion/kernel/%_apple.m $(wildcard orion/kernel/*.h) $(BUILD_ROOT)/settings
 	$(COMPILER) $(FLAGS) -fblocks -c "$<" -o "$@"
-$(APP_ROOT)/app.o: $(APP_SRCS) $(APP_HEADERS) $(GENERATED) $(APP_ROOT)/settings packaging/ipad/build.mk
+$(APP_ROOT)/app.o: $(APP_SRCS) $(APP_HEADERS) $(GENERATED) $(APP_ROOT)/settings packaging/ipad/build.mk tools/app_sources.mk
 	@printf '%s\n' $(APP_SRCS) | sed 's/.*/\#include "&"/' > "$(APP_ROOT)/app.c"
 	$(COMPILER) $(FLAGS) $(APP_FLAGS) -c "$(APP_ROOT)/app.c" -o "$@"
 $(APP_ROOT)/$(APP): $(OBJECTS) $(APP_ROOT)/app.o $(PLATFORM_LIB)

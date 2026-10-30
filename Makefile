@@ -106,6 +106,7 @@ GEM_CFLAGS = $(CFLAGS) -DBUILD_AS_GEM
 
 APPS  = apps
 COMPS = components
+include tools/app_sources.mk
 
 # Build directories
 BUILD_DIR     = build
@@ -189,7 +190,7 @@ appdir = $(APPS)/$(or $(PHONY_APPS_SRC_$(1)),$(1))
 # Unity-built apps need their real sources as prerequisites: without them an
 # edited example leaves the binary newer than every listed prereq and make
 # silently runs the stale executable.
-app_srcs = $(shell find $(call appdir,$(1)) \( -name '*.c' -o -name '*.h' \) ! -path '*/tests/*')
+app_srcs = $(shell $(call find_app_sources,$(call appdir,$(1)),\( -name '*.c' -o -name '*.h' \) ! -path '*/tests/*'))
 $(foreach n,$(EXAMPLES) $(PHONY_APP_NAMES),$(eval $(BIN_DIR)/$(n)$(EXE_EXT): $(call app_srcs,$(n))))
 $(foreach n,$(EXAMPLES) $(PHONY_APP_NAMES),$(eval $(BIN_DIR)/$(n)$(EXE_EXT): $(call app_plugin_file,$(n))))
 $(foreach n,$(filter-out shell,$(EXAMPLES)) $(PHONY_APP_NAMES),$(eval $(GEM_DIR)/$(n).gem: $(call app_srcs,$(n))))
@@ -226,7 +227,7 @@ $(BIN_DIR)/test_groove_synth_test$(EXE_EXT): $(APPS)/groove/synth.c $(wildcard $
 
 # Shell fragment emitting the unity translation unit for example dir $(1):
 # every .c outside $(COMPS), main.c last.  ('#' is backslash-escaped for make.)
-unity_tu = find $(1) -name '*.c' ! -name main.c ! -path '*/$(COMPS)/*' ! -path '*/tests/*' ! -path '*/reel/*' | sort | sed 's/.*/\#include "&"/'; if [ -f $(1)/main.c ]; then echo '\#include "$(1)/main.c"'; else echo '\#define ORION_APP_NAME "$(notdir $(1))"'; echo '\#include <orion/script/application_main.h>'; fi
+unity_tu = $(call app_unity_sources,$(1)) | sed 's/.*/\#include "&"/'; if [ -f $(1)/main.c ]; then echo '\#include "$(1)/main.c"'; else echo '\#define ORION_APP_NAME "$(notdir $(1))"'; echo '\#include <orion/script/application_main.h>'; fi
 app_inc  = -I. -I$(call appdir,$*) -I$(call appdir,$*)/$(COMPS) -DSHAREDIR='"../share/$(notdir $(call appdir,$*))"'
 app_libs = $(LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(call app_plugin,$*) $(LIBS) $(if $(findstring scener,$*),$(SCENER_LIBS))
 
@@ -509,7 +510,7 @@ $(LIB_DIR)/%_components.$(LIB_EXT): $$(wildcard $(APPS)/$$*/$(COMPS)/*.c) $(CORE
 	@$(CC) $(CFLAGS) $(LIB_FLAGS) $(component_id_flags) -I. -I$(APPS)/$* -I$(APPS)/$*/$(COMPS) -o $@ $(wildcard $(APPS)/$*/$(COMPS)/*.c) \
 	    $(LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS)
 
-$(EXAMPLE_BINS) $(PHONY_APP_BINS): $(BIN_DIR)/%$(EXE_EXT): $(CORE_LIBS) $(GENERATED_HEADERS) | $(BIN_DIR) share
+$(EXAMPLE_BINS) $(PHONY_APP_BINS): $(BIN_DIR)/%$(EXE_EXT): tools/app_sources.mk $(CORE_LIBS) $(GENERATED_HEADERS) | $(BIN_DIR) share
 	@printf '%-8s%s\n' '$(if $(PHONY_APPS_SRC_$*),PHONY,BIN)' "$@"
 	@{ $(call unity_tu,$(call appdir,$*)); } | \
 	    $(CC) $(CFLAGS) $(PHONY_APPS_CFLAGS_$*) $(call app_theme_cflags,$*) $(app_inc) -x c -o $@ - \
@@ -542,7 +543,7 @@ endif
 gems: $(GEM_BINS) $(PHONY_APP_GEMS)
 	@echo "OK All .gems built and validated"
 
-$(GEM_BINS) $(PHONY_APP_GEMS): $(GEM_DIR)/%.gem: $(CORE_LIBS) $(GENERATED_HEADERS) | $(GEM_DIR)
+$(GEM_BINS) $(PHONY_APP_GEMS): $(GEM_DIR)/%.gem: tools/app_sources.mk $(CORE_LIBS) $(GENERATED_HEADERS) | $(GEM_DIR)
 	@printf '%-8s%s\n' '$(if $(PHONY_APPS_SRC_$*),GEM(P),GEM)' "$@"
 	@{ echo '#include <orion/gem.h>'; $(call unity_tu,$(call appdir,$*)); } | \
 	    $(CC) $(GEM_CFLAGS) $(PHONY_APPS_CFLAGS_$*) $(LIB_FLAGS) $(app_inc) -x c -o $@ - \
@@ -559,7 +560,7 @@ test: share $(TEST_BINS) lua-docs-check
 	done
 	@echo "All tests passed!"
 
-$(TEST_BINS): $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_SRCS) $(wildcard $(TEST_DIR)/*.h) $(TEST_DIR)/test_env.c $(GENERATED_HEADERS) $(CORE_LIBS) $(COMPONENT_PLUGIN_BINS) | $(BIN_DIR) share
+$(TEST_BINS): $(BIN_DIR)/test_%$(EXE_EXT): tools/app_sources.mk $(TEST_SRCS) $(wildcard $(TEST_DIR)/*.h) $(TEST_DIR)/test_env.c $(GENERATED_HEADERS) $(CORE_LIBS) $(COMPONENT_PLUGIN_BINS) | $(BIN_DIR) share
 	@echo "TEST    $@"
 	@src='$(firstword $(filter %/$*.c,$(TEST_SRCS)))'; \
 	app_dir=; app=; stem='$*'; \
@@ -575,7 +576,7 @@ $(TEST_BINS): $(BIN_DIR)/test_%$(EXE_EXT): $(TEST_SRCS) $(wildcard $(TEST_DIR)/*
 	  printf '#include "%s"\n' "$$src"; \
 	  printf '#include "$(TEST_DIR)/test_env.c"\n'; \
 	  if [ -n "$$app_dir" ] && [ -d "$(APPS)/$$app_dir" ]; then \
-	    find "$(APPS)/$$app_dir" -name '*.c' ! -name main.c ! -path '*/$(COMPS)/*' ! -path '*/tests/*' ! -path '*/reel/*' | sort | sed 's/.*/#include "&"/'; \
+	    $(call app_unity_sources,"$(APPS)/$$app_dir") | sed 's/.*/#include "&"/'; \
 	  fi; \
 	  if [ -n "$$app_dir" ] && [ -d "$(APPS)/$$app_dir/tests/support" ]; then \
 	    find "$(APPS)/$$app_dir/tests/support" -name '*.c' | sort | sed 's/.*/#include "&"/'; \
