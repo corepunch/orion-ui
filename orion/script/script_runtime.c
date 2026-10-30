@@ -6,6 +6,13 @@
 
 struct script_runtime_s { lua_State *L; unsigned controllers, pages; };
 
+// Callers may pass no error buffer; diagnostics still need somewhere to land.
+#define RUNTIME_ERROR_BUFFER(error, size) char fallback[1024]; if (!(error) || !(size)) { error = fallback; size = sizeof(fallback); } (error)[0] = 0
+static void runtime_report(const char *what, const char *detail, bool refused, const char *message) {
+  if (refused) return;  // A refusal is a user-facing answer, not a framework fault; the caller shows it.
+  fprintf(stderr, "[runtime] %s %s: %s\n", what, detail ? detail : "", message); fflush(stderr);
+}
+
 // The wrapper receives _ENV from the package scope; no Lua load/loadfile API
 // is exposed. Text-only loading and path validation remain native.
 static int runtime_local_chunk(lua_State *L) {
@@ -26,7 +33,8 @@ static int runtime_read(lua_State *L) {
     else if (!((*c >= 'a' && *c <= 'z') || (*c >= 'A' && *c <= 'Z') || (*c >= '0' && *c <= '9') || *c == '_'))
       return luaL_error(L, "invalid local module name");
   }
-  snprintf(path, sizeof(path), "%s/%s.lua", directory, relative);
+  int length = snprintf(path, sizeof(path), "%s/%s.lua", directory, relative);
+  if (length < 0 || (size_t)length >= sizeof(path)) return luaL_error(L, "local module path is too long");
   FILE *file = fopen(path, "rb");
   if (!file) { lua_pushnil(L); return 1; }
   fclose(file);
@@ -52,8 +60,9 @@ bool script_runtime_close(script_runtime_t *runtime) {
 lua_State *script_runtime_state(script_runtime_t *runtime) { return runtime ? runtime->L : NULL; }
 
 int script_runtime_controller(script_runtime_t *runtime, const char *path, char *error, size_t size) {
+  RUNTIME_ERROR_BUFFER(error, size);
   lua_State *L = runtime ? runtime->L : NULL;
-  if (!L || !path) return LUA_NOREF;
+  if (!L || !path) { snprintf(error, size, "no runtime or controller path"); return LUA_NOREF; }
   int base = lua_gettop(L);
   char directory[1200];
   const char *slash = strrchr(path, '/');
@@ -82,21 +91,25 @@ int script_runtime_controller(script_runtime_t *runtime, const char *path, char 
   lua_settop(L, base); runtime->controllers++;
   return reference;
 failed:
-  fprintf(stderr, "[runtime] controller %s: %s\n", path, error ? error : "load failed"); fflush(stderr);
+  runtime_report("controller", path, refused, error);
   lua_settop(L, base); return LUA_NOREF;
 }
 bool script_runtime_invoke(script_runtime_t *runtime, int controller, const char *method, const char *argument,
                            char *error, size_t size) {
-  if (!runtime || controller == LUA_NOREF) return false;
+  RUNTIME_ERROR_BUFFER(error, size);
+  if (!runtime || controller == LUA_NOREF || !method) { snprintf(error, size, "no controller for %s", method ? method : "?"); return false; }
   lua_State *L = runtime->L;
   int base = lua_gettop(L);
   lua_rawgeti(L, LUA_REGISTRYINDEX, controller); lua_getfield(L, -1, method);
-  if (!lua_isfunction(L, -1)) { lua_settop(L, base); return false; }
+  if (!lua_isfunction(L, -1)) {
+    lua_settop(L, base); snprintf(error, size, "controller has no method '%s'", method);
+    runtime_report("invoke", method, false, error); return false;
+  }
   lua_insert(L, -2); lua_pushstring(L, argument ? argument : "");
   bool refused = false;
   bool ok = script_call(L, 2, 0, error, size, &refused);
   lua_settop(L, base);
-  if (!ok) { fprintf(stderr, "[runtime] %s: %s\n", method, error); fflush(stderr); }
+  if (!ok) runtime_report("invoke", method, refused, error);
   return ok;
 }
 void script_runtime_release(script_runtime_t *runtime, int controller) {
@@ -109,7 +122,8 @@ void script_runtime_page_retain(script_runtime_t *runtime) { if (runtime) runtim
 void script_runtime_page_release(script_runtime_t *runtime) { if (runtime && runtime->pages) runtime->pages--; }
 
 bool script_runtime_action(script_runtime_t *runtime, const char *module, const char *method, const char *argument, char *error, size_t size) {
-  if (!runtime) return false;
+  RUNTIME_ERROR_BUFFER(error, size);
+  if (!runtime || !module || !method) { snprintf(error, size, "no runtime for action"); return false; }
   lua_State *L = runtime->L; int base = lua_gettop(L); bool refused = false;
   lua_getglobal(L, "require"); lua_pushstring(L, module);
   bool ok = script_call(L, 1, 1, error, size, &refused);
@@ -119,6 +133,6 @@ bool script_runtime_action(script_runtime_t *runtime, const char *module, const 
     else { if (argument) lua_pushstring(L, argument); ok = script_call(L, argument ? 1 : 0, 0, error, size, &refused); }
   }
   lua_settop(L, base);
-  if (!ok) { fprintf(stderr, "[runtime] action %s.%s: %s\n", module, method, error); fflush(stderr); }
+  if (!ok) { char what[256]; snprintf(what, sizeof(what), "%s.%s", module, method); runtime_report("action", what, refused, error); }
   return ok;
 }

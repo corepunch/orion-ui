@@ -15,6 +15,11 @@ return function()
     return n
   end
   function Calendar.between(first, last) return Calendar.day(last) - Calendar.day(first) end
+  function Calendar.month_end(iso)
+    Calendar.day(iso)
+    local y, m = tonumber(iso:sub(1, 4)), tonumber(iso:sub(6, 7))
+    return string.format("%04d-%02d-%02d", y, m, lengths[m] + ((m == 2 and leap(y)) and 1 or 0))
+  end
   function Calendar.add(iso, days)
     assert(math.type(days) == "integer", "days must be an integer")
     local n = Calendar.day(iso) + days

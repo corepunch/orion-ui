@@ -184,9 +184,9 @@ and hot reload are not part of this contract.
 
 ## Ledger migration boundary
 
-Ledger's former C command switch, document-kind selection, private month-end
-calendar, status aggregation and command policy now live in
-`apps/ledger/share/controller.lua`. Declarative screens remain in `ledger.orion`.
+Ledger's former C command switch, document-kind selection, status aggregation
+and command policy now live in `apps/ledger/share/controller.lua`; the month-end
+date comes from the shared `calendar` plugin. Declarative screens remain in `ledger.orion`.
 Its native adapter exposes focused capabilities such as editing a document,
 posting/reposting, opening a catalog and navigating pages. Business workflows use
 `orion.model` directly rather than calling a second native command dispatcher.
