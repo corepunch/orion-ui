@@ -158,7 +158,8 @@ PENCILTEST_VIDEO_CFLAGS = $(shell $(PKG_CONFIG) --cflags libpng 2>/dev/null)
 PENCILTEST_VIDEO_LIBS   = $(shell $(PKG_CONFIG) --libs libpng 2>/dev/null)
 
 # Examples are directory names under $(APPS)/, independent of their contents.
-EXAMPLES     = $(patsubst $(APPS)/%/,%,$(filter %/,$(wildcard $(APPS)/*/)))
+# The Doom editor uses separate translation units (see its build.mk).
+EXAMPLES     = $(filter-out doom-ed,$(patsubst $(APPS)/%/,%,$(filter %/,$(wildcard $(APPS)/*/))))
 EXAMPLE_BINS = $(patsubst %,$(BIN_DIR)/%$(EXE_EXT),$(EXAMPLES))
 GEM_BINS     = $(patsubst %,$(GEM_DIR)/%.gem,$(filter-out shell,$(EXAMPLES)))
 COMPONENT_PLUGIN_BINS = $(patsubst $(APPS)/%/$(COMPS),$(LIB_DIR)/%_components.$(LIB_EXT),$(wildcard $(APPS)/*/$(COMPS)))
@@ -227,6 +228,7 @@ TEST_BINS = $(patsubst %,$(BIN_DIR)/test_%$(EXE_EXT),$(basename $(notdir $(TEST_
 $(foreach n,$(EXAMPLES),$(foreach t,$(wildcard $(APPS)/$(n)/tests/*.c),$(eval $(BIN_DIR)/test_$(basename $(notdir $(t)))$(EXE_EXT): $(call app_srcs,$(n)) $(wildcard $(APPS)/$(n)/tests/*.h))))
 $(BIN_DIR)/test_groove_waveform_cache_test$(EXE_EXT): $(APPS)/groove/waveform_cache.c $(APPS)/groove/groove.h
 $(BIN_DIR)/test_groove_synth_test$(EXE_EXT): $(APPS)/groove/synth.c $(wildcard $(APPS)/groove/synth*.h) $(APPS)/groove/third_party/tsf.h $(APPS)/groove/groove.h
+$(BIN_DIR)/test_doom_ed_wad_test$(EXE_EXT): $(APPS)/doom-ed/wad.c $(APPS)/doom-ed/wad.h
 
 # Shell fragment emitting the unity translation unit for example dir $(1):
 # every .c outside $(COMPS), main.c last.  ('#' is backslash-escaped for make.)
@@ -554,6 +556,8 @@ $(GEM_BINS) $(PHONY_APP_GEMS): $(GEM_DIR)/%.gem: tools/app_sources.mk $(CORE_LIB
 	@$(GEM_NM) $@ 2>/dev/null | grep -q '$(GEM_SYM)' || { echo 'FAIL missing gem_get_interface'; exit 1; }
 
 # ── Tests ────────────────────────────────────────────────────────────────
+include apps/doom-ed/build.mk
+
 test: share $(TEST_BINS) lua-docs-check
 	@echo "Running tests..."
 	@$(COPY_DLLS)

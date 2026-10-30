@@ -200,4 +200,58 @@ bool R_DrawVGABuffer(const R_VgaBuffer *buf,
                      const R_FontSheet *font,
                      const uint32_t palette256[256]);
 
+// Immediate GPU operations for custom scene pipelines. See docs/drawing.md.
+void R_GpuActiveTexture(GLenum texture);
+void R_GpuAttachShader(GLuint program, GLuint shader);
+void R_GpuBindAttribLocation(GLuint program, GLuint index, const GLchar *name);
+void R_GpuBindBuffer(GLenum target, GLuint buffer);
+void R_GpuBindTexture(GLenum target, GLuint texture);
+void R_GpuBindVertexArray(GLuint array);
+void R_GpuBlendFunc(GLenum sfactor, GLenum dfactor);
+void R_GpuBufferData(GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage);
+void R_GpuClear(GLbitfield mask);
+void R_GpuClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
+void R_GpuCompileShader(GLuint shader);
+GLuint R_GpuCreateProgram(void);
+GLuint R_GpuCreateShader(GLenum type);
+void R_GpuCullFace(GLenum mode);
+void R_GpuDeleteBuffers(GLsizei n, const GLuint *buffers);
+void R_GpuDeleteProgram(GLuint program);
+void R_GpuDeleteShader(GLuint shader);
+void R_GpuDeleteTextures(GLsizei n, const GLuint *textures);
+void R_GpuDeleteVertexArrays(GLsizei n, const GLuint *arrays);
+void R_GpuDepthMask(GLboolean flag);
+void R_GpuDisable(GLenum cap);
+void R_GpuDisableVertexAttribArray(GLuint index);
+void R_GpuDrawArrays(GLenum mode, GLint first, GLsizei count);
+void R_GpuEnable(GLenum cap);
+void R_GpuEnableVertexAttribArray(GLuint index);
+void R_GpuGenBuffers(GLsizei n, GLuint *buffers);
+void R_GpuGenTextures(GLsizei n, GLuint *textures);
+void R_GpuGenVertexArrays(GLsizei n, GLuint *arrays);
+void R_GpuGenerateMipmap(GLenum target);
+void R_GpuGetBooleanv(GLenum pname, GLboolean *params);
+void R_GpuGetProgramInfoLog(GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
+void R_GpuGetProgramiv(GLuint program, GLenum pname, GLint *params);
+void R_GpuGetShaderInfoLog(GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
+void R_GpuGetShaderiv(GLuint shader, GLenum pname, GLint *params);
+GLint R_GpuGetUniformLocation(GLuint program, const GLchar *name);
+void R_GpuLinkProgram(GLuint program);
+void R_GpuPointSize(GLfloat size);
+void R_GpuReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
+void R_GpuShaderSource(GLuint shader, GLsizei count, const GLchar* const *string, const GLint *length);
+void R_GpuTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+void R_GpuTexParameteri(GLenum target, GLenum pname, GLint param);
+void R_GpuUniform1f(GLint location, GLfloat v0);
+void R_GpuUniform1i(GLint location, GLint v0);
+void R_GpuUniform2f(GLint location, GLfloat v0, GLfloat v1);
+void R_GpuUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
+void R_GpuUniform3fv(GLint location, GLsizei count, const GLfloat *value);
+void R_GpuUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
+void R_GpuUniform4fv(GLint location, GLsizei count, const GLfloat *value);
+void R_GpuUniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+void R_GpuUseProgram(GLuint program);
+void R_GpuVertexAttrib4f(GLuint index, GLfloat x, GLfloat y, GLfloat z, GLfloat w);
+void R_GpuVertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer);
+
 #endif /* __UI_RENDERER_H__ */

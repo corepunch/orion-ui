@@ -428,3 +428,15 @@ selected content and toolbar children.
 `rect_inset_edges(rect, insets)` interprets the inset fields as left, top, right,
 and bottom, and clamps exhausted width or height to zero. Layout containers and
 window-managed scroll content share this utility for their padded content area.
+
+## Custom scene GPU pipelines
+
+The `R_Gpu*` operations in `orion/kernel/renderer.h` support custom shader,
+buffer, texture, and picking pipelines that cannot use the standard 2D drawing
+functions or `R_Mesh` helpers. They operate on the framework's current graphics
+context. Backend calls stay in `renderer_impl.c`; each operation reports GPU
+errors to stderr. These calls use the same GPU types and constants as the
+existing mesh API. Resource creation and destruction require a current context;
+drawing is restricted to `evPaint`. A scene must restore the render state it
+changes before returning to framework painting. Prefer the existing mesh and
+texture helpers for ordinary drawing.
