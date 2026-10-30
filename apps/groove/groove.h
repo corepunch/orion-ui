@@ -304,7 +304,9 @@ bool song_export_wav_with_audio(const song_t *song, const block_pcm_t *audio, co
 // Mixdown and timeline export (export.c / dialogs/dlg_export.c).
 void groove_master_pcm(const float *in, int16_t *out, int samples);
 bool song_export_wav(const song_t *song, const char *path, ui_media_progress_fn progress, void *userdata);
+#ifdef GROOVE_USE_SHINE
 bool groove_encode_mp3(const char *wav, const char *path, ui_media_progress_fn progress, void *userdata);
+#endif
 void song_draw_overview(const song_t *song, irect16_t r);
 bool song_export_canvas(const song_t *song, int width, int height, ui_media_video_t *video);
 void app_export_media(window_t *owner, int kind);

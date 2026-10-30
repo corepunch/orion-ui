@@ -32,6 +32,7 @@ jobs:
         shell: ${{ matrix.os == 'windows-latest' && 'msys2 {0}' || 'bash' }}
     env:
       ORION_VERSION: ${{ inputs.version }}
+      GROOVE_USE_SHINE: "1"
     steps:
       - uses: actions/checkout@v4
         with:

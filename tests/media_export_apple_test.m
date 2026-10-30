@@ -11,10 +11,21 @@ static void media_test_u32(uint8_t *p, uint32_t n) {
   for (int i = 0; i < 4; i++) p[i] = (uint8_t)(n >> (8 * i));
 }
 static bool media_test_cancel(void *userdata, float value) { (void)userdata; (void)value; return false; }
+static NSArray<AVAssetTrack *> *media_test_tracks(AVAsset *asset, AVMediaType type) {
+  __block NSArray<AVAssetTrack *> *loaded = nil;
+  dispatch_semaphore_t done = dispatch_semaphore_create(0);
+  [asset loadTracksWithMediaType:type completionHandler:^(NSArray<AVAssetTrack *> *tracks, NSError *error) {
+    if (!error) loaded = [tracks retain];
+    dispatch_semaphore_signal(done);
+  }];
+  dispatch_semaphore_wait(done, DISPATCH_TIME_FOREVER);
+  dispatch_release(done);
+  return [loaded autorelease];
+}
 static bool media_test_asset(const char *path, int width) {
   AVURLAsset *asset = [AVURLAsset URLAssetWithURL:[NSURL fileURLWithPath:[NSString stringWithUTF8String:path]] options:nil];
-  NSArray<AVAssetTrack *> *audio = [asset tracksWithMediaType:AVMediaTypeAudio];
-  NSArray<AVAssetTrack *> *video = [asset tracksWithMediaType:AVMediaTypeVideo];
+  NSArray<AVAssetTrack *> *audio = media_test_tracks(asset, AVMediaTypeAudio);
+  NSArray<AVAssetTrack *> *video = media_test_tracks(asset, AVMediaTypeVideo);
   double duration = CMTimeGetSeconds(asset.duration);
   bool ok = audio.count == 1 && isfinite(duration) && fabs(duration - 1) < .08;
   if (width) ok = ok && video.count == 1 && (int)video.firstObject.naturalSize.width == width && (int)video.firstObject.naturalSize.height == 720;

@@ -1,4 +1,5 @@
 #include "groove.h"
+#ifdef GROOVE_USE_SHINE
 #pragma push_macro("BLKSIZE")
 #undef BLKSIZE
 #pragma push_macro("BUFFER_SIZE")
@@ -256,3 +257,4 @@ bool groove_encode_mp3(const char *wav, const char *path, ui_media_progress_fn p
 #pragma pop_macro("CBLIMIT")
 #pragma pop_macro("BUFFER_SIZE")
 #pragma pop_macro("BLKSIZE")
+#endif

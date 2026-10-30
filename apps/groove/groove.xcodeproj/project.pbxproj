@@ -23,6 +23,7 @@
 "GL_SILENCE_DEPRECATION",
 "STBTT_STATIC",
 "HAVE_WINDOWING",
+"GROOVE_USE_SHINE",
 "SHAREDIR=\"../share/groove\"",
 );
 "OTHER_CFLAGS" = ("$(inherited)",
@@ -64,6 +65,7 @@
 "GL_SILENCE_DEPRECATION",
 "STBTT_STATIC",
 "HAVE_WINDOWING",
+"GROOVE_USE_SHINE",
 "SHAREDIR=\"../share/groove\"",
 );
 "OTHER_CFLAGS" = ("$(inherited)",

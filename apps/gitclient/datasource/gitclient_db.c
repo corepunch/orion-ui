@@ -124,6 +124,9 @@ static result_t field_text_from_meta(const void *object,
     case DB_TYPE_STRING:
       snprintf(buf, buf_sz, "%s", (const char *)value);
       return true;
+    case DB_TYPE_DATE:
+      ui_format_date((const char *)value, buf, buf_sz);
+      return true;
     case DB_TYPE_BOOL:
       snprintf(buf, buf_sz, "%d", *(const bool *)value ? 1 : 0);
       return true;

@@ -411,7 +411,7 @@ int quantize(int ix[GRANULE_SIZE], int stepsize, shine_global_config *config) {
  */
 static inline int ix_max(int ix[GRANULE_SIZE], unsigned int begin,
                          unsigned int end) {
-  register int i;
+  register unsigned int i;
   register int max = 0;
 
   for (i = begin; i < end; i++)
@@ -428,12 +428,9 @@ static inline int ix_max(int ix[GRANULE_SIZE], unsigned int begin,
  */
 void calc_runlen(int ix[GRANULE_SIZE], gr_info *cod_info) {
   int i;
-  int rzero = 0;
 
   for (i = GRANULE_SIZE; i > 1; i -= 2)
-    if (!ix[i - 1] && !ix[i - 2])
-      rzero++;
-    else
+    if (ix[i - 1] || ix[i - 2])
       break;
 
   cod_info->count1 = 0;
@@ -452,7 +449,8 @@ void calc_runlen(int ix[GRANULE_SIZE], gr_info *cod_info) {
  * Determines the number of bits to encode the quadruples.
  */
 int count1_bitcount(int ix[GRANULE_SIZE], gr_info *cod_info) {
-  int p, i, k;
+  int p, i;
+  unsigned int k;
   int v, w, x, y, signbits;
   int sum0 = 0, sum1 = 0;
 
@@ -599,7 +597,8 @@ void bigv_tab_select(int ix[GRANULE_SIZE], gr_info *cod_info) {
  */
 int new_choose_table(int ix[GRANULE_SIZE], unsigned int begin,
                      unsigned int end) {
-  int i, max;
+  int i;
+  unsigned int max;
   int choice[2];
   int sum[2];
 
@@ -711,7 +710,8 @@ int bigv_bitcount(int ix[GRANULE_SIZE], gr_info *gi) {
 int count_bit(int ix[GRANULE_SIZE], unsigned int start, unsigned int end,
               unsigned int table) {
   unsigned linbits, ylen;
-  register int i, sum;
+  register unsigned int i;
+  register int sum;
   register int x, y;
   const struct huffcodetab *h;
 

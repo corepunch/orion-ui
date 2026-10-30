@@ -97,6 +97,11 @@ grant it access to `corepunch/platform` if that repository is private. See
 Choose a development team in Xcode before configuring a signed archive workflow.
 No custom pre-clone or post-clone script is needed.
 
+Both Xcode configurations define `GROOVE_USE_SHINE`, so Xcode Cloud builds
+include MP3 export using the committed `apps/groove/third_party/shine/` sources.
+GitHub Actions enables the same feature for its Make builds, tests, and release
+packages through `GROOVE_USE_SHINE=1`. Local Make builds keep Shine optional.
+
 When the development certificate and profile used by `ipad-deploy` are installed,
 omit `--unsigned` to configure manual signing with the exact same selector from
 `tools/ipad/sign.py`. It picks the newest matching, unexpired development profile

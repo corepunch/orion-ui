@@ -11,6 +11,23 @@ import generate
 
 
 class FileReferenceTests(unittest.TestCase):
+    def test_cloud_build_configurations_enable_shine(self):
+        with tempfile.TemporaryDirectory(prefix='orion shine ') as directory:
+            output = Path(directory)
+            subprocess.run(['python3', str(Path(generate.__file__)), 'groove', '--unsigned',
+                            '--output', str(output)], check=True, stdout=subprocess.DEVNULL)
+            for bundle in (output / 'groove.xcodeproj', generate.ROOT / 'apps/groove/groove.xcodeproj'):
+                objects = generate.read_project(bundle / 'project.pbxproj')
+                project = next(obj for obj in objects.values() if obj['isa'] == 'PBXProject')
+                configs = objects[project['buildConfigurationList']]['buildConfigurations']
+                self.assertEqual({objects[uid]['name'] for uid in configs}, {'Debug', 'Release'})
+                for uid in configs:
+                    self.assertIn('GROOVE_USE_SHINE', objects[uid]['buildSettings']['GCC_PREPROCESSOR_DEFINITIONS'])
+                for target in (obj for obj in objects.values() if obj['isa'] == 'PBXNativeTarget'):
+                    for uid in objects[target['buildConfigurationList']]['buildConfigurations']:
+                        definitions = objects[uid]['buildSettings'].get('GCC_PREPROCESSOR_DEFINITIONS', ['$(inherited)'])
+                        self.assertTrue('$(inherited)' in definitions or 'GROOVE_USE_SHINE' in definitions)
+
     def test_generated_sources_have_declared_build_outputs(self):
         with tempfile.TemporaryDirectory(prefix='orion xcode ') as directory:
             output = Path(directory)

@@ -49,7 +49,7 @@ void shine_putbits(bitstream_t *bs, unsigned int val, unsigned int N) {
     bs->cache_bits -= N;
     bs->cache |= val << bs->cache_bits;
   } else {
-    if (bs->data_position + sizeof(unsigned int) >= bs->data_size) {
+    if (bs->data_position + (int)sizeof(unsigned int) >= bs->data_size) {
       bs->data = (unsigned char *)realloc(bs->data,
                                           bs->data_size + (bs->data_size / 2));
       bs->data_size += (bs->data_size / 2);

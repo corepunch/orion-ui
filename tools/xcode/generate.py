@@ -120,7 +120,7 @@ def generate(args):
                                '$(ORION_ROOT)/apps/groove', '$(ORION_ROOT)/components',
                                '$(SDKROOT)/usr/include/libxml2'],
         'GCC_PREPROCESSOR_DEFINITIONS': ['$(inherited)', 'ORION_ALLOW_HIGHDPI=1',
-                                       'GL_SILENCE_DEPRECATION', 'STBTT_STATIC', 'HAVE_WINDOWING',
+                                       'GL_SILENCE_DEPRECATION', 'STBTT_STATIC', 'HAVE_WINDOWING', 'GROOVE_USE_SHINE',
                                        'SHAREDIR=\"../share/groove\"'],
         'OTHER_CFLAGS': ['$(inherited)', '-fblocks', '-Wall', '-Wextra', '-Wno-unused-parameter',
                          '-Wno-unused-function', '-Wno-missing-field-initializers', '-Wno-deprecated-declarations'],

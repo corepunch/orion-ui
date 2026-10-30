@@ -8,8 +8,34 @@ static bool export_test_cancel(void *userdata, float value) {
   (void)userdata; (void)value; return false;
 }
 
+static result_t export_media_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+static void test_export_formats(void) {
+  TEST("export choices match the compiled encoders and sharing defaults to AAC");
+  test_env_init();
+  const char *audio[] = { "WAV (44.1 kHz, 16-bit)",
+#ifdef GROOVE_USE_SHINE
+    "MP3 (192 kbps)",
+#endif
+    "M4A (AAC)" };
+  for (int kind = 0; kind < 3; kind++) {
+    window_t *dlg = create_window_from_form(&groove_export_media_form, 0, 0, NULL, export_media_proc, 0, &kind);
+    ASSERT_NOT_NULL(dlg);
+    window_t *format = get_window_item(dlg, ID_EXPORT_MEDIA_FORMAT);
+    ASSERT_NOT_NULL(format);
+    ASSERT_STR_EQUAL(format->title, kind == 2 ? "MP4 (H.264 + AAC)" : kind == 1 ? "M4A (AAC)" : audio[0]);
+    if (kind != 2) for (int i = 0; i < ARRAY_LEN(audio); i++) {
+      char text[256];
+      ASSERT(send_message(format, cbGetListBoxText, (uint32_t)i, text), "format exists");
+      ASSERT_STR_EQUAL(text, audio[i]);
+    }
+    destroy_window(dlg);
+  }
+  test_env_shutdown(); PASS();
+}
+
 static void test_audio_export(void) {
-  TEST("finite lossless mixdown matches playback, excludes audition, preserves transport and encodes MP3");
+  TEST("finite lossless mixdown matches playback, excludes audition, preserves transport and supports the enabled encoders");
   test_env_init();
   g_app = app_init(); ASSERT_NOT_NULL(g_app);
   song_t song; song_init(&song);
@@ -58,6 +84,7 @@ static void test_audio_export(void) {
   free(snapshot[0].pcm); free(snapshot);
   ASSERT_FALSE(song_export_wav(&song, cancelled, export_test_cancel, NULL));
   ASSERT(access(cancelled, F_OK) != 0, "cancel removes partial WAV");
+#ifdef GROOVE_USE_SHINE
   ASSERT(groove_encode_mp3(wav, mp3, NULL, NULL), "portable MP3 encoded");
   f = fopen(mp3, "rb"); ASSERT_NOT_NULL(f);
   fseek(f, 0, SEEK_END); long size = ftell(f); rewind(f);
@@ -74,6 +101,7 @@ static void test_audio_export(void) {
   }
   ASSERT(samples >= frames && samples < frames + 2304, "MP3 padding is less than two codec frames");
   ASSERT(energy > 1, "MP3 decodes to audible PCM"); free(encoded);
+#endif
   const char *out = getenv("GROOVE_MEDIA_TEST_OUTPUT");
   if (out) {
     axMkDir(out); char path[1024];
@@ -90,7 +118,10 @@ static void test_audio_export(void) {
       free(rgba);
     }
     char path_wav[1024], path_mp3[1024]; snprintf(path_wav, sizeof(path_wav), "%s/mix.wav", out); snprintf(path_mp3, sizeof(path_mp3), "%s/mix.mp3", out);
-    ASSERT_EQUAL(rename(wav, path_wav), 0); ASSERT_EQUAL(rename(mp3, path_mp3), 0);
+    ASSERT_EQUAL(rename(wav, path_wav), 0);
+#ifdef GROOVE_USE_SHINE
+    ASSERT_EQUAL(rename(mp3, path_mp3), 0);
+#endif
   }
   remove(wav); remove(mp3); rmdir(directory);
   app_shutdown(g_app); test_env_shutdown(); PASS();
@@ -119,6 +150,7 @@ static void test_video_clock(void) {
 
 int main(void) {
   TEST_START("Groove export");
+  test_export_formats();
   test_audio_export();
   test_video_clock();
   TEST_END();

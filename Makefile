@@ -19,6 +19,9 @@ CFLAGS += -DORION_ALLOW_HIGHDPI=$(ALLOW_HIGHDPI)
 # Optimisation is opt-in: `make clean && make scener OPT=-O2` renders reels about 3x faster.
 OPT ?=
 CFLAGS += $(OPT)
+# Optional Groove MP3 export; requires apps/groove/third_party/shine/.
+GROOVE_USE_SHINE ?= 0
+CFLAGS += $(if $(filter 1,$(GROOVE_USE_SHINE)),-DGROOVE_USE_SHINE)
 
 # ── Platform ─────────────────────────────────────────────────────────────
 # Native Windows and MinGW/MSYS share one configuration; IS_WIN gates the

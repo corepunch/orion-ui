@@ -32,9 +32,11 @@ else ifeq ($(filter classic modern light navy,$(THEME_$(APP))),)
 $(error unknown THEME_$(APP)=$(THEME_$(APP)) (want classic, modern, light, or navy))
 endif
 APP_THEME_FLAGS := $(if $(filter-out modern,$(THEME_$(APP))),-DORION_THEME=$(THEME_$(APP)))
+GROOVE_USE_SHINE ?= 0
 APP_SOURCE := $(if $(filter penciltest,$(APP)),imageeditor,$(APP))
 APP_DIR := apps/$(APP_SOURCE)
 APP_FLAGS := -DSTBTT_STATIC $(if $(filter penciltest,$(APP)),-DIMAGEEDITOR_BW=1 -DIMAGEEDITOR_BW_RETINA) $(APP_THEME_FLAGS) -I$(APP_DIR) -I$(APP_DIR)/components -DSHAREDIR='"../share/$(APP_SOURCE)"'
+APP_FLAGS += $(if $(filter 1,$(GROOVE_USE_SHINE)),-DGROOVE_USE_SHINE)
 USER_SRCS := $(filter-out orion/user/dialog.c orion/user/component_registry.c,$(wildcard orion/user/*.c))
 KERNEL_SRCS := $(wildcard orion/kernel/*.c)
 COMMCTL_SRCS := $(filter-out orion/commctl/tray.c,$(wildcard orion/commctl/*.c))

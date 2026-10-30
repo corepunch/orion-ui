@@ -15,6 +15,23 @@ static bool media_apple_progress(ui_media_progress_fn progress, void *userdata, 
   return !progress || progress(userdata, n);
 }
 
+static AVAssetTrack *media_apple_track(AVAsset *asset, AVMediaType type, ui_media_progress_fn progress, void *userdata) {
+  __block AVAssetTrack *track = nil;
+  dispatch_semaphore_t done = dispatch_semaphore_create(0);
+  [asset loadTracksWithMediaType:type completionHandler:^(NSArray<AVAssetTrack *> *tracks, NSError *error) {
+    track = [tracks.firstObject retain];
+    if (error) { fprintf(stderr, "[media] loading %s track failed: %s\n", type.UTF8String, error.localizedDescription.UTF8String); fflush(stderr); }
+    dispatch_semaphore_signal(done);
+  }];
+  bool cancelled = false;
+  while (dispatch_semaphore_wait(done, dispatch_time(DISPATCH_TIME_NOW, 20000000))) {
+    if (!cancelled && !media_apple_progress(progress, userdata, .8f)) { cancelled = true; [asset cancelLoading]; }
+  }
+  dispatch_release(done);
+  if (cancelled) { [track release]; return nil; }
+  return [track autorelease];
+}
+
 static bool media_apple_movie(NSURL *url, const ui_media_video_t *v, ui_media_progress_fn progress, void *userdata) {
   NSError *error = nil;
   AVAssetWriter *writer = [[AVAssetWriter alloc] initWithURL:url fileType:AVFileTypeMPEG4 error:&error];
@@ -83,8 +100,8 @@ bool ui_media_encode(const char *wav, const char *output, ui_media_format_t form
     if (ok && format == UI_MEDIA_MP4) {
       AVURLAsset *silent = [AVURLAsset URLAssetWithURL:silentURL options:nil];
       AVMutableComposition *composition = [AVMutableComposition composition];
-      AVAssetTrack *a = [[audio tracksWithMediaType:AVMediaTypeAudio] firstObject];
-      AVAssetTrack *v = [[silent tracksWithMediaType:AVMediaTypeVideo] firstObject];
+      AVAssetTrack *a = media_apple_track(audio, AVMediaTypeAudio, progress, userdata);
+      AVAssetTrack *v = a ? media_apple_track(silent, AVMediaTypeVideo, progress, userdata) : nil;
       CMTimeRange range = CMTimeRangeMake(kCMTimeZero, CMTimeMake(video->frames, video->rate));
       NSError *error = nil;
       ok = a && v && [[composition addMutableTrackWithMediaType:AVMediaTypeAudio preferredTrackID:kCMPersistentTrackID_Invalid]

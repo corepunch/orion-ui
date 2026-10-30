@@ -6,7 +6,7 @@ typedef struct bit_stream_struc {
   int data_size;       /* Total data size */
   int data_position;   /* Data position */
   unsigned int cache;  /* bit stream cache */
-  int cache_bits;      /* free bits in cache */
+  unsigned int cache_bits; /* free bits in cache */
 } bitstream_t;
 
 /* "bit_stream.h" Definitions */

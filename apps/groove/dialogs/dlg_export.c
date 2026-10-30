@@ -6,6 +6,14 @@
 #include <windows.h>
 #endif
 
+enum {
+  EXPORT_WAV,
+#ifdef GROOVE_USE_SHINE
+  EXPORT_MP3,
+#endif
+  EXPORT_M4A
+};
+
 typedef struct {
   int kind, format;
   song_t song;
@@ -34,11 +42,14 @@ static bool export_encode_progress(void *userdata, float fraction) {
 
 static void export_media_worker(void *userdata) {
   export_media_t *st = userdata;
-  bool wav_only = st->kind != 2 && st->format == 0;
+  bool wav_only = st->kind != 2 && st->format == EXPORT_WAV;
   st->ok = song_export_wav_with_audio(&st->song, st->audio, wav_only ? st->stage : st->wav, export_render_progress, st);
   if (st->ok && !wav_only) {
-    if (st->format == 1 && st->kind != 2) st->ok = groove_encode_mp3(st->wav, st->stage, export_encode_progress, st);
-    else st->ok = ui_media_encode(st->wav, st->stage, st->kind == 2 ? UI_MEDIA_MP4 : UI_MEDIA_M4A,
+#ifdef GROOVE_USE_SHINE
+    if (st->format == EXPORT_MP3 && st->kind != 2) st->ok = groove_encode_mp3(st->wav, st->stage, export_encode_progress, st);
+    else
+#endif
+      st->ok = ui_media_encode(st->wav, st->stage, st->kind == 2 ? UI_MEDIA_MP4 : UI_MEDIA_M4A,
       st->kind == 2 ? &st->video : NULL, export_encode_progress, st);
   }
   remove(st->wav);
@@ -70,7 +81,10 @@ static void export_audio_clear(export_media_t *st) {
 static void export_media_start(window_t *win, export_media_t *st, bool share) {
   if (st->worker) return;
   st->format = (int)send_message(get_window_item(win, ID_EXPORT_MEDIA_FORMAT), cbGetCurrentSelection, 0, NULL);
-  const char *ext = st->kind == 2 ? "mp4" : st->format == 1 ? "mp3" : st->format == 2 ? "m4a" : "wav";
+  const char *ext = st->kind == 2 ? "mp4" : st->format == EXPORT_M4A ? "m4a" : "wav";
+#ifdef GROOVE_USE_SHINE
+  if (st->kind != 2 && st->format == EXPORT_MP3) ext = "mp3";
+#endif
   st->share = share;
   if (share) {
     const char *settings = axSettingsDirectory();
@@ -147,10 +161,12 @@ static result_t export_media_proc(window_t *win, uint32_t msg, uint32_t wparam, 
       if (kind == 2) send_message(format, cbAddString, 0, "MP4 (H.264 + AAC)");
       else {
         send_message(format, cbAddString, 0, "WAV (44.1 kHz, 16-bit)");
+#ifdef GROOVE_USE_SHINE
         send_message(format, cbAddString, 0, "MP3 (192 kbps)");
+#endif
         send_message(format, cbAddString, 0, "M4A (AAC)");
       }
-      send_message(format, cbSetCurrentSelection, kind == 1 ? 2 : 0, NULL);
+      send_message(format, cbSetCurrentSelection, kind == 1 ? EXPORT_M4A : EXPORT_WAV, NULL);
       send_message(aspect, cbAddString, 0, "16:9 (1280 x 720)");
       send_message(aspect, cbAddString, 0, "21:9 (1680 x 720)");
       send_message(aspect, cbSetCurrentSelection, 0, NULL);
