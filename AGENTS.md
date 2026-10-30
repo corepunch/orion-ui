@@ -1,3 +1,8 @@
+## Disk-heavy work
+
+- Before downloading dependencies or starting a job, estimate its total additional disk footprint, including environments, models, datasets, caches, intermediates and duplicate outputs. If it is expected to exceed **0.5 GB (500 MB)** and can run in the cloud, run it in the cloud instead of on the user's computer.
+- Keep large working files and caches in the cloud; download only the final deliverables needed locally. Preserve irreplaceable source recordings and masters in persistent cloud storage, not only in an ephemeral runner. Record where they are stored and how to reproduce the work.
+- If cloud execution is unavailable or the work requires local hardware or tools, explain the constraint before creating more than 0.5 GB locally; do not silently fall back to a large local installation or download.
 
 ## Design skill
 

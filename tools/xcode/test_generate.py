@@ -49,6 +49,10 @@ class FileReferenceTests(unittest.TestCase):
                 self.assertTrue(plistlib.loads(Path(info).read_bytes())['NSMicrophoneUsageDescription'])
                 if target['name'] == 'groove-ipad':
                     self.assertTrue(plistlib.loads(Path(info).read_bytes())['NSPhotoLibraryAddUsageDescription'])
+                    self.assertIn('PhotosUI', config['OTHER_LDFLAGS'])
+                    self.assertIn('ImageIO', config['OTHER_LDFLAGS'])
+                else:
+                    self.assertIn('UniformTypeIdentifiers', config['OTHER_LDFLAGS'])
             permissions = plistlib.loads((bundle / 'Generated/macos.entitlements').read_bytes())
             self.assertIs(permissions['com.apple.security.device.audio-input'], True)
 
@@ -125,6 +129,30 @@ class FileReferenceTests(unittest.TestCase):
                     self.assertEqual(build_file.get('settings', {}).get('COMPILER_FLAGS'),
                                      '-fobjc-arc' if ref['path'] == 'u_platform_ipad.m' else None)
             self.assertFalse(any(output.rglob('*.c')), 'Generated C sources must stay in DerivedData')
+
+    def test_macos_distribution_keeps_automatic_signing_and_notarization_requirements(self):
+        with tempfile.TemporaryDirectory(prefix='orion signing ') as directory:
+            output = Path(directory)
+            subprocess.run(['python3', str(Path(generate.__file__)), 'groove', '--unsigned',
+                            '--team', 'TESTTEAM', '--output', str(output)], check=True, stdout=subprocess.DEVNULL)
+            for bundle in (output / 'groove.xcodeproj', generate.ROOT / 'apps/groove/groove.xcodeproj'):
+                objects = generate.read_project(bundle / 'project.pbxproj')
+                target = next(obj for obj in objects.values()
+                              if obj['isa'] == 'PBXNativeTarget' and obj['name'] == 'groove-macos')
+                for uid in objects[target['buildConfigurationList']]['buildConfigurations']:
+                    config = objects[uid]
+                    settings = config['buildSettings']
+                    self.assertEqual(settings['CODE_SIGN_STYLE'], 'Automatic')
+                    self.assertEqual(settings['CODE_SIGN_IDENTITY'], 'Apple Development')
+                    self.assertEqual(settings['ENABLE_HARDENED_RUNTIME'], 'YES')
+                    if config['name'] == 'Release':
+                        self.assertIn('--timestamp', settings['OTHER_CODE_SIGN_FLAGS'])
+                        self.assertEqual(settings['CODE_SIGN_INJECT_BASE_ENTITLEMENTS'], 'NO')
+                        release = settings
+                export = plistlib.loads((bundle / 'Generated/DeveloperIDExportOptions.plist').read_bytes())
+                self.assertEqual(export['method'], 'developer-id')
+                self.assertEqual(export['signingStyle'], 'automatic')
+                self.assertEqual(export['teamID'], release['DEVELOPMENT_TEAM'])
 
     def test_regeneration_preserves_signing_and_shared_schemes(self):
         with tempfile.TemporaryDirectory(prefix='orion xcode ') as directory:

@@ -10,7 +10,35 @@ open apps/groove/groove.xcodeproj
 Choose the `groove-macos` or `groove-ipad` scheme. The iPad scheme supports
 Simulator and physical iPads (iPadOS 16+); the Mac target requires macOS 12+.
 For device builds, select a team in **Signing & Capabilities** and keep automatic
-signing enabled. No team or certificate is needed for macOS or Simulator builds.
+signing enabled. Simulator builds need no certificate. Local macOS builds can
+use ad hoc signing without a team; signed archives use the configured team and
+Apple Development identity, then Xcode re-signs them for the chosen distribution
+method during export.
+
+The macOS target enables Hardened Runtime in both configurations. Release builds
+request a secure timestamp and omit debug entitlements. To distribute outside the
+Mac App Store, create a new `groove-macos` archive, then choose **Distribute App →
+Developer ID → Automatically manage signing** in Organizer. Xcode can create the
+Developer ID Application certificate for an authorized team account. A development
+certificate alone cannot satisfy notarization. Upload through Organizer to notarize
+the app, then export the accepted result.
+
+For a local Developer ID export, the generator also writes
+`Generated/DeveloperIDExportOptions.plist`, retaining the project's signing team:
+
+```sh
+xcodebuild -project apps/groove/groove.xcodeproj -scheme groove-macos \
+  -configuration Release -destination 'generic/platform=macOS' \
+  -archivePath build/xcode/groove.xcarchive -allowProvisioningUpdates archive
+xcodebuild -exportArchive -archivePath build/xcode/groove.xcarchive \
+  -exportPath build/xcode/DeveloperID \
+  -exportOptionsPlist apps/groove/groove.xcodeproj/Generated/DeveloperIDExportOptions.plist \
+  -allowProvisioningUpdates
+```
+
+This command exports the signed app; notarization still runs through Organizer or
+`notarytool`. Verify the exported app with `codesign -dvvv`: it must show a
+Developer ID Application authority, the `runtime` flag and a `Timestamp`.
 
 The macOS target enables App Sandbox in Debug and Release, with read/write access
 to files selected through Open and Save dialogs. Its signing entitlements live in

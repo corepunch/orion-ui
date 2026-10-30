@@ -41,12 +41,14 @@ class Project:
         self.objects[uid] = dict(isa=isa, **fields)
         return uid
 
-    def configurations(self, key, settings):
+    def configurations(self, key, settings, release_settings=None):
         configs = []
         for name in ('Debug', 'Release'):
             values = dict(settings, GCC_OPTIMIZATION_LEVEL='0' if name == 'Debug' else 's',
                           DEBUG_INFORMATION_FORMAT='dwarf' if name == 'Debug' else 'dwarf-with-dsym',
                           ONLY_ACTIVE_ARCH='YES' if name == 'Debug' else 'NO')
+            if name == 'Release':
+                values.update(release_settings or {})
             uid = self.add(f'{key}/{name}', 'XCBuildConfiguration', name=name, buildSettings=values)
             for field, value in self.existing.get(uid, {}).get('buildSettings', {}).items():
                 if field.startswith(('CODE_SIGN', 'DEVELOPMENT_TEAM', 'PROVISIONING_PROFILE', 'PRODUCT_BUNDLE_IDENTIFIER')):
@@ -124,7 +126,6 @@ def generate(args):
                          '-Wno-unused-function', '-Wno-missing-field-initializers', '-Wno-deprecated-declarations'],
         'PRODUCT_NAME': args.app, 'PRODUCT_BUNDLE_IDENTIFIER': args.bundle_id,
         'MARKETING_VERSION': '1.0', 'CURRENT_PROJECT_VERSION': '1',
-        'ENABLE_HARDENED_RUNTIME': 'NO',
     }
     root_configs = project.configurations('project', common)
     icon_ref = project.add('app-icon', 'PBXFileReference', path='Assets.xcassets',
@@ -162,10 +163,11 @@ def generate(args):
             settings.update(signing, SDKROOT='iphoneos', SUPPORTED_PLATFORMS='iphoneos iphonesimulator',
                             IPHONEOS_DEPLOYMENT_TARGET='16.0', TARGETED_DEVICE_FAMILY='2', SUPPORTS_MACCATALYST='NO')
             frameworks = ('UIKit', 'CoreGraphics', 'Foundation', 'OpenGLES', 'QuartzCore', 'Security',
-                          'UniformTypeIdentifiers', 'AudioToolbox', 'AVFoundation', 'CoreMedia', 'CoreVideo')
+                          'UniformTypeIdentifiers', 'AudioToolbox', 'AVFoundation', 'CoreMedia', 'CoreVideo', 'PhotosUI', 'ImageIO')
         else:
             settings.update(SUPPORTED_PLATFORMS='macosx', MACOSX_DEPLOYMENT_TARGET='12.0',
-                            CODE_SIGN_STYLE='Automatic', CODE_SIGN_IDENTITY='-',
+                            CODE_SIGN_STYLE='Automatic', CODE_SIGN_IDENTITY='Apple Development' if args.team else '-',
+                            ENABLE_HARDENED_RUNTIME='YES',
                             ENABLE_APP_SANDBOX='YES', ENABLE_USER_SELECTED_FILES='readwrite',
                             CODE_SIGN_ENTITLEMENTS='$(PROJECT_FILE_PATH)/Generated/macos.entitlements')
             if args.team:
@@ -175,10 +177,19 @@ def generate(args):
                 'com.apple.security.device.audio-input': True,
                 'com.apple.security.files.user-selected.read-write': True,
             }).decode())
-            frameworks = ('AppKit', 'Cocoa', 'OpenGL', 'IOSurface', 'Security', 'CoreFoundation', 'AudioToolbox', 'AVFoundation', 'CoreMedia', 'CoreVideo')
+            frameworks = ('AppKit', 'Cocoa', 'OpenGL', 'IOSurface', 'Security', 'CoreFoundation', 'AudioToolbox', 'AVFoundation', 'CoreMedia', 'CoreVideo', 'UniformTypeIdentifiers')
         for framework in frameworks:
             settings['OTHER_LDFLAGS'] += ['-framework', framework]
-        configs = project.configurations(name, settings)
+        configs = project.configurations(name, settings, None if ipad else {
+            'OTHER_CODE_SIGN_FLAGS': ['$(inherited)', '--timestamp'],
+            'CODE_SIGN_INJECT_BASE_ENTITLEMENTS': 'NO',
+        })
+        if not ipad:
+            export = dict(method='developer-id', destination='export', signingStyle='automatic')
+            release = project.objects[project.objects[configs]['buildConfigurations'][1]]['buildSettings']
+            if release.get('DEVELOPMENT_TEAM'):
+                export['teamID'] = release['DEVELOPMENT_TEAM']
+            write(bundle / 'Generated/DeveloperIDExportOptions.plist', plistlib.dumps(export).decode())
         info = dict(CFBundleExecutable='$(EXECUTABLE_NAME)', CFBundleIdentifier='$(PRODUCT_BUNDLE_IDENTIFIER)',
                     CFBundleName='Groove', CFBundleDisplayName='Groove', CFBundlePackageType='APPL',
                     CFBundleInfoDictionaryVersion='6.0', CFBundleShortVersionString='$(MARKETING_VERSION)',
