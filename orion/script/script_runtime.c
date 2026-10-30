@@ -54,7 +54,7 @@ bool script_runtime_close(script_runtime_t *runtime) {
     fprintf(stderr, "[runtime] close rejected: controllers=%u pages=%u\n", runtime->controllers, runtime->pages); fflush(stderr);
     return false;
   }
-  lua_close(runtime->L); free(runtime);
+  script_state_close(runtime->L); free(runtime);
   return true;
 }
 lua_State *script_runtime_state(script_runtime_t *runtime) { return runtime ? runtime->L : NULL; }

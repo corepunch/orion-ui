@@ -89,7 +89,7 @@ static bool run_lua(const char *chunk, char *msg, size_t msg_sz) {
   lua_State *L = script_state_new(SHARE "/addons", "spec");
   bool ok = L && luaL_loadstring(L, chunk) == LUA_OK && script_call(L, 0, 0, msg, msg_sz, NULL);
   if (L && !ok && !msg[0]) snprintf(msg, msg_sz, "%s", lua_tostring(L, -1));
-  if (L) lua_close(L);
+  script_state_close(L);
   return ok;
 }
 

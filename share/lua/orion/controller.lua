@@ -3,8 +3,10 @@
 local Controller = {}
 function Controller.scope(read, shared, globals)
   local loaded, active = {}, {}
-  local environment = setmetatable({}, {__index = globals})
-  environment.package = {loaded = loaded}
+  local environment = setmetatable({}, {__index = globals, __newindex = function(_, name)
+    error("assignment to undeclared global '" .. tostring(name) .. "' in a controller module", 2)
+  end})
+  rawset(environment, "package", {loaded = loaded})
   local function import(name)
     assert(type(name) == "string" and name:match("^[%a_][%w_.]*$") and not name:find("..", 1, true), "invalid module name")
     if name == "orion" or name:sub(1, 6) == "orion." then return shared(name) end
@@ -19,7 +21,7 @@ function Controller.scope(read, shared, globals)
     loaded[name] = value == nil and true or value
     return loaded[name]
   end
-  environment.require = import
+  rawset(environment, "require", import)
   return environment
 end
 return Controller

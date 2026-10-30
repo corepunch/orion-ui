@@ -13,8 +13,74 @@
 #include <time.h>
 
 #include <orion/user/i18n.h>
+#include <stdlib.h>
 
 #define SCRIPT_MAX_MODULES 32
+
+// ── Resource accounting ─────────────────────────────────────────────────────
+// Every state carries its own accounting as the allocator's user data, so a
+// state created elsewhere (lua_getallocf() names another allocator) has none.
+#define SCRIPT_MEMORY_LIMIT  ((size_t)256 << 20)   // bytes a state may hold
+#define SCRIPT_CPU_BUDGET    30.0                   // CPU seconds per outermost call
+#define SCRIPT_HOOK_COUNT    10000                  // instructions between watchdog checks
+
+typedef struct {
+  size_t used, limit;
+  double budget;
+  clock_t deadline;
+  int depth;
+  bool warning;   // a multi-part warning is open
+  char name[64];
+} script_state_t;
+
+static void *script_alloc(void *ud, void *ptr, size_t osize, size_t nsize) {
+  script_state_t *state = ud;
+  size_t old = ptr ? osize : 0;  // without a block, osize is the type being allocated
+  if (nsize == 0) { free(ptr); state->used -= old; return NULL; }
+  if (nsize > old && state->used + (nsize - old) > state->limit) return NULL;  // Lua raises "not enough memory"
+  void *block = realloc(ptr, nsize);
+  if (block) state->used = state->used - old + nsize;
+  return block;
+}
+static script_state_t *state_of(lua_State *L) {
+  void *ud = NULL;
+  return lua_getallocf(L, &ud) == script_alloc ? ud : NULL;
+}
+static int script_panic(lua_State *L) {
+  script_state_t *state = state_of(L);
+  const char *msg = lua_tostring(L, -1);
+  fprintf(stderr, "[script] %s: unprotected error: %s\n", state ? state->name : "?", msg ? msg : luaL_typename(L, -1));
+  fflush(stderr);
+  return 0;
+}
+// Lua 5.4 warnings (warn(), errors in __gc and __close) would otherwise vanish.
+static void script_warn(void *ud, const char *message, int tocont) {
+  script_state_t *state = ud;
+  if (!state->warning && *message == '@') return;  // a control message such as "@on"
+  if (!state->warning) fprintf(stderr, "[script] %s: warning: ", state->name);
+  fputs(message, stderr);
+  state->warning = tocont != 0;
+  if (!tocont) { fputc('\n', stderr); fflush(stderr); }
+}
+static void script_watchdog(lua_State *L, lua_Debug *ar) {
+  (void)ar;
+  script_state_t *state = state_of(L);
+  if (!state || clock() <= state->deadline) return;
+  lua_sethook(L, NULL, 0, 0);
+  luaL_error(L, "the script ran for more than %.0f seconds of CPU time and was stopped", state->budget);
+}
+void script_state_limits(lua_State *L, size_t memory_bytes, double cpu_seconds) {
+  script_state_t *state = state_of(L);
+  if (!state) return;
+  if (memory_bytes) state->limit = memory_bytes;
+  if (cpu_seconds > 0) state->budget = cpu_seconds;
+}
+void script_state_close(lua_State *L) {
+  if (!L) return;
+  script_state_t *state = state_of(L);
+  lua_close(L);
+  free(state);
+}
 
 static struct { const char *name; lua_CFunction open; } g_modules[SCRIPT_MAX_MODULES];
 static int g_module_count;
@@ -75,7 +141,15 @@ bool script_call(lua_State *L, int nargs, int nresults, char *msg, size_t msg_sz
   int base = lua_gettop(L) - nargs;
   lua_pushcfunction(L, message_handler);
   lua_insert(L, base);
+  // The outermost call arms the watchdog; calls nested through native code
+  // (a model validating inside an action) share its deadline.
+  script_state_t *state = state_of(L);
+  if (state && state->depth++ == 0) {
+    state->deadline = clock() + (clock_t)(state->budget * CLOCKS_PER_SEC);
+    lua_sethook(L, script_watchdog, LUA_MASKCOUNT, SCRIPT_HOOK_COUNT);
+  }
   int rc = lua_pcall(L, nargs, nresults, base);
+  if (state && --state->depth == 0) lua_sethook(L, NULL, 0, 0);
   lua_remove(L, base);
   if (refused) *refused = false;
   if (rc == LUA_OK) return true;
@@ -177,12 +251,20 @@ static void keep_only(lua_State *L, const char *lib, const char *const *keep) {
 }
 
 lua_State *script_state_new(const char *dir, const char *name) {
-  lua_State *L = luaL_newstate();
+  script_state_t *state = calloc(1, sizeof(*state));
+  if (state) {
+    state->limit = SCRIPT_MEMORY_LIMIT; state->budget = SCRIPT_CPU_BUDGET;
+    snprintf(state->name, sizeof(state->name), "%s", name ? name : "?");
+  }
+  lua_State *L = state ? lua_newstate(script_alloc, state) : NULL;
   if (!L) {
     fprintf(stderr, "[script] %s: cannot create a Lua state\n", name ? name : "?");
     fflush(stderr);
+    free(state);
     return NULL;
   }
+  lua_atpanic(L, script_panic);
+  lua_setwarnf(L, script_warn, state);
   open_lib(L, "_G", luaopen_base);
   open_lib(L, LUA_LOADLIBNAME, luaopen_package);
   open_lib(L, LUA_COLIBNAME, luaopen_coroutine);
@@ -235,5 +317,15 @@ lua_State *script_state_new(const char *dir, const char *name) {
   lua_rawseti(L, -2, 2);
   lua_setfield(L, -3, "searchers");
   lua_pop(L, 2);
+  // Modules return tables; a global assigned anywhere is a leak between
+  // modules, so the sandbox refuses it. Reading an unknown global stays nil.
+  static const char *const strict =
+    "setmetatable(_G, {__newindex = function(_, name)"
+    "  error(\"assignment to undeclared global '\" .. tostring(name) .. \"'\", 2) end})";
+  if (luaL_loadstring(L, strict) != LUA_OK || lua_pcall(L, 0, 0, 0) != LUA_OK) {
+    fprintf(stderr, "[script] %s: cannot install strict globals: %s\n", state->name, lua_tostring(L, -1));
+    fflush(stderr);
+    lua_pop(L, 1);
+  }
   return L;
 }

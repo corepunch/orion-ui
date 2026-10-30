@@ -75,7 +75,30 @@ static void test_model_spec(void) {
   bool refused = false, ok = script_call(L, 0, 0, msg, sizeof(msg), &refused);
   if (!ok) fprintf(stderr, "model_spec.lua:\n%s\n", msg);
   ASSERT(ok, "every expectation of model_spec.lua holds");
-  lua_close(L);
+  script_state_close(L);
+  PASS();
+}
+
+static void test_sandbox_limits(void) {
+  TEST("sandbox: a runaway loop, memory past the cap and an undeclared global stop; the state stays usable");
+  lua_State *L = script_state_new(FIXTURES, "limits");
+  ASSERT_NOT_NULL(L);
+  script_state_limits(L, (size_t)4 << 20, 0.2);
+  char msg[1024]; bool refused = false;
+  ASSERT_EQUAL(luaL_loadstring(L, "while true do end"), LUA_OK);
+  ASSERT_FALSE(script_call(L, 0, 0, msg, sizeof(msg), &refused));
+  ASSERT(strstr(msg, "seconds") != NULL, "the watchdog names its budget");
+  ASSERT_EQUAL(luaL_loadstring(L, "local s = string.rep('x', 1 << 24) return #s"), LUA_OK);
+  ASSERT_FALSE(script_call(L, 0, 1, msg, sizeof(msg), &refused));
+  ASSERT(strstr(msg, "memory") != NULL, "an allocation past the cap is a memory error");
+  ASSERT_EQUAL(luaL_loadstring(L, "leaked = 1"), LUA_OK);
+  ASSERT_FALSE(script_call(L, 0, 0, msg, sizeof(msg), &refused));
+  ASSERT(strstr(msg, "undeclared global 'leaked'") != NULL, "a global assignment is refused");
+  ASSERT_EQUAL(luaL_loadstring(L, "local t = {} for i = 1, 20000 do t[i] = i end return #t + (nothing or 0)"), LUA_OK);
+  ASSERT_TRUE(script_call(L, 0, 1, msg, sizeof(msg), &refused));
+  ASSERT_EQUAL((int)lua_tointeger(L, -1), 20000);
+  ASSERT_EQUAL(lua_gettop(L), 1);
+  script_state_close(L);
   PASS();
 }
 
@@ -173,6 +196,7 @@ int main(int argc, char **argv) {
   DB_CLASS(db_schema_xml);
   seed();
   test_model_spec();
+  test_sandbox_limits();
   test_page_shows_data();
   test_actions();
   test_refusals_and_errors();

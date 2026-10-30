@@ -20,7 +20,7 @@ static void test_hotel(void) {
   bool ok = script_call(L, 0, 0, message, sizeof(message), &refused);
   if (!ok) fprintf(stderr, "%s\n", message);
   ASSERT_TRUE(ok);
-  lua_close(L);
+  script_state_close(L);
   PASS();
 }
 static void test_persistence_and_page(void) {

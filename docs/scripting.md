@@ -175,8 +175,24 @@ It has no `io`, `load`, `loadfile`, `dofile`, `string.dump` or native modules.
 `require()` reaches three places: the add-on's own folder (`require("helpers")`
 loads `helpers.lua` beside the script), Orion's modules in
 `share/orion/lua`, and the modules the host registers. `print()` writes to
-stderr with the add-on's name. Data reaches a script only through
+stderr with the add-on's name, and so do Lua warnings (`warn()`, an error in a
+`__gc` or `__close` metamethod). Data reaches a script only through
 datasources.
+
+The state is bounded. Its allocator caps what a state may hold (256 MB); an
+allocation beyond that fails as Lua's ordinary "not enough memory" error. A
+count hook gives each outermost call from the host (an action, `data()`, a
+model's `validate`) a CPU budget (30 s); past it the script stops with an
+error that names the budget, and the page reports it like any other script
+error. Calls nested through native code share the outer deadline. Tests shrink
+both limits with `script_state_limits()`.
+
+Modules return tables and never assign globals. The sandbox enforces this: an
+assignment to an undeclared global raises `assignment to undeclared global
+'name'`, in the add-on's own state and in a controller module's package
+scope alike. Reading an unknown global stays `nil`. `make lua-check` runs
+luacheck over every Lua source with the repository's `.luacheckrc`, and CI
+runs it too.
 
 An add-on's databases live in memory. They are registered under their
 declared names while the add-on is open, so a second add-on with the same
@@ -224,6 +240,12 @@ if (page) {
 `script_page_create()`, `script_page_perform()`, `script_page_message()` and
 `script_page_control()` run a page without a modal loop, for tests and for
 hosts that embed one.
+
+A host that creates a bare state with `script_state_new()` (a test, a
+renderer) closes it with `script_state_close()`, which also frees the state's
+resource accounting. `script_call()` runs a function in protected mode with a
+traceback handler and arms the watchdog; it reports a refusal separately from
+a script fault, so the host shows the one and logs the other.
 
 ## Bindings are generated
 

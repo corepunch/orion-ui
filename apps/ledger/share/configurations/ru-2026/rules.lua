@@ -14,11 +14,10 @@ local MROT = 27093.00          -- МРОТ с 01.01.2026 (Федеральный
 function contributions_sme(ctx)
   local threshold = 1.5 * MROT
   local gross, ytd = ctx.line.amount, ctx.ytd
-  local amount = 0
   local within_base = math.max(0, math.min(gross, ctx.tax.cap_year - ytd))
   local above_base = gross - within_base
   local low = math.min(within_base, threshold)
-  amount = low * 0.30 + (within_base - low) * 0.15 + above_base * ctx.tax.rate_above / 100
+  local amount = low * 0.30 + (within_base - low) * 0.15 + above_base * ctx.tax.rate_above / 100
   return ledger.round2(amount)
 end
 

@@ -230,7 +230,8 @@ codeless forms, DisplayGroups, generated capabilities and migration boundaries.
 ## Portability and trust
 
 Plugins have the existing add-on sandbox's capabilities: no `io`, `loadfile`,
-bytecode/native module loading or arbitrary OS calls. Trusted pages in an application share its Lua state and datasource access. Each
+bytecode/native module loading or arbitrary OS calls, a memory cap per state
+and a CPU budget per call (see [docs/scripting.md](scripting.md#the-sandbox)). Trusted pages in an application share its Lua state and datasource access. Each
 window has its own controller object; unrelated external add-ons keep isolated VMs. Manifests are executable
 trusted Lua, and dependency declarations are an architecture contract, not
 a security boundary against malicious code. There is no remote plugin
@@ -241,6 +242,10 @@ that supplies Orion's Lua 5.4 API. This does not by itself add mobile packaging
 support to a new application.
 
 ## Test a plugin
+
+Lint first: `make lua-check` runs luacheck over every Lua source with the
+repository's `.luacheckrc`. A plugin assigns no globals (the sandbox refuses
+them at run time as well), leaves no unused values and shadows no names.
 
 `tests/fixtures/plugins/spec.lua` runs inside the actual Orion sandbox through
 `tests/plugin_test.c`. It covers dependencies, cycles, version conflicts,

@@ -15,7 +15,7 @@ function policies.number_document(ctx)
   return {document = {number = prefix .. string.format("%04d", last + 1)}}
 end
 function policies.fill_payroll(ctx)
-  local document, kind = ctx.document, ctx.type
+  local kind = ctx.type
   if not kind or kind.form ~= "payroll" then return {} end
   local rows = {}
   for _, employee in ipairs(ledger.fetch("ib", "employees")) do

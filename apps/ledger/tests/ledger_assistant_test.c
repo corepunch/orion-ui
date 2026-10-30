@@ -83,7 +83,7 @@ static void test_assistant(void) {
     if (ok) ok = script_call(L, 0, 0, error, sizeof(error), NULL);
     ASSERT(ok, error[0] ? error : "assistant grammar test failed");
   }
-  lua_close(L);
+  script_state_close(L);
   const char *configurations[] = {"ru-2026", "de-2026", "gb-2026", "ie-2026", "nz-2026", "mt-2026"};
   for (size_t i = 0; i < ARRAY_LEN(configurations); i++) {
     open_configuration(configurations[i]);

@@ -28,7 +28,7 @@ end
 -- Read from a file - this should work normally
 f = io.open("test_file_output.txt", "r")
 if f then
-  local content = f:read("*a")
+  f:read("*a")
   f:close()
   -- The file content is verified in the C test code
   print("File read completed")

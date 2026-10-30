@@ -1,6 +1,6 @@
 local foobar = {
 	greet = function()
 		print('Hello World from foobar.lua!')
-	end,	
+	end,
 }
 return foobar

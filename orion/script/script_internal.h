@@ -14,8 +14,13 @@
 #define SCRIPT_REFUSAL "orion.Refusal"
 
 // A sandboxed state whose require() searches `dir` (the add-on's folder) and
-// Orion's Lua modules. `name` prefixes its print() lines on stderr.
+// Orion's Lua modules. `name` prefixes its print() lines on stderr. The state
+// is capped in memory and each outermost script_call() in CPU time; an
+// assignment to an undeclared global raises. Close it with script_state_close.
 lua_State *script_state_new(const char *dir, const char *name);
+void script_state_close(lua_State *L);
+// Replaces the state's limits; 0 keeps a value. Tests shrink them.
+void script_state_limits(lua_State *L, size_t memory_bytes, double cpu_seconds);
 
 // Calls the function under nargs arguments with a traceback handler. On
 // failure writes the message to msg and sets *refused when the script raised
