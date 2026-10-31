@@ -317,10 +317,12 @@ void R_GpuLinkProgram(GLuint program) {
   gpu_report_error("glLinkProgram");
 }
 
+#ifndef ORION_OPENGL_ES
 void R_GpuPointSize(GLfloat size) {
   glPointSize(size);
   gpu_report_error("glPointSize");
 }
+#endif
 
 void R_GpuReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels) {
   glReadPixels(x, y, width, height, format, type, pixels);

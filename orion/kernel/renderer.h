@@ -237,7 +237,10 @@ void R_GpuGetShaderInfoLog(GLuint shader, GLsizei bufSize, GLsizei *length, GLch
 void R_GpuGetShaderiv(GLuint shader, GLenum pname, GLint *params);
 GLint R_GpuGetUniformLocation(GLuint program, const GLchar *name);
 void R_GpuLinkProgram(GLuint program);
+#ifndef ORION_OPENGL_ES
+// Fixed point size is a desktop API; ES shaders write gl_PointSize.
 void R_GpuPointSize(GLfloat size);
+#endif
 void R_GpuReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
 void R_GpuShaderSource(GLuint shader, GLsizei count, const GLchar* const *string, const GLint *length);
 void R_GpuTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
