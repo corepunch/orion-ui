@@ -24,6 +24,7 @@
   #define CW_USEDEFAULT (-32768)
 #else
   /* Linux and other platforms */
+  #define GL_GLEXT_PROTOTYPES 1
   #include <GL/glcorearb.h>
   #include <GL/gl.h>
 #endif

@@ -44,11 +44,11 @@ const char* fs_src = "#version 150 core\n"
 "void main() {\n"
 "  // Extract view position from inverse MVP matrix\n"
 "  vec3 viewDir = normalize(viewPos - fragPos);\n"
-"  float distance = smoothstep(500,0,distance(viewPos, fragPos));\n"
-"  float facingFactor = abs(dot(normalize(normal), viewDir));\n"
+"  float distance = 1.0 - smoothstep(0.0,500.0,distance(viewPos, fragPos));\n"
+"  float facingFactor = abs(dot(normal / max(length(normal), 0.0001), viewDir));\n"
 "  float fading = mix(distance * light, 1.0, light * light);\n"
 "  if (viewDir.z < -10000) { outColor = texture(tex0, tex) * light; return; }"
-"  outColor = texture(tex0, tex) * mix(facingFactor, 1.0, 0.5) * fading * 1.5;\n"
+"  outColor = texture(tex0, tex); outColor.rgb *= mix(facingFactor, 1.0, 0.5) * fading * 1.5;\n"
 "  if(outColor.a < 0.1) discard;\n"
 "}";
 
@@ -163,6 +163,12 @@ bool init_resources(void) {
   R_GpuBindTexture(GL_TEXTURE_2D, no_tex);
   R_GpuTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &(int){0xffffff00});
 
+  GLuint solid[] = {white_tex, black_tex, selection_tex, no_tex};
+  for (size_t i = 0; i < sizeof(solid) / sizeof(*solid); i++) {
+    R_GpuBindTexture(GL_TEXTURE_2D, solid[i]);
+    R_GpuTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    R_GpuTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  }
   return true;
 }
 

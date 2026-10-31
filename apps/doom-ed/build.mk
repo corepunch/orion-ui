@@ -6,6 +6,10 @@ DOOM_ED_SRCS := $(DOOM_ED_DIR)/wad.c $(wildcard $(DOOM_ED_DIR)/mapview/*.c) \
   $(wildcard $(DOOM_ED_DIR)/editor/windows/*.c) \
   $(wildcard $(DOOM_ED_DIR)/editor/windows/inspector/*.c) \
   $(wildcard $(DOOM_ED_DIR)/hexen/*.c)
+# map_data_t currently embeds two large vertex arrays and is returned by value.
+ifeq ($(IS_WIN),1)
+DOOM_ED_LDFLAGS := -Wl,--stack,16777216
+endif
 DOOM_ED_OBJS := $(patsubst $(DOOM_ED_DIR)/%.c,$(BUILD_DIR)/doom-ed/%.o,$(DOOM_ED_SRCS))
 
 .PHONY: doom-ed
@@ -35,6 +39,6 @@ $(BUILD_DIR)/doom-ed/%.o: $(DOOM_ED_DIR)/%.c
 	$(CC) $(CFLAGS) -I$(DOOM_ED_DIR) -I$(DOOM_ED_DIR)/third_party -MMD -MP -c $< -o $@
 
 $(BIN_DIR)/doom-ed$(EXE_EXT): $(DOOM_ED_OBJS) $(CORE_LIBS) $(PLATFORM_LIB) | $(BIN_DIR) share
-	$(CC) $(DOOM_ED_OBJS) $(LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS) -o $@
+	$(CC) $(DOOM_ED_OBJS) $(LDFLAGS) $(DOOM_ED_LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS) -o $@
 
 -include $(DOOM_ED_OBJS:.o=.d)
