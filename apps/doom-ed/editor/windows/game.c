@@ -356,14 +356,18 @@ result_t win_game(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       free(game);
       win->userdata = NULL;
       return true;
-    case evPaint:
+    case evPaint: {
+      R_GpuSceneState scene;
+      R_GpuBeginScene(&scene);
       game_tick(game);
       draw_dungeon(win, moved);
+      R_GpuEndScene(&scene);
       if (g_ui_runtime.focused == win) {
         post_message(win, evPaint, wparam, lparam);
       }
       moved = false;
-      return false;
+      return true;
+    }
   }
 
   if (g_ui_runtime.captured == win) {
