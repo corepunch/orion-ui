@@ -65,6 +65,8 @@ jobs:
             unzip
       - name: Build
         run: make -j4 all
+      - name: Check Doom-ED WAD imports and geometry
+        run: make doom-ed-test
       - name: Build release packages
         if: inputs.version != ''
         run: sh scripts/package-release.sh "${{ inputs.version }}" "${{ matrix.platform }}" dist
