@@ -201,6 +201,14 @@ bool R_DrawVGABuffer(const R_VgaBuffer *buf,
                      const uint32_t palette256[256]);
 
 // Immediate GPU operations for custom scene pipelines. See docs/drawing.md.
+typedef struct {
+  GLint program, vao, buffer, active_texture, texture, viewport[4];
+  GLint blend_src_rgb, blend_dst_rgb, blend_src_alpha, blend_dst_alpha;
+  GLboolean blend, depth, cull, depth_mask;
+} R_GpuSceneState;
+void R_GpuBeginScene(R_GpuSceneState *state);
+void R_GpuEndScene(const R_GpuSceneState *state);
+
 void R_GpuActiveTexture(GLenum texture);
 void R_GpuAttachShader(GLuint program, GLuint shader);
 void R_GpuBindAttribLocation(GLuint program, GLuint index, const GLchar *name);

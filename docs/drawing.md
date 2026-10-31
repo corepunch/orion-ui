@@ -437,6 +437,8 @@ functions or `R_Mesh` helpers. They operate on the framework's current graphics
 context. Backend calls stay in `renderer_impl.c`; each operation reports GPU
 errors to stderr. These calls use the same GPU types and constants as the
 existing mesh API. Resource creation and destruction require a current context;
-drawing is restricted to `evPaint`. A scene must restore the render state it
-changes before returning to framework painting. Prefer the existing mesh and
+drawing is restricted to `evPaint`. Use `R_GpuBeginScene` / `R_GpuEndScene`
+around custom scene painting to bind texture unit zero and preserve the UI
+program, vertex/buffer bindings, texture binding, viewport, blend and depth/cull
+state. Restore any additional state the scene changes before returning to UI painting. Prefer the existing mesh and
 texture helpers for ordinary drawing.

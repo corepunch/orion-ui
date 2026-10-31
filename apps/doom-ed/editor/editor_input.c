@@ -230,9 +230,13 @@ result_t win_editor(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       free(game);
       win->userdata = NULL;
       return true;
-    case evPaint:
+    case evPaint: {
+      R_GpuSceneState scene;
+      R_GpuBeginScene(&scene);
       draw_editor(win, &game->map, editor, &game->player);
+      R_GpuEndScene(&scene);
       return true;
+    }
     case evMouseMove:
       track_mouse(win);
       editor->hover.type = ObjTypeNone;

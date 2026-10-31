@@ -48,7 +48,10 @@ if len(sys.argv) == 3:
         lumps = []
         for i in range(count):
             offset, size, name = struct.unpack_from("<II8s", original, directory + i * 16)
-            lumps.append((name, original[offset:offset + size]))
+            payload = original[offset:offset + size]
+            if name.rstrip(b"\0") == b"THINGS":
+                payload = struct.pack("<7h6B", 0, 64, 64, 0, 0, 1, 7, 0, 0, 0, 0, 0, 0)
+            lumps.append((name, payload))
         lumps += [(b"PLAYPAL", bytes(c for i in range(256) for c in (i, i, i))),
                   (b"TEXTURE1", struct.pack("<I", 0)), (b"PNAMES", struct.pack("<I", 0)),
                   (b"F_START", b""), (b"FLOOR", bytes([100]) * 4096),
@@ -66,3 +69,4 @@ if len(sys.argv) == 3:
             assert capture.stat().st_size > 1000, capture
             assert capture.read_bytes().startswith(b"\xff\xd8"), capture
             print("Rendered:", view)
+    assert (captures / "editor.jpg").read_bytes() != (captures / "preview.jpg").read_bytes(), "Both views rendered the same empty shell"

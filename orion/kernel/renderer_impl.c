@@ -134,6 +134,43 @@ static void gpu_report_error(const char *operation) {
   }
 }
 
+void R_GpuBeginScene(R_GpuSceneState *s) {
+  glGetIntegerv(GL_CURRENT_PROGRAM, &s->program);
+  glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &s->vao);
+  glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &s->buffer);
+  glGetIntegerv(GL_ACTIVE_TEXTURE, &s->active_texture);
+  glActiveTexture(GL_TEXTURE0);
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &s->texture);
+  glGetIntegerv(GL_VIEWPORT, s->viewport);
+  glGetIntegerv(GL_BLEND_SRC_RGB, &s->blend_src_rgb);
+  glGetIntegerv(GL_BLEND_DST_RGB, &s->blend_dst_rgb);
+  glGetIntegerv(GL_BLEND_SRC_ALPHA, &s->blend_src_alpha);
+  glGetIntegerv(GL_BLEND_DST_ALPHA, &s->blend_dst_alpha);
+  s->blend = glIsEnabled(GL_BLEND);
+  s->depth = glIsEnabled(GL_DEPTH_TEST);
+  s->cull = glIsEnabled(GL_CULL_FACE);
+  glGetBooleanv(GL_DEPTH_WRITEMASK, &s->depth_mask);
+  glDisable(GL_BLEND);
+  glDisable(GL_CULL_FACE);
+  gpu_report_error("begin scene");
+}
+
+void R_GpuEndScene(const R_GpuSceneState *s) {
+  glUseProgram(s->program);
+  glBindVertexArray(s->vao);
+  glBindBuffer(GL_ARRAY_BUFFER, s->buffer);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, s->texture);
+  glActiveTexture(s->active_texture);
+  glViewport(s->viewport[0], s->viewport[1], s->viewport[2], s->viewport[3]);
+  glBlendFuncSeparate(s->blend_src_rgb, s->blend_dst_rgb, s->blend_src_alpha, s->blend_dst_alpha);
+  if (s->blend) glEnable(GL_BLEND); else glDisable(GL_BLEND);
+  if (s->depth) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
+  if (s->cull) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
+  glDepthMask(s->depth_mask);
+  gpu_report_error("end scene");
+}
+
 void R_GpuActiveTexture(GLenum texture) {
   glActiveTexture(texture);
   gpu_report_error("glActiveTexture");
