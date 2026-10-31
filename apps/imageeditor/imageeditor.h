@@ -210,7 +210,7 @@ extern const int kZoomMenuIDs[NUM_ZOOM_LEVELS];
 #define IE_PENCIL_PALETTE_PREV 0x7df0
 #define IE_PENCIL_PALETTE_NEXT 0x7df1
 #define IE_PENCIL_COLOR_SWATCH 0
-#define IE_PENCIL_DEFAULT_OPACITY 64   // 25% of 255; pencil coverage is stored as a byte.
+#define IE_PENCIL_DEFAULT_OPACITY 127  // 50% of 255; pencil coverage is stored as a byte.
 #define IE_PENCIL_FADE_LENGTH 16.0f   // Logical pixels from each stroke endpoint to full opacity.
 #define IE_PENCIL_DAB_SPACING 0.5f    // Backing pixels; flow is normalized by brush width.
 #define IE_PENCIL_GRAIN_VARIATION 32  // Deterministic 0–12.5% paper-grain variation.

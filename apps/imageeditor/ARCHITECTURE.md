@@ -226,7 +226,7 @@ Pencil stores alpha from 0 to 255 in a `GL_R8` texture, tinted with
 `pencil_configured_color()`. Dabs add coverage even when a stroke crosses or
 retraces itself, saturating at 255. Distance-based dab spacing and flow normalized
 by brush width keep a straight pass near the sidebar's opacity (default
-`IE_PENCIL_DEFAULT_OPACITY`, 64), independent of input event frequency; a stroke
+`IE_PENCIL_DEFAULT_OPACITY`, 127), independent of input event frequency; a stroke
 keeps the opacity it began with. A floating-point accumulator preserves fractional dab
 coverage; fade-tail updates add only the change from the previous path length.
 The fade distance is 16 logical pixels at each end. Fade distance, dab spacing,
