@@ -52,9 +52,35 @@ references. Backend GPU calls live in Orion's renderer; scene code uses its
 
 ## Removing the old repository
 
-The application source and local WAD copies no longer require Doom-ED.
-**This checkout is still inside the old repository, and its `.git` file points
-to `../.git/modules/ui`.** Deleting `~/Developer/mapview` would delete Orion
-and its Git metadata too. Save these changes in Orion, then use a standalone
-Orion clone outside `mapview` before removing that parent directory. Retiring
+The application source builds entirely from a standalone `orion-ui` checkout.
+The original migration was made inside `~/Developer/mapview/ui`, whose `.git`
+file referenced the parent's `.git/modules/ui`. Do not delete that parent until
+all of the following have been verified on the machine holding those files:
+
+1. Clone Orion **outside** `mapview` with `git clone --recurse-submodules
+   https://github.com/corepunch/orion-ui.git ~/Developer/orion-ui` after the PR
+   has merged. Do not use `git worktree`, `--shared`, or `--reference` here.
+2. Preserve a separate backup of the entire old `mapview` directory, including
+   hidden files, Git metadata, ignored resources and untracked maps. Record
+   `git status --short --untracked-files=all` in both the parent and nested UI,
+   and preserve any unpushed commits before retiring either repository.
+3. Copy local WADs and local data from both old checkouts into the independent
+   copy, preserving their relative paths. The conventional WAD destination is
+   `apps/doom-ed/local/wads/`. Check copied files byte-for-byte (`cmp`) and use
+   `reference/wads.sha256` for known reference WADs. Keep personal maps and
+   other files too, even when they are absent from that reference manifest.
+4. Confirm `git rev-parse --absolute-git-dir` is inside the new checkout and
+   `git rev-parse --git-common-dir` resolves there too. Confirm no
+   `objects/info/alternates` file references the old repository. Recursively
+   check the initialized submodules as well.
+5. From the new root run `make doom-ed doom-ed-test`, then `--check-wad` on
+   the preserved Hexen IWAD. Launch the editor and verify map selection,
+   vertex/sector editing, palettes, property inspectors and Tab/3D WASD/mouse
+   navigation. Capture both views using the commands above.
+6. Repeat launch and build with the old directory temporarily renamed and
+   restore its name afterwards. Only retire it once the independent copy,
+   verified resources and backup have all been confirmed.
+
+A successful CI run verifies a fresh checkout and synthetic WAD imports; it
+does not confirm preservation of files that exist only on your Mac. Retiring
 the Doom-ED GitHub repository does not require deleting the local directory.

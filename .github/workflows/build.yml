@@ -66,6 +66,9 @@ jobs:
     - name: Build and run tests
       run: env -u DISPLAY -u WAYLAND_DISPLAY make test
 
+    - name: Check Doom-ED WAD imports and geometry
+      run: make doom-ed-test
+
     - name: Check XML-generated Ledger API and documentation
       run: make ledger-api-check
 
