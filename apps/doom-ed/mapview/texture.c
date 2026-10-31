@@ -298,7 +298,7 @@ int allocate_mapside_textures(void) {
   int dir_count = 0;
   
   // Find and load all texture directories (TEXTURE1, TEXTURE2, etc.)
-  for (int i = 0; dir_count < MAX_TEXDIR; i++) {
+  for (int i = 0; i < MAX_TEXDIR; i++) {
     char tex_lump_name[sizeof(lumpname_t)+1]={0};
     snprintf(tex_lump_name, sizeof(tex_lump_name), "TEXTURE%d", i+1);
     texture_directory_t *td = cache_lump(tex_lump_name);

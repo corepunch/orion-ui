@@ -34,3 +34,35 @@ with tempfile.TemporaryDirectory(prefix="orion-doom-import-") as temp:
         if variant == "valid":
             assert "vertices=4 lines=4 sectors=1" in result.stdout, result.stdout
         print("Map import:", variant, "passed")
+
+# Optional display-backed smoke check; the fixture contains only generated data.
+# Run under xvfb-run on Linux. Keep captures outside the checkout for CI upload.
+if len(sys.argv) == 3:
+    captures = pathlib.Path(sys.argv[2]).resolve()
+    captures.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="orion-doom-render-") as temp:
+        path = pathlib.Path(temp) / "render.wad"
+        fixture(path, "valid")
+        original = path.read_bytes()
+        count, directory = struct.unpack_from("<II", original, 4)
+        lumps = []
+        for i in range(count):
+            offset, size, name = struct.unpack_from("<II8s", original, directory + i * 16)
+            lumps.append((name, original[offset:offset + size]))
+        lumps += [(b"PLAYPAL", bytes(c for i in range(256) for c in (i, i, i))),
+                  (b"TEXTURE1", struct.pack("<I", 0)), (b"PNAMES", struct.pack("<I", 0)),
+                  (b"F_START", b""), (b"FLOOR", bytes([100]) * 4096),
+                  (b"CEILING", bytes([180]) * 4096), (b"F_END", b"")]
+        data, entries = bytearray(b"PWAD" + b"\0" * 8), []
+        for name, payload in lumps:
+            entries.append(struct.pack("<II8s", len(data), len(payload), name))
+            data.extend(payload)
+        data[4:12] = struct.pack("<II", len(entries), len(data))
+        path.write_bytes(data + b"".join(entries))
+        for view, options in [("editor", []), ("preview", ["--3d"])]:
+            capture = captures / (view + ".jpg")
+            subprocess.run([sys.argv[1], str(path), "--offscreen", *options,
+                            "--screenshot", str(capture)], check=True, timeout=30)
+            assert capture.stat().st_size > 1000, capture
+            assert capture.read_bytes().startswith(b"\xff\xd8"), capture
+            print("Rendered:", view)

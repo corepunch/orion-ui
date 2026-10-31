@@ -284,7 +284,7 @@ int check_closed_loop(map_data_t *map, uint16_t line, uint16_t vertices[]) {
   free(queue);
   return 0;
   
-reconstruct_path:
+reconstruct_path:;
   // Reconstruct and reverse the path
   int vertex_count = queue[loop_end_idx].length + 1; // +1 for start vertex
   int *path = malloc(vertex_count * sizeof(int));
