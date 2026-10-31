@@ -30,7 +30,7 @@ with tempfile.TemporaryDirectory(prefix="orion-doom-import-") as temp:
         path = pathlib.Path(temp) / (variant + ".wad")
         fixture(path, variant)
         result = subprocess.run([sys.argv[1], "--check-wad", str(path)], capture_output=True, text=True, timeout=30)
-        assert (result.returncode == 0) == (variant == "valid"), (variant, result.stdout, result.stderr)
+        assert (result.returncode == 0) == (variant == "valid"), (variant, result.returncode, result.stdout, result.stderr)
         if variant == "valid":
             assert "vertices=4 lines=4 sectors=1" in result.stdout, result.stdout
         print("Map import:", variant, "passed")

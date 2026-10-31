@@ -146,6 +146,11 @@ void R_GpuBeginScene(R_GpuSceneState *s) {
   glGetIntegerv(GL_BLEND_DST_RGB, &s->blend_dst_rgb);
   glGetIntegerv(GL_BLEND_SRC_ALPHA, &s->blend_src_alpha);
   glGetIntegerv(GL_BLEND_DST_ALPHA, &s->blend_dst_alpha);
+  glGetIntegerv(GL_CULL_FACE_MODE, &s->cull_mode);
+  glGetVertexAttribfv(3, GL_CURRENT_VERTEX_ATTRIB, s->attribute_color);
+#ifndef ORION_OPENGL_ES
+  glGetFloatv(GL_POINT_SIZE, &s->point_size);
+#endif
   s->blend = glIsEnabled(GL_BLEND);
   s->depth = glIsEnabled(GL_DEPTH_TEST);
   s->cull = glIsEnabled(GL_CULL_FACE);
@@ -168,6 +173,11 @@ void R_GpuEndScene(const R_GpuSceneState *s) {
   if (s->depth) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
   if (s->cull) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
   glDepthMask(s->depth_mask);
+  glCullFace(s->cull_mode);
+  glVertexAttrib4fv(3, s->attribute_color);
+#ifndef ORION_OPENGL_ES
+  glPointSize(s->point_size);
+#endif
   gpu_report_error("end scene");
 }
 

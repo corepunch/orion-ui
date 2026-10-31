@@ -203,7 +203,11 @@ bool R_DrawVGABuffer(const R_VgaBuffer *buf,
 // Immediate GPU operations for custom scene pipelines. See docs/drawing.md.
 typedef struct {
   GLint program, vao, buffer, active_texture, texture, viewport[4];
-  GLint blend_src_rgb, blend_dst_rgb, blend_src_alpha, blend_dst_alpha;
+  GLint blend_src_rgb, blend_dst_rgb, blend_src_alpha, blend_dst_alpha, cull_mode;
+  GLfloat attribute_color[4];
+#ifndef ORION_OPENGL_ES
+  GLfloat point_size;
+#endif
   GLboolean blend, depth, cull, depth_mask;
 } R_GpuSceneState;
 void R_GpuBeginScene(R_GpuSceneState *state);
