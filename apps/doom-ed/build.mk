@@ -1,6 +1,7 @@
 # Doom's game tables and renderer are separate translation units: both game
 # headers deliberately use overlapping names and cannot be unity-included.
 DOOM_ED_DIR := apps/doom-ed
+DOOM_ED_CGLM_DIR := $(DOOM_ED_DIR)/third_party/cglm
 DOOM_ED_SRCS := $(DOOM_ED_DIR)/wad.c $(wildcard $(DOOM_ED_DIR)/mapview/*.c) \
   $(wildcard $(DOOM_ED_DIR)/editor/*.c) \
   $(wildcard $(DOOM_ED_DIR)/editor/windows/*.c) \
@@ -36,7 +37,7 @@ $(BUILD_DIR)/doom-ed/tests/triangulate: $(DOOM_ED_DIR)/tests/legacy/triangulate_
 
 $(BUILD_DIR)/doom-ed/%.o: $(DOOM_ED_DIR)/%.c
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -I$(DOOM_ED_DIR) -I$(DOOM_ED_DIR)/third_party -MMD -MP -c $< -o $@
+	$(CC) $(CFLAGS) -I$(DOOM_ED_DIR) -I$(DOOM_ED_CGLM_DIR)/include -MMD -MP -c $< -o $@
 
 $(BIN_DIR)/doom-ed$(EXE_EXT): $(DOOM_ED_OBJS) $(CORE_LIBS) $(PLATFORM_LIB) | $(BIN_DIR) share
 	$(CC) $(DOOM_ED_OBJS) $(LDFLAGS) $(DOOM_ED_LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(LIBS) -o $@

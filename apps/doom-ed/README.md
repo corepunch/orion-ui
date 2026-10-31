@@ -1,16 +1,17 @@
 # Doom Editor
 
 Doom-ED is now a native Orion application. It builds against the current split
-Orion libraries and vendored cglm 0.9.6 headers, without a separate Doom-ED
+Orion libraries and a cglm 0.9.6 submodule, without a separate Doom-ED
 checkout or nested UI dependency. Imported from `corepunch/doom-ed` commit
 `0be92cd560120719a085a92854c6bcfffe70e679`. The root GPL-3.0 license applies;
-cglm's MIT license is in `third_party/cglm-LICENSE`.
+cglm's MIT license is in `third_party/cglm/LICENSE`.
 
 ## Build and run
 
 From the Orion repository root:
 
 ```sh
+git submodule update --init --recursive
 make doom-ed
 build/bin/doom-ed /path/to/hexen.wad
 build/bin/doom-ed /path/to/hexen.wad --map MAP02 --3d

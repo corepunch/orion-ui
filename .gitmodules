@@ -1,3 +1,6 @@
 [submodule "platform"]
 	path = platform
 	url = https://github.com/corepunch/platform.git
+[submodule "apps/doom-ed/third_party/cglm"]
+	path = apps/doom-ed/third_party/cglm
+	url = https://github.com/recp/cglm.git
