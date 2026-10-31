@@ -24,11 +24,11 @@ doom-ed-test: $(DOOM_ED_TEST_BINS) $(BIN_DIR)/test_doom_ed_wad_test$(EXE_EXT) $(
 
 $(BUILD_DIR)/doom-ed/tests/%: $(DOOM_ED_DIR)/tests/legacy/%_test.c $(DOOM_ED_DIR)/tests/map_test.h
 	@mkdir -p $(@D)
-	$(CC) -std=c99 -I$(DOOM_ED_DIR) $< -lm -o $@
+	$(CC) $(CFLAGS) -std=c99 -I$(DOOM_ED_DIR) $< -lm -o $@
 
 $(BUILD_DIR)/doom-ed/tests/triangulate: $(DOOM_ED_DIR)/tests/legacy/triangulate_test.c $(DOOM_ED_DIR)/mapview/triangulate.c $(DOOM_ED_DIR)/tests/map_test.h
 	@mkdir -p $(@D)
-	$(CC) -std=c99 -DTEST_MODE -I$(DOOM_ED_DIR) $(filter %.c,$^) -lm -o $@
+	$(CC) $(CFLAGS) -std=c99 -DTEST_MODE -I$(DOOM_ED_DIR) $(filter %.c,$^) -lm -o $@
 
 $(BUILD_DIR)/doom-ed/%.o: $(DOOM_ED_DIR)/%.c
 	@mkdir -p $(@D)
