@@ -29,7 +29,13 @@ static bool write_fixture(const char *path, int variant) {
 
 static void test_wad(void) {
   TEST("WAD loading, map detection, lump reads, and malformed input");
-  char path[] = "/tmp/orion-doom-wad-XXXXXX", data[4];
+  const char *temp = getenv("TEMP");
+  if (!temp) temp = getenv("TMP");
+  if (!temp) temp = getenv("TMPDIR");
+  if (!temp) temp = ".";
+  char path[4096], data[4];
+  int length = snprintf(path, sizeof(path), "%s/orion-doom-wad-XXXXXX", temp);
+  ASSERT_TRUE(length > 0 && (size_t)length < sizeof(path));
   int fd = mkstemp(path);
   ASSERT_TRUE(fd >= 0);
   close(fd);
