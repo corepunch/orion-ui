@@ -238,7 +238,8 @@ bool app_open_song(const char *path) {
     bool first = true;
     for (int j = 0; j < i; j++) if (next.clips[j].block == next.clips[i].block) first = false;
     const sample_t *sample = first ? sample_get(next.clips[i].block) : NULL;
-    if (sample && g_app->samples_dir[0] && !sample_save(g_app->samples_dir, sample)) {
+    if (sample && !sample_is_deleted(next.clips[i].block) && g_app->samples_dir[0] &&
+        !sample_store(g_app->samples_dir, next.clips[i].block)) {
       fprintf(stderr, "[gr] could not keep embedded recording in sample library block=%d\n", next.clips[i].block);
       fflush(stderr); // the opened song retains its embedded sample in memory and on disk
     }

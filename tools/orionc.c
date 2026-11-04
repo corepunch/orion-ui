@@ -548,7 +548,6 @@ static void emit_context_menus(FILE *f, xmlNodePtr contexts) {
   }
 }
 
-static const char *control_size_flag(xmlNodePtr n);
 
 static void emit_toolbar(FILE *f, xmlNodePtr toolbar, const char *symbol,
                          const char *scope_name) {
@@ -565,9 +564,8 @@ static void emit_toolbar(FILE *f, xmlNodePtr toolbar, const char *symbol,
       if (icon && *icon) snprintf(iconq, sizeof(iconq), "\"%s\"", icon); else snprintf(iconq, sizeof(iconq), "NULL");
       if (checked && *checked) snprintf(checkedq, sizeof(checkedq), ", 0, \"%s\"", checked); // color, checked_icon
       emit_if(f, it, false);
-      OUT("  { %s, %s, %s, %s, %s%s%s, %s, %s%s", toolbar_type(it), id, iconq, nz(w, "0"), nz(flags, "0"),
-          elem(toolbar->parent, "activitybar") && elem(it, "button") ? " | TBSTYLE_CHECKGROUP" : "",
-          elem(it, "button") ? control_size_flag(it) : "", textq, tipq, checkedq);
+      OUT("  { %s, %s, %s, %s, %s%s, %s, %s%s", toolbar_type(it), id, iconq, nz(w, "0"), nz(flags, "0"),
+          elem(toolbar->parent, "activitybar") && elem(it, "button") ? " | TBSTYLE_CHECKGROUP" : "", textq, tipq, checkedq);
       char *alt = attr(it, "alt-command"), *alt_icon = attr(it, "alt-icon"), *alt_tip = attr(it, "alt-tooltip");
       if (alt) {
         char alt_id[256], aq[ORIONC_STRING_SIZE], tq[ORIONC_STRING_SIZE];

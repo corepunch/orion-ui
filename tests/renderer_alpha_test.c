@@ -217,7 +217,7 @@ static void read_card_pixel(int x, int y, uint8_t pixel[4]) {
 static plastic_look_t look_for(ctrl_state_t state) {
   return (plastic_look_t){.pressed = !!(state & CTRL_PRESSED), .hover = !!(state & CTRL_HOVER),
     .selected = !!(state & CTRL_SELECTED), .disabled = !!(state & CTRL_DISABLED),
-    .gloss = 1.0f, .rim = 0.55f, .ink = 0.10f, .lift = 0.10f};
+    .gloss = 1.0f, .rim = 0.55f, .lift = 0.10f};
 }
 
 static const plastic_look_t *look_ptr(ctrl_state_t state) {
@@ -227,7 +227,7 @@ static const plastic_look_t *look_ptr(ctrl_state_t state) {
 }
 
 static void test_plastic_surface(void) {
-  TEST("Plastic states preserve bounds, disable interaction shading and letterpress the glyph");
+  TEST("Plastic card states preserve bounds, alpha and disabled shading");
   CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
     (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, 0};
   CGLPixelFormatObj format = NULL;
@@ -239,7 +239,7 @@ static void test_plastic_surface(void) {
   if (error != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
   CGLSetCurrentContext(context);
   bool initialized = ui_init_prog(), ok = initialized;
-  uint32_t fbo = 0, texture = 0, glyph = 0;
+  uint32_t fbo = 0, texture = 0;
   int w = 0, h = 0;
   if (ok) {
     ok = R_EnsureWindowTarget(&fbo, &texture, &w, &h, 32, 32);
@@ -248,15 +248,12 @@ static void test_plastic_surface(void) {
     glDisable(GL_SCISSOR_TEST);
     set_projection(0, 0, 32, 32);
     glClearColor(0, 0, 0, 0);
-    uint8_t mask[16 * 16 * 4] = {0};
-    for (int y = 4; y < 12; y++) for (int x = 4; x < 12; x++) mask[(y * 16 + x) * 4 + 3] = 255;
-    glyph = R_CreateTextureRGBA(16, 16, mask, R_FILTER_LINEAR, R_WRAP_CLAMP);
     uint8_t samples[5][4], disabled_only[32 * 32 * 4], disabled_flags[32 * 32 * 4];
     ctrl_state_t states[] = {CTRL_NORMAL, CTRL_SELECTED, CTRL_PRESSED, CTRL_HOVER, CTRL_DISABLED};
     for (int i = 0; i < ARRAY_LEN(states); i++) {
       glClear(GL_COLOR_BUFFER_BIT);
       render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, look_ptr(states[i]), WEB(0x48aa36),
-                              0x80000000, glyph, NULL, (ipoint16_t){16, 16});
+                              0x80000000);
       read_card_pixel(8, 16, samples[i]);
       uint8_t pixels[32 * 32 * 4];
       glReadPixels(0, 0, 32, 32, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
@@ -269,25 +266,23 @@ static void test_plastic_surface(void) {
     ok &= abs(samples[4][0] - samples[4][1]) <= 1 && abs(samples[4][1] - samples[4][2]) <= 1;
     glClear(GL_COLOR_BUFFER_BIT);
     render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, look_ptr(CTRL_DISABLED | CTRL_HOVER | CTRL_PRESSED | CTRL_SELECTED),
-                            WEB(0x48aa36), 0x80000000, glyph, NULL, (ipoint16_t){16, 16});
+                            WEB(0x48aa36), 0x80000000);
     glReadPixels(0, 0, 32, 32, GL_RGBA, GL_UNSIGNED_BYTE, disabled_flags);
     ok &= memcmp(disabled_only, disabled_flags, sizeof(disabled_only)) == 0;
     glClear(GL_COLOR_BUFFER_BIT);
     render_plastic_surface(R(2, 2, 28, 28), 10, 2, 3, look_ptr(CTRL_NORMAL), 0x8036aa48,
-                            0x80000000, glyph, NULL, (ipoint16_t){16, 16});
-    uint8_t face[4], rim[4], top[4], center[4], under[4], beside[4];
+                            0x80000000);
+    uint8_t face[4], rim[4];
     read_card_pixel(8, 16, face); read_card_pixel(16, 28, rim);
-    read_card_pixel(16, 12, top); read_card_pixel(16, 16, center); read_card_pixel(16, 20, under); read_card_pixel(10, 20, beside);
-    ok &= face[3] == 128 && rim[3] > 0 && rim[3] < 128 && top[1] < center[1] && center[1] < beside[1] && under[1] > beside[1];
+    ok &= face[3] == 128 && rim[3] > 0 && rim[3] < 128;
     for (int size = 4; size <= 24; size += 4) {
       glClear(GL_COLOR_BUFFER_BIT);
-      render_plastic_surface(R(4, 4, size, 8), 100, 2, 3, look_ptr(CTRL_SELECTED), WEB(0x48aa36), 0x80000000, 0, NULL, (ipoint16_t){0, 0});
+      render_plastic_surface(R(4, 4, size, 8), 100, 2, 3, look_ptr(CTRL_SELECTED), WEB(0x48aa36), 0x80000000);
     }
     ok &= glGetError() == GL_NO_ERROR;
-    if (!ok) fprintf(stderr, "[renderer-test] plastic normal=%u pressed=%u hover=%u alpha=%u,%u glyph=%u,%u catch=%u,%u\n",
-                      samples[0][1], samples[2][1], samples[3][1], face[3], rim[3], top[1], center[1], under[1], beside[1]);
+    if (!ok) fprintf(stderr, "[renderer-test] plastic normal=%u pressed=%u hover=%u alpha=%u,%u\n",
+                      samples[0][1], samples[2][1], samples[3][1], face[3], rim[3]);
   }
-  R_DeleteTexture(glyph);
   R_DestroyWindowTarget(&fbo, &texture, &w, &h);
   if (initialized) ui_shutdown_prog();
   CGLSetCurrentContext(NULL);
@@ -370,6 +365,7 @@ static void test_selection_gradient(void) {
   PASS();
 }
 static result_t rotated_content_proc(window_t *win, uint32_t msg, uint32_t wp, void *lp) {
+  if (msg == evCreate || msg == evDestroy) return true;
   if (msg == evPaint) {
     fill_rect(0xffffffff, wp == WINDOW_PAINT_OVERLAY ? R(2, 2, 3, 3) : R(8, 4, 8, 4));
     return true;
@@ -390,35 +386,36 @@ static void test_view_rotation(void) {
   CGLDestroyPixelFormat(format);
   if (error != kCGLNoError || !context) { SKIP("Offscreen OpenGL context unavailable"); }
   CGLSetCurrentContext(context);
-  bool ok = ui_init_prog();
-  if (ok) {
+  test_env_init();
+  bool initialized = ui_init_prog(), ok = initialized;
+  if (initialized) {
     init_ui_white_texture();
-    GLuint fbo = 0, texture = 0;
-    int width = 0, height = 0;
-    R_EnsureWindowTarget(&fbo, &texture, &width, &height, 64, 64);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glViewport(0, 0, 64, 64);
-    glDisable(GL_SCISSOR_TEST);
-    glClearColor(0, 0, 0, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
-    set_projection(0, 0, 64, 64);
-    g_ui_runtime.running = true;
-    window_t win = {.frame = {0, 0, 64, 64}, .flags = WINDOW_NOTITLE, .proc = rotated_content_proc,
-      .view = &(window_view_t){.enabled = true, .width = 64, .height = 64, .pixel_ratio = 1,
-               .matrix = {.a = 0, .b = 1, .tx = 66, .ty = 3}}};
-    window_surface_adopt(&win, fbo, texture, 64, 64);
-    send_message(&win, evPaint, 0, NULL);
-    uint8_t rotated[4], original[4], overlay[4];
-    glReadPixels(60, 64 - 15 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rotated);
-    glReadPixels(10, 64 - 6 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, original);
-    glReadPixels(3, 64 - 3 - 1, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, overlay);
-    ok = rotated[0] == 255 && original[0] == 0 && overlay[0] == 255 && glGetError() == GL_NO_ERROR;
-    g_ui_runtime.running = false;
-    glDeleteTextures(1, &texture);
-    glDeleteFramebuffers(1, &fbo);
+    // Overlay dispatch checks that the content callback left a live window.
+    window_t *win = create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 64, 64), NULL, rotated_content_proc, 0, NULL);
+    if (win) window_view_init(win, 64, 64, 1, true);
+    window_surface_t *surf = win ? window_surface_ensure(win) : NULL;
+    int extent = ui_surface_px(64);
+    ok = window_has_view(win) && surf &&
+         R_EnsureWindowTarget(&surf->fbo, &surf->tex, &surf->w, &surf->h, extent, extent);
+    if (ok) {
+      win->view->matrix = (view_matrix_t){.b = 1, .tx = 66, .ty = 3};
+      R_ClearWindowTarget(surf->fbo);
+      g_ui_runtime.running = true;
+      send_message(win, evPaint, 0, NULL);
+      uint32_t rotated = pane_pixel(win, 60, 15);
+      uint32_t original = pane_pixel(win, 10, 6);
+      uint32_t overlay = pane_pixel(win, 3, 3);
+      GLenum gl_error = glGetError();
+      ok = rotated == 0xffffffff && original == 0 && overlay == 0xffffffff && gl_error == GL_NO_ERROR;
+      if (!ok) fprintf(stderr, "[renderer-test] rotation rotated=0x%x original=0x%x overlay=0x%x gl_error=0x%x\n",
+                       rotated, original, overlay, gl_error);
+      g_ui_runtime.running = false;
+    }
+    if (win) destroy_window(win);
     shutdown_white_texture();
     ui_shutdown_prog();
   }
+  test_env_shutdown();
   CGLSetCurrentContext(NULL);
   CGLDestroyContext(context);
   ASSERT_TRUE(ok);

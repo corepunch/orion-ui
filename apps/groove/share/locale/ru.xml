@@ -21,14 +21,14 @@
   <string source="Window" where="menu">Окно</string>
   <string source="Show Library" where="menu">Показать библиотеку</string>
   <string source="Reset Workspace" where="menu">Сбросить расположение окон</string>
-  <string source="Delete" where="song_browser">Удалить</string>
+  <string source="Delete" where="manage_samples,song_browser">Удалить</string>
   <string source="Remove selected block (Delete)">Удалить выделенный блок (Delete)</string>
   <string source="Loop (L)">Повтор (L)</string>
   <string source="Record Sample" where="record_sample">Запись сэмпла</string>
-  <string source="Name:" where="record_sample,save_song">Название:</string>
+  <string source="Name:" where="record_sample,manage_samples,save_song">Название:</string>
   <string source="Length:" where="record_sample">Длина:</string>
   <string source="Record a sample at the current song tempo." where="record_sample">Запишите сэмпл в темпе текущей песни.</string>
-  <string source="Use headphones if the song is playing." where="record_sample">При воспроизведении песни используйте наушники.</string>
+  <string source="Use headphones if the song is playing." obsolete="true">При воспроизведении песни используйте наушники.</string>
   <string source="Record" where="record_sample">Записать</string>
   <string source="Listen" where="record_sample">Слушать</string>
   <string source="Save Sample" where="record_sample">Сохранить сэмпл</string>
@@ -80,7 +80,7 @@
   <string source="Ready to export." where="export_media">Всё готово к экспорту.</string>
   <string source="Save File..." where="export_media">Сохранить файл...</string>
   <string source="Share..." where="export_media">Поделиться...</string>
-  <string source="Close" where="export_media">Закрыть</string>
+  <string source="Close" where="export_media,manage_samples">Закрыть</string>
   <string source="Cancel Export" where="code">Отменить экспорт</string>
   <string source="Could not create the export folder. Try Save File." where="code">Не удалось создать папку экспорта. Используйте «Сохранить файл».</string>
   <string source="Use the filename extension matching the selected format." where="code">Расширение файла должно соответствовать выбранному формату.</string>
@@ -124,4 +124,17 @@
   <string source="WAV (44.1 kHz, 16-bit)" where="code">WAV (44,1 кГц, 16 бит)</string>
   <string source="Saved songs appear in My Songs." where="save_song">Сохранённые песни появятся в разделе «Мои песни».</string>
   <string source="Save changes to this song?" where="code">Сохранить изменения в этой песне?</string>
+  <string source="Manage Recordings..." where="menu">Управление записями…</string>
+  <string source="Metronome" where="record_sample">Метроном</string>
+  <string source="Use headphones to keep the click out of the recording." where="record_sample">Используйте наушники, чтобы щелчки метронома не попали в запись.</string>
+  <string source="Manage Recordings" where="manage_samples">Управление записями</string>
+  <string source="Recording" where="manage_samples">Запись</string>
+  <string source="Bars" where="manage_samples">Такты</string>
+  <string source="No recordings yet. Use Add Recording in My Samples." where="manage_samples">Записей пока нет. Выберите «Добавить запись» в разделе «Мои сэмплы».</string>
+  <string source="Rename" where="manage_samples">Переименовать</string>
+  <string source="Add Recording" where="library_window">Добавить запись</string>
+  <string source="Could not rename the recording." where="code">Не удалось переименовать запись.</string>
+  <string source="Delete “%s” from My Samples? Saved songs keep their own copies." where="code">Удалить «%s» из раздела «Мои сэмплы»? В сохранённых композициях останутся собственные копии.</string>
+  <string source="Delete Recording" where="code">Удалить запись</string>
+  <string source="Could not delete the recording." where="code">Не удалось удалить запись.</string>
 </strings>

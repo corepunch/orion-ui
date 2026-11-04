@@ -204,11 +204,6 @@ void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state) {
   get_theme()->draw_part(part, r, state);
 }
 
-static bool theme_part_is_plastic(theme_part_t part) {
-  return part == THEME_PART_BUTTON || part == THEME_PART_CARD ||
-         part == THEME_PART_TOOLBAR_BUTTON || part == THEME_PART_TOOLBAR_LABELED_BUTTON;
-}
-
 void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const theme_draw_opts_t *opts) {
   if (part < 0 || part >= THEME_PART_COUNT) {
     fprintf(stderr, "[theme] draw_ex REJECTED part=%d state=%u rect=%d,%d,%d,%d\n",
@@ -220,13 +215,11 @@ void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const the
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
   theme_draw_opts_t none = {0};
   if (!opts) opts = &none;
-  bool plastic = (state & CTRL_PLASTIC) && theme_part_is_plastic(part);
+  bool plastic = (state & CTRL_PLASTIC) != 0;
   state &= ~CTRL_PLASTIC;
   if (part == THEME_PART_CARD) {
     if (plastic) draw_plastic_card(r, state, opts->color);
     else get_theme()->draw_card(r, state, opts->edge_color);
-  } else if (plastic) {
-    draw_plastic_button(r, state, opts->color, opts->icon, opts->control_size, opts->round);
   } else {
     get_theme()->draw_part(part, r, state);
   }
@@ -238,12 +231,6 @@ irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state)
   int ring = theme->card.ring_width;
   if (state & CTRL_PLASTIC) ring += theme->card.shadow_size;
   return rect_inset(r, ring);
-}
-
-int theme_control_extent(int regular, uint32_t style) {
-  int pct = get_theme()->control.size_pct[CONTROL_SIZE_INDEX(style)];
-  if (pct <= 0) pct = 100;
-  return MAX(1, (regular * pct + 50) / 100);
 }
 
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state) {

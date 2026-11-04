@@ -578,7 +578,7 @@ static void runtime_fill_activity_params(runtime_build_ctx_t *ctx, xmlNodePtr no
     char *title = runtime_xml_attr_dup(ctx, metadata, toolbar ? "text" : "title");
     char *tooltip = runtime_xml_attr_dup(ctx, metadata, "tooltip");
     items[params->count++] = (toolbar_item_t){
-      .type = TOOLBAR_ITEM_BUTTON, .ident = ctx->next_generated_id++, .style = TBSTYLE_CHECKGROUP | runtime_control_size(ctx, c),
+      .type = TOOLBAR_ITEM_BUTTON, .ident = ctx->next_generated_id++, .style = TBSTYLE_CHECKGROUP,
       .icon = runtime_xml_attr_dup(ctx, metadata, "icon"), .text = title ? title : name,
       .tooltip = tooltip ? tooltip : title ? title : name,
       .checked_icon = runtime_xml_attr_dup(ctx, metadata, "checked-icon")

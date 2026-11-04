@@ -21,14 +21,14 @@
   <string source="Window" where="menu">Finestra</string>
   <string source="Show Library" where="menu">Mostra libreria</string>
   <string source="Reset Workspace" where="menu">Ripristina area di lavoro</string>
-  <string source="Delete" where="song_browser">Elimina</string>
+  <string source="Delete" where="manage_samples,song_browser">Elimina</string>
   <string source="Remove selected block (Delete)">Elimina il blocco selezionato (Canc)</string>
   <string source="Loop (L)">Loop (L)</string>
   <string source="Record Sample" where="record_sample">Registra campione</string>
-  <string source="Name:" where="record_sample,save_song">Nome:</string>
+  <string source="Name:" where="record_sample,manage_samples,save_song">Nome:</string>
   <string source="Length:" where="record_sample">Durata:</string>
   <string source="Record a sample at the current song tempo." where="record_sample">Registra un campione al tempo del brano corrente.</string>
-  <string source="Use headphones if the song is playing." where="record_sample">Usa le cuffie durante la riproduzione del brano.</string>
+  <string source="Use headphones if the song is playing." obsolete="true">Usa le cuffie durante la riproduzione del brano.</string>
   <string source="Record" where="record_sample">Registra</string>
   <string source="Listen" where="record_sample">Ascolta</string>
   <string source="Save Sample" where="record_sample">Salva campione</string>
@@ -80,7 +80,7 @@
   <string source="Ready to export." where="export_media">Pronto per l’esportazione.</string>
   <string source="Save File..." where="export_media">Salva file...</string>
   <string source="Share..." where="export_media">Condividi...</string>
-  <string source="Close" where="export_media">Chiudi</string>
+  <string source="Close" where="export_media,manage_samples">Chiudi</string>
   <string source="Cancel Export" where="code">Annulla esportazione</string>
   <string source="Could not create the export folder. Try Save File." where="code">Impossibile creare la cartella di esportazione. Prova con Salva file.</string>
   <string source="Use the filename extension matching the selected format." where="code">Usa l’estensione del file corrispondente al formato selezionato.</string>
@@ -124,4 +124,17 @@
   <string source="WAV (44.1 kHz, 16-bit)" where="code">WAV (44,1 kHz, 16 bit)</string>
   <string source="Saved songs appear in My Songs." where="save_song">I brani salvati appaiono in I miei brani.</string>
   <string source="Save changes to this song?" where="code">Salvare le modifiche a questo brano?</string>
+  <string source="Manage Recordings..." where="menu">Gestisci registrazioni...</string>
+  <string source="Metronome" where="record_sample">Metronomo</string>
+  <string source="Use headphones to keep the click out of the recording." where="record_sample">Usa le cuffie per evitare che il clic si senta nella registrazione.</string>
+  <string source="Manage Recordings" where="manage_samples">Gestisci registrazioni</string>
+  <string source="Recording" where="manage_samples">Registrazione</string>
+  <string source="Bars" where="manage_samples">Battute</string>
+  <string source="No recordings yet. Use Add Recording in My Samples." where="manage_samples">Nessuna registrazione. Usa «Aggiungi registrazione» in «I miei campioni».</string>
+  <string source="Rename" where="manage_samples">Rinomina</string>
+  <string source="Add Recording" where="library_window">Aggiungi registrazione</string>
+  <string source="Could not rename the recording." where="code">Impossibile rinominare la registrazione.</string>
+  <string source="Delete “%s” from My Samples? Saved songs keep their own copies." where="code">Eliminare «%s» da «I miei campioni»? I brani salvati mantengono la propria copia.</string>
+  <string source="Delete Recording" where="code">Elimina registrazione</string>
+  <string source="Could not delete the recording." where="code">Impossibile eliminare la registrazione.</string>
 </strings>

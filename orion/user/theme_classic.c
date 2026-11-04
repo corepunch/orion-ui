@@ -350,7 +350,7 @@ static theme_t g_classic_theme = {
     .button_size = SYSICON_SIZE + 4, .padding = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
     .spacing = TOOLBAR_SPACING, .corner_radius = 0,
     .compact = { .padding = 2, .spacing = 6, .icon = TOOLBAR_COMPACT_ICON_SIZE, .menu_gap = 8 },
-    .grip_size = 12, .dropdown_arrow_w = 12, .large_inset = 2,
+    .grip_size = 12, .dropdown_arrow_w = 12,
   },
   .tab = {
     .header = { .height = TITLEBAR_HEIGHT, .start = 0 },
@@ -369,7 +369,7 @@ static theme_t g_classic_theme = {
     .shadow = { .size = 2, .blur = 1, .offset = {1, 1}, .color = 0x40000000 },
   },
   .command_link = { .bullet_size = 7, .gap = 6, .padding_y = 1 },
-  .control = { .padding = BUTTON_PADDING, .press_icon_offset = 1, .size_pct = { 100, 84, 71, 133 } },
+  .control = { .padding = BUTTON_PADDING, .press_icon_offset = 1 },
   .button = { .corner_radius = 0 },
   .field = { .padding_x = TEXTEDIT_PADDING_CAPSULE },  // bevelled, unchanged
   .window = { .corner_radius = 0 },
@@ -380,8 +380,7 @@ static theme_t g_classic_theme = {
   .thumbnail = { .gap = 2, .ring_width = 2 },
   .slider = { .trough_inset = 3, .trough_radius = 0, .thumb_inset = 2, .thumb_length = 12, .thumb_radius = 0 },
   .plastic = {
-    .corner_radius = CORNER_RADIUS_CIRCULAR, .bevel_width = 2, .shadow_size = 3,
-    .gloss = 0.7f, .rim = 0.7f, .ink = 0.12f, .lift = 0.08f, .glyph_size = 20, .shadow_color = 0xE0000000,
+    .gloss = 0.7f, .rim = 0.7f, .lift = 0.08f, .shadow_color = 0xE0000000,
   },
   .drag = {
     .shadow = { .blur = 6, .offset = {0, 8}, .color = 0xE0000000 },

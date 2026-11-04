@@ -152,8 +152,7 @@ enum {
   btnSetImage,       // wparam = icon index (iBitmap); lparam = bitmap_strip_t*
   btnSetIconName,    // wparam = 0; lparam = const char* SVG base name (NULL to clear)
   btnSetTooltip,     // wparam = 0; lparam = const char* hover text (copied; NULL clears)
-  btnSetFaceColor,   // wparam = 0; lparam = uint32_t* packed plastic face colour (NULL restores the theme accent)
-  cbAddString,
+  cbAddString = evUser + 6,  // preserve the message IDs after the retired button face colour slot
   cbGetCurrentSelection, // returns index; if lparam=int* also writes index (or kComboBoxError)
   cbGetCurrentValue,     // returns value_field data (e.g., ID) for foreign key binding
   cbSetCurrentSelection,
@@ -323,11 +322,10 @@ enum {
 #define WINDOW_STATE_DISABLED  (1u << 28)
 // Extended window bits (32+): states and styles that do not fit the low word.
 #define WINDOW_STATE_MAXIMIZED (1ull << 34)  // ≈ WS_MAXIMIZE
-#define WINDOW_PLASTIC         (1ull << 36)  // paint with the theme's plastic material (Button, Card)
-#define WINDOW_ROUND           (1ull << 37)  // Button: circular silhouette (BUTTON_STYLE_ROUND)
 #define LABEL_COLLAPSE_EMPTY    (1ull << 38)  // omit an empty Label or BUTTON_COMMANDLINK and its spacing from auto-layout
 #define SPRITE_BUTTON_DOUBLECLICK (1ull << 39) // send btnDoubleClicked instead of a second btnClicked
 #define BUTTON_COMMANDLINK     (1ull << 40)  // ≈ BS_COMMANDLINK: flat, bulleted, left-aligned choice (balloon label)
+#define WINDOW_DRAWS_DISABLED  (1ull << 41)  // window procedure paints its own disabled state
 #define WINDOW_MAXIMIZEBOX     (1ull << 35)  // ≈ WS_MAXIMIZEBOX: caption exposes a restore/maximize command
 
 // Auto-layout alignment values used by layout_measure_t / layout_arrange_t.
@@ -415,7 +413,6 @@ typedef struct {
 #define CONTROL_SIZE_MINI     (2u << 29)
 #define CONTROL_SIZE_LARGE    (3u << 29)
 #define CONTROL_SIZE_MASK     (3u << 29)
-#define CONTROL_SIZE_INDEX(style) ((int)(((style) & CONTROL_SIZE_MASK) >> 29)) // regular 0, small 1, mini 2, large 3
 
 #define TB_SPACING              TOOLBAR_HEIGHT  // equals TOOLBAR_HEIGHT so toolbar buttons are square
 #define TOOLBAR_PADDING         2               // pixels of margin between toolbar border and button area (all sides)
@@ -437,7 +434,7 @@ enum {
   tbSetColumns,                // vertical toolbar grid (1..4 columns); non-button items occupy a full row
   tbSetItemIcon,               // wparam=item ident, lparam=icon name (NULL clears); preserves embedded controls
   edSetLeadingIcon,            // lparam=SVG icon name (copied, NULL clears); inside the text field before its text
-  tbSetItemColor,              // wparam=item ident, lparam=uint32_t* packed colour (NULL restores theme accent)
+  tbSetItemColor,              // wparam=item ident, lparam=uint32_t* SVG tint (NULL restores theme foreground)
   tbFitItem,                   // wparam=ident of an embedded control; re-measures it and lays the toolbar out again (TB_AUTOSIZE)
   tbCheckButton,               // wparam=button ident, lparam=(void *)(intptr_t)checked (TB_CHECKBUTTON); checking a CHECKGROUP button clears its group
   tbGetState,                  // wparam=item ident; returns TBSTATE_* bits, or -1 when absent (TB_GETSTATE)
@@ -466,19 +463,13 @@ enum {
   evDockMeasure,               // lparam: ipoint16_t preferred menu size
 };
 #define TOOLBAR_ITEM_FLAG_REORDERABLE (1u << 2) // drop onto another reorderable item
-// Half-size cell: in a single-column vertical toolbar consecutive SMALL
-// buttons/customs pack 2 per row, so 2x2 of them fills one normal button cell.
+// Half-size cell: consecutive custom items pack two per row in a vertical palette.
 #define TOOLBAR_ITEM_FLAG_SMALL      (1u << 4)
 #define TOOLBAR_ITEM_FLAG_FLEXSPACE  (1u << 5) // spacer or slider shares the remaining length along the toolbar axis
-#define TOOLBAR_ITEM_FLAG_ARTWORK    (1u << 6) // button icon is full-colour artwork filling the button; no plastic body
-// Item flags also take CONTROL_SIZE_*: the button cell and its glyph scale by the theme's
-// control.size_pct; a bigger cell spreads into the band padding (toolbar.large_inset short of
-// the edges) and every item is centred on the row.
 #define TOOLBAR_STYLE_GRIP           (1u << 1) // draggable grip on a floating toolbar
 #define TOOLBAR_STYLE_COMPACT        (1u << 2) // menu-bar background, icon-only items
 #define TOOLBAR_STYLE_TRANSPARENT    (1u << 3) // retain the parent's surface behind toolbar items (TBSTYLE_TRANSPARENT)
 #define TOOLBAR_STYLE_WRAPABLE       (1u << 7) // vertical toolbar flows into a new column at the window height (≈ TBSTYLE_WRAPABLE)
-#define TOOLBAR_STYLE_PLASTIC        (1u << 6) // procedural coloured body with recessed SVG glyph
 #if defined(__APPLE__) && TARGET_OS_IOS
 #define TOOLBAR_COMPACT_ICON_SIZE   20
 #else
@@ -520,7 +511,7 @@ typedef struct {
   uint32_t            style;  // TBSTYLE_CHECK / TBSTYLE_CHECKGROUP, TOOLBAR_ITEM_FLAG_*, CONTROL_SIZE_*
   const char         *text;   // label text, or combobox/textedit initial text
   const char         *tooltip; // tooltip text shown on hover; NULL = none
-  uint32_t            color;  // packed 0xAABBGGRR plastic face or SVG icon tint; 0 uses theme default
+  uint32_t            color;  // packed 0xAABBGGRR SVG icon tint; 0 uses theme default
   const char         *checked_icon; // shown instead of icon while TBSTATE_CHECKED
   uint32_t            state;  // initial TBSTATE_* bits; live state is read back through tbGetState
   int                 alt_ident; // alternate command while Alt is held; 0 disables
@@ -689,7 +680,6 @@ typedef enum {
   brTextOnColor          = 30,  // dark ink on vivid gradient cards and other bright tinted surfaces
   brSelectionTop         = 31,  // selection gradient endpoints (sRGB)
   brSelectionBottom      = 32,
-  brPlasticNeutral       = 33,  // neutral plastic face (transport buttons): silver
   brTabBarBg             = 34,  // tab strip: between Page background and inactive tab face
   brAccentText           = 35,  // text and icons on accent fills: selection, default button, hovered menu item
   brDesktopBg            = 36,  // desktop behind root windows (UI_INIT_DESKTOP)

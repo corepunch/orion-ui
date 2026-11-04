@@ -21,14 +21,14 @@
   <string source="Window" where="menu">Fenêtre</string>
   <string source="Show Library" where="menu">Afficher la bibliothèque</string>
   <string source="Reset Workspace" where="menu">Réinitialiser l’espace de travail</string>
-  <string source="Delete" where="song_browser">Supprimer</string>
+  <string source="Delete" where="manage_samples,song_browser">Supprimer</string>
   <string source="Remove selected block (Delete)">Supprimer le bloc sélectionné (Suppr)</string>
   <string source="Loop (L)">Boucle (L)</string>
   <string source="Record Sample" where="record_sample">Enregistrer un échantillon</string>
-  <string source="Name:" where="record_sample,save_song">Nom :</string>
+  <string source="Name:" where="record_sample,manage_samples,save_song">Nom :</string>
   <string source="Length:" where="record_sample">Durée :</string>
   <string source="Record a sample at the current song tempo." where="record_sample">Enregistrez un échantillon au tempo du morceau actuel.</string>
-  <string source="Use headphones if the song is playing." where="record_sample">Utilisez un casque pendant la lecture du morceau.</string>
+  <string source="Use headphones if the song is playing." obsolete="true">Utilisez un casque pendant la lecture du morceau.</string>
   <string source="Record" where="record_sample">Enregistrer</string>
   <string source="Listen" where="record_sample">Écouter</string>
   <string source="Save Sample" where="record_sample">Sauvegarder l’échantillon</string>
@@ -80,7 +80,7 @@
   <string source="Ready to export." where="export_media">Prêt pour l’exportation.</string>
   <string source="Save File..." where="export_media">Enregistrer le fichier...</string>
   <string source="Share..." where="export_media">Partager...</string>
-  <string source="Close" where="export_media">Fermer</string>
+  <string source="Close" where="export_media,manage_samples">Fermer</string>
   <string source="Cancel Export" where="code">Annuler l’exportation</string>
   <string source="Could not create the export folder. Try Save File." where="code">Impossible de créer le dossier d’exportation. Essayez « Enregistrer le fichier ».</string>
   <string source="Use the filename extension matching the selected format." where="code">Utilisez l’extension qui correspond au format sélectionné.</string>
@@ -124,4 +124,17 @@
   <string source="WAV (44.1 kHz, 16-bit)" where="code">WAV (44,1 kHz, 16 bits)</string>
   <string source="Saved songs appear in My Songs." where="save_song">Les morceaux enregistrés apparaissent dans Mes morceaux.</string>
   <string source="Save changes to this song?" where="code">Enregistrer les modifications de ce morceau ?</string>
+  <string source="Manage Recordings..." where="menu">Gérer les enregistrements...</string>
+  <string source="Metronome" where="record_sample">Métronome</string>
+  <string source="Use headphones to keep the click out of the recording." where="record_sample">Utilisez un casque pour que le clic ne soit pas audible dans l’enregistrement.</string>
+  <string source="Manage Recordings" where="manage_samples">Gérer les enregistrements</string>
+  <string source="Recording" where="manage_samples">Enregistrement</string>
+  <string source="Bars" where="manage_samples">Mesures</string>
+  <string source="No recordings yet. Use Add Recording in My Samples." where="manage_samples">Aucun enregistrement. Utilisez « Ajouter un enregistrement » dans « Mes échantillons ».</string>
+  <string source="Rename" where="manage_samples">Renommer</string>
+  <string source="Add Recording" where="library_window">Ajouter un enregistrement</string>
+  <string source="Could not rename the recording." where="code">Impossible de renommer l’enregistrement.</string>
+  <string source="Delete “%s” from My Samples? Saved songs keep their own copies." where="code">Supprimer « %s » de « Mes échantillons » ? Les morceaux enregistrés gardent leur propre copie.</string>
+  <string source="Delete Recording" where="code">Supprimer l’enregistrement</string>
+  <string source="Could not delete the recording." where="code">Impossible de supprimer l’enregistrement.</string>
 </strings>

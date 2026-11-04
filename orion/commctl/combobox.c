@@ -382,7 +382,6 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       return false;
     case btnSetIconName:
     case btnSetTooltip:
-    case btnSetFaceColor:
       fprintf(stderr, "[combobox] button message rejected win=%u msg=%u: combobox has no button extras\n", win->id, msg);
       fflush(stderr);
       return false;

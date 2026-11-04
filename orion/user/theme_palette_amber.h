@@ -7,7 +7,7 @@
 // Business-application palette: white content wells (tables and fields),
 // warm grey chrome, a graphite caption, and amber for focus, the default
 // button and selection, which carries dark text. Fields share
-// brColumnViewBg with lists; brLightEdge is the hairline and scrollbar thumb.
+// brColumnViewBg with lists; brLightEdge is the hairline.
 
 #define THEME_PALETTE_AMBER_INIT \
   [brTransparent]          = 0x00000000, \
@@ -44,7 +44,6 @@
   [brTextOnColor]          = WEB(0x1A1A1A), \
   [brSelectionTop]         = WEB(0xFFF2BF), \
   [brSelectionBottom]      = WEB(0xFBE59A), \
-  [brPlasticNeutral]       = WEB(0xC8C8C4), \
   [brAccentText]           = WEB(0x1A1A1A), \
   [brTooltipBackground]   = WEB(0xE7E7E3), \
   [brTooltipText]         = WEB(0x1E1E1E), \

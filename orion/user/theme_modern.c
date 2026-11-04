@@ -374,10 +374,14 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
       break;
     }
     case THEME_PART_SCROLLBAR_TRACK:     fill_rect(get_sys_color(brStatusbarBg), r); break;
-    case THEME_PART_SCROLLBAR_THUMB:
+    case THEME_PART_SCROLLBAR_THUMB: {
+      uint32_t color = get_sys_color(disabled ? brTextDisabled : brLightEdge);
+      if (!disabled && !get_theme()->appearance.dark)
+        color = color_mix(get_sys_color(brTextSecondary), get_sys_color(brStatusbarBg), 0x33);
       r = rect_inset(r, (SCROLLBAR_WIDTH - SCROLLBAR_THUMB_WIDTH) / 2);
-      fill_rounded_rect(get_sys_color(disabled ? brTextDisabled : brLightEdge), r, MIN(r.w, r.h) / 2);
+      fill_rounded_rect(color, r, MIN(r.w, r.h) / 2);
       break;
+    }
     case THEME_PART_SCROLLBAR_ARROW_UP:
     case THEME_PART_SCROLLBAR_ARROW_DOWN:
     case THEME_PART_SCROLLBAR_ARROW_LEFT:
@@ -396,7 +400,9 @@ static void modern_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state)
 }
 
 static uint32_t modern_foreground(theme_part_t part, ctrl_state_t state) {
-  if (state & CTRL_DISABLED) return get_sys_color(brTextDisabled);
+  if (state & CTRL_DISABLED)
+    return get_sys_color(part == THEME_PART_BUTTON && !get_theme()->appearance.dark
+                         ? brTextSecondary : brTextDisabled);
   if (part == THEME_PART_LIST_ITEM && (state & CTRL_INACTIVE)) return get_sys_color(brTextNormal);
   if (((state & CTRL_SELECTED) && (part == THEME_PART_LIST_ITEM || part == THEME_PART_SEGMENT)) ||
       ((state & (CTRL_SELECTED | CTRL_PRESSED)) && (part == THEME_PART_TOOLBAR_BUTTON ||
@@ -442,9 +448,9 @@ static theme_t g_modern_theme = {
   .caption = { .height = TITLEBAR_HEIGHT },
   .menubar = { .height = MODERN_MENUBAR_HEIGHT },
   .toolbar = {
-    .button_size = TB_SPACING, .padding = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH, .spacing = 2, .corner_radius = 10,
+    .button_size = TB_SPACING, .padding = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH, .spacing = 2, .corner_radius = 4,
     .compact = { .padding = 2, .spacing = 6, .icon = TOOLBAR_COMPACT_ICON_SIZE, .menu_gap = 8 },
-    .grip_size = 12, .dropdown_arrow_w = 12, .large_inset = 2,
+    .grip_size = 12, .dropdown_arrow_w = 12,
   },
   .tab = {
     .header = { .height = TITLEBAR_HEIGHT, .start = 0 },
@@ -465,7 +471,7 @@ static theme_t g_modern_theme = {
   .command_link = { .bullet_size = 6, .gap = 8, .padding_y = 2 },
   .field = { .corner_radius = CORNER_RADIUS_CIRCULAR, .multiline_corner_radius = (CONTROL_HEIGHT_REGULAR + 1) / 2,
              .padding_x = TEXTEDIT_PADDING_CAPSULE },
-  .control = { .padding = BUTTON_PADDING, .press_icon_offset = 0, .size_pct = { 100, 84, 71, 133 } },
+  .control = { .padding = BUTTON_PADDING, .press_icon_offset = 0 },
   .button = { .corner_radius = CORNER_RADIUS_CIRCULAR },
   .window = {
     .corner_radius = 8,
@@ -479,8 +485,7 @@ static theme_t g_modern_theme = {
   .thumbnail = { .gap = 2, .ring_width = 3 },
   .slider = { .trough_inset = 3, .trough_radius = 9, .thumb_inset = 3, .thumb_length = 12, .thumb_radius = 6 },
   .plastic = {
-    .corner_radius = CORNER_RADIUS_CIRCULAR, .bevel_width = 2, .shadow_size = 3,
-    .gloss = 1.0f, .rim = 0.55f, .ink = 0.10f, .lift = 0.10f, .glyph_size = 20, .shadow_color = 0xE0000000,
+    .gloss = 1.0f, .rim = 0.55f, .lift = 0.10f, .shadow_color = 0xE0000000,
   },
   .drag = {
     .shadow = { .blur = 6, .offset = {0, 8}, .color = 0xE0000000 },
@@ -500,10 +505,7 @@ static theme_t *modern_variant(theme_style_t style, const char *name, bool dark,
   theme_t *slot = &variants[style];
   if (!slot->draw_part) {
     *slot = g_modern_theme;
-    if (style != THEME_LIGHT) {
-      slot->toolbar.spacing = TOOLBAR_SPACING;
-      slot->toolbar.corner_radius = 4;
-    }
+    if (style != THEME_LIGHT) slot->toolbar.spacing = TOOLBAR_SPACING;
     slot->style = style;
     slot->name = name;
     slot->appearance.dark = dark;

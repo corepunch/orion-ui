@@ -158,8 +158,8 @@ show_scroll_bar(win, SB_VERT, true);    // show
 
 `enable_scroll_bar()` controls whether a bar accepts mouse input, independently
 of its visibility (which is managed automatically by `set_scroll_info()`).  A
-disabled bar is still drawn but ignores clicks; its thumb is rendered in a
-darker colour to signal the non-interactive state.
+disabled bar is still drawn but ignores clicks; the theme gives its thumb a
+separate disabled colour.
 
 ```c
 enable_scroll_bar(win, SB_VERT, false);  // disable — bar visible but non-interactive
@@ -276,6 +276,10 @@ The window system permanently reserves `scrollbar.width` pixels along the
 relevant edge of the client area.  `SCROLLBAR_WIDTH` in layout helpers
 (e.g. `sync_scrollbars`) reads this value.  The bar is always visible when
 the range exceeds the page size.
+
+Light palettes using the Modern painter draw enabled thumbs with
+`brTextSecondary` blended 20% toward the `brStatusbarBg` track. Keep at least
+3:1 thumb-to-track contrast when updating these palettes.
 
 ### Overlay mode (`scrollbar.overlay = true`)
 

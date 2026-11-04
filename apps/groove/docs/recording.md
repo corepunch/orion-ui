@@ -1,13 +1,15 @@
 # Recorded samples and portable songs
 
-Groove keeps eight tracks and mono instruments. File > Record Sample records
-the default microphone into a reusable one-, two-, or four-bar sample at the
-current song tempo. Recording starts only after a Record action and microphone
+My Samples starts with a two-bar Add Recording card. It opens the same dialog as
+File > Record Sample and captures the default microphone into a reusable one-,
+two-, or four-bar sample at the current song tempo. Recording starts only after a Record action and microphone
 permission. The first permission request does not start recording: press Record
 again after granting access.
 
-Use headphones while playing the song. Input is not monitored through the
-speakers. Recording stops automatically at the chosen length; Stop ends capture
+Turn on Metronome for a click at the song tempo, with an accent on each
+downbeat. Use headphones to keep playback and the click out of the microphone.
+The click goes to the output mix while recording and the WAV contains the
+microphone input. Recording stops automatically at the chosen length; Stop ends capture
 early and leaves silence for the rest of the block. Listen auditions the draft.
 Save Sample writes the original and makes it available under My Samples. Cancel
 discards the draft. There is no automatic insertion into an arrangement: drag
@@ -15,11 +17,15 @@ the new sample to the desired position and track.
 
 ## Storage
 
-Originals live in `axSettingsDirectory()/Samples`, beside the iPad `Songs`
-directory. They are standard mono 44.1 kHz PCM16 WAV files with a private `gruv`
+New originals are saved in `Documents/Samples` on iPad and
+`Documents/Groove/Samples` on macOS. Groove also loads earlier recordings
+from `axSettingsDirectory()/Samples`. The originals are standard mono 44.1 kHz PCM16 WAV files with a private `gruv`
 metadata chunk for the name, tempo and bar count. Titles are never used as paths.
-The sample library deduplicates equal names, metadata and PCM. It is loaded at
-startup, so recordings can be reused in other songs.
+The library loads at startup so recordings can be reused in other songs.
+
+Use File > Manage Recordings to select a take, edit its name, or delete its
+standalone WAV. Deleting removes it from My Samples. Placed clips retain their
+audio and saved songs retain embedded copies.
 
 Songs containing only built-in blocks keep the existing `ORION_GROOVE 4` format.
 A song using a recording is saved as `ORION_GROOVE 5`. Each distinct custom

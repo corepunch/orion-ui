@@ -8,8 +8,8 @@
 #define MAX_TILES  GR_MAX_BLOCKS
 
 typedef struct {
-  window_t *flow;
-  int ids[MAX_TILES], count;
+  window_t *flow, *record;
+  int ids[MAX_TILES], count, loaded, shown, tile_height;
 } bin_t;
 
 static int vpos(window_t *win) { return get_scroll_pos(win, SB_VERT); }
@@ -42,29 +42,34 @@ static bool block_source_load(bin_t *st, const char *source) {
   }
   result_node_t *rows = (result_node_t *)send_db_message(db, dbFetch, MAKEDWORD(table_id, 0), NULL);
   for (result_node_t *row = rows; row && st->count < MAX_TILES; row = row->next)
-    st->ids[st->count++] = ((library_block_t *)row->data)->id;
+    st->ids[st->count++] = (*(library_block_t **)row->data)->id;
   free_result_list(rows);
   return true;
 }
 
 // Shows the cards that pass the bin's filter, hides the rest.
-static int apply_filter(window_t *win, bin_t *st) {
+static void apply_filter(window_t *win, bin_t *st) {
   int i = 0, shown = 0;
   window_t *parent = st->flow ? st->flow : win;
-  for (window_t *c = parent->children; c && i < st->count; c = c->next, i++) {
-    bool match = block_visible(st->ids[i]);
-    if (match != window_has_state(c, WINDOW_STATE_VISIBLE)) show_window(c, match);
+  bool record = g_app->family == FAMILY_SAMPLES;
+  if (st->record) window_set_state(st->record, WINDOW_STATE_VISIBLE, record);
+  shown += st->record && record;
+  for (window_t *c = parent->children; c && i < st->count; c = c->next) {
+    if (c == st->record) continue;
+    bool match = block_visible(st->ids[i++]);
+    window_set_state(c, WINDOW_STATE_VISIBLE, match);
     shown += match;
   }
-  return shown;
+  st->shown = shown;
 }
 
 // Keep one FlowView child sized to its measured content and shift it with the bin viewport.
 static void layout_tiles(window_t *win, bin_t *st) {
   irect16_t cr = get_client_rect(win);
+  st->tile_height = g_app->sheet ? sheet_row_h(g_app->sheet) : 0;
   if (!st->flow) {
-    int x = TILE_PAD, y = TILE_PAD, i = 0, bottom = 0, row_height = 0;
-    for (window_t *c = win->children; c && i < st->count; c = c->next, i++) {
+    int x = TILE_PAD, y = TILE_PAD, bottom = 0, row_height = 0;
+    for (window_t *c = win->children; c; c = c->next) {
       if (!window_has_state(c, WINDOW_STATE_VISIBLE)) continue;
       layout_measure_t measure = {0};
       send_message(c, evMeasure, 0, &measure);
@@ -83,10 +88,10 @@ static void layout_tiles(window_t *win, bin_t *st) {
   layout_measure_t measure = { .avail_w = cr.w, .avail_h = cr.h };
   send_message(st->flow, evMeasure, 0, &measure);
   int content_h = MAX(cr.h, measure.desired_h);
-  move_window(st->flow, 0, -vpos(win));
-  resize_window(st->flow, cr.w, content_h);
   scroll_info_t si = { .fMask = SIF_RANGE | SIF_PAGE | SIF_POS, .nMin = 0, .nMax = content_h, .nPage = cr.h, .nPos = vpos(win) };
   set_scroll_info(win, SB_VERT, &si, false);
+  layout_arrange_t arrange = { .rect = R(0, -vpos(win), cr.w, content_h) };
+  send_message(st->flow, evArrange, 0, &arrange);
 }
 
 result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -100,8 +105,6 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         return false;
       }
       g_app->bin = win;
-      for (window_t *c = win->children; c; c = c->next)
-        if (window_is_class(c, "FlowView")) { st->flow = c; break; }
       const form_ctrl_def_t *def = (uintptr_t)lparam > 0x100000u ? lparam : NULL;
       if (def && def->source) {
         if (!block_source_load(st, def->source)) return false;
@@ -111,16 +114,25 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         if (db) {
           result_node_t *rows = (result_node_t *)send_db_message(db, dbFetch, MAKEDWORD(TABLE_BLOCKS, 0), NULL);
           for (result_node_t *row = rows; row && st->count < MAX_TILES; row = row->next)
-            st->ids[st->count++] = ((library_block_t *)row->data)->id;
+            st->ids[st->count++] = (*(library_block_t **)row->data)->id;
           free_result_list(rows);
         } else {
           for (int family = 0; family < FAMILY_COUNT; family++) st->count += blocks_in_family(family, st->ids + st->count, MAX_TILES - st->count);
         }
       }
-      window_t *template = st->flow ? st->flow->children : NULL;
+      st->loaded = blocks_count();
+      return true;
+    case binPopulate: {
+      st->flow = get_window_item(win, ID_LIBRARY_WINDOW_BLOCKS);
+      st->record = get_window_item(win, ID_LIBRARY_WINDOW_RECORD_AUDIO);
+      if (!st->record && !st->flow) {
+        st->record = create_window(ui_tr("Add Recording"), GR_CARD_FLAGS | WINDOW_HIDDEN,
+                                   MAKERECT(0, 0, 128, 44), win, win_block_card, win->hinstance, NULL);
+        if (st->record) st->record->id = ID_LIBRARY_WINDOW_RECORD_AUDIO;
+      }
+      window_t *template = st->flow ? get_window_item(st->flow, ID_LIBRARY_WINDOW_ITEM_TEMPLATE) : NULL;
       if (template && st->count) {
         send_message(template, grCardSetBlock, st->ids[0], NULL);
-        show_window(template, true);
       }
       for (int i = template && st->count ? 1 : 0; i < st->count; i++) {
         window_t *parent = st->flow ? st->flow : win;
@@ -129,24 +141,27 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           fflush(stderr);
         }
       }
-      if (template && !st->count) show_window(template, false);
+      if (template && !st->count) window_set_state(template, WINDOW_STATE_VISIBLE, false);
       apply_filter(win, st);
-      return true;
-    case evPaint: {
       layout_tiles(win, st);
+      return true;
+    }
+    case evPaint: {
+      if (g_app->sheet && st->tile_height != sheet_row_h(g_app->sheet)) layout_tiles(win, st);
       irect16_t cr = get_client_rect(win);
       fill_rect(get_sys_color(brControlBg), cr);
-      if (!apply_filter(win, st))
+      if (!st->shown)
         draw_text(FONT_SYSTEM, ui_tr("No sounds in this family"), TILE_PAD + 4, TILE_PAD + 4, get_sys_color(brTextSecondary));
       return false;
     }
     case binReload:
-      while (st->count < blocks_count()) {
-        int id = st->count;
+      while (st->loaded < blocks_count()) {
+        int id = st->loaded;
         window_t *card = create_window("", GR_CARD_FLAGS, MAKERECT(0, 0, 1, 1), st->flow ? st->flow : win,
                                        win_block_card, 0, (void *)(intptr_t)id);
         if (!card) { fprintf(stderr, "[bin] recording card allocation failed block=%d\n", id); fflush(stderr); break; }
         st->ids[st->count++] = id;
+        st->loaded++;
       }
       // fall through
     case binFilter:

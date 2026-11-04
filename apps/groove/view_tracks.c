@@ -1,5 +1,5 @@
 // VIEW: the track header column beside the sheet — one row per track holding its mute and
-// solo buttons. Rows are windows and the buttons are ordinary plastic push-like Buttons, so
+// solo buttons. Rows are windows and the buttons are push-like Buttons, so
 // they get hover, press, focus and tooltips from the framework; a click reaches
 // app_command(ID_MUTE(t) / ID_SOLO(t)). Row heights follow the sheet's lanes (sheet_row_h).
 
@@ -8,7 +8,7 @@
 typedef struct { int track; window_t *mute, *solo; } track_row_t;
 
 static window_t *make_toggle(window_t *row, int id, const char *icon, const char *tip) {
-  window_t *b = create_window("", WINDOW_PLASTIC | BUTTON_PUSHLIKE | WINDOW_NOACTIVATE | WINDOW_NOTABSTOP,
+  window_t *b = create_window("", BUTTON_PUSHLIKE | WINDOW_NOACTIVATE | WINDOW_NOTABSTOP,
                               MAKERECT(0, 0, 1, 1), row, win_button, row->hinstance, NULL);
   if (!b) {
     fprintf(stderr, "[tk] toggle allocation failed row=%u id=%d\n", row->id, id);
@@ -19,13 +19,6 @@ static window_t *make_toggle(window_t *row, int id, const char *icon, const char
   send_message(b, btnSetIconName, 0, (void *)icon);
   send_message(b, btnSetTooltip, 0, (void *)tip);
   return b;
-}
-
-static void toggle_sync(window_t *b, bool on, sys_color_idx_t role) {
-  if (!b) return;
-  b->value = on;
-  uint32_t face = on ? get_sys_color(role) : get_sys_color(brControlBg);
-  send_message(b, btnSetFaceColor, 0, &face);
 }
 
 static void row_layout(window_t *row) {
@@ -54,8 +47,8 @@ static result_t win_track_header(window_t *win, uint32_t msg, uint32_t wparam, v
       fill_rect(get_sys_color(brPanelDarker), r);
       fill_rect(get_sys_color(brDarkEdge), R(0, r.h - 1, r.w, 1));
       fill_rect(track_color(tr->track), R(0, 2, 3, r.h - 5));
-      toggle_sync(tr->mute, g_app->song.mute[tr->track], brTextError);
-      toggle_sync(tr->solo, g_app->song.solo[tr->track], brTextWarning);
+      if (tr->mute) tr->mute->value = g_app->song.mute[tr->track];
+      if (tr->solo) tr->solo->value = g_app->song.solo[tr->track];
       for (window_t *c = win->children; c; c = c->next) send_message(c, evPaint, 0, NULL);
       return true;
     }

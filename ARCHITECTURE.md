@@ -380,7 +380,7 @@ surface (≈ `PrintWindow`); `ui_save_screenshot()` reads the composed frame. Ra
 
 `window_t.flags` is 64 bits. Bits 0-15 are class styles (`BUTTON_*`, `SLIDER_VERTICAL`), 16-31 generic
 window styles, and bits 32+ extended styles and state (`WINDOW_TITLETOOLBAR`, `WINDOW_NOCOLLAPSE`,
-`WINDOW_STATE_MAXIMIZED`, `WINDOW_MAXIMIZEBOX`, `WINDOW_PLASTIC`, `WINDOW_ROUND`). Keep masks 64-bit:
+`WINDOW_STATE_MAXIMIZED`, `WINDOW_MAXIMIZEBOX`). Keep masks 64-bit:
 `~flag` on a 32-bit constant clears the high word.
 
 ### Color and Alpha

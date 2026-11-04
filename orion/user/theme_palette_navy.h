@@ -62,7 +62,6 @@
   [brTextOnColor]          = 0xff101010, \
   [brSelectionTop]         = WEB(0x37C9FF), \
   [brSelectionBottom]      = WEB(0x0879EA), \
-  [brPlasticNeutral]       = WEB(0xc8d2e0), \
   [brAccentText]           = NAVY_TEXT, \
   [brTooltipBackground]   = NAVY_RECESS, \
   [brTooltipText]         = NAVY_TEXT, \

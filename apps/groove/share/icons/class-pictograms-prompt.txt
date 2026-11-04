@@ -66,3 +66,11 @@ compact square silhouette and broad readable forms over instrument accuracy.
 Packing: split the complete generated atlas into its 18 glyphs, remove detached
 small alpha fragments, crop to each complete glyph, and proportionally resize
 with premultiplied-alpha Lanczos into centered 128x128 transparent cells.
+
+Recording category addition: use the existing atlas as an ImageGen edit
+reference. In one transparent 6×4 atlas, keep all 18 original subjects in their
+existing cells and add a retro handheld microphone in row 4, column 1. Use a
+short charcoal handle, domed satin silver grille and broad red band, angled
+lower left to upper right. Match the chunky 3D forms and soft studio light.
+Leave the five unused cells transparent. Pack the new artwork into a 128×128
+cell and keep the original pixels of the first three rows.

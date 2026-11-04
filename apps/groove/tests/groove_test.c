@@ -7,6 +7,7 @@
 #include "apps/groove/sample_levels.h"
 #include <orion/user/toolbar.h>
 #include <orion/commctl/appchrome.h>
+#include <orion/kernel/audio_input.h>
 #include <unistd.h>
 #include <utime.h>
 
@@ -700,6 +701,8 @@ static void test_overlap_audio(void) {
   PASS();
 }
 
+static window_t *library_card(window_t *page, int block);
+
 static void test_overlap_sheet(void) {
   TEST("routed drops crop card windows; selection, full-width drags, moves and deletion restore earlier cards");
   test_env_init();
@@ -707,7 +710,7 @@ static void test_overlap_sheet(void) {
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
-  window_t *sheet = g_app->sheet, *library = g_app->bin->children;
+  window_t *sheet = g_app->sheet, *library = library_card(g_app->bin, 0);
   int long_block = 0, start = 3 * GR_TICKS_BAR + GR_SNAP_TICKS, cut = start + GR_SNAP_TICKS;
   while (long_block < blocks_count() && block_get(long_block)->bars < 2) long_block++;
   ASSERT(long_block < blocks_count(), "multi-bar block exists");
@@ -1039,13 +1042,13 @@ static void test_library_transport(void) {
   ASSERT_EQUAL(g_app->bin->frame.y, 0);
   ASSERT_EQUAL(window_screen_y(g_app->bin), window_screen_y(bar) + titlebar_height(bar));
   toolbar_state_t *tb = toolbar_get_state(bar);
-  ASSERT_EQUAL(tb->style, TOOLBAR_STYLE_PLASTIC);
+  ASSERT_EQUAL(tb->style, 0);
   for (int i = 0; i < tb->item_count; i++) ASSERT(tb->items[i].type != TOOLBAR_ITEM_LABEL, "the merged caption shows no title");
   ASSERT_EQUAL(toolbar_index(ID_REWIND), 0);
   ASSERT(tb->strip.tex == g_app->pictograms && tb->strip.cols == 6 && tb->strip.icon_w == 128 && tb->strip.icon_h == 128,
          "the family toolbar uses the shared pictogram atlas metadata in headless tests");
   ASSERT_TRUE(strcmp(tb->items[toolbar_index(ID_REWIND)].icon, "phosphor-rewind-fill") == 0);
-  ASSERT_TRUE(tb->items[toolbar_index(ID_PLAY)].color != 0 && tb->items[toolbar_index(ID_PLAY)].color == tb->items[toolbar_index(ID_FORWARD)].color);
+  ASSERT_EQUAL(tb->items[toolbar_index(ID_PLAY)].color, 0);
   ASSERT(toolbar_index(ID_PLAY) == toolbar_index(ID_REWIND) + 1 && toolbar_index(ID_FORWARD) == toolbar_index(ID_PLAY) + 1, "rewind, play, forward sit together");
   ASSERT(toolbar_index(ID_STOP) < 0 && toolbar_index(ID_DELETE) < 0, "stop is menu-only and delete moved to the compact toolbar");
   uint32_t original_color = tb->items[toolbar_index(ID_PLAY)].color, color = WEB(0x2277bb);
@@ -1070,15 +1073,12 @@ static void test_library_transport(void) {
       ASSERT_TRUE(tb->item_rects[i].x >= 0 && tb->item_rects[i].x + tb->item_rects[i].w <= bar->frame.w);
     }
   }
-  irect16_t play = tb->item_rects[toolbar_index(ID_PLAY)], fwd = tb->item_rects[toolbar_index(ID_FORWARD)];
-  int inset = get_theme()->toolbar.large_inset, small = theme_control_extent(toolbar_effective_bsz(bar), CONTROL_SIZE_SMALL);
-#ifndef AX_PLATFORM_IOS
-  ASSERT_EQUAL(small, 32);
-#endif
-  ASSERT(play.w == play.h && play.y == inset && play.y + play.h == titlebar_height(bar) - inset,
-         "the large play button fills the band to the theme inset without growing it");
-  ASSERT(fwd.w == small && fwd.h == small && small < toolbar_effective_bsz(bar) && play.y + play.h / 2 == fwd.y + fwd.h / 2,
-         "rewind and forward are small and share play's centreline");
+  for (int i = toolbar_index(ID_REWIND); i <= toolbar_index(ID_FORWARD); i++) {
+    irect16_t item = tb->item_rects[i];
+    ASSERT_EQUAL(item.w, toolbar_effective_bsz(bar));
+    ASSERT_EQUAL(item.h, toolbar_effective_bsz(bar));
+    ASSERT_EQUAL(item.y, toolbar_effective_padding(bar));
+  }
   irect16_t r = tb->item_rects[toolbar_index(ID_PLAY)];
   ui_event_t event = {.message = kEventLeftButtonDown,
     .x = (window_screen_x(bar) + r.x + r.w / 2) * UI_WINDOW_SCALE,
@@ -1142,7 +1142,7 @@ static void test_shared_block_cards(void) {
   int clip = song_add_clip(&g_app->song, 0, 0, 0);
   send_message(g_app->sheet, evResize, 0, NULL);
   window_t *canvas = g_app->sheet->children, *page = g_app->bin;
-  window_t *library = page->children;
+  window_t *library = library_card(page, 0);
   ASSERT_TRUE(canvas && library && canvas->proc == win_block_card && library->proc == canvas->proc);
   layout_measure_t a = {0}, b = {0};
   send_message(canvas, evMeasure, 0, &a);
@@ -1174,6 +1174,7 @@ static void test_shared_block_cards(void) {
 
 static window_t *library_card(window_t *page, int block) {
   window_t *card = page->children;
+  if (card && card->id == ID_LIBRARY_WINDOW_RECORD_AUDIO) card = card->next;
   int ids[GR_MAX_BLOCKS];
   for (int family = 0; family < FAMILY_COUNT; family++) {
     int count = blocks_in_family((family_t)family, ids, ARRAY_LEN(ids));
@@ -1586,14 +1587,14 @@ static void test_family_filter(void) {
   ASSERT(first >= 0 && toolbar_index(ID_FAMILY(FAMILY_COUNT - 1)) == first + FAMILY_COUNT - 1, "one button per family, in order");
   for (int i = first; i < first + FAMILY_COUNT; i++) {
     irect16_t r = tb->item_rects[i];
-    ASSERT(tb->items[i].type == TOOLBAR_ITEM_BUTTON && (tb->items[i].style & TOOLBAR_ITEM_FLAG_ARTWORK), "family buttons draw artwork");
+    ASSERT(tb->items[i].type == TOOLBAR_ITEM_BUTTON && (strncmp(tb->items[i].icon, "strip:", 6) == 0), "family buttons draw artwork");
     ASSERT(r.w == toolbar_effective_bsz(bar) && r.h == toolbar_effective_bsz(bar), "family buttons are full toolbar size");
     ASSERT(r.x + r.w <= bar->frame.w, "every button fits one row at the default width");
   }
   ASSERT(strcmp(tb->items[first + FAMILY_GUITAR].icon, "strip:11") == 0, "a family button uses an existing atlas cell");
   for (int c = FAMILY_COUNT - 1; c >= 0; c--) {
     click_toolbar(ID_FAMILY(c));
-    ASSERT(g_app->family == (family_t)c && library_visible() == blocks_in_family(c, ids, GR_MAX_BLOCKS), "a routed click shows one family");
+    ASSERT(g_app->family == (family_t)c && library_visible() == blocks_in_family(c, ids, GR_MAX_BLOCKS) + (c == FAMILY_SAMPLES), "a routed click shows one family");
     int checked = 0;
     for (int i = first; i < first + FAMILY_COUNT; i++) checked += (tb->items[i].state & TBSTATE_CHECKED) != 0;
     ASSERT(checked == 1 && toolbar_checked(ID_FAMILY(c)), "exactly the chosen family is checked");
@@ -1634,7 +1635,7 @@ static void test_portable_recordings(void) {
   ASSERT(id >= blocks_builtin_count(), "recording becomes a library block");
   ASSERT_EQUAL(sample_add(&sample), id);
   ASSERT_EQUAL(samples_count(), original_count + 1);
-  ASSERT_TRUE(sample_save(dir, &sample));
+  ASSERT_TRUE(sample_store(dir, id));
   char wav[512], song[512], bad[512];
   snprintf(wav, sizeof(wav), "%s/recording-1.wav", dir);
   snprintf(song, sizeof(song), "%s/portable.groove", dir);
@@ -1694,6 +1695,174 @@ static void test_portable_recordings(void) {
   PASS();
 }
 
+static result_t record_sample_proc(window_t *, uint32_t, uint32_t, void *);
+static result_t manage_samples_proc(window_t *, uint32_t, uint32_t, void *);
+
+static void (*fixture_receive)(void *, const int16_t *, int);
+static void *fixture_receive_data;
+static int fixture_confirm_delete;
+
+static ui_microphone_permission_t fixture_microphone_permission(bool request) { return UI_MIC_ALLOWED; }
+
+static ui_audio_input_t *fixture_input_open(int rate, void (*receive)(void *, const int16_t *, int), void *data) {
+  if (rate != GR_SAMPLE_RATE) return NULL;
+  fixture_receive = receive;
+  fixture_receive_data = data;
+  return (ui_audio_input_t *)&fixture_receive_data;
+}
+
+static void fixture_input_close(ui_audio_input_t *input) {
+  fixture_receive = NULL;
+  fixture_receive_data = NULL;
+}
+
+static int fixture_message_box(window_t *parent, const char *text, const char *caption, uint32_t type) {
+  if (fixture_confirm_delete && type == MB_YESNO && !strcmp(caption, "Delete Recording")) return fixture_confirm_delete;
+  return message_box(parent, text, caption, type);
+}
+
+static void test_recording_forms(void) {
+  TEST("the recording dialog captures with a metronome and exposes the saved take in both library views");
+  test_env_init();
+  static const fe_component_desc_t classes[] = {
+    { .class_name = "GrooveArrangement", .proc = win_sheet, .default_flags = WINDOW_HSCROLL },
+    { .class_name = "GrooveBlockBin", .proc = win_bin, .default_flags = WINDOW_VSCROLL },
+    { .class_name = "GrooveBlockCard", .proc = win_block_card, .default_flags = GR_CARD_FLAGS },
+  };
+  for (int i = 0; i < ARRAY_LEN(classes); i++) register_window_class(&classes[i]);
+  g_app = app_init();
+  ASSERT_NOT_NULL(g_app);
+  samples_truncate(0);
+  char dir[] = "/tmp/groove-capture-XXXXXX";
+  ASSERT_NOT_NULL(mkdtemp(dir));
+  snprintf(g_app->samples_dir, sizeof(g_app->samples_dir), "%s", dir);
+  DB_CLASS(groove_library_db);
+  g_app->library_db = create_database("library", "groove_library_db", NULL);
+  ASSERT_NOT_NULL(g_app->library_db);
+  register_database("library", g_app->library_db);
+  window_t *win = create_window_from_form(&groove_main_window_form, 0, 0, NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  app_set_family(FAMILY_SAMPLES);
+  window_t *flow = get_window_item(g_app->bin, ID_LIBRARY_WINDOW_BLOCKS);
+  ASSERT_NOT_NULL(flow);
+  ASSERT_EQUAL(flow->children->id, ID_LIBRARY_WINDOW_RECORD_AUDIO);
+  ASSERT_EQUAL(visible_tiles(flow), 1);
+
+  window_t *dlg = create_window_from_form(&groove_record_sample_form, 0, 0, NULL, record_sample_proc, 0, NULL);
+  ASSERT_NOT_NULL(dlg);
+  window_t *click = get_window_item(dlg, ID_RECORD_SAMPLE_METRONOME);
+  send_message(click, btnSetCheck, btnStateChecked, NULL);
+  send_message(get_window_item(dlg, ID_RECORD_SAMPLE_BARS), cbSetCurrentSelection, 0, NULL);
+  set_window_item_text(dlg, ID_RECORD_SAMPLE_NAME, "%s", "Fixture take");
+  ASSERT_TRUE(send_message(dlg, evCommand, MAKEDWORD(ID_RECORD_SAMPLE_RECORD, btnClicked), NULL));
+  ASSERT_NOT_NULL(fixture_receive);
+  if (g_app->audio_dev) ASSERT_EQUAL(g_app->recording_beat_frames, bar_frames_for_bpm(g_app->song.bpm) / GR_BEATS_BAR);
+  int frames = bar_frames_for_bpm(g_app->song.bpm);
+  int16_t *pcm = calloc((size_t)frames, sizeof(*pcm));
+  ASSERT_NOT_NULL(pcm);
+  pcm[20] = 12000;
+  fixture_receive(fixture_receive_data, pcm, frames);
+  send_message(dlg, evTimer, 0, NULL);
+  ASSERT_NULL(fixture_receive);
+  ASSERT_EQUAL(g_app->recording_beat_frames, 0);
+  ASSERT_TRUE(send_message(dlg, evCommand, MAKEDWORD(ID_RECORD_SAMPLE_SAVE, btnClicked), NULL));
+  ASSERT_EQUAL(visible_tiles(flow), 2);
+  window_t *take = flow->children->next;
+  while (take && !window_has_state(take, WINDOW_STATE_VISIBLE)) take = take->next;
+  ASSERT_NOT_NULL(take);
+  ASSERT_EQUAL(take->frame.y, flow->children->frame.y);
+  ASSERT_EQUAL(take->frame.h, flow->children->frame.h);
+  ASSERT_EQUAL(flow->children->frame.w, 2 * take->frame.w);
+  ASSERT_EQUAL(take->frame.x, flow->children->frame.w);
+
+  char wav[512];
+  snprintf(wav, sizeof(wav), "%s/recording-1.wav", dir);
+  FILE *f = fopen(wav, "rb");
+  ASSERT_NOT_NULL(f);
+  sample_t saved = {0};
+  ASSERT_TRUE(sample_read(f, &saved));
+  fclose(f);
+  ASSERT_STR_EQUAL(saved.name, "Fixture take");
+  ASSERT_EQUAL(saved.frames, frames);
+  ASSERT(memcmp(saved.pcm, pcm, (size_t)frames * sizeof(*pcm)) == 0, "only the microphone frames go into the WAV");
+  free(saved.pcm); free(pcm);
+
+  dlg = create_window_from_form(&groove_manage_samples_form, 0, 0, NULL, manage_samples_proc, 0, NULL);
+  ASSERT_NOT_NULL(dlg);
+  ASSERT_STR_EQUAL(get_window_item(dlg, ID_MANAGE_SAMPLES_NAME)->title, "Fixture take");
+  set_window_item_text(dlg, ID_MANAGE_SAMPLES_NAME, "%s", "Renamed fixture");
+  ASSERT_TRUE(send_message(dlg, evCommand, MAKEDWORD(ID_MANAGE_SAMPLES_RENAME, btnClicked), NULL));
+  ASSERT_STR_EQUAL(get_window_item(dlg, ID_MANAGE_SAMPLES_NAME)->title, "Renamed fixture");
+  ASSERT_STR_EQUAL(sample_get(blocks_builtin_count())->name, "Renamed fixture");
+  fixture_confirm_delete = IDNO;
+  ASSERT_TRUE(send_message(dlg, evCommand, MAKEDWORD(ID_MANAGE_SAMPLES_DELETE, btnClicked), NULL));
+  ASSERT_TRUE(axPathExists(wav));
+  fixture_confirm_delete = IDYES;
+  ASSERT_TRUE(send_message(dlg, evCommand, MAKEDWORD(ID_MANAGE_SAMPLES_DELETE, btnClicked), NULL));
+  fixture_confirm_delete = 0;
+  ASSERT_FALSE(axPathExists(wav));
+  ASSERT_EQUAL(visible_tiles(flow), 1);
+  ASSERT_STR_EQUAL(get_window_item(dlg, ID_MANAGE_SAMPLES_NAME)->title, "");
+  destroy_window(dlg); destroy_window(win);
+  app_shutdown(g_app); test_env_shutdown();
+  ASSERT_EQUAL(rmdir(dir), 0);
+  PASS();
+}
+
+static void test_recording_library_management(void) {
+  TEST("recordings reload, rename, and delete while placed clips retain their source");
+  char dir[] = "/tmp/groove-recording-library-XXXXXX";
+  ASSERT_NOT_NULL(mkdtemp(dir));
+  sample_t sample = { .name = "Original take", .bpm = 140, .bars = 1, .frames = bar_frames_for_bpm(140) };
+  sample.pcm = calloc((size_t)sample.frames, sizeof(int16_t));
+  ASSERT_NOT_NULL(sample.pcm);
+  sample.pcm[20] = 12000;
+  int first = sample_add(&sample);
+  ASSERT_TRUE(sample_store(dir, first));
+  ASSERT_TRUE(sample_rename(first, "Renamed take"));
+  samples_truncate(0);
+  samples_load(dir);
+  int ids[2];
+  ASSERT_EQUAL(blocks_in_family(FAMILY_SAMPLES, ids, ARRAY_LEN(ids)), 1);
+  ASSERT_STR_EQUAL(block_get(ids[0])->display_name, "Renamed take");
+  ASSERT_EQUAL(block_get(ids[0])->cat, CAT_RECORDING);
+  ASSERT_EQUAL(sample_get(ids[0])->pcm[20], 12000);
+  ASSERT_TRUE(sample_delete(ids[0]));
+  ASSERT_EQUAL(blocks_in_family(FAMILY_SAMPLES, ids, ARRAY_LEN(ids)), 0);
+  block_pcm_t rendered;
+  ASSERT_TRUE(sample_render(ids[0], 140, &rendered));
+  ASSERT(rendered.pcm[20] > .3f, "the deleted library recording is still playable by its original ID");
+  free(rendered.pcm);
+  samples_truncate(0);
+  samples_load(dir);
+  ASSERT_EQUAL(samples_count(), 0);
+  ASSERT_EQUAL(rmdir(dir), 0);
+  free(sample.pcm);
+  PASS();
+}
+
+static void test_recording_metronome(void) {
+  TEST("the recording click keeps beat position across audio callbacks");
+  int beat = bar_frames_for_bpm(140) / GR_BEATS_BAR, pos = 0;
+  float click[2048] = {0};
+  recording_click_mix(click, 1024, beat, &pos);
+  ASSERT(peak_of(click, ARRAY_LEN(click)) > .1f, "the downbeat is audible");
+  ASSERT_EQUAL(pos, 1024);
+  float *to_next_beat = calloc((size_t)(beat - pos) * 2, sizeof(float));
+  ASSERT_NOT_NULL(to_next_beat);
+  recording_click_mix(to_next_beat, beat - pos, beat, &pos);
+  ASSERT_EQUAL(pos, beat);
+  free(to_next_beat);
+  float next[2048] = {0};
+  recording_click_mix(next, 1024, beat, &pos);
+  ASSERT(peak_of(next, ARRAY_LEN(next)) > .1f, "the next beat starts on the expected frame");
+  ASSERT(click[2] != next[2], "the downbeat uses a distinct accent");
+  memset(next, 0, sizeof(next));
+  recording_click_mix(next, 1024, 0, &pos);
+  ASSERT(peak_of(next, ARRAY_LEN(next)) == 0, "disabled metronome is silent");
+  PASS();
+}
+
 int main(void) {
   TEST_START("Groove");
   test_library_levels();
@@ -1723,5 +1892,14 @@ int main(void) {
   test_sheet_gestures();
   test_drag_off_sheet_removes();
   test_portable_recordings();
+  test_recording_forms();
+  test_recording_library_management();
+  test_recording_metronome();
   TEST_END();
 }
+
+// The test binary includes the app sources below this file in one translation unit.
+#define ui_microphone_permission fixture_microphone_permission
+#define ui_audio_input_open fixture_input_open
+#define ui_audio_input_close fixture_input_close
+#define message_box fixture_message_box

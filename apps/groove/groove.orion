@@ -16,7 +16,8 @@
         <item name="save" label="Save Song" shortcut="Ctrl+S" />
         <item name="saveas" label="Save Song As..." />
         <Separator />
-        <item name="record" label="Record Sample..." />
+        <item name="record" label="Record Sample..." shortcut="Ctrl+R" />
+        <item name="manage_samples" label="Manage Recordings..." />
         <item name="import_project" label="Import Song..." />
         <item name="export_project" label="Export Project..." />
         <Separator />
@@ -111,19 +112,40 @@
           </Column>
         </GridView>
         <Label name="status" text="Record a sample at the current song tempo." height="40" />
-        <Label name="hint" text="Use headphones if the song is playing." />
-        <StackView name="capture_actions" orientation="horizontal" spacing="6">
+        <CheckBox name="metronome" text="Metronome" />
+        <Label name="hint" text="Use headphones to keep the click out of the recording." height="32" />
+        <StackView name="actions" orientation="horizontal" spacing="6">
           <Button name="record" text="Record" />
           <Button name="stop" text="Stop" />
           <Button name="preview" text="Listen" />
-          <Space name="capture_flex" />
-        </StackView>
-        <StackView name="actions" orientation="horizontal" spacing="6">
           <Space name="flex" />
           <Button name="save" text="Save Sample" flags="BUTTON_DEFAULT" />
           <Button name="cancel" text="Cancel" />
         </StackView>
       </form>
+      <form name="manage_samples" title="Manage Recordings" width="460" height="330" spacing="8" padding="12">
+        <TableView name="recordings" source="library.blocks" filter-field="category" filter-value="10" master="none"
+                   flags="WINDOW_NOTITLE | WINDOW_VSCROLL | WINDOW_FLEXSPACE">
+          <Column field="name" title="Recording" width="0" />
+          <Column field="bars" title="Bars" width="70" />
+        </TableView>
+        <Label name="empty" text="No recordings yet. Use Add Recording in My Samples." color="text-secondary" />
+        <GridView name="fields" spacing="6">
+          <Column name="labels" width="auto">
+            <Label name="lbl_name" text="Name:" />
+          </Column>
+          <Column name="inputs">
+            <TextBox name="name" />
+          </Column>
+        </GridView>
+        <StackView name="actions" orientation="horizontal" spacing="6">
+          <Button name="rename" text="Rename" />
+          <Button name="delete" text="Delete" />
+          <Space name="flex" />
+          <Button name="close" text="Close" flags="BUTTON_DEFAULT" />
+        </StackView>
+      </form>
+
       <form name="main_window" title="Groove" width="1180" height="760"
             flags="WINDOW_AUTO_LAYOUT" spacing="0" padding="0">
         <GrooveArrangement name="arrangement" flags="WINDOW_FLEXSPACE" />
@@ -133,24 +155,25 @@
             flags="WINDOW_AUTO_LAYOUT | WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE"
             spacing="0" padding="0">
         <Toolbar>
-          <Button name="rewind" command="transport.rewind" icon="phosphor-rewind-fill" tooltip="Rewind (Home)" control-size="small" />
-          <Button name="play" command="transport.play" icon="phosphor-play-fill" checked-icon="phosphor-pause-fill" tooltip="Play / pause (Space)" control-size="large" />
-          <Button name="forward" command="transport.forward" icon="phosphor-fast-forward-fill" tooltip="Go to end (End)" control-size="small" />
+          <Button name="rewind" command="transport.rewind" icon="phosphor-rewind-fill" tooltip="Rewind (Home)" />
+          <Button name="play" command="transport.play" icon="phosphor-play-fill" checked-icon="phosphor-pause-fill" tooltip="Play / pause (Space)" />
+          <Button name="forward" command="transport.forward" icon="phosphor-fast-forward-fill" tooltip="Go to end (End)" />
           <spacer flags="TOOLBAR_ITEM_FLAG_FLEXSPACE" />
-          <Button name="family_loop" icon="strip:0" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Drum Loops" />
-          <Button name="family_drum" icon="strip:7" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Drum Fills" />
-          <Button name="family_bass" icon="strip:8" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Bass" />
-          <Button name="family_guitar" icon="strip:11" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Guitar" />
-          <Button name="family_synth" icon="strip:12" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Synth" />
-          <Button name="family_pad" icon="strip:13" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Pads" />
-          <Button name="family_stab" icon="strip:14" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Stabs" />
-          <Button name="family_vox" icon="strip:15" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Vocals" />
-          <Button name="family_scratch" icon="strip:16" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Scratch" />
-          <Button name="family_fx" icon="strip:17" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="Effects" />
-          <Button name="family_samples" icon="phosphor-microphone-fill" flags="TOOLBAR_ITEM_FLAG_ARTWORK | TBSTYLE_CHECKGROUP" tooltip="My Samples" />
+          <Button name="family_loop" icon="strip:0" flags="TBSTYLE_CHECKGROUP" tooltip="Drum Loops" />
+          <Button name="family_drum" icon="strip:7" flags="TBSTYLE_CHECKGROUP" tooltip="Drum Fills" />
+          <Button name="family_bass" icon="strip:8" flags="TBSTYLE_CHECKGROUP" tooltip="Bass" />
+          <Button name="family_guitar" icon="strip:11" flags="TBSTYLE_CHECKGROUP" tooltip="Guitar" />
+          <Button name="family_synth" icon="strip:12" flags="TBSTYLE_CHECKGROUP" tooltip="Synth" />
+          <Button name="family_pad" icon="strip:13" flags="TBSTYLE_CHECKGROUP" tooltip="Pads" />
+          <Button name="family_stab" icon="strip:14" flags="TBSTYLE_CHECKGROUP" tooltip="Stabs" />
+          <Button name="family_vox" icon="strip:15" flags="TBSTYLE_CHECKGROUP" tooltip="Vocals" />
+          <Button name="family_scratch" icon="strip:16" flags="TBSTYLE_CHECKGROUP" tooltip="Scratch" />
+          <Button name="family_fx" icon="strip:17" flags="TBSTYLE_CHECKGROUP" tooltip="Effects" />
+          <Button name="family_samples" icon="strip:18" flags="TBSTYLE_CHECKGROUP" tooltip="My Samples" />
         </Toolbar>
         <GrooveBlockBin name="bin" source="library.blocks" flags="WINDOW_FLEXSPACE">
-          <FlowView name="blocks" spacing="4" padding="0" flags="WINDOW_FLEXSPACE">
+          <FlowView name="blocks" spacing="0" padding="0" flags="WINDOW_FLEXSPACE">
+            <GrooveBlockCard name="record_audio" text="Add Recording" width="176" height="44" flags="WINDOW_HIDDEN" />
             <GrooveBlockCard name="item_template" width="128" height="44" />
           </FlowView>
         </GrooveBlockBin>

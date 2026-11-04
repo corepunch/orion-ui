@@ -178,7 +178,8 @@ static void test_all_parts(void) {
         theme_draw((theme_part_t)part, R(5, 7, 60, 24), (ctrl_state_t)state);
     ASSERT_EQUAL(theme_foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED),
                  get_sys_color(style == THEME_CLASSIC ? brWindowDarkBg : brAccentText));
-    ASSERT_EQUAL(theme_foreground(THEME_PART_BUTTON, CTRL_DISABLED | CTRL_DEFAULT), get_sys_color(brTextDisabled));
+    ASSERT_EQUAL(theme_foreground(THEME_PART_BUTTON, CTRL_DISABLED | CTRL_DEFAULT),
+                 get_sys_color(get_theme()->appearance.dark ? brTextDisabled : brTextSecondary));
   }
   test_env_shutdown();
   PASS();

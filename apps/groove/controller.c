@@ -19,6 +19,7 @@ static void audio_cb(void *userdata, uint8_t *stream, int len) {
       float v = app->sample_preview[app->sample_preview_pos++] / 32768.0f;
       tmp[i * 2] += v; tmp[i * 2 + 1] += v;
     }
+    recording_click_mix(tmp, n, app->recording_beat_frames, &app->recording_click_pos);
     groove_master_pcm(tmp, out, n * 2);
     out += n * 2;
     frames -= n;
@@ -129,11 +130,29 @@ groove_t *app_init(void) {
   app->family = FAMILY_LOOP;
   app->peak_credit = GR_PEAKS_PER_TICK;
   const char *sample_settings = axSettingsDirectory();
-  int sample_path_n = sample_settings && sample_settings[0] ? snprintf(app->samples_dir, sizeof(app->samples_dir), "%s/Samples", sample_settings) : -1;
-  if (sample_path_n <= 0 || (size_t)sample_path_n >= sizeof(app->samples_dir) || !axMkDir(sample_settings) || !axMkDir(app->samples_dir)) {
-    fprintf(stderr, "[gr] sample storage unavailable\n"); fflush(stderr);
+  char legacy_samples[sizeof(app->samples_dir)];
+  int legacy_n = sample_settings && sample_settings[0] ? snprintf(legacy_samples, sizeof(legacy_samples), "%s/Samples", sample_settings) : -1;
+  bool legacy_valid = legacy_n > 0 && (size_t)legacy_n < sizeof(legacy_samples);
+#ifdef __APPLE__
+  char documents[sizeof(app->samples_dir)];
+  bool documents_available = ui_media_documents_directory(documents, sizeof(documents)) && axMkDir(documents);
+#ifdef AX_PLATFORM_IOS
+  int sample_path_n = documents_available ? snprintf(app->samples_dir, sizeof(app->samples_dir), "%s/Samples", documents) : -1;
+#else
+  char groove_docs[sizeof(app->samples_dir)];
+  int docs_n = documents_available ? snprintf(groove_docs, sizeof(groove_docs), "%s/Groove", documents) : -1;
+  int sample_path_n = docs_n > 0 && (size_t)docs_n < sizeof(groove_docs) && axMkDir(groove_docs)
+    ? snprintf(app->samples_dir, sizeof(app->samples_dir), "%s/Samples", groove_docs) : -1;
+#endif
+#else
+  int sample_path_n = legacy_valid ? snprintf(app->samples_dir, sizeof(app->samples_dir), "%s", legacy_samples) : -1;
+#endif
+  if (sample_path_n <= 0 || (size_t)sample_path_n >= sizeof(app->samples_dir) || !axMkDir(app->samples_dir)) {
+    fprintf(stderr, "[gr] sample storage unavailable path=%s\n", app->samples_dir);
+    fflush(stderr);
     app->samples_dir[0] = 0;
   } else samples_load(app->samples_dir);
+  if (legacy_valid && strcmp(legacy_samples, app->samples_dir)) samples_load(legacy_samples);
 #ifdef AX_PLATFORM_IOS
   // iPad songs stay in the app's private storage, like a reader app's library.
   const char *settings = axSettingsDirectory();
@@ -271,7 +290,7 @@ void app_set_genre(uint8_t genre) {
 
 bool block_visible(int id) {
   const block_t *b = block_get(id);
-  return b && b->family == g_app->family && (!g_app->genre || (b->genres & g_app->genre));
+  return b && !sample_is_deleted(id) && b->family == g_app->family && (!g_app->genre || (b->genres & g_app->genre));
 }
 
 void app_select_clip(int idx) {
@@ -382,7 +401,9 @@ void app_command(uint16_t id) {
     case ID_FILE_EXPORT_AUDIO: app_export_media(g_app->menubar_win, 0); break;
     case ID_FILE_SHARE_AUDIO: app_export_media(g_app->menubar_win, 1); break;
     case ID_FILE_EXPORT_VIDEO: app_export_media(g_app->menubar_win, 2); break;
-    case ID_FILE_RECORD: app_record_sample(g_app->menubar_win); break;
+    case ID_FILE_RECORD:
+    case ID_LIBRARY_WINDOW_RECORD_AUDIO: app_record_sample(g_app->win); break;
+    case ID_FILE_MANAGE_SAMPLES: app_manage_samples(g_app->win); break;
     case ID_FILE_IMPORT_PROJECT: project_file_dialog(false); break;
     case ID_FILE_EXPORT_PROJECT: project_file_dialog(true); break;
     case ID_PLAY:     app_set_playing(!s->playing); break;

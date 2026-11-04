@@ -59,18 +59,15 @@ static inline uint32_t color_mix(uint32_t a, uint32_t b, uint8_t amount) {
 void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color);
 // Framework internals behind theme_draw_ex(CTRL_PLASTIC); controls and apps never call these directly.
 // Single shader pass; shadow is reserved inside r, so controls never paint outside their bounds.
-// control_size (CONTROL_SIZE_*) scales the glyph by the theme's control.size_pct.
-void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon, uint32_t control_size, bool round);
 void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color);
 // Kernel entry point: plain floats only, so the renderer knows nothing about control state.
-// pressed/hover/selected/disabled are 0..1; gloss/rim/ink/lift come from theme_t.plastic.
+// pressed/hover/selected/disabled are 0..1; gloss/rim/lift come from theme_t.plastic.
 typedef struct {
   float pressed, hover, selected, disabled;
-  float gloss, rim, ink, lift;
+  float gloss, rim, lift;
 } plastic_look_t;
 void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow,
-                            const plastic_look_t *look, uint32_t color, uint32_t shadow_color,
-                            uint32_t icon_tex, const frect_t *icon_uv, ipoint16_t icon_size);
+                            const plastic_look_t *look, uint32_t color, uint32_t shadow_color);
 // Small tinted label ("3 modified"): a rounded fill in `color` at the theme's badge tint with the
 // text in the badge ink (see draw_status_badge). Drawn at (x, y) with the given height; returns the
 // badge width so callers can chain badges.

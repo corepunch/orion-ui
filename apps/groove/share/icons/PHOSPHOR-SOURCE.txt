@@ -6,3 +6,5 @@ Bold plus/minus preserve solid symbols; Fill variants include a square backgroun
 Local SVG width/height: 24px; original 256-unit viewBox and filled paths preserved.
 
 Recording: assets/fill/microphone-fill.svg, same revision; 24px viewport, original paths.
+Transport: assets/fill/{rewind,play,pause,fast-forward}-fill.svg, same revision.
+Rewind and Fast Forward center the original path at 80% scale within the same 24px canvas.

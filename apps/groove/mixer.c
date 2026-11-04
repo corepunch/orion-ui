@@ -190,3 +190,21 @@ void song_render_with_audio(song_t *s, float *lr, int frames, const block_pcm_t 
 void song_render(song_t *s, float *lr, int frames) {
   song_render_with_audio(s, lr, frames, NULL);
 }
+
+void recording_click_mix(float *stereo, int frames, int beat_frames, int *position) {
+  if (beat_frames <= 0) return;
+  enum { CLICK_FRAMES = GR_SAMPLE_RATE / 40 };
+  int pos = *position;
+  for (int i = 0; i < frames; i++) {
+    int beat_pos = pos % beat_frames;
+    if (beat_pos < CLICK_FRAMES) {
+      float pitch = pos < beat_frames ? 1760.0f : 1100.0f;
+      float fade = 1.0f - (float)beat_pos / CLICK_FRAMES;
+      float click = 0.24f * fade * fade * sinf(6.2831853f * pitch * beat_pos / GR_SAMPLE_RATE);
+      stereo[i * 2] += click;
+      stereo[i * 2 + 1] += click;
+    }
+    if (++pos == beat_frames * GR_BEATS_BAR) pos = 0;
+  }
+  *position = pos;
+}

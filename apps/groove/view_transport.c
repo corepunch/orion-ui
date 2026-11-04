@@ -20,18 +20,10 @@ static void set_items(window_t *win) {
   send_message(win, tbSetItems, (uint32_t)groove_library_window_form.toolbar_count, (void *)groove_library_window_form.toolbar_items);
 }
 
-// The iTunes-style transport buttons take the theme's neutral plastic.
-static void transport_tint(window_t *win) {
-  static const uint16_t transport[] = { ID_REWIND, ID_PLAY, ID_FORWARD };
-  uint32_t neutral = get_sys_color(brPlasticNeutral);
-  for (int i = 0; i < ARRAY_LEN(transport); i++) send_message(win, tbSetItemColor, transport[i], &neutral);
-}
-
 result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate: {
       g_app->library = win;
-      send_message(win, tbSetStyle, TOOLBAR_STYLE_PLASTIC, NULL);
       block_pictograms_load(g_app);
       bitmap_strip_t strip = block_pictogram_strip();
       send_message(win, tbSetStrip, 0, &strip);
@@ -41,12 +33,12 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       send_message(win, tbSetButtonSize, TB_SPACING, NULL);
 #endif
       if (!toolbar_get_state(win)->item_count) set_items(win);
-      transport_tint(win);
       if (!g_app->bin) {
         g_app->bin = create_window("Sounds", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL | WINDOW_NOACTIVATE,
                                    MAKERECT(0, 0, 1, 1), win, win_bin, win->hinstance, NULL);
         if (g_app->bin) dock_window(g_app->bin, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 0);
       }
+      if (g_app->bin) send_message(g_app->bin, binPopulate, 0, NULL);
       transport_refresh();
       return true;
     }
@@ -58,7 +50,6 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     //     return true;
     //   }
     //   return false;
-    case evThemeChanged: transport_tint(win); return false;
     case evPaint: return false;
     case evDestroy:
       if (g_app && g_app->library == win) g_app->library = NULL;

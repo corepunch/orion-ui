@@ -39,21 +39,13 @@ color to `draw_icon16` / `draw_toolbar_icon_in_rect`.
 
 ## Icon strips
 
-### Procedural Groove buttons
+### Groove transport icons
 
-Groove uses [Phosphor](https://github.com/phosphor-icons/core) filled SVGs from
-`apps/groove/share/icons/phosphor-*.svg`. Plus and Minus use Phosphor Bold solid
-paths to avoid the square backgrounds of their Fill variants. The `phosphor-`
-prefix avoids collisions with
-the framework's global icon pool. The loader rasterizes each SVG at display
-density at the final glyph size and the shader uses its alpha mask; no pre-rendered button/state atlas is
-loaded or generated. License notices remain in `PHOSPHOR-LICENSE`;
-`PHOSPHOR-SOURCE.txt` records the upstream revision.
-
-`TOOLBAR_STYLE_PLASTIC` draws the coloured surface, bevel, small shadow and white
-solid glyph together in the procedural shader. Per-button `color` values and
-`tbSetItemColor` supply the face colour. The same shader draws sample card
-surfaces without a glyph. See [Drawing](drawing.md) and [Toolbars](toolbars.md).
+Groove uses upstream [Phosphor](https://github.com/phosphor-icons/core) SVGs in
+`apps/groove/share/icons/`. The transport uses Fill icons. Rewind and Fast Forward
+have more padding inside their SVGs. Play switches to Pause during playback. The toolbar paints
+the icons using the active theme's foreground color. `PHOSPHOR-SOURCE.txt`
+records the upstream revision and `PHOSPHOR-LICENSE` contains the license.
 
 | Strip | Index enum | Tile size | Source | Loaded by |
 |---|---|---|---|---|

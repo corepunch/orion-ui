@@ -181,8 +181,9 @@ static void test_pencil_canvas_without_timeline(void) {
     ASSERT_FALSE(tb->items[i].style & TOOLBAR_ITEM_FLAG_REORDERABLE);
     ASSERT_TRUE(tb->item_rects[i].x + tb->item_rects[i].w <= g_app->tool_win->frame.w);
     ASSERT_TRUE(tb->item_rects[i].y + tb->item_rects[i].h <= g_app->tool_win->frame.h);
-    if ((tb->items[i].style & CONTROL_SIZE_MASK) == CONTROL_SIZE_SMALL) {
+    if (tb->items[i].type == TOOLBAR_ITEM_BUTTON) {
       irect16_t r = tb->item_rects[i];
+      ASSERT_EQUAL(r.w, toolbar_effective_bsz(g_app->tool_win));
       ASSERT_TRUE(abs(r.x - (g_app->tool_win->frame.w - r.x - r.w)) <= 1);
     }
   }

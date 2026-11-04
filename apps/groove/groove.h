@@ -43,7 +43,7 @@
 typedef enum {
   CAT_DRUMS, CAT_KICK, CAT_SNARE, CAT_HAT, CAT_CLAP, CAT_CYMBAL, CAT_PERC, CAT_FILL,
   CAT_BASS, CAT_KEYS, CAT_ORGAN, CAT_GUITAR, CAT_SYNTH, CAT_PAD, CAT_STAB,
-  CAT_VOX, CAT_SCRATCH, CAT_FX,
+  CAT_VOX, CAT_SCRATCH, CAT_FX, CAT_RECORDING,
   CAT_COUNT
 } category_t;
 
@@ -121,7 +121,10 @@ typedef struct { char name[64]; int bpm, bars, frames; int16_t *pcm; } sample_t;
 bool sample_read(FILE *f, sample_t *out);
 bool sample_read_info(FILE *f, sample_t *out);
 bool sample_write(FILE *f, const sample_t *sample);
-bool sample_save(const char *dir, const sample_t *sample);
+bool sample_store(const char *dir, int id);
+bool sample_is_deleted(int id);
+bool sample_rename(int id, const char *name);
+bool sample_delete(int id);
 void samples_load(const char *dir);
 int samples_count(void);
 int sample_add(const sample_t *sample);
@@ -130,6 +133,8 @@ const block_t *sample_block_get(int id);
 bool sample_render(int id, int bpm, block_pcm_t *out);
 void samples_truncate(int count);
 void app_record_sample(window_t *owner);
+void app_manage_samples(window_t *owner);
+void recording_click_mix(float *stereo, int frames, int beat_frames, int *position);
 void app_samples_refresh(void);
 
 // ── Song + mixer ─────────────────────────────────────────────────────────
@@ -190,13 +195,14 @@ typedef struct {
   song_t        song;
   const int16_t *sample_preview;
   int           sample_preview_frames, sample_preview_pos;
+  int           recording_beat_frames, recording_click_pos;
   int           audio_dev;
   uint32_t      timer;
   int           selected_clip;
   char          filename[512];
   bool          song_dirty;
   char          songs_dir[512]; // iPad: Groove's own song storage, never Files/iCloud; empty on desktop
-  char          samples_dir[512]; // reusable originals, beside Songs
+  char          samples_dir[512]; // reusable WAV originals
   drag_t        drag;
   uint8_t       genre;      // library filter: 0 = every genre, else one GENRE_* flag
   family_t      family;     // library filter
@@ -219,6 +225,7 @@ enum {
   shDragEnd,                  // clear drag preview
   shSeekPosition,             // wparam = position in ticks
   shSetDropAnchor,             // wparam = groove_drop_anchor_t; default = sample origin
+  binPopulate,                // build the cards after form children are instantiated
   binFilter,                  // re-apply the family and genre filters to the bin
   binReload,                  // append recorded blocks
   grCardSetBlock,              // wparam = block id

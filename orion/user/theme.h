@@ -105,7 +105,7 @@ typedef enum {
   CTRL_DISABLED = 1 << 3,   // input disabled; takes priority over transient states
   CTRL_FOCUSED  = 1 << 4,   // keyboard focus ring required
   CTRL_DEFAULT  = 1 << 5,   // primary action / default button
-  CTRL_PLASTIC  = 1 << 6,   // paint with the theme's plastic material (≈ SetWindowTheme visual style)
+  CTRL_PLASTIC  = 1 << 6,   // paint a card with the theme's plastic material
   CTRL_MULTILINE = 1 << 7,  // field contains multiple lines
   CTRL_INACTIVE = 1 << 8,   // selected, but keyboard focus is elsewhere: a quieter selection
 } ctrl_state_t;
@@ -229,13 +229,11 @@ typedef struct {
     } compact;
     int grip_size;          // drag grip thickness of a floating toolbar or menu bar
     int dropdown_arrow_w;   // width of a split button's arrow zone
-    int large_inset;        // gap a bigger-than-regular button keeps from the band edges
   } toolbar;
 
   struct {
     int padding;            // standard inset from control frame to content area
     int press_icon_offset;  // Classic shifts pressed icons/labels by 1; Modern keeps them stationary
-    int size_pct[4];        // CONTROL_SIZE_INDEX order: regular, small, mini, large (% of regular)
   } control;
   struct { int corner_radius; } button; // 0 = square; CORNER_RADIUS_CIRCULAR = capsule
   struct {
@@ -261,12 +259,9 @@ typedef struct {
     int ring_width;         // selected tile's accent ring, inside the tile
   } thumbnail;
   struct {                   // plastic material, handed to the shader as uniforms
-    int corner_radius, bevel_width, shadow_size; // radius may be CORNER_RADIUS_CIRCULAR
     float gloss;             // strength of the top highlight band (1 = reference)
     float rim;               // lit/shaded bevel strength along the silhouette
-    float ink;               // glyph darkness: base-colour fraction kept in the engraved glyph
     float lift;              // face lightening while hovered
-    int   glyph_size;        // largest glyph, logical pixels
     uint32_t shadow_color;   // drop shadow tint (alpha = strength)
   } plastic;
   struct {
@@ -358,18 +353,13 @@ void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state);
 
 // Extra inputs for parts whose look depends on more than bounds and state.
 typedef struct {
-  uint32_t    color;         // plastic face colour (0 = theme accent) / card plastic tint
-  uint32_t    edge_color;    // THEME_PART_CARD accent edge (alpha 0 = none)
-  const char *icon;          // plastic button glyph (SVG name)
-  uint32_t    control_size;  // CONTROL_SIZE_*: scales the glyph by control.size_pct
-  bool        round;         // force a circular silhouette (BUTTON_STYLE_ROUND)
+  uint32_t color;       // card plastic tint
+  uint32_t edge_color;  // THEME_PART_CARD accent edge (alpha 0 = none)
 } theme_draw_opts_t;
-// theme_draw() with opts; CTRL_PLASTIC in state selects the plastic material for buttons, toolbar buttons and cards.
+// theme_draw() with opts; CTRL_PLASTIC in state selects the card material.
 void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const theme_draw_opts_t *opts);
 // The area a part leaves for content (≈ GetThemeBackgroundContentRect).
 irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state);
-// `regular` scaled to the CONTROL_SIZE_* in `style` by the theme's control.size_pct (≈ NSControlSize).
-int theme_control_extent(int regular, uint32_t style);
 void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color); // shared card painter for flat themes
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state);
 

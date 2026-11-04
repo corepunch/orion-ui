@@ -113,7 +113,11 @@ extern int g_bw_retina_scale;
 
 #define PALETTE_WIN_X   4
 #define IMAGEEDITOR_TOOL_ICON_PX 24
-#define TOOL_PALETTE_BTN_SIZE    TB_SPACING
+#if IMAGEEDITOR_BW
+#define TOOL_PALETTE_BTN_SIZE 32
+#else
+#define TOOL_PALETTE_BTN_SIZE TB_SPACING
+#endif
 #define PALETTE_WIN_W   (TOOL_PALETTE_BTN_SIZE + 2 * get_theme()->toolbar.padding)
 #define TOOL_ICON_W     IMAGEEDITOR_TOOL_ICON_PX
 #define TOOL_ICON_H     IMAGEEDITOR_TOOL_ICON_PX

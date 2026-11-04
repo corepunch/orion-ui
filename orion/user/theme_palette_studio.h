@@ -41,7 +41,6 @@
   [brTextOnColor]          = 0xff101010, \
   [brSelectionTop]         = 0xffc57330, \
   [brSelectionBottom]      = 0xffc57330, \
-  [brPlasticNeutral]       = 0xffd0d0d0, \
   [brAccentText]           = 0xffffffff, \
   [brTooltipBackground]   = 0xff303230, \
   [brTooltipText]         = 0xfff2f1f0, \

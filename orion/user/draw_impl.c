@@ -464,30 +464,8 @@ static plastic_look_t plastic_look(ctrl_state_t state) {
   return (plastic_look_t){
     .pressed = !!(state & CTRL_PRESSED), .hover = !!(state & CTRL_HOVER),
     .selected = !!(state & CTRL_SELECTED), .disabled = !!(state & CTRL_DISABLED),
-    .gloss = theme->plastic.gloss, .rim = theme->plastic.rim, .ink = theme->plastic.ink, .lift = theme->plastic.lift,
+    .gloss = theme->plastic.gloss, .rim = theme->plastic.rim, .lift = theme->plastic.lift,
   };
-}
-
-void draw_plastic_button(irect16_t r, ctrl_state_t state, uint32_t color, const char *icon, uint32_t control_size, bool round) {
-  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
-  const theme_t *theme = get_theme();
-  int shadow = MIN(theme->plastic.shadow_size, MIN(r.w, r.h) / 10);
-  int glyph_max = theme_control_extent(theme->plastic.glyph_size, control_size);
-  int size = MAX(0, MIN(glyph_max, MIN(r.w, r.h) - 2 * shadow - 4));
-  float radius = round || theme->plastic.corner_radius == CORNER_RADIUS_CIRCULAR ? MIN(r.w, r.h) * 0.5f : theme->plastic.corner_radius;
-  sysicon_resolved_t glyph = {0};
-  if (icon && size > 0 && !sysicon_resolve_size(icon, size, &glyph)) {
-    fprintf(stderr, "[draw] plastic icon unavailable name=%s\n", icon);
-    fflush(stderr);
-  }
-  ipoint16_t icon_size = {size, size};
-  int extent = MAX(glyph.w, glyph.h);
-  if (extent > 0) icon_size = (ipoint16_t){size * glyph.w / extent, size * glyph.h / extent};
-  plastic_look_t look = plastic_look(state);
-  render_plastic_surface(r, radius, theme->plastic.bevel_width,
-                          shadow, &look, color ? color : get_sys_color(brAccent),
-                          theme->plastic.shadow_color, glyph.tex,
-                          UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1), icon_size);
 }
 
 void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color) {
@@ -496,7 +474,7 @@ void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color) {
   plastic_look_t look = plastic_look(state);
   render_plastic_surface(r, theme->card.corner_radius, theme->card.highlight_width,
                           theme->card.shadow_size, &look, color,
-                          theme->plastic.shadow_color, 0, NULL, (ipoint16_t){0, 0});
+                          theme->plastic.shadow_color);
 }
 
 int measure_badge(ui_font_t font, const char *text) {

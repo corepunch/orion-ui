@@ -45,7 +45,6 @@
   [brTextOnColor]          = WEB(0x1B1D23), \
   [brSelectionTop]         = WEB(0x4D78CC), \
   [brSelectionBottom]      = WEB(0x4570C2), \
-  [brPlasticNeutral]       = WEB(0x4B5263), \
   [brAccentText]           = WEB(0xF0F2F5), \
   [brTooltipBackground]   = WEB(0x1B1D23), \
   [brTooltipText]         = WEB(0xFFFFFF), \

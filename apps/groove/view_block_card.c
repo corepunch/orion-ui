@@ -2,7 +2,7 @@
 
 #define CARD_SLOP 5
 #define PICTOGRAM_COLS 6
-#define PICTOGRAM_ROWS 3
+#define PICTOGRAM_ROWS 4
 #define PICTOGRAM_CELL 128
 #define CARD_LABEL_PADDING 4
 #define CARD_TAG_INSET 2
@@ -25,7 +25,7 @@ bool block_pictograms_load(groove_t *app) {
     fflush(stderr);
     return false;
   }
-  if (w != PICTOGRAM_COLS * PICTOGRAM_CELL || h != PICTOGRAM_ROWS * PICTOGRAM_CELL || CAT_COUNT != PICTOGRAM_COLS * PICTOGRAM_ROWS) {
+  if (w != PICTOGRAM_COLS * PICTOGRAM_CELL || h != PICTOGRAM_ROWS * PICTOGRAM_CELL || CAT_COUNT > PICTOGRAM_COLS * PICTOGRAM_ROWS) {
     fprintf(stderr, "[gr] pictogram atlas rejected path=%s size=%dx%d categories=%d\n", path, w, h, CAT_COUNT);
     fflush(stderr);
     image_free(pixels);
@@ -144,6 +144,46 @@ static void paint_block_card(int block, const block_t *b, irect16_t r, int visib
 }
 
 result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (win->title[0]) {
+    switch (msg) {
+      case evCreate: case evDestroy: return true;
+      case evArrange: return false;
+      case evQueryDrag: return DRAG_NONE;
+      case evPointerCancel:
+        window_set_state(win, WINDOW_STATE_PRESSED, false);
+        invalidate_window(win);
+        return true;
+      case evMeasure: {
+        layout_measure_t *m = lparam;
+        if (!m) return false;
+        if (g_app && g_app->sheet) {
+          ipoint16_t size = clip_cell_size(g_app->sheet, &(block_t){.bars = 2});
+          m->desired_w = size.x;
+          m->desired_h = size.y;
+        }
+        return true;
+      }
+      case evPaint: {
+        const theme_t *theme = get_theme();
+        bool pressed = window_has_state(win, WINDOW_STATE_PRESSED);
+        bool hover = window_has_state(win, WINDOW_STATE_HOVERED);
+        irect16_t r = rect_inset(get_client_rect(win), theme->card.shadow_size);
+        fill_rounded_rect(get_sys_color(pressed ? brButtonHover : hover ? brButtonInner : brPanelDark),
+                          r, theme->card.corner_radius);
+        int icon_size = MIN(24, MIN(r.w, r.h) - 4), gap = 8;
+        if (icon_size <= 0) return true;
+        int text_w = MIN(text_strwidth(FONT_SYSTEM, win->title), MAX(0, r.w - icon_size - gap - 12));
+        irect16_t content = rect_center(r, icon_size + gap + text_w, r.h);
+        irect16_t icon = rect_center(rect_split_left(content, icon_size), icon_size, icon_size);
+        irect16_t label = rect_center(rect_trim_left(content, icon_size + gap), text_w, text_char_height(FONT_SYSTEM));
+        uint32_t ink = get_sys_color(window_is_disabled(win) ? brTextDisabled : brTextNormal);
+        draw_sysicon("phosphor-plus-bold", icon.x, icon.y, icon_size, ink);
+        draw_text_ellipsized(FONT_SYSTEM, win->title, label.x, label.y, label.w, ink);
+        return true;
+      }
+      default: return win_button(win, msg, wparam, lparam);
+    }
+  }
   block_card_t *st = win->userdata;
   if (!g_app && msg != evDestroy) return false;
   switch (msg) {

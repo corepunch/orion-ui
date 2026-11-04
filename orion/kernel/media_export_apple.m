@@ -11,6 +11,12 @@
 #include <string.h>
 #include <unistd.h>
 
+bool ui_media_documents_directory(char *path, size_t capacity) {
+  NSURL *url = [NSFileManager.defaultManager URLsForDirectory:NSDocumentDirectory
+                                                   inDomains:NSUserDomainMask].firstObject;
+  return url && [url getFileSystemRepresentation:path maxLength:capacity];
+}
+
 static bool media_apple_progress(ui_media_progress_fn progress, void *userdata, float n) {
   return !progress || progress(userdata, n);
 }

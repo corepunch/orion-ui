@@ -230,17 +230,20 @@ static void resize_clip(window_t *win, int mx) {
 }
 
 static void paint_ruler(window_t *win, int cur_bar) {
-  irect16_t cr = get_client_rect(win);
-  fill_rect(get_sys_color(brPanelDark), R(0, 0, cr.w, RULER_H));
+  irect16_t ruler = rect_split_top(get_client_rect(win), RULER_H);
+  uint32_t ink = get_sys_color(brTextNormal), tick = get_sys_color(brTextSecondary);
+  fill_rect(get_sys_color(get_theme()->appearance.dark ? brPanelDark : brWorkspaceBg), ruler);
   for (int b = 0; b < GR_BARS; b++) {
     char num[8];
     snprintf(num, sizeof(num), "%d", b + 1);
-    if (b == cur_bar) fill_rect(color_with_alpha(get_sys_color(brAccent), 0x50), R(bar_x(win, b), 0, BAR_W, RULER_H));
-    fill_rect(color_with_alpha(get_sys_color(brLightEdge), b % 4 ? 0x30 : 0x80), R(bar_x(win, b), b % 4 ? RULER_H - 6 : 2, 1, b % 4 ? 6 : RULER_H - 2));
-    draw_text(FONT_SMALLEST, num, bar_x(win, b) + 5, 5, get_sys_color(b % 4 ? brTextSecondary : brTextNormal));
+    int x = bar_x(win, b);
+    if (b == cur_bar) fill_rect(color_with_alpha(get_sys_color(brAccent), 0x50), R(x, 0, BAR_W, RULER_H));
+    fill_rect(color_with_alpha(tick, b % 4 ? 0x60 : 0x90), R(x, b % 4 ? RULER_H - 6 : 2, 1, b % 4 ? 6 : RULER_H - 2));
+    draw_text(FONT_SMALL, num, x + 5, 3, ink);
     for (int step = GR_SNAP_TICKS; step < GR_TICKS_BAR; step += GR_SNAP_TICKS)
-      fill_rect(color_with_alpha(get_sys_color(brLightEdge), 0x20), R(position_x(win, b * GR_TICKS_BAR + step), RULER_H - 4, 1, 4));
+      fill_rect(color_with_alpha(tick, 0x40), R(position_x(win, b * GR_TICKS_BAR + step), RULER_H - 4, 1, 4));
   }
+  fill_rect(get_sys_color(brDarkEdge), rect_split_bottom(ruler, 1));
   set_clip_rect(win, R(0, 0, win->frame.w, win->frame.h));
 }
 
@@ -252,10 +255,13 @@ static void paint_sheet(window_t *win) {
   sync_clips(win);
   fill_rect(get_sys_color(brWorkspaceBg), cr);
   set_clip_rect(win, grid);
+  uint32_t lane_bg = get_sys_color(brWindowDarkBg), ink = get_sys_color(brTextNormal);
+  bool dark = get_theme()->appearance.dark;
+  uint32_t alternate_bg = dark ? lane_bg : color_mix(lane_bg, ink, 0x18);
   for (int t = 0; t < GR_TRACKS; t++) {
     irect16_t lane = R(grid.x, track_y(win, t), grid.w, row_h(win));
-    fill_rect(get_sys_color(brWindowDarkBg), lane);
-    if (t % 2) fill_rect(color_with_alpha(get_sys_color(brTextNormal), 0x08), lane);
+    fill_rect(t % 2 ? alternate_bg : lane_bg, lane);
+    if (dark && t % 2) fill_rect(color_with_alpha(ink, 0x08), lane);
   }
   sheet_paint_branding(win, grid);
   for (int position = 0; position <= GR_BARS * GR_TICKS_BAR; position += GR_SNAP_TICKS) {

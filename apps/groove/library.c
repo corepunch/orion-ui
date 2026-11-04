@@ -10,7 +10,7 @@
 
 const char *const kCategoryName[CAT_COUNT] = {
   "Drums", "Kicks", "Snares", "Hats", "Claps", "Cymbals", "Perc", "Fills",
-  "Bass", "Keys", "Organ", "Guitar", "Synth", "Pads", "Stabs", "Vocals", "Scratch", "FX",
+  "Bass", "Keys", "Organ", "Guitar", "Synth", "Pads", "Stabs", "Vocals", "Scratch", "FX", "Recordings",
 };
 
 const char *const kFamilyName[FAMILY_COUNT] = {
@@ -21,7 +21,7 @@ family_t block_family(category_t cat) {
   static const family_t family[CAT_COUNT] = {
     FAMILY_LOOP, FAMILY_LOOP, FAMILY_LOOP, FAMILY_LOOP, FAMILY_LOOP, FAMILY_LOOP, FAMILY_LOOP, FAMILY_DRUM,
     FAMILY_BASS, FAMILY_SYNTH, FAMILY_SYNTH, FAMILY_GUITAR, FAMILY_SYNTH, FAMILY_PAD, FAMILY_STAB,
-    FAMILY_VOX, FAMILY_SCRATCH, FAMILY_FX,
+    FAMILY_VOX, FAMILY_SCRATCH, FAMILY_FX, FAMILY_SAMPLES,
   };
   return cat >= 0 && cat < CAT_COUNT ? family[cat] : FAMILY_LOOP;
 }
@@ -32,7 +32,7 @@ uint32_t category_color(category_t cat) {
   static const uint32_t col[CAT_COUNT] = {
     WEB(0x1aa6f2), WEB(0xff7a2a), WEB(0xff4fa0), WEB(0xf2d02c), WEB(0xff7f5e), WEB(0x5cc6f8), WEB(0xffa12c), WEB(0xe64fd8),
     WEB(0xa047f2), WEB(0xffb21e), WEB(0x36c95c), WEB(0xff4f6c), WEB(0x1fd2b2), WEB(0x8ad13f), WEB(0xf2553d), WEB(0xff63a6),
-    WEB(0x7c8cff), WEB(0x6c5cff),
+    WEB(0x7c8cff), WEB(0x6c5cff), WEB(0x8b64c4),
   };
   return col[cat >= 0 && cat < CAT_COUNT ? cat : 0];
 }
@@ -742,7 +742,7 @@ int blocks_in_category(category_t cat, int *ids, int max) {
 int blocks_in_family(family_t family, int *ids, int max) {
   meta();
   int n = 0;
-  for (int i = 0; i < blocks_count() && n < max; i++) if (block_get(i)->family == family) ids[n++] = i;
+  for (int i = 0; i < blocks_count() && n < max; i++) if (block_get(i)->family == family && !sample_is_deleted(i)) ids[n++] = i;
   return n;
 }
 

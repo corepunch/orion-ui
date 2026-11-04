@@ -34,10 +34,9 @@ static void autoradio_select(window_t *win) {
   invalidate_window(win);
 }
 
-// Optional per-button extras, allocated on first use (btnSetIconName / btnSetFaceColor).
+// Optional per-button extras, allocated on first use.
 typedef struct {
   char     icon[64];
-  uint32_t face_color;   // plastic face; 0 = theme accent
   char     tooltip[96];
   uint8_t  ink;          // BUTTON_COMMANDLINK text role from color=; 0 = brTextNormal
 } button_extras_t;
@@ -75,8 +74,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       return true;
     }
     case btnSetIconName:
-    case btnSetTooltip:
-    case btnSetFaceColor: {
+    case btnSetTooltip: {
       button_extras_t *x = button_extras(win, true);
       if (!x) {
         fprintf(stderr, "[button] extras allocation failed win=%u\n", win->id);
@@ -84,16 +82,12 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
         return false;
       }
       if (msg == btnSetIconName) snprintf(x->icon, sizeof(x->icon), "%s", lparam ? (const char *)lparam : "");
-      else if (msg == btnSetTooltip) snprintf(x->tooltip, sizeof(x->tooltip), "%s", lparam ? (const char *)lparam : "");
-      else {
-        uint32_t color = lparam ? *(const uint32_t *)lparam : 0;
-        if (x->face_color == color) return true;
-        x->face_color = color;
-      }
+      else snprintf(x->tooltip, sizeof(x->tooltip), "%s", lparam ? (const char *)lparam : "");
       invalidate_window(win);
       return true;
     }
     case evCreate:
+      win->flags |= WINDOW_DRAWS_DISABLED;
       if (win->flags & BUTTON_COMMANDLINK) {
         const form_ctrl_def_t *cd = lparam && (uintptr_t)lparam > 0x1000 ? (const form_ctrl_def_t *)lparam : NULL;
         if (cd && cd->color_set && cd->color < brCount) {
@@ -148,12 +142,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
         draw_command_link(local, win->title, state, get_sys_color(x && x->ink ? (sys_color_idx_t)x->ink : brTextNormal));
         return true;
       }
-      bool plastic = (win->flags & WINDOW_PLASTIC) != 0;
-      theme_draw_ex(THEME_PART_BUTTON, local, plastic ? state | CTRL_PLASTIC : state,
-                    &(theme_draw_opts_t){.color = x ? x->face_color : 0, .icon = x && x->icon[0] ? x->icon : NULL,
-                                         .control_size = win->flags & CONTROL_SIZE_MASK,
-                                         .round = (win->flags & WINDOW_ROUND) != 0});
-      if (plastic && x && x->icon[0]) return true;   // the plastic face engraves the glyph itself
+      theme_draw(THEME_PART_BUTTON, local, state);
       int icon_w = button_icon_width(win);
       if (x && x->icon[0]) {
         sysicon_resolved_t glyph;

@@ -584,8 +584,8 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
     value = MAKEDWORD((uint16_t)MAX(1, win->frame.w),
                       (uint16_t)MAX(1, win->frame.h));
   }
-  // Draw disabled overlay
-  if (window_is_disabled(win) && msg == evPaint) {
+  // Fallback for windows that do not paint their own disabled state.
+  if (msg == evPaint && !(win->flags & WINDOW_DRAWS_DISABLED) && window_is_disabled(win)) {
     uint32_t col = (get_sys_color(brControlBg) & 0x00FFFFFF) | 0x80000000;
     int root_t = titlebar_height(root);
     irect16_t wf = win_frame_in_screen(win, root, root_t);
@@ -594,9 +594,8 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
     fill_rect(col, R(wf.x - root->frame.x, wf.y - root->frame.y, wf.w, wf.h));
   }
   // Draw built-in scrollbars on top of window content.
-  // Restore the FBO paint state: the overlay above may have changed the
-  // projection.  The bars are drawn in the root-relative coordinate space
-  // established by paint setup.
+  // The bars are drawn in the root-relative coordinate space established by
+  // paint setup, regardless of the window procedure's projection.
   if (msg == evPaint && g_ui_runtime.running &&
       (win->flags & (WINDOW_HSCROLL | WINDOW_VSCROLL))) {
     int root_t = titlebar_height(root);

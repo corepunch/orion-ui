@@ -1505,10 +1505,11 @@ void test_toolbar_check_button(void) {
 }
 
 static void test_vertical_column_alignment(void) {
-  TEST("vertical toolbar centers smaller buttons and mini pairs within each wrapped column");
+  TEST("vertical toolbar uses uniform buttons and keeps custom pairs within each wrapped column");
   test_env_init();
   window_t *win = create_window("Alignment", WINDOW_TOOLBAR | WINDOW_NOTITLE,
-      MAKERECT(0, 0, 100, 2 * get_theme()->toolbar.padding + get_theme()->toolbar.grip_size + theme_control_extent(get_theme()->toolbar.button_size, CONTROL_SIZE_SMALL) + get_theme()->toolbar.button_size + 2 * get_theme()->toolbar.spacing), NULL, noop_proc, 0, NULL);
+      MAKERECT(0, 0, 100, 2 * get_theme()->toolbar.padding + get_theme()->toolbar.grip_size +
+                         2 * (get_theme()->toolbar.button_size + get_theme()->toolbar.spacing)), NULL, noop_proc, 0, NULL);
   toolbar_item_t items[] = {
     {.type = TOOLBAR_ITEM_BUTTON, .ident = 1, .style = CONTROL_SIZE_SMALL},
     {.type = TOOLBAR_ITEM_BUTTON, .ident = 2},
@@ -1521,13 +1522,14 @@ static void test_vertical_column_alignment(void) {
   send_message(win, tbSetItems, ARRAY_LEN(items), items);
   toolbar_state_t *tb = toolbar_get_state(win);
   int pad = toolbar_effective_padding(win), bsz = toolbar_effective_bsz(win);
-  irect16_t small = tb->item_rects[0], regular = tb->item_rects[1];
-  ASSERT_TRUE(small.w < regular.w);
-  ASSERT_TRUE(abs((small.x - pad) - (pad + bsz - small.x - small.w)) <= 1);
-  ASSERT_EQUAL(regular.x, pad);
-  small = tb->item_rects[2];
+  for (int i = 0; i < 3; i++) {
+    ASSERT_EQUAL(tb->item_rects[i].w, bsz);
+    ASSERT_EQUAL(tb->item_rects[i].h, bsz);
+  }
+  ASSERT_EQUAL(tb->item_rects[0].x, pad);
+  ASSERT_EQUAL(tb->item_rects[1].x, pad);
   int start = pad + bsz + get_theme()->toolbar.spacing;
-  ASSERT_TRUE(abs((small.x - start) - (start + bsz - small.x - small.w)) <= 1);
+  ASSERT_EQUAL(tb->item_rects[2].x, start);
   ASSERT_EQUAL(tb->item_rects[3].y, tb->item_rects[4].y);
   ASSERT_TRUE(tb->item_rects[3].x + tb->item_rects[3].w < tb->item_rects[4].x);
   send_message(win, tbSetItems, 1, items);

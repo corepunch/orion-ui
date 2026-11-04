@@ -103,7 +103,7 @@ typedef struct {
   uint32_t            style;   // TBSTYLE_CHECK, TBSTYLE_CHECKGROUP, TOOLBAR_ITEM_FLAG_*, CONTROL_SIZE_*
   const char         *text;    // label text, or combobox/textedit initial text
   const char         *tooltip; // hover tooltip; NULL = none
-  uint32_t            color;   // plastic face or SVG icon tint; 0 = theme default
+  uint32_t            color;   // SVG icon tint; 0 = theme default
   const char         *checked_icon; // icon while TBSTATE_CHECKED; NULL = same icon
   uint32_t            state;   // initial TBSTATE_CHECKED / TBSTATE_DISABLED
 } toolbar_item_t;
@@ -130,8 +130,9 @@ movable options toolbar. Set `tbSetOrientation` to `TOOLBAR_VERTICAL` and
 `tbSetStyle` to `TOOLBAR_STYLE_GRIP` to reserve a drag grip above its items.
 Use the same button size and padding as the main tool strip.
 
-Toolbar button `color` also tints its SVG icon in standard and compact toolbars;
-zero uses the theme foreground and disabled buttons use the disabled foreground.
+Toolbar button `color` tints its SVG icon. Use `tbSetItemColor` to update it at
+runtime. Zero uses the theme foreground and disabled buttons use the disabled
+foreground.
 
 `TOOLBAR_ITEM_SLIDER` creates a framework-owned `Slider` in the toolbar's
 embedded child list. Its default length is three icon slots, including the
@@ -166,10 +167,8 @@ button's checked state like `TB_CHECKBUTTON`; checking a `CHECKGROUP` button
 clears its group. Apps only call it when the state changes for a reason other
 than a click on that button (a menu command, undo, a document switch).
 
-`TOOLBAR_ITEM_FLAG_ARTWORK` marks a button whose icon is full-colour artwork,
-such as a `strip:N` cell. It is drawn as large as the button allows, over the
-theme's toolbar-button background (empty at rest, accent when checked), never
-on a plastic body.
+A `strip:N` icon uses the bitmap cell's own colors over the theme's toolbar
+button background.
 
 ## Two ways to define items
 
@@ -211,10 +210,10 @@ Declare the application's main toolbar directly under `<orion>`, alongside
 the menu. `presentation="compact"` puts small icon buttons at the right of
 the menu row, leaving the far-right restore-button slot free. Icons have a
 background highlight while pressed or checked (`tbCheckButton`, for toggles),
-never on hover. A toggle with `checked-icon="..."` shows that icon instead of
-the checked highlight. Compact
-icons are 16 logical pixels; square pressed backgrounds have 2 pixels of
-vertical padding, with 6 pixels between button boxes. If there is
+never on hover. A toggle with `checked-icon="..."` swaps the icon inside the
+checked highlight. Compact and regular highlights use the same theme shape
+(a rounded rectangle in Modern themes). Compact icons are 16 logical pixels;
+button boxes have 2 pixels of vertical padding and 6 pixels between them. If there is
 insufficient room beside the menu labels, the toolbar uses the normal band
 and returns to compact placement when space permits. Hosts with a shell-owned
 menu (GEMs) also use the normal band; this API does not contribute icons to
@@ -556,23 +555,5 @@ the segment's width; it is 0 without a separator or without a left pane.
 
 ### Control sizes
 
-A button item takes a `CONTROL_SIZE_*` style (`control-size="mini|small|regular|large"`
-in `.orion`), the same intrinsic sizes dialog controls use. The toolbar's button size
-(`tbSetButtonSize`, else the theme's `toolbar.button_size`) is the regular cell;
-`theme_control_extent()` scales it by the theme's `control.size_pct`, which follows
-AppKit's round bezels (regular 21, small 18, mini 15, large 28). The row keeps the
-regular height: a bigger cell spreads into the band padding and stops the theme's
-`toolbar.large_inset` short of the band edges, and every item is centred on the row's
-axis. An iTunes-style transport is three plain buttons: `control-size="small"` rewind and
-forward around a `control-size="large"` play that fills the band. Nothing is hand-sized;
-the glyph scales with the cell.
-
-### Coloured procedural buttons
-
-Set `TOOLBAR_STYLE_PLASTIC` with `tbSetStyle` to draw toolbar buttons as procedural
-plastic with solid white SVG icons. Set `toolbar_item_t.color` to a packed
-`0xAABBGGRR` face colour; zero uses the theme accent. Update it without recreating
-embedded controls with `send_message(toolbar, tbSetItemColor, command_id, &color)`;
-the message copies the `uint32_t` immediately. A null colour pointer restores the
-theme accent. Unavailable IDs and non-button items are rejected with diagnostics.
-Window caption controls retain the active theme's normal drawing.
+Toolbar buttons share a cell size. Set the size for the entire toolbar with
+`tbSetButtonSize`.

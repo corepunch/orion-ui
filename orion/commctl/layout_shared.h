@@ -108,7 +108,8 @@ static inline int layout_horizontal_gap_total(window_t *first, int gap) {
 static inline void layout_paint_children(window_t *win) {
   if (!win) return;
   for (window_t *child = win->children; child; child = child->next) {
-    send_message(child, evPaint, 0, NULL);
+    if (window_has_state(child, WINDOW_STATE_VISIBLE) && !window_is_lifted(child))
+      send_message(child, evPaint, 0, NULL);
   }
 }
 

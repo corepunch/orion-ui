@@ -2,6 +2,7 @@
 #define ORION_MEDIA_EXPORT_H
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 // Called on the worker thread. Return false to cancel. Values are in [0,1].
 typedef bool (*ui_media_progress_fn)(void *userdata, float fraction);
@@ -23,4 +24,8 @@ bool ui_media_video_frame(const ui_media_video_t *video, int64_t index, uint8_t 
 // UI thread only. File must remain available until the native share UI closes.
 // Returns false where native sharing is unavailable; caller can offer Save As.
 bool ui_media_share(const char *path);
+#ifdef __APPLE__
+// Native Documents directory for user-owned media. Returns false if unavailable.
+bool ui_media_documents_directory(char *path, size_t capacity);
+#endif
 #endif

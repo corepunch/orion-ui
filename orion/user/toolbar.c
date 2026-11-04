@@ -64,15 +64,6 @@ static bool toolbar_lists_text(const toolbar_state_t *tb, const toolbar_item_t *
   return tb && (tb->style & TOOLBAR_STYLE_LIST) && item->text && item->text[0];
 }
 
-// Square cell of a button-like item: the regular button size scaled by the item's CONTROL_SIZE_*.
-// The row never grows: a bigger cell spreads into the band padding and stops toolbar.large_inset
-// short of the band edges, like the iTunes play button.
-static int toolbar_item_cell(const toolbar_state_t *tb, const toolbar_item_t *item, int padding) {
-  int bsz = toolbar_state_bsz(tb);
-  int limit = bsz + 2 * MAX(0, padding - get_theme()->toolbar.large_inset);
-  return MIN(theme_control_extent(bsz, item->style), MAX(bsz, limit));
-}
-
 // Row height: the regular cell plus the caption band.
 static int toolbar_state_item_height(const toolbar_state_t *tb) {
   return toolbar_state_bsz(tb) + toolbar_label_extra(tb);
@@ -96,7 +87,8 @@ static void toolbar_center_column(toolbar_state_t *tb, int first, int end, int x
     while (next < end && tb->item_rects[next].y == tb->item_rects[i].y) next++;
     irect16_t last = tb->item_rects[next - 1];
     int row_width = last.x + last.w - tb->item_rects[i].x;
-    if (tb->items[i].style & TOOLBAR_ITEM_FLAG_SMALL) row_width = MAX(row_width, toolbar_state_bsz(tb));
+    if (tb->items[i].type == TOOLBAR_ITEM_CUSTOM && (tb->items[i].style & TOOLBAR_ITEM_FLAG_SMALL))
+      row_width = MAX(row_width, toolbar_state_bsz(tb));
     int offset = x + (width - row_width) / 2 - tb->item_rects[i].x;
     for (int j = i; j < next; j++) tb->item_rects[j].x += offset;
     i = next;
@@ -165,14 +157,13 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
       case TOOLBAR_ITEM_CUSTOM:
       case TOOLBAR_ITEM_BUTTON:
       case TOOLBAR_ITEM_DROPDOWN: {
-        int cell = toolbar_item_cell(tb, item, padding);
-        w = item->w > 0 ? item->w : cell;
+        w = item->w > 0 ? item->w : bsz;
         if (!item->w && toolbar_lists_text(tb, item))
-          w = cell + text_strwidth(FONT_SMALL, item->text) + TOOLBAR_LIST_TEXT_PAD;
+          w = bsz + text_strwidth(FONT_SMALL, item->text) + TOOLBAR_LIST_TEXT_PAD;
         else if (!item->w && (tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text)
           w = MAX(w, text_strwidth(FONT_SMALLEST, item->text) + 8);
         if (item->type == TOOLBAR_ITEM_DROPDOWN) w += get_theme()->toolbar.dropdown_arrow_w;
-        h = cell + toolbar_label_extra(tb);
+        h = item_h;
         break;
       }
       case TOOLBAR_ITEM_LABEL:
@@ -220,8 +211,8 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
     if (!vertical) y = base_y + item_h / 2 - h / 2; // every item is centred on the row's axis
 
     if (vertical) {
-      bool small = tb->columns <= 1 && (item->style & TOOLBAR_ITEM_FLAG_SMALL) != 0 &&
-                   (item->type == TOOLBAR_ITEM_BUTTON || item->type == TOOLBAR_ITEM_CUSTOM);
+      bool small = tb->columns <= 1 && item->type == TOOLBAR_ITEM_CUSTOM &&
+                   (item->style & TOOLBAR_ITEM_FLAG_SMALL) != 0;
       if (small) {
         // Half-size cell: two minis + one gap fill a normal button cell, so a
         // 2x2 block takes one normal row (within 1px when bsz is odd).
@@ -230,8 +221,7 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
         int pair = 1;
         if (i + 1 < tb->item_count) {
           toolbar_item_t *next = &tb->items[i + 1];
-          if ((next->style & TOOLBAR_ITEM_FLAG_SMALL) != 0 &&
-              (next->type == TOOLBAR_ITEM_BUTTON || next->type == TOOLBAR_ITEM_CUSTOM))
+          if (next->type == TOOLBAR_ITEM_CUSTOM && (next->style & TOOLBAR_ITEM_FLAG_SMALL))
             pair = 2;
         }
         if ((tb->style & TOOLBAR_STYLE_WRAPABLE) && cursor > base_y &&
@@ -403,9 +393,8 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
   bool disabled = (item->state & TBSTATE_DISABLED) != 0;
   bool is_pressed = !disabled && (tb->pressed_item == i);
   bool compact = (tb->style & TOOLBAR_STYLE_COMPACT) != 0;
-  bool interactive = !compact || (tb->style & TOOLBAR_STYLE_PLASTIC);
   bool is_active  = !disabled && (item->state & TBSTATE_CHECKED) != 0; // compact rows keep checks, not hover
-  bool is_hot     = !disabled && interactive && (tb->hot_item == i);
+  bool is_hot     = !disabled && !compact && (tb->hot_item == i);
   theme_t *th = get_theme();
 
   switch (item->type) {
@@ -433,19 +422,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       uint32_t foreground = (state & (CTRL_DISABLED | CTRL_SELECTED | CTRL_PRESSED))
                           ? theme_foreground(part, state)
                           : item->color;
-      bool plastic = (tb->style & TOOLBAR_STYLE_PLASTIC) && !(item->style & TOOLBAR_ITEM_FLAG_ARTWORK) &&
-                     item->ident != TB_WINDOW_CLOSE && item->ident != TB_WINDOW_COLLAPSE;
-      if (plastic) {
-        irect16_t face = local;
-        face.h -= toolbar_label_extra(tb);
-        theme_draw_ex(THEME_PART_TOOLBAR_BUTTON, face, state | CTRL_PLASTIC,
-                      &(theme_draw_opts_t){.color = item->color, .icon = icon, .control_size = item->style & CONTROL_SIZE_MASK});
-      } else if (tb->style & TOOLBAR_STYLE_COMPACT) {
-        if (is_pressed || is_active)
-          theme_draw(THEME_PART_TOOLBAR_BUTTON, rect_center(local, local.h, local.h), is_pressed ? CTRL_PRESSED : CTRL_SELECTED);
-      } else {
-        theme_draw(part, local, state);
-      }
+      theme_draw(part, local, state);
       int poff = is_pressed ? th->control.press_icon_offset : 0;
       irect16_t icon_rect = local;
       icon_rect.h -= toolbar_label_extra(tb);
@@ -459,7 +436,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       if (item->ident == TB_WINDOW_CLOSE || item->ident == TB_WINDOW_COLLAPSE)
         draw_theme_icon_in_rect(item->ident == TB_WINDOW_CLOSE ? THEME_ICON_CLOSE : THEME_ICON_RESTORE,
                                 icon_rect, get_sys_color(brTextNormal));
-      else if (!plastic) draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, poff, disabled, foreground);
+      else draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, poff, disabled, foreground);
       if (toolbar_label_extra(tb) && item->text) {
         int tx = (local.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + poff;
         int ty = local.h - text_char_height(FONT_SMALLEST) - 2 + poff;

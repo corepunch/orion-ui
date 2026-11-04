@@ -35,15 +35,23 @@ static bool block_row_init(library_block_t *row, int id) {
   return true;
 }
 
-static result_node_t *block_fetch(void) {
+static result_node_t *block_fetch(library_block_t *catalogue, int family) {
   result_node_t *head = NULL, **tail = &head;
   for (int category = 0; category < FAMILY_COUNT; category++) {
+    if (family >= 0 && category != family) continue;
     int ids[GR_MAX_BLOCKS];
     int count = blocks_in_family((family_t)category, ids, ARRAY_LEN(ids));
     for (int i = 0; i < count; i++) {
-      result_node_t *node = calloc(1, sizeof(*node) + sizeof(library_block_t));
-      if (!node) { free_result_list(head); return NULL; }
-      if (!block_row_init((library_block_t *)node->data, ids[i])) { free(node); continue; }
+      library_block_t *row = &catalogue[ids[i]];
+      if (!block_row_init(row, ids[i])) continue;
+      result_node_t *node = calloc(1, sizeof(*node) + sizeof(row));
+      if (!node) {
+        fprintf(stderr, "[groove-db] block row allocation failed block=%d\n", ids[i]);
+        fflush(stderr);
+        free_result_list(head);
+        return NULL;
+      }
+      memcpy(node->data, &row, sizeof(row));
       *tail = node;
       tail = (result_node_t **)&node->next;
     }
@@ -62,7 +70,7 @@ static result_t block_object_proc(const void *object, uint32_t msg, uint32_t wpa
     case 0x7101: snprintf(out, cap, "%s", row->name); return true;
     case 0x7102: snprintf(out, cap, "%s", row->category >= 0 && row->category < FAMILY_COUNT ? kFamilyName[row->category] : ""); return true;
     case 0x7103: snprintf(out, cap, "%u", row->genres); return true;
-    case 0x7104: snprintf(out, cap, "%d", row->bars); return true;
+    case 0x7104: ui_format_number(row->bars, 0, out, cap); return true;
     case 0x7105: snprintf(out, cap, "%u", row->variant); return true;
     default: return false;
   }
@@ -70,11 +78,20 @@ static result_t block_object_proc(const void *object, uint32_t msg, uint32_t wpa
 
 lresult_t groove_library_db(database_t *db, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
-    case dbCreate: case dbLoad: case dbSave: return 1;
-    case dbDestroy: return 1;
+    case dbCreate:
+      db->userdata = calloc(GR_MAX_BLOCKS, sizeof(library_block_t));
+      if (!db->userdata) {
+        fprintf(stderr, "[groove-db] catalogue allocation failed\n");
+        fflush(stderr);
+      }
+      return db->userdata != NULL;
+    case dbLoad: case dbSave: return 1;
+    case dbDestroy: free(db->userdata); db->userdata = NULL; return 1;
     case dbGetDirty: return 0;
     case dbFetch:
-      if (LOWORD(wparam) == TABLE_BLOCKS && HIWORD(wparam) == 0) return (lresult_t)block_fetch();
+      if (LOWORD(wparam) == TABLE_BLOCKS && HIWORD(wparam) == 0) return (lresult_t)block_fetch(db->userdata, -1);
+      if (LOWORD(wparam) == TABLE_BLOCKS && HIWORD(wparam) == 2 && (uintptr_t)lparam < FAMILY_COUNT)
+        return (lresult_t)block_fetch(db->userdata, (int)(intptr_t)lparam);
       fprintf(stderr, "[groove-db] dbFetch rejected table=%u filter_field=%u value=%ld\n",
               (unsigned)LOWORD(wparam), (unsigned)HIWORD(wparam), (long)(intptr_t)lparam);
       fflush(stderr);

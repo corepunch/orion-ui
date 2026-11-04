@@ -1,8 +1,15 @@
 // Owned microphone recordings. Files and embedded assets use the same bounded WAV representation.
 #include "groove.h"
 #include <stdatomic.h>
+#include <errno.h>
+#include <orion/user/file.h>
 
-typedef struct { sample_t source; block_t block; char key[32]; } recorded_block_t;
+typedef struct {
+  sample_t source;
+  block_t block;
+  char key[32], path[1024];
+  bool deleted;
+} recorded_block_t;
 static recorded_block_t recorded[GR_MAX_BLOCKS];
 static atomic_int recorded_count;
 
@@ -77,34 +84,58 @@ bool sample_read(FILE *f, sample_t *out) { return sample_read_wav(f, out, true);
 bool sample_read_info(FILE *f, sample_t *out) { return sample_read_wav(f, out, false); }
 
 int samples_count(void) { return recorded_count; }
-const sample_t *sample_get(int id) {
+static recorded_block_t *recorded_get(int id) {
   int i = id - blocks_builtin_count();
-  return i >= 0 && i < recorded_count ? &recorded[i].source : NULL;
-}
-const block_t *sample_block_get(int id) {
-  int i = id - blocks_builtin_count();
-  return i >= 0 && i < recorded_count ? &recorded[i].block : NULL;
+  return i >= 0 && i < recorded_count ? &recorded[i] : NULL;
 }
 
-int sample_add(const sample_t *s) {
+const sample_t *sample_get(int id) {
+  const recorded_block_t *r = recorded_get(id);
+  return r ? &r->source : NULL;
+}
+
+const block_t *sample_block_get(int id) {
+  const recorded_block_t *r = recorded_get(id);
+  return r ? &r->block : NULL;
+}
+
+bool sample_is_deleted(int id) {
+  const recorded_block_t *r = recorded_get(id);
+  return r && r->deleted;
+}
+
+static int sample_register(const sample_t *s, const char *path) {
   if (!sample_valid(s)) return -1;
   size_t bytes = (size_t)s->frames * sizeof(int16_t);
+  int deleted = -1;
   for (int i = 0; i < recorded_count; i++) {
-    const sample_t *old = &recorded[i].source;
-    if (sample_equal(old, s)) return blocks_builtin_count() + i;
-    bytes += (size_t)old->frames * sizeof(int16_t);
+    recorded_block_t *r = &recorded[i];
+    if (sample_equal(&r->source, s)) {
+      if (!path) {
+        if (!r->deleted) return blocks_builtin_count() + i;
+        deleted = blocks_builtin_count() + i;
+      } else if (!r->deleted && (!r->path[0] || !strcmp(r->path, path))) {
+        snprintf(r->path, sizeof(r->path), "%s", path);
+        return blocks_builtin_count() + i;
+      }
+    }
+    bytes += (size_t)r->source.frames * sizeof(int16_t);
   }
+  if (deleted >= 0) return deleted;
   if (blocks_builtin_count() + recorded_count >= GR_MAX_BLOCKS || bytes > 64u * 1024u * 1024u) return -1;
   recorded_block_t *r = &recorded[recorded_count];
   int16_t *copy = malloc((size_t)s->frames * 2);
   if (!copy) return -1;
   memcpy(copy, s->pcm, (size_t)s->frames * 2);
   r->source = *s; r->source.pcm = copy;
+  if (path) snprintf(r->path, sizeof(r->path), "%s", path);
   snprintf(r->key, sizeof(r->key), "Recording:%d", recorded_count);
-  r->block = (block_t){ .name = r->key, .display_name = r->source.name, .cat = CAT_VOX,
+  r->block = (block_t){ .name = r->key, .display_name = r->source.name, .cat = CAT_RECORDING,
     .family = FAMILY_SAMPLES, .genres = GENRE_ANY, .bars = s->bars };
   return blocks_builtin_count() + recorded_count++;
 }
+
+int sample_add(const sample_t *s) { return sample_register(s, NULL); }
 
 void samples_truncate(int count) {
   while (recorded_count > count) {
@@ -140,7 +171,7 @@ static bool_t sample_scan(const AXdirent *entry, void *userdata) {
   FILE *f = len > 0 && (size_t)len < sizeof(path) ? fopen(path, "rb") : NULL;
   sample_t sample = {0};
   if (f) {
-    if (sample_read(f, &sample) && fgetc(f) == EOF) sample_add(&sample);
+    if (sample_read(f, &sample) && fgetc(f) == EOF) sample_register(&sample, path);
     free(sample.pcm); fclose(f);
   }
   return true;
@@ -148,29 +179,54 @@ static bool_t sample_scan(const AXdirent *entry, void *userdata) {
 
 void samples_load(const char *dir) { if (dir && dir[0]) axListDir(dir, sample_scan, (void *)dir); }
 
-bool sample_save(const char *dir, const sample_t *s) {
-  if (!dir || !dir[0] || !sample_valid(s)) return false;
-  // Never use a user-supplied title as a path, and never overwrite an existing recording.
-  char path[1024], temp[1030];
-  unsigned int serial = 1;
-  do {
-    int n = snprintf(path, sizeof(path), "%s/recording-%u.wav", dir, serial++);
-    if (n <= 0 || (size_t)n >= sizeof(path)) return false;
-    if (axPathExists(path)) {
-      FILE *existing = fopen(path, "rb");
-      sample_t old = {0};
-      bool match = existing && sample_read(existing, &old) && fgetc(existing) == EOF && sample_equal(&old, s);
-      if (existing) fclose(existing);
-      free(old.pcm);
-      if (match) return true;
-    }
-  } while (axPathExists(path) && serial);
+static bool sample_write_path(const char *path, const sample_t *s, bool replace) {
+  char temp[1030];
   snprintf(temp, sizeof(temp), "%s.tmp", path);
-  FILE *f = fopen(temp, "wb");
+  FILE *f = fopen(temp, "wbx");
   if (!f) return false;
-  bool ok = sample_write(f, s);
+  bool ok = (replace || !axPathExists(path)) && sample_write(f, s);
   if (fclose(f)) ok = false;
-  if (ok && rename(temp, path)) ok = false;
+  if (ok) ok = file_replace(temp, path);
   if (!ok) remove(temp);
   return ok;
+}
+
+bool sample_store(const char *dir, int id) {
+  recorded_block_t *r = recorded_get(id);
+  if (!r || !dir || !dir[0]) return false;
+  if (r->path[0]) return true;
+  // Keep file names independent of display names.
+  char path[sizeof(r->path)];
+  for (unsigned serial = 1; serial; serial++) {
+    int n = snprintf(path, sizeof(path), "%s/recording-%u.wav", dir, serial);
+    if (n <= 0 || (size_t)n >= sizeof(path)) return false;
+    if (axPathExists(path)) continue;
+    if (!sample_write_path(path, &r->source, false)) return false;
+    snprintf(r->path, sizeof(r->path), "%s", path);
+    r->deleted = false;
+    return true;
+  }
+  return false;
+}
+
+bool sample_rename(int id, const char *name) {
+  recorded_block_t *r = recorded_get(id);
+  if (!r || r->deleted || !name || !name[0] || strlen(name) >= sizeof(r->source.name)) return false;
+  if (!strcmp(r->source.name, name)) return true;
+  sample_t renamed = r->source;
+  memset(renamed.name, 0, sizeof(renamed.name));
+  snprintf(renamed.name, sizeof(renamed.name), "%s", name);
+  if (r->path[0] && !sample_write_path(r->path, &renamed, true)) return false;
+  memcpy(r->source.name, renamed.name, sizeof(renamed.name));
+  return true;
+}
+
+bool sample_delete(int id) {
+  recorded_block_t *r = recorded_get(id);
+  if (!r || r->deleted) return false;
+  if (r->path[0] && remove(r->path) && errno != ENOENT) return false;
+  // The arrangement and mixer can still reference this source by its block ID.
+  r->path[0] = 0;
+  r->deleted = true;
+  return true;
 }

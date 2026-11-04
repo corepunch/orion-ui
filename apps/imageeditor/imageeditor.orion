@@ -316,27 +316,27 @@
 
       <form name="pencil_tools" title="Tools" width="40" flags="WINDOW_NOTITLE | WINDOW_NORESIZE" spacing="0" padding="0">
         <Toolbar>
-          <Button name="pencil" command="tool.pencil" icon="ie-pencil" tooltip="Pencil" flags="TBSTYLE_CHECKGROUP" control-size="small" />
-          <Button name="brush" command="tool.brush" icon="phosphor-circle-fill" tooltip="Brush" flags="TBSTYLE_CHECKGROUP" control-size="small" />
-          <Button name="eraser" command="tool.eraser" icon="ie-eraser" tooltip="Eraser" flags="TBSTYLE_CHECKGROUP" control-size="small" />
-          <Button name="fill" command="tool.fill" icon="ie-fill" tooltip="Fill" flags="TBSTYLE_CHECKGROUP" control-size="small" />
-          <Button name="eyedropper" command="tool.eyedropper" icon="ie-eyedropper" tooltip="Eyedropper" flags="TBSTYLE_CHECKGROUP" control-size="small" />
-          <Button name="select" command="tool.select" icon="ie-select" tooltip="Select" flags="TBSTYLE_CHECKGROUP" control-size="small" />
-          <Button name="move" command="tool.move" icon="ie-move" tooltip="Move" flags="TBSTYLE_CHECKGROUP" control-size="small" />
-          <Button name="hand" command="tool.hand" icon="ie-hand" tooltip="Hand" flags="TBSTYLE_CHECKGROUP" control-size="small" if="!defined(AX_PLATFORM_IOS)" />
+          <Button name="pencil" command="tool.pencil" icon="ie-pencil" tooltip="Pencil" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="brush" command="tool.brush" icon="phosphor-circle-fill" tooltip="Brush" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="eraser" command="tool.eraser" icon="ie-eraser" tooltip="Eraser" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="fill" command="tool.fill" icon="ie-fill" tooltip="Fill" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="eyedropper" command="tool.eyedropper" icon="ie-eyedropper" tooltip="Eyedropper" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="select" command="tool.select" icon="ie-select" tooltip="Select" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="move" command="tool.move" icon="ie-move" tooltip="Move" flags="TBSTYLE_CHECKGROUP" />
+          <Button name="hand" command="tool.hand" icon="ie-hand" tooltip="Hand" flags="TBSTYLE_CHECKGROUP" if="!defined(AX_PLATFORM_IOS)" />
           <Separator />
           <Slider name="size" w="TOOL_PALETTE_BTN_SIZE" flags="SLIDER_TROUGH | TOOLBAR_ITEM_FLAG_FLEXSPACE" tooltip="Brush size" />
           <Slider name="opacity" w="TOOL_PALETTE_BTN_SIZE" flags="SLIDER_TROUGH | TOOLBAR_ITEM_FLAG_FLEXSPACE" tooltip="Pencil opacity" />
           <Separator />
           <Label name="frame" text="1" w="TOOL_PALETTE_BTN_SIZE" tooltip="Current frame" />
-          <Button name="prev" command="anim.prev_frame" icon="fast-arrow-left" tooltip="Previous frame (Left)" control-size="small" />
-          <Button name="next" command="anim.next_frame" icon="fast-arrow-right" tooltip="Next frame (Right)" control-size="small" />
-          <Button name="play" command="anim.play" icon="play" checked-icon="phosphor-pause-fill" tooltip="Play / pause (Space)" control-size="small" />
-          <Button name="trace" command="anim.trace" icon="eye" tooltip="Onion skin" control-size="small" />
+          <Button name="prev" command="anim.prev_frame" icon="fast-arrow-left" tooltip="Previous frame (Left)" />
+          <Button name="next" command="anim.next_frame" icon="fast-arrow-right" tooltip="Next frame (Right)" />
+          <Button name="play" command="anim.play" icon="play" checked-icon="phosphor-pause-fill" tooltip="Play / pause (Space)" />
+          <Button name="trace" command="anim.trace" icon="eye" tooltip="Onion skin" />
           <Separator />
-          <Button name="new" command="anim.new_frame" icon="plus" tooltip="New frame (N)" control-size="small" />
-          <Button name="duplicate" command="anim.duplicate_frame" icon="copy" tooltip="Duplicate frame (D)" control-size="small" />
-          <Button name="delete" command="anim.delete_frame" icon="trash" tooltip="Delete frame (Shift+Delete / Shift+Backspace)" control-size="small" />
+          <Button name="new" command="anim.new_frame" icon="plus" tooltip="New frame (N)" />
+          <Button name="duplicate" command="anim.duplicate_frame" icon="copy" tooltip="Duplicate frame (D)" />
+          <Button name="delete" command="anim.delete_frame" icon="trash" tooltip="Delete frame (Shift+Delete / Shift+Backspace)" />
         </Toolbar>
       </form>
 

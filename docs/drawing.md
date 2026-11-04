@@ -344,38 +344,12 @@ value is 128 and each texel of distance changes it by `128 / padding`, so a
 shader recovers screen-space coverage from the sample and its derivatives.
 Scener's reel renderer (`apps/scener/reel_draw.c`) is the reference user.
 
-### Procedural plastic surfaces
+### Procedural card surfaces
 
-Plastic is a theme material, reached through the theme like every other look:
-`theme_draw_ex(part, rect, state | CTRL_PLASTIC, &(theme_draw_opts_t){.color, .icon, .control_size, .round})`
-for `THEME_PART_BUTTON`, `THEME_PART_TOOLBAR_BUTTON` and `THEME_PART_CARD`. Buttons opt in with
-`WINDOW_PLASTIC` (and `WINDOW_ROUND` for a circular silhouette); toolbars with `TOOLBAR_STYLE_PLASTIC`.
-`theme_content_rect(THEME_PART_CARD, rect, state | CTRL_PLASTIC)` returns the area left for content.
-The material comes from `theme_t.plastic` (`gloss`, `rim`, `ink`, `lift`, `glyph_size`, `shadow_color`)
-and reaches the shader as uniforms; the kernel entry `render_plastic_surface` takes a `plastic_look_t`
-of floats and never sees `ctrl_state_t`. `draw_plastic_button` below is the framework painter behind it:
-it draws a tinted plastic button and solid white SVG glyph in one shader pass. `color` is packed `0xAABBGGRR`; zero
-uses `brAccent`. Icon names use the SVG cache at their final draw size, avoiding a second scaling
-of the glyph mask. `control_size` scales the glyph by the theme's `control.size_pct`
-(see the toolbar guide for the size system). Glyph placement and press offsets snap to device pixels, and
-the glyph has no emboss, highlight halo or inner shadow. The shader adds a smooth
-vertical gradient, directional button bevel and a small drop shadow.
-Normal, hover, selected, pressed and disabled states share the same allocated
-rectangle. Disabled takes precedence over interaction flags.
-
-The shadow stays inside `rect`; no extra layer, framebuffer or neighbouring
-repaint margin is needed. Theme metrics `plastic.corner_radius`,
-`plastic.bevel_width` and `plastic.shadow_size` are logical pixels. Radius clamps
-to half the face size, allowing rounded rectangles, capsules and circles;
-`CORNER_RADIUS_CIRCULAR` (-1) asks for that full rounding at any size, like
-AppKit's circular bezel. SDF
-antialiasing uses screen derivatives to follow display density and transforms.
-
-`draw_plastic_card(rect, state, color)` (also reached via `THEME_PART_CARD`) uses the same shader with the theme's
-card radius and a shallow bevel, without a glyph. `card.shadow_size` reserves the
-shadow margin inside the bounds; `theme_content_rect()` excludes that margin and
-the selection ring. Waveforms and labels remain
-ordinary content drawn over the procedural surface.
+`theme_draw_ex(THEME_PART_CARD, rect, state | CTRL_PLASTIC, &opts)` paints a tinted
+card with a shallow bevel and an inset shadow. Set `opts.color` to the card tint
+in packed `0xAABBGGRR`. `theme_content_rect()` excludes the shadow margin and
+selection ring. Waveforms, artwork and labels draw separately over the surface.
 
 ## Bitmaps and block transfers (`user/gdi.h`)
 
@@ -404,7 +378,7 @@ and `lparam = control`. It consumes the second release so it cannot also fire
 Theme settings are grouped in inline structs by component: `scrollbar`, `caption`,
 `menubar`, `toolbar`, `control`, `button`, `window`, `card`, `thumbnail`, `plastic`, `drag`,
 `tab`, `menu`, `badge`, `field`, `slider`, and `tooltip`. Shadows live under `window.shadow`,
-`drag.shadow`, and `tooltip.shadow`; shared control sizes use `control.size_pct`.
+`drag.shadow`, and `tooltip.shadow`.
 
 `slider` shapes `SLIDER_TROUGH` sliders in both orientations: `trough_inset` and
 `thumb_inset` separate the control edge, trough and thumb on every side,
