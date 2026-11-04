@@ -25,3 +25,17 @@ from the project's **Preprocessor Macros** setting. See
 
 Shine's upstream revision, license, and local changes are documented in
 `third_party/shine/README.orion.md` when that optional folder is present.
+
+## Apple release checks
+
+Use the `groove-macos` and `groove-ipad` schemes from the linked Xcode
+instructions. Test the exact signed builds that will be uploaded.
+
+- On iPad, save a named song, reopen it from My Songs, and verify that Save
+  updates the same song. Export a project copy to Files, import it, and save
+  it to My Songs. Test with the onscreen keyboard in both orientations.
+- On macOS, open and save songs in a folder outside the app sandbox using
+  the native dialogs. Check the window close button and Command-Q with edits.
+- On both platforms, cancel a switch away from an edited song, then save and
+  switch. Reopen a project with an embedded recording and verify audio and
+  video export. On iPad, also verify the microphone and Photos permission flows.

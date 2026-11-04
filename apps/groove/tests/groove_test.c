@@ -188,6 +188,16 @@ static void test_project_io(void) {
   ASSERT_FALSE(app_open_song(bad));
   ASSERT_EQUAL(g_app->song.nclips, old_clips);
   ASSERT_EQUAL(g_app->song.bpm, 140);
+  ASSERT_FALSE(g_app->song_dirty);
+  app_command(ID_LOOP);
+  ASSERT_TRUE(g_app->song_dirty);
+  char copy[140]; snprintf(copy, sizeof(copy), "%s-copy.groove", path);
+  ASSERT_TRUE(song_write_copy(copy));
+  ASSERT_STR_EQUAL(g_app->filename, bad);
+  ASSERT_TRUE(g_app->song_dirty);
+  ASSERT_TRUE(app_save_song(g_app->filename));
+  ASSERT_FALSE(g_app->song_dirty);
+  remove(copy);
   remove(saved); remove(bad);
   destroy_window(win);
   app_shutdown(g_app);
@@ -285,7 +295,11 @@ static void test_song_library(void) {
   ASSERT(strstr(get_window_item(grid->children, ID_SONG_CARD_DETAIL)->title, "128 BPM") &&
          strstr(get_window_item(grid->children->next, ID_SONG_CARD_DETAIL)->title, "Unreadable"), "details show tempo or the read failure");
   ASSERT(!window_has_state(get_window_item(songs, ID_SONG_BROWSER_EMPTY), WINDOW_STATE_VISIBLE) &&
-         send_message(grid, tgGetSelection, 0, NULL) == 0, "the newest song is selected");
+         send_message(grid, tgGetSelection, 0, NULL) == 2, "the current song is selected");
+  send_message(grid, tgSetSelection, 1, NULL);
+  send_message(songs, evCommand, MAKEDWORD(1, tgnSelChange), grid);
+  ASSERT(window_has_state(get_window_item(songs, ID_SONG_BROWSER_OPEN), WINDOW_STATE_DISABLED),
+         "unreadable songs can be deleted but cannot be opened");
   show_window(songs, true);
   window_t *third = get_window_item(grid->children->next->next, ID_SONG_CARD_PREVIEW);
   ui_event_t press = { .message = kEventLeftButtonDown,
@@ -1641,6 +1655,12 @@ static void test_portable_recordings(void) {
   ASSERT_STR_EQUAL(line, "ORION_GROOVE 5\n"); fclose(f);
   app_new_song(); samples_truncate(original_count);
   ASSERT(remove(wav) == 0, "remove the standalone recording");
+  song_t preview;
+  ASSERT_TRUE(song_read_preview(song, &preview));
+  ASSERT_EQUAL(samples_count(), original_count);
+  ASSERT_EQUAL(preview.nclips, 2);
+  ASSERT_EQUAL(song_clip_ticks(&preview, 1), GR_TICKS_BAR);
+  ASSERT_EQUAL(song_length_ticks(&preview), 2 * GR_TICKS_BAR);
   ASSERT_TRUE(app_open_song(song));
   ASSERT_EQUAL(g_app->song.nclips, 2);
   ASSERT_EQUAL(g_app->song.clips[0].block, g_app->song.clips[1].block);

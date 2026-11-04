@@ -13,6 +13,8 @@
   <string source="Save File">Datei speichern</string>
   <string source="Select Folder">Ordner wählen</string>
   <string source="File Picker">Dateiauswahl</string>
+  <string source="File:">Datei:</string>
+  <string source="Filter:">Filter:</string>
   <string source="Location:">Ordner:</string>
   <string source="Up one folder">Übergeordneter Ordner</string>
   <string source="Create new folder">Neuen Ordner erstellen</string>

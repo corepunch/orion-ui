@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="it" decimal="," group="." date="dd/MM/yyyy">
+  <string source="OK">OK</string>
+  <string source="Cancel">Annulla</string>
+  <string source="Yes">Sì</string>
+  <string source="No">No</string>
+  <string source="Message">Messaggio</string>
+  <string source="Open">Apri</string>
+  <string source="Save">Salva</string>
+  <string source="Select">Seleziona</string>
+  <string source="Open File">Apri file</string>
+  <string source="Save File">Salva file</string>
+  <string source="Select Folder">Seleziona cartella</string>
+  <string source="File Picker">Selettore file</string>
+  <string source="File:">File:</string>
+  <string source="Filter:">Filtro:</string>
+  <string source="Location:">Posizione:</string>
+  <string source="Up one folder">Cartella superiore</string>
+  <string source="Create new folder">Crea nuova cartella</string>
+  <string source="Create Folder">Crea cartella</string>
+  <string source="Folder name:">Nome cartella:</string>
+  <string source="Enter a valid folder name.">Inserisci un nome di cartella valido.</string>
+  <string source="Could not create folder:">Impossibile creare la cartella:</string>
+  <string source="Confirm Save As">Conferma Salva con nome</string>
+  <string source="File already exists:">Il file esiste già:</string>
+  <string source="Do you want to replace it?">Vuoi sostituirlo?</string>
+  <string source="Collapse / restore">Comprimi / Ripristina</string>
+  <string source="Hide window">Nascondi finestra</string>
+  <string source="Split Right (Alt: Split Down)">Dividi a destra (Alt: in basso)</string>
+  <string source="Split Down (release Alt: Split Right)">Dividi in basso (rilascia Alt: a destra)</string>
+  <string source="Close active tab">Chiudi scheda attiva</string>
+  <string source="Delete">Elimina</string>
+  <string source="Delete the selected record?">Eliminare il record selezionato?</string>
+  <string source="This record is used by %d other record(s) and cannot be deleted.">Impossibile eliminare questo record perché è usato da %d altri record.</string>
+  <string source="Totals">Totali</string>
+  <string source="The record was changed in another window. Close and reopen this document." where="code">Il record è stato modificato in un’altra finestra. Chiudi e riapri il documento.</string>
+  <string source="The document could not be saved. No changes were applied." where="code">Impossibile salvare il documento. Non è stata applicata alcuna modifica.</string>
+  <string source="Save changes to this document?" where="code">Salvare le modifiche a questo documento?</string>
+</strings>

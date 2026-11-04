@@ -8,6 +8,9 @@
 #include "i18n.h"
 #include <libxml/parser.h>
 #include <libxml/tree.h>
+#ifdef __APPLE__
+#include <CoreFoundation/CoreFoundation.h>
+#endif
 
 typedef struct {
   char *context;  // NULL = any context
@@ -208,13 +211,46 @@ bool ui_set_language(const char *language) {
 
 const char *ui_get_language(void) { return g_locale.language; }
 
+#ifdef __APPLE__
+static bool apple_language(char *buf, size_t buf_sz, bool bundle_only) {
+  CFBundleRef bundle = CFBundleGetMainBundle();
+  bool localized = bundle && CFBundleGetValueForInfoDictionaryKey(bundle, kCFBundleLocalizationsKey);
+  if (bundle_only && !localized) return false;
+  CFArrayRef languages;
+  if (localized) {
+    CFArrayRef available = CFBundleCopyBundleLocalizations(bundle);
+    if (!available) return false;
+    languages = CFBundleCopyPreferredLocalizationsFromArray(available);
+    CFRelease(available);
+  } else {
+    languages = CFLocaleCopyPreferredLanguages();
+  }
+  if (!languages) return false;
+  bool found = CFArrayGetCount(languages) &&
+    CFStringGetCString(CFArrayGetValueAtIndex(languages, 0), buf, buf_sz, kCFStringEncodingUTF8);
+  CFRelease(languages);
+  return found;
+}
+#endif
+
 const char *ui_system_language(char *buf, size_t buf_sz) {
+  if (!buf || !buf_sz) {
+    fprintf(stderr, "[locale] ui_system_language: invalid buffer size=%zu\n", buf_sz);
+    fflush(stderr);
+    return NULL;
+  }
+#ifdef __APPLE__
+  if (apple_language(buf, buf_sz, true)) return buf;
+#endif
   const char *vars[] = { "LC_ALL", "LC_MESSAGES", "LANG" };
   const char *value = NULL;
   for (size_t i = 0; i < sizeof(vars) / sizeof(vars[0]) && !value; i++) {
     const char *v = getenv(vars[i]);
     if (v && *v) value = v;
   }
+#ifdef __APPLE__
+  if (!value && apple_language(buf, buf_sz, false)) return buf;
+#endif
   if (!value || !strcmp(value, "C") || !strcmp(value, "POSIX") || !strncmp(value, "C.", 2)) value = "en";
   size_t n = 0;
   for (; value[n] && value[n] != '.' && value[n] != '@' && n + 1 < buf_sz; n++)

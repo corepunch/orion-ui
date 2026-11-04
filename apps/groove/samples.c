@@ -43,7 +43,7 @@ bool sample_write(FILE *f, const sample_t *s) {
   return ok;
 }
 
-bool sample_read(FILE *f, sample_t *out) {
+static bool sample_read_wav(FILE *f, sample_t *out, bool pcm) {
   if (!f || !out) return false;
   sample_t s = {0};
   uint32_t size, fmt_size, meta_size, bpm, bars, bytes;
@@ -58,6 +58,11 @@ bool sample_read(FILE *f, sample_t *out) {
       bpm < GR_BPM_MIN || bpm > GR_BPM_MAX || (bars != 1 && bars != 2 && bars != 4) ||
       bytes != bars * (uint32_t)bar_frames_for_bpm((int)bpm) * 2 || size != 116 + bytes) return false;
   s.bpm = bpm; s.bars = bars; s.frames = bytes / 2;
+  if (!pcm) {
+    if (fseek(f, bytes, SEEK_CUR) != 0) return false;
+    *out = s;
+    return true;
+  }
   if (!(s.pcm = malloc(bytes))) return false;
   for (int i = 0; i < s.frames; i++) {
     uint8_t b[2];
@@ -67,6 +72,9 @@ bool sample_read(FILE *f, sample_t *out) {
   *out = s;
   return true;
 }
+
+bool sample_read(FILE *f, sample_t *out) { return sample_read_wav(f, out, true); }
+bool sample_read_info(FILE *f, sample_t *out) { return sample_read_wav(f, out, false); }
 
 int samples_count(void) { return recorded_count; }
 const sample_t *sample_get(int id) {

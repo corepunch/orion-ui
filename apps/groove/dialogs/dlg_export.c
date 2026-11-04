@@ -58,6 +58,12 @@ static void export_media_worker(void *userdata) {
 #ifdef _WIN32
     st->ok = MoveFileExA(st->stage, st->path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
 #else
+#if defined(__APPLE__) && TARGET_OS_OSX
+    if (axFileDialogsRequireNative()) {
+      st->ok = axMacPublishFile(st->stage, st->path);
+      if (st->ok) remove(st->stage);
+    } else
+#endif
     st->ok = rename(st->stage, st->path) == 0;
 #endif
   }
@@ -139,8 +145,21 @@ static void export_media_start(window_t *win, export_media_t *st, bool share) {
     }
   }
   unsigned token = (unsigned)rand();
-  snprintf(st->stage, sizeof(st->stage), "%s.part-%u.%s", st->path, token, ext);
-  snprintf(st->wav, sizeof(st->wav), "%s.part-%u.wav", st->path, token + 1);
+#if defined(__APPLE__) && TARGET_OS_OSX
+  if (axFileDialogsRequireNative()) {
+    const char *dir = axSettingsDirectory();
+    if (!dir || !*dir || !axMkDir(dir) ||
+        snprintf(st->stage, sizeof(st->stage), "%s/groove-export-%u.%s", dir, token, ext) >= (int)sizeof(st->stage) ||
+        snprintf(st->wav, sizeof(st->wav), "%s/groove-source-%u.wav", dir, token) >= (int)sizeof(st->wav)) {
+      set_window_item_text(win, ID_EXPORT_MEDIA_STATUS, "%s", ui_tr("Could not start the export."));
+      return;
+    }
+  } else
+#endif
+  {
+    snprintf(st->stage, sizeof(st->stage), "%s.part-%u.%s", st->path, token, ext);
+    snprintf(st->wav, sizeof(st->wav), "%s.part-%u.wav", st->path, token + 1);
+  }
   atomic_store(&st->cancel, false); atomic_store(&st->done, false); atomic_store(&st->progress, 0);
   st->worker = axThreadCreate(export_media_worker, st);
   if (!st->worker) { set_window_item_text(win, ID_EXPORT_MEDIA_STATUS, "%s", ui_tr("Could not start the export.")); return; }
@@ -160,7 +179,7 @@ static result_t export_media_proc(window_t *win, uint32_t msg, uint32_t wparam, 
       window_t *format = get_window_item(win, ID_EXPORT_MEDIA_FORMAT), *aspect = get_window_item(win, ID_EXPORT_MEDIA_ASPECT);
       if (kind == 2) send_message(format, cbAddString, 0, "MP4 (H.264 + AAC)");
       else {
-        send_message(format, cbAddString, 0, "WAV (44.1 kHz, 16-bit)");
+        send_message(format, cbAddString, 0, (void *)ui_tr("WAV (44.1 kHz, 16-bit)"));
 #ifdef GROOVE_USE_SHINE
         send_message(format, cbAddString, 0, "MP3 (192 kbps)");
 #endif

@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="es" decimal="," group="." date="dd/MM/yyyy">
+  <string source="File" where="menu">Archivo</string>
+  <string source="New Song" where="menu">Nueva canción</string>
+  <string source="Open Song..." where="menu">Abrir canción...</string>
+  <string source="Save Song" where="menu,save_song">Guardar canción</string>
+  <string source="Save Song As..." where="menu">Guardar canción como...</string>
+  <string source="Record Sample..." where="menu">Grabar muestra...</string>
+  <string source="Demo: Neon Skyline" where="menu">Demo: Neon Skyline</string>
+  <string source="Demo: Afterglow Avenue" where="menu">Demo: Afterglow Avenue</string>
+  <string source="Demo: Victory Lights" where="menu">Demo: Victory Lights</string>
+  <string source="Quit" where="menu">Salir</string>
+  <string source="Edit" where="menu">Edición</string>
+  <string source="Delete Block" where="menu">Eliminar bloque</string>
+  <string source="Transport" where="menu">Reproducción</string>
+  <string source="Play / Pause" where="menu">Reproducir / Pausar</string>
+  <string source="Stop" where="menu,record_sample">Detener</string>
+  <string source="Rewind" where="menu">Ir al inicio</string>
+  <string source="Go to End" where="menu">Ir al final</string>
+  <string source="Loop" where="menu">Bucle</string>
+  <string source="Window" where="menu">Ventana</string>
+  <string source="Show Library" where="menu">Mostrar biblioteca</string>
+  <string source="Reset Workspace" where="menu">Restablecer espacio de trabajo</string>
+  <string source="Delete" where="song_browser">Eliminar</string>
+  <string source="Remove selected block (Delete)">Eliminar el bloque seleccionado (Supr)</string>
+  <string source="Loop (L)">Bucle (L)</string>
+  <string source="Record Sample" where="record_sample">Grabar muestra</string>
+  <string source="Name:" where="record_sample,save_song">Nombre:</string>
+  <string source="Length:" where="record_sample">Duración:</string>
+  <string source="Record a sample at the current song tempo." where="record_sample">Graba una muestra al tempo de la canción actual.</string>
+  <string source="Use headphones if the song is playing." where="record_sample">Usa auriculares si la canción se está reproduciendo.</string>
+  <string source="Record" where="record_sample">Grabar</string>
+  <string source="Listen" where="record_sample">Escuchar</string>
+  <string source="Save Sample" where="record_sample">Guardar muestra</string>
+  <string source="Cancel" where="record_sample,song_browser,save_song">Cancelar</string>
+  <string source="Groove" where="main_window">Groove</string>
+  <string source="Library" where="library_window">Biblioteca</string>
+  <string source="Rewind (Home)" where="library_window">Ir al inicio (Inicio)</string>
+  <string source="Play / pause (Space)" where="library_window">Reproducir / Pausar (Espacio)</string>
+  <string source="Go to end (End)" where="library_window">Ir al final (Fin)</string>
+  <string source="Drum Loops" where="library_window">Bucles de batería</string>
+  <string source="Drum Fills" where="library_window">Redobles de batería</string>
+  <string source="Bass" where="library_window">Bajo</string>
+  <string source="Guitar" where="library_window">Guitarra</string>
+  <string source="Synth" where="library_window">Sintetizador</string>
+  <string source="Pads" where="library_window">Capas</string>
+  <string source="Stabs" where="library_window">Acentos</string>
+  <string source="Vocals" where="library_window">Voces</string>
+  <string source="Scratch" where="library_window">Scratch</string>
+  <string source="Effects" where="library_window">Efectos</string>
+  <string source="My Samples" where="library_window">Mis muestras</string>
+  <string source="My Songs" where="song_browser">Mis canciones</string>
+  <string source="No saved songs yet. Choose File &gt; Save Song to keep the current song here." where="song_browser">Aún no hay canciones guardadas. Elige Archivo &gt; Guardar canción para guardar aquí la canción actual.</string>
+  <string source="Open" where="song_browser">Abrir</string>
+  <string source="Save" where="save_song">Guardar</string>
+  <string source="Import Song..." where="menu">Importar canción...</string>
+  <string source="Export Project..." where="menu">Exportar proyecto...</string>
+  <string source="1 bar" where="code">1 compás</string>
+  <string source="2 bars" where="code">2 compases</string>
+  <string source="4 bars" where="code">4 compases</string>
+  <string source="Enable Microphone for Groove in system settings." where="code">Permite que Groove use el micrófono en los ajustes del sistema.</string>
+  <string source="Microphone recording is unavailable on this platform." where="code">La grabación con micrófono no está disponible en esta plataforma.</string>
+  <string source="Allow microphone access, then press Record again." where="code">Permite el acceso al micrófono y vuelve a pulsar Grabar.</string>
+  <string source="Microphone unavailable. Check access and the input device." where="code">Micrófono no disponible. Comprueba los permisos y el dispositivo de entrada.</string>
+  <string source="Recording..." where="code">Grabando...</string>
+  <string source="Ready. Listen or save the sample." where="code">Listo. Escucha o guarda la muestra.</string>
+  <string source="Stopped. Unrecorded time is kept silent." where="code">Grabación detenida. El tiempo restante queda en silencio.</string>
+  <string source="Enter a sample name." where="code">Escribe un nombre para la muestra.</string>
+  <string source="Could not save the sample. Check available space." where="code">No se pudo guardar la muestra. Comprueba el espacio disponible.</string>
+  <string source="Save failed" where="code">Error al guardar</string>
+  <string source="Could not read or write the Groove project." where="code">No se pudo leer o escribir el proyecto de Groove.</string>
+  <string source="Project unavailable" where="code">Proyecto no disponible</string>
+  <string source="Export Audio..." where="menu">Exportar audio...</string>
+  <string source="Share Audio..." where="menu">Compartir audio...</string>
+  <string source="Export Timeline Video..." where="menu">Exportar vídeo de la línea de tiempo...</string>
+  <string source="Export" where="export_media">Exportar</string>
+  <string source="Format:" where="export_media">Formato:</string>
+  <string source="Video size:" where="export_media">Tamaño del vídeo:</string>
+  <string source="Export the whole song, with current mute, solo and block levels." where="export_media">Exporta toda la canción con los ajustes actuales de silencio, solo y nivel de los bloques.</string>
+  <string source="Ready to export." where="export_media">Listo para exportar.</string>
+  <string source="Save File..." where="export_media">Guardar archivo...</string>
+  <string source="Share..." where="export_media">Compartir...</string>
+  <string source="Close" where="export_media">Cerrar</string>
+  <string source="Cancel Export" where="code">Cancelar exportación</string>
+  <string source="Could not create the export folder. Try Save File." where="code">No se pudo crear la carpeta de exportación. Prueba con Guardar archivo.</string>
+  <string source="Use the filename extension matching the selected format." where="code">Usa la extensión de archivo que corresponde al formato seleccionado.</string>
+  <string source="Add blocks to the song before exporting." where="code">Añade bloques a la canción antes de exportarla.</string>
+  <string source="Could not prepare the song audio." where="code">No se pudo preparar el audio de la canción.</string>
+  <string source="Could not render the timeline." where="code">No se pudo renderizar la línea de tiempo.</string>
+  <string source="Could not start the export." where="code">No se pudo iniciar la exportación.</string>
+  <string source="Exporting..." where="code">Exportando...</string>
+  <string source="Export saved." where="code">Exportación guardada.</string>
+  <string source="Export cancelled." where="code">Exportación cancelada.</string>
+  <string source="Export failed. Check available space and encoder availability." where="code">Error al exportar. Comprueba el espacio disponible y la disponibilidad del codificador.</string>
+  <string source="The export is saved in the Exports folder. Native sharing is unavailable here; use Save File to choose another location." where="code">El archivo se guardó en la carpeta Exports. La opción de compartir del sistema no está disponible aquí. Elige Guardar archivo para usar otra ubicación.</string>
+  <string source="Export saved" where="code">Exportación guardada</string>
+  <string source="Exporting: %s%%" where="code">Exportando: %s%%</string>
+  <string source="Cancelling..." where="code">Cancelando...</string>
+  <string source="Not enough memory to prepare the export." where="code">No hay memoria suficiente para preparar la exportación.</string>
+  <string source="Could not open this Groove song. The file may be damaged or use an unsupported version." where="code">No se pudo abrir esta canción de Groove. Es posible que el archivo esté dañado o use una versión incompatible.</string>
+  <string source="Open failed" where="code">Error al abrir</string>
+  <string source="Could not save the Groove song. Check the filename and available space." where="code">No se pudo guardar la canción de Groove. Comprueba el nombre del archivo y el espacio disponible.</string>
+  <string source="Could not save the Groove song. Check the available space." where="code">No se pudo guardar la canción de Groove. Comprueba el espacio disponible.</string>
+  <string source="Could not load this demo song. Check that Groove's demo files are installed." where="code">No se pudo cargar esta demo. Comprueba que los archivos de demostración de Groove estén instalados.</string>
+  <string source="Demo unavailable" where="code">Demo no disponible</string>
+  <string source="Groove's song storage is unavailable on this device." where="code">El almacenamiento de canciones de Groove no está disponible en este dispositivo.</string>
+  <string source="Enter a song name without slashes or colons." where="code">Escribe un nombre de canción sin barras ni dos puntos.</string>
+  <string source="A song named &quot;%s&quot; already exists. Replace it?" where="code">Ya existe una canción llamada «%s». ¿Quieres reemplazarla?</string>
+  <string source="Delete &quot;%s&quot;? This cannot be undone." where="code">¿Eliminar «%s»? Esta acción no se puede deshacer.</string>
+  <string source="Delete Song" where="code">Eliminar canción</string>
+  <string source="Could not delete this song." where="code">No se pudo eliminar esta canción.</string>
+  <string source="Delete failed" where="code">Error al eliminar</string>
+  <string source="Unreadable song  -  %s" where="code">Canción ilegible – %s</string>
+  <string source="%s BPM  -  empty  -  %s" where="code">%s BPM – vacía – %s</string>
+  <string source="%s BPM  -  Bars: %s  -  %s" where="code">%s BPM – Compases: %s – %s</string>
+  <string source="No sounds in this family" where="code">No hay sonidos en esta categoría</string>
+  <string source="Groove cannot read this song" where="code">Groove no puede leer esta canción</string>
+  <string source="Mute track" where="code">Silenciar pista</string>
+  <string source="Solo track" where="code">Poner pista en solo</string>
+  <string source="Groove Songs" where="code">Canciones de Groove</string>
+  <string source="Groove Song" where="code">Canción de Groove</string>
+  <string source="All Files" where="code">Todos los archivos</string>
+  <string source="Audio / Video" where="code">Audio / Vídeo</string>
+  <string source="WAV (44.1 kHz, 16-bit)" where="code">WAV (44,1 kHz, 16 bits)</string>
+  <string source="Saved songs appear in My Songs." where="save_song">Las canciones guardadas aparecen en Mis canciones.</string>
+  <string source="Save changes to this song?" where="code">¿Guardar los cambios de esta canción?</string>
+</strings>

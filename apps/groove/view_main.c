@@ -89,7 +89,9 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       if (HIWORD(wparam) == kAcceleratorNotification || HIWORD(wparam) == btnClicked) { app_command(LOWORD(wparam)); return true; }
       return false;
     case evClose:
-      ui_request_quit();
+#ifndef AX_PLATFORM_IOS
+      if (app_confirm_replace_song(win)) ui_request_quit();
+#endif
       return true;
     case evDestroy:
       if (app->accel) free_accelerators(app->accel);

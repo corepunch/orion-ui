@@ -4,6 +4,8 @@
 #include <inttypes.h>
 #ifdef _WIN32
 #include <windows.h>
+#elif defined(__APPLE__) && TARGET_OS_OSX
+#include <unistd.h>
 #endif
 
 static uint32_t track_flags(const bool flags[GR_TRACKS]) {
@@ -27,12 +29,10 @@ static int append_extension(char *path, size_t cap) {
   return 1;
 }
 
-bool app_save_song(const char *path) {
+static bool song_write(const char *path, bool make_current) {
   if (!g_app || !path || !path[0]) return false;
   char target[sizeof(g_app->filename)];
   if (snprintf(target, sizeof(target), "%s", path) >= (int)sizeof(target) || !append_extension(target, sizeof(target))) return false;
-  char temp[sizeof(target) + 5];
-  if (snprintf(temp, sizeof(temp), "%s.tmp", target) >= (int)sizeof(temp)) return false;
   song_t snapshot;
   app_lock();
   snapshot = g_app->song;
@@ -44,10 +44,25 @@ bool app_save_song(const char *path) {
     while (j < nassets && asset_ids[j] != id) j++;
     if (j == nassets) asset_ids[nassets++] = id;
   }
-  char tmp_path[sizeof(temp)];
-  snprintf(tmp_path, sizeof(tmp_path), "%s", temp);
-  FILE *f = fopen(tmp_path, "wb");
-  if (!f) return false;
+  char tmp_path[sizeof(target) + 32];
+  FILE *f;
+#if defined(__APPLE__) && TARGET_OS_OSX
+  bool native = axFileDialogsRequireNative();
+  if (native) {
+    const char *dir = axSettingsDirectory();
+    if (!dir || !*dir || !axMkDir(dir) ||
+        snprintf(tmp_path, sizeof(tmp_path), "%s/groove-save-XXXXXX", dir) >= (int)sizeof(tmp_path)) return false;
+    int fd = mkstemp(tmp_path);
+    if (fd < 0) return false;
+    f = fdopen(fd, "wb");
+    if (!f) { close(fd); remove(tmp_path); return false; }
+  } else
+#endif
+  {
+    snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", target);
+    f = fopen(tmp_path, "wb");
+    if (!f) return false;
+  }
   uint32_t mute = track_flags(s->mute), solo = track_flags(s->solo);
   int version = 4;
   for (int i = 0; i < nassets; i++) if (sample_get(asset_ids[i])) version = 5;
@@ -69,14 +84,24 @@ bool app_save_song(const char *path) {
 #ifdef _WIN32
   if (ok && !MoveFileExA(tmp_path, target, MOVEFILE_REPLACE_EXISTING)) ok = false;
 #else
-  if (ok && rename(tmp_path, target) != 0) ok = false;
+#if defined(__APPLE__) && TARGET_OS_OSX
+  if (ok && native) { ok = axMacPublishFile(tmp_path, target); remove(tmp_path); }
+  else
+#endif
+  if (ok) ok = rename(tmp_path, target) == 0;
 #endif
   if (!ok) { remove(tmp_path); return false; }
-  snprintf(g_app->filename, sizeof(g_app->filename), "%s", target);
+  if (make_current) {
+    snprintf(g_app->filename, sizeof(g_app->filename), "%s", target);
+    g_app->song_dirty = false;
+  }
   return true;
 }
 
-bool song_read(const char *path, song_t *out) {
+bool app_save_song(const char *path) { return song_write(path, true); }
+bool song_write_copy(const char *path) { return song_write(path, false); }
+
+static bool song_read_file(const char *path, song_t *out, bool preview) {
   if (!path || !path[0] || !out) return false;
   FILE *f = fopen(path, "rb");
   if (!f) return false;
@@ -102,7 +127,8 @@ bool song_read(const char *path, song_t *out) {
     int block = -1;
     if (fscanf(f, " %c", &kind) != 1) { ok = false; break; }
     if (kind == 'S' && version == 5) {
-      if (fgetc(f) != '\n' || !sample_read(f, &embedded[i]) || fgetc(f) != '\n') { ok = false; break; }
+      if (fgetc(f) != '\n' || !(preview ? sample_read_info(f, &embedded[i]) : sample_read(f, &embedded[i])) ||
+          fgetc(f) != '\n') { ok = false; break; }
       embedded_bytes += (size_t)embedded[i].frames * sizeof(int16_t);
       if (embedded_bytes > 64u * 1024u * 1024u) { ok = false; break; }
       asset_ids[i] = -1;
@@ -139,7 +165,8 @@ bool song_read(const char *path, song_t *out) {
     if (!valid_asset || !song_can_place(&next, track, position, ticks, -1) || !order) { ok = false; break; }
     for (int j = 0; j < next.nclips; j++) if (next.clips[j].order == order) ok = false;
     if (!ok) break;
-    next.clips[next.nclips++] = (clip_t){ source, track, position, order, length, gain_db };
+    next.clips[next.nclips++] = (clip_t){ source, track, position, order,
+      preview && asset_ids[source] < 0 ? ticks : length, gain_db };
     next.clip_order = MAX(next.clip_order, order);
   }
   if (ok) { int c; do c = fgetc(f); while (c != EOF && isspace((unsigned char)c)); ok = c == EOF && !ferror(f); }
@@ -158,9 +185,13 @@ bool song_read(const char *path, song_t *out) {
   return ok;
 }
 
+bool song_read(const char *path, song_t *out) { return song_read_file(path, out, false); }
+bool song_read_preview(const char *path, song_t *out) { return song_read_file(path, out, true); }
+
 bool app_open_song(const char *path) {
   if (!g_app || !path || !path[0] || strlen(path) >= sizeof(g_app->filename)) return false;
   song_t next;
+  int old_samples = samples_count();
   if (!song_read(path, &next)) return false;
   int bpm = next.bpm;
   bool ok = true;
@@ -175,7 +206,11 @@ bool app_open_song(const char *path) {
       if (!block_render(id, bpm, &prepared[i])) { ok = false; break; }
     }
   }
-  if (!ok) { for (int i = 0; i < next.nclips; i++) free(prepared[i].pcm); return false; }
+  if (!ok) {
+    for (int i = 0; i < next.nclips; i++) free(prepared[i].pcm);
+    samples_truncate(old_samples);
+    return false;
+  }
 
   float *stale[GR_MAX_BLOCKS] = {0};
   app_lock();
@@ -194,6 +229,7 @@ bool app_open_song(const char *path) {
   g_app->selected_clip = -1;
   g_app->auditioned = -1;
   snprintf(g_app->filename, sizeof(g_app->filename), "%s", path);
+  g_app->song_dirty = false;
   if (g_app->sheet) invalidate_window(g_app->sheet);
   if (g_app->library) invalidate_window(g_app->library);
   transport_refresh();

@@ -44,8 +44,8 @@ static result_t win_track_header(window_t *win, uint32_t msg, uint32_t wparam, v
     case evCreate:
       if (!(tr = allocate_window_data(win, sizeof(*tr)))) return false;
       tr->track = (int)(intptr_t)lparam;
-      tr->mute = make_toggle(win, ID_MUTE(tr->track), "phosphor-speaker-slash-fill", "Mute track");
-      tr->solo = make_toggle(win, ID_SOLO(tr->track), "phosphor-headphones-fill", "Solo track");
+      tr->mute = make_toggle(win, ID_MUTE(tr->track), "phosphor-speaker-slash-fill", ui_tr("Mute track"));
+      tr->solo = make_toggle(win, ID_SOLO(tr->track), "phosphor-headphones-fill", ui_tr("Solo track"));
       return true;
     case evResize: row_layout(win); return false;
     case evPaint: {

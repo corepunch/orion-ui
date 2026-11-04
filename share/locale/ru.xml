@@ -14,6 +14,8 @@
   <string source="Save File">Сохранить файл</string>
   <string source="Select Folder">Выбрать папку</string>
   <string source="File Picker">Выбор файла</string>
+  <string source="File:">Файл:</string>
+  <string source="Filter:">Фильтр:</string>
   <string source="Location:">Папка:</string>
   <string source="Up one folder">На уровень вверх</string>
   <string source="Create new folder">Создать папку</string>

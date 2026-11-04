@@ -137,7 +137,7 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       irect16_t cr = get_client_rect(win);
       fill_rect(get_sys_color(brControlBg), cr);
       if (!apply_filter(win, st))
-        draw_text(FONT_SYSTEM, "No sounds in this family", TILE_PAD + 4, TILE_PAD + 4, get_sys_color(brTextSecondary));
+        draw_text(FONT_SYSTEM, ui_tr("No sounds in this family"), TILE_PAD + 4, TILE_PAD + 4, get_sys_color(brTextSecondary));
       return false;
     }
     case binReload:

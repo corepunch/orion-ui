@@ -119,6 +119,7 @@ int            bar_frames_for_bpm(int bpm);
 
 typedef struct { char name[64]; int bpm, bars, frames; int16_t *pcm; } sample_t;
 bool sample_read(FILE *f, sample_t *out);
+bool sample_read_info(FILE *f, sample_t *out);
 bool sample_write(FILE *f, const sample_t *sample);
 bool sample_save(const char *dir, const sample_t *sample);
 void samples_load(const char *dir);
@@ -193,6 +194,7 @@ typedef struct {
   uint32_t      timer;
   int           selected_clip;
   char          filename[512];
+  bool          song_dirty;
   char          songs_dir[512]; // iPad: Groove's own song storage, never Files/iCloud; empty on desktop
   char          samples_dir[512]; // reusable originals, beside Songs
   drag_t        drag;
@@ -248,10 +250,14 @@ void      app_shutdown(groove_t *app);
 void      app_load_demo(void);
 bool      app_load_demo_song(int demo);
 void      app_new_song(void);
+bool      app_confirm_replace_song(window_t *owner);
 bool      app_open_song(const char *path);
 bool      app_save_song(const char *path);
-// Parses a song file without touching the app's song or audio (persistence.c).
+bool      song_write_copy(const char *path);
+// Playable reads register embedded samples. Preview reads use clip durations
+// and leave embedded recordings outside the live sample library.
 bool      song_read(const char *path, song_t *out);
+bool      song_read_preview(const char *path, song_t *out);
 // "name" -> <songs_dir>/name.groove; false for an empty name or one with path separators.
 bool      song_path_for_name(const char *name, char *path, size_t cap);
 void      song_name_from_path(const char *path, char *name, size_t cap);

@@ -44,7 +44,7 @@ static bool_t scan_entry(AXdirent const *e, void *userdata) {
   song_name_from_path(e->name, row->name, sizeof(row->name));
   row->modified = (int)e->modified;
   song_t *song = malloc(sizeof(*song));
-  if (song && song_read(row->path, song)) {   // bpm 0 marks a file Groove cannot read
+  if (song && song_read_preview(row->path, song)) {
     row->bpm = song->bpm;
     row->bars = (song_length_ticks(song) + GR_TICKS_BAR - 1) / GR_TICKS_BAR;
   }

@@ -109,6 +109,7 @@ def generate(args):
     bundle = output / (args.app + '.xcodeproj')
     existing = read_project((args.settings_from or bundle) / 'project.pbxproj')
     project = Project(existing if args.unsigned else {})
+    languages = ['en'] + sorted(path.stem for path in (ROOT / 'apps' / args.app / 'share/locale').glob('*.xml') if path.stem != 'en')
     relative_root = os.path.relpath(ROOT, output)
     common = {
         'ORION_ROOT': '$(SRCROOT)/' + relative_root,
@@ -162,7 +163,7 @@ def generate(args):
         if ipad:
             settings.update(signing, SDKROOT='iphoneos', SUPPORTED_PLATFORMS='iphoneos iphonesimulator',
                             IPHONEOS_DEPLOYMENT_TARGET='16.0', TARGETED_DEVICE_FAMILY='2', SUPPORTS_MACCATALYST='NO')
-            frameworks = ('UIKit', 'CoreGraphics', 'Foundation', 'OpenGLES', 'QuartzCore', 'Security',
+            frameworks = ('UIKit', 'CoreGraphics', 'Foundation', 'CoreFoundation', 'OpenGLES', 'QuartzCore', 'Security',
                           'UniformTypeIdentifiers', 'AudioToolbox', 'AVFoundation', 'CoreMedia', 'CoreVideo', 'PhotosUI', 'ImageIO')
         else:
             settings.update(SUPPORTED_PLATFORMS='macosx', MACOSX_DEPLOYMENT_TARGET='12.0',
@@ -194,6 +195,7 @@ def generate(args):
                     CFBundleName='Groove', CFBundleDisplayName='Groove', CFBundlePackageType='APPL',
                     CFBundleInfoDictionaryVersion='6.0', CFBundleShortVersionString='$(MARKETING_VERSION)',
                     CFBundleVersion='$(CURRENT_PROJECT_VERSION)', CFBundleDevelopmentRegion='en',
+                    CFBundleLocalizations=languages,
                     NSMicrophoneUsageDescription='Record your own sounds and vocals as samples in Groove songs.',
                     ITSAppUsesNonExemptEncryption=False)
         if ipad:
@@ -251,7 +253,7 @@ def generate(args):
     products_group = project.add('group/products', 'PBXGroup', name='Products', children=products, sourceTree='<group>')
     main_group = project.add('group/main', 'PBXGroup', children=browse + [products_group], sourceTree='<group>')
     root = project.add('project', 'PBXProject', buildConfigurationList=root_configs, compatibilityVersion='Xcode 14.0',
-                       developmentRegion='en', knownRegions=['en', 'Base'], mainGroup=main_group,
+                       developmentRegion='en', knownRegions=[*languages, 'Base'], mainGroup=main_group,
                        productRefGroup=products_group, projectDirPath='', projectRoot='', targets=targets)
     if existing.get(root, {}).get('attributes'):
         project.objects[root]['attributes'] = existing[root]['attributes']

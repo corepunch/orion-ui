@@ -394,6 +394,8 @@
 "-framework",
 "Foundation",
 "-framework",
+"CoreFoundation",
+"-framework",
 "OpenGLES",
 "-framework",
 "QuartzCore",
@@ -439,6 +441,8 @@
 "CoreGraphics",
 "-framework",
 "Foundation",
+"-framework",
+"CoreFoundation",
 "-framework",
 "OpenGLES",
 "-framework",
@@ -599,6 +603,12 @@
 "compatibilityVersion" = "Xcode 14.0";
 "developmentRegion" = "en";
 "knownRegions" = ("en",
+"de",
+"es",
+"fr",
+"it",
+"pt-BR",
+"ru",
 "Base",
 );
 "mainGroup" = "664F835B1ED89846DAB355B5";

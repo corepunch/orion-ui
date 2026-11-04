@@ -48,7 +48,7 @@ APP_HEADERS := $(shell $(call find_app_sources,$(APP_DIR),-name '*.h' ! -path '*
 PLATFORM_LIB := $(BUILD_ROOT)/platform/libplatform.a
 HOST_TOOL := $(abspath $(BUILD_DIR))/host/orionc
 GENERATED := build/generated/$(APP_DIR)/$(APP_SOURCE).h
-LIBS := -lxml2 -lm -lobjc -framework UIKit -framework CoreGraphics -framework Foundation -framework OpenGLES -framework QuartzCore -framework Security -framework UniformTypeIdentifiers -framework AudioToolbox -framework AVFoundation -framework CoreMedia -framework CoreVideo -framework PhotosUI -framework ImageIO
+LIBS := -lxml2 -lm -lobjc -framework UIKit -framework CoreGraphics -framework Foundation -framework CoreFoundation -framework OpenGLES -framework QuartzCore -framework Security -framework UniformTypeIdentifiers -framework AudioToolbox -framework AVFoundation -framework CoreMedia -framework CoreVideo -framework PhotosUI -framework ImageIO
 
 .PHONY: app run deploy mac settings platform
 settings:

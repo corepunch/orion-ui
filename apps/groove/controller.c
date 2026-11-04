@@ -83,6 +83,9 @@ void app_new_song(void) {
   app_unlock();
   release_all_audio();
   g_app->filename[0] = 0;
+  g_app->song_dirty = false;
+  transport_refresh();
+  if (g_app->tracks) tracks_sync();
   invalidate_window(g_app->sheet);
 }
 
@@ -207,6 +210,7 @@ void app_set_bpm(int bpm) {
   app_lock();
   s->pos = s->pos * bar_frames_for_bpm(bpm) / bar_frames_for_bpm(s->bpm);
   s->bpm = bpm;
+  g_app->song_dirty = true;
   s->preview_block = -1;
   for (int i = 0; i < blocks_count(); i++) stale[i] = block_release(i);
   for (int i = 0; i < n; i++) block_install(ids[i], bpm, &pcm[i]);
@@ -276,9 +280,9 @@ void app_select_clip(int idx) {
 }
 
 #ifdef AX_PLATFORM_IOS
-// iPad: songs live in Groove's own library (My Songs), never in Files.
+// iPad: the library is the default destination; Import and Export use Files.
 static void open_song_dialog(void)    { app_show_songs(g_app->menubar_win); }
-static void save_song_as_dialog(void) { app_save_song_as(g_app->menubar_win); }
+static bool save_song_as_dialog(window_t *owner) { return app_save_song_as(owner); }
 #else
 static void open_song_dialog(void) {
   char path[512] = {0};
@@ -289,30 +293,51 @@ static void open_song_dialog(void) {
   ofn.nMaxFile = sizeof(path);
   ofn.lpstrFilter = "Groove Songs\0*.groove\0All Files\0*.*\0";
   ofn.Flags = OFN_FILEMUSTEXIST;
-  if (get_open_filename(&ofn) && !app_open_song(path))
-    message_box(g_app->menubar_win, "Could not open this Groove song. The file may be damaged or use an unsupported version.", "Open failed", MB_OK);
+  if (get_open_filename(&ofn) && app_confirm_replace_song(ofn.hwndOwner) && !app_open_song(path))
+    message_box(g_app->menubar_win, ui_tr("Could not open this Groove song. The file may be damaged or use an unsupported version."), ui_tr("Open failed"), MB_OK);
 }
 
-static void save_song_as_dialog(void) {
+static bool save_song_as_dialog(window_t *owner) {
   char path[512] = {0};
   snprintf(path, sizeof(path), "%s", g_app->filename[0] ? g_app->filename : "Untitled.groove");
   openfilename_t ofn = {0};
   ofn.lStructSize = sizeof(ofn);
-  ofn.hwndOwner = g_app->menubar_win;
+  ofn.hwndOwner = owner;
   ofn.lpstrFile = path;
   ofn.nMaxFile = sizeof(path);
   ofn.lpstrFilter = "Groove Song\0*.groove\0";
   ofn.Flags = OFN_OVERWRITEPROMPT;
-  if (get_save_filename(&ofn) && !app_save_song(path))
-    message_box(g_app->menubar_win, "Could not save the Groove song. Check the filename and available space.", "Save failed", MB_OK);
+  if (!get_save_filename(&ofn)) return false;
+  if (app_save_song(path)) return true;
+  message_box(owner, ui_tr("Could not save the Groove song. Check the filename and available space."), ui_tr("Save failed"), MB_OK);
+  return false;
 }
 #endif
+
+static bool save_current_song(window_t *owner) {
+  if (!g_app->filename[0]) return save_song_as_dialog(owner);
+#ifdef AX_PLATFORM_IOS
+  size_t dir_len = strlen(g_app->songs_dir);
+  if (!dir_len || strncmp(g_app->filename, g_app->songs_dir, dir_len) || g_app->filename[dir_len] != '/')
+    return save_song_as_dialog(owner);
+#endif
+  if (app_save_song(g_app->filename)) return true;
+  message_box(owner, ui_tr("Could not save the Groove song. Check the available space."), ui_tr("Save failed"), MB_OK);
+  return false;
+}
+
+bool app_confirm_replace_song(window_t *owner) {
+  if (!g_app->song_dirty) return true;
+  int choice = message_box(owner, ui_tr("Save changes to this song?"), ui_tr("Save Song"), MB_YESNOCANCEL);
+  return choice == IDNO || (choice == IDYES && save_current_song(owner));
+}
 
 bool app_resize_clip(int idx, int ticks) {
   if (!g_app) return false;
   app_lock();
   bool ok = song_resize_clip(&g_app->song, idx, ticks);
   app_unlock();
+  if (ok) g_app->song_dirty = true;
   if (ok && g_app->sheet) invalidate_window(g_app->sheet);
   return ok;
 }
@@ -328,14 +353,14 @@ bool app_drop(const drag_t *d) {
     if ((ok = idx >= 0)) g_app->selected_clip = idx;
   }
   app_unlock();
+  if (ok) g_app->song_dirty = true;
   invalidate_window(g_app->sheet);
   return ok;
 }
 
 static void project_file_dialog(bool exporting) {
-  char path[512] = {0}, active[sizeof(g_app->filename)];
-  snprintf(active, sizeof(active), "%s", g_app->filename);
-  if (exporting) song_name_from_path(active, path, sizeof(path));
+  char path[512] = {0};
+  if (exporting) song_name_from_path(g_app->filename, path, sizeof(path));
   if (exporting && !path[0]) snprintf(path, sizeof(path), "Untitled.groove");
   openfilename_t ofn = {0};
   ofn.lStructSize = sizeof(ofn); ofn.hwndOwner = g_app->menubar_win;
@@ -343,9 +368,11 @@ static void project_file_dialog(bool exporting) {
   ofn.lpstrFilter = "Groove Songs\0*.groove\0";
   ofn.Flags = exporting ? OFN_OVERWRITEPROMPT : OFN_FILEMUSTEXIST;
   bool accepted = exporting ? get_save_filename(&ofn) : get_open_filename(&ofn);
-  if (!accepted) return;
-  bool ok = exporting ? app_save_song(path) : app_open_song(path);
-  if (exporting) snprintf(g_app->filename, sizeof(g_app->filename), "%s", active);
+  if (!accepted || (!exporting && !app_confirm_replace_song(ofn.hwndOwner))) return;
+  bool ok = exporting ? song_write_copy(path) : app_open_song(path);
+#ifdef AX_PLATFORM_IOS
+  if (ok && !exporting) g_app->song_dirty = true;
+#endif
   if (!ok) message_box(g_app->menubar_win, ui_tr("Could not read or write the Groove project."), ui_tr("Project unavailable"), MB_OK);
 }
 
@@ -362,7 +389,7 @@ void app_command(uint16_t id) {
     case ID_STOP:     app_set_playing(false); app_seek_position(0); break;
     case ID_REWIND:   app_seek_position(0); break;
     case ID_FORWARD:  app_seek_position(song_length_ticks(s)); break;
-    case ID_LOOP:     app_lock(); s->loop = !s->loop; app_unlock(); transport_refresh(); break;
+    case ID_LOOP:     app_lock(); s->loop = !s->loop; app_unlock(); g_app->song_dirty = true; transport_refresh(); break;
     case ID_WINDOW_LIBRARY:
       show_window(g_app->library, true);
       dock_collapse(g_app->library, false);
@@ -373,33 +400,34 @@ void app_command(uint16_t id) {
       dock_set_side(g_app->library, DOCK_BOTTOM);
       if (g_app->menubar_win) dock_set_side(g_app->menubar_win, DOCK_TOP);
       break;
-    case ID_FILE_NEW:  app_new_song(); break;
+    case ID_FILE_NEW:  if (app_confirm_replace_song(g_app->menubar_win)) app_new_song(); break;
     case ID_FILE_OPEN: open_song_dialog(); break;
-    case ID_FILE_SAVE:
-      if (!g_app->filename[0]) save_song_as_dialog();
-      else if (!app_save_song(g_app->filename)) message_box(g_app->menubar_win, "Could not save the Groove song. Check the available space.", "Save failed", MB_OK);
-      break;
-    case ID_FILE_SAVEAS: save_song_as_dialog(); break;
+    case ID_FILE_SAVE:   save_current_song(g_app->menubar_win); break;
+    case ID_FILE_SAVEAS: save_song_as_dialog(g_app->menubar_win); break;
     case ID_FILE_DEMO:
     case ID_FILE_DEMO_AFTERGLOW:
     case ID_FILE_DEMO_VICTORY: {
       int demo = id == ID_FILE_DEMO ? GR_DEMO_SKYLINE : id == ID_FILE_DEMO_AFTERGLOW ? GR_DEMO_AFTERGLOW : GR_DEMO_VICTORY;
-      if (!app_load_demo_song(demo)) message_box(g_app->menubar_win, "Could not load this demo song. Check that Groove's demo files are installed.", "Demo unavailable", MB_OK);
+      if (app_confirm_replace_song(g_app->menubar_win) && !app_load_demo_song(demo))
+        message_box(g_app->menubar_win, ui_tr("Could not load this demo song. Check that Groove's demo files are installed."), ui_tr("Demo unavailable"), MB_OK);
       break;
     }
-    case ID_FILE_QUIT: ui_request_quit(); break;
+#ifndef AX_PLATFORM_IOS
+    case ID_FILE_QUIT: if (app_confirm_replace_song(g_app->menubar_win)) ui_request_quit(); break;
+#endif
     case ID_DELETE:
       if (g_app->selected_clip < 0 || g_app->selected_clip >= s->nclips) break;
       app_lock();
       song_remove_clip(s, g_app->selected_clip);
       g_app->selected_clip = -1;
       app_unlock();
+      g_app->song_dirty = true;
       invalidate_window(g_app->sheet);
       break;
     default:
       if (id >= ID_FAMILY(0) && id < ID_FAMILY(FAMILY_COUNT)) app_set_family(id - ID_FAMILY(0));
-      else if (id >= ID_MUTE(0) && id < ID_MUTE(GR_TRACKS)) { app_lock(); s->mute[id - ID_MUTE(0)] = !s->mute[id - ID_MUTE(0)]; app_unlock(); tracks_sync(); }
-      else if (id >= ID_SOLO(0) && id < ID_SOLO(GR_TRACKS)) { app_lock(); s->solo[id - ID_SOLO(0)] = !s->solo[id - ID_SOLO(0)]; app_unlock(); tracks_sync(); }
+      else if (id >= ID_MUTE(0) && id < ID_MUTE(GR_TRACKS)) { app_lock(); s->mute[id - ID_MUTE(0)] = !s->mute[id - ID_MUTE(0)]; app_unlock(); g_app->song_dirty = true; tracks_sync(); }
+      else if (id >= ID_SOLO(0) && id < ID_SOLO(GR_TRACKS)) { app_lock(); s->solo[id - ID_SOLO(0)] = !s->solo[id - ID_SOLO(0)]; app_unlock(); g_app->song_dirty = true; tracks_sync(); }
       break;
   }
 }

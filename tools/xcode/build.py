@@ -68,6 +68,8 @@ def resources(root, output):
         if target.exists():
             shutil.rmtree(target)
         shutil.copytree(source, target)
+    for localization in (root / 'apps/groove/share/locale').glob('*.lproj'):
+        shutil.copytree(localization, destination / localization.name, dirs_exist_ok=True)
     if ipad:
         (bundle / 'bin').mkdir(exist_ok=True)
     else:

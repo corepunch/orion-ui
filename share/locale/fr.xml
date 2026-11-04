@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="fr" decimal="," group=" " date="dd/MM/yyyy">
+  <string source="OK">OK</string>
+  <string source="Cancel">Annuler</string>
+  <string source="Yes">Oui</string>
+  <string source="No">Non</string>
+  <string source="Message">Message</string>
+  <string source="Open">Ouvrir</string>
+  <string source="Save">Enregistrer</string>
+  <string source="Select">Sélectionner</string>
+  <string source="Open File">Ouvrir un fichier</string>
+  <string source="Save File">Enregistrer le fichier</string>
+  <string source="Select Folder">Choisir un dossier</string>
+  <string source="File Picker">Sélecteur de fichiers</string>
+  <string source="File:">Fichier :</string>
+  <string source="Filter:">Filtre :</string>
+  <string source="Location:">Emplacement :</string>
+  <string source="Up one folder">Dossier parent</string>
+  <string source="Create new folder">Créer un dossier</string>
+  <string source="Create Folder">Créer un dossier</string>
+  <string source="Folder name:">Nom du dossier :</string>
+  <string source="Enter a valid folder name.">Saisissez un nom de dossier valide.</string>
+  <string source="Could not create folder:">Impossible de créer le dossier :</string>
+  <string source="Confirm Save As">Confirmer l’enregistrement</string>
+  <string source="File already exists:">Le fichier existe déjà :</string>
+  <string source="Do you want to replace it?">Voulez-vous le remplacer ?</string>
+  <string source="Collapse / restore">Réduire / Rétablir</string>
+  <string source="Hide window">Masquer la fenêtre</string>
+  <string source="Split Right (Alt: Split Down)">Scinder à droite (Alt : en bas)</string>
+  <string source="Split Down (release Alt: Split Right)">Scinder en bas (relâcher Alt : à droite)</string>
+  <string source="Close active tab">Fermer l’onglet actif</string>
+  <string source="Delete">Supprimer</string>
+  <string source="Delete the selected record?">Supprimer l’enregistrement sélectionné ?</string>
+  <string source="This record is used by %d other record(s) and cannot be deleted.">Impossible de supprimer cet enregistrement. Il est référencé par %d autres enregistrements.</string>
+  <string source="Totals">Totaux</string>
+  <string source="The record was changed in another window. Close and reopen this document." where="code">L’enregistrement a été modifié dans une autre fenêtre. Fermez et rouvrez ce document.</string>
+  <string source="The document could not be saved. No changes were applied." where="code">Impossible d’enregistrer le document. Aucune modification n’a été appliquée.</string>
+  <string source="Save changes to this document?" where="code">Enregistrer les modifications de ce document ?</string>
+</strings>

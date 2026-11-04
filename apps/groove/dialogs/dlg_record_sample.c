@@ -76,6 +76,7 @@ static result_t record_sample_proc(window_t *win, uint32_t msg, uint32_t wparam,
     case evCreate: {
       if (!(st = allocate_window_data(win, sizeof(*st)))) return false;
       atomic_init(&st->received, 0);
+      set_window_item_text(win, ID_RECORD_SAMPLE_NAME, "%s", "Recording");
       window_t *bars = get_window_item(win, ID_RECORD_SAMPLE_BARS);
       send_message(bars, cbAddString, 0, (void *)ui_tr("1 bar"));
       send_message(bars, cbAddString, 0, (void *)ui_tr("2 bars"));

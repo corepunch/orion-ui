@@ -232,6 +232,9 @@ def main():
         'NSPrincipalClass': 'NSApplication',
     }
     if args.app == 'groove':
+        for localization in (share_root / 'groove/locale').glob('*.lproj'):
+            shutil.copytree(localization, resources / localization.name)
+        info['CFBundleLocalizations'] = ['en'] + sorted(p.stem for p in (share_root / 'groove/locale').glob('*.xml') if p.stem != 'en')
         info['NSMicrophoneUsageDescription'] = 'Record your own sounds and vocals as samples in Groove songs.'
     (contents / 'Info.plist').write_bytes(plistlib.dumps(info, fmt=plistlib.FMT_XML))
     (contents / 'PkgInfo').write_bytes(b'APPL????')

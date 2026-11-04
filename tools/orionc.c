@@ -43,6 +43,7 @@ typedef struct {
   char label[ORIONC_STRING_SIZE];  // "Sync Current Branch"
   char category[ORIONC_MAX_IDENT]; // menu name "remote"
   char hotkey[ORIONC_MAX_IDENT];   // "F5" / "Ctrl+K" / ""
+  xmlNodePtr menu_item;
 } action_meta_t;
 typedef struct { action_meta_t v[ORIONC_MAX_IDS]; int n; } action_meta_list_t;
 
@@ -268,6 +269,7 @@ static void collect_menu_ids(ids_t *ids, action_meta_list_t *meta,
       snprintf(dotted, sizeof(dotted), "%s.%s", category, nz(name, label));
       action_meta_t *m = &meta->v[meta->n++];
       memset(m, 0, sizeof(*m));
+      m->menu_item = it;
       snprintf(m->name, sizeof(m->name), "%s", dotted);
       snprintf(m->id, sizeof(m->id), "%s", id);
       snprintf(m->label, sizeof(m->label), "%s", nz(label, name));
@@ -662,7 +664,9 @@ static void emit_action_meta(FILE *f, const char *prefix, const action_meta_list
     cstr(name, sizeof(name), meta->v[i].name);
     cstr(category, sizeof(category), meta->v[i].category);
     cstr(hotkey, sizeof(hotkey), meta->v[i].hotkey);
+    emit_if(f, meta->v[i].menu_item, false);
     OUT("  { %s, %s, %s, %s, %s },\n", meta->v[i].id, name, label, category, hotkey);
+    emit_if(f, meta->v[i].menu_item, true);
   }
   OUT("};\n#define %s_action_meta_count ((int)(sizeof(%s_action_meta) / sizeof(%s_action_meta[0])))\n\n", prefix, prefix, prefix);
 }
@@ -678,7 +682,9 @@ static void emit_accelerators(FILE *f, const char *prefix, const action_meta_lis
     while (next_hotkey(&cursor, token, sizeof(token))) {
       char fvirt[64], key[64];
       if (!parse_hotkey(token, fvirt, sizeof(fvirt), key, sizeof(key))) continue;
+      emit_if(f, meta->v[i].menu_item, false);
       OUT("  { %s, %s, %s },\n", fvirt, key, meta->v[i].id);
+      emit_if(f, meta->v[i].menu_item, true);
     }
   }
   OUT("};\n#define %s_default_accel_count ((int)(sizeof(%s_default_accels) / sizeof(%s_default_accels[0])))\n\n", prefix, prefix, prefix);

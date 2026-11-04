@@ -680,7 +680,7 @@ static result_t fp_proc(window_t *win, uint32_t msg,
       if (ps->filter_combo) {
         for (int i = 0; i < ps->num_filters; i++) {
           send_message(ps->filter_combo, cbAddString,
-                       0, (void *)ps->filters[i].description);
+                       0, (void *)ui_tr(ps->filters[i].description));
         }
         if (ps->num_filters > 0) {
           send_message(ps->filter_combo, cbSetCurrentSelection,

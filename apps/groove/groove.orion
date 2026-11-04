@@ -27,8 +27,8 @@
         <item name="demo" label="Demo: Neon Skyline" />
         <item name="demo_afterglow" label="Demo: Afterglow Avenue" />
         <item name="demo_victory" label="Demo: Victory Lights" />
-        <Separator />
-        <item name="quit" label="Quit" shortcut="Ctrl+Q" />
+        <Separator if="!defined(AX_PLATFORM_IOS)" />
+        <item name="quit" label="Quit" shortcut="Ctrl+Q" if="!defined(AX_PLATFORM_IOS)" />
       </menu>
 
       <menu name="edit" label="Edit">
@@ -106,7 +106,7 @@
             <Label name="lbl_bars" text="Length:" />
           </Column>
           <Column name="inputs">
-            <TextBox name="name" text="Recording" />
+            <TextBox name="name" />
             <ComboBox name="bars" />
           </Column>
         </GridView>
@@ -157,14 +157,14 @@
       </form>
 
       <!-- iPad File > Open Song: every saved song as a card with a preview drawn from the file itself. -->
-      <form name="song_browser" title="My Songs" width="760" height="520" spacing="8" padding="8">
+      <form name="song_browser" title="My Songs" width="700" height="460" spacing="8" padding="12">
         <TileGrid name="songs" spacing="8" padding="8 8 8 8" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL | WINDOW_FLEXSPACE" />
-        <Label name="empty" text="No saved songs yet. Choose File &gt; Save Song to keep the current song here." color="text-disabled" />
+        <Label name="empty" text="No saved songs yet. Choose File &gt; Save Song to keep the current song here." color="text-secondary" />
         <StackView name="actions" orientation="horizontal" spacing="6">
-          <Button name="delete" text="Delete" />
+          <Button name="delete" text="Delete" height="44" />
           <Space name="flex" />
-          <Button name="open" text="Open" flags="BUTTON_DEFAULT" />
-          <Button name="cancel" text="Cancel" />
+          <Button name="cancel" text="Cancel" height="44" />
+          <Button name="open" text="Open" height="44" flags="BUTTON_DEFAULT" />
         </StackView>
       </form>
 
@@ -175,20 +175,20 @@
         <Label name="detail" color="text-disabled" />
       </form>
 
-      <form name="save_song" title="Save Song" width="300" spacing="8" padding="8">
+      <form name="save_song" title="Save Song" width="360" spacing="8" padding="12">
         <GridView name="fields" spacing="4">
           <Column name="labels" width="auto">
             <Label name="lbl_name" text="Name:" />
           </Column>
           <Column name="inputs">
-            <TextBox name="name" text="" />
+            <TextBox name="name" height="44" />
           </Column>
         </GridView>
-        <Separator name="sep" />
+        <Label name="status" text="Saved songs appear in My Songs." height="44" color="text-secondary" />
         <StackView name="actions" orientation="horizontal" spacing="6">
           <Space name="flex" />
-          <Button name="ok" text="Save" flags="BUTTON_DEFAULT" />
-          <Button name="cancel" text="Cancel" />
+          <Button name="cancel" text="Cancel" height="44" />
+          <Button name="ok" text="Save" height="44" flags="BUTTON_DEFAULT" />
         </StackView>
       </form>
     </forms>

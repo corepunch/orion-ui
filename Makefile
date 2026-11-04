@@ -45,7 +45,7 @@ else ifeq ($(UNAME_S),Darwin)
 ARCH     ?= arm64
 CFLAGS   += -arch $(ARCH)
 LDFLAGS  += -arch $(ARCH)
-LIBS     += -framework OpenGL -framework AVFoundation -framework AudioToolbox -framework CoreMedia -framework CoreVideo -framework AppKit
+LIBS     += -framework OpenGL -framework AVFoundation -framework AudioToolbox -framework CoreMedia -framework CoreVideo -framework AppKit -framework CoreFoundation
 KERNEL_INPUT_OBJ = $(BUILD_DIR)/audio_input_apple.o $(BUILD_DIR)/media_export_apple.o
 # Scener encodes reel videos with VideoToolbox.
 SCENER_LIBS = -framework VideoToolbox -framework CoreMedia -framework CoreVideo -framework CoreFoundation

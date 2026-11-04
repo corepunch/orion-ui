@@ -56,11 +56,11 @@ void song_draw_overview(const song_t *song, irect16_t r) {
     int x0 = (int)((int64_t)c->position * r.w / span), x1 = (int)((int64_t)song_clip_end(song, i) * r.w / span);
     int y0 = c->track * r.h / GR_TRACKS, y1 = (c->track + 1) * r.h / GR_TRACKS;
     bool audible = solo ? song->solo[c->track] : !song->mute[c->track];
-    if (!b || x1 <= x0) continue;
+    if (x1 <= x0) continue;
     irect16_t clip = R(r.x + x0, r.y + y0 + 2, MAX(1, x1 - x0 - 1), MAX(1, y1 - y0 - 4));
-    uint32_t color = audible ? category_color(b->cat) : get_sys_color(brTextSecondary);
+    uint32_t color = audible ? category_color(b ? b->cat : CAT_VOX) : get_sys_color(brTextSecondary);
     fill_rect(color_with_alpha(color, audible ? 0xc0 : 0x50), clip);
-    if (clip.h >= 36 && clip.w > 26) {
+    if (b && clip.h >= 36 && clip.w > 26) {
       draw_text_ellipsized(FONT_SMALL, b->display_name ? b->display_name : b->name,
         clip.x + 4, clip.y + 2, MAX(0, clip.w - 8), get_sys_color(brTextNormal));
       if (b->audio.npeaks > 0) for (int x = 2; x < clip.w - 2; x++) {

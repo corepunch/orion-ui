@@ -27,7 +27,6 @@
   <string source="Record Sample" where="record_sample">Запись сэмпла</string>
   <string source="Name:" where="record_sample,save_song">Название:</string>
   <string source="Length:" where="record_sample">Длина:</string>
-  <string source="Recording" where="record_sample">Запись</string>
   <string source="Record a sample at the current song tempo." where="record_sample">Запишите сэмпл в темпе текущей песни.</string>
   <string source="Use headphones if the song is playing." where="record_sample">При воспроизведении песни используйте наушники.</string>
   <string source="Record" where="record_sample">Записать</string>
@@ -98,4 +97,31 @@
   <string source="Exporting: %s%%" where="code">Экспорт: %s%%</string>
   <string source="Cancelling..." where="code">Отмена...</string>
   <string source="Not enough memory to prepare the export." where="code">Недостаточно памяти для подготовки экспорта.</string>
+  <string source="Could not open this Groove song. The file may be damaged or use an unsupported version." where="code">Не удалось открыть песню Groove. Возможно, файл повреждён или создан в неподдерживаемой версии.</string>
+  <string source="Open failed" where="code">Ошибка открытия</string>
+  <string source="Could not save the Groove song. Check the filename and available space." where="code">Не удалось сохранить песню Groove. Проверьте имя файла и свободное место.</string>
+  <string source="Could not save the Groove song. Check the available space." where="code">Не удалось сохранить песню Groove. Проверьте свободное место.</string>
+  <string source="Could not load this demo song. Check that Groove's demo files are installed." where="code">Не удалось загрузить демопесню. Проверьте, установлены ли демофайлы Groove.</string>
+  <string source="Demo unavailable" where="code">Демо недоступно</string>
+  <string source="Groove's song storage is unavailable on this device." where="code">Хранилище песен Groove недоступно на этом устройстве.</string>
+  <string source="Enter a song name without slashes or colons." where="code">Введите название песни без косых черт и двоеточий.</string>
+  <string source="A song named &quot;%s&quot; already exists. Replace it?" where="code">Песня «%s» уже существует. Заменить её?</string>
+  <string source="Delete &quot;%s&quot;? This cannot be undone." where="code">Удалить «%s»? Это действие нельзя отменить.</string>
+  <string source="Delete Song" where="code">Удалить песню</string>
+  <string source="Could not delete this song." where="code">Не удалось удалить песню.</string>
+  <string source="Delete failed" where="code">Ошибка удаления</string>
+  <string source="Unreadable song  -  %s" where="code">Не удалось прочитать песню — %s</string>
+  <string source="%s BPM  -  empty  -  %s" where="code">%s уд/мин — пустая песня — %s</string>
+  <string source="%s BPM  -  Bars: %s  -  %s" where="code">%s уд/мин — тактов: %s — %s</string>
+  <string source="No sounds in this family" where="code">В этой категории нет звуков</string>
+  <string source="Groove cannot read this song" where="code">Не удалось прочитать песню</string>
+  <string source="Mute track" where="code">Отключить звук дорожки</string>
+  <string source="Solo track" where="code">Соло дорожки</string>
+  <string source="Groove Songs" where="code">Песни Groove</string>
+  <string source="Groove Song" where="code">Песня Groove</string>
+  <string source="All Files" where="code">Все файлы</string>
+  <string source="Audio / Video" where="code">Аудио / видео</string>
+  <string source="WAV (44.1 kHz, 16-bit)" where="code">WAV (44,1 кГц, 16 бит)</string>
+  <string source="Saved songs appear in My Songs." where="save_song">Сохранённые песни появятся в разделе «Мои песни».</string>
+  <string source="Save changes to this song?" where="code">Сохранить изменения в этой песне?</string>
 </strings>

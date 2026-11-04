@@ -11,20 +11,21 @@ static const ctrl_binding_t kSaveBindings[] = {
 static bool save_named(window_t *win, const char *name) {
   char path[sizeof(g_app->filename)];
   if (!g_app->songs_dir[0]) {
-    message_box(win, "Groove's song storage is unavailable on this device.", "Save failed", MB_OK);
+    message_box(win, ui_tr("Groove's song storage is unavailable on this device."), ui_tr("Save failed"), MB_OK);
     return false;
   }
   if (!song_path_for_name(name, path, sizeof(path))) {
-    message_box(win, "Enter a song name without slashes or colons.", "Save Song", MB_OK);
+    set_window_item_text(win, ID_SAVE_SONG_STATUS, "%s", ui_tr("Enter a song name without slashes or colons."));
+    set_focus(get_window_item(win, ID_SAVE_SONG_NAME));
     return false;
   }
   if (strcmp(path, g_app->filename) && axPathExists(path)) {
     char prompt[256];
-    snprintf(prompt, sizeof(prompt), "A song named \"%s\" already exists. Replace it?", name);
-    if (message_box(win, prompt, "Save Song", MB_YESNO) != IDYES) return false;
+    snprintf(prompt, sizeof(prompt), ui_tr("A song named \"%s\" already exists. Replace it?"), name);
+    if (message_box(win, prompt, ui_tr("Save Song"), MB_YESNO) != IDYES) return false;
   }
   if (!app_save_song(path)) {
-    message_box(win, "Could not save the Groove song. Check the available space.", "Save failed", MB_OK);
+    message_box(win, ui_tr("Could not save the Groove song. Check the available space."), ui_tr("Save failed"), MB_OK);
     return false;
   }
   return true;
@@ -59,5 +60,5 @@ bool app_save_song_as(window_t *owner) {
   if (!g_app) return false;
   char name[128];
   song_name_from_path(g_app->filename, name, sizeof(name));
-  return show_dialog_from_form(&groove_save_song_form, "Save Song", owner, save_song_proc, name[0] ? name : "Untitled") == 1;
+  return show_dialog_from_form(&groove_save_song_form, NULL, owner, save_song_proc, name[0] ? name : "Untitled") == 1;
 }

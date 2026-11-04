@@ -20,7 +20,7 @@ The design follows the Win32 MUI resource model and Qt's `.ts` files:
 | `LoadString(hInst, IDS_SAVE)` | `tr("Save")` | `ui_tr("Save")` |
 | Dialog templates translated in the `.mui` | `.ui` strings extracted by `lupdate` | `.orion` texts translated when a form is instantiated |
 | — | context (class name) disambiguates | `<context name="form">`, the form's name |
-| `GetUserDefaultUILanguage` | `QLocale::system()` | `ui_system_language()` (`LC_ALL`/`LC_MESSAGES`/`LANG`) |
+| `GetUserDefaultUILanguage` | `QLocale::system()` | `ui_system_language()` (Apple bundle preferences or `LC_ALL`/`LC_MESSAGES`/`LANG`) |
 | `GetNumberFormatEx`, `GetDateFormatEx` | `QLocale::toString` | `ui_format_number`, `ui_format_date` |
 | Pseudo-locale `qps-ploc` | — | `ui_set_language("qps-ploc")` |
 
@@ -59,6 +59,13 @@ lists only what differs. Later layers override earlier ones. Ledger uses a
 third layer for its accounting configuration: the platform says "Tax ID",
 the Russian configuration turns it into "ИНН" — in Russian *and* in English
 ("INN"), because the term belongs to the country, not the UI language.
+
+On iPadOS and macOS, declare the supported catalog languages in the app's
+`CFBundleLocalizations` and set `CFBundleDevelopmentRegion` to `en`.
+`ui_system_language()` asks the bundle for the best match before loading any
+catalogs. This honors the app-specific language and the ordered list of
+system languages. Groove's packagers derive the list from its catalog files.
+Groove also accepts `--lang <tag>` at launch for testing.
 
 ## What is translated automatically
 

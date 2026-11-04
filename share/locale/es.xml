@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="es" decimal="," group="." date="dd/MM/yyyy">
+  <string source="OK">Aceptar</string>
+  <string source="Cancel">Cancelar</string>
+  <string source="Yes">Sí</string>
+  <string source="No">No</string>
+  <string source="Message">Mensaje</string>
+  <string source="Open">Abrir</string>
+  <string source="Save">Guardar</string>
+  <string source="Select">Seleccionar</string>
+  <string source="Open File">Abrir archivo</string>
+  <string source="Save File">Guardar archivo</string>
+  <string source="Select Folder">Seleccionar carpeta</string>
+  <string source="File Picker">Selector de archivos</string>
+  <string source="File:">Archivo:</string>
+  <string source="Filter:">Filtro:</string>
+  <string source="Location:">Ubicación:</string>
+  <string source="Up one folder">Subir un nivel</string>
+  <string source="Create new folder">Crear carpeta nueva</string>
+  <string source="Create Folder">Crear carpeta</string>
+  <string source="Folder name:">Nombre de la carpeta:</string>
+  <string source="Enter a valid folder name.">Introduce un nombre de carpeta válido.</string>
+  <string source="Could not create folder:">No se pudo crear la carpeta:</string>
+  <string source="Confirm Save As">Confirmar Guardar como</string>
+  <string source="File already exists:">El archivo ya existe:</string>
+  <string source="Do you want to replace it?">¿Quieres reemplazarlo?</string>
+  <string source="Collapse / restore">Contraer / Restaurar</string>
+  <string source="Hide window">Ocultar ventana</string>
+  <string source="Split Right (Alt: Split Down)">Dividir a la derecha (Alt: abajo)</string>
+  <string source="Split Down (release Alt: Split Right)">Dividir abajo (suelta Alt: a la derecha)</string>
+  <string source="Close active tab">Cerrar pestaña activa</string>
+  <string source="Delete">Eliminar</string>
+  <string source="Delete the selected record?">¿Eliminar el registro seleccionado?</string>
+  <string source="This record is used by %d other record(s) and cannot be deleted.">No se puede eliminar este registro porque %d registros lo usan.</string>
+  <string source="Totals">Totales</string>
+  <string source="The record was changed in another window. Close and reopen this document." where="code">El registro se modificó en otra ventana. Cierra y vuelve a abrir este documento.</string>
+  <string source="The document could not be saved. No changes were applied." where="code">No se pudo guardar el documento. No se aplicó ningún cambio.</string>
+  <string source="Save changes to this document?" where="code">¿Guardar los cambios en este documento?</string>
+</strings>

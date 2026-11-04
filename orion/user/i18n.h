@@ -41,8 +41,9 @@
 bool ui_set_language(const char *language);
 const char *ui_get_language(void);
 
-// The user's preferred language from LC_ALL / LC_MESSAGES / LANG
-// ("ru_RU.UTF-8" -> "ru-RU"); "en" when unset or "C"/"POSIX".
+// Apple bundles that declare CFBundleLocalizations use the system's best
+// match, including app-specific preferences. Otherwise LC_ALL / LC_MESSAGES /
+// LANG take precedence, followed by Apple's preferred language or English.
 const char *ui_system_language(char *buf, size_t buf_sz);
 
 // Adds a layer: loads the neutral then the regional catalog of the current

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Enregistrez vos propres sons et voix pour les utiliser comme échantillons dans vos morceaux Groove.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Enregistrez dans votre photothèque les vidéos exportées depuis la timeline de Groove.</string>
+</dict>
+</plist>

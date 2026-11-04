@@ -82,7 +82,10 @@ def main():
         'UIApplicationSceneManifest': {'UIApplicationSupportsMultipleScenes': False, 'UISceneConfigurations': {'UIWindowSceneSessionRoleApplication': [{'UISceneConfigurationName': 'Orion', 'UISceneDelegateClassName': 'AXSceneDelegate'}]}},
     })
     if args.app == 'groove':
+        for localization in (target / 'share/groove/locale').glob('*.lproj'):
+            shutil.copytree(localization, target / localization.name)
         info['ITSAppUsesNonExemptEncryption'] = False
+        info['CFBundleLocalizations'] = ['en'] + sorted(p.stem for p in (target / 'share/groove/locale').glob('*.xml') if p.stem != 'en')
     if phone:
         info.update({'UIStatusBarHidden': True, 'UIViewControllerBasedStatusBarAppearance': False})
     if args.app == 'groove':
