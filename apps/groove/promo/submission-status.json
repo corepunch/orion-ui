@@ -55,6 +55,17 @@
     "build_metadata_url": "https://appstoreconnect.apple.com/teams/69a6de81-3668-47e3-e053-5b8c7c11a4d1/apps/6821380428/testflight/ios/3aac09eb-cc65-41b9-bbe6-f781064844c5/metadata"
   },
   "submitted_for_review": false,
+  "ipad_creative_assets": {
+    "version": "1.0",
+    "locale": "en-US",
+    "source": "apps/groove/promo/creative/groove-universal.png",
+    "render": "python3 apps/groove/promo/render-creative.py",
+    "size": [5244, 2950],
+    "placements": ["Header", "Search Results"],
+    "verified_ui": "1 of 1 Header Asset; 1 of 1 Search Results Asset",
+    "verified_date": "2026-11-04",
+    "submitted_for_review": false
+  },
   "source_commit": "78702e94",
   "waveform_alignment": "bottom",
   "verified_date": "2026-10-25",
