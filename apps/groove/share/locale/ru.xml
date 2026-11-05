@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="ru" decimal="," group=" " date="dd.MM.yyyy">
   <string source="File" where="menu">Файл</string>
-  <string source="New Song" where="menu,new_song_card">Новая песня</string>
+  <string source="New Song" where="menu">Новая песня</string>
   <string source="Open Song..." where="menu">Открыть песню...</string>
   <string source="Save Song" where="menu,save_song">Сохранить песню</string>
   <string source="Save Song As..." where="menu">Сохранить песню как...</string>
@@ -54,7 +54,7 @@
   <string source="Open" where="song_browser">Открыть</string>
   <string source="Save" where="save_song">Сохранить</string>
   <string source="Import Song..." where="menu">Импортировать песню...</string>
-  <string source="Export Project..." where="menu">Экспортировать проект...</string>
+  <string source="Export Project..." obsolete="true">Экспортировать проект...</string>
   <string source="1 bar" where="code">1 такт</string>
   <string source="2 bars" where="code">2 такта</string>
   <string source="4 bars" where="code">4 такта</string>
@@ -140,4 +140,7 @@
   <string source="Your saved songs will appear here." where="song_browser">Здесь появятся сохранённые композиции.</string>
   <string source="+ New Song" where="new_song_card">+ Новая композиция</string>
   <string source="Start with an empty song" where="new_song_card">Начать с пустой композиции</string>
+  <string source="Export Song..." where="menu">Экспортировать песню...</string>
+  <string source="Could not read or write the Groove song." where="code">Не удалось прочитать или сохранить песню Groove.</string>
+  <string source="Song unavailable" where="code">Песня недоступна</string>
 </strings>
