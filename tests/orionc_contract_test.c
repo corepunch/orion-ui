@@ -55,6 +55,18 @@ static bool contains(const char *hay, const char *needle) {
     return strstr(hay, needle) != NULL;
 }
 
+static void test_context_menu_platform_condition(void) {
+  TEST("orionc: context menu items honor platform conditions");
+  const char *fixture = "<orion><menus><menu name=\"file\" label=\"File\">"
+    "<item name=\"quit\" label=\"Quit\"/></menu></menus>"
+    "<contextmenus><contextmenu name=\"more\"><item command=\"file.quit\" label=\"Quit\" if=\"!defined(AX_PLATFORM_IOS)\"/>"
+    "</contextmenu></contextmenus></orion>";
+  char out[8192] = {0};
+  ASSERT_EQUAL(run_orionc(fixture, "context_condition", out, sizeof(out)), 0);
+  ASSERT_TRUE(contains(out, "#if !defined(AX_PLATFORM_IOS)\n  { \"Quit\", ID_FILE_QUIT, NULL, 0 },\n#endif"));
+  PASS();
+}
+
 static const char *kValid = ""
   "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
   "<orion version=\"1\" name=\"t\" title=\"T\">\n"
@@ -375,6 +387,7 @@ int main(void) {
     TEST_START("orionc generator contract");
 #if !defined(_WIN32)
     test_valid_manifest_accepted();
+    test_context_menu_platform_condition();
     test_large_control_manifest();
     test_activity_page_bindings();
     test_page_metadata();

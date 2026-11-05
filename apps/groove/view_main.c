@@ -1,44 +1,14 @@
-// VIEW: the application chrome (menu bar and compact toolbar), then the sheet
-// above the library: a transport and family toolbar over one sound bin.
+// VIEW: the application toolbar, then the sheet above the sound library.
 
 #include "groove.h"
-#include <orion/gem.h>
-#include <orion/commctl/appchrome.h>
-
-result_t app_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-  if (msg == evCommand && (HIWORD(wparam) == kMenuBarNotificationItemClick || HIWORD(wparam) == kAcceleratorNotification)) {
-    app_command((uint16_t)LOWORD(wparam));
-    return true;
+static void show_more_actions(window_t *win) {
+  irect16_t r = {0};
+  if (!send_message(win, tbGetItemRect, ID_MAIN_WINDOW_MORE, &r) ||
+      !show_popup_menu(win, CONTEXT_MENU_MORE_ITEMS, CONTEXT_MENU_MORE_COUNT,
+                       window_screen_x(win) + r.x, window_screen_y(win) + toolbar_content_offset(win) + r.y + r.h)) {
+    fprintf(stderr, "[groove] more actions menu unavailable win=%u\n", win->id);
+    fflush(stderr);
   }
-  return win_menubar(win, msg, wparam, lparam);
-}
-
-// The compact toolbar shares the menu row when it fits (groove.orion <toolbar>).
-static result_t app_toolbar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-  (void)lparam;
-  switch (msg) {
-    case evCreate: return true;
-    case evCommand: if (HIWORD(wparam) != btnClicked) return false; app_command(LOWORD(wparam)); return true;
-    case evDestroy:
-      if (g_app && g_app->toolbar == win) g_app->toolbar = NULL;
-      return false;
-    default: return false;
-  }
-}
-
-void create_menubar(void) {
-#ifdef BUILD_AS_GEM
-  g_app->menubar_win = set_app_menu(app_menubar_proc, kMenus, kNumMenus, app_command, g_app->hinstance);
-  g_app->chrome = create_application_chrome("Groove Chrome", NULL, NULL, 0, app_toolbar_proc,
-                                            &groove_application_toolbar, g_app->hinstance);
-#else
-  g_app->chrome = create_application_chrome("Groove Chrome", app_menubar_proc, kMenus, kNumMenus, app_toolbar_proc,
-                                            &groove_application_toolbar, g_app->hinstance);
-  g_app->menubar_win = app_chrome_menubar(g_app->chrome);
-#endif
-  g_app->toolbar = app_chrome_toolbar(g_app->chrome);
-  g_app->accel = load_accelerators(groove_default_accels, ARRAY_LEN(groove_default_accels));
-  if (g_app->menubar_win && g_app->accel) send_message(g_app->menubar_win, kMenuBarMessageSetAccelerators, 0, g_app->accel);
 }
 
 result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -47,7 +17,14 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
   switch (msg) {
     case evCreate: {
       app->win = win;
-      create_menubar();
+      app->toolbar = win;
+      app->accel = load_accelerators(groove_default_accels, ARRAY_LEN(groove_default_accels));
+      toolbar_state_t *toolbar = toolbar_get_state(win);
+      if (!toolbar || !toolbar->item_count)
+        send_message(win, tbSetItems, (uint32_t)groove_main_window_form.toolbar_count, (void *)groove_main_window_form.toolbar_items);
+#ifdef AX_PLATFORM_IOS
+      send_message(win, tbSetButtonSize, BUTTON_HEIGHT + 4, NULL);
+#endif
       if (app->sheet) {
         if (!app->tracks) {
           fprintf(stderr, "[groove] track headers unavailable parent=%u\n", (unsigned)win->id);
@@ -71,7 +48,7 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
                                   MAKERECT(0, 0, 1, 1), win, win_sheet, app->hinstance, NULL);
       app->tracks = create_window("Tracks", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOACTIVATE | WINDOW_NOTABSTOP | WINDOW_NODRAG,
                                   MAKERECT(0, 0, GR_SHEET_HEADER_W, 1), win, win_tracks, app->hinstance, NULL);
-      app->library = create_window("Library", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE,
+      app->library = create_window("Library", WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE,
                                     MAKERECT(0, 0, 800, 340), win, win_transport, app->hinstance, NULL);
       dock_window(app->library, DOCK_BOTTOM, DOCK_EDGE(DOCK_BOTTOM), DOCK_RESIZABLE | DOCK_NOFLOAT | DOCK_OVERLAY_SPLITTER, 340, 100);
       if (app->tracks) dock_window(app->tracks, DOCK_LEFT, DOCK_EDGE(DOCK_LEFT), DOCK_NOFLOAT, GR_SHEET_HEADER_W, GR_SHEET_HEADER_W);
@@ -92,7 +69,8 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       }
       return true;
     case evCommand:
-      if (HIWORD(wparam) == kAcceleratorNotification || HIWORD(wparam) == btnClicked) { app_command(LOWORD(wparam)); return true; }
+      if (HIWORD(wparam) == btnClicked && LOWORD(wparam) == ID_MAIN_WINDOW_MORE) { show_more_actions(win); return true; }
+      if (HIWORD(wparam) == kAcceleratorNotification || HIWORD(wparam) == kMenuBarNotificationItemClick || HIWORD(wparam) == btnClicked) { app_command(LOWORD(wparam)); return true; }
       return false;
     case evClose:
 #ifndef AX_PLATFORM_IOS
@@ -102,11 +80,6 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evDestroy:
       if (app->accel) free_accelerators(app->accel);
       app->accel = NULL;
-      if (app->chrome) destroy_window(app->chrome);
-      app->chrome = NULL;
-#ifndef BUILD_AS_GEM
-      app->menubar_win = NULL; // owned by the chrome
-#endif
       app->toolbar = NULL;
       return true;
     default: return false;

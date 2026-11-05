@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="ru" decimal="," group=" " date="dd.MM.yyyy">
   <string source="File" where="menu">Файл</string>
-  <string source="New Song" where="menu">Новая песня</string>
-  <string source="Open Song..." where="menu">Открыть песню...</string>
-  <string source="Save Song" where="menu,save_song">Сохранить песню</string>
+  <string source="New Song" where="menu,main_window">Новая песня</string>
+  <string source="Open Song..." where="menu,main_window">Открыть песню...</string>
+  <string source="Save Song" where="menu,main_window,save_song">Сохранить песню</string>
   <string source="Save Song As..." where="menu">Сохранить песню как...</string>
-  <string source="Record Sample..." where="menu">Записать сэмпл...</string>
+  <string source="Record Sample..." where="menu,main_window">Записать сэмпл...</string>
   <string source="Demo: Neon Skyline" where="menu">Демо: Neon Skyline</string>
   <string source="Demo: Afterglow Avenue" where="menu">Демо: Afterglow Avenue</string>
   <string source="Demo: Victory Lights" where="menu">Демо: Victory Lights</string>
@@ -15,15 +15,15 @@
   <string source="Transport" where="menu">Воспроизведение</string>
   <string source="Play / Pause" where="menu">Пуск / Пауза</string>
   <string source="Stop" where="menu,record_sample">Стоп</string>
-  <string source="Rewind" where="menu,library_window">В начало</string>
+  <string source="Rewind" where="menu">В начало</string>
   <string source="Go to End" where="menu">В конец</string>
   <string source="Loop" where="menu">Повтор</string>
   <string source="Window" where="menu">Окно</string>
   <string source="Show Library" where="menu">Показать библиотеку</string>
   <string source="Reset Workspace" where="menu">Сбросить расположение окон</string>
   <string source="Delete" where="manage_samples,song_browser">Удалить</string>
-  <string source="Remove selected block (Delete)">Удалить выделенный блок (Delete)</string>
-  <string source="Loop (L)">Повтор (L)</string>
+  <string source="Remove selected block (Delete)" where="main_window">Удалить выделенный блок (Delete)</string>
+  <string source="Loop (L)" where="main_window">Повтор (L)</string>
   <string source="Record Sample" where="record_sample">Запись сэмпла</string>
   <string source="Name:" where="record_sample,manage_samples,save_song">Название:</string>
   <string source="Length:" where="record_sample">Длина:</string>
@@ -35,9 +35,9 @@
   <string source="Cancel" where="record_sample,song_browser,save_song">Отмена</string>
   <string source="Groove" where="main_window">Groove</string>
   <string source="Library" where="library_window">Библиотека</string>
-  <string source="Rewind (Home)" where="library_window">В начало (Home)</string>
-  <string source="Play / pause (Space)" where="library_window">Пуск / Пауза (Пробел)</string>
-  <string source="Go to end (End)" where="library_window">В конец (End)</string>
+  <string source="Rewind (Home)" where="main_window">В начало (Home)</string>
+  <string source="Play / pause (Space)" where="main_window">Пуск / Пауза (Пробел)</string>
+  <string source="Go to end (End)" where="main_window">В конец (End)</string>
   <string source="Drum Loops" where="code">Ритмы</string>
   <string source="Drum Fills" where="code">Сбивки</string>
   <string source="Bass" where="code">Бас</string>
@@ -70,7 +70,7 @@
   <string source="Save failed" where="code">Ошибка сохранения</string>
   <string source="Could not read or write the Groove project." where="code">Не удалось прочитать или записать проект Groove.</string>
   <string source="Project unavailable" where="code">Проект недоступен</string>
-  <string source="Export Audio..." where="menu">Экспортировать аудио...</string>
+  <string source="Export Audio..." where="menu,main_window">Экспортировать аудио...</string>
   <string source="Share Audio..." where="menu">Поделиться аудио...</string>
   <string source="Export Timeline Video..." where="menu">Экспортировать видео таймлайна...</string>
   <string source="Export" where="export_media">Экспорт</string>
@@ -143,12 +143,13 @@
   <string source="Export Song..." where="menu">Экспортировать песню...</string>
   <string source="Could not read or write the Groove song." where="code">Не удалось прочитать или сохранить песню Groove.</string>
   <string source="Song unavailable" where="code">Песня недоступна</string>
-  <string source="Play" where="library_window">Играть</string>
-  <string source="Forward" where="library_window">Вперёд</string>
+  <string source="Play" obsolete="true">Играть</string>
+  <string source="Forward" obsolete="true">Вперёд</string>
   <string source="Sounds" where="code">Звуки</string>
   <string source="Drums|Fills|Bass|Guitar|Synth|Pads|Stabs|Vocals|Scratch|FX|My Samples" where="library_window">Барабаны|Сбивки|Бас|Гитара|Синтезатор|Пэды|Акценты|Вокал|Скретч|Эффекты|Мои сэмплы</string>
   <string source="All tracks are in use. Empty a track to choose this family." where="code">Все дорожки заняты. Освободите дорожку, чтобы выбрать эту группу звуков.</string>
   <string source="Empty track" where="code">Пустая дорожка</string>
   <string source="Add Same Instrument Track" where="menu">Добавить дорожку с тем же инструментом</string>
   <string source="All 8 tracks are in use" where="menu">Все 8 дорожек заняты</string>
+  <string source="More actions" where="main_window">Другие действия</string>
 </strings>

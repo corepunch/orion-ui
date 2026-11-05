@@ -303,20 +303,20 @@ void app_select_clip(int idx) {
 
 #ifdef AX_PLATFORM_IOS
 // iPad: the library is the default destination; Import and Export use Files.
-static void open_song_dialog(void)    { app_show_songs(g_app->menubar_win); }
+static void open_song_dialog(void)    { app_show_songs(g_app->win); }
 static bool save_song_as_dialog(window_t *owner) { return app_save_song_as(owner); }
 #else
 static void open_song_dialog(void) {
   char path[512] = {0};
   openfilename_t ofn = {0};
   ofn.lStructSize = sizeof(ofn);
-  ofn.hwndOwner = g_app->menubar_win;
+  ofn.hwndOwner = g_app->win;
   ofn.lpstrFile = path;
   ofn.nMaxFile = sizeof(path);
   ofn.lpstrFilter = "Groove Songs\0*.groove\0All Files\0*.*\0";
   ofn.Flags = OFN_FILEMUSTEXIST;
   if (get_open_filename(&ofn) && app_confirm_replace_song(ofn.hwndOwner) && !app_open_song(path))
-    message_box(g_app->menubar_win, ui_tr("Could not open this Groove song. The file may be damaged or use an unsupported version."), ui_tr("Open failed"), MB_OK);
+    message_box(g_app->win, ui_tr("Could not open this Groove song. The file may be damaged or use an unsupported version."), ui_tr("Open failed"), MB_OK);
 }
 
 static bool save_song_as_dialog(window_t *owner) {
@@ -425,7 +425,7 @@ static void project_file_dialog(bool exporting) {
   if (exporting) song_name_from_path(g_app->filename, path, sizeof(path));
   if (exporting && !path[0]) snprintf(path, sizeof(path), "Untitled.groove");
   openfilename_t ofn = {0};
-  ofn.lStructSize = sizeof(ofn); ofn.hwndOwner = g_app->menubar_win;
+  ofn.lStructSize = sizeof(ofn); ofn.hwndOwner = g_app->win;
   ofn.lpstrFile = path; ofn.nMaxFile = sizeof(path);
   ofn.lpstrFilter = "Groove Songs\0*.groove\0";
   ofn.Flags = exporting ? OFN_OVERWRITEPROMPT : OFN_FILEMUSTEXIST;
@@ -435,15 +435,15 @@ static void project_file_dialog(bool exporting) {
 #ifdef AX_PLATFORM_IOS
   if (ok && !exporting) g_app->song_dirty = true;
 #endif
-  if (!ok) message_box(g_app->menubar_win, ui_tr("Could not read or write the Groove song."), ui_tr("Song unavailable"), MB_OK);
+  if (!ok) message_box(g_app->win, ui_tr("Could not read or write the Groove song."), ui_tr("Song unavailable"), MB_OK);
 }
 
 void app_command(uint16_t id) {
   song_t *s = &g_app->song;
   switch (id) {
-    case ID_FILE_EXPORT_AUDIO: app_export_media(g_app->menubar_win, 0); break;
-    case ID_FILE_SHARE_AUDIO: app_export_media(g_app->menubar_win, 1); break;
-    case ID_FILE_EXPORT_VIDEO: app_export_media(g_app->menubar_win, 2); break;
+    case ID_FILE_EXPORT_AUDIO: app_export_media(g_app->win, 0); break;
+    case ID_FILE_SHARE_AUDIO: app_export_media(g_app->win, 1); break;
+    case ID_FILE_EXPORT_VIDEO: app_export_media(g_app->win, 2); break;
     case ID_FILE_RECORD:
     case ID_LIBRARY_WINDOW_RECORD_AUDIO: app_record_sample(g_app->win); break;
     case ID_FILE_MANAGE_SAMPLES: app_manage_samples(g_app->win); break;
@@ -462,22 +462,21 @@ void app_command(uint16_t id) {
       show_window(g_app->library, true);
       dock_collapse(g_app->library, false);
       dock_set_side(g_app->library, DOCK_BOTTOM);
-      if (g_app->menubar_win) dock_set_side(g_app->menubar_win, DOCK_TOP);
       break;
-    case ID_FILE_NEW:  if (app_confirm_replace_song(g_app->menubar_win)) app_new_song(); break;
+    case ID_FILE_NEW:  if (app_confirm_replace_song(g_app->win)) app_new_song(); break;
     case ID_FILE_OPEN: open_song_dialog(); break;
-    case ID_FILE_SAVE:   save_current_song(g_app->menubar_win); break;
-    case ID_FILE_SAVEAS: save_song_as_dialog(g_app->menubar_win); break;
+    case ID_FILE_SAVE:   save_current_song(g_app->win); break;
+    case ID_FILE_SAVEAS: save_song_as_dialog(g_app->win); break;
     case ID_FILE_DEMO:
     case ID_FILE_DEMO_AFTERGLOW:
     case ID_FILE_DEMO_VICTORY: {
       int demo = id == ID_FILE_DEMO ? GR_DEMO_SKYLINE : id == ID_FILE_DEMO_AFTERGLOW ? GR_DEMO_AFTERGLOW : GR_DEMO_VICTORY;
-      if (app_confirm_replace_song(g_app->menubar_win) && !app_load_demo_song(demo))
-        message_box(g_app->menubar_win, ui_tr("Could not load this demo song. Check that Groove's demo files are installed."), ui_tr("Demo unavailable"), MB_OK);
+      if (app_confirm_replace_song(g_app->win) && !app_load_demo_song(demo))
+        message_box(g_app->win, ui_tr("Could not load this demo song. Check that Groove's demo files are installed."), ui_tr("Demo unavailable"), MB_OK);
       break;
     }
 #ifndef AX_PLATFORM_IOS
-    case ID_FILE_QUIT: if (app_confirm_replace_song(g_app->menubar_win)) ui_request_quit(); break;
+    case ID_FILE_QUIT: if (app_confirm_replace_song(g_app->win)) ui_request_quit(); break;
 #endif
     case ID_DELETE:
       if (g_app->selected_clip < 0 || g_app->selected_clip >= s->nclips) break;

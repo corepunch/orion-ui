@@ -54,12 +54,22 @@
         <item name="duplicate" label="Add Same Instrument Track" />
         <item name="full" label="All 8 tracks are in use" />
       </contextmenu>
+      <contextmenu name="more">
+        <item command="file.saveas" label="Save Song As..." />
+        <item command="file.import_project" label="Import Song..." />
+        <item command="file.export_project" label="Export Song..." />
+        <Separator />
+        <item command="file.manage_samples" label="Manage Recordings..." />
+        <item command="file.share_audio" label="Share Audio..." />
+        <item command="file.export_video" label="Export Timeline Video..." />
+        <Separator />
+        <item command="file.demo" label="Demo: Neon Skyline" />
+        <item command="file.demo_afterglow" label="Demo: Afterglow Avenue" />
+        <item command="file.demo_victory" label="Demo: Victory Lights" />
+        <item command="window.reset" label="Reset Workspace" />
+        <item command="file.quit" label="Quit" if="!defined(AX_PLATFORM_IOS)" />
+      </contextmenu>
     </contextmenus>
-
-    <toolbar presentation="compact">
-        <Button name="delete" command="edit.delete" icon="trash" text="Delete" tooltip="Remove selected block (Delete)" />
-        <Button name="loop" command="transport.loop" icon="repeat" checked-icon="arrow-right-to-line" text="Loop" tooltip="Loop (L)" />
-    </toolbar>
 
     <databases>
       <database name="library" class="groove_library_db">
@@ -154,21 +164,29 @@
       </form>
 
       <form name="main_window" title="Groove" width="1180" height="760"
-            flags="WINDOW_AUTO_LAYOUT" spacing="0" padding="0">
+            flags="WINDOW_AUTO_LAYOUT | WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE" spacing="0" padding="0">
+        <Toolbar>
+          <Button command="file.new" icon="phosphor-file-plus" tooltip="New Song" />
+          <Button command="file.open" icon="phosphor-folder-open" tooltip="Open Song..." />
+          <Button command="file.save" icon="phosphor-floppy-disk" tooltip="Save Song" />
+          <Spacer flags="TOOLBAR_ITEM_FLAG_FLEXSPACE" />
+          <Button command="transport.rewind" icon="phosphor-rewind-fill" tooltip="Rewind (Home)" />
+          <Button command="transport.play" icon="phosphor-play-fill" checked-icon="phosphor-pause-fill" tooltip="Play / pause (Space)" />
+          <Button command="transport.forward" icon="phosphor-fast-forward-fill" tooltip="Go to end (End)" />
+          <Spacer flags="TOOLBAR_ITEM_FLAG_FLEXSPACE" />
+          <Button command="transport.loop" icon="phosphor-repeat" checked-icon="phosphor-repeat-fill" tooltip="Loop (L)" />
+          <Button command="edit.delete" icon="phosphor-trash" tooltip="Remove selected block (Delete)" />
+          <Button command="file.record" icon="phosphor-microphone" tooltip="Record Sample..." />
+          <Button command="file.export_audio" icon="phosphor-arrow-square-out" tooltip="Export Audio..." />
+          <Button name="more" icon="phosphor-dots-three" tooltip="More actions" />
+        </Toolbar>
         <GrooveTracks name="tracks" width="64" />
         <GrooveArrangement name="arrangement" flags="WINDOW_FLEXSPACE" />
       </form>
 
-      <form name="library_window" title="Library" width="800" height="320" toolbar-style="list"
-            flags="WINDOW_AUTO_LAYOUT | WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE"
+      <form name="library_window" title="Library" width="800" height="320"
+            flags="WINDOW_AUTO_LAYOUT | WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE"
             spacing="4" padding="4">
-        <Toolbar>
-          <Spacer flags="TOOLBAR_ITEM_FLAG_FLEXSPACE" />
-          <Button name="rewind" command="transport.rewind" icon="phosphor-rewind-fill" text="Rewind" tooltip="Rewind (Home)" />
-          <Button name="play" command="transport.play" icon="phosphor-play-fill" checked-icon="phosphor-pause-fill" text="Play" flags="BUTTON_DEFAULT" tooltip="Play / pause (Space)" />
-          <Button name="forward" command="transport.forward" icon="phosphor-fast-forward-fill" text="Forward" tooltip="Go to end (End)" />
-          <Spacer flags="TOOLBAR_ITEM_FLAG_FLEXSPACE" />
-        </Toolbar>
         <SegmentedControl name="families" text="Drums|Fills|Bass|Guitar|Synth|Pads|Stabs|Vocals|Scratch|FX|My Samples" flags="CONTROL_SIZE_LARGE" />
         <GrooveBlockBin name="bin" source="library.blocks" flags="WINDOW_FLEXSPACE">
           <FlowView name="blocks" spacing="0" padding="0" flags="WINDOW_FLEXSPACE">

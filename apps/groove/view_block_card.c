@@ -68,7 +68,6 @@ static void paint_block_card(int block, const block_t *b, irect16_t r, int visib
     int offset = wave.x - source_x;
     if (period > 0) {
       draw_waveform(b, wave, source_width, offset, radius, ink);
-      fill_rounded_rect_bands(CARD_REPEAT_OVERLAY, wave, radius, source_width, offset);
     } else {
       uint32_t texture = waveform_texture(g_app, block, (ipoint16_t){wave.w, wave.h}, radius, source_width, offset);
       if (texture) draw_sprite_region(texture, wave, NULL, ink, 0);
@@ -78,6 +77,8 @@ static void paint_block_card(int block, const block_t *b, irect16_t r, int visib
   uint32_t label_ink = color_with_alpha(get_sys_color(brTextOnColor), color >> 24);
   paint_card_label(b, r, source_x + visible_width, label_x, label_ink);
   paint_card_variant(b, r, visible_width);
+  if (period > 0 && r.w > 0 && r.h > 0)
+    fill_rounded_rect_bands(CARD_REPEAT_OVERLAY, r, radius, source_width, r.x - source_x);
 }
 
 result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {

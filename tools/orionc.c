@@ -535,6 +535,7 @@ static void emit_context_menus(FILE *f, xmlNodePtr contexts) {
     char *name = attr(menu, "name"), scope[128], base[160]; ident(scope, sizeof(scope), name, true); snprintf(base, sizeof(base), "CONTEXT_MENU_%s", scope);
     OUT("static const menu_item_t %s_ITEMS[] = {\n", base);
     EACH_ELEMENT(it, menu) {
+      emit_if(f, it, false);
       if (elem(it, "separator")) LINE("  { NULL, 0, NULL, 0 },\n");
       else if (elem(it, "item")) {
         char *command = attr(it, "command"), *menu_attr = attr(it, "menu"), *item_name = attr(it, "name"), *raw = attr(it, "label"), id[256], label[ORIONC_STRING_SIZE];
@@ -542,6 +543,7 @@ static void emit_context_menus(FILE *f, xmlNodePtr contexts) {
         OUT("  { %s, %s, NULL, 0 },\n", label, id);
         free(command); free(menu_attr); free(item_name); free(raw);
       }
+      emit_if(f, it, true);
     }
     OUT("};\n#define %s_COUNT ((int)(sizeof(%s_ITEMS) / sizeof(%s_ITEMS[0])))\n\n", base, base, base);
     free(name);

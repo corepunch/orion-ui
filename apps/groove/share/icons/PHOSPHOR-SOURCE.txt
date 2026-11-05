@@ -9,3 +9,5 @@ Recording: assets/fill/microphone-fill.svg, same revision; 24px viewport, origin
 Transport: assets/fill/{rewind,play,pause,fast-forward}-fill.svg, same revision.
 Rewind and Fast Forward center the original path at 80% scale within the same 24px canvas.
 Track headers: assets/{regular,fill}/{waveform,guitar,piano-keys,microphone,vinyl-record,sparkle,music-note}[-fill].svg, same revision; upstream paths and viewBox preserved.
+
+Toolbar: assets/regular/{file-plus,folder-open,floppy-disk,trash,repeat,arrow-square-out,dots-three}.svg and assets/fill/repeat-fill.svg, same revision; upstream geometry and viewBox preserved.
