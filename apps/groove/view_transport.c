@@ -5,32 +5,20 @@
 
 void transport_refresh(void) {
   g_app->shown_playing = g_app->song.playing;
-  if (g_app->toolbar) send_message(g_app->toolbar, tbCheckButton, ID_LOOP, (void *)(intptr_t)g_app->song.loop); // compact toolbar
+  if (g_app->toolbar) {
+    send_message(g_app->toolbar, tbCheckButton, ID_LOOP, (void *)(intptr_t)g_app->song.loop);
+    send_message(g_app->toolbar, tbCheckButton, ID_PLAY, (void *)(intptr_t)g_app->shown_playing);
+  }
   window_t *win = g_app->library;
   if (!win) return;
-  send_message(win, tbCheckButton, ID_PLAY, (void *)(intptr_t)g_app->shown_playing);
   window_t *families = get_window_item(win, ID_LIBRARY_WINDOW_FAMILIES);
   if (families) send_message(families, sgSetSelection, g_app->family, NULL);
-}
-
-// A library window created without the form (tests) takes the form's toolbar.
-static void set_items(window_t *win) {
-  send_message(win, tbSetItems, (uint32_t)groove_library_window_form.toolbar_count, (void *)groove_library_window_form.toolbar_items);
 }
 
 result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate: {
       g_app->library = win;
-#ifdef AX_PLATFORM_IOS
-      send_message(win, tbSetButtonSize, BUTTON_HEIGHT + 4, NULL);
-#else
-      send_message(win, tbSetButtonSize, TB_SPACING, NULL);
-#endif
-      if (!toolbar_get_state(win)->item_count) {
-        set_items(win);
-        send_message(win, tbSetStyle, groove_library_window_form.toolbar_style, NULL);
-      }
       if (!g_app->bin) {
         const form_ctrl_def_t *families_def = NULL;
         for (int i = 0; i < groove_library_window_form.child_count; i++)

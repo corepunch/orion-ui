@@ -93,4 +93,4 @@ void gem_shutdown(void) {
 
 GEM_DEFINE("Groove", "0.1", gem_init, gem_shutdown, NULL)
 
-GEM_STANDALONE_MAIN("Orion Groove", UI_INIT_DESKTOP, SCREEN_W, SCREEN_H, g_app->menubar_win, g_app->accel)
+GEM_STANDALONE_MAIN("Orion Groove", UI_INIT_DESKTOP, SCREEN_W, SCREEN_H, g_app->win, g_app->accel)

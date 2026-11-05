@@ -195,7 +195,7 @@ typedef struct {
 } waveform_cache_t;
 
 typedef struct {
-  window_t     *win, *chrome, *menubar_win, *toolbar, *sheet, *tracks, *library, *bin; // chrome: menu bar with the compact toolbar
+  window_t     *win, *toolbar, *sheet, *tracks, *library, *bin;
   database_t   *library_db, *songs_db;
   accel_table_t *accel;
   hinstance_t   hinstance;
@@ -278,7 +278,6 @@ void      song_name_from_path(const char *path, char *name, size_t cap);
 bool      app_save_song_as(window_t *owner);  // asks for a name, saves into songs_dir
 bool      app_show_songs(window_t *owner);    // the My Songs screen; true when a song was opened
 bool      app_show_startup_songs(window_t *owner);
-void      create_menubar(void);
 void      app_lock(void);
 void      app_unlock(void);
 void      app_command(uint16_t id);

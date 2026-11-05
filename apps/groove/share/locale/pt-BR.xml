@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="pt-BR" decimal="," group="." date="dd/MM/yyyy">
   <string source="File" where="menu">Arquivo</string>
-  <string source="New Song" where="menu">Nova música</string>
-  <string source="Open Song..." where="menu">Abrir música...</string>
-  <string source="Save Song" where="menu,save_song">Salvar música</string>
+  <string source="New Song" where="menu,main_window">Nova música</string>
+  <string source="Open Song..." where="menu,main_window">Abrir música...</string>
+  <string source="Save Song" where="menu,main_window,save_song">Salvar música</string>
   <string source="Save Song As..." where="menu">Salvar música como...</string>
-  <string source="Record Sample..." where="menu">Gravar amostra...</string>
+  <string source="Record Sample..." where="menu,main_window">Gravar amostra...</string>
   <string source="Demo: Neon Skyline" where="menu">Demo: Neon Skyline</string>
   <string source="Demo: Afterglow Avenue" where="menu">Demo: Afterglow Avenue</string>
   <string source="Demo: Victory Lights" where="menu">Demo: Victory Lights</string>
@@ -15,15 +15,15 @@
   <string source="Transport" where="menu">Reprodução</string>
   <string source="Play / Pause" where="menu">Reproduzir / Pausar</string>
   <string source="Stop" where="menu,record_sample">Parar</string>
-  <string source="Rewind" where="menu,library_window">Ir para o início</string>
+  <string source="Rewind" where="menu">Ir para o início</string>
   <string source="Go to End" where="menu">Ir para o fim</string>
   <string source="Loop" where="menu">Loop</string>
   <string source="Window" where="menu">Janela</string>
   <string source="Show Library" where="menu">Mostrar biblioteca</string>
   <string source="Reset Workspace" where="menu">Redefinir área de trabalho</string>
   <string source="Delete" where="manage_samples,song_browser">Excluir</string>
-  <string source="Remove selected block (Delete)">Excluir o bloco selecionado (Delete)</string>
-  <string source="Loop (L)">Loop (L)</string>
+  <string source="Remove selected block (Delete)" where="main_window">Excluir o bloco selecionado (Delete)</string>
+  <string source="Loop (L)" where="main_window">Loop (L)</string>
   <string source="Record Sample" where="record_sample">Gravar amostra</string>
   <string source="Name:" where="record_sample,manage_samples,save_song">Nome:</string>
   <string source="Length:" where="record_sample">Duração:</string>
@@ -35,9 +35,9 @@
   <string source="Cancel" where="record_sample,song_browser,save_song">Cancelar</string>
   <string source="Groove" where="main_window">Groove</string>
   <string source="Library" where="library_window">Biblioteca</string>
-  <string source="Rewind (Home)" where="library_window">Ir para o início (Home)</string>
-  <string source="Play / pause (Space)" where="library_window">Reproduzir / Pausar (Espaço)</string>
-  <string source="Go to end (End)" where="library_window">Ir para o fim (End)</string>
+  <string source="Rewind (Home)" where="main_window">Ir para o início (Home)</string>
+  <string source="Play / pause (Space)" where="main_window">Reproduzir / Pausar (Espaço)</string>
+  <string source="Go to end (End)" where="main_window">Ir para o fim (End)</string>
   <string source="Drum Loops" where="code">Loops de bateria</string>
   <string source="Drum Fills" where="code">Viradas de bateria</string>
   <string source="Bass" where="code">Baixo</string>
@@ -70,7 +70,7 @@
   <string source="Save failed" where="code">Falha ao salvar</string>
   <string source="Could not read or write the Groove project." where="code">Não foi possível ler ou gravar o projeto do Groove.</string>
   <string source="Project unavailable" where="code">Projeto indisponível</string>
-  <string source="Export Audio..." where="menu">Exportar áudio...</string>
+  <string source="Export Audio..." where="menu,main_window">Exportar áudio...</string>
   <string source="Share Audio..." where="menu">Compartilhar áudio...</string>
   <string source="Export Timeline Video..." where="menu">Exportar vídeo da linha do tempo...</string>
   <string source="Export" where="export_media">Exportar</string>
@@ -143,12 +143,13 @@
   <string source="Export Song..." where="menu">Exportar música...</string>
   <string source="Could not read or write the Groove song." where="code">Não foi possível ler ou salvar a música do Groove.</string>
   <string source="Song unavailable" where="code">Música indisponível</string>
-  <string source="Play" where="library_window">Reproduzir</string>
-  <string source="Forward" where="library_window">Avançar</string>
+  <string source="Play" obsolete="true">Reproduzir</string>
+  <string source="Forward" obsolete="true">Avançar</string>
   <string source="Sounds" where="code">Sons</string>
   <string source="Drums|Fills|Bass|Guitar|Synth|Pads|Stabs|Vocals|Scratch|FX|My Samples" where="library_window">Bateria|Viradas|Baixo|Guitarra|Sintetizador|Pads|Stabs|Vozes|Scratch|Efeitos|Meus samples</string>
   <string source="All tracks are in use. Empty a track to choose this family." where="code">Todas as faixas estão ocupadas. Esvazie uma faixa para escolher esta família.</string>
   <string source="Empty track" where="code">Faixa vazia</string>
   <string source="Add Same Instrument Track" where="menu">Adicionar faixa do mesmo instrumento</string>
   <string source="All 8 tracks are in use" where="menu">As 8 faixas estão ocupadas</string>
+  <string source="More actions" where="main_window">Mais ações</string>
 </strings>
