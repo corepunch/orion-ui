@@ -286,30 +286,31 @@ static void test_song_library(void) {
   window_t *grid = get_window_item(songs, ID_SONG_BROWSER_SONGS);
   const char *order[] = { "Night Drive", "Broken", "Afterglow" };
   int tiles = 0;
-  for (window_t *card = grid->children; card; card = card->next, tiles++) {
+  ASSERT_STR_EQUAL(get_window_item(grid->children, ID_NEW_SONG_CARD_PLACEHOLDER)->title, "+ New Song");
+  for (window_t *card = grid->children->next; card; card = card->next, tiles++) {
     ASSERT(tiles < 3 && !strcmp(get_window_item(card, ID_SONG_CARD_TITLE)->title, order[tiles]), "cards are the saved songs, newest first");
     window_t *preview = get_window_item(card, ID_SONG_CARD_PREVIEW);
     const song_t *shown = preview ? preview->userdata : NULL;
     ASSERT(tiles == 1 ? !shown : shown && shown->nclips == (tiles ? 1 : 2), "each preview parses its own file; an unreadable one draws none");
   }
   ASSERT_EQUAL(tiles, 3);
-  ASSERT(strstr(get_window_item(grid->children, ID_SONG_CARD_DETAIL)->title, "128 BPM") &&
-         strstr(get_window_item(grid->children->next, ID_SONG_CARD_DETAIL)->title, "Unreadable"), "details show tempo or the read failure");
+  ASSERT(strstr(get_window_item(grid->children->next, ID_SONG_CARD_DETAIL)->title, "128 BPM") &&
+         strstr(get_window_item(grid->children->next->next, ID_SONG_CARD_DETAIL)->title, "Unreadable"), "details show tempo or the read failure");
   ASSERT(!window_has_state(get_window_item(songs, ID_SONG_BROWSER_EMPTY), WINDOW_STATE_VISIBLE) &&
-         send_message(grid, tgGetSelection, 0, NULL) == 2, "the current song is selected");
-  send_message(grid, tgSetSelection, 1, NULL);
-  send_message(songs, evCommand, MAKEDWORD(1, tgnSelChange), grid);
+         send_message(grid, tgGetSelection, 0, NULL) == 3, "the current song is selected");
+  send_message(grid, tgSetSelection, 2, NULL);
+  send_message(songs, evCommand, MAKEDWORD(2, tgnSelChange), grid);
   ASSERT(window_has_state(get_window_item(songs, ID_SONG_BROWSER_OPEN), WINDOW_STATE_DISABLED),
          "unreadable songs can be deleted but cannot be opened");
   show_window(songs, true);
-  window_t *third = get_window_item(grid->children->next->next, ID_SONG_CARD_PREVIEW);
+  window_t *third = get_window_item(grid->children->next->next->next, ID_SONG_CARD_PREVIEW);
   ui_event_t press = { .message = kEventLeftButtonDown,
     .x = (window_screen_x(third) + third->frame.w / 2) * UI_WINDOW_SCALE, .y = (window_screen_y(third) + third->frame.h / 2) * UI_WINDOW_SCALE };
   dispatch_message(&press);
   press.message = kEventLeftButtonUp;
   dispatch_message(&press);
-  ASSERT_EQUAL(send_message(grid, tgGetSelection, 0, NULL), 2);
-  send_message(songs, evCommand, MAKEDWORD(2, tgnActivate), grid);
+  ASSERT_EQUAL(send_message(grid, tgGetSelection, 0, NULL), 3);
+  send_message(songs, evCommand, MAKEDWORD(3, tgnActivate), grid);
   ASSERT(!is_window(songs) && !strcmp(g_app->filename, other) && g_app->song.bpm == 100 && g_app->song.nclips == 1,
          "activating a card opens that song and closes the screen");
 
@@ -321,9 +322,9 @@ static void test_song_library(void) {
   ASSERT(access(path, F_OK) != 0 && access(other, F_OK) != 0 && access(broken, F_OK) != 0, "deleting a row removes its file");
   ASSERT_FALSE(send_db_message(g_app->songs_db, dbDelete, TABLE_SONGS, (void *)(intptr_t)1));
   songs = create_window_from_form(&groove_song_browser_form, 0, 0, NULL, songs_proc, 0, NULL);
-  ASSERT(!get_window_item(songs, ID_SONG_BROWSER_SONGS)->children && window_has_state(get_window_item(songs, ID_SONG_BROWSER_EMPTY), WINDOW_STATE_VISIBLE) &&
-         window_has_state(get_window_item(songs, ID_SONG_BROWSER_OPEN), WINDOW_STATE_DISABLED), "an empty library says how to add songs");
-  destroy_window(songs);
+  ASSERT(get_window_item(songs, ID_SONG_BROWSER_SONGS)->children && window_has_state(get_window_item(songs, ID_SONG_BROWSER_EMPTY), WINDOW_STATE_VISIBLE), "an empty library offers a new song");
+  send_message(songs, evCommand, MAKEDWORD(ID_NEW_SONG_CARD_PLACEHOLDER, btnClicked), get_window_item(songs, ID_NEW_SONG_CARD_PLACEHOLDER));
+  ASSERT(!is_window(songs) && !g_app->filename[0] && !g_app->song.nclips, "new song tile starts an empty song");
 
   remove(notes); rmdir(dir);
   destroy_window(win);

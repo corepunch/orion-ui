@@ -271,6 +271,7 @@ void      song_name_from_path(const char *path, char *name, size_t cap);
 // iPad song library (dialogs/): desktop keeps the ordinary file dialogs.
 bool      app_save_song_as(window_t *owner);  // asks for a name, saves into songs_dir
 bool      app_show_songs(window_t *owner);    // the My Songs screen; true when a song was opened
+bool      app_show_startup_songs(window_t *owner);
 void      create_menubar(void);
 void      app_lock(void);
 void      app_unlock(void);
