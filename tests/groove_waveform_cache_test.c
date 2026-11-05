@@ -44,9 +44,11 @@ static void test_shared_cache(void) {
   for (int i = 0; i < 100; i++) ASSERT_EQUAL(waveform_texture(&app, 0, (ipoint16_t){20, 32}, 0, 20, 0), first);
   ASSERT_EQUAL(uploads, 1);
   ASSERT_EQUAL(deletes, 0);
-  ASSERT_EQUAL(uploaded_mask[13 * uploaded_w + 10], 0);
-  ASSERT_EQUAL(uploaded_mask[14 * uploaded_w + 10], 255);
-  ASSERT_EQUAL(uploaded_mask[(uploaded_h - 1) * uploaded_w + 10], 255);
+  ASSERT_EQUAL(uploaded_mask[9], 255);
+  ASSERT_EQUAL(uploaded_mask[(uploaded_h - 1) * uploaded_w + 9], 255);
+  ASSERT_EQUAL(uploaded_mask[15 * uploaded_w + 8], 255);
+  ASSERT_EQUAL(uploaded_mask[15 * uploaded_w + 10], 0);
+  ASSERT_EQUAL(uploaded_mask[15 * uploaded_w + 11], 0);
   ASSERT_NOT_EQUAL(waveform_texture(&app, 1, (ipoint16_t){20, 32}, 0, 20, 0), first);
   ASSERT_EQUAL(uploads, 2);
   cache_blocks[0].audio_revision++;
@@ -54,8 +56,10 @@ static void test_shared_cache(void) {
   ASSERT_NOT_EQUAL(waveform_texture(&app, 0, (ipoint16_t){20, 32}, 0, 20, 0), first);
   ASSERT_EQUAL(uploads, 3);
   ASSERT_EQUAL(deletes, 1);
-  ASSERT_EQUAL(uploaded_mask[14 * uploaded_w + 10], 0);
-  ASSERT_EQUAL(uploaded_mask[(uploaded_h - 1) * uploaded_w + 10], 255);
+  ASSERT_EQUAL(uploaded_mask[14 * uploaded_w + 9], 0);
+  ASSERT_EQUAL(uploaded_mask[15 * uploaded_w + 9], 255);
+  ASSERT_EQUAL(uploaded_mask[16 * uploaded_w + 9], 255);
+  ASSERT_EQUAL(uploaded_mask[17 * uploaded_w + 9], 0);
   ASSERT_NOT_EQUAL(waveform_texture(&app, 0, (ipoint16_t){21, 33}, 0, 21, 0), 0);
   ASSERT_EQUAL(uploaded_w, 21);
   ASSERT_EQUAL(uploaded_h, 33);
@@ -63,7 +67,7 @@ static void test_shared_cache(void) {
   ASSERT_NOT_EQUAL(waveform_texture(&app, 0, (ipoint16_t){21, 33}, 8, 21, 0), 0);
   ASSERT_EQUAL(uploads, 5);
   ASSERT_EQUAL(uploaded_mask[(uploaded_h - 1) * uploaded_w], 0);
-  ASSERT_EQUAL(uploaded_mask[(uploaded_h - 1) * uploaded_w + 10], 255);
+  ASSERT_EQUAL(uploaded_mask[16 * uploaded_w + 9], 255);
   waveform_cache_free(&app);
   ASSERT_EQUAL(deletes, uploads);
   ASSERT_EQUAL(app.waveforms[0].texture, 0);
@@ -105,7 +109,8 @@ static void test_grid_viewport(void) {
   TEST("card margins crop a grid-aligned waveform; trimming and looping preserve beat positions in both painters");
   groove_t app = {0};
   cache_blocks[0] = (block_t){ .audio = {.npeaks = 88}, .audio_revision = 1 };
-  for (int beat = 0; beat < 4; beat++) cache_blocks[0].audio.peaks[beat * 22] = 255;
+  const int beats[] = {1, 21, 45, 65};
+  for (int i = 0; i < ARRAY_LEN(beats); i++) cache_blocks[0].audio.peaks[beats[i]] = 255;
   g_ui_runtime.running = true;
   ASSERT_NOT_EQUAL(waveform_texture(&app, 0, (ipoint16_t){88, 32}, 0, 88, 0), 0);
   uint8_t reference[88 * 32];
@@ -125,8 +130,8 @@ static void test_grid_viewport(void) {
         ASSERT_EQUAL(drawn_mask[y * 512 + x + 2], expected);
       }
     }
-    ASSERT_EQUAL(uploaded_mask[14 * width + 20], 255); // beat at x=22, regardless of viewport width
-    ASSERT_EQUAL(uploaded_mask[14 * width + 22], 0);
+    ASSERT_EQUAL(uploaded_mask[0 * width + 19], 255); // source x=21, after the two-pixel crop
+    ASSERT_EQUAL(uploaded_mask[0 * width + 22], 0);
   }
   uint32_t last = app.waveforms[0].texture;
   ASSERT_NOT_EQUAL(waveform_texture(&app, 0, (ipoint16_t){260, 32}, 0, 176, 2), last);
@@ -134,6 +139,48 @@ static void test_grid_viewport(void) {
   ASSERT_NOT_EQUAL(waveform_texture(&app, 0, (ipoint16_t){260, 32}, 0, 176, 1), last);
   waveform_cache_free(&app);
   g_ui_runtime.running = false;
+  PASS();
+}
+
+static void test_card_inset_keeps_timing(void) {
+  TEST("card margins hide waveform edges without rescaling or moving sound on the grid");
+  groove_t app = {0};
+  cache_blocks[0] = (block_t){ .audio = {.npeaks = 100}, .audio_revision = 1 };
+  const int beats[] = {1, 25, 53, 81, 99};
+  for (int i = 0; i < ARRAY_LEN(beats); i++) cache_blocks[0].audio.peaks[beats[i]] = 255;
+  g_ui_runtime.running = true;
+  ASSERT_NOT_EQUAL(waveform_texture(&app, 0, (ipoint16_t){100, 32}, 0, 100, 0), 0);
+  uint8_t full[100 * 32];
+  memcpy(full, uploaded_mask, sizeof(full));
+  ASSERT_NOT_EQUAL(waveform_texture(&app, 0, (ipoint16_t){96, 32}, 0, 100, 2), 0);
+  for (int y = 0; y < 32; y++)
+    for (int x = 0; x < 96; x++)
+      ASSERT_EQUAL(uploaded_mask[y * 96 + x], full[y * 100 + x + 2]);
+  ASSERT_EQUAL(full[0], 255);
+  ASSERT_EQUAL(uploaded_mask[24 - 2], 255);
+  ASSERT_EQUAL(uploaded_mask[23 - 2], 0);
+  ASSERT_EQUAL(uploaded_mask[25 - 2], 255);
+  ASSERT_EQUAL(uploaded_mask[26 - 2], 0);
+  for (int y = 0; y < 32; y++)
+    ASSERT_EQUAL(uploaded_mask[y * 96 + 24 - 2], uploaded_mask[y * 96 + 25 - 2]);
+  ASSERT_EQUAL(uploaded_mask[52 - 2], 255);
+  ASSERT_EQUAL(uploaded_mask[80 - 2], 255);
+  ASSERT_EQUAL(uploaded_mask[24], full[26]);
+  waveform_cache_free(&app);
+  g_ui_runtime.running = false;
+  PASS();
+}
+
+static void test_label_alignment(void) {
+  TEST("the label starts at the first visible waveform bar, including cropped and repeated edges");
+  cache_blocks[0] = (block_t){ .audio = { .npeaks = 2, .peaks = {255, 255} } };
+  for (int period = 1; period <= 24; period++) for (int offset = 0; offset < period * 2; offset++) {
+    int first = waveform_first_bar_offset(period, offset);
+    ASSERT_TRUE(first >= 0 && first < period);
+    ASSERT_TRUE(waveform_bar(&cache_blocks[0], first, 32, 32, period, offset, 0).w);
+    for (int x = 0; x < first; x++)
+      ASSERT_EQUAL(waveform_bar(&cache_blocks[0], x, 32, 32, period, offset, 0).w, 0);
+  }
   PASS();
 }
 
@@ -158,6 +205,8 @@ int main(void) {
   test_shared_cache();
   test_failed_refresh();
   test_grid_viewport();
+  test_card_inset_keeps_timing();
+  test_label_alignment();
   test_card_margin();
   free(uploaded_mask);
   TEST_END();

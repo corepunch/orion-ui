@@ -155,6 +155,43 @@ static uint32_t gesture_target_id;
 static bool gesture_scroll;
 static window_t *pointer_target;
 static uint32_t pointer_target_id;
+static struct { window_t *win; uint32_t id, timer, point; int x, y; } long_press;
+
+static void long_press_cancel(void) {
+  if (long_press.timer) axCancelTimer(long_press.timer);
+  memset(&long_press, 0, sizeof(long_press));
+}
+
+static void long_press_begin(window_t *win, int x, int y) {
+  long_press_cancel();
+  if (!win || !is_window(win)) return;
+  uint32_t point = MAKEDWORD((int16_t)LOCAL_X(x, y, win), (int16_t)LOCAL_Y(x, y, win));
+  if (!send_pointer_message(win, evQueryLongPress, point, NULL)) return;
+  long_press.win = win; long_press.id = win->id; long_press.point = point;
+  long_press.x = x; long_press.y = y;
+  long_press.timer = axSetTimer(win, CONTEXT_LONG_PRESS_MS, NULL, false);
+  if (!long_press.timer) {
+    fprintf(stderr, "[event] long press timer allocation failed win=%u\n", win->id);
+    fflush(stderr);
+    long_press_cancel();
+  }
+}
+
+static bool long_press_filter(ui_event_t *msg) {
+  if (!long_press.timer) return false;
+  if (msg->message == kEventTimer && msg->wParam == long_press.timer && msg->target == long_press.win) {
+    window_t *win = long_press.win; uint32_t id = long_press.id, point = long_press.point;
+    long_press.timer = 0; long_press.win = NULL;
+    if (is_window(win) && win->id == id) send_pointer_message(win, evLongPress, point, NULL);
+    return true;
+  }
+  if (msg->message == kEventLeftButtonUp || msg->message == kEventPointerCancel || msg->message == kEventGesture ||
+      (msg->message == kEventKeyDown && msg->keyCode == AX_KEY_ESCAPE)) long_press_cancel();
+  else if (msg->message == kEventLeftButtonDragged &&
+           (abs((int)msg->x - long_press.x) > TOUCH_SLOP * UI_WINDOW_SCALE ||
+            abs((int)msg->y - long_press.y) > TOUCH_SLOP * UI_WINDOW_SCALE)) long_press_cancel();
+  return false;
+}
 
 // Window that received evNCLeftButtonDown (toolbar press).
 // Always delivered evNCLeftButtonUp on the next left-up,
@@ -163,7 +200,7 @@ static uint32_t pointer_target_id;
 
 // Handle mouse events on child windows.
 result_t send_pointer_message(window_t *win, uint32_t msg, uint32_t point, void *lparam) {
-  if (window_has_view(win) && (msg == evMouseMove || msg == evLeftButtonDown ||
+  if (window_has_view(win) && (msg == evQueryLongPress || msg == evLongPress || msg == evMouseMove || msg == evLeftButtonDown ||
       msg == evLeftButtonUp || msg == evLeftButtonDoubleClick || msg == evRightButtonDown || msg == evRightButtonUp ||
       msg == evMiddleButtonDown || msg == evMiddleButtonUp)) {
     ipoint16_t client = {(int16_t)LOWORD(point), (int16_t)HIWORD(point)};
@@ -711,6 +748,7 @@ void dispatch_message(ui_event_t *msg) {
 
   update_key_state(msg);
   update_pointer_state(msg);
+  if (long_press_filter(msg)) return;
   if (middle_pan_filter(msg)) return;
   if (touch_filter(msg)) return;
   if (dock_handle_event(msg)) return;
@@ -1148,6 +1186,8 @@ void dispatch_message(ui_event_t *msg) {
           }
         }
       }
+      if (msg->message == kEventLeftButtonDown && pointer_target && is_window(pointer_target) && pointer_target->id == pointer_target_id)
+        long_press_begin(pointer_target, px, py);
       break;
     }
 

@@ -118,10 +118,11 @@ typedef enum {
   THEME_AMBER   = 4,  // flat + light business palette: white wells, amber selection
   THEME_PORCELAIN = 5,  // flat + cool white business palette: white wells, indigo selection
   THEME_PORCELAIN_DARK = 6, // Porcelain's dark counterpart: graphite wells, indigo selection
-  THEME_LAST      = THEME_PORCELAIN_DARK,
+  THEME_METRO = 7,  // square, flat dark creative workspace
+  THEME_LAST      = THEME_METRO,
 } theme_style_t;
 
-// Makefile THEME_<app>=classic|modern|light|navy|amber|porcelain|porcelain_dark → -DORION_THEME=<name>
+// Makefile THEME_<app>=classic|modern|light|navy|amber|porcelain|porcelain_dark|metro → -DORION_THEME=<name>
 #define THEME_classic  THEME_CLASSIC
 #define THEME_modern   THEME_MODERN
 #define THEME_light    THEME_LIGHT
@@ -129,6 +130,7 @@ typedef enum {
 #define THEME_amber    THEME_AMBER
 #define THEME_porcelain THEME_PORCELAIN
 #define THEME_porcelain_dark THEME_PORCELAIN_DARK
+#define THEME_metro    THEME_METRO
 
 // Semantic class/part identifiers, flattened into one enum to prevent invalid
 // class/part pairs. Bounds and interaction state come from the caller.
@@ -259,6 +261,7 @@ typedef struct {
     int ring_width;         // selected tile's accent ring, inside the tile
   } thumbnail;
   struct {                   // plastic material, handed to the shader as uniforms
+    bool flat;               // solid colour instead of the plastic material
     float gloss;             // strength of the top highlight band (1 = reference)
     float rim;               // lit/shaded bevel strength along the silhouette
     float lift;              // face lightening while hovered
@@ -372,6 +375,7 @@ theme_t *theme_navy_instance(void);
 theme_t *theme_amber_instance(void);
 theme_t *theme_porcelain_instance(void);
 theme_t *theme_porcelain_dark_instance(void);
+theme_t *theme_metro_instance(void);
 
 // ── Appearance (light / dark) ────────────────────────────────────────────────
 //

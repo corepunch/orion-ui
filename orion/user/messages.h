@@ -7,6 +7,10 @@
 #include <TargetConditionals.h>
 #endif
 
+typedef enum {
+  TOOLTIP_PLACE_ABOVE, TOOLTIP_PLACE_BELOW, TOOLTIP_PLACE_LEFT, TOOLTIP_PLACE_RIGHT
+} tooltip_placement_t;
+
 // Window messages
 enum {
   evCreate,
@@ -74,6 +78,9 @@ enum {
   // Hover lookup continues through ancestors until one supplies nonempty text;
   // that ancestor also owns the tooltip anchor.
   evGetTooltipText,
+  // Optional preferred side for this tooltip and its descendants. wparam is
+  // the pointer in content coordinates; lparam is tooltip_placement_t*.
+  evGetTooltipPlacement,
   // Query a window for the desired cursor shape at a given client position.
   // wparam = MAKEDWORD(client_x, client_y) — position inside the window's
   //          client area (same coordinate system as evMouseMove).
@@ -107,6 +114,10 @@ enum {
   // for TOUCH_LONG_PRESS_MS delivers the press and hands the drag over.
   // Return DRAG_NONE (false) to let a swipe scroll and a tap click.
   evQueryDrag,
+  // Opt in to a stationary press-and-hold at the content point; evLongPress
+  // is delivered at that same point after the delay unless the pointer moves.
+  evQueryLongPress,
+  evLongPress,
   // Optional tooltip anchor: wparam is the queried content point; lparam is
   // irect16_t* in this window's content space. Default is the whole control.
   evGetTooltipRect,
@@ -508,7 +519,7 @@ typedef struct {
   int                 ident;  // command ID / button identifier
   const char         *icon;   // SVG base name; TEXTEDIT uses it as a leading icon; NULL = none
   int                 w;      // width, or slider length along toolbar orientation (0 = automatic)
-  uint32_t            style;  // TBSTYLE_CHECK / TBSTYLE_CHECKGROUP, TOOLBAR_ITEM_FLAG_*, CONTROL_SIZE_*
+  uint32_t            style;  // TBSTYLE_CHECK / TBSTYLE_CHECKGROUP, BUTTON_DEFAULT, TOOLBAR_ITEM_FLAG_*, CONTROL_SIZE_*
   const char         *text;   // label text, or combobox/textedit initial text
   const char         *tooltip; // tooltip text shown on hover; NULL = none
   uint32_t            color;  // packed 0xAABBGGRR SVG icon tint; 0 uses theme default
@@ -610,7 +621,7 @@ enum {
 };
 #define SEGMENTED_MAX_SEGMENTS 24
 #define SEGMENTED_STYLE_ICONS_ONLY (1u << 0) // a segment with an icon shows it alone; its label becomes the tooltip
-#define SEGMENTED_LABEL_MAX    32
+#define SEGMENTED_LABEL_MAX    128
 #define SEGMENTED_PADDING      8  // horizontal label padding inside one segment
 #define SEGMENTED_INSET        2  // track margin around the segments
 #define TAB_CONTROL_HEIGHT (get_theme()->tab.header.height)

@@ -33,6 +33,8 @@ void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 | `evMiddleButtonUp` | Middle mouse button released | same |
 | `evMouseMove` | Mouse moved | same |
 | `evMouseLeave` | Mouse left window | – |
+| `evQueryLongPress` | Pointer pressed; return true to opt in | local content point in `wparam` |
+| `evLongPress` | Opted-in pointer held in place | original local content point in `wparam` |
 | `evKeyDown` | Key pressed | Orion `AX_KEY_*` value in `wparam` |
 | `evKeyUp` | Key released | Orion `AX_KEY_*` value in `wparam` |
 | `evTextInput` | Text character input | `lparam` = `const char *` UTF-8 |
@@ -52,6 +54,8 @@ through `evGesture`, with unit scale and zero rotation. It works automatically
 for built-in scrollbars and content views, retains the starting window until
 release, and cancels on Escape or pointer cancellation. Raw middle-button
 messages remain available when the press does not start framework panning.
+The window system cancels a pending long press on release, cancellation, gesture,
+Escape or movement beyond the touch slop. The delay is `CONTEXT_LONG_PRESS_MS`.
 
 ## Control Notification Codes
 

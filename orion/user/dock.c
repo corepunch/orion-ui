@@ -52,7 +52,8 @@ static void dock_orient(window_t *win) {
 
 bool dock_window(window_t *win, dock_side_t side, uint32_t allowed, uint32_t flags, int extent, int minimum) {
   if (!win || !win->parent || side < DOCK_FLOAT || side > DOCK_FILL || extent < 0 || minimum < 0 ||
-      (allowed & ~DOCK_ALL_EDGES) || (flags & ~(DOCK_RESIZABLE | DOCK_TOOLBAR | DOCK_MENU | DOCK_NOFLOAT)) ||
+      (allowed & ~DOCK_ALL_EDGES) || (flags & ~(DOCK_RESIZABLE | DOCK_TOOLBAR | DOCK_MENU | DOCK_NOFLOAT | DOCK_OVERLAY_SPLITTER)) ||
+      ((flags & DOCK_OVERLAY_SPLITTER) && !(flags & DOCK_RESIZABLE)) ||
       (side > DOCK_FLOAT && side < DOCK_FILL && !(allowed & DOCK_EDGE(side))) ||
       (side == DOCK_FLOAT && (flags & DOCK_NOFLOAT)))
     return dock_error(win, "invalid registration", side);
@@ -209,7 +210,7 @@ irect16_t dock_layout(window_t *host, irect16_t area) {
         ((d->flags & DOCK_TOOLBAR) && toolbar_dock_hint(pane) == TOOLBAR_DOCK_MENU)) continue;
     irect16_t old = pane->frame;
     int available = dock_vertical(d->side) ? area.w : area.h;
-    int gap = (d->flags & DOCK_RESIZABLE) ? MIN(DOCK_SPLITTER, available) : 0;
+    int gap = (d->flags & DOCK_RESIZABLE) && !(d->flags & DOCK_OVERLAY_SPLITTER) ? MIN(DOCK_SPLITTER, available) : 0;
     int reserve = 0;
     for (window_t *c = host->children; c; c = c->next)
       if (c->dock && c->dock->side == DOCK_FILL && window_has_state(c, WINDOW_STATE_VISIBLE)) reserve = MAX(reserve, c->dock->minimum);
@@ -223,6 +224,15 @@ irect16_t dock_layout(window_t *host, irect16_t area) {
       case DOCK_LEFT:   band = rect_split_left(area, size);   area = rect_trim_left(area, size);   splitter = rect_split_left(area, gap);   area = rect_trim_left(area, gap);   break;
       case DOCK_RIGHT:  band = rect_split_right(area, size);  area = rect_trim_right(area, size);  splitter = rect_split_right(area, gap);  area = rect_trim_right(area, gap);  break;
       default: break;
+    }
+    if ((d->flags & (DOCK_RESIZABLE | DOCK_OVERLAY_SPLITTER)) == (DOCK_RESIZABLE | DOCK_OVERLAY_SPLITTER)) {
+      switch (d->side) {
+        case DOCK_TOP:    splitter = rect_split_bottom(band, MIN(DOCK_SPLITTER, band.h)); break;
+        case DOCK_BOTTOM: splitter = rect_split_top(band, MIN(DOCK_SPLITTER, band.h));    break;
+        case DOCK_LEFT:   splitter = rect_split_right(band, MIN(DOCK_SPLITTER, band.w)); break;
+        case DOCK_RIGHT:  splitter = rect_split_left(band, MIN(DOCK_SPLITTER, band.w));  break;
+        default: break;
+      }
     }
     d->splitter = splitter;
     if (dock_drag.win == pane && dock_drag.moved && !dock_drag.resize && !dock_drag.floating_resize)
@@ -393,7 +403,7 @@ void dock_forget_window(window_t *win) {
 
 void dock_paint(window_t *host) {
   for (window_t *c = host->children; c; c = c->next)
-    if (c->dock && window_has_state(c, WINDOW_STATE_VISIBLE) && c->dock->splitter.w && c->dock->splitter.h)
+    if (c->dock && !(c->dock->flags & DOCK_OVERLAY_SPLITTER) && window_has_state(c, WINDOW_STATE_VISIBLE) && c->dock->splitter.w && c->dock->splitter.h)
       theme_draw(THEME_PART_SEPARATOR, c->dock->splitter, CTRL_NORMAL);
 }
 

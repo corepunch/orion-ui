@@ -1,5 +1,14 @@
 #include "groove.h"
 
+#define WAVEFORM_STEP 4
+#define WAVEFORM_WIDTH 2
+
+int waveform_first_bar_offset(int period, int offset) {
+  if (period <= 0 || offset < 0) return 0;
+  int src = offset % period, phase = src % WAVEFORM_STEP;
+  return phase < WAVEFORM_WIDTH ? 0 : MIN(WAVEFORM_STEP - phase, period - src);
+}
+
 static int waveform_bottom(int x, int w, int h, int radius) {
   if (radius <= 0) return h - 1;
   float px = x + 0.5f, dx = 0;
@@ -18,15 +27,25 @@ static float waveform_peak(const block_t *b, int x, int w) {
   return b->audio.peaks[k] + (b->audio.peaks[k1] - b->audio.peaks[k]) * t;
 }
 
+static irect16_t waveform_bar(const block_t *b, int x, int w, int h, int period, int offset, int radius) {
+  int src = (x + offset) % period;
+  int phase = src % WAVEFORM_STEP;
+  if (phase >= WAVEFORM_WIDTH) return R(0, 0, 0, 0);
+  int center = (src - phase + WAVEFORM_WIDTH / 2) % period;
+  float peak = waveform_peak(b, center, period);
+  int amplitude = (int)(peak * MAX(0, h - 2) / 510);
+  int edge = waveform_bottom(x, w, h, radius);
+  int top = MAX(h - 1 - edge, (h - 1) / 2 - amplitude);
+  int bottom = MIN(edge, h / 2 + amplitude);
+  return bottom >= top ? R(x, top, 1, bottom - top + 1) : R(0, 0, 0, 0);
+}
+
 void draw_waveform(const block_t *b, irect16_t wave, int period, int offset, int radius, uint32_t color) {
   if (!b || b->audio.npeaks < 2 || wave.w <= 0 || wave.h <= 0 || period <= 0 || offset < 0) return;
   radius = CLAMP(radius, 0, MIN(wave.w, wave.h) / 2);
   for (int x = 0; x < wave.w; x++) {
-    int src = (x + offset) % period;
-    int h = MAX(1, (int)(waveform_peak(b, src, period) * MAX(1, wave.h - 14) / 255));
-    int bottom = waveform_bottom(x, wave.w, wave.h, radius);
-    int top = MAX(0, bottom + 1 - h);
-    if (bottom >= top) fill_rect(color, R(wave.x + x, wave.y + top, 1, bottom - top + 1));
+    irect16_t bar = waveform_bar(b, x, wave.w, wave.h, period, offset, radius);
+    if (bar.w) fill_rect(color, rect_offset(bar, wave.x, wave.y));
   }
 }
 
@@ -50,10 +69,8 @@ uint32_t waveform_texture(groove_t *app, int block, ipoint16_t size, int radius,
     return 0;
   }
   for (int x = 0; x < size.x; x++) {
-    int src = (x + offset) % period;
-    int h = MAX(1, (int)(waveform_peak(b, src, period) * MAX(1, size.y - 14) / 255));
-    int bottom = waveform_bottom(x, size.x, size.y, radius);
-    for (int y = MAX(0, bottom + 1 - h); y <= bottom; y++) mask[(size_t)y * size.x + x] = 255;
+    irect16_t bar = waveform_bar(b, x, size.x, size.y, period, offset, radius);
+    for (int y = bar.y; y < bar.y + bar.h; y++) mask[(size_t)y * size.x + x] = 255;
   }
   uint32_t texture = R_CreateTextureR8(size.x, size.y, mask, R_FILTER_NEAREST, R_WRAP_CLAMP);
   free(mask);

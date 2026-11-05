@@ -245,6 +245,36 @@ static void test_dock_collapse_and_limits(void) {
   PASS();
 }
 
+static void test_dock_overlay_splitter(void) {
+  TEST("overlay splitters preserve resizing on every edge without reserving a gap");
+  test_env_init();
+  window_t *host = dock_test_host();
+  window_t *pane = create_window("Library", WINDOW_NOTITLE, MAKERECT(0, 0, 1, 1), host, dock_test_proc, 0, NULL);
+  window_t *doc = create_window("Document", WINDOW_NOTITLE, MAKERECT(0, 0, 1, 1), host, dock_test_proc, 0, NULL);
+  ASSERT_TRUE(dock_window(pane, DOCK_BOTTOM, DOCK_ALL_EDGES, DOCK_RESIZABLE | DOCK_OVERLAY_SPLITTER, 200, 90));
+  ASSERT_TRUE(dock_window(doc, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 0));
+  show_window(host, true); show_window(pane, true); show_window(doc, true);
+  for (int side = DOCK_TOP; side <= DOCK_RIGHT; side++) {
+    ASSERT_TRUE(dock_set_side(pane, (dock_side_t)side));
+    irect16_t p = pane->frame, d = doc->frame, hit = pane->dock->splitter;
+    if (side == DOCK_TOP)    ASSERT_EQUAL(p.y + p.h, d.y);
+    if (side == DOCK_BOTTOM) ASSERT_EQUAL(d.y + d.h, p.y);
+    if (side == DOCK_LEFT)   ASSERT_EQUAL(p.x + p.w, d.x);
+    if (side == DOCK_RIGHT)  ASSERT_EQUAL(d.x + d.w, p.x);
+    ASSERT(hit.x >= p.x && hit.y >= p.y && hit.x + hit.w <= p.x + p.w && hit.y + hit.h <= p.y + p.h, "resize band stays inside its pane");
+    int x = window_screen_x(host) + hit.x + hit.w / 2;
+    int y = window_screen_y(host) + titlebar_height(host) + hit.y + hit.h / 2;
+    ASSERT_EQUAL(dock_cursor(host, (ipoint16_t){x, y}), side == DOCK_LEFT || side == DOCK_RIGHT ? curResizeH : curResizeV);
+    dock_mouse(kEventLeftButtonDown, x, y);
+    dock_mouse(kEventLeftButtonDragged, x + (side == DOCK_LEFT ? 30 : side == DOCK_RIGHT ? -30 : 0),
+               y + (side == DOCK_TOP ? 30 : side == DOCK_BOTTOM ? -30 : 0));
+    ASSERT_EQUAL(pane->dock->extent, 230);
+    dock_mouse(kEventPointerCancel, x, y);
+    ASSERT_EQUAL(pane->dock->extent, 200);
+  }
+  test_env_shutdown(); PASS();
+}
+
 static void test_dock_menu(void) {
   TEST("floating menus stack vertically and open their popup beside the selected row");
   test_env_init();
@@ -497,6 +527,7 @@ int main(void) {
   test_dock_form_resize();
   test_dock_pointer_and_caption();
   test_dock_drag_and_resize();
+  test_dock_overlay_splitter();
   test_dock_collapse_and_limits();
   test_dock_menu();
   test_menu_only_chrome();

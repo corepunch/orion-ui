@@ -27,6 +27,7 @@ static theme_t *theme_for_style(theme_style_t style) {
     case THEME_AMBER:   return theme_amber_instance();
     case THEME_PORCELAIN: return theme_porcelain_instance();
     case THEME_PORCELAIN_DARK: return theme_porcelain_dark_instance();
+    case THEME_METRO: return theme_metro_instance();
     default:            return NULL;
   }
 }

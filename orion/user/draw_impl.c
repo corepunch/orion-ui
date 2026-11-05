@@ -471,6 +471,15 @@ static plastic_look_t plastic_look(ctrl_state_t state) {
 void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color) {
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
   const theme_t *theme = get_theme();
+  if (theme->plastic.flat) {
+    irect16_t face = rect_inset(r, theme->card.shadow_size);
+    if (state & CTRL_DISABLED) color = color_mix(color, get_sys_color(brControlBg), 128);
+    else if (state & CTRL_PRESSED) color = color_mix(color, get_sys_color(brPanelDarker), 70);
+    else if (state & CTRL_HOVER) color = color_mix(color, get_sys_color(brTextOnColor), 35);
+    fill_rect(color, face);
+    if (state & CTRL_SELECTED) stroke_rounded_rect(get_sys_color(brAccentText), face, 0, theme->card.ring_width);
+    return;
+  }
   plastic_look_t look = plastic_look(state);
   render_plastic_surface(r, theme->card.corner_radius, theme->card.highlight_width,
                           theme->card.shadow_size, &look, color,

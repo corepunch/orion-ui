@@ -45,6 +45,7 @@ minimums reserve document space when a resizable pane consumes an edge.
 | Flag | Behavior |
 |---|---|
 | `DOCK_RESIZABLE` | Edge splitter, caption collapse, floating resize corner |
+| `DOCK_OVERLAY_SPLITTER` | With `DOCK_RESIZABLE`, uses the pane edge for resizing without reserving or painting a separator gap |
 | `DOCK_TOOLBAR` | Measures existing toolbar items and switches orientation |
 | `DOCK_MENU` | Measures the menu; left/right and floating layouts stack entries vertically |
 | `DOCK_NOFLOAT` | Fixed child, including the document fill slot |

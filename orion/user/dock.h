@@ -11,6 +11,7 @@ typedef enum { DOCK_ALIGN_NONE, DOCK_ALIGN_START, DOCK_ALIGN_CENTER, DOCK_ALIGN_
 #define DOCK_TOOLBAR   2u
 #define DOCK_MENU      4u
 #define DOCK_NOFLOAT   8u
+#define DOCK_OVERLAY_SPLITTER 16u // resize on the pane's edge without reserving a gap
 #define DOCK_SPLITTER  5
 #define DOCK_FLOAT_GAP 4
 

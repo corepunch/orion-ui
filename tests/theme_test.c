@@ -97,6 +97,13 @@ static void test_navy_theme_palette(void) {
   ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x243D60));
   ASSERT_TRUE(set_theme(THEME_MODERN));
   ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x303230));
+  ASSERT_TRUE(set_theme(THEME_METRO));
+  ASSERT_EQUAL(get_sys_color(brAccent), WEB(0x0078D7));
+  ASSERT_EQUAL(get_theme()->card.corner_radius, 0);
+  ASSERT_TRUE(get_theme()->plastic.flat);
+  ASSERT_EQUAL(theme_foreground(THEME_PART_TOOLBAR_BUTTON, CTRL_DEFAULT), get_sys_color(brAccentText));
+  ASSERT_TRUE(set_theme(THEME_MODERN));
+  ASSERT_FALSE(get_theme()->plastic.flat);
   test_env_shutdown();
   PASS();
 }

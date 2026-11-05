@@ -29,12 +29,11 @@ family_t block_family(category_t cat) {
 const char *const kGenreName[GENRE_COUNT] = { "Dance", "Hip Hop", "Rave", "Techno" };
 
 uint32_t category_color(category_t cat) {
-  static const uint32_t col[CAT_COUNT] = {
-    WEB(0x1aa6f2), WEB(0xff7a2a), WEB(0xff4fa0), WEB(0xf2d02c), WEB(0xff7f5e), WEB(0x5cc6f8), WEB(0xffa12c), WEB(0xe64fd8),
-    WEB(0xa047f2), WEB(0xffb21e), WEB(0x36c95c), WEB(0xff4f6c), WEB(0x1fd2b2), WEB(0x8ad13f), WEB(0xf2553d), WEB(0xff63a6),
-    WEB(0x7c8cff), WEB(0x6c5cff), WEB(0x8b64c4),
+  static const uint32_t col[FAMILY_COUNT] = {
+    WEB(0x1285ce), WEB(0x158da2), WEB(0xa047d8), WEB(0xe8555c), WEB(0xd5a329), WEB(0x54a85e),
+    WEB(0xe68039), WEB(0x1fa78d), WEB(0x768be0), WEB(0x6c5cda), WEB(0x9975b7),
   };
-  return col[cat >= 0 && cat < CAT_COUNT ? cat : 0];
+  return col[block_family(cat)];
 }
 
 int bar_frames_for_bpm(int bpm) {

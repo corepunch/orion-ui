@@ -7,7 +7,10 @@
 #define CLIP_GAIN 0.5f
 
 void song_init(song_t *s) {
+  static const family_t defaults[GR_TRACKS] = { FAMILY_LOOP, FAMILY_BASS, FAMILY_GUITAR, FAMILY_SYNTH,
+                                              FAMILY_PAD, FAMILY_VOX, FAMILY_SCRATCH, FAMILY_FX };
   memset(s, 0, sizeof(*s));
+  memcpy(s->track_family, defaults, sizeof(defaults));
   s->bpm = GR_BPM_DEFAULT;
   s->loop = true;
   s->preview_block = -1;

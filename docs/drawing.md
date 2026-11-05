@@ -247,6 +247,9 @@ and spacing. Toolbar tooltips appear toward the workspace: right of a left
 toolbar, left of a right toolbar, below a top toolbar, and above a bottom toolbar.
 They flip to the opposite side when needed to stay on-screen. Other controls
 prefer a tooltip above the element. All tooltips appear immediately.
+An element or ancestor may handle `evGetTooltipPlacement` and return a
+`tooltip_placement_t` to choose another preferred side; placement still flips
+at screen edges and remains anchored to the control that supplies the text.
 Hover lookup starts with the deepest child and continues through its parents
 until one supplies tooltip text. That source also supplies the anchor, so moving
 across a card's labels keeps its tooltip stable. A child's own tooltip takes
@@ -347,7 +350,8 @@ Scener's reel renderer (`apps/scener/reel_draw.c`) is the reference user.
 ### Procedural card surfaces
 
 `theme_draw_ex(THEME_PART_CARD, rect, state | CTRL_PLASTIC, &opts)` paints a tinted
-card with a shallow bevel and an inset shadow. Set `opts.color` to the card tint
+card using the active theme's material. Most themes use a shallow bevel and an
+inset shadow; Metro uses a flat, square face. Set `opts.color` to the card tint
 in packed `0xAABBGGRR`. `theme_content_rect()` excludes the shadow margin and
 selection ring. Waveforms, artwork and labels draw separately over the surface.
 

@@ -15,7 +15,7 @@
   <string source="Transport" where="menu">Воспроизведение</string>
   <string source="Play / Pause" where="menu">Пуск / Пауза</string>
   <string source="Stop" where="menu,record_sample">Стоп</string>
-  <string source="Rewind" where="menu">В начало</string>
+  <string source="Rewind" where="menu,library_window">В начало</string>
   <string source="Go to End" where="menu">В конец</string>
   <string source="Loop" where="menu">Повтор</string>
   <string source="Window" where="menu">Окно</string>
@@ -38,17 +38,17 @@
   <string source="Rewind (Home)" where="library_window">В начало (Home)</string>
   <string source="Play / pause (Space)" where="library_window">Пуск / Пауза (Пробел)</string>
   <string source="Go to end (End)" where="library_window">В конец (End)</string>
-  <string source="Drum Loops" where="library_window">Ритмы</string>
-  <string source="Drum Fills" where="library_window">Сбивки</string>
-  <string source="Bass" where="library_window">Бас</string>
-  <string source="Guitar" where="library_window">Гитара</string>
-  <string source="Synth" where="library_window">Синтезатор</string>
-  <string source="Pads" where="library_window">Пэды</string>
-  <string source="Stabs" where="library_window">Акценты</string>
-  <string source="Vocals" where="library_window">Вокал</string>
-  <string source="Scratch" where="library_window">Скрэтч</string>
-  <string source="Effects" where="library_window">Эффекты</string>
-  <string source="My Samples" where="library_window">Мои сэмплы</string>
+  <string source="Drum Loops" where="code">Ритмы</string>
+  <string source="Drum Fills" where="code">Сбивки</string>
+  <string source="Bass" where="code">Бас</string>
+  <string source="Guitar" where="code">Гитара</string>
+  <string source="Synth" where="code">Синтезатор</string>
+  <string source="Pads" where="code">Пэды</string>
+  <string source="Stabs" where="code">Акценты</string>
+  <string source="Vocals" where="code">Вокал</string>
+  <string source="Scratch" where="code">Скрэтч</string>
+  <string source="Effects" where="code">Эффекты</string>
+  <string source="My Samples" where="code">Мои сэмплы</string>
   <string source="My Songs" where="song_browser">Мои песни</string>
   <string source="No saved songs yet. Choose File &gt; Save Song to keep the current song here." obsolete="true">Сохранённых песен пока нет. Выберите «Файл → Сохранить песню».</string>
   <string source="Open" where="song_browser">Открыть</string>
@@ -143,4 +143,12 @@
   <string source="Export Song..." where="menu">Экспортировать песню...</string>
   <string source="Could not read or write the Groove song." where="code">Не удалось прочитать или сохранить песню Groove.</string>
   <string source="Song unavailable" where="code">Песня недоступна</string>
+  <string source="Play" where="library_window">Играть</string>
+  <string source="Forward" where="library_window">Вперёд</string>
+  <string source="Sounds" where="code">Звуки</string>
+  <string source="Drums|Fills|Bass|Guitar|Synth|Pads|Stabs|Vocals|Scratch|FX|My Samples" where="library_window">Барабаны|Сбивки|Бас|Гитара|Синтезатор|Пэды|Акценты|Вокал|Скретч|Эффекты|Мои сэмплы</string>
+  <string source="All tracks are in use. Empty a track to choose this family." where="code">Все дорожки заняты. Освободите дорожку, чтобы выбрать эту группу звуков.</string>
+  <string source="Empty track" where="code">Пустая дорожка</string>
+  <string source="Add Same Instrument Track" where="menu">Добавить дорожку с тем же инструментом</string>
+  <string source="All 8 tracks are in use" where="menu">Все 8 дорожек заняты</string>
 </strings>

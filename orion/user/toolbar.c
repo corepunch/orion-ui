@@ -416,10 +416,11 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       if (is_active)  state |= CTRL_SELECTED;
       if (is_pressed) state |= CTRL_PRESSED;
       if (is_hot)     state |= CTRL_HOVER;
+      if (item->style & BUTTON_DEFAULT) state |= CTRL_DEFAULT;
       theme_part_t part = (tb->style & TOOLBAR_STYLE_SHOW_LABELS)
                                      ? THEME_PART_TOOLBAR_LABELED_BUTTON
                                      : THEME_PART_TOOLBAR_BUTTON;
-      uint32_t foreground = (state & (CTRL_DISABLED | CTRL_SELECTED | CTRL_PRESSED))
+      uint32_t foreground = (state & (CTRL_DISABLED | CTRL_SELECTED | CTRL_PRESSED | CTRL_DEFAULT))
                           ? theme_foreground(part, state)
                           : item->color;
       theme_draw(part, local, state);
@@ -429,7 +430,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       if (toolbar_lists_text(tb, item)) {
         icon_rect.w = MIN(icon_rect.w, icon_rect.h);
         irect16_t caption = rect_offset(rect_trim_left(local, icon_rect.w), poff, poff);
-        uint32_t ink = (state & (CTRL_DISABLED | CTRL_SELECTED | CTRL_PRESSED))
+        uint32_t ink = (state & (CTRL_DISABLED | CTRL_SELECTED | CTRL_PRESSED | CTRL_DEFAULT))
                      ? theme_foreground(part, state) : get_sys_color(brToolbarForeground);
         draw_text_clipped(FONT_SMALL, item->text, &caption, ink, 0);
       }

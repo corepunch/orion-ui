@@ -19,7 +19,23 @@ static irect16_t g_tooltip_bar_rect;
 static int g_tooltip_tail_offset;
 static tooltip_tail_side_t g_tooltip_preferred_side, g_tooltip_tail_side;
 
-static tooltip_tail_side_t tooltip_preferred_side(window_t *src, irect16_t *bounds) {
+static tooltip_tail_side_t tooltip_preferred_side(window_t *src, irect16_t *bounds, int sx, int sy) {
+  for (window_t *win = src; win; win = win->parent) {
+    tooltip_placement_t placement = TOOLTIP_PLACE_ABOVE;
+    int x = sx - window_screen_x(win) + (int)win->hscroll.pos;
+    int y = sy - window_screen_y(win) - titlebar_height(win) + (int)win->vscroll.pos;
+    if (!send_message(win, evGetTooltipPlacement, MAKEDWORD(x, y), &placement)) continue;
+    switch (placement) {
+      case TOOLTIP_PLACE_ABOVE: return TOOLTIP_TAIL_BOTTOM;
+      case TOOLTIP_PLACE_BELOW: return TOOLTIP_TAIL_TOP;
+      case TOOLTIP_PLACE_LEFT:  return TOOLTIP_TAIL_RIGHT;
+      case TOOLTIP_PLACE_RIGHT: return TOOLTIP_TAIL_LEFT;
+      default:
+        fprintf(stderr, "[tooltip] placement rejected win=%u value=%d\n", win->id, (int)placement);
+        fflush(stderr);
+        break;
+    }
+  }
   for (window_t *win = src; win; win = win->parent) {
     window_t *owner = NULL;
     if (win->parent && win->parent->toolbar == win) owner = win->parent;
@@ -141,7 +157,7 @@ void tooltip_update(window_t *src_win, const char *text, int sx, int sy) {
     anchor = rect_offset(part, ox - (int)src_win->hscroll.pos,
                          oy + titlebar_height(src_win) - (int)src_win->vscroll.pos);
   irect16_t bar = anchor;
-  tooltip_tail_side_t side = tooltip_preferred_side(src_win, &bar);
+  tooltip_tail_side_t side = tooltip_preferred_side(src_win, &bar, sx, sy);
   if (g_tooltip_src == src_win && !memcmp(&anchor, &g_tooltip_anchor, sizeof(anchor)) &&
       !memcmp(&bar, &g_tooltip_bar_rect, sizeof(bar)) && side == g_tooltip_preferred_side &&
       !strcmp(g_tooltip_text, text)) return;
