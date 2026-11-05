@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="it" decimal="," group="." date="dd/MM/yyyy">
   <string source="File" where="menu">File</string>
-  <string source="New Song" where="menu,new_song_card">Nuovo brano</string>
+  <string source="New Song" where="menu">Nuovo brano</string>
   <string source="Open Song..." where="menu">Apri brano...</string>
   <string source="Save Song" where="menu,save_song">Salva brano</string>
   <string source="Save Song As..." where="menu">Salva brano con nome...</string>
@@ -54,7 +54,7 @@
   <string source="Open" where="song_browser">Apri</string>
   <string source="Save" where="save_song">Salva</string>
   <string source="Import Song..." where="menu">Importa brano...</string>
-  <string source="Export Project..." where="menu">Esporta progetto...</string>
+  <string source="Export Project..." obsolete="true">Esporta progetto...</string>
   <string source="1 bar" where="code">1 battuta</string>
   <string source="2 bars" where="code">2 battute</string>
   <string source="4 bars" where="code">4 battute</string>
@@ -140,4 +140,7 @@
   <string source="Your saved songs will appear here." where="song_browser">I brani salvati appariranno qui.</string>
   <string source="+ New Song" where="new_song_card">+ Nuovo brano</string>
   <string source="Start with an empty song" where="new_song_card">Inizia con un brano vuoto</string>
+  <string source="Export Song..." where="menu">Esporta brano...</string>
+  <string source="Could not read or write the Groove song." where="code">Impossibile leggere o salvare il brano Groove.</string>
+  <string source="Song unavailable" where="code">Brano non disponibile</string>
 </strings>

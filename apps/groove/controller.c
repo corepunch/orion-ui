@@ -392,7 +392,7 @@ static void project_file_dialog(bool exporting) {
 #ifdef AX_PLATFORM_IOS
   if (ok && !exporting) g_app->song_dirty = true;
 #endif
-  if (!ok) message_box(g_app->menubar_win, ui_tr("Could not read or write the Groove project."), ui_tr("Project unavailable"), MB_OK);
+  if (!ok) message_box(g_app->menubar_win, ui_tr("Could not read or write the Groove song."), ui_tr("Song unavailable"), MB_OK);
 }
 
 void app_command(uint16_t id) {
