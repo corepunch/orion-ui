@@ -274,6 +274,7 @@ bool      song_read_preview(const char *path, song_t *out);
 // "name" -> <songs_dir>/name.groove; false for an empty name or one with path separators.
 bool      song_path_for_name(const char *name, char *path, size_t cap);
 void      song_name_from_path(const char *path, char *name, size_t cap);
+bool      song_seed_demos(const char *songs_dir, const char *demos_dir);
 // iPad song library (dialogs/): desktop keeps the ordinary file dialogs.
 bool      app_save_song_as(window_t *owner);  // asks for a name, saves into songs_dir
 bool      app_show_songs(window_t *owner);    // the My Songs screen; true when a song was opened

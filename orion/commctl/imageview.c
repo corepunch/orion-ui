@@ -5,14 +5,28 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef struct { bitmap_t *bitmap; char *path; } image_view_t;
+typedef struct { bitmap_t *bitmap; char *path; char icon[64]; uint32_t background; } image_view_t;
 result_t win_imageview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   image_view_t *state = win->userdata;
   switch (msg) {
-    case evCreate:
+    case evCreate: {
       state = allocate_window_data(win, sizeof(*state));
       win->flags |= WINDOW_NOTABSTOP;
+      if (state) {
+        const form_ctrl_def_t *cd = (const form_ctrl_def_t *)lparam;
+        state->background = cd && (uintptr_t)cd > 0x1000 && cd->color_set && cd->color < brCount ? cd->color : brWorkspaceBg;
+      }
       return state != NULL;
+    }
+    case btnSetIconName:
+      if (!state) return false;
+      snprintf(state->icon, sizeof(state->icon), "%s", lparam ? (const char *)lparam : "");
+      invalidate_window(win);
+      return true;
+    case evHitTest:
+      if (!state || !state->icon[0] || !lparam || !win->parent) return false;
+      *(window_t **)lparam = win->parent;
+      return true;
     case imageSetPath: {
       const char *path = lparam ? lparam : "";
       if (!state) return false;
@@ -28,7 +42,12 @@ result_t win_imageview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       return !*path || bitmap != NULL;
     }
     case evPaint:
-      fill_rect(get_sys_color(brWorkspaceBg), R(0, 0, win->frame.w, win->frame.h));
+      fill_rect(get_sys_color(state ? state->background : brWorkspaceBg), R(0, 0, win->frame.w, win->frame.h));
+      if (state && state->icon[0]) {
+        int size = MIN(48, MIN(win->frame.w, win->frame.h));
+        irect16_t r = rect_center(get_client_rect(win), size, size);
+        draw_sysicon(state->icon, r.x, r.y, size, get_sys_color(brTextSecondary));
+      }
       if (state && state->bitmap) {
         isize16_t size = bitmap_size(state->bitmap);
         if (size.w > 0 && size.h > 0) {

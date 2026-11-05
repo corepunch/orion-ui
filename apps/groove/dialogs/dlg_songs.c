@@ -145,7 +145,6 @@ static result_t songs_proc(window_t *win, uint32_t msg, uint32_t wparam, void *l
         case tgnSelChange: songs_update_actions(win, st, songs_selection(win, st)); return true;
         case btnClicked:
           switch (LOWORD(wparam)) {
-            case ID_NEW_SONG_CARD_PLACEHOLDER: songs_dlg_activate(win, st, 0); return true;
             case ID_SONG_BROWSER_OPEN:   songs_dlg_activate(win, st, (int)send_message(get_window_item(win, ID_SONG_BROWSER_SONGS), tgGetSelection, 0, NULL)); return true;
             case ID_SONG_BROWSER_DELETE: songs_dlg_delete(win, st, songs_selection(win, st)); return true;
             case ID_SONG_BROWSER_CANCEL: end_dialog(win, 0);                              return true;
@@ -174,6 +173,8 @@ bool app_show_startup_songs(window_t *owner) {
     return false;
   }
   if (owner) window_set_owner(win, owner);
+  show_window(get_window_item(win, ID_SONG_BROWSER_CANCEL), false);
+  window_layout_sync(win);
   show_window(win, true);
   maximize_window(win);
   return true;
