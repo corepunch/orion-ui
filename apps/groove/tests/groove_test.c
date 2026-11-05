@@ -214,6 +214,32 @@ static void set_mtime(const char *path, time_t when) {
   utime(path, &t);
 }
 
+static void test_demo_install(void) {
+  TEST("demo songs are installed once as editable files without overwriting or restoring deleted songs");
+  char dir[128], path[256], marker[256];
+  snprintf(dir, sizeof(dir), "/tmp/orion-groove-demos-%ld", (long)getpid());
+  ASSERT_TRUE(axMkDir(dir));
+  snprintf(path, sizeof(path), "%s/Neon Skyline.groove", dir);
+  FILE *existing = fopen(path, "wb"); ASSERT_NOT_NULL(existing);
+  fputs("existing song", existing); fclose(existing);
+  ASSERT_TRUE(song_seed_demos(dir, "apps/groove/share/demos"));
+  char text[32] = "";
+  existing = fopen(path, "rb"); ASSERT_NOT_NULL(existing);
+  ASSERT_EQUAL(fread(text, 1, sizeof(text) - 1, existing), 13); fclose(existing);
+  ASSERT_STR_EQUAL(text, "existing song");
+  snprintf(path, sizeof(path), "%s/Afterglow Avenue.groove", dir);
+  song_t song; ASSERT_TRUE(song_read_preview(path, &song));
+  ASSERT(song.nclips > 80, "the copied demo is a complete editable arrangement");
+  ASSERT_EQUAL(remove(path), 0);
+  ASSERT_TRUE(song_seed_demos(dir, "apps/groove/share/demos"));
+  ASSERT_FALSE(axPathExists(path));
+  snprintf(path, sizeof(path), "%s/Neon Skyline.groove", dir); remove(path);
+  snprintf(path, sizeof(path), "%s/Victory Lights.groove", dir); remove(path);
+  snprintf(marker, sizeof(marker), "%s/.demo-songs-v1", dir); remove(marker);
+  rmdir(dir);
+  PASS();
+}
+
 static void test_song_library(void) {
   TEST("iPad songs save into Groove's own storage; My Songs lists them newest first with previews read from the files");
   test_env_init();
@@ -285,7 +311,7 @@ static void test_song_library(void) {
   window_t *grid = get_window_item(songs, ID_SONG_BROWSER_SONGS);
   const char *order[] = { "Night Drive", "Broken", "Afterglow" };
   int tiles = 0;
-  ASSERT_STR_EQUAL(get_window_item(grid->children, ID_NEW_SONG_CARD_PLACEHOLDER)->title, "+ New Song");
+  ASSERT_STR_EQUAL(get_window_item(grid->children, ID_NEW_SONG_CARD_TITLE)->title, "New Song");
   for (window_t *card = grid->children->next; card; card = card->next, tiles++) {
     ASSERT(tiles < 3 && !strcmp(get_window_item(card, ID_SONG_CARD_TITLE)->title, order[tiles]), "cards are the saved songs, newest first");
     window_t *preview = get_window_item(card, ID_SONG_CARD_PREVIEW);
@@ -302,6 +328,15 @@ static void test_song_library(void) {
   ASSERT(window_has_state(get_window_item(songs, ID_SONG_BROWSER_OPEN), WINDOW_STATE_DISABLED),
          "unreadable songs can be deleted but cannot be opened");
   show_window(songs, true);
+  window_t *new_preview = get_window_item(grid->children, ID_NEW_SONG_CARD_PREVIEW);
+  ASSERT(new_preview && new_preview->frame.h == get_window_item(grid->children->next, ID_SONG_CARD_PREVIEW)->frame.h,
+         "new and saved song cards use matching preview heights");
+  ui_event_t new_press = { .message = kEventLeftButtonDown,
+    .x = (window_screen_x(new_preview) + new_preview->frame.w / 2) * UI_WINDOW_SCALE, .y = (window_screen_y(new_preview) + new_preview->frame.h / 2) * UI_WINDOW_SCALE };
+  dispatch_message(&new_press);
+  new_press.message = kEventLeftButtonUp;
+  dispatch_message(&new_press);
+  ASSERT_EQUAL(send_message(grid, tgGetSelection, 0, NULL), 0);
   window_t *third = get_window_item(grid->children->next->next->next, ID_SONG_CARD_PREVIEW);
   ui_event_t press = { .message = kEventLeftButtonDown,
     .x = (window_screen_x(third) + third->frame.w / 2) * UI_WINDOW_SCALE, .y = (window_screen_y(third) + third->frame.h / 2) * UI_WINDOW_SCALE };
@@ -322,7 +357,7 @@ static void test_song_library(void) {
   ASSERT_FALSE(send_db_message(g_app->songs_db, dbDelete, TABLE_SONGS, (void *)(intptr_t)1));
   songs = create_window_from_form(&groove_song_browser_form, 0, 0, NULL, songs_proc, 0, NULL);
   ASSERT(get_window_item(songs, ID_SONG_BROWSER_SONGS)->children && window_has_state(get_window_item(songs, ID_SONG_BROWSER_EMPTY), WINDOW_STATE_VISIBLE), "an empty library offers a new song");
-  send_message(songs, evCommand, MAKEDWORD(ID_NEW_SONG_CARD_PLACEHOLDER, btnClicked), get_window_item(songs, ID_NEW_SONG_CARD_PLACEHOLDER));
+  send_message(songs, evCommand, MAKEDWORD(0, tgnActivate), get_window_item(songs, ID_SONG_BROWSER_SONGS));
   ASSERT(!is_window(songs) && !g_app->filename[0] && !g_app->song.nclips, "new song tile starts an empty song");
 
   remove(notes); rmdir(dir);
@@ -1910,6 +1945,7 @@ int main(void) {
   test_project_io();
   test_song_library();
   test_eurodance_demos();
+  test_demo_install();
   test_song_rules();
   test_mixer();
   test_clip_gain();

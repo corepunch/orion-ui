@@ -162,6 +162,13 @@ groove_t *app_init(void) {
     fprintf(stderr, "[gr] song storage unavailable settings=%s songs=%s\n", settings ? settings : "<null>", app->songs_dir);
     fflush(stderr);
     app->songs_dir[0] = 0;
+  } else {
+    char demos[1024];
+    int demo_n = snprintf(demos, sizeof(demos), "%s/../share/groove/demos", ui_get_exe_dir());
+    if (demo_n <= 0 || (size_t)demo_n >= sizeof(demos) || !song_seed_demos(app->songs_dir, demos)) {
+      fprintf(stderr, "[gr] demo installation failed songs=%s\n", app->songs_dir);
+      fflush(stderr);
+    }
   }
 #endif
   if (axAudioInit()) {

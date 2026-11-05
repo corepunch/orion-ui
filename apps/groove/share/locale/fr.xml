@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="fr" decimal="," group=" " date="dd/MM/yyyy">
   <string source="File" where="menu">Fichier</string>
-  <string source="New Song" where="menu,main_window">Nouveau morceau</string>
+  <string source="New Song" where="menu,main_window,new_song_card">Nouveau morceau</string>
   <string source="Open Song..." where="menu,main_window">Ouvrir un morceau...</string>
   <string source="Save Song" where="menu,main_window,save_song">Enregistrer le morceau</string>
   <string source="Save Song As..." where="menu">Enregistrer le morceau sous...</string>
@@ -138,7 +138,7 @@
   <string source="Delete Recording" where="code">Supprimer l’enregistrement</string>
   <string source="Could not delete the recording." where="code">Impossible de supprimer l’enregistrement.</string>
   <string source="Your saved songs will appear here." where="song_browser">Vos morceaux enregistrés apparaîtront ici.</string>
-  <string source="+ New Song" where="new_song_card">+ Nouveau morceau</string>
+  <string source="+ New Song" obsolete="true">+ Nouveau morceau</string>
   <string source="Start with an empty song" where="new_song_card">Commencer avec un morceau vide</string>
   <string source="Export Song..." where="menu">Exporter le morceau...</string>
   <string source="Could not read or write the Groove song." where="code">Impossible de lire ou d’enregistrer le morceau Groove.</string>

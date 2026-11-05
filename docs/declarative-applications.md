@@ -117,6 +117,11 @@ ordinary typed DDX bindings, with no Lua callback. ImageView owns the bitmap it
 loads from the string path and preserves its aspect ratio. Empty selection clears
 the bound controls. See `tests/fixtures/runtime/browser.orion`.
 
+An ImageView may also declare `icon="name"` for a centered theme-aware SVG,
+and `color="button-inner"` (or another theme color role) for its background.
+An icon-only ImageView passes pointer hits to its parent, allowing it to serve
+as a card's thumbnail.
+
 Source writes publish database notifications after the outermost successful
 change scope. Reverted changes do not publish. The host refreshes open forms;
 selection changes update bindings without refetching the list. Notifications are

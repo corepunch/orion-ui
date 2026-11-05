@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="ru" decimal="," group=" " date="dd.MM.yyyy">
   <string source="File" where="menu">Файл</string>
-  <string source="New Song" where="menu,main_window">Новая песня</string>
+  <string source="New Song" where="menu,main_window,new_song_card">Новая песня</string>
   <string source="Open Song..." where="menu,main_window">Открыть песню...</string>
   <string source="Save Song" where="menu,main_window,save_song">Сохранить песню</string>
   <string source="Save Song As..." where="menu">Сохранить песню как...</string>
@@ -138,7 +138,7 @@
   <string source="Delete Recording" where="code">Удалить запись</string>
   <string source="Could not delete the recording." where="code">Не удалось удалить запись.</string>
   <string source="Your saved songs will appear here." where="song_browser">Здесь появятся сохранённые композиции.</string>
-  <string source="+ New Song" where="new_song_card">+ Новая композиция</string>
+  <string source="+ New Song" obsolete="true">+ Новая композиция</string>
   <string source="Start with an empty song" where="new_song_card">Начать с пустой композиции</string>
   <string source="Export Song..." where="menu">Экспортировать песню...</string>
   <string source="Could not read or write the Groove song." where="code">Не удалось прочитать или сохранить песню Groove.</string>

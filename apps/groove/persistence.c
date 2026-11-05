@@ -2,11 +2,42 @@
 
 #include "groove.h"
 #include <inttypes.h>
+#include <errno.h>
 #ifdef _WIN32
 #include <windows.h>
 #elif defined(__APPLE__) && TARGET_OS_OSX
 #include <unistd.h>
 #endif
+
+bool song_seed_demos(const char *songs_dir, const char *demos_dir) {
+  static const struct { const char *source, *name; } demos[] = {
+    { "neon-skyline.groove", "Neon Skyline.groove" },
+    { "afterglow-avenue.groove", "Afterglow Avenue.groove" },
+    { "victory-lights.groove", "Victory Lights.groove" },
+  };
+  char marker[1024], source[1024], target[1024];
+  if (!songs_dir || !demos_dir || snprintf(marker, sizeof(marker), "%s/.demo-songs-v1", songs_dir) >= (int)sizeof(marker)) return false;
+  if (axPathExists(marker)) return true;
+  for (int i = 0; i < ARRAY_LEN(demos); i++) {
+    if (snprintf(source, sizeof(source), "%s/%s", demos_dir, demos[i].source) >= (int)sizeof(source) ||
+        snprintf(target, sizeof(target), "%s/%s", songs_dir, demos[i].name) >= (int)sizeof(target)) return false;
+    FILE *in = fopen(source, "rb");
+    if (!in) return false;
+    FILE *out = fopen(target, "wbx");
+    if (!out) { int error = errno; fclose(in); if (error == EEXIST) continue; return false; }
+    char buffer[8192];
+    size_t n;
+    bool ok = true;
+    while ((n = fread(buffer, 1, sizeof(buffer), in)) > 0)
+      if (fwrite(buffer, 1, n, out) != n) { ok = false; break; }
+    if (ferror(in)) ok = false;
+    if (fclose(out) != 0) ok = false;
+    fclose(in);
+    if (!ok) { remove(target); return false; }
+  }
+  FILE *done = fopen(marker, "wb");
+  return done && fclose(done) == 0;
+}
 
 static uint32_t track_flags(const bool flags[GR_TRACKS]) {
   uint32_t bits = 0;

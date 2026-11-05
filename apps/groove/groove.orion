@@ -210,7 +210,8 @@
       </form>
 
       <form name="new_song_card" width="232" flags="WINDOW_NOTITLE | WINDOW_NOFILL" spacing="4" padding="0">
-        <Button name="placeholder" text="+ New Song" height="84" />
+        <ImageView name="preview" icon="phosphor-plus" color="button-inner" height="84" />
+        <Label name="title" text="New Song" font="system" />
         <Label name="detail" text="Start with an empty song" color="text-secondary" />
       </form>
 
