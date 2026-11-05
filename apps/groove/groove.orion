@@ -182,13 +182,19 @@
       <!-- iPad File > Open Song: every saved song as a card with a preview drawn from the file itself. -->
       <form name="song_browser" title="My Songs" width="700" height="460" spacing="8" padding="12">
         <TileGrid name="songs" spacing="8" padding="8 8 8 8" flags="WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL | WINDOW_FLEXSPACE" />
-        <Label name="empty" text="No saved songs yet. Choose File &gt; Save Song to keep the current song here." color="text-secondary" />
+        <Label name="empty" text="Your saved songs will appear here." color="text-secondary" />
         <StackView name="actions" orientation="horizontal" spacing="6">
           <Button name="delete" text="Delete" height="44" />
           <Space name="flex" />
           <Button name="cancel" text="Cancel" height="44" />
           <Button name="open" text="Open" height="44" flags="BUTTON_DEFAULT" />
         </StackView>
+      </form>
+
+      <form name="new_song_card" width="232" flags="WINDOW_NOTITLE | WINDOW_NOFILL" spacing="4" padding="0">
+        <Button name="placeholder" text="+ New Song" height="84" />
+        <Label name="title" text="New Song" />
+        <Label name="detail" text="Start with an empty song" color="text-secondary" />
       </form>
 
       <!-- One song tile inside song_browser's TileGrid; the form root is a Card. -->

@@ -14,7 +14,8 @@ typedef struct {
 static void songs_update_actions(window_t *win, const songs_dlg_t *st, int i) {
   bool selected = i >= 0 && i < st->count;
   enable_window(get_window_item(win, ID_SONG_BROWSER_DELETE), selected);
-  enable_window(get_window_item(win, ID_SONG_BROWSER_OPEN), selected && st->rows[i].bpm);
+  int tile = (int)send_message(get_window_item(win, ID_SONG_BROWSER_SONGS), tgGetSelection, 0, NULL);
+  enable_window(get_window_item(win, ID_SONG_BROWSER_OPEN), tile == 0 || (selected && st->rows[i].bpm));
 }
 
 static void card_fill(window_t *card, const song_entry_t *song) {
@@ -47,6 +48,12 @@ static void songs_rebuild(window_t *win, songs_dlg_t *st, int select) {
   st->rows = NULL;
   st->count = 0;
   send_message(grid, tgClear, 0, NULL);
+  window_t *new_card = create_window_from_form(&groove_new_song_card_form, 0, 0, grid, win_card, g_app->hinstance, NULL);
+  if (!new_card) {
+    fprintf(stderr, "[gr] new song card creation failed grid=%u\n", (unsigned)grid->id);
+    fflush(stderr);
+    return;
+  }
   bool loaded = db && send_db_message(db, dbLoad, 0, NULL);
   result_node_t *rows = loaded ? (result_node_t *)send_db_message(db, dbFetch, MAKEDWORD(TABLE_SONGS, 0), NULL) : NULL;
   int n = count_result_list(rows);
@@ -71,13 +78,25 @@ static void songs_rebuild(window_t *win, songs_dlg_t *st, int select) {
   show_window(get_window_item(win, ID_SONG_BROWSER_EMPTY), st->count == 0);
   window_layout_sync(win);
   int i = st->count ? CLAMP(select, 0, st->count - 1) : -1;
-  if (i >= 0) send_message(grid, tgSetSelection, (uint32_t)i, NULL);
+  send_message(grid, tgSetSelection, (uint32_t)(i + 1), NULL);
   songs_update_actions(win, st, i);
 }
 
 static int songs_selection(window_t *win, const songs_dlg_t *st) {
   int i = (int)send_message(get_window_item(win, ID_SONG_BROWSER_SONGS), tgGetSelection, 0, NULL);
-  return i >= 0 && i < st->count ? i : -1;
+  return i > 0 && i <= st->count ? i - 1 : -1;
+}
+
+static void songs_dlg_open(window_t *win, songs_dlg_t *st, int i);
+
+static void songs_dlg_activate(window_t *win, songs_dlg_t *st, int index) {
+  if (index == 0) {
+    if (!app_confirm_replace_song(win)) return;
+    app_new_song();
+    end_dialog(win, 1);
+  } else if (index > 0 && index <= st->count) {
+    songs_dlg_open(win, st, index - 1);
+  }
 }
 
 static void songs_dlg_open(window_t *win, songs_dlg_t *st, int i) {
@@ -122,11 +141,12 @@ static result_t songs_proc(window_t *win, uint32_t msg, uint32_t wparam, void *l
     }
     case evCommand:
       switch (HIWORD(wparam)) {
-        case tgnActivate: songs_dlg_open(win, st, LOWORD(wparam) < st->count ? LOWORD(wparam) : -1); return true;
+        case tgnActivate: songs_dlg_activate(win, st, LOWORD(wparam)); return true;
         case tgnSelChange: songs_update_actions(win, st, songs_selection(win, st)); return true;
         case btnClicked:
           switch (LOWORD(wparam)) {
-            case ID_SONG_BROWSER_OPEN:   songs_dlg_open(win, st, songs_selection(win, st));   return true;
+            case ID_NEW_SONG_CARD_PLACEHOLDER: songs_dlg_activate(win, st, 0); return true;
+            case ID_SONG_BROWSER_OPEN:   songs_dlg_activate(win, st, (int)send_message(get_window_item(win, ID_SONG_BROWSER_SONGS), tgGetSelection, 0, NULL)); return true;
             case ID_SONG_BROWSER_DELETE: songs_dlg_delete(win, st, songs_selection(win, st)); return true;
             case ID_SONG_BROWSER_CANCEL: end_dialog(win, 0);                              return true;
             default: return false;
@@ -144,4 +164,17 @@ static result_t songs_proc(window_t *win, uint32_t msg, uint32_t wparam, void *l
 
 bool app_show_songs(window_t *owner) {
   return g_app && show_dialog_from_form(&groove_song_browser_form, NULL, owner, songs_proc, NULL) == 1;
+}
+
+bool app_show_startup_songs(window_t *owner) {
+  window_t *win = create_window_from_form(&groove_song_browser_form, 0, 0, NULL, songs_proc, g_app->hinstance, NULL);
+  if (!win) {
+    fprintf(stderr, "[gr] startup song browser creation failed\n");
+    fflush(stderr);
+    return false;
+  }
+  if (owner) window_set_owner(win, owner);
+  show_window(win, true);
+  maximize_window(win);
+  return true;
 }

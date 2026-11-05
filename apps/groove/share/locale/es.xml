@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="es" decimal="," group="." date="dd/MM/yyyy">
   <string source="File" where="menu">Archivo</string>
-  <string source="New Song" where="menu">Nueva canción</string>
+  <string source="New Song" where="menu,new_song_card">Nueva canción</string>
   <string source="Open Song..." where="menu">Abrir canción...</string>
   <string source="Save Song" where="menu,save_song">Guardar canción</string>
   <string source="Save Song As..." where="menu">Guardar canción como...</string>
@@ -50,7 +50,7 @@
   <string source="Effects" where="library_window">Efectos</string>
   <string source="My Samples" where="library_window">Mis muestras</string>
   <string source="My Songs" where="song_browser">Mis canciones</string>
-  <string source="No saved songs yet. Choose File &gt; Save Song to keep the current song here." where="song_browser">Aún no hay canciones guardadas. Elige Archivo &gt; Guardar canción para guardar aquí la canción actual.</string>
+  <string source="No saved songs yet. Choose File &gt; Save Song to keep the current song here." obsolete="true">Aún no hay canciones guardadas. Elige Archivo &gt; Guardar canción para guardar aquí la canción actual.</string>
   <string source="Open" where="song_browser">Abrir</string>
   <string source="Save" where="save_song">Guardar</string>
   <string source="Import Song..." where="menu">Importar canción...</string>
@@ -137,4 +137,7 @@
   <string source="Delete “%s” from My Samples? Saved songs keep their own copies." where="code">¿Eliminar «%s» de «Mis muestras»? Las canciones guardadas conservan sus propias copias.</string>
   <string source="Delete Recording" where="code">Eliminar grabación</string>
   <string source="Could not delete the recording." where="code">No se pudo eliminar la grabación.</string>
+  <string source="Your saved songs will appear here." where="song_browser">Tus canciones guardadas aparecerán aquí.</string>
+  <string source="+ New Song" where="new_song_card">+ Nueva canción</string>
+  <string source="Start with an empty song" where="new_song_card">Empezar con una canción vacía</string>
 </strings>

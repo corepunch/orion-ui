@@ -71,6 +71,9 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (!win) { app_shutdown(g_app); return false; }
   show_window(win, true);
   maximize_window(win);
+#ifdef AX_PLATFORM_IOS
+  app_show_startup_songs(win);
+#endif
   return true;
 }
 

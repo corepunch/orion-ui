@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="ru" decimal="," group=" " date="dd.MM.yyyy">
   <string source="File" where="menu">Файл</string>
-  <string source="New Song" where="menu">Новая песня</string>
+  <string source="New Song" where="menu,new_song_card">Новая песня</string>
   <string source="Open Song..." where="menu">Открыть песню...</string>
   <string source="Save Song" where="menu,save_song">Сохранить песню</string>
   <string source="Save Song As..." where="menu">Сохранить песню как...</string>
@@ -50,7 +50,7 @@
   <string source="Effects" where="library_window">Эффекты</string>
   <string source="My Samples" where="library_window">Мои сэмплы</string>
   <string source="My Songs" where="song_browser">Мои песни</string>
-  <string source="No saved songs yet. Choose File &gt; Save Song to keep the current song here." where="song_browser">Сохранённых песен пока нет. Выберите «Файл → Сохранить песню».</string>
+  <string source="No saved songs yet. Choose File &gt; Save Song to keep the current song here." obsolete="true">Сохранённых песен пока нет. Выберите «Файл → Сохранить песню».</string>
   <string source="Open" where="song_browser">Открыть</string>
   <string source="Save" where="save_song">Сохранить</string>
   <string source="Import Song..." where="menu">Импортировать песню...</string>
@@ -137,4 +137,7 @@
   <string source="Delete “%s” from My Samples? Saved songs keep their own copies." where="code">Удалить «%s» из раздела «Мои сэмплы»? В сохранённых композициях останутся собственные копии.</string>
   <string source="Delete Recording" where="code">Удалить запись</string>
   <string source="Could not delete the recording." where="code">Не удалось удалить запись.</string>
+  <string source="Your saved songs will appear here." where="song_browser">Здесь появятся сохранённые композиции.</string>
+  <string source="+ New Song" where="new_song_card">+ Новая композиция</string>
+  <string source="Start with an empty song" where="new_song_card">Начать с пустой композиции</string>
 </strings>
