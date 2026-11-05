@@ -22,6 +22,7 @@
 #include <orion/user/theme_palette_amber.h>
 #include <orion/user/theme_palette_porcelain.h>
 #include <orion/user/theme_palette_porcelain_dark.h>
+#include <orion/user/theme_palette_metro.h>
 
 // Radius constants (logical pixels).
 #define RADIUS_MENU_ITEM     6
@@ -106,14 +107,14 @@ static void modern_draw_toolbar_item_bg(irect16_t r, ctrl_state_t state,
   } else if ((state & (CTRL_SELECTED | CTRL_HOVER)) == (CTRL_SELECTED | CTRL_HOVER)) {
     // Keep selection the same accent while hovered.
     color = get_sys_color(theme_modern_instance()->item_background.selected_hover);
-  } else if (state & CTRL_SELECTED) {
+  } else if (state & (CTRL_SELECTED | CTRL_DEFAULT)) {
     color = get_sys_color(theme_modern_instance()->item_background.selected);
   } else if (state & CTRL_HOVER) {
     color = get_sys_color(theme_modern_instance()->item_background.hover);
   } else {
     return;  // normal: no permanent background
   }
-  if (state & (CTRL_SELECTED | CTRL_PRESSED)) modern_draw_selection(r, get_theme()->toolbar.corner_radius);
+  if (state & (CTRL_SELECTED | CTRL_PRESSED | CTRL_DEFAULT)) modern_draw_selection(r, get_theme()->toolbar.corner_radius);
   else fill_rounded_rect(color, r, get_theme()->toolbar.corner_radius);
 }
 
@@ -122,7 +123,7 @@ static void modern_draw_toolbar_item_bg(irect16_t r, ctrl_state_t state,
 // A capsule inside the field-shaped track: selection gradient when chosen,
 // a soft fill while hovered or pressed.
 static void modern_draw_segment(irect16_t r, ctrl_state_t state) {
-  int radius = (MIN(r.w, r.h) + 1) / 2;
+  int radius = modern_radius(get_theme()->field.corner_radius, r);
   if (state & CTRL_SELECTED) {
     if (state & CTRL_DISABLED) fill_rounded_rect(get_sys_color(brButtonInner), r, radius);
     else modern_draw_selection(r, radius);
@@ -261,6 +262,7 @@ static void navy_apply_palette(void)   { theme_copy_palette(k_theme_palette_navy
 static void amber_apply_palette(void)  { theme_copy_palette(k_theme_palette_amber); }
 static void porcelain_apply_palette(void) { theme_copy_palette(k_theme_palette_porcelain); }
 static void porcelain_dark_apply_palette(void) { theme_copy_palette(k_theme_palette_porcelain_dark); }
+static void metro_apply_palette(void) { theme_copy_palette(k_theme_palette_metro); }
 
 // ── Singleton ────────────────────────────────────────────────────────────────
 
@@ -405,7 +407,7 @@ static uint32_t modern_foreground(theme_part_t part, ctrl_state_t state) {
                          ? brTextSecondary : brTextDisabled);
   if (part == THEME_PART_LIST_ITEM && (state & CTRL_INACTIVE)) return get_sys_color(brTextNormal);
   if (((state & CTRL_SELECTED) && (part == THEME_PART_LIST_ITEM || part == THEME_PART_SEGMENT)) ||
-      ((state & (CTRL_SELECTED | CTRL_PRESSED)) && (part == THEME_PART_TOOLBAR_BUTTON ||
+      ((state & (CTRL_SELECTED | CTRL_PRESSED | CTRL_DEFAULT)) && (part == THEME_PART_TOOLBAR_BUTTON ||
        part == THEME_PART_TOOLBAR_LABELED_BUTTON || part == THEME_PART_TOOLBAR_SPLIT_BUTTON)))
     return get_sys_color(brAccentText);
   if (part == THEME_PART_BUTTON && (state & CTRL_DEFAULT))
@@ -563,4 +565,16 @@ theme_t *theme_porcelain_instance(void) {
 }
 theme_t *theme_porcelain_dark_instance(void) {
   return porcelain_variant(THEME_PORCELAIN_DARK, "Porcelain Dark", true, THEME_PORCELAIN, porcelain_dark_apply_palette);
+}
+
+theme_t *theme_metro_instance(void) {
+  theme_t *theme = modern_variant(THEME_METRO, "Metro", true, THEME_METRO, metro_apply_palette);
+  theme->button.corner_radius = theme->field.corner_radius = theme->field.multiline_corner_radius = 0;
+  theme->field.padding_x = FIELD_PADDING_X(0);
+  theme->window.corner_radius = theme->toolbar.corner_radius = theme->tab.corner_radius = 0;
+  theme->table.corner_radius = theme->card.corner_radius = 0;
+  theme->badge.corner_radius = 0;
+  theme->card.highlight_width = 0;
+  theme->plastic.flat = true;
+  return theme;
 }

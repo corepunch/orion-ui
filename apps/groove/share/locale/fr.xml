@@ -15,7 +15,7 @@
   <string source="Transport" where="menu">Lecture</string>
   <string source="Play / Pause" where="menu">Lecture / Pause</string>
   <string source="Stop" where="menu,record_sample">Arrêter</string>
-  <string source="Rewind" where="menu">Aller au début</string>
+  <string source="Rewind" where="menu,library_window">Aller au début</string>
   <string source="Go to End" where="menu">Aller à la fin</string>
   <string source="Loop" where="menu">Boucle</string>
   <string source="Window" where="menu">Fenêtre</string>
@@ -38,17 +38,17 @@
   <string source="Rewind (Home)" where="library_window">Aller au début (Début)</string>
   <string source="Play / pause (Space)" where="library_window">Lecture / Pause (Espace)</string>
   <string source="Go to end (End)" where="library_window">Aller à la fin (Fin)</string>
-  <string source="Drum Loops" where="library_window">Boucles de batterie</string>
-  <string source="Drum Fills" where="library_window">Breaks de batterie</string>
-  <string source="Bass" where="library_window">Basse</string>
-  <string source="Guitar" where="library_window">Guitare</string>
-  <string source="Synth" where="library_window">Synthé</string>
-  <string source="Pads" where="library_window">Nappes</string>
-  <string source="Stabs" where="library_window">Accents</string>
-  <string source="Vocals" where="library_window">Voix</string>
-  <string source="Scratch" where="library_window">Scratch</string>
-  <string source="Effects" where="library_window">Effets</string>
-  <string source="My Samples" where="library_window">Mes échantillons</string>
+  <string source="Drum Loops" where="code">Boucles de batterie</string>
+  <string source="Drum Fills" where="code">Breaks de batterie</string>
+  <string source="Bass" where="code">Basse</string>
+  <string source="Guitar" where="code">Guitare</string>
+  <string source="Synth" where="code">Synthé</string>
+  <string source="Pads" where="code">Nappes</string>
+  <string source="Stabs" where="code">Accents</string>
+  <string source="Vocals" where="code">Voix</string>
+  <string source="Scratch" where="code">Scratch</string>
+  <string source="Effects" where="code">Effets</string>
+  <string source="My Samples" where="code">Mes échantillons</string>
   <string source="My Songs" where="song_browser">Mes morceaux</string>
   <string source="No saved songs yet. Choose File &gt; Save Song to keep the current song here." obsolete="true">Aucun morceau enregistré. Choisissez Fichier &gt; Enregistrer le morceau pour ajouter le morceau actuel ici.</string>
   <string source="Open" where="song_browser">Ouvrir</string>
@@ -143,4 +143,12 @@
   <string source="Export Song..." where="menu">Exporter le morceau...</string>
   <string source="Could not read or write the Groove song." where="code">Impossible de lire ou d’enregistrer le morceau Groove.</string>
   <string source="Song unavailable" where="code">Morceau indisponible</string>
+  <string source="Play" where="library_window">Lecture</string>
+  <string source="Forward" where="library_window">Avancer</string>
+  <string source="Sounds" where="code">Sons</string>
+  <string source="Drums|Fills|Bass|Guitar|Synth|Pads|Stabs|Vocals|Scratch|FX|My Samples" where="library_window">Batterie|Breaks|Basse|Guitare|Synthé|Nappes|Stabs|Voix|Scratch|Effets|Mes samples</string>
+  <string source="All tracks are in use. Empty a track to choose this family." where="code">Toutes les pistes sont occupées. Videz une piste pour choisir cette famille.</string>
+  <string source="Empty track" where="code">Piste vide</string>
+  <string source="Add Same Instrument Track" where="menu">Ajouter une piste du même instrument</string>
+  <string source="All 8 tracks are in use" where="menu">Les 8 pistes sont occupées</string>
 </strings>

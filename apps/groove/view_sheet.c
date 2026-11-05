@@ -82,13 +82,12 @@ static void sheet_paint_branding(window_t *win, irect16_t grid) {
 
 // The header accent follows the track's earliest clip.
 uint32_t track_color(int t) {
-  static const category_t fallback[GR_TRACKS] = {0, 7, 1, 2, 4, 3, 13, 15};
   const song_t *s = &g_app->song;
   int best = -1;
   for (int i = 0; i < s->nclips; i++)
     if (s->clips[i].track == t && (best < 0 || s->clips[i].position < s->clips[best].position)) best = i;
   const block_t *b = best >= 0 ? block_get(s->clips[best].block) : NULL;
-  return category_color(b ? b->cat : fallback[t]);
+  return b ? category_color(b->cat) : get_sys_color(brTextDisabled);
 }
 
 static void sync_scroll(window_t *win) {
@@ -185,7 +184,8 @@ static void drag_target(window_t *win, int cx, int cy) {
   }
   d->track = CLAMP(floordiv(cy, row_h(win)), 0, GR_TRACKS - 1);
   d->position = CLAMP(floordiv(cx, SNAP_W) * GR_SNAP_TICKS, 0, GR_BARS * GR_TICKS_BAR - ticks);
-  d->valid = song_can_place(&g_app->song, d->track, d->position, ticks, d->from_clip);
+  d->valid = track_accepts_block(d->track, d->block, d->from_clip) &&
+             song_can_place(&g_app->song, d->track, d->position, ticks, d->from_clip);
 }
 
 static void drag_clear(window_t *win) {
@@ -262,6 +262,7 @@ static void paint_sheet(window_t *win) {
     irect16_t lane = R(grid.x, track_y(win, t), grid.w, row_h(win));
     fill_rect(t % 2 ? alternate_bg : lane_bg, lane);
     if (dark && t % 2) fill_rect(color_with_alpha(ink, 0x08), lane);
+    if (t == g_app->selected_track) fill_rect(color_with_alpha(get_sys_color(brAccent), 0x18), lane);
   }
   sheet_paint_branding(win, grid);
   for (int position = 0; position <= GR_BARS * GR_TICKS_BAR; position += GR_SNAP_TICKS) {
@@ -318,6 +319,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       st->resize = false;
       if (my < RULER_H) { app_seek_position(seek_ticks(mx)); return true; }
       int track = (my - RULER_H) / row_h(win), position = position_at(mx);
+      if (track >= 0 && track < GR_TRACKS) app_select_track(track);
       st->press_clip = track >= 0 && track < GR_TRACKS ? song_clip_at(&g_app->song, track, position) : -1;
       st->press = (ipoint16_t){ (int16_t)mx, (int16_t)my };
       app_select_clip(st->press_clip);

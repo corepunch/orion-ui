@@ -83,6 +83,8 @@ void app_new_song(void) {
   g_app->selected_clip = -1;
   app_unlock();
   release_all_audio();
+  app_reset_tracks();
+  app_select_track(0);
   g_app->filename[0] = 0;
   g_app->song_dirty = false;
   transport_refresh();
@@ -122,7 +124,6 @@ void app_load_demo(void) {
 groove_t *app_init(void) {
   groove_t *app = calloc(1, sizeof(*app));
   if (!app) { fprintf(stderr, "[gr] app_init: allocation failed\n"); fflush(stderr); return NULL; }
-  if (!block_pictograms_load(app)) { free(app); return NULL; }
   song_init(&app->song);
   app->selected_clip = -1;
   app->drag.track = -1;
@@ -171,6 +172,7 @@ groove_t *app_init(void) {
     }
   }
   g_app = app;
+  app_reset_tracks();
   return app;
 }
 
@@ -180,7 +182,6 @@ void app_shutdown(groove_t *app) {
   if (app->audio_dev) axAudioClose(app->audio_dev);
   axAudioShutdown();
   waveform_cache_free(app);
-  if (app->pictograms) R_DeleteTexture(app->pictograms);
   if (app->library_db) destroy_database(app->library_db);
   if (app->songs_db) destroy_database(app->songs_db);
   app->library_db = app->songs_db = NULL;
@@ -275,6 +276,8 @@ void app_set_family(int family) {
   g_app->family = (family_t)family;
   library_refilter();
   transport_refresh();
+  if (g_app->tracks) tracks_sync();
+  if (g_app->sheet) invalidate_window(g_app->sheet);
 }
 
 void app_set_genre(uint8_t genre) {
@@ -361,7 +364,47 @@ bool app_resize_clip(int idx, int ticks) {
   return ok;
 }
 
+static int track_duplicate_space(int track) {
+  if (!g_app || track < 0 || track >= GR_TRACKS) return -1;
+  bool occupied[GR_TRACKS] = {0};
+  for (int i = 0; i < g_app->song.nclips; i++) occupied[g_app->song.clips[i].track] = true;
+  for (int t = GR_TRACKS - 1; t > track; t--) if (!occupied[t]) return t;
+  for (int t = 0; t < track; t++) if (!occupied[t]) return t;
+  return -1;
+}
+
+bool app_can_duplicate_track(int track) { return track_duplicate_space(track) >= 0; }
+
+bool app_duplicate_track(int track) {
+  int space = track_duplicate_space(track);
+  if (space < 0) return false;
+  int family = track_family(track), inserted = space > track ? track + 1 : track;
+  song_t *s = &g_app->song;
+  app_lock();
+  if (space > track) {
+    for (int i = 0; i < s->nclips; i++) if (s->clips[i].track > track && s->clips[i].track < space) s->clips[i].track++;
+    for (int t = space; t > track + 1; t--) {
+      s->track_family[t] = s->track_family[t - 1]; s->mute[t] = s->mute[t - 1]; s->solo[t] = s->solo[t - 1];
+    }
+  } else {
+    for (int i = 0; i < s->nclips; i++) if (s->clips[i].track > space && s->clips[i].track <= track) s->clips[i].track--;
+    for (int t = space; t < track; t++) {
+      s->track_family[t] = s->track_family[t + 1]; s->mute[t] = s->mute[t + 1]; s->solo[t] = s->solo[t + 1];
+    }
+  }
+  s->track_family[inserted] = (family_t)family;
+  s->mute[inserted] = s->solo[inserted] = false;
+  app_unlock();
+  g_app->song_dirty = true;
+  app_select_track(inserted);
+  if (g_app->sheet) send_message(g_app->sheet, evResize, 0, NULL);
+  return true;
+}
+
 bool app_drop(const drag_t *d) {
+  if (!d) return false;
+  int block = d->from_clip >= 0 && d->from_clip < g_app->song.nclips ? g_app->song.clips[d->from_clip].block : d->block;
+  if (!track_accepts_block(d->track, block, d->from_clip)) return false;
   song_t *s = &g_app->song;
   bool ok = false, audio = d->from_clip < 0 && app_block_audio(d->block); // render before taking the lock
   app_lock();
@@ -372,7 +415,7 @@ bool app_drop(const drag_t *d) {
     if ((ok = idx >= 0)) g_app->selected_clip = idx;
   }
   app_unlock();
-  if (ok) g_app->song_dirty = true;
+  if (ok) { g_app->song_dirty = true; app_select_track(d->track); }
   invalidate_window(g_app->sheet);
   return ok;
 }
@@ -443,11 +486,11 @@ void app_command(uint16_t id) {
       g_app->selected_clip = -1;
       app_unlock();
       g_app->song_dirty = true;
+      if (g_app->tracks) tracks_sync();
       invalidate_window(g_app->sheet);
       break;
     default:
-      if (id >= ID_FAMILY(0) && id < ID_FAMILY(FAMILY_COUNT)) app_set_family(id - ID_FAMILY(0));
-      else if (id >= ID_MUTE(0) && id < ID_MUTE(GR_TRACKS)) { app_lock(); s->mute[id - ID_MUTE(0)] = !s->mute[id - ID_MUTE(0)]; app_unlock(); g_app->song_dirty = true; tracks_sync(); }
+      if (id >= ID_MUTE(0) && id < ID_MUTE(GR_TRACKS)) { app_lock(); s->mute[id - ID_MUTE(0)] = !s->mute[id - ID_MUTE(0)]; app_unlock(); g_app->song_dirty = true; tracks_sync(); }
       else if (id >= ID_SOLO(0) && id < ID_SOLO(GR_TRACKS)) { app_lock(); s->solo[id - ID_SOLO(0)] = !s->solo[id - ID_SOLO(0)]; app_unlock(); g_app->song_dirty = true; tracks_sync(); }
       break;
   }

@@ -27,13 +27,14 @@ Use File > Manage Recordings to select a take, edit its name, or delete its
 standalone WAV. Deleting removes it from My Samples. Placed clips retain their
 audio and saved songs retain embedded copies.
 
-Songs containing only built-in blocks keep the existing `ORION_GROOVE 4` format.
-A song using a recording is saved as `ORION_GROOVE 5`. Each distinct custom
+Songs are saved as `ORION_GROOVE 6`, which preserves instrument choices for
+empty tracks. Older versions remain readable. Each distinct custom
 source is embedded once, regardless of the number of placements. Built-in
-sources remain references by ID and name. Versions 2–4 remain readable; older
-Groove builds cannot open version 5 songs.
+sources remain references by ID and name. Versions 2–5 remain readable; older
+Groove builds cannot open version 6 songs.
 
-Version 5 uses the existing song header and clip rows. An asset is either the
+Version 6 adds eight family IDs after the song header; the asset and clip rows
+otherwise follow version 5. An asset is either the
 existing `B <id>\t<name>\n` record or `S\n`, a complete bounded WAV, and `\n`.
 Clip rows retain the version 4 fields. PCM is explicitly little-endian. The
 loader validates the complete file, metadata, bounds and clip references before

@@ -106,6 +106,29 @@ static void test_radio_input(void) {
   PASS();
 }
 
+static void test_long_utf8_label(void) {
+  TEST("long translated segment labels are truncated at a UTF-8 boundary");
+  test_env_init();
+  window_t *host = create_window("Host", 0, MAKERECT(20, 20, 400, 200), NULL, host_proc, 0, NULL);
+  window_t *seg = create_window("", WINDOW_NOTITLE, MAKERECT(10, 10, 300, 24), host, win_segmented, 0, NULL);
+  char label[141], tip[256] = {0};
+  for (int i = 0; i < 70; i++) { label[i * 2] = (char)0xd0; label[i * 2 + 1] = (char)0x96; }
+  label[140] = '\0';
+  ASSERT_EQUAL(send_message(seg, sgAddSegment, 0, label), 0);
+  bitmap_strip_t strip = { .cols = 1, .icon_w = 16, .icon_h = 16, .sheet_w = 16, .sheet_h = 16 };
+  send_message(seg, sgSetImageStrip, 0, &strip);
+  send_message(seg, sgSetSegmentIcon, 0, (void *)(intptr_t)0);
+  send_message(seg, sgSetStyle, SEGMENTED_STYLE_ICONS_ONLY, NULL);
+  irect16_t r;
+  ASSERT_TRUE(send_message(seg, sgGetSegmentRect, 0, &r));
+  ASSERT_TRUE(send_message(seg, evGetTooltipText, MAKEDWORD(r.x + 2, r.y + 2), tip));
+  ASSERT_EQUAL(strlen(tip), SEGMENTED_LABEL_MAX - 2);
+  ASSERT_EQUAL((unsigned char)tip[strlen(tip) - 1], 0x96);
+  destroy_window(host);
+  test_env_shutdown();
+  PASS();
+}
+
 static void test_toolbar_item(void) {
   TEST("TOOLBAR_ITEM_SEGMENTED embeds the control, fits its labels and routes clicks to the toolbar owner");
   test_env_init();
@@ -194,6 +217,7 @@ int main(void) {
   TEST_START("SegmentedControl");
   test_selection();
   test_radio_input();
+  test_long_utf8_label();
   test_toolbar_item();
   test_icons();
   TEST_END();

@@ -15,7 +15,7 @@
   <string source="Transport" where="menu">Reprodução</string>
   <string source="Play / Pause" where="menu">Reproduzir / Pausar</string>
   <string source="Stop" where="menu,record_sample">Parar</string>
-  <string source="Rewind" where="menu">Ir para o início</string>
+  <string source="Rewind" where="menu,library_window">Ir para o início</string>
   <string source="Go to End" where="menu">Ir para o fim</string>
   <string source="Loop" where="menu">Loop</string>
   <string source="Window" where="menu">Janela</string>
@@ -38,17 +38,17 @@
   <string source="Rewind (Home)" where="library_window">Ir para o início (Home)</string>
   <string source="Play / pause (Space)" where="library_window">Reproduzir / Pausar (Espaço)</string>
   <string source="Go to end (End)" where="library_window">Ir para o fim (End)</string>
-  <string source="Drum Loops" where="library_window">Loops de bateria</string>
-  <string source="Drum Fills" where="library_window">Viradas de bateria</string>
-  <string source="Bass" where="library_window">Baixo</string>
-  <string source="Guitar" where="library_window">Guitarra</string>
-  <string source="Synth" where="library_window">Sintetizador</string>
-  <string source="Pads" where="library_window">Pads</string>
-  <string source="Stabs" where="library_window">Acentos</string>
-  <string source="Vocals" where="library_window">Vozes</string>
-  <string source="Scratch" where="library_window">Scratch</string>
-  <string source="Effects" where="library_window">Efeitos</string>
-  <string source="My Samples" where="library_window">Minhas amostras</string>
+  <string source="Drum Loops" where="code">Loops de bateria</string>
+  <string source="Drum Fills" where="code">Viradas de bateria</string>
+  <string source="Bass" where="code">Baixo</string>
+  <string source="Guitar" where="code">Guitarra</string>
+  <string source="Synth" where="code">Sintetizador</string>
+  <string source="Pads" where="code">Pads</string>
+  <string source="Stabs" where="code">Acentos</string>
+  <string source="Vocals" where="code">Vozes</string>
+  <string source="Scratch" where="code">Scratch</string>
+  <string source="Effects" where="code">Efeitos</string>
+  <string source="My Samples" where="code">Minhas amostras</string>
   <string source="My Songs" where="song_browser">Minhas músicas</string>
   <string source="No saved songs yet. Choose File &gt; Save Song to keep the current song here." obsolete="true">Nenhuma música salva. Escolha Arquivo &gt; Salvar música para guardar a música atual aqui.</string>
   <string source="Open" where="song_browser">Abrir</string>
@@ -143,4 +143,12 @@
   <string source="Export Song..." where="menu">Exportar música...</string>
   <string source="Could not read or write the Groove song." where="code">Não foi possível ler ou salvar a música do Groove.</string>
   <string source="Song unavailable" where="code">Música indisponível</string>
+  <string source="Play" where="library_window">Reproduzir</string>
+  <string source="Forward" where="library_window">Avançar</string>
+  <string source="Sounds" where="code">Sons</string>
+  <string source="Drums|Fills|Bass|Guitar|Synth|Pads|Stabs|Vocals|Scratch|FX|My Samples" where="library_window">Bateria|Viradas|Baixo|Guitarra|Sintetizador|Pads|Stabs|Vozes|Scratch|Efeitos|Meus samples</string>
+  <string source="All tracks are in use. Empty a track to choose this family." where="code">Todas as faixas estão ocupadas. Esvazie uma faixa para escolher esta família.</string>
+  <string source="Empty track" where="code">Faixa vazia</string>
+  <string source="Add Same Instrument Track" where="menu">Adicionar faixa do mesmo instrumento</string>
+  <string source="All 8 tracks are in use" where="menu">As 8 faixas estão ocupadas</string>
 </strings>

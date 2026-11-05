@@ -133,7 +133,7 @@ static void test_project_io(void) {
   ASSERT_TRUE(app_save_song(path));
   ASSERT(access(saved, F_OK) == 0, "save appends the project extension");
   FILE *f = fopen(saved, "rb"); ASSERT_NOT_NULL(f);
-  char line[256]; ASSERT(fgets(line, sizeof(line), f) && strcmp(line, "ORION_GROOVE 4\n") == 0, "saves clip levels with the source table");
+  char line[256]; ASSERT(fgets(line, sizeof(line), f) && strcmp(line, "ORION_GROOVE 6\n") == 0, "saves clip levels with the source table");
   int bpm, loop, assets, clips; uint32_t mute, solo;
   ASSERT(fscanf(f, "%d %d %u %u %d %d", &bpm, &loop, &mute, &solo, &assets, &clips) == 6 && assets == 3 && clips == 4, "writes one table entry per distinct source");
   fclose(f);
@@ -602,6 +602,7 @@ static void test_sheet_drop(void) {
   TEST("dropping a block snaps to the grid; identical starts cover and restore the earlier clip");
   test_env_init();
   g_app = app_init();
+  for (int t = 0; t < GR_TRACKS; t++) g_app->song.track_family[t] = block_get(0)->family;
   ASSERT(g_app != NULL, "app_init");
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1100, 700), NULL, main_win_proc, 0, g_app);
   ASSERT(win && g_app->sheet, "main window and sheet");
@@ -643,7 +644,7 @@ static void test_overlap_audio(void) {
   song_t s;
   song_init(&s);
   int long_block = 0;
-  while (long_block < blocks_count() && block_get(long_block)->bars < 2) long_block++;
+  while (long_block < blocks_count() && (block_get(long_block)->bars < 2 || block_get(long_block)->family != block_get(0)->family)) long_block++;
   ASSERT(long_block < blocks_count(), "multi-bar block exists");
   load_block(0, s.bpm);
   load_block(long_block, s.bpm);
@@ -708,12 +709,13 @@ static void test_overlap_sheet(void) {
   TEST("routed drops crop card windows; selection, full-width drags, moves and deletion restore earlier cards");
   test_env_init();
   g_app = app_init();
+  for (int t = 0; t < GR_TRACKS; t++) g_app->song.track_family[t] = block_get(0)->family;
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
   window_t *sheet = g_app->sheet, *library = library_card(g_app->bin, 0);
   int long_block = 0, start = 3 * GR_TICKS_BAR + GR_SNAP_TICKS, cut = start + GR_SNAP_TICKS;
-  while (long_block < blocks_count() && block_get(long_block)->bars < 2) long_block++;
+  while (long_block < blocks_count() && (block_get(long_block)->bars < 2 || block_get(long_block)->family != block_get(0)->family)) long_block++;
   ASSERT(long_block < blocks_count(), "multi-bar block exists");
   ASSERT_EQUAL(song_add_clip(&g_app->song, long_block, 0, start), 0);
   send_message(sheet, evResize, 0, NULL);
@@ -781,6 +783,7 @@ static void test_resized_clip_drag(void) {
   TEST("resized clip drags retain their stored length through layout, scrolling, cancellation and drop");
   test_env_init();
   g_app = app_init();
+  for (int t = 0; t < GR_TRACKS; t++) g_app->song.track_family[t] = block_get(0)->family;
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
@@ -1020,8 +1023,20 @@ static bool bar_checked(window_t *bar, uint16_t ident) {
 }
 static bool toolbar_checked(uint16_t ident) { return bar_checked(g_app->library, ident); }
 
+static void click_family(int family) {
+  window_t *control = get_window_item(g_app->library, ID_LIBRARY_WINDOW_FAMILIES);
+  irect16_t r;
+  ASSERT_TRUE(control && send_message(control, sgGetSegmentRect, (uint32_t)family, &r));
+  ui_event_t e = { .message = kEventLeftButtonDown,
+    .x = (window_screen_x(control) + r.x + r.w / 2) * UI_WINDOW_SCALE,
+    .y = (window_screen_y(control) + r.y + r.h / 2) * UI_WINDOW_SCALE };
+  dispatch_message(&e);
+  e.message = kEventLeftButtonUp;
+  dispatch_message(&e);
+}
+
 static void test_library_transport(void) {
-  TEST("transport and the family buttons share one toolbar row; nested mouse routing reaches every button");
+  TEST("transport and the family selector occupy separate rows and route input");
   test_env_init();
   g_app = app_init();
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
@@ -1037,17 +1052,18 @@ static void test_library_transport(void) {
   ASSERT(g_app->chrome && g_app->menubar_win && app_chrome_menubar(g_app->chrome) == g_app->menubar_win, "the chrome owns the menu bar");
   ASSERT(g_app->toolbar == app_chrome_toolbar(g_app->chrome) && bar_index(g_app->toolbar, ID_DELETE) == 0 && bar_index(g_app->toolbar, ID_LOOP) == 1,
          "delete and loop live on the compact toolbar");
-  ASSERT_EQUAL(bar->frame.y, g_app->sheet->frame.y + g_app->sheet->frame.h + DOCK_SPLITTER);
-  ASSERT_EQUAL(bar->frame.h, 280);
+  ASSERT_EQUAL(bar->frame.y, g_app->sheet->frame.y + g_app->sheet->frame.h);
+  ASSERT_EQUAL(bar->frame.h, 340);
   ASSERT_TRUE(g_app->bin->parent == bar);
-  ASSERT_EQUAL(g_app->bin->frame.y, 0);
-  ASSERT_EQUAL(window_screen_y(g_app->bin), window_screen_y(bar) + titlebar_height(bar));
+  ASSERT(g_app->bin->frame.y >= CONTROL_HEIGHT_LARGE, "the selector precedes the bin");
   toolbar_state_t *tb = toolbar_get_state(bar);
-  ASSERT_EQUAL(tb->style, 0);
+  ASSERT_EQUAL(tb->style, TOOLBAR_STYLE_LIST);
   for (int i = 0; i < tb->item_count; i++) ASSERT(tb->items[i].type != TOOLBAR_ITEM_LABEL, "the merged caption shows no title");
-  ASSERT_EQUAL(toolbar_index(ID_REWIND), 0);
-  ASSERT(tb->strip.tex == g_app->pictograms && tb->strip.cols == 6 && tb->strip.icon_w == 128 && tb->strip.icon_h == 128,
-         "the family toolbar uses the shared pictogram atlas metadata in headless tests");
+  ASSERT_EQUAL(toolbar_index(ID_REWIND), 1);
+  ASSERT(tb->items[0].type == TOOLBAR_ITEM_SPACER && (tb->items[0].style & TOOLBAR_ITEM_FLAG_FLEXSPACE), "a flexible spacer precedes transport");
+  int after_transport = toolbar_index(ID_FORWARD) + 1;
+  ASSERT(after_transport < tb->item_count && tb->items[after_transport].type == TOOLBAR_ITEM_SPACER &&
+         (tb->items[after_transport].style & TOOLBAR_ITEM_FLAG_FLEXSPACE), "a flexible spacer follows transport");
   ASSERT_TRUE(strcmp(tb->items[toolbar_index(ID_REWIND)].icon, "phosphor-rewind-fill") == 0);
   ASSERT_EQUAL(tb->items[toolbar_index(ID_PLAY)].color, 0);
   ASSERT(toolbar_index(ID_PLAY) == toolbar_index(ID_REWIND) + 1 && toolbar_index(ID_FORWARD) == toolbar_index(ID_PLAY) + 1, "rewind, play, forward sit together");
@@ -1073,10 +1089,13 @@ static void test_library_transport(void) {
     for (int i = 0; i < tb->item_count; i++) {
       ASSERT_TRUE(tb->item_rects[i].x >= 0 && tb->item_rects[i].x + tb->item_rects[i].w <= bar->frame.w);
     }
+    ASSERT(abs(tb->item_rects[0].w - tb->item_rects[after_transport].w) <= 1, "transport spacers share remaining space");
+    irect16_t first = tb->item_rects[toolbar_index(ID_REWIND)], last = tb->item_rects[toolbar_index(ID_FORWARD)];
+    ASSERT(abs(first.x + last.x + last.w - bar->frame.w) <= 2, "transport is centered");
   }
   for (int i = toolbar_index(ID_REWIND); i <= toolbar_index(ID_FORWARD); i++) {
     irect16_t item = tb->item_rects[i];
-    ASSERT_EQUAL(item.w, toolbar_effective_bsz(bar));
+    ASSERT(item.w >= toolbar_effective_bsz(bar), "transport labels fit alongside their icons");
     ASSERT_EQUAL(item.h, toolbar_effective_bsz(bar));
     ASSERT_EQUAL(item.y, toolbar_effective_padding(bar));
   }
@@ -1112,14 +1131,10 @@ static void test_library_transport(void) {
   ASSERT(!g_app->song.loop && !bar_checked(g_app->toolbar, ID_LOOP), "the compact loop button toggles loop off");
   click_bar(g_app->toolbar, ID_LOOP);
   ASSERT(g_app->song.loop && bar_checked(g_app->toolbar, ID_LOOP), "and back on");
-  char tooltip[256] = {0};
   resize_window(win, SCREEN_W, 700);
-  r = tb->item_rects[toolbar_index(ID_FAMILY(FAMILY_GUITAR))];
-  ASSERT(send_message(bar->toolbar, evGetTooltipText, MAKEDWORD(r.x + 4, r.y + 4), tooltip) &&
-         strcmp(tooltip, kFamilyName[FAMILY_GUITAR]) == 0, "a family button names its family");
-  click_toolbar(ID_FAMILY(FAMILY_GUITAR));
+  click_family(FAMILY_GUITAR);
   ASSERT(g_app->family == FAMILY_GUITAR && library_visible() > 0 && library_visible() < blocks_count(), "a routed family click switches the library");
-  ASSERT(g_app->song.loop && bar_checked(g_app->toolbar, ID_LOOP) && toolbar_checked(ID_FAMILY(FAMILY_GUITAR)), "the family check leaves Loop checked");
+  ASSERT(g_app->song.loop && bar_checked(g_app->toolbar, ID_LOOP) && send_message(get_window_item(bar, ID_LIBRARY_WINDOW_FAMILIES), sgGetSelection, 0, NULL) == FAMILY_GUITAR, "the family selection leaves Loop checked");
   irect16_t area = rect_offset(dock_content_rect(g_app->chrome), window_screen_x(g_app->chrome), window_screen_y(g_app->chrome));
   ASSERT_TRUE(maximize_window(win));
   ASSERT_EQUAL(win->frame.x, area.x);
@@ -1188,6 +1203,7 @@ static void test_drag_anchor(void) {
   TEST("library and canvas drops snap the exact card origin, including scrolling and release position; pointer anchoring is optional");
   test_env_init();
   g_app = app_init();
+  for (int t = 0; t < GR_TRACKS; t++) g_app->song.track_family[t] = block_get(4)->family;
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
@@ -1268,6 +1284,7 @@ static void test_drag_center_boundaries(void) {
   send_message(page, evResize, 0, NULL);
   const int percent[] = {20, 49, 51, 80};
   for (int block = 0; block <= 4; block += 4) {
+    for (int t = 0; t < GR_TRACKS; t++) g_app->song.track_family[t] = block_get(block)->family;
     window_t *library = library_card(page, block);
     ASSERT_NOT_NULL(library);
     ipoint16_t size = clip_cell_size(sheet, block_get(block));
@@ -1300,6 +1317,7 @@ static void test_drag_center_boundaries(void) {
         ASSERT(g_app->song.nclips == 1 && song_clip_at(&g_app->song, 3, 3 * GR_TICKS_BAR + 2 * GR_SNAP_TICKS) >= 0, "80% diagonal drag commits to the bottom-right placement");
         ASSERT_FALSE(g_app->drag.active || window_is_lifted(library));
         app_new_song();
+        for (int t = 0; t < GR_TRACKS; t++) g_app->song.track_family[t] = block_get(block)->family;
       }
     }
   }
@@ -1515,6 +1533,7 @@ static void test_lazy_audio(void) {
   TEST("blocks load on demand: overviews keep no PCM, auditions swap theirs, drops keep the song's audio");
   test_env_init();
   g_app = app_init();
+  g_app->song.track_family[0] = block_get(6)->family;
   ASSERT_NOT_NULL(g_app);
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
@@ -1573,32 +1592,22 @@ static void test_genre_filter(void) {
 }
 
 static void test_family_filter(void) {
-  TEST("family buttons pick the one family the bin shows, as a radio group, and combine with genre");
+  TEST("family selector filters the bin and combines with genre");
   test_env_init();
   g_app = app_init();
   window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1180, 700), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
   window_t *bar = g_app->library;
-  toolbar_state_t *tb = toolbar_get_state(bar);
+  window_t *families = get_window_item(bar, ID_LIBRARY_WINDOW_FAMILIES);
   int ids[GR_MAX_BLOCKS];
-  ASSERT(g_app->family == FAMILY_LOOP && toolbar_checked(ID_FAMILY(FAMILY_LOOP)), "the library opens on drum loops");
+  ASSERT(g_app->family == FAMILY_LOOP && send_message(families, sgGetSelection, 0, NULL) == FAMILY_LOOP, "the library opens on drum loops");
   ASSERT_EQUAL(library_visible(), blocks_in_family(FAMILY_LOOP, ids, GR_MAX_BLOCKS));
-  int first = toolbar_index(ID_FAMILY(0));
-  ASSERT(first >= 0 && toolbar_index(ID_FAMILY(FAMILY_COUNT - 1)) == first + FAMILY_COUNT - 1, "one button per family, in order");
-  for (int i = first; i < first + FAMILY_COUNT; i++) {
-    irect16_t r = tb->item_rects[i];
-    ASSERT(tb->items[i].type == TOOLBAR_ITEM_BUTTON && (strncmp(tb->items[i].icon, "strip:", 6) == 0), "family buttons draw artwork");
-    ASSERT(r.w == toolbar_effective_bsz(bar) && r.h == toolbar_effective_bsz(bar), "family buttons are full toolbar size");
-    ASSERT(r.x + r.w <= bar->frame.w, "every button fits one row at the default width");
-  }
-  ASSERT(strcmp(tb->items[first + FAMILY_GUITAR].icon, "strip:11") == 0, "a family button uses an existing atlas cell");
+  ASSERT_EQUAL(send_message(families, sgGetCount, 0, NULL), FAMILY_COUNT);
   for (int c = FAMILY_COUNT - 1; c >= 0; c--) {
-    click_toolbar(ID_FAMILY(c));
+    click_family(c);
     ASSERT(g_app->family == (family_t)c && library_visible() == blocks_in_family(c, ids, GR_MAX_BLOCKS) + (c == FAMILY_SAMPLES), "a routed click shows one family");
-    int checked = 0;
-    for (int i = first; i < first + FAMILY_COUNT; i++) checked += (tb->items[i].state & TBSTATE_CHECKED) != 0;
-    ASSERT(checked == 1 && toolbar_checked(ID_FAMILY(c)), "exactly the chosen family is checked");
+    ASSERT_EQUAL(send_message(families, sgGetSelection, 0, NULL), c);
   }
   app_set_genre(GENRE_DANCE);
   int n = blocks_in_family(FAMILY_LOOP, ids, GR_MAX_BLOCKS), dance_drums = 0;
@@ -1613,6 +1622,96 @@ static void test_family_filter(void) {
   PASS();
 }
 
+static void test_track_selection(void) {
+  TEST("track selection filters the library and restricts new placements to matching tracks");
+  test_env_init();
+  g_app = app_init();
+  window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  show_window(win, true);
+  int drums[GR_MAX_BLOCKS], bass[GR_MAX_BLOCKS];
+  ASSERT(blocks_in_family(FAMILY_LOOP, drums, GR_MAX_BLOCKS) > 0 &&
+         blocks_in_family(FAMILY_BASS, bass, GR_MAX_BLOCKS) > 0, "test families exist");
+  ASSERT(g_app->selected_track == 0 && g_app->family == FAMILY_LOOP, "drums are selected initially");
+  window_t *row = g_app->tracks->children->next;
+  ASSERT_NOT_NULL(row);
+  tooltip_placement_t placement = TOOLTIP_PLACE_ABOVE;
+  ASSERT_TRUE(send_message(row, evGetTooltipPlacement, MAKEDWORD(10, 10), &placement));
+  ASSERT_EQUAL(placement, TOOLTIP_PLACE_RIGHT);
+  ui_event_t e = { .message = kEventLeftButtonDown,
+    .x = (window_screen_x(row) + 12) * UI_WINDOW_SCALE,
+    .y = (window_screen_y(row) + row->frame.h / 2) * UI_WINDOW_SCALE };
+  dispatch_message(&e);
+  e.message = kEventLeftButtonUp;
+  dispatch_message(&e);
+  ASSERT(g_app->selected_track == 1 && g_app->family == FAMILY_BASS, "tapping bass selects its sounds");
+  ASSERT_EQUAL(library_visible(), blocks_in_family(FAMILY_BASS, bass, GR_MAX_BLOCKS));
+  ASSERT(track_accepts_block(1, bass[0], -1) && !track_accepts_block(1, drums[0], -1), "track accepts its own family");
+  g_app->drag = (drag_t){ .active = true, .block = drums[0], .from_clip = -1, .track = -1 };
+  int x = window_screen_x(g_app->sheet) + 8;
+  int y = window_screen_y(g_app->sheet) + GR_RULER_H + sheet_row_h(g_app->sheet) + 8;
+  send_message(g_app->sheet, shDragOver, MAKEDWORD(x, y), NULL);
+  ASSERT(g_app->drag.track == 1 && !g_app->drag.valid, "the wrong track rejects the drag preview");
+  send_message(g_app->sheet, shDragEnd, 0, NULL);
+  drag_t wrong = { .block = drums[0], .from_clip = -1, .track = 1, .position = 0 };
+  ASSERT_FALSE(app_drop(&wrong));
+  ASSERT_EQUAL(g_app->song.nclips, 0);
+  int legacy = song_add_clip(&g_app->song, drums[0], 1, 0);
+  ASSERT(legacy >= 0 && song_add_clip(&g_app->song, bass[0], 1, GR_TICKS_BAR * 8) >= 0, "legacy mixed tracks remain intact");
+  ASSERT(track_accepts_block(1, bass[0], legacy + 1), "a legacy mixed clip can still move within its track");
+  ASSERT(!track_accepts_block(1, bass[0], -1), "new mismatched clips remain rejected");
+  app_select_track(1);
+  ASSERT_EQUAL(g_app->family, FAMILY_LOOP);
+  destroy_window(win);
+  app_shutdown(g_app);
+  test_env_shutdown();
+  PASS();
+}
+
+static void test_duplicate_track(void) {
+  TEST("duplicating a track inserts an empty matching track, preserves other rows, and saves the choice");
+  test_env_init();
+  g_app = app_init();
+  window_t *win = create_window("Groove", 0, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win); show_window(win, true);
+  int bass[GR_MAX_BLOCKS], guitar[GR_MAX_BLOCKS];
+  ASSERT(blocks_in_family(FAMILY_BASS, bass, GR_MAX_BLOCKS) > 0 && blocks_in_family(FAMILY_GUITAR, guitar, GR_MAX_BLOCKS) > 0, "sample families exist");
+  ASSERT_EQUAL(song_add_clip(&g_app->song, bass[0], 1, 0), 0);
+  ASSERT_EQUAL(song_add_clip(&g_app->song, guitar[0], 2, GR_TICKS_BAR), 1);
+  g_app->song.mute[2] = true; g_app->song.solo[2] = true;
+  window_t *row = g_app->tracks->children->next;
+  ASSERT_TRUE(send_message(row, evLongPress, MAKEDWORD(10, 10), NULL));
+  window_t *popup = g_ui_runtime.captured; ASSERT_NOT_NULL(popup);
+  send_message(popup, evLeftButtonDown, MAKEDWORD(10, 5), NULL);
+  send_message(popup, evLeftButtonUp, MAKEDWORD(10, 5), NULL);
+  ASSERT_EQUAL(g_app->song.clips[0].track, 1);
+  ASSERT_EQUAL(g_app->song.clips[1].track, 3);
+  ASSERT(g_app->song.mute[3] && g_app->song.solo[3], "settings follow the moved track");
+  ASSERT(!g_app->song.mute[2] && !g_app->song.solo[2] && track_family(2) == FAMILY_BASS, "new track is empty with the same instrument");
+  ASSERT(g_app->selected_track == 2 && g_app->family == FAMILY_BASS && g_app->song_dirty, "new track and library are selected");
+  char path[128]; snprintf(path, sizeof(path), "/tmp/groove-duplicate-%ld.groove", (long)getpid());
+  ASSERT_TRUE(app_save_song(path));
+  song_t restored; ASSERT_TRUE(song_read(path, &restored));
+  ASSERT(restored.track_family[2] == FAMILY_BASS && restored.clips[1].track == 3 && restored.mute[3] && restored.solo[3], "round-trip preserves empty track and shifted rows");
+  unlink(path);
+  app_new_song();
+  for (int t = 1; t < GR_TRACKS; t++) ASSERT(song_add_clip(&g_app->song, bass[0], t, 0) >= 0, "fill every row except the first");
+  g_app->song.mute[7] = true;
+  ASSERT_TRUE(app_duplicate_track(7));
+  ASSERT(g_app->song.clips[0].track == 0 && g_app->song.clips[6].track == 6 && g_app->song.mute[6], "free space above moves existing rows up");
+  ASSERT(g_app->selected_track == 7 && track_family(7) == FAMILY_BASS, "new track follows the moved source");
+  ASSERT(song_add_clip(&g_app->song, bass[0], 7, 0) >= 0, "fill the final row");
+  ASSERT_FALSE(app_can_duplicate_track(6));
+  ASSERT_FALSE(app_duplicate_track(6));
+  ASSERT_EQUAL(g_app->song.nclips, GR_TRACKS);
+  ASSERT_TRUE(send_message(row, evLongPress, MAKEDWORD(10, 10), NULL));
+  popup = g_ui_runtime.captured; ASSERT_NOT_NULL(popup);
+  send_message(popup, evLeftButtonDown, MAKEDWORD(10, 5), NULL);
+  send_message(popup, evLeftButtonUp, MAKEDWORD(10, 5), NULL);
+  ASSERT_EQUAL(g_app->song.nclips, GR_TRACKS);
+  send_message(popup, evLeftButtonDown, MAKEDWORD(-1, -1), NULL);
+  destroy_window(win); app_shutdown(g_app); test_env_shutdown(); PASS();
+}
 
 static void test_portable_recordings(void) {
   TEST("a song embeds microphone samples once and opens without the source library");
@@ -1654,7 +1753,7 @@ static void test_portable_recordings(void) {
   ASSERT_TRUE(app_save_song(song));
   f = fopen(song, "rb"); ASSERT_NOT_NULL(f);
   char line[64]; ASSERT_NOT_NULL(fgets(line, sizeof(line), f));
-  ASSERT_STR_EQUAL(line, "ORION_GROOVE 5\n"); fclose(f);
+  ASSERT_STR_EQUAL(line, "ORION_GROOVE 6\n"); fclose(f);
   app_new_song(); samples_truncate(original_count);
   ASSERT(remove(wav) == 0, "remove the standalone recording");
   song_t preview;
@@ -1726,6 +1825,7 @@ static void test_recording_forms(void) {
   TEST("the recording dialog captures with a metronome and exposes the saved take in both library views");
   test_env_init();
   static const fe_component_desc_t classes[] = {
+    { .class_name = "GrooveTracks", .proc = win_tracks, .default_flags = WINDOW_NOTITLE | WINDOW_NOACTIVATE | WINDOW_NOTABSTOP },
     { .class_name = "GrooveArrangement", .proc = win_sheet, .default_flags = WINDOW_HSCROLL },
     { .class_name = "GrooveBlockBin", .proc = win_bin, .default_flags = WINDOW_VSCROLL },
     { .class_name = "GrooveBlockCard", .proc = win_block_card, .default_flags = GR_CARD_FLAGS },
@@ -1743,7 +1843,9 @@ static void test_recording_forms(void) {
   register_database("library", g_app->library_db);
   window_t *win = create_window_from_form(&groove_main_window_form, 0, 0, NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
-  app_set_family(FAMILY_SAMPLES);
+  show_window(win, true);
+  click_family(FAMILY_SAMPLES);
+  ASSERT_EQUAL(g_app->family, FAMILY_SAMPLES);
   window_t *flow = get_window_item(g_app->bin, ID_LIBRARY_WINDOW_BLOCKS);
   ASSERT_NOT_NULL(flow);
   ASSERT_EQUAL(flow->children->id, ID_LIBRARY_WINDOW_RECORD_AUDIO);
@@ -1885,6 +1987,8 @@ int main(void) {
   test_two_finger_sheet_pan();
   test_genre_filter();
   test_family_filter();
+  test_track_selection();
+  test_duplicate_track();
   test_lazy_audio();
   test_library_transport();
   test_shared_block_cards();

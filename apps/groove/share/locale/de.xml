@@ -15,7 +15,7 @@
   <string source="Transport" where="menu">Wiedergabe</string>
   <string source="Play / Pause" where="menu">Wiedergabe / Pause</string>
   <string source="Stop" where="menu,record_sample">Stopp</string>
-  <string source="Rewind" where="menu">Zum Anfang</string>
+  <string source="Rewind" where="menu,library_window">Zum Anfang</string>
   <string source="Go to End" where="menu">Zum Ende</string>
   <string source="Loop" where="menu">Schleife</string>
   <string source="Window" where="menu">Fenster</string>
@@ -38,17 +38,17 @@
   <string source="Rewind (Home)" where="library_window">Zum Anfang (Pos1)</string>
   <string source="Play / pause (Space)" where="library_window">Wiedergabe / Pause (Leertaste)</string>
   <string source="Go to end (End)" where="library_window">Zum Ende (Ende)</string>
-  <string source="Drum Loops" where="library_window">Drumloops</string>
-  <string source="Drum Fills" where="library_window">Drumfills</string>
-  <string source="Bass" where="library_window">Bass</string>
-  <string source="Guitar" where="library_window">Gitarre</string>
-  <string source="Synth" where="library_window">Synthesizer</string>
-  <string source="Pads" where="library_window">Flächen</string>
-  <string source="Stabs" where="library_window">Stabs</string>
-  <string source="Vocals" where="library_window">Gesang</string>
-  <string source="Scratch" where="library_window">Scratches</string>
-  <string source="Effects" where="library_window">Effekte</string>
-  <string source="My Samples" where="library_window">Meine Samples</string>
+  <string source="Drum Loops" where="code">Drumloops</string>
+  <string source="Drum Fills" where="code">Drumfills</string>
+  <string source="Bass" where="code">Bass</string>
+  <string source="Guitar" where="code">Gitarre</string>
+  <string source="Synth" where="code">Synthesizer</string>
+  <string source="Pads" where="code">Flächen</string>
+  <string source="Stabs" where="code">Stabs</string>
+  <string source="Vocals" where="code">Gesang</string>
+  <string source="Scratch" where="code">Scratches</string>
+  <string source="Effects" where="code">Effekte</string>
+  <string source="My Samples" where="code">Meine Samples</string>
   <string source="My Songs" where="song_browser">Meine Songs</string>
   <string source="No saved songs yet. Choose File &gt; Save Song to keep the current song here." obsolete="true">Hier sind noch keine Songs gespeichert. Wähle „Datei &gt; Song speichern“, um den aktuellen Song hier abzulegen.</string>
   <string source="Open" where="song_browser">Öffnen</string>
@@ -143,4 +143,12 @@
   <string source="Export Song..." where="menu">Song exportieren...</string>
   <string source="Could not read or write the Groove song." where="code">Der Groove-Song konnte nicht gelesen oder geschrieben werden.</string>
   <string source="Song unavailable" where="code">Song nicht verfügbar</string>
+  <string source="Play" where="library_window">Wiedergabe</string>
+  <string source="Forward" where="library_window">Vorwärts</string>
+  <string source="Sounds" where="code">Sounds</string>
+  <string source="Drums|Fills|Bass|Guitar|Synth|Pads|Stabs|Vocals|Scratch|FX|My Samples" where="library_window">Drums|Fills|Bass|Gitarre|Synth|Pads|Stabs|Gesang|Scratch|Effekte|Meine Samples</string>
+  <string source="All tracks are in use. Empty a track to choose this family." where="code">Alle Spuren sind belegt. Leere eine Spur, um diese Klanggruppe auszuwählen.</string>
+  <string source="Empty track" where="code">Leere Spur</string>
+  <string source="Add Same Instrument Track" where="menu">Gleiche Instrumentspur hinzufügen</string>
+  <string source="All 8 tracks are in use" where="menu">Alle 8 Spuren sind belegt</string>
 </strings>

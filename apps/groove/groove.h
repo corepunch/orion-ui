@@ -26,7 +26,7 @@
 #define GR_SNAP_TICKS   (GR_TICKS_BAR / 4)                       // one beat
 #define GR_FRACTION_TICKS (GR_TICKS_BAR / (GR_BEATS_BAR * 4))    // a beat is four fractions
 #define GR_TRACKS       8
-#define GR_SHEET_HEADER_W 32 // width of the track header column beside the sheet
+#define GR_SHEET_HEADER_W 64 // width of the track header column beside the sheet
 #define GR_RULER_H      22
 #define GR_MIN_ROW      26
 #define GR_MAX_ROW      64
@@ -96,6 +96,12 @@ extern const char *const kGenreName[GENRE_COUNT]; // index = bit number of the G
 family_t block_family(category_t cat);
 uint32_t category_color(category_t cat);
 uint32_t track_color(int track);              // hue of the track's earliest clip (view_sheet.c)
+int      track_family(int track);             // first clip's family, or the empty track's chosen family
+void     app_select_track(int track);
+void     app_reset_tracks(void);
+bool     track_accepts_block(int track, int block, int from_clip);
+bool     app_can_duplicate_track(int track);
+bool     app_duplicate_track(int track);
 int      sheet_row_h(window_t *sheet);         // height of one track lane, shared by the sheet and the header column
 result_t win_tracks(window_t *win, uint32_t msg, uint32_t wparam, void *lparam); // view_tracks.c
 void     tracks_sync(void);
@@ -145,6 +151,7 @@ typedef struct {
   int      nclips;
   uint64_t clip_order;    // latest drop wins when starts coincide
   bool     mute[GR_TRACKS], solo[GR_TRACKS];
+  family_t track_family[GR_TRACKS]; // chosen family for empty tracks
   int      bpm;
   int64_t  pos;           // playhead, in frames
   bool     playing, loop;
@@ -199,6 +206,7 @@ typedef struct {
   int           audio_dev;
   uint32_t      timer;
   int           selected_clip;
+  int           selected_track;
   char          filename[512];
   bool          song_dirty;
   char          songs_dir[512]; // iPad: Groove's own song storage, never Files/iCloud; empty on desktop
@@ -210,7 +218,6 @@ typedef struct {
   int           peak_credit;   // waveform overviews the cards may still render this timer tick
   bool          peaks_pending; // a card went without its overview; repaint next tick
   bool          shown_playing; // song.playing as the transport shows it; the mixer stops at the end
-  uint32_t      pictograms;   // shared category atlas, in category_t order
   waveform_cache_t waveforms[GR_MAX_BLOCKS];
 } groove_t;
 
@@ -241,7 +248,6 @@ enum {
 #define ID_DELETE    ID_EDIT_DELETE
 // Above every auto-assigned card id (1..GR_MAX_BLOCKS inside a bin), so
 // get_window_item() cannot find a card first.
-#define ID_FAMILY(family) (ID_LIBRARY_WINDOW_FAMILY_LOOP + (family)) // contiguous family actions emitted from groove.orion
 #define ID_GENRE     (ID_CONTROL_BASE + 3)
 #define ID_MUTE(t)   (ID_CONTROL_BASE + 32 + (t))    // track header buttons
 #define ID_SOLO(t)   (ID_CONTROL_BASE + 48 + (t))
@@ -303,10 +309,9 @@ extern result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void
 extern result_t win_song_preview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void transport_refresh(void);
 ipoint16_t clip_cell_size(window_t *sheet, const block_t *b);
-bool block_pictograms_load(groove_t *app);
-bitmap_strip_t block_pictogram_strip(void); // the category atlas as an icon strip, in category_t order
 // Shared logical-pixel alpha masks; audio revision and geometry determine reuse.
 uint32_t waveform_texture(groove_t *app, int block, ipoint16_t size, int radius, int period, int offset);
+int waveform_first_bar_offset(int period, int offset);
 void draw_waveform(const block_t *b, irect16_t wave, int period, int offset, int radius, uint32_t color);
 void waveform_cache_free(groove_t *app);
 // Moves a card window. A visual drag keeps the painted copy still: the frame

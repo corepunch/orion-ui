@@ -64,10 +64,10 @@ static bool song_write(const char *path, bool make_current) {
     if (!f) return false;
   }
   uint32_t mute = track_flags(s->mute), solo = track_flags(s->solo);
-  int version = 4;
-  for (int i = 0; i < nassets; i++) if (sample_get(asset_ids[i])) version = 5;
+  int version = 6;
   bool ok = fprintf(f, "ORION_GROOVE %d\n%d %d %" PRIu32 " %" PRIu32 " %d %d\n",
                     version, s->bpm, s->loop ? 1 : 0, mute, solo, nassets, s->nclips) > 0;
+  for (int i = 0; ok && i < GR_TRACKS; i++) ok = fprintf(f, "%d%c", (int)s->track_family[i], i == GR_TRACKS - 1 ? '\n' : ' ') > 0;
   for (int i = 0; ok && i < nassets; i++) {
     const sample_t *sample = sample_get(asset_ids[i]);
     if (sample) ok = fputs("S\n", f) != EOF && sample_write(f, sample) && fputc('\n', f) != EOF;
@@ -110,7 +110,7 @@ static bool song_read_file(const char *path, song_t *out, bool preview) {
   uint32_t mute = 0, solo = 0;
   song_t next;
   song_init(&next);
-  bool ok = fscanf(f, "%31s %d", magic, &version) == 2 && !strcmp(magic, "ORION_GROOVE") && version >= 2 && version <= 5;
+  bool ok = fscanf(f, "%31s %d", magic, &version) == 2 && !strcmp(magic, "ORION_GROOVE") && version >= 2 && version <= 6;
   if (ok) ok = fscanf(f, "%d %d %" SCNu32 " %" SCNu32 " %d %d", &bpm, &loop, &mute, &solo, &nassets, &nclips) == 6;
   ok = ok && bpm >= GR_BPM_MIN && bpm <= GR_BPM_MAX && (loop == 0 || loop == 1) &&
        !(mute & ~((1u << GR_TRACKS) - 1)) && !(solo & ~((1u << GR_TRACKS) - 1)) &&
@@ -118,6 +118,11 @@ static bool song_read_file(const char *path, song_t *out, bool preview) {
   next.bpm = bpm;
   next.loop = loop != 0;
   if (ok) { flags_from_bits(next.mute, mute); flags_from_bits(next.solo, solo); }
+  for (int i = 0; ok && version >= 6 && i < GR_TRACKS; i++) {
+    int family = -1;
+    ok = fscanf(f, "%d", &family) == 1 && family >= 0 && family < FAMILY_COUNT;
+    if (ok) next.track_family[i] = (family_t)family;
+  }
   int asset_ids[GR_MAX_CLIPS], asset_bars[GR_MAX_CLIPS];
   sample_t *embedded = ok ? calloc((size_t)MAX(nassets, 1), sizeof(*embedded)) : NULL;
   if (!embedded) ok = false;
@@ -126,7 +131,7 @@ static bool song_read_file(const char *path, song_t *out, bool preview) {
     char kind = 0, name[256];
     int block = -1;
     if (fscanf(f, " %c", &kind) != 1) { ok = false; break; }
-    if (kind == 'S' && version == 5) {
+    if (kind == 'S' && version >= 5) {
       if (fgetc(f) != '\n' || !(preview ? sample_read_info(f, &embedded[i]) : sample_read(f, &embedded[i])) ||
           fgetc(f) != '\n') { ok = false; break; }
       embedded_bytes += (size_t)embedded[i].frames * sizeof(int16_t);
@@ -227,9 +232,12 @@ bool app_open_song(const char *path) {
   for (int i = 0; i < blocks_count(); i++) free(stale[i]);
   for (int i = 0; i < next.nclips; i++) free(prepared[i].pcm);
   g_app->selected_clip = -1;
+  app_reset_tracks();
+  app_select_track(0);
   g_app->auditioned = -1;
   snprintf(g_app->filename, sizeof(g_app->filename), "%s", path);
   g_app->song_dirty = false;
+  if (g_app->tracks) tracks_sync();
   if (g_app->sheet) invalidate_window(g_app->sheet);
   if (g_app->library) invalidate_window(g_app->library);
   transport_refresh();

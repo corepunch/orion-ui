@@ -28,6 +28,7 @@
 
 // Touch-and-hold that picks up an item answering DRAG_AFTER_HOLD.
 #define TOUCH_LONG_PRESS_MS     250u
+#define CONTEXT_LONG_PRESS_MS   500u
 
 // UIKit normal momentum: velocity retained per millisecond, and the release
 // and stopping speeds in points/ms. Keep the slow tail after a qualifying flick.

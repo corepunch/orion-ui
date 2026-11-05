@@ -87,7 +87,10 @@ static int sg_add(window_t *win, segmented_state_t *s, const char *label, size_t
     fflush(stderr);
     return -1;
   }
-  snprintf(s->label[s->count], SEGMENTED_LABEL_MAX, "%.*s", (int)MIN(len, (size_t)SEGMENTED_LABEL_MAX - 1), label);
+  size_t n = MIN(len, (size_t)SEGMENTED_LABEL_MAX - 1);
+  while (n && n < len && ((unsigned char)label[n] & 0xc0) == 0x80) n--;
+  memcpy(s->label[s->count], label, n);
+  s->label[s->count][n] = '\0';
   s->icon[s->count] = -1;
   return s->count++;
 }

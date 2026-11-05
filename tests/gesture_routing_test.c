@@ -235,11 +235,51 @@ static void test_touch_pan(void) {
   PASS();
 }
 
+static int long_press_count;
+static ipoint16_t long_press_point;
+static result_t long_press_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  switch (msg) {
+    case evCreate: case evPaint: case evDestroy: case evLeftButtonDown: return true;
+    case evQueryLongPress: return true;
+    case evLongPress: long_press_count++; long_press_point = (ipoint16_t){(int16_t)LOWORD(wparam), (int16_t)HIWORD(wparam)}; return true;
+    default: return false;
+  }
+}
+
+static void test_stationary_long_press(void) {
+  TEST("a held pointer reports its nested content point and movement or release cancels it");
+  test_env_init(); long_press_count = 0;
+  window_t *root = create_window("Root", WINDOW_NOTITLE, MAKERECT(20, 30, 300, 200), NULL, container_proc, 0, NULL);
+  window_t *child = create_window("Target", WINDOW_NOTITLE, MAKERECT(15, 25, 100, 100), root, long_press_proc, 0, NULL);
+  show_window(root, true); show_window(child, true);
+  uint32_t hold = axSetTimer(child, 100000, NULL, false) + 1; axCancelTimer(hold - 1);
+  ui_event_t e = {.message = kEventLeftButtonDown, .x = 45 * UI_WINDOW_SCALE, .y = 65 * UI_WINDOW_SCALE,
+                  .pointer = {.flags = AX_POINTER_TOUCH} };
+  dispatch_message(&e);
+  ui_event_t timer = {.message = kEventTimer, .target = child, .wParam = hold};
+  dispatch_message(&timer);
+  ASSERT_EQUAL(long_press_count, 1);
+  ASSERT_EQUAL(long_press_point.x, 10); ASSERT_EQUAL(long_press_point.y, 10);
+  e.message = kEventLeftButtonUp; dispatch_message(&e);
+  hold = axSetTimer(child, 100000, NULL, false) + 1; axCancelTimer(hold - 1);
+  e.message = kEventLeftButtonDown; dispatch_message(&e);
+  e.message = kEventLeftButtonDragged; e.x += (TOUCH_SLOP + 1) * UI_WINDOW_SCALE; dispatch_message(&e);
+  timer.wParam = hold; dispatch_message(&timer); ASSERT_EQUAL(long_press_count, 1);
+  e.message = kEventLeftButtonUp; dispatch_message(&e);
+  e.x = 45 * UI_WINDOW_SCALE;
+  hold = axSetTimer(child, 100000, NULL, false) + 1; axCancelTimer(hold - 1);
+  e.message = kEventLeftButtonDown; dispatch_message(&e);
+  e.message = kEventLeftButtonUp; dispatch_message(&e);
+  timer.wParam = hold; dispatch_message(&timer); ASSERT_EQUAL(long_press_count, 1);
+  destroy_window(root); test_env_shutdown(); PASS();
+}
+
 int main(void) {
   TEST_START("Gesture routing");
   test_nested_gesture();
   test_builtin_pan();
   test_pan_axis_availability();
   test_touch_pan();
+  test_stationary_long_press();
   TEST_END();
 }

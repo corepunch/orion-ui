@@ -31,6 +31,19 @@ overlapping drops are allowed. The cursor must be inside the sheet grid.
 Library cards stay in the library while a copy follows the cursor. Releasing a
 clip that is being moved outside the sheet grid removes it from the song.
 
+Selecting a track filters the library to its instrument family. Empty tracks
+start with suggested families and can be reassigned through the family selector;
+occupied tracks take the family of their earliest clip. New clips and clips
+moved between tracks must match the destination's family. Existing mixed tracks
+are preserved, and their clips can still be moved within that track. Chosen
+families for empty tracks are saved with the song; older songs receive the
+default empty-track families.
+
+Holding a track icon opens a menu to add an empty track with the same family
+immediately below it. Existing rows, clips, mute and solo settings move together.
+The command is disabled when all eight tracks contain clips. If the only free
+track is above the selected one, intervening tracks move up before insertion.
+
 On each track, a clip is visible and audible only up to the next clip's start.
 This cutoff is derived from the current arrangement; the block, start position,
 source audio and original duration are preserved. A shorter later clip does
@@ -42,6 +55,11 @@ deletion and the playback loop endpoint follow the visible arrangement. Cropped
 waveforms retain their original time scale, and dragging lifts the clip at
 its stored length. An overlap does not change that length, so a hidden tail
 returns while the clip is moving.
+
+Waveform strokes use the clip's full, grid-aligned source width. The card's
+border and spacing hide the covered pixels; they do not squeeze the waveform
+or move its peaks. Shortened clips show the corresponding prefix, while an
+extended clip repeats the source waveform at the same scale as its audio.
 
 The target can opt into cursor-based placement:
 

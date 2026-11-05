@@ -82,6 +82,8 @@ metrics are in `theme_t.badge`. Use badges for state ("Posted", "Paid",
   needs a `tooltip=`.
 - One `BUTTON_DEFAULT` per form; Enter in a field does not trigger it in
   document forms.
+- A toolbar button can also use `BUTTON_DEFAULT` for the primary action; its
+  face and text use the active theme's accent roles.
 - A page with more commands than the title row holds gets its own command
   bar under it: a horizontal `StackView` of `<Button command=...>` in the
   1C order (Create, Post, Cancel Posting | Print, Dr/Cr, Edit), the rarer
@@ -180,6 +182,11 @@ in the user's own words, the way Office's Answer Wizard did: "проверь у�
 page does (`ledger.settle`).
 
 ## Tokens
+
+The Metro theme is a dark, square-edged creative workspace with a blue accent
+and flat coloured cards. Groove uses it by default in standalone builds;
+other applications may select it with `THEME_<app>=metro`. Category colours in
+Groove identify sound families, and sample cards show their names and waveforms.
 
 | Token | Porcelain | Porcelain Dark (One Dark) |
 |---|---|---|

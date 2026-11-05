@@ -1,50 +1,11 @@
 #include "groove.h"
 
 #define CARD_SLOP 5
-#define PICTOGRAM_COLS 6
-#define PICTOGRAM_ROWS 4
-#define PICTOGRAM_CELL 128
 #define CARD_LABEL_PADDING 4
 #define CARD_TAG_INSET 2
 #define CARD_LABEL_BG 0xB8000000u
 #define CARD_REPEAT_OVERLAY 0x54000000u
-
-bool block_pictograms_load(groove_t *app) {
-  if (!g_ui_runtime.running || app->pictograms) return true;
-  char path[1024];
-  int n = snprintf(path, sizeof(path), "%s/../share/groove/icons/class-pictograms.png", ui_get_exe_dir());
-  if (n < 0 || (size_t)n >= sizeof(path)) {
-    fprintf(stderr, "[gr] pictogram path too long length=%d capacity=%zu\n", n, sizeof(path));
-    fflush(stderr);
-    return false;
-  }
-  int w = 0, h = 0;
-  uint8_t *pixels = load_image(path, &w, &h);
-  if (!pixels) {
-    fprintf(stderr, "[gr] pictogram atlas load failed path=%s\n", path);
-    fflush(stderr);
-    return false;
-  }
-  if (w != PICTOGRAM_COLS * PICTOGRAM_CELL || h != PICTOGRAM_ROWS * PICTOGRAM_CELL || CAT_COUNT > PICTOGRAM_COLS * PICTOGRAM_ROWS) {
-    fprintf(stderr, "[gr] pictogram atlas rejected path=%s size=%dx%d categories=%d\n", path, w, h, CAT_COUNT);
-    fflush(stderr);
-    image_free(pixels);
-    return false;
-  }
-  app->pictograms = R_CreateTextureSRGBA8(w, h, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
-  image_free(pixels);
-  if (!app->pictograms) {
-    fprintf(stderr, "[gr] pictogram texture allocation failed size=%dx%d\n", w, h);
-    fflush(stderr);
-    return false;
-  }
-  return true;
-}
-
-bitmap_strip_t block_pictogram_strip(void) {
-  return (bitmap_strip_t){ .tex = g_app ? g_app->pictograms : 0, .icon_w = PICTOGRAM_CELL, .icon_h = PICTOGRAM_CELL, .cols = PICTOGRAM_COLS,
-                           .sheet_w = PICTOGRAM_COLS * PICTOGRAM_CELL, .sheet_h = PICTOGRAM_ROWS * PICTOGRAM_CELL };
-}
+#define CARD_LABEL_FONT FONT_SYSTEM
 
 typedef struct {
   int block;
@@ -70,23 +31,9 @@ static bool card_on_screen(const window_t *win) {
   return frame.x < view.w && frame.x + frame.w > 0 && frame.y < view.h && frame.y + frame.h > 0;
 }
 
-static void paint_card_label(const block_t *b, irect16_t r, int icon_width, int visible_width, uint32_t color) {
-  char fitted[512];
-  int text_h = text_char_height(FONT_SMALLEST);
-  r.w = MIN(r.w, visible_width);
-  irect16_t area = rect_inset(r, CARD_TAG_INSET);
-  int max_text_w = MAX(0, area.w - 2 * CARD_LABEL_PADDING);
-  int text_w = text_ellipsize(FONT_SMALLEST, b->display_name, max_text_w, fitted, sizeof(fitted));
-  if (!text_w || text_w > max_text_w) return;
-  int label_w = text_w + 2 * CARD_LABEL_PADDING;
-  int text_x = r.x + icon_width;
-
-  int label_right = area.x + area.w;
-  if (text_x + label_w > label_right) text_x = label_right - label_w;
-  text_x = MAX(area.x, text_x);
-  irect16_t label = R(text_x, area.y, label_w, text_h + 1);
-  draw_badge_ex(FONT_SMALLEST, fitted, label, color_with_alpha(0xFFFFFFFFu, color >> 24),
-                CARD_LABEL_BG, true);
+static void paint_card_label(const block_t *b, irect16_t r, int visible_right, int text_x, uint32_t ink) {
+  int text_w = MAX(0, MIN(r.x + r.w, visible_right) - text_x);
+  if (text_w) draw_text_ellipsized(CARD_LABEL_FONT, b->display_name, text_x, r.y + CARD_TAG_INSET, text_w, ink);
 }
 
 static void paint_card_variant(const block_t *b, irect16_t r, int visible_width) {
@@ -99,7 +46,7 @@ static void paint_card_variant(const block_t *b, irect16_t r, int visible_width)
   if (size > area.w || size > area.h) return;
   irect16_t badge = rect_split_right(rect_split_bottom(area, size), size);
   draw_badge_ex(FONT_SMALLEST, text, badge, 0xFFFFFFFFu,
-                CARD_LABEL_BG, true);
+                CARD_LABEL_BG, false);
 }
 
 static int sheet_card_index(window_t *win) {
@@ -112,11 +59,10 @@ static int sheet_card_index(window_t *win) {
 // period > 0 draws the source waveform at its own scale, repeating when the clip is longer.
 static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state, int period) {
   theme_draw_ex(THEME_PART_CARD, r, state | CTRL_PLASTIC, &(theme_draw_opts_t){.color = color}); // its shadow margin is the only gap between neighbouring cards
-  int icon_size = r.h * 3 / 4;
   int source_width = period > 0 ? period : r.w, source_x = r.x;
   r = theme_content_rect(THEME_PART_CARD, r, state | CTRL_PLASTIC);
   int radius = MAX(0, get_theme()->card.corner_radius - get_theme()->card.ring_width);
-  irect16_t wave = r;
+  irect16_t wave = rect_trim_top(r, MIN(r.h, text_char_height(CARD_LABEL_FONT) + 3));
   uint32_t ink = color_with_alpha(get_sys_color(brTextOnColor), (color >> 24) * 0x99 / 255);
   if (wave.w > 0 && wave.h > 0) {
     int offset = wave.x - source_x;
@@ -128,18 +74,9 @@ static void paint_block_card(int block, const block_t *b, irect16_t r, int visib
       if (texture) draw_sprite_region(texture, wave, NULL, ink, 0);
     }
   }
-  int icon_width = 0;
-  icon_size = MIN(icon_size, MIN(r.w - 8, r.h));
-  if (icon_size > 0) {
-    irect16_t icon = rect_center(rect_split_left(r, icon_size + 8), icon_size, icon_size);
-    int col = b->cat % PICTOGRAM_COLS, row = b->cat / PICTOGRAM_COLS;
-    if (g_app->pictograms) draw_sprite_region(g_app->pictograms, icon,
-      UV_RECT((float)col / PICTOGRAM_COLS, (float)row / PICTOGRAM_ROWS,
-              (float)(col + 1) / PICTOGRAM_COLS, (float)(row + 1) / PICTOGRAM_ROWS),
-      color_with_alpha(0xFFFFFFFFu, color >> 24), 0);
-    icon_width = icon_size + 8;
-  }
-  paint_card_label(b, r, icon_width, visible_width, color);
+  int label_x = wave.x + waveform_first_bar_offset(source_width, wave.x - source_x);
+  uint32_t label_ink = color_with_alpha(get_sys_color(brTextOnColor), color >> 24);
+  paint_card_label(b, r, source_x + visible_width, label_x, label_ink);
   paint_card_variant(b, r, visible_width);
 }
 

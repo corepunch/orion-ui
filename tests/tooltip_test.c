@@ -70,6 +70,32 @@ static void test_immediate_toolbar_tooltip(void) {
   PASS();
 }
 
+static result_t right_tooltip_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  if (msg == evGetTooltipPlacement && lparam) { *(tooltip_placement_t *)lparam = TOOLTIP_PLACE_RIGHT; return true; }
+  return owner_proc(win, msg, wparam, lparam);
+}
+
+static void test_preferred_tooltip_side(void) {
+  TEST("tooltip: a control and its child prefer the right, then flip at the screen edge");
+  test_env_init();
+  window_t *root = create_window("Root", WINDOW_NOTITLE, MAKERECT(100, 80, 100, 150), NULL, owner_proc, 0, NULL);
+  window_t *row = create_window("Track", WINDOW_NOTITLE, MAKERECT(65, 20, 30, 60), root, right_tooltip_proc, 0, NULL);
+  window_t *button = create_window("", WINDOW_NOTITLE, MAKERECT(10, 10, 20, 20), row, win_button, 0, NULL);
+  show_window(root, true); show_window(row, true); show_window(button, true);
+  int pad = get_theme()->tooltip.shadow.size, gap = get_theme()->tooltip.gap;
+  tooltip_update(row, "Bass", window_screen_x(row) + 4, window_screen_y(row) + 4);
+  window_t *tip = find_tooltip("Bass"); ASSERT_NOT_NULL(tip);
+  ASSERT_TRUE(tip->frame.x + pad >= window_screen_x(row) + row->frame.w + gap);
+  tooltip_update(button, "Mute", window_screen_x(button) + 4, window_screen_y(button) + 4);
+  tip = find_tooltip("Mute"); ASSERT_NOT_NULL(tip);
+  ASSERT_TRUE(tip->frame.x + pad >= window_screen_x(button) + button->frame.w + gap);
+  root->frame.x = ui_get_system_metrics(kSystemMetricScreenWidth) - root->frame.w;
+  tooltip_update(row, "Bass", window_screen_x(row) + 4, window_screen_y(row) + 4);
+  tip = find_tooltip("Bass"); ASSERT_NOT_NULL(tip);
+  ASSERT_TRUE(tip->frame.x + tip->frame.w - pad <= window_screen_x(row) - gap);
+  tooltip_cancel(); destroy_window(root); test_env_shutdown(); PASS();
+}
+
 static void test_toolbar_tooltip_sides(void) {
   TEST("tooltip: all four toolbar edges point inward, update after docking, and flip at screen boundaries");
   test_env_init();
@@ -296,6 +322,7 @@ int main(void) {
   if (!test_graphics_init(640, 480)) return 1;
   test_immediate_control_tooltip();
   test_immediate_toolbar_tooltip();
+  test_preferred_tooltip_side();
   test_toolbar_tooltip_sides();
   test_inherited_tooltip();
   test_tooltip_bubble_tails();
