@@ -419,10 +419,10 @@ uses the already-presented sRGB surface. `R_ReadTextureSRGBA8()` also provides
 format-aware texture readback: it unpremultiplies sRGB8 and linear FP16 colors
 in linear light before encoding straight-alpha sRGB8, while raw data bytes are
 preserved unchanged. PNG/JPEG/BMP import uses sRGB for untagged files. PNGs
-with unsupported ICC/cICP/gamma-only metadata, JPEGs with ICC profiles, BMP
-V4/V5 files with unsupported color metadata, and PNGs above 8 bits are rejected
-with a diagnostic because the document model remains 8-bit RGBA and this build
-has no ICC transform library.
+with unsupported ICC/cICP/gamma-only metadata, JPEGs with ICC profiles, and PNGs
+above 8 bits are rejected with a diagnostic because the document model remains
+8-bit RGBA and this build has no ICC transform library. BMP color metadata is
+not transformed; decoded BMP colors are treated as sRGB.
 
 CPU layer compositing, pixel-canvas antialiasing, layer merges and background
 compositing use the same linear-light source-over rule as the GPU renderer.

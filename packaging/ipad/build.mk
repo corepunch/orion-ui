@@ -26,7 +26,7 @@ APP_ROOT := $(BUILD_ROOT)/$(APP)
 BUNDLE := $(APP_ROOT)/$(APP).app
 COMPILER := xcrun --sdk $(SDK) clang
 MIN_FLAG := $(if $(filter iphoneos,$(SDK)),-miphoneos-version-min,-mios-simulator-version-min)=$(IOS_MIN)
-FLAGS := -isysroot "$(SDK_PATH)" -arch $(ARCH) $(MIN_FLAG) -std=c11 -O2 -g -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-declarations -MMD -MP -I. -I"$(SDK_PATH)/usr/include/libxml2" -DORION_ALLOW_HIGHDPI=1
+FLAGS := -isysroot "$(SDK_PATH)" -arch $(ARCH) $(MIN_FLAG) -std=c11 -O2 -g -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-declarations -MMD -MP -I. -I"$(SDK_PATH)/usr/include/libxml2" -Ivendor/freetype/include -Iorion/user/image_deps_config -Ivendor/libpng -Ivendor/libjpeg -Ivendor/libnsbmp/include -Ivendor/zlib -Ivendor/bmplib -Iorion/user/bmplib_config -I$(BUILD_ROOT)/bmplib-generated -DORION_ALLOW_HIGHDPI=1
 ifeq ($(THEME_$(APP)),)
 else ifeq ($(filter classic modern light navy amber porcelain porcelain_dark metro,$(THEME_$(APP))),)
 $(error unknown THEME_$(APP)=$(THEME_$(APP)))
@@ -35,7 +35,7 @@ APP_THEME_FLAGS := $(if $(filter-out modern,$(THEME_$(APP))),-DORION_THEME=$(THE
 GROOVE_USE_SHINE ?= 0
 APP_SOURCE := $(if $(filter penciltest,$(APP)),imageeditor,$(APP))
 APP_DIR := apps/$(APP_SOURCE)
-APP_FLAGS := -DSTBTT_STATIC $(if $(filter penciltest,$(APP)),-DIMAGEEDITOR_BW=1 -DIMAGEEDITOR_BW_RETINA) $(APP_THEME_FLAGS) -I$(APP_DIR) -I$(APP_DIR)/components -DSHAREDIR='"../share/$(APP_SOURCE)"'
+APP_FLAGS := $(if $(filter penciltest,$(APP)),-DIMAGEEDITOR_BW=1 -DIMAGEEDITOR_BW_RETINA) $(APP_THEME_FLAGS) -I$(APP_DIR) -I$(APP_DIR)/components -DSHAREDIR='"../share/$(APP_SOURCE)"'
 APP_FLAGS += $(if $(filter 1,$(GROOVE_USE_SHINE)),-DGROOVE_USE_SHINE)
 USER_SRCS := $(filter-out orion/user/dialog.c orion/user/component_registry.c,$(wildcard orion/user/*.c))
 KERNEL_SRCS := $(wildcard orion/kernel/*.c)
@@ -46,6 +46,12 @@ OBJECTS := $(BUILD_ROOT)/media_export_apple.o $(BUILD_ROOT)/audio_input_apple.o 
 APP_SRCS := $(shell $(call app_unity_sources,$(APP_DIR))) $(APP_DIR)/main.c
 APP_HEADERS := $(shell $(call find_app_sources,$(APP_DIR),-name '*.h' ! -path '*/tests/*'))
 PLATFORM_LIB := $(BUILD_ROOT)/platform/libplatform.a
+FREETYPE_SRCS := base/ftbase base/ftinit base/ftsystem base/ftglyph base/ftbitmap base/ftdebug base/ftmm gzip/ftgzip autofit/autofit truetype/truetype cff/cff psaux/psaux psnames/psnames pshinter/pshinter sfnt/sfnt smooth/smooth sdf/sdf raster/raster
+PNG_SRCS := png pngerror pngget pngmem pngpread pngread pngrio pngrtran pngrutil pngset pngtrans pngwio pngwrite pngwtran pngwutil
+JPEG_SRCS := jaricom jcomapi jutils jerror jmemmgr jmemnobs jcapimin jcapistd jcarith jctrans jcparam jdatadst jcinit jcmaster jcmarker jcmainct jcprepct jccoefct jccolor jcsample jchuff jcdctmgr jfdctfst jfdctflt jfdctint jdapimin jdapistd jdarith jdtrans jdatasrc jdmaster jdinput jdmarker jdhuff jdmainct jdcoefct jdpostct jddctmgr jidctfst jidctflt jidctint jdsample jdcolor jquant1 jquant2 jdmerge
+ZLIB_SRCS := adler32 compress crc32 deflate infback inffast inflate inftrees trees uncompr zutil
+BMPLIB_SRCS := bmp-read bmp-write bmp-read-loadimage bmp-read-loadindexed bmp-read-icons bmp-common huffman logging
+DEP_OBJECTS := $(addprefix $(BUILD_ROOT)/deps/freetype/,$(addsuffix .o,$(FREETYPE_SRCS))) $(addprefix $(BUILD_ROOT)/deps/png/,$(addsuffix .o,$(PNG_SRCS))) $(addprefix $(BUILD_ROOT)/deps/jpeg/,$(addsuffix .o,$(JPEG_SRCS))) $(addprefix $(BUILD_ROOT)/deps/zlib/,$(addsuffix .o,$(ZLIB_SRCS))) $(addprefix $(BUILD_ROOT)/deps/bmplib/,$(addsuffix .o,$(BMPLIB_SRCS))) $(BUILD_ROOT)/deps/bmp/libnsbmp.o
 HOST_TOOL := $(abspath $(BUILD_DIR))/host/orionc
 GENERATED := build/generated/$(APP_DIR)/$(APP_SOURCE).h
 LIBS := -lxml2 -lm -lobjc -framework UIKit -framework CoreGraphics -framework Foundation -framework CoreFoundation -framework OpenGLES -framework QuartzCore -framework Security -framework UniformTypeIdentifiers -framework AudioToolbox -framework AVFoundation -framework CoreMedia -framework CoreVideo -framework PhotosUI -framework ImageIO
@@ -61,6 +67,28 @@ $(BUILD_ROOT)/settings $(APP_ROOT)/settings: settings
 platform:
 	$(MAKE) -C platform SDK=$(SDK) ARCH=$(ARCH) IOS_MIN=$(IOS_MIN) OUTDIR="$(BUILD_ROOT)/platform"
 $(PLATFORM_LIB): platform
+$(BUILD_ROOT)/deps/freetype/%.o: vendor/freetype/src/%.c orion/user/freetype_modules.h $(BUILD_ROOT)/settings
+	@mkdir -p "$(@D)"
+	$(COMPILER) $(FLAGS) -DFT2_BUILD_LIBRARY -DFT_CONFIG_MODULES_H='"orion/user/freetype_modules.h"' -c "$<" -o "$@"
+$(BUILD_ROOT)/deps/png/%.o: vendor/libpng/%.c orion/user/image_deps_config/pnglibconf.h $(BUILD_ROOT)/settings
+	@mkdir -p "$(@D)"
+	$(COMPILER) $(FLAGS) -DPNG_ARM_NEON_OPT=0 -c "$<" -o "$@"
+$(BUILD_ROOT)/deps/jpeg/%.o: vendor/libjpeg/%.c orion/user/image_deps_config/jconfig.h $(BUILD_ROOT)/settings
+	@mkdir -p "$(@D)"
+	$(COMPILER) $(FLAGS) -c "$<" -o "$@"
+$(BUILD_ROOT)/deps/zlib/%.o: vendor/zlib/%.c $(BUILD_ROOT)/settings
+	@mkdir -p "$(@D)"
+	$(COMPILER) $(FLAGS) -c "$<" -o "$@"
+$(BUILD_ROOT)/deps/bmp/%.o: vendor/libnsbmp/src/%.c $(BUILD_ROOT)/settings
+	@mkdir -p "$(@D)"
+	$(COMPILER) $(FLAGS) -DNDEBUG -c "$<" -o "$@"
+$(BUILD_ROOT)/bmplib-generated/huffman-codes.h: vendor/bmplib/gen-huffman.c vendor/bmplib/gen-huffman-codes.h
+	@mkdir -p "$(@D)"
+	xcrun --sdk macosx clang -std=c11 vendor/bmplib/gen-huffman.c -o "$(@D)/gen-huffman"
+	"$(@D)/gen-huffman" "$@"
+$(BUILD_ROOT)/deps/bmplib/%.o: vendor/bmplib/%.c orion/user/bmplib_config/config.h $(BUILD_ROOT)/bmplib-generated/huffman-codes.h $(BUILD_ROOT)/settings
+	@mkdir -p "$(@D)"
+	$(COMPILER) $(FLAGS) -DNDEBUG -c "$<" -o "$@"
 $(HOST_TOOL): tools/orionc.c $(wildcard orion/user/*.h)
 	@mkdir -p "$(@D)"
 	xcrun --sdk macosx clang -std=c11 -O2 -I. -I"$(shell xcrun --sdk macosx --show-sdk-path)/usr/include/libxml2" $< -lxml2 -o "$@"
@@ -83,8 +111,8 @@ $(BUILD_ROOT)/%_apple.o: orion/kernel/%_apple.m $(wildcard orion/kernel/*.h) $(B
 $(APP_ROOT)/app.o: $(APP_SRCS) $(APP_HEADERS) $(GENERATED) $(APP_ROOT)/settings packaging/ipad/build.mk tools/app_sources.mk
 	@printf '%s\n' $(APP_SRCS) | sed 's/.*/\#include "&"/' > "$(APP_ROOT)/app.c"
 	$(COMPILER) $(FLAGS) $(APP_FLAGS) -c "$(APP_ROOT)/app.c" -o "$@"
-$(APP_ROOT)/$(APP): $(OBJECTS) $(APP_ROOT)/app.o $(PLATFORM_LIB)
-	$(COMPILER) -isysroot "$(SDK_PATH)" -arch $(ARCH) $(MIN_FLAG) $(OBJECTS) "$(APP_ROOT)/app.o" $(PLATFORM_LIB) $(LIBS) -o "$@"
+$(APP_ROOT)/$(APP): $(OBJECTS) $(APP_ROOT)/app.o $(PLATFORM_LIB) $(DEP_OBJECTS)
+	$(COMPILER) -isysroot "$(SDK_PATH)" -arch $(ARCH) $(MIN_FLAG) $(OBJECTS) "$(APP_ROOT)/app.o" $(PLATFORM_LIB) $(DEP_OBJECTS) $(LIBS) -o "$@"
 app: $(APP_ROOT)/$(APP)
 	python3 tools/ipad/bundle.py --root "$(CURDIR)" --target "$(BUNDLE)" --binary "$<" --app $(APP) --bundle-id "$(BUNDLE_ID)" --sdk $(SDK) --sdk-version $(SDK_VERSION) --minimum $(IOS_MIN) --family $(FAMILY)
 ifeq ($(SDK),iphonesimulator)
@@ -120,4 +148,4 @@ mac: app
 	python3 tools/ipad/sign.py "$(BUNDLE)" $(if $(TEAM),--team "$(TEAM)") $(if $(PROFILE),--profile "$(PROFILE)")
 	python3 tools/ipad/wrap_mac.py "$(BUNDLE)" "$(abspath $(BUILD_DIR))/$(APP).app"
 	open "$(abspath $(BUILD_DIR))/$(APP).app"
--include $(OBJECTS:.o=.d) $(APP_ROOT)/app.d
+-include $(OBJECTS:.o=.d) $(DEP_OBJECTS:.o=.d) $(APP_ROOT)/app.d

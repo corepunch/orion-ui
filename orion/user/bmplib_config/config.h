@@ -1,0 +1,2 @@
+#define LIBRARY_VERSION "1.8.0"
+#define INSANITY_LIMIT 500

@@ -65,6 +65,42 @@ def forms(root, output):
         shutil.copyfile(archives[0], output / 'liborion_freetype.a')
     else:
         run('xcrun', 'lipo', '-create', *archives, '-output', output / 'liborion_freetype.a')
+    image_components = {
+        'libpng': 'png pngerror pngget pngmem pngpread pngread pngrio pngrtran pngrutil pngset pngtrans pngwio pngwrite pngwtran pngwutil',
+        'libjpeg': 'jaricom jcomapi jutils jerror jmemmgr jmemnobs jcapimin jcapistd jcarith jctrans jcparam jdatadst jcinit jcmaster jcmarker jcmainct jcprepct jccoefct jccolor jcsample jchuff jcdctmgr jfdctfst jfdctflt jfdctint jdapimin jdapistd jdarith jdtrans jdatasrc jdmaster jdinput jdmarker jdhuff jdmainct jdcoefct jdpostct jddctmgr jidctfst jidctflt jidctint jdsample jdcolor jquant1 jquant2 jdmerge',
+        'zlib': 'adler32 compress crc32 deflate infback inffast inflate inftrees trees uncompr zutil',
+        'libnsbmp/src': 'libnsbmp',
+        'bmplib': 'bmp-read bmp-write bmp-read-loadimage bmp-read-loadindexed bmp-read-icons bmp-common huffman logging',
+    }
+    bmplib_generated = output / 'bmplib-generated'
+    bmplib_generated.mkdir(parents=True, exist_ok=True)
+    generator = bmplib_generated / 'gen-huffman'
+    host_sdk = subprocess.check_output(['xcrun', '--sdk', 'macosx', '--show-sdk-path'], text=True).strip()
+    run('xcrun', '--sdk', 'macosx', 'clang', '-target', os.uname().machine + '-apple-macos12.0',
+        '-isysroot', host_sdk, '-std=c11', root / 'vendor/bmplib/gen-huffman.c', '-o', generator)
+    run(generator, bmplib_generated / 'huffman-codes.h')
+    image_includes = [root / 'orion/user/image_deps_config', root / 'vendor/libpng', root / 'vendor/libjpeg',
+                      root / 'vendor/libnsbmp/include', root / 'vendor/zlib', root / 'vendor/bmplib',
+                      root / 'orion/user/bmplib_config', bmplib_generated]
+    archives = []
+    for arch in os.environ['ARCHS'].split():
+        folder = output / ('image-deps-' + arch)
+        folder.mkdir(parents=True, exist_ok=True)
+        objects = []
+        for directory, names in image_components.items():
+            for name in names.split():
+                obj = folder / (directory.replace('/', '_') + '_' + name + '.o')
+                run(os.environ.get('CC', 'clang'), '-arch', arch, '-isysroot', os.environ['SDKROOT'],
+                    '-std=c11', '-DNDEBUG', '-DPNG_ARM_NEON_OPT=0', *('-I' + str(p) for p in image_includes),
+                    '-c', root / 'vendor' / directory / (name + '.c'), '-o', obj)
+                objects.append(obj)
+        archive = folder / 'liborion_image_deps.a'
+        run('xcrun', 'libtool', '-static', '-o', archive, *objects)
+        archives.append(archive)
+    if len(archives) == 1:
+        shutil.copyfile(archives[0], output / 'liborion_image_deps.a')
+    else:
+        run('xcrun', 'lipo', '-create', *archives, '-output', output / 'liborion_image_deps.a')
     host = output / 'host'
     host.mkdir(exist_ok=True)
     tool = host / 'orionc'

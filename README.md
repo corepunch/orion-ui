@@ -234,3 +234,7 @@ The documentation site is published with GitHub Pages from `docs/`.
 
 Orion uses the FreeType font engine. This software is based in part on the
 work of the FreeType Project (https://freetype.org).
+This software is based in part on the work of the Independent JPEG Group.
+PNG, JPEG, BMP and ZIP decoding use the libpng, IJG libjpeg, libnsbmp and zlib
+submodules. Indexed BMP reading and writing use the bmplib submodule. Their
+license notices are included in `share/licenses/`.

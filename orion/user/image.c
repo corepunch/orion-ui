@@ -1,14 +1,6 @@
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_ONLY_PNG
-#define STBI_ONLY_JPEG
-#define STBI_ONLY_BMP
-#include "stb_image.h"
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-
 #include "image.h"
 #include "color.h"
+#include "image_codec.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -35,11 +27,6 @@ static uint32_t image_read32_tiff(const uint8_t *p, bool le) {
                ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24))
             : (((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
                ((uint32_t)p[2] << 8) | (uint32_t)p[3]);
-}
-
-static uint32_t image_read32_le(const uint8_t *p) {
-  return (uint32_t)p[0] | ((uint32_t)p[1] << 8) |
-         ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
 static bool image_parse_exif_orientation(const uint8_t *data, size_t len,
@@ -143,46 +130,6 @@ static bool image_png_srgb_supported(const char *path) {
   return true;
 }
 
-static bool image_bmp_srgb_supported(const char *path) {
-  FILE *f = fopen(path, "rb");
-  if (!f) return true;
-  uint8_t file_header[14], size_bytes[4];
-  if (fread(file_header, 1, sizeof(file_header), f) != sizeof(file_header) ||
-      file_header[0] != 'B' || file_header[1] != 'M' ||
-      fread(size_bytes, 1, sizeof(size_bytes), f) != sizeof(size_bytes)) {
-    fclose(f);
-    return true;
-  }
-  uint32_t header_size = image_read32_le(size_bytes);
-  if (header_size < 108) {
-    fclose(f);
-    return true;
-  }
-  uint8_t dib[124] = {0};
-  memcpy(dib, size_bytes, sizeof(size_bytes));
-  size_t dib_size = header_size;
-  if (dib_size > sizeof(dib)) dib_size = sizeof(dib);
-  size_t rest = dib_size - sizeof(size_bytes);
-  if (fread(dib + sizeof(size_bytes), 1, rest, f) != rest) {
-    fclose(f);
-    fprintf(stderr, "[image] malformed BMP color header path=%s size=%u\n",
-            path, header_size);
-    fflush(stderr);
-    return false;
-  }
-  fclose(f);
-
-  uint32_t color_space = image_read32_le(dib + 56);
-  uint32_t profile_size = header_size >= 124 ? image_read32_le(dib + 116) : 0;
-  if (color_space != 0x73524742u || profile_size != 0) {
-    fprintf(stderr, "[image] unsupported BMP color metadata path=%s colorspace=0x%08x profile_size=%u\n",
-            path, color_space, profile_size);
-    fflush(stderr);
-    return false;
-  }
-  return true;
-}
-
 static int image_jpeg_orientation(const char *path, bool *has_icc) {
   FILE *f = fopen(path, "rb");
   if (has_icc) *has_icc = false;
@@ -278,103 +225,56 @@ static uint8_t *image_apply_orientation(uint8_t *src, int *w, int *h,
     }
   }
 
-  stbi_image_free(src);
+  free(src);
   *w = dw;
   *h = dh;
   return dst;
 }
 
-// stb_image rejects RLE-compressed BMPs, which classic skins ship. Expands an 8-bit RLE8 BMP into a
-// plain bottom-up 8-bit BMP; returns NULL (without a diagnostic) for anything else.
-static uint8_t *image_expand_bmp_rle(const uint8_t *d, size_t n, size_t *out_n) {
-  if (n < 54 || d[0] != 'B' || d[1] != 'M' || image_read32_le(d + 14) != 40) return NULL;
-  uint32_t data_at = image_read32_le(d + 10), comp = image_read32_le(d + 30);
-  int w = (int)image_read32_le(d + 18), h = (int)image_read32_le(d + 22);
-  if (comp != 1 || d[28] != 8 || w <= 0 || h == 0 || data_at > n || data_at < 54) return NULL;
-  int rows = h < 0 ? -h : h;
-  size_t stride = ((size_t)w + 3) & ~(size_t)3, pixels = stride * (size_t)rows;
-  uint8_t *out = calloc(1, data_at + pixels);
-  if (!out) {
-    fprintf(stderr, "[image] RLE BMP allocation failed size=%dx%d\n", w, rows);
-    fflush(stderr);
-    return NULL;
-  }
-  memcpy(out, d, data_at);
-  out[30] = out[31] = out[32] = out[33] = 0;                       // BI_RGB
-  size_t at = data_at;
-  int x = 0, y = 0;
-  while (at + 1 < n && y < rows) {
-    int count = d[at], value = d[at + 1];
-    at += 2;
-    uint8_t *row = out + data_at + (size_t)y * stride;
-    if (count) {
-      for (int i = 0; i < count && x < w; i++) row[x++] = (uint8_t)value;
-    } else if (value == 0) { x = 0; y++; }
-    else if (value == 1) break;
-    else if (value == 2) { if (at + 1 >= n) break; x += d[at]; y += d[at + 1]; at += 2; }
-    else {
-      for (int i = 0; i < value && at + (size_t)i < n && x < w; i++) row[x++] = d[at + i];
-      at += (size_t)value + (value & 1);
-    }
-  }
-  *out_n = data_at + pixels;
-  return out;
-}
-
 uint8_t *load_image(const char *path, int *out_w, int *out_h) {
   if (!out_w || !out_h) return NULL;
-  *out_w = 0;
-  *out_h = 0;
-  if (!path) return NULL;
-  if (!image_png_srgb_supported(path)) return NULL;
-  if (!image_bmp_srgb_supported(path)) return NULL;
+  *out_w = *out_h = 0;
+  if (!path || !image_png_srgb_supported(path)) return NULL;
   bool has_jpeg_icc = false;
   int orientation = image_jpeg_orientation(path, &has_jpeg_icc);
   if (has_jpeg_icc) {
     fprintf(stderr, "[image] unsupported JPEG ICC profile path=%s; import skipped\n", path);
-    fflush(stderr);
-    return NULL;
+    fflush(stderr); return NULL;
   }
-  int channels;
-  uint8_t *pixels = stbi_load(path, out_w, out_h, &channels, 4);
-  if (!pixels) {
-    FILE *f = fopen(path, "rb");
-    long len = f && !fseek(f, 0, SEEK_END) ? ftell(f) : -1;
-    uint8_t *raw = len > 0 && !fseek(f, 0, SEEK_SET) ? malloc((size_t)len) : NULL;
-    if (raw && fread(raw, 1, (size_t)len, f) == (size_t)len) pixels = load_image_memory(raw, (size_t)len, out_w, out_h);
-    free(raw);
-    if (f) fclose(f);
-  }
-  if (!pixels)
-    return NULL;
+  FILE *file = fopen(path, "rb");
+  if (!file) return NULL;
+  long len = !fseek(file, 0, SEEK_END) ? ftell(file) : -1;
+  uint8_t *data = len > 0 && !fseek(file, 0, SEEK_SET) ? malloc((size_t)len) : NULL;
+  uint8_t *pixels = data && fread(data, 1, (size_t)len, file) == (size_t)len
+      ? load_image_memory(data, (size_t)len, out_w, out_h) : NULL;
+  free(data); fclose(file);
   return image_apply_orientation(pixels, out_w, out_h, orientation);
 }
 
-void image_free(uint8_t *pixels) {
-  stbi_image_free(pixels);
-}
+void image_free(uint8_t *pixels) { free(pixels); }
 
 bool save_image_png(const char *path, const uint8_t *pixels, int w, int h) {
-  return stbi_write_png(path, w, h, 4, pixels, w * 4) != 0;
+  if (!path || !pixels || w < 1 || h < 1 || (size_t)w > SIZE_MAX / 4 / (size_t)h) return false;
+  png_image image = {0}; image.version = PNG_IMAGE_VERSION;
+  image.width = w; image.height = h; image.format = PNG_FORMAT_RGBA;
+  return png_image_write_to_file(&image, path, 0, pixels, 0, NULL) != 0;
 }
 
-bool save_image_jpg(const char *path, const uint8_t *pixels, int w, int h,
-                    int quality) {
-  return stbi_write_jpg(path, w, h, 4, pixels, quality) != 0;
+bool save_image_jpg(const char *path, const uint8_t *pixels, int w, int h, int quality) {
+  return image_encode_jpeg(path, pixels, w, h, quality);
 }
 
 uint8_t *encode_image_png(const uint8_t *pixels, int w, int h, size_t *out_size) {
-  int len = 0;
   if (out_size) *out_size = 0;
-  if (!pixels || w < 1 || h < 1 || !out_size) return NULL;
-  uint8_t *png = stbi_write_png_to_mem(pixels, w * 4, w, h, 4, &len);
-  if (!png) {
-    fprintf(stderr, "[image] PNG encode failed w=%d h=%d\n", w, h);
-    fflush(stderr);
-    return NULL;
-  }
-  *out_size = (size_t)len;
-  return png;
+  if (!pixels || w < 1 || h < 1 || !out_size || (size_t)w > SIZE_MAX / 4 / (size_t)h) return NULL;
+  png_image image = {0}; image.version = PNG_IMAGE_VERSION;
+  image.width = w; image.height = h; image.format = PNG_FORMAT_RGBA;
+  png_alloc_size_t size = 0;
+  if (!png_image_write_to_memory(&image, NULL, &size, 0, pixels, 0, NULL)) return NULL;
+  uint8_t *data = malloc(size);
+  if (!data || !png_image_write_to_memory(&image, data, &size, 0, pixels, 0, NULL)) { free(data); return NULL; }
+  *out_size = size;
+  return data;
 }
 
 void image_cover_rect(int src_w, int src_h, int dst_w, int dst_h, int rect[4]) {
@@ -467,35 +367,44 @@ done:
 }
 
 uint8_t *load_image_memory(const void *data, size_t size, int *out_w, int *out_h) {
-  int n = 0;
+  if (!out_w || !out_h) return NULL;
   *out_w = *out_h = 0;
-  if (!size) return NULL;
-  size_t flat_size = 0;
-  uint8_t *flat = image_expand_bmp_rle(data, size, &flat_size);
-  uint8_t *px = stbi_load_from_memory(flat ? flat : data, (int)(flat ? flat_size : size), out_w, out_h, &n, 4);
-  free(flat);
-  return px;
+  if (!data || size < 2) return NULL;
+  const uint8_t *bytes = data;
+  if (size >= 8 && !png_sig_cmp(bytes, 0, 8)) return image_decode_png(data, size, out_w, out_h);
+  if (bytes[0] == 0xff && bytes[1] == 0xd8) return image_decode_jpeg(data, size, out_w, out_h);
+  if (bytes[0] == 'B' && bytes[1] == 'M') return image_decode_bmp(data, size, out_w, out_h);
+  return NULL;
 }
 
 uint8_t *inflate_raw(const void *data, size_t size, size_t *out_size) {
-  // stb_image's inflater mis-reads the last symbols when the stream ends exactly at the buffer end,
-  // so it is given a zero-padded copy.
-  uint8_t *padded = malloc(size + 8);
-  if (!padded) {
-    fprintf(stderr, "[image] inflate allocation failed size=%zu\n", size);
-    fflush(stderr);
-    return NULL;
+  if (out_size) *out_size = 0;
+  if (!data || !out_size || size > UINT_MAX) {
+    fprintf(stderr, "[image] inflate rejected data=%p size=%zu out_size=%p\n", data, size, (void *)out_size);
+    fflush(stderr); return NULL;
   }
-  memcpy(padded, data, size);
-  memset(padded + size, 0, 8);
-  int len = 0;
-  uint8_t *out = (uint8_t *)stbi_zlib_decode_noheader_malloc((const char *)padded, (int)size + 8, &len);
-  free(padded);
-  if (!out) {
-    fprintf(stderr, "[image] inflate failed size=%zu reason=%s\n", size, stbi_failure_reason());
-    fflush(stderr);
-    return NULL;
+  z_stream stream = {0};
+  stream.next_in = (Bytef *)data; stream.avail_in = (uInt)size;
+  if (inflateInit2(&stream, -MAX_WBITS) != Z_OK) return NULL;
+  size_t capacity = 4096, used = 0;
+  uint8_t *result = malloc(capacity);
+  int status = Z_OK;
+  while (result && status == Z_OK) {
+    if (used == capacity) {
+      if (capacity > SIZE_MAX / 2 || capacity > UINT_MAX / 2) { status = Z_MEM_ERROR; break; }
+      capacity *= 2;
+      uint8_t *grown = realloc(result, capacity);
+      if (!grown) { status = Z_MEM_ERROR; break; }
+      result = grown;
+    }
+    stream.next_out = result + used; stream.avail_out = (uInt)(capacity - used);
+    status = inflate(&stream, Z_NO_FLUSH);
+    used = capacity - stream.avail_out;
   }
-  *out_size = (size_t)len;
-  return out;
+  inflateEnd(&stream);
+  if (!result || status != Z_STREAM_END) {
+    fprintf(stderr, "[image] inflate failed size=%zu status=%d\n", size, status); fflush(stderr);
+    free(result); return NULL;
+  }
+  *out_size = used; return result;
 }

@@ -4,8 +4,7 @@
 //   load and save.  These are the formats used by the 256-colour era tools
 //   (Deluxe Paint, Autodesk Animator, Disney Animation Studio).
 //
-// IMAGEEDITOR_INDEXED=0: delegates to user/image.h (stb_image PNG/JPEG/BMP)
-//   for loading and stb_image_write PNG for saving.
+// IMAGEEDITOR_INDEXED=0: delegates PNG/JPEG/BMP loading and PNG saving to user/image.h.
 //
 // Public API (both modes):
 //   uint8_t *image_io_load(path, out_w, out_h, out_pal, out_pal_count)
@@ -27,6 +26,8 @@
 
 #if IMAGEEDITOR_INDEXED
 
+#include <bmplib.h>
+
 static bool iio_has_ext(const char *path, const char *ext) {
   if (!path || !ext) return false;
   size_t plen = strlen(path);
@@ -42,22 +43,8 @@ static void iio_write_u16_le(uint8_t *buf, uint16_t v) {
   buf[1] = (uint8_t)(v >> 8);
 }
 
-static void iio_write_u32_le(uint8_t *buf, uint32_t v) {
-  buf[0] = (uint8_t)(v);
-  buf[1] = (uint8_t)(v >> 8);
-  buf[2] = (uint8_t)(v >> 16);
-  buf[3] = (uint8_t)(v >> 24);
-}
-
 static uint16_t iio_read_u16_le(const uint8_t *buf) {
   return (uint16_t)(buf[0] | ((uint16_t)buf[1] << 8));
-}
-
-static uint32_t iio_read_u32_le(const uint8_t *buf) {
-  return (uint32_t)buf[0]         |
-         ((uint32_t)buf[1] << 8)  |
-         ((uint32_t)buf[2] << 16) |
-         ((uint32_t)buf[3] << 24);
 }
 
 // ============================================================
@@ -247,139 +234,62 @@ static uint8_t *pcx_load(const char *path, int *out_w, int *out_h,
 // ============================================================
 
 static bool bmp8_save(const char *path, const canvas_doc_t *doc) {
-  if (!doc || doc->layer.count == 0 ||
-      !doc->layer.stack[0] || !doc->layer.stack[0]->pixels) return false;
-  int w = doc->canvas_w;
-  int h = doc->canvas_h;
-  int row_stride = (w + 3) & ~3; // rows padded to a multiple of 4 bytes
-  uint32_t pixel_bytes = (uint32_t)(row_stride * h);
-  uint32_t data_offset = 14 + 40 + 256 * 4; // 1078
-  uint32_t file_size   = data_offset + pixel_bytes;
-
-  FILE *fp = fopen(path, "wb");
-  if (!fp) return false;
-
-  // BITMAPFILEHEADER (14 bytes)
-  uint8_t fhdr[14];
-  memset(fhdr, 0, sizeof(fhdr));
-  fhdr[0] = 'B'; fhdr[1] = 'M';
-  iio_write_u32_le(fhdr + 2,  file_size);
-  iio_write_u32_le(fhdr + 10, data_offset);
-  if (fwrite(fhdr, 1, 14, fp) != 14) { fclose(fp); return false; }
-
-  // BITMAPINFOHEADER (40 bytes)
-  uint8_t ihdr[40];
-  memset(ihdr, 0, sizeof(ihdr));
-  iio_write_u32_le(ihdr + 0,  40);
-  iio_write_u32_le(ihdr + 4,  (uint32_t)w);
-  iio_write_u32_le(ihdr + 8,  (uint32_t)h); // positive = bottom-up
-  iio_write_u16_le(ihdr + 12, 1);           // planes
-  iio_write_u16_le(ihdr + 14, 8);           // bits per pixel
-  iio_write_u32_le(ihdr + 32, 256);         // clrUsed
-  if (fwrite(ihdr, 1, 40, fp) != 40) { fclose(fp); return false; }
-
-  // Colour table: 256 × RGBQUAD (B, G, R, 0)
+  if (!doc || doc->layer.count == 0 || !doc->layer.stack[0] || !doc->layer.stack[0]->pixels ||
+      doc->canvas_w <= 0 || doc->canvas_h <= 0 || doc->canvas_w > IIO_MAX_DIM || doc->canvas_h > IIO_MAX_DIM) return false;
+  FILE *file = fopen(path, "wb");
+  if (!file) return false;
+  BMPHANDLE bmp = bmpwrite_new(file);
+  uint8_t palette[256 * 4] = {0};
   for (int i = 0; i < 256; i++) {
-    uint32_t c = (i < doc->ipal.count) ? doc->ipal.entries[i] : 0u;
-    uint8_t quad[4] = { COLOR_B(c), COLOR_G(c), COLOR_R(c), 0 };
-    if (fwrite(quad, 1, 4, fp) != 4) { fclose(fp); return false; }
+    uint32_t c = i < doc->ipal.count ? doc->ipal.entries[i] : 0;
+    palette[i * 4] = COLOR_R(c); palette[i * 4 + 1] = COLOR_G(c); palette[i * 4 + 2] = COLOR_B(c);
   }
-
-  // Pixel data: rows stored bottom-up, padded to 4 bytes.
-  const uint8_t *pixels = doc->layer.stack[0]->pixels;
-  uint8_t *row_buf = calloc(1, (size_t)row_stride);
-  if (!row_buf) { fclose(fp); return false; }
-  bool ok = true;
-  for (int y = h - 1; y >= 0 && ok; y--) {
-    memset(row_buf, 0, (size_t)row_stride);
-    memcpy(row_buf, pixels + (size_t)y * w, (size_t)w);
-    ok = (fwrite(row_buf, 1, (size_t)row_stride, fp) == (size_t)row_stride);
+  bool ok = bmp && bmpwrite_set_dimensions(bmp, doc->canvas_w, doc->canvas_h, 1, 8) == BMP_RESULT_OK &&
+            bmpwrite_set_palette(bmp, 256, palette) == BMP_RESULT_OK &&
+            bmpwrite_save_image(bmp, doc->layer.stack[0]->pixels) == BMP_RESULT_OK;
+  if (!ok) {
+    const char *reason = bmp ? bmp_errmsg(bmp) : NULL;
+    fprintf(stderr, "[imageeditor] BMP save failed path=%s: %s\n", path, reason ? reason : "allocation or configuration failed");
+    fflush(stderr);
   }
-  free(row_buf);
-  fclose(fp);
+  if (bmp) bmp_free(bmp);
+  if (fclose(file) != 0) { fprintf(stderr, "[imageeditor] BMP close failed path=%s\n", path); fflush(stderr); return false; }
   return ok;
 }
 
 static uint8_t *bmp8_load(const char *path, int *out_w, int *out_h,
-                           uint32_t out_pal[256], int *out_pal_count) {
-  FILE *fp = fopen(path, "rb");
-  if (!fp) return NULL;
-
-  // BITMAPFILEHEADER (14 bytes)
-  uint8_t fhdr[14];
-  if (fread(fhdr, 1, 14, fp) != 14 ||
-      fhdr[0] != 'B' || fhdr[1] != 'M') {
-    fclose(fp); return NULL;
+                          uint32_t out_pal[256], int *out_pal_count) {
+  FILE *file = fopen(path, "rb");
+  if (!file) return NULL;
+  BMPHANDLE bmp = bmpread_new(file);
+  uint8_t *pixels = NULL, palette[256 * 4] = {0}, *palette_data = palette;
+  int w = 0, h = 0, count = 0, channels = 0, bits = 0;
+  bool ok = bmp != NULL;
+  if (ok) {
+    bmpread_set_insanity_limit(bmp, (size_t)IIO_MAX_DIM * IIO_MAX_DIM * 4);
+    ok = bmpread_load_info(bmp) == BMP_RESULT_OK && bmpread_info_bitcount(bmp) == 8;
   }
-  uint32_t data_offset = iio_read_u32_le(fhdr + 10);
-
-  // BITMAPINFOHEADER (40 bytes minimum)
-  uint8_t ihdr[40];
-  if (fread(ihdr, 1, 40, fp) != 40) { fclose(fp); return NULL; }
-  uint32_t info_size   = iio_read_u32_le(ihdr + 0);
-  // Reject unsupported or truncated DIB headers.
-  if (info_size < 40) { fclose(fp); return NULL; }
-  int      w           = (int)iio_read_u32_le(ihdr + 4);
-  int32_t  h_signed    = (int32_t)iio_read_u32_le(ihdr + 8);
-  uint16_t bit_count   = iio_read_u16_le(ihdr + 14);
-  uint32_t compression = iio_read_u32_le(ihdr + 16);
-  uint32_t clr_used    = iio_read_u32_le(ihdr + 32);
-
-  if (bit_count != 8 || compression != 0) {
-    fclose(fp); return NULL; // Only uncompressed 8-bit indexed
+  if (ok) {
+    w = bmpread_width(bmp); h = bmpread_height(bmp); count = bmpread_num_palette_colors(bmp);
+    ok = w > 0 && h > 0 && w <= IIO_MAX_DIM && h <= IIO_MAX_DIM && count > 0 && count <= 256 &&
+         bmpread_load_palette(bmp, &palette_data) == BMP_RESULT_OK &&
+         bmpread_dimensions(bmp, &w, &h, &channels, &bits, NULL) == BMP_RESULT_OK && channels == 1 && bits == 8 &&
+         bmpread_load_image(bmp, &pixels) == BMP_RESULT_OK;
   }
-  int h = (h_signed < 0) ? -h_signed : (int)h_signed;
-  bool bottom_up = (h_signed > 0);
-  if (w <= 0 || h <= 0 ||
-      (size_t)w > IIO_MAX_DIM || (size_t)h > IIO_MAX_DIM) {
-    fclose(fp); return NULL;
+  if (ok && out_pal && out_pal_count) {
+    memset(out_pal, 0, 256 * sizeof(*out_pal));
+    for (int i = 0; i < count; i++)
+      out_pal[i] = MAKE_COLOR(palette[i * 4], palette[i * 4 + 1], palette[i * 4 + 2],
+                              i == IMAGEEDITOR_TRANSPARENT_INDEX ? 0 : 255);
+    *out_pal_count = count;
   }
-
-  // Skip any extra bytes beyond the 40-byte BITMAPINFOHEADER.
-  if (info_size > 40)
-    fseek(fp, (long)(info_size - 40), SEEK_CUR);
-
-  // Colour table: BMP stores each entry as B, G, R, reserved.
-  // Index IMAGEEDITOR_TRANSPARENT_INDEX is given alpha=0 to mark it as the
-  // transparent slot, consistent with the PCX loader and this editor's
-  // palette convention.
-  int pal_count = (clr_used > 0 && clr_used <= 256) ? (int)clr_used : 256;
-  if (out_pal && out_pal_count) {
-    memset(out_pal, 0, 256 * sizeof(uint32_t));
-    *out_pal_count = pal_count;
-    for (int i = 0; i < pal_count; i++) {
-      uint8_t quad[4];
-      if (fread(quad, 1, 4, fp) != 4) { fclose(fp); return NULL; }
-      uint8_t a = (i == IMAGEEDITOR_TRANSPARENT_INDEX) ? 0 : 255;
-      out_pal[i] = MAKE_COLOR(quad[2], quad[1], quad[0], a);
-    }
-  } else {
-    fseek(fp, (long)(pal_count * 4), SEEK_CUR);
-  }
-
-  // Jump to pixel data using the absolute offset from the file header.
-  fseek(fp, (long)data_offset, SEEK_SET);
-
-  int row_stride = (w + 3) & ~3;
-  uint8_t *pixels = malloc((size_t)w * h);
-  if (!pixels) { fclose(fp); return NULL; }
-  uint8_t *row_buf = malloc((size_t)row_stride);
-  if (!row_buf) { free(pixels); fclose(fp); return NULL; }
-
-  bool ok = true;
-  for (int row = 0; row < h && ok; row++) {
-    int dst_y = bottom_up ? (h - 1 - row) : row;
-    if (fread(row_buf, 1, (size_t)row_stride, fp) != (size_t)row_stride) {
-      ok = false; break;
-    }
-    memcpy(pixels + (size_t)dst_y * w, row_buf, (size_t)w);
-  }
-  free(row_buf);
-  if (!ok) { free(pixels); fclose(fp); return NULL; }
-
-  fclose(fp);
-  *out_w = w;
-  *out_h = h;
+  if (!ok) {
+    const char *reason = bmp ? bmp_errmsg(bmp) : NULL;
+    fprintf(stderr, "[imageeditor] BMP load failed path=%s: %s\n", path, reason ? reason : "unsupported format or allocation failed");
+    fflush(stderr); free(pixels); pixels = NULL;
+  } else { *out_w = w; *out_h = h; }
+  if (bmp) bmp_free(bmp);
+  fclose(file);
   return pixels;
 }
 

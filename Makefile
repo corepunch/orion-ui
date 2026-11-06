@@ -123,6 +123,49 @@ $(FREETYPE_LIB): $(FREETYPE_OBJS)
 	@mkdir -p $(@D)
 	@$(AR) rcs $@ $^
 
+PNG_DIR ?= vendor/libpng
+JPEG_DIR ?= vendor/libjpeg
+BMP_DIR ?= vendor/libnsbmp
+BMPLIB_DIR ?= vendor/bmplib
+ZLIB_DIR ?= vendor/zlib
+IMAGE_CONFIG = orion/user/image_deps_config
+IMAGE_LIB = $(BUILD_DIR)/lib/liborion_image_deps.a
+BMPLIB_GENERATED = $(BUILD_DIR)/generated/bmplib
+HOSTCC ?= cc
+IMAGE_INCLUDES = -I$(IMAGE_CONFIG) -Iorion/user/bmplib_config -I$(BMPLIB_GENERATED) -I$(PNG_DIR) -I$(JPEG_DIR) -I$(BMP_DIR)/include -I$(BMPLIB_DIR) -I$(ZLIB_DIR)
+CFLAGS += $(IMAGE_INCLUDES)
+LIBS += -x none $(IMAGE_LIB)
+PNG_COMPONENTS = png pngerror pngget pngmem pngpread pngread pngrio pngrtran pngrutil pngset pngtrans pngwio pngwrite pngwtran pngwutil
+JPEG_COMPONENTS = jaricom jcomapi jutils jerror jmemmgr jmemnobs jcapimin jcapistd jcarith jctrans jcparam jdatadst jcinit jcmaster jcmarker jcmainct jcprepct jccoefct jccolor jcsample jchuff jcdctmgr jfdctfst jfdctflt jfdctint jdapimin jdapistd jdarith jdtrans jdatasrc jdmaster jdinput jdmarker jdhuff jdmainct jdcoefct jdpostct jddctmgr jidctfst jidctflt jidctint jdsample jdcolor jquant1 jquant2 jdmerge
+ZLIB_COMPONENTS = adler32 compress crc32 deflate infback inffast inflate inftrees trees uncompr zutil
+BMPLIB_COMPONENTS = bmp-read bmp-write bmp-read-loadimage bmp-read-loadindexed bmp-read-icons bmp-common huffman logging
+IMAGE_OBJS = $(addprefix $(BUILD_DIR)/image-deps/png/,$(addsuffix .o,$(PNG_COMPONENTS))) $(addprefix $(BUILD_DIR)/image-deps/jpeg/,$(addsuffix .o,$(JPEG_COMPONENTS))) $(addprefix $(BUILD_DIR)/image-deps/zlib/,$(addsuffix .o,$(ZLIB_COMPONENTS))) $(addprefix $(BUILD_DIR)/image-deps/bmplib/,$(addsuffix .o,$(BMPLIB_COMPONENTS))) $(BUILD_DIR)/image-deps/bmp/libnsbmp.o
+
+$(BUILD_DIR)/image-deps/png/%.o: $(PNG_DIR)/%.c
+	@mkdir -p $(@D)
+	@$(CC) $(CFLAGS) -DPNG_ARM_NEON_OPT=0 -fPIC -c $< -o $@
+$(BUILD_DIR)/image-deps/jpeg/%.o: $(JPEG_DIR)/%.c
+	@mkdir -p $(@D)
+	@$(CC) $(CFLAGS) -fPIC -c $< -o $@
+$(BUILD_DIR)/image-deps/zlib/%.o: $(ZLIB_DIR)/%.c
+	@mkdir -p $(@D)
+	@$(CC) $(CFLAGS) -fPIC -c $< -o $@
+$(BUILD_DIR)/image-deps/bmp/%.o: $(BMP_DIR)/src/%.c
+	@mkdir -p $(@D)
+	@$(CC) $(CFLAGS) -DNDEBUG -fPIC -c $< -o $@
+$(BMPLIB_GENERATED)/huffman-codes.h: $(BMPLIB_DIR)/gen-huffman.c $(BMPLIB_DIR)/gen-huffman-codes.h
+	@mkdir -p $(@D)
+	@$(HOSTCC) -std=c11 $(BMPLIB_DIR)/gen-huffman.c -o $(BMPLIB_GENERATED)/gen-huffman
+	@$(BMPLIB_GENERATED)/gen-huffman $@
+$(BUILD_DIR)/image-deps/bmplib/%.o: $(BMPLIB_DIR)/%.c
+	@mkdir -p $(@D)
+	@$(CC) $(CFLAGS) -DNDEBUG -fPIC -c $< -o $@
+$(addprefix $(BUILD_DIR)/image-deps/bmplib/,$(addsuffix .o,$(BMPLIB_COMPONENTS))): $(BMPLIB_GENERATED)/huffman-codes.h
+$(IMAGE_OBJS): $(IMAGE_CONFIG)/jconfig.h $(IMAGE_CONFIG)/pnglibconf.h orion/user/bmplib_config/config.h $(wildcard $(PNG_DIR)/*.h $(JPEG_DIR)/*.h $(ZLIB_DIR)/*.h $(BMP_DIR)/include/*.h $(BMP_DIR)/src/utils/*.h $(BMPLIB_DIR)/*.h)
+$(IMAGE_LIB): $(IMAGE_OBJS)
+	@mkdir -p $(@D)
+	@$(AR) rcs $@ $^
+
 # Compile flags for .gem shared libraries
 GEM_CFLAGS = $(CFLAGS) -DBUILD_AS_GEM
 
@@ -294,7 +337,7 @@ $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(CORE_LIBS) | $(BIN_DIR)
 	@$(COPY_DLLS)
 
 # Self-contained tools that don't need the core libraries.
-$(ORIONC_BIN) $(CGEN_BIN): $(FREETYPE_LIB)
+$(ORIONC_BIN) $(CGEN_BIN): $(FREETYPE_LIB) $(IMAGE_LIB)
 $(ORIONC_BIN) $(CGEN_BIN): TOOL_LINK = $(LDFLAGS) $(LIBS)
 $(ORIONC_BIN) $(CGEN_BIN): $(BIN_DIR)/%$(EXE_EXT): tools/%.c | $(BIN_DIR)
 	@echo "TOOL    $@"
@@ -446,7 +489,7 @@ CORE_HEADERS = $(wildcard vendor/gl_shader/*.[ch]) $(wildcard orion/*.h orion/us
 # unity_lib <name> <srcs> <lib-deps> <extra-cflags> <link-libs>
 # The sources are #included into a single translation unit fed via stdin.
 define unity_lib
-$(LIB_DIR)/lib$(1).$(LIB_EXT): $(2) $(3) $(PLATFORM_LIB) $(CORE_HEADERS) $(FREETYPE_LIB) | $(LIB_DIR)
+$(LIB_DIR)/lib$(1).$(LIB_EXT): $(2) $(3) $(PLATFORM_LIB) $(CORE_HEADERS) $(FREETYPE_LIB) $(IMAGE_LIB) | $(LIB_DIR)
 	@echo "LIB     $$@"
 	@printf '%s\n' $(sort $(2)) | sed 's/.*/\#include "&"/' | \
 	    $(CC) $(CFLAGS) $(LIB_FLAGS) $(call lib_id_flags,$(1)) $(4) -x c -o $$@ - \

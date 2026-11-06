@@ -118,6 +118,9 @@ def generate(args):
         'ALWAYS_SEARCH_USER_PATHS': 'NO',
         'GCC_WARN_INHIBIT_ALL_WARNINGS': 'NO', 'GCC_WARN_ABOUT_RETURN_TYPE': 'YES',
         'HEADER_SEARCH_PATHS': ['$(DERIVED_FILE_DIR)/include', '$(ORION_ROOT)', '$(ORION_ROOT)/vendor/freetype/include',
+                               '$(ORION_ROOT)/orion/user/image_deps_config', '$(ORION_ROOT)/vendor/libpng',
+                               '$(ORION_ROOT)/vendor/libjpeg', '$(ORION_ROOT)/vendor/libnsbmp/include', '$(ORION_ROOT)/vendor/zlib',
+                               '$(ORION_ROOT)/vendor/bmplib', '$(ORION_ROOT)/orion/user/bmplib_config',
                                '$(ORION_ROOT)/apps/groove', '$(ORION_ROOT)/components',
                                '$(SDKROOT)/usr/include/libxml2'],
         'GCC_PREPROCESSOR_DEFINITIONS': ['$(inherited)', 'ORION_ALLOW_HIGHDPI=1',
@@ -159,7 +162,8 @@ def generate(args):
         ipad = platform == 'ipad'
         settings = dict(INFOPLIST_FILE='$(PROJECT_FILE_PATH)/Generated/' + platform + '-Info.plist',
                         ASSETCATALOG_COMPILER_APPICON_NAME='AppIcon',
-                        OTHER_LDFLAGS=['$(inherited)', '$(DERIVED_FILE_DIR)/liborion_freetype.a', '-lxml2', '-lm'])
+                        OTHER_LDFLAGS=['$(inherited)', '$(DERIVED_FILE_DIR)/liborion_freetype.a',
+                                       '$(DERIVED_FILE_DIR)/liborion_image_deps.a', '-lxml2', '-lm'])
         if ipad:
             settings.update(signing, SDKROOT='iphoneos', SUPPORTED_PLATFORMS='iphoneos iphonesimulator',
                             IPHONEOS_DEPLOYMENT_TARGET='16.0', TARGETED_DEVICE_FAMILY='2', SUPPORTS_MACCATALYST='NO')
@@ -227,7 +231,8 @@ def generate(args):
                         '$(ORION_ROOT)/tools/orionc.c', '$(ORION_ROOT)/apps/groove/groove.orion',
                         '$(ORION_ROOT)/apps/groove/share/icon.png'],
             outputPaths=['$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h',
-                         '$(DERIVED_FILE_DIR)/Assets.xcassets', '$(DERIVED_FILE_DIR)/liborion_freetype.a'] +
+                         '$(DERIVED_FILE_DIR)/Assets.xcassets', '$(DERIVED_FILE_DIR)/liborion_freetype.a',
+                         '$(DERIVED_FILE_DIR)/liborion_image_deps.a'] +
                         ['$(DERIVED_FILE_DIR)/' + filename for filename in target_sources if filename in units],
             runOnlyForDeploymentPostprocessing=0,
             alwaysOutOfDate=1)

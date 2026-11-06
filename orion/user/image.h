@@ -9,7 +9,7 @@
 // RGB bytes are sRGB encoded; untagged PNGs use the sRGB fallback. PNGs with
 // unsupported profiles/transfer metadata and PNGs above 8 bits are rejected
 // with an unconditional diagnostic rather than silently reinterpreted.
-// Supports PNG, JPEG (.jpg and .jpeg), and BMP via stb_image.
+// Supports PNG, JPEG (.jpg and .jpeg), and BMP.
 // The image type is determined by the file's magic bytes (first few bytes),
 // not by the filename extension, so renaming a file does not affect loading.
 // Returns NULL on failure; on failure *out_w and *out_h are set to 0.
