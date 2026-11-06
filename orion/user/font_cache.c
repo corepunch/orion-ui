@@ -7,9 +7,8 @@
 #include <orion/kernel/renderer.h>
 #include <platform/platform.h>
 
-#define STB_TRUETYPE_IMPLEMENTATION
-#include <tools/stb_truetype.h>
-#undef STB_TRUETYPE_IMPLEMENTATION
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 #define FONT_ATLAS_COLS 64
 #define FONT_ATLAS_ROWS 64
@@ -17,8 +16,8 @@
 #define FONT_CODEPOINT_LIMIT 0x10000
 
 struct font_cache_s {
-  uint8_t *ttf_data;
-  stbtt_fontinfo font;
+  FT_Library library;
+  FT_Face font;
   float scale;
   float raster_scale;
   float bitmap_scale;
@@ -32,49 +31,28 @@ struct font_cache_s {
   font_cache_glyph_t glyphs[FONT_ATLAS_CAPACITY];
 };
 
-static uint8_t *read_ttf(const char *path) {
-  FILE *file = fopen(path, "rb");
-  if (!file) return NULL;
-  fseek(file, 0, SEEK_END);
-  long size = ftell(file);
-  rewind(file);
-  if (size <= 0 || size > 32 * 1024 * 1024) { fclose(file); return NULL; }
-  uint8_t *data = (uint8_t *)malloc((size_t)size);
-  if (!data || fread(data, 1, (size_t)size, file) != (size_t)size) {
-    free(data);
-    fclose(file);
-    return NULL;
-  }
-  fclose(file);
-  return data;
-}
-
 font_cache_t *font_cache_create(const char *path, float em_size) {
-  if (!path || em_size <= 0.0f) return NULL;
-  font_cache_t *cache = (font_cache_t *)calloc(1, sizeof(*cache));
-  if (!cache) return NULL;
-  cache->ttf_data = read_ttf(path);
-  int offset = cache->ttf_data ? stbtt_GetFontOffsetForIndex(cache->ttf_data, 0) : -1;
-  if (offset < 0 || !stbtt_InitFont(&cache->font, cache->ttf_data, offset)) {
-    fprintf(stderr, "[font] failed to load %s\n", path);
-    font_cache_destroy(cache);
-    return NULL;
+  if (!path || em_size <= 0.0f) {
+    fprintf(stderr, "[font] invalid path=%s size=%g\n", path ? path : "(null)", em_size); fflush(stderr); return NULL;
   }
-
-  int ascent, descent, line_gap, x0, y0, x1, y1;
+  font_cache_t *cache = (font_cache_t *)calloc(1, sizeof(*cache));
+  if (!cache) { fprintf(stderr, "[font] cache allocation failed\n"); fflush(stderr); return NULL; }
+  if (FT_Init_FreeType(&cache->library) || FT_New_Face(cache->library, path, 0, &cache->font) || !cache->font->units_per_EM) {
+    fprintf(stderr, "[font] failed to load %s\n", path); fflush(stderr);
+    font_cache_destroy(cache); return NULL;
+  }
   cache->bitmap_scale = axGetScaling();
   if (cache->bitmap_scale < 1.0f) cache->bitmap_scale = 1.0f;
-  // Font size is the logical em size; display density only affects the bitmap.
-  cache->scale = stbtt_ScaleForMappingEmToPixels(&cache->font, em_size);
+  cache->scale = em_size / cache->font->units_per_EM;
   cache->raster_scale = cache->scale * cache->bitmap_scale;
-  stbtt_GetFontVMetrics(&cache->font, &ascent, &descent, &line_gap);
-  stbtt_GetFontBoundingBox(&cache->font, &x0, &y0, &x1, &y1);
-  cache->baseline = (int)ceilf((float)ascent * cache->raster_scale);
-  cache->line_height = (int)ceilf((float)(ascent - descent + line_gap) * cache->scale);
-  cache->cell_w = (int)ceilf((float)(x1 - x0) * cache->raster_scale) +
-                  (int)ceilf(2.0f * cache->bitmap_scale);
-  cache->cell_h = (int)ceilf((float)(y1 - y0) * cache->raster_scale) +
-                  (int)ceilf(2.0f * cache->bitmap_scale);
+  if (FT_Set_Char_Size(cache->font, 0, (FT_F26Dot6)lroundf(em_size * cache->bitmap_scale * 64), 72, 72)) {
+    fprintf(stderr, "[font] failed to set size %g for %s\n", em_size, path); fflush(stderr);
+    font_cache_destroy(cache); return NULL;
+  }
+  cache->baseline = (int)ceilf(cache->font->ascender * cache->raster_scale);
+  cache->line_height = (int)ceilf(cache->font->height * cache->scale);
+  cache->cell_w = (int)ceilf((cache->font->bbox.xMax - cache->font->bbox.xMin) * cache->raster_scale) + 4;
+  cache->cell_h = (int)ceilf((cache->font->bbox.yMax - cache->font->bbox.yMin) * cache->raster_scale) + 4;
   if (cache->line_height < 1) cache->line_height = 1;
   if (cache->cell_w < 1) cache->cell_w = 1;
   if (cache->cell_h < 1) cache->cell_h = 1;
@@ -111,14 +89,15 @@ font_cache_t *font_cache_create(const char *path, float em_size) {
 void font_cache_destroy(font_cache_t *cache) {
   if (!cache) return;
   R_DeleteTexture(cache->texture);
-  free(cache->ttf_data);
+  if (cache->font) FT_Done_Face(cache->font);
+  if (cache->library) FT_Done_FreeType(cache->library);
   free(cache);
 }
 
 static uint32_t supported_codepoint(font_cache_t *cache, uint32_t codepoint) {
   if (codepoint >= FONT_CODEPOINT_LIMIT ||
-      stbtt_FindGlyphIndex(&cache->font, (int)codepoint) == 0) {
-    if (stbtt_FindGlyphIndex(&cache->font, 0xFFFD) != 0) return 0xFFFD;
+      FT_Get_Char_Index(cache->font, codepoint) == 0) {
+    if (FT_Get_Char_Index(cache->font, 0xFFFD) != 0) return 0xFFFD;
     return '?';
   }
   return codepoint;
@@ -136,30 +115,37 @@ const font_cache_glyph_t *font_cache_get_glyph(font_cache_t *cache,
     return codepoint == '?' ? NULL : font_cache_get_glyph(cache, '?');
   }
 
-  uint16_t slot = cache->next_slot++;
+  uint16_t slot = cache->next_slot;
   font_cache_glyph_t *glyph = &cache->glyphs[slot];
   glyph->atlas_x = (slot % cache->columns) * cache->cell_w;
   glyph->atlas_y = (slot / cache->columns) * cache->cell_h;
-  int advance, left_bearing, width, height, x_offset, y_offset;
-  stbtt_GetCodepointHMetrics(&cache->font, (int)codepoint, &advance, &left_bearing);
-  unsigned char *bitmap = stbtt_GetCodepointBitmap(&cache->font, 0,
-                                                    cache->raster_scale,
-                                                    (int)codepoint, &width, &height,
-                                                    &x_offset, &y_offset);
-  glyph->advance = (int16_t)lroundf((float)advance * cache->scale);
-  glyph->x_offset = (int16_t)x_offset;
-  glyph->y_offset = (int16_t)(cache->baseline + y_offset);
-  if (width < 0) width = 0;
-  if (height < 0) height = 0;
-  glyph->width = (uint16_t)(width < cache->cell_w ? width : cache->cell_w);
-  glyph->height = (uint16_t)(height < cache->cell_h ? height : cache->cell_h);
-  cache->slots[codepoint] = slot + 1;
-
-  if (bitmap && glyph->width && glyph->height) {
-    R_UpdateTextureR8(cache->texture, glyph->atlas_x, glyph->atlas_y,
-                      glyph->width, glyph->height, bitmap);
+  FT_UInt index = FT_Get_Char_Index(cache->font, codepoint);
+  if (FT_Load_Glyph(cache->font, index, FT_LOAD_NO_SCALE)) {
+    fprintf(stderr, "[font] failed to load metrics U+%04X\n", codepoint); fflush(stderr); return NULL;
   }
-  stbtt_FreeBitmap(bitmap, NULL);
+  glyph->advance = (int16_t)lroundf(cache->font->glyph->advance.x * cache->scale);
+  if (FT_Load_Glyph(cache->font, index, FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP | FT_LOAD_RENDER)) {
+    fprintf(stderr, "[font] failed to render U+%04X\n", codepoint); fflush(stderr); return NULL;
+  }
+  FT_GlyphSlot image = cache->font->glyph;
+  glyph->x_offset = (int16_t)image->bitmap_left;
+  glyph->y_offset = (int16_t)(cache->baseline - image->bitmap_top);
+  glyph->width = (uint16_t)image->bitmap.width;
+  glyph->height = (uint16_t)image->bitmap.rows;
+  if (glyph->width > cache->cell_w || glyph->height > cache->cell_h) {
+    fprintf(stderr, "[font] glyph U+%04X exceeds cell %dx%d\n", codepoint, cache->cell_w, cache->cell_h); fflush(stderr); return NULL;
+  }
+  if (glyph->width && glyph->height) {
+    uint8_t *pixels = malloc((size_t)glyph->width * glyph->height);
+    if (!pixels) { fprintf(stderr, "[font] bitmap allocation failed U+%04X\n", codepoint); fflush(stderr); return NULL; }
+    for (int y = 0; y < glyph->height; y++)
+      memcpy(pixels + (size_t)y * glyph->width, image->bitmap.buffer + (size_t)y * image->bitmap.pitch, glyph->width);
+    bool uploaded = R_UpdateTextureR8(cache->texture, glyph->atlas_x, glyph->atlas_y, glyph->width, glyph->height, pixels);
+    free(pixels);
+    if (!uploaded) { fprintf(stderr, "[font] upload failed U+%04X\n", codepoint); fflush(stderr); return NULL; }
+  }
+  cache->slots[codepoint] = slot + 1;
+  cache->next_slot++;
   return glyph;
 }
 

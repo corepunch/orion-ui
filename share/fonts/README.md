@@ -1,24 +1,21 @@
 # Orion fonts
 
-Orion's proportional UI text uses separate roles chosen for readability at
-their target sizes:
+Orion uses DejaVu Sans 2.37 with FreeType. The fonts come from
+https://dejavu-fonts.github.io/ (release archive SHA-256
+fa9ca4d13871dd122f61258a80d01751d603b4d3ee14095d65453b4e846e17d7). The system and compact text roles
+use DejaVuSans.ttf; titles use DejaVuSans-Bold.ttf. Italic and bold italic
+variants are included for applications that need them. The font family
+supports Latin, Greek and Cyrillic. See DejaVu-LICENSE.txt for its license.
 
-- `FONT_SYSTEM`: `NotoSans-Medium.ttf` at 12 px for window chrome and controls
-- `FONT_SMALL`: `NotoSans-Regular.ttf` at 12 px for content
-- `FONT_SMALLEST`: `NotoSans-Regular.ttf` at 9 px for compact labels
+Font sizes are logical em sizes. The glyph cache uses hinted FreeType bitmaps
+at display density while retaining logical advance and line metrics, so Retina
+increases raster resolution without changing layout. `monoid.ttf` remains the
+terminal's fixed-width face.
 
-Sizes are em sizes in logical UI pixels, not the font's full ascent-to-descent
-height. Retina increases atlas resolution without changing logical text size
-or advances. Line heights include the typeface's ascent, descent, and line gap.
+FreeType 2.15.0 is included as the `vendor/freetype` Git submodule, pinned to
+the `VER-2-15-0` release. Initialize it with
+`git submodule update --init --recursive`. Orion's selected modules are listed
+in `orion/user/freetype_modules.h`.
 
-Noto Sans is distributed under the SIL Open Font License 1.1 in
-`NotoSans-OFL.txt`. Its Latin, Greek, and Cyrillic coverage is suitable for the
-framework's general UI text. Glyphs are rasterized from the TTF files into empty
-runtime atlases on first use; generated bitmap font sheets are not source
-assets.
-
-`monoid.ttf` remains the fixed-width face for the terminal/VGA text renderer.
-
-Orion requests high-DPI surfaces by default, matching SDL's opt-in window flag
-model. Build with `make -B ALLOW_HIGHDPI=0` to omit that request and exercise a
-1x surface on Retina displays. Use `make -B` to restore the default afterward.
+This software is based in part on the work of the FreeType Project
+(https://freetype.org). License notices are bundled in share/licenses/freetype.

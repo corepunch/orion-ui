@@ -1,6 +1,7 @@
 #include "test_framework.h"
 #include <orion/kernel/renderer.h>
 #include <platform/platform.h>
+#include <orion/user/font_sdf.h>
 
 static float test_display_scale = 1.0f;
 static int test_texture_limit = 16384;
@@ -29,7 +30,7 @@ static void test_delete_texture(uint32_t tex) {}
 static void test_font_size(void) {
   TEST("12 px UI fonts retain readable cap height at 1x and 2x");
   const char *paths[] = {
-    "share/fonts/NotoSans-Medium.ttf", "share/fonts/NotoSans-Regular.ttf",
+    "share/fonts/DejaVuSans-Bold.ttf", "share/fonts/DejaVuSans.ttf",
   };
   for (int i = 0; i < 2; i++) {
     for (int scale = 1; scale <= 2; scale++) {
@@ -50,9 +51,9 @@ static void test_retina_metrics(void) {
   const float sizes[] = {8.0f, 9.0f, 12.0f};
   for (int i = 0; i < 3; i++) {
     test_display_scale = 1.0f;
-    font_cache_t *normal = font_cache_create("share/fonts/NotoSans-Regular.ttf", sizes[i]);
+    font_cache_t *normal = font_cache_create("share/fonts/DejaVuSans.ttf", sizes[i]);
     test_display_scale = 2.0f;
-    font_cache_t *retina = font_cache_create("share/fonts/NotoSans-Regular.ttf", sizes[i]);
+    font_cache_t *retina = font_cache_create("share/fonts/DejaVuSans.ttf", sizes[i]);
     ASSERT_NOT_NULL(normal);
     ASSERT_NOT_NULL(retina);
     bool matches = font_cache_line_height(normal) == font_cache_line_height(retina);
@@ -77,7 +78,7 @@ static void test_mobile_texture_limit(void) {
   TEST("Retina font atlases fit mobile GPU limits and wrap glyph rows");
   test_display_scale = 2.0f;
   test_texture_limit = 4096;
-  font_cache_t *cache = font_cache_create("share/fonts/NotoSans-Regular.ttf", 12.0f);
+  font_cache_t *cache = font_cache_create("share/fonts/DejaVuSans.ttf", 12.0f);
   ASSERT_NOT_NULL(cache);
   ASSERT_TRUE(font_cache_texture_width(cache) <= test_texture_limit);
   ASSERT_TRUE(font_cache_texture_height(cache) <= test_texture_limit);
@@ -92,10 +93,41 @@ static void test_mobile_texture_limit(void) {
   PASS();
 }
 
+static void test_hinting_and_sdf(void) {
+  TEST("DejaVu hinting aligns the hyphen and SDF preserves glyphs and kerning");
+  test_display_scale = 1.0f;
+  font_cache_t *cache = font_cache_create("share/fonts/DejaVuSans.ttf", 11.0f);
+  ASSERT_NOT_NULL(cache);
+  const font_cache_glyph_t *hyphen = font_cache_get_glyph(cache, '-');
+  ASSERT_NOT_NULL(hyphen);
+  ASSERT_EQUAL(hyphen->height, 1);
+  ASSERT_NOT_NULL(font_cache_get_glyph(cache, 0x0416));
+  font_cache_destroy(cache);
+
+  font_sdf_t *sdf = font_sdf_create("share/fonts/DejaVuSans.ttf", 64.0f, 8, 512);
+  ASSERT_NOT_NULL(sdf);
+  const font_sdf_glyph_t *a = font_sdf_glyph(sdf, 'A');
+  const font_sdf_glyph_t *v = font_sdf_glyph(sdf, 'V');
+  ASSERT_NOT_NULL(a); ASSERT_NOT_NULL(v);
+  ASSERT_TRUE(a->w > 0 && a->h > 0 && a->advance > 0);
+  ASSERT_TRUE(font_sdf_kern(sdf, a, v) < 0);
+  int w, h;
+  const uint8_t *pixels = font_sdf_pixels(sdf, &w, &h);
+  bool inside = false, outside = false;
+  for (int y = 0; y < a->h; y++) for (int x = 0; x < a->w; x++) {
+    uint8_t p = pixels[(a->y + y) * w + a->x + x];
+    inside |= p > 128; outside |= p < 128;
+  }
+  ASSERT_TRUE(inside && outside);
+  font_sdf_destroy(sdf);
+  PASS();
+}
+
 int main(void) {
   TEST_START("UI font sizing");
   test_font_size();
   test_retina_metrics();
   test_mobile_texture_limit();
+  test_hinting_and_sdf();
   TEST_END();
 }

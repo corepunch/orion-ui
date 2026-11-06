@@ -5,16 +5,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <tools/stb_truetype.h>
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_MODULE_H
 
 #define FONT_SDF_CODEPOINTS 0x10000
 #define FONT_SDF_MAX_GLYPHS 4096
-#define FONT_SDF_EDGE 128
 #define FONT_SDF_GAP 1
 
 struct font_sdf_s {
-  uint8_t *ttf;
-  stbtt_fontinfo info;
+  FT_Library library;
+  FT_Face face;
   float base, scale, ascent, descent, line_gap;
   int padding, size;
   uint8_t *pixels;
@@ -25,20 +26,8 @@ struct font_sdf_s {
   font_sdf_glyph_t glyphs[FONT_SDF_MAX_GLYPHS];
 };
 
-static uint8_t *font_sdf_read(const char *path) {
-  FILE *file = fopen(path, "rb");
-  if (!file) return NULL;
-  fseek(file, 0, SEEK_END);
-  long size = ftell(file);
-  rewind(file);
-  uint8_t *data = size > 0 && size <= 32 * 1024 * 1024 ? malloc((size_t)size) : NULL;
-  if (data && fread(data, 1, (size_t)size, file) != (size_t)size) { free(data); data = NULL; }
-  fclose(file);
-  return data;
-}
-
 font_sdf_t *font_sdf_create(const char *path, float base_size, int padding, int atlas_size) {
-  if (!path || base_size <= 0 || padding < 1 || atlas_size < 64) {
+  if (!path || base_size <= 0 || padding < 2 || padding > 32 || atlas_size < 64) {
     fprintf(stderr, "[font_sdf] rejected create path=%s base=%g padding=%d atlas=%d\n",
             path ? path : "(null)", base_size, padding, atlas_size);
     fflush(stderr);
@@ -46,22 +35,20 @@ font_sdf_t *font_sdf_create(const char *path, float base_size, int padding, int 
   }
   font_sdf_t *font = calloc(1, sizeof(*font));
   if (!font) return NULL;
-  font->ttf = font_sdf_read(path);
-  int offset = font->ttf ? stbtt_GetFontOffsetForIndex(font->ttf, 0) : -1;
   font->pixels = calloc((size_t)atlas_size * (size_t)atlas_size, 1);
-  if (offset < 0 || !font->pixels || !stbtt_InitFont(&font->info, font->ttf, offset)) {
-    fprintf(stderr, "[font_sdf] failed to load %s\n", path);
-    fflush(stderr);
-    font_sdf_destroy(font);
-    return NULL;
+  if (!font->pixels || FT_Init_FreeType(&font->library) || FT_New_Face(font->library, path, 0, &font->face) ||
+      FT_Set_Char_Size(font->face, 0, (FT_F26Dot6)lroundf(base_size * 64), 72, 72)) {
+    fprintf(stderr, "[font_sdf] failed to load %s\n", path); fflush(stderr); font_sdf_destroy(font); return NULL;
   }
-  int ascent, descent, line_gap;
-  stbtt_GetFontVMetrics(&font->info, &ascent, &descent, &line_gap);
+  FT_UInt spread = (FT_UInt)padding;
+  if (FT_Property_Set(font->library, "sdf", "spread", &spread)) {
+    fprintf(stderr, "[font_sdf] unsupported spread=%d\n", padding); fflush(stderr); font_sdf_destroy(font); return NULL;
+  }
   font->base = base_size;
-  font->scale = stbtt_ScaleForMappingEmToPixels(&font->info, base_size);
-  font->ascent = ascent * font->scale;
-  font->descent = descent * font->scale;
-  font->line_gap = line_gap * font->scale;
+  font->scale = base_size / font->face->units_per_EM;
+  font->ascent = font->face->ascender * font->scale;
+  font->descent = font->face->descender * font->scale;
+  font->line_gap = (font->face->height - font->face->ascender + font->face->descender) * font->scale;
   font->padding = padding;
   font->size = atlas_size;
   font->dirty_x0 = font->dirty_y0 = atlas_size;
@@ -71,7 +58,8 @@ font_sdf_t *font_sdf_create(const char *path, float base_size, int padding, int 
 void font_sdf_destroy(font_sdf_t *font) {
   if (!font) return;
   free(font->pixels);
-  free(font->ttf);
+  if (font->face) FT_Done_Face(font->face);
+  if (font->library) FT_Done_FreeType(font->library);
   free(font);
 }
 
@@ -90,8 +78,8 @@ static bool font_sdf_place(font_sdf_t *font, int w, int h, int *x, int *y) {
 
 const font_sdf_glyph_t *font_sdf_glyph(font_sdf_t *font, uint32_t codepoint) {
   if (!font) return NULL;
-  if (codepoint >= FONT_SDF_CODEPOINTS || !stbtt_FindGlyphIndex(&font->info, (int)codepoint))
-    codepoint = stbtt_FindGlyphIndex(&font->info, 0xFFFD) ? 0xFFFD : '?';
+  if (codepoint >= FONT_SDF_CODEPOINTS || !FT_Get_Char_Index(font->face, codepoint))
+    codepoint = FT_Get_Char_Index(font->face, 0xFFFD) ? 0xFFFD : '?';
   if (font->slots[codepoint]) return &font->glyphs[font->slots[codepoint] - 1];
   if (font->nglyphs >= FONT_SDF_MAX_GLYPHS) {
     fprintf(stderr, "[font_sdf] glyph table full at U+%04X\n", codepoint);
@@ -100,39 +88,42 @@ const font_sdf_glyph_t *font_sdf_glyph(font_sdf_t *font, uint32_t codepoint) {
   }
   font_sdf_glyph_t *glyph = &font->glyphs[font->nglyphs];
   memset(glyph, 0, sizeof(*glyph));
-  int advance, bearing, w = 0, h = 0, xoff = 0, yoff = 0;
-  glyph->index = stbtt_FindGlyphIndex(&font->info, (int)codepoint);
-  stbtt_GetGlyphHMetrics(&font->info, glyph->index, &advance, &bearing);
-  glyph->advance = advance * font->scale;
-  uint8_t *sdf = stbtt_GetGlyphSDF(&font->info, font->scale, glyph->index, font->padding,
-                                   FONT_SDF_EDGE, (float)FONT_SDF_EDGE / font->padding,
-                                   &w, &h, &xoff, &yoff);
-  if (sdf && w > 0 && h > 0) {
+  glyph->index = FT_Get_Char_Index(font->face, codepoint);
+  if (FT_Load_Glyph(font->face, glyph->index, FT_LOAD_NO_SCALE)) {
+    fprintf(stderr, "[font_sdf] metrics failed U+%04X\n", codepoint); fflush(stderr); return NULL;
+  }
+  glyph->advance = font->face->glyph->advance.x * font->scale;
+  if (FT_Load_Glyph(font->face, glyph->index, FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP)) {
+    fprintf(stderr, "[font_sdf] load failed U+%04X\n", codepoint); fflush(stderr); return NULL;
+  }
+  FT_GlyphSlot slot = font->face->glyph;
+  if (slot->outline.n_contours && FT_Render_Glyph(slot, FT_RENDER_MODE_SDF)) {
+    fprintf(stderr, "[font_sdf] render failed U+%04X\n", codepoint); fflush(stderr); return NULL;
+  }
+  int w = slot->bitmap.width, h = slot->bitmap.rows;
+  if (w > 0 && h > 0) {
     int x, y;
     if (!font_sdf_place(font, w, h, &x, &y)) {
-      fprintf(stderr, "[font_sdf] atlas %dx%d full at U+%04X\n", font->size, font->size, codepoint);
-      fflush(stderr);
-      stbtt_FreeSDF(sdf, NULL);
-      return NULL;
+      fprintf(stderr, "[font_sdf] atlas %dx%d full at U+%04X\n", font->size, font->size, codepoint); fflush(stderr); return NULL;
     }
     for (int row = 0; row < h; row++)
-      memcpy(font->pixels + (size_t)(y + row) * font->size + x, sdf + (size_t)row * w, (size_t)w);
-    glyph->x = (uint16_t)x; glyph->y = (uint16_t)y;
-    glyph->w = (uint16_t)w; glyph->h = (uint16_t)h;
-    glyph->x_offset = (float)xoff; glyph->y_offset = (float)yoff;
+      memcpy(font->pixels + (size_t)(y + row) * font->size + x, slot->bitmap.buffer + (size_t)row * slot->bitmap.pitch, (size_t)w);
+    glyph->x = (uint16_t)x; glyph->y = (uint16_t)y; glyph->w = (uint16_t)w; glyph->h = (uint16_t)h;
+    glyph->x_offset = (float)slot->bitmap_left; glyph->y_offset = (float)-slot->bitmap_top;
     if (x < font->dirty_x0) font->dirty_x0 = x;
     if (y < font->dirty_y0) font->dirty_y0 = y;
     if (x + w > font->dirty_x1) font->dirty_x1 = x + w;
     if (y + h > font->dirty_y1) font->dirty_y1 = y + h;
   }
-  if (sdf) stbtt_FreeSDF(sdf, NULL);
   font->slots[codepoint] = (uint16_t)++font->nglyphs;
   return glyph;
 }
 
 float font_sdf_kern(font_sdf_t *font, const font_sdf_glyph_t *a, const font_sdf_glyph_t *b) {
   if (!font || !a || !b) return 0;
-  return stbtt_GetGlyphKernAdvance(&font->info, a->index, b->index) * font->scale;
+  FT_Vector delta = {0};
+  if (FT_Get_Kerning(font->face, a->index, b->index, FT_KERNING_UNSCALED, &delta)) return 0;
+  return delta.x * font->scale;
 }
 
 void font_sdf_vmetrics(const font_sdf_t *font, float *ascent, float *descent, float *line_gap) {
