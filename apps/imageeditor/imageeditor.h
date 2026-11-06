@@ -761,9 +761,9 @@ typedef struct {
 } text_options_t;
 bool show_text_dialog(window_t *parent, text_options_t *opts);
 
-// Render a UTF-8 string into the canvas at (x, y) using stb_truetype.
+// Render a UTF-8 string into the canvas at (x, y) using FreeType.
 // Returns true if at least one pixel was written.
-bool canvas_draw_text_stb(canvas_doc_t *doc, int x, int y,
+bool canvas_draw_text(canvas_doc_t *doc, int x, int y,
                            const text_options_t *opts);
 
 // About dialog

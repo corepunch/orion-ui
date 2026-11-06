@@ -345,6 +345,7 @@ and `font_sdf_take_dirty()` reports the region to upload with your renderer.
 Metrics and `font_sdf_kern()` are in pixels at the atlas base size. The edge
 value is 128 and each texel of distance changes it by `128 / padding`, so a
 shader recovers screen-space coverage from the sample and its derivatives.
+FreeType supports padding values from 2 through 32 pixels.
 Scener's reel renderer (`apps/scener/reel_draw.c`) is the reference user.
 
 ### Procedural card surfaces

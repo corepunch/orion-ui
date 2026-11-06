@@ -1,8 +1,8 @@
-// Text-to-canvas rendering using stb_truetype.
+// Text-to-canvas rendering using FreeType.
 // Rasterizes a UTF-8 string into the canvas pixel buffer.
 
-#define STB_TRUETYPE_IMPLEMENTATION
-#include "stb_truetype.h"
+#include <ft2build.h>
+#include FT_FREETYPE_H
 #include "imageeditor.h"
 
 // System font fallback paths tried when the bundled font is unavailable.
@@ -11,31 +11,16 @@ static const char * const k_system_fonts[] = {
   "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
   "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
   "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-  "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
   NULL
 };
 
-// Cached font state – loaded once on first use, held for the lifetime of the
-// process.  Avoids repeated disk I/O and stbtt_InitFont() overhead on every
-// text insertion.
-static uint8_t      *s_font_data   = NULL;
-static stbtt_fontinfo s_font;
-static bool           s_font_ready = false;
+static FT_Library s_font_library;
+static FT_Face s_font;
+static bool s_font_ready;
 
-// Try to load and parse a font file.  Returns true on success.
 static bool try_load_font(const char *path) {
-  FILE *fp = fopen(path, "rb");
-  if (!fp) return false;
-  if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return false; }
-  long sz = ftell(fp);
-  if (sz <= 0) { fclose(fp); return false; }
-  rewind(fp);
-  uint8_t *data = (uint8_t *)malloc((size_t)sz);
-  if (!data) { fclose(fp); return false; }
-  if ((long)fread(data, 1, (size_t)sz, fp) != sz) { free(data); fclose(fp); return false; }
-  fclose(fp);
-  if (!stbtt_InitFont(&s_font, data, 0)) { free(data); return false; }
-  s_font_data  = data;
+  if (!s_font_library && FT_Init_FreeType(&s_font_library)) return false;
+  if (FT_New_Face(s_font_library, path, 0, &s_font)) return false;
   s_font_ready = true;
   return true;
 }
@@ -51,6 +36,10 @@ static bool ensure_font(void) {
            ui_get_exe_dir());
   if (try_load_font(bundled)) return true;
 #endif
+
+  char default_font[4096];
+  snprintf(default_font, sizeof(default_font), "%s/../share/orion/fonts/DejaVuSans.ttf", ui_get_exe_dir());
+  if (try_load_font(default_font)) return true;
 
   // Fallback: system-installed fonts.
   for (int i = 0; k_system_fonts[i]; i++) {
@@ -87,16 +76,14 @@ static int utf8_next(const char **pp) {
 // Render a UTF-8 string into the canvas at canvas position (cx, cy).
 // The y coordinate is the top of the text (ascent line).
 // Returns true if at least one pixel was written, false otherwise.
-bool canvas_draw_text_stb(canvas_doc_t *doc, int cx, int cy,
+bool canvas_draw_text(canvas_doc_t *doc, int cx, int cy,
                            const text_options_t *opts) {
   if (!opts || !opts->text[0]) return false;
   if (!ensure_font()) return false;
 
-  float scale = stbtt_ScaleForPixelHeight(&s_font, (float)opts->font_size);
-
-  int ascent, descent, line_gap;
-  stbtt_GetFontVMetrics(&s_font, &ascent, &descent, &line_gap);
-  int baseline_y = cy + (int)(ascent * scale);
+  float em = (float)opts->font_size * s_font->units_per_EM / (s_font->ascender - s_font->descender);
+  if (FT_Set_Char_Size(s_font, 0, (FT_F26Dot6)lroundf(em * 64), 72, 72)) return false;
+  int baseline_y = cy + (int)(s_font->ascender * em / s_font->units_per_EM);
 
   bool drew = false;
   int pen_x = cx;
@@ -104,11 +91,13 @@ bool canvas_draw_text_stb(canvas_doc_t *doc, int cx, int cy,
   while (*p) {
     int cp = utf8_next(&p);
 
-    // Determine glyph bitmap offsets and dimensions
-    int bmp_w, bmp_h, bmp_ox, bmp_oy;
-    uint8_t *bmp = stbtt_GetCodepointBitmap(
-        &s_font, scale, scale, cp,
-        &bmp_w, &bmp_h, &bmp_ox, &bmp_oy);
+    if (FT_Load_Char(s_font, cp, FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP | FT_LOAD_RENDER)) {
+      fprintf(stderr, "[imageeditor] text glyph render failed U+%04X\n", cp); fflush(stderr); continue;
+    }
+    FT_GlyphSlot glyph = s_font->glyph;
+    int bmp_w = glyph->bitmap.width, bmp_h = glyph->bitmap.rows;
+    int bmp_ox = glyph->bitmap_left, bmp_oy = -glyph->bitmap_top;
+    uint8_t *bmp = glyph->bitmap.buffer;
 
     if (bmp) {
       int dst_x0 = pen_x + bmp_ox;
@@ -120,7 +109,7 @@ bool canvas_draw_text_stb(canvas_doc_t *doc, int cx, int cy,
           int py = dst_y0 + row;
           if (!canvas_in_bounds(doc, px, py)) continue;
 
-          uint8_t alpha = bmp[row * bmp_w + col];
+          uint8_t alpha = bmp[row * glyph->bitmap.pitch + col];
           if (!opts->antialias) {
             // Hard threshold: fully opaque or fully transparent
             alpha = (alpha > 127) ? 255 : 0;
@@ -140,19 +129,15 @@ bool canvas_draw_text_stb(canvas_doc_t *doc, int cx, int cy,
           drew = true;
         }
       }
-      stbtt_FreeBitmap(bmp, NULL);
     }
 
-    // Advance pen by glyph advance width
-    int advance, lsb;
-    stbtt_GetCodepointHMetrics(&s_font, cp, &advance, &lsb);
-    pen_x += (int)(advance * scale);
-
-    // Kerning between this codepoint and the next
+    pen_x += (int)(glyph->advance.x / 64);
     if (*p) {
       const char *peek = p;
+      FT_Vector kern = {0};
       int next_cp = utf8_next(&peek);
-      pen_x += (int)(stbtt_GetCodepointKernAdvance(&s_font, cp, next_cp) * scale);
+      if (!FT_Get_Kerning(s_font, FT_Get_Char_Index(s_font, cp), FT_Get_Char_Index(s_font, next_cp), FT_KERNING_DEFAULT, &kern))
+        pen_x += (int)(kern.x / 64);
     }
   }
 

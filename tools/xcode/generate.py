@@ -117,11 +117,11 @@ def generate(args):
         'CLANG_ENABLE_OBJC_ARC': 'NO', 'ENABLE_USER_SCRIPT_SANDBOXING': 'NO',
         'ALWAYS_SEARCH_USER_PATHS': 'NO',
         'GCC_WARN_INHIBIT_ALL_WARNINGS': 'NO', 'GCC_WARN_ABOUT_RETURN_TYPE': 'YES',
-        'HEADER_SEARCH_PATHS': ['$(DERIVED_FILE_DIR)/include', '$(ORION_ROOT)',
+        'HEADER_SEARCH_PATHS': ['$(DERIVED_FILE_DIR)/include', '$(ORION_ROOT)', '$(ORION_ROOT)/vendor/freetype/include',
                                '$(ORION_ROOT)/apps/groove', '$(ORION_ROOT)/components',
                                '$(SDKROOT)/usr/include/libxml2'],
         'GCC_PREPROCESSOR_DEFINITIONS': ['$(inherited)', 'ORION_ALLOW_HIGHDPI=1',
-                                       'GL_SILENCE_DEPRECATION', 'STBTT_STATIC', 'HAVE_WINDOWING', 'GROOVE_USE_SHINE',
+                                       'GL_SILENCE_DEPRECATION', 'HAVE_WINDOWING', 'GROOVE_USE_SHINE',
                                        'SHAREDIR=\"../share/groove\"'],
         'OTHER_CFLAGS': ['$(inherited)', '-fblocks', '-Wall', '-Wextra', '-Wno-unused-parameter',
                          '-Wno-unused-function', '-Wno-missing-field-initializers', '-Wno-deprecated-declarations'],
@@ -159,7 +159,7 @@ def generate(args):
         ipad = platform == 'ipad'
         settings = dict(INFOPLIST_FILE='$(PROJECT_FILE_PATH)/Generated/' + platform + '-Info.plist',
                         ASSETCATALOG_COMPILER_APPICON_NAME='AppIcon',
-                        OTHER_LDFLAGS=['$(inherited)', '-lxml2', '-lm'])
+                        OTHER_LDFLAGS=['$(inherited)', '$(DERIVED_FILE_DIR)/liborion_freetype.a', '-lxml2', '-lm'])
         if ipad:
             settings.update(signing, SDKROOT='iphoneos', SUPPORTED_PLATFORMS='iphoneos iphonesimulator',
                             IPHONEOS_DEPLOYMENT_TARGET='16.0', TARGETED_DEVICE_FAMILY='2', SUPPORTS_MACCATALYST='NO')
@@ -227,7 +227,7 @@ def generate(args):
                         '$(ORION_ROOT)/tools/orionc.c', '$(ORION_ROOT)/apps/groove/groove.orion',
                         '$(ORION_ROOT)/apps/groove/share/icon.png'],
             outputPaths=['$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h',
-                         '$(DERIVED_FILE_DIR)/Assets.xcassets'] +
+                         '$(DERIVED_FILE_DIR)/Assets.xcassets', '$(DERIVED_FILE_DIR)/liborion_freetype.a'] +
                         ['$(DERIVED_FILE_DIR)/' + filename for filename in target_sources if filename in units],
             runOnlyForDeploymentPostprocessing=0,
             alwaysOutOfDate=1)

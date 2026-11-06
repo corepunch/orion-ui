@@ -155,10 +155,10 @@ clips a group.
 | `<font>` | `name`, `src` (TTF next to the reel or in `share/orion/fonts`) |
 | `<curve>` | `name`, `ease`, `loop`; content `time:value` keys; callable as `name(x)` |
 
-Built-in fonts are `sans` (Noto Sans Regular), `sans-medium` and `mono`.
+Built-in fonts are `sans` (DejaVu Sans Regular), `sans-medium` and `mono`.
 Text content folds line breaks and indentation into one space and keeps runs
 of spaces; `{{` and `}}` are literal braces. A missing glyph renders as
-U+FFFD, so check coverage: bundled Noto Sans has no arrows (use `›`).
+U+FFFD, so check the bundled DejaVu Sans character coverage.
 
 ### Expressions
 

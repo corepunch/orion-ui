@@ -788,7 +788,7 @@ result_t win_canvas_proc(window_t *win, uint32_t msg,
           g_app->text_tool.font_size = opts.font_size;
           g_app->text_tool.antialias = opts.antialias;
           if (!ie_doc_begin_op(doc, "Text")) return true;
-          if (canvas_draw_text_stb(doc, px, py, &opts)) {
+          if (canvas_draw_text(doc, px, py, &opts)) {
             ie_doc_commit_op(doc, true);
             invalidate_window(win);
           } else {

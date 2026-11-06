@@ -11,6 +11,7 @@
 //
 // Metrics are in pixels at the atlas base size; multiply by size / base.
 // Edge value is 128; each texel of distance changes the value by 128 / padding.
+// FreeType supports padding (spread) from 2 through 32 pixels.
 
 typedef struct font_sdf_s font_sdf_t;
 

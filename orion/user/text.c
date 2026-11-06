@@ -88,8 +88,8 @@ void init_text_rendering(void) {
 
   const char *exe = ui_get_exe_dir();
   char system_path[4096], compact_path[4096];
-  snprintf(system_path, sizeof(system_path), "%s/../share/orion/fonts/NotoSans-Medium.ttf", exe);
-  snprintf(compact_path, sizeof(compact_path), "%s/../share/orion/fonts/NotoSans-Regular.ttf", exe);
+  snprintf(system_path, sizeof(system_path), "%s/../share/orion/fonts/DejaVuSans-Bold.ttf", exe);
+  snprintf(compact_path, sizeof(compact_path), "%s/../share/orion/fonts/DejaVuSans.ttf", exe);
 
 #if defined(AX_PLATFORM_IOS)
   const float system_size = 14.4f, small_size = 14.4f, smallest_size = 10.8f, title_size = 21.6f, display_size = 28.8f;
@@ -98,7 +98,7 @@ void init_text_rendering(void) {
 #else
   const float system_size = 8.0f, small_size = 8.0f, smallest_size = 7.0f, title_size = 12.0f, display_size = 16.0f;
 #endif
-  bool loaded = load_atlas(&text_state.big, system_path, system_size);
+  bool loaded = load_atlas(&text_state.big, compact_path, system_size);
   loaded = load_atlas(&text_state.small, compact_path, small_size) && loaded;
   loaded = load_atlas(&text_state.smallest, compact_path, smallest_size) && loaded;
   loaded = load_atlas(&text_state.title, system_path, title_size) && loaded;

@@ -231,3 +231,6 @@ documentation standards.
 - [Package Manager](packaging/README.md)
 
 The documentation site is published with GitHub Pages from `docs/`.
+
+Orion uses the FreeType font engine. This software is based in part on the
+work of the FreeType Project (https://freetype.org).

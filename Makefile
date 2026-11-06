@@ -74,6 +74,7 @@ $(error Unsupported platform: OS=$(OS) UNAME_S=$(UNAME_S))
 endif
 
 # ── Dependencies ─────────────────────────────────────────────────────────
+BUILD_DIR = build
 PKG_CONFIG ?= pkg-config
 LUA_PKG_CONFIG = $(PKG_CONFIG)
 find_lua_pkg = $(shell for pkg in lua5.4 lua-5.4 lua54 lua; do \
@@ -104,6 +105,24 @@ LIBXML_LIBS   := $(shell $(PKG_CONFIG) --libs libxml-2.0 2>/dev/null)
 CFLAGS += $(LUA_CFLAGS) $(LIBXML_CFLAGS) -DHAVE_LUA
 LIBS   += $(filter-out -lm,$(LUA_LIBS) $(LIBXML_LIBS)) -lm
 
+# Bundled FreeType, built from source for the selected platform.
+FREETYPE_DIR = vendor/freetype
+FREETYPE_LIB = $(BUILD_DIR)/lib/liborion_freetype.a
+CFLAGS += -I$(FREETYPE_DIR)/include
+LIBS += -x none $(FREETYPE_LIB)
+FREETYPE_SRCS = $(addprefix $(FREETYPE_DIR)/src/,base/ftbase.c base/ftinit.c base/ftsystem.c base/ftglyph.c base/ftbitmap.c base/ftdebug.c base/ftmm.c gzip/ftgzip.c autofit/autofit.c truetype/truetype.c cff/cff.c psaux/psaux.c psnames/psnames.c pshinter/pshinter.c sfnt/sfnt.c smooth/smooth.c sdf/sdf.c raster/raster.c)
+FREETYPE_OBJS = $(patsubst $(FREETYPE_DIR)/src/%.c,$(BUILD_DIR)/freetype/%.o,$(FREETYPE_SRCS))
+
+$(BUILD_DIR)/freetype/%.o: $(FREETYPE_DIR)/src/%.c
+	@mkdir -p $(@D)
+	@$(CC) $(CFLAGS) -I. -DFT2_BUILD_LIBRARY -DFT_CONFIG_MODULES_H='"orion/user/freetype_modules.h"' -fPIC -c $< -o $@
+
+$(FREETYPE_OBJS): orion/user/freetype_modules.h $(wildcard $(FREETYPE_DIR)/include/*.h $(FREETYPE_DIR)/include/freetype/*.h $(FREETYPE_DIR)/include/freetype/config/*.h)
+
+$(FREETYPE_LIB): $(FREETYPE_OBJS)
+	@mkdir -p $(@D)
+	@$(AR) rcs $@ $^
+
 # Compile flags for .gem shared libraries
 GEM_CFLAGS = $(CFLAGS) -DBUILD_AS_GEM
 
@@ -112,7 +131,6 @@ COMPS = components
 include tools/app_sources.mk
 
 # Build directories
-BUILD_DIR     = build
 LIB_DIR       = $(BUILD_DIR)/lib
 BIN_DIR       = $(BUILD_DIR)/bin
 SHARE_DIR     = $(BUILD_DIR)/share
@@ -276,6 +294,7 @@ $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(CORE_LIBS) | $(BIN_DIR)
 	@$(COPY_DLLS)
 
 # Self-contained tools that don't need the core libraries.
+$(ORIONC_BIN) $(CGEN_BIN): $(FREETYPE_LIB)
 $(ORIONC_BIN) $(CGEN_BIN): TOOL_LINK = $(LDFLAGS) $(LIBS)
 $(ORIONC_BIN) $(CGEN_BIN): $(BIN_DIR)/%$(EXE_EXT): tools/%.c | $(BIN_DIR)
 	@echo "TOOL    $@"
@@ -404,6 +423,7 @@ $(PLATFORM_LIB): $(PLATFORM_SRCS) | $(LIB_DIR)
 share: | $(SHARE_DIR)
 	@mkdir -p $(SHARE_DIR)/orion
 	@cp -R share/. $(SHARE_DIR)/orion/
+	@rm -f $(SHARE_DIR)/orion/fonts/NotoSans-Regular.ttf $(SHARE_DIR)/orion/fonts/NotoSans-Medium.ttf $(SHARE_DIR)/orion/fonts/NotoSans-OFL.txt
 	@for dir in $(APPS)/*/share; do \
 	  [ -d "$$dir" ] || continue; \
 	  name=$$(basename $$(dirname "$$dir")); \
@@ -426,7 +446,7 @@ CORE_HEADERS = $(wildcard vendor/gl_shader/*.[ch]) $(wildcard orion/*.h orion/us
 # unity_lib <name> <srcs> <lib-deps> <extra-cflags> <link-libs>
 # The sources are #included into a single translation unit fed via stdin.
 define unity_lib
-$(LIB_DIR)/lib$(1).$(LIB_EXT): $(2) $(3) $(PLATFORM_LIB) $(CORE_HEADERS) | $(LIB_DIR)
+$(LIB_DIR)/lib$(1).$(LIB_EXT): $(2) $(3) $(PLATFORM_LIB) $(CORE_HEADERS) $(FREETYPE_LIB) | $(LIB_DIR)
 	@echo "LIB     $$@"
 	@printf '%s\n' $(sort $(2)) | sed 's/.*/\#include "&"/' | \
 	    $(CC) $(CFLAGS) $(LIB_FLAGS) $(call lib_id_flags,$(1)) $(4) -x c -o $$@ - \

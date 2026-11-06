@@ -233,7 +233,7 @@ static int reel_font_add(reel_t *r, int line, const char *name, const char *src)
 static int reel_font_find(reel_t *r, const char *name) {
 	for (int i = 0; i < r->nfonts; i++) if (!strcmp(r->fonts[i].name, name)) return i;
 	static const struct { const char *name, *file; } defaults[] = {
-		{"sans", "NotoSans-Regular.ttf"}, {"sans-medium", "NotoSans-Medium.ttf"}, {"mono", "monoid.ttf"}};
+		{"sans", "DejaVuSans.ttf"}, {"sans-medium", "DejaVuSans-Bold.ttf"}, {"mono", "monoid.ttf"}};
 	for (size_t i = 0; i < sizeof(defaults) / sizeof(defaults[0]); i++)
 		if (!strcmp(defaults[i].name, name)) return reel_font_add(r, r->root.line, name, defaults[i].file);
 	return -1;

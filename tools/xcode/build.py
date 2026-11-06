@@ -41,6 +41,30 @@ def app_icon(root, output):
 def forms(root, output):
     for name, sources in unity_sources(root, 'groove').items():
         write(output / name, ''.join(f'#include "{p.relative_to(root).as_posix()}"\n' for p in sources))
+    freetype = root / 'vendor/freetype'
+    components = ('base/ftbase', 'base/ftinit', 'base/ftsystem', 'base/ftglyph', 'base/ftbitmap',
+                  'base/ftdebug', 'base/ftmm', 'gzip/ftgzip', 'autofit/autofit', 'truetype/truetype',
+                  'cff/cff', 'psaux/psaux', 'psnames/psnames', 'pshinter/pshinter', 'sfnt/sfnt',
+                  'smooth/smooth', 'sdf/sdf', 'raster/raster')
+    archives = []
+    for arch in os.environ['ARCHS'].split():
+        folder = output / ('freetype-' + arch)
+        folder.mkdir(parents=True, exist_ok=True)
+        objects = []
+        for component in components:
+            obj = folder / (component.replace('/', '_') + '.o')
+            run(os.environ.get('CC', 'clang'), '-arch', arch, '-isysroot', os.environ['SDKROOT'],
+                '-std=c11', '-DFT2_BUILD_LIBRARY', '-DFT_CONFIG_MODULES_H="orion/user/freetype_modules.h"',
+                '-I' + str(root), '-I' + str(freetype / 'include'),
+                '-c', freetype / 'src' / (component + '.c'), '-o', obj)
+            objects.append(obj)
+        archive = folder / 'liborion_freetype.a'
+        run('xcrun', 'libtool', '-static', '-o', archive, *objects)
+        archives.append(archive)
+    if len(archives) == 1:
+        shutil.copyfile(archives[0], output / 'liborion_freetype.a')
+    else:
+        run('xcrun', 'lipo', '-create', *archives, '-output', output / 'liborion_freetype.a')
     host = output / 'host'
     host.mkdir(exist_ok=True)
     tool = host / 'orionc'
