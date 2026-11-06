@@ -11,8 +11,6 @@
 #include <unistd.h>
 
 // Pull in the image module implementation without the full static library.
-// user/image.c defines STB_IMAGE_IMPLEMENTATION before including stb_image.h,
-// so all stb symbols are compiled in here with no duplicate-symbol conflicts.
 #include <orion/user/image.c>
 
 // ============================================================
@@ -33,22 +31,19 @@ static const char *temp_dir(void) {
 //   import zlib, struct
 //   def chunk(t, d): return struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d)&0xFFFFFFFF)
 //   raw = b'\x00\xff\x00\x00\xff'  # filter byte + R G B A
-//   img = chunk(b'IHDR', struct.pack('>IIBBBBB',1,1,8,2,0,0,0))
+//   img = chunk(b'IHDR', struct.pack('>IIBBBBB',1,1,8,6,0,0,0))
 //   img += chunk(b'IDAT', zlib.compress(raw))
 //   img += chunk(b'IEND', b'')
 //   print(list(b'\x89PNG\r\n\x1a\n'+img))
 // "
 // ============================================================
 static const uint8_t k_red_1x1_png[] = {
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-  0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-  0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-  0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-  0xde, 0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41,
-  0x54, 0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0x00,
-  0x00, 0x00, 0x02, 0x00, 0x01, 0xe2, 0x21, 0xbc,
-  0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e,
-  0x44, 0xae, 0x42, 0x60, 0x82
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+  0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0xf8, 0xcf, 0xc0, 0xf0,
+  0x1f, 0x00, 0x05, 0x00, 0x01, 0xff, 0x89, 0x99, 0x3d, 0x1d, 0x00, 0x00,
+  0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
 };
 
 // Write the embedded PNG bytes to a temp file, return path (static buffer).
@@ -281,13 +276,49 @@ void test_exif_orientation_transform_pixels(void) {
   PASS();
 }
 
+static void test_bmp_color_metadata(void) {
+  TEST("BMP with calibrated colour metadata loads through file and memory APIs");
+  uint8_t bmp[126] = {0};
+  bmp[0] = 'B'; bmp[1] = 'M'; bmp[2] = sizeof(bmp); bmp[10] = 122;
+  bmp[14] = 108; bmp[18] = 1; bmp[22] = 1; bmp[26] = 1; bmp[28] = 24;
+  bmp[122] = 3; bmp[123] = 2; bmp[124] = 1;
+  char path[512]; snprintf(path, sizeof(path), "%s/orion_bmp_metadata_%d.bmp", temp_dir(), (int)getpid());
+  FILE *file = fopen(path, "wb"); ASSERT_NOT_NULL(file);
+  ASSERT_EQUAL(fwrite(bmp, 1, sizeof(bmp), file), sizeof(bmp)); ASSERT_EQUAL(fclose(file), 0);
+  int w = 0, h = 0;
+  uint8_t *memory = load_image_memory(bmp, sizeof(bmp), &w, &h);
+  ASSERT_NOT_NULL(memory); ASSERT_EQUAL(w, 1); ASSERT_EQUAL(h, 1);
+  uint8_t *from_file = load_image(path, &w, &h);
+  ASSERT_NOT_NULL(from_file); ASSERT_EQUAL(w, 1); ASSERT_EQUAL(h, 1);
+  ASSERT_EQUAL(from_file[0], 1); ASSERT_EQUAL(from_file[1], 2); ASSERT_EQUAL(from_file[2], 3);
+  ASSERT_TRUE(memcmp(memory, from_file, 4) == 0);
+  image_free(memory); image_free(from_file); remove(path); PASS();
+}
+
+static void test_memory_png(void) {
+  TEST("in-memory PNG round trip preserves RGBA and rejects truncation");
+  const uint8_t src[] = {255, 0, 10, 255, 3, 4, 5, 90};
+  size_t size = 0;
+  uint8_t *encoded = encode_image_png(src, 2, 1, &size);
+  ASSERT_NOT_NULL(encoded);
+  int w = 0, h = 0;
+  uint8_t *decoded = load_image_memory(encoded, size, &w, &h);
+  ASSERT_NOT_NULL(decoded);
+  ASSERT_EQUAL(w, 2); ASSERT_EQUAL(h, 1);
+  ASSERT_TRUE(memcmp(src, decoded, sizeof(src)) == 0);
+  image_free(decoded);
+  ASSERT_NULL(load_image_memory(encoded, size / 2, &w, &h));
+  free(encoded);
+  PASS();
+}
+
 void test_load_image_applies_jpeg_exif_orientation(void) {
   TEST("load_image: applies JPEG EXIF orientation");
 
-  uint8_t rgb[2 * 3 * 3] = {
-    255, 0, 0,     0, 255, 0,
-    0, 0, 255,     255, 255, 0,
-    0, 255, 255,   255, 0, 255,
+  uint8_t rgba[2 * 3 * 4] = {
+    255, 0, 0, 255,     0, 255, 0, 255,
+    0, 0, 255, 255,     255, 255, 0, 255,
+    0, 255, 255, 255,   255, 0, 255, 255,
   };
 
   char plain_path[512];
@@ -295,7 +326,21 @@ void test_load_image_applies_jpeg_exif_orientation(void) {
   snprintf(plain_path, sizeof(plain_path), "%s/orion_plain_%d.jpg", temp_dir(), (int)getpid());
   snprintf(oriented_path, sizeof(oriented_path), "%s/orion_oriented_%d.jpg", temp_dir(), (int)getpid());
 
-  ASSERT_TRUE(stbi_write_jpg(plain_path, 2, 3, 3, rgb, 100) != 0);
+  ASSERT_TRUE(save_image_jpg(plain_path, rgba, 2, 3, 100));
+  FILE *jpeg = fopen(plain_path, "rb");
+  ASSERT_NOT_NULL(jpeg);
+  ASSERT_TRUE(fseek(jpeg, 0, SEEK_END) == 0);
+  long size = ftell(jpeg);
+  ASSERT_TRUE(size > 0 && fseek(jpeg, 0, SEEK_SET) == 0);
+  uint8_t *encoded = malloc((size_t)size);
+  ASSERT_NOT_NULL(encoded);
+  ASSERT_TRUE(fread(encoded, 1, (size_t)size, jpeg) == (size_t)size);
+  fclose(jpeg);
+  int memory_w = 0, memory_h = 0;
+  uint8_t *memory_pixels = load_image_memory(encoded, (size_t)size, &memory_w, &memory_h);
+  ASSERT_NOT_NULL(memory_pixels);
+  ASSERT_EQUAL(memory_w, 2); ASSERT_EQUAL(memory_h, 3);
+  image_free(memory_pixels); free(encoded);
   ASSERT_TRUE(write_exif_oriented_jpeg(plain_path, oriented_path, 6));
 
   int w = 0, h = 0;
@@ -318,6 +363,8 @@ int main(void) {
   test_load_image_missing_file();
   test_save_and_reload();
   test_save_image_bad_path();
+  test_memory_png();
+  test_bmp_color_metadata();
   test_exif_orientation_transform_pixels();
   test_load_image_applies_jpeg_exif_orientation();
   TEST_END();

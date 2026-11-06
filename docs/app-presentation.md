@@ -57,7 +57,7 @@ ui_request_screenshot("docs/screenshots/myapp_dialog.png", 90, true);
 Use `ui_save_screenshot()` only when the current frame is already complete.
 Use `ui_request_screenshot()` during initialization or message handling so
 capture occurs at the event-loop paint boundary. PNG and JPEG encoding are
-provided by Orion's vendored `stb_image_write`; `jpeglib` is not required.
+provided by Orion's bundled libpng and libjpeg libraries.
 
 ### How Capture Works
 

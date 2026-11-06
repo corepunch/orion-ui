@@ -7,3 +7,18 @@
 [submodule "freetype"]
 	path = vendor/freetype
 	url = https://github.com/freetype/freetype.git
+[submodule "libpng"]
+	path = vendor/libpng
+	url = https://github.com/pnggroup/libpng.git
+[submodule "libjpeg"]
+	path = vendor/libjpeg
+	url = https://github.com/libjpeg-turbo/ijg.git
+[submodule "libnsbmp"]
+	path = vendor/libnsbmp
+	url = https://github.com/netsurf-browser/libnsbmp.git
+[submodule "zlib"]
+	path = vendor/zlib
+	url = https://github.com/madler/zlib.git
+[submodule "bmplib"]
+	path = vendor/bmplib
+	url = https://github.com/rupertwh/bmplib.git

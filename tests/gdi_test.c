@@ -158,6 +158,7 @@ static void test_rle(void) {
     ASSERT_TRUE(bitmap_pixel(bm, x, 1) == kBottom[x]);
   }
   bitmap_free(bm);
+  ASSERT_NULL(bitmap_load_memory(kRleBmp, sizeof(kRleBmp) - 7));
   PASS();
 }
 
@@ -173,6 +174,22 @@ static void test_tight_deflate(void) {
   PASS();
 }
 
+static void test_rle4(void) {
+  TEST("bitmap decodes RLE4 with an end-of-line before end-of-bitmap");
+  uint8_t bmp[124] = {0};
+  bmp[0] = 'B'; bmp[1] = 'M'; bmp[2] = sizeof(bmp); bmp[10] = 118;
+  bmp[14] = 40; bmp[18] = 3; bmp[22] = 1; bmp[26] = 1; bmp[28] = 4; bmp[30] = 2; bmp[46] = 16;
+  bmp[54] = 255; bmp[60] = 255; bmp[63] = 255;
+  bmp[118] = 2; bmp[119] = 0x12; bmp[123] = 1;
+  bitmap_t *bm = bitmap_load_memory(bmp, sizeof(bmp));
+  ASSERT_NOT_NULL(bm);
+  ASSERT_TRUE(bitmap_size(bm).w == 3 && bitmap_size(bm).h == 1);
+  ASSERT_EQUAL(bitmap_pixel(bm, 0, 0), 0xFF0000FFu);
+  ASSERT_EQUAL(bitmap_pixel(bm, 1, 0), 0xFF00FF00u);
+  ASSERT_EQUAL(bitmap_pixel(bm, 2, 0), 0xFFFF0000u);
+  bitmap_free(bm); PASS();
+}
+
 int main(void) {
   TEST_START("zip and gdi");
   test_0();
@@ -180,6 +197,7 @@ int main(void) {
   test_2();
   test_3();
   test_rle();
+  test_rle4();
   test_tight_deflate();
   TEST_END();
 }
