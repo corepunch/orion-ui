@@ -307,8 +307,8 @@ end
 function Assistant:submit(values)
   local text=values.command or ''
   self.budget_visible=false
-  local ok,budget=pcall(self.budget_request,self,text)
-  if not ok then budget={ok=false,message=tostring(budget),items={},animation='ALERT'} end
+  local budget_ok,budget=pcall(self.budget_request,self,text)
+  if not budget_ok then budget={ok=false,message=tostring(budget),items={},animation='ALERT'} end
   if budget then
     self.command=budget.ok and '' or text
     self.balloon={text=budget.message}; self.items=budget.items
