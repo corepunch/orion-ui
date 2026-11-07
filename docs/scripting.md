@@ -88,6 +88,9 @@ The script returns its page table. The host reads these fields:
 | `data(self)` | What the form shows now (below); called on opening and after every action |
 | any other method | An action: `<Button action="name">` calls `self:name(values, control)`, where `control` is the button's `name=` (`nil` when the host runs the action) |
 
+MultiEdit string values are passed in full in both directions; its text buffer grows
+as needed. `edGetText` with a null destination returns the text byte length.
+
 `data()` returns a table with any of the following:
 
 | Key | Effect |

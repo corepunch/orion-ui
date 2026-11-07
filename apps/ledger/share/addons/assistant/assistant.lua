@@ -3,6 +3,7 @@ local orion = require('orion')
 local Model = require('orion.model')
 local ledger = require('ledger')
 local Engine = require('engine')
+local Budget = require('budget')
 local animations = require('animations')
 local Models = {
   counterparties=Model:extend('ib.counterparties'),
@@ -224,9 +225,9 @@ end
 function Assistant:data()
   local clip=assert(animations[self.animation])
   return {
-    values={command=self.command,summary=self.balloon.text or '',more=self.balloon.more or ''},
+    values={command=self.command,summary=self.balloon.text or '',more=self.balloon.more or '',budget_report=self.budget_visible and self.budget_text or ''},
     lists={palette=self.items},
-    hidden={bubble=not self.expanded,palette=#self.items==0},
+    hidden={bubble=not self.expanded,palette=#self.items==0,budget_report=not self.budget_visible,budget_notice=not self.budget_visible},
     placeholders={command=self.hint},
     sprites={mascot={path=clip.path,columns=clip.columns or 4,rows=clip.rows or 2,count=clip.count or 8,interval=clip.interval,loop=clip.loop,revision=self.revision}},
   }
@@ -275,8 +276,47 @@ function Assistant:show(result,text)
   self.app.focus('command')
 end
 
+function Assistant:budget_request(text)
+  local edited=Budget.edit(text,self.budget)
+  local plan,message
+  if not edited then plan,message=Budget.request(text,self.budget_pending) end
+  if not edited and plan==nil then return nil end
+  if plan==false then
+    self.budget_pending=message==tr('Which year? Enter four digits, for example 2026. No budget assumptions will be made.')
+    return {ok=false,message=message,items={},animation='IDLEHEADSCRATCH'}
+  end
+  if not edited then
+    -- Pass only reviewed read capabilities to the operation, never the Ledger
+    -- module's post/command/settle functions or a writable model.
+    self.budget=Budget.run(plan,{configuration=ledger.configuration,account=ledger.account,movements=ledger.movements})
+    self.budget_pending=false
+  end
+  self.budget_text=Budget.render(self.budget,function(n) return orion.formatNumber(n,2) end)
+  self.budget_visible=true
+  local items,seen={},{}
+  for _,source in ipairs(self.budget.sources) do
+    if not seen[source.document] and #items<LIMIT then
+      seen[source.document]=true
+      items[#items+1]={section=tr('Budget sources'),kind='documents',name=source.date..' · '..source.number,
+        action='open',arg='documents',record_id=source.document}
+    end
+  end
+  return {ok=true,message=tr('Budget worksheet ready. Use план ACCOUNT MONTH AMOUNT to edit proposals and recalculate. Source documents are below.'),items=items,animation='EXPLAIN'}
+end
+
 function Assistant:submit(values)
   local text=values.command or ''
+  self.budget_visible=false
+  local ok,budget=pcall(self.budget_request,self,text)
+  if not ok then budget={ok=false,message=tostring(budget),items={},animation='ALERT'} end
+  if budget then
+    self.command=budget.ok and '' or text
+    self.balloon={text=budget.message}; self.items=budget.items
+    self.expanded=true; self.revision=self.revision+1; self.animation=budget.animation
+    self.app.focus('command')
+    return
+  end
+  self.budget_pending=false
   local result=self.engine:submit(text)
   -- What the command grammar does not take may still ask about the books.
   if not result.ok and not result.clarification then
@@ -356,6 +396,7 @@ function Assistant:expand(values)
   self.animation='HEARING_1'
 end
 function Assistant:collapse(values)
+  if self.budget_visible then self.budget_text=values.budget_report or self.budget_text end
   self.command=values.command or ''
   self.expanded=false
   self.app.focus('mascot')

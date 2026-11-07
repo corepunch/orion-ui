@@ -124,4 +124,37 @@
   <string source="%s owes the company %s." where="code">%s должен организации %s.</string>
   <string source="The company owes %s %s, or holds their advance." where="code">Организация должна %s %s или держит их аванс.</string>
   <string source="Settlements with %s are closed." where="code">Расчеты с %s закрыты.</string>
+  <string source="Invalid financial amount." where="code">Некорректная денежная сумма.</string>
+  <string source="Invalid budget plan." where="code">Некорректный план бюджета.</string>
+  <string source="Unsupported budget operation." where="code">Неподдерживаемая операция бюджета.</string>
+  <string source="Specify a four-digit budget year." where="code">Укажите год бюджета четырьмя цифрами.</string>
+  <string source="Which year? Enter four digits, for example 2026. No budget assumptions will be made." where="code">За какой год? Введите четыре цифры, например 2026. Предположения для бюджета не подставляются.</string>
+  <string source="Supported: составь бюджет за первый квартал 2026. Proposals: план ACCOUNT MONTH AMOUNT (month 1–3). Posting and forecasts are not supported." where="code">Пример: составь бюджет за первый квартал 2026. Плановые суммы: план СЧЕТ МЕСЯЦ СУММА (месяц 1–3). Проведение и прогнозы не поддерживаются.</string>
+  <string source="No reviewed budget account mapping for this configuration." where="code">Для этой конфигурации нет проверенной схемы счетов бюджета.</string>
+  <string source="Overlapping budget account mapping." where="code">Счета в схеме бюджета пересекаются.</string>
+  <string source="A mapped budget account is missing." where="code">В конфигурации отсутствует счет из схемы бюджета.</string>
+  <string source="Movement outside the requested quarter." where="code">Проводка вне выбранного квартала.</string>
+  <string source="Invalid source movement." where="code">Некорректная исходная проводка.</string>
+  <string source="Use a month from 1 to 3." where="code">Укажите месяц от 1 до 3.</string>
+  <string source="Proposed amounts must be nonnegative." where="code">Плановые суммы не могут быть отрицательными.</string>
+  <string source="Choose an account in this budget." where="code">Выберите счет из этого бюджета.</string>
+  <string source="Proposals: план ACCOUNT MONTH AMOUNT. Create a budget first." where="code">Плановые суммы: план СЧЕТ МЕСЯЦ СУММА. Сначала создайте бюджет.</string>
+  <string source="Use at most two decimal places." where="code">Допускается не более двух знаков после запятой.</string>
+  <string source="not set" where="code">не задано</string>
+  <string source="Q1 %d · %s · accrual worksheet" where="code">I квартал %d · %s · бюджет доходов и расходов</string>
+  <string source="Actuals: posted entries on mapped accounts. Proposals: user input only; blank is not zero." where="code">Факт: проведенные записи по выбранным счетам. План: только ввод пользователя; пустое поле не означает ноль.</string>
+  <string source="No records does not prove zero activity. This is not a cash-flow or tax budget." where="code">Отсутствие записей не доказывает отсутствие деятельности. Это не бюджет движения денег и не налоговый бюджет.</string>
+  <string source="Edit proposals: план ACCOUNT MONTH AMOUNT. Example: план 90.01 1 100000." where="code">Изменить план: план СЧЕТ МЕСЯЦ СУММА. Например: план 90.01 1 100000.</string>
+  <string source="Month %d: actual %s | proposed %s" where="code">Месяц %d: факт %s | план %s</string>
+  <string source="Quarter actual: %s" where="code">Факт за квартал: %s</string>
+  <string source="Income totals" where="code">Итого доходы</string>
+  <string source="Expense totals" where="code">Итого расходы</string>
+  <string source="Quarter: actual %s | proposed %s" where="code">Квартал: факт %s | план %s</string>
+  <string source="Income less expenses" where="code">Доходы минус расходы</string>
+  <string source="Month %d: no mapped source entries; coverage unknown." where="code">Месяц %d: проводок по выбранным счетам нет; полнота данных неизвестна.</string>
+  <string source="Sources: date · document ID / number · account / corresponding account · signed amount" where="code">Источники: дата · ID / номер документа · счет / корр. счет · сумма со знаком</string>
+  <string source="Excluded internal/closing sides: %d. Mapping is limited to the reviewed demo chart." where="code">Исключено сторон внутренних проводок и закрытия: %d. Схема ограничена проверенным демопланом счетов.</string>
+  <string source="Budget sources" where="code">Источники бюджета</string>
+  <string source="Budget worksheet ready. Use план ACCOUNT MONTH AMOUNT to edit proposals and recalculate. Source documents are below." where="code">Бюджет готов. Команда план СЧЕТ МЕСЯЦ СУММА меняет план и пересчитывает итоги. Ниже — исходные документы.</string>
+  <string source="Editable worksheet text; free text edits do not recalculate. Use plan commands to update amounts and totals." where="code">Текст можно редактировать; свободные правки не пересчитывают итоги. Для сумм и итогов используйте команду план.</string>
 </strings>

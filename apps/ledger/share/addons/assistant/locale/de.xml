@@ -124,4 +124,37 @@
   <string source="%s owes the company %s." where="code">%s schuldet dem Unternehmen %s.</string>
   <string source="The company owes %s %s, or holds their advance." where="code">Das Unternehmen schuldet %s %s oder hält deren Anzahlung.</string>
   <string source="Settlements with %s are closed." where="code">Die Posten mit %s sind ausgeglichen.</string>
+  <string source="Invalid financial amount." where="code">Ungültiger Geldbetrag.</string>
+  <string source="Invalid budget plan." where="code">Ungültiger Budgetplan.</string>
+  <string source="Unsupported budget operation." where="code">Nicht unterstützte Budgetoperation.</string>
+  <string source="Specify a four-digit budget year." where="code">Geben Sie ein vierstelliges Budgetjahr an.</string>
+  <string source="Which year? Enter four digits, for example 2026. No budget assumptions will be made." where="code">Für welches Jahr? Vier Ziffern eingeben, zum Beispiel 2026. Es werden keine Budgetannahmen getroffen.</string>
+  <string source="Supported: составь бюджет за первый квартал 2026. Proposals: план ACCOUNT MONTH AMOUNT (month 1–3). Posting and forecasts are not supported." where="code">Beispiel: составь бюджет за первый квартал 2026. Planwerte: план KONTO MONAT BETRAG (Monat 1–3). Buchungen und Prognosen werden nicht unterstützt.</string>
+  <string source="No reviewed budget account mapping for this configuration." where="code">Für diese Konfiguration fehlt eine geprüfte Budgetkontenzuordnung.</string>
+  <string source="Overlapping budget account mapping." where="code">Budgetkonten überschneiden sich.</string>
+  <string source="A mapped budget account is missing." where="code">Ein zugeordnetes Budgetkonto fehlt.</string>
+  <string source="Movement outside the requested quarter." where="code">Buchung außerhalb des gewählten Quartals.</string>
+  <string source="Invalid source movement." where="code">Ungültige Quellbuchung.</string>
+  <string source="Use a month from 1 to 3." where="code">Wählen Sie einen Monat von 1 bis 3.</string>
+  <string source="Proposed amounts must be nonnegative." where="code">Planwerte dürfen nicht negativ sein.</string>
+  <string source="Choose an account in this budget." where="code">Wählen Sie ein Konto aus diesem Budget.</string>
+  <string source="Proposals: план ACCOUNT MONTH AMOUNT. Create a budget first." where="code">Planwerte: план KONTO MONAT BETRAG. Erstellen Sie zuerst ein Budget.</string>
+  <string source="Use at most two decimal places." where="code">Höchstens zwei Nachkommastellen verwenden.</string>
+  <string source="not set" where="code">nicht festgelegt</string>
+  <string source="Q1 %d · %s · accrual worksheet" where="code">1. Quartal %d · %s · periodengerechtes Arbeitsblatt</string>
+  <string source="Actuals: posted entries on mapped accounts. Proposals: user input only; blank is not zero." where="code">Ist: gebuchte Einträge zugeordneter Konten. Plan: nur Benutzereingaben; leer bedeutet nicht null.</string>
+  <string source="No records does not prove zero activity. This is not a cash-flow or tax budget." where="code">Fehlende Einträge belegen keine fehlende Aktivität. Kein Liquiditäts- oder Steuerbudget.</string>
+  <string source="Edit proposals: план ACCOUNT MONTH AMOUNT. Example: план 90.01 1 100000." where="code">Planwerte ändern: план KONTO MONAT BETRAG. Beispiel: план 90.01 1 100000.</string>
+  <string source="Month %d: actual %s | proposed %s" where="code">Monat %d: Ist %s | Plan %s</string>
+  <string source="Quarter actual: %s" where="code">Ist im Quartal: %s</string>
+  <string source="Income totals" where="code">Erträge gesamt</string>
+  <string source="Expense totals" where="code">Aufwendungen gesamt</string>
+  <string source="Quarter: actual %s | proposed %s" where="code">Quartal: Ist %s | Plan %s</string>
+  <string source="Income less expenses" where="code">Erträge abzüglich Aufwendungen</string>
+  <string source="Month %d: no mapped source entries; coverage unknown." where="code">Monat %d: keine zugeordneten Buchungen; Datenabdeckung unbekannt.</string>
+  <string source="Sources: date · document ID / number · account / corresponding account · signed amount" where="code">Quellen: Datum · Beleg-ID / Nummer · Konto / Gegenkonto · Betrag mit Vorzeichen</string>
+  <string source="Excluded internal/closing sides: %d. Mapping is limited to the reviewed demo chart." where="code">Ausgeschlossene interne/Abschlussseiten: %d. Die Zuordnung gilt nur für den geprüften Demokontenrahmen.</string>
+  <string source="Budget sources" where="code">Budgetquellen</string>
+  <string source="Budget worksheet ready. Use план ACCOUNT MONTH AMOUNT to edit proposals and recalculate. Source documents are below." where="code">Budget bereit. план KONTO MONAT BETRAG ändert Planwerte und berechnet Summen neu. Quellbelege stehen unten.</string>
+  <string source="Editable worksheet text; free text edits do not recalculate. Use plan commands to update amounts and totals." where="code">Arbeitsblatttext ist editierbar; freie Textänderungen berechnen nichts neu. Planbefehle aktualisieren Beträge und Summen.</string>
 </strings>

@@ -75,7 +75,7 @@ static void test_assistant(void) {
   lua_State *L = script_state_new(ASSISTANT_SHARE, "assistant-spec");
   ASSERT_NOT_NULL(L);
   const char *specs[] = {"assistant_test.lua", "assistant_examples.lua", "assistant_dialogue_test.lua", "assistant_dictionary_test.lua",
-                         "assistant_palette_test.lua"};
+                         "assistant_palette_test.lua", "assistant_budget_test.lua"};
   for (size_t i = 0; i < ARRAY_LEN(specs); i++) {
     char path[256];
     snprintf(path, sizeof(path), "apps/ledger/tests/%s", specs[i]);
@@ -490,6 +490,63 @@ static void test_document_postings_preview(void) {
   PASS();
 }
 
+static void test_quarter_budget(void) {
+  TEST("assistant: Q1 demo worksheet, explicit year, proposals and no transaction changes");
+  const char *configs[] = {"ru-2026", "de-2026"};
+  for (size_t i = 0; i < ARRAY_LEN(configs); i++) {
+    open_configuration(configs[i]);
+    int docs = count_rows("ib", TABLE_DOCUMENTS), entries = count_rows("ib", TABLE_ENTRIES);
+    char error[512] = "", text[65536];
+    script_page_t *page = script_page_open(ASSISTANT_SHARE "/assistant", error, sizeof(error));
+    ASSERT(page != NULL, error); ASSERT_NOT_NULL(script_page_create(page, NULL));
+    set_text(page, "command", "Сверстай бюджет за первый квартал");
+    ASSERT_TRUE(script_page_perform(page, "submit"));
+    ASSERT(strstr(script_page_control(page, "summary")->title, "Which year?"), "year is requested explicitly");
+    set_text(page, "command", "2026"); ASSERT_TRUE(script_page_perform(page, "submit"));
+    window_t *report = script_page_control(page, "budget_report");
+    send_message(report, edGetText, sizeof(text), text);
+    ASSERT(strstr(text, "2026-01-01 — 2026-03-31"), "exact Q1 period");
+    ASSERT(strstr(text, "coverage unknown"), "missing January/February coverage is visible");
+    ASSERT(strstr(text, "not set"), "no invented proposed amounts");
+    ASSERT(strstr(text, "Sources:"), "source audit trail");
+    ASSERT(strstr(text, "Excluded internal/closing sides:"), "complete report reaches editor without truncation");
+    if (i == 0) {
+      ASSERT(strstr(text, "Quarter: actual 61050.00"), "RU net revenue excludes output VAT");
+      ASSERT(strstr(text, "Quarter: actual 586070.00"), "RU expense transfers are not counted twice");
+      ASSERT(strstr(text, "Quarter actual: -525020.00"), "RU actual net result");
+    }
+    char output[256]; snprintf(output, sizeof(output), "build/budget-%s.txt", configs[i]);
+    FILE *file = fopen(output, "w"); ASSERT_NOT_NULL(file); fputs(text, file); fclose(file);
+    strncat(text, "\nDraft note retained.", sizeof(text) - strlen(text) - 1);
+    set_text(page, "budget_report", text);
+    ASSERT_TRUE(script_page_perform(page, "collapse")); ASSERT_TRUE(script_page_perform(page, "expand"));
+    send_message(report, edGetText, sizeof(text), text);
+    ASSERT(strstr(text, "Draft note retained."), "full multiline text survives action round trip");
+    set_text(page, "command", i == 0 ? "план 90.01 1 100000" : "план 8400 1 100000");
+    ASSERT_TRUE(script_page_perform(page, "submit"));
+    send_message(report, edGetText, sizeof(text), text);
+    ASSERT(strstr(text, "100000.00"), "proposal entered and rendered");
+    set_text(page, "command", "бюджет и проведи документы");
+    ASSERT_TRUE(script_page_perform(page, "submit"));
+    ASSERT_EQUAL(count_rows("ib", TABLE_DOCUMENTS), docs); ASSERT_EQUAL(count_rows("ib", TABLE_ENTRIES), entries);
+    set_text(page, "command", "покажи клиентов"); ASSERT_TRUE(script_page_perform(page, "submit"));
+    ASSERT(count_rows("assistant", 0) > 0, "existing assistant still works");
+    script_page_close(page);
+    if (i == 0) {
+      ui_set_language("ru");
+      page = script_page_open(ASSISTANT_SHARE "/assistant", error, sizeof(error));
+      ASSERT(page != NULL, error); ASSERT_NOT_NULL(script_page_create(page, NULL));
+      set_text(page, "command", "Сверстай бюджет за первый квартал 2026");
+      ASSERT_TRUE(script_page_perform(page, "submit"));
+      send_message(script_page_control(page, "budget_report"), edGetText, sizeof(text), text);
+      ASSERT(strstr(text, "не задано") && strstr(text, "Источники:"), "Russian end-to-end worksheet");
+      file = fopen("build/budget-ru-2026-ru.txt", "w"); ASSERT_NOT_NULL(file); fputs(text, file); fclose(file);
+      script_page_close(page); ui_set_language("en");
+    }
+  }
+  PASS();
+}
+
 int main(void) {
   TEST_START("Ledger assistant"); test_env_init();
   DB_CLASS(db_schema_xml); DB_CLASS(ledger_ib);
@@ -497,6 +554,7 @@ int main(void) {
   snprintf(state.share_dir,sizeof(state.share_dir),SHARE);
   ledger_addons_init();
   test_assistant();
+  test_quarter_budget();
   test_assistant_companion();
   test_modeless_documents();
   test_untouched_document_close();

@@ -35,6 +35,8 @@
         <Label name="heading" text="What would you like to do?" font="system" color="info-text" />
         <TextBox name="command" placeholder="Show debtors" list="palette" />
         <Label name="summary" color="info-text" flags="LABEL_COLLAPSE_EMPTY" />
+        <Label name="budget_notice" text="Editable worksheet text; free text edits do not recalculate. Use plan commands to update amounts and totals." flags="LABEL_COLLAPSE_EMPTY" />
+        <MultiEdit name="budget_report" height="240" flags="vscroll" />
         <TableView name="palette" source="assistant.palette" group-field="section" fit-rows="true" frame="true"
                    column-titles="false" zeros="blank" action="choose" flags="notitle,nofill">
           <RowIcon field="kind" value="tip" icon="ledger-tip" color="warning" />

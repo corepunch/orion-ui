@@ -118,6 +118,10 @@ static void set_value(script_page_t *page, const form_ctrl_def_t *d, window_t *c
     send_message(ctrl, cbSetCurrentSelection, (uint32_t)(lua_isinteger(L, idx) ? lua_tointeger(L, idx) - 1 : -1), NULL);
     return;
   }
+  if (class_is(d, "MultiEdit") && lua_type(L, idx) == LUA_TSTRING) {
+    send_message(ctrl, edSetText, 0, (void *)lua_tostring(L, idx));
+    return;
+  }
   char text[1024];
   format_value(page, d->id, L, idx, text, sizeof(text));
   if (is_text_input(d)) send_message(ctrl, edSetText, 0, text);
@@ -399,6 +403,13 @@ static void push_input(script_page_t *page, const form_ctrl_def_t *d, window_t *
     database_t *db = source_parts(d, db_name, sizeof(db_name), table, sizeof(table)) ? registered_database(db_name) : NULL;
     const db_table_schema_t *t = record && db && db->schema ? db_schema_table_named(db->schema, table) : NULL;
     if (t) script_push_record(L, t, record); else lua_pushnil(L);
+    return;
+  }
+  if (class_is(d, "MultiEdit") && !control_attr(page, d->id, "type")) {
+    size_t length = (size_t)send_message(ctrl, edGetText, 0, NULL);
+    char *text = lua_newuserdatauv(L, length + 1, 0);
+    send_message(ctrl, edGetText, length + 1, text);
+    lua_pushstring(L, text); lua_remove(L, -2);
     return;
   }
   char text[1024] = {0};
