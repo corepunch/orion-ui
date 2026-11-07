@@ -491,3 +491,12 @@ compiled indexes, and functions express the grammar and productive rules.
 This compilation model does not create a reason to move the assistant into C.
 The native data access/UI boundary stays in C; a future move of a specific
 operation should follow measured need.
+
+## Q1 budget worksheet
+
+`Сверстай бюджет за первый квартал` asks for a year, then creates a read-only
+accounting-derived worksheet on RU/DE 2026 demo charts. `план 90.01 1 100000`
+sets an explicit proposal and recalculates totals without posting transactions.
+All other proposals stay unset. The editable worksheet text includes the source
+trail; free text edits do not recalculate figures. See the
+[implementation, demo result, planner evaluation and tests](../../../docs/q1-budget-prototype.md).

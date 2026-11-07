@@ -1,15 +1,17 @@
 // Multi-line text edit control (analogous to WinAPI ES_MULTILINE edit).
 //
 // State is stored in win->userdata (me_state_t, heap-allocated at create time).
-// Text lives in buf[ME_BUF_SIZE]; win->title is not used for content.
+// Text lives in a growable buffer; win->title is not used for content.
 //
 // Messages handled in addition to the standard window messages:
 //   edGetText  wparam=buf_size, lparam=char* → copies text, returns byte count
+//              lparam=NULL → returns required byte count excluding NUL
 //   edSetText  wparam=0, lparam=const char* → replaces text, resets cursor/scroll
 
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits.h>
 
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
@@ -17,18 +19,34 @@
 #include <orion/user/theme.h>
 #include "commctl.h"
 
-#define ME_BUF_SIZE 2048
+#define ME_INITIAL_SIZE 2048
 #define ME_MIN_WIDTH  80
-// Maximum number of characters that can be stored (leave room for the NUL).
-#define ME_MAX_LEN  (ME_BUF_SIZE - 2)
 
 typedef struct {
-  char buf[ME_BUF_SIZE];
+  char *buf;
+  size_t capacity;
   char placeholder[128];
   int  len;        // strlen(buf)
   int  cursor;     // byte offset of caret in buf
   int  scroll_y;   // vertical scroll in pixels
 } me_state_t;
+
+static bool me_reserve(window_t *win, me_state_t *s, size_t needed) {
+  if (needed > INT_MAX) {
+    fprintf(stderr, "[multiedit] window %u: text length %zu exceeds supported range\n", win->id, needed);
+    return false;
+  }
+  if (needed <= s->capacity) return true;
+  size_t capacity = MAX(needed, s->capacity ? s->capacity * 2 : ME_INITIAL_SIZE);
+  capacity = MIN(capacity, INT_MAX);
+  char *buf = realloc(s->buf, capacity);
+  if (!buf) {
+    fprintf(stderr, "[multiedit] window %u: cannot allocate %zu text bytes\n", win->id, capacity);
+    return false;
+  }
+  s->buf = buf; s->capacity = capacity;
+  return true;
+}
 
 // ---------------------------------------------------------------------------
 // Internal layout helpers
@@ -154,8 +172,8 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       const form_ctrl_def_t *cd = (const form_ctrl_def_t *)lparam;
       if (cd && cd->size.h > 0 && !(cd->flags & WINDOW_FLEXSPACE)) win->flags &= ~WINDOW_FLEXSPACE;
       else win->flags |= WINDOW_FLEXSPACE;
-      strncpy(s->buf, win->title, ME_BUF_SIZE - 1);
-      s->buf[ME_BUF_SIZE - 1] = '\0';
+      if (!me_reserve(win, s, strlen(win->title) + 2)) { free(s); win->userdata = NULL; return true; }
+      strcpy(s->buf, win->title);
       s->len      = (int)strlen(s->buf);
       s->cursor   = s->len;
       s->scroll_y = 0;
@@ -180,6 +198,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 
     // ── Destroy ────────────────────────────────────────────────────────────
     case evDestroy:
+      if (s) free(s->buf);
       free(s);
       win->userdata = NULL;
       return false;
@@ -270,7 +289,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       char c = *(const char *)lparam;
       // Accept only printable ASCII; newlines are handled via AX_KEY_ENTER.
       if ((unsigned char)c < 32 || (unsigned char)c > 126) return true;
-      if (s->len >= ME_MAX_LEN) return true;
+      if (!me_reserve(win, s, (size_t)s->len + 3)) return true;
       memmove(s->buf + s->cursor + 1,
               s->buf + s->cursor,
               (size_t)(s->len - s->cursor + 1));
@@ -293,7 +312,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       switch (wparam) {
 
         case AX_KEY_ENTER:
-          if (s->len < ME_MAX_LEN) {
+          if (me_reserve(win, s, (size_t)s->len + 3)) {
             memmove(s->buf + s->cursor + 1,
                     s->buf + s->cursor,
                     (size_t)(s->len - s->cursor + 1));
@@ -420,8 +439,8 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case edSetText: {
       if (!s || !lparam) return true;
       const char *src = (const char *)lparam;
-      strncpy(s->buf, src, ME_BUF_SIZE - 1);
-      s->buf[ME_BUF_SIZE - 1] = '\0';
+      if (!me_reserve(win, s, strlen(src) + 2)) return false;
+      memmove(s->buf, src, strlen(src) + 1);
       s->len      = (int)strlen(s->buf);
       s->cursor   = s->len;
       s->scroll_y = 0;
@@ -432,7 +451,8 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 
     // ── edGetText ───────────────────────────────────────────
     case edGetText: {
-      if (!s || !lparam) return 0;
+      if (!s) return 0;
+      if (!lparam) return s->len;
       int maxlen = (int)wparam;
       char *dst  = (char *)lparam;
       if (maxlen <= 0) return 0;

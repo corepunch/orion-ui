@@ -15,7 +15,7 @@ ADDON = ROOT / 'apps/ledger/share/addons/assistant'
 class AssistantLocaleTest(unittest.TestCase):
     def test_catalogs(self):
         sources = set()
-        for name in ('parser.lua', 'engine.lua', 'assistant.lua'):
+        for name in ('parser.lua', 'engine.lua', 'assistant.lua', 'budget.lua'):
             sources.update(re.findall(r"\btr\('([^']*)'\)", (ADDON / name).read_text()))
         for node in ET.parse(ADDON / 'assistant.orion').iter():
             sources.update(node.attrib[key] for key in ('title', 'text') if key in node.attrib)
