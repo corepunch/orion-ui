@@ -118,7 +118,7 @@ static void set_value(script_page_t *page, const form_ctrl_def_t *d, window_t *c
     send_message(ctrl, cbSetCurrentSelection, (uint32_t)(lua_isinteger(L, idx) ? lua_tointeger(L, idx) - 1 : -1), NULL);
     return;
   }
-  if (class_is(d, "MultiEdit") && lua_type(L, idx) == LUA_TSTRING) {
+  if (class_is(d, "MultiEdit") && !control_attr(page, d->id, "type") && lua_type(L, idx) == LUA_TSTRING) {
     send_message(ctrl, edSetText, 0, (void *)lua_tostring(L, idx));
     return;
   }
