@@ -26,7 +26,7 @@
 #define GR_SNAP_TICKS   (GR_TICKS_BAR / 4)                       // one beat
 #define GR_FRACTION_TICKS (GR_TICKS_BAR / (GR_BEATS_BAR * 4))    // a beat is four fractions
 #define GR_TRACKS       8
-#define GR_SHEET_HEADER_W 64 // width of the track header column beside the sheet
+#define GR_SHEET_HEADER_W 28 // track header column beside the sheet: colour stripe plus the mute/solo pair
 #define GR_RULER_H      22
 #define GR_MIN_ROW      26
 #define GR_MAX_ROW      64
@@ -95,6 +95,7 @@ extern const char *const kFamilyName[FAMILY_COUNT];
 extern const char *const kGenreName[GENRE_COUNT]; // index = bit number of the GENRE_* flag
 family_t block_family(category_t cat);
 uint32_t category_color(category_t cat);
+uint32_t family_color(family_t family);
 uint32_t track_color(int track);              // hue of the track's earliest clip (view_sheet.c)
 int      track_family(int track);             // first clip's family, or the empty track's chosen family
 void     app_select_track(int track);

@@ -7,6 +7,7 @@
 #include <orion/user/toolbar.h>
 
 #define ID_SEG 77
+window_t *find_next_tab_stop(window_t *win, bool allow_current); // user/event.c
 
 static int g_changes, g_last_selection;
 
@@ -213,8 +214,40 @@ static void test_icons(void) {
   PASS();
 }
 
+static void test_color_dots_and_nofocus(void) {
+  TEST("colour dots widen a segment and WINDOW_NOFOCUS keeps a tap from moving keyboard focus");
+  test_env_init();
+  window_t *host = create_window("Host", 0, MAKERECT(20, 20, 400, 200), NULL, host_proc, 0, NULL);
+  window_t *edit = create_window("", WINDOW_NOTITLE, MAKERECT(10, 60, 200, 24), host, win_textedit, 0, NULL);
+  window_t *seg = create_window("Drums|Bass|Synth", WINDOW_NOTITLE | WINDOW_NOFOCUS, MAKERECT(10, 10, 1, 24), host, win_segmented, 0, NULL);
+  seg->id = ID_SEG;
+  show_window(host, true);
+  int plain = seg->frame.w;
+  layout_measure_t before = {0}, after = {0};
+  send_message(seg, evMeasure, 0, &before);
+  ASSERT_TRUE(send_message(seg, sgSetSegmentColor, 1, (void *)(uintptr_t)0xFF2060C0u));
+  ASSERT_FALSE(send_message(seg, sgSetSegmentColor, 3, (void *)(uintptr_t)0xFF2060C0u));
+  send_message(seg, evMeasure, 0, &after);
+  ASSERT(after.desired_w > before.desired_w && plain == before.desired_w, "a dot adds to the segment's natural width");
+  send_message(seg, sgSetSegments, 0, "One|Two");
+  send_message(seg, evMeasure, 0, &after);
+  ASSERT(after.desired_w < before.desired_w, "replacing the segments clears the dots");
+  send_message(seg, sgSetSegments, 0, "Drums|Bass|Synth");
+  set_focus(edit);
+  g_changes = 0;
+  ipoint16_t p = segment_center(seg, 2);
+  click_at(p.x, p.y);
+  ASSERT(g_changes == 1 && send_message(seg, sgGetSelection, 0, NULL) == 2, "the tap still selects");
+  ASSERT(g_ui_runtime.focused == edit, "focus stays on the text field");
+  ASSERT(find_next_tab_stop(host->children, true) != seg, "Tab skips a WINDOW_NOFOCUS window");
+  destroy_window(host);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("SegmentedControl");
+  test_color_dots_and_nofocus();
   test_selection();
   test_radio_input();
   test_long_utf8_label();

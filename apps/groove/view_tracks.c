@@ -98,11 +98,6 @@ static result_t win_track_header(window_t *win, uint32_t msg, uint32_t wparam, v
       if (suggested) fill_rect(color_with_alpha(get_sys_color(brAccent), 0x50), r);
       fill_rect(get_sys_color(brDarkEdge), R(0, r.h - 1, r.w, 1));
       fill_rect(track_color(tr->track), R(0, 2, 3, r.h - 5));
-      char number[16];
-      snprintf(number, sizeof(number), "%d", tr->track + 1);
-      irect16_t label = rect_trim_right(r, 24);
-      draw_text(FONT_SYSTEM, number, label.x + label.w / 2 - text_strwidth(FONT_SYSTEM, number) / 2,
-                label.y + (label.h - text_char_height(FONT_SYSTEM)) / 2, get_sys_color(brTextNormal));
       if (tr->mute) tr->mute->value = g_app->song.mute[tr->track];
       if (tr->solo) tr->solo->value = g_app->song.solo[tr->track];
       for (window_t *c = win->children; c; c = c->next) send_message(c, evPaint, 0, NULL);
@@ -119,9 +114,9 @@ static result_t win_track_header(window_t *win, uint32_t msg, uint32_t wparam, v
       return true;
     case evHitTest: return true;
     case evLeftButtonDown: if (tr) app_select_track(tr->track); return true;
-    case evQueryLongPress: return tr && (int16_t)LOWORD(wparam) < win->frame.w - 24;
+    case evQueryLongPress: return tr != NULL;
     case evLongPress: if (tr) track_popup(win, tr->track); return true;
-    case evRightButtonDown: if (tr && (int16_t)LOWORD(wparam) < win->frame.w - 24) { track_popup(win, tr->track); return true; } return false;
+    case evRightButtonDown: if (tr) { track_popup(win, tr->track); return true; } return false;
     case evCommand:
       if (tr && HIWORD(wparam) == kMenuBarNotificationItemClick && LOWORD(wparam) == ID_TRACK_DUPLICATE) {
         app_duplicate_track(tr->track);

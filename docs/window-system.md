@@ -163,6 +163,9 @@ Pair every resource allocation performed for `evCreate` with cleanup in
 | `WINDOW_TRANSPARENT` | Preserve parent/background pixels where the window does not draw |
 | `WINDOW_NOTRAYBUTTON` | Omit a top-level window from tray/task UI |
 | `WINDOW_AUTO_LAYOUT` | Arrange children through their layout container |
+| `WINDOW_NOACTIVATE` | Do not take keyboard focus when shown |
+| `WINDOW_NOTABSTOP` | Leave the window out of the Tab cycle (`WS_TABSTOP` off) |
+| `WINDOW_NOFOCUS` | Never take keyboard focus: a click leaves focus where it is and Tab skips the window (`WS_EX_NOACTIVATE`) |
 
 Control-specific flags and messages are documented in [Controls](controls).
 
@@ -184,7 +187,11 @@ identifies the source window.
 
 ## Focus, Capture, And Z-Order
 
-- `set_focus(win)` directs keyboard/text input to a control.
+- `set_focus(win)` directs keyboard/text input to a control. A click focuses
+  the window under the pointer, except a `WINDOW_NOFOCUS` window: filter rows
+  and other chrome beside a document use it so a tap never draws a focus ring
+  or takes the keyboard from the content. Its root is still activated, and
+  `set_focus` still works for a caller that focuses it on purpose.
 - `set_capture(win)` keeps mouse input routed to a dragging control until
   capture is released.
 - `move_to_top(win)` raises a regular top-level window while respecting

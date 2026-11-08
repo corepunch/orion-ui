@@ -18,6 +18,7 @@
 typedef struct {
   char label[SEGMENTED_MAX_SEGMENTS][SEGMENTED_LABEL_MAX];
   int  icon[SEGMENTED_MAX_SEGMENTS]; // index in strip, -1 = none
+  uint32_t dot[SEGMENTED_MAX_SEGMENTS]; // colour dot before the label, 0 = none
   int  count, selected, pressed, hot;
   uint32_t style;
   bitmap_strip_t strip;
@@ -27,10 +28,13 @@ typedef struct {
 
 static bool sg_has_icon(const segmented_state_t *s, int i) { return s->strip.cols > 0 && s->icon[i] >= 0; }
 static bool sg_shows_label(const segmented_state_t *s, int i) { return !sg_has_icon(s, i) || !(s->style & SEGMENTED_STYLE_ICONS_ONLY); }
+// The dot is a small disc on the text's x-height, like a status bullet.
+static int sg_dot_size(void) { return MAX(4, text_char_height(FONT_SMALL) * 3 / 5); }
 
-// Width of the icon and label drawn centred in a segment.
+// Width of the dot, icon and label drawn centred in a segment.
 static int sg_content_width(const segmented_state_t *s, int i) {
-  int w = sg_has_icon(s, i) ? s->strip.icon_w : 0;
+  int w = s->dot[i] ? sg_dot_size() : 0;
+  if (sg_has_icon(s, i)) w += (w ? SG_ICON_GAP : 0) + s->strip.icon_w;
   if (sg_shows_label(s, i)) w += (w ? SG_ICON_GAP : 0) + text_strwidth(FONT_SMALL, s->label[i]);
   return w;
 }
@@ -92,6 +96,7 @@ static int sg_add(window_t *win, segmented_state_t *s, const char *label, size_t
   memcpy(s->label[s->count], label, n);
   s->label[s->count][n] = '\0';
   s->icon[s->count] = -1;
+  s->dot[s->count] = 0;
   return s->count++;
 }
 
@@ -142,6 +147,14 @@ result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         if (!disabled && i == s->hot)     state |= CTRL_HOVER;
         theme_draw(THEME_PART_SEGMENT, r, state);
         irect16_t content = rect_center(r, MIN(sg_content_width(s, i), MAX(0, r.w - 4)), r.h);
+        if (s->dot[i]) {
+          // The chosen segment already shows its colour in the content it filters; its dot takes the label colour.
+          int d = sg_dot_size();
+          uint32_t color = (i == s->selected) ? theme_foreground(THEME_PART_SEGMENT, state) : s->dot[i];
+          if (disabled) color = color_with_alpha(color, 0x80);
+          fill_rounded_rect(color, rect_center(rect_split_left(content, d), d, d), d / 2);
+          content = rect_trim_left(content, d + SG_ICON_GAP);
+        }
         if (sg_has_icon(s, i)) {
           const bitmap_strip_t *st = &s->strip;
           int col = s->icon[i] % st->cols, row = s->icon[i] / st->cols;
@@ -253,6 +266,17 @@ result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         return false;
       }
       s->icon[index] = icon;
+      invalidate_window(win);
+      return true;
+    }
+    case sgSetSegmentColor: {
+      int index = (int)wparam;
+      if (index < 0 || index >= s->count) {
+        fprintf(stderr, "[sg] segment colour rejected win=%u index=%d count=%d\n", win->id, index, s->count);
+        fflush(stderr);
+        return false;
+      }
+      s->dot[index] = (uint32_t)(uintptr_t)lparam;
       invalidate_window(win);
       return true;
     }

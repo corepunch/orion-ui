@@ -624,6 +624,7 @@ case evCommand:
 | `sgSetImageStrip` | `lparam` = `bitmap_strip_t *` (copied; the texture stays the caller's), shared by every segment |
 | `sgSetSegmentIcon` | `wparam` = index, `lparam` = `(void *)(intptr_t)` icon index in the strip, -1 clears |
 | `sgSetStyle` | `wparam` = `SEGMENTED_STYLE_*` flags |
+| `sgSetSegmentColor` | `wparam` = index, `lparam` = `(void *)(uintptr_t)` colour; draws a dot before the label, 0 clears |
 | `sgnSelChange` | notification to the parent through `evCommand` when the user picks another segment |
 
 A click selects on release, and only when the release is on the pressed
@@ -641,6 +642,16 @@ drawn before its label. With `SEGMENTED_STYLE_ICONS_ONLY` a segment that has an
 icon shows the icon alone, hugging it (never narrower than tall), and answers
 `evGetTooltipText` with its label. Segments without an icon keep their label,
 so an "All" segment can lead a row of icons. `sgSetSegments` clears the icons.
+
+A colour dot (`sgSetSegmentColor`) marks a segment the way a status bullet
+does, so a row of category filters can be told apart without reading. The
+selected segment draws its dot in the label colour: the content it filters
+already shows the category colour. `sgSetSegments` clears the dots.
+
+Filter rows that sit beside the content they filter are usually created with
+`WINDOW_NOFOCUS`, so a tap selects a segment without drawing the focus ring or
+taking keyboard focus from the content (see
+[window-system.md](window-system.md#keyboard-focus)).
 
 In a toolbar use `TOOLBAR_ITEM_SEGMENTED` (see [toolbars.md](toolbars.md)).
 

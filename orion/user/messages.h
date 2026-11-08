@@ -338,6 +338,7 @@ enum {
 #define BUTTON_COMMANDLINK     (1ull << 40)  // ≈ BS_COMMANDLINK: flat, bulleted, left-aligned choice (balloon label)
 #define WINDOW_DRAWS_DISABLED  (1ull << 41)  // window procedure paints its own disabled state
 #define WINDOW_MAXIMIZEBOX     (1ull << 35)  // ≈ WS_MAXIMIZEBOX: caption exposes a restore/maximize command
+#define WINDOW_NOFOCUS         (1ull << 36)  // ≈ WS_EX_NOACTIVATE: a click never moves keyboard focus here; skipped by Tab
 
 // Auto-layout alignment values used by layout_measure_t / layout_arrange_t.
 // 0 = stretch (default), matching WPF/SwiftUI "fill available space".
@@ -606,6 +607,7 @@ enum {
   sgSetImageStrip,              // lparam = bitmap_strip_t* (copied, texture not owned); shared by every segment
   sgSetSegmentIcon,             // wparam = index; lparam = (void*)(intptr_t)icon index in the strip; -1 = clear
   sgSetStyle,                   // wparam = SEGMENTED_STYLE_* flags
+  sgSetSegmentColor,            // wparam = index; lparam = (void*)(uintptr_t)color dot drawn before the label; 0 clears
   sgnSelChange,                 // control -> parent (evCommand): LOWORD = control id, lparam = control
 };
 // Sprite controls (SpriteButton / SpriteSlider): bitmap-skinned variants of Button and Slider.

@@ -275,7 +275,7 @@ window_t* find_next_tab_stop(window_t *win, bool allow_current) {
   if (!win) return false;
   window_t *next;
   if ((next = find_next_tab_stop(win->children, true))) return next;
-  if (!(win->flags & WINDOW_NOTABSTOP) &&
+  if (!(win->flags & (WINDOW_NOTABSTOP | WINDOW_NOFOCUS)) &&
       (win->parent || window_has_state(win, WINDOW_STATE_VISIBLE)) &&
       allow_current) return win;
   if ((next = find_next_tab_stop(win->next, true))) return next;
@@ -1128,8 +1128,11 @@ void dispatch_message(ui_event_t *msg) {
 
         // Unify activation focus target: when the click lands on the toolbar,
         // focus the window (not the toolbar host); the toolbar host is hidden and
-        // just processes owner-drawn clicks.
+        // just processes owner-drawn clicks. A WINDOW_NOFOCUS window leaves focus
+        // where it is inside its root; from another root, the root itself takes it.
         window_t *focus_target = win;
+        if (win->flags & WINDOW_NOFOCUS)
+          focus_target = g_ui_runtime.focused && get_root_window(g_ui_runtime.focused) == click_root ? g_ui_runtime.focused : click_root;
         bool activating = (focus_target != g_ui_runtime.focused);
         window_t *old_root = g_ui_runtime.focused ? get_root_window(g_ui_runtime.focused) : NULL;
         window_t *new_root = click_root;

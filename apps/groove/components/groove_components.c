@@ -4,8 +4,8 @@
 
 static const fe_component_desc_t kGrooveComponents[] = {
   { .class_name = "GrooveTracks", .name_prefix = "IDC_GTR", .toolbar_icon = "StackView",
-    .default_size = { 64, 420 }, .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR,
-    .proc = win_stack, .default_layout_size = { 64, 0 },
+    .default_size = { 28, 420 }, .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR,
+    .proc = win_stack, .default_layout_size = { 28, 0 },
     .default_flags = WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOACTIVATE | WINDOW_NOTABSTOP | WINDOW_NODRAG,
     .default_h_align = LAYOUT_ALIGN_START, .default_v_align = LAYOUT_ALIGN_STRETCH },
   { .class_name = "GrooveArrangement", .name_prefix = "IDC_GSH", .toolbar_icon = "FlowView",

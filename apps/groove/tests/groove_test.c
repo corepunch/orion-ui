@@ -1067,12 +1067,6 @@ static bool toolbar_checked(uint16_t ident) { return bar_checked(g_app->toolbar,
 
 static void click_family(int family) {
   window_t *control = get_window_item(g_app->library, ID_LIBRARY_WINDOW_FAMILIES);
-  if (!window_has_state(control, WINDOW_STATE_VISIBLE)) {
-    window_t *list = get_window_item(g_app->library, ID_LIBRARY_WINDOW_FAMILY_LIST);
-    send_message(list, cbSetCurrentSelection, family, NULL);
-    send_message(g_app->win, evCommand, MAKEDWORD(ID_LIBRARY_WINDOW_FAMILY_LIST, cbSelectionChange), list);
-    return;
-  }
   irect16_t r;
   ASSERT_TRUE(control && send_message(control, sgGetSegmentRect, (uint32_t)family, &r));
   ui_event_t e = { .message = kEventLeftButtonDown,
@@ -1987,38 +1981,35 @@ static void test_recording_metronome(void) {
   PASS();
 }
 
-static void test_adaptive_library_layout(void) {
-  TEST("library moves between side and bottom while preserving the family selection");
+static void test_library_below_arrangement(void) {
+  TEST("library always docks below the arrangement, with colour-marked family tabs that never take focus");
   test_env_init();
   g_app = app_init();
   window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE,
                                 MAKERECT(0, 0, 1100, 700), NULL, main_win_proc, 0, g_app);
-  ASSERT_NOT_NULL(win);
+  ASSERT_NOT_NULL(win); show_window(win, true);
   window_t *library = g_app->library;
   window_t *families = get_window_item(library, ID_LIBRARY_WINDOW_FAMILIES);
-  window_t *list = get_window_item(library, ID_LIBRARY_WINDOW_FAMILY_LIST);
-  ASSERT_NOT_NULL(families); ASSERT_NOT_NULL(list);
-  ASSERT_EQUAL(library->dock->side, DOCK_RIGHT);
-  ASSERT_TRUE(window_has_state(list, WINDOW_STATE_VISIBLE));
-  ASSERT_FALSE(window_has_state(families, WINDOW_STATE_VISIBLE));
-  send_message(list, cbSetCurrentSelection, FAMILY_BASS, NULL);
-  send_message(win, evCommand, MAKEDWORD(ID_LIBRARY_WINDOW_FAMILY_LIST, cbSelectionChange), list);
-  ASSERT_EQUAL(g_app->family, FAMILY_BASS);
-  resize_window(win, 700, 1100);
+  ASSERT_NOT_NULL(families);
   ASSERT_EQUAL(library->dock->side, DOCK_BOTTOM);
   ASSERT_TRUE(window_has_state(families, WINDOW_STATE_VISIBLE));
-  ASSERT_FALSE(window_has_state(list, WINDOW_STATE_VISIBLE));
+  ASSERT_TRUE(families->flags & WINDOW_NOFOCUS);
+  ASSERT_EQUAL(send_message(families, sgGetCount, 0, NULL), FAMILY_COUNT);
+  resize_window(win, 1400, 600);
+  ASSERT_EQUAL(library->dock->side, DOCK_BOTTOM);
+  ASSERT_EQUAL(library->frame.y, g_app->sheet->frame.y + g_app->sheet->frame.h);
+  set_focus(g_app->sheet);
+  click_family(FAMILY_BASS);
+  ASSERT_EQUAL(g_app->family, FAMILY_BASS);
   ASSERT_EQUAL(send_message(families, sgGetSelection, 0, NULL), FAMILY_BASS);
-  resize_window(win, 1100, 700);
-  ASSERT_EQUAL(library->dock->side, DOCK_RIGHT);
-  ASSERT_EQUAL(send_message(list, cbGetCurrentSelection, 0, NULL), FAMILY_BASS);
+  ASSERT(g_ui_runtime.focused == g_app->sheet, "tapping a family tab leaves the arrangement focused");
   destroy_window(win); app_shutdown(g_app); test_env_shutdown();
   PASS();
 }
 
 int main(void) {
   TEST_START("Groove");
-  test_adaptive_library_layout();
+  test_library_below_arrangement();
   test_library_levels();
   test_blocks();
   test_genres();

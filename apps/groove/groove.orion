@@ -180,15 +180,14 @@
           <Button command="file.export_audio" icon="phosphor-arrow-square-out" tooltip="Export Audio..." />
           <Button name="more" icon="phosphor-dots-three" tooltip="More actions" />
         </Toolbar>
-        <GrooveTracks name="tracks" width="64" />
+        <GrooveTracks name="tracks" width="28" />
         <GrooveArrangement name="arrangement" flags="WINDOW_FLEXSPACE" />
       </form>
 
       <form name="library_window" title="Library" width="800" height="320"
             flags="WINDOW_AUTO_LAYOUT | WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE"
             spacing="4" padding="4">
-        <SegmentedControl name="families" text="Drums|Fills|Bass|Guitar|Synth|Pads|Stabs|Vocals|Scratch|FX|My Samples" flags="CONTROL_SIZE_LARGE" />
-        <ComboBox name="family_list" flags="WINDOW_HIDDEN | CONTROL_SIZE_LARGE" />
+        <SegmentedControl name="families" text="Drums|Fills|Bass|Guitar|Synth|Pads|Stabs|Vocals|Scratch|FX|My Samples" flags="CONTROL_SIZE_LARGE | WINDOW_NOFOCUS" />
         <GrooveBlockBin name="bin" source="library.blocks" flags="WINDOW_FLEXSPACE">
           <FlowView name="blocks" spacing="0" padding="0" flags="WINDOW_FLEXSPACE">
             <GrooveBlockCard name="record_audio" text="Add Recording" width="176" height="44" flags="WINDOW_HIDDEN" />
