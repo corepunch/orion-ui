@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Groove</title>
+<meta name="description" content="Listen to a song made with Groove, then make your own.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#1e1f1c">
+<meta property="og:type" content="music.song">
+<meta property="og:site_name" content="Groove">
+<meta property="og:title" content="A song made with Groove">
+<meta property="og:description" content="Listen, then open it in Groove to remix it.">
+<meta property="og:image" content="https://corepunch.github.io/orion-ui/groove/play/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" type="image/png" href="assets/icon-64.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<!-- Icons: Phosphor play-fill, pause-fill, arrow-square-out, revision
+     2b75f3ad12b420c9504ef05df8d2564a28f8500e, paths copied from
+     apps/groove/share/icons. MIT license: assets/PHOSPHOR-LICENSE. -->
+<style>
+:root {
+  --bg: #1e1f1c;
+  --panel: #2b2c29;
+  --panel-edge: #3a3b37;
+  --text: #f2f1ec;
+  --muted: #a3a29b;
+  --accent: #ffcf2e;
+  --accent-ink: #1d1a33;
+  --link: #59c3ff;
+  --danger: #ff6b6b;
+  --radius: 14px;
+  --font: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); }
+body { min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
+a { color: var(--link); }
+.wrap { width: 100%; max-width: 920px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0 20px; }
+header img { height: 48px; width: auto; display: block; }
+header .tag { color: var(--muted); font-size: 14px; }
+
+.song { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: var(--radius); overflow: hidden; }
+.song-head { display: flex; align-items: center; gap: 16px; padding: 18px 20px; }
+.play { flex: none; width: 64px; height: 64px; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--accent); color: var(--accent-ink); display: grid; place-items: center;
+  box-shadow: 0 3px 0 #c99a00; transition: transform .08s; }
+.play:active { transform: translateY(2px); box-shadow: 0 1px 0 #c99a00; }
+.play:focus-visible, .btn:focus-visible, .cover:focus-visible { outline: 3px solid var(--link); outline-offset: 3px; }
+.play svg { width: 28px; height: 28px; }
+.play[disabled] { opacity: .5; cursor: default; }
+.title { min-width: 0; flex: 1; }
+.title h1 { margin: 0; font-size: clamp(22px, 4vw, 32px); line-height: 1.15; overflow-wrap: anywhere; }
+.title .facts { margin-top: 4px; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+
+.cover { position: relative; display: block; width: 100%; aspect-ratio: 1200 / 630; background: #2f302d;
+  cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; }
+.cover img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.played { position: absolute; background: rgba(255, 207, 46, .10); pointer-events: none; }
+.playhead { position: absolute; width: 2px; margin-left: -1px; background: var(--accent);
+  box-shadow: 0 0 8px rgba(255, 207, 46, .8); pointer-events: none; }
+
+.transport { display: flex; align-items: center; gap: 12px; padding: 12px 20px 16px;
+  color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.transport input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); height: 24px; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0 8px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px;
+  padding: 0 22px; border-radius: 999px; font: 600 16px var(--font); text-decoration: none; cursor: pointer;
+  border: 2px solid transparent; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.secondary { background: transparent; color: var(--text); border-color: var(--panel-edge); }
+.btn.secondary:hover { border-color: var(--muted); }
+.btn svg { width: 20px; height: 20px; }
+.note { color: var(--muted); font-size: 14px; margin: 4px 0 0; min-height: 1.4em; }
+
+.downloads { margin-top: 28px; padding: 18px 20px; background: var(--panel); border: 1px solid var(--panel-edge);
+  border-radius: var(--radius); }
+.downloads h2 { margin: 0 0 4px; font-size: 18px; }
+.downloads p { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+.downloads ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.downloads a { display: block; padding: 10px 12px; border-radius: 10px; background: var(--bg);
+  text-decoration: none; color: var(--text); border: 1px solid var(--panel-edge); }
+.downloads a:hover { border-color: var(--muted); }
+.downloads a small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.downloads a.suggested { border-color: var(--accent); }
+
+.empty { text-align: center; padding: 48px 20px; }
+.empty img { width: 96px; height: 96px; border-radius: 22px; }
+.empty h1 { font-size: 26px; margin: 16px 0 8px; }
+.empty p { color: var(--muted); margin: 0 auto; max-width: 440px; }
+
+footer { margin-top: 28px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+footer a { color: var(--muted); }
+@media (max-width: 480px) {
+  header .tag { display: none; }
+  .actions .btn { flex: 1 1 100%; }
+  .song-head { padding: 14px 16px; }
+  .transport { padding: 10px 16px 14px; }
+}
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a href="#" id="home"><img src="assets/groove-wordmark.png" alt="Groove" width="144" height="48"></a>
+    <span class="tag">Make music by dragging blocks</span>
+  </header>
+
+  <main>
+    <section class="song" id="song" hidden aria-labelledby="song-title">
+      <div class="song-head">
+        <button class="play" id="play" type="button" aria-label="Play" disabled>
+          <svg id="icon-play" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M240,128a15.74,15.74,0,0,1-7.6,13.51L88.32,229.65a16,16,0,0,1-16.2.3A15.86,15.86,0,0,1,64,216.13V39.87a15.86,15.86,0,0,1,8.12-13.82,16,16,0,0,1,16.2.3L232.4,114.49A15.74,15.74,0,0,1,240,128Z"/></svg>
+          <svg id="icon-pause" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" hidden><path d="M216,48V208a16,16,0,0,1-16,16H160a16,16,0,0,1-16-16V48a16,16,0,0,1,16-16h40A16,16,0,0,1,216,48ZM96,32H56A16,16,0,0,0,40,48V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V48A16,16,0,0,0,96,32Z"/></svg>
+        </button>
+        <div class="title">
+          <h1 id="song-title"></h1>
+          <div class="facts" id="facts"></div>
+        </div>
+      </div>
+      <div class="cover" id="cover" role="slider" tabindex="0" aria-label="Song position"
+           aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
+        <img id="cover-img" alt="">
+        <div class="played" id="played"></div>
+        <div class="playhead" id="playhead"></div>
+      </div>
+      <div class="transport">
+        <span id="time">0:00</span>
+        <input type="range" id="seek" min="0" max="0" step="0.01" value="0" aria-label="Seek">
+        <span id="duration">0:00</span>
+      </div>
+      <audio id="audio" preload="metadata"></audio>
+    </section>
+
+    <section class="empty" id="empty" hidden>
+      <img src="assets/icon-180.png" alt="">
+      <h1 id="empty-title"></h1>
+      <p id="empty-text"></p>
+    </section>
+
+    <div class="actions" id="actions" hidden>
+      <a class="btn primary" id="open-app" href="#">
+        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z"/></svg>
+        Open in Groove
+      </a>
+      <a class="btn secondary" href="#downloads" id="get-app">Download Groove</a>
+    </div>
+    <p class="note" id="note" role="status"></p>
+
+    <section class="downloads" id="downloads" aria-labelledby="downloads-title">
+      <h2 id="downloads-title">Get Groove</h2>
+      <p>Drag blocks onto eight tracks, record your own sounds and share your song.</p>
+      <ul id="download-list"></ul>
+    </section>
+  </main>
+
+  <footer>
+    <span id="disclaimer" hidden>This song was shared by a Groove user.
+      <a id="report" href="#">Report this song</a> ·</span>
+    <a href="../privacy/">Privacy</a> · <a href="../support/">Support</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // Upload storage. Committed songs live at SONG_BASE/<id>/. Set this when the
+  // share service is deployed; until then only the fixtures below play.
+  const SONG_BASE = null;
+  const FIXTURES = { 'neon-skyline': 'fixtures/neon-skyline/' };
+  const ID_PATTERN = /^[A-Za-z0-9]{10}$/;
+  const APP_STORE = 'https://apps.apple.com/app/id6821380428';
+  const RELEASES = 'https://github.com/corepunch/orion-ui/releases/latest/download/';
+  const REPORT_EMAIL = 'igor.chernakov@gmail.com';
+  const BEATS_PER_BAR = 4;
+
+  const $ = id => document.getElementById(id);
+  const audio = $('audio'), cover = $('cover'), seek = $('seek');
+  let meta = null, base = '', dragging = false;
+
+  const platform = (() => {
+    const ua = navigator.userAgent, touch = navigator.maxTouchPoints > 1;
+    if (/iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && touch)) return 'ios';
+    if (/Macintosh|Mac OS X/.test(ua)) return 'mac';
+    if (/Windows/.test(ua)) return 'windows';
+    if (/Android/.test(ua)) return 'android';
+    if (/Linux|X11/.test(ua)) return 'linux';
+    return 'other';
+  })();
+
+  function renderDownloads() {
+    const items = [
+      { key: 'ios', label: 'iPad', sub: 'App Store', href: APP_STORE },
+      { key: 'mac', label: 'Mac', sub: 'App Store', href: APP_STORE },
+      { key: 'mac-zip', label: 'Mac (Apple silicon)', sub: 'Direct download, .zip', href: RELEASES + 'groove-macos-arm64.zip' },
+      { key: 'windows', label: 'Windows', sub: 'x64, .zip', href: RELEASES + 'groove-windows-x86_64.zip' },
+      { key: 'linux', label: 'Linux', sub: 'x86-64, .tar.gz', href: RELEASES + 'groove-linux-x86_64.tar.gz' },
+    ];
+    const list = $('download-list');
+    list.replaceChildren(...items.map(item => {
+      const li = document.createElement('li'), a = document.createElement('a');
+      a.href = item.href; a.rel = 'noopener';
+      a.textContent = item.label;
+      const small = document.createElement('small'); small.textContent = item.sub; a.append(small);
+      if (item.key === platform) a.classList.add('suggested');
+      li.append(a); return li;
+    }));
+    const suggested = items.find(i => i.key === platform);
+    if (suggested) { $('get-app').href = suggested.href; $('get-app').rel = 'noopener'; }
+  }
+
+  function clock(seconds) {
+    if (!isFinite(seconds) || seconds < 0) seconds = 0;
+    const m = Math.floor(seconds / 60), s = Math.floor(seconds % 60);
+    return m + ':' + String(s).padStart(2, '0');
+  }
+
+  function duration() { return isFinite(audio.duration) && audio.duration > 0 ? audio.duration : meta.duration; }
+
+  function layoutOverlay() {
+    const t = meta.cover.timeline, W = meta.cover.width, H = meta.cover.height;
+    const left = t.x / W * 100, width = t.w / W * 100, top = t.y / H * 100, height = t.h / H * 100;
+    for (const el of [$('playhead'), $('played')]) { el.style.top = top + '%'; el.style.height = height + '%'; }
+    $('played').style.left = left + '%';
+    return { left, width };
+  }
+
+  let overlay = null;
+  function updatePosition() {
+    if (!meta) return;
+    const d = duration(), t = Math.min(audio.currentTime, d), f = d ? t / d : 0;
+    $('playhead').style.left = (overlay.left + f * overlay.width) + '%';
+    $('played').style.width = (f * overlay.width) + '%';
+    $('time').textContent = clock(t);
+    if (!dragging) seek.value = t;
+    const bar = Math.min(meta.bars, Math.floor(t * meta.bpm / 60 / BEATS_PER_BAR) + 1);
+    cover.setAttribute('aria-valuenow', Math.round(t));
+    cover.setAttribute('aria-valuetext', `${clock(t)}, bar ${bar} of ${meta.bars}`);
+    $('facts').textContent = `${meta.bpm} BPM · bar ${bar} of ${meta.bars} · ${clock(d)}`;
+  }
+
+  function tick() { updatePosition(); if (!audio.paused) requestAnimationFrame(tick); }
+
+  function setPlaying(playing) {
+    $('icon-play').toggleAttribute('hidden', playing); $('icon-pause').toggleAttribute('hidden', !playing);
+    $('play').setAttribute('aria-label', playing ? 'Pause' : 'Play');
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+  }
+
+  function toggle() {
+    if (audio.paused) audio.play().catch(() => showNote('Your browser blocked playback. Press Play again.'));
+    else audio.pause();
+  }
+
+  function seekTo(seconds) {
+    const d = duration();
+    audio.currentTime = Math.max(0, Math.min(d - 0.05, seconds));
+    updatePosition();
+  }
+
+  function seekFromPointer(event) {
+    const rect = cover.getBoundingClientRect();
+    const x0 = rect.left + rect.width * overlay.left / 100, w = rect.width * overlay.width / 100;
+    seekTo(Math.max(0, Math.min(1, (event.clientX - x0) / w)) * duration());
+  }
+
+  function showNote(text) { $('note').textContent = text; }
+
+  function showEmpty(title, text) {
+    $('song').hidden = true; $('actions').hidden = true; $('disclaimer').hidden = true;
+    $('empty').hidden = false; $('empty-title').textContent = title; $('empty-text').textContent = text;
+    document.title = 'Groove';
+  }
+
+  function validMeta(m) {
+    const n = v => typeof v === 'number' && isFinite(v) && v > 0;
+    return m && typeof m.title === 'string' && n(m.bpm) && n(m.bars) && n(m.duration) &&
+      m.cover && n(m.cover.width) && n(m.cover.height) && m.cover.timeline &&
+      ['x', 'y', 'w', 'h'].every(k => typeof m.cover.timeline[k] === 'number');
+  }
+
+  async function load(id) {
+    audio.pause(); audio.removeAttribute('src'); meta = null; showNote('');
+    if (!id) {
+      showEmpty('Songs made with Groove play here',
+        'When someone shares a song from Groove, its link opens this page. Get Groove below to make your own.');
+      return;
+    }
+    if (FIXTURES[id]) base = FIXTURES[id];
+    else if (SONG_BASE && ID_PATTERN.test(id)) base = `${SONG_BASE}/${id}/`;
+    else { showEmpty('This link doesn’t point to a song', 'Check that you copied the whole link.'); return; }
+
+    let m;
+    try {
+      const response = await fetch(base + 'meta.json', { cache: 'no-cache', referrerPolicy: 'no-referrer' });
+      if (!response.ok) throw new Error(response.status);
+      m = await response.json();
+    } catch (e) {
+      showEmpty('This song is no longer available', 'It may have been deleted by the person who shared it.');
+      return;
+    }
+    if (!validMeta(m)) { showEmpty('This song can’t be played', 'Its files are damaged or from a newer version of Groove.'); return; }
+
+    meta = m;
+    const files = Object.assign({ song: 'song.groove', audio: 'audio.m4a', cover: 'cover.png' }, m.files);
+    const title = m.title.trim() || 'Untitled song';
+    $('empty').hidden = true; $('song').hidden = false; $('actions').hidden = false; $('disclaimer').hidden = false;
+    $('song-title').textContent = title;
+    document.title = `${title} · Groove`;
+    $('cover-img').src = base + files.cover;
+    $('cover-img').alt = `Arrangement of ${title}: clips on eight tracks over ${m.bars} bars`;
+    overlay = layoutOverlay();
+    seek.max = m.duration; cover.setAttribute('aria-valuemax', Math.round(m.duration));
+    $('duration').textContent = clock(m.duration);
+    audio.src = base + files.audio;
+    $('play').disabled = false;
+    $('open-app').href = 'groove://open?id=' + encodeURIComponent(id);
+    $('report').href = `mailto:${REPORT_EMAIL}?subject=` + encodeURIComponent(`Report shared Groove song ${id}`) +
+      '&body=' + encodeURIComponent(`Song: ${location.href}\nReason: `);
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({ title, artist: 'Made with Groove',
+        artwork: [{ src: new URL(base + files.cover, location.href).href, sizes: '1200x630', type: 'image/png' }] });
+    }
+    setPlaying(false); updatePosition();
+  }
+
+  $('play').addEventListener('click', toggle);
+  audio.addEventListener('play', () => { setPlaying(true); requestAnimationFrame(tick); });
+  audio.addEventListener('pause', () => setPlaying(false));
+  audio.addEventListener('ended', () => { setPlaying(false); updatePosition(); });
+  audio.addEventListener('loadedmetadata', () => { seek.max = duration(); $('duration').textContent = clock(duration()); updatePosition(); });
+  audio.addEventListener('error', () => { if (meta) { $('play').disabled = true; showNote('The audio could not be loaded. Try again later.'); } });
+
+  seek.addEventListener('input', () => { dragging = true; seekTo(+seek.value); });
+  seek.addEventListener('change', () => { dragging = false; });
+
+  cover.addEventListener('pointerdown', e => { if (!meta) return; cover.setPointerCapture(e.pointerId); seekFromPointer(e); });
+  cover.addEventListener('pointermove', e => { if (cover.hasPointerCapture(e.pointerId)) seekFromPointer(e); });
+  cover.addEventListener('keydown', e => {
+    if (!meta) return;
+    const bar = 60 / meta.bpm * BEATS_PER_BAR;
+    const steps = { ArrowRight: bar, ArrowLeft: -bar, PageUp: 8 * bar, PageDown: -8 * bar };
+    if (e.key in steps) { seekTo(audio.currentTime + steps[e.key]); e.preventDefault(); }
+    else if (e.key === 'Home') { seekTo(0); e.preventDefault(); }
+    else if (e.key === 'End') { seekTo(duration()); e.preventDefault(); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== ' ' || !meta || (e.target instanceof Element && e.target.closest('input, a, button, textarea, [role=slider]'))) return;
+    e.preventDefault(); toggle();
+  });
+
+  $('open-app').addEventListener('click', () => {
+    let left = false;
+    const away = () => { left = true; };
+    window.addEventListener('pagehide', away, { once: true });
+    document.addEventListener('visibilitychange', away, { once: true });
+    setTimeout(() => {
+      if (!left && !document.hidden) {
+        showNote('Groove didn’t open. If it isn’t installed yet, download it below, then open this link again.');
+        $('downloads').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 1500);
+  });
+
+  $('home').addEventListener('click', e => { e.preventDefault(); history.pushState(null, '', location.pathname); load(''); });
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('play', () => audio.play());
+    navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+    navigator.mediaSession.setActionHandler('seekto', d => seekTo(d.seekTime));
+  }
+
+  const currentId = () => decodeURIComponent(location.hash.slice(1));
+  window.addEventListener('hashchange', () => load(currentId()));
+  renderDownloads();
+  load(currentId());
+})();
+</script>
+</body>
+</html>

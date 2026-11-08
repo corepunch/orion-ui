@@ -1,0 +1,12 @@
+{
+  "id": "neon-skyline",
+  "title": "Neon Skyline",
+  "bpm": 140,
+  "bars": 88,
+  "duration": 150.857,
+  "app_version": "1.0.4",
+  "format_version": 4,
+  "created": "2026-11-08T21:20:00Z",
+  "cover": { "width": 1200, "height": 630, "timeline": { "x": 64, "y": 92, "w": 1104, "h": 506 } },
+  "files": { "song": "song.groove", "audio": "audio.m4a", "cover": "cover.png" }
+}
