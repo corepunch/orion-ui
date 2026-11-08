@@ -1,5 +1,20 @@
 # Track instrument atlas
 
-`instruments.png` was generated as a single transparent atlas with the built-in ImageGen tool. Its 4×3 cells, in reading order, represent drums, fills, bass, guitar, synth, pads, stabs, vocals, scratch, effects, recordings, and a spare music note. The track column uses one piece of artwork per family; selection is shown by the track background.
+`instruments.png` is a transparent 4×3 atlas generated in one built-in ImageGen call. The track column uses the artwork directly; selection is shown by the track background.
 
-Generation prompt: Create one cohesive transparent PNG sprite atlas of 12 individual music instrument icons for Groove, an iPad music-making app. Strict layout: a 4-column by 3-row grid of equal square cells, each cell has exactly one centered isolated icon, with generous transparent padding, no borders, no grid lines, no text. In reading order: acoustic drum kit, drum fill/snare and cymbal, electric bass guitar, electric guitar, synthesizer keyboard, soft pad synthesizer, brass stabs/trumpet, vocal microphone, DJ turntable, sound effects pedal, audio recorder microphone, music note. Flat 2D illustration, simplified distinctive silhouettes readable at 24 to 32 points, restrained coordinated muted blue, teal, warm ochre, coral and cream palette, 2–4 solid colors per icon, subtle outlines only where needed, no gradients, no highlights, no shadows, no 3D, no realistic rendering, no neon, no busy details. Every icon fully contained within its own grid cell, consistent visual size and weight. Genuinely transparent background.
+| Cell | Groove category | Artwork |
+|---|---|---|
+| 1 | Drum Loops (Drums) | Drum kit |
+| 2 | Drum Fills (Fills) | Snare and cymbal |
+| 3 | Bass | Bass guitar |
+| 4 | Guitar | Electric guitar |
+| 5 | Synth | Synthesizer keyboard |
+| 6 | Pads | Pad controller |
+| 7 | Stabs | Trumpet |
+| 8 | Vocals | Handheld microphone |
+| 9 | Scratch | Turntable |
+| 10 | FX | Effects pedal |
+| 11 | My Samples | Studio microphone |
+| 12 | Spare | Music note |
+
+Generation prompt: Create one cohesive transparent PNG sprite atlas for Groove music app track instrument icons. Strict regular 4-column by 3-row grid of equal square cells, each with exactly one centered separate icon, ample transparent padding, no cell borders, no text. In reading order: acoustic drum kit; snare drum with cymbal for fills; electric bass guitar; electric guitar; synthesizer keyboard; electronic pad controller; trumpet for brass stabs; handheld vocal microphone; DJ turntable; sound effects pedal; studio recording microphone; musical note. Art direction: iOS 7 era clean flat colorful illustration, simple bold filled shapes, vibrant harmonious colors and restrained subtle gradients, absolutely no outlines, no dark contour strokes, no strokes around shapes, no borders, no drop shadows, no textures, no 3D. Distinguish parts with color and negative space, large readable silhouettes at 36 pixels, consistent optical size and weight. All shapes contained safely inside their own cell. Truly transparent background.

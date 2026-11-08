@@ -51,7 +51,7 @@
 
     <contextmenus>
       <contextmenu name="track">
-        <item name="duplicate" label="Add Same Instrument Track" />
+        <item name="duplicate" label="Add Track" />
         <item name="full" label="All 8 tracks are in use" />
       </contextmenu>
       <contextmenu name="more">
@@ -188,6 +188,7 @@
             flags="WINDOW_AUTO_LAYOUT | WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE"
             spacing="4" padding="4">
         <SegmentedControl name="families" text="Drums|Fills|Bass|Guitar|Synth|Pads|Stabs|Vocals|Scratch|FX|My Samples" flags="CONTROL_SIZE_LARGE" />
+        <ComboBox name="family_list" flags="WINDOW_HIDDEN | CONTROL_SIZE_LARGE" />
         <GrooveBlockBin name="bin" source="library.blocks" flags="WINDOW_FLEXSPACE">
           <FlowView name="blocks" spacing="0" padding="0" flags="WINDOW_FLEXSPACE">
             <GrooveBlockCard name="record_audio" text="Add Recording" width="176" height="44" flags="WINDOW_HIDDEN" />

@@ -5,7 +5,7 @@
 #define CARD_TAG_INSET 2
 #define CARD_LABEL_BG 0xB8000000u
 #define CARD_REPEAT_OVERLAY 0x54000000u
-#define CARD_LABEL_FONT FONT_SYSTEM
+#define CARD_LABEL_FONT FONT_SMALLEST
 
 typedef struct {
   int block;

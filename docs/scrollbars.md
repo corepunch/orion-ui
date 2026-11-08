@@ -154,6 +154,9 @@ show_scroll_bar(win, SB_VERT, false);   // hide
 show_scroll_bar(win, SB_VERT, true);    // show
 ```
 
+A hidden, enabled scrollbar still accepts gesture and touch panning when its
+content exceeds the page. Use `enable_scroll_bar()` to disable scrolling too.
+
 ### Explicitly enabling / disabling a bar
 
 `enable_scroll_bar()` controls whether a bar accepts mouse input, independently

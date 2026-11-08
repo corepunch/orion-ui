@@ -1,6 +1,12 @@
-// VIEW: the application toolbar, then the sheet above the sound library.
+// VIEW: the arrangement and sound library share the available workspace.
 
 #include "groove.h"
+static void layout_library(window_t *win) {
+  if (!g_app->library || !g_app->library->dock) return;
+  irect16_t area = get_client_rect(win);
+  dock_side_t side = area.w > area.h ? DOCK_RIGHT : area.h > area.w ? DOCK_BOTTOM : g_app->library->dock->side;
+  if (side != g_app->library->dock->side) dock_set_side(g_app->library, side);
+}
 static void show_more_actions(window_t *win) {
   irect16_t r = {0};
   if (!send_message(win, tbGetItemRect, ID_MAIN_WINDOW_MORE, &r) ||
@@ -40,7 +46,8 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         }
         dock_window(app->tracks, DOCK_LEFT, DOCK_EDGE(DOCK_LEFT), DOCK_NOFLOAT, GR_SHEET_HEADER_W, GR_SHEET_HEADER_W);
         dock_window(app->sheet, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 100);
-        dock_window(app->library, DOCK_BOTTOM, DOCK_EDGE(DOCK_BOTTOM), DOCK_RESIZABLE | DOCK_NOFLOAT | DOCK_OVERLAY_SPLITTER, 340, 100);
+        dock_window(app->library, DOCK_BOTTOM, DOCK_EDGE(DOCK_BOTTOM) | DOCK_EDGE(DOCK_RIGHT), DOCK_RESIZABLE | DOCK_NOFLOAT | DOCK_OVERLAY_SPLITTER, 340, 100);
+        layout_library(win);
         app->timer = axSetTimer(win, 33, NULL, true);
         return true;
       }
@@ -50,14 +57,15 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
                                   MAKERECT(0, 0, GR_SHEET_HEADER_W, 1), win, win_tracks, app->hinstance, NULL);
       app->library = create_window("Library", WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE,
                                     MAKERECT(0, 0, 800, 340), win, win_transport, app->hinstance, NULL);
-      dock_window(app->library, DOCK_BOTTOM, DOCK_EDGE(DOCK_BOTTOM), DOCK_RESIZABLE | DOCK_NOFLOAT | DOCK_OVERLAY_SPLITTER, 340, 100);
+      dock_window(app->library, DOCK_BOTTOM, DOCK_EDGE(DOCK_BOTTOM) | DOCK_EDGE(DOCK_RIGHT), DOCK_RESIZABLE | DOCK_NOFLOAT | DOCK_OVERLAY_SPLITTER, 340, 100);
       if (app->tracks) dock_window(app->tracks, DOCK_LEFT, DOCK_EDGE(DOCK_LEFT), DOCK_NOFLOAT, GR_SHEET_HEADER_W, GR_SHEET_HEADER_W);
       dock_window(app->sheet, DOCK_FILL, 0, DOCK_NOFLOAT, 0, 100);
+      layout_library(win);
       app->timer = axSetTimer(win, 33, NULL, true);
       return true;
     }
     case evPaint: return false;
-    case evResize: return false;
+    case evResize: layout_library(win); return false;
     case evTimer:
       if (app->song.playing || app->shown_playing) invalidate_window(app->sheet);
       if (app->song.playing != app->shown_playing) transport_refresh(); // the mixer stopped at the song's end
@@ -69,6 +77,15 @@ result_t main_win_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       }
       return true;
     case evCommand:
+      if (HIWORD(wparam) == cbSelectionChange && LOWORD(wparam) == ID_LIBRARY_WINDOW_FAMILY_LIST) {
+        int family = (int)send_message((window_t *)lparam, cbGetCurrentSelection, 0, NULL);
+        window_t *families = get_window_item(app->library, ID_LIBRARY_WINDOW_FAMILIES);
+        if (families && family >= 0 && family < FAMILY_COUNT) {
+          send_message(families, sgSetSelection, family, NULL);
+          send_message(app->library, evCommand, MAKEDWORD(ID_LIBRARY_WINDOW_FAMILIES, sgnSelChange), families);
+        }
+        return true;
+      }
       if (HIWORD(wparam) == btnClicked && LOWORD(wparam) == ID_MAIN_WINDOW_MORE) { show_more_actions(win); return true; }
       if (HIWORD(wparam) == kAcceleratorNotification || HIWORD(wparam) == kMenuBarNotificationItemClick || HIWORD(wparam) == btnClicked) { app_command(LOWORD(wparam)); return true; }
       return false;

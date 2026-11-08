@@ -149,7 +149,9 @@
   <string source="Drums|Fills|Bass|Guitar|Synth|Pads|Stabs|Vocals|Scratch|FX|My Samples" where="library_window">Batterie|Breaks|Basse|Guitare|Synthé|Nappes|Stabs|Voix|Scratch|Effets|Mes samples</string>
   <string source="All tracks are in use. Empty a track to choose this family." where="code">Toutes les pistes sont occupées. Videz une piste pour choisir cette famille.</string>
   <string source="Empty track" where="code">Piste vide</string>
-  <string source="Add Same Instrument Track" where="menu">Ajouter une piste du même instrument</string>
+  <string source="Add Same Instrument Track" obsolete="true">Ajouter une piste du même instrument</string>
   <string source="All 8 tracks are in use" where="menu">Les 8 pistes sont occupées</string>
   <string source="More actions" where="main_window">Plus d’actions</string>
+  <string source="Add Track" where="menu">Ajouter une piste</string>
+  <string source="Track %d" where="code">Piste %d</string>
 </strings>

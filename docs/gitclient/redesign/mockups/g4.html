@@ -1,6 +1,6 @@
 <!doctype html><html><head><meta charset='utf-8'><style>
-@font-face { font-family: Noto; src: url('../../../../share/fonts/NotoSans-Regular.ttf'); font-weight: 400; }
-@font-face { font-family: Noto; src: url('../../../../share/fonts/NotoSans-Medium.ttf'); font-weight: 500 700; }
+@font-face { font-family: DejaVu; src: url('../../../../share/fonts/DejaVuSans.ttf'); font-weight: 400; }
+@font-face { font-family: DejaVu; src: url('../../../../share/fonts/DejaVuSans-Bold.ttf'); font-weight: 500 700; }
 :root {
   --ctl:#F8F9FB; --win:#F0F2F5; --ws:#E6E9EE; --desk:#C9CFDA; --panel:#EEF0F4; --panel2:#E4E7EC;
   --edge:#D8DCE3; --edge2:#E3E6EB; --hair:#ECEEF2; --acc:#4C5BD4; --acc2:#5866DC; --accsoft:rgba(76,91,212,.12);
@@ -9,7 +9,7 @@
 }
 * { box-sizing:border-box; margin:0; padding:0; }
 html,body { width:1280px; height:800px; overflow:hidden; }
-body { background:var(--desk); font:13px/1.35 Noto, -apple-system, sans-serif; color:var(--text);
+body { background:var(--desk); font:13px/1.35 DejaVu, -apple-system, sans-serif; color:var(--text);
   -webkit-font-smoothing:antialiased; font-variant-numeric: tabular-nums; position:relative; }
 .ic { fill:currentColor; flex:none; display:block; }
 .menubar { position:absolute; left:0; top:0; right:0; height:24px; background:var(--win); border-bottom:1px solid var(--edge2);
@@ -133,7 +133,7 @@ tr.sel .ok, tr.sel .warn { color:#fff; }
 .field { height:28px; border-radius:6px; background:#fff; box-shadow: inset 0 0 0 1px var(--edge); display:flex; align-items:center; padding:0 9px; font-size:12.5px; }
 .field.ph { color:var(--dis); } .field.tall { height:58px; align-items:flex-start; padding-top:7px; }
 .diff { flex:1; overflow:hidden; background:#fff; font:12px/20px "SF Mono", Menlo, monospace; }
-.dh { display:flex; align-items:center; gap:10px; height:38px; padding:0 12px; border-bottom:1px solid var(--edge2); font:13px Noto, sans-serif; background:#fff; }
+.dh { display:flex; align-items:center; gap:10px; height:38px; padding:0 12px; border-bottom:1px solid var(--edge2); font:13px DejaVu, sans-serif; background:#fff; }
 .dh b { font-weight:500; } .dh .sec { font-size:12px; }
 .hunk { background:#F3F5FB; color:#5965C8; padding:0 12px 0 96px; border-top:1px solid #E6E9F4; border-bottom:1px solid #E6E9F4; font-size:11.5px; }
 .ln { display:flex; white-space:pre; }

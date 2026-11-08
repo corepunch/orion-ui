@@ -17,13 +17,12 @@
 #include "groove.h"
 
 #define RULER_H    GR_RULER_H
-#define BAR_W      88
-#define SNAP_W     (BAR_W * GR_SNAP_TICKS / GR_TICKS_BAR)
+#define BAR_W      (((sheet_t *)win->userdata)->bar_width)
 #define SHEET_SLOP 4
 #define RESIZE_FRACTIONS 2
 
 typedef struct {
-  int press_clip;
+  int press_clip, bar_width;
   ipoint16_t press;
   bool own_drag;
   bool resize;      // the press landed on the clip's trailing fractions
@@ -39,8 +38,10 @@ static int  row_h(window_t *win)   { return sheet_row_h(win); }
 static int  floordiv(int a, int b) { return a >= 0 ? a / b : -((-a + b - 1) / b); }
 static int  bar_x(window_t *win, int bar)  { return bar * BAR_W - hpos(win); }
 static int  position_x(window_t *win, int position) { return position * BAR_W / GR_TICKS_BAR - hpos(win); }
-static int  position_at(int x) { return floordiv(x * GR_TICKS_BAR, BAR_W); }
-static int  seek_ticks(int content_x) { return floordiv(content_x, SNAP_W) * GR_SNAP_TICKS; }
+static int  position_at(window_t *win, int x) { return floordiv((x + 1) * GR_TICKS_BAR - 1, BAR_W); }
+static int  seek_ticks(window_t *win, int content_x) {
+  return floordiv((content_x + 1) * GR_TICKS_BAR / GR_SNAP_TICKS - 1, BAR_W) * GR_SNAP_TICKS;
+}
 static int  track_y(window_t *win, int t)  { return RULER_H + t * row_h(win); }
 static irect16_t grid_rect(window_t *win)  { irect16_t cr = get_client_rect(win); return R(0, RULER_H, cr.w, row_h(win) * GR_TRACKS); }
 
@@ -96,8 +97,8 @@ static void sync_scroll(window_t *win) {
   set_scroll_info(win, SB_HORZ, &si, false);
 }
 
-ipoint16_t clip_cell_size(window_t *sheet, const block_t *b) {
-  return (ipoint16_t){ b->bars * BAR_W, row_h(sheet) };
+ipoint16_t clip_cell_size(window_t *win, const block_t *b) {
+  return (ipoint16_t){ b->bars * BAR_W, row_h(win) };
 }
 
 static irect16_t clip_rect(window_t *win, int track, int position, int ticks) {
@@ -165,6 +166,20 @@ static void sync_clips(window_t *win) {
   }
 }
 
+void sheet_set_library_width(window_t *win, int width) {
+  if (!win || !win->userdata || width < 44) return;
+  sheet_t *st = win->userdata;
+  int columns = MAX(1, (width + 44) / 88);
+  int bar_width = MAX(4, width / columns);
+  if (st->bar_width == bar_width) return;
+  int pos = hpos(win) * bar_width / st->bar_width;
+  st->bar_width = bar_width;
+  sync_scroll(win);
+  set_scroll_info(win, SB_HORZ, &(scroll_info_t){ .fMask = SIF_POS, .nPos = pos }, false);
+  sync_clips(win);
+  invalidate_window(win);
+}
+
 // The pointer must enter the target; the chosen anchor determines placement.
 static void drag_target(window_t *win, int cx, int cy) {
   drag_t *d = &g_app->drag;
@@ -179,11 +194,11 @@ static void drag_target(window_t *win, int cx, int cy) {
     irect16_t sample = R(cx - d->grab.x, cy - d->grab.y, ticks * BAR_W / GR_TICKS_BAR, row_h(win));
     irect16_t center = rect_center(sample, 0, 0);
     // Candidate centers account for the full width of multi-bar samples.
-    cx = center.x - (sample.w - SNAP_W) / 2;
+    cx = center.x - (sample.w - BAR_W * GR_SNAP_TICKS / GR_TICKS_BAR) / 2;
     cy = center.y;
   }
   d->track = CLAMP(floordiv(cy, row_h(win)), 0, GR_TRACKS - 1);
-  d->position = CLAMP(floordiv(cx, SNAP_W) * GR_SNAP_TICKS, 0, GR_BARS * GR_TICKS_BAR - ticks);
+  d->position = CLAMP(seek_ticks(win, cx), 0, GR_BARS * GR_TICKS_BAR - ticks);
   d->valid = track_accepts_block(d->track, d->block, d->from_clip) &&
              song_can_place(&g_app->song, d->track, d->position, ticks, d->from_clip);
 }
@@ -196,12 +211,12 @@ static void drag_clear(window_t *win) {
 }
 
 // The true end has to be visible. The last two fractions are the resize handle.
-static bool on_resize_handle(int idx, int content_x) {
+static bool on_resize_handle(window_t *win, int idx, int content_x) {
   const song_t *s = &g_app->song;
   if (idx < 0 || idx >= s->nclips) return false;
   int origin = s->clips[idx].position, stored = origin + song_clip_ticks(s, idx);
   if (song_clip_end(s, idx) != stored) return false;
-  int at = position_at(content_x), tail = RESIZE_FRACTIONS * GR_FRACTION_TICKS;
+  int at = position_at(win, content_x), tail = RESIZE_FRACTIONS * GR_FRACTION_TICKS;
   return at >= MAX(origin, stored - tail) && at < stored;
 }
 
@@ -221,7 +236,7 @@ static void resize_clip(window_t *win, int mx) {
   int idx = st->press_clip;
   if (idx < 0 || idx >= g_app->song.nclips) return;
   int step = GR_SNAP_TICKS;
-  int steps = floordiv(mx - st->press.x + SNAP_W / 2, SNAP_W);
+  int steps = floordiv((mx - st->press.x) * GR_TICKS_BAR / GR_SNAP_TICKS + BAR_W / 2, BAR_W);
   int ticks = st->resize_ticks + steps * step, limit = resize_limit(idx);
   if (limit < step) return;
   ticks = CLAMP(ticks, step, limit);
@@ -302,6 +317,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       g_app->sheet = win;
       st->press_clip = -1;
+      st->bar_width = 88;
       sheet_load_branding(win);
       sync_scroll(win);
       return true;
@@ -312,19 +328,19 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evQueryDrag: { // hold picks up a clip; a swipe scrolls the sheet. The trailing fractions resize.
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
       if (my < RULER_H) return false;
-      return song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), position_at(mx)) >= 0 ? DRAG_AFTER_HOLD : DRAG_NONE;
+      return song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), position_at(win, mx)) >= 0 ? DRAG_AFTER_HOLD : DRAG_NONE;
     }
     case evLeftButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
       st->resize = false;
-      if (my < RULER_H) { app_seek_position(seek_ticks(mx)); return true; }
-      int track = (my - RULER_H) / row_h(win), position = position_at(mx);
+      if (my < RULER_H) { app_seek_position(seek_ticks(win, mx)); return true; }
+      int track = (my - RULER_H) / row_h(win), position = position_at(win, mx);
       if (track >= 0 && track < GR_TRACKS) app_select_track(track);
       st->press_clip = track >= 0 && track < GR_TRACKS ? song_clip_at(&g_app->song, track, position) : -1;
       st->press = (ipoint16_t){ (int16_t)mx, (int16_t)my };
       app_select_clip(st->press_clip);
-      if (st->press_clip < 0) { app_seek_position(seek_ticks(mx)); return true; }
-      st->resize = on_resize_handle(st->press_clip, mx);
+      if (st->press_clip < 0) { app_seek_position(seek_ticks(win, mx)); return true; }
+      st->resize = on_resize_handle(win, st->press_clip, mx);
       st->resize_ticks = song_clip_ticks(&g_app->song, st->press_clip);
       const clip_t *c = &g_app->song.clips[st->press_clip];
       ipoint16_t grab = { mx - c->position * BAR_W / GR_TICKS_BAR, my - track_y(win, c->track) };
@@ -379,7 +395,7 @@ result_t win_sheet(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evRightButtonDown: {
       int mx = (int16_t)LOWORD(wparam), my = (int16_t)HIWORD(wparam);
       if (my < RULER_H) return false;
-      int idx = song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), position_at(mx));
+      int idx = song_clip_at(&g_app->song, (my - RULER_H) / row_h(win), position_at(win, mx));
       if (idx < 0) return false;
       app_select_clip(idx);
       app_command(ID_DELETE);

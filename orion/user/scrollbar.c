@@ -572,7 +572,7 @@ bool scrollbar_handle_builtin_mouse(window_t *win, uint32_t msg, uint32_t wparam
 // ── Touch momentum ────────────────────────────────────────────────────────────
 
 static bool sb_available(window_t *win, win_sb_t *sb, uint32_t flag) {
-  return (win->flags & flag) && sb->visible && sb->enabled && sb->max_val - sb->page > sb->min_val;
+  return (win->flags & flag) && (sb->visible || sb->visible_mode == SB_VIS_HIDE) && sb->enabled && sb->max_val - sb->page > sb->min_val;
 }
 
 bool scrollbar_can_scroll(window_t *win) {

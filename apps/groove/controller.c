@@ -283,8 +283,6 @@ void app_set_family(int family) {
   g_app->family = (family_t)family;
   library_refilter();
   transport_refresh();
-  if (g_app->tracks) tracks_sync();
-  if (g_app->sheet) invalidate_window(g_app->sheet);
 }
 
 void app_set_genre(uint8_t genre) {

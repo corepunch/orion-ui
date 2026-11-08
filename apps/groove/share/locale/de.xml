@@ -149,7 +149,9 @@
   <string source="Drums|Fills|Bass|Guitar|Synth|Pads|Stabs|Vocals|Scratch|FX|My Samples" where="library_window">Drums|Fills|Bass|Gitarre|Synth|Pads|Stabs|Gesang|Scratch|Effekte|Meine Samples</string>
   <string source="All tracks are in use. Empty a track to choose this family." where="code">Alle Spuren sind belegt. Leere eine Spur, um diese Klanggruppe auszuwählen.</string>
   <string source="Empty track" where="code">Leere Spur</string>
-  <string source="Add Same Instrument Track" where="menu">Gleiche Instrumentspur hinzufügen</string>
+  <string source="Add Same Instrument Track" obsolete="true">Gleiche Instrumentspur hinzufügen</string>
   <string source="All 8 tracks are in use" where="menu">Alle 8 Spuren sind belegt</string>
   <string source="More actions" where="main_window">Weitere Aktionen</string>
+  <string source="Add Track" where="menu">Spur hinzufügen</string>
+  <string source="Track %d" where="code">Spur %d</string>
 </strings>

@@ -66,6 +66,7 @@ static void apply_filter(window_t *win, bin_t *st) {
 // Keep one FlowView child sized to its measured content and shift it with the bin viewport.
 static void layout_tiles(window_t *win, bin_t *st) {
   irect16_t cr = get_client_rect(win);
+  if (g_app->sheet) sheet_set_library_width(g_app->sheet, cr.w);
   st->tile_height = g_app->sheet ? sheet_row_h(g_app->sheet) : 0;
   if (!st->flow) {
     int x = TILE_PAD, y = TILE_PAD, bottom = 0, row_height = 0;
@@ -105,6 +106,10 @@ result_t win_bin(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         return false;
       }
       g_app->bin = win;
+#ifdef AX_PLATFORM_IOS
+      show_scroll_bar(win, SB_VERT, false);
+      enable_scroll_bar(win, SB_VERT, true);
+#endif
       const form_ctrl_def_t *def = (uintptr_t)lparam > 0x100000u ? lparam : NULL;
       if (def && def->source) {
         if (!block_source_load(st, def->source)) return false;

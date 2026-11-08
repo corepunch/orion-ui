@@ -104,6 +104,27 @@ static void test_builtin_pan(void) {
   PASS();
 }
 
+static void test_hidden_scrollbar_pan(void) {
+  TEST("a hidden enabled scrollbar remains touch-scrollable without reserving a gutter");
+  test_env_init();
+  set_theme(THEME_CLASSIC);
+  window_t *win = create_window("List", WINDOW_NOTITLE | WINDOW_VSCROLL,
+                                MAKERECT(0, 0, 200, 150), NULL, container_proc, 0, NULL);
+  show_window(win, true);
+  show_scroll_bar(win, SB_VERT, false);
+  enable_scroll_bar(win, SB_VERT, true);
+  set_scroll_info(win, SB_VERT, &(scroll_info_t){.fMask = SIF_ALL, .nMax = 800, .nPage = 150}, false);
+  ASSERT_EQUAL(get_client_rect(win).w, 200);
+  ASSERT_TRUE(scrollbar_can_scroll(win));
+  dispatch_gesture(AX_GESTURE_BEGIN, 80, 100, 80, 100);
+  dispatch_gesture(AX_GESTURE_UPDATE, 80, 70, 80, 100);
+  dispatch_gesture(AX_GESTURE_END, 80, 70, 80, 70);
+  ASSERT_EQUAL(get_scroll_pos(win, SB_VERT), 30);
+  enable_scroll_bar(win, SB_VERT, false);
+  ASSERT_FALSE(scrollbar_can_scroll(win));
+  destroy_window(win); test_env_shutdown(); PASS();
+}
+
 static void test_pan_axis_availability(void) {
   TEST("native pan respects disabled axes, ignores invalid payloads and leaves exact-fit views alone");
   test_env_init();
@@ -278,6 +299,7 @@ int main(void) {
   TEST_START("Gesture routing");
   test_nested_gesture();
   test_builtin_pan();
+  test_hidden_scrollbar_pan();
   test_pan_axis_availability();
   test_touch_pan();
   test_stationary_long_press();

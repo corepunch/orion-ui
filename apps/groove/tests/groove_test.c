@@ -639,8 +639,10 @@ static void test_sheet_drop(void) {
   for (int t = 0; t < GR_TRACKS; t++) g_app->song.track_family[t] = block_get(0)->family;
   ASSERT(g_app != NULL, "app_init");
   window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1100, 700), NULL, main_win_proc, 0, g_app);
+  dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT(win && g_app->sheet, "main window and sheet");
   show_window(win, true);
+  sheet_set_library_width(g_app->sheet, 880);
   int before = g_app->song.nclips;
   int track = 7, bar = 10;
   int sx = window_screen_x(g_app->sheet) + bar * 88 + 20;
@@ -745,8 +747,10 @@ static void test_overlap_sheet(void) {
   g_app = app_init();
   for (int t = 0; t < GR_TRACKS; t++) g_app->song.track_family[t] = block_get(0)->family;
   window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
+  dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
+  sheet_set_library_width(g_app->sheet, 880);
   window_t *sheet = g_app->sheet, *library = library_card(g_app->bin, 0);
   int long_block = 0, start = 3 * GR_TICKS_BAR + GR_SNAP_TICKS, cut = start + GR_SNAP_TICKS;
   while (long_block < blocks_count() && (block_get(long_block)->bars < 2 || block_get(long_block)->family != block_get(0)->family)) long_block++;
@@ -821,6 +825,7 @@ static void test_resized_clip_drag(void) {
   window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
+  sheet_set_library_width(g_app->sheet, 880);
   window_t *sheet = g_app->sheet;
   int natural = block_get(0)->bars * GR_TICKS_BAR, start = 2 * GR_TICKS_BAR;
   int lengths[] = {2 * natural + GR_SNAP_TICKS, natural - GR_SNAP_TICKS};
@@ -881,8 +886,10 @@ static void test_fractional_selection(void) {
   test_env_init();
   g_app = app_init();
   window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
+  sheet_set_library_width(g_app->sheet, 880);
   window_t *sheet = g_app->sheet;
   int position = 3 * GR_TICKS_BAR + GR_SNAP_TICKS;
   int clip = song_add_clip(&g_app->song, 0, 0, position);
@@ -956,6 +963,7 @@ static void test_two_finger_sheet_pan(void) {
   test_env_init();
   g_app = app_init();
   window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
   int clip = song_add_clip(&g_app->song, 0, 0, 0);
@@ -1059,6 +1067,12 @@ static bool toolbar_checked(uint16_t ident) { return bar_checked(g_app->toolbar,
 
 static void click_family(int family) {
   window_t *control = get_window_item(g_app->library, ID_LIBRARY_WINDOW_FAMILIES);
+  if (!window_has_state(control, WINDOW_STATE_VISIBLE)) {
+    window_t *list = get_window_item(g_app->library, ID_LIBRARY_WINDOW_FAMILY_LIST);
+    send_message(list, cbSetCurrentSelection, family, NULL);
+    send_message(g_app->win, evCommand, MAKEDWORD(ID_LIBRARY_WINDOW_FAMILY_LIST, cbSelectionChange), list);
+    return;
+  }
   irect16_t r;
   ASSERT_TRUE(control && send_message(control, sgGetSegmentRect, (uint32_t)family, &r));
   ui_event_t e = { .message = kEventLeftButtonDown,
@@ -1075,6 +1089,7 @@ static void test_library_transport(void) {
   g_app = app_init();
   window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE,
                                 MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
+  dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT_NOT_NULL(win); show_window(win, true);
   window_t *bar = g_app->library;
   ASSERT(g_app->toolbar == win && (win->flags & WINDOW_TOOLBAR), "one toolbar belongs to the main window");
@@ -1158,6 +1173,34 @@ static void test_shared_block_cards(void) {
   PASS();
 }
 
+static void test_responsive_bar_width(void) {
+  TEST("library width resizes the timeline and sample cards together");
+  test_env_init(); g_app = app_init();
+  window_t *sheet = create_window("Sheet", WINDOW_NOTITLE | WINDOW_HSCROLL,
+                                  MAKERECT(0, 0, 600, 300), NULL, win_sheet, 0, NULL);
+  ASSERT_NOT_NULL(sheet);
+  sheet_set_library_width(sheet, 1000);
+  int width = clip_cell_size(sheet, &(block_t){.bars = 1}).x;
+  ASSERT(width * 11 <= 1000 && 1000 - width * 11 < 11, "whole bars fill the available width within pixel rounding");
+  ASSERT_EQUAL(clip_cell_size(sheet, &(block_t){.bars = 2}).x, 2 * width);
+  ASSERT_EQUAL(sheet->hscroll.max_val, GR_BARS * width);
+  sheet_set_library_width(sheet, 720);
+  ASSERT_EQUAL(clip_cell_size(sheet, &(block_t){.bars = 1}).x, 90);
+  for (int beat = 1; beat <= 8; beat++) {
+    int x = beat * 90 / 4;
+    send_message(sheet, evLeftButtonDown, MAKEDWORD(x, 1), NULL);
+    ASSERT_EQUAL(g_app->song.pos, position_frames_for_bpm(beat * GR_SNAP_TICKS, g_app->song.bpm));
+    send_message(sheet, evLeftButtonDown, MAKEDWORD(x - 1, 1), NULL);
+    ASSERT_EQUAL(g_app->song.pos, position_frames_for_bpm((beat - 1) * GR_SNAP_TICKS, g_app->song.bpm));
+  }
+  ASSERT_EQUAL(song_add_clip(&g_app->song, 0, 0, GR_SNAP_TICKS), 0);
+  send_message(sheet, evResize, 0, NULL);
+  send_message(sheet, evLeftButtonDown, MAKEDWORD(90 / 4, GR_RULER_H + 2), NULL);
+  ASSERT_EQUAL(g_app->selected_clip, 0);
+  send_message(sheet, evPointerCancel, 0, NULL);
+  destroy_window(sheet); app_shutdown(g_app); test_env_shutdown(); PASS();
+}
+
 static window_t *library_card(window_t *page, int block) {
   window_t *card = page->children;
   if (card && card->id == ID_LIBRARY_WINDOW_RECORD_AUDIO) card = card->next;
@@ -1175,6 +1218,7 @@ static void test_drag_anchor(void) {
   g_app = app_init();
   for (int t = 0; t < GR_TRACKS; t++) g_app->song.track_family[t] = block_get(4)->family;
   window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
+  dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
   window_t *sheet = g_app->sheet, *page = g_app->bin;
@@ -1184,6 +1228,7 @@ static void test_drag_anchor(void) {
   send_message(page, evResize, 0, NULL);
   set_scroll_info(page, SB_VERT, &(scroll_info_t){ .fMask = SIF_POS, .nPos = 20 }, false);
   send_message(page, evVScroll, 0, NULL);
+  sheet_set_library_width(sheet, 880);
   set_scroll_info(sheet, SB_HORZ, &(scroll_info_t){ .fMask = SIF_POS, .nPos = 120 }, false);
   send_message(sheet, evHScroll, 0, NULL);
   int row = CLAMP((get_client_rect(sheet).h - 22) / GR_TRACKS, 26, 64);
@@ -1248,10 +1293,12 @@ static void test_drag_center_boundaries(void) {
   test_env_init();
   g_app = app_init();
   window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1100, 760), NULL, main_win_proc, 0, g_app);
+  dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
   window_t *sheet = g_app->sheet, *page = g_app->bin;
   send_message(page, evResize, 0, NULL);
+  sheet_set_library_width(sheet, 880);
   const int percent[] = {20, 49, 51, 80};
   for (int block = 0; block <= 4; block += 4) {
     for (int t = 0; t < GR_TRACKS; t++) g_app->song.track_family[t] = block_get(block)->family;
@@ -1346,8 +1393,10 @@ static void test_sheet_gestures(void) {
   ASSERT_NOT_NULL(g_app);
   int natural = block_get(0)->bars * GR_TICKS_BAR;
   window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 800, 600), NULL, main_win_proc, 0, g_app);
+  dock_set_side(g_app->library, DOCK_BOTTOM);
   ASSERT_NOT_NULL(win);
   show_window(win, true);
+  sheet_set_library_width(g_app->sheet, 880);
   song_add_clip(&g_app->song, 0, 0, 0);
   window_t *sheet = g_app->sheet;
   send_message(sheet, evResize, 0, NULL);
@@ -1593,7 +1642,7 @@ static void test_family_filter(void) {
 }
 
 static void test_track_selection(void) {
-  TEST("track selection filters the library and restricts new placements to matching tracks");
+  TEST("track selection and sample filtering are independent");
   test_env_init();
   g_app = app_init();
   window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE, MAKERECT(0, 0, 1000, 700), NULL, main_win_proc, 0, g_app);
@@ -1614,24 +1663,26 @@ static void test_track_selection(void) {
   dispatch_message(&e);
   e.message = kEventLeftButtonUp;
   dispatch_message(&e);
-  ASSERT(g_app->selected_track == 1 && g_app->family == FAMILY_BASS, "tapping bass selects its sounds");
-  ASSERT_EQUAL(library_visible(), blocks_in_family(FAMILY_BASS, bass, GR_MAX_BLOCKS));
-  ASSERT(track_accepts_block(1, bass[0], -1) && !track_accepts_block(1, drums[0], -1), "track accepts its own family");
+  ASSERT(g_app->selected_track == 1 && g_app->family == FAMILY_LOOP, "selecting a track leaves the filter unchanged");
+  ASSERT_EQUAL(library_visible(), blocks_in_family(FAMILY_LOOP, drums, GR_MAX_BLOCKS));
+  click_family(FAMILY_BASS);
+  ASSERT(g_app->selected_track == 1 && g_app->family == FAMILY_BASS, "filtering leaves the selected track unchanged");
+  ASSERT(track_accepts_block(1, bass[0], -1) && track_accepts_block(1, drums[0], -1), "track accepts different sample families");
   g_app->drag = (drag_t){ .active = true, .block = drums[0], .from_clip = -1, .track = -1 };
   int x = window_screen_x(g_app->sheet) + 8;
   int y = window_screen_y(g_app->sheet) + GR_RULER_H + sheet_row_h(g_app->sheet) + 8;
   send_message(g_app->sheet, shDragOver, MAKEDWORD(x, y), NULL);
-  ASSERT(g_app->drag.track == 1 && !g_app->drag.valid, "the wrong track rejects the drag preview");
+  ASSERT(g_app->drag.track == 1 && g_app->drag.valid, "any track accepts the drag preview");
   send_message(g_app->sheet, shDragEnd, 0, NULL);
   drag_t wrong = { .block = drums[0], .from_clip = -1, .track = 1, .position = 0 };
-  ASSERT_FALSE(app_drop(&wrong));
-  ASSERT_EQUAL(g_app->song.nclips, 0);
-  int legacy = song_add_clip(&g_app->song, drums[0], 1, 0);
-  ASSERT(legacy >= 0 && song_add_clip(&g_app->song, bass[0], 1, GR_TICKS_BAR * 8) >= 0, "legacy mixed tracks remain intact");
+  ASSERT_TRUE(app_drop(&wrong));
+  ASSERT_EQUAL(g_app->song.nclips, 1);
+  int legacy = 0;
+  ASSERT(legacy >= 0 && song_add_clip(&g_app->song, bass[0], 1, GR_TICKS_BAR * 8) >= 0, "mixed tracks accept another family");
   ASSERT(track_accepts_block(1, bass[0], legacy + 1), "a legacy mixed clip can still move within its track");
-  ASSERT(!track_accepts_block(1, bass[0], -1), "new mismatched clips remain rejected");
+  ASSERT(track_accepts_block(1, bass[0], -1), "new mixed clips are accepted");
   app_select_track(1);
-  ASSERT_EQUAL(g_app->family, FAMILY_LOOP);
+  ASSERT_EQUAL(g_app->family, FAMILY_BASS);
   destroy_window(win);
   app_shutdown(g_app);
   test_env_shutdown();
@@ -1658,7 +1709,7 @@ static void test_duplicate_track(void) {
   ASSERT_EQUAL(g_app->song.clips[1].track, 3);
   ASSERT(g_app->song.mute[3] && g_app->song.solo[3], "settings follow the moved track");
   ASSERT(!g_app->song.mute[2] && !g_app->song.solo[2] && track_family(2) == FAMILY_BASS, "new track is empty with the same instrument");
-  ASSERT(g_app->selected_track == 2 && g_app->family == FAMILY_BASS && g_app->song_dirty, "new track and library are selected");
+  ASSERT(g_app->selected_track == 2 && g_app->family == FAMILY_LOOP && g_app->song_dirty, "new track is selected without changing the library");
   char path[128]; snprintf(path, sizeof(path), "/tmp/groove-duplicate-%ld.groove", (long)getpid());
   ASSERT_TRUE(app_save_song(path));
   song_t restored; ASSERT_TRUE(song_read(path, &restored));
@@ -1936,8 +1987,38 @@ static void test_recording_metronome(void) {
   PASS();
 }
 
+static void test_adaptive_library_layout(void) {
+  TEST("library moves between side and bottom while preserving the family selection");
+  test_env_init();
+  g_app = app_init();
+  window_t *win = create_window("Groove", WINDOW_TOOLBAR | WINDOW_TITLETOOLBAR | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE,
+                                MAKERECT(0, 0, 1100, 700), NULL, main_win_proc, 0, g_app);
+  ASSERT_NOT_NULL(win);
+  window_t *library = g_app->library;
+  window_t *families = get_window_item(library, ID_LIBRARY_WINDOW_FAMILIES);
+  window_t *list = get_window_item(library, ID_LIBRARY_WINDOW_FAMILY_LIST);
+  ASSERT_NOT_NULL(families); ASSERT_NOT_NULL(list);
+  ASSERT_EQUAL(library->dock->side, DOCK_RIGHT);
+  ASSERT_TRUE(window_has_state(list, WINDOW_STATE_VISIBLE));
+  ASSERT_FALSE(window_has_state(families, WINDOW_STATE_VISIBLE));
+  send_message(list, cbSetCurrentSelection, FAMILY_BASS, NULL);
+  send_message(win, evCommand, MAKEDWORD(ID_LIBRARY_WINDOW_FAMILY_LIST, cbSelectionChange), list);
+  ASSERT_EQUAL(g_app->family, FAMILY_BASS);
+  resize_window(win, 700, 1100);
+  ASSERT_EQUAL(library->dock->side, DOCK_BOTTOM);
+  ASSERT_TRUE(window_has_state(families, WINDOW_STATE_VISIBLE));
+  ASSERT_FALSE(window_has_state(list, WINDOW_STATE_VISIBLE));
+  ASSERT_EQUAL(send_message(families, sgGetSelection, 0, NULL), FAMILY_BASS);
+  resize_window(win, 1100, 700);
+  ASSERT_EQUAL(library->dock->side, DOCK_RIGHT);
+  ASSERT_EQUAL(send_message(list, cbGetCurrentSelection, 0, NULL), FAMILY_BASS);
+  destroy_window(win); app_shutdown(g_app); test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("Groove");
+  test_adaptive_library_layout();
   test_library_levels();
   test_blocks();
   test_genres();
@@ -1963,6 +2044,7 @@ int main(void) {
   test_lazy_audio();
   test_library_transport();
   test_shared_block_cards();
+  test_responsive_bar_width();
   test_drag_anchor();
   test_drag_center_boundaries();
   test_sheet_gestures();

@@ -149,7 +149,9 @@
   <string source="Drums|Fills|Bass|Guitar|Synth|Pads|Stabs|Vocals|Scratch|FX|My Samples" where="library_window">Барабаны|Сбивки|Бас|Гитара|Синтезатор|Пэды|Акценты|Вокал|Скретч|Эффекты|Мои сэмплы</string>
   <string source="All tracks are in use. Empty a track to choose this family." where="code">Все дорожки заняты. Освободите дорожку, чтобы выбрать эту группу звуков.</string>
   <string source="Empty track" where="code">Пустая дорожка</string>
-  <string source="Add Same Instrument Track" where="menu">Добавить дорожку с тем же инструментом</string>
+  <string source="Add Same Instrument Track" obsolete="true">Добавить дорожку с тем же инструментом</string>
   <string source="All 8 tracks are in use" where="menu">Все 8 дорожек заняты</string>
   <string source="More actions" where="main_window">Другие действия</string>
+  <string source="Add Track" where="menu">Добавить дорожку</string>
+  <string source="Track %d" where="code">Дорожка %d</string>
 </strings>

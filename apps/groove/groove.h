@@ -103,6 +103,7 @@ bool     track_accepts_block(int track, int block, int from_clip);
 bool     app_can_duplicate_track(int track);
 bool     app_duplicate_track(int track);
 int      sheet_row_h(window_t *sheet);         // height of one track lane, shared by the sheet and the header column
+void     sheet_set_library_width(window_t *sheet, int width);
 result_t win_tracks(window_t *win, uint32_t msg, uint32_t wparam, void *lparam); // view_tracks.c
 void     tracks_sync(void);
 
