@@ -65,26 +65,6 @@ typedef struct {
   GLenum format;          // Texture format (GL_RGBA, GL_RED, etc.)
 } R_Texture;
 
-// VGA text buffer descriptor (one texel per character cell).
-// Texture format is RGBA (4 bytes/cell):
-//   R = glyph index low byte  (uint16_t & 0xFF)
-//   G = glyph index high byte (uint16_t >> 8)
-//   B = foreground color index (0..255)
-//   A = background color index (0..255)
-typedef struct {
-  uint32_t vga_buffer;
-  int width;    // character columns
-  int height;   // character rows
-} R_VgaBuffer;
-
-// Font sheet layout for VGA rendering.
-typedef struct {
-  uint32_t texture;   // glyph sheet texture (256x256 grid of cells)
-  int cell_w;          // pixel width of one glyph cell
-  int cell_h;          // pixel height of one glyph cell
-  int sheet_w;         // total texture width  (= 256 * cell_w)
-  int sheet_h;         // total texture height (= 256 * cell_h)
-} R_FontSheet;
 
 // Mesh management functions
 // Initialize a mesh with vertex attributes and drawing mode
@@ -189,16 +169,6 @@ void R_BlendPremultiplied(void);
 // and pair it with depth-test disable/enable for 2-D UI rendering.
 void R_SetBlendMode(bool enabled);
 
-// Draw a VGA text buffer using the cell buffer and font sheet.
-//   - buf       : RGBA cell buffer (glyph_hi<<8|glyph_lo, fg, bg)
-//   - font      : font sheet description (texture, cell/sheet dimensions)
-//   - palette256: full 256-color palette (0xAARRGGBB)
-// dst_w_px/dst_h_px are output size in screen pixels.
-bool R_DrawVGABuffer(const R_VgaBuffer *buf,
-                     int x, int y,
-                     int dst_w_px, int dst_h_px,
-                     const R_FontSheet *font,
-                     const uint32_t palette256[256]);
 
 // Immediate GPU operations for custom scene pipelines. See docs/drawing.md.
 typedef struct {

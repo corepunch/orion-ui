@@ -1,7 +1,8 @@
-// Screen management functions for VGA terminal.
+// Screen management functions for the terminal.
 // These handle the scrollback ring buffer and cursor state.
 
 #include "vgat.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -17,8 +18,22 @@ void vgat_screen_init(vgat_screen *s, int rows, int cols) {
   s->cursor_visible = true;
 }
 
+// A new width: the ring is copied row by row in logical order, clipped or
+// padded to the new width.
 void vgat_screen_resize(vgat_screen *s, int cols) {
-  if (!s || !s->rows || cols <= 0) return;
+  if (!s || !s->rows || cols <= 0 || cols == s->cols) return;
+  vgat_cell *rows = (vgat_cell *)calloc((size_t)s->total_rows * (size_t)cols, sizeof(vgat_cell));
+  if (!rows) {
+    fprintf(stderr, "[terminal] screen resize failed: %d rows x %d cols\n", s->total_rows, cols);
+    fflush(stderr);
+    return;
+  }
+  int keep = cols < s->cols ? cols : s->cols;
+  for (int r = 0; r < s->total_rows; r++)
+    memcpy(rows + (size_t)r * cols, s->rows + (size_t)((s->head + r) % s->total_rows) * s->cols, (size_t)keep * sizeof(vgat_cell));
+  free(s->rows);
+  s->rows = rows;
+  s->head = 0;
   s->cols = cols;
   if (s->cursor_col >= cols) s->cursor_col = cols - 1;
 }
@@ -54,11 +69,11 @@ void vgat_screen_scroll(vgat_screen *s) {
   memset(&s->rows[row * s->cols], 0, (size_t)s->cols * sizeof(vgat_cell));
 }
 
-void vgat_screen_write_cell(vgat_screen *s, uint16_t glyph, int fg, int bg) {
+void vgat_screen_write_cell(vgat_screen *s, uint32_t codepoint, int fg, int bg) {
   if (!s || !s->rows) return;
   int row = phys_row(s, s->cursor_row);
   int idx = row * s->cols + s->cursor_col;
-  s->rows[idx].glyph = glyph;
+  s->rows[idx].codepoint = codepoint;
   s->rows[idx].fg = (uint8_t)(fg & 0xFF);
   s->rows[idx].bg = (uint8_t)(bg & 0xFF);
   s->cursor_col++;

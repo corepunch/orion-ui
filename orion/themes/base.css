@@ -238,6 +238,8 @@ Scrollbar::thumb:disabled { background: var(--text-disabled); }
   --text-heading: 600 12px var(--ui-face);   /* group captions and section headings */
   --text-title:   600 18px var(--ui-face);   /* a window or page title */
   --text-display: 600 24px var(--ui-face);   /* the one figure a view exists to show */
+  --mono-face:    "IBM Plex Mono";
+  --text-mono:    400 13px var(--mono-face); /* terminals and diffs: one column per character */
   font: var(--text);
 }
 
@@ -256,3 +258,5 @@ Label.display { font: var(--text-display); }
 TableView::detail, TableView::subtitle, Icon, IconView::cell, Toolbar::label, Window::subtitle { font: var(--text-caption); }
 TableView::group { font: var(--text-heading); }
 Window::title    { font: var(--text-title); }
+Terminal, DiffView { font: var(--text-mono); }
+DiffView { background: #1E1E1E; color: #D4D4D4; --hunk-selection: #553333; }

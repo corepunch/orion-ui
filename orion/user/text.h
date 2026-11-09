@@ -39,6 +39,21 @@ int  text_strnwidth(ui_font_t font, const char *text, int len); // pixel width o
 int  text_ellipsize(ui_font_t font, const char *text, int max_w, char *out, size_t n);
 void draw_text_ellipsized(ui_font_t font, const char *text, int x, int y, int max_w, uint32_t col);
 
+// ── Character grids ───────────────────────────────────────────────────────────
+// Terminals and diffs: a row of cells in a monospace font, each with its own
+// colours (0xAABBGGRR). Cells sit at x + i * text_cell_width(font), so columns
+// line up whatever the glyphs; any code point the font has is drawn.
+typedef struct {
+  uint32_t codepoint;
+  uint32_t fg, bg;      // bg alpha 0 leaves the background unpainted
+} text_cell_t;
+
+int  text_cell_width(ui_font_t font);   // one column, in logical pixels
+void draw_text_cells(ui_font_t font, const text_cell_t *cells, int count, int x, int y);
+// Converts a line with ANSI SGR colour codes (ESC[...m) into cells, starting
+// from the default colours; returns how many cells it wrote (at most max).
+int  text_cells_from_ansi(const char *line, text_cell_t *out, int max, uint32_t fg, uint32_t bg);
+
 // ── Advanced text rendering ───────────────────────────────────────────────────
 typedef struct {
   int  width;

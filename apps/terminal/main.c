@@ -52,9 +52,6 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   int n = snprintf(icons_path, sizeof(icons_path), "%s/../share/terminal/icons", ui_get_exe_dir());
   if (n > 0 && (size_t)n < sizeof(icons_path)) svg_add_icons_dir(hinstance, icons_path);
 
-  char font_path[1024];
-  n = snprintf(font_path, sizeof(font_path), "%s/../share/orion/fonts/monoid.ttf", ui_get_exe_dir());
-  if (n <= 0 || (size_t)n >= sizeof(font_path) || !vga_font_init(font_path, 12.0f)) return false;
   ansi_init_palette256();
 
   g_terminal.accel = load_accelerators(terminal_default_accels, terminal_default_accel_count);
@@ -81,7 +78,6 @@ void gem_shutdown(void) {
   if (g_terminal.host && is_window(g_terminal.host)) destroy_window(g_terminal.host);
   free_accelerators(g_terminal.accel);
   memset(&g_terminal, 0, sizeof(g_terminal));
-  vga_font_shutdown();
 }
 
 GEM_DEFINE("Terminal", "1.0", gem_init, gem_shutdown, terminal_file_types)

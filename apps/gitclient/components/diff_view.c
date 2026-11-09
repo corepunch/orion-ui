@@ -1,13 +1,13 @@
 #include "diff_view.h"
-#include <orion/user/vga_font.h>
 #include <orion/user/ansi.h>
 #include <orion/user/rect.h>
 
-#define CLR_CTX_BG   0xFF1E1E1E
-#define CLR_HUNK_SEL 0xFF333355
+// The diff draws in the DiffView font and colours (orion/themes/base.css):
+// background, color, and --hunk-selection behind the current hunk. Git's
+// ANSI colours paint over them.
 
 static int visible_lines(window_t *win) {
-  int ch = vga_char_height();
+  int ch = text_char_height("DiffView");
   return MAX(1, win->frame.h / ch);
 }
 
@@ -61,7 +61,6 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
     case evDestroy: {
       gc_diff_state_t *st = (gc_diff_state_t *)win->userdata;
       if (st) {
-        vga_text_free_grid(&st->grid);
         free(st->lines);
         free(st);
         win->userdata = NULL;
@@ -206,76 +205,38 @@ result_t gc_diff_proc(window_t *win, uint32_t msg,
       gc_diff_state_t *st = (gc_diff_state_t *)win->userdata;
       irect16_t cr = get_client_rect(win);
 
-      fill_rect(CLR_CTX_BG, cr);
+      fill_rect(ui_color("DiffView", "background"), cr);
+      uint32_t ink = ui_color("DiffView", "color"), hunk = ui_color("DiffView", "--hunk-selection");
 
-      int cw = vga_char_width();
-      int ch = vga_char_height();
-      int vis_cols = cr.w / cw;
-      int vis_rows = cr.h / ch;
+      int ch = text_char_height("DiffView");
+      int vis_cols = cr.w / MAX(1, text_cell_width("DiffView"));
+      int vis_rows = cr.h / MAX(1, ch);
       if (vis_cols <= 0 || vis_rows <= 0)
         return true;
+      static text_cell_t cells[1024];
+      if (vis_cols > (int)(sizeof(cells) / sizeof(cells[0]))) vis_cols = (int)(sizeof(cells) / sizeof(cells[0]));
 
       if (!st || !st->lines || st->line_count <= 0) {
         if (st) {
           const char *text = "No local changes";
-          if (!vga_text_ensure_grid(&st->grid, vis_cols, vis_rows))
-            return true;
-          vga_text_clear_grid(&st->grid, 7, 0);
-          int col = MAX(0, (vis_cols - (int)strlen(text)) / 2);
-          int row = vis_rows / 2;
-          vga_text_write_ansi_line(text, &st->grid, row, col, vis_cols, kAnsi16[7], kAnsi16[0]);
-          goto paint_grid;
+          int n = text_cells_from_ansi(text, cells, vis_cols, ink, 0);
+          int col = MAX(0, (vis_cols - n) / 2);
+          draw_text_cells("DiffView", cells, n, cr.x + col * text_cell_width("DiffView"), cr.y + (vis_rows / 2) * ch);
         }
         return true;
       }
-
-      if (!vga_text_ensure_grid(&st->grid, vis_cols, vis_rows))
-        return true;
-
-      vga_text_clear_grid(&st->grid, 7, 0);
 
       int first = st->scroll_y;
-      int last = first + vis_rows;
-      if (last > st->line_count)
-        last = st->line_count;
-
       for (int row = 0; row < vis_rows && first + row < st->line_count; row++) {
         int line_idx = first + row;
-
-        // Highlight the selected hunk range
-        if (st->current_hunk >= 0 && st->current_hunk + 1 < st->hunk_count) {
-          int hunk_start = st->hunk_offsets[st->current_hunk];
-          int hunk_end = st->hunk_offsets[st->current_hunk + 1];
-          if (line_idx >= hunk_start && line_idx < hunk_end)
-            fill_rect(CLR_HUNK_SEL, R(cr.x, cr.y + row * ch, cr.w, ch));
-        }
-
-        // Highlight hunk header lines
-        for (int h = 0; h < st->hunk_count; h++) {
-          if (line_idx == st->hunk_offsets[h])
-            fill_rect(CLR_HUNK_SEL, R(cr.x, cr.y + row * ch, cr.w, ch));
-        }
-
-        vga_text_write_ansi_line(st->lines[first + row], &st->grid, row,
-                                 0, vis_cols, kAnsi16[7], kAnsi16[0]);
+        bool marked = false;
+        if (st->current_hunk >= 0 && st->current_hunk + 1 < st->hunk_count)   // the selected hunk's range
+          marked = line_idx >= st->hunk_offsets[st->current_hunk] && line_idx < st->hunk_offsets[st->current_hunk + 1];
+        for (int h = 0; h < st->hunk_count; h++) marked |= line_idx == st->hunk_offsets[h];   // hunk headers
+        if (marked) fill_rect(hunk, R(cr.x, cr.y + row * ch, cr.w, ch));
+        int n = text_cells_from_ansi(st->lines[line_idx], cells, vis_cols, ink, 0);
+        draw_text_cells("DiffView", cells, n, cr.x, cr.y + row * ch);
       }
-
-paint_grid:
-      if (R_UpdateTextureRGBA(st->grid.cells_tex, 0, 0,
-                              st->grid.cells_w, st->grid.cells_h,
-                              st->grid.cells)) {
-        R_VgaBuffer buf = {
-          .vga_buffer = st->grid.cells_tex,
-          .width = st->grid.cells_w,
-          .height = st->grid.cells_h,
-        };
-        VgaFontLayout fl = vga_get_font_layout();
-        R_DrawVGABuffer(&buf, cr.x, cr.y,
-                        st->grid.cells_w * cw,
-                        st->grid.cells_h * ch,
-                        (const R_FontSheet*)&fl, kAnsi256);
-      }
-
       return true;
     }
 

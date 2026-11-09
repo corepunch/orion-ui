@@ -5,7 +5,6 @@
 #include "pages/changes/page_changes.h"
 #include "pages/history/page_history.h"
 #include "pages/github/page_github.h"
-#include <orion/user/vga_font.h>
 #include <orion/commctl/menubar.h>
 #include <sys/stat.h>
 
@@ -290,17 +289,10 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       send_message(win, evStatusBar, 0, "No repository");
       if (!page_host_init(win, &gc_main_window_form, pages, ARRAY_LEN(pages))) return false;
 
-      char font_path[600];
-      snprintf(font_path, sizeof(font_path),
-               "%s/../share/orion/fonts/monoid.ttf",
-               ui_get_exe_dir());
-      vga_font_init(font_path, 12.0f);
-
       return true;
     }
 
     case evDestroy:
-      vga_font_shutdown();
       git_repo_close(gc->repo);
       gc->repo = NULL;
       return false;

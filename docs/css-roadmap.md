@@ -32,8 +32,8 @@ letter-spacing: .05em }`.
 - Text properties: `font`, `color`, `text-transform`, `letter-spacing`,
   `text-align`, `line-height`, `text-overflow: ellipsis`, `font-variant-numeric:
   tabular-nums` (figures in tables).
-- The VGA bitmap font (`vga_font.c`, `vga_text.c`) goes: the terminal and the
-  diff view draw a monospace TTF (IBM Plex Mono) on the same grid.
+- Done: the VGA bitmap font is gone; the terminal and the diff view draw IBM
+  Plex Mono as a grid of cells (`draw_text_cells`).
 
 ## 3. The shapes still in C
 
@@ -85,11 +85,12 @@ The browser is weak at application chrome; Orion keeps its own, styled by CSS:
 
 ## 7. Next steps, in order
 
-1. Style queries replace `theme_t` metrics; the vtable becomes direct calls.
-2. Font cache by face; `font` and text properties on elements; roles removed.
-3. VGA font replaced by IBM Plex Mono in the terminal and diff view.
-4. App sheets and `class=` from `.orion`.
-5. Browser conformance fixtures for boxes, then text, then layout.
-6. Layout properties in the sheet.
-7. Git Client's Run page (rail, process table, console, ⌘K) built from these,
+Done: style queries replaced `theme_t`'s metrics and vtable; fonts are
+selectors; the VGA font gave way to IBM Plex Mono.
+
+1. Text properties (`text-transform`, `letter-spacing`, `text-align`).
+2. App sheets and `class=` from `.orion`.
+3. Browser conformance fixtures for boxes, then text, then layout.
+4. Layout properties in the sheet.
+5. Git Client's Run page (rail, process table, console, ⌘K) built from these,
    with its behaviour in Lua.

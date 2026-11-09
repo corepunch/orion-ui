@@ -11,7 +11,7 @@ typedef struct vgat_screen_s vgat_screen;
 
 typedef struct {
   vgat_screen *screen;
-  void (*write_cell)(vgat_screen *s, uint16_t glyph, int fg, int bg);
+  void (*write_cell)(vgat_screen *s, uint32_t codepoint, int fg, int bg);
   void (*newline)(vgat_screen *s);
   void (*backspace)(vgat_screen *s);
   void (*cr)(vgat_screen *s);
@@ -43,7 +43,7 @@ typedef struct vgat_parser_s {
   uint32_t utf8_codepoint;
   uint8_t utf8_remaining;
   vgat_screen *screen;
-  void (*write_cell)(vgat_screen *s, uint16_t glyph, int fg, int bg);
+  void (*write_cell)(vgat_screen *s, uint32_t codepoint, int fg, int bg);
   void (*newline)(vgat_screen *s);
   void (*backspace)(vgat_screen *s);
   void (*cr)(vgat_screen *s);

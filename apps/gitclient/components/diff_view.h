@@ -1,7 +1,6 @@
 #ifndef GC_DIFF_VIEW_H
 #define GC_DIFF_VIEW_H
 
-#include <orion/user/vga_text.h>
 #include <orion/ui.h>
 
 #define GC_DIFF_VIEW_CLASS_NAME "DiffView"
@@ -15,7 +14,6 @@ typedef struct {
   char  **lines;
   int     line_count;
   int     scroll_y;
-  vga_text_grid_t grid;
   char    diff_buf[GC_DIFF_BUF_SIZE];
 
   bool    unified_mode;

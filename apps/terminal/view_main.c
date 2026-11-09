@@ -2,6 +2,12 @@
 // Reads keyboard input and dispatches commands from a built-in table.
 
 #include "vgat.h"
+
+// An xterm palette index as a drawing colour (0xAABBGGRR).
+static uint32_t terminal_color(int index) {
+  uint32_t c = kAnsi256[index & 0xFF];
+  return (c & 0xFF00FF00u) | ((c >> 16) & 0xFFu) | ((c & 0xFFu) << 16);
+}
 #include <unistd.h>
 #include <time.h>
 #include <dirent.h>
@@ -318,8 +324,8 @@ static void spawn_program(vgat_state_t *st, char *const *argv) {
   }
 
   irect16_t cr = get_client_rect(st->win);
-  int cols = cr.w / vga_char_width();
-  int rows = cr.h / vga_char_height();
+  int cols = cr.w / text_cell_width("Terminal");
+  int rows = cr.h / text_char_height("Terminal");
   if (cols <= 0) cols = 80;
   if (rows <= 0) rows = 24;
 
@@ -521,8 +527,8 @@ result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         snprintf(st->cwd, sizeof(st->cwd), "/");
 
       irect16_t cr = get_client_rect(win);
-      int cols = cr.w / vga_char_width();
-      int rows = cr.h / vga_char_height();
+      int cols = cr.w / text_cell_width("Terminal");
+      int rows = cr.h / text_char_height("Terminal");
       if (cols <= 0) cols = VGAT_DEFAULT_COLS;
       if (rows <= 0) rows = VGAT_DEFAULT_ROWS;
 
@@ -604,16 +610,18 @@ result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evPaint: {
       if (!st || !st->screen.rows) return true;
 
-      int cw = vga_char_width();
-      int ch = vga_char_height();
+      int cw = text_cell_width("Terminal");
+      int ch = text_char_height("Terminal");
       irect16_t cr = get_client_rect(win);
       int vis_cols = cr.w / cw;
       int vis_rows = cr.h / ch;
       if (vis_cols <= 0 || vis_rows <= 0) return true;
 
-      vga_text_grid_t grid = {0};
-      if (!vga_text_ensure_grid(&grid, vis_cols, vis_rows)) return true;
-      vga_text_clear_grid(&grid, VGAT_FG_DEFAULT, VGAT_BG_DEFAULT);
+      // One row of cells at a time, in xterm colours.
+      static text_cell_t line[1024];
+      if (vis_cols > (int)(sizeof(line) / sizeof(line[0]))) vis_cols = (int)(sizeof(line) / sizeof(line[0]));
+      uint32_t def_fg = terminal_color(VGAT_FG_DEFAULT), def_bg = terminal_color(VGAT_BG_DEFAULT);
+      fill_rect(def_bg, cr);
 
       // In PTY mode, use all rows for output. In CMD mode, reserve last row for input.
       int content_rows = (st->mode == VGAT_MODE_PTY) ? vis_rows : vis_rows - 1;
@@ -621,30 +629,20 @@ result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         int written = (st->mode == VGAT_MODE_PTY) ? st->screen.max_row : st->screen.cursor_row;
         int first = written - content_rows - st->scroll_pos;
         if (first < 0) first = 0;
+        bool show_cursor = window_has_focus(win) && st->mode == VGAT_MODE_PTY && st->cursor_visible && st->screen.cursor_visible;
 
         for (int row = 0; row < content_rows; row++) {
           int logical = first + row;
           if (logical >= written) break;
           int phys = (st->screen.head + logical) % st->screen.total_rows;
-          for (int col = 0; col < vis_cols; col++) {
-            if (col >= st->screen.cols) break;
+          int cols = MIN(vis_cols, st->screen.cols);
+          for (int col = 0; col < cols; col++) {
             vgat_cell *cell = &st->screen.rows[phys * st->screen.cols + col];
-            vga_font_ensure_glyph(cell->glyph);
-            vga_text_set_cell(&grid, col, row, cell->glyph, cell->fg, cell->bg);
+            bool cursor = show_cursor && logical == st->screen.cursor_row && col == st->screen.cursor_col;   // a block: colours swapped
+            line[col] = (text_cell_t){ cell->codepoint, terminal_color(cursor ? cell->bg : cell->fg),
+                                       terminal_color(cursor ? cell->fg : cell->bg) };
           }
-        }
-
-        // ── PTY cursor (block cursor via fg/bg flip) ──
-        if (window_has_focus(win) && st->mode == VGAT_MODE_PTY && st->cursor_visible &&
-            st->screen.cursor_visible) {
-          int cscr = st->screen.cursor_row - first;
-          int csc = st->screen.cursor_col;
-          if (cscr >= 0 && cscr < content_rows && csc >= 0 && csc < vis_cols &&
-              csc < st->screen.cols) {
-            int phys = (st->screen.head + st->screen.cursor_row) % st->screen.total_rows;
-            vgat_cell *cell = &st->screen.rows[phys * st->screen.cols + csc];
-            vga_text_set_cell(&grid, csc, cscr, cell->glyph, cell->bg, cell->fg);
-          }
+          draw_text_cells("Terminal", line, cols, cr.x, cr.y + row * ch);
         }
       }
 
@@ -660,37 +658,14 @@ result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
           snprintf(pbuf, sizeof(pbuf), "%s > ", name);
           prompt = pbuf;
         }
-        for (const char *cp = prompt; *cp && col < vis_cols; cp++, col++) {
-          vga_font_ensure_glyph((uint16_t)*cp);
-          vga_text_set_cell(&grid, col, input_row, *cp, 10, VGAT_BG_DEFAULT);
-        }
-
-        for (int i = 0; i < st->input_len && col < vis_cols; i++, col++) {
-          vga_font_ensure_glyph((uint16_t)st->input_buf[i]);
-          vga_text_set_cell(&grid, col, input_row, st->input_buf[i], VGAT_FG_DEFAULT, VGAT_BG_DEFAULT);
-        }
-
-        if (window_has_focus(win) && st->cursor_visible && col < vis_cols) {
-          vga_font_ensure_glyph(' ');
-          vga_text_set_cell(&grid, col, input_row, ' ', VGAT_BG_DEFAULT, VGAT_FG_DEFAULT);
-        }
+        for (const char *cp = prompt; *cp && col < vis_cols; cp++, col++)
+          line[col] = (text_cell_t){ (unsigned char)*cp, terminal_color(10), def_bg };
+        for (int i = 0; i < st->input_len && col < vis_cols; i++, col++)
+          line[col] = (text_cell_t){ (unsigned char)st->input_buf[i], def_fg, def_bg };
+        if (window_has_focus(win) && st->cursor_visible && col < vis_cols)
+          line[col++] = (text_cell_t){ ' ', def_bg, def_fg };
+        draw_text_cells("Terminal", line, col, cr.x, cr.y + input_row * ch);
       }
-
-      // ── Render ──
-      if (R_UpdateTextureRGBA(grid.cells_tex, 0, 0, grid.cells_w, grid.cells_h, grid.cells)) {
-        R_VgaBuffer buf = {
-          .vga_buffer = grid.cells_tex,
-          .width = grid.cells_w,
-          .height = grid.cells_h,
-        };
-        VgaFontLayout fl = vga_get_font_layout();
-        R_DrawVGABuffer(&buf, cr.x, cr.y,
-                        grid.cells_w * cw,
-                        grid.cells_h * ch,
-                        (const R_FontSheet*)&fl, kAnsi256);
-      }
-
-      vga_text_free_grid(&grid);
       return true;
     }
 
@@ -704,8 +679,8 @@ result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evResize: {
       if (!st) return false;
       irect16_t cr = get_client_rect(win);
-      int cols = cr.w / vga_char_width();
-      int rows = cr.h / vga_char_height();
+      int cols = cr.w / text_cell_width("Terminal");
+      int rows = cr.h / text_char_height("Terminal");
       if (cols <= 0 || rows <= 0) return false;
 
       vgat_screen_resize(&st->screen, cols);
@@ -733,7 +708,7 @@ result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evVScroll: {
       if (!st) return false;
       irect16_t cr = get_client_rect(win);
-      int vis_rows = cr.h / vga_char_height();
+      int vis_rows = cr.h / text_char_height("Terminal");
       if (vis_rows <= 0) vis_rows = 24;
       int content_rows = (st->mode == VGAT_MODE_PTY) ? vis_rows : vis_rows - 1;
       int written = (st->mode == VGAT_MODE_PTY) ? st->screen.max_row : st->screen.cursor_row;
@@ -752,7 +727,7 @@ result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       if (!st) return false;
       int delta = (int16_t)HIWORD((uintptr_t)lparam);
       irect16_t cr = get_client_rect(win);
-      int vis_rows = cr.h / vga_char_height();
+      int vis_rows = cr.h / text_char_height("Terminal");
       if (vis_rows <= 0) vis_rows = 24;
       int content_rows = (st->mode == VGAT_MODE_PTY) ? vis_rows : vis_rows - 1;
       int written = (st->mode == VGAT_MODE_PTY) ? st->screen.max_row : st->screen.cursor_row;

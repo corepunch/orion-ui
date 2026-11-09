@@ -5,7 +5,6 @@
 
 #include "gitclient.h"
 #include "components/diff_view.h"
-#include <orion/user/vga_font.h>
 
 static void parse_hunks(gc_diff_state_t *st) {
   st->hunk_count = 0;
@@ -143,7 +142,7 @@ void gc_diff_refresh(void) {
     .fMask = SIF_RANGE | SIF_PAGE | SIF_POS,
     .nMin  = 0,
     .nMax  = st->line_count,
-    .nPage = (uint32_t)MAX(1, win->frame.h / vga_char_height()),
+    .nPage = (uint32_t)MAX(1, win->frame.h / MAX(1, text_char_height("DiffView"))),
     .nPos  = 0,
   };
   set_scroll_info(win, SB_VERT, &si, false);

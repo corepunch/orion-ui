@@ -1,4 +1,4 @@
-// Terminal — Quake-style command console with VGA font rendering.
+// Terminal — Quake-style command console drawn as a monospace text grid.
 //
 // Built-in command dispatch replaces the PTY-driven terminal emulator.
 // Commands are registered in a dispatch table: {name, help, func}.
@@ -13,8 +13,6 @@
 #include <stdbool.h>
 
 #include <orion/ui.h>
-#include <orion/user/vga_font.h>
-#include <orion/user/vga_text.h>
 #include <orion/user/scrollbar.h>
 #include <platform/platform.h>
 #include <orion/user/ansi.h>
@@ -69,10 +67,10 @@ typedef struct {
   vgat_cmd_func_t func;
 } vgat_cmd_t;
 
-// VGA cell — stored per-character in the scrollback ring buffer.
+// A screen cell, stored per character in the scrollback ring buffer.
 typedef struct {
-  uint16_t glyph;  // 16-bit glyph index into the atlas
-  uint8_t fg;
+  uint32_t codepoint;  // Unicode code point, drawn in the Terminal font
+  uint8_t fg;          // xterm palette indices
   uint8_t bg;
 } vgat_cell;
 
@@ -153,7 +151,7 @@ void vgat_screen_resize(vgat_screen *s, int cols);
 void vgat_screen_shutdown(vgat_screen *s);
 void vgat_screen_clear(vgat_screen *s);
 void vgat_screen_scroll(vgat_screen *s);
-void vgat_screen_write_cell(vgat_screen *s, uint16_t glyph, int fg, int bg);
+void vgat_screen_write_cell(vgat_screen *s, uint32_t codepoint, int fg, int bg);
 void vgat_screen_write_string(vgat_screen *s, const char *str, int fg, int bg);
 void vgat_screen_newline(vgat_screen *s);
 void vgat_screen_backspace(vgat_screen *s);

@@ -11,6 +11,7 @@
 #include "font_cache.h"
 #include "theme.h"
 #include "style.h"
+#include "ansi.h"
 #include <orion/kernel/kernel.h>
 
 #define MAX_TEXT_LENGTH   4096
@@ -529,3 +530,74 @@ void shutdown_text_rendering(void) {
   memset(&text_state, 0, sizeof(text_state));
   memset(g_font_slots, 0, sizeof(g_font_slots));
 }
+
+// ── Character grids ───────────────────────────────────────────────────────────
+
+int text_cell_width(ui_font_t font) {
+  const font_cache_glyph_t *glyph = font_cache_get_glyph(font_for_role(font)->cache, 'M');
+  return glyph && glyph->advance > 0 ? glyph->advance : 8;
+}
+
+void draw_text_cells(ui_font_t font, const text_cell_t *cells, int count, int x, int y) {
+  if (!cells || count <= 0 || !g_ui_runtime.running) return;
+  font_atlas_t *atlas = font_for_role(font);
+  int cw = text_cell_width(font), ch = font_line(font);
+  for (int i = 0; i < count;) {   // backgrounds, a run of one colour at a time
+    int j = i + 1;
+    while (j < count && cells[j].bg == cells[i].bg) j++;
+    if (cells[i].bg >> 24) fill_rect(cells[i].bg, R(x + i * cw, y, (j - i) * cw, ch));
+    i = j;
+  }
+  static text_vertex_t buf[MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
+  int vc = 0;
+  for (int i = 0; i < count && i < MAX_TEXT_LENGTH; i++) {
+    uint32_t cp = cells[i].codepoint;
+    if (cp <= ' ' || cp == 0x7F || !(cells[i].fg >> 24)) continue;
+    vc += emit_char_verts(buf + vc, (float)(x + i * cw), y, cp, cells[i].fg, atlas);
+  }
+  if (vc > 0) flush_batch(atlas, buf, vc);
+}
+
+// ANSI palette entries are 0xAARRGGBB; drawing takes 0xAABBGGRR.
+static uint32_t text_ansi_color(int index) {
+  uint32_t c = kAnsi256[clamp_ansi_index(index)];
+  return (c & 0xFF00FF00u) | ((c >> 16) & 0xFFu) | ((c & 0xFFu) << 16);
+}
+
+static uint32_t text_argb(uint32_t abgr) {
+  return (abgr & 0xFF00FF00u) | ((abgr >> 16) & 0xFFu) | ((abgr & 0xFFu) << 16);
+}
+
+int text_cells_from_ansi(const char *line, text_cell_t *out, int max, uint32_t fg, uint32_t bg) {
+  if (!line || !out || max <= 0) return 0;
+  if (!(kAnsi256[255] >> 24)) ansi_init_palette256();
+  int def_fg = nearest_ansi_index(text_argb(fg)), def_bg = nearest_ansi_index(text_argb(bg));
+  int cur_fg = def_fg, cur_bg = def_bg, n = 0, len = (int)strlen(line);
+  bool bold = false;   // a colour left at its default keeps the caller's exact value
+  for (int i = 0; i < len && n < max;) {
+    if ((unsigned char)line[i] == 0x1B && line[i + 1] == '[') {
+      int codes[16], count = 0, val = 0, k = i + 2;
+      bool have = false;
+      for (; k < len && line[k] != 'm'; k++) {
+        if (line[k] >= '0' && line[k] <= '9') { val = val * 10 + (line[k] - '0'); have = true; }
+        else if (line[k] == ';') { if (count < 16) codes[count++] = have ? val : 0; val = 0; have = false; }
+        else break;
+      }
+      if (k < len && line[k] == 'm') {
+        if (count < 16) codes[count++] = have ? val : 0;
+        ansi_apply_sgr_codes(codes, count, &cur_fg, &cur_bg, def_fg, def_bg, &bold);
+        i = k + 1;
+        continue;
+      }
+    }
+    int length;
+    uint32_t cp = utf8_codepoint(line + i, len - i, &length);
+    i += length > 0 ? length : 1;
+    out[n].codepoint = cp;
+    out[n].fg = cur_fg != def_fg ? text_ansi_color(cur_fg) : fg;
+    out[n].bg = cur_bg != def_bg ? text_ansi_color(cur_bg) : bg;
+    n++;
+  }
+  return n;
+}
+
