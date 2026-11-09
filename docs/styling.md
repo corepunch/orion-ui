@@ -63,11 +63,11 @@ apply to every part.
 | Property | Meaning |
 |---|---|
 | `background` | A colour, `none`, or `linear-gradient([to bottom,] top, bottom)` |
-| `border`, `border-<side>`, `border-width/-style/-color`, `border-<side>-<property>` | Solid sides; a uniform border follows the corner radius |
+| `border`, `border-<side>`, `border-width/-style/-color`, `border-<side>-<property>` | Solid sides; a uniform border follows the corner radius; unequal sides meet in mitred corners, as in a browser |
 | `border-radius` | 1–4 lengths; rounded top corners with square bottom ones draw a tab |
 | `margin` | 1–4 lengths: the painted box inside the part's bounds |
 | `outline` | `width style colour`, filled behind the box as a focus halo |
-| `box-shadow` | `[inset] dx dy [blur] colour, ...`: outer shadows paint behind the box, blurred; inset ones with no blur paint the edges they offset into, inside the border (a bevel's inner line) |
+| `box-shadow` | `[inset] dx dy [blur] colour, ...`: outer shadows paint behind the box, blurred as CSS blurs them (a Gaussian of σ = blur / 2), and overflow the window's frame (its `ink_overflow`); inset ones with no blur paint the edges they offset into, inside the border (a bevel's inner line) |
 | `color` | The part's text colour (`theme_foreground()`) |
 | `content` | The glyph over the box: `arrow-updown`, `close`, `maximize`, `checkmark`, `resize`, `scroll-up`/`-down`/`-left`/`-right`, `triangle-down`, `grip`, `dots`, `groove`, `none` |
 | `fill` | The glyph's colour; defaults to `color` |
@@ -88,6 +88,15 @@ apply to every part.
 | `TOOLBAR_BUTTON` (`_LABELED`, `_SPLIT`) | `Toolbar::button` (`.labeled`, `.split`) | `TITLEBAR`, `TITLE_TOOLBAR` | `Window::titlebar`, `Window::title-toolbar` |
 | `TOOLBAR_SPLIT_ARROW`, `_SEPARATOR`, `_GRIP` | `Toolbar::split-arrow`, `::separator`, `::grip` | `WINDOW_CLOSE`, `RESIZE_GRIP` | `Window::close`, `Window::resize-grip` |
 | `SLIDER_TRACK`, `_THUMB`, `_TROUGH`, `_KNOB` | `Slider::track`, `::thumb`, `::trough`, `::knob` | `SCROLLBAR_*` | `Scrollbar::track`, `::thumb`, `::arrow-up` … `::corner` |
+
+Layout containers are boxes too, like a `div`: `StackView`, `GridView` and
+`FlowView` paint their own element's box under their children, and nothing
+unless a sheet styles them (`StackView#summary { background: …; border-radius: 8px }`).
+
+The painter says what it cannot draw yet instead of drawing it differently:
+a `box-shadow` spread, a blurred inset shadow, corner radii other than one
+radius or the top two, and unequal border sides on a rounded box each print
+`[theme] part …: … is not supported yet`.
 
 States map to pseudo-classes: hover `:hover`, pressed `:active`, selected
 `:checked`, disabled `:disabled`, keyboard focus `:focus`, default button

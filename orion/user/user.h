@@ -551,6 +551,7 @@ struct window_s {
   char style_id[32];      // CSS #id: the control's name in its form
   char style_class[64];   // CSS classes, space separated: the form's class= attribute
   const void *style_scope; // ui_style.c: the interned scope of the three above and hinstance
+  irect16_t ink_overflow;  // paint beyond the frame, as CSS ink overflow (a box-shadow): left, top, right, bottom
   uint32_t cursor_pos;
   layout_t layout;
   void *userdata;

@@ -863,6 +863,47 @@ void render_rounded_rect(int tex, irect16_t r, int win_w, int win_h,
   render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, 0, 0, 0, 0, 0, 0, 0);
 }
 
+// A box's border as CSS draws it: each side (top, right, bottom, left) a
+// trapezoid mitred towards its neighbours, the diagonal shared by the two
+// colours. One pass clears the background under the border, then the sides add
+// up, so a diagonal pixel mixes the two colours and none of the background.
+// size and widths are in device pixels.
+void render_border_sides(irect16_t r, isize16_t size, const float widths[4], const uint32_t colors[4]) {
+  if (!widths || !colors || r.w <= 0 || r.h <= 0) {
+    fprintf(stderr, "[renderer] border rejected rect=%d,%d,%d,%d\n", r.x, r.y, r.w, r.h);
+    fflush(stderr);
+    return;
+  }
+  sprite_program_t *p = &g_ref.rounded_rect_sprite;
+  if (!p->shader.progid) return;
+  p->state.tex0 = 0;
+  sprite_vec2(p->state.offset, (float)r.x, (float)r.y);
+  sprite_vec2(p->state.scale, (float)r.w, (float)r.h);
+  p->state.alpha = 1;
+  sprite_vec2(p->state.uv_offset, 0.0f, 1.0f);
+  sprite_vec2(p->state.uv_scale, 1.0f, -1.0f);
+  sprite_vec2(p->state.size, (float)size.w, (float)size.h);
+  p->state.radius = 0;
+  sprite_vec4(p->state.params1, 0, 0, 0, 0);
+  sprite_vec4(p->state.edge, widths[0], widths[1], widths[2], widths[3]);
+  sprite_vec4(p->state.overlay, (colors[0] >> 24) / 255.0f, (colors[1] >> 24) / 255.0f,
+              (colors[2] >> 24) / 255.0f, (colors[3] >> 24) / 255.0f);
+  g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
+  glEnable(GL_BLEND);
+  for (int pass = 4; pass >= 0; pass--) {
+    int side = pass == 4 ? 4 : 3 - pass;
+    if (side < 4 && (!(widths[side] > 0) || !(colors[side] >> 24))) continue;
+    uint32_t c = side < 4 ? colors[side] : 0;
+    sprite_vec4(p->state.tint, (c & 255) / 255.0f, ((c >> 8) & 255) / 255.0f, ((c >> 16) & 255) / 255.0f, (c >> 24) / 255.0f);
+    sprite_vec4(p->state.params0, 0, 0, 5, (float)side);
+    if (side == 4) glBlendFuncSeparate(GL_ZERO, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
+    else glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
+    if (!gs_apply(&p->shader, &p->state)) break;
+    R_MeshDraw(&g_ref.mesh);
+  }
+  glDisable(GL_BLEND);
+}
+
 void render_rounded_rect_bands(irect16_t r, isize16_t size, float radius, uint32_t color, float band_width, float offset) {
   if (!(band_width > 0)) {
     fprintf(stderr, "[renderer] rounded bands rejected width=%g offset=%g\n", band_width, offset);
@@ -910,16 +951,19 @@ void render_rounded_rect_edged(int tex, irect16_t r, int win_w, int win_h, float
   render_rounded_box(tex, r, win_w, win_h, radius, alpha, color, 0, 0, false, edge_color, edge_width, 0, 0, 0, 0, 0);
 }
 
+// A CSS box-shadow: blur is the blur radius, a Gaussian of standard deviation
+// blur / 2; blur 0 is the offset silhouette with a crisp edge.
 void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, uint32_t color) {
-  if (r.w <= 0 || r.h <= 0 || !(color >> 24) || blur == 0) return;
-  if (!(blur > 0 && blur <= 256) || !(radius >= 0)) {
+  if (r.w <= 0 || r.h <= 0 || !(color >> 24)) return;
+  if (!(blur >= 0 && blur <= 256) || !(radius >= 0)) {
     fprintf(stderr, "[renderer] invalid shadow radius=%g blur=%g\n", radius, blur);
     fflush(stderr);
     return;
   }
-  int padding = (int)(blur * 3 + 1);
+  float sigma = blur > 0 ? blur * 0.5f : 0.25f;   // an unblurred edge still antialiases
+  int padding = (int)(sigma * 3 + 1);
   irect16_t bounds = rect_inset(rect_offset(r, offset.x, offset.y), -padding);
-  render_rounded_box(0, bounds, r.w, r.h, radius, 1, color, blur, padding, false, 0, 0, 0, 0, 0, 0, 0);
+  render_rounded_box(0, bounds, r.w, r.h, radius, 1, color, sigma, padding, false, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void draw_rounded_rect(int tex, irect16_t r, int win_w, int win_h,

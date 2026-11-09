@@ -83,7 +83,7 @@ static void test_page_pane_surfaces(void) {
       ok &= pane_pixel(root, p.x, p.y + h - 1) == background;
       ok &= pane_pixel(root, p.x + w - 1, p.y + h - 1) == background;
       ok &= pane_pixel(root, p.x + w / 2, p.y + h - 4) == get_sys_color(brTextSuccess);
-      ok &= pane_pixel(root, p.x + 20, p.y) != background;
+      ok &= pane_pixel(root, p.x + 20, p.y) == pane_pixel(root, p.x + 20, p.y + 2);   // the tab face reaches the top edge
       ok &= pane_pixel(root, p.x + 20, p.y + 2) == get_sys_color(brControlBg);
     }
     create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 1, 1), left, pane_surface_proc, 0, NULL);

@@ -90,6 +90,7 @@ Toolbar::button, Toolbar::split-arrow, CheckBox::box {
   border-color: var(--raised-border);
   box-shadow: inset -1px -1px var(--dark-edge);
 }
+CheckBox::box { border-radius: 0; }
 Button:hover, ComboBox:hover, TableView::header:hover, SegmentedControl::segment:hover, Slider::knob:hover,
 Toolbar::button:hover, Toolbar::split-arrow:hover, CheckBox::box:hover { background: var(--button-hover); }
 Button:active, Button:checked, ComboBox:active, ComboBox:checked, TableView::header:active,

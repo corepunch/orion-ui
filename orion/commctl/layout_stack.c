@@ -74,7 +74,7 @@ void layout_stack_arrange_window(window_t *win, const irect16_t *rect) {
       layout_measure_t cm = layout_measure_child(child, content.w, content.h);
       bool stretchable = (child->flags & WINDOW_FLEXSPACE) != 0;
       int cw = stretchable ? stretch_share : cm.desired_w;
-      int ch = layout_apply_alignment(content.h, cm.desired_h, child->layout.v_align);
+      int ch = layout_definite_h(child) ? MIN(cm.desired_h, content.h) : layout_apply_alignment(content.h, cm.desired_h, child->layout.v_align);
       int cy = content.y;
       if (child->layout.v_align == LAYOUT_ALIGN_CENTER)
         cy += (content.h - ch) / 2;
@@ -107,7 +107,7 @@ void layout_stack_arrange_window(window_t *win, const irect16_t *rect) {
       if (layout_child_is_collapsed(child)) continue;
       if (y > content.y) y += gap;
       layout_measure_t cm = layout_measure_child(child, content.w, content.h);
-      int cw = layout_apply_alignment(content.w, cm.desired_w, child->layout.h_align);
+      int cw = layout_definite_w(child) ? MIN(cm.desired_w, content.w) : layout_apply_alignment(content.w, cm.desired_w, child->layout.h_align);
       bool stretchable = (child->flags & WINDOW_FLEXSPACE) != 0;
       int ch = stretchable ? stretch_share : cm.desired_h;
       int cx = content.x;
@@ -168,6 +168,7 @@ result_t win_stack(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           win->layout.layout_margin = cfg->margin;
         }
       }
+      layout_update_ink(win, THEME_PART_STACK_VIEW);
       return true;
     }
     case evMeasure: {
@@ -175,6 +176,7 @@ result_t win_stack(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (!m)
         return MAKEDWORD(1, 1);
       layout_stack_measure_window(win, m);
+      layout_measure_empty(win, m);
       if (m->desired_w < 1) m->desired_w = 1;
       if (m->desired_h < 1) m->desired_h = 1;
       return MAKEDWORD((uint16_t)m->desired_w, (uint16_t)m->desired_h);
@@ -196,8 +198,11 @@ result_t win_stack(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       return true;
     case evPaint:
-      layout_paint_children(win);
+      layout_paint(win, THEME_PART_STACK_VIEW);
       return true;
+    case evThemeChanged:
+      layout_update_ink(win, THEME_PART_STACK_VIEW);
+      return false;
     case evCommand:
     case evParentNotify:
       return win->parent ? send_message(win->parent, msg, wparam, lparam) : false;

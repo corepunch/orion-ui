@@ -199,6 +199,9 @@ typedef enum {
   THEME_PART_DROP_TARGET,    // where a dragged pane will dock in a Page
   THEME_PART_DOCK_PREVIEW,   // where a dragged window will dock
   THEME_PART_DISABLED_VEIL,  // laid over a disabled window that does not paint its own disabled state
+  THEME_PART_STACK_VIEW,     // a layout container's own box, like a div: nothing unless a sheet styles it
+  THEME_PART_GRID_VIEW,
+  THEME_PART_FLOW_VIEW,
   THEME_PART_COUNT,
 } theme_part_t;
 
@@ -250,6 +253,8 @@ void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state);
 // the window's classes and #id join the part's selector and its app sheet
 // applies, so `TableView#checkouts::header` styles one table.
 void theme_draw_in(const window_t *win, theme_part_t part, irect16_t r, ctrl_state_t state);
+// How far win's part paints beyond its rect (outer shadows, outline): left, top, right, bottom.
+irect16_t theme_ink_overflow_in(const window_t *win, theme_part_t part, ctrl_state_t state);
 
 // Extra inputs for parts whose look depends on more than bounds and state.
 typedef struct {

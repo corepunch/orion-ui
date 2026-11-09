@@ -1,0 +1,12 @@
+<orion>
+  <forms>
+    <form name="fixture" width="344" height="88" padding="0" spacing="0">
+      <StackView name="page" orientation="horizontal" spacing="16" padding="16" flags="flexspace">
+        <StackView name="small" width="56" height="56" />
+        <StackView name="pill" width="96" height="32" />
+        <StackView name="circle" width="56" height="56" />
+        <StackView name="top" width="56" height="56" />
+      </StackView>
+    </form>
+  </forms>
+</orion>

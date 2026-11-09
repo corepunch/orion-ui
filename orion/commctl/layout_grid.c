@@ -406,6 +406,7 @@ result_t win_grid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           win->layout.layout_margin = cfg->margin;
         }
       }
+      layout_update_ink(win, THEME_PART_GRID_VIEW);
       return true;
     }
     case evInitChildren:
@@ -415,6 +416,7 @@ result_t win_grid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (!m)
         return MAKEDWORD(1, 1);
       layout_grid_measure_window(win, m);
+      layout_measure_empty(win, m);
       if (m->desired_w < 1) m->desired_w = 1;
       if (m->desired_h < 1) m->desired_h = 1;
       return MAKEDWORD((uint16_t)m->desired_w, (uint16_t)m->desired_h);
@@ -436,8 +438,11 @@ result_t win_grid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       return true;
     case evPaint:
-      layout_paint_children(win);
+      layout_paint(win, THEME_PART_GRID_VIEW);
       return true;
+    case evThemeChanged:
+      layout_update_ink(win, THEME_PART_GRID_VIEW);
+      return false;
     default:
       return false;
   }

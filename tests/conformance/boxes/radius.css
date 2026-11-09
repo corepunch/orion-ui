@@ -1,0 +1,5 @@
+#page   { background: #ffffff; }
+#small  { background: #0ea5e9; border-radius: 8px; }
+#pill   { background: #f97316; border-radius: 9999px; }
+#circle { background: #10b981; border-radius: 28px; }
+#top    { background: #6366f1; border-radius: 14px 14px 0 0; }

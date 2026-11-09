@@ -1,0 +1,4 @@
+#page     { background: #f4f4f5; }
+#solid    { background: #3b82f6; }
+#alpha    { background: rgba(220, 38, 38, 0.5); }
+#gradient { background: linear-gradient(to bottom, #22c55e, #14532d); }

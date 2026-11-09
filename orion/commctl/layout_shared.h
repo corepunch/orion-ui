@@ -4,6 +4,7 @@
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
 #include <orion/user/rect.h>
+#include <orion/user/theme.h>
 
 static inline int layout_apply_alignment(int avail, int desired, uint8_t align) {
   if (avail < 0) avail = 0;
@@ -111,6 +112,33 @@ static inline void layout_paint_children(window_t *win) {
     if (window_has_state(child, WINDOW_STATE_VISIBLE) && !window_is_lifted(child))
       send_message(child, evPaint, 0, NULL);
   }
+}
+
+// An empty container with a declared width or height is a sized box, like an
+// empty div with width and height: that size is definite, and stretch does
+// not apply to it. A container with children measures its content.
+static inline bool layout_definite_w(const window_t *win) {
+  return win && !win->children && (win->flags & WINDOW_LAYOUT_CONTAINER) && win->layout.layout_fixed_w > 0;
+}
+static inline bool layout_definite_h(const window_t *win) {
+  return win && !win->children && (win->flags & WINDOW_LAYOUT_CONTAINER) && win->layout.layout_fixed_h > 0;
+}
+static inline void layout_measure_empty(window_t *win, layout_measure_t *m) {
+  if (!m) return;
+  if (layout_definite_w(win)) m->desired_w = win->layout.layout_fixed_w;
+  if (layout_definite_h(win)) m->desired_h = win->layout.layout_fixed_h;
+}
+
+// Its box's shadow and outline paint beyond its frame.
+static inline void layout_update_ink(window_t *win, theme_part_t part) {
+  win->ink_overflow = theme_ink_overflow_in(win, part, CTRL_NORMAL);
+}
+
+// A container is a div: its own box (background, border, radius, shadow) from
+// its element, classes and #id, under its children.
+static inline void layout_paint(window_t *win, theme_part_t part) {
+  theme_draw_in(win, part, get_client_rect(win), CTRL_NORMAL);
+  layout_paint_children(win);
 }
 
 #endif

@@ -1,0 +1,6 @@
+#page    { background: #ffffff; }
+#uniform { background: #93c5fd; border: 4px solid #1e3a8a; }
+#sides   { background: #fef3c7; border-top: 2px solid #dc2626; border-right: 6px solid #16a34a;
+           border-bottom: 4px solid #2563eb; border-left: 8px solid #111827; }
+#rounded { background: #ede9fe; border: 3px solid #7c3aed; border-radius: 12px; }
+#ring    { border: 2px solid #0f172a; border-radius: 16px; }

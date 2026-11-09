@@ -1,0 +1,8 @@
+/* Opaque, square and on whole pixels: no antialiasing, so Orion must match exactly. */
+#page   { background: #e2e8f0; }
+#fill   { background: #0f766e; }
+#framed { background: #fef9c3; border: 3px solid #854d0e; }
+#rule   { background: #ffffff; border-bottom: 4px solid #be123c; border-left: 2px solid #1d4ed8; }
+#lifted { background: #ffffff; box-shadow: 6px 6px 0 #334155; }
+#well   { background: #cbd5e1; box-shadow: inset 3px 3px 0 #475569, inset -2px -2px 0 #f8fafc; }
+#tall   { background: #7c3aed; }

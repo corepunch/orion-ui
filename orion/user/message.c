@@ -349,6 +349,10 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
             irect16_t cr = get_client_rect(owner);
             cr = rect_offset(cr, window_screen_x(owner) - root->frame.x,
                              window_screen_y(owner) - root->frame.y + titlebar_height(owner));
+            if (owner == win) {   // its own ink overflows its frame; its ancestors still clip it
+              irect16_t ink = win->ink_overflow;
+              cr = R(cr.x - ink.x, cr.y - ink.y, cr.w + ink.x + ink.w, cr.h + ink.y + ink.h);
+            }
             clip = isect_rect(clip, cr);
           }
         }

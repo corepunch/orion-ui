@@ -49,6 +49,14 @@ static void paint_gradient(uint32_t top, uint32_t bottom, irect16_t r, int radiu
 static void paint_gradient_top(uint32_t top, uint32_t bottom, irect16_t r, int radius) {
   paint_gradient_shape(top, bottom, r, radius, true);
 }
+// The mitred corners are the renderer's; the sides' middles are what these tests read.
+static void paint_border_sides(irect16_t r, const int w[4], const uint32_t c[4]) {
+  if (w[0] > 0) paint_fill(c[0], rect_split_top(r, w[0]));
+  if (w[3] > 0) paint_fill(c[3], rect_split_left(r, w[3]));
+  if (w[2] > 0) paint_fill(c[2], rect_split_bottom(r, w[2]));
+  if (w[1] > 0) paint_fill(c[1], rect_split_right(r, w[1]));
+}
+#define fill_border_sides paint_border_sides
 #define fill_gradient_rounded_rect paint_gradient
 #define fill_gradient_rounded_top_rect paint_gradient_top
 #define fill_rounded_rect paint_rounded
@@ -68,6 +76,7 @@ theme_t *paint_porcelain_instance(void);
 #include <orion/user/theme_builtin.c>
 #include <orion/user/theme_box.c>
 #undef fill_rect
+#undef fill_border_sides
 #undef draw_wire_rect
 #undef fill_rounded_rect
 #undef fill_gradient_rounded_rect

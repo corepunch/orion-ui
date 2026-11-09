@@ -329,6 +329,15 @@ void fill_rounded_rect_bands(uint32_t color, irect16_t r, int radius, int band_w
   render_rounded_rect_bands(r, size, radius * scale, color, band_width * scale, offset * scale);
 }
 
+void fill_border_sides(irect16_t r, const int widths[4], const uint32_t colors[4]) {
+  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0 || !widths || !colors) return;
+  float scale = ui_surface_scale();
+  isize16_t size = {(int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f)};
+  float w[4];
+  for (int i = 0; i < 4; i++) w[i] = MAX(0, widths[i]) * scale;
+  render_border_sides(r, size, w, colors);
+}
+
 static irect16_t bubble_body_rect(irect16_t r, tooltip_tail_side_t side, bool speech) {
   r = rect_inset(r, speech ? ui_px("SpeechBubble", "--shadow-size") : ui_px("Tooltip", "--shadow-size"));
   int length = speech ? ui_px("SpeechBubble", "--tail-length") : ui_px("Tooltip", "--tail-size");

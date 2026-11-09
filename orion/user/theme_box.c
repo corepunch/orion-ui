@@ -119,6 +119,9 @@ static const struct { const char *element, *part, *classes; } k_part_selectors[T
   [THEME_PART_DROP_TARGET]            = {"Page", "drop-target"},
   [THEME_PART_DOCK_PREVIEW]           = {"Dock", "preview"},
   [THEME_PART_DISABLED_VEIL]          = {"Window", "disabled-veil"},
+  [THEME_PART_STACK_VIEW]             = {"StackView"},
+  [THEME_PART_GRID_VIEW]              = {"GridView"},
+  [THEME_PART_FLOW_VIEW]              = {"FlowView"},
 };
 
 // ── value parsing ─────────────────────────────────────────────────────────────
@@ -218,6 +221,14 @@ static bool box_border_component(const style_sheet_t *s, style_query_t q, int si
   return true;
 }
 
+// What the painter cannot draw yet is said, never drawn differently in silence.
+static void box_unsupported(const char *what, theme_part_t part, const char *id) {
+  fprintf(stderr, "[theme] part %s%s%s%s%s: %s is not supported yet\n", k_part_selectors[part].element,
+          id && *id ? "#" : "", id && *id ? id : "",
+          k_part_selectors[part].part ? "::" : "", k_part_selectors[part].part ? k_part_selectors[part].part : "", what);
+  fflush(stderr);
+}
+
 static void box_report(const char *what, theme_part_t part, const char *value) {
   fprintf(stderr, "[theme] part %s%s%s: bad %s \"%s\"\n", k_part_selectors[part].element,
           k_part_selectors[part].part ? "::" : "", k_part_selectors[part].part ? k_part_selectors[part].part : "", what, value);
@@ -299,6 +310,8 @@ static void box_compute(theme_box_t *b, theme_part_t part, ctrl_state_t state, c
         else ok = style_parse_color(tok[i], &color);
       }
       if (!ok || nl < 2) { box_report("box-shadow", part, item); break; }
+      if (nl > 3 && lengths[3] != 0) box_unsupported("a box-shadow spread", part, id);
+      if (inset && nl > 2 && lengths[2] != 0) box_unsupported("a blurred inset box-shadow (drawn unblurred)", part, id);
       b->shadows[b->shadow_count].inset = inset;
       b->shadows[b->shadow_count].dx = lengths[0];
       b->shadows[b->shadow_count].dy = lengths[1];
@@ -309,6 +322,13 @@ static void box_compute(theme_box_t *b, theme_part_t part, ctrl_state_t state, c
   }
 
   if (style_value(s, q, "border-radius", v, sizeof(v)) && !box_four(v, b->radius, true)) box_report("border-radius", part, v);
+  const int *rad = b->radius, *bw = b->border_width;
+  bool one_radius = rad[0] == rad[1] && rad[1] == rad[2] && rad[2] == rad[3];
+  bool top_only = rad[0] == rad[1] && rad[2] == 0 && rad[3] == 0;
+  if (!one_radius && !top_only) box_unsupported("a border-radius other than one radius or the top two", part, id);
+  bool uniform = bw[0] == bw[1] && bw[1] == bw[2] && bw[2] == bw[3] && b->border_color[0] == b->border_color[1] &&
+                 b->border_color[1] == b->border_color[2] && b->border_color[2] == b->border_color[3];
+  if (!uniform && (rad[0] || rad[1] || rad[2] || rad[3])) box_unsupported("a border with unequal sides on a rounded box", part, id);
   if (style_value(s, q, "margin", v, sizeof(v)) && !box_four(v, b->margin, false)) box_report("margin", part, v);
   if (style_value(s, q, "outline", v, sizeof(v))) {
     box_line_t line;
@@ -399,11 +419,7 @@ static void box_paint(const theme_box_t *b, irect16_t r) {
     }
   } else {
     if (b->background) box_fill(b->top, b->bottom, b->gradient, r, radius, top_only);
-    // Top and left first, so a bevel's off-diagonal corners take the bottom and right colours.
-    if (bw[0] > 0) fill_rect(b->border_color[0], rect_split_top(r, bw[0]));
-    if (bw[3] > 0) fill_rect(b->border_color[3], rect_split_left(r, bw[3]));
-    if (bw[2] > 0) fill_rect(b->border_color[2], rect_split_bottom(r, bw[2]));
-    if (bw[1] > 0) fill_rect(b->border_color[1], rect_split_right(r, bw[1]));
+    if (bw[0] > 0 || bw[1] > 0 || bw[2] > 0 || bw[3] > 0) fill_border_sides(r, bw, b->border_color);
   }
   irect16_t inner = R(r.x + bw[3], r.y + bw[0], r.w - bw[1] - bw[3], r.h - bw[0] - bw[2]);
   for (int i = b->shadow_count - 1; i >= 0; i--) {   // inset edges, the first on top
@@ -465,6 +481,23 @@ void theme_css_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state, con
   const theme_box_t *b = box_for(part, state, scope);
   box_paint(b, r);
   box_glyph(b, r);
+}
+
+// The extent draw_rect_shadow and the outline give the box beyond r.
+irect16_t theme_ink_overflow_in(const window_t *win, theme_part_t part, ctrl_state_t state) {
+  irect16_t ink = {0, 0, 0, 0};
+  if (part < 0 || part >= THEME_PART_COUNT) return ink;
+  const theme_box_t *b = box_for(part, state, ui_window_scope(win));
+  int out[4] = {b->outline_width, b->outline_width, b->outline_width, b->outline_width};   // left, top, right, bottom
+  for (int i = 0; i < b->shadow_count; i++) {
+    if (b->shadows[i].inset) continue;
+    int reach = (int)(MAX(b->shadows[i].blur * 0.5f, 0.25f) * 3 + 1);
+    out[0] = MAX(out[0], reach - b->shadows[i].dx); out[2] = MAX(out[2], reach + b->shadows[i].dx);
+    out[1] = MAX(out[1], reach - b->shadows[i].dy); out[3] = MAX(out[3], reach + b->shadows[i].dy);
+  }
+  int margin[4] = {b->margin[3], b->margin[0], b->margin[1], b->margin[2]};
+  for (int i = 0; i < 4; i++) out[i] = MAX(0, out[i] - margin[i]);
+  return (irect16_t){out[0], out[1], out[2], out[3]};
 }
 
 uint32_t theme_css_foreground(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope) {

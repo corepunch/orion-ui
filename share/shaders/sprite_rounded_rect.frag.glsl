@@ -8,6 +8,23 @@ float roundedBoxSDF(vec2 p, vec2 b, float r) {
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
 
+// Pixel coverage of a shape edge at signed distance d (device pixels), as a
+// browser antialiases it: one pixel wide, centred on the edge.
+float edgeCoverage(float d) { return clamp(0.5 - d, 0.0, 1.0); }
+
+// The share of a pixel (centre p, top-left origin) one border side covers: a
+// trapezoid mitred towards its neighbours. The four shares sum to the border.
+float borderSideCoverage(vec2 p, int side) {
+  // Turn the box so this side is the top: q.x runs along it, q.y inwards.
+  vec2 q = side == 0 ? p : side == 1 ? vec2(p.y, size.x - p.x) : side == 2 ? size - p : vec2(size.y - p.y, p.x);
+  float len = side == 1 || side == 3 ? size.y : size.x;
+  float own = edge[side], before = edge[(side + 3) % 4], after = edge[(side + 1) % 4];
+  if (own <= 0.0) return 0.0;
+  float start = (q.x * own - q.y * before) / length(vec2(own, before));
+  float end = ((len - q.x) * own - q.y * after) / length(vec2(own, after));
+  return edgeCoverage(q.y - own) * clamp(0.5 + start, 0.0, 1.0) * clamp(0.5 + end, 0.0, 1.0);
+}
+
 float cross2(vec2 a, vec2 b) { return a.x * b.y - a.y * b.x; }
 
 float triangleSDF(vec2 p, vec2 a, vec2 b, vec2 c) {
@@ -69,10 +86,22 @@ float bubbleSDF(vec2 p) {
 
 vec4 frag() {
   vec4 outColor;
+  if (params0.z > 4.5) {   // a mitred border: edge holds the widths top, right, bottom, left
+    vec2 p = vec2(tex.x, 1.0 - tex.y) * size;
+    int side = int(params0.w + 0.5);
+    if (side > 3) {   // clear the background under all four sides; overlay holds their alphas
+      float a = 0.0;
+      for (int k = 0; k < 4; k++) a += overlay[k] * borderSideCoverage(p, k);
+      return vec4(0.0, 0.0, 0.0, a * alpha * col.a);
+    }
+    float a = tint.a * alpha * col.a * borderSideCoverage(p, side);
+    vec3 rgb = vec3(srgb_to_linear(tint.r), srgb_to_linear(tint.g), srgb_to_linear(tint.b));
+    return vec4(rgb * a, a);
+  }
   if (params0.z > 3.5) {
     vec2 p = tex * size;
     float d = roundedBoxSDF(p - size * 0.5, size * 0.5, radius);
-    float face = radius > 0.0 ? 1.0 - smoothstep(-1.5, 1.5, d) : 1.0;
+    float face = radius > 0.0 ? edgeCoverage(d) : 1.0;
     float band = mod(floor((p.x + params1.w) / params1.y), 2.0);
     float a = tint.a * alpha * face * band * col.a;
     vec3 rgb = vec3(srgb_to_linear(tint.r), srgb_to_linear(tint.g), srgb_to_linear(tint.b));
@@ -121,9 +150,9 @@ vec4 frag() {
     // Gradient tabs round only the top (texture coordinates are flipped).
     float corner_radius = params0.z > 0.5 && params0.w > 0.5 && tex.y < 0.5 ? 0.0 : max(radius, 0.0);
     float d = roundedBoxSDF(pixel - center, size * 0.5, corner_radius);
-    float outer = 1.0 - smoothstep(-1.5, 1.5, d);
+    float outer = edgeCoverage(d);
     if (stroke > 0.0) {
-      float inner = 1.0 - smoothstep(-1.5, 1.5, d + stroke);
+      float inner = edgeCoverage(d + stroke);
       aa = max(0.0, outer - inner);
     } else {
       aa = outer;

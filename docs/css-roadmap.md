@@ -56,6 +56,16 @@ margin), then text placement, then layout. Every supported property gets a
 fixture; an unsupported one is a diagnostic, never a silent difference. This is
 what lets an agent trust its browser intuition.
 
+Started: `tests/conformance/boxes/` (background, border, radius, shadow,
+square) with `tools/conformance/render.py` generating each page from its form
+and rendering it in headless Chrome; `tests/css_conformance_test.c` compares
+([tests/conformance/README.md](../tests/conformance/README.md)). The first
+fixtures fixed sized empty containers, `stretch` on definite sizes, CSS shadow
+blur, shadows clipped by their own frame, three-pixel edge antialiasing and
+unmitred borders. One divergence remains, listed in the test: Orion composites
+in linear light, CSS in sRGB, so translucent colours, gradients and
+antialiased edges come out lighter.
+
 ## 5. Layout in CSS terms
 
 Orion already lays out like a simple web page: stacks, grids, flow. Name it in
@@ -91,7 +101,7 @@ Done: style queries replaced `theme_t`'s metrics and vtable; fonts are
 selectors with text properties; the VGA font gave way to IBM Plex Mono; apps
 link their own sheets and every control is styled by its `#id` and `.class`.
 
-1. Browser conformance fixtures for boxes, then text, then layout.
+1. Browser conformance fixtures: boxes started; decide sRGB compositing; then text and layout.
 2. Layout properties in the sheet.
 3. Git Client's Run page (rail, process table, console, ⌘K) built from these,
    with its behaviour in Lua.
