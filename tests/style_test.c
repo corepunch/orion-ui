@@ -123,10 +123,24 @@ void test_value_parsers(void) {
 }
 
 void test_porcelain_sheet(void) {
-  TEST("porcelain.css: no errors, every colour role in both appearances, and Porcelain reads it");
+  TEST("theme sheets: no errors, every colour role in both appearances, and Porcelain reads them");
+  const char *sheets[] = {"base", "modern", "navy", "amber", "metro", "porcelain"};
+  for (int i = 0; i < 6; i++) {
+    char path[64]; snprintf(path, sizeof(path), "orion/themes/%s.css", sheets[i]);
+    style_sheet_t *sheet = style_sheet_load(path);
+    ASSERT_NOT_NULL(sheet);
+    ASSERT_EQUAL(style_sheet_error_count(sheet), 0);
+    if (i > 0) {
+      ASSERT_TRUE(style_sheet_append(sheet, "", NULL));
+      uint32_t colors[brCount];
+      ASSERT_TRUE(theme_palette_from_stylesheet(sheet, colors));
+      style_sheet_set_dark(sheet, true);
+      ASSERT_TRUE(theme_palette_from_stylesheet(sheet, colors));
+    }
+    style_sheet_free(sheet);
+  }
   style_sheet_t *s = style_sheet_load("orion/themes/porcelain.css");
   ASSERT_NOT_NULL(s);
-  ASSERT_EQUAL(style_sheet_error_count(s), 0);
   uint32_t palette[brCount];
   ASSERT_TRUE(theme_palette_from_stylesheet(s, palette));
   ASSERT_EQUAL(palette[brAccent], WEB(0x4C5BD4));
@@ -156,12 +170,54 @@ void test_porcelain_sheet(void) {
   PASS();
 }
 
+static bool live_var(const char *name, char *out, size_t n, void *ctx) {
+  (void)ctx;
+  if (strcmp(name, "accent")) return false;
+  snprintf(out, n, "#00FF00");
+  return true;
+}
+static bool platform_var(const char *name, char *out, size_t n, void *ctx) {
+  (void)ctx;
+  if (strcmp(name, "control-radius")) return false;
+  snprintf(out, n, "13px");
+  return true;
+}
+
+void test_mixing_hooks_and_append(void) {
+  TEST("style: color-mix, live and fallback variables, appended sheets and ranked lookups");
+  uint32_t c = 0;
+  ASSERT_TRUE(style_parse_color("color-mix(in srgb, #000000, #FFFFFF)", &c));          ASSERT_EQUAL(c, WEB(0x808080));
+  ASSERT_TRUE(style_parse_color("color-mix(in srgb, #FF0000 25%, #0000FF)", &c));      ASSERT_EQUAL(c, WEB(0x4000BF));
+  ASSERT_TRUE(style_parse_color("color-mix(in srgb, #4C5BD4 14.9%, transparent)", &c)); ASSERT_EQUAL(c, 0x26D45B4Cu);
+  ASSERT_TRUE(style_parse_color("color-mix(in srgb, rgb(0 0 0), white 20%)", &c));     ASSERT_EQUAL(c, WEB(0x333333));
+  ASSERT_FALSE(style_parse_color("color-mix(in oklch, red, blue)", &c));
+  ASSERT_FALSE(style_parse_color("color-mix(in srgb, #000)", &c));
+
+  style_sheet_t *s = style_sheet_parse(":root { --accent: #FF0000; --radius: var(--control-radius) }\n"
+                                       "Button { color: var(--accent); border-radius: var(--radius) }\n", "base.css");
+  ASSERT_TRUE(style_sheet_append(s, "Button { border: 1px solid red }\nButton { border-color: blue }\n", "theme.css"));
+  ASSERT_EQUAL(style_sheet_rule_count(s), 4);
+  style_sheet_set_var_hook(s, live_var, platform_var, NULL);
+  ASSERT_TRUE(style_color(s, q("Button", NULL, NULL, 0), "color", &c));
+  ASSERT_EQUAL(c, WEB(0x00FF00));                                     // the live value wins over :root
+  ASSERT_STR_EQUAL(value(s, q("Button", NULL, NULL, 0), "border-radius"), "13px");   // the fallback fills a gap
+  char v[64]; long shorthand, longhand;
+  ASSERT_TRUE(style_value_ranked(s, q("Button", NULL, NULL, 0), "border", v, sizeof(v), &shorthand));
+  ASSERT_TRUE(style_value_ranked(s, q("Button", NULL, NULL, 0), "border-color", v, sizeof(v), &longhand));
+  ASSERT_TRUE(longhand > shorthand);
+  ASSERT_FALSE(style_value_ranked(s, q("Button", NULL, NULL, 0), "outline", v, sizeof(v), &longhand));
+  ASSERT_EQUAL(longhand, -1);
+  style_sheet_free(s);
+  PASS();
+}
+
 int main(void) {
   TEST_START("Style sheets");
   test_selectors_and_cascade();
   test_custom_properties_and_media();
   test_error_recovery();
   test_value_parsers();
+  test_mixing_hooks_and_append();
   test_porcelain_sheet();
   TEST_END();
 }

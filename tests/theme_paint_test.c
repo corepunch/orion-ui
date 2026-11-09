@@ -67,6 +67,7 @@ theme_t *paint_amber_instance(void);
 theme_t *paint_porcelain_instance(void);
 #include <orion/user/theme_classic.c>
 #include <orion/user/theme_modern.c>
+#include <orion/user/theme_box.c>
 #undef fill_rect
 #undef draw_wire_rect
 #undef fill_rounded_rect

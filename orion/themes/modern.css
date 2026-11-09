@@ -1,0 +1,92 @@
+/* Modern: layered charcoal surfaces and blue selection for creative
+   workspaces. Light is the same theme in the light appearance: the original
+   light WinUI surfaces with the same accent. Capsule buttons and fields come
+   from base.css. */
+
+:root {
+  --control-bg:              #303230;
+  --window-dark-bg:          #202224;
+  --workspace-bg:            #1B1D20;
+  --active-titlebar:         #202224;
+  --active-titlebar-text:    #FFFFFF;
+  --inactive-titlebar:       #202224;
+  --inactive-titlebar-text:  #787878;
+  --statusbar-bg:            #303230;
+  --light-edge:              #535655;
+  --dark-edge:               #1F2120;
+  --flare:                   #CFCFCF;
+  --accent:                  #3073C5;
+  --button-inner:            #444745;
+  --button-hover:            #474A48;
+  --text-normal:             #F0F1F2;
+  --text-disabled:           #7D8380;
+  --text-error:              #FF4444;
+  --text-success:            #44FF44;
+  --border-focus:            #101010;
+  --border-active:           #808080;
+  --folder-text:             #00D0A0;
+  --column-view-bg:          #202224;
+  --modal-overlay:           #00204040;
+  --toolbar-foreground:      #F0F1F2;
+  --panel-dark:              #303230;
+  --panel-darker:            #303230;
+  --text-warning:            #E5A82E;
+  --text-info:               #4CA0F0;
+  --text-secondary:          #ADB4B1;
+  --text-on-color:           #101010;
+  --selection-top:           #3073C5;
+  --selection-bottom:        #3073C5;
+  --tab-bar-bg:              #202224;
+  --accent-text:             #FFFFFF;
+  --desktop-bg:              #29356B;
+  --info-background:         #403B23;
+  --info-text:               #FFF4BD;
+  --tooltip-background:      #303230;
+  --tooltip-text:            #F0F1F2;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --control-bg:              #F3F3F3;
+    --window-dark-bg:          #E8E8E8;
+    --workspace-bg:            #DCDCDC;
+    --active-titlebar:         #0078D7;
+    --active-titlebar-text:    #FFFFFF;
+    --inactive-titlebar:       #F0F0F0;
+    --inactive-titlebar-text:  #767676;
+    --statusbar-bg:            #F0F0F0;
+    --light-edge:              #FFFFFF;
+    --dark-edge:               #C8C8C8;
+    --flare:                   #FFFFFF;
+    --accent:                  #0078D7;
+    --button-inner:            #E0E0E0;
+    --button-hover:            #D0D0D0;
+    --text-normal:             #1A1A1A;
+    --text-disabled:           #9E9E9E;
+    --text-error:              #C42B1C;
+    --text-success:            #0F7B0F;
+    --border-focus:            #B85F00;
+    --border-active:           #868686;
+    --folder-text:             #107C10;
+    --column-view-bg:          #EAE3DE;
+    --modal-overlay:           #00000040;
+    --toolbar-foreground:      #1A1A1A;
+    --panel-dark:              #E6E6E6;
+    --panel-darker:            #E6E6E6;
+    --text-warning:            #B26B00;
+    --text-info:               #005AB4;
+    --text-secondary:          #5F5F5F;
+    --text-on-color:           #101010;
+    --selection-top:           #0078D7;
+    --selection-bottom:        #0078D7;
+    --tab-bar-bg:              #DDDDDD;
+    --accent-text:             #FFFFFF;
+    --desktop-bg:              #29356B;
+    --info-background:         #FFFFE1;
+    --info-text:               #303025;
+    --tooltip-background:      #E6E6E6;
+    --tooltip-text:            #1A1A1A;
+  }
+}
+
+Toolbar { gap: 2px; }

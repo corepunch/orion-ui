@@ -1,0 +1,64 @@
+/* Amber: a business palette. White content wells (tables and fields), warm
+   grey chrome, a graphite caption, and amber for focus, the default button
+   and selection, which carries dark text. Fields share --column-view-bg with
+   lists; --light-edge is the hairline. Softly rounded rectangles instead of
+   capsules, like a business form. */
+
+:root {
+  --control-bg:              #F7F7F5;
+  --window-dark-bg:          #ECECE9;
+  --workspace-bg:            #CFD2D6;
+  --active-titlebar:         #3A3E44;
+  --active-titlebar-text:    #FFFFFF;
+  --inactive-titlebar:       #D9DADC;
+  --inactive-titlebar-text:  #707378;
+  --statusbar-bg:            #EEEEEB;
+  --light-edge:              #BEBEB8;
+  --dark-edge:               #D3D3CE;
+  --flare:                   #FFFFFF;
+  --accent:                  #FAD03C;
+  --button-inner:            #EDEDEA;
+  --button-hover:            #E1E1DC;
+  --text-normal:             #1E1E1E;
+  --text-disabled:           #A3A3A0;
+  --text-error:              #C0392B;
+  --text-success:            #2E7D32;
+  --border-focus:            #D4A10A;
+  --border-active:           #C6C6C0;
+  --folder-text:             #8A6D00;
+  --column-view-bg:          #FFFFFF;
+  --modal-overlay:           #00000040;
+  --toolbar-foreground:      #3C3C3C;
+  --panel-dark:              #E7E7E3;
+  --panel-darker:            #DEDEDA;
+  --text-warning:            #B26A00;
+  --text-info:               #1F5FA8;
+  --text-secondary:          #66666A;
+  --text-on-color:           #1A1A1A;
+  --selection-top:           #FFF2BF;
+  --selection-bottom:        #FBE59A;
+  --tab-bar-bg:              #E3E3DF;
+  --accent-text:             #1A1A1A;
+  --desktop-bg:              #29356B;
+  --info-background:         #FFFFE1;
+  --info-text:               #303025;
+  --tooltip-background:      #E7E7E3;
+  --tooltip-text:            #1E1E1E;
+
+  --window-radius: 6px;
+  --button-radius: 4px;
+  --field-radius: 3px;
+  --multiline-radius: 3px;
+  --tab-radius: 4px;
+  --card-radius: 5px;
+}
+
+Button { border-color: var(--light-edge); }
+
+/* White wells with a hairline that turns to the focus colour. */
+TextEdit, ComboBox, SegmentedControl {
+  background: var(--column-view-bg);
+  border-color: var(--light-edge);
+}
+TextEdit:focus, ComboBox:focus, SegmentedControl:focus { border-color: var(--border-focus); }
+TextEdit:disabled, ComboBox:disabled, SegmentedControl:disabled { border-color: var(--light-edge); }

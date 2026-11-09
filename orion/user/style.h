@@ -19,8 +19,8 @@
 // sheet's appearance matches.
 //
 // Values are kept as text and parsed on lookup by the typed getters below:
-// colours (#rgb, #rrggbb, #rrggbbaa, rgb(), rgba(), transparent and a few
-// names) and lengths (px or a bare number). A malformed rule or declaration
+// colours (#rgb, #rrggbb, #rrggbbaa, rgb(), rgba(), color-mix(in srgb, ...),
+// transparent and a few names) and lengths (px or a bare number). A malformed rule or declaration
 // is skipped with a diagnostic naming its line; the rest of the sheet still
 // applies, as browsers recover.
 
@@ -61,12 +61,27 @@ void style_sheet_free(style_sheet_t *sheet);
 int  style_sheet_error_count(const style_sheet_t *sheet);
 int  style_sheet_rule_count(const style_sheet_t *sheet);
 
+// Parses more CSS into the sheet, after its rules (a base sheet, then a theme).
+bool style_sheet_append(style_sheet_t *sheet, const char *text, const char *origin);
+
 // Which @media (prefers-color-scheme) blocks apply. Light by default.
 void style_sheet_set_dark(style_sheet_t *sheet, bool dark);
+bool style_sheet_dark(const style_sheet_t *sheet);
+
+// Custom properties from outside the sheet, called with the name without "--";
+// each returns true after writing the value. `override` answers before the
+// sheet (themes route the colour roles through it, so var(--accent) follows
+// the live palette and set_sys_colors() overrides); `fallback` answers names
+// the sheet leaves undefined (platform metrics). Either may be NULL.
+typedef bool (*style_var_fn)(const char *name, char *out, size_t n, void *ctx);
+void style_sheet_set_var_hook(style_sheet_t *sheet, style_var_fn override, style_var_fn fallback, void *ctx);
 
 // The cascaded value of property for query with var() resolved, copied into
 // out. Returns false when no rule sets it (out is then empty).
 bool style_value(const style_sheet_t *sheet, style_query_t q, const char *property, char *out, size_t n);
+// The same, with the winning declaration's cascade rank (higher wins), so a
+// caller can choose between a shorthand and a longhand; -1 when unset.
+bool style_value_ranked(const style_sheet_t *sheet, style_query_t q, const char *property, char *out, size_t n, long *rank);
 
 // Typed lookups: true when the property is set and parses; *out is left
 // unchanged otherwise, so callers pass their default in.

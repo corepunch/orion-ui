@@ -1,15 +1,22 @@
 # Style sheets
 
-Orion themes are moving from C to CSS. A theme's colours and metrics live in a
-style sheet under `orion/themes/`; the build embeds it in `libuser`
-(`tools/embed_text.py`), so a theme never depends on files at run time.
-Porcelain and Porcelain Dark are the first: both are
-[`orion/themes/porcelain.css`](../orion/themes/porcelain.css), read in the
-light and the dark appearance.
+Orion themes are written in CSS. Every theme part is painted by one box
+painter from the cascaded properties of its element and part, the colour roles
+are custom properties, and `theme_t`'s metrics are control properties.
 
-The drawing itself is still C (`theme_modern.c`). The next steps move it into a
-generic box painter driven by the same properties, then the other themes, and
-then drop the per-theme C drawing.
+| File | Themes |
+|---|---|
+| [`orion/themes/base.css`](../orion/themes/base.css) | Shared rules: how each part paints, in roles and radius variables |
+| [`modern.css`](../orion/themes/modern.css) | Modern (dark) and Light (`prefers-color-scheme: light`) |
+| [`navy.css`](../orion/themes/navy.css) | Navy |
+| [`amber.css`](../orion/themes/amber.css) | Amber |
+| [`porcelain.css`](../orion/themes/porcelain.css) | Porcelain and Porcelain Dark |
+| [`metro.css`](../orion/themes/metro.css) | Metro |
+
+A theme is `base.css` followed by its own sheet, read in the theme's appearance.
+The build embeds the sheets in `libuser` (`tools/embed_text.py`), so a theme
+never depends on files at run time. Classic is still C (`theme_classic.c`); its
+parts that have no bevelled drawing of their own use `base.css` over its palette.
 
 ## Editing a theme without rebuilding
 
@@ -17,8 +24,9 @@ then drop the per-theme C drawing.
 ORION_THEME_CSS=orion/themes/porcelain.css build/bin/ledger
 ```
 
-`ORION_THEME_CSS` names a file read instead of the embedded sheet. Errors go to
-stderr with the file and line: `[style] porcelain.css:42: rule dropped: ...`.
+`ORION_THEME_CSS` names a file read instead of the active CSS theme's own sheet
+(after `base.css`). Errors go to stderr with the file and line:
+`[style] porcelain.css:42: rule dropped: ...`.
 
 ## The CSS subset
 
@@ -32,7 +40,7 @@ Parser and cascade: `orion/user/style.c` (`style.h`).
 | Cascade | `!important`, then specificity (ids; classes and pseudo-classes; elements and parts), then source order |
 | Custom properties | `--name: value`, `var(--name, fallback)`; looked up on the element, then `:root` |
 | At-rules | `@media (prefers-color-scheme: dark)` and `light`. Others are skipped with a diagnostic |
-| Colours | `#rgb` `#rgba` `#rrggbb` `#rrggbbaa`, `rgb()` / `rgba()` (commas or spaces, `/ alpha`), `transparent`, `black`, `white` |
+| Colours | `#rgb` `#rgba` `#rrggbb` `#rrggbbaa`, `rgb()` / `rgba()`, `color-mix(in srgb, a p%, b q%)`, `transparent`, `black`, `white` |
 | Lengths | `px` or a bare number; `border-radius: 9999px` is a capsule |
 
 A rule with one bad selector is dropped, a bad declaration is skipped, and the
@@ -42,25 +50,61 @@ rest of the sheet applies, as in browsers.
 
 Every system colour role is a custom property on `:root`, in kebab case:
 `brControlBg` is `--control-bg`, `brTextSecondary` is `--text-secondary`
-(`theme_sys_color_name()` lists them). A sheet must define all of them; a
-missing role is logged and the theme falls back to a built-in palette.
+(`theme_sys_color_name()` lists them). A sheet must define all of them. While
+painting, `var(--role)` reads the live palette, so `set_sys_colors()` overrides
+apply to every part.
 
-## Control properties
+## Painting parts
 
-The properties a sheet sets override the matching `theme_t` metric; the rest
-keep the base theme's value (`theme_metrics_from_stylesheet()` in
-`orion/user/theme_css.c`).
+`theme_box.c` maps each `THEME_PART_*` to a selector and paints its box:
+
+| Property | Meaning |
+|---|---|
+| `background` | A colour, `none`, or `linear-gradient([to bottom,] top, bottom)` |
+| `border`, `border-<side>`, `border-width/-style/-color`, `border-<side>-<property>` | Solid sides; a uniform border follows the corner radius |
+| `border-radius` | 1–4 lengths; rounded top corners with square bottom ones draw a tab |
+| `margin` | 1–4 lengths: the painted box inside the part's bounds |
+| `outline` | `width style colour`, filled behind the box as a focus halo |
+| `color` | The part's text colour (`theme_foreground()`) |
+| `fill` | The part's glyph colour (arrows, checkmark, grips); defaults to `color` |
+
+| Part | Selector | Part | Selector |
+|---|---|---|---|
+| `BUTTON` | `Button` | `LIST_ITEM` | `TableView::row` |
+| `FIELD` | `TextEdit` (`.multiline`) | `HEADER` | `TableView::header` |
+| `COMBOBOX`, `COMBOBOX_ARROW` | `ComboBox`, `ComboBox::arrow` | `COLUMN_DIVIDER` | `TableView::divider` |
+| `CHECKBOX` | `CheckBox::box` | `MENU_BAR`, `MENU_POPUP`, `MENU_ITEM` | `MenuBar`, `Menu`, `Menu::item` |
+| `SEGMENTED_TRACK`, `SEGMENT` | `SegmentedControl`, `::segment` | `SEPARATOR` | `Separator` |
+| `TAB`, `TAB_BAR`, `TAB_PANE` | `TabView::tab`, `::bar`, `::pane` | `PAGE`, `PANEL`, `SURFACE`, `SIDEBAR` | `Page`, `Panel`, `Surface`, `Sidebar` |
+| `TOOLBAR` | `Toolbar` | `STATUSBAR` | `StatusBar` |
+| `TOOLBAR_BUTTON` (`_LABELED`, `_SPLIT`) | `Toolbar::button` (`.labeled`, `.split`) | `TITLEBAR`, `TITLE_TOOLBAR` | `Window::titlebar`, `Window::title-toolbar` |
+| `TOOLBAR_SPLIT_ARROW`, `_SEPARATOR`, `_GRIP` | `Toolbar::split-arrow`, `::separator`, `::grip` | `WINDOW_CLOSE`, `RESIZE_GRIP` | `Window::close`, `Window::resize-grip` |
+| `SLIDER_TRACK`, `_THUMB`, `_TROUGH`, `_KNOB` | `Slider::track`, `::thumb`, `::trough`, `::knob` | `SCROLLBAR_*` | `Scrollbar::track`, `::thumb`, `::arrow-up` … `::corner` |
+
+States map to pseudo-classes: hover `:hover`, pressed `:active`, selected
+`:checked`, disabled `:disabled`, keyboard focus `:focus`, default button
+`:default`, a selection whose window is not focused `:window-inactive`.
+
+## Metrics
+
+Control properties set the matching `theme_t` metric when a theme is built
+(`theme_metrics_from_stylesheet()` in `orion/user/theme_css.c`). Themes set the
+radii through the `:root` variables `base.css` uses: `--window-radius`,
+`--button-radius`, `--field-radius`, `--multiline-radius`, `--tab-radius`,
+`--toolbar-radius`, `--table-radius`, `--card-radius`, `--badge-radius`.
+`--control-radius` is supplied by the platform (half a control's height).
 
 | Selector | Property | `theme_t` field |
 |---|---|---|
 | `Window` | `border-radius` | `window.corner_radius` |
 | `Button` | `border-radius` | `button.corner_radius` |
-| `TextEdit` | `border-radius` | `field.corner_radius` |
-| `MultiEdit` | `border-radius` | `field.multiline_corner_radius` |
-| `TabView::tab` | `border-radius` | `tab.corner_radius` |
-| `Card` | `border-radius`, `background-color: var(--role)`, `border-color: var(--role)` | `card.corner_radius`, `card.face`, `card.outline` |
+| `TextEdit`, `TextEdit.multiline` | `border-radius` | `field.corner_radius`, `field.multiline_corner_radius` |
+| `TabView::tab` | `border-radius` (top-left) | `tab.corner_radius` |
+| `Toolbar` | `gap` | `toolbar.spacing` |
+| `Toolbar::button` | `border-radius` | `toolbar.corner_radius` |
+| `Card` | `border-radius`, `background-color: var(--role)`, `border-color: var(--role)`, `--highlight-width`, `--plastic: flat` | `card.corner_radius`, `card.face`, `card.outline`, `card.highlight_width`, `plastic.flat` |
 | `TableView` | `border-radius` | `table.corner_radius` |
 | `TableView::header` | `min-height` | `report.header_height` |
-| `TableView::row` | `min-height`, `border-bottom-width` | `report.row_height`, `report.row_dividers` |
+| `TableView::row` | `min-height`, `--divider-width` | `report.row_height`, `report.row_dividers` |
 | `Badge` | `border-radius`, `padding-left`, `--tint-alpha`, `--ink-mix` (0..1) | `badge.corner_radius`, `badge.padding`, `badge.tint_alpha`, `badge.ink_mix` |
 | `Badge::icon` | `width`, `margin-right` | `badge.icon_size`, `badge.icon_gap` |

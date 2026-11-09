@@ -1,0 +1,55 @@
+/* Metro: square, flat dark surfaces and a bright blue accent for creative work. */
+
+:root {
+  --control-bg:              #20262E;
+  --window-dark-bg:          #101318;
+  --workspace-bg:            #101318;
+  --active-titlebar:         #20262E;
+  --active-titlebar-text:    #FFFFFF;
+  --inactive-titlebar:       #101318;
+  --inactive-titlebar-text:  #5C6370;
+  --statusbar-bg:            #101318;
+  --light-edge:              #343B44;
+  --dark-edge:               #101318;
+  --flare:                   #3E4451;
+  --accent:                  #0078D7;
+  --button-inner:            #28323C;
+  --button-hover:            #354455;
+  --text-normal:             #F1F5F8;
+  --text-disabled:           #717B85;
+  --text-error:              #E06C75;
+  --text-success:            #98C379;
+  --border-focus:            #0078D7;
+  --border-active:           #343B44;
+  --folder-text:             #61AFEF;
+  --column-view-bg:          #1A1E24;
+  --modal-overlay:           #00000060;
+  --toolbar-foreground:      #9DA5B4;
+  --panel-dark:              #101318;
+  --panel-darker:            #101318;
+  --text-warning:            #E5C07B;
+  --text-info:               #61AFEF;
+  --text-secondary:          #A9B6C0;
+  --text-on-color:           #FFFFFF;
+  --selection-top:           #0078D7;
+  --selection-bottom:        #0078D7;
+  --tab-bar-bg:              #1D2025;
+  --accent-text:             #FFFFFF;
+  --desktop-bg:              #16181D;
+  --info-background:         #28323C;
+  --info-text:               #C8CCD4;
+  --tooltip-background:      #101318;
+  --tooltip-text:            #FFFFFF;
+
+  --window-radius: 0;
+  --button-radius: 0;
+  --field-radius: 0;
+  --multiline-radius: 0;
+  --tab-radius: 0;
+  --toolbar-radius: 0;
+  --table-radius: 0;
+  --card-radius: 0;
+  --badge-radius: 0;
+}
+
+Card { --highlight-width: 0; --plastic: flat; }

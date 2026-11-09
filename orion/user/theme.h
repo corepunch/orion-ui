@@ -185,6 +185,8 @@ typedef enum {
   THEME_PART_COUNT,
 } theme_part_t;
 
+typedef struct style_sheet_s style_sheet_t;
+
 // Drawing vtable.  All callbacks receive logical coordinates and explicit state.
 // They must not dispatch messages, change control state, or perform hit-testing.
 // Implementations may call fill_rect() and other low-level draw primitives.
@@ -327,6 +329,12 @@ typedef struct {
   // before evThemeChanged is broadcast so controls see the new colors
   // immediately on first repaint.
   void (*apply_palette)(void);
+
+  // CSS themes: the theme's sheet (embedded text), read after
+  // orion/themes/base.css. theme_stylesheet() parses them on first use.
+  const char    *css;
+  const char    *css_origin;
+  style_sheet_t *sheet;
 } theme_t;
 
 
@@ -381,14 +389,26 @@ theme_t *theme_metro_instance(void);
 //
 // CSS-driven themes (orion/themes/*.css, embedded at build time): :root custom
 // properties are the system colour roles, named in kebab case (brControlBg is
-// --control-bg), and control properties set theme_t metrics. See docs/styling.md.
-typedef struct style_sheet_s style_sheet_t;
+// --control-bg), control properties set theme_t metrics, and every theme part
+// is painted from its box properties. See docs/styling.md.
 const char *theme_sys_color_name(int role);      // "control-bg"; NULL for an unused slot
 int  theme_sys_color_role(const char *name);     // -1 when no role has that name
 // Every role from the sheet's :root; false (missing roles logged) when any is undefined.
-bool theme_palette_from_stylesheet(const style_sheet_t *sheet, uint32_t palette[brCount]);
+bool theme_palette_from_stylesheet(style_sheet_t *sheet, uint32_t palette[brCount]);
 // Overwrites the metrics the sheet sets; the rest keep their values.
 void theme_metrics_from_stylesheet(theme_t *theme, const style_sheet_t *sheet);
+
+// base.css + theme->css (or the file ORION_THEME_CSS names), in the theme's
+// appearance; colour roles resolve against the live palette.
+style_sheet_t *theme_stylesheet(theme_t *theme);
+// Reads the theme's metrics from its sheet; call once when building the instance.
+void theme_init_from_stylesheet(theme_t *theme);
+// theme_t callbacks for CSS themes (theme_box.c and theme_css.c).
+void theme_css_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state);
+uint32_t theme_css_foreground(theme_part_t part, ctrl_state_t state);
+void theme_css_apply_palette(void);
+// Bumped whenever cached styles go stale: a theme switch or a palette override.
+extern unsigned g_theme_style_generation;
 
 // ── Appearance (light / dark) ────────────────────────────────────────────────
 //

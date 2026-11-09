@@ -17,6 +17,7 @@ uint32_t g_sys_colors[brCount] = { THEME_PALETTE_DARK_INIT };
 // ── Active theme runtime ───────────────────────────────────────────────────
 
 static theme_t *g_active_theme = NULL;
+unsigned g_theme_style_generation = 1;
 
 static theme_t *theme_for_style(theme_style_t style) {
   switch (style) {
@@ -36,6 +37,7 @@ theme_t *get_theme(void) {
   if (!g_active_theme) {
     g_active_theme = theme_modern_instance();
     g_active_theme->apply_palette();
+    g_theme_style_generation++;
   }
   return g_active_theme;
 }
@@ -150,7 +152,9 @@ bool set_theme(theme_style_t style) {
 
   s_switching = true;
   g_active_theme = candidate;
+  g_theme_style_generation++;
   candidate->apply_palette();
+  g_theme_style_generation++;
 
   if (g_ui_runtime.running) {
     post_to_win_tree(g_ui_runtime.windows, evThemeChanged, (uint32_t)style);
@@ -185,6 +189,7 @@ void set_sys_colors(int count, const int *indices, const uint32_t *colors) {
       g_sys_colors[indices[i]] = colors[i];
     }
   }
+  g_theme_style_generation++;
   if (g_ui_runtime.running) {
     post_message((window_t*)1, evRefreshStencil, 0, NULL);
     for (window_t *w = g_ui_runtime.windows; w; w = w->next) {

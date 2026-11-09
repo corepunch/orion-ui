@@ -1,0 +1,151 @@
+/* Base rules for every CSS theme: how each part paints, in terms of the colour
+   roles and radius variables a theme defines. A theme sheet is read after this
+   one and overrides what it needs. Parts and properties: docs/styling.md. */
+
+:root {
+  --window-radius: 8px;
+  --button-radius: 9999px;
+  --field-radius: 9999px;
+  --multiline-radius: var(--control-radius);   /* half the platform control height */
+  --tab-radius: 6px;
+  --toolbar-radius: 4px;
+  --table-radius: 6px;
+  --card-radius: 7px;
+  --badge-radius: 5px;
+  --selection: linear-gradient(var(--selection-top), var(--selection-bottom));
+}
+
+* { color: var(--text-normal); }
+*:disabled { color: var(--text-disabled) !important; fill: var(--text-disabled) !important; }
+
+/* ── Metrics ─────────────────────────────────────────────────────────────── */
+
+Window       { border-radius: var(--window-radius); }
+Toolbar      { gap: 1px; }
+TableView    { border-radius: var(--table-radius); }
+Card         { border-radius: var(--card-radius); }
+Badge {
+  border-radius: var(--badge-radius);
+  padding-left: 7px;
+  --tint-alpha: 0.149;   /* the pill's tint of its role colour */
+  --ink-mix: 0.314;      /* how far the text leans from the role towards --text-normal */
+}
+Badge::icon  { width: 12px; margin-right: 4px; }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+
+Button {
+  background: var(--control-bg);
+  border: 1px solid #767676;
+  border-radius: var(--button-radius);
+}
+Button:hover                 { background: var(--button-inner); }
+Button:active, Button:checked { background: var(--button-hover); }
+Button:focus                 { border-color: var(--accent); }
+Button:default               { background: var(--accent); border-style: none; color: var(--accent-text); }
+Button:disabled              { background: var(--window-dark-bg); border-style: none; }
+@media (prefers-color-scheme: light) {
+  Button:disabled { color: var(--text-secondary) !important; }
+}
+
+/* ── Fields ──────────────────────────────────────────────────────────────── */
+
+TextEdit, ComboBox, SegmentedControl {
+  background: color-mix(in srgb, var(--control-bg), var(--window-dark-bg));
+  border: 1px solid color-mix(in srgb, var(--control-bg), var(--button-inner));
+  border-radius: var(--field-radius);
+}
+TextEdit.multiline { border-radius: var(--multiline-radius); }
+TextEdit:focus, ComboBox:focus, SegmentedControl:focus { border-color: var(--accent); }
+TextEdit:disabled, ComboBox:disabled, SegmentedControl:disabled {
+  border-color: color-mix(in srgb, var(--control-bg), var(--button-inner));
+}
+
+SegmentedControl::segment          { border-radius: var(--field-radius); }
+SegmentedControl::segment:hover    { background: var(--button-hover); }
+SegmentedControl::segment:active   { background: var(--button-inner); }
+SegmentedControl::segment:checked  { background: var(--selection); color: var(--accent-text); }
+SegmentedControl::segment:checked:disabled { background: var(--button-inner); }
+
+CheckBox::box          { background: var(--window-dark-bg); border-radius: 3px; }
+CheckBox::box:hover    { background: var(--button-hover); }
+CheckBox::box:focus    { outline: 2px solid var(--accent); }
+CheckBox::box:disabled { background: var(--window-dark-bg); outline: none; }
+
+/* ── Toolbars ────────────────────────────────────────────────────────────── */
+
+Toolbar         { background: var(--panel-darker); }
+Toolbar::button, Toolbar::split-arrow { border-radius: var(--toolbar-radius); }
+Toolbar::split-arrow { fill: var(--toolbar-foreground); }
+Toolbar::button:hover, Toolbar::split-arrow:hover { background: var(--button-hover); }
+Toolbar::button:checked, Toolbar::button:active, Toolbar::button:default,
+Toolbar::split-arrow:checked, Toolbar::split-arrow:active, Toolbar::split-arrow:default {
+  background: var(--selection);
+}
+Toolbar::button:checked, Toolbar::button:active, Toolbar::button:default { color: var(--accent-text); }
+Toolbar::button:disabled, Toolbar::split-arrow:disabled { background: none !important; }
+Toolbar::grip   { fill: var(--text-disabled); }
+
+/* ── Lists and tables ────────────────────────────────────────────────────── */
+
+TableView::header  { background: var(--control-bg); border-bottom: 1px solid var(--button-inner); }
+TableView::divider { background: var(--dark-edge); }
+TableView::divider:hover { background: var(--accent); }
+TableView::row:hover   { background: var(--button-hover); }
+TableView::row:checked, TableView::row:active { background: var(--selection); }
+TableView::row:checked { color: var(--accent-text); }
+TableView::row:window-inactive { color: var(--text-normal); }
+TableView::row:checked:window-inactive { background: color-mix(in srgb, var(--accent) 14.9%, transparent); }
+TableView::row:checked:window-inactive:active { background: var(--selection); }
+TableView::row:disabled { background: none !important; }
+
+/* ── Menus ───────────────────────────────────────────────────────────────── */
+
+MenuBar   { background: var(--window-dark-bg); }
+Menu      { background: var(--control-bg); border-radius: 6px; }
+Menu::item:hover, Menu::item:checked, Menu::item:active {
+  background: var(--selection);
+  border-radius: 9999px;
+  margin: 1px 4px;
+  color: var(--accent-text);
+}
+Menu::item:disabled { background: none !important; }
+Separator { background: var(--button-inner); }
+
+/* ── Tabs, panels and windows ────────────────────────────────────────────── */
+
+TabView::tab {
+  background: linear-gradient(var(--panel-dark), var(--tab-bar-bg));
+  border-radius: var(--tab-radius) var(--tab-radius) 0 0;
+}
+TabView::tab:hover, TabView::tab:active { background: linear-gradient(var(--button-hover), var(--tab-bar-bg)); }
+TabView::tab:checked { background: linear-gradient(var(--control-bg), var(--control-bg)); }
+TabView::bar    { background: var(--tab-bar-bg); }
+TabView::pane   { background: var(--control-bg); }
+Page            { background: var(--panel-darker); }
+Panel, Surface  { background: var(--control-bg); }
+Sidebar         { background: var(--panel-dark); border-right: 1px solid var(--dark-edge); }
+StatusBar       { background: var(--statusbar-bg); }
+
+Window::titlebar       { background: var(--inactive-titlebar); }
+Window::titlebar:focus { background: var(--active-titlebar); }
+Window::title-toolbar  { background: var(--window-dark-bg); }
+Window::resize-grip    { fill: var(--text-disabled); }
+
+/* ── Sliders and scroll bars ─────────────────────────────────────────────── */
+
+Slider::track         { background: var(--button-inner); }
+Slider::thumb         { background: var(--text-normal); border: 1px solid var(--dark-edge); }
+Slider::thumb:active  { border-color: var(--accent); }
+Slider::trough        { background: var(--control-bg); border-radius: 9px; }
+Slider::knob          { background: var(--text-secondary); border-radius: 6px; }
+Slider::knob:hover    { background: var(--text-normal); }
+Slider::knob:active   { background: var(--accent); }
+Slider::knob:disabled { background: var(--text-disabled); }
+
+Scrollbar::track, Scrollbar::corner { background: var(--statusbar-bg); }
+Scrollbar::thumb { background: var(--light-edge); border-radius: 5px; margin: 3px; }   /* an 11 px thumb in a 17 px gutter */
+Scrollbar::thumb:disabled { background: var(--text-disabled); }
+@media (prefers-color-scheme: light) {
+  Scrollbar::thumb { background: color-mix(in srgb, var(--text-secondary) 80%, var(--statusbar-bg)); }
+}

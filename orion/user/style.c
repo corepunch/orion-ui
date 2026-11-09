@@ -36,6 +36,8 @@ struct style_sheet_s {
   int errors;
   bool dark;
   char origin[256];
+  style_var_fn var_hook, var_default;
+  void *var_ctx;
 };
 
 typedef struct {
@@ -335,12 +337,13 @@ static void css_parse_block(css_parser_t *p, int media, bool nested) {
   }
 }
 
-style_sheet_t *style_sheet_parse(const char *text, const char *origin) {
-  if (!text) return NULL;
-  style_sheet_t *sheet = calloc(1, sizeof(*sheet));
+bool style_sheet_append(style_sheet_t *sheet, const char *text, const char *origin) {
+  if (!sheet || !text) return false;
   char *src = strdup(text);
-  if (!sheet || !src) { free(sheet); free(src); return NULL; }
-  snprintf(sheet->origin, sizeof(sheet->origin), "%s", origin ? origin : "<style>");
+  if (!src) return false;
+  char saved[256];
+  snprintf(saved, sizeof(saved), "%s", sheet->origin);
+  if (origin) snprintf(sheet->origin, sizeof(sheet->origin), "%s", origin);
   css_parser_t p = { sheet, src, 0, strlen(src) };
   for (char *c = src; *c; c++) {   // blank comments, keeping newlines
     if (c[0] != '/' || c[1] != '*') continue;
@@ -352,6 +355,16 @@ style_sheet_t *style_sheet_parse(const char *text, const char *origin) {
   }
   css_parse_block(&p, CSS_MEDIA_ALL, false);
   free(src);
+  if (saved[0] && origin) snprintf(sheet->origin, sizeof(sheet->origin), "%s", saved);
+  return true;
+}
+
+style_sheet_t *style_sheet_parse(const char *text, const char *origin) {
+  if (!text) return NULL;
+  style_sheet_t *sheet = calloc(1, sizeof(*sheet));
+  if (!sheet) return NULL;
+  snprintf(sheet->origin, sizeof(sheet->origin), "%s", origin ? origin : "<style>");
+  if (!style_sheet_append(sheet, text, NULL)) { free(sheet); return NULL; }
   return sheet;
 }
 
@@ -379,10 +392,15 @@ void style_sheet_free(style_sheet_t *sheet) {
 int  style_sheet_error_count(const style_sheet_t *sheet) { return sheet ? sheet->errors : 0; }
 int  style_sheet_rule_count(const style_sheet_t *sheet) { return sheet ? sheet->count : 0; }
 void style_sheet_set_dark(style_sheet_t *sheet, bool dark) { if (sheet) sheet->dark = dark; }
+bool style_sheet_dark(const style_sheet_t *sheet) { return sheet && sheet->dark; }
+void style_sheet_set_var_hook(style_sheet_t *sheet, style_var_fn override, style_var_fn fallback, void *ctx) {
+  if (sheet) { sheet->var_hook = override; sheet->var_default = fallback; sheet->var_ctx = ctx; }
+}
 
 // ── cascade ───────────────────────────────────────────────────────────────────
 
-static const char *css_cascade(const style_sheet_t *sheet, style_query_t q, const char *property) {
+static const char *css_cascade_ranked(const style_sheet_t *sheet, style_query_t q, const char *property, long *rank) {
+  if (rank) *rank = -1;
   if (!sheet || !property) return NULL;
   const char *best = NULL;
   long best_key = -1;
@@ -400,7 +418,12 @@ static const char *css_cascade(const style_sheet_t *sheet, style_query_t q, cons
       }
     }
   }
+  if (rank) *rank = best_key;
   return best;
+}
+
+static const char *css_cascade(const style_sheet_t *sheet, style_query_t q, const char *property) {
+  return css_cascade_ranked(sheet, q, property, NULL);
 }
 
 static const char *css_custom(const style_sheet_t *sheet, style_query_t q, const char *name) {
@@ -435,8 +458,11 @@ static bool css_resolve(const style_sheet_t *sheet, style_query_t q, const char 
       fprintf(stderr, "[style] %s: var() needs a --name in \"%s\"\n", sheet->origin, value); fflush(stderr); return false;
     }
     memcpy(name, ns, (size_t)(ne - ns)); name[ne - ns] = 0;
-    const char *found = css_custom(sheet, q, name);
+    char hooked[128];
+    const char *found = sheet->var_hook && sheet->var_hook(name + 2, hooked, sizeof(hooked), sheet->var_ctx)
+                        ? hooked : css_custom(sheet, q, name);
     char *fallback = NULL;
+    if (!found && sheet->var_default && sheet->var_default(name + 2, hooked, sizeof(hooked), sheet->var_ctx)) found = hooked;
     if (!found && comma) {
       const char *fs = comma + 1, *fe = end - 1;
       css_trim(&fs, &fe);
@@ -459,9 +485,15 @@ static bool css_resolve(const style_sheet_t *sheet, style_query_t q, const char 
 }
 
 bool style_value(const style_sheet_t *sheet, style_query_t q, const char *property, char *out, size_t n) {
+  return style_value_ranked(sheet, q, property, out, n, NULL);
+}
+
+bool style_value_ranked(const style_sheet_t *sheet, style_query_t q, const char *property, char *out, size_t n, long *rank) {
+  if (rank) *rank = -1;
   if (!out || !n) return false;
   out[0] = 0;
-  const char *raw = !strncmp(property ? property : "", "--", 2) ? css_custom(sheet, q, property) : css_cascade(sheet, q, property);
+  const char *raw = !strncmp(property ? property : "", "--", 2) ? css_custom(sheet, q, property)
+                                                                : css_cascade_ranked(sheet, q, property, rank);
   if (!raw) return false;
   if (!css_resolve(sheet, q, raw, out, n, 0)) { out[0] = 0; return false; }
   return true;
@@ -504,6 +536,53 @@ static bool css_channel(const char **s, bool alpha, int *out) {
   return true;
 }
 
+// color-mix(in srgb, A p%, B q%): premultiplied, as CSS mixes, so mixing with
+// transparent fades a colour instead of darkening it.
+static bool css_color_mix(const char *args, uint32_t *out) {
+  char buf[256];
+  size_t len = strlen(args);
+  if (!len || len >= sizeof(buf) || args[len - 1] != ')') return false;
+  memcpy(buf, args, len - 1); buf[len - 1] = 0;
+  char *part[3]; int n = 0, depth = 0;
+  part[n++] = buf;
+  for (char *c = buf; *c; c++) {
+    if (*c == '(') depth++;
+    else if (*c == ')') depth--;
+    else if (*c == ',' && !depth) { if (n == 3) return false; *c = 0; part[n++] = c + 1; }
+  }
+  if (n != 3) return false;
+  while (isspace((unsigned char)*part[0])) part[0]++;
+  if (strncasecmp(part[0], "in srgb", 7)) return false;
+  uint32_t color[2]; double pct[2] = {-1, -1};
+  for (int i = 0; i < 2; i++) {
+    char *s = part[i + 1];
+    char *pc = strrchr(s, '%');
+    if (pc && (!strrchr(s, ')') || strrchr(s, ')') < pc)) {   // a trailing percentage
+      char *num = pc;
+      while (num > s && (isdigit((unsigned char)num[-1]) || num[-1] == '.')) num--;
+      pct[i] = strtod(num, NULL) / 100.0;
+      *num = 0;
+    }
+    if (!style_parse_color(s, &color[i])) return false;
+  }
+  if (pct[0] < 0 && pct[1] < 0) pct[0] = pct[1] = 0.5;
+  else if (pct[0] < 0) pct[0] = 1 - pct[1];
+  else if (pct[1] < 0) pct[1] = 1 - pct[0];
+  double sum = pct[0] + pct[1];
+  if (sum <= 0) return false;
+  double w0 = pct[0] / sum, w1 = pct[1] / sum;
+  double a0 = (color[0] >> 24) / 255.0, a1 = (color[1] >> 24) / 255.0;
+  double a = a0 * w0 + a1 * w1;
+  int ch[3];
+  for (int k = 0; k < 3; k++) {
+    double c0 = ((color[0] >> (8 * k)) & 255) * a0, c1 = ((color[1] >> (8 * k)) & 255) * a1;
+    double v = a > 0 ? (c0 * w0 + c1 * w1) / a : 0;
+    ch[k] = (int)lround(v < 0 ? 0 : v > 255 ? 255 : v);
+  }
+  *out = css_pack(ch[0], ch[1], ch[2], (int)lround(a * 255));
+  return true;
+}
+
 bool style_parse_color(const char *text, uint32_t *out) {
   if (!text || !out) return false;
   while (isspace((unsigned char)*text)) text++;
@@ -529,6 +608,7 @@ bool style_parse_color(const char *text, uint32_t *out) {
     *out = css_pack(c[0], c[1], c[2], c[3]);
     return true;
   }
+  if (!strncasecmp(text, "color-mix(", 10)) return css_color_mix(text + 10, out);
   static const struct { const char *name; uint32_t color; } named[] = {
     {"transparent", 0x00000000u}, {"black", 0xFF000000u}, {"white", 0xFFFFFFFFu},
   };

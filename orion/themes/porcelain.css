@@ -97,28 +97,34 @@
 }
 
 /* Softly rounded rectangles, a little rounder than a business form. */
-Window   { border-radius: 6px; }
-Button   { border-radius: 6px; }
-TextEdit { border-radius: 5px; }
-MultiEdit { border-radius: 5px; }
-TabView::tab { border-radius: 5px; }
+:root {
+  --window-radius: 6px;
+  --button-radius: 6px;
+  --field-radius: 5px;
+  --multiline-radius: 5px;
+  --tab-radius: 5px;
+  --card-radius: 7px;
+}
+
+Button { border-color: var(--light-edge); }
+
+/* White wells with a hairline that turns indigo on focus. */
+TextEdit, ComboBox, SegmentedControl {
+  background: var(--column-view-bg);
+  border-color: var(--light-edge);
+}
+TextEdit:focus, ComboBox:focus, SegmentedControl:focus { border-color: var(--border-focus); }
+TextEdit:disabled, ComboBox:disabled, SegmentedControl:disabled { border-color: var(--light-edge); }
+
+/* The merged title row shares the window face, like a unified macOS toolbar. */
+Window::title-toolbar { background: var(--control-bg); border-bottom: 1px solid var(--dark-edge); }
 
 /* White panels with a hairline on the window face. */
 Card {
-  border-radius: 7px;
   background-color: var(--column-view-bg);
   border-color: var(--light-edge);
 }
 
 /* Business tables: 21 px rows under a 24 px header, ruled by hairlines. */
-TableView         { border-radius: 6px; }
 TableView::header { min-height: 24px; }
-TableView::row    { min-height: 21px; border-bottom-width: 1px; }
-
-Badge {
-  border-radius: 5px;
-  padding-left: 7px;
-  --tint-alpha: 0.149;   /* the pill's tint of its role colour */
-  --ink-mix: 0.314;      /* how far the text leans from the role towards --text-normal */
-}
-Badge::icon { width: 12px; margin-right: 4px; }
+TableView::row    { min-height: 21px; --divider-width: 1px; }

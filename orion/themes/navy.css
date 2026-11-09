@@ -1,0 +1,64 @@
+/* Navy: blue chrome and cyan selection. The caption follows Win95/XP: active
+   is the accent, inactive a dull bar, not the window face. Near-duplicate
+   surfaces share one swatch: menu, toolbar, status and the document mat are
+   --navy-chrome; inactive tabs sit one step under the face. */
+
+:root {
+  --navy-shadow:     #0D1B34;
+  --navy-chrome:     #142440;
+  --navy-tab-bar:    #182A49;
+  --navy-recess:     #1C3152;
+  --navy-face:       #243D60;
+  --navy-raised:     #294669;
+  --navy-hover:      #365B85;
+  --navy-line:       #456B96;
+  --navy-hairline:   #658BB3;
+  --navy-text:       #F8FAFF;
+  --navy-text-muted: #A8B7CC;
+  --navy-accent:     #168CFA;
+
+  --control-bg:             var(--navy-face);
+  --window-dark-bg:         var(--navy-chrome);
+  --workspace-bg:           var(--navy-chrome);
+  --active-titlebar:        var(--navy-accent);
+  --active-titlebar-text:   var(--navy-text);
+  --inactive-titlebar:      var(--navy-raised);
+  --inactive-titlebar-text: var(--navy-text-muted);
+  --statusbar-bg:           var(--navy-chrome);
+  --light-edge:             var(--navy-hairline);
+  --dark-edge:              var(--navy-shadow);
+  --flare:                  var(--navy-text);
+  --accent:                 var(--navy-accent);
+  --button-inner:           var(--navy-raised);
+  --button-hover:           var(--navy-hover);
+  --text-normal:            var(--navy-text);
+  --text-disabled:          var(--navy-text-muted);
+  --text-error:             #C42B1C;
+  --text-success:           #63C994;
+  --border-focus:           #6DDCFF;
+  --border-active:          var(--navy-line);
+  --folder-text:            #8FC7FF;
+  --column-view-bg:         var(--navy-raised);
+  --modal-overlay:          #14244040;
+  --toolbar-foreground:     var(--navy-text);
+  --panel-dark:             var(--navy-recess);
+  --panel-darker:           var(--navy-chrome);
+  --tab-bar-bg:             var(--navy-tab-bar);
+  --text-warning:           #F2C14E;
+  --text-info:              #7AB8FF;
+  --text-secondary:         var(--navy-text-muted);
+  --text-on-color:          #101010;
+  --selection-top:          #37C9FF;
+  --selection-bottom:       #0879EA;
+  --accent-text:            var(--navy-text);
+  --tooltip-background:     var(--navy-recess);
+  --tooltip-text:           var(--navy-text);
+  --info-background:        #403B23;
+  --info-text:              #FFF4BD;
+  --desktop-bg:             #29356B;
+}
+
+Button { border-color: var(--light-edge); }
+TextEdit, ComboBox, SegmentedControl { background: var(--window-dark-bg); border-color: var(--light-edge); }
+TextEdit:disabled, ComboBox:disabled, SegmentedControl:disabled { border-color: var(--light-edge); }
+Slider::track { background: var(--light-edge); }
