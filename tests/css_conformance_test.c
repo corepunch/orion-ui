@@ -14,6 +14,7 @@
 #include <orion/user/image.h>
 #include <orion/user/theme.h>
 #include <glob.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -25,6 +26,18 @@
 #define EDGE_STEP 24
 #define FILL      12
 #define EDGE      80
+
+// Text rasterises differently in every engine (Chrome hints and positions glyphs on
+// fractions of a pixel, Orion on whole ones), so the text suite compares where the ink
+// is, not which pixels it covers: each line of ink (a run of rows that differ from the
+// row's background by at least INK) must have the same bounding box in both images to
+// within BOX pixels, and the total ink (distance from the background, in whole pixels)
+// must agree to within INK_TOTAL percent (Chrome on macOS sets light text on dark up to 17% heavier
+// than FreeType does: a difference of weight, not of placement).
+#define INK         96
+#define BOX         1
+#define INK_TOTAL   20
+#define MAX_LINES   64
 
 // Known divergences, with their reason: such a fixture must still agree in
 // geometry (no pixel off by more than GEOMETRY), and the test fails once it
@@ -89,6 +102,66 @@ static uint8_t *paint_fixture(const char *orion, const char *css_path, int *w, i
   return pixels;
 }
 
+typedef struct { int y0, y1, x0, x1; double ink; } ink_line_t;
+
+// Lines of ink in an RGBA image; the background of a row is its most common colour.
+static int ink_lines(const uint8_t *px, int w, int h, ink_line_t *out, double *total) {
+  int n = 0;
+  bool open = false;
+  *total = 0;
+  for (int y = 0; y <= h; y++) {
+    int x0 = w, x1 = -1;
+    double row_ink = 0;
+    if (y < h) {
+      const uint8_t *row = px + (size_t)y * w * 4;
+      uint32_t bg = 0; int best = 0;
+      for (int a = 0; a < w; a += 7) {   // sample candidates, count exactly
+        int count = 0;
+        for (int b = 0; b < w; b++) count += !memcmp(row + a * 4, row + b * 4, 4);
+        if (count > best) { best = count; bg = (uint32_t)a; }
+      }
+      for (int x = 0; x < w; x++) {
+        int d = 0;
+        for (int c = 0; c < 3; c++) d = MAX(d, abs(row[x * 4 + c] - row[bg * 4 + c]));
+        row_ink += d / 255.0;
+        if (d >= INK) { x0 = MIN(x0, x); x1 = MAX(x1, x); }
+      }
+    }
+    *total += row_ink;
+    if (x1 >= 0 && n < MAX_LINES) {
+      if (!open) { out[n++] = (ink_line_t){ y, y, x0, x1, 0 }; open = true; }
+      else { out[n - 1].y1 = y; out[n - 1].x0 = MIN(out[n - 1].x0, x0); out[n - 1].x1 = MAX(out[n - 1].x1, x1); }
+      out[n - 1].ink += row_ink;
+    } else open = false;
+  }
+  return n;
+}
+
+// Compares the ink of two renderings; why says what differs. geometry is whether the lines
+// are at least in the same place within a few pixels.
+static bool text_matches(const uint8_t *reference, const uint8_t *actual, int w, int h, char *why, size_t n, bool *geometry) {
+  ink_line_t a[MAX_LINES], b[MAX_LINES];
+  double ink_a, ink_b;
+  int na = ink_lines(reference, w, h, a, &ink_a), nb = ink_lines(actual, w, h, b, &ink_b);
+  why[0] = 0; *geometry = na == nb;
+  if (na != nb) { snprintf(why, n, "Chrome has %d lines of ink, Orion %d", na, nb); return false; }
+  bool ok = true;
+  for (int i = 0; i < na; i++) {
+    int off = MAX(MAX(abs(a[i].y0 - b[i].y0), abs(a[i].y1 - b[i].y1)), MAX(abs(a[i].x0 - b[i].x0), abs(a[i].x1 - b[i].x1)));
+    if (off > BOX * 3) *geometry = false;
+    if (off > BOX && ok) {
+      snprintf(why, n, "line %d: Chrome y%d-%d x%d-%d, Orion y%d-%d x%d-%d", i + 1,
+               a[i].y0, a[i].y1, a[i].x0, a[i].x1, b[i].y0, b[i].y1, b[i].x0, b[i].x1);
+      ok = false;
+    }
+  }
+  if (ok && fabs(ink_b - ink_a) > ink_a * INK_TOTAL / 100.0) {
+    snprintf(why, n, "total ink: Chrome %.0f, Orion %.0f", ink_a, ink_b);
+    ok = false;
+  }
+  return ok;
+}
+
 typedef enum { FIXTURE_MATCHES, FIXTURE_KNOWN, FIXTURE_DIFFERS } fixture_verdict_t;
 
 static fixture_verdict_t compare_fixture(const char *orion, const char *fixture) {
@@ -122,6 +195,9 @@ static fixture_verdict_t compare_fixture(const char *orion, const char *fixture)
   const char *known = known_reason(fixture);
   bool matches = fill_off == 0 && edge_off == 0;
   bool geometry = MAX(worst_fill, worst_edge) <= GEOMETRY;
+  char why[200] = "";
+  bool text = !strncmp(fixture, "text/", 5);
+  if (text) matches = text_matches(reference, actual, w, h, why, sizeof(why), &geometry);
   fixture_verdict_t verdict = matches ? FIXTURE_MATCHES : known && geometry ? FIXTURE_KNOWN : FIXTURE_DIFFERS;
   char flat[256];
   snprintf(flat, sizeof(flat), "%s", fixture);
@@ -134,7 +210,8 @@ static fixture_verdict_t compare_fixture(const char *orion, const char *fixture)
     mkdir("build", 0755); mkdir("build/conformance", 0755);
     save_image_png(orion_png, actual, w, h);
     save_image_png(diff_png, diff, w, h);
-    fprintf(stderr, "[conformance] %s: %d fill pixels off by more than %d (worst %d), %d edge pixels by more than %d (worst %d)%s%s; see %s\n",
+    if (text) fprintf(stderr, "[conformance] %s: %s%s%s; see %s\n", fixture, why, known ? ": known, " : "", known ? known : "", diff_png);
+    else fprintf(stderr, "[conformance] %s: %d fill pixels off by more than %d (worst %d), %d edge pixels by more than %d (worst %d)%s%s; see %s\n",
             fixture, fill_off, FILL, worst_fill, edge_off, EDGE, worst_edge, known ? ": known, " : "", known ? known : "", diff_png);
   }
   free(diff);
@@ -170,6 +247,7 @@ int main(void) {
   set_theme(THEME_MODERN);
   test_fixtures("boxes");
   test_fixtures("layout");
+  test_fixtures("text");
   test_graphics_shutdown();
   TEST_END();
 }

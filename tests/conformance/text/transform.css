@@ -1,0 +1,5 @@
+/* text-transform and letter-spacing change the measured width too. */
+#page   { background: #1e1e1e; }
+#upper  { font: 600 11px "IBM Plex Sans"; color: #ffffff; text-transform: uppercase; }
+#spaced { font: 400 13px "IBM Plex Sans"; color: #ffffff; letter-spacing: 2px; }
+#both   { font: 600 12px "IBM Plex Sans"; color: #ffffff; text-transform: uppercase; letter-spacing: .08em; }

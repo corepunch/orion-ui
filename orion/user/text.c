@@ -374,6 +374,8 @@ static inline int wrapped_line_advance(ui_font_t font) {
   return adv > 0 ? adv : 1;
 }
 
+int text_line_height(ui_font_t font) { return wrapped_line_advance(font); }
+
 // In 1/64 logical pixel.
 static inline int wrap_char_advance(ui_font_t font, uint32_t c) {
   if (c == '\n') return 0;
@@ -555,7 +557,7 @@ text_wrap_result_t text_wrap_layout_font(ui_font_t font, const char *text,
   font_atlas_t *atlas = st->atlas;
   int vc = 0, line_vc = 0;   // the current line's vertices start at line_vc
   int lh = wrapped_line_advance(font);
-  int leading = (lh - text_char_height(font)) / 2;   // CSS half-leading: glyphs sit in the middle of the line box
+  int leading = (lh - text_char_height(font)) >> 1;   // CSS half-leading (floor above): glyphs sit in the middle of the line box
   // Horizontal positions in 1/64 logical pixel.
   int sw = font_space64(font) + st->spacing64;
   int x = viewport->x * 64, w = viewport->w * 64;

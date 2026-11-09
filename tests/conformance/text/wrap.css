@@ -1,0 +1,6 @@
+/* Wrapped text: line-height decides the line box; half-leading splits above and below. */
+#page   { background: #f8fafc; }
+Label   { font: 400 13px "IBM Plex Sans"; color: #1e293b; }
+#normal { line-height: normal; }
+#loose  { font: 400 12px "IBM Plex Sans"; line-height: 1.5; }
+#px     { line-height: 20px; }

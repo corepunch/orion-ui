@@ -69,8 +69,17 @@ and rendering it in headless Chrome; `tests/css_conformance_test.c` compares
 fixtures fixed sized empty containers, `stretch` on definite sizes, CSS shadow
 blur, shadows clipped by their own frame, three-pixel edge antialiasing and
 unmitred borders, and Orion now composites in sRGB as a browser does (it
-blended in linear light). Glyph contrast follows Chrome's ink; where text sits
-in its box is the next fixture set.
+blended in linear light). Glyph contrast follows Chrome's ink.
+
+Text followed in `tests/conformance/text/` (sizes, weights, `text-align`,
+`text-transform`, `letter-spacing`, wrapped `line-height`, a label in a padded
+row), with `render.py` giving Chrome the same font files through `@font-face`.
+Glyph pixels differ between engines, so the text suite compares lines of ink
+(bounding boxes within a pixel, total ink within 20%). It fixed the face's line
+(CSS rounds ascent, descent and gap separately; Orion rounded the sum up and put
+the baseline a pixel low), a `Label` that carried a minimum height of 14 and a
+shadow pixel even when it had no shadow, and labels that centred their text in a
+taller box instead of sitting at its top.
 
 ## 5. Layout in CSS terms
 
@@ -117,7 +126,7 @@ Done: style queries replaced `theme_t`'s metrics and vtable; fonts are
 selectors with text properties; the VGA font gave way to IBM Plex Mono; apps
 link their own sheets and every control is styled by its `#id` and `.class`.
 
-1. Browser conformance fixtures: boxes and layout done; text placement and size next.
+1. Browser conformance fixtures: boxes, layout and text done.
 2. Layout properties in the sheet: done for gap, padding and direction; margin and the alignment properties remain.
 3. Git Client's Run page (rail, process table, console, ⌘K) built from these,
    with its behaviour in Lua.

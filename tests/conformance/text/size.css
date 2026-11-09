@@ -1,0 +1,5 @@
+/* Dark ink on light: one label per size, each as tall as its line box. */
+#page  { background: #f8fafc; }
+#small { font: 400 11px "IBM Plex Sans"; color: #1e293b; }
+#body  { font: 400 13px "IBM Plex Sans"; color: #1e293b; }
+#title { font: 400 18px "IBM Plex Sans"; color: #1e293b; }

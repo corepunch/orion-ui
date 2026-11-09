@@ -1,0 +1,15 @@
+<orion>
+  <forms>
+    <form name="fixture" width="240" height="72" padding="0" spacing="0">
+      <StackView name="page" orientation="vertical" spacing="0" padding="0" flags="flexspace">
+        <StackView name="bar" orientation="horizontal" spacing="8" padding="8">
+          <Label name="name" text="main.c" />
+          <Label name="meta" text="1.2 KB" />
+        </StackView>
+        <StackView name="note" orientation="horizontal" spacing="8" padding="8">
+          <Label name="warn" text="Dark-on-light in a padded row" />
+        </StackView>
+      </StackView>
+    </form>
+  </forms>
+</orion>

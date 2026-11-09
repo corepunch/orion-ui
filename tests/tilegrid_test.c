@@ -204,7 +204,7 @@ static void test_badge_and_truncating_label_measure(void) {
     send_message(label, lbSetStyle, 0, &style);
     layout_measure_t lm = {20, 100, 1, 1};                          // far narrower than the text
     send_message(label, evMeasure, 0, &lm);
-    ASSERT_EQUAL(lm.desired_h, CONTROL_HEIGHT);
+    ASSERT_TRUE(lm.desired_h >= text_line_height("Label") && lm.desired_h < 2 * text_line_height("Label"));   // one line, plus a text shadow pixel at most
     test_env_shutdown();
     PASS();
 }

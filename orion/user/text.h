@@ -31,7 +31,8 @@ void shutdown_text_rendering(void);
 void draw_text(ui_font_t font, const char *text, int x, int y, uint32_t col);
 void draw_text_clipped(ui_font_t font, const char *text,
                        irect16_t const *viewport, uint32_t col, uint32_t flags);
-int  text_char_height(ui_font_t font);   // cell pixel height for the given font
+int  text_char_height(ui_font_t font);   // a line of the face at line-height: normal (ascent + descent + gap, as CSS rounds them)
+int  text_line_height(ui_font_t font);   // the element's line box: its line-height, or text_char_height; glyphs sit in its middle
 int  text_strwidth(ui_font_t font, const char *text);  // pixel width of string
 int  text_strnwidth(ui_font_t font, const char *text, int len); // pixel width of first len chars
 // Copies text into out (capacity n), cutting on a UTF-8 boundary and appending "..." so the

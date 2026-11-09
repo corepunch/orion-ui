@@ -1,0 +1,8 @@
+/* A label in a padded horizontal stack: padding and spacing, then the text's own box. */
+#page { background: #ffffff; }
+#bar  { background: #1e1e1e; }
+#note { background: #fef9c3; }
+Label { font: 400 13px "IBM Plex Sans"; }
+#name { color: #ffffff; }
+#meta { color: #94a3b8; }
+#warn { color: #713f12; }

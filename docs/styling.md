@@ -294,6 +294,18 @@ wrapped:
 | `text-align` | `start`/`left`, `center`, `end`/`right` | single lines in `draw_text_clipped` (an alignment flag from the caller wins) and every wrapped line; trailing spaces hang |
 | `line-height` | `normal`, `<number>`, `<px>`, `<em>` | between wrapped lines; glyphs sit in the middle of the line box |
 
+Text is placed as a browser places it (checked against headless Chrome by
+`tests/conformance/text/`). A face's line is its hhea ascent, descent and line
+gap, each rounded to whole pixels (IBM Plex Sans 13px: 13 + 4 = 17; DejaVu Sans:
+12 + 3); that sum is `line-height: normal` and `text_char_height()`. A line box
+is the element's `line-height` (`text_line_height()`); the glyphs sit in it with
+the baseline `ascent` below the top of the content plus half the leftover leading
+(rounded down). A `Label` has no padding of its own: it measures as its widest
+line by the lines times the line box, the first line is at its top, and
+`text-align` works within its width. A fractional `line-height` (`1.6` at 13px)
+is rounded to whole pixels, so lines do not drift as they do in a browser. Glyphs
+still start on whole device pixels, where Chrome positions them on fractions.
+
 ```css
 TableView::header { font: 500 11px var(--ui-face); text-transform: uppercase; letter-spacing: .05em; }
 ```

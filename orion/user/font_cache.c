@@ -49,8 +49,16 @@ font_cache_t *font_cache_create(const char *path, float em_size) {
     fprintf(stderr, "[font] failed to set size %g for %s\n", em_size, path); fflush(stderr);
     font_cache_destroy(cache); return NULL;
   }
-  cache->baseline = (int)ceilf(cache->font->ascender * cache->raster_scale);
-  cache->line_height = (int)ceilf(cache->font->height * cache->scale);
+  // Line metrics as CSS takes them from the face's hhea table: ascent, descent and line gap
+  // each rounded to a whole logical pixel, and the gap split above and below the glyphs
+  // (floor above). A line of line-height: normal is their sum and the baseline sits
+  // ascent + gap/2 below its top, as in a browser.
+  int ascent = (int)lroundf(cache->font->ascender * cache->scale);
+  int descent = (int)lroundf(-cache->font->descender * cache->scale);
+  int gap = (int)lroundf((cache->font->height - (cache->font->ascender - cache->font->descender)) * cache->scale);
+  if (gap < 0) gap = 0;
+  cache->baseline = (int)lroundf((ascent + gap / 2) * cache->bitmap_scale);
+  cache->line_height = ascent + descent + gap;
   cache->cell_w = (int)ceilf((cache->font->bbox.xMax - cache->font->bbox.xMin) * cache->raster_scale) + 4;
   cache->cell_h = (int)ceilf((cache->font->bbox.yMax - cache->font->bbox.yMin) * cache->raster_scale) + 4;
   if (cache->line_height < 1) cache->line_height = 1;

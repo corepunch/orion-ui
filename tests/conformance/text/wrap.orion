@@ -1,0 +1,11 @@
+<orion>
+  <forms>
+    <form name="fixture" width="260" height="230" padding="0" spacing="0">
+      <StackView name="page" orientation="vertical" spacing="10" padding="12" flags="flexspace">
+        <Label name="normal" width="236" text="The quick brown fox jumps over the lazy dog and keeps running across the field." />
+        <Label name="loose"  width="236" text="The quick brown fox jumps over the lazy dog and keeps running across the field." />
+        <Label name="px"     width="236" text="Lines of exactly twenty pixels, wrapped inside a narrow column." />
+      </StackView>
+    </form>
+  </forms>
+</orion>

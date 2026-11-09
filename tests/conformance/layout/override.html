@@ -9,6 +9,17 @@
   * { box-sizing: border-box; min-width: 0; min-height: 0; }
   /* base.css's container defaults, which spacing=, padding= and orientation= override. */
   StackView, GridView, FlowView { display: flex; flex-direction: column; gap: 4px; padding: 0; }
+  /* A Label is one inline-level box of line boxes (its line-height); as a flex item it is
+     blockified, and a width makes it wrap. */
+  Label { display: inline; }
+  @font-face { font-family: "DejaVu Sans"; font-weight: 700; src: url("../../../share/fonts/DejaVuSans-Bold.ttf"); }
+  @font-face { font-family: "DejaVu Sans"; font-weight: 400; src: url("../../../share/fonts/DejaVuSans.ttf"); }
+  @font-face { font-family: "IBM Plex Mono"; font-weight: 700; src: url("../../../share/fonts/IBMPlexMono-Bold.ttf"); }
+  @font-face { font-family: "IBM Plex Mono"; font-weight: 400; src: url("../../../share/fonts/IBMPlexMono-Regular.ttf"); }
+  @font-face { font-family: "IBM Plex Sans"; font-weight: 700; src: url("../../../share/fonts/IBMPlexSans-Bold.ttf"); }
+  @font-face { font-family: "IBM Plex Sans"; font-weight: 500; src: url("../../../share/fonts/IBMPlexSans-Medium.ttf"); }
+  @font-face { font-family: "IBM Plex Sans"; font-weight: 400; src: url("../../../share/fonts/IBMPlexSans-Regular.ttf"); }
+  @font-face { font-family: "IBM Plex Sans"; font-weight: 600; src: url("../../../share/fonts/IBMPlexSans-SemiBold.ttf"); }
 </style>
 <link rel="stylesheet" href="override.css">
 </head>

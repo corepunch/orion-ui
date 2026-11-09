@@ -1,0 +1,12 @@
+<orion>
+  <forms>
+    <form name="fixture" width="240" height="132" padding="0" spacing="0">
+      <StackView name="page" orientation="vertical" spacing="8" padding="12" flags="flexspace">
+        <Label name="regular"  text="Regular 400 at 13px" />
+        <Label name="semibold" text="SemiBold 600 at 13px" />
+        <Label name="title"    text="SemiBold 600 at 18px" />
+        <Label name="mono"     text="Mono 400 at 13px" />
+      </StackView>
+    </form>
+  </forms>
+</orion>

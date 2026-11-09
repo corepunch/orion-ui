@@ -1,0 +1,11 @@
+<orion>
+  <forms>
+    <form name="fixture" width="240" height="96" padding="0" spacing="0">
+      <StackView name="page" orientation="vertical" spacing="8" padding="12" flags="flexspace">
+        <Label name="start"  width="216" text="Start" />
+        <Label name="center" width="216" text="Centred in 216 pixels" />
+        <Label name="end"    width="216" text="Right aligned" />
+      </StackView>
+    </form>
+  </forms>
+</orion>

@@ -38,6 +38,11 @@ static uint32_t label_color(const window_t *win) {
   return get_sys_color(brTextNormal);
 }
 
+// Classic's text-shadow falls one pixel right and down; the label's box makes room for it.
+static int label_shadow_inset(void) { return ui_flag("Button", "text-shadow") ? TEXT_SHADOW_OFFSET : 0; }
+
+#define LABEL_MAX_CONTENT 0x4000   // wider than any line
+
 static bool label_truncates(const window_t *win) {
   return win && (((uint32_t)(uintptr_t)win->userdata) & LABEL_PACK_TRUNCATE) != 0;
 }
@@ -63,37 +68,36 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         uint32_t color_index = (uint32_t)(uintptr_t)lparam;
         win->userdata = (void *)(uintptr_t)label_pack_userdata(color_index, LABEL_TEXT, lparam != NULL);
       }
-      // Single-line labels auto-expand to fit text; multiline labels wrap and
-      // should be measured from content instead of the previous frame size.
-      {
-        ui_font_t font = label_font(win);
-        if (win->frame.h <= CONTROL_HEIGHT)
-          win->frame.w = MAX(win->frame.w, text_strwidth(font, win->title) + TEXT_SHADOW_OFFSET);
-      }
+      // Single-line labels start as wide as their text.
+      if (win->frame.h <= CONTROL_HEIGHT)
+        win->frame.w = MAX(win->frame.w, text_strwidth(label_font(win), win->title) + label_shadow_inset());
       win->flags |= WINDOW_NOTABSTOP;
       if ((win->flags & LABEL_COLLAPSE_EMPTY) && !win->title[0]) win->frame = R(0, 0, 0, 0);
       return true;
+    // A label is the line boxes of its text and nothing else: its width is the widest line, its
+    // height the lines times the element's line-height (text_line_height), the first line box is
+    // at the top and glyphs sit in the middle of each, as for an inline-level box in CSS.
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (!m) return true;
       ui_font_t font = label_font(win);
+      int inset = label_shadow_inset(), line = text_line_height(font);
       if (label_truncates(win)) {
         // One line; the arranged width decides how much of it is visible.
-        m->desired_w = text_strwidth(font, win->title) + TEXT_SHADOW_OFFSET;
-        m->desired_h = MAX(CONTROL_HEIGHT, text_char_height(font) + TEXT_SHADOW_OFFSET);   // descenders must fit
+        m->desired_w = text_strwidth(font, win->title) + inset;
+        m->desired_h = line + inset;
         return true;
       }
-      int avail_w = m->avail_w > 0 ? m->avail_w : win->frame.w;
-      if (avail_w < 1) avail_w = win->frame.w > 0 ? win->frame.w : 1;
+      // Until the parent has a width the label is as wide as its text, or as its declared width.
+      int avail_w = m->avail_w > 0 ? m->avail_w : win->layout.layout_fixed_w > 0 ? win->layout.layout_fixed_w : LABEL_MAX_CONTENT;
       irect16_t wrap_vp = {0, 0, avail_w, 1};
       text_wrap_result_t wrap = text_wrap_layout_font(font, win->title, &wrap_vp, 0, false);
       if (wrap.wrapped) {
         m->desired_w = avail_w;
-        m->desired_h = wrap.height;
+        m->desired_h = wrap.height + inset;
       } else {
-        int text_w = MAX(wrap.width, text_strwidth(font, win->title));
-        m->desired_w = text_w + TEXT_SHADOW_OFFSET;
-        m->desired_h = MAX(CONTROL_HEIGHT, text_char_height(font) + TEXT_SHADOW_OFFSET);   // a heading is taller
+        m->desired_w = MAX(1, wrap.width + inset);   // the message router reads a zero width as "not measured"
+        m->desired_h = (wrap.height ? wrap.height : line) + inset;   // an empty label keeps its line
       }
       return true;
     }
@@ -101,24 +105,18 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       uint32_t col = label_color(win);
       ui_font_t font = label_font(win);
       irect16_t text_pos = {0, 0, win->frame.w, win->frame.h};
+      bool shadow = ui_flag("Button", "text-shadow");
+      irect16_t shadow_pos = rect_offset(text_pos, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
       if (label_truncates(win)) {
         char fitted[512];
-        text_ellipsize(font, win->title, win->frame.w - TEXT_SHADOW_OFFSET, fitted, sizeof(fitted));
-        irect16_t shadow_pos = rect_offset(text_pos, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
-        if (ui_flag("Button", "text-shadow")) draw_text_clipped(font, fitted, &shadow_pos, get_sys_color(brDarkEdge), 0);
+        text_ellipsize(font, win->title, win->frame.w - label_shadow_inset(), fitted, sizeof(fitted));
+        text_pos.h = shadow_pos.h = text_line_height(font);   // the top line box; glyphs in its middle
+        if (shadow) draw_text_clipped(font, fitted, &shadow_pos, get_sys_color(brDarkEdge), 0);
         draw_text_clipped(font, fitted, &text_pos, col, 0);
         return true;
       }
-      // Labels taller than a single control row use draw_text_wrapped so that
-      // long text reflows naturally within the available width.
-      text_wrap_result_t wrap = text_wrap_layout_font(font, win->title, &text_pos, 0, false);
-      if (wrap.wrapped) {
-        draw_text_wrapped_font(font, win->title, &text_pos, col);
-      } else {
-        irect16_t shadow_pos = rect_offset(text_pos, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
-        if (ui_flag("Button", "text-shadow")) draw_text_clipped(font, win->title, &shadow_pos, get_sys_color(brDarkEdge), 0);
-        draw_text_clipped(font, win->title, &text_pos, col, 0);
-      }
+      if (shadow) draw_text_wrapped_font(font, win->title, &shadow_pos, get_sys_color(brDarkEdge));
+      draw_text_wrapped_font(font, win->title, &text_pos, col);
       return true;
     }
   }

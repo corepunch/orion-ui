@@ -1,0 +1,6 @@
+/* text-align inside a label of fixed width. */
+#page   { background: #f8fafc; }
+Label   { font: 400 13px "IBM Plex Sans"; color: #0f172a; }
+#start  { text-align: left; }
+#center { text-align: center; }
+#end    { text-align: right; }

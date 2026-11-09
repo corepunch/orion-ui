@@ -31,6 +31,27 @@ def chrome():
   sys.exit("render.py: no Chrome; set ORION_CHROME or install chrome-headless-shell (see --help)")
 
 
+FONTS = os.path.join(ROOT, "share", "fonts")
+FAMILIES = {"IBMPlexSans": "IBM Plex Sans", "IBMPlexMono": "IBM Plex Mono", "DejaVuSans": "DejaVu Sans"}
+WEIGHTS = {"Thin": 100, "ExtraLight": 200, "Light": 300, "Regular": 400, "Medium": 500,
+           "SemiBold": 600, "Bold": 700, "ExtraBold": 800, "Black": 900}
+
+
+def font_faces(base):
+  """@font-face rules for share/fonts. Orion reads a face by file name (docs/styling.md, Type)
+  and its sheet parser skips @font-face, so the page carries them and fixture sheets never do.
+  Oblique and unknown files are left out."""
+  rules = []
+  for path in sorted(glob.glob(os.path.join(FONTS, "*.ttf"))):
+    stem, weight = os.path.basename(path)[:-4], "Regular"
+    if "-" in stem: stem, weight = stem.split("-", 1)
+    if stem not in FAMILIES or weight not in WEIGHTS: continue
+    url = os.path.relpath(path, os.path.dirname(base)).replace(os.sep, "/")
+    rules.append(f'  @font-face {{ font-family: "{FAMILIES[stem]}"; font-weight: {WEIGHTS[weight]}; '
+                 f'src: url("{url}"); }}\n')
+  return "".join(rules)
+
+
 def px(value):
   return " ".join(f"{int(v)}px" for v in value.split())
 
@@ -93,6 +114,7 @@ def element(node, depth, cell=None):
 
 
 def page(orion_path):
+  base = os.path.splitext(orion_path)[0]
   tree = ET.parse(orion_path).getroot()
   form = tree.find(".//form")
   if form is None: sys.exit(f"{orion_path}: no <form>")
@@ -110,7 +132,10 @@ def page(orion_path):
   * {{ box-sizing: border-box; min-width: 0; min-height: 0; }}
   /* base.css's container defaults, which spacing=, padding= and orientation= override. */
   StackView, GridView, FlowView {{ display: flex; flex-direction: column; gap: 4px; padding: 0; }}
-</style>
+  /* A Label is one inline-level box of line boxes (its line-height); as a flex item it is
+     blockified, and a width makes it wrap. */
+  Label {{ display: inline; }}
+{font_faces(base)}</style>
 <link rel="stylesheet" href="{css}">
 </head>
 <body>

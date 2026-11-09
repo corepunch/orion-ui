@@ -1,0 +1,6 @@
+/* Light ink on dark: two weights and a second family. */
+#page     { background: #1e1e1e; }
+#regular  { font: 400 13px "IBM Plex Sans"; color: #ffffff; }
+#semibold { font: 600 13px "IBM Plex Sans"; color: #ffffff; }
+#title    { font: 600 18px "IBM Plex Sans"; color: #ffffff; }
+#mono     { font: 400 13px "IBM Plex Mono"; color: #e2e8f0; }

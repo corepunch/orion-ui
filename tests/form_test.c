@@ -1627,7 +1627,7 @@ void test_label_font_pack_and_measure(void) {
   window_t *label = create_window("Font test", 0, MAKERECT(0, 0, 1, CONTROL_HEIGHT),
                                   root, win_label, 0, &params);
   ASSERT_NOT_NULL(label);
-  ASSERT_EQUAL(label->frame.w, MAX(1, text_strwidth("Caption", "Font test") + TEXT_SHADOW_OFFSET));
+  ASSERT_EQUAL(label->frame.w, MAX(1, text_strwidth("Caption", "Font test")));
 
   label_create_params_t defaults = {
     .font = LABEL_TEXT,
