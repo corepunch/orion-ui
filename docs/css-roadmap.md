@@ -62,9 +62,9 @@ and rendering it in headless Chrome; `tests/css_conformance_test.c` compares
 ([tests/conformance/README.md](../tests/conformance/README.md)). The first
 fixtures fixed sized empty containers, `stretch` on definite sizes, CSS shadow
 blur, shadows clipped by their own frame, three-pixel edge antialiasing and
-unmitred borders. One divergence remains, listed in the test: Orion composites
-in linear light, CSS in sRGB, so translucent colours, gradients and
-antialiased edges come out lighter.
+unmitred borders, and Orion now composites in sRGB as a browser does (it
+blended in linear light). Glyph contrast follows Chrome's ink; where text sits
+in its box is the next fixture set.
 
 ## 5. Layout in CSS terms
 
@@ -101,7 +101,7 @@ Done: style queries replaced `theme_t`'s metrics and vtable; fonts are
 selectors with text properties; the VGA font gave way to IBM Plex Mono; apps
 link their own sheets and every control is styled by its `#id` and `.class`.
 
-1. Browser conformance fixtures: boxes started; decide sRGB compositing; then text and layout.
+1. Browser conformance fixtures: boxes done; text placement and size next, then layout.
 2. Layout properties in the sheet.
 3. Git Client's Run page (rail, process table, console, ⌘K) built from these,
    with its behaviour in Lua.

@@ -314,7 +314,7 @@ static void test_selection_gradient(void) {
     glViewport(0, 0, 32, 32);
     glDisable(GL_SCISSOR_TEST);
     set_projection(0, 0, 32, 32);
-    R_SetFramebufferSRGB(true);
+    R_SetFramebufferSRGB(false);
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
     render_rounded_rect_gradient(ui_white_texture, R(4, 4, 24, 24), 24, 24, 6,
@@ -322,7 +322,7 @@ static void test_selection_gradient(void) {
     uint8_t top[4], mid[4], bottom[4], corner[4], outside[4];
     read_card_pixel(16, 8, top); read_card_pixel(16, 16, mid); read_card_pixel(16, 23, bottom);
     read_card_pixel(4, 4, corner); read_card_pixel(2, 16, outside);
-    ok &= top[0] > mid[0] && mid[0] > bottom[0] && mid[0] > 170 && mid[0] < 200;
+    ok &= top[0] > mid[0] && mid[0] > bottom[0] && mid[0] > 110 && mid[0] < 135;   // interpolated in sRGB, as CSS
     ok &= top[3] == 255 && bottom[3] == 255 && corner[3] == 0 && outside[3] == 0;
     glClear(GL_COLOR_BUFFER_BIT);
     render_rounded_top_rect_gradient(ui_white_texture, R(4, 4, 24, 24), 24, 24, 6,
@@ -611,14 +611,14 @@ static bool srgb_upload_boundaries(void) {
     glBindTexture(GL_TEXTURE_2D, tex);
     GLint format = 0;
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
-    ok &= format == GL_SRGB8_ALPHA8;
+    ok &= format == GL_RGBA8;
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, stored);
     for (size_t i = 0; i < sizeof(pixels); i += 4) {
       int alpha = pixels[i + 3];
       ok &= stored[i + 3] == alpha;
       for (int c = 0; c < 3; c++) {
         int expected = alpha == 0 ? 0 : alpha == 255 ? pixels[i + c] :
-          ui_linear_to_srgb8(ui_srgb8_to_linear(pixels[i + c]) * (128.0f / 255));
+          (pixels[i + c] * alpha + 127) / 255;   // premultiplied in sRGB, as CSS composites
         ok &= stored[i + c] == expected;
       }
     }
@@ -635,8 +635,8 @@ static bool srgb_upload_boundaries(void) {
   return ok;
 }
 
-static void test_srgb_linear_source_over(void) {
-  TEST("sRGB window targets store linear-light source-over results");
+static void test_srgb_source_over(void) {
+  TEST("window targets composite source-over in sRGB, as CSS, and a texture GL stores as sRGB draws as its colour");
   CGLPixelFormatAttribute attrs[] = {kCGLPFAOpenGLProfile,
     (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core, (CGLPixelFormatAttribute)0};
   CGLPixelFormatObj format = NULL;
@@ -659,7 +659,7 @@ static void test_srgb_linear_source_over(void) {
     correct &= black != 0;
     color_tex = R_CreateTextureSRGBA8(1, 1, (uint8_t[]){128, 128, 128, 128},
                                       R_FILTER_NEAREST, R_WRAP_CLAMP);
-    float_tex = R_CreateTexture(1, 1, R_TEXTURE_RGBA16F_LINEAR,
+    float_tex = R_CreateTexture(1, 1, R_TEXTURE_RGBA16F,
                                 (float[]){0.25f, 0.25f, 0.25f, 0.5f},
                                 R_FILTER_NEAREST, R_WRAP_CLAMP);
     correct &= color_tex != 0 && float_tex != 0;
@@ -670,30 +670,46 @@ static void test_srgb_linear_source_over(void) {
     glViewport(0, 0, 1, 1);
     glDisable(GL_SCISSOR_TEST);
     set_projection(0, 0, 1, 1);
-    R_SetFramebufferSRGB(true);
+    R_SetFramebufferSRGB(false);
     glClearColor(1, 1, 1, 1);
     glClear(GL_COLOR_BUFFER_BIT);
     draw_rect_ex((int)black, R(0, 0, 1, 1), 0, 0.5f);
     uint8_t result[4] = {0};
     glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, result);
     GLenum draw_error = glGetError();
-    bool draw_ok = abs((int)result[0] - 188) <= 1 &&
-                   abs((int)result[1] - 188) <= 1 &&
-                   abs((int)result[2] - 188) <= 1 && result[3] == 255 &&
+    // Half-transparent black over white composites to 128, as in a browser.
+    bool draw_ok = abs((int)result[0] - 128) <= 1 &&
+                   abs((int)result[1] - 128) <= 1 &&
+                   abs((int)result[2] - 128) <= 1 && result[3] == 255 &&
                    draw_error == GL_NO_ERROR;
     uint8_t surface_result[4] = {0}, color_result[4] = {0}, float_result[4] = {0};
     bool surface_read = R_ReadTextureSRGBA8(surface, 1, 1, surface_result);
     bool color_read = R_ReadTextureSRGBA8(color_tex, 1, 1, color_result);
     bool float_read = R_ReadTextureSRGBA8(float_tex, 1, 1, float_result);
-    bool surface_ok = surface_read && abs((int)surface_result[0] - 188) <= 1 && surface_result[3] == 255;
+    bool surface_ok = surface_read && abs((int)surface_result[0] - 128) <= 1 && surface_result[3] == 255;
     bool color_ok = color_read && abs((int)color_result[0] - 128) <= 1 && color_result[3] == 128;
-    bool float_ok = float_read && abs((int)float_result[0] - 188) <= 1 && float_result[3] == 128;
-    correct = draw_ok && surface_ok && color_ok && float_ok;
+    bool float_ok = float_read && abs((int)float_result[0] - 128) <= 1 && float_result[3] == 128;
+    // A 3D view's target: GL decodes it on sampling, and the sprite programs encode it again.
+    GLuint external = 0;
+    glGenTextures(1, &external);
+    glBindTexture(GL_TEXTURE_2D, external);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, (uint8_t[]){128, 64, 200, 255});
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glClear(GL_COLOR_BUFFER_BIT);
+    draw_rect_ex((int)external, R(0, 0, 1, 1), 0, 1.0f);
+    uint8_t external_result[4] = {0};
+    glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, external_result);
+    glDeleteTextures(1, &external);
+    bool external_ok = abs((int)external_result[0] - 128) <= 1 && abs((int)external_result[1] - 64) <= 1 &&
+                       abs((int)external_result[2] - 200) <= 1;
+    correct = draw_ok && surface_ok && color_ok && float_ok && external_ok;
     if (!correct)
-      fprintf(stderr, "[renderer-test] gpu=%s draw=%u,%u,%u,%u error=0x%x surface=%d:%u,%u color=%d:%u,%u float=%d:%u,%u\n",
+      fprintf(stderr, "[renderer-test] gpu=%s draw=%u,%u,%u,%u error=0x%x surface=%d:%u,%u color=%d:%u,%u float=%d:%u,%u external=%u,%u,%u\n",
               glGetString(GL_RENDERER), result[0], result[1], result[2], result[3], draw_error,
               surface_read, surface_result[0], surface_result[3], color_read, color_result[0], color_result[3],
-              float_read, float_result[0], float_result[3]);
+              float_read, float_result[0], float_result[3], external_result[0], external_result[1], external_result[2]);
   }
   R_SetFramebufferSRGB(false);
   if (black) R_DeleteTexture(black);
@@ -711,8 +727,8 @@ static void test_onion_alpha(void) {
   TEST("Faded strokes keep an opaque canvas opaque through window compositing");
   SKIP("Offscreen test requires macOS CGL");
 }
-static void test_srgb_linear_source_over(void) {
-  TEST("sRGB window targets store linear-light source-over results");
+static void test_srgb_source_over(void) {
+  TEST("window targets composite source-over in sRGB, as CSS, and a texture GL stores as sRGB draws as its colour");
   SKIP("Offscreen test requires macOS CGL");
 }
 #endif
@@ -729,7 +745,7 @@ int main(void) {
   test_scroll_padding_paint();
 #endif
   test_onion_alpha();
-  test_srgb_linear_source_over();
+  test_srgb_source_over();
 #if defined(__APPLE__) && !TARGET_OS_IOS
 #endif
   TEST_END();

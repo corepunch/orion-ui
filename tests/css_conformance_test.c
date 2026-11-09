@@ -2,7 +2,7 @@
 // Each fixture in tests/conformance/<suite>/ is a form (<name>.orion) and its
 // style sheet (<name>.css); <name>.png is headless Chrome's rendering of the
 // same page (tools/conformance/render.py). Orion paints the form offscreen and
-// the two images must agree within a small tolerance for antialiasing.
+// the two images must agree: fills closely, antialiased edges loosely.
 // A failing fixture leaves build/conformance/<suite>-<name>.orion.png and
 // .diff.png beside the reference for inspection.
 
@@ -18,27 +18,25 @@
 #include <string.h>
 #include <sys/stat.h>
 
-// A pixel differs when a channel is off by more than CHANNEL; antialiased edges
-// may differ by more, but no more than EDGE_SHARE of the image may, and none by
-// more than LARGE.
-#define CHANNEL     12
-#define LARGE       48
-#define EDGE_SHARE  0.004
+// Fills must match and edges may rasterise differently, as text does: a pixel
+// whose 3x3 neighbourhood in Chrome's image is even (no channel steps by more
+// than EDGE_STEP) is inside a fill and may be off by at most FILL; one on an
+// edge (Chrome flattens curves into chords) by at most EDGE.
+#define EDGE_STEP 24
+#define FILL      12
+#define EDGE      80
 
-// Known divergences: the fixture must still agree in geometry (no pixel off by
-// more than GEOMETRY_WORST, at most GEOMETRY_SHARE of them by more than LARGE),
-// and the test fails once it matches outright, so the list stays true.
-#define GEOMETRY_WORST 128
-#define GEOMETRY_SHARE 0.02
-static const char *const k_linear_blending =
-  "Orion composites translucent colours, gradients and antialiased edges in linear light; CSS in sRGB";
+// Known divergences, with their reason: such a fixture must still agree in
+// geometry (no pixel off by more than GEOMETRY), and the test fails once it
+// matches outright, so the list stays true.
+#define GEOMETRY 128
 static const struct { const char *fixture, *reason; } k_known[] = {
-  {"boxes/background", NULL}, {"boxes/border", NULL}, {"boxes/radius", NULL}, {"boxes/shadow", NULL},
+  {NULL, NULL},
 };
 
 static const char *known_reason(const char *fixture) {
   for (size_t i = 0; i < ARRAY_LEN(k_known); i++)
-    if (!strcmp(k_known[i].fixture, fixture)) return k_known[i].reason ? k_known[i].reason : k_linear_blending;
+    if (k_known[i].fixture && !strcmp(k_known[i].fixture, fixture)) return k_known[i].reason;
   return NULL;
 }
 
@@ -106,20 +104,24 @@ static fixture_verdict_t compare_fixture(const char *orion, const char *fixture)
     fprintf(stderr, "[conformance] %s: Orion paints %dx%d, Chrome %dx%d\n", orion, w, h, rw, rh);
   if (!ok) { image_free(reference); free(actual); return FIXTURE_DIFFERS; }
 
-  int differ = 0, large = 0, worst = 0;
+  int fill_off = 0, edge_off = 0, worst_fill = 0, worst_edge = 0;
   uint8_t *diff = calloc((size_t)w * h * 4, 1);
-  for (int i = 0; i < w * h; i++) {
-    int d = 0;
+  for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) {
+    int i = y * w + x, d = 0, step = 0;
     for (int c = 0; c < 4; c++) d = MAX(d, abs(actual[i * 4 + c] - reference[i * 4 + c]));
-    worst = MAX(worst, d);
-    differ += d > CHANNEL;
-    large += d > LARGE;
+    for (int ny = MAX(0, y - 1); ny <= MIN(h - 1, y + 1); ny++)
+      for (int nx = MAX(0, x - 1); nx <= MIN(w - 1, x + 1); nx++)
+        for (int c = 0; c < 4; c++) step = MAX(step, abs(reference[(ny * w + nx) * 4 + c] - reference[i * 4 + c]));
+    bool edge = step > EDGE_STEP;
+    if (edge) { worst_edge = MAX(worst_edge, d); edge_off += d > EDGE; }
+    else { worst_fill = MAX(worst_fill, d); fill_off += d > FILL; }
+    bool bad = edge ? d > EDGE : d > FILL;
     uint8_t v = (uint8_t)MIN(255, d * 4);
-    diff[i * 4 + 0] = v; diff[i * 4 + 1] = d > LARGE ? 0 : v; diff[i * 4 + 2] = d > LARGE ? 0 : v; diff[i * 4 + 3] = 255;
+    diff[i * 4 + 0] = bad ? 255 : v; diff[i * 4 + 1] = bad ? 0 : v; diff[i * 4 + 2] = bad ? 0 : v; diff[i * 4 + 3] = 255;
   }
   const char *known = known_reason(fixture);
-  bool matches = large == 0 && differ <= (int)(w * h * EDGE_SHARE);
-  bool geometry = worst <= GEOMETRY_WORST && large <= (int)(w * h * GEOMETRY_SHARE);
+  bool matches = fill_off == 0 && edge_off == 0;
+  bool geometry = MAX(worst_fill, worst_edge) <= GEOMETRY;
   fixture_verdict_t verdict = matches ? FIXTURE_MATCHES : known && geometry ? FIXTURE_KNOWN : FIXTURE_DIFFERS;
   char flat[256];
   snprintf(flat, sizeof(flat), "%s", fixture);
@@ -132,8 +134,8 @@ static fixture_verdict_t compare_fixture(const char *orion, const char *fixture)
     mkdir("build", 0755); mkdir("build/conformance", 0755);
     save_image_png(orion_png, actual, w, h);
     save_image_png(diff_png, diff, w, h);
-    fprintf(stderr, "[conformance] %s: %d pixels differ (%d by more than %d, worst %d)%s%s; see %s\n",
-            fixture, differ, large, LARGE, worst, known ? ": known, " : "", known ? known : "", diff_png);
+    fprintf(stderr, "[conformance] %s: %d fill pixels off by more than %d (worst %d), %d edge pixels by more than %d (worst %d)%s%s; see %s\n",
+            fixture, fill_off, FILL, worst_fill, edge_off, EDGE, worst_edge, known ? ": known, " : "", known ? known : "", diff_png);
   }
   free(diff);
   image_free(reference);

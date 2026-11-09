@@ -99,6 +99,7 @@ typedef enum {
 } ui_layer_blend_t;
 
 void push_sprite_args(int tex, int x, int y, int w, int h, float alpha);
+void push_text_args(int tex);
 void draw_rect_blend(int tex, int x, int y, int w, int h, float alpha,
                      ui_layer_blend_t blend);
 void draw_rect_program_blend(int tex, int x, int y, int w, int h, float alpha,

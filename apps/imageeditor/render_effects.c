@@ -41,22 +41,9 @@ char *imageeditor_prepare_effect_shader(const char *source) {
   static const char input_helpers[] =
     "\nuniform float source_premultiplied;\n"
     "uniform float output_premultiplied;\n"
-    "float imageeditor_srgb_to_linear(float x) {\n"
-    "  return x <= 0.04045 ? x / 12.92 : pow((x + 0.055) / 1.055, 2.4);\n"
-    "}\n"
-    "float imageeditor_linear_to_srgb(float x) {\n"
-    "  x = max(x, 0.0);\n"
-    "  return x <= 0.0031308 ? 12.92 * x : 1.055 * pow(x, 1.0 / 2.4) - 0.055;\n"
-    "}\n"
     "vec4 imageeditor_effect_sample(vec2 uv) {\n"
     "  vec4 c = texture(tex0, uv);\n"
-    "  if (source_premultiplied > 0.5) {\n"
-    "    if (c.a > 0.00001) {\n"
-    "      c.rgb = vec3(imageeditor_linear_to_srgb(c.r / c.a),\n"
-    "                   imageeditor_linear_to_srgb(c.g / c.a),\n"
-    "                   imageeditor_linear_to_srgb(c.b / c.a));\n"
-    "    } else c.rgb = vec3(0.0);\n"
-    "  }\n"
+    "  if (source_premultiplied > 0.5) c.rgb = c.a > 0.00001 ? c.rgb / c.a : vec3(0.0);\n"
     "  return c;\n"
     "}\n";
   static const char output_wrapper[] =
@@ -64,10 +51,7 @@ char *imageeditor_prepare_effect_shader(const char *source) {
     "  imageeditor_user_main();\n"
     "  if (output_premultiplied > 0.5) {\n"
     "    float a = clamp(outColor.a, 0.0, 1.0);\n"
-    "    vec3 linear_rgb = vec3(imageeditor_srgb_to_linear(outColor.r),\n"
-    "                           imageeditor_srgb_to_linear(outColor.g),\n"
-    "                           imageeditor_srgb_to_linear(outColor.b));\n"
-    "    outColor = vec4(linear_rgb * a, a);\n"
+    "    outColor = vec4(outColor.rgb * a, a);\n"
     "  }\n"
     "}\n";
   if (!source || !strstr(source, "uniform sampler2D tex0;") ||

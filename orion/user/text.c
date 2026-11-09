@@ -384,7 +384,6 @@ static inline int wrap_char_advance(ui_font_t font, uint32_t c) {
 
 // ── Render a filled vertex batch for one atlas ────────────────────────────────
 
-extern void push_sprite_args(int tex, int x, int y, int w, int h, float alpha);
 
 static void flush_batch(font_atlas_t *atlas, text_vertex_t *buf, int count) {
   if (count == 0) return;
@@ -395,7 +394,7 @@ static void flush_batch(font_atlas_t *atlas, text_vertex_t *buf, int count) {
     .format = GL_RED,
   };
   R_SetBlendMode(true);
-  push_sprite_args((int)texture.id, 0, 0, 1, 1, 1.0f);
+  push_text_args((int)texture.id);
   R_TextureBind(&texture);
   R_MeshDrawDynamic(&atlas->mesh, buf, (size_t)count);
 }

@@ -58,6 +58,9 @@ vec4 frag() {
 
   float a = face * tint.a * col.a;
   float sa = shadow * shadow_color.a * tint.a * col.a * (1.0 - face);
-  outColor = vec4(rgb * col.rgb * a + shadow_color.rgb * sa, a + sa);
+  // Lit in linear light, then encoded: the surface composites in sRGB like everything else.
+  vec3 lit = rgb * col.rgb;
+  lit = vec3(ui_encode(lit.r), ui_encode(lit.g), ui_encode(lit.b));
+  outColor = vec4(lit * a + shadow_color.rgb * sa, a + sa);
   return ui_clipped(outColor);
 }

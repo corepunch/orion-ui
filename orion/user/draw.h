@@ -33,7 +33,7 @@ void render_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
                           float tail_offset, float padding, tooltip_tail_side_t side, uint32_t color, uint32_t border, float border_width, float tail_width);
 void render_tooltip_bubble(irect16_t r, isize16_t face_size, float radius, float tail,
                           float tail_offset, float padding, tooltip_tail_side_t side, uint32_t color);
-// Vertical, linear-light gradient with one rounded silhouette; radius 0 fills a row.
+// Vertical gradient, interpolated in sRGB as CSS does, with one rounded silhouette; radius 0 fills a row.
 void fill_gradient_rounded_rect(uint32_t top, uint32_t bottom, irect16_t r, int radius);
 // Same gradient with rounded top corners and square bottom corners, for tabs.
 void fill_gradient_rounded_top_rect(uint32_t top, uint32_t bottom, irect16_t r, int radius);

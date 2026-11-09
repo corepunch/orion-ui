@@ -25,11 +25,11 @@ typedef enum {
 } R_TextureWrap;
 
 // Texture storage and sampling role. SRGBA8 uploads accept straight-alpha
-// sRGB bytes and are stored premultiplied in linear light before encoding.
+// sRGB bytes and are stored premultiplied in sRGB, as CSS composites.
 typedef enum {
   R_TEXTURE_RGBA8_DATA = 0,     // Raw RGBA8 bytes; masks, indices, legacy data.
-  R_TEXTURE_SRGBA8_COLOR,        // sRGB-encoded premultiplied linear RGB + alpha.
-  R_TEXTURE_RGBA16F_LINEAR,      // Linear-premultiplied float RGBA; caller supplies float pixels.
+  R_TEXTURE_SRGBA8_COLOR,        // sRGB bytes premultiplied in that encoding (as CSS composites); stored as RGBA8.
+  R_TEXTURE_RGBA16F,             // Premultiplied float RGBA in the UI's sRGB encoding; caller supplies float pixels.
 } R_TextureFormat;
 
 typedef enum {
@@ -102,8 +102,8 @@ void R_ClearVertexAttribs(size_t count);
 
 // High-level texture helpers (no GL knowledge required in callers)
 // Create raw RGBA8 data. Use for masks, indices and packed cell data; RGB is
-// not decoded. SRGBA8 input APIs accept straight-alpha sRGB bytes and convert
-// them to premultiplied linear RGB before storing encoded values for filtering.
+// not decoded. SRGBA8 input APIs accept straight-alpha sRGB bytes and store
+// them premultiplied in sRGB.
 uint32_t R_CreateTextureRGBA(int w, int h, const void *rgba,
                               R_TextureFilter filter, R_TextureWrap wrap);
 uint32_t R_CreateTexture(int w, int h, R_TextureFormat format,
@@ -111,7 +111,7 @@ uint32_t R_CreateTexture(int w, int h, R_TextureFormat format,
                          R_TextureWrap wrap);
 uint32_t R_CreateTextureSRGBA8(int w, int h, const void *rgba,
                                R_TextureFilter filter, R_TextureWrap wrap);
-// True for textures whose sampled RGB is already premultiplied linear light.
+// True for textures whose sampled RGB is already premultiplied.
 bool R_TextureIsPremultiplied(uint32_t tex);
 uint32_t R_CreateTextureR8(int w, int h, const void *pixels,
                            R_TextureFilter filter, R_TextureWrap wrap);

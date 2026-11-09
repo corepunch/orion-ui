@@ -1,7 +1,3 @@
-float srgb_to_linear(float x) {
-  return x <= 0.04045 ? x / 12.92 : pow((x + 0.055) / 1.055, 2.4);
-}
-
 // Signed distance to a rounded box centered at the origin.
 float roundedBoxSDF(vec2 p, vec2 b, float r) {
   vec2 q = abs(p) - b + vec2(r);
@@ -95,7 +91,7 @@ vec4 frag() {
       return vec4(0.0, 0.0, 0.0, a * alpha * col.a);
     }
     float a = tint.a * alpha * col.a * borderSideCoverage(p, side);
-    vec3 rgb = vec3(srgb_to_linear(tint.r), srgb_to_linear(tint.g), srgb_to_linear(tint.b));
+    vec3 rgb = tint.rgb;
     return vec4(rgb * a, a);
   }
   if (params0.z > 3.5) {
@@ -104,7 +100,7 @@ vec4 frag() {
     float face = radius > 0.0 ? edgeCoverage(d) : 1.0;
     float band = mod(floor((p.x + params1.w) / params1.y), 2.0);
     float a = tint.a * alpha * face * band * col.a;
-    vec3 rgb = vec3(srgb_to_linear(tint.r), srgb_to_linear(tint.g), srgb_to_linear(tint.b));
+    vec3 rgb = tint.rgb;
     return vec4(rgb * col.rgb * a, a);
   }
   if (params0.z > 1.5) {
@@ -113,10 +109,10 @@ vec4 frag() {
     float aa = max(0.75, fwidth(d));
     float face = 1.0 - smoothstep(-aa, aa, d);
     float fa = tint.a * face * alpha;
-    vec3 fill_rgb = vec3(srgb_to_linear(tint.r), srgb_to_linear(tint.g), srgb_to_linear(tint.b));
+    vec3 fill_rgb = tint.rgb;
     if (params1.z > 0.0) {
       float inner = 1.0 - smoothstep(-aa, aa, d + params1.z);
-      vec3 border_rgb = vec3(srgb_to_linear(edge.r), srgb_to_linear(edge.g), srgb_to_linear(edge.b));
+      vec3 border_rgb = edge.rgb;
       float border_alpha = (face - inner) * edge.a * alpha;
       float inner_alpha = inner * tint.a * alpha;
       return vec4(fill_rgb * inner_alpha + border_rgb * border_alpha, inner_alpha + border_alpha);
@@ -133,15 +129,13 @@ vec4 frag() {
                    * t - 0.284496736) * t + 0.254829592) * t * exp(-x * x);
     float coverage = 0.5 * tail;
     if (d < 0.0) coverage = 1.0 - coverage;
-    vec3 shadow_rgb = vec3(srgb_to_linear(tint.r), srgb_to_linear(tint.g),
-                           srgb_to_linear(tint.b));
+    vec3 shadow_rgb = tint.rgb;
     float shadow_alpha = tint.a * alpha * coverage;
     outColor = vec4(shadow_rgb * shadow_alpha, shadow_alpha);
     return ui_clipped(outColor);
   }
-  vec4 src = texture(tex0, tex);
-  vec3 tint_linear = vec3(srgb_to_linear(tint.r), srgb_to_linear(tint.g),
-                          srgb_to_linear(tint.b));
+  vec4 src = ui_texture(tex);
+  vec3 tint_rgb = tint.rgb;
   float aa = 1.0;
   float stroke = params1.z;
   if (radius > 0.0 || stroke > 0.0) {
@@ -159,22 +153,22 @@ vec4 frag() {
     }
   }
   if (params0.z > 0.5) {
-    vec3 bottom = vec3(srgb_to_linear(edge.r), srgb_to_linear(edge.g), srgb_to_linear(edge.b));
+    vec3 bottom = edge.rgb;
     // Texture coordinates are flipped for the compositor: top is tex.y = 1.
     float y = clamp(1.0 - tex.y, 0.0, 1.0);
     float a = mix(tint.a, edge.a, y) * alpha * aa * col.a;
-    outColor = vec4(mix(tint_linear, bottom, y) * col.rgb * a, a);
+    outColor = vec4(mix(tint_rgb, bottom, y) * col.rgb * a, a);
     return ui_clipped(outColor);
   }
   float factor = alpha * aa * col.a * tint.a;
-  vec3 straight_rgb = src.rgb * col.rgb * tint_linear;
+  vec3 straight_rgb = src.rgb * col.rgb * tint_rgb;
   if (params1.x < 0.5) straight_rgb *= src.a;
-  vec3 overlay_linear = vec3(srgb_to_linear(overlay.r), srgb_to_linear(overlay.g), srgb_to_linear(overlay.b));
-  straight_rgb = mix(straight_rgb, overlay_linear * src.a, overlay.a);
+  vec3 overlay_rgb = overlay.rgb;
+  straight_rgb = mix(straight_rgb, overlay_rgb * src.a, overlay.a);
   float src_a = src.a;
   // A plain rectangular edge, clipped by the same rounded silhouette as the fill.
   if (stroke <= 0.0 && params1.y > 0.0 && tex.x * size.x < params1.y) {
-    straight_rgb = vec3(srgb_to_linear(edge.r), srgb_to_linear(edge.g), srgb_to_linear(edge.b));
+    straight_rgb = edge.rgb;
     factor = alpha * aa * col.a * edge.a;
     src_a = 1.0;
   }

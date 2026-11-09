@@ -262,7 +262,7 @@ static void test_modal_composition(void) {
     ASSERT(memcmp(modal[i], repainted[i], 4) == 0, "repaint must preserve modal appearance");
     ASSERT(memcmp(before[i], restored[i], 4) == 0, "closing restores cached content");
     if (i < 5) {
-      ASSERT(modal[i][1] > 170 && modal[i][1] < 200, "one linear-light overlay");
+      ASSERT(modal[i][1] > 115 && modal[i][1] < 140, "one overlay, composited in sRGB");
     } else ASSERT(memcmp(before[i], modal[i], 4) == 0, "dialog and other app remain untinted");
   }
   ASSERT_EQUAL(surface[0], 255); ASSERT_EQUAL(surface[1], 0);

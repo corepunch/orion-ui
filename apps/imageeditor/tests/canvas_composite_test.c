@@ -16,7 +16,7 @@ static void test_normal_layer_composite(void) {
   doc.layer.stack = stack; doc.layer.count = 2;
   uint8_t result[12];
   canvas_composite(&doc, result);
-  ASSERT_EQUAL(result[0], 187); ASSERT_EQUAL(result[1], 187); ASSERT_EQUAL(result[2], 187);
+  ASSERT_EQUAL(result[0], 127); ASSERT_EQUAL(result[1], 127); ASSERT_EQUAL(result[2], 127);   // in sRGB, as on screen
   ASSERT_EQUAL(result[3], 255);
   ASSERT_EQUAL(memcmp(result + 4, upper + 4, 8), 0);
   layers[1].opacity = 0;
@@ -32,7 +32,7 @@ static void test_normal_layer_composite(void) {
 }
 
 static void test_blend_modes(void) {
-  TEST("non-normal blend modes still composite in linear light");
+  TEST("blend modes composite in sRGB, as the GPU draws the layers");
   uint8_t lower[] = {128, 128, 128, 255}, upper[] = {128, 128, 128, 255}, result[4];
   layer_t layers[] = {
     {.pixels = lower, .visible = true, .opacity = 255, .blend_mode = LAYER_BLEND_NORMAL},
@@ -42,7 +42,7 @@ static void test_blend_modes(void) {
   canvas_doc_t doc = {.canvas_w = 1, .canvas_h = 1};
   doc.layer.stack = stack; doc.layer.count = 2;
   const int modes[] = {LAYER_BLEND_MULTIPLY, LAYER_BLEND_SCREEN, LAYER_BLEND_ADD};
-  const int expected[] = {61, 167, 176};
+  const int expected[] = {64, 192, 255};
   for (int i = 0; i < 3; i++) {
     layers[1].blend_mode = modes[i];
     canvas_composite(&doc, result);

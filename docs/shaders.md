@@ -28,7 +28,7 @@ image-editor shader/filter files retain complete-source syntax; the legacy
 filter importer still owns its constrained syntax conversion. New built-ins
 should use descriptors instead of expanding that importer.
 
-The migration preserves the existing linear-light/premultiplied color math.
+The sprite programs work in sRGB, premultiplied in that encoding, as CSS composites (ARCHITECTURE.md, Color and Alpha).
 Framebuffer sRGB policy and FP16 capability checks stay in the renderer.
 Scener's other desktop GL operations remain a separate GLES-porting concern.
 

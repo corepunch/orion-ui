@@ -75,7 +75,7 @@ wall_vertex_t sprite_verts[] = {
 typedef struct {
   float projection[16], offset[2], scale[2], uv_offset[2], uv_scale[2];
   float tint[4], alpha, params0[4], params1[4], size[2], radius, edge[4], overlay[4];
-  float shadow_color[4], material[4], disabled;
+  float shadow_color[4], material[4], disabled, decode;
   float clip_rect[4], clip_radius;   // rounded clip (clip.frag.glsl); radius 0 = off
   int tex0, palette_tex;
 } sprite_state_t;
@@ -110,7 +110,7 @@ static const shaderUniform_t sprite_uniforms[] = {
   SPRITE_UNIFORM(overlay, "overlay", UT_FLOAT_VEC4),
   SPRITE_UNIFORM(edge, "edge", UT_FLOAT_VEC4), SPRITE_UNIFORM(shadow_color, "shadow_color", UT_FLOAT_VEC4),
   SPRITE_UNIFORM(material, "material", UT_FLOAT_VEC4),
-  SPRITE_UNIFORM(disabled, "disabled", UT_FLOAT),
+  SPRITE_UNIFORM(disabled, "disabled", UT_FLOAT), SPRITE_UNIFORM(decode, "decode", UT_FLOAT),
   SPRITE_UNIFORM(clip_rect, "clip_rect", UT_FLOAT_VEC4), SPRITE_UNIFORM(clip_radius, "clip_radius", UT_FLOAT),
 };
 #undef SPRITE_UNIFORM
@@ -168,10 +168,7 @@ static uint8_t *premultiply_srgba8(const uint8_t *rgba, int w, int h) {
     uint8_t a = rgba[i + 3];
     if (a == 255) { memcpy(out + i, rgba + i, 4); continue; }
     if (a == 0) { memset(out + i, 0, 4); continue; }
-    float alpha = (float)a / 255.0f;
-    out[i + 0] = ui_linear_to_srgb8(ui_srgb8_to_linear(rgba[i + 0]) * alpha);
-    out[i + 1] = ui_linear_to_srgb8(ui_srgb8_to_linear(rgba[i + 1]) * alpha);
-    out[i + 2] = ui_linear_to_srgb8(ui_srgb8_to_linear(rgba[i + 2]) * alpha);
+    for (int c = 0; c < 3; c++) out[i + c] = (uint8_t)((rgba[i + c] * a + 127) / 255);
     out[i + 3] = a;
   }
   return out;
@@ -186,7 +183,7 @@ static bool register_texture_metadata(GLuint id, R_TextureFormat format,
   meta->width = width;
   meta->height = height;
   meta->premultiplied = format == R_TEXTURE_SRGBA8_COLOR ||
-                        format == R_TEXTURE_RGBA16F_LINEAR;
+                        format == R_TEXTURE_RGBA16F;
   meta->next = g_texture_metadata;
   g_texture_metadata = meta;
   return true;
@@ -196,6 +193,20 @@ static texture_metadata_t *find_texture_metadata(uint32_t id) {
   for (texture_metadata_t *meta = g_texture_metadata; meta; meta = meta->next)
     if (meta->id == (GLuint)id) return meta;
   return NULL;
+}
+
+// 1 when the texture bound to GL_TEXTURE_2D is one GL stores as sRGB and
+// decodes on sampling (a 3D view's own target): the sprite programs encode it
+// again (ui_texture). Orion's textures hold sRGB bytes as they are.
+static float bound_texture_decodes(GLuint tex) {
+  if (!tex || find_texture_metadata(tex)) return 0.0f;
+#ifndef ORION_OPENGL_ES
+  GLint format = 0;
+  glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
+  return format == GL_SRGB8_ALPHA8 || format == GL_SRGB8 || format == GL_SRGB_ALPHA || format == GL_SRGB ? 1.0f : 0.0f;
+#else
+  return 0.0f;
+#endif
 }
 
 static void draw_rect_program_common(int tex, int x, int y, int w, int h,
@@ -385,6 +396,7 @@ static void prepare_sprite_args(int tex, int x, int y, int w, int h, float alpha
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, tex);
   g_ref.copy_sprite.state.tex0 = 0;
+  g_ref.copy_sprite.state.decode = bound_texture_decodes((GLuint)tex);
   sprite_vec2(g_ref.copy_sprite.state.offset, x, y);
   sprite_vec2(g_ref.copy_sprite.state.scale, w, h);
   g_ref.copy_sprite.state.alpha = alpha;
@@ -393,6 +405,14 @@ static void prepare_sprite_args(int tex, int x, int y, int w, int h, float alpha
   sprite_vec2(g_ref.copy_sprite.state.uv_offset, 0.0f, 0.0f);
   sprite_vec2(g_ref.copy_sprite.state.uv_scale, 1.0f, 1.0f);
   sprite_vec4(g_ref.copy_sprite.state.tint, 1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+// Glyphs: tex is a coverage atlas, the vertex colour the text's.
+void push_text_args(int tex) {
+  if (!g_ref.copy_sprite.shader.progid) return;
+  prepare_sprite_args(tex, 0, 0, 1, 1, 1.0f);
+  g_ref.copy_sprite.state.params0[1] = 1.0f;
+  gs_apply(&g_ref.copy_sprite.shader, &g_ref.copy_sprite.state);
 }
 
 void push_sprite_args(int tex, int x, int y, int w, int h, float alpha) {
@@ -577,7 +597,7 @@ void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow
   sprite_vec4(program->state.params1, shadow, look->pressed, look->hover, look->selected);
   sprite_vec4(program->state.material, look->gloss, look->rim, 0, look->lift);
   program->state.disabled = look->disabled;
-  sprite_vec4(program->state.shadow_color, ui_srgb8_to_linear(shadow_color & 255), ui_srgb8_to_linear((shadow_color >> 8) & 255), ui_srgb8_to_linear((shadow_color >> 16) & 255), (shadow_color >> 24) / 255.0f);
+  sprite_vec4(program->state.shadow_color, (shadow_color & 255) / 255.0f, ((shadow_color >> 8) & 255) / 255.0f, ((shadow_color >> 16) & 255) / 255.0f, (shadow_color >> 24) / 255.0f);
   R_BlendPremultiplied();
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
   if (!gs_apply(&program->shader, &program->state)) return;
@@ -595,6 +615,7 @@ void draw_rect_gradient(int tex, int x, int y, int w, int h,
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, tex);
   g_ref.gradient_sprite.state.tex0 = 0;
+  g_ref.gradient_sprite.state.decode = bound_texture_decodes((GLuint)tex);
   sprite_vec2(g_ref.gradient_sprite.state.offset, x, y);
   sprite_vec2(g_ref.gradient_sprite.state.scale, w, h);
   g_ref.gradient_sprite.state.alpha = 1.0f;
@@ -692,6 +713,8 @@ static void draw_rect_program_common(int tex, int x, int y, int w, int h,
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, tex);
   GLint tex0_u = glGetUniformLocation(program, "tex0");
+  GLint decode_u = glGetUniformLocation(program, "decode");
+  if (decode_u >= 0) glUniform1f(decode_u, bound_texture_decodes((GLuint)tex));
   GLint projection_u = glGetUniformLocation(program, "projection");
   GLint alpha_u = glGetUniformLocation(program, "alpha");
   GLint tint_u = glGetUniformLocation(program, "tint");
@@ -835,6 +858,7 @@ static void render_rounded_box(int tex, irect16_t r, int win_w, int win_h,
   // the macOS GL layer warn and substitute a zero texture.
   if (tex) glBindTexture(GL_TEXTURE_2D, (GLuint)tex);
   g_ref.rounded_rect_sprite.state.tex0 = 0;
+  g_ref.rounded_rect_sprite.state.decode = bound_texture_decodes((GLuint)tex);
   sprite_vec2(g_ref.rounded_rect_sprite.state.offset, (float)r.x, (float)r.y);
   sprite_vec2(g_ref.rounded_rect_sprite.state.scale, (float)r.w, (float)r.h);
   g_ref.rounded_rect_sprite.state.alpha = alpha;
@@ -1129,7 +1153,7 @@ bool R_ReadTextureSRGBA8(uint32_t tex, int w, int h, uint8_t *out_rgba) {
   size_t pixel_count = (size_t)w * (size_t)h;
   float *linear = NULL;
   uint8_t *encoded = NULL;
-  if (format == R_TEXTURE_RGBA16F_LINEAR) {
+  if (format == R_TEXTURE_RGBA16F) {
     if (pixel_count > SIZE_MAX / (4 * sizeof(float))) {
       fprintf(stderr, "[renderer] sRGB float readback size overflow tex=%u size=%dx%d\n",
               tex, w, h);
@@ -1166,7 +1190,7 @@ bool R_ReadTextureSRGBA8(uint32_t tex, int w, int h, uint8_t *out_rgba) {
       memcpy(out_rgba + i * 4, encoded + i * 4, 4);
       continue;
     }
-    float alpha = format == R_TEXTURE_RGBA16F_LINEAR
+    float alpha = format == R_TEXTURE_RGBA16F
                 ? linear[i * 4 + 3] : (float)encoded[i * 4 + 3] / 255.0f;
     if (!isfinite(alpha) || alpha <= 0.0f) {
       out_rgba[i * 4] = out_rgba[i * 4 + 1] = out_rgba[i * 4 + 2] = 0;
@@ -1174,10 +1198,10 @@ bool R_ReadTextureSRGBA8(uint32_t tex, int w, int h, uint8_t *out_rgba) {
       continue;
     }
     for (int c = 0; c < 3; c++) {
-      float premultiplied = format == R_TEXTURE_RGBA16F_LINEAR
-                          ? linear[i * 4 + c]
-                          : ui_srgb8_to_linear(encoded[i * 4 + c]);
-      out_rgba[i * 4 + c] = ui_linear_to_srgb8(premultiplied / alpha);
+      float premultiplied = format == R_TEXTURE_RGBA16F
+                          ? linear[i * 4 + c] : encoded[i * 4 + c] / 255.0f;
+      float straight = premultiplied / alpha;
+      out_rgba[i * 4 + c] = (uint8_t)(MIN(1.0f, MAX(0.0f, straight)) * 255.0f + 0.5f);
     }
     if (alpha >= 1.0f) out_rgba[i * 4 + 3] = 255;
     else out_rgba[i * 4 + 3] = (uint8_t)(alpha * 255.0f + 0.5f);
@@ -1279,7 +1303,7 @@ uint32_t R_CreateTexture(int w, int h, R_TextureFormat format,
                          const void *pixels, R_TextureFilter filter,
                          R_TextureWrap wrap) {
   if (w <= 0 || h <= 0 || format < R_TEXTURE_RGBA8_DATA ||
-      format > R_TEXTURE_RGBA16F_LINEAR ||
+      format > R_TEXTURE_RGBA16F ||
       filter < R_FILTER_NEAREST || filter > R_FILTER_LINEAR ||
       wrap < R_WRAP_CLAMP || wrap > R_WRAP_REPEAT) {
     fprintf(stderr, "[renderer] RGBA texture rejected size=%dx%d format=%d filter=%d wrap=%d\n",
@@ -1287,7 +1311,7 @@ uint32_t R_CreateTexture(int w, int h, R_TextureFormat format,
     fflush(stderr);
     return 0;
   }
-  size_t bytes_per_pixel = format == R_TEXTURE_RGBA16F_LINEAR ? 16 : 4;
+  size_t bytes_per_pixel = format == R_TEXTURE_RGBA16F ? 16 : 4;
   if ((size_t)w > SIZE_MAX / bytes_per_pixel / (size_t)h) {
     fprintf(stderr, "[renderer] RGBA texture size overflow size=%dx%d format=%d\n",
             w, h, format);
@@ -1306,9 +1330,10 @@ uint32_t R_CreateTexture(int w, int h, R_TextureFormat format,
     }
     upload = premultiplied;
   }
-  GLenum internal_format = format == R_TEXTURE_SRGBA8_COLOR ? GL_SRGB8_ALPHA8 :
-                           format == R_TEXTURE_RGBA16F_LINEAR ? GL_RGBA16F : GL_RGBA;
-  GLenum data_type = format == R_TEXTURE_RGBA16F_LINEAR ? GL_FLOAT : GL_UNSIGNED_BYTE;
+  // Colour textures hold sRGB bytes as they are, so sampling and blending
+  // stay in the encoding CSS composites in.
+  GLenum internal_format = format == R_TEXTURE_RGBA16F ? GL_RGBA16F : GL_RGBA8;
+  GLenum data_type = format == R_TEXTURE_RGBA16F ? GL_FLOAT : GL_UNSIGNED_BYTE;
   GLuint tex = 0;
   GLint previous_unpack = 4;
   drain_stale_gl_errors("RGBA texture creation");
@@ -1340,7 +1365,7 @@ uint32_t R_CreateTexture(int w, int h, R_TextureFormat format,
     glDeleteTextures(1, &tex);
     return 0;
   }
-  if ((format == R_TEXTURE_SRGBA8_COLOR || format == R_TEXTURE_RGBA16F_LINEAR) &&
+  if ((format == R_TEXTURE_SRGBA8_COLOR || format == R_TEXTURE_RGBA16F) &&
       !register_texture_metadata(tex, format, w, h)) {
     fprintf(stderr, "[renderer] texture metadata allocation failed tex=%u size=%dx%d\n",
             tex, w, h);
@@ -1444,7 +1469,7 @@ bool R_UpdateTextureRGBA(uint32_t tex, int x, int y, int w, int h,
     fflush(stderr);
     return false;
   }
-  if (meta && meta->format == R_TEXTURE_RGBA16F_LINEAR) {
+  if (meta && meta->format == R_TEXTURE_RGBA16F) {
     fprintf(stderr, "[renderer] RGBA8 update rejected for float texture tex=%u rect=%d,%d,%d,%d\n",
             tex, x, y, w, h);
     fflush(stderr);
@@ -1575,7 +1600,7 @@ static bool screen_target_create(int width, int height,
                                  R_ScreenCompositionMode mode,
                                  GLuint *out_fbo, GLuint *out_tex) {
   R_TextureFormat format = mode == R_SCREEN_COMPOSITION_FP16
-                         ? R_TEXTURE_RGBA16F_LINEAR : R_TEXTURE_SRGBA8_COLOR;
+                         ? R_TEXTURE_RGBA16F : R_TEXTURE_SRGBA8_COLOR;
   GLuint tex = R_CreateTexture(width, height, format, NULL,
                                R_FILTER_LINEAR, R_WRAP_CLAMP);
   if (!tex) return false;
@@ -1656,11 +1681,8 @@ bool R_BeginScreenComposition(int width, int height, uint32_t clear_color) {
   glDisable(GL_BLEND);
   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
   glDepthMask(GL_TRUE);
-  R_SetFramebufferSRGB(g_screen_composition.active == R_SCREEN_COMPOSITION_SRGB8);
-  float r = ui_srgb8_to_linear((uint8_t)clear_color);
-  float g = ui_srgb8_to_linear((uint8_t)(clear_color >> 8));
-  float b = ui_srgb8_to_linear((uint8_t)(clear_color >> 16));
-  glClearColor(r, g, b, 1.0f);
+  R_SetFramebufferSRGB(false);
+  glClearColor((clear_color & 255) / 255.0f, ((clear_color >> 8) & 255) / 255.0f, ((clear_color >> 16) & 255) / 255.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
   return true;
 }
@@ -1687,9 +1709,9 @@ void R_PresentScreenComposition(int width, int height) {
   glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, attachment,
                                          GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING,
                                          &encoding);
-  float encode_srgb = encoding == GL_SRGB ? 0.0f : 1.0f;
+  float decode_srgb = encoding == GL_SRGB ? 1.0f : 0.0f;
 #else
-  float encode_srgb = 1.0f;
+  float decode_srgb = 0.0f;
 #endif
   sprite_program_t *prog = &g_ref.present_sprite;
 
@@ -1702,7 +1724,7 @@ void R_PresentScreenComposition(int width, int height) {
   sprite_vec2(prog->state.uv_offset, 0.0f, 1.0f);
   sprite_vec2(prog->state.uv_scale, 1.0f, -1.0f);
   prog->state.alpha = 1.0f;
-  sprite_vec4(prog->state.params0, encode_srgb, 0.0f, 0.0f, 0.0f);
+  sprite_vec4(prog->state.params0, decode_srgb, 0.0f, 0.0f, 0.0f);
   sprite_vec4(prog->state.tint, 1.0f, 1.0f, 1.0f, 1.0f);
   g_ref.mesh.draw_mode = GL_TRIANGLE_FAN;
   if (!gs_apply(&prog->shader, &prog->state)) return;
@@ -1849,7 +1871,7 @@ void R_Composite(const R_CompositeLayer *layers, int count, uint32_t clear_color
   bool composed = R_BeginScreenComposition(screen_w, screen_h, clear_color);
   if (!composed) {
     glViewport(0, 0, screen_w, screen_h);
-    R_SetFramebufferSRGB(true);
+    R_SetFramebufferSRGB(false);
   }
   glDisable(GL_SCISSOR_TEST);
   glDisable(GL_DEPTH_TEST);

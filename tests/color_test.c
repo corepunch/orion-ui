@@ -20,14 +20,14 @@ static void test_web_color_packing(void) {
   PASS();
 }
 
-static void test_linear_half_black_over_white(void) {
-  TEST("half black over white encodes to sRGB #BC");
+static void test_half_black_over_white(void) {
+  TEST("half black over white composites to #80, as in a browser");
   uint8_t dst[4] = {255, 255, 255, 255};
   const uint8_t src[4] = {0, 0, 0, 255};
   ui_composite_srgba8(dst, src, 0.5f);
-  ASSERT_EQUAL(dst[0], 188);
-  ASSERT_EQUAL(dst[1], 188);
-  ASSERT_EQUAL(dst[2], 188);
+  ASSERT_EQUAL(dst[0], 128);
+  ASSERT_EQUAL(dst[1], 128);
+  ASSERT_EQUAL(dst[2], 128);
   ASSERT_EQUAL(dst[3], 255);
   PASS();
 }
@@ -51,7 +51,7 @@ int main(void) {
   TEST_START("sRGB color contract");
   test_srgb8_roundtrip();
   test_web_color_packing();
-  test_linear_half_black_over_white();
+  test_half_black_over_white();
   test_composite_alpha_boundaries();
   TEST_END();
 }

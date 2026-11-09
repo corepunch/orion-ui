@@ -391,44 +391,51 @@ to that packed layout. `ui_srgb_to_linear()` and `ui_linear_to_srgb()` implement
 the piecewise sRGB transfer curve; use them at CPU boundaries rather than a
 gamma-2.2 approximation.
 
+Orion composites as CSS does: colours stay sRGB-encoded, are premultiplied in
+that encoding and blend as they are, so `rgba(0,0,0,.5)` over white is `#808080`
+and gradients interpolate between encoded endpoints, as in a browser
+(`tests/css_conformance_test.c` holds Orion to headless Chrome).
+
 `R_CreateTextureRGBA()` is a raw RGBA8 data texture for masks, indices, glyph
 cells and legacy numerical data. `R_CreateTextureSRGBA8()` accepts straight
-sRGB RGBA8 source pixels, premultiplies RGB in linear light, and stores the
-sRGB encoding of that premultiplied value. The renderer tracks this role so
-ordinary sprite draws apply opacity to RGB and alpha together. Alpha remains a
-linear coverage value. Do not use sRGB formats for lookup indices or coverage
-masks.
+sRGB RGBA8 source pixels and stores them premultiplied in sRGB as plain
+`GL_RGBA8`: sampling returns the bytes as they are. The renderer tracks this
+role so ordinary sprite draws apply opacity to RGB and alpha together. Alpha is
+coverage. A texture created outside the renderer as `GL_SRGB8_ALPHA8` (a 3D
+view's linear-light target) is decoded by GL on sampling; the sprite programs
+encode it again (`ui_texture()` in `share/shaders/clip.frag.glsl`), so it shows
+its sRGB colour.
 
-Root-window caches use `GL_SRGB8_ALPHA8` and remain 4 bytes per pixel. Orion
-enables framebuffer sRGB conversion for cache writes, so source-over blending
-uses linear RGB; cache RGB is premultiplied and sampling decodes it to linear.
-Screen composition uses one reusable physical-pixel target. `AUTO` is the
+Root-window caches are `GL_RGBA8`, written with framebuffer sRGB conversion
+off. Screen composition uses one reusable physical-pixel target. `AUTO` is the
 default and uses `GL_RGBA16F` when the backend supports renderable, blendable
-float targets, otherwise it uses `GL_SRGB8_ALPHA8`. Select a comparison mode
-with `R_SetScreenCompositionMode(R_SCREEN_COMPOSITION_SRGB8)` or
-`R_SetScreenCompositionMode(R_SCREEN_COMPOSITION_FP16)`, or set
+float targets, otherwise `GL_RGBA8`; both hold the same sRGB values. Select a
+comparison mode with `R_SetScreenCompositionMode(R_SCREEN_COMPOSITION_SRGB8)`
+or `R_SetScreenCompositionMode(R_SCREEN_COMPOSITION_FP16)`, or set
 `ORION_SCREEN_COMPOSITION=srgb8|fp16|auto` before startup. The renderer logs
 the chosen mode, dimensions, memory per pixel and any fallback.
 
-The final pass presents the opaque linear composition in sRGB once, accounting
-for backends that automatically encode sRGB attachments. macOS windows,
-Wayland/X11 EGL surfaces and iOS drawable layers declare sRGB where the
-platform API supports it. PNG screenshots and still/APNG exports carry an
-`sRGB` declaration and store straight-alpha sRGB8 bytes. Screenshot readback
-uses the already-presented sRGB surface. `R_ReadTextureSRGBA8()` also provides
-format-aware texture readback: it unpremultiplies sRGB8 and linear FP16 colors
-in linear light before encoding straight-alpha sRGB8, while raw data bytes are
-preserved unchanged. PNG/JPEG/BMP import uses sRGB for untagged files. PNGs
-with unsupported ICC/cICP/gamma-only metadata, JPEGs with ICC profiles, and PNGs
-above 8 bits are rejected with a diagnostic because the document model remains
-8-bit RGBA and this build has no ICC transform library. BMP color metadata is
-not transformed; decoded BMP colors are treated as sRGB.
+The final pass copies the composition to the window as it is, decoding it only
+for a backend that encodes sRGB attachments on write (OpenGL ES). macOS
+windows, Wayland/X11 EGL surfaces and iOS drawable layers declare sRGB where
+the platform API supports it. PNG screenshots and still/APNG exports carry an
+`sRGB` declaration and store straight-alpha sRGB8 bytes.
+`R_ReadTextureSRGBA8()` reads a colour texture back unpremultiplied, while raw
+data bytes are preserved unchanged. PNG/JPEG/BMP import uses sRGB for untagged
+files. PNGs with unsupported ICC/cICP/gamma-only metadata, JPEGs with ICC
+profiles, and PNGs above 8 bits are rejected with a diagnostic because the
+document model remains 8-bit RGBA and this build has no ICC transform library.
+BMP color metadata is not transformed; decoded BMP colors are treated as sRGB.
 
-CPU layer compositing, pixel-canvas antialiasing, layer merges and background
-compositing use the same linear-light source-over rule as the GPU renderer.
-Image-editor effect shaders keep their existing sRGB math: the loader converts
-premultiplied linear samples to straight sRGB inputs and converts shader output
-back to premultiplied linear before blending or to straight sRGB for readback.
+Glyphs blend their coverage with a contrast curve that depends on the text's
+luminance, as Skia's does: light text on a dark ground gains weight, dark text
+a little (`sprite_copy.frag.glsl`, fitted to Chrome's ink for IBM Plex Sans).
+
+CPU layer compositing (`ui_composite_srgba8`), layer blend modes, merges and
+background compositing use the same sRGB source-over as the GPU renderer.
+Image-editor effect shaders unpremultiply their samples and premultiply their
+output in sRGB. Picture resampling (`user/image.h`) still filters in linear
+light.
 
 The [shared shader module](docs/shaders.md) owns generated GLSL interfaces,
 program compilation and typed uniform submission for built-in renderer programs.

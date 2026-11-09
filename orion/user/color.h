@@ -27,6 +27,7 @@ static inline float ui_srgb8_to_linear(uint8_t x) {
   return ui_srgb_to_linear((float)x / 255.0f);
 }
 
+// Source-over of straight sRGB RGBA8 pixels, blended in the sRGB encoding.
 static inline void ui_composite_srgba8(uint8_t dst[4], const uint8_t src[4],
                                        float opacity) {
   if (opacity < 0.0f) opacity = 0.0f;
@@ -44,11 +45,9 @@ static inline void ui_composite_srgba8(uint8_t dst[4], const uint8_t src[4],
     dst[0] = dst[1] = dst[2] = dst[3] = 0;
     return;
   }
-  for (int c = 0; c < 3; c++) {
-    float source = ui_srgb8_to_linear(src[c]);
-    float dest = ui_srgb8_to_linear(dst[c]);
-    float result = (source * sa + dest * da * (1.0f - sa)) / oa;
-    dst[c] = ui_linear_to_srgb8(result);
+  for (int c = 0; c < 3; c++) {   // in sRGB, as CSS and the GPU renderer composite
+    float result = (src[c] * sa + dst[c] * da * (1.0f - sa)) / oa;
+    dst[c] = (uint8_t)(fminf(255.0f, fmaxf(0.0f, result)) + 0.5f);
   }
   dst[3] = (uint8_t)(oa * 255.0f + 0.5f);
 }

@@ -198,7 +198,7 @@ static bool bind_root_surface(window_t *root) {
                                      ui_surface_px(target->frame.w), ui_surface_px(target->frame.h)))
     return false;
   R_BindWindowTarget(surf->fbo);
-  R_SetFramebufferSRGB(true);
+  R_SetFramebufferSRGB(false);   // surfaces hold sRGB bytes and blend in them, as CSS composites
   set_viewport_for_fbo(root);
   return true;
 }

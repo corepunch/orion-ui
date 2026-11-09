@@ -58,12 +58,9 @@ void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
       float sa = (float)sa8 / 255.0f;
       float da = (float)d[3] / 255.0f;
       float inv = 1.0f - sa;
-      float source[3] = {ui_srgb8_to_linear(src[0]),
-                         ui_srgb8_to_linear(src[1]),
-                         ui_srgb8_to_linear(src[2])};
-      float dest[3] = {ui_srgb8_to_linear(d[0]),
-                       ui_srgb8_to_linear(d[1]),
-                       ui_srgb8_to_linear(d[2])};
+      // Blended in sRGB, as the GPU draws the layers.
+      float source[3] = {src[0] / 255.0f, src[1] / 255.0f, src[2] / 255.0f};
+      float dest[3] = {d[0] / 255.0f, d[1] / 255.0f, d[2] / 255.0f};
       switch (lay->blend_mode) {
         case LAYER_BLEND_MULTIPLY:
           for (int c = 0; c < 3; c++) source[c] *= dest[c];
@@ -81,7 +78,7 @@ void canvas_composite(const canvas_doc_t *doc, uint8_t *dst) {
       float out_a = sa + da * inv;
       if (out_a <= 0.0f) continue;
       for (int c = 0; c < 3; c++)
-        d[c] = ui_linear_to_srgb8((source[c] * sa + dest[c] * da * inv) / out_a);
+        d[c] = (uint8_t)(MIN(1.0f, MAX(0.0f, (source[c] * sa + dest[c] * da * inv) / out_a)) * 255.0f + 0.5f);
       d[3] = (uint8_t)(out_a * 255.0f + 0.5f);
     }
   }

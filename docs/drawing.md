@@ -91,8 +91,8 @@ stroke_rounded_rect(get_sys_color(brLightEdge), cr, get_theme()->table.corner_ra
 ### Cards, badges and theme colours
 
 `fill_gradient_rounded_rect(top, bottom, r, radius)` paints a vertical gradient
-in one SDF pass. The endpoints are packed sRGB colours; interpolation happens
-in linear light, with alpha interpolated independently. Radius 0 fills the
+in one SDF pass. The endpoints are packed sRGB colours, interpolated in sRGB as
+CSS interpolates them, with alpha interpolated independently. Radius 0 fills the
 complete rectangle, while a positive radius masks the same fill with one
 antialiased silhouette. Coordinates and radius are logical pixels, including
 Retina scaling. No gradient texture or per-row geometry is allocated.

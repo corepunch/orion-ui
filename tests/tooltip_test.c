@@ -282,7 +282,7 @@ static void test_tooltip_shadow_color(void) {
   int w = 0, h = 0;
   ASSERT_TRUE(R_EnsureWindowTarget(&fbo, &texture, &w, &h, 128, 96));
   glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-  R_SetFramebufferSRGB(true);
+  R_SetFramebufferSRGB(false);
   glViewport(0, 0, 128, 96);
   set_projection(0, 0, 128, 96);
   glDisable(GL_SCISSOR_TEST);
