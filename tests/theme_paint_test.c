@@ -65,8 +65,7 @@ theme_t *paint_navy_instance(void);
 theme_t *paint_light_instance(void);
 theme_t *paint_amber_instance(void);
 theme_t *paint_porcelain_instance(void);
-#include <orion/user/theme_classic.c>
-#include <orion/user/theme_modern.c>
+#include <orion/user/theme_builtin.c>
 #include <orion/user/theme_box.c>
 #undef fill_rect
 #undef draw_wire_rect
@@ -115,7 +114,9 @@ static void test_modern_button_states(void) {
 static void test_translated_separator(void) {
   TEST("Classic toolbar separators respect caller bounds; Modern toolbar separators draw nothing");
   theme_t *themes[] = {paint_classic_instance(), paint_modern_instance()};
+  theme_style_t styles[] = {THEME_CLASSIC, THEME_MODERN};
   for (int i = 0; i < 2; i++) {
+    set_theme(styles[i]);   // parts paint from the active theme's sheet
     themes[i]->apply_palette();
     memset(pixels, 0, sizeof(pixels));
     themes[i]->draw_part(THEME_PART_TOOLBAR_SEPARATOR, R(40, 20, 10, 24), CTRL_NORMAL);
@@ -152,6 +153,7 @@ static void test_column_dividers(void) {
 
 static void test_classic_window_border(void) {
   TEST("Classic paints a bevel outside inactive windows and an accent border outside focused windows");
+  set_theme(THEME_CLASSIC);
   theme_t *classic = paint_classic_instance();
   classic->apply_palette();
   irect16_t frame = R(10, 10, 80, 30);
@@ -168,6 +170,7 @@ static void test_classic_window_border(void) {
   ASSERT_EQUAL(pixels[25][90], get_sys_color(brAccent));
   ASSERT_EQUAL(pixels[25][50], 0);
   memset(pixels, 0, sizeof(pixels));
+  set_theme(THEME_MODERN);
   paint_modern_instance()->draw_part(THEME_PART_WINDOW_BORDER, frame, CTRL_FOCUSED);
   ASSERT_EQUAL(pixels[9][50], 0);
   PASS();
@@ -376,7 +379,7 @@ static void test_navy_caption_bar(void) {
 
 static void test_panel_shades_and_tabs(void) {
   TEST("Theme surfaces preserve their palette hierarchy; active tabs merge with the pane");
-  theme_style_t styles[] = {THEME_MODERN, THEME_LIGHT, THEME_NAVY, THEME_AMBER, THEME_PORCELAIN, THEME_PORCELAIN_DARK, THEME_CLASSIC};
+  theme_style_t styles[] = {THEME_MODERN, THEME_LIGHT, THEME_NAVY, THEME_AMBER, THEME_PORCELAIN, THEME_PORCELAIN_DARK};
   for (int i = 0; i < ARRAY_LEN(styles); i++) {
     theme_t *theme = paint_with_theme(styles[i]);
     if (styles[i] == THEME_MODERN || styles[i] == THEME_LIGHT) {

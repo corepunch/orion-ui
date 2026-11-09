@@ -12,11 +12,13 @@ are custom properties, and `theme_t`'s metrics are control properties.
 | [`amber.css`](../orion/themes/amber.css) | Amber |
 | [`porcelain.css`](../orion/themes/porcelain.css) | Porcelain and Porcelain Dark |
 | [`metro.css`](../orion/themes/metro.css) | Metro |
+| [`classic.css`](../orion/themes/classic.css) | Classic: Win95 bevels from per-side border colours and inset box-shadows |
 
 A theme is `base.css` followed by its own sheet, read in the theme's appearance.
 The build embeds the sheets in `libuser` (`tools/embed_text.py`), so a theme
-never depends on files at run time. Classic is still C (`theme_classic.c`); its
-parts that have no bevelled drawing of their own use `base.css` over its palette.
+never depends on files at run time. `orion/user/theme_builtin.c` builds the
+instances; its templates still hold the chrome geometry no property sets yet
+(caption and menu bar heights, toolbar sizes, tooltip and slider geometry).
 
 ## Editing a theme without rebuilding
 
@@ -65,8 +67,11 @@ apply to every part.
 | `border-radius` | 1–4 lengths; rounded top corners with square bottom ones draw a tab |
 | `margin` | 1–4 lengths: the painted box inside the part's bounds |
 | `outline` | `width style colour`, filled behind the box as a focus halo |
+| `box-shadow` | `[inset] dx dy [blur] colour, ...`: outer shadows paint behind the box, blurred; inset ones with no blur paint the edges they offset into, inside the border (a bevel's inner line) |
 | `color` | The part's text colour (`theme_foreground()`) |
-| `fill` | The part's glyph colour (arrows, checkmark, grips); defaults to `color` |
+| `content` | The glyph over the box: `arrow-updown`, `close`, `maximize`, `checkmark`, `resize`, `scroll-up`/`-down`/`-left`/`-right`, `triangle-down`, `grip`, `dots`, `groove`, `none` |
+| `fill` | The glyph's colour; defaults to `color` |
+| `stroke` | The second line of a `groove` |
 
 | Part | Selector | Part | Selector |
 |---|---|---|---|

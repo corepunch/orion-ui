@@ -10,10 +10,13 @@
 #include "messages.h"
 #include "user.h"
 #include "theme.h"
-#include "theme_palette_dark.h"
 #include "text.h"
 
-uint32_t g_sys_colors[brCount] = { THEME_PALETTE_DARK_INIT };
+uint32_t g_sys_colors[brCount];
+
+// The palette is ready before any code reads a colour: the default theme's
+// sheet is applied when libuser loads (a standalone ORION_THEME runs after).
+__attribute__((constructor)) static void theme_initial_palette(void) { get_theme(); }
 
 // ── Active theme runtime ───────────────────────────────────────────────────
 

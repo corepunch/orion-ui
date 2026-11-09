@@ -8,9 +8,15 @@
 //                     9999px is a capsule; rounded top and square bottom is a tab
 //   margin            1..4 lengths: the painted box inside the part's bounds
 //   outline           width style colour, filled behind the box (a focus halo)
+//   box-shadow        a list of [inset] dx dy [blur] colour: outer shadows paint
+//                     behind the box (blurred like CSS); inset ones with no blur
+//                     paint the edges they offset into, inside the border (bevels)
 //   color             the part's text colour (theme_foreground)
-//   fill              the colour of the part's glyph (arrows, checkmark, grips);
-//                     defaults to color
+//   content           the glyph drawn over the box: arrow-updown, close,
+//                     maximize, checkmark, resize, scroll-up/-down/-left/-right,
+//                     triangle-down, grip, dots, groove, or none
+//   fill              the glyph's colour; defaults to color
+//   stroke            the second line of a groove
 //
 // Boxes are cached per part and state until the theme or palette changes.
 
@@ -35,8 +41,19 @@ typedef struct {
   int margin[4];
   int outline_width;
   uint32_t outline_color;
-  uint32_t color, fill;
+  uint32_t color, fill, stroke;
+  int glyph;
+  int shadow_count;
+  struct { bool inset; int dx, dy, blur; uint32_t color; } shadows[4];
 } theme_box_t;
+
+enum { GLYPH_NONE, GLYPH_ARROW_UPDOWN, GLYPH_CLOSE, GLYPH_MAXIMIZE, GLYPH_CHECKMARK, GLYPH_RESIZE,
+       GLYPH_SCROLL_UP, GLYPH_SCROLL_DOWN, GLYPH_SCROLL_LEFT, GLYPH_SCROLL_RIGHT,
+       GLYPH_TRIANGLE_DOWN, GLYPH_GRIP, GLYPH_DOTS, GLYPH_GROOVE };
+static const char *const k_glyph_names[] = {
+  "none", "arrow-updown", "close", "maximize", "checkmark", "resize", "scroll-up", "scroll-down",
+  "scroll-left", "scroll-right", "triangle-down", "grip", "dots", "groove",
+};
 
 static const struct { const char *element, *part, *classes; } k_part_selectors[THEME_PART_COUNT] = {
   [THEME_PART_BUTTON]                 = {"Button"},
@@ -239,6 +256,39 @@ static void box_compute(theme_box_t *b, theme_part_t part, ctrl_state_t state) {
     b->border_width[side] = w;
   }
 
+  if (style_value(s, q, "content", v, sizeof(v))) {
+    size_t g = 0;
+    while (g < sizeof(k_glyph_names) / sizeof(k_glyph_names[0]) && strcmp(v, k_glyph_names[g])) g++;
+    if (g < sizeof(k_glyph_names) / sizeof(k_glyph_names[0])) b->glyph = (int)g;
+    else box_report("content", part, v);
+  }
+  b->stroke = b->fill;
+  style_color(s, q, "stroke", &b->stroke);
+  if (style_value(s, q, "box-shadow", v, sizeof(v)) && strcmp(v, "none")) {
+    for (char *item = v, *next; item && b->shadow_count < 4; item = next) {
+      int depth = 0; next = NULL;
+      for (char *c = item; *c; c++) {
+        if (*c == '(') depth++;
+        else if (*c == ')') depth--;
+        else if (*c == ',' && !depth) { *c = 0; next = c + 1; break; }
+      }
+      char *tok[6]; int n = box_tokens(item, tok, 6), lengths[4], nl = 0;
+      bool inset = false, ok = true; uint32_t color = 0xFF000000u;
+      for (int i = 0; i < n && ok; i++) {
+        if (!strcmp(tok[i], "inset")) inset = true;
+        else if (nl < 4 && style_parse_length(tok[i], &lengths[nl])) nl++;
+        else ok = style_parse_color(tok[i], &color);
+      }
+      if (!ok || nl < 2) { box_report("box-shadow", part, item); break; }
+      b->shadows[b->shadow_count].inset = inset;
+      b->shadows[b->shadow_count].dx = lengths[0];
+      b->shadows[b->shadow_count].dy = lengths[1];
+      b->shadows[b->shadow_count].blur = nl > 2 ? lengths[2] : 0;
+      b->shadows[b->shadow_count].color = color;
+      b->shadow_count++;
+    }
+  }
+
   if (style_value(s, q, "border-radius", v, sizeof(v)) && !box_four(v, b->radius, true)) box_report("border-radius", part, v);
   if (style_value(s, q, "margin", v, sizeof(v)) && !box_four(v, b->margin, false)) box_report("margin", part, v);
   if (style_value(s, q, "outline", v, sizeof(v))) {
@@ -294,48 +344,81 @@ static void box_paint(const theme_box_t *b, irect16_t r) {
   bool uniform = bw[0] == bw[1] && bw[1] == bw[2] && bw[2] == bw[3] &&
                  b->border_color[0] == b->border_color[1] && b->border_color[1] == b->border_color[2] &&
                  b->border_color[2] == b->border_color[3];
-  if (uniform && bw[0] > 0) {
-    uint32_t edge = b->border_color[0];
-    box_fill(edge, edge, false, r, radius, top_only);
-    if (b->background) box_fill(b->top, b->bottom, b->gradient, rect_inset(r, bw[0]), MAX(0, radius - bw[0]), top_only);
-    return;
+  for (int i = b->shadow_count - 1; i >= 0; i--) {   // outer shadows, the first on top
+    if (b->shadows[i].inset) continue;
+    draw_rect_shadow(r, (float)radius, (float)b->shadows[i].blur, (ipoint16_t){b->shadows[i].dx, b->shadows[i].dy},
+                     b->shadows[i].color);
   }
-  if (b->background) box_fill(b->top, b->bottom, b->gradient, r, radius, top_only);
-  if (bw[0] > 0) fill_rect(b->border_color[0], rect_split_top(r, bw[0]));
-  if (bw[1] > 0) fill_rect(b->border_color[1], rect_split_right(r, bw[1]));
-  if (bw[2] > 0) fill_rect(b->border_color[2], rect_split_bottom(r, bw[2]));
-  if (bw[3] > 0) fill_rect(b->border_color[3], rect_split_left(r, bw[3]));
+  bool opaque = b->background && (b->top >> 24) == 0xFF && (b->bottom >> 24) == 0xFF;
+  if (uniform && bw[0] > 0 && (opaque || (radius > 0 && !top_only))) {
+    uint32_t edge = b->border_color[0];
+    if (opaque) {   // the face covers the middle of the edge-coloured shape
+      box_fill(edge, edge, false, r, radius, top_only);
+      box_fill(b->top, b->bottom, b->gradient, rect_inset(r, bw[0]), MAX(0, radius - bw[0]), top_only);
+    } else {
+      if (b->background) box_fill(b->top, b->bottom, b->gradient, rect_inset(r, bw[0]), MAX(0, radius - bw[0]), top_only);
+      stroke_rounded_rect(edge, r, radius, bw[0]);
+    }
+  } else {
+    if (b->background) box_fill(b->top, b->bottom, b->gradient, r, radius, top_only);
+    // Top and left first, so a bevel's off-diagonal corners take the bottom and right colours.
+    if (bw[0] > 0) fill_rect(b->border_color[0], rect_split_top(r, bw[0]));
+    if (bw[3] > 0) fill_rect(b->border_color[3], rect_split_left(r, bw[3]));
+    if (bw[2] > 0) fill_rect(b->border_color[2], rect_split_bottom(r, bw[2]));
+    if (bw[1] > 0) fill_rect(b->border_color[1], rect_split_right(r, bw[1]));
+  }
+  irect16_t inner = R(r.x + bw[3], r.y + bw[0], r.w - bw[1] - bw[3], r.h - bw[0] - bw[2]);
+  for (int i = b->shadow_count - 1; i >= 0; i--) {   // inset edges, the first on top
+    if (!b->shadows[i].inset || inner.w <= 0 || inner.h <= 0) continue;
+    int dx = b->shadows[i].dx, dy = b->shadows[i].dy;
+    uint32_t c = b->shadows[i].color;
+    if (dy > 0) fill_rect(c, rect_split_top(inner, MIN(dy, inner.h)));
+    if (dx > 0) fill_rect(c, rect_split_left(inner, MIN(dx, inner.w)));
+    if (dy < 0) fill_rect(c, rect_split_bottom(inner, MIN(-dy, inner.h)));
+    if (dx < 0) fill_rect(c, rect_split_right(inner, MIN(-dx, inner.w)));
+  }
 }
 
-// Glyphs drawn over a part's box, in its fill colour.
-static void box_glyph(theme_part_t part, irect16_t r, ctrl_state_t state, uint32_t ink) {
-  switch (part) {
-    case THEME_PART_COMBOBOX_ARROW:      draw_theme_icon_in_rect(THEME_ICON_ARROW_UPDOWN, r, ink); break;
-    case THEME_PART_WINDOW_CLOSE:        draw_theme_icon_in_rect(THEME_ICON_CLOSE, r, ink); break;
-    case THEME_PART_SCROLLBAR_ARROW_UP:    draw_theme_icon_in_rect(THEME_ICON_SCROLL_UP, r, ink); break;
-    case THEME_PART_SCROLLBAR_ARROW_DOWN:  draw_theme_icon_in_rect(THEME_ICON_SCROLL_DOWN, r, ink); break;
-    case THEME_PART_SCROLLBAR_ARROW_LEFT:  draw_theme_icon_in_rect(THEME_ICON_SCROLL_LEFT, r, ink); break;
-    case THEME_PART_SCROLLBAR_ARROW_RIGHT: draw_theme_icon_in_rect(THEME_ICON_SCROLL_RIGHT, r, ink); break;
-    case THEME_PART_CHECKBOX:
-      if (state & CTRL_SELECTED) {
-        irect16_t check = rect_center(r, MIN(r.w, r.h), MIN(r.w, r.h));
-        draw_theme_icon(THEME_ICON_CHECKMARK, check.x, check.y, check.w, ink);
-      }
+// The box's content glyph, in its fill colour.
+static void box_glyph(const theme_box_t *b, irect16_t r) {
+  uint32_t ink = b->fill;
+  static const int icons[] = {
+    [GLYPH_ARROW_UPDOWN] = THEME_ICON_ARROW_UPDOWN, [GLYPH_CLOSE] = THEME_ICON_CLOSE, [GLYPH_MAXIMIZE] = THEME_ICON_MAXIMIZE,
+    [GLYPH_RESIZE] = THEME_ICON_RESIZE, [GLYPH_SCROLL_UP] = THEME_ICON_SCROLL_UP, [GLYPH_SCROLL_DOWN] = THEME_ICON_SCROLL_DOWN,
+    [GLYPH_SCROLL_LEFT] = THEME_ICON_SCROLL_LEFT, [GLYPH_SCROLL_RIGHT] = THEME_ICON_SCROLL_RIGHT,
+  };
+  switch (b->glyph) {
+    case GLYPH_NONE: break;
+    case GLYPH_CHECKMARK: {
+      irect16_t check = rect_center(r, MIN(r.w, r.h), MIN(r.w, r.h));
+      draw_theme_icon(THEME_ICON_CHECKMARK, check.x, check.y, check.w, ink);
       break;
-    case THEME_PART_TOOLBAR_SPLIT_ARROW: {
+    }
+    case GLYPH_TRIANGLE_DOWN: {
       int cx = r.x + r.w / 2, cy = r.y + r.h / 2 - 1;
       for (int i = 0; i < 4; i++) fill_rect(ink, R(cx - 3 + i, cy + i, 7 - 2 * i, 1));
       break;
     }
-    case THEME_PART_TOOLBAR_GRIP:
+    case GLYPH_GRIP:
       if (r.w > r.h) fill_rect(ink, rect_center(r, MIN(16, r.w - 4), 2));
       else fill_rect(ink, rect_center(r, 2, MIN(16, r.h - 4)));
       break;
-    case THEME_PART_RESIZE_GRIP:
+    case GLYPH_DOTS:
       for (int row = 0; row < 3; row++)
         for (int col = row; col < 3; col++) fill_rect(ink, R(r.x + r.w - 6 + col * 2, r.y + r.h - 6 + row * 2, 1, 1));
       break;
-    default: break;
+    case GLYPH_GROOVE:   // a fill line and a stroke line along the long axis, as an etched rule
+      if (r.w > r.h) {
+        int my = r.y + r.h / 2;
+        fill_rect(ink, R(r.x + 2, my, r.w - 4, 1));
+        fill_rect(b->stroke, R(r.x + 2, my + 1, r.w - 4, 1));
+      } else {
+        int mx = r.x + r.w / 2;
+        fill_rect(ink, R(mx, r.y + 2, 1, r.h - 4));
+        fill_rect(b->stroke, R(mx + 1, r.y + 2, 1, r.h - 4));
+      }
+      break;
+    default: draw_theme_icon_in_rect(icons[b->glyph], r, ink); break;
   }
 }
 
@@ -343,7 +426,7 @@ void theme_css_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state) {
   if (part < 0 || part >= THEME_PART_COUNT || part == THEME_PART_CARD) return;   // cards paint through draw_card
   const theme_box_t *b = box_for(part, state);
   box_paint(b, r);
-  box_glyph(part, r, state, b->fill);
+  box_glyph(b, r);
 }
 
 uint32_t theme_css_foreground(theme_part_t part, ctrl_state_t state) {

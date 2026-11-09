@@ -141,6 +141,7 @@ static bool text_file_exists(const char *path) {
 
 // Resolves a CSS font shorthand to a font file and size.
 static bool text_css_face(const char *value, char *path, size_t n, float *size) {
+  if (!strcmp(value, "none")) return false;   // the default face
   char buf[256]; snprintf(buf, sizeof(buf), "%s", value);
   int weight = 400; float px = 0;
   char *c = buf, family[96] = "";

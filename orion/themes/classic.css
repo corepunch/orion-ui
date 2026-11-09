@@ -1,0 +1,154 @@
+/* Classic: the bevelled look Orion started with, on a dark palette. Edges are
+   Win95 bevels: a light top-left and a dark bottom-right border, with a second
+   dark line inside the bottom-right (an inset box-shadow); pressed and sunken
+   parts swap them. Square corners, and DejaVu Sans: no text roles. */
+
+:root {
+  --control-bg:              #3C3C3C;
+  --window-dark-bg:          #2C2C2C;
+  --workspace-bg:            #1E1E1E;
+  --active-titlebar:         #1E5AA0;
+  --active-titlebar-text:    #FFFFFF;
+  --inactive-titlebar:       #2C2C2C;
+  --inactive-titlebar-text:  #787878;
+  --statusbar-bg:            #2C2C2C;
+  --light-edge:              #7F7F7F;
+  --dark-edge:               #1A1A1A;
+  --flare:                   #CFCFCF;
+  --accent:                  #F3C45E;
+  --button-inner:            #505050;
+  --button-hover:            #5A5A5A;
+  --text-normal:             #C0C0C0;
+  --text-disabled:           #808080;
+  --text-error:              #FF4444;
+  --text-success:            #44FF44;
+  --border-focus:            #101010;
+  --border-active:           #808080;
+  --folder-text:             #00D0A0;
+  --column-view-bg:          #474E54;
+  --modal-overlay:           #00204040;
+  --toolbar-foreground:      #D8D8D8;
+  --panel-dark:              #323232;
+  --panel-darker:            #262626;
+  --text-warning:            #E5A82E;
+  --text-info:               #4CA0F0;
+  --text-secondary:          #9A9A9A;
+  --text-on-color:           #101010;
+  --selection-top:           #0078D7;
+  --selection-bottom:        #0078D7;
+  --tab-bar-bg:              #2C2C2C;
+  --accent-text:             #FFFFFF;
+  --desktop-bg:              #29356B;
+  --info-background:         #403B23;
+  --info-text:               #FFF4BD;
+  --tooltip-background:      #323232;
+  --tooltip-text:            #C0C0C0;
+
+  --window-radius: 0;
+  --button-radius: 0;
+  --field-radius: 0;
+  --multiline-radius: 0;
+  --tab-radius: 0;
+  --toolbar-radius: 0;
+  --table-radius: 0;
+  --card-radius: 0;
+
+  --font-system: none;   /* the default faces: DejaVu Sans */
+  --font-small: none;
+  --font-smallest: none;
+  --font-title: none;
+  --font-display: none;
+
+  --raised-border: var(--light-edge) var(--dark-edge) var(--dark-edge) var(--light-edge);
+  --sunken-border: var(--dark-edge) var(--light-edge) var(--light-edge) var(--dark-edge);
+}
+
+Toolbar { gap: 1px; }
+Card { --highlight-width: 0; }
+Badge { --tint-alpha: 0.251; --ink-mix: 0.188; }
+
+/* ── Bevels ──────────────────────────────────────────────────────────────── */
+
+Button, ComboBox, TableView::header, SegmentedControl::segment, Slider::knob,
+Toolbar::button, Toolbar::split-arrow, CheckBox::box {
+  background: var(--control-bg);
+  border: 1px solid;
+  border-color: var(--raised-border);
+  box-shadow: inset -1px -1px var(--dark-edge);
+}
+Button:hover, ComboBox:hover, TableView::header:hover, SegmentedControl::segment:hover, Slider::knob:hover,
+Toolbar::button:hover, Toolbar::split-arrow:hover, CheckBox::box:hover { background: var(--button-hover); }
+Button:active, Button:checked, ComboBox:active, ComboBox:checked, TableView::header:active,
+SegmentedControl::segment:active, SegmentedControl::segment:checked,
+Toolbar::button:active, Toolbar::button:checked, Toolbar::split-arrow:active, Toolbar::split-arrow:checked,
+CheckBox::box:active, Slider::trough {
+  background: var(--window-dark-bg);
+  border: 1px solid;
+  border-color: var(--sunken-border);
+  box-shadow: inset 1px 1px var(--dark-edge);
+}
+Button:disabled, ComboBox:disabled, SegmentedControl::segment:disabled, Slider::knob:disabled,
+Toolbar::button:disabled, Toolbar::split-arrow:disabled, CheckBox::box:disabled { background: var(--window-dark-bg) !important; }
+Toolbar::button.labeled { background: none !important; border-style: none; box-shadow: none; }
+CheckBox::box:focus { outline: 2px solid var(--accent); }
+
+Button          { outline: 1px solid var(--control-bg); }
+Button:default  { background: var(--control-bg); border-style: solid; outline: 1px solid #000000; color: var(--text-normal); }
+Button:focus    { outline: 1px solid var(--accent); border-color: var(--raised-border); }
+Button:disabled { border-style: solid; }
+ComboBox:focus  { border-color: var(--raised-border); }
+
+TextEdit {
+  background: var(--window-dark-bg);
+  border: 1px solid;
+  border-color: var(--sunken-border);
+  box-shadow: inset 1px 1px var(--dark-edge);
+  outline: 1px solid var(--control-bg);
+}
+TextEdit:focus    { outline: 1px solid var(--accent); border-color: var(--sunken-border); }
+TextEdit:disabled { border-color: var(--sunken-border); }
+SegmentedControl  { background: var(--control-bg); border-style: none; }
+
+/* Raised panels, one pixel outside their bounds. */
+Toolbar, Window::title-toolbar, TabView::pane {
+  background: var(--control-bg);
+  margin: -1px;
+  border: 1px solid;
+  border-color: var(--raised-border);
+}
+Window::border       { margin: -1px; border: 1px solid; border-color: var(--raised-border); }
+Window::border:focus { border-color: var(--accent); }
+
+TabView::tab {
+  background: var(--panel-dark);
+  border: 1px solid;
+  border-color: var(--raised-border);
+}
+TabView::tab:hover, TabView::tab:active { background: var(--panel-dark); }
+TabView::tab:checked { background: var(--control-bg); border-bottom-style: none; }
+
+/* ── Lists, menus and bars ───────────────────────────────────────────────── */
+
+TableView::row:hover, TableView::row:active { background: none; }
+TableView::row:checked { background: var(--text-normal); color: var(--window-dark-bg); }
+TableView::row:checked:window-inactive,
+TableView::row:checked:window-inactive:active { background: var(--dark-edge); color: var(--text-normal); }
+
+MenuBar { border-bottom: 1px solid var(--dark-edge); }
+Menu    { border: 1px solid var(--dark-edge); border-radius: 0; }
+Menu::item:hover, Menu::item:checked, Menu::item:active {
+  background: var(--accent);
+  border-radius: 0;
+  margin: 0;
+  color: var(--active-titlebar-text);
+}
+Separator, Slider::track { background: var(--dark-edge); }
+Toolbar::separator  { content: groove; fill: var(--dark-edge); stroke: var(--light-edge); }
+Toolbar::grip, Window::resize-grip { fill: var(--light-edge); }
+
+Slider::knob, Slider::trough { border-radius: 0; }
+
+Scrollbar::thumb { background: var(--light-edge); border-radius: 0; margin: 1px; }
+Scrollbar::thumb:disabled { background: var(--dark-edge); }
+Scrollbar::arrow-up, Scrollbar::arrow-down, Scrollbar::arrow-left, Scrollbar::arrow-right { background: var(--statusbar-bg); }
+Scrollbar::corner { content: resize; }

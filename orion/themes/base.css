@@ -71,12 +71,13 @@ CheckBox::box          { background: var(--window-dark-bg); border-radius: 3px; 
 CheckBox::box:hover    { background: var(--button-hover); }
 CheckBox::box:focus    { outline: 2px solid var(--accent); }
 CheckBox::box:disabled { background: var(--window-dark-bg); outline: none; }
+CheckBox::box:checked  { content: checkmark; }
 
 /* ── Toolbars ────────────────────────────────────────────────────────────── */
 
 Toolbar         { background: var(--panel-darker); }
 Toolbar::button, Toolbar::split-arrow { border-radius: var(--toolbar-radius); }
-Toolbar::split-arrow { fill: var(--toolbar-foreground); }
+Toolbar::split-arrow { content: triangle-down; fill: var(--toolbar-foreground); }
 Toolbar::button:hover, Toolbar::split-arrow:hover { background: var(--button-hover); }
 Toolbar::button:checked, Toolbar::button:active, Toolbar::button:default,
 Toolbar::split-arrow:checked, Toolbar::split-arrow:active, Toolbar::split-arrow:default {
@@ -84,7 +85,7 @@ Toolbar::split-arrow:checked, Toolbar::split-arrow:active, Toolbar::split-arrow:
 }
 Toolbar::button:checked, Toolbar::button:active, Toolbar::button:default { color: var(--accent-text); }
 Toolbar::button:disabled, Toolbar::split-arrow:disabled { background: none !important; }
-Toolbar::grip   { fill: var(--text-disabled); }
+Toolbar::grip   { content: grip; fill: var(--text-disabled); }
 
 /* ── Lists and tables ────────────────────────────────────────────────────── */
 
@@ -130,7 +131,9 @@ StatusBar       { background: var(--statusbar-bg); }
 Window::titlebar       { background: var(--inactive-titlebar); }
 Window::titlebar:focus { background: var(--active-titlebar); }
 Window::title-toolbar  { background: var(--window-dark-bg); }
-Window::resize-grip    { fill: var(--text-disabled); }
+Window::resize-grip    { content: dots; fill: var(--text-disabled); }
+Window::close          { content: close; }
+ComboBox::arrow        { content: arrow-updown; }
 
 /* ── Sliders and scroll bars ─────────────────────────────────────────────── */
 
@@ -144,6 +147,10 @@ Slider::knob:active   { background: var(--accent); }
 Slider::knob:disabled { background: var(--text-disabled); }
 
 Scrollbar::track, Scrollbar::corner { background: var(--statusbar-bg); }
+Scrollbar::arrow-up    { content: scroll-up; }
+Scrollbar::arrow-down  { content: scroll-down; }
+Scrollbar::arrow-left  { content: scroll-left; }
+Scrollbar::arrow-right { content: scroll-right; }
 Scrollbar::thumb { background: var(--light-edge); border-radius: 5px; margin: 3px; }   /* an 11 px thumb in a 17 px gutter */
 Scrollbar::thumb:disabled { background: var(--text-disabled); }
 @media (prefers-color-scheme: light) {
