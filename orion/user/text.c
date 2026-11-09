@@ -144,16 +144,78 @@ static font_atlas_t *text_face(const char *path, float size) {
   return atlas;
 }
 
-// Selector → face, until the style sheet changes.
-#define TEXT_FONT_SLOTS 256
-static struct { ui_font_t selector; unsigned generation; font_atlas_t *atlas; } g_font_slots[TEXT_FONT_SLOTS];
+// The text properties of an element: its face, and the CSS that changes how
+// the characters are set (text-transform, letter-spacing, text-align).
+enum { TEXT_TRANSFORM_NONE, TEXT_TRANSFORM_UPPERCASE, TEXT_TRANSFORM_LOWERCASE, TEXT_TRANSFORM_CAPITALIZE };
 
-static font_atlas_t *font_for_role(ui_font_t font) {
-  if (!text_state.ready) return &g_no_face;
+typedef struct {
+  font_atlas_t *atlas;
+  int spacing64;        // letter-spacing, 1/64 logical pixel, after every character
+  uint8_t transform;
+  uint32_t align;       // TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER or 0 (start)
+  int line_height;      // between wrapped lines, logical pixels; 0 is the face's own
+} text_style_t;
+
+static int text_letter_spacing64(ui_font_t font, float size) {
+  char v[64];
+  if (!ui_string(font, "letter-spacing", v, sizeof(v)) || !strcmp(v, "normal")) return 0;
+  char *unit;
+  double d = strtod(v, &unit);
+  if (unit != v && !strcmp(unit, "em")) return (int)lround(d * size * 64.0);
+  if (unit != v && (!strcmp(unit, "px") || (!*unit && d == 0))) return (int)lround(d * text_platform_scale() * 64.0);
+  fprintf(stderr, "[text] %s { letter-spacing: %s } is not a length\n", font, v);
+  fflush(stderr);
+  return 0;
+}
+
+static uint8_t text_transform_of(ui_font_t font) {
+  char v[32];
+  if (!ui_string(font, "text-transform", v, sizeof(v)) || !strcmp(v, "none")) return TEXT_TRANSFORM_NONE;
+  if (!strcmp(v, "uppercase"))  return TEXT_TRANSFORM_UPPERCASE;
+  if (!strcmp(v, "lowercase"))  return TEXT_TRANSFORM_LOWERCASE;
+  if (!strcmp(v, "capitalize")) return TEXT_TRANSFORM_CAPITALIZE;
+  fprintf(stderr, "[text] %s { text-transform: %s } is not supported\n", font, v);
+  fflush(stderr);
+  return TEXT_TRANSFORM_NONE;
+}
+
+static uint32_t text_align_of(ui_font_t font) {
+  char v[32];
+  if (!ui_string(font, "text-align", v, sizeof(v))) return 0;
+  if (!strcmp(v, "right") || !strcmp(v, "end")) return TEXT_ALIGN_RIGHT;
+  if (!strcmp(v, "center")) return TEXT_ALIGN_CENTER;
+  if (strcmp(v, "left") && strcmp(v, "start")) {
+    fprintf(stderr, "[text] %s { text-align: %s } is not supported\n", font, v);
+    fflush(stderr);
+  }
+  return 0;
+}
+
+// line-height: a number times the font size, a length, or normal (0).
+static int text_line_height_of(ui_font_t font, float size) {
+  char v[64];
+  if (!ui_string(font, "line-height", v, sizeof(v)) || !strcmp(v, "normal")) return 0;
+  char *unit;
+  double d = strtod(v, &unit);
+  if (unit != v && !*unit) return (int)lround(d * size);
+  if (unit != v && !strcmp(unit, "px")) return (int)lround(d * text_platform_scale());
+  if (unit != v && !strcmp(unit, "em")) return (int)lround(d * size);
+  fprintf(stderr, "[text] %s { line-height: %s } is not supported\n", font, v);
+  fflush(stderr);
+  return 0;
+}
+
+// Selector → text style, until the style sheet changes.
+#define TEXT_FONT_SLOTS 256
+static struct { ui_font_t selector; unsigned generation; text_style_t style; } g_font_slots[TEXT_FONT_SLOTS];
+
+static const text_style_t *text_style(ui_font_t font) {
+  static text_style_t no_face_style = { &g_no_face, 0, TEXT_TRANSFORM_NONE, 0, 0 };
+  if (!text_state.ready) return &no_face_style;
   if (!font) font = "Text";
   unsigned h = (unsigned)(((uintptr_t)font >> 3) % TEXT_FONT_SLOTS);
-  if (g_font_slots[h].selector == font && g_font_slots[h].generation == g_theme_style_generation && g_font_slots[h].atlas)
-    return g_font_slots[h].atlas;
+  if (g_font_slots[h].selector == font && g_font_slots[h].generation == g_theme_style_generation && g_font_slots[h].style.atlas)
+    return &g_font_slots[h].style;
   char value[256], path[1024]; float size = 0;
   font_atlas_t *atlas = NULL;
   if ((ui_string(font, "font", value, sizeof(value)) || ui_string(":root", "font", value, sizeof(value))) &&
@@ -170,9 +232,12 @@ static font_atlas_t *font_for_role(ui_font_t font) {
   }
   g_font_slots[h].selector = font;
   g_font_slots[h].generation = g_theme_style_generation;
-  g_font_slots[h].atlas = atlas;
-  return atlas;
+  g_font_slots[h].style = (text_style_t){ atlas, text_letter_spacing64(font, size), text_transform_of(font), text_align_of(font),
+                                              text_line_height_of(font, size) };
+  return &g_font_slots[h].style;
 }
+
+static font_atlas_t *font_for_role(ui_font_t font) { return text_style(font)->atlas; }
 
 static inline int font_space(ui_font_t font) {
   font_atlas_t *atlas = font_for_role(font);
@@ -198,7 +263,6 @@ void init_text_rendering(void) {
   memset(&text_state, 0, sizeof(text_state));
   memset(g_font_slots, 0, sizeof(g_font_slots));
   text_state.ready = true;
-  printf("text: body line %d, caption line %d\n", font_line("Text"), font_line("Caption"));
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -228,6 +292,58 @@ static uint32_t utf8_codepoint(const char *text, int remaining, int *length) {
   return 0xFFFD;
 }
 
+// Case mapping for text-transform: ASCII, Latin-1, Latin Extended-A, Greek
+// and Cyrillic, the scripts Orion's faces cover.
+static uint32_t text_upper(uint32_t c) {
+  if (c >= 'a' && c <= 'z') return c - 32;
+  if (c < 0x80) return c;
+  if (c >= 0xE0 && c <= 0xFE && c != 0xF7) return c - 32;
+  if (c == 0xFF) return 0x178;
+  if (c >= 0x100 && c <= 0x17F && c != 0x130 && c != 0x131 && c != 0x138 && c != 0x149 && c != 0x17F) {
+    bool odd_upper = (c >= 0x139 && c <= 0x148) || c >= 0x179;   // these ranges pair an odd capital with an even small letter
+    if (odd_upper ? (c & 1) == 0 : (c & 1) == 1) return c - 1;
+    return c;
+  }
+  if (c >= 0x3B1 && c <= 0x3C9 && c != 0x3C2) return c - 32;
+  if (c == 0x3C2) return 0x3A3;
+  if (c >= 0x430 && c <= 0x44F) return c - 32;
+  if (c >= 0x450 && c <= 0x45F) return c - 80;
+  return c;
+}
+
+static uint32_t text_lower(uint32_t c) {
+  if (c >= 'A' && c <= 'Z') return c + 32;
+  if (c < 0x80) return c;
+  if (c >= 0xC0 && c <= 0xDE && c != 0xD7) return c + 32;
+  if (c == 0x178) return 0xFF;
+  if (c >= 0x100 && c <= 0x17F && c != 0x130 && c != 0x131 && c != 0x138 && c != 0x149 && c != 0x17F) {
+    bool odd_upper = (c >= 0x139 && c <= 0x148) || c >= 0x179;
+    if (odd_upper ? (c & 1) == 1 : (c & 1) == 0) return c + 1;
+    return c;
+  }
+  if (c >= 0x391 && c <= 0x3A9 && c != 0x3A2) return c + 32;
+  if (c >= 0x410 && c <= 0x42F) return c + 32;
+  if (c >= 0x400 && c <= 0x40F) return c + 80;
+  return c;
+}
+
+// The next character of text as the style sets it: decoded at *i, which moves
+// past it, and case-mapped by text-transform. *word_start carries the start of
+// a word between calls (capitalize); start it true.
+static uint32_t text_next(const text_style_t *st, const char *text, int len, int *i, bool *word_start) {
+  int length;
+  uint32_t c = utf8_codepoint(text + *i, len - *i, &length);
+  *i += length > 0 ? length : 1;
+  bool space = c == ' ' || c == '\n' || c == '\t';
+  switch (st->transform) {
+    case TEXT_TRANSFORM_UPPERCASE:  c = text_upper(c); break;
+    case TEXT_TRANSFORM_LOWERCASE:  c = text_lower(c); break;
+    case TEXT_TRANSFORM_CAPITALIZE: if (*word_start) c = text_upper(c); break;
+  }
+  *word_start = space;
+  return c;
+}
+
 static inline int codepoint_advance(ui_font_t font, uint32_t codepoint) {
   const font_cache_glyph_t *glyph =
     font_cache_get_glyph(font_for_role(font)->cache, codepoint);
@@ -252,7 +368,8 @@ static inline int fallback_char_advance(uint32_t c, ui_font_t font) {
 }
 
 static inline int wrapped_line_advance(ui_font_t font) {
-  int adv = text_char_height(font);
+  int adv = text_style(font)->line_height;
+  if (adv <= 0) adv = text_char_height(font);
   if (adv <= 0) adv = font_line("Text");
   return adv > 0 ? adv : 1;
 }
@@ -324,15 +441,14 @@ static int emit_char_verts(text_vertex_t *buf, float cursor_x, int y,
 static int strnwidth_impl(ui_font_t font, const char *text, int len) {
   if (!text || !*text) return 0;
   if (len > MAX_TEXT_LENGTH) len = MAX_TEXT_LENGTH;
+  const text_style_t *st = text_style(font);
   int sw = font_space64(font);
   int w = 0;
+  bool word_start = true;
   for (int i = 0; i < len;) {
-    int length;
-    uint32_t codepoint = utf8_codepoint(text + i, len - i, &length);
-    i += length;
-    if (codepoint == ' ') { w += sw; continue; }
+    uint32_t codepoint = text_next(st, text, len, &i, &word_start);
     if (codepoint == '\n') continue;
-    w += codepoint_advance64(font, codepoint);
+    w += (codepoint == ' ' ? sw : codepoint_advance64(font, codepoint)) + st->spacing64;
   }
   return (w + 32) >> 6;
 }
@@ -386,24 +502,24 @@ void draw_text(ui_font_t font, const char *text, int x, int y, uint32_t col) {
   int text_length = (int)strlen(text);
   if (text_length > MAX_TEXT_LENGTH) text_length = MAX_TEXT_LENGTH;
 
-  // Each font role has its own atlas; a string is one batch of that atlas.
+  // Each face has its own atlas; a string is one batch of that atlas.
   static text_vertex_t buf[MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
-  font_atlas_t *atlas = font_for_role(font);
+  const text_style_t *st = text_style(font);
+  font_atlas_t *atlas = st->atlas;
   int vc = 0;
 
   int sw = font_space64(font);
   int lh = font_line(font);
 
   int pen = x * 64;
+  bool word_start = true;
   for (int i = 0; i < text_length;) {
-    int length;
-    uint32_t codepoint = utf8_codepoint(text + i, text_length - i, &length);
-    i += length;
-    if (codepoint == ' ')  { pen += sw; continue; }
+    uint32_t codepoint = text_next(st, text, text_length, &i, &word_start);
+    if (codepoint == ' ')  { pen += sw + st->spacing64; continue; }
     if (codepoint == '\n') { pen = x * 64; y += lh; continue; }
 
     vc += emit_char_verts(buf + vc, pen / 64.0f, y, codepoint, col, atlas);
-    pen += codepoint_advance64(font, codepoint);
+    pen += codepoint_advance64(font, codepoint) + st->spacing64;
   }
 
   if (vc > 0) flush_batch(atlas, buf, vc);
@@ -415,6 +531,7 @@ void draw_text_clipped(ui_font_t font, const char *text,
   int cell_h = text_char_height(font);
   int x = viewport->x;
   int y = viewport->y + (viewport->h - cell_h) / 2;
+  if (!(flags & (TEXT_ALIGN_RIGHT | TEXT_ALIGN_CENTER))) flags |= text_style(font)->align;   // the caller's alignment wins over CSS
   if (flags & TEXT_ALIGN_RIGHT)
     x = viewport->x + viewport->w - text_strwidth(font, text);
   else if (flags & TEXT_ALIGN_CENTER)
@@ -435,30 +552,34 @@ text_wrap_result_t text_wrap_layout_font(ui_font_t font, const char *text,
   if (draw && (!g_ui_runtime.running || !font_for_role(font)->cache)) return out;
 
   static text_vertex_t buf[MAX_TEXT_LENGTH * VERTICES_PER_CHAR];
-  int vc = 0;
-  int x = viewport->x;
-  int y = viewport->y;
-  int w = viewport->w;
+  const text_style_t *st = text_style(font);
+  font_atlas_t *atlas = st->atlas;
+  int vc = 0, line_vc = 0;   // the current line's vertices start at line_vc
   int lh = wrapped_line_advance(font);
+  int leading = (lh - text_char_height(font)) / 2;   // CSS half-leading: glyphs sit in the middle of the line box
   // Horizontal positions in 1/64 logical pixel.
-  int sw = font_space64(font);
-  x *= 64; w *= 64;
+  int sw = font_space64(font) + st->spacing64;
+  int x = viewport->x * 64, w = viewport->w * 64;
+  int cx = x, cy = viewport->y;
+  int line_w = 0, ink_w = 0;   // ink_w leaves out trailing spaces, which hang
+  int max_line_w = 0, lines = 1;
 
-  int cx = x;
-  int cy = y;
-  int line_w = 0;
-  int max_line_w = 0;
-  int lines = 1;
-  font_atlas_t *cur_atlas = NULL;
-
-#define NEW_LINE() do { if (line_w > max_line_w) max_line_w = line_w; \
-                       line_w = 0; cx = x; cy += lh; lines++; out.wrapped = true; } while (0)
+  // text-align moves a finished line within the viewport.
+  #define ALIGN_LINE() do { \
+    if (draw && st->align && vc > line_vc) { \
+      float dx = (float)(w - ink_w) / 64.0f; \
+      if (st->align == TEXT_ALIGN_CENTER) dx = floorf(dx / 2); \
+      for (int v = line_vc; v < vc; v++) buf[v].x += dx; \
+    } \
+    line_vc = vc; } while (0)
+  #define NEW_LINE() do { ALIGN_LINE(); if (ink_w > max_line_w) max_line_w = ink_w; \
+                         line_w = ink_w = 0; cx = x; cy += lh; lines++; out.wrapped = true; } while (0)
   int text_length = (int)strlen(text);
-  bool word_start = true;
+  if (text_length > MAX_TEXT_LENGTH) text_length = MAX_TEXT_LENGTH;
+  bool word_start = true, case_word = true;
   for (int i = 0; i < text_length;) {
-    int length;
-    uint32_t codepoint = utf8_codepoint(text + i, text_length - i, &length);
-    i += length;
+    int at = i;
+    uint32_t codepoint = text_next(st, text, text_length, &i, &case_word);
 
     if (codepoint == '\n') { NEW_LINE(); word_start = true; continue; }
 
@@ -472,38 +593,34 @@ text_wrap_result_t text_wrap_layout_font(ui_font_t font, const char *text,
     // Lines break between words; only a word longer than the line breaks inside.
     if (word_start && cx > x) {
       int word_w = 0;
-      for (int j = i - length, l; j < text_length; j += l) {
-        uint32_t cp = utf8_codepoint(text + j, text_length - j, &l);
+      bool ws = true;   // a word follows a space or the start
+      for (int j = at; j < text_length;) {
+        uint32_t cp = text_next(st, text, text_length, &j, &ws);
         if (cp == ' ' || cp == '\n') break;
-        word_w += wrap_char_advance(font, cp);
+        word_w += wrap_char_advance(font, cp) + st->spacing64;
       }
       if (cx + word_w > x + w) NEW_LINE();
     }
     word_start = false;
 
-    int cw = wrap_char_advance(font, codepoint);
+    int cw = wrap_char_advance(font, codepoint) + st->spacing64;
     if (cx + cw > x + w) NEW_LINE();
 
-    if (draw && vc < MAX_TEXT_LENGTH * VERTICES_PER_CHAR - VERTICES_PER_CHAR) {
-      font_atlas_t *atlas = font_for_role(font);
-      if (cur_atlas && atlas != cur_atlas && vc > 0) {
-        flush_batch(cur_atlas, buf, vc);
-        vc = 0;
-      }
-      cur_atlas = atlas;
-      vc += emit_char_verts(buf + vc, cx / 64.0f, cy, codepoint, col, atlas);
-    }
+    if (draw && vc < MAX_TEXT_LENGTH * VERTICES_PER_CHAR - VERTICES_PER_CHAR)
+      vc += emit_char_verts(buf + vc, cx / 64.0f, cy + leading, codepoint, col, atlas);
     cx += cw;
     line_w += cw;
+    ink_w = line_w;
   }
 
-#undef NEW_LINE
-  if (line_w > max_line_w) max_line_w = line_w;
+  ALIGN_LINE();
+  #undef NEW_LINE
+  #undef ALIGN_LINE
+  if (ink_w > max_line_w) max_line_w = ink_w;
   out.width = (max_line_w + 63) >> 6;
   out.height = lines * lh;
 
-  if (draw && vc > 0 && cur_atlas)
-    flush_batch(cur_atlas, buf, vc);
+  if (draw && vc > 0) flush_batch(atlas, buf, vc);
 
   return out;
 }

@@ -146,3 +146,19 @@ named Thin, ExtraLight, Light, Regular, Medium, SemiBold, Bold, ExtraBold and
 Black (a 400 face may also be `<Family>.ttf`). Sizes are scaled for the
 platform (×1.2 on iOS). Each face and size gets one glyph atlas, made on first
 use; a missing face falls back to DejaVu Sans with a diagnostic.
+
+The element's text properties apply wherever its text is measured, drawn or
+wrapped:
+
+| Property | Values | Notes |
+|---|---|---|
+| `text-transform` | `none`, `uppercase`, `lowercase`, `capitalize` | Latin, Greek and Cyrillic case pairs; the string itself is not changed |
+| `letter-spacing` | `normal`, `<px>`, `<em>` | added after every character, as browsers do |
+| `text-align` | `start`/`left`, `center`, `end`/`right` | single lines in `draw_text_clipped` (an alignment flag from the caller wins) and every wrapped line; trailing spaces hang |
+| `line-height` | `normal`, `<number>`, `<px>`, `<em>` | between wrapped lines; glyphs sit in the middle of the line box |
+
+```css
+TableView::header { font: 500 11px var(--ui-face); text-transform: uppercase; letter-spacing: .05em; }
+```
+
+An unsupported value is reported on `stderr` and reads as the initial value.

@@ -194,8 +194,8 @@ static void report_paint(window_t *win, reportview_data_t *data) {
       char title[MAX_REPORTVIEW_TITLE + 4];
       const char *shown = data->columns[col].title;
       int title_w = col_w - 2 * WIN_PADDING;
-      if (text_strwidth("TableView::row", shown) > title_w) { text_ellipsize("TableView::header", shown, MAX(0, title_w), title, sizeof(title)); shown = title; }
-      draw_text_clipped("TableView::row", shown,
+      if (text_strwidth("TableView::header", shown) > title_w) { text_ellipsize("TableView::header", shown, MAX(0, title_w), title, sizeof(title)); shown = title; }
+      draw_text_clipped("TableView::header", shown,
                               &(irect16_t){draw_x, 0, col_w - (data->columns[col].align ? WIN_PADDING : 0), header_h},
                               hdr_fg, data->columns[col].align ? data->columns[col].align : TEXT_PADDING_LEFT);
     }

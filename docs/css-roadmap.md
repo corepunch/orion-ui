@@ -24,14 +24,15 @@ text faces come from CSS; controls no longer paint shapes of their own
 ## 2. Text from CSS, not roles
 
 Done: a font is a selector, and each control draws with its element's `font`
-([styling.md](styling.md#type)). Still to come, the text properties:
-`TableView::header { font: 600 11px "IBM Plex Sans"; text-transform: uppercase;
+and text properties ([styling.md](styling.md#type)):
+`TableView::header { font: 500 11px var(--ui-face); text-transform: uppercase;
 letter-spacing: .05em }`.
 
 - Done: a font cache keyed by face and size, created on first use.
-- Text properties: `font`, `color`, `text-transform`, `letter-spacing`,
-  `text-align`, `line-height`, `text-overflow: ellipsis`, `font-variant-numeric:
-  tabular-nums` (figures in tables).
+- Done: `text-transform`, `letter-spacing`, `text-align`, `line-height`.
+- Still to come: `text-overflow: ellipsis` as a property (controls ellipsize in
+  C today) and `font-variant-numeric: tabular-nums`, which needs OpenType
+  features the FreeType-only path does not apply.
 - Done: the VGA bitmap font is gone; the terminal and the diff view draw IBM
   Plex Mono as a grid of cells (`draw_text_cells`).
 
@@ -86,11 +87,10 @@ The browser is weak at application chrome; Orion keeps its own, styled by CSS:
 ## 7. Next steps, in order
 
 Done: style queries replaced `theme_t`'s metrics and vtable; fonts are
-selectors; the VGA font gave way to IBM Plex Mono.
+selectors with text properties; the VGA font gave way to IBM Plex Mono.
 
-1. Text properties (`text-transform`, `letter-spacing`, `text-align`).
-2. App sheets and `class=` from `.orion`.
-3. Browser conformance fixtures for boxes, then text, then layout.
-4. Layout properties in the sheet.
-5. Git Client's Run page (rail, process table, console, ⌘K) built from these,
+1. App sheets and `class=` from `.orion`.
+2. Browser conformance fixtures for boxes, then text, then layout.
+3. Layout properties in the sheet.
+4. Git Client's Run page (rail, process table, console, ⌘K) built from these,
    with its behaviour in Lua.

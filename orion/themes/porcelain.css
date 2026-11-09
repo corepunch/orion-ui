@@ -129,8 +129,10 @@ Card {
 TableView::header { min-height: 24px; }
 TableView::row    { min-height: 21px; --divider-width: 1px; }
 
-/* Group captions read as headings on a quiet band; column titles step back. */
-TableView::group  { background: var(--window-dark-bg); color: var(--text-normal); }
-TableView::header { color: var(--text-secondary); }
+/* Group captions and column titles step back: small capitals, spaced out. */
+TableView::group  { background: var(--window-dark-bg); color: var(--text-secondary);
+                    font: 600 11px var(--ui-face); text-transform: uppercase; letter-spacing: .07em; }
+TableView::header { color: var(--text-secondary);
+                    font: 500 11px var(--ui-face); text-transform: uppercase; letter-spacing: .05em; }
 
 TextEdit { padding-left: 6px; }   /* the text clears the corner: at least 6 px */
