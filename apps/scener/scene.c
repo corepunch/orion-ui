@@ -770,7 +770,7 @@ static void parse_mod_noise(Mesh *m, XmlNode *n){
 	mesh_apply_noise(m,xml_attr_f_cm(n,"strength",NOISE_DEFAULT_STRENGTH_CM),xml_attr_i(n,"seed",1));
 }
 static void parse_mod_shell(Mesh *m, XmlNode *n){
-	mesh_apply_shell(m,xml_attr_f(n,"amount",0.05f));
+	mesh_apply_shell(m,xml_attr_f_cm(n,"amount",0.05f));
 }
 static void parse_mod_bevel(Mesh *m, XmlNode *n){
 	(void)m; (void)n;
@@ -824,6 +824,23 @@ static Shape2D* find_shape(Scene *s,const char *id){
 	return NULL;
 }
 
+static Shape2D shape_points(XmlNode *n){
+	Shape2D sh={0};
+	for(int k=0;k<n->nkids;k++){
+		if(!strcmp(n->kids[k]->tag,"v")){
+			float x=xml_attr_f_cm(n->kids[k],"x",0), y=xml_attr_f_cm(n->kids[k],"y",0);
+			vec3 p=v3(x,y,0); DA_PUSH(sh.pts,sh.npts,sh.cpts,p);
+		}
+	}
+	sh.closed=xml_attr_i(n,"closed",0);
+	return sh;
+}
+
+static int shape_extrudes(XmlNode *n){
+	for(int i=0;i<n->nkids;i++) if(!strcmp(n->kids[i]->tag,"extrude")) return 1;
+	return 0;
+}
+
 static void collect_shapes_from_tree(Scene *s,XmlNode *root){
 	for(int i=0;i<root->nkids;i++){
 		XmlNode *n=root->kids[i];
@@ -831,16 +848,9 @@ static void collect_shapes_from_tree(Scene *s,XmlNode *root){
 			const char *id=xml_attr(n,"id",NULL);
 			if(!id) continue;
 			if(find_shape(s,id)) continue;
-			Shape2D sh={0};
+			Shape2D sh=shape_points(n);
 			strncpy(sh.name,id,31);
-			for(int k=0;k<n->nkids;k++){
-				if(!strcmp(n->kids[k]->tag,"v")){
-					float x=xml_attr_f_cm(n->kids[k],"x",0), y=xml_attr_f_cm(n->kids[k],"y",0);
-					vec3 p=v3(x,y,0); DA_PUSH(sh.pts,sh.npts,sh.cpts,p);
-				}
-			}
-			if(sh.npts<2) continue;
-			sh.closed=xml_attr_i(n,"closed",0);
+			if(sh.npts<2){ shape2d_free(&sh); continue; }
 			shape2d_compute_normals(&sh);
 			DA_PUSH(s->shapes,s->nshapes,s->cshapes,sh);
 		} else if(!strcmp(n->tag,"group")||xml_is_bone(n)||!strcmp(n->tag,"prefab")){
@@ -1056,17 +1066,68 @@ static int screen_texture_index(Scene *s,const char *image){
 	return s->nscreenTextures-1;
 }
 
-static void parse_rounded_box(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
+typedef enum { PROFILE_RECT, PROFILE_ROUNDED_RECT, PROFILE_CIRCLE, PROFILE_ELLIPSE, PROFILE_STAR } profile_kind_t;
+
+#define SHAPE_FILLET_DEFAULT_SEGMENTS 6
+
+/* A <shape> with <extrude> renders through a 2D modifier stack, applied in document order: the
+   points are a line (closed="0") or a perimeter; <fillet> rounds the current outline's corners
+   (only the inner bends of a line); <extrude> pushes it along local Z, turning a line into a face
+   and a perimeter into a solid; <shell> gives a face its thickness, growing to the left of the
+   line's direction (a negative amount grows to the right); <bevel> rounds the solid's two rims.
+   Everything after the bevel is an ordinary mesh modifier. */
+static void parse_shape_node(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,vec3 rot,vec3 color,float shin,int castsShadow,int renderable,int unlit){
 	(void)parentM; (void)pos; (void)rot;
-	vec3 size=xml_attr_v3_cm(n,"size",v3(0.01f,0.01f,0.01f));
-	Mesh mesh=gen_rounded_box_beveled(size.x,size.y,size.z,xml_attr_f_cm(n,"radius",0),
-		xml_attr_f_cm(n,"bevel",0),xml_attr_i(n,"segments",8),xml_attr_i(n,"bevelSegments",4));
-	if(!mesh.ntris){ fprintf(stderr,"[scener] rounded-box: invalid size, radius, or bevel\n"); return; }
-	apply_modifiers(&mesh,n);
+	xml_attr(n,"id",NULL);
+	if(!shape_extrudes(n)) return;
+	const char *file=node_file(s,n);
+	Shape2D cur=shape_points(n);
+	float depth=0,bevel=0; int bevel_segments=4,extruded=0,stage=0,last=-1,ok=cur.npts>=2;
+	for(int i=0;i<n->nkids&&ok;i++){
+		XmlNode *c=n->kids[i];
+		const char *tag=c->tag;
+		if(!strcmp(tag,"v")) continue;
+		if(stage>=3){ last=i; continue; }
+		if(!strcmp(tag,"fillet")){
+			Shape2D next=shape2d_fillet(&cur,xml_attr_f_cm(c,"radius",0),xml_attr_i(c,"segments",SHAPE_FILLET_DEFAULT_SEGMENTS));
+			shape2d_free(&cur); cur=next; ok=cur.npts>0;
+		} else if(!strcmp(tag,"extrude")){
+			if(extruded||strcmp(xml_attr(c,"axis","z"),"z")){ ok=0; break; }
+			depth=xml_attr_f_cm(c,"amount",0); extruded=1; stage=1;
+		} else if(!strcmp(tag,"shell")){
+			float amount=xml_attr_f_cm(c,"amount",0);
+			if(!extruded||cur.closed||fabsf(amount)<=0){
+				scene_issue(s,SCENE_ISSUE_ERROR,"shape",file,c->line,"<shell> in <shape> thickens an extruded open line; it needs <extrude> before it and a non-zero amount");
+				ok=0; break;
+			}
+			Shape2D next=shape2d_stroke(&cur,amount>0?amount:0,amount<0?-amount:0);
+			shape2d_free(&cur); cur=next; ok=cur.npts>0; stage=2;
+		} else if(!strcmp(tag,"bevel")){
+			if(!extruded){ ok=0; break; }
+			bevel=xml_attr_f_cm(c,"amount",0); bevel_segments=xml_attr_i(c,"bevelSegments",4); stage=3;
+		} else { stage=3; last=i; }
+	}
+	if(ok&&!cur.closed){
+		scene_issue(s,SCENE_ISSUE_ERROR,"shape",file,n->line,"<shape> line needs <shell> after <extrude> to become a solid");
+		ok=0;
+	}
+	Shape2D outline=ok?shape2d_outline(&cur):(Shape2D){0};
+	shape2d_free(&cur);
+	Mesh mesh=outline.npts?gen_profile_extrusion_beveled(&outline,depth,bevel,bevel_segments):(Mesh){0};
+	shape2d_free(&outline);
+	if(!mesh.ntris){
+		if(ok) scene_issue(s,SCENE_ISSUE_ERROR,"shape",file,n->line,"<shape> modifiers give no valid solid: check the extrusion depth, fillet radius and bevel");
+		else fprintf(stderr,"[scener] shape: expected <v> points, one <extrude axis=\"z\">, then optional <fillet>, <shell> and <bevel>\n");
+		return;
+	}
+	for(int i=0;i<=last;i++){
+		XmlNode *c=n->kids[i];
+		if(!strcmp(c->tag,"v")||!strcmp(c->tag,"fillet")||!strcmp(c->tag,"extrude")||!strcmp(c->tag,"shell")||!strcmp(c->tag,"bevel")) continue;
+		for(int j=0;j<(int)(sizeof(modifier_parsers)/sizeof(modifier_parsers[0]));j++)
+			if(!strcmp(c->tag,modifier_parsers[j].tag)){ modifier_parsers[j].parse(&mesh,c); break; }
+	}
 	scene_add_obj(s,mesh,M,R,color,shin,castsShadow,renderable,unlit);
 }
-
-typedef enum { PROFILE_RECT, PROFILE_ROUNDED_RECT, PROFILE_CIRCLE, PROFILE_ELLIPSE, PROFILE_STAR } profile_kind_t;
 
 static void parse_profile_primitive(Scene *s,XmlNode *n,mat4 M,mat4 R,vec3 color,float shin,int castsShadow,int renderable,int unlit,profile_kind_t kind){
 	Shape2D profile={0};
@@ -1156,8 +1217,9 @@ static void parse_prism(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3
 static void parse_cone(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)parentM; (void)pos; (void)rot;
 	float rb=xml_attr_f_cm(n,"radius",0.5f), rt=xml_attr_f_cm(n,"radiusTop",0.0f), h=xml_attr_f_cm(n,"height",1.0f);
-	int sides = xml_attr_i(n,"sides", !strcmp(n->tag,"pyramid")?4:24);
-	Mesh mesh=gen_cone(rb,rt,h,sides); apply_modifiers(&mesh,n);
+	int pyramid=!strcmp(n->tag,"pyramid");
+	int sides = xml_attr_i(n,"sides", pyramid?4:24);
+	Mesh mesh=gen_cone(rb,rt,h,sides,xml_attr_i(n,"smooth",!pyramid)); apply_modifiers(&mesh,n);
 	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
 }
 
@@ -2250,12 +2312,12 @@ static const struct {
 	shape_parser_fn parse;
 } shape_parsers[] = {
 	{ "box",      parse_box },
-	{ "rounded-box", parse_rounded_box },
 	{ "rect",     parse_rect },
 	{ "rounded-rect", parse_rounded_rect },
 	{ "circle",   parse_circle },
 	{ "ellipse",  parse_ellipse },
 	{ "star",     parse_star },
+	{ "shape",    parse_shape_node },
 	{ "screen",   parse_screen },
 	{ "sphere",   parse_sphere },
 	{ "cylinder", parse_cylinder },
@@ -2358,7 +2420,7 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 		}
 		if(ownsEditNode) s->activeEditMatrix=M;
 		int oldRecord=s->activeRecord; void *oldSource=s->activeSourceNode;
-		if(has_shape_parser(tag) && (!s->prefabDepth || !strcmp(tag,"prefab"))){
+		if(has_shape_parser(tag) && (!s->prefabDepth || !strcmp(tag,"prefab")) && (strcmp(tag,"shape") || shape_extrudes(n))){
 			SceneRecord record={n,oldRecord,M};
 			DA_PUSH(s->records,s->nrecords,s->crecords,record);
 			s->activeRecord=s->nrecords-1;
@@ -2557,7 +2619,7 @@ static void warn_unknown_children(Scene *s, XmlNode *parent, const char *path, i
 		else if(!strcmp(parent->tag,"capture-profile")) supported=!strcmp(n->tag,"map");
 		else if(!strcmp(parent->tag,"layer")) supported=!strcmp(n->tag,"contact");
 		else if(!strcmp(parent->tag,"clip")) supported=!strcmp(n->tag,"key");
-		else if(!strcmp(parent->tag,"shape")) supported=!strcmp(n->tag,"v");
+		else if(!strcmp(parent->tag,"shape")) supported=!strcmp(n->tag,"v") || !strcmp(n->tag,"fillet") || has_modifier_parser(n->tag);
 		else if(!strcmp(parent->tag,"wall")||!strcmp(parent->tag,"floor")||!strcmp(parent->tag,"window")||!strcmp(parent->tag,"door")) supported=0;
 		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array") || !strcmp(n->tag,"joint") || !strcmp(n->tag,"ik") || !strcmp(n->tag,"gait") || !strcmp(n->tag,"layer") || !strcmp(n->tag,"option");
 		else if(has_shape_parser(parent->tag)) supported=has_modifier_parser(n->tag);
@@ -2865,7 +2927,6 @@ static int scene_create_insert(Scene *s,const char *tag,const char *preset,vec3 
 
 int scene_create_promo_shape(Scene *s,const char *tag,vec3 ground){
 	int screen=!strcmp(tag,"screen");
-	int rounded_box=!strcmp(tag,"rounded-box");
 	const struct { const char *tag,*size,*radius,*outer,*inner,*points,*depth,*bevel; float lift; } presets[]={
 		{ "rect",         "100 100", NULL, NULL, NULL, NULL, "20", "2", 0.5f },
 		{ "rounded-rect", "7.6 16.2", "1.28", NULL, NULL, NULL, "0.8", "0.16", 0.081f },
@@ -2876,10 +2937,10 @@ int scene_create_promo_shape(Scene *s,const char *tag,vec3 ground){
 	const int npresets=(int)(sizeof(presets)/sizeof(presets[0]));
 	int preset=-1;
 	for(int i=0;i<npresets;i++) if(!strcmp(tag,presets[i].tag)){ preset=i; break; }
-	if(!screen&&!rounded_box&&preset<0) return 0;
+	if(!screen&&preset<0) return 0;
 	XmlNode *node=xml_new(tag);
 	vec3 up=s->worldUp.z==1?v3(0,0,1):v3(0,1,0);
-	float lift=screen?0.0777f:rounded_box?0.081f:presets[preset].lift;
+	float lift=screen?0.0777f:presets[preset].lift;
 	if(preset>=0){
 		const char *size=presets[preset].size,*radius=presets[preset].radius;
 		if(size) xml_set_attr(node,"size",size);
@@ -2894,9 +2955,8 @@ int scene_create_promo_shape(Scene *s,const char *tag,vec3 ground){
 		xml_set_attr(bevel,"amount",presets[preset].bevel); xml_set_attr(bevel,"bevelSegments","4");
 		DA_PUSH(node->kids,node->nkids,node->ckids,bevel);
 	} else {
-		xml_set_attr(node,"size",screen?"7.03 15.54 0.03":"7.6 16.2 0.8");
-		xml_set_attr(node,"radius",screen?"0.98":"1.28");
-		if(rounded_box){ xml_set_attr(node,"bevel","0.16"); xml_set_attr(node,"bevelSegments","4"); }
+		xml_set_attr(node,"size","7.03 15.54 0.03");
+		xml_set_attr(node,"radius","0.98");
 	}
 	xml_set_attr_v3_cm(node,"pos",vadd(ground,vscale(up,lift)));
 	if(up.z==1) xml_set_attr(node,"rot",WINDOW_Z_UP_ROTATION);

@@ -44,6 +44,13 @@ static void test_prefab_files_open_as_documents(void) {
   PASS();
 }
 
+static Mesh beveled_rounded_rect(float sx, float sy, float sz, float radius, float bevel) {
+  Shape2D profile = shape2d_rounded_rect(sx, sy, radius, 8);
+  Mesh mesh = gen_profile_extrusion_beveled(&profile, sz, bevel, 4);
+  shape2d_free(&profile);
+  return mesh;
+}
+
 static void test_device_screen_geometry_and_assets(void) {
   TEST("promo devices: rounded solids are sealed and screen images resolve through prefabs");
   Mesh mesh = gen_rounded_box(2.0f, 4.0f, 0.1f, 0.3f, 8);
@@ -59,7 +66,7 @@ static void test_device_screen_geometry_and_assets(void) {
   mesh = gen_rounded_box(2.0f, 4.0f, 0.4f, 0.3f, 8);
   float sharp_volume = mesh_signed_volume(&mesh);
   mesh_free(&mesh);
-  mesh = gen_rounded_box_beveled(2.0f, 4.0f, 0.4f, 0.3f, 0.08f, 8, 4);
+  mesh = beveled_rounded_rect(2.0f, 4.0f, 0.4f, 0.3f, 0.08f);
   ASSERT_TRUE(mesh.nverts > 0 && mesh.ntris > 0);
   mesh_build_edges(&mesh);
   for (int i = 0; i < mesh.nedges; i++) ASSERT_TRUE(mesh.edges[i].t1 >= 0);
@@ -80,10 +87,10 @@ static void test_device_screen_geometry_and_assets(void) {
     ASSERT_TRUE(vdot(normal, mesh.verts[t.a].nrm) > -1e-6f);
   }
   mesh_free(&mesh);
-  mesh = gen_rounded_box_beveled(2.0f, 4.0f, 0.4f, 0.3f, 0.3f, 8, 4);
+  mesh = beveled_rounded_rect(2.0f, 4.0f, 0.4f, 0.3f, 0.3f);
   ASSERT_EQUAL(mesh.ntris, 0);
   for (int beveled = 0; beveled <= 1; beveled++) {
-    mesh = gen_rounded_box_beveled(2.0f, 4.0f, 0.4f, 1.0f, beveled ? 0.08f : 0, 8, 4);
+    mesh = beveled_rounded_rect(2.0f, 4.0f, 0.4f, 1.0f, beveled ? 0.08f : 0);
     mesh_build_edges(&mesh);
     ASSERT_TRUE(mesh_signed_volume(&mesh) > 0);
     for (int i = 0; i < mesh.nedges; i++) ASSERT_TRUE(mesh.edges[i].t1 >= 0);
@@ -100,7 +107,7 @@ static void test_device_screen_geometry_and_assets(void) {
   };
   for (int i = 0; i < 2; i++) {
     const float *d = device_sizes[i];
-    mesh = gen_rounded_box_beveled(d[0], d[1], d[2], d[3], d[4], 8, 4);
+    mesh = beveled_rounded_rect(d[0], d[1], d[2], d[3], d[4]);
     mesh_build_edges(&mesh);
     ASSERT_EQUAL(mesh.nedges * 2, mesh.ntris * 3);
     for (int edge = 0; edge < mesh.nedges; edge++) {
@@ -149,6 +156,96 @@ static void test_device_screen_geometry_and_assets(void) {
   ASSERT_EQUAL(restored.nobjs, 1);
   unlink(created.scenePath);
   scene_free(&created); scene_free(&restored);
+  PASS();
+}
+
+static void test_cone_normals_follow_slope(void) {
+  TEST("cone: low-sided cones are smooth by default and side normals lean up by the slope");
+  Mesh mesh = gen_cone(2.0f, 0.0f, 1.0f, 12, 1);
+  int side = 0;
+  for (int i = 0; i < mesh.nverts; i++) {
+    vec3 p = mesh.verts[i].pos, n = mesh.verts[i].nrm;
+    if (p.y > -0.4999f || fabsf(n.y + 1.0f) < 1e-4f) continue;
+    float radial = sqrtf(n.x * n.x + n.z * n.z);
+    ASSERT_TRUE(fabsf(n.y / radial - 2.0f) < 1e-3f);
+    ASSERT_TRUE(fabsf(n.x * p.z - n.z * p.x) < 1e-4f);
+    side++;
+  }
+  ASSERT_TRUE(side == 24);
+  mesh_free(&mesh);
+  mesh = gen_cone(2.0f, 0.0f, 1.0f, 12, 0);
+  for (int i = 0; i < mesh.nverts; i++) {
+    vec3 p = mesh.verts[i].pos, n = mesh.verts[i].nrm;
+    if (p.y > -0.4999f || fabsf(n.y + 1.0f) < 1e-4f || fabsf(p.z) > 1e-4f || p.x < 1.0f) continue;
+    ASSERT_TRUE(fabsf(n.z) > 0.1f);
+  }
+  mesh_free(&mesh);
+  PASS();
+}
+
+static int issues_of_kind(Scene *s,const char *kind);
+
+static void test_shape_modifier_stack(void) {
+  TEST("<shape>: a line extruded into a face, shelled, filleted and bevelled is a sealed solid");
+  Shape2D line = {0};
+  vec3 pts[] = {{-1.3f, 0, 0}, {0, 0.8f, 0}, {1.3f, 0, 0}};
+  for (int i = 0; i < 3; i++) DA_PUSH(line.pts, line.npts, line.cpts, pts[i]);
+  Shape2D slab = shape2d_stroke(&line, 0.2f, 0);
+  ASSERT_EQUAL(slab.npts, 6);
+  float area = 0, top = -1;
+  for (int i = 0; i < slab.npts; i++) {
+    vec3 a = slab.pts[i], b = slab.pts[(i + 1) % slab.npts];
+    area += a.x * b.y - a.y * b.x; top = fmaxf(top, a.y);
+  }
+  float turn = 2.0f * atanf(0.8f / 1.3f);
+  ASSERT_TRUE(fabsf(area * 0.5f - (0.2f * 2.0f * sqrtf(1.3f * 1.3f + 0.64f) + 0.04f * tanf(turn * 0.5f))) < 0.002f);
+  ASSERT_TRUE(top > 0.95f);
+  Shape2D bent = shape2d_fillet(&line, 0.3f, 6);
+  ASSERT_FALSE(bent.closed);
+  ASSERT_EQUAL(bent.npts, 9);
+  ASSERT_TRUE(bent.pts[0].x == -1.3f && bent.pts[8].x == 1.3f);
+  Shape2D round = shape2d_fillet(&slab, 0.08f, 6);
+  ASSERT_TRUE(round.npts > slab.npts * 4);
+  shape2d_free(&round); shape2d_free(&bent); shape2d_free(&slab); shape2d_free(&line);
+
+  const char *xml = "<scene>"
+    "<shape id=\"roof\" closed=\"0\"><v x=\"-130\" y=\"0\"/><v x=\"0\" y=\"80\"/><v x=\"130\" y=\"0\"/>"
+      "<extrude amount=\"200\"/><shell amount=\"22\"/><fillet radius=\"10\"/><bevel amount=\"8\"/></shape>"
+    "<shape closed=\"0\" pos=\"0 300 0\"><v x=\"-130\" y=\"0\"/><v x=\"0\" y=\"80\"/><v x=\"130\" y=\"0\"/>"
+      "<fillet radius=\"30\"/><extrude amount=\"200\"/><shell amount=\"-15\"/><bevel amount=\"5\"/><taper amount=\"0.1\"/></shape>"
+    "<shape closed=\"1\" pos=\"0 600 0\"><v x=\"0\" y=\"0\"/><v x=\"100\" y=\"0\"/><v x=\"100\" y=\"60\"/><v x=\"0\" y=\"60\"/>"
+      "<fillet radius=\"12\"/><extrude amount=\"20\"/><bevel amount=\"6\"/></shape>"
+    "<shape id=\"definition\" closed=\"0\"><v x=\"0\" y=\"0\"/><v x=\"10\" y=\"10\"/></shape>"
+    "<shape closed=\"0\" pos=\"0 900 0\"><v x=\"0\" y=\"0\"/><v x=\"10\" y=\"10\"/><extrude amount=\"20\"/></shape>"
+    "<shape closed=\"1\" pos=\"0 1200 0\"><v x=\"0\" y=\"0\"/><v x=\"10\" y=\"0\"/><v x=\"0\" y=\"10\"/><extrude amount=\"20\"/><shell amount=\"2\"/></shape>"
+    "</scene>";
+  Scene scene = {0};
+  FILE *sink = fopen("/dev/null", "w"), *saved = stderr; stderr = sink;
+  ASSERT_TRUE(window_test_load(&scene, xml));
+  stderr = saved; fclose(sink);
+  ASSERT_EQUAL(scene.nobjs, 3);
+  ASSERT_EQUAL(issues_of_kind(&scene, "shape"), 2);
+  ASSERT_EQUAL(issues_of_kind(&scene, "element"), 0);
+  for (int i = 0; i < scene.nobjs; i++) {
+    Mesh *mesh = &scene.objs[i].mesh;
+    ASSERT_TRUE(mesh_signed_volume(mesh) > 0);
+    ASSERT_EQUAL(mesh->nedges * 2, mesh->ntris * 3);
+    for (int e = 0; e < mesh->nedges; e++) ASSERT_TRUE(mesh->edges[e].t1 >= 0);
+  }
+  scene_free(&scene);
+  PASS();
+}
+
+static void test_shell_amount_is_centimetres(void) {
+  TEST("<shell>: the mesh modifier's amount is in centimetres like every spatial value");
+  Scene scene = {0};
+  ASSERT_TRUE(window_test_load(&scene, "<scene><sun/><box size=\"100 100 100\"><shell amount=\"10\"/></box></scene>"));
+  ASSERT_EQUAL(scene.nobjs, 1);
+  float reach = 0;
+  Mesh *mesh = &scene.objs[0].mesh;
+  for (int i = 0; i < mesh->nverts; i++) reach = fmaxf(reach, mesh->verts[i].pos.x);
+  ASSERT_TRUE(fabsf(reach - 0.6f) < 0.001f);
+  scene_free(&scene);
   PASS();
 }
 
@@ -1305,7 +1402,10 @@ int main(void) {
   test_tool_commands_share_document_state();
   test_prefab_files_open_as_documents();
   test_device_screen_geometry_and_assets();
+  test_cone_normals_follow_slope();
   test_profile_extrude_and_bevel();
+  test_shape_modifier_stack();
+  test_shell_amount_is_centimetres();
   test_created_screen_persists();
   test_instance_rig_ik();
   test_rig_mirror_and_pose_reuse();

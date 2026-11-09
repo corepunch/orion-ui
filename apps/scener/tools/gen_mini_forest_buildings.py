@@ -10,33 +10,34 @@ def v3(a, b, c): return "%s %s %s" % (f(a), f(b), f(c))
 # Kit pieces have softly rounded edges: every box is a rounded rectangle extruded along local Z
 # with a bevelled rim, and every cylinder a bevelled circle. Radii scale with the piece so thin
 # trims stay crisp while walls and roofs read as chunky toys.
-ROUND = 0.24      # corner radius as a fraction of the smaller cross-section side
-ROUND_MAX = 10.0  # cm
-BEVEL = 0.8       # rim bevel as a fraction of the corner radius (must stay below it)
+ROUND = 0.42      # corner radius as a fraction of the smaller cross-section side
+ROUND_MAX = 22.0  # cm
+BEVEL = 0.92      # rim bevel as a fraction of the corner radius (must stay below it)
 
 def box(p, s, m, rot=None, extra="", mods=""):
   r = ' rot="%s"' % v3(*rot) if rot else ""
   rad = min(ROUND_MAX, ROUND * min(s[0], s[1]))
-  bev = min(BEVEL * rad, s[2] * 0.4)
+  bev = min(BEVEL * rad, s[2] * 0.46)
   if rad < 0.6 or bev < 0.4:
     if mods: e('    <box pos="%s" size="%s"%s material="%s"%s>%s</box>' % (v3(*p), v3(*s), r, m, extra, mods))
     else:    e('    <box pos="%s" size="%s"%s material="%s"%s/>' % (v3(*p), v3(*s), r, m, extra))
     return
-  e('    <rounded-rect pos="%s" size="%s %s" radius="%s" segments="3"%s material="%s"%s>'
-    '<extrude amount="%s"/><bevel amount="%s" bevelSegments="2"/>%s</rounded-rect>'
+  e('    <rounded-rect pos="%s" size="%s %s" radius="%s" segments="5"%s material="%s"%s>'
+    '<extrude amount="%s"/><bevel amount="%s" bevelSegments="4"/>%s</rounded-rect>'
     % (v3(*p), f(s[0]), f(s[1]), f(rad), r, m, extra, f(s[2]), f(bev), mods))
 
 def cyl(p, r, h, m, sides=8, rot=None, extra="", mods=""):
-  bev = min(ROUND_MAX, ROUND * min(r * 2, h), h * 0.45) * BEVEL
+  bev = min(ROUND_MAX, ROUND * min(r * 2, h), h * 0.5) * BEVEL
   e('    <group pos="%s"%s>' % (v3(*p), ' rot="%s"' % v3(*rot) if rot else ""))
-  e('    <circle radius="%s" segments="%d" rot="90 0 0" material="%s"%s><extrude amount="%s"/><bevel amount="%s" bevelSegments="2"/>%s</circle>'
+  e('    <circle radius="%s" segments="%d" rot="90 0 0" material="%s"%s><extrude amount="%s"/><bevel amount="%s" bevelSegments="4"/>%s</circle>'
     % (f(r), max(8, sides), m, extra, f(h), f(bev), mods))
   e('    </group>')
 
-def cone(p, r, h, m, sides=8, top=0, rot=None):
+def cone(p, r, h, m, sides=8, top=0, rot=None, smooth=True):
   rr = ' rot="%s"' % v3(*rot) if rot else ""
   t = ' radiusTop="%s"' % f(top) if top else ""
-  e('    <cone pos="%s" radius="%s"%s height="%s" sides="%d"%s material="%s"/>' % (v3(*p), f(r), t, f(h), sides, rr, m))
+  sm = "" if smooth else ' smooth="0"'
+  e('    <cone pos="%s" radius="%s"%s height="%s" sides="%d"%s%s material="%s"/>' % (v3(*p), f(r), t, f(h), sides, rr, sm, m))
 
 def gable_fill(cx, y0, cz, w, d, h, m, along="z"):
   """Triangular gable solid: base width w at y0, apex h above, length d along `along`."""
@@ -47,8 +48,13 @@ def gable_fill(cx, y0, cz, w, d, h, m, along="z"):
   e('    <prism pos="%s" radius="1" height="%s" sides="3" rot="%s" scale="%s" material="%s"/>'
     % (v3(cx, y0 + 0.5 * h / 1.5, cz), f(d), rot, sc, m))
 
-def gable_roof(cx, y0, cz, w, d, h, m, t=10, ov=18, along="z", fill=None):
-  """Two thick slabs meeting at a ridge above (cx, y0+h); ridge runs along `along`."""
+STUDS = ((0.32, -0.28), (0.55, 0.18), (0.78, -0.06), (0.4, 0.38))
+
+def gable_roof(cx, y0, cz, w, d, h, m, t=16, ov=18, along="z", fill=None):
+  """One solid bent roof, as a shape modifier stack: the gable underside drawn as a line, extruded
+  across the building into a face, shelled upward to thickness t, every corner rounded and both
+  rims bevelled. The underside rests on the slopes from (cx +- w/2, y0) to the ridge at
+  (cx, y0 + h); ov is the overhang along the slope and at the gable ends."""
   if along == "x":
     e('    <group pos="%s" rot="0 90 0">' % v3(cx, 0, cz))
     gable_roof(0, y0, 0, w, d, h, m, t, ov, "z", fill)
@@ -56,21 +62,20 @@ def gable_roof(cx, y0, cz, w, d, h, m, t=10, ov=18, along="z", fill=None):
     return
   if fill: gable_fill(cx, y0, cz, w, d, h, fill)
   a = math.atan2(h, w / 2)
-  L = math.hypot(w / 2, h)
+  ex, ey = w / 2 + ov * math.cos(a), y0 - ov * math.sin(a)
+  D = d + 2 * ov
+  e('    <shape closed="0" pos="%s" material="%s"><v x="%s" y="%s"/><v x="0" y="%s"/><v x="%s" y="%s"/>'
+    '<extrude amount="%s"/><shell amount="%s"/><fillet radius="%s"/><bevel amount="%s" bevelSegments="4"/></shape>'
+    % (v3(cx, 0, cz), m, f(-ex), f(ey), f(y0 + h), f(ex), f(ey), f(D), f(t), f(t * 0.45), f(t * 0.38)))
+  # a few soft shingle studs on each slope, like the kit's roofs
+  L = math.hypot(w / 2, h) + ov
   for side in (1, -1):
-    u = (side * math.cos(a), -math.sin(a))       # ridge -> eave
-    n = (side * math.sin(a), math.cos(a))        # outward normal
-    mx = side * w / 4 + u[0] * ov / 2 + n[0] * t / 2
-    my = y0 + h / 2 + u[1] * ov / 2 + n[1] * t / 2
-    deg = -side * math.degrees(a)
-    if along == "z":
-      box((cx + mx, my, cz), (L + ov, t, d + 2 * ov), m, rot=(0, 0, deg))
-    else:
-      box((cx, my, cz + mx), (d + 2 * ov, t, L + ov), m, rot=(0, 90, deg))
-  # ridge cap
-  ry = y0 + h + t / math.cos(a) - 2
-  if along == "z": box((cx, ry, cz), (t + 4, 8, d + 2 * ov + 4), m + "_dark")
-  else:            box((cx, ry, cz), (d + 2 * ov + 4, 8, t + 4), m + "_dark")
+    n = (side * math.sin(a), math.cos(a))
+    for (fr, fz) in STUDS:
+      sx, sy = side * fr * L * math.cos(a), y0 + h - fr * L * math.sin(a)
+      px, py = sx + n[0] * (t + 1.5), sy + n[1] * (t + 1.5)
+      e('    <circle radius="%s" segments="10" pos="%s" rot="-90 0 %s" material="%s"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>'
+        % (f(max(6, t * 0.5)), v3(cx + px, py, cz + side * fz * D), f(-side * math.degrees(a)), m))
 
 def window(x, y, z, face, w=36, h=40, glass="glass"):
   """face: +z, -z, +x, -x. (x,y,z) is the wall surface point at window centre."""
@@ -98,9 +103,12 @@ def door(x, y0, z, face, w=48, h=86, m="door"):
     box((x + sgn * 18, y0 + 3, z), (30, 6, w + 24), "stone_step")
 
 def pine(x, z, s=1.0, seed=0):
-  cyl((x, 15 * s, z), 9 * s, 30 * s, "trunk", sides=6)
-  for i, (r, h, y) in enumerate(((60, 80, 55), (48, 70, 95), (34, 60, 132))):
-    cone((x, (y + h / 2 - 10) * s, z), r * s, h * s, "pine" if i % 2 == 0 else "pine_light", sides=7)
+  """Slim faceted pine like the kit's: short trunk, four flat-shaded six-sided tiers, each turned
+  so its facets fall between the ones below."""
+  cyl((x, 14 * s, z), 8 * s, 28 * s, "trunk", sides=8)
+  m = "pine" if int(abs(x + z)) % 3 else "pine_light"
+  for i, (r, top, h, y) in enumerate(((46, 10, 62, 24), (40, 8, 58, 66), (32, 6, 52, 104), (22, 0, 46, 138))):
+    cone((x, (y + h / 2) * s, z), r * s, h * s, m, sides=6, top=top * s, rot=(0, i * 30, 0), smooth=False)
 
 def bush(x, z, r=26, m="leaf"):
   e('    <sphere pos="%s" radius="%s" rings="5" slices="7" material="%s"><noise strength="2" seed="%d"/></sphere>'
@@ -235,11 +243,11 @@ def treehouse():
 
 def roundhut():
   """Round hut: cylinder wall, conical thatch with a little cap."""
-  cyl((0, 65, 0), 115, 130, "plaster_warm", sides=12)
-  cyl((0, 8, 0), 122, 16, "stone", sides=12)
-  e('    <cone pos="0 190 0" radius="160" radiusTop="18" height="130" sides="12" material="thatch"/>')
+  cyl((0, 65, 0), 115, 130, "plaster_warm", sides=24)
+  cyl((0, 8, 0), 122, 16, "stone", sides=24)
+  e('    <cone pos="0 190 0" radius="160" radiusTop="18" height="130" sides="24" material="thatch"/>')
   e('    <cone pos="0 270 0" radius="26" height="30" sides="8" material="thatch_dark"/>')
-  cyl((0, 130, 0), 160, 10, "thatch_dark", sides=12)
+  cyl((0, 130, 0), 160, 10, "thatch_dark", sides=24)
   # door + windows on the front, set in flat frame boxes against the round wall
   box((0, 58, 108), (62, 106, 20), "plaster_warm")
   door(0, 16, 118, "+z", w=46, h=84)
@@ -292,10 +300,10 @@ def ranger_station():
 
 def stone_tower():
   """Round stone tower with a tall pointed roof and a pennant."""
-  cyl((0, 140, 0), 80, 280, "stone_light", sides=12, mods='<taper amount="0.08" axis="z"/>')
-  cyl((0, 10, 0), 92, 20, "stone", sides=12)
-  cyl((0, 286, 0), 94, 16, "stone", sides=12)
-  e('    <cone pos="0 359 0" radius="104" height="130" sides="12" material="roof_purple"/>')
+  cyl((0, 140, 0), 80, 280, "stone_light", sides=24, mods='<taper amount="0.08" axis="z"/>')
+  cyl((0, 10, 0), 92, 20, "stone", sides=24)
+  cyl((0, 286, 0), 94, 16, "stone", sides=24)
+  e('    <cone pos="0 359 0" radius="104" height="130" sides="24" material="roof_purple"/>')
   cyl((0, 444, 0), 3, 40, "metal")
   box((14, 456, 0), (26, 16, 3), "flag")
   # band of stones

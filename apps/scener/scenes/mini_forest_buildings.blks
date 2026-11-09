@@ -58,615 +58,669 @@
   <material id="pine_light"    color="0.32 0.68 0.44" shininess="4"/>
   <!-- Log cabin: stacked logs, dark shingle roof, stone chimney. -->
   <group name="log_cabin" pos="-1320 0 -330">
-    <rounded-rect pos="0 -16 0" size="560 28" radius="6.72" segments="3" material="dirt"><extrude amount="560"/><bevel amount="5.38" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 -4 0" size="562 8" radius="1.92" segments="3" material="grass"><extrude amount="562"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 6 0" size="280 12" radius="2.88" segments="3" material="stone"><extrude amount="220"/><bevel amount="2.3" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 -16 0" size="560 28" radius="11.76" segments="5" material="dirt"><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 -4 0" size="562 8" radius="3.36" segments="5" material="grass"><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 6 0" size="280 12" radius="5.04" segments="5" material="stone"><extrude amount="220"/><bevel amount="4.64" bevelSegments="4"/></rounded-rect>
     <group pos="0 25 88" rot="0 0 90">
-    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="284"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="284"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="0 25 -88" rot="0 0 90">
-    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="284"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="284"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="118 37 0" rot="90 0 0">
-    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="224"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="224"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="-118 37 0" rot="90 0 0">
-    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="224"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="224"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="0 49 88" rot="0 0 90">
-    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="284"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="284"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="0 49 -88" rot="0 0 90">
-    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="284"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="284"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="118 61 0" rot="90 0 0">
-    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="224"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="224"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="-118 61 0" rot="90 0 0">
-    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="224"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="224"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="0 73 88" rot="0 0 90">
-    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="284"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="284"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="0 73 -88" rot="0 0 90">
-    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="284"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="284"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="118 85 0" rot="90 0 0">
-    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="224"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="224"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="-118 85 0" rot="90 0 0">
-    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="224"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="224"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="0 97 88" rot="0 0 90">
-    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="284"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="284"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="0 97 -88" rot="0 0 90">
-    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="284"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="284"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="118 109 0" rot="90 0 0">
-    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="224"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="224"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="-118 109 0" rot="90 0 0">
-    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="224"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="224"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="0 121 88" rot="0 0 90">
-    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="284"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="284"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="0 121 -88" rot="0 0 90">
-    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="284"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="284"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="118 133 0" rot="90 0 0">
-    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="224"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="224"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="-118 133 0" rot="90 0 0">
-    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="224"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="224"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="0 145 88" rot="0 0 90">
-    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="284"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="284"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="0 145 -88" rot="0 0 90">
-    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="284"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log_light"><extrude amount="284"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="118 157 0" rot="90 0 0">
-    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="224"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="224"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
     <group pos="-118 157 0" rot="90 0 0">
-    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="224"/><bevel amount="4.99" bevelSegments="2"/></circle>
+    <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="224"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
-    <rounded-rect pos="0 87 0" size="230 150" radius="10" segments="3" material="log_inner"><extrude amount="170"/><bevel amount="8" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-40 58 101.5" size="58 92" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-40 55 103" size="48 86" radius="10" segments="3" material="door"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-25.6 53.28 106" size="6 6" radius="1.44" segments="3" material="metal_knob"><extrude amount="4"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-40 15 118" size="72 6" radius="1.44" segments="3" material="stone_step"><extrude amount="30"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="60 95 101.5" size="46 50" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="60 95 102.5" size="36 40" radius="8.64" segments="3" material="glass"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="60 69 104" size="52 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="131.5 95 0" size="3 50" radius="0.72" segments="3" material="trim"><extrude amount="46"/><bevel amount="0.58" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="132.5 95 0" size="3 40" radius="0.72" segments="3" material="glass"><extrude amount="36"/><bevel amount="0.58" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="134 69 0" size="8 5" radius="1.2" segments="3" material="trim"><extrude amount="52"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 87 0" size="230 150" radius="22" segments="5" material="log_inner"><extrude amount="170"/><bevel amount="20.24" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-40 58 101.5" size="58 92" radius="22" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-40 55 103" size="48 86" radius="20.16" segments="5" material="door"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-25.6 53.28 106" size="6 6" radius="2.52" segments="5" material="metal_knob"><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-40 15 118" size="72 6" radius="2.52" segments="5" material="stone_step"><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="60 95 101.5" size="46 50" radius="19.32" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="60 95 102.5" size="36 40" radius="15.12" segments="5" material="glass"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="60 69 104" size="52 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="131.5 95 0" size="3 50" radius="1.26" segments="5" material="trim"><extrude amount="46"/><bevel amount="1.16" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="132.5 95 0" size="3 40" radius="1.26" segments="5" material="glass"><extrude amount="36"/><bevel amount="1.16" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="134 69 0" size="8 5" radius="2.1" segments="5" material="trim"><extrude amount="52"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
     <group pos="0 0 0" rot="0 90 0">
     <prism pos="0 199.67 0" radius="1" height="220" sides="3" rot="90 0 90" scale="63.33 1 167.44" material="log_light"/>
-    <rounded-rect pos="82.77 214.75 0" size="191.35 10" radius="2.4" segments="3" rot="0 0 -33.23" material="roof_brown"><extrude amount="256"/><bevel amount="1.92" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-82.77 214.75 0" size="191.35 10" radius="2.4" segments="3" rot="0 0 33.23" material="roof_brown"><extrude amount="256"/><bevel amount="1.92" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 272.96 0" size="14 8" radius="1.92" segments="3" material="roof_brown_dark"><extrude amount="260"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
+    <shape closed="0" pos="0 0 0" material="roof_brown"><v x="-160.06" y="158.14"/><v x="0" y="263"/><v x="160.06" y="158.14"/><extrude amount="256"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
+    <circle radius="8" segments="10" pos="60.81 244.08 -71.68" rot="-90 0 -33.23" material="roof_brown"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="97.62 219.96 46.08" rot="-90 0 -33.23" material="roof_brown"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="134.43 195.84 -15.36" rot="-90 0 -33.23" material="roof_brown"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="73.61 235.69 97.28" rot="-90 0 -33.23" material="roof_brown"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-60.81 244.08 71.68" rot="-90 0 33.23" material="roof_brown"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-97.62 219.96 -46.08" rot="-90 0 33.23" material="roof_brown"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-134.43 195.84 15.36" rot="-90 0 33.23" material="roof_brown"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-73.61 235.69 -97.28" rot="-90 0 33.23" material="roof_brown"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     </group>
-    <rounded-rect pos="80 232 -40" size="44 200" radius="10" segments="3" material="stone"><extrude amount="44"/><bevel amount="8" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="80 337 -40" size="54 14" radius="3.36" segments="3" material="stone_dark"><extrude amount="54"/><bevel amount="2.69" bevelSegments="2"/></rounded-rect>
-    <group pos="-210 15 -210">
-    <circle radius="9" segments="8" rot="90 0 0" material="trunk"><extrude amount="30"/><bevel amount="3.46" bevelSegments="2"/></circle>
+    <rounded-rect pos="80 232 -40" size="44 200" radius="18.48" segments="5" material="stone"><extrude amount="44"/><bevel amount="17" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="80 337 -40" size="54 14" radius="5.88" segments="5" material="stone_dark"><extrude amount="54"/><bevel amount="5.41" bevelSegments="4"/></rounded-rect>
+    <group pos="-210 14 -210">
+    <circle radius="8" segments="8" rot="90 0 0" material="trunk"><extrude amount="28"/><bevel amount="6.18" bevelSegments="4"/></circle>
     </group>
-    <cone pos="-210 85 -210" radius="60" height="80" sides="7" material="pine"/>
-    <cone pos="-210 120 -210" radius="48" height="70" sides="7" material="pine_light"/>
-    <cone pos="-210 152 -210" radius="34" height="60" sides="7" material="pine"/>
-    <group pos="210 12 -190">
-    <circle radius="7.2" segments="8" rot="90 0 0" material="trunk"><extrude amount="24"/><bevel amount="2.76" bevelSegments="2"/></circle>
+    <cone pos="-210 55 -210" radius="46" radiusTop="10" height="62" sides="6" rot="0 0 0" smooth="0" material="pine_light"/>
+    <cone pos="-210 95 -210" radius="40" radiusTop="8" height="58" sides="6" rot="0 30 0" smooth="0" material="pine_light"/>
+    <cone pos="-210 130 -210" radius="32" radiusTop="6" height="52" sides="6" rot="0 60 0" smooth="0" material="pine_light"/>
+    <cone pos="-210 161 -210" radius="22" height="46" sides="6" rot="0 90 0" smooth="0" material="pine_light"/>
+    <group pos="210 11.2 -190">
+    <circle radius="6.4" segments="8" rot="90 0 0" material="trunk"><extrude amount="22.4"/><bevel amount="4.95" bevelSegments="4"/></circle>
     </group>
-    <cone pos="210 68 -190" radius="48" height="64" sides="7" material="pine"/>
-    <cone pos="210 96 -190" radius="38.4" height="56" sides="7" material="pine_light"/>
-    <cone pos="210 121.6 -190" radius="27.2" height="48" sides="7" material="pine"/>
+    <cone pos="210 44 -190" radius="36.8" radiusTop="8" height="49.6" sides="6" rot="0 0 0" smooth="0" material="pine"/>
+    <cone pos="210 76 -190" radius="32" radiusTop="6.4" height="46.4" sides="6" rot="0 30 0" smooth="0" material="pine"/>
+    <cone pos="210 104 -190" radius="25.6" radiusTop="4.8" height="41.6" sides="6" rot="0 60 0" smooth="0" material="pine"/>
+    <cone pos="210 128.8 -190" radius="17.6" height="36.8" sides="6" rot="0 90 0" smooth="0" material="pine"/>
     <sphere pos="-220 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" seed="93"/></sphere>
     <sphere pos="230 7 240" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Cream cottage with red roof, flower boxes and a chimney. -->
   <group name="cottage" pos="-660 0 -330">
-    <rounded-rect pos="0 -16 0" size="560 28" radius="6.72" segments="3" material="dirt"><extrude amount="560"/><bevel amount="5.38" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 -4 0" size="562 8" radius="1.92" segments="3" material="grass"><extrude amount="562"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 70 0" size="240 140" radius="10" segments="3" material="plaster"><extrude amount="190"/><bevel amount="8" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 8 0" size="248 16" radius="3.84" segments="3" material="stone"><extrude amount="198"/><bevel amount="3.07" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-114 70 -89" size="14 140" radius="3.36" segments="3" material="timber"><extrude amount="14"/><bevel amount="2.69" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-114 70 89" size="14 140" radius="3.36" segments="3" material="timber"><extrude amount="14"/><bevel amount="2.69" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="114 70 -89" size="14 140" radius="3.36" segments="3" material="timber"><extrude amount="14"/><bevel amount="2.69" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="114 70 89" size="14 140" radius="3.36" segments="3" material="timber"><extrude amount="14"/><bevel amount="2.69" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 134 96" size="240 12" radius="2.88" segments="3" material="timber"><extrude amount="6"/><bevel amount="2.3" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 62 96.5" size="60 92" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 59 98" size="50 86" radius="10" segments="3" material="door"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="15 57.28 101" size="6 6" radius="1.44" segments="3" material="metal_knob"><extrude amount="4"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 19 113" size="74 6" radius="1.44" segments="3" material="stone_step"><extrude amount="30"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-75 82 96.5" size="46 50" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-75 82 97.5" size="36 40" radius="8.64" segments="3" material="glass"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-75 56 99" size="52 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-75 55 107" size="46 12" radius="2.88" segments="3" material="timber"><extrude amount="14"/><bevel amount="2.3" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 -16 0" size="560 28" radius="11.76" segments="5" material="dirt"><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 -4 0" size="562 8" radius="3.36" segments="5" material="grass"><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 70 0" size="240 140" radius="22" segments="5" material="plaster"><extrude amount="190"/><bevel amount="20.24" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 8 0" size="248 16" radius="6.72" segments="5" material="stone"><extrude amount="198"/><bevel amount="6.18" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-114 70 -89" size="14 140" radius="5.88" segments="5" material="timber"><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-114 70 89" size="14 140" radius="5.88" segments="5" material="timber"><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="114 70 -89" size="14 140" radius="5.88" segments="5" material="timber"><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="114 70 89" size="14 140" radius="5.88" segments="5" material="timber"><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 134 96" size="240 12" radius="5.04" segments="5" material="timber"><extrude amount="6"/><bevel amount="2.76" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 62 96.5" size="60 92" radius="22" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 59 98" size="50 86" radius="21" segments="5" material="door"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="15 57.28 101" size="6 6" radius="2.52" segments="5" material="metal_knob"><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 19 113" size="74 6" radius="2.52" segments="5" material="stone_step"><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-75 82 96.5" size="46 50" radius="19.32" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-75 82 97.5" size="36 40" radius="15.12" segments="5" material="glass"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-75 56 99" size="52 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-75 55 107" size="46 12" radius="5.04" segments="5" material="timber"><extrude amount="14"/><bevel amount="4.64" bevelSegments="4"/></rounded-rect>
     <sphere pos="-89 66 107" radius="7" rings="4" slices="6" material="flower_pink"/>
     <sphere pos="-75 66 107" radius="7" rings="4" slices="6" material="flower_yellow"/>
     <sphere pos="-61 66 107" radius="7" rings="4" slices="6" material="flower_pink"/>
-    <rounded-rect pos="75 82 96.5" size="46 50" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="75 82 97.5" size="36 40" radius="8.64" segments="3" material="glass"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="75 56 99" size="52 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="75 55 107" size="46 12" radius="2.88" segments="3" material="timber"><extrude amount="14"/><bevel amount="2.3" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="75 82 96.5" size="46 50" radius="19.32" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="75 82 97.5" size="36 40" radius="15.12" segments="5" material="glass"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="75 56 99" size="52 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="75 55 107" size="46 12" radius="5.04" segments="5" material="timber"><extrude amount="14"/><bevel amount="4.64" bevelSegments="4"/></rounded-rect>
     <sphere pos="61 66 107" radius="7" rings="4" slices="6" material="flower_pink"/>
     <sphere pos="75 66 107" radius="7" rings="4" slices="6" material="flower_yellow"/>
     <sphere pos="89 66 107" radius="7" rings="4" slices="6" material="flower_pink"/>
-    <rounded-rect pos="121.5 82 0" size="3 50" radius="0.72" segments="3" material="trim"><extrude amount="46"/><bevel amount="0.58" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="122.5 82 0" size="3 40" radius="0.72" segments="3" material="glass"><extrude amount="36"/><bevel amount="0.58" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="124 56 0" size="8 5" radius="1.2" segments="3" material="trim"><extrude amount="52"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="121.5 82 0" size="3 50" radius="1.26" segments="5" material="trim"><extrude amount="46"/><bevel amount="1.16" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="122.5 82 0" size="3 40" radius="1.26" segments="5" material="glass"><extrude amount="36"/><bevel amount="1.16" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="124 56 0" size="8 5" radius="2.1" segments="5" material="trim"><extrude amount="52"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
     <prism pos="0 176.67 0" radius="1" height="190" sides="3" rot="90 0 90" scale="73.33 1 144.34" material="plaster"/>
-    <rounded-rect pos="72.56 192.81 0" size="184.51 10" radius="2.4" segments="3" rot="0 0 -41.35" material="roof_red"><extrude amount="226"/><bevel amount="1.92" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-72.56 192.81 0" size="184.51 10" radius="2.4" segments="3" rot="0 0 41.35" material="roof_red"><extrude amount="226"/><bevel amount="1.92" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 261.32 0" size="14 8" radius="1.92" segments="3" material="roof_red_dark"><extrude amount="230"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-60 230 -30" size="36 140" radius="8.64" segments="3" material="brick"><extrude amount="36"/><bevel amount="6.91" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-60 302 -30" size="44 10" radius="2.4" segments="3" material="brick_dark"><extrude amount="44"/><bevel amount="1.92" bevelSegments="2"/></rounded-rect>
-    <group pos="-220 13.5 -200">
-    <circle radius="8.1" segments="8" rot="90 0 0" material="trunk"><extrude amount="27"/><bevel amount="3.11" bevelSegments="2"/></circle>
+    <shape closed="0" pos="0 0 0" material="roof_red"><v x="-138.51" y="128.11"/><v x="0" y="250"/><v x="138.51" y="128.11"/><extrude amount="226"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
+    <circle radius="8" segments="10" pos="55.89 224.13 -63.28" rot="-90 0 -41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="87.74 196.1 40.68" rot="-90 0 -41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="119.6 168.06 -13.56" rot="-90 0 -41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="66.97 214.38 85.88" rot="-90 0 -41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-55.89 224.13 63.28" rot="-90 0 41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-87.74 196.1 -40.68" rot="-90 0 41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-119.6 168.06 13.56" rot="-90 0 41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-66.97 214.38 -85.88" rot="-90 0 41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <rounded-rect pos="-60 230 -30" size="36 140" radius="15.12" segments="5" material="brick"><extrude amount="36"/><bevel amount="13.91" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-60 302 -30" size="44 10" radius="4.2" segments="5" material="brick_dark"><extrude amount="44"/><bevel amount="3.86" bevelSegments="4"/></rounded-rect>
+    <group pos="-220 12.6 -200">
+    <circle radius="7.2" segments="8" rot="90 0 0" material="trunk"><extrude amount="25.2"/><bevel amount="5.56" bevelSegments="4"/></circle>
     </group>
-    <cone pos="-220 76.5 -200" radius="54" height="72" sides="7" material="pine"/>
-    <cone pos="-220 108 -200" radius="43.2" height="63" sides="7" material="pine_light"/>
-    <cone pos="-220 136.8 -200" radius="30.6" height="54" sides="7" material="pine"/>
-    <group pos="220 10.5 210">
-    <circle radius="6.3" segments="8" rot="90 0 0" material="trunk"><extrude amount="21"/><bevel amount="2.42" bevelSegments="2"/></circle>
+    <cone pos="-220 49.5 -200" radius="41.4" radiusTop="9" height="55.8" sides="6" rot="0 0 0" smooth="0" material="pine_light"/>
+    <cone pos="-220 85.5 -200" radius="36" radiusTop="7.2" height="52.2" sides="6" rot="0 30 0" smooth="0" material="pine_light"/>
+    <cone pos="-220 117 -200" radius="28.8" radiusTop="5.4" height="46.8" sides="6" rot="0 60 0" smooth="0" material="pine_light"/>
+    <cone pos="-220 144.9 -200" radius="19.8" height="41.4" sides="6" rot="0 90 0" smooth="0" material="pine_light"/>
+    <group pos="220 9.8 210">
+    <circle radius="5.6" segments="8" rot="90 0 0" material="trunk"><extrude amount="19.6"/><bevel amount="4.33" bevelSegments="4"/></circle>
     </group>
-    <cone pos="220 59.5 210" radius="42" height="56" sides="7" material="pine"/>
-    <cone pos="220 84 210" radius="33.6" height="49" sides="7" material="pine_light"/>
-    <cone pos="220 106.4 210" radius="23.8" height="42" sides="7" material="pine"/>
+    <cone pos="220 38.5 210" radius="32.2" radiusTop="7" height="43.4" sides="6" rot="0 0 0" smooth="0" material="pine"/>
+    <cone pos="220 66.5 210" radius="28" radiusTop="5.6" height="40.6" sides="6" rot="0 30 0" smooth="0" material="pine"/>
+    <cone pos="220 91 210" radius="22.4" radiusTop="4.2" height="36.4" sides="6" rot="0 60 0" smooth="0" material="pine"/>
+    <cone pos="220 112.7 210" radius="15.4" height="32.2" sides="6" rot="0 90 0" smooth="0" material="pine"/>
     <sphere pos="-183 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" seed="61"/></sphere>
     <sphere pos="207 7 229" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- A-frame hut: the roof reaches the ground; glazed front gable. -->
   <group name="a_frame" pos="0 0 -330">
-    <rounded-rect pos="0 -16 0" size="560 28" radius="6.72" segments="3" material="dirt"><extrude amount="560"/><bevel amount="5.38" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 -4 0" size="562 8" radius="1.92" segments="3" material="grass"><extrude amount="562"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 -16 0" size="560 28" radius="11.76" segments="5" material="dirt"><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 -4 0" size="562 8" radius="3.36" segments="5" material="grass"><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
     <prism pos="0 68 0" radius="1" height="220" sides="3" rot="90 0 90" scale="136 1 144.34" material="wood_light"/>
-    <rounded-rect pos="78.58 114.37 0" size="279.26 14" radius="3.36" segments="3" rot="0 0 -58.67" material="roof_green"><extrude amount="260"/><bevel amount="2.69" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-78.58 114.37 0" size="279.26 14" radius="3.36" segments="3" rot="0 0 58.67" material="roof_green"><extrude amount="260"/><bevel amount="2.69" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 254.93 0" size="18 8" radius="1.92" segments="3" material="roof_green_dark"><extrude amount="264"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 51 111.5" size="66 102" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 48 113" size="56 96" radius="10" segments="3" material="door"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="16.8 46.08 116" size="6 6" radius="1.44" segments="3" material="metal_knob"><extrude amount="4"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 3 128" size="80 6" radius="1.44" segments="3" material="stone_step"><extrude amount="30"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 150 111.5" size="44 44" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 150 112.5" size="34 34" radius="8.16" segments="3" material="glass"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 127 114" size="50 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 3 170" size="240 6" radius="1.44" segments="3" material="deck"><extrude amount="80"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <group pos="210 16.5 -210">
-    <circle radius="9.9" segments="8" rot="90 0 0" material="trunk"><extrude amount="33"/><bevel amount="3.8" bevelSegments="2"/></circle>
+    <shape closed="0" pos="0 0 0" material="roof_green"><v x="-145.2" y="-8.54"/><v x="0" y="230"/><v x="145.2" y="-8.54"/><extrude amount="260"/><shell amount="14"/><fillet radius="6.3"/><bevel amount="5.32" bevelSegments="4"/></shape>
+    <circle radius="7" segments="10" pos="59.7 161.73 -72.8" rot="-90 0 -58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="7" segments="10" pos="93.1 106.86 46.8" rot="-90 0 -58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="7" segments="10" pos="126.5 52 -15.6" rot="-90 0 -58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="7" segments="10" pos="71.32 142.64 98.8" rot="-90 0 -58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="7" segments="10" pos="-59.7 161.73 72.8" rot="-90 0 58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="7" segments="10" pos="-93.1 106.86 -46.8" rot="-90 0 58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="7" segments="10" pos="-126.5 52 15.6" rot="-90 0 58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="7" segments="10" pos="-71.32 142.64 -98.8" rot="-90 0 58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <rounded-rect pos="0 51 111.5" size="66 102" radius="22" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 48 113" size="56 96" radius="22" segments="5" material="door"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="16.8 46.08 116" size="6 6" radius="2.52" segments="5" material="metal_knob"><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 3 128" size="80 6" radius="2.52" segments="5" material="stone_step"><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 150 111.5" size="44 44" radius="18.48" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 150 112.5" size="34 34" radius="14.28" segments="5" material="glass"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 127 114" size="50 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 3 170" size="240 6" radius="2.52" segments="5" material="deck"><extrude amount="80"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <group pos="210 15.4 -210">
+    <circle radius="8.8" segments="8" rot="90 0 0" material="trunk"><extrude amount="30.8"/><bevel amount="6.8" bevelSegments="4"/></circle>
     </group>
-    <cone pos="210 93.5 -210" radius="66" height="88" sides="7" material="pine"/>
-    <cone pos="210 132 -210" radius="52.8" height="77" sides="7" material="pine_light"/>
-    <cone pos="210 167.2 -210" radius="37.4" height="66" sides="7" material="pine"/>
-    <group pos="-210 11.25 -170">
-    <circle radius="6.75" segments="8" rot="90 0 0" material="trunk"><extrude amount="22.5"/><bevel amount="2.59" bevelSegments="2"/></circle>
+    <cone pos="210 60.5 -210" radius="50.6" radiusTop="11" height="68.2" sides="6" rot="0 0 0" smooth="0" material="pine_light"/>
+    <cone pos="210 104.5 -210" radius="44" radiusTop="8.8" height="63.8" sides="6" rot="0 30 0" smooth="0" material="pine_light"/>
+    <cone pos="210 143 -210" radius="35.2" radiusTop="6.6" height="57.2" sides="6" rot="0 60 0" smooth="0" material="pine_light"/>
+    <cone pos="210 177.1 -210" radius="24.2" height="50.6" sides="6" rot="0 90 0" smooth="0" material="pine_light"/>
+    <group pos="-210 10.5 -170">
+    <circle radius="6" segments="8" rot="90 0 0" material="trunk"><extrude amount="21"/><bevel amount="4.64" bevelSegments="4"/></circle>
     </group>
-    <cone pos="-210 63.75 -170" radius="45" height="60" sides="7" material="pine"/>
-    <cone pos="-210 90 -170" radius="36" height="52.5" sides="7" material="pine_light"/>
-    <cone pos="-210 114 -170" radius="25.5" height="45" sides="7" material="pine"/>
+    <cone pos="-210 41.25 -170" radius="34.5" radiusTop="7.5" height="46.5" sides="6" rot="0 0 0" smooth="0" material="pine"/>
+    <cone pos="-210 71.25 -170" radius="30" radiusTop="6" height="43.5" sides="6" rot="0 30 0" smooth="0" material="pine"/>
+    <cone pos="-210 97.5 -170" radius="24" radiusTop="4.5" height="39" sides="6" rot="0 60 0" smooth="0" material="pine"/>
+    <cone pos="-210 120.75 -170" radius="16.5" height="34.5" sides="6" rot="0 90 0" smooth="0" material="pine"/>
     <sphere pos="-146 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" seed="29"/></sphere>
     <sphere pos="184 7 218" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Ranger lookout: four log legs, cross braces, platform and a pyramid-roofed cabin. -->
   <group name="watchtower" pos="660 0 -330">
-    <rounded-rect pos="0 -16 0" size="560 28" radius="6.72" segments="3" material="dirt"><extrude amount="560"/><bevel amount="5.38" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 -4 0" size="562 8" radius="1.92" segments="3" material="grass"><extrude amount="562"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 -16 0" size="560 28" radius="11.76" segments="5" material="dirt"><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 -4 0" size="562 8" radius="3.36" segments="5" material="grass"><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
     <group pos="-75 130 -75">
-    <circle radius="10" segments="8" rot="90 0 0" material="log"><extrude amount="260"/><bevel amount="3.84" bevelSegments="2"/></circle>
+    <circle radius="10" segments="8" rot="90 0 0" material="log"><extrude amount="260"/><bevel amount="7.73" bevelSegments="4"/></circle>
     </group>
     <group pos="-75 130 75">
-    <circle radius="10" segments="8" rot="90 0 0" material="log"><extrude amount="260"/><bevel amount="3.84" bevelSegments="2"/></circle>
+    <circle radius="10" segments="8" rot="90 0 0" material="log"><extrude amount="260"/><bevel amount="7.73" bevelSegments="4"/></circle>
     </group>
     <group pos="75 130 -75">
-    <circle radius="10" segments="8" rot="90 0 0" material="log"><extrude amount="260"/><bevel amount="3.84" bevelSegments="2"/></circle>
+    <circle radius="10" segments="8" rot="90 0 0" material="log"><extrude amount="260"/><bevel amount="7.73" bevelSegments="4"/></circle>
     </group>
     <group pos="75 130 75">
-    <circle radius="10" segments="8" rot="90 0 0" material="log"><extrude amount="260"/><bevel amount="3.84" bevelSegments="2"/></circle>
+    <circle radius="10" segments="8" rot="90 0 0" material="log"><extrude amount="260"/><bevel amount="7.73" bevelSegments="4"/></circle>
     </group>
-    <rounded-rect pos="0 91 -75" size="190.23 8" radius="1.92" segments="3" rot="0 0 37.95" material="log_light"><extrude amount="8"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 91 -75" size="190.23 8" radius="1.92" segments="3" rot="0 0 -37.95" material="log_light"><extrude amount="8"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 91 75" size="190.23 8" radius="1.92" segments="3" rot="0 0 37.95" material="log_light"><extrude amount="8"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 91 75" size="190.23 8" radius="1.92" segments="3" rot="0 0 -37.95" material="log_light"><extrude amount="8"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 266 0" size="220 12" radius="2.88" segments="3" material="deck"><extrude amount="220"/><bevel amount="2.3" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-105 297 -105" size="8 50" radius="1.92" segments="3" material="log"><extrude amount="8"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-105 297 105" size="8 50" radius="1.92" segments="3" material="log"><extrude amount="8"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="105 297 -105" size="8 50" radius="1.92" segments="3" material="log"><extrude amount="8"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="105 297 105" size="8 50" radius="1.92" segments="3" material="log"><extrude amount="8"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 318 105" size="218 6" radius="1.44" segments="3" material="log_light"><extrude amount="6"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="105 318 0" size="6 6" radius="1.44" segments="3" material="log_light"><extrude amount="218"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 318 -105" size="218 6" radius="1.44" segments="3" material="log_light"><extrude amount="6"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-105 318 0" size="6 6" radius="1.44" segments="3" material="log_light"><extrude amount="218"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 322 0" size="110 100" radius="10" segments="3" material="wood_light"><extrude amount="110"/><bevel amount="8" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 332 56.5" size="60 44" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 332 57.5" size="50 34" radius="8.16" segments="3" material="glass"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 309 59" size="66 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="56.5 332 0" size="3 44" radius="0.72" segments="3" material="trim"><extrude amount="60"/><bevel amount="0.58" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="57.5 332 0" size="3 34" radius="0.72" segments="3" material="glass"><extrude amount="50"/><bevel amount="0.58" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="59 309 0" size="8 5" radius="1.2" segments="3" material="trim"><extrude amount="66"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 91 -75" size="190.23 8" radius="3.36" segments="5" rot="0 0 37.95" material="log_light"><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 91 -75" size="190.23 8" radius="3.36" segments="5" rot="0 0 -37.95" material="log_light"><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 91 75" size="190.23 8" radius="3.36" segments="5" rot="0 0 37.95" material="log_light"><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 91 75" size="190.23 8" radius="3.36" segments="5" rot="0 0 -37.95" material="log_light"><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 266 0" size="220 12" radius="5.04" segments="5" material="deck"><extrude amount="220"/><bevel amount="4.64" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-105 297 -105" size="8 50" radius="3.36" segments="5" material="log"><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-105 297 105" size="8 50" radius="3.36" segments="5" material="log"><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="105 297 -105" size="8 50" radius="3.36" segments="5" material="log"><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="105 297 105" size="8 50" radius="3.36" segments="5" material="log"><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 318 105" size="218 6" radius="2.52" segments="5" material="log_light"><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="105 318 0" size="6 6" radius="2.52" segments="5" material="log_light"><extrude amount="218"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 318 -105" size="218 6" radius="2.52" segments="5" material="log_light"><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-105 318 0" size="6 6" radius="2.52" segments="5" material="log_light"><extrude amount="218"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 322 0" size="110 100" radius="22" segments="5" material="wood_light"><extrude amount="110"/><bevel amount="20.24" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 332 56.5" size="60 44" radius="18.48" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 332 57.5" size="50 34" radius="14.28" segments="5" material="glass"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 309 59" size="66 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="56.5 332 0" size="3 44" radius="1.26" segments="5" material="trim"><extrude amount="60"/><bevel amount="1.16" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="57.5 332 0" size="3 34" radius="1.26" segments="5" material="glass"><extrude amount="50"/><bevel amount="1.16" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="59 309 0" size="8 5" radius="2.1" segments="5" material="trim"><extrude amount="66"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
     <pyramid pos="0 407 0" radius="105" height="70" rot="0 45 0" material="roof_brown"/>
-    <rounded-rect pos="-18 140 101" size="6 280" radius="1.44" segments="3" rot="-8 0 0" material="log_light"><extrude amount="6"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="18 140 101" size="6 280" radius="1.44" segments="3" rot="-8 0 0" material="log_light"><extrude amount="6"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 25 115.76" size="40 5" radius="1.2" segments="3" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 53 111.82" size="40 5" radius="1.2" segments="3" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 81 107.89" size="40 5" radius="1.2" segments="3" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 109 103.95" size="40 5" radius="1.2" segments="3" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 137 100.02" size="40 5" radius="1.2" segments="3" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 165 96.08" size="40 5" radius="1.2" segments="3" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 193 92.15" size="40 5" radius="1.2" segments="3" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 221 88.21" size="40 5" radius="1.2" segments="3" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 249 84.28" size="40 5" radius="1.2" segments="3" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <group pos="-220 12 220">
-    <circle radius="7.2" segments="8" rot="90 0 0" material="trunk"><extrude amount="24"/><bevel amount="2.76" bevelSegments="2"/></circle>
+    <rounded-rect pos="-18 140 101" size="6 280" radius="2.52" segments="5" rot="-8 0 0" material="log_light"><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="18 140 101" size="6 280" radius="2.52" segments="5" rot="-8 0 0" material="log_light"><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 25 115.76" size="40 5" radius="2.1" segments="5" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 53 111.82" size="40 5" radius="2.1" segments="5" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 81 107.89" size="40 5" radius="2.1" segments="5" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 109 103.95" size="40 5" radius="2.1" segments="5" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 137 100.02" size="40 5" radius="2.1" segments="5" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 165 96.08" size="40 5" radius="2.1" segments="5" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 193 92.15" size="40 5" radius="2.1" segments="5" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 221 88.21" size="40 5" radius="2.1" segments="5" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 249 84.28" size="40 5" radius="2.1" segments="5" rot="-8 0 0" material="log"><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <group pos="-220 11.2 220">
+    <circle radius="6.4" segments="8" rot="90 0 0" material="trunk"><extrude amount="22.4"/><bevel amount="4.95" bevelSegments="4"/></circle>
     </group>
-    <cone pos="-220 68 220" radius="48" height="64" sides="7" material="pine"/>
-    <cone pos="-220 96 220" radius="38.4" height="56" sides="7" material="pine_light"/>
-    <cone pos="-220 121.6 220" radius="27.2" height="48" sides="7" material="pine"/>
-    <group pos="210 15 -210">
-    <circle radius="9" segments="8" rot="90 0 0" material="trunk"><extrude amount="30"/><bevel amount="3.46" bevelSegments="2"/></circle>
+    <cone pos="-220 44 220" radius="36.8" radiusTop="8" height="49.6" sides="6" rot="0 0 0" smooth="0" material="pine_light"/>
+    <cone pos="-220 76 220" radius="32" radiusTop="6.4" height="46.4" sides="6" rot="0 30 0" smooth="0" material="pine_light"/>
+    <cone pos="-220 104 220" radius="25.6" radiusTop="4.8" height="41.6" sides="6" rot="0 60 0" smooth="0" material="pine_light"/>
+    <cone pos="-220 128.8 220" radius="17.6" height="36.8" sides="6" rot="0 90 0" smooth="0" material="pine_light"/>
+    <group pos="210 14 -210">
+    <circle radius="8" segments="8" rot="90 0 0" material="trunk"><extrude amount="28"/><bevel amount="6.18" bevelSegments="4"/></circle>
     </group>
-    <cone pos="210 85 -210" radius="60" height="80" sides="7" material="pine"/>
-    <cone pos="210 120 -210" radius="48" height="70" sides="7" material="pine_light"/>
-    <cone pos="210 152 -210" radius="34" height="60" sides="7" material="pine"/>
+    <cone pos="210 55 -210" radius="46" radiusTop="10" height="62" sides="6" rot="0 0 0" smooth="0" material="pine_light"/>
+    <cone pos="210 95 -210" radius="40" radiusTop="8" height="58" sides="6" rot="0 30 0" smooth="0" material="pine_light"/>
+    <cone pos="210 130 -210" radius="32" radiusTop="6" height="52" sides="6" rot="0 60 0" smooth="0" material="pine_light"/>
+    <cone pos="210 161 -210" radius="22" height="46" sides="6" rot="0 90 0" smooth="0" material="pine_light"/>
     <sphere pos="-189 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" seed="19"/></sphere>
     <sphere pos="221 7 207" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Stone mill with a timber upper storey and a paddle wheel in a stream. -->
   <group name="watermill" pos="1320 0 -330">
-    <rounded-rect pos="0 -16 0" size="560 28" radius="6.72" segments="3" material="dirt"><extrude amount="560"/><bevel amount="5.38" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 -4 0" size="562 8" radius="1.92" segments="3" material="grass"><extrude amount="562"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 50 0" size="220 100" radius="10" segments="3" material="stone"><extrude amount="180"/><bevel amount="8" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 155 0" size="220 110" radius="10" segments="3" material="wood"><extrude amount="180"/><bevel amount="8" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 103 0" size="230 8" radius="1.92" segments="3" material="timber"><extrude amount="190"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-40 46 91.5" size="60 92" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-40 43 93" size="50 86" radius="10" segments="3" material="door"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-25 41.28 96" size="6 6" radius="1.44" segments="3" material="metal_knob"><extrude amount="4"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-40 3 108" size="74 6" radius="1.44" segments="3" material="stone_step"><extrude amount="30"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="50 60 91.5" size="40 40" radius="9.6" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="50 60 92.5" size="30 30" radius="7.2" segments="3" material="glass"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="50 39 94" size="46 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-40 160 91.5" size="46 50" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-40 160 92.5" size="36 40" radius="8.64" segments="3" material="glass"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-40 134 94" size="52 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="50 160 91.5" size="46 50" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="50 160 92.5" size="36 40" radius="8.64" segments="3" material="glass"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="50 134 94" size="52 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 -16 0" size="560 28" radius="11.76" segments="5" material="dirt"><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 -4 0" size="562 8" radius="3.36" segments="5" material="grass"><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 50 0" size="220 100" radius="22" segments="5" material="stone"><extrude amount="180"/><bevel amount="20.24" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 155 0" size="220 110" radius="22" segments="5" material="wood"><extrude amount="180"/><bevel amount="20.24" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 103 0" size="230 8" radius="3.36" segments="5" material="timber"><extrude amount="190"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-40 46 91.5" size="60 92" radius="22" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-40 43 93" size="50 86" radius="21" segments="5" material="door"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-25 41.28 96" size="6 6" radius="2.52" segments="5" material="metal_knob"><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-40 3 108" size="74 6" radius="2.52" segments="5" material="stone_step"><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="50 60 91.5" size="40 40" radius="16.8" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="50 60 92.5" size="30 30" radius="12.6" segments="5" material="glass"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="50 39 94" size="46 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-40 160 91.5" size="46 50" radius="19.32" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-40 160 92.5" size="36 40" radius="15.12" segments="5" material="glass"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-40 134 94" size="52 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="50 160 91.5" size="46 50" radius="19.32" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="50 160 92.5" size="36 40" radius="15.12" segments="5" material="glass"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="50 134 94" size="52 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
     <prism pos="0 240 0" radius="1" height="180" sides="3" rot="90 0 90" scale="60 1 132.79" material="wood"/>
-    <rounded-rect pos="67.67 253.39 0" size="164.03 10" radius="2.4" segments="3" rot="0 0 -38.05" material="roof_blue"><extrude amount="216"/><bevel amount="1.92" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-67.67 253.39 0" size="164.03 10" radius="2.4" segments="3" rot="0 0 38.05" material="roof_blue"><extrude amount="216"/><bevel amount="1.92" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 310.7 0" size="14 8" radius="1.92" segments="3" material="roof_blue_dark"><extrude amount="220"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <box pos="180 1 0" size="90 2 540" material="water"/>
+    <shape closed="0" pos="0 0 0" material="roof_blue"><v x="-129.18" y="198.91"/><v x="0" y="300"/><v x="129.18" y="198.91"/><extrude amount="216"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
+    <circle radius="8" segments="10" pos="52.12 281.43 -60.48" rot="-90 0 -38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="81.83 258.18 38.88" rot="-90 0 -38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="111.54 234.93 -12.96" rot="-90 0 -38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="62.46 273.34 82.08" rot="-90 0 -38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-52.12 281.43 60.48" rot="-90 0 38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-81.83 258.18 -38.88" rot="-90 0 38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-111.54 234.93 12.96" rot="-90 0 38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-62.46 273.34 -82.08" rot="-90 0 38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <rounded-rect pos="180 1 0" size="90 2" radius="0.84" segments="5" material="water"><extrude amount="540"/><bevel amount="0.77" bevelSegments="4"/></rounded-rect>
     <group pos="144 92 0" rot="0 0 90">
-    <circle radius="14" segments="8" rot="90 0 0" material="metal"><extrude amount="30"/><bevel amount="5.38" bevelSegments="2"/></circle>
+    <circle radius="14" segments="8" rot="90 0 0" material="metal"><extrude amount="30"/><bevel amount="10.82" bevelSegments="4"/></circle>
     </group>
     <torus pos="152 92 0" majorRadius="80" minorRadius="5" majorSegments="16" minorSegments="5" rot="0 0 90" material="wood_dark"/>
     <torus pos="136 92 0" majorRadius="80" minorRadius="5" majorSegments="16" minorSegments="5" rot="0 0 90" material="wood_dark"/>
-    <rounded-rect pos="144 92 0" size="24 8" radius="1.92" segments="3" material="wood_light"><extrude amount="160"/><bevel amount="1.54" bevelSegments="2"/><array count="6" rotation="30 0 0"/></rounded-rect>
-    <group pos="-220 13.5 -210">
-    <circle radius="8.1" segments="8" rot="90 0 0" material="trunk"><extrude amount="27"/><bevel amount="3.11" bevelSegments="2"/></circle>
+    <rounded-rect pos="144 92 0" size="24 8" radius="3.36" segments="5" material="wood_light"><extrude amount="160"/><bevel amount="3.09" bevelSegments="4"/><array count="6" rotation="30 0 0"/></rounded-rect>
+    <group pos="-220 12.6 -210">
+    <circle radius="7.2" segments="8" rot="90 0 0" material="trunk"><extrude amount="25.2"/><bevel amount="5.56" bevelSegments="4"/></circle>
     </group>
-    <cone pos="-220 76.5 -210" radius="54" height="72" sides="7" material="pine"/>
-    <cone pos="-220 108 -210" radius="43.2" height="63" sides="7" material="pine_light"/>
-    <cone pos="-220 136.8 -210" radius="30.6" height="54" sides="7" material="pine"/>
+    <cone pos="-220 49.5 -210" radius="41.4" radiusTop="9" height="55.8" sides="6" rot="0 0 0" smooth="0" material="pine"/>
+    <cone pos="-220 85.5 -210" radius="36" radiusTop="7.2" height="52.2" sides="6" rot="0 30 0" smooth="0" material="pine"/>
+    <cone pos="-220 117 -210" radius="28.8" radiusTop="5.4" height="46.8" sides="6" rot="0 60 0" smooth="0" material="pine"/>
+    <cone pos="-220 144.9 -210" radius="19.8" height="41.4" sides="6" rot="0 90 0" smooth="0" material="pine"/>
     <sphere pos="-152 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" seed="84"/></sphere>
     <sphere pos="198 7 236" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Treehouse: fat trunk, round leafy crown, small hut on a platform. -->
   <group name="treehouse" pos="-1320 0 330">
-    <rounded-rect pos="0 -16 0" size="560 28" radius="6.72" segments="3" material="dirt"><extrude amount="560"/><bevel amount="5.38" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 -4 0" size="562 8" radius="1.92" segments="3" material="grass"><extrude amount="562"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 -16 0" size="560 28" radius="11.76" segments="5" material="dirt"><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 -4 0" size="562 8" radius="3.36" segments="5" material="grass"><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
     <group pos="0 140 0">
-    <circle radius="34" segments="9" rot="90 0 0" material="trunk"><extrude amount="280"/><bevel amount="8" bevelSegments="2"/><taper amount="0.25" axis="z"/></circle>
+    <circle radius="34" segments="9" rot="90 0 0" material="trunk"><extrude amount="280"/><bevel amount="20.24" bevelSegments="4"/><taper amount="0.25" axis="z"/></circle>
     </group>
-    <rounded-rect pos="40 10 0" size="60 20" radius="4.8" segments="3" rot="0 0 -20" material="trunk"><extrude amount="22"/><bevel amount="3.84" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-20 10 34.64" size="60 20" radius="4.8" segments="3" rot="0 -120 -20" material="trunk"><extrude amount="22"/><bevel amount="3.84" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-20 10 -34.64" size="60 20" radius="4.8" segments="3" rot="0 -240 -20" material="trunk"><extrude amount="22"/><bevel amount="3.84" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="40 10 0" size="60 20" radius="8.4" segments="5" rot="0 0 -20" material="trunk"><extrude amount="22"/><bevel amount="7.73" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-20 10 34.64" size="60 20" radius="8.4" segments="5" rot="0 -120 -20" material="trunk"><extrude amount="22"/><bevel amount="7.73" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-20 10 -34.64" size="60 20" radius="8.4" segments="5" rot="0 -240 -20" material="trunk"><extrude amount="22"/><bevel amount="7.73" bevelSegments="4"/></rounded-rect>
     <sphere pos="0 360 0" radius="120" rings="6" slices="9" material="leaf"><noise strength="5" seed="120"/></sphere>
     <sphere pos="-90 320 50" radius="80" rings="6" slices="9" material="leaf_light"><noise strength="5" seed="80"/></sphere>
     <sphere pos="80 330 -60" radius="85" rings="6" slices="9" material="leaf_light"><noise strength="5" seed="85"/></sphere>
     <sphere pos="40 410 70" radius="70" rings="6" slices="9" material="leaf"><noise strength="5" seed="70"/></sphere>
-    <rounded-rect pos="60 175 50" size="210 10" radius="2.4" segments="3" material="deck"><extrude amount="180"/><bevel amount="1.92" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="70 225 50" size="120 90" radius="10" segments="3" material="wood_light"><extrude amount="110"/><bevel amount="8" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="60 175 50" size="210 10" radius="4.2" segments="5" material="deck"><extrude amount="180"/><bevel amount="3.86" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="70 225 50" size="120 90" radius="22" segments="5" material="wood_light"><extrude amount="110"/><bevel amount="20.24" bevelSegments="4"/></rounded-rect>
     <group pos="70 0 50" rot="0 90 0">
     <prism pos="0 286.67 0" radius="1" height="110" sides="3" rot="90 0 90" scale="33.33 1 75.06" material="wood_light"/>
-    <rounded-rect pos="39.69 294.51 0" size="94.01 8" radius="1.92" segments="3" rot="0 0 -37.57" material="roof_red"><extrude amount="134"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-39.69 294.51 0" size="94.01 8" radius="1.92" segments="3" rot="0 0 37.57" material="roof_red"><extrude amount="134"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 328.09 0" size="12 8" radius="1.92" segments="3" material="roof_red_dark"><extrude amount="138"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
+    <shape closed="0" pos="0 0 0" material="roof_red"><v x="-74.51" y="262.68"/><v x="0" y="320"/><v x="74.51" y="262.68"/><extrude amount="134"/><shell amount="8"/><fillet radius="3.6"/><bevel amount="3.04" bevelSegments="4"/></shape>
+    <circle radius="6" segments="10" pos="29.64 309.19 -37.52" rot="-90 0 -37.57" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="6" segments="10" pos="46.77 296.01 24.12" rot="-90 0 -37.57" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="6" segments="10" pos="63.91 282.82 -8.04" rot="-90 0 -37.57" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="6" segments="10" pos="35.6 304.6 50.92" rot="-90 0 -37.57" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="6" segments="10" pos="-29.64 309.19 37.52" rot="-90 0 37.57" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="6" segments="10" pos="-46.77 296.01 -24.12" rot="-90 0 37.57" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="6" segments="10" pos="-63.91 282.82 8.04" rot="-90 0 37.57" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="6" segments="10" pos="-35.6 304.6 -50.92" rot="-90 0 37.57" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     </group>
-    <rounded-rect pos="70 218 106.5" size="46 76" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="70 215 108" size="36 70" radius="8.64" segments="3" material="door"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="80.8 213.6 111" size="6 6" radius="1.44" segments="3" material="metal_knob"><extrude amount="4"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="70 183 123" size="60 6" radius="1.44" segments="3" material="stone_step"><extrude amount="30"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="131.5 230 50" size="3 38" radius="0.72" segments="3" material="trim"><extrude amount="38"/><bevel amount="0.58" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="132.5 230 50" size="3 28" radius="0.72" segments="3" material="glass"><extrude amount="28"/><bevel amount="0.58" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="134 210 50" size="8 5" radius="1.2" segments="3" material="trim"><extrude amount="44"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-40 200 138" size="6 40" radius="1.44" segments="3" material="log"><extrude amount="6"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 200 138" size="6 40" radius="1.44" segments="3" material="log"><extrude amount="6"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="160 200 138" size="6 40" radius="1.44" segments="3" material="log"><extrude amount="6"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="60 218 138" size="210 5" radius="1.2" segments="3" material="log_light"><extrude amount="5"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-45 85 135" size="4 170" radius="0.96" segments="3" material="rope"><extrude amount="4"/><bevel amount="0.77" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-45 85 135" size="4 170" radius="0.96" segments="3" material="rope"><extrude amount="4"/><bevel amount="0.77" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-15 85 135" size="4 170" radius="0.96" segments="3" material="rope"><extrude amount="4"/><bevel amount="0.77" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-15 85 135" size="4 170" radius="0.96" segments="3" material="rope"><extrude amount="4"/><bevel amount="0.77" bevelSegments="2"/></rounded-rect>
-    <group pos="220 12 -220">
-    <circle radius="7.2" segments="8" rot="90 0 0" material="trunk"><extrude amount="24"/><bevel amount="2.76" bevelSegments="2"/></circle>
+    <rounded-rect pos="70 218 106.5" size="46 76" radius="19.32" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="70 215 108" size="36 70" radius="15.12" segments="5" material="door"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="80.8 213.6 111" size="6 6" radius="2.52" segments="5" material="metal_knob"><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="70 183 123" size="60 6" radius="2.52" segments="5" material="stone_step"><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="131.5 230 50" size="3 38" radius="1.26" segments="5" material="trim"><extrude amount="38"/><bevel amount="1.16" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="132.5 230 50" size="3 28" radius="1.26" segments="5" material="glass"><extrude amount="28"/><bevel amount="1.16" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="134 210 50" size="8 5" radius="2.1" segments="5" material="trim"><extrude amount="44"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-40 200 138" size="6 40" radius="2.52" segments="5" material="log"><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 200 138" size="6 40" radius="2.52" segments="5" material="log"><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="160 200 138" size="6 40" radius="2.52" segments="5" material="log"><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="60 218 138" size="210 5" radius="2.1" segments="5" material="log_light"><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-45 85 135" size="4 170" radius="1.68" segments="5" material="rope"><extrude amount="4"/><bevel amount="1.55" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-45 85 135" size="4 170" radius="1.68" segments="5" material="rope"><extrude amount="4"/><bevel amount="1.55" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-15 85 135" size="4 170" radius="1.68" segments="5" material="rope"><extrude amount="4"/><bevel amount="1.55" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-15 85 135" size="4 170" radius="1.68" segments="5" material="rope"><extrude amount="4"/><bevel amount="1.55" bevelSegments="4"/></rounded-rect>
+    <group pos="220 11.2 -220">
+    <circle radius="6.4" segments="8" rot="90 0 0" material="trunk"><extrude amount="22.4"/><bevel amount="4.95" bevelSegments="4"/></circle>
     </group>
-    <cone pos="220 68 -220" radius="48" height="64" sides="7" material="pine"/>
-    <cone pos="220 96 -220" radius="38.4" height="56" sides="7" material="pine_light"/>
-    <cone pos="220 121.6 -220" radius="27.2" height="48" sides="7" material="pine"/>
+    <cone pos="220 44 -220" radius="36.8" radiusTop="8" height="49.6" sides="6" rot="0 0 0" smooth="0" material="pine_light"/>
+    <cone pos="220 76 -220" radius="32" radiusTop="6.4" height="46.4" sides="6" rot="0 30 0" smooth="0" material="pine_light"/>
+    <cone pos="220 104 -220" radius="25.6" radiusTop="4.8" height="41.6" sides="6" rot="0 60 0" smooth="0" material="pine_light"/>
+    <cone pos="220 128.8 -220" radius="17.6" height="36.8" sides="6" rot="0 90 0" smooth="0" material="pine_light"/>
     <sphere pos="-195 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" seed="74"/></sphere>
     <sphere pos="175 7 225" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Round hut: cylinder wall, conical thatch with a little cap. -->
   <group name="round_hut" pos="-660 0 330">
-    <rounded-rect pos="0 -16 0" size="560 28" radius="6.72" segments="3" material="dirt"><extrude amount="560"/><bevel amount="5.38" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 -4 0" size="562 8" radius="1.92" segments="3" material="grass"><extrude amount="562"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 -16 0" size="560 28" radius="11.76" segments="5" material="dirt"><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 -4 0" size="562 8" radius="3.36" segments="5" material="grass"><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
     <group pos="0 65 0">
-    <circle radius="115" segments="12" rot="90 0 0" material="plaster_warm"><extrude amount="130"/><bevel amount="8" bevelSegments="2"/></circle>
+    <circle radius="115" segments="24" rot="90 0 0" material="plaster_warm"><extrude amount="130"/><bevel amount="20.24" bevelSegments="4"/></circle>
     </group>
     <group pos="0 8 0">
-    <circle radius="122" segments="12" rot="90 0 0" material="stone"><extrude amount="16"/><bevel amount="3.07" bevelSegments="2"/></circle>
+    <circle radius="122" segments="24" rot="90 0 0" material="stone"><extrude amount="16"/><bevel amount="6.18" bevelSegments="4"/></circle>
     </group>
-    <cone pos="0 190 0" radius="160" radiusTop="18" height="130" sides="12" material="thatch"/>
+    <cone pos="0 190 0" radius="160" radiusTop="18" height="130" sides="24" material="thatch"/>
     <cone pos="0 270 0" radius="26" height="30" sides="8" material="thatch_dark"/>
     <group pos="0 130 0">
-    <circle radius="160" segments="12" rot="90 0 0" material="thatch_dark"><extrude amount="10"/><bevel amount="1.92" bevelSegments="2"/></circle>
+    <circle radius="160" segments="24" rot="90 0 0" material="thatch_dark"><extrude amount="10"/><bevel amount="3.86" bevelSegments="4"/></circle>
     </group>
-    <rounded-rect pos="0 58 108" size="62 106" radius="10" segments="3" material="plaster_warm"><extrude amount="20"/><bevel amount="8" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 61 119.5" size="56 90" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 58 121" size="46 84" radius="10" segments="3" material="door"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="13.8 56.32 124" size="6 6" radius="1.44" segments="3" material="metal_knob"><extrude amount="4"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 19 136" size="70 6" radius="1.44" segments="3" material="stone_step"><extrude amount="30"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 58 108" size="62 106" radius="22" segments="5" material="plaster_warm"><extrude amount="20"/><bevel amount="9.2" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 61 119.5" size="56 90" radius="22" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 58 121" size="46 84" radius="19.32" segments="5" material="door"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="13.8 56.32 124" size="6 6" radius="2.52" segments="5" material="metal_knob"><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 19 136" size="70 6" radius="2.52" segments="5" material="stone_step"><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
     <group pos="88.47 0 61.95" rot="0 55 0">
-    <rounded-rect pos="0 80 0" size="50 56" radius="10" segments="3" material="plaster_warm"><extrude amount="20"/><bevel amount="8" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 82 11.5" size="40 40" radius="9.6" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 82 12.5" size="30 30" radius="7.2" segments="3" material="glass"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 61 14" size="46 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 80 0" size="50 56" radius="21" segments="5" material="plaster_warm"><extrude amount="20"/><bevel amount="9.2" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 82 11.5" size="40 40" radius="16.8" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 82 12.5" size="30 30" radius="12.6" segments="5" material="glass"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 61 14" size="46 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
     </group>
     <group pos="-88.47 0 61.95" rot="0 -55 0">
-    <rounded-rect pos="0 80 0" size="50 56" radius="10" segments="3" material="plaster_warm"><extrude amount="20"/><bevel amount="8" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 82 11.5" size="40 40" radius="9.6" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 82 12.5" size="30 30" radius="7.2" segments="3" material="glass"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 61 14" size="46 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 80 0" size="50 56" radius="21" segments="5" material="plaster_warm"><extrude amount="20"/><bevel amount="9.2" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 82 11.5" size="40 40" radius="16.8" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 82 12.5" size="30 30" radius="12.6" segments="5" material="glass"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 61 14" size="46 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
     </group>
-    <group pos="-210 15 -210">
-    <circle radius="9" segments="8" rot="90 0 0" material="trunk"><extrude amount="30"/><bevel amount="3.46" bevelSegments="2"/></circle>
+    <group pos="-210 14 -210">
+    <circle radius="8" segments="8" rot="90 0 0" material="trunk"><extrude amount="28"/><bevel amount="6.18" bevelSegments="4"/></circle>
     </group>
-    <cone pos="-210 85 -210" radius="60" height="80" sides="7" material="pine"/>
-    <cone pos="-210 120 -210" radius="48" height="70" sides="7" material="pine_light"/>
-    <cone pos="-210 152 -210" radius="34" height="60" sides="7" material="pine"/>
-    <group pos="220 12.75 -180">
-    <circle radius="7.65" segments="8" rot="90 0 0" material="trunk"><extrude amount="25.5"/><bevel amount="2.94" bevelSegments="2"/></circle>
+    <cone pos="-210 55 -210" radius="46" radiusTop="10" height="62" sides="6" rot="0 0 0" smooth="0" material="pine_light"/>
+    <cone pos="-210 95 -210" radius="40" radiusTop="8" height="58" sides="6" rot="0 30 0" smooth="0" material="pine_light"/>
+    <cone pos="-210 130 -210" radius="32" radiusTop="6" height="52" sides="6" rot="0 60 0" smooth="0" material="pine_light"/>
+    <cone pos="-210 161 -210" radius="22" height="46" sides="6" rot="0 90 0" smooth="0" material="pine_light"/>
+    <group pos="220 11.9 -180">
+    <circle radius="6.8" segments="8" rot="90 0 0" material="trunk"><extrude amount="23.8"/><bevel amount="5.26" bevelSegments="4"/></circle>
     </group>
-    <cone pos="220 72.25 -180" radius="51" height="68" sides="7" material="pine"/>
-    <cone pos="220 102 -180" radius="40.8" height="59.5" sides="7" material="pine_light"/>
-    <cone pos="220 129.2 -180" radius="28.9" height="51" sides="7" material="pine"/>
-    <group pos="210 10.5 210">
-    <circle radius="6.3" segments="8" rot="90 0 0" material="trunk"><extrude amount="21"/><bevel amount="2.42" bevelSegments="2"/></circle>
+    <cone pos="220 46.75 -180" radius="39.1" radiusTop="8.5" height="52.7" sides="6" rot="0 0 0" smooth="0" material="pine"/>
+    <cone pos="220 80.75 -180" radius="34" radiusTop="6.8" height="49.3" sides="6" rot="0 30 0" smooth="0" material="pine"/>
+    <cone pos="220 110.5 -180" radius="27.2" radiusTop="5.1" height="44.2" sides="6" rot="0 60 0" smooth="0" material="pine"/>
+    <cone pos="220 136.85 -180" radius="18.7" height="39.1" sides="6" rot="0 90 0" smooth="0" material="pine"/>
+    <group pos="210 9.8 210">
+    <circle radius="5.6" segments="8" rot="90 0 0" material="trunk"><extrude amount="19.6"/><bevel amount="4.33" bevelSegments="4"/></circle>
     </group>
-    <cone pos="210 59.5 210" radius="42" height="56" sides="7" material="pine"/>
-    <cone pos="210 84 210" radius="33.6" height="49" sides="7" material="pine_light"/>
-    <cone pos="210 106.4 210" radius="23.8" height="42" sides="7" material="pine"/>
+    <cone pos="210 38.5 210" radius="32.2" radiusTop="7" height="43.4" sides="6" rot="0 0 0" smooth="0" material="pine_light"/>
+    <cone pos="210 66.5 210" radius="28" radiusTop="5.6" height="40.6" sides="6" rot="0 30 0" smooth="0" material="pine_light"/>
+    <cone pos="210 91 210" radius="22.4" radiusTop="4.2" height="36.4" sides="6" rot="0 60 0" smooth="0" material="pine_light"/>
+    <cone pos="210 112.7 210" radius="15.4" height="32.2" sides="6" rot="0 90 0" smooth="0" material="pine_light"/>
     <sphere pos="-158 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" seed="42"/></sphere>
     <sphere pos="212 7 214" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Open lean-to woodshed with a stack of split logs and a chopping block. -->
   <group name="woodshed" pos="0 0 330">
-    <rounded-rect pos="0 -16 0" size="560 28" radius="6.72" segments="3" material="dirt"><extrude amount="560"/><bevel amount="5.38" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 -4 0" size="562 8" radius="1.92" segments="3" material="grass"><extrude amount="562"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-115 90 -65" size="14 180" radius="3.36" segments="3" material="timber"><extrude amount="14"/><bevel amount="2.69" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-115 65 65" size="14 130" radius="3.36" segments="3" material="timber"><extrude amount="14"/><bevel amount="2.69" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="115 90 -65" size="14 180" radius="3.36" segments="3" material="timber"><extrude amount="14"/><bevel amount="2.69" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="115 65 65" size="14 130" radius="3.36" segments="3" material="timber"><extrude amount="14"/><bevel amount="2.69" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 90 -69" size="230 170" radius="10" segments="3" material="plank"><extrude amount="8"/><bevel amount="3.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 162 0" size="280 10" radius="2.4" segments="3" rot="-18.43 0 0" material="roof_green"><extrude amount="198.11"/><bevel amount="1.92" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 6 0" size="250 12" radius="2.88" segments="3" material="deck"><extrude amount="150"/><bevel amount="2.3" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 -16 0" size="560 28" radius="11.76" segments="5" material="dirt"><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 -4 0" size="562 8" radius="3.36" segments="5" material="grass"><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-115 90 -65" size="14 180" radius="5.88" segments="5" material="timber"><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-115 65 65" size="14 130" radius="5.88" segments="5" material="timber"><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="115 90 -65" size="14 180" radius="5.88" segments="5" material="timber"><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="115 65 65" size="14 130" radius="5.88" segments="5" material="timber"><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 90 -69" size="230 170" radius="22" segments="5" material="plank"><extrude amount="8"/><bevel amount="3.68" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 162 0" size="280 10" radius="4.2" segments="5" rot="-18.43 0 0" material="roof_green"><extrude amount="198.11"/><bevel amount="3.86" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 6 0" size="250 12" radius="5.04" segments="5" material="deck"><extrude amount="150"/><bevel amount="4.64" bevelSegments="4"/></rounded-rect>
     <group pos="-85 25 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="-57 25 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="-29 25 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="-1 25 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="27 25 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="55 25 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="83 25 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="-71 49 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="-43 49 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="-15 49 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="13 49 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="41 49 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="69 49 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="-85 73 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="-57 73 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="-29 73 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="-1 73 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="27 73 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="55 73 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="83 73 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="-71 97 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="-43 97 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="-15 97 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="13 97 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="41 97 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="69 97 -10" rot="90 0 0">
-    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="4.61" bevelSegments="2"/></circle>
+    <circle radius="12" segments="8" rot="90 0 0" material="log"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
     <group pos="185 22 70">
-    <circle radius="28" segments="9" rot="90 0 0" material="log_light"><extrude amount="44"/><bevel amount="8" bevelSegments="2"/></circle>
+    <circle radius="28" segments="9" rot="90 0 0" material="log_light"><extrude amount="44"/><bevel amount="17" bevelSegments="4"/></circle>
     </group>
-    <rounded-rect pos="185 64 70" size="6 40" radius="1.44" segments="3" rot="0 0 25" material="trunk"><extrude amount="6"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="195 82 70" size="24 16" radius="3.84" segments="3" material="metal"><extrude amount="6"/><bevel amount="2.4" bevelSegments="2"/></rounded-rect>
-    <group pos="-220 13.5 -220">
-    <circle radius="8.1" segments="8" rot="90 0 0" material="trunk"><extrude amount="27"/><bevel amount="3.11" bevelSegments="2"/></circle>
+    <rounded-rect pos="185 64 70" size="6 40" radius="2.52" segments="5" rot="0 0 25" material="trunk"><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="195 82 70" size="24 16" radius="6.72" segments="5" material="metal"><extrude amount="6"/><bevel amount="2.76" bevelSegments="4"/></rounded-rect>
+    <group pos="-220 12.6 -220">
+    <circle radius="7.2" segments="8" rot="90 0 0" material="trunk"><extrude amount="25.2"/><bevel amount="5.56" bevelSegments="4"/></circle>
     </group>
-    <cone pos="-220 76.5 -220" radius="54" height="72" sides="7" material="pine"/>
-    <cone pos="-220 108 -220" radius="43.2" height="63" sides="7" material="pine_light"/>
-    <cone pos="-220 136.8 -220" radius="30.6" height="54" sides="7" material="pine"/>
-    <group pos="220 12 220">
-    <circle radius="7.2" segments="8" rot="90 0 0" material="trunk"><extrude amount="24"/><bevel amount="2.76" bevelSegments="2"/></circle>
+    <cone pos="-220 49.5 -220" radius="41.4" radiusTop="9" height="55.8" sides="6" rot="0 0 0" smooth="0" material="pine"/>
+    <cone pos="-220 85.5 -220" radius="36" radiusTop="7.2" height="52.2" sides="6" rot="0 30 0" smooth="0" material="pine"/>
+    <cone pos="-220 117 -220" radius="28.8" radiusTop="5.4" height="46.8" sides="6" rot="0 60 0" smooth="0" material="pine"/>
+    <cone pos="-220 144.9 -220" radius="19.8" height="41.4" sides="6" rot="0 90 0" smooth="0" material="pine"/>
+    <group pos="220 11.2 220">
+    <circle radius="6.4" segments="8" rot="90 0 0" material="trunk"><extrude amount="22.4"/><bevel amount="4.95" bevelSegments="4"/></circle>
     </group>
-    <cone pos="220 68 220" radius="48" height="64" sides="7" material="pine"/>
-    <cone pos="220 96 220" radius="38.4" height="56" sides="7" material="pine_light"/>
-    <cone pos="220 121.6 220" radius="27.2" height="48" sides="7" material="pine"/>
+    <cone pos="220 44 220" radius="36.8" radiusTop="8" height="49.6" sides="6" rot="0 0 0" smooth="0" material="pine"/>
+    <cone pos="220 76 220" radius="32" radiusTop="6.4" height="46.4" sides="6" rot="0 30 0" smooth="0" material="pine"/>
+    <cone pos="220 104 220" radius="25.6" radiusTop="4.8" height="41.6" sides="6" rot="0 60 0" smooth="0" material="pine"/>
+    <cone pos="220 128.8 220" radius="17.6" height="36.8" sides="6" rot="0 90 0" smooth="0" material="pine"/>
     <sphere pos="-201 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" seed="32"/></sphere>
     <sphere pos="189 7 203" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Two-storey ranger station: stone ground floor, shingled upper floor, porch. -->
   <group name="ranger_station" pos="660 0 330">
-    <rounded-rect pos="0 -16 0" size="560 28" radius="6.72" segments="3" material="dirt"><extrude amount="560"/><bevel amount="5.38" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 -4 0" size="562 8" radius="1.92" segments="3" material="grass"><extrude amount="562"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 60 0" size="230 120" radius="10" segments="3" material="stone_light"><extrude amount="190"/><bevel amount="8" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 175 0" size="246 110" radius="10" segments="3" material="wood_teal"><extrude amount="206"/><bevel amount="8" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 124 0" size="250 8" radius="1.92" segments="3" material="trim"><extrude amount="210"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-50 46 96.5" size="60 92" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-50 43 98" size="50 86" radius="10" segments="3" material="door"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-35 41.28 101" size="6 6" radius="1.44" segments="3" material="metal_knob"><extrude amount="4"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-50 3 113" size="74 6" radius="1.44" segments="3" material="stone_step"><extrude amount="30"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="50 70 96.5" size="46 50" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="50 70 97.5" size="36 40" radius="8.64" segments="3" material="glass"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="50 44 99" size="52 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-60 180 104.5" size="50 54" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-60 180 105.5" size="40 44" radius="9.6" segments="3" material="glass"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-60 152 107" size="56 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="60 180 104.5" size="50 54" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="60 180 105.5" size="40 44" radius="9.6" segments="3" material="glass"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="60 152 107" size="56 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="124.5 180 0" size="3 50" radius="0.72" segments="3" material="trim"><extrude amount="46"/><bevel amount="0.58" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="125.5 180 0" size="3 40" radius="0.72" segments="3" material="glass"><extrude amount="36"/><bevel amount="0.58" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="127 154 0" size="8 5" radius="1.2" segments="3" material="trim"><extrude amount="52"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="116.5 70 0" size="3 50" radius="0.72" segments="3" material="trim"><extrude amount="46"/><bevel amount="0.58" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="117.5 70 0" size="3 40" radius="0.72" segments="3" material="glass"><extrude amount="36"/><bevel amount="0.58" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="119 44 0" size="8 5" radius="1.2" segments="3" material="trim"><extrude amount="52"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 -16 0" size="560 28" radius="11.76" segments="5" material="dirt"><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 -4 0" size="562 8" radius="3.36" segments="5" material="grass"><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 60 0" size="230 120" radius="22" segments="5" material="stone_light"><extrude amount="190"/><bevel amount="20.24" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 175 0" size="246 110" radius="22" segments="5" material="wood_teal"><extrude amount="206"/><bevel amount="20.24" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 124 0" size="250 8" radius="3.36" segments="5" material="trim"><extrude amount="210"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-50 46 96.5" size="60 92" radius="22" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-50 43 98" size="50 86" radius="21" segments="5" material="door"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-35 41.28 101" size="6 6" radius="2.52" segments="5" material="metal_knob"><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-50 3 113" size="74 6" radius="2.52" segments="5" material="stone_step"><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="50 70 96.5" size="46 50" radius="19.32" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="50 70 97.5" size="36 40" radius="15.12" segments="5" material="glass"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="50 44 99" size="52 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-60 180 104.5" size="50 54" radius="21" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-60 180 105.5" size="40 44" radius="16.8" segments="5" material="glass"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-60 152 107" size="56 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="60 180 104.5" size="50 54" radius="21" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="60 180 105.5" size="40 44" radius="16.8" segments="5" material="glass"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="60 152 107" size="56 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="124.5 180 0" size="3 50" radius="1.26" segments="5" material="trim"><extrude amount="46"/><bevel amount="1.16" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="125.5 180 0" size="3 40" radius="1.26" segments="5" material="glass"><extrude amount="36"/><bevel amount="1.16" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="127 154 0" size="8 5" radius="2.1" segments="5" material="trim"><extrude amount="52"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="116.5 70 0" size="3 50" radius="1.26" segments="5" material="trim"><extrude amount="46"/><bevel amount="1.16" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="117.5 70 0" size="3 40" radius="1.26" segments="5" material="glass"><extrude amount="36"/><bevel amount="1.16" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="119 44 0" size="8 5" radius="2.1" segments="5" material="trim"><extrude amount="52"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
     <prism pos="0 258.33 0" radius="1" height="206" sides="3" rot="90 0 90" scale="56.67 1 150.12" material="wood_teal"/>
-    <rounded-rect pos="75.27 271.76 0" size="173.32 10" radius="2.4" segments="3" rot="0 0 -33.18" material="roof_blue"><extrude amount="242"/><bevel amount="1.92" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-75.27 271.76 0" size="173.32 10" radius="2.4" segments="3" rot="0 0 33.18" material="roof_blue"><extrude amount="242"/><bevel amount="1.92" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 324.95 0" size="14 8" radius="1.92" segments="3" material="roof_blue_dark"><extrude amount="246"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 6 145" size="250 12" radius="2.88" segments="3" material="deck"><extrude amount="100"/><bevel amount="2.3" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="-115 70 187" size="12 116" radius="2.88" segments="3" material="timber"><extrude amount="12"/><bevel amount="2.3" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="115 70 187" size="12 116" radius="2.88" segments="3" material="timber"><extrude amount="12"/><bevel amount="2.3" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 133 145" size="270 10" radius="2.4" segments="3" rot="12 0 0" material="roof_blue"><extrude amount="116"/><bevel amount="1.92" bevelSegments="2"/></rounded-rect>
+    <shape closed="0" pos="0 0 0" material="roof_blue"><v x="-145.07" y="220.15"/><v x="0" y="315"/><v x="145.07" y="220.15"/><extrude amount="242"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
+    <circle radius="8" segments="10" pos="56 299.29 -67.76" rot="-90 0 -33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="89.36 277.48 43.56" rot="-90 0 -33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="122.73 255.66 -14.52" rot="-90 0 -33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="67.6 291.71 91.96" rot="-90 0 -33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-56 299.29 67.76" rot="-90 0 33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-89.36 277.48 -43.56" rot="-90 0 33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-122.73 255.66 14.52" rot="-90 0 33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <circle radius="8" segments="10" pos="-67.6 291.71 -91.96" rot="-90 0 33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
+    <rounded-rect pos="0 6 145" size="250 12" radius="5.04" segments="5" material="deck"><extrude amount="100"/><bevel amount="4.64" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="-115 70 187" size="12 116" radius="5.04" segments="5" material="timber"><extrude amount="12"/><bevel amount="4.64" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="115 70 187" size="12 116" radius="5.04" segments="5" material="timber"><extrude amount="12"/><bevel amount="4.64" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 133 145" size="270 10" radius="4.2" segments="5" rot="12 0 0" material="roof_blue"><extrude amount="116"/><bevel amount="3.86" bevelSegments="4"/></rounded-rect>
     <group pos="165 150 165">
-    <circle radius="4" segments="8" rot="90 0 0" material="metal"><extrude amount="300"/><bevel amount="1.54" bevelSegments="2"/></circle>
+    <circle radius="4" segments="8" rot="90 0 0" material="metal"><extrude amount="300"/><bevel amount="3.09" bevelSegments="4"/></circle>
     </group>
-    <rounded-rect pos="195 275 165" size="56 36" radius="8.64" segments="3" material="flag"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <group pos="-220 15 -210">
-    <circle radius="9" segments="8" rot="90 0 0" material="trunk"><extrude amount="30"/><bevel amount="3.46" bevelSegments="2"/></circle>
+    <rounded-rect pos="195 275 165" size="56 36" radius="15.12" segments="5" material="flag"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <group pos="-220 14 -210">
+    <circle radius="8" segments="8" rot="90 0 0" material="trunk"><extrude amount="28"/><bevel amount="6.18" bevelSegments="4"/></circle>
     </group>
-    <cone pos="-220 85 -210" radius="60" height="80" sides="7" material="pine"/>
-    <cone pos="-220 120 -210" radius="48" height="70" sides="7" material="pine_light"/>
-    <cone pos="-220 152 -210" radius="34" height="60" sides="7" material="pine"/>
+    <cone pos="-220 55 -210" radius="46" radiusTop="10" height="62" sides="6" rot="0 0 0" smooth="0" material="pine"/>
+    <cone pos="-220 95 -210" radius="40" radiusTop="8" height="58" sides="6" rot="0 30 0" smooth="0" material="pine"/>
+    <cone pos="-220 130 -210" radius="32" radiusTop="6" height="52" sides="6" rot="0 60 0" smooth="0" material="pine"/>
+    <cone pos="-220 161 -210" radius="22" height="46" sides="6" rot="0 90 0" smooth="0" material="pine"/>
     <sphere pos="-164 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" seed="97"/></sphere>
     <sphere pos="226 7 232" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Round stone tower with a tall pointed roof and a pennant. -->
   <group name="stone_tower" pos="1320 0 330">
-    <rounded-rect pos="0 -16 0" size="560 28" radius="6.72" segments="3" material="dirt"><extrude amount="560"/><bevel amount="5.38" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 -4 0" size="562 8" radius="1.92" segments="3" material="grass"><extrude amount="562"/><bevel amount="1.54" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 -16 0" size="560 28" radius="11.76" segments="5" material="dirt"><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 -4 0" size="562 8" radius="3.36" segments="5" material="grass"><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rounded-rect>
     <group pos="0 140 0">
-    <circle radius="80" segments="12" rot="90 0 0" material="stone_light"><extrude amount="280"/><bevel amount="8" bevelSegments="2"/><taper amount="0.08" axis="z"/></circle>
+    <circle radius="80" segments="24" rot="90 0 0" material="stone_light"><extrude amount="280"/><bevel amount="20.24" bevelSegments="4"/><taper amount="0.08" axis="z"/></circle>
     </group>
     <group pos="0 10 0">
-    <circle radius="92" segments="12" rot="90 0 0" material="stone"><extrude amount="20"/><bevel amount="3.84" bevelSegments="2"/></circle>
+    <circle radius="92" segments="24" rot="90 0 0" material="stone"><extrude amount="20"/><bevel amount="7.73" bevelSegments="4"/></circle>
     </group>
     <group pos="0 286 0">
-    <circle radius="94" segments="12" rot="90 0 0" material="stone"><extrude amount="16"/><bevel amount="3.07" bevelSegments="2"/></circle>
+    <circle radius="94" segments="24" rot="90 0 0" material="stone"><extrude amount="16"/><bevel amount="6.18" bevelSegments="4"/></circle>
     </group>
-    <cone pos="0 359 0" radius="104" height="130" sides="12" material="roof_purple"/>
+    <cone pos="0 359 0" radius="104" height="130" sides="24" material="roof_purple"/>
     <group pos="0 444 0">
-    <circle radius="3" segments="8" rot="90 0 0" material="metal"><extrude amount="40"/><bevel amount="1.15" bevelSegments="2"/></circle>
+    <circle radius="3" segments="8" rot="90 0 0" material="metal"><extrude amount="40"/><bevel amount="2.32" bevelSegments="4"/></circle>
     </group>
-    <rounded-rect pos="14 456 0" size="26 16" radius="3.84" segments="3" material="flag"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 65 81.5" size="56 90" radius="10" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 62 83" size="46 84" radius="10" segments="3" material="door"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="13.8 60.32 86" size="6 6" radius="1.44" segments="3" material="metal_knob"><extrude amount="4"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 23 98" size="70 6" radius="1.44" segments="3" material="stone_step"><extrude amount="30"/><bevel amount="1.15" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="14 456 0" size="26 16" radius="6.72" segments="5" material="flag"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 65 81.5" size="56 90" radius="22" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 62 83" size="46 84" radius="19.32" segments="5" material="door"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="13.8 60.32 86" size="6 6" radius="2.52" segments="5" material="metal_knob"><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 23 98" size="70 6" radius="2.52" segments="5" material="stone_step"><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rounded-rect>
     <group pos="0 0 72" rot="0 0 0">
-    <rounded-rect pos="0 150 0" size="40 54" radius="9.6" segments="3" material="stone_light"><extrude amount="20"/><bevel amount="7.68" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 152 11.5" size="32 46" radius="7.68" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 152 12.5" size="22 36" radius="5.28" segments="3" material="glass_warm"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 128 14" size="38 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 150 0" size="40 54" radius="16.8" segments="5" material="stone_light"><extrude amount="20"/><bevel amount="9.2" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 152 11.5" size="32 46" radius="13.44" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 152 12.5" size="22 36" radius="9.24" segments="5" material="glass_warm"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 128 14" size="38 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
     </group>
     <group pos="62.35 0 36" rot="0 60 0">
-    <rounded-rect pos="0 215 0" size="40 54" radius="9.6" segments="3" material="stone_light"><extrude amount="20"/><bevel amount="7.68" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 217 11.5" size="32 46" radius="7.68" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 217 12.5" size="22 36" radius="5.28" segments="3" material="glass_warm"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 193 14" size="38 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 215 0" size="40 54" radius="16.8" segments="5" material="stone_light"><extrude amount="20"/><bevel amount="9.2" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 217 11.5" size="32 46" radius="13.44" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 217 12.5" size="22 36" radius="9.24" segments="5" material="glass_warm"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 193 14" size="38 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
     </group>
     <group pos="-62.35 0 36" rot="0 -60 0">
-    <rounded-rect pos="0 215 0" size="40 54" radius="9.6" segments="3" material="stone_light"><extrude amount="20"/><bevel amount="7.68" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 217 11.5" size="32 46" radius="7.68" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 217 12.5" size="22 36" radius="5.28" segments="3" material="glass_warm"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 193 14" size="38 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 215 0" size="40 54" radius="16.8" segments="5" material="stone_light"><extrude amount="20"/><bevel amount="9.2" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 217 11.5" size="32 46" radius="13.44" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 217 12.5" size="22 36" radius="9.24" segments="5" material="glass_warm"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 193 14" size="38 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
     </group>
     <group pos="62.35 0 -36" rot="0 120 0">
-    <rounded-rect pos="0 150 0" size="40 54" radius="9.6" segments="3" material="stone_light"><extrude amount="20"/><bevel amount="7.68" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 152 11.5" size="32 46" radius="7.68" segments="3" material="trim"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 152 12.5" size="22 36" radius="5.28" segments="3" material="glass_warm"><extrude amount="3"/><bevel amount="1.2" bevelSegments="2"/></rounded-rect>
-    <rounded-rect pos="0 128 14" size="38 5" radius="1.2" segments="3" material="trim"><extrude amount="8"/><bevel amount="0.96" bevelSegments="2"/></rounded-rect>
+    <rounded-rect pos="0 150 0" size="40 54" radius="16.8" segments="5" material="stone_light"><extrude amount="20"/><bevel amount="9.2" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 152 11.5" size="32 46" radius="13.44" segments="5" material="trim"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 152 12.5" size="22 36" radius="9.24" segments="5" material="glass_warm"><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rounded-rect>
+    <rounded-rect pos="0 128 14" size="38 5" radius="2.1" segments="5" material="trim"><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rounded-rect>
     </group>
-    <group pos="210 15 -210">
-    <circle radius="9" segments="8" rot="90 0 0" material="trunk"><extrude amount="30"/><bevel amount="3.46" bevelSegments="2"/></circle>
+    <group pos="210 14 -210">
+    <circle radius="8" segments="8" rot="90 0 0" material="trunk"><extrude amount="28"/><bevel amount="6.18" bevelSegments="4"/></circle>
     </group>
-    <cone pos="210 85 -210" radius="60" height="80" sides="7" material="pine"/>
-    <cone pos="210 120 -210" radius="48" height="70" sides="7" material="pine_light"/>
-    <cone pos="210 152 -210" radius="34" height="60" sides="7" material="pine"/>
-    <group pos="-220 12 -190">
-    <circle radius="7.2" segments="8" rot="90 0 0" material="trunk"><extrude amount="24"/><bevel amount="2.76" bevelSegments="2"/></circle>
+    <cone pos="210 55 -210" radius="46" radiusTop="10" height="62" sides="6" rot="0 0 0" smooth="0" material="pine_light"/>
+    <cone pos="210 95 -210" radius="40" radiusTop="8" height="58" sides="6" rot="0 30 0" smooth="0" material="pine_light"/>
+    <cone pos="210 130 -210" radius="32" radiusTop="6" height="52" sides="6" rot="0 60 0" smooth="0" material="pine_light"/>
+    <cone pos="210 161 -210" radius="22" height="46" sides="6" rot="0 90 0" smooth="0" material="pine_light"/>
+    <group pos="-220 11.2 -190">
+    <circle radius="6.4" segments="8" rot="90 0 0" material="trunk"><extrude amount="22.4"/><bevel amount="4.95" bevelSegments="4"/></circle>
     </group>
-    <cone pos="-220 68 -190" radius="48" height="64" sides="7" material="pine"/>
-    <cone pos="-220 96 -190" radius="38.4" height="56" sides="7" material="pine_light"/>
-    <cone pos="-220 121.6 -190" radius="27.2" height="48" sides="7" material="pine"/>
+    <cone pos="-220 44 -190" radius="36.8" radiusTop="8" height="49.6" sides="6" rot="0 0 0" smooth="0" material="pine"/>
+    <cone pos="-220 76 -190" radius="32" radiusTop="6.4" height="46.4" sides="6" rot="0 30 0" smooth="0" material="pine"/>
+    <cone pos="-220 104 -190" radius="25.6" radiusTop="4.8" height="41.6" sides="6" rot="0 60 0" smooth="0" material="pine"/>
+    <cone pos="-220 128.8 -190" radius="17.6" height="36.8" sides="6" rot="0 90 0" smooth="0" material="pine"/>
     <sphere pos="-207 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" seed="87"/></sphere>
     <sphere pos="203 7 221" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>

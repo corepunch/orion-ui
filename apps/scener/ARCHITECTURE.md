@@ -33,7 +33,7 @@ Defines `Mesh` as a triangle soup: `Vertex*` (position + normal), `Tri*` (3 vert
 | `gen_sphere(r, rings, slices)` | UV sphere |
 | `gen_cylinder(r, h, sides)` | Closed cylinder along Y |
 | `gen_prism(r, h, sides)` | Regular N-gonal prism along Y |
-| `gen_cone(rb, rt, h, sides)` | Truncated cone/frustum along Y |
+| `gen_cone(rb, rt, h, sides, smooth)` | Truncated cone/frustum along Y; smooth normals follow the slope |
 | `gen_torus(R, r, majSeg, minSeg)` | Torus in XZ plane |
 | `gen_arch(w, h, d, wall, segments, inset)` | Solid Roman arch or hollow arch frame along Z |
 | `gen_box_hole_arch(w, h, d, segments)` | Wall lunette above a Roman-arch opening |
@@ -57,8 +57,13 @@ Primitive generators should work at the highest useful level. Prefer composing c
 Renderable 2D profile elements (`rect`, `rounded-rect`, `circle`, `ellipse`,
 `star`) use `<extrude>` to create a closed local-Z solid. A following `<bevel>`
 insets the cap outline and adds rounded perimeter rings before later mesh
-modifiers run. The same extrusion and bevel generator consumes each profile;
-the legacy `rounded-box` element delegates to it. Inset profiles are checked
+modifiers run. The same extrusion and bevel generator consumes each profile.
+A `<shape>` with `<extrude>` renders through its own modifier stack
+(`parse_shape_node()`): `shape2d_fillet()` rounds a line's bends or an
+outline's corners, `<shell>` is `shape2d_stroke()` thickening the extruded line
+to one side, and `shape2d_outline()` normalises the result before the same
+extrusion and bevel generator builds the solid.
+Inset profiles are checked
 for collapsed or crossing edges so sharp concave shapes cannot create open
 shadow meshes.
 

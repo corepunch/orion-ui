@@ -37,16 +37,14 @@ static const prop_def_t kBoxProperties[] = {
 	PV("Width", "size", "100 100 100", PROP_X), PV("Height", "size", "100 100 100", PROP_Y), PV("Depth", "size", "100 100 100", PROP_Z),
 	PV("Inset X", "inset", "0 0 0", PROP_X), PV("Inset Y", "inset", "0 0 0", PROP_Y),
 };
-static const prop_def_t kRoundedBoxProperties[] = {
-	PV("Width", "size", "100 100 10", PROP_X), PV("Height", "size", "100 100 10", PROP_Y), PV("Depth", "size", "100 100 10", PROP_Z),
-	P("Corner Radius", "radius", "10"), P("Segments", "segments", "8"),
-	P("Bevel", "bevel", "0"), P("Bevel Segments", "bevelSegments", "4"),
-};
 static const prop_def_t kRectProperties[] = { PV("Width", "size", "100 100", PROP_X), PV("Height", "size", "100 100", PROP_Y) };
 static const prop_def_t kRoundedRectProperties[] = {
 	PV("Width", "size", "7.6 16.2", PROP_X), PV("Height", "size", "7.6 16.2", PROP_Y),
 	P("Corner Radius", "radius", "1.28"), P("Segments", "segments", "8"),
 };
+static const prop_def_t kShapeProperties[] = { P("Id", "id", ""), PB("Closed", "closed", "0") };
+static const prop_def_t kFilletProperties[] = { P("Radius", "radius", "0"), P("Segments", "segments", "6") };
+static const prop_def_t kShellProperties[] = { P("Amount", "amount", "5") };
 static const prop_def_t kCircleProperties[] = { P("Radius", "radius", "50"), P("Segments", "segments", "32") };
 static const prop_def_t kEllipseProperties[] = {
 	PV("Width", "size", "100 70", PROP_X), PV("Height", "size", "100 70", PROP_Y), P("Segments", "segments", "48"),
@@ -97,14 +95,16 @@ static const prop_def_t kNegativeCylinderProperties[] = { P("Radius", "radius", 
 static const node_class_t kNodeClasses[] = {
 	{ "window", "Window", kWindowProperties, PROP_COUNT(kWindowProperties), 1, 1 },
 	{ "box", "Box", kBoxProperties, PROP_COUNT(kBoxProperties), 1, 1 }, { "sphere", "Sphere", kSphereProperties, PROP_COUNT(kSphereProperties), 1, 1 },
-	{ "rounded-box", "Rounded Box", kRoundedBoxProperties, PROP_COUNT(kRoundedBoxProperties), 1, 1 },
 	{ "rect", "Rect", kRectProperties, PROP_COUNT(kRectProperties), 1, 1 },
 	{ "rounded-rect", "Rounded Rect", kRoundedRectProperties, PROP_COUNT(kRoundedRectProperties), 1, 1 },
 	{ "circle", "Circle", kCircleProperties, PROP_COUNT(kCircleProperties), 1, 1 },
+	{ "shape", "Shape", kShapeProperties, PROP_COUNT(kShapeProperties), 1, 1 },
 	{ "ellipse", "Ellipse", kEllipseProperties, PROP_COUNT(kEllipseProperties), 1, 1 },
 	{ "star", "Star", kStarProperties, PROP_COUNT(kStarProperties), 1, 1 },
 	{ "extrude", "Extrude", kExtrudeProperties, PROP_COUNT(kExtrudeProperties), 0, 0 },
 	{ "bevel", "Bevel", kBevelProperties, PROP_COUNT(kBevelProperties), 0, 0 },
+	{ "fillet", "Fillet", kFilletProperties, PROP_COUNT(kFilletProperties), 0, 0 },
+	{ "shell", "Shell", kShellProperties, PROP_COUNT(kShellProperties), 0, 0 },
 	{ "screen", "Screen", kScreenProperties, PROP_COUNT(kScreenProperties), 1, 1 },
 	{ "cylinder", "Cylinder", kCylinderProperties, PROP_COUNT(kCylinderProperties), 1, 1 }, { "prism", "Prism", kPrismProperties, PROP_COUNT(kPrismProperties), 1, 1 },
 	{ "cone", "Cone", kConeProperties, PROP_COUNT(kConeProperties), 1, 1 }, { "pyramid", "Pyramid", kPyramidProperties, PROP_COUNT(kPyramidProperties), 1, 1 },

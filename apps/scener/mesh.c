@@ -31,6 +31,9 @@
 #define PROFILE_OFFSET_PARALLEL_EPSILON 1e-6f
 #define PROFILE_TRIANGULATION_RATIO 1e-8f
 #define PROFILE_TRIANGULATION_MIN_EPSILON 1e-16f
+#define PROFILE_FILLET_MAX_SEGMENTS 16
+#define PROFILE_FILLET_STRAIGHT_COS 0.9999f
+#define PROFILE_STROKE_MAX_MITER 4.0f
 
 void mesh_free(Mesh *m){
     free(m->verts); free(m->tris); free(m->edges); free(m->triN);
@@ -272,13 +275,6 @@ Mesh gen_rounded_box(float sx,float sy,float sz,float radius,int segments){
 	return mesh;
 }
 
-Mesh gen_rounded_box_beveled(float sx,float sy,float sz,float radius,float bevel,int segments,int bevel_segments){
-	Shape2D profile=shape2d_rounded_rect(sx,sy,radius,segments);
-	Mesh mesh=gen_profile_extrusion_beveled(&profile,sz,bevel,bevel_segments);
-	shape2d_free(&profile);
-	return mesh;
-}
-
 Mesh gen_box_inset(float sx,float sy,float sz,float insetX,float insetY){
 	Mesh m={0};
 	float halfX=sx*0.5f, halfY=sy*0.5f;
@@ -300,9 +296,13 @@ Mesh gen_cylinder_like(int sides,float rBot,float rTop,float height,int smooth){
         vec3 t0=v3(cosf(a0)*rTop, hy,sinf(a0)*rTop), t1=v3(cosf(a1)*rTop, hy,sinf(a1)*rTop);
         vec3 flatN=vnorm(vcross(vsub(t0,b0),vsub(b1,b0)));
         if(smooth){
-            vec3 n0=vnorm(v3(cosf(a0),0,sinf(a0))), n1=vnorm(v3(cosf(a1),0,sinf(a1)));
+            /* The side normal leans up by the slope, (rBot-rTop)/height; a pointed apex takes the
+               segment's mid-angle normal so neighbouring facets do not pinch to a dark tip. */
+            float am=(a0+a1)*0.5f, lean=rBot-rTop;
+            vec3 n0=vnorm(v3(cosf(a0)*height,lean,sinf(a0)*height)), n1=vnorm(v3(cosf(a1)*height,lean,sinf(a1)*height));
+            vec3 nm=vnorm(v3(cosf(am)*height,lean,sinf(am)*height));
             int ib0=mesh_add_vert(&m,b0,n0), ib1=mesh_add_vert(&m,b1,n1);
-            int it0=mesh_add_vert(&m,t0,n0), it1=mesh_add_vert(&m,t1,n1);
+            int it0=mesh_add_vert(&m,t0,rTop>1e-6f?n0:nm), it1=mesh_add_vert(&m,t1,rTop>1e-6f?n1:nm);
             if(rBot>1e-6f) mesh_add_tri(&m,ib0,it1,ib1);
             if(rTop>1e-6f || rBot>1e-6f) mesh_add_tri(&m,ib0,it0,it1);
         } else {
@@ -376,8 +376,8 @@ Mesh gen_cylinder_tube(float r,float h,float wall,int sides){
 	return m;
 }
 Mesh gen_prism(float r,float h,int sides){ return gen_cylinder_like(sides<3?6:sides,r,r,h,0); }
-Mesh gen_cone(float rBase,float rTop,float h,int sides){
-    return gen_cylinder_like(sides<3?4:sides, rBase, rTop, h, sides>=16);
+Mesh gen_cone(float rBase,float rTop,float h,int sides,int smooth){
+    return gen_cylinder_like(sides<3?4:sides, rBase, rTop, h, smooth);
 }
 
 Mesh gen_sphere(float r,int rings,int slices){
@@ -836,6 +836,75 @@ Shape2D shape2d_clip_rect(const Shape2D *p,float width,float height){
 		shape2d_free(&q); q=clipped;
 	}
 	shape2d_free(&bounds); return q;
+}
+
+Shape2D shape2d_outline(const Shape2D *p){
+	Shape2D q={0}; q.closed=1;
+	if(!p||p->npts<PROFILE_MIN_POINTS) return q;
+	for(int i=0;i<p->npts;i++) profile_push_unique(&q,p->pts[i]);
+	if(q.npts>1&&vlen(vsub(q.pts[0],q.pts[q.npts-1]))<=PROFILE_EPSILON) q.npts--;
+	if(shape2d_area(&q)<0) for(int i=0,j=q.npts-1;i<j;i++,j--){ vec3 t=q.pts[i]; q.pts[i]=q.pts[j]; q.pts[j]=t; }
+	if(q.npts<PROFILE_MIN_POINTS||fabsf(shape2d_area(&q))<=PROFILE_EPSILON) shape2d_free(&q);
+	return q;
+}
+
+Shape2D shape2d_stroke(const Shape2D *path,float left_width,float right_width){
+	Shape2D q={0}; q.closed=1;
+	int n=path?path->npts:0;
+	if(n<2||!isfinite(left_width)||!isfinite(right_width)||left_width<0||right_width<0||left_width+right_width<=PROFILE_EPSILON) return q;
+	vec3 *left=malloc(sizeof(vec3)*(size_t)n),*right=malloc(sizeof(vec3)*(size_t)n);
+	for(int i=0;i<n;i++){
+		vec3 before=i>0?vnorm(vsub(path->pts[i],path->pts[i-1])):v3(0,0,0);
+		vec3 after=i<n-1?vnorm(vsub(path->pts[i+1],path->pts[i])):v3(0,0,0);
+		vec3 dir=vnorm(vadd(before,after));
+		if(vlen(dir)<PROFILE_EPSILON) dir=after;
+		vec3 side=v3(-dir.y,dir.x,0),edge=i<n-1?after:before;
+		/* A mitre keeps both walls of the slab at the full thickness; cap it so a hairpin turn
+		   cannot shoot a corner off to infinity. */
+		float cosine=vdot(side,v3(-edge.y,edge.x,0)),miter=cosine>1.0f/PROFILE_STROKE_MAX_MITER?1.0f/cosine:PROFILE_STROKE_MAX_MITER;
+		left[i]=vadd(path->pts[i],vscale(side,left_width*miter)); right[i]=vsub(path->pts[i],vscale(side,right_width*miter));
+	}
+	Shape2D raw={0}; raw.closed=1;
+	for(int i=0;i<n;i++) DA_PUSH(raw.pts,raw.npts,raw.cpts,right[i]);
+	for(int i=n-1;i>=0;i--) DA_PUSH(raw.pts,raw.npts,raw.cpts,left[i]);
+	free(left); free(right);
+	q=shape2d_outline(&raw); shape2d_free(&raw);
+	return q;
+}
+
+Shape2D shape2d_fillet(const Shape2D *p,float radius,int segments){
+	Shape2D q={0}; q.closed=p?p->closed:1;
+	int n=p?p->npts:0;
+	if(n<(q.closed?PROFILE_MIN_POINTS:2)) return q;
+	if(segments<1) segments=1;
+	if(segments>PROFILE_FILLET_MAX_SEGMENTS) segments=PROFILE_FILLET_MAX_SEGMENTS;
+	for(int i=0;i<n;i++){
+		if(!q.closed&&(i==0||i==n-1)){ profile_push_unique(&q,p->pts[i]); continue; }
+		vec3 a=p->pts[(i+n-1)%n],c=p->pts[i],b=p->pts[(i+1)%n];
+		vec3 u=vsub(a,c),w=vsub(b,c);
+		float lu=vlen(u),lw=vlen(w);
+		u=vscale(u,1.0f/lu); w=vscale(w,1.0f/lw);
+		float cosine=vdot(u,w);
+		if(radius<=PROFILE_EPSILON||fabsf(cosine)>PROFILE_FILLET_STRAIGHT_COS){ profile_push_unique(&q,c); continue; }
+		/* Each tangent point may use at most half of its edge so neighbouring fillets never overlap;
+		   a corner on a short edge gets a proportionally smaller radius. */
+		float half=acosf(cosine)*0.5f,tangent=radius/tanf(half);
+		float limit=fminf(lu,lw)*0.5f;
+		if(tangent>limit) tangent=limit;
+		float r=tangent*tanf(half);
+		vec3 center=vadd(c,vscale(vnorm(vadd(u,w)),r/sinf(half)));
+		vec3 t0=vsub(vadd(c,vscale(u,tangent)),center),t1=vsub(vadd(c,vscale(w,tangent)),center);
+		float a0=atan2f(t0.y,t0.x),sweep=atan2f(t1.y,t1.x)-a0;
+		while(sweep>M_PIf) sweep-=2.0f*M_PIf;
+		while(sweep<-M_PIf) sweep+=2.0f*M_PIf;
+		for(int k=0;k<=segments;k++){
+			float t=a0+sweep*(float)k/(float)segments;
+			profile_push_unique(&q,vadd(center,v3(cosf(t)*r,sinf(t)*r,0)));
+		}
+	}
+	if(q.closed&&q.npts>1&&vlen(vsub(q.pts[0],q.pts[q.npts-1]))<=PROFILE_EPSILON) q.npts--;
+	if(q.npts<(q.closed?PROFILE_MIN_POINTS:2)) shape2d_free(&q);
+	return q;
 }
 
 Shape2D shape2d_inset(const Shape2D *p,float distance){

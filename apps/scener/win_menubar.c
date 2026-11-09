@@ -111,7 +111,7 @@ bool scener_create_primitive(scene_doc_t *doc, uint16_t id, vec3 ground_pos) {
     case ID_CREATE_BOX:      m = gen_box(1, 1, 1); lift = 0.5f; break;
     case ID_CREATE_SPHERE:   m = gen_sphere(0.5f, 16, 16); lift = 0.5f; break;
     case ID_CREATE_CYLINDER: m = gen_cylinder(0.5f, 1, 24); lift = 0.5f; break;
-    case ID_CREATE_CONE:     m = gen_cone(0.5f, 0, 1, 24); lift = 0.5f; break;
+    case ID_CREATE_CONE:     m = gen_cone(0.5f, 0, 1, 24, 1); lift = 0.5f; break;
     case ID_CREATE_TORUS:    m = gen_torus(0.4f, 0.15f, 24, 12); lift = 0.15f; break;
     case ID_CREATE_PRISM:    m = gen_prism(0.5f, 1, 6); lift = 0.5f; break;
     case ID_CREATE_CAPSULE:  m = gen_capsule(0.3f, 0.6f, 12, 12); lift = 0.3f; break;

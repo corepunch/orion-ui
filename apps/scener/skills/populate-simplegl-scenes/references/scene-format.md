@@ -32,11 +32,11 @@ The complete supported element inventory is:
 | `<scene>` attributes | `ambient`, `background`, `up`, `convention`, `duration` |
 | Scene configuration | `<camera>`, `<pose>`, `<clip>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
 | Character rig parts | `<bone>`, `<hub>`, `<spine>`, `<tail>`, `<limb>`, `<collarbone>`, `<palm>`, `<ankle>`, `<digit>` |
-| Transformable content | `<box>`, `<rect>`, `<rounded-rect>`, `<circle>`, `<ellipse>`, `<star>`, `<rounded-box>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
+| Transformable content | `<box>`, `<rect>`, `<rounded-rect>`, `<circle>`, `<ellipse>`, `<star>`, `<shape>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
 | Wall cutters | `<bool-negative-box>`, `<bool-negative-arch>`, `<bool-negative-cylinder>` |
 | Mesh modifiers | `<taper>`, `<twist>`, `<bend>`, `<stretch>`, `<skew>`, `<array>`, `<extrude>`, `<bevel>`, `<mirror>`, `<noise>`, `<shell>` |
 | Expressions | `<let>` in `<scene>`, `<prefab>`, `<group>` and bones; `{expr}` in any attribute value |
-| Context-only children | `<camera><transform>`, `<camera><use-pose>`, `<pose><joint>`, `<pose><ik>`, `<clip><key>`, `<key><joint>`, `<key><ik>`, `<prefab><joint>`, `<prefab><ik>`, `<prefab><gait>`, `<prefab><layer>`, `<shape><v>`, `<prefab><attach>` |
+| Context-only children | `<shape><fillet>`, `<camera><transform>`, `<camera><use-pose>`, `<pose><joint>`, `<pose><ik>`, `<clip><key>`, `<key><joint>`, `<key><ik>`, `<prefab><joint>`, `<prefab><ik>`, `<prefab><gait>`, `<prefab><layer>`, `<shape><v>`, `<prefab><attach>` |
 
 Unknown elements produce an `unsupported XML element` error. Element names
 and attribute names are case-sensitive.
@@ -73,7 +73,7 @@ every problem with `file:line`:
 |------|----------|---------|
 | `element`, `attribute` | error | Unsupported element; attribute that no parser read (typo, or overridden as `color` beside `material`) |
 | `prefab`, `material` | error | Missing prefab file; material that is neither defined nor a preset; invalid prefab `up`/`front` |
-| `shape` | error | `<lathe>` or `<loft>` naming a `<shape>` that no scene or loaded prefab defines |
+| `shape` | error | `<lathe>` or `<loft>` naming a `<shape>` that no scene or loaded prefab defines; an extruded `<shape>` line without `<shell>`, a misplaced `<shell>`, or modifiers that leave no valid solid |
 | `expression` | error | `{expr}` or `<let>` that does not evaluate |
 | `light` | error | No `<light>`/`<sun>`, or a shadow-casting light sealed in a closed shadow-casting mesh |
 | `floating` | warning | A unit above the ground plane whose bounds touch no other unit (gap over 0.5 cm) |
@@ -393,14 +393,17 @@ ref="...">`. Declare it as a top-level scene child.
 
 ### `<shape>`
 
-Defines a reusable 2D profile for `<lathe>` and `<loft>`. The profile is
-constructed in the XY plane as a sequence of `(x, y)` vertices. Shapes may
-appear at the top level of a scene or prefab file; use them to model
-cross-sections and sweep paths that can be shared by many objects.
+A line or outline in the XY plane, given as a sequence of `(x, y)` vertices.
+With an `id` it is a reusable profile for `<lathe>` and `<loft>`. With an
+`<extrude>` child it also renders where it stands, through its
+[modifier stack](#shape-modifier-stack), and takes the
+[common attributes](#common-attributes) (`pos`, `rot`, `material`, …) like any
+shape. Shapes may appear at the top level of a scene or prefab file and inside
+groups.
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `id`      | string | (required) | Unique name, referenced by lathe/loft |
+| `id`      | string | (none) | Unique name, referenced by lathe/loft; required for a shape used only as a definition |
 | `closed`  | int | 0 | 1 if the profile closes back to its first point (for loft cross-sections) |
 
 Child `<v>` elements define vertices in order. Each vertex is a single point on
@@ -465,6 +468,38 @@ Example — a rectangular loft path in XZ (the shape's Y becomes world Z):
 </shape>
 ```
 
+#### Shape modifier stack
+
+After its `<v>` points, a shape takes modifiers that turn it, step by step and
+in document order, into a solid:
+
+| Modifier | Turns | Attributes |
+|----------|-------|------------|
+| `<fillet>` | the current outline into one with rounded corners. On a line it rounds only the inner bends; on a perimeter or a shelled slab, every corner. A corner on a short edge gets a smaller radius so arcs never overlap | `radius` (cm), `segments` per arc (1–16, default 6) |
+| `<extrude>` | a line into a face, or a perimeter into a solid, along local Z, centred | `amount` (cm) |
+| `<shell>` | an extruded line's face into a solid of that thickness. It grows to the left of the line's direction; a negative amount grows to the right. Only for lines | `amount` (cm) |
+| `<bevel>` | the solid's two extruded rims into rounded ones; must stay below half the extrusion depth and the corner radius | `amount` (cm), `bevelSegments` (1–8) |
+
+`<extrude>` is required, `<shell>` is required for a line (`closed="0"`), and
+`<fillet>` may appear before or after either. Any modifier after `<bevel>`
+(`<taper>`, `<bend>`, `<array>`, …) deforms the finished mesh. Walls and roofs
+of any silhouette come out of one line this way. A roof is its gable line, the
+underside drawn left to right, extruded across the building, shelled to its
+thickness, with every edge rounded:
+
+```xml
+<shape closed="0" pos="0 108 0" material="roof_blue">
+  <v x="-130" y="0"/><v x="0" y="80"/><v x="130" y="0"/>
+  <extrude amount="210"/>
+  <shell amount="22"/>
+  <fillet radius="10"/>
+  <bevel amount="8" bevelSegments="4"/>
+</shape>
+```
+
+A `<fillet>` before `<shell>` instead rounds only the ridge, keeping the eave
+edges sharp.
+
 ### `<light>`
 
 Point light source with distance attenuation.
@@ -528,7 +563,7 @@ Example: moon through a back-wall window at 45° down and 30° horizontal offset
 
 ## Shape objects
 
-All shapes share common attributes plus shape-specific ones. Shapes may contain modifier child elements. The supported shapes include `box`, `rect`, `rounded-rect`, `circle`, `ellipse`, `star`, `rounded-box`, `screen`, `sphere`, `cylinder`, `arch`, `prism`, `cone`/`pyramid`, `torus`, `lathe`, `loft`, and `wall`.
+All shapes share common attributes plus shape-specific ones. Shapes may contain modifier child elements. The supported shapes include `box`, `rect`, `rounded-rect`, `circle`, `ellipse`, `star`, `shape`, `screen`, `sphere`, `cylinder`, `arch`, `prism`, `cone`/`pyramid`, `torus`, `lathe`, `loft`, and `wall`.
 
 ### Common attributes
 
@@ -609,19 +644,6 @@ especially relevant to sharp star points.
   <bevel amount="0.1"/>
 </star>
 ```
-
-### `<rounded-box>`
-
-A legacy single-element rounded solid. New scenes should use
-`<rounded-rect>` with child `<extrude>` and `<bevel>` instead.
-
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `size` | vec3 | 1 1 1 | Width, height, depth in cm |
-| `radius` | float | 0 | XY corner radius in cm, clamped to half the smaller side |
-| `segments` | int | 8 | Segments per corner, clamped to 2–32 |
-| `bevel` | float | 0 | Rounded front and back edge radius in cm; must be smaller than the corner radius and half the depth |
-| `bevelSegments` | int | 4 | Segments per bevel arc, clamped to 1–8 |
 
 ### `<screen>`
 
@@ -1207,6 +1229,10 @@ Regular N-sided prism along Y (flat-shaded).
 ### `<cone>` / `<pyramid>`
 
 Truncated cone (frustum) along Y. `<pyramid>` is a `4`-sided default.
+A cone's sides are smooth-shaded with normals that follow its slope, so a
+low-sided cone still reads round; a pyramid keeps flat facets. `smooth`
+overrides either: `smooth="0"` gives a faceted low-poly cone (a pine tier),
+`smooth="1"` a rounded pyramid.
 
 | Attribute   | Type  | Default | Description |
 |-------------|-------|---------|-------------|
@@ -1214,6 +1240,7 @@ Truncated cone (frustum) along Y. `<pyramid>` is a `4`-sided default.
 | `radiusTop` | float | 0       | Top radius in cm (0 = pointed) |
 | `height`    | float | 100     | Height along Y in cm |
 | `sides`     | int   | 24/4    | Radial segments (24 for cone, 4 for pyramid) |
+| `smooth`    | int   | 1/0     | Smooth side normals (1 for cone, 0 for pyramid) |
 
 ### `<torus>`
 
