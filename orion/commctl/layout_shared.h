@@ -129,6 +129,13 @@ static inline void layout_measure_empty(window_t *win, layout_measure_t *m) {
   if (layout_definite_h(win)) m->desired_h = win->layout.layout_fixed_h;
 }
 
+// Spacing, padding and direction from the style sheet (layout_style.c). A StackView's gap
+// runs along its main axis; a GridView's and FlowView's is one value, `row-gap`
+// (the first of `gap: 6px 10px`).
+typedef enum { LAYOUT_GAP_MAIN, LAYOUT_GAP_ROW } layout_gap_axis_t;
+bool layout_style_resolve(window_t *win, const char *element, layout_gap_axis_t gap_axis);
+void layout_style_refresh(window_t *win, const char *element, layout_gap_axis_t gap_axis);
+
 // Its box's shadow and outline paint beyond its frame.
 static inline void layout_update_ink(window_t *win, theme_part_t part) {
   win->ink_overflow = theme_ink_overflow_in(win, part, CTRL_NORMAL);

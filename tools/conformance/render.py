@@ -18,7 +18,7 @@ import xml.etree.ElementTree as ET
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 FIXTURES = os.path.join(ROOT, "tests", "conformance")
 CONTAINERS = {"StackView", "GridView", "FlowView"}
-DEFAULT_SPACING = 4   # FL_DEFAULT_SPACING in orion/commctl/form_loader.c
+DEFAULT_SPACING = 4   # FL_DEFAULT_SPACING in orion/commctl/form_loader.c: the form root's gap
 
 
 def chrome():
@@ -43,30 +43,50 @@ def padding(value):
   return f"{v[1]}px {v[2]}px {v[3]}px {v[0]}px"
 
 
-def layout_style(node, root=False):
+def layout_style(node, root=False, cell=None):
+  """Inline style of a node. Orion attributes are inline styles: what the form leaves out
+  (spacing, padding, orientation) is the style sheet's to decide, and the page's
+  user-agent rule below stands for base.css."""
   s = []
-  horizontal = node.get("orientation") == "horizontal"
   if root or node.tag in CONTAINERS:
-    s.append("display:flex")
-    s.append(f"flex-direction:{'row' if horizontal else 'column'}")
-    s.append(f"gap:{int(node.get('spacing', DEFAULT_SPACING))}px")
+    columns = [c for c in node if c.tag == "Column"] if node.tag == "GridView" else []
+    if columns:
+      s.append("display:grid")
+      s.append("grid-template-columns:" + " ".join("auto" if c.get("width") == "auto" else "1fr" for c in columns))
+    else:
+      s.append("display:flex")
+      if root or node.get("orientation"):
+        s.append(f"flex-direction:{'row' if node.get('orientation') == 'horizontal' else 'column'}")
+    if root: s.append(f"gap:{int(node.get('spacing', DEFAULT_SPACING))}px")
+    elif node.get("spacing") is not None: s.append(f"gap:{int(node.get('spacing'))}px")
     if node.get("padding"): s.append(f"padding:{padding(node.get('padding'))}")
+    elif root: s.append("padding:0px")
   has_children = len(list(node)) > 0
   if root or not has_children:   # a container's own size comes from its children
     if node.get("width"): s.append(f"width:{int(node.get('width'))}px")
     if node.get("height"): s.append(f"height:{int(node.get('height'))}px")
+  if cell: s.append(f"grid-area:{cell[0] + 1}/{cell[1] + 1}")
   if "flexspace" in (node.get("flags") or ""): s.append("flex:1 1 0")
   elif not root: s.append("flex:none")
   return ";".join(s)
 
 
-def element(node, depth):
+def grid_cells(node):
+  """A GridView's columns hold its cells top to bottom; the grid places each in its row and column."""
+  columns = [c for c in node if c.tag == "Column"]
+  return [(cell, r, c) for c, col in enumerate(columns) for r, cell in enumerate(col)]
+
+
+def element(node, depth, cell=None):
   pad = "  " * depth
   attrs = ""
   if node.get("name"): attrs += f' id="{html.escape(node.get("name"))}"'
   if node.get("class"): attrs += f' class="{html.escape(node.get("class"))}"'
-  attrs += f' style="{layout_style(node)}"'
-  inner = "".join(element(c, depth + 1) for c in node)
+  attrs += f' style="{layout_style(node, cell=cell)}"'
+  if node.tag == "GridView" and any(c.tag == "Column" for c in node):
+    inner = "".join(element(c, depth + 1, (r, col)) for c, r, col in grid_cells(node))
+  else:
+    inner = "".join(element(c, depth + 1) for c in node)
   text = html.escape(node.get("text", "")) if node.tag not in CONTAINERS else ""
   if inner: return f"{pad}<{node.tag}{attrs}>\n{inner}{pad}</{node.tag}>\n"
   return f"{pad}<{node.tag}{attrs}>{text}</{node.tag}>\n"
@@ -88,7 +108,8 @@ def page(orion_path):
   /* Orion's box model: borders inside the frame, no default margins. */
   html, body {{ margin: 0; background: transparent; }}
   * {{ box-sizing: border-box; min-width: 0; min-height: 0; }}
-  StackView, GridView, FlowView {{ display: flex; }}
+  /* base.css's container defaults, which spacing=, padding= and orientation= override. */
+  StackView, GridView, FlowView {{ display: flex; flex-direction: column; gap: 4px; padding: 0; }}
 </style>
 <link rel="stylesheet" href="{css}">
 </head>

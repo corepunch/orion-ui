@@ -141,6 +141,7 @@ result_t win_stack(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       win->layout.layout_spacing = 4;
       win->layout.layout_padding = (irect16_t){0, 0, 0, 0};
       win->layout.layout_margin = (irect16_t){0, 0, 0, 0};
+      win->layout.layout_sheet = LAYOUT_SHEET_ALL;
       win->layout.h_align = LAYOUT_ALIGN_STRETCH;
       win->layout.v_align = LAYOUT_ALIGN_STRETCH;
       
@@ -157,6 +158,7 @@ result_t win_stack(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             win->layout.layout_spacing = cd->layout_spacing;
           win->layout.layout_padding = cd->padding;
           win->layout.layout_margin = cd->margin;
+          win->layout.layout_sheet = cd->layout_sheet;
         } else {
           // Parse as legacy layout_view_config_t* (from direct create_window)
           const layout_view_config_t *cfg = (const layout_view_config_t *)lparam;
@@ -166,8 +168,10 @@ result_t win_stack(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             win->layout.layout_spacing = cfg->spacing;
           win->layout.layout_padding = cfg->padding;
           win->layout.layout_margin = cfg->margin;
+          win->layout.layout_sheet = cfg->spacing > 0 ? 0 : LAYOUT_SHEET_SPACING;
         }
       }
+      layout_style_resolve(win, "StackView", LAYOUT_GAP_MAIN);
       layout_update_ink(win, THEME_PART_STACK_VIEW);
       return true;
     }
@@ -202,6 +206,7 @@ result_t win_stack(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return true;
     case evThemeChanged:
       layout_update_ink(win, THEME_PART_STACK_VIEW);
+      layout_style_refresh(win, "StackView", LAYOUT_GAP_MAIN);
       return false;
     case evCommand:
     case evParentNotify:

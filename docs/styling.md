@@ -217,6 +217,46 @@ menus (measured before their window exists), free text (`Caption`, `Heading`
 and the rest) and elements drawn inside a control that are not the control
 itself (`Scrollbar`, `Tooltip`).
 
+## Layout
+
+A StackView, GridView or FlowView is a `div` with its own box and takes its
+spacing from CSS:
+
+```css
+StackView#summary { gap: 6px; padding: 10px 14px; background: var(--surface); }
+StackView.toolbar { flex-direction: row; gap: 8px; }
+```
+
+| Property | Container | Notes |
+|---|---|---|
+| `gap` | all | A StackView's is its main axis: `column-gap` in a row, `row-gap` in a column (`gap: 12px 7px` is row, then column). GridView and FlowView use one gap, the first value. |
+| `row-gap`, `column-gap` | all | Longhands, as in a browser. |
+| `padding` | all | 1 to 4 values, or `padding-left` and the other sides. |
+| `flex-direction` | StackView | `row` or `column` (the default). It is `orientation=` in a form. |
+
+`flags="flexspace"` is `flex: 1`, `h-align`/`v-align` are `align-items` and
+`margin` is not a layout property yet: the box painter reads it as an inset of
+the painted box, so it is left as it is.
+
+**Precedence.** A form's `spacing=`, `padding=` and `orientation=` are inline
+styles: what the form declares wins over the sheet, and the sheet decides what
+it leaves out. `base.css` supplies Orion's defaults (`gap: 4px; padding: 0;
+flex-direction: column`), so a form that says nothing keeps its look.
+`spacing="0"` is a declared zero and beats a `gap: 20px` rule. A definition
+written by hand in C (a `form_ctrl_def_t` literal) and `window_set_layout()`
+declare their values and the sheet never touches them; a StackView made with
+`create_window()` alone takes the sheet (a GridView or FlowView made that way keeps
+its zero gap). `orionc` and the form loader record
+what a form leaves out in `form_ctrl_def_t.layout_sheet`, and each container
+reads the sheet when it is created and again on `evThemeChanged`
+(`window_set_style()`, a theme switch), then lays out anew.
+
+Orion lays out as Chrome's flexbox does for the same sheet:
+`tests/conformance/layout/` renders nested stacks, `flex: 1` children,
+attributes over rules and a GridView (`grid-template-columns: auto 1fr`) in
+both ([conformance fixtures](../tests/conformance/README.md)). A grid cell with
+a declared size keeps it, as a stack child does; others stretch to their column.
+
 ## Type
 
 A font is a CSS selector: `draw_text("TableView::row", ...)` draws with the

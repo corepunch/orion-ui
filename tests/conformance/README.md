@@ -13,7 +13,10 @@ compares the two.
 
 `tools/conformance/render.py` writes the `.html` and `.png`: forms and stacks
 become flexboxes, `width`/`height` on an empty container its size, `name` the
-`id`, `class` the class. Run it after adding or changing a fixture:
+`id`, `class` the class. `spacing`, `padding` and `orientation` become inline
+styles only where the form declares them; the sheet decides the rest, over a rule
+standing for `base.css`'s container defaults. A GridView with `<Column>`s becomes
+a CSS grid (`width="auto"` columns `auto`, the others `1fr`). Run it after adding or changing a fixture:
 
 ```
 python3 tools/conformance/render.py tests/conformance/boxes/shadow.orion

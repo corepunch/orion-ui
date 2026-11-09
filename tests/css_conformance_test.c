@@ -169,6 +169,7 @@ int main(void) {
   test_env_init();
   set_theme(THEME_MODERN);
   test_fixtures("boxes");
+  test_fixtures("layout");
   test_graphics_shutdown();
   TEST_END();
 }

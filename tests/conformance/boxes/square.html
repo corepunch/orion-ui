@@ -7,19 +7,20 @@
   /* Orion's box model: borders inside the frame, no default margins. */
   html, body { margin: 0; background: transparent; }
   * { box-sizing: border-box; min-width: 0; min-height: 0; }
-  StackView, GridView, FlowView { display: flex; }
+  /* base.css's container defaults, which spacing=, padding= and orientation= override. */
+  StackView, GridView, FlowView { display: flex; flex-direction: column; gap: 4px; padding: 0; }
 </style>
 <link rel="stylesheet" href="square.css">
 </head>
 <body>
   <div style="display:flex;flex-direction:column;gap:0px;padding:0px;width:352px;height:96px">
     <StackView id="page" style="display:flex;flex-direction:row;gap:16px;padding:16px;flex:1 1 0">
-      <StackView id="fill" style="display:flex;flex-direction:column;gap:4px;width:48px;height:48px;flex:none"></StackView>
-      <StackView id="framed" style="display:flex;flex-direction:column;gap:4px;width:48px;height:48px;flex:none"></StackView>
-      <StackView id="rule" style="display:flex;flex-direction:column;gap:4px;width:48px;height:48px;flex:none"></StackView>
-      <StackView id="lifted" style="display:flex;flex-direction:column;gap:4px;width:48px;height:48px;flex:none"></StackView>
-      <StackView id="well" style="display:flex;flex-direction:column;gap:4px;width:48px;height:48px;flex:none"></StackView>
-      <StackView id="tall" style="display:flex;flex-direction:column;gap:4px;width:24px;height:64px;flex:none"></StackView>
+      <StackView id="fill" style="display:flex;width:48px;height:48px;flex:none"></StackView>
+      <StackView id="framed" style="display:flex;width:48px;height:48px;flex:none"></StackView>
+      <StackView id="rule" style="display:flex;width:48px;height:48px;flex:none"></StackView>
+      <StackView id="lifted" style="display:flex;width:48px;height:48px;flex:none"></StackView>
+      <StackView id="well" style="display:flex;width:48px;height:48px;flex:none"></StackView>
+      <StackView id="tall" style="display:flex;width:24px;height:64px;flex:none"></StackView>
     </StackView>
   </div>
 </body>

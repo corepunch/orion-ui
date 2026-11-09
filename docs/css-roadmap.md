@@ -85,9 +85,19 @@ CSS so the knowledge transfers:
 | `FlowView` | `display: flex; flex-wrap: wrap` |
 | `h-align`, `v-align` | `justify-content`, `align-items` |
 
-Layout properties in the sheet (`StackView#summary { gap: 6px; padding: 10px
-14px }`) let a designer move spacing out of `.orion` attributes. Measuring stays
-in C.
+Done: layout properties in the sheet (`StackView#summary { gap: 6px; padding:
+10px 14px }`) let a designer move spacing out of `.orion` attributes. Containers
+read `gap` (`row-gap`/`column-gap`), `padding` and, for a StackView,
+`flex-direction` from their computed style; a form's `spacing=`, `padding=` and
+`orientation=` are inline styles and win, and `base.css` holds Orion's defaults
+([styling.md](styling.md#layout)). `tests/conformance/layout/` checks stacks,
+`flex: 1`, overrides and a grid against Chrome. Measuring stays in C.
+
+Still open: `margin` (the box painter reads it as an inset of the painted box,
+so it is not a layout margin yet), separate row and column gaps in GridView and
+FlowView (one gap today), `h-align`/`v-align` as `align-items`/`justify-content`
+in the sheet, `flex-wrap` and `flex-direction` for FlowView, and
+`flex-grow` and `flex-basis` beyond `flexspace`.
 
 ## 6. Where Orion should not copy the web
 
@@ -107,7 +117,7 @@ Done: style queries replaced `theme_t`'s metrics and vtable; fonts are
 selectors with text properties; the VGA font gave way to IBM Plex Mono; apps
 link their own sheets and every control is styled by its `#id` and `.class`.
 
-1. Browser conformance fixtures: boxes done; text placement and size next, then layout.
-2. Layout properties in the sheet.
+1. Browser conformance fixtures: boxes and layout done; text placement and size next.
+2. Layout properties in the sheet: done for gap, padding and direction; margin and the alignment properties remain.
 3. Git Client's Run page (rail, process table, console, ⌘K) built from these,
    with its behaviour in Lua.

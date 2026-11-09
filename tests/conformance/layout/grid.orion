@@ -1,0 +1,20 @@
+<orion>
+  <forms>
+    <form name="fixture" width="320" height="112" padding="0" spacing="0">
+      <StackView name="page" flags="flexspace">
+        <GridView name="fields">
+          <Column name="labels" width="auto">
+            <StackView name="l1" width="40" height="20" />
+            <StackView name="l2" width="64" height="20" />
+            <StackView name="l3" width="48" height="20" />
+          </Column>
+          <Column name="inputs">
+            <StackView name="i1" height="20" />
+            <StackView name="i2" height="20" />
+            <StackView name="i3" height="20" />
+          </Column>
+        </GridView>
+      </StackView>
+    </form>
+  </forms>
+</orion>

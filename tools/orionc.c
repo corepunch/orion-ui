@@ -1208,16 +1208,20 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
       target_msg = eq(taction, "insert") ? "tvInsertRecord" : eq(taction, "edit") ? "tvEditRecord" : eq(taction, "delete") ? "tvDeleteRecord" : NULL;
       if (!target_msg) { fprintf(stderr, "orionc: control '%s': unknown action '%s' for target '%s' (insert, edit, delete)\n", nz(a.v[A_NAME], ""), nz(taction, ""), target); target_msg = "0"; snprintf(target_id, sizeof(target_id), "0"); }
     }
+    // Spacing, padding and orientation the form leaves out come from the style sheet (LAYOUT_SHEET_*).
+    char *padding_attr = attrs_first(c, "padding", "layout_padding");
+    unsigned sheet_mask = (a.v[A_SPACING] ? 0 : 1u) | (padding_attr ? 0 : 2u) | (a.v[A_ORIENT] || strstr(flags, "WINDOW_STACK_HORIZONTAL") ? 0 : 4u);
+    free(padding_attr);
     char *css_class = attr(c, "class"), css_classq[ORIONC_STRING_SIZE] = "NULL";
     if (css_class && *css_class) cstr(css_classq, sizeof(css_classq), css_class);
     free(css_class);
-    OUT("  { %s, %s, { %d, %d }, %s, %s, %s, %u, %u, NULL, 0, %s, { %d, %d, %d, %d }, { %d, %d, %d, %d }, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s },\n",
+    OUT("  { %s, %s, { %d, %d }, %s, %s, %s, %u, %u, NULL, 0, %s, { %d, %d, %d, %d }, { %d, %d, %d, %d }, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %u },\n",
         classq, id, sz.w, sz.h, flags, textq, nameq,
         (unsigned)enum_parse_token(a.v[A_HA], kAlignH, ARRAY_LEN(kAlignH), 0),
         (unsigned)enum_parse_token(a.v[A_VA], kAlignV, ARRAY_LEN(kAlignV), 0),
         spacing, pad.x, pad.y, pad.w, pad.h, mar.x, mar.y, mar.w, mar.h,
         nz(parent_id, "0"), font, a.v[A_FONT] ? "true" : "false", color, a.v[A_COLOR] ? "true" : "false", lparam, context_items, context_count, sourceq, placeholderq,
-        target_id, target_msg, iconq, tooltipq, css_classq);
+        target_id, target_msg, iconq, tooltipq, css_classq, sheet_mask);
     free(target); free(taction); free(icon); free(tooltip);
     (*count)++;
     emit_controls_ex(f, c, form, id, bindings, count, btn_ids);

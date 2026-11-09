@@ -7,17 +7,18 @@
   /* Orion's box model: borders inside the frame, no default margins. */
   html, body { margin: 0; background: transparent; }
   * { box-sizing: border-box; min-width: 0; min-height: 0; }
-  StackView, GridView, FlowView { display: flex; }
+  /* base.css's container defaults, which spacing=, padding= and orientation= override. */
+  StackView, GridView, FlowView { display: flex; flex-direction: column; gap: 4px; padding: 0; }
 </style>
 <link rel="stylesheet" href="radius.css">
 </head>
 <body>
   <div style="display:flex;flex-direction:column;gap:0px;padding:0px;width:344px;height:88px">
     <StackView id="page" style="display:flex;flex-direction:row;gap:16px;padding:16px;flex:1 1 0">
-      <StackView id="small" style="display:flex;flex-direction:column;gap:4px;width:56px;height:56px;flex:none"></StackView>
-      <StackView id="pill" style="display:flex;flex-direction:column;gap:4px;width:96px;height:32px;flex:none"></StackView>
-      <StackView id="circle" style="display:flex;flex-direction:column;gap:4px;width:56px;height:56px;flex:none"></StackView>
-      <StackView id="top" style="display:flex;flex-direction:column;gap:4px;width:56px;height:56px;flex:none"></StackView>
+      <StackView id="small" style="display:flex;width:56px;height:56px;flex:none"></StackView>
+      <StackView id="pill" style="display:flex;width:96px;height:32px;flex:none"></StackView>
+      <StackView id="circle" style="display:flex;width:56px;height:56px;flex:none"></StackView>
+      <StackView id="top" style="display:flex;width:56px;height:56px;flex:none"></StackView>
     </StackView>
   </div>
 </body>

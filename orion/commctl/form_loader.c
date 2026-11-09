@@ -660,6 +660,9 @@ static void fl_control(fl_build_t *b, int i, uint32_t parent) {
   d->v_align = (uint8_t)FL_ENUM(fl_attrs_first(lib, c, "v-align", "v_align"), kAlignV, 0);
   d->layout_spacing = fl_byte(spacing, FL_DEFAULT_SPACING);
   fl_rect(lib, c, "padding", "layout_padding", &d->padding);
+  // What the form does not declare, the style sheet decides (gap, padding, flex-direction).
+  d->layout_sheet = (spacing ? 0 : LAYOUT_SHEET_SPACING) | (fl_attrs_first(lib, c, "padding", "layout_padding") ? 0 : LAYOUT_SHEET_PADDING) |
+                    (orientation || (flags & WINDOW_STACK_HORIZONTAL) ? 0 : LAYOUT_SHEET_ORIENT);
   fl_rect(lib, c, "margin", "layout_margin", &d->margin);
   d->parent = parent;
   // font= picks the label's class: caption (or the older smallest), heading, title, display.

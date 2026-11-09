@@ -1,0 +1,7 @@
+/* flexspace is flex: 1; the gaps and padding are the sheet's. */
+#page { gap: 8px; padding: 12px; background: #f1f5f9; }
+#bar  { flex-direction: row; gap: 10px; background: #cbd5e1; }
+#body { flex-direction: row; gap: 4px; padding: 6px; background: #fef9c3; }
+#left { background: #0f766e; } #grow { background: #f97316; } #right { background: #6366f1; }
+#side { background: #be123c; } #fill { background: #10b981; }
+#foot { background: #334155; }

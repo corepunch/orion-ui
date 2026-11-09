@@ -1,0 +1,7 @@
+/* Spacing and direction come from the sheet; the form declares none of them. */
+#outer  { gap: 6px; padding: 10px 14px; background: #e2e8f0; }
+#head   { background: #0f766e; }
+#row    { flex-direction: row; gap: 12px; padding: 4px 8px 4px 2px; background: #fef9c3; }
+#column { gap: 3px; padding: 5px; background: #dbeafe; }
+#a { background: #be123c; } #b { background: #1d4ed8; } #c { background: #854d0e; }
+#d { background: #7c3aed; } #e { background: #0ea5e9; }

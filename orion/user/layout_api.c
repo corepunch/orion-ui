@@ -137,6 +137,7 @@ void window_set_layout(window_t *win, flags_t orientation, int spacing, irect16_
   win->flags = (win->flags & ~WINDOW_STACK_HORIZONTAL) | (orientation & WINDOW_STACK_HORIZONTAL);
   win->layout.layout_spacing = (uint8_t)spacing;
   win->layout.layout_padding = padding;
+  win->layout.layout_sheet = 0;   // declared in code: the style sheet no longer supplies them
   window_layout_sync(win);
 }
 

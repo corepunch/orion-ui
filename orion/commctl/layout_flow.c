@@ -176,6 +176,7 @@ result_t win_flow(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       win->layout.layout_spacing = 0;
       win->layout.layout_padding = (irect16_t){0, 0, 0, 0};
       win->layout.layout_margin = (irect16_t){0, 0, 0, 0};
+      win->layout.layout_sheet = 0;   // made in code: spacing 0 and no padding until a form or the code says otherwise
       
       if (lparam) {
         const form_ctrl_def_t *cd = (const form_ctrl_def_t *)lparam;
@@ -188,6 +189,7 @@ result_t win_flow(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             win->layout.layout_spacing = cd->layout_spacing;
           win->layout.layout_padding = cd->padding;
           win->layout.layout_margin = cd->margin;
+          win->layout.layout_sheet = cd->layout_sheet;
         } else {
           const layout_view_config_t *cfg = (const layout_view_config_t *)lparam;
           if (cfg->orientation & WINDOW_STACK_HORIZONTAL)
@@ -198,8 +200,10 @@ result_t win_flow(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
             win->layout.layout_spacing = cfg->spacing;
           win->layout.layout_padding = cfg->padding;
           win->layout.layout_margin = cfg->margin;
+          win->layout.layout_sheet = 0;   // the config declares spacing, padding and margin
         }
       }
+      layout_style_resolve(win, "FlowView", LAYOUT_GAP_ROW);
       layout_update_ink(win, THEME_PART_FLOW_VIEW);
       return true;
     }
@@ -234,6 +238,7 @@ result_t win_flow(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return true;
     case evThemeChanged:
       layout_update_ink(win, THEME_PART_FLOW_VIEW);
+      layout_style_refresh(win, "FlowView", LAYOUT_GAP_ROW);
       return false;
     case evParentNotify:
       return win->parent ? send_message(win->parent, msg, wparam, lparam) : false;

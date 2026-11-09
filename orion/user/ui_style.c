@@ -302,6 +302,22 @@ static bool ui_side_value(style_sheet_t *sheet, style_query_t q, const char *pro
   return true;
 }
 
+// row-gap and column-gap, from the longhand or `gap: row column` (one value is both).
+static bool ui_gap_value(style_sheet_t *sheet, style_query_t q, const char *property, char *out, size_t n) {
+  bool column = !strcmp(property, "column-gap");
+  if (!column && strcmp(property, "row-gap")) return false;
+  char longv[256], shortv[256];
+  long long_rank, short_rank;
+  bool has_long = style_value_ranked(sheet, q, property, longv, sizeof(longv), &long_rank);
+  bool has_short = style_value_ranked(sheet, q, "gap", shortv, sizeof(shortv), &short_rank);
+  if (has_long && (!has_short || long_rank >= short_rank)) { snprintf(out, n, "%s", longv); return true; }
+  if (!has_short) return false;
+  char *first = strtok(shortv, " \t"), *second = first ? strtok(NULL, " \t") : NULL;
+  if (!first) return false;
+  snprintf(out, n, "%s", column && second ? second : first);
+  return true;
+}
+
 bool ui_string(const char *selector, const char *property, char *out, size_t n) {
   ui_selector_t sel;
   ui_parse_selector(selector, &sel);
@@ -317,6 +333,7 @@ static bool ui_value(const char *selector, const char *property, char *out, size
   ui_parse_selector(selector, &sel);
   style_sheet_t *sheet = ui_scope_sheet(ui_scope_of(selector));
   if (sheet && ui_side_value(sheet, ui_query(&sel), property, out, n)) return true;
+  if (sheet && ui_gap_value(sheet, ui_query(&sel), property, out, n)) return true;
   if (sheet && style_value(sheet, ui_query(&sel), property, out, n)) return true;
   fprintf(stderr, "[ui_style] %s { %s } is not set by the style sheet\n", selector, property);
   fflush(stderr);

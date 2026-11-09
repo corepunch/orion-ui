@@ -1,0 +1,5 @@
+/* The label column is as wide as its widest cell; the input column takes the rest. */
+#page   { padding: 8px; background: #f1f5f9; }
+#fields { gap: 6px; padding: 4px 10px; background: #cbd5e1; }
+#l1, #l2, #l3 { background: #6366f1; }
+#i1, #i2, #i3 { background: #10b981; }

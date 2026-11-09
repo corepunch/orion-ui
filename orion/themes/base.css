@@ -32,6 +32,9 @@ Toolbar::button  { height: var(--toolbar-height); }
 TabView::tab     { height: var(--titlebar-height); min-width: 80px; padding-left: 16px; }
 TabView::pane    { --frame-width: 0; --pane-margin: 2px; }
 SplitView        { gap: 0; }
+/* Containers: spacing=, padding= and orientation= in a form override these, as inline styles would. */
+StackView, GridView, FlowView { gap: 4px; padding: 0; }
+StackView        { flex-direction: column; }
 Button           { padding-left: var(--control-padding); --press-offset: 0; text-shadow: none; }
 Menu::item       { --shape: capsule; }
 Card {

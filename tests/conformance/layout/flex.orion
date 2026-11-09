@@ -1,0 +1,18 @@
+<orion>
+  <forms>
+    <form name="fixture" width="320" height="120" padding="0" spacing="0">
+      <StackView name="page" flags="flexspace">
+        <StackView name="bar">
+          <StackView name="left" width="48" height="32" />
+          <StackView name="grow" height="32" flags="flexspace" />
+          <StackView name="right" width="64" height="32" />
+        </StackView>
+        <StackView name="body" flags="flexspace">
+          <StackView name="side" width="72" height="20" />
+          <StackView name="fill" flags="flexspace" />
+        </StackView>
+        <StackView name="foot" height="16" />
+      </StackView>
+    </form>
+  </forms>
+</orion>

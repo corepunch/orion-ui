@@ -1,0 +1,20 @@
+<orion>
+  <forms>
+    <form name="fixture" width="320" height="168" padding="0" spacing="0">
+      <StackView name="page" flags="flexspace" spacing="10" padding="10">
+        <StackView name="sheet">
+          <StackView name="s1" width="50" height="20" />
+          <StackView name="s2" width="50" height="20" />
+        </StackView>
+        <StackView name="declared" spacing="2" padding="3 6">
+          <StackView name="d1" width="50" height="20" />
+          <StackView name="d2" width="50" height="20" />
+        </StackView>
+        <StackView name="zero" spacing="0" padding="0" orientation="vertical">
+          <StackView name="z1" width="50" height="20" />
+          <StackView name="z2" width="50" height="20" />
+        </StackView>
+      </StackView>
+    </form>
+  </forms>
+</orion>

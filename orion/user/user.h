@@ -92,7 +92,16 @@ typedef struct layout_s {
   int16_t   layout_fixed_h;  // declarative height hint used by auto-layout
   irect16_t layout_padding;  // inner padding for auto-layout containers
   irect16_t layout_margin;   // outer margin when nested inside a layout container
+  uint8_t   layout_sheet;    // LAYOUT_SHEET_*: the values a container takes from its style sheet
 } layout_t;
+
+// A container's spacing, padding and orientation come from its style sheet (gap, padding,
+// flex-direction) unless its form or code declares them: declared values win, as an
+// inline style beats a rule.
+#define LAYOUT_SHEET_SPACING (1u << 0)
+#define LAYOUT_SHEET_PADDING (1u << 1)
+#define LAYOUT_SHEET_ORIENT  (1u << 2)
+#define LAYOUT_SHEET_ALL     (LAYOUT_SHEET_SPACING | LAYOUT_SHEET_PADDING | LAYOUT_SHEET_ORIENT)
 
 // A fixed-size-tile bitmap strip, analogous to WinAPI HIMAGELIST / TB_ADDBITMAP.
 // Icons are indexed 0..N left-to-right then top-to-bottom.
@@ -284,6 +293,7 @@ typedef struct form_ctrl_def_s {
   const char       *icon;    // Button / Badge: SVG icon name drawn before the text
   const char       *tooltip; // Button: tooltip text (translated through the string catalog)
   const char       *style_class; // CSS classes (class="compact muted"); the name is the #id
+  uint8_t           layout_sheet; // LAYOUT_SHEET_*: spacing, padding, orientation the form leaves to the style sheet
 } form_ctrl_def_t;
 
 // Describes a complete form (window + children) as a serializable definition

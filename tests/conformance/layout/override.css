@@ -1,0 +1,5 @@
+/* Attributes win over the sheet: #declared and #zero state their spacing, padding and
+   orientation, so their rules do not apply; #sheet states none and takes them. */
+#page     { background: #e2e8f0; }
+#sheet, #declared, #zero { flex-direction: row; gap: 20px; padding: 14px; background: #fef9c3; }
+#s1, #d1, #z1 { background: #0f766e; } #s2, #d2, #z2 { background: #be123c; }
