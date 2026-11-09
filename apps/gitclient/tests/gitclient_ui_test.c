@@ -792,7 +792,7 @@ void test_activitybar_navigation(void) {
   toolbar_state_t *tb = toolbar_get_state(bar);
   ASSERT_EQUAL(tb->orientation, TOOLBAR_VERTICAL);
   ASSERT_EQUAL(tb->btn_size, 0);
-  ASSERT_EQUAL(toolbar_effective_bsz(bar), get_theme()->toolbar.button_size);
+  ASSERT_EQUAL(toolbar_effective_bsz(bar), ui_px("Toolbar::button", "height"));
   ASSERT_EQUAL(tb->item_count, 4);
   ASSERT_STR_EQUAL(tb->items[0].checked_icon, "gc-nav-overview-fill");
   ASSERT_STR_EQUAL(tb->items[1].checked_icon, "gc-nav-changes-fill");
@@ -989,7 +989,7 @@ static void test_gitclient_pane_layout(void) {
   window_t *left = page_pane_at(changes, 0), *right = page_pane_at(changes, 1);
   ASSERT_EQUAL(left->parent->id, ID_CHANGES_PAGE_CHANGES_SPLIT);
   ASSERT_EQUAL(splitview_get_left(left->parent), left);
-  int margin = get_theme()->tab.pane_margin;
+  int margin = ui_px("TabView::pane", "--pane-margin");
   int left_width = left->frame.w + 2 * margin, right_width = right->frame.w + 2 * margin;
   ASSERT_TRUE(abs(left_width * 10 - (left_width + right_width) * 3) <= 10);
   window_t *panel = get_window_item(root, ID_CHANGES_PAGE_CHANGES_PANEL);

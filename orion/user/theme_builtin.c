@@ -10,6 +10,7 @@
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
+#include <orion/user/style.h>
 #include "orion/themes/modern_css.h"
 #include "orion/themes/navy_css.h"
 #include "orion/themes/amber_css.h"
@@ -46,11 +47,11 @@ static void modern_draw_statusbar_text(irect16_t r, const char *text) {
 
 // Bevelled themes engrave the label and shift it while the button is down.
 static void modern_draw_button_label(irect16_t r, const char *text, ctrl_state_t state) {
-  const theme_t *theme = get_theme();
   bool pressed = (state & (CTRL_PRESSED | CTRL_SELECTED)) && !(state & CTRL_DISABLED);
-  if (theme->text_shadow && !pressed && !(state & CTRL_DISABLED))
+  if (ui_flag("Button", "text-shadow") && !pressed && !(state & CTRL_DISABLED))
     draw_text_small(text, r.x + TEXT_SHADOW_OFFSET, r.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
-  if (pressed) r = rect_offset(r, theme->control.press_icon_offset, theme->control.press_icon_offset);
+  int offset = ui_px("Button", "--press-offset");
+  if (pressed) r = rect_offset(r, offset, offset);
   draw_text_small(text, r.x, r.y, theme_css_foreground(THEME_PART_BUTTON, state));
 }
 
@@ -68,7 +69,7 @@ static void modern_draw_combobox(irect16_t r, const char *text, ctrl_state_t sta
   draw_theme_icon(THEME_ICON_ARROW_UPDOWN, arrow.x, arrow.y, icon_size, foreground);
 }
 
-// What the sheets do not set yet: tooltip, balloon, slider, compact toolbar and card material geometry.
+// The callbacks every built-in theme shares; everything else is in its sheet.
 static const theme_t k_modern_template = {
   .style                  = THEME_MODERN,
   .name                   = "Modern",
@@ -80,32 +81,24 @@ static const theme_t k_modern_template = {
   .draw_part              = theme_css_draw_part,
   .draw_window_chrome     = modern_draw_window_chrome,
   .draw_statusbar_text    = modern_draw_statusbar_text,
-  .toolbar = {
-    .compact = { .padding = 2, .spacing = 6, .icon = TOOLBAR_COMPACT_ICON_SIZE, .menu_gap = 8 },
-    .grip_size = 12, .dropdown_arrow_w = 12,
-  },
-  .report = { .divider_width = 1 },
-  .tooltip = {
-    .corner_radius = 6, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,
-    .shadow = { .size = 10, .blur = 2, .offset = {0, 3}, .color = 0x78000000 },
-  },
-  .speechbubble = {
-    .corner_radius = 5, .tail_width = 10, .tail_length = 16,
-    .shadow = { .size = 2, .blur = 1, .offset = {1, 1}, .color = 0x40000000 },
-  },
-  .command_link = { .bullet_size = 6, .gap = 8, .padding_y = 2 },
-  .card = { .edge_width = 4, .ring_width = 1, .shadow_size = 1 },
-  .thumbnail = { .gap = 2 },
-  .slider = { .trough_inset = 3, .trough_radius = 9, .thumb_inset = 3, .thumb_length = 12, .thumb_radius = 6 },
-  .plastic = { .gloss = 1.0f, .rim = 0.55f, .lift = 0.10f, .shadow_color = 0xE0000000 },
-  .drag = { .shadow = { .blur = 6, .offset = {0, 8}, .color = 0xE0000000 } },
   .apply_palette          = theme_css_apply_palette,
 };
 
+static theme_t g_themes[THEME_LAST + 1];
+static bool g_built[THEME_LAST + 1];
+
+// The parsed sheets go stale when the application's sheet changes.
+void theme_reset_stylesheets(void) {
+  for (int i = 0; i <= THEME_LAST; i++) {
+    style_sheet_free(g_themes[i].sheet);
+    g_themes[i].sheet = NULL;
+  }
+}
+
 static theme_t *css_theme(theme_style_t style, const char *name, bool dark, theme_style_t counterpart,
                           const char *css, const char *origin) {
-  static theme_t themes[THEME_LAST + 1];
-  static bool built[THEME_LAST + 1];
+  theme_t *themes = g_themes;
+  bool *built = g_built;
   theme_t *slot = &themes[style];
   if (!built[style]) {
     built[style] = true;
@@ -116,7 +109,6 @@ static theme_t *css_theme(theme_style_t style, const char *name, bool dark, them
     slot->appearance.counterpart = counterpart;
     slot->css = css;
     slot->css_origin = origin;
-    theme_init_from_stylesheet(slot);
   }
   return slot;
 }
@@ -149,43 +141,21 @@ static const theme_t k_classic_template = {
   .draw_part              = theme_css_draw_part,
   .draw_window_chrome     = modern_draw_window_chrome,
   .draw_statusbar_text    = modern_draw_statusbar_text,
-  .toolbar = {
-    .compact = { .padding = 2, .spacing = 6, .icon = TOOLBAR_COMPACT_ICON_SIZE, .menu_gap = 8 },
-    .grip_size = 12, .dropdown_arrow_w = 12,
-  },
-  .report = { .divider_width = 1 },
-  .tooltip = {
-    .corner_radius = 4, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,
-    .shadow = { .size = 10, .blur = 2, .offset = {0, 3}, .color = 0x78000000 },
-  },
-  .speechbubble = {
-    .corner_radius = 5, .tail_width = 10, .tail_length = 16,
-    .shadow = { .size = 2, .blur = 1, .offset = {1, 1}, .color = 0x40000000 },
-  },
-  .command_link = { .bullet_size = 7, .gap = 6, .padding_y = 1 },
-  .card = { .edge_width = 4, .ring_width = 1, .shadow_size = 1 },
-  .thumbnail = { .gap = 2 },
-  .slider = { .trough_inset = 3, .trough_radius = 0, .thumb_inset = 2, .thumb_length = 12, .thumb_radius = 0 },
-  .plastic = { .gloss = 0.7f, .rim = 0.7f, .lift = 0.08f, .shadow_color = 0xE0000000 },
-  .drag = { .shadow = { .blur = 6, .offset = {0, 8}, .color = 0xE0000000 } },
   .apply_palette          = theme_css_apply_palette,
 };
 
 theme_t *theme_classic_instance(void) {
-  static theme_t classic;
-  static bool built;
-  if (!built) {
-    built = true;
-    classic = k_classic_template;
-    classic.style = THEME_CLASSIC;
-    classic.appearance.dark = true;
-    classic.appearance.counterpart = THEME_CLASSIC;
-    classic.css = k_classic_css;
-    classic.css_origin = "orion/themes/classic.css";
-    theme_init_from_stylesheet(&classic);
-    classic.field.padding_x = TEXTEDIT_PADDING_CAPSULE;   // bevelled fields keep the wide inset
+  theme_t *classic = &g_themes[THEME_CLASSIC];
+  if (!g_built[THEME_CLASSIC]) {
+    g_built[THEME_CLASSIC] = true;
+    *classic = k_classic_template;
+    classic->style = THEME_CLASSIC;
+    classic->appearance.dark = true;
+    classic->appearance.counterpart = THEME_CLASSIC;
+    classic->css = k_classic_css;
+    classic->css_origin = "orion/themes/classic.css";
   }
-  return &classic;
+  return classic;
 }
 
 theme_t *theme_metro_instance(void) {

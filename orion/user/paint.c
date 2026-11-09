@@ -29,8 +29,7 @@ bool window_lift_offset(const window_t *win, int *dx, int *dy) {
 
 // Paint the whole lifted frame before its non-client chrome and client content.
 void paint_lift_shadow(window_t *root, window_t *win) {
-  theme_t *theme = get_theme();
-  int blur = theme->drag.shadow.blur;
+  int blur = ui_shadow("Window", "--drag-shadow").blur;
   if (blur <= 0) return;
   int dx, dy;
   window_lift_offset(win, &dx, &dy);
@@ -39,8 +38,8 @@ void paint_lift_shadow(window_t *root, window_t *win) {
   set_viewport_for_fbo(root);
   set_projection(0, 0, root->frame.w, root->frame.h);
   set_scissor_fbo(root, R(0, 0, root->frame.w, root->frame.h));
-  draw_rect_shadow(frame, (float)theme->card.corner_radius, (float)blur,
-                   theme->drag.shadow.offset, theme->drag.shadow.color);
+  draw_rect_shadow(frame, (float)ui_radius("Card"), (float)blur,
+                   ui_shadow("Window", "--drag-shadow").offset, ui_shadow("Window", "--drag-shadow").color);
 }
 
 // Lifted windows were omitted from the in-place walk. Paint them above the root.

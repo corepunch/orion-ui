@@ -285,18 +285,18 @@ static void test_dock_menu(void) {
   send_message(menu, kMenuBarMessageSetMenus, ARRAY_LEN(menus), menus);
   ASSERT_TRUE(dock_window(menu, DOCK_TOP, DOCK_ALL_EDGES, DOCK_MENU, 0, 0));
   ASSERT_TRUE(dock_float(menu, R(100, 100, 120, 100)));
-  ASSERT_EQUAL(menu->frame.h, get_theme()->toolbar.grip_size + 3 * get_theme()->menubar.height);
+  ASSERT_EQUAL(menu->frame.h, ui_px("Toolbar::grip", "width") + 3 * ui_px("MenuBar", "height"));
   int x = window_screen_x(menu) + menu->frame.w / 2;
-  int y = window_screen_y(menu) + get_theme()->toolbar.grip_size + get_theme()->menubar.height + 4;
+  int y = window_screen_y(menu) + ui_px("Toolbar::grip", "width") + ui_px("MenuBar", "height") + 4;
   dock_mouse(kEventLeftButtonDown, x, y);
   window_t *popup = g_ui_runtime.captured;
   ASSERT_NOT_NULL(popup);
   ASSERT_EQUAL(popup->frame.x, window_screen_x(menu) + menu->frame.w);
-  ASSERT_EQUAL(popup->frame.y, window_screen_y(menu) + get_theme()->toolbar.grip_size + get_theme()->menubar.height);
+  ASSERT_EQUAL(popup->frame.y, window_screen_y(menu) + ui_px("Toolbar::grip", "width") + ui_px("MenuBar", "height"));
   ASSERT_TRUE(dock_set_side(menu, DOCK_TOP));
   ASSERT_FALSE(is_window(popup));
   ASSERT_NULL(g_ui_runtime.captured);
-  ASSERT_EQUAL(menu->frame.h, get_theme()->menubar.height);
+  ASSERT_EQUAL(menu->frame.h, ui_px("MenuBar", "height"));
   test_env_shutdown();
   PASS();
 }
@@ -492,7 +492,7 @@ static void test_menu_only_chrome(void) {
   ASSERT_EQUAL(bar->frame.x, 0);
   ASSERT_EQUAL(bar->frame.y, 0);
   ASSERT_EQUAL(bar->frame.w, 800);
-  ASSERT_EQUAL(bar->frame.h, get_theme()->menubar.height);
+  ASSERT_EQUAL(bar->frame.h, ui_px("MenuBar", "height"));
   ASSERT_EQUAL(window_composition_attr(chrome, WCA_CORNERS), 0);
   ASSERT_EQUAL(window_composition_attr(chrome, WCA_SHADOW), 0);
   ASSERT_EQUAL(window_composition_attr(chrome, WCA_BORDER), 0);

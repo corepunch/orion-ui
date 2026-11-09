@@ -53,3 +53,5 @@
 }
 
 Card { --highlight-width: 0; --plastic: flat; }
+
+TextEdit { padding-left: 6px; }   /* the text clears the corner: at least 6 px */

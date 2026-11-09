@@ -134,7 +134,7 @@ static void test_column_dividers(void) {
     set_theme((theme_style_t)style);
     get_theme()->apply_palette();
     theme_t *painter = style == THEME_CLASSIC ? paint_classic_instance() : paint_modern_instance();
-    int width = get_theme()->report.divider_width;
+    int width = ui_px("TableView::divider", "width");
     ASSERT_EQUAL(width, 1);
     for (int hover = 0; hover <= 1; hover++) {
       memset(pixels, 0, sizeof(pixels));
@@ -245,8 +245,9 @@ static void test_flat_tool_items(void) {
       ASSERT_EQUAL(recorded_radius, 4);
     }
   }
-  ASSERT_EQUAL(theme->window.corner_radius, 8);
-  ASSERT_EQUAL(paint_classic_instance()->window.corner_radius, 0);
+  ASSERT_EQUAL(ui_radius("Window"), 8);
+  set_theme(THEME_CLASSIC);
+  ASSERT_EQUAL(ui_radius("Window"), 0);
   PASS();
 }
 
@@ -417,7 +418,7 @@ static void test_panel_shades_and_tabs(void) {
       ASSERT_TRUE(((pixels[10][50] >> shift) & 255) <= ((get_sys_color(brPanelDark) >> shift) & 255));
       ASSERT_TRUE(((pixels[39][50] >> shift) & 255) >= ((get_sys_color(brTabBarBg) >> shift) & 255));
     }
-    if (get_theme()->tab.corner_radius) { ASSERT_EQUAL(pixels[10][10], 0); }
+    if (ui_radius("TabView::tab")) { ASSERT_EQUAL(pixels[10][10], 0); }
     else { ASSERT_EQUAL(pixels[10][10], pixels[10][50]); }
     ASSERT_EQUAL(pixels[39][10], pixels[39][50]);
     memset(pixels, 0, sizeof(pixels));
@@ -430,7 +431,7 @@ static void test_panel_shades_and_tabs(void) {
   theme_t *modern = paint_with_theme(THEME_MODERN);
   memset(pixels, 0, sizeof(pixels));
   modern->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_SELECTED);
-  ASSERT_EQUAL(recorded_radius, get_theme()->tab.corner_radius);
+  ASSERT_EQUAL(recorded_radius, ui_radius("TabView::tab"));
   ASSERT_EQUAL(pixels[10][10], 0);
   ASSERT_EQUAL(pixels[39][10], get_sys_color(brControlBg));
   PASS();
@@ -480,8 +481,8 @@ static void test_amber_business_surfaces(void) {
   theme->draw_part(THEME_PART_FIELD, R(10, 10, 100, 34), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[27][60], get_sys_color(brColumnViewBg));
   ASSERT_NOT_EQUAL(pixels[10][18], 0);   // a capsule would leave the top row empty here
-  ASSERT_EQUAL(get_theme()->field.padding_x, FIELD_PADDING_X(get_theme()->field.corner_radius));
-  ASSERT_TRUE(get_theme()->field.padding_x < theme_modern_instance()->field.padding_x);  // squarer ends, text nearer the edge
+  ASSERT_EQUAL(ui_px("TextEdit", "padding-left"), FIELD_PADDING_X(ui_radius("TextEdit")));
+  ASSERT_TRUE(ui_px("TextEdit", "padding-left") < TEXTEDIT_PADDING_CAPSULE);  // squarer ends than Modern's capsule, text nearer the edge
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 20), CTRL_FOCUSED);
   ASSERT_EQUAL(pixels[20][50], get_sys_color(brActiveTitlebar));
@@ -517,8 +518,8 @@ static void test_control_parts(void) {
   ASSERT_EQUAL(theme_foreground(THEME_PART_DESKTOP_ICON, CTRL_SELECTED), get_sys_color(brAccent));
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_THUMBNAIL, R(10, 10, 40, 40), CTRL_SELECTED);
-  ASSERT_EQUAL(pixels[10 + get_theme()->thumbnail.ring_width - 1][30], get_sys_color(brAccent));
-  ASSERT_EQUAL(pixels[10 + get_theme()->thumbnail.ring_width][30], 0);
+  ASSERT_EQUAL(pixels[10 + ui_px("IconView::thumbnail:checked", "border-width") - 1][30], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[10 + ui_px("IconView::thumbnail:checked", "border-width")][30], 0);
   memset(pixels, 0, sizeof(pixels));
   theme->draw_part(THEME_PART_DROP_TARGET, R(10, 10, 40, 40), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[10][30], color_with_alpha(get_sys_color(brTextInfo), 128));

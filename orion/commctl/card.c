@@ -106,11 +106,10 @@ result_t win_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       win_stack(win, msg, wparam, lparam);
       win->userdata = card;
-      const theme_t *theme = get_theme();
-      int inset = theme->card.ring_width;
+      int inset = ui_px("Card", "--ring-width");
       win->layout.layout_padding = (irect16_t){
-        inset + theme->card.edge_width + theme->card.padding_x, inset + theme->card.padding_y,
-        inset + theme->card.padding_x, inset + theme->card.padding_y };
+        inset + ui_px("Card", "--edge-width") + ui_px("Card", "padding-left"), inset + ui_px("Card", "padding-top"),
+        inset + ui_px("Card", "padding-left"), inset + ui_px("Card", "padding-top") };
       win->layout.layout_spacing = 3;
       return true;
     }

@@ -22,7 +22,7 @@ typedef struct {
 static icon_grid_geom_t grid_geom_for(reportview_data_t *data, int origin_x, int width) {
   int usable = MAX(1, width);
   if (data->view_mode == RVM_VIEW_THUMBNAIL) {
-    int gap = get_theme()->thumbnail.gap;
+    int gap = ui_px("IconView::thumbnail", "--gap");
     int ncol = data->fixed_large_icon_cols > 0 ? data->fixed_large_icon_cols
                                                : MAX(1, (usable + gap) / (data->icon_size + gap));
     int tile = MAX(1, (usable - (ncol - 1) * gap) / ncol);

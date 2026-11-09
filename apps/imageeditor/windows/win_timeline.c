@@ -27,13 +27,13 @@ static canvas_doc_t *tl_doc(void) {
 }
 
 static int timeline_fixed_width(void) {
-  return get_theme()->toolbar.grip_size + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH) +
-         7 * (40 + get_theme()->toolbar.spacing) + 6 + get_theme()->toolbar.spacing;
+  return ui_px("Toolbar::grip", "width") + 2 * (TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH) +
+         7 * (40 + ui_px("Toolbar", "gap")) + 6 + ui_px("Toolbar", "gap");
 }
 
-// Inter-frame TOOLBAR_ITEM_SPACER width: the toolbar also adds get_theme()->toolbar.spacing
+// Inter-frame TOOLBAR_ITEM_SPACER width: the toolbar also adds ui_px("Toolbar", "gap")
 // after the previous frame and after the spacer, so spacer + 2*SPACING = GAP.
-#define TIMELINE_FRAME_SPACER_W (TIMELINE_FRAME_GAP - 2 * get_theme()->toolbar.spacing)
+#define TIMELINE_FRAME_SPACER_W (TIMELINE_FRAME_GAP - 2 * ui_px("Toolbar", "gap"))
 
 static void timeline_layout(window_t *win, bool follow) {
   timeline_state_t *st = win->userdata;

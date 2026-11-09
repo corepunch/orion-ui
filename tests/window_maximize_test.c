@@ -139,7 +139,7 @@ static void test_standalone_menubar_workspace(void) {
   ASSERT_TRUE(maximize_window(other));
   ASSERT_EQUAL(doc->frame.y, 0);
   window_t *bar = create_window("Menu", WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_ALWAYSONTOP,
-    MAKERECT(0, 0, 800, get_theme()->menubar.height), NULL, win_menubar, 1, NULL);
+    MAKERECT(0, 0, 800, ui_px("MenuBar", "height")), NULL, win_menubar, 1, NULL);
   ASSERT_NOT_NULL(bar);
   ASSERT_EQUAL(doc->frame.y, bar->frame.h);
   ASSERT_EQUAL(doc->frame.h, 600 - bar->frame.h);
@@ -148,7 +148,7 @@ static void test_standalone_menubar_workspace(void) {
   ASSERT_EQUAL(doc->frame.y, 40);
   ASSERT_EQUAL(doc->frame.h, 560);
   send_message(bar, evThemeChanged, 0, NULL);
-  ASSERT_EQUAL(doc->frame.y, get_theme()->menubar.height);
+  ASSERT_EQUAL(doc->frame.y, ui_px("MenuBar", "height"));
   window_t *child_bar = create_window("Child menu", WINDOW_NOTITLE, MAKERECT(0, 0, 100, 80),
                                        doc, win_menubar, 0, NULL);
   ASSERT_NOT_NULL(child_bar);

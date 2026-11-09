@@ -178,7 +178,7 @@ static int tab_icon_gap(tabview_state_t *st) {
 static int tab_width(const char *title, tabview_state_t *st, int idx) {
   if (st && (st->style & TAB_STYLE_ICONS_ONLY))
     return tab_has_icon(st, idx) ? st->strip.icon_w + 8 : TAB_CONTROL_HEIGHT;
-  int w = MAX(get_theme()->tab.min_width, strwidth(title) + 2 * get_theme()->tab.padding);
+  int w = MAX(ui_px("TabView::tab", "min-width"), strwidth(title) + 2 * ui_px("TabView::tab", "padding-left"));
   if (tab_has_icon(st, idx)) w += st->strip.icon_w + tab_icon_gap(st);
   return w;
 }
@@ -194,7 +194,7 @@ static int sidebar_rows_width(window_t *win, tabview_state_t *st) {
 }
 
 static int sidebar_width(window_t *win, tabview_state_t *st) {
-  bool bar = st->list && st->list->vscroll.visible && !get_theme()->scrollbar.overlay;
+  bool bar = st->list && st->list->vscroll.visible && !ui_flag("Scrollbar", "--overlay");
   return sidebar_rows_width(win, st) + (bar ? SCROLLBAR_WIDTH : 0);
 }
 
@@ -248,7 +248,7 @@ static irect16_t tab_page_rect(window_t *win, tabview_state_t *st, irect16_t r) 
   if (is_sidebar(st)) return rect_trim_left(r, sidebar_width(win, st));
   if (!tab_header_extent(win, st)) return r;
   irect16_t page_rect = rect_trim_top(r, tab_header_extent(win, st));
-  int frame = get_theme()->tab.pane_frame;
+  int frame = ui_px("TabView::pane", "--frame-width");
   page_rect.x += frame; page_rect.w = MAX(0, page_rect.w - 2 * frame);
   page_rect.h = MAX(0, page_rect.h - frame);
   return page_rect;
@@ -291,7 +291,7 @@ static void tab_arrange(window_t *win) {
   }
   if (tab_single_hidden(win, st)) st->scroll = 0;
   else if (!is_sidebar(st)) {
-    int start = get_theme()->tab.header.start;
+    int start = ui_px("TabView::bar", "padding-left");
     int x = start, selected_x = start, selected_w = 0, width = tab_available_width(win, st);
     for (int idx = 0; idx < count; idx++) {
       int w = tab_width(tab_title(win, idx), st, idx);
@@ -398,11 +398,11 @@ static bool tab_paint(window_t *win) {
   if (!st) return true;
 
   set_clip_rect(win, R(0, 0, tab_available_width(win, st), th));
-  int selected_x = get_theme()->tab.header.start - st->scroll;
+  int selected_x = ui_px("TabView::bar", "padding-left") - st->scroll;
   int x = selected_x;
   if (tab_single_hidden(win, st)) {
-    if (th) draw_text_ellipsized(FONT_SMALL, tab_title(win, 0), get_theme()->tab.padding,
-      (th - text_char_height(FONT_SMALL)) / 2, MAX(0, tab_available_width(win, st) - 2 * get_theme()->tab.padding),
+    if (th) draw_text_ellipsized(FONT_SMALL, tab_title(win, 0), ui_px("TabView::tab", "padding-left"),
+      (th - text_char_height(FONT_SMALL)) / 2, MAX(0, tab_available_width(win, st) - 2 * ui_px("TabView::tab", "padding-left")),
       get_sys_color(brTextNormal));
   } else {
     for (int i = 0, n = tab_count(win); i < n; i++) {
@@ -567,7 +567,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (is_sidebar(st)) return false;
       int th = tab_header_extent(win, st);
       if (my < 0 || my >= th || mx < 0 || mx >= tab_available_width(win, st)) return false;
-      int left = tab_single_hidden(win, st) ? 0 : get_theme()->tab.header.start - st->scroll;
+      int left = tab_single_hidden(win, st) ? 0 : ui_px("TabView::bar", "padding-left") - st->scroll;
       for (int i = 0, n = tab_count(win); i < n; i++) {
         int w = tab_single_hidden(win, st) ? tab_available_width(win, st) - left : tab_width(tab_title(win, i), st, i);
         if (mx >= left && mx < left + w) {
@@ -674,7 +674,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return (result_t)(intptr_t)page;
     }
     case tcGetTabRect: {
-      int index = (int)wparam, x = get_theme()->tab.header.start - (st ? st->scroll : 0), i = 0;
+      int index = (int)wparam, x = ui_px("TabView::bar", "padding-left") - (st ? st->scroll : 0), i = 0;
       if (!st || !lparam || index < 0 || index >= tab_count(win)) {
         fprintf(stderr, "[tv] get_tab_rect rejected win=%u index=%d\n", win->id, index);
         fflush(stderr); return false;

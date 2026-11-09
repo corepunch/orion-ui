@@ -59,42 +59,8 @@ static bool theme_validate(theme_t *t) {
   REQUIRE(draw_combobox)
   REQUIRE(apply_palette)
 #undef REQUIRE
-  if (t->scrollbar.width < 0 || (!t->scrollbar.overlay && t->scrollbar.width == 0) ||
-      (t->scrollbar.overlay && t->scrollbar.width != 0) || t->control.padding < 0 ||
-      t->control.press_icon_offset < 0 || t->window.corner_radius < 0 ||
-      (t->button.corner_radius < 0 && t->button.corner_radius != CORNER_RADIUS_CIRCULAR) ||
-      (t->field.corner_radius < 0 && t->field.corner_radius != CORNER_RADIUS_CIRCULAR) || t->field.padding_x <= 0 ||
-      t->caption.height <= 0 || t->menubar.height <= 0 || t->toolbar.button_size <= 0 ||
-      t->toolbar.padding < 0 || t->toolbar.spacing < 0 || t->toolbar.corner_radius < 0 || t->tab.corner_radius < 0 || t->tab.pane_margin < 0 || t->splitter.spacing < 0 ||
-      t->thumbnail.gap < 0 || t->thumbnail.ring_width < 0 || t->slider.trough_inset < 0 ||
-      t->slider.thumb_inset < 0 || t->slider.thumb_length <= 0 ||
-      t->slider.trough_radius < CORNER_RADIUS_CIRCULAR || t->slider.thumb_radius < CORNER_RADIUS_CIRCULAR) {
-    fprintf(stderr, "[theme] invalid metrics name=%s gutter=%d overlay=%d padding=%d offset=%d radius=%d window_radius=%d caption=%d menu=%d toolbar=%d toolbar.padding=%d tab.radius=%d pane.margin=%d splitter.spacing=%d thumbnail.gap=%d thumbnail.ring=%d slider=%d/%d/%d/%d/%d\n",
-            t->name, t->scrollbar.width, t->scrollbar.overlay, t->control.padding,
-            t->control.press_icon_offset, t->button.corner_radius, t->window.corner_radius,
-            t->caption.height, t->menubar.height, t->toolbar.button_size, t->toolbar.padding, t->tab.corner_radius, t->tab.pane_margin, t->splitter.spacing,
-            t->thumbnail.gap, t->thumbnail.ring_width, t->slider.trough_inset, t->slider.trough_radius,
-            t->slider.thumb_inset, t->slider.thumb_length, t->slider.thumb_radius);
-    fflush(stderr);
-    return false;
-  }
-  if (t->speechbubble.corner_radius < 0 || t->speechbubble.tail_width <= 0 ||
-      t->speechbubble.tail_length <= 0 || t->speechbubble.shadow.size < 0 || t->speechbubble.shadow.blur < 0) {
-    fprintf(stderr, "[theme] invalid speech bubble metrics name=%s radius=%d width=%d length=%d shadow=%d blur=%d\n",
-            t->name, t->speechbubble.corner_radius, t->speechbubble.tail_width,
-            t->speechbubble.tail_length, t->speechbubble.shadow.size, t->speechbubble.shadow.blur);
-    fflush(stderr);
-    return false;
-  }
-  if (t->report.divider_width <= 0) {
-    fprintf(stderr, "[theme] invalid report metrics name=%s divider_width=%d\n", t->name, t->report.divider_width);
-    fflush(stderr);
-    return false;
-  }
-  if (t->command_link.bullet_size <= 0 || t->command_link.gap < 0 || t->command_link.padding_y < 0) {
-    fprintf(stderr, "[theme] invalid command link metrics name=%s bullet=%d gap=%d padding_y=%d\n",
-            t->name, t->command_link.bullet_size, t->command_link.gap, t->command_link.padding_y);
-    fflush(stderr);
+  if (!theme_stylesheet(t)) {   // its geometry and colours live there
+    fprintf(stderr, "theme[%s]: style sheet failed to load\n", t->name ? t->name : "?"); fflush(stderr);
     return false;
   }
   return true;
@@ -147,19 +113,12 @@ bool set_theme(theme_style_t style) {
     post_message(capturer, evMouseLeave, 0, NULL);
   }
 
-  // Track geometry that changes client layout after the switch.
-  int old_scrollbar_width = g_active_theme ? g_active_theme->scrollbar.width : 0;
-  int old_caption_height = g_active_theme ? g_active_theme->caption.height : 0;
-  int old_menubar_height = g_active_theme ? g_active_theme->menubar.height : 0;
-  int old_toolbar_size = g_active_theme ? g_active_theme->toolbar.button_size : 0;
-  int old_toolbar_padding = g_active_theme ? g_active_theme->toolbar.padding : 0;
-
   s_switching = true;
   g_active_theme = candidate;
   g_theme_style_generation++;
   candidate->apply_palette();
   g_theme_style_generation++;
-  bool fonts_changed = text_apply_theme_fonts();   // the role faces may differ between themes
+  text_apply_theme_fonts();   // the role faces may differ between themes
 
   if (g_ui_runtime.running) {
     post_to_win_tree(g_ui_runtime.windows, evThemeChanged, (uint32_t)style);
@@ -171,18 +130,9 @@ bool set_theme(theme_style_t style) {
       if (window_has_state(w, WINDOW_STATE_VISIBLE)) invalidate_window(w);
     }
 
-    // If the scrollbar gutter width changed the client area of every window
-    // shrinks or grows; post evResize to all top-level windows so layout
-    // managers recalculate scroll-channel allocations.
-    if (fonts_changed || candidate->scrollbar.width != old_scrollbar_width ||
-        candidate->caption.height != old_caption_height ||
-        candidate->menubar.height != old_menubar_height ||
-        candidate->toolbar.button_size != old_toolbar_size ||
-        candidate->toolbar.padding != old_toolbar_padding) {
-      for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
-        post_message(w, evResize, 0, NULL);
-      }
-    }
+    // Geometry comes from the new sheet (scroll bar gutter, caption, toolbar,
+    // fonts): every top-level window lays out again.
+    for (window_t *w = g_ui_runtime.windows; w; w = w->next) post_message(w, evResize, 0, NULL);
   }
   s_switching = false;
   return true;
@@ -237,10 +187,9 @@ void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const the
 }
 
 irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state) {
-  const theme_t *theme = get_theme();
   if (part != THEME_PART_CARD) return r;
-  int ring = theme->card.ring_width;
-  if (state & CTRL_PLASTIC) ring += theme->card.shadow_size;
+  int ring = ui_px("Card", "--ring-width");
+  if (state & CTRL_PLASTIC) ring += ui_px("Card", "--shadow-size");
   return rect_inset(r, ring);
 }
 

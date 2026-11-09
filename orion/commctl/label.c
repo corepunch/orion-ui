@@ -99,7 +99,7 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         char fitted[512];
         text_ellipsize(font, win->title, win->frame.w - TEXT_SHADOW_OFFSET, fitted, sizeof(fitted));
         irect16_t shadow_pos = rect_offset(text_pos, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
-        if (get_theme()->text_shadow) draw_text_clipped(font, fitted, &shadow_pos, get_sys_color(brDarkEdge), 0);
+        if (ui_flag("Button", "text-shadow")) draw_text_clipped(font, fitted, &shadow_pos, get_sys_color(brDarkEdge), 0);
         draw_text_clipped(font, fitted, &text_pos, col, 0);
         return true;
       }
@@ -110,7 +110,7 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         draw_text_wrapped_font(font, win->title, &text_pos, col);
       } else {
         irect16_t shadow_pos = rect_offset(text_pos, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
-        if (get_theme()->text_shadow) draw_text_clipped(font, win->title, &shadow_pos, get_sys_color(brDarkEdge), 0);
+        if (ui_flag("Button", "text-shadow")) draw_text_clipped(font, win->title, &shadow_pos, get_sys_color(brDarkEdge), 0);
         draw_text_clipped(font, win->title, &text_pos, col, 0);
       }
       return true;

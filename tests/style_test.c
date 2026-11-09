@@ -153,17 +153,16 @@ void test_porcelain_sheet(void) {
   style_sheet_free(s);
 
   ASSERT_TRUE(set_theme(THEME_PORCELAIN) || get_theme()->style == THEME_PORCELAIN);
-  theme_t *t = get_theme();
   ASSERT_EQUAL(get_sys_color(brColumnViewBg), WEB(0xFFFFFF));
-  ASSERT_EQUAL(t->button.corner_radius, 6);
-  ASSERT_EQUAL(t->card.face, brColumnViewBg);
-  ASSERT_EQUAL(t->card.outline, brLightEdge);
-  ASSERT_EQUAL(t->report.row_height, 21);
-  ASSERT_TRUE(t->report.row_dividers);
-  ASSERT_EQUAL(t->badge.tint_alpha, 0x26);
+  ASSERT_EQUAL(ui_radius("Button"), 6);
+  ASSERT_EQUAL(ui_role("Card", "background-color"), brColumnViewBg);
+  ASSERT_EQUAL(ui_role("Card", "border-color"), brLightEdge);
+  ASSERT_EQUAL(ui_px("TableView::row", "min-height"), 21);
+  ASSERT_TRUE(ui_flag("TableView::row", "--divider-width"));
+  ASSERT_EQUAL(((int)(ui_number("Badge", "--tint-alpha") * 255.0f + 0.5f)), 0x26);
   ASSERT_TRUE(set_theme(THEME_PORCELAIN_DARK));
   ASSERT_EQUAL(get_sys_color(brTextNormal), WEB(0xABB2BF));
-  ASSERT_EQUAL(get_theme()->field.corner_radius, 5);
+  ASSERT_EQUAL(ui_radius("TextEdit"), 5);
   ASSERT_EQUAL(theme_sys_color_role("control-bg"), brControlBg);
   ASSERT_EQUAL(theme_sys_color_role("nope"), -1);
   ASSERT_STR_EQUAL(theme_sys_color_name(brTooltipText), "tooltip-text");

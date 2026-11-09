@@ -53,7 +53,7 @@ static void test_form_splitview_uses_arranged_frame(void) {
   ASSERT_TRUE(left->frame.w > 0); ASSERT_TRUE(right->frame.w > 0);
   ASSERT_EQUAL(left->frame.y, right->frame.y);
   ASSERT_TRUE(right->frame.x > left->frame.x);
-  ASSERT_EQUAL(right->frame.x - left->frame.x - left->frame.w, get_theme()->splitter.spacing);
+  ASSERT_EQUAL(right->frame.x - left->frame.x - left->frame.w, ui_px("SplitView", "gap"));
 
   destroy_window(root);
   test_env_shutdown();
@@ -83,7 +83,7 @@ static void test_form_splitview_honors_horizontal_divider(void) {
   ASSERT_TRUE(top->frame.h > 0); ASSERT_TRUE(bottom->frame.h > 0);
   ASSERT_EQUAL(top->frame.x, bottom->frame.x);
   ASSERT_TRUE(bottom->frame.y > top->frame.y);
-  ASSERT_EQUAL(bottom->frame.y - top->frame.y - top->frame.h, get_theme()->splitter.spacing);
+  ASSERT_EQUAL(bottom->frame.y - top->frame.y - top->frame.h, ui_px("SplitView", "gap"));
 
   destroy_window(root);
   test_env_shutdown();
@@ -155,7 +155,7 @@ static void test_splitter_margin_hotspot(void) {
       send_message(split, svSetPaneMargin, 2, NULL);
       send_message(split, evResize, 0, NULL);
       window_t *divider = find_splitter(split);
-      ASSERT_EQUAL(orientation == SPLIT_VERT ? divider->frame.w : divider->frame.h, 4 + get_theme()->splitter.spacing);
+      ASSERT_EQUAL(orientation == SPLIT_VERT ? divider->frame.w : divider->frame.h, 4 + ui_px("SplitView", "gap"));
       for (int side = 0; side < 2; side++) {
         ipoint16_t local = {divider->frame.w / 2, divider->frame.h / 2};
         if (orientation == SPLIT_VERT) local.x = side ? divider->frame.w - 1 : 0;

@@ -67,11 +67,11 @@ static int components_bitmap_icon(const fe_component_desc_t *c) {
 }
 
 static int components_win_y(void) {
-  return get_theme()->menubar.height + 4;
+  return ui_px("MenuBar", "height") + 4;
 }
 
 static int components_win_h(void) {
-  return get_theme()->caption.height + FE_COMPONENTS_MIN_ROWS * FE_COMPONENTS_BTN_SIZE + 4;
+  return ui_px("Window::titlebar", "height") + FE_COMPONENTS_MIN_ROWS * FE_COMPONENTS_BTN_SIZE + 4;
 }
 
 #ifndef SHAREDIR

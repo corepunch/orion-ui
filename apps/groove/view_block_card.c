@@ -61,7 +61,7 @@ static void paint_block_card(int block, const block_t *b, irect16_t r, int visib
   theme_draw_ex(THEME_PART_CARD, r, state | CTRL_PLASTIC, &(theme_draw_opts_t){.color = color}); // its shadow margin is the only gap between neighbouring cards
   int source_width = period > 0 ? period : r.w, source_x = r.x;
   r = theme_content_rect(THEME_PART_CARD, r, state | CTRL_PLASTIC);
-  int radius = MAX(0, get_theme()->card.corner_radius - get_theme()->card.ring_width);
+  int radius = MAX(0, ui_radius("Card") - ui_px("Card", "--ring-width"));
   irect16_t wave = rect_trim_top(r, MIN(r.h, text_char_height(CARD_LABEL_FONT) + 3));
   uint32_t ink = color_with_alpha(get_sys_color(brTextOnColor), (color >> 24) * 0x99 / 255);
   if (wave.w > 0 && wave.h > 0) {
@@ -102,12 +102,11 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         return true;
       }
       case evPaint: {
-        const theme_t *theme = get_theme();
         bool pressed = window_has_state(win, WINDOW_STATE_PRESSED);
         bool hover = window_has_state(win, WINDOW_STATE_HOVERED);
-        irect16_t r = rect_inset(get_client_rect(win), theme->card.shadow_size);
+        irect16_t r = rect_inset(get_client_rect(win), ui_px("Card", "--shadow-size"));
         fill_rounded_rect(get_sys_color(pressed ? brButtonHover : hover ? brButtonInner : brPanelDark),
-                          r, theme->card.corner_radius);
+                          r, ui_radius("Card"));
         int icon_size = MIN(24, MIN(r.w, r.h) - 4), gap = 8;
         if (icon_size <= 0) return true;
         int text_w = MIN(text_strwidth(FONT_SYSTEM, win->title), MAX(0, r.w - icon_size - gap - 12));

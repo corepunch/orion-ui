@@ -73,8 +73,8 @@ static void test_pane_moves_and_collapses(void) {
   ASSERT_TRUE(page_close_tab(host, c));
   ASSERT_EQUAL(page_pane_count(host), 1);
   ASSERT_EQUAL(bottom->parent, host);
-  ASSERT_EQUAL(bottom->frame.w, 900 - 2 * get_theme()->tab.pane_margin);
-  ASSERT_EQUAL(bottom->frame.h, 600 - 2 * get_theme()->tab.pane_margin);
+  ASSERT_EQUAL(bottom->frame.w, 900 - 2 * ui_px("TabView::pane", "--pane-margin"));
+  ASSERT_EQUAL(bottom->frame.h, 600 - 2 * ui_px("TabView::pane", "--pane-margin"));
   ASSERT_FALSE(window_reparent(bottom, b, NULL));
   ASSERT_TRUE(page_close_tab(host, a));
   ASSERT_EQUAL(g_ui_runtime.focused, focus);
@@ -294,13 +294,13 @@ static void test_pane_header_actions(void) {
   toolbar_state_t *items = toolbar_get_state(copy);
   ASSERT_STR_EQUAL(items->items[0].alt_icon, "split-down");
   ASSERT_EQUAL(send_message(right, tcGetCount, 0, NULL), 1);
-  ASSERT_EQUAL(copy->frame.y, 0); ASSERT_EQUAL(copy->frame.h, get_theme()->tab.header.height);
+  ASSERT_EQUAL(copy->frame.y, 0); ASSERT_EQUAL(copy->frame.h, ui_px("TabView::tab", "height"));
   ASSERT_EQUAL(copy->frame.x + copy->frame.w, get_client_rect(right).w);
   for (int i = 0; i < 7; i++) pane_test_tab(right, "Long session title");
   irect16_t tab, r;
   ASSERT_TRUE(send_message(right, tcGetTabRect, 7, &tab));
   ASSERT_TRUE(tab.x + tab.w <= copy->frame.x);
-  ASSERT_EQUAL(tab.h, get_theme()->tab.header.height);
+  ASSERT_EQUAL(tab.h, ui_px("TabView::tab", "height"));
   ASSERT_TRUE(send_message(copy, tbGetItemRect, 2400, &r));
   pane_command = 0;
   ui_event_t modifiers = {.message = kEventModifiersChanged, .wParam = AX_MOD_ALT};
@@ -435,7 +435,7 @@ static void test_default_pane_actions(void) {
 static void test_pane_margins(void) {
   TEST("Page pane margin is configurable and stable through nested splits and repeated arrangement");
   test_env_init();
-  int saved_margin = get_theme()->tab.pane_margin;
+  int saved_margin = ui_px("TabView::pane", "--pane-margin");
   window_t *host = pane_test_host(), *left = page_pane_at(host, 0);
   pane_test_tab(left, "A");
   ASSERT_EQUAL(left->frame.x, saved_margin); ASSERT_EQUAL(left->frame.y, saved_margin);
@@ -445,7 +445,9 @@ static void test_pane_margins(void) {
   pane_test_tab(bottom, "C");
   int margins[] = {0, 1, 3};
   for (int i = 0; i < ARRAY_LEN(margins); i++) {
-    int margin = get_theme()->tab.pane_margin = margins[i];
+    int margin = margins[i];
+    char css[64]; snprintf(css, sizeof(css), "TabView::pane { --pane-margin: %dpx; }", margin);
+    ui_set_app_stylesheet(css, "margin.css");
     send_message(host, evThemeChanged, 0, NULL);
     for (int pass = 0; pass < 2; pass++) {
       send_message(host, evResize, 0, NULL);
@@ -453,12 +455,12 @@ static void test_pane_margins(void) {
       ASSERT_EQUAL(left->frame.h, host->frame.h - 2 * margin);
       ASSERT_EQUAL(right->frame.x, margin); ASSERT_EQUAL(right->frame.y, margin);
       ASSERT_EQUAL(bottom->frame.x, margin);
-      ASSERT_EQUAL(bottom->frame.y - right->frame.y - right->frame.h, get_theme()->splitter.spacing + 2 * margin);
-      ASSERT_EQUAL(right->parent->frame.x + right->frame.x - left->frame.x - left->frame.w, get_theme()->splitter.spacing + 2 * margin);
+      ASSERT_EQUAL(bottom->frame.y - right->frame.y - right->frame.h, ui_px("SplitView", "gap") + 2 * margin);
+      ASSERT_EQUAL(right->parent->frame.x + right->frame.x - left->frame.x - left->frame.w, ui_px("SplitView", "gap") + 2 * margin);
       ASSERT_EQUAL(bottom->frame.y + bottom->frame.h, right->parent->frame.h - margin);
     }
   }
-  get_theme()->tab.pane_margin = saved_margin;
+  ui_set_app_stylesheet(NULL, NULL);
   destroy_window(host); test_env_shutdown(); PASS();
 }
 

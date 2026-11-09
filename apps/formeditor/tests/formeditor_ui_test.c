@@ -397,7 +397,7 @@ void test_activitybar_preview(void) {
   ASSERT_NOT_NULL(tb);
   ASSERT_EQUAL(tb->orientation, TOOLBAR_VERTICAL);
   ASSERT_EQUAL(tb->btn_size, 0);
-  ASSERT_EQUAL(toolbar_effective_bsz(bar), get_theme()->toolbar.button_size);
+  ASSERT_EQUAL(toolbar_effective_bsz(bar), ui_px("Toolbar::button", "height"));
   ASSERT_EQUAL(tb->item_count, 2);
   ASSERT_STR_EQUAL(tb->items[0].icon, "view-grid");
   ASSERT_STR_EQUAL(tb->items[1].tooltip, "Working tree");

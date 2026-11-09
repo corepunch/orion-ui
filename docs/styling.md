@@ -18,9 +18,7 @@ A theme is `base.css` followed by its own sheet, read in the theme's appearance.
 The build embeds the sheets in `libuser` (`tools/embed_text.py`), so a theme
 never depends on files at run time. `base.css` is Orion's user-agent sheet: it
 sets every part and the chrome geometry, and a theme overrides what it needs.
-`orion/user/theme_builtin.c` builds the instances; its templates hold only what
-no property sets yet (tooltip and balloon geometry, slider, compact toolbar and
-card material).
+`orion/user/theme_builtin.c` builds the instances; they carry no numbers.
 
 ## Editing a theme without rebuilding
 
@@ -95,46 +93,32 @@ States map to pseudo-classes: hover `:hover`, pressed `:active`, selected
 `:checked`, disabled `:disabled`, keyboard focus `:focus`, default button
 `:default`, a selection whose window is not focused `:window-inactive`.
 
-## Metrics
+## Computed style
 
-Control properties set the matching `theme_t` metric when a theme is built
-(`theme_metrics_from_stylesheet()` in `orion/user/theme_css.c`). Themes set the
-radii through the `:root` variables `base.css` uses: `--window-radius`,
-`--button-radius`, `--field-radius`, `--multiline-radius`, `--tab-radius`,
-`--toolbar-radius`, `--table-radius`, `--card-radius`, `--badge-radius`.
-`--control-radius` is supplied by the platform (half a control's height).
+Code asks the active sheet for the values it lays out and paints with, by
+selector and property, as a page asks `getComputedStyle()`
+(`orion/user/ui_style.h`):
 
-| Selector | Property | `theme_t` field |
-|---|---|---|
-| `Window` | `border-radius` | `window.corner_radius` |
-| `Button` | `border-radius` | `button.corner_radius` |
-| `TextEdit`, `TextEdit.multiline` | `border-radius` | `field.corner_radius`, `field.multiline_corner_radius` |
-| `TabView::tab` | `border-radius` (top-left) | `tab.corner_radius` |
-| `Toolbar` | `gap` | `toolbar.spacing` |
-| `Toolbar::button` | `border-radius` | `toolbar.corner_radius` |
-| `Card` | `border-radius`, `background-color: var(--role)`, `border-color: var(--role)`, `--highlight-width`, `--plastic: flat` | `card.corner_radius`, `card.face`, `card.outline`, `card.highlight_width`, `plastic.flat` |
-| `TableView` | `border-radius` | `table.corner_radius` |
-| `TableView::header` | `min-height` | `report.header_height` |
-| `TableView::row` | `min-height`, `--divider-width` | `report.row_height`, `report.row_dividers` |
-| `IconView::thumbnail:checked` | `border-width` | `thumbnail.ring_width` |
-| `Badge` | `border-radius`, `padding-left`, `--tint-alpha`, `--ink-mix` (0..1) | `badge.corner_radius`, `badge.padding`, `badge.tint_alpha`, `badge.ink_mix` |
-| `Badge::icon` | `width`, `margin-right` | `badge.icon_size`, `badge.icon_gap` |
-| `Window` | `box-shadow` | `window.shadow` |
-| `Window::titlebar`, `MenuBar` | `height` | `caption.height`, `menubar.height` |
-| `Scrollbar` | `width` | `scrollbar.width` |
-| `Toolbar`, `Toolbar::button` | `padding`, `height` | `toolbar.padding`, `toolbar.button_size` |
-| `TabView::tab` | `height`, `min-width`, `padding-left` | `tab.header.height`, `tab.min_width`, `tab.padding` |
-| `TabView::pane` | `--frame-width`, `--pane-margin` | `tab.pane_frame`, `tab.pane_margin` |
-| `SplitView` | `gap` | `splitter.spacing` |
-| `Button` | `padding-left`, `--press-offset`, `text-shadow` (any but `none` engraves labels) | `control.padding`, `control.press_icon_offset`, `text_shadow` |
-| `Menu::item` | `--shape: capsule \| cell` | `menu.capsule` |
-| `Card` | `padding` | `card.padding_y`, `card.padding_x` |
+```c
+int gutter = ui_px("Scrollbar", "width");
+int radius = ui_radius("Button");                  // CORNER_RADIUS_CIRCULAR for 9999px
+ui_shadow_t s = ui_shadow("Tooltip", "box-shadow");
+bool ruled = ui_flag("TableView::row", "--divider-width");
+```
 
-Lengths may use `calc()` (`+ - * /` over px and numbers) and the platform
-values `--titlebar-height`, `--menubar-height`, `--toolbar-height`,
-`--font-size`, `--icon-size`, `--scrollbar-width`, `--control-height`,
-`--control-radius` and `--control-padding`, which differ between desktop and
-touch builds: `height: calc(var(--font-size) + 5px)`.
+Answers are cached until the sheet or the palette changes. `padding-left` and
+its kin read the longhand or the `padding` shorthand, whichever cascades higher.
+A property the sheet leaves unset is reported (`[ui_style] Scrollbar { width }
+is not set`) and reads as zero, so `base.css` sets every value the framework
+asks for: it is Orion's user-agent sheet, and a theme overrides what it needs.
+
+Lengths may use `calc()` and the platform values `--titlebar-height`,
+`--menubar-height`, `--toolbar-height`, `--compact-icon-size`, `--font-size`,
+`--icon-size`, `--scrollbar-width`, `--control-height`, `--control-radius` and
+`--control-padding`, which differ between desktop and touch builds.
+
+An application may add its own sheet, read after the theme's:
+`ui_set_app_stylesheet("TabView::pane { --pane-margin: 0 }", "myapp.css")`.
 
 ## Type
 

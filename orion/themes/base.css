@@ -34,7 +34,33 @@ TabView::pane    { --frame-width: 0; --pane-margin: 2px; }
 SplitView        { gap: 0; }
 Button           { padding-left: var(--control-padding); --press-offset: 0; text-shadow: none; }
 Menu::item       { --shape: capsule; }
-Card             { padding: 8px 12px; --highlight-width: 1px; }
+Card {
+  padding: 8px 12px;
+  --highlight-width: 1px; --edge-width: 4px; --ring-width: 1px; --shadow-size: 1px;
+  --plastic: gloss; --plastic-gloss: 1; --plastic-rim: 0.55; --plastic-lift: 0.10; --plastic-shadow: #000000E0;
+}
+Window              { --drag-shadow: 0 8px 6px #000000E0; }
+Scrollbar           { --overlay: 0; }
+Toolbar.compact     { padding: 2px; gap: 6px; --icon-size: var(--compact-icon-size); margin-left: 8px; }
+Toolbar::grip       { width: 12px; }
+Toolbar::split-arrow { width: 12px; }
+TabView::bar        { padding-left: 0; }
+TableView::header   { min-height: 0; }
+TableView::row      { min-height: 0; --divider-width: 0; }
+TableView::divider  { width: 1px; }
+TextEdit            { padding-left: 12px; }
+IconView::thumbnail { --gap: 2px; }
+Slider::trough      { --inset: 3px; }
+Slider::knob        { --inset: 3px; --length: 12px; }
+Tooltip {
+  border-radius: 6px; padding: 5px 8px; margin-top: 2px;
+  --tail-size: 6px; --shadow-size: 10px; box-shadow: 0 3px 2px #00000078;
+}
+SpeechBubble {
+  border-radius: 5px; --tail-width: 10px; --tail-length: 16px;
+  --shadow-size: 2px; box-shadow: 1px 1px 1px #00000040;
+}
+CommandLink         { --bullet-size: 6px; gap: 8px; padding-top: 2px; }
 
 Window       { border-radius: var(--window-radius); }
 Toolbar      { gap: 1px; }

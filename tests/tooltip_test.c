@@ -28,7 +28,7 @@ static void test_immediate_control_tooltip(void) {
   window_t *tip = find_tooltip("Control hint");
   ASSERT_NOT_NULL(tip);
   ASSERT_TRUE(window_has_state(tip, WINDOW_STATE_VISIBLE));
-  ASSERT_TRUE(tip->frame.y + tip->frame.h - get_theme()->tooltip.shadow.size <= window_screen_y(button));
+  ASSERT_TRUE(tip->frame.y + tip->frame.h - ui_px("Tooltip", "--shadow-size") <= window_screen_y(button));
   irect16_t frame = tip->frame;
   tooltip_update(button, "Control hint", 120, 115);
   ASSERT_TRUE(!memcmp(&frame, &tip->frame, sizeof(frame)));
@@ -82,7 +82,7 @@ static void test_preferred_tooltip_side(void) {
   window_t *row = create_window("Track", WINDOW_NOTITLE, MAKERECT(65, 20, 30, 60), root, right_tooltip_proc, 0, NULL);
   window_t *button = create_window("", WINDOW_NOTITLE, MAKERECT(10, 10, 20, 20), row, win_button, 0, NULL);
   show_window(root, true); show_window(row, true); show_window(button, true);
-  int pad = get_theme()->tooltip.shadow.size, gap = get_theme()->tooltip.gap;
+  int pad = ui_px("Tooltip", "--shadow-size"), gap = ui_px("Tooltip", "margin-top");
   tooltip_update(row, "Bass", window_screen_x(row) + 4, window_screen_y(row) + 4);
   window_t *tip = find_tooltip("Bass"); ASSERT_NOT_NULL(tip);
   ASSERT_TRUE(tip->frame.x + pad >= window_screen_x(row) + row->frame.w + gap);
@@ -106,8 +106,7 @@ static void test_toolbar_tooltip_sides(void) {
   send_message(bar, tbSetItems, 1, &item);
   show_window(bar, true);
   const dock_side_t sides[] = {DOCK_LEFT, DOCK_RIGHT, DOCK_TOP, DOCK_BOTTOM};
-  const theme_t *theme = get_theme();
-  int pad = theme->tooltip.shadow.size, gap = theme->tooltip.gap;
+  int pad = ui_px("Tooltip", "--shadow-size"), gap = ui_px("Tooltip", "margin-top");
   for (int i = 0; i < ARRAY_LEN(sides); i++) {
     ASSERT_TRUE(dock_set_side(bar, sides[i]));
     irect16_t item_rect;

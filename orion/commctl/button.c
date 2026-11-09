@@ -56,8 +56,7 @@ static int button_icon_width(window_t *win) {
 }
 
 static int command_link_height(void) {
-  const theme_t *theme = get_theme();
-  return MAX(text_char_height(FONT_SMALL), theme->command_link.bullet_size) + theme->command_link.padding_y * 2;
+  return MAX(text_char_height(FONT_SMALL), ui_px("CommandLink", "--bullet-size")) + ui_px("CommandLink", "padding-top") * 2;
 }
 
 // Button control window procedure (text label buttons).
@@ -109,8 +108,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m && (win->flags & BUTTON_COMMANDLINK)) {
-        const theme_t *theme = get_theme();
-        m->desired_w = theme->command_link.bullet_size + theme->command_link.gap + text_strwidth(FONT_SMALL, win->title);
+        m->desired_w = ui_px("CommandLink", "--bullet-size") + ui_px("CommandLink", "gap") + text_strwidth(FONT_SMALL, win->title);
         if (m->avail_w > 0) m->desired_w = MIN(m->desired_w, m->avail_w);   // long text ellipsizes
         m->desired_h = command_link_height();
       } else if (m) {
@@ -155,7 +153,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
         }
         if (!icon_w) return true;
       }
-      irect16_t content = rect_inset_xy(local, get_theme()->control.padding, 2);
+      irect16_t content = rect_inset_xy(local, ui_px("Button", "padding-left"), 2);
       irect16_t label = rect_center(content, strwidth(win->title) + icon_w, CHAR_HEIGHT);
       label = rect_trim_left(label, icon_w);
       get_theme()->draw_button_label(label, win->title, state);
@@ -252,7 +250,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       if (g_ui_runtime.focused == win) state |= CTRL_FOCUSED;
       irect16_t local = {0, 0, win->frame.w, win->frame.h};
       theme_draw(THEME_PART_TOOLBAR_BUTTON, local, state);
-      int px = (state & CTRL_PRESSED) && !(state & CTRL_DISABLED) ? get_theme()->control.press_icon_offset : 0;
+      int px = (state & CTRL_PRESSED) && !(state & CTRL_DISABLED) ? ui_px("Button", "--press-offset") : 0;
       toolbar_button_data_t *bd = (toolbar_button_data_t *)win->userdata;
       bool drew_icon = false;
       if (bd && bd->icon_name[0]) {
@@ -278,7 +276,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       }
       if (!drew_icon) {
         // Fallback: draw text label when no image has been set.
-        irect16_t inner = rect_inset_xy(local, get_theme()->control.padding, 2);
+        irect16_t inner = rect_inset_xy(local, ui_px("Button", "padding-left"), 2);
         get_theme()->draw_button_label(inner, win->title, state);
       }
       return true;

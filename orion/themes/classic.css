@@ -74,7 +74,10 @@ TabView::pane    { --frame-width: 2px; }
 SplitView        { gap: 2px; }
 Button           { --press-offset: 1px; text-shadow: 1px 1px var(--dark-edge); }
 Menu::item       { --shape: cell; }
-Card             { padding: 6px 8px; }
+Card             { padding: 6px 8px; --plastic-gloss: 0.7; --plastic-rim: 0.7; --plastic-lift: 0.08; }
+Tooltip          { border-radius: 4px; }
+CommandLink      { --bullet-size: 7px; gap: 6px; padding-top: 1px; }
+Slider::knob     { --inset: 2px; }
 Card { --highlight-width: 0; }
 Badge { --tint-alpha: 0.251; --ink-mix: 0.188; }
 

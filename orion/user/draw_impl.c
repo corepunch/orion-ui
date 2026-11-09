@@ -100,7 +100,7 @@ irect16_t get_opengl_rect(irect16_t r) {
 
 // Get titlebar height
 int window_caption_height(window_t const *win) {
-  return (win && (win->flags & WINDOW_TOOLWINDOW)) ? (FONT_SIZE + 5) : get_theme()->caption.height;
+  return (win && (win->flags & WINDOW_TOOLWINDOW)) ? (FONT_SIZE + 5) : ui_px("Window::titlebar", "height");
 }
 
 bool caption_merged_into_toolbar(flags_t flags) {
@@ -109,7 +109,7 @@ bool caption_merged_into_toolbar(flags_t flags) {
 
 int caption_extent(flags_t flags) {
   if ((flags & WINDOW_NOTITLE) || caption_merged_into_toolbar(flags)) return 0;
-  return (flags & WINDOW_TOOLWINDOW) ? (FONT_SIZE + 5) : get_theme()->caption.height;
+  return (flags & WINDOW_TOOLWINDOW) ? (FONT_SIZE + 5) : ui_px("Window::titlebar", "height");
 }
 
 int titlebar_height(window_t const *win) {
@@ -173,7 +173,7 @@ void draw_panel(window_t const *win) {
 // Draw a theme icon centred inside rect r.
 void draw_theme_icon_in_rect(int id, irect16_t r, uint32_t col) {
   int size = (id == THEME_ICON_CLOSE || id == THEME_ICON_MAXIMIZE || id == THEME_ICON_RESTORE)
-    ? MIN(get_theme()->toolbar.compact.icon, MIN(r.w, r.h)) : THEME_ICON_SIZE;
+    ? MIN(ui_px("Toolbar.compact", "--icon-size"), MIN(r.w, r.h)) : THEME_ICON_SIZE;
   irect16_t icon = rect_center(r, size, size);
   draw_theme_icon(id, icon.x, icon.y, size, col);
 }
@@ -330,9 +330,8 @@ void fill_rounded_rect_bands(uint32_t color, irect16_t r, int radius, int band_w
 }
 
 static irect16_t bubble_body_rect(irect16_t r, tooltip_tail_side_t side, bool speech) {
-  const theme_t *theme = get_theme();
-  r = rect_inset(r, speech ? theme->speechbubble.shadow.size : theme->tooltip.shadow.size);
-  int length = speech ? theme->speechbubble.tail_length : theme->tooltip.tail_size;
+  r = rect_inset(r, speech ? ui_px("SpeechBubble", "--shadow-size") : ui_px("Tooltip", "--shadow-size"));
+  int length = speech ? ui_px("SpeechBubble", "--tail-length") : ui_px("Tooltip", "--tail-size");
   switch (side) {
     case TOOLTIP_TAIL_TOP:    return rect_trim_top(r, length);
     case TOOLTIP_TAIL_BOTTOM: return rect_trim_bottom(r, length);
@@ -353,24 +352,23 @@ irect16_t speech_bubble_body_rect(irect16_t r, tooltip_tail_side_t side) {
 }
 
 static void draw_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side, bool speech) {
-  const theme_t *theme = get_theme();
-  int pad = speech ? theme->speechbubble.shadow.size : theme->tooltip.shadow.size;
-  int radius = speech ? theme->speechbubble.corner_radius : theme->tooltip.corner_radius;
-  int length = speech ? theme->speechbubble.tail_length : theme->tooltip.tail_size;
+  int pad = speech ? ui_px("SpeechBubble", "--shadow-size") : ui_px("Tooltip", "--shadow-size");
+  int radius = speech ? ui_radius("SpeechBubble") : ui_radius("Tooltip");
+  int length = speech ? ui_px("SpeechBubble", "--tail-length") : ui_px("Tooltip", "--tail-size");
   float scale = ui_surface_scale();
   isize16_t size = { (int)((r.w - 2 * pad) * scale), (int)((r.h - 2 * pad) * scale) };
   if (size.w <= 0 || size.h <= 0) return;
   irect16_t body = bubble_body_rect(r, side, speech);
   if (body.w <= 0 || body.h <= 0) return;
   draw_rect_shadow(body, radius,
-                   speech ? theme->speechbubble.shadow.blur : theme->tooltip.shadow.blur,
-                   speech ? theme->speechbubble.shadow.offset : theme->tooltip.shadow.offset,
-                   speech ? theme->speechbubble.shadow.color : theme->tooltip.shadow.color);
+                   speech ? ui_shadow("SpeechBubble", "box-shadow").blur : ui_shadow("Tooltip", "box-shadow").blur,
+                   speech ? ui_shadow("SpeechBubble", "box-shadow").offset : ui_shadow("Tooltip", "box-shadow").offset,
+                   speech ? ui_shadow("SpeechBubble", "box-shadow").color : ui_shadow("Tooltip", "box-shadow").color);
   render_bubble(r, size, radius * scale, length * scale,
                 (tail_offset - pad) * scale, pad * scale, side,
                 get_sys_color(speech ? brInfoBackground : brTooltipBackground),
                 speech ? get_sys_color(brInfoText) : 0, speech ? scale : 0,
-                speech ? theme->speechbubble.tail_width * scale : 0);
+                speech ? ui_px("SpeechBubble", "--tail-width") * scale : 0);
 }
 
 void draw_tooltip_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side) {
@@ -383,10 +381,9 @@ void draw_speech_bubble(irect16_t r, int tail_offset, tooltip_tail_side_t side) 
 
 void draw_command_link(irect16_t r, const char *text, ctrl_state_t state, uint32_t ink) {
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
-  const theme_t *theme = get_theme();
-  int size = theme->command_link.bullet_size, gap = theme->command_link.gap;
-  int press = (state & CTRL_PRESSED) && !(state & CTRL_DISABLED) ? theme->control.press_icon_offset : 0;
-  irect16_t row = rect_offset(rect_inset_xy(r, 0, theme->command_link.padding_y), press, press);
+  int size = ui_px("CommandLink", "--bullet-size"), gap = ui_px("CommandLink", "gap");
+  int press = (state & CTRL_PRESSED) && !(state & CTRL_DISABLED) ? ui_px("Button", "--press-offset") : 0;
+  irect16_t row = rect_offset(rect_inset_xy(r, 0, ui_px("CommandLink", "padding-top")), press, press);
   irect16_t bullet = rect_center(rect_split_left(row, size), size, size);
   irect16_t label = rect_trim_left(row, size + gap);
   uint32_t dot = get_sys_color(state & CTRL_DISABLED ? brTextDisabled : brAccent);
@@ -431,15 +428,14 @@ void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
 void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
   extern uint32_t ui_white_texture;
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
-  const theme_t *theme = get_theme();
-  int radius = theme->card.corner_radius, edge = theme->card.edge_width, ring = theme->card.ring_width;
+  int radius = ui_radius("Card"), edge = ui_px("Card", "--edge-width"), ring = ui_px("Card", "--ring-width");
   if (state & CTRL_SELECTED) {
     // The ring matches the accent edge; a card without an edge uses the theme accent.
     uint32_t ring_color = (edge_color >> 24) ? color_with_alpha(edge_color, 0xFF) : get_sys_color(brAccent);
     fill_rounded_rect(ring_color, r, radius + ring);
   }
   r = rect_inset(r, ring);
-  uint32_t face = get_sys_color(theme->card.face > 0 && theme->card.face < brCount ? (sys_color_idx_t)theme->card.face : brControlBg);
+  uint32_t face = get_sys_color(ui_role("Card", "background-color") > 0 && ui_role("Card", "background-color") < brCount ? (sys_color_idx_t)ui_role("Card", "background-color") : brControlBg);
   if (state & CTRL_HOVER) {
     uint32_t hover = get_sys_color(brButtonHover);
     // Average the packed channels without carries between them.
@@ -454,56 +450,53 @@ void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_colo
   float scale = MAX(1.0f, axGetScaling());
   render_rounded_rect_edged(ui_white_texture, r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
                             radius * scale, 1.0f, face, edge_color, edge * scale);
-  if (theme->card.outline > 0 && theme->card.outline < brCount && !(state & CTRL_SELECTED))   // the same silhouette, stroked
+  if (ui_role("Card", "border-color") > 0 && ui_role("Card", "border-color") < brCount && !(state & CTRL_SELECTED))   // the same silhouette, stroked
     render_rounded_rect_stroke(ui_white_texture, r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
-                               radius * scale, 1.0f, get_sys_color((sys_color_idx_t)theme->card.outline), scale);
+                               radius * scale, 1.0f, get_sys_color((sys_color_idx_t)ui_role("Card", "border-color")), scale);
 }
 
 static plastic_look_t plastic_look(ctrl_state_t state) {
-  const theme_t *theme = get_theme();
   return (plastic_look_t){
     .pressed = !!(state & CTRL_PRESSED), .hover = !!(state & CTRL_HOVER),
     .selected = !!(state & CTRL_SELECTED), .disabled = !!(state & CTRL_DISABLED),
-    .gloss = theme->plastic.gloss, .rim = theme->plastic.rim, .lift = theme->plastic.lift,
+    .gloss = ui_number("Card", "--plastic-gloss"), .rim = ui_number("Card", "--plastic-rim"), .lift = ui_number("Card", "--plastic-lift"),
   };
 }
 
 void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color) {
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
-  const theme_t *theme = get_theme();
-  if (theme->plastic.flat) {
-    irect16_t face = rect_inset(r, theme->card.shadow_size);
+  if (ui_keyword_is("Card", "--plastic", "flat")) {
+    irect16_t face = rect_inset(r, ui_px("Card", "--shadow-size"));
     if (state & CTRL_DISABLED) color = color_mix(color, get_sys_color(brControlBg), 128);
     else if (state & CTRL_PRESSED) color = color_mix(color, get_sys_color(brPanelDarker), 70);
     else if (state & CTRL_HOVER) color = color_mix(color, get_sys_color(brTextOnColor), 35);
     fill_rect(color, face);
-    if (state & CTRL_SELECTED) stroke_rounded_rect(get_sys_color(brAccentText), face, 0, theme->card.ring_width);
+    if (state & CTRL_SELECTED) stroke_rounded_rect(get_sys_color(brAccentText), face, 0, ui_px("Card", "--ring-width"));
     return;
   }
   plastic_look_t look = plastic_look(state);
-  render_plastic_surface(r, theme->card.corner_radius, theme->card.highlight_width,
-                          theme->card.shadow_size, &look, color,
-                          theme->plastic.shadow_color);
+  render_plastic_surface(r, ui_radius("Card"), ui_px("Card", "--highlight-width"),
+                          ui_px("Card", "--shadow-size"), &look, color,
+                          ui_color("Card", "--plastic-shadow"));
 }
 
 int measure_badge(ui_font_t font, const char *text) {
-  return text_strwidth(font, text) + 2 * get_theme()->badge.padding;
+  return text_strwidth(font, text) + 2 * ui_px("Badge", "padding-left");
 }
 
 uint32_t badge_ink(uint32_t color) {
-  return color_mix(color, get_sys_color(brTextNormal), (uint8_t)get_theme()->badge.ink_mix);
+  return color_mix(color, get_sys_color(brTextNormal), (uint8_t)((int)(ui_number("Badge", "--ink-mix") * 255.0f + 0.5f)));
 }
 
 int draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color) {
   int w = measure_badge(font, text);
   draw_badge_ex(font, text, R(x, y, w, height), badge_ink(color),
-                color_with_alpha(color, (uint8_t)get_theme()->badge.tint_alpha), false);
+                color_with_alpha(color, (uint8_t)((int)(ui_number("Badge", "--tint-alpha") * 255.0f + 0.5f))), false);
   return w;
 }
 
 static int status_badge_icon_width(const char *icon) {
-  const theme_t *theme = get_theme();
-  return icon && icon[0] ? theme->badge.icon_size + theme->badge.icon_gap : 0;
+  return icon && icon[0] ? ui_px("Badge::icon", "width") + ui_px("Badge::icon", "margin-right") : 0;
 }
 
 int measure_status_badge(const char *text, const char *icon) {
@@ -511,13 +504,12 @@ int measure_status_badge(const char *text, const char *icon) {
 }
 
 void draw_status_badge(irect16_t r, const char *text, const char *icon, uint32_t color) {
-  const theme_t *theme = get_theme();
   int icon_w = status_badge_icon_width(icon);
-  draw_badge_ex(FONT_SYSTEM, "", r, color, color_with_alpha(color, (uint8_t)theme->badge.tint_alpha), true);
-  irect16_t content = rect_inset_xy(r, theme->badge.padding, 0);
+  draw_badge_ex(FONT_SYSTEM, "", r, color, color_with_alpha(color, (uint8_t)((int)(ui_number("Badge", "--tint-alpha") * 255.0f + 0.5f))), true);
+  irect16_t content = rect_inset_xy(r, ui_px("Badge", "padding-left"), 0);
   sysicon_resolved_t glyph;
-  if (icon_w && sysicon_resolve_size(icon, theme->badge.icon_size, &glyph)) {
-    irect16_t at = rect_center(rect_split_left(content, theme->badge.icon_size), glyph.w, glyph.h);
+  if (icon_w && sysicon_resolve_size(icon, ui_px("Badge::icon", "width"), &glyph)) {
+    irect16_t at = rect_center(rect_split_left(content, ui_px("Badge::icon", "width")), glyph.w, glyph.h);
     draw_sprite_region((int)glyph.tex, at, UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1), color, 0);
   }
   irect16_t label = rect_trim_left(content, icon_w);
@@ -526,9 +518,8 @@ void draw_status_badge(irect16_t r, const char *text, const char *icon, uint32_t
 
 void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_color, uint32_t background_color, bool round) {
   if (r.w <= 0 || r.h <= 0) return;
-  const theme_t *theme = get_theme();
   int radius = MIN(r.w, r.h) / 2;
-  if (!round) radius = MIN(theme->badge.corner_radius, radius);
+  if (!round) radius = MIN(ui_radius("Badge"), radius);
   fill_rounded_rect(background_color, r, radius);
   draw_text_clipped(font, text, &r, text_color, TEXT_ALIGN_CENTER);
 }
@@ -659,15 +650,14 @@ void composite_root_windows(void) {
       layers = p;
       capacity = grown;
     }
-    const theme_t *theme = get_theme();
     layers[count++] = (R_CompositeLayer){
       .tex = surf->tex, .w = surf->w, .h = surf->h, .frame = w->frame,
       .clipped = w->mdi_client != NULL,
       .clip = w->mdi_client ? mdi_client_screen_rect(w->mdi_client) : R(0, 0, 0, 0),
       .corner_radius = (float)window_composition_attr(w, WCA_CORNERS) * axGetScaling(),
       .shadow = window_composition_attr(w, WCA_SHADOW) != 0,
-      .shadow_radius = (float)theme->window.corner_radius, .shadow_blur = (float)theme->window.shadow.blur,
-      .shadow_offset = theme->window.shadow.offset, .shadow_color = theme->window.shadow.color,
+      .shadow_radius = (float)ui_radius("Window"), .shadow_blur = (float)ui_shadow("Window", "box-shadow").blur,
+      .shadow_offset = ui_shadow("Window", "box-shadow").offset, .shadow_color = ui_shadow("Window", "box-shadow").color,
       .overlay_color = window_is_modal_blocked(w) ? get_sys_color(brModalOverlay) : 0,
       .border = window_composition_attr(w, WCA_BORDER) != 0, .user = w,
     };

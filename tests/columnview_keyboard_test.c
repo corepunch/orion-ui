@@ -892,7 +892,7 @@ void test_cv_thumbnail_fills_width_and_adds_columns(void) {
     ASSERT_TRUE(send_message(cv, RVM_SETICONSIZE, 70, NULL));
     add_items(cv, 8);
 
-    int gap = get_theme()->thumbnail.gap;
+    int gap = ui_px("IconView::thumbnail", "--gap");
     int cols = (240 + gap) / (70 + gap);
     int tile = (240 - (cols - 1) * gap) / cols;
     ASSERT_EQUAL(cols, 3);

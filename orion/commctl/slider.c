@@ -39,8 +39,7 @@ static int sl_axis(const window_t *win, int mx, int my) {
 // Range of thumb-centre positions: [start, start + span].
 static void sl_travel(const window_t *win, int *start, int *span) {
   int edge = SLIDER_TRACK_PAD;
-  const theme_t *theme = get_theme();
-  if (sl_trough(win)) edge = theme->slider.trough_inset + theme->slider.thumb_inset + theme->slider.thumb_length / 2;
+  if (sl_trough(win)) edge = ui_px("Slider::trough", "--inset") + ui_px("Slider::knob", "--inset") + ui_px("Slider::knob", "--length") / 2;
   *start = edge;
   *span = MAX(1, sl_length(win) - 2 * edge);
 }
@@ -52,7 +51,7 @@ static irect16_t sl_axis_rect(const window_t *win, int from, int len, irect16_t 
 }
 
 static irect16_t sl_trough_rect(const window_t *win) {
-  return rect_inset(get_client_rect(win), get_theme()->slider.trough_inset);
+  return rect_inset(get_client_rect(win), ui_px("Slider::trough", "--inset"));
 }
 
 static int sl_clamp_count(int n) {
@@ -78,9 +77,8 @@ static int sl_value_from_axis(const window_t *win, const slider_state_t *s, int 
 }
 
 static irect16_t sl_knob_rect(const window_t *win, const slider_state_t *s, int i) {
-  const theme_t *theme = get_theme();
-  irect16_t trough = rect_inset(sl_trough_rect(win), theme->slider.thumb_inset);
-  int len = theme->slider.thumb_length;
+  irect16_t trough = rect_inset(sl_trough_rect(win), ui_px("Slider::knob", "--inset"));
+  int len = ui_px("Slider::knob", "--length");
   return sl_axis_rect(win, sl_axis_from_value(win, s, s->pos[i]) - len / 2, len, trough);
 }
 

@@ -49,7 +49,7 @@ bool toolbar_hit_action(const toolbar_state_t *tb, int x, int y) {
 }
 
 static int toolbar_state_bsz(const toolbar_state_t *tb) {
-  return (tb && tb->btn_size > 0) ? tb->btn_size : get_theme()->toolbar.button_size;
+  return (tb && tb->btn_size > 0) ? tb->btn_size : ui_px("Toolbar::button", "height");
 }
 
 // Caption band under the icon of a TOOLBAR_STYLE_SHOW_LABELS button.
@@ -135,11 +135,11 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
   int bsz = toolbar_state_bsz(tb);
   int item_h = toolbar_state_item_height(tb);
   int padding = toolbar_effective_padding(parent);
-  int spacing = (tb->style & TOOLBAR_STYLE_COMPACT) ? get_theme()->toolbar.compact.spacing : get_theme()->toolbar.spacing;
+  int spacing = (tb->style & TOOLBAR_STYLE_COMPACT) ? ui_px("Toolbar.compact", "gap") : ui_px("Toolbar", "gap");
   bool vertical = tb->orientation == TOOLBAR_VERTICAL;
-  int vertical_spacing = get_theme()->toolbar.spacing;
-  int grip_h = (vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? get_theme()->toolbar.grip_size : 0;
-  int grip_w = (!vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? get_theme()->toolbar.grip_size : 0;
+  int vertical_spacing = ui_px("Toolbar", "gap");
+  int grip_h = (vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? ui_px("Toolbar::grip", "width") : 0;
+  int grip_w = (!vertical && (tb->style & TOOLBAR_STYLE_GRIP)) ? ui_px("Toolbar::grip", "width") : 0;
   int cursor = padding + grip_h;
   int x = padding + grip_w;
   int base_y = padding + grip_h;
@@ -162,7 +162,7 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
           w = bsz + text_strwidth(FONT_SMALL, item->text) + TOOLBAR_LIST_TEXT_PAD;
         else if (!item->w && (tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text)
           w = MAX(w, text_strwidth(FONT_SMALLEST, item->text) + 8);
-        if (item->type == TOOLBAR_ITEM_DROPDOWN) w += get_theme()->toolbar.dropdown_arrow_w;
+        if (item->type == TOOLBAR_ITEM_DROPDOWN) w += ui_px("Toolbar::split-arrow", "width");
         h = item_h;
         break;
       }
@@ -185,8 +185,8 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
         h = field_h;
         break;
       case TOOLBAR_ITEM_SLIDER:
-        w = vertical ? bsz : item->w > 0 ? item->w : bsz * 3 + get_theme()->toolbar.spacing * 2;
-        h = vertical ? (item->w > 0 ? item->w : item_h * 3 + get_theme()->toolbar.spacing * 2) : item_h;
+        w = vertical ? bsz : item->w > 0 ? item->w : bsz * 3 + ui_px("Toolbar", "gap") * 2;
+        h = vertical ? (item->w > 0 ? item->w : item_h * 3 + ui_px("Toolbar", "gap") * 2) : item_h;
         break;
       case TOOLBAR_ITEM_TEXTEDIT:
         w = item->w > 0 ? item->w : (bsz * 8);
@@ -372,7 +372,7 @@ static void draw_toolbar_icon_in_rect(window_t *win, toolbar_state_t *tb, const 
   bool compact = tb && (tb->style & TOOLBAR_STYLE_COMPACT);
   int w = res.w, h = res.h;
   if (w > 0 && h > 0) {
-    int size = MAX(1, compact ? MIN(get_theme()->toolbar.compact.icon, MIN(r.w, r.h)) : MIN(r.w, r.h) - 4);
+    int size = MAX(1, compact ? MIN(ui_px("Toolbar.compact", "--icon-size"), MIN(r.w, r.h)) : MIN(r.w, r.h) - 4);
     size = MIN(size, MAX(w, h));
     int extent = MAX(w, h);
     w = MAX(1, w * size / extent);
@@ -395,7 +395,6 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
   bool compact = (tb->style & TOOLBAR_STYLE_COMPACT) != 0;
   bool is_active  = !disabled && (item->state & TBSTATE_CHECKED) != 0; // compact rows keep checks, not hover
   bool is_hot     = !disabled && !compact && (tb->hot_item == i);
-  theme_t *th = get_theme();
 
   switch (item->type) {
     case TOOLBAR_ITEM_CUSTOM: {
@@ -424,7 +423,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
                           ? theme_foreground(part, state)
                           : item->color;
       theme_draw(part, local, state);
-      int poff = is_pressed ? th->control.press_icon_offset : 0;
+      int poff = is_pressed ? ui_px("Button", "--press-offset") : 0;
       irect16_t icon_rect = local;
       icon_rect.h -= toolbar_label_extra(tb);
       if (toolbar_lists_text(tb, item)) {
@@ -448,7 +447,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       break;
     }
     case TOOLBAR_ITEM_DROPDOWN: {
-      int aw = get_theme()->toolbar.dropdown_arrow_w;
+      int aw = ui_px("Toolbar::split-arrow", "width");
       irect16_t btn_part = {0, 0, r.w - aw, r.h};
       irect16_t arr_part = {r.w - aw, 0, aw, r.h};
       bool arrow_pressed = is_pressed && tb->pressed_in_arrow;
@@ -460,7 +459,7 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       if (is_hot)      btn_state |= CTRL_HOVER;
       theme_draw(THEME_PART_TOOLBAR_SPLIT_BUTTON, btn_part, btn_state);
 
-      int btn_poff = btn_pressed ? th->control.press_icon_offset : 0;
+      int btn_poff = btn_pressed ? ui_px("Button", "--press-offset") : 0;
       const char *icon = item->alt_ident && (ui_get_mod_state() & AX_MOD_ALT) && item->alt_icon ? item->alt_icon : item->icon;
       const char *icon_name = icon ? icon : "missing";
       irect16_t icon_rect = btn_part;
@@ -553,7 +552,7 @@ static result_t win_toolbar(window_t *win, uint32_t msg, uint32_t wparam, void *
       tb->pressed_item = idx;
       set_capture(win);
       tb->pressed_in_arrow = (item->type == TOOLBAR_ITEM_DROPDOWN) &&
-                             (tx >= tb->item_rects[idx].x + tb->item_rects[idx].w - get_theme()->toolbar.dropdown_arrow_w);
+                             (tx >= tb->item_rects[idx].x + tb->item_rects[idx].w - ui_px("Toolbar::split-arrow", "width"));
       invalidate_window(win->parent);
       return true;
     }
@@ -739,15 +738,15 @@ int toolbar_effective_bsz(window_t const *win) {
 
 int toolbar_effective_padding(window_t const *win) {
   toolbar_state_t *tb = window_toolbar_state((window_t *)win);
-  return tb && (tb->style & TOOLBAR_STYLE_COMPACT) ? get_theme()->toolbar.compact.padding
-                                                : get_theme()->toolbar.padding;
+  return tb && (tb->style & TOOLBAR_STYLE_COMPACT) ? ui_px("Toolbar.compact", "padding")
+                                                : ui_px("Toolbar", "padding");
 }
 
 int toolbar_effective_item_height(window_t const *win) {
   toolbar_state_t *tb = window_toolbar_state((window_t *)win);
   int height = toolbar_state_item_height(tb);
   if (tb && tb->orientation == TOOLBAR_VERTICAL && (tb->style & TOOLBAR_STYLE_GRIP))
-    height += get_theme()->toolbar.grip_size;
+    height += ui_px("Toolbar::grip", "width");
   if (tb && tb->orientation == TOOLBAR_VERTICAL && tb->item_rects) {
     for (int i = 0; i < tb->item_count; i++)
       height = MAX(height, tb->item_rects[i].y + tb->item_rects[i].h -
@@ -793,8 +792,8 @@ void toolbar_draw_non_client(window_t *win) {
 
   if (tb && (tb->style & TOOLBAR_STYLE_GRIP)) {
     irect16_t grip = tb->orientation == TOOLBAR_VERTICAL
-      ? rect_split_top(tb_rect, get_theme()->toolbar.grip_size)
-      : rect_split_left(tb_rect, get_theme()->toolbar.grip_size);
+      ? rect_split_top(tb_rect, ui_px("Toolbar::grip", "width"))
+      : rect_split_left(tb_rect, ui_px("Toolbar::grip", "width"));
     theme_draw(THEME_PART_TOOLBAR_GRIP, grip, CTRL_NORMAL);
   }
   set_viewport(tb_rect);

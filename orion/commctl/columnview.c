@@ -106,11 +106,11 @@ int rv_content_width(window_t *win) {
 }
 
 int rv_report_header_height(const reportview_data_t *data) {
-  return (!data || data->column_titles_visible) ? MAX(HEADER_HEIGHT, get_theme()->report.header_height) : 0;
+  return (!data || data->column_titles_visible) ? MAX(HEADER_HEIGHT, ui_px("TableView::header", "min-height")) : 0;
 }
 
 int rv_report_footer_height(const reportview_data_t *data) {
-  return data && data->footer_visible ? MAX(HEADER_HEIGHT, get_theme()->report.header_height) : 0;
+  return data && data->footer_visible ? MAX(HEADER_HEIGHT, ui_px("TableView::header", "min-height")) : 0;
 }
 
 int rv_get_report_column_width(reportview_data_t *data, int col, int avail_w) {

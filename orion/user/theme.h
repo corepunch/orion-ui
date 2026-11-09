@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <orion/user/user.h>
+#include <orion/user/ui_style.h>
 
 // Public drawing colors use sRGB RGB and linear alpha. Packed values are
 // 0xAABBGGRR (R in the low byte); WEB(0xaabbcc) accepts CSS #RRGGBB.
@@ -213,9 +214,6 @@ typedef struct {
     bool dark;                  // palette is dark (≈ NSAppearanceNameDarkAqua)
     theme_style_t counterpart;  // same theme in the other appearance; its own style when there is none
   } appearance;
-  bool text_shadow;             // labels and checkboxes engrave their text with brDarkEdge (bevelled themes)
-  struct { int corner_radius; } table;  // framed lists (RVS_EX_FRAME): 0 = a square frame
-
   void (*draw_part)(theme_part_t part, irect16_t r, ctrl_state_t state);
   void (*draw_window_chrome)(irect16_t titlebar, irect16_t caption,
                              const char *title, ctrl_state_t state, bool maximizable);
@@ -225,118 +223,7 @@ typedef struct {
   void (*draw_card)(irect16_t r, ctrl_state_t state, uint32_t edge_color); // card face, selection ring and accent edge in one silhouette
   uint32_t (*foreground)(theme_part_t part, ctrl_state_t state);
 
-  // Geometry in logical pixels.
-  struct {
-    int width;              // reserved gutter width; 0 = overlay only
-    bool overlay;           // true = overlay thumbs, false = reserved-space bars
-  } scrollbar;
-  struct { int height; } caption;
-  struct { int height; } menubar;
-  struct {
-    int divider_width;      // column divider thickness in logical pixels
-    int row_height;         // minimum row height; 0 = from the content font
-    int header_height;      // minimum column-title and totals band height; 0 = from the system font
-    bool row_dividers;      // a hairline under every row, as business tables rule them
-  } report;
-  struct {
-    int button_size, padding;
-    int spacing, corner_radius; // inter-item gap and selection rounding
-    struct {
-      int padding;          // menu-bar-row toolbar: outer margin
-      int spacing;          // menu-bar-row toolbar: gap between buttons
-      int icon;             // menu-bar-row toolbar: glyph size
-      int menu_gap;         // clearance between a compact toolbar and the menus
-    } compact;
-    int grip_size;          // drag grip thickness of a floating toolbar or menu bar
-    int dropdown_arrow_w;   // width of a split button's arrow zone
-  } toolbar;
-
-  struct {
-    int padding;            // standard inset from control frame to content area
-    int press_icon_offset;  // Classic shifts pressed icons/labels by 1; Modern keeps them stationary
-  } control;
-  struct { int corner_radius; } button; // 0 = square; CORNER_RADIUS_CIRCULAR = capsule
-  struct {
-    int corner_radius;      // applied by the SDF compositor
-    struct {
-      int blur;             // zero disables shadows
-      ipoint16_t offset;
-      uint32_t color;
-    } shadow;
-  } window;
-  struct {
-    int corner_radius;      // draw_card(): 0 = square
-    int edge_width;         // accent edge width
-    int ring_width;         // selection ring thickness, reserved inside the bounds
-    int highlight_width;    // plastic card bevel width (0 = none)
-    int shadow_size;        // plastic card margin reserved inside the bounds
-    int padding_x, padding_y;
-    int face;               // sys colour role of the face, 0 = brControlBg (a tile on a panel)
-    int outline;            // sys colour role of a hairline along the silhouette, 0 = none
-  } card;
-  struct {
-    int gap;                // space between photo-grid tiles (IconGrid RVM_VIEW_THUMBNAIL)
-    int ring_width;         // selected tile's accent ring, inside the tile
-  } thumbnail;
-  struct {                   // plastic material, handed to the shader as uniforms
-    bool flat;               // solid colour instead of the plastic material
-    float gloss;             // strength of the top highlight band (1 = reference)
-    float rim;               // lit/shaded bevel strength along the silhouette
-    float lift;              // face lightening while hovered
-    uint32_t shadow_color;   // drop shadow tint (alpha = strength)
-  } plastic;
-  struct {
-    struct {
-      int blur;             // zero disables the shadow for a window lifted under the pointer
-      ipoint16_t offset;
-      uint32_t color;
-    } shadow;
-  } drag;
-  struct {
-    struct { int height, start; } header; // horizontal TabView height and leading inset
-    int min_width, padding;
-    int pane_frame;          // page inset from the tab bar frame (bevel width; 0 = flat)
-    int corner_radius;       // shared by tab faces and Page pane composition
-    int pane_margin;         // outside each Page pane, in logical pixels
-  } tab;
-  struct { int spacing; } splitter; // layout space reserved between pane allocations
-  struct { int capsule; } menu; // 1 = padded selection capsule; 0 = full item cell
-  struct {
-    int padding, corner_radius;
-    int tint_alpha;          // alpha of the tinted face (0..255)
-    int ink_mix;             // how far the text moves from the role towards brTextNormal (0..255)
-    int icon_size, icon_gap; // status badge's leading icon
-  } badge;
-  struct {
-    int corner_radius;            // single-line fields; CORNER_RADIUS_CIRCULAR = capsule
-    int multiline_corner_radius;  // derived from single-line control height
-    int padding_x;                // text inset from the ends, clearing the corner (FIELD_PADDING_X)
-  } field;
-  struct {                   // SLIDER_TROUGH geometry; radii may be CORNER_RADIUS_CIRCULAR
-    int trough_inset;        // control edge to trough, on every side
-    int trough_radius;
-    int thumb_inset;         // trough edge to thumb, on every side
-    int thumb_length;        // thumb extent along the axis
-    int thumb_radius;
-  } slider;
-  struct {
-    int corner_radius, tail_size;
-    int padding_x, padding_y, gap;
-    struct {
-      int size, blur;
-      ipoint16_t offset;
-      uint32_t color;
-    } shadow;
-  } tooltip;
-  struct {
-    int corner_radius, tail_width, tail_length;
-    struct {
-      int size, blur;
-      ipoint16_t offset;
-      uint32_t color;
-    } shadow;
-  } speechbubble;
-  struct { int bullet_size, gap, padding_y; } command_link; // BUTTON_COMMANDLINK bullet and row
+  // Every metric is a style sheet property, read with ui_px() and its kin (ui_style.h).
 
   // Writes the theme's palette into g_sys_colors.  Called by set_theme()
   // before evThemeChanged is broadcast so controls see the new colors
@@ -367,8 +254,7 @@ theme_t *get_theme(void);
 bool set_theme(theme_style_t style);
 
 static inline int theme_toolbar_band_height(void) {
-  theme_t *theme = get_theme();
-  return theme->toolbar.button_size + 2 * theme->toolbar.padding;
+  return ui_px("Toolbar::button", "height") + 2 * ui_px("Toolbar", "padding");
 }
 
 // Paint semantic parts only inside the established paint path. Disabled state
@@ -408,14 +294,13 @@ const char *theme_sys_color_name(int role);      // "control-bg"; NULL for an un
 int  theme_sys_color_role(const char *name);     // -1 when no role has that name
 // Every role from the sheet's :root; false (missing roles logged) when any is undefined.
 bool theme_palette_from_stylesheet(style_sheet_t *sheet, uint32_t palette[brCount]);
-// Overwrites the metrics the sheet sets; the rest keep their values.
-void theme_metrics_from_stylesheet(theme_t *theme, const style_sheet_t *sheet);
 
 // base.css + theme->css (or the file ORION_THEME_CSS names), in the theme's
 // appearance; colour roles resolve against the live palette.
 style_sheet_t *theme_stylesheet(theme_t *theme);
-// Reads the theme's metrics from its sheet; call once when building the instance.
-void theme_init_from_stylesheet(theme_t *theme);
+// An application's own sheet, read after the theme's as a page's sheet follows
+// the user agent's; NULL removes it. Applies to every theme.
+void ui_set_app_stylesheet(const char *css, const char *origin);
 // theme_t callbacks for CSS themes (theme_box.c and theme_css.c).
 void theme_css_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state);
 uint32_t theme_css_foreground(theme_part_t part, ctrl_state_t state);

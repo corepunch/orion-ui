@@ -576,10 +576,10 @@ void test_toolbar_set_items_spacer(void) {
     ASSERT_EQUAL(tb->item_rects[0].w, TB_SPACING);
     ASSERT_EQUAL(tb->item_rects[0].x, TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING);
     ASSERT_EQUAL(tb->item_rects[1].x,
-                 TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING + TB_SPACING + get_theme()->toolbar.spacing);
+                 TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING + TB_SPACING + ui_px("Toolbar", "gap"));
     ASSERT_EQUAL(tb->item_rects[2].x,
-                 TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING + TB_SPACING + get_theme()->toolbar.spacing +
-                 8 + get_theme()->toolbar.spacing);
+                 TOOLBAR_BEVEL_WIDTH + TOOLBAR_PADDING + TB_SPACING + ui_px("Toolbar", "gap") +
+                 8 + ui_px("Toolbar", "gap"));
 
     destroy_window(win);
     test_env_shutdown();
@@ -1105,7 +1105,7 @@ static void test_toolbar_vertical_custom_item(void) {
   send_message(win, tbSetButtonSize, 30, NULL);
   ASSERT_EQUAL(tb->item_rects[0].x, tb->item_rects[2].x);
   ASSERT_EQUAL(tb->item_rects[1].h, 8);
-  ASSERT_EQUAL(tb->item_rects[2].y, tb->item_rects[0].y + 30 + 8 + 2 * get_theme()->toolbar.spacing);
+  ASSERT_EQUAL(tb->item_rects[2].y, tb->item_rects[0].y + 30 + 8 + 2 * ui_px("Toolbar", "gap"));
   irect16_t r = tb->item_rects[2];
   ASSERT_EQUAL(titlebar_height(win), TITLEBAR_HEIGHT + r.y + r.h + TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH);
   send_message(win, tbSetOrientation, 999, NULL);
@@ -1153,11 +1153,10 @@ void test_toolbar_trough_slider(void) {
   ASSERT_NOT_NULL(slider);
   ASSERT_TRUE(slider->flags & SLIDER_TROUGH);
   ASSERT_TRUE(slider->flags & SLIDER_VERTICAL);
-  const theme_t *t = get_theme();
   int h = slider->frame.h, cx = slider->frame.w / 2;
-  int edge = t->slider.trough_inset + t->slider.thumb_inset + t->slider.thumb_length / 2, span = h - 2 * edge;
+  int edge = ui_px("Slider::trough", "--inset") + ui_px("Slider::knob", "--inset") + ui_px("Slider::knob", "--length") / 2, span = h - 2 * edge;
   // Outside the trough: not a slider press.
-  ASSERT_FALSE(send_message(slider, evLeftButtonDown, MAKEDWORD(t->slider.trough_inset - 1, h / 2), NULL));
+  ASSERT_FALSE(send_message(slider, evLeftButtonDown, MAKEDWORD(ui_px("Slider::trough", "--inset") - 1, h / 2), NULL));
   // On the thumb, 3px above its centre: dragging keeps the offset, so the value stays put.
   ASSERT_TRUE(send_message(slider, evLeftButtonDown, MAKEDWORD(cx, h - edge - 3), NULL));
   send_message(slider, evMouseMove, MAKEDWORD(cx, h - edge - 3), NULL);
@@ -1220,7 +1219,7 @@ void test_toolbar_embedded_slider_drag(void) {
   window_t *slider = get_window_item(win, 42);
   ASSERT_NOT_NULL(slider);
   ASSERT_TRUE(slider->flags & SLIDER_VERTICAL);
-  ASSERT_EQUAL(slider->frame.h, 3 * TB_SPACING + 2 * get_theme()->toolbar.spacing);
+  ASSERT_EQUAL(slider->frame.h, 3 * TB_SPACING + 2 * ui_px("Toolbar", "gap"));
   int x = window_screen_x(slider) + slider->frame.w / 2;
   int y = window_screen_y(slider);
   ASSERT_EQUAL(y, win->frame.y + slider->frame.y);
@@ -1232,8 +1231,8 @@ void test_toolbar_embedded_slider_drag(void) {
   ASSERT_NULL(g_ui_runtime.captured);
   send_message(win, tbSetOrientation, TOOLBAR_HORIZONTAL, NULL);
   ASSERT_FALSE(slider->flags & SLIDER_VERTICAL);
-  ASSERT_EQUAL(slider->frame.w, 3 * TB_SPACING + 2 * get_theme()->toolbar.spacing);
-  item.w = 2 * TB_SPACING + get_theme()->toolbar.spacing;
+  ASSERT_EQUAL(slider->frame.w, 3 * TB_SPACING + 2 * ui_px("Toolbar", "gap"));
+  item.w = 2 * TB_SPACING + ui_px("Toolbar", "gap");
   send_message(win, tbSetItems, 1, &item);
   slider = get_window_item(win, 42);
   ASSERT_EQUAL(slider->frame.w, item.w);
@@ -1308,7 +1307,7 @@ void test_compact_application_toolbar(void) {
   ASSERT_NOT_NULL(bar);
   ASSERT_EQUAL(bar->frame.y, 0);
   ASSERT_EQUAL(bar->frame.h, MENUBAR_HEIGHT);
-  ASSERT_EQUAL(bar->frame.x + bar->frame.w, 600 - MENUBAR_HEIGHT - (get_theme()->toolbar.compact.spacing - 2 * get_theme()->toolbar.compact.padding)); // restore button one pitch away
+  ASSERT_EQUAL(bar->frame.x + bar->frame.w, 600 - MENUBAR_HEIGHT - (ui_px("Toolbar.compact", "gap") - 2 * ui_px("Toolbar.compact", "padding"))); // restore button one pitch away
   toolbar_state_t *tb = require_toolbar_state(bar);
   irect16_t r = tb->item_rects[0];
   ASSERT_EQUAL(r.y, 2);
@@ -1396,7 +1395,7 @@ static void test_vertical_grid_columns(void) {
   toolbar_state_t *tb = toolbar_get_state(win);
   ASSERT_EQUAL(tb->item_rects[0].y, tb->item_rects[1].y);
   ASSERT_TRUE(tb->item_rects[0].x + tb->item_rects[0].w < tb->item_rects[1].x);
-  ASSERT_EQUAL(tb->item_rects[2].w, 2 * TB_SPACING + get_theme()->toolbar.spacing);
+  ASSERT_EQUAL(tb->item_rects[2].w, 2 * TB_SPACING + ui_px("Toolbar", "gap"));
   ASSERT_TRUE(tb->item_rects[3].y > tb->item_rects[2].y);
   ASSERT_EQUAL(tb->item_rects[3].y, tb->item_rects[4].y);
   for (int i = 0; i < ARRAY_LEN(items); i++) {
@@ -1442,7 +1441,7 @@ static void test_vertical_small_items_pack(void) {
   send_message(win, tbSetOrientation, TOOLBAR_VERTICAL, NULL);
   send_message(win, tbSetItems, ARRAY_LEN(items), items);
   toolbar_state_t *tb = toolbar_get_state(win);
-  int mini = (TB_SPACING - get_theme()->toolbar.spacing) / 2;
+  int mini = (TB_SPACING - ui_px("Toolbar", "gap")) / 2;
   for (int i = 0; i < 4; i++) {
     ASSERT_EQUAL(tb->item_rects[i].w, mini);
     ASSERT_EQUAL(tb->item_rects[i].h, mini);
@@ -1451,8 +1450,8 @@ static void test_vertical_small_items_pack(void) {
   ASSERT_EQUAL(tb->item_rects[2].y, tb->item_rects[3].y);
   ASSERT_TRUE(tb->item_rects[1].x > tb->item_rects[0].x);
   ASSERT_EQUAL(tb->item_rects[3].y + tb->item_rects[3].h - tb->item_rects[0].y,
-               2 * mini + get_theme()->toolbar.spacing);
-  ASSERT_TRUE(2 * mini + get_theme()->toolbar.spacing <= TB_SPACING);
+               2 * mini + ui_px("Toolbar", "gap"));
+  ASSERT_TRUE(2 * mini + ui_px("Toolbar", "gap") <= TB_SPACING);
   ASSERT_EQUAL(tb->item_rects[4].w, TB_SPACING);
   ASSERT_EQUAL(tb->item_rects[4].h, TB_SPACING);
   ASSERT_EQUAL(tb->item_rects[5].y, tb->item_rects[6].y);
@@ -1508,8 +1507,8 @@ static void test_vertical_column_alignment(void) {
   TEST("vertical toolbar uses uniform buttons and keeps custom pairs within each wrapped column");
   test_env_init();
   window_t *win = create_window("Alignment", WINDOW_TOOLBAR | WINDOW_NOTITLE,
-      MAKERECT(0, 0, 100, 2 * get_theme()->toolbar.padding + get_theme()->toolbar.grip_size +
-                         2 * (get_theme()->toolbar.button_size + get_theme()->toolbar.spacing)), NULL, noop_proc, 0, NULL);
+      MAKERECT(0, 0, 100, 2 * ui_px("Toolbar", "padding") + ui_px("Toolbar::grip", "width") +
+                         2 * (ui_px("Toolbar::button", "height") + ui_px("Toolbar", "gap"))), NULL, noop_proc, 0, NULL);
   toolbar_item_t items[] = {
     {.type = TOOLBAR_ITEM_BUTTON, .ident = 1, .style = CONTROL_SIZE_SMALL},
     {.type = TOOLBAR_ITEM_BUTTON, .ident = 2},
@@ -1528,7 +1527,7 @@ static void test_vertical_column_alignment(void) {
   }
   ASSERT_EQUAL(tb->item_rects[0].x, pad);
   ASSERT_EQUAL(tb->item_rects[1].x, pad);
-  int start = pad + bsz + get_theme()->toolbar.spacing;
+  int start = pad + bsz + ui_px("Toolbar", "gap");
   ASSERT_EQUAL(tb->item_rects[2].x, start);
   ASSERT_EQUAL(tb->item_rects[3].y, tb->item_rects[4].y);
   ASSERT_TRUE(tb->item_rects[3].x + tb->item_rects[3].w < tb->item_rects[4].x);

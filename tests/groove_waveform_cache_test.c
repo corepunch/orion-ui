@@ -188,10 +188,10 @@ static void test_card_margin(void) {
   TEST("plastic card content uses the theme's halved shadow margin and keeps its grid bounds");
   for (int theme = THEME_CLASSIC; theme <= THEME_MODERN; theme++) {
     set_theme(theme);
-    ASSERT_EQUAL(get_theme()->card.shadow_size, 1);
+    ASSERT_EQUAL(ui_px("Card", "--shadow-size"), 1);
     irect16_t bounds = R(0, 0, 88, 32);
     irect16_t content = theme_content_rect(THEME_PART_CARD, bounds, CTRL_PLASTIC);
-    ASSERT_EQUAL(content.x, get_theme()->card.shadow_size + get_theme()->card.ring_width);
+    ASSERT_EQUAL(content.x, ui_px("Card", "--shadow-size") + ui_px("Card", "--ring-width"));
     ASSERT_EQUAL(content.w + 2 * content.x, bounds.w);
     irect16_t selected = theme_content_rect(THEME_PART_CARD, bounds, CTRL_PLASTIC | CTRL_SELECTED);
     ASSERT_EQUAL(selected.x, content.x);

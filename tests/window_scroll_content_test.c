@@ -47,10 +47,7 @@ static void test_insets_and_reveal(void) {
 static void test_overlay_empty_and_oversized(void) {
   TEST("window scrolling: overlay bars, oversized reveal, empty content and rejected geometry");
   test_env_init(); set_theme(THEME_MODERN);
-  theme_t *theme = get_theme();
-  int saved_width = theme->scrollbar.width;
-  bool saved_overlay = theme->scrollbar.overlay;
-  theme->scrollbar.width = 0; theme->scrollbar.overlay = true;
+  ui_set_app_stylesheet("Scrollbar { width: 0; --overlay: 1; }", "overlay.css");   // overlay scroll bars
   window_t *win = create_window("", WINDOW_NOTITLE | WINDOW_VSCROLL,
                                 MAKERECT(0, 0, 100, 80), NULL, content_proc, 0, NULL);
   window_set_scroll_content(win, 0, 400, R(4, 6, 8, 10), R(0, 12, 0, 0));
@@ -66,7 +63,7 @@ static void test_overlay_empty_and_oversized(void) {
   window_set_scroll_content(win, 0, 0, R(4, 6, 8, 10), R(0, 12, 0, 0));
   ok &= win->vscroll.max_val == 0 && win->vscroll.pos == 0 && !win->vscroll.visible;
   test_env_shutdown();
-  theme->scrollbar.width = saved_width; theme->scrollbar.overlay = saved_overlay;
+  ui_set_app_stylesheet(NULL, NULL);
   ASSERT_TRUE(ok); PASS();
 }
 

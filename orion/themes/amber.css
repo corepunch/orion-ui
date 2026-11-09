@@ -62,3 +62,5 @@ TextEdit, ComboBox, SegmentedControl {
 }
 TextEdit:focus, ComboBox:focus, SegmentedControl:focus { border-color: var(--border-focus); }
 TextEdit:disabled, ComboBox:disabled, SegmentedControl:disabled { border-color: var(--light-edge); }
+
+TextEdit { padding-left: 6px; }   /* the text clears the corner: at least 6 px */

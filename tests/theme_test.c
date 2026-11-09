@@ -14,7 +14,7 @@ static void record_part(theme_part_t part, irect16_t r, ctrl_state_t state) {
 }
 
 static void test_switch_validation(void) {
-  TEST("theme switching rejects invalid styles, callbacks and metrics without changing palette");
+  TEST("theme switching rejects invalid styles, callbacks and sheets without changing palette");
   test_env_init();
   set_theme(THEME_CLASSIC);
   uint32_t classic_color = get_sys_color(brControlBg);
@@ -32,25 +32,20 @@ static void test_switch_validation(void) {
   bool result = set_theme(THEME_CLASSIC);
   classic->draw_part = saved;
   ASSERT_FALSE(result);
-  int width = classic->scrollbar.width;
-  classic->scrollbar.width = -1;
+  // A theme whose style sheet does not load is rejected.
+  const char *css = classic->css;
+  style_sheet_t *sheet = classic->sheet;
+  classic->css = NULL; classic->sheet = NULL;
   result = set_theme(THEME_CLASSIC);
-  classic->scrollbar.width = width;
+  classic->css = css; classic->sheet = sheet;
   ASSERT_FALSE(result);
   ASSERT_TRUE(get_theme() == light);
   ASSERT_EQUAL(light_color, get_sys_color(brControlBg));
-  int divider_width = classic->report.divider_width;
-  classic->report.divider_width = 0;
-  result = set_theme(THEME_CLASSIC);
-  classic->report.divider_width = divider_width;
-  ASSERT_FALSE(result);
-  ASSERT_TRUE(get_theme() == light);
-  ASSERT_EQUAL(light_color, get_sys_color(brControlBg));
-  ASSERT_FALSE(light->scrollbar.overlay);
-  ASSERT_EQUAL(light->scrollbar.width, SCROLLBAR_WIDTH);
+  ASSERT_FALSE(ui_flag("Scrollbar", "--overlay"));
+  ASSERT_EQUAL(ui_px("Scrollbar", "width"), SCROLLBAR_WIDTH);
   ASSERT_TRUE(set_theme(THEME_CLASSIC));
   ASSERT_EQUAL(get_sys_color(brControlBg), classic_color);
-  ASSERT_EQUAL(get_theme()->scrollbar.width, 13);
+  ASSERT_EQUAL(ui_px("Scrollbar", "width"), 13);
   int color_id = brControlBg;
   uint32_t override = 0xff123456;
   set_sys_colors(1, &color_id, &override);
@@ -99,11 +94,11 @@ static void test_navy_theme_palette(void) {
   ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x303230));
   ASSERT_TRUE(set_theme(THEME_METRO));
   ASSERT_EQUAL(get_sys_color(brAccent), WEB(0x0078D7));
-  ASSERT_EQUAL(get_theme()->card.corner_radius, 0);
-  ASSERT_TRUE(get_theme()->plastic.flat);
+  ASSERT_EQUAL(ui_radius("Card"), 0);
+  ASSERT_TRUE(ui_keyword_is("Card", "--plastic", "flat"));
   ASSERT_EQUAL(theme_foreground(THEME_PART_TOOLBAR_BUTTON, CTRL_DEFAULT), get_sys_color(brAccentText));
   ASSERT_TRUE(set_theme(THEME_MODERN));
-  ASSERT_FALSE(get_theme()->plastic.flat);
+  ASSERT_FALSE(ui_keyword_is("Card", "--plastic", "flat"));
   test_env_shutdown();
   PASS();
 }
@@ -112,18 +107,18 @@ static void test_classic_geometry(void) {
   TEST("Classic owns compact menu, caption, toolbar and scrollbar dimensions");
   test_env_init();
   if (get_theme()->style != THEME_CLASSIC) ASSERT_TRUE(set_theme(THEME_CLASSIC));
-  ASSERT_EQUAL(get_theme()->menubar.height, FONT_SIZE + 5);
-  ASSERT_EQUAL(get_theme()->caption.height, FONT_SIZE + 5);
-  ASSERT_EQUAL(get_theme()->toolbar.button_size, SYSICON_SIZE + 4);
+  ASSERT_EQUAL(ui_px("MenuBar", "height"), FONT_SIZE + 5);
+  ASSERT_EQUAL(ui_px("Window::titlebar", "height"), FONT_SIZE + 5);
+  ASSERT_EQUAL(ui_px("Toolbar::button", "height"), SYSICON_SIZE + 4);
   ASSERT_EQUAL(theme_toolbar_band_height(), SYSICON_SIZE + 10);
-  ASSERT_EQUAL(get_theme()->scrollbar.width, 13);
+  ASSERT_EQUAL(ui_px("Scrollbar", "width"), 13);
   window_t *win = test_env_create_window("classic", 0, 0, 200, 120, win_button, NULL);
   ASSERT_NOT_NULL(win);
-  ASSERT_EQUAL(window_caption_height(win), get_theme()->caption.height);
+  ASSERT_EQUAL(window_caption_height(win), ui_px("Window::titlebar", "height"));
   ASSERT_TRUE(set_theme(THEME_MODERN));
-  ASSERT_EQUAL(get_theme()->caption.height, TITLEBAR_HEIGHT);
-  ASSERT_EQUAL(get_theme()->toolbar.button_size, TB_SPACING);
-  ASSERT_EQUAL(get_theme()->scrollbar.width, SCROLLBAR_WIDTH);
+  ASSERT_EQUAL(ui_px("Window::titlebar", "height"), TITLEBAR_HEIGHT);
+  ASSERT_EQUAL(ui_px("Toolbar::button", "height"), TB_SPACING);
+  ASSERT_EQUAL(ui_px("Scrollbar", "width"), SCROLLBAR_WIDTH);
   destroy_window(win);
   test_env_shutdown();
   PASS();
@@ -210,9 +205,9 @@ static void test_titlebar_bounds(void) {
   theme->draw_window_chrome = record_chrome;
   draw_window_controls(&win);
   theme->draw_window_chrome = saved;
-  ASSERT_EQUAL(recorded_titlebar.h, get_theme()->caption.height);
+  ASSERT_EQUAL(recorded_titlebar.h, ui_px("Window::titlebar", "height"));
   ASSERT_EQUAL(recorded_titlebar.w, 300);
-  ASSERT_EQUAL(recorded_caption.h, get_theme()->caption.height);
+  ASSERT_EQUAL(recorded_caption.h, ui_px("Window::titlebar", "height"));
   test_env_shutdown();
   PASS();
 }

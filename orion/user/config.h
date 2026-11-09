@@ -78,7 +78,7 @@
 // TEXTEDIT_PADDING_CAPSULE and a squarer field less: FIELD_PADDING_X(radius).
 #define TEXTEDIT_PADDING_CAPSULE 12
 #define FIELD_PADDING_X(radius) ((radius) > 6 ? (radius) : 6)
-#define TEXTEDIT_PADDING_HORZ   (get_theme()->field.padding_x)
+#define TEXTEDIT_PADDING_HORZ   (ui_px("TextEdit", "padding-left"))
 #define COMBOBOX_ICON_SIZE      16
 // The chevrons SVG has a quarter-tile inset on each side, including its stroke.
 #define COMBOBOX_ICON_PADDING   (TEXTEDIT_PADDING_HORZ - COMBOBOX_ICON_SIZE / 4)

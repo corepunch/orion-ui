@@ -626,7 +626,7 @@ enum {
 #define SEGMENTED_LABEL_MAX    128
 #define SEGMENTED_PADDING      8  // horizontal label padding inside one segment
 #define SEGMENTED_INSET        2  // track margin around the segments
-#define TAB_CONTROL_HEIGHT (get_theme()->tab.header.height)
+#define TAB_CONTROL_HEIGHT (ui_px("TabView::tab", "height"))
 #define TAB_STYLE_ICONS_ONLY (1u << 0) // show tab icons without page-title labels
 #define TAB_STYLE_DRAG_TABS (1u << 3) // notify parent after a TabBar drag threshold
 #define TAB_STYLE_RESTORE_FOCUS (1u << 2) // restore each page's focused descendant on selection

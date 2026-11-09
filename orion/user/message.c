@@ -251,7 +251,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   irect16_t paint_clip = {0};
   window_t *previous_surface = NULL;
   bool rounded_pane = msg == evPaint && g_ui_runtime.running && win->parent &&
-                      get_theme()->tab.corner_radius > 0 && page_is_pane(win);
+                      ui_radius("TabView::tab") > 0 && page_is_pane(win);
   // Call registered hooks
   for (winhook_t *hook = g_hooks; hook; hook = hook->next) {
     if (msg == hook->msg) {
@@ -628,7 +628,7 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
     window_lift_offset(win, &dx, &dy);
     irect16_t r = rect_offset(R(0, 0, win->frame.w, win->frame.h), origin.x + dx, origin.y + dy);
     render_rounded_rect(surf->tex, r, surf->w, surf->h,
-                        get_theme()->tab.corner_radius * ui_surface_scale(), 1, 0xffffffff);
+                        ui_radius("TabView::tab") * ui_surface_scale(), 1, 0xffffffff);
   }
   return value;
 }

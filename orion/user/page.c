@@ -100,7 +100,7 @@ window_t *page_active_pane(window_t *owner) {
 static void pane_configure(window_t *owner, window_t *tree, bool initial) {
   if (!tree) return;
   if (pane_class(tree, "TabView")) {
-    int margin = get_theme()->tab.pane_margin;
+    int margin = ui_px("TabView::pane", "--pane-margin");
     tree->layout.layout_margin = R(margin, margin, margin, margin);
     if (!send_message(tree, tcGetToolbar, 0, NULL)) {
       int custom = initial ? owner->pages->pane_toolbar_count : 0;
@@ -123,7 +123,7 @@ static void pane_configure(window_t *owner, window_t *tree, bool initial) {
     if ((style & required) != required) send_message(tree, tcSetStyle, style | required, NULL);
   } else if (pane_class(tree, "SplitView")) {
     pane_configure(owner, pane_child(tree, 0), initial); pane_configure(owner, pane_child(tree, 1), initial);
-    send_message(tree, svSetPaneMargin, get_theme()->tab.pane_margin, NULL);
+    send_message(tree, svSetPaneMargin, ui_px("TabView::pane", "--pane-margin"), NULL);
   }
 }
 
@@ -146,7 +146,7 @@ static void pane_cancel(window_t *owner) {
 
 static bool pane_can_split(window_t *pane, pane_edge_t edge) {
   irect16_t r = get_client_rect(pane);
-  int gap = get_theme()->splitter.spacing + 2 * get_theme()->tab.pane_margin;
+  int gap = ui_px("SplitView", "gap") + 2 * ui_px("TabView::pane", "--pane-margin");
   if (edge == PANE_LEFT || edge == PANE_RIGHT) return r.w >= 2 * PANE_MIN_WIDTH + gap;
   if (edge == PANE_TOP || edge == PANE_BOTTOM) return r.h >= 2 * PANE_MIN_HEIGHT + gap;
   return false;
@@ -331,7 +331,7 @@ static void pane_preview(window_t *owner, ipoint16_t point) {
             (st->drag_page->parent == pane && send_message(pane, tcGetCount, 0, NULL) == 1)) {
           drop.pane = NULL; break;
         }
-        int gap = get_theme()->splitter.spacing + 2 * get_theme()->tab.pane_margin;
+        int gap = ui_px("SplitView", "gap") + 2 * ui_px("TabView::pane", "--pane-margin");
         int width = MAX(0, (r.w - gap) / 2), height = MAX(0, (r.h - gap) / 2);
         switch (drop.edge) {
           case PANE_LEFT:   r = rect_split_left(r, width); break;

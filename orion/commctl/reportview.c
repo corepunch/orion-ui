@@ -142,7 +142,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
 
   // A framed list clips everything it draws to the frame's silhouette, so
   // the header and the rows that scroll under the corners stay inside it.
-  int frame_radius = (data->extended_style & RVS_EX_FRAME) ? get_theme()->table.corner_radius : -1;
+  int frame_radius = (data->extended_style & RVS_EX_FRAME) ? ui_radius("TableView") : -1;
   if (frame_radius > 0) set_clip_rounded_rect(win, cr, frame_radius);
   theme_draw(THEME_PART_LIST_BODY, rect_trim_top(cr, header_h), CTRL_NORMAL);
   ctrl_state_t selection = report_selection_state(win);
@@ -159,7 +159,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   }
 
   // Rows ruled by hairlines, under the selection's face.
-  if (get_theme()->report.row_dividers) {
+  if (ui_flag("TableView::row", "--divider-width")) {
     set_clip_rect(win, (irect16_t){0, header_h, eff_w, MAX(0, body_bottom - header_h)});
     for (int row = first_row; row < last_row; row++) {
       int y = window_scroll_rect_to_client(win, report_item_rect(win, data, row)).y;
@@ -263,7 +263,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
         // A status badge: a pill toned by the row (its RowIcon colour), sized to its text.
         if (src[0]) {
           char fitted[MAX_COLUMNVIEW_ITEM_NAME];
-          int room = MAX(0, text_w - WIN_PADDING), pad = get_theme()->badge.padding;
+          int room = MAX(0, text_w - WIN_PADDING), pad = ui_px("Badge", "padding-left");
           if (measure_status_badge(src, NULL) > room) {   // the text ends in an ellipsis inside the pill
             text_ellipsize(FONT_SYSTEM, src, MAX(0, room - 2 * pad), fitted, sizeof(fitted));
             src = fitted;
@@ -296,7 +296,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
 
   set_clip_rect(win, (irect16_t){0, 0, eff_w, cr.h});
   col_x = 0;
-  int divider_w = get_theme()->report.divider_width;
+  int divider_w = ui_px("TableView::divider", "width");
   for (uint32_t col = 0; col < data->column_count; col++) {
     int col_w = data->cell_style == REPORTVIEW_CELL_TWO_LINE
               ? eff_w : rv_get_report_column_width(data, (int)col, eff_w);
