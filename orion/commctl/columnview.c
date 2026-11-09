@@ -106,11 +106,11 @@ int rv_content_width(window_t *win) {
 }
 
 int rv_report_header_height(const reportview_data_t *data) {
-  return (!data || data->column_titles_visible) ? MAX(HEADER_HEIGHT, ui_px("TableView::header", "min-height")) : 0;
+  return (!data || data->column_titles_visible) ? MAX(HEADER_HEIGHT, ui_px(ui_selector(data ? data->owner : NULL, "TableView::header"), "min-height")) : 0;
 }
 
 int rv_report_footer_height(const reportview_data_t *data) {
-  return data && data->footer_visible ? MAX(HEADER_HEIGHT, ui_px("TableView::header", "min-height")) : 0;
+  return data && data->footer_visible ? MAX(HEADER_HEIGHT, ui_px(ui_selector(data ? data->owner : NULL, "TableView::header"), "min-height")) : 0;
 }
 
 int rv_get_report_column_width(reportview_data_t *data, int col, int avail_w) {
@@ -164,7 +164,7 @@ int rv_large_icon_cell_h(const reportview_data_t *data) {
   return data->icon_size
        + RV_LARGE_ICON_TOP_PAD
        + RV_LARGE_ICON_LABEL_GAP
-      + text_char_height("TableView::detail")
+      + text_char_height(ui_selector(data->owner, "TableView::detail"))
        + RV_LARGE_ICON_BOT_PAD;
 }
 

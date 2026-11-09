@@ -263,6 +263,8 @@ $(foreach n,$(filter-out shell,$(EXAMPLES)) $(PHONY_APP_NAMES),$(eval $(GEM_DIR)
 $(foreach n,$(filter-out shell,$(EXAMPLES)) $(PHONY_APP_NAMES),$(eval $(GEM_DIR)/$(n).gem: $(call app_plugin_file,$(n))))
 
 GENERATED_HEADERS = $(patsubst $(APPS)/%.orion,$(GENERATED_DIR)/$(APPS)/%.h,$(wildcard $(APPS)/*/*.orion))
+# An app's <orion stylesheet="name.css"> is embedded in its generated header.
+$(foreach h,$(GENERATED_HEADERS),$(eval $(h): $(wildcard $(patsubst $(GENERATED_DIR)/%.h,%,$(h)).css)))
 
 # Lua bindings declared in .cgen files (tools/cgen.c); the file implementing
 # a module includes its generated <stem>_lua.h. Framework modules also get a

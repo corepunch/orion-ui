@@ -675,6 +675,8 @@ static void fl_control(fl_build_t *b, int i, uint32_t parent) {
   const char *icon = fl_attr(lib, c, "icon"), *tooltip = fl_attr(lib, c, "tooltip");
   d->icon = icon && *icon ? icon : NULL;
   d->tooltip = tooltip && *tooltip ? tooltip : NULL;
+  const char *css_class = fl_attr(lib, c, "class");
+  d->style_class = css_class && *css_class ? css_class : NULL;
 
   const char *context = fl_attrs_first(lib, c, "context-menu", "context_menu");
   if (context && *context) fl_error(b, c, "control '%s': context menus need compiled command ids; use orionc", fl_nz(m->name, ""));

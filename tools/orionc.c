@@ -1208,13 +1208,16 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
       target_msg = eq(taction, "insert") ? "tvInsertRecord" : eq(taction, "edit") ? "tvEditRecord" : eq(taction, "delete") ? "tvDeleteRecord" : NULL;
       if (!target_msg) { fprintf(stderr, "orionc: control '%s': unknown action '%s' for target '%s' (insert, edit, delete)\n", nz(a.v[A_NAME], ""), nz(taction, ""), target); target_msg = "0"; snprintf(target_id, sizeof(target_id), "0"); }
     }
-    OUT("  { %s, %s, { %d, %d }, %s, %s, %s, %u, %u, NULL, 0, %s, { %d, %d, %d, %d }, { %d, %d, %d, %d }, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s },\n",
+    char *css_class = attr(c, "class"), css_classq[ORIONC_STRING_SIZE] = "NULL";
+    if (css_class && *css_class) cstr(css_classq, sizeof(css_classq), css_class);
+    free(css_class);
+    OUT("  { %s, %s, { %d, %d }, %s, %s, %s, %u, %u, NULL, 0, %s, { %d, %d, %d, %d }, { %d, %d, %d, %d }, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s },\n",
         classq, id, sz.w, sz.h, flags, textq, nameq,
         (unsigned)enum_parse_token(a.v[A_HA], kAlignH, ARRAY_LEN(kAlignH), 0),
         (unsigned)enum_parse_token(a.v[A_VA], kAlignV, ARRAY_LEN(kAlignV), 0),
         spacing, pad.x, pad.y, pad.w, pad.h, mar.x, mar.y, mar.w, mar.h,
         nz(parent_id, "0"), font, a.v[A_FONT] ? "true" : "false", color, a.v[A_COLOR] ? "true" : "false", lparam, context_items, context_count, sourceq, placeholderq,
-        target_id, target_msg, iconq, tooltipq);
+        target_id, target_msg, iconq, tooltipq, css_classq);
     free(target); free(taction); free(icon); free(tooltip);
     (*count)++;
     emit_controls_ex(f, c, form, id, bindings, count, btn_ids);
@@ -1388,6 +1391,31 @@ static int emit_page_bindings(FILE *f, xmlNodePtr form, const char *prefix, cons
   return count;
 }
 
+// <orion stylesheet="app.css">: the app's CSS, beside the .orion file, embedded
+// and handed to every form (form_def_t.stylesheet).
+static char g_stylesheet_origin[256];
+
+static bool emit_stylesheet(FILE *f, xmlNodePtr root, const char *input, const char *prefix) {
+  char *href = attr(root, "stylesheet");
+  if (!href || !*href) { free(href); return true; }
+  char path[1024];
+  const char *slash = strrchr(input, '/');
+  snprintf(path, sizeof(path), "%.*s%s", slash ? (int)(slash - input + 1) : 0, input, href);
+  FILE *css = fopen(path, "rb");
+  if (!css) { fprintf(stderr, "orionc: stylesheet \"%s\" not found: %s\n", href, path); free(href); return false; }
+  snprintf(g_stylesheet_origin, sizeof(g_stylesheet_origin), "%s", path);
+  OUT("static const char %s_stylesheet[] =\n  \"", prefix);
+  for (int ch; (ch = fgetc(css)) != EOF;) {
+    if (ch == '\n') { LINE("\\n\"\n  \""); continue; }
+    if (ch == '"' || ch == '\\') fputc('\\', f);
+    if (ch == '\r') continue;
+    fputc(ch, f);
+  }
+  LINE("\";\n\n");
+  fclose(css); free(href);
+  return true;
+}
+
 static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr database) {
   char *name = attr(form, "name"), *title = attr(form, "title"), *flags_raw = attr(form, "flags"), *role = attr(form, "role"), *spacing = attrs_first(form, "spacing", "layout_spacing");
   rect_t sz = size_attr(form), pad = {0}, mar = {0}; char form_id[128], titleq[ORIONC_STRING_SIZE], flags[256];
@@ -1436,6 +1464,7 @@ static bool emit_form(FILE *f, xmlNodePtr form, const char *prefix, xmlNodePtr d
       toolbar && !eq(role, "page") ? " | WINDOW_TOOLBAR" : "", role_name,
       byte_attr(spacing, ORIONC_DEFAULT_SPACING),
       pad.x, pad.y, pad.w, pad.h, mar.x, mar.y, mar.w, mar.h, prefix, form_id, count);
+  if (g_stylesheet_origin[0]) OUT(", .stylesheet = %s_stylesheet, .stylesheet_origin = \"%s\"", prefix, g_stylesheet_origin);
   if (toolbar) OUT(", .toolbar_items = %s, .toolbar_count = ARRAY_LEN(%s)", toolbar_symbol, toolbar_symbol);
   else LINE(", .toolbar_items = NULL, .toolbar_count = 0");
   if (pane_toolbar) OUT(", .pane_toolbar_items = %s, .pane_toolbar_count = ARRAY_LEN(%s)", pane_symbol, pane_symbol);
@@ -1645,6 +1674,7 @@ int main(int argc, char **argv) {
   } else {
     emit_database(f, database, pre, true);
   }
+  if (!emit_stylesheet(f, root, input, pre)) { fclose(f); xmlFreeDoc(doc); return 1; }
   EACH_ELEMENT(form, forms) if (elem(form, "form") && activity_form_needed(form, forms, only)) {
     char *name = attr(form, "name"), id[128]; ident(id, sizeof(id), name, false);
     OUT("static const form_def_t %s_%s_form;\n", pre, id); free(name);

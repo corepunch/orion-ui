@@ -246,6 +246,10 @@ static inline int theme_toolbar_band_height(void) {
 // Paint semantic parts only inside the established paint path. Disabled state
 // suppresses hover/pressed feedback while preserving selection and focus.
 void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state);
+// The part as it appears in win (≈ DrawThemeBackground with OpenThemeData(hwnd)):
+// the window's classes and #id join the part's selector and its app sheet
+// applies, so `TableView#checkouts::header` styles one table.
+void theme_draw_in(const window_t *win, theme_part_t part, irect16_t r, ctrl_state_t state);
 
 // Extra inputs for parts whose look depends on more than bounds and state.
 typedef struct {
@@ -258,6 +262,7 @@ void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const the
 irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state);
 void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color); // shared card painter for flat themes
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state);
+uint32_t theme_foreground_in(const window_t *win, theme_part_t part, ctrl_state_t state);
 
 // Built-in theme singletons. Every theme but Classic shares Modern drawing;
 // Amber and Porcelain share its business metrics.
@@ -287,9 +292,15 @@ style_sheet_t *theme_stylesheet(theme_t *theme);
 // An application's own sheet, read after the theme's as a page's sheet follows
 // the user agent's; NULL removes it. Applies to every theme.
 void ui_set_app_stylesheet(const char *css, const char *origin);
+// An application instance's sheet (a gem's), read by the windows it owns
+// through ui_selector(); instance 0 is the process and sets the app sheet.
+// NULL removes it. A form with a stylesheet sets it when it is created.
+void ui_set_instance_stylesheet(hinstance_t hinstance, const char *css, const char *origin);
+style_sheet_t *ui_instance_stylesheet(hinstance_t hinstance);   // NULL: the instance reads the process sheet
+bool ui_has_instance_stylesheet(hinstance_t hinstance);
 // Painting from the active sheet (theme_box.c, theme_css.c, theme_builtin.c).
-void theme_css_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state);
-uint32_t theme_css_foreground(theme_part_t part, ctrl_state_t state);
+void theme_css_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state, const ui_scope_t *scope);
+uint32_t theme_css_foreground(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope);
 void theme_css_apply_palette(void);   // writes the sheet's colour roles into g_sys_colors
 void theme_draw_window_chrome(irect16_t titlebar, irect16_t caption, const char *title, ctrl_state_t state, bool maximizable);
 void theme_draw_statusbar_text(irect16_t r, const char *text);

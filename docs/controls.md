@@ -25,6 +25,15 @@ For focused API details and message contracts, use the sections below. For
 guidance on capturing and presenting a complete application, see the
 [Application Presentation Guide](app-presentation).
 
+## Styling one control
+
+Every control's `name` is its CSS `#id`, and `class=` gives it classes, for the
+app's sheet ([styling.md](styling.md#application-sheets)):
+
+```xml
+<Label name="hint" class="muted" text="No launch targets" />
+```
+
 ## SplitView
 
 `SplitView` arranges two panes with a draggable divider. In `.orion`,

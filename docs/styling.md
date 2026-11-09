@@ -117,8 +117,48 @@ Lengths may use `calc()` and the platform values `--titlebar-height`,
 `--icon-size`, `--scrollbar-width`, `--control-height`, `--control-radius` and
 `--control-padding`, which differ between desktop and touch builds.
 
-An application may add its own sheet, read after the theme's:
-`ui_set_app_stylesheet("TabView::pane { --pane-margin: 0 }", "myapp.css")`.
+## Application sheets
+
+An application's own CSS is read after the theme's, as a page's sheet follows
+the browser's. Link it from the `.orion` root; `orionc` embeds the file in the
+generated header and every form carries it:
+
+```xml
+<orion name="gitclient" root="apps/gitclient" stylesheet="gitclient.css">
+```
+
+The first form an app instance creates sets the sheet for that instance
+(`ui_set_instance_stylesheet`). A standalone app is instance 0, the process:
+its sheet applies to every query. A gem shares the process with the shell and
+other gems, so its sheet styles only the windows it owns. Code may also set one
+directly: `ui_set_app_stylesheet(css, "myapp.css")` for the process.
+
+A control's form `name` is its `#id` and `class=` its classes:
+
+```xml
+<TableView name="checkouts" class="compact" source="workspace.checkouts" />
+```
+
+```css
+TableView#checkouts::header { text-transform: uppercase; letter-spacing: .05em; }
+TableView.compact::row      { min-height: 20px; }
+Label.muted                 { color: var(--text-secondary); }
+```
+
+Controls look themselves up through their window, as WinAPI controls open
+theme data for their `HWND`:
+
+```c
+draw_text_clipped(ui_selector(win, "TableView::header"), title, &r, fg, 0);
+theme_draw_in(win, THEME_PART_HEADER, r, CTRL_NORMAL);
+```
+
+`ui_selector()` returns the element selector with the window's classes and id
+(`TableView.compact#checkouts::header`), interned, and remembers which
+instance's sheet answers it; an unstyled window gets the element selector back.
+`window_set_style(win, id, classes)` restyles a window at run time. TableView
+(rows, headers, group captions, parts) and Label (font and colour) read their
+window's selectors; other controls still style as their element.
 
 ## Type
 

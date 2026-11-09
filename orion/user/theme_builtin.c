@@ -26,7 +26,7 @@ void theme_draw_window_chrome(irect16_t titlebar, irect16_t caption,
                                        const char *title, ctrl_state_t state, bool maximizable) {
   bool focused = (state & CTRL_FOCUSED) != 0;
   uint32_t title_color = get_sys_color(focused ? brActiveTitlebarText : brInactiveTitlebarText);
-  theme_css_draw_part(THEME_PART_TITLEBAR, titlebar, focused ? CTRL_FOCUSED : CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_TITLEBAR, titlebar, focused ? CTRL_FOCUSED : CTRL_NORMAL, NULL);
   irect16_t close = rect_split_right(caption, caption.h);
   if (!(state & CTRL_NO_CLOSE)) {
     draw_theme_icon_in_rect(THEME_ICON_CLOSE, close, title_color);
@@ -52,19 +52,19 @@ void theme_draw_button_label(irect16_t r, const char *text, ctrl_state_t state) 
     draw_text("Text", text, r.x + TEXT_SHADOW_OFFSET, r.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
   int offset = ui_px("Button", "--press-offset");
   if (pressed) r = rect_offset(r, offset, offset);
-  draw_text("Text", text, r.x, r.y, theme_css_foreground(THEME_PART_BUTTON, state));
+  draw_text("Text", text, r.x, r.y, theme_css_foreground(THEME_PART_BUTTON, state, NULL));
 }
 
 void theme_draw_combobox(irect16_t r, const char *text, ctrl_state_t state) {
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
-  theme_css_draw_part(THEME_PART_COMBOBOX, r, state);
+  theme_css_draw_part(THEME_PART_COMBOBOX, r, state, NULL);
   int icon_size = MIN(COMBOBOX_ICON_SIZE, MAX(0, r.h - 4));
   int icon_padding = TEXTEDIT_PADDING_HORZ - icon_size / 4;
   irect16_t content = rect_inset_xy(r, TEXTEDIT_PADDING_HORZ, 0);
   irect16_t arrow = rect_center(rect_split_right(rect_trim_right(r, icon_padding),
                                               icon_size), icon_size, icon_size);
   irect16_t label = rect_trim_right(content, icon_size + icon_padding);
-  uint32_t foreground = theme_css_foreground(THEME_PART_COMBOBOX, state);
+  uint32_t foreground = theme_css_foreground(THEME_PART_COMBOBOX, state, NULL);
   draw_text_clipped("ComboBox", text, &label, foreground, 0);
   draw_theme_icon(THEME_ICON_ARROW_UPDOWN, arrow.x, arrow.y, icon_size, foreground);
 }
@@ -79,7 +79,10 @@ static theme_t g_themes[THEME_LAST + 1];
 static bool g_built[THEME_LAST + 1];
 
 // The parsed sheets go stale when the application's sheet changes.
+void theme_reset_instance_stylesheets(void);   // theme_css.c
+
 void theme_reset_stylesheets(void) {
+  theme_reset_instance_stylesheets();
   for (int i = 0; i <= THEME_LAST; i++) {
     style_sheet_free(g_themes[i].sheet);
     g_themes[i].sheet = NULL;

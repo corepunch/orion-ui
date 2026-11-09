@@ -7,6 +7,7 @@
 #include <orion/user/draw.h>
 #include <orion/user/rect.h>
 #include <orion/user/theme.h>
+#include <orion/user/ui_style.h>
 
 // Label control window procedure.
 // lparam in evCreate may be either:
@@ -14,7 +15,7 @@
 //   - a small integer palette index: text color only, LABEL_TEXT
 //   - label_create_params_t*: explicit palette index + font selection
 
-// The label's style is its CSS class.
+// The label's style is its CSS class; its own classes and #id join it.
 static ui_font_t label_font(const window_t *win) {
   static const char *const k_label_selectors[LABEL_STYLE_COUNT] = {
     [LABEL_TEXT] = "Label", [LABEL_CAPTION] = "Label.caption", [LABEL_HEADING] = "Label.heading",
@@ -22,14 +23,14 @@ static ui_font_t label_font(const window_t *win) {
   };
   uint32_t packed = (uint32_t)(uintptr_t)(win ? win->userdata : NULL);
   uint32_t style = (packed >> 8) & 0xffu;
-  return k_label_selectors[style < LABEL_STYLE_COUNT ? style : LABEL_TEXT];
+  return ui_selector(win, k_label_selectors[style < LABEL_STYLE_COUNT ? style : LABEL_TEXT]);
 }
 
 static uint32_t label_color(const window_t *win) {
   uint32_t packed = (uint32_t)(uintptr_t)(win ? win->userdata : NULL);
   uint8_t idx = (uint8_t)(packed & 0xffu);
   if ((packed & LABEL_PACK_COLOR_SET) == 0)
-    return get_sys_color(brTextNormal);
+    return ui_color(label_font(win), "color");   // the style sheet's, unless color= sets a role
   if (idx == 0)
     return get_sys_color(brTransparent);
   if (idx < (uint8_t)brCount)

@@ -94,20 +94,68 @@ static char *theme_read_file(const char *path) {
 
 static char *g_app_css, *g_app_origin;   // ui_set_app_stylesheet()
 
-style_sheet_t *theme_stylesheet(theme_t *theme) {
-  if (!theme || !theme->css) return NULL;
-  if (theme->sheet) return theme->sheet;
+// base.css, the theme's sheet, then an application's.
+static style_sheet_t *theme_build_sheet(theme_t *theme, const char *app_css, const char *app_origin) {
   style_sheet_t *sheet = style_sheet_parse(k_base_css, "orion/themes/base.css");
   if (!sheet) return NULL;
   const char *path = getenv("ORION_THEME_CSS");
   char *override = path && *path ? theme_read_file(path) : NULL;
   style_sheet_append(sheet, override ? override : theme->css, override ? path : theme->css_origin);
   free(override);
-  if (g_app_css) style_sheet_append(sheet, g_app_css, g_app_origin);
+  if (app_css) style_sheet_append(sheet, app_css, app_origin);
   style_sheet_set_dark(sheet, theme->appearance.dark);
   style_sheet_set_var_hook(sheet, theme_role_var, theme_platform_var, NULL);
-  theme->sheet = sheet;
   return sheet;
+}
+
+style_sheet_t *theme_stylesheet(theme_t *theme) {
+  if (!theme || !theme->css) return NULL;
+  if (!theme->sheet) theme->sheet = theme_build_sheet(theme, g_app_css, g_app_origin);
+  return theme->sheet;
+}
+
+// ── application instances' sheets ─────────────────────────────────────────────
+//
+// A gem shares the process with the shell and other gems, so its sheet belongs
+// to its instance: windows with that hinstance read it (ui_selector), others
+// do not. Instance 0 is the process: its sheet is the app sheet every query sees.
+
+#define THEME_MAX_INSTANCE_SHEETS 32
+static struct {
+  hinstance_t hinstance;
+  char *css, *origin;
+  style_sheet_t *sheet;   // built for `theme`
+  theme_t *theme;
+} g_instance_sheets[THEME_MAX_INSTANCE_SHEETS];
+static int g_instance_sheet_count;
+
+void theme_reset_instance_stylesheets(void) {
+  for (int i = 0; i < g_instance_sheet_count; i++) {
+    style_sheet_free(g_instance_sheets[i].sheet);
+    g_instance_sheets[i].sheet = NULL;
+    g_instance_sheets[i].theme = NULL;
+  }
+}
+
+style_sheet_t *ui_instance_stylesheet(hinstance_t hinstance) {
+  if (!hinstance) return NULL;
+  theme_t *theme = get_theme();
+  for (int i = 0; i < g_instance_sheet_count; i++) {
+    if (g_instance_sheets[i].hinstance != hinstance) continue;
+    if (g_instance_sheets[i].theme != theme) {
+      style_sheet_free(g_instance_sheets[i].sheet);
+      g_instance_sheets[i].sheet = theme_build_sheet(theme, g_instance_sheets[i].css, g_instance_sheets[i].origin);
+      g_instance_sheets[i].theme = theme;
+    }
+    return g_instance_sheets[i].sheet;
+  }
+  return NULL;
+}
+
+bool ui_has_instance_stylesheet(hinstance_t hinstance) {
+  if (!hinstance) return g_app_css != NULL;
+  for (int i = 0; i < g_instance_sheet_count; i++) if (g_instance_sheets[i].hinstance == hinstance) return true;
+  return false;
 }
 
 // ── palette ───────────────────────────────────────────────────────────────────
@@ -145,5 +193,34 @@ void ui_set_app_stylesheet(const char *css, const char *origin) {
   g_app_css = css ? strdup(css) : NULL;
   g_app_origin = css ? strdup(origin ? origin : "app.css") : NULL;
   theme_reset_stylesheets();
+  g_theme_style_generation++;
+}
+
+void ui_set_instance_stylesheet(hinstance_t hinstance, const char *css, const char *origin) {
+  if (!hinstance) { ui_set_app_stylesheet(css, origin); return; }
+  int i = 0;
+  while (i < g_instance_sheet_count && g_instance_sheets[i].hinstance != hinstance) i++;
+  if (i == g_instance_sheet_count) {
+    if (!css) return;
+    if (i == THEME_MAX_INSTANCE_SHEETS) {
+      fprintf(stderr, "[theme] instance %u: more than %d instance style sheets; %s is not loaded\n",
+              (unsigned)hinstance, THEME_MAX_INSTANCE_SHEETS, origin ? origin : "app.css");
+      fflush(stderr);
+      return;
+    }
+    g_instance_sheet_count++;
+  }
+  style_sheet_free(g_instance_sheets[i].sheet);
+  free(g_instance_sheets[i].css); free(g_instance_sheets[i].origin);
+  if (!css) {   // removed: the last record takes its place
+    g_instance_sheets[i] = g_instance_sheets[--g_instance_sheet_count];
+    memset(&g_instance_sheets[g_instance_sheet_count], 0, sizeof(g_instance_sheets[0]));
+  } else {
+    g_instance_sheets[i].hinstance = hinstance;
+    g_instance_sheets[i].css = strdup(css);
+    g_instance_sheets[i].origin = strdup(origin ? origin : "app.css");
+    g_instance_sheets[i].sheet = NULL;
+    g_instance_sheets[i].theme = NULL;
+  }
   g_theme_style_generation++;
 }

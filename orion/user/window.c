@@ -12,8 +12,11 @@
 #include "dock.h"
 #include "page_host.h"
 #include "messages.h"
+#include "theme.h"
+#include "ui_style.h"
 #include "draw.h"
 #include "theme.h"
+#include "ui_style.h"
 #include <orion/kernel/renderer.h>
 #include <orion/commctl/commctl.h>
 
@@ -1064,6 +1067,7 @@ static void create_form_children_flat(window_t *parent, const form_ctrl_def_t *c
     if (!child) continue;
     
     child->id = cd->id;
+    window_set_style(child, cd->name, cd->style_class);   // name= is the #id, class= the classes
     child->context_menu = cd->context_menu;
     child->context_menu_count = cd->context_menu_count;
     child->layout.h_align = child_h_align;
@@ -1165,6 +1169,10 @@ window_t *create_window_from_form(form_def_t const *def, int x, int y,
   const char *outer_context = ui_get_string_context();
   if (def->id) ui_set_string_context(def->id);
   const char *title = def->name ? def->name : "";
+  // The app's sheet comes with its forms, as a page's with its <link>.
+  hinstance_t owner = parent ? parent->hinstance : hinstance;
+  if (def->stylesheet && !ui_has_instance_stylesheet(owner))
+    ui_set_instance_stylesheet(owner, def->stylesheet, def->stylesheet_origin);
   window_t *win = alloc_window(def->id ? ui_tr(title) : title, def->flags, &r, parent, proc, hinstance);
   if (!win) { ui_set_string_context(outer_context); return NULL; }
 
@@ -1326,6 +1334,7 @@ static void create_form_children(window_t *parent, const form_ctrl_def_t *childr
                                     &child_frame, parent, cp, 0, (void *)cd);
     if (!child) continue;
     child->id = cd->id;
+    window_set_style(child, cd->name, cd->style_class);   // name= is the #id, class= the classes
     child->context_menu = cd->context_menu;
     child->context_menu_count = cd->context_menu_count;
     child->layout.h_align = child_h_align;

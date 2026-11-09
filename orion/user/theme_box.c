@@ -224,14 +224,17 @@ static void box_report(const char *what, theme_part_t part, const char *value) {
   fflush(stderr);
 }
 
-static void box_compute(theme_box_t *b, theme_part_t part, ctrl_state_t state) {
-  const style_sheet_t *s = theme_stylesheet(get_theme());
+// scope: the window's classes, #id and instance sheet (ui_window_scope), or NULL.
+static void box_compute(theme_box_t *b, theme_part_t part, ctrl_state_t state, const ui_scope_t *scope) {
+  const style_sheet_t *s = scope ? ui_scope_stylesheet(scope) : theme_stylesheet(get_theme());
   memset(b, 0, sizeof(*b));
-  char classes[64];
-  snprintf(classes, sizeof(classes), "%s%s", k_part_selectors[part].classes ? k_part_selectors[part].classes : "",
+  char classes[160];
+  const char *own = k_part_selectors[part].classes ? k_part_selectors[part].classes : "", *win_classes = ui_scope_classes(scope);
+  snprintf(classes, sizeof(classes), "%s%s%s%s", own, *own && *win_classes ? " " : "", win_classes,
            (state & CTRL_MULTILINE) ? " multiline" : "");
+  const char *id = ui_scope_id(scope);
   style_query_t q = {
-    .element = k_part_selectors[part].element, .part = k_part_selectors[part].part, .classes = classes,
+    .element = k_part_selectors[part].element, .part = k_part_selectors[part].part, .classes = classes, .id = *id ? id : NULL,
     .state = ((state & CTRL_HOVER) ? STYLE_HOVER : 0) | ((state & CTRL_PRESSED) ? STYLE_ACTIVE : 0) |
              ((state & CTRL_SELECTED) ? STYLE_CHECKED : 0) | ((state & CTRL_DISABLED) ? STYLE_DISABLED : 0) |
              ((state & CTRL_FOCUSED) ? STYLE_FOCUS : 0) | ((state & CTRL_DEFAULT) ? STYLE_DEFAULT : 0) |
@@ -321,12 +324,31 @@ static unsigned box_state_key(ctrl_state_t state) {
   return (state & 0x3F) | ((state & CTRL_MULTILINE) ? 0x40 : 0) | ((state & CTRL_INACTIVE) ? 0x80 : 0);
 }
 
-static const theme_box_t *box_for(theme_part_t part, ctrl_state_t state) {
+// Windows with classes, an #id or an instance sheet: their own boxes.
+#define BOX_SCOPES 128
+static struct { const ui_scope_t *scope; theme_box_t *boxes[THEME_PART_COUNT]; } g_scoped_boxes[BOX_SCOPES];
+static int g_scoped_box_count;
+
+static theme_box_t **box_slots(const ui_scope_t *scope) {
+  if (!scope) return g_box_cache;
+  for (int i = 0; i < g_scoped_box_count; i++) if (g_scoped_boxes[i].scope == scope) return g_scoped_boxes[i].boxes;
+  if (g_scoped_box_count == BOX_SCOPES) {
+    fprintf(stderr, "[theme] more than %d styled windows; #%s paints as its element\n", BOX_SCOPES, ui_scope_id(scope));
+    fflush(stderr);
+    return NULL;
+  }
+  g_scoped_boxes[g_scoped_box_count].scope = scope;
+  return g_scoped_boxes[g_scoped_box_count++].boxes;
+}
+
+static const theme_box_t *box_for(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope) {
   static theme_box_t scratch;
-  if (!g_box_cache[part]) g_box_cache[part] = calloc(256, sizeof(theme_box_t));
-  theme_box_t *b = g_box_cache[part] ? &g_box_cache[part][box_state_key(state)] : &scratch;
+  theme_box_t **slots = box_slots(scope);
+  if (!slots) { slots = g_box_cache; scope = NULL; }
+  if (!slots[part]) slots[part] = calloc(256, sizeof(theme_box_t));
+  theme_box_t *b = slots[part] ? &slots[part][box_state_key(state)] : &scratch;
   if (b->generation != g_theme_style_generation || !b->generation) {
-    box_compute(b, part, state);
+    box_compute(b, part, state, scope);
     b->generation = g_theme_style_generation;
   }
   return b;
@@ -438,14 +460,14 @@ static void box_glyph(const theme_box_t *b, irect16_t r) {
   }
 }
 
-void theme_css_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state) {
+void theme_css_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state, const ui_scope_t *scope) {
   if (part < 0 || part >= THEME_PART_COUNT || part == THEME_PART_CARD) return;   // cards paint through draw_card
-  const theme_box_t *b = box_for(part, state);
+  const theme_box_t *b = box_for(part, state, scope);
   box_paint(b, r);
   box_glyph(b, r);
 }
 
-uint32_t theme_css_foreground(theme_part_t part, ctrl_state_t state) {
+uint32_t theme_css_foreground(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope) {
   if (part < 0 || part >= THEME_PART_COUNT) return get_sys_color(brTextNormal);
-  return box_for(part, state)->color;
+  return box_for(part, state, scope)->color;
 }

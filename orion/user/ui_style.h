@@ -9,7 +9,7 @@
 //   int radius = ui_radius("Button");                     // CORNER_RADIUS_CIRCULAR for 9999px
 //   ui_shadow_t s = ui_shadow("Tooltip", "box-shadow");
 //
-// A selector is one compound selector: Element, ::part, .class and
+// A selector is one compound selector: Element, ::part, .class, #id and
 // :pseudo-class (TabView::tab, Toolbar.compact, IconView::thumbnail:checked).
 // Answers are cached until the style sheet or the palette changes. A property
 // the sheet does not set is a framework error: it is reported once and reads
@@ -29,6 +29,22 @@ typedef struct {
 } ui_shadow_t;
 
 style_sheet_t *ui_stylesheet(void);    // the active sheet: base.css and the theme's
+
+// ── A window's own selectors ──────────────────────────────────────────────────
+// A control asks for its element as it appears in its window: the window's
+// classes and #id (its name in the form) join the selector, and its app
+// instance's sheet answers. ui_selector(win, "TableView::header") is
+// "TableView.compact#checkouts::header" for <TableView name="checkouts"
+// class="compact">, and the element selector itself for an unstyled window.
+// The result is interned: pass it to ui_px(), draw_text() and the rest.
+typedef struct ui_scope_s ui_scope_t;
+const char *ui_selector(const window_t *win, const char *element_selector);
+const ui_scope_t *ui_window_scope(const window_t *win);   // NULL for an unstyled window
+const char *ui_scope_id(const ui_scope_t *scope);
+const char *ui_scope_classes(const ui_scope_t *scope);
+style_sheet_t *ui_scope_stylesheet(const ui_scope_t *scope);
+// Sets a window's #id and classes, as a form does from name= and class=.
+void window_set_style(window_t *win, const char *id, const char *classes);
 
 int  ui_px(const char *selector, const char *property);            // first length of the value
 int  ui_radius(const char *selector);                              // border-radius, capsule = CORNER_RADIUS_CIRCULAR

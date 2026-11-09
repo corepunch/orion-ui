@@ -16,10 +16,11 @@ text faces come from CSS; controls no longer paint shapes of their own
 - Done: every metric is a computed-style query (`ui_px("Scrollbar", "width")`)
   and `theme_t` holds no numbers or callbacks, only its sheet.
 - "Switching theme" becomes loading a sheet: `ui_set_stylesheet("porcelain")`.
-  The built-in sheets stay embedded; an app may add its own (`gitclient.css`),
-  read after the theme's, as a page's sheet follows the user-agent sheet.
-- `class=` and `id` on `.orion` elements reach the selectors, so an app styles
-  one table without a new part.
+- Done: an app links its own sheet from the `.orion` root (`gitclient.css`),
+  read after the theme's; a gem's sheet styles only its own windows.
+- Done: a control's `name` is its `#id` and `class=` its classes
+  ([styling.md](styling.md#application-sheets)). TableView and Label read
+  them; the other controls move to `ui_selector()` / `theme_draw_in()` next.
 
 ## 2. Text from CSS, not roles
 
@@ -87,9 +88,10 @@ The browser is weak at application chrome; Orion keeps its own, styled by CSS:
 ## 7. Next steps, in order
 
 Done: style queries replaced `theme_t`'s metrics and vtable; fonts are
-selectors with text properties; the VGA font gave way to IBM Plex Mono.
+selectors with text properties; the VGA font gave way to IBM Plex Mono; apps
+link their own sheets and style controls by `#id` and `.class`.
 
-1. App sheets and `class=` from `.orion`.
+1. Every control reads its window's selectors (buttons, edits, tabs, cards).
 2. Browser conformance fixtures for boxes, then text, then layout.
 3. Layout properties in the sheet.
 4. Git Client's Run page (rail, process table, console, ⌘K) built from these,

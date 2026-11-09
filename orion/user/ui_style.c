@@ -11,10 +11,114 @@
 
 style_sheet_t *ui_stylesheet(void) { return theme_stylesheet(get_theme()); }
 
+// ── scopes: a window's classes, id and instance ───────────────────────────────
+
+struct ui_scope_s {
+  hinstance_t hinstance;
+  char id[32], classes[64];
+  struct { const char *base, *selector; } map[32];   // element selector → this window's
+  int count;
+};
+
+#define UI_MAX_SCOPES 512
+static ui_scope_t *g_scopes[UI_MAX_SCOPES];
+static int g_scope_count;
+
+// Scoped selector strings → their scope, so a query finds the instance's sheet.
+#define UI_SCOPED_SLOTS 4096
+static struct { const char *selector; const ui_scope_t *scope; } g_scoped[UI_SCOPED_SLOTS];
+
+static unsigned ui_ptr_hash(const void *p) { uintptr_t h = (uintptr_t)p; h ^= h >> 9; return (unsigned)(h % UI_SCOPED_SLOTS); }
+
+static const ui_scope_t *ui_scope_of(const char *selector) {
+  for (unsigned i = ui_ptr_hash(selector), n = 0; n < UI_SCOPED_SLOTS && g_scoped[i].selector; i = (i + 1) % UI_SCOPED_SLOTS, n++)
+    if (g_scoped[i].selector == selector) return g_scoped[i].scope;
+  return NULL;
+}
+
+static ui_scope_t *ui_intern_scope(hinstance_t hinstance, const char *id, const char *classes) {
+  for (int i = 0; i < g_scope_count; i++)
+    if (g_scopes[i]->hinstance == hinstance && !strcmp(g_scopes[i]->id, id) && !strcmp(g_scopes[i]->classes, classes)) return g_scopes[i];
+  if (g_scope_count == UI_MAX_SCOPES) {
+    fprintf(stderr, "[ui_style] more than %d style scopes; #%s .%s is styled as its element\n", UI_MAX_SCOPES, id, classes);
+    fflush(stderr);
+    return NULL;
+  }
+  ui_scope_t *scope = calloc(1, sizeof(*scope));
+  if (!scope) { fprintf(stderr, "[ui_style] scope allocation failed\n"); fflush(stderr); return NULL; }
+  scope->hinstance = hinstance;
+  snprintf(scope->id, sizeof(scope->id), "%s", id);
+  snprintf(scope->classes, sizeof(scope->classes), "%s", classes);
+  return g_scopes[g_scope_count++] = scope;
+}
+
+const ui_scope_t *ui_window_scope(const window_t *win) {
+  if (!win) return NULL;
+  if (win->style_scope) return win->style_scope;
+  if (!win->style_id[0] && !win->style_class[0] && !(win->hinstance && ui_has_instance_stylesheet(win->hinstance))) return NULL;
+  ((window_t *)win)->style_scope = ui_intern_scope(win->hinstance, win->style_id, win->style_class);   // a cache, like the window's DC
+  return win->style_scope;
+}
+
+const char *ui_scope_id(const ui_scope_t *scope) { return scope ? scope->id : ""; }
+const char *ui_scope_classes(const ui_scope_t *scope) { return scope ? scope->classes : ""; }
+
+static style_sheet_t *ui_scope_sheet(const ui_scope_t *scope) {
+  style_sheet_t *sheet = scope && scope->hinstance ? ui_instance_stylesheet(scope->hinstance) : NULL;
+  return sheet ? sheet : ui_stylesheet();
+}
+style_sheet_t *ui_scope_stylesheet(const ui_scope_t *scope) { return ui_scope_sheet(scope); }
+
+static void ui_register_scoped(const char *selector, const ui_scope_t *scope) {
+  for (unsigned i = ui_ptr_hash(selector), n = 0; n < UI_SCOPED_SLOTS; i = (i + 1) % UI_SCOPED_SLOTS, n++)
+    if (!g_scoped[i].selector) { g_scoped[i].selector = selector; g_scoped[i].scope = scope; return; }
+  fprintf(stderr, "[ui_style] the scoped selector table is full; %s reads the process sheet\n", selector);
+  fflush(stderr);
+}
+
+const char *ui_selector(const window_t *win, const char *base) {
+  ui_scope_t *scope = (ui_scope_t *)ui_window_scope(win);
+  if (!scope || !base) return base;
+  for (int i = 0; i < scope->count; i++) if (scope->map[i].base == base) return scope->map[i].selector;
+  if (scope->count == (int)(sizeof(scope->map) / sizeof(scope->map[0]))) {
+    fprintf(stderr, "[ui_style] #%s: more than %d element selectors; %s is styled as its element\n",
+            scope->id, (int)(sizeof(scope->map) / sizeof(scope->map[0])), base);
+    fflush(stderr);
+    return base;
+  }
+  // Element, then the window's classes and id, then the rest: TableView.compact#checkouts::header.
+  size_t element = 0;
+  while (isalnum((unsigned char)base[element]) || base[element] == '-' || base[element] == '_') element++;
+  char composed[256], classes[80] = "";
+  size_t k = 0;
+  for (const char *c = scope->classes; *c && k + 2 < sizeof(classes); c++) {
+    if (*c == ' ') continue;
+    if (c == scope->classes || c[-1] == ' ') classes[k++] = '.';
+    classes[k++] = *c;
+  }
+  classes[k] = 0;
+  snprintf(composed, sizeof(composed), "%.*s%s%s%s%s", (int)element, base, classes, scope->id[0] ? "#" : "", scope->id, base + element);
+  char *selector = strdup(composed);
+  if (!selector) { fprintf(stderr, "[ui_style] selector allocation failed\n"); fflush(stderr); return base; }
+  scope->map[scope->count].base = base;
+  scope->map[scope->count].selector = selector;
+  scope->count++;
+  ui_register_scoped(selector, scope);
+  return selector;
+}
+
+void window_set_style(window_t *win, const char *id, const char *classes) {
+  if (!win) return;
+  snprintf(win->style_id, sizeof(win->style_id), "%s", id ? id : "");
+  snprintf(win->style_class, sizeof(win->style_class), "%s", classes ? classes : "");
+  win->style_scope = NULL;
+  invalidate_window(win);
+}
+
 // ── selectors ─────────────────────────────────────────────────────────────────
 
 typedef struct {
-  char element[48], part[48], classes[64];
+  char element[48], part[48], classes[64], id[32];
   uint32_t state;
 } ui_selector_t;
 
@@ -39,6 +143,9 @@ static void ui_parse_selector(const char *selector, ui_selector_t *out) {
     if (c[0] == ':' && c[1] == ':') {
       c += 2; n = ui_ident(c);
       snprintf(out->part, sizeof(out->part), "%.*s", (int)n, c);
+    } else if (*c == '#') {
+      c++; n = ui_ident(c);
+      snprintf(out->id, sizeof(out->id), "%.*s", (int)n, c);
     } else if (*c == '.') {
       c++; n = ui_ident(c);
       size_t used = strlen(out->classes);
@@ -57,7 +164,7 @@ static void ui_parse_selector(const char *selector, ui_selector_t *out) {
 
 static style_query_t ui_query(const ui_selector_t *s) {
   return (style_query_t){ .element = s->element, .part = s->part[0] ? s->part : NULL,
-                          .classes = s->classes[0] ? s->classes : NULL, .state = s->state };
+                          .classes = s->classes[0] ? s->classes : NULL, .id = s->id[0] ? s->id : NULL, .state = s->state };
 }
 
 // ── cache ─────────────────────────────────────────────────────────────────────
@@ -119,7 +226,7 @@ static bool ui_side_value(style_sheet_t *sheet, style_query_t q, const char *pro
 bool ui_string(const char *selector, const char *property, char *out, size_t n) {
   ui_selector_t sel;
   ui_parse_selector(selector, &sel);
-  style_sheet_t *sheet = ui_stylesheet();
+  style_sheet_t *sheet = ui_scope_sheet(ui_scope_of(selector));
   if (!sheet || !out || !n) return false;
   if (!strcmp(selector, ":root")) return style_value(sheet, STYLE_ROOT, property, out, n);
   return style_value(sheet, ui_query(&sel), property, out, n);
@@ -129,7 +236,7 @@ bool ui_string(const char *selector, const char *property, char *out, size_t n) 
 static bool ui_value(const char *selector, const char *property, char *out, size_t n) {
   ui_selector_t sel;
   ui_parse_selector(selector, &sel);
-  style_sheet_t *sheet = ui_stylesheet();
+  style_sheet_t *sheet = ui_scope_sheet(ui_scope_of(selector));
   if (sheet && ui_side_value(sheet, ui_query(&sel), property, out, n)) return true;
   if (sheet && style_value(sheet, ui_query(&sel), property, out, n)) return true;
   fprintf(stderr, "[ui_style] %s { %s } is not set by the style sheet\n", selector, property);
@@ -200,7 +307,7 @@ int ui_role(const char *selector, const char *property) {
   UI_CACHED(UI_ROLE, i, {
     ui_selector_t sel; char name[64];
     ui_parse_selector(selector, &sel);
-    style_sheet_t *sheet = ui_stylesheet();
+    style_sheet_t *sheet = ui_scope_sheet(ui_scope_of(selector));
     e->value.i = 0;
     if (sheet && style_var_name(sheet, ui_query(&sel), property, name, sizeof(name))) {
       int role = theme_sys_color_role(name);

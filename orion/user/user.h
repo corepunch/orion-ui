@@ -282,6 +282,7 @@ typedef struct form_ctrl_def_s {
   uint32_t          target_message; // e.g. tvInsertRecord for <Button target="lines" action="insert">
   const char       *icon;    // Button / Badge: SVG icon name drawn before the text
   const char       *tooltip; // Button: tooltip text (translated through the string catalog)
+  const char       *style_class; // CSS classes (class="compact muted"); the name is the #id
 } form_ctrl_def_t;
 
 // Describes a complete form (window + children) as a serializable definition
@@ -326,6 +327,8 @@ typedef struct form_def_s {
   uint32_t                initial_page;
   const char             *icon, *checked_icon, *tooltip; // page navigation metadata
   const char             *label;       // page: short caption under its icon in a labelled ActivityBar (default: title)
+  const char             *stylesheet;  // the app's CSS (<orion stylesheet="app.css">), set for the instance on creation
+  const char             *stylesheet_origin;
 } form_def_t;
 
 // Declarative database API metadata emitted from .orion documents.
@@ -544,6 +547,9 @@ struct window_s {
   char title[512];
   char subtitle[256];     // second line under a merged toolbar title (≈ NSWindow.subtitle)
   char statusbar_text[256];
+  char style_id[32];      // CSS #id: the control's name in its form
+  char style_class[64];   // CSS classes, space separated: the form's class= attribute
+  const void *style_scope; // ui_style.c: the interned scope of the three above and hinstance
   uint32_t cursor_pos;
   layout_t layout;
   void *userdata;

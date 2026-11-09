@@ -67,6 +67,7 @@ typedef struct {
   int  resize_start_w;   // column width when drag started
   int  resize_hot_col;   // column whose edge has hover (-1 = none)
   int  press_row;        // RVS_EX_ONECLICK: the row the button went down on (-1 = none)
+  const window_t *owner; // the control's window: its classes and #id style it (ui_selector)
 } reportview_data_t;
 
 #define REPORTVIEW_RESIZE_HOT_ZONE 4
@@ -96,9 +97,10 @@ void rv_draw_item_icon(bitmap_strip_t *strip, int icon_id,
 // Rows are at least as tall as the theme asks (theme_t.report.row_height); a
 // two-line row adds a secondary line under it.
 static inline int rv_entry_height(const reportview_data_t *data) {
-  int themed = ui_px("TableView::row", "min-height"), row = MAX(ENTRY_HEIGHT, themed);
+  const window_t *win = data ? data->owner : NULL;
+  int themed = ui_px(ui_selector(win, "TableView::row"), "min-height"), row = MAX(ENTRY_HEIGHT, themed);
   if (data && data->cell_style != REPORTVIEW_CELL_COLUMNS)
-    return themed > 0 ? MAX(TWO_LINE_ENTRY_HEIGHT, row + text_char_height("TableView::detail") + 2) : TWO_LINE_ENTRY_HEIGHT;
+    return themed > 0 ? MAX(TWO_LINE_ENTRY_HEIGHT, row + text_char_height(ui_selector(win, "TableView::detail")) + 2) : TWO_LINE_ENTRY_HEIGHT;
   return row;
 }
 

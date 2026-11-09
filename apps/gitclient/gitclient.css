@@ -1,0 +1,16 @@
+/* Git Client's own sheet, read after the theme's (gitclient.orion links it).
+   Selectors name controls by their form names: TableView#checkouts. */
+
+/* Column titles and group captions step back: small capitals, spaced out. */
+TableView::header {
+  color: var(--text-secondary);
+  font: 500 11px var(--ui-face);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+TableView::group {
+  color: var(--text-secondary);
+  font: 600 11px var(--ui-face);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}

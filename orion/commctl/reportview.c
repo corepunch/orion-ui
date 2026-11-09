@@ -138,32 +138,32 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   if (first_row < 0) first_row = 0;
   if (last_row > (int)data->count) last_row = (int)data->count;
 
-  uint32_t hdr_fg = theme_foreground(THEME_PART_HEADER, CTRL_NORMAL);
+  uint32_t hdr_fg = theme_foreground_in(win, THEME_PART_HEADER, CTRL_NORMAL);
 
   // A framed list clips everything it draws to the frame's silhouette, so
   // the header and the rows that scroll under the corners stay inside it.
-  int frame_radius = (data->extended_style & RVS_EX_FRAME) ? ui_radius("TableView") : -1;
+  int frame_radius = (data->extended_style & RVS_EX_FRAME) ? ui_radius(ui_selector(win, "TableView")) : -1;
   if (frame_radius > 0) set_clip_rounded_rect(win, cr, frame_radius);
-  theme_draw(THEME_PART_LIST_BODY, rect_trim_top(cr, header_h), CTRL_NORMAL);
+  theme_draw_in(win, THEME_PART_LIST_BODY, rect_trim_top(cr, header_h), CTRL_NORMAL);
   ctrl_state_t selection = report_selection_state(win);
   // Section captions span the columns above their rows, styled as the list's group part.
-  uint32_t group_fg = theme_foreground(THEME_PART_LIST_GROUP, CTRL_NORMAL);
+  uint32_t group_fg = theme_foreground_in(win, THEME_PART_LIST_GROUP, CTRL_NORMAL);
   for (int row = first_row; data->has_sections && row <= last_row && row < (int)data->count; row++) {
     if (!data->items[row].section) continue;
     int y = window_scroll_rect_to_client(win, report_item_rect(win, data, row)).y - entry_h;
     if (y + entry_h <= header_h || y >= body_bottom) continue;
     set_clip_rect(win, (irect16_t){0, header_h, eff_w, MAX(0, body_bottom - header_h)});
-    theme_draw(THEME_PART_LIST_GROUP, R(0, y, eff_w, entry_h), CTRL_NORMAL);
+    theme_draw_in(win, THEME_PART_LIST_GROUP, R(0, y, eff_w, entry_h), CTRL_NORMAL);
     irect16_t caption = {WIN_PADDING * 2, y, eff_w - WIN_PADDING * 4, entry_h};
-    draw_text_clipped("TableView::group", data->items[row].section, &caption, group_fg, 0);
+    draw_text_clipped(ui_selector(win, "TableView::group"), data->items[row].section, &caption, group_fg, 0);
   }
 
   // Rows ruled by hairlines, under the selection's face.
-  if (ui_flag("TableView::row", "--divider-width")) {
+  if (ui_flag(ui_selector(win, "TableView::row"), "--divider-width")) {
     set_clip_rect(win, (irect16_t){0, header_h, eff_w, MAX(0, body_bottom - header_h)});
     for (int row = first_row; row < last_row; row++) {
       int y = window_scroll_rect_to_client(win, report_item_rect(win, data, row)).y;
-      theme_draw(THEME_PART_ROW_RULE, R(0, y + entry_h - 1, eff_w, 1), CTRL_NORMAL);
+      theme_draw_in(win, THEME_PART_ROW_RULE, R(0, y + entry_h - 1, eff_w, 1), CTRL_NORMAL);
     }
   }
 
@@ -172,7 +172,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   if (show_selection && data->selected >= first_row && data->selected < last_row) {
     int y = window_scroll_rect_to_client(win, report_item_rect(win, data, data->selected)).y;
     int top = MAX(y, header_h), bottom = MIN(y + entry_h, body_bottom);
-    theme_draw(THEME_PART_LIST_ITEM, R(0, top, eff_w, bottom - top), selection);
+    theme_draw_in(win, THEME_PART_LIST_ITEM, R(0, top, eff_w, bottom - top), selection);
   }
 
   int col_x = 0;
@@ -190,12 +190,12 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     }
     if (header_h > 0) {
       set_clip_rect(win, (irect16_t){clip_x, 0, clip_w, header_h});
-      theme_draw(THEME_PART_HEADER, R(draw_x, 0, col_w, header_h), CTRL_NORMAL);
+      theme_draw_in(win, THEME_PART_HEADER, R(draw_x, 0, col_w, header_h), CTRL_NORMAL);
       char title[MAX_REPORTVIEW_TITLE + 4];
       const char *shown = data->columns[col].title;
       int title_w = col_w - 2 * WIN_PADDING;
-      if (text_strwidth("TableView::header", shown) > title_w) { text_ellipsize("TableView::header", shown, MAX(0, title_w), title, sizeof(title)); shown = title; }
-      draw_text_clipped("TableView::header", shown,
+      if (text_strwidth(ui_selector(win, "TableView::header"), shown) > title_w) { text_ellipsize(ui_selector(win, "TableView::header"), shown, MAX(0, title_w), title, sizeof(title)); shown = title; }
+      draw_text_clipped(ui_selector(win, "TableView::header"), shown,
                               &(irect16_t){draw_x, 0, col_w - (data->columns[col].align ? WIN_PADDING : 0), header_h},
                               hdr_fg, data->columns[col].align ? data->columns[col].align : TEXT_PADDING_LEFT);
     }
@@ -204,7 +204,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     for (int row = first_row; row < last_row; row++) {
       reportview_item_t *it = &data->items[row];
       bool strong = row == data->selected && !(selection & CTRL_INACTIVE);
-      uint32_t fg = strong ? theme_foreground(THEME_PART_LIST_ITEM, selection)
+      uint32_t fg = strong ? theme_foreground_in(win, THEME_PART_LIST_ITEM, selection)
                   : data->columns[col].color > 0 && data->columns[col].color < brCount
                   ? get_sys_color((sys_color_idx_t)data->columns[col].color)
                   : it->color ? it->color : get_sys_color(brTextNormal);
@@ -231,24 +231,24 @@ static void report_paint(window_t *win, reportview_data_t *data) {
                          CHECKBOX_BOX_SIZE, CHECKBOX_BOX_SIZE};
         bool cb_checked = RV_STATEIMAGEINDEX(it->state) == 2;
         ctrl_state_t cb_state = cb_checked ? CTRL_SELECTED : CTRL_NORMAL;
-        theme_draw(THEME_PART_CHECKBOX, box, cb_state);
+        theme_draw_in(win, THEME_PART_CHECKBOX, box, cb_state);
         text_x += CHECKBOX_BOX_SIZE + CHECKBOX_GAP;
       }
       int text_w = MAX(0, draw_x + col_w - text_x);
       if (data->cell_style == REPORTVIEW_CELL_STACKED && col == 0) {
         // The title over its detail, the pair centred in the row.
         const char *detail = it->subitem_count && it->subitems[0] ? it->subitems[0] : "";
-        int title_h = text_char_height("TableView::row"), detail_h = detail[0] ? text_char_height("TableView::detail") : 0;
+        int title_h = text_char_height(ui_selector(win, "TableView::row")), detail_h = detail[0] ? text_char_height(ui_selector(win, "TableView::detail")) : 0;
         int top = y + (entry_h - title_h - detail_h) / 2, pad = WIN_PADDING;
-        draw_text_ellipsized("TableView::row", src, text_x, top, MAX(0, text_w - pad), fg);
+        draw_text_ellipsized(ui_selector(win, "TableView::row"), src, text_x, top, MAX(0, text_w - pad), fg);
         if (detail[0])
-          draw_text_ellipsized("TableView::detail", detail, text_x, top + title_h, MAX(0, text_w - pad),
+          draw_text_ellipsized(ui_selector(win, "TableView::detail"), detail, text_x, top + title_h, MAX(0, text_w - pad),
                                strong ? fg : get_sys_color(brTextSecondary));
       } else if (data->cell_style == REPORTVIEW_CELL_TWO_LINE) {
         irect16_t title_rect = {text_x, y + 1, text_w, FONT_SIZE_SMALL};
         irect16_t subtitle_rect = {text_x, y + FONT_SIZE_SMALL + 3,
                                    text_w, FONT_SIZE_SMALL};
-        draw_text_clipped("TableView::row", src, &title_rect, fg, 0);
+        draw_text_clipped(ui_selector(win, "TableView::row"), src, &title_rect, fg, 0);
         char subtitle[512] = {0};
         for (uint32_t sub = 0; sub < data->items[row].subitem_count; sub++) {
           const char *part = data->items[row].subitems[sub];
@@ -257,7 +257,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
           snprintf(subtitle + used, sizeof(subtitle) - used, "%s%s",
                    used ? " - " : "", part);
         }
-        draw_text_clipped("TableView::detail", subtitle, &subtitle_rect,
+        draw_text_clipped(ui_selector(win, "TableView::detail"), subtitle, &subtitle_rect,
                           row == data->selected ? fg : get_sys_color(brTextDisabled), 0);
       } else if (data->columns[col].badge) {
         // A status badge: a pill toned by the row (its RowIcon colour), sized to its text.
@@ -265,7 +265,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
           char fitted[MAX_COLUMNVIEW_ITEM_NAME];
           int room = MAX(0, text_w - WIN_PADDING), pad = ui_px("Badge", "padding-left");
           if (measure_status_badge(src, NULL) > room) {   // the text ends in an ellipsis inside the pill
-            text_ellipsize("TableView::header", src, MAX(0, room - 2 * pad), fitted, sizeof(fitted));
+            text_ellipsize("Badge", src, MAX(0, room - 2 * pad), fitted, sizeof(fitted));
             src = fitted;
           }
           int bw = MIN(measure_status_badge(src, NULL), room);
@@ -277,18 +277,18 @@ static void report_paint(window_t *win, reportview_data_t *data) {
         // Text that does not fit ends in an ellipsis; numbers align right.
         char fitted[MAX_COLUMNVIEW_ITEM_NAME];
         int pad = data->columns[col].align ? WIN_PADDING : 0;
-        if (text_strwidth("TableView::row", src) > text_w - pad) {
-          text_ellipsize("TableView::row", src, MAX(0, text_w - pad), fitted, sizeof(fitted));
+        if (text_strwidth(ui_selector(win, "TableView::row"), src) > text_w - pad) {
+          text_ellipsize(ui_selector(win, "TableView::row"), src, MAX(0, text_w - pad), fitted, sizeof(fitted));
           src = fitted;
         }
         irect16_t text_rect = {text_x, y, MAX(0, text_w - pad), entry_h};
-        draw_text_clipped("TableView::row", src, &text_rect, fg, data->columns[col].align);
+        draw_text_clipped(ui_selector(win, "TableView::row"), src, &text_rect, fg, data->columns[col].align);
       }
     }
 
     if (footer_h > 0) {  // totals band: a header face pinned under the rows
       set_clip_rect(win, (irect16_t){clip_x, body_bottom, clip_w, footer_h});
-      theme_draw(THEME_PART_HEADER, R(draw_x, body_bottom, col_w, footer_h), CTRL_NORMAL);
+      theme_draw_in(win, THEME_PART_HEADER, R(draw_x, body_bottom, col_w, footer_h), CTRL_NORMAL);
     }
 
     col_x += col_w;
@@ -296,7 +296,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
 
   set_clip_rect(win, (irect16_t){0, 0, eff_w, cr.h});
   col_x = 0;
-  int divider_w = ui_px("TableView::divider", "width");
+  int divider_w = ui_px(ui_selector(win, "TableView::divider"), "width");
   for (uint32_t col = 0; col < data->column_count; col++) {
     int col_w = data->cell_style == REPORTVIEW_CELL_TWO_LINE
               ? eff_w : rv_get_report_column_width(data, (int)col, eff_w);
@@ -305,12 +305,12 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     ctrl_state_t divider_state = (int)col == data->resize_hot_col && data->resize_col < 0 ? CTRL_HOVER : CTRL_NORMAL;
 #if REPORTVIEW_RESIZE_FULL_HEIGHT
     if (sep_x >= 0 && sep_x <= eff_w && !data->has_sections && data->cell_style != REPORTVIEW_CELL_STACKED)   // grouped and stacked lists read as rows
-      theme_draw(THEME_PART_COLUMN_DIVIDER, R(sep_x - divider_w / 2, 0, divider_w, cr.h), divider_state);
+      theme_draw_in(win, THEME_PART_COLUMN_DIVIDER, R(sep_x - divider_w / 2, 0, divider_w, cr.h), divider_state);
 #else
     if (sep_x >= 0 && sep_x <= eff_w && !data->has_sections)   // a grouped list reads as one column of rows
-      theme_draw(THEME_PART_COLUMN_DIVIDER, R(sep_x, header_h, 1, cr.h - header_h), CTRL_NORMAL);
+      theme_draw_in(win, THEME_PART_COLUMN_DIVIDER, R(sep_x, header_h, 1, cr.h - header_h), CTRL_NORMAL);
     if (header_h > 0 && sep_x >= 0 && sep_x <= eff_w)
-      theme_draw(THEME_PART_COLUMN_DIVIDER, R(sep_x - divider_w / 2, 0, divider_w, header_h), divider_state);
+      theme_draw_in(win, THEME_PART_COLUMN_DIVIDER, R(sep_x - divider_w / 2, 0, divider_w, header_h), divider_state);
 #endif
   }
 
@@ -328,18 +328,18 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     int clip_x = MAX(0, draw_x), clip_r = MIN(eff_w, draw_x + span_w);
     if (clip_r <= clip_x) continue;
     set_clip_rect(win, (irect16_t){clip_x, body_bottom, clip_r - clip_x, footer_h});
-    if (span_w > col_w) theme_draw(THEME_PART_HEADER, R(draw_x, body_bottom, span_w - 1, footer_h), CTRL_NORMAL);
+    if (span_w > col_w) theme_draw_in(win, THEME_PART_HEADER, R(draw_x, body_bottom, span_w - 1, footer_h), CTRL_NORMAL);
     char total[MAX_REPORTVIEW_TITLE + 4];
     const char *shown = data->footer[col];
     int pad = data->columns[col].align ? WIN_PADDING : 0, total_w = span_w - 2 * WIN_PADDING;
-    if (text_strwidth("TableView::row", shown) > total_w) { text_ellipsize("TableView::row", shown, MAX(0, total_w), total, sizeof(total)); shown = total; }
+    if (text_strwidth(ui_selector(win, "TableView::row"), shown) > total_w) { text_ellipsize(ui_selector(win, "TableView::row"), shown, MAX(0, total_w), total, sizeof(total)); shown = total; }
     irect16_t total_rect = {draw_x + WIN_PADDING, body_bottom, MAX(0, span_w - WIN_PADDING - pad), footer_h};
-    draw_text_clipped("TableView::row", shown, &total_rect, hdr_fg, data->columns[col].align);
+    draw_text_clipped(ui_selector(win, "TableView::row"), shown, &total_rect, hdr_fg, data->columns[col].align);
   }
   set_clip_rect(win, (irect16_t){0, 0, eff_w, cr.h});
   if (frame_radius >= 0) {
     set_clip_rounded_rect(win, cr, 0);
-    theme_draw(THEME_PART_LIST_FRAME, cr, CTRL_NORMAL);
+    theme_draw_in(win, THEME_PART_LIST_FRAME, cr, CTRL_NORMAL);
   }
 }
 
@@ -349,6 +349,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
   switch (msg) {
     case evCreate: {
       data = calloc(1, sizeof(reportview_data_t));
+      if (data) data->owner = win;
     if (!data) return false;
       win->userdata2 = data;
       win->flags |= WINDOW_HSCROLL;

@@ -150,7 +150,10 @@ void theme_paint_window_chrome(irect16_t titlebar, irect16_t caption, const char
   theme_draw_window_chrome(titlebar, caption, title, state, maximizable);
 }
 
-void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state) {
+void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state) { theme_draw_in(NULL, part, r, state); }
+
+// A part of win's element: the window's classes, #id and app sheet apply.
+void theme_draw_in(const window_t *win, theme_part_t part, irect16_t r, ctrl_state_t state) {
   if (part < 0 || part >= THEME_PART_COUNT) {
     fprintf(stderr, "[theme] draw REJECTED part=%d state=%u rect=%d,%d,%d,%d\n",
             (int)part, (unsigned)state, r.x, r.y, r.w, r.h);
@@ -160,7 +163,7 @@ void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state) {
   if (r.w <= 0 || r.h <= 0) return;
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
   if (g_paint_recorder && g_paint_recorder->part) { g_paint_recorder->part(part, r, state); return; }
-  theme_css_draw_part(part, r, state);
+  theme_css_draw_part(part, r, state, ui_window_scope(win));
 }
 
 void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const theme_draw_opts_t *opts) {
@@ -182,7 +185,7 @@ void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const the
   } else if (g_paint_recorder && g_paint_recorder->part) {
     g_paint_recorder->part(part, r, state);
   } else {
-    theme_css_draw_part(part, r, state);
+    theme_css_draw_part(part, r, state, NULL);
   }
 }
 
@@ -193,14 +196,16 @@ irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state)
   return rect_inset(r, ring);
 }
 
-uint32_t theme_foreground(theme_part_t part, ctrl_state_t state) {
+uint32_t theme_foreground(theme_part_t part, ctrl_state_t state) { return theme_foreground_in(NULL, part, state); }
+
+uint32_t theme_foreground_in(const window_t *win, theme_part_t part, ctrl_state_t state) {
   if (part < 0 || part >= THEME_PART_COUNT) {
     fprintf(stderr, "[theme] foreground REJECTED part=%d state=%u\n", (int)part, (unsigned)state);
     fflush(stderr);
     return get_sys_color(brTextNormal);
   }
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
-  return theme_css_foreground(part, state);
+  return theme_css_foreground(part, state, ui_window_scope(win));
 }
 
 // ── Appearance ──────────────────────────────────────────────────────────────

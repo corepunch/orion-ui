@@ -145,6 +145,7 @@ result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
   switch (msg) {
     case evCreate: {
       data = calloc(1, sizeof(reportview_data_t));
+      if (data) data->owner = win;
       if (!data) return false;
       win->userdata2 = data;
       win->flags |= WINDOW_VSCROLL;
