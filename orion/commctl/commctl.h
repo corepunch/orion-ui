@@ -218,6 +218,7 @@ typedef struct {
   const char *group_field;     // group-field="section": consecutive rows sharing its value form a captioned group
   bool fit_rows;               // fit-rows="true": measures to all its rows (RVS_EX_FITROWS), for popovers
   const int *column_colors;    // Column color="accent": sys colour role per column, 0 = the row's (NULL = none)
+  const int *column_badges;    // Column style="badge": 1 shows the cell as a status badge toned by the row's RowIcon colour (NULL = none)
   bool click_activates;        // activate="click": rows are links (RVS_EX_ONECLICK), nothing is selected at first
 } tableview_params_t;
 

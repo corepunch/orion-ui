@@ -80,6 +80,7 @@ typedef struct {
   uint32_t min_width;  // 0 = use default (20px), >0 = per-column minimum
   uint32_t align;      // 0 = left, TEXT_ALIGN_RIGHT (numbers), TEXT_ALIGN_CENTER
   int color;           // sys colour role of the column's text, 0 = the row's colour
+  bool badge;          // cells are status badges toned by their row's tone
 } reportview_column_t;
 
 typedef struct {
@@ -93,6 +94,7 @@ typedef struct {
   const char *subitems[REPORTVIEW_MAX_SUBITEMS];
   uint32_t    subitem_count;
   const char *section;    // report rows: a caption drawn above this row, starting a group (NULL = none)
+  int         tone;       // sys colour role of the row's badge cells (0 = secondary)
 } reportview_item_t;
 
 typedef struct {

@@ -281,7 +281,7 @@
                             <RowIcon icon="gc-check-circle" color="success" />
                             <Column field="name" title="Worktree" width="0" />
                             <Column field="branch" title="Branch" width="0" />
-                            <Column field="state" title="State" width="128" />
+                            <Column field="state" title="State" width="150" style="badge" />
                             <Column field="target" title="Runs" width="120" color="info" />
                         </TableView>
                     </StackView>

@@ -39,6 +39,7 @@ typedef struct {
     uint32_t min_width;   // Per-column minimum width, 0 = default (20px)
     uint32_t align;       // 0 = left, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER
     int color;            // sys colour role, 0 = the row's colour
+    bool badge;           // cells are status badges toned by the row
   } columns[MAX_REPORTVIEW_COLUMNS];
 
   char footer[MAX_REPORTVIEW_COLUMNS][MAX_REPORTVIEW_TITLE]; // totals row pinned under the rows

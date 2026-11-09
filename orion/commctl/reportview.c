@@ -259,6 +259,20 @@ static void report_paint(window_t *win, reportview_data_t *data) {
         }
         draw_text_clipped(FONT_SMALLEST, subtitle, &subtitle_rect,
                           row == data->selected ? fg : get_sys_color(brTextDisabled), 0);
+      } else if (data->columns[col].badge) {
+        // A status badge: a pill toned by the row (its RowIcon colour), sized to its text.
+        if (src[0]) {
+          char fitted[MAX_COLUMNVIEW_ITEM_NAME];
+          int room = MAX(0, text_w - WIN_PADDING), pad = get_theme()->badge.padding;
+          if (measure_status_badge(src, NULL) > room) {   // the text ends in an ellipsis inside the pill
+            text_ellipsize(FONT_SYSTEM, src, MAX(0, room - 2 * pad), fitted, sizeof(fitted));
+            src = fitted;
+          }
+          int bw = MIN(measure_status_badge(src, NULL), room);
+          int bh = MIN(BADGE_HEIGHT, entry_h - 2);
+          draw_status_badge(R(text_x, y + (entry_h - bh) / 2, bw, bh), src, NULL,
+                            get_sys_color(it->tone > 0 && it->tone < brCount ? (sys_color_idx_t)it->tone : brTextSecondary));
+        }
       } else {
         // Text that does not fit ends in an ellipsis; numbers align right.
         char fitted[MAX_COLUMNVIEW_ITEM_NAME];
@@ -622,6 +636,7 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       data->columns[i].min_width = col->min_width;
       data->columns[i].align = col->align;
       data->columns[i].color = col->color;
+      data->columns[i].badge = col->badge;
       data->column_count++;
 
       // Keep effective widths in sync when columns are added after layout.

@@ -529,6 +529,10 @@ reported on stderr.
 - `color="info"` on a `<Column>` draws that column's text in a theme role
   (the RowIcon roles), for an action caption ("Post", "Close Month") or
   secondary detail. The selected row keeps the selection's text colour.
+- `style="badge"` on a `<Column>` draws each cell as a status badge (the pill
+  `draw_status_badge` paints), toned by the colour of the row's matching
+  `<RowIcon>` rule, secondary without one. A state column then reads like the
+  row icon beside it: "3 modified" in a warning pill on a warning row.
 - `activate="click"` makes the rows links (`RVS_EX_ONECLICK`): releasing the
   button on the row it went down on activates it (`RVN_DBLCLK`), nothing is
   selected after a refresh, and the selection shows only while the list has

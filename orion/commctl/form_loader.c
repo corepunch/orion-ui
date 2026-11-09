@@ -421,8 +421,9 @@ static const tableview_params_t *fl_tableview(fl_build_t *b, xmlNodePtr c, const
   int *min_widths = fl_alloc(lib, (size_t)(columns + 1) * sizeof(*min_widths));
   bool *totals = fl_alloc(lib, (size_t)(columns + 1) * sizeof(*totals));
   int *colors = fl_alloc(lib, (size_t)(columns + 1) * sizeof(*colors));
-  if (!p || !fields || !titles || !widths || !min_widths || !totals || !colors) { b->ok = false; return NULL; }
-  bool any_color = false;
+  int *badges = fl_alloc(lib, (size_t)(columns + 1) * sizeof(*badges));
+  if (!p || !fields || !titles || !widths || !min_widths || !totals || !colors || !badges) { b->ok = false; return NULL; }
+  bool any_color = false, any_badge = false;
   int i = 0;
   bool any_total = false;
   FL_EACH_ELEMENT(col, c) if (fl_elem(col, "column")) {
@@ -437,6 +438,10 @@ static const tableview_params_t *fl_tableview(fl_build_t *b, xmlNodePtr c, const
     colors[i] = color ? FL_ENUM(color, kRowIconColors, 0) : 0;
     if (color && !colors[i]) fl_warn(b, col, "TableView '%s': unknown Column color '%s'", fl_nz(name, ""), color);
     any_color |= colors[i] != 0;
+    const char *style = fl_attr(lib, col, "style");
+    badges[i] = fl_eq(style, "badge");
+    if (style && !badges[i]) fl_warn(b, col, "TableView '%s': unknown Column style '%s' (want badge)", fl_nz(name, ""), style);
+    any_badge |= badges[i] != 0;
     if (total && !totals[i]) fl_warn(b, col, "TableView '%s': unknown total '%s' (want sum)", fl_nz(name, ""), total);
     i++;
   }
@@ -502,6 +507,7 @@ static const tableview_params_t *fl_tableview(fl_build_t *b, xmlNodePtr c, const
   }
   if (any_total) p->column_totals = totals;
   if (any_color) p->column_colors = colors;
+  if (any_badge) p->column_badges = badges;
   p->totals_label = fl_attr(lib, c, "totals-label");
   p->totals_skip = fl_attr(lib, c, "totals-skip");
 

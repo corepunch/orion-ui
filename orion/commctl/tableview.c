@@ -76,6 +76,7 @@ typedef struct {
   char *totals_label;
   char *totals_skip;
   int *column_colors;  // per column, NULL = the row's colour
+  int *column_badges;  // per column, 1 = a status badge cell; NULL = none
   bool click_activates;
   int fitted_rows;     // RVS_EX_FITROWS: the row count the layout last measured
 } tableview_state_t;
@@ -276,6 +277,7 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
         .min_width = (uint32_t)((s->column_min_widths && s->column_min_widths[i] > 0) ? s->column_min_widths[i] : 0),
         .align = number ? TEXT_ALIGN_RIGHT : 0,
         .color = s->column_colors ? s->column_colors[i] : 0,
+        .badge = s->column_badges && s->column_badges[i],
       };
       send_message(win, RVM_ADDCOLUMN, 0, &col);
     }
@@ -338,6 +340,7 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
     if (rule) {
       item.icon_name = rule->icon;
       item.icon_color = rule->color >= 0 && rule->color < brCount ? get_sys_color((sys_color_idx_t)rule->color) : 0;
+      item.tone = rule->color >= 0 && rule->color < brCount ? rule->color : 0;
     }
     if (s->check_field) {
       char checked[16] = {0};
@@ -478,6 +481,7 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       }
       s->column_widths = copy_int_array(params->column_widths, s->column_count);
       s->column_colors = params->column_colors ? copy_int_array(params->column_colors, s->column_count) : NULL;
+      s->column_badges = params->column_badges ? copy_int_array(params->column_badges, s->column_count) : NULL;
       s->click_activates = params->click_activates;
       s->column_min_widths = copy_int_array(params->column_min_widths, s->column_count);
       
@@ -544,6 +548,7 @@ result_t win_tableview(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         free_string_array(s->column_titles);
         free(s->column_widths);
         free(s->column_colors);
+        free(s->column_badges);
         free(s->column_min_widths);
         free(s->master_key);
         free(s->check_field); free(s->group_field);

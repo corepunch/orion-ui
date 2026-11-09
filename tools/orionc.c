@@ -990,6 +990,18 @@ static void emit_tableviews(FILE *f, xmlNodePtr parent, xmlNodePtr form_node,
         }
         LINE("0 };\n");
       }
+      // style="badge" on a Column: status badges toned by the row's RowIcon colour.
+      bool badges = false;
+      EACH_ELEMENT(col, c) if (elem(col, "column")) {
+        char *v = attr(col, "style"); badges |= eq(v, "badge");
+        if (v && !eq(v, "badge")) fprintf(stderr, "orionc: warning: TableView '%s': unknown Column style '%s' (want badge)\n", nz(name, ""), v);
+        free(v);
+      }
+      if (badges) {
+        OUT("static const int %s_badges[] = { ", param);
+        EACH_ELEMENT(col, c) if (elem(col, "column")) { char *v = attr(col, "style"); OUT("%d, ", eq(v, "badge") ? 1 : 0); free(v); }
+        LINE("0 };\n");
+      }
       // total="sum" on a Column: a totals row under the rows.
       bool totals = false;
       EACH_ELEMENT(col, c) if (elem(col, "column")) { char *v = attr(col, "total"); totals |= eq(v, "sum"); if (v && !eq(v, "sum")) fprintf(stderr, "orionc: warning: TableView '%s': unknown total '%s' (want sum)\n", nz(name, ""), v); free(v); }
@@ -1000,15 +1012,16 @@ static void emit_tableviews(FILE *f, xmlNodePtr parent, xmlNodePtr form_node,
       if (group_field && *group_field) cstr(group_field_q, sizeof(group_field_q), group_field);
       if (totals_label) cstr(totals_label_q, sizeof(totals_label_q), totals_label);
       if (totals_skip) cstr(totals_skip_q, sizeof(totals_skip_q), totals_skip);
-      char row_icons_ref[300] = "NULL", totals_ref[300] = "NULL", colors_ref[300] = "NULL", *activate = attr(c, "activate");
+      char row_icons_ref[300] = "NULL", totals_ref[300] = "NULL", colors_ref[300] = "NULL", badges_ref[300] = "NULL", *activate = attr(c, "activate");
       if (colors) snprintf(colors_ref, sizeof(colors_ref), "%s_colors", param);
+      if (badges) snprintf(badges_ref, sizeof(badges_ref), "%s_badges", param);
       if (row_icons) snprintf(row_icons_ref, sizeof(row_icons_ref), "%s_row_icons", param);
       if (totals) snprintf(totals_ref, sizeof(totals_ref), "%s_totals", param);
-      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = %d, .filter_value = %d, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s, .record_form = %s, .blank_zeros = %s, .row_icons = %s, .row_icon_count = %d, .column_totals = %s, .totals_label = %s, .totals_skip = %s, .framed = %s, .group_field = %s, .fit_rows = %s, .column_colors = %s, .click_activates = %s };\n\n",
+      OUT("static const tableview_params_t %s = { .db = NULL, .table_id = TABLE_%s, .filter_field = %d, .filter_value = %d, .field_names = %s_fields, .column_titles = %s_titles, .column_widths = %s_widths, .column_min_widths = %s_min_widths, .check_field = %s, .master_id = %s, .master_filter_field = %d, .master_key = %s, .cell_style = %s, .hide_column_titles = %s, .record_form = %s, .blank_zeros = %s, .row_icons = %s, .row_icon_count = %d, .column_totals = %s, .totals_label = %s, .totals_skip = %s, .framed = %s, .group_field = %s, .fit_rows = %s, .column_colors = %s, .column_badges = %s, .click_activates = %s };\n\n",
           param, table_id, filter_index, filter_value ? atoi(filter_value) : 0, param, param, param, param, check_field_q, master_id,
           relation_field, master_key_q, cell_style_value, column_titles && eq(column_titles, "false") ? "true" : "false", record_form_ref, eq(zeros, "blank") ? "true" : "false",
           row_icons_ref, row_icons, totals_ref, totals_label_q, totals_skip_q, eq(frame, "true") ? "true" : "false",
-          group_field_q, eq(fit_rows, "true") ? "true" : "false", colors_ref, eq(activate, "click") ? "true" : "false");
+          group_field_q, eq(fit_rows, "true") ? "true" : "false", colors_ref, badges_ref, eq(activate, "click") ? "true" : "false");
       free(activate); free(record_form); free(zeros); free(totals_label); free(totals_skip); free(frame); free(group_field); free(fit_rows);
       free(column_titles);
       free(cell_style);
