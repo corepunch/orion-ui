@@ -1,5 +1,6 @@
 // Proportional UTF-8 text rendering backed by lazily populated TTF atlases.
 
+#include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -8,6 +9,8 @@
 #include "text.h"
 #include "user.h"
 #include "font_cache.h"
+#include "theme.h"
+#include "style.h"
 #include <orion/kernel/kernel.h>
 
 #define MAX_TEXT_LENGTH   4096
@@ -24,6 +27,8 @@ typedef struct {
 typedef struct {
   R_Mesh mesh;
   font_cache_t *cache;
+  char path[1024];   // the face and size the atlas was built from
+  float size;
 } font_atlas_t;
 
 static struct {
@@ -32,6 +37,7 @@ static struct {
   font_atlas_t smallest;
   font_atlas_t title;
   font_atlas_t display;
+  bool ready;
 } text_state = {0};
 
 // ── Dynamic metric accessors ──────────────────────────────────────────────────
@@ -49,6 +55,12 @@ static inline int font_space(ui_font_t font) {
   font_atlas_t *atlas = font_for_role(font);
   const font_cache_glyph_t *glyph = font_cache_get_glyph(atlas->cache, ' ');
   return glyph && glyph->advance > 0 ? glyph->advance : 3;
+}
+
+// Advances in 1/64 logical pixel: summed before rounding, as typesetters do.
+static inline int font_space64(ui_font_t font) {
+  const font_cache_glyph_t *glyph = font_cache_get_glyph(font_for_role(font)->cache, ' ');
+  return glyph && glyph->advance64 > 0 ? glyph->advance64 : 3 * 64;
 }
 
 static inline int font_line(ui_font_t font) {
@@ -75,40 +87,134 @@ static void init_atlas_mesh(font_atlas_t *atlas) {
 }
 
 static bool load_atlas(font_atlas_t *atlas, const char *path, float em_size) {
-  atlas->cache = font_cache_create(path, em_size);
-  if (!atlas->cache) return false;
+  font_cache_t *cache = font_cache_create(path, em_size);
+  if (!cache) return false;
+  if (atlas->cache) { font_cache_destroy(atlas->cache); R_MeshDestroy(&atlas->mesh); }
+  atlas->cache = cache;
+  snprintf(atlas->path, sizeof(atlas->path), "%s", path);
+  atlas->size = em_size;
   init_atlas_mesh(atlas);
   return true;
+}
+
+// ── Faces from the theme ──────────────────────────────────────────────────────
+//
+// A CSS theme names each role's face in a :root custom property, in the CSS
+// font shorthand: --font-system: 400 13px "IBM Plex Sans". The file is
+// share/orion/fonts/<Family without spaces>-<Weight>.ttf (Regular, Medium,
+// SemiBold, Bold, ...; a 400 face may also be <Family>.ttf). Sizes are desktop
+// logical pixels, scaled for the platform. C themes and missing faces use DejaVu.
+
+#define TEXT_ROLES 5
+static const char *const k_text_role_vars[TEXT_ROLES] = {
+  "--font-system", "--font-small", "--font-smallest", "--font-title", "--font-display",
+};
+
+static font_atlas_t *text_atlas(int role) {
+  font_atlas_t *atlases[TEXT_ROLES] = {&text_state.big, &text_state.small, &text_state.smallest,
+                                       &text_state.title, &text_state.display};
+  return atlases[role];
+}
+
+static float text_platform_scale(void) {
+#if defined(AX_PLATFORM_IOS)
+  return 1.2f;
+#elif UI_WINDOW_SCALE == 1
+  return 1.0f;
+#else
+  return 2.0f / 3.0f;
+#endif
+}
+
+static void text_default_face(int role, char *path, size_t n, float *size) {
+  static const float sizes[TEXT_ROLES] = {12.0f, 12.0f, 9.0f, 18.0f, 24.0f};
+  snprintf(path, n, "%s/../share/orion/fonts/%s", ui_get_exe_dir(),
+           role >= 3 ? "DejaVuSans-Bold.ttf" : "DejaVuSans.ttf");
+  *size = sizes[role] * text_platform_scale();
+}
+
+static bool text_file_exists(const char *path) {
+  FILE *f = fopen(path, "rb");
+  if (f) fclose(f);
+  return f != NULL;
+}
+
+// Resolves a CSS font shorthand to a font file and size.
+static bool text_css_face(const char *value, char *path, size_t n, float *size) {
+  char buf[256]; snprintf(buf, sizeof(buf), "%s", value);
+  int weight = 400; float px = 0;
+  char *c = buf, family[96] = "";
+  while (*c) {
+    while (*c == ' ') c++;
+    if (!*c) break;
+    if (*c == '"' || *c == '\'') {   // the quoted family ends the shorthand
+      char quote = *c++, *end = strchr(c, quote);
+      if (end) *end = 0;
+      snprintf(family, sizeof(family), "%s", c);
+      break;
+    }
+    char *end = c; while (*end && *end != ' ') end++;
+    char saved = *end; *end = 0;
+    char *unit;
+    double v = strtod(c, &unit);
+    if (!strcmp(c, "bold")) weight = 700;
+    else if (!strcmp(c, "normal")) weight = 400;
+    else if (unit != c && !strcmp(unit, "px")) px = (float)v;
+    else if (unit != c && !*unit) weight = (int)v;
+    else { snprintf(family, sizeof(family), "%s%s", c, saved ? end + 1 : ""); break; }
+    *end = saved; c = saved ? end + 1 : end;
+  }
+  if (!family[0] || px <= 0) return false;
+  char stem[96]; size_t k = 0;
+  for (const char *f = family; *f && k + 1 < sizeof(stem); f++) if (*f != ' ') stem[k++] = *f;
+  stem[k] = 0;
+  static const char *const weights[] = {"Thin", "ExtraLight", "Light", "Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"};
+  int index = weight / 100 - 1;
+  if (index < 0) index = 0;
+  if (index > 8) index = 8;
+  const char *dir = ui_get_exe_dir();
+  snprintf(path, n, "%s/../share/orion/fonts/%s-%s.ttf", dir, stem, weights[index]);
+  if (!text_file_exists(path) && index == 3) snprintf(path, n, "%s/../share/orion/fonts/%s.ttf", dir, stem);
+  if (!text_file_exists(path)) {
+    fprintf(stderr, "[text] font %s %d is not installed: %s\n", family, weight, path);
+    fflush(stderr);
+    return false;
+  }
+  *size = px * text_platform_scale();
+  return true;
+}
+
+bool text_apply_theme_fonts(void) {
+  if (!text_state.ready) return false;
+  theme_t *theme = get_theme();
+  style_sheet_t *sheet = theme->css ? theme_stylesheet(theme) : NULL;
+  bool changed = false;
+  for (int role = 0; role < TEXT_ROLES; role++) {
+    char path[1024], value[256]; float size = 0;
+    if (!sheet || !style_value(sheet, STYLE_ROOT, k_text_role_vars[role], value, sizeof(value)) ||
+        !text_css_face(value, path, sizeof(path), &size))
+      text_default_face(role, path, sizeof(path), &size);
+    font_atlas_t *atlas = text_atlas(role);
+    if (atlas->cache && atlas->size == size && !strcmp(atlas->path, path)) continue;
+    if (!load_atlas(atlas, path, size)) {
+      text_default_face(role, path, sizeof(path), &size);
+      if (!load_atlas(atlas, path, size) && !atlas->cache) {
+        fprintf(stderr, "[text] required font asset failed to load: %s\n", path);
+        fflush(stderr);
+        exit(1);
+      }
+    }
+    changed = true;
+  }
+  return changed;
 }
 
 // ── init_text_rendering ───────────────────────────────────────────────────────
 
 void init_text_rendering(void) {
   memset(&text_state, 0, sizeof(text_state));
-
-  const char *exe = ui_get_exe_dir();
-  char system_path[4096], compact_path[4096];
-  snprintf(system_path, sizeof(system_path), "%s/../share/orion/fonts/DejaVuSans-Bold.ttf", exe);
-  snprintf(compact_path, sizeof(compact_path), "%s/../share/orion/fonts/DejaVuSans.ttf", exe);
-
-#if defined(AX_PLATFORM_IOS)
-  const float system_size = 14.4f, small_size = 14.4f, smallest_size = 10.8f, title_size = 21.6f, display_size = 28.8f;
-#elif UI_WINDOW_SCALE == 1
-  const float system_size = 12.0f, small_size = 12.0f, smallest_size = 9.0f, title_size = 18.0f, display_size = 24.0f;
-#else
-  const float system_size = 8.0f, small_size = 8.0f, smallest_size = 7.0f, title_size = 12.0f, display_size = 16.0f;
-#endif
-  bool loaded = load_atlas(&text_state.big, compact_path, system_size);
-  loaded = load_atlas(&text_state.small, compact_path, small_size) && loaded;
-  loaded = load_atlas(&text_state.smallest, compact_path, smallest_size) && loaded;
-  loaded = load_atlas(&text_state.title, system_path, title_size) && loaded;
-  loaded = load_atlas(&text_state.display, system_path, display_size) && loaded;
-  if (!loaded) {
-    fprintf(stderr, "[text] required font assets failed to load:\n  %s\n  %s\n",
-            system_path, compact_path);
-    fflush(stderr);
-    exit(1);
-  }
+  text_state.ready = true;
+  text_apply_theme_fonts();
   printf("text: lazy TTF atlases loaded system=%d small=%d smallest=%d\n",
          font_line(FONT_SYSTEM), font_line(FONT_SMALL), font_line(FONT_SMALLEST));
 }
@@ -146,6 +252,11 @@ static inline int codepoint_advance(ui_font_t font, uint32_t codepoint) {
   return glyph ? glyph->advance : 0;
 }
 
+static inline int codepoint_advance64(ui_font_t font, uint32_t codepoint) {
+  const font_cache_glyph_t *glyph = font_cache_get_glyph(font_for_role(font)->cache, codepoint);
+  return glyph ? glyph->advance64 : 0;
+}
+
 static inline int fallback_char_advance(uint32_t c, ui_font_t font) {
   if (c == '\n') return 0;
   if (c == ' ') {
@@ -164,14 +275,12 @@ static inline int wrapped_line_advance(ui_font_t font) {
   return adv > 0 ? adv : 1;
 }
 
+// In 1/64 logical pixel.
 static inline int wrap_char_advance(ui_font_t font, uint32_t c) {
   if (c == '\n') return 0;
-  if (c == ' ') {
-    int sw = font_space(font);
-    return sw > 0 ? sw : 3;
-  }
-  if (font_for_role(font)->cache) return codepoint_advance(font, c);
-  return fallback_char_advance(c, font);
+  if (c == ' ') return font_space64(font);
+  if (font_for_role(font)->cache) return codepoint_advance64(font, c);
+  return fallback_char_advance(c, font) * 64;
 }
 
 // Public API: pixel width of one glyph from the FONT_SYSTEM atlas.
@@ -200,7 +309,7 @@ static void flush_batch(font_atlas_t *atlas, text_vertex_t *buf, int count) {
 
 // ── Build vertices for one character ─────────────────────────────────────────
 
-static int emit_char_verts(text_vertex_t *buf, int cursor_x, int y,
+static int emit_char_verts(text_vertex_t *buf, float cursor_x, int y,
                            uint32_t codepoint, uint32_t col,
                            font_atlas_t *atlas) {
   const font_cache_glyph_t *glyph = font_cache_get_glyph(atlas->cache, codepoint);
@@ -219,7 +328,8 @@ static int emit_char_verts(text_vertex_t *buf, int cursor_x, int y,
   float u2 = (cx0 + glyph->width)  / tw;
   float v2 = (cy0 + glyph->height) / th;
 
-  float x = cursor_x + glyph->x_offset / bitmap_scale;
+  // Each glyph starts on a device pixel, so hinted bitmaps stay sharp.
+  float x = roundf(cursor_x * bitmap_scale) / bitmap_scale + glyph->x_offset / bitmap_scale;
   float draw_y = y + glyph->y_offset / bitmap_scale;
   buf[0] = (text_vertex_t){ x,    draw_y,    u1, v1, col };
   buf[1] = (text_vertex_t){ x,    draw_y+dh, u1, v2, col };
@@ -238,7 +348,7 @@ static int emit_char_verts(text_vertex_t *buf, int cursor_x, int y,
 static int strnwidth_impl(ui_font_t font, const char *text, int len) {
   if (!text || !*text) return 0;
   if (len > MAX_TEXT_LENGTH) len = MAX_TEXT_LENGTH;
-  int sw = font_space(font);
+  int sw = font_space64(font);
   int w = 0;
   for (int i = 0; i < len;) {
     int length;
@@ -246,9 +356,9 @@ static int strnwidth_impl(ui_font_t font, const char *text, int len) {
     i += length;
     if (codepoint == ' ') { w += sw; continue; }
     if (codepoint == '\n') continue;
-    w += codepoint_advance(font, codepoint);
+    w += codepoint_advance64(font, codepoint);
   }
-  return w;
+  return (w + 32) >> 6;
 }
 
 int strnwidth(const char *text, int text_length) {
@@ -314,19 +424,19 @@ void draw_text(ui_font_t font, const char *text, int x, int y, uint32_t col) {
   font_atlas_t *atlas = font_for_role(font);
   int vc = 0;
 
-  int sw = font_space(font);
+  int sw = font_space64(font);
   int lh = font_line(font);
 
-  int cursor_x = x;
+  int pen = x * 64;
   for (int i = 0; i < text_length;) {
     int length;
     uint32_t codepoint = utf8_codepoint(text + i, text_length - i, &length);
     i += length;
-    if (codepoint == ' ')  { cursor_x += sw; continue; }
-    if (codepoint == '\n') { cursor_x = x; y += lh; continue; }
+    if (codepoint == ' ')  { pen += sw; continue; }
+    if (codepoint == '\n') { pen = x * 64; y += lh; continue; }
 
-    vc += emit_char_verts(buf + vc, cursor_x, y, codepoint, col, atlas);
-    cursor_x += codepoint_advance(font, codepoint);
+    vc += emit_char_verts(buf + vc, pen / 64.0f, y, codepoint, col, atlas);
+    pen += codepoint_advance64(font, codepoint);
   }
 
   if (vc > 0) flush_batch(atlas, buf, vc);
@@ -373,9 +483,9 @@ text_wrap_result_t text_wrap_layout_font(ui_font_t font, const char *text,
   int y = viewport->y;
   int w = viewport->w;
   int lh = wrapped_line_advance(font);
-  int sw = text_strwidth(font, " ");
-  if (sw <= 0) sw = font_space(font);
-  if (sw <= 0) sw = 3;
+  // Horizontal positions in 1/64 logical pixel.
+  int sw = font_space64(font);
+  x *= 64; w *= 64;
 
   int cx = x;
   int cy = y;
@@ -424,7 +534,7 @@ text_wrap_result_t text_wrap_layout_font(ui_font_t font, const char *text,
         vc = 0;
       }
       cur_atlas = atlas;
-      vc += emit_char_verts(buf + vc, cx, cy, codepoint, col, atlas);
+      vc += emit_char_verts(buf + vc, cx / 64.0f, cy, codepoint, col, atlas);
     }
     cx += cw;
     line_w += cw;
@@ -432,7 +542,7 @@ text_wrap_result_t text_wrap_layout_font(ui_font_t font, const char *text,
 
 #undef NEW_LINE
   if (line_w > max_line_w) max_line_w = line_w;
-  out.width = max_line_w;
+  out.width = (max_line_w + 63) >> 6;
   out.height = lines * lh;
 
   if (draw && vc > 0 && cur_atlas)

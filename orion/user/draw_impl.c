@@ -620,12 +620,6 @@ void draw_sysicon(const char *name, int x, int y, int size, uint32_t col) {
                      UV_RECT(r.u0, r.v0, r.u1, r.v1), col, 0);
 }
 
-void draw_icon16(int icon, int x, int y, uint32_t col) {
-  icon *= 2;
-  draw_text_small((char[]) { icon+128, icon+129, 0 }, x, y, col);
-  draw_text_small((char[]) { icon+144, icon+145, 0 }, x, y+8, col);
-}
-
 void draw_checkerboard(irect16_t r, int square_px) {
   extern uint32_t ui_transparency_checker_texture;
   if (!g_ui_runtime.running || r.w < 1 || r.h < 1 || square_px < 1) return;

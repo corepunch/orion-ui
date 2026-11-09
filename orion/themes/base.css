@@ -149,3 +149,15 @@ Scrollbar::thumb:disabled { background: var(--text-disabled); }
 @media (prefers-color-scheme: light) {
   Scrollbar::thumb { background: color-mix(in srgb, var(--text-secondary) 80%, var(--statusbar-bg)); }
 }
+
+/* ── Type ────────────────────────────────────────────────────────────────── */
+/* The text roles, in the CSS font shorthand: weight, size in desktop logical
+   pixels, family. Files: share/orion/fonts/<Family>-<Weight>.ttf. */
+
+:root {
+  --font-system:   400 13px "IBM Plex Sans";   /* chrome: menus, buttons, dialogs */
+  --font-small:    400 13px "IBM Plex Sans";   /* content: list rows, status bar */
+  --font-smallest: 400 11px "IBM Plex Sans";   /* captions in dense views */
+  --font-title:    600 18px "IBM Plex Sans";   /* a window title in its toolbar */
+  --font-display:  600 24px "IBM Plex Sans";   /* the one figure a view exists to show */
+}

@@ -130,7 +130,6 @@ void draw_theme_icon_in_rect(int id, irect16_t r, uint32_t col);
 void draw_icon8(int icon, int x, int y, uint32_t col);
 void draw_icon8_clipped(int icon, irect16_t rect, uint32_t col);
 void draw_sysicon(const char *name, int x, int y, int size, uint32_t col);
-void draw_icon16(int icon, int x, int y, uint32_t col);
 void draw_checkerboard(irect16_t r, int square_px);
 
 // Viewport and projection

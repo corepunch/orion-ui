@@ -124,6 +124,7 @@ const font_cache_glyph_t *font_cache_get_glyph(font_cache_t *cache,
     fprintf(stderr, "[font] failed to load metrics U+%04X\n", codepoint); fflush(stderr); return NULL;
   }
   glyph->advance = (int16_t)lroundf(cache->font->glyph->advance.x * cache->scale);
+  glyph->advance64 = (int32_t)lroundf(cache->font->glyph->advance.x * cache->scale * 64.0f);
   if (FT_Load_Glyph(cache->font, index, FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP | FT_LOAD_RENDER)) {
     fprintf(stderr, "[font] failed to render U+%04X\n", codepoint); fflush(stderr); return NULL;
   }

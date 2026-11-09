@@ -14,17 +14,6 @@
   ((px) >= (rc).x && (py) >= (rc).y && \
    (px) < (rc).x + (rc).w && (py) < (rc).y + (rc).h)
 
-typedef enum {
-  icon16_select,
-  icon16_points,
-  icon16_lines,
-  icon16_sectors,
-  icon16_things,
-  icon16_sounds,
-  icon16_appicon,
-  icon16_count,
-} ed_icon16_t;
-
 typedef struct {
   window_t *hot;
   window_t *pressed;
@@ -90,8 +79,7 @@ result_t win_tray(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return true;
     }
     case evPaint:
-      draw_icon16(icon16_appicon, 4, 1, get_sys_color(brDarkEdge));
-      draw_icon16(icon16_appicon, 3, 0, get_sys_color(brTextNormal));
+      draw_sysicon("orion-mark", 3, (TRAY_HEIGHT - 16) / 2, 16, get_sys_color(brAccent));   // Orion's crystal
       {
         window_t *active = g_ui_runtime.focused
             ? get_root_window(g_ui_runtime.focused) : NULL;

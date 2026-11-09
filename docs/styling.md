@@ -108,3 +108,23 @@ radii through the `:root` variables `base.css` uses: `--window-radius`,
 | `TableView::row` | `min-height`, `--divider-width` | `report.row_height`, `report.row_dividers` |
 | `Badge` | `border-radius`, `padding-left`, `--tint-alpha`, `--ink-mix` (0..1) | `badge.corner_radius`, `badge.padding`, `badge.tint_alpha`, `badge.ink_mix` |
 | `Badge::icon` | `width`, `margin-right` | `badge.icon_size`, `badge.icon_gap` |
+
+## Type
+
+The text roles are `:root` custom properties in the CSS `font` shorthand
+(weight, size in desktop logical pixels, family), read by `text.c` when the
+theme changes; `base.css` sets IBM Plex Sans:
+
+| Property | Role | Used for |
+|---|---|---|
+| `--font-system` | `FONT_SYSTEM` | Chrome: menus, buttons, dialogs |
+| `--font-small` | `FONT_SMALL` | Content: list rows, the status bar |
+| `--font-smallest` | `FONT_SMALLEST` | Captions in dense views |
+| `--font-title` | `FONT_TITLE` | A window title in its toolbar |
+| `--font-display` | `FONT_DISPLAY` | The one figure a view exists to show |
+
+The face is `share/orion/fonts/<Family without spaces>-<Weight>.ttf`, with
+weights named Thin, ExtraLight, Light, Regular, Medium, SemiBold, Bold,
+ExtraBold and Black (a 400 face may also be `<Family>.ttf`). Sizes are scaled
+for the platform (×1.2 on iOS). A missing face falls back to DejaVu Sans with a
+diagnostic; Classic keeps DejaVu.

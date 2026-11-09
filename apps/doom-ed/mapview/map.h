@@ -428,7 +428,6 @@ void fill_rect(uint32_t color, irect16_t r);
 void draw_rect(int tex, irect16_t r);
 void draw_rect_ex(int tex, irect16_t r, int type, float alpha);
 void draw_icon8(int icon, int x, int y, uint32_t col);
-void draw_icon16(int icon, int x, int y, uint32_t col);
 void draw_palette(map_data_t const *map);
 char const* get_texture_name(int i);
 char const* get_flat_texture_name(int i);

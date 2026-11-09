@@ -1,6 +1,13 @@
 # Orion fonts
 
-Orion uses DejaVu Sans 2.37 with FreeType. The fonts come from
+CSS themes set their text faces (docs/styling.md): the Modern family, Navy,
+Amber, Porcelain and Metro use IBM Plex Sans 6.4.0 (Regular, Medium, SemiBold,
+Bold), from https://github.com/IBM/plex at tag `v6.4.0`
+(`IBM-Plex-Sans/fonts/complete/ttf/`). It covers Latin, Greek and Cyrillic;
+its license is IBMPlexSans-LICENSE.txt (SIL Open Font License 1.1). A face is
+installed as `<Family without spaces>-<Weight>.ttf`.
+
+Classic, and any role whose face is missing, uses DejaVu Sans 2.37 with FreeType. The fonts come from
 https://dejavu-fonts.github.io/ (release archive SHA-256
 fa9ca4d13871dd122f61258a80d01751d603b4d3ee14095d65453b4e846e17d7). The system and compact text roles
 use DejaVuSans.ttf; titles use DejaVuSans-Bold.ttf. Italic and bold italic
@@ -9,7 +16,9 @@ supports Latin, Greek and Cyrillic. See DejaVu-LICENSE.txt for its license.
 
 Font sizes are logical em sizes. The glyph cache uses hinted FreeType bitmaps
 at display density while retaining logical advance and line metrics, so Retina
-increases raster resolution without changing layout. `monoid.ttf` remains the
+increases raster resolution without changing layout. Advances are kept in 1/64
+of a logical pixel and summed before rounding, so letter spacing stays even;
+each glyph starts on a device pixel. `monoid.ttf` remains the
 terminal's fixed-width face.
 
 FreeType 2.15.0 is included as the `vendor/freetype` Git submodule, pinned to

@@ -10,7 +10,8 @@ typedef struct {
   uint16_t atlas_x, atlas_y;
   int16_t x_offset, y_offset;
   uint16_t width, height;
-  int16_t advance;
+  int16_t advance;      // logical pixels, rounded
+  int32_t advance64;    // logical pixels in 1/64: text is laid out with these, so spacing stays even
 } font_cache_glyph_t;
 
 // em_size and advance/line metrics use logical pixels; bitmap bounds use texels.

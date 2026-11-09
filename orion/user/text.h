@@ -35,6 +35,11 @@ void init_text_rendering(void);
 // Clean up text rendering resources
 void shutdown_text_rendering(void);
 
+// Reloads the role atlases whose face or size the active theme changed
+// (--font-system, --font-small, ... in its style sheet). Returns true when any
+// changed. set_theme() calls it; a no-op before init_text_rendering().
+bool text_apply_theme_fonts(void);
+
 // Returns the pixel width of a single glyph from the FONT_SYSTEM atlas.
 // Returns 0 when the text system is not yet initialized.
 int char_width(unsigned char c);

@@ -12,3 +12,4 @@ included as `PHOSPHOR-LICENSE`.
 | pane-split-right.svg | columns (regular) | Standard pane title bar |
 | pane-split-down.svg | rows (regular) | Standard pane title bar with Alt |
 | pane-close.svg | x (regular) | Standard pane title bar |
+| orion-mark.svg | diamond (fill) | Orion's mark: the crystal of the Orion logo, at the start of the task bar |

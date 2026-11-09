@@ -80,7 +80,8 @@ GEM_DEFINE("File Manager", "1.0", gem_init, NULL, NULL)
 
 #ifndef BUILD_AS_GEM
 int main(int argc, char *argv[]) {
-  (void)argc; (void)argv;
+  const char *screenshot = NULL;   // --screenshot PATH: capture the first painted frame and exit
+  for (int i = 1; i + 1 < argc; i++) if (!strcmp(argv[i], "--screenshot")) screenshot = argv[i + 1];
 
   if (!ui_init_graphics(UI_INIT_DESKTOP | UI_INIT_TRAY, "File Manager", 480, 320)) {
     printf("Failed to initialize graphics!\n");
@@ -106,6 +107,7 @@ int main(int argc, char *argv[]) {
   }
 
   show_window(main_window, true);
+  if (screenshot) ui_request_screenshot(screenshot, 90, true);
 
   ui_event_t e;
   while (ui_is_running()) {

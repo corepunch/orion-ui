@@ -224,7 +224,7 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
     base = base ? base + 1 : data->items[i].path;
     const char *ext = strrchr(base, '.');
     bool is_gem = !data->items[i].is_directory && ext && strcmp(ext, ".gem") == 0;
-    uint32_t col = data->items[i].is_hidden    ? get_sys_color(brTextDisabled)
+    uint32_t col = data->items[i].is_hidden    ? get_sys_color(brTextSecondary)   // quieter, still readable
                  : data->items[i].is_directory ? get_sys_color(brFolderText)
                  : is_gem                      ? FL_COLOR_GEM
                                                : get_sys_color(brTextNormal);

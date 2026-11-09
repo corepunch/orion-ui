@@ -11,6 +11,7 @@
 #include "user.h"
 #include "theme.h"
 #include "theme_palette_dark.h"
+#include "text.h"
 
 uint32_t g_sys_colors[brCount] = { THEME_PALETTE_DARK_INIT };
 
@@ -155,6 +156,7 @@ bool set_theme(theme_style_t style) {
   g_theme_style_generation++;
   candidate->apply_palette();
   g_theme_style_generation++;
+  bool fonts_changed = text_apply_theme_fonts();   // the role faces may differ between themes
 
   if (g_ui_runtime.running) {
     post_to_win_tree(g_ui_runtime.windows, evThemeChanged, (uint32_t)style);
@@ -169,7 +171,7 @@ bool set_theme(theme_style_t style) {
     // If the scrollbar gutter width changed the client area of every window
     // shrinks or grows; post evResize to all top-level windows so layout
     // managers recalculate scroll-channel allocations.
-    if (candidate->scrollbar.width != old_scrollbar_width ||
+    if (fonts_changed || candidate->scrollbar.width != old_scrollbar_width ||
         candidate->caption.height != old_caption_height ||
         candidate->menubar.height != old_menubar_height ||
         candidate->toolbar.button_size != old_toolbar_size ||

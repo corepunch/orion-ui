@@ -5,17 +5,6 @@
 #define TRAY_HEIGHT (BUTTON_HEIGHT+4)
 #define SPACING 4
 
-typedef enum {
-  icon16_select,
-  icon16_points,
-  icon16_lines,
-  icon16_sectors,
-  icon16_things,
-  icon16_sounds,
-  icon16_appicon,
-  icon16_count,
-} ed_icon16_t;
-
 result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 void create_button(window_t *tray, window_t *window) {
@@ -72,8 +61,7 @@ result_t win_tray(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       register_window_hook(evDestroy, on_win_destroyed, win);
       return true;
     case evPaint:
-      draw_icon16(icon16_appicon, 4, 1, get_sys_color(brDarkEdge));
-      draw_icon16(icon16_appicon, 3, 0, get_sys_color(brTextNormal));
+      draw_sysicon("orion-mark", 3, (TRAY_HEIGHT - 16) / 2, 16, get_sys_color(brAccent));   // Orion's crystal
       return false;
     case evCommand:
       if (HIWORD(wparam) == btnClicked) {
