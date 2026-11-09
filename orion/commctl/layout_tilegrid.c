@@ -192,7 +192,7 @@ result_t win_tilegrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       tilegrid_relayout(win);
       return true;
     case evPaint:
-      fill_rect(get_sys_color(brPanelDark), get_client_rect(win));
+      theme_draw(THEME_PART_TILE_GRID, get_client_rect(win), CTRL_NORMAL);
       layout_paint_children(win);
       return true;
     case evParentNotify:

@@ -51,12 +51,9 @@ result_t win_splitter(window_t *win, uint32_t msg,
       irect16_t cr = get_client_rect(win);
       splitter_data_t *st = (splitter_data_t *)win->userdata;
       if (!st || !st->hot) return true;
-      uint32_t accent = color_with_alpha(get_sys_color(brTextInfo), 128);
-      if (st && st->orientation == SPLIT_VERT) {
-        fill_rect(accent, rect_center(cr, MIN(cr.w, SPLITTER_HIGHLIGHT_WIDTH), cr.h));
-      } else {
-        fill_rect(accent, rect_center(cr, cr.w, MIN(cr.h, SPLITTER_HIGHLIGHT_WIDTH)));
-      }
+      irect16_t strip = st->orientation == SPLIT_VERT ? rect_center(cr, MIN(cr.w, SPLITTER_HIGHLIGHT_WIDTH), cr.h)
+                                                       : rect_center(cr, cr.w, MIN(cr.h, SPLITTER_HIGHLIGHT_WIDTH));
+      theme_draw(THEME_PART_SPLITTER, strip, CTRL_HOVER);
       return true;
     }
 

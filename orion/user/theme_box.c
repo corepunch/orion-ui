@@ -104,6 +104,21 @@ static const struct { const char *element, *part, *classes; } k_part_selectors[T
   [THEME_PART_TITLE_TOOLBAR]          = {"Window", "title-toolbar"},
   [THEME_PART_COLUMN_DIVIDER]         = {"TableView", "divider"},
   [THEME_PART_LIST_GROUP]             = {"TableView", "group"},
+  [THEME_PART_LIST_BODY]              = {"TableView", "body"},
+  [THEME_PART_ROW_RULE]               = {"TableView", "rule"},
+  [THEME_PART_LIST_FRAME]             = {"TableView", "frame"},
+  [THEME_PART_ICON_ITEM]              = {"IconView", "item"},
+  [THEME_PART_ICON_CELL]              = {"IconView", "cell"},
+  [THEME_PART_THUMBNAIL]              = {"IconView", "thumbnail"},
+  [THEME_PART_DESKTOP_ICON]           = {"Icon"},
+  [THEME_PART_WORKSPACE]              = {"Workspace"},
+  [THEME_PART_DESKTOP]                = {"Desktop"},
+  [THEME_PART_TILE_GRID]              = {"TileGrid"},
+  [THEME_PART_CARET]                  = {"TextEdit", "caret"},
+  [THEME_PART_SPLITTER]               = {"SplitView", "handle"},
+  [THEME_PART_DROP_TARGET]            = {"Page", "drop-target"},
+  [THEME_PART_DOCK_PREVIEW]           = {"Dock", "preview"},
+  [THEME_PART_DISABLED_VEIL]          = {"Window", "disabled-veil"},
 };
 
 // ── value parsing ─────────────────────────────────────────────────────────────

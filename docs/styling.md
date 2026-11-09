@@ -78,6 +78,9 @@ apply to every part.
 | `BUTTON` | `Button` | `LIST_ITEM` | `TableView::row` |
 | `FIELD` | `TextEdit` (`.multiline`) | `HEADER` | `TableView::header` |
 | `COMBOBOX`, `COMBOBOX_ARROW` | `ComboBox`, `ComboBox::arrow` | `COLUMN_DIVIDER`, `LIST_GROUP` | `TableView::divider`, `TableView::group` (a grouped list's caption row) |
+| `LIST_BODY`, `ROW_RULE`, `LIST_FRAME` | `TableView::body`, `::rule`, `::frame` | `ICON_ITEM`, `ICON_CELL`, `THUMBNAIL` | `IconView::item`, `::cell`, `::thumbnail` |
+| `DESKTOP_ICON`, `DESKTOP`, `WORKSPACE` | `Icon`, `Desktop`, `Workspace` | `TILE_GRID`, `CARET` | `TileGrid`, `TextEdit::caret` |
+| `SPLITTER` | `SplitView::handle` | `DROP_TARGET`, `DOCK_PREVIEW`, `DISABLED_VEIL` | `Page::drop-target`, `Dock::preview`, `Window::disabled-veil` |
 | `CHECKBOX` | `CheckBox::box` | `MENU_BAR`, `MENU_POPUP`, `MENU_ITEM` | `MenuBar`, `Menu`, `Menu::item` |
 | `SEGMENTED_TRACK`, `SEGMENT` | `SegmentedControl`, `::segment` | `SEPARATOR` | `Separator` |
 | `TAB`, `TAB_BAR`, `TAB_PANE` | `TabView::tab`, `::bar`, `::pane` | `PAGE`, `PANEL`, `SURFACE`, `SIDEBAR` | `Page`, `Panel`, `Surface`, `Sidebar` |
@@ -111,6 +114,7 @@ radii through the `:root` variables `base.css` uses: `--window-radius`,
 | `TableView` | `border-radius` | `table.corner_radius` |
 | `TableView::header` | `min-height` | `report.header_height` |
 | `TableView::row` | `min-height`, `--divider-width` | `report.row_height`, `report.row_dividers` |
+| `IconView::thumbnail:checked` | `border-width` | `thumbnail.ring_width` |
 | `Badge` | `border-radius`, `padding-left`, `--tint-alpha`, `--ink-mix` (0..1) | `badge.corner_radius`, `badge.padding`, `badge.tint_alpha`, `badge.ink_mix` |
 | `Badge::icon` | `width`, `margin-right` | `badge.icon_size`, `badge.icon_gap` |
 

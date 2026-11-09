@@ -238,8 +238,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         me_cursor_xy(s->buf, s->cursor, tw, &cx, &cy);
         int cur_y = ty + cy - s->scroll_y;
         if (cur_y >= ty - SMALL_LINE_HEIGHT && cur_y < ty + th) {
-          fill_rect(get_sys_color(brTextNormal),
-                    R(tx + cx, cur_y, 2, CHAR_HEIGHT));
+          theme_draw(THEME_PART_CARET, R(tx + cx, cur_y, 2, CHAR_HEIGHT), CTRL_NORMAL);
         }
       }
 

@@ -93,6 +93,20 @@ TableView::header  { background: var(--control-bg); border-bottom: 1px solid var
 TableView::divider { background: var(--dark-edge); }
 TableView::divider:hover { background: var(--accent); }
 TableView::group   { color: var(--text-secondary); }
+TableView::body    { background: var(--column-view-bg); }
+TableView::rule    { background: color-mix(in srgb, var(--light-edge) 56.5%, transparent); }
+TableView::frame   { border: 1px solid var(--light-edge); border-radius: var(--table-radius); }
+
+IconView::item          { background: var(--column-view-bg); }
+IconView::item:checked  { background: var(--text-normal); color: var(--control-bg); }
+IconView::cell:checked  { background: var(--active-titlebar); color: var(--accent-text); }
+IconView::thumbnail:checked { border-style: solid; border-color: var(--accent); border-width: 3px; }
+
+Icon          { color: var(--text-normal); }
+Icon:checked  { border: 2px solid var(--active-titlebar); margin: 1px; color: var(--accent); }
+Workspace     { background: var(--workspace-bg); }
+Desktop       { background: var(--desktop-bg); }
+TileGrid      { background: var(--panel-dark); }
 TableView::row:hover   { background: var(--button-hover); }
 TableView::row:checked, TableView::row:active { background: var(--selection); }
 TableView::row:checked { color: var(--accent-text); }
@@ -135,6 +149,17 @@ Window::title-toolbar  { background: var(--window-dark-bg); }
 Window::resize-grip    { content: dots; fill: var(--text-disabled); }
 Window::close          { content: close; }
 ComboBox::arrow        { content: arrow-updown; }
+
+/* ── Editing, docking and dragging ────────────────────────────────────────── */
+
+TextEdit::caret        { background: var(--text-normal); }
+SplitView::handle:hover { background: color-mix(in srgb, var(--text-info) 50.2%, transparent); }
+Page::drop-target {
+  background: color-mix(in srgb, var(--text-info) 13.73%, transparent);
+  border: 2px solid color-mix(in srgb, var(--text-info) 50.2%, transparent);
+}
+Dock::preview          { background: color-mix(in srgb, var(--text-info) 27.45%, transparent); }
+Window::disabled-veil  { background: color-mix(in srgb, var(--control-bg) 50.2%, transparent); }
 
 /* ── Sliders and scroll bars ─────────────────────────────────────────────── */
 

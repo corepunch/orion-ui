@@ -28,8 +28,7 @@ static int icon_hit_index(window_t *win, reportview_data_t *data, uint32_t wpara
 
 static void icon_paint(window_t *win, reportview_data_t *data) {
   irect16_t cr = get_client_rect(win);
-  uint32_t bg_col = get_sys_color(brColumnViewBg);
-  fill_rect(bg_col, R(0, 0, cr.w, cr.h));
+  theme_draw(THEME_PART_LIST_BODY, R(0, 0, cr.w, cr.h), CTRL_NORMAL);
 
   bitmap_strip_t *strip = data->icon_strip;
   for (uint32_t i = 0; i < data->count; i++) {
@@ -49,12 +48,9 @@ static void icon_paint(window_t *win, reportview_data_t *data) {
                            MAX(0, item.w - ICON_OFFSET - gap),
                            item_h};
 
-    uint32_t icon_col = (int)i == data->selected ? get_sys_color(brControlBg)
-                                                 : data->items[i].color;
-    if ((int)i == data->selected)
-      fill_rect(get_sys_color(brTextNormal), R(x, y, item_w, item_h));
-    else
-      fill_rect(bg_col, R(x, y, item_w, item_h));
+    ctrl_state_t item_state = (int)i == data->selected ? CTRL_SELECTED : CTRL_NORMAL;
+    uint32_t icon_col = item_state ? theme_foreground(THEME_PART_ICON_ITEM, item_state) : data->items[i].color;
+    theme_draw(THEME_PART_ICON_ITEM, R(x, y, item_w, item_h), item_state);
     const char *icon_name = data->items[i].icon_name;
     if (icon_name) {
       sysicon_resolved_t res;

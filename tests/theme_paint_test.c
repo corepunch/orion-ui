@@ -493,6 +493,39 @@ static void test_amber_business_surfaces(void) {
   PASS();
 }
 
+static void test_control_parts(void) {
+  TEST("controls' wells, rules, carets, selections and drop targets paint from their parts");
+  theme_t *theme = paint_with_theme(THEME_PORCELAIN);
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_LIST_BODY, R(0, 0, 60, 40), CTRL_NORMAL);
+  ASSERT_EQUAL(pixels[20][30], get_sys_color(brColumnViewBg));
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_ROW_RULE, R(0, 10, 60, 1), CTRL_NORMAL);
+  ASSERT_EQUAL(pixels[10][30], color_with_alpha(get_sys_color(brLightEdge), 0x90));
+  ASSERT_EQUAL(pixels[11][30], 0);
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_CARET, R(10, 5, 2, 14), CTRL_NORMAL);
+  ASSERT_EQUAL(pixels[10][11], get_sys_color(brTextNormal));
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_DESKTOP_ICON, R(10, 10, 40, 40), CTRL_NORMAL);
+  ASSERT_EQUAL(pixels[11][30], 0);
+  theme->draw_part(THEME_PART_DESKTOP_ICON, R(10, 10, 40, 40), CTRL_SELECTED);
+  ASSERT_EQUAL(pixels[11][30], get_sys_color(brActiveTitlebar));
+  ASSERT_EQUAL(pixels[12][30], get_sys_color(brActiveTitlebar));
+  ASSERT_EQUAL(pixels[10][30], 0);    // one pixel inside the icon
+  ASSERT_EQUAL(pixels[30][30], 0);    // a frame, not a fill
+  ASSERT_EQUAL(theme_foreground(THEME_PART_DESKTOP_ICON, CTRL_SELECTED), get_sys_color(brAccent));
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_THUMBNAIL, R(10, 10, 40, 40), CTRL_SELECTED);
+  ASSERT_EQUAL(pixels[10 + get_theme()->thumbnail.ring_width - 1][30], get_sys_color(brAccent));
+  ASSERT_EQUAL(pixels[10 + get_theme()->thumbnail.ring_width][30], 0);
+  memset(pixels, 0, sizeof(pixels));
+  theme->draw_part(THEME_PART_DROP_TARGET, R(10, 10, 40, 40), CTRL_NORMAL);
+  ASSERT_EQUAL(pixels[10][30], color_with_alpha(get_sys_color(brTextInfo), 128));
+  ASSERT_EQUAL(pixels[30][30], color_with_alpha(get_sys_color(brTextInfo), 35));
+  PASS();
+}
+
 int main(void) {
   TEST_START("theme paint output");
   test_modern_surfaces();
@@ -502,6 +535,7 @@ int main(void) {
   test_translated_separator();
   test_column_dividers();
   test_classic_window_border();
+  test_control_parts();
   test_independent_parts();
   test_modern_slider_track_contrasts();
   test_flat_tool_items();

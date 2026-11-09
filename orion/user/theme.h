@@ -183,6 +183,21 @@ typedef enum {
   THEME_PART_TITLE_TOOLBAR,  // merged caption and toolbar row (WINDOW_TITLETOOLBAR), past any sidebar
   THEME_PART_COLUMN_DIVIDER, // report/table column boundary; CTRL_HOVER marks the resize handle
   THEME_PART_LIST_GROUP,     // a grouped list's caption row: its face, and its text colour as the foreground
+  THEME_PART_LIST_BODY,      // the well behind a list's rows (report, icon and grid views)
+  THEME_PART_ROW_RULE,       // the hairline under a row, where the theme rules rows
+  THEME_PART_LIST_FRAME,     // the outline of a framed list (RVS_EX_FRAME)
+  THEME_PART_ICON_ITEM,      // a row of an icon list; CTRL_SELECTED is the chosen one, its foreground the label
+  THEME_PART_ICON_CELL,      // the face behind a chosen icon and label in an icon grid
+  THEME_PART_THUMBNAIL,      // a photo-grid tile; CTRL_SELECTED draws its ring
+  THEME_PART_DESKTOP_ICON,   // a desktop icon; CTRL_SELECTED frames it, its foreground is the caption
+  THEME_PART_WORKSPACE,      // behind images and desktop icons: the document mat
+  THEME_PART_DESKTOP,        // the desktop behind root windows
+  THEME_PART_TILE_GRID,      // the well behind a TileGrid's tiles
+  THEME_PART_CARET,          // a text field's insertion point
+  THEME_PART_SPLITTER,       // a split view's handle; CTRL_HOVER highlights the strip the caller passes
+  THEME_PART_DROP_TARGET,    // where a dragged pane will dock in a Page
+  THEME_PART_DOCK_PREVIEW,   // where a dragged window will dock
+  THEME_PART_DISABLED_VEIL,  // laid over a disabled window that does not paint its own disabled state
   THEME_PART_COUNT,
 } theme_part_t;
 

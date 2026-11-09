@@ -459,5 +459,5 @@ void dock_paint_overlay(window_t *host) {
   set_viewport_for_fbo(root);
   set_projection(-x, -y, root->frame.w - x, root->frame.h - y);
   set_scissor_fbo(root, rect_offset(area, x, y));
-  fill_rect(color_with_alpha(get_sys_color(brTextInfo), 70), preview);
+  theme_draw(THEME_PART_DOCK_PREVIEW, preview, CTRL_NORMAL);
 }

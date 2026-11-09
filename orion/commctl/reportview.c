@@ -125,8 +125,6 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   int body_h = window_scroll_viewport(win).h;
   int entry_h = rv_entry_height(data);
   int scroll_y = (int)win->vscroll.pos;
-  uint32_t bg_col = get_sys_color(brColumnViewBg);
-
   report_layout_rows(data);
   int first_row = 0, last_row = 0;
   if (body_h > 0 && data->has_sections) {
@@ -141,15 +139,12 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   if (last_row > (int)data->count) last_row = (int)data->count;
 
   uint32_t hdr_fg = theme_foreground(THEME_PART_HEADER, CTRL_NORMAL);
-#if !REPORTVIEW_RESIZE_FULL_HEIGHT
-  uint32_t sep_col = get_sys_color(brDarkEdge);
-#endif
 
   // A framed list clips everything it draws to the frame's silhouette, so
   // the header and the rows that scroll under the corners stay inside it.
   int frame_radius = (data->extended_style & RVS_EX_FRAME) ? get_theme()->table.corner_radius : -1;
   if (frame_radius > 0) set_clip_rounded_rect(win, cr, frame_radius);
-  fill_rect(bg_col, rect_trim_top(cr, header_h));
+  theme_draw(THEME_PART_LIST_BODY, rect_trim_top(cr, header_h), CTRL_NORMAL);
   ctrl_state_t selection = report_selection_state(win);
   // Section captions span the columns above their rows, styled as the list's group part.
   uint32_t group_fg = theme_foreground(THEME_PART_LIST_GROUP, CTRL_NORMAL);
@@ -166,10 +161,9 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   // Rows ruled by hairlines, under the selection's face.
   if (get_theme()->report.row_dividers) {
     set_clip_rect(win, (irect16_t){0, header_h, eff_w, MAX(0, body_bottom - header_h)});
-    uint32_t rule = color_with_alpha(get_sys_color(brLightEdge), 0x90);
     for (int row = first_row; row < last_row; row++) {
       int y = window_scroll_rect_to_client(win, report_item_rect(win, data, row)).y;
-      fill_rect(rule, R(0, y + entry_h - 1, eff_w, 1));
+      theme_draw(THEME_PART_ROW_RULE, R(0, y + entry_h - 1, eff_w, 1), CTRL_NORMAL);
     }
   }
 
@@ -300,7 +294,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
       theme_draw(THEME_PART_COLUMN_DIVIDER, R(sep_x - divider_w / 2, 0, divider_w, cr.h), divider_state);
 #else
     if (sep_x >= 0 && sep_x <= eff_w && !data->has_sections)   // a grouped list reads as one column of rows
-      fill_rect(sep_col, R(sep_x, header_h, 1, cr.h - header_h));
+      theme_draw(THEME_PART_COLUMN_DIVIDER, R(sep_x, header_h, 1, cr.h - header_h), CTRL_NORMAL);
     if (header_h > 0 && sep_x >= 0 && sep_x <= eff_w)
       theme_draw(THEME_PART_COLUMN_DIVIDER, R(sep_x - divider_w / 2, 0, divider_w, header_h), divider_state);
 #endif
@@ -331,7 +325,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   set_clip_rect(win, (irect16_t){0, 0, eff_w, cr.h});
   if (frame_radius >= 0) {
     set_clip_rounded_rect(win, cr, 0);
-    stroke_rounded_rect(get_sys_color(brLightEdge), cr, frame_radius, 1);
+    theme_draw(THEME_PART_LIST_FRAME, cr, CTRL_NORMAL);
   }
 }
 

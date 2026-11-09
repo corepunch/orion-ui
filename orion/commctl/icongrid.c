@@ -88,15 +88,13 @@ static int grid_hit_index(window_t *win, reportview_data_t *data, uint32_t wpara
 
 static void grid_paint_thumbnails(window_t *win, reportview_data_t *data) {
   irect16_t cr = get_client_rect(win);
-  int ring = get_theme()->thumbnail.ring_width;
-  fill_rect(get_sys_color(brColumnViewBg), R(0, 0, cr.w, cr.h));
+  theme_draw(THEME_PART_LIST_BODY, R(0, 0, cr.w, cr.h), CTRL_NORMAL);
   for (uint32_t i = 0; i < data->count; i++) {
     irect16_t tile = window_scroll_rect_to_client(win, grid_item_rect(win, data, i));
     if (tile.y + tile.h <= 0) continue;
     if (tile.y >= cr.h) break;
     rv_draw_item_icon(data->icon_strip, data->items[i].icon, &tile, 0xFFFFFFFF);
-    if ((int)i == data->selected && ring > 0)
-      stroke_rounded_rect(get_sys_color(brAccent), tile, 0, ring);
+    theme_draw(THEME_PART_THUMBNAIL, tile, (int)i == data->selected ? CTRL_SELECTED : CTRL_NORMAL);
   }
 }
 
@@ -108,9 +106,7 @@ static void grid_paint(window_t *win, reportview_data_t *data) {
   int label_h = text_char_height(FONT_SMALLEST) + 2;
   int clip_bot = cr.h;
   bitmap_strip_t *strip = data->icon_strip;
-  uint32_t bg_col = get_sys_color(brColumnViewBg);
-
-  fill_rect(bg_col, R(0, 0, cr.w, cr.h));
+  theme_draw(THEME_PART_LIST_BODY, R(0, 0, cr.w, cr.h), CTRL_NORMAL);
 
   for (uint32_t i = 0; i < data->count; i++) {
     irect16_t item = window_scroll_rect_to_client(win, grid_item_rect(win, data, i));
@@ -130,16 +126,14 @@ static void grid_paint(window_t *win, reportview_data_t *data) {
 
     if (selected) {
       int sel_h = icon_sz + RV_LARGE_ICON_LABEL_GAP + label_h + 4;
-      fill_rect(get_sys_color(brActiveTitlebar),
-                rect_inset(R(cx + 2, icon_r.y - 2, g.cell_w - 4, sel_h), -1));
+      theme_draw(THEME_PART_ICON_CELL, rect_inset(R(cx + 2, icon_r.y - 2, g.cell_w - 4, sel_h), -1), CTRL_SELECTED);
     }
 
     uint32_t icon_col = data->preserve_icon_colors ? 0xFFFFFFFF :
                         selected ? 0xFFFFFFFF : data->items[i].color;
     rv_draw_item_icon(strip, data->items[i].icon, &icon_r, icon_col);
 
-    uint32_t txt_col = selected ? get_sys_color(brAccentText)
-                                : get_sys_color(brTextNormal);
+    uint32_t txt_col = theme_foreground(THEME_PART_ICON_CELL, selected ? CTRL_SELECTED : CTRL_NORMAL);
     draw_text_clipped(FONT_SMALLEST, data->items[i].text, &label_r,
                       txt_col, TEXT_ALIGN_CENTER);
   }

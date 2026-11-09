@@ -158,10 +158,8 @@ static result_t win_desktop(window_t *win, uint32_t msg, uint32_t wparam, void *
   (void)lparam;
   switch (msg) {
     case evPaint:
-      fill_rect(get_sys_color(brDesktopBg),
-                R(0, 0,
-                  ui_get_system_metrics(kSystemMetricScreenWidth),
-                  ui_get_system_metrics(kSystemMetricScreenHeight)));
+      theme_draw(THEME_PART_DESKTOP, R(0, 0, ui_get_system_metrics(kSystemMetricScreenWidth),
+                                        ui_get_system_metrics(kSystemMetricScreenHeight)), CTRL_NORMAL);
       return false; // continue painting desktop children such as icons
     case evDestroy:
       if (g_desktop_window == win) g_desktop_window = NULL;

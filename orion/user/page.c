@@ -446,6 +446,5 @@ void page_paint_overlay(window_t *page, irect16_t clip) {
   set_viewport_for_fbo(root);
   set_projection(-x, -y, root->frame.w - x, root->frame.h - y);
   set_scissor_fbo(root, clip);
-  fill_rect(color_with_alpha(get_sys_color(brTextInfo), 35), st->drop.rect);
-  stroke_rounded_rect(color_with_alpha(get_sys_color(brTextInfo), 128), st->drop.rect, 0, 2);
+  theme_draw(THEME_PART_DROP_TARGET, st->drop.rect, CTRL_NORMAL);
 }

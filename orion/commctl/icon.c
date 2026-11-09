@@ -113,17 +113,11 @@ static void desktop_icon_paint(window_t *win, const icon_state_t *st) {
   int status_h = st->status_image.texture ? ICON_STATUS_SIZE : 0;
   int label_h = MAX(text_char_height(FONT_SMALLEST), status_h) + 2;
   irect16_t label = rect_split_bottom(local, label_h); label.w = local.w;
-  uint32_t bg = get_sys_color(brWorkspaceBg);
-  if (!(win->flags & WINDOW_TRANSPARENT)) fill_rect(bg, local);
-  if (win->value) {
-    uint32_t selection = get_sys_color(brActiveTitlebar);
-    irect16_t border = rect_inset(local, 1);
-    irect16_t sides = rect_trim_bottom(rect_trim_top(border, 2), 2);
-    fill_rect(selection, rect_split_top(border, 2));    fill_rect(selection, rect_split_bottom(border, 2));
-    fill_rect(selection, rect_split_left(sides, 2));    fill_rect(selection, rect_split_right(sides, 2));
-  }
+  if (!(win->flags & WINDOW_TRANSPARENT)) theme_draw(THEME_PART_WORKSPACE, local, CTRL_NORMAL);
+  ctrl_state_t state = win->value ? CTRL_SELECTED : CTRL_NORMAL;
+  theme_draw(THEME_PART_DESKTOP_ICON, local, state);
   if (st->image.texture) draw_rect((int)st->image.texture, image);
-  uint32_t text_col = win->value ? get_sys_color(brAccent) : get_sys_color(brTextNormal);
+  uint32_t text_col = theme_foreground(THEME_PART_DESKTOP_ICON, state);
   if (st->status_image.texture) {
     int text_w = text_strwidth(FONT_SMALLEST, win->title);
     int status_w = ICON_STATUS_SIZE;

@@ -195,6 +195,8 @@ void theme_metrics_from_stylesheet(theme_t *t, const style_sheet_t *s) {
   char material[16];
   if (style_value(s, q_elem("Card", NULL), "--plastic", material, sizeof(material))) t->plastic.flat = !strcmp(material, "flat");
 
+  style_query_t chosen_tile = { .element = "IconView", .part = "thumbnail", .state = STYLE_CHECKED };
+  style_length(s, chosen_tile, "border-width", &t->thumbnail.ring_width);
   read_radius(s, q_elem("TableView", NULL), &t->table.corner_radius);
   style_length(s, q_elem("TableView", "header"), "min-height", &t->report.header_height);
   style_length(s, q_elem("TableView", "row"), "min-height", &t->report.row_height);

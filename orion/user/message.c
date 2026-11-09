@@ -586,12 +586,11 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
   }
   // Fallback for windows that do not paint their own disabled state.
   if (msg == evPaint && !(win->flags & WINDOW_DRAWS_DISABLED) && window_is_disabled(win)) {
-    uint32_t col = (get_sys_color(brControlBg) & 0x00FFFFFF) | 0x80000000;
     int root_t = titlebar_height(root);
     irect16_t wf = win_frame_in_screen(win, root, root_t);
     // Render in FBO-local coordinates.
     set_viewport_for_fbo(root);
-    fill_rect(col, R(wf.x - root->frame.x, wf.y - root->frame.y, wf.w, wf.h));
+    theme_draw(THEME_PART_DISABLED_VEIL, R(wf.x - root->frame.x, wf.y - root->frame.y, wf.w, wf.h), CTRL_NORMAL);
   }
   // Draw built-in scrollbars on top of window content.
   // The bars are drawn in the root-relative coordinate space established by

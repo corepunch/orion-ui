@@ -113,10 +113,8 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         draw_text_ellipsized(FONT_SMALL, te->placeholder, text_x, text_y, MAX(0, local.w - text_x - TEXTEDIT_PADDING_HORZ), get_sys_color(brTextSecondary));
       draw_text(FONT_SMALL, win->title, text_x, text_y, get_sys_color(brTextNormal));
       if (g_ui_runtime.focused == win && window_has_state(win, WINDOW_STATE_EDITING)) {
-        fill_rect(get_sys_color(brTextNormal),
-                  R(text_x + text_strnwidth(FONT_SMALL, win->title, win->cursor_pos),
-                    text_y,
-                    2, th));
+        theme_draw(THEME_PART_CARET, R(text_x + text_strnwidth(FONT_SMALL, win->title, win->cursor_pos), text_y, 2, th),
+                   CTRL_NORMAL);
       }
       return true;
     }

@@ -153,3 +153,4 @@ Scrollbar::thumb { background: var(--light-edge); border-radius: 0; margin: 1px;
 Scrollbar::thumb:disabled { background: var(--dark-edge); }
 Scrollbar::arrow-up, Scrollbar::arrow-down, Scrollbar::arrow-left, Scrollbar::arrow-right { background: var(--statusbar-bg); }
 Scrollbar::corner { content: resize; }
+IconView::thumbnail:checked { border-width: 2px; }
