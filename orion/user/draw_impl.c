@@ -182,7 +182,7 @@ void draw_theme_icon_in_rect(int id, irect16_t r, uint32_t col) {
 void draw_window_controls(window_t *win) {
   irect16_t r = R(0, 0, win->frame.w, win->frame.h);
   int caption_h = window_caption_height(win);
-  get_theme()->draw_window_chrome(rect_split_top(r, caption_h),
+  theme_paint_window_chrome(rect_split_top(r, caption_h),
                                   rect_split_top(r, caption_h), win->title,
                                   (window_has_focus(win) ? CTRL_FOCUSED : CTRL_NORMAL) |
                                   ((win->flags & WINDOW_NOCLOSE) ? CTRL_NO_CLOSE : 0),
@@ -206,7 +206,7 @@ void draw_statusbar(window_t *win, const char *text) {
   theme_draw(THEME_PART_STATUSBAR, row, CTRL_NORMAL);
   irect16_t text_area = rect_split_left(row, split_x);
   set_scissor_fbo(get_root_window(win), text_area);
-  get_theme()->draw_statusbar_text(text_area, text);
+  theme_draw_statusbar_text(text_area, text);
   set_scissor_fbo(get_root_window(win), r);
 
   if (has_h) {
@@ -422,7 +422,7 @@ void stroke_rounded_rect(uint32_t color, irect16_t r, int radius, int thickness)
 }
 
 void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
-  get_theme()->draw_card(r, state, edge_color);
+  theme_default_draw_card(r, state, edge_color);
 }
 
 void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {

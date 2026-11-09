@@ -156,7 +156,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       irect16_t content = rect_inset_xy(local, ui_px("Button", "padding-left"), 2);
       irect16_t label = rect_center(content, strwidth(win->title) + icon_w, CHAR_HEIGHT);
       label = rect_trim_left(label, icon_w);
-      get_theme()->draw_button_label(label, win->title, state);
+      theme_draw_button_label(label, win->title, state);
       return true;
     }
     case evMouseMove:
@@ -277,7 +277,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       if (!drew_icon) {
         // Fallback: draw text label when no image has been set.
         irect16_t inner = rect_inset_xy(local, ui_px("Button", "padding-left"), 2);
-        get_theme()->draw_button_label(inner, win->title, state);
+        theme_draw_button_label(inner, win->title, state);
       }
       return true;
     }

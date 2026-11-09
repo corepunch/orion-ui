@@ -214,21 +214,7 @@ typedef struct {
     bool dark;                  // palette is dark (≈ NSAppearanceNameDarkAqua)
     theme_style_t counterpart;  // same theme in the other appearance; its own style when there is none
   } appearance;
-  void (*draw_part)(theme_part_t part, irect16_t r, ctrl_state_t state);
-  void (*draw_window_chrome)(irect16_t titlebar, irect16_t caption,
-                             const char *title, ctrl_state_t state, bool maximizable);
-  void (*draw_statusbar_text)(irect16_t r, const char *text);
-  void (*draw_button_label)(irect16_t r, const char *text, ctrl_state_t state);
-  void (*draw_combobox)(irect16_t r, const char *text, ctrl_state_t state);
-  void (*draw_card)(irect16_t r, ctrl_state_t state, uint32_t edge_color); // card face, selection ring and accent edge in one silhouette
-  uint32_t (*foreground)(theme_part_t part, ctrl_state_t state);
-
   // Every metric is a style sheet property, read with ui_px() and its kin (ui_style.h).
-
-  // Writes the theme's palette into g_sys_colors.  Called by set_theme()
-  // before evThemeChanged is broadcast so controls see the new colors
-  // immediately on first repaint.
-  void (*apply_palette)(void);
 
   // CSS themes: the theme's sheet (embedded text), read after
   // orion/themes/base.css. theme_stylesheet() parses them on first use.
@@ -301,10 +287,23 @@ style_sheet_t *theme_stylesheet(theme_t *theme);
 // An application's own sheet, read after the theme's as a page's sheet follows
 // the user agent's; NULL removes it. Applies to every theme.
 void ui_set_app_stylesheet(const char *css, const char *origin);
-// theme_t callbacks for CSS themes (theme_box.c and theme_css.c).
+// Painting from the active sheet (theme_box.c, theme_css.c, theme_builtin.c).
 void theme_css_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state);
 uint32_t theme_css_foreground(theme_part_t part, ctrl_state_t state);
-void theme_css_apply_palette(void);
+void theme_css_apply_palette(void);   // writes the sheet's colour roles into g_sys_colors
+void theme_draw_window_chrome(irect16_t titlebar, irect16_t caption, const char *title, ctrl_state_t state, bool maximizable);
+void theme_draw_statusbar_text(irect16_t r, const char *text);
+void theme_draw_button_label(irect16_t r, const char *text, ctrl_state_t state);
+void theme_draw_combobox(irect16_t r, const char *text, ctrl_state_t state);
+
+// Tests observe what would be painted: while a recorder is set, parts and the
+// window chrome are reported to it instead of drawn. NULL paints again.
+typedef struct {
+  void (*part)(theme_part_t part, irect16_t r, ctrl_state_t state);
+  void (*chrome)(irect16_t titlebar, irect16_t caption, const char *title, ctrl_state_t state, bool maximizable);
+} theme_paint_recorder_t;
+void theme_set_paint_recorder(const theme_paint_recorder_t *recorder);
+void theme_paint_window_chrome(irect16_t titlebar, irect16_t caption, const char *title, ctrl_state_t state, bool maximizable);
 // Bumped whenever cached styles go stale: a theme switch or a palette override.
 extern unsigned g_theme_style_generation;
 

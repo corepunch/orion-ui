@@ -235,7 +235,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         if (window_has_state(win, WINDOW_STATE_HOVERED))  state |= CTRL_HOVER;
         if (window_is_disabled(win)) state |= CTRL_DISABLED;
         if (g_ui_runtime.focused == win)                  state |= CTRL_FOCUSED;
-        get_theme()->draw_combobox(local, win->title, state);
+        theme_draw_combobox(local, win->title, state);
       }
       return true;
     case evLeftButtonUp:

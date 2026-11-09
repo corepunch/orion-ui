@@ -27,11 +27,7 @@ static void test_switch_validation(void) {
   ASSERT_TRUE(get_theme() == light);
   ASSERT_EQUAL(light_color, get_sys_color(brControlBg));
 
-  void (*saved)(theme_part_t, irect16_t, ctrl_state_t) = classic->draw_part;
-  classic->draw_part = NULL;
-  bool result = set_theme(THEME_CLASSIC);
-  classic->draw_part = saved;
-  ASSERT_FALSE(result);
+  bool result;
   // A theme whose style sheet does not load is rejected.
   const char *css = classic->css;
   style_sheet_t *sheet = classic->sheet;
@@ -126,9 +122,7 @@ static void test_classic_geometry(void) {
 
 static void test_semantic_dispatch(void) {
   TEST("semantic dispatch preserves selection/focus, suppresses disabled transients and rejects invalid parts");
-  theme_t *theme = get_theme();
-  void (*saved)(theme_part_t, irect16_t, ctrl_state_t) = theme->draw_part;
-  theme->draw_part = record_part;
+  theme_set_paint_recorder(&(theme_paint_recorder_t){ .part = record_part });
   draw_count = 0;
   theme_draw(THEME_PART_BUTTON, R(10, 20, 60, 24),
              CTRL_DISABLED | CTRL_SELECTED | CTRL_FOCUSED | CTRL_HOVER | CTRL_PRESSED);
@@ -136,7 +130,7 @@ static void test_semantic_dispatch(void) {
   theme_draw((theme_part_t)-1, R(0, 0, 10, 10), CTRL_NORMAL);
   theme_draw(THEME_PART_COUNT, R(0, 0, 10, 10), CTRL_NORMAL);
   theme_draw(THEME_PART_BUTTON, R(0, 0, 0, 10), CTRL_NORMAL);
-  theme->draw_part = saved;
+  theme_set_paint_recorder(NULL);
   ASSERT_EQUAL(draw_count, 1);
   ASSERT_EQUAL(recorded_part, THEME_PART_BUTTON);
   ASSERT_EQUAL(state, CTRL_DISABLED | CTRL_SELECTED | CTRL_FOCUSED);
@@ -153,14 +147,12 @@ static void test_control_parts(void) {
   button->flags |= BUTTON_PUSHLIKE;
   button->value = 1;
   g_ui_runtime.focused = field;
-  theme_t *theme = get_theme();
-  void (*saved)(theme_part_t, irect16_t, ctrl_state_t) = theme->draw_part;
-  theme->draw_part = record_part;
+  theme_set_paint_recorder(&(theme_paint_recorder_t){ .part = record_part });
   send_message(field, evPaint, 0, NULL);
   theme_part_t field_part = recorded_part;
   ctrl_state_t field_state = recorded_state;
   send_message(button, evPaint, 0, NULL);
-  theme->draw_part = saved;
+  theme_set_paint_recorder(NULL);
   ASSERT_EQUAL(field_part, THEME_PART_FIELD);
   ASSERT_TRUE(field_state & CTRL_FOCUSED);
   ASSERT_EQUAL(recorded_part, THEME_PART_BUTTON);
@@ -200,11 +192,9 @@ static void test_titlebar_bounds(void) {
   window_t win = {0};
   win.frame = R(0, 0, 300, 200);
   win.flags = WINDOW_TOOLBAR;
-  theme_t *theme = get_theme();
-  void (*saved)(irect16_t, irect16_t, const char *, ctrl_state_t, bool) = theme->draw_window_chrome;
-  theme->draw_window_chrome = record_chrome;
+  theme_set_paint_recorder(&(theme_paint_recorder_t){ .chrome = record_chrome });
   draw_window_controls(&win);
-  theme->draw_window_chrome = saved;
+  theme_set_paint_recorder(NULL);
   ASSERT_EQUAL(recorded_titlebar.h, ui_px("Window::titlebar", "height"));
   ASSERT_EQUAL(recorded_titlebar.w, 300);
   ASSERT_EQUAL(recorded_caption.h, ui_px("Window::titlebar", "height"));

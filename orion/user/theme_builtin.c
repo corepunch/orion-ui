@@ -22,7 +22,7 @@
 
 // ── Window chrome and labels ─────────────────────────────────────────────────
 
-static void modern_draw_window_chrome(irect16_t titlebar, irect16_t caption,
+void theme_draw_window_chrome(irect16_t titlebar, irect16_t caption,
                                        const char *title, ctrl_state_t state, bool maximizable) {
   bool focused = (state & CTRL_FOCUSED) != 0;
   uint32_t title_color = get_sys_color(focused ? brActiveTitlebarText : brInactiveTitlebarText);
@@ -41,12 +41,12 @@ static void modern_draw_window_chrome(irect16_t titlebar, irect16_t caption,
   draw_text_small_clipped(title, &caption, title_color, 0);
 }
 
-static void modern_draw_statusbar_text(irect16_t r, const char *text) {
+void theme_draw_statusbar_text(irect16_t r, const char *text) {
   if (text) draw_text_clipped(FONT_SMALL, text, &r, get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
 }
 
 // Bevelled themes engrave the label and shift it while the button is down.
-static void modern_draw_button_label(irect16_t r, const char *text, ctrl_state_t state) {
+void theme_draw_button_label(irect16_t r, const char *text, ctrl_state_t state) {
   bool pressed = (state & (CTRL_PRESSED | CTRL_SELECTED)) && !(state & CTRL_DISABLED);
   if (ui_flag("Button", "text-shadow") && !pressed && !(state & CTRL_DISABLED))
     draw_text_small(text, r.x + TEXT_SHADOW_OFFSET, r.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
@@ -55,7 +55,7 @@ static void modern_draw_button_label(irect16_t r, const char *text, ctrl_state_t
   draw_text_small(text, r.x, r.y, theme_css_foreground(THEME_PART_BUTTON, state));
 }
 
-static void modern_draw_combobox(irect16_t r, const char *text, ctrl_state_t state) {
+void theme_draw_combobox(irect16_t r, const char *text, ctrl_state_t state) {
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
   theme_css_draw_part(THEME_PART_COMBOBOX, r, state);
   int icon_size = MIN(COMBOBOX_ICON_SIZE, MAX(0, r.h - 4));
@@ -69,19 +69,10 @@ static void modern_draw_combobox(irect16_t r, const char *text, ctrl_state_t sta
   draw_theme_icon(THEME_ICON_ARROW_UPDOWN, arrow.x, arrow.y, icon_size, foreground);
 }
 
-// The callbacks every built-in theme shares; everything else is in its sheet.
 static const theme_t k_modern_template = {
   .style                  = THEME_MODERN,
   .name                   = "Modern",
   .appearance             = { .dark = true, .counterpart = THEME_LIGHT },
-  .draw_button_label      = modern_draw_button_label,
-  .draw_combobox          = modern_draw_combobox,
-  .draw_card              = theme_default_draw_card,
-  .foreground             = theme_css_foreground,
-  .draw_part              = theme_css_draw_part,
-  .draw_window_chrome     = modern_draw_window_chrome,
-  .draw_statusbar_text    = modern_draw_statusbar_text,
-  .apply_palette          = theme_css_apply_palette,
 };
 
 static theme_t g_themes[THEME_LAST + 1];
@@ -134,14 +125,6 @@ theme_t *theme_porcelain_dark_instance(void) {
 // Classic: bevelled, square, compact chrome.
 static const theme_t k_classic_template = {
   .name                   = "Classic",
-  .draw_button_label      = modern_draw_button_label,
-  .draw_combobox          = modern_draw_combobox,
-  .draw_card              = theme_default_draw_card,
-  .foreground             = theme_css_foreground,
-  .draw_part              = theme_css_draw_part,
-  .draw_window_chrome     = modern_draw_window_chrome,
-  .draw_statusbar_text    = modern_draw_statusbar_text,
-  .apply_palette          = theme_css_apply_palette,
 };
 
 theme_t *theme_classic_instance(void) {

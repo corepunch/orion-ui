@@ -79,47 +79,46 @@ theme_t *paint_porcelain_instance(void);
 #undef theme_amber_instance
 #undef theme_porcelain_instance
 
-static theme_t *paint_with_theme(theme_style_t style) {
+// Parts paint from the active theme's sheet.
+static void paint_with_theme(theme_style_t style) {
   if (get_theme()->style != style) set_theme(style);
-  get_theme()->apply_palette();
-  return paint_modern_instance();
+  theme_css_apply_palette();
 }
 
 static void test_modern_surfaces(void) {
   TEST("Modern paints a button border with a separate interior and preserves its panel fill");
-  theme_t *theme = paint_with_theme(THEME_NAVY);
+  paint_with_theme(THEME_NAVY);
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_BUTTON, R(12, 10, 80, 30), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_BUTTON, R(12, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][12], get_sys_color(brLightEdge));
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
-  theme->draw_part(THEME_PART_PANEL, R(12, 10, 80, 30), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_PANEL, R(12, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
   PASS();
 }
 
 static void test_modern_button_states(void) {
   TEST("Modern secondary button stays neutral when pressed");
-  theme_t *theme = paint_with_theme(THEME_NAVY);
+  paint_with_theme(THEME_NAVY);
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_BUTTON, R(12, 10, 80, 30), CTRL_PRESSED);
+  theme_css_draw_part(THEME_PART_BUTTON, R(12, 10, 80, 30), CTRL_PRESSED);
   ASSERT_EQUAL(pixels[25][12], get_sys_color(brLightEdge));
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brButtonHover));
   ASSERT_NOT_EQUAL(pixels[25][50], get_sys_color(brAccent));
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_BUTTON, R(12, 10, 80, 30), CTRL_DEFAULT | CTRL_PRESSED);
+  theme_css_draw_part(THEME_PART_BUTTON, R(12, 10, 80, 30), CTRL_DEFAULT | CTRL_PRESSED);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
   PASS();
 }
 
 static void test_translated_separator(void) {
   TEST("Classic toolbar separators respect caller bounds; Modern toolbar separators draw nothing");
-  theme_t *themes[] = {paint_classic_instance(), paint_modern_instance()};
   theme_style_t styles[] = {THEME_CLASSIC, THEME_MODERN};
   for (int i = 0; i < 2; i++) {
     set_theme(styles[i]);   // parts paint from the active theme's sheet
-    themes[i]->apply_palette();
+    theme_css_apply_palette();
     memset(pixels, 0, sizeof(pixels));
-    themes[i]->draw_part(THEME_PART_TOOLBAR_SEPARATOR, R(40, 20, 10, 24), CTRL_NORMAL);
+    theme_css_draw_part(THEME_PART_TOOLBAR_SEPARATOR, R(40, 20, 10, 24), CTRL_NORMAL);
     if (i == 0) { ASSERT_NOT_EQUAL(pixels[32][45], 0); }
     else { ASSERT_EQUAL(pixels[32][45], 0); }
     ASSERT_EQUAL(pixels[12][5], 0);
@@ -132,13 +131,12 @@ static void test_column_dividers(void) {
   TEST("all themes paint 1pt column dividers, with an accent resize highlight");
   for (int style = THEME_CLASSIC; style <= THEME_LAST; style++) {
     set_theme((theme_style_t)style);
-    get_theme()->apply_palette();
-    theme_t *painter = style == THEME_CLASSIC ? paint_classic_instance() : paint_modern_instance();
+    theme_css_apply_palette();
     int width = ui_px("TableView::divider", "width");
     ASSERT_EQUAL(width, 1);
     for (int hover = 0; hover <= 1; hover++) {
       memset(pixels, 0, sizeof(pixels));
-      painter->draw_part(THEME_PART_COLUMN_DIVIDER, R(40, 10, width, 30), hover ? CTRL_HOVER : CTRL_NORMAL);
+      theme_css_draw_part(THEME_PART_COLUMN_DIVIDER, R(40, 10, width, 30), hover ? CTRL_HOVER : CTRL_NORMAL);
       uint32_t color = get_sys_color(hover ? brAccent : brDarkEdge);
       for (int y = 0; y < 64; y++) for (int x = 0; x < 128; x++) {
         uint32_t expected = 0;
@@ -154,39 +152,38 @@ static void test_column_dividers(void) {
 static void test_classic_window_border(void) {
   TEST("Classic paints a bevel outside inactive windows and an accent border outside focused windows");
   set_theme(THEME_CLASSIC);
-  theme_t *classic = paint_classic_instance();
-  classic->apply_palette();
+  theme_css_apply_palette();
   irect16_t frame = R(10, 10, 80, 30);
   memset(pixels, 0, sizeof(pixels));
-  classic->draw_part(THEME_PART_WINDOW_BORDER, frame, CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_WINDOW_BORDER, frame, CTRL_NORMAL);
   ASSERT_EQUAL(pixels[9][50], get_sys_color(brLightEdge));
   ASSERT_EQUAL(pixels[25][9], get_sys_color(brLightEdge));
   ASSERT_EQUAL(pixels[25][90], get_sys_color(brDarkEdge));
   ASSERT_EQUAL(pixels[40][50], get_sys_color(brDarkEdge));
   ASSERT_EQUAL(pixels[25][50], 0);
   memset(pixels, 0, sizeof(pixels));
-  classic->draw_part(THEME_PART_WINDOW_BORDER, frame, CTRL_FOCUSED);
+  theme_css_draw_part(THEME_PART_WINDOW_BORDER, frame, CTRL_FOCUSED);
   ASSERT_EQUAL(pixels[9][50], get_sys_color(brAccent));
   ASSERT_EQUAL(pixels[25][90], get_sys_color(brAccent));
   ASSERT_EQUAL(pixels[25][50], 0);
   memset(pixels, 0, sizeof(pixels));
   set_theme(THEME_MODERN);
-  paint_modern_instance()->draw_part(THEME_PART_WINDOW_BORDER, frame, CTRL_FOCUSED);
+  theme_css_draw_part(THEME_PART_WINDOW_BORDER, frame, CTRL_FOCUSED);
   ASSERT_EQUAL(pixels[9][50], 0);
   PASS();
 }
 
 static void test_independent_parts(void) {
   TEST("Modern dropdowns match field bounds and fills in every state");
-  theme_t *theme = paint_with_theme(THEME_NAVY);
+  paint_with_theme(THEME_NAVY);
   ctrl_state_t states[] = {CTRL_NORMAL, CTRL_HOVER, CTRL_PRESSED, CTRL_FOCUSED, CTRL_DISABLED};
   uint32_t field[64][128];
   for (int i = 0; i < ARRAY_LEN(states); i++) {
     memset(pixels, 0, sizeof(pixels));
-    theme->draw_part(THEME_PART_FIELD, R(10, 10, 80, 30), states[i]);
+    theme_css_draw_part(THEME_PART_FIELD, R(10, 10, 80, 30), states[i]);
     memcpy(field, pixels, sizeof(field));
     memset(pixels, 0, sizeof(pixels));
-    theme->draw_part(THEME_PART_COMBOBOX, R(10, 10, 80, 30), states[i]);
+    theme_css_draw_part(THEME_PART_COMBOBOX, R(10, 10, 80, 30), states[i]);
     ASSERT_EQUAL(memcmp(field, pixels, sizeof(field)), 0);
     ASSERT_EQUAL(pixels[25][50], get_sys_color(brWindowDarkBg));
     if (states[i] == CTRL_FOCUSED) {
@@ -198,7 +195,7 @@ static void test_independent_parts(void) {
     ASSERT_NOT_EQUAL(pixels[25][10], pixels[25][50]);
   }
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_SCROLLBAR_THUMB, R(10, 10, SCROLLBAR_WIDTH, 30), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_SCROLLBAR_THUMB, R(10, 10, SCROLLBAR_WIDTH, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[10][10], 0);
   ASSERT_NOT_EQUAL(pixels[25][13], 0);
   PASS();
@@ -206,9 +203,9 @@ static void test_independent_parts(void) {
 
 static void test_modern_slider_track_contrasts(void) {
   TEST("Modern slider tracks use the light-edge hairline, not the navy fill");
-  theme_t *theme = paint_with_theme(THEME_NAVY);
+  paint_with_theme(THEME_NAVY);
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_SLIDER_TRACK, R(20, 20, 2, 40), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_SLIDER_TRACK, R(20, 20, 2, 40), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[30][20], get_sys_color(brLightEdge));
   ASSERT_NOT_EQUAL(pixels[30][20], get_sys_color(brControlBg));
   ASSERT_NOT_EQUAL(pixels[30][20], get_sys_color(brButtonInner));
@@ -217,11 +214,11 @@ static void test_modern_slider_track_contrasts(void) {
 
 static void test_flat_tool_items(void) {
   TEST("Modern tool items are transparent at rest and highlight only inside their bounds");
-  theme_t *theme = paint_with_theme(THEME_NAVY);
+  paint_with_theme(THEME_NAVY);
   ctrl_state_t states[] = {CTRL_NORMAL, CTRL_HOVER, CTRL_SELECTED, CTRL_PRESSED};
   for (int i = 0; i < ARRAY_LEN(states); i++) {
     memset(pixels, 0, sizeof(pixels));
-    theme->draw_part(THEME_PART_TOOLBAR_BUTTON, R(10, 10, 30, 30), states[i]);
+    theme_css_draw_part(THEME_PART_TOOLBAR_BUTTON, R(10, 10, 30, 30), states[i]);
     ASSERT_EQUAL(pixels[10][10], 0);
     ASSERT_EQUAL(pixels[25][9], 0);
     ASSERT_EQUAL(pixels[25][40], 0);
@@ -253,7 +250,7 @@ static void test_flat_tool_items(void) {
 
 static void test_palette_overrides(void) {
   TEST("Modern active parts and panels follow runtime palette overrides");
-  theme_t *theme = paint_with_theme(THEME_NAVY);
+  paint_with_theme(THEME_NAVY);
   g_sys_colors[brAccent] = 0xff123456;
   g_sys_colors[brSelectionTop] = g_sys_colors[brSelectionBottom] = g_sys_colors[brAccent];
   g_sys_colors[brControlBg] = 0xff654321;
@@ -262,29 +259,29 @@ static void test_palette_overrides(void) {
   for (int i = 0; i < ARRAY_LEN(parts); i++) {
     for (int j = 0; j < ARRAY_LEN(states); j++) {
       memset(pixels, 0, sizeof(pixels));
-      theme->draw_part(parts[i], R(10, 10, 80, 30), states[j] | CTRL_FOCUSED | CTRL_DEFAULT);
+      theme_css_draw_part(parts[i], R(10, 10, 80, 30), states[j] | CTRL_FOCUSED | CTRL_DEFAULT);
       ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
     }
   }
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_SELECTED);
+  theme_css_draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_SELECTED);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
-  theme->draw_part(THEME_PART_PANEL, R(10, 10, 80, 30), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_PANEL, R(10, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
   g_sys_colors[brActiveTitlebar] = 0xffabcdef;
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
+  theme_css_draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brActiveTitlebar));
   ASSERT_NOT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
-  get_theme()->apply_palette();
+  theme_css_apply_palette();
   PASS();
 }
 
 static void test_full_row_selection(void) {
   TEST("Modern list selection fills the row; menus stay capsule-shaped");
-  theme_t *theme = paint_with_theme(THEME_NAVY);
+  paint_with_theme(THEME_NAVY);
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_LIST_ITEM, R(10, 10, 80, 30), CTRL_SELECTED);
+  theme_css_draw_part(THEME_PART_LIST_ITEM, R(10, 10, 80, 30), CTRL_SELECTED);
   ASSERT_NOT_EQUAL(pixels[10][50], pixels[39][50]);
   ASSERT_EQUAL(pixels[10][10], pixels[10][50]);
   ASSERT_EQUAL(pixels[25][10], pixels[25][50]);
@@ -294,10 +291,10 @@ static void test_full_row_selection(void) {
   ASSERT_EQUAL(pixels[9][10], 0);
   ASSERT_EQUAL(pixels[40][10], 0);
   ASSERT_EQUAL(pixels[25][90], 0);
-  ASSERT_EQUAL(theme->foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED), get_sys_color(brActiveTitlebarText));
-  ASSERT_EQUAL(theme->foreground(THEME_PART_LIST_ITEM, CTRL_NORMAL), get_sys_color(brTextNormal));
+  ASSERT_EQUAL(theme_css_foreground(THEME_PART_LIST_ITEM, CTRL_SELECTED), get_sys_color(brActiveTitlebarText));
+  ASSERT_EQUAL(theme_css_foreground(THEME_PART_LIST_ITEM, CTRL_NORMAL), get_sys_color(brTextNormal));
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_MENU_ITEM, R(10, 10, 80, 24), CTRL_HOVER);
+  theme_css_draw_part(THEME_PART_MENU_ITEM, R(10, 10, 80, 24), CTRL_HOVER);
   ASSERT_EQUAL(recorded_radius, 11);
   ASSERT_EQUAL(pixels[11][14], 0);
   ASSERT_NOT_EQUAL(pixels[11][25], 0);
@@ -309,16 +306,16 @@ static void test_full_row_selection(void) {
 
 static void test_scrollbar_thickness(void) {
   TEST("Both scrollbar orientations paint an 11 pixel thumb inside a 17 pixel strip");
-  theme_t *theme = paint_with_theme(THEME_NAVY);
+  paint_with_theme(THEME_NAVY);
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_SCROLLBAR_THUMB, R(10, 5, 17, 50), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_SCROLLBAR_THUMB, R(10, 5, 17, 50), CTRL_NORMAL);
   int width = 0;
   for (int x = 10; x < 27; x++) width += pixels[30][x] != 0;
   ASSERT_EQUAL(width, 11);
   ASSERT_EQUAL(pixels[30][12], 0);
   ASSERT_EQUAL(pixels[30][24], 0);
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_SCROLLBAR_THUMB, R(10, 5, 50, 17), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_SCROLLBAR_THUMB, R(10, 5, 50, 17), CTRL_NORMAL);
   int height = 0;
   for (int y = 5; y < 22; y++) height += pixels[y][35] != 0;
   ASSERT_EQUAL(height, 11);
@@ -327,53 +324,53 @@ static void test_scrollbar_thickness(void) {
 
 static void test_default_modern_chrome(void) {
   TEST("Default Modern uses charcoal creative surfaces, blue selection, and inner slider tracks");
-  theme_t *theme = paint_with_theme(THEME_MODERN);
+  paint_with_theme(THEME_MODERN);
   ASSERT_EQUAL(get_sys_color(brControlBg), WEB(0x303230));
   ASSERT_EQUAL(get_sys_color(brAccent), WEB(0x3073C5));
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
+  theme_css_draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brActiveTitlebar));
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_TOOLBAR, R(10, 10, 80, 30), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_TOOLBAR, R(10, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_SLIDER_TRACK, R(20, 20, 2, 40), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_SLIDER_TRACK, R(20, 20, 2, 40), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[30][20], get_sys_color(brButtonInner));
   PASS();
 }
 
 static void test_light_chrome(void) {
   TEST("Light theme uses the original light WinUI palette");
-  theme_t *theme = paint_with_theme(THEME_LIGHT);
+  paint_with_theme(THEME_LIGHT);
   ASSERT_EQUAL(get_sys_color(brControlBg), 0xffF3F3F3);
   ASSERT_EQUAL(get_sys_color(brToolbarForeground), 0xff1A1A1A);
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
+  theme_css_draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
   PASS();
 }
 
 static void test_navy_caption_bar(void) {
   TEST("Navy focused caption is the accent; inactive caption is not the window face");
-  theme_t *theme = paint_with_theme(THEME_NAVY);
+  paint_with_theme(THEME_NAVY);
   ASSERT_NOT_EQUAL(get_sys_color(brAccent), get_sys_color(brControlBg));
   ASSERT_NOT_EQUAL(get_sys_color(brInactiveTitlebar), get_sys_color(brControlBg));
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
+  theme_css_draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_FOCUSED);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brAccent));
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brInactiveTitlebar));
   ASSERT_NOT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_TOOLBAR, R(10, 10, 80, 30), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_TOOLBAR, R(10, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
   uint32_t toolbar = pixels[25][50];
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_MENU_BAR, R(10, 10, 80, 30), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_MENU_BAR, R(10, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][50], toolbar);
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_STATUSBAR, R(10, 10, 80, 30), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_STATUSBAR, R(10, 10, 80, 30), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[25][50], toolbar);
   PASS();
 }
@@ -382,7 +379,7 @@ static void test_panel_shades_and_tabs(void) {
   TEST("Theme surfaces preserve their palette hierarchy; active tabs merge with the pane");
   theme_style_t styles[] = {THEME_MODERN, THEME_LIGHT, THEME_NAVY, THEME_AMBER, THEME_PORCELAIN, THEME_PORCELAIN_DARK};
   for (int i = 0; i < ARRAY_LEN(styles); i++) {
-    theme_t *theme = paint_with_theme(styles[i]);
+    paint_with_theme(styles[i]);
     if (styles[i] == THEME_MODERN || styles[i] == THEME_LIGHT) {
       if (styles[i] == THEME_MODERN) { ASSERT_EQUAL(get_sys_color(brControlBg), get_sys_color(brPanelDark)); }
       else { ASSERT_NOT_EQUAL(get_sys_color(brControlBg), get_sys_color(brPanelDark)); }
@@ -394,13 +391,13 @@ static void test_panel_shades_and_tabs(void) {
       ASSERT_NOT_EQUAL(get_sys_color(brControlBg), get_sys_color(brPanelDarker));
     }
     memset(pixels, 0, sizeof(pixels));
-    theme->draw_part(THEME_PART_TOOLBAR, R(10, 10, 80, 30), CTRL_NORMAL);
+    theme_css_draw_part(THEME_PART_TOOLBAR, R(10, 10, 80, 30), CTRL_NORMAL);
     ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
     memset(pixels, 0, sizeof(pixels));
-    theme->draw_part(THEME_PART_TAB_BAR, R(10, 10, 80, 30), CTRL_NORMAL);
+    theme_css_draw_part(THEME_PART_TAB_BAR, R(10, 10, 80, 30), CTRL_NORMAL);
     ASSERT_EQUAL(pixels[25][50], get_sys_color(brTabBarBg));
     memset(pixels, 0, sizeof(pixels));
-    theme->draw_part(THEME_PART_PAGE, R(10, 10, 80, 30), CTRL_NORMAL);
+    theme_css_draw_part(THEME_PART_PAGE, R(10, 10, 80, 30), CTRL_NORMAL);
     ASSERT_EQUAL(pixels[25][50], get_sys_color(brPanelDarker));
     for (int shift = 0; shift < 24; shift += 8) {
       if (styles[i] == THEME_MODERN || styles[i] == THEME_LIGHT) {
@@ -412,7 +409,7 @@ static void test_panel_shades_and_tabs(void) {
       }
     }
     memset(pixels, 0, sizeof(pixels));
-    theme->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_NORMAL);
+    theme_css_draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_NORMAL);
     for (int shift = 0; shift < 24; shift += 8) {
       ASSERT_TRUE(((pixels[10][50] >> shift) & 255) > ((pixels[39][50] >> shift) & 255));
       ASSERT_TRUE(((pixels[10][50] >> shift) & 255) <= ((get_sys_color(brPanelDark) >> shift) & 255));
@@ -422,15 +419,15 @@ static void test_panel_shades_and_tabs(void) {
     else { ASSERT_EQUAL(pixels[10][10], pixels[10][50]); }
     ASSERT_EQUAL(pixels[39][10], pixels[39][50]);
     memset(pixels, 0, sizeof(pixels));
-    theme->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_SELECTED);
+    theme_css_draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_SELECTED);
     ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
     memset(pixels, 0, sizeof(pixels));
-    theme->draw_part(THEME_PART_TAB_PANE, R(10, 10, 80, 30), CTRL_NORMAL);
+    theme_css_draw_part(THEME_PART_TAB_PANE, R(10, 10, 80, 30), CTRL_NORMAL);
     ASSERT_EQUAL(pixels[25][50], get_sys_color(brControlBg));
   }
-  theme_t *modern = paint_with_theme(THEME_MODERN);
+  paint_with_theme(THEME_MODERN);
   memset(pixels, 0, sizeof(pixels));
-  modern->draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_SELECTED);
+  theme_css_draw_part(THEME_PART_TAB, R(10, 10, 80, 30), CTRL_SELECTED);
   ASSERT_EQUAL(recorded_radius, ui_radius("TabView::tab"));
   ASSERT_EQUAL(pixels[10][10], 0);
   ASSERT_EQUAL(pixels[39][10], get_sys_color(brControlBg));
@@ -439,13 +436,13 @@ static void test_panel_shades_and_tabs(void) {
 
 static void test_button_capsules(void) {
   TEST("Modern button ends follow the full height at desktop and touch sizes");
-  theme_t *theme = paint_with_theme(THEME_NAVY);
+  paint_with_theme(THEME_NAVY);
   const int heights[] = {13, 25, 40};
   const ctrl_state_t states[] = {CTRL_NORMAL, CTRL_DEFAULT, CTRL_DISABLED, CTRL_HOVER, CTRL_PRESSED};
   for (int h = 0; h < ARRAY_LEN(heights); h++) {
     for (int st = 0; st < ARRAY_LEN(states); st++) {
       memset(pixels, 0, sizeof(pixels));
-      theme->draw_part(THEME_PART_BUTTON, R(10, 10, 100, heights[h]), states[st]);
+      theme_css_draw_part(THEME_PART_BUTTON, R(10, 10, 100, heights[h]), states[st]);
       ASSERT_EQUAL(pixels[10][12], 0);
       ASSERT_TRUE(pixels[10 + heights[h] / 2][10] != 0);
       ASSERT_TRUE(pixels[10][60] != 0);
@@ -460,10 +457,10 @@ static void test_field_capsules(void) {
   const theme_style_t styles[] = {THEME_MODERN, THEME_LIGHT, THEME_NAVY};
   const ctrl_state_t states[] = {CTRL_NORMAL, CTRL_FOCUSED, CTRL_DISABLED};
   for (int t = 0; t < ARRAY_LEN(styles); t++) {
-    theme_t *theme = paint_with_theme(styles[t]);
+    paint_with_theme(styles[t]);
     for (int h = 0; h < ARRAY_LEN(heights); h++) for (int st = 0; st < ARRAY_LEN(states); st++) {
       memset(pixels, 0, sizeof(pixels));
-      theme->draw_part(THEME_PART_FIELD, R(10, 10, 100, heights[h]), states[st]);
+      theme_css_draw_part(THEME_PART_FIELD, R(10, 10, 100, heights[h]), states[st]);
       ASSERT_EQUAL(pixels[10][10 + heights[h] / 2 - 6], 0);
       ASSERT_NOT_EQUAL(pixels[10 + heights[h] / 2][10], 0);
       ASSERT_NOT_EQUAL(pixels[10][60], 0);
@@ -476,15 +473,15 @@ static int luma(uint32_t c) { return ((c & 255) * 3 + ((c >> 8) & 255) * 6 + ((c
 
 static void test_amber_business_surfaces(void) {
   TEST("Amber: white rounded-rect fields, graphite caption, dark text on amber");
-  theme_t *theme = paint_with_theme(THEME_AMBER);
+  paint_with_theme(THEME_AMBER);
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_FIELD, R(10, 10, 100, 34), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_FIELD, R(10, 10, 100, 34), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[27][60], get_sys_color(brColumnViewBg));
   ASSERT_NOT_EQUAL(pixels[10][18], 0);   // a capsule would leave the top row empty here
   ASSERT_EQUAL(ui_px("TextEdit", "padding-left"), FIELD_PADDING_X(ui_radius("TextEdit")));
   ASSERT_TRUE(ui_px("TextEdit", "padding-left") < TEXTEDIT_PADDING_CAPSULE);  // squarer ends than Modern's capsule, text nearer the edge
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 20), CTRL_FOCUSED);
+  theme_css_draw_part(THEME_PART_TITLEBAR, R(10, 10, 80, 20), CTRL_FOCUSED);
   ASSERT_EQUAL(pixels[20][50], get_sys_color(brActiveTitlebar));
   ASSERT_NOT_EQUAL(get_sys_color(brActiveTitlebar), get_sys_color(brAccent));
   ASSERT_TRUE(luma(get_sys_color(brAccent)) > 160);
@@ -496,32 +493,32 @@ static void test_amber_business_surfaces(void) {
 
 static void test_control_parts(void) {
   TEST("controls' wells, rules, carets, selections and drop targets paint from their parts");
-  theme_t *theme = paint_with_theme(THEME_PORCELAIN);
+  paint_with_theme(THEME_PORCELAIN);
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_LIST_BODY, R(0, 0, 60, 40), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_LIST_BODY, R(0, 0, 60, 40), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[20][30], get_sys_color(brColumnViewBg));
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_ROW_RULE, R(0, 10, 60, 1), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_ROW_RULE, R(0, 10, 60, 1), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[10][30], color_with_alpha(get_sys_color(brLightEdge), 0x90));
   ASSERT_EQUAL(pixels[11][30], 0);
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_CARET, R(10, 5, 2, 14), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_CARET, R(10, 5, 2, 14), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[10][11], get_sys_color(brTextNormal));
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_DESKTOP_ICON, R(10, 10, 40, 40), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_DESKTOP_ICON, R(10, 10, 40, 40), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[11][30], 0);
-  theme->draw_part(THEME_PART_DESKTOP_ICON, R(10, 10, 40, 40), CTRL_SELECTED);
+  theme_css_draw_part(THEME_PART_DESKTOP_ICON, R(10, 10, 40, 40), CTRL_SELECTED);
   ASSERT_EQUAL(pixels[11][30], get_sys_color(brActiveTitlebar));
   ASSERT_EQUAL(pixels[12][30], get_sys_color(brActiveTitlebar));
   ASSERT_EQUAL(pixels[10][30], 0);    // one pixel inside the icon
   ASSERT_EQUAL(pixels[30][30], 0);    // a frame, not a fill
   ASSERT_EQUAL(theme_foreground(THEME_PART_DESKTOP_ICON, CTRL_SELECTED), get_sys_color(brAccent));
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_THUMBNAIL, R(10, 10, 40, 40), CTRL_SELECTED);
+  theme_css_draw_part(THEME_PART_THUMBNAIL, R(10, 10, 40, 40), CTRL_SELECTED);
   ASSERT_EQUAL(pixels[10 + ui_px("IconView::thumbnail:checked", "border-width") - 1][30], get_sys_color(brAccent));
   ASSERT_EQUAL(pixels[10 + ui_px("IconView::thumbnail:checked", "border-width")][30], 0);
   memset(pixels, 0, sizeof(pixels));
-  theme->draw_part(THEME_PART_DROP_TARGET, R(10, 10, 40, 40), CTRL_NORMAL);
+  theme_css_draw_part(THEME_PART_DROP_TARGET, R(10, 10, 40, 40), CTRL_NORMAL);
   ASSERT_EQUAL(pixels[10][30], color_with_alpha(get_sys_color(brTextInfo), 128));
   ASSERT_EQUAL(pixels[30][30], color_with_alpha(get_sys_color(brTextInfo), 35));
   PASS();

@@ -40,25 +40,15 @@ static theme_t *theme_for_style(theme_style_t style) {
 theme_t *get_theme(void) {
   if (!g_active_theme) {
     g_active_theme = theme_modern_instance();
-    g_active_theme->apply_palette();
+    theme_css_apply_palette();
     g_theme_style_generation++;
   }
   return g_active_theme;
 }
 
-// Returns true if all required vtable slots in t are non-NULL.
+// A theme is usable when its style sheet loads.
 static bool theme_validate(theme_t *t) {
   if (!t) { fprintf(stderr, "[theme] NULL theme pointer\n"); fflush(stderr); return false; }
-#define REQUIRE(fn) \
-  if (!t->fn) { fprintf(stderr, "theme[%s]: missing " #fn "\n", t->name ? t->name : "?"); fflush(stderr); return false; }
-  REQUIRE(draw_part)
-  REQUIRE(draw_window_chrome)
-  REQUIRE(draw_statusbar_text)
-  REQUIRE(foreground)
-  REQUIRE(draw_button_label)
-  REQUIRE(draw_combobox)
-  REQUIRE(apply_palette)
-#undef REQUIRE
   if (!theme_stylesheet(t)) {   // its geometry and colours live there
     fprintf(stderr, "theme[%s]: style sheet failed to load\n", t->name ? t->name : "?"); fflush(stderr);
     return false;
@@ -116,7 +106,7 @@ bool set_theme(theme_style_t style) {
   s_switching = true;
   g_active_theme = candidate;
   g_theme_style_generation++;
-  candidate->apply_palette();
+  theme_css_apply_palette();
   g_theme_style_generation++;
   text_apply_theme_fonts();   // the role faces may differ between themes
 
@@ -153,6 +143,15 @@ void set_sys_colors(int count, const int *indices, const uint32_t *colors) {
   }
 }
 
+static const theme_paint_recorder_t *g_paint_recorder;
+void theme_set_paint_recorder(const theme_paint_recorder_t *recorder) { g_paint_recorder = recorder; }
+
+// The window chrome, through the recorder when one is set.
+void theme_paint_window_chrome(irect16_t titlebar, irect16_t caption, const char *title, ctrl_state_t state, bool maximizable) {
+  if (g_paint_recorder && g_paint_recorder->chrome) { g_paint_recorder->chrome(titlebar, caption, title, state, maximizable); return; }
+  theme_draw_window_chrome(titlebar, caption, title, state, maximizable);
+}
+
 void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state) {
   if (part < 0 || part >= THEME_PART_COUNT) {
     fprintf(stderr, "[theme] draw REJECTED part=%d state=%u rect=%d,%d,%d,%d\n",
@@ -162,7 +161,8 @@ void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state) {
   }
   if (r.w <= 0 || r.h <= 0) return;
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
-  get_theme()->draw_part(part, r, state);
+  if (g_paint_recorder && g_paint_recorder->part) { g_paint_recorder->part(part, r, state); return; }
+  theme_css_draw_part(part, r, state);
 }
 
 void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const theme_draw_opts_t *opts) {
@@ -180,9 +180,11 @@ void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const the
   state &= ~CTRL_PLASTIC;
   if (part == THEME_PART_CARD) {
     if (plastic) draw_plastic_card(r, state, opts->color);
-    else get_theme()->draw_card(r, state, opts->edge_color);
+    else theme_default_draw_card(r, state, opts->edge_color);
+  } else if (g_paint_recorder && g_paint_recorder->part) {
+    g_paint_recorder->part(part, r, state);
   } else {
-    get_theme()->draw_part(part, r, state);
+    theme_css_draw_part(part, r, state);
   }
 }
 
@@ -200,7 +202,7 @@ uint32_t theme_foreground(theme_part_t part, ctrl_state_t state) {
     return get_sys_color(brTextNormal);
   }
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
-  return get_theme()->foreground(part, state);
+  return theme_css_foreground(part, state);
 }
 
 // ── Appearance ──────────────────────────────────────────────────────────────

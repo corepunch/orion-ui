@@ -128,11 +128,9 @@ static void test_root_scrollbar_position(void) {
                                  MAKERECT(40, 60, 300, 220), NULL, scrolling_window_proc, 0, NULL);
   set_vscroll(root, 0, 600, 182, 100);
   root->hscroll.pos = 75;
-  theme_t *theme = get_theme();
-  void (*saved)(theme_part_t, irect16_t, ctrl_state_t) = theme->draw_part;
-  theme->draw_part = record_scrollbar_part;
+  theme_set_paint_recorder(&(theme_paint_recorder_t){ .part = record_scrollbar_part });
   draw_builtin_scrollbars(root);
-  theme->draw_part = saved;
+  theme_set_paint_recorder(NULL);
   ASSERT_EQUAL(recorded_track.x, 300 - SCROLLBAR_WIDTH);
   ASSERT_EQUAL(recorded_track.y, 0);
   ASSERT_EQUAL(recorded_track.w, 17);
