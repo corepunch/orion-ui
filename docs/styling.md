@@ -16,9 +16,11 @@ are custom properties, and `theme_t`'s metrics are control properties.
 
 A theme is `base.css` followed by its own sheet, read in the theme's appearance.
 The build embeds the sheets in `libuser` (`tools/embed_text.py`), so a theme
-never depends on files at run time. `orion/user/theme_builtin.c` builds the
-instances; its templates still hold the chrome geometry no property sets yet
-(caption and menu bar heights, toolbar sizes, tooltip and slider geometry).
+never depends on files at run time. `base.css` is Orion's user-agent sheet: it
+sets every part and the chrome geometry, and a theme overrides what it needs.
+`orion/user/theme_builtin.c` builds the instances; its templates hold only what
+no property sets yet (tooltip and balloon geometry, slider, compact toolbar and
+card material).
 
 ## Editing a theme without rebuilding
 
@@ -117,6 +119,22 @@ radii through the `:root` variables `base.css` uses: `--window-radius`,
 | `IconView::thumbnail:checked` | `border-width` | `thumbnail.ring_width` |
 | `Badge` | `border-radius`, `padding-left`, `--tint-alpha`, `--ink-mix` (0..1) | `badge.corner_radius`, `badge.padding`, `badge.tint_alpha`, `badge.ink_mix` |
 | `Badge::icon` | `width`, `margin-right` | `badge.icon_size`, `badge.icon_gap` |
+| `Window` | `box-shadow` | `window.shadow` |
+| `Window::titlebar`, `MenuBar` | `height` | `caption.height`, `menubar.height` |
+| `Scrollbar` | `width` | `scrollbar.width` |
+| `Toolbar`, `Toolbar::button` | `padding`, `height` | `toolbar.padding`, `toolbar.button_size` |
+| `TabView::tab` | `height`, `min-width`, `padding-left` | `tab.header.height`, `tab.min_width`, `tab.padding` |
+| `TabView::pane` | `--frame-width`, `--pane-margin` | `tab.pane_frame`, `tab.pane_margin` |
+| `SplitView` | `gap` | `splitter.spacing` |
+| `Button` | `padding-left`, `--press-offset`, `text-shadow` (any but `none` engraves labels) | `control.padding`, `control.press_icon_offset`, `text_shadow` |
+| `Menu::item` | `--shape: capsule \| cell` | `menu.capsule` |
+| `Card` | `padding` | `card.padding_y`, `card.padding_x` |
+
+Lengths may use `calc()` (`+ - * /` over px and numbers) and the platform
+values `--titlebar-height`, `--menubar-height`, `--toolbar-height`,
+`--font-size`, `--icon-size`, `--scrollbar-width`, `--control-height`,
+`--control-radius` and `--control-padding`, which differ between desktop and
+touch builds: `height: calc(var(--font-size) + 5px)`.
 
 ## Type
 

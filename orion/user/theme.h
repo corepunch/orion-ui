@@ -293,9 +293,6 @@ typedef struct {
     } shadow;
   } drag;
   struct {
-    int hover, selected, selected_hover, pressed; // system color roles
-  } item_background;
-  struct {
     struct { int height, start; } header; // horizontal TabView height and leading inset
     int min_width, padding;
     int pane_frame;          // page inset from the tab bar frame (bevel width; 0 = flat)

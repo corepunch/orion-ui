@@ -79,10 +79,25 @@ static bool theme_c_var(const char *name, char *out, size_t n, void *ctx) {
   return false;
 }
 
-// Platform metrics a sheet may use without defining them.
+#if defined(__APPLE__) && TARGET_OS_IOS
+#define THEME_MENUBAR_HEIGHT 29
+#else
+#define THEME_MENUBAR_HEIGHT (FONT_SIZE + 12)
+#endif
+
+// Platform metrics a sheet may use without defining them, like a browser's
+// device values: sizes differ between desktop and touch builds.
 static bool theme_platform_var(const char *name, char *out, size_t n, void *ctx) {
   (void)ctx;
-  if (!strcmp(name, "control-radius")) { snprintf(out, n, "%dpx", (CONTROL_HEIGHT_REGULAR + 1) / 2); return true; }
+  static const struct { const char *name; int value; } k[] = {
+    {"control-radius", (CONTROL_HEIGHT_REGULAR + 1) / 2}, {"control-height", CONTROL_HEIGHT_REGULAR},
+    {"titlebar-height", TITLEBAR_HEIGHT},                 {"menubar-height", THEME_MENUBAR_HEIGHT},
+    {"toolbar-height", TB_SPACING},                       {"icon-size", SYSICON_SIZE},
+    {"font-size", FONT_SIZE},                             {"scrollbar-width", SCROLLBAR_WIDTH},
+    {"control-padding", BUTTON_PADDING},
+  };
+  for (size_t i = 0; i < sizeof(k) / sizeof(k[0]); i++)
+    if (!strcmp(name, k[i].name)) { snprintf(out, n, "%dpx", k[i].value); return true; }
   return false;
 }
 
@@ -164,6 +179,40 @@ static void read_radius(const style_sheet_t *s, style_query_t q, int *out) {
   else { fprintf(stderr, "[theme] border-radius: \"%s\" is not a px length\n", v); fflush(stderr); }
 }
 
+// The first length of a 1..4 value property.
+static void read_first(const style_sheet_t *s, style_query_t q, const char *property, int *out) {
+  char v[128];
+  if (!style_value(s, q, property, v, sizeof(v))) return;
+  v[strcspn(v, " \t")] = 0;
+  if (!style_parse_length(v, out)) { fprintf(stderr, "[theme] %s: \"%s\" is not a px length\n", property, v); fflush(stderr); }
+}
+
+// 1..4 lengths in CSS order (top, right, bottom, left).
+static bool theme_four(const char *value, int out[4]) {
+  char buf[128], *tok[4]; int n = 0;
+  snprintf(buf, sizeof(buf), "%s", value);
+  for (char *c = strtok(buf, " \t"); c && n < 4; c = strtok(NULL, " \t")) tok[n++] = c;
+  int v[4];
+  for (int i = 0; i < n; i++) if (!style_parse_length(tok[i], &v[i])) return false;
+  if (!n) return false;
+  static const int map[5][4] = {{0}, {0, 0, 0, 0}, {0, 1, 0, 1}, {0, 1, 2, 1}, {0, 1, 2, 3}};
+  for (int i = 0; i < 4; i++) out[i] = v[map[n][i]];
+  return true;
+}
+
+// A box-shadow of dx dy blur colour.
+static void theme_shadow(const char *value, ipoint16_t *offset, int *blur, uint32_t *color) {
+  char buf[128], *tok[5]; int n = 0, len[3], nl = 0;
+  snprintf(buf, sizeof(buf), "%s", value);
+  for (char *c = strtok(buf, " \t"); c && n < 5; c = strtok(NULL, " \t")) tok[n++] = c;
+  for (int i = 0; i < n; i++) {
+    if (nl < 3 && style_parse_length(tok[i], &len[nl])) nl++;
+    else if (!style_parse_color(tok[i], color)) { fprintf(stderr, "[theme] box-shadow: bad \"%s\"\n", value); fflush(stderr); return; }
+  }
+  if (nl >= 2) { offset->x = (int16_t)len[0]; offset->y = (int16_t)len[1]; }
+  if (nl >= 3) *blur = len[2];
+}
+
 static void read_role(const style_sheet_t *s, style_query_t q, const char *property, int *out) {
   char name[64];
   if (!style_var_name(s, q, property, name, sizeof(name))) return;
@@ -202,6 +251,32 @@ void theme_metrics_from_stylesheet(theme_t *t, const style_sheet_t *s) {
   style_length(s, q_elem("TableView", "row"), "min-height", &t->report.row_height);
   int divider = t->report.row_dividers ? 1 : 0;
   if (style_length(s, q_elem("TableView", "row"), "--divider-width", &divider)) t->report.row_dividers = divider > 0;
+
+  // Chrome geometry: the default sheet sets it, as a browser's user-agent sheet does.
+  style_length(s, q_elem("Window", "titlebar"), "height", &t->caption.height);
+  style_length(s, q_elem("MenuBar", NULL), "height", &t->menubar.height);
+  style_length(s, q_elem("Scrollbar", NULL), "width", &t->scrollbar.width);
+  style_length(s, q_elem("Toolbar", "button"), "height", &t->toolbar.button_size);
+  read_first(s, q_elem("Toolbar", NULL), "padding", &t->toolbar.padding);
+  style_length(s, q_elem("TabView", "tab"), "height", &t->tab.header.height);
+  style_length(s, q_elem("TabView", "tab"), "min-width", &t->tab.min_width);
+  style_length(s, q_elem("TabView", "tab"), "padding-left", &t->tab.padding);
+  style_length(s, q_elem("TabView", "pane"), "--frame-width", &t->tab.pane_frame);
+  style_length(s, q_elem("TabView", "pane"), "--pane-margin", &t->tab.pane_margin);
+  style_length(s, q_elem("SplitView", NULL), "gap", &t->splitter.spacing);
+  style_length(s, q_elem("Button", NULL), "padding-left", &t->control.padding);
+  style_length(s, q_elem("Button", NULL), "--press-offset", &t->control.press_icon_offset);
+  char v[128];
+  if (style_value(s, q_elem("Button", NULL), "text-shadow", v, sizeof(v))) t->text_shadow = strcmp(v, "none") != 0;
+  if (style_value(s, q_elem("Menu", "item"), "--shape", v, sizeof(v))) t->menu.capsule = !strcmp(v, "capsule");
+  int pad[4];
+  if (style_value(s, q_elem("Card", NULL), "padding", v, sizeof(v)) && theme_four(v, pad)) {
+    t->card.padding_y = pad[0]; t->card.padding_x = pad[1];
+  }
+  if (style_value(s, q_elem("Window", NULL), "box-shadow", v, sizeof(v))) {
+    memset(&t->window.shadow, 0, sizeof(t->window.shadow));
+    if (strcmp(v, "none")) theme_shadow(v, &t->window.shadow.offset, &t->window.shadow.blur, &t->window.shadow.color);
+  }
 
   read_radius(s, q_elem("Badge", NULL), &t->badge.corner_radius);
   style_length(s, q_elem("Badge", NULL), "padding-left", &t->badge.padding);

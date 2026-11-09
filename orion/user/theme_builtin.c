@@ -19,12 +19,6 @@
 
 #define MODERN_CAPTION_TEXT_INSET 8
 
-#if defined(__APPLE__) && TARGET_OS_IOS
-#define MODERN_MENUBAR_HEIGHT 29
-#else
-#define MODERN_MENUBAR_HEIGHT (FONT_SIZE + 12)
-#endif
-
 // ── Window chrome and labels ─────────────────────────────────────────────────
 
 static void modern_draw_window_chrome(irect16_t titlebar, irect16_t caption,
@@ -74,7 +68,7 @@ static void modern_draw_combobox(irect16_t r, const char *text, ctrl_state_t sta
   draw_theme_icon(THEME_ICON_ARROW_UPDOWN, arrow.x, arrow.y, icon_size, foreground);
 }
 
-// Metrics the sheets do not set: chrome heights, toolbar, tooltip and slider geometry.
+// What the sheets do not set yet: tooltip, balloon, slider, compact toolbar and card material geometry.
 static const theme_t k_modern_template = {
   .style                  = THEME_MODERN,
   .name                   = "Modern",
@@ -86,22 +80,11 @@ static const theme_t k_modern_template = {
   .draw_part              = theme_css_draw_part,
   .draw_window_chrome     = modern_draw_window_chrome,
   .draw_statusbar_text    = modern_draw_statusbar_text,
-  .scrollbar = { .width = SCROLLBAR_WIDTH, .overlay = false },
-  .caption = { .height = TITLEBAR_HEIGHT },
-  .menubar = { .height = MODERN_MENUBAR_HEIGHT },
   .toolbar = {
-    .button_size = TB_SPACING, .padding = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH, .spacing = 2, .corner_radius = 4,
     .compact = { .padding = 2, .spacing = 6, .icon = TOOLBAR_COMPACT_ICON_SIZE, .menu_gap = 8 },
     .grip_size = 12, .dropdown_arrow_w = 12,
   },
-  .tab = {
-    .header = { .height = TITLEBAR_HEIGHT, .start = 0 },
-    .min_width = 80, .padding = 16, .pane_frame = 0, .corner_radius = 6, .pane_margin = 2,
-  },
-  .menu = { .capsule = 1 },
   .report = { .divider_width = 1 },
-  .splitter = { .spacing = 0 },
-  .badge = { .padding = 7, .corner_radius = 5, .tint_alpha = 0x26, .ink_mix = 0x50, .icon_size = 12, .icon_gap = 4 },
   .tooltip = {
     .corner_radius = 6, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,
     .shadow = { .size = 10, .blur = 2, .offset = {0, 3}, .color = 0x78000000 },
@@ -111,31 +94,11 @@ static const theme_t k_modern_template = {
     .shadow = { .size = 2, .blur = 1, .offset = {1, 1}, .color = 0x40000000 },
   },
   .command_link = { .bullet_size = 6, .gap = 8, .padding_y = 2 },
-  .field = { .corner_radius = CORNER_RADIUS_CIRCULAR, .multiline_corner_radius = (CONTROL_HEIGHT_REGULAR + 1) / 2,
-             .padding_x = TEXTEDIT_PADDING_CAPSULE },
-  .control = { .padding = BUTTON_PADDING, .press_icon_offset = 0 },
-  .button = { .corner_radius = CORNER_RADIUS_CIRCULAR },
-  .window = {
-    .corner_radius = 8,
-    .shadow = { .blur = 8, .offset = {0, 4}, .color = 0x80000000 },
-  },
-  .table = { .corner_radius = 6 },
-  .card = {
-    .corner_radius = 7, .edge_width = 4, .ring_width = 1, .highlight_width = 1, .shadow_size = 1,
-    .padding_x = 12, .padding_y = 8,
-  },
-  .thumbnail = { .gap = 2, .ring_width = 3 },
+  .card = { .edge_width = 4, .ring_width = 1, .shadow_size = 1 },
+  .thumbnail = { .gap = 2 },
   .slider = { .trough_inset = 3, .trough_radius = 9, .thumb_inset = 3, .thumb_length = 12, .thumb_radius = 6 },
-  .plastic = {
-    .gloss = 1.0f, .rim = 0.55f, .lift = 0.10f, .shadow_color = 0xE0000000,
-  },
-  .drag = {
-    .shadow = { .blur = 6, .offset = {0, 8}, .color = 0xE0000000 },
-  },
-  .item_background        = {
-    .hover = brButtonHover, .selected = brAccent,
-    .selected_hover = brAccent, .pressed = brAccent,
-  },
+  .plastic = { .gloss = 1.0f, .rim = 0.55f, .lift = 0.10f, .shadow_color = 0xE0000000 },
+  .drag = { .shadow = { .blur = 6, .offset = {0, 8}, .color = 0xE0000000 } },
   .apply_palette          = theme_css_apply_palette,
 };
 
@@ -179,7 +142,6 @@ theme_t *theme_porcelain_dark_instance(void) {
 // Classic: bevelled, square, compact chrome.
 static const theme_t k_classic_template = {
   .name                   = "Classic",
-  .text_shadow            = true,
   .draw_button_label      = modern_draw_button_label,
   .draw_combobox          = modern_draw_combobox,
   .draw_card              = theme_default_draw_card,
@@ -187,23 +149,11 @@ static const theme_t k_classic_template = {
   .draw_part              = theme_css_draw_part,
   .draw_window_chrome     = modern_draw_window_chrome,
   .draw_statusbar_text    = modern_draw_statusbar_text,
-  .scrollbar = { .width = 13, .overlay = false },
-  .caption = { .height = FONT_SIZE + 5 },
-  .menubar = { .height = FONT_SIZE + 5 },
   .toolbar = {
-    .button_size = SYSICON_SIZE + 4, .padding = TOOLBAR_PADDING + TOOLBAR_BEVEL_WIDTH,
-    .spacing = TOOLBAR_SPACING, .corner_radius = 0,
     .compact = { .padding = 2, .spacing = 6, .icon = TOOLBAR_COMPACT_ICON_SIZE, .menu_gap = 8 },
     .grip_size = 12, .dropdown_arrow_w = 12,
   },
-  .tab = {
-    .header = { .height = TITLEBAR_HEIGHT, .start = 0 },
-    .min_width = 80, .padding = 16, .pane_frame = 2, .pane_margin = 2,
-  },
-  .menu = { .capsule = 0 },
   .report = { .divider_width = 1 },
-  .splitter = { .spacing = 2 },
-  .badge = { .padding = 7, .corner_radius = 5, .tint_alpha = 0x40, .ink_mix = 0x30, .icon_size = 12, .icon_gap = 4 },
   .tooltip = {
     .corner_radius = 4, .tail_size = 6, .padding_x = 8, .padding_y = 5, .gap = 2,
     .shadow = { .size = 10, .blur = 2, .offset = {0, 3}, .color = 0x78000000 },
@@ -213,15 +163,8 @@ static const theme_t k_classic_template = {
     .shadow = { .size = 2, .blur = 1, .offset = {1, 1}, .color = 0x40000000 },
   },
   .command_link = { .bullet_size = 7, .gap = 6, .padding_y = 1 },
-  .control = { .padding = BUTTON_PADDING, .press_icon_offset = 1 },
-  .button = { .corner_radius = 0 },
-  .field = { .padding_x = TEXTEDIT_PADDING_CAPSULE },
-  .window = { .corner_radius = 0 },
-  .card = {
-    .corner_radius = 0, .edge_width = 4, .ring_width = 1, .highlight_width = 0, .shadow_size = 1,
-    .padding_x = 8, .padding_y = 6,
-  },
-  .thumbnail = { .gap = 2, .ring_width = 2 },
+  .card = { .edge_width = 4, .ring_width = 1, .shadow_size = 1 },
+  .thumbnail = { .gap = 2 },
   .slider = { .trough_inset = 3, .trough_radius = 0, .thumb_inset = 2, .thumb_length = 12, .thumb_radius = 0 },
   .plastic = { .gloss = 0.7f, .rim = 0.7f, .lift = 0.08f, .shadow_color = 0xE0000000 },
   .drag = { .shadow = { .blur = 6, .offset = {0, 8}, .color = 0xE0000000 } },

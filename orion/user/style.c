@@ -617,8 +617,56 @@ bool style_parse_color(const char *text, uint32_t *out) {
   return false;
 }
 
+// calc(): + - * / over px lengths and numbers, with parentheses.
+typedef struct { const char *p; bool ok; } css_calc_t;
+static double css_calc_sum(css_calc_t *c);
+static void css_calc_space(css_calc_t *c) { while (isspace((unsigned char)*c->p)) c->p++; }
+static double css_calc_atom(css_calc_t *c) {
+  css_calc_space(c);
+  if (*c->p == '(') {
+    c->p++;
+    double v = css_calc_sum(c);
+    css_calc_space(c);
+    if (*c->p == ')') c->p++; else c->ok = false;
+    return v;
+  }
+  char *end;
+  double v = strtod(c->p, &end);
+  if (end == c->p) { c->ok = false; return 0; }
+  c->p = end;
+  if (!strncasecmp(c->p, "px", 2)) c->p += 2;
+  return v;
+}
+static double css_calc_product(css_calc_t *c) {
+  double v = css_calc_atom(c);
+  for (;;) {
+    css_calc_space(c);
+    if (*c->p == '*') { c->p++; v *= css_calc_atom(c); }
+    else if (*c->p == '/') { c->p++; double d = css_calc_atom(c); if (d == 0) c->ok = false; else v /= d; }
+    else return v;
+  }
+}
+static double css_calc_sum(css_calc_t *c) {
+  double v = css_calc_product(c);
+  for (;;) {
+    css_calc_space(c);
+    if (*c->p == '+') { c->p++; v += css_calc_product(c); }
+    else if (*c->p == '-' && isspace((unsigned char)c->p[1])) { c->p++; v -= css_calc_product(c); }
+    else return v;
+  }
+}
+
 bool style_parse_length(const char *text, int *out) {
   if (!text || !out) return false;
+  while (isspace((unsigned char)*text)) text++;
+  if (!strncasecmp(text, "calc(", 5)) {
+    css_calc_t c = { text + 4, true };
+    double v = css_calc_atom(&c);
+    css_calc_space(&c);
+    if (!c.ok || *c.p) return false;
+    *out = (int)lround(v);
+    return true;
+  }
   char *end;
   double v = strtod(text, &end);
   if (end == text) return false;

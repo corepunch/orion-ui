@@ -19,6 +19,22 @@
 *:disabled { color: var(--text-disabled) !important; fill: var(--text-disabled) !important; }
 
 /* ── Metrics ─────────────────────────────────────────────────────────────── */
+/* The chrome's geometry, like a browser's user-agent sheet: themes override it.
+   --titlebar-height, --menubar-height, --toolbar-height, --font-size, --icon-size,
+   --scrollbar-width, --control-height and --control-padding are platform values. */
+
+Window           { box-shadow: 0 4px 8px #00000080; }
+Window::titlebar { height: var(--titlebar-height); }
+MenuBar          { height: var(--menubar-height); }
+Scrollbar        { width: var(--scrollbar-width); }
+Toolbar          { padding: 3px; }
+Toolbar::button  { height: var(--toolbar-height); }
+TabView::tab     { height: var(--titlebar-height); min-width: 80px; padding-left: 16px; }
+TabView::pane    { --frame-width: 0; --pane-margin: 2px; }
+SplitView        { gap: 0; }
+Button           { padding-left: var(--control-padding); --press-offset: 0; text-shadow: none; }
+Menu::item       { --shape: capsule; }
+Card             { padding: 8px 12px; --highlight-width: 1px; }
 
 Window       { border-radius: var(--window-radius); }
 Toolbar      { gap: 1px; }

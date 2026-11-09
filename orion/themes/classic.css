@@ -65,6 +65,16 @@
 }
 
 Toolbar { gap: 1px; }
+Window           { box-shadow: none; }
+Window::titlebar { height: calc(var(--font-size) + 5px); }
+MenuBar          { height: calc(var(--font-size) + 5px); }
+Scrollbar        { width: 13px; }
+Toolbar::button  { height: calc(var(--icon-size) + 4px); }
+TabView::pane    { --frame-width: 2px; }
+SplitView        { gap: 2px; }
+Button           { --press-offset: 1px; text-shadow: 1px 1px var(--dark-edge); }
+Menu::item       { --shape: cell; }
+Card             { padding: 6px 8px; }
 Card { --highlight-width: 0; }
 Badge { --tint-alpha: 0.251; --ink-mix: 0.188; }
 

@@ -241,7 +241,7 @@ static void test_flat_tool_items(void) {
     if (i == 2) {
       ASSERT_EQUAL(pixels[25][25] >> 24, 255);
       ASSERT_NOT_EQUAL(pixels[25][25], get_sys_color(brControlBg));
-      ASSERT_NOT_EQUAL(pixels[25][25], get_sys_color(theme->item_background.hover));
+      ASSERT_NOT_EQUAL(pixels[25][25], get_sys_color(brButtonHover));
       ASSERT_EQUAL(recorded_radius, 4);
     }
   }
