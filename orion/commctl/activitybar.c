@@ -33,7 +33,7 @@ result_t win_activitybar(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
     case evCommand:
       return win->parent ? send_message(win->parent, msg, wparam, HIWORD(wparam) == btnClicked ? win : lparam) : false;
     case evPaint:
-      theme_draw(THEME_PART_SIDEBAR, get_client_rect(win), CTRL_NORMAL);
+      theme_draw_in(win, THEME_PART_SIDEBAR, get_client_rect(win), CTRL_NORMAL);
       return true;
     case evDestroy:
       return true; // the window system owns the toolbar's items and host

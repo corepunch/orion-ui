@@ -46,26 +46,28 @@ void theme_draw_statusbar_text(irect16_t r, const char *text) {
 }
 
 // Bevelled themes engrave the label and shift it while the button is down.
-void theme_draw_button_label(irect16_t r, const char *text, ctrl_state_t state) {
+// win is the button: its classes, #id and app sheet style the label.
+void theme_draw_button_label(const window_t *win, irect16_t r, const char *text, ctrl_state_t state) {
+  const char *button = ui_selector(win, "Button");
   bool pressed = (state & (CTRL_PRESSED | CTRL_SELECTED)) && !(state & CTRL_DISABLED);
-  if (ui_flag("Button", "text-shadow") && !pressed && !(state & CTRL_DISABLED))
-    draw_text("Text", text, r.x + TEXT_SHADOW_OFFSET, r.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
-  int offset = ui_px("Button", "--press-offset");
+  if (ui_flag(button, "text-shadow") && !pressed && !(state & CTRL_DISABLED))
+    draw_text(button, text, r.x + TEXT_SHADOW_OFFSET, r.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
+  int offset = ui_px(button, "--press-offset");
   if (pressed) r = rect_offset(r, offset, offset);
-  draw_text("Text", text, r.x, r.y, theme_css_foreground(THEME_PART_BUTTON, state, NULL));
+  draw_text(button, text, r.x, r.y, theme_css_foreground(THEME_PART_BUTTON, state, ui_window_scope(win)));
 }
 
-void theme_draw_combobox(irect16_t r, const char *text, ctrl_state_t state) {
+void theme_draw_combobox(const window_t *win, irect16_t r, const char *text, ctrl_state_t state) {
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
-  theme_css_draw_part(THEME_PART_COMBOBOX, r, state, NULL);
+  theme_css_draw_part(THEME_PART_COMBOBOX, r, state, ui_window_scope(win));
   int icon_size = MIN(COMBOBOX_ICON_SIZE, MAX(0, r.h - 4));
   int icon_padding = TEXTEDIT_PADDING_HORZ - icon_size / 4;
   irect16_t content = rect_inset_xy(r, TEXTEDIT_PADDING_HORZ, 0);
   irect16_t arrow = rect_center(rect_split_right(rect_trim_right(r, icon_padding),
                                               icon_size), icon_size, icon_size);
   irect16_t label = rect_trim_right(content, icon_size + icon_padding);
-  uint32_t foreground = theme_css_foreground(THEME_PART_COMBOBOX, state, NULL);
-  draw_text_clipped("ComboBox", text, &label, foreground, 0);
+  uint32_t foreground = theme_css_foreground(THEME_PART_COMBOBOX, state, ui_window_scope(win));
+  draw_text_clipped(ui_selector(win, "ComboBox"), text, &label, foreground, 0);
   draw_theme_icon(THEME_ICON_ARROW_UPDOWN, arrow.x, arrow.y, icon_size, foreground);
 }
 

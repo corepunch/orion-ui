@@ -156,9 +156,20 @@ theme_draw_in(win, THEME_PART_HEADER, r, CTRL_NORMAL);
 `ui_selector()` returns the element selector with the window's classes and id
 (`TableView.compact#checkouts::header`), interned, and remembers which
 instance's sheet answers it; an unstyled window gets the element selector back.
-`window_set_style(win, id, classes)` restyles a window at run time. TableView
-(rows, headers, group captions, parts) and Label (font and colour) read their
-window's selectors; other controls still style as their element.
+`window_set_style(win, id, classes)` restyles a window at run time and sends it
+`evThemeChanged`, as a theme switch does, so a control recomputes what it
+derived from the sheet (a Card its padding).
+
+Every control reads its own element through its window: Button and
+CommandLink, CheckBox, TextEdit (single and multi-line), ComboBox, Label,
+TabView, TableView, IconView, SegmentedControl, Slider, Card, SplitView,
+Splitter, Separator, MenuBar, Toolbar (through its toolbar window), ActivityBar,
+TileGrid, Image and SpeechBubble. Painters a control shares take its window
+too: `theme_draw_button_label(win, ...)`, `theme_draw_combobox(win, ...)`,
+`draw_card_in(win, ...)`. Three things still style as their element: popup
+menus (measured before their window exists), free text (`Caption`, `Heading`
+and the rest) and elements drawn inside a control that are not the control
+itself (`Scrollbar`, `Badge`, `Tooltip`).
 
 ## Type
 

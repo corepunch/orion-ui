@@ -139,6 +139,8 @@ do not depend on the machine. A standalone app takes `--appearance light|dark|sy
 ```c
 // Card with an optional accent edge; the theme rounds (or squares) card and edge together.
 draw_card(r, CTRL_HOVER | CTRL_SELECTED | CTRL_FOCUSED, color_with_alpha(get_sys_color(brTextWarning), 0x78));
+// The same, as a Card window's classes, #id and app sheet style it.
+draw_card_in(win, r, state, edge_color);
 
 // Tinted label ("3 modified"); returns its width so badges can be chained.
 int w = draw_badge("Text", "3 modified", x, y, 18, get_sys_color(brTextWarning));

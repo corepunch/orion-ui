@@ -109,9 +109,11 @@ const char *ui_selector(const window_t *win, const char *base) {
 
 void window_set_style(window_t *win, const char *id, const char *classes) {
   if (!win) return;
+  if (!strcmp(win->style_id, id ? id : "") && !strcmp(win->style_class, classes ? classes : "")) return;
   snprintf(win->style_id, sizeof(win->style_id), "%s", id ? id : "");
   snprintf(win->style_class, sizeof(win->style_class), "%s", classes ? classes : "");
   win->style_scope = NULL;
+  send_message(win, evThemeChanged, 0, NULL);   // its theme data changed (≈ WM_THEMECHANGED)
   invalidate_window(win);
 }
 

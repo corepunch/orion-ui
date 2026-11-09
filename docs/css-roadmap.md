@@ -19,8 +19,8 @@ text faces come from CSS; controls no longer paint shapes of their own
 - Done: an app links its own sheet from the `.orion` root (`gitclient.css`),
   read after the theme's; a gem's sheet styles only its own windows.
 - Done: a control's `name` is its `#id` and `class=` its classes
-  ([styling.md](styling.md#application-sheets)). TableView and Label read
-  them; the other controls move to `ui_selector()` / `theme_draw_in()` next.
+  ([styling.md](styling.md#application-sheets)), and every control reads
+  them through `ui_selector()` / `theme_draw_in()`.
 
 ## 2. Text from CSS, not roles
 
@@ -89,10 +89,9 @@ The browser is weak at application chrome; Orion keeps its own, styled by CSS:
 
 Done: style queries replaced `theme_t`'s metrics and vtable; fonts are
 selectors with text properties; the VGA font gave way to IBM Plex Mono; apps
-link their own sheets and style controls by `#id` and `.class`.
+link their own sheets and every control is styled by its `#id` and `.class`.
 
-1. Every control reads its window's selectors (buttons, edits, tabs, cards).
-2. Browser conformance fixtures for boxes, then text, then layout.
-3. Layout properties in the sheet.
-4. Git Client's Run page (rail, process table, console, ⌘K) built from these,
+1. Browser conformance fixtures for boxes, then text, then layout.
+2. Layout properties in the sheet.
+3. Git Client's Run page (rail, process table, console, ⌘K) built from these,
    with its behaviour in Lua.

@@ -71,7 +71,7 @@ static void splitview_get_panes(window_t *win, window_t **left, window_t **right
 static void splitview_arrange(splitview_state_t *st, window_t *win) {
   irect16_t cr = get_client_rect(win);
   int total = (st->orientation == SPLIT_VERT) ? cr.w : cr.h;
-  int spacing = MIN(total, ui_px("SplitView", "gap"));
+  int spacing = MIN(total, ui_px(ui_selector(win, "SplitView"), "gap"));
   int available = MAX(0, total - spacing);
   int split_px = (int)(available * st->split_ratio + 0.5);
   if (available >= SPLITVIEW_MIN_PANE * 2)
@@ -206,7 +206,7 @@ result_t win_splitview(window_t *win, uint32_t msg,
                   : (int16_t)HIWORD(wparam);
       int delta = pos - st->drag_start;
       irect16_t cr = get_client_rect(win);
-      int total = MAX(0, (st->orientation == SPLIT_VERT ? cr.w : cr.h) - ui_px("SplitView", "gap"));
+      int total = MAX(0, (st->orientation == SPLIT_VERT ? cr.w : cr.h) - ui_px(ui_selector(win, "SplitView"), "gap"));
       if (total > 0)
         st->split_ratio = st->drag_ratio + (double)delta / total;
       if (st->split_ratio < 0.0) st->split_ratio = 0.0;

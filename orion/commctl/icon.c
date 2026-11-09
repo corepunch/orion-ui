@@ -113,11 +113,11 @@ static void desktop_icon_paint(window_t *win, const icon_state_t *st) {
   int status_h = st->status_image.texture ? ICON_STATUS_SIZE : 0;
   int label_h = MAX(text_char_height("Caption"), status_h) + 2;
   irect16_t label = rect_split_bottom(local, label_h); label.w = local.w;
-  if (!(win->flags & WINDOW_TRANSPARENT)) theme_draw(THEME_PART_WORKSPACE, local, CTRL_NORMAL);
+  if (!(win->flags & WINDOW_TRANSPARENT)) theme_draw_in(win, THEME_PART_WORKSPACE, local, CTRL_NORMAL);
   ctrl_state_t state = win->value ? CTRL_SELECTED : CTRL_NORMAL;
-  theme_draw(THEME_PART_DESKTOP_ICON, local, state);
+  theme_draw_in(win, THEME_PART_DESKTOP_ICON, local, state);
   if (st->image.texture) draw_rect((int)st->image.texture, image);
-  uint32_t text_col = theme_foreground(THEME_PART_DESKTOP_ICON, state);
+  uint32_t text_col = theme_foreground_in(win, THEME_PART_DESKTOP_ICON, state);
   if (st->status_image.texture) {
     int text_w = text_strwidth("Caption", win->title);
     int status_w = ICON_STATUS_SIZE;

@@ -89,11 +89,43 @@ static void test_window_set_style(void) {
   PASS();
 }
 
+static void test_controls_read_their_selectors(void) {
+  TEST("Card and TabView read their own #id rules; a restyled Card recomputes its padding");
+  test_env_init();
+  ui_set_app_stylesheet("Card#roomy { padding-left: 30px; padding-top: 20px; }"
+                        "TabView#wide::tab { min-width: 200px; }", "app.css");
+  static const form_ctrl_def_t roomy = { .class_name = "Card", .id = 3, .text = "", .name = "roomy" };
+  static const form_ctrl_def_t plain = { .class_name = "Card", .id = 4, .text = "", .name = "plain" };
+  window_t *a = make_form(&roomy, 0, NULL), *b = make_form(&plain, 0, NULL);
+  int ring = ui_px("Card", "--ring-width");
+  ASSERT_EQUAL(a->children->layout.layout_padding.y, ring + 20);
+  ASSERT_TRUE(b->children->layout.layout_padding.y != ring + 20);
+  window_set_style(b->children, "roomy", NULL);
+  ASSERT_EQUAL(b->children->layout.layout_padding.y, ring + 20);
+
+  window_t *host = create_window("Host", 0, MAKERECT(0, 0, 900, 200), NULL, form_proc, 0, NULL);
+  window_t *tabs = create_window("", WINDOW_NOTITLE, MAKERECT(0, 0, 900, TAB_CONTROL_HEIGHT), host, "TabView", 0, NULL);
+  const tab_item_t items[] = {{"A", 1}, {"B", 2}};
+  ASSERT_TRUE(send_message(tabs, tcSetItems, 2, (void *)items));
+  irect16_t r;
+  ASSERT_TRUE(send_message(tabs, tcGetTabRect, 0, &r));
+  ASSERT_TRUE(r.w < 200);
+  window_set_style(tabs, "wide", NULL);
+  ASSERT_TRUE(send_message(tabs, tcGetTabRect, 0, &r));
+  ASSERT_EQUAL(r.w, 200);
+
+  destroy_window(host); destroy_window(a); destroy_window(b);
+  ui_set_app_stylesheet(NULL, NULL);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("App style sheets");
   test_selector_composition();
   test_id_and_class_rules();
   test_instance_sheet();
   test_window_set_style();
+  test_controls_read_their_selectors();
   TEST_END();
 }

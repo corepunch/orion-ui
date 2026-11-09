@@ -136,9 +136,9 @@ result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       irect16_t r = R(0, 0, win->frame.w, win->frame.h);
       ctrl_state_t state = s->dragging ? CTRL_PRESSED : CTRL_NORMAL;
       if (window_is_disabled(win)) state |= CTRL_DISABLED;
-      theme_draw(THEME_PART_SCROLLBAR_TRACK, r, state);
+      theme_draw_in(win, THEME_PART_SCROLLBAR_TRACK, r, state);
       irect16_t thumb = vert ? R(0, to, r.w, tl) : R(to, 0, tl, r.h);
-      theme_draw(THEME_PART_SCROLLBAR_THUMB, thumb, state);
+      theme_draw_in(win, THEME_PART_SCROLLBAR_THUMB, thumb, state);
       return true;
     }
 

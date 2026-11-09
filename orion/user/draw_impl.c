@@ -421,21 +421,22 @@ void stroke_rounded_rect(uint32_t color, irect16_t r, int radius, int thickness)
                              thickness * scale);
 }
 
-void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
-  theme_default_draw_card(r, state, edge_color);
-}
+void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) { draw_card_in(NULL, r, state, edge_color); }
+void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) { draw_card_in(NULL, r, state, edge_color); }
 
-void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) {
+// The card face of win, a Card: its classes, #id and app sheet apply.
+void draw_card_in(const window_t *win, irect16_t r, ctrl_state_t state, uint32_t edge_color) {
   extern uint32_t ui_white_texture;
+  const char *card = ui_selector(win, "Card");
   if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
-  int radius = ui_radius("Card"), edge = ui_px("Card", "--edge-width"), ring = ui_px("Card", "--ring-width");
+  int radius = ui_radius(card), edge = ui_px(card, "--edge-width"), ring = ui_px(card, "--ring-width");
   if (state & CTRL_SELECTED) {
     // The ring matches the accent edge; a card without an edge uses the theme accent.
     uint32_t ring_color = (edge_color >> 24) ? color_with_alpha(edge_color, 0xFF) : get_sys_color(brAccent);
     fill_rounded_rect(ring_color, r, radius + ring);
   }
   r = rect_inset(r, ring);
-  uint32_t face = get_sys_color(ui_role("Card", "background-color") > 0 && ui_role("Card", "background-color") < brCount ? (sys_color_idx_t)ui_role("Card", "background-color") : brControlBg);
+  uint32_t face = get_sys_color(ui_role(card, "background-color") > 0 && ui_role(card, "background-color") < brCount ? (sys_color_idx_t)ui_role(card, "background-color") : brControlBg);
   if (state & CTRL_HOVER) {
     uint32_t hover = get_sys_color(brButtonHover);
     // Average the packed channels without carries between them.
@@ -450,9 +451,9 @@ void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_colo
   float scale = MAX(1.0f, axGetScaling());
   render_rounded_rect_edged(ui_white_texture, r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
                             radius * scale, 1.0f, face, edge_color, edge * scale);
-  if (ui_role("Card", "border-color") > 0 && ui_role("Card", "border-color") < brCount && !(state & CTRL_SELECTED))   // the same silhouette, stroked
+  if (ui_role(card, "border-color") > 0 && ui_role(card, "border-color") < brCount && !(state & CTRL_SELECTED))   // the same silhouette, stroked
     render_rounded_rect_stroke(ui_white_texture, r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
-                               radius * scale, 1.0f, get_sys_color((sys_color_idx_t)ui_role("Card", "border-color")), scale);
+                               radius * scale, 1.0f, get_sys_color((sys_color_idx_t)ui_role(card, "border-color")), scale);
 }
 
 static plastic_look_t plastic_look(ctrl_state_t state) {

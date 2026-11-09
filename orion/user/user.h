@@ -140,6 +140,7 @@ typedef struct toolbar_state_s {
   toolbar_orientation_t orientation;
   uint32_t        style;        // TOOLBAR_STYLE_* flags
   uint8_t         dock_hint;    // toolbar_dock_t measurement/compact presentation hint; dock owns placement
+  const struct window_s *owner; // the toolbar window: its classes, #id and app sheet style the items
 } toolbar_state_t;
 
 // Window definition structure (for declarative window creation)

@@ -4,11 +4,11 @@
 #include <orion/user/draw.h>
 
 static void speechbubble_padding(window_t *win) {
-  int shadow = ui_px("SpeechBubble", "--shadow-size");
+  int shadow = ui_px(ui_selector(win, "SpeechBubble"), "--shadow-size");
   int x = MAX(ui_px("Tooltip", "padding-left"), ui_px("Card", "padding-left"));
   int y = MAX(ui_px("Tooltip", "padding-top"), ui_px("Card", "padding-top"));
   win->layout.layout_padding = R(shadow + x, shadow + y, shadow + x,
-                                 shadow + y + ui_px("SpeechBubble", "--tail-length"));
+                                 shadow + y + ui_px(ui_selector(win, "SpeechBubble"), "--tail-length"));
 }
 
 result_t win_speechbubble(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -34,7 +34,7 @@ result_t win_speechbubble(window_t *win, uint32_t msg, uint32_t wparam, void *lp
       speechbubble_padding(win);
       break;
     case evPaint: {
-      int margin = ui_px("SpeechBubble", "--shadow-size") + ui_radius("SpeechBubble") + ui_px("SpeechBubble", "--tail-width");
+      int margin = ui_px(ui_selector(win, "SpeechBubble"), "--shadow-size") + ui_radius(ui_selector(win, "SpeechBubble")) + ui_px(ui_selector(win, "SpeechBubble"), "--tail-width");
       int offset = win->value ? (int)win->value : win->frame.w / 2;
       offset = MAX(margin, MIN(offset, win->frame.w - margin));
       draw_speech_bubble(get_client_rect(win), offset, TOOLTIP_TAIL_BOTTOM);

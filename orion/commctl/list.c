@@ -61,11 +61,11 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
     case evPaint:
       if (!cb || !texts)
         return true;
-      theme_draw(THEME_PART_MENU_POPUP,
+      theme_draw_in(win, THEME_PART_MENU_POPUP,
           get_client_rect(win), CTRL_NORMAL);
       for (uint32_t i = 0; i < cb->cursor_pos; i++) {
         irect16_t item = window_scroll_rect_to_client(win, list_item_rect(win, i));
-        popup_item_paint(item, texts[i], i == win->cursor_pos ? CTRL_SELECTED : CTRL_NORMAL, "Menu::item");
+        popup_item_paint(item, texts[i], i == win->cursor_pos ? CTRL_SELECTED : CTRL_NORMAL, ui_selector(win, "Menu::item"));
       }
       return true;
     case evLeftButtonDown: {

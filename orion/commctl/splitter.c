@@ -53,7 +53,7 @@ result_t win_splitter(window_t *win, uint32_t msg,
       if (!st || !st->hot) return true;
       irect16_t strip = st->orientation == SPLIT_VERT ? rect_center(cr, MIN(cr.w, SPLITTER_HIGHLIGHT_WIDTH), cr.h)
                                                        : rect_center(cr, cr.w, MIN(cr.h, SPLITTER_HIGHLIGHT_WIDTH));
-      theme_draw(THEME_PART_SPLITTER, strip, CTRL_HOVER);
+      theme_draw_in(win, THEME_PART_SPLITTER, strip, CTRL_HOVER);
       return true;
     }
 

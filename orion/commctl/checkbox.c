@@ -15,17 +15,17 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
   switch (msg) {
     case evCreate:
       win->frame.w = MAX(win->frame.w,
-                         text_strwidth("CheckBox", win->title) +
+                         text_strwidth(ui_selector(win, "CheckBox"), win->title) +
                          CHECKBOX_BOX_SIZE + CHECKBOX_GAP);
       win->frame.h = MAX(win->frame.h,
-                         text_char_height("CheckBox") + 4);
+                         text_char_height(ui_selector(win, "CheckBox")) + 4);
       return true;
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m) {
-        int desired_w = text_strwidth("CheckBox", win->title) +
+        int desired_w = text_strwidth(ui_selector(win, "CheckBox"), win->title) +
                         CHECKBOX_BOX_SIZE + CHECKBOX_GAP;
-        int desired_h = MAX(text_char_height("CheckBox") + 4, CHECKBOX_BOX_SIZE + 2);
+        int desired_h = MAX(text_char_height(ui_selector(win, "CheckBox")) + 4, CHECKBOX_BOX_SIZE + 2);
         m->desired_w = MAX(win->frame.w, desired_w);
         m->desired_h = MAX(win->frame.h, desired_h);
       }
@@ -44,7 +44,7 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       if (window_has_state(win, WINDOW_STATE_PRESSED))  state |= CTRL_PRESSED;
       if (window_has_state(win, WINDOW_STATE_HOVERED))  state |= CTRL_HOVER;
       if (window_is_disabled(win)) state |= CTRL_DISABLED;
-      theme_draw(THEME_PART_CHECKBOX, box, state | (win->value ? CTRL_SELECTED : 0));
+      theme_draw_in(win, THEME_PART_CHECKBOX, box, state | (win->value ? CTRL_SELECTED : 0));
       irect16_t text_rect = {
         box.x + box.w + CHECKBOX_GAP,
         0,
@@ -55,9 +55,9 @@ result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       uint32_t text_col = disabled ? get_sys_color(brTextDisabled) : get_sys_color(brTextNormal);
       if (!disabled && ui_flag("Button", "text-shadow")) {
         irect16_t shadow_rect = rect_offset(text_rect, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
-        draw_text_clipped("CheckBox", win->title, &shadow_rect, get_sys_color(brDarkEdge), 0);
+        draw_text_clipped(ui_selector(win, "CheckBox"), win->title, &shadow_rect, get_sys_color(brDarkEdge), 0);
       }
-      draw_text_clipped("CheckBox", win->title, &text_rect, text_col, 0);
+      draw_text_clipped(ui_selector(win, "CheckBox"), win->title, &text_rect, text_col, 0);
       return true;
     }
     case evMouseMove:

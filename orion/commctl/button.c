@@ -55,8 +55,8 @@ static int button_icon_width(window_t *win) {
   return x && x->icon[0] && win->title[0] ? BUTTON_TEXT_ICON + BUTTON_ICON_GAP : 0;
 }
 
-static int command_link_height(void) {
-  return MAX(text_char_height("Button"), ui_px("CommandLink", "--bullet-size")) + ui_px("CommandLink", "padding-top") * 2;
+static int command_link_height(const window_t *win) {
+  return MAX(text_char_height(ui_selector(win, "Button")), ui_px(ui_selector(win, "CommandLink"), "--bullet-size")) + ui_px(ui_selector(win, "CommandLink"), "padding-top") * 2;
 }
 
 // Button control window procedure (text label buttons).
@@ -98,21 +98,21 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
           }
           x->ink = cd->color;
         }
-        win->frame.h = command_link_height();
+        win->frame.h = command_link_height(win);
         if ((win->flags & LABEL_COLLAPSE_EMPTY) && !win->title[0]) win->frame = R(0, 0, 0, 0);
         return true;
       }
-      win->frame.w = MAX(win->frame.w, text_strwidth("Button", win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2);
+      win->frame.w = MAX(win->frame.w, text_strwidth(ui_selector(win, "Button"), win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2);
       control_apply_predefined_height(win, "button");
       return true;
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m && (win->flags & BUTTON_COMMANDLINK)) {
-        m->desired_w = ui_px("CommandLink", "--bullet-size") + ui_px("CommandLink", "gap") + text_strwidth("Button", win->title);
+        m->desired_w = ui_px(ui_selector(win, "CommandLink"), "--bullet-size") + ui_px(ui_selector(win, "CommandLink"), "gap") + text_strwidth(ui_selector(win, "Button"), win->title);
         if (m->avail_w > 0) m->desired_w = MIN(m->desired_w, m->avail_w);   // long text ellipsizes
-        m->desired_h = command_link_height();
+        m->desired_h = command_link_height(win);
       } else if (m) {
-        m->desired_w = MAX(win->frame.w, text_strwidth("Button", win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2 +
+        m->desired_w = MAX(win->frame.w, text_strwidth(ui_selector(win, "Button"), win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2 +
                                          button_icon_width(win));
         m->desired_h = control_predefined_height(win->flags);
       }
@@ -140,23 +140,23 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
         draw_command_link(local, win->title, state, get_sys_color(x && x->ink ? (sys_color_idx_t)x->ink : brTextNormal));
         return true;
       }
-      theme_draw(THEME_PART_BUTTON, local, state);
+      theme_draw_in(win, THEME_PART_BUTTON, local, state);
       int icon_w = button_icon_width(win);
       if (x && x->icon[0]) {
         sysicon_resolved_t glyph;
         int size = MIN(icon_w ? BUTTON_TEXT_ICON : SYSICON_SIZE, MIN(local.w, local.h) - 4);
         if (size > 0 && sysicon_resolve_size(x->icon, size, &glyph)) {
-          irect16_t at = rect_center(local, icon_w ? icon_w + text_strwidth("Button", win->title) : glyph.w, glyph.h);
+          irect16_t at = rect_center(local, icon_w ? icon_w + text_strwidth(ui_selector(win, "Button"), win->title) : glyph.w, glyph.h);
           at.w = glyph.w;
           draw_sprite_region((int)glyph.tex, at, UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1),
-                             theme_foreground(THEME_PART_BUTTON, state), 0);
+                             theme_foreground_in(win, THEME_PART_BUTTON, state), 0);
         }
         if (!icon_w) return true;
       }
-      irect16_t content = rect_inset_xy(local, ui_px("Button", "padding-left"), 2);
-      irect16_t label = rect_center(content, text_strwidth("Button", win->title) + icon_w, text_char_height("Button"));
+      irect16_t content = rect_inset_xy(local, ui_px(ui_selector(win, "Button"), "padding-left"), 2);
+      irect16_t label = rect_center(content, text_strwidth(ui_selector(win, "Button"), win->title) + icon_w, text_char_height(ui_selector(win, "Button")));
       label = rect_trim_left(label, icon_w);
-      theme_draw_button_label(label, win->title, state);
+      theme_draw_button_label(win, label, win->title, state);
       return true;
     }
     case evMouseMove:
@@ -249,8 +249,8 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       if (window_is_disabled(win)) state |= CTRL_DISABLED;
       if (g_ui_runtime.focused == win) state |= CTRL_FOCUSED;
       irect16_t local = {0, 0, win->frame.w, win->frame.h};
-      theme_draw(THEME_PART_TOOLBAR_BUTTON, local, state);
-      int px = (state & CTRL_PRESSED) && !(state & CTRL_DISABLED) ? ui_px("Button", "--press-offset") : 0;
+      theme_draw_in(win, THEME_PART_TOOLBAR_BUTTON, local, state);
+      int px = (state & CTRL_PRESSED) && !(state & CTRL_DISABLED) ? ui_px(ui_selector(win, "Button"), "--press-offset") : 0;
       toolbar_button_data_t *bd = (toolbar_button_data_t *)win->userdata;
       bool drew_icon = false;
       if (bd && bd->icon_name[0]) {
@@ -276,8 +276,8 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       }
       if (!drew_icon) {
         // Fallback: draw text label when no image has been set.
-        irect16_t inner = rect_inset_xy(local, ui_px("Button", "padding-left"), 2);
-        theme_draw_button_label(inner, win->title, state);
+        irect16_t inner = rect_inset_xy(local, ui_px(ui_selector(win, "Button"), "padding-left"), 2);
+        theme_draw_button_label(win, inner, win->title, state);
       }
       return true;
     }

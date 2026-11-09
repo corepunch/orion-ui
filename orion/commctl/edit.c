@@ -82,14 +82,14 @@ static int edit_next(const char *text, int at) {
 result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate:
-      win->frame.w = MAX(win->frame.w, text_strwidth("TextEdit", win->title) + TEXTEDIT_PADDING_HORZ* 2);
+      win->frame.w = MAX(win->frame.w, text_strwidth(ui_selector(win, "TextEdit"), win->title) + TEXTEDIT_PADDING_HORZ* 2);
       control_apply_predefined_height(win, "textedit");
       return true;
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m) {
         m->desired_w = MAX(TEXTEDIT_MIN_WIDTH,
-                           text_strwidth("TextEdit", win->title) + textedit_text_x(win) + TEXTEDIT_PADDING_HORZ);
+                           text_strwidth(ui_selector(win, "TextEdit"), win->title) + textedit_text_x(win) + TEXTEDIT_PADDING_HORZ);
         m->desired_h = control_predefined_height(win->flags);
       }
       return true;
@@ -100,8 +100,8 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
       irect16_t local = {0, 0, win->frame.w, win->frame.h};
       ctrl_state_t state = g_ui_runtime.focused == win ? CTRL_FOCUSED : CTRL_NORMAL;
       if (window_is_disabled(win)) state |= CTRL_DISABLED;
-      theme_draw(THEME_PART_FIELD, local, state);
-      int th = text_char_height("TextEdit");
+      theme_draw_in(win, THEME_PART_FIELD, local, state);
+      int th = text_char_height(ui_selector(win, "TextEdit"));
       int text_x = textedit_text_x(win);
       int text_y = MIN(control_text_padding_y(win->flags), MAX(0, (win->frame.h - th) / 2));
       const textedit_t *te = win->userdata;
@@ -110,10 +110,10 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         draw_sysicon(te->leading_icon, icon.x, icon.y, icon.w, get_sys_color(state & CTRL_DISABLED ? brTextDisabled : brTextSecondary));
       }
       if (!win->title[0] && te && te->placeholder[0])
-        draw_text_ellipsized("TextEdit", te->placeholder, text_x, text_y, MAX(0, local.w - text_x - TEXTEDIT_PADDING_HORZ), get_sys_color(brTextSecondary));
-      draw_text("TextEdit", win->title, text_x, text_y, get_sys_color(brTextNormal));
+        draw_text_ellipsized(ui_selector(win, "TextEdit"), te->placeholder, text_x, text_y, MAX(0, local.w - text_x - TEXTEDIT_PADDING_HORZ), get_sys_color(brTextSecondary));
+      draw_text(ui_selector(win, "TextEdit"), win->title, text_x, text_y, get_sys_color(brTextNormal));
       if (g_ui_runtime.focused == win && window_has_state(win, WINDOW_STATE_EDITING)) {
-        theme_draw(THEME_PART_CARET, R(text_x + text_strnwidth("TextEdit", win->title, win->cursor_pos), text_y, 2, th),
+        theme_draw_in(win, THEME_PART_CARET, R(text_x + text_strnwidth(ui_selector(win, "TextEdit"), win->title, win->cursor_pos), text_y, 2, th),
                    CTRL_NORMAL);
       }
       return true;
@@ -140,8 +140,8 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         int text_x = textedit_text_x(win);
         win->cursor_pos = 0;
         for (int i = 0;; i = edit_next(win->title, i)) {
-          int x1 = text_x + text_strnwidth("TextEdit", win->title, i);
-          int x2 = text_x + text_strnwidth("TextEdit", win->title, win->cursor_pos);
+          int x1 = text_x + text_strnwidth(ui_selector(win, "TextEdit"), win->title, i);
+          int x2 = text_x + text_strnwidth(ui_selector(win, "TextEdit"), win->title, win->cursor_pos);
           if (abs((int)LOWORD(wparam) - x1) < abs((int)LOWORD(wparam) - x2)) {
             win->cursor_pos = i;
           }

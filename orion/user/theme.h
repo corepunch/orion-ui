@@ -304,8 +304,8 @@ uint32_t theme_css_foreground(theme_part_t part, ctrl_state_t state, const ui_sc
 void theme_css_apply_palette(void);   // writes the sheet's colour roles into g_sys_colors
 void theme_draw_window_chrome(irect16_t titlebar, irect16_t caption, const char *title, ctrl_state_t state, bool maximizable);
 void theme_draw_statusbar_text(irect16_t r, const char *text);
-void theme_draw_button_label(irect16_t r, const char *text, ctrl_state_t state);
-void theme_draw_combobox(irect16_t r, const char *text, ctrl_state_t state);
+void theme_draw_button_label(const window_t *win, irect16_t r, const char *text, ctrl_state_t state);
+void theme_draw_combobox(const window_t *win, irect16_t r, const char *text, ctrl_state_t state);
 
 // Tests observe what would be painted: while a recorder is set, parts and the
 // window chrome are reported to it instead of drawn. NULL paints again.

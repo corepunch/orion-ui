@@ -429,8 +429,8 @@ static void open_submenu_popup(window_t *popup, popup_data_t *pd, int index) {
 
 static irect16_t menubar_item_rect(window_t *win, menubar_data_t *data, int index) {
   int grip = win->dock ? (data->vertical ? ui_px("Toolbar::grip", "width") : ui_px("Toolbar::grip", "width")) : 0;
-  if (data->vertical) return R(0, grip + index * ui_px("MenuBar", "height"), win->frame.w, ui_px("MenuBar", "height"));
-  return R(data->menu_x[index] - 2 + grip, 0, text_strwidth("MenuBar", data->menus[index].label) + MENU_LABEL_PAD, ui_px("MenuBar", "height"));
+  if (data->vertical) return R(0, grip + index * ui_px(ui_selector(win, "MenuBar"), "height"), win->frame.w, ui_px(ui_selector(win, "MenuBar"), "height"));
+  return R(data->menu_x[index] - 2 + grip, 0, text_strwidth(ui_selector(win, "MenuBar"), data->menus[index].label) + MENU_LABEL_PAD, ui_px(ui_selector(win, "MenuBar"), "height"));
 }
 
 static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
@@ -507,7 +507,7 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       for (int i = 0; i < count; i++) {
         data->menus[i].label = ui_tr(defs[i].label);
         data->menu_x[i] = x;
-        x += text_strwidth("MenuBar", data->menus[i].label) + MENU_LABEL_PAD;
+        x += text_strwidth(ui_selector(win, "MenuBar"), data->menus[i].label) + MENU_LABEL_PAD;
       }
       invalidate_window(win);
       return true;
@@ -526,18 +526,18 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     case evDockMeasure: {
       if (!data || !lparam) return false;
       int width = 0;
-      for (int i = 0; i < data->count; i++) width = MAX(width, text_strwidth("MenuBar", data->menus[i].label) + MENU_LABEL_PAD);
+      for (int i = 0; i < data->count; i++) width = MAX(width, text_strwidth(ui_selector(win, "MenuBar"), data->menus[i].label) + MENU_LABEL_PAD);
       *(ipoint16_t *)lparam = (ipoint16_t){MAX(80, width),
-        data->vertical ? ui_px("Toolbar::grip", "width") + data->count * ui_px("MenuBar", "height") : ui_px("MenuBar", "height")};
+        data->vertical ? ui_px("Toolbar::grip", "width") + data->count * ui_px(ui_selector(win, "MenuBar"), "height") : ui_px(ui_selector(win, "MenuBar"), "height")};
       return true;
     }
     case kMenuBarMessageGetContentWidth:
       if (!data || !data->count) return 4;
-      return (win->dock ? ui_px("Toolbar::grip", "width") : 0) + data->menu_x[data->count - 1] + text_strwidth("MenuBar", data->menus[data->count - 1].label) + MENU_LABEL_PAD;
+      return (win->dock ? ui_px("Toolbar::grip", "width") : 0) + data->menu_x[data->count - 1] + text_strwidth(ui_selector(win, "MenuBar"), data->menus[data->count - 1].label) + MENU_LABEL_PAD;
 
     case evThemeChanged:
-      if (!win->dock && !win->parent && win->frame.h != ui_px("MenuBar", "height"))
-        resize_window(win, win->frame.w, ui_px("MenuBar", "height"));
+      if (!win->dock && !win->parent && win->frame.h != ui_px(ui_selector(win, "MenuBar"), "height"))
+        resize_window(win, win->frame.w, ui_px(ui_selector(win, "MenuBar"), "height"));
       return true;
 
     case evResize:
@@ -546,8 +546,8 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return true;
 
     case evPaint: {
-      theme_draw(THEME_PART_MENU_BAR, R(0, 0, win->frame.w, win->frame.h), CTRL_NORMAL);
-      if (win->dock) theme_draw(THEME_PART_TOOLBAR_GRIP, data->vertical
+      theme_draw_in(win, THEME_PART_MENU_BAR, R(0, 0, win->frame.w, win->frame.h), CTRL_NORMAL);
+      if (win->dock) theme_draw_in(win, THEME_PART_TOOLBAR_GRIP, data->vertical
           ? rect_split_top(get_client_rect(win), ui_px("Toolbar::grip", "width"))
           : rect_split_left(get_client_rect(win), ui_px("Toolbar::grip", "width")), CTRL_NORMAL);
       window_t *maximized = menubar_maximized_window(win);
@@ -560,18 +560,18 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         int i = data->active_idx;
         irect16_t selection = menubar_item_rect(win, data, i);
         // Capsule padding can overlap adjacent hit targets; paint behind all labels.
-        if (ui_keyword_is("Menu::item", "--shape", "capsule")) {
-          selection = rect_center(selection, text_strwidth("MenuBar", data->menus[i].label), selection.h);
+        if (ui_keyword_is(ui_selector(win, "Menu::item"), "--shape", "capsule")) {
+          selection = rect_center(selection, text_strwidth(ui_selector(win, "MenuBar"), data->menus[i].label), selection.h);
           selection = rect_inset_xy(selection, -(MENU_CAPSULE_PAD + MENU_CAPSULE_INSET), 0);
         }
-        theme_draw(THEME_PART_MENU_ITEM, selection, CTRL_SELECTED);
+        theme_draw_in(win, THEME_PART_MENU_ITEM, selection, CTRL_SELECTED);
       }
       for (int i = 0; i < data->count; i++) {
         bool active = (i == data->active_idx);
         irect16_t label_rect = menubar_item_rect(win, data, i);
         if (maximized && label_rect.x + label_rect.w > restore.x) break;
-        draw_text_clipped("MenuBar", data->menus[i].label, &label_rect,
-                        theme_foreground(THEME_PART_MENU_ITEM,
+        draw_text_clipped(ui_selector(win, "MenuBar"), data->menus[i].label, &label_rect,
+                        theme_foreground_in(win, THEME_PART_MENU_ITEM,
                                          active ? CTRL_SELECTED : CTRL_NORMAL),
                         TEXT_ALIGN_CENTER);
       }
@@ -617,7 +617,7 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
 
     case evDisplayChange: {
       if (!win->dock && !win->parent)
-        resize_window(win, LOWORD(wparam), ui_px("MenuBar", "height"));
+        resize_window(win, LOWORD(wparam), ui_px(ui_selector(win, "MenuBar"), "height"));
       return false;
     }
 

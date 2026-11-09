@@ -57,6 +57,7 @@ static inline uint32_t color_mix(uint32_t a, uint32_t b, uint8_t amount) {
 // the card and the edge together. CTRL_SELECTED draws a ring in the accent edge's colour (theme accent when there is no edge) in the theme's card.ring_width margin,
 // which is reserved inside `r` for every card so selecting never shifts content.
 void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color);
+void draw_card_in(const window_t *win, irect16_t r, ctrl_state_t state, uint32_t edge_color);   // as win styles it
 // Framework internals behind theme_draw_ex(CTRL_PLASTIC); controls and apps never call these directly.
 // Single shader pass; shadow is reserved inside r, so controls never paint outside their bounds.
 void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color);

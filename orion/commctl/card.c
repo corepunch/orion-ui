@@ -94,6 +94,13 @@ static void card_notify(window_t *win, uint16_t code) {
   if (win->parent) send_message(win->parent, evCommand, MAKEDWORD(win->id, code), win);
 }
 
+// The content inset: the ring, the accent edge and the card's padding.
+static void card_apply_style(window_t *win) {
+  const char *card = ui_selector(win, "Card");
+  int inset = ui_px(card, "--ring-width"), left = ui_px(card, "padding-left"), top = ui_px(card, "padding-top");
+  win->layout.layout_padding = (irect16_t){ inset + ui_px(card, "--edge-width") + left, inset + top, inset + left, inset + top };
+}
+
 result_t win_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   card_state_t *card = (card_state_t *)win->userdata;
   switch (msg) {
@@ -106,13 +113,13 @@ result_t win_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       win_stack(win, msg, wparam, lparam);
       win->userdata = card;
-      int inset = ui_px("Card", "--ring-width");
-      win->layout.layout_padding = (irect16_t){
-        inset + ui_px("Card", "--edge-width") + ui_px("Card", "padding-left"), inset + ui_px("Card", "padding-top"),
-        inset + ui_px("Card", "padding-left"), inset + ui_px("Card", "padding-top") };
+      card_apply_style(win);
       win->layout.layout_spacing = 3;
       return true;
     }
+    case evThemeChanged:   // a new theme, or new classes or #id
+      card_apply_style(win);
+      return false;
     case evDestroy:
       free(card);
       win->userdata = NULL;
@@ -131,7 +138,7 @@ result_t win_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         ctrl_state_t state = card->state | (card->hover ? CTRL_HOVER : 0);
         if (window_is_disabled(win)) state |= CTRL_DISABLED;
         if (window_has_state(win, WINDOW_STATE_PRESSED)) state |= CTRL_PRESSED;
-        theme_draw_ex(THEME_PART_CARD, get_client_rect(win), state, &(theme_draw_opts_t){.edge_color = card->edge_color});
+        draw_card_in(win, get_client_rect(win), state, card->edge_color);
       }
       layout_paint_children(win);
       return true;

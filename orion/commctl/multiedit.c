@@ -53,20 +53,20 @@ static bool me_reserve(window_t *win, me_state_t *s, size_t needed) {
 // ---------------------------------------------------------------------------
 
 // Advance one character's worth of wrapping state.  Uses the same algorithm
-// as draw_text_wrapped_font("TextEdit", ) / calc_text_height_font("TextEdit", ) in user/text.c so that cursor
+// as draw_text_wrapped_font() / calc_text_height_font() in user/text.c so that cursor
 // positions exactly match rendered glyph positions.  Mutates *cx/*cy.
-static void me_advance(const char *buf, int i, int max_w, int *cx, int *cy) {
+static void me_advance(ui_font_t font, const char *buf, int i, int max_w, int *cx, int *cy) {
   unsigned char c = (unsigned char)buf[i];
   if (c == '\n') {
     *cx = 0;
-    *cy += text_char_height("TextEdit");
+    *cy += text_char_height(font);
   } else if (c == ' ') {
-    *cx += text_strwidth("TextEdit", " ");
+    *cx += text_strwidth(font, " ");
   } else {
-    int cw = text_strnwidth("TextEdit", (const char[]){(char)c, 0}, 1);
+    int cw = text_strnwidth(font, (const char[]){(char)c, 0}, 1);
     if (cw > 0 && *cx + cw > max_w) {
       *cx = 0;
-      *cy += text_char_height("TextEdit");
+      *cy += text_char_height(font);
     }
     *cx += cw;
   }
@@ -75,17 +75,17 @@ static void me_advance(const char *buf, int i, int max_w, int *cx, int *cy) {
 // Compute visual (cx, cy) of byte offset `cursor` in buf.
 // Coordinates are relative to the text-area origin (0, 0).
 // out_x may be NULL when only the row position is needed.
-static void me_cursor_xy(const char *buf, int cursor, int max_w,
+static void me_cursor_xy(ui_font_t font, const char *buf, int cursor, int max_w,
                           int *out_x, int *out_y) {
   int cx = 0, cy = 0;
   for (int i = 0; i < cursor && buf[i]; i++)
-    me_advance(buf, i, max_w, &cx, &cy);
+    me_advance(font, buf, i, max_w, &cx, &cy);
   if (out_x) *out_x = cx;
   *out_y = cy;
 }
 
 // Find byte offset whose visual position is closest to pixel (tx, ty).
-static int me_find_at_xy(const char *buf, int len, int tx, int ty, int max_w) {
+static int me_find_at_xy(ui_font_t font, const char *buf, int len, int tx, int ty, int max_w) {
   int cx = 0, cy = 0;
   int best = 0, best_d = 0x7fffffff;
 
@@ -96,7 +96,7 @@ static int me_find_at_xy(const char *buf, int len, int tx, int ty, int max_w) {
   }
 
   for (int i = 0; i < len; i++) {
-    me_advance(buf, i, max_w, &cx, &cy);
+    me_advance(font, buf, i, max_w, &cx, &cy);
     if (cy == ty) {
       int d = abs(cx - tx);
       if (d < best_d) { best_d = d; best = i + 1; }
@@ -107,13 +107,13 @@ static int me_find_at_xy(const char *buf, int len, int tx, int ty, int max_w) {
 }
 
 // Scroll so that the caret is within the visible viewport.
-static void me_ensure_visible(me_state_t *s, int max_w, int vis_h) {
+static void me_ensure_visible(ui_font_t font, me_state_t *s, int max_w, int vis_h) {
   int cy;
-  me_cursor_xy(s->buf, s->cursor, max_w, NULL, &cy);
+  me_cursor_xy(font, s->buf, s->cursor, max_w, NULL, &cy);
   if (cy < s->scroll_y)
     s->scroll_y = cy;
-  if (cy + text_char_height("TextEdit") > s->scroll_y + vis_h)
-    s->scroll_y = cy + text_char_height("TextEdit") - vis_h;
+  if (cy + text_char_height(font) > s->scroll_y + vis_h)
+    s->scroll_y = cy + text_char_height(font) - vis_h;
   if (s->scroll_y < 0) s->scroll_y = 0;
 }
 
@@ -135,11 +135,11 @@ static void me_sync_scrollbar(window_t *win, me_state_t *s) {
   int tw, th;
   tw = MAX(1, win->frame.w - TEXTEDIT_PADDING_HORZ * 2);
   th = MAX(1, win->frame.h - control_text_padding_y(win->flags) * 2);
-  int total_h = calc_text_height_font("TextEdit", s->buf, tw);
+  int total_h = calc_text_height_font(ui_selector(win, "TextEdit"), s->buf, tw);
   bool needs_scroll = (total_h > th);
   if (needs_scroll) {
     tw = MAX(1, tw - ui_px("Scrollbar", "width"));
-    total_h = calc_text_height_font("TextEdit", s->buf, tw);
+    total_h = calc_text_height_font(ui_selector(win, "TextEdit"), s->buf, tw);
   }
   int max_scroll = needs_scroll ? (total_h - th) : 0;
   if (s->scroll_y > max_scroll) s->scroll_y = max_scroll;
@@ -187,9 +187,9 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         int avail_w = m->avail_w > 0 ? m->avail_w : ME_MIN_WIDTH;
         if (avail_w < ME_MIN_WIDTH) avail_w = ME_MIN_WIDTH;
         m->desired_w = MAX(ME_MIN_WIDTH,
-                           text_strwidth("TextEdit", win->title) + TEXTEDIT_PADDING_HORZ * 2);
-        m->desired_h = MAX(text_char_height("TextEdit") * 4,
-                           calc_text_height_font("TextEdit", s ? s->buf : win->title, MAX(1, avail_w - TEXTEDIT_PADDING_HORZ * 2)) + control_text_padding_y(win->flags) * 2);
+                           text_strwidth(ui_selector(win, "TextEdit"), win->title) + TEXTEDIT_PADDING_HORZ * 2);
+        m->desired_h = MAX(text_char_height(ui_selector(win, "TextEdit")) * 4,
+                           calc_text_height_font(ui_selector(win, "TextEdit"), s ? s->buf : win->title, MAX(1, avail_w - TEXTEDIT_PADDING_HORZ * 2)) + control_text_padding_y(win->flags) * 2);
         if (!(win->flags & WINDOW_FLEXSPACE) && win->layout.layout_fixed_h > 0)
           m->desired_h = win->layout.layout_fixed_h;
       }
@@ -217,7 +217,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       ctrl_state_t state = focused ? CTRL_FOCUSED : CTRL_NORMAL;
       state |= CTRL_MULTILINE;
       if (window_is_disabled(win)) state |= CTRL_DISABLED;
-      theme_draw(THEME_PART_FIELD, R(0, 0, win->frame.w, win->frame.h), state);
+      theme_draw_in(win, THEME_PART_FIELD, R(0, 0, win->frame.w, win->frame.h), state);
 
       int tw, th;
       me_text_dims(win, &tw, &th);
@@ -228,17 +228,17 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 
       // Draw wrapped text, offset upward by scroll_y.
       irect16_t vp = { tx, ty - s->scroll_y, tw, th + s->scroll_y };
-      draw_text_wrapped_font("TextEdit", s->buf, &vp, get_sys_color(brTextNormal));
+      draw_text_wrapped_font(ui_selector(win, "TextEdit"), s->buf, &vp, get_sys_color(brTextNormal));
       if (!s->len && s->placeholder[0])
-        draw_text_ellipsized("TextEdit", s->placeholder, tx, ty, tw, get_sys_color(brTextSecondary));
+        draw_text_ellipsized(ui_selector(win, "TextEdit"), s->placeholder, tx, ty, tw, get_sys_color(brTextSecondary));
 
       // Draw caret when focused.
       if (focused) {
         int cx, cy;
-        me_cursor_xy(s->buf, s->cursor, tw, &cx, &cy);
+        me_cursor_xy(ui_selector(win, "TextEdit"), s->buf, s->cursor, tw, &cx, &cy);
         int cur_y = ty + cy - s->scroll_y;
-        if (cur_y >= ty - text_char_height("TextEdit") && cur_y < ty + th) {
-          theme_draw(THEME_PART_CARET, R(tx + cx, cur_y, 2, text_char_height("TextEdit")), CTRL_NORMAL);
+        if (cur_y >= ty - text_char_height(ui_selector(win, "TextEdit")) && cur_y < ty + th) {
+          theme_draw_in(win, THEME_PART_CARET, R(tx + cx, cur_y, 2, text_char_height(ui_selector(win, "TextEdit"))), CTRL_NORMAL);
         }
       }
 
@@ -256,10 +256,10 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       // wparam carries client-local x (LOWORD) and y (HIWORD).
       int lx = (int)(int16_t)LOWORD(wparam) - TEXTEDIT_PADDING_HORZ;
       int ly = (int)(int16_t)HIWORD(wparam) - control_text_padding_y(win->flags);
-      int target_y = (ly / text_char_height("TextEdit")) * text_char_height("TextEdit");
+      int target_y = (ly / text_char_height(ui_selector(win, "TextEdit"))) * text_char_height(ui_selector(win, "TextEdit"));
       if (target_y < 0) target_y = 0;
-      s->cursor = me_find_at_xy(s->buf, s->len, lx, target_y, tw);
-      me_ensure_visible(s, tw, th);
+      s->cursor = me_find_at_xy(ui_selector(win, "TextEdit"), s->buf, s->len, lx, target_y, tw);
+      me_ensure_visible(ui_selector(win, "TextEdit"), s, tw, th);
       invalidate_window(win);
       return true;
     }
@@ -273,7 +273,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       int delta = -(int16_t)HIWORD((uintptr_t)lparam);
       s->scroll_y += delta;
       if (s->scroll_y < 0) s->scroll_y = 0;
-      int total_h = calc_text_height_font("TextEdit", s->buf, tw);
+      int total_h = calc_text_height_font(ui_selector(win, "TextEdit"), s->buf, tw);
       int max_scroll = total_h - th;
       if (max_scroll < 0) max_scroll = 0;
       if (s->scroll_y > max_scroll) s->scroll_y = max_scroll;
@@ -297,7 +297,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       s->len++;
       int tw, th;
       me_text_dims(win, &tw, &th);
-      me_ensure_visible(s, tw, th);
+      me_ensure_visible(ui_selector(win, "TextEdit"), s, tw, th);
       me_sync_scrollbar(win, s);
       invalidate_window(win);
       return true;
@@ -318,7 +318,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
             s->buf[s->cursor] = '\n';
             s->cursor++;
             s->len++;
-            me_ensure_visible(s, tw, th);
+            me_ensure_visible(ui_selector(win, "TextEdit"), s, tw, th);
             me_sync_scrollbar(win, s);
             invalidate_window(win);
           }
@@ -331,7 +331,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
                     (size_t)(s->len - s->cursor + 1));
             s->cursor--;
             s->len--;
-            me_ensure_visible(s, tw, th);
+            me_ensure_visible(ui_selector(win, "TextEdit"), s, tw, th);
             me_sync_scrollbar(win, s);
             invalidate_window(win);
           }
@@ -343,7 +343,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
                     s->buf + s->cursor + 1,
                     (size_t)(s->len - s->cursor));
             s->len--;
-            me_ensure_visible(s, tw, th);
+            me_ensure_visible(ui_selector(win, "TextEdit"), s, tw, th);
             me_sync_scrollbar(win, s);
             invalidate_window(win);
           }
@@ -352,7 +352,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         case AX_KEY_LEFTARROW:
           if (s->cursor > 0) {
             s->cursor--;
-            me_ensure_visible(s, tw, th);
+            me_ensure_visible(ui_selector(win, "TextEdit"), s, tw, th);
             invalidate_window(win);
           }
           return true;
@@ -360,18 +360,18 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
         case AX_KEY_RIGHTARROW:
           if (s->cursor < s->len) {
             s->cursor++;
-            me_ensure_visible(s, tw, th);
+            me_ensure_visible(ui_selector(win, "TextEdit"), s, tw, th);
             invalidate_window(win);
           }
           return true;
 
         case AX_KEY_UPARROW: {
           int cx, cy;
-          me_cursor_xy(s->buf, s->cursor, tw, &cx, &cy);
-          int ny = cy - text_char_height("TextEdit");
+          me_cursor_xy(ui_selector(win, "TextEdit"), s->buf, s->cursor, tw, &cx, &cy);
+          int ny = cy - text_char_height(ui_selector(win, "TextEdit"));
           if (ny >= 0) {
-            s->cursor = me_find_at_xy(s->buf, s->len, cx, ny, tw);
-            me_ensure_visible(s, tw, th);
+            s->cursor = me_find_at_xy(ui_selector(win, "TextEdit"), s->buf, s->len, cx, ny, tw);
+            me_ensure_visible(ui_selector(win, "TextEdit"), s, tw, th);
             invalidate_window(win);
           }
           return true;
@@ -379,12 +379,12 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 
         case AX_KEY_DOWNARROW: {
           int cx, cy;
-          me_cursor_xy(s->buf, s->cursor, tw, &cx, &cy);
-          int ny = cy + text_char_height("TextEdit");
-          int new_pos = me_find_at_xy(s->buf, s->len, cx, ny, tw);
+          me_cursor_xy(ui_selector(win, "TextEdit"), s->buf, s->cursor, tw, &cx, &cy);
+          int ny = cy + text_char_height(ui_selector(win, "TextEdit"));
+          int new_pos = me_find_at_xy(ui_selector(win, "TextEdit"), s->buf, s->len, cx, ny, tw);
           if (new_pos != s->cursor) {
             s->cursor = new_pos;
-            me_ensure_visible(s, tw, th);
+            me_ensure_visible(ui_selector(win, "TextEdit"), s, tw, th);
             invalidate_window(win);
           }
           return true;
@@ -395,7 +395,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
           int p = s->cursor;
           while (p > 0 && s->buf[p - 1] != '\n') p--;
           s->cursor = p;
-          me_ensure_visible(s, tw, th);
+          me_ensure_visible(ui_selector(win, "TextEdit"), s, tw, th);
           invalidate_window(win);
           return true;
         }
@@ -405,7 +405,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
           int p = s->cursor;
           while (p < s->len && s->buf[p] != '\n') p++;
           s->cursor = p;
-          me_ensure_visible(s, tw, th);
+          me_ensure_visible(ui_selector(win, "TextEdit"), s, tw, th);
           invalidate_window(win);
           return true;
         }
@@ -465,7 +465,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       if (!s) return true;
       int tw, th;
       me_text_dims(win, &tw, &th);
-      int total_h   = calc_text_height_font("TextEdit", s->buf, tw);
+      int total_h   = calc_text_height_font(ui_selector(win, "TextEdit"), s->buf, tw);
       int max_scroll = total_h - th;
       if (max_scroll < 0) max_scroll = 0;
       s->scroll_y = (int)wparam;

@@ -175,10 +175,10 @@ static int tab_icon_gap(tabview_state_t *st) {
   (void)st; return 3;
 }
 
-static int tab_width(const char *title, tabview_state_t *st, int idx) {
+static int tab_width(window_t *win, const char *title, tabview_state_t *st, int idx) {
   if (st && (st->style & TAB_STYLE_ICONS_ONLY))
     return tab_has_icon(st, idx) ? st->strip.icon_w + 8 : TAB_CONTROL_HEIGHT;
-  int w = MAX(ui_px("TabView::tab", "min-width"), text_strwidth("TabView::tab", title) + 2 * ui_px("TabView::tab", "padding-left"));
+  int w = MAX(ui_px(ui_selector(win, "TabView::tab"), "min-width"), text_strwidth(ui_selector(win, "TabView::tab"), title) + 2 * ui_px(ui_selector(win, "TabView::tab"), "padding-left"));
   if (tab_has_icon(st, idx)) w += st->strip.icon_w + tab_icon_gap(st);
   return w;
 }
@@ -188,7 +188,7 @@ static int sidebar_rows_width(window_t *win, tabview_state_t *st) {
   int w = 96;
   for (int i = 0, n = tab_count(win); i < n; i++) {
     int iw = tab_has_icon(st, i) ? st->strip.icon_w + tab_icon_gap(st) : 0;
-    w = MAX(w, text_strwidth("TabView::tab", tab_title(win, i)) + iw + 4 * SIDEBAR_PAD);
+    w = MAX(w, text_strwidth(ui_selector(win, "TabView::tab"), tab_title(win, i)) + iw + 4 * SIDEBAR_PAD);
   }
   return w;
 }
@@ -224,31 +224,31 @@ static void draw_tab_icon(tabview_state_t *st, int idx, int x, int y, int h) {
                      UV_RECT(u0, v0, u1, v1), 0xFFFFFFFF, 0);
 }
 
-static void draw_tab_item(const char *title, int x, bool selected, tabview_state_t *st, int idx) {
-  int w = tab_width(title, st, idx);
+static void draw_tab_item(window_t *win, const char *title, int x, bool selected, tabview_state_t *st, int idx) {
+  int w = tab_width(win, title, st, idx);
   int th = tab_header_height(st);
   int y = (selected ? 0 : 2) + ((st->style & TAB_STYLE_PANE) ? 0 : TAB_TOP_PAD);
   int h = th - y;
   ctrl_state_t state = selected ? CTRL_SELECTED : CTRL_NORMAL;
-  theme_draw(THEME_PART_TAB, rect_inset_xy(R(x, y, w, h), selected ? 0 : 2, 0), state);
+  theme_draw_in(win, THEME_PART_TAB, rect_inset_xy(R(x, y, w, h), selected ? 0 : 2, 0), state);
   bool has_icon = tab_has_icon(st, idx);
   if (st->style & TAB_STYLE_ICONS_ONLY) {
     draw_tab_icon(st, idx, x + (w - st->strip.icon_w) / 2, y, h);
     return;
   }
-  int sw = text_strwidth("TabView::tab", title), iw = has_icon ? st->strip.icon_w + tab_icon_gap(st) : 0;
+  int sw = text_strwidth(ui_selector(win, "TabView::tab"), title), iw = has_icon ? st->strip.icon_w + tab_icon_gap(st) : 0;
   int content_w = iw + sw;
   int cx = x + (w - content_w) / 2;
   if (has_icon) { draw_tab_icon(st, idx, cx, y, h); cx += iw; }
-  draw_text("TabView::tab", title, cx, y + (h - text_char_height("TabView::tab")) / 2,
-                  theme_foreground(THEME_PART_TAB, state));
+  draw_text(ui_selector(win, "TabView::tab"), title, cx, y + (h - text_char_height(ui_selector(win, "TabView::tab"))) / 2,
+                  theme_foreground_in(win, THEME_PART_TAB, state));
 }
 
 static irect16_t tab_page_rect(window_t *win, tabview_state_t *st, irect16_t r) {
   if (is_sidebar(st)) return rect_trim_left(r, sidebar_width(win, st));
   if (!tab_header_extent(win, st)) return r;
   irect16_t page_rect = rect_trim_top(r, tab_header_extent(win, st));
-  int frame = ui_px("TabView::pane", "--frame-width");
+  int frame = ui_px(ui_selector(win, "TabView::pane"), "--frame-width");
   page_rect.x += frame; page_rect.w = MAX(0, page_rect.w - 2 * frame);
   page_rect.h = MAX(0, page_rect.h - frame);
   return page_rect;
@@ -291,10 +291,10 @@ static void tab_arrange(window_t *win) {
   }
   if (tab_single_hidden(win, st)) st->scroll = 0;
   else if (!is_sidebar(st)) {
-    int start = ui_px("TabView::bar", "padding-left");
+    int start = ui_px(ui_selector(win, "TabView::bar"), "padding-left");
     int x = start, selected_x = start, selected_w = 0, width = tab_available_width(win, st);
     for (int idx = 0; idx < count; idx++) {
-      int w = tab_width(tab_title(win, idx), st, idx);
+      int w = tab_width(win, tab_title(win, idx), st, idx);
       if (idx == st->selected) { selected_x = x; selected_w = w; }
       x += w;
     }
@@ -348,17 +348,17 @@ static result_t win_tabview_list(window_t *win, uint32_t msg, uint32_t wparam, v
   switch (msg) {
     case evPaint: {
       int h = get_client_rect(win).h;
-      theme_draw(THEME_PART_SIDEBAR, get_client_rect(win), CTRL_NORMAL);
+      theme_draw_in(win, THEME_PART_SIDEBAR, get_client_rect(win), CTRL_NORMAL);
       for (int i = 0, n = tab_count(tabs); i < n; i++) {
         irect16_t r = window_scroll_rect_to_client(win, sidebar_row(tabs, st, i));
         if (r.y + r.h >= 0 && r.y <= h) {
           ctrl_state_t state = i == st->selected ? CTRL_SELECTED : CTRL_NORMAL;
           // Same capsule as a menu item; the theme insets it, so widen the rect to land on the row.
-          if (i == st->selected) theme_draw(THEME_PART_MENU_ITEM, rect_inset_xy(r, -MENU_CAPSULE_INSET, 0), state);
+          if (i == st->selected) theme_draw_in(win, THEME_PART_MENU_ITEM, rect_inset_xy(r, -MENU_CAPSULE_INSET, 0), state);
           int x = r.x + SIDEBAR_PAD;
           if (tab_has_icon(st, i)) { draw_tab_icon(st, i, x, r.y, r.h); x += st->strip.icon_w + tab_icon_gap(st); }
-          draw_text_ellipsized("TabView::tab", tab_title(tabs, i), x, r.y + (r.h - text_char_height("TabView::tab")) / 2,
-                               r.x + r.w - SIDEBAR_PAD - x, theme_foreground(THEME_PART_MENU_ITEM, state));
+          draw_text_ellipsized(ui_selector(win, "TabView::tab"), tab_title(tabs, i), x, r.y + (r.h - text_char_height(ui_selector(win, "TabView::tab"))) / 2,
+                               r.x + r.w - SIDEBAR_PAD - x, theme_foreground_in(win, THEME_PART_MENU_ITEM, state));
         }
       }
       return true;
@@ -394,27 +394,27 @@ static bool tab_paint(window_t *win) {
   if (is_sidebar(st)) return false; // the list and the selected page paint as children
   irect16_t cr = get_client_rect(win);
   int th = tab_header_extent(win, st);
-  theme_draw(THEME_PART_TAB_BAR, rect_split_top(cr, th), CTRL_NORMAL);
+  theme_draw_in(win, THEME_PART_TAB_BAR, rect_split_top(cr, th), CTRL_NORMAL);
   if (!st) return true;
 
   set_clip_rect(win, R(0, 0, tab_available_width(win, st), th));
-  int selected_x = ui_px("TabView::bar", "padding-left") - st->scroll;
+  int selected_x = ui_px(ui_selector(win, "TabView::bar"), "padding-left") - st->scroll;
   int x = selected_x;
   if (tab_single_hidden(win, st)) {
-    if (th) draw_text_ellipsized("TabView::tab", tab_title(win, 0), ui_px("TabView::tab", "padding-left"),
-      (th - text_char_height("TabView::tab")) / 2, MAX(0, tab_available_width(win, st) - 2 * ui_px("TabView::tab", "padding-left")),
+    if (th) draw_text_ellipsized(ui_selector(win, "TabView::tab"), tab_title(win, 0), ui_px(ui_selector(win, "TabView::tab"), "padding-left"),
+      (th - text_char_height(ui_selector(win, "TabView::tab"))) / 2, MAX(0, tab_available_width(win, st) - 2 * ui_px(ui_selector(win, "TabView::tab"), "padding-left")),
       get_sys_color(brTextNormal));
   } else {
     for (int i = 0, n = tab_count(win); i < n; i++) {
       if (i == st->selected) selected_x = x;
-      else draw_tab_item(tab_title(win, i), x, false, st, i);
-      x += tab_width(tab_title(win, i), st, i);
+      else draw_tab_item(win, tab_title(win, i), x, false, st, i);
+      x += tab_width(win, tab_title(win, i), st, i);
     }
-    if (st->selected < tab_count(win)) draw_tab_item(tab_title(win, st->selected), selected_x, true, st, st->selected);
+    if (st->selected < tab_count(win)) draw_tab_item(win, tab_title(win, st->selected), selected_x, true, st, st->selected);
   }
   set_clip_rect(win, cr);
   irect16_t page = rect_trim_top(cr, th);
-  theme_draw(THEME_PART_TAB_PANE, page, CTRL_NORMAL);
+  theme_draw_in(win, THEME_PART_TAB_PANE, page, CTRL_NORMAL);
   return false; // The window system paints the selected page and the toolbar children.
 }
 
@@ -567,9 +567,9 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (is_sidebar(st)) return false;
       int th = tab_header_extent(win, st);
       if (my < 0 || my >= th || mx < 0 || mx >= tab_available_width(win, st)) return false;
-      int left = tab_single_hidden(win, st) ? 0 : ui_px("TabView::bar", "padding-left") - st->scroll;
+      int left = tab_single_hidden(win, st) ? 0 : ui_px(ui_selector(win, "TabView::bar"), "padding-left") - st->scroll;
       for (int i = 0, n = tab_count(win); i < n; i++) {
-        int w = tab_single_hidden(win, st) ? tab_available_width(win, st) - left : tab_width(tab_title(win, i), st, i);
+        int w = tab_single_hidden(win, st) ? tab_available_width(win, st) - left : tab_width(win, tab_title(win, i), st, i);
         if (mx >= left && mx < left + w) {
           tab_remember_focus(win, g_ui_runtime.focused); set_focus(win); tab_select(win, i, true);
           if ((st->style & TAB_STYLE_DRAG_TABS) && !st->item_mode) {
@@ -674,7 +674,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return (result_t)(intptr_t)page;
     }
     case tcGetTabRect: {
-      int index = (int)wparam, x = ui_px("TabView::bar", "padding-left") - (st ? st->scroll : 0), i = 0;
+      int index = (int)wparam, x = ui_px(ui_selector(win, "TabView::bar"), "padding-left") - (st ? st->scroll : 0), i = 0;
       if (!st || !lparam || index < 0 || index >= tab_count(win)) {
         fprintf(stderr, "[tv] get_tab_rect rejected win=%u index=%d\n", win->id, index);
         fflush(stderr); return false;
@@ -687,8 +687,8 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         *(irect16_t *)lparam = st->actions ? R(0, 0, tab_available_width(win, st), tab_header_height(st)) : R(0, 0, 0, 0);
         return true;
       }
-      for (; i < index; i++) x += tab_width(tab_title(win, i), st, i);
-      *(irect16_t *)lparam = R(x, 0, tab_width(tab_title(win, index), st, index), tab_header_extent(win, st));
+      for (; i < index; i++) x += tab_width(win, tab_title(win, i), st, i);
+      *(irect16_t *)lparam = R(x, 0, tab_width(win, tab_title(win, index), st, index), tab_header_extent(win, st));
       return true;
     }
     case tcMovePage: {

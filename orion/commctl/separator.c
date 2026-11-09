@@ -46,9 +46,9 @@ result_t win_separator(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       bool vertical = separator_is_vertical(win);
       irect16_t pad = win->parent ? win->parent->layout.layout_padding : (irect16_t){0, 0, 0, 0};
       if (vertical) {
-        theme_draw(THEME_PART_SEPARATOR, R(win->frame.w / 2, -pad.y, 1, win->frame.h + pad.y + pad.h), CTRL_NORMAL);
+        theme_draw_in(win, THEME_PART_SEPARATOR, R(win->frame.w / 2, -pad.y, 1, win->frame.h + pad.y + pad.h), CTRL_NORMAL);
       } else {
-        theme_draw(THEME_PART_SEPARATOR, R(-pad.x, win->frame.h / 2, win->frame.w + pad.x + pad.w, 1), CTRL_NORMAL);
+        theme_draw_in(win, THEME_PART_SEPARATOR, R(-pad.x, win->frame.h / 2, win->frame.w + pad.x + pad.w, 1), CTRL_NORMAL);
       }
       return true;
     }

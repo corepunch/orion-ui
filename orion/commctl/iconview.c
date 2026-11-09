@@ -28,7 +28,7 @@ static int icon_hit_index(window_t *win, reportview_data_t *data, uint32_t wpara
 
 static void icon_paint(window_t *win, reportview_data_t *data) {
   irect16_t cr = get_client_rect(win);
-  theme_draw(THEME_PART_LIST_BODY, R(0, 0, cr.w, cr.h), CTRL_NORMAL);
+  theme_draw_in(win, THEME_PART_LIST_BODY, R(0, 0, cr.w, cr.h), CTRL_NORMAL);
 
   bitmap_strip_t *strip = data->icon_strip;
   for (uint32_t i = 0; i < data->count; i++) {
@@ -49,8 +49,8 @@ static void icon_paint(window_t *win, reportview_data_t *data) {
                            item_h};
 
     ctrl_state_t item_state = (int)i == data->selected ? CTRL_SELECTED : CTRL_NORMAL;
-    uint32_t icon_col = item_state ? theme_foreground(THEME_PART_ICON_ITEM, item_state) : data->items[i].color;
-    theme_draw(THEME_PART_ICON_ITEM, R(x, y, item_w, item_h), item_state);
+    uint32_t icon_col = item_state ? theme_foreground_in(win, THEME_PART_ICON_ITEM, item_state) : data->items[i].color;
+    theme_draw_in(win, THEME_PART_ICON_ITEM, R(x, y, item_w, item_h), item_state);
     const char *icon_name = data->items[i].icon_name;
     if (icon_name) {
       sysicon_resolved_t res;
@@ -61,7 +61,7 @@ static void icon_paint(window_t *win, reportview_data_t *data) {
       rv_draw_item_icon(strip, data->items[i].icon, &icon_rect,
                         data->preserve_icon_colors ? 0xFFFFFFFF : icon_col);
     }
-    draw_text_clipped("IconView::item", data->items[i].text, &text_rect, icon_col, 0);
+    draw_text_clipped(ui_selector(win, "IconView::item"), data->items[i].text, &text_rect, icon_col, 0);
   }
 }
 

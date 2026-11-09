@@ -39,7 +39,7 @@ static int sl_axis(const window_t *win, int mx, int my) {
 // Range of thumb-centre positions: [start, start + span].
 static void sl_travel(const window_t *win, int *start, int *span) {
   int edge = SLIDER_TRACK_PAD;
-  if (sl_trough(win)) edge = ui_px("Slider::trough", "--inset") + ui_px("Slider::knob", "--inset") + ui_px("Slider::knob", "--length") / 2;
+  if (sl_trough(win)) edge = ui_px(ui_selector(win, "Slider::trough"), "--inset") + ui_px(ui_selector(win, "Slider::knob"), "--inset") + ui_px(ui_selector(win, "Slider::knob"), "--length") / 2;
   *start = edge;
   *span = MAX(1, sl_length(win) - 2 * edge);
 }
@@ -51,7 +51,7 @@ static irect16_t sl_axis_rect(const window_t *win, int from, int len, irect16_t 
 }
 
 static irect16_t sl_trough_rect(const window_t *win) {
-  return rect_inset(get_client_rect(win), ui_px("Slider::trough", "--inset"));
+  return rect_inset(get_client_rect(win), ui_px(ui_selector(win, "Slider::trough"), "--inset"));
 }
 
 static int sl_clamp_count(int n) {
@@ -77,8 +77,8 @@ static int sl_value_from_axis(const window_t *win, const slider_state_t *s, int 
 }
 
 static irect16_t sl_knob_rect(const window_t *win, const slider_state_t *s, int i) {
-  irect16_t trough = rect_inset(sl_trough_rect(win), ui_px("Slider::knob", "--inset"));
-  int len = ui_px("Slider::knob", "--length");
+  irect16_t trough = rect_inset(sl_trough_rect(win), ui_px(ui_selector(win, "Slider::knob"), "--inset"));
+  int len = ui_px(ui_selector(win, "Slider::knob"), "--length");
   return sl_axis_rect(win, sl_axis_from_value(win, s, s->pos[i]) - len / 2, len, trough);
 }
 
@@ -161,13 +161,13 @@ result_t win_slider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       if (!s) return true;
       {
       irect16_t cr = get_client_rect(win);
-      if (!(win->flags & WINDOW_NOFILL)) theme_draw(THEME_PART_SURFACE, cr, CTRL_NORMAL);
+      if (!(win->flags & WINDOW_NOFILL)) theme_draw_in(win, THEME_PART_SURFACE, cr, CTRL_NORMAL);
       if (sl_trough(win)) {
         ctrl_state_t base = window_has_state(win, WINDOW_STATE_DISABLED) ? CTRL_DISABLED : CTRL_NORMAL;
-        theme_draw(THEME_PART_SLIDER_TROUGH, sl_trough_rect(win), base);
+        theme_draw_in(win, THEME_PART_SLIDER_TROUGH, sl_trough_rect(win), base);
         for (int i = 0; i < s->count; i++) {
           bool active = s->dragging && s->drag_index == i;
-          theme_draw(THEME_PART_SLIDER_KNOB, sl_knob_rect(win, s, i), base | (active ? CTRL_PRESSED : 0));
+          theme_draw_in(win, THEME_PART_SLIDER_KNOB, sl_knob_rect(win, s, i), base | (active ? CTRL_PRESSED : 0));
         }
         return true;
       }
@@ -176,13 +176,13 @@ result_t win_slider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
       sl_travel(win, &start, &span);
       irect16_t track = R(start, SLIDER_BAR_Y + SLIDER_BAR_H / 2 - 1, span, 2);
       if (vertical) track = R(cr.w / 2 - 1, start, 2, span);
-      theme_draw(THEME_PART_SLIDER_TRACK, track, CTRL_NORMAL);
+      theme_draw_in(win, THEME_PART_SLIDER_TRACK, track, CTRL_NORMAL);
       for (int i = 0; i < s->count; i++) {
         bool active = s->dragging && s->drag_index == i;
         int tx = sl_axis_from_value(win, s, s->pos[i]);
         irect16_t thumb = R(tx - 3, SLIDER_HANDLE_Y - 2, SLIDER_MIN_THUMB_W, 11);
         if (vertical) thumb = R(cr.w / 2 - 5, cr.h - tx - 3, 11, SLIDER_MIN_THUMB_W);
-        theme_draw(THEME_PART_SLIDER_THUMB, thumb, active ? CTRL_PRESSED : CTRL_NORMAL);
+        theme_draw_in(win, THEME_PART_SLIDER_THUMB, thumb, active ? CTRL_PRESSED : CTRL_NORMAL);
       }
       }
       return true;
