@@ -103,6 +103,7 @@ static const struct { const char *element, *part, *classes; } k_part_selectors[T
   [THEME_PART_PAGE]                   = {"Page"},
   [THEME_PART_TITLE_TOOLBAR]          = {"Window", "title-toolbar"},
   [THEME_PART_COLUMN_DIVIDER]         = {"TableView", "divider"},
+  [THEME_PART_LIST_GROUP]             = {"TableView", "group"},
 };
 
 // ── value parsing ─────────────────────────────────────────────────────────────

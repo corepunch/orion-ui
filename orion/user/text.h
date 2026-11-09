@@ -13,6 +13,7 @@ typedef enum {
   FONT_SMALLEST = 2,  // Compact labels in icon/grid views and dense controls
   FONT_TITLE  = 3,  // A window title shown in its toolbar (the caption font, larger)
   FONT_DISPLAY = 4, // Headline figures: the one figure a view exists to show (a start page's money total)
+  FONT_HEADING = 5, // Strong small text: group captions and section headings in lists and forms
 } ui_font_t;
 
 // ── Dynamic metric accessors ─────────────────────────────────────────────────

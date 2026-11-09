@@ -241,6 +241,7 @@ PHONY_APP_NAMES = penciltest
 # Override per build: make imageeditor THEME_imageeditor=light
 THEME_ledger ?= porcelain
 THEME_lodge ?= porcelain
+THEME_gitclient ?= porcelain
 app_theme_cflags = $(if $(filter-out modern,$(THEME_$(1))),-DORION_THEME=$(THEME_$(1)))
 define check_app_theme
 $(if $(THEME_$(1)),$(if $(filter classic modern light navy amber porcelain porcelain_dark metro,$(THEME_$(1))),,$(error unknown THEME_$(1)=$(THEME_$(1)) (want classic, modern, light, navy, amber, porcelain, porcelain_dark, or metro))))

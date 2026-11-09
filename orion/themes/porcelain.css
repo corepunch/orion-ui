@@ -128,3 +128,7 @@ Card {
 /* Business tables: 21 px rows under a 24 px header, ruled by hairlines. */
 TableView::header { min-height: 24px; }
 TableView::row    { min-height: 21px; --divider-width: 1px; }
+
+/* Group captions read as headings on a quiet band; column titles step back. */
+TableView::group  { background: var(--window-dark-bg); color: var(--text-normal); }
+TableView::header { color: var(--text-secondary); }

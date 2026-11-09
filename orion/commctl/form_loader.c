@@ -656,7 +656,7 @@ static void fl_control(fl_build_t *b, int i, uint32_t parent) {
   fl_rect(lib, c, "padding", "layout_padding", &d->padding);
   fl_rect(lib, c, "margin", "layout_margin", &d->margin);
   d->parent = parent;
-  d->font = fl_eq(font, "system") ? FONT_SYSTEM : fl_eq(font, "smallest") ? FONT_SMALLEST : fl_eq(font, "title") ? FONT_TITLE : fl_eq(font, "display") ? FONT_DISPLAY : FONT_SMALL;
+  d->font = fl_eq(font, "system") ? FONT_SYSTEM : fl_eq(font, "smallest") ? FONT_SMALLEST : fl_eq(font, "title") ? FONT_TITLE : fl_eq(font, "display") ? FONT_DISPLAY : fl_eq(font, "heading") ? FONT_HEADING : FONT_SMALL;
   d->font_set = font != NULL;
   d->color = (uint8_t)FL_ENUM(color, kColors, brTextNormal);
   d->color_set = color != NULL;

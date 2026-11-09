@@ -92,6 +92,7 @@ Toolbar::grip   { content: grip; fill: var(--text-disabled); }
 TableView::header  { background: var(--control-bg); border-bottom: 1px solid var(--button-inner); }
 TableView::divider { background: var(--dark-edge); }
 TableView::divider:hover { background: var(--accent); }
+TableView::group   { color: var(--text-secondary); }
 TableView::row:hover   { background: var(--button-hover); }
 TableView::row:checked, TableView::row:active { background: var(--selection); }
 TableView::row:checked { color: var(--accent-text); }
@@ -167,4 +168,5 @@ Scrollbar::thumb:disabled { background: var(--text-disabled); }
   --font-smallest: 400 11px "IBM Plex Sans";   /* captions in dense views */
   --font-title:    600 18px "IBM Plex Sans";   /* a window title in its toolbar */
   --font-display:  600 24px "IBM Plex Sans";   /* the one figure a view exists to show */
+  --font-heading:  600 12px "IBM Plex Sans";   /* group captions and section headings */
 }

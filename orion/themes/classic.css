@@ -58,6 +58,7 @@
   --font-smallest: none;
   --font-title: none;
   --font-display: none;
+  --font-heading: none;
 
   --raised-border: var(--light-edge) var(--dark-edge) var(--dark-edge) var(--light-edge);
   --sunken-border: var(--dark-edge) var(--light-edge) var(--light-edge) var(--dark-edge);

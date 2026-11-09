@@ -77,7 +77,7 @@ apply to every part.
 |---|---|---|---|
 | `BUTTON` | `Button` | `LIST_ITEM` | `TableView::row` |
 | `FIELD` | `TextEdit` (`.multiline`) | `HEADER` | `TableView::header` |
-| `COMBOBOX`, `COMBOBOX_ARROW` | `ComboBox`, `ComboBox::arrow` | `COLUMN_DIVIDER` | `TableView::divider` |
+| `COMBOBOX`, `COMBOBOX_ARROW` | `ComboBox`, `ComboBox::arrow` | `COLUMN_DIVIDER`, `LIST_GROUP` | `TableView::divider`, `TableView::group` (a grouped list's caption row) |
 | `CHECKBOX` | `CheckBox::box` | `MENU_BAR`, `MENU_POPUP`, `MENU_ITEM` | `MenuBar`, `Menu`, `Menu::item` |
 | `SEGMENTED_TRACK`, `SEGMENT` | `SegmentedControl`, `::segment` | `SEPARATOR` | `Separator` |
 | `TAB`, `TAB_BAR`, `TAB_PANE` | `TabView::tab`, `::bar`, `::pane` | `PAGE`, `PANEL`, `SURFACE`, `SIDEBAR` | `Page`, `Panel`, `Surface`, `Sidebar` |
@@ -127,6 +127,7 @@ theme changes; `base.css` sets IBM Plex Sans:
 | `--font-smallest` | `FONT_SMALLEST` | Captions in dense views |
 | `--font-title` | `FONT_TITLE` | A window title in its toolbar |
 | `--font-display` | `FONT_DISPLAY` | The one figure a view exists to show |
+| `--font-heading` | `FONT_HEADING` | Group captions and section headings |
 
 The face is `share/orion/fonts/<Family without spaces>-<Weight>.ttf`, with
 weights named Thin, ExtraLight, Light, Regular, Medium, SemiBold, Bold,

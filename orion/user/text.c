@@ -37,6 +37,7 @@ static struct {
   font_atlas_t smallest;
   font_atlas_t title;
   font_atlas_t display;
+  font_atlas_t heading;
   bool ready;
 } text_state = {0};
 
@@ -47,6 +48,7 @@ static inline font_atlas_t *font_for_role(ui_font_t font) {
   if (font == FONT_SMALLEST) return &text_state.smallest;
   if (font == FONT_TITLE) return &text_state.title;
   if (font == FONT_DISPLAY) return &text_state.display;
+  if (font == FONT_HEADING) return &text_state.heading;
   if (font == FONT_SMALL) return &text_state.small;
   return &text_state.big;
 }
@@ -105,14 +107,14 @@ static bool load_atlas(font_atlas_t *atlas, const char *path, float em_size) {
 // SemiBold, Bold, ...; a 400 face may also be <Family>.ttf). Sizes are desktop
 // logical pixels, scaled for the platform. C themes and missing faces use DejaVu.
 
-#define TEXT_ROLES 5
+#define TEXT_ROLES 6
 static const char *const k_text_role_vars[TEXT_ROLES] = {
-  "--font-system", "--font-small", "--font-smallest", "--font-title", "--font-display",
+  "--font-system", "--font-small", "--font-smallest", "--font-title", "--font-display", "--font-heading",
 };
 
 static font_atlas_t *text_atlas(int role) {
   font_atlas_t *atlases[TEXT_ROLES] = {&text_state.big, &text_state.small, &text_state.smallest,
-                                       &text_state.title, &text_state.display};
+                                       &text_state.title, &text_state.display, &text_state.heading};
   return atlases[role];
 }
 
@@ -127,9 +129,9 @@ static float text_platform_scale(void) {
 }
 
 static void text_default_face(int role, char *path, size_t n, float *size) {
-  static const float sizes[TEXT_ROLES] = {12.0f, 12.0f, 9.0f, 18.0f, 24.0f};
+  static const float sizes[TEXT_ROLES] = {12.0f, 12.0f, 9.0f, 18.0f, 24.0f, 12.0f};
   snprintf(path, n, "%s/../share/orion/fonts/%s", ui_get_exe_dir(),
-           role >= 3 ? "DejaVuSans-Bold.ttf" : "DejaVuSans.ttf");
+           role >= 3 ? "DejaVuSans-Bold.ttf" : "DejaVuSans.ttf");   // titles, figures and headings are bold
   *size = sizes[role] * text_platform_scale();
 }
 
@@ -595,6 +597,9 @@ void shutdown_text_rendering(void) {
 
   font_cache_destroy(text_state.display.cache);
   R_MeshDestroy(&text_state.display.mesh);
+
+  font_cache_destroy(text_state.heading.cache);
+  R_MeshDestroy(&text_state.heading.mesh);
 
   memset(&text_state, 0, sizeof(text_state));
 }

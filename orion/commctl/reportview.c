@@ -140,7 +140,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   if (first_row < 0) first_row = 0;
   if (last_row > (int)data->count) last_row = (int)data->count;
 
-  uint32_t hdr_fg = get_sys_color(brTextNormal);
+  uint32_t hdr_fg = theme_foreground(THEME_PART_HEADER, CTRL_NORMAL);
 #if !REPORTVIEW_RESIZE_FULL_HEIGHT
   uint32_t sep_col = get_sys_color(brDarkEdge);
 #endif
@@ -151,14 +151,16 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   if (frame_radius > 0) set_clip_rounded_rect(win, cr, frame_radius);
   fill_rect(bg_col, rect_trim_top(cr, header_h));
   ctrl_state_t selection = report_selection_state(win);
-  // Section captions span the columns, in secondary text above their rows.
+  // Section captions span the columns above their rows, styled as the list's group part.
+  uint32_t group_fg = theme_foreground(THEME_PART_LIST_GROUP, CTRL_NORMAL);
   for (int row = first_row; data->has_sections && row <= last_row && row < (int)data->count; row++) {
     if (!data->items[row].section) continue;
     int y = window_scroll_rect_to_client(win, report_item_rect(win, data, row)).y - entry_h;
     if (y + entry_h <= header_h || y >= body_bottom) continue;
     set_clip_rect(win, (irect16_t){0, header_h, eff_w, MAX(0, body_bottom - header_h)});
+    theme_draw(THEME_PART_LIST_GROUP, R(0, y, eff_w, entry_h), CTRL_NORMAL);
     irect16_t caption = {WIN_PADDING * 2, y, eff_w - WIN_PADDING * 4, entry_h};
-    draw_text_clipped(FONT_SMALLEST, data->items[row].section, &caption, get_sys_color(brTextSecondary), 0);
+    draw_text_clipped(FONT_HEADING, data->items[row].section, &caption, group_fg, 0);
   }
 
   // Rows ruled by hairlines, under the selection's face.
