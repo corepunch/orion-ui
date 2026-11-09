@@ -1,5 +1,6 @@
 // Modern drawing — flat, borderless toolbar controls; rounded hover backgrounds.
-// Palettes live in theme_palette_*.h. THEME_MODERN uses layered charcoal surfaces
+// Palettes live in theme_palette_*.h, Porcelain's in orion/themes/porcelain.css
+// (docs/styling.md). THEME_MODERN uses layered charcoal surfaces
 // for creative workspaces. THEME_LIGHT is its light counterpart. THEME_NAVY
 // is navy/purple. THEME_AMBER is a light business palette with white fields,
 // softly rounded buttons and amber selection; THEME_PORCELAIN shares its metrics
@@ -20,8 +21,8 @@
 #include <orion/user/theme_palette_light.h>
 #include <orion/user/theme_palette_navy.h>
 #include <orion/user/theme_palette_amber.h>
-#include <orion/user/theme_palette_porcelain.h>
-#include <orion/user/theme_palette_porcelain_dark.h>
+#include <orion/user/style.h>
+#include "orion/themes/porcelain_css.h"
 #include <orion/user/theme_palette_metro.h>
 
 // Radius constants (logical pixels).
@@ -260,8 +261,29 @@ static void modern_apply_palette(void) { theme_copy_palette(k_theme_palette_stud
 static void light_apply_palette(void)  { theme_copy_palette(k_theme_palette_light); }
 static void navy_apply_palette(void)   { theme_copy_palette(k_theme_palette_navy); }
 static void amber_apply_palette(void)  { theme_copy_palette(k_theme_palette_amber); }
-static void porcelain_apply_palette(void) { theme_copy_palette(k_theme_palette_porcelain); }
-static void porcelain_dark_apply_palette(void) { theme_copy_palette(k_theme_palette_porcelain_dark); }
+// Porcelain and Porcelain Dark are orion/themes/porcelain.css in the light and
+// dark appearance. ORION_THEME_CSS names a file that replaces it, for editing a
+// theme without rebuilding.
+static style_sheet_t *porcelain_sheet(bool dark) {
+  static style_sheet_t *sheets[2];
+  if (!sheets[dark]) {
+    const char *path = getenv("ORION_THEME_CSS");
+    if (path && *path) sheets[dark] = style_sheet_load(path);
+    if (!sheets[dark]) sheets[dark] = style_sheet_parse(k_porcelain_css, "orion/themes/porcelain.css");
+    style_sheet_set_dark(sheets[dark], dark);
+  }
+  return sheets[dark];
+}
+
+static void porcelain_palette(bool dark) {
+  uint32_t palette[brCount];
+  if (theme_palette_from_stylesheet(porcelain_sheet(dark), palette)) { theme_copy_palette(palette); return; }
+  fprintf(stderr, "[theme] Porcelain%s style sheet is incomplete; using the %s palette\n", dark ? " Dark" : "", dark ? "Modern" : "Light");
+  fflush(stderr);
+  theme_copy_palette(dark ? k_theme_palette_studio : k_theme_palette_light);
+}
+static void porcelain_apply_palette(void) { porcelain_palette(false); }
+static void porcelain_dark_apply_palette(void) { porcelain_palette(true); }
 static void metro_apply_palette(void) { theme_copy_palette(k_theme_palette_metro); }
 
 // ── Singleton ────────────────────────────────────────────────────────────────
@@ -540,23 +562,12 @@ static theme_t *business_variant(theme_style_t style, const char *name, bool dar
 }
 
 theme_t *theme_amber_instance(void)     { return business_variant(THEME_AMBER, "Amber", false, THEME_AMBER, amber_apply_palette); }
-// Porcelain rounds a little more than the business forms: 6 px buttons, 5 px
-// fields, 7 px cards, as its design concepts draw them.
+// Porcelain's metrics come from its style sheet, over the business variant.
 static theme_t *porcelain_variant(theme_style_t style, const char *name, bool dark,
                                   theme_style_t counterpart, void (*apply)(void)) {
   theme_t *theme = business_variant(style, name, dark, counterpart, apply);
-  theme->button.corner_radius = 6;
-  theme->field.corner_radius = 5;
-  theme->field.multiline_corner_radius = 5;
+  theme_metrics_from_stylesheet(theme, porcelain_sheet(dark));
   theme->field.padding_x = FIELD_PADDING_X(theme->field.corner_radius);
-  theme->tab.corner_radius = 5;
-  theme->card.corner_radius = 7;
-  theme->card.face = brColumnViewBg;    // white panels with a hairline on the window face
-  theme->card.outline = brLightEdge;
-  theme->table.corner_radius = 6;
-  theme->report.row_height = 21;   // the concepts' 21 px rows under a 24 px header, ruled by hairlines
-  theme->report.header_height = 24;
-  theme->report.row_dividers = true;
   return theme;
 }
 

@@ -1,0 +1,124 @@
+/* Porcelain: cool white surfaces and an indigo accent, after macOS Finder and
+   modern banking dashboards. Selection is a solid indigo row with white text;
+   fields are white wells with a hairline that turns indigo on focus.
+
+   Porcelain Dark is the same sheet under prefers-color-scheme: dark, in the
+   colours of Atom's One Dark: charcoal faces with editor-grey wells a step
+   lighter, soft blue-grey ink and muted status hues, so long tables read
+   without glare. Edges are darker than the faces, as One Dark's borders are.
+
+   Custom properties on :root are the system colour roles (brControlBg is
+   --control-bg); see docs/styling.md for the names and the properties each
+   control reads. */
+
+:root {
+  --control-bg:             #F8F9FB;
+  --window-dark-bg:         #F0F2F5;
+  --workspace-bg:           #E6E9EE;
+  --active-titlebar:        #F0F2F5;
+  --active-titlebar-text:   #13151A;
+  --inactive-titlebar:      #F6F7F9;
+  --inactive-titlebar-text: #9AA0AA;
+  --statusbar-bg:           #F3F4F7;
+  --light-edge:             #D8DCE3;
+  --dark-edge:              #E3E6EB;
+  --flare:                  #FFFFFF;
+  --accent:                 #4C5BD4;
+  --button-inner:           #F1F3F6;
+  --button-hover:           #E6E9EE;
+  --text-normal:            #13151A;
+  --text-disabled:          #A9AEB8;
+  --text-error:             #D23B30;
+  --text-success:           #17855A;
+  --border-focus:           var(--accent);
+  --border-active:          #CBD0D8;
+  --folder-text:            #3D4BB8;
+  --column-view-bg:         #FFFFFF;
+  --modal-overlay:          #00000040;
+  --toolbar-foreground:     #3B404A;
+  --panel-dark:             #EEF0F4;
+  --panel-darker:           #E4E7EC;
+  --tab-bar-bg:             #E9ECF0;
+  --text-warning:           #B26B00;
+  --text-info:              #2F6FD6;
+  --text-secondary:         #646A75;
+  --text-on-color:          #13151A;
+  --selection-top:          #5866DC;
+  --selection-bottom:       var(--accent);
+  --accent-text:            #FFFFFF;
+  --tooltip-background:     #1E1F24;
+  --tooltip-text:           #FFFFFF;
+  --info-background:        #FFFFE1;
+  --info-text:              #303025;
+  --desktop-bg:             #C9CFDA;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --control-bg:             #21252B;
+    --window-dark-bg:         #1E2227;
+    --workspace-bg:           #1B1D23;
+    --active-titlebar:        #21252B;
+    --active-titlebar-text:   #D7DAE0;
+    --inactive-titlebar:      #1E2227;
+    --inactive-titlebar-text: #5C6370;
+    --statusbar-bg:           #1E2227;
+    --light-edge:             #3A3F4B;
+    --dark-edge:              #181A1F;
+    --flare:                  #3E4451;
+    --accent:                 #568AF2;
+    --button-inner:           #2C313A;
+    --button-hover:           #353B45;
+    --text-normal:            #ABB2BF;
+    --text-disabled:          #4B5263;
+    --text-error:             #E06C75;
+    --text-success:           #98C379;
+    --border-active:          #3A3F4B;
+    --folder-text:            #61AFEF;
+    --column-view-bg:         #282C34;
+    --modal-overlay:          #00000060;
+    --toolbar-foreground:     #9DA5B4;
+    --panel-dark:             #1E2227;
+    --panel-darker:           #1B1D23;
+    --tab-bar-bg:             #1D2025;
+    --text-warning:           #E5C07B;
+    --text-info:              #61AFEF;
+    --text-secondary:         #7F848E;
+    --text-on-color:          #1B1D23;
+    --selection-top:          #4D78CC;
+    --selection-bottom:       #4570C2;
+    --accent-text:            #F0F2F5;
+    --tooltip-background:     #1B1D23;
+    --tooltip-text:           #FFFFFF;
+    --info-background:        #2C313A;
+    --info-text:              #C8CCD4;
+    --desktop-bg:             #16181D;
+  }
+}
+
+/* Softly rounded rectangles, a little rounder than a business form. */
+Window   { border-radius: 6px; }
+Button   { border-radius: 6px; }
+TextEdit { border-radius: 5px; }
+MultiEdit { border-radius: 5px; }
+TabView::tab { border-radius: 5px; }
+
+/* White panels with a hairline on the window face. */
+Card {
+  border-radius: 7px;
+  background-color: var(--column-view-bg);
+  border-color: var(--light-edge);
+}
+
+/* Business tables: 21 px rows under a 24 px header, ruled by hairlines. */
+TableView         { border-radius: 6px; }
+TableView::header { min-height: 24px; }
+TableView::row    { min-height: 21px; border-bottom-width: 1px; }
+
+Badge {
+  border-radius: 5px;
+  padding-left: 7px;
+  --tint-alpha: 0.149;   /* the pill's tint of its role colour */
+  --ink-mix: 0.314;      /* how far the text leans from the role towards --text-normal */
+}
+Badge::icon { width: 12px; margin-right: 4px; }

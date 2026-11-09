@@ -377,6 +377,19 @@ theme_t *theme_porcelain_instance(void);
 theme_t *theme_porcelain_dark_instance(void);
 theme_t *theme_metro_instance(void);
 
+// ── Style sheets ──────────────────────────────────────────────────────────────
+//
+// CSS-driven themes (orion/themes/*.css, embedded at build time): :root custom
+// properties are the system colour roles, named in kebab case (brControlBg is
+// --control-bg), and control properties set theme_t metrics. See docs/styling.md.
+typedef struct style_sheet_s style_sheet_t;
+const char *theme_sys_color_name(int role);      // "control-bg"; NULL for an unused slot
+int  theme_sys_color_role(const char *name);     // -1 when no role has that name
+// Every role from the sheet's :root; false (missing roles logged) when any is undefined.
+bool theme_palette_from_stylesheet(const style_sheet_t *sheet, uint32_t palette[brCount]);
+// Overwrites the metrics the sheet sets; the rest keep their values.
+void theme_metrics_from_stylesheet(theme_t *theme, const style_sheet_t *sheet);
+
 // ── Appearance (light / dark) ────────────────────────────────────────────────
 //
 // Each theme names its counterpart in the other appearance (Light ↔ Modern,

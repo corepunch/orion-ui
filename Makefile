@@ -506,7 +506,14 @@ $(BUILD_DIR)/%_apple.o: orion/kernel/%_apple.m $(wildcard orion/kernel/*.h) | $(
 	$(CC) $(CFLAGS) -fblocks -c $< -o $@
 endif
 $(eval $(call unity_lib,kernel,$(wildcard orion/kernel/*.c),$(KERNEL_INPUT_OBJ),,$(if $(KERNEL_INPUT_OBJ),-x none $(KERNEL_INPUT_OBJ) -lobjc)))
-$(eval $(call unity_lib,user,$(USER_SRCS),$(COMMDLG_LIB) $(KERNEL_LIB),,-lcommdlg -lkernel))
+# Built-in theme style sheets, compiled into libuser (orion/user/theme_css.c).
+THEME_CSS         = $(wildcard orion/themes/*.css)
+THEME_CSS_HEADERS = $(patsubst orion/themes/%.css,$(GENERATED_DIR)/orion/themes/%_css.h,$(THEME_CSS))
+$(GENERATED_DIR)/orion/themes/%_css.h: orion/themes/%.css tools/embed_text.py | $(GENERATED_DIR)
+	@mkdir -p $(dir $@)
+	@python3 tools/embed_text.py $< k_$(subst -,_,$*)_css > $@
+CFLAGS += -I$(GENERATED_DIR)
+$(eval $(call unity_lib,user,$(USER_SRCS),$(COMMDLG_LIB) $(KERNEL_LIB) $(THEME_CSS_HEADERS),,-lcommdlg -lkernel))
 $(eval $(call unity_lib,commctl,$(wildcard orion/commctl/*.c),$(USER_LIB) $(KERNEL_LIB),-Icomponents,-luser -lkernel))
 # Lua add-ons: runtime .orion forms driven by a script (orion/script/script.h).
 $(eval $(call unity_lib,script,$(wildcard orion/script/*.c),$(COMMCTL_LIB) $(USER_LIB) $(KERNEL_LIB) $(filter $(GENERATED_DIR)/orion/%,$(CGEN_HEADERS)) $(SCRIPT_METADATA),,-lcommctl -luser -lkernel))
