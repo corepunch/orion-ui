@@ -326,6 +326,8 @@ typedef struct {
 
 int load_scene(const char *path,Scene *s);
 void scene_free(Scene *s);
+bool scene_export_file(Scene *s,const char *path,const char *exporter_id,const char *const *keys,const char *const *values,int nopts,float time);
+void export_list(FILE *f);
 void scene_select_camera(Scene *s,const char *name);
 void scene_add_obj(Scene *s,Mesh mesh,mat4 M,mat4 R,vec3 color,float shin,int castsShadow,int renderable,int unlit);
 typedef struct { int errors, warnings; } SceneCheckResult;

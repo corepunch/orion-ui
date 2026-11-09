@@ -300,7 +300,7 @@ unity_tu = $(call app_unity_sources,$(1)) | sed 's/.*/\#include "&"/'; if [ -f $
 app_inc  = -I. -I$(call appdir,$*) -I$(call appdir,$*)/$(COMPS) -DSHAREDIR='"../share/$(notdir $(call appdir,$*))"'
 app_libs = $(LDFLAGS) $(CORE_LDLIBS) $(PLATFORM_LDFLAGS) $(RPATH_FLAGS) $(call app_plugin,$*) $(LIBS) $(if $(findstring scener,$*),$(SCENER_LIBS))
 
-.PHONY: all install tools platform share library apps plugins gems scener test clean help groove groove-demo mac-deploy $(PHONY_APP_NAMES)
+.PHONY: all install tools platform share library apps plugins gems scener exporters test clean help groove groove-demo mac-deploy $(PHONY_APP_NAMES)
 
 all: library apps tools $(if $(IS_WIN),,gems)
 
@@ -532,7 +532,19 @@ apps: share $(EXAMPLE_BINS) $(COMPONENT_PLUGIN_BINS) $(PHONY_APP_BINS)
 
 plugins: $(COMPONENT_PLUGIN_BINS)
 
-scener: $(BIN_DIR)/scener$(EXE_EXT)
+# Scener exporter plugins: one shared library per apps/scener/exporters/<id>/export_<id>.c.
+SCENER_EXPORTER_DIR  = $(BUILD_DIR)/exporters
+SCENER_EXPORTER_LIBS = $(foreach s,$(wildcard $(APPS)/scener/exporters/*/export_*.c),$(SCENER_EXPORTER_DIR)/$(basename $(notdir $(s))).$(LIB_EXT))
+
+.SECONDEXPANSION:
+$(SCENER_EXPORTER_DIR)/%.$(LIB_EXT): $$(wildcard $(APPS)/scener/exporters/*/%.c) $(APPS)/scener/exporter.h
+	@mkdir -p $(@D)
+	@printf '%-8s%s\n' EXPORT "$@"
+	@$(CC) $(CFLAGS) $(LIB_FLAGS) -o $@ $< -lm
+
+exporters: $(SCENER_EXPORTER_LIBS)
+
+scener: $(BIN_DIR)/scener$(EXE_EXT) exporters
 
 # Launch localized Ledger demos: make run-ledger-ru / make run-ledger-de.
 # A fresh infobase loads and posts the configuration's original demo documents.

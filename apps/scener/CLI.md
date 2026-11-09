@@ -36,7 +36,16 @@ scener --check /absolute/path/room.blks --all-cameras --strict
 scener --check /absolute/path/room.blks --camera room-main --time 2.2
 scener --query /absolute/path/room.blks [--camera room-main] [--time 2.2]
 scener --prefab-info furniture/chair
+scener --list-exporters
+scener --export /absolute/path/room.obj /absolute/path/room.blks [--opt up=z] [--time 2.2]
+scener --export /absolute/path/room.glb /absolute/path/room.blks --opt merge=1
 ```
+
+`--export` loads the scene without a graphical session and hands its renderable
+geometry (metres, Y up, posed at `--time`) to an exporter plugin chosen by the
+output extension, or by `--exporter ID`. Exporters are shared libraries; see
+[docs/exporters.md](docs/exporters.md) for the bundled OBJ and glB exporters,
+their options, and how to write another.
 
 `--check`, `--query` and `--prefab-info` load the scene without a graphical
 session. `--check` prints a summary line (or, with `--json`, every issue as

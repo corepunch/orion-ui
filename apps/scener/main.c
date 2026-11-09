@@ -1,5 +1,6 @@
 #include "scener.h"
 #include "reel.h"
+#include "exporter_registry.h"
 #include <errno.h>
 #include <sys/stat.h>
 #include <orion/gem.h>
@@ -22,6 +23,7 @@
 #define CLI_BYTE_MAX 255.0f
 #define CLI_COLOR_GAMMA 2.2f
 #define CLI_MAX_FRAMES 100000
+#define CLI_MAX_OPTS 16
 #define CLI_FRAME_EPSILON 0.0001f
 
 typedef struct {
@@ -30,6 +32,9 @@ typedef struct {
 	float time, frame_start, frame_end, fps;
 	bool frames, time_set, check, output_dir_set, query, json, strict, all_cameras;
 	char prefab_source[1024];
+	bool list_exporters;
+	char export_path[1024], exporter_id[32];
+	int nopts; char opt_keys[CLI_MAX_OPTS][32], opt_values[CLI_MAX_OPTS][128];
 	char reel_path[1024], poster_path[1024], sheet_path[1024];
 	int sheet_columns, nsheet_times; float sheet_times[64];
 	char output_dir[1024], format[8];
@@ -75,6 +80,9 @@ static void cli_usage(void) {
 	     "scener --check SCENE [--camera NAME | --all-cameras] [--time SECONDS] [--json] [--strict]\n"
 	     "                                            load diagnostics plus floating, intersecting and z-fighting geometry in that camera's view\n"
 	     "scener --query SCENE [--camera NAME] [--time SECONDS]  JSON: cameras, lights, prefabs, every node with world bounds and attach points\n"
+	     "scener --export FILE.ext SCENE [--exporter ID] [--opt KEY=VALUE]... [--camera NAME] [--time SECONDS]\n"
+	     "                                            write the built scene through an exporter plugin chosen by extension\n"
+	     "scener --list-exporters                    installed exporter plugins and their options (SCENER_EXPORTER_PATH adds directories)\n"
 	     "scener --prefab-info SOURCE|FILE.blk        JSON for one prefab: bounds, attach points, up, front, description\n"
 	     "scener --reel REEL (--output FILE.mp4|FILE.png | --output-dir DIR) [--time SECONDS] [--poster FILE.png]\n"
 	     "scener --reel REEL --check\n"
@@ -103,6 +111,7 @@ static void cli_parse(int argc, char *argv[]) {
 		if(!strcmp(arg,"-wireframe")){g_cli.debug_flags|=DBG_WIREFRAME;continue;}
 		if(!strcmp(arg,"--check")){g_cli.check=true;continue;}
 		if(!strcmp(arg,"--query")){g_cli.query=true;continue;}
+		if(!strcmp(arg,"--list-exporters")){g_cli.list_exporters=true;continue;}
 		if(!strcmp(arg,"--json")){g_cli.json=true;continue;}
 		if(!strcmp(arg,"--strict")){g_cli.strict=true;continue;}
 		if(!strcmp(arg,"--all-cameras")){g_cli.all_cameras=true;continue;}
@@ -115,12 +124,21 @@ static void cli_parse(int argc, char *argv[]) {
 		bool output_dir=!strcmp(arg,"--output-dir")||(!strcmp(arg,"-o")&&(g_cli.batch||g_cli.layout));
 		if(output_dir)output=false;
 		bool camera=!strcmp(arg,"--camera")||!strcmp(arg,"--cam")||!strcmp(arg,"-cam");
-		bool known=output||output_dir||camera||!strcmp(arg,"--reel")||!strcmp(arg,"--prefab-info")||!strcmp(arg,"--poster")||!strcmp(arg,"--sheet")||!strcmp(arg,"--columns")||!strcmp(arg,"--sheet-times")||!strcmp(arg,"--size")||!strcmp(arg,"--format")||!strcmp(arg,"--output-dir")||!strcmp(arg,"--scale")||!strcmp(arg,"--supersample")||!strcmp(arg,"-d")||!strcmp(arg,"--time")||!strcmp(arg,"--frames");
+		bool known=output||output_dir||camera||!strcmp(arg,"--reel")||!strcmp(arg,"--prefab-info")||!strcmp(arg,"--poster")||!strcmp(arg,"--sheet")||!strcmp(arg,"--columns")||!strcmp(arg,"--sheet-times")||!strcmp(arg,"--size")||!strcmp(arg,"--format")||!strcmp(arg,"--output-dir")||!strcmp(arg,"--scale")||!strcmp(arg,"--supersample")||!strcmp(arg,"-d")||!strcmp(arg,"--time")||!strcmp(arg,"--frames")||!strcmp(arg,"--export")||!strcmp(arg,"--exporter")||!strcmp(arg,"--opt");
 		if(!known){fprintf(stderr,"unsupported option: %s\n",arg);g_cli.invalid=true;continue;}
 		if(i+1>=argc){fprintf(stderr,"missing value for %s\n",arg);g_cli.invalid=true;continue;}
 		value=argv[++i];
 		if(!strcmp(arg,"--reel")){snprintf(g_cli.reel_path,sizeof(g_cli.reel_path),"%s",value);continue;}
 		if(!strcmp(arg,"--prefab-info")){snprintf(g_cli.prefab_source,sizeof(g_cli.prefab_source),"%s",value);continue;}
+		if(!strcmp(arg,"--export")){snprintf(g_cli.export_path,sizeof(g_cli.export_path),"%s",value);continue;}
+		if(!strcmp(arg,"--exporter")){snprintf(g_cli.exporter_id,sizeof(g_cli.exporter_id),"%s",value);continue;}
+		if(!strcmp(arg,"--opt")){
+			const char *eq=strchr(value,'=');
+			if(!eq||eq==value||eq-value>=(int)sizeof(g_cli.opt_keys[0])||strlen(eq+1)>=sizeof(g_cli.opt_values[0])||!eq[1]){fprintf(stderr,"invalid option (KEY=VALUE): %s\n",value);g_cli.invalid=true;}
+			else if(g_cli.nopts>=CLI_MAX_OPTS){fprintf(stderr,"at most %d --opt options\n",CLI_MAX_OPTS);g_cli.invalid=true;}
+			else{snprintf(g_cli.opt_keys[g_cli.nopts],sizeof(g_cli.opt_keys[0]),"%.*s",(int)(eq-value),value);snprintf(g_cli.opt_values[g_cli.nopts],sizeof(g_cli.opt_values[0]),"%s",eq+1);g_cli.nopts++;}
+			continue;
+		}
 		if(!strcmp(arg,"--poster")){snprintf(g_cli.poster_path,sizeof(g_cli.poster_path),"%s",value);continue;}
 		if(!strcmp(arg,"--sheet")){snprintf(g_cli.sheet_path,sizeof(g_cli.sheet_path),"%s",value);continue;}
 		if(!strcmp(arg,"--columns")){g_cli.sheet_columns=atoi(value);if(g_cli.sheet_columns<1||g_cli.sheet_columns>16){fprintf(stderr,"invalid columns: %s\n",value);g_cli.invalid=true;}continue;}
@@ -170,6 +188,12 @@ static void cli_parse(int argc, char *argv[]) {
 		return;
 	}
 	if(g_cli.poster_path[0]||g_cli.sheet_path[0]){fprintf(stderr,"--poster and --sheet require --reel\n");g_cli.invalid=true;}
+	if(g_cli.list_exporters||g_cli.export_path[0]||g_cli.exporter_id[0]||g_cli.nopts){
+		if(g_cli.list_exporters&&(g_cli.export_path[0]||g_cli.scene_path[0]||g_cli.check||g_cli.query||g_cli.screenshot_mode)){fprintf(stderr,"--list-exporters takes no scene or other mode\n");g_cli.invalid=true;}
+		else if(!g_cli.list_exporters&&!g_cli.export_path[0]){fprintf(stderr,"--exporter and --opt apply to --export\n");g_cli.invalid=true;}
+		else if(!g_cli.list_exporters&&(!g_cli.scene_path[0]||g_cli.check||g_cli.query||g_cli.prefab_source[0]||g_cli.screenshot_mode||g_cli.list_cameras||g_cli.list_joints||g_cli.frames)){fprintf(stderr,"--export takes a scene and no other mode\n");g_cli.invalid=true;}
+		return;
+	}
 	int inspections=g_cli.check+g_cli.query+(g_cli.prefab_source[0]!=0);
 	if(inspections){
 		if(inspections>1||g_cli.screenshot_mode||g_cli.list_cameras||g_cli.list_joints||g_cli.frames){fprintf(stderr,"select one CLI mode\n");g_cli.invalid=true;}
@@ -324,6 +348,20 @@ static int cli_inspect(void){
 	}else scene_query(&scene,stdout);
 	scene_free(&scene);
 	return status;
+}
+#endif
+
+#ifndef BUILD_AS_GEM
+static int cli_export(void){
+	Scene scene={0};
+	if(!load_scene(g_cli.scene_path,&scene))return 1;
+	if(g_cli.camera_name[0]&&!cli_select_camera(&scene,g_cli.camera_name)){scene_free(&scene);return 1;}
+	if(g_cli.time_set)scene_set_time(&scene,g_cli.time);
+	const char *keys[CLI_MAX_OPTS],*values[CLI_MAX_OPTS];
+	for(int i=0;i<g_cli.nopts;i++){keys[i]=g_cli.opt_keys[i];values[i]=g_cli.opt_values[i];}
+	bool ok=scene_export_file(&scene,g_cli.export_path,g_cli.exporter_id,keys,values,g_cli.nopts,g_cli.time_set?g_cli.time:0);
+	scene_free(&scene);
+	return ok?0:1;
 }
 #endif
 
@@ -595,6 +633,8 @@ int main(int argc, char *argv[]) {
     bool ok=r&&reel_sample(r,stdout);
     reel_free(r);return ok?0:1;
   }
+  if(g_cli.list_exporters){export_list(stdout);return 0;}
+  if(g_cli.export_path[0])return cli_export();
   if(g_cli.check||g_cli.query||g_cli.prefab_source[0])return cli_inspect();
   if(g_cli.list_joints){
     Scene scene={0};if(!load_scene(g_cli.scene_path,&scene))return 1;

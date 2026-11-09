@@ -3317,6 +3317,7 @@ static Bounds scene_obj_bounds(SceneObj *o){
 }
 
 #include "scene_inspect.h"
+#include "scene_export.h"
 
 void scene_get_obj_bounds(Scene *s, int idx, vec3 *outMin, vec3 *outMax){
 	if(idx<0 || idx>=s->nobjs){ *outMin=v3(0,0,0); *outMax=v3(0,0,0); return; }

@@ -64,13 +64,19 @@ def main():
     for name in ('scenes', 'prefabs', 'mocap'):
         shutil.copytree(app / name, bundle / 'share/scener' / name)
     shutil.copytree(app / 'share/screens', bundle / 'share/scener/share/screens')
+    exporters = bundle / 'exporters'
+    exporters.mkdir()
+    for plugin in sorted((ui / 'build/exporters').glob('*.dylib')):
+        shutil.copy2(plugin, exporters / plugin.name)
+    if not any(exporters.iterdir()):
+        parser.error('build the exporters first: make -C ' + str(ui) + ' exporters')
     revision = subprocess.check_output(['git', '-C', str(app), 'rev-parse', 'HEAD'], text=True).strip()
     dirty = subprocess.check_output(['git', '-C', str(app), 'status', '--short'], text=True)
     (bundle / 'BUILD.txt').write_text(f'Source: {app}\nRevision: {revision}\nBuild: make -C {ui} build/bin/scener\nWorking changes:\n{dirty}')
     launcher = args.prefix.resolve() / 'bin/scener'
     launcher.parent.mkdir(parents=True, exist_ok=True)
     temporary = launcher.with_name('scener.new')
-    temporary.write_text('#!/bin/sh\nexport DYLD_LIBRARY_PATH=' + shlex.quote(str(bundle / 'lib')) + '\nexec ' + shlex.quote(str(deployed)) + ' "$@"\n')
+    temporary.write_text('#!/bin/sh\nexport DYLD_LIBRARY_PATH=' + shlex.quote(str(bundle / 'lib')) + '\nexport SCENER_EXPORTER_PATH=' + shlex.quote(str(exporters)) + '${SCENER_EXPORTER_PATH:+:$SCENER_EXPORTER_PATH}\nexec ' + shlex.quote(str(deployed)) + ' "$@"\n')
     temporary.chmod(0o755)
     temporary.replace(launcher)
     print(launcher)
