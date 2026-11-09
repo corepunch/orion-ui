@@ -589,7 +589,7 @@ static const accel_t *gc_find_accel(uint16_t cmd) {
 
 void test_action_metadata_and_accelerators(void) {
     TEST("gitclient Orion: metadata + accels enumerate menu shortcuts");
-    ASSERT_EQUAL(gitclient_action_meta_count, 59);
+    ASSERT_EQUAL(gitclient_action_meta_count, 60);
 
     for (int i = 0; i < gitclient_action_meta_count; i++) {
         ASSERT_TRUE(gitclient_action_meta[i].name[0] != '\0');
@@ -681,56 +681,88 @@ static result_t overview_test_host(window_t *win, uint32_t msg, uint32_t wparam,
   return msg == evCreate || msg == evDestroy;
 }
 
-void test_overview_close_filtered_cards(void) {
-  TEST("overview: close targets the filtered card, removes missing repositories and handles an empty board");
+static int table_rows(window_t *list) {
+  int n = 0;
+  while (send_message(list, tvGetRecord, (uint32_t)n, NULL)) n++;
+  return n;
+}
+
+void test_overview_table_filters_and_removes(void) {
+  TEST("overview: one row per checkout with launch targets; filter and Remove from Workspace act on the table");
   test_env_init();
   gc_state_t saved = g_test_state;
   memset(&g_test_state, 0, sizeof(g_test_state));
+  g_test_state.workspace_db = gc_workspace_db_create();
+  ASSERT_NOT_NULL(g_test_state.workspace_db);
   window_t *host = test_env_create_window("overview", 0, 0, 640, 480, overview_test_host, NULL);
   g_test_state.main_win = host;
   g_test_state.tab = GC_TAB_OVERVIEW;
   g_test_state.overview_page_win = create_window_from_form(&gitclient_overview_page_form, 0, 0, host, gc_page_overview_proc, 0, NULL);
+  ASSERT_NOT_NULL(g_test_state.checkouts_win);
+  ASSERT_NOT_NULL(g_test_state.targets_win);
+
+  char launch[700];
+  snprintf(launch, sizeof(launch), "%s/" GC_LAUNCH_FILE, s_repo);
+  ASSERT_TRUE(gct_write_file(launch,
+    "<launch project=\"demo\">\n"
+    "  <target name=\"Tests\" kind=\"test\" run=\"make test\" />\n"
+    "  <target name=\"Game\" default=\"true\" run=\"make run LEVEL=${level}\">\n"
+    "    <param name=\"level\" choices=\"3 4\" />\n"
+    "  </target>\n"
+    "</launch>\n"));
   snprintf(g_test_state.workspace[0], 512, "%s/missing-a", s_repo);
   snprintf(g_test_state.workspace[1], 512, "%s", s_repo);
-  snprintf(g_test_state.workspace[2], 512, "%s/missing-z", s_repo);
-  g_test_state.workspace_count = 3;
+  g_test_state.workspace_count = 2;
   gc_overview_refresh();
-  for (int i = 0; i < g_test_state.tile_count; i++)
-    if (!g_test_state.tiles[i].missing) g_test_state.tiles[i].no_upstream = false;
+  ASSERT_EQUAL(g_test_state.checkout_count, 2);
+  ASSERT_EQUAL(table_rows(g_test_state.checkouts_win), 2);
+
+  int repo_row = -1;
+  for (int i = 0; i < 2; i++) {
+    const db_checkout_t *row = (const db_checkout_t *)send_message(g_test_state.checkouts_win, tvGetRecord, (uint32_t)i, NULL);
+    ASSERT_NOT_NULL(row);
+    if (!strcmp(row->tone, "missing")) { ASSERT_STR_EQUAL(row->state, "Folder missing"); continue; }
+    repo_row = i;
+    ASSERT_STR_EQUAL(row->name, "Main checkout");
+    ASSERT_STR_EQUAL(row->target, "Game");
+  }
+  ASSERT_TRUE(repo_row >= 0);
+  send_message(g_test_state.checkouts_win, RVM_SETSELECTION, (uint32_t)repo_row, NULL);
+  tableview_handle_master_selection(get_root_window(g_test_state.checkouts_win), g_test_state.checkouts_win);
+  ASSERT_EQUAL(table_rows(g_test_state.targets_win), 2);
+  const db_target_t *game = NULL;
+  for (int i = 0; i < 2; i++) {
+    const db_target_t *t = (const db_target_t *)send_message(g_test_state.targets_win, tvGetRecord, (uint32_t)i, NULL);
+    if (t && !strcmp(t->name, "Game")) game = t;
+  }
+  ASSERT_NOT_NULL(game);
+  ASSERT_STR_EQUAL(game->kind, "run");
+  ASSERT_STR_EQUAL(game->command, "make run LEVEL=3");
+
+  // Only the missing folder needs attention once the repository counts as published.
+  for (int i = 0; i < g_test_state.checkout_count; i++)
+    if (!g_test_state.checkouts[i].missing) g_test_state.checkouts[i].no_upstream = false, g_test_state.checkouts[i].untracked = 0;
   ASSERT_TRUE(gc_overview_handle_command(MAKEDWORD(g_test_state.filter_btn->id, btnClicked), g_test_state.filter_btn));
   ASSERT_TRUE(g_test_state.attention_only);
-  window_t *card = g_test_state.board_win->children->next;
-  ASSERT_NOT_NULL(card);
-  ASSERT_NULL(card->next);
-  char tooltip[256] = {0};
-  ASSERT_FALSE(send_message(card, evGetTooltipText, 0, tooltip));
-  window_t *close = get_window_item(card, ID_OVERVIEW_CARD_HEADER_CLOSE);
-  window_t *status = get_window_item(card, ID_OVERVIEW_CARD_HEADER_STATUS);
-  ASSERT_NOT_NULL(close);
-  ASSERT_NOT_NULL(status);
-  ASSERT_TRUE(send_message(close, evGetTooltipText, 0, tooltip));
-  ASSERT_STR_EQUAL(tooltip, "Close repository");
-  ASSERT_EQUAL(close->parent, status->parent);
-  ASSERT_EQUAL(close->frame.w, close->frame.h);
-  ASSERT_TRUE(close->frame.x >= status->frame.x + status->frame.w);
-  send_message(close, evLeftButtonDown, 0, NULL);
-  send_message(close, evLeftButtonUp, 0, NULL);
-  ASSERT_EQUAL(g_test_state.workspace_count, 2);
-  ASSERT_STR_EQUAL(g_test_state.workspace[1], s_repo);
+  ASSERT_EQUAL(table_rows(g_test_state.checkouts_win), 1);
+  send_message(g_test_state.checkouts_win, RVM_SETSELECTION, 0, NULL);
+  ASSERT_TRUE(gc_overview_remove_selected());
+  ASSERT_EQUAL(g_test_state.workspace_count, 1);
+  ASSERT_STR_EQUAL(g_test_state.workspace[0], s_repo);
   ASSERT_TRUE(g_test_state.workspace_dirty);
-  ASSERT_TRUE(axPathExists(s_repo));
+
   ASSERT_TRUE(gc_overview_handle_command(MAKEDWORD(g_test_state.filter_btn->id, btnClicked), g_test_state.filter_btn));
-  while (g_test_state.board_win->children) {
-    close = get_window_item(g_test_state.board_win->children, ID_OVERVIEW_CARD_HEADER_CLOSE);
-    ASSERT_NOT_NULL(close);
-    send_message(close, evLeftButtonDown, 0, NULL);
-    send_message(close, evLeftButtonUp, 0, NULL);
-  }
+  ASSERT_EQUAL(table_rows(g_test_state.checkouts_win), 1);
+  send_message(g_test_state.checkouts_win, RVM_SETSELECTION, 0, NULL);
+  ASSERT_TRUE(gc_overview_remove_selected());
   ASSERT_EQUAL(g_test_state.workspace_count, 0);
-  ASSERT_EQUAL(g_test_state.tile_count, 0);
-  ASSERT_EQUAL(send_message(g_test_state.board_win, tgGetSelection, 0, NULL), -1);
+  ASSERT_EQUAL(g_test_state.checkout_count, 0);
+  ASSERT_EQUAL(table_rows(g_test_state.checkouts_win), 0);
+  ASSERT_FALSE(gc_overview_remove_selected());
   ASSERT_TRUE(axPathExists(s_repo));
+  remove(launch);
   test_env_shutdown();
+  destroy_database(g_test_state.workspace_db);
   g_test_state = saved;
   PASS();
 }
@@ -749,6 +781,7 @@ void test_activitybar_navigation(void) {
   ui_set_database(g_test_state.history_db);
   register_database("db", g_test_state.history_db);
   register_database("github_db", g_test_state.github_db);
+  g_test_state.workspace_db = gc_workspace_db_create();
   char plugin[4096];
   snprintf(plugin, sizeof(plugin), "%s/../lib/gitclient_components%s", ui_get_exe_dir(), AX_DYNLIB_EXT);
   ASSERT_TRUE(fe_load_component_plugin(plugin));
@@ -828,6 +861,7 @@ void test_activitybar_navigation(void) {
   destroy_database(g_test_state.history_db);
   destroy_database(g_test_state.changes_db);
   destroy_database(g_test_state.github_db);
+  destroy_database(g_test_state.workspace_db);
   ui_set_database(saved_db);
   test_env_shutdown();
   test_graphics_shutdown();
@@ -866,6 +900,7 @@ static void test_history_latest_commit_diff(void) {
   g_test_state.github_db = create_database("gc-history-github", "github_database_proc", NULL);
   ui_set_database(g_test_state.history_db);
   register_database("db", g_test_state.history_db); register_database("github_db", g_test_state.github_db);
+  g_test_state.workspace_db = gc_workspace_db_create();
   char plugin[4096];
   snprintf(plugin, sizeof(plugin), "%s/../lib/gitclient_components%s", ui_get_exe_dir(), AX_DYNLIB_EXT);
   ASSERT_TRUE(fe_load_component_plugin(plugin));
@@ -910,6 +945,7 @@ static void test_history_latest_commit_diff(void) {
 
   destroy_window(root);
   destroy_database(g_test_state.history_db); destroy_database(g_test_state.changes_db); destroy_database(g_test_state.github_db);
+  destroy_database(g_test_state.workspace_db);
   ui_set_database(saved_db); test_env_shutdown(); test_graphics_shutdown(); g_test_state = saved;
   PASS();
 }
@@ -927,6 +963,7 @@ static void test_gitclient_pane_layout(void) {
   g_test_state.github_db = create_database("gc-pane-github", "github_database_proc", NULL);
   ui_set_database(g_test_state.history_db);
   register_database("db", g_test_state.history_db); register_database("github_db", g_test_state.github_db);
+  g_test_state.workspace_db = gc_workspace_db_create();
   char plugin[4096];
   snprintf(plugin, sizeof(plugin), "%s/../lib/gitclient_components%s", ui_get_exe_dir(), AX_DYNLIB_EXT);
   ASSERT_TRUE(fe_load_component_plugin(plugin));
@@ -937,7 +974,7 @@ static void test_gitclient_pane_layout(void) {
   window_t *changes = g_test_state.changes_page_win;
   window_t *history = g_test_state.history_page_win;
   window_t *github = g_test_state.github_page_win;
-  ASSERT_EQUAL(page_pane_count(g_test_state.overview_page_win), 1);
+  ASSERT_EQUAL(page_pane_count(g_test_state.overview_page_win), 2);
   ASSERT_EQUAL(page_pane_count(changes), 2); ASSERT_EQUAL(page_pane_count(history), 7); ASSERT_EQUAL(page_pane_count(github), 2);
   window_t *pages[] = {g_test_state.overview_page_win, changes, history, github};
   for (int p = 0; p < ARRAY_LEN(pages); p++) {
@@ -1055,6 +1092,7 @@ static void test_gitclient_pane_layout(void) {
   send_message(summary, edGetText, sizeof(draft), draft); ASSERT_STR_EQUAL(draft, "Draft remains editable");
   destroy_window(root);
   destroy_database(g_test_state.history_db); destroy_database(g_test_state.changes_db); destroy_database(g_test_state.github_db);
+  destroy_database(g_test_state.workspace_db);
   ui_set_database(saved_db); test_env_shutdown(); test_graphics_shutdown(); g_test_state = saved;
   PASS();
 }
@@ -1082,7 +1120,7 @@ int main(void) {
     test_action_metadata_and_accelerators();
     test_every_menu_action_has_handler();
     test_reload_history_log_invalidates_diff_and_reports_failure();
-    test_overview_close_filtered_cards();
+    test_overview_table_filters_and_removes();
     test_activitybar_navigation();
     test_history_latest_commit_diff();
     test_gitclient_pane_layout();

@@ -9,6 +9,7 @@
 
 #include <orion/ui.h>
 #include "components/diff_view.h"
+#include "gc_launch.h"
 #include <orion/commctl/columnview.h>
 #include <orion/commctl/menubar.h>
 #include <orion/commctl/appchrome.h>
@@ -63,21 +64,21 @@ typedef struct { char ref[64]; char message[512]; char branch[256]; } git_stash_
 typedef struct git_repo_s git_repo_t;
 
 #define GC_MAX_WORKTREES 16
-#define GC_MAX_TILES 64
+#define GC_MAX_CHECKOUTS 128
 #define GC_WORKSPACE_MAGIC "gitclient-workspace 1"
 typedef struct {
   char path[512], branch[96];
   bool linked, bare, prunable, detached;
 } git_worktree_t;
 typedef struct {
-  char path[512], repo[96], dir[96], branch[96], upstream[96], subject[160], when[32];
+  char path[512], root[512], repo[96], dir[96], branch[96], upstream[96], subject[160], when[32];
   int staged, unstaged, untracked, conflicts, ahead, behind, stashes;
-  int worktrees, dirty_worktrees, other_attention;
+  int worktrees;
   bool linked, detached, no_upstream, gone, missing, initial, prunable;
 } git_summary_t;
-static inline bool gc_tile_needs_attention(const git_summary_t *t) {
+static inline bool gc_checkout_needs_attention(const git_summary_t *t) {
   return t->missing || t->conflicts || t->staged || t->unstaged || t->untracked || t->ahead || t->behind
-      || t->no_upstream || t->gone || t->dirty_worktrees || t->other_attention;
+      || t->no_upstream || t->gone || t->prunable;
 }
 
 #define GC_MAX_BRANCHES 256
@@ -198,9 +199,10 @@ typedef struct {
   window_t *overview_page_win;
   window_t *summary_win;
   window_t *filter_btn;
-  window_t *board_win;
+  window_t *checkouts_win;
+  window_t *targets_win;
+  database_t *workspace_db;
   bool attention_only;
-  int visible_tiles[GC_MAX_TILES];
   window_t *changes_page_win;
   window_t *history_page_win;
   window_t *github_page_win;
@@ -220,8 +222,8 @@ typedef struct {
   hinstance_t hinstance;
   bool history_mode;
   int tab;
-  git_summary_t tiles[GC_MAX_TILES];
-  int tile_count;
+  git_summary_t checkouts[GC_MAX_CHECKOUTS];
+  int checkout_count;
   bool fetching_all;
   bool ephemeral;
   char workspace[GC_MAX_RECENT_REPOS][512];
@@ -307,7 +309,7 @@ void git_worktree_label(const git_worktree_t *wt, char *out, size_t n);
 bool git_path_absolute(const char *in, char *out, size_t n);
 bool git_locate(const char *path, char *checkout, size_t checkout_n, char *main_root, size_t main_n);
 bool git_get_summary(const char *path, const char *repo_name, bool linked, git_summary_t *out);
-int  git_workspace_scan(char (*roots)[512], int root_count, git_summary_t *out, int max);
+int  git_workspace_checkouts(char (*roots)[512], int root_count, git_summary_t *out, int max);
 bool git_fetch_all_async(char (*roots)[512], int count, window_t *notify_win);
 bool git_run_async(git_repo_t *repo, git_op_t op, const char *args[], window_t *notify_win);
 bool git_run_sync(git_repo_t *repo, const char *args[], char *buf, int buf_sz);
@@ -333,7 +335,9 @@ void gc_update_status(void);
 void gc_set_view_mode(int tab);
 bool gc_pane_command(uint16_t id);
 void gc_overview_refresh(void);
-void gc_overview_open(int index);
+void gc_overview_open(const char *path);
+bool gc_overview_remove_selected(void);
+database_t *gc_workspace_db_create(void);
 void gc_overview_fetch_all(void);
 void gc_overview_status(char *out, size_t n);
 bool gc_overview_handle_command(uint32_t wparam, void *lparam);

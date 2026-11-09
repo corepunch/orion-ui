@@ -170,6 +170,9 @@ void gc_handle_command_impl(uint16_t id) {
     case ID_FILE_REPOSITORIES:
       gc_show_repositories_dialog(gc->main_win);
       break;
+    case ID_FILE_REMOVE_REPO:
+      gc_overview_remove_selected();
+      break;
     case ID_FILE_NEW_REPO:
       gc_show_create_repo_dialog(gc->main_win);
       break;

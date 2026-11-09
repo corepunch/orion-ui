@@ -84,7 +84,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_gc->history_db = create_database("gitclient_history", "gitclient_db", NULL);
   g_gc->changes_db = create_database("gitclient_changes", "changes_database_proc", NULL);
   g_gc->github_db  = create_database("gitclient_github",  "github_database_proc",  NULL);
-  if (!g_gc->history_db || !g_gc->changes_db || !g_gc->github_db) return false;
+  g_gc->workspace_db = gc_workspace_db_create();
+  if (!g_gc->history_db || !g_gc->changes_db || !g_gc->github_db || !g_gc->workspace_db) return false;
   register_database("db",        g_gc->history_db);
   register_database("github_db", g_gc->github_db);
   ui_set_database(g_gc->history_db);
@@ -177,6 +178,10 @@ void gem_shutdown(void) {
     if (g_gc->github_db) {
       destroy_database(g_gc->github_db);
       g_gc->github_db = NULL;
+    }
+    if (g_gc->workspace_db) {
+      destroy_database(g_gc->workspace_db);
+      g_gc->workspace_db = NULL;
     }
     if (g_gc->accel)
       free_accelerators(g_gc->accel);

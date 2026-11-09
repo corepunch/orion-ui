@@ -11,6 +11,7 @@
             <item name="open_workspace" label="Open Workspace..." shortcut="Ctrl+O" />
             <item name="save_workspace" label="Save Workspace..." shortcut="Ctrl+S" />
             <item name="repositories" label="Repositories..." />
+            <item name="remove_repo" label="Remove from Workspace" />
             <item name="new_repo" label="Create Repository..." />
             <item name="clone" label="Clone..." shortcut="Ctrl+Shift+N" />
             <Separator />
@@ -130,6 +131,9 @@
             <Separator />
             <item command="branch.delete" label="Delete" />
         </contextMenu>
+        <contextMenu name="checkouts">
+            <item command="file.remove_repo" label="Remove from Workspace" />
+        </contextMenu>
         <contextMenu name="tags">
             <item command="tag.delete" label="Delete Tag" />
         </contextMenu>
@@ -208,6 +212,26 @@
                 <field name="is_prunable" type="bool"/>
             </table>
         </database>
+        <database name="workspace" class="db_schema_xml">
+            <table name="checkouts" transient="true">
+                <field name="id" type="integer" key="YES"/>
+                <field name="project" type="string" length="96"/>
+                <field name="name" type="string" length="128"/>
+                <field name="branch" type="string" length="96"/>
+                <field name="state" type="string" length="48"/>
+                <field name="tone" type="string" length="12"/>
+                <field name="target" type="string" length="64"/>
+                <field name="path" type="string" length="512"/>
+                <field name="root" type="string" length="512"/>
+            </table>
+            <table name="targets" transient="true">
+                <field name="id" type="integer" key="YES"/>
+                <field name="checkout_id" type="integer" relation="checkouts.id"/>
+                <field name="name" type="string" length="64"/>
+                <field name="kind" type="string" length="8"/>
+                <field name="command" type="string" length="1024"/>
+            </table>
+        </database>
         <database name="github_db" class="github_database_proc">
             <table name="issues">
                 <field name="id" type="integer" key="YES"/>
@@ -241,24 +265,37 @@
                 <Page form="github_page" command="view.github" />
             </ActivityBar>
         </form>
-        <form name="overview_page" title="Overview" icon="gc-nav-overview" checked-icon="gc-nav-overview-fill" tooltip="All repositories (Ctrl+0)" focus="board" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
+        <form name="overview_page" title="Overview" icon="gc-nav-overview" checked-icon="gc-nav-overview-fill" tooltip="All repositories (Ctrl+0)" focus="checkouts" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <PaneToolbar replace="true">
                 <Button command="view.close_tab" icon="pane-close" tooltip="Close active view" />
             </PaneToolbar>
-            <requires library="gitclient_components" />
-            <TabView name="repositories_tabs" hide-single-tab="true" flags="flexspace">
-                <StackView name="repositories_panel" text="Repositories" flags="flexspace" spacing="0" padding="0">
-                    <StackView name="summary" orientation="horizontal" spacing="6" padding="14 10 14 2" />
-                    <TileGrid name="board" flags="notitle,nofill,vscroll,flexspace" spacing="6" padding="10 6 10 10" />
-                </StackView>
-            </TabView>
-        </form>
-        <form name="overview_card_header" width="232" height="16" auto_layout="1" flags="notitle,nofill" spacing="0" padding="0">
-            <StackView name="row" orientation="horizontal" spacing="6">
-                <Label name="title" text="" font="system" flags="flexspace" />
-                <Label name="status" text="" font="small" />
-                <Button name="close" text="" width="16" control-size="small" />
-            </StackView>
+            <SplitView name="overview_split" split-ratio="0.62" flags="flexspace">
+                <TabView name="checkouts_tabs" hide-single-tab="true" flags="flexspace">
+                    <StackView name="checkouts_panel" text="Worktrees" flags="flexspace" spacing="0" padding="0">
+                        <FlowView name="summary" spacing="6" padding="14 10 14 6" />
+                        <TableView name="checkouts" source="workspace.checkouts" group-field="project" context-menu="checkouts" flags="notitle,nofill,vscroll,flexspace">
+                            <RowIcon field="tone" value="conflict" icon="gc-x-circle" color="error" />
+                            <RowIcon field="tone" value="dirty" icon="gc-warning-circle" color="warning" />
+                            <RowIcon field="tone" value="remote" icon="gc-arrows-down-up" color="info" />
+                            <RowIcon field="tone" value="missing" icon="gc-question" color="secondary" />
+                            <RowIcon icon="gc-check-circle" color="success" />
+                            <Column field="name" title="Worktree" width="0" />
+                            <Column field="branch" title="Branch" width="0" />
+                            <Column field="state" title="State" width="128" />
+                            <Column field="target" title="Runs" width="120" color="info" />
+                        </TableView>
+                    </StackView>
+                </TabView>
+                <TabView name="targets_tabs" hide-single-tab="true" flags="flexspace">
+                    <TableView name="targets" text="Launch Targets" source="workspace.targets" master="checkouts" flags="notitle,nofill,vscroll,flexspace">
+                        <RowIcon field="kind" value="build" icon="gc-hammer" color="secondary" />
+                        <RowIcon field="kind" value="test" icon="gc-flask" color="secondary" />
+                        <RowIcon icon="gc-play" color="success" />
+                        <Column field="name" title="Target" width="150" />
+                        <Column field="command" title="Command" width="0" />
+                    </TableView>
+                </TabView>
+            </SplitView>
         </form>
         <form name="changes_page" title="Changes" icon="gc-nav-changes" checked-icon="gc-nav-changes-fill" tooltip="Working tree (Ctrl+1)" focus="changes_files" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <PaneToolbar replace="true">

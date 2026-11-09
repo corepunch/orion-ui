@@ -1,269 +1,274 @@
-// Overview page: one Card per repository in the workspace.
+// Overview page: every checkout of every repository in the workspace, and the
+// launch targets of the selected checkout.
 //
-// Each card is a Card (vertical stack) holding a title row, the main checkout's branch, the last commit
-// subject and a FlowView of Badges (uncommitted files, worktree count). The TileGrid columns, wraps and
-// scrolls them, and owns selection and keyboard navigation.
+// The rows live in the transient tables of the "workspace" database
+// (gitclient.orion); the TableViews group checkouts by project and list the
+// selected checkout's launch.xml targets as a detail view.
 
 #include "gitclient.h"
 #include <orion/commctl/commctl.h>
 
-#define EDGE_ALPHA 0x78   // calmer than the text colour, closer to the badge tint
+// ── row model ──────────────────────────────────────────────────────────────────
 
-// ── verdict ────────────────────────────────────────────────────────────────────
+static bool row_dirty(const git_summary_t *t) { return t->staged || t->unstaged || t->untracked; }
 
-static bool tile_dirty(const git_summary_t *t) {
-  return t->staged || t->unstaged || t->untracked || t->dirty_worktrees;
+static const char *row_tone(const git_summary_t *t) {
+  if (t->missing)                                               return "missing";
+  if (t->conflicts)                                             return "conflict";
+  if (row_dirty(t))                                             return "dirty";
+  if (t->ahead || t->behind || (t->no_upstream && !t->initial) || t->gone || t->prunable) return "remote";
+  return "sync";
 }
 
-static sys_color_idx_t tile_role(const git_summary_t *t) {
-  if (t->missing)                                          return brTextSecondary;
-  if (t->conflicts)                                        return brTextError;
-  if (tile_dirty(t))                                       return brTextWarning;
-  if (t->ahead || t->behind || t->no_upstream || t->gone || t->other_attention) return brTextInfo;
-  return brTextSuccess;
+static void append(char *out, size_t n, const char *fmt, int value) {
+  size_t len = strlen(out);
+  if (len && len + 2 < n) { memcpy(out + len, ", ", 3); len += 2; }
+  if (len < n) snprintf(out + len, n - len, fmt, value);
 }
 
-static const char *tile_state(const git_summary_t *t) {
-  if (t->missing)                                          return "Unavailable";
-  if (t->conflicts)                                        return "Conflicts";
-  if (t->staged && !t->unstaged && !t->untracked && t->dirty_worktrees <= 1) return "Ready to commit";
-  if (tile_dirty(t))                                       return "Uncommitted";
-  if (t->ahead && t->behind)                               return "Diverged";
-  if (t->ahead)                                            return "Unpushed";
-  if (t->behind)                                           return "Behind";
-  if (t->no_upstream && !t->initial)                       return "Unpublished";
-  if (t->gone)                                             return "Upstream gone";
-  if (t->other_attention)                                  return "Needs attention";
-  return "Up to date";
+static void row_state(const git_summary_t *t, char *out, size_t n) {
+  out[0] = 0;
+  if (t->missing)   { snprintf(out, n, "%s", ui_tr("Folder missing")); return; }
+  if (t->conflicts) append(out, n, ui_tr(t->conflicts == 1 ? "%d conflict" : "%d conflicts"), t->conflicts);
+  if (t->staged)    append(out, n, ui_tr("%d staged"), t->staged);
+  if (t->unstaged)  append(out, n, ui_tr("%d modified"), t->unstaged);
+  if (t->untracked) append(out, n, ui_tr("%d new"), t->untracked);
+  if (t->ahead)     append(out, n, ui_tr("%d to push"), t->ahead);
+  if (t->behind)    append(out, n, ui_tr("%d to pull"), t->behind);
+  if (out[0]) return;
+  const char *word = t->prunable ? "Prunable" : t->gone ? "Upstream gone"
+                   : t->no_upstream && !t->initial ? "Unpublished" : "Up to date";
+  snprintf(out, n, "%s", ui_tr(word));
 }
 
-// ── view construction ──────────────────────────────────────────────────────────
-
-static window_t *make_view(window_t *parent, winproc_t proc, flags_t orientation, int spacing) {
-  irect16_t frame = {0, 0, 10, 10};
-  window_t *view = create_window("", 0, &frame, parent, proc, g_gc->hinstance, NULL);
-  if (view && proc != win_card) window_set_layout(view, orientation, spacing, (irect16_t){0, 0, 0, 0});
-  return view;
+static void row_name(const git_summary_t *t, char *out, size_t n) {
+  if (!t->linked) { snprintf(out, n, "%s", ui_tr("Main checkout")); return; }
+  const char *dir = t->dir; size_t len = strlen(t->repo);
+  if (!strncmp(dir, t->repo, len) && (dir[len] == '-' || dir[len] == '_') && dir[len + 1]) dir += len + 1;
+  snprintf(out, n, "%s", dir);
 }
 
-static window_t *make_label(window_t *parent, const char *text, ui_font_t font, sys_color_idx_t role, bool flex) {
+static void overview_clear_table(database_t *db, int table) {
+  result_node_t *rows = (result_node_t *)send_db_message(db, dbFetch, MAKEDWORD(table, 0), NULL);
+  for (result_node_t *r = rows; r; r = r->next)
+    send_db_message(db, dbDelete, (uint32_t)table, (void *)(intptr_t)(*(int **)r->data)[0]);
+  free_result_list(rows);
+}
+
+static void insert_targets(database_t *db, int checkout_id, const gc_launch_t *launch) {
+  for (int i = 0; i < launch->count; i++) {
+    const gc_launch_target_t *t = &launch->targets[i];
+    db_target_t rec = {0};
+    rec.checkout_id = checkout_id;
+    snprintf(rec.name, sizeof(rec.name), "%s", t->name);
+    snprintf(rec.kind, sizeof(rec.kind), "%s", gc_launch_kind_name(t->kind));
+    if (!gc_launch_command(t, NULL, rec.command, sizeof(rec.command))) rec.command[0] = 0;
+    if (!send_db_message(db, dbInsert, TABLE_TARGETS, &rec)) return;
+  }
+}
+
+static void fill_rows(void) {
+  gc_state_t *gc = g_gc; database_t *db = gc->workspace_db;
+  if (!db) return;
+  overview_clear_table(db, TABLE_TARGETS);
+  overview_clear_table(db, TABLE_CHECKOUTS);
+  for (int i = 0; i < gc->checkout_count; i++) {
+    const git_summary_t *t = &gc->checkouts[i];
+    if (gc->attention_only && !gc_checkout_needs_attention(t)) continue;
+    db_checkout_t rec = {0};
+    snprintf(rec.project, sizeof(rec.project), "%s", t->repo);
+    row_name(t, rec.name, sizeof(rec.name));
+    snprintf(rec.branch, sizeof(rec.branch), "%s", t->missing ? "" : t->branch);
+    row_state(t, rec.state, sizeof(rec.state));
+    snprintf(rec.tone, sizeof(rec.tone), "%s", row_tone(t));
+    snprintf(rec.path, sizeof(rec.path), "%s", t->path);
+    snprintf(rec.root, sizeof(rec.root), "%s", t->root);
+    gc_launch_t *launch = calloc(1, sizeof(*launch));
+    int targets = launch && !t->missing ? gc_launch_load(t->path, launch) : 0;
+    if (targets < 0) snprintf(rec.target, sizeof(rec.target), "%s", ui_tr("launch.xml has errors"));
+    else if (targets > 0) snprintf(rec.target, sizeof(rec.target), "%s", launch->targets[launch->default_index].name);
+    const db_checkout_t *row = (const db_checkout_t *)send_db_message(db, dbInsert, TABLE_CHECKOUTS, &rec);
+    if (row && targets > 0) insert_targets(db, row->id, launch);
+    free(launch);
+  }
+  // Reinserted checkouts get new keys, so the targets follow the selection again.
+  if (gc->checkouts_win) {
+    send_message(gc->checkouts_win, tvRefresh, 0, NULL);
+    tableview_handle_master_selection(get_root_window(gc->checkouts_win), gc->checkouts_win);
+  }
+}
+
+// ── summary strip ──────────────────────────────────────────────────────────────
+
+static window_t *make_label(window_t *parent, const char *text) {
   irect16_t frame = {0, 0, 10, CONTROL_HEIGHT};
   window_t *label = create_window(text, 0, &frame, parent, win_label, g_gc->hinstance, NULL);
   if (!label) return NULL;
-  label_create_params_t style = { .color_index = role, .font = font, .color_set = true, .truncate = true };
+  label_create_params_t style = { .color_index = brTextNormal, .font = FONT_SYSTEM, .color_set = true, .truncate = true };
   send_message(label, lbSetStyle, 0, &style);
-  if (flex) label->flags |= WINDOW_FLEXSPACE;
   return label;
 }
 
-static window_t *make_badge(window_t *parent, const char *text, sys_color_idx_t role) {
+static void make_badge_text(window_t *parent, sys_color_idx_t role, const char *text) {
   irect16_t frame = {0, 0, 10, BADGE_HEIGHT};
   window_t *badge = create_window(text, 0, &frame, parent, win_badge, g_gc->hinstance, NULL);
   if (badge) send_message(badge, bdSetColor, role, NULL);
-  return badge;
 }
 
-static void make_badgef(window_t *parent, sys_color_idx_t role, const char *fmt, int n) {
-  char text[48]; snprintf(text, sizeof(text), fmt, n);
-  make_badge(parent, text, role);
+static void make_badge(window_t *parent, sys_color_idx_t role, const char *fmt, int n) {
+  char text[64]; snprintf(text, sizeof(text), fmt, n);
+  make_badge_text(parent, role, text);
 }
 
-static void build_card(window_t *grid, const git_summary_t *t) {
-  window_t *card = make_view(grid, win_card, 0, 0);
-  if (!card) return;
-  int card_inset = get_theme()->card.ring_width + get_theme()->card.padding_y;
-  card->layout.layout_padding = (irect16_t){card_inset, card_inset, card_inset, card_inset};
-  sys_color_idx_t verdict = tile_role(t);
-  send_message(card, cdSetEdgeColor, 0, (void *)(uintptr_t)color_with_alpha(get_sys_color(verdict), EDGE_ALPHA));
+typedef struct { int repos, trees, dirty, push, pull, conflicts; } overview_counts_t;
 
-  window_t *header = create_window_from_form(&gitclient_overview_card_header_form, 0, 0, card, win_stack, g_gc->hinstance, NULL);
-  if (!header) return;
-  char name[256]; snprintf(name, sizeof(name), "%s", t->repo);
-  if (t->linked) {
-    const char *dir = t->dir; size_t n = strlen(t->repo);
-    if (!strncmp(dir, t->repo, n) && (dir[n] == '-' || dir[n] == '_')) dir += n + 1;
-    snprintf(name, sizeof(name), "%s / %s", t->repo, dir);
+static overview_counts_t count_rows(void) {
+  overview_counts_t c = {0};
+  for (int i = 0; i < g_gc->checkout_count; i++) {
+    const git_summary_t *t = &g_gc->checkouts[i];
+    c.repos += !t->linked; c.trees++;
+    c.dirty += row_dirty(t); c.push += t->ahead > 0; c.pull += t->behind > 0; c.conflicts += t->conflicts > 0;
   }
-  window_t *title = get_window_item(header, ID_OVERVIEW_CARD_HEADER_TITLE);
-  window_t *status = get_window_item(header, ID_OVERVIEW_CARD_HEADER_STATUS);
-  window_t *close = get_window_item(header, ID_OVERVIEW_CARD_HEADER_CLOSE);
-  set_window_item_text(header, ID_OVERVIEW_CARD_HEADER_TITLE, "%s", name);
-  set_window_item_text(header, ID_OVERVIEW_CARD_HEADER_STATUS, "%s", tile_state(t));
-  label_create_params_t title_style = {.color_index = brTextNormal, .font = FONT_SYSTEM, .color_set = true, .truncate = true};
-  label_create_params_t status_style = {.color_index = verdict, .font = FONT_SMALL, .color_set = true, .truncate = true};
-  send_message(title, lbSetStyle, 0, &title_style);
-  send_message(status, lbSetStyle, 0, &status_style);
-  send_message(close, btnSetIconName, 0, "lucide-x");
-  send_message(close, btnSetTooltip, 0, "Close repository");
-  close->layout.layout_fixed_w = control_predefined_height(close->flags);
-  for (window_t *c = close->parent->children; c; c = c->next) c->layout.v_align = LAYOUT_ALIGN_CENTER;
-  close->layout.v_align = LAYOUT_ALIGN_START;
-
-  if (t->missing) { make_label(card, "Folder missing or not a repository", FONT_SMALL, brTextSecondary, false); return; }
-  char where[200]; snprintf(where, sizeof(where), "%s%s%s", t->branch, t->when[0] ? "  -  " : "", t->when);
-  make_label(card, where, FONT_SMALL, brTextNormal, false);
-  make_label(card, t->initial ? "No commits yet" : t->subject, FONT_SMALL, brTextSecondary, false);
-
-  window_t *badges = make_view(card, win_flow, WINDOW_STACK_HORIZONTAL, 5);
-  if (t->conflicts) make_badgef(badges, brTextError,   t->conflicts == 1 ? "%d conflict" : "%d conflicts", t->conflicts);
-  if (t->staged)    make_badgef(badges, brTextSuccess, "%d staged",   t->staged);
-  if (t->unstaged)  make_badgef(badges, brTextWarning, "%d modified", t->unstaged);
-  if (t->untracked) make_badgef(badges, brTextWarning, "%d new",      t->untracked);
-  if (t->ahead)     make_badgef(badges, brTextInfo,    "%d to push",  t->ahead);
-  if (t->behind)    make_badgef(badges, brTextInfo,    "%d to pull",  t->behind);
-  if (t->no_upstream && !t->initial) make_badge(badges, "no upstream", brTextInfo);
-  if (t->stashes)   make_badgef(badges, brTextSecondary, "%d stashed", t->stashes);
-  if (t->worktrees > 0) make_badgef(badges, brTextSecondary, t->worktrees == 1 ? "%d worktree" : "%d worktrees", t->worktrees);
-  if (t->dirty_worktrees > 1) make_badgef(badges, brTextWarning, "%d dirty", t->dirty_worktrees);
-  else if (t->dirty_worktrees == 1 && !t->staged && !t->unstaged && !t->untracked && !t->conflicts)
-    make_badge(badges, "uncommitted", brTextWarning);
-  if (!badges->children) make_badge(badges, "clean", brTextSuccess);
+  return c;
 }
 
 static void rebuild_summary(void) {
   gc_state_t *gc = g_gc;
   if (!gc->summary_win) return;
   while (gc->summary_win->children) destroy_window(gc->summary_win->children);
-  int repos = 0, trees = 0, dirty = 0, push = 0, pull = 0, conf = 0;
-  for (int i = 0; i < gc->tile_count; i++) {
-    const git_summary_t *t = &gc->tiles[i];
-    repos++; trees += t->worktrees;
-    dirty += tile_dirty(t) ? 1 : 0; push += t->ahead ? 1 : 0; pull += t->behind ? 1 : 0; conf += t->conflicts ? 1 : 0;
-  }
-  char text[80]; snprintf(text, sizeof(text), "%d repositories, %d worktrees", repos, trees);
+  overview_counts_t c = count_rows();
+  char text[96]; snprintf(text, sizeof(text), ui_tr("%d repositories, %d worktrees"), c.repos, c.trees);
   window_t *summary = gc->summary_win;
-  make_label(summary, text, FONT_SYSTEM, brTextNormal, false);
-  if (conf)  make_badgef(summary, brTextError,   "%d with conflicts", conf);
-  if (dirty) make_badgef(summary, brTextWarning, "%d uncommitted",    dirty);
-  if (push)  make_badgef(summary, brTextInfo,    "%d to push",        push);
-  if (pull)  make_badgef(summary, brTextInfo,    "%d to pull",        pull);
-  if (!conf && !dirty && !push && !pull && gc->tile_count) make_badge(summary, "everything is in sync", brTextSuccess);
-  irect16_t space = {0, 0, 1, 1};
-  window_t *spring = create_window("", 0, &space, summary, win_space, gc->hinstance, NULL);
-  if (spring) spring->flags |= WINDOW_FLEXSPACE;
-  irect16_t frame = {0, 0, 150, BUTTON_HEIGHT};
-  gc->filter_btn = create_window(gc->attention_only ? "Showing: needs attention" : "Showing: all", BUTTON_PUSHLIKE, &frame,
+  make_label(summary, text);
+  if (c.conflicts) make_badge(summary, brTextError,   ui_tr("%d with conflicts"), c.conflicts);
+  if (c.dirty)     make_badge(summary, brTextWarning, ui_tr("%d uncommitted"),    c.dirty);
+  if (c.push)      make_badge(summary, brTextInfo,    ui_tr("%d to push"),        c.push);
+  if (c.pull)      make_badge(summary, brTextInfo,    ui_tr("%d to pull"),        c.pull);
+  if (!c.conflicts && !c.dirty && !c.push && !c.pull && gc->checkout_count)
+    make_badge_text(summary, brTextSuccess, ui_tr("everything is in sync"));
+  irect16_t frame = {0, 0, 170, BUTTON_HEIGHT};
+  gc->filter_btn = create_window(ui_tr(gc->attention_only ? "Showing: needs attention" : "Showing: all"), BUTTON_PUSHLIKE, &frame,
                                  summary, win_button, gc->hinstance, NULL);
   if (gc->filter_btn) { gc->filter_btn->value = gc->attention_only; gc->filter_btn->layout.layout_fixed_w = 170; }
-  for (window_t *c = summary->children; c; c = c->next) c->layout.v_align = LAYOUT_ALIGN_CENTER;
-  window_layout_sync(summary);
-}
-
-static void rebuild_board(void) {
-  gc_state_t *gc = g_gc;
-  if (!gc->board_win) return;
-  char keep[512] = "";
-  int sel = (int)send_message(gc->board_win, tgGetSelection, 0, NULL);
-  if (sel >= 0 && sel < GC_MAX_TILES) snprintf(keep, sizeof(keep), "%s", gc->tiles[gc->visible_tiles[sel]].path);
-  send_message(gc->board_win, tgClear, 0, NULL);
-  int shown = 0, restore = 0;
-  for (int i = 0; i < gc->tile_count; i++) {
-    if (gc->attention_only && !gc_tile_needs_attention(&gc->tiles[i])) continue;
-    if (keep[0] && !strcmp(keep, gc->tiles[i].path)) restore = shown;
-    gc->visible_tiles[shown++] = i;
-    build_card(gc->board_win, &gc->tiles[i]);
-  }
-  window_layout_sync(gc->board_win);
-  if (shown) send_message(gc->board_win, tgSetSelection, (uint32_t)restore, NULL);
+  window_layout_sync(summary->parent ? summary->parent : summary);
 }
 
 // ── page ───────────────────────────────────────────────────────────────────────
 
-result_t gc_page_overview_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-  (void)wparam; (void)lparam;
-  if (msg != evCreate || !g_gc) return false;
-  g_gc->overview_page_win = win;
-  g_gc->summary_win = get_window_item(win, ID_OVERVIEW_PAGE_SUMMARY);
-  g_gc->board_win   = get_window_item(win, ID_OVERVIEW_PAGE_BOARD);
-  return true;
+database_t *gc_workspace_db_create(void) {
+  DB_CLASS(db_schema_xml);
+  database_t *db = create_database_with_schema("workspace", "db_schema_xml", &gitclient_workspace_schema, NULL);
+  if (!db) { fprintf(stderr, "[gc] could not create the workspace database\n"); fflush(stderr); return NULL; }
+  register_database("workspace", db);
+  return db;
 }
 
-static int tile_cmp(const void *pa, const void *pb) {
+result_t gc_page_overview_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  (void)wparam; (void)lparam;
+  if (!g_gc) return false;
+  if (msg == evCreate) {
+    g_gc->overview_page_win = win;
+    g_gc->summary_win   = get_window_item(win, ID_OVERVIEW_PAGE_SUMMARY);
+    g_gc->checkouts_win = get_window_item(win, ID_OVERVIEW_PAGE_CHECKOUTS);
+    g_gc->targets_win   = get_window_item(win, ID_OVERVIEW_PAGE_TARGETS);
+    return true;
+  }
+  if (msg == evDestroy && g_gc->overview_page_win == win) {
+    g_gc->overview_page_win = g_gc->summary_win = g_gc->checkouts_win = g_gc->targets_win = g_gc->filter_btn = NULL;
+    return true;
+  }
+  return false;
+}
+
+static int row_cmp(const void *pa, const void *pb) {
   const git_summary_t *a = pa, *b = pb;
   int c = strcasecmp(a->repo, b->repo); if (c) return c;
+  if ((c = strcmp(a->root, b->root))) return c;
   if (a->linked != b->linked) return a->linked ? 1 : -1;
   return strcasecmp(a->dir, b->dir);
 }
 
 void gc_overview_refresh(void) {
   gc_state_t *gc = g_gc; if (!gc) return;
-  gc->tile_count = git_workspace_scan(gc->workspace, gc->workspace_count, gc->tiles, GC_MAX_TILES);
-  qsort(gc->tiles, (size_t)gc->tile_count, sizeof(gc->tiles[0]), tile_cmp);
+  gc->checkout_count = git_workspace_checkouts(gc->workspace, gc->workspace_count, gc->checkouts, GC_MAX_CHECKOUTS);
+  qsort(gc->checkouts, (size_t)gc->checkout_count, sizeof(gc->checkouts[0]), row_cmp);
   rebuild_summary();
-  rebuild_board();
-  window_layout_sync(gc->overview_page_win);   // the strip's height comes from its children
+  fill_rows();
+  if (gc->overview_page_win) window_layout_sync(gc->overview_page_win);   // the strip's height comes from its children
   if (gc->tab == GC_TAB_OVERVIEW) gc_update_status();
 }
 
-void gc_overview_status(char *out, size_t n) {
-  gc_state_t *gc = g_gc; int trees = 0, dirty = 0, push = 0, pull = 0, conf = 0;
-  for (int i = 0; i < gc->tile_count; i++) {
-    const git_summary_t *t = &gc->tiles[i];
-    trees += t->worktrees; dirty += tile_dirty(t) ? 1 : 0; push += t->ahead ? 1 : 0; pull += t->behind ? 1 : 0; conf += t->conflicts ? 1 : 0;
-  }
-  int sel = gc->board_win ? (int)send_message(gc->board_win, tgGetSelection, 0, NULL) : -1;
-  int len = snprintf(out, n, "%d repositories, %d worktrees | %d uncommitted | %d to push | %d to pull%s",
-                     gc->tile_count, trees, dirty, push, pull, conf ? " | CONFLICTS" : "");
-  if (sel >= 0 && sel < gc->tile_count && len > 0 && (size_t)len < n)
-    snprintf(out + len, n - (size_t)len, "   -   %s", gc->tiles[gc->visible_tiles[sel]].path);
+static const db_checkout_t *selected_checkout(void) {
+  window_t *list = g_gc ? g_gc->checkouts_win : NULL;
+  return list ? (const db_checkout_t *)send_message(list, tvGetSelectedRecord, 0, NULL) : NULL;
 }
 
-void gc_overview_open(int index) {
+void gc_overview_status(char *out, size_t n) {
+  overview_counts_t c = count_rows();
+  int len = snprintf(out, n, ui_tr("%d repositories, %d worktrees | %d uncommitted | %d to push | %d to pull"),
+                     c.repos, c.trees, c.dirty, c.push, c.pull);
+  if (len < 0 || (size_t)len >= n) return;
+  if (c.conflicts) len += snprintf(out + len, n - (size_t)len, " | %s", ui_tr("CONFLICTS"));
+  const db_target_t *target = g_gc->targets_win ? (const db_target_t *)send_message(g_gc->targets_win, tvGetSelectedRecord, 0, NULL) : NULL;
+  const db_checkout_t *row = selected_checkout();
+  if ((size_t)len < n && (target || row))
+    snprintf(out + len, n - (size_t)len, "   -   %s", target && target->command[0] ? target->command : row ? row->path : "");
+}
+
+void gc_overview_open(const char *path) {
   gc_state_t *gc = g_gc;
-  if (!gc || index < 0 || index >= gc->tile_count) {
-    fprintf(stderr, "[gc] overview_open rejected index=%d count=%d\n", index, gc ? gc->tile_count : -1); fflush(stderr); return;
-  }
-  const git_summary_t *t = &gc->tiles[index];
-  if (t->missing) { message_box(gc->main_win, "This folder is missing or is no longer a git repository.", "Open Repository", MB_OK); return; }
-  char path[512]; snprintf(path, sizeof(path), "%s", t->path);
-  bool dirty = t->staged || t->unstaged || t->untracked || t->conflicts;
-  gc_open_repo(path);
+  if (!gc || !path || !path[0]) { fprintf(stderr, "[gc] overview_open rejected path=%s\n", path ? path : "(null)"); fflush(stderr); return; }
+  const git_summary_t *t = NULL;
+  for (int i = 0; i < gc->checkout_count; i++) if (!strcmp(gc->checkouts[i].path, path)) t = &gc->checkouts[i];
+  if (!t) { fprintf(stderr, "[gc] overview_open: %s is not in the workspace (rows=%d)\n", path, gc->checkout_count); fflush(stderr); return; }
+  if (t->missing) { message_box(gc->main_win, ui_tr("This folder is missing or is no longer a git repository."), ui_tr("Open Repository"), MB_OK); return; }
+  char open_path[512]; snprintf(open_path, sizeof(open_path), "%s", path);
+  bool dirty = row_dirty(t) || t->conflicts;
+  gc_open_repo(open_path);
   if (gc->repo) gc_set_view_mode(dirty ? GC_TAB_CHANGES : GC_TAB_HISTORY);
+}
+
+bool gc_overview_remove_selected(void) {
+  const db_checkout_t *row = selected_checkout();
+  if (!row) { fprintf(stderr, "[gc] remove from workspace: no checkout selected\n"); fflush(stderr); return false; }
+  char root[512]; snprintf(root, sizeof(root), "%s", row->root);
+  if (!gc_workspace_remove(root)) {
+    fprintf(stderr, "[gc] remove from workspace: %s is not a workspace root\n", root); fflush(stderr); return false;
+  }
+  gc_overview_refresh();
+  return true;
 }
 
 void gc_overview_fetch_all(void) {
   gc_state_t *gc = g_gc; if (!gc || gc->fetching_all) return;
   char roots[GC_MAX_RECENT_REPOS][512]; int n = 0;
-  for (int i = 0; i < gc->tile_count && n < GC_MAX_RECENT_REPOS; i++) {
-    if (gc->tiles[i].linked || gc->tiles[i].missing) continue;
-    snprintf(roots[n++], sizeof(roots[0]), "%s", gc->tiles[i].path);
+  for (int i = 0; i < gc->checkout_count && n < GC_MAX_RECENT_REPOS; i++) {
+    if (gc->checkouts[i].linked || gc->checkouts[i].missing) continue;
+    snprintf(roots[n++], sizeof(roots[0]), "%s", gc->checkouts[i].path);
   }
   if (!n) { for (; n < gc->workspace_count && n < GC_MAX_RECENT_REPOS; n++) snprintf(roots[n], sizeof(roots[0]), "%s", gc->workspace[n]); }
   if (git_fetch_all_async(roots, n, gc->main_win)) {
     gc->fetching_all = true;
-    char msg[96]; snprintf(msg, sizeof(msg), "Fetching %d repositories...", n);
+    char msg[96]; snprintf(msg, sizeof(msg), ui_tr("Fetching %d repositories..."), n);
     send_message(gc->main_win, evStatusBar, 0, msg);
-  } else message_box(gc->main_win, "There are no repositories to fetch.", "Fetch All", MB_OK);
+  } else message_box(gc->main_win, ui_tr("There are no repositories to fetch."), ui_tr("Fetch All"), MB_OK);
 }
 
 // Handles notifications from the overview controls; returns true when consumed.
 bool gc_overview_handle_command(uint32_t wparam, void *lparam) {
   gc_state_t *gc = g_gc; uint16_t code = HIWORD(wparam);
   if (!gc || !lparam) return false;
-  if (code == btnClicked && LOWORD(wparam) == ID_OVERVIEW_CARD_HEADER_CLOSE) {
-    window_t *card = lparam;
-    while (card && card->parent != gc->board_win) card = card->parent;
-    if (!card || !gc->board_win) return false;
-    int index = 0;
-    for (window_t *c = gc->board_win->children; c && c != card; c = c->next) index++;
-    if (index >= gc->tile_count) return true;
-    char path[512]; snprintf(path, sizeof(path), "%s", gc->tiles[gc->visible_tiles[index]].path);
-    if (gc_workspace_remove(path)) {
-      send_message(gc->board_win, tgClear, 0, NULL);
-      gc_overview_refresh();
-    }
+  window_t *src = lparam;
+  if (src == gc->checkouts_win && code == RVN_DBLCLK) {
+    const db_checkout_t *row = selected_checkout();
+    if (row) gc_overview_open(row->path);
     return true;
   }
-  if ((code == tgnSelChange || code == tgnActivate) && (window_t *)lparam == gc->board_win) {
-    int index = (int)LOWORD(wparam);
-    if (index < 0 || index >= gc->tile_count) return true;
-    if (code == tgnActivate) gc_overview_open(gc->visible_tiles[index]); else gc_update_status();
-    return true;
-  }
-  if (code == btnClicked && (window_t *)lparam == gc->filter_btn) {
+  if ((src == gc->checkouts_win || src == gc->targets_win) && code == RVN_SELCHANGE) { gc_update_status(); return true; }
+  if (code == btnClicked && src == gc->filter_btn) {
     gc->attention_only = !gc->attention_only;
     rebuild_summary();
-    rebuild_board();
+    fill_rows();
     window_layout_sync(gc->overview_page_win);
     return true;
   }

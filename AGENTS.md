@@ -9,6 +9,13 @@
 For UI design and review, use the [`orion-ui-design`](.agents/skills/orion-ui-design/SKILL.md) skill (adapted from Apple HIG principles for Orion's retro style).
 The app shell, status badges, buttons, tables and tokens every app shares are
 defined in [docs/design-language.md](docs/design-language.md).
+## Launch targets
+
+`launch.xml` at the repository root lists the ways to start this checkout; Git
+Client shows them for every worktree. When a change adds, renames or removes an
+app or a run target in the Makefile, update `launch.xml` in the same change.
+The format is in [apps/gitclient/README.md](apps/gitclient/README.md#launch-targets-launchxml).
+
 # Debug macros
 
 These macros control verbose debug logging. Set to `1` at build time to enable,

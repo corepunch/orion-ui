@@ -15,6 +15,20 @@ Source: [Phosphor core](https://github.com/phosphor-icons/core), revision
 Upstream paths: `assets/regular/<name>.svg` and `assets/fill/<name>-fill.svg`.
 The MIT license is included as `PHOSPHOR-LICENSE`.
 
+The Overview table's row icons are single regular-weight Phosphor icons from the
+same revision (`assets/regular/<name>.svg`), saved with a `gc-` prefix:
+
+| Asset | Upstream icon | Row |
+|---|---|---|
+| gc-check-circle.svg | check-circle | checkout in sync |
+| gc-warning-circle.svg | warning-circle | uncommitted changes |
+| gc-x-circle.svg | x-circle | merge conflicts |
+| gc-arrows-down-up.svg | arrows-down-up | commits to push or pull |
+| gc-question.svg | question | folder missing |
+| gc-play.svg | play | run target |
+| gc-hammer.svg | hammer | build target |
+| gc-flask.svg | flask | test target |
+
 The Changes pair uses Bootstrap Icons v1.13.1's `file-diff` and `file-diff-fill`,
 which show additions and deletions on a document. Blind review found Phosphor's
 `git-diff` ambiguous with branch comparison or synchronization.

@@ -508,8 +508,8 @@ void test_gc_identity_roundtrip(void) {
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
-void test_gc_workspace_scan_worktrees(void) {
-    TEST("git_workspace_scan: one card per repo, with worktree and dirty counts");
+void test_gc_workspace_checkouts(void) {
+    TEST("git_workspace_checkouts: one row per checkout, main first, sharing the repository root");
 
     char wt[600];
     snprintf(wt, sizeof(wt), "%s_wt", s_repo);
@@ -526,26 +526,32 @@ void test_gc_workspace_scan_worktrees(void) {
 
     char roots[1][512];
     snprintf(roots[0], sizeof(roots[0]), "%s", s_repo);
-    git_summary_t tiles[GC_MAX_TILES];
-    int n = git_workspace_scan(roots, 1, tiles, GC_MAX_TILES);
-    ASSERT_EQUAL(n, 1);
+    git_summary_t rows[GC_MAX_CHECKOUTS];
+    int n = git_workspace_checkouts(roots, 1, rows, GC_MAX_CHECKOUTS);
+    ASSERT_EQUAL(n, 2);
 
-    ASSERT_FALSE(tiles[0].linked);
-    ASSERT_STR_EQUAL(tiles[0].branch, "scan-base");
-    ASSERT_EQUAL(tiles[0].unstaged, 1);
-    ASSERT_EQUAL(tiles[0].untracked, 0);
-    ASSERT_EQUAL(tiles[0].worktrees, 2);
-    ASSERT_EQUAL(tiles[0].dirty_worktrees, 2);
-    ASSERT_TRUE(tiles[0].other_attention >= 1);
-    ASSERT_TRUE(tiles[0].no_upstream);
-    ASSERT_TRUE(gc_tile_needs_attention(&tiles[0]));
+    // The main checkout comes first, then each linked worktree with its own state.
+    ASSERT_FALSE(rows[0].linked);
+    ASSERT_STR_EQUAL(rows[0].branch, "scan-base");
+    ASSERT_EQUAL(rows[0].unstaged, 1);
+    ASSERT_EQUAL(rows[0].untracked, 0);
+    ASSERT_EQUAL(rows[0].worktrees, 2);
+    ASSERT_TRUE(rows[0].no_upstream);
+    ASSERT_TRUE(rows[1].linked);
+    ASSERT_STR_EQUAL(rows[1].branch, "scan-linked");
+    ASSERT_EQUAL(rows[1].untracked, 1);
+    ASSERT_EQUAL(rows[1].unstaged, 0);
+    char abs_repo[512];
+    ASSERT_TRUE(git_path_absolute(s_repo, abs_repo, sizeof(abs_repo)));
+    ASSERT_STR_EQUAL(rows[1].root, rows[0].root);
+    ASSERT_STR_EQUAL(rows[0].root, abs_repo);
+    ASSERT_TRUE(gc_checkout_needs_attention(&rows[1]));
 
-    // The linked checkout is the same repository, so both roots collapse to one card.
+    // The linked checkout is the same repository, so both roots list its rows once.
     char both[2][512];
     snprintf(both[0], sizeof(both[0]), "%s", s_repo);
     snprintf(both[1], sizeof(both[1]), "%s", wt);
-    ASSERT_EQUAL(git_workspace_scan(both, 2, tiles, GC_MAX_TILES), 1);
-    ASSERT_EQUAL(tiles[0].worktrees, 2);
+    ASSERT_EQUAL(git_workspace_checkouts(both, 2, rows, GC_MAX_CHECKOUTS), 2);
 
     ASSERT_TRUE(gct_git(s_repo, "checkout -- file1.txt"));
     gct_remove_dir(wt);
@@ -712,15 +718,15 @@ void test_gc_branches_skip_only_remote_head(void) {
     PASS();
 }
 
-void test_gc_workspace_scan_missing(void) {
-    TEST("git_workspace_scan: a vanished folder becomes an 'unavailable' tile, not a crash");
+void test_gc_workspace_checkouts_missing(void) {
+    TEST("git_workspace_checkouts: a vanished folder becomes a missing row, not a crash");
     char roots[1][512] = {"/nonexistent/gitclient/repo"};
-    git_summary_t tiles[GC_MAX_TILES];
-    int n = git_workspace_scan(roots, 1, tiles, GC_MAX_TILES);
+    git_summary_t checkouts[GC_MAX_CHECKOUTS];
+    int n = git_workspace_checkouts(roots, 1, checkouts, GC_MAX_CHECKOUTS);
     ASSERT_EQUAL(n, 1);
-    ASSERT_TRUE(tiles[0].missing);
-    ASSERT_EQUAL(tiles[0].worktrees, 0);
-    ASSERT_TRUE(gc_tile_needs_attention(&tiles[0]));
+    ASSERT_TRUE(checkouts[0].missing);
+    ASSERT_EQUAL(checkouts[0].worktrees, 0);
+    ASSERT_TRUE(gc_checkout_needs_attention(&checkouts[0]));
     PASS();
 }
 
@@ -823,6 +829,123 @@ void test_gc_locate_and_workspace_file(void) {
     PASS();
 }
 
+void test_gc_worktree_list_submodule_checkout(void) {
+    TEST("git_worktree_list: a submodule's main worktree is its checkout, not its gitdir");
+    char super[256];
+    ASSERT_TRUE(gct_make_temp_dir(super, sizeof(super), "orion_gcsuper"));
+    ASSERT_TRUE(gct_git(super, "init -q"));
+    char cmd[900];
+    snprintf(cmd, sizeof(cmd), "-c protocol.file.allow=always submodule add -q \"%s\" sub", s_repo);
+    ASSERT_TRUE(gct_git(super, cmd));
+    char sub[400], abs_sub[512];
+    snprintf(sub, sizeof(sub), "%s/sub", super);
+    ASSERT_TRUE(git_path_absolute(sub, abs_sub, sizeof(abs_sub)));
+    git_worktree_t wt[GC_MAX_WORKTREES];
+    ASSERT_TRUE(git_worktree_list(sub, wt, GC_MAX_WORKTREES) >= 1);
+    char listed[512];
+    ASSERT_TRUE(git_path_absolute(wt[0].path, listed, sizeof(listed)));
+    ASSERT_STR_EQUAL(listed, abs_sub);
+    char checkout[512], main_root[512];
+    ASSERT_TRUE(git_locate(sub, checkout, sizeof(checkout), main_root, sizeof(main_root)));
+    ASSERT_STR_EQUAL(main_root, abs_sub);
+    gct_remove_dir(super);
+    PASS();
+}
+
+static int launch_from(const char *dir, const char *body, gc_launch_t *out) {
+    char path[400];
+    snprintf(path, sizeof(path), "%s/" GC_LAUNCH_FILE, dir);
+    if (!gct_write_file(path, body)) return -2;
+    return gc_launch_load(dir, out);
+}
+
+void test_gc_launch_targets_and_commands(void) {
+    TEST("launch.xml: targets, kinds, default, params and env build shell commands");
+    char dir[256];
+    ASSERT_TRUE(gct_make_temp_dir(dir, sizeof(dir), "orion_gclaunch"));
+    gc_launch_t *l = calloc(1, sizeof(*l));
+    ASSERT_NOT_NULL(l);
+    ASSERT_EQUAL(gc_launch_load(dir, l), 0);
+    ASSERT_EQUAL(l->default_index, -1);
+
+    ASSERT_EQUAL(launch_from(dir,
+        "<launch project=\"x-com\">\n"
+        "  <target name=\"Assets\" kind=\"build\" run=\"swift run assetdump build/dump\" />\n"
+        "  <target name=\"City\" run=\"swift run XComCity\" />\n"
+        "  <target name=\"Preset\" default=\"true\" run=\"swift run -c release XComCity\">\n"
+        "    <env name=\"XCOM_AUTOSTART\" value=\"${preset}\" />\n"
+        "    <param name=\"preset\" choices=\"preset1 preset2 demo\" />\n"
+        "  </target>\n"
+        "  <target name=\"Map\" dir=\"viewer dir\" build=\"make -C viewer\" run=\"build/ufo-viewer --map ${map} --seed ${seed}\">\n"
+        "    <param name=\"map\" default=\"tactical/scenes/a b.scene\" />\n"
+        "    <param name=\"seed\" choices=\"7 42\" default=\"42\" />\n"
+        "  </target>\n"
+        "  <target name=\"Tests\" kind=\"test\" run=\"swift test\" />\n"
+        "</launch>\n", l), 5);
+    ASSERT_STR_EQUAL(l->project, "x-com");
+    ASSERT_EQUAL(l->default_index, 2);
+    ASSERT_TRUE(l->targets[2].is_default);
+    ASSERT_FALSE(l->targets[1].is_default);
+    ASSERT_EQUAL(l->targets[0].kind, GC_TARGET_BUILD);
+    ASSERT_EQUAL(l->targets[4].kind, GC_TARGET_TEST);
+    ASSERT_STR_EQUAL(gc_launch_kind_name(l->targets[4].kind), "test");
+    ASSERT_STR_EQUAL(l->targets[2].params[0].def, "preset1");
+
+    char cmd[1024];
+    ASSERT_TRUE(gc_launch_command(&l->targets[2], NULL, cmd, sizeof(cmd)));
+    ASSERT_STR_EQUAL(cmd, "XCOM_AUTOSTART=preset1 swift run -c release XComCity");
+    const char *demo[] = {"demo"};
+    ASSERT_TRUE(gc_launch_command(&l->targets[2], demo, cmd, sizeof(cmd)));
+    ASSERT_STR_EQUAL(cmd, "XCOM_AUTOSTART=demo swift run -c release XComCity");
+    const char *quoted[] = {"it's here", NULL};
+    ASSERT_TRUE(gc_launch_command(&l->targets[3], quoted, cmd, sizeof(cmd)));
+    ASSERT_STR_EQUAL(cmd, "cd 'viewer dir' && make -C viewer && build/ufo-viewer --map 'it'\\''s here' --seed 42");
+    ASSERT_TRUE(gc_launch_command(&l->targets[3], NULL, cmd, sizeof(cmd)));
+    ASSERT_STR_EQUAL(cmd, "cd 'viewer dir' && make -C viewer && build/ufo-viewer --map 'tactical/scenes/a b.scene' --seed 42");
+    char tiny[16];
+    ASSERT_FALSE(gc_launch_command(&l->targets[3], NULL, tiny, sizeof(tiny)));
+
+    // Without default="true" the first run target is the default.
+    ASSERT_EQUAL(launch_from(dir,
+        "<launch><target name=\"Build\" kind=\"build\" run=\"make\" /><target name=\"Run\" run=\"make run\" /></launch>", l), 2);
+    ASSERT_EQUAL(l->default_index, 1);
+    ASSERT_TRUE(l->targets[1].is_default);
+
+    free(l);
+    gct_remove_dir(dir);
+    PASS();
+}
+
+void test_gc_launch_rejects_malformed_files(void) {
+    TEST("launch.xml: malformed files are rejected whole with an empty result");
+    char dir[256];
+    ASSERT_TRUE(gct_make_temp_dir(dir, sizeof(dir), "orion_gclaunchbad"));
+    gc_launch_t *l = calloc(1, sizeof(*l));
+    ASSERT_NOT_NULL(l);
+    const char *bad[] = {
+        "<launch><target name=\"A\" run=\"x\"></launch>",
+        "<targets><target name=\"A\" run=\"x\" /></targets>",
+        "<launch><target name=\"A\" /></launch>",
+        "<launch><target run=\"x\" /></launch>",
+        "<launch><target name=\"A\" run=\"x\" kind=\"deploy\" /></launch>",
+        "<launch><target name=\"A\" run=\"x\" /><target name=\"A\" run=\"y\" /></launch>",
+        "<launch><target name=\"A\" run=\"x\" default=\"true\" /><target name=\"B\" run=\"y\" default=\"true\" /></launch>",
+        "<launch><target name=\"A\" run=\"x\"><arg /></target></launch>",
+        "<launch><step /></launch>",
+    };
+    for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
+        ASSERT_EQUAL(launch_from(dir, bad[i], l), -1);
+        ASSERT_EQUAL(l->count, 0);
+        ASSERT_EQUAL(l->default_index, -1);
+    }
+    ASSERT_EQUAL(launch_from(dir, "<launch><target name=\"A\" run=\"make ${level}\" /></launch>", l), 1);
+    char cmd[256];
+    ASSERT_FALSE(gc_launch_command(&l->targets[0], NULL, cmd, sizeof(cmd)));
+    free(l);
+    gct_remove_dir(dir);
+    PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -857,7 +980,7 @@ int main(int argc, char *argv[]) {
     test_gc_status_z_handles_spaces_and_renames();
     test_gc_sync_status_without_upstream();
     test_gc_identity_roundtrip();
-    test_gc_workspace_scan_worktrees();
+    test_gc_workspace_checkouts();
     test_gc_branch_kinds_and_activity();
     test_gc_default_branch();
     test_gc_delete_merged_branches();
@@ -866,8 +989,11 @@ int main(int argc, char *argv[]) {
     test_gc_delete_merged_keeps_unknown_trunk();
     test_gc_default_branch_with_slash();
     test_gc_branches_skip_only_remote_head();
-    test_gc_workspace_scan_missing();
+    test_gc_workspace_checkouts_missing();
     test_gc_locate_and_workspace_file();
+    test_gc_worktree_list_submodule_checkout();
+    test_gc_launch_targets_and_commands();
+    test_gc_launch_rejects_malformed_files();
 
     teardown_test_repo();
 

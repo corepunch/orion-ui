@@ -1,0 +1,463 @@
+<title>Git Client Control Room</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: page explains on top; each variant is a framed Orion window mockup (Porcelain / Porcelain Dark tokens) */
+:root{
+  --page:#eef0f4; --win:#ffffff; --side:#f5f6f8; --line:#dfe2e8; --line2:#eceef2;
+  --fg:#23262d; --fg2:#6b7280; --fg3:#9aa1ad;
+  --accent:#5b3fe0; --accent-soft:#ece8fd;
+  --ok:#1f8a4c; --ok-soft:#e3f4ea; --warn:#b26b00; --warn-soft:#fdf1dc;
+  --err:#c4362c; --err-soft:#fbe5e3; --info:#2463c7; --info-soft:#e2ecfb;
+  --console:#1d2026; --console-fg:#cdd3de;
+  --ui:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --page:#1b1d22; --win:#282c34; --side:#21252b; --line:#3a3f4b; --line2:#2f343e;
+  --fg:#d7dae0; --fg2:#9aa2b1; --fg3:#6b7280;
+  --accent:#a48cff; --accent-soft:#3a3358;
+  --ok:#98c379; --ok-soft:#2f3b2c; --warn:#e5c07b; --warn-soft:#3f3829; --err:#e06c75; --err-soft:#43292d; --info:#61afef; --info-soft:#253446;
+  --console:#1b1e23; --console-fg:#c6ccd7; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --page:#1b1d22; --win:#282c34; --side:#21252b; --line:#3a3f4b; --line2:#2f343e;
+  --fg:#d7dae0; --fg2:#9aa2b1; --fg3:#6b7280;
+  --accent:#a48cff; --accent-soft:#3a3358;
+  --ok:#98c379; --ok-soft:#2f3b2c; --warn:#e5c07b; --warn-soft:#3f3829; --err:#e06c75; --err-soft:#43292d; --info:#61afef; --info-soft:#253446;
+  --console:#1b1e23; --console-fg:#c6ccd7; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--fg);font:14px/1.5 var(--ui);padding-block:28px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:22px}
+h1{font-size:26px;font-weight:600;margin:0;text-wrap:balance}
+h2{font-size:18px;font-weight:600;margin:0}
+p{margin:0;max-width:72ch;color:var(--fg2)}
+p b{color:var(--fg)}
+code,.mono{font-family:var(--mono);font-size:12px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.tabs button{font:500 13px var(--ui);color:var(--fg2);background:none;border:0;padding:8px 12px;border-bottom:2px solid transparent;cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.lede{display:grid;gap:6px}
+.pros{display:flex;gap:18px;flex-wrap:wrap;font-size:13px}
+.pros div{min-width:0;flex:1 1 260px}
+.pros strong{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg3);font-weight:600}
+/* Orion window */
+.win{background:var(--win);border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+.scroll{overflow-x:auto}
+.inner{min-width:900px}
+.titlebar{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--line);background:var(--side);font-size:12px;color:var(--fg2)}
+.dots{display:flex;gap:6px}.dots i{width:11px;height:11px;border-radius:50%;background:var(--line)}
+.titlebar b{color:var(--fg);font-weight:600}
+.cmdbar{display:flex;gap:6px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
+.btn{font:500 12px var(--ui);color:var(--fg);background:var(--win);border:1px solid var(--line);border-radius:5px;padding:3px 9px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:5px;align-items:center}
+.btn:hover{border-color:var(--fg3)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.run{border-color:var(--ok);color:var(--ok)}
+.btn.stop{border-color:var(--err);color:var(--err)}
+.btn.ghost{border-color:transparent;color:var(--fg2)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.sep{width:1px;height:18px;background:var(--line);margin:0 4px}
+.grow{flex:1}
+.search{border:1px solid var(--line);border-radius:5px;padding:3px 8px;color:var(--fg3);font-size:12px;min-width:180px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:0 7px;border-radius:9px;line-height:18px;white-space:nowrap}
+.b-ok{background:var(--ok-soft);color:var(--ok)}.b-warn{background:var(--warn-soft);color:var(--warn)}
+.b-err{background:var(--err-soft);color:var(--err)}.b-info{background:var(--info-soft);color:var(--info)}
+.b-sec{background:var(--line2);color:var(--fg2)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+.pulse{animation:p 1.4s ease-in-out infinite}
+@keyframes p{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+.statusbar{border-top:1px solid var(--line);background:var(--side);font-size:11px;color:var(--fg2);padding:4px 12px}
+/* Variant A — cards */
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px;background:var(--side)}
+.card{background:var(--win);border:1px solid var(--line);border-radius:7px;overflow:hidden;display:flex}
+.card .edge{width:4px;flex:none}
+.card .body{flex:1;min-width:0;padding:9px 10px;display:grid;gap:7px;align-content:start}
+.card .head{display:flex;align-items:center;gap:6px}
+.card .head b{font-size:13px}
+.card .path{color:var(--fg3);font-size:11px}
+.wt{border-top:1px solid var(--line2);padding-top:6px;display:grid;gap:5px}
+.wt .row{display:flex;align-items:center;gap:6px;font-size:12px;min-width:0}
+.wt .br{font-family:var(--mono);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font:500 11.5px var(--ui);border:1px solid var(--line);background:var(--win);color:var(--fg);border-radius:4px;padding:1px 7px;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.on{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.chip.def{border-color:var(--accent);color:var(--accent)}
+.chip .tri{font-size:9px}
+.more{color:var(--fg3);font-size:11px;cursor:pointer;border:0;background:none;font-family:var(--ui)}
+/* Variant B — rail */
+.split{display:grid;grid-template-columns:290px 1fr;min-height:520px}
+.rail{border-right:1px solid var(--line);background:var(--side);padding:6px 0;font-size:12.5px;overflow:auto}
+.rail .proj{padding:6px 12px 2px;display:flex;align-items:center;gap:6px;font-weight:600}
+.rail .proj span{color:var(--fg3);font-weight:400;font-size:11px}
+.rail .w{padding:2px 12px 2px 24px;display:flex;align-items:center;gap:6px;color:var(--fg2);font-family:var(--mono);font-size:11.5px}
+.rail .t{padding:3px 12px 3px 38px;display:flex;align-items:center;gap:7px;cursor:pointer;border-left:2px solid transparent}
+.rail .t:hover{background:var(--line2)}
+.rail .t.sel{background:var(--accent-soft);border-left-color:var(--accent)}
+.rail .t .st{width:12px;text-align:center;font-size:10px;color:var(--fg3)}
+.rail .t.running .st{color:var(--ok)}
+.rail .t.failed .st{color:var(--err)}
+.rail .t em{font-style:normal;margin-left:auto;color:var(--fg3);font-size:11px}
+.detail{display:grid;grid-template-rows:auto auto 1fr;min-width:0}
+.dhead{padding:12px 14px;border-bottom:1px solid var(--line);display:grid;gap:4px}
+.dhead .t1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dhead .t1 b{font-size:15px}
+.cmdline{font-family:var(--mono);font-size:12px;background:var(--side);border:1px solid var(--line2);border-radius:4px;padding:4px 8px;color:var(--fg)}
+.params{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;padding:10px 14px;border-bottom:1px solid var(--line);align-items:center;font-size:12px}
+.params label{color:var(--fg2)}
+.params select,.params input{font:12px var(--mono);border:1px solid var(--line);border-radius:4px;padding:3px 6px;background:var(--win);color:var(--fg);max-width:340px}
+.log{background:var(--console);color:var(--console-fg);font:11.5px/1.55 var(--mono);padding:10px 14px;overflow:auto;white-space:pre-wrap;min-height:200px}
+.log .g{color:#98c379}.log .y{color:#e5c07b}.log .d{color:#7f8796}
+/* Variant C — table + palette */
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{text-align:left;font-weight:500;color:var(--fg2);font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--side)}
+.tbl td{padding:5px 10px;border-bottom:1px solid var(--line2);vertical-align:middle;white-space:nowrap}
+.tbl td.num{text-align:right;font-variant-numeric:tabular-nums;color:var(--fg2)}
+.tbl tr.grp td{background:var(--side);font-weight:600;font-size:12px;padding-top:8px}
+.tbl tr.grp td span{color:var(--fg3);font-weight:400}
+.palette-wrap{position:relative;padding:14px;background:var(--side);border-top:1px solid var(--line)}
+.palette{max-width:560px;margin:0 auto;background:var(--win);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.18);overflow:hidden}
+.palette .q{padding:10px 12px;border-bottom:1px solid var(--line);font-size:14px;display:flex;gap:8px;align-items:center}
+.palette .q .caret{width:1px;height:16px;background:var(--accent);animation:p 1s steps(2) infinite}
+.palette .opt{display:flex;gap:10px;align-items:center;padding:6px 12px;font-size:12.5px}
+.palette .opt.sel{background:var(--accent-soft)}
+.palette .opt .sub{color:var(--fg3);font-size:11px;margin-left:auto;font-family:var(--mono)}
+.palette .foot{padding:5px 12px;font-size:11px;color:var(--fg3);border-top:1px solid var(--line2)}
+.kbd{font:11px var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;color:var(--fg2)}
+/* XML */
+pre.xml{margin:0;background:var(--console);color:var(--console-fg);font:12px/1.55 var(--mono);padding:14px 16px;border-radius:8px;overflow-x:auto}
+pre.xml .tg{color:#e06c75}.xml .at{color:#d19a66}.xml .st{color:#98c379}.xml .cm{color:#7f8796}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.cols>div{min-width:0;display:grid;gap:10px;align-content:start}
+ul{margin:0;padding-left:18px;color:var(--fg2);display:grid;gap:4px}
+ul b{color:var(--fg)}
+/* Variant D — rail + table + palette */
+.rail .sec{padding:8px 12px 3px;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--fg3);font-weight:600}
+.rail .rn{padding:4px 12px;display:grid;grid-template-columns:12px 1fr auto;gap:2px 7px;cursor:pointer;border-left:2px solid transparent;align-items:center}
+.rail .rn:hover,.rail .pr:hover,.rail .t:hover{background:var(--line2)}
+.rail .rn.sel,.rail .pr.sel{background:var(--accent-soft);border-left-color:var(--accent)}
+.rail .rn .st{color:var(--ok);font-size:10px}
+.rail .rn small{grid-column:2/4;color:var(--fg3);font:11px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rail .rn em{font-style:normal;color:var(--fg3);font-size:11px}
+.rail .pr{padding:5px 12px;display:flex;gap:6px;align-items:center;cursor:pointer;border-left:2px solid transparent;font-weight:600}
+.rail .pr .tw{color:var(--fg3);font-size:10px;width:10px}
+.rail .pr .cnt{margin-left:auto}
+.rail .pr .sw{width:7px;height:7px;border-radius:2px;flex:none}
+.dmain{position:relative;min-width:0;display:grid;grid-template-rows:auto 1fr}
+.dmain>.view{min-width:0;overflow:auto}
+.ptitle{padding:12px 14px 4px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.ptitle b{font-size:15px}.ptitle span{color:var(--fg3);font-size:12px}
+.overlay{position:absolute;inset:0;background:rgba(20,22,28,.28);display:flex;justify-content:center;align-items:flex-start;padding-top:40px}
+.palette .q input{flex:1;border:0;outline:0;background:transparent;color:var(--fg);font:14px var(--ui)}
+.palette .list{max-height:260px;overflow:auto}
+.palette .opt{cursor:pointer}
+.palette .opt .k{font-size:10.5px;color:var(--fg3);text-transform:uppercase;letter-spacing:.05em;min-width:44px}
+.palette .grp{padding:6px 12px 2px;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--fg3)}
+.roles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;font-size:13px}
+.roles div{min-width:0;border-top:2px solid var(--line);padding-top:8px}
+.roles strong{display:block;margin-bottom:2px}
+.roles p{font-size:13px}
+@media (max-width:760px){.roles{grid-template-columns:1fr}}
+.toast{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--win);font-size:12px;padding:7px 12px;border-radius:6px;opacity:0;transition:opacity .2s;pointer-events:none;font-family:var(--mono)}
+.toast.show{opacity:1}
+@media (max-width:760px){.cols{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+  <header class="lede">
+    <h1>Git Client как Control Room</h1>
+    <p>Шесть вкладок терминала — <b>ui, orca, blocks, tessera, x-com, lua-objc</b> — превращаются в один список: проект → его worktree → кнопки запуска. Команды взяты из ваших Makefile и README; worktree — из <code>git worktree list</code> (у orca их четыре, все в <code>/private/tmp</code>). Кнопки кликабельны: запуск помечается как работающий.</p>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" aria-selected="true" data-v="d">B + C · Run</button>
+    <button role="tab" aria-selected="false" data-v="a">A · Карточки дашборда</button>
+    <button role="tab" aria-selected="false" data-v="b">B · Вертикальный rail</button>
+    <button role="tab" aria-selected="false" data-v="c">C · Таблица + палитра</button>
+    <button role="tab" aria-selected="false" data-v="x">Формат workspace.xml</button>
+  </nav>
+
+  <section id="v-d" class="lede"></section>
+  <section id="v-a" class="lede" hidden></section>
+  <section id="v-b" class="lede" hidden></section>
+  <section id="v-c" class="lede" hidden></section>
+  <section id="v-x" hidden></section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const P=[
+ {id:"ui",name:"ui",path:"~/Developer/mapview/ui",tone:"warn",state:"3 uncommitted",
+  wts:[{br:"main",path:".",st:"b-warn",stt:"3 changed"}],
+  targets:[{n:"Groove",c:"make groove && build/bin/groove",def:1},{n:"Groove demo",c:"make groove-demo"},
+   {n:"Git Client",c:"make gitclient && build/bin/gitclient"},{n:"Ledger RU",c:"make run-ledger-ru"},
+   {n:"Ledger DE",c:"make run-ledger-de"},{n:"Scener",c:"make scener && build/bin/scener"},
+   {n:"Image Editor",c:"make imageeditor && build/bin/imageeditor"},{n:"iPad",c:"make ipad-run APP=${app}",p:{app:["imageeditor","groove","ledger"]}},
+   {n:"Tests",c:"make test",kind:"test"}]},
+ {id:"orca",name:"orca",path:"~/Developer/orca",tone:"info",state:"4 worktrees",
+  wts:[{br:"main",path:".",st:"b-ok",stt:"clean"},
+   {br:"codex/chat-design-review-fixes",path:"/private/tmp/orca-chat-design-fixes",st:"b-info",stt:"2 to push"},
+   {br:"codex/editor-native-data-sources",path:"/private/tmp/orca-editor-pr-20261106",st:"b-warn",stt:"5 changed"},
+   {br:"feature/complete-image-font-migration",path:"/private/tmp/orca-image-font-migration",st:"b-ok",stt:"clean"},
+   {br:"feature/chat-xcode-renderer-libs",path:"/private/tmp/orca-xcode-host-sdk",st:"b-ok",stt:"clean"}],
+  targets:[{n:"Run",c:"make run",def:1},{n:"Editor",c:"make editor PROJECT=${project}",p:{project:["samples/hello","apps/Chat"]}},
+   {n:"Cluster",c:"make cluster START=${start}",p:{start:["","voltage"]}},{n:"Weather",c:"make weather"},
+   {n:"iOS Simulator",c:"make ios-run"},{n:"Headless tests",c:"make test-headless",kind:"test"}]},
+ {id:"blocks",name:"blocks",path:"~/Developer/blocks",tone:"ok",state:"in sync",
+  wts:[{br:"main",path:".",st:"b-ok",stt:"clean"}],
+  targets:[{n:"BlockCraft",c:"make run",def:1},{n:"Build app",c:"make app",kind:"build"}]},
+ {id:"tessera",name:"tessera",path:"~/Developer/tessera",tone:"ok",state:"in sync",
+  wts:[{br:"main",path:".",st:"b-ok",stt:"clean"}],
+  targets:[{n:"Map menu",c:"make -C viewer && build/ufo-viewer",def:1},
+   {n:"Tutorial · night",c:"build/ufo-viewer --map tactical/scenes/special/tutorial.scene --profile night"},
+   {n:"West Europe",c:"build/ufo-viewer --map tactical/configs/tilesets/west_europe.txt --template ${template} --seed ${seed}",p:{template:["normal4x3","small2x2"],seed:["7","42"]}},
+   {n:"Block 05_00",c:"build/ufo-viewer --map tactical/ublocks/05-zapadni_evropa/05_00.ublck"}]},
+ {id:"xcom",name:"x-com",path:"~/Developer/x-com",tone:"info",state:"branch",
+  wts:[{br:"original-lots-tubes-wall",path:".",st:"b-info",stt:"1 to push"}],
+  targets:[{n:"City (menu)",c:"swift run XComCity",def:1},{n:"Preset",c:"XCOM_AUTOSTART=${preset} swift run -c release XComCity",p:{preset:["preset1","preset2","preset3","preset4","preset5","demo"]}},
+   {n:"Asset dump",c:"swift run assetdump build/dump",kind:"build"},{n:"Tests",c:"swift test",kind:"test"}]},
+ {id:"luaobjc",name:"lua-objc",path:"~/Developer/lua-objc",tone:"ok",state:"in sync",
+  wts:[{br:"main",path:".",st:"b-ok",stt:"clean"}],
+  targets:[{n:"IDE",c:"make run-ide",def:1},{n:"Hello",c:"make run-hello"},{n:"Mail",c:"make run-mail"},{n:"Stocks",c:"make run-stocks"},
+   {n:"Weather",c:"make run-weather"},{n:"Disk map",c:"make run-diskmap"},{n:"Welcome",c:"make run-welcome"},{n:"iOS",c:"make ios-run"}]}
+];
+const running=new Set(["ui|main|Groove","orca|codex/chat-design-review-fixes|Run","xcom|original-lots-tubes-wall|Preset"]);
+const key=(p,w,t)=>p.id+"|"+w.br+"|"+t.n;
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const toast=m=>{const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),1800)};
+function toggle(k,cmd){running.has(k)?running.delete(k):running.add(k);toast((running.has(k)?"▶ ":"■ ")+cmd);renderAll()}
+const toneVar={ok:"var(--ok)",warn:"var(--warn)",info:"var(--info)",err:"var(--err)"};
+const shortBr=b=>b.replace(/^(codex|feature)\//,"");
+const chrome=(title,sub,body,status)=>`<div class="win"><div class="scroll"><div class="inner">
+ <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span><b>${title}</b><span>${sub}</span></div>${body}
+ <div class="statusbar">${status}</div></div></div></div>`;
+const runCount=()=>running.size;
+
+/* ---------- A ---------- */
+function renderA(){
+ const cards=P.map(p=>{
+  const wts=p.wts.map(w=>{
+   const chips=p.targets.filter(t=>!t.kind).slice(0,w.br==="main"?6:3).map(t=>{
+    const k=key(p,w,t),on=running.has(k);
+    return `<button class="chip ${on?"on":t.def?"def":""}" data-k="${k}" data-c="${esc(t.c)}">${on?'<span class="dot pulse"></span>':'<span class="tri">▶</span>'}${t.n}</button>`}).join("");
+   const extra=p.targets.filter(t=>!t.kind).length-(w.br==="main"?6:3);
+   return `<div class="wt"><div class="row"><span class="br" title="${w.path}">⎇ ${shortBr(w.br)}</span><span class="grow"></span><span class="badge ${w.st}">${w.stt}</span></div>
+    <div class="chips">${chips}${extra>0?`<button class="more">+${extra} ▾</button>`:""}</div></div>`}).join("");
+  const nrun=[...running].filter(k=>k.startsWith(p.id+"|")).length;
+  return `<div class="card"><div class="edge" style="background:${toneVar[p.tone]}"></div><div class="body">
+   <div class="head"><b>${p.name}</b>${nrun?`<span class="badge b-ok"><span class="dot pulse"></span>${nrun} running</span>`:""}<span class="grow"></span><span class="path">${p.path.replace("~/Developer/","")}</span></div>${wts}</div></div>`}).join("");
+ const body=`<div class="cmdbar"><button class="btn primary">Run default</button><button class="btn">Stop all</button><span class="sep"></span><button class="btn">Add project…</button><button class="btn">Edit launch.xml</button><span class="grow"></span><span class="search">Filter projects</span></div><div class="board">${cards}</div>`;
+ document.getElementById("v-a").innerHTML=`
+  <div class="pros"><div><strong>Идея</strong>Текущая карточка Overview получает секцию на каждый worktree с кнопками запуска. Ничего нового в навигации — тот же TileGrid.</div>
+  <div><strong>Хорошо</strong>Минимум работы: Card + StackView + FlowView кнопок, всё уже есть. Git-статус и запуск рядом.</div>
+  <div><strong>Плохо</strong>Orca с 5 worktree раздувает карточку; лог процесса показать негде (только в отдельной вкладке).</div></div>
+  ${chrome("Git Client","Overview · mapview.gitworkspace",body,`${runCount()} running · 6 repositories · 9 worktrees`)}`;
+}
+
+/* ---------- B ---------- */
+let selB="orca|codex/chat-design-review-fixes|Run";
+function renderB(){
+ let rail="";
+ P.forEach(p=>{
+  rail+=`<div class="proj">${p.name} <span>${p.wts.length>1?p.wts.length+" worktrees":""}</span></div>`;
+  p.wts.forEach(w=>{
+   if(p.wts.length>1) rail+=`<div class="w">⎇ ${shortBr(w.br)}</div>`;
+   const list=p.targets.filter(t=>t.def||running.has(key(p,w,t))||(w.br==="main"&&p.targets.indexOf(t)<3));
+   list.forEach(t=>{const k=key(p,w,t),on=running.has(k);
+    rail+=`<div class="t ${on?"running":""} ${k===selB?"sel":""}" data-sel="${k}" style="${p.wts.length>1?"":"padding-left:26px"}"><span class="st">${on?"●":"○"}</span>${t.n}${on?"<em>2m</em>":""}</div>`});
+  });
+ });
+ const [pid,br,tn]=selB.split("|");const p=P.find(x=>x.id===pid),w=p.wts.find(x=>x.br===br),t=p.targets.find(x=>x.n===tn);
+ const on=running.has(selB);
+ const params=t.p?Object.entries(t.p).map(([k,v])=>`<label for="pb-${k}">${k}</label><select id="pb-${k}">${v.map(o=>`<option>${o||"(default)"}</option>`).join("")}</select>`).join(""):"";
+ const cmd=t.c.replace(/\$\{(\w+)\}/g,(m,k)=>t.p&&t.p[k]?t.p[k][0]:m);
+ const log=on?`<span class="d">$ cd ${w.path==="."?p.path:w.path}</span>
+<span class="d">$ ${esc(cmd)}</span>
+cc -O2 -c source/app/main.c -o build/obj/main.o
+cc -O2 -c source/chat/renderer.c -o build/obj/renderer.o
+<span class="g">ld  build/orca</span>
+[orca] loading share/ … 214 assets
+[orca] window 1280×800, metal
+<span class="y">[chat] warning: font 'SF Mono' missing, using Menlo</span>
+[orca] ready in 1.82 s`:`<span class="d">Not running. Press Run to start in ${w.path==="."?p.path:w.path}</span>`;
+ const body=`<div class="split"><div class="rail">${rail}</div><div class="detail">
+  <div class="dhead"><div class="t1"><b>${p.name} · ${t.n}</b><span class="badge b-sec">⎇ ${shortBr(w.br)}</span>${on?'<span class="badge b-ok"><span class="dot pulse"></span>Running · pid 48213</span>':'<span class="badge b-sec">Stopped</span>'}
+   <span class="grow"></span>${on?`<button class="btn">Restart</button><button class="btn stop" data-k="${selB}" data-c="${esc(cmd)}">Stop</button>`:`<button class="btn primary" data-k="${selB}" data-c="${esc(cmd)}">Run</button>`}</div>
+   <div class="cmdline">${esc(cmd)}</div><div style="font-size:11px;color:var(--fg3)">${w.path==="."?p.path:w.path}</div></div>
+  ${params?`<div class="params">${params}</div>`:`<div></div>`}
+  <div class="log">${log}</div></div></div>`;
+ document.getElementById("v-b").innerHTML=`
+  <div class="pros"><div><strong>Идея</strong>Вертикальные «вкладки», как вы описали: слева дерево проект → worktree → цели, справа выбранный процесс с параметрами и его выводом.</div>
+  <div><strong>Хорошо</strong>Заменяет Terminal целиком: вывод, Stop/Restart, параметры (уровень, preset) — без памяти о командах.</div>
+  <div><strong>Плохо</strong>Нужен встроенный вывод процесса (терминал-контрол уже есть в apps/terminal). Отдельная страница рядом с Overview.</div></div>
+  ${chrome("Git Client","Run · orca",body,`${runCount()} running · Ctrl+R run selected · Ctrl+. stop`)}`;
+}
+
+/* ---------- C ---------- */
+function renderC(){
+ let rows="";
+ P.forEach(p=>{
+  rows+=`<tr class="grp"><td colspan="6">${p.name} <span>${p.path}</span></td></tr>`;
+  p.wts.forEach(w=>{
+   const def=p.targets.find(t=>t.def);const runs=p.targets.filter(t=>running.has(key(p,w,t)));
+   const t=runs[0]||def;const k=key(p,w,t),on=running.has(k);
+   rows+=`<tr><td class="mono">⎇ ${shortBr(w.br)}</td><td><span class="badge ${w.st}">${w.stt}</span></td>
+    <td>${on?'<span class="badge b-ok"><span class="dot pulse"></span>'+t.n+'</span>':'<span style="color:var(--fg3)">—</span>'}</td>
+    <td class="num">${on?"4m 12s":""}</td>
+    <td>${on?`<button class="btn stop" data-k="${k}" data-c="${esc(t.c)}">Stop</button>`:`<button class="btn run" data-k="${k}" data-c="${esc(def.c)}">▶ ${def.n}</button>`}</td>
+    <td><button class="btn ghost">${p.targets.length} targets ▾</button></td></tr>`})});
+ const body=`<div class="cmdbar"><button class="btn primary">Run… <span class="kbd">⌘K</span></button><button class="btn">Stop all</button><span class="grow"></span><span class="search">Filter</span></div>
+  <table class="tbl"><thead><tr><th>Worktree</th><th>Git</th><th>Running</th><th style="text-align:right">Uptime</th><th>Default</th><th>Other</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="palette-wrap"><div class="palette"><div class="q"><span style="color:var(--fg3)">Run</span> x-com pre<span class="caret"></span></div>
+   <div class="opt sel"><b>x-com · Preset</b> preset1 <span class="sub">⎇ original-lots-tubes-wall</span></div>
+   <div class="opt">x-com · Preset · preset3<span class="sub">recent</span></div>
+   <div class="opt">x-com · City (menu)<span class="sub">swift run XComCity</span></div>
+   <div class="opt">tessera · Tutorial · night<span class="sub">recent</span></div>
+   <div class="foot"><span class="kbd">↵</span> run · <span class="kbd">⌥↵</span> choose worktree · <span class="kbd">Tab</span> edit parameters</div></div></div>`;
+ document.getElementById("v-c").innerHTML=`
+  <div class="pros"><div><strong>Идея</strong>Плотная таблица «что где запущено» по всем worktree + палитра команд (⌘K) для запуска по имени, с историей недавних запусков и параметров.</div>
+  <div><strong>Хорошо</strong>Масштабируется на 20+ проектов, удобно с клавиатуры, «last used» помнит level 3 за вас.</div>
+  <div><strong>Плохо</strong>Меньше наглядности; кнопки целей спрятаны в меню. Палитра — новый контрол во фреймворке.</div></div>
+  ${chrome("Git Client","Processes",body,`${runCount()} running · 6 repositories`)}`;
+}
+
+/* ---------- XML ---------- */
+function renderX(){
+ const x=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/(&lt;\/?)([\w-]+)/g,'$1<span class="tg">$2</span>').replace(/ ([\w-]+)=("[^"]*")/g,' <span class="at">$1</span>=<span class="st">$2</span>').replace(/(&lt;!--[\s\S]*?--&gt;)/g,'<span class="cm">$1</span>');
+ const ws=`<?xml version="1.0"?>
+<!-- ~/Developer/developer.gitworkspace — opened by Git Client -->
+<workspace name="Developer">
+  <project path="~/Developer/mapview/ui" />
+  <project path="~/Developer/orca" />
+  <project path="~/Developer/blocks" />
+  <project path="~/Developer/tessera" />
+  <project path="~/Developer/x-com" />
+  <project path="~/Developer/lua-objc" />
+  <!-- Worktrees are found with git worktree list;
+       no need to list /private/tmp/orca-* by hand. -->
+</workspace>`;
+ const lx=`<?xml version="1.0"?>
+<!-- x-com/launch.xml — committed, so every worktree has it.
+     Agents add a target when they add a way to run the project. -->
+<launch project="x-com">
+  <target name="City" default="true"
+          run="swift run XComCity" />
+  <target name="Preset"
+          run="swift run -c release XComCity">
+    <env name="XCOM_AUTOSTART" value="\${preset}" />
+    <param name="preset" choices="preset1 preset2 preset3
+                                  preset4 preset5 demo" />
+  </target>
+  <target name="Asset dump" kind="build"
+          run="swift run assetdump build/dump" />
+  <target name="Tests" kind="test" run="swift test" />
+</launch>`;
+ const tx=`<launch project="tessera">
+  <target name="Map menu" default="true"
+          build="make -C viewer" run="build/ufo-viewer" />
+  <target name="Tactical map" build="make -C viewer"
+          run="build/ufo-viewer --map \${map} --profile \${profile}">
+    <param name="map" files="data/tactical/scenes/**/*.scene" />
+    <param name="profile" choices="day night" default="night" />
+  </target>
+</launch>`;
+ document.getElementById("v-x").innerHTML=`<div class="cols">
+  <div><h2>Два файла, не один</h2>
+   <ul>
+    <li><b>Workspace</b> (<code>.gitworkspace</code>, уже есть — сейчас список путей) становится XML: только какие проекты открыты. Он ваш, личный.</li>
+    <li><b>launch.xml в корне каждого репозитория</b> — как запускать. Коммитится, поэтому любой worktree и любая ветка видят свои цели без настройки. Если на ветке появился новый уровень, кнопка появляется только у этого worktree.</li>
+    <li>Агент обновляет <code>launch.xml</code> того проекта, где работает. Правило одной строкой в AGENTS.md каждого проекта: «добавил способ запуска — добавь target».</li>
+    <li><b>build</b> и <b>run</b> раздельно: Git Client может собрать один раз и запустить с разными параметрами; <b>kind</b> = run / build / test группирует кнопки.</li>
+    <li><b>param</b> со <code>choices</code> или <code>files</code> даёт выпадающий список; последнее значение запоминается per worktree («level 3» сам подставится).</li>
+   </ul>
+   <pre class="xml">${x(ws)}</pre></div>
+  <div><pre class="xml">${x(lx)}</pre><pre class="xml">${x(tx)}</pre></div></div>`;
+}
+
+/* ---------- D = B + C ---------- */
+let selD={mode:"all",id:""},open=new Set(["orca"]),pal=false,palQ="",palI=0;
+const started={"ui|main|Groove":"12m","orca|codex/chat-design-review-fixes|Run":"2m","xcom|original-lots-tubes-wall|Preset":"4m"};
+const recents=[["xcom","original-lots-tubes-wall","Preset","preset3"],["tessera","main","Tutorial · night",""],["orca","codex/editor-native-data-sources","Editor","apps/Chat"]];
+const cmdOf=t=>t.c.replace(/\$\{(\w+)\}/g,(m,k)=>t.p&&t.p[k]?(t.p[k][0]||"\"\""):m);
+const find=k=>{const[pid,br,tn]=k.split("|");const p=P.find(x=>x.id===pid);return{p,w:p.wts.find(x=>x.br===br),t:p.targets.find(x=>x.n===tn)}};
+const dir=(p,w)=>w.path==="."?p.path:w.path;
+function railD(){
+ let h=`<div class="sec">Running · ${running.size}</div>`;
+ [...running].forEach(k=>{const{p,w,t}=find(k);
+  h+=`<div class="rn ${selD.mode==="target"&&selD.id===k?"sel":""}" data-dsel="target|${k}"><span class="st">●</span><span>${p.name} · ${t.n}</span><em>${started[k]||"0s"}</em><small>⎇ ${shortBr(w.br)}</small></div>`});
+ if(!running.size)h+=`<div class="rn" style="cursor:default"><span></span><small>Nothing running. ⌘K to run.</small></div>`;
+ h+=`<div class="sec">Projects</div><div class="pr ${selD.mode==="all"?"sel":""}" data-dsel="all|"><span class="tw"></span>All projects<span class="cnt badge b-sec">${P.length}</span></div>`;
+ P.forEach(p=>{const op=open.has(p.id),nrun=[...running].filter(k=>k.startsWith(p.id+"|")).length;
+  h+=`<div class="pr ${selD.mode==="project"&&selD.id===p.id?"sel":""}" data-dsel="project|${p.id}"><span class="tw" data-tw="${p.id}">${op?"▾":"▸"}</span><span class="sw" style="background:${toneVar[p.tone]}"></span>${p.name}${nrun?`<span class="cnt badge b-ok">${nrun} running</span>`:""}</div>`;
+  if(op)p.wts.forEach(w=>{if(p.wts.length>1)h+=`<div class="w">⎇ ${shortBr(w.br)}</div>`;
+   p.targets.filter(t=>!t.kind).forEach(t=>{const k=key(p,w,t),on=running.has(k);
+    h+=`<div class="t ${on?"running":""} ${selD.mode==="target"&&selD.id===k?"sel":""}" data-dsel="target|${k}" style="${p.wts.length>1?"":"padding-left:26px"}"><span class="st">${on?"●":"○"}</span>${t.n}</div>`})})});
+ return h}
+function tableRows(list){let rows="";
+ list.forEach(p=>{if(list.length>1)rows+=`<tr class="grp"><td colspan="5"><a data-dsel="project|${p.id}" style="cursor:pointer">${p.name}</a> <span>${p.path}</span></td></tr>`;
+  p.wts.forEach(w=>{const def=p.targets.find(t=>t.def),runs=p.targets.filter(t=>running.has(key(p,w,t)));
+   const runCell=runs.length?runs.map(t=>`<span class="badge b-ok" data-dsel="target|${key(p,w,t)}" style="cursor:pointer"><span class="dot pulse"></span>${t.n}</span>`).join(" "):'<span style="color:var(--fg3)">—</span>';
+   const act=list.length>1
+    ?`<button class="btn run" data-k="${key(p,w,def)}" data-c="${esc(cmdOf(def))}">▶ ${def.n}</button>`
+    :`<div class="chips">${p.targets.map(t=>{const k=key(p,w,t),on=running.has(k);return `<button class="chip ${on?"on":t.def?"def":""}" data-k="${k}" data-c="${esc(cmdOf(t))}">${on?'<span class="dot pulse"></span>':'<span class="tri">▶</span>'}${t.n}</button>`}).join("")}</div>`;
+   rows+=`<tr><td class="mono" title="${dir(p,w)}">⎇ ${shortBr(w.br)}${list.length===1?`<div style="color:var(--fg3);font-size:10.5px">${dir(p,w).replace("~/Developer/","")}</div>`:""}</td><td><span class="badge ${w.st}">${w.stt}</span></td><td>${runCell}</td><td style="white-space:normal">${act}</td></tr>`})});
+ return rows}
+function viewD(){
+ if(selD.mode==="target"){const{p,w,t}=find(selD.id),on=running.has(selD.id),cmd=cmdOf(t);
+  const params=t.p?Object.entries(t.p).map(([k,v])=>`<label for="pd-${k}">${k}</label><select id="pd-${k}">${v.map(o=>`<option>${o||"(default)"}</option>`).join("")}</select>`).join(""):"";
+  return `<div class="detail" style="height:100%"><div class="dhead"><div class="t1"><b>${p.name} · ${t.n}</b><span class="badge b-sec">⎇ ${shortBr(w.br)}</span>${on?`<span class="badge b-ok"><span class="dot pulse"></span>Running · ${started[selD.id]||"0s"}</span>`:'<span class="badge b-sec">Stopped</span>'}<span class="grow"></span>${on?`<button class="btn">Restart</button><button class="btn stop" data-k="${selD.id}" data-c="${esc(cmd)}">Stop</button>`:`<button class="btn primary" data-k="${selD.id}" data-c="${esc(cmd)}">Run</button>`}</div>
+   <div class="cmdline">${esc(cmd)}</div><div style="font-size:11px;color:var(--fg3)">${dir(p,w)}</div></div>${params?`<div class="params">${params}</div>`:"<div></div>"}
+   <div class="log">${on?`<span class="d">$ cd ${dir(p,w)}</span>\n<span class="d">$ ${esc(cmd)}</span>\n[build] up to date\n<span class="g">[${p.name}] started</span>\n[${p.name}] window 1280×800\n<span class="y">[${p.name}] warning: shader cache rebuilt</span>\n[${p.name}] ready in 1.4 s`:`<span class="d">Not running. Run starts it in ${dir(p,w)}</span>`}</div></div>`}
+ const list=selD.mode==="project"?[P.find(p=>p.id===selD.id)]:P,p=list[0];
+ const title=selD.mode==="project"?`<div class="ptitle"><b>${p.name}</b><span>${p.path} · ${p.wts.length} worktree${p.wts.length>1?"s":""} · launch.xml: ${p.targets.length} targets</span></div>`:`<div class="ptitle"><b>All projects</b><span>${P.length} repositories · ${P.reduce((a,p)=>a+p.wts.length,0)} worktrees · ${running.size} running</span></div>`;
+ return `${title}<table class="tbl"><thead><tr><th>Worktree</th><th>Git</th><th>Running</th><th>${selD.mode==="project"?"Targets":"Default"}</th></tr></thead><tbody>${tableRows(list)}</tbody></table>`}
+function palItems(){const out=[];
+ if(!palQ)recents.forEach(([pid,br,tn,arg])=>{const p=P.find(x=>x.id===pid),w=p.wts.find(x=>x.br===br),t=p.targets.find(x=>x.n===tn);out.push({g:"Recent",k:key(p,w,t),label:`${p.name} · ${t.n}${arg?" · "+arg:""}`,sub:"⎇ "+shortBr(br),c:cmdOf(t)})});
+ const toks=palQ.toLowerCase().split(/\s+/).filter(Boolean);
+ P.forEach(p=>p.wts.forEach(w=>p.targets.forEach(t=>{const hay=(p.name+" "+t.n+" "+w.br).toLowerCase();
+  if(toks.every(x=>hay.includes(x)))out.push({g:palQ?"Targets":"All targets",k:key(p,w,t),label:`${p.name} · ${t.n}`,sub:"⎇ "+shortBr(w.br),c:cmdOf(t),on:running.has(key(p,w,t))})})));
+ return out.slice(0,40)}
+function palList(){const it=palItems();palI=Math.min(palI,Math.max(0,it.length-1));let g="",h="";
+ it.forEach((o,i)=>{if(o.g!==g){g=o.g;h+=`<div class="grp">${g}</div>`}
+  h+=`<div class="opt ${i===palI?"sel":""}" data-pi="${i}"><span class="k">${o.on?"stop":"run"}</span><b style="font-weight:${i===palI?600:400}">${o.label}</b><span class="sub">${o.sub}</span></div>`});
+ return h||`<div class="opt" style="color:var(--fg3)">No target matches “${esc(palQ)}”. Agents add targets to launch.xml.</div>`}
+function palRun(i){const o=palItems()[i];if(!o)return;pal=false;if(!running.has(o.k)||o.on)toggle(o.k,o.c);selD={mode:"target",id:o.k};open.add(o.k.split("|")[0]);renderD()}
+function renderD(){
+ const body=`<div class="cmdbar"><button class="btn primary" data-pal="1">Run… <span class="kbd" style="color:inherit;border-color:rgba(255,255,255,.5)">⌘K</span></button><button class="btn">Stop all</button><span class="sep"></span><button class="btn">Add project…</button><span class="grow"></span><span class="search">Filter</span></div>
+  <div class="split"><div class="rail">${railD()}</div><div class="dmain"><div class="view">${viewD()}</div>
+  ${pal?`<div class="overlay" data-close="1"><div class="palette" style="width:min(520px,92%)"><div class="q"><span style="color:var(--fg3)">Run</span><input id="palq" aria-label="Run target" placeholder="project, target or branch" value="${esc(palQ)}" autocomplete="off"></div><div class="list" id="pall">${palList()}</div><div class="foot"><span class="kbd">↵</span> run and show · <span class="kbd">↑↓</span> choose · <span class="kbd">esc</span> close</div></div></div>`:""}</div></div>`;
+ document.getElementById("v-d").innerHTML=`
+  <div class="roles">
+   <div><strong>Слева: всегда видно, что работает</strong><p>Секция Running наверху заменяет вкладки Terminal: по строке на процесс, с веткой и временем. Ниже дерево проектов. Клик по проекту открывает таблицу, клик по цели открывает процесс.</p></div>
+   <div><strong>Справа: таблица или процесс</strong><p>«All projects» — таблица C по всем worktree с кнопкой цели по умолчанию. Проект — та же таблица, но с полным набором целей на каждый worktree. Цель — консоль B с параметрами, Stop и Restart.</p></div>
+   <div><strong>⌘K: запуск по имени</strong><p>Палитра работает с любой страницы Git Client, в том числе с Overview. Сначала идут недавние запуски вместе с параметрами. Enter запускает цель и сразу открывает её вывод. Попробуйте ввести «tess night» или «orca edi».</p></div>
+  </div>
+  ${chrome("Git Client","Run",body,`${running.size} running · ⌘K run · ⌘. stop selected · ⌘1–9 jump to running process`)}`;
+ if(pal){const q=document.getElementById("palq");q.focus();q.setSelectionRange(q.value.length,q.value.length)}
+}
+
+function renderAll(){renderA();renderB();renderC();renderD()}
+renderAll();renderX();
+document.getElementById("tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+ document.querySelectorAll("#tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));
+ ["d","a","b","c","x"].forEach(v=>document.getElementById("v-"+v).hidden=v!==b.dataset.v)});
+document.addEventListener("click",e=>{
+ if(e.target.closest("#v-d")){
+  const tw=e.target.closest("[data-tw]");if(tw){const id=tw.dataset.tw;open.has(id)?open.delete(id):open.add(id);renderD();return}
+  if(e.target.closest("[data-pal]")){pal=true;palQ="";palI=0;renderD();return}
+  const pi=e.target.closest("[data-pi]");if(pi){palRun(+pi.dataset.pi);return}
+  if(e.target.matches("[data-close]")){pal=false;renderD();return}
+  const ds=e.target.closest("[data-dsel]");if(ds){const[m,...r]=ds.dataset.dsel.split("|");selD={mode:m,id:r.join("|")};if(m==="project")open.add(selD.id);renderD();return}
+ }
+ const s=e.target.closest("[data-sel]");if(s){selB=s.dataset.sel;renderB();return}
+ const k=e.target.closest("[data-k]");if(k){toggle(k.dataset.k,k.dataset.c);if(e.target.closest("#v-d")&&selD.mode==="target"){}}});
+document.addEventListener("input",e=>{if(e.target.id==="palq"){palQ=e.target.value;palI=0;document.getElementById("pall").innerHTML=palList()}});
+document.addEventListener("keydown",e=>{
+ if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"&&!document.getElementById("v-d").hidden){e.preventDefault();pal=true;palQ="";palI=0;renderD();return}
+ if(!pal)return;
+ if(e.key==="Escape"){pal=false;renderD()}
+ else if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();palI=Math.max(0,palI+(e.key==="ArrowDown"?1:-1));document.getElementById("pall").innerHTML=palList();document.querySelector("#pall .opt.sel")?.scrollIntoView({block:"nearest"})}
+ else if(e.key==="Enter"){e.preventDefault();palRun(palI)}});
+</script>

@@ -37,6 +37,20 @@ edit() { for f in "$@"; do mkdir -p "$(dirname "$f")"; echo "wip $RANDOM" >> "$f
 
 # api-gateway: dirty main with unpushed work, plus two worktrees
 new_repo api-gateway; cd work/api-gateway
+cat > launch.xml <<'XML'
+<launch project="api-gateway">
+    <target name="Gateway" default="true" build="make build" run="bin/gateway --config ${config}">
+        <param name="config" choices="config/local.yaml config/staging.yaml" />
+    </target>
+    <target name="Gateway (race detector)" run="go run -race ./cmd/gateway" />
+    <target name="Load test" run="k6 run --vus ${users} load/smoke.js">
+        <param name="users" choices="10 100 1000" />
+    </target>
+    <target name="Docker image" kind="build" run="docker build -t northwind/api-gateway ." />
+    <target name="Unit tests" kind="test" run="go test ./..." />
+</launch>
+XML
+git add launch.xml; ts=$((NOW - 32 * 3600)); GIT_AUTHOR_DATE="$ts +0000" GIT_COMMITTER_DATE="$ts +0000" git commit -q -m "Add launch targets"; git push -q origin main 2>/dev/null
 commit "Rate limiter: token bucket per API key" 30 src/limiter.txt; commit "Log rejected requests with tenant id" 26 src/log.txt
 edit src/limiter.txt src/router.txt src/config.txt; echo new > src/limiter_test.txt; git stash list >/dev/null
 git worktree add -q -b hotfix/rate-limit-1287 ../api-gateway-hotfix-1287 origin/main

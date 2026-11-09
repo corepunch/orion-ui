@@ -855,7 +855,7 @@ static char *gc_next_line(char **p) {
   return s;
 }
 
-// "5 hours ago" -> "5h"; keeps tiles narrow.
+// "5 hours ago" -> "5h"; keeps checkouts narrow.
 static void gc_short_age(const char *rel, char *out, size_t n) {
   int v = atoi(rel); const char *u = strchr(rel, ' '); u = u ? u + 1 : "";
   const char *suffix = !strncmp(u, "second", 6) ? "s" : !strncmp(u, "minute", 6) ? "m" : !strncmp(u, "hour", 4) ? "h" :
@@ -882,6 +882,19 @@ int git_worktree_list(const char *path, git_worktree_t *out, int max) {
       const char *b = line + 7;
       if (!strncmp(b, "refs/heads/", 11)) b += 11;
       strncpy(out[count - 1].branch, b, sizeof(out[count - 1].branch) - 1);
+    }
+  }
+  // A submodule lists its gitdir (.git/modules/<name>) as the main worktree;
+  // its core.worktree names the checkout itself.
+  char dotgit[600];
+  if (count > 0 && !out[0].bare && snprintf(dotgit, sizeof(dotgit), "%s/.git", out[0].path) < (int)sizeof(dotgit)
+      && !axPathExists(dotgit)) {
+    git_repo_t gitdir = {0}; strncpy(gitdir.path, out[0].path, sizeof(gitdir.path) - 1);
+    const char *top[] = { "git", "rev-parse", "--show-toplevel", NULL };
+    char root[600] = {0};
+    if (git_run_sync(&gitdir, top, root, sizeof(root))) {
+      root[strcspn(root, "\r\n")] = 0;
+      if (root[0] && strlen(root) < sizeof(out[0].path)) snprintf(out[0].path, sizeof(out[0].path), "%s", root);
     }
   }
   return count;
@@ -1023,24 +1036,22 @@ static bool gc_same_path(const char *a, const char *b) {
   return a && b && !strcmp(a, b);
 }
 
-static bool gc_summary_dirty(const git_summary_t *s) {
-  return s->staged || s->unstaged || s->untracked || s->conflicts;
-}
-
-// One card per repository. File counts and the branch line describe the main
-// checkout; worktrees / dirty_worktrees / other_attention cover the rest.
-int git_workspace_scan(char (*roots)[512], int root_count, git_summary_t *out, int max) {
+// One row per checkout, main worktree first. A root that is no longer a
+// repository becomes a single missing row; roots of the same repository share
+// its rows once.
+int git_workspace_checkouts(char (*roots)[512], int root_count, git_summary_t *out, int max) {
   int n = 0;
   for (int i = 0; i < root_count && n < max; i++) {
     git_worktree_t wt[GC_MAX_WORKTREES];
     int wn = git_worktree_list(roots[i], wt, GC_MAX_WORKTREES);
     if (wn == 0) {
       bool dup = false;
-      for (int k = 0; k < n; k++) if (!strcmp(out[k].path, roots[i])) dup = true;
+      for (int k = 0; k < n; k++) if (!strcmp(out[k].root, roots[i])) dup = true;
       if (dup) continue;
       git_summary_t *s = &out[n++];
       memset(s, 0, sizeof(*s));
       strncpy(s->path, roots[i], sizeof(s->path) - 1);
+      strncpy(s->root, roots[i], sizeof(s->root) - 1);
       gc_path_basename(roots[i], s->repo, sizeof(s->repo));
       strncpy(s->dir, s->repo, sizeof(s->dir) - 1);
       strncpy(s->branch, "unavailable", sizeof(s->branch) - 1);
@@ -1050,28 +1061,22 @@ int git_workspace_scan(char (*roots)[512], int root_count, git_summary_t *out, i
     const git_worktree_t *main = &wt[0];
     for (int w = 0; w < wn; w++) if (!wt[w].bare && !wt[w].linked) { main = &wt[w]; break; }
     bool dup = false;
-    for (int k = 0; k < n; k++) if (gc_same_path(out[k].path, main->path)) dup = true;
+    for (int k = 0; k < n; k++) if (gc_same_path(out[k].root, main->path)) dup = true;
     if (dup) continue;
     char name[128];
     gc_path_basename(main->path, name, sizeof(name));
-    git_summary_t *s = &out[n];
-    if (!git_get_summary(main->path, name, false, s))
-      strncpy(s->branch, "unavailable", sizeof(s->branch) - 1);
-    s->worktrees = 0; s->dirty_worktrees = 0; s->other_attention = 0;
-    for (int w = 0; w < wn; w++) {
-      if (wt[w].bare) continue;
-      s->worktrees++;
-      if (gc_same_path(wt[w].path, main->path)) {
-        if (gc_summary_dirty(s)) s->dirty_worktrees++;
-        continue;
+    int count = 0;
+    for (int w = 0; w < wn; w++) if (!wt[w].bare) count++;
+    for (int pass = 0; pass < 2; pass++)
+      for (int w = 0; w < wn && n < max; w++) {
+        if (wt[w].bare || (pass == 0) != (&wt[w] == main)) continue;
+        git_summary_t *s = &out[n++];
+        if (!git_get_summary(wt[w].path, name, &wt[w] != main, s))
+          strncpy(s->branch, "unavailable", sizeof(s->branch) - 1);
+        strncpy(s->root, main->path, sizeof(s->root) - 1);
+        s->prunable = wt[w].prunable;
+        s->worktrees = count;
       }
-      git_summary_t sub;
-      if (!git_get_summary(wt[w].path, name, true, &sub)) continue;
-      if (gc_summary_dirty(&sub)) s->dirty_worktrees++;
-      if (sub.conflicts) s->conflicts += sub.conflicts;
-      if (gc_tile_needs_attention(&sub)) s->other_attention++;
-    }
-    n++;
   }
   return n;
 }

@@ -17,23 +17,27 @@ identity.
 
 ## Two modes: Overview and Focus
 
-**Overview** (Ctrl+0) is a board of cards, one per repository. Each card shows the main checkout's
-branch and file badges, whether uncommitted changes remain anywhere in the repository, and how many
-worktrees it has. A colour stripe gives the verdict at a glance: red conflicts, amber uncommitted,
-blue needs push/pull or attention, green in sync. Diffs are deliberately absent.
+**Overview** (Ctrl+0) lists every checkout of every repository in the workspace, grouped by
+repository: the main checkout first, then each linked worktree, wherever git put it. Each row shows
+the branch, the state in words ("3 modified, 1 new", "2 to push", "Up to date") and the target that
+runs by default. The row icon gives the verdict at a glance: a red cross for conflicts, an amber
+warning for uncommitted changes, blue arrows for commits to push or pull, a green check when in sync.
+The right pane lists the selected checkout's [launch targets](#launch-targets-launchxml); the status
+bar shows the selected target's full command.
 
-Drop a git folder onto the window to add another card. File → Save Workspace writes a `.gitworkspace`
-file of main-worktree roots; pass that file to reopen every repository at once.
+Drop a git folder onto the window to add its repository. File → Save Workspace writes a `.gitworkspace`
+file of main-worktree roots; pass that file to reopen every repository at once. File → Remove from
+Workspace (also on the row's context menu) drops the selected row's repository.
 
 | Input | Action |
 |---|---|
-| Arrow keys | move between tiles |
-| Click / Enter | open the tile in Focus mode (Changes if dirty, otherwise History) |
+| Arrow keys | move between checkouts |
+| Double-click / Enter | open the checkout in Focus mode (Changes if dirty, otherwise History) |
 | Ctrl+0 | toggle Overview and the last Focus page |
 | Ctrl+O | open a workspace file |
 | Ctrl+S | save the workspace |
 | Ctrl+Shift+R | fetch every repository in the background |
-| "Showing" pill | filter to tiles that need attention |
+| "Showing" pill | filter to checkouts that need attention |
 
 **Focus** is the classic single-repository view (Changes, History, GitHub). It opens with a summary
 line (branch, to push/pull, staged/modified/new counts), tells you what Commit will do
@@ -45,10 +49,11 @@ and toolbar actions that used to live only in dialogs — **Prune**, **Delete Me
 View → All Commits loads `--all`; View → Reflog loads `git log -g`. Selecting a branch reloads that
 branch's log instead of leaving you stuck on HEAD.
 
-The page is built from framework controls only (`view_overview.c`): a `TileGrid` of `Card`s, each holding Labels
-and a `FlowView` of `Badge`s, so wrapping, truncation and row heights come from auto-layout. The app feeds it
-`git_summary_t` rows (`git_workspace_scan` in `git_backend.c`). A saved workspace, several folder arguments,
-or `--overview` opens the board:
+The page is two TableViews over the transient tables of the `workspace` database declared in
+`gitclient.orion` (`db_schema_xml`, no adaptor code): `checkouts`, grouped by `project`, and `targets`,
+a detail list that follows the selected checkout. `view_overview.c` fills them from
+`git_workspace_checkouts` in `git_backend.c` (one `git_summary_t` per checkout) and from each checkout's
+`launch.xml`. A saved workspace, several folder arguments, or `--overview` opens it:
 
 ```bash
 apps/gitclient/share/demo/make_workspace.sh /tmp/ws
@@ -60,13 +65,50 @@ build/bin/gitclient /tmp/ws/work/api-gateway
 ![Overview](../../docs/screenshots/gitclient_overview.jpg)
 ![Focus](../../docs/screenshots/gitclient_focused.jpg)
 
+## Launch targets (launch.xml)
+
+A `launch.xml` at a repository's root says how to start that checkout. It is committed with the
+code, so every worktree and branch shows its own targets: a level added on a branch appears only in
+that worktree. Agents keep it current: when a change adds or renames a way to run the project, the
+same change updates `launch.xml`.
+
+```xml
+<launch project="x-com">
+    <target name="City" default="true" run="swift run XComCity" />
+    <target name="Preset" run="swift run -c release XComCity">
+        <env name="XCOM_AUTOSTART" value="${preset}" />
+        <param name="preset" choices="preset1 preset2 preset3 demo" />
+    </target>
+    <target name="Map" dir="viewer" build="make" run="../build/ufo-viewer --map ${map}">
+        <param name="map" default="tactical/scenes/special/tutorial.scene" />
+    </target>
+    <target name="Tests" kind="test" run="swift test" />
+</launch>
+```
+
+| Element / attribute | Meaning |
+|---|---|
+| `<launch project=>` | Root element; `project` is informational. |
+| `<target name= run=>` | A way to start the checkout. Names are unique within the file. |
+| `build=` | Runs first; `run` starts only when it succeeds. |
+| `dir=` | Directory, relative to the checkout, both commands run in. |
+| `kind=` | `run` (default), `build` or `test`; the list marks each with its own icon. |
+| `default="true"` | The target the Overview row shows under Runs (at most one). Without it, the first `run` target. |
+| `<param name= choices= default=>` | A value substituted for `${name}` in `build`, `run` and env values. `default` falls back to the first of the space-separated `choices`. Values are shell-quoted. |
+| `<env name= value=>` | An environment variable set for `run`. |
+
+A target has at most 4 params and 4 env variables; a file at most 32 targets. A malformed file is
+rejected as a whole: the reason goes to stderr with its line number and the Runs column says
+"launch.xml has errors". `gc_launch.c` reads the file and builds each target's shell command
+(`gc_launch_command`); this repository's own [launch.xml](../../launch.xml) is an example.
+
 ## Rearranging views
 
 Each activity Page directly owns its [docking layout](../../docs/page-docking.md).
 The initial split tree, orientations, and ratios remain declared in
 `gitclient.orion`:
 
-- Overview keeps the repository board and summary together.
+- Overview keeps the checkouts and their summary on the left, launch targets on the right.
 - Changes keeps its files and commit form on the left, with Diff on the right.
 - History keeps Branches, Tags, Stash, Worktrees, Commits, Files, and Diff in
   their existing positions. The original Stash pane still hides when empty.

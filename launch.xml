@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- How to start this checkout. Git Client lists these targets for every
+     worktree; keep them in step with the Makefile (see AGENTS.md). -->
+<launch project="ui">
+    <target name="Groove" default="true" run="make groove" />
+    <target name="Groove demo song" run="make groove-demo" />
+    <target name="Git Client" build="make build/bin/gitclient" run="build/bin/gitclient ${workspace}">
+        <param name="workspace" default="." />
+    </target>
+    <target name="Ledger" run="make run-ledger-${lang}">
+        <param name="lang" choices="ru de" />
+    </target>
+    <target name="Scener" build="make scener" run="build/bin/scener" />
+    <target name="Image Editor" build="make build/bin/imageeditor" run="build/bin/imageeditor" />
+    <target name="Form Editor" build="make build/bin/formeditor" run="build/bin/formeditor" />
+    <target name="iPad Simulator" run="make ipad-run APP=${app}">
+        <param name="app" choices="imageeditor groove penciltest" />
+    </target>
+    <target name="All apps" kind="build" run="make" />
+    <target name="Tests" kind="test" run="make test" />
+</launch>
