@@ -426,7 +426,14 @@ static const char *css_cascade(const style_sheet_t *sheet, style_query_t q, cons
   return css_cascade_ranked(sheet, q, property, NULL);
 }
 
+static const char *css_instance_var(style_query_t q, const char *name) {
+  for (int i = 0; i < q.var_count; i++) if (q.vars[i].name && !strcmp(q.vars[i].name, name)) return q.vars[i].value;
+  return NULL;
+}
+
 static const char *css_custom(const style_sheet_t *sheet, style_query_t q, const char *name) {
+  const char *own = css_instance_var(q, name);
+  if (own) return own;
   const char *v = q.element ? css_cascade(sheet, q, name) : NULL;
   return v ? v : css_cascade(sheet, STYLE_ROOT, name);
 }
@@ -459,7 +466,8 @@ static bool css_resolve(const style_sheet_t *sheet, style_query_t q, const char 
     }
     memcpy(name, ns, (size_t)(ne - ns)); name[ne - ns] = 0;
     char hooked[128];
-    const char *found = sheet->var_hook && sheet->var_hook(name + 2, hooked, sizeof(hooked), sheet->var_ctx)
+    const char *found = css_instance_var(q, name);   // the instance answers before the palette and the sheet
+    if (!found) found = sheet->var_hook && sheet->var_hook(name + 2, hooked, sizeof(hooked), sheet->var_ctx)
                         ? hooked : css_custom(sheet, q, name);
     char *fallback = NULL;
     if (!found && sheet->var_default && sheet->var_default(name + 2, hooked, sizeof(hooked), sheet->var_ctx)) found = hooked;

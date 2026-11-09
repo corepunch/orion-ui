@@ -45,8 +45,7 @@ static void paint_card_variant(const block_t *b, irect16_t r, int visible_width)
   irect16_t area = rect_inset(r, CARD_TAG_INSET);
   if (size > area.w || size > area.h) return;
   irect16_t badge = rect_split_right(rect_split_bottom(area, size), size);
-  draw_badge_ex("Caption", text, badge, 0xFFFFFFFFu,
-                CARD_LABEL_BG, false);
+  draw_badge_ex("Caption", text, badge, 0xFFFFFFFFu, CARD_LABEL_BG);
 }
 
 static int sheet_card_index(window_t *win) {

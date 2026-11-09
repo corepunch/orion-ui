@@ -41,14 +41,21 @@ enum {
   STYLE_WINDOW_INACTIVE = 1 << 6,
 };
 
+// A custom property set on one instance, like a style="--tone: #f00"
+// attribute: it answers var(--name) before the sheet does. The name keeps its "--".
+typedef struct { const char *name, *value; } style_var_t;
+
 // What is being styled: an element, an optional part, its classes (space
-// separated), id and pseudo-class state. A NULL element is the :root.
+// separated), id, pseudo-class state and instance variables. A NULL element is
+// the :root.
 typedef struct {
   const char *element;
   const char *part;
   const char *classes;
   const char *id;
   uint32_t    state;
+  const style_var_t *vars;   // the instance's own custom properties, or NULL
+  int         var_count;
 } style_query_t;
 
 #define STYLE_ROOT ((style_query_t){0})

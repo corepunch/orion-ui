@@ -151,22 +151,20 @@ counterpart. Headless (`UI_INIT_HIDDEN`) contexts never follow the OS, so tests
 do not depend on the machine. A standalone app takes `--appearance light|dark|system`.
 
 ```c
-// Card with an optional accent edge; the theme rounds (or squares) card and edge together.
-draw_card(r, CTRL_HOVER | CTRL_SELECTED | CTRL_FOCUSED, color_with_alpha(get_sys_color(brTextWarning), 0x78));
-// The same, as a Card window's classes, #id and app sheet style it.
-draw_card_in(win, r, state, edge_color);
+// A card is a CSS box: its background, hover, border-left accent and selection ring come from the
+// sheet, and the accent colour is the window's --tone (see styling.md, "Cards and badges").
+theme_draw_in(card_win, THEME_PART_CARD, r, CTRL_HOVER | CTRL_SELECTED);
 
-// Tinted label ("3 modified"); returns its width so badges can be chained.
-int w = draw_badge("Text", "3 modified", x, y, 18, get_sys_color(brTextWarning));
-
-// Independent foreground and background, with capsule/circular ends.
+// Chip with independent foreground and background; its corners are Badge.chip's radius.
 draw_badge_ex("Caption", "1", R(x, y, 16, 16), get_sys_color(brActiveTitlebarText),
-              color_with_alpha(get_sys_color(brModalOverlay), 0xB8), true);
+              color_with_alpha(get_sys_color(brModalOverlay), 0xB8));
 
-// Status badge ("Posted"): a pill tinted with a theme role, an optional leading
-// icon in that role, and text in the badge ink. The Badge control draws exactly this.
+// Status badge ("Posted"): the Badge box toned by --tone, an optional leading icon and the text.
+// The Badge control draws exactly this; a table cell passes its own variables.
+ui_style_vars_t tone = {0};
+ui_style_vars_set(&tone, "--tone", "var(--text-success)");
 irect16_t pill = R(x, y, measure_status_badge("Posted", "ledger-doc-posted"), BADGE_HEIGHT);
-draw_status_badge(pill, "Posted", "ledger-doc-posted", get_sys_color(brTextSuccess));
+draw_status_badge(win, pill, "Posted", "ledger-doc-posted", &tone);
 
 uint32_t soft = color_with_alpha(color, 0x40);   // same colour, different alpha
 uint32_t ink  = color_mix(color, get_sys_color(brTextNormal), 0x50);  // towards body text
@@ -370,7 +368,7 @@ Scener's reel renderer (`apps/scener/reel_draw.c`) is the reference user.
 card using the active theme's material. Most themes use a shallow bevel and an
 inset shadow; Metro uses a flat, square face. Set `opts.color` to the card tint
 in packed `0xAABBGGRR`. `theme_content_rect()` excludes the shadow margin and
-selection ring. Waveforms, artwork and labels draw separately over the surface.
+selection ring. (Without `CTRL_PLASTIC` the card is the sheet's box.) Waveforms, artwork and labels draw separately over the surface.
 
 ## Bitmaps and block transfers (`user/gdi.h`)
 

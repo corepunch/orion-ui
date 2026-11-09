@@ -270,8 +270,11 @@ static void report_paint(window_t *win, reportview_data_t *data) {
           }
           int bw = MIN(measure_status_badge(src, NULL), room);
           int bh = MIN(BADGE_HEIGHT, entry_h - 2);
-          draw_status_badge(R(text_x, y + (entry_h - bh) / 2, bw, bh), src, NULL,
-                            get_sys_color(it->tone > 0 && it->tone < brCount ? (sys_color_idx_t)it->tone : brTextSecondary));
+          ui_style_vars_t tone = {0};
+          const char *role = theme_sys_color_name(it->tone > 0 && it->tone < brCount ? (int)it->tone : brTextSecondary);
+          char var[48]; snprintf(var, sizeof(var), "var(--%s)", role ? role : "text-secondary");
+          ui_style_vars_set(&tone, "--tone", var);
+          draw_status_badge(win, R(text_x, y + (entry_h - bh) / 2, bw, bh), src, NULL, &tone);
         }
       } else {
         // Text that does not fit ends in an ellipsis; numbers align right.

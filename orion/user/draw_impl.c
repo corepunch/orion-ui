@@ -430,39 +430,12 @@ void stroke_rounded_rect(uint32_t color, irect16_t r, int radius, int thickness)
                              thickness * scale);
 }
 
-void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) { draw_card_in(NULL, r, state, edge_color); }
-void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color) { draw_card_in(NULL, r, state, edge_color); }
-
-// The card face of win, a Card: its classes, #id and app sheet apply.
-void draw_card_in(const window_t *win, irect16_t r, ctrl_state_t state, uint32_t edge_color) {
+void fill_rounded_rect_edged(uint32_t color, irect16_t r, int radius, uint32_t edge_color, int edge_width) {
   extern uint32_t ui_white_texture;
-  const char *card = ui_selector(win, "Card");
-  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
-  int radius = ui_radius(card), edge = ui_px(card, "--edge-width"), ring = ui_px(card, "--ring-width");
-  if (state & CTRL_SELECTED) {
-    // The ring matches the accent edge; a card without an edge uses the theme accent.
-    uint32_t ring_color = (edge_color >> 24) ? color_with_alpha(edge_color, 0xFF) : get_sys_color(brAccent);
-    fill_rounded_rect(ring_color, r, radius + ring);
-  }
-  r = rect_inset(r, ring);
-  uint32_t face = get_sys_color(ui_role(card, "background-color") > 0 && ui_role(card, "background-color") < brCount ? (sys_color_idx_t)ui_role(card, "background-color") : brControlBg);
-  if (state & CTRL_HOVER) {
-    uint32_t hover = get_sys_color(brButtonHover);
-    // Average the packed channels without carries between them.
-    face = ((face & 0xfefefefeu) >> 1) + ((hover & 0xfefefefeu) >> 1) + (face & hover & 0x01010101u);
-  }
-  if (!(edge_color >> 24)) edge = 0;
-  if (radius <= 0) {
-    fill_rect(face, r);
-    if (edge) fill_rect(edge_color, rect_split_left(r, edge));
-    return;
-  }
+  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0 || edge_width <= 0) return;
   float scale = MAX(1.0f, axGetScaling());
   render_rounded_rect_edged(ui_white_texture, r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
-                            radius * scale, 1.0f, face, edge_color, edge * scale);
-  if (ui_role(card, "border-color") > 0 && ui_role(card, "border-color") < brCount && !(state & CTRL_SELECTED))   // the same silhouette, stroked
-    render_rounded_rect_stroke(ui_white_texture, r, (int)(r.w * scale + 0.5f), (int)(r.h * scale + 0.5f),
-                               radius * scale, 1.0f, get_sys_color((sys_color_idx_t)ui_role(card, "border-color")), scale);
+                            MAX(0, radius) * scale, 1.0f, color, edge_color, edge_width * scale);
 }
 
 static plastic_look_t plastic_look(ctrl_state_t state) {
@@ -490,47 +463,35 @@ void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color) {
                           ui_color("Card", "--plastic-shadow"));
 }
 
-int measure_badge(ui_font_t font, const char *text) {
-  return text_strwidth(font, text) + 2 * ui_px("Badge", "padding-left");
-}
-
-uint32_t badge_ink(uint32_t color) {
-  return color_mix(color, get_sys_color(brTextNormal), (uint8_t)((int)(ui_number("Badge", "--ink-mix") * 255.0f + 0.5f)));
-}
-
-int draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color) {
-  int w = measure_badge(font, text);
-  draw_badge_ex(font, text, R(x, y, w, height), badge_ink(color),
-                color_with_alpha(color, (uint8_t)((int)(ui_number("Badge", "--tint-alpha") * 255.0f + 0.5f))), false);
-  return w;
-}
-
 static int status_badge_icon_width(const char *icon) {
   return icon && icon[0] ? ui_px("Badge::icon", "width") + ui_px("Badge::icon", "margin-right") : 0;
 }
 
 int measure_status_badge(const char *text, const char *icon) {
-  return measure_badge("Badge", text) + status_badge_icon_width(icon);
+  return text_strwidth("Badge", text) + 2 * ui_px("Badge", "padding-left") + status_badge_icon_width(icon);
 }
 
-void draw_status_badge(irect16_t r, const char *text, const char *icon, uint32_t color) {
+// The pill is the Badge box, the icon the Badge::icon part's fill and the text its colour: the sheet
+// derives all three from the instance's --tone.
+void draw_status_badge(const window_t *win, irect16_t r, const char *text, const char *icon, const ui_style_vars_t *vars) {
+  if (r.w <= 0 || r.h <= 0) return;
+  if (!vars) vars = window_style_vars(win);
+  theme_draw_with(win, vars, THEME_PART_BADGE, r, CTRL_NORMAL);
   int icon_w = status_badge_icon_width(icon);
-  draw_badge_ex("Badge", "", r, color, color_with_alpha(color, (uint8_t)((int)(ui_number("Badge", "--tint-alpha") * 255.0f + 0.5f))), true);
   irect16_t content = rect_inset_xy(r, ui_px("Badge", "padding-left"), 0);
   sysicon_resolved_t glyph;
   if (icon_w && sysicon_resolve_size(icon, ui_px("Badge::icon", "width"), &glyph)) {
     irect16_t at = rect_center(rect_split_left(content, ui_px("Badge::icon", "width")), glyph.w, glyph.h);
-    draw_sprite_region((int)glyph.tex, at, UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1), color, 0);
+    draw_sprite_region((int)glyph.tex, at, UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1),
+                       theme_fill_with(win, vars, THEME_PART_BADGE_ICON, CTRL_NORMAL), 0);
   }
   irect16_t label = rect_trim_left(content, icon_w);
-  draw_text_clipped("Badge", text, &label, badge_ink(color), TEXT_ALIGN_CENTER);
+  draw_text_clipped("Badge", text, &label, theme_foreground_with(win, vars, THEME_PART_BADGE, CTRL_NORMAL), TEXT_ALIGN_CENTER);
 }
 
-void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_color, uint32_t background_color, bool round) {
+void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_color, uint32_t background_color) {
   if (r.w <= 0 || r.h <= 0) return;
-  int radius = MIN(r.w, r.h) / 2;
-  if (!round) radius = MIN(ui_radius("Badge"), radius);
-  fill_rounded_rect(background_color, r, radius);
+  fill_rounded_rect(background_color, r, MIN(ui_radius("Badge.chip"), MIN(r.w, r.h) / 2));
   draw_text_clipped(font, text, &r, text_color, TEXT_ALIGN_CENTER);
 }
 

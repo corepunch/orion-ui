@@ -21,6 +21,22 @@ float borderSideCoverage(vec2 p, int side) {
   return edgeCoverage(q.y - own) * clamp(0.5 + start, 0.0, 1.0) * clamp(0.5 + end, 0.0, 1.0);
 }
 
+// The share of a pixel (centre p, in the box's own pixels) that is the left border of
+// width w on a box of corner radius r, as CSS draws it: the border is what lies
+// inside the box and outside its padding edge, whose left corners are the ellipses
+// (r - w, r) because no top or bottom border narrows them vertically.
+float leftBorderCoverage(vec2 p, vec2 extent, float w, float r) {
+  float rx = max(r - w, 0.0), ry = r;
+  vec2 q = vec2(p.x, min(p.y, extent.y - p.y)) - vec2(w + rx, ry);   // from the corner ellipse's centre, top half
+  float d = w - p.x;                                                 // inside the padding edge: negative
+  if (q.x < 0.0 && q.y < 0.0 && rx > 0.0 && ry > 0.0) {
+    vec2 radii = vec2(rx, ry);
+    float k0 = length(q / radii), k1 = length(q / (radii * radii));
+    d = k0 * (k0 - 1.0) / k1;
+  }
+  return 1.0 - edgeCoverage(d);
+}
+
 float cross2(vec2 a, vec2 b) { return a.x * b.y - a.y * b.x; }
 
 float triangleSDF(vec2 p, vec2 a, vec2 b, vec2 c) {
@@ -166,12 +182,12 @@ vec4 frag() {
   vec3 overlay_rgb = overlay.rgb;
   straight_rgb = mix(straight_rgb, overlay_rgb * src.a, overlay.a);
   float src_a = src.a;
-  // A plain rectangular edge, clipped by the same rounded silhouette as the fill.
-  if (stroke <= 0.0 && params1.y > 0.0 && tex.x * size.x < params1.y) {
-    straight_rgb = edge.rgb;
-    factor = alpha * aa * col.a * edge.a;
-    src_a = 1.0;
-  }
   outColor = vec4(straight_rgb * factor, src_a * factor);
+  // A left border of width params1.y, clipped by the same rounded silhouette as the fill.
+  if (stroke <= 0.0 && params1.y > 0.0) {
+    float share = leftBorderCoverage(tex * size, size, params1.y, max(radius, 0.0));
+    float edge_a = alpha * aa * col.a * edge.a;
+    outColor = mix(outColor, vec4(edge.rgb * edge_a, edge_a), share);
+  }
   return ui_clipped(outColor);
 }

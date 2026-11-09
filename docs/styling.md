@@ -63,10 +63,10 @@ apply to every part.
 | Property | Meaning |
 |---|---|
 | `background` | A colour, `none`, or `linear-gradient([to bottom,] top, bottom)` |
-| `border`, `border-<side>`, `border-width/-style/-color`, `border-<side>-<property>` | Solid sides; a uniform border follows the corner radius; unequal sides meet in mitred corners, as in a browser |
+| `border`, `border-<side>`, `border-width/-style/-color`, `border-<side>-<property>` | Solid sides; a uniform border follows the corner radius; unequal sides meet in mitred corners, as in a browser; a rounded box may have a `border-left` alone (an accent edge), which follows the corner as a browser draws it: its padding edge has the corner ellipse (r − w, r) |
 | `border-radius` | 1–4 lengths; rounded top corners with square bottom ones draw a tab |
 | `margin` | 1–4 lengths: the painted box inside the part's bounds |
-| `outline` | `width style colour`, filled behind the box as a focus halo |
+| `outline` | `width style colour`, filled behind the box, outside it and following its corners (`radius + width`), as a focus halo or a selection ring |
 | `box-shadow` | `[inset] dx dy [blur] colour, ...`: outer shadows paint behind the box, blurred as CSS blurs them (a Gaussian of σ = blur / 2), and overflow the window's frame (its `ink_overflow`); inset ones with no blur paint the edges they offset into, inside the border (a bevel's inner line) |
 | `color` | The part's text colour (`theme_foreground()`) |
 | `content` | The glyph over the box: `arrow-updown`, `close`, `maximize`, `checkmark`, `resize`, `scroll-up`/`-down`/`-left`/`-right`, `triangle-down`, `grip`, `dots`, `groove`, `none` |
@@ -85,6 +85,7 @@ apply to every part.
 | `SEGMENTED_TRACK`, `SEGMENT` | `SegmentedControl`, `::segment` | `SEPARATOR` | `Separator` |
 | `TAB`, `TAB_BAR`, `TAB_PANE` | `TabView::tab`, `::bar`, `::pane` | `PAGE`, `PANEL`, `SURFACE`, `SIDEBAR` | `Page`, `Panel`, `Surface`, `Sidebar` |
 | `TOOLBAR` | `Toolbar` | `STATUSBAR` | `StatusBar` |
+| `CARD` | `Card` (`:hover`, `:checked`) | `BADGE`, `BADGE_ICON` | `Badge`, `Badge::icon` (`fill`) |
 | `TOOLBAR_BUTTON` (`_LABELED`, `_SPLIT`) | `Toolbar::button` (`.labeled`, `.split`) | `TITLEBAR`, `TITLE_TOOLBAR` | `Window::titlebar`, `Window::title-toolbar` |
 | `TOOLBAR_SPLIT_ARROW`, `_SEPARATOR`, `_GRIP` | `Toolbar::split-arrow`, `::separator`, `::grip` | `WINDOW_CLOSE`, `RESIZE_GRIP` | `Window::close`, `Window::resize-grip` |
 | `SLIDER_TRACK`, `_THUMB`, `_TROUGH`, `_KNOB` | `Slider::track`, `::thumb`, `::trough`, `::knob` | `SCROLLBAR_*` | `Scrollbar::track`, `::thumb`, `::arrow-up` … `::corner` |
@@ -95,8 +96,44 @@ unless a sheet styles them (`StackView#summary { background: …; border-radius:
 
 The painter says what it cannot draw yet instead of drawing it differently:
 a `box-shadow` spread, a blurred inset shadow, corner radii other than one
-radius or the top two, and unequal border sides on a rounded box each print
+radius or the top two, and unequal border sides on a rounded box (but a lone
+`border-left`) each print
 `[theme] part …: … is not supported yet`.
+
+### Cards and badges
+
+A `Card` and a `Badge` are ordinary boxes; `base.css` styles them:
+
+```css
+Card         { margin: var(--ring-width); background: var(--card-face); border-radius: var(--card-radius);
+               border-left: var(--edge-width) solid var(--tone, transparent); --card-face: var(--control-bg); }
+Card:hover   { background: color-mix(in srgb, var(--card-face), var(--button-hover)); }
+Card:checked { outline: var(--ring-width) solid var(--accent); }
+Badge        { background: color-mix(in srgb, var(--tone) var(--tint), transparent);
+               color: color-mix(in srgb, var(--tone) var(--ink), var(--text-normal)); border-radius: 9999px; }
+```
+
+The accent of one card and the tone of one badge are data, so they are
+*instance variables*: custom properties set on the window, as `style="--tone: …"`
+sets them on an element. They answer `var(--name)` in that window's queries
+before the sheet does:
+
+```c
+window_set_style_var_color(card, "--tone", color_with_alpha(get_sys_color(brTextWarning), 0xFF));
+window_set_style_var(badge, "--tone", "var(--text-success)");   // a role: follows the palette
+```
+
+`cdSetEdgeColor` and `bdSetColor` are these calls. A part that is not a window
+(a status badge in a table cell) passes the variables itself:
+`theme_draw_with(win, &vars, THEME_PART_BADGE, r, state)`, with `vars` built by
+`ui_style_vars_set()` (at most four, names `--x`, values up to 47 characters).
+The painter caches a box per distinct set of variables.
+
+A card reserves its `margin` and `border-left` whether or not it has an accent,
+so a selection or an accent never shifts content; `theme_content_insets_in()`
+reports that reservation. Porcelain draws the card's hairline as its `outline`
+and moves the box one pixel in (`margin: 2px`) so that selecting can swap it for
+the accent ring.
 
 States map to pseudo-classes: hover `:hover`, pressed `:active`, selected
 `:checked`, disabled `:disabled`, keyboard focus `:focus`, default button
@@ -175,10 +212,10 @@ TabView, TableView, IconView, SegmentedControl, Slider, Card, SplitView,
 Splitter, Separator, MenuBar, Toolbar (through its toolbar window), ActivityBar,
 TileGrid, Image and SpeechBubble. Painters a control shares take its window
 too: `theme_draw_button_label(win, ...)`, `theme_draw_combobox(win, ...)`,
-`draw_card_in(win, ...)`. Three things still style as their element: popup
+`draw_status_badge(win, ...)`. Three things still style as their element: popup
 menus (measured before their window exists), free text (`Caption`, `Heading`
 and the rest) and elements drawn inside a control that are not the control
-itself (`Scrollbar`, `Badge`, `Tooltip`).
+itself (`Scrollbar`, `Tooltip`).
 
 ## Type
 

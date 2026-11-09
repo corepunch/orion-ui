@@ -39,11 +39,17 @@ letter-spacing: .05em }`.
 
 ## 3. The shapes still in C
 
-- Cards: the accent edge becomes `border-left` sharing the card's rounded
-  silhouette (the painter learns per-side widths on a rounded box).
-- Badges: the pill becomes a `Badge` box whose tone is a per-instance variable
-  (`background: color-mix(in srgb, var(--tone) 15%, transparent)`), so
-  `theme_draw` gains instance variables.
+- Done: cards are boxes. Face, hover (`Card:hover`), selection ring
+  (`Card:checked { outline }`, which now follows the corner radius) and the
+  accent edge (`border-left` sharing the rounded silhouette; the rounded-rect
+  shader draws it as a browser does, with the elliptical padding edge) come
+  from `base.css`; `draw_card` is gone. Only the plastic material (Groove's
+  block cards) still paints in C.
+- Done: badges are `Badge` boxes. The tone is an instance variable
+  (`window_set_style_var(win, "--tone", ...)`, or `vars` for a table cell), and
+  `background: color-mix(in srgb, var(--tone) 15%, transparent)` tints the pill;
+  `draw_badge` and the `--tint-alpha`/`--ink-mix` metrics are gone
+  ([styling.md](styling.md#cards-and-badges)).
 - Tooltips and speech balloons stay in C: the tail is not a box.
 
 ## 4. Same CSS, same picture: conformance with the browser
@@ -57,7 +63,7 @@ fixture; an unsupported one is a diagnostic, never a silent difference. This is
 what lets an agent trust its browser intuition.
 
 Started: `tests/conformance/boxes/` (background, border, radius, shadow,
-square) with `tools/conformance/render.py` generating each page from its form
+square, card) with `tools/conformance/render.py` generating each page from its form
 and rendering it in headless Chrome; `tests/css_conformance_test.c` compares
 ([tests/conformance/README.md](../tests/conformance/README.md)). The first
 fixtures fixed sized empty containers, `stretch` on definite sizes, CSS shadow

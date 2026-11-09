@@ -137,7 +137,7 @@ typedef enum {
 // class/part pairs. Bounds and interaction state come from the caller.
 typedef enum {
   THEME_PART_BUTTON,
-  THEME_PART_CARD,            // card face; CTRL_SELECTED draws the ring, opts->edge_color the accent edge
+  THEME_PART_CARD,            // a Card's box: CTRL_HOVER and CTRL_SELECTED are :hover and :checked; --tone is its accent edge
   THEME_PART_CHECKBOX,
   THEME_PART_COMBOBOX,
   THEME_PART_COMBOBOX_ARROW,
@@ -202,6 +202,8 @@ typedef enum {
   THEME_PART_STACK_VIEW,     // a layout container's own box, like a div: nothing unless a sheet styles it
   THEME_PART_GRID_VIEW,
   THEME_PART_FLOW_VIEW,
+  THEME_PART_BADGE,          // a status pill, toned by --tone
+  THEME_PART_BADGE_ICON,     // the glyph before its text (fill is the icon's colour)
   THEME_PART_COUNT,
 } theme_part_t;
 
@@ -255,17 +257,23 @@ void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state);
 void theme_draw_in(const window_t *win, theme_part_t part, irect16_t r, ctrl_state_t state);
 // How far win's part paints beyond its rect (outer shadows, outline): left, top, right, bottom.
 irect16_t theme_ink_overflow_in(const window_t *win, theme_part_t part, ctrl_state_t state);
+// How far win's part reserves inside its rect for margin and border: left, top, right, bottom.
+irect16_t theme_content_insets_in(const window_t *win, theme_part_t part, ctrl_state_t state);
+// theme_draw_in() and theme_foreground_in() with explicit instance variables (ui_style.h) in
+// place of the window's own: a part toned for a row or cell that is not a window. NULL = none.
+void theme_draw_with(const window_t *win, const ui_style_vars_t *vars, theme_part_t part, irect16_t r, ctrl_state_t state);
+uint32_t theme_foreground_with(const window_t *win, const ui_style_vars_t *vars, theme_part_t part, ctrl_state_t state);
+// The part's `fill`: the colour of the glyph it carries (its foreground when the sheet sets none).
+uint32_t theme_fill_with(const window_t *win, const ui_style_vars_t *vars, theme_part_t part, ctrl_state_t state);
 
 // Extra inputs for parts whose look depends on more than bounds and state.
 typedef struct {
   uint32_t color;       // card plastic tint
-  uint32_t edge_color;  // THEME_PART_CARD accent edge (alpha 0 = none)
 } theme_draw_opts_t;
 // theme_draw() with opts; CTRL_PLASTIC in state selects the card material.
 void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const theme_draw_opts_t *opts);
 // The area a part leaves for content (≈ GetThemeBackgroundContentRect).
 irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state);
-void theme_default_draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color); // shared card painter for flat themes
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state);
 uint32_t theme_foreground_in(const window_t *win, theme_part_t part, ctrl_state_t state);
 
@@ -306,6 +314,11 @@ bool ui_has_instance_stylesheet(hinstance_t hinstance);
 // Painting from the active sheet (theme_box.c, theme_css.c, theme_builtin.c).
 void theme_css_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state, const ui_scope_t *scope);
 uint32_t theme_css_foreground(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope);
+// The same for an instance with its own custom properties (vars may be NULL).
+void theme_css_draw_part_vars(theme_part_t part, irect16_t r, ctrl_state_t state, const ui_scope_t *scope, const ui_style_vars_t *vars);
+uint32_t theme_css_foreground_vars(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope, const ui_style_vars_t *vars);
+uint32_t theme_css_fill_vars(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope, const ui_style_vars_t *vars);
+irect16_t theme_css_insets_vars(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope, const ui_style_vars_t *vars);
 void theme_css_apply_palette(void);   // writes the sheet's colour roles into g_sys_colors
 void theme_draw_window_chrome(irect16_t titlebar, irect16_t caption, const char *title, ctrl_state_t state, bool maximizable);
 void theme_draw_statusbar_text(irect16_t r, const char *text);

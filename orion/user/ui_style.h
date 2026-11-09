@@ -46,6 +46,29 @@ style_sheet_t *ui_scope_stylesheet(const ui_scope_t *scope);
 // Sets a window's #id and classes, as a form does from name= and class=.
 void window_set_style(window_t *win, const char *id, const char *classes);
 
+// ── Instance variables ────────────────────────────────────────────────────────
+// Data a style sheet cannot know, such as the accent of one card or the tone of
+// one badge, is a custom property on the instance (≈ style="--tone: #D29922").
+// It answers var(--name) in that window's queries before the sheet does, so the
+// sheet decides what the value means: `Badge { background: color-mix(in srgb,
+// var(--tone) 15%, transparent) }`. A value may itself be var(--text-success),
+// which then follows the live palette.
+#define UI_MAX_STYLE_VARS 4
+typedef struct ui_style_vars_s {
+  int  count;
+  char name[UI_MAX_STYLE_VARS][24];    // with the leading "--"
+  char value[UI_MAX_STYLE_VARS][48];
+} ui_style_vars_t;
+// Sets, replaces or (value NULL or "") removes one variable. False when the
+// name does not start with "--", or the value does not fit, or no slot is left.
+bool ui_style_vars_set(ui_style_vars_t *vars, const char *name, const char *value);
+bool ui_style_vars_set_color(ui_style_vars_t *vars, const char *name, uint32_t color);   // as #RRGGBBAA
+bool ui_style_vars_equal(const ui_style_vars_t *a, const ui_style_vars_t *b);            // NULL = none
+// A window's own variables (NULL when it has none), and setters that repaint it.
+const ui_style_vars_t *window_style_vars(const window_t *win);
+bool window_set_style_var(window_t *win, const char *name, const char *value);
+bool window_set_style_var_color(window_t *win, const char *name, uint32_t color);
+
 int  ui_px(const char *selector, const char *property);            // first length of the value
 int  ui_radius(const char *selector);                              // border-radius, capsule = CORNER_RADIUS_CIRCULAR
 float ui_number(const char *selector, const char *property);       // a number or a percentage (0.5 for 50%)

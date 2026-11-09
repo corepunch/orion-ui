@@ -56,12 +56,8 @@ static inline uint32_t color_mix(uint32_t a, uint32_t b, uint8_t amount) {
   }
   return out;
 }
-// A card: brControlBg, halfway to brButtonHover when hovered, with an optional accent edge on its left side.
-// The edge is a plain `edge_width`-pixel rectangle; the active theme's card.corner_radius rounds (or not)
-// the card and the edge together. CTRL_SELECTED draws a ring in the accent edge's colour (theme accent when there is no edge) in the theme's card.ring_width margin,
-// which is reserved inside `r` for every card so selecting never shifts content.
-void draw_card(irect16_t r, ctrl_state_t state, uint32_t edge_color);
-void draw_card_in(const window_t *win, irect16_t r, ctrl_state_t state, uint32_t edge_color);   // as win styles it
+// A Card is a CSS box (theme_draw_in(win, THEME_PART_CARD, ...), base.css); only the plastic material
+// (Groove's block cards) has a painter of its own.
 // Framework internals behind theme_draw_ex(CTRL_PLASTIC); controls and apps never call these directly.
 // Single shader pass; shadow is reserved inside r, so controls never paint outside their bounds.
 void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color);
@@ -73,21 +69,15 @@ typedef struct {
 } plastic_look_t;
 void render_plastic_surface(irect16_t r, float radius, float bevel, float shadow,
                             const plastic_look_t *look, uint32_t color, uint32_t shadow_color);
-// Small tinted label ("3 modified"): a rounded fill in `color` at the theme's badge tint with the
-// text in the badge ink (see draw_status_badge). Drawn at (x, y) with the given height; returns the
-// badge width so callers can chain badges.
-int  draw_badge(ui_font_t font, const char *text, int x, int y, int height, uint32_t color);
-int  measure_badge(ui_font_t font, const char *text);   // width draw_badge() will use
-// Explicit bounds and independent text/fill colours; round uses capsule or circular ends.
-void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_color, uint32_t background_color, bool round);
+// A small chip with its own fill and text colours (Groove's variant tag); its corners are Badge.chip's radius.
+void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_color, uint32_t background_color);
 #define BADGE_HEIGHT 18
-// A status badge ("Posted", "Paid"): a pill tinted with `color`, a theme role such as brTextSuccess,
-// an optional leading icon in that colour, and text in the Badge font in the badge ink, the role leaning
-// towards brTextNormal so small type stays readable on the tint in light and dark palettes. Padding,
-// tint and icon size come from the theme's badge metrics. The Badge control draws exactly this.
+// A status badge ("Posted", "Paid"): the Badge box (THEME_PART_BADGE) toned by the instance variable
+// --tone, a leading icon (THEME_PART_BADGE_ICON) and the text in the Badge font; base.css says how the
+// tone tints the pill and leans the text towards the normal ink. `vars` carries --tone for a badge that is
+// not a window (a table cell); NULL takes win's own (window_set_style_var). win may be NULL.
 int  measure_status_badge(const char *text, const char *icon);
-void draw_status_badge(irect16_t r, const char *text, const char *icon, uint32_t color);
-uint32_t badge_ink(uint32_t color);   // the text colour a badge tinted with `color` uses
+void draw_status_badge(const window_t *win, irect16_t r, const char *text, const char *icon, const ui_style_vars_t *vars);
 // Procedural rounded-box shadow; radius, blur (Gaussian sigma), and offset are logical pixels.
 void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, uint32_t color);
 void draw_gradient_rect(irect16_t r, uint32_t left_color, uint32_t right_color);
@@ -123,6 +113,9 @@ void render_rounded_rect(int tex, irect16_t r, int pixel_w, int pixel_h,
                          float radius, float alpha, uint32_t color);
 void render_rounded_rect_stroke(int tex, irect16_t r, int pixel_w, int pixel_h,
                                 float radius, float alpha, uint32_t color, float stroke);
+// A rounded fill (colour may be fully transparent) whose left `edge_width` pixels are `edge_color`,
+// both clipped by one rounded silhouette: a box's border-left.
+void fill_rounded_rect_edged(uint32_t color, irect16_t r, int radius, uint32_t edge_color, int edge_width);
 // Rounded fill whose left `edge_width` pixels are painted in `edge_color`, sharing one rounded silhouette.
 void render_rounded_rect_edged(int tex, irect16_t r, int pixel_w, int pixel_h, float radius,
                                float alpha, uint32_t color, uint32_t edge_color, float edge_width);

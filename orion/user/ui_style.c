@@ -117,6 +117,83 @@ void window_set_style(window_t *win, const char *id, const char *classes) {
   invalidate_window(win);
 }
 
+// ── instance variables ────────────────────────────────────────────────────────
+
+bool ui_style_vars_set(ui_style_vars_t *vars, const char *name, const char *value) {
+  if (!vars || !name || strncmp(name, "--", 2) || strlen(name) < 3 || strlen(name) >= sizeof(vars->name[0])) {
+    fprintf(stderr, "[ui_style] instance variable name \"%s\" must be --name of at most %d characters\n",
+            name ? name : "(null)", (int)sizeof(vars->name[0]) - 1);
+    fflush(stderr);
+    return false;
+  }
+  int at = -1;
+  for (int i = 0; i < vars->count; i++) if (!strcmp(vars->name[i], name)) at = i;
+  if (!value || !*value) {   // remove, keeping the order of the rest
+    if (at < 0) return true;
+    for (int i = at; i + 1 < vars->count; i++) { memcpy(vars->name[i], vars->name[i + 1], sizeof(vars->name[0])); memcpy(vars->value[i], vars->value[i + 1], sizeof(vars->value[0])); }
+    vars->count--;
+    memset(vars->name[vars->count], 0, sizeof(vars->name[0])); memset(vars->value[vars->count], 0, sizeof(vars->value[0]));
+    return true;
+  }
+  if (strlen(value) >= sizeof(vars->value[0])) {
+    fprintf(stderr, "[ui_style] instance variable %s: value \"%s\" is longer than %d characters\n", name, value, (int)sizeof(vars->value[0]) - 1);
+    fflush(stderr);
+    return false;
+  }
+  if (at < 0) {
+    if (vars->count == UI_MAX_STYLE_VARS) {
+      fprintf(stderr, "[ui_style] more than %d instance variables; %s is not set\n", UI_MAX_STYLE_VARS, name);
+      fflush(stderr);
+      return false;
+    }
+    at = vars->count++;
+  }
+  memset(vars->name[at], 0, sizeof(vars->name[0])); memset(vars->value[at], 0, sizeof(vars->value[0]));
+  snprintf(vars->name[at], sizeof(vars->name[0]), "%s", name);
+  snprintf(vars->value[at], sizeof(vars->value[0]), "%s", value);
+  return true;
+}
+
+bool ui_style_vars_set_color(ui_style_vars_t *vars, const char *name, uint32_t color) {
+  char text[16];
+  snprintf(text, sizeof(text), "#%02X%02X%02X%02X", color & 0xFF, (color >> 8) & 0xFF, (color >> 16) & 0xFF, color >> 24);
+  return ui_style_vars_set(vars, name, text);
+}
+
+bool ui_style_vars_equal(const ui_style_vars_t *a, const ui_style_vars_t *b) {
+  int na = a ? a->count : 0, nb = b ? b->count : 0;
+  if (na != nb) return false;
+  for (int i = 0; i < na; i++) if (strcmp(a->name[i], b->name[i]) || strcmp(a->value[i], b->value[i])) return false;
+  return true;
+}
+
+const ui_style_vars_t *window_style_vars(const window_t *win) {
+  const ui_style_vars_t *vars = win ? win->style_vars : NULL;
+  return vars && vars->count ? vars : NULL;
+}
+
+static bool window_edit_style_vars(window_t *win, const char *name, const char *value, uint32_t color, bool is_color) {
+  if (!win) {
+    fprintf(stderr, "[ui_style] window_set_style_var(%s): no window\n", name ? name : "(null)");
+    fflush(stderr);
+    return false;
+  }
+  if (!win->style_vars && !(win->style_vars = calloc(1, sizeof(ui_style_vars_t)))) {
+    fprintf(stderr, "[ui_style] win=%u instance variable allocation failed\n", (unsigned)win->id);
+    fflush(stderr);
+    return false;
+  }
+  ui_style_vars_t edited = *(ui_style_vars_t *)win->style_vars;
+  if (!(is_color ? ui_style_vars_set_color(&edited, name, color) : ui_style_vars_set(&edited, name, value))) return false;
+  if (ui_style_vars_equal(&edited, win->style_vars)) return true;
+  *(ui_style_vars_t *)win->style_vars = edited;
+  invalidate_window(win);
+  return true;
+}
+
+bool window_set_style_var(window_t *win, const char *name, const char *value) { return window_edit_style_vars(win, name, value, 0, false); }
+bool window_set_style_var_color(window_t *win, const char *name, uint32_t color) { return window_edit_style_vars(win, name, NULL, color, true); }
+
 // ── selectors ─────────────────────────────────────────────────────────────────
 
 typedef struct {

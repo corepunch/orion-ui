@@ -210,14 +210,15 @@ Key points:
 Composite tiles are built from controls and laid out by the auto-layout system, the way an
 `NSCollectionViewItem` or `UICollectionViewCell` is built from views. Nothing is painted or positioned by hand.
 
-- **Card**: a vertical stack with a themed face (`draw_card`), hover, an optional accent edge
-  (`cdSetEdgeColor`) and selection state. Children can be Labels, Badges, nested StackViews or FlowViews.
+- **Card**: a vertical stack whose box (face, hover, `border-left` accent edge, selection ring) is the
+  sheet's `Card` rule; `cdSetEdgeColor` sets the window's `--tone` accent, and selection state is `:checked`. Children can be Labels, Badges, nested StackViews or FlowViews.
   Clicks on the face, labels, badges and nested layouts are reported to the parent as `cdnClicked` / `cdnActivated`.
   Interactive children, such as buttons, receive their own input. Its padding comes from the theme
   (`theme_t.card.padding_x/y`) unless the form declares `padding=`; its face is `theme_t.card.face`
   (Porcelain: the wells' white) with a hairline `card.outline` along the same silhouette. A `<Card>` in a
   form is a panel of a start page or dashboard: a caption Label, then a TableView, Labels or a StackView.
-- **Badge**: a self-measuring tinted label; `bdSetColor` takes a theme colour role.
+- **Badge**: a self-measuring tinted label, the sheet's `Badge` box; `bdSetColor` takes a theme colour role and
+  sets the window's `--tone` to it.
 - **Label** gains single-line truncation: `lbSetStyle` with `label_create_params_t.truncate` cuts with "..." instead
   of wrapping. Give a truncating label `WINDOW_FLEXSPACE` in a horizontal stack so it takes the leftover width.
 - **TileGrid**: an adaptive grid. It fits as many columns as the minimum tile width allows (`tgSetMinTileWidth`),

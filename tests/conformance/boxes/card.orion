@@ -1,0 +1,11 @@
+<orion>
+  <forms>
+    <form name="fixture" width="334" height="136" padding="0" spacing="0">
+      <StackView name="page" orientation="horizontal" spacing="24" padding="24" flags="flexspace">
+        <Card name="warn" width="112" height="88" />
+        <Card name="plain" width="112" height="88" />
+        <Badge name="pill" v-align="start" />
+      </StackView>
+    </form>
+  </forms>
+</orion>

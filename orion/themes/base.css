@@ -39,6 +39,12 @@ Card {
   --highlight-width: 1px; --edge-width: 4px; --ring-width: 1px; --shadow-size: 1px;
   --plastic: gloss; --plastic-gloss: 1; --plastic-rim: 0.55; --plastic-lift: 0.10; --plastic-shadow: #000000E0;
 }
+Badge {
+  padding-left: 7px;
+  --tone: var(--text-secondary);   /* each badge sets its own (window_set_style_var) */
+  --tint: 14.9%;                   /* how much of --tone tints the pill */
+  --ink: 68.6%;                    /* how much of --tone is left in the text; the rest is --text-normal */
+}
 Window              { --drag-shadow: 0 8px 6px #000000E0; }
 Scrollbar           { --overlay: 0; }
 Toolbar.compact     { padding: 2px; gap: 6px; --icon-size: var(--compact-icon-size); margin-left: 8px; }
@@ -65,14 +71,30 @@ CommandLink         { --bullet-size: 6px; gap: 8px; padding-top: 2px; }
 Window       { border-radius: var(--window-radius); }
 Toolbar      { gap: 1px; }
 TableView    { border-radius: var(--table-radius); }
-Card         { border-radius: var(--card-radius); }
-Badge {
-  border-radius: var(--badge-radius);
-  padding-left: 7px;
-  --tint-alpha: 0.149;   /* the pill's tint of its role colour */
-  --ink-mix: 0.314;      /* how far the text leans from the role towards --text-normal */
+
+/* ── Cards and badges ────────────────────────────────────────────────────── */
+/* A card keeps a margin of the ring's width so selecting it never shifts its
+   content; the accent edge is a border-left of its own colour (the window's
+   --tone, transparent when it has none) and is reserved for every card. */
+
+Card {
+  margin: var(--ring-width);
+  background: var(--card-face);
+  border-radius: var(--card-radius);
+  border-left: var(--edge-width) solid var(--tone, transparent);
+  --card-face: var(--control-bg);
 }
-Badge::icon  { width: 12px; margin-right: 4px; }
+Card:hover   { background: color-mix(in srgb, var(--card-face), var(--button-hover)); }
+Card:checked { outline: var(--ring-width) solid var(--accent); }
+
+/* A status pill: its tone tints the fill, the icon and, mixed with the normal ink, the text. */
+Badge {
+  background: color-mix(in srgb, var(--tone) var(--tint), transparent);
+  color: color-mix(in srgb, var(--tone) var(--ink), var(--text-normal));
+  border-radius: 9999px;
+}
+Badge.chip   { border-radius: var(--badge-radius); }
+Badge::icon  { width: 12px; margin-right: 4px; fill: var(--tone, var(--text-secondary)); }
 
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
 

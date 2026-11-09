@@ -65,8 +65,8 @@ engraved text.
 
 A pill with a leading icon. Tones are theme roles: `success`, `warning`,
 `error`, `info`, `secondary`. Set them at run time with `bdSetColor`,
-`btnSetIconName` and `set_window_title`. Painted by `draw_status_badge`; its
-metrics are in `theme_t.badge`. Use badges for state ("Posted", "Paid",
+`btnSetIconName` and `set_window_title`. Painted by `draw_status_badge` from the
+`Badge` box in `base.css`, toned by the instance variable `--tone`. Use badges for state ("Posted", "Paid",
 "2 to push") and never as buttons.
 
 ### Buttons

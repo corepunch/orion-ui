@@ -3,7 +3,8 @@
 //
 //   background        a colour, none, or linear-gradient([to bottom,] top, bottom)
 //   border, border-<side>, border-width/-style/-color, border-<side>-<property>
-//                     solid sides; a uniform border follows the corner radius
+//                     solid sides; a uniform border follows the corner radius, and so does
+//                     a lone border-left (an accent edge, clipped by the silhouette)
 //   border-radius     1..4 lengths (top-left, top-right, bottom-right, bottom-left);
 //                     9999px is a capsule; rounded top and square bottom is a tab
 //   margin            1..4 lengths: the painted box inside the part's bounds
@@ -122,6 +123,8 @@ static const struct { const char *element, *part, *classes; } k_part_selectors[T
   [THEME_PART_STACK_VIEW]             = {"StackView"},
   [THEME_PART_GRID_VIEW]              = {"GridView"},
   [THEME_PART_FLOW_VIEW]              = {"FlowView"},
+  [THEME_PART_BADGE]                  = {"Badge"},
+  [THEME_PART_BADGE_ICON]             = {"Badge", "icon"},
 };
 
 // ── value parsing ─────────────────────────────────────────────────────────────
@@ -236,9 +239,13 @@ static void box_report(const char *what, theme_part_t part, const char *value) {
 }
 
 // scope: the window's classes, #id and instance sheet (ui_window_scope), or NULL.
-static void box_compute(theme_box_t *b, theme_part_t part, ctrl_state_t state, const ui_scope_t *scope) {
+// vars: the window's own custom properties (ui_style.h), or NULL.
+static void box_compute(theme_box_t *b, theme_part_t part, ctrl_state_t state, const ui_scope_t *scope, const ui_style_vars_t *vars) {
   const style_sheet_t *s = scope ? ui_scope_stylesheet(scope) : theme_stylesheet(get_theme());
   memset(b, 0, sizeof(*b));
+  style_var_t instance_vars[UI_MAX_STYLE_VARS];
+  int own_count = vars ? vars->count : 0;
+  for (int i = 0; i < own_count; i++) instance_vars[i] = (style_var_t){vars->name[i], vars->value[i]};
   char classes[160];
   const char *own = k_part_selectors[part].classes ? k_part_selectors[part].classes : "", *win_classes = ui_scope_classes(scope);
   snprintf(classes, sizeof(classes), "%s%s%s%s", own, *own && *win_classes ? " " : "", win_classes,
@@ -250,6 +257,7 @@ static void box_compute(theme_box_t *b, theme_part_t part, ctrl_state_t state, c
              ((state & CTRL_SELECTED) ? STYLE_CHECKED : 0) | ((state & CTRL_DISABLED) ? STYLE_DISABLED : 0) |
              ((state & CTRL_FOCUSED) ? STYLE_FOCUS : 0) | ((state & CTRL_DEFAULT) ? STYLE_DEFAULT : 0) |
              ((state & CTRL_INACTIVE) ? STYLE_WINDOW_INACTIVE : 0),
+    .vars = own_count ? instance_vars : NULL, .var_count = own_count,
   };
   b->color = get_sys_color(brTextNormal);
   style_color(s, q, "color", &b->color);
@@ -328,7 +336,9 @@ static void box_compute(theme_box_t *b, theme_part_t part, ctrl_state_t state, c
   if (!one_radius && !top_only) box_unsupported("a border-radius other than one radius or the top two", part, id);
   bool uniform = bw[0] == bw[1] && bw[1] == bw[2] && bw[2] == bw[3] && b->border_color[0] == b->border_color[1] &&
                  b->border_color[1] == b->border_color[2] && b->border_color[2] == b->border_color[3];
-  if (!uniform && (rad[0] || rad[1] || rad[2] || rad[3])) box_unsupported("a border with unequal sides on a rounded box", part, id);
+  bool left_edge = one_radius && bw[3] > 0 && !bw[0] && !bw[1] && !bw[2];   // an accent edge: clipped by the rounded silhouette
+  if (!uniform && !left_edge && (rad[0] || rad[1] || rad[2] || rad[3]))
+    box_unsupported("a border with unequal sides on a rounded box (only a left edge)", part, id);
   if (style_value(s, q, "margin", v, sizeof(v)) && !box_four(v, b->margin, false)) box_report("margin", part, v);
   if (style_value(s, q, "outline", v, sizeof(v))) {
     box_line_t line;
@@ -361,14 +371,45 @@ static theme_box_t **box_slots(const ui_scope_t *scope) {
   return g_scoped_boxes[g_scoped_box_count++].boxes;
 }
 
-static const theme_box_t *box_for(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope) {
+// Windows with instance variables of their own (a badge's --tone): one box per
+// distinct scope, part, state and variables, direct-mapped so that tones which
+// are never repeated cannot grow the cache.
+#define BOX_TONED 512
+typedef struct { const ui_scope_t *scope; theme_part_t part; unsigned key; ui_style_vars_t vars; theme_box_t box; } toned_box_t;
+static toned_box_t *g_toned_boxes;
+
+static unsigned box_toned_hash(theme_part_t part, unsigned key, const ui_scope_t *scope, const ui_style_vars_t *vars) {
+  unsigned h = 2166136261u ^ (unsigned)(uintptr_t)scope ^ ((unsigned)part << 16) ^ key;
+  for (int i = 0; i < vars->count; i++)
+    for (const char *c = vars->name[i]; *c; c++) h = (h ^ (unsigned char)*c) * 16777619u;
+  for (int i = 0; i < vars->count; i++)
+    for (const char *c = vars->value[i]; *c; c++) h = (h ^ (unsigned char)*c) * 16777619u;
+  return h;
+}
+
+static const theme_box_t *box_for(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope, const ui_style_vars_t *vars) {
   static theme_box_t scratch;
+  if (vars && vars->count) {
+    if (!g_toned_boxes && !(g_toned_boxes = calloc(BOX_TONED, sizeof(*g_toned_boxes)))) {
+      box_compute(&scratch, part, state, scope, vars);
+      return &scratch;
+    }
+    unsigned key = box_state_key(state), slot = box_toned_hash(part, key, scope, vars) % BOX_TONED;
+    toned_box_t *e = &g_toned_boxes[slot];
+    if (e->box.generation != g_theme_style_generation || !e->box.generation || e->scope != scope || e->part != part ||
+        e->key != key || !ui_style_vars_equal(&e->vars, vars)) {
+      e->scope = scope; e->part = part; e->key = key; e->vars = *vars;
+      box_compute(&e->box, part, state, scope, vars);
+      e->box.generation = g_theme_style_generation;
+    }
+    return &e->box;
+  }
   theme_box_t **slots = box_slots(scope);
   if (!slots) { slots = g_box_cache; scope = NULL; }
   if (!slots[part]) slots[part] = calloc(256, sizeof(theme_box_t));
   theme_box_t *b = slots[part] ? &slots[part][box_state_key(state)] : &scratch;
   if (b->generation != g_theme_style_generation || !b->generation) {
-    box_compute(b, part, state, scope);
+    box_compute(b, part, state, scope, NULL);
     b->generation = g_theme_style_generation;
   }
   return b;
@@ -393,11 +434,15 @@ static void box_fill(uint32_t top, uint32_t bottom, bool gradient, irect16_t r, 
 static void box_paint(const theme_box_t *b, irect16_t r) {
   r = R(r.x + b->margin[3], r.y + b->margin[0], r.w - b->margin[1] - b->margin[3], r.h - b->margin[0] - b->margin[2]);
   if (r.w <= 0 || r.h <= 0) return;
-  if (b->outline_width > 0) fill_rect(b->outline_color, rect_inset(r, -b->outline_width));
   const int *rad = b->radius;
   bool top_only = rad[0] == rad[1] && rad[0] != 0 && rad[2] == 0 && rad[3] == 0;
   int widest = MAX(MAX(rad[0] < 0 ? 9999 : rad[0], rad[1] < 0 ? 9999 : rad[1]), MAX(rad[2] < 0 ? 9999 : rad[2], rad[3] < 0 ? 9999 : rad[3]));
   int radius = box_radius(top_only ? rad[0] : (widest >= 9999 ? -1 : widest), r);
+  if (b->outline_width > 0) {   // behind the box, following its corners
+    irect16_t ring = rect_inset(r, -b->outline_width);
+    if (radius > 0 && !top_only) fill_rounded_rect(b->outline_color, ring, radius + b->outline_width);
+    else fill_rect(b->outline_color, ring);
+  }
   const int *bw = b->border_width;
   bool uniform = bw[0] == bw[1] && bw[1] == bw[2] && bw[2] == bw[3] &&
                  b->border_color[0] == b->border_color[1] && b->border_color[1] == b->border_color[2] &&
@@ -416,6 +461,16 @@ static void box_paint(const theme_box_t *b, irect16_t r) {
     } else {
       if (b->background) box_fill(b->top, b->bottom, b->gradient, rect_inset(r, bw[0]), MAX(0, radius - bw[0]), top_only);
       stroke_rounded_rect(edge, r, radius, bw[0]);
+    }
+  } else if (radius > 0 && !top_only && !uniform && bw[3] > 0 && !bw[0] && !bw[1] && !bw[2]) {
+    // An accent edge on a rounded box: the left border is a plain rectangle clipped by the box's own
+    // silhouette, drawn in one pass with the face so both share it (a transparent edge shows the face).
+    bool visible = (b->border_color[3] >> 24) != 0;
+    if (!visible) { if (b->background) box_fill(b->top, b->bottom, b->gradient, r, radius, false); }
+    else if (b->background && !b->gradient) fill_rounded_rect_edged(b->top, r, radius, b->border_color[3], bw[3]);
+    else {
+      if (b->background) box_fill(b->top, b->bottom, b->gradient, r, radius, false);
+      fill_rounded_rect_edged(0, r, radius, b->border_color[3], bw[3]);
     }
   } else {
     if (b->background) box_fill(b->top, b->bottom, b->gradient, r, radius, top_only);
@@ -476,18 +531,22 @@ static void box_glyph(const theme_box_t *b, irect16_t r) {
   }
 }
 
-void theme_css_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state, const ui_scope_t *scope) {
-  if (part < 0 || part >= THEME_PART_COUNT || part == THEME_PART_CARD) return;   // cards paint through draw_card
-  const theme_box_t *b = box_for(part, state, scope);
+void theme_css_draw_part_vars(theme_part_t part, irect16_t r, ctrl_state_t state, const ui_scope_t *scope, const ui_style_vars_t *vars) {
+  if (part < 0 || part >= THEME_PART_COUNT) return;
+  const theme_box_t *b = box_for(part, state, scope, vars);
   box_paint(b, r);
   box_glyph(b, r);
+}
+
+void theme_css_draw_part(theme_part_t part, irect16_t r, ctrl_state_t state, const ui_scope_t *scope) {
+  theme_css_draw_part_vars(part, r, state, scope, NULL);
 }
 
 // The extent draw_rect_shadow and the outline give the box beyond r.
 irect16_t theme_ink_overflow_in(const window_t *win, theme_part_t part, ctrl_state_t state) {
   irect16_t ink = {0, 0, 0, 0};
   if (part < 0 || part >= THEME_PART_COUNT) return ink;
-  const theme_box_t *b = box_for(part, state, ui_window_scope(win));
+  const theme_box_t *b = box_for(part, state, ui_window_scope(win), window_style_vars(win));
   int out[4] = {b->outline_width, b->outline_width, b->outline_width, b->outline_width};   // left, top, right, bottom
   for (int i = 0; i < b->shadow_count; i++) {
     if (b->shadows[i].inset) continue;
@@ -500,7 +559,25 @@ irect16_t theme_ink_overflow_in(const window_t *win, theme_part_t part, ctrl_sta
   return (irect16_t){out[0], out[1], out[2], out[3]};
 }
 
-uint32_t theme_css_foreground(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope) {
+uint32_t theme_css_foreground_vars(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope, const ui_style_vars_t *vars) {
   if (part < 0 || part >= THEME_PART_COUNT) return get_sys_color(brTextNormal);
-  return box_for(part, state, scope)->color;
+  return box_for(part, state, scope, vars)->color;
+}
+
+uint32_t theme_css_foreground(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope) {
+  return theme_css_foreground_vars(part, state, scope, NULL);
+}
+
+uint32_t theme_css_fill_vars(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope, const ui_style_vars_t *vars) {
+  if (part < 0 || part >= THEME_PART_COUNT) return get_sys_color(brTextNormal);
+  return box_for(part, state, scope, vars)->fill;
+}
+
+// What the part's margin and border take inside its rect: left, top, right, bottom.
+irect16_t theme_css_insets_vars(theme_part_t part, ctrl_state_t state, const ui_scope_t *scope, const ui_style_vars_t *vars) {
+  irect16_t in = {0, 0, 0, 0};
+  if (part < 0 || part >= THEME_PART_COUNT) return in;
+  const theme_box_t *b = box_for(part, state, scope, vars);
+  return (irect16_t){b->margin[3] + b->border_width[3], b->margin[0] + b->border_width[0],
+                     b->margin[1] + b->border_width[1], b->margin[2] + b->border_width[2]};
 }

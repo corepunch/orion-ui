@@ -644,6 +644,7 @@ void destroy_window(window_t *win) {
   clear_window_children(win);
   // Release the per-window render target before freeing the struct.
   window_surface_release(win);
+  free(win->style_vars);
   free(win->placement);
   free(win->pages);
   free(win->view);

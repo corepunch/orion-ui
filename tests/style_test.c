@@ -155,11 +155,11 @@ void test_porcelain_sheet(void) {
   ASSERT_TRUE(set_theme(THEME_PORCELAIN) || get_theme()->style == THEME_PORCELAIN);
   ASSERT_EQUAL(get_sys_color(brColumnViewBg), WEB(0xFFFFFF));
   ASSERT_EQUAL(ui_radius("Button"), 6);
-  ASSERT_EQUAL(ui_role("Card", "background-color"), brColumnViewBg);
-  ASSERT_EQUAL(ui_role("Card", "border-color"), brLightEdge);
+  ASSERT_EQUAL(ui_role("Card", "--card-face"), brColumnViewBg);
+  ASSERT_EQUAL(ui_px("Card", "margin-left"), 2);
   ASSERT_EQUAL(ui_px("TableView::row", "min-height"), 21);
   ASSERT_TRUE(ui_flag("TableView::row", "--divider-width"));
-  ASSERT_EQUAL(((int)(ui_number("Badge", "--tint-alpha") * 255.0f + 0.5f)), 0x26);
+  ASSERT_EQUAL(((int)(ui_number("Badge", "--tint") * 255.0f + 0.5f)), 0x26);
   ASSERT_TRUE(set_theme(THEME_PORCELAIN_DARK));
   ASSERT_EQUAL(get_sys_color(brTextNormal), WEB(0xABB2BF));
   ASSERT_EQUAL(ui_radius("TextEdit"), 5);
@@ -210,8 +210,26 @@ void test_mixing_hooks_and_append(void) {
   PASS();
 }
 
+void test_instance_variables(void) {
+  TEST("style: an instance variable answers var() before the sheet; color-mix tints it");
+  style_sheet_t *s = style_sheet_parse(
+    "Badge { --tone: #FF0000; background: color-mix(in srgb, var(--tone) 25%, transparent); color: var(--tone, #000) }\n", "vars.css");
+  style_query_t plain = q("Badge", NULL, NULL, 0), toned = plain;
+  style_var_t own[] = {{"--tone", "#0000FF"}};
+  toned.vars = own; toned.var_count = 1;
+  uint32_t c = 0;
+  ASSERT_TRUE(style_color(s, plain, "color", &c));  ASSERT_EQUAL(c, 0xFF0000FFu);   // #FF0000, packed AABBGGRR
+  ASSERT_TRUE(style_color(s, toned, "color", &c));  ASSERT_EQUAL(c, 0xFFFF0000u);   // #0000FF
+  ASSERT_TRUE(style_color(s, toned, "background", &c));
+  ASSERT_EQUAL(c >> 24, 64u);                                                       // 25% of opaque
+  ASSERT_EQUAL(c & 0xFFFFFF, 0xFF0000u);                                            // still blue
+  style_sheet_free(s);
+  PASS();
+}
+
 int main(void) {
   TEST_START("Style sheets");
+  test_instance_variables();
   test_selectors_and_cascade();
   test_custom_properties_and_media();
   test_error_recovery();

@@ -120,8 +120,35 @@ static void test_controls_read_their_selectors(void) {
   PASS();
 }
 
+static void test_instance_variables(void) {
+  TEST("window_set_style_var tones one Badge and one Card without touching the sheet");
+  test_env_init();
+  ui_set_app_stylesheet("Badge { --ink: 100% }", "app.css");
+  window_t *a = create_window("a", 0, MAKERECT(0, 0, 40, 18), NULL, win_badge, 0, NULL);
+  window_t *b = create_window("b", 0, MAKERECT(0, 0, 40, 18), NULL, win_badge, 0, NULL);
+  ASSERT_TRUE(window_set_style_var_color(a, "--tone", 0xFF00FF00u));
+  ASSERT_TRUE(window_set_style_var_color(b, "--tone", 0xFF0000FFu));
+  ASSERT_EQUAL(theme_foreground_in(a, THEME_PART_BADGE, CTRL_NORMAL), 0xFF00FF00u);
+  ASSERT_EQUAL(theme_foreground_in(b, THEME_PART_BADGE, CTRL_NORMAL), 0xFF0000FFu);
+  ASSERT_FALSE(window_set_style_var(a, "tone", "#fff"));   // custom properties start with --
+  send_message(b, bdSetColor, brTextSuccess, NULL);          // a role follows the palette
+  ASSERT_EQUAL(theme_foreground_in(b, THEME_PART_BADGE, CTRL_NORMAL), get_sys_color(brTextSuccess));
+  window_t *card = create_window("c", 0, MAKERECT(0, 0, 80, 40), NULL, win_card, 0, NULL);
+  irect16_t plain = theme_content_insets_in(card, THEME_PART_CARD, CTRL_NORMAL);
+  send_message(card, cdSetEdgeColor, 0, (void *)(uintptr_t)0xFF0000FFu);
+  ASSERT_EQUAL(theme_content_insets_in(card, THEME_PART_CARD, CTRL_NORMAL).x, plain.x);   // the edge is reserved either way
+  ASSERT_TRUE(window_style_vars(card) != NULL);
+  send_message(card, cdSetEdgeColor, 0, NULL);
+  ASSERT_TRUE(window_style_vars(card) == NULL);
+  destroy_window(a); destroy_window(b); destroy_window(card);
+  ui_set_app_stylesheet(NULL, NULL);
+  test_env_shutdown();
+  PASS();
+}
+
 int main(void) {
   TEST_START("App style sheets");
+  test_instance_variables();
   test_selector_composition();
   test_id_and_class_rules();
   test_instance_sheet();

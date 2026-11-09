@@ -152,8 +152,12 @@ void theme_paint_window_chrome(irect16_t titlebar, irect16_t caption, const char
 
 void theme_draw(theme_part_t part, irect16_t r, ctrl_state_t state) { theme_draw_in(NULL, part, r, state); }
 
-// A part of win's element: the window's classes, #id and app sheet apply.
+// A part of win's element: the window's classes, #id, instance variables and app sheet apply.
 void theme_draw_in(const window_t *win, theme_part_t part, irect16_t r, ctrl_state_t state) {
+  theme_draw_with(win, window_style_vars(win), part, r, state);
+}
+
+void theme_draw_with(const window_t *win, const ui_style_vars_t *vars, theme_part_t part, irect16_t r, ctrl_state_t state) {
   if (part < 0 || part >= THEME_PART_COUNT) {
     fprintf(stderr, "[theme] draw REJECTED part=%d state=%u rect=%d,%d,%d,%d\n",
             (int)part, (unsigned)state, r.x, r.y, r.w, r.h);
@@ -163,7 +167,7 @@ void theme_draw_in(const window_t *win, theme_part_t part, irect16_t r, ctrl_sta
   if (r.w <= 0 || r.h <= 0) return;
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
   if (g_paint_recorder && g_paint_recorder->part) { g_paint_recorder->part(part, r, state); return; }
-  theme_css_draw_part(part, r, state, ui_window_scope(win));
+  theme_css_draw_part_vars(part, r, state, ui_window_scope(win), vars);
 }
 
 void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const theme_draw_opts_t *opts) {
@@ -179,33 +183,47 @@ void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const the
   if (!opts) opts = &none;
   bool plastic = (state & CTRL_PLASTIC) != 0;
   state &= ~CTRL_PLASTIC;
-  if (part == THEME_PART_CARD) {
-    if (plastic) draw_plastic_card(r, state, opts->color);
-    else theme_default_draw_card(r, state, opts->edge_color);
-  } else if (g_paint_recorder && g_paint_recorder->part) {
-    g_paint_recorder->part(part, r, state);
-  } else {
-    theme_css_draw_part(part, r, state, NULL);
-  }
+  if (part == THEME_PART_CARD && plastic) draw_plastic_card(r, state, opts->color);
+  else if (g_paint_recorder && g_paint_recorder->part) g_paint_recorder->part(part, r, state);
+  else theme_css_draw_part(part, r, state, NULL);
 }
 
+// What a part leaves for content: the plastic card's material margin, or any part's margin and border.
 irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state) {
-  if (part != THEME_PART_CARD) return r;
-  int ring = ui_px("Card", "--ring-width");
-  if (state & CTRL_PLASTIC) ring += ui_px("Card", "--shadow-size");
-  return rect_inset(r, ring);
+  if (part == THEME_PART_CARD && (state & CTRL_PLASTIC))
+    return rect_inset(r, ui_px("Card", "--ring-width") + ui_px("Card", "--shadow-size"));
+  irect16_t in = theme_css_insets_vars(part, state, NULL, NULL);
+  return R(r.x + in.x, r.y + in.y, r.w - in.x - in.w, r.h - in.y - in.h);
+}
+
+irect16_t theme_content_insets_in(const window_t *win, theme_part_t part, ctrl_state_t state) {
+  return theme_css_insets_vars(part, state, ui_window_scope(win), window_style_vars(win));
 }
 
 uint32_t theme_foreground(theme_part_t part, ctrl_state_t state) { return theme_foreground_in(NULL, part, state); }
 
 uint32_t theme_foreground_in(const window_t *win, theme_part_t part, ctrl_state_t state) {
+  return theme_foreground_with(win, window_style_vars(win), part, state);
+}
+
+uint32_t theme_foreground_with(const window_t *win, const ui_style_vars_t *vars, theme_part_t part, ctrl_state_t state) {
   if (part < 0 || part >= THEME_PART_COUNT) {
     fprintf(stderr, "[theme] foreground REJECTED part=%d state=%u\n", (int)part, (unsigned)state);
     fflush(stderr);
     return get_sys_color(brTextNormal);
   }
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
-  return theme_css_foreground(part, state, ui_window_scope(win));
+  return theme_css_foreground_vars(part, state, ui_window_scope(win), vars);
+}
+
+uint32_t theme_fill_with(const window_t *win, const ui_style_vars_t *vars, theme_part_t part, ctrl_state_t state) {
+  if (part < 0 || part >= THEME_PART_COUNT) {
+    fprintf(stderr, "[theme] fill REJECTED part=%d state=%u\n", (int)part, (unsigned)state);
+    fflush(stderr);
+    return get_sys_color(brTextNormal);
+  }
+  if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
+  return theme_css_fill_vars(part, state, ui_window_scope(win), vars);
 }
 
 // ── Appearance ──────────────────────────────────────────────────────────────

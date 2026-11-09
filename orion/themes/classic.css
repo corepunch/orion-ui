@@ -79,7 +79,7 @@ Tooltip          { border-radius: 4px; }
 CommandLink      { --bullet-size: 7px; gap: 6px; padding-top: 1px; }
 Slider::knob     { --inset: 2px; }
 Card { --highlight-width: 0; }
-Badge { --tint-alpha: 0.251; --ink-mix: 0.188; }
+Badge { --tint: 25.1%; --ink: 81.2%; }
 
 /* ── Bevels ──────────────────────────────────────────────────────────────── */
 

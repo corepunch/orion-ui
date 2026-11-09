@@ -119,11 +119,17 @@ TextEdit:disabled, ComboBox:disabled, SegmentedControl:disabled { border-color: 
 /* The merged title row shares the window face, like a unified macOS toolbar. */
 Window::title-toolbar { background: var(--control-bg); border-bottom: 1px solid var(--dark-edge); }
 
-/* White panels with a hairline on the window face. */
+/* White panels with a hairline on the window face. The hairline is the card's
+   outline, one pixel outside its box, which gives the 2 px margin; selecting
+   moves the box out to the ring's place, where the accent ring replaces it. */
 Card {
-  background-color: var(--column-view-bg);
-  border-color: var(--light-edge);
+  --card-face: var(--column-view-bg);
+  margin: 2px;
+  padding: 7px 11px;
+  border-radius: calc(var(--card-radius) - 1px);
+  outline: 1px solid var(--light-edge);
 }
+Card:checked { margin: var(--ring-width); border-radius: var(--card-radius); }
 
 /* Business tables: 21 px rows under a 24 px header, ruled by hairlines. */
 TableView::header { min-height: 24px; }

@@ -1,6 +1,6 @@
 // Card and Badge controls.
 //
-// A Card is a container view with a themed face (draw_card) that lays its children out as a vertical
+// A Card is a container view whose box comes from the style sheet that lays its children out as a vertical
 // stack, like NSBox / a UICollectionViewCell's contentView. Put Labels, Badges and nested stacks or
 // flow views inside it and it sizes itself from their measure pass, so a tile grid can wrap and
 // align any content. A Badge is a self-measuring tinted label.
@@ -20,13 +20,20 @@
 
 // ── Badge ─────────────────────────────────────────────────────────────────────
 
-// A status pill (draw_status_badge): a theme role from color= or bdSetColor,
-// and an optional leading icon from icon= or btnSetIconName, so the state
-// never relies on colour alone.
+// A status pill (draw_status_badge): the Badge box of the style sheet, toned by a
+// theme role from color= or bdSetColor (the window's --tone, var(--text-success)
+// and so on, so it follows the palette), and an optional leading icon from icon=
+// or btnSetIconName, so the state never relies on colour alpha alone.
 typedef struct {
-  uint32_t role;
-  char     icon[64];
+  char icon[64];
 } badge_t;
+
+static void badge_set_tone(window_t *win, uint32_t role) {
+  const char *name = theme_sys_color_name((int)role);
+  char tone[48];
+  snprintf(tone, sizeof(tone), "var(--%s)", name ? name : "text-secondary");
+  window_set_style_var(win, "--tone", tone);
+}
 
 result_t win_badge(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   badge_t *b = (badge_t *)win->userdata;
@@ -38,11 +45,12 @@ result_t win_badge(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         fflush(stderr);
         return false;
       }
-      b->role = brTextSecondary;
+      uint32_t role = brTextSecondary;
       if (lparam && (uintptr_t)lparam > 0x1000) {
         const form_ctrl_def_t *cd = (const form_ctrl_def_t *)lparam;
-        if (cd->color_set && cd->color < brCount) b->role = cd->color;
+        if (cd->color_set && cd->color < brCount) role = cd->color;
       }
+      badge_set_tone(win, role);
       win->userdata = b;
       win->flags |= WINDOW_NOTABSTOP;
       win->layout.h_align = win->layout.v_align = LAYOUT_ALIGN_START;   // keep the intrinsic size
@@ -58,8 +66,7 @@ result_t win_badge(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         fflush(stderr);
         return false;
       }
-      b->role = wparam;
-      invalidate_window(win);
+      badge_set_tone(win, wparam);
       return true;
     case btnSetIconName:
       if (!b) return false;
@@ -75,7 +82,7 @@ result_t win_badge(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return true;
     }
     case evPaint:
-      if (b) draw_status_badge(R(0, 0, win->frame.w, win->frame.h), win->title, b->icon, get_sys_color((sys_color_idx_t)b->role));
+      if (b) draw_status_badge(win, R(0, 0, win->frame.w, win->frame.h), win->title, b->icon, NULL);
       return true;
     default:
       return false;
@@ -84,8 +91,9 @@ result_t win_badge(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
+// The Card box (margin, border-left accent, ring, hover) is the sheet's; the accent colour is the
+// window's --tone variable (cdSetEdgeColor).
 typedef struct {
-  uint32_t edge_color;   // packed colour of the accent edge; alpha 0 = none
   uint32_t state;        // CTRL_SELECTED | CTRL_FOCUSED, owned by the containing collection
   bool     hover;
 } card_state_t;
@@ -94,11 +102,13 @@ static void card_notify(window_t *win, uint16_t code) {
   if (win->parent) send_message(win->parent, evCommand, MAKEDWORD(win->id, code), win);
 }
 
-// The content inset: the ring, the accent edge and the card's padding.
+// The content inset: what the box takes for its margin and border, plus the card's padding.
 static void card_apply_style(window_t *win) {
   const char *card = ui_selector(win, "Card");
-  int inset = ui_px(card, "--ring-width"), left = ui_px(card, "padding-left"), top = ui_px(card, "padding-top");
-  win->layout.layout_padding = (irect16_t){ inset + ui_px(card, "--edge-width") + left, inset + top, inset + left, inset + top };
+  irect16_t box = theme_content_insets_in(win, THEME_PART_CARD, CTRL_NORMAL);
+  int left = ui_px(card, "padding-left"), top = ui_px(card, "padding-top");
+  win->layout.layout_padding = (irect16_t){ box.x + left, box.y + top, box.w + left, box.h + top };
+  win->ink_overflow = theme_ink_overflow_in(win, THEME_PART_CARD, CTRL_NORMAL);
 }
 
 result_t win_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -124,9 +134,12 @@ result_t win_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       free(card);
       win->userdata = NULL;
       return false;
-    case cdSetEdgeColor:
-      if (card) { card->edge_color = (uint32_t)(uintptr_t)lparam; invalidate_window(win); }
+    case cdSetEdgeColor: {
+      uint32_t color = (uint32_t)(uintptr_t)lparam;
+      if (color >> 24) window_set_style_var_color(win, "--tone", color);
+      else window_set_style_var(win, "--tone", NULL);   // no accent: the sheet's var(--tone, transparent)
       return true;
+    }
     case cdSetState:
       if (card && card->state != (wparam & (CTRL_SELECTED | CTRL_FOCUSED))) {
         card->state = wparam & (CTRL_SELECTED | CTRL_FOCUSED);
@@ -138,7 +151,7 @@ result_t win_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
         ctrl_state_t state = card->state | (card->hover ? CTRL_HOVER : 0);
         if (window_is_disabled(win)) state |= CTRL_DISABLED;
         if (window_has_state(win, WINDOW_STATE_PRESSED)) state |= CTRL_PRESSED;
-        draw_card_in(win, get_client_rect(win), state, card->edge_color);
+        theme_draw_in(win, THEME_PART_CARD, get_client_rect(win), state);
       }
       layout_paint_children(win);
       return true;
