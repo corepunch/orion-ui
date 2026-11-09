@@ -61,7 +61,7 @@ void song_draw_overview(const song_t *song, irect16_t r) {
     uint32_t color = audible ? category_color(b ? b->cat : CAT_VOX) : get_sys_color(brTextSecondary);
     fill_rect(color_with_alpha(color, audible ? 0xc0 : 0x50), clip);
     if (b && clip.h >= 36 && clip.w > 26) {
-      draw_text_ellipsized(FONT_SMALL, b->display_name ? b->display_name : b->name,
+      draw_text_ellipsized("Text", b->display_name ? b->display_name : b->name,
         clip.x + 4, clip.y + 2, MAX(0, clip.w - 8), get_sys_color(brTextNormal));
       if (b->audio.npeaks > 0) for (int x = 2; x < clip.w - 2; x++) {
         int source_tick = (c->position + (int)((int64_t)x * span / r.w)) - c->position;
@@ -82,16 +82,16 @@ static result_t win_export_canvas(window_t *win, uint32_t msg, uint32_t wparam, 
   irect16_t r = get_client_rect(win);
   fill_rect(get_sys_color(brControlBg), r);
   char title[80]; snprintf(title, sizeof(title), "Orion Groove  /  %d BPM", s->bpm);
-  draw_text(FONT_SYSTEM, title, 32, 24, get_sys_color(brTextNormal));
+  draw_text("Text", title, 32, 24, get_sys_color(brTextNormal));
   int span = MAX(1, song_length_ticks(s)), step = MAX(1, (span / GR_TICKS_BAR + 15) / 16);
   irect16_t timeline = R(64, 92, r.w - 96, r.h - 124);
   for (int bar = 0; bar * GR_TICKS_BAR < span; bar += step) {
     char text[20]; snprintf(text, sizeof(text), "%d", bar + 1);
-    draw_text(FONT_SMALL, text, timeline.x + (int)((int64_t)bar * GR_TICKS_BAR * timeline.w / span), 68, get_sys_color(brTextSecondary));
+    draw_text("Text", text, timeline.x + (int)((int64_t)bar * GR_TICKS_BAR * timeline.w / span), 68, get_sys_color(brTextSecondary));
   }
   for (int track = 0; track < GR_TRACKS; track++) {
     char number[8]; snprintf(number, sizeof(number), "%d", track + 1);
-    draw_text(FONT_SYSTEM, number, 32, timeline.y + track * timeline.h / GR_TRACKS + 12, get_sys_color(brTextSecondary));
+    draw_text("Text", number, 32, timeline.y + track * timeline.h / GR_TRACKS + 12, get_sys_color(brTextSecondary));
   }
   song_draw_overview(s, timeline);
   return true;

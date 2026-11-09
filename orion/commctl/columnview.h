@@ -7,9 +7,9 @@
 // Layout constants shared by the columnview-style controls.
 // FONT_SIZE       — chrome font, from kernel/kernel.h.
 // FONT_SIZE_SMALL — content font, from kernel/kernel.h.
-#define COLUMNVIEW_ENTRY_HEIGHT  (FONT_SIZE_SMALL + 5)  // data rows use FONT_SMALL
+#define COLUMNVIEW_ENTRY_HEIGHT  (FONT_SIZE_SMALL + 5)  // data rows
 #define REPORTVIEW_TWO_LINE_ENTRY_HEIGHT (FONT_SIZE_SMALL * 2 + 5)
-#define COLUMNVIEW_HEADER_HEIGHT (FONT_SIZE + 6)        // header uses FONT_SYSTEM
+#define COLUMNVIEW_HEADER_HEIGHT (FONT_SIZE + 6)        // the header
 #define COLUMNVIEW_WIN_PADDING   4
 #define REPORTVIEW_MAX_SUBITEMS  (MAX_REPORTVIEW_COLUMNS - 1)  // every column after the first
 

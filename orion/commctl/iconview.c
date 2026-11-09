@@ -61,7 +61,7 @@ static void icon_paint(window_t *win, reportview_data_t *data) {
       rv_draw_item_icon(strip, data->items[i].icon, &icon_rect,
                         data->preserve_icon_colors ? 0xFFFFFFFF : icon_col);
     }
-    draw_text_clipped(FONT_SMALL, data->items[i].text, &text_rect, icon_col, 0);
+    draw_text_clipped("IconView::item", data->items[i].text, &text_rect, icon_col, 0);
   }
 }
 

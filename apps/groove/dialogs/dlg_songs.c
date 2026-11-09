@@ -19,8 +19,8 @@ static void songs_update_actions(window_t *win, const songs_dlg_t *st, int i) {
 }
 
 static void card_fill(window_t *card, const song_entry_t *song) {
-  label_create_params_t title = { .color_index = brTextNormal,    .font = FONT_SYSTEM, .color_set = true, .truncate = true };
-  label_create_params_t note  = { .color_index = brTextSecondary, .font = FONT_SMALL,  .color_set = true, .truncate = true };
+  label_create_params_t title = { .color_index = brTextNormal,    .font = LABEL_TEXT, .color_set = true, .truncate = true };
+  label_create_params_t note  = { .color_index = brTextSecondary, .font = LABEL_TEXT,  .color_set = true, .truncate = true };
   send_message(get_window_item(card, ID_SONG_CARD_TITLE), lbSetStyle, 0, &title);
   send_message(get_window_item(card, ID_SONG_CARD_DETAIL), lbSetStyle, 0, &note);
   set_window_item_text(card, ID_SONG_CARD_TITLE, "%s", song->name);

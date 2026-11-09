@@ -90,7 +90,7 @@ void draw_console(void) {
       // Convert alpha to color with alpha channel (format is ABGR: 0xAABBGGRR)
       uint32_t alpha_byte = (uint32_t)(alpha * 255);
       uint32_t col = (alpha_byte << 24) | 0x00FFFFFF; // white color with variable alpha
-      draw_text_small(msg->text, CONSOLE_PADDING, y, col);
+      draw_text("Text", msg->text, CONSOLE_PADDING, y, col);
       
       // Move to next line
       y += LINE_HEIGHT;

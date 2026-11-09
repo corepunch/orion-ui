@@ -65,7 +65,7 @@ static void open_dropdown(window_t *win) {
   if (screen_h > 0) height = MIN(height, screen_h);
   if (screen_w > 0) width = MIN(width, screen_w);
   int scroll = MAX(0, selected - visible_items + 1) * POPUP_ITEM_HEIGHT;
-  int font_h = text_char_height(FONT_SMALL);
+  int font_h = text_char_height("ComboBox");
   int label_y = abs_y + (win->frame.h - font_h) / 2 - (POPUP_ITEM_HEIGHT - font_h) / 2;
   int popup_y = label_y - MENU_START_Y - selected * POPUP_ITEM_HEIGHT + scroll;
   irect16_t rect = {abs_x, popup_y, width, height};
@@ -176,7 +176,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
   switch (msg) {
     case evCreate: {
       control_apply_predefined_height(win, "combobox");
-      win->frame.w = MAX(win->frame.w, strwidth(win->title)+16);
+      win->frame.w = MAX(win->frame.w, text_strwidth("ComboBox", win->title)+16);
       
       // Allocate state
       state = (combobox_state_t *)calloc(1, sizeof(combobox_state_t));
@@ -209,7 +209,7 @@ result_t win_combobox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m) {
-        int text_w = text_strwidth(FONT_SMALL, win->title) + TEXTEDIT_PADDING_HORZ * 2
+        int text_w = text_strwidth("ComboBox", win->title) + TEXTEDIT_PADDING_HORZ * 2
                      + COMBOBOX_ICON_SIZE + COMBOBOX_ICON_PADDING;
         m->desired_w = MAX(win->frame.w > 0 ? win->frame.w : 60, text_w);
         m->desired_h = control_predefined_height(win->flags);

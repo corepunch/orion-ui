@@ -102,8 +102,8 @@ static void timeline_draw_frame(int idx, toolbar_draw_item_t *draw) {
   theme_draw(THEME_PART_TOOLBAR_BUTTON, draw->rect, draw->state);
   char number[16];
   snprintf(number, sizeof(number), "%d", idx + 1);
-  irect16_t label = rect_center(draw->rect, text_strwidth(FONT_SMALL, number), text_char_height(FONT_SMALL));
-  draw_text(FONT_SMALL, number, label.x, label.y, theme_foreground(THEME_PART_TOOLBAR_BUTTON, draw->state));
+  irect16_t label = rect_center(draw->rect, text_strwidth("Text", number), text_char_height("Text"));
+  draw_text("Text", number, label.x, label.y, theme_foreground(THEME_PART_TOOLBAR_BUTTON, draw->state));
 }
 
 static result_t timeline_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {

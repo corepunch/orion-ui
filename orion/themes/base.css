@@ -226,14 +226,33 @@ Scrollbar::thumb:disabled { background: var(--text-disabled); }
 }
 
 /* ── Type ────────────────────────────────────────────────────────────────── */
-/* The text roles, in the CSS font shorthand: weight, size in desktop logical
-   pixels, family. Files: share/orion/fonts/<Family>-<Weight>.ttf. */
+/* Every element takes its `font` (the CSS shorthand: weight, size in desktop
+   logical pixels, family) or :root's. The tokens below name the five sizes in
+   use; a theme swaps the face or a size by redefining them.
+   Files: share/orion/fonts/<Family>-<Weight>.ttf. */
 
 :root {
-  --font-system:   400 13px "IBM Plex Sans";   /* chrome: menus, buttons, dialogs */
-  --font-small:    400 13px "IBM Plex Sans";   /* content: list rows, status bar */
-  --font-smallest: 400 11px "IBM Plex Sans";   /* captions in dense views */
-  --font-title:    600 18px "IBM Plex Sans";   /* a window title in its toolbar */
-  --font-display:  600 24px "IBM Plex Sans";   /* the one figure a view exists to show */
-  --font-heading:  600 12px "IBM Plex Sans";   /* group captions and section headings */
+  --ui-face:      "IBM Plex Sans";
+  --text:         400 13px var(--ui-face);   /* body and chrome: menus, buttons, fields, rows */
+  --text-caption: 400 11px var(--ui-face);   /* captions under icons, details, subtitles */
+  --text-heading: 600 12px var(--ui-face);   /* group captions and section headings */
+  --text-title:   600 18px var(--ui-face);   /* a window or page title */
+  --text-display: 600 24px var(--ui-face);   /* the one figure a view exists to show */
+  font: var(--text);
 }
+
+/* Free text, as HTML's p, small, h3, h2 and h1. */
+Text     { font: var(--text); }
+Caption  { font: var(--text-caption); }
+Heading  { font: var(--text-heading); }
+Title    { font: var(--text-title); }
+Display  { font: var(--text-display); }
+
+Label.caption { font: var(--text-caption); }
+Label.heading { font: var(--text-heading); }
+Label.title   { font: var(--text-title); }
+Label.display { font: var(--text-display); }
+
+TableView::detail, TableView::subtitle, Icon, IconView::cell, Toolbar::label, Window::subtitle { font: var(--text-caption); }
+TableView::group { font: var(--text-heading); }
+Window::title    { font: var(--text-title); }

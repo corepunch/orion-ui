@@ -21,9 +21,9 @@ typedef struct {
 } font_sample_t;
 
 static const font_sample_t kFontSamples[] = {
-  { FONT_SYSTEM,   "System 12: AaBb 0123" },
-  { FONT_SMALL,    "Small 12: AaBb 0123" },
-  { FONT_SMALLEST, "Smallest 9: AaBb 0123" },
+  { "Text",   "System 12: AaBb 0123" },
+  { "Text",    "Small 12: AaBb 0123" },
+  { "Caption", "Smallest 9: AaBb 0123" },
 };
 
 static void draw_font_samples(window_t *win) {
@@ -64,12 +64,12 @@ result_t hello_window_proc(window_t *win, uint32_t msg, uint32_t wparam, void *l
          snprintf(text, sizeof(text), "Clicked %d times", click_count);
        }
        
-       int text_x = (win->frame.w - strwidth(text)) / 2;
+       int text_x = (win->frame.w - text_strwidth("Text", text)) / 2;
        int text_y = 8;
       
        // Draw text with shadow effect
-       draw_text_small(text, text_x + 1, text_y + 1, get_sys_color(brDarkEdge));
-       draw_text_small(text, text_x, text_y, get_sys_color(brTextNormal));
+       draw_text("Text", text, text_x + 1, text_y + 1, get_sys_color(brDarkEdge));
+       draw_text("Text", text, text_x, text_y, get_sys_color(brTextNormal));
       draw_font_samples(win);
        return false;
      }

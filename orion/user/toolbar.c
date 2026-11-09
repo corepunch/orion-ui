@@ -55,7 +55,7 @@ static int toolbar_state_bsz(const toolbar_state_t *tb) {
 // Caption band under the icon of a TOOLBAR_STYLE_SHOW_LABELS button.
 static int toolbar_label_extra(const toolbar_state_t *tb) {
   return (tb && (tb->style & TOOLBAR_STYLE_SHOW_LABELS) && !(tb->style & TOOLBAR_STYLE_LIST))
-       ? text_char_height(FONT_SMALLEST) + 2 : 0;
+       ? text_char_height("Toolbar::label") + 2 : 0;
 }
 
 // TOOLBAR_STYLE_LIST: the caption follows the icon cell on the same line.
@@ -116,8 +116,8 @@ int toolbar_sidebar_width(window_t *win) {
 }
 
 static int toolbar_title_width(window_t *win) {
-  int w = text_strwidth(FONT_TITLE, win->title);
-  if (win->subtitle[0]) w = MAX(w, text_strwidth(FONT_SMALLEST, win->subtitle));
+  int w = text_strwidth("Window::title", win->title);
+  if (win->subtitle[0]) w = MAX(w, text_strwidth("Window::subtitle", win->subtitle));
   return w;
 }
 
@@ -159,20 +159,20 @@ static void compute_toolbar_item_rects_for_size(window_t *parent, toolbar_state_
       case TOOLBAR_ITEM_DROPDOWN: {
         w = item->w > 0 ? item->w : bsz;
         if (!item->w && toolbar_lists_text(tb, item))
-          w = bsz + text_strwidth(FONT_SMALL, item->text) + TOOLBAR_LIST_TEXT_PAD;
+          w = bsz + text_strwidth("Toolbar", item->text) + TOOLBAR_LIST_TEXT_PAD;
         else if (!item->w && (tb->style & TOOLBAR_STYLE_SHOW_LABELS) && item->text)
-          w = MAX(w, text_strwidth(FONT_SMALLEST, item->text) + 8);
+          w = MAX(w, text_strwidth("Toolbar::label", item->text) + 8);
         if (item->type == TOOLBAR_ITEM_DROPDOWN) w += ui_px("Toolbar::split-arrow", "width");
         h = item_h;
         break;
       }
       case TOOLBAR_ITEM_LABEL:
         w = item->w > 0 ? item->w
-                        : (text_strwidth(FONT_SMALLEST, item->text ? item->text : "") + TOOLBAR_LABEL_PADDING);
+                        : (text_strwidth("Toolbar::label", item->text ? item->text : "") + TOOLBAR_LABEL_PADDING);
         break;
       case TOOLBAR_ITEM_TITLE:
         // As far in from the content's edge as the text is down from the window's top.
-        if (!vertical) x = MAX(x, toolbar_title_lead(parent) + base_y + (item_h - text_char_height(FONT_TITLE)) / 2);
+        if (!vertical) x = MAX(x, toolbar_title_lead(parent) + base_y + (item_h - text_char_height("Window::title")) / 2);
         w = item->w > 0 ? item->w : toolbar_title_width(parent) + TB_TITLE_GAP;
         break;
       case TOOLBAR_ITEM_SIDEBAR_SEPARATOR:
@@ -431,16 +431,16 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
         irect16_t caption = rect_offset(rect_trim_left(local, icon_rect.w), poff, poff);
         uint32_t ink = (state & (CTRL_DISABLED | CTRL_SELECTED | CTRL_PRESSED | CTRL_DEFAULT))
                      ? theme_foreground(part, state) : get_sys_color(brToolbarForeground);
-        draw_text_clipped(FONT_SMALL, item->text, &caption, ink, 0);
+        draw_text_clipped("Toolbar", item->text, &caption, ink, 0);
       }
       if (item->ident == TB_WINDOW_CLOSE || item->ident == TB_WINDOW_COLLAPSE)
         draw_theme_icon_in_rect(item->ident == TB_WINDOW_CLOSE ? THEME_ICON_CLOSE : THEME_ICON_RESTORE,
                                 icon_rect, get_sys_color(brTextNormal));
       else draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, poff, disabled, foreground);
       if (toolbar_label_extra(tb) && item->text) {
-        int tx = (local.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + poff;
-        int ty = local.h - text_char_height(FONT_SMALLEST) - 2 + poff;
-        draw_text(FONT_SMALLEST, item->text, tx, ty,
+        int tx = (local.w - text_strwidth("Toolbar::label", item->text)) / 2 + poff;
+        int ty = local.h - text_char_height("Toolbar::label") - 2 + poff;
+        draw_text("Toolbar::label", item->text, tx, ty,
                   (state & (CTRL_DISABLED | CTRL_SELECTED | CTRL_PRESSED))
                   ? theme_foreground(part, state) : get_sys_color(brToolbarForeground));
       }
@@ -468,9 +468,9 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
                           ? theme_foreground(THEME_PART_TOOLBAR_SPLIT_BUTTON, btn_state) : item->color;
       draw_toolbar_icon_in_rect(win, tb, icon_name, icon_rect, btn_poff, disabled, foreground);
       if (toolbar_label_extra(tb) && item->text) {
-        int tx = (btn_part.w - text_strwidth(FONT_SMALLEST, item->text)) / 2 + btn_poff;
-        int ty = btn_part.h - text_char_height(FONT_SMALLEST) - 2 + btn_poff;
-        draw_text(FONT_SMALLEST, item->text, tx, ty,
+        int tx = (btn_part.w - text_strwidth("Toolbar::label", item->text)) / 2 + btn_poff;
+        int ty = btn_part.h - text_char_height("Toolbar::label") - 2 + btn_poff;
+        draw_text("Toolbar::label", item->text, tx, ty,
                   (btn_state & (CTRL_DISABLED | CTRL_SELECTED | CTRL_PRESSED))
                   ? theme_foreground(THEME_PART_TOOLBAR_SPLIT_BUTTON, btn_state) : get_sys_color(brToolbarForeground));
       }
@@ -487,17 +487,17 @@ static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int 
       break;
     case TOOLBAR_ITEM_TITLE: {
       // A subtitle stacks under the title, the pair centred on the row like a unified macOS toolbar.
-      int th = text_char_height(FONT_TITLE), sh = win->subtitle[0] ? text_char_height(FONT_SMALLEST) : 0;
+      int th = text_char_height("Window::title"), sh = win->subtitle[0] ? text_char_height("Window::subtitle") : 0;
       int ty = (r.h - th - sh) / 2, tw = MAX(0, r.w - TB_TITLE_GAP);
-      draw_text_ellipsized(FONT_TITLE, win->title, 0, ty, tw, get_sys_color(brTextNormal));
-      if (sh) draw_text_ellipsized(FONT_SMALLEST, win->subtitle, 0, ty + th, tw, get_sys_color(brTextSecondary));
+      draw_text_ellipsized("Window::title", win->title, 0, ty, tw, get_sys_color(brTextNormal));
+      if (sh) draw_text_ellipsized("Window::subtitle", win->subtitle, 0, ty + th, tw, get_sys_color(brTextSecondary));
       break;
     }
     case TOOLBAR_ITEM_SIDEBAR_SEPARATOR:
       break;
     case TOOLBAR_ITEM_LABEL: {
-      int ty = (r.h - text_char_height(FONT_SMALLEST)) / 2;
-      draw_text_ellipsized(FONT_SMALLEST, item->text ? item->text : "", 2, ty, MAX(0, r.w - 4), get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
+      int ty = (r.h - text_char_height("Toolbar::label")) / 2;
+      draw_text_ellipsized("Toolbar::label", item->text ? item->text : "", 2, ty, MAX(0, r.w - 4), get_sys_color(disabled ? brTextDisabled : brToolbarForeground));
       break;
     }
     case TOOLBAR_ITEM_SLIDER:

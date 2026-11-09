@@ -514,7 +514,7 @@ void test_cb_dropdown_outside_click_cancels(void) {
     ASSERT_NOT_NULL(cb);
     window_t *list = open_test_dropdown(cb, 10, 2);
     ASSERT_NOT_NULL(list);
-    int font_h = text_char_height(FONT_SMALL);
+    int font_h = text_char_height("Text");
     ASSERT_EQUAL(list->frame.x, window_screen_x(cb));
     ASSERT_EQUAL(list->frame.y + MENU_START_Y + 2 * CONTROL_HEIGHT_REGULAR
                  - (int)list->vscroll.pos + (CONTROL_HEIGHT_REGULAR - font_h) / 2,

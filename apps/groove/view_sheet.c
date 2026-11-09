@@ -254,7 +254,7 @@ static void paint_ruler(window_t *win, int cur_bar) {
     int x = bar_x(win, b);
     if (b == cur_bar) fill_rect(color_with_alpha(get_sys_color(brAccent), 0x50), R(x, 0, BAR_W, RULER_H));
     fill_rect(color_with_alpha(tick, b % 4 ? 0x60 : 0x90), R(x, b % 4 ? RULER_H - 6 : 2, 1, b % 4 ? 6 : RULER_H - 2));
-    draw_text(FONT_SMALL, num, x + 5, 3, ink);
+    draw_text("Text", num, x + 5, 3, ink);
     for (int step = GR_SNAP_TICKS; step < GR_TICKS_BAR; step += GR_SNAP_TICKS)
       fill_rect(color_with_alpha(tick, 0x40), R(position_x(win, b * GR_TICKS_BAR + step), RULER_H - 4, 1, 4));
   }

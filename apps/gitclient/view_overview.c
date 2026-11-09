@@ -104,7 +104,7 @@ static window_t *make_label(window_t *parent, const char *text) {
   irect16_t frame = {0, 0, 10, CONTROL_HEIGHT};
   window_t *label = create_window(text, 0, &frame, parent, win_label, g_gc->hinstance, NULL);
   if (!label) return NULL;
-  label_create_params_t style = { .color_index = brTextNormal, .font = FONT_SYSTEM, .color_set = true, .truncate = true };
+  label_create_params_t style = { .color_index = brTextNormal, .font = LABEL_TEXT, .color_set = true, .truncate = true };
   send_message(label, lbSetStyle, 0, &style);
   return label;
 }

@@ -29,13 +29,13 @@ typedef struct {
 static bool sg_has_icon(const segmented_state_t *s, int i) { return s->strip.cols > 0 && s->icon[i] >= 0; }
 static bool sg_shows_label(const segmented_state_t *s, int i) { return !sg_has_icon(s, i) || !(s->style & SEGMENTED_STYLE_ICONS_ONLY); }
 // The dot is a small disc on the text's x-height, like a status bullet.
-static int sg_dot_size(void) { return MAX(4, text_char_height(FONT_SMALL) * 3 / 5); }
+static int sg_dot_size(void) { return MAX(4, text_char_height("SegmentedControl::segment") * 3 / 5); }
 
 // Width of the dot, icon and label drawn centred in a segment.
 static int sg_content_width(const segmented_state_t *s, int i) {
   int w = s->dot[i] ? sg_dot_size() : 0;
   if (sg_has_icon(s, i)) w += (w ? SG_ICON_GAP : 0) + s->strip.icon_w;
-  if (sg_shows_label(s, i)) w += (w ? SG_ICON_GAP : 0) + text_strwidth(FONT_SMALL, s->label[i]);
+  if (sg_shows_label(s, i)) w += (w ? SG_ICON_GAP : 0) + text_strwidth("SegmentedControl::segment", s->label[i]);
   return w;
 }
 
@@ -166,8 +166,8 @@ result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
           content = rect_trim_left(content, st->icon_w + SG_ICON_GAP);
         }
         if (sg_shows_label(s, i) && content.w > 0) {
-          irect16_t label = rect_center(content, content.w, text_char_height(FONT_SMALL));
-          draw_text_ellipsized(FONT_SMALL, s->label[i], label.x, label.y, label.w, theme_foreground(THEME_PART_SEGMENT, state));
+          irect16_t label = rect_center(content, content.w, text_char_height("SegmentedControl::segment"));
+          draw_text_ellipsized("SegmentedControl::segment", s->label[i], label.x, label.y, label.w, theme_foreground(THEME_PART_SEGMENT, state));
         }
       }
       return true;

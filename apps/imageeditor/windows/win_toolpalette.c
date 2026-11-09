@@ -231,8 +231,8 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         if (doc && doc->anim) snprintf(number, sizeof(number), "%d", doc->anim->active_frame + 1);
         else snprintf(number, sizeof(number), "—");
         toolbar_draw_item_t *draw = lparam;
-        irect16_t r = rect_center(draw->rect, text_strwidth(FONT_SMALLEST, number), text_char_height(FONT_SMALLEST));
-        draw_text(FONT_SMALLEST, number, r.x, r.y, get_sys_color(brTextNormal));
+        irect16_t r = rect_center(draw->rect, text_strwidth("Caption", number), text_char_height("Caption"));
+        draw_text("Caption", number, r.x, r.y, get_sys_color(brTextNormal));
         return true;
       }
       if (wparam >= IE_PENCIL_LAYER_BASE && wparam < IE_PENCIL_LAYER_BASE + IE_LAYER_COUNT && lparam) {
@@ -242,9 +242,9 @@ result_t win_tool_palette_proc(window_t *win, uint32_t msg,
         ctrl_state_t state = draw->state | (active ? CTRL_SELECTED : 0);
         theme_draw(THEME_PART_TOOLBAR_BUTTON, draw->rect, state);
         const char *code = pencil_layer_code(layer);
-        int width = text_strwidth(FONT_SMALLEST, code);
-        irect16_t text = rect_center(draw->rect, width, text_char_height(FONT_SMALLEST));
-        draw_text(FONT_SMALLEST, code, text.x, text.y, theme_foreground(THEME_PART_TOOLBAR_BUTTON, state));
+        int width = text_strwidth("Caption", code);
+        irect16_t text = rect_center(draw->rect, width, text_char_height("Caption"));
+        draw_text("Caption", code, text.x, text.y, theme_foreground(THEME_PART_TOOLBAR_BUTTON, state));
         return true;
       }
 #endif
@@ -345,8 +345,8 @@ static result_t pencil_color_proc(window_t *win, uint32_t msg, uint32_t wparam, 
         toolbar_draw_item_t *draw = lparam;
         theme_draw(THEME_PART_TOOLBAR_BUTTON, draw->rect, draw->state);
         const char *label = wparam == IE_PENCIL_PALETTE_PREV ? "<" : ">";
-        irect16_t r = rect_center(draw->rect, text_strwidth(FONT_SMALL, label), text_char_height(FONT_SMALL));
-        draw_text(FONT_SMALL, label, r.x, r.y, theme_foreground(THEME_PART_TOOLBAR_BUTTON, draw->state));
+        irect16_t r = rect_center(draw->rect, text_strwidth("Text", label), text_char_height("Text"));
+        draw_text("Text", label, r.x, r.y, theme_foreground(THEME_PART_TOOLBAR_BUTTON, draw->state));
         return true;
       }
       if (wparam >= IE_PENCIL_PALETTE_BASE && wparam < IE_PENCIL_PALETTE_BASE + 256 && lparam) {

@@ -269,7 +269,7 @@ typedef struct form_ctrl_def_s {
   irect16_t         padding; // inner padding for layout containers
   irect16_t         margin;  // outer margin when this control is laid out by a parent
   uint32_t          parent;  // parent control ID; 0 = form root
-  uint8_t           font;    // label font; FONT_SMALL by default
+  uint8_t           font;    // label style (LABEL_TEXT, LABEL_TITLE, ...); LABEL_TEXT by default
   bool              font_set; // font attribute explicitly set
   uint8_t           color;   // label color palette index; 0 = transparent
   bool              color_set; // color attribute explicitly set
@@ -408,16 +408,19 @@ bool db_object_get_field_text(const db_field_msg_binding_t *bindings, int bindin
                               db_object_proc_t proc, const void *object,
                               const char *field, char *buf, size_t buf_sz);
 
+// A label's text style: its CSS class, so Label.title takes `Label.title { font }`.
+enum { LABEL_TEXT, LABEL_CAPTION, LABEL_HEADING, LABEL_TITLE, LABEL_DISPLAY, LABEL_STYLE_COUNT };
+
 typedef struct {
   uint32_t color_index;   // palette index for label text color; 0 = transparent
-  ui_font_t font;         // prepared font role for labels
+  uint8_t  font;          // LABEL_TEXT, LABEL_CAPTION, LABEL_HEADING, LABEL_TITLE or LABEL_DISPLAY
   bool      color_set;    // whether color_index is explicitly set
   bool      truncate;     // single line: cut with "..." instead of wrapping when too narrow
 } label_create_params_t;
 
 #define LABEL_PACK_COLOR_SET (1u << 16)
 #define LABEL_PACK_TRUNCATE  (1u << 17)
-static inline uint32_t label_pack_userdata(uint32_t color_index, ui_font_t font, bool color_set) {
+static inline uint32_t label_pack_userdata(uint32_t color_index, uint32_t font, bool color_set) {
   return (uint32_t)(color_index & 0xffu) |
          ((uint32_t)(font & 0xffu) << 8) |
          (color_set ? LABEL_PACK_COLOR_SET : 0u);

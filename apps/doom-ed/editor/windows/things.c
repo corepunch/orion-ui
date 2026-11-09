@@ -52,10 +52,10 @@ result_t win_things(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
           uint16_t n = MAX(1, win->frame.w / THING_SIZE);
           uint16_t x = (j % n) * THING_SIZE;
           uint16_t y = (j / n) * (THING_SIZE+THING_LABEL_HEIGHT);
-          uint16_t tx = x + (THING_SIZE-strwidth(ed_things[i].sprite))/2;
+          uint16_t tx = x + (THING_SIZE-text_strwidth("Text", ed_things[i].sprite))/2;
           irect16_t r = fit_sprite(spr, &(irect16_t){ x, y, THING_SIZE, THING_SIZE });
           draw_rect(spr->texture, r);
-          draw_text_small(ed_things[i].sprite, tx, y + THING_SIZE+4, get_sys_color(brTextNormal));
+          draw_text("Text", ed_things[i].sprite, tx, y + THING_SIZE+4, get_sys_color(brTextNormal));
           j++;
         }
       }

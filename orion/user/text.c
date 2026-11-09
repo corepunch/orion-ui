@@ -31,53 +31,24 @@ typedef struct {
   float size;
 } font_atlas_t;
 
+// One atlas per face and size the style sheet asks for, made on first use.
+#define TEXT_MAX_FACES 32
 static struct {
-  font_atlas_t big;
-  font_atlas_t small;
-  font_atlas_t smallest;
-  font_atlas_t title;
-  font_atlas_t display;
-  font_atlas_t heading;
+  font_atlas_t faces[TEXT_MAX_FACES];
+  int face_count;
   bool ready;
 } text_state = {0};
 
-// ── Dynamic metric accessors ──────────────────────────────────────────────────
-// Space and line metrics come from each TTF at its logical em size.
+static font_atlas_t g_no_face;   // before init_text_rendering(): no glyphs, default metrics
 
-static inline font_atlas_t *font_for_role(ui_font_t font) {
-  if (font == FONT_SMALLEST) return &text_state.smallest;
-  if (font == FONT_TITLE) return &text_state.title;
-  if (font == FONT_DISPLAY) return &text_state.display;
-  if (font == FONT_HEADING) return &text_state.heading;
-  if (font == FONT_SMALL) return &text_state.small;
-  return &text_state.big;
-}
-
-static inline int font_space(ui_font_t font) {
-  font_atlas_t *atlas = font_for_role(font);
-  const font_cache_glyph_t *glyph = font_cache_get_glyph(atlas->cache, ' ');
-  return glyph && glyph->advance > 0 ? glyph->advance : 3;
-}
-
-// Advances in 1/64 logical pixel: summed before rounding, as typesetters do.
-static inline int font_space64(ui_font_t font) {
-  const font_cache_glyph_t *glyph = font_cache_get_glyph(font_for_role(font)->cache, ' ');
-  return glyph && glyph->advance64 > 0 ? glyph->advance64 : 3 * 64;
-}
-
-static inline int font_line(ui_font_t font) {
-  font_atlas_t *atlas = font_for_role(font);
-  int height = font_cache_line_height(atlas->cache);
-  return height > 0 ? height : 12;
-}
-
-// Legacy getters: return FONT_SYSTEM (big atlas) metrics.
-
-int get_char_height(void) { return font_line(FONT_SYSTEM); }
-int get_line_height(void) { return font_line(FONT_SYSTEM); }
-int get_space_width(void) { return font_space(FONT_SYSTEM); }
-
-// ── Initialise a mesh for the given atlas ─────────────────────────────────────
+// ── Faces from the style sheet ────────────────────────────────────────────────
+//
+// A font is a CSS selector: the text takes the `font` of that element and part
+// (`TableView::row`, `Caption`), or of :root when the element sets none. The
+// value is the CSS font shorthand, `400 13px "IBM Plex Sans"`; the file is
+// share/orion/fonts/<Family without spaces>-<Weight>.ttf (Regular, Medium,
+// SemiBold, Bold, ...; a 400 face may also be <Family>.ttf). Sizes are desktop
+// logical pixels, scaled for the platform. A missing face falls back to DejaVu.
 
 static void init_atlas_mesh(font_atlas_t *atlas) {
   R_VertexAttrib attribs[] = {
@@ -86,36 +57,6 @@ static void init_atlas_mesh(font_atlas_t *atlas) {
     {2, 4, GL_UNSIGNED_BYTE, GL_TRUE,  offsetof(text_vertex_t, col)},
   };
   R_MeshInit(&atlas->mesh, attribs, 3, sizeof(text_vertex_t), GL_TRIANGLES);
-}
-
-static bool load_atlas(font_atlas_t *atlas, const char *path, float em_size) {
-  font_cache_t *cache = font_cache_create(path, em_size);
-  if (!cache) return false;
-  if (atlas->cache) { font_cache_destroy(atlas->cache); R_MeshDestroy(&atlas->mesh); }
-  atlas->cache = cache;
-  snprintf(atlas->path, sizeof(atlas->path), "%s", path);
-  atlas->size = em_size;
-  init_atlas_mesh(atlas);
-  return true;
-}
-
-// ── Faces from the theme ──────────────────────────────────────────────────────
-//
-// A CSS theme names each role's face in a :root custom property, in the CSS
-// font shorthand: --font-system: 400 13px "IBM Plex Sans". The file is
-// share/orion/fonts/<Family without spaces>-<Weight>.ttf (Regular, Medium,
-// SemiBold, Bold, ...; a 400 face may also be <Family>.ttf). Sizes are desktop
-// logical pixels, scaled for the platform. C themes and missing faces use DejaVu.
-
-#define TEXT_ROLES 6
-static const char *const k_text_role_vars[TEXT_ROLES] = {
-  "--font-system", "--font-small", "--font-smallest", "--font-title", "--font-display", "--font-heading",
-};
-
-static font_atlas_t *text_atlas(int role) {
-  font_atlas_t *atlases[TEXT_ROLES] = {&text_state.big, &text_state.small, &text_state.smallest,
-                                       &text_state.title, &text_state.display, &text_state.heading};
-  return atlases[role];
 }
 
 static float text_platform_scale(void) {
@@ -128,22 +69,19 @@ static float text_platform_scale(void) {
 #endif
 }
 
-static void text_default_face(int role, char *path, size_t n, float *size) {
-  static const float sizes[TEXT_ROLES] = {12.0f, 12.0f, 9.0f, 18.0f, 24.0f, 12.0f};
-  snprintf(path, n, "%s/../share/orion/fonts/%s", ui_get_exe_dir(),
-           role >= 3 ? "DejaVuSans-Bold.ttf" : "DejaVuSans.ttf");   // titles, figures and headings are bold
-  *size = sizes[role] * text_platform_scale();
-}
-
 static bool text_file_exists(const char *path) {
   FILE *f = fopen(path, "rb");
   if (f) fclose(f);
   return f != NULL;
 }
 
+static void text_default_face(char *path, size_t n, float *size) {
+  snprintf(path, n, "%s/../share/orion/fonts/DejaVuSans.ttf", ui_get_exe_dir());
+  *size = 12.0f * text_platform_scale();
+}
+
 // Resolves a CSS font shorthand to a font file and size.
 static bool text_css_face(const char *value, char *path, size_t n, float *size) {
-  if (!strcmp(value, "none")) return false;   // the default face
   char buf[256]; snprintf(buf, sizeof(buf), "%s", value);
   int weight = 400; float px = 0;
   char *c = buf, family[96] = "";
@@ -187,39 +125,79 @@ static bool text_css_face(const char *value, char *path, size_t n, float *size) 
   return true;
 }
 
-bool text_apply_theme_fonts(void) {
-  if (!text_state.ready) return false;
-  theme_t *theme = get_theme();
-  style_sheet_t *sheet = theme->css ? theme_stylesheet(theme) : NULL;
-  bool changed = false;
-  for (int role = 0; role < TEXT_ROLES; role++) {
-    char path[1024], value[256]; float size = 0;
-    if (!sheet || !style_value(sheet, STYLE_ROOT, k_text_role_vars[role], value, sizeof(value)) ||
-        !text_css_face(value, path, sizeof(path), &size))
-      text_default_face(role, path, sizeof(path), &size);
-    font_atlas_t *atlas = text_atlas(role);
-    if (atlas->cache && atlas->size == size && !strcmp(atlas->path, path)) continue;
-    if (!load_atlas(atlas, path, size)) {
-      text_default_face(role, path, sizeof(path), &size);
-      if (!load_atlas(atlas, path, size) && !atlas->cache) {
-        fprintf(stderr, "[text] required font asset failed to load: %s\n", path);
-        fflush(stderr);
-        exit(1);
-      }
-    }
-    changed = true;
+static font_atlas_t *text_face(const char *path, float size) {
+  for (int i = 0; i < text_state.face_count; i++)
+    if (text_state.faces[i].size == size && !strcmp(text_state.faces[i].path, path)) return &text_state.faces[i];
+  if (text_state.face_count == TEXT_MAX_FACES) {
+    fprintf(stderr, "[text] more than %d faces; %s at %g uses the first\n", TEXT_MAX_FACES, path, size);
+    fflush(stderr);
+    return &text_state.faces[0];
   }
-  return changed;
+  font_atlas_t *atlas = &text_state.faces[text_state.face_count];
+  atlas->cache = font_cache_create(path, size);
+  if (!atlas->cache) return NULL;
+  snprintf(atlas->path, sizeof(atlas->path), "%s", path);
+  atlas->size = size;
+  init_atlas_mesh(atlas);
+  text_state.face_count++;
+  return atlas;
+}
+
+// Selector → face, until the style sheet changes.
+#define TEXT_FONT_SLOTS 256
+static struct { ui_font_t selector; unsigned generation; font_atlas_t *atlas; } g_font_slots[TEXT_FONT_SLOTS];
+
+static font_atlas_t *font_for_role(ui_font_t font) {
+  if (!text_state.ready) return &g_no_face;
+  if (!font) font = "Text";
+  unsigned h = (unsigned)(((uintptr_t)font >> 3) % TEXT_FONT_SLOTS);
+  if (g_font_slots[h].selector == font && g_font_slots[h].generation == g_theme_style_generation && g_font_slots[h].atlas)
+    return g_font_slots[h].atlas;
+  char value[256], path[1024]; float size = 0;
+  font_atlas_t *atlas = NULL;
+  if ((ui_string(font, "font", value, sizeof(value)) || ui_string(":root", "font", value, sizeof(value))) &&
+      text_css_face(value, path, sizeof(path), &size))
+    atlas = text_face(path, size);
+  if (!atlas) {
+    text_default_face(path, sizeof(path), &size);
+    atlas = text_face(path, size);
+  }
+  if (!atlas) {
+    fprintf(stderr, "[text] required font asset failed to load: %s\n", path);
+    fflush(stderr);
+    exit(1);
+  }
+  g_font_slots[h].selector = font;
+  g_font_slots[h].generation = g_theme_style_generation;
+  g_font_slots[h].atlas = atlas;
+  return atlas;
+}
+
+static inline int font_space(ui_font_t font) {
+  font_atlas_t *atlas = font_for_role(font);
+  const font_cache_glyph_t *glyph = font_cache_get_glyph(atlas->cache, ' ');
+  return glyph && glyph->advance > 0 ? glyph->advance : 3;
+}
+
+// Advances in 1/64 logical pixel: summed before rounding, as typesetters do.
+static inline int font_space64(ui_font_t font) {
+  const font_cache_glyph_t *glyph = font_cache_get_glyph(font_for_role(font)->cache, ' ');
+  return glyph && glyph->advance64 > 0 ? glyph->advance64 : 3 * 64;
+}
+
+static inline int font_line(ui_font_t font) {
+  font_atlas_t *atlas = font_for_role(font);
+  int height = font_cache_line_height(atlas->cache);
+  return height > 0 ? height : 12;
 }
 
 // ── init_text_rendering ───────────────────────────────────────────────────────
 
 void init_text_rendering(void) {
   memset(&text_state, 0, sizeof(text_state));
+  memset(g_font_slots, 0, sizeof(g_font_slots));
   text_state.ready = true;
-  text_apply_theme_fonts();
-  printf("text: lazy TTF atlases loaded system=%d small=%d smallest=%d\n",
-         font_line(FONT_SYSTEM), font_line(FONT_SMALL), font_line(FONT_SMALLEST));
+  printf("text: body line %d, caption line %d\n", font_line("Text"), font_line("Caption"));
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -263,7 +241,7 @@ static inline int codepoint_advance64(ui_font_t font, uint32_t codepoint) {
 static inline int fallback_char_advance(uint32_t c, ui_font_t font) {
   if (c == '\n') return 0;
   if (c == ' ') {
-    int sw = get_space_width();
+    int sw = font_space(font);
     return sw > 0 ? sw : 3;
   }
 
@@ -274,7 +252,7 @@ static inline int fallback_char_advance(uint32_t c, ui_font_t font) {
 
 static inline int wrapped_line_advance(ui_font_t font) {
   int adv = text_char_height(font);
-  if (adv <= 0) adv = font_line(FONT_SMALL);
+  if (adv <= 0) adv = font_line("Text");
   return adv > 0 ? adv : 1;
 }
 
@@ -284,12 +262,6 @@ static inline int wrap_char_advance(ui_font_t font, uint32_t c) {
   if (c == ' ') return font_space64(font);
   if (font_for_role(font)->cache) return codepoint_advance64(font, c);
   return fallback_char_advance(c, font) * 64;
-}
-
-// Public API: pixel width of one glyph from the FONT_SYSTEM atlas.
-int char_width(unsigned char c) {
-  if (!text_state.big.cache) return 0;
-  return codepoint_advance(FONT_SYSTEM, c);
 }
 
 // ── Render a filled vertex batch for one atlas ────────────────────────────────
@@ -362,15 +334,6 @@ static int strnwidth_impl(ui_font_t font, const char *text, int len) {
     w += codepoint_advance64(font, codepoint);
   }
   return (w + 32) >> 6;
-}
-
-int strnwidth(const char *text, int text_length) {
-  return strnwidth_impl(FONT_SYSTEM, text, text_length);
-}
-
-int strwidth(const char *text) {
-  if (!text || !*text) return 0;
-  return strnwidth_impl(FONT_SYSTEM, text, (int)strlen(text));
 }
 
 // ── New explicit-font metric API ──────────────────────────────────────────────
@@ -460,16 +423,6 @@ void draw_text_clipped(ui_font_t font, const char *text,
   draw_text(font, text, x, y, col);
 }
 
-// ── Legacy FONT_SYSTEM wrappers ───────────────────────────────────────────────
-
-void draw_text_small(const char *text, int x, int y, uint32_t col) {
-  draw_text(FONT_SYSTEM, text, x, y, col);
-}
-
-void draw_text_small_clipped(const char *text, irect16_t const *viewport,
-                              uint32_t col, uint32_t flags) {
-  draw_text_clipped(FONT_SYSTEM, text, viewport, col, flags);
-}
 
 // ── calc_text_height ──────────────────────────────────────────────────────────
 
@@ -554,52 +507,25 @@ text_wrap_result_t text_wrap_layout_font(ui_font_t font, const char *text,
   return out;
 }
 
-text_wrap_result_t text_wrap_layout(const char *text, irect16_t const *viewport,
-                                    uint32_t col, bool draw) {
-  return text_wrap_layout_font(FONT_SMALL, text, viewport, col, draw);
-}
-
 int calc_text_height_font(ui_font_t font, const char *text, int width) {
   irect16_t vp = {0, 0, width, 1};
   return text_wrap_layout_font(font, text, &vp, 0, false).height;
 }
 
-int calc_text_height(const char *text, int width) {
-  return calc_text_height_font(FONT_SMALL, text, width);
-}
-
 // ── draw_text_wrapped ─────────────────────────────────────────────────────────
-// Wrapped content uses FONT_SMALL by default.
 
 void draw_text_wrapped_font(ui_font_t font, const char *text,
                             irect16_t const *viewport, uint32_t col) {
   (void)text_wrap_layout_font(font, text, viewport, col, true);
 }
 
-void draw_text_wrapped(const char *text, irect16_t const *viewport, uint32_t col) {
-  draw_text_wrapped_font(FONT_SMALL, text, viewport, col);
-}
-
 // ── shutdown_text_rendering ───────────────────────────────────────────────────
 
 void shutdown_text_rendering(void) {
-  font_cache_destroy(text_state.big.cache);
-  R_MeshDestroy(&text_state.big.mesh);
-
-  font_cache_destroy(text_state.small.cache);
-  R_MeshDestroy(&text_state.small.mesh);
-
-  font_cache_destroy(text_state.smallest.cache);
-  R_MeshDestroy(&text_state.smallest.mesh);
-
-  font_cache_destroy(text_state.title.cache);
-  R_MeshDestroy(&text_state.title.mesh);
-
-  font_cache_destroy(text_state.display.cache);
-  R_MeshDestroy(&text_state.display.mesh);
-
-  font_cache_destroy(text_state.heading.cache);
-  R_MeshDestroy(&text_state.heading.mesh);
-
+  for (int i = 0; i < text_state.face_count; i++) {
+    font_cache_destroy(text_state.faces[i].cache);
+    R_MeshDestroy(&text_state.faces[i].mesh);
+  }
   memset(&text_state, 0, sizeof(text_state));
+  memset(g_font_slots, 0, sizeof(g_font_slots));
 }

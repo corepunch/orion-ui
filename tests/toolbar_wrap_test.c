@@ -758,8 +758,8 @@ void test_toolbar_labels_increase_button_and_band_size(void) {
     toolbar_state_t *tb = require_toolbar_state(win);
     ASSERT_EQUAL(tb->style, TOOLBAR_STYLE_SHOW_LABELS);
     ASSERT_TRUE(titlebar_height(win) > plain_h);
-    ASSERT_EQUAL(tb->item_rects[0].w, MAX(plain_w, text_strwidth(FONT_SMALLEST, item.text) + 8));
-    ASSERT_EQUAL(tb->item_rects[0].h, TB_SPACING + text_char_height(FONT_SMALLEST) + 2);
+    ASSERT_EQUAL(tb->item_rects[0].w, MAX(plain_w, text_strwidth("Caption", item.text) + 8));
+    ASSERT_EQUAL(tb->item_rects[0].h, TB_SPACING + text_char_height("Caption") + 2);
     destroy_window(win);
     test_env_shutdown();
     PASS();
@@ -779,7 +779,7 @@ void test_toolbar_list_labels_follow_icons(void) {
     window_t *win = create_window("", 0, MAKERECT(0, 0, 200, 300), root, win_activitybar, 0, &def);
     toolbar_state_t *tb = toolbar_get_state(win);
     ASSERT_NOT_NULL(tb);
-    int widest = TB_SPACING + text_strwidth(FONT_SMALL, "Chart of Accounts") + 8;
+    int widest = TB_SPACING + text_strwidth("Text", "Chart of Accounts") + 8;
     ASSERT_EQUAL(tb->item_rects[1].w, widest);
     ASSERT_EQUAL(tb->item_rects[0].w, widest);           // rows fill the column
     ASSERT_EQUAL(tb->item_rects[0].x, tb->item_rects[1].x);

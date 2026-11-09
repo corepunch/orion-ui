@@ -116,6 +116,15 @@ static bool ui_side_value(style_sheet_t *sheet, style_query_t q, const char *pro
   return true;
 }
 
+bool ui_string(const char *selector, const char *property, char *out, size_t n) {
+  ui_selector_t sel;
+  ui_parse_selector(selector, &sel);
+  style_sheet_t *sheet = ui_stylesheet();
+  if (!sheet || !out || !n) return false;
+  if (!strcmp(selector, ":root")) return style_value(sheet, STYLE_ROOT, property, out, n);
+  return style_value(sheet, ui_query(&sel), property, out, n);
+}
+
 // The cascaded text of a property; reports a property the sheet leaves unset.
 static bool ui_value(const char *selector, const char *property, char *out, size_t n) {
   ui_selector_t sel;

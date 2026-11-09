@@ -326,14 +326,17 @@ static uint8_t runtime_parse_align_v(const char *s) {
   return LAYOUT_ALIGN_STRETCH;
 }
 
+// font= picks a label's class (Label.caption, Label.title, ...).
 static uint8_t runtime_parse_font(const char *s, bool *set) {
   if (set) *set = false;
   if (!s || !*s)
-    return FONT_SMALL;
+    return LABEL_TEXT;
   if (set) *set = true;
-  if (str_ieq(s, "system")) return FONT_SYSTEM;
-  if (str_ieq(s, "smallest")) return FONT_SMALLEST;
-  return FONT_SMALL;
+  if (str_ieq(s, "smallest") || str_ieq(s, "caption")) return LABEL_CAPTION;
+  if (str_ieq(s, "title")) return LABEL_TITLE;
+  if (str_ieq(s, "display")) return LABEL_DISPLAY;
+  if (str_ieq(s, "heading")) return LABEL_HEADING;
+  return LABEL_TEXT;
 }
 
 static uint8_t runtime_parse_color(const char *s, bool *set) {

@@ -53,12 +53,12 @@
   --table-radius: 0;
   --card-radius: 0;
 
-  --font-system: none;   /* the default faces: DejaVu Sans */
-  --font-small: none;
-  --font-smallest: none;
-  --font-title: none;
-  --font-display: none;
-  --font-heading: none;
+  --ui-face:      "DejaVu Sans";   /* the faces Orion began with */
+  --text:         400 12px var(--ui-face);
+  --text-caption: 400 9px var(--ui-face);
+  --text-heading: 700 12px var(--ui-face);
+  --text-title:   700 18px var(--ui-face);
+  --text-display: 700 24px var(--ui-face);
 
   --raised-border: var(--light-edge) var(--dark-edge) var(--dark-edge) var(--light-edge);
   --sunken-border: var(--dark-edge) var(--light-edge) var(--light-edge) var(--dark-edge);

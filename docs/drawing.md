@@ -141,10 +141,10 @@ do not depend on the machine. A standalone app takes `--appearance light|dark|sy
 draw_card(r, CTRL_HOVER | CTRL_SELECTED | CTRL_FOCUSED, color_with_alpha(get_sys_color(brTextWarning), 0x78));
 
 // Tinted label ("3 modified"); returns its width so badges can be chained.
-int w = draw_badge(FONT_SMALL, "3 modified", x, y, 18, get_sys_color(brTextWarning));
+int w = draw_badge("Text", "3 modified", x, y, 18, get_sys_color(brTextWarning));
 
 // Independent foreground and background, with capsule/circular ends.
-draw_badge_ex(FONT_SMALLEST, "1", R(x, y, 16, 16), get_sys_color(brActiveTitlebarText),
+draw_badge_ex("Caption", "1", R(x, y, 16, 16), get_sys_color(brActiveTitlebarText),
               color_with_alpha(get_sys_color(brModalOverlay), 0xB8), true);
 
 // Status badge ("Posted"): a pill tinted with a theme role, an optional leading
@@ -256,7 +256,7 @@ across a card's labels keeps its tooltip stable. A child's own tooltip takes
 precedence over its parent's.
 
 `draw_command_link(rect, text, state, ink)` paints a `BUTTON_COMMANDLINK` row:
-a filled `brAccent` bullet, `FONT_SMALL` text in `ink` ellipsized to the row,
+a filled `brAccent` bullet, `CommandLink`-font text in `ink` ellipsized to the row,
 a one-pixel underline on hover and the focus rectangle when focused. Disabled
 rows use `brTextDisabled`. `theme_t.command_link` sets the bullet size, the gap
 before the text and the vertical padding of the row.
@@ -279,8 +279,8 @@ draw_text_small("Hello", (win->frame.w - w) / 2, 10, COLOR_TEXT_NORMAL);
 
 ```c
 // Cut on a UTF-8 boundary and append "..." so the result is at most max_w pixels wide
-draw_text_ellipsized(FONT_SMALL, title, x, y, max_w, color);
-int w = text_ellipsize(FONT_SMALL, title, max_w, buf, sizeof(buf));   // when you need the string
+draw_text_ellipsized("Text", title, x, y, max_w, color);
+int w = text_ellipsize("Text", title, max_w, buf, sizeof(buf));   // when you need the string
 ```
 
 ### Initialisation

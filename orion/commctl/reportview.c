@@ -155,7 +155,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     set_clip_rect(win, (irect16_t){0, header_h, eff_w, MAX(0, body_bottom - header_h)});
     theme_draw(THEME_PART_LIST_GROUP, R(0, y, eff_w, entry_h), CTRL_NORMAL);
     irect16_t caption = {WIN_PADDING * 2, y, eff_w - WIN_PADDING * 4, entry_h};
-    draw_text_clipped(FONT_HEADING, data->items[row].section, &caption, group_fg, 0);
+    draw_text_clipped("TableView::group", data->items[row].section, &caption, group_fg, 0);
   }
 
   // Rows ruled by hairlines, under the selection's face.
@@ -194,8 +194,8 @@ static void report_paint(window_t *win, reportview_data_t *data) {
       char title[MAX_REPORTVIEW_TITLE + 4];
       const char *shown = data->columns[col].title;
       int title_w = col_w - 2 * WIN_PADDING;
-      if (strwidth(shown) > title_w) { text_ellipsize(FONT_SYSTEM, shown, MAX(0, title_w), title, sizeof(title)); shown = title; }
-      draw_text_small_clipped(shown,
+      if (text_strwidth("TableView::row", shown) > title_w) { text_ellipsize("TableView::header", shown, MAX(0, title_w), title, sizeof(title)); shown = title; }
+      draw_text_clipped("TableView::row", shown,
                               &(irect16_t){draw_x, 0, col_w - (data->columns[col].align ? WIN_PADDING : 0), header_h},
                               hdr_fg, data->columns[col].align ? data->columns[col].align : TEXT_PADDING_LEFT);
     }
@@ -238,17 +238,17 @@ static void report_paint(window_t *win, reportview_data_t *data) {
       if (data->cell_style == REPORTVIEW_CELL_STACKED && col == 0) {
         // The title over its detail, the pair centred in the row.
         const char *detail = it->subitem_count && it->subitems[0] ? it->subitems[0] : "";
-        int title_h = text_char_height(FONT_SMALL), detail_h = detail[0] ? text_char_height(FONT_SMALLEST) : 0;
+        int title_h = text_char_height("TableView::row"), detail_h = detail[0] ? text_char_height("TableView::detail") : 0;
         int top = y + (entry_h - title_h - detail_h) / 2, pad = WIN_PADDING;
-        draw_text_ellipsized(FONT_SMALL, src, text_x, top, MAX(0, text_w - pad), fg);
+        draw_text_ellipsized("TableView::row", src, text_x, top, MAX(0, text_w - pad), fg);
         if (detail[0])
-          draw_text_ellipsized(FONT_SMALLEST, detail, text_x, top + title_h, MAX(0, text_w - pad),
+          draw_text_ellipsized("TableView::detail", detail, text_x, top + title_h, MAX(0, text_w - pad),
                                strong ? fg : get_sys_color(brTextSecondary));
       } else if (data->cell_style == REPORTVIEW_CELL_TWO_LINE) {
         irect16_t title_rect = {text_x, y + 1, text_w, FONT_SIZE_SMALL};
         irect16_t subtitle_rect = {text_x, y + FONT_SIZE_SMALL + 3,
                                    text_w, FONT_SIZE_SMALL};
-        draw_text_clipped(FONT_SMALL, src, &title_rect, fg, 0);
+        draw_text_clipped("TableView::row", src, &title_rect, fg, 0);
         char subtitle[512] = {0};
         for (uint32_t sub = 0; sub < data->items[row].subitem_count; sub++) {
           const char *part = data->items[row].subitems[sub];
@@ -257,7 +257,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
           snprintf(subtitle + used, sizeof(subtitle) - used, "%s%s",
                    used ? " - " : "", part);
         }
-        draw_text_clipped(FONT_SMALLEST, subtitle, &subtitle_rect,
+        draw_text_clipped("TableView::detail", subtitle, &subtitle_rect,
                           row == data->selected ? fg : get_sys_color(brTextDisabled), 0);
       } else if (data->columns[col].badge) {
         // A status badge: a pill toned by the row (its RowIcon colour), sized to its text.
@@ -265,7 +265,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
           char fitted[MAX_COLUMNVIEW_ITEM_NAME];
           int room = MAX(0, text_w - WIN_PADDING), pad = ui_px("Badge", "padding-left");
           if (measure_status_badge(src, NULL) > room) {   // the text ends in an ellipsis inside the pill
-            text_ellipsize(FONT_SYSTEM, src, MAX(0, room - 2 * pad), fitted, sizeof(fitted));
+            text_ellipsize("TableView::header", src, MAX(0, room - 2 * pad), fitted, sizeof(fitted));
             src = fitted;
           }
           int bw = MIN(measure_status_badge(src, NULL), room);
@@ -277,12 +277,12 @@ static void report_paint(window_t *win, reportview_data_t *data) {
         // Text that does not fit ends in an ellipsis; numbers align right.
         char fitted[MAX_COLUMNVIEW_ITEM_NAME];
         int pad = data->columns[col].align ? WIN_PADDING : 0;
-        if (text_strwidth(FONT_SMALL, src) > text_w - pad) {
-          text_ellipsize(FONT_SMALL, src, MAX(0, text_w - pad), fitted, sizeof(fitted));
+        if (text_strwidth("TableView::row", src) > text_w - pad) {
+          text_ellipsize("TableView::row", src, MAX(0, text_w - pad), fitted, sizeof(fitted));
           src = fitted;
         }
         irect16_t text_rect = {text_x, y, MAX(0, text_w - pad), entry_h};
-        draw_text_clipped(FONT_SMALL, src, &text_rect, fg, data->columns[col].align);
+        draw_text_clipped("TableView::row", src, &text_rect, fg, data->columns[col].align);
       }
     }
 
@@ -332,9 +332,9 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     char total[MAX_REPORTVIEW_TITLE + 4];
     const char *shown = data->footer[col];
     int pad = data->columns[col].align ? WIN_PADDING : 0, total_w = span_w - 2 * WIN_PADDING;
-    if (text_strwidth(FONT_SMALL, shown) > total_w) { text_ellipsize(FONT_SMALL, shown, MAX(0, total_w), total, sizeof(total)); shown = total; }
+    if (text_strwidth("TableView::row", shown) > total_w) { text_ellipsize("TableView::row", shown, MAX(0, total_w), total, sizeof(total)); shown = total; }
     irect16_t total_rect = {draw_x + WIN_PADDING, body_bottom, MAX(0, span_w - WIN_PADDING - pad), footer_h};
-    draw_text_clipped(FONT_SMALL, shown, &total_rect, hdr_fg, data->columns[col].align);
+    draw_text_clipped("TableView::row", shown, &total_rect, hdr_fg, data->columns[col].align);
   }
   set_clip_rect(win, (irect16_t){0, 0, eff_w, cr.h});
   if (frame_radius >= 0) {

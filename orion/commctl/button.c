@@ -56,7 +56,7 @@ static int button_icon_width(window_t *win) {
 }
 
 static int command_link_height(void) {
-  return MAX(text_char_height(FONT_SMALL), ui_px("CommandLink", "--bullet-size")) + ui_px("CommandLink", "padding-top") * 2;
+  return MAX(text_char_height("Button"), ui_px("CommandLink", "--bullet-size")) + ui_px("CommandLink", "padding-top") * 2;
 }
 
 // Button control window procedure (text label buttons).
@@ -102,17 +102,17 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
         if ((win->flags & LABEL_COLLAPSE_EMPTY) && !win->title[0]) win->frame = R(0, 0, 0, 0);
         return true;
       }
-      win->frame.w = MAX(win->frame.w, strwidth(win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2);
+      win->frame.w = MAX(win->frame.w, text_strwidth("Button", win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2);
       control_apply_predefined_height(win, "button");
       return true;
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m && (win->flags & BUTTON_COMMANDLINK)) {
-        m->desired_w = ui_px("CommandLink", "--bullet-size") + ui_px("CommandLink", "gap") + text_strwidth(FONT_SMALL, win->title);
+        m->desired_w = ui_px("CommandLink", "--bullet-size") + ui_px("CommandLink", "gap") + text_strwidth("Button", win->title);
         if (m->avail_w > 0) m->desired_w = MIN(m->desired_w, m->avail_w);   // long text ellipsizes
         m->desired_h = command_link_height();
       } else if (m) {
-        m->desired_w = MAX(win->frame.w, strwidth(win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2 +
+        m->desired_w = MAX(win->frame.w, text_strwidth("Button", win->title) + MAX(BUTTON_PADDING, (control_predefined_height(win->flags) + 1) / 2) * 2 +
                                          button_icon_width(win));
         m->desired_h = control_predefined_height(win->flags);
       }
@@ -146,7 +146,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
         sysicon_resolved_t glyph;
         int size = MIN(icon_w ? BUTTON_TEXT_ICON : SYSICON_SIZE, MIN(local.w, local.h) - 4);
         if (size > 0 && sysicon_resolve_size(x->icon, size, &glyph)) {
-          irect16_t at = rect_center(local, icon_w ? icon_w + strwidth(win->title) : glyph.w, glyph.h);
+          irect16_t at = rect_center(local, icon_w ? icon_w + text_strwidth("Button", win->title) : glyph.w, glyph.h);
           at.w = glyph.w;
           draw_sprite_region((int)glyph.tex, at, UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1),
                              theme_foreground(THEME_PART_BUTTON, state), 0);
@@ -154,7 +154,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
         if (!icon_w) return true;
       }
       irect16_t content = rect_inset_xy(local, ui_px("Button", "padding-left"), 2);
-      irect16_t label = rect_center(content, strwidth(win->title) + icon_w, CHAR_HEIGHT);
+      irect16_t label = rect_center(content, text_strwidth("Button", win->title) + icon_w, text_char_height("Button"));
       label = rect_trim_left(label, icon_w);
       theme_draw_button_label(label, win->title, state);
       return true;

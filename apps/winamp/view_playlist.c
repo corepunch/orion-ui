@@ -49,7 +49,7 @@ static int hit_bottom(const wa_canvas_t *c, ipoint16_t p) {
 }
 
 static int row_height(void) {
-  return MAX(text_char_height(FONT_SMALL) + 4, (int)lroundf(13 * g_app->pt_per_px));
+  return MAX(text_char_height("Text") + 4, (int)lroundf(13 * g_app->pt_per_px));
 }
 
 static irect16_t list_rect(const wa_canvas_t *c) {
@@ -98,7 +98,7 @@ static void paint_rows(window_t *win, pl_view_t *v) {
   wa_playlist_t *pl = &g_app->list;
   wa_skin_t *s = &g_app->skin;
   irect16_t list = list_rect(c);
-  int rh = row_height(), th = text_char_height(FONT_SMALL), rows = visible_rows(c);
+  int rh = row_height(), th = text_char_height("Text"), rows = visible_rows(c);
   (void)win;
   for (int r = 0; r < rows; r++) {
     int i = pl->scroll + r;
@@ -110,11 +110,11 @@ static void paint_rows(window_t *win, pl_view_t *v) {
     char dur[16] = "";
     const wa_track_t *t = &pl->items[i];
     if (t->seconds >= 0) snprintf(dur, sizeof(dur), "%d:%02d", t->seconds / 60, t->seconds % 60);
-    int dw = text_strwidth(FONT_SMALL, dur);
+    int dw = text_strwidth("Text", dur);
     char label[512];
     snprintf(label, sizeof(label), "%d. %s", i + 1, t->title);
-    draw_text_ellipsized(FONT_SMALL, label, row.x + 3, ty, row.w - dw - 12, color);
-    draw_text(FONT_SMALL, dur, row.x + row.w - dw - 3, ty, color);
+    draw_text_ellipsized("Text", label, row.x + 3, ty, row.w - dw - 12, color);
+    draw_text("Text", dur, row.x + row.w - dw - 3, ty, color);
   }
 }
 

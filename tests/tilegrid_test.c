@@ -200,7 +200,7 @@ static void test_badge_and_truncating_label_measure(void) {
     ASSERT_EQUAL(send_message(badge, bdSetColor, 9999, NULL), 0);   // rejected: outside the palette
 
     window_t *label = create_window("a fairly long line of text that would normally wrap", 0, &f, host, win_label, 0, NULL);
-    label_create_params_t style = {.color_index = brTextNormal, .font = FONT_SMALL, .color_set = true, .truncate = true};
+    label_create_params_t style = {.color_index = brTextNormal, .font = LABEL_TEXT, .color_set = true, .truncate = true};
     send_message(label, lbSetStyle, 0, &style);
     layout_measure_t lm = {20, 100, 1, 1};                          // far narrower than the text
     send_message(label, evMeasure, 0, &lm);

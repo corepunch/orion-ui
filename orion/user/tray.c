@@ -24,7 +24,7 @@ static bool tray_is_task_window(window_t *tray, window_t *w) {
 }
 
 static int tray_button_width(const window_t *w) {
-  int tw = strwidth(w->title);
+  int tw = text_strwidth("Text", w->title);
   int bw = tw + 12;
   if (bw < 56) bw = 56;
   return bw;
@@ -91,7 +91,7 @@ result_t win_tray(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
           bool pressed = (st && st->pressed == it);
           bool down = pressed || (it == active);
           draw_button(r, 1, 1, down);
-          draw_text_small(it->title, r.x + 5, r.y + 4,
+          draw_text("Text", it->title, r.x + 5, r.y + 4,
                           get_sys_color(brTextNormal));
           bx += bw + TRAY_SPACING;
         }

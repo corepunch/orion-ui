@@ -99,11 +99,11 @@ metrics are in `theme_t.badge`. Use badges for state ("Posted", "Paid",
 <Label name="total" field="ib.documents.total" font="title" h-align="end" />
 ```
 
-`font="title"` is the heading face (`--font-title`: IBM Plex Sans SemiBold
-at 18 px), as the concepts draw page titles and document headings.
-`font="display"` (24 px, `FONT_DISPLAY`) is for the one figure a view exists
+`font="title"` makes the label `Label.title` (`--text-title`: IBM Plex Sans
+SemiBold at 18 px), as the concepts draw page titles and document headings.
+`font="display"` (24 px, `Label.display`) is for the one figure a view exists
 to show, such as the start page's money total; use it once per card at most.
-`font="heading"` (`FONT_HEADING`, SemiBold 12 px) names a group inside a view:
+`font="heading"` (`Label.heading`, SemiBold 12 px) names a group inside a view:
 a grouped list's captions use it. Body text is 13 px, captions 11 px. The
 theme's sheet sets every face (docs/styling.md). A `Label` with `field=` shows the field
 formatted (numbers through `ui_format_number`, dates through `ui_format_date`)

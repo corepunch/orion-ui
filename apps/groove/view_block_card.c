@@ -5,7 +5,7 @@
 #define CARD_TAG_INSET 2
 #define CARD_LABEL_BG 0xB8000000u
 #define CARD_REPEAT_OVERLAY 0x54000000u
-#define CARD_LABEL_FONT FONT_SMALLEST
+#define CARD_LABEL_FONT "Caption"
 
 typedef struct {
   int block;
@@ -40,12 +40,12 @@ static void paint_card_variant(const block_t *b, irect16_t r, int visible_width)
   if (!b->variant) return;
   char text[8];
   snprintf(text, sizeof(text), "%u", b->variant);
-  int size = MAX(text_char_height(FONT_SMALLEST) + 1, text_strwidth(FONT_SMALLEST, text) + 2 * CARD_LABEL_PADDING);
+  int size = MAX(text_char_height("Caption") + 1, text_strwidth("Caption", text) + 2 * CARD_LABEL_PADDING);
   r.w = MIN(r.w, visible_width);
   irect16_t area = rect_inset(r, CARD_TAG_INSET);
   if (size > area.w || size > area.h) return;
   irect16_t badge = rect_split_right(rect_split_bottom(area, size), size);
-  draw_badge_ex(FONT_SMALLEST, text, badge, 0xFFFFFFFFu,
+  draw_badge_ex("Caption", text, badge, 0xFFFFFFFFu,
                 CARD_LABEL_BG, false);
 }
 
@@ -109,13 +109,13 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
                           r, ui_radius("Card"));
         int icon_size = MIN(24, MIN(r.w, r.h) - 4), gap = 8;
         if (icon_size <= 0) return true;
-        int text_w = MIN(text_strwidth(FONT_SYSTEM, win->title), MAX(0, r.w - icon_size - gap - 12));
+        int text_w = MIN(text_strwidth("Text", win->title), MAX(0, r.w - icon_size - gap - 12));
         irect16_t content = rect_center(r, icon_size + gap + text_w, r.h);
         irect16_t icon = rect_center(rect_split_left(content, icon_size), icon_size, icon_size);
-        irect16_t label = rect_center(rect_trim_left(content, icon_size + gap), text_w, text_char_height(FONT_SYSTEM));
+        irect16_t label = rect_center(rect_trim_left(content, icon_size + gap), text_w, text_char_height("Text"));
         uint32_t ink = get_sys_color(window_is_disabled(win) ? brTextDisabled : brTextNormal);
         draw_sysicon("phosphor-plus-bold", icon.x, icon.y, icon_size, ink);
-        draw_text_ellipsized(FONT_SYSTEM, win->title, label.x, label.y, label.w, ink);
+        draw_text_ellipsized("Text", win->title, label.x, label.y, label.w, ink);
         return true;
       }
       default: return win_button(win, msg, wparam, lparam);

@@ -5,27 +5,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// ── Font role identifiers ─────────────────────────────────────────────────────
-// Semantic font roles backed by proportional sans-serif TTF atlases.
-typedef enum {
-  FONT_SYSTEM = 0,  // Chrome: titlebars, menus, buttons, dialogs
-  FONT_SMALL  = 1,  // Content: list items, column rows, status bar
-  FONT_SMALLEST = 2,  // Compact labels in icon/grid views and dense controls
-  FONT_TITLE  = 3,  // A window title shown in its toolbar (the caption font, larger)
-  FONT_DISPLAY = 4, // Headline figures: the one figure a view exists to show (a start page's money total)
-  FONT_HEADING = 5, // Strong small text: group captions and section headings in lists and forms
-} ui_font_t;
-
-// ── Dynamic metric accessors ─────────────────────────────────────────────────
-// FONT_SYSTEM metrics (backward-compatible; equivalent to FONT_SYSTEM variants).
-// Return safe defaults before init_text_rendering() is called.
-int get_char_height(void);
-int get_line_height(void);
-int get_space_width(void);
-
-#define CHAR_HEIGHT       (get_char_height())
-#define SMALL_LINE_HEIGHT (get_line_height())
-#define SPACE_WIDTH       (get_space_width())
+// ── Fonts ─────────────────────────────────────────────────────────────────────
+// A font is a CSS selector: text drawn with "TableView::row" takes the `font`
+// the style sheet gives that element and part, or :root's when it sets none.
+// Controls name their own element; free text uses the elements base.css
+// defines for it: "Text", "Caption", "Heading", "Title" and "Display"
+// (as HTML has p, small, h3, h2 and h1). NULL is "Text".
+typedef const char *ui_font_t;
 
 // Forward declaration
 typedef struct irect16_s irect16_t;
@@ -36,21 +22,12 @@ void init_text_rendering(void);
 // Clean up text rendering resources
 void shutdown_text_rendering(void);
 
-// Reloads the role atlases whose face or size the active theme changed
-// (--font-system, --font-small, ... in its style sheet). Returns true when any
-// changed. set_theme() calls it; a no-op before init_text_rendering().
-bool text_apply_theme_fonts(void);
-
-// Returns the pixel width of a single glyph from the FONT_SYSTEM atlas.
-// Returns 0 when the text system is not yet initialized.
-int char_width(unsigned char c);
 
 #define TEXT_PADDING_LEFT  (1u << 0)   // add WIN_PADDING (4px) to the left
 #define TEXT_ALIGN_RIGHT   (1u << 1)   // right-align to viewport's right edge
 #define TEXT_ALIGN_CENTER   (1u << 2)   // center-align within the viewport (ignores TEXT_PADDING_LEFT)
 
-// ── New explicit-font API ─────────────────────────────────────────────────────
-// Pass font role at every call site — no hidden global state.
+// ── Drawing and measuring ─────────────────────────────────────────────────────
 void draw_text(ui_font_t font, const char *text, int x, int y, uint32_t col);
 void draw_text_clipped(ui_font_t font, const char *text,
                        irect16_t const *viewport, uint32_t col, uint32_t flags);
@@ -62,15 +39,6 @@ int  text_strnwidth(ui_font_t font, const char *text, int len); // pixel width o
 int  text_ellipsize(ui_font_t font, const char *text, int max_w, char *out, size_t n);
 void draw_text_ellipsized(ui_font_t font, const char *text, int x, int y, int max_w, uint32_t col);
 
-// ── Legacy FONT_SYSTEM aliases (backward-compatible) ─────────────────────────
-// These remain as real callable functions so existing extern declarations and
-// call sites compile without change.
-void draw_text_small(const char* text, int x, int y, uint32_t col);
-void draw_text_small_clipped(const char* text, irect16_t const *viewport,
-                              uint32_t col, uint32_t flags);
-int strwidth(const char* text);
-int strnwidth(const char* text, int text_length);
-
 // ── Advanced text rendering ───────────────────────────────────────────────────
 typedef struct {
   int  width;
@@ -78,14 +46,10 @@ typedef struct {
   bool wrapped;
 } text_wrap_result_t;
 
-text_wrap_result_t text_wrap_layout(const char* text, irect16_t const *viewport,
-                                    uint32_t col, bool draw);
 text_wrap_result_t text_wrap_layout_font(ui_font_t font, const char* text,
                                          irect16_t const *viewport,
                                          uint32_t col, bool draw);
-int calc_text_height(const char* text, int width);
 int calc_text_height_font(ui_font_t font, const char* text, int width);
-void draw_text_wrapped(const char* text, irect16_t const *viewport, uint32_t col);
 void draw_text_wrapped_font(ui_font_t font, const char* text,
                             irect16_t const *viewport, uint32_t col);
 

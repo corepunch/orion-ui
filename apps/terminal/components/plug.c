@@ -7,7 +7,7 @@ static result_t terminal_preview_proc(window_t *win, uint32_t msg, uint32_t wpar
     case evPaint: {
       irect16_t r = get_client_rect(win);
       fill_rect(get_sys_color(brWindowDarkBg), r);
-      draw_text(FONT_SMALL, "Terminal session", r.x + 8, r.y + 8, get_sys_color(brTextNormal));
+      draw_text("Text", "Terminal session", r.x + 8, r.y + 8, get_sys_color(brTextNormal));
       return true;
     }
     case evDestroy: return true;

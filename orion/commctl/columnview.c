@@ -164,7 +164,7 @@ int rv_large_icon_cell_h(const reportview_data_t *data) {
   return data->icon_size
        + RV_LARGE_ICON_TOP_PAD
        + RV_LARGE_ICON_LABEL_GAP
-      + text_char_height(FONT_SMALLEST)
+      + text_char_height("TableView::detail")
        + RV_LARGE_ICON_BOT_PAD;
 }
 

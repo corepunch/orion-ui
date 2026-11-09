@@ -81,8 +81,8 @@ static void tooltip_show(window_t *win) {
   bool horizontal = g_tooltip_preferred_side == TOOLTIP_TAIL_LEFT || g_tooltip_preferred_side == TOOLTIP_TAIL_RIGHT;
   int tail = ui_px("Tooltip", "--tail-size");
   int max_text = MAX(1, MIN(TOOLTIP_MAX_WIDTH, sw - 2 * (pad + ui_px("Tooltip", "padding-left")) - (horizontal ? tail : 0)));
-  int tw = MAX(1, MIN(text_strwidth(FONT_SMALL, g_tooltip_text), max_text));
-  int th = calc_text_height_font(FONT_SMALL, g_tooltip_text, tw);
+  int tw = MAX(1, MIN(text_strwidth("Tooltip", g_tooltip_text), max_text));
+  int th = calc_text_height_font("Tooltip", g_tooltip_text, tw);
   int margin = pad + ui_radius("Tooltip") + tail;
   int w = tw + 2 * (pad + ui_px("Tooltip", "padding-left")) + (horizontal ? tail : 0);
   int h = th + 2 * (pad + ui_px("Tooltip", "padding-top")) + (horizontal ? 0 : tail);
@@ -127,7 +127,7 @@ static result_t tooltip_win_proc(window_t *win, uint32_t msg, uint32_t wparam, v
       draw_tooltip_bubble(bounds, g_tooltip_tail_offset, g_tooltip_tail_side);
       irect16_t text = rect_inset_xy(tooltip_bubble_body_rect(bounds, g_tooltip_tail_side),
                                      ui_px("Tooltip", "padding-left"), ui_px("Tooltip", "padding-top"));
-      draw_text_wrapped(win->title, &text, get_sys_color(brTooltipText));
+      draw_text_wrapped_font("Tooltip", win->title, &text, get_sys_color(brTooltipText));
       return true;
     }
     // Tooltips do not intercept pointer hit-testing through their shadow.

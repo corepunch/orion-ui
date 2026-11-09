@@ -75,7 +75,7 @@ static void desktop_icon_select(window_t *win, bool selected, bool notify) {
 
 static irect16_t desktop_icon_image_rect(window_t *win, const icon_state_t *st) {
   int status_h = st->status_image.texture ? ICON_STATUS_SIZE : 0;
-  int label_h = MAX(text_char_height(FONT_SMALLEST), status_h);
+  int label_h = MAX(text_char_height("Caption"), status_h);
   irect16_t area = rect_trim_bottom(get_client_rect(win), label_h);
   int avail_w = MAX(1, area.w), avail_h = MAX(1, area.h);
   int w = avail_w, h = avail_h;
@@ -90,8 +90,8 @@ static irect16_t desktop_icon_image_rect(window_t *win, const icon_state_t *st) 
 static void desktop_icon_draw_badge(window_t *win, const icon_badge_state_t *badge,
                                     irect16_t image, int stack) {
   if (!badge->visible || !badge->text[0]) return;
-  int h = text_char_height(FONT_SMALLEST) + 4;
-  int w = text_strwidth(FONT_SMALLEST, badge->text) + 8;
+  int h = text_char_height("Caption") + 4;
+  int w = text_strwidth("Caption", badge->text) + 8;
   int x = badge->anchor == ICON_BADGE_TOP_CENTER ? image.x + (image.w - w) / 2
         : (badge->anchor == ICON_BADGE_TOP_LEFT || badge->anchor == ICON_BADGE_BOTTOM_LEFT)
           ? image.x - 2 : image.x + image.w - w + 2;
@@ -104,14 +104,14 @@ static void desktop_icon_draw_badge(window_t *win, const icon_badge_state_t *bad
   irect16_t text_rect = rect_trim_top(badge_rect, 2);
   fill_rect(get_sys_color(brTextNormal), rect_inset(badge_rect, -1));
   fill_rect(badge->background, badge_rect);
-  draw_text_clipped(FONT_SMALLEST, badge->text, &text_rect, badge->foreground, TEXT_ALIGN_CENTER);
+  draw_text_clipped("Caption", badge->text, &text_rect, badge->foreground, TEXT_ALIGN_CENTER);
 }
 
 static void desktop_icon_paint(window_t *win, const icon_state_t *st) {
   irect16_t local = get_client_rect(win);
   irect16_t image = desktop_icon_image_rect(win, st);
   int status_h = st->status_image.texture ? ICON_STATUS_SIZE : 0;
-  int label_h = MAX(text_char_height(FONT_SMALLEST), status_h) + 2;
+  int label_h = MAX(text_char_height("Caption"), status_h) + 2;
   irect16_t label = rect_split_bottom(local, label_h); label.w = local.w;
   if (!(win->flags & WINDOW_TRANSPARENT)) theme_draw(THEME_PART_WORKSPACE, local, CTRL_NORMAL);
   ctrl_state_t state = win->value ? CTRL_SELECTED : CTRL_NORMAL;
@@ -119,7 +119,7 @@ static void desktop_icon_paint(window_t *win, const icon_state_t *st) {
   if (st->image.texture) draw_rect((int)st->image.texture, image);
   uint32_t text_col = theme_foreground(THEME_PART_DESKTOP_ICON, state);
   if (st->status_image.texture) {
-    int text_w = text_strwidth(FONT_SMALLEST, win->title);
+    int text_w = text_strwidth("Caption", win->title);
     int status_w = ICON_STATUS_SIZE;
     int group_w = status_w + ICON_STATUS_GAP + text_w;
     irect16_t group_area = label; group_area.w = MAX(group_area.w, group_w);
@@ -127,8 +127,8 @@ static void desktop_icon_paint(window_t *win, const icon_state_t *st) {
     irect16_t status = rect_center(rect_split_left(group, status_w), status_w, ICON_STATUS_SIZE);
     irect16_t status_label = rect_trim_left(group, status_w + ICON_STATUS_GAP);
     draw_rect((int)st->status_image.texture, status);
-    draw_text_clipped(FONT_SMALLEST, win->title, &status_label, text_col, TEXT_ALIGN_CENTER);
-  } else draw_text_clipped(FONT_SMALLEST, win->title, &label, text_col, TEXT_ALIGN_CENTER);
+    draw_text_clipped("Caption", win->title, &status_label, text_col, TEXT_ALIGN_CENTER);
+  } else draw_text_clipped("Caption", win->title, &label, text_col, TEXT_ALIGN_CENTER);
   int anchor_counts[5] = {0};
   for (int i = 0; i < ICON_MAX_BADGES; i++) {
     int anchor = st->badges[i].anchor;

@@ -17,6 +17,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <orion/user/user.h>
 
 typedef struct style_sheet_s style_sheet_t;
@@ -37,5 +38,7 @@ int  ui_role(const char *selector, const char *property);          // the colour
 bool ui_flag(const char *selector, const char *property);          // set, and not none, 0 or false
 bool ui_keyword_is(const char *selector, const char *property, const char *keyword);
 ui_shadow_t ui_shadow(const char *selector, const char *property); // "dx dy blur colour" or none
+// The cascaded text of a property, var() resolved; false (quietly) when unset.
+bool ui_string(const char *selector, const char *property, char *out, size_t n);
 
 #endif

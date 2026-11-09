@@ -77,7 +77,7 @@ int  measure_badge(ui_font_t font, const char *text);   // width draw_badge() wi
 void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_color, uint32_t background_color, bool round);
 #define BADGE_HEIGHT 18
 // A status badge ("Posted", "Paid"): a pill tinted with `color`, a theme role such as brTextSuccess,
-// an optional leading icon in that colour, and medium-weight (FONT_SYSTEM) text in the badge ink, the role leaning
+// an optional leading icon in that colour, and text in the Badge font in the badge ink, the role leaning
 // towards brTextNormal so small type stays readable on the tint in light and dark palettes. Padding,
 // tint and icon size come from the theme's badge metrics. The Badge control draws exactly this.
 int  measure_status_badge(const char *text, const char *icon);

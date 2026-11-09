@@ -192,7 +192,7 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
                           ? MAKE_COLOR(0xFF,0xFF,0xFF,0xFF)
                           : get_sys_color(brTextNormal);
       irect16_t name_rect = R(LAYERS_NAME_X, ry, LAYERS_NAME_W, LAYERS_ROW_H);
-      draw_text_clipped(FONT_SMALL, lay->name, &name_rect, name_col, TEXT_PADDING_LEFT);
+      draw_text_clipped("Text", lay->name, &name_rect, name_col, TEXT_PADDING_LEFT);
 
       // Separator line.
       fill_rect(get_sys_color(brWindowDarkBg), R(0, ry + LAYERS_ROW_H - 1, w, 1));
@@ -200,7 +200,7 @@ static void paint_layers(window_t *win, layers_win_state_t *st) {
   } else {
     // No document open.
     uint32_t hint = get_sys_color(brTextDisabled);
-    draw_text_clipped(FONT_SMALL, "(no document)",
+    draw_text_clipped("Text", "(no document)",
                       &R(4, 0, w - 8, client_h), hint, TEXT_PADDING_LEFT);
   }
 }

@@ -1621,16 +1621,16 @@ void test_label_font_pack_and_measure(void) {
   ASSERT_NOT_NULL(root);
   label_create_params_t params = {
     .color_index = brTextDisabled,
-    .font = FONT_SMALLEST,
+    .font = LABEL_CAPTION,
     .color_set = true,
   };
   window_t *label = create_window("Font test", 0, MAKERECT(0, 0, 1, CONTROL_HEIGHT),
                                   root, win_label, 0, &params);
   ASSERT_NOT_NULL(label);
-  ASSERT_EQUAL(label->frame.w, MAX(1, text_strwidth(FONT_SMALLEST, "Font test") + TEXT_SHADOW_OFFSET));
+  ASSERT_EQUAL(label->frame.w, MAX(1, text_strwidth("Caption", "Font test") + TEXT_SHADOW_OFFSET));
 
   label_create_params_t defaults = {
-    .font = FONT_SMALL,
+    .font = LABEL_TEXT,
     .color_index = 0,
     .color_set = false,
   };
@@ -1641,7 +1641,7 @@ void test_label_font_pack_and_measure(void) {
   ASSERT_EQUAL(get_sys_color(brTransparent), 0u);
 
   label_create_params_t transparent = {
-    .font = FONT_SMALL,
+    .font = LABEL_TEXT,
     .color_index = 0,
     .color_set = true,
   };
@@ -1800,8 +1800,8 @@ void test_new_post_grid_stack_layout(void) {
   ASSERT_EQUAL(flex_left->frame.y, 0);
   ASSERT_EQUAL(cancel->frame.y, 0);
   ASSERT_EQUAL(flex_left->frame.x, 0);
-  ASSERT_TRUE(ok->frame.w >= strwidth("Post") + BUTTON_PADDING * 2);
-  ASSERT_TRUE(cancel->frame.w >= strwidth("Cancel") + BUTTON_PADDING * 2);
+  ASSERT_TRUE(ok->frame.w >= text_strwidth("Text", "Post") + BUTTON_PADDING * 2);
+  ASSERT_TRUE(cancel->frame.w >= text_strwidth("Text", "Cancel") + BUTTON_PADDING * 2);
   ASSERT_EQUAL(ok->frame.x - (flex_left->frame.x + flex_left->frame.w), 6);
   ASSERT_EQUAL(cancel->frame.x, ok->frame.x + ok->frame.w + 6);
   ASSERT_EQUAL(flex_right->frame.x - (cancel->frame.x + cancel->frame.w), 6);
@@ -1907,13 +1907,13 @@ void test_button_keeps_fixed_height_and_centers_in_tall_row(void) {
   ASSERT_NOT_NULL(row);
   ASSERT_EQUAL(btn->frame.h, BUTTON_HEIGHT);
   ASSERT_TRUE(row->frame.h > BUTTON_HEIGHT);
-  ASSERT_TRUE(btn->frame.w >= strwidth("Center Me") + BUTTON_PADDING * 2);
+  ASSERT_TRUE(btn->frame.w >= text_strwidth("Text", "Center Me") + BUTTON_PADDING * 2);
   ASSERT_EQUAL(btn->frame.y, (row->frame.h - BUTTON_HEIGHT) / 2);
 
   resize_window(win, kBtnTallForm.width, 160);
   ASSERT_EQUAL(btn->frame.h, BUTTON_HEIGHT);
   ASSERT_TRUE(row->frame.h > BUTTON_HEIGHT);
-  ASSERT_TRUE(btn->frame.w >= strwidth("Center Me") + BUTTON_PADDING * 2);
+  ASSERT_TRUE(btn->frame.w >= text_strwidth("Text", "Center Me") + BUTTON_PADDING * 2);
   ASSERT_EQUAL(btn->frame.y, (row->frame.h - BUTTON_HEIGHT) / 2);
 
   destroy_window(win);
@@ -1985,11 +1985,11 @@ void test_socialfeed_post_detail_layout(void) {
   ASSERT_NOT_NULL(actions);
   ASSERT_NOT_NULL(flex);
   ASSERT_TRUE(flex->flags & WINDOW_FLEXSPACE);
-  ASSERT_EQUAL(((uint32_t)(uintptr_t)title->userdata >> 8) & 0xffu, FONT_SYSTEM);
+  ASSERT_EQUAL(((uint32_t)(uintptr_t)title->userdata >> 8) & 0xffu, LABEL_TEXT);
   ASSERT_EQUAL((uint32_t)(uintptr_t)title->userdata & 0xffu, brTextNormal);
-  ASSERT_EQUAL(((uint32_t)(uintptr_t)author->userdata >> 8) & 0xffu, FONT_SMALL);
+  ASSERT_EQUAL(((uint32_t)(uintptr_t)author->userdata >> 8) & 0xffu, LABEL_TEXT);
   ASSERT_EQUAL((uint32_t)(uintptr_t)author->userdata & 0xffu, brTextDisabled);
-  ASSERT_EQUAL(((uint32_t)(uintptr_t)body->userdata >> 8) & 0xffu, FONT_SMALL);
+  ASSERT_EQUAL(((uint32_t)(uintptr_t)body->userdata >> 8) & 0xffu, LABEL_TEXT);
   ASSERT_EQUAL((uint32_t)(uintptr_t)body->userdata & 0xffu, brTextNormal);
   ASSERT_EQUAL(meta->frame.y, body->frame.y + body->frame.h + 2);
   ASSERT_EQUAL(author->frame.y, 0);

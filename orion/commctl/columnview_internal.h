@@ -98,7 +98,7 @@ void rv_draw_item_icon(bitmap_strip_t *strip, int icon_id,
 static inline int rv_entry_height(const reportview_data_t *data) {
   int themed = ui_px("TableView::row", "min-height"), row = MAX(ENTRY_HEIGHT, themed);
   if (data && data->cell_style != REPORTVIEW_CELL_COLUMNS)
-    return themed > 0 ? MAX(TWO_LINE_ENTRY_HEIGHT, row + text_char_height(FONT_SMALLEST) + 2) : TWO_LINE_ENTRY_HEIGHT;
+    return themed > 0 ? MAX(TWO_LINE_ENTRY_HEIGHT, row + text_char_height("TableView::detail") + 2) : TWO_LINE_ENTRY_HEIGHT;
   return row;
 }
 

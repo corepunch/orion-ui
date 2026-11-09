@@ -178,7 +178,7 @@ static int tab_icon_gap(tabview_state_t *st) {
 static int tab_width(const char *title, tabview_state_t *st, int idx) {
   if (st && (st->style & TAB_STYLE_ICONS_ONLY))
     return tab_has_icon(st, idx) ? st->strip.icon_w + 8 : TAB_CONTROL_HEIGHT;
-  int w = MAX(ui_px("TabView::tab", "min-width"), strwidth(title) + 2 * ui_px("TabView::tab", "padding-left"));
+  int w = MAX(ui_px("TabView::tab", "min-width"), text_strwidth("TabView::tab", title) + 2 * ui_px("TabView::tab", "padding-left"));
   if (tab_has_icon(st, idx)) w += st->strip.icon_w + tab_icon_gap(st);
   return w;
 }
@@ -188,7 +188,7 @@ static int sidebar_rows_width(window_t *win, tabview_state_t *st) {
   int w = 96;
   for (int i = 0, n = tab_count(win); i < n; i++) {
     int iw = tab_has_icon(st, i) ? st->strip.icon_w + tab_icon_gap(st) : 0;
-    w = MAX(w, strwidth(tab_title(win, i)) + iw + 4 * SIDEBAR_PAD);
+    w = MAX(w, text_strwidth("TabView::tab", tab_title(win, i)) + iw + 4 * SIDEBAR_PAD);
   }
   return w;
 }
@@ -236,11 +236,11 @@ static void draw_tab_item(const char *title, int x, bool selected, tabview_state
     draw_tab_icon(st, idx, x + (w - st->strip.icon_w) / 2, y, h);
     return;
   }
-  int sw = strwidth(title), iw = has_icon ? st->strip.icon_w + tab_icon_gap(st) : 0;
+  int sw = text_strwidth("TabView::tab", title), iw = has_icon ? st->strip.icon_w + tab_icon_gap(st) : 0;
   int content_w = iw + sw;
   int cx = x + (w - content_w) / 2;
   if (has_icon) { draw_tab_icon(st, idx, cx, y, h); cx += iw; }
-  draw_text_small(title, cx, y + (h - CHAR_HEIGHT) / 2,
+  draw_text("TabView::tab", title, cx, y + (h - text_char_height("TabView::tab")) / 2,
                   theme_foreground(THEME_PART_TAB, state));
 }
 
@@ -357,7 +357,7 @@ static result_t win_tabview_list(window_t *win, uint32_t msg, uint32_t wparam, v
           if (i == st->selected) theme_draw(THEME_PART_MENU_ITEM, rect_inset_xy(r, -MENU_CAPSULE_INSET, 0), state);
           int x = r.x + SIDEBAR_PAD;
           if (tab_has_icon(st, i)) { draw_tab_icon(st, i, x, r.y, r.h); x += st->strip.icon_w + tab_icon_gap(st); }
-          draw_text_ellipsized(FONT_SYSTEM, tab_title(tabs, i), x, r.y + (r.h - text_char_height(FONT_SYSTEM)) / 2,
+          draw_text_ellipsized("TabView::tab", tab_title(tabs, i), x, r.y + (r.h - text_char_height("TabView::tab")) / 2,
                                r.x + r.w - SIDEBAR_PAD - x, theme_foreground(THEME_PART_MENU_ITEM, state));
         }
       }
@@ -401,8 +401,8 @@ static bool tab_paint(window_t *win) {
   int selected_x = ui_px("TabView::bar", "padding-left") - st->scroll;
   int x = selected_x;
   if (tab_single_hidden(win, st)) {
-    if (th) draw_text_ellipsized(FONT_SMALL, tab_title(win, 0), ui_px("TabView::tab", "padding-left"),
-      (th - text_char_height(FONT_SMALL)) / 2, MAX(0, tab_available_width(win, st) - 2 * ui_px("TabView::tab", "padding-left")),
+    if (th) draw_text_ellipsized("TabView::tab", tab_title(win, 0), ui_px("TabView::tab", "padding-left"),
+      (th - text_char_height("TabView::tab")) / 2, MAX(0, tab_available_width(win, st) - 2 * ui_px("TabView::tab", "padding-left")),
       get_sys_color(brTextNormal));
   } else {
     for (int i = 0, n = tab_count(win); i < n; i++) {

@@ -182,7 +182,7 @@ static result_t win_status_label(window_t *win, uint32_t msg,
     case evCreate: win->flags |= WINDOW_NOTABSTOP; return true;
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
-      if (m) { m->desired_w = text_strwidth(FONT_SMALL, win->title) + 14; m->desired_h = CONTROL_HEIGHT; }
+      if (m) { m->desired_w = text_strwidth("Text", win->title) + 14; m->desired_h = CONTROL_HEIGHT; }
       return true;
     }
     case evPaint: {
@@ -192,7 +192,7 @@ static result_t win_status_label(window_t *win, uint32_t msg,
       if (icon) vibe_task_read(icon->id, &task); else memset(&task, 0, sizeof(task));
       int dot_y = MAX(0, (win->frame.h - 8) / 2);
       fill_rect(task_status_color(task.status), R(0, dot_y, 8, 8));
-      draw_text_small(win->title, 14, MAX(0, (win->frame.h - CONTROL_HEIGHT) / 2),
+      draw_text("Text", win->title, 14, MAX(0, (win->frame.h - CONTROL_HEIGHT) / 2),
                       get_sys_color(brTextNormal));
       return true;
     }
@@ -433,7 +433,7 @@ static void layout_icons(void) {
   int gap = 10, margin = 12;
   int status_h = 0;
   for (int i = 0; i < (int)ARRAY_LEN(g_status_icons); i++) status_h = MAX(status_h, g_status_icons[i].image_h);
-  int label_h = MAX(text_char_height(FONT_SMALLEST), status_h);
+  int label_h = MAX(text_char_height("Caption"), status_h);
   int icon_w = AGENT_IMAGE_SIZE + ICON_LAYOUT_ARTIFACT_W * 2;
   int icon_h = AGENT_IMAGE_SIZE + label_h;
   int used_w = count * icon_w + (count - 1) * gap;

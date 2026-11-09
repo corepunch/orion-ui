@@ -13,7 +13,7 @@ int control_predefined_height(flags_t flags) {
 }
 
 int control_text_padding_y(flags_t flags) {
-  return MAX(0, (control_predefined_height(flags) - text_char_height(FONT_SMALL)) / 2);
+  return MAX(0, (control_predefined_height(flags) - text_char_height("Text")) / 2);
 }
 
 void control_apply_predefined_height(window_t *win, const char *module) {

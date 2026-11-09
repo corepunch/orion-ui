@@ -38,21 +38,21 @@ void theme_draw_window_chrome(irect16_t titlebar, irect16_t caption,
     caption = rect_trim_right(caption, caption.h);
   }
   caption = rect_trim_left(caption, MODERN_CAPTION_TEXT_INSET);
-  draw_text_small_clipped(title, &caption, title_color, 0);
+  draw_text_clipped("Text", title, &caption, title_color, 0);
 }
 
 void theme_draw_statusbar_text(irect16_t r, const char *text) {
-  if (text) draw_text_clipped(FONT_SMALL, text, &r, get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
+  if (text) draw_text_clipped("StatusBar", text, &r, get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
 }
 
 // Bevelled themes engrave the label and shift it while the button is down.
 void theme_draw_button_label(irect16_t r, const char *text, ctrl_state_t state) {
   bool pressed = (state & (CTRL_PRESSED | CTRL_SELECTED)) && !(state & CTRL_DISABLED);
   if (ui_flag("Button", "text-shadow") && !pressed && !(state & CTRL_DISABLED))
-    draw_text_small(text, r.x + TEXT_SHADOW_OFFSET, r.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
+    draw_text("Text", text, r.x + TEXT_SHADOW_OFFSET, r.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
   int offset = ui_px("Button", "--press-offset");
   if (pressed) r = rect_offset(r, offset, offset);
-  draw_text_small(text, r.x, r.y, theme_css_foreground(THEME_PART_BUTTON, state));
+  draw_text("Text", text, r.x, r.y, theme_css_foreground(THEME_PART_BUTTON, state));
 }
 
 void theme_draw_combobox(irect16_t r, const char *text, ctrl_state_t state) {
@@ -65,7 +65,7 @@ void theme_draw_combobox(irect16_t r, const char *text, ctrl_state_t state) {
                                               icon_size), icon_size, icon_size);
   irect16_t label = rect_trim_right(content, icon_size + icon_padding);
   uint32_t foreground = theme_css_foreground(THEME_PART_COMBOBOX, state);
-  draw_text_clipped(FONT_SMALL, text, &label, foreground, 0);
+  draw_text_clipped("ComboBox", text, &label, foreground, 0);
   draw_theme_icon(THEME_ICON_ARROW_UPDOWN, arrow.x, arrow.y, icon_size, foreground);
 }
 

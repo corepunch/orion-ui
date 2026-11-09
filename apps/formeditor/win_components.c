@@ -130,9 +130,9 @@ static result_t components_drag_ghost_proc(window_t *win, uint32_t msg,
         draw_sprite_region((int)g_tool_strip.tex, R(px, py, FE_TOOL_ICON_SIZE, FE_TOOL_ICON_SIZE),
                            UV_RECT(u0, v0, u1, v1), 0xFFFFFFFF, 0);
       }
-      draw_text(FONT_SMALL, g_ghost.text,
+      draw_text("Text", g_ghost.text,
                 px + FE_TOOL_ICON_SIZE + 6,
-                (h - text_char_height(FONT_SMALL)) / 2,
+                (h - text_char_height("Text")) / 2,
                 0xFFFFFFFF);
       return true;
     }
@@ -164,7 +164,7 @@ static void components_update_ghost(int ident, int sx, int sy) {
   g_ghost.icon = item->icon;
   snprintf(g_ghost.text, sizeof(g_ghost.text), "%s", item->text ? item->text : "");
 
-  int text_w = text_strwidth(FONT_SMALL, g_ghost.text);
+  int text_w = text_strwidth("Text", g_ghost.text);
   int w = FE_TOOL_ICON_SIZE + 14 + text_w;
   int h = MAX(FE_TOOL_ICON_SIZE + 8, FONT_SIZE_SMALL + 10);
   if (w < 48) w = 48;

@@ -1142,7 +1142,7 @@ static void emit_controls_ex(FILE *f, xmlNodePtr parent, const char *form, const
     const char *auto_flex = (elem(c, "space") || (elem(c, "multiedit") && sz.h <= 0)) ? " | WINDOW_FLEXSPACE" : "";
     snprintf(flags, sizeof(flags), "(%s)%s%s%s", resolved, enum_parse_token(a.v[A_ORIENT], kOrient, ARRAY_LEN(kOrient), WINDOW_STACK_VERTICAL) & WINDOW_STACK_HORIZONTAL ? " | WINDOW_STACK_HORIZONTAL" : "", auto_flex, control_size_flag(c));
     snprintf(spacing, sizeof(spacing), "%u", byte_attr(a.v[A_SPACING], ORIONC_DEFAULT_SPACING));
-    snprintf(font, sizeof(font), "%s", eq(a.v[A_FONT], "system") ? "FONT_SYSTEM" : eq(a.v[A_FONT], "smallest") ? "FONT_SMALLEST" : eq(a.v[A_FONT], "title") ? "FONT_TITLE" : eq(a.v[A_FONT], "display") ? "FONT_DISPLAY" : eq(a.v[A_FONT], "heading") ? "FONT_HEADING" : "FONT_SMALL");
+    snprintf(font, sizeof(font), "%s", eq(a.v[A_FONT], "smallest") || eq(a.v[A_FONT], "caption") ? "LABEL_CAPTION" : eq(a.v[A_FONT], "title") ? "LABEL_TITLE" : eq(a.v[A_FONT], "display") ? "LABEL_DISPLAY" : eq(a.v[A_FONT], "heading") ? "LABEL_HEADING" : "LABEL_TEXT");
     snprintf(color, sizeof(color), "%u", (unsigned)enum_parse_token(a.v[A_COLOR], kColors, ARRAY_LEN(kColors), brTextNormal));
     if (elem(c, "tableview")) snprintf(lparam, sizeof(lparam), "&%s_%s_tableview_params", form, nz(a.v[A_NAME], "unnamed"));
     if (elem(c, "activitybar") && (child(c, "toolbar") || xmlHasProp(c, BAD_CAST "labels"))) snprintf(lparam, sizeof(lparam), "&%s_%s_activity_params", form, nz(a.v[A_NAME], "unnamed"));

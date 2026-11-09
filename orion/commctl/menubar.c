@@ -72,7 +72,7 @@ static bool menu_item_is_active(const menu_item_t *it) {
 static int item_label_width(const char *label) {
   if (!label) return 0;
   const char *tab = strchr(label, '\t');
-  return tab ? strnwidth(label, (int)(tab - label)) : strwidth(label);
+  return tab ? text_strnwidth("MenuBar", label, (int)(tab - label)) : text_strwidth("MenuBar", label);
 }
 
 static const char *item_label_shortcut(const char *label) {
@@ -106,11 +106,11 @@ static int popup_items_width(const menu_item_t *items, int item_count,
     if (!menu_item_is_separator(it)) {
       int lw = item_label_width(it->label) + MENU_SIDE_PAD * 2;
       if (menu_item_has_submenu(it)) {
-        lw += strwidth(">") + MENU_HOTKEY_GAP;
+        lw += text_strwidth("MenuBar", ">") + MENU_HOTKEY_GAP;
       } else {
         char hkbuf[128];
         const char *shortcut = item_shortcut(it, accel, hkbuf, sizeof(hkbuf));
-        if (shortcut) lw += MENU_HOTKEY_GAP + strwidth(shortcut);
+        if (shortcut) lw += MENU_HOTKEY_GAP + text_strwidth("MenuBar", shortcut);
       }
       if (lw > w) w = lw;
     }
@@ -220,16 +220,16 @@ static result_t popup_proc(window_t *win, uint32_t msg,
                                                   state);
           uint32_t hotkey_col = hov ? label_col : get_sys_color(brTextDisabled);
           popup_item_paint(R(0, y, win->frame.w, MENU_ITEM_H), it->label,
-                           state, FONT_SYSTEM);
+                           state, "MenuBar");
           if (menu_item_has_submenu(it)) {
-            draw_text_small_clipped(">",
+            draw_text_clipped("MenuBar", ">",
                                    &(irect16_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},
                                    hotkey_col, TEXT_ALIGN_RIGHT);
           } else {
             char hkbuf[128];
             const char *shortcut = item_shortcut(it, pd->accel, hkbuf, sizeof(hkbuf));
             if (shortcut) {
-              draw_text_small_clipped(shortcut,
+              draw_text_clipped("MenuBar", shortcut,
                                      &(irect16_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},
                                      hotkey_col, TEXT_ALIGN_RIGHT);
             }
@@ -430,7 +430,7 @@ static void open_submenu_popup(window_t *popup, popup_data_t *pd, int index) {
 static irect16_t menubar_item_rect(window_t *win, menubar_data_t *data, int index) {
   int grip = win->dock ? (data->vertical ? ui_px("Toolbar::grip", "width") : ui_px("Toolbar::grip", "width")) : 0;
   if (data->vertical) return R(0, grip + index * ui_px("MenuBar", "height"), win->frame.w, ui_px("MenuBar", "height"));
-  return R(data->menu_x[index] - 2 + grip, 0, strwidth(data->menus[index].label) + MENU_LABEL_PAD, ui_px("MenuBar", "height"));
+  return R(data->menu_x[index] - 2 + grip, 0, text_strwidth("MenuBar", data->menus[index].label) + MENU_LABEL_PAD, ui_px("MenuBar", "height"));
 }
 
 static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
@@ -507,7 +507,7 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       for (int i = 0; i < count; i++) {
         data->menus[i].label = ui_tr(defs[i].label);
         data->menu_x[i] = x;
-        x += strwidth(data->menus[i].label) + MENU_LABEL_PAD;
+        x += text_strwidth("MenuBar", data->menus[i].label) + MENU_LABEL_PAD;
       }
       invalidate_window(win);
       return true;
@@ -526,14 +526,14 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     case evDockMeasure: {
       if (!data || !lparam) return false;
       int width = 0;
-      for (int i = 0; i < data->count; i++) width = MAX(width, strwidth(data->menus[i].label) + MENU_LABEL_PAD);
+      for (int i = 0; i < data->count; i++) width = MAX(width, text_strwidth("MenuBar", data->menus[i].label) + MENU_LABEL_PAD);
       *(ipoint16_t *)lparam = (ipoint16_t){MAX(80, width),
         data->vertical ? ui_px("Toolbar::grip", "width") + data->count * ui_px("MenuBar", "height") : ui_px("MenuBar", "height")};
       return true;
     }
     case kMenuBarMessageGetContentWidth:
       if (!data || !data->count) return 4;
-      return (win->dock ? ui_px("Toolbar::grip", "width") : 0) + data->menu_x[data->count - 1] + strwidth(data->menus[data->count - 1].label) + MENU_LABEL_PAD;
+      return (win->dock ? ui_px("Toolbar::grip", "width") : 0) + data->menu_x[data->count - 1] + text_strwidth("MenuBar", data->menus[data->count - 1].label) + MENU_LABEL_PAD;
 
     case evThemeChanged:
       if (!win->dock && !win->parent && win->frame.h != ui_px("MenuBar", "height"))
@@ -561,7 +561,7 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         irect16_t selection = menubar_item_rect(win, data, i);
         // Capsule padding can overlap adjacent hit targets; paint behind all labels.
         if (ui_keyword_is("Menu::item", "--shape", "capsule")) {
-          selection = rect_center(selection, strwidth(data->menus[i].label), selection.h);
+          selection = rect_center(selection, text_strwidth("MenuBar", data->menus[i].label), selection.h);
           selection = rect_inset_xy(selection, -(MENU_CAPSULE_PAD + MENU_CAPSULE_INSET), 0);
         }
         theme_draw(THEME_PART_MENU_ITEM, selection, CTRL_SELECTED);
@@ -570,7 +570,7 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         bool active = (i == data->active_idx);
         irect16_t label_rect = menubar_item_rect(win, data, i);
         if (maximized && label_rect.x + label_rect.w > restore.x) break;
-        draw_text_small_clipped(data->menus[i].label, &label_rect,
+        draw_text_clipped("MenuBar", data->menus[i].label, &label_rect,
                         theme_foreground(THEME_PART_MENU_ITEM,
                                          active ? CTRL_SELECTED : CTRL_NORMAL),
                         TEXT_ALIGN_CENTER);

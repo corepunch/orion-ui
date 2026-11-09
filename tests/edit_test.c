@@ -423,7 +423,7 @@ static void test_edit_leading_icon(void) {
   ASSERT_TRUE(g_ui_runtime.focused == ed);
   ASSERT_EQUAL(ed->cursor_pos, 2);
   ASSERT_EQUAL(g_change_count, 0);
-  int x = TEXTEDIT_PADDING_HORZ + inset + text_strnwidth(FONT_SMALL, ed->title, 2);
+  int x = TEXTEDIT_PADDING_HORZ + inset + text_strnwidth("Text", ed->title, 2);
   send_message(ed, evLeftButtonUp, MAKEDWORD(x, ed->frame.h / 2), NULL);
   ASSERT_EQUAL(ed->cursor_pos, 2);
   send_message(ed, evLeftButtonUp, MAKEDWORD(TEXTEDIT_PADDING_HORZ, ed->frame.h / 2), NULL);
@@ -431,7 +431,7 @@ static void test_edit_leading_icon(void) {
   ASSERT_TRUE(send_message(ed, edSetLeadingIcon, 0, NULL));
   send_message(ed, evMeasure, 0, &after);
   ASSERT_EQUAL(after.desired_w, before.desired_w);
-  x = TEXTEDIT_PADDING_HORZ + text_strnwidth(FONT_SMALL, ed->title, 2);
+  x = TEXTEDIT_PADDING_HORZ + text_strnwidth("Text", ed->title, 2);
   send_message(ed, evLeftButtonUp, MAKEDWORD(x, ed->frame.h / 2), NULL);
   ASSERT_EQUAL(ed->cursor_pos, 2);
   ASSERT_STR_EQUAL(ed->title, text);

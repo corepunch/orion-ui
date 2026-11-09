@@ -13,14 +13,8 @@ text faces come from CSS; controls no longer paint shapes of their own
 
 ## 1. No themes, only style sheets
 
-A theme today is a CSS sheet plus a `theme_t` struct that caches what the sheet
-says. The struct goes:
-
-- Replace the 206 `get_theme()->…` reads with cached style queries at the use
-  site (`ui_style_px("Scrollbar", NULL, "width")`), then delete the fields one
-  group at a time, comparing screenshots after each.
-- Replace the `theme_t` vtable (`draw_part`, `foreground`, `draw_card`, …) with
-  direct calls to the painter; the window chrome and labels become parts.
+- Done: every metric is a computed-style query (`ui_px("Scrollbar", "width")`)
+  and `theme_t` holds no numbers or callbacks, only its sheet.
 - "Switching theme" becomes loading a sheet: `ui_set_stylesheet("porcelain")`.
   The built-in sheets stay embedded; an app may add its own (`gitclient.css`),
   read after the theme's, as a page's sheet follows the user-agent sheet.
@@ -29,14 +23,12 @@ says. The struct goes:
 
 ## 2. Text from CSS, not roles
 
-`FONT_SYSTEM`, `FONT_SMALL`, `FONT_SMALLEST`, `FONT_TITLE`, `FONT_DISPLAY` and
-`FONT_HEADING` (188 call sites) are fixed roles from the bitmap-font era. Each
-control should ask for the font of its own element and part:
+Done: a font is a selector, and each control draws with its element's `font`
+([styling.md](styling.md#type)). Still to come, the text properties:
 `TableView::header { font: 600 11px "IBM Plex Sans"; text-transform: uppercase;
 letter-spacing: .05em }`.
 
-- A font cache keyed by face and size, created on first use, replaces the six
-  role atlases.
+- Done: a font cache keyed by face and size, created on first use.
 - Text properties: `font`, `color`, `text-transform`, `letter-spacing`,
   `text-align`, `line-height`, `text-overflow: ellipsis`, `font-variant-numeric:
   tabular-nums` (figures in tables).

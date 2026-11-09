@@ -122,21 +122,27 @@ An application may add its own sheet, read after the theme's:
 
 ## Type
 
-The text roles are `:root` custom properties in the CSS `font` shorthand
-(weight, size in desktop logical pixels, family), read by `text.c` when the
-theme changes; `base.css` sets IBM Plex Sans:
+A font is a CSS selector: `draw_text("TableView::row", ...)` draws with the
+`font` the sheet gives that element and part, or `:root`'s when it sets none
+(`ui_font_t` is `const char *`). Controls name their own element; free text
+uses the elements `base.css` defines for it: `Text`, `Caption`, `Heading`,
+`Title` and `Display`, as HTML has `p`, `small`, `h3`, `h2` and `h1`. A
+label's `font=` attribute (`caption`, `heading`, `title`, `display`) is its
+class: `Label.title`.
 
-| Property | Role | Used for |
+`base.css` names five sizes as tokens and every element uses one of them:
+
+| Token | Value (Porcelain) | Used by |
 |---|---|---|
-| `--font-system` | `FONT_SYSTEM` | Chrome: menus, buttons, dialogs |
-| `--font-small` | `FONT_SMALL` | Content: list rows, the status bar |
-| `--font-smallest` | `FONT_SMALLEST` | Captions in dense views |
-| `--font-title` | `FONT_TITLE` | A window title in its toolbar |
-| `--font-display` | `FONT_DISPLAY` | The one figure a view exists to show |
-| `--font-heading` | `FONT_HEADING` | Group captions and section headings |
+| `--text` | `400 13px var(--ui-face)` | `:root`, so every control's own text |
+| `--text-caption` | `400 11px` | `Caption`, `TableView::detail`, `Icon`, `IconView::cell`, `Toolbar::label`, `Window::subtitle` |
+| `--text-heading` | `600 12px` | `Heading`, `TableView::group`, `Label.heading` |
+| `--text-title` | `600 18px` | `Title`, `Window::title`, `Label.title` |
+| `--text-display` | `600 24px` | `Display`, `Label.display` |
 
-The face is `share/orion/fonts/<Family without spaces>-<Weight>.ttf`, with
-weights named Thin, ExtraLight, Light, Regular, Medium, SemiBold, Bold,
-ExtraBold and Black (a 400 face may also be `<Family>.ttf`). Sizes are scaled
-for the platform (×1.2 on iOS). A missing face falls back to DejaVu Sans with a
-diagnostic; Classic keeps DejaVu.
+`--ui-face` is IBM Plex Sans; Classic sets DejaVu Sans and its own sizes. The
+face is `share/orion/fonts/<Family without spaces>-<Weight>.ttf`, with weights
+named Thin, ExtraLight, Light, Regular, Medium, SemiBold, Bold, ExtraBold and
+Black (a 400 face may also be `<Family>.ttf`). Sizes are scaled for the
+platform (×1.2 on iOS). Each face and size gets one glyph atlas, made on first
+use; a missing face falls back to DejaVu Sans with a diagnostic.

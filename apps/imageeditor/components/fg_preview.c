@@ -44,7 +44,7 @@ result_t fg_preview_component_proc(window_t *win, uint32_t msg,
       } else {
         fill_rect(get_sys_color(brWorkspaceBg), r);
         irect16_t label = R(0, (r.h - CONTROL_HEIGHT) / 2, r.w, CONTROL_HEIGHT);
-        draw_text_clipped(FONT_SMALL, "Filter Preview", &label,
+        draw_text_clipped("Text", "Filter Preview", &label,
                           get_sys_color(brTextDisabled), TEXT_ALIGN_CENTER);
       }
       fg_preview_draw_outline(r, get_sys_color(brBorderActive));

@@ -393,8 +393,8 @@ typedef struct {
 } scroll_info_t;
 
 // Chrome height constants — derived from FONT_SIZE (defined in kernel/kernel.h).
-// FONT_SIZE (FONT_SYSTEM): 12 at UI_WINDOW_SCALE==1, 8 at scale>=2.
-// FONT_SIZE_SMALL (FONT_SMALL): 12 at UI_WINDOW_SCALE==1, 8 at scale>=2.
+// FONT_SIZE: 12 at UI_WINDOW_SCALE==1, 8 at scale>=2 (the chrome's text height).
+// FONT_SIZE_SMALL: 12 at UI_WINDOW_SCALE==1, 8 at scale>=2 (rows).
 // Content heights (list rows, column-view entries) use FONT_SIZE_SMALL;
 // see commctl/columnview.h.  All values are usable in static initializers.
 // +5 instead of +4 keeps the height odd at both scales so that 9x9 theme

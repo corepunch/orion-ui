@@ -10,7 +10,6 @@
 #include "messages.h"
 #include "user.h"
 #include "theme.h"
-#include "text.h"
 
 uint32_t g_sys_colors[brCount];
 
@@ -108,7 +107,6 @@ bool set_theme(theme_style_t style) {
   g_theme_style_generation++;
   theme_css_apply_palette();
   g_theme_style_generation++;
-  text_apply_theme_fonts();   // the role faces may differ between themes
 
   if (g_ui_runtime.running) {
     post_to_win_tree(g_ui_runtime.windows, evThemeChanged, (uint32_t)style);

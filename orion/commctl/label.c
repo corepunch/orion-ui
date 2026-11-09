@@ -10,14 +10,19 @@
 
 // Label control window procedure.
 // lparam in evCreate may be either:
-//   - NULL: default palette text color + FONT_SMALL
-//   - a small integer palette index: text color only, FONT_SMALL
+//   - NULL: default palette text color, LABEL_TEXT
+//   - a small integer palette index: text color only, LABEL_TEXT
 //   - label_create_params_t*: explicit palette index + font selection
 
+// The label's style is its CSS class.
 static ui_font_t label_font(const window_t *win) {
+  static const char *const k_label_selectors[LABEL_STYLE_COUNT] = {
+    [LABEL_TEXT] = "Label", [LABEL_CAPTION] = "Label.caption", [LABEL_HEADING] = "Label.heading",
+    [LABEL_TITLE] = "Label.title", [LABEL_DISPLAY] = "Label.display",
+  };
   uint32_t packed = (uint32_t)(uintptr_t)(win ? win->userdata : NULL);
-  ui_font_t font = (ui_font_t)((packed >> 8) & 0xffu);
-  return font <= FONT_HEADING ? font : FONT_SMALL;
+  uint32_t style = (packed >> 8) & 0xffu;
+  return k_label_selectors[style < LABEL_STYLE_COUNT ? style : LABEL_TEXT];
 }
 
 static uint32_t label_color(const window_t *win) {
@@ -51,11 +56,11 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       if (lparam && (uintptr_t)lparam > 0x1000) {
         const form_ctrl_def_t *cd = (const form_ctrl_def_t *)lparam;
         uint8_t color_idx = cd->color_set ? cd->color : 0;
-        uint8_t font = cd->font_set ? cd->font : FONT_SMALL;
+        uint8_t font = cd->font_set ? cd->font : LABEL_TEXT;
         win->userdata = (void *)(uintptr_t)label_pack_userdata(color_idx, font, cd->color_set);
       } else {
         uint32_t color_index = (uint32_t)(uintptr_t)lparam;
-        win->userdata = (void *)(uintptr_t)label_pack_userdata(color_index, FONT_SMALL, lparam != NULL);
+        win->userdata = (void *)(uintptr_t)label_pack_userdata(color_index, LABEL_TEXT, lparam != NULL);
       }
       // Single-line labels auto-expand to fit text; multiline labels wrap and
       // should be measured from content instead of the previous frame size.

@@ -389,10 +389,10 @@ void draw_command_link(irect16_t r, const char *text, ctrl_state_t state, uint32
   uint32_t dot = get_sys_color(state & CTRL_DISABLED ? brTextDisabled : brAccent);
   if (state & CTRL_DISABLED) ink = get_sys_color(brTextDisabled);
   fill_rounded_rect(dot, bullet, size / 2);
-  int line = text_char_height(FONT_SMALL), y = label.y + (label.h - line) / 2;
-  draw_text_ellipsized(FONT_SMALL, text, label.x, y, label.w, ink);
+  int line = text_char_height("CommandLink"), y = label.y + (label.h - line) / 2;
+  draw_text_ellipsized("CommandLink", text, label.x, y, label.w, ink);
   if ((state & CTRL_HOVER) && !(state & CTRL_DISABLED))
-    fill_rect(ink, R(label.x, y + line, MIN(text_strwidth(FONT_SMALL, text), label.w), 1));
+    fill_rect(ink, R(label.x, y + line, MIN(text_strwidth("CommandLink", text), label.w), 1));
   if (state & CTRL_FOCUSED) draw_sel_rect(r);
 }
 
@@ -500,12 +500,12 @@ static int status_badge_icon_width(const char *icon) {
 }
 
 int measure_status_badge(const char *text, const char *icon) {
-  return measure_badge(FONT_SYSTEM, text) + status_badge_icon_width(icon);
+  return measure_badge("Badge", text) + status_badge_icon_width(icon);
 }
 
 void draw_status_badge(irect16_t r, const char *text, const char *icon, uint32_t color) {
   int icon_w = status_badge_icon_width(icon);
-  draw_badge_ex(FONT_SYSTEM, "", r, color, color_with_alpha(color, (uint8_t)((int)(ui_number("Badge", "--tint-alpha") * 255.0f + 0.5f))), true);
+  draw_badge_ex("Badge", "", r, color, color_with_alpha(color, (uint8_t)((int)(ui_number("Badge", "--tint-alpha") * 255.0f + 0.5f))), true);
   irect16_t content = rect_inset_xy(r, ui_px("Badge", "padding-left"), 0);
   sysicon_resolved_t glyph;
   if (icon_w && sysicon_resolve_size(icon, ui_px("Badge::icon", "width"), &glyph)) {
@@ -513,7 +513,7 @@ void draw_status_badge(irect16_t r, const char *text, const char *icon, uint32_t
     draw_sprite_region((int)glyph.tex, at, UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1), color, 0);
   }
   irect16_t label = rect_trim_left(content, icon_w);
-  draw_text_clipped(FONT_SYSTEM, text, &label, badge_ink(color), TEXT_ALIGN_CENTER);
+  draw_text_clipped("Badge", text, &label, badge_ink(color), TEXT_ALIGN_CENTER);
 }
 
 void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_color, uint32_t background_color, bool round) {

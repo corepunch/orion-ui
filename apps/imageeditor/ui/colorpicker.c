@@ -159,7 +159,7 @@ static void draw_slider(int idx, const cp_state_t *st) {
   int ty = kSliderY[idx];
 
   // 1-char label
-  draw_text_small(kSliderLbl[idx], CP_LBL_X, ty, get_sys_color(brTextNormal));
+  draw_text("Text", kSliderLbl[idx], CP_LBL_X, ty, get_sys_color(brTextNormal));
 
   // Gradient track
   const int SEGS = (idx == 3) ? 36 : 16;
@@ -181,7 +181,7 @@ static void draw_slider(int idx, const cp_state_t *st) {
   // Numeric value
   char buf[8];
   snprintf(buf, sizeof(buf), "%d", val);
-  draw_text_small(buf, CP_VAL_X, ty, get_sys_color(brTextNormal));
+  draw_text("Text", buf, CP_VAL_X, ty, get_sys_color(brTextNormal));
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -227,14 +227,14 @@ static void drag_slider(cp_state_t *st, int idx, int lx) {
 
 static void paint_cp(const cp_state_t *st) {
   // "New" colour preview
-  draw_text_small("New", CP_PREV_X + 2, CP_NEW_LBL_Y, get_sys_color(brTextDisabled));
+  draw_text("Text", "New", CP_PREV_X + 2, CP_NEW_LBL_Y, get_sys_color(brTextDisabled));
   fill_rect(get_sys_color(brDarkEdge),
             R(CP_PREV_X - 1, CP_NEW_Y - 1, CP_PREV_W + 2, CP_NEW_H + 2));
   fill_rect(st->cur, R(CP_PREV_X,     CP_NEW_Y,
                            CP_PREV_W,      CP_NEW_H));
 
   // "Old" colour preview
-  draw_text_small("Old", CP_PREV_X + 2, CP_OLD_LBL_Y, get_sys_color(brTextDisabled));
+  draw_text("Text", "Old", CP_PREV_X + 2, CP_OLD_LBL_Y, get_sys_color(brTextDisabled));
   fill_rect(get_sys_color(brDarkEdge),
             R(CP_PREV_X - 1, CP_OLD_Y - 1, CP_PREV_W + 2, CP_OLD_H + 2));
   fill_rect(st->orig, R(CP_PREV_X,     CP_OLD_Y,
@@ -250,7 +250,7 @@ static void paint_cp(const cp_state_t *st) {
     draw_slider(i, st);
 
   // User palette
-  draw_text_small("Palette:", CP_PREV_X, CP_PAL_LBL_Y, get_sys_color(brTextDisabled));
+  draw_text("Text", "Palette:", CP_PREV_X, CP_PAL_LBL_Y, get_sys_color(brTextDisabled));
   for (int i = 0; i < NUM_USER_COLORS; i++) {
     int px = CP_PREV_X + i * CP_PAL_SW;
     bool has = (g_app && i < g_app->num_user_colors);

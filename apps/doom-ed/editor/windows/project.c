@@ -36,9 +36,9 @@ result_t win_project(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       for (int i = 0, y = 0; i < items->num_items; i++, y += BUTTON_HEIGHT) {
         if (win->cursor_pos == i) {
           fill_rect(get_sys_color(brTextNormal), R(0, y, win->frame.w, BUTTON_HEIGHT));
-          draw_text_small(items->items[i], 4, y+3, get_sys_color(brControlBg));
+          draw_text("Text", items->items[i], 4, y+3, get_sys_color(brControlBg));
         } else {
-          draw_text_small(items->items[i], 4, y+3, get_sys_color(brTextNormal));
+          draw_text("Text", items->items[i], 4, y+3, get_sys_color(brTextNormal));
         }
       }
       return true;

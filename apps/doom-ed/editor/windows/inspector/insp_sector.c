@@ -67,8 +67,8 @@ result_t win_dummy(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       send_message(win, tbSetItems, sizeof(but)/sizeof(*but), but);      
       return true;
     case evPaint:
-      draw_text_small("Nothing selected", 5, 5, get_sys_color(brDarkEdge));
-      draw_text_small("Nothing selected", 4, 4, get_sys_color(brTextNormal));
+      draw_text("Text", "Nothing selected", 5, 5, get_sys_color(brDarkEdge));
+      draw_text("Text", "Nothing selected", 4, 4, get_sys_color(brTextNormal));
       return true;
     case evCommand:
       if (HIWORD(wparam) != btnClicked) return false;

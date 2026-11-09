@@ -103,7 +103,7 @@ static void grid_paint(window_t *win, reportview_data_t *data) {
   irect16_t cr = get_client_rect(win);
   icon_grid_geom_t g = grid_geom(win, data);
   int icon_sz = data->icon_size;
-  int label_h = text_char_height(FONT_SMALLEST) + 2;
+  int label_h = text_char_height("Caption") + 2;
   int clip_bot = cr.h;
   bitmap_strip_t *strip = data->icon_strip;
   theme_draw(THEME_PART_LIST_BODY, R(0, 0, cr.w, cr.h), CTRL_NORMAL);
@@ -134,7 +134,7 @@ static void grid_paint(window_t *win, reportview_data_t *data) {
     rv_draw_item_icon(strip, data->items[i].icon, &icon_r, icon_col);
 
     uint32_t txt_col = theme_foreground(THEME_PART_ICON_CELL, selected ? CTRL_SELECTED : CTRL_NORMAL);
-    draw_text_clipped(FONT_SMALLEST, data->items[i].text, &label_r,
+    draw_text_clipped("Caption", data->items[i].text, &label_r,
                       txt_col, TEXT_ALIGN_CENTER);
   }
 }
