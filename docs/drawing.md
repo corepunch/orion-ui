@@ -365,10 +365,33 @@ Scener's reel renderer (`apps/scener/reel_draw.c`) is the reference user.
 ### Procedural card surfaces
 
 `theme_draw_ex(THEME_PART_CARD, rect, state | CTRL_PLASTIC, &opts)` paints a tinted
-card using the active theme's material. Most themes use a shallow bevel and an
-inset shadow; Metro uses a flat, square face. Set `opts.color` to the card tint
-in packed `0xAABBGGRR`. `theme_content_rect()` excludes the shadow margin and
-selection ring. (Without `CTRL_PLASTIC` the card is the sheet's box.) Waveforms, artwork and labels draw separately over the surface.
+card as the sheet's `Card::plastic` box (`THEME_PART_CARD_PLASTIC`). Set `opts.color`
+to the tint in packed `0xAABBGGRR`; the sheet receives it as the instance variable
+`--surface`. The look, flat or glossy, and every state is the sheet's:
+
+```css
+Card::plastic {                       /* base.css: the glossy material */
+  margin: 1px;                        /* room for the shadow, kept inside the bounds */
+  border: 1px solid transparent;      /* room for the selection ring */
+  border-radius: var(--card-radius);
+  --gloss: 1; --rim: 0.55; --lift: 0.10; --bevel: 1px;
+  background: plastic(var(--surface, transparent) var(--gloss) var(--rim) var(--lift) var(--bevel) #000000E0);
+}
+Card::plastic:hover { background: color-mix(...); }   /* metro.css: flat, mixed per state */
+Card::plastic:checked { border-color: var(--accent-text); }
+```
+
+`background: plastic(colour gloss rim lift bevel shadow-colour)` is a surface painter
+of the box renderer (`theme_box.c`), next to colours and `linear-gradient()`. It
+paints the whole bounds in one shader pass (`render_plastic_surface`) with the
+border-radius as its corner, the first margin value as the shadow reserved inside
+the bounds, and the box's `:hover`, `:active`, `:checked` and `:disabled` state as
+the shader's response. Themes that want a flat card use a plain `background` with
+per-state `color-mix()` and a `:checked` border colour instead; no C code asks which
+look the theme has. A fully transparent uniform border is not painted and does not
+hide the background beneath it, as in CSS. `theme_content_rect()` returns the margin
+and border of the part. (Without `CTRL_PLASTIC` the card is the sheet's `Card` box.)
+Waveforms, artwork and labels draw separately over the surface.
 
 ## Bitmaps and block transfers (`user/gdi.h`)
 

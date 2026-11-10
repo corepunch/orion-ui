@@ -181,18 +181,19 @@ void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const the
   if (state & CTRL_DISABLED) state &= ~(CTRL_HOVER | CTRL_PRESSED);
   theme_draw_opts_t none = {0};
   if (!opts) opts = &none;
-  bool plastic = (state & CTRL_PLASTIC) != 0;
-  state &= ~CTRL_PLASTIC;
-  if (part == THEME_PART_CARD && plastic) draw_plastic_card(r, state, opts->color);
+  if (part == THEME_PART_CARD && (state & CTRL_PLASTIC)) {
+    ui_style_vars_t tint = {0};
+    ui_style_vars_set_color(&tint, "--surface", opts->color);
+    theme_css_draw_part_vars(THEME_PART_CARD_PLASTIC, r, state & ~CTRL_PLASTIC, NULL, &tint);
+  }
   else if (g_paint_recorder && g_paint_recorder->part) g_paint_recorder->part(part, r, state);
   else theme_css_draw_part(part, r, state, NULL);
 }
 
-// What a part leaves for content: the plastic card's material margin, or any part's margin and border.
+// What a part leaves for content: its margin and border (Card::plastic's for a CTRL_PLASTIC card).
 irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state) {
-  if (part == THEME_PART_CARD && (state & CTRL_PLASTIC))
-    return rect_inset(r, ui_px("Card", "--ring-width") + ui_px("Card", "--shadow-size"));
-  irect16_t in = theme_css_insets_vars(part, state, NULL, NULL);
+  if (part == THEME_PART_CARD && (state & CTRL_PLASTIC)) part = THEME_PART_CARD_PLASTIC;
+  irect16_t in = theme_css_insets_vars(part, state & ~CTRL_PLASTIC, NULL, NULL);
   return R(r.x + in.x, r.y + in.y, r.w - in.x - in.w, r.h - in.y - in.h);
 }
 

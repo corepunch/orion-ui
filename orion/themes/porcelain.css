@@ -130,6 +130,7 @@ Card {
   outline: 1px solid var(--light-edge);
 }
 Card:checked { margin: var(--ring-width); border-radius: var(--card-radius); }
+Card::plastic { border-radius: calc(var(--card-radius) - 1px); }
 
 /* Business tables: 21 px rows under a 24 px header, ruled by hairlines. */
 TableView::header { min-height: 24px; }

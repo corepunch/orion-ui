@@ -39,8 +39,7 @@ Button           { padding-left: var(--control-padding); --press-offset: 0; text
 Menu::item       { --shape: capsule; }
 Card {
   padding: 8px 12px;
-  --highlight-width: 1px; --edge-width: 4px; --ring-width: 1px; --shadow-size: 1px;
-  --plastic: gloss; --plastic-gloss: 1; --plastic-rim: 0.55; --plastic-lift: 0.10; --plastic-shadow: #000000E0;
+  --edge-width: 4px; --ring-width: 1px; --shadow-size: 1px;
 }
 Badge {
   padding-left: 7px;
@@ -89,6 +88,18 @@ Card {
 }
 Card:hover   { background: color-mix(in srgb, var(--card-face), var(--button-hover)); }
 Card:checked { outline: var(--ring-width) solid var(--accent); }
+
+/* A tinted card (Groove's blocks; theme_draw_ex with CTRL_PLASTIC) is the plastic material over its
+   whole bounds. The window's --surface is the tint. The margin is the shadow's room and the border
+   the ring's, as on Card (--shadow-size and --ring-width above); :hover, :active, :checked and
+   :disabled drive the shader. A theme may repaint it flat with a plain background and a border-color. */
+Card::plastic {
+  margin: 1px;
+  border: 1px solid transparent;
+  border-radius: var(--card-radius);
+  --gloss: 1; --rim: 0.55; --lift: 0.10; --bevel: 1px;
+  background: plastic(var(--surface, transparent) var(--gloss) var(--rim) var(--lift) var(--bevel) #000000E0);
+}
 
 /* A status pill: its tone tints the fill, the icon and, mixed with the normal ink, the text. */
 Badge {
