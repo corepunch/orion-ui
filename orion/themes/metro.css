@@ -52,6 +52,11 @@
   --badge-radius: 0;
 }
 
-Card { --highlight-width: 0; --plastic: flat; }
+/* Flat tinted cards: the tint, mixed per state, with the selection ring as the border. */
+Card::plastic          { background: var(--surface, transparent); }
+Card::plastic:hover    { background: color-mix(in srgb, var(--surface, transparent), var(--text-on-color) 13.725%); }
+Card::plastic:active   { background: color-mix(in srgb, var(--surface, transparent), var(--panel-darker) 27.451%); }
+Card::plastic:disabled { background: color-mix(in srgb, var(--surface, transparent), var(--control-bg) 50.196%); }
+Card::plastic:checked  { border-color: var(--accent-text); }
 
 TextEdit { padding-left: 6px; }   /* the text clears the corner: at least 6 px */

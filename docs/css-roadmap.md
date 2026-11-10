@@ -43,8 +43,10 @@ letter-spacing: .05em }`.
   (`Card:checked { outline }`, which now follows the corner radius) and the
   accent edge (`border-left` sharing the rounded silhouette; the rounded-rect
   shader draws it as a browser does, with the elliptical padding edge) come
-  from `base.css`; `draw_card` is gone. Only the plastic material (Groove's
-  block cards) still paints in C.
+  from `base.css`; `draw_card` is gone. The plastic material (Groove's block
+  cards) is `Card::plastic` with `background: plastic(...)`, painted by the box
+  renderer; flat themes give it a plain background instead
+  ([drawing.md](drawing.md)).
 - Done: badges are `Badge` boxes. The tone is an instance variable
   (`window_set_style_var(win, "--tone", ...)`, or `vars` for a table cell), and
   `background: color-mix(in srgb, var(--tone) 15%, transparent)` tints the pill;

@@ -438,31 +438,6 @@ void fill_rounded_rect_edged(uint32_t color, irect16_t r, int radius, uint32_t e
                             MAX(0, radius) * scale, 1.0f, color, edge_color, edge_width * scale);
 }
 
-static plastic_look_t plastic_look(ctrl_state_t state) {
-  return (plastic_look_t){
-    .pressed = !!(state & CTRL_PRESSED), .hover = !!(state & CTRL_HOVER),
-    .selected = !!(state & CTRL_SELECTED), .disabled = !!(state & CTRL_DISABLED),
-    .gloss = ui_number("Card", "--plastic-gloss"), .rim = ui_number("Card", "--plastic-rim"), .lift = ui_number("Card", "--plastic-lift"),
-  };
-}
-
-void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color) {
-  if (!g_ui_runtime.running || r.w <= 0 || r.h <= 0) return;
-  if (ui_keyword_is("Card", "--plastic", "flat")) {
-    irect16_t face = rect_inset(r, ui_px("Card", "--shadow-size"));
-    if (state & CTRL_DISABLED) color = color_mix(color, get_sys_color(brControlBg), 128);
-    else if (state & CTRL_PRESSED) color = color_mix(color, get_sys_color(brPanelDarker), 70);
-    else if (state & CTRL_HOVER) color = color_mix(color, get_sys_color(brTextOnColor), 35);
-    fill_rect(color, face);
-    if (state & CTRL_SELECTED) stroke_rounded_rect(get_sys_color(brAccentText), face, 0, ui_px("Card", "--ring-width"));
-    return;
-  }
-  plastic_look_t look = plastic_look(state);
-  render_plastic_surface(r, ui_radius("Card"), ui_px("Card", "--highlight-width"),
-                          ui_px("Card", "--shadow-size"), &look, color,
-                          ui_color("Card", "--plastic-shadow"));
-}
-
 static int status_badge_icon_width(const char *icon) {
   return icon && icon[0] ? ui_px("Badge::icon", "width") + ui_px("Badge::icon", "margin-right") : 0;
 }

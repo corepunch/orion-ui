@@ -2,6 +2,9 @@
 // its element and part (orion/themes/base.css lists them).
 //
 //   background        a colour, none, or linear-gradient([to bottom,] top, bottom)
+//                     or plastic(colour gloss rim lift bevel shadow-colour): the glossy plastic
+//                     surface, one shader pass over the whole bounds whose shadow stays inside
+//                     the margin; :hover, :active, :checked and :disabled drive the shader
 //   border, border-<side>, border-width/-style/-color, border-<side>-<property>
 //                     solid sides; a uniform border follows the corner radius, and so does
 //                     a lone border-left (an accent edge, clipped by the silhouette)
@@ -51,6 +54,12 @@ typedef struct {
   int outline_width;
   uint32_t outline_color;
   uint32_t color, fill, stroke;
+  struct {                    // background: plastic(...)
+    bool on, pressed, hover, selected, disabled;
+    uint32_t color, shadow_color;
+    float gloss, rim, lift;
+    int bevel;
+  } plastic;
   int glyph;
   int shadow_count;
   struct { bool inset; int dx, dy, blur; uint32_t color; } shadows[4];
@@ -133,6 +142,7 @@ static const struct { const char *element, *part, *classes; } k_part_selectors[T
   [THEME_PART_FLOW_VIEW]              = {"FlowView"},
   [THEME_PART_BADGE]                  = {"Badge"},
   [THEME_PART_BADGE_ICON]             = {"Badge", "icon"},
+  [THEME_PART_CARD_PLASTIC]           = {"Card", "plastic"},
 };
 
 // ── value parsing ─────────────────────────────────────────────────────────────
@@ -283,6 +293,17 @@ static void box_compute(theme_box_t *b, theme_part_t part, ctrl_state_t state, c
       if (comma) *comma = 0;
       if (comma && style_parse_color(first, &b->top) && style_parse_color(comma + 1, &b->bottom)) b->background = b->gradient = true;
       else box_report("background", part, v);
+    } else if (!strncmp(v, "plastic(", 8)) {
+      char *end = strrchr(v, ')');
+      if (end) *end = 0;
+      char *tok[6]; int n = box_tokens(v + 8, tok, 6);
+      if (n == 6 && style_parse_color(tok[0], &b->plastic.color) && style_parse_length(tok[4], &b->plastic.bevel) &&
+          style_parse_color(tok[5], &b->plastic.shadow_color)) {
+        b->plastic.gloss = strtof(tok[1], NULL); b->plastic.rim = strtof(tok[2], NULL); b->plastic.lift = strtof(tok[3], NULL);
+        b->plastic.on = true;
+        b->plastic.pressed = !!(state & CTRL_PRESSED); b->plastic.hover = !!(state & CTRL_HOVER);
+        b->plastic.selected = !!(state & CTRL_SELECTED); b->plastic.disabled = !!(state & CTRL_DISABLED);
+      } else box_report("background", part, v);
     } else if (style_parse_color(v, &b->top)) { b->bottom = b->top; b->background = (b->top >> 24) != 0; }
     else box_report("background", part, v);
   }
@@ -437,6 +458,14 @@ static void box_fill(uint32_t top, uint32_t bottom, bool gradient, irect16_t r, 
 }
 
 static void box_paint(const theme_box_t *b, irect16_t r) {
+  if (b->plastic.on) {
+    const int *pr = b->radius;
+    float radius = pr[0] < 0 || pr[1] < 0 || pr[2] < 0 || pr[3] < 0 ? 9999.0f : (float)MAX(MAX(pr[0], pr[1]), MAX(pr[2], pr[3]));
+    plastic_look_t look = {.pressed = b->plastic.pressed, .hover = b->plastic.hover, .selected = b->plastic.selected,
+                           .disabled = b->plastic.disabled, .gloss = b->plastic.gloss, .rim = b->plastic.rim, .lift = b->plastic.lift};
+    render_plastic_surface(r, radius, (float)b->plastic.bevel, (float)b->margin[0], &look, b->plastic.color, b->plastic.shadow_color);
+    return;
+  }
   r = R(r.x + b->margin[3], r.y + b->margin[0], r.w - b->margin[1] - b->margin[3], r.h - b->margin[0] - b->margin[2]);
   if (r.w <= 0 || r.h <= 0) return;
   const int *rad = b->radius;
@@ -458,7 +487,7 @@ static void box_paint(const theme_box_t *b, irect16_t r) {
                      b->shadows[i].color);
   }
   bool opaque = b->background && (b->top >> 24) == 0xFF && (b->bottom >> 24) == 0xFF;
-  if (uniform && bw[0] > 0 && (opaque || (radius > 0 && !top_only))) {
+  if (uniform && bw[0] > 0 && (b->border_color[0] >> 24) != 0 && (opaque || (radius > 0 && !top_only))) {
     uint32_t edge = b->border_color[0];
     if (opaque) {   // the face covers the middle of the edge-coloured shape
       box_fill(edge, edge, false, r, radius, top_only);

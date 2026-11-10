@@ -56,13 +56,11 @@ static inline uint32_t color_mix(uint32_t a, uint32_t b, uint8_t amount) {
   }
   return out;
 }
-// A Card is a CSS box (theme_draw_in(win, THEME_PART_CARD, ...), base.css); only the plastic material
-// (Groove's block cards) has a painter of its own.
-// Framework internals behind theme_draw_ex(CTRL_PLASTIC); controls and apps never call these directly.
-// Single shader pass; shadow is reserved inside r, so controls never paint outside their bounds.
-void draw_plastic_card(irect16_t r, ctrl_state_t state, uint32_t color);
+// A Card is a CSS box (theme_draw_in(win, THEME_PART_CARD, ...), base.css); Card::plastic (Groove's
+// block cards, theme_draw_ex with CTRL_PLASTIC) is the same kind of box with `background: plastic(...)`,
+// which the box renderer (theme_box.c) hands to the shader: one pass, its shadow reserved inside r.
 // Kernel entry point: plain floats only, so the renderer knows nothing about control state.
-// pressed/hover/selected/disabled are 0..1; gloss/rim/lift come from theme_t.plastic.
+// pressed/hover/selected/disabled are 0..1; gloss/rim/lift come from the sheet's plastic().
 typedef struct {
   float pressed, hover, selected, disabled;
   float gloss, rim, lift;

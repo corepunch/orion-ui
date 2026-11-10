@@ -101,7 +101,7 @@ typedef enum {
   CTRL_DISABLED = 1 << 3,   // input disabled; takes priority over transient states
   CTRL_FOCUSED  = 1 << 4,   // keyboard focus ring required
   CTRL_DEFAULT  = 1 << 5,   // primary action / default button
-  CTRL_PLASTIC  = 1 << 6,   // paint a card with the theme's plastic material
+  CTRL_PLASTIC  = 1 << 6,   // paint a card as Card::plastic, the sheet's tinted material
   CTRL_MULTILINE = 1 << 7,  // field contains multiple lines
   CTRL_INACTIVE = 1 << 8,   // selected, but keyboard focus is elsewhere: a quieter selection
 } ctrl_state_t;
@@ -199,6 +199,7 @@ typedef enum {
   THEME_PART_FLOW_VIEW,
   THEME_PART_BADGE,          // a status pill, toned by --tone
   THEME_PART_BADGE_ICON,     // the glyph before its text (fill is the icon's colour)
+  THEME_PART_CARD_PLASTIC,   // Card::plastic, what THEME_PART_CARD paints with CTRL_PLASTIC; its tint is the instance variable --surface
   THEME_PART_COUNT,
 } theme_part_t;
 
@@ -263,9 +264,9 @@ uint32_t theme_fill_with(const window_t *win, const ui_style_vars_t *vars, theme
 
 // Extra inputs for parts whose look depends on more than bounds and state.
 typedef struct {
-  uint32_t color;       // card plastic tint
+  uint32_t color;       // the plastic card's tint, handed to its sheet as --surface
 } theme_draw_opts_t;
-// theme_draw() with opts; CTRL_PLASTIC in state selects the card material.
+// theme_draw() with opts; CTRL_PLASTIC in state paints the card as Card::plastic.
 void theme_draw_ex(theme_part_t part, irect16_t r, ctrl_state_t state, const theme_draw_opts_t *opts);
 // The area a part leaves for content (≈ GetThemeBackgroundContentRect).
 irect16_t theme_content_rect(theme_part_t part, irect16_t r, ctrl_state_t state);

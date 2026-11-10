@@ -91,10 +91,11 @@ static void test_navy_theme_palette(void) {
   ASSERT_TRUE(set_theme(THEME_METRO));
   ASSERT_EQUAL(get_sys_color(brAccent), WEB(0x0078D7));
   ASSERT_EQUAL(ui_radius("Card"), 0);
-  ASSERT_TRUE(ui_keyword_is("Card", "--plastic", "flat"));
+  char bg[96];
+  ASSERT_TRUE(ui_string("Card::plastic", "background", bg, sizeof(bg)) && strncmp(bg, "plastic(", 8));
   ASSERT_EQUAL(theme_foreground(THEME_PART_TOOLBAR_BUTTON, CTRL_DEFAULT), get_sys_color(brAccentText));
   ASSERT_TRUE(set_theme(THEME_MODERN));
-  ASSERT_FALSE(ui_keyword_is("Card", "--plastic", "flat"));
+  ASSERT_TRUE(ui_string("Card::plastic", "background", bg, sizeof(bg)) && !strncmp(bg, "plastic(", 8));
   test_env_shutdown();
   PASS();
 }
