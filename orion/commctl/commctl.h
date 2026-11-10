@@ -20,6 +20,7 @@ void register_commctl_classes(void);
 // callers choose a CONTROL_SIZE_* style instead of supplying pixel heights.
 int  control_predefined_height(flags_t flags);
 int  control_text_padding_y(flags_t flags);
+int  edit_padding_x(const window_t *win);   // TextEdit padding-left: the text clears the field's ends
 void control_apply_predefined_height(window_t *win, const char *module);
 bool control_arrange_predefined_height(window_t *win, const layout_arrange_t *arrange);
 

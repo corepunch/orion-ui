@@ -139,4 +139,5 @@ TableView::row    { min-height: 21px; --divider-width: 1px; }
 TableView::group  { background: var(--window-dark-bg); color: var(--text-normal); }
 TableView::header { color: var(--text-secondary); }
 
+SpeechBubble { padding: 7px 11px; }
 TextEdit { padding-left: 6px; }   /* the text clears the corner: at least 6 px */

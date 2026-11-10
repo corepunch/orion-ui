@@ -20,7 +20,6 @@
 #include "commctl.h"
 
 #define ME_INITIAL_SIZE 2048
-#define ME_MIN_WIDTH  80
 
 typedef struct {
   char *buf;
@@ -120,9 +119,12 @@ static void me_ensure_visible(ui_font_t font, me_state_t *s, int max_w, int vis_
 // Text-area dimensions in client pixels (scrollbar strip excluded when visible).
 // Uses win->frame.w directly (not get_client_rect) because multiedit draws into
 // the full frame without a title bar; only the vertical scrollbar strip is carved out.
+static int me_gutter(void) { return ui_px("Scrollbar", "width"); }
+static int me_min_width(const window_t *win) { return ui_px(ui_selector(win, "TextEdit"), "min-width"); }
+
 static void me_text_dims(window_t *win, int *tw, int *th) {
   bool has_v = (win->flags & WINDOW_VSCROLL) && win->vscroll.visible;
-  *tw = win->frame.w - (has_v ? ui_px("Scrollbar", "width") : 0) - TEXTEDIT_PADDING_HORZ * 2;
+  *tw = win->frame.w - (has_v ? me_gutter() : 0) - edit_padding_x(win) * 2;
   *th = win->frame.h - control_text_padding_y(win->flags) * 2;
   if (*tw < 1) *tw = 1;
   if (*th < 1) *th = 1;
@@ -133,12 +135,12 @@ static void me_text_dims(window_t *win, int *tw, int *th) {
 static void me_sync_scrollbar(window_t *win, me_state_t *s) {
   if (!(win->flags & WINDOW_VSCROLL)) return;
   int tw, th;
-  tw = MAX(1, win->frame.w - TEXTEDIT_PADDING_HORZ * 2);
+  tw = MAX(1, win->frame.w - edit_padding_x(win) * 2);
   th = MAX(1, win->frame.h - control_text_padding_y(win->flags) * 2);
   int total_h = calc_text_height_font(ui_selector(win, "TextEdit"), s->buf, tw);
   bool needs_scroll = (total_h > th);
   if (needs_scroll) {
-    tw = MAX(1, tw - ui_px("Scrollbar", "width"));
+    tw = MAX(1, tw - me_gutter());
     total_h = calc_text_height_font(ui_selector(win, "TextEdit"), s->buf, tw);
   }
   int max_scroll = needs_scroll ? (total_h - th) : 0;
@@ -184,12 +186,12 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m) {
-        int avail_w = m->avail_w > 0 ? m->avail_w : ME_MIN_WIDTH;
-        if (avail_w < ME_MIN_WIDTH) avail_w = ME_MIN_WIDTH;
-        m->desired_w = MAX(ME_MIN_WIDTH,
-                           text_strwidth(ui_selector(win, "TextEdit"), win->title) + TEXTEDIT_PADDING_HORZ * 2);
+        int avail_w = m->avail_w > 0 ? m->avail_w : me_min_width(win);
+        if (avail_w < me_min_width(win)) avail_w = me_min_width(win);
+        m->desired_w = MAX(me_min_width(win),
+                           text_strwidth(ui_selector(win, "TextEdit"), win->title) + edit_padding_x(win) * 2);
         m->desired_h = MAX(text_char_height(ui_selector(win, "TextEdit")) * 4,
-                           calc_text_height_font(ui_selector(win, "TextEdit"), s ? s->buf : win->title, MAX(1, avail_w - TEXTEDIT_PADDING_HORZ * 2)) + control_text_padding_y(win->flags) * 2);
+                           calc_text_height_font(ui_selector(win, "TextEdit"), s ? s->buf : win->title, MAX(1, avail_w - edit_padding_x(win) * 2)) + control_text_padding_y(win->flags) * 2);
         if (!(win->flags & WINDOW_FLEXSPACE) && win->layout.layout_fixed_h > 0)
           m->desired_h = win->layout.layout_fixed_h;
       }
@@ -221,7 +223,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
 
       int tw, th;
       me_text_dims(win, &tw, &th);
-      int tx = TEXTEDIT_PADDING_HORZ;
+      int tx = edit_padding_x(win);
       int ty = control_text_padding_y(win->flags);
 
       set_clip_rect(win, R(tx, ty, tw, th));
@@ -254,7 +256,7 @@ result_t win_multiedit(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       int tw, th;
       me_text_dims(win, &tw, &th);
       // wparam carries client-local x (LOWORD) and y (HIWORD).
-      int lx = (int)(int16_t)LOWORD(wparam) - TEXTEDIT_PADDING_HORZ;
+      int lx = (int)(int16_t)LOWORD(wparam) - edit_padding_x(win);
       int ly = (int)(int16_t)HIWORD(wparam) - control_text_padding_y(win->flags);
       int target_y = (ly / text_char_height(ui_selector(win, "TextEdit"))) * text_char_height(ui_selector(win, "TextEdit"));
       if (target_y < 0) target_y = 0;
