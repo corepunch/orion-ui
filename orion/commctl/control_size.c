@@ -34,3 +34,5 @@ bool control_arrange_predefined_height(window_t *win, const layout_arrange_t *a)
   win->frame.y = a->rect.y + MAX(0, (a->rect.h - win->frame.h) / 2);
   return true;
 }
+
+int edit_padding_x(const window_t *win) { return ui_px(ui_selector(win, "TextEdit"), "padding-left"); }

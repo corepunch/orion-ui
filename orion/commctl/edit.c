@@ -9,7 +9,6 @@
 #include "commctl.h"
 
 #define BUFFER_SIZE 512
-#define TEXTEDIT_MIN_WIDTH  80
 
 // Helper function (will be moved to ui/user/window.c later)
 extern window_t *get_root_window(window_t *window);
@@ -20,20 +19,19 @@ typedef struct {
   bool edited;     // typed into since the text was last submitted (edUpdate)
 } textedit_t;
 
-#define TEXTEDIT_ICON_GAP 6
-
 // Inset by the vertical margin on the left too, so the icon sits centred in the
 // rounded end of a capsule field.
 static irect16_t textedit_icon_rect(window_t *win) {
-  int size = MIN(20, MAX(0, win->frame.h - 4)), inset = (win->frame.h - size) / 2;
+  const char *sel = ui_selector(win, "TextEdit");
+  int size = MIN(ui_px(sel, "--icon-size"), MAX(0, win->frame.h - 2 * ui_px(sel, "--icon-margin"))), inset = (win->frame.h - size) / 2;
   return R(inset, inset, size, size);
 }
 
 static int textedit_text_x(window_t *win) {
   const textedit_t *te = win->userdata;
-  if (!te || !te->leading_icon[0]) return TEXTEDIT_PADDING_HORZ;
+  if (!te || !te->leading_icon[0]) return edit_padding_x(win);
   irect16_t icon = textedit_icon_rect(win);
-  return icon.x + icon.w + TEXTEDIT_ICON_GAP;
+  return icon.x + icon.w + ui_px(ui_selector(win, "TextEdit"), "--icon-gap");
 }
 
 static void notify_change(window_t *win) {
@@ -82,14 +80,14 @@ static int edit_next(const char *text, int at) {
 result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate:
-      win->frame.w = MAX(win->frame.w, text_strwidth(ui_selector(win, "TextEdit"), win->title) + TEXTEDIT_PADDING_HORZ* 2);
+      win->frame.w = MAX(win->frame.w, text_strwidth(ui_selector(win, "TextEdit"), win->title) + edit_padding_x(win) * 2);
       control_apply_predefined_height(win, "textedit");
       return true;
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (m) {
-        m->desired_w = MAX(TEXTEDIT_MIN_WIDTH,
-                           text_strwidth(ui_selector(win, "TextEdit"), win->title) + textedit_text_x(win) + TEXTEDIT_PADDING_HORZ);
+        m->desired_w = MAX(ui_px(ui_selector(win, "TextEdit"), "min-width"),
+                           text_strwidth(ui_selector(win, "TextEdit"), win->title) + textedit_text_x(win) + edit_padding_x(win));
         m->desired_h = control_predefined_height(win->flags);
       }
       return true;
@@ -110,7 +108,7 @@ result_t win_textedit(window_t *win, uint32_t msg, uint32_t wparam, void *lparam
         draw_sysicon(te->leading_icon, icon.x, icon.y, icon.w, get_sys_color(state & CTRL_DISABLED ? brTextDisabled : brTextSecondary));
       }
       if (!win->title[0] && te && te->placeholder[0])
-        draw_text_ellipsized(ui_selector(win, "TextEdit"), te->placeholder, text_x, text_y, MAX(0, local.w - text_x - TEXTEDIT_PADDING_HORZ), get_sys_color(brTextSecondary));
+        draw_text_ellipsized(ui_selector(win, "TextEdit"), te->placeholder, text_x, text_y, MAX(0, local.w - text_x - edit_padding_x(win)), get_sys_color(brTextSecondary));
       draw_text(ui_selector(win, "TextEdit"), win->title, text_x, text_y, get_sys_color(brTextNormal));
       if (g_ui_runtime.focused == win && window_has_state(win, WINDOW_STATE_EDITING)) {
         theme_draw_in(win, THEME_PART_CARET, R(text_x + text_strnwidth(ui_selector(win, "TextEdit"), win->title, win->cursor_pos), text_y, 2, th),

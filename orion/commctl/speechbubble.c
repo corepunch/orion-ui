@@ -3,12 +3,17 @@
 #include <stdio.h>
 #include <orion/user/draw.h>
 
+// The sheet's SpeechBubble box: shadow room, then padding; the tail adds to the bottom.
 static void speechbubble_padding(window_t *win) {
-  int shadow = ui_px(ui_selector(win, "SpeechBubble"), "--shadow-size");
-  int x = MAX(ui_px("Tooltip", "padding-left"), ui_px("Card", "padding-left"));
-  int y = MAX(ui_px("Tooltip", "padding-top"), ui_px("Card", "padding-top"));
-  win->layout.layout_padding = R(shadow + x, shadow + y, shadow + x,
-                                 shadow + y + ui_px(ui_selector(win, "SpeechBubble"), "--tail-length"));
+  const char *sel = ui_selector(win, "SpeechBubble");
+  int shadow = ui_px(sel, "--shadow-size"), x = ui_px(sel, "padding-left"), y = ui_px(sel, "padding-top");
+  win->layout.layout_padding = R(shadow + x, shadow + y, shadow + x, shadow + y + ui_px(sel, "--tail-length"));
+}
+
+// The tail's nearest approach to either end: past the shadow, the rounded corner and the tail's own width.
+static int speechbubble_tail_margin(window_t *win) {
+  const char *sel = ui_selector(win, "SpeechBubble");
+  return ui_px(sel, "--shadow-size") + ui_radius(sel) + ui_px(sel, "--tail-width");
 }
 
 result_t win_speechbubble(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -34,7 +39,7 @@ result_t win_speechbubble(window_t *win, uint32_t msg, uint32_t wparam, void *lp
       speechbubble_padding(win);
       break;
     case evPaint: {
-      int margin = ui_px(ui_selector(win, "SpeechBubble"), "--shadow-size") + ui_radius(ui_selector(win, "SpeechBubble")) + ui_px(ui_selector(win, "SpeechBubble"), "--tail-width");
+      int margin = speechbubble_tail_margin(win);
       int offset = win->value ? (int)win->value : win->frame.w / 2;
       offset = MAX(margin, MIN(offset, win->frame.w - margin));
       draw_speech_bubble(get_client_rect(win), offset, TOOLTIP_TAIL_BOTTOM);
