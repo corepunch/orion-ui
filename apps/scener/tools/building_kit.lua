@@ -1,4 +1,4 @@
--- Building kit for Scener, Lua edition. Same API and same output as building_kit.py: a building is a
+-- Building kit for Scener, Lua edition (profiles through modifiers: see building_kit.py). Same API and same output as building_kit.py: a building is a
 -- function drawing into a Kit in pivot-local, whole-tile coordinates (X = u, Y = -v, Z up, 1 unit =
 -- 1 tile) and the kit writes Scener XML (Y up, centimetres): (x, y, z) tiles -> (x, z, -y) * TILE.
 -- Run under Lua 5.4: lua gen_nile_buildings.lua [out.blks]
@@ -9,7 +9,7 @@ local pi, sin, cos, sqrt, atan, acos, floor, abs, min, max =
 local fmt = string.format
 
 local TILE, G = 160.0, 0.1
-local SOLID_ROUND, THIN = 0.45, 1.5
+local SOLID_ROUND, THIN, HALF = 0.45, 1.5, 50.0
 M.TILE, M.G = TILE, G
 
 -- material -> {shininess, bevel width in tiles, unlit}
@@ -49,6 +49,11 @@ local function f(v)
   if s == "-0" or s == "" then return "0" end
   return s
 end
+local function f4(v)
+  local s = fmt("%.4f", v):gsub("0+$", ""):gsub("%.$", "")
+  if s == "-0" or s == "" then return "0" end
+  return s
+end
 local function v3(a, b, c) return f(a) .. " " .. f(b) .. " " .. f(c) end
 local function rgb(c) return fmt("%.3f %.3f %.3f", c[1], c[2], c[3]) end
 local function attrs(pairs_)
@@ -85,55 +90,74 @@ end
 
 local function pos(x, y, z) return v3(x * TILE, z * TILE, -y * TILE) end
 
+-- Solids: every shape is a profile (line, rect, circle, revolved curve) put through modifiers.
+
+-- A 2D profile extruded `depth` cm along local Z, bevelled, then deformed by `mods`.
+function Kit:solid(tag, pattrs, depth, p, mat, col, rot, mods)
+  self:emit(fmt('<%s%s%s%s%s>%s%s</%s>', tag, attrs(pattrs), attrs({{"pos", p}}), attrs(rot or {}), attrs(self:look(mat, col)),
+    fmt('<extrude amount="%s"/>', f(depth)), mods or "", tag))
+end
+
+-- Corner radius and rim bevel (cm) for a piece with cross-section a x b tiles and extruded depth cm.
+local function rounded(mat, a, b, depth)
+  local rad = min(MATERIALS[mat][2] * TILE, SOLID_ROUND * min(a, b) * TILE)
+  if rad >= .8 and depth >= 2.4 then return rad, min(.85 * rad, SOLID_ROUND * depth) end
+  return 0, 0
+end
+
+-- A box as a rect (or rounded-rect) of a x b tiles, extruded `depth` cm, with the kit's bevels.
+function Kit:prism(mat, p, a, b, depth, col, rot, mods)
+  local rad, bev = rounded(mat, a, b, depth)
+  local size = {"size", f(a * TILE) .. " " .. f(b * TILE)}
+  if rad == 0 then return self:solid("rect", {size}, depth, p, mat, col, rot, mods) end
+  local bevel = fmt('<bevel amount="%s" bevelSegments="3"/>', f(bev))
+  return self:solid("rounded-rect", {size, {"radius", f(rad)}, {"segments", 4}}, depth, p, mat, col, rot, bevel .. (mods or ""))
+end
+
 function Kit:box(mat, x, y, z, sx, sy, sz, col, rz)
   rz = rz or 0
-  local bev = MATERIALS[mat][2] * TILE
-  local rad = min(bev, SOLID_ROUND * min(sx, sz) * TILE)
-  local rot = rz ~= 0 and {{"rot", v3(0, deg(rz), 0)}} or {}
-  local p = {"pos", v3(x * TILE, (z + sz / 2) * TILE, y * TILE * -1)}
-  if rad < .8 or sy * TILE < 2.4 then
-    self:emit(fmt('<box%s size="%s"%s%s/>', attrs({p}), v3(sx * TILE, sz * TILE, sy * TILE), attrs(rot), attrs(self:look(mat, col))))
-    return
-  end
-  local b = min(.85 * rad, SOLID_ROUND * sy * TILE)
-  self:emit(fmt('<rounded-rect%s size="%s %s" radius="%s" segments="4"%s%s><extrude amount="%s"/><bevel amount="%s" bevelSegments="3"/></rounded-rect>',
-    attrs({p}), f(sx * TILE), f(sz * TILE), f(rad), attrs(rot), attrs(self:look(mat, col)), f(sy * TILE), f(b)))
+  self:prism(mat, v3(x * TILE, (z + sz / 2) * TILE, -y * TILE), sx, sz, sy * TILE, col, rz ~= 0 and {{"rot", v3(0, deg(rz), 0)}} or {})
 end
 
 function Kit:beam(mat, a, b, w, d, col)
   local dx, dy, dz = b[1] - a[1], b[2] - a[2], b[3] - a[3]
   local L = sqrt(dx * dx + dy * dy + dz * dz)
-  local yaw, pitch = atan(dy, dx), atan(dz, math.sqrt(dx * dx + dy * dy))
+  local yaw, pitch = atan(dy, dx), atan(dz, sqrt(dx * dx + dy * dy))
   local mx, my, mz = (a[1] + b[1]) / 2, (a[2] + b[2]) / 2, (a[3] + b[3]) / 2
   self:open("group", {{"pos", v3(mx * TILE, mz * TILE, -my * TILE)}, {"rot", v3(0, deg(yaw), 0)}})
-  self:emit(fmt('<box size="%s" rot="%s"%s/>', v3(L * TILE, d * TILE, w * TILE), v3(0, 0, deg(pitch)), attrs(self:look(mat, col))))
+  self:prism(mat, "0 0 0", L, d, w * TILE, col, {{"rot", v3(0, 0, deg(pitch))}})
   self:close("group")
 end
 
-function Kit:tube(mat, a, b, r0, r1, col, n, smooth)
+-- A circle extruded along the tube and tapered from radius r0 at a to r1 at b.
+function Kit:tube(mat, a, b, r0, r1, col, n)
   n = n or 10
   local dx, dy, dz = b[1] - a[1], b[2] - a[2], b[3] - a[3]
   local L = sqrt(dx * dx + dy * dy + dz * dz)
   local mx, my, mz = (a[1] + b[1]) / 2, (a[2] + b[2]) / 2, (a[3] + b[3]) / 2
-  local tail = (smooth == false and ' smooth="0"' or "")
-  local cone = fmt('<cone%%s radius="%s" radiusTop="%s" height="%s" sides="%d"%s%s/>', f(r0 * TILE), f(r1 * TILE), f(L * TILE), n, tail, attrs(self:look(mat, col)))
+  local ratio = r1 / r0
+  local t = (ratio - 1) / (ratio + 1)
+  local bev = min(.35 * min(r0, r1) * TILE, SOLID_ROUND * L * TILE)
+  local mods = (bev >= .6 and fmt('<bevel amount="%s" bevelSegments="2"/>', f(bev)) or "") ..
+    (abs(t) > .001 and fmt('<taper amount="%s" axis="z"/>', f4(t)) or "")
   local tilt = deg(acos(max(-1, min(1, dz / L))))
+  local p = v3(mx * TILE, mz * TILE, -my * TILE)
+  local circle = {{"radius", f(r0 * TILE / (1 - t))}, {"segments", max(8, n)}}
   if tilt < .01 then
-    self:emit(fmt(cone, fmt(' pos="%s"', pos(mx, my, mz))))
+    self:solid("circle", circle, L * TILE, p, mat, col, {{"rot", "-90 0 0"}}, mods)
     return
   end
-  self:open("group", {{"pos", v3(mx * TILE, mz * TILE, -my * TILE)}, {"rot", v3(0, deg(atan(dy, dx)), 0)}})
-  self:emit(fmt(cone, fmt(' rot="%s"', v3(0, 0, -tilt))))
+  self:open("group", {{"pos", p}, {"rot", v3(0, deg(atan(dy, dx)), 0)}})
+  self:open("group", {{"rot", v3(0, 0, -tilt)}})
+  self:solid("circle", circle, L * TILE, "0 0 0", mat, col, {{"rot", "-90 0 0"}}, mods)
+  self:close("group")
   self:close("group")
 end
 
-function Kit:lathe(mat, x, y, z, prof, col, n, sx, sy)
-  n, sx, sy = n or 18, sx or 1, sy or 1
+-- Revolves a profile of {radius, height} cm pairs about the vertical axis; identical profiles share one shape.
+function Kit:revolve(prof, p, scale, segments, look, rot)
   local parts = {}
-  for i, p in ipairs(prof) do
-    local r = p[1] * TILE
-    parts[i] = f(r < .3 and 0 or r) .. "," .. f(p[2] * TILE)
-  end
+  for i, q in ipairs(prof) do parts[i] = f(q[1] < .3 and 0 or q[1]) .. "," .. f(q[2]) end
   local key = table.concat(parts, " ")
   local sid = self.shapes.ids[key]
   if not sid then
@@ -141,16 +165,27 @@ function Kit:lathe(mat, x, y, z, prof, col, n, sx, sy)
     self.shapes.ids[key] = sid
     self.shapes.order[#self.shapes.order + 1] = key
   end
-  local scale = (sx ~= 1 or sy ~= 1) and {{"scale", v3(sx, 1, sy)}} or {}
-  if type(col) == "function" then col = col(prof[#prof // 2 + 1][2]) end
-  self:emit(fmt('<lathe shape="%s" segments="%d" pos="%s"%s%s/>', sid, n, pos(x, y, z), attrs(scale), attrs(self:look(mat, col))))
+  self:emit(fmt('<lathe shape="%s" segments="%d"%s%s%s/>', sid, segments,
+    attrs(cat({{"pos", p}}, scale and {{"scale", scale}} or {})), attrs(rot or {}), attrs(look)))
 end
 
-function Kit:ball(mat, x, y, z, r, col, n, sx, sy, sz)
+function Kit:lathe(mat, x, y, z, prof, col, n, sx, sy)
+  n, sx, sy = n or 18, sx or 1, sy or 1
+  if type(col) == "function" then col = col(prof[#prof // 2 + 1][2]) end
+  local cm = {}
+  for i, q in ipairs(prof) do cm[i] = {q[1] * TILE, q[2] * TILE} end
+  self:revolve(cm, v3(x * TILE, z * TILE, -y * TILE), (sx ~= 1 or sy ~= 1) and v3(sx, 1, sy) or nil, n, self:look(mat, col))
+end
+
+-- A sphere is a revolved half-circle: one 100 cm profile shared by all, scaled to the radii.
+function Kit:ball(mat, x, y, z, r, col, n, sx, sy, sz, rot)
   n, sx, sy, sz = n or 12, sx or 1, sy or 1, sz or 1
   if type(col) == "function" then col = col(r) end
-  self:emit(fmt('<ellipsoid pos="%s" radii="%s" rings="%d" slices="%d"%s/>',
-    pos(x, y, z), v3(r * sx * TILE, r * sz * TILE, r * sy * TILE), max(4, n // 2), n, attrs(self:look(mat, col))))
+  local rings = max(4, n // 2)
+  local prof = {}
+  for i = 0, rings do prof[i + 1] = {HALF * sin(pi * i / rings), HALF * (1 - cos(pi * i / rings))} end
+  local k = TILE / HALF
+  self:revolve(prof, v3(x * TILE, (z - r * sz) * TILE, -y * TILE), v3(r * sx * k, r * sz * k, r * sy * k), n, self:look(mat, col), rot and {{"rot", rot}} or {})
 end
 
 -- A flat polygon standing in a vertical plane; pts[2] fixes the plane's direction.
@@ -171,19 +206,18 @@ function Kit:poly(mat, pts, col)
   self:close("group")
 end
 
--- A battered block: the top is inset by tx on each side (Scener tapers both axes alike).
+-- A battered block: a box tapered towards its top. A taper scales both axes alike, so ty is not honoured.
 function Kit:frustum(mat, x, y, z, sx, sy, h, tx, ty, col, rz)
   local ratio = (sx - 2 * tx) / sx
   local a = (ratio - 1) / (ratio + 1)
   local k = 1 / (1 - a)
-  local rot = (rz and rz ~= 0) and {{"rot", v3(0, deg(rz), 0)}} or {}
-  self:emit(fmt('<box pos="%s" size="%s"%s%s><taper amount="%s"/></box>',
-    v3(x * TILE, (z + h / 2) * TILE, -y * TILE), v3(sx * k * TILE, h * TILE, sy * k * TILE), attrs(rot), attrs(self:look(mat, col)), f(a)))
+  self:prism(mat, v3(x * TILE, (z + h / 2) * TILE, -y * TILE), sx * k, h, sy * k * TILE, col,
+    (rz and rz ~= 0) and {{"rot", v3(0, deg(rz), 0)}} or {}, fmt('<taper amount="%s"/>', f4(a)))
 end
 
+-- Four revolved segments turned a quarter step, so the base is square.
 function Kit:pyramid(mat, x, y, z, s, h, col)
-  self:emit(fmt('<pyramid pos="%s" radius="%s" height="%s" rot="0 45 0"%s/>',
-    v3(x * TILE, (z + h / 2) * TILE, -y * TILE), f(s * TILE / sqrt(2)), f(h * TILE), attrs(self:look(mat, col))))
+  self:revolve({{s * TILE / sqrt(2), 0}, {0, h * TILE}}, v3(x * TILE, z * TILE, -y * TILE), nil, 4, self:look(mat, col), {{"rot", "0 45 0"}})
 end
 
 -- Moves a plant inward so its reach stays on the footprint.
@@ -214,8 +248,7 @@ function Kit:palm(x, y, z, trunk, leaves, h, L, fronds)
     local a = 2 * pi * i / fronds + Rng.uniform(-.15, .15)
     local base = M.J(Rng.choice(leaves), .04)
     self:open("group", {{"pos", v3(x * TILE, (z + h) * TILE, -y * TILE)}, {"rot", v3(0, deg(a), 0)}})
-    self:emit(fmt('<ellipsoid pos="%s" radii="%s" rot="0 0 -22" rings="4" slices="8"%s/>',
-      v3(L * .5 * TILE, -L * .1 * TILE, 0), v3(L * .52 * TILE, L * .04 * TILE, L * .17 * TILE), attrs(self:look("leaf", base))))
+    self:ball("leaf", L * .5, 0, -L * .1, 1, base, 8, L * .52, L * .17, L * .04, "0 0 -22")
     self:close("group")
   end
   self:blob(x, y, z + h, .08, leaves)
