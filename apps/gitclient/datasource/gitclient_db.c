@@ -391,9 +391,16 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
     }
 
     case dbLoad: {
-      if (!ctx) return 0;
-      git_repo_t *repo = (git_repo_t *)lparam;
-      if (!repo) return 0;
+      // wparam = GC_DB_LOAD_SNAPSHOT: lparam is a git_repo_snapshot_t read elsewhere (a worker thread); otherwise lparam is the repo.
+      if (!ctx || !lparam) return 0;
+      git_repo_snapshot_t *own = NULL, *snap = (git_repo_snapshot_t *)lparam;
+      if (wparam != GC_DB_LOAD_SNAPSHOT) {
+        git_repo_t *repo = (git_repo_t *)lparam;
+        own = snap = git_repo_snapshot_read(git_repo_path(repo), GIT_SNAP_HISTORY, 0);
+        if (!snap) return 0;
+        snap->repo = repo;
+      }
+      git_repo_t *repo = snap->repo;
       ctx->repo = repo;
 
       clear_table((void **)&ctx->branches, &ctx->branch_count, &ctx->branch_capacity, &ctx->next_branch_id);
@@ -407,12 +414,10 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
       ctx->worktree_count = 0;
 
       // Branches
-      int branch_count = 0;
-      git_branch_t raw_branches[256];
       int branch_ids[256] = {0};
       {
-        int count = git_get_branches(repo, raw_branches, 256);
-        branch_count = count;
+        const git_branch_t *raw_branches = snap->branches;
+        int count = snap->branch_count;
         for (int i = 0; i < count; i++) {
           db_branch_t *rec = append_row((void **)&ctx->branches, &ctx->branch_count,
                                          &ctx->branch_capacity, sizeof(db_branch_t),
@@ -427,24 +432,20 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
         }
       }
 
-      // Commits — only load the current branch's log eagerly.
+      // Commits: only the current branch's log is loaded eagerly.
       // Other branches lazy-load when the user selects them.
-      {
-        for (int b = 0; b < branch_count; b++) {
-          if (!raw_branches[b].is_current) continue;
-          git_commit_t raw[500];
-          int count = git_get_log_ref(repo, raw_branches[b].name, raw, 500);
-          for (int i = 0; i < count; i++) {
-            db_commit_t *rec = append_row((void **)&ctx->commits, &ctx->commit_count,
-                                          &ctx->commit_capacity, sizeof(db_commit_t),
-                                          &ctx->next_commit_id, 256);
-            rec->branch_id = branch_ids[b];
-            strncpy(rec->hash,    raw[i].hash,    sizeof(rec->hash) - 1);
-            strncpy(rec->author,  raw[i].author,  sizeof(rec->author) - 1);
-            strncpy(rec->date,    raw[i].date,    sizeof(rec->date) - 1);
-            strncpy(rec->subject, raw[i].subject, sizeof(rec->subject) - 1);
-          }
-          break;
+      if (snap->commit_branch >= 0) {
+        int b = snap->commit_branch;
+        for (int i = 0; i < snap->commit_count; i++) {
+          const git_commit_t *raw = &snap->commits[i];
+          db_commit_t *rec = append_row((void **)&ctx->commits, &ctx->commit_count,
+                                        &ctx->commit_capacity, sizeof(db_commit_t),
+                                        &ctx->next_commit_id, 256);
+          rec->branch_id = branch_ids[b];
+          strncpy(rec->hash,    raw->hash,    sizeof(rec->hash) - 1);
+          strncpy(rec->author,  raw->author,  sizeof(rec->author) - 1);
+          strncpy(rec->date,    raw->date,    sizeof(rec->date) - 1);
+          strncpy(rec->subject, raw->subject, sizeof(rec->subject) - 1);
         }
       }
 
@@ -453,8 +454,8 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
 
       // Tags
       {
-        git_tag_t raw[256];
-        int count = git_get_tags(repo, raw, 256);
+        const git_tag_t *raw = snap->tags;
+        int count = snap->tag_count;
         for (int i = 0; i < count; i++) {
           db_tag_t *rec = append_row((void **)&ctx->tags, &ctx->tag_count,
                                      &ctx->tag_capacity, sizeof(db_tag_t),
@@ -467,8 +468,8 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
 
       // Stash
       {
-        git_stash_t raw[64];
-        int count = git_get_stash(repo, raw, 64);
+        const git_stash_t *raw = snap->stash;
+        int count = snap->stash_count;
         for (int i = 0; i < count; i++) {
           db_stash_t *rec = append_row((void **)&ctx->stash, &ctx->stash_count,
                                        &ctx->stash_capacity, sizeof(db_stash_t),
@@ -481,21 +482,19 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
 
       // Remotes
       {
-        char raw[16][256];
-        int count = git_get_remotes(repo, raw, 16);
+        const char (*raw)[256] = (const char (*)[256])snap->remotes;
+        int count = snap->remote_count;
         for (int i = 0; i < count; i++) {
           db_remote_t *rec = append_row((void **)&ctx->remotes, &ctx->remote_count,
                                         &ctx->remote_capacity, sizeof(db_remote_t),
                                         &ctx->next_remote_id, 8);
           strncpy(rec->name, raw[i], sizeof(rec->name) - 1);
-          char url[512] = {0};
-          if (git_get_remote_url(repo, raw[i], url, sizeof(url)))
-            strncpy(rec->url, url, sizeof(rec->url) - 1);
+          strncpy(rec->url, snap->remote_urls[i], sizeof(rec->url) - 1);
         }
       }
 
-      git_worktree_t raw_worktrees[GC_MAX_WORKTREES];
-      int worktree_count = git_worktree_list(git_repo_path(repo), raw_worktrees, ARRAY_LEN(raw_worktrees));
+      const git_worktree_t *raw_worktrees = snap->worktrees;
+      int worktree_count = snap->worktree_count;
       char current_path[512];
       if (!git_path_absolute(git_repo_path(repo), current_path, sizeof(current_path)))
         snprintf(current_path, sizeof(current_path), "%s", git_repo_path(repo));
@@ -513,6 +512,7 @@ lresult_t gitclient_db(database_t *db, uint32_t msg, uint32_t wparam, void *lpar
         snprintf(rec->status, sizeof(rec->status), "%s", rec->is_current ? "Current" : rec->is_prunable ? "Prunable" :
                  rec->is_detached ? "Detached" : rec->is_linked ? "Linked" : "Main");
       }
+      free(own);
       return 1;
     }
 

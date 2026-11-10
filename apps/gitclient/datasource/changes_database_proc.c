@@ -117,25 +117,30 @@ lresult_t changes_database_proc(database_t *db, uint32_t msg,
       return 1;
 
     case dbLoad: {
-      if (!ctx) return 0;
-      git_repo_t *repo = (git_repo_t *)lparam;
-      if (!repo) return 0;
-      ctx->repo = repo;
+      // wparam = GC_DB_LOAD_SNAPSHOT: lparam is a git_repo_snapshot_t read elsewhere (a worker thread); otherwise lparam is the repo.
+      if (!ctx || !lparam) return 0;
+      git_repo_snapshot_t *own = NULL, *snap = (git_repo_snapshot_t *)lparam;
+      if (wparam != GC_DB_LOAD_SNAPSHOT) {
+        git_repo_t *repo = (git_repo_t *)lparam;
+        own = snap = git_repo_snapshot_read(git_repo_path(repo), GIT_SNAP_FILES, 0);
+        if (!snap) return 0;
+        snap->repo = repo;
+      }
+      ctx->repo = snap->repo;
       changes_clear_table((void **)&ctx->files, &ctx->file_count,
                           &ctx->file_capacity, &ctx->next_id);
-      git_file_status_t raw[256];
-      int count = git_get_status(repo, raw, 256);
-      for (int i = 0; i < count; i++) {
+      for (int i = 0; i < snap->file_count; i++) {
         db_file_t *rec = changes_append_row((void **)&ctx->files, &ctx->file_count,
                                              &ctx->file_capacity, sizeof(db_file_t),
                                              &ctx->next_id, 64);
         if (!rec) break;
         rec->commit_id = 0;
-        strncpy(rec->path, raw[i].path, sizeof(rec->path) - 1);
-        rec->status[0] = raw[i].status;
+        strncpy(rec->path, snap->files[i].path, sizeof(rec->path) - 1);
+        rec->status[0] = snap->files[i].status;
         rec->status[1] = '\0';
-        rec->staged = raw[i].staged;
+        rec->staged = snap->files[i].staged;
       }
+      free(own);
       return 1;
     }
 

@@ -887,6 +887,24 @@ static bool history_diff_contains(const char *text) {
   return false;
 }
 
+static bool changes_db_has(const char *path) {
+  result_node_t *rows = (result_node_t *)send_db_message(g_test_state.changes_db, dbFetch, MAKEDWORD(ID_DB_FILES, 0), (void *)(intptr_t)0);
+  bool found = false;
+  for (result_node_t *n = rows; n; n = n->next) if (!strcmp((*(db_file_t **)n->data)->path, path)) found = true;
+  free_result_list(rows);
+  return found;
+}
+
+static git_repo_snapshot_t *bogus_snapshot(unsigned generation, const char *path) {
+  static char open_path[512];
+  if (g_test_state.repo) snprintf(open_path, sizeof(open_path), "%s", git_repo_path(g_test_state.repo));
+  git_repo_snapshot_t *snap = git_repo_snapshot_read(open_path, GIT_SNAP_ALL, generation);
+  if (!snap) return NULL;
+  snprintf(snap->files[snap->file_count].path, sizeof(snap->files[0].path), "%s", path);
+  snap->files[snap->file_count++].status = 'M';
+  return snap;
+}
+
 static void test_history_latest_commit_diff(void) {
   TEST("history: branch reload and refresh keep the latest commit diff selected");
   test_env_init();
@@ -894,7 +912,7 @@ static void test_history_latest_commit_diff(void) {
   gc_state_t saved = g_test_state;
   database_t *saved_db = ui_get_database();
   memset(&g_test_state, 0, sizeof(g_test_state));
-  g_test_state.ephemeral = true;
+  g_test_state.ephemeral = true; g_test_state.sync_loads = true;
   g_test_state.history_db = make_db(); g_test_state.changes_db = make_changes_db();
   DB_CLASS(github_database_proc);
   g_test_state.github_db = create_database("gc-history-github", "github_database_proc", NULL);
@@ -943,6 +961,26 @@ static void test_history_latest_commit_diff(void) {
   ASSERT_EQUAL(g_test_state.selected_commit, 0);
   ASSERT_TRUE(history_diff_contains("world"));
 
+  // The worker's result is applied only for the repository that is still open.
+  g_test_state.repo_loading = true;
+  git_repo_snapshot_t *snap = bogus_snapshot(g_test_state.repo_generation, "applied.txt");
+  ASSERT_NOT_NULL(snap);
+  gc_repo_loaded(snap);
+  ASSERT_FALSE(g_test_state.repo_loading);
+  ASSERT_TRUE(changes_db_has("applied.txt"));
+  git_repo_t *open_repo = g_test_state.repo;
+  g_test_state.repo = NULL; g_test_state.repo_loading = true;
+  snap = bogus_snapshot(g_test_state.repo_generation, "closed.txt");
+  gc_repo_loaded(snap);
+  g_test_state.repo = open_repo;
+  ASSERT_FALSE(g_test_state.repo_loading);
+  ASSERT_FALSE(changes_db_has("closed.txt"));
+  g_test_state.repo_loading = true;
+  snap = bogus_snapshot(g_test_state.repo_generation - 1, "older.txt");
+  gc_repo_loaded(snap);   // another repository was opened meanwhile: dropped, then the open one is read again
+  ASSERT_FALSE(changes_db_has("older.txt"));
+  ASSERT_FALSE(changes_db_has("applied.txt"));
+
   destroy_window(root);
   destroy_database(g_test_state.history_db); destroy_database(g_test_state.changes_db); destroy_database(g_test_state.github_db);
   destroy_database(g_test_state.workspace_db);
@@ -957,7 +995,7 @@ static void test_gitclient_pane_layout(void) {
   gc_state_t saved = g_test_state;
   database_t *saved_db = ui_get_database();
   memset(&g_test_state, 0, sizeof(g_test_state));
-  g_test_state.ephemeral = true;
+  g_test_state.ephemeral = true; g_test_state.sync_loads = true;
   g_test_state.history_db = make_db(); g_test_state.changes_db = make_changes_db();
   DB_CLASS(github_database_proc);
   g_test_state.github_db = create_database("gc-pane-github", "github_database_proc", NULL);

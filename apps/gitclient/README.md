@@ -39,6 +39,13 @@ Workspace (also on the row's context menu) drops the selected row's repository.
 | Ctrl+Shift+R | fetch every repository in the background |
 | "Showing" pill | filter to checkouts that need attention |
 
+Opening a checkout switches pages at once. Changes, History, branches, tags, worktrees and the
+branch/ahead/behind status are read on worker threads (`git_repo_snapshot_async`,
+`git_sync_status_async`) and applied on the UI thread when `evRepoLoaded` / `evSyncStatusLoaded`
+arrive; the status bar says "Loading <name>..." meanwhile. One load per kind runs at a time, a
+refresh requested during it runs afterwards, and results for a repository that is no longer open are
+dropped (`repo_generation`). Tests set `sync_loads` or call `gc_refresh_all_sync()` to read inline.
+
 **Focus** is the classic single-repository view (Changes, History, GitHub). It opens with a summary
 line (branch, to push/pull, staged/modified/new counts), tells you what Commit will do
 ("Commit 3 staged files" or "Nothing staged"), and has an Overview button on every page. The worktree

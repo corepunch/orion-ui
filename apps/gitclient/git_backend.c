@@ -1102,6 +1102,72 @@ bool git_workspace_checkouts_async(char (*roots)[512], int root_count, window_t 
   git_thread_detach(t); return true;
 }
 
+git_repo_snapshot_t *git_repo_snapshot_read(const char *path, int parts, unsigned generation) {
+  git_repo_snapshot_t *s = calloc(1, sizeof(*s));
+  if (!s) { fprintf(stderr, "[git] snapshot allocation failed for %s\n", path ? path : "(null)"); fflush(stderr); return NULL; }
+  struct git_repo_s repo = {{0}};
+  snprintf(repo.path, sizeof(repo.path), "%s", path ? path : "");
+  snprintf(s->path, sizeof(s->path), "%s", repo.path);
+  s->parts = parts; s->generation = generation; s->commit_branch = -1;
+  if (parts & GIT_SNAP_SYNC) git_get_sync_status(&repo, &s->sync);
+  if (parts & GIT_SNAP_FILES) s->file_count = git_get_status(&repo, s->files, ARRAY_LEN(s->files));
+  if (parts & GIT_SNAP_HISTORY) {
+    s->branch_count = git_get_branches(&repo, s->branches, ARRAY_LEN(s->branches));
+    for (int b = 0; b < s->branch_count; b++) {
+      if (!s->branches[b].is_current) continue;
+      s->commit_branch = b;
+      s->commit_count = git_get_log_ref(&repo, s->branches[b].name, s->commits, ARRAY_LEN(s->commits));
+      break;
+    }
+    s->tag_count   = git_get_tags(&repo, s->tags, ARRAY_LEN(s->tags));
+    s->stash_count = git_get_stash(&repo, s->stash, ARRAY_LEN(s->stash));
+    s->remote_count = git_get_remotes(&repo, s->remotes, ARRAY_LEN(s->remotes));
+    for (int i = 0; i < s->remote_count; i++)
+      if (!git_get_remote_url(&repo, s->remotes[i], s->remote_urls[i], sizeof(s->remote_urls[i]))) s->remote_urls[i][0] = 0;
+    s->worktree_count = git_worktree_list(repo.path, s->worktrees, ARRAY_LEN(s->worktrees));
+  }
+  return s;
+}
+
+typedef struct { char path[512]; int parts; unsigned generation; window_t *notify_win; } git_snapshot_args_t;
+
+static GIT_THREAD_RET git_snapshot_worker(void *arg) {
+  git_snapshot_args_t *a = arg;
+  post_message(a->notify_win, evRepoLoaded, 0, git_repo_snapshot_read(a->path, a->parts, a->generation));
+  free(a); return 0;
+}
+
+bool git_repo_snapshot_async(const char *path, int parts, unsigned generation, window_t *notify_win) {
+  if (!path || !path[0] || !notify_win) return false;
+  git_snapshot_args_t *a = calloc(1, sizeof(*a)); if (!a) return false;
+  snprintf(a->path, sizeof(a->path), "%s", path); a->parts = parts; a->generation = generation; a->notify_win = notify_win;
+  git_thread_t t; if (!git_thread_create(&t, git_snapshot_worker, a)) { free(a); return false; }
+  git_thread_detach(t); return true;
+}
+
+typedef struct { char path[512]; unsigned generation; window_t *notify_win; } git_sync_args_t;
+
+static GIT_THREAD_RET git_sync_worker(void *arg) {
+  git_sync_args_t *a = arg;
+  git_sync_result_t *res = calloc(1, sizeof(*res));
+  if (res) {
+    struct git_repo_s repo = {{0}};
+    snprintf(repo.path, sizeof(repo.path), "%s", a->path);
+    snprintf(res->path, sizeof(res->path), "%s", a->path); res->generation = a->generation;
+    git_get_sync_status(&repo, &res->sync);
+  } else { fprintf(stderr, "[git] sync status allocation failed for %s\n", a->path); fflush(stderr); }
+  post_message(a->notify_win, evSyncStatusLoaded, 0, res);
+  free(a); return 0;
+}
+
+bool git_sync_status_async(const char *path, unsigned generation, window_t *notify_win) {
+  if (!path || !path[0] || !notify_win) return false;
+  git_sync_args_t *a = calloc(1, sizeof(*a)); if (!a) return false;
+  snprintf(a->path, sizeof(a->path), "%s", path); a->generation = generation; a->notify_win = notify_win;
+  git_thread_t t; if (!git_thread_create(&t, git_sync_worker, a)) { free(a); return false; }
+  git_thread_detach(t); return true;
+}
+
 typedef struct { char cmds[GC_MAX_RECENT_REPOS][GC_CMD_BUF_SIZE]; int count; window_t *notify_win; } git_fetch_all_args_t;
 
 static GIT_THREAD_RET git_fetch_all_worker(void *arg) {

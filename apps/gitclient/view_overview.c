@@ -249,7 +249,7 @@ void gc_overview_open(const char *path) {
   if (t->missing) { message_box(gc->main_win, ui_tr("This folder is missing or is no longer a git repository."), ui_tr("Open Repository"), MB_OK); return; }
   char open_path[512]; snprintf(open_path, sizeof(open_path), "%s", path);
   bool dirty = row_dirty(t) || t->conflicts;
-  gc_open_repo(open_path);
+  gc_open_checkout(open_path, true);
   if (gc->repo) gc_set_view_mode(dirty ? GC_TAB_CHANGES : GC_TAB_HISTORY);
 }
 
