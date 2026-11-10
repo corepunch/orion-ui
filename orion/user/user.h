@@ -980,6 +980,7 @@ void window_set_scroll_content(window_t *win, int width, int height,
                                irect16_t padding, irect16_t viewport_inset);
 void window_sync_scroll_content(window_t *win);
 irect16_t window_scroll_viewport(const window_t *win);
+int window_scroll_gutter_width(const window_t *win);
 irect16_t window_scroll_content_rect(const window_t *win);
 irect16_t window_scroll_rect_to_client(const window_t *win, irect16_t rect);
 irect16_t window_scroll_rect_from_client(const window_t *win, irect16_t rect);

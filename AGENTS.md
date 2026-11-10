@@ -188,6 +188,22 @@ accel_table_t *accel = load_accelerators(table, ARRAY_LEN(table));
 
 Accelerators fire as `evCommand` with `kAcceleratorNotification` in `HIWORD(wparam)`.
 
+## Model: Mozilla XUL — a control knows its behaviour, the style sheet knows its look
+
+Orion follows XUL: a control is a box of named parts (`TabView::tab`, `Menu::item`, `Scrollbar::track`)
+whose appearance is entirely the style sheet's, the way XBL anonymous content is skinned.
+
+- A control's code owns **state and behaviour** and exposes state as pseudo-classes (`:hover`, `:checked`,
+  `:disabled`). It never asks whether the theme is classic, flat, capsule or overlay, and never branches on a
+  theme property (`ui_flag`, `ui_keyword_is`). If two themes need different results, the difference is a
+  property value in the sheet (`--face-pad`, `text-shadow`, a colour), not an `if` in C.
+- Sizes, padding, gaps, radii, colours, shadows and rules come from the sheet. Code may read a metric
+  (`ui_px`) to lay out its own parts, but a visual switch belongs in the sheet, and a computed value that
+  several controls need (a scrollbar's gutter, an engraved text's inset) is one framework function.
+- Layout is boxes (flex), like XUL's `hbox`/`vbox`: containers arrange children; a control does not
+  hand-compute its children's rectangles from style metrics.
+- No literal colours in a control; use theme roles (`get_sys_color`) and `color_with_alpha()`.
+
 ## Shapes come from the theme, not from stacked rectangles
 
 A visual that has a shape (card, badge, pill, tab, ring) is drawn by **one framework call** whose geometry

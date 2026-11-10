@@ -559,11 +559,9 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (data->active_idx >= 0 && data->active_idx < data->count) {
         int i = data->active_idx;
         irect16_t selection = menubar_item_rect(win, data, i);
-        // Capsule padding can overlap adjacent hit targets; paint behind all labels.
-        if (ui_keyword_is(ui_selector(win, "Menu::item"), "--shape", "capsule")) {
-          selection = rect_center(selection, text_strwidth(ui_selector(win, "MenuBar"), data->menus[i].label), selection.h);
-          selection = rect_inset_xy(selection, -(MENU_CAPSULE_PAD + MENU_CAPSULE_INSET), 0);
-        }
+        // The face is the label plus the item's --face-pad; it may overlap neighbours, so it is painted behind all labels.
+        selection = rect_center(selection, text_strwidth(ui_selector(win, "MenuBar"), data->menus[i].label), selection.h);
+        selection = rect_inset_xy(selection, -ui_px(ui_selector(win, "Menu::item"), "--face-pad"), 0);
         theme_draw_in(win, THEME_PART_MENU_ITEM, selection, CTRL_SELECTED);
       }
       for (int i = 0; i < data->count; i++) {

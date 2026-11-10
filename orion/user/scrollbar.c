@@ -177,6 +177,11 @@ void set_scroll_content(window_t *win, int width, int height, int x, int y) {
   scroll_publish_content(win, width, height, x, y, (irect16_t){0}, false);
 }
 
+// The width the vertical bar takes from the content while it shows; an overlay bar takes none.
+int window_scroll_gutter_width(const window_t *win) {
+  return win && win->vscroll.visible && !ui_flag("Scrollbar", "--overlay") ? ui_px("Scrollbar", "width") : 0;
+}
+
 irect16_t window_scroll_viewport(const window_t *win) {
   return rect_inset_edges(get_client_rect(win), win->scroll_content.viewport_inset);
 }

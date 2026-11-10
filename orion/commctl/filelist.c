@@ -27,8 +27,6 @@
 #define FL_ICON_PARENT  "arrow-bend-left-up"
 #define FL_ICON_FOLDER  "folder"
 #define FL_ICON_FILE    "page"
-#define FL_COLOR_FOLDER 0xffa0d000u
-#define FL_COLOR_GEM    0xff50d050u  // bright green — executable .gem plugin
 #define FL_ICON_TEXT_GAP 2
 
 // ---------------------------------------------------------------------------
@@ -226,7 +224,7 @@ static void fl_load_directory(window_t *win, filelist_data_t *data) {
     bool is_gem = !data->items[i].is_directory && ext && strcmp(ext, ".gem") == 0;
     uint32_t col = data->items[i].is_hidden    ? get_sys_color(brTextSecondary)   // quieter, still readable
                  : data->items[i].is_directory ? get_sys_color(brFolderText)
-                 : is_gem                      ? FL_COLOR_GEM
+                 : is_gem                      ? get_sys_color(brTextSuccess)  // an executable plugin
                                                : get_sys_color(brTextNormal);
     bool is_parent = fl_is_parent_sentinel(data->items[i].path);
     send_message(win, RVM_ADDITEM, 0,

@@ -38,8 +38,7 @@ static uint32_t label_color(const window_t *win) {
   return get_sys_color(brTextNormal);
 }
 
-// Classic's text-shadow falls one pixel right and down; the label's box makes room for it.
-static int label_shadow_inset(void) { return ui_flag("Button", "text-shadow") ? TEXT_SHADOW_OFFSET : 0; }
+
 
 #define LABEL_MAX_CONTENT 0x4000   // wider than any line
 
@@ -70,7 +69,7 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       // Single-line labels start as wide as their text.
       if (win->frame.h <= CONTROL_HEIGHT)
-        win->frame.w = MAX(win->frame.w, text_strwidth(label_font(win), win->title) + label_shadow_inset());
+        win->frame.w = MAX(win->frame.w, text_strwidth(label_font(win), win->title) + theme_text_inset(label_font(win)));
       win->flags |= WINDOW_NOTABSTOP;
       if ((win->flags & LABEL_COLLAPSE_EMPTY) && !win->title[0]) win->frame = R(0, 0, 0, 0);
       return true;
@@ -81,7 +80,7 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (!m) return true;
       ui_font_t font = label_font(win);
-      int inset = label_shadow_inset(), line = text_line_height(font);
+      int inset = theme_text_inset(font), line = text_line_height(font);
       if (label_truncates(win)) {
         // One line; the arranged width decides how much of it is visible.
         m->desired_w = text_strwidth(font, win->title) + inset;
@@ -105,18 +104,14 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       uint32_t col = label_color(win);
       ui_font_t font = label_font(win);
       irect16_t text_pos = {0, 0, win->frame.w, win->frame.h};
-      bool shadow = ui_flag("Button", "text-shadow");
-      irect16_t shadow_pos = rect_offset(text_pos, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
       if (label_truncates(win)) {
         char fitted[512];
-        text_ellipsize(font, win->title, win->frame.w - label_shadow_inset(), fitted, sizeof(fitted));
-        text_pos.h = shadow_pos.h = text_line_height(font);   // the top line box; glyphs in its middle
-        if (shadow) draw_text_clipped(font, fitted, &shadow_pos, get_sys_color(brDarkEdge), 0);
-        draw_text_clipped(font, fitted, &text_pos, col, 0);
+        text_ellipsize(font, win->title, win->frame.w - theme_text_inset(font), fitted, sizeof(fitted));
+        text_pos.h = text_line_height(font);   // the top line box; glyphs in its middle
+        theme_draw_text_clipped(font, fitted, text_pos, col, CTRL_NORMAL);
         return true;
       }
-      if (shadow) draw_text_wrapped_font(font, win->title, &shadow_pos, get_sys_color(brDarkEdge));
-      draw_text_wrapped_font(font, win->title, &text_pos, col);
+      theme_draw_text_wrapped(font, win->title, text_pos, col, CTRL_NORMAL);
       return true;
     }
   }

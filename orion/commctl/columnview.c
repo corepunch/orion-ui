@@ -194,7 +194,7 @@ void rv_draw_item_icon(bitmap_strip_t *strip, int icon_id,
     const int ph = THEME_ICON_SIZE;  // 8 px — matches the smallest tile unit
     int px = icon_rect->x + (icon_rect->w - ph) / 2;
     int py = icon_rect->y + (icon_rect->h - ph) / 2;
-    uint32_t dim = (col & 0x00FFFFFFu) | 0x60000000u;  // 38% opacity
+    uint32_t dim = color_with_alpha(col, 0x60);   // 38% opacity
     fill_rect(dim, R(px,        py,        ph, 1));
     fill_rect(dim, R(px,        py + ph-1, ph, 1));
     fill_rect(dim, R(px,        py + 1,    1,  ph - 2));

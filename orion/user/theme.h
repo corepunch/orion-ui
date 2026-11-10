@@ -322,6 +322,10 @@ irect16_t theme_css_insets_vars(theme_part_t part, ctrl_state_t state, const ui_
 void theme_css_apply_palette(void);   // writes the sheet's colour roles into g_sys_colors
 void theme_draw_window_chrome(irect16_t titlebar, irect16_t caption, const char *title, ctrl_state_t state, bool maximizable);
 void theme_draw_statusbar_text(irect16_t r, const char *text);
+// Engraved text: the control's own `text-shadow` in the sheet; disabled text has none.
+int  theme_text_inset(ui_font_t font);
+void theme_draw_text_clipped(ui_font_t font, const char *text, irect16_t r, uint32_t color, ctrl_state_t state);
+void theme_draw_text_wrapped(ui_font_t font, const char *text, irect16_t r, uint32_t color, ctrl_state_t state);
 void theme_draw_button_label(const window_t *win, irect16_t r, const char *text, ctrl_state_t state);
 void theme_draw_combobox(const window_t *win, irect16_t r, const char *text, ctrl_state_t state);
 

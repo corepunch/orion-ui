@@ -45,6 +45,22 @@ void theme_draw_statusbar_text(irect16_t r, const char *text) {
   if (text) draw_text_clipped("StatusBar", text, &r, get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
 }
 
+int theme_text_inset(ui_font_t font) { return ui_flag(font, "text-shadow") ? TEXT_SHADOW_OFFSET : 0; }
+
+void theme_draw_text_clipped(ui_font_t font, const char *text, irect16_t r, uint32_t color, ctrl_state_t state) {
+  if (theme_text_inset(font) && !(state & CTRL_DISABLED)) {
+    irect16_t shadow = rect_offset(r, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
+    draw_text_clipped(font, text, &shadow, get_sys_color(brDarkEdge), 0);
+  }
+  draw_text_clipped(font, text, &r, color, 0);
+}
+
+void theme_draw_text_wrapped(ui_font_t font, const char *text, irect16_t r, uint32_t color, ctrl_state_t state) {
+  if (theme_text_inset(font) && !(state & CTRL_DISABLED))
+    draw_text_wrapped_font(font, text, &(irect16_t){r.x + TEXT_SHADOW_OFFSET, r.y + TEXT_SHADOW_OFFSET, r.w, r.h}, get_sys_color(brDarkEdge));
+  draw_text_wrapped_font(font, text, &r, color);
+}
+
 // Bevelled themes engrave the label and shift it while the button is down.
 // win is the button: its classes, #id and app sheet style the label.
 void theme_draw_button_label(const window_t *win, irect16_t r, const char *text, ctrl_state_t state) {

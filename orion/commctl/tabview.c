@@ -194,8 +194,7 @@ static int sidebar_rows_width(window_t *win, tabview_state_t *st) {
 }
 
 static int sidebar_width(window_t *win, tabview_state_t *st) {
-  bool bar = st->list && st->list->vscroll.visible && !ui_flag("Scrollbar", "--overlay");
-  return sidebar_rows_width(win, st) + (bar ? SCROLLBAR_WIDTH : 0);
+  return sidebar_rows_width(win, st) + (st->list ? window_scroll_gutter_width(st->list) : 0);
 }
 
 // Row rectangle in the list's content space.
