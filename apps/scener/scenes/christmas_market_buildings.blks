@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- The twelve Christmas Market objects, converted from market_wishes.py (nile-archive games/christmas-market)
      by tools/gen_christmas_market.py. Each is a named group; boxes are utilities.xml soft-box/slab calls. -->
-<scene ambient="0.27 0.33 0.52" background="0.64 0.70 0.84">
+<scene ambient="0.27 0.33 0.52" skyReflection="4" background="0.64 0.70 0.84">
   <include src="utilities.xml"/>
   <sun dir="-0.325 -0.738 -0.591" color="0.95COLOR" intensity="0.95" castShadows="1"/>
   <sun dir="-0.845 -0.507 -0.169" color="0.88 0.93 1.0" intensity="0.35" castShadows="0"/>

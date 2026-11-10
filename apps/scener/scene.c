@@ -2883,6 +2883,7 @@ static void scene_rebuild_view(Scene *s){
 	if(prefabMode){ s->ambient=v3(0.48f,0.50f,0.56f); s->bg=v3(0.14f,0.16f,0.20f); }
 	else {
 		s->ambient=xml_attr_v3(root,"ambient",s->ambient);
+		s->skyReflection=fmaxf(xml_attr_f(root,"skyReflection",0.0f),0.0f);
 		const char *bg=xml_attr(root,"background",NULL);
 		if(bg){
 			if(strchr(bg,' ')) sscanf(bg,"%f %f %f",&s->bg.x,&s->bg.y,&s->bg.z);
@@ -2955,6 +2956,7 @@ static int scene_insert_source_node(Scene *s,XmlNode *node){
 		XmlNode *root=xml_new("scene"); s->sceneRoot=s->editRoot=root;
 		xml_set_attr(root,"up",up.z==1?"z":"y");
 		xml_set_attr_v3(root,"ambient",s->ambient); xml_set_attr_v3(root,"background",s->bg);
+		if(s->skyReflection>0){ char v[32]; snprintf(v,sizeof(v),"%.6g",s->skyReflection); xml_set_attr(root,"skyReflection",v); }
 		XmlNode *camera=xml_new("camera"); xml_set_attr(camera,"name","Camera1");
 		xml_set_attr_v3_cm(camera,"pos",s->camPos); xml_set_attr_v3_cm(camera,"look",s->camLook);
 		DA_PUSH(root->kids,root->nkids,root->ckids,camera);
@@ -3073,7 +3075,7 @@ int load_scene(const char *path, Scene *s){
 	s->sceneRoot=root; s->editRoot=root;
 	scene_rebuild_view(s);
 	if(s->assetError){ scene_free(s); return 0; }
-	xml_attr(root,"up",NULL); xml_attr(root,"convention",NULL); xml_attr(root,"ambient",NULL); xml_attr(root,"background",NULL);
+	xml_attr(root,"up",NULL); xml_attr(root,"convention",NULL); xml_attr(root,"ambient",NULL); xml_attr(root,"background",NULL); xml_attr(root,"skyReflection",NULL);
 	warn_unused_attributes(s,root,path);
 	warn_unlit_scene(s,path);
 	for(int i=0;i<s->nprefabs;i++) warn_unused_attributes(s,(XmlNode*)s->prefabs[i].root,s->prefabs[i].path);

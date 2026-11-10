@@ -393,6 +393,21 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     shader_set_viewproj(viewProj);
     shader_set_camera_pos(camPos);
 
+    if (s->skyReflection > 0) {   /* sky reflection: one additive pass without a light */
+        glDepthFunc(GL_LEQUAL);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE);
+        shader_set_sky(1, vscale(s->ambient, s->skyReflection));
+        for (int i = 0; i < s->nobjs; i++) {
+            if (!s->objs[i].renderable || s->objs[i].unlit) continue;
+            shader_set_material(s->objs[i].color, s->objs[i].shininess, s->objs[i].specular, s->objs[i].metallic);
+            shader_draw_mesh(&s->objs[i].mesh);
+        }
+        shader_set_sky(0, v3(0, 0, 0));
+        glDisable(GL_BLEND);
+        glDepthFunc(GL_LESS);
+    }
+
     for (int li = 0; li < s->nlights; li++) {
         Light *L = &s->lights[li];
         shader_set_light(L);

@@ -260,6 +260,13 @@ Global ambient light color applied to all objects before per-light additive pass
 |-----------|------|-------------------|-------------|
 | `ambient` | vec3 | 0.12 0.12 0.14    | Global ambient light, authored as sRGB color |
 
+### `skyReflection` (attribute of `<scene>`)
+
+Default 0 (off). A positive value mirrors the sky, the `ambient` colour times this scale, in glossy
+surfaces: a Fresnel-weighted reflection that is stronger on smooth materials, fades with roughness and
+shows sky above and darkness below. It stands in for the environment reflections a path tracer gives for
+free; 3 to 5 reads as a satin sheen with `ambient` around 0.3.
+
 ### `background` (attribute of `<scene>`)
 
 Background clear color. Accepts either a preset ID (one-word string, no spaces) or a raw vec3 color.

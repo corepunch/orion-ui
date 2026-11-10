@@ -266,6 +266,7 @@ typedef struct {
 	int convention3dsMax;
 	Camera *cameras; int ncameras,ccameras;
 	vec3 ambient,bg;
+	float skyReflection; /* scale of the sky (ambient colour) mirrored in glossy surfaces; 0 = off */
 	Light *lights; int nlights,clights;
 	Material *mats; int nmats,cmats;
 	MaterialRamp *ramps; int nramps,cramps;

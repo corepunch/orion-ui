@@ -11,7 +11,7 @@
 static GLuint prog, s_mesh_vao, s_mesh_vbo, s_mesh_ebo;
 static GLuint vlocPos, vlocNrm;
 static GLint ulocViewProj, ulocViewPos, ulocLightPos, ulocLightColor, ulocLightRadius;
-static GLint ulocSpecular, ulocMetallic, ulocColor, ulocShininess, ulocRamp, ulocRampOn, ulocGradOn, ulocGradFrom, ulocGradTo;
+static GLint ulocSky, ulocSkyOn, ulocSpecular, ulocMetallic, ulocColor, ulocShininess, ulocRamp, ulocRampOn, ulocGradOn, ulocGradFrom, ulocGradTo;
 static GLint vlocGrad;
 #ifdef SCENER_USE_TEXTURES
 static GLint ulocTex;
@@ -68,6 +68,8 @@ static const char *fs_src =
 "uniform float uShininess;\n"
 "uniform float uSpecular;\n"
 "uniform float uMetallic;\n"
+"uniform vec3 uSky;\n"
+"uniform int uSkyOn;\n"
 "uniform vec3 uRamp[RAMP_SHADES];\n"
 "uniform int uRampOn;\n"
 "uniform int uGradOn;\n"
@@ -96,13 +98,22 @@ static const char *fs_src =
 "    vec3 albedo=uColor;\n"
 "    vec3 F0=mix(vec3(SPECULAR_TO_F0*uSpecular),albedo,uMetallic);\n"
 "    vec3 F=F0+(vec3(1.0)-F0)*pow(1.0-max(dot(V,H),0.0),FRESNEL_EXP);\n"
+"    if(uSkyOn>0){\n"
+"        /* The sky in glossy surfaces: reflection direction picks sky above, ground below; Fresnel is damped by roughness. */\n"
+"        vec3 Rv=reflect(-V,N);\n"
+"        float up=clamp(Rv.y*0.5+0.5,0.0,1.0);\n"
+"        vec3 Fr=F0+(max(vec3(1.0-roughness),F0)-F0)*pow(1.0-NdotV,FRESNEL_EXP);\n"
+"        fragColor=vec4(clamp(uSky*Fr*up*up*(1.0-0.5*roughness),0.0,1.0),1.0);\n"
+"        return;\n"
+"    }\n"
 #ifdef SCENER_USE_TEXTURES
 "    vec3 texColor=texture(uTex,vWorldUV).rgb;\n"
 #else
 "    vec3 texColor=vec3(1.0);\n"
 #endif
 "    if(uGradOn>0) texColor*=mix(uGradFrom,uGradTo,clamp(vGrad,0.0,1.0));\n"
-"    vec3 spec=(D*G*F)/(max(4.0*NdotL*NdotV,MIN_SPECULAR))*uLightColor;\n"
+"    /* The diffuse term drops its 1/pi, so a light colour is irradiance/pi; the specular lobe times NdotL needs the pi back. */\n"
+"    vec3 spec=(D*G*F)*PI/(max(4.0*NdotV,MIN_SPECULAR))*uLightColor;\n"
 "    vec3 diff=uColor*texColor*(vec3(1.0)-F)*(1.0-uMetallic)*NdotL*uLightColor;\n"
 "    float att=1.0;\n"
 "    if(uLightRadius>0.0 && uLightPos.w>0.0){\n"
@@ -140,6 +151,8 @@ void shader_init(void){
 	ulocColor       = glGetUniformLocation(prog, "uColor");
 	ulocShininess   = glGetUniformLocation(prog, "uShininess");
 	ulocSpecular    = glGetUniformLocation(prog, "uSpecular");
+	ulocSky         = glGetUniformLocation(prog, "uSky");
+	ulocSkyOn       = glGetUniformLocation(prog, "uSkyOn");
 	ulocMetallic    = glGetUniformLocation(prog, "uMetallic");
 	ulocRamp        = glGetUniformLocation(prog, "uRamp");
 	ulocRampOn      = glGetUniformLocation(prog, "uRampOn");
@@ -193,6 +206,11 @@ void shader_set_material(vec3 color, float shininess, float specular, float meta
 	glUniform1f(ulocShininess, shininess);
 	glUniform1f(ulocSpecular, specular);
 	glUniform1f(ulocMetallic, metallic);
+}
+
+void shader_set_sky(int on, vec3 color){
+	glUniform1i(ulocSkyOn, on ? 1 : 0);
+	if(on){ color=srgb_to_linear(color); glUniform3f(ulocSky, color.x, color.y, color.z); }
 }
 
 void shader_set_ramp(const vec3 *shades){

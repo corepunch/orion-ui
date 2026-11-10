@@ -213,14 +213,14 @@ def apply_blender_materials(nile):
 HEAD = """<?xml version="1.0" encoding="UTF-8"?>
 <!-- The twelve Christmas Market objects, converted from market_wishes.py (nile-archive games/christmas-market)
      by tools/gen_christmas_market.py. Each is a named group; boxes are utilities.xml soft-box/slab calls. -->
-<scene ambient="AMBIENT" background="BACKGROUND">
+<scene ambient="AMBIENT" skyReflection="SKY" background="BACKGROUND">
   <include src="utilities.xml"/>
   <sun dir="-0.325 -0.738 -0.591" color="SUNCOLOR" intensity="SUN" castShadows="1"/>
   <sun dir="-0.845 -0.507 -0.169" color="0.88 0.93 1.0" intensity="FILL" castShadows="0"/>
   <material id="snowfield" color="0.86 0.9 0.96" shininess="4"/>"""
 
 
-LIGHT = dict(AMBIENT="0.27 0.33 0.52", SUN="0.95", FILL="0.35", BACKGROUND="0.64 0.70 0.84", SUNCOLOR="0.96 0.95 0.95", LAMPS="0.5")   # tuned against the Blender renders
+LIGHT = dict(AMBIENT="0.27 0.33 0.52", SUN="0.95", FILL="0.35", BACKGROUND="0.64 0.70 0.84", SUNCOLOR="0.96 0.95 0.95", LAMPS="0.5", SKY="4")   # tuned against the Blender renders
 
 
 def main():
@@ -246,7 +246,7 @@ def main():
   rows = (len(body) + cols - 1) // cols
   cell = 3 + gap
   W, D = cols * cell + gap, rows * cell + gap
-  out = [HEAD.replace("AMBIENT", LIGHT["AMBIENT"]).replace("SUN", LIGHT["SUN"]).replace("FILL", LIGHT["FILL"]).replace("BACKGROUND", LIGHT["BACKGROUND"]).replace("SUNCOLOR", LIGHT["SUNCOLOR"])]
+  out = [HEAD.replace("AMBIENT", LIGHT["AMBIENT"]).replace("SUN", LIGHT["SUN"]).replace("FILL", LIGHT["FILL"]).replace("BACKGROUND", LIGHT["BACKGROUND"]).replace("SUNCOLOR", LIGHT["SUNCOLOR"]).replace("SKY", LIGHT["SKY"])]
   out.append('  <camera name="Overview" comment="The whole market, three-quarter view" pos="%s" look="0 30 0" fov="30"/>' % scener.v3(W * TILE * .15, W * TILE * .55, D * TILE * .5 + W * TILE * .45))
   placed = []
   for n, (it, lines) in enumerate(body):
