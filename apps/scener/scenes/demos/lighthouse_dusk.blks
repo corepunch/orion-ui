@@ -39,16 +39,7 @@
   </group>
 
   <!-- Tower: lathe profile with a flared base, a red band, and the gallery floor at its top. -->
-  <shape id="tower" closed="0">
-    <v x="0" y="0"/>
-    <v x="{RB}" y="0"/>
-    <v x="{RB}" y="24"/>
-    <v x="{RB - 30}" y="50"/>
-    <v x="{RT}" y="{TH - 60}"/>
-    <v x="{RT + 48}" y="{TH - 36}"/>
-    <v x="{RT + 48}" y="{TH}"/>
-    <v x="0" y="{TH}"/>
-  </shape>
+  <shape id="tower" closed="0" v="0 0 {RB} 0 {RB} 24 {RB - 30} 50 {RT} {TH - 60} {RT + 48} {TH - 36} {RT + 48} {TH} 0 {TH}"/>
   <group name="tower">
     <lathe shape="tower" segments="48" pos="0 0 {ROCK}" rot="90 0 0" material="whitewash"/>
     <cylinder pos="0 0 {ROCK + 560}" rot="90 0 0" radius="{RT + (RB - RT)*0.5 + 1.5}" height="110" tube="2" material="red_band"/>

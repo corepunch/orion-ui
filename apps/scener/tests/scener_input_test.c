@@ -4,6 +4,24 @@
 #include <sys/stat.h>
 
 app_state_t *g_app;
+
+/* Objects share models placed by matrices; the geometry tests measure world space, so they read world copies
+   (cached per object until the slot is reused). */
+#define WORLD_MESH_SLOTS 16
+static Mesh *world_mesh(SceneObj *o) {
+  static struct { SceneObj *obj; Mesh *mesh; unsigned long long hash; int nverts; mat4 model; Mesh copy; } slot[WORLD_MESH_SLOTS];
+  static int next;
+  for (int i = 0; i < WORLD_MESH_SLOTS; i++)
+    if (slot[i].obj == o && slot[i].mesh == o->mesh && o->mesh && slot[i].hash == o->mesh->hash && slot[i].nverts == o->mesh->nverts &&
+        !memcmp(&slot[i].model, &o->model, sizeof(mat4))) return &slot[i].copy;
+  int k = next++ % WORLD_MESH_SLOTS;
+  mesh_free(&slot[k].copy);
+  scene_obj_world_mesh(o, &slot[k].copy);
+  slot[k].obj = o; slot[k].mesh = o->mesh; slot[k].model = o->model;
+  slot[k].hash = o->mesh ? o->mesh->hash : 0; slot[k].nverts = o->mesh ? o->mesh->nverts : 0;
+  return &slot[k].copy;
+}
+
 static const char *window_test_temp_dir(void);
 static int window_test_load(Scene *s,const char *xml);
 
@@ -129,7 +147,7 @@ static void test_device_screen_geometry_and_assets(void) {
   for (int i = 0; i < scene.nobjs; i++) {
     if (scene.objs[i].screenTexture >= 0) screens++;
     if (scene.objs[i].castsShadow) {
-      Mesh *solid = &scene.objs[i].mesh;
+      Mesh *solid = world_mesh(&scene.objs[i]);
       ASSERT_TRUE(mesh_signed_volume(solid) > 0);
       ASSERT_EQUAL(solid->nedges * 2, solid->ntris * 3);
     }
@@ -231,7 +249,7 @@ static void test_shape_modifier_stack(void) {
   ASSERT_EQUAL(issues_of_kind(&scene, "shape"), 2);
   ASSERT_EQUAL(issues_of_kind(&scene, "element"), 0);
   for (int i = 0; i < scene.nobjs; i++) {
-    Mesh *mesh = &scene.objs[i].mesh;
+    Mesh *mesh = world_mesh(&scene.objs[i]);
     ASSERT_TRUE(mesh_signed_volume(mesh) > 0);
     ASSERT_EQUAL(mesh->nedges * 2, mesh->ntris * 3);
     for (int e = 0; e < mesh->nedges; e++) ASSERT_TRUE(mesh->edges[e].t1 >= 0);
@@ -246,7 +264,7 @@ static void test_shell_amount_is_centimetres(void) {
   ASSERT_TRUE(window_test_load(&scene, "<scene><sun/><box size=\"100 100 100\"><shell amount=\"10\"/></box></scene>"));
   ASSERT_EQUAL(scene.nobjs, 1);
   float reach = 0;
-  Mesh *mesh = &scene.objs[0].mesh;
+  Mesh *mesh = world_mesh(&scene.objs[0]);
   for (int i = 0; i < mesh->nverts; i++) reach = fmaxf(reach, mesh->verts[i].pos.x);
   ASSERT_TRUE(fabsf(reach - 0.6f) < 0.001f);
   scene_free(&scene);
@@ -266,7 +284,7 @@ static void test_profile_extrude_and_bevel(void) {
   ASSERT_TRUE(window_test_load(&scene, xml));
   ASSERT_EQUAL(scene.nobjs, 5);
   for (int i = 0; i < scene.nobjs; i++) {
-    Mesh *mesh = &scene.objs[i].mesh;
+    Mesh *mesh = world_mesh(&scene.objs[i]);
     ASSERT_TRUE(mesh_signed_volume(mesh) > 0);
     ASSERT_EQUAL(mesh->nedges * 2, mesh->ntris * 3);
     for (int e = 0; e < mesh->nedges; e++) ASSERT_TRUE(mesh->edges[e].t1 >= 0);
@@ -276,7 +294,7 @@ static void test_profile_extrude_and_bevel(void) {
       ASSERT_TRUE(vlen(vcross(vsub(b, a), vsub(c, a))) > 1e-12f);
     }
   }
-  ASSERT_TRUE(fabsf(mesh_signed_volume(&scene.objs[0].mesh) - 0.00007f) < 0.00003f);
+  ASSERT_TRUE(fabsf(mesh_signed_volume(world_mesh(&scene.objs[0])) - 0.00007f) < 0.00003f);
   scene_free(&scene);
   PASS();
 }
@@ -300,7 +318,7 @@ static void test_created_screen_persists(void) {
 }
 
 static vec3 rig_test_center(Scene *s,int index){
-	Mesh *mesh=&s->objs[index].mesh;
+	Mesh *mesh=world_mesh(&s->objs[index]);
 	vec3 lo=v3(INFINITY,INFINITY,INFINITY),hi=v3(-INFINITY,-INFINITY,-INFINITY);
 	for(int i=0;i<mesh->nverts;i++){
 		vec3 p=mesh->verts[i].pos;
@@ -342,8 +360,8 @@ static void test_instance_rig_ik(void){
 	ASSERT_EQUAL(s.nrigTargets,1);
 	ASSERT_FALSE(s.rigTargets[0].reachable);
 	ASSERT_TRUE(s.rigTargets[0].error>1.0f);
-	for(int i=0;i<s.objs[2].mesh.nverts;i++){
-		vec3 p=s.objs[2].mesh.verts[i].pos;
+	for(int i=0;i<world_mesh(&s.objs[2])->nverts;i++){
+		vec3 p=world_mesh(&s.objs[2])->verts[i].pos;
 		ASSERT_TRUE(isfinite(p.x) && isfinite(p.y) && isfinite(p.z));
 	}
 	scene_free(&s); PASS();
@@ -411,7 +429,7 @@ static void test_bone_skeleton(void){
 	ASSERT_TRUE(bone_test_joint(&s,kitten,"ribcage")!=NULL);
 	ASSERT_TRUE(bone_test_joint(&s,kitten,"tail_3")!=NULL);
 	float low=INFINITY;
-	for(int i=0;i<s.nobjs;i++) for(int v=0;v<s.objs[i].mesh.nverts;v++) low=fminf(low,s.objs[i].mesh.verts[v].pos.z);
+	for(int i=0;i<s.nobjs;i++) for(int v=0;v<world_mesh(&s.objs[i])->nverts;v++) low=fminf(low,world_mesh(&s.objs[i])->verts[v].pos.z);
 	ASSERT_TRUE(low>-0.001f && low<0.005f);
 	vec3 left=bone_test_world(&s,kitten,"left_shoulder"),right=bone_test_world(&s,kitten,"right_shoulder");
 	ASSERT_TRUE(left.x>0 && fabsf(left.x+right.x)<0.0005f && fabsf(left.y-right.y)<0.0005f && fabsf(left.z-right.z)<0.0005f);
@@ -620,7 +638,7 @@ static void test_nested_arch_emits_wall_parts_once(void) {
   ASSERT_EQUAL(scene.nobjs, 1);
   Shape2D arch=shape2d_window(WINDOW_ROUND_ARCH,2,3,32);
   Mesh opening=gen_profile_extrusion(&arch,0.2f);
-  ASSERT_TRUE(fabsf(mesh_signed_volume(&scene.objs[0].mesh)+mesh_signed_volume(&opening)-4.8f)<0.0001f);
+  ASSERT_TRUE(fabsf(mesh_signed_volume(world_mesh(&scene.objs[0]))+mesh_signed_volume(&opening)-4.8f)<0.0001f);
   mesh_free(&opening); shape2d_free(&arch);
   scene_free(&scene);
   PASS();
@@ -740,7 +758,7 @@ static void test_scene_coordinate_conventions(void){
 static int window_test_wall_at(Scene *s,vec3 point){
 	for(int o=0;o<s->nobjs;o++){
 		if(strcmp(scene_node_tag(s->objs[o].editNode),"wall")) continue;
-		Mesh *m=&s->objs[o].mesh;
+		Mesh *m=world_mesh(&s->objs[o]);
 		for(int i=0;i<m->ntris;i++){
 			Tri t=m->tris[i]; vec3 a=m->verts[t.a].pos,b=m->verts[t.b].pos,c=m->verts[t.c].pos;
 			float area=(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
@@ -818,7 +836,7 @@ static void test_far_meshes_keep_their_winding(void){
 		"<group pos=\"0 0 -40000\"><group pos=\"-380 -330 140\" rot=\"0 0 93.9\"><box pos=\"0 2 11\" size=\"13 30 18\"/>\n"
 		"<box pos=\"-6.65 6 12\" size=\"0.3 10 5\"/><box pos=\"0 11 22.5\" size=\"3 2 5\"/></group></group></scene>"));
 	ASSERT_EQUAL(s.nobjs,3);
-	for(int i=0;i<s.nobjs;i++) ASSERT_TRUE(mesh_signed_volume(&s.objs[i].mesh)>0);
+	for(int i=0;i<s.nobjs;i++) ASSERT_TRUE(mesh_signed_volume(world_mesh(&s.objs[i]))>0);
 	FILE *sink=fopen("/dev/null","w"); scene_check(&s,sink,0); fclose(sink);
 	ASSERT_EQUAL(issues_of_kind(&s,"coplanar"),0);
 	ASSERT_EQUAL(issues_of_kind(&s,"intersection"),0);
@@ -833,7 +851,7 @@ static void test_noise_in_centimetres_keeps_corners_joined(void){
 	ASSERT_EQUAL(s.nobjs,1);
 	vec3 lo,hi; scene_get_obj_bounds(&s,0,&lo,&hi);
 	ASSERT_TRUE(hi.x-lo.x>0.4f && hi.x-lo.x<0.44f && hi.z-lo.z>0.4f && hi.z-lo.z<0.44f);
-	Mesh *m=&s.objs[0].mesh; int distinct=0;
+	Mesh *m=world_mesh(&s.objs[0]); int distinct=0;
 	for(int i=0;i<m->nverts;i++){
 		int seen=0;
 		for(int j=0;j<i && !seen;j++) seen=vlen(vsub(m->verts[i].pos,m->verts[j].pos))<WINDOW_TEST_EPSILON;
@@ -852,7 +870,7 @@ static void test_lofts_share_a_cross_shape(void){
 		"<loft pathShape=\"path\" crossShape=\"cross\"/><loft pathShape=\"path\" crossShape=\"cross\" pos=\"0 50 0\"/>"
 		"<loft pathShape=\"path\" crossShape=\"cross\" pos=\"0 100 0\"/><lathe shape=\"absent\"/></scene>"));
 	ASSERT_EQUAL(s.nobjs,3);
-	for(int i=0;i<s.nobjs;i++) ASSERT_TRUE(s.objs[i].mesh.nverts>0);
+	for(int i=0;i<s.nobjs;i++) ASSERT_TRUE(world_mesh(&s.objs[i])->nverts>0);
 	ASSERT_EQUAL(s.nshapes,2);
 	for(int i=0;i<s.nshapes;i++) ASSERT_TRUE(s.shapes[i].nrm!=NULL);
 	ASSERT_EQUAL(issues_of_kind(&s,"shape"),1);
@@ -1004,8 +1022,8 @@ static void test_door_fit_swing_and_pet_opening(void){
 		ASSERT_EQUAL(closed.nnegativeProfiles,1); ASSERT_EQUAL(closed.nobjs,3);
 		ASSERT_TRUE(closed.objs[0].editNode==closed.objs[1].editNode&&closed.objs[1].editNode==closed.objs[2].editNode);
 		vec3 lo=v3(INFINITY,INFINITY,INFINITY);
-		for(int i=0;i<closed.objs[1].mesh.nverts;i++){
-			vec3 v=closed.objs[1].mesh.verts[i].pos;lo.x=fminf(lo.x,v.x);lo.y=fminf(lo.y,v.y);
+		for(int i=0;i<world_mesh(&closed.objs[1])->nverts;i++){
+			vec3 v=world_mesh(&closed.objs[1])->verts[i].pos;lo.x=fminf(lo.x,v.x);lo.y=fminf(lo.y,v.y);
 		}
 		ASSERT_TRUE(fabsf(lo.x-(-DOOR_TEST_WIDTH/2+DOOR_TEST_FRAME+DOOR_TEST_GAP))<WINDOW_TEST_EPSILON);
 		ASSERT_TRUE(fabsf(lo.y-(-DOOR_TEST_HEIGHT/2+DOOR_TEST_GAP))<WINDOW_TEST_EPSILON);
@@ -1014,16 +1032,16 @@ static void test_door_fit_swing_and_pet_opening(void){
 		Shape2D leaf=shape2d_inset(&inner,DOOR_TEST_GAP);
 		Shape2D pet=shape2d_window(WINDOW_ROUND_ARCH,DOOR_TEST_PET_WIDTH+2*DOOR_TEST_TRIM,DOOR_TEST_PET_HEIGHT+DOOR_TEST_TRIM,DOOR_TEST_SEGMENTS);
 		float expected=(window_test_area(&leaf)-window_test_area(&pet))*DOOR_TEST_LEAF_DEPTH;
-		ASSERT_TRUE(fabsf(mesh_signed_volume(&closed.objs[1].mesh)-expected)<WINDOW_TEST_EPSILON);
+		ASSERT_TRUE(fabsf(mesh_signed_volume(world_mesh(&closed.objs[1]))-expected)<WINDOW_TEST_EPSILON);
 		shape2d_free(&inner);shape2d_free(&leaf);shape2d_free(&pet);
 		for(int side=-1;side<=1;side+=2){
 			snprintf(xml,sizeof(xml),"<scene><door preset='%s' width='154' height='270' frameWidth='10' depth='20' leafDepth='8' clearance='0.2' handle='0' petWidth='40' petHeight='48' petFrameWidth='2' hinge='%s' openAngle='90'/></scene>",presets[p],side<0?"left":"right");
 			ASSERT_TRUE(window_test_load(&opened,xml)); ASSERT_EQUAL(opened.nobjs,closed.nobjs);
 			ASSERT_EQUAL(opened.negativeProfiles[0].profile.npts,closed.negativeProfiles[0].profile.npts);
-			for(int i=0;i<closed.objs[0].mesh.nverts;i++) ASSERT_TRUE(vlen(vsub(closed.objs[0].mesh.verts[i].pos,opened.objs[0].mesh.verts[i].pos))<WINDOW_TEST_EPSILON);
+			for(int i=0;i<world_mesh(&closed.objs[0])->nverts;i++) ASSERT_TRUE(vlen(vsub(world_mesh(&closed.objs[0])->verts[i].pos,world_mesh(&opened.objs[0])->verts[i].pos))<WINDOW_TEST_EPSILON);
 			float hingeX=side*(DOOR_TEST_WIDTH/2-DOOR_TEST_FRAME);
-			for(int o=1;o<closed.nobjs;o++) for(int i=0;i<closed.objs[o].mesh.nverts;i++){
-				vec3 a=closed.objs[o].mesh.verts[i].pos,b=opened.objs[o].mesh.verts[i].pos;
+			for(int o=1;o<closed.nobjs;o++) for(int i=0;i<world_mesh(&closed.objs[o])->nverts;i++){
+				vec3 a=world_mesh(&closed.objs[o])->verts[i].pos,b=world_mesh(&opened.objs[o])->verts[i].pos;
 				ASSERT_TRUE(fabsf(b.x-(hingeX+side*(a.z-DOOR_TEST_DEPTH/2)))<WINDOW_TEST_EPSILON);
 				ASSERT_TRUE(fabsf(b.y-a.y)<WINDOW_TEST_EPSILON);
 				ASSERT_TRUE(fabsf(b.z-(DOOR_TEST_DEPTH/2-side*(a.x-hingeX)))<WINDOW_TEST_EPSILON);
@@ -1089,8 +1107,8 @@ static void test_door_windows(void){
 			DOOR_WINDOW_ASSERT(window_test_load(&closed,xml));DOOR_WINDOW_EQUAL(closed.nobjs,5);DOOR_WINDOW_EQUAL(closed.nnegativeProfiles,1);
 			for(int i=0;i<closed.nobjs;i++) DOOR_WINDOW_ASSERT(closed.objs[i].editNode==closed.objs[0].editNode);
 			ASSERT_FALSE(closed.objs[4].castsShadow);
-			float removed=mesh_signed_volume(&plain.objs[1].mesh)-mesh_signed_volume(&closed.objs[1].mesh);
-			float filled=mesh_signed_volume(&closed.objs[3].mesh)/2+mesh_signed_volume(&closed.objs[4].mesh)*DOOR_TEST_LEAF_DEPTH/DOOR_WINDOW_TEST_PANE_DEPTH;
+			float removed=mesh_signed_volume(world_mesh(&plain.objs[1]))-mesh_signed_volume(world_mesh(&closed.objs[1]));
+			float filled=mesh_signed_volume(world_mesh(&closed.objs[3]))/2+mesh_signed_volume(world_mesh(&closed.objs[4]))*DOOR_TEST_LEAF_DEPTH/DOOR_WINDOW_TEST_PANE_DEPTH;
 			DOOR_WINDOW_ASSERT(removed>0&&fabsf(removed-filled)<WINDOW_TEST_EPSILON);
 			vec3 ray=v3(0,DOOR_WINDOW_TEST_CENTER,DOOR_WINDOW_TEST_CAMERA_DISTANCE);
 			DOOR_WINDOW_EQUAL(scene_pick_object(&closed,ray,v3(0,0,-1),NULL),0);
@@ -1101,8 +1119,8 @@ static void test_door_windows(void){
 				snprintf(xml,sizeof(xml),"<scene><door preset='%s' width='154' height='270' frameWidth='10' depth='20' leafDepth='8' handle='0' petWidth='40' petHeight='48' petFrameWidth='2' window='%s' hinge='%s' openAngle='90'/></scene>",presets[p],windows[w],side<0?"left":"right");
 				DOOR_WINDOW_ASSERT(window_test_load(&opened,xml));DOOR_WINDOW_EQUAL(opened.nobjs,closed.nobjs);
 				float hingeX=side*(DOOR_TEST_WIDTH/2-DOOR_TEST_FRAME);
-				for(int o=1;o<closed.nobjs;o++) for(int i=0;i<closed.objs[o].mesh.nverts;i++){
-					vec3 a=closed.objs[o].mesh.verts[i].pos,b=opened.objs[o].mesh.verts[i].pos;
+				for(int o=1;o<closed.nobjs;o++) for(int i=0;i<world_mesh(&closed.objs[o])->nverts;i++){
+					vec3 a=world_mesh(&closed.objs[o])->verts[i].pos,b=world_mesh(&opened.objs[o])->verts[i].pos;
 					DOOR_WINDOW_ASSERT(fabsf(b.x-(hingeX+side*(a.z-DOOR_TEST_DEPTH/2)))<WINDOW_TEST_EPSILON);
 					DOOR_WINDOW_ASSERT(fabsf(b.y-a.y)<WINDOW_TEST_EPSILON);
 					DOOR_WINDOW_ASSERT(fabsf(b.z-(DOOR_TEST_DEPTH/2-side*(a.x-hingeX)))<WINDOW_TEST_EPSILON);
@@ -1122,7 +1140,7 @@ static void test_door_windows(void){
 	DOOR_WINDOW_ASSERT(window_test_load(&s,"<scene up='z'><door window='round' rot='90 0 0' openAngle='65' windowPane='0'/></scene>"));
 	snprintf(s.scenePath,sizeof(s.scenePath),"%s/scener-door-window-%d.blks",window_test_temp_dir(),getpid());
 	DOOR_WINDOW_ASSERT(scene_save_all(&s));DOOR_WINDOW_ASSERT(load_scene(s.scenePath,&restored));DOOR_WINDOW_EQUAL(restored.nobjs,s.nobjs);
-	for(int o=0;o<s.nobjs;o++) for(int i=0;i<s.objs[o].mesh.nverts;i++) DOOR_WINDOW_ASSERT(vlen(vsub(s.objs[o].mesh.verts[i].pos,restored.objs[o].mesh.verts[i].pos))<WINDOW_TEST_EPSILON);
+	for(int o=0;o<s.nobjs;o++) for(int i=0;i<world_mesh(&s.objs[o])->nverts;i++) DOOR_WINDOW_ASSERT(vlen(vsub(world_mesh(&s.objs[o])->verts[i].pos,world_mesh(&restored.objs[o])->verts[i].pos))<WINDOW_TEST_EPSILON);
 	unlink(s.scenePath);scene_free(&s);scene_free(&restored);PASS();
 }
 
@@ -1133,7 +1151,7 @@ static void test_door_windows(void){
 
 static int surface_test_closed(Scene *s){
 	for(int o=0;o<s->nobjs;o++){
-		Mesh *m=&s->objs[o].mesh;
+		Mesh *m=world_mesh(&s->objs[o]);
 		if(!m->ntris||mesh_signed_volume(m)<=0){ fprintf(stderr,"surface mesh %d: volume %g\n",o,mesh_signed_volume(m)); return 0; }
 		for(int e=0;e<m->nedges;e++) if(m->edges[e].t1<0){ fprintf(stderr,"surface mesh %d (%s): open edge %d\n",o,scene_node_tag(s->objs[o].editNode),e); return 0; }
 	}
@@ -1155,11 +1173,11 @@ static void test_wall_sections_and_trims(void){
 	SURFACE_ASSERT(window_test_load(&s,"<scene>" SURFACE_TEST_WALL_XML "</scene>"));
 	ASSERT_EQUAL(s.nobjs,8);
 	SURFACE_ASSERT(surface_test_closed(&s));
-	vec3 lo,hi; surface_test_bounds(&s.objs[0].mesh,&lo,&hi);
+	vec3 lo,hi; surface_test_bounds(world_mesh(&s.objs[0]),&lo,&hi);
 	SURFACE_ASSERT(fabsf(lo.y)<SURFACE_TEST_EPSILON&&fabsf(hi.y-1)<SURFACE_TEST_EPSILON);
 	SURFACE_ASSERT(fabsf(s.objs[0].color.x-0.2f)<SURFACE_TEST_EPSILON);
 	SURFACE_ASSERT(fabsf(s.objs[1].color.x-0.8f)<SURFACE_TEST_EPSILON);
-	float volume=0; for(int i=0;i<s.nobjs;i++) volume+=mesh_signed_volume(&s.objs[i].mesh);
+	float volume=0; for(int i=0;i<s.nobjs;i++) volume+=mesh_signed_volume(world_mesh(&s.objs[i]));
 	SURFACE_ASSERT(fabsf(volume-(4*3*0.2f+2*3*4*0.1f*0.04f))<SURFACE_TEST_EPSILON);
 	scene_free(&s);
 	SURFACE_ASSERT(window_test_load(&s,"<scene>" SURFACE_TEST_WALL_XML
@@ -1187,9 +1205,9 @@ static void test_wall_surface_transforms_and_invalid(void){
 	ASSERT_EQUAL(a.nobjs,b.nobjs);
 	mat4 transform=mat4_mul(mat4_translate(v3(1,2,3)),mat4_mul(mat4_rot_xyz(v3(90,0,30)),mat4_scale(v3(2,2,2))));
 	for(int o=0;o<a.nobjs;o++){
-		ASSERT_EQUAL(a.objs[o].mesh.nverts,b.objs[o].mesh.nverts);
-		for(int v=0;v<a.objs[o].mesh.nverts;v++)
-			SURFACE_ASSERT(vlen(vsub(mat4_xform_point(transform,a.objs[o].mesh.verts[v].pos),b.objs[o].mesh.verts[v].pos))<SURFACE_TEST_EPSILON);
+		ASSERT_EQUAL(world_mesh(&a.objs[o])->nverts,world_mesh(&b.objs[o])->nverts);
+		for(int v=0;v<world_mesh(&a.objs[o])->nverts;v++)
+			SURFACE_ASSERT(vlen(vsub(mat4_xform_point(transform,world_mesh(&a.objs[o])->verts[v].pos),world_mesh(&b.objs[o])->verts[v].pos))<SURFACE_TEST_EPSILON);
 	}
 	scene_free(&a); scene_free(&b);
 	const char *invalid[]={"length='0'","height='nan'","thickness='-1'","lowerHeight='400'","trimSide='left'",
@@ -1214,14 +1232,14 @@ static void test_procedural_floors(void){
 		SURFACE_ASSERT(a.nobjs>2); ASSERT_EQUAL(a.nobjs,b.nobjs); SURFACE_ASSERT(surface_test_closed(&a));
 		int varied=0; void *node=a.objs[0].editNode;
 		for(int o=0;o<a.nobjs;o++){
-			vec3 lo,hi; surface_test_bounds(&a.objs[o].mesh,&lo,&hi);
+			vec3 lo,hi; surface_test_bounds(world_mesh(&a.objs[o]),&lo,&hi);
 			SURFACE_ASSERT(lo.x>=-0.685f-SURFACE_TEST_EPSILON&&hi.x<=0.685f+SURFACE_TEST_EPSILON);
 			SURFACE_ASSERT(lo.z>=-0.565f-SURFACE_TEST_EPSILON&&hi.z<=0.565f+SURFACE_TEST_EPSILON);
 			SURFACE_ASSERT(lo.y>=-0.18f-SURFACE_TEST_EPSILON&&hi.y<=SURFACE_TEST_EPSILON);
 			SURFACE_ASSERT(a.objs[o].editNode==node);
 			SURFACE_ASSERT(vlen(vsub(a.objs[o].color,b.objs[o].color))==0);
-			ASSERT_EQUAL(a.objs[o].mesh.nverts,b.objs[o].mesh.nverts);
-			for(int v=0;v<a.objs[o].mesh.nverts;v++) SURFACE_ASSERT(vlen(vsub(a.objs[o].mesh.verts[v].pos,b.objs[o].mesh.verts[v].pos))==0);
+			ASSERT_EQUAL(world_mesh(&a.objs[o])->nverts,world_mesh(&b.objs[o])->nverts);
+			for(int v=0;v<world_mesh(&a.objs[o])->nverts;v++) SURFACE_ASSERT(vlen(vsub(world_mesh(&a.objs[o])->verts[v].pos,world_mesh(&b.objs[o])->verts[v].pos))==0);
 			if(o){
 				SURFACE_ASSERT(fabsf(hi.y)<SURFACE_TEST_EPSILON);
 				SURFACE_ASSERT(a.objs[o].color.x>=0.375f&&a.objs[o].color.x<=0.625f);
@@ -1233,8 +1251,8 @@ static void test_procedural_floors(void){
 		SURFACE_ASSERT(window_test_load(&c,xml)); ASSERT_EQUAL(a.nobjs,c.nobjs);
 		for(int o=1;o<c.nobjs;o++){
 			SURFACE_ASSERT(c.objs[o].color.x==0.5f);
-			ASSERT_EQUAL(a.objs[o].mesh.nverts,c.objs[o].mesh.nverts);
-			for(int v=0;v<a.objs[o].mesh.nverts;v++) SURFACE_ASSERT(vlen(vsub(a.objs[o].mesh.verts[v].pos,c.objs[o].mesh.verts[v].pos))==0);
+			ASSERT_EQUAL(world_mesh(&a.objs[o])->nverts,world_mesh(&c.objs[o])->nverts);
+			for(int v=0;v<world_mesh(&a.objs[o])->nverts;v++) SURFACE_ASSERT(vlen(vsub(world_mesh(&a.objs[o])->verts[v].pos,world_mesh(&c.objs[o])->verts[v].pos))==0);
 		}
 		scene_free(&a); scene_free(&b); scene_free(&c);
 	}
@@ -1247,7 +1265,7 @@ static void test_floor_coverage_and_limits(void){
 	for(int i=0;i<(int)(sizeof(styles)/sizeof(styles[0]));i++){
 		char xml[SURFACE_TEST_CAPACITY]; snprintf(xml,sizeof(xml),"<scene up='z'><floor style='%s' width='137' depth='113' tileWidth='30' gap='0' pos='100 200 300' rot='90 0 0'/></scene>",styles[i]);
 		SURFACE_ASSERT(window_test_load(&s,xml)); float volume=0;
-		for(int o=0;o<s.nobjs;o++) volume+=mesh_signed_volume(&s.objs[o].mesh);
+		for(int o=0;o<s.nobjs;o++) volume+=mesh_signed_volume(world_mesh(&s.objs[o]));
 		SURFACE_ASSERT(fabsf(volume-1.37f*1.13f*0.18f)<SURFACE_TEST_EPSILON);
 		vec3 lo,hi; scene_get_bounds(&s,&lo,&hi);
 		SURFACE_ASSERT(fabsf(hi.z-3)<SURFACE_TEST_EPSILON&&fabsf(lo.z-2.82f)<SURFACE_TEST_EPSILON);
@@ -1280,8 +1298,8 @@ static void test_surface_materials_and_roundtrip(void){
 	ASSERT_EQUAL(s.nobjs,restored.nobjs);
 	for(int o=0;o<s.nobjs;o++){
 		SURFACE_ASSERT(vlen(vsub(s.objs[o].color,restored.objs[o].color))==0);
-		ASSERT_EQUAL(s.objs[o].mesh.nverts,restored.objs[o].mesh.nverts);
-		for(int v=0;v<s.objs[o].mesh.nverts;v++) SURFACE_ASSERT(vlen(vsub(s.objs[o].mesh.verts[v].pos,restored.objs[o].mesh.verts[v].pos))==0);
+		ASSERT_EQUAL(world_mesh(&s.objs[o])->nverts,world_mesh(&restored.objs[o])->nverts);
+		for(int v=0;v<world_mesh(&s.objs[o])->nverts;v++) SURFACE_ASSERT(vlen(vsub(world_mesh(&s.objs[o])->verts[v].pos,world_mesh(&restored.objs[o])->verts[v].pos))==0);
 	}
 	unlink(s.scenePath); scene_free(&s); scene_free(&restored); PASS();
 }

@@ -11,7 +11,7 @@
 
 static GLuint prog;
 static GLuint vlocPos, vlocNrm;
-static GLint ulocViewProj, ulocViewPos, ulocLightPos, ulocLightColor, ulocLightRadius;
+static GLint ulocModel, ulocNormalM, ulocViewProj, ulocViewPos, ulocLightPos, ulocLightColor, ulocLightRadius;
 static GLint ulocAmbient, ulocAmbientOn, ulocLightRange, ulocSky, ulocSkyOn, ulocSpecular, ulocMetallic, ulocColor, ulocShininess, ulocRamp, ulocRampOn, ulocGradOn, ulocGradFrom, ulocGradTo;
 static GLint vlocGrad;
 #ifdef SCENER_USE_TEXTURES
@@ -24,19 +24,22 @@ static const char *vs_src =
 "in vec3 aNrm;\n"
 "in float aGrad;\n"
 "uniform mat4 uViewProj;\n"
+"uniform mat4 uModel;\n"
+"uniform mat4 uNormalM;\n"
 "out float vGrad;\n"
 "out vec3 vWorldPos;\n"
 "out vec3 vWorldNrm;\n"
 "out vec2 vWorldUV;\n"
 "void main(){\n"
-"    vWorldPos=aPos;\n"
-"    vWorldNrm=aNrm;\n"
+"    vec4 wp=uModel*vec4(aPos,1.0);\n"
+"    vWorldPos=wp.xyz;\n"
+"    vWorldNrm=normalize(mat3(uNormalM)*aNrm);\n"
 "    vGrad=aGrad;\n"
-"    vec3 n=abs(aNrm);\n"
-"    if(n.y>n.x&&n.y>n.z) vWorldUV=aPos.xz*0.5;\n"
-"    else if(n.x>n.y&&n.x>n.z) vWorldUV=aPos.yz*0.5;\n"
-"    else vWorldUV=aPos.xy*0.5;\n"
-"    gl_Position=uViewProj*vec4(aPos,1.0);\n"
+"    vec3 n=abs(vWorldNrm);\n"
+"    if(n.y>n.x&&n.y>n.z) vWorldUV=wp.xz*0.5;\n"
+"    else if(n.x>n.y&&n.x>n.z) vWorldUV=wp.yz*0.5;\n"
+"    else vWorldUV=wp.xy*0.5;\n"
+"    gl_Position=uViewProj*wp;\n"
 "}\n";
 
 static const char *fs_src =
@@ -154,6 +157,8 @@ void shader_init(void){
 	vlocPos = 0;
 	vlocNrm = 1;
 	ulocViewProj    = glGetUniformLocation(prog, "uViewProj");
+	ulocModel       = glGetUniformLocation(prog, "uModel");
+	ulocNormalM     = glGetUniformLocation(prog, "uNormalM");
 	ulocViewPos     = glGetUniformLocation(prog, "uViewPos");
 	ulocLightPos    = glGetUniformLocation(prog, "uLightPos");
 	ulocLightColor  = glGetUniformLocation(prog, "uLightColor");
@@ -218,6 +223,11 @@ void shader_set_material(vec3 color, float shininess, float specular, float meta
 	glUniform1f(ulocShininess, shininess);
 	glUniform1f(ulocSpecular, specular);
 	glUniform1f(ulocMetallic, metallic);
+}
+
+void shader_set_model(mat4 model, mat4 normalM){
+	glUniformMatrix4fv(ulocModel, 1, GL_FALSE, model.m);
+	glUniformMatrix4fv(ulocNormalM, 1, GL_FALSE, normalM.m);
 }
 
 void shader_set_ambient(int on, vec3 linear){

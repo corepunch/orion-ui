@@ -18,7 +18,7 @@ static vec3 export_upright(const Scene *s,vec3 v){ return s->worldUp.z==1?v3(v.x
 static bool export_snapshot_build(Scene *s,export_snapshot_t *x,scener_export_scene_t *out,float time){
   memset(x,0,sizeof(*x)); memset(out,0,sizeof(*out));
   int count=0; size_t nverts=0,ntris=0;
-  for(int i=0;i<s->nobjs;i++){ SceneObj *o=&s->objs[i]; if(!o->renderable||!o->mesh.nverts||!o->mesh.ntris) continue; count++; nverts+=o->mesh.nverts; ntris+=o->mesh.ntris; }
+  for(int i=0;i<s->nobjs;i++){ SceneObj *o=&s->objs[i]; if(!o->renderable||!o->mesh||!o->mesh->nverts||!o->mesh->ntris) continue; count++; nverts+=o->mesh->nverts; ntris+=o->mesh->ntris; }
   if(!count){ fprintf(stderr,"export: %s has no renderable geometry\n",s->scenePath); return false; }
   x->objects=calloc(count,sizeof(*x->objects)); x->names=calloc(count,sizeof(*x->names));
   x->data=malloc(nverts*8*sizeof(float)); x->indices=malloc(ntris*3*sizeof(uint32_t));
@@ -26,8 +26,9 @@ static bool export_snapshot_build(Scene *s,export_snapshot_t *x,scener_export_sc
   vec3 lo=v3(1e30f,1e30f,1e30f),hi=v3(-1e30f,-1e30f,-1e30f);
   float *d=x->data; uint32_t *ix=x->indices; int n=0;
   for(int i=0;i<s->nobjs;i++){
-    SceneObj *o=&s->objs[i]; Mesh *m=&o->mesh;
-    if(!o->renderable||!m->nverts||!m->ntris) continue;
+    SceneObj *o=&s->objs[i];
+    if(!o->renderable||!o->mesh||!o->mesh->nverts||!o->mesh->ntris) continue;
+    Mesh world; scene_obj_world_mesh(o,&world); Mesh *m=&world;   /* exporters get world space */
     XmlNode *node=(XmlNode*)o->sourceNode; const char *name=node?xml_peek(node,"name"):NULL;
     if(name&&*name) snprintf(x->names[n],sizeof(x->names[n]),"%s",name); else snprintf(x->names[n],sizeof(x->names[n]),"%s_%d",node?node->tag:"mesh",i);
     for(char *c=x->names[n];*c;c++) if(isspace((unsigned char)*c)) *c='_';
@@ -43,6 +44,7 @@ static bool export_snapshot_build(Scene *s,export_snapshot_t *x,scener_export_sc
     }
     e->indices=ix;
     for(int t=0;t<m->ntris;t++){ *ix++=(uint32_t)m->tris[t].a; *ix++=(uint32_t)m->tris[t].b; *ix++=(uint32_t)m->tris[t].c; }
+    mesh_free(&world);
   }
   out->abi=SCENER_EXPORTER_ABI; out->source=s->scenePath; out->authored_up=s->worldUp.z==1?'z':'y'; out->time=time;
   out->bounds_min[0]=lo.x;out->bounds_min[1]=lo.y;out->bounds_min[2]=lo.z; out->bounds_max[0]=hi.x;out->bounds_max[1]=hi.y;out->bounds_max[2]=hi.z;

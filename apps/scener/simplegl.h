@@ -134,8 +134,10 @@ typedef struct {
 	Edge *edges; int nedges,cedges;
 	vec3 *triN;
 	int gpuChunk;                  /* vertex cache chunk + 1 holding its GPU copy (vertex_cache.c); 0 = none yet */
-	unsigned gpuVertex,gpuIndex;   /* where in that chunk its vertices and indices start */
+	unsigned gpuVertex,gpuIndex;   /* where in that chunk its vertices start, and its indices (bytes) */
+	int gpuWide;                   /* 32-bit indices (more than 65536 vertices); else 16-bit */
 	int gpuDirty;                  /* vertices changed since the GPU copy was made */
+	int refs; unsigned long long hash; /* a shared model (scene_add_obj): objects using it, content hash */
 } Mesh;
 int mesh_gpu_take_retired(int **chunks); /* the vertex cache chunks (+1) of meshes freed since the last call */
 
@@ -222,7 +224,9 @@ typedef struct { vec3 pos,color,dir; float intensity,radius,range; /* range: bey
 typedef struct { float x,y,z,w; } ShadowVertex;
 /* A light's volume is its casters' volumes end to end; obj/first/count say which vertices belong to which object, as Doom 3 keeps one shadow surface per interaction. */
 typedef struct { ShadowVertex *verts; int nverts,cverts; int *obj,*first,*count; int nranges; } ShadowVolume;
-typedef struct { Mesh mesh; vec3 bmin,bmax; vec3 color; float shininess,specular,metallic; /* specular: Blender-style level, F0 = 0.08 * specular (0.5 gives 4%); metallic 0..1 tints the reflection with the colour and drops the diffuse */ int ramp; int gradient; vec3 gradFrom,gradTo; /* gradient: colour multipliers at Vertex.g 0 and 1, valid when set */ int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
+/* An object is a model shared with every object of the same geometry, placed by its own matrix, as a Doom 3
+   entity places a render model; bmin/bmax are its world bounds. */
+typedef struct { Mesh *mesh; mat4 model,normalM; int mirrored; vec3 bmin,bmax; vec3 color; float shininess,specular,metallic; /* specular: Blender-style level, F0 = 0.08 * specular (0.5 gives 4%); metallic 0..1 tints the reflection with the colour and drops the diffuse */ int ramp; int gradient; vec3 gradFrom,gradTo; /* gradient: colour multipliers at Vertex.g 0 and 1, valid when set */ int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
 typedef struct { char path[1024]; unsigned char *pixels; int width,height; unsigned int texture; } ScreenTexture;
 typedef struct { char name[32]; vec3 pos; } AttachPoint;
 #define SCENE_PREFAB_PATH_CAPACITY 1024
@@ -276,6 +280,7 @@ typedef struct {
 	Material *mats; int nmats,cmats;
 	MaterialRamp *ramps; int nramps,cramps;
 	SceneObj *objs; int nobjs,cobjs;
+	Mesh **models; int nmodels,cmodels; /* the shared models, looked up by content when objects are added */
 	ShadowVolume *svols;
 	unsigned shadowRev; /* bumped whenever the combined volumes are rebuilt; GPU copies of them are keyed by it */
 	PrefabDef *prefabs; int nprefabs,cprefabs;
@@ -332,8 +337,8 @@ typedef struct {
 	vec3 dragPrevAnchor; /* anchor point from previous frame (rotate/scale delta) */
 	vec3 dragStartPos,dragStartRot,dragStartScale;
 	mat4 dragStartEditMatrix,dragParentMatrix;
-	Vertex *dragStartVerts; int *dragObjIndices,*dragVertOffsets;
-	int ndragStartObjs,ndragStartVerts;
+	mat4 *dragStartModels; int *dragObjIndices; /* matrices of the dragged objects when the drag began */
+	int ndragStartObjs;
 } Scene;
 
 int load_scene(const char *path,Scene *s);
@@ -343,6 +348,8 @@ void export_list(FILE *f);
 void scene_select_camera(Scene *s,const char *name);
 int light_reaches_obj(const Light *L,const SceneObj *o); /* false when o lies beyond a point light's range */
 void scene_obj_update_bounds(SceneObj *o);
+void scene_obj_world_mesh(const SceneObj *o,Mesh *out); /* a world-space copy (checks, export); free with mesh_free */
+void scene_obj_release(SceneObj *o);                      /* drops its reference to the shared model */
 void scene_add_obj(Scene *s,Mesh mesh,mat4 M,mat4 R,vec3 color,float shin,int castsShadow,int renderable,int unlit);
 typedef struct { int errors, warnings; } SceneCheckResult;
 SceneCheckResult scene_check(Scene *s,FILE *out,int json);

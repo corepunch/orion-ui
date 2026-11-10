@@ -101,15 +101,37 @@ void shadow_volume_release(ShadowVolume *sv){
 
 void scene_obj_update_bounds(SceneObj *o){
 	vec3 lo=v3(INFINITY,INFINITY,INFINITY),hi=v3(-INFINITY,-INFINITY,-INFINITY);
-	for(int i=0;i<o->mesh.nverts;i++){
-		vec3 p=o->mesh.verts[i].pos;
+	for(int i=0;o->mesh && i<o->mesh->nverts;i++){
+		vec3 p=mat4_xform_point(o->model,o->mesh->verts[i].pos);
 		lo=v3(fminf(lo.x,p.x),fminf(lo.y,p.y),fminf(lo.z,p.z)); hi=v3(fmaxf(hi.x,p.x),fmaxf(hi.y,p.y),fmaxf(hi.z,p.z));
 	}
 	o->bmin=lo; o->bmax=hi;
 }
 
+void scene_obj_world_mesh(const SceneObj *o,Mesh *out){
+	memset(out,0,sizeof(*out));
+	const Mesh *m=o->mesh;
+	if(!m||!m->nverts) return;
+	out->verts=malloc(sizeof(Vertex)*(size_t)m->nverts); out->nverts=out->cverts=m->nverts;
+	for(int i=0;i<m->nverts;i++){
+		Vertex v=m->verts[i];
+		v.pos=mat4_xform_point(o->model,v.pos);
+		v.nrm=vnorm(mat4_xform_dir(o->normalM,v.nrm));
+		out->verts[i]=v;
+	}
+	out->tris=malloc(sizeof(Tri)*(size_t)(m->ntris?m->ntris:1)); out->ntris=out->ctris=m->ntris;
+	memcpy(out->tris,m->tris,sizeof(Tri)*(size_t)m->ntris);
+	if(o->mirrored) for(int i=0;i<out->ntris;i++){ int t=out->tris[i].b; out->tris[i].b=out->tris[i].c; out->tris[i].c=t; }
+	if(m->nedges){
+		out->edges=malloc(sizeof(Edge)*(size_t)m->nedges); out->nedges=out->cedges=m->nedges;
+		memcpy(out->edges,m->edges,sizeof(Edge)*(size_t)m->nedges);
+		if(o->mirrored) for(int i=0;i<out->nedges;i++){ int v=out->edges[i].v0; out->edges[i].v0=out->edges[i].v1; out->edges[i].v1=v; }
+	}
+	mesh_compute_face_normals(out);
+}
+
 int light_reaches_obj(const Light *L,const SceneObj *o){
-	if(L->isDirectional || L->range<=0 || !o->mesh.nverts) return 1;
+	if(L->isDirectional || L->range<=0 || !o->mesh || !o->mesh->nverts) return 1;
 	float dx=fmaxf(fmaxf(o->bmin.x-L->pos.x,L->pos.x-o->bmax.x),0),dy=fmaxf(fmaxf(o->bmin.y-L->pos.y,L->pos.y-o->bmax.y),0),dz=fmaxf(fmaxf(o->bmin.z-L->pos.z,L->pos.z-o->bmax.z),0);
 	return dx*dx+dy*dy+dz*dz<=L->range*L->range;
 }

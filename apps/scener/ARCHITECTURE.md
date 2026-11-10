@@ -152,6 +152,20 @@ light with nothing lit on screen draws no shadows; a caster is drawn only if the
 meets the lit rectangle, and under that scissor. Not taken from Doom 3: the depth-bounds test (no such extension on
 macOS OpenGL), static pre-light volumes, and z-pass for volumes the camera cannot be inside (all volumes are z-fail).
 
+### Shared models and the vertex cache
+
+As in Doom 3, geometry is stored once and placed by matrices. `scene_add_obj()` looks the generated mesh up by
+content (`Scene.models`); every `SceneObj` keeps a pointer to that shared model in its own space plus `model`,
+`normalM` and `mirrored`, and `bmin`/`bmax` are its world bounds. The renderer draws models with those matrices;
+shadow volumes are built with the light carried into model space (Doom 3's `localLightOrigin`). Code that needs
+world-space triangles (`--check`, exporters, tests) asks `scene_obj_world_mesh()` for a copy. Dragging changes the
+matrix, never the shared vertices.
+
+On the GPU, `vertex_cache.c` sub-allocates models (20-byte vertices with packed normals, 16-bit indices) and shadow
+index lists from a few large buffers; the macOS driver gives every GL buffer its own memory region, so one buffer
+per mesh cost gigabytes. Shadow volumes have no vertices of their own: index 2i is model vertex i, 2i+1 the same
+vertex at infinity, read by the shadow shader from the model's buffer. Caps exist only for casters drawn z-fail.
+
 Shadow construction depends on the sealed-mesh invariant. `mesh_build_edges()` welds coincident positions and records the two adjacent triangles for each edge. `build_shadow_volume()` compares those two face directions against the light; an edge is a silhouette only when one face points toward the light and the other points away. It extrudes only those silhouette edges, then uses the original mesh triangles as the finite and infinite caps for Z-fail.
 
 An open mesh gives an edge only one adjacent face, so the shadow builder treats it as a boundary silhouette. The resulting volume is generally not closed and stencil increments cannot cancel reliably. Fix the primitive instead of special-casing its shadows. `castShadow="0"` is for intentionally non-shadowing geometry, not for hiding invalid topology.

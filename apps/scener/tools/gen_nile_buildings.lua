@@ -215,9 +215,9 @@ local function main(path)
     local vs = {}
     for p in key:gmatch("%S+") do
       local x, y = p:match("^([^,]+),(.+)$")
-      vs[#vs + 1] = string.format('<v x="%s" y="%s"/>', x, y)
+      vs[#vs + 1] = x .. " " .. y
     end
-    out[#out + 1] = string.format('  <shape id="%s" closed="0">%s</shape>', shapes.ids[key], table.concat(vs))
+    out[#out + 1] = string.format('  <shape id="%s" closed="0" v="%s"/>', shapes.ids[key], table.concat(vs, " "))
   end
   out[#out + 1] = string.format('  <box pos="0 -8 0" size="%s 16 %s" material="grass"/>', f(W), f(D))
   for _, e in ipairs(body) do

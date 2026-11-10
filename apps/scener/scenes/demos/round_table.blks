@@ -61,18 +61,7 @@
 
   <!-- Round rug under the seating ring; table and chairs stand on it. Then the pedestal table turned on the lathe. -->
   <circle pos="0 0 {RUG/2}" radius="{RC + 56}" segments="64" material="rug"><extrude amount="{RUG}"/></circle>
-  <shape id="pedestal" closed="0">
-    <v x="0" y="0"/>
-    <v x="32" y="0"/>
-    <v x="32" y="3"/>
-    <v x="7" y="5"/>
-    <v x="5.5" y="12"/>
-    <v x="5.5" y="{TOP - 9}"/>
-    <v x="10" y="{TOP - 4}"/>
-    <v x="{R}" y="{TOP - 4}"/>
-    <v x="{R}" y="{TOP + RUG}"/>
-    <v x="0" y="{TOP + RUG}"/>
-  </shape>
+  <shape id="pedestal" closed="0" v="0 0 32 0 32 3 7 5 5.5 12 5.5 {TOP - 9} 10 {TOP - 4} {R} {TOP - 4} {R} {TOP + RUG} 0 {TOP + RUG}"/>
   <lathe shape="pedestal" segments="40" pos="0 0 {RUG}" rot="90 0 0" material="dark_wood"/>
 
   <!-- Chairs on the ring: a chair faces local -Y, so rot.z = angle - 90 points it at the table.
@@ -87,16 +76,7 @@
   <prefab source="items/mug" pos="{0.55*R*cos(rad(A2))} {0.55*R*sin(rad(A2))} {TOP + RUG}" rot="90 0 {A2 + 75}" color="0.58 0.22 0.18"/>
   <prefab source="items/mug" pos="{0.55*R*cos(rad(A3))} {0.55*R*sin(rad(A3))} {TOP + RUG}" rot="90 0 {A3 + 50}" color="0.30 0.42 0.28"/>
   <group name="vase" pos="-8 6 {TOP + RUG}">
-    <shape id="vase" closed="0">
-      <v x="0" y="0"/>
-      <v x="5" y="0"/>
-      <v x="6" y="2"/>
-      <v x="3.4" y="9"/>
-      <v x="2.6" y="16"/>
-      <v x="3.6" y="21"/>
-      <v x="3" y="22.5"/>
-      <v x="0" y="22.5"/>
-    </shape>
+    <shape id="vase" closed="0" v="0 0 5 0 6 2 3.4 9 2.6 16 3.6 21 3 22.5 0 22.5"/>
     <lathe shape="vase" segments="28" rot="90 0 0" material="ceramic"/>
     <cylinder pos="0.4 0.3 31" rot="96 0 0" radius="0.35" height="22" material="leaf"/>
     <cylinder pos="-0.9 -0.5 30" rot="85 0 8" radius="0.35" height="20" material="leaf"/>

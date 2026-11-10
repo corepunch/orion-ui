@@ -219,8 +219,9 @@ function Kit:poly(mat, pts, col)
     flat[i] = {(p[1] - x0) * c + (p[2] - y0) * s, p[3] - z0}
   end
   self:open("group", {{"pos", v3(x0 * TILE, z0 * TILE, -y0 * TILE)}, {"rot", v3(0, deg(ang), 0)}})
-  self:open("shape", cat({{"closed", 1}}, self:look(mat, col)))
-  for _, p in ipairs(flat) do self:emit(fmt('<v x="%s" y="%s"/>', f(p[1] * TILE), f(p[2] * TILE))) end
+  local vs = {}
+  for _, p in ipairs(flat) do vs[#vs + 1] = f(p[1] * TILE) .. " " .. f(p[2] * TILE) end
+  self:open("shape", cat({{"closed", 1}, {"v", table.concat(vs, " ")}}, self:look(mat, col)))
   self:emit(fmt('<extrude amount="%s"/>', f(THIN)))
   self:close("shape")
   self:close("group")

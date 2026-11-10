@@ -14,20 +14,20 @@
   <camera name="Bakery" comment="Bakery" pos="-300 420 1020" look="-720 90 320" fov="32"/>
   <camera name="Watchtower" comment="Watchtower" pos="420 420 1020" look="0 90 320" fov="32"/>
   <camera name="Pylon gate" comment="Pylon gate" pos="1140 420 1020" look="720 90 320" fov="32"/>
-  <shape id="lathe0" closed="0"><v x="33.94" y="0"/><v x="0" y="48"/></shape>
-  <shape id="lathe1" closed="0"><v x="0" y="0"/><v x="29.39" y="9.55"/><v x="47.55" y="34.55"/><v x="47.55" y="65.45"/><v x="29.39" y="90.45"/><v x="0" y="100"/></shape>
-  <shape id="lathe2" closed="0"><v x="0" y="0"/><v x="35.36" y="14.64"/><v x="50" y="50"/><v x="35.36" y="85.36"/><v x="0" y="100"/></shape>
-  <shape id="lathe3" closed="0"><v x="7.2" y="0"/><v x="16" y="12.8"/><v x="15.2" y="24"/><v x="7.2" y="33.6"/><v x="8" y="37.6"/><v x="6.08" y="38.4"/></shape>
-  <shape id="lathe4" closed="0"><v x="16.16" y="0"/><v x="16.16" y="3.52"/></shape>
-  <shape id="lathe5" closed="0"><v x="60.8" y="0"/><v x="57.6" y="48"/><v x="35.2" y="99.2"/><v x="12.8" y="115.2"/><v x="0" y="118.4"/></shape>
-  <shape id="lathe6" closed="0"><v x="9.6" y="0"/><v x="9.6" y="41.6"/><v x="32" y="41.6"/><v x="32" y="48"/></shape>
-  <shape id="lathe7" closed="0"><v x="12.8" y="0"/><v x="16" y="16"/><v x="8" y="25.6"/></shape>
-  <shape id="lathe8" closed="0"><v x="6.48" y="0"/><v x="14.4" y="11.52"/><v x="13.68" y="21.6"/><v x="6.48" y="30.24"/><v x="7.2" y="33.84"/><v x="5.47" y="34.56"/></shape>
-  <shape id="lathe9" closed="0"><v x="5.76" y="0"/><v x="12.8" y="10.24"/><v x="12.16" y="19.2"/><v x="5.76" y="26.88"/><v x="6.4" y="30.08"/><v x="4.86" y="30.72"/></shape>
-  <shape id="lathe10" closed="0"><v x="12.93" y="0"/><v x="12.93" y="2.82"/></shape>
-  <shape id="lathe11" closed="0"><v x="48" y="0"/><v x="46.4" y="32"/><v x="28.8" y="72"/><v x="0" y="83.2"/></shape>
-  <shape id="lathe12" closed="0"><v x="13.89" y="0"/><v x="22.4" y="12.32"/><v x="23.52" y="19.04"/><v x="19.04" y="19.71"/></shape>
-  <shape id="lathe13" closed="0"><v x="0" y="0"/><v x="25" y="6.7"/><v x="43.3" y="25"/><v x="50" y="50"/><v x="43.3" y="75"/><v x="25" y="93.3"/><v x="0" y="100"/></shape>
+  <shape id="lathe0" closed="0" v="33.94 0 0 48"/>
+  <shape id="lathe1" closed="0" v="0 0 29.39 9.55 47.55 34.55 47.55 65.45 29.39 90.45 0 100"/>
+  <shape id="lathe2" closed="0" v="0 0 35.36 14.64 50 50 35.36 85.36 0 100"/>
+  <shape id="lathe3" closed="0" v="7.2 0 16 12.8 15.2 24 7.2 33.6 8 37.6 6.08 38.4"/>
+  <shape id="lathe4" closed="0" v="16.16 0 16.16 3.52"/>
+  <shape id="lathe5" closed="0" v="60.8 0 57.6 48 35.2 99.2 12.8 115.2 0 118.4"/>
+  <shape id="lathe6" closed="0" v="9.6 0 9.6 41.6 32 41.6 32 48"/>
+  <shape id="lathe7" closed="0" v="12.8 0 16 16 8 25.6"/>
+  <shape id="lathe8" closed="0" v="6.48 0 14.4 11.52 13.68 21.6 6.48 30.24 7.2 33.84 5.47 34.56"/>
+  <shape id="lathe9" closed="0" v="5.76 0 12.8 10.24 12.16 19.2 5.76 26.88 6.4 30.08 4.86 30.72"/>
+  <shape id="lathe10" closed="0" v="12.93 0 12.93 2.82"/>
+  <shape id="lathe11" closed="0" v="48 0 46.4 32 28.8 72 0 83.2"/>
+  <shape id="lathe12" closed="0" v="13.89 0 22.4 12.32 23.52 19.04 19.04 19.71"/>
+  <shape id="lathe13" closed="0" v="0 0 25 6.7 43.3 25 50 50 43.3 75 25 93.3 0 100"/>
   <box pos="0 -8 0" size="2880 16 1920" material="grass"/>
   <group name="small_pyramid" pos="-800 0 -320">
     <soft-box width="320" height="16" depth="320" radius="6.4" bevel="5.44" segments="3" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
@@ -209,10 +209,7 @@
     <circle radius="5.2" segments="8" pos="32 411.2 -32" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="112"/><bevel amount="1.68" bevelSegments="2"/><taper amount="-0.0769" axis="z"/></circle>
     <lathe shape="lathe1" segments="10" pos="32 462.4 -32" scale="0.16 0.16 0.16" color="0.910 0.682 0.173" shininess="60"/>
     <group pos="32 460.8 -32" rot="0 0 0">
-      <shape closed="1" color="0.169 0.361 0.682" shininess="3">
-        <v x="0" y="0"/>
-        <v x="67.2" y="-16"/>
-        <v x="0" y="-51.2"/>
+      <shape closed="1" v="0 0 67.2 -16 0 -51.2" color="0.169 0.361 0.682" shininess="3">
         <extrude amount="1.5"/>
       </shape>
     </group>
@@ -249,10 +246,7 @@
     <circle radius="5.2" segments="8" pos="-187.2 176 99.2" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="320"/><bevel amount="1.68" bevelSegments="2"/><taper amount="-0.0769" axis="z"/></circle>
     <lathe shape="lathe1" segments="10" pos="-187.2 331.2 99.2" scale="0.16 0.16 0.16" color="0.910 0.682 0.173" shininess="60"/>
     <group pos="-187.2 329.6 99.2" rot="0 180 0">
-      <shape closed="1" color="0.725 0.333 0.184" shininess="3">
-        <v x="0" y="0"/>
-        <v x="67.2" y="-16"/>
-        <v x="0" y="-51.2"/>
+      <shape closed="1" v="0 0 67.2 -16 0 -51.2" color="0.725 0.333 0.184" shininess="3">
         <extrude amount="1.5"/>
       </shape>
     </group>
@@ -271,10 +265,7 @@
     <circle radius="5.2" segments="8" pos="187.2 176 99.2" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="320"/><bevel amount="1.68" bevelSegments="2"/><taper amount="-0.0769" axis="z"/></circle>
     <lathe shape="lathe1" segments="10" pos="187.2 331.2 99.2" scale="0.16 0.16 0.16" color="0.910 0.682 0.173" shininess="60"/>
     <group pos="187.2 329.6 99.2" rot="0 0 0">
-      <shape closed="1" color="0.169 0.361 0.682" shininess="3">
-        <v x="0" y="0"/>
-        <v x="67.2" y="-16"/>
-        <v x="0" y="-51.2"/>
+      <shape closed="1" v="0 0 67.2 -16 0 -51.2" color="0.169 0.361 0.682" shininess="3">
         <extrude amount="1.5"/>
       </shape>
     </group>

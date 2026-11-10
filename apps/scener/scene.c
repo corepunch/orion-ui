@@ -575,22 +575,19 @@ static XmlNode* xml_parse_node(const char **p){
 		while(**p && **p!='=' && !isspace((unsigned char)**p) && **p!='>' && **p!='/' && ai<XML_NAME_CAPACITY-1) aname[ai++]=*(*p)++;
 		aname[ai]=0;
 		xp_skip_ws(p);
-		char aval[XML_VALUE_CAPACITY]={0};
+		const char *vstart=""; size_t vlen=0;   /* any length: mesh data is written as attribute arrays */
 		if(**p=='='){
 			(*p)++; xp_skip_ws(p);
 			if(**p=='"'||**p=='\''){
-				char q=*(*p)++; int vi=0;
-				while(**p && **p!=q && vi<XML_VALUE_CAPACITY-1) aval[vi++]=*(*p)++;
-				if(**p!=q){
-					fprintf(stderr,"[scener] line %d: <%s %s> value exceeds %d bytes; truncated\n",line,tag,aname,XML_VALUE_CAPACITY-1); fflush(stderr);
-					while(**p && **p!=q) (*p)++;
-				}
+				char q=*(*p)++; vstart=*p;
+				while(**p && **p!=q) (*p)++;
+				vlen=(size_t)(*p-vstart);
 				if(**p==q) (*p)++;
-				aval[vi]=0;
 			}
 		}
 		if(ai>0){
-			XmlAttr a={ strdup(aname), strdup(aval), NULL, 0 };
+			char *val=malloc(vlen+1); memcpy(val,vstart,vlen); val[vlen]=0;
+			XmlAttr a={ strdup(aname), val, NULL, 0 };
 			DA_PUSH(n->attrs,n->nattrs,n->cattrs,a);
 		}
 	}
@@ -636,10 +633,11 @@ void scene_free(Scene *s){
 	for(int i=0;i<s->nprefabs;i++) xml_free((XmlNode*)s->prefabs[i].root);
 	for(int i=0;i<s->nprefabs;i++) free(s->prefabs[i].attaches);
 	for(int i=0;i<s->nobjs;i++){
-		mesh_free(&s->objs[i].mesh);
+		scene_obj_release(&s->objs[i]);
 		for(int j=0;j<s->objs[i].nshadowParts;j++) free(s->objs[i].shadowParts[j].verts);
 		free(s->objs[i].shadowParts);
 	}
+	free(s->models); s->models=NULL; s->nmodels=s->cmodels=0;
 	for(int i=0;i<s->nlights;i++) shadow_volume_release(&s->svols[i]);
 	for(int i=0;i<s->nshapes;i++) shape2d_free(&s->shapes[i]);
 	for(int i=0;i<s->nnegativeProfiles;i++) shape2d_free(&s->negativeProfiles[i].profile);
@@ -648,7 +646,7 @@ void scene_free(Scene *s){
 	free(s->lights); free(s->mats); free(s->ramps); free(s->objs); free(s->svols); free(s->cameras);
 	free(s->prefabs); free(s->instances); free(s->rigRotations); free(s->rigTargets); free(s->rigJointWorlds); free(s->negativeBoxes); free(s->negativeArches);
 	free(s->negativeCylinders); free(s->overlayLines); free(s->charDefs); free(s->shapes);
-	free(s->dragStartVerts); free(s->dragObjIndices); free(s->dragVertOffsets);
+	free(s->dragStartModels); free(s->dragObjIndices);
 	free(s->records); free(s->issues);
 	for(int i=0;i<s->nscreenTextures;i++) image_free(s->screenTextures[i].pixels);
 	free(s->screenTextures);
@@ -676,15 +674,59 @@ static Material* find_material(Scene*s, const char*id){
 	return NULL;
 }
 
+static unsigned long long mesh_content_hash(const Mesh *m){
+	unsigned long long h=1469598103934665603ULL;
+	const unsigned char *p=(const unsigned char*)m->verts; size_t n=(size_t)m->nverts*sizeof(Vertex);
+	for(size_t i=0;i<n;i++){ h^=p[i]; h*=1099511628211ULL; }
+	p=(const unsigned char*)m->tris; n=(size_t)m->ntris*sizeof(Tri);
+	for(size_t i=0;i<n;i++){ h^=p[i]; h*=1099511628211ULL; }
+	return h;
+}
+
+/* Identical geometry is stored once: a lathe ball, a garland bead or a snow drift made a thousand times is
+   one model with a thousand matrices. */
+static Mesh *scene_share_mesh(Scene *s,Mesh *mesh,int castsShadow){
+	unsigned long long h=mesh_content_hash(mesh);
+	for(int i=0;i<s->nmodels;i++){
+		Mesh *m=s->models[i];
+		if(m->hash!=h || m->nverts!=mesh->nverts || m->ntris!=mesh->ntris) continue;
+		if(memcmp(m->verts,mesh->verts,sizeof(Vertex)*(size_t)m->nverts) || memcmp(m->tris,mesh->tris,sizeof(Tri)*(size_t)m->ntris)) continue;
+		mesh_free(mesh);
+		if(castsShadow && !m->nedges) mesh_build_edges(m);
+		m->refs++;
+		return m;
+	}
+	Mesh *m=malloc(sizeof(Mesh)); *m=*mesh; memset(mesh,0,sizeof(*mesh));
+	mesh_compute_face_normals(m);
+	if(castsShadow) mesh_build_edges(m);
+	mesh_shrink(m);
+	m->hash=h; m->refs=1;
+	DA_PUSH(s->models,s->nmodels,s->cmodels,m);
+	return m;
+}
+
+void scene_obj_release(SceneObj *o){
+	if(o->mesh && --o->mesh->refs<=0){ mesh_free(o->mesh); free(o->mesh); }
+	o->mesh=NULL;
+}
+
+static void scene_obj_set_matrix(SceneObj *o,mat4 M){
+	o->model=M;
+	mat4 inv=mat4_affine_inverse(M),t=mat4_identity();   /* normals take the inverse transpose */
+	for(int r=0;r<3;r++) for(int c=0;c<3;c++) t.m[c*4+r]=inv.m[r*4+c];
+	o->normalM=t;
+	float det=M.m[0]*(M.m[5]*M.m[10]-M.m[9]*M.m[6])-M.m[4]*(M.m[1]*M.m[10]-M.m[9]*M.m[2])+M.m[8]*(M.m[1]*M.m[6]-M.m[5]*M.m[2]);
+	o->mirrored=det<0;
+}
+
 void scene_add_obj(Scene *s, Mesh mesh, mat4 M, mat4 R, vec3 color, float shin, int castsShadow, int renderable, int unlit){
+	(void)R;
 	if(s->activeGradient) mesh_gradient_param(&mesh, s->activeGradAxis);
-	mesh_transform(&mesh, M, R);
-	if(castsShadow && mesh_signed_volume(&mesh) < 0.0f) mesh_flip_winding(&mesh);
-	mesh_compute_face_normals(&mesh);
-	if(castsShadow) mesh_build_edges(&mesh);
-	mesh_shrink(&mesh);
+	if(castsShadow && mesh_signed_volume(&mesh) < 0.0f) mesh_flip_winding(&mesh);   /* a solid model winds outward; mirroring is the matrix's */
 	SceneObj o={0};
-	o.mesh=mesh; o.color=color; o.shininess=shin; o.ramp=s->activeRamp; o.castsShadow=castsShadow;
+	o.mesh=scene_share_mesh(s,&mesh,castsShadow);
+	scene_obj_set_matrix(&o,M);
+	o.color=color; o.shininess=shin; o.ramp=s->activeRamp; o.castsShadow=castsShadow;
 	o.specular=s->activeSpecular; o.metallic=s->activeMetallic;
 	o.gradient=s->activeGradient; o.gradFrom=s->activeGradFrom; o.gradTo=s->activeGradTo;
 	o.renderable=renderable; o.unlit=unlit; o.sanityIgnore=s->sanityIgnoreActive;
@@ -833,8 +875,15 @@ static Shape2D* find_shape(Scene *s,const char *id){
 	return NULL;
 }
 
+/* Points as v="x y x y ..." (cm), like a mesh's vertex array; <v x y> children are read too. */
 static Shape2D shape_points(XmlNode *n){
 	Shape2D sh={0};
+	const char *text=xml_attr(n,"v",NULL);
+	if(text) for(const char *t=text;;){
+		char *e; float x=strtof(t,&e); if(e==t) break; t=e;
+		float y=strtof(t,&e); if(e==t) break; t=e;
+		vec3 p=v3(x*0.01f,y*0.01f,0); DA_PUSH(sh.pts,sh.npts,sh.cpts,p);
+	}
 	for(int k=0;k<n->nkids;k++){
 		if(!strcmp(n->kids[k]->tag,"v")){
 			float x=xml_attr_f_cm(n->kids[k],"x",0), y=xml_attr_f_cm(n->kids[k],"y",0);
@@ -882,13 +931,19 @@ static void parse_lathe(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,
 	scene_add_obj(s,mesh,M,R,color,shin,castsShadow,renderable,unlit);
 }
 
-/* <mesh>: the lowest atom, a polygon soup. <v x y z> vertices (cm) and <f v="i j k ..."> faces
-   (counter-clockwise from outside), triangulated as fans. smooth="1" shares vertices and averages
+/* <mesh>: the lowest atom, a polygon soup. Vertices as v="x y z x y z ..." (cm) and faces as
+   f="i j k, i j k l, ..." (counter-clockwise from outside), or as <v x y z>/<f v="..."> children; faces are
+   triangulated as fans. smooth="1" shares vertices and averages
    normals; twoSided="1" also adds the reversed faces, for open sheets. */
 static void parse_mesh(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,vec3 rot,vec3 color,float shin,int castsShadow,int renderable,int unlit){
 	(void)parentM; (void)pos; (void)rot;
 	int smooth=xml_attr_i(n,"smooth",0),both=xml_attr_i(n,"twoSided",0),nv=0;
 	vec3 *p=NULL; int cp=0;
+	const char *vtext=xml_attr(n,"v",NULL),*ftext=xml_attr(n,"f",NULL);
+	if(vtext){   /* v="x y z x y z ..." (cm) */
+		for(const char *t=vtext;;){ char *e; float x=strtof(t,&e); if(e==t) break; t=e; float y=strtof(t,&e); if(e==t) break; t=e; float z=strtof(t,&e); if(e==t) break; t=e;
+			vec3 q=v3(x*0.01f,y*0.01f,z*0.01f); DA_PUSH(p,nv,cp,q); }
+	}
 	for(int i=0;i<n->nkids;i++) if(!strcmp(n->kids[i]->tag,"v")){
 		XmlNode *c=n->kids[i]; vec3 q=v3(xml_attr_f_cm(c,"x",0),xml_attr_f_cm(c,"y",0),xml_attr_f_cm(c,"z",0));
 		DA_PUSH(p,nv,cp,q);
@@ -897,11 +952,24 @@ static void parse_mesh(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,v
 	int *base=smooth?malloc((size_t)(nv?nv:1)*sizeof(int)):NULL;
 	if(smooth) for(int i=0;i<nv;i++) base[i]=mesh_add_vert(&m,p[i],v3(0,1,0));
 	int ok=nv>0;
-	for(int i=0;i<n->nkids&&ok;i++) if(!strcmp(n->kids[i]->tag,"f")){
-		XmlNode *c=n->kids[i]; int idx[64],ni=0; const char *t=xml_attr(c,"v","");
+	/* faces: f="a b c, d e f g, ..." or <f v="a b c"/> children */
+	const char *fcur=ftext; int kid=0;
+	for(;ok;){
+		int idx[64],ni=0; char text[XML_VALUE_CAPACITY]; const char *t; int line=n->line;
+		if(fcur && *fcur){
+			const char *end=strchr(fcur,','); size_t len=end?(size_t)(end-fcur):strlen(fcur);
+			if(len>=sizeof(text)) len=sizeof(text)-1;
+			memcpy(text,fcur,len); text[len]=0; t=text; fcur=end?end+1:fcur+strlen(fcur);
+		} else {
+			while(kid<n->nkids && strcmp(n->kids[kid]->tag,"f")) kid++;
+			if(kid>=n->nkids) break;
+			XmlNode *c=n->kids[kid++]; t=xml_attr(c,"v",""); line=c->line;
+		}
+		const char *src=t;
 		for(char *e;ni<64;){ long v=strtol(t,&e,10); if(e==t) break; idx[ni++]=(int)v; t=e; }
+		if(!ni) continue;
 		int bad=ni<3; for(int k=0;k<ni;k++) if(idx[k]<0||idx[k]>=nv) bad=1;
-		if(bad){ scene_issue(s,SCENE_ISSUE_ERROR,"mesh",node_file(s,n),c->line,"<f v=\"%s\">: a face needs 3 to 64 valid vertex indices (0..%d)",xml_attr(c,"v",""),nv-1); ok=0; break; }
+		if(bad){ scene_issue(s,SCENE_ISSUE_ERROR,"mesh",node_file(s,n),line,"<mesh> face \"%s\": a face needs 3 to 64 valid vertex indices (0..%d)",src,nv-1); ok=0; break; }
 		for(int pass=0;pass<(both?2:1);pass++) for(int k=1;k+1<ni;k++){
 			int a=idx[0],b=idx[k],d=idx[k+1]; if(pass){ int tmp=b; b=d; d=tmp; }
 			vec3 fn=vcross(vsub(p[b],p[a]),vsub(p[d],p[a]));
@@ -2776,7 +2844,7 @@ static void warn_unlit_scene(Scene *s,const char *path){
 		if(light->isDirectional || !light->castsShadow) continue;
 		for(int i=0;i<s->nobjs;i++){
 			SceneObj *o=&s->objs[i];
-			if(!o->castsShadow || !mesh_encloses(&o->mesh,light->pos)) continue;
+			if(!o->castsShadow || !o->mesh || !mesh_encloses(o->mesh,mat4_xform_point(mat4_affine_inverse(o->model),light->pos))) continue;
 			s->enclosedLights++;
 			XmlNode *enclosure=(XmlNode*)o->sourceNode;
 			scene_issue(s,SCENE_ISSUE_ERROR,"light",enclosure?node_file(s,enclosure):path,enclosure?enclosure->line:0,
@@ -2838,10 +2906,11 @@ static char* read_file(const char*path){
 
 static void scene_clear_view(Scene *s){
 	for(int i=0;i<s->nobjs;i++){
-		mesh_free(&s->objs[i].mesh);
+		scene_obj_release(&s->objs[i]);
 		for(int j=0;j<s->objs[i].nshadowParts;j++) free(s->objs[i].shadowParts[j].verts);
 		free(s->objs[i].shadowParts);
 	}
+	free(s->models); s->models=NULL; s->nmodels=s->cmodels=0;
 	for(int i=0;i<s->nlights;i++) if(s->svols) shadow_volume_release(&s->svols[i]);
 	for(int i=0;i<s->nshapes;i++) shape2d_free(&s->shapes[i]);
 	for(int i=0;i<s->nnegativeProfiles;i++) shape2d_free(&s->negativeProfiles[i].profile);
@@ -2863,9 +2932,9 @@ static void scene_clear_view(Scene *s){
 	s->nnegativeBoxes=s->cnegativeBoxes=s->nnegativeArches=s->cnegativeArches=0;
 	s->nnegativeCylinders=s->cnegativeCylinders=s->noverlayLines=s->coverlayLines=0;
 	s->ncharDefs=s->ccharDefs=s->nshapes=s->cshapes=0;
-	free(s->dragStartVerts); free(s->dragObjIndices); free(s->dragVertOffsets);
-	s->dragStartVerts=NULL; s->dragObjIndices=NULL; s->dragVertOffsets=NULL;
-	s->ndragStartObjs=s->ndragStartVerts=0;
+	free(s->dragStartModels); free(s->dragObjIndices);
+	s->dragStartModels=NULL; s->dragObjIndices=NULL;
+	s->ndragStartObjs=0;
 }
 
 static void scene_apply_camera(Scene *s,int index);
@@ -2915,12 +2984,10 @@ static void scene_rebuild_view(Scene *s){
 	s->defaultLights=prefabMode && s->nlights==0;
 	if(s->defaultLights){
 		vec3 bmin={1e30f,1e30f,1e30f},bmax={-1e30f,-1e30f,-1e30f};
-		for(int i=0;i<s->nobjs;i++) if(s->objs[i].renderable){
-			for(int v=0;v<s->objs[i].mesh.nverts;v++){
-				vec3 p=s->objs[i].mesh.verts[v].pos;
-				if(p.x<bmin.x)bmin.x=p.x; if(p.y<bmin.y)bmin.y=p.y; if(p.z<bmin.z)bmin.z=p.z;
-				if(p.x>bmax.x)bmax.x=p.x; if(p.y>bmax.y)bmax.y=p.y; if(p.z>bmax.z)bmax.z=p.z;
-			}
+		for(int i=0;i<s->nobjs;i++) if(s->objs[i].renderable && s->objs[i].mesh && s->objs[i].mesh->nverts){
+			vec3 lo=s->objs[i].bmin,hi=s->objs[i].bmax;
+			if(lo.x<bmin.x)bmin.x=lo.x; if(lo.y<bmin.y)bmin.y=lo.y; if(lo.z<bmin.z)bmin.z=lo.z;
+			if(hi.x>bmax.x)bmax.x=hi.x; if(hi.y>bmax.y)bmax.y=hi.y; if(hi.z>bmax.z)bmax.z=hi.z;
 		}
 		if(bmin.x<=bmax.x){
 			vec3 c=vscale(vadd(bmin,bmax),0.5f); float sz=vlen(vsub(bmax,bmin));
@@ -3440,13 +3507,7 @@ int scene_rig_mirror_joint(Scene *s,void *instance,void *joint){
 typedef struct { vec3 min,max; } Bounds;
 
 static Bounds scene_obj_bounds(SceneObj *o){
-	Bounds b={v3(INFINITY,INFINITY,INFINITY),v3(-INFINITY,-INFINITY,-INFINITY)};
-	for(int i=0;i<o->mesh.nverts;i++){
-		vec3 p=o->mesh.verts[i].pos;
-		if(p.x<b.min.x) b.min.x=p.x; if(p.x>b.max.x) b.max.x=p.x;
-		if(p.y<b.min.y) b.min.y=p.y; if(p.y>b.max.y) b.max.y=p.y;
-		if(p.z<b.min.z) b.min.z=p.z; if(p.z>b.max.z) b.max.z=p.z;
-	}
+	Bounds b={o->bmin,o->bmax};
 	return b;
 }
 
@@ -3473,8 +3534,9 @@ void scene_get_obj_oriented_bounds(Scene *s,int idx,mat4 *matrix,vec3 *outMin,ve
 	mat4 inv=mat4_affine_inverse(*matrix);
 	Bounds b={v3(INFINITY,INFINITY,INFINITY),v3(-INFINITY,-INFINITY,-INFINITY)};
 	for(int i=0;i<s->nobjs;i++) if((node && s->objs[i].editNode==node) || (!node && i==idx)){
-		for(int j=0;j<s->objs[i].mesh.nverts;j++){
-			vec3 p=mat4_xform_point(inv,s->objs[i].mesh.verts[j].pos);
+		mat4 toFrame=mat4_mul(inv,s->objs[i].model);
+		for(int j=0;s->objs[i].mesh && j<s->objs[i].mesh->nverts;j++){
+			vec3 p=mat4_xform_point(toFrame,s->objs[i].mesh->verts[j].pos);
 			if(p.x<b.min.x) b.min.x=p.x; if(p.x>b.max.x) b.max.x=p.x;
 			if(p.y<b.min.y) b.min.y=p.y; if(p.y>b.max.y) b.max.y=p.y;
 			if(p.z<b.min.z) b.min.z=p.z; if(p.z>b.max.z) b.max.z=p.z;
@@ -3515,7 +3577,8 @@ int scene_pick_object(Scene *s, vec3 rayOrigin, vec3 rayDir, float *tOut){
 		if(ray_intersect_aabb(mat4_xform_point(inv,rayOrigin),mat4_xform_dir(inv,rayDir),bmin,bmax,&t)){
 			for(int j=i;j<s->nobjs;j++){
 				if(!s->objs[j].renderable || (node?s->objs[j].editNode!=node:j!=i)) continue;
-				if(ray_mesh_hit(&s->objs[j].mesh,rayOrigin,rayDir,&bestT)) hit=i;
+				mat4 toModel=mat4_affine_inverse(s->objs[j].model);   /* the ray in model space: same t */
+				if(s->objs[j].mesh && ray_mesh_hit(s->objs[j].mesh,mat4_xform_point(toModel,rayOrigin),mat4_xform_dir(toModel,rayDir),&bestT)) hit=i;
 			}
 		}
 	}
@@ -3669,20 +3732,15 @@ void gizmo_begin_drag(Scene *s,int handle,int mouseX,int mouseY){
 	s->dragStartEditMatrix=matrix;
 	s->dragParentMatrix=mat4_mul(matrix,mat4_affine_inverse(xml_node_transform(s,n)));
 	s->dragStartCenter=mat4_xform_point(matrix,v3(0,0,0));
-	free(s->dragStartVerts); free(s->dragObjIndices); free(s->dragVertOffsets);
-	s->dragStartVerts=NULL; s->dragObjIndices=NULL; s->dragVertOffsets=NULL;
-	s->ndragStartObjs=s->ndragStartVerts=0;
+	free(s->dragStartModels); free(s->dragObjIndices);
+	s->dragStartModels=NULL; s->dragObjIndices=NULL;
+	s->ndragStartObjs=0;
+	for(int i=0;i<s->nobjs;i++) if(s->objs[i].editNode==s->selectedNode) s->ndragStartObjs++;
+	s->dragStartModels=malloc(sizeof(mat4)*(size_t)(s->ndragStartObjs?s->ndragStartObjs:1));
+	s->dragObjIndices=malloc(sizeof(int)*(size_t)(s->ndragStartObjs?s->ndragStartObjs:1));
+	int oi=0;
 	for(int i=0;i<s->nobjs;i++) if(s->objs[i].editNode==s->selectedNode){
-		s->ndragStartObjs++; s->ndragStartVerts+=s->objs[i].mesh.nverts;
-	}
-	s->dragStartVerts=malloc(sizeof(Vertex)*(size_t)s->ndragStartVerts);
-	s->dragObjIndices=malloc(sizeof(int)*(size_t)s->ndragStartObjs);
-	s->dragVertOffsets=malloc(sizeof(int)*(size_t)s->ndragStartObjs);
-	int oi=0,vo=0;
-	for(int i=0;i<s->nobjs;i++) if(s->objs[i].editNode==s->selectedNode){
-		s->dragObjIndices[oi]=i; s->dragVertOffsets[oi++]=vo;
-		memcpy(s->dragStartVerts+vo,s->objs[i].mesh.verts,sizeof(Vertex)*(size_t)s->objs[i].mesh.nverts);
-		vo+=s->objs[i].mesh.nverts;
+		s->dragObjIndices[oi]=i; s->dragStartModels[oi++]=s->objs[i].model;
 	}
 }
 
@@ -3698,16 +3756,10 @@ static int ray_plane_hit(vec3 ro,vec3 rd,vec3 point,vec3 normal,vec3 *hit){
 static void scene_apply_drag_transform(Scene *s,XmlNode *n){
 	mat4 matrix=mat4_mul(s->dragParentMatrix,xml_node_transform(s,n));
 	mat4 delta=mat4_mul(matrix,mat4_affine_inverse(s->dragStartEditMatrix));
-	for(int k=0;k<s->ndragStartObjs;k++){
+	for(int k=0;k<s->ndragStartObjs;k++){   /* dragging moves the object, not its shared model */
 		SceneObj *o=&s->objs[s->dragObjIndices[k]];
-		Vertex *start=s->dragStartVerts+s->dragVertOffsets[k];
-		for(int i=0;i<o->mesh.nverts;i++){
-			o->mesh.verts[i].pos=mat4_xform_point(delta,start[i].pos);
-			o->mesh.verts[i].nrm=mat4_xform_normal(delta,start[i].nrm);
-		}
+		scene_obj_set_matrix(o,mat4_mul(delta,s->dragStartModels[k]));
 		o->editMatrix=matrix;
-		o->mesh.gpuDirty=1;
-		mesh_compute_face_normals(&o->mesh);
 	}
 	scene_rebuild_node_shadow_volumes(s,s->selectedNode);
 }

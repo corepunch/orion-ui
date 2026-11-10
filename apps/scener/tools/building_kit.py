@@ -211,8 +211,7 @@ class Kit:
     flat = [((x - x0) * c + (y - y0) * s, z - z0) for x, y, z in pts]
     assert all(abs(-(x - x0) * s + (y - y0) * c) < 1e-6 for x, y, _ in pts), "poly must stand in a vertical plane"
     self.open("group", [("pos", v3(x0 * TILE, z0 * TILE, -y0 * TILE)), ("rot", v3(0, math.degrees(ang), 0))])
-    self.open("shape", [("closed", 1)] + self.look(mat, col))
-    for u, v in flat: self.emit("<v x=\"%s\" y=\"%s\"/>" % (f(u * TILE), f(v * TILE)))
+    self.open("shape", [("closed", 1), ("v", " ".join("%s %s" % (f(u * TILE), f(v * TILE)) for u, v in flat))] + self.look(mat, col))
     self.emit("<extrude amount=\"%s\"/>" % f(THIN))
     self.close("shape")
     self.close("group")

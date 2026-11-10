@@ -18,6 +18,7 @@ int  vcache_index_alloc(const unsigned *ix, int n, int *chunk, int *first); /* s
 void vcache_index_draw(int chunk, int first, int n, int baseVertex);
 void vcache_index_reset(void);                  /* forgets every index range (shadow volumes went stale) */
 void vcache_shutdown(void);
+int  vcache_vertex_floats(void);                  /* floats per GPU vertex: the stride the shadow shader reads with */
 void vcache_set_attribs(int pos, int nrm, int grad); /* the lit shader's attribute locations */
 
 #endif

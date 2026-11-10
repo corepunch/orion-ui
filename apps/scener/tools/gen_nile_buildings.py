@@ -190,7 +190,7 @@ def main(path):
     bx, bz = (it["at"][0] - cx) * TILE, (it["at"][1] - cv) * TILE
     out.append('  <camera name="%s" comment="%s" pos="%s" look="%s" fov="32"/>' % (it["title"], it["title"], v3(bx + 420, 420, bz + 700), v3(bx, 90, bz)))
   for key, sid in shapes.items():
-    out.append('  <shape id="%s" closed="0">%s</shape>' % (sid, "".join('<v x="%s" y="%s"/>' % tuple(p.split(",")) for p in key.split(" "))))
+    out.append('  <shape id="%s" closed="0" v="%s"/>' % (sid, " ".join(" ".join(p.split(",")) for p in key.split(" "))))
   out.append('  <box pos="0 -8 0" size="%s 16 %s" material="grass"/>' % (f((x1 - x0) * TILE), f((v1 - v0) * TILE)))
   for it, lines in body:
     out.append('  <group name="%s" pos="%s">' % (it["key"], v3((it["at"][0] - cx) * TILE, 0, (it["at"][1] - cv) * TILE)))

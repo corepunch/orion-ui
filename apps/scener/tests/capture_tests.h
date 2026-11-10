@@ -336,9 +336,9 @@ static void test_character_cosmetic_options(void){
 static int volume_meshes_match(Scene *a,Scene *b){
   if(a->nobjs!=b->nobjs) return 0;
   for(int i=0;i<a->nobjs;i++){
-    Mesh *m=&a->objs[i].mesh; int found=0;
+    Mesh *m=world_mesh(&a->objs[i]); int found=0;
     for(int j=0;j<b->nobjs && !found;j++){
-      Mesh *n=&b->objs[j].mesh;
+      Mesh *n=world_mesh(&b->objs[j]);
       if(m->nverts!=n->nverts || m->ntris!=n->ntris) continue;
       float error=0;
       for(int k=0;k<m->nverts;k++) error=fmaxf(error,vlen(vsub(m->verts[k].pos,n->verts[k].pos)));

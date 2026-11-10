@@ -182,10 +182,8 @@ def make_kit(nile_kit):
 
     def _mesh(self, mat, pts, faces, col, smooth, both):
       s = self.sk
-      s.open("mesh", [("smooth", 1 if smooth else None), ("twoSided", 1 if both else None)] + s.look(mat, col))
-      for p in pts: s.emit('<v x="%s" y="%s" z="%s"/>' % tuple(f(c) for c in to_scener(p)))
-      for fc in faces: s.emit('<f v="%s"/>' % " ".join(str(i) for i in fc))
-      s.close("mesh")
+      s.emit('<mesh%s v="%s" f="%s"/>' % (attrs([("smooth", 1 if smooth else None), ("twoSided", 1 if both else None)] + s.look(mat, col)),
+             " ".join(f(c) for p in pts for c in to_scener(p)), ", ".join(" ".join(str(i) for i in fc) for fc in faces)))
 
     def finish(self):
       for p, watts in self.lights: self.sk.light(p[0], p[1], p[2], watts * float(LIGHT["LAMPS"]))
@@ -258,7 +256,7 @@ def main():
     placed.append((it, lines, cx, cz))
     out.append('  <camera name="%s" comment="%s" pos="%s" look="%s" fov="32"/>' % (it["title"], it["title"], scener.v3(cx + 360, 360, cz + 520), scener.v3(cx, 90, cz)))
   for key, sid in shapes.items():
-    out.append('  <shape id="%s" closed="0">%s</shape>' % (sid, "".join('<v x="%s" y="%s"/>' % tuple(p.split(",")) for p in key.split(" "))))
+    out.append('  <shape id="%s" closed="0" v="%s"/>' % (sid, " ".join(" ".join(p.split(",")) for p in key.split(" "))))
   out.append('  <box pos="0 -8 0" size="%s 16 %s" material="snowfield"/>' % (scener.f(W * TILE), scener.f(D * TILE)))
   for it, lines, cx, cz in placed:
     out.append('  <group name="%s" pos="%s">' % (it["key"], scener.v3(cx, 0, cz)))

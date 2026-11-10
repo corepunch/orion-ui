@@ -147,7 +147,7 @@
     <soft-box width="8" height="5" depth="52" radius="2.1" bevel="1.93" pos="134 69 0" material="trim"></soft-box>
     <group pos="0 0 0" rot="0 90 0">
     <prism pos="0 199.67 0" radius="1" height="220" sides="3" rot="90 0 90" scale="63.33 1 167.44" material="log_light"/>
-    <shape closed="0" pos="0 0 0" material="roof_brown"><v x="-160.06" y="158.14"/><v x="0" y="263"/><v x="160.06" y="158.14"/><extrude amount="256"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
+    <shape closed="0" pos="0 0 0" material="roof_brown" v="-160.06 158.14 0 263 160.06 158.14"><extrude amount="256"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
     <circle radius="8" segments="10" pos="60.81 244.08 -71.68" rot="-90 0 -33.23" material="roof_brown"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="97.62 219.96 46.08" rot="-90 0 -33.23" material="roof_brown"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="134.43 195.84 -15.36" rot="-90 0 -33.23" material="roof_brown"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
@@ -209,7 +209,7 @@
     <soft-box width="3" height="40" depth="36" radius="1.26" bevel="1.16" pos="122.5 82 0" material="glass"></soft-box>
     <soft-box width="8" height="5" depth="52" radius="2.1" bevel="1.93" pos="124 56 0" material="trim"></soft-box>
     <prism pos="0 176.67 0" radius="1" height="190" sides="3" rot="90 0 90" scale="73.33 1 144.34" material="plaster"/>
-    <shape closed="0" pos="0 0 0" material="roof_red"><v x="-138.51" y="128.11"/><v x="0" y="250"/><v x="138.51" y="128.11"/><extrude amount="226"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
+    <shape closed="0" pos="0 0 0" material="roof_red" v="-138.51 128.11 0 250 138.51 128.11"><extrude amount="226"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
     <circle radius="8" segments="10" pos="55.89 224.13 -63.28" rot="-90 0 -41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="87.74 196.1 40.68" rot="-90 0 -41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="119.6 168.06 -13.56" rot="-90 0 -41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
@@ -242,7 +242,7 @@
     <soft-box width="560" height="28" depth="560" radius="11.76" bevel="10.82" pos="0 -16 0" material="dirt"></soft-box>
     <soft-box width="562" height="8" depth="562" radius="3.36" bevel="3.09" pos="0 -4 0" material="grass"></soft-box>
     <prism pos="0 68 0" radius="1" height="220" sides="3" rot="90 0 90" scale="136 1 144.34" material="wood_light"/>
-    <shape closed="0" pos="0 0 0" material="roof_green"><v x="-145.2" y="-8.54"/><v x="0" y="230"/><v x="145.2" y="-8.54"/><extrude amount="260"/><shell amount="14"/><fillet radius="6.3"/><bevel amount="5.32" bevelSegments="4"/></shape>
+    <shape closed="0" pos="0 0 0" material="roof_green" v="-145.2 -8.54 0 230 145.2 -8.54"><extrude amount="260"/><shell amount="14"/><fillet radius="6.3"/><bevel amount="5.32" bevelSegments="4"/></shape>
     <circle radius="7" segments="10" pos="59.7 161.73 -72.8" rot="-90 0 -58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="7" segments="10" pos="93.1 106.86 46.8" rot="-90 0 -58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="7" segments="10" pos="126.5 52 -15.6" rot="-90 0 -58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
@@ -362,7 +362,7 @@
     <soft-box width="36" height="40" depth="3" radius="15.12" bevel="1.38" pos="50 160 92.5" material="glass"></soft-box>
     <soft-box width="52" height="5" depth="8" radius="2.1" bevel="1.93" pos="50 134 94" material="trim"></soft-box>
     <prism pos="0 240 0" radius="1" height="180" sides="3" rot="90 0 90" scale="60 1 132.79" material="wood"/>
-    <shape closed="0" pos="0 0 0" material="roof_blue"><v x="-129.18" y="198.91"/><v x="0" y="300"/><v x="129.18" y="198.91"/><extrude amount="216"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
+    <shape closed="0" pos="0 0 0" material="roof_blue" v="-129.18 198.91 0 300 129.18 198.91"><extrude amount="216"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
     <circle radius="8" segments="10" pos="52.12 281.43 -60.48" rot="-90 0 -38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="81.83 258.18 38.88" rot="-90 0 -38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="111.54 234.93 -12.96" rot="-90 0 -38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
@@ -406,7 +406,7 @@
     <soft-box width="120" height="90" depth="110" radius="22" bevel="20.24" pos="70 225 50" material="wood_light"></soft-box>
     <group pos="70 0 50" rot="0 90 0">
     <prism pos="0 286.67 0" radius="1" height="110" sides="3" rot="90 0 90" scale="33.33 1 75.06" material="wood_light"/>
-    <shape closed="0" pos="0 0 0" material="roof_red"><v x="-74.51" y="262.68"/><v x="0" y="320"/><v x="74.51" y="262.68"/><extrude amount="134"/><shell amount="8"/><fillet radius="3.6"/><bevel amount="3.04" bevelSegments="4"/></shape>
+    <shape closed="0" pos="0 0 0" material="roof_red" v="-74.51 262.68 0 320 74.51 262.68"><extrude amount="134"/><shell amount="8"/><fillet radius="3.6"/><bevel amount="3.04" bevelSegments="4"/></shape>
     <circle radius="6" segments="10" pos="29.64 309.19 -37.52" rot="-90 0 -37.57" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="6" segments="10" pos="46.77 296.01 24.12" rot="-90 0 -37.57" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="6" segments="10" pos="63.91 282.82 -8.04" rot="-90 0 -37.57" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
@@ -635,7 +635,7 @@
     <soft-box width="3" height="40" depth="36" radius="1.26" bevel="1.16" pos="117.5 70 0" material="glass"></soft-box>
     <soft-box width="8" height="5" depth="52" radius="2.1" bevel="1.93" pos="119 44 0" material="trim"></soft-box>
     <prism pos="0 258.33 0" radius="1" height="206" sides="3" rot="90 0 90" scale="56.67 1 150.12" material="wood_teal"/>
-    <shape closed="0" pos="0 0 0" material="roof_blue"><v x="-145.07" y="220.15"/><v x="0" y="315"/><v x="145.07" y="220.15"/><extrude amount="242"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
+    <shape closed="0" pos="0 0 0" material="roof_blue" v="-145.07 220.15 0 315 145.07 220.15"><extrude amount="242"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
     <circle radius="8" segments="10" pos="56 299.29 -67.76" rot="-90 0 -33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="89.36 277.48 43.56" rot="-90 0 -33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="122.73 255.66 -14.52" rot="-90 0 -33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>

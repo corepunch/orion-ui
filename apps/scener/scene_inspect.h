@@ -239,14 +239,22 @@ static int check_item_cmp(const void *a,const void *b){
 
 static int check_is_structural(XmlNode *n){ return n && (!strcmp(n->tag,"wall") || !strcmp(n->tag,"floor")); }
 
+/* The checks measure world-space surfaces; objects keep shared models, so each gets a world copy the first time a
+   check needs it, freed when the check ends. */
+static Mesh *check_world_mesh(Mesh **world,Scene *s,int i){
+	if(!world[i]){ world[i]=calloc(1,sizeof(Mesh)); scene_obj_world_mesh(&s->objs[i],world[i]); }
+	return world[i];
+}
+
 static void check_geometry(Scene *s){
 	if(!s->nobjs) return;
+	Mesh **world=calloc((size_t)s->nobjs,sizeof(Mesh*));
 	float contact=CHECK_CONTACT_CM/CM_PER_METRE,penetration=CHECK_PENETRATION_CM/CM_PER_METRE;
 	int up=s->worldUp.z>0.5f?2:1;
 	check_item_t *items=calloc((size_t)s->nobjs,sizeof(*items)); int n=0;
 	for(int i=0;i<s->nobjs;i++){
 		SceneObj *o=&s->objs[i];
-		if(!o->mesh.nverts) continue;
+		if(!o->mesh || !o->mesh->nverts) continue;
 		check_item_t it={scene_obj_bounds(o),i,record_unit(s,i),check_is_structural((XmlNode*)o->sourceNode),o->renderable,o->sanityIgnore,o->unlit};
 		items[n++]=it;
 	}
@@ -269,14 +277,15 @@ static void check_geometry(Scene *s){
 			int at=-1;   /* a deeper hit of this unit pair is already known: only deeper samples can change the report */
 			for(int k=0;k<nhits;k++) if((hits[k].a==a->unit && hits[k].b==b->unit) || (hits[k].a==b->unit && hits[k].b==a->unit)) at=k;
 			float known=at>=0?hits[at].depth:0,depth=0;
-			if(mesh_closed(&ob->mesh)) depth=fmaxf(depth,mesh_penetration(&oa->mesh,&ob->mesh,b->b,known));
-			if(mesh_closed(&oa->mesh)) depth=fmaxf(depth,mesh_penetration(&ob->mesh,&oa->mesh,a->b,known));
+			Mesh *wa=check_world_mesh(world,s,a->obj),*wb=check_world_mesh(world,s,b->obj);
+			if(mesh_closed(wb)) depth=fmaxf(depth,mesh_penetration(wa,wb,b->b,known));
+			if(mesh_closed(wa)) depth=fmaxf(depth,mesh_penetration(wb,wa,a->b,known));
 			if(depth>penetration){
 				if(at>=0) hits[at].depth=fmaxf(hits[at].depth,depth);
 				else { check_pair_t h={a->unit,b->unit,depth}; DA_PUSH(hits,nhits,chits,h); }
 			}
 		}
-		if(meshes_share_plane(&oa->mesh,a->b,&ob->mesh,b->b)){
+		if(meshes_share_plane(check_world_mesh(world,s,a->obj),a->b,check_world_mesh(world,s,b->obj),b->b)){
 			XmlNode *na=(XmlNode*)oa->sourceNode,*nb=(XmlNode*)ob->sourceNode;
 			if(a->unit==b->unit && na && nb){ node_label(s,na,la,sizeof(la)); node_label(s,nb,lb,sizeof(lb)); }
 			else { unit_label(s,a->unit,la,sizeof(la)); unit_label(s,b->unit,lb,sizeof(lb)); }
@@ -307,6 +316,8 @@ static void check_geometry(Scene *s){
 			"%s floats: its base is %.1f cm above the ground and it touches nothing",label,base*CM_PER_METRE);
 	}
 	free(touched); free(items);
+	for(int i=0;i<s->nobjs;i++) if(world[i]){ mesh_free(world[i]); free(world[i]); }
+	free(world);
 }
 
 /* ------------------------------------------------------------ JSON output */
@@ -381,7 +392,7 @@ static Bounds prefab_local_bounds(Scene *s,const char *source){
 		if(strcmp(n->tag,"prefab") || !xml_peek(n,"source") || strcmp(xml_peek(n,"source"),source)) continue;
 		mat4 inv=mat4_affine_inverse(s->records[r].transform);
 		for(int i=0;i<s->nobjs;i++) if(record_is_ancestor(s,r,s->objs[i].record))
-			for(int v=0;v<s->objs[i].mesh.nverts;v++){ vec3 p=mat4_xform_point(inv,s->objs[i].mesh.verts[v].pos); Bounds q={p,p}; b=bounds_union(b,q); }
+			for(int v=0;s->objs[i].mesh && v<s->objs[i].mesh->nverts;v++){ vec3 p=mat4_xform_point(inv,mat4_xform_point(s->objs[i].model,s->objs[i].mesh->verts[v].pos)); Bounds q={p,p}; b=bounds_union(b,q); }
 		break;
 	}
 	return b;

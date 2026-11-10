@@ -63,7 +63,7 @@ def gable_roof(cx, y0, cz, w, d, h, m, t=16, ov=18, along="z", fill=None):
   a = math.atan2(h, w / 2)
   ex, ey = w / 2 + ov * math.cos(a), y0 - ov * math.sin(a)
   D = d + 2 * ov
-  e('    <shape closed="0" pos="%s" material="%s"><v x="%s" y="%s"/><v x="0" y="%s"/><v x="%s" y="%s"/>'
+  e('    <shape closed="0" pos="%s" material="%s" v="%s %s 0 %s %s %s">'
     '<extrude amount="%s"/><shell amount="%s"/><fillet radius="%s"/><bevel amount="%s" bevelSegments="4"/></shape>'
     % (v3(cx, 0, cz), m, f(-ex), f(ey), f(y0 + h), f(ex), f(ey), f(D), f(t), f(t * 0.45), f(t * 0.38)))
   # a few soft shingle studs on each slope, like the kit's roofs

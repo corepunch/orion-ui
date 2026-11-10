@@ -16,7 +16,7 @@ make scener
 | File | Root | Purpose | Allowed direct children |
 |------|------|---------|-------------------------|
 | `.blks` | `<scene>` | Complete scene/room | Config tags, reusable profiles, renderable content, groups, prefab instances, cutters, overlays |
-| `.blk` | `<prefab>` | Reusable object or assembly | `<attach>`, `<shape>`, `<material>`, `<pose>`, `<clip>`, renderable content, nested groups/prefabs, cutters, overlays |
+| `.blk` | `<prefab>` | Reusable object or assembly | `<attach>`, `<shape v="-{${width}/2} -50 {${width}/2} -50">`, `<material>`, `<pose>`, `<clip>`, renderable content, nested groups/prefabs, cutters, overlays |
 
 A `.blks` scene is the authority for cameras, ambient/background color,
 materials, character definitions, and directional lights. A `.blk` prefab is
@@ -157,7 +157,6 @@ primitive for it; a `<define>` is expanded at load, before expressions are evalu
   <param name="width"  doc="x size, cm"/>
   <param name="radius" default="6" doc="corner radius, cm"/>
   <shape closed="0">
-    <v x="-{${width}/2}" y="-50"/><v x="{${width}/2}" y="-50"/>
     <shell amount="100"/><fillet radius="${radius}"/><extrude amount="80"/><bevel amount="2"/>
   </shape>
 </define>
@@ -429,7 +428,7 @@ ref="...">`. Declare it as a top-level scene child.
 | `pelvis` | float | 0.25 | Pelvis height fraction |
 | `feet` | float | 0.0 | Foot landmark height fraction |
 
-### `<shape>`
+### `<shape v="0 0 40 0 40 30 25 160 12 270 8 300 0 300">`
 
 A `<shell>` before `<extrude>` thickens an open line into a flat outline, so
 line, `<shell>`, `<fillet>`, `<extrude>`, `<bevel>` builds a rounded slab.
@@ -446,15 +445,11 @@ groups.
 |-----------|------|---------|-------------|
 | `id`      | string | (none) | Unique name, referenced by lathe/loft; required for a shape used only as a definition |
 | `closed`  | int | 0 | 1 if the profile closes back to its first point (for loft cross-sections) |
+| `v`       | floats | (none) | The points in order, `x y x y ...` in cm: x is the distance from the axis in the profile plane, y the position along the profile. `{expr}` works inside, as in any attribute |
 
-Child `<v>` elements define vertices in order. Each vertex is a single point on
-the profile curve. The lathe sweeper reads them top-to-bottom; the loft sweeper
-projects the profile into world space along the chosen axis.
-
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `x`       | float | 0 | Horizontal distance from the axis in the profile plane |
-| `y`       | float | 0 | Vertical position along the profile |
+The points are one array, the way a `<mesh>` writes its vertices. `<v x y/>` children
+are still read, after the array, for old files. The lathe sweeper reads the points
+top-to-bottom; the loft sweeper projects the profile into world space along the chosen axis.
 
 **Lathe profiles must be open** (`closed="0"`); the first vertex defines the
 bottom cap radius and the last vertex defines the top cap radius. The profile
@@ -473,45 +468,24 @@ Example — a bottle profile for lathe (open, from bottom at y=0 to neck at y=3)
 
 ```xml
 <shape id="bottle" closed="0">
-  <v x="0" y="0"/>
-  <v x="40" y="0"/>
-  <v x="40" y="30"/>
-  <v x="25" y="160"/>
-  <v x="12" y="270"/>
-  <v x="8" y="300"/>
-  <v x="0" y="300"/>
 </shape>
 ```
 
 Example — a circle for loft cross-section (closed, radius 0.15, 8 segments):
 
 ```xml
-<shape id="circle_small" closed="1">
-  <v x="15" y="0"/>
-  <v x="10.6" y="10.6"/>
-  <v x="0" y="15"/>
-  <v x="-10.6" y="10.6"/>
-  <v x="-15" y="0"/>
-  <v x="-10.6" y="-10.6"/>
-  <v x="0" y="-15"/>
-  <v x="10.6" y="-10.6"/>
-</shape>
+<shape id="circle_small" closed="1" v="15 0 10.6 10.6 0 15 -10.6 10.6 -15 0 -10.6 -10.6 0 -15 10.6 -10.6"/>
 ```
 
 Example — a rectangular loft path in XZ (the shape's Y becomes world Z):
 
 ```xml
-<shape id="rect_path" closed="1">
-  <v x="-100" y="-50"/>
-  <v x="100" y="-50"/>
-  <v x="100" y="50"/>
-  <v x="-100" y="50"/>
-</shape>
+<shape id="rect_path" closed="1" v="-100 -50 100 -50 100 50 -100 50"/>
 ```
 
 #### Shape modifier stack
 
-After its `<v>` points, a shape takes modifiers that turn it, step by step and
+After its points, a shape takes modifiers that turn it, step by step and
 in document order, into a solid:
 
 | Modifier | Turns | Attributes |
@@ -529,8 +503,7 @@ underside drawn left to right, extruded across the building, shelled to its
 thickness, with every edge rounded:
 
 ```xml
-<shape closed="0" pos="0 108 0" material="roof_blue">
-  <v x="-130" y="0"/><v x="0" y="80"/><v x="130" y="0"/>
+<shape closed="0" pos="0 108 0" material="roof_blue" v="-130 0 0 80 130 0">
   <extrude amount="210"/>
   <shell amount="22"/>
   <fillet radius="10"/>
@@ -656,8 +629,9 @@ The `pivotOffset` is in local space, applied before the object's own `rot`. Rota
 ### `<mesh>`
 
 The lowest atom: a polygon soup, for geometry no profile or modifier gives (a draped sheet, a converted
-Blender mesh). `<v x y z/>` vertices in cm and `<f v="i j k ..."/>` faces of 3 to 64 vertex indices,
-counter-clockwise seen from outside, each triangulated as a fan. `smooth="1"` shares vertices and averages
+Blender mesh). Vertices as `v="x y z x y z ..."` in cm and faces as `f="i j k, i j k l, ..."` (3 to 64
+vertex indices each, counter-clockwise seen from outside, each triangulated as a fan); `<v x y z/>` and
+`<f v="i j k"/>` children say the same for small hand-written meshes. `smooth="1"` shares vertices and averages
 normals; `twoSided="1"` adds the reversed faces, for open sheets. Takes the [common attributes](#common-attributes)
 and mesh modifiers.
 
@@ -897,7 +871,7 @@ rectangular, round-arch and circular cutters.
   a sibling of `<wall>`, not a child of it: walls reject child elements. Do not add a duplicate negative shape or `<opening>` for
   a procedural window with `cutWalls="1"`.
 - `<window>` must have no children. Any child element, including `<array>`,
-  `<extrude>`, `<shape>` or a material definition, rejects the whole window.
+  `<extrude>`, `<shape v="0 0 35 0 35 10 28 40 15 160 6 230 6 250 0 250">` or a material definition, rejects the whole window.
   Its extrusion is built in through `depth` and `frameWidth`.
 - Do not use `attach` on the window or attach-based placement for a containing
   window assembly. The cutter prepass does not resolve attach placements.
@@ -1337,14 +1311,6 @@ vertex for the cap).
 
 ```xml
 <shape id="vase" closed="0">
-  <v x="0" y="0"/>
-  <v x="35" y="0"/>
-  <v x="35" y="10"/>
-  <v x="28" y="40"/>
-  <v x="15" y="160"/>
-  <v x="6" y="230"/>
-  <v x="6" y="250"/>
-  <v x="0" y="250"/>
 </shape>
 
 <lathe shape="vase" segments="32" pos="0 0 0" material="glass"/>
@@ -1371,22 +1337,9 @@ closed loop. When `closed="0"`, the first and last rings receive flat end caps.
 | `segments`   | int    | *pathShape points* | Number of stations along the path (defaults to the shape vertex count) |
 
 ```xml
-<shape id="path_L" closed="0">
-  <v x="0" y="0"/>
-  <v x="200" y="0"/>
-  <v x="200" y="100"/>
-</shape>
+<shape id="path_L" closed="0" v="0 0 200 0 200 100"/>
 
-<shape id="circle_ring" closed="1">
-  <v x="8" y="0"/>
-  <v x="5.6" y="5.6"/>
-  <v x="0" y="8"/>
-  <v x="-5.6" y="5.6"/>
-  <v x="-8" y="0"/>
-  <v x="-5.6" y="-5.6"/>
-  <v x="0" y="-8"/>
-  <v x="5.6" y="-5.6"/>
-</shape>
+<shape id="circle_ring" closed="1" v="8 0 5.6 5.6 0 8 -5.6 5.6 -8 0 -5.6 -5.6 0 -8 5.6 -5.6"/>
 
 <loft pathShape="path_L" crossShape="circle_ring" closed="0" segments="16" material="metal"/>
 ```
