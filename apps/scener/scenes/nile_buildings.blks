@@ -29,18 +29,18 @@
   <shape id="lathe13" closed="0"><v x="0" y="0"/><v x="25" y="6.7"/><v x="43.3" y="25"/><v x="50" y="50"/><v x="43.3" y="75"/><v x="25" y="93.3"/><v x="0" y="100"/></shape>
   <box pos="0 -8 0" size="2880 16 1920" material="grass"/>
   <group name="small_pyramid" pos="-800 0 -320">
-    <rounded-rect size="320 16" radius="6.4" segments="4" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"><extrude amount="320"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="265.6 48" radius="6.4" segments="4" pos="0 40 0" color="0.885 0.809 0.625" shininess="6"><extrude amount="265.6"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="208 48" radius="6.4" segments="4" pos="0 88 0" color="0.910 0.837 0.648" shininess="6"><extrude amount="208"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="150.4 48" radius="6.4" segments="4" pos="0 136 0" color="0.912 0.840 0.651" shininess="6"><extrude amount="150.4"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="92.8 48" radius="6.4" segments="4" pos="0 184 0" color="0.888 0.811 0.629" shininess="6"><extrude amount="92.8"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
+    <box pos="0 8 0" size="320 16 320" radius="6.4" bevel="5.44" color="0.804 0.698 0.514" shininess="6"/>
+    <box pos="0 40 0" size="265.6 48 265.6" radius="6.4" bevel="5.44" color="0.885 0.809 0.625" shininess="6"/>
+    <box pos="0 88 0" size="208 48 208" radius="6.4" bevel="5.44" color="0.910 0.837 0.648" shininess="6"/>
+    <box pos="0 136 0" size="150.4 48 150.4" radius="6.4" bevel="5.44" color="0.912 0.840 0.651" shininess="6"/>
+    <box pos="0 184 0" size="92.8 48 92.8" radius="6.4" bevel="5.44" color="0.888 0.811 0.629" shininess="6"/>
     <lathe shape="lathe0" segments="4" pos="0 208 0" rot="0 45 0" color="0.910 0.682 0.173" shininess="60"/>
     <group pos="132.8 0 132.8" rot="0 90 0">
-      <rect size="48 41.6" pos="132.8 36.8 1.92" color="0.227 0.149 0.078" shininess="6"><extrude amount="4.8"/></rect>
-      <rounded-rect size="16 41.6" radius="6.4" segments="4" pos="100.8 36.8 3.2" color="0.953 0.902 0.761" shininess="6"><extrude amount="8"/><bevel amount="3.6" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="16 41.6" radius="6.4" segments="4" pos="164.8 36.8 3.2" color="0.953 0.902 0.761" shininess="6"><extrude amount="8"/><bevel amount="3.6" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="89.6 19.2" radius="6.4" segments="4" pos="132.8 67.2 4.8" color="0.953 0.902 0.761" shininess="6"><extrude amount="11.2"/><bevel amount="5.04" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="28.8 11.2" radius="4.48" segments="4" pos="132.8 66.4 8" color="0.169 0.361 0.682" shininess="40"><extrude amount="3.2"/><bevel amount="1.44" bevelSegments="3"/></rounded-rect>
+      <box pos="132.8 36.8 1.92" size="48 41.6 4.8" color="0.227 0.149 0.078" shininess="6"/>
+      <box pos="100.8 36.8 3.2" size="16 41.6 8" radius="6.4" bevel="3.6" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="164.8 36.8 3.2" size="16 41.6 8" radius="6.4" bevel="3.6" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="132.8 67.2 4.8" size="89.6 19.2 11.2" radius="6.4" bevel="5.04" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="132.8 66.4 8" size="28.8 11.2 3.2" radius="4.48" bevel="1.44" color="0.169 0.361 0.682" shininess="40"/>
     </group>
     <lathe shape="lathe1" segments="10" pos="139.72 11.24 125.53" scale="0.4 0.4 0.4" color="0.423 0.782 0.256" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     <lathe shape="lathe1" segments="10" pos="118.03 11.24 118.64" scale="0.4 0.4 0.4" color="0.330 0.752 0.241" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
@@ -75,32 +75,32 @@
     <lathe shape="lathe2" segments="8" pos="-100.68 114.56 -85.47" scale="0.19 0.27 0.19" color="0.784 0.392 0.118" shininess="6"/>
   </group>
   <group name="mud_house" pos="-160 0 -320">
-    <rounded-rect size="320 16" radius="6.4" segments="4" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"><extrude amount="320"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="208 160" radius="6.4" segments="4" pos="0 96 -16" color="0.928 0.891 0.793" shininess="6"><extrude amount="208"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="220.8 11.2" radius="5.04" segments="4" pos="0 181.6 -16" color="0.780 0.675 0.471" shininess="6"><extrude amount="220.8"/><bevel amount="4.28" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="80 80" radius="6.4" segments="4" pos="-57.6 227.2 -70.4" color="0.954 0.911 0.817" shininess="6"><extrude amount="92.8"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="128 6.4" radius="2.88" segments="4" pos="40 251.2 16" color="0.086 0.635 0.588" shininess="3"><extrude amount="128"/><bevel amount="2.45" bevelSegments="3"/></rounded-rect>
+    <box pos="0 8 0" size="320 16 320" radius="6.4" bevel="5.44" color="0.804 0.698 0.514" shininess="6"/>
+    <box pos="0 96 -16" size="208 160 208" radius="6.4" bevel="5.44" color="0.928 0.891 0.793" shininess="6"/>
+    <box pos="0 181.6 -16" size="220.8 11.2 220.8" radius="5.04" bevel="4.28" color="0.780 0.675 0.471" shininess="6"/>
+    <box pos="-57.6 227.2 -70.4" size="80 80 92.8" radius="6.4" bevel="5.44" color="0.954 0.911 0.817" shininess="6"/>
+    <box pos="40 251.2 16" size="128 6.4 128" radius="2.88" bevel="2.45" color="0.086 0.635 0.588" shininess="3"/>
     <circle radius="4" segments="8" pos="-16 217.6 72" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="60.8"/><bevel amount="1.4" bevelSegments="2"/></circle>
     <circle radius="4" segments="8" pos="96 217.6 72" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="60.8"/><bevel amount="1.4" bevelSegments="2"/></circle>
     <circle radius="4" segments="8" pos="96 217.6 -56" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="60.8"/><bevel amount="1.4" bevelSegments="2"/></circle>
     <group pos="104 0 88" rot="0 90 0">
-      <rect size="44.8 92.8" pos="88 62.4 1.92" color="0.227 0.149 0.078" shininess="6"><extrude amount="4.8"/></rect>
-      <rounded-rect size="16 92.8" radius="6.4" segments="4" pos="57.6 62.4 3.2" color="0.953 0.902 0.761" shininess="6"><extrude amount="8"/><bevel amount="3.6" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="16 92.8" radius="6.4" segments="4" pos="118.4 62.4 3.2" color="0.953 0.902 0.761" shininess="6"><extrude amount="8"/><bevel amount="3.6" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="86.4 19.2" radius="6.4" segments="4" pos="88 118.4 4.8" color="0.953 0.902 0.761" shininess="6"><extrude amount="11.2"/><bevel amount="5.04" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="26.88 11.2" radius="4.48" segments="4" pos="88 117.6 8" color="0.169 0.361 0.682" shininess="40"><extrude amount="3.2"/><bevel amount="1.44" bevelSegments="3"/></rounded-rect>
+      <box pos="88 62.4 1.92" size="44.8 92.8 4.8" color="0.227 0.149 0.078" shininess="6"/>
+      <box pos="57.6 62.4 3.2" size="16 92.8 8" radius="6.4" bevel="3.6" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="118.4 62.4 3.2" size="16 92.8 8" radius="6.4" bevel="3.6" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="88 118.4 4.8" size="86.4 19.2 11.2" radius="6.4" bevel="5.04" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="88 117.6 8" size="26.88 11.2 3.2" radius="4.48" bevel="1.44" color="0.169 0.361 0.682" shininess="40"/>
     </group>
     <group pos="-104 0 88" rot="0 0 0">
-      <rect size="28.8 32" pos="56 120 1.92" color="0.227 0.149 0.078" shininess="6"><extrude amount="4.8"/></rect>
+      <box pos="56 120 1.92" size="28.8 32 4.8" color="0.227 0.149 0.078" shininess="6"/>
     </group>
     <group pos="-104 0 88" rot="0 0 0">
-      <rect size="28.8 32" pos="152 120 1.92" color="0.227 0.149 0.078" shininess="6"><extrude amount="4.8"/></rect>
+      <box pos="152 120 1.92" size="28.8 32 4.8" color="0.227 0.149 0.078" shininess="6"/>
     </group>
-    <rounded-rect size="32 32" radius="6.4" segments="4" pos="-88 32 115.2" color="0.942 0.890 0.749" shininess="6"><extrude amount="35.2"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="32 64" radius="6.4" segments="4" pos="-56 48 115.2" color="0.959 0.910 0.762" shininess="6"><extrude amount="35.2"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="32 96" radius="6.4" segments="4" pos="-24 64 115.2" color="0.939 0.887 0.748" shininess="6"><extrude amount="35.2"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="32 128" radius="6.4" segments="4" pos="8 80 115.2" color="0.947 0.895 0.755" shininess="6"><extrude amount="35.2"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="32 160" radius="6.4" segments="4" pos="40 96 115.2" color="0.944 0.890 0.755" shininess="6"><extrude amount="35.2"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
+    <box pos="-88 32 115.2" size="32 32 35.2" radius="6.4" bevel="5.44" color="0.942 0.890 0.749" shininess="6"/>
+    <box pos="-56 48 115.2" size="32 64 35.2" radius="6.4" bevel="5.44" color="0.959 0.910 0.762" shininess="6"/>
+    <box pos="-24 64 115.2" size="32 96 35.2" radius="6.4" bevel="5.44" color="0.939 0.887 0.748" shininess="6"/>
+    <box pos="8 80 115.2" size="32 128 35.2" radius="6.4" bevel="5.44" color="0.947 0.895 0.755" shininess="6"/>
+    <box pos="40 96 115.2" size="32 160 35.2" radius="6.4" bevel="5.44" color="0.944 0.890 0.755" shininess="6"/>
     <lathe shape="lathe3" segments="14" pos="128 16 120" color="0.686 0.369 0.220" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
     <lathe shape="lathe4" segments="14" pos="128 34.4 120" color="0.169 0.361 0.682" shininess="40"/>
     <circle radius="12" segments="10" pos="102.88 88 -102.88" rot="-90 0 0" color="0.557 0.329 0.153" shininess="8"><extrude amount="144"/><bevel amount="3.36" bevelSegments="2"/><taper amount="-0.2" axis="z"/></circle>
@@ -128,21 +128,21 @@
     <lathe shape="lathe2" segments="8" pos="100.18 130.56 -90.37" scale="0.19 0.27 0.19" color="0.784 0.392 0.118" shininess="6"/>
   </group>
   <group name="pottery" pos="480 0 -320">
-    <rounded-rect size="320 16" radius="6.4" segments="4" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"><extrude amount="320"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="160 120" radius="6.4" segments="4" pos="-48 76 -56" color="0.806 0.642 0.446" shininess="6"><extrude amount="144"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="169.6 9.6" radius="4.32" segments="4" pos="-48 140.8 -56" color="0.725 0.545 0.361" shininess="6"><extrude amount="153.6"/><bevel amount="3.67" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="160 6.4" radius="2.88" segments="4" pos="-48 115.2 48" color="0.725 0.333 0.184" shininess="3"><extrude amount="80"/><bevel amount="2.45" bevelSegments="3"/></rounded-rect>
+    <box pos="0 8 0" size="320 16 320" radius="6.4" bevel="5.44" color="0.804 0.698 0.514" shininess="6"/>
+    <box pos="-48 76 -56" size="160 120 144" radius="6.4" bevel="5.44" color="0.806 0.642 0.446" shininess="6"/>
+    <box pos="-48 140.8 -56" size="169.6 9.6 153.6" radius="4.32" bevel="3.67" color="0.725 0.545 0.361" shininess="6"/>
+    <box pos="-48 115.2 48" size="160 6.4 80" radius="2.88" bevel="2.45" color="0.725 0.333 0.184" shininess="3"/>
     <circle radius="4.8" segments="8" pos="-120 64 80" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="96"/><bevel amount="1.68" bevelSegments="2"/></circle>
     <circle radius="4.8" segments="8" pos="24 64 80" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="96"/><bevel amount="1.68" bevelSegments="2"/></circle>
     <group pos="-128 0 16" rot="0 0 0">
-      <rect size="41.6 80" pos="112 56 1.92" color="0.227 0.149 0.078" shininess="6"><extrude amount="4.8"/></rect>
-      <rounded-rect size="16 80" radius="6.4" segments="4" pos="83.2 56 3.2" color="0.953 0.902 0.761" shininess="6"><extrude amount="8"/><bevel amount="3.6" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="16 80" radius="6.4" segments="4" pos="140.8 56 3.2" color="0.953 0.902 0.761" shininess="6"><extrude amount="8"/><bevel amount="3.6" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="83.2 19.2" radius="6.4" segments="4" pos="112 105.6 4.8" color="0.953 0.902 0.761" shininess="6"><extrude amount="11.2"/><bevel amount="5.04" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="24.96 11.2" radius="4.48" segments="4" pos="112 104.8 8" color="0.169 0.361 0.682" shininess="40"><extrude amount="3.2"/><bevel amount="1.44" bevelSegments="3"/></rounded-rect>
+      <box pos="112 56 1.92" size="41.6 80 4.8" color="0.227 0.149 0.078" shininess="6"/>
+      <box pos="83.2 56 3.2" size="16 80 8" radius="6.4" bevel="3.6" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="140.8 56 3.2" size="16 80 8" radius="6.4" bevel="3.6" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="112 105.6 4.8" size="83.2 19.2 11.2" radius="6.4" bevel="5.04" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="112 104.8 8" size="24.96 11.2 3.2" radius="4.48" bevel="1.44" color="0.169 0.361 0.682" shininess="40"/>
     </group>
     <lathe shape="lathe5" segments="16" pos="80 16 -72" color="0.801 0.310 0.175" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
-    <rect size="32 28.8" pos="80 46.4 -11.2" color="1.000 0.478 0.039" shininess="4" unlit="1" castShadow="0"><extrude amount="6.4"/></rect>
+    <box pos="80 46.4 -11.2" size="32 28.8 6.4" color="1.000 0.478 0.039" shininess="4" unlit="1" castShadow="0"/>
     <lathe shape="lathe6" segments="14" pos="48 16 72" color="0.706 0.455 0.212" shininess="8"/>
     <lathe shape="lathe7" segments="12" pos="48 64 72" color="0.878 0.416 0.227" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
     <lathe shape="lathe3" segments="14" pos="-128 16 128" color="0.702 0.378 0.221" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
@@ -154,28 +154,28 @@
     <light pos="80 48 8" color="1.000 0.620 0.280" intensity="0.28" radius="224" castShadows="0"/>
   </group>
   <group name="bakery" pos="-720 0 320">
-    <rounded-rect size="480 16" radius="6.4" segments="4" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"><extrude amount="320"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="272 136" radius="6.4" segments="4" pos="-56 84 -32" color="0.807 0.638 0.452" shininess="6"><extrude amount="176"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="281.6 12.8" radius="4.48" segments="4" pos="-56 158.4 -32" color="0.725 0.333 0.184" shininess="40"><extrude amount="185.6"/><bevel amount="3.81" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="294.4 16" radius="6.4" segments="4" pos="-56 172.8 -32" color="0.953 0.902 0.761" shininess="6"><extrude amount="198.4"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
+    <box pos="0 8 0" size="480 16 320" radius="6.4" bevel="5.44" color="0.804 0.698 0.514" shininess="6"/>
+    <box pos="-56 84 -32" size="272 136 176" radius="6.4" bevel="5.44" color="0.807 0.638 0.452" shininess="6"/>
+    <box pos="-56 158.4 -32" size="281.6 12.8 185.6" radius="4.48" bevel="3.81" color="0.725 0.333 0.184" shininess="40"/>
+    <box pos="-56 172.8 -32" size="294.4 16 198.4" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
     <group pos="-192 0 56" rot="0 0 0">
-      <rect size="48 88" pos="136 60 1.92" color="0.227 0.149 0.078" shininess="6"><extrude amount="4.8"/></rect>
-      <rounded-rect size="16 88" radius="6.4" segments="4" pos="104 60 3.2" color="0.953 0.902 0.761" shininess="6"><extrude amount="8"/><bevel amount="3.6" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="16 88" radius="6.4" segments="4" pos="168 60 3.2" color="0.953 0.902 0.761" shininess="6"><extrude amount="8"/><bevel amount="3.6" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="89.6 19.2" radius="6.4" segments="4" pos="136 113.6 4.8" color="0.953 0.902 0.761" shininess="6"><extrude amount="11.2"/><bevel amount="5.04" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="28.8 11.2" radius="4.48" segments="4" pos="136 112.8 8" color="0.169 0.361 0.682" shininess="40"><extrude amount="3.2"/><bevel amount="1.44" bevelSegments="3"/></rounded-rect>
+      <box pos="136 60 1.92" size="48 88 4.8" color="0.227 0.149 0.078" shininess="6"/>
+      <box pos="104 60 3.2" size="16 88 8" radius="6.4" bevel="3.6" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="168 60 3.2" size="16 88 8" radius="6.4" bevel="3.6" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="136 113.6 4.8" size="89.6 19.2 11.2" radius="6.4" bevel="5.04" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="136 112.8 8" size="28.8 11.2 3.2" radius="4.48" bevel="1.44" color="0.169 0.361 0.682" shininess="40"/>
     </group>
     <group pos="-192 0 56" rot="0 0 0">
-      <rect size="32 28.8" pos="56 102.4 1.92" color="0.227 0.149 0.078" shininess="6"><extrude amount="4.8"/></rect>
+      <box pos="56 102.4 1.92" size="32 28.8 4.8" color="0.227 0.149 0.078" shininess="6"/>
     </group>
     <group pos="-192 0 56" rot="0 0 0">
-      <rect size="32 28.8" pos="216 102.4 1.92" color="0.227 0.149 0.078" shininess="6"><extrude amount="4.8"/></rect>
+      <box pos="216 102.4 1.92" size="32 28.8 4.8" color="0.227 0.149 0.078" shininess="6"/>
     </group>
     <lathe shape="lathe11" segments="16" pos="160 16 64" color="0.801 0.308 0.176" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
-    <rect size="6.4 22.4" pos="206.4 36.8 64" color="1.000 0.478 0.039" shininess="4" unlit="1" castShadow="0"><extrude amount="25.6"/></rect>
+    <box pos="206.4 36.8 64" size="6.4 22.4 25.6" color="1.000 0.478 0.039" shininess="4" unlit="1" castShadow="0"/>
     <lathe shape="lathe11" segments="16" pos="160 16 -56" color="0.794 0.310 0.174" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
-    <rect size="6.4 22.4" pos="206.4 36.8 -56" color="1.000 0.478 0.039" shininess="4" unlit="1" castShadow="0"><extrude amount="25.6"/></rect>
-    <rounded-rect size="96 48" radius="4.8" segments="4" pos="48 40 115.2" color="0.706 0.455 0.212" shininess="8"><extrude amount="48"/><bevel amount="4.08" bevelSegments="3"/></rounded-rect>
+    <box pos="206.4 36.8 -56" size="6.4 22.4 25.6" color="1.000 0.478 0.039" shininess="4" unlit="1" castShadow="0"/>
+    <box pos="48 40 115.2" size="96 48 48" radius="4.8" bevel="4.08" color="0.706 0.455 0.212" shininess="8"/>
     <lathe shape="lathe1" segments="10" pos="19.2 63.04 115.2" scale="0.19 0.12 0.19" color="0.827 0.580 0.275" shininess="6"/>
     <lathe shape="lathe1" segments="10" pos="38.4 63.04 115.2" scale="0.19 0.12 0.19" color="0.827 0.580 0.275" shininess="6"/>
     <lathe shape="lathe1" segments="10" pos="57.6 63.04 115.2" scale="0.19 0.12 0.19" color="0.827 0.580 0.275" shininess="6"/>
@@ -184,27 +184,27 @@
     <lathe shape="lathe1" segments="10" pos="-134.59 26.08 112" scale="0.18 0.18 0.18" color="0.949 0.803 0.191" shininess="6"/>
     <lathe shape="lathe1" segments="10" pos="-148.7 26.08 103.85" scale="0.18 0.18 0.18" color="0.903 0.747 0.174" shininess="6"/>
     <lathe shape="lathe1" segments="10" pos="-148.7 26.08 120.15" scale="0.18 0.18 0.18" color="0.928 0.775 0.181" shininess="6"/>
-    <rounded-rect size="256 6.4" radius="2.88" segments="4" pos="-56 118.4 88" color="0.941 0.894 0.776" shininess="3"><extrude amount="64"/><bevel amount="2.45" bevelSegments="3"/></rounded-rect>
+    <box pos="-56 118.4 88" size="256 6.4 64" radius="2.88" bevel="2.45" color="0.941 0.894 0.776" shininess="3"/>
     <light pos="217.6 38.4 64" color="1.000 0.620 0.280" intensity="0.21" radius="224" castShadows="0"/>
     <light pos="217.6 38.4 -56" color="1.000 0.620 0.280" intensity="0.21" radius="224" castShadows="0"/>
   </group>
   <group name="watchtower" pos="0 0 320">
-    <rounded-rect size="320 16" radius="6.4" segments="4" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"><extrude amount="320"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="240 19.2" radius="6.4" segments="4" pos="0 25.6 0" color="0.953 0.902 0.761" shininess="6"><extrude amount="240"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="168 304" radius="6.4" segments="4" pos="0 187.2 0" color="0.768 0.662 0.463" shininess="6"><extrude amount="168"/><bevel amount="5.44" bevelSegments="3"/><taper amount="-0.0952"/></rounded-rect>
-    <rounded-rect size="168 16" radius="6.4" segments="4" pos="0 347.2 0" color="0.902 0.827 0.639" shininess="6"><extrude amount="168"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="28.8 28.8" radius="6.4" segments="4" pos="-57.6 369.6 72" color="0.953 0.902 0.761" shininess="6"><extrude amount="28.8"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="28.8 28.8" radius="6.4" segments="4" pos="-57.6 369.6 -72" color="0.953 0.902 0.761" shininess="6"><extrude amount="28.8"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="28.8 28.8" radius="6.4" segments="4" pos="-72 369.6 57.6" color="0.953 0.902 0.761" shininess="6"><extrude amount="28.8"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="28.8 28.8" radius="6.4" segments="4" pos="72 369.6 57.6" color="0.953 0.902 0.761" shininess="6"><extrude amount="28.8"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="28.8 28.8" radius="6.4" segments="4" pos="0 369.6 72" color="0.953 0.902 0.761" shininess="6"><extrude amount="28.8"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="28.8 28.8" radius="6.4" segments="4" pos="0 369.6 -72" color="0.953 0.902 0.761" shininess="6"><extrude amount="28.8"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="28.8 28.8" radius="6.4" segments="4" pos="-72 369.6 0" color="0.953 0.902 0.761" shininess="6"><extrude amount="28.8"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="28.8 28.8" radius="6.4" segments="4" pos="72 369.6 0" color="0.953 0.902 0.761" shininess="6"><extrude amount="28.8"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="28.8 28.8" radius="6.4" segments="4" pos="57.6 369.6 72" color="0.953 0.902 0.761" shininess="6"><extrude amount="28.8"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="28.8 28.8" radius="6.4" segments="4" pos="57.6 369.6 -72" color="0.953 0.902 0.761" shininess="6"><extrude amount="28.8"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="28.8 28.8" radius="6.4" segments="4" pos="-72 369.6 -57.6" color="0.953 0.902 0.761" shininess="6"><extrude amount="28.8"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="28.8 28.8" radius="6.4" segments="4" pos="72 369.6 -57.6" color="0.953 0.902 0.761" shininess="6"><extrude amount="28.8"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
+    <box pos="0 8 0" size="320 16 320" radius="6.4" bevel="5.44" color="0.804 0.698 0.514" shininess="6"/>
+    <box pos="0 25.6 0" size="240 19.2 240" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
+    <box pos="0 187.2 0" size="168 304 168" radius="6.4" bevel="5.44" color="0.768 0.662 0.463" shininess="6"><taper amount="-0.0952"/></box>
+    <box pos="0 347.2 0" size="168 16 168" radius="6.4" bevel="5.44" color="0.902 0.827 0.639" shininess="6"/>
+    <box pos="-57.6 369.6 72" size="28.8 28.8 28.8" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
+    <box pos="-57.6 369.6 -72" size="28.8 28.8 28.8" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
+    <box pos="-72 369.6 57.6" size="28.8 28.8 28.8" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
+    <box pos="72 369.6 57.6" size="28.8 28.8 28.8" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
+    <box pos="0 369.6 72" size="28.8 28.8 28.8" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
+    <box pos="0 369.6 -72" size="28.8 28.8 28.8" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
+    <box pos="-72 369.6 0" size="28.8 28.8 28.8" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
+    <box pos="72 369.6 0" size="28.8 28.8 28.8" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
+    <box pos="57.6 369.6 72" size="28.8 28.8 28.8" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
+    <box pos="57.6 369.6 -72" size="28.8 28.8 28.8" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
+    <box pos="-72 369.6 -57.6" size="28.8 28.8 28.8" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
+    <box pos="72 369.6 -57.6" size="28.8 28.8 28.8" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
     <circle radius="5.2" segments="8" pos="32 411.2 -32" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="112"/><bevel amount="1.68" bevelSegments="2"/><taper amount="-0.0769" axis="z"/></circle>
     <lathe shape="lathe1" segments="10" pos="32 462.4 -32" scale="0.16 0.16 0.16" color="0.910 0.682 0.173" shininess="60"/>
     <group pos="32 460.8 -32" rot="0 0 0">
@@ -216,33 +216,33 @@
       </shape>
     </group>
     <group pos="-91.2 0 91.2" rot="0 0 0">
-      <rect size="48 80" pos="91.2 75.2 1.92" color="0.227 0.149 0.078" shininess="6"><extrude amount="4.8"/></rect>
-      <rounded-rect size="16 80" radius="6.4" segments="4" pos="59.2 75.2 3.2" color="0.953 0.902 0.761" shininess="6"><extrude amount="8"/><bevel amount="3.6" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="16 80" radius="6.4" segments="4" pos="123.2 75.2 3.2" color="0.953 0.902 0.761" shininess="6"><extrude amount="8"/><bevel amount="3.6" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="89.6 19.2" radius="6.4" segments="4" pos="91.2 124.8 4.8" color="0.953 0.902 0.761" shininess="6"><extrude amount="11.2"/><bevel amount="5.04" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="28.8 11.2" radius="4.48" segments="4" pos="91.2 124 8" color="0.169 0.361 0.682" shininess="40"><extrude amount="3.2"/><bevel amount="1.44" bevelSegments="3"/></rounded-rect>
+      <box pos="91.2 75.2 1.92" size="48 80 4.8" color="0.227 0.149 0.078" shininess="6"/>
+      <box pos="59.2 75.2 3.2" size="16 80 8" radius="6.4" bevel="3.6" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="123.2 75.2 3.2" size="16 80 8" radius="6.4" bevel="3.6" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="91.2 124.8 4.8" size="89.6 19.2 11.2" radius="6.4" bevel="5.04" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="91.2 124 8" size="28.8 11.2 3.2" radius="4.48" bevel="1.44" color="0.169 0.361 0.682" shininess="40"/>
     </group>
     <group pos="88 0 88" rot="0 90 0">
-      <rect size="16 48" pos="88 248 1.92" color="0.227 0.149 0.078" shininess="6"><extrude amount="4.8"/></rect>
+      <box pos="88 248 1.92" size="16 48 4.8" color="0.227 0.149 0.078" shininess="6"/>
     </group>
     <group pos="-88 0 88" rot="0 0 0">
-      <rect size="16 48" pos="88 248 1.92" color="0.227 0.149 0.078" shininess="6"><extrude amount="4.8"/></rect>
+      <box pos="88 248 1.92" size="16 48 4.8" color="0.227 0.149 0.078" shininess="6"/>
     </group>
-    <rounded-rect size="35.2 35.2" radius="4.8" segments="4" pos="-96 33.6 99.2" color="0.709 0.464 0.214" shininess="8"><extrude amount="35.2"/><bevel amount="4.08" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="43.2 9.6" radius="4.32" segments="4" pos="-96 56 99.2" color="0.557 0.329 0.153" shininess="8"><extrude amount="43.2"/><bevel amount="3.67" bevelSegments="3"/></rounded-rect>
+    <box pos="-96 33.6 99.2" size="35.2 35.2 35.2" radius="4.8" bevel="4.08" color="0.709 0.464 0.214" shininess="8"/>
+    <box pos="-96 56 99.2" size="43.2 9.6 43.2" radius="4.32" bevel="3.67" color="0.557 0.329 0.153" shininess="8"/>
   </group>
   <group name="pylon_gate" pos="720 0 320">
-    <rounded-rect size="480 16" radius="6.4" segments="4" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"><extrude amount="320"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="150.4 296" radius="6.4" segments="4" pos="-136 164 0" color="0.880 0.809 0.628" shininess="6"><extrude amount="150.4"/><bevel amount="5.44" bevelSegments="3"/><taper amount="-0.1702"/></rounded-rect>
-    <rounded-rect size="134.4 12.8" radius="4.48" segments="4" pos="-136 318.4 0" color="0.086 0.635 0.588" shininess="40"><extrude amount="153.6"/><bevel amount="3.81" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="147.2 16" radius="6.4" segments="4" pos="-136 332.8 0" color="0.953 0.902 0.761" shininess="6"><extrude amount="166.4"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
+    <box pos="0 8 0" size="480 16 320" radius="6.4" bevel="5.44" color="0.804 0.698 0.514" shininess="6"/>
+    <box pos="-136 164 0" size="150.4 296 150.4" radius="6.4" bevel="5.44" color="0.880 0.809 0.628" shininess="6"><taper amount="-0.1702"/></box>
+    <box pos="-136 318.4 0" size="134.4 12.8 153.6" radius="4.48" bevel="3.81" color="0.086 0.635 0.588" shininess="40"/>
+    <box pos="-136 332.8 0" size="147.2 16 166.4" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
     <group pos="-216 0 80" rot="0 0 0">
-      <rect size="92.8 144" pos="80 168 1.6" color="0.955 0.903 0.766" shininess="6"><extrude amount="3.2"/></rect>
-      <rect size="12.06 74.88" pos="52.71 153.6 3.52" color="0.725 0.333 0.184" shininess="6"><extrude amount="3.2"/></rect>
+      <box pos="80 168 1.6" size="92.8 144 3.2" color="0.955 0.903 0.766" shininess="6"/>
+      <box pos="52.71 153.6 3.52" size="12.06 74.88 3.2" color="0.725 0.333 0.184" shininess="6"/>
       <lathe shape="lathe2" segments="8" pos="52.71 198.94 4.16" scale="0.13 0.13 0.04" color="0.169 0.141 0.125" shininess="6"/>
-      <rect size="12.06 74.88" pos="80 153.6 3.52" color="0.169 0.361 0.682" shininess="6"><extrude amount="3.2"/></rect>
+      <box pos="80 153.6 3.52" size="12.06 74.88 3.2" color="0.169 0.361 0.682" shininess="6"/>
       <lathe shape="lathe2" segments="8" pos="80 198.94 4.16" scale="0.13 0.13 0.04" color="0.169 0.141 0.125" shininess="6"/>
-      <rect size="12.06 74.88" pos="107.29 153.6 3.52" color="0.910 0.682 0.173" shininess="6"><extrude amount="3.2"/></rect>
+      <box pos="107.29 153.6 3.52" size="12.06 74.88 3.2" color="0.910 0.682 0.173" shininess="6"/>
       <lathe shape="lathe2" segments="8" pos="107.29 198.94 4.16" scale="0.13 0.13 0.04" color="0.169 0.141 0.125" shininess="6"/>
     </group>
     <circle radius="5.2" segments="8" pos="-187.2 176 99.2" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="320"/><bevel amount="1.68" bevelSegments="2"/><taper amount="-0.0769" axis="z"/></circle>
@@ -255,16 +255,16 @@
         <extrude amount="1.5"/>
       </shape>
     </group>
-    <rounded-rect size="150.4 296" radius="6.4" segments="4" pos="136 164 0" color="0.893 0.813 0.632" shininess="6"><extrude amount="150.4"/><bevel amount="5.44" bevelSegments="3"/><taper amount="-0.1702"/></rounded-rect>
-    <rounded-rect size="134.4 12.8" radius="4.48" segments="4" pos="136 318.4 0" color="0.086 0.635 0.588" shininess="40"><extrude amount="153.6"/><bevel amount="3.81" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="147.2 16" radius="6.4" segments="4" pos="136 332.8 0" color="0.953 0.902 0.761" shininess="6"><extrude amount="166.4"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
+    <box pos="136 164 0" size="150.4 296 150.4" radius="6.4" bevel="5.44" color="0.893 0.813 0.632" shininess="6"><taper amount="-0.1702"/></box>
+    <box pos="136 318.4 0" size="134.4 12.8 153.6" radius="4.48" bevel="3.81" color="0.086 0.635 0.588" shininess="40"/>
+    <box pos="136 332.8 0" size="147.2 16 166.4" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
     <group pos="56 0 80" rot="0 0 0">
-      <rect size="92.8 144" pos="80 168 1.6" color="0.974 0.916 0.773" shininess="6"><extrude amount="3.2"/></rect>
-      <rect size="12.06 74.88" pos="52.71 153.6 3.52" color="0.725 0.333 0.184" shininess="6"><extrude amount="3.2"/></rect>
+      <box pos="80 168 1.6" size="92.8 144 3.2" color="0.974 0.916 0.773" shininess="6"/>
+      <box pos="52.71 153.6 3.52" size="12.06 74.88 3.2" color="0.725 0.333 0.184" shininess="6"/>
       <lathe shape="lathe2" segments="8" pos="52.71 198.94 4.16" scale="0.13 0.13 0.04" color="0.169 0.141 0.125" shininess="6"/>
-      <rect size="12.06 74.88" pos="80 153.6 3.52" color="0.169 0.361 0.682" shininess="6"><extrude amount="3.2"/></rect>
+      <box pos="80 153.6 3.52" size="12.06 74.88 3.2" color="0.169 0.361 0.682" shininess="6"/>
       <lathe shape="lathe2" segments="8" pos="80 198.94 4.16" scale="0.13 0.13 0.04" color="0.169 0.141 0.125" shininess="6"/>
-      <rect size="12.06 74.88" pos="107.29 153.6 3.52" color="0.910 0.682 0.173" shininess="6"><extrude amount="3.2"/></rect>
+      <box pos="107.29 153.6 3.52" size="12.06 74.88 3.2" color="0.910 0.682 0.173" shininess="6"/>
       <lathe shape="lathe2" segments="8" pos="107.29 198.94 4.16" scale="0.13 0.13 0.04" color="0.169 0.141 0.125" shininess="6"/>
     </group>
     <circle radius="5.2" segments="8" pos="187.2 176 99.2" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="320"/><bevel amount="1.68" bevelSegments="2"/><taper amount="-0.0769" axis="z"/></circle>
@@ -277,18 +277,18 @@
         <extrude amount="1.5"/>
       </shape>
     </group>
-    <rounded-rect size="102.4 200" radius="6.4" segments="4" pos="0 116 0" color="0.780 0.675 0.471" shininess="6"><extrude amount="128"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="105.6 12.8" radius="4.48" segments="4" pos="0 222.4 0" color="0.169 0.361 0.682" shininess="40"><extrude amount="137.6"/><bevel amount="3.81" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="118.4 16" radius="6.4" segments="4" pos="0 236.8 0" color="0.953 0.902 0.761" shininess="6"><extrude amount="150.4"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
+    <box pos="0 116 0" size="102.4 200 128" radius="6.4" bevel="5.44" color="0.780 0.675 0.471" shininess="6"/>
+    <box pos="0 222.4 0" size="105.6 12.8 137.6" radius="4.48" bevel="3.81" color="0.169 0.361 0.682" shininess="40"/>
+    <box pos="0 236.8 0" size="118.4 16 150.4" radius="6.4" bevel="5.44" color="0.953 0.902 0.761" shininess="6"/>
     <group pos="-51.2 0 64" rot="0 0 0">
-      <rect size="57.6 136" pos="51.2 84 1.92" color="0.227 0.149 0.078" shininess="6"><extrude amount="4.8"/></rect>
-      <rounded-rect size="16 136" radius="6.4" segments="4" pos="14.4 84 3.2" color="0.953 0.902 0.761" shininess="6"><extrude amount="8"/><bevel amount="3.6" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="16 136" radius="6.4" segments="4" pos="88 84 3.2" color="0.953 0.902 0.761" shininess="6"><extrude amount="8"/><bevel amount="3.6" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="99.2 19.2" radius="6.4" segments="4" pos="51.2 161.6 4.8" color="0.953 0.902 0.761" shininess="6"><extrude amount="11.2"/><bevel amount="5.04" bevelSegments="3"/></rounded-rect>
-      <rounded-rect size="34.56 11.2" radius="4.48" segments="4" pos="51.2 160.8 8" color="0.169 0.361 0.682" shininess="40"><extrude amount="3.2"/><bevel amount="1.44" bevelSegments="3"/></rounded-rect>
+      <box pos="51.2 84 1.92" size="57.6 136 4.8" color="0.227 0.149 0.078" shininess="6"/>
+      <box pos="14.4 84 3.2" size="16 136 8" radius="6.4" bevel="3.6" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="88 84 3.2" size="16 136 8" radius="6.4" bevel="3.6" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="51.2 161.6 4.8" size="99.2 19.2 11.2" radius="6.4" bevel="5.04" color="0.953 0.902 0.761" shininess="6"/>
+      <box pos="51.2 160.8 8" size="34.56 11.2 3.2" radius="4.48" bevel="1.44" color="0.169 0.361 0.682" shininess="40"/>
     </group>
     <lathe shape="lathe13" segments="12" pos="0 217.6 70.4" scale="0.32 0.32 0.1" color="0.910 0.682 0.173" shininess="60"/>
-    <rounded-rect size="41.6 9.6" radius="4.32" segments="4" pos="-32 241.6 70.4" color="0.169 0.361 0.682" shininess="40"><extrude amount="4.8"/><bevel amount="2.16" bevelSegments="3"/></rounded-rect>
-    <rounded-rect size="41.6 9.6" radius="4.32" segments="4" pos="32 241.6 70.4" color="0.169 0.361 0.682" shininess="40"><extrude amount="4.8"/><bevel amount="2.16" bevelSegments="3"/></rounded-rect>
+    <box pos="-32 241.6 70.4" size="41.6 9.6 4.8" radius="4.32" bevel="2.16" color="0.169 0.361 0.682" shininess="40"/>
+    <box pos="32 241.6 70.4" size="41.6 9.6 4.8" radius="4.32" bevel="2.16" color="0.169 0.361 0.682" shininess="40"/>
   </group>
 </scene>

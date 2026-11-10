@@ -135,13 +135,11 @@ class Kit:
     return (rad, min(.85 * rad, SOLID_ROUND * depth)) if rad >= .8 and depth >= 2.4 else (0, 0)
 
   def prism(self, mat, pos, a, b, depth, col, rot=(), mods=""):
-    """A box as a rect (or rounded-rect) of a x b tiles, extruded `depth` cm, with the kit's bevels."""
+    """A box a x b tiles across and `depth` cm deep along local Z, with the kit's soft edges (<box radius bevel>)."""
     rad, bev = self.rounded(mat, a, b, depth)
-    size = ("size", "%s %s" % (f(a * TILE), f(b * TILE)))
-    if not rad:
-      return self.solid(("rect", [size]), depth, pos, mat, col, rot, mods)
-    bevel = "<bevel amount=\"%s\" bevelSegments=\"3\"/>" % f(bev)
-    return self.solid(("rounded-rect", [size, ("radius", f(rad)), ("segments", 4)]), depth, pos, mat, col, rot, bevel + mods)
+    soft = [("radius", f(rad)), ("bevel", f(bev))] if rad else []
+    self.emit("<box%s%s%s%s>%s</box>" % (attrs([("pos", pos), ("size", "%s %s %s" % (f(a * TILE), f(b * TILE), f(depth)))]), attrs(soft), attrs(list(rot)), attrs(self.look(mat, col)), mods) if mods
+              else "<box%s%s%s%s/>" % (attrs([("pos", pos), ("size", "%s %s %s" % (f(a * TILE), f(b * TILE), f(depth)))]), attrs(soft), attrs(list(rot)), attrs(self.look(mat, col))))
 
   def box(self, mat, x, y, z, sx, sy, sz, col, rz=0.):
     self.prism(mat, v3(x * TILE, (z + sz / 2) * TILE, -y * TILE), sx, sz, sy * TILE, col, [("rot", v3(0, math.degrees(rz), 0))] if rz else [])

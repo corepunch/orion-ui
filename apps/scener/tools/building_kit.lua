@@ -117,13 +117,12 @@ local function rounded(mat, a, b, depth)
   return 0, 0
 end
 
--- A box as a rect (or rounded-rect) of a x b tiles, extruded `depth` cm, with the kit's bevels.
+-- A box a x b tiles across and `depth` cm deep along local Z, with the kit's soft edges (<box radius bevel>).
 function Kit:prism(mat, p, a, b, depth, col, rot, mods)
   local rad, bev = rounded(mat, a, b, depth)
-  local size = {"size", f(a * TILE) .. " " .. f(b * TILE)}
-  if rad == 0 then return self:solid("rect", {size}, depth, p, mat, col, rot, mods) end
-  local bevel = fmt('<bevel amount="%s" bevelSegments="3"/>', f(bev))
-  return self:solid("rounded-rect", {size, {"radius", f(rad)}, {"segments", 4}}, depth, p, mat, col, rot, bevel .. (mods or ""))
+  local soft = rad ~= 0 and {{"radius", f(rad)}, {"bevel", f(bev)}} or {}
+  local head = attrs({{"pos", p}, {"size", f(a * TILE) .. " " .. f(b * TILE) .. " " .. f(depth)}}) .. attrs(soft) .. attrs(rot or {}) .. attrs(self:look(mat, col))
+  if mods and mods ~= "" then self:emit("<box" .. head .. ">" .. mods .. "</box>") else self:emit("<box" .. head .. "/>") end
 end
 
 function Kit:box(mat, x, y, z, sx, sy, sz, col, rz)

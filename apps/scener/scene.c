@@ -1039,13 +1039,31 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR);
 
 typedef void (*shape_parser_fn)(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit);
 
+#define BOX_SOFT_LIMIT 0.45f           /* soft edges never exceed this fraction of the thinnest side */
+#define BOX_BEVEL_OF_RADIUS 0.85f       /* default rim bevel, as a fraction of the corner radius */
+#define BOX_BEVEL_OF_RADIUS_MAX 0.95f   /* a bevel must stay below the corner radius */
+#define BOX_SOFT_SEGMENTS 4
+
 static void parse_box(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)parentM; (void)pos; (void)rot;
 	vec3 sz=cvt3ds_sz(s,xml_attr_v3_cm(n,"size",v3(1,1,1)));
 	float insetX=0.0f, insetY=0.0f;
 	xml_attr_2f(n,"inset",0.0f,0.0f,&insetX,&insetY);
-	Mesh mesh=(insetX>0.0f || insetY>0.0f) ? gen_box_inset(sz.x,sz.y,sz.z,insetX,insetY)
-		: gen_box(sz.x,sz.y,sz.z);
+	float radius=xml_attr_f_cm(n,"radius",0), bevel=xml_attr_f_cm(n,"bevel",-1);
+	int soft=radius>0.0f || bevel>0.0f;
+	if(soft){	/* soft edges: the two sides across Z get corner radius, the front and back rims a bevel */
+		float side=fminf(sz.x,sz.y);
+		if(radius<=0.0f) radius=BOX_SOFT_LIMIT*side;
+		radius=fminf(radius,BOX_SOFT_LIMIT*side);
+		if(bevel<0.0f) bevel=BOX_BEVEL_OF_RADIUS*radius;
+		bevel=fminf(fminf(bevel,radius*BOX_BEVEL_OF_RADIUS_MAX),BOX_SOFT_LIMIT*sz.z);
+	}
+	Mesh mesh;
+	if(soft){
+		Shape2D profile=shape2d_rounded_rect(sz.x,sz.y,radius,xml_attr_i(n,"segments",BOX_SOFT_SEGMENTS));
+		mesh=gen_profile_extrusion_beveled(&profile,sz.z,bevel,xml_attr_i(n,"bevelSegments",BOX_SOFT_SEGMENTS));
+		shape2d_free(&profile);
+	} else mesh=(insetX>0.0f || insetY>0.0f) ? gen_box_inset(sz.x,sz.y,sz.z,insetX,insetY) : gen_box(sz.x,sz.y,sz.z);
 	apply_modifiers(&mesh,n);
 	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
 }
