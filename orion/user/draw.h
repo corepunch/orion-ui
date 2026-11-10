@@ -78,6 +78,7 @@ void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_
 // not a window (a table cell); NULL takes win's own (window_set_style_var). win may be NULL.
 int  measure_status_badge(const char *text, const char *icon);
 void draw_status_badge(const window_t *win, irect16_t r, const char *text, const char *icon, const ui_style_vars_t *vars);
+void draw_status_badge_in(const window_t *win, irect16_t r, const char *text, const char *icon, const ui_style_vars_t *vars, ctrl_state_t state);
 // Procedural rounded-box shadow; radius, blur (Gaussian sigma), and offset are logical pixels.
 void draw_rect_shadow(irect16_t r, float radius, float blur, ipoint16_t offset, uint32_t color);
 void draw_gradient_rect(irect16_t r, uint32_t left_color, uint32_t right_color);

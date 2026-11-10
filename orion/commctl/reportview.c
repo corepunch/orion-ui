@@ -274,7 +274,7 @@ static void report_paint(window_t *win, reportview_data_t *data) {
           const char *role = theme_sys_color_name(it->tone > 0 && it->tone < brCount ? (int)it->tone : brTextSecondary);
           char var[48]; snprintf(var, sizeof(var), "var(--%s)", role ? role : "text-secondary");
           ui_style_vars_set(&tone, "--tone", var);
-          draw_status_badge(win, R(text_x, y + (entry_h - bh) / 2, bw, bh), src, NULL, &tone);
+          draw_status_badge_in(win, R(text_x, y + (entry_h - bh) / 2, bw, bh), src, NULL, &tone, strong ? CTRL_SELECTED : CTRL_NORMAL);
         }
       } else {
         // Text that does not fit ends in an ellipsis; numbers align right.

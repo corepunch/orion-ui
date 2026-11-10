@@ -96,6 +96,8 @@ Badge {
   color: color-mix(in srgb, var(--tone) var(--ink), var(--text-normal));
   border-radius: 9999px;
 }
+Badge:checked { background: color-mix(in srgb, var(--accent-text) 22%, transparent); color: var(--accent-text); }
+Badge:checked::icon { fill: var(--accent-text); }
 Badge.chip   { border-radius: var(--badge-radius); }
 Badge::icon  { width: 12px; margin-right: 4px; fill: var(--tone, var(--text-secondary)); }
 

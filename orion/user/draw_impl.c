@@ -474,19 +474,24 @@ int measure_status_badge(const char *text, const char *icon) {
 // The pill is the Badge box, the icon the Badge::icon part's fill and the text its colour: the sheet
 // derives all three from the instance's --tone.
 void draw_status_badge(const window_t *win, irect16_t r, const char *text, const char *icon, const ui_style_vars_t *vars) {
+  draw_status_badge_in(win, r, text, icon, vars, CTRL_NORMAL);
+}
+
+// CTRL_SELECTED is Badge:checked: a pill on a selected row re-tones itself for the selection's face.
+void draw_status_badge_in(const window_t *win, irect16_t r, const char *text, const char *icon, const ui_style_vars_t *vars, ctrl_state_t state) {
   if (r.w <= 0 || r.h <= 0) return;
   if (!vars) vars = window_style_vars(win);
-  theme_draw_with(win, vars, THEME_PART_BADGE, r, CTRL_NORMAL);
+  theme_draw_with(win, vars, THEME_PART_BADGE, r, state);
   int icon_w = status_badge_icon_width(icon);
   irect16_t content = rect_inset_xy(r, ui_px("Badge", "padding-left"), 0);
   sysicon_resolved_t glyph;
   if (icon_w && sysicon_resolve_size(icon, ui_px("Badge::icon", "width"), &glyph)) {
     irect16_t at = rect_center(rect_split_left(content, ui_px("Badge::icon", "width")), glyph.w, glyph.h);
     draw_sprite_region((int)glyph.tex, at, UV_RECT(glyph.u0, glyph.v0, glyph.u1, glyph.v1),
-                       theme_fill_with(win, vars, THEME_PART_BADGE_ICON, CTRL_NORMAL), 0);
+                       theme_fill_with(win, vars, THEME_PART_BADGE_ICON, state), 0);
   }
   irect16_t label = rect_trim_left(content, icon_w);
-  draw_text_clipped("Badge", text, &label, theme_foreground_with(win, vars, THEME_PART_BADGE, CTRL_NORMAL), TEXT_ALIGN_CENTER);
+  draw_text_clipped("Badge", text, &label, theme_foreground_with(win, vars, THEME_PART_BADGE, state), TEXT_ALIGN_CENTER);
 }
 
 void draw_badge_ex(ui_font_t font, const char *text, irect16_t r, uint32_t text_color, uint32_t background_color) {
