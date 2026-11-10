@@ -220,16 +220,19 @@ HEAD = """<?xml version="1.0" encoding="UTF-8"?>
   <material id="snowfield" color="0.86 0.9 0.96" shininess="4"/>"""
 
 
-LIGHT = dict(AMBIENT="0.27 0.33 0.52", SUN="0.95", FILL="0.35", BACKGROUND="0.64 0.70 0.84", SUNCOLOR="0.96 0.95 0.95", LAMPS="0.5", SKY="4")   # tuned against the Blender renders
+LIGHT = dict(AMBIENT="0.27 0.33 0.52", SUN="0.95", FILL="0.35", BACKGROUND="0.64 0.70 0.84", SUNCOLOR="0.96 0.95 0.95", LAMPS="1.0", SKY="4")   # tuned against the Blender renders
 
 
 def main():
   ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
   ap.add_argument("out", nargs="?", default=os.path.join(HERE, "..", "scenes", "christmas_market_buildings.blks"))
   for k in LIGHT: ap.add_argument("--" + k.lower(), default=LIGHT[k], help="LAMPS scales the shop point lights. Blender sun 3.0 / fill 0.55 / sky 0.7 are the targets (default %s)" % LIGHT[k])
+  ap.add_argument("--lamp-shadows", type=int, default=1, choices=(0, 1), help="1: the shop lamps cast shadows, as in Blender (slow to render with 36 lamps)")
   ap.add_argument("--nile", default=os.path.expanduser("~/Developer/nile-archive"))
   a = ap.parse_args()
   for k in LIGHT: LIGHT[k] = getattr(a, k.lower())
+  scener.LAMP_RANGE = 6 * scener.TILE * 1.4   # six lamp radii: past it a lamp is a negligible 1/37th and would only cost shadow volumes
+  scener.LAMP_SHADOWS = a.lamp_shadows   # the Blender lamps cast shadows, so light stays inside a stall
   nile = load_nile(a.nile)
   apply_blender_materials(nile)
   nile.Kit = make_kit(nile)

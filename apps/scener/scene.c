@@ -692,6 +692,7 @@ void scene_add_obj(Scene *s, Mesh mesh, mat4 M, mat4 R, vec3 color, float shin, 
 	o.sourceNode=s->activeSourceNode; o.record=s->activeRecord;
 	o.texIndex=s->activeTexIndex;
 	o.screenTexture=s->activeScreenTexture>=0&&s->activeScreenTexture<s->nscreenTextures?s->activeScreenTexture:-1;
+	scene_obj_update_bounds(&o);
 	DA_PUSH(s->objs,s->nobjs,s->cobjs,o);
 }
 
@@ -2350,6 +2351,7 @@ static void parse_light(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3
 	L.color=xml_attr_v3(n,"color",v3(1,1,1));
 	L.intensity=xml_attr_f(n,"intensity",1.0f);
 	L.radius=xml_attr_f_cm(n,"radius",0.0f);
+	L.range=fmaxf(xml_attr_f_cm(n,"range",0.0f),0.0f);
 	L.castsShadow=xml_attr_i(n,"castShadows",1);
 	DA_PUSH(s->lights,s->nlights,s->clights,L);
 }

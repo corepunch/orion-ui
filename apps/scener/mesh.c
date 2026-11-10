@@ -62,10 +62,19 @@ void mesh_gradient_param(Mesh *m, char axis){
 	}
 }
 
+/* Positions take posM. Normals take its inverse transpose, so a non-uniform scale (a flattened sphere, a
+   stretched lathe) tilts them with the surface; rotM, the rotation alone, is the fallback for a singular posM. */
 void mesh_transform(Mesh *m, mat4 posM, mat4 rotM){
+    float det=posM.m[0]*(posM.m[5]*posM.m[10]-posM.m[9]*posM.m[6])-posM.m[4]*(posM.m[1]*posM.m[10]-posM.m[9]*posM.m[2])+posM.m[8]*(posM.m[1]*posM.m[6]-posM.m[5]*posM.m[2]);
+    int exact=fabsf(det)>1e-10f;
+    mat4 inv=exact?mat4_affine_inverse(posM):mat4_identity();
     for(int i=0;i<m->nverts;i++){
+        vec3 n=m->verts[i].nrm;
         m->verts[i].pos = mat4_xform_point(posM, m->verts[i].pos);
-        m->verts[i].nrm = vnorm(mat4_xform_dir(rotM, m->verts[i].nrm));
+        m->verts[i].nrm = exact?vnorm(v3(inv.m[0]*n.x+inv.m[1]*n.y+inv.m[2]*n.z,
+                                         inv.m[4]*n.x+inv.m[5]*n.y+inv.m[6]*n.z,
+                                         inv.m[8]*n.x+inv.m[9]*n.y+inv.m[10]*n.z))
+                                : vnorm(mat4_xform_dir(rotM, n));
     }
 }
 void mesh_compute_face_normals(Mesh *m){

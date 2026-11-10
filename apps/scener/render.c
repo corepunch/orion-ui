@@ -327,6 +327,25 @@ static void draw_stencil_debug_quad(mat4 proj, mat4 view) {
     glUseProgram(0);
 }
 
+/* The screen rectangle (pixels, clamped to the viewport) that a point light with a range can touch: the
+   projected box around its sphere. False when the box reaches the camera plane, where no rectangle is safe. */
+static int light_scissor(const Light *L, mat4 viewProj, int w, int h, int rect[4]) {
+    if (L->isDirectional || L->range <= 0) return 0;
+    float x0 = INFINITY, y0 = INFINITY, x1 = -INFINITY, y1 = -INFINITY;
+    for (int c = 0; c < 8; c++) {
+        vec3 p = v3(L->pos.x + ((c & 1) ? L->range : -L->range), L->pos.y + ((c & 2) ? L->range : -L->range), L->pos.z + ((c & 4) ? L->range : -L->range));
+        const float *m = viewProj.m;
+        float cw = m[3] * p.x + m[7] * p.y + m[11] * p.z + m[15];
+        if (cw <= 1e-4f) return 0;
+        float sx = (m[0] * p.x + m[4] * p.y + m[8] * p.z + m[12]) / cw, sy = (m[1] * p.x + m[5] * p.y + m[9] * p.z + m[13]) / cw;
+        float px = (sx * 0.5f + 0.5f) * (float)w, py = (sy * 0.5f + 0.5f) * (float)h;
+        x0 = fminf(x0, px); x1 = fmaxf(x1, px); y0 = fminf(y0, py); y1 = fmaxf(y1, py);
+    }
+    int ix0 = (int)floorf(fmaxf(x0, 0.0f)), iy0 = (int)floorf(fmaxf(y0, 0.0f)), ix1 = (int)ceilf(fminf(x1, (float)w)), iy1 = (int)ceilf(fminf(y1, (float)h));
+    rect[0] = ix0; rect[1] = iy0; rect[2] = ix1 > ix0 ? ix1 - ix0 : 0; rect[3] = iy1 > iy0 ? iy1 - iy0 : 0;
+    return 1;
+}
+
 void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
                   vec3 camPos, vec3 camLook, int flags) {
     if (!scene_is_prefab_mode(s)) scene_rebuild_camera_gizmos(s, h > 0 ? (float)w / (float)h : 1.0f);
@@ -411,6 +430,11 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     for (int li = 0; li < s->nlights; li++) {
         Light *L = &s->lights[li];
         shader_set_light(L);
+        int scissor[4], scissored = light_scissor(L, viewProj, w, h, scissor);
+        if (scissored) {   /* the light cannot reach outside this rectangle: stencil, volumes and lit draws stay in it */
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+        }
 
         int drawShadows = !(flags & DBG_NO_SHADOWS) && L->castsShadow && s->svols[li].nverts > 0;
 #ifndef USE_ZPASS
@@ -453,7 +477,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
             glEnable(GL_BLEND);
             glBlendFunc(GL_ONE, GL_ONE);
             for (int i = 0; i < s->nobjs; i++) {
-                if (!s->objs[i].renderable || s->objs[i].unlit) continue;
+                if (!s->objs[i].renderable || s->objs[i].unlit || !light_reaches_obj(L, &s->objs[i])) continue;
                 shader_set_material(s->objs[i].color, s->objs[i].shininess, s->objs[i].specular, s->objs[i].metallic);
                 shader_set_ramp(s->objs[i].ramp >= 0 ? s->ramps[s->objs[i].ramp].shade : NULL);
                 shader_set_gradient(s->objs[i].gradient, s->objs[i].gradFrom, s->objs[i].gradTo);
@@ -472,7 +496,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
             glEnable(GL_BLEND);
             glBlendFunc(GL_ONE, GL_ONE);
             for (int i = 0; i < s->nobjs; i++) {
-                if (!s->objs[i].renderable || s->objs[i].unlit) continue;
+                if (!s->objs[i].renderable || s->objs[i].unlit || !light_reaches_obj(L, &s->objs[i])) continue;
                 shader_set_material(s->objs[i].color, s->objs[i].shininess, s->objs[i].specular, s->objs[i].metallic);
                 shader_set_ramp(s->objs[i].ramp >= 0 ? s->ramps[s->objs[i].ramp].shade : NULL);
                 shader_set_gradient(s->objs[i].gradient, s->objs[i].gradFrom, s->objs[i].gradTo);
@@ -486,6 +510,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
             glDisable(GL_BLEND);
             glDepthFunc(GL_LESS);
         }
+        if (scissored) glDisable(GL_SCISSOR_TEST);
     }
 
     shader_unbind();

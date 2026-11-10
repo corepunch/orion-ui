@@ -35,4 +35,6 @@ rc, out = check('<scene>%s%s</scene>' % (HEAD, mesh))
 assert rc == 0 and "1 objects" in out, out
 rc, out = check('<scene>%s<mesh><v x="0" y="0" z="0"/><f v="0 1 2"/></mesh></scene>' % HEAD)
 assert rc != 0 and "valid vertex indices" in out, out
+rc, out = check('<scene>%s<light pos="0 100 0" radius="200" range="600" castShadows="1"/><box size="50 50 50" pos="0 25 0"/></scene>' % HEAD)
+assert rc == 0 and "1 objects" in out, out
 print("ok")

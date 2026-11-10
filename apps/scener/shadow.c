@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 #ifdef _WIN32
 #include <malloc.h>
 #else
@@ -83,10 +84,25 @@ static void scene_resize_shadow_parts(SceneObj *o,int nlights){
 	o->nshadowParts=nlights;
 }
 
+void scene_obj_update_bounds(SceneObj *o){
+	vec3 lo=v3(INFINITY,INFINITY,INFINITY),hi=v3(-INFINITY,-INFINITY,-INFINITY);
+	for(int i=0;i<o->mesh.nverts;i++){
+		vec3 p=o->mesh.verts[i].pos;
+		lo=v3(fminf(lo.x,p.x),fminf(lo.y,p.y),fminf(lo.z,p.z)); hi=v3(fmaxf(hi.x,p.x),fmaxf(hi.y,p.y),fmaxf(hi.z,p.z));
+	}
+	o->bmin=lo; o->bmax=hi;
+}
+
+int light_reaches_obj(const Light *L,const SceneObj *o){
+	if(L->isDirectional || L->range<=0 || !o->mesh.nverts) return 1;
+	float dx=fmaxf(fmaxf(o->bmin.x-L->pos.x,L->pos.x-o->bmax.x),0),dy=fmaxf(fmaxf(o->bmin.y-L->pos.y,L->pos.y-o->bmax.y),0),dz=fmaxf(fmaxf(o->bmin.z-L->pos.z,L->pos.z-o->bmax.z),0);
+	return dx*dx+dy*dy+dz*dz<=L->range*L->range;
+}
+
 static void scene_build_object_shadow_part(Scene *s,SceneObj *o,int li){
 	free(o->shadowParts[li].verts);
 	memset(&o->shadowParts[li],0,sizeof(ShadowVolume));
-	if(!o->castsShadow || !s->lights[li].castsShadow) return;
+	if(!o->castsShadow || !s->lights[li].castsShadow || !light_reaches_obj(&s->lights[li],o)) return;
 	build_shadow_volume(&o->mesh,s->lights[li].pos,s->lights[li].dir,
 		s->lights[li].isDirectional,&o->shadowParts[li]);
 }
@@ -104,6 +120,7 @@ void scene_rebuild_node_shadow_volumes(Scene *s,void *editNode){
 	for(int oi=0;oi<s->nobjs;oi++){
 		SceneObj *o=&s->objs[oi];
 		if(o->editNode!=editNode) continue;
+		scene_obj_update_bounds(o);
 		if(o->nshadowParts!=s->nlights) scene_resize_shadow_parts(o,s->nlights);
 		for(int li=0;li<s->nlights;li++) scene_build_object_shadow_part(s,o,li);
 	}

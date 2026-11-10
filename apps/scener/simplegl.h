@@ -214,10 +214,10 @@ typedef struct {
 	char follow[32]; /* instance whose root the camera tracks across the ground */
 	CameraTransform *transforms; int ntransforms,ctransforms;
 } Camera;
-typedef struct { vec3 pos,color,dir; float intensity,radius; int castsShadow,isDirectional; } Light;
+typedef struct { vec3 pos,color,dir; float intensity,radius,range; /* range: beyond it a point light neither lights nor shadows; 0 = unlimited */ int castsShadow,isDirectional; } Light;
 typedef struct { float x,y,z,w; } ShadowVertex;
 typedef struct { ShadowVertex *verts; int nverts,cverts; } ShadowVolume;
-typedef struct { Mesh mesh; vec3 color; float shininess,specular,metallic; /* specular: Blender-style level, F0 = 0.08 * specular (0.5 gives 4%); metallic 0..1 tints the reflection with the colour and drops the diffuse */ int ramp; int gradient; vec3 gradFrom,gradTo; /* gradient: colour multipliers at Vertex.g 0 and 1, valid when set */ int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
+typedef struct { Mesh mesh; vec3 bmin,bmax; vec3 color; float shininess,specular,metallic; /* specular: Blender-style level, F0 = 0.08 * specular (0.5 gives 4%); metallic 0..1 tints the reflection with the colour and drops the diffuse */ int ramp; int gradient; vec3 gradFrom,gradTo; /* gradient: colour multipliers at Vertex.g 0 and 1, valid when set */ int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
 typedef struct { char path[1024]; unsigned char *pixels; int width,height; unsigned int texture; } ScreenTexture;
 typedef struct { char name[32]; vec3 pos; } AttachPoint;
 #define SCENE_PREFAB_PATH_CAPACITY 1024
@@ -335,6 +335,8 @@ void scene_free(Scene *s);
 bool scene_export_file(Scene *s,const char *path,const char *exporter_id,const char *const *keys,const char *const *values,int nopts,float time);
 void export_list(FILE *f);
 void scene_select_camera(Scene *s,const char *name);
+int light_reaches_obj(const Light *L,const SceneObj *o); /* false when o lies beyond a point light's range */
+void scene_obj_update_bounds(SceneObj *o);
 void scene_add_obj(Scene *s,Mesh mesh,mat4 M,mat4 R,vec3 color,float shin,int castsShadow,int renderable,int unlit);
 typedef struct { int errors, warnings; } SceneCheckResult;
 SceneCheckResult scene_check(Scene *s,FILE *out,int json);

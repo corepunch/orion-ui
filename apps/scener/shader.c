@@ -11,7 +11,7 @@
 static GLuint prog, s_mesh_vao, s_mesh_vbo, s_mesh_ebo;
 static GLuint vlocPos, vlocNrm;
 static GLint ulocViewProj, ulocViewPos, ulocLightPos, ulocLightColor, ulocLightRadius;
-static GLint ulocSky, ulocSkyOn, ulocSpecular, ulocMetallic, ulocColor, ulocShininess, ulocRamp, ulocRampOn, ulocGradOn, ulocGradFrom, ulocGradTo;
+static GLint ulocLightRange, ulocSky, ulocSkyOn, ulocSpecular, ulocMetallic, ulocColor, ulocShininess, ulocRamp, ulocRampOn, ulocGradOn, ulocGradFrom, ulocGradTo;
 static GLint vlocGrad;
 #ifdef SCENER_USE_TEXTURES
 static GLint ulocTex;
@@ -64,6 +64,7 @@ static const char *fs_src =
 "uniform vec4 uLightPos;\n"
 "uniform vec3 uLightColor;\n"
 "uniform float uLightRadius;\n"
+"uniform float uLightRange;\n"
 "uniform vec3 uColor;\n"
 "uniform float uShininess;\n"
 "uniform float uSpecular;\n"
@@ -120,6 +121,11 @@ static const char *fs_src =
 "        float dist=length(uLightPos.xyz-vWorldPos);\n"
 "        att=1.0/(1.0+LIGHT_ATT_QUAD*dist/uLightRadius+(dist*dist)/(uLightRadius*uLightRadius));\n"
 "    }\n"
+"    if(uLightRange>0.0 && uLightPos.w>0.0){ /* a smooth window ends the light at its range */\n"
+"        float q=length(uLightPos.xyz-vWorldPos)/uLightRange;\n"
+"        float w=clamp(1.0-q*q*q*q,0.0,1.0);\n"
+"        att*=w*w;\n"
+"    }\n"
 "    float seed=dot(uLightPos.xyz,NOISE_SEED);\n"
 "    float noise=fract(NOISE_SCALE*fract(dot(gl_FragCoord.xy+seed,NOISE_PARAM)))-0.5;\n"
 "    vec3 lit;\n"
@@ -148,6 +154,7 @@ void shader_init(void){
 	ulocLightPos    = glGetUniformLocation(prog, "uLightPos");
 	ulocLightColor  = glGetUniformLocation(prog, "uLightColor");
 	ulocLightRadius = glGetUniformLocation(prog, "uLightRadius");
+	ulocLightRange  = glGetUniformLocation(prog, "uLightRange");
 	ulocColor       = glGetUniformLocation(prog, "uColor");
 	ulocShininess   = glGetUniformLocation(prog, "uShininess");
 	ulocSpecular    = glGetUniformLocation(prog, "uSpecular");
@@ -198,6 +205,7 @@ void shader_set_light(Light *L){
 		glUniform4f(ulocLightPos, L->pos.x, L->pos.y, L->pos.z, 1.0f);
 	glUniform3f(ulocLightColor, color.x*L->intensity, color.y*L->intensity, color.z*L->intensity);
 	glUniform1f(ulocLightRadius, L->isDirectional ? 0.0f : L->radius);
+	glUniform1f(ulocLightRange, L->isDirectional ? 0.0f : L->range);
 }
 
 void shader_set_material(vec3 color, float shininess, float specular, float metallic){

@@ -36,6 +36,8 @@ HALF = 50.0     # cm radius of the shared unit-sphere profile
 # along the shape's own up axis, the Blender kit's darker-at-the-bottom vertex colours (<gradient> attributes)
 # material -> (specular level, metallic) when it is not Blender's default (0.5, 0); the shape then carries specular= and metallic=
 SURFACE = {}
+LAMP_RANGE = 0     # cm; beyond it a kit lamp neither lights nor shadows (0: unlimited)
+LAMP_SHADOWS = 0   # 1: the kit's point lights cast shadows (the Blender master's do)
 GRADIENTS = {"leaf": (.6, 1.2), "clay": (.8, 1.05)}
 MATERIALS = {
   "stone": (6, .04, False), "slab": (6, .04, False), "wood": (8, .03, False), "clay": (14, .03, False),
@@ -278,8 +280,8 @@ class Kit:
 
   def finish(self):
     for x, y, z, watts, color in self.lights:
-      self.emit("<light pos=\"%s\" color=\"%s\" intensity=\"%s\" radius=\"%s\" castShadows=\"0\"/>" % (
-        v3(x * TILE, z * TILE, -y * TILE), rgb(color), f(.35 * watts), f(TILE * 1.4)))
+      self.emit("<light pos=\"%s\" color=\"%s\" intensity=\"%s\" radius=\"%s\"%s castShadows=\"%d\"/>" % (
+        v3(x * TILE, z * TILE, -y * TILE), rgb(color), f(.35 * watts), f(TILE * 1.4), (" range=\"%s\"" % f(LAMP_RANGE)) if LAMP_RANGE else "", LAMP_SHADOWS))
     return self.lines
 
 
