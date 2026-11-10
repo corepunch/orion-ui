@@ -136,9 +136,7 @@ typedef struct {
 	int gpuChunk;                  /* vertex cache chunk + 1 holding its GPU copy (vertex_cache.c); 0 = none yet */
 	unsigned gpuVertex,gpuIndex;   /* where in that chunk its vertices start, and its indices (bytes) */
 	int gpuWide;                   /* 32-bit indices (more than 65536 vertices); else 16-bit */
-	int gpuDirty;                  /* vertices changed since the GPU copy was made */
-	int shChunk,shVertex,shIndex,shPlane,shSides,shCaps,shWide; /* its shadow mesh in the vertex cache: chunk + 1, first vertex, index byte offset, first plane, index counts */
-	int refs; unsigned long long hash; /* a shared model (scene_add_obj): objects using it, content hash */
+	int refs,serial; unsigned long long hash; /* a shared model (scene_add_obj): objects using it, content hash */
 } Mesh;
 int mesh_gpu_take_retired(int **chunks); /* the vertex cache chunks (+1) of meshes freed since the last call */
 

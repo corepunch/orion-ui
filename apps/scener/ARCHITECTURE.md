@@ -161,6 +161,15 @@ shadow volumes are built with the light carried into model space (Doom 3's `loca
 world-space triangles (`--check`, exporters, tests) asks `scene_obj_world_mesh()` for a copy. Dragging changes the
 matrix, never the shared vertices.
 
+A frame has a front end and a back end, as Doom 3 does. The front end decides what is drawn (frustum and light
+culling), sorts objects into batches of one model and state, fills the instance buffer (matrix, normal matrix, colour,
+material and gradient per object, read by the vertex shader from a buffer texture), builds missing shadow volumes and
+uploads everything once. The back end only draws: one instanced call per batch for the depth-filling pass (ambient
+and mirrored sky together) and for each light. An upload between draws ends the macOS driver's render pass, so
+none happens there. Shadow volumes stay one draw per (light, caster): drawing a model's whole edge set instanced and
+picking the silhouette in the shader was tried, cut the draws by 3.5 times, and cost 50 MB more on a tile-based GPU
+for no gain in time.
+
 On the GPU, `vertex_cache.c` sub-allocates models (20-byte vertices with packed normals, 16-bit indices) and shadow
 index lists from a few large buffers; the macOS driver gives every GL buffer its own memory region, so one buffer
 per mesh cost gigabytes. Shadow volumes have no vertices of their own: index 2i is model vertex i, 2i+1 the same

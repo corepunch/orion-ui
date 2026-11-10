@@ -700,7 +700,7 @@ static Mesh *scene_share_mesh(Scene *s,Mesh *mesh,int castsShadow){
 	mesh_compute_face_normals(m);
 	if(castsShadow) mesh_build_edges(m);
 	mesh_shrink(m);
-	m->hash=h; m->refs=1;
+	static int serial; m->hash=h; m->refs=1; m->serial=++serial;   /* serial: a stable order for sorting draws */
 	DA_PUSH(s->models,s->nmodels,s->cmodels,m);
 	return m;
 }

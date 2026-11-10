@@ -20,7 +20,7 @@ static GLuint s_shadow_prog;
 static GLuint s_image_prog,s_image_vao,s_image_vbo,s_image_ebo;
 static GLint s_image_viewproj_loc,s_image_color_loc,s_image_sampler_loc;
 static vec3 render_srgb_to_linear(vec3 color);
-static GLint s_shadow_proj_loc, s_shadow_view_loc, s_shadow_color_loc, s_shadow_verts_loc, s_shadow_stride_loc, s_shadow_light_loc, s_shadow_planes_loc, s_shadow_inst_loc, s_shadow_vertbase_loc, s_shadow_planebase_loc, s_shadow_instbase_loc;
+static GLint s_shadow_proj_loc, s_shadow_view_loc, s_shadow_color_loc, s_shadow_verts_loc, s_shadow_stride_loc, s_shadow_light_loc, s_shadow_model_loc;
 GLuint s_line_prog;
 GLint s_line_viewproj_loc;
 
@@ -38,32 +38,22 @@ static const char *s_line_fs =
     "out vec4 frag;\n"
     "void main(){ frag=vec4(vColor,1); }\n";
 
-/* Shadow volumes drawn from a model's static shadow mesh (vertex_cache.c), instanced over the objects using it.
-   Each vertex names a model vertex and a triangle; a vertex whose triangle faces away from the light is pushed
-   to infinity, as Doom 3's shadow.vertex pushes its w=0 copies. Edge quads so become the silhouette's sides,
-   triangles the near and far caps. The light arrives in the model's own space with each instance. */
+/* Doom 3's shadow.vertex: no vertex data of its own. Index 2i is mesh vertex i where it is, 2i+1 the same
+   vertex pushed to infinity away from the light; positions are read from the mesh's own buffer. */
 static const char *s_shadow_vs =
     "#version 150\n"
-    "in ivec2 aRef;\n"
     "uniform samplerBuffer uVerts;\n"
-    "uniform samplerBuffer uPlanes;\n"
-    "uniform samplerBuffer uInst;\n"
     "uniform int uStride;\n"
-    "uniform int uVertBase;\n"
-    "uniform int uPlaneBase;\n"
-    "uniform int uInstBase;\n"
     "uniform vec3 uLight;\n"
+    "uniform mat4 uModel;\n"
     "uniform mat4 uProj;\n"
     "uniform mat4 uView;\n"
     "void main(){\n"
-    "    int b=(uVertBase+aRef.x)*uStride;\n"
-    "    vec4 p=vec4(texelFetch(uVerts,b).r,texelFetch(uVerts,b+1).r,texelFetch(uVerts,b+2).r,1.0);\n"
-    "    int i=(uInstBase+gl_InstanceID)*4;\n"
-    "    vec4 m0=texelFetch(uInst,i),m1=texelFetch(uInst,i+1),m2=texelFetch(uInst,i+2),L=texelFetch(uInst,i+3);\n"
-    "    bool lit=false;\n"
-    "    if(aRef.y>=0){ vec4 pl=texelFetch(uPlanes,uPlaneBase+aRef.y); lit=dot(pl.xyz,L.xyz)-pl.w*L.w>0.0; }\n"
-    "    vec3 w=vec3(dot(m0,p),dot(m1,p),dot(m2,p));\n"
-    "    gl_Position=uProj*uView*(lit?vec4(w,1.0):vec4(w-uLight,0.0));\n"
+    "    int b=(gl_VertexID>>1)*uStride;\n"
+    "    vec3 p=vec3(texelFetch(uVerts,b).r,texelFetch(uVerts,b+1).r,texelFetch(uVerts,b+2).r);\n"
+    "    vec3 w=(uModel*vec4(p,1.0)).xyz;\n"
+    "    vec4 pos=(gl_VertexID&1)==1?vec4(w-uLight,0.0):vec4(w,1.0);\n"
+    "    gl_Position=uProj*uView*pos;\n"
     "}\n";
 
 static const char *s_shadow_fs =
@@ -162,18 +152,14 @@ void ensure_line_prog(void) {
 
 static void ensure_shadow_prog(void) {
     if (s_shadow_prog) return;
-    if (!ui_load_program_from_source(s_shadow_vs, s_shadow_fs, "aRef", NULL, NULL, &s_shadow_prog)) return;
+    if (!ui_load_program_from_source(s_shadow_vs, s_shadow_fs, "aPos", NULL, NULL, &s_shadow_prog)) return;
     s_shadow_proj_loc = glGetUniformLocation(s_shadow_prog, "uProj");
     s_shadow_view_loc = glGetUniformLocation(s_shadow_prog, "uView");
     s_shadow_color_loc = glGetUniformLocation(s_shadow_prog, "uColor");
     s_shadow_verts_loc = glGetUniformLocation(s_shadow_prog, "uVerts");
     s_shadow_stride_loc = glGetUniformLocation(s_shadow_prog, "uStride");
     s_shadow_light_loc = glGetUniformLocation(s_shadow_prog, "uLight");
-    s_shadow_planes_loc = glGetUniformLocation(s_shadow_prog, "uPlanes");
-    s_shadow_inst_loc = glGetUniformLocation(s_shadow_prog, "uInst");
-    s_shadow_vertbase_loc = glGetUniformLocation(s_shadow_prog, "uVertBase");
-    s_shadow_planebase_loc = glGetUniformLocation(s_shadow_prog, "uPlaneBase");
-    s_shadow_instbase_loc = glGetUniformLocation(s_shadow_prog, "uInstBase");
+    s_shadow_model_loc = glGetUniformLocation(s_shadow_prog, "uModel");
 }
 
 static void ensure_buffers(void) {
@@ -406,6 +392,20 @@ static void shadow_bounds(vec3 mlo, vec3 mhi, vec3 llo, vec3 lhi, vec3 o, vec3 *
     *shi = v3(o.x > mhi.x ? mhi.x : lhi.x, o.y > mhi.y ? mhi.y : lhi.y, o.z > mhi.z ? mhi.z : lhi.z);
 }
 
+/* Shadow volumes as Doom 3 keeps them: per (light, caster) only indices into the caster's own vertices,
+   built the first time a view needs the pair and kept until the scene says its volumes are stale. */
+typedef struct { int chunk, first, sides, capChunk, capFirst, caps; } shadow_part_t;   /* sides < 0: not built yet; caps < 0: not built (only z-fail needs them) */
+static shadow_part_t *s_part; static int s_partLights, s_partObjs; static const Scene *s_partScene; static unsigned s_partRev;
+static void shadow_cache_sync(Scene *s) {
+    if (s_partScene == s && s_partRev == s->shadowRev && s_partLights == s->nlights && s_partObjs == s->nobjs) return;
+    vcache_index_reset();
+    free(s_part);
+    size_t n = (size_t)s->nlights * (size_t)s->nobjs;
+    s_part = malloc((n ? n : 1) * sizeof(shadow_part_t));
+    for (size_t i = 0; i < n; i++) { s_part[i].sides = -1; s_part[i].caps = -1; }
+    s_partLights = s->nlights; s_partObjs = s->nobjs; s_partScene = s; s_partRev = s->shadowRev;
+}
+
 /* Where the light's rays start, for the shadow shader: a sun stands far away against its direction. */
 static vec3 shadow_light_origin(const Light *L) { return L->isDirectional ? vscale(L->dir, -10000.0f) : L->pos; }
 
@@ -416,21 +416,57 @@ static int view_may_be_inside(vec3 sLo, vec3 sHi, vec3 eye, float reach) {
            eye.z >= sLo.z - reach && eye.z <= sHi.z + reach;
 }
 
-static void shadow_pass_begin(const Light *L, GLuint instances) {
+/* Front end: builds what the pair still lacks and sends it to the vertex cache. Uploads end the driver's
+   render pass, so none may happen between draws; Doom 3 likewise finishes its shadow volumes before the back end runs. */
+static void prepare_shadow_part(Scene *s, int li, int oi, int zfail) {
+    shadow_part_t *p = &s_part[(size_t)li * (size_t)s->nobjs + (size_t)oi];
+    SceneObj *o = &s->objs[oi];
+    vcache_prepare_mesh(o->mesh);
+    if (p->sides >= 0 && (!zfail || p->caps >= 0)) return;
+    const Light *L = &s->lights[li];   /* the light in the model's own space (Doom 3's localLightOrigin) */
+    mat4 inv = mat4_affine_inverse(o->model);
+    unsigned *ix; int sides;
+    int n = build_shadow_indices(o->mesh, mat4_xform_point(inv, L->pos), mat4_xform_dir(inv, L->dir), L->isDirectional, &ix, &sides);
+    if (p->sides < 0) p->sides = vcache_index_alloc(ix, sides, &p->chunk, &p->first);
+    if (zfail && p->caps < 0) p->caps = vcache_index_alloc(ix + sides, n - sides, &p->capChunk, &p->capFirst);
+    free(ix);
+}
+
+/* Back end: draws a prepared pair. */
+static void draw_shadow_part(Scene *s, int li, int oi, int zfail) {
+    shadow_part_t *p = &s_part[(size_t)li * (size_t)s->nobjs + (size_t)oi];
+    SceneObj *o = &s->objs[oi];
+    Mesh *m = o->mesh;
+    if (p->sides <= 0 && (!zfail || p->caps <= 0)) return;
+    int first;
+    unsigned tex = vcache_mesh_texture(m, &first);
+    glBindTexture(GL_TEXTURE_BUFFER, tex);
+    glUniformMatrix4fv(s_shadow_model_loc, 1, GL_FALSE, o->model.m);
+    glFrontFace(o->mirrored ? GL_CW : GL_CCW);   /* a mirrored model's faces turn the other way */
+    if (zfail) {
+        glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
+        glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
+        if (p->sides > 0) vcache_index_draw(p->chunk, p->first, p->sides, 2 * first);
+        if (p->caps > 0) vcache_index_draw(p->capChunk, p->capFirst, p->caps, 2 * first);
+    } else if (p->sides > 0) {
+        glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR_WRAP);
+        glStencilOpSeparate(GL_BACK, GL_KEEP, GL_KEEP, GL_DECR_WRAP);
+        vcache_index_draw(p->chunk, p->first, p->sides, 2 * first);
+    }
+    glFrontFace(GL_CCW);
+}
+
+static void shadow_pass_begin(const Light *L) {
     ensure_shadow_prog();
     glUseProgram(s_shadow_prog);
     vec3 o = shadow_light_origin(L);
     glUniform3f(s_shadow_light_loc, o.x, o.y, o.z);
     glUniform1i(s_shadow_verts_loc, 0);
-    glUniform1i(s_shadow_inst_loc, 1);
-    glUniform1i(s_shadow_planes_loc, 2);
     glUniform1i(s_shadow_stride_loc, vcache_vertex_floats());
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_BUFFER, instances);
+    glActiveTexture(GL_TEXTURE0);
 }
 static void shadow_pass_end(void) {
-    glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_BUFFER, 0);
-    glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_BUFFER, 0);
+    glBindTexture(GL_TEXTURE_BUFFER, 0);
     glBindVertexArray(0);
     glUseProgram(0);
 }
@@ -439,27 +475,24 @@ static void shadow_pass_end(void) {
 
 /* Objects of one model and one render state, drawn in one instanced call. */
 typedef struct { Mesh *mesh; int mirrored, ramp, tex, first, count; } batch_t;
-typedef struct { Mesh *mesh; int mirrored, zfail, first, count; } shadow_batch_t;   /* casters of one model, drawn in one call */
-typedef struct { int obj, zfail; } caster_t;
+typedef struct { int obj, zfail; ScreenRect rect; } caster_t;
 typedef struct { int active, batchFirst, batchCount, castFirst, castCount; ScreenRect scissor; } light_work_t;
 
 static batch_t *s_batch; static int s_nbatch, s_cbatch;
-static caster_t *s_cast; static int s_ncast, s_ccast;                 /* scratch: one light's casters */
-static shadow_batch_t *s_sbatch; static int s_nsbatch, s_csbatch;
-static float *s_sinst; static int s_nsinst, s_csinst;     /* shadow instances: 3 model rows and the light in model space */
-static GLuint s_sinst_buf, s_sinst_tex;
-#define SHADOW_INSTANCE_FLOATS 16
+static caster_t *s_cast; static int s_ncast, s_ccast;
 static float *s_inst; static int s_ninst, s_cinst;        /* instances; SHADER_INSTANCE_FLOATS each */
 static light_work_t *s_work; static int s_cwork;
 static GLuint s_inst_buf, s_inst_tex;
 static const Scene *s_sortScene;
 
 static int batch_key_cmp(const void *pa, const void *pb) {
-    const SceneObj *a = &s_sortScene->objs[*(const int *)pa], *b = &s_sortScene->objs[*(const int *)pb];
-    if (a->mesh != b->mesh) return a->mesh < b->mesh ? -1 : 1;
+    int ia = *(const int *)pa, ib = *(const int *)pb;
+    const SceneObj *a = &s_sortScene->objs[ia], *b = &s_sortScene->objs[ib];
+    if (a->mesh != b->mesh) return a->mesh->serial < b->mesh->serial ? -1 : 1;
     if (a->mirrored != b->mirrored) return a->mirrored - b->mirrored;
     if (a->ramp != b->ramp) return a->ramp - b->ramp;
-    return a->texIndex - b->texIndex;
+    if (a->texIndex != b->texIndex) return a->texIndex - b->texIndex;
+    return ia - ib;   /* scene order within a batch, so equal depths resolve the same way every run */
 }
 
 /* Sorts the objects by model and state (Doom 3 sorts its draw surfaces by material) and appends their
@@ -488,82 +521,17 @@ static int add_batches(Scene *s, int *idx, int n, int *count) {
     return first;
 }
 
-static int caster_cmp(const void *pa, const void *pb) {
-    const caster_t *a = pa, *b = pb;
-    const SceneObj *oa = &s_sortScene->objs[a->obj], *ob = &s_sortScene->objs[b->obj];
-    if (oa->mesh != ob->mesh) return oa->mesh < ob->mesh ? -1 : 1;
-    if (oa->mirrored != ob->mirrored) return oa->mirrored - ob->mirrored;
-    return a->zfail - b->zfail;
-}
-
-/* Turns one light's casters into instanced batches; returns the first, *count how many. */
-static int add_shadow_batches(Scene *s, const Light *L, caster_t *cast, int n, int *count) {
-    int first = s_nsbatch;
-    s_sortScene = s;
-    qsort(cast, (size_t)n, sizeof(caster_t), caster_cmp);
-    if (s_nsinst + n > s_csinst) {
-        s_csinst = (s_nsinst + n) * 2;
-        s_sinst = realloc(s_sinst, (size_t)s_csinst * SHADOW_INSTANCE_FLOATS * sizeof(float));
+static void upload_instances(void) {
+    if (!s_inst_buf) {
+        glGenBuffers(1, &s_inst_buf);
+        glGenTextures(1, &s_inst_tex);
     }
-    for (int i = 0; i < n; i++) {
-        SceneObj *o = &s->objs[cast[i].obj];
-        shadow_batch_t *last = s_nsbatch > first ? &s_sbatch[s_nsbatch - 1] : NULL;
-        if (!last || last->mesh != o->mesh || last->mirrored != o->mirrored || last->zfail != cast[i].zfail) {
-            shadow_batch_t b = { o->mesh, o->mirrored, cast[i].zfail, s_nsinst, 0 };
-            DA_PUSH(s_sbatch, s_nsbatch, s_csbatch, b);
-            last = &s_sbatch[s_nsbatch - 1];
-            vcache_prepare_mesh(o->mesh);
-            vcache_prepare_shadow(o->mesh);
-        }
-        float *t = s_sinst + (size_t)s_nsinst * SHADOW_INSTANCE_FLOATS;
-        const float *m = o->model.m;
-        for (int r = 0; r < 3; r++) { t[r * 4] = m[r]; t[r * 4 + 1] = m[4 + r]; t[r * 4 + 2] = m[8 + r]; t[r * 4 + 3] = m[12 + r]; }
-        mat4 inv = mat4_affine_inverse(o->model);   /* the light in the model's own space (Doom 3's localLightOrigin) */
-        vec3 l = L->isDirectional ? vscale(mat4_xform_dir(inv, L->dir), -1.0f) : mat4_xform_point(inv, L->pos);
-        t[12] = l.x; t[13] = l.y; t[14] = l.z; t[15] = L->isDirectional ? 0.0f : 1.0f;
-        s_nsinst++; last->count++;
-    }
-    *count = s_nsbatch - first;
-    return first;
-}
-
-static void draw_shadow_batches(int first, int count) {
-    for (int i = first; i < first + count; i++) {
-        shadow_batch_t *b = &s_sbatch[i];
-        int firstVertex, firstPlane;
-        unsigned verts = vcache_mesh_texture(b->mesh, &firstVertex), planes = vcache_shadow_planes(b->mesh, &firstPlane);
-        if (!planes) continue;
-        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_BUFFER, verts);
-        glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_BUFFER, planes);
-        glUniform1i(s_shadow_vertbase_loc, firstVertex);
-        glUniform1i(s_shadow_planebase_loc, firstPlane);
-        glUniform1i(s_shadow_instbase_loc, b->first);
-        glFrontFace(b->mirrored ? GL_CW : GL_CCW);   /* a mirrored model's faces turn the other way */
-        if (b->zfail) {   /* the view may be inside the volume: count behind the depth, caps included */
-            glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
-            glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
-        } else {
-            glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR_WRAP);
-            glStencilOpSeparate(GL_BACK, GL_KEEP, GL_KEEP, GL_DECR_WRAP);
-        }
-        vcache_draw_shadow(b->mesh, b->zfail, b->count);
-    }
-    glFrontFace(GL_CCW);
-}
-
-static void upload_buffer_texture(GLuint *buf, GLuint *tex, const float *data, size_t floats) {
-    if (!*buf) { glGenBuffers(1, buf); glGenTextures(1, tex); }
-    glBindBuffer(GL_TEXTURE_BUFFER, *buf);
-    glBufferData(GL_TEXTURE_BUFFER, (GLsizeiptr)((floats ? floats : 4) * sizeof(float)), floats ? data : NULL, GL_STREAM_DRAW);
-    glBindTexture(GL_TEXTURE_BUFFER, *tex);
-    glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, *buf);
+    glBindBuffer(GL_TEXTURE_BUFFER, s_inst_buf);
+    glBufferData(GL_TEXTURE_BUFFER, (GLsizeiptr)((size_t)(s_ninst ? s_ninst : 1) * SHADER_INSTANCE_FLOATS * sizeof(float)), s_ninst ? s_inst : NULL, GL_STREAM_DRAW);
+    glBindTexture(GL_TEXTURE_BUFFER, s_inst_tex);
+    glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, s_inst_buf);
     glBindTexture(GL_TEXTURE_BUFFER, 0);
     glBindBuffer(GL_TEXTURE_BUFFER, 0);
-}
-
-static void upload_instances(void) {
-    upload_buffer_texture(&s_inst_buf, &s_inst_tex, s_inst, (size_t)s_ninst * SHADER_INSTANCE_FLOATS);
-    upload_buffer_texture(&s_sinst_buf, &s_sinst_tex, s_sinst, (size_t)s_nsinst * SHADOW_INSTANCE_FLOATS);
 }
 
 static void draw_batches(Scene *s, int first, int count, int ramps) {
@@ -626,7 +594,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     /* ---- Front end: decide what the frame draws, build and upload it. Nothing is drawn here, because an upload
        between draws ends the driver's render pass (Doom 3 finishes its front end before the back end runs). ---- */
     vec3 ambient = render_srgb_to_linear(s->ambient);
-    s_nbatch = s_ninst = s_nsbatch = s_nsinst = 0;
+    s_nbatch = s_ncast = s_ninst = 0;
     static int *list, *screens; static int listCap;
     if (listCap < s->nobjs) {
         free(list); free(screens);
@@ -652,6 +620,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
        clipped bounds and drops out when that is empty; only surfaces inside it are lit; a light with no lit
        surface on screen draws no shadows; a caster is drawn only if the box its shadow can reach
        (R_ShadowBounds) meets the lit rectangle, and under that scissor. */
+    shadow_cache_sync(s);
     for (int li = 0; li < s->nlights && !(flags & DBG_FLAT); li++) {
         Light *L = &s->lights[li];
         light_work_t *wk = &s_work[li];
@@ -674,7 +643,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
         wk->scissor = rect_isect(lightRect, litUnion);
         wk->batchFirst = add_batches(s, list, nlit, &wk->batchCount);
 
-        s_ncast = 0;
+        wk->castFirst = s_ncast;
         int shadows = !(flags & DBG_NO_SHADOWS) && L->castsShadow;
 #ifndef USE_ZPASS
         shadows = shadows && shadows_supported();
@@ -684,15 +653,16 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
             if (!o->castsShadow || !o->mesh || !o->mesh->nverts || !light_reaches_obj(L, o)) continue;
             vec3 sLo, sHi;
             shadow_bounds(o->bmin, o->bmax, lightLo, lightHi, lightOrigin, &sLo, &sHi);
-            if (rect_empty(rect_isect(box_screen_rect(viewProj, sLo, sHi, w, h), wk->scissor))) continue;   /* its shadow cannot reach anything on screen */
-            caster_t c = { i, view_may_be_inside(sLo, sHi, camPos, SHADOW_NEAR_REACH) };
+            ScreenRect r = rect_isect(box_screen_rect(viewProj, sLo, sHi, w, h), wk->scissor);
+            if (rect_empty(r)) continue;   /* its shadow cannot reach anything on screen */
+            caster_t c = { i, view_may_be_inside(sLo, sHi, camPos, SHADOW_NEAR_REACH), r };
             DA_PUSH(s_cast, s_ncast, s_ccast, c);
+            prepare_shadow_part(s, li, c.obj, c.zfail);
         }
-        wk->castFirst = add_shadow_batches(s, L, s_cast, s_ncast, &wk->castCount);
+        wk->castCount = s_ncast - wk->castFirst;
     }
     vcache_flush();
     upload_instances();
-    if (getenv("SCENER_MEM")) fprintf(stderr, "FRAME batches %d (fill %d) instances %d shadow batches %d instances %d\n", s_nbatch, fillCount, s_ninst, s_nsbatch, s_nsinst); /* TEMP */
 
     /* ---- Back end: draws only. ---- */
     glEnable(GL_DEPTH_TEST);
@@ -730,8 +700,8 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
             glStencilFunc(GL_ALWAYS, 0, 0xFF);
             glDisable(GL_CULL_FACE);
             glEnable(GL_DEPTH_CLAMP);   /* far caps and sides at infinity stay inside the depth range */
-            shadow_pass_begin(L, s_sinst_tex);
-            if (!getenv("SCENER_NOSH")) draw_shadow_batches(wk->castFirst, wk->castCount);
+            shadow_pass_begin(L);
+            for (int k = wk->castFirst; k < wk->castFirst + wk->castCount; k++) { set_scissor(s_cast[k].rect); draw_shadow_part(s, li, s_cast[k].obj, s_cast[k].zfail); }
             shadow_pass_end();
             glDisable(GL_DEPTH_CLAMP);
 
@@ -742,8 +712,8 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
                 glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
                 glDepthFunc(GL_LEQUAL);
                 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-                shadow_pass_begin(L, s_sinst_tex);
-                draw_shadow_batches(wk->castFirst, wk->castCount);
+                shadow_pass_begin(L);
+                for (int k = wk->castFirst; k < wk->castFirst + wk->castCount; k++) { set_scissor(s_cast[k].rect); draw_shadow_part(s, li, s_cast[k].obj, s_cast[k].zfail); }
                 shadow_pass_end();
                 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
                 glDisable(GL_POLYGON_OFFSET_LINE);
@@ -763,7 +733,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
         glDepthFunc(GL_LEQUAL);
         glEnable(GL_BLEND);
         glBlendFunc(GL_ONE, GL_ONE);
-        if (!getenv("SCENER_NOLIT")) draw_batches(s, wk->batchFirst, wk->batchCount, 1);
+        draw_batches(s, wk->batchFirst, wk->batchCount, 1);
         glDisable(GL_BLEND);
         if (wk->castCount > 0) glDisable(GL_STENCIL_TEST);
         glDepthFunc(GL_LESS);
