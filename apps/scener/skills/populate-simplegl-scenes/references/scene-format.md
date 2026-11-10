@@ -619,9 +619,6 @@ Axis-aligned box centered at origin.
 |-----------|------|---------|-------------|
 | `size`    | vec3 | 1 1 1   | Width, height, depth |
 | `inset`   | float/vec2 | 0 | Hollow the box into a rectangular tube. One value uses the same inset on X and Y; two values are `insetX insetY`. The opening passes fully through local Z |
-| `radius`  | float | 0 | Soft edges: rounds the four edges parallel to local Z (the depth). Capped at 45 % of the thinner of X and Y |
-| `bevel`   | float | 0.85 × radius | Rounds the front and back rims; given alone it implies a radius. Capped at 45 % of the depth |
-| `segments`, `bevelSegments` | int | 4 | Subdivisions of the corner arcs and of the rim |
 
 ### 2D profiles: `<rect>`, `<rounded-rect>`, `<circle>`, `<ellipse>`, `<star>`
 
