@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "docs-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-I", "/private/tmp/claude-501/-Users-igor--claude-spares-spare-TLm8XB/559dabda-1f05-491d-88de-a8577271b608/scratchpad/range_server.py", "4173", "docs"],
+      "port": 4173
+    }
+  ]
+}

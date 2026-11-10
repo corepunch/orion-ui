@@ -23,6 +23,7 @@ def main():
     else:
       print("lua not found: skipped the Lua comparison")
     if len(sys.argv) > 1:
+      shutil.copy(os.path.join(HERE, "..", "scenes", "utilities.xml"), d)   # the scene includes it
       r = subprocess.run([sys.argv[1], "--check", py], capture_output=True, text=True)
       assert r.returncode == 0, r.stdout + r.stderr
   print("ok")

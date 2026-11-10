@@ -10,7 +10,7 @@ That keeps handedness: Blender's front (-Y) is Scener's +Z, the side a camera at
 Rotations about Blender's Z become Scener rotations about Y with the same sign.
 
 Everything is a profile put through modifiers, as Scener prefers, not a hard-coded primitive:
-  box / beam / frustum  rect -> fillet -> extrude -> bevel (-> taper)
+  box / beam / frustum  soft-box / slab utility (-> taper)
   tube                  circle -> extrude -> bevel -> taper along the axis
   ball / lathe / pyramid  a profile curve revolved about the vertical axis (a sphere is a half circle)
   poly / roof           a line -> extrude (-> shell -> fillet)
@@ -135,13 +135,12 @@ class Kit:
     return (rad, min(.85 * rad, SOLID_ROUND * depth)) if rad >= .8 and depth >= 2.4 else (0, 0)
 
   def prism(self, mat, pos, a, b, depth, col, rot=(), mods=""):
-    """A box as a rect (filleted when the material is rounded) of a x b tiles, extruded `depth` cm, with the kit's bevels."""
+    """A box of a x b tiles, `depth` cm deep, as a call to the scene's soft-box (rounded) or slab (square) utility; `mods` become its children."""
     rad, bev = self.rounded(mat, a, b, depth)
-    size = ("size", "%s %s" % (f(a * TILE), f(b * TILE)))
-    if not rad:
-      return self.solid(("rect", [size]), depth, pos, mat, col, rot, mods)
-    bevel = "<bevel amount=\"%s\" bevelSegments=\"3\"/>" % f(bev)
-    return self.solid(("rect", [size]), depth, pos, mat, col, rot, bevel + mods, "<fillet radius=\"%s\" segments=\"4\"/>" % f(rad))
+    size = [("width", f(a * TILE)), ("height", f(b * TILE)), ("depth", f(depth))]
+    call = [("soft-box", size + [("radius", f(rad)), ("bevel", f(bev))]) if rad else ("slab", size + [("bevel", 0)])][0]
+    return self.emit("<%s%s%s%s>%s</%s>" % (call[0], attrs(call[1]), attrs([("pos", pos)]) + attrs(list(rot)), attrs(self.look(mat, col)), mods, call[0]) if mods
+                     else "<%s%s%s%s/>" % (call[0], attrs(call[1]), attrs([("pos", pos)]) + attrs(list(rot)), attrs(self.look(mat, col))))
 
   def box(self, mat, x, y, z, sx, sy, sz, col, rz=0.):
     self.prism(mat, v3(x * TILE, (z + sz / 2) * TILE, -y * TILE), sx, sz, sy * TILE, col, [("rot", v3(0, math.degrees(rz), 0))] if rz else [])

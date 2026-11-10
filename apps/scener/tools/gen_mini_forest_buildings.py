@@ -7,8 +7,8 @@ def e(s): out.append(s)
 def f(v): return ("%.2f" % v).rstrip("0").rstrip(".") if abs(v) > 1e-6 else "0"
 def v3(a, b, c): return "%s %s %s" % (f(a), f(b), f(c))
 
-# Kit pieces have softly rounded edges: every box is a rect, filleted, extruded along local Z
-# with a bevelled rim, and every cylinder a bevelled circle. Radii scale with the piece so thin
+# Kit pieces have softly rounded edges: every box is a soft-box utility call (utilities.xml)
+# and every cylinder a bevelled circle. Radii scale with the piece so thin
 # trims stay crisp while walls and roofs read as chunky toys.
 ROUND = 0.42      # corner radius as a fraction of the smaller cross-section side
 ROUND_MAX = 22.0  # cm
@@ -22,9 +22,8 @@ def box(p, s, m, rot=None, extra="", mods=""):
     if mods: e('    <box pos="%s" size="%s"%s material="%s"%s>%s</box>' % (v3(*p), v3(*s), r, m, extra, mods))
     else:    e('    <box pos="%s" size="%s"%s material="%s"%s/>' % (v3(*p), v3(*s), r, m, extra))
     return
-  e('    <rect pos="%s" size="%s %s"%s material="%s"%s>'
-    '<fillet radius="%s" segments="5"/><extrude amount="%s"/><bevel amount="%s" bevelSegments="4"/>%s</rect>'
-    % (v3(*p), f(s[0]), f(s[1]), r, m, extra, f(rad), f(s[2]), f(bev), mods))
+  e('    <soft-box width="%s" height="%s" depth="%s" radius="%s" bevel="%s" pos="%s"%s material="%s"%s>%s</soft-box>'
+    % (f(s[0]), f(s[1]), f(s[2]), f(rad), f(bev), v3(*p), r, m, extra, mods))
 
 def cyl(p, r, h, m, sides=8, rot=None, extra="", mods=""):
   bev = min(ROUND_MAX, ROUND * min(r * 2, h), h * 0.5) * BEVEL
@@ -392,6 +391,7 @@ e('<?xml version="1.0" encoding="UTF-8"?>')
 e('<!-- Ten casual low-poly forest buildings in a toy-like kit style, laid out on a 5x2 grid of')
 e('     grass tiles. Generated; each building is a named group you can copy into another scene. -->')
 e('<scene ambient="0.52 0.55 0.62" background="0.62 0.82 0.96">')
+e('  <include src="utilities.xml"/>')
 e('  <camera name="Grid" comment="All ten buildings, three-quarter overview" pos="500 2500 3300" look="0 20 40" fov="28.5"/>')
 e('  <camera name="Front" comment="Lower front row view" pos="900 900 2400" look="0 150 300" fov="40"/>')
 e('  <camera name="Closeup" comment="Cottage and log cabin, showing the rounded kit edges" pos="-300 420 300" look="-860 110 -330" fov="38"/>')

@@ -2,6 +2,7 @@
 <!-- Ten casual low-poly forest buildings in a toy-like kit style, laid out on a 5x2 grid of
      grass tiles. Generated; each building is a named group you can copy into another scene. -->
 <scene ambient="0.52 0.55 0.62" background="0.62 0.82 0.96">
+  <include src="utilities.xml"/>
   <camera name="Grid" comment="All ten buildings, three-quarter overview" pos="500 2500 3300" look="0 20 40" fov="28.5"/>
   <camera name="Front" comment="Lower front row view" pos="900 900 2400" look="0 150 300" fov="40"/>
   <camera name="Closeup" comment="Cottage and log cabin, showing the rounded kit edges" pos="-300 420 300" look="-860 110 -330" fov="38"/>
@@ -58,9 +59,9 @@
   <material id="pine_light"    color="0.32 0.68 0.44" shininess="4"/>
   <!-- Log cabin: stacked logs, dark shingle roof, stone chimney. -->
   <group name="log_cabin" pos="-1320 0 -330">
-    <rect pos="0 -16 0" size="560 28" material="dirt"><fillet radius="11.76" segments="5"/><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rect>
-    <rect pos="0 -4 0" size="562 8" material="grass"><fillet radius="3.36" segments="5"/><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="0 6 0" size="280 12" material="stone"><fillet radius="5.04" segments="5"/><extrude amount="220"/><bevel amount="4.64" bevelSegments="4"/></rect>
+    <soft-box width="560" height="28" depth="560" radius="11.76" bevel="10.82" pos="0 -16 0" material="dirt"></soft-box>
+    <soft-box width="562" height="8" depth="562" radius="3.36" bevel="3.09" pos="0 -4 0" material="grass"></soft-box>
+    <soft-box width="280" height="12" depth="220" radius="5.04" bevel="4.64" pos="0 6 0" material="stone"></soft-box>
     <group pos="0 25 88" rot="0 0 90">
     <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="284"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
@@ -133,17 +134,17 @@
     <group pos="-118 157 0" rot="90 0 0">
     <circle radius="13" segments="8" rot="90 0 0" material="log"><extrude amount="224"/><bevel amount="10.05" bevelSegments="4"/></circle>
     </group>
-    <rect pos="0 87 0" size="230 150" material="log_inner"><fillet radius="22" segments="5"/><extrude amount="170"/><bevel amount="20.24" bevelSegments="4"/></rect>
-    <rect pos="-40 58 101.5" size="58 92" material="trim"><fillet radius="22" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="-40 55 103" size="48 86" material="door"><fillet radius="20.16" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="-25.6 53.28 106" size="6 6" material="metal_knob"><fillet radius="2.52" segments="5"/><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rect>
-    <rect pos="-40 15 118" size="72 6" material="stone_step"><fillet radius="2.52" segments="5"/><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="60 95 101.5" size="46 50" material="trim"><fillet radius="19.32" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="60 95 102.5" size="36 40" material="glass"><fillet radius="15.12" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="60 69 104" size="52 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="131.5 95 0" size="3 50" material="trim"><fillet radius="1.26" segments="5"/><extrude amount="46"/><bevel amount="1.16" bevelSegments="4"/></rect>
-    <rect pos="132.5 95 0" size="3 40" material="glass"><fillet radius="1.26" segments="5"/><extrude amount="36"/><bevel amount="1.16" bevelSegments="4"/></rect>
-    <rect pos="134 69 0" size="8 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="52"/><bevel amount="1.93" bevelSegments="4"/></rect>
+    <soft-box width="230" height="150" depth="170" radius="22" bevel="20.24" pos="0 87 0" material="log_inner"></soft-box>
+    <soft-box width="58" height="92" depth="3" radius="22" bevel="1.38" pos="-40 58 101.5" material="trim"></soft-box>
+    <soft-box width="48" height="86" depth="3" radius="20.16" bevel="1.38" pos="-40 55 103" material="door"></soft-box>
+    <soft-box width="6" height="6" depth="4" radius="2.52" bevel="1.84" pos="-25.6 53.28 106" material="metal_knob"></soft-box>
+    <soft-box width="72" height="6" depth="30" radius="2.52" bevel="2.32" pos="-40 15 118" material="stone_step"></soft-box>
+    <soft-box width="46" height="50" depth="3" radius="19.32" bevel="1.38" pos="60 95 101.5" material="trim"></soft-box>
+    <soft-box width="36" height="40" depth="3" radius="15.12" bevel="1.38" pos="60 95 102.5" material="glass"></soft-box>
+    <soft-box width="52" height="5" depth="8" radius="2.1" bevel="1.93" pos="60 69 104" material="trim"></soft-box>
+    <soft-box width="3" height="50" depth="46" radius="1.26" bevel="1.16" pos="131.5 95 0" material="trim"></soft-box>
+    <soft-box width="3" height="40" depth="36" radius="1.26" bevel="1.16" pos="132.5 95 0" material="glass"></soft-box>
+    <soft-box width="8" height="5" depth="52" radius="2.1" bevel="1.93" pos="134 69 0" material="trim"></soft-box>
     <group pos="0 0 0" rot="0 90 0">
     <prism pos="0 199.67 0" radius="1" height="220" sides="3" rot="90 0 90" scale="63.33 1 167.44" material="log_light"/>
     <shape closed="0" pos="0 0 0" material="roof_brown"><v x="-160.06" y="158.14"/><v x="0" y="263"/><v x="160.06" y="158.14"/><extrude amount="256"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
@@ -156,8 +157,8 @@
     <circle radius="8" segments="10" pos="-134.43 195.84 15.36" rot="-90 0 33.23" material="roof_brown"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="-73.61 235.69 -97.28" rot="-90 0 33.23" material="roof_brown"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     </group>
-    <rect pos="80 232 -40" size="44 200" material="stone"><fillet radius="18.48" segments="5"/><extrude amount="44"/><bevel amount="17" bevelSegments="4"/></rect>
-    <rect pos="80 337 -40" size="54 14" material="stone_dark"><fillet radius="5.88" segments="5"/><extrude amount="54"/><bevel amount="5.41" bevelSegments="4"/></rect>
+    <soft-box width="44" height="200" depth="44" radius="18.48" bevel="17" pos="80 232 -40" material="stone"></soft-box>
+    <soft-box width="54" height="14" depth="54" radius="5.88" bevel="5.41" pos="80 337 -40" material="stone_dark"></soft-box>
     <group pos="-210 14 -210">
     <circle radius="8" segments="8" rot="90 0 0" material="trunk"><extrude amount="28"/><bevel amount="6.18" bevelSegments="4"/></circle>
     </group>
@@ -177,36 +178,36 @@
   </group>
   <!-- Cream cottage with red roof, flower boxes and a chimney. -->
   <group name="cottage" pos="-660 0 -330">
-    <rect pos="0 -16 0" size="560 28" material="dirt"><fillet radius="11.76" segments="5"/><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rect>
-    <rect pos="0 -4 0" size="562 8" material="grass"><fillet radius="3.36" segments="5"/><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="0 70 0" size="240 140" material="plaster"><fillet radius="22" segments="5"/><extrude amount="190"/><bevel amount="20.24" bevelSegments="4"/></rect>
-    <rect pos="0 8 0" size="248 16" material="stone"><fillet radius="6.72" segments="5"/><extrude amount="198"/><bevel amount="6.18" bevelSegments="4"/></rect>
-    <rect pos="-114 70 -89" size="14 140" material="timber"><fillet radius="5.88" segments="5"/><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rect>
-    <rect pos="-114 70 89" size="14 140" material="timber"><fillet radius="5.88" segments="5"/><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rect>
-    <rect pos="114 70 -89" size="14 140" material="timber"><fillet radius="5.88" segments="5"/><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rect>
-    <rect pos="114 70 89" size="14 140" material="timber"><fillet radius="5.88" segments="5"/><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rect>
-    <rect pos="0 134 96" size="240 12" material="timber"><fillet radius="5.04" segments="5"/><extrude amount="6"/><bevel amount="2.76" bevelSegments="4"/></rect>
-    <rect pos="0 62 96.5" size="60 92" material="trim"><fillet radius="22" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 59 98" size="50 86" material="door"><fillet radius="21" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="15 57.28 101" size="6 6" material="metal_knob"><fillet radius="2.52" segments="5"/><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rect>
-    <rect pos="0 19 113" size="74 6" material="stone_step"><fillet radius="2.52" segments="5"/><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="-75 82 96.5" size="46 50" material="trim"><fillet radius="19.32" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="-75 82 97.5" size="36 40" material="glass"><fillet radius="15.12" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="-75 56 99" size="52 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="-75 55 107" size="46 12" material="timber"><fillet radius="5.04" segments="5"/><extrude amount="14"/><bevel amount="4.64" bevelSegments="4"/></rect>
+    <soft-box width="560" height="28" depth="560" radius="11.76" bevel="10.82" pos="0 -16 0" material="dirt"></soft-box>
+    <soft-box width="562" height="8" depth="562" radius="3.36" bevel="3.09" pos="0 -4 0" material="grass"></soft-box>
+    <soft-box width="240" height="140" depth="190" radius="22" bevel="20.24" pos="0 70 0" material="plaster"></soft-box>
+    <soft-box width="248" height="16" depth="198" radius="6.72" bevel="6.18" pos="0 8 0" material="stone"></soft-box>
+    <soft-box width="14" height="140" depth="14" radius="5.88" bevel="5.41" pos="-114 70 -89" material="timber"></soft-box>
+    <soft-box width="14" height="140" depth="14" radius="5.88" bevel="5.41" pos="-114 70 89" material="timber"></soft-box>
+    <soft-box width="14" height="140" depth="14" radius="5.88" bevel="5.41" pos="114 70 -89" material="timber"></soft-box>
+    <soft-box width="14" height="140" depth="14" radius="5.88" bevel="5.41" pos="114 70 89" material="timber"></soft-box>
+    <soft-box width="240" height="12" depth="6" radius="5.04" bevel="2.76" pos="0 134 96" material="timber"></soft-box>
+    <soft-box width="60" height="92" depth="3" radius="22" bevel="1.38" pos="0 62 96.5" material="trim"></soft-box>
+    <soft-box width="50" height="86" depth="3" radius="21" bevel="1.38" pos="0 59 98" material="door"></soft-box>
+    <soft-box width="6" height="6" depth="4" radius="2.52" bevel="1.84" pos="15 57.28 101" material="metal_knob"></soft-box>
+    <soft-box width="74" height="6" depth="30" radius="2.52" bevel="2.32" pos="0 19 113" material="stone_step"></soft-box>
+    <soft-box width="46" height="50" depth="3" radius="19.32" bevel="1.38" pos="-75 82 96.5" material="trim"></soft-box>
+    <soft-box width="36" height="40" depth="3" radius="15.12" bevel="1.38" pos="-75 82 97.5" material="glass"></soft-box>
+    <soft-box width="52" height="5" depth="8" radius="2.1" bevel="1.93" pos="-75 56 99" material="trim"></soft-box>
+    <soft-box width="46" height="12" depth="14" radius="5.04" bevel="4.64" pos="-75 55 107" material="timber"></soft-box>
     <sphere pos="-89 66 107" radius="7" rings="4" slices="6" material="flower_pink"/>
     <sphere pos="-75 66 107" radius="7" rings="4" slices="6" material="flower_yellow"/>
     <sphere pos="-61 66 107" radius="7" rings="4" slices="6" material="flower_pink"/>
-    <rect pos="75 82 96.5" size="46 50" material="trim"><fillet radius="19.32" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="75 82 97.5" size="36 40" material="glass"><fillet radius="15.12" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="75 56 99" size="52 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="75 55 107" size="46 12" material="timber"><fillet radius="5.04" segments="5"/><extrude amount="14"/><bevel amount="4.64" bevelSegments="4"/></rect>
+    <soft-box width="46" height="50" depth="3" radius="19.32" bevel="1.38" pos="75 82 96.5" material="trim"></soft-box>
+    <soft-box width="36" height="40" depth="3" radius="15.12" bevel="1.38" pos="75 82 97.5" material="glass"></soft-box>
+    <soft-box width="52" height="5" depth="8" radius="2.1" bevel="1.93" pos="75 56 99" material="trim"></soft-box>
+    <soft-box width="46" height="12" depth="14" radius="5.04" bevel="4.64" pos="75 55 107" material="timber"></soft-box>
     <sphere pos="61 66 107" radius="7" rings="4" slices="6" material="flower_pink"/>
     <sphere pos="75 66 107" radius="7" rings="4" slices="6" material="flower_yellow"/>
     <sphere pos="89 66 107" radius="7" rings="4" slices="6" material="flower_pink"/>
-    <rect pos="121.5 82 0" size="3 50" material="trim"><fillet radius="1.26" segments="5"/><extrude amount="46"/><bevel amount="1.16" bevelSegments="4"/></rect>
-    <rect pos="122.5 82 0" size="3 40" material="glass"><fillet radius="1.26" segments="5"/><extrude amount="36"/><bevel amount="1.16" bevelSegments="4"/></rect>
-    <rect pos="124 56 0" size="8 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="52"/><bevel amount="1.93" bevelSegments="4"/></rect>
+    <soft-box width="3" height="50" depth="46" radius="1.26" bevel="1.16" pos="121.5 82 0" material="trim"></soft-box>
+    <soft-box width="3" height="40" depth="36" radius="1.26" bevel="1.16" pos="122.5 82 0" material="glass"></soft-box>
+    <soft-box width="8" height="5" depth="52" radius="2.1" bevel="1.93" pos="124 56 0" material="trim"></soft-box>
     <prism pos="0 176.67 0" radius="1" height="190" sides="3" rot="90 0 90" scale="73.33 1 144.34" material="plaster"/>
     <shape closed="0" pos="0 0 0" material="roof_red"><v x="-138.51" y="128.11"/><v x="0" y="250"/><v x="138.51" y="128.11"/><extrude amount="226"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
     <circle radius="8" segments="10" pos="55.89 224.13 -63.28" rot="-90 0 -41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
@@ -217,8 +218,8 @@
     <circle radius="8" segments="10" pos="-87.74 196.1 -40.68" rot="-90 0 41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="-119.6 168.06 13.56" rot="-90 0 41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="-66.97 214.38 -85.88" rot="-90 0 41.35" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
-    <rect pos="-60 230 -30" size="36 140" material="brick"><fillet radius="15.12" segments="5"/><extrude amount="36"/><bevel amount="13.91" bevelSegments="4"/></rect>
-    <rect pos="-60 302 -30" size="44 10" material="brick_dark"><fillet radius="4.2" segments="5"/><extrude amount="44"/><bevel amount="3.86" bevelSegments="4"/></rect>
+    <soft-box width="36" height="140" depth="36" radius="15.12" bevel="13.91" pos="-60 230 -30" material="brick"></soft-box>
+    <soft-box width="44" height="10" depth="44" radius="4.2" bevel="3.86" pos="-60 302 -30" material="brick_dark"></soft-box>
     <group pos="-220 12.6 -200">
     <circle radius="7.2" segments="8" rot="90 0 0" material="trunk"><extrude amount="25.2"/><bevel amount="5.56" bevelSegments="4"/></circle>
     </group>
@@ -238,8 +239,8 @@
   </group>
   <!-- A-frame hut: the roof reaches the ground; glazed front gable. -->
   <group name="a_frame" pos="0 0 -330">
-    <rect pos="0 -16 0" size="560 28" material="dirt"><fillet radius="11.76" segments="5"/><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rect>
-    <rect pos="0 -4 0" size="562 8" material="grass"><fillet radius="3.36" segments="5"/><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rect>
+    <soft-box width="560" height="28" depth="560" radius="11.76" bevel="10.82" pos="0 -16 0" material="dirt"></soft-box>
+    <soft-box width="562" height="8" depth="562" radius="3.36" bevel="3.09" pos="0 -4 0" material="grass"></soft-box>
     <prism pos="0 68 0" radius="1" height="220" sides="3" rot="90 0 90" scale="136 1 144.34" material="wood_light"/>
     <shape closed="0" pos="0 0 0" material="roof_green"><v x="-145.2" y="-8.54"/><v x="0" y="230"/><v x="145.2" y="-8.54"/><extrude amount="260"/><shell amount="14"/><fillet radius="6.3"/><bevel amount="5.32" bevelSegments="4"/></shape>
     <circle radius="7" segments="10" pos="59.7 161.73 -72.8" rot="-90 0 -58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
@@ -250,14 +251,14 @@
     <circle radius="7" segments="10" pos="-93.1 106.86 -46.8" rot="-90 0 58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="7" segments="10" pos="-126.5 52 15.6" rot="-90 0 58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="7" segments="10" pos="-71.32 142.64 -98.8" rot="-90 0 58.67" material="roof_green"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
-    <rect pos="0 51 111.5" size="66 102" material="trim"><fillet radius="22" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 48 113" size="56 96" material="door"><fillet radius="22" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="16.8 46.08 116" size="6 6" material="metal_knob"><fillet radius="2.52" segments="5"/><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rect>
-    <rect pos="0 3 128" size="80 6" material="stone_step"><fillet radius="2.52" segments="5"/><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="0 150 111.5" size="44 44" material="trim"><fillet radius="18.48" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 150 112.5" size="34 34" material="glass"><fillet radius="14.28" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 127 114" size="50 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="0 3 170" size="240 6" material="deck"><fillet radius="2.52" segments="5"/><extrude amount="80"/><bevel amount="2.32" bevelSegments="4"/></rect>
+    <soft-box width="66" height="102" depth="3" radius="22" bevel="1.38" pos="0 51 111.5" material="trim"></soft-box>
+    <soft-box width="56" height="96" depth="3" radius="22" bevel="1.38" pos="0 48 113" material="door"></soft-box>
+    <soft-box width="6" height="6" depth="4" radius="2.52" bevel="1.84" pos="16.8 46.08 116" material="metal_knob"></soft-box>
+    <soft-box width="80" height="6" depth="30" radius="2.52" bevel="2.32" pos="0 3 128" material="stone_step"></soft-box>
+    <soft-box width="44" height="44" depth="3" radius="18.48" bevel="1.38" pos="0 150 111.5" material="trim"></soft-box>
+    <soft-box width="34" height="34" depth="3" radius="14.28" bevel="1.38" pos="0 150 112.5" material="glass"></soft-box>
+    <soft-box width="50" height="5" depth="8" radius="2.1" bevel="1.93" pos="0 127 114" material="trim"></soft-box>
+    <soft-box width="240" height="6" depth="80" radius="2.52" bevel="2.32" pos="0 3 170" material="deck"></soft-box>
     <group pos="210 15.4 -210">
     <circle radius="8.8" segments="8" rot="90 0 0" material="trunk"><extrude amount="30.8"/><bevel amount="6.8" bevelSegments="4"/></circle>
     </group>
@@ -277,8 +278,8 @@
   </group>
   <!-- Ranger lookout: four log legs, cross braces, platform and a pyramid-roofed cabin. -->
   <group name="watchtower" pos="660 0 -330">
-    <rect pos="0 -16 0" size="560 28" material="dirt"><fillet radius="11.76" segments="5"/><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rect>
-    <rect pos="0 -4 0" size="562 8" material="grass"><fillet radius="3.36" segments="5"/><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rect>
+    <soft-box width="560" height="28" depth="560" radius="11.76" bevel="10.82" pos="0 -16 0" material="dirt"></soft-box>
+    <soft-box width="562" height="8" depth="562" radius="3.36" bevel="3.09" pos="0 -4 0" material="grass"></soft-box>
     <group pos="-75 130 -75">
     <circle radius="10" segments="8" rot="90 0 0" material="log"><extrude amount="260"/><bevel amount="7.73" bevelSegments="4"/></circle>
     </group>
@@ -291,38 +292,38 @@
     <group pos="75 130 75">
     <circle radius="10" segments="8" rot="90 0 0" material="log"><extrude amount="260"/><bevel amount="7.73" bevelSegments="4"/></circle>
     </group>
-    <rect pos="0 91 -75" size="190.23 8" rot="0 0 37.95" material="log_light"><fillet radius="3.36" segments="5"/><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="0 91 -75" size="190.23 8" rot="0 0 -37.95" material="log_light"><fillet radius="3.36" segments="5"/><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="0 91 75" size="190.23 8" rot="0 0 37.95" material="log_light"><fillet radius="3.36" segments="5"/><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="0 91 75" size="190.23 8" rot="0 0 -37.95" material="log_light"><fillet radius="3.36" segments="5"/><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="0 266 0" size="220 12" material="deck"><fillet radius="5.04" segments="5"/><extrude amount="220"/><bevel amount="4.64" bevelSegments="4"/></rect>
-    <rect pos="-105 297 -105" size="8 50" material="log"><fillet radius="3.36" segments="5"/><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="-105 297 105" size="8 50" material="log"><fillet radius="3.36" segments="5"/><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="105 297 -105" size="8 50" material="log"><fillet radius="3.36" segments="5"/><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="105 297 105" size="8 50" material="log"><fillet radius="3.36" segments="5"/><extrude amount="8"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="0 318 105" size="218 6" material="log_light"><fillet radius="2.52" segments="5"/><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="105 318 0" size="6 6" material="log_light"><fillet radius="2.52" segments="5"/><extrude amount="218"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="0 318 -105" size="218 6" material="log_light"><fillet radius="2.52" segments="5"/><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="-105 318 0" size="6 6" material="log_light"><fillet radius="2.52" segments="5"/><extrude amount="218"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="0 322 0" size="110 100" material="wood_light"><fillet radius="22" segments="5"/><extrude amount="110"/><bevel amount="20.24" bevelSegments="4"/></rect>
-    <rect pos="0 332 56.5" size="60 44" material="trim"><fillet radius="18.48" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 332 57.5" size="50 34" material="glass"><fillet radius="14.28" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 309 59" size="66 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="56.5 332 0" size="3 44" material="trim"><fillet radius="1.26" segments="5"/><extrude amount="60"/><bevel amount="1.16" bevelSegments="4"/></rect>
-    <rect pos="57.5 332 0" size="3 34" material="glass"><fillet radius="1.26" segments="5"/><extrude amount="50"/><bevel amount="1.16" bevelSegments="4"/></rect>
-    <rect pos="59 309 0" size="8 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="66"/><bevel amount="1.93" bevelSegments="4"/></rect>
+    <soft-box width="190.23" height="8" depth="8" radius="3.36" bevel="3.09" pos="0 91 -75" rot="0 0 37.95" material="log_light"></soft-box>
+    <soft-box width="190.23" height="8" depth="8" radius="3.36" bevel="3.09" pos="0 91 -75" rot="0 0 -37.95" material="log_light"></soft-box>
+    <soft-box width="190.23" height="8" depth="8" radius="3.36" bevel="3.09" pos="0 91 75" rot="0 0 37.95" material="log_light"></soft-box>
+    <soft-box width="190.23" height="8" depth="8" radius="3.36" bevel="3.09" pos="0 91 75" rot="0 0 -37.95" material="log_light"></soft-box>
+    <soft-box width="220" height="12" depth="220" radius="5.04" bevel="4.64" pos="0 266 0" material="deck"></soft-box>
+    <soft-box width="8" height="50" depth="8" radius="3.36" bevel="3.09" pos="-105 297 -105" material="log"></soft-box>
+    <soft-box width="8" height="50" depth="8" radius="3.36" bevel="3.09" pos="-105 297 105" material="log"></soft-box>
+    <soft-box width="8" height="50" depth="8" radius="3.36" bevel="3.09" pos="105 297 -105" material="log"></soft-box>
+    <soft-box width="8" height="50" depth="8" radius="3.36" bevel="3.09" pos="105 297 105" material="log"></soft-box>
+    <soft-box width="218" height="6" depth="6" radius="2.52" bevel="2.32" pos="0 318 105" material="log_light"></soft-box>
+    <soft-box width="6" height="6" depth="218" radius="2.52" bevel="2.32" pos="105 318 0" material="log_light"></soft-box>
+    <soft-box width="218" height="6" depth="6" radius="2.52" bevel="2.32" pos="0 318 -105" material="log_light"></soft-box>
+    <soft-box width="6" height="6" depth="218" radius="2.52" bevel="2.32" pos="-105 318 0" material="log_light"></soft-box>
+    <soft-box width="110" height="100" depth="110" radius="22" bevel="20.24" pos="0 322 0" material="wood_light"></soft-box>
+    <soft-box width="60" height="44" depth="3" radius="18.48" bevel="1.38" pos="0 332 56.5" material="trim"></soft-box>
+    <soft-box width="50" height="34" depth="3" radius="14.28" bevel="1.38" pos="0 332 57.5" material="glass"></soft-box>
+    <soft-box width="66" height="5" depth="8" radius="2.1" bevel="1.93" pos="0 309 59" material="trim"></soft-box>
+    <soft-box width="3" height="44" depth="60" radius="1.26" bevel="1.16" pos="56.5 332 0" material="trim"></soft-box>
+    <soft-box width="3" height="34" depth="50" radius="1.26" bevel="1.16" pos="57.5 332 0" material="glass"></soft-box>
+    <soft-box width="8" height="5" depth="66" radius="2.1" bevel="1.93" pos="59 309 0" material="trim"></soft-box>
     <pyramid pos="0 407 0" radius="105" height="70" rot="0 45 0" material="roof_brown"/>
-    <rect pos="-18 140 101" size="6 280" rot="-8 0 0" material="log_light"><fillet radius="2.52" segments="5"/><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="18 140 101" size="6 280" rot="-8 0 0" material="log_light"><fillet radius="2.52" segments="5"/><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="0 25 115.76" size="40 5" rot="-8 0 0" material="log"><fillet radius="2.1" segments="5"/><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="0 53 111.82" size="40 5" rot="-8 0 0" material="log"><fillet radius="2.1" segments="5"/><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="0 81 107.89" size="40 5" rot="-8 0 0" material="log"><fillet radius="2.1" segments="5"/><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="0 109 103.95" size="40 5" rot="-8 0 0" material="log"><fillet radius="2.1" segments="5"/><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="0 137 100.02" size="40 5" rot="-8 0 0" material="log"><fillet radius="2.1" segments="5"/><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="0 165 96.08" size="40 5" rot="-8 0 0" material="log"><fillet radius="2.1" segments="5"/><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="0 193 92.15" size="40 5" rot="-8 0 0" material="log"><fillet radius="2.1" segments="5"/><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="0 221 88.21" size="40 5" rot="-8 0 0" material="log"><fillet radius="2.1" segments="5"/><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="0 249 84.28" size="40 5" rot="-8 0 0" material="log"><fillet radius="2.1" segments="5"/><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rect>
+    <soft-box width="6" height="280" depth="6" radius="2.52" bevel="2.32" pos="-18 140 101" rot="-8 0 0" material="log_light"></soft-box>
+    <soft-box width="6" height="280" depth="6" radius="2.52" bevel="2.32" pos="18 140 101" rot="-8 0 0" material="log_light"></soft-box>
+    <soft-box width="40" height="5" depth="5" radius="2.1" bevel="1.93" pos="0 25 115.76" rot="-8 0 0" material="log"></soft-box>
+    <soft-box width="40" height="5" depth="5" radius="2.1" bevel="1.93" pos="0 53 111.82" rot="-8 0 0" material="log"></soft-box>
+    <soft-box width="40" height="5" depth="5" radius="2.1" bevel="1.93" pos="0 81 107.89" rot="-8 0 0" material="log"></soft-box>
+    <soft-box width="40" height="5" depth="5" radius="2.1" bevel="1.93" pos="0 109 103.95" rot="-8 0 0" material="log"></soft-box>
+    <soft-box width="40" height="5" depth="5" radius="2.1" bevel="1.93" pos="0 137 100.02" rot="-8 0 0" material="log"></soft-box>
+    <soft-box width="40" height="5" depth="5" radius="2.1" bevel="1.93" pos="0 165 96.08" rot="-8 0 0" material="log"></soft-box>
+    <soft-box width="40" height="5" depth="5" radius="2.1" bevel="1.93" pos="0 193 92.15" rot="-8 0 0" material="log"></soft-box>
+    <soft-box width="40" height="5" depth="5" radius="2.1" bevel="1.93" pos="0 221 88.21" rot="-8 0 0" material="log"></soft-box>
+    <soft-box width="40" height="5" depth="5" radius="2.1" bevel="1.93" pos="0 249 84.28" rot="-8 0 0" material="log"></soft-box>
     <group pos="-220 11.2 220">
     <circle radius="6.4" segments="8" rot="90 0 0" material="trunk"><extrude amount="22.4"/><bevel amount="4.95" bevelSegments="4"/></circle>
     </group>
@@ -342,24 +343,24 @@
   </group>
   <!-- Stone mill with a timber upper storey and a paddle wheel in a stream. -->
   <group name="watermill" pos="1320 0 -330">
-    <rect pos="0 -16 0" size="560 28" material="dirt"><fillet radius="11.76" segments="5"/><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rect>
-    <rect pos="0 -4 0" size="562 8" material="grass"><fillet radius="3.36" segments="5"/><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="0 50 0" size="220 100" material="stone"><fillet radius="22" segments="5"/><extrude amount="180"/><bevel amount="20.24" bevelSegments="4"/></rect>
-    <rect pos="0 155 0" size="220 110" material="wood"><fillet radius="22" segments="5"/><extrude amount="180"/><bevel amount="20.24" bevelSegments="4"/></rect>
-    <rect pos="0 103 0" size="230 8" material="timber"><fillet radius="3.36" segments="5"/><extrude amount="190"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="-40 46 91.5" size="60 92" material="trim"><fillet radius="22" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="-40 43 93" size="50 86" material="door"><fillet radius="21" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="-25 41.28 96" size="6 6" material="metal_knob"><fillet radius="2.52" segments="5"/><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rect>
-    <rect pos="-40 3 108" size="74 6" material="stone_step"><fillet radius="2.52" segments="5"/><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="50 60 91.5" size="40 40" material="trim"><fillet radius="16.8" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="50 60 92.5" size="30 30" material="glass"><fillet radius="12.6" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="50 39 94" size="46 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="-40 160 91.5" size="46 50" material="trim"><fillet radius="19.32" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="-40 160 92.5" size="36 40" material="glass"><fillet radius="15.12" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="-40 134 94" size="52 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="50 160 91.5" size="46 50" material="trim"><fillet radius="19.32" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="50 160 92.5" size="36 40" material="glass"><fillet radius="15.12" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="50 134 94" size="52 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
+    <soft-box width="560" height="28" depth="560" radius="11.76" bevel="10.82" pos="0 -16 0" material="dirt"></soft-box>
+    <soft-box width="562" height="8" depth="562" radius="3.36" bevel="3.09" pos="0 -4 0" material="grass"></soft-box>
+    <soft-box width="220" height="100" depth="180" radius="22" bevel="20.24" pos="0 50 0" material="stone"></soft-box>
+    <soft-box width="220" height="110" depth="180" radius="22" bevel="20.24" pos="0 155 0" material="wood"></soft-box>
+    <soft-box width="230" height="8" depth="190" radius="3.36" bevel="3.09" pos="0 103 0" material="timber"></soft-box>
+    <soft-box width="60" height="92" depth="3" radius="22" bevel="1.38" pos="-40 46 91.5" material="trim"></soft-box>
+    <soft-box width="50" height="86" depth="3" radius="21" bevel="1.38" pos="-40 43 93" material="door"></soft-box>
+    <soft-box width="6" height="6" depth="4" radius="2.52" bevel="1.84" pos="-25 41.28 96" material="metal_knob"></soft-box>
+    <soft-box width="74" height="6" depth="30" radius="2.52" bevel="2.32" pos="-40 3 108" material="stone_step"></soft-box>
+    <soft-box width="40" height="40" depth="3" radius="16.8" bevel="1.38" pos="50 60 91.5" material="trim"></soft-box>
+    <soft-box width="30" height="30" depth="3" radius="12.6" bevel="1.38" pos="50 60 92.5" material="glass"></soft-box>
+    <soft-box width="46" height="5" depth="8" radius="2.1" bevel="1.93" pos="50 39 94" material="trim"></soft-box>
+    <soft-box width="46" height="50" depth="3" radius="19.32" bevel="1.38" pos="-40 160 91.5" material="trim"></soft-box>
+    <soft-box width="36" height="40" depth="3" radius="15.12" bevel="1.38" pos="-40 160 92.5" material="glass"></soft-box>
+    <soft-box width="52" height="5" depth="8" radius="2.1" bevel="1.93" pos="-40 134 94" material="trim"></soft-box>
+    <soft-box width="46" height="50" depth="3" radius="19.32" bevel="1.38" pos="50 160 91.5" material="trim"></soft-box>
+    <soft-box width="36" height="40" depth="3" radius="15.12" bevel="1.38" pos="50 160 92.5" material="glass"></soft-box>
+    <soft-box width="52" height="5" depth="8" radius="2.1" bevel="1.93" pos="50 134 94" material="trim"></soft-box>
     <prism pos="0 240 0" radius="1" height="180" sides="3" rot="90 0 90" scale="60 1 132.79" material="wood"/>
     <shape closed="0" pos="0 0 0" material="roof_blue"><v x="-129.18" y="198.91"/><v x="0" y="300"/><v x="129.18" y="198.91"/><extrude amount="216"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
     <circle radius="8" segments="10" pos="52.12 281.43 -60.48" rot="-90 0 -38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
@@ -370,13 +371,13 @@
     <circle radius="8" segments="10" pos="-81.83 258.18 -38.88" rot="-90 0 38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="-111.54 234.93 12.96" rot="-90 0 38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="-62.46 273.34 -82.08" rot="-90 0 38.05" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
-    <rect pos="180 1 0" size="90 2" material="water"><fillet radius="0.84" segments="5"/><extrude amount="540"/><bevel amount="0.77" bevelSegments="4"/></rect>
+    <soft-box width="90" height="2" depth="540" radius="0.84" bevel="0.77" pos="180 1 0" material="water"></soft-box>
     <group pos="144 92 0" rot="0 0 90">
     <circle radius="14" segments="8" rot="90 0 0" material="metal"><extrude amount="30"/><bevel amount="10.82" bevelSegments="4"/></circle>
     </group>
     <torus pos="152 92 0" majorRadius="80" minorRadius="5" majorSegments="16" minorSegments="5" rot="0 0 90" material="wood_dark"/>
     <torus pos="136 92 0" majorRadius="80" minorRadius="5" majorSegments="16" minorSegments="5" rot="0 0 90" material="wood_dark"/>
-    <rect pos="144 92 0" size="24 8" material="wood_light"><fillet radius="3.36" segments="5"/><extrude amount="160"/><bevel amount="3.09" bevelSegments="4"/><array count="6" rotation="30 0 0"/></rect>
+    <soft-box width="24" height="8" depth="160" radius="3.36" bevel="3.09" pos="144 92 0" material="wood_light"><array count="6" rotation="30 0 0"/></soft-box>
     <group pos="-220 12.6 -210">
     <circle radius="7.2" segments="8" rot="90 0 0" material="trunk"><extrude amount="25.2"/><bevel amount="5.56" bevelSegments="4"/></circle>
     </group>
@@ -389,20 +390,20 @@
   </group>
   <!-- Treehouse: fat trunk, round leafy crown, small hut on a platform. -->
   <group name="treehouse" pos="-1320 0 330">
-    <rect pos="0 -16 0" size="560 28" material="dirt"><fillet radius="11.76" segments="5"/><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rect>
-    <rect pos="0 -4 0" size="562 8" material="grass"><fillet radius="3.36" segments="5"/><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rect>
+    <soft-box width="560" height="28" depth="560" radius="11.76" bevel="10.82" pos="0 -16 0" material="dirt"></soft-box>
+    <soft-box width="562" height="8" depth="562" radius="3.36" bevel="3.09" pos="0 -4 0" material="grass"></soft-box>
     <group pos="0 140 0">
     <circle radius="34" segments="9" rot="90 0 0" material="trunk"><extrude amount="280"/><bevel amount="20.24" bevelSegments="4"/><taper amount="0.25" axis="z"/></circle>
     </group>
-    <rect pos="40 10 0" size="60 20" rot="0 0 -20" material="trunk"><fillet radius="8.4" segments="5"/><extrude amount="22"/><bevel amount="7.73" bevelSegments="4"/></rect>
-    <rect pos="-20 10 34.64" size="60 20" rot="0 -120 -20" material="trunk"><fillet radius="8.4" segments="5"/><extrude amount="22"/><bevel amount="7.73" bevelSegments="4"/></rect>
-    <rect pos="-20 10 -34.64" size="60 20" rot="0 -240 -20" material="trunk"><fillet radius="8.4" segments="5"/><extrude amount="22"/><bevel amount="7.73" bevelSegments="4"/></rect>
+    <soft-box width="60" height="20" depth="22" radius="8.4" bevel="7.73" pos="40 10 0" rot="0 0 -20" material="trunk"></soft-box>
+    <soft-box width="60" height="20" depth="22" radius="8.4" bevel="7.73" pos="-20 10 34.64" rot="0 -120 -20" material="trunk"></soft-box>
+    <soft-box width="60" height="20" depth="22" radius="8.4" bevel="7.73" pos="-20 10 -34.64" rot="0 -240 -20" material="trunk"></soft-box>
     <sphere pos="0 360 0" radius="120" rings="6" slices="9" material="leaf"><noise strength="5" seed="120"/></sphere>
     <sphere pos="-90 320 50" radius="80" rings="6" slices="9" material="leaf_light"><noise strength="5" seed="80"/></sphere>
     <sphere pos="80 330 -60" radius="85" rings="6" slices="9" material="leaf_light"><noise strength="5" seed="85"/></sphere>
     <sphere pos="40 410 70" radius="70" rings="6" slices="9" material="leaf"><noise strength="5" seed="70"/></sphere>
-    <rect pos="60 175 50" size="210 10" material="deck"><fillet radius="4.2" segments="5"/><extrude amount="180"/><bevel amount="3.86" bevelSegments="4"/></rect>
-    <rect pos="70 225 50" size="120 90" material="wood_light"><fillet radius="22" segments="5"/><extrude amount="110"/><bevel amount="20.24" bevelSegments="4"/></rect>
+    <soft-box width="210" height="10" depth="180" radius="4.2" bevel="3.86" pos="60 175 50" material="deck"></soft-box>
+    <soft-box width="120" height="90" depth="110" radius="22" bevel="20.24" pos="70 225 50" material="wood_light"></soft-box>
     <group pos="70 0 50" rot="0 90 0">
     <prism pos="0 286.67 0" radius="1" height="110" sides="3" rot="90 0 90" scale="33.33 1 75.06" material="wood_light"/>
     <shape closed="0" pos="0 0 0" material="roof_red"><v x="-74.51" y="262.68"/><v x="0" y="320"/><v x="74.51" y="262.68"/><extrude amount="134"/><shell amount="8"/><fillet radius="3.6"/><bevel amount="3.04" bevelSegments="4"/></shape>
@@ -415,21 +416,21 @@
     <circle radius="6" segments="10" pos="-63.91 282.82 8.04" rot="-90 0 37.57" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="6" segments="10" pos="-35.6 304.6 -50.92" rot="-90 0 37.57" material="roof_red"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     </group>
-    <rect pos="70 218 106.5" size="46 76" material="trim"><fillet radius="19.32" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="70 215 108" size="36 70" material="door"><fillet radius="15.12" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="80.8 213.6 111" size="6 6" material="metal_knob"><fillet radius="2.52" segments="5"/><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rect>
-    <rect pos="70 183 123" size="60 6" material="stone_step"><fillet radius="2.52" segments="5"/><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="131.5 230 50" size="3 38" material="trim"><fillet radius="1.26" segments="5"/><extrude amount="38"/><bevel amount="1.16" bevelSegments="4"/></rect>
-    <rect pos="132.5 230 50" size="3 28" material="glass"><fillet radius="1.26" segments="5"/><extrude amount="28"/><bevel amount="1.16" bevelSegments="4"/></rect>
-    <rect pos="134 210 50" size="8 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="44"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="-40 200 138" size="6 40" material="log"><fillet radius="2.52" segments="5"/><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="0 200 138" size="6 40" material="log"><fillet radius="2.52" segments="5"/><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="160 200 138" size="6 40" material="log"><fillet radius="2.52" segments="5"/><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="60 218 138" size="210 5" material="log_light"><fillet radius="2.1" segments="5"/><extrude amount="5"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="-45 85 135" size="4 170" material="rope"><fillet radius="1.68" segments="5"/><extrude amount="4"/><bevel amount="1.55" bevelSegments="4"/></rect>
-    <rect pos="-45 85 135" size="4 170" material="rope"><fillet radius="1.68" segments="5"/><extrude amount="4"/><bevel amount="1.55" bevelSegments="4"/></rect>
-    <rect pos="-15 85 135" size="4 170" material="rope"><fillet radius="1.68" segments="5"/><extrude amount="4"/><bevel amount="1.55" bevelSegments="4"/></rect>
-    <rect pos="-15 85 135" size="4 170" material="rope"><fillet radius="1.68" segments="5"/><extrude amount="4"/><bevel amount="1.55" bevelSegments="4"/></rect>
+    <soft-box width="46" height="76" depth="3" radius="19.32" bevel="1.38" pos="70 218 106.5" material="trim"></soft-box>
+    <soft-box width="36" height="70" depth="3" radius="15.12" bevel="1.38" pos="70 215 108" material="door"></soft-box>
+    <soft-box width="6" height="6" depth="4" radius="2.52" bevel="1.84" pos="80.8 213.6 111" material="metal_knob"></soft-box>
+    <soft-box width="60" height="6" depth="30" radius="2.52" bevel="2.32" pos="70 183 123" material="stone_step"></soft-box>
+    <soft-box width="3" height="38" depth="38" radius="1.26" bevel="1.16" pos="131.5 230 50" material="trim"></soft-box>
+    <soft-box width="3" height="28" depth="28" radius="1.26" bevel="1.16" pos="132.5 230 50" material="glass"></soft-box>
+    <soft-box width="8" height="5" depth="44" radius="2.1" bevel="1.93" pos="134 210 50" material="trim"></soft-box>
+    <soft-box width="6" height="40" depth="6" radius="2.52" bevel="2.32" pos="-40 200 138" material="log"></soft-box>
+    <soft-box width="6" height="40" depth="6" radius="2.52" bevel="2.32" pos="0 200 138" material="log"></soft-box>
+    <soft-box width="6" height="40" depth="6" radius="2.52" bevel="2.32" pos="160 200 138" material="log"></soft-box>
+    <soft-box width="210" height="5" depth="5" radius="2.1" bevel="1.93" pos="60 218 138" material="log_light"></soft-box>
+    <soft-box width="4" height="170" depth="4" radius="1.68" bevel="1.55" pos="-45 85 135" material="rope"></soft-box>
+    <soft-box width="4" height="170" depth="4" radius="1.68" bevel="1.55" pos="-45 85 135" material="rope"></soft-box>
+    <soft-box width="4" height="170" depth="4" radius="1.68" bevel="1.55" pos="-15 85 135" material="rope"></soft-box>
+    <soft-box width="4" height="170" depth="4" radius="1.68" bevel="1.55" pos="-15 85 135" material="rope"></soft-box>
     <group pos="220 11.2 -220">
     <circle radius="6.4" segments="8" rot="90 0 0" material="trunk"><extrude amount="22.4"/><bevel amount="4.95" bevelSegments="4"/></circle>
     </group>
@@ -442,8 +443,8 @@
   </group>
   <!-- Round hut: cylinder wall, conical thatch with a little cap. -->
   <group name="round_hut" pos="-660 0 330">
-    <rect pos="0 -16 0" size="560 28" material="dirt"><fillet radius="11.76" segments="5"/><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rect>
-    <rect pos="0 -4 0" size="562 8" material="grass"><fillet radius="3.36" segments="5"/><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rect>
+    <soft-box width="560" height="28" depth="560" radius="11.76" bevel="10.82" pos="0 -16 0" material="dirt"></soft-box>
+    <soft-box width="562" height="8" depth="562" radius="3.36" bevel="3.09" pos="0 -4 0" material="grass"></soft-box>
     <group pos="0 65 0">
     <circle radius="115" segments="24" rot="90 0 0" material="plaster_warm"><extrude amount="130"/><bevel amount="20.24" bevelSegments="4"/></circle>
     </group>
@@ -455,22 +456,22 @@
     <group pos="0 130 0">
     <circle radius="160" segments="24" rot="90 0 0" material="thatch_dark"><extrude amount="10"/><bevel amount="3.86" bevelSegments="4"/></circle>
     </group>
-    <rect pos="0 58 108" size="62 106" material="plaster_warm"><fillet radius="22" segments="5"/><extrude amount="20"/><bevel amount="9.2" bevelSegments="4"/></rect>
-    <rect pos="0 61 119.5" size="56 90" material="trim"><fillet radius="22" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 58 121" size="46 84" material="door"><fillet radius="19.32" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="13.8 56.32 124" size="6 6" material="metal_knob"><fillet radius="2.52" segments="5"/><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rect>
-    <rect pos="0 19 136" size="70 6" material="stone_step"><fillet radius="2.52" segments="5"/><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rect>
+    <soft-box width="62" height="106" depth="20" radius="22" bevel="9.2" pos="0 58 108" material="plaster_warm"></soft-box>
+    <soft-box width="56" height="90" depth="3" radius="22" bevel="1.38" pos="0 61 119.5" material="trim"></soft-box>
+    <soft-box width="46" height="84" depth="3" radius="19.32" bevel="1.38" pos="0 58 121" material="door"></soft-box>
+    <soft-box width="6" height="6" depth="4" radius="2.52" bevel="1.84" pos="13.8 56.32 124" material="metal_knob"></soft-box>
+    <soft-box width="70" height="6" depth="30" radius="2.52" bevel="2.32" pos="0 19 136" material="stone_step"></soft-box>
     <group pos="88.47 0 61.95" rot="0 55 0">
-    <rect pos="0 80 0" size="50 56" material="plaster_warm"><fillet radius="21" segments="5"/><extrude amount="20"/><bevel amount="9.2" bevelSegments="4"/></rect>
-    <rect pos="0 82 11.5" size="40 40" material="trim"><fillet radius="16.8" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 82 12.5" size="30 30" material="glass"><fillet radius="12.6" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 61 14" size="46 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
+    <soft-box width="50" height="56" depth="20" radius="21" bevel="9.2" pos="0 80 0" material="plaster_warm"></soft-box>
+    <soft-box width="40" height="40" depth="3" radius="16.8" bevel="1.38" pos="0 82 11.5" material="trim"></soft-box>
+    <soft-box width="30" height="30" depth="3" radius="12.6" bevel="1.38" pos="0 82 12.5" material="glass"></soft-box>
+    <soft-box width="46" height="5" depth="8" radius="2.1" bevel="1.93" pos="0 61 14" material="trim"></soft-box>
     </group>
     <group pos="-88.47 0 61.95" rot="0 -55 0">
-    <rect pos="0 80 0" size="50 56" material="plaster_warm"><fillet radius="21" segments="5"/><extrude amount="20"/><bevel amount="9.2" bevelSegments="4"/></rect>
-    <rect pos="0 82 11.5" size="40 40" material="trim"><fillet radius="16.8" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 82 12.5" size="30 30" material="glass"><fillet radius="12.6" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 61 14" size="46 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
+    <soft-box width="50" height="56" depth="20" radius="21" bevel="9.2" pos="0 80 0" material="plaster_warm"></soft-box>
+    <soft-box width="40" height="40" depth="3" radius="16.8" bevel="1.38" pos="0 82 11.5" material="trim"></soft-box>
+    <soft-box width="30" height="30" depth="3" radius="12.6" bevel="1.38" pos="0 82 12.5" material="glass"></soft-box>
+    <soft-box width="46" height="5" depth="8" radius="2.1" bevel="1.93" pos="0 61 14" material="trim"></soft-box>
     </group>
     <group pos="-210 14 -210">
     <circle radius="8" segments="8" rot="90 0 0" material="trunk"><extrude amount="28"/><bevel amount="6.18" bevelSegments="4"/></circle>
@@ -498,15 +499,15 @@
   </group>
   <!-- Open lean-to woodshed with a stack of split logs and a chopping block. -->
   <group name="woodshed" pos="0 0 330">
-    <rect pos="0 -16 0" size="560 28" material="dirt"><fillet radius="11.76" segments="5"/><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rect>
-    <rect pos="0 -4 0" size="562 8" material="grass"><fillet radius="3.36" segments="5"/><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="-115 90 -65" size="14 180" material="timber"><fillet radius="5.88" segments="5"/><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rect>
-    <rect pos="-115 65 65" size="14 130" material="timber"><fillet radius="5.88" segments="5"/><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rect>
-    <rect pos="115 90 -65" size="14 180" material="timber"><fillet radius="5.88" segments="5"/><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rect>
-    <rect pos="115 65 65" size="14 130" material="timber"><fillet radius="5.88" segments="5"/><extrude amount="14"/><bevel amount="5.41" bevelSegments="4"/></rect>
-    <rect pos="0 90 -69" size="230 170" material="plank"><fillet radius="22" segments="5"/><extrude amount="8"/><bevel amount="3.68" bevelSegments="4"/></rect>
-    <rect pos="0 162 0" size="280 10" rot="-18.43 0 0" material="roof_green"><fillet radius="4.2" segments="5"/><extrude amount="198.11"/><bevel amount="3.86" bevelSegments="4"/></rect>
-    <rect pos="0 6 0" size="250 12" material="deck"><fillet radius="5.04" segments="5"/><extrude amount="150"/><bevel amount="4.64" bevelSegments="4"/></rect>
+    <soft-box width="560" height="28" depth="560" radius="11.76" bevel="10.82" pos="0 -16 0" material="dirt"></soft-box>
+    <soft-box width="562" height="8" depth="562" radius="3.36" bevel="3.09" pos="0 -4 0" material="grass"></soft-box>
+    <soft-box width="14" height="180" depth="14" radius="5.88" bevel="5.41" pos="-115 90 -65" material="timber"></soft-box>
+    <soft-box width="14" height="130" depth="14" radius="5.88" bevel="5.41" pos="-115 65 65" material="timber"></soft-box>
+    <soft-box width="14" height="180" depth="14" radius="5.88" bevel="5.41" pos="115 90 -65" material="timber"></soft-box>
+    <soft-box width="14" height="130" depth="14" radius="5.88" bevel="5.41" pos="115 65 65" material="timber"></soft-box>
+    <soft-box width="230" height="170" depth="8" radius="22" bevel="3.68" pos="0 90 -69" material="plank"></soft-box>
+    <soft-box width="280" height="10" depth="198.11" radius="4.2" bevel="3.86" pos="0 162 0" rot="-18.43 0 0" material="roof_green"></soft-box>
+    <soft-box width="250" height="12" depth="150" radius="5.04" bevel="4.64" pos="0 6 0" material="deck"></soft-box>
     <group pos="-85 25 -10" rot="90 0 0">
     <circle radius="12" segments="8" rot="90 0 0" material="log_light"><extrude amount="90"/><bevel amount="9.27" bevelSegments="4"/></circle>
     </group>
@@ -588,8 +589,8 @@
     <group pos="185 22 70">
     <circle radius="28" segments="9" rot="90 0 0" material="log_light"><extrude amount="44"/><bevel amount="17" bevelSegments="4"/></circle>
     </group>
-    <rect pos="185 64 70" size="6 40" rot="0 0 25" material="trunk"><fillet radius="2.52" segments="5"/><extrude amount="6"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="195 82 70" size="24 16" material="metal"><fillet radius="6.72" segments="5"/><extrude amount="6"/><bevel amount="2.76" bevelSegments="4"/></rect>
+    <soft-box width="6" height="40" depth="6" radius="2.52" bevel="2.32" pos="185 64 70" rot="0 0 25" material="trunk"></soft-box>
+    <soft-box width="24" height="16" depth="6" radius="6.72" bevel="2.76" pos="195 82 70" material="metal"></soft-box>
     <group pos="-220 12.6 -220">
     <circle radius="7.2" segments="8" rot="90 0 0" material="trunk"><extrude amount="25.2"/><bevel amount="5.56" bevelSegments="4"/></circle>
     </group>
@@ -609,30 +610,30 @@
   </group>
   <!-- Two-storey ranger station: stone ground floor, shingled upper floor, porch. -->
   <group name="ranger_station" pos="660 0 330">
-    <rect pos="0 -16 0" size="560 28" material="dirt"><fillet radius="11.76" segments="5"/><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rect>
-    <rect pos="0 -4 0" size="562 8" material="grass"><fillet radius="3.36" segments="5"/><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="0 60 0" size="230 120" material="stone_light"><fillet radius="22" segments="5"/><extrude amount="190"/><bevel amount="20.24" bevelSegments="4"/></rect>
-    <rect pos="0 175 0" size="246 110" material="wood_teal"><fillet radius="22" segments="5"/><extrude amount="206"/><bevel amount="20.24" bevelSegments="4"/></rect>
-    <rect pos="0 124 0" size="250 8" material="trim"><fillet radius="3.36" segments="5"/><extrude amount="210"/><bevel amount="3.09" bevelSegments="4"/></rect>
-    <rect pos="-50 46 96.5" size="60 92" material="trim"><fillet radius="22" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="-50 43 98" size="50 86" material="door"><fillet radius="21" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="-35 41.28 101" size="6 6" material="metal_knob"><fillet radius="2.52" segments="5"/><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rect>
-    <rect pos="-50 3 113" size="74 6" material="stone_step"><fillet radius="2.52" segments="5"/><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rect>
-    <rect pos="50 70 96.5" size="46 50" material="trim"><fillet radius="19.32" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="50 70 97.5" size="36 40" material="glass"><fillet radius="15.12" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="50 44 99" size="52 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="-60 180 104.5" size="50 54" material="trim"><fillet radius="21" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="-60 180 105.5" size="40 44" material="glass"><fillet radius="16.8" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="-60 152 107" size="56 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="60 180 104.5" size="50 54" material="trim"><fillet radius="21" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="60 180 105.5" size="40 44" material="glass"><fillet radius="16.8" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="60 152 107" size="56 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="124.5 180 0" size="3 50" material="trim"><fillet radius="1.26" segments="5"/><extrude amount="46"/><bevel amount="1.16" bevelSegments="4"/></rect>
-    <rect pos="125.5 180 0" size="3 40" material="glass"><fillet radius="1.26" segments="5"/><extrude amount="36"/><bevel amount="1.16" bevelSegments="4"/></rect>
-    <rect pos="127 154 0" size="8 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="52"/><bevel amount="1.93" bevelSegments="4"/></rect>
-    <rect pos="116.5 70 0" size="3 50" material="trim"><fillet radius="1.26" segments="5"/><extrude amount="46"/><bevel amount="1.16" bevelSegments="4"/></rect>
-    <rect pos="117.5 70 0" size="3 40" material="glass"><fillet radius="1.26" segments="5"/><extrude amount="36"/><bevel amount="1.16" bevelSegments="4"/></rect>
-    <rect pos="119 44 0" size="8 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="52"/><bevel amount="1.93" bevelSegments="4"/></rect>
+    <soft-box width="560" height="28" depth="560" radius="11.76" bevel="10.82" pos="0 -16 0" material="dirt"></soft-box>
+    <soft-box width="562" height="8" depth="562" radius="3.36" bevel="3.09" pos="0 -4 0" material="grass"></soft-box>
+    <soft-box width="230" height="120" depth="190" radius="22" bevel="20.24" pos="0 60 0" material="stone_light"></soft-box>
+    <soft-box width="246" height="110" depth="206" radius="22" bevel="20.24" pos="0 175 0" material="wood_teal"></soft-box>
+    <soft-box width="250" height="8" depth="210" radius="3.36" bevel="3.09" pos="0 124 0" material="trim"></soft-box>
+    <soft-box width="60" height="92" depth="3" radius="22" bevel="1.38" pos="-50 46 96.5" material="trim"></soft-box>
+    <soft-box width="50" height="86" depth="3" radius="21" bevel="1.38" pos="-50 43 98" material="door"></soft-box>
+    <soft-box width="6" height="6" depth="4" radius="2.52" bevel="1.84" pos="-35 41.28 101" material="metal_knob"></soft-box>
+    <soft-box width="74" height="6" depth="30" radius="2.52" bevel="2.32" pos="-50 3 113" material="stone_step"></soft-box>
+    <soft-box width="46" height="50" depth="3" radius="19.32" bevel="1.38" pos="50 70 96.5" material="trim"></soft-box>
+    <soft-box width="36" height="40" depth="3" radius="15.12" bevel="1.38" pos="50 70 97.5" material="glass"></soft-box>
+    <soft-box width="52" height="5" depth="8" radius="2.1" bevel="1.93" pos="50 44 99" material="trim"></soft-box>
+    <soft-box width="50" height="54" depth="3" radius="21" bevel="1.38" pos="-60 180 104.5" material="trim"></soft-box>
+    <soft-box width="40" height="44" depth="3" radius="16.8" bevel="1.38" pos="-60 180 105.5" material="glass"></soft-box>
+    <soft-box width="56" height="5" depth="8" radius="2.1" bevel="1.93" pos="-60 152 107" material="trim"></soft-box>
+    <soft-box width="50" height="54" depth="3" radius="21" bevel="1.38" pos="60 180 104.5" material="trim"></soft-box>
+    <soft-box width="40" height="44" depth="3" radius="16.8" bevel="1.38" pos="60 180 105.5" material="glass"></soft-box>
+    <soft-box width="56" height="5" depth="8" radius="2.1" bevel="1.93" pos="60 152 107" material="trim"></soft-box>
+    <soft-box width="3" height="50" depth="46" radius="1.26" bevel="1.16" pos="124.5 180 0" material="trim"></soft-box>
+    <soft-box width="3" height="40" depth="36" radius="1.26" bevel="1.16" pos="125.5 180 0" material="glass"></soft-box>
+    <soft-box width="8" height="5" depth="52" radius="2.1" bevel="1.93" pos="127 154 0" material="trim"></soft-box>
+    <soft-box width="3" height="50" depth="46" radius="1.26" bevel="1.16" pos="116.5 70 0" material="trim"></soft-box>
+    <soft-box width="3" height="40" depth="36" radius="1.26" bevel="1.16" pos="117.5 70 0" material="glass"></soft-box>
+    <soft-box width="8" height="5" depth="52" radius="2.1" bevel="1.93" pos="119 44 0" material="trim"></soft-box>
     <prism pos="0 258.33 0" radius="1" height="206" sides="3" rot="90 0 90" scale="56.67 1 150.12" material="wood_teal"/>
     <shape closed="0" pos="0 0 0" material="roof_blue"><v x="-145.07" y="220.15"/><v x="0" y="315"/><v x="145.07" y="220.15"/><extrude amount="242"/><shell amount="16"/><fillet radius="7.2"/><bevel amount="6.08" bevelSegments="4"/></shape>
     <circle radius="8" segments="10" pos="56 299.29 -67.76" rot="-90 0 -33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
@@ -643,14 +644,14 @@
     <circle radius="8" segments="10" pos="-89.36 277.48 -43.56" rot="-90 0 33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="-122.73 255.66 14.52" rot="-90 0 33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
     <circle radius="8" segments="10" pos="-67.6 291.71 -91.96" rot="-90 0 33.18" material="roof_blue"><extrude amount="5"/><bevel amount="2" bevelSegments="3"/></circle>
-    <rect pos="0 6 145" size="250 12" material="deck"><fillet radius="5.04" segments="5"/><extrude amount="100"/><bevel amount="4.64" bevelSegments="4"/></rect>
-    <rect pos="-115 70 187" size="12 116" material="timber"><fillet radius="5.04" segments="5"/><extrude amount="12"/><bevel amount="4.64" bevelSegments="4"/></rect>
-    <rect pos="115 70 187" size="12 116" material="timber"><fillet radius="5.04" segments="5"/><extrude amount="12"/><bevel amount="4.64" bevelSegments="4"/></rect>
-    <rect pos="0 133 145" size="270 10" rot="12 0 0" material="roof_blue"><fillet radius="4.2" segments="5"/><extrude amount="116"/><bevel amount="3.86" bevelSegments="4"/></rect>
+    <soft-box width="250" height="12" depth="100" radius="5.04" bevel="4.64" pos="0 6 145" material="deck"></soft-box>
+    <soft-box width="12" height="116" depth="12" radius="5.04" bevel="4.64" pos="-115 70 187" material="timber"></soft-box>
+    <soft-box width="12" height="116" depth="12" radius="5.04" bevel="4.64" pos="115 70 187" material="timber"></soft-box>
+    <soft-box width="270" height="10" depth="116" radius="4.2" bevel="3.86" pos="0 133 145" rot="12 0 0" material="roof_blue"></soft-box>
     <group pos="165 150 165">
     <circle radius="4" segments="8" rot="90 0 0" material="metal"><extrude amount="300"/><bevel amount="3.09" bevelSegments="4"/></circle>
     </group>
-    <rect pos="195 275 165" size="56 36" material="flag"><fillet radius="15.12" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
+    <soft-box width="56" height="36" depth="3" radius="15.12" bevel="1.38" pos="195 275 165" material="flag"></soft-box>
     <group pos="-220 14 -210">
     <circle radius="8" segments="8" rot="90 0 0" material="trunk"><extrude amount="28"/><bevel amount="6.18" bevelSegments="4"/></circle>
     </group>
@@ -663,8 +664,8 @@
   </group>
   <!-- Round stone tower with a tall pointed roof and a pennant. -->
   <group name="stone_tower" pos="1320 0 330">
-    <rect pos="0 -16 0" size="560 28" material="dirt"><fillet radius="11.76" segments="5"/><extrude amount="560"/><bevel amount="10.82" bevelSegments="4"/></rect>
-    <rect pos="0 -4 0" size="562 8" material="grass"><fillet radius="3.36" segments="5"/><extrude amount="562"/><bevel amount="3.09" bevelSegments="4"/></rect>
+    <soft-box width="560" height="28" depth="560" radius="11.76" bevel="10.82" pos="0 -16 0" material="dirt"></soft-box>
+    <soft-box width="562" height="8" depth="562" radius="3.36" bevel="3.09" pos="0 -4 0" material="grass"></soft-box>
     <group pos="0 140 0">
     <circle radius="80" segments="24" rot="90 0 0" material="stone_light"><extrude amount="280"/><bevel amount="20.24" bevelSegments="4"/><taper amount="0.08" axis="z"/></circle>
     </group>
@@ -678,34 +679,34 @@
     <group pos="0 444 0">
     <circle radius="3" segments="8" rot="90 0 0" material="metal"><extrude amount="40"/><bevel amount="2.32" bevelSegments="4"/></circle>
     </group>
-    <rect pos="14 456 0" size="26 16" material="flag"><fillet radius="6.72" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 65 81.5" size="56 90" material="trim"><fillet radius="22" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 62 83" size="46 84" material="door"><fillet radius="19.32" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="13.8 60.32 86" size="6 6" material="metal_knob"><fillet radius="2.52" segments="5"/><extrude amount="4"/><bevel amount="1.84" bevelSegments="4"/></rect>
-    <rect pos="0 23 98" size="70 6" material="stone_step"><fillet radius="2.52" segments="5"/><extrude amount="30"/><bevel amount="2.32" bevelSegments="4"/></rect>
+    <soft-box width="26" height="16" depth="3" radius="6.72" bevel="1.38" pos="14 456 0" material="flag"></soft-box>
+    <soft-box width="56" height="90" depth="3" radius="22" bevel="1.38" pos="0 65 81.5" material="trim"></soft-box>
+    <soft-box width="46" height="84" depth="3" radius="19.32" bevel="1.38" pos="0 62 83" material="door"></soft-box>
+    <soft-box width="6" height="6" depth="4" radius="2.52" bevel="1.84" pos="13.8 60.32 86" material="metal_knob"></soft-box>
+    <soft-box width="70" height="6" depth="30" radius="2.52" bevel="2.32" pos="0 23 98" material="stone_step"></soft-box>
     <group pos="0 0 72" rot="0 0 0">
-    <rect pos="0 150 0" size="40 54" material="stone_light"><fillet radius="16.8" segments="5"/><extrude amount="20"/><bevel amount="9.2" bevelSegments="4"/></rect>
-    <rect pos="0 152 11.5" size="32 46" material="trim"><fillet radius="13.44" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 152 12.5" size="22 36" material="glass_warm"><fillet radius="9.24" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 128 14" size="38 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
+    <soft-box width="40" height="54" depth="20" radius="16.8" bevel="9.2" pos="0 150 0" material="stone_light"></soft-box>
+    <soft-box width="32" height="46" depth="3" radius="13.44" bevel="1.38" pos="0 152 11.5" material="trim"></soft-box>
+    <soft-box width="22" height="36" depth="3" radius="9.24" bevel="1.38" pos="0 152 12.5" material="glass_warm"></soft-box>
+    <soft-box width="38" height="5" depth="8" radius="2.1" bevel="1.93" pos="0 128 14" material="trim"></soft-box>
     </group>
     <group pos="62.35 0 36" rot="0 60 0">
-    <rect pos="0 215 0" size="40 54" material="stone_light"><fillet radius="16.8" segments="5"/><extrude amount="20"/><bevel amount="9.2" bevelSegments="4"/></rect>
-    <rect pos="0 217 11.5" size="32 46" material="trim"><fillet radius="13.44" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 217 12.5" size="22 36" material="glass_warm"><fillet radius="9.24" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 193 14" size="38 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
+    <soft-box width="40" height="54" depth="20" radius="16.8" bevel="9.2" pos="0 215 0" material="stone_light"></soft-box>
+    <soft-box width="32" height="46" depth="3" radius="13.44" bevel="1.38" pos="0 217 11.5" material="trim"></soft-box>
+    <soft-box width="22" height="36" depth="3" radius="9.24" bevel="1.38" pos="0 217 12.5" material="glass_warm"></soft-box>
+    <soft-box width="38" height="5" depth="8" radius="2.1" bevel="1.93" pos="0 193 14" material="trim"></soft-box>
     </group>
     <group pos="-62.35 0 36" rot="0 -60 0">
-    <rect pos="0 215 0" size="40 54" material="stone_light"><fillet radius="16.8" segments="5"/><extrude amount="20"/><bevel amount="9.2" bevelSegments="4"/></rect>
-    <rect pos="0 217 11.5" size="32 46" material="trim"><fillet radius="13.44" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 217 12.5" size="22 36" material="glass_warm"><fillet radius="9.24" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 193 14" size="38 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
+    <soft-box width="40" height="54" depth="20" radius="16.8" bevel="9.2" pos="0 215 0" material="stone_light"></soft-box>
+    <soft-box width="32" height="46" depth="3" radius="13.44" bevel="1.38" pos="0 217 11.5" material="trim"></soft-box>
+    <soft-box width="22" height="36" depth="3" radius="9.24" bevel="1.38" pos="0 217 12.5" material="glass_warm"></soft-box>
+    <soft-box width="38" height="5" depth="8" radius="2.1" bevel="1.93" pos="0 193 14" material="trim"></soft-box>
     </group>
     <group pos="62.35 0 -36" rot="0 120 0">
-    <rect pos="0 150 0" size="40 54" material="stone_light"><fillet radius="16.8" segments="5"/><extrude amount="20"/><bevel amount="9.2" bevelSegments="4"/></rect>
-    <rect pos="0 152 11.5" size="32 46" material="trim"><fillet radius="13.44" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 152 12.5" size="22 36" material="glass_warm"><fillet radius="9.24" segments="5"/><extrude amount="3"/><bevel amount="1.38" bevelSegments="4"/></rect>
-    <rect pos="0 128 14" size="38 5" material="trim"><fillet radius="2.1" segments="5"/><extrude amount="8"/><bevel amount="1.93" bevelSegments="4"/></rect>
+    <soft-box width="40" height="54" depth="20" radius="16.8" bevel="9.2" pos="0 150 0" material="stone_light"></soft-box>
+    <soft-box width="32" height="46" depth="3" radius="13.44" bevel="1.38" pos="0 152 11.5" material="trim"></soft-box>
+    <soft-box width="22" height="36" depth="3" radius="9.24" bevel="1.38" pos="0 152 12.5" material="glass_warm"></soft-box>
+    <soft-box width="38" height="5" depth="8" radius="2.1" bevel="1.93" pos="0 128 14" material="trim"></soft-box>
     </group>
     <group pos="210 14 -210">
     <circle radius="8" segments="8" rot="90 0 0" material="trunk"><extrude amount="28"/><bevel amount="6.18" bevelSegments="4"/></circle>

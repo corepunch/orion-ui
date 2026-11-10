@@ -117,13 +117,14 @@ local function rounded(mat, a, b, depth)
   return 0, 0
 end
 
--- A box as a rect (filleted when the material is rounded) of a x b tiles, extruded `depth` cm, with the kit's bevels.
+-- A box of a x b tiles, `depth` cm deep, as a call to the scene's soft-box (rounded) or slab (square) utility; `mods` become its children.
 function Kit:prism(mat, p, a, b, depth, col, rot, mods)
   local rad, bev = rounded(mat, a, b, depth)
-  local size = {"size", f(a * TILE) .. " " .. f(b * TILE)}
-  if rad == 0 then return self:solid("rect", {size}, depth, p, mat, col, rot, mods) end
-  local bevel = fmt('<bevel amount="%s" bevelSegments="3"/>', f(bev))
-  return self:solid("rect", {size}, depth, p, mat, col, rot, bevel .. (mods or ""), fmt('<fillet radius="%s" segments="4"/>', f(rad)))
+  local size = {{"width", f(a * TILE)}, {"height", f(b * TILE)}, {"depth", f(depth)}}
+  local tag, extra = "slab", {{"bevel", 0}}
+  if rad ~= 0 then tag, extra = "soft-box", {{"radius", f(rad)}, {"bevel", f(bev)}} end
+  local head = fmt('<%s%s%s%s%s%s', tag, attrs(size), attrs(extra), attrs({{"pos", p}}), attrs(rot or {}), attrs(self:look(mat, col)))
+  self:emit((mods and mods ~= "") and fmt('%s>%s</%s>', head, mods, tag) or head .. "/>")
 end
 
 function Kit:box(mat, x, y, z, sx, sy, sz, col, rz)
