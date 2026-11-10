@@ -171,7 +171,8 @@ static void report_paint(window_t *win, reportview_data_t *data) {
   bool show_selection = !(data->extended_style & RVS_EX_ONECLICK) || !(selection & CTRL_INACTIVE);
   if (show_selection && data->selected >= first_row && data->selected < last_row) {
     int y = window_scroll_rect_to_client(win, report_item_rect(win, data, data->selected)).y;
-    int top = MAX(y, header_h), bottom = MIN(y + entry_h, body_bottom);
+    int rule = ui_flag(ui_selector(win, "TableView::row"), "--divider-width") ? 1 : 0;   // the face stops above the hairline, like every row
+    int top = MAX(y, header_h), bottom = MIN(y + entry_h - rule, body_bottom);
     theme_draw_in(win, THEME_PART_LIST_ITEM, R(0, top, eff_w, bottom - top), selection);
   }
 

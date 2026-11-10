@@ -45,6 +45,7 @@ static const char *gc_status_label(char c) {
 #define SCREEN_H 768
 #define evGitOpDone (evUser + 500)
 #define evOpenRepo  (evUser + 501)
+#define evWorkspaceLoaded (evUser + 502)   // lparam = git_workspace_result_t* (owned by the receiver; NULL = the load failed)
 
 typedef struct { char hash[41]; char author[64]; char date[20]; char subject[256]; } git_commit_t;
 typedef struct {
@@ -225,6 +226,7 @@ typedef struct {
   git_summary_t checkouts[GC_MAX_CHECKOUTS];
   int checkout_count;
   bool fetching_all;
+  bool overview_loading, overview_stale;   // a background load is running / the workspace changed while it ran
   bool ephemeral;
   char workspace[GC_MAX_RECENT_REPOS][512];
   int workspace_count;
@@ -310,6 +312,8 @@ bool git_path_absolute(const char *in, char *out, size_t n);
 bool git_locate(const char *path, char *checkout, size_t checkout_n, char *main_root, size_t main_n);
 bool git_get_summary(const char *path, const char *repo_name, bool linked, git_summary_t *out);
 int  git_workspace_checkouts(char (*roots)[512], int root_count, git_summary_t *out, int max);
+typedef struct { int count; git_summary_t rows[GC_MAX_CHECKOUTS]; } git_workspace_result_t;
+bool git_workspace_checkouts_async(char (*roots)[512], int root_count, window_t *notify_win);
 bool git_fetch_all_async(char (*roots)[512], int count, window_t *notify_win);
 bool git_run_async(git_repo_t *repo, git_op_t op, const char *args[], window_t *notify_win);
 bool git_run_sync(git_repo_t *repo, const char *args[], char *buf, int buf_sz);
@@ -334,7 +338,9 @@ void gc_show_reflog_dialog(window_t *parent);
 void gc_update_status(void);
 void gc_set_view_mode(int tab);
 bool gc_pane_command(uint16_t id);
-void gc_overview_refresh(void);
+void gc_overview_refresh(void);        // reads every checkout on a worker thread; rows update when it posts evWorkspaceLoaded
+void gc_overview_refresh_sync(void);   // same, on the calling thread (tests)
+void gc_overview_loaded(git_workspace_result_t *res);
 void gc_overview_open(const char *path);
 bool gc_overview_remove_selected(void);
 database_t *gc_workspace_db_create(void);

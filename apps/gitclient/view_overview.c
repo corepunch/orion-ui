@@ -188,14 +188,39 @@ static int row_cmp(const void *pa, const void *pb) {
   return strcasecmp(a->dir, b->dir);
 }
 
-void gc_overview_refresh(void) {
-  gc_state_t *gc = g_gc; if (!gc) return;
-  gc->checkout_count = git_workspace_checkouts(gc->workspace, gc->workspace_count, gc->checkouts, GC_MAX_CHECKOUTS);
+static void overview_show(void) {
+  gc_state_t *gc = g_gc;
   qsort(gc->checkouts, (size_t)gc->checkout_count, sizeof(gc->checkouts[0]), row_cmp);
   rebuild_summary();
   fill_rows();
   if (gc->overview_page_win) window_layout_sync(gc->overview_page_win);   // the strip's height comes from its children
   if (gc->tab == GC_TAB_OVERVIEW) gc_update_status();
+}
+
+void gc_overview_refresh_sync(void) {
+  gc_state_t *gc = g_gc; if (!gc) return;
+  gc->checkout_count = git_workspace_checkouts(gc->workspace, gc->workspace_count, gc->checkouts, GC_MAX_CHECKOUTS);
+  overview_show();
+}
+
+void gc_overview_refresh(void) {
+  gc_state_t *gc = g_gc; if (!gc) return;
+  if (gc->overview_loading) { gc->overview_stale = true; return; }
+  if (gc->workspace_count <= 0) { gc->checkout_count = 0; overview_show(); return; }
+  if (git_workspace_checkouts_async(gc->workspace, gc->workspace_count, gc->main_win)) gc->overview_loading = true;
+  else { fprintf(stderr, "[gc] background load not started (roots=%d); reading on the UI thread\n", gc->workspace_count); fflush(stderr); gc_overview_refresh_sync(); }
+}
+
+void gc_overview_loaded(git_workspace_result_t *res) {
+  gc_state_t *gc = g_gc; if (!gc) { free(res); return; }
+  gc->overview_loading = false;
+  if (res) {
+    gc->checkout_count = res->count;
+    memcpy(gc->checkouts, res->rows, (size_t)res->count * sizeof(gc->checkouts[0]));
+    free(res);
+    overview_show();
+  }
+  if (gc->overview_stale) { gc->overview_stale = false; gc_overview_refresh(); }
 }
 
 static const db_checkout_t *selected_checkout(void) {
@@ -235,7 +260,11 @@ bool gc_overview_remove_selected(void) {
   if (!gc_workspace_remove(root)) {
     fprintf(stderr, "[gc] remove from workspace: %s is not a workspace root\n", root); fflush(stderr); return false;
   }
-  gc_overview_refresh();
+  gc_state_t *gc = g_gc;
+  int kept = 0;   // the cached rows answer at once; no git call is needed to forget a root
+  for (int i = 0; i < gc->checkout_count; i++) if (strcmp(gc->checkouts[i].root, root)) gc->checkouts[kept++] = gc->checkouts[i];
+  gc->checkout_count = kept;
+  overview_show();
   return true;
 }
 

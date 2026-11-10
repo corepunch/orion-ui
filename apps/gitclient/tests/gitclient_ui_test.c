@@ -713,7 +713,7 @@ void test_overview_table_filters_and_removes(void) {
   snprintf(g_test_state.workspace[0], 512, "%s/missing-a", s_repo);
   snprintf(g_test_state.workspace[1], 512, "%s", s_repo);
   g_test_state.workspace_count = 2;
-  gc_overview_refresh();
+  gc_overview_refresh_sync();
   ASSERT_EQUAL(g_test_state.checkout_count, 2);
   ASSERT_EQUAL(table_rows(g_test_state.checkouts_win), 2);
 

@@ -1081,6 +1081,27 @@ int git_workspace_checkouts(char (*roots)[512], int root_count, git_summary_t *o
   return n;
 }
 
+typedef struct { char roots[GC_MAX_RECENT_REPOS][512]; int count; window_t *notify_win; } git_workspace_args_t;
+
+// One worker reads every checkout (some dozens of git calls); the UI thread keeps the last rows until it posts.
+static GIT_THREAD_RET git_workspace_worker(void *arg) {
+  git_workspace_args_t *a = arg;
+  git_workspace_result_t *res = calloc(1, sizeof(*res));
+  if (res) res->count = git_workspace_checkouts(a->roots, a->count, res->rows, GC_MAX_CHECKOUTS);
+  else { fprintf(stderr, "[git] workspace result allocation failed\n"); fflush(stderr); }
+  post_message(a->notify_win, evWorkspaceLoaded, 0, res);
+  free(a); return 0;
+}
+
+bool git_workspace_checkouts_async(char (*roots)[512], int root_count, window_t *notify_win) {
+  if (!notify_win || root_count <= 0 || root_count > GC_MAX_RECENT_REPOS) return false;
+  git_workspace_args_t *a = calloc(1, sizeof(*a)); if (!a) return false;
+  a->notify_win = notify_win; a->count = root_count;
+  memcpy(a->roots, roots, (size_t)root_count * sizeof(a->roots[0]));
+  git_thread_t t; if (!git_thread_create(&t, git_workspace_worker, a)) { free(a); return false; }
+  git_thread_detach(t); return true;
+}
+
 typedef struct { char cmds[GC_MAX_RECENT_REPOS][GC_CMD_BUF_SIZE]; int count; window_t *notify_win; } git_fetch_all_args_t;
 
 static GIT_THREAD_RET git_fetch_all_worker(void *arg) {

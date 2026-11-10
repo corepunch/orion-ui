@@ -347,6 +347,10 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
       return true;
     }
 
+    case evWorkspaceLoaded:
+      gc_overview_loaded((git_workspace_result_t *)lparam);
+      return true;
+
     case evOpenRepo:
       if (lparam)
         gc_add_repo((const char *)lparam);
