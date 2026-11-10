@@ -152,16 +152,11 @@
 // Menu geometry follows the more generous spacing of native desktop menus.
 #define MENU_SEP_H              9
 
-// Text-to-capsule padding, shared by menu-bar labels and popup items.
-#define MENU_CAPSULE_PAD        12
+// Capsule inset, still used by TabView.
 #define MENU_CAPSULE_INSET      4
-#define MENU_SIDE_PAD           (1 + MENU_CAPSULE_INSET + MENU_CAPSULE_PAD)
 
 // Menu minimum popup width
 #define MENU_MIN_W              180
-
-// Menu top-level label padding
-#define MENU_LABEL_PAD          16
 
 // Menu gap between label and right-aligned hotkey
 #define MENU_HOTKEY_GAP         16

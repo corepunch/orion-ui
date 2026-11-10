@@ -31,7 +31,6 @@ typedef struct {
   menu_def_t      *menus;       // shallow copy of the menu_def_t array
   bool             vertical;
   int              count;       // number of menus
-  int             *menu_x;      // x offset for each label (window-local)
   window_t        *open_popup;  // currently visible dropdown, or NULL
   int              active_idx;  // index of the currently open menu label (-1 if none)
   window_t        *restore_pressed;
@@ -91,6 +90,9 @@ static const char *item_shortcut(const menu_item_t *it, const accel_table_t *acc
   return item_label_shortcut(it->label);
 }
 
+// Text inset of a popup row; the style sheet owns it.
+static int menu_side_pad(void) { return ui_px("Menu::item", "padding-left"); }
+
 static int popup_items_height(const menu_item_t *items, int item_count) {
   int h = MENU_START_Y * 2; // top and bottom padding
   for (int i = 0; i < item_count; i++)
@@ -104,7 +106,7 @@ static int popup_items_width(const menu_item_t *items, int item_count,
   for (int i = 0; i < item_count; i++) {
     const menu_item_t *it = &items[i];
     if (!menu_item_is_separator(it)) {
-      int lw = item_label_width(it->label) + MENU_SIDE_PAD * 2;
+      int lw = item_label_width(it->label) + menu_side_pad() * 2;
       if (menu_item_has_submenu(it)) {
         lw += text_strwidth("MenuBar", ">") + MENU_HOTKEY_GAP;
       } else {
@@ -223,14 +225,14 @@ static result_t popup_proc(window_t *win, uint32_t msg,
                            state, "MenuBar");
           if (menu_item_has_submenu(it)) {
             draw_text_clipped("MenuBar", ">",
-                                   &(irect16_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},
+                                   &(irect16_t){0, y, win->frame.w - menu_side_pad(), MENU_ITEM_H},
                                    hotkey_col, TEXT_ALIGN_RIGHT);
           } else {
             char hkbuf[128];
             const char *shortcut = item_shortcut(it, pd->accel, hkbuf, sizeof(hkbuf));
             if (shortcut) {
               draw_text_clipped("MenuBar", shortcut,
-                                     &(irect16_t){0, y, win->frame.w - MENU_SIDE_PAD, MENU_ITEM_H},
+                                     &(irect16_t){0, y, win->frame.w - menu_side_pad(), MENU_ITEM_H},
                                      hotkey_col, TEXT_ALIGN_RIGHT);
             }
           }
@@ -420,17 +422,28 @@ static void open_submenu_popup(window_t *popup, popup_data_t *pd, int index) {
   if (pd->child_popup && is_window(pd->child_popup))
     close_popup_tree(pd->child_popup);
   pd->child_popup = NULL;
-  int px = popup->frame.x + popup->frame.w - 2;
+  int px = popup->frame.x + popup->frame.w - ui_px("Menu", "--submenu-overlap");
   int py = popup->frame.y + popup_item_y(pd, index);
   pd->child_popup = create_popup_window(pd->menubar, popup,
                                         it->submenu_items, it->submenu_count,
                                         pd->accel, px, py, pd->notify_win);
 }
 
+// The one place a menu bar's geometry is computed. Item `index` (0..count)
+// is laid out from the style sheet; index == count yields the zero-width slot
+// after the last item, whose x is where the content ends.
 static irect16_t menubar_item_rect(window_t *win, menubar_data_t *data, int index) {
-  int grip = win->dock ? (data->vertical ? ui_px("Toolbar::grip", "width") : ui_px("Toolbar::grip", "width")) : 0;
-  if (data->vertical) return R(0, grip + index * ui_px(ui_selector(win, "MenuBar"), "height"), win->frame.w, ui_px(ui_selector(win, "MenuBar"), "height"));
-  return R(data->menu_x[index] - 2 + grip, 0, text_strwidth(ui_selector(win, "MenuBar"), data->menus[index].label) + MENU_LABEL_PAD, ui_px(ui_selector(win, "MenuBar"), "height"));
+  const char *bar = ui_selector(win, "MenuBar");
+  int h = ui_px(bar, "height"), grip = win->dock ? ui_px("Toolbar::grip", "width") : 0;
+  if (data->vertical) return R(0, grip + index * h, win->frame.w, h);
+  int pad = ui_px(ui_selector(win, "MenuBar::item"), "padding-left");
+  int x = grip + ui_px(bar, "padding");
+  for (int i = 0; i < index; i++) x += text_strwidth(bar, data->menus[i].label) + 2 * pad;
+  return R(x, 0, index < data->count ? text_strwidth(bar, data->menus[index].label) + 2 * pad : 0, h);
+}
+
+static int menubar_content_width(window_t *win, menubar_data_t *data) {
+  return menubar_item_rect(win, data, data->count).x + ui_px(ui_selector(win, "MenuBar"), "padding");
 }
 
 static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
@@ -496,19 +509,11 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       const menu_def_t *defs = (const menu_def_t *)lparam;
       if (!data) return false;
       free(data->menus);
-      free(data->menu_x);
       data->count  = count;
       data->menus  = malloc(sizeof(menu_def_t) * count);
-      data->menu_x = malloc(sizeof(int)        * count);
-      if (!data->menus || !data->menu_x) return false;
+      if (!data->menus) return false;
       memcpy(data->menus, defs, sizeof(menu_def_t) * count);
-      // Compute label x positions (window-local)
-      int x = 4;
-      for (int i = 0; i < count; i++) {
-        data->menus[i].label = ui_tr(defs[i].label);
-        data->menu_x[i] = x;
-        x += text_strwidth(ui_selector(win, "MenuBar"), data->menus[i].label) + MENU_LABEL_PAD;
-      }
+      for (int i = 0; i < count; i++) data->menus[i].label = ui_tr(defs[i].label);
       invalidate_window(win);
       return true;
     }
@@ -526,14 +531,14 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
     case evDockMeasure: {
       if (!data || !lparam) return false;
       int width = 0;
-      for (int i = 0; i < data->count; i++) width = MAX(width, text_strwidth(ui_selector(win, "MenuBar"), data->menus[i].label) + MENU_LABEL_PAD);
+      for (int i = 0; i < data->count; i++) width = MAX(width, menubar_item_rect(win, data, i).w);
       *(ipoint16_t *)lparam = (ipoint16_t){MAX(80, width),
         data->vertical ? ui_px("Toolbar::grip", "width") + data->count * ui_px(ui_selector(win, "MenuBar"), "height") : ui_px(ui_selector(win, "MenuBar"), "height")};
       return true;
     }
     case kMenuBarMessageGetContentWidth:
-      if (!data || !data->count) return 4;
-      return (win->dock ? ui_px("Toolbar::grip", "width") : 0) + data->menu_x[data->count - 1] + text_strwidth(ui_selector(win, "MenuBar"), data->menus[data->count - 1].label) + MENU_LABEL_PAD;
+      if (!data) return 0;
+      return menubar_content_width(win, data);
 
     case evThemeChanged:
       if (!win->dock && !win->parent && win->frame.h != ui_px(ui_selector(win, "MenuBar"), "height"))
@@ -559,9 +564,8 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (data->active_idx >= 0 && data->active_idx < data->count) {
         int i = data->active_idx;
         irect16_t selection = menubar_item_rect(win, data, i);
-        // The face is the label plus the item's --face-pad; it may overlap neighbours, so it is painted behind all labels.
-        selection = rect_center(selection, text_strwidth(ui_selector(win, "MenuBar"), data->menus[i].label), selection.h);
-        selection = rect_inset_xy(selection, -ui_px(ui_selector(win, "Menu::item"), "--face-pad"), 0);
+        // Capsule padding can overlap adjacent hit targets; paint behind all labels.
+        selection = rect_inset_xy(selection, -ui_px(ui_selector(win, "Menu::item"), "--overhang"), 0);
         theme_draw_in(win, THEME_PART_MENU_ITEM, selection, CTRL_SELECTED);
       }
       for (int i = 0; i < data->count; i++) {
@@ -623,7 +627,6 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (data) {
         close_popup(win, data);
         free(data->menus);
-        free(data->menu_x);
         free(data);
         win->userdata = NULL;
       }
