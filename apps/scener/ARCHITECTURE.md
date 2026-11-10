@@ -144,7 +144,13 @@ Implements the classic vertex-shader-free algorithm:
 3. Close each volume with finite light caps and infinite dark caps.
 4. Store the sides and caps as a homogeneous triangle list in `ShadowVolume.verts`.
 
-`scene_build_all_shadow_volumes()` builds a shadow volume per light for every shadow-casting object.
+Volumes are built on demand, as Doom 3 builds interactions: `scene_build_all_shadow_volumes()` only marks the cached ones stale
+(`Scene.shadowRev`), and `render.c` builds the volume of a (light, caster) pair the first time a view needs it and keeps it in
+a GPU buffer. Each light follows Doom 3's `R_AddSingleLight`: the screen rectangle of its clipped bounds (a point light's
+`range` box, else the scene) drops the light when empty; only surfaces inside it are lit, each under its own `glScissor`; a
+light with nothing lit on screen draws no shadows; a caster is drawn only if the box its shadow can reach (`R_ShadowBounds`)
+meets the lit rectangle, and under that scissor. Not taken from Doom 3: the depth-bounds test (no such extension on
+macOS OpenGL), static pre-light volumes, and z-pass for volumes the camera cannot be inside (all volumes are z-fail).
 
 Shadow construction depends on the sealed-mesh invariant. `mesh_build_edges()` welds coincident positions and records the two adjacent triangles for each edge. `build_shadow_volume()` compares those two face directions against the light; an edge is a silhouette only when one face points toward the light and the other points away. It extrudes only those silhouette edges, then uses the original mesh triangles as the finite and infinite caps for Z-fail.
 

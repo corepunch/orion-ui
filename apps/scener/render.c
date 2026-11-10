@@ -255,21 +255,6 @@ static void draw_mesh_flat_gradient_vbo(Mesh *m, vec3 color, int gradient, vec3 
     free(verts);
 }
 
-static void draw_shadow_volume_vbo(ShadowVolume *sv) {
-    ensure_buffers();
-    ensure_shadow_prog();
-    if (!s_shadow_prog || sv->nverts <= 0) return;
-
-    glUseProgram(s_shadow_prog);
-    glBindVertexArray(s_shadow_vao);
-    glBindBuffer(GL_ARRAY_BUFFER, s_shadow_vbo);
-    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(sv->nverts * sizeof(ShadowVertex)), sv->verts, GL_DYNAMIC_DRAW);
-    glDrawArrays(GL_TRIANGLES, 0, sv->nverts);
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glUseProgram(0);
-}
-
 static void draw_lines_vbo(OverlayLine *lines, int n, int hide_chars, int hide_lights,
                            const char *active_camera) {
     ensure_buffers();
@@ -327,23 +312,143 @@ static void draw_stencil_debug_quad(mat4 proj, mat4 view) {
     glUseProgram(0);
 }
 
-/* The screen rectangle (pixels, clamped to the viewport) that a point light with a range can touch: the
-   projected box around its sphere. False when the box reaches the camera plane, where no rectangle is safe. */
-static int light_scissor(const Light *L, mat4 viewProj, int w, int h, int rect[4]) {
-    if (L->isDirectional || L->range <= 0) return 0;
-    float x0 = INFINITY, y0 = INFINITY, x1 = -INFINITY, y1 = -INFINITY;
-    for (int c = 0; c < 8; c++) {
-        vec3 p = v3(L->pos.x + ((c & 1) ? L->range : -L->range), L->pos.y + ((c & 2) ? L->range : -L->range), L->pos.z + ((c & 4) ? L->range : -L->range));
-        const float *m = viewProj.m;
-        float cw = m[3] * p.x + m[7] * p.y + m[11] * p.z + m[15];
-        if (cw <= 1e-4f) return 0;
-        float sx = (m[0] * p.x + m[4] * p.y + m[8] * p.z + m[12]) / cw, sy = (m[1] * p.x + m[5] * p.y + m[9] * p.z + m[13]) / cw;
-        float px = (sx * 0.5f + 0.5f) * (float)w, py = (sy * 0.5f + 0.5f) * (float)h;
-        x0 = fminf(x0, px); x1 = fmaxf(x1, px); y0 = fminf(y0, py); y1 = fmaxf(y1, py);
+/* ---- Doom 3 style light culling helpers ---- */
+
+typedef struct { int x0, y0, x1, y1; } ScreenRect;   /* pixels, half open, origin bottom left */
+static int rect_empty(ScreenRect r) { return r.x1 <= r.x0 || r.y1 <= r.y0; }
+static ScreenRect rect_isect(ScreenRect a, ScreenRect b) {
+    ScreenRect r = { a.x0 > b.x0 ? a.x0 : b.x0, a.y0 > b.y0 ? a.y0 : b.y0, a.x1 < b.x1 ? a.x1 : b.x1, a.y1 < b.y1 ? a.y1 : b.y1 };
+    return r;
+}
+static ScreenRect rect_union(ScreenRect a, ScreenRect b) {
+    if (rect_empty(a)) return b;
+    if (rect_empty(b)) return a;
+    ScreenRect r = { a.x0 < b.x0 ? a.x0 : b.x0, a.y0 < b.y0 ? a.y0 : b.y0, a.x1 > b.x1 ? a.x1 : b.x1, a.y1 > b.y1 ? a.y1 : b.y1 };
+    return r;
+}
+static void set_scissor(ScreenRect r) { glScissor(r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0); }
+
+/* The pixels a world box can touch. Its edges are clipped to the near plane before projecting, so a box
+   around or partly behind the camera still gets the right rectangle (Doom 3's ProjectedFullyClippedBounds);
+   empty when the box is wholly behind the camera or off screen. */
+static ScreenRect box_screen_rect(mat4 viewProj, vec3 lo, vec3 hi, int w, int h) {
+    const float *m = viewProj.m;
+    float c[8][4];
+    for (int i = 0; i < 8; i++) {
+        float x = (i & 1) ? hi.x : lo.x, y = (i & 2) ? hi.y : lo.y, z = (i & 4) ? hi.z : lo.z;
+        c[i][0] = m[0] * x + m[4] * y + m[8] * z + m[12];
+        c[i][1] = m[1] * x + m[5] * y + m[9] * z + m[13];
+        c[i][2] = m[2] * x + m[6] * y + m[10] * z + m[14];
+        c[i][3] = m[3] * x + m[7] * y + m[11] * z + m[15];
     }
-    int ix0 = (int)floorf(fmaxf(x0, 0.0f)), iy0 = (int)floorf(fmaxf(y0, 0.0f)), ix1 = (int)ceilf(fminf(x1, (float)w)), iy1 = (int)ceilf(fminf(y1, (float)h));
-    rect[0] = ix0; rect[1] = iy0; rect[2] = ix1 > ix0 ? ix1 - ix0 : 0; rect[3] = iy1 > iy0 ? iy1 - iy0 : 0;
-    return 1;
+    float x0 = INFINITY, y0 = INFINITY, x1 = -INFINITY, y1 = -INFINITY;
+    for (int i = 0; i < 8; i++) for (int bit = 1; bit <= 4; bit <<= 1) {
+        if (i & bit) continue;
+        float a[4], b[4];
+        memcpy(a, c[i], sizeof(a)); memcpy(b, c[i | bit], sizeof(b));
+        float da = a[2] + a[3], db = b[2] + b[3];   /* >= 0 is in front of the near plane */
+        if (da < 0 && db < 0) continue;
+        if (da < 0) { float t = da / (da - db); for (int k = 0; k < 4; k++) a[k] += (b[k] - a[k]) * t; }
+        else if (db < 0) { float t = db / (db - da); for (int k = 0; k < 4; k++) b[k] += (a[k] - b[k]) * t; }
+        float *p[2] = { a, b };
+        for (int k = 0; k < 2; k++) {
+            float iw = 1.0f / fmaxf(p[k][3], 1e-6f);
+            float sx = p[k][0] * iw, sy = p[k][1] * iw;
+            x0 = fminf(x0, sx); x1 = fmaxf(x1, sx); y0 = fminf(y0, sy); y1 = fmaxf(y1, sy);
+        }
+    }
+    ScreenRect r = { 0, 0, 0, 0 };
+    if (x0 > x1) return r;
+    r.x0 = (int)floorf(fmaxf((x0 * 0.5f + 0.5f) * (float)w, 0.0f)) - 1;  r.x1 = (int)ceilf(fminf((x1 * 0.5f + 0.5f) * (float)w, (float)w)) + 1;
+    r.y0 = (int)floorf(fmaxf((y0 * 0.5f + 0.5f) * (float)h, 0.0f)) - 1;  r.y1 = (int)ceilf(fminf((y1 * 0.5f + 0.5f) * (float)h, (float)h)) + 1;
+    ScreenRect full = { 0, 0, w, h };
+    return rect_isect(r, full);
+}
+
+/* A light's volume of influence: the range box of a point light, else the scene; origin is where its rays start. */
+static void light_bounds(const Light *L, vec3 sceneLo, vec3 sceneHi, vec3 *lo, vec3 *hi, vec3 *origin) {
+    if (!L->isDirectional && L->range > 0) {
+        *lo = v3(L->pos.x - L->range, L->pos.y - L->range, L->pos.z - L->range);
+        *hi = v3(L->pos.x + L->range, L->pos.y + L->range, L->pos.z + L->range);
+        *origin = L->pos;
+        return;
+    }
+    *lo = sceneLo; *hi = sceneHi;
+    *origin = L->isDirectional ? vscale(L->dir, -10000.0f) : L->pos;
+}
+
+/* Doom 3's R_ShadowBounds: the model's box stretched, on each axis where the light origin is not
+   beyond it, out to the light's bounds. Everything the caster's shadow can reach lies inside. */
+static void shadow_bounds(vec3 mlo, vec3 mhi, vec3 llo, vec3 lhi, vec3 o, vec3 *slo, vec3 *shi) {
+    *slo = v3(mlo.x > o.x ? mlo.x : llo.x, mlo.y > o.y ? mlo.y : llo.y, mlo.z > o.z ? mlo.z : llo.z);
+    *shi = v3(o.x > mhi.x ? mhi.x : lhi.x, o.y > mhi.y ? mhi.y : lhi.y, o.z > mhi.z ? mhi.z : lhi.z);
+}
+
+/* Shadow volumes on the GPU, one buffer per (light, caster), built the first time a view needs them and kept
+   until the scene says its volumes are stale (Doom 3's interactions and vertex cache). */
+static GLuint *s_part; static int *s_partVerts; static int s_partLights, s_partObjs; static const Scene *s_partScene; static unsigned s_partRev;
+static void shadow_cache_sync(Scene *s) {
+    ensure_buffers();
+    if (s_partScene == s && s_partRev == s->shadowRev && s_partLights == s->nlights && s_partObjs == s->nobjs) return;
+    if (s_part) {
+        size_t n = (size_t)s_partLights * (size_t)s_partObjs;
+        for (size_t i = 0; i < n; i++) if (s_part[i]) glDeleteBuffers(1, &s_part[i]);
+    }
+    free(s_part); free(s_partVerts);
+    size_t n = (size_t)s->nlights * (size_t)s->nobjs;
+    s_part = calloc(n ? n : 1, sizeof(GLuint)); s_partVerts = malloc((n ? n : 1) * sizeof(int));
+    for (size_t i = 0; i < n; i++) s_partVerts[i] = -1;
+    s_partLights = s->nlights; s_partObjs = s->nobjs; s_partScene = s; s_partRev = s->shadowRev;
+}
+
+static int shadow_part(Scene *s, int li, int oi) {
+    size_t idx = (size_t)li * (size_t)s->nobjs + (size_t)oi;
+    if (s_partVerts[idx] < 0) {
+        const Light *L = &s->lights[li];
+        ShadowVolume sv;
+        build_shadow_volume(&s->objs[oi].mesh, L->pos, L->dir, L->isDirectional, &sv);
+        s_partVerts[idx] = sv.nverts;
+        if (sv.nverts > 0) {
+            glGenBuffers(1, &s_part[idx]);
+            glBindBuffer(GL_ARRAY_BUFFER, s_part[idx]);
+            glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)((size_t)sv.nverts * sizeof(ShadowVertex)), sv.verts, GL_STATIC_DRAW);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+        }
+        free(sv.verts);
+    }
+    return s_partVerts[idx];
+}
+
+/* Draws the volume of one caster for one light, bound and sent from its own buffer. */
+static void draw_shadow_part(Scene *s, int li, int oi) {
+    int n = shadow_part(s, li, oi);
+    if (n <= 0) return;
+    glBindBuffer(GL_ARRAY_BUFFER, s_part[(size_t)li * (size_t)s->nobjs + (size_t)oi]);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(ShadowVertex), (void *)0);
+    glDrawArrays(GL_TRIANGLES, 0, n);
+}
+
+static void shadow_pass_begin(void) {
+    ensure_shadow_prog();
+    glUseProgram(s_shadow_prog);
+    glBindVertexArray(s_shadow_vao);
+    glEnableVertexAttribArray(0);
+}
+static void shadow_pass_end(void) {
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glUseProgram(0);
+}
+
+static void draw_lit_surface(Scene *s, int i) {
+    SceneObj *o = &s->objs[i];
+    shader_set_material(o->color, o->shininess, o->specular, o->metallic);
+    shader_set_ramp(o->ramp >= 0 ? s->ramps[o->ramp].shade : NULL);
+    shader_set_gradient(o->gradient, o->gradFrom, o->gradTo);
+#ifdef SCENER_USE_TEXTURES
+    shader_set_texture(o->texIndex >= 0 ? s->materialTextures[o->texIndex] : s->whiteTexture);
+#endif
+    shader_draw_mesh(&o->mesh);
 }
 
 void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
@@ -427,20 +532,63 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
         glDepthFunc(GL_LESS);
     }
 
+    /* Lights, the way Doom 3 does them (tr_frontend_addlights.cpp): each light gets the screen rectangle of its
+       clipped bounds and drops out when that is empty; only surfaces inside it are lit, each under its own
+       scissor; a light with no lit surface on screen draws no shadows; shadow volumes are scissored to the
+       reach of their caster (R_ShadowBounds) and kept in one buffer per light instead of being re-sent. */
+    vec3 sceneLo = v3(INFINITY, INFINITY, INFINITY), sceneHi = v3(-INFINITY, -INFINITY, -INFINITY);
+    for (int i = 0; i < s->nobjs; i++) {
+        if (!s->objs[i].mesh.nverts) continue;
+        sceneLo = v3(fminf(sceneLo.x, s->objs[i].bmin.x), fminf(sceneLo.y, s->objs[i].bmin.y), fminf(sceneLo.z, s->objs[i].bmin.z));
+        sceneHi = v3(fmaxf(sceneHi.x, s->objs[i].bmax.x), fmaxf(sceneHi.y, s->objs[i].bmax.y), fmaxf(sceneHi.z, s->objs[i].bmax.z));
+    }
+    static int *litIdx, *castIdx; static ScreenRect *litRect, *castRect; static int litCap;
+    if (litCap < s->nobjs) {
+        free(litIdx); free(litRect); free(castIdx); free(castRect);
+        litIdx = malloc((size_t)s->nobjs * sizeof(int)); litRect = malloc((size_t)s->nobjs * sizeof(ScreenRect));
+        castIdx = malloc((size_t)s->nobjs * sizeof(int)); castRect = malloc((size_t)s->nobjs * sizeof(ScreenRect)); litCap = s->nobjs;
+    }
+    shadow_cache_sync(s);
+
     for (int li = 0; li < s->nlights; li++) {
         Light *L = &s->lights[li];
         shader_set_light(L);
-        int scissor[4], scissored = light_scissor(L, viewProj, w, h, scissor);
-        if (scissored) {   /* the light cannot reach outside this rectangle: stencil, volumes and lit draws stay in it */
-            glEnable(GL_SCISSOR_TEST);
-            glScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
-        }
+        vec3 lightLo, lightHi, lightOrigin;
+        light_bounds(L, sceneLo, sceneHi, &lightLo, &lightHi, &lightOrigin);
+        ScreenRect lightRect = box_screen_rect(viewProj, lightLo, lightHi, w, h);
+        if (rect_empty(lightRect)) continue;   /* the light cannot be seen from here */
 
-        int drawShadows = !(flags & DBG_NO_SHADOWS) && L->castsShadow && s->svols[li].nverts > 0;
+        int nlit = 0; ScreenRect litUnion = {0, 0, 0, 0};
+        for (int i = 0; i < s->nobjs; i++) {
+            SceneObj *o = &s->objs[i];
+            if (!o->renderable || o->unlit || !light_reaches_obj(L, o)) continue;
+            ScreenRect r = rect_isect(box_screen_rect(viewProj, o->bmin, o->bmax, w, h), lightRect);
+            if (rect_empty(r)) continue;
+            litIdx[nlit] = i; litRect[nlit++] = r; litUnion = rect_union(litUnion, r);
+        }
+        if (!nlit) continue;   /* nothing it lights is on screen, so its shadows would be invisible too */
+        ScreenRect lightScissor = rect_isect(lightRect, litUnion);
+
+        /* casters whose shadow can reach the lit part of the screen */
+        int ncast = 0;
+        if (!(flags & DBG_NO_SHADOWS) && L->castsShadow) {
+            for (int i = 0; i < s->nobjs; i++) {
+                SceneObj *o = &s->objs[i];
+                if (!o->castsShadow || !o->mesh.nverts || !light_reaches_obj(L, o)) continue;
+                vec3 sLo, sHi;
+                shadow_bounds(o->bmin, o->bmax, lightLo, lightHi, lightOrigin, &sLo, &sHi);
+                ScreenRect r = rect_isect(box_screen_rect(viewProj, sLo, sHi, w, h), lightScissor);
+                if (rect_empty(r)) continue;   /* its shadow cannot reach anything on screen */
+                castIdx[ncast] = i; castRect[ncast++] = r;
+            }
+        }
+        int drawShadows = ncast > 0;
 #ifndef USE_ZPASS
         drawShadows = drawShadows && shadows_supported();
 #endif
+        glEnable(GL_SCISSOR_TEST);
         if (drawShadows) {
+            set_scissor(lightScissor);
             glClear(GL_STENCIL_BUFFER_BIT);
             shader_unbind();
             glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -450,7 +598,9 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
             glStencilFunc(GL_ALWAYS, 0, 0xFF);
             glDisable(GL_CULL_FACE);
             begin_shadow_pass();
-            draw_shadow_volume_vbo(&s->svols[li]);
+            shadow_pass_begin();
+            for (int k = 0; k < ncast; k++) { set_scissor(castRect[k]); draw_shadow_part(s, li, castIdx[k]); }
+            shadow_pass_end();
             end_shadow_pass();
 
             if (flags & DBG_WIRE_SHADOWVOL) {
@@ -460,7 +610,9 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
                 glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
                 glDepthFunc(GL_LEQUAL);
                 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-                draw_shadow_volume_vbo(&s->svols[li]);
+                shadow_pass_begin();
+                for (int k = 0; k < ncast; k++) { set_scissor(castRect[k]); draw_shadow_part(s, li, castIdx[k]); }
+                shadow_pass_end();
                 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
                 glDisable(GL_POLYGON_OFFSET_LINE);
                 glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -473,44 +625,18 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
             glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
             glStencilFunc(GL_EQUAL, 0, 0xFF);
             glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-            glDepthFunc(GL_LEQUAL);
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_ONE, GL_ONE);
-            for (int i = 0; i < s->nobjs; i++) {
-                if (!s->objs[i].renderable || s->objs[i].unlit || !light_reaches_obj(L, &s->objs[i])) continue;
-                shader_set_material(s->objs[i].color, s->objs[i].shininess, s->objs[i].specular, s->objs[i].metallic);
-                shader_set_ramp(s->objs[i].ramp >= 0 ? s->ramps[s->objs[i].ramp].shade : NULL);
-                shader_set_gradient(s->objs[i].gradient, s->objs[i].gradFrom, s->objs[i].gradTo);
-#ifdef SCENER_USE_TEXTURES
-                shader_set_texture(s->objs[i].texIndex >= 0
-                                   ? s->materialTextures[s->objs[i].texIndex]
-                                   : s->whiteTexture);
-#endif
-                shader_draw_mesh(&s->objs[i].mesh);
-            }
-            glDisable(GL_BLEND);
-            glDisable(GL_STENCIL_TEST);
-            glDepthFunc(GL_LESS);
-        } else {
-            glDepthFunc(GL_LEQUAL);
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_ONE, GL_ONE);
-            for (int i = 0; i < s->nobjs; i++) {
-                if (!s->objs[i].renderable || s->objs[i].unlit || !light_reaches_obj(L, &s->objs[i])) continue;
-                shader_set_material(s->objs[i].color, s->objs[i].shininess, s->objs[i].specular, s->objs[i].metallic);
-                shader_set_ramp(s->objs[i].ramp >= 0 ? s->ramps[s->objs[i].ramp].shade : NULL);
-                shader_set_gradient(s->objs[i].gradient, s->objs[i].gradFrom, s->objs[i].gradTo);
-#ifdef SCENER_USE_TEXTURES
-                shader_set_texture(s->objs[i].texIndex >= 0
-                                   ? s->materialTextures[s->objs[i].texIndex]
-                                   : s->whiteTexture);
-#endif
-                shader_draw_mesh(&s->objs[i].mesh);
-            }
-            glDisable(GL_BLEND);
-            glDepthFunc(GL_LESS);
         }
-        if (scissored) glDisable(GL_SCISSOR_TEST);
+        glDepthFunc(GL_LEQUAL);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE);
+        for (int k = 0; k < nlit; k++) {
+            set_scissor(litRect[k]);
+            draw_lit_surface(s, litIdx[k]);
+        }
+        glDisable(GL_BLEND);
+        if (drawShadows) glDisable(GL_STENCIL_TEST);
+        glDepthFunc(GL_LESS);
+        glDisable(GL_SCISSOR_TEST);
     }
 
     shader_unbind();

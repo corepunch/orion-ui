@@ -640,7 +640,7 @@ void scene_free(Scene *s){
 		for(int j=0;j<s->objs[i].nshadowParts;j++) free(s->objs[i].shadowParts[j].verts);
 		free(s->objs[i].shadowParts);
 	}
-	for(int i=0;i<s->nlights;i++) free(s->svols[i].verts);
+	for(int i=0;i<s->nlights;i++) shadow_volume_release(&s->svols[i]);
 	for(int i=0;i<s->nshapes;i++) shape2d_free(&s->shapes[i]);
 	for(int i=0;i<s->nnegativeProfiles;i++) shape2d_free(&s->negativeProfiles[i].profile);
 	free(s->negativeProfiles);
@@ -2841,7 +2841,7 @@ static void scene_clear_view(Scene *s){
 		for(int j=0;j<s->objs[i].nshadowParts;j++) free(s->objs[i].shadowParts[j].verts);
 		free(s->objs[i].shadowParts);
 	}
-	for(int i=0;i<s->nlights;i++) if(s->svols) free(s->svols[i].verts);
+	for(int i=0;i<s->nlights;i++) if(s->svols) shadow_volume_release(&s->svols[i]);
 	for(int i=0;i<s->nshapes;i++) shape2d_free(&s->shapes[i]);
 	for(int i=0;i<s->nnegativeProfiles;i++) shape2d_free(&s->negativeProfiles[i].profile);
 	free(s->negativeProfiles);

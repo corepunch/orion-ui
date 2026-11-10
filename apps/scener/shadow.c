@@ -53,35 +53,9 @@ void build_shadow_volume(Mesh *m, vec3 lightPos, vec3 lightDir, int isDir, Shado
 	#undef PUSHD
 }
 
-static void scene_combine_shadow_parts(Scene *s,int li){
-	int total=0;
-	for(int oi=0;oi<s->nobjs;oi++){
-		SceneObj *o=&s->objs[oi];
-		if(li<o->nshadowParts) total+=o->shadowParts[li].nverts;
-	}
-	if(total==0){ free(s->svols[li].verts); memset(&s->svols[li],0,sizeof(ShadowVolume)); return; }
-	if(s->svols[li].cverts < total){
-		free(s->svols[li].verts);
-		s->svols[li].verts=malloc((size_t)total*sizeof(ShadowVertex));
-		s->svols[li].cverts=total;
-	}
-	s->svols[li].nverts=0;
-	for(int oi=0;oi<s->nobjs;oi++){
-		SceneObj *o=&s->objs[oi];
-		if(li>=o->nshadowParts) continue;
-		ShadowVolume *part=&o->shadowParts[li];
-		if(part->nverts>0){
-			memcpy(s->svols[li].verts+s->svols[li].nverts,part->verts,(size_t)part->nverts*sizeof(ShadowVertex));
-			s->svols[li].nverts+=part->nverts;
-		}
-	}
-}
-
-static void scene_resize_shadow_parts(SceneObj *o,int nlights){
-	for(int i=0;i<o->nshadowParts;i++) free(o->shadowParts[i].verts);
-	free(o->shadowParts);
-	o->shadowParts=calloc((size_t)nlights,sizeof(ShadowVolume));
-	o->nshadowParts=nlights;
+void shadow_volume_release(ShadowVolume *sv){
+	free(sv->verts); free(sv->obj); free(sv->first); free(sv->count);
+	memset(sv,0,sizeof(*sv));
 }
 
 void scene_obj_update_bounds(SceneObj *o){
@@ -99,30 +73,14 @@ int light_reaches_obj(const Light *L,const SceneObj *o){
 	return dx*dx+dy*dy+dz*dz<=L->range*L->range;
 }
 
-static void scene_build_object_shadow_part(Scene *s,SceneObj *o,int li){
-	free(o->shadowParts[li].verts);
-	memset(&o->shadowParts[li],0,sizeof(ShadowVolume));
-	if(!o->castsShadow || !s->lights[li].castsShadow || !light_reaches_obj(&s->lights[li],o)) return;
-	build_shadow_volume(&o->mesh,s->lights[li].pos,s->lights[li].dir,
-		s->lights[li].isDirectional,&o->shadowParts[li]);
-}
-
+/* Shadow volumes are built when a view first needs them, per light and caster, and kept on the GPU
+   (render.c), as Doom 3 creates interactions on demand; the scene only says that every cached one is stale. */
 void scene_build_all_shadow_volumes(Scene *s){
-	for(int oi=0;oi<s->nobjs;oi++){
-		SceneObj *o=&s->objs[oi];
-		scene_resize_shadow_parts(o,s->nlights);
-		for(int li=0;li<s->nlights;li++) scene_build_object_shadow_part(s,o,li);
-	}
-	for(int li=0;li<s->nlights;li++) scene_combine_shadow_parts(s,li);
+	for(int oi=0;oi<s->nobjs;oi++) scene_obj_update_bounds(&s->objs[oi]);
+	s->shadowRev++;
 }
 
 void scene_rebuild_node_shadow_volumes(Scene *s,void *editNode){
-	for(int oi=0;oi<s->nobjs;oi++){
-		SceneObj *o=&s->objs[oi];
-		if(o->editNode!=editNode) continue;
-		scene_obj_update_bounds(o);
-		if(o->nshadowParts!=s->nlights) scene_resize_shadow_parts(o,s->nlights);
-		for(int li=0;li<s->nlights;li++) scene_build_object_shadow_part(s,o,li);
-	}
-	for(int li=0;li<s->nlights;li++) scene_combine_shadow_parts(s,li);
+	for(int oi=0;oi<s->nobjs;oi++) if(s->objs[oi].editNode==editNode) scene_obj_update_bounds(&s->objs[oi]);
+	s->shadowRev++;
 }

@@ -216,7 +216,8 @@ typedef struct {
 } Camera;
 typedef struct { vec3 pos,color,dir; float intensity,radius,range; /* range: beyond it a point light neither lights nor shadows; 0 = unlimited */ int castsShadow,isDirectional; } Light;
 typedef struct { float x,y,z,w; } ShadowVertex;
-typedef struct { ShadowVertex *verts; int nverts,cverts; } ShadowVolume;
+/* A light's volume is its casters' volumes end to end; obj/first/count say which vertices belong to which object, as Doom 3 keeps one shadow surface per interaction. */
+typedef struct { ShadowVertex *verts; int nverts,cverts; int *obj,*first,*count; int nranges; } ShadowVolume;
 typedef struct { Mesh mesh; vec3 bmin,bmax; vec3 color; float shininess,specular,metallic; /* specular: Blender-style level, F0 = 0.08 * specular (0.5 gives 4%); metallic 0..1 tints the reflection with the colour and drops the diffuse */ int ramp; int gradient; vec3 gradFrom,gradTo; /* gradient: colour multipliers at Vertex.g 0 and 1, valid when set */ int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
 typedef struct { char path[1024]; unsigned char *pixels; int width,height; unsigned int texture; } ScreenTexture;
 typedef struct { char name[32]; vec3 pos; } AttachPoint;
@@ -272,6 +273,7 @@ typedef struct {
 	MaterialRamp *ramps; int nramps,cramps;
 	SceneObj *objs; int nobjs,cobjs;
 	ShadowVolume *svols;
+	unsigned shadowRev; /* bumped whenever the combined volumes are rebuilt; GPU copies of them are keyed by it */
 	PrefabDef *prefabs; int nprefabs,cprefabs;
 	int ignoredAttributes,enclosedLights;
 	SceneIssue *issues; int nissues,cissues;
@@ -387,6 +389,7 @@ void gizmo_apply_drag(Scene *s, int mX, int mY, int W, int H,
 	vec3 camPos, vec3 camRight, vec3 camUp, vec3 camLook, float camFov);
 
 
+void shadow_volume_release(ShadowVolume *sv);
 void build_shadow_volume(Mesh *m,vec3 lightPos,vec3 lightDir,int isDir,ShadowVolume *sv);
 void scene_build_all_shadow_volumes(Scene *s);
 void scene_rebuild_node_shadow_volumes(Scene *s,void *editNode);
