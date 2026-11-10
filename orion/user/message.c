@@ -495,6 +495,9 @@ static intptr_t send_message_impl(window_t *win, uint32_t msg, uint32_t wparam, 
         break;
       case evPaintStencil:
         break;
+      case evResize:
+        window_layout_sync(win);
+        break;
       case evMeasure: {
         layout_measure_t *m = (layout_measure_t *)lparam;
         // If window has auto-layout, measure its children

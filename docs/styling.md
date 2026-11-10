@@ -40,13 +40,26 @@ Parser and cascade: `orion/user/style.c` (`style.h`).
 | Pseudo-classes | `:hover` `:active` `:checked` `:disabled` `:focus` `:default` `:window-inactive` |
 | Combinators | None. Style the element or its `::part` (`TableView::row`, not `TableView tr`) |
 | Cascade | `!important`, then specificity (ids; classes and pseudo-classes; elements and parts), then source order |
-| Custom properties | `--name: value`, `var(--name, fallback)`; looked up on the element, then `:root` |
+| Custom properties | `--name: value`, `var(--name, fallback)`; element values, then computed `:root` values; no parent-tree inheritance yet |
 | At-rules | `@media (prefers-color-scheme: dark)` and `light`. Others are skipped with a diagnostic |
-| Colours | `#rgb` `#rgba` `#rrggbb` `#rrggbbaa`, `rgb()` / `rgba()`, `color-mix(in srgb, a p%, b q%)`, `transparent`, `black`, `white` |
+| Colours | `#rgb` `#rgba` `#rrggbb` `#rrggbbaa`, `rgb()` / `rgba()`, `color-mix(in srgb, a p%, b q%)`, `transparent`, `black`, `white`, `red`, `blue` |
 | Lengths | `px` or a bare number; `border-radius: 9999px` is a capsule |
 
 A rule with one bad selector is dropped, a bad declaration is skipped, and the
 rest of the sheet applies, as in browsers.
+
+Literal validation before cascading currently covers `color`, `fill`, `stroke`,
+`outline-color`, border-side colours, `min-width`/`min-height`, and individual
+margin/padding sides. Unknown properties, custom properties, `var()` values,
+and compound values such as borders and backgrounds remain deferred. Keeping a
+CSS-wide keyword does not yet implement its computed-value semantics.
+
+Root aliases resolve in root context: with `:root { --ink: blue; --edge:
+var(--ink) }`, an element overriding `--ink` still inherits a blue `--edge`.
+Cycles, including dependencies in unused fallbacks, invalidate the cyclic
+definitions; a referencing `var()` can then use its fallback. Resource limits
+are errors, not reasons to substitute a fallback. Variable resolution currently
+has a depth limit of 16 and a 512-byte intermediate buffer.
 
 ## Colour roles
 
@@ -179,6 +192,14 @@ its sheet applies to every query. A gem shares the process with the shell and
 other gems, so its sheet styles only the windows it owns. Code may also set one
 directly: `ui_set_app_stylesheet(css, "myapp.css")` for the process.
 
+Replacing or removing a sheet while the UI is running queues `evThemeChanged`
+for the affected windows, followed by root resize/repaint work. Descendants
+receive the style notification before their root, so a generic auto-layout root
+can reflow using updated child metrics. Hidden windows and toolbar controls
+receive notifications too. Setters do not invoke window callbacks synchronously
+or reset the current theme, palette overrides, or capture. Changes take effect
+as the message queue is dispatched.
+
 A control's form `name` is its `#id` and `class=` its classes:
 
 ```xml
@@ -202,6 +223,9 @@ theme_draw_in(win, THEME_PART_HEADER, r, CTRL_NORMAL);
 `ui_selector()` returns the element selector with the window's classes and id
 (`TableView.compact#checkouts::header`), interned, and remembers which
 instance's sheet answers it; an unstyled window gets the element selector back.
+Interned scopes and selector strings remain valid for the process lifetime;
+storage grows with distinct scopes/selectors. Computed box caches are bounded
+and evict entries without dropping ID, class, state, or instance-sheet rules.
 `window_set_style(win, id, classes)` restyles a window at run time and sends it
 `evThemeChanged`, as a theme switch does, so a control recomputes what it
 derived from the sheet (a Card its padding).

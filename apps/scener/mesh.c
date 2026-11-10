@@ -48,6 +48,7 @@ int mesh_gpu_take_retired(int **chunks){
 
 void mesh_free(Mesh *m){
     if(m->gpuChunk) DA_PUSH(s_retired,s_nretired,s_cretired,m->gpuChunk);
+    if(m->shChunk){ int k=-m->shChunk; DA_PUSH(s_retired,s_nretired,s_cretired,k); }
     free(m->verts); free(m->tris); free(m->edges); free(m->triN);
     memset(m,0,sizeof(*m));
 }

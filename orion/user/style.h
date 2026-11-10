@@ -15,7 +15,11 @@
 // then specificity (ids, classes and pseudo-classes, elements and parts),
 // then source order. Custom properties (--name: value) cascade like any
 // property; var(--name, fallback) looks them up on the queried element, then
-// on :root. @media (prefers-color-scheme: dark|light) blocks apply when the
+// inherits the computed :root value. Root aliases resolve in root context,
+// not against element/instance overrides. There is no parent-tree inheritance.
+// Cycles include references in unused fallbacks; cyclic definitions are invalid
+// and a referencing var() may use its fallback. Dependency/nesting depth is
+// limited to 16. @media (prefers-color-scheme: dark|light) blocks apply when the
 // sheet's appearance matches.
 //
 // Values are kept as text and parsed on lookup by the typed getters below:
@@ -23,6 +27,12 @@
 // transparent and a few names) and lengths (px or a bare number). A malformed rule or declaration
 // is skipped with a diagnostic naming its line; the rest of the sheet still
 // applies, as browsers recover.
+// Literal validation before cascading covers scalar color/fill/stroke,
+// outline-color, border-side colors, min-width/min-height and margin/padding
+// sides, using the supported color/length parsers. Unknown/custom properties,
+// var() values and compound grammars (background, border, shadows, shorthands)
+// remain deferred. Reserved CSS-wide/currentColor/none/auto keywords are kept;
+// retaining them does not add their computed-value semantics.
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -84,10 +94,13 @@ typedef bool (*style_var_fn)(const char *name, char *out, size_t n, void *ctx);
 void style_sheet_set_var_hook(style_sheet_t *sheet, style_var_fn override, style_var_fn fallback, void *ctx);
 
 // The cascaded value of property for query with var() resolved, copied into
-// out. Returns false when no rule sets it (out is then empty).
+// out. Returns false when unset or variable resolution fails (out is empty).
 bool style_value(const style_sheet_t *sheet, style_query_t q, const char *property, char *out, size_t n);
 // The same, with the winning declaration's cascade rank (higher wins), so a
-// caller can choose between a shorthand and a longhand; -1 when unset.
+// caller can choose between a shorthand and a longhand. Ranks are opaque
+// ordinals comparable only for the same query and unchanged sheet, not packed
+// bit fields. -1 when unset or querying a custom property. A declaration whose
+// var() fails still has a rank, but the lookup returns false.
 bool style_value_ranked(const style_sheet_t *sheet, style_query_t q, const char *property, char *out, size_t n, long *rank);
 
 // Typed lookups: true when the property is set and parses; *out is left

@@ -13,43 +13,48 @@ style_sheet_t *ui_stylesheet(void) { return theme_stylesheet(get_theme()); }
 
 // ── scopes: a window's classes, id and instance ───────────────────────────────
 
+typedef struct ui_scoped_selector_s {
+  char *base, *selector;
+  const ui_scope_t *scope;
+  struct ui_scoped_selector_s *next, *scope_next;
+} ui_scoped_selector_t;
+
 struct ui_scope_s {
   hinstance_t hinstance;
   char id[32], classes[64];
-  struct { const char *base, *selector; } map[32];   // element selector → this window's
-  int count;
+  ui_scoped_selector_t *selectors;
+  struct ui_scope_s *next;
 };
 
-#define UI_MAX_SCOPES 512
-static ui_scope_t *g_scopes[UI_MAX_SCOPES];
-static int g_scope_count;
+#define UI_SCOPE_BUCKETS 512
+static ui_scope_t *g_scopes[UI_SCOPE_BUCKETS];
 
 // Scoped selector strings → their scope, so a query finds the instance's sheet.
 #define UI_SCOPED_SLOTS 4096
-static struct { const char *selector; const ui_scope_t *scope; } g_scoped[UI_SCOPED_SLOTS];
+static ui_scoped_selector_t *g_scoped[UI_SCOPED_SLOTS];
 
 static unsigned ui_ptr_hash(const void *p) { uintptr_t h = (uintptr_t)p; h ^= h >> 9; return (unsigned)(h % UI_SCOPED_SLOTS); }
 
 static const ui_scope_t *ui_scope_of(const char *selector) {
-  for (unsigned i = ui_ptr_hash(selector), n = 0; n < UI_SCOPED_SLOTS && g_scoped[i].selector; i = (i + 1) % UI_SCOPED_SLOTS, n++)
-    if (g_scoped[i].selector == selector) return g_scoped[i].scope;
+  for (const ui_scoped_selector_t *entry = g_scoped[ui_ptr_hash(selector)]; entry; entry = entry->next)
+    if (entry->selector == selector) return entry->scope;
   return NULL;
 }
 
 static ui_scope_t *ui_intern_scope(hinstance_t hinstance, const char *id, const char *classes) {
-  for (int i = 0; i < g_scope_count; i++)
-    if (g_scopes[i]->hinstance == hinstance && !strcmp(g_scopes[i]->id, id) && !strcmp(g_scopes[i]->classes, classes)) return g_scopes[i];
-  if (g_scope_count == UI_MAX_SCOPES) {
-    fprintf(stderr, "[ui_style] more than %d style scopes; #%s .%s is styled as its element\n", UI_MAX_SCOPES, id, classes);
-    fflush(stderr);
-    return NULL;
-  }
+  unsigned hash = 2166136261u ^ (unsigned)hinstance;
+  for (const char *text = id; *text; text++) hash = (hash ^ (unsigned char)*text) * 16777619u;
+  for (const char *text = classes; *text; text++) hash = (hash ^ (unsigned char)*text) * 16777619u;
+  unsigned bucket = hash % UI_SCOPE_BUCKETS;
+  for (ui_scope_t *scope = g_scopes[bucket]; scope; scope = scope->next)
+    if (scope->hinstance == hinstance && !strcmp(scope->id, id) && !strcmp(scope->classes, classes)) return scope;
   ui_scope_t *scope = calloc(1, sizeof(*scope));
   if (!scope) { fprintf(stderr, "[ui_style] scope allocation failed\n"); fflush(stderr); return NULL; }
   scope->hinstance = hinstance;
   snprintf(scope->id, sizeof(scope->id), "%s", id);
   snprintf(scope->classes, sizeof(scope->classes), "%s", classes);
-  return g_scopes[g_scope_count++] = scope;
+  scope->next = g_scopes[bucket];
+  return g_scopes[bucket] = scope;
 }
 
 const ui_scope_t *ui_window_scope(const window_t *win) {
@@ -69,27 +74,34 @@ static style_sheet_t *ui_scope_sheet(const ui_scope_t *scope) {
 }
 style_sheet_t *ui_scope_stylesheet(const ui_scope_t *scope) { return ui_scope_sheet(scope); }
 
-static void ui_register_scoped(const char *selector, const ui_scope_t *scope) {
-  for (unsigned i = ui_ptr_hash(selector), n = 0; n < UI_SCOPED_SLOTS; i = (i + 1) % UI_SCOPED_SLOTS, n++)
-    if (!g_scoped[i].selector) { g_scoped[i].selector = selector; g_scoped[i].scope = scope; return; }
-  fprintf(stderr, "[ui_style] the scoped selector table is full; %s reads the process sheet\n", selector);
+static ui_scoped_selector_t *ui_register_scoped(const char *base, const char *selector, const ui_scope_t *scope) {
+  ui_scoped_selector_t *entry = calloc(1, sizeof(*entry));
+  if (entry) {
+    entry->base = strdup(base);
+    entry->selector = strdup(selector);
+    if (entry->base && entry->selector) {
+      unsigned bucket = ui_ptr_hash(entry->selector);
+      entry->scope = scope;
+      entry->next = g_scoped[bucket];
+      g_scoped[bucket] = entry;
+      return entry;
+    }
+    free(entry->base); free(entry->selector); free(entry);
+  }
+  fprintf(stderr, "[ui_style] selector allocation failed for %s\n", selector);
   fflush(stderr);
+  return NULL;
 }
 
 const char *ui_selector(const window_t *win, const char *base) {
   ui_scope_t *scope = (ui_scope_t *)ui_window_scope(win);
   if (!scope || !base) return base;
-  for (int i = 0; i < scope->count; i++) if (scope->map[i].base == base) return scope->map[i].selector;
-  if (scope->count == (int)(sizeof(scope->map) / sizeof(scope->map[0]))) {
-    fprintf(stderr, "[ui_style] #%s: more than %d element selectors; %s is styled as its element\n",
-            scope->id, (int)(sizeof(scope->map) / sizeof(scope->map[0])), base);
-    fflush(stderr);
-    return base;
-  }
+  for (ui_scoped_selector_t *entry = scope->selectors; entry; entry = entry->scope_next)
+    if (!strcmp(entry->base, base)) return entry->selector;
   // Element, then the window's classes and id, then the rest: TableView.compact#checkouts::header.
   size_t element = 0;
   while (isalnum((unsigned char)base[element]) || base[element] == '-' || base[element] == '_') element++;
-  char composed[256], classes[80] = "";
+  char classes[128] = "";
   size_t k = 0;
   for (const char *c = scope->classes; *c && k + 2 < sizeof(classes); c++) {
     if (*c == ' ') continue;
@@ -97,14 +109,16 @@ const char *ui_selector(const window_t *win, const char *base) {
     classes[k++] = *c;
   }
   classes[k] = 0;
-  snprintf(composed, sizeof(composed), "%.*s%s%s%s%s", (int)element, base, classes, scope->id[0] ? "#" : "", scope->id, base + element);
-  char *selector = strdup(composed);
-  if (!selector) { fprintf(stderr, "[ui_style] selector allocation failed\n"); fflush(stderr); return base; }
-  scope->map[scope->count].base = base;
-  scope->map[scope->count].selector = selector;
-  scope->count++;
-  ui_register_scoped(selector, scope);
-  return selector;
+  size_t size = strlen(base) + strlen(classes) + strlen(scope->id) + 2;
+  char *composed = malloc(size);
+  if (!composed) { fprintf(stderr, "[ui_style] selector allocation failed\n"); fflush(stderr); return base; }
+  snprintf(composed, size, "%.*s%s%s%s%s", (int)element, base, classes, scope->id[0] ? "#" : "", scope->id, base + element);
+  ui_scoped_selector_t *entry = ui_register_scoped(base, composed, scope);
+  free(composed);
+  if (!entry) return base;
+  entry->scope_next = scope->selectors;
+  scope->selectors = entry;
+  return entry->selector;
 }
 
 // ── pseudo-class selectors ────────────────────────────────────────────────────
@@ -117,30 +131,42 @@ static const struct { const char *name; uint32_t bit; } k_ui_states[] = {
 };
 
 #define UI_STATE_SLOTS 1024
-static struct { const char *base, *result; uint32_t bits; } g_state_selectors[UI_STATE_SLOTS];
+typedef struct ui_state_selector_s {
+  ui_scoped_selector_t *selector;
+  uint32_t bits;
+  struct ui_state_selector_s *next;
+} ui_state_selector_t;
+static ui_state_selector_t *g_state_selectors[UI_STATE_SLOTS];
 
 const char *ui_state_selector(const char *base, ctrl_state_t state) {
   uint32_t bits = theme_style_state(state);
   if (!base || !bits) return base;
-  unsigned h = (ui_ptr_hash(base) * 131u + bits) % UI_STATE_SLOTS;
-  for (unsigned n = 0; n < UI_STATE_SLOTS; n++, h = (h + 1) % UI_STATE_SLOTS) {
-    if (!g_state_selectors[h].base) {
-      char composed[320];
-      int len = snprintf(composed, sizeof(composed), "%s", base);
-      for (size_t i = 0; i < sizeof(k_ui_states) / sizeof(k_ui_states[0]); i++)
-        if (bits & k_ui_states[i].bit) len += snprintf(composed + len, sizeof(composed) - len, ":%s", k_ui_states[i].name);
-      char *result = strdup(composed);
-      if (!result) { fprintf(stderr, "[ui_style] selector allocation failed\n"); fflush(stderr); return base; }
-      g_state_selectors[h].base = base; g_state_selectors[h].bits = bits; g_state_selectors[h].result = result;
-      const ui_scope_t *scope = ui_scope_of(base);
-      if (scope) ui_register_scoped(result, scope);
-      return result;
-    }
-    if (g_state_selectors[h].base == base && g_state_selectors[h].bits == bits) return g_state_selectors[h].result;
+  const ui_scope_t *scope = ui_scope_of(base);
+  unsigned hash = 2166136261u ^ bits ^ ui_ptr_hash(scope);
+  for (const char *text = base; *text; text++) hash = (hash ^ (unsigned char)*text) * 16777619u;
+  unsigned bucket = hash % UI_STATE_SLOTS;
+  for (ui_state_selector_t *entry = g_state_selectors[bucket]; entry; entry = entry->next)
+    if (entry->bits == bits && entry->selector->scope == scope && !strcmp(entry->selector->base, base)) return entry->selector->selector;
+  size_t size = strlen(base) + 1;
+  for (size_t index = 0; index < sizeof(k_ui_states) / sizeof(k_ui_states[0]); index++)
+    if (bits & k_ui_states[index].bit) size += strlen(k_ui_states[index].name) + 1;
+  char *composed = malloc(size);
+  ui_state_selector_t *entry = calloc(1, sizeof(*entry));
+  if (!composed || !entry) {
+    free(composed); free(entry);
+    fprintf(stderr, "[ui_style] state selector allocation failed\n"); fflush(stderr);
+    return base;
   }
-  fprintf(stderr, "[ui_style] the state selector table is full; %s is styled without its state\n", base);
-  fflush(stderr);
-  return base;
+  size_t len = (size_t)snprintf(composed, size, "%s", base);
+  for (size_t index = 0; index < sizeof(k_ui_states) / sizeof(k_ui_states[0]); index++)
+    if (bits & k_ui_states[index].bit) len += (size_t)snprintf(composed + len, size - len, ":%s", k_ui_states[index].name);
+  entry->selector = ui_register_scoped(base, composed, scope);
+  free(composed);
+  if (!entry->selector) { free(entry); return base; }
+  entry->bits = bits;
+  entry->next = g_state_selectors[bucket];
+  g_state_selectors[bucket] = entry;
+  return entry->selector->selector;
 }
 
 void window_set_style(window_t *win, const char *id, const char *classes) {

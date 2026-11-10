@@ -384,17 +384,23 @@ static unsigned box_state_key(ctrl_state_t state) {
 #define BOX_SCOPES 128
 static struct { const ui_scope_t *scope; theme_box_t *boxes[THEME_PART_COUNT]; } g_scoped_boxes[BOX_SCOPES];
 static int g_scoped_box_count;
+static unsigned g_scoped_box_next;
 
 static theme_box_t **box_slots(const ui_scope_t *scope) {
   if (!scope) return g_box_cache;
   for (int i = 0; i < g_scoped_box_count; i++) if (g_scoped_boxes[i].scope == scope) return g_scoped_boxes[i].boxes;
-  if (g_scoped_box_count == BOX_SCOPES) {
-    fprintf(stderr, "[theme] more than %d styled windows; #%s paints as its element\n", BOX_SCOPES, ui_scope_id(scope));
-    fflush(stderr);
-    return NULL;
+  int slot = g_scoped_box_count;
+  if (slot == BOX_SCOPES) {
+    slot = (int)(g_scoped_box_next++ % BOX_SCOPES);
+    for (int part = 0; part < THEME_PART_COUNT; part++) {
+      free(g_scoped_boxes[slot].boxes[part]);
+      g_scoped_boxes[slot].boxes[part] = NULL;
+    }
+  } else {
+    g_scoped_box_count++;
   }
-  g_scoped_boxes[g_scoped_box_count].scope = scope;
-  return g_scoped_boxes[g_scoped_box_count++].boxes;
+  g_scoped_boxes[slot].scope = scope;
+  return g_scoped_boxes[slot].boxes;
 }
 
 // Windows with instance variables of their own (a badge's --tone): one box per
@@ -431,9 +437,14 @@ static const theme_box_t *box_for(theme_part_t part, ctrl_state_t state, const u
     return &e->box;
   }
   theme_box_t **slots = box_slots(scope);
-  if (!slots) { slots = g_box_cache; scope = NULL; }
   if (!slots[part]) slots[part] = calloc(256, sizeof(theme_box_t));
-  theme_box_t *b = slots[part] ? &slots[part][box_state_key(state)] : &scratch;
+  if (!slots[part]) {
+    fprintf(stderr, "[theme] box allocation failed for part %d scope #%s\n", part, ui_scope_id(scope));
+    fflush(stderr);
+    box_compute(&scratch, part, state, scope, NULL);
+    return &scratch;
+  }
+  theme_box_t *b = &slots[part][box_state_key(state)];
   if (b->generation != g_theme_style_generation || !b->generation) {
     box_compute(b, part, state, scope, NULL);
     b->generation = g_theme_style_generation;

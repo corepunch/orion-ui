@@ -1,6 +1,7 @@
 // CSS subset parser and cascade. See style.h for what is supported.
 
 #include <ctype.h>
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -207,6 +208,8 @@ static size_t css_scan(const css_parser_t *p, size_t from, const char *stops) {
   return p->len;
 }
 
+static bool css_valid_literal(const char *property, const char *value);
+
 static void css_parse_declarations(css_parser_t *p, size_t s, size_t e, css_rule_t *rule) {
   while (s < e) {
     size_t semi = css_scan(p, s, ";");
@@ -239,6 +242,10 @@ static void css_parse_declarations(css_parser_t *p, size_t s, size_t e, css_rule
         if (!d->name || !d->value) { free(d->name); free(d->value); rule->decl_count--; return; }
         // Property names are ASCII case-insensitive; custom properties are not.
         if (strncmp(d->name, "--", 2)) for (char *c = d->name; *c; c++) *c = (char)tolower((unsigned char)*c);
+        if (!css_valid_literal(d->name, d->value)) {
+          css_error(p, (size_t)(ds - p->src), "invalid literal value", d->name);
+          free(d->name); free(d->value); rule->decl_count--;
+        }
       }
     }
     s = semi + 1;
@@ -399,27 +406,50 @@ void style_sheet_set_var_hook(style_sheet_t *sheet, style_var_fn override, style
 
 // ── cascade ───────────────────────────────────────────────────────────────────
 
+static int css_rule_specificity(const style_sheet_t *sheet, const css_rule_t *rule, style_query_t query) {
+  if (rule->media == CSS_MEDIA_NEVER || (rule->media == CSS_MEDIA_DARK && !sheet->dark) ||
+      (rule->media == CSS_MEDIA_LIGHT && sheet->dark)) return -1;
+  int specificity = -1;
+  for (int selector = 0; selector < rule->selector_count; selector++)
+    if (css_matches(&rule->selectors[selector], query) && rule->selectors[selector].specificity > specificity)
+      specificity = rule->selectors[selector].specificity;
+  return specificity;
+}
+
 static const char *css_cascade_ranked(const style_sheet_t *sheet, style_query_t q, const char *property, long *rank) {
   if (rank) *rank = -1;
   if (!sheet || !property) return NULL;
-  const char *best = NULL;
-  long best_key = -1;
+  const css_decl_t *best = NULL;
+  int best_specificity = -1, best_rule = -1, best_decl = -1;
   for (int r = 0; r < sheet->count; r++) {
     const css_rule_t *rule = &sheet->rules[r];
-    if (rule->media == CSS_MEDIA_NEVER || (rule->media == CSS_MEDIA_DARK && !sheet->dark) ||
-        (rule->media == CSS_MEDIA_LIGHT && sheet->dark)) continue;
+    int specificity = css_rule_specificity(sheet, rule, q);
+    if (specificity < 0) continue;
     for (int d = 0; d < rule->decl_count; d++) {
-      if (strcmp(rule->decls[d].name, property)) continue;
-      for (int s = 0; s < rule->selector_count; s++) {
-        if (!css_matches(&rule->selectors[s], q)) continue;
-        // importance, then specificity, then source order
-        long key = ((long)rule->decls[d].important << 40) | ((long)rule->selectors[s].specificity << 20) | (long)(r * 64 + d);
-        if (key > best_key) { best_key = key; best = rule->decls[d].value; }
+      const css_decl_t *decl = &rule->decls[d];
+      if (strcmp(decl->name, property)) continue;
+      if (!best || decl->important > best->important ||
+          (decl->important == best->important && specificity >= best_specificity)) {
+        best = decl; best_specificity = specificity; best_rule = r; best_decl = d;
       }
     }
   }
-  if (rank) *rank = best_key;
-  return best;
+  if (rank && best) {
+    *rank = 0;
+    for (int rule_index = 0; rule_index < sheet->count; rule_index++) {
+      const css_rule_t *rule = &sheet->rules[rule_index];
+      int specificity = css_rule_specificity(sheet, rule, q);
+      if (specificity < 0) continue;
+      for (int decl_index = 0; decl_index < rule->decl_count; decl_index++) {
+        const css_decl_t *decl = &rule->decls[decl_index];
+        if (decl->important < best->important ||
+            (decl->important == best->important && (specificity < best_specificity ||
+             (specificity == best_specificity && (rule_index < best_rule ||
+              (rule_index == best_rule && decl_index < best_decl)))))) (*rank)++;
+      }
+    }
+  }
+  return best ? best->value : NULL;
 }
 
 static const char *css_cascade(const style_sheet_t *sheet, style_query_t q, const char *property) {
@@ -431,65 +461,145 @@ static const char *css_instance_var(style_query_t q, const char *name) {
   return NULL;
 }
 
-static const char *css_custom(const style_sheet_t *sheet, style_query_t q, const char *name) {
-  const char *own = css_instance_var(q, name);
+static const char *css_custom(const style_sheet_t *sheet, style_query_t *query, const char *name) {
+  const char *own = css_instance_var(*query, name);
   if (own) return own;
-  const char *v = q.element ? css_cascade(sheet, q, name) : NULL;
-  return v ? v : css_cascade(sheet, STYLE_ROOT, name);
+  const char *value = css_cascade(sheet, *query, name);
+  if (value || !query->element) return value;
+  *query = STYLE_ROOT;
+  return css_cascade(sheet, *query, name);
 }
 
-static bool css_resolve(const style_sheet_t *sheet, style_query_t q, const char *value, char *out, size_t n, int depth) {
-  if (depth > CSS_VAR_DEPTH) {
-    fprintf(stderr, "[style] %s: var() nesting deeper than %d (a cycle?) in \"%s\"\n", sheet->origin, CSS_VAR_DEPTH, value);
-    fflush(stderr);
+typedef struct {
+  char name[CSS_NAME + 2];
+  const char *fallback, *end;
+} css_var_ref_t;
+
+typedef struct { char name[CSS_NAME + 2]; bool root; const char *value; } css_var_path_t;
+
+static bool css_var_ref(const style_sheet_t *sheet, const char *value, css_var_ref_t *ref) {
+  const char *args = value + 4, *end = args, *comma = NULL;
+  int paren = 1;
+  for (; *end && paren; end++) {
+    if (*end == '(') paren++;
+    else if (*end == ')') paren--;
+    else if (*end == ',' && paren == 1 && !comma) comma = end;
+  }
+  if (paren) {
+    fprintf(stderr, "[style] %s: unterminated var() in \"%s\"\n", sheet->origin, value); fflush(stderr);
     return false;
+  }
+  const char *start = args, *stop = comma ? comma : end - 1;
+  css_trim(&start, &stop);
+  bool valid = stop - start >= 3 && (size_t)(stop - start) < sizeof(ref->name) && !strncmp(start, "--", 2);
+  for (const char *cursor = start; valid && cursor < stop; cursor++) valid = css_ident_char(*cursor);
+  if (!valid) {
+    fprintf(stderr, "[style] %s: var() needs a --name in \"%s\"\n", sheet->origin, value); fflush(stderr);
+    return false;
+  }
+  memcpy(ref->name, start, (size_t)(stop - start)); ref->name[stop - start] = 0;
+  ref->fallback = comma ? comma + 1 : NULL; ref->end = end;
+  return true;
+}
+
+static const char *css_lookup_var(const style_sheet_t *sheet, style_query_t *query, const char *name, char *hooked, size_t size) {
+  const char *value = css_instance_var(*query, name);
+  if (value) return value;
+  if (sheet->var_hook && sheet->var_hook(name + 2, hooked, size, sheet->var_ctx)) return hooked;
+  style_query_t owner = *query;
+  value = css_custom(sheet, &owner, name);
+  if (value) { *query = owner; return value; }
+  return sheet->var_default && sheet->var_default(name + 2, hooked, size, sheet->var_ctx) ? hooked : NULL;
+}
+
+static int css_dependency_cycle(const style_sheet_t *sheet, style_query_t query, const char *value, css_var_path_t *path, int count) {
+  for (const char *cursor = value; (cursor = strstr(cursor, "var(")); cursor += 4) {
+    css_var_ref_t ref;
+    if (!css_var_ref(sheet, cursor, &ref)) return 0;
+    style_query_t owner = query;
+    char hooked[128];
+    const char *found = css_lookup_var(sheet, &owner, ref.name, hooked, sizeof(hooked));
+    if (!found) continue;
+    int previous = 0;
+    while (previous < count && (path[previous].root != !owner.element || strcmp(path[previous].name, ref.name) ||
+                   strcmp(path[previous].value, found))) previous++;
+    if (!previous) return 1;
+    if (previous < count) continue;
+    if (count == CSS_VAR_DEPTH) {
+      fprintf(stderr, "[style] %s: custom property dependency depth exceeds %d\n", sheet->origin, CSS_VAR_DEPTH); fflush(stderr);
+      return -1;
+    }
+    snprintf(path[count].name, sizeof(path[count].name), "%s", ref.name);
+    path[count].root = !owner.element; path[count].value = found;
+    int result = css_dependency_cycle(sheet, owner, found, path, count + 1);
+    if (result) return result;
+  }
+  return 0;
+}
+
+typedef enum { CSS_VALUE_INVALID, CSS_VALUE_ERROR, CSS_VALUE_OK } css_value_result_t;
+
+static css_value_result_t css_resolve(const style_sheet_t *sheet, style_query_t q, const char *value, char *out, size_t n, int depth);
+
+static css_value_result_t css_compute_custom(const style_sheet_t *sheet, style_query_t query, const char *name, const char *raw, char *out, size_t size, int depth) {
+  css_var_path_t path[CSS_VAR_DEPTH] = {0};
+  snprintf(path[0].name, sizeof(path[0].name), "%s", name);
+  path[0].root = !query.element; path[0].value = raw;
+  int cycle = css_dependency_cycle(sheet, query, raw, path, 1);
+  if (cycle) {
+    if (cycle > 0) { fprintf(stderr, "[style] %s: cyclic custom property %s\n", sheet->origin, name); fflush(stderr); }
+    return cycle > 0 ? CSS_VALUE_INVALID : CSS_VALUE_ERROR;
+  }
+  return css_resolve(sheet, query, raw, out, size, depth);
+}
+
+static css_value_result_t css_value_overflow(const style_sheet_t *sheet, size_t size) {
+  fprintf(stderr, "[style] %s: resolved value exceeds buffer capacity %zu\n", sheet->origin, size);
+  fflush(stderr);
+  return CSS_VALUE_ERROR;
+}
+
+static css_value_result_t css_resolve(const style_sheet_t *sheet, style_query_t q, const char *value, char *out, size_t n, int depth) {
+  if (depth > CSS_VAR_DEPTH) {
+    fprintf(stderr, "[style] %s: var() nesting deeper than %d in \"%s\"\n", sheet->origin, CSS_VAR_DEPTH, value);
+    fflush(stderr);
+    return CSS_VALUE_ERROR;
   }
   size_t used = 0; out[0] = 0;
   for (const char *c = value; *c;) {
     const char *v = strstr(c, "var(");
     size_t lit = v ? (size_t)(v - c) : strlen(c);
-    if (used + lit >= n) return false;
+    if (used + lit >= n) return css_value_overflow(sheet, n);
     memcpy(out + used, c, lit); used += lit; out[used] = 0;
     if (!v) break;
-    const char *args = v + 4; int paren = 1; const char *end = args, *comma = NULL;
-    for (; *end && paren; end++) {
-      if (*end == '(') paren++;
-      else if (*end == ')') paren--;
-      else if (*end == ',' && paren == 1 && !comma) comma = end;
+    css_var_ref_t ref;
+    if (!css_var_ref(sheet, v, &ref)) return CSS_VALUE_INVALID;
+    style_query_t owner = q;
+    char hooked[128], sub[512];
+    const char *found = css_lookup_var(sheet, &owner, ref.name, hooked, sizeof(hooked));
+    css_value_result_t result = found ? css_compute_custom(sheet, owner, ref.name, found, sub, sizeof(sub), depth + 1)
+                      : CSS_VALUE_INVALID;
+    if (result == CSS_VALUE_INVALID && ref.fallback) {
+      const char *start = ref.fallback, *stop = ref.end - 1;
+      css_trim(&start, &stop);
+      char *fallback = css_strndup(start, (size_t)(stop - start));
+      if (!fallback) {
+        fprintf(stderr, "[style] %s: var() fallback allocation failed\n", sheet->origin); fflush(stderr);
+        return CSS_VALUE_ERROR;
+      }
+      result = css_resolve(sheet, q, fallback, sub, sizeof(sub), depth + 1);
+      free(fallback);
     }
-    if (paren) { fprintf(stderr, "[style] %s: unterminated var() in \"%s\"\n", sheet->origin, value); fflush(stderr); return false; }
-    const char *ns = args, *ne = comma ? comma : end - 1;
-    css_trim(&ns, &ne);
-    char name[CSS_NAME + 2];
-    if (ne - ns < 3 || (size_t)(ne - ns) >= sizeof(name) || strncmp(ns, "--", 2)) {
-      fprintf(stderr, "[style] %s: var() needs a --name in \"%s\"\n", sheet->origin, value); fflush(stderr); return false;
+    if (!found && result == CSS_VALUE_INVALID) {
+      fprintf(stderr, "[style] %s: undefined custom property %s\n", sheet->origin, ref.name); fflush(stderr);
     }
-    memcpy(name, ns, (size_t)(ne - ns)); name[ne - ns] = 0;
-    char hooked[128];
-    const char *found = css_instance_var(q, name);   // the instance answers before the palette and the sheet
-    if (!found) found = sheet->var_hook && sheet->var_hook(name + 2, hooked, sizeof(hooked), sheet->var_ctx)
-                        ? hooked : css_custom(sheet, q, name);
-    char *fallback = NULL;
-    if (!found && sheet->var_default && sheet->var_default(name + 2, hooked, sizeof(hooked), sheet->var_ctx)) found = hooked;
-    if (!found && comma) {
-      const char *fs = comma + 1, *fe = end - 1;
-      css_trim(&fs, &fe);
-      found = fallback = css_strndup(fs, (size_t)(fe - fs));
-    }
-    if (!found) {
-      fprintf(stderr, "[style] %s: undefined custom property %s\n", sheet->origin, name); fflush(stderr);
-      return false;
-    }
-    char sub[512];
-    bool ok = css_resolve(sheet, q, found, sub, sizeof(sub), depth + 1);
-    free(fallback);
-    if (!ok) return false;
+    if (result != CSS_VALUE_OK) return result;
     size_t sl = strlen(sub);
-    if (used + sl >= n) return false;
+    if (used + sl >= n) return css_value_overflow(sheet, n);
     memcpy(out + used, sub, sl + 1); used += sl;
-    c = end;
+    c = ref.end;
   }
-  return true;
+  return CSS_VALUE_OK;
 }
 
 bool style_value(const style_sheet_t *sheet, style_query_t q, const char *property, char *out, size_t n) {
@@ -500,10 +610,11 @@ bool style_value_ranked(const style_sheet_t *sheet, style_query_t q, const char 
   if (rank) *rank = -1;
   if (!out || !n) return false;
   out[0] = 0;
-  const char *raw = !strncmp(property ? property : "", "--", 2) ? css_custom(sheet, q, property)
-                                                                : css_cascade_ranked(sheet, q, property, rank);
+  bool custom = !strncmp(property ? property : "", "--", 2);
+  const char *raw = custom ? css_custom(sheet, &q, property) : css_cascade_ranked(sheet, q, property, rank);
   if (!raw) return false;
-  if (!css_resolve(sheet, q, raw, out, n, 0)) { out[0] = 0; return false; }
+  css_value_result_t result = custom ? css_compute_custom(sheet, q, property, raw, out, n, 0) : css_resolve(sheet, q, raw, out, n, 0);
+  if (result != CSS_VALUE_OK) { out[0] = 0; return false; }
   return true;
 }
 
@@ -533,7 +644,7 @@ static bool css_channel(const char **s, bool alpha, int *out) {
   while (isspace((unsigned char)**s)) (*s)++;
   char *end;
   double v = strtod(*s, &end);
-  if (end == *s) return false;
+  if (end == *s || !isfinite(v)) return false;
   if (*end == '%') { v = v / 100.0 * 255.0; end++; }
   else if (alpha) v *= 255.0;
   if (v < 0) v = 0;
@@ -612,13 +723,14 @@ bool style_parse_color(const char *text, uint32_t *out) {
       if (i < 2 && *s == ',') s++;
     }
     if (*s == '/' || *s == ',') { s++; if (!css_channel(&s, true, &c[3])) return false; }
-    if (*s != ')') return false;
+    if (*s != ')' || s + 1 != text + len) return false;
     *out = css_pack(c[0], c[1], c[2], c[3]);
     return true;
   }
   if (!strncasecmp(text, "color-mix(", 10)) return css_color_mix(text + 10, out);
   static const struct { const char *name; uint32_t color; } named[] = {
     {"transparent", 0x00000000u}, {"black", 0xFF000000u}, {"white", 0xFFFFFFFFu},
+    {"red", 0xFF0000FFu}, {"blue", 0xFFFF0000u},
   };
   for (size_t i = 0; i < sizeof(named) / sizeof(named[0]); i++)
     if (strlen(named[i].name) == len && !strncasecmp(text, named[i].name, len)) { *out = named[i].color; return true; }
@@ -671,19 +783,51 @@ bool style_parse_length(const char *text, int *out) {
     css_calc_t c = { text + 4, true };
     double v = css_calc_atom(&c);
     css_calc_space(&c);
-    if (!c.ok || *c.p) return false;
+    if (!c.ok || *c.p || !isfinite(v) || v < INT_MIN || v > INT_MAX) return false;
     *out = (int)lround(v);
     return true;
   }
   char *end;
   double v = strtod(text, &end);
-  if (end == text) return false;
+  if (end == text || !isfinite(v) || v < INT_MIN || v > INT_MAX) return false;
   while (isspace((unsigned char)*end)) end++;
   if (!strncasecmp(end, "px", 2)) end += 2;
   else if (v != 0 && *end) return false;   // other units are not supported
   while (isspace((unsigned char)*end)) end++;
   if (*end) return false;
   *out = (int)lround(v);
+  return true;
+}
+
+static bool css_valid_literal(const char *property, const char *value) {
+  if (!strncmp(property, "--", 2) || strstr(value, "var(")) return true;
+  static const char *const deferred[] = {"inherit", "initial", "unset", "revert", "revert-layer"};
+  for (size_t index = 0; index < sizeof(deferred) / sizeof(deferred[0]); index++)
+    if (!strcasecmp(value, deferred[index])) return true;
+  enum { CSS_LITERAL_COLOR, CSS_LITERAL_LENGTH };
+  static const struct { const char *name; int type; } properties[] = {
+    {"color", CSS_LITERAL_COLOR},                {"fill", CSS_LITERAL_COLOR},
+    {"stroke", CSS_LITERAL_COLOR},               {"outline-color", CSS_LITERAL_COLOR},
+    {"border-top-color", CSS_LITERAL_COLOR},     {"border-right-color", CSS_LITERAL_COLOR},
+    {"border-bottom-color", CSS_LITERAL_COLOR},  {"border-left-color", CSS_LITERAL_COLOR},
+    {"min-width", CSS_LITERAL_LENGTH},           {"min-height", CSS_LITERAL_LENGTH},
+    {"margin-top", CSS_LITERAL_LENGTH},          {"margin-right", CSS_LITERAL_LENGTH},
+    {"margin-bottom", CSS_LITERAL_LENGTH},       {"margin-left", CSS_LITERAL_LENGTH},
+    {"padding-top", CSS_LITERAL_LENGTH},         {"padding-right", CSS_LITERAL_LENGTH},
+    {"padding-bottom", CSS_LITERAL_LENGTH},      {"padding-left", CSS_LITERAL_LENGTH},
+  };
+  for (size_t index = 0; index < sizeof(properties) / sizeof(properties[0]); index++) {
+    if (strcmp(property, properties[index].name)) continue;
+    if (properties[index].type == CSS_LITERAL_COLOR) {
+      uint32_t color;
+      if (!strcasecmp(value, "currentcolor")) return true;
+      if ((!strcmp(property, "fill") || !strcmp(property, "stroke")) && !strcasecmp(value, "none")) return true;
+      return style_parse_color(value, &color);
+    }
+    int length;
+    if (!strcasecmp(value, "auto") && strncmp(property, "padding-", 8)) return true;
+    return style_parse_length(value, &length);
+  }
   return true;
 }
 

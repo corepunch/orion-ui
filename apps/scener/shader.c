@@ -11,30 +11,46 @@
 
 static GLuint prog;
 static GLuint vlocPos, vlocNrm;
-static GLint ulocModel, ulocNormalM, ulocViewProj, ulocViewPos, ulocLightPos, ulocLightColor, ulocLightRadius;
-static GLint ulocAmbient, ulocAmbientOn, ulocLightRange, ulocSky, ulocSkyOn, ulocSpecular, ulocMetallic, ulocColor, ulocShininess, ulocRamp, ulocRampOn, ulocGradOn, ulocGradFrom, ulocGradTo;
+static GLint ulocInst, ulocInstBase, ulocViewProj, ulocViewPos, ulocLightPos, ulocLightColor, ulocLightRadius;
+static GLint ulocAmbient, ulocAmbientOn, ulocLightRange, ulocSky, ulocSkyOn, ulocRamp, ulocRampOn;
 static GLint vlocGrad;
 #ifdef SCENER_USE_TEXTURES
 static GLint ulocTex;
 #endif
 
+/* Objects are drawn in instanced batches of one model. What differs per object (matrix, normal matrix,
+   colour, material, gradient) comes from a buffer texture, INSTANCE_TEXELS RGBA32F texels per instance:
+   0-2 model rows; 3-5 normal-matrix rows with shininess, specular, metallic in w; 6 colour (linear) and unlit;
+   7 gradient from (linear) and on; 8 gradient to. */
 static const char *vs_src =
 "#version 150\n"
 "in vec3 aPos;\n"
 "in vec3 aNrm;\n"
 "in float aGrad;\n"
 "uniform mat4 uViewProj;\n"
-"uniform mat4 uModel;\n"
-"uniform mat4 uNormalM;\n"
+"uniform samplerBuffer uInst;\n"
+"uniform int uInstBase;\n"
 "out float vGrad;\n"
 "out vec3 vWorldPos;\n"
 "out vec3 vWorldNrm;\n"
 "out vec2 vWorldUV;\n"
+"flat out vec3 vColor;\n"
+"flat out vec3 vMat;\n"
+"flat out float vUnlit;\n"
+"flat out vec4 vGradFrom;\n"
+"flat out vec3 vGradTo;\n"
 "void main(){\n"
-"    vec4 wp=uModel*vec4(aPos,1.0);\n"
+"    int b=(uInstBase+gl_InstanceID)*9;\n"
+"    vec4 m0=texelFetch(uInst,b),m1=texelFetch(uInst,b+1),m2=texelFetch(uInst,b+2);\n"
+"    vec4 n0=texelFetch(uInst,b+3),n1=texelFetch(uInst,b+4),n2=texelFetch(uInst,b+5);\n"
+"    vec4 c=texelFetch(uInst,b+6);\n"
+"    vec4 p=vec4(aPos,1.0);\n"
+"    vec4 wp=vec4(dot(m0,p),dot(m1,p),dot(m2,p),1.0);\n"
 "    vWorldPos=wp.xyz;\n"
-"    vWorldNrm=normalize(mat3(uNormalM)*aNrm);\n"
+"    vWorldNrm=normalize(vec3(dot(n0.xyz,aNrm),dot(n1.xyz,aNrm),dot(n2.xyz,aNrm)));\n"
 "    vGrad=aGrad;\n"
+"    vColor=c.rgb; vUnlit=c.a; vMat=vec3(n0.w,n1.w,n2.w);\n"
+"    vGradFrom=texelFetch(uInst,b+7); vGradTo=texelFetch(uInst,b+8).rgb;\n"
 "    vec3 n=abs(vWorldNrm);\n"
 "    if(n.y>n.x&&n.y>n.z) vWorldUV=wp.xz*0.5;\n"
 "    else if(n.x>n.y&&n.x>n.z) vWorldUV=wp.yz*0.5;\n"
@@ -69,23 +85,22 @@ static const char *fs_src =
 "uniform vec3 uLightColor;\n"
 "uniform float uLightRadius;\n"
 "uniform float uLightRange;\n"
-"uniform vec3 uColor;\n"
-"uniform float uShininess;\n"
-"uniform float uSpecular;\n"
-"uniform float uMetallic;\n"
+"flat in vec3 vColor;\n"
+"flat in vec3 vMat;\n"
+"flat in float vUnlit;\n"
+"flat in vec4 vGradFrom;\n"
+"flat in vec3 vGradTo;\n"
 "uniform vec3 uSky;\n"
 "uniform vec3 uAmbient;\n"
 "uniform int uAmbientOn;\n"
 "uniform int uSkyOn;\n"
 "uniform vec3 uRamp[RAMP_SHADES];\n"
 "uniform int uRampOn;\n"
-"uniform int uGradOn;\n"
-"uniform vec3 uGradFrom;\n"
-"uniform vec3 uGradTo;\n"
 #ifdef SCENER_USE_TEXTURES
 "uniform sampler2D uTex;\n"
 #endif
 "void main(){\n"
+"    vec3 uColor=vColor; float uShininess=vMat.x,uSpecular=vMat.y,uMetallic=vMat.z;\n"
 "    vec3 N=normalize(vWorldNrm);\n"
 "    vec3 V=normalize(uViewPos-vWorldPos);\n"
 "    vec3 L=normalize(uLightPos.xyz-vWorldPos*uLightPos.w);\n"
@@ -105,21 +120,25 @@ static const char *fs_src =
 "    vec3 albedo=uColor;\n"
 "    vec3 F0=mix(vec3(SPECULAR_TO_F0*uSpecular),albedo,uMetallic);\n"
 "    vec3 F=F0+(vec3(1.0)-F0)*pow(1.0-max(dot(V,H),0.0),FRESNEL_EXP);\n"
-"    if(uSkyOn>0){\n"
-"        /* The sky in glossy surfaces: reflection direction picks sky above, ground below; Fresnel is damped by roughness. */\n"
-"        vec3 Rv=reflect(-V,N);\n"
-"        float up=clamp(Rv.y*0.5+0.5,0.0,1.0);\n"
-"        vec3 Fr=F0+(max(vec3(1.0-roughness),F0)-F0)*pow(1.0-NdotV,FRESNEL_EXP);\n"
-"        fragColor=vec4(clamp(uSky*Fr*up*up*(1.0-0.5*roughness),0.0,1.0),1.0);\n"
-"        return;\n"
-"    }\n"
 #ifdef SCENER_USE_TEXTURES
 "    vec3 texColor=texture(uTex,vWorldUV).rgb;\n"
 #else
 "    vec3 texColor=vec3(1.0);\n"
 #endif
-"    if(uGradOn>0) texColor*=mix(uGradFrom,uGradTo,clamp(vGrad,0.0,1.0));\n"
-"    if(uAmbientOn>0){ fragColor=vec4(clamp(uColor*texColor*uAmbient,0.0,1.0),1.0); return; }\n"
+"    if(vGradFrom.a>0.5) texColor*=mix(vGradFrom.rgb,vGradTo,clamp(vGrad,0.0,1.0));\n"
+"    if(uAmbientOn>0){\n"
+"        /* The depth-filling pass: ambient light (an unlit object shows its own colour), plus the sky in glossy\n"
+"           surfaces: the reflection direction picks sky above, ground below; Fresnel is damped by roughness. */\n"
+"        vec3 base=clamp(uColor*texColor*mix(uAmbient,vec3(1.0),vUnlit),0.0,1.0);\n"
+"        if(uSkyOn>0 && vUnlit<0.5){\n"
+"            vec3 Rv=reflect(-V,N);\n"
+"            float up=clamp(Rv.y*0.5+0.5,0.0,1.0);\n"
+"            vec3 Fr=F0+(max(vec3(1.0-roughness),F0)-F0)*pow(1.0-NdotV,FRESNEL_EXP);\n"
+"            base+=clamp(uSky*Fr*up*up*(1.0-0.5*roughness),0.0,1.0);\n"
+"        }\n"
+"        fragColor=vec4(base,1.0);\n"
+"        return;\n"
+"    }\n"
 "    /* The diffuse term drops its 1/pi, so a light colour is irradiance/pi; the specular lobe times NdotL needs the pi back. */\n"
 "    vec3 spec=(D*G*F)*PI/(max(4.0*NdotV,MIN_SPECULAR))*uLightColor;\n"
 "    vec3 diff=uColor*texColor*(vec3(1.0)-F)*(1.0-uMetallic)*NdotL*uLightColor;\n"
@@ -157,26 +176,19 @@ void shader_init(void){
 	vlocPos = 0;
 	vlocNrm = 1;
 	ulocViewProj    = glGetUniformLocation(prog, "uViewProj");
-	ulocModel       = glGetUniformLocation(prog, "uModel");
-	ulocNormalM     = glGetUniformLocation(prog, "uNormalM");
+	ulocInst        = glGetUniformLocation(prog, "uInst");
+	ulocInstBase    = glGetUniformLocation(prog, "uInstBase");
 	ulocViewPos     = glGetUniformLocation(prog, "uViewPos");
 	ulocLightPos    = glGetUniformLocation(prog, "uLightPos");
 	ulocLightColor  = glGetUniformLocation(prog, "uLightColor");
 	ulocLightRadius = glGetUniformLocation(prog, "uLightRadius");
 	ulocLightRange  = glGetUniformLocation(prog, "uLightRange");
-	ulocColor       = glGetUniformLocation(prog, "uColor");
-	ulocShininess   = glGetUniformLocation(prog, "uShininess");
-	ulocSpecular    = glGetUniformLocation(prog, "uSpecular");
 	ulocSky         = glGetUniformLocation(prog, "uSky");
 	ulocAmbient     = glGetUniformLocation(prog, "uAmbient");
 	ulocAmbientOn   = glGetUniformLocation(prog, "uAmbientOn");
 	ulocSkyOn       = glGetUniformLocation(prog, "uSkyOn");
-	ulocMetallic    = glGetUniformLocation(prog, "uMetallic");
 	ulocRamp        = glGetUniformLocation(prog, "uRamp");
 	ulocRampOn      = glGetUniformLocation(prog, "uRampOn");
-	ulocGradOn      = glGetUniformLocation(prog, "uGradOn");
-	ulocGradFrom    = glGetUniformLocation(prog, "uGradFrom");
-	ulocGradTo      = glGetUniformLocation(prog, "uGradTo");
 	vlocGrad        = glGetAttribLocation(prog, "aGrad");
 	vcache_set_attribs((int)vlocPos,(int)vlocNrm,(int)vlocGrad);
 #ifdef SCENER_USE_TEXTURES
@@ -217,27 +229,41 @@ void shader_set_light(Light *L){
 	glUniform1f(ulocLightRange, L->isDirectional ? 0.0f : L->range);
 }
 
-void shader_set_material(vec3 color, float shininess, float specular, float metallic){
-	color=srgb_to_linear(color);
-	glUniform3f(ulocColor, color.x, color.y, color.z);
-	glUniform1f(ulocShininess, shininess);
-	glUniform1f(ulocSpecular, specular);
-	glUniform1f(ulocMetallic, metallic);
-}
-
-void shader_set_model(mat4 model, mat4 normalM){
-	glUniformMatrix4fv(ulocModel, 1, GL_FALSE, model.m);
-	glUniformMatrix4fv(ulocNormalM, 1, GL_FALSE, normalM.m);
-}
-
-void shader_set_ambient(int on, vec3 linear){
+/* The depth-filling pass: ambient light (linear) and, when sky is on, the sky colour (sRGB) glossy surfaces mirror. */
+void shader_set_ambient(int on, vec3 linear, int skyOn, vec3 sky){
 	glUniform1i(ulocAmbientOn, on ? 1 : 0);
-	if(on) glUniform3f(ulocAmbient, linear.x, linear.y, linear.z);
+	glUniform1i(ulocSkyOn, on && skyOn ? 1 : 0);
+	if(!on) return;
+	glUniform3f(ulocAmbient, linear.x, linear.y, linear.z);
+	sky=srgb_to_linear(sky);
+	glUniform3f(ulocSky, sky.x, sky.y, sky.z);
 }
 
-void shader_set_sky(int on, vec3 color){
-	glUniform1i(ulocSkyOn, on ? 1 : 0);
-	if(on){ color=srgb_to_linear(color); glUniform3f(ulocSky, color.x, color.y, color.z); }
+/* One object's texels of the instance buffer (see the vertex shader). */
+void shader_fill_instance(float *t, const SceneObj *o){
+	const float *m=o->model.m,*n=o->normalM.m;
+	float mat[3]={o->shininess,o->specular,o->metallic};
+	for(int r=0;r<3;r++){
+		t[r*4]=m[r]; t[r*4+1]=m[4+r]; t[r*4+2]=m[8+r]; t[r*4+3]=m[12+r];
+		t[12+r*4]=n[r]; t[12+r*4+1]=n[4+r]; t[12+r*4+2]=n[8+r]; t[12+r*4+3]=mat[r];
+	}
+	vec3 c=srgb_to_linear(o->color),a=srgb_to_linear(o->gradFrom),b=srgb_to_linear(o->gradTo);
+	t[24]=c.x; t[25]=c.y; t[26]=c.z; t[27]=o->unlit?1.0f:0.0f;
+	t[28]=a.x; t[29]=a.y; t[30]=a.z; t[31]=o->gradient?1.0f:0.0f;
+	t[32]=b.x; t[33]=b.y; t[34]=b.z; t[35]=0;
+}
+
+/* The instance buffer texture sits on unit 1 (unit 0 is the material texture). */
+void shader_set_instances(unsigned int bufferTexture){
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_BUFFER, bufferTexture);
+	glActiveTexture(GL_TEXTURE0);
+	glUniform1i(ulocInst, 1);
+}
+
+void shader_draw_instances(Mesh *m, int first, int count){
+	glUniform1i(ulocInstBase, first);
+	vcache_draw_mesh(m, count);
 }
 
 void shader_set_ramp(const vec3 *shades){
@@ -248,14 +274,6 @@ void shader_set_ramp(const vec3 *shades){
 	glUniform1i(ulocRampOn, 1);
 }
 
-void shader_set_gradient(int on, vec3 from, vec3 to){
-	glUniform1i(ulocGradOn, on ? 1 : 0);
-	if(!on) return;
-	vec3 a=srgb_to_linear(from), b=srgb_to_linear(to);
-	glUniform3f(ulocGradFrom, a.x, a.y, a.z);
-	glUniform3f(ulocGradTo, b.x, b.y, b.z);
-}
-
 #ifdef SCENER_USE_TEXTURES
 void shader_set_texture(unsigned int tex){
 	glActiveTexture(GL_TEXTURE0);
@@ -264,4 +282,3 @@ void shader_set_texture(unsigned int tex){
 }
 #endif
 
-void shader_draw_mesh(Mesh *m){ vcache_draw_mesh(m); }

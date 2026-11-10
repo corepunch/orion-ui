@@ -187,6 +187,7 @@ void theme_css_apply_palette(void) {
 // ── application sheet ─────────────────────────────────────────────────────────
 
 void theme_reset_stylesheets(void);   // theme_builtin.c: drops the parsed sheets
+void theme_refresh_windows(hinstance_t hinstance);
 
 void ui_set_app_stylesheet(const char *css, const char *origin) {
   free(g_app_css); free(g_app_origin);
@@ -194,6 +195,7 @@ void ui_set_app_stylesheet(const char *css, const char *origin) {
   g_app_origin = css ? strdup(origin ? origin : "app.css") : NULL;
   theme_reset_stylesheets();
   g_theme_style_generation++;
+  theme_refresh_windows(0);
 }
 
 void ui_set_instance_stylesheet(hinstance_t hinstance, const char *css, const char *origin) {
@@ -223,4 +225,5 @@ void ui_set_instance_stylesheet(hinstance_t hinstance, const char *css, const ch
     g_instance_sheets[i].theme = NULL;
   }
   g_theme_style_generation++;
+  theme_refresh_windows(hinstance);
 }

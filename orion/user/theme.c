@@ -58,12 +58,25 @@ static bool theme_validate(theme_t *t) {
 // Depth-first walk over the entire window tree, posting msg to every live
 // window.  Covers regular children and toolbar-band embedded controls
 // (toolbar_state_t->children), which live in a separate list from win->children.
-static void post_to_win_tree(window_t *win, uint32_t msg, uint32_t wparam) {
-  for (; win; win = win->next) {
-    post_message(win, msg, wparam, NULL);
-    post_to_win_tree(win->children, msg, wparam);
-    toolbar_state_t *tb = window_toolbar_state(win);
-    if (tb) post_to_win_tree(tb->children, msg, wparam);
+static bool post_to_win_tree(window_t *win, uint32_t msg, uint32_t wparam, hinstance_t hinstance) {
+  bool affected = !hinstance || win->hinstance == hinstance;
+  if (affected) post_message(win, msg, wparam, NULL);
+  for (window_t *child = win->children; child; child = child->next)
+    affected |= post_to_win_tree(child, msg, wparam, hinstance);
+  if (win->toolbar) affected |= post_to_win_tree(win->toolbar, msg, wparam, hinstance);
+  toolbar_state_t *tb = window_toolbar_state(win);
+  for (window_t *child = tb ? tb->children : NULL; child; child = child->next)
+    affected |= post_to_win_tree(child, msg, wparam, hinstance);
+  return affected;
+}
+
+void theme_refresh_windows(hinstance_t hinstance) {
+  if (!g_ui_runtime.running) return;
+  uint32_t style = (uint32_t)get_theme()->style;
+  for (window_t *win = g_ui_runtime.windows; win; win = win->next) {
+    if (!post_to_win_tree(win, evThemeChanged, style, hinstance)) continue;
+    if (window_has_state(win, WINDOW_STATE_VISIBLE)) invalidate_window(win);
+    post_message(win, evResize, 0, NULL);
   }
 }
 
@@ -108,20 +121,7 @@ bool set_theme(theme_style_t style) {
   theme_css_apply_palette();
   g_theme_style_generation++;
 
-  if (g_ui_runtime.running) {
-    post_to_win_tree(g_ui_runtime.windows, evThemeChanged, (uint32_t)style);
-
-    // Repaint only visible top-level windows; hidden windows receive the
-    // evThemeChanged notification above so controls can update caches, but
-    // should not trigger a redundant paint until they become visible.
-    for (window_t *w = g_ui_runtime.windows; w; w = w->next) {
-      if (window_has_state(w, WINDOW_STATE_VISIBLE)) invalidate_window(w);
-    }
-
-    // Geometry comes from the new sheet (scroll bar gutter, caption, toolbar,
-    // fonts): every top-level window lays out again.
-    for (window_t *w = g_ui_runtime.windows; w; w = w->next) post_message(w, evResize, 0, NULL);
-  }
+  theme_refresh_windows(0);
   s_switching = false;
   return true;
 }

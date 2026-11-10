@@ -6,6 +6,44 @@
 #include <orion/ui.h>
 #include <orion/user/ui_style.h>
 
+#ifdef APP_STYLESHEET_TEST_STANDALONE
+#include <orion/user/style.h>
+#include <orion/user/ui_style.c>
+#include <orion/user/theme_box.c>
+
+static style_sheet_t *test_process_sheet;
+static struct { hinstance_t instance; style_sheet_t *sheet; } test_instance_sheets[2];
+unsigned g_theme_style_generation = 1;
+uint32_t g_sys_colors[brCount];
+
+theme_t *get_theme(void) { return NULL; }
+style_sheet_t *theme_stylesheet(theme_t *theme) { (void)theme; return test_process_sheet; }
+style_sheet_t *ui_instance_stylesheet(hinstance_t instance) {
+  for (size_t index = 0; index < 2; index++)
+    if (test_instance_sheets[index].instance == instance) return test_instance_sheets[index].sheet;
+  return NULL;
+}
+bool ui_has_instance_stylesheet(hinstance_t instance) { return ui_instance_stylesheet(instance) != NULL; }
+void ui_set_instance_stylesheet(hinstance_t instance, const char *css, const char *origin) {
+  for (size_t index = 0; index < 2; index++) {
+    if (test_instance_sheets[index].instance && test_instance_sheets[index].instance != instance) continue;
+    style_sheet_free(test_instance_sheets[index].sheet);
+    test_instance_sheets[index].instance = css ? instance : 0;
+    test_instance_sheets[index].sheet = css ? style_sheet_parse(css, origin) : NULL;
+    g_theme_style_generation++;
+    return;
+  }
+  abort();
+}
+void test_env_init(void) { test_process_sheet = style_sheet_parse("Button { color: #000000; }", "process.css"); }
+void test_env_shutdown(void) { style_sheet_free(test_process_sheet); test_process_sheet = NULL; g_theme_style_generation++; }
+uint32_t theme_foreground_in(const window_t *win, theme_part_t part, ctrl_state_t state) {
+  return theme_css_foreground(part, state, ui_window_scope(win));
+}
+irect16_t theme_content_insets_in(const window_t *win, theme_part_t part, ctrl_state_t state) {
+  return theme_css_insets_vars(part, state, ui_window_scope(win), NULL);
+}
+#else
 static result_t form_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   (void)win; (void)msg; (void)wparam; (void)lparam;
   return false;
@@ -145,14 +183,107 @@ static void test_instance_variables(void) {
   test_env_shutdown();
   PASS();
 }
+#endif
+
+static void test_box_cache_pressure(void) {
+  TEST("painted scopes keep instance and class overrides after box cache eviction");
+  test_env_init();
+  ui_set_instance_stylesheet(71, "Button.pressure { color: #123456; background: #123456; border: 7px solid #123456; margin: 0; }"
+                                "Button#paint0 { color: #654321; }", "pressure.css");
+  window_t windows[160] = {0};
+  for (int index = 0; index < 160; index++) {
+    windows[index].hinstance = 71;
+    snprintf(windows[index].style_id, sizeof(windows[index].style_id), "paint%d", index);
+    snprintf(windows[index].style_class, sizeof(windows[index].style_class), "pressure");
+    ASSERT_EQUAL(theme_foreground_in(&windows[index], THEME_PART_BUTTON, CTRL_NORMAL),
+                 index ? 0xFF563412u : 0xFF214365u);
+    ASSERT_EQUAL(theme_content_insets_in(&windows[index], THEME_PART_BUTTON, CTRL_NORMAL).x, 7);
+  #ifdef APP_STYLESHEET_TEST_STANDALONE
+    ASSERT_EQUAL(box_for(THEME_PART_BUTTON, CTRL_NORMAL, ui_window_scope(&windows[index]), NULL)->top, 0xFF563412u);
+  #endif
+  }
+  for (int index = 0; index < 160; index++)
+    ASSERT_EQUAL(theme_foreground_in(&windows[index], THEME_PART_BUTTON, CTRL_NORMAL),
+                 index ? 0xFF563412u : 0xFF214365u);
+  ui_set_instance_stylesheet(71, NULL, NULL);
+  test_env_shutdown();
+  PASS();
+}
+
+static void test_selector_cache_pressure(void) {
+  TEST("scopes, selector attribution and pseudo-classes survive registry pressure and churn");
+  test_env_init();
+  ui_set_instance_stylesheet(71, "Button.pressure { min-height: 37px; color: #123456; }"
+                                "Button.pressure:hover { min-height: 41px; }"
+                                "Button#scope0 { min-height: 43px; }", "first.css");
+  ui_set_instance_stylesheet(72, "Button.pressure { min-height: 53px; color: #654321; }"
+                                "Button.pressure:hover { min-height: 59px; }"
+                                "Button#scope0 { min-height: 61px; }", "second.css");
+  enum { SCOPE_COUNT = 600, SELECTOR_COUNT = 8 };
+  const char *selectors[SCOPE_COUNT][SELECTOR_COUNT], *hover[SCOPE_COUNT][SELECTOR_COUNT];
+  const ui_scope_t *scopes[SCOPE_COUNT];
+  window_t window = {0};
+  snprintf(window.style_class, sizeof(window.style_class), "pressure");
+  for (int index = 0; index < SCOPE_COUNT; index++) {
+    window.hinstance = index % 2 ? 72 : 71;
+    snprintf(window.style_id, sizeof(window.style_id), "scope%d", index / 2);
+    window.style_scope = NULL;
+    scopes[index] = ui_window_scope(&window);
+    ASSERT_NOT_NULL(scopes[index]);
+    for (int selector = 0; selector < SELECTOR_COUNT; selector++) {
+      char base[64];
+      snprintf(base, sizeof(base), "Button.variant%d", selector);
+      selectors[index][selector] = ui_selector(&window, base);
+      hover[index][selector] = ui_state_selector(selectors[index][selector], CTRL_HOVER);
+      ASSERT_EQUAL(ui_px(selectors[index][selector], "min-height"), index < 2 ? (index ? 61 : 43) : (index % 2 ? 53 : 37));
+      ASSERT_EQUAL(ui_px(hover[index][selector], "min-height"), index < 2 ? (index ? 61 : 43) : (index % 2 ? 59 : 41));
+    }
+  }
+  for (int index = 0; index < SCOPE_COUNT; index++) {
+    window.hinstance = index % 2 ? 72 : 71;
+    snprintf(window.style_id, sizeof(window.style_id), "scope%d", index / 2);
+    window.style_scope = NULL;
+    ASSERT_TRUE(ui_window_scope(&window) == scopes[index]);
+    ASSERT_EQUAL(theme_foreground_in(&window, THEME_PART_BUTTON, CTRL_NORMAL), index % 2 ? 0xFF214365u : 0xFF563412u);
+    for (int selector = 0; selector < SELECTOR_COUNT; selector++) {
+      char base[64];
+      snprintf(base, sizeof(base), "Button.variant%d", selector);
+      ASSERT_TRUE(ui_selector(&window, base) == selectors[index][selector]);
+      ASSERT_TRUE(ui_state_selector(selectors[index][selector], CTRL_HOVER) == hover[index][selector]);
+      ASSERT_EQUAL(ui_px(selectors[index][selector], "min-height"), index < 2 ? (index ? 61 : 43) : (index % 2 ? 53 : 37));
+      ASSERT_EQUAL(ui_px(hover[index][selector], "min-height"), index < 2 ? (index ? 61 : 43) : (index % 2 ? 59 : 41));
+    }
+  }
+  const char *many[40];
+  for (int index = 0; index < 40; index++) {
+    char base[64];
+    snprintf(base, sizeof(base), "Button.many%d", index);
+    many[index] = ui_selector(&window, base);
+    ASSERT_EQUAL(ui_px(many[index], "min-height"), 53);
+  }
+  ui_set_instance_stylesheet(72, "Button.pressure { min-height: 67px; color: #ABCDEF; }", "replacement.css");
+  ASSERT_EQUAL(ui_px(selectors[599][0], "min-height"), 67);
+  ASSERT_EQUAL(ui_px(hover[599][0], "min-height"), 67);
+  ASSERT_EQUAL(ui_px(many[0], "min-height"), 67);
+  ASSERT_EQUAL(theme_foreground_in(&window, THEME_PART_BUTTON, CTRL_NORMAL), 0xFFEFCDABu);
+  ASSERT_EQUAL(ui_px(selectors[598][0], "min-height"), 37);
+  ui_set_instance_stylesheet(71, NULL, NULL);
+  ui_set_instance_stylesheet(72, NULL, NULL);
+  test_env_shutdown();
+  PASS();
+}
 
 int main(void) {
   TEST_START("App style sheets");
+#ifndef APP_STYLESHEET_TEST_STANDALONE
   test_instance_variables();
   test_selector_composition();
   test_id_and_class_rules();
   test_instance_sheet();
   test_window_set_style();
   test_controls_read_their_selectors();
+#endif
+  test_box_cache_pressure();
+  test_selector_cache_pressure();
   TEST_END();
 }
