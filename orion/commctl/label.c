@@ -38,7 +38,8 @@ static uint32_t label_color(const window_t *win) {
   return get_sys_color(brTextNormal);
 }
 
-
+// A sheet's text-shadow falls right and down of the text; the label's box makes room for it.
+static int label_shadow_inset(const window_t *win) { return theme_text_inset(label_font(win)); }
 
 #define LABEL_MAX_CONTENT 0x4000   // wider than any line
 
@@ -69,7 +70,7 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       }
       // Single-line labels start as wide as their text.
       if (win->frame.h <= CONTROL_HEIGHT)
-        win->frame.w = MAX(win->frame.w, text_strwidth(label_font(win), win->title) + theme_text_inset(label_font(win)));
+        win->frame.w = MAX(win->frame.w, text_strwidth(label_font(win), win->title) + label_shadow_inset(win));
       win->flags |= WINDOW_NOTABSTOP;
       if ((win->flags & LABEL_COLLAPSE_EMPTY) && !win->title[0]) win->frame = R(0, 0, 0, 0);
       return true;
@@ -80,7 +81,7 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       layout_measure_t *m = (layout_measure_t *)lparam;
       if (!m) return true;
       ui_font_t font = label_font(win);
-      int inset = theme_text_inset(font), line = text_line_height(font);
+      int inset = label_shadow_inset(win), line = text_line_height(font);
       if (label_truncates(win)) {
         // One line; the arranged width decides how much of it is visible.
         m->desired_w = text_strwidth(font, win->title) + inset;
@@ -106,7 +107,7 @@ result_t win_label(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       irect16_t text_pos = {0, 0, win->frame.w, win->frame.h};
       if (label_truncates(win)) {
         char fitted[512];
-        text_ellipsize(font, win->title, win->frame.w - theme_text_inset(font), fitted, sizeof(fitted));
+        text_ellipsize(font, win->title, win->frame.w - label_shadow_inset(win), fitted, sizeof(fitted));
         text_pos.h = text_line_height(font);   // the top line box; glyphs in its middle
         theme_draw_text_clipped(font, fitted, text_pos, col, CTRL_NORMAL);
         return true;

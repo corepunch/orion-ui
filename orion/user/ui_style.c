@@ -107,6 +107,42 @@ const char *ui_selector(const window_t *win, const char *base) {
   return selector;
 }
 
+// ── pseudo-class selectors ────────────────────────────────────────────────────
+// ui_state_selector(sel, state) is sel with the pseudo-classes the control state
+// matches, interned like ui_selector()'s answers and read by the same sheet.
+
+static const struct { const char *name; uint32_t bit; } k_ui_states[] = {
+  {"hover", STYLE_HOVER}, {"active", STYLE_ACTIVE}, {"checked", STYLE_CHECKED}, {"disabled", STYLE_DISABLED},
+  {"focus", STYLE_FOCUS}, {"default", STYLE_DEFAULT}, {"window-inactive", STYLE_WINDOW_INACTIVE},
+};
+
+#define UI_STATE_SLOTS 1024
+static struct { const char *base, *result; uint32_t bits; } g_state_selectors[UI_STATE_SLOTS];
+
+const char *ui_state_selector(const char *base, ctrl_state_t state) {
+  uint32_t bits = theme_style_state(state);
+  if (!base || !bits) return base;
+  unsigned h = (ui_ptr_hash(base) * 131u + bits) % UI_STATE_SLOTS;
+  for (unsigned n = 0; n < UI_STATE_SLOTS; n++, h = (h + 1) % UI_STATE_SLOTS) {
+    if (!g_state_selectors[h].base) {
+      char composed[320];
+      int len = snprintf(composed, sizeof(composed), "%s", base);
+      for (size_t i = 0; i < sizeof(k_ui_states) / sizeof(k_ui_states[0]); i++)
+        if (bits & k_ui_states[i].bit) len += snprintf(composed + len, sizeof(composed) - len, ":%s", k_ui_states[i].name);
+      char *result = strdup(composed);
+      if (!result) { fprintf(stderr, "[ui_style] selector allocation failed\n"); fflush(stderr); return base; }
+      g_state_selectors[h].base = base; g_state_selectors[h].bits = bits; g_state_selectors[h].result = result;
+      const ui_scope_t *scope = ui_scope_of(base);
+      if (scope) ui_register_scoped(result, scope);
+      return result;
+    }
+    if (g_state_selectors[h].base == base && g_state_selectors[h].bits == bits) return g_state_selectors[h].result;
+  }
+  fprintf(stderr, "[ui_style] the state selector table is full; %s is styled without its state\n", base);
+  fflush(stderr);
+  return base;
+}
+
 void window_set_style(window_t *win, const char *id, const char *classes) {
   if (!win) return;
   if (!strcmp(win->style_id, id ? id : "") && !strcmp(win->style_class, classes ? classes : "")) return;
@@ -200,11 +236,6 @@ typedef struct {
   char element[48], part[48], classes[64], id[32];
   uint32_t state;
 } ui_selector_t;
-
-static const struct { const char *name; uint32_t bit; } k_ui_states[] = {
-  {"hover", STYLE_HOVER}, {"active", STYLE_ACTIVE}, {"checked", STYLE_CHECKED}, {"disabled", STYLE_DISABLED},
-  {"focus", STYLE_FOCUS}, {"default", STYLE_DEFAULT}, {"window-inactive", STYLE_WINDOW_INACTIVE},
-};
 
 static size_t ui_ident(const char *s) {
   size_t n = 0;

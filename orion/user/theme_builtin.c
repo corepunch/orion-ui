@@ -45,32 +45,46 @@ void theme_draw_statusbar_text(irect16_t r, const char *text) {
   if (text) draw_text_clipped("StatusBar", text, &r, get_sys_color(brTextNormal), TEXT_PADDING_LEFT);
 }
 
-int theme_text_inset(ui_font_t font) { return ui_flag(font, "text-shadow") ? TEXT_SHADOW_OFFSET : 0; }
+// The text-shadow the sheet gives selector in state: none unless set. Offset and colour are the sheet's.
+static bool text_shadow_of(const char *selector, ctrl_state_t state, ui_shadow_t *out) {
+  const char *styled = ui_state_selector(selector, state);
+  if (!ui_flag(styled, "text-shadow")) return false;
+  *out = ui_shadow(styled, "text-shadow");
+  return true;
+}
 
-void theme_draw_text_clipped(ui_font_t font, const char *text, irect16_t r, uint32_t color, ctrl_state_t state) {
-  if (theme_text_inset(font) && !(state & CTRL_DISABLED)) {
-    irect16_t shadow = rect_offset(r, TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
-    draw_text_clipped(font, text, &shadow, get_sys_color(brDarkEdge), 0);
+void theme_draw_text_clipped(const char *selector, const char *text, irect16_t r, uint32_t color, ctrl_state_t state) {
+  ui_shadow_t shadow;
+  if (text_shadow_of(selector, state, &shadow)) {
+    irect16_t at = rect_offset(r, shadow.offset.x, shadow.offset.y);
+    draw_text_clipped(selector, text, &at, shadow.color, 0);
   }
-  draw_text_clipped(font, text, &r, color, 0);
+  draw_text_clipped(selector, text, &r, color, 0);
 }
 
-void theme_draw_text_wrapped(ui_font_t font, const char *text, irect16_t r, uint32_t color, ctrl_state_t state) {
-  if (theme_text_inset(font) && !(state & CTRL_DISABLED))
-    draw_text_wrapped_font(font, text, &(irect16_t){r.x + TEXT_SHADOW_OFFSET, r.y + TEXT_SHADOW_OFFSET, r.w, r.h}, get_sys_color(brDarkEdge));
-  draw_text_wrapped_font(font, text, &r, color);
+void theme_draw_text_wrapped(const char *selector, const char *text, irect16_t r, uint32_t color, ctrl_state_t state) {
+  ui_shadow_t shadow;
+  if (text_shadow_of(selector, state, &shadow)) {
+    irect16_t at = rect_offset(r, shadow.offset.x, shadow.offset.y);
+    draw_text_wrapped_font(selector, text, &at, shadow.color);
+  }
+  draw_text_wrapped_font(selector, text, &r, color);
 }
 
-// Bevelled themes engrave the label and shift it while the button is down.
-// win is the button: its classes, #id and app sheet style the label.
+int theme_text_inset(const char *selector) {
+  ui_shadow_t shadow;
+  return text_shadow_of(selector, CTRL_NORMAL, &shadow) ? MAX(0, MAX(shadow.offset.x, shadow.offset.y)) : 0;
+}
+
+// The label of a button: engraved and shifted as the sheet says for its state
+// (Button:active, Button:checked, Button:disabled). win is the button: its
+// classes, #id and app sheet style the label.
 void theme_draw_button_label(const window_t *win, irect16_t r, const char *text, ctrl_state_t state) {
-  const char *button = ui_selector(win, "Button");
-  bool pressed = (state & (CTRL_PRESSED | CTRL_SELECTED)) && !(state & CTRL_DISABLED);
-  if (ui_flag(button, "text-shadow") && !pressed && !(state & CTRL_DISABLED))
-    draw_text(button, text, r.x + TEXT_SHADOW_OFFSET, r.y + TEXT_SHADOW_OFFSET, get_sys_color(brDarkEdge));
-  int offset = ui_px(button, "--press-offset");
-  if (pressed) r = rect_offset(r, offset, offset);
-  draw_text(button, text, r.x, r.y, theme_css_foreground(THEME_PART_BUTTON, state, ui_window_scope(win)));
+  const char *button = ui_selector(win, "Button"), *styled = ui_state_selector(button, state);
+  ui_shadow_t shadow;
+  if (text_shadow_of(button, state, &shadow)) draw_text(button, text, r.x + shadow.offset.x, r.y + shadow.offset.y, shadow.color);
+  int offset = ui_px(styled, "--label-offset");
+  draw_text(button, text, r.x + offset, r.y + offset, theme_css_foreground(THEME_PART_BUTTON, state, ui_window_scope(win)));
 }
 
 void theme_draw_combobox(const window_t *win, irect16_t r, const char *text, ctrl_state_t state) {
