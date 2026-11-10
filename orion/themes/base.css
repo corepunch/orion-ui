@@ -25,7 +25,7 @@
 
 Window           { box-shadow: 0 4px 8px #00000080; }
 Window::titlebar { height: var(--titlebar-height); }
-MenuBar          { height: var(--menubar-height); }
+MenuBar          { height: var(--menubar-height); padding: 2px; }
 Scrollbar        { width: var(--scrollbar-width); }
 Toolbar          { padding: 3px; }
 Toolbar::button  { height: var(--toolbar-height); }
@@ -36,7 +36,9 @@ SplitView        { gap: 0; }
 StackView, GridView, FlowView { gap: 4px; padding: 0; }
 StackView        { flex-direction: column; }
 Button           { padding-left: var(--control-padding); --press-offset: 0; text-shadow: none; }
-Menu::item       { --shape: capsule; }
+Menu::item       { --shape: capsule; padding-left: 17px; --overhang: 8px; }
+MenuBar::item    { padding-left: 8px; }
+Menu             { --submenu-overlap: 2px; }
 Card {
   padding: 8px 12px;
   --highlight-width: 1px; --edge-width: 4px; --ring-width: 1px; --shadow-size: 1px;

@@ -10,7 +10,7 @@
 
 static inline void popup_item_paint(irect16_t row, const char *text, ctrl_state_t state, ui_font_t font) {
   theme_draw(THEME_PART_MENU_ITEM, rect_inset_xy(row, 1, 0), state);
-  irect16_t label = rect_inset_xy(row, MENU_SIDE_PAD, 0);
+  irect16_t label = rect_inset_xy(row, ui_px("Menu::item", "padding-left"), 0);
   char buf[256];
   const char *tab = text ? strchr(text, '\t') : NULL;
   if (tab) {
