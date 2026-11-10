@@ -11,10 +11,12 @@
 #include "simplegl.h"
 
 void vcache_draw_mesh(Mesh *m);                 /* uploads on first use (or after gpuDirty), then draws */
+void vcache_prepare_mesh(Mesh *m);              /* uploads now, so that a later draw does not have to */
 void vcache_collect(void);                      /* applies the frees queued by mesh_free; call with a GL context */
 
 unsigned vcache_mesh_texture(Mesh *m, int *firstVertex); /* uploads if needed; its chunk's vertices as an R32F buffer texture */
-int  vcache_index_alloc(const unsigned *ix, int n, int *chunk, int *first); /* stores indices, 16-bit when they fit */
+int  vcache_index_alloc(const unsigned *ix, int n, int *chunk, int *first); /* stages indices, 16-bit when they fit; never call between draws */
+void vcache_flush(void);                        /* sends the indices allocated since the last flush; call before drawing them */
 void vcache_index_draw(int chunk, int first, int n, int baseVertex);
 void vcache_index_reset(void);                  /* forgets every index range (shadow volumes went stale) */
 void vcache_shutdown(void);

@@ -2844,7 +2844,9 @@ static void warn_unlit_scene(Scene *s,const char *path){
 		if(light->isDirectional || !light->castsShadow) continue;
 		for(int i=0;i<s->nobjs;i++){
 			SceneObj *o=&s->objs[i];
-			if(!o->castsShadow || !o->mesh || !mesh_encloses(o->mesh,mat4_xform_point(mat4_affine_inverse(o->model),light->pos))) continue;
+			vec3 lp=light->pos;   /* only a solid whose bounds hold the light can enclose it */
+			if(!o->castsShadow || !o->mesh || lp.x<o->bmin.x || lp.x>o->bmax.x || lp.y<o->bmin.y || lp.y>o->bmax.y || lp.z<o->bmin.z || lp.z>o->bmax.z) continue;
+			if(!mesh_encloses(o->mesh,mat4_xform_point(mat4_affine_inverse(o->model),lp))) continue;
 			s->enclosedLights++;
 			XmlNode *enclosure=(XmlNode*)o->sourceNode;
 			scene_issue(s,SCENE_ISSUE_ERROR,"light",enclosure?node_file(s,enclosure):path,enclosure?enclosure->line:0,

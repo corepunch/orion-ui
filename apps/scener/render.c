@@ -410,19 +410,27 @@ static int view_may_be_inside(vec3 sLo, vec3 sHi, vec3 eye, float reach) {
            eye.z >= sLo.z - reach && eye.z <= sHi.z + reach;
 }
 
+/* Front end: builds what the pair still lacks and sends it to the vertex cache. Uploads end the driver's
+   render pass, so none may happen between draws; Doom 3 likewise finishes its shadow volumes before the back end runs. */
+static void prepare_shadow_part(Scene *s, int li, int oi, int zfail) {
+    shadow_part_t *p = &s_part[(size_t)li * (size_t)s->nobjs + (size_t)oi];
+    SceneObj *o = &s->objs[oi];
+    vcache_prepare_mesh(o->mesh);
+    if (p->sides >= 0 && (!zfail || p->caps >= 0)) return;
+    const Light *L = &s->lights[li];   /* the light in the model's own space (Doom 3's localLightOrigin) */
+    mat4 inv = mat4_affine_inverse(o->model);
+    unsigned *ix; int sides;
+    int n = build_shadow_indices(o->mesh, mat4_xform_point(inv, L->pos), mat4_xform_dir(inv, L->dir), L->isDirectional, &ix, &sides);
+    if (p->sides < 0) p->sides = vcache_index_alloc(ix, sides, &p->chunk, &p->first);
+    if (zfail && p->caps < 0) p->caps = vcache_index_alloc(ix + sides, n - sides, &p->capChunk, &p->capFirst);
+    free(ix);
+}
+
+/* Back end: draws a prepared pair. */
 static void draw_shadow_part(Scene *s, int li, int oi, int zfail) {
     shadow_part_t *p = &s_part[(size_t)li * (size_t)s->nobjs + (size_t)oi];
     SceneObj *o = &s->objs[oi];
     Mesh *m = o->mesh;
-    if (p->sides < 0 || (zfail && p->caps < 0)) {   /* the light in the model's own space (Doom 3's localLightOrigin) */
-        const Light *L = &s->lights[li];
-        mat4 inv = mat4_affine_inverse(o->model);
-        unsigned *ix; int sides;
-        int n = build_shadow_indices(m, mat4_xform_point(inv, L->pos), mat4_xform_dir(inv, L->dir), L->isDirectional, &ix, &sides);
-        if (p->sides < 0) p->sides = vcache_index_alloc(ix, sides, &p->chunk, &p->first);
-        if (zfail && p->caps < 0) p->caps = vcache_index_alloc(ix + sides, n - sides, &p->capChunk, &p->capFirst);
-        free(ix);
-    }
     if (p->sides <= 0 && (!zfail || p->caps <= 0)) return;
     int first;
     unsigned tex = vcache_mesh_texture(m, &first);
@@ -585,9 +593,12 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     }
     shadow_cache_sync(s);
 
+    /* pass 0 is the front end (decide what each light needs, build and upload it), pass 1 the back end (draw) */
+    for (int pass = 0; pass < 2; pass++)
     for (int li = 0; li < s->nlights; li++) {
         Light *L = &s->lights[li];
-        shader_set_light(L);
+        if (pass && li == 0) vcache_flush();   /* the front end is done: one upload, then only draws */
+        if (pass) shader_set_light(L);
         vec3 lightLo, lightHi, lightOrigin;
         light_bounds(L, sceneLo, sceneHi, &lightLo, &lightHi, &lightOrigin);
         ScreenRect lightRect = box_screen_rect(viewProj, lightLo, lightHi, w, h);
@@ -616,6 +627,11 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
                 if (rect_empty(r)) continue;   /* its shadow cannot reach anything on screen */
                 castIdx[ncast] = i; castRect[ncast] = r; castZFail[ncast++] = view_may_be_inside(sLo, sHi, camPos, SHADOW_NEAR_REACH);
             }
+        }
+        if (!pass) {
+            for (int k = 0; k < ncast; k++) prepare_shadow_part(s, li, castIdx[k], castZFail[k]);
+            for (int k = 0; k < nlit; k++) vcache_prepare_mesh(s->objs[litIdx[k]].mesh);
+            continue;
         }
         int drawShadows = ncast > 0;
 #ifndef USE_ZPASS
@@ -672,6 +688,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
         if (drawShadows) glDisable(GL_STENCIL_TEST);
         glDepthFunc(GL_LESS);
         glDisable(GL_SCISSOR_TEST);
+        glFlush();   /* hand this light's work to the GPU: the driver otherwise queues every light's passes in memory */
     }
 
     shader_unbind();

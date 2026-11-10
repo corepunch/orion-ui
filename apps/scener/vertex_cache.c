@@ -15,7 +15,7 @@
 typedef struct { float x, y, z; unsigned n; float g; } gpu_vertex_t;
 
 typedef struct { GLuint vao, vbo, ibo, tex; int vcap, vused, ibytes, iused, live; } geom_chunk_t;   /* tex: the vertices as a buffer texture, read by the shadow shader */
-typedef struct { GLuint vao, ibo; int cap, used, wide; } index_chunk_t;
+typedef struct { GLuint vao, ibo; int cap, used, wide; unsigned char *pending; int pendingFirst, pendingBytes, pendingCap; } index_chunk_t;   /* pending: indices allocated since the last flush, one upload away */
 
 static geom_chunk_t *s_geom; static int s_ngeom, s_cgeom;
 static index_chunk_t *s_index; static int s_nindex, s_cindex;
@@ -102,6 +102,8 @@ static void mesh_upload(Mesh *m) {
     }
 }
 
+void vcache_prepare_mesh(Mesh *m) { if (m && m->ntris) mesh_upload(m); }
+
 void vcache_draw_mesh(Mesh *m) {
     if (!m->ntris) return;
     mesh_upload(m);
@@ -126,6 +128,15 @@ void vcache_collect(void) {
     free(chunks);
 }
 
+void vcache_flush(void);
+static void index_chunk_flush(index_chunk_t *c) {
+    if (!c->pendingBytes) return;
+    glBindVertexArray(c->vao);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, (GLintptr)((size_t)c->pendingFirst * (c->wide ? 4 : 2)), (GLsizeiptr)c->pendingBytes, c->pending);
+    glBindVertexArray(0);
+    c->pendingBytes = 0;
+}
+
 int vcache_index_alloc(const unsigned *ix, int n, int *chunk, int *first) {
     if (n <= 0) return 0;
     unsigned top = 0;
@@ -133,6 +144,7 @@ int vcache_index_alloc(const unsigned *ix, int n, int *chunk, int *first) {
     int wide = top > 0xffff, size = wide ? 4 : 2, k = -1;
     for (int i = 0; i < s_nindex; i++) if (s_index[i].wide == wide && s_index[i].cap - s_index[i].used >= n) { k = i; break; }
     if (k < 0) {
+        vcache_flush();   /* the chunks before this one are as full as they get: send them and drop their staging */
         int cap = n > VCACHE_SHADOW_CHUNK ? n : VCACHE_SHADOW_CHUNK;
         index_chunk_t c = {0};
         c.cap = cap; c.wide = wide;
@@ -145,17 +157,29 @@ int vcache_index_alloc(const unsigned *ix, int n, int *chunk, int *first) {
         k = s_nindex - 1;
     }
     index_chunk_t *c = &s_index[k];
-    glBindVertexArray(c->vao);
-    if (wide) glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, (GLintptr)((size_t)c->used * 4), (GLsizeiptr)((size_t)n * 4), ix);
-    else {
-        unsigned short *narrow = malloc((size_t)n * 2);
-        for (int i = 0; i < n; i++) narrow[i] = (unsigned short)ix[i];
-        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, (GLintptr)((size_t)c->used * 2), (GLsizeiptr)((size_t)n * 2), narrow);
-        free(narrow);
+    int bytes = n * size;
+    if (!c->pendingBytes) c->pendingFirst = c->used;
+    if (c->pendingBytes + bytes > c->pendingCap) {   /* staged up to the rest of the chunk, so a chunk is sent once */
+        c->pendingCap = (c->cap - c->pendingFirst) * size;
+        c->pending = realloc(c->pending, (size_t)c->pendingCap);
     }
-    glBindVertexArray(0);
+    if (wide) memcpy(c->pending + c->pendingBytes, ix, (size_t)bytes);
+    else {
+        unsigned short *narrow = (unsigned short *)(c->pending + c->pendingBytes);
+        for (int i = 0; i < n; i++) narrow[i] = (unsigned short)ix[i];
+    }
+    c->pendingBytes += bytes;
     *chunk = k; *first = c->used; c->used += n;
     return n;
+}
+
+/* Sends what is still staged. An upload between draws ends the driver's render pass, and thousands of small
+   ones are thousands of passes, so allocations are staged and the back end flushes once before it draws. */
+void vcache_flush(void) {
+    for (int i = 0; i < s_nindex; i++) {
+        index_chunk_flush(&s_index[i]);
+        free(s_index[i].pending); s_index[i].pending = NULL; s_index[i].pendingCap = 0;
+    }
 }
 
 void vcache_index_draw(int chunk, int first, int n, int baseVertex) {
@@ -166,12 +190,12 @@ void vcache_index_draw(int chunk, int first, int n, int baseVertex) {
 }
 
 void vcache_index_reset(void) {
-    for (int i = 0; i < s_nindex; i++) s_index[i].used = 0;
+    for (int i = 0; i < s_nindex; i++) { s_index[i].used = 0; free(s_index[i].pending); s_index[i].pending = NULL; s_index[i].pendingBytes = s_index[i].pendingCap = 0; }
 }
 
 void vcache_shutdown(void) {
     for (int i = 0; i < s_ngeom; i++) { glDeleteVertexArrays(1, &s_geom[i].vao); glDeleteBuffers(1, &s_geom[i].vbo); glDeleteBuffers(1, &s_geom[i].ibo); glDeleteTextures(1, &s_geom[i].tex); }
-    for (int i = 0; i < s_nindex; i++) { glDeleteVertexArrays(1, &s_index[i].vao); glDeleteBuffers(1, &s_index[i].ibo); }
+    for (int i = 0; i < s_nindex; i++) { glDeleteVertexArrays(1, &s_index[i].vao); glDeleteBuffers(1, &s_index[i].ibo); free(s_index[i].pending); }
     free(s_geom); free(s_index);
     s_geom = NULL; s_index = NULL; s_ngeom = s_cgeom = s_nindex = s_cindex = 0;
 }
