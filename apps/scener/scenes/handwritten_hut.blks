@@ -10,4 +10,7 @@
   <soft-box width="200" height="120" depth="160" radius="10" bevel="3" pos="0 66 0" material="mud"/>
   <soft-box width="230" height="14" depth="190" radius="6" bevel="2" pos="0 133 0" material="roof"/>
   <column radius="7" height="130" taper="-0.08" pos="-110 6 90" material="mud"/>
+  <beam ax="-100" ay="146" az="0" bx="100" by="146" bz="0" width="8" depth="12" radius="2" bevel="1" material="roof"/>
+  <tube ax="110" ay="6" az="90" bx="110" by="90" bz="90" r0="8" r1="4" material="mud"/>
+  <tube ax="130" ay="10" az="60" bx="170" by="60" bz="20" r0="5" material="roof"/>
 </scene>

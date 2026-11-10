@@ -16,7 +16,7 @@ def check(xml, files=None):
 
 HEAD = '<camera name="C" pos="0 100 300" look="0 50 0"/><sun dir="0 -1 -1"/>'
 r = subprocess.run([BIN, "--check", os.path.join(HERE, "..", "scenes", "handwritten_hut.blks")], capture_output=True, text=True)
-assert r.returncode == 0 and "4 objects" in r.stdout, r.stdout + r.stderr
+assert r.returncode == 0 and "0 warnings" in r.stdout and "7 objects" in r.stdout, r.stdout + r.stderr
 
 lib = '<library><define name="peg"><param name="h" doc="height"/><param name="r" default="5"/><circle radius="${r}" rot="-90 0 0"><extrude amount="${h}"/></circle></define></library>'
 rc, out = check('<scene>%s<include src="lib.xml"/><peg h="40" pos="0 20 0"/><peg h="{2*20}" r="3"/></scene>' % HEAD, {"lib.xml": lib})

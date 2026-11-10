@@ -168,10 +168,11 @@ primitive for it; a `<define>` is expanded at load, before expressions are evalu
   `${name}` is replaced by the argument text in every attribute of the body (then `{expr}` is evaluated as usual).
 - The body is exactly one element. Call attributes that are not params (`pos`, `rot`, `color`,
   `material`, ...) are set on that element; child elements of the call are appended to it.
+- An argument written as `{expr}` and used inside another expression becomes `(expr)`; a default may use earlier params (`default="${r0}"`).
 - A body may call other utilities. Definitions sit at the top level of a scene or of a `<library>`
   file, which `<include src="utilities.xml"/>` pulls in (path relative to the including file).
   A later definition of the same name replaces an earlier one (warning).
-- `scenes/utilities.xml` provides `soft-box`, `slab` and `column`; `scenes/handwritten_hut.blks` uses them.
+- `scenes/utilities.xml` provides `soft-box`, `slab`, `column`, `beam` and `tube` (the last two run between points a and b, `ax ay az` to `bx by bz`, and take `material` as a parameter); `scenes/handwritten_hut.blks` uses them.
 - Saving a scene writes the expanded elements, not the calls.
 
 ## Quick example

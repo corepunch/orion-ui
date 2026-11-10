@@ -46,14 +46,20 @@ static void scene_define_collect(Scene *s,scene_defines_t *d,XmlNode *root,const
 }
 
 static char *scene_define_substitute(Scene *s,XmlNode *call,XmlNode *def,const char *path,const char *text,char names[][XML_NAME_CAPACITY],char **values,int n){
-	size_t cap=strlen(text)+1,len=0; char *out=malloc(cap);
+	size_t cap=strlen(text)+1,len=0; char *out=malloc(cap); int depth=0;
 	for(const char *p=text;*p;){
-		if(p[0]!='$' || p[1]!='{'){ out[len++]=*p++; continue; }
+		if(p[0]!='$' || p[1]!='{'){ if(*p=='{') depth++; else if(*p=='}') depth--; out[len++]=*p++; continue; }
 		const char *end=strchr(p,'}'); if(!end){ out[len++]=*p++; continue; }
 		size_t nl=(size_t)(end-p-2); int hit=-1;
 		for(int i=0;i<n;i++) if(strlen(names[i])==nl && !strncmp(names[i],p+2,nl)) hit=i;
 		if(hit<0){ scene_issue(s,SCENE_ISSUE_ERROR,"define",path,call->line,"<%s>: body of <define name=\"%s\"> uses unknown parameter ${%.*s}",call->tag,xml_attr(def,"name",""),(int)nl,p+2); p=end+1; continue; }
-		size_t vl=strlen(values[hit]); cap+=vl; out=realloc(out,cap); memcpy(out+len,values[hit],vl); len+=vl; p=end+1;
+		const char *val=values[hit]; size_t vl=strlen(val);
+		/* an argument that is itself {expr}, used inside another expression, becomes (expr) */
+		if(depth>0 && vl>=2 && val[0]=='{' && val[vl-1]=='}'){
+			char wrapped[XML_VALUE_CAPACITY]; snprintf(wrapped,sizeof(wrapped),"(%.*s)",(int)vl-2,val+1);
+			cap+=vl; out=realloc(out,cap); memcpy(out+len,wrapped,vl); len+=vl; p=end+1; continue;
+		}
+		cap+=vl; out=realloc(out,cap); memcpy(out+len,val,vl); len+=vl; p=end+1;
 	}
 	out[len]=0; return out;
 }
@@ -78,7 +84,7 @@ static void scene_define_expand_call(Scene *s,scene_defines_t *d,XmlNode *parent
 			snprintf(names[np],XML_NAME_CAPACITY,"%s",pn);
 			const char *given=xml_attr(call,pn,NULL),*dflt=xml_attr(k,"default",NULL);
 			if(!given && !dflt){ scene_issue(s,SCENE_ISSUE_ERROR,"define",path,call->line,"<%s> needs %s=\"...\"%s%s",call->tag,pn,xml_attr(k,"doc",NULL)?": ":"",xml_attr(k,"doc","")); bad=1; given=""; }
-			values[np++]=strdup(given?given:dflt);
+			values[np]=given?strdup(given):scene_define_substitute(s,call,def,path,dflt,names,values,np); np++;
 		} else if(body<0) body=i;
 		else { scene_issue(s,SCENE_ISSUE_ERROR,"define",path,def->line,"<define name=\"%s\"> must have exactly one body element",call->tag); bad=1; break; }
 	}
