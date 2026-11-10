@@ -878,6 +878,40 @@ static void parse_lathe(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,
 	scene_add_obj(s,mesh,M,R,color,shin,castsShadow,renderable,unlit);
 }
 
+/* <mesh>: the lowest atom, a polygon soup. <v x y z> vertices (cm) and <f v="i j k ..."> faces
+   (counter-clockwise from outside), triangulated as fans. smooth="1" shares vertices and averages
+   normals; twoSided="1" also adds the reversed faces, for open sheets. */
+static void parse_mesh(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,vec3 rot,vec3 color,float shin,int castsShadow,int renderable,int unlit){
+	(void)parentM; (void)pos; (void)rot;
+	int smooth=xml_attr_i(n,"smooth",0),both=xml_attr_i(n,"twoSided",0),nv=0;
+	vec3 *p=NULL; int cp=0;
+	for(int i=0;i<n->nkids;i++) if(!strcmp(n->kids[i]->tag,"v")){
+		XmlNode *c=n->kids[i]; vec3 q=v3(xml_attr_f_cm(c,"x",0),xml_attr_f_cm(c,"y",0),xml_attr_f_cm(c,"z",0));
+		DA_PUSH(p,nv,cp,q);
+	}
+	Mesh m={0}; vec3 *acc=smooth?calloc((size_t)(nv?nv:1),sizeof(vec3)):NULL;
+	int *base=smooth?malloc((size_t)(nv?nv:1)*sizeof(int)):NULL;
+	if(smooth) for(int i=0;i<nv;i++) base[i]=mesh_add_vert(&m,p[i],v3(0,1,0));
+	int ok=nv>0;
+	for(int i=0;i<n->nkids&&ok;i++) if(!strcmp(n->kids[i]->tag,"f")){
+		XmlNode *c=n->kids[i]; int idx[64],ni=0; const char *t=xml_attr(c,"v","");
+		for(char *e;ni<64;){ long v=strtol(t,&e,10); if(e==t) break; idx[ni++]=(int)v; t=e; }
+		int bad=ni<3; for(int k=0;k<ni;k++) if(idx[k]<0||idx[k]>=nv) bad=1;
+		if(bad){ scene_issue(s,SCENE_ISSUE_ERROR,"mesh",node_file(s,n),c->line,"<f v=\"%s\">: a face needs 3 to 64 valid vertex indices (0..%d)",xml_attr(c,"v",""),nv-1); ok=0; break; }
+		for(int pass=0;pass<(both?2:1);pass++) for(int k=1;k+1<ni;k++){
+			int a=idx[0],b=idx[k],d=idx[k+1]; if(pass){ int tmp=b; b=d; d=tmp; }
+			vec3 fn=vcross(vsub(p[b],p[a]),vsub(p[d],p[a]));
+			if(smooth){ acc[a]=vadd(acc[a],fn); acc[b]=vadd(acc[b],fn); acc[d]=vadd(acc[d],fn); mesh_add_tri(&m,base[a],base[b],base[d]); }
+			else { vec3 nn=vnorm(fn); int ia=mesh_add_vert(&m,p[a],nn),ib=mesh_add_vert(&m,p[b],nn),id=mesh_add_vert(&m,p[d],nn); mesh_add_tri(&m,ia,ib,id); }
+		}
+	}
+	if(smooth) for(int i=0;i<nv;i++) m.verts[base[i]].nrm=vnorm(acc[i]);
+	free(p); free(acc); free(base);
+	if(!ok||!m.ntris){ if(ok) scene_issue(s,SCENE_ISSUE_ERROR,"mesh",node_file(s,n),n->line,"<mesh> has no faces"); mesh_free(&m); return; }
+	apply_modifiers(&m,n);
+	scene_add_obj(s,m,M,R,color,shin,castsShadow,renderable,unlit);
+}
+
 static void parse_loft(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,vec3 rot,vec3 color,float shin,int castsShadow,int renderable,int unlit){
 	(void)parentM; (void)pos; (void)rot;
 	const char *ps=xml_attr(n,"pathShape",NULL);
@@ -2328,6 +2362,7 @@ static const struct {
 	{ "ellipse",  parse_ellipse },
 	{ "star",     parse_star },
 	{ "shape",    parse_shape_node },
+	{ "mesh",     parse_mesh },
 	{ "screen",   parse_screen },
 	{ "sphere",   parse_sphere },
 	{ "cylinder", parse_cylinder },
@@ -2646,6 +2681,7 @@ static void warn_unknown_children(Scene *s, XmlNode *parent, const char *path, i
 		else if(!strcmp(parent->tag,"capture-profile")) supported=!strcmp(n->tag,"map");
 		else if(!strcmp(parent->tag,"layer")) supported=!strcmp(n->tag,"contact");
 		else if(!strcmp(parent->tag,"clip")) supported=!strcmp(n->tag,"key");
+		else if(!strcmp(parent->tag,"mesh")) supported=!strcmp(n->tag,"v") || !strcmp(n->tag,"f") || has_modifier_parser(n->tag);
 		else if(!strcmp(parent->tag,"shape")) supported=!strcmp(n->tag,"v") || !strcmp(n->tag,"fillet") || has_modifier_parser(n->tag);
 		else if(!strcmp(parent->tag,"wall")||!strcmp(parent->tag,"floor")||!strcmp(parent->tag,"window")||!strcmp(parent->tag,"door")) supported=0;
 		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array") || !strcmp(n->tag,"joint") || !strcmp(n->tag,"ik") || !strcmp(n->tag,"gait") || !strcmp(n->tag,"layer") || !strcmp(n->tag,"option");

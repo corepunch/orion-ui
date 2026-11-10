@@ -30,4 +30,9 @@ assert rc != 0 and "calls itself" in out, out
 line = '<shape closed="0"><v x="-50" y="-50"/><v x="50" y="-50"/><shell amount="100"/><fillet radius="10"/><extrude amount="60"/><bevel amount="2"/></shape>'
 rc, out = check('<scene>%s%s</scene>' % (HEAD, line))
 assert rc == 0 and "1 objects" in out, out
+mesh = '<mesh smooth="1" twoSided="1" pos="0 20 0"><v x="0" y="0" z="0"/><v x="50" y="0" z="0"/><v x="50" y="30" z="0"/><v x="0" y="30" z="10"/><f v="0 1 2 3"/></mesh>'
+rc, out = check('<scene>%s%s</scene>' % (HEAD, mesh))
+assert rc == 0 and "1 objects" in out, out
+rc, out = check('<scene>%s<mesh><v x="0" y="0" z="0"/><f v="0 1 2"/></mesh></scene>' % HEAD)
+assert rc != 0 and "valid vertex indices" in out, out
 print("ok")

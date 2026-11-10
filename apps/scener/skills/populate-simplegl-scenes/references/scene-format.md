@@ -642,6 +642,14 @@ Shifts the rotation center away from the object's origin. The object is translat
 
 The `pivotOffset` is in local space, applied before the object's own `rot`. Rotation-only matrices (for normals) are unaffected.
 
+### `<mesh>`
+
+The lowest atom: a polygon soup, for geometry no profile or modifier gives (a draped sheet, a converted
+Blender mesh). `<v x y z/>` vertices in cm and `<f v="i j k ..."/>` faces of 3 to 64 vertex indices,
+counter-clockwise seen from outside, each triangulated as a fan. `smooth="1"` shares vertices and averages
+normals; `twoSided="1"` adds the reversed faces, for open sheets. Takes the [common attributes](#common-attributes)
+and mesh modifiers.
+
 ### `<box>`
 
 Axis-aligned box centered at origin.
