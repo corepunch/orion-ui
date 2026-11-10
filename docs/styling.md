@@ -149,7 +149,7 @@ selector and property, as a page asks `getComputedStyle()`
 int gutter = ui_px("Scrollbar", "width");
 int radius = ui_radius("Button");                  // CORNER_RADIUS_CIRCULAR for 9999px
 ui_shadow_t s = ui_shadow("Tooltip", "box-shadow");
-bool ruled = ui_flag("TableView::row", "--divider-width");
+bool engraved = ui_flag("Button", "text-shadow");
 ```
 
 Answers are cached until the sheet or the palette changes. `padding-left` and

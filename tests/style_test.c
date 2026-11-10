@@ -158,7 +158,7 @@ void test_porcelain_sheet(void) {
   ASSERT_EQUAL(ui_role("Card", "--card-face"), brColumnViewBg);
   ASSERT_EQUAL(ui_px("Card", "margin-left"), 2);
   ASSERT_EQUAL(ui_px("TableView::row", "min-height"), 21);
-  ASSERT_TRUE(ui_flag("TableView::row", "--divider-width"));
+  ASSERT_TRUE(ui_color("TableView::rule", "background") >> 24);   // porcelain rules its rows
   ASSERT_EQUAL(((int)(ui_number("Badge", "--tint") * 255.0f + 0.5f)), 0x26);
   ASSERT_TRUE(set_theme(THEME_PORCELAIN_DARK));
   ASSERT_EQUAL(get_sys_color(brTextNormal), WEB(0xABB2BF));
