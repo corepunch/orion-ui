@@ -34,6 +34,8 @@ HALF = 50.0     # cm radius of the shared unit-sphere profile
 
 # material -> (shininess, bevel width in tiles or 0, unlit); GRADIENTS: material -> darkest..lightest multiplier
 # along the shape's own up axis, the Blender kit's darker-at-the-bottom vertex colours (<gradient> attributes)
+# material -> (specular level, metallic) when it is not Blender's default (0.5, 0); the shape then carries specular= and metallic=
+SURFACE = {}
 GRADIENTS = {"leaf": (.6, 1.2), "clay": (.8, 1.05)}
 MATERIALS = {
   "stone": (6, .04, False), "slab": (6, .04, False), "wood": (8, .03, False), "clay": (14, .03, False),
@@ -118,6 +120,9 @@ class Kit:
     else:
       p = [("color", rgb(col)), ("shininess", shin)]
     if mat in GRADIENTS and not isinstance(col[0], tuple): p += [("gradientFrom", v3(*[GRADIENTS[mat][0]] * 3)), ("gradientTo", v3(*[GRADIENTS[mat][1]] * 3))]
+    spec, metal = SURFACE.get(mat, (.5, 0))
+    if spec != .5: p.append(("specular", f4(spec)))
+    if metal: p.append(("metallic", f4(metal)))
     return p + ([("unlit", 1), ("castShadow", 0)] if unlit else [])
 
   # ---- primitives

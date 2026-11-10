@@ -374,7 +374,9 @@ Named material referenced by shapes via the `material` attribute. Scene-defined 
 |--------------|--------|----------------|-------------|
 | `id`         | string | (required)     | Unique material name |
 | `color`      | vec3   | 0.8 0.8 0.8    | Diffuse sRGB colour |
-| `shininess`  | float  | 8.0            | Phong specular exponent |
+| `shininess`  | float  | 8.0            | Sets the highlight's roughness: `roughness = exp(-shininess / 18)`; Blender's roughness r is `-18 * ln(r)` |
+| `specular`   | float  | 0.5            | Blender's specular level: reflectance at normal incidence is `0.08 * specular` (0.5 is the usual 4%) |
+| `metallic`   | float  | 0              | 0..1; tints the reflection with `color` and removes the diffuse part, as Blender's Metallic does |
 | `ramp`       | 16 × vec3 | (none)      | Palette ramp: 48 numbers, sixteen sRGB shades from dark to light |
 | `gradientFrom`, `gradientTo`, `gradientAxis` | vec3, vec3, x/y/z | (none), y | A [gradient](#common-attributes) every shape using the material gets, unless the shape sets its own |
 
@@ -606,7 +608,8 @@ All shapes share common attributes plus shape-specific ones. Shapes may contain 
 | `scale`      | vec3   | 1 1 1            | Non-uniform scale |
 | `material`   | string | (none)           | Reference to a `<material id="...">` |
 | `color`      | vec3   | 0.8 0.8 0.8      | Diffuse sRGB colour (used if no material ref) |
-| `shininess`  | float  | 8.0              | Specular exponent (used if no material ref) |
+| `shininess`  | float  | 8.0              | Highlight roughness, `exp(-shininess / 18)` (used if no material ref) |
+| `specular`, `metallic` | float | 0.5, 0       | As on a material: reflectance `0.08 * specular`; metallic tints the reflection with the colour (a material ref supplies them if unset) |
 | `castShadow` | int    | 1                | Whether this object casts shadows |
 | `renderable` | int    | 1                | Whether this object is drawn; non-renderable objects may still cast shadows |
 | `unlit`      | int    | 0                | Render the authored diffuse color without ambient or additive light contribution |

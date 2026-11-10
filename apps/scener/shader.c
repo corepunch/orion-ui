@@ -11,7 +11,7 @@
 static GLuint prog, s_mesh_vao, s_mesh_vbo, s_mesh_ebo;
 static GLuint vlocPos, vlocNrm;
 static GLint ulocViewProj, ulocViewPos, ulocLightPos, ulocLightColor, ulocLightRadius;
-static GLint ulocColor, ulocShininess, ulocRamp, ulocRampOn, ulocGradOn, ulocGradFrom, ulocGradTo;
+static GLint ulocSpecular, ulocMetallic, ulocColor, ulocShininess, ulocRamp, ulocRampOn, ulocGradOn, ulocGradFrom, ulocGradTo;
 static GLint vlocGrad;
 #ifdef SCENER_USE_TEXTURES
 static GLint ulocTex;
@@ -42,7 +42,7 @@ static const char *fs_src =
 "#version 150\n"
 "#define PI 3.14159\n"
 "#define SHININESS_SCALE 18.0\n"
-"#define BASE_REFLECTANCE 0.04\n"
+"#define SPECULAR_TO_F0 0.08\n"
 "#define MIN_ROUGHNESS 0.005\n"
 "#define MAX_ROUGHNESS 1.0\n"
 "#define MIN_SPECULAR 0.001\n"
@@ -66,6 +66,8 @@ static const char *fs_src =
 "uniform float uLightRadius;\n"
 "uniform vec3 uColor;\n"
 "uniform float uShininess;\n"
+"uniform float uSpecular;\n"
+"uniform float uMetallic;\n"
 "uniform vec3 uRamp[RAMP_SHADES];\n"
 "uniform int uRampOn;\n"
 "uniform int uGradOn;\n"
@@ -91,7 +93,9 @@ static const char *fs_src =
 "    float G1=NdotL/(NdotL*(1.0-k)+k);\n"
 "    float G2=NdotV/(NdotV*(1.0-k)+k);\n"
 "    float G=G1*G2;\n"
-"    float F=BASE_REFLECTANCE+(1.0-BASE_REFLECTANCE)*pow(1.0-max(dot(V,H),0.0),FRESNEL_EXP);\n"
+"    vec3 albedo=uColor;\n"
+"    vec3 F0=mix(vec3(SPECULAR_TO_F0*uSpecular),albedo,uMetallic);\n"
+"    vec3 F=F0+(vec3(1.0)-F0)*pow(1.0-max(dot(V,H),0.0),FRESNEL_EXP);\n"
 #ifdef SCENER_USE_TEXTURES
 "    vec3 texColor=texture(uTex,vWorldUV).rgb;\n"
 #else
@@ -99,7 +103,7 @@ static const char *fs_src =
 #endif
 "    if(uGradOn>0) texColor*=mix(uGradFrom,uGradTo,clamp(vGrad,0.0,1.0));\n"
 "    vec3 spec=(D*G*F)/(max(4.0*NdotL*NdotV,MIN_SPECULAR))*uLightColor;\n"
-"    vec3 diff=uColor*texColor*(1.0-F)*NdotL*uLightColor;\n"
+"    vec3 diff=uColor*texColor*(vec3(1.0)-F)*(1.0-uMetallic)*NdotL*uLightColor;\n"
 "    float att=1.0;\n"
 "    if(uLightRadius>0.0 && uLightPos.w>0.0){\n"
 "        float dist=length(uLightPos.xyz-vWorldPos);\n"
@@ -135,6 +139,8 @@ void shader_init(void){
 	ulocLightRadius = glGetUniformLocation(prog, "uLightRadius");
 	ulocColor       = glGetUniformLocation(prog, "uColor");
 	ulocShininess   = glGetUniformLocation(prog, "uShininess");
+	ulocSpecular    = glGetUniformLocation(prog, "uSpecular");
+	ulocMetallic    = glGetUniformLocation(prog, "uMetallic");
 	ulocRamp        = glGetUniformLocation(prog, "uRamp");
 	ulocRampOn      = glGetUniformLocation(prog, "uRampOn");
 	ulocGradOn      = glGetUniformLocation(prog, "uGradOn");
@@ -181,10 +187,12 @@ void shader_set_light(Light *L){
 	glUniform1f(ulocLightRadius, L->isDirectional ? 0.0f : L->radius);
 }
 
-void shader_set_material(vec3 color, float shininess){
+void shader_set_material(vec3 color, float shininess, float specular, float metallic){
 	color=srgb_to_linear(color);
 	glUniform3f(ulocColor, color.x, color.y, color.z);
 	glUniform1f(ulocShininess, shininess);
+	glUniform1f(ulocSpecular, specular);
+	glUniform1f(ulocMetallic, metallic);
 }
 
 void shader_set_ramp(const vec3 *shades){

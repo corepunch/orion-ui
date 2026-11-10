@@ -439,7 +439,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
             glBlendFunc(GL_ONE, GL_ONE);
             for (int i = 0; i < s->nobjs; i++) {
                 if (!s->objs[i].renderable || s->objs[i].unlit) continue;
-                shader_set_material(s->objs[i].color, s->objs[i].shininess);
+                shader_set_material(s->objs[i].color, s->objs[i].shininess, s->objs[i].specular, s->objs[i].metallic);
                 shader_set_ramp(s->objs[i].ramp >= 0 ? s->ramps[s->objs[i].ramp].shade : NULL);
                 shader_set_gradient(s->objs[i].gradient, s->objs[i].gradFrom, s->objs[i].gradTo);
 #ifdef SCENER_USE_TEXTURES
@@ -458,7 +458,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
             glBlendFunc(GL_ONE, GL_ONE);
             for (int i = 0; i < s->nobjs; i++) {
                 if (!s->objs[i].renderable || s->objs[i].unlit) continue;
-                shader_set_material(s->objs[i].color, s->objs[i].shininess);
+                shader_set_material(s->objs[i].color, s->objs[i].shininess, s->objs[i].specular, s->objs[i].metallic);
                 shader_set_ramp(s->objs[i].ramp >= 0 ? s->ramps[s->objs[i].ramp].shade : NULL);
                 shader_set_gradient(s->objs[i].gradient, s->objs[i].gradFrom, s->objs[i].gradTo);
 #ifdef SCENER_USE_TEXTURES

@@ -196,7 +196,8 @@ def make_kit(nile_kit):
 
 def apply_blender_materials(nile):
   """Both renderers get the same material settings: Blender's roughness and emission from the kit's own
-  make_materials(), turned into Scener's shininess (roughness = exp(-shininess / 18) in its shader)."""
+  make_materials(): roughness becomes shininess (roughness = exp(-shininess / 18) in Scener's shader), and
+  specular level and metallic go across as they are."""
   seen = {}
   nile.make_material = lambda name, **kw: seen.setdefault(name, kw)
   nile.make_materials()
@@ -205,7 +206,8 @@ def apply_blender_materials(nile):
     shin, bevel, _ = scener.MATERIALS[name]
     rough = max(kw.get("rough", .7), .05)
     scener.MATERIALS[name] = (round(-18 * math.log(rough), 1), bevel, kw.get("emit", 0) > 0)
-    print("material %-6s roughness %.2f -> shininess %.1f%s" % (name, rough, scener.MATERIALS[name][0], "  (metallic %.1f ignored)" % kw["metal"] if kw.get("metal") else ""))
+    scener.SURFACE[name] = (kw.get("spec", .4), kw.get("metal", 0.))   # Blender's spec default in make_material is .4
+    print("material %-6s roughness %.2f -> shininess %.1f, specular %.2f, metallic %.2f" % (name, rough, scener.MATERIALS[name][0], *scener.SURFACE[name]))
 
 
 HEAD = """<?xml version="1.0" encoding="UTF-8"?>

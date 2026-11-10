@@ -105,6 +105,7 @@
 #define MOCAP_NAME_CAPACITY 64
 #define MOCAP_FOOT_POINTS 2
 
+#define DEFAULT_SPECULAR 0.5f   /* Blender's default specular level: a 4% reflectance */
 #define ENCLOSURE_RAY_X 0.5773f
 #define ENCLOSURE_RAY_Y 0.6211f
 #define ENCLOSURE_RAY_Z 0.5303f
@@ -683,6 +684,7 @@ void scene_add_obj(Scene *s, Mesh mesh, mat4 M, mat4 R, vec3 color, float shin, 
 	if(castsShadow) mesh_build_edges(&mesh);
 	SceneObj o={0};
 	o.mesh=mesh; o.color=color; o.shininess=shin; o.ramp=s->activeRamp; o.castsShadow=castsShadow;
+	o.specular=s->activeSpecular; o.metallic=s->activeMetallic;
 	o.gradient=s->activeGradient; o.gradFrom=s->activeGradFrom; o.gradTo=s->activeGradTo;
 	o.renderable=renderable; o.unlit=unlit; o.sanityIgnore=s->sanityIgnoreActive;
 	o.sanityFloor=s->sanityFloorActive; o.sanityCheck=s->sanityCheckActive;
@@ -2482,6 +2484,8 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 		int tint=xml_attr_i(n,"tint",0);
 		if(s->prefabTintActive && tint) color=s->prefabTint;
 		float shin = mat? mat->shininess : xml_attr_f(n,"shininess",8.0f);
+		s->activeSpecular=xml_attr_f(n,"specular",mat?mat->specular:DEFAULT_SPECULAR);
+		s->activeMetallic=fminf(fmaxf(xml_attr_f(n,"metallic",mat?mat->metallic:0.0f),0.0f),1.0f);
 		int castsShadow = xml_attr_i(n,"castShadow",1);
 		int renderable = xml_attr_i(n,"renderable",1);
 		int unlit = xml_attr_i(n,"unlit",0);
@@ -2575,6 +2579,8 @@ static void read_material(Scene *s, XmlNode *n, Material *m){
 	strncpy(m->id, xml_attr(n,"id","mat"), 31);
 	m->color = xml_attr_v3(n,"color",v3(0.8f,0.8f,0.8f));
 	m->shininess = xml_attr_f(n,"shininess",8.0f);
+	m->specular = xml_attr_f(n,"specular",DEFAULT_SPECULAR);
+	m->metallic = fminf(fmaxf(xml_attr_f(n,"metallic",0.0f),0.0f),1.0f);
 	const char *ramp=xml_attr(n,"ramp",NULL);
 	m->ramp = ramp ? parse_material_ramp(s,n,ramp) : -1;
 	const char *axis=xml_attr(n,"gradientAxis","y");
@@ -2584,7 +2590,7 @@ static void read_material(Scene *s, XmlNode *n, Material *m){
 }
 
 static int material_equal(const Scene *s, const Material *a, const Material *b){
-	if(vlen(vsub(a->color,b->color))>MATERIAL_EPSILON || fabsf(a->shininess-b->shininess)>MATERIAL_EPSILON || (a->ramp<0)!=(b->ramp<0)) return 0;
+	if(vlen(vsub(a->color,b->color))>MATERIAL_EPSILON || fabsf(a->shininess-b->shininess)>MATERIAL_EPSILON || fabsf(a->specular-b->specular)>MATERIAL_EPSILON || fabsf(a->metallic-b->metallic)>MATERIAL_EPSILON || (a->ramp<0)!=(b->ramp<0)) return 0;
 	if(a->ramp>=0) for(int k=0;k<MATERIAL_RAMP_SHADES;k++)
 		if(vlen(vsub(s->ramps[a->ramp].shade[k],s->ramps[b->ramp].shade[k]))>MATERIAL_EPSILON) return 0;
 	return 1;
@@ -3033,7 +3039,7 @@ int scene_create_door(Scene *s,const char *preset,vec3 ground){ return scene_cre
 int load_scene(const char *path, Scene *s){
 	memset(s,0,sizeof(*s));
 	s->selectedObj=-1; s->editMode=EDIT_W_MOVE;
-	s->activeTexIndex=-1; s->activeRamp=-1; s->activeGradient=0;
+	s->activeTexIndex=-1; s->activeRamp=-1; s->activeGradient=0; s->activeSpecular=DEFAULT_SPECULAR; s->activeMetallic=0;
 	s->activeScreenTexture=-1;
 	strncpy(s->scenePath,path,sizeof(s->scenePath)-1);
 	const char *content=strstr(path,"/scenes/");

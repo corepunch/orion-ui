@@ -205,7 +205,7 @@ Mesh gen_box_hole_arch(float w,float h,float depth,int sides);
 
 #define MATERIAL_RAMP_SHADES 16
 typedef struct { vec3 shade[MATERIAL_RAMP_SHADES]; } MaterialRamp; /* dark to light; replaces diffuse and specular */
-typedef struct { char id[32]; vec3 color; float shininess; int ramp, prefabDefined; int gradient; vec3 gradFrom,gradTo; char gradAxis; } Material; /* gradient: see SceneObj */ /* ramp: index into Scene.ramps, -1 for none */
+typedef struct { char id[32]; vec3 color; float shininess,specular,metallic; int ramp, prefabDefined; int gradient; vec3 gradFrom,gradTo; char gradAxis; } Material; /* gradient: see SceneObj */ /* ramp: index into Scene.ramps, -1 for none */
 typedef struct { char target[32]; vec3 pos,rot,scale; } CameraTransform;
 #define MAX_CAMERA_NAME 128
 
@@ -217,7 +217,7 @@ typedef struct {
 typedef struct { vec3 pos,color,dir; float intensity,radius; int castsShadow,isDirectional; } Light;
 typedef struct { float x,y,z,w; } ShadowVertex;
 typedef struct { ShadowVertex *verts; int nverts,cverts; } ShadowVolume;
-typedef struct { Mesh mesh; vec3 color; float shininess; int ramp; int gradient; vec3 gradFrom,gradTo; /* gradient: colour multipliers at Vertex.g 0 and 1, valid when set */ int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
+typedef struct { Mesh mesh; vec3 color; float shininess,specular,metallic; /* specular: Blender-style level, F0 = 0.08 * specular (0.5 gives 4%); metallic 0..1 tints the reflection with the colour and drops the diffuse */ int ramp; int gradient; vec3 gradFrom,gradTo; /* gradient: colour multipliers at Vertex.g 0 and 1, valid when set */ int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
 typedef struct { char path[1024]; unsigned char *pixels; int width,height; unsigned int texture; } ScreenTexture;
 typedef struct { char name[32]; vec3 pos; } AttachPoint;
 #define SCENE_PREFAB_PATH_CAPACITY 1024
@@ -303,6 +303,7 @@ typedef struct {
 	void *sceneRoot, *editRoot, *selectedNode, *activeEditNode;
 	mat4 activeEditMatrix;
 	int activeTexIndex;
+	float activeSpecular,activeMetallic; /* of the shape being placed */
 	int activeGradient; vec3 activeGradFrom,activeGradTo; char activeGradAxis; /* gradient of the shape being placed: multipliers from the box minimum to maximum along a local axis */
 	int activeRamp; /* ramp of the material being placed, -1 for none; mirrors activeTexIndex */
 	const char *activeScreenImage;
