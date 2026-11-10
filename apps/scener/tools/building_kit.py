@@ -38,10 +38,6 @@ HALF = 50.0     # cm radius of the shared unit-sphere profile
 SURFACE = {}
 # material -> bevel segments, as the Blender kit's BEVELS give its bevel modifier; others take soft-box's 2
 SEGMENTS = {"stone": 3, "slab": 3, "hedge": 3}
-# A lamp's range (where it stops lighting and shadowing) follows from its power: the distance at which its
-# contribution, intensity / (1 + d / radius)^2, falls to LAMP_CUTOFF. 0: no range, the lamp reaches everything.
-LAMP_CUTOFF = 0
-LAMP_MIN_RANGE = 1.0   # in lamp radii, so a weak lamp still lights what stands next to it
 LAMP_SHADOWS = 0   # 1: the kit's point lights cast shadows (the Blender master's do)
 GRADIENTS = {"leaf": (.6, 1.2), "clay": (.8, 1.05)}
 MATERIALS = {
@@ -100,12 +96,6 @@ def rgb(c): return "%.3f %.3f %.3f" % tuple(c)
 
 
 def attrs(pairs): return "".join(' %s="%s"' % (k, v) for k, v in pairs if v is not None)
-
-
-def lamp_range(intensity, radius):
-  if not LAMP_CUTOFF: return ""
-  reach = max(LAMP_MIN_RANGE, math.sqrt(max(intensity, 0) / LAMP_CUTOFF) - 1)
-  return ' range="%s"' % f(reach * radius)
 
 
 class Kit:
@@ -291,8 +281,8 @@ class Kit:
 
   def finish(self):
     for x, y, z, watts, color in self.lights:
-      self.emit("<light pos=\"%s\" color=\"%s\" intensity=\"%s\" radius=\"%s\"%s castShadows=\"%d\"/>" % (
-        v3(x * TILE, z * TILE, -y * TILE), rgb(color), f(.35 * watts), f(TILE * 1.4), lamp_range(.35 * watts, TILE * 1.4), LAMP_SHADOWS))
+      self.emit("<light pos=\"%s\" color=\"%s\" intensity=\"%s\" radius=\"%s\" castShadows=\"%d\"/>" % (
+        v3(x * TILE, z * TILE, -y * TILE), rgb(color), f(.35 * watts), f(TILE * 1.4), LAMP_SHADOWS))
     return self.lines
 
 

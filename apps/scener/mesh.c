@@ -90,7 +90,8 @@ void mesh_transform(Mesh *m, mat4 posM, mat4 rotM){
     }
 }
 void mesh_compute_face_normals(Mesh *m){
-    if(!m->triN) m->triN = malloc(sizeof(vec3)*(size_t)m->ntris);
+    /* always sized for the triangles there are now: a modifier may have added some since the last time */
+    m->triN = realloc(m->triN, sizeof(vec3)*(size_t)(m->ntris?m->ntris:1));
     for(int i=0;i<m->ntris;i++){
         Tri t=m->tris[i];
         vec3 a=m->verts[t.a].pos, b=m->verts[t.b].pos, c=m->verts[t.c].pos;

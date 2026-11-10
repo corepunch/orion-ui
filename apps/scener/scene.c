@@ -2413,6 +2413,16 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 	s->activeScreenImage=oldScreenImage;
 }
 
+/* A light with falloff stops where its contribution, intensity / (1 + d / radius)^2, has fallen to
+   LIGHT_CUTOFF: a strong lamp reaches far, a weak one lights only what stands near it, and neither is
+   lit, shadowed or drawn for beyond that. A light without falloff (radius 0) has no range. */
+#define LIGHT_CUTOFF 0.05f
+#define LIGHT_MIN_RANGE_RADII 1.0f
+static float light_default_range(float intensity,float radius){
+	if(radius<=0 || intensity<=0) return 0;
+	return fmaxf(LIGHT_MIN_RANGE_RADII,sqrtf(intensity/LIGHT_CUTOFF)-1.0f)*radius;   /* metres, like radius */
+}
+
 static void parse_light(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)R; (void)parentM; (void)pos; (void)rot; (void)color; (void)shin; (void)castsShadow; (void)renderable; (void)unlit;
 	Light L={0};
@@ -2420,7 +2430,7 @@ static void parse_light(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3
 	L.color=xml_attr_v3(n,"color",v3(1,1,1));
 	L.intensity=xml_attr_f(n,"intensity",1.0f);
 	L.radius=xml_attr_f_cm(n,"radius",0.0f);
-	L.range=fmaxf(xml_attr_f_cm(n,"range",0.0f),0.0f);
+	L.range=fmaxf(xml_attr_f_cm(n,"range",light_default_range(L.intensity,L.radius)),0.0f);
 	L.castsShadow=xml_attr_i(n,"castShadows",1);
 	DA_PUSH(s->lights,s->nlights,s->clights,L);
 }
@@ -2994,10 +3004,10 @@ static void scene_rebuild_view(Scene *s){
 		if(bmin.x<=bmax.x){
 			vec3 c=vscale(vadd(bmin,bmax),0.5f); float sz=vlen(vsub(bmax,bmin));
 			if(sz<1.0f) sz=1.0f;
-			Light key={v3(0,0,0),v3(1.0f,0.88f,0.76f),{0},2.8f,sz*2.5f,1,0};
+			Light key={.color=v3(1.0f,0.88f,0.76f),.intensity=2.8f,.radius=sz*2.5f,.castsShadow=1};
 			key.pos=vadd(c,v3(sz*0.9f,sz*0.8f,sz*1.1f));
 			DA_PUSH(s->lights,s->nlights,s->clights,key);
-			Light rim={v3(0,0,0),v3(0.68f,0.80f,1.0f),{0},1.6f,sz*2.8f,0,0};
+			Light rim={.color=v3(0.68f,0.80f,1.0f),.intensity=1.6f,.radius=sz*2.8f};
 			rim.pos=vadd(c,v3(-sz*0.7f,sz*0.9f,-sz*1.0f));
 			DA_PUSH(s->lights,s->nlights,s->clights,rim);
 		}

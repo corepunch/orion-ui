@@ -524,7 +524,7 @@ Point light source with distance attenuation.
 | `color`      | vec3 | 1 1 1   | Light colour authored as sRGB |
 | `intensity`  | float| 1.0     | Linear brightness multiplier; never sRGB-converted |
 | `radius`     | float| 0       | Attenuation radius in cm (0 = no falloff). Light reaches 25% at this distance |
-| `range`      | float| 0       | Cut-off distance in cm (0 = unlimited). Beyond it the light neither lights nor shadows: objects farther than `range` are skipped for both, and the light fades smoothly to zero over the last part of it. Needed for many lights in a big scene, where every shadow-casting light otherwise builds volumes from every object |
+| `range`      | float| from intensity | Cut-off distance in cm. Beyond it the light neither lights nor shadows: objects farther away are skipped for both, and the light fades smoothly to zero towards it. Left out, it is where the light's contribution, `intensity / (1 + d / radius)^2`, has fallen to 0.05 (at least one `radius`), so strong lights reach farther than weak ones; a light with `radius` 0 has no range. `range="0"` switches the cut-off off |
 | `castShadows`| int  | 1       | Whether this light casts stencil shadows |
 
 When `radius` is 0 (default), the light has no distance attenuation — it illuminates at full intensity regardless of distance. When `radius` > 0, smooth quadratic attenuation is applied: the light is 25% of nominal strength at the given radius and reaches roughly 10% around `2.16 × radius`.

@@ -226,12 +226,10 @@ def main():
   ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
   ap.add_argument("out", nargs="?", default=os.path.join(HERE, "..", "scenes", "christmas_market_buildings.blks"))
   for k in LIGHT: ap.add_argument("--" + k.lower(), default=LIGHT[k], help="LAMPS scales the shop point lights. Blender sun 3.0 / fill 0.55 / sky 0.7 are the targets (default %s)" % LIGHT[k])
-  ap.add_argument("--lamp-cutoff", type=float, default=0.05, help="a lamp's range ends where its light falls to this level, so strong lamps reach farther than weak ones (0: no range)")
   ap.add_argument("--lamp-shadows", type=int, default=1, choices=(0, 1), help="1: the shop lamps cast shadows, as in Blender (slow to render with 36 lamps)")
   ap.add_argument("--nile", default=os.path.expanduser("~/Developer/nile-archive"))
   a = ap.parse_args()
   for k in LIGHT: LIGHT[k] = getattr(a, k.lower())
-  scener.LAMP_CUTOFF = a.lamp_cutoff
   scener.LAMP_SHADOWS = a.lamp_shadows   # the Blender lamps cast shadows, so light stays inside a stall
   nile = load_nile(a.nile)
   apply_blender_materials(nile)
