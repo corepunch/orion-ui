@@ -37,10 +37,10 @@ island in front of that image.
 The device bodies use reusable 2D profiles and modifiers:
 
 ```xml
-<rounded-rect size="7.6 16.2" radius="1.28">
+<rect size="7.6 16.2"><fillet radius="1.28" segments="8"/>
   <extrude amount="0.8"/>
   <bevel amount="0.16" bevelSegments="4"/>
-</rounded-rect>
+</rect>
 ```
 
 The same extrusion and bevel work on `<rect>`, `<circle>`, `<ellipse>`, and

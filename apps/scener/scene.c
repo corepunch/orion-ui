@@ -814,7 +814,7 @@ static void apply_modifiers(Mesh *m, XmlNode *n){
 static void apply_profile_modifiers(Mesh *m,XmlNode *n){
 	for(int i=0;i<n->nkids;i++){
 		XmlNode *c=n->kids[i];
-		if(!strcmp(c->tag,"extrude")||!strcmp(c->tag,"bevel")) continue;
+		if(!strcmp(c->tag,"extrude")||!strcmp(c->tag,"bevel")||!strcmp(c->tag,"fillet")) continue;
 		for(int j=0;j<(int)(sizeof(modifier_parsers)/sizeof(modifier_parsers[0]));j++)
 			if(!strcmp(c->tag,modifier_parsers[j].tag)){ modifier_parsers[j].parse(m,c); break; }
 	}
@@ -1071,7 +1071,7 @@ static int screen_texture_index(Scene *s,const char *image){
 	return s->nscreenTextures-1;
 }
 
-typedef enum { PROFILE_RECT, PROFILE_ROUNDED_RECT, PROFILE_CIRCLE, PROFILE_ELLIPSE, PROFILE_STAR } profile_kind_t;
+typedef enum { PROFILE_RECT, PROFILE_CIRCLE, PROFILE_ELLIPSE, PROFILE_STAR } profile_kind_t;
 
 #define SHAPE_FILLET_DEFAULT_SEGMENTS 6
 
@@ -1140,7 +1140,6 @@ static void parse_profile_primitive(Scene *s,XmlNode *n,mat4 M,mat4 R,vec3 color
 	vec3 size=xml_attr_v3_cm(n,"size",v3(0.01f,0.01f,0));
 	switch(kind){
 	case PROFILE_RECT:         profile=shape2d_rect(size.x,size.y); break;
-	case PROFILE_ROUNDED_RECT: profile=shape2d_rounded_rect(size.x,size.y,xml_attr_f_cm(n,"radius",0),xml_attr_i(n,"segments",8)); break;
 	case PROFILE_CIRCLE:       profile=shape2d_ellipse(xml_attr_f_cm(n,"radius",0.005f),xml_attr_f_cm(n,"radius",0.005f),xml_attr_i(n,"segments",32)); break;
 	case PROFILE_ELLIPSE:      profile=shape2d_ellipse(size.x*0.5f,size.y*0.5f,xml_attr_i(n,"segments",48)); break;
 	case PROFILE_STAR:         profile=shape2d_star(xml_attr_f_cm(n,"outerRadius",0.005f),xml_attr_f_cm(n,"innerRadius",0.0025f),xml_attr_i(n,"points",5)); break;
@@ -1149,7 +1148,13 @@ static void parse_profile_primitive(Scene *s,XmlNode *n,mat4 M,mat4 R,vec3 color
 	int stage=0,invalid=0;
 	for(int i=0;i<n->nkids;i++){
 		XmlNode *child=n->kids[i];
-		if(!strcmp(child->tag,"extrude")){
+		if(!strcmp(child->tag,"fillet")){
+			if(extrude||stage) invalid=1;
+			else {
+				Shape2D next=shape2d_fillet(&profile,xml_attr_f_cm(child,"radius",0),xml_attr_i(child,"segments",SHAPE_FILLET_DEFAULT_SEGMENTS));
+				shape2d_free(&profile); profile=next;
+			}
+		} else if(!strcmp(child->tag,"extrude")){
 			if(extrude||stage) invalid=1;
 			extrude=child; stage=1;
 		} else if(!strcmp(child->tag,"bevel")){
@@ -1161,7 +1166,7 @@ static void parse_profile_primitive(Scene *s,XmlNode *n,mat4 M,mat4 R,vec3 color
 	float depth=extrude?xml_attr_f_cm(extrude,"amount",0):0;
 	float amount=bevel?xml_attr_f_cm(bevel,"amount",0):0;
 	if(!profile.npts||!extrude||invalid||strcmp(axis,"z")){
-		fprintf(stderr,"[scener] %s: expected a valid 2D outline and one <extrude axis=\"z\"> before optional <bevel>\n",n->tag);
+		fprintf(stderr,"[scener] %s: expected a valid 2D outline, optional <fillet>s, one <extrude axis=\"z\"> and an optional <bevel>\n",n->tag);
 		shape2d_free(&profile); return;
 	}
 	Mesh mesh=gen_profile_extrusion_beveled(&profile,depth,amount,bevel?xml_attr_i(bevel,"bevelSegments",4):1);
@@ -1176,7 +1181,6 @@ static void parse_##name(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos
 	(void)parentM; (void)pos; (void)rot; parse_profile_primitive(s,n,M,R,color,shin,castsShadow,renderable,unlit,kind); \
 }
 PROFILE_PARSER(rect,PROFILE_RECT)
-PROFILE_PARSER(rounded_rect,PROFILE_ROUNDED_RECT)
 PROFILE_PARSER(circle,PROFILE_CIRCLE)
 PROFILE_PARSER(ellipse,PROFILE_ELLIPSE)
 PROFILE_PARSER(star,PROFILE_STAR)
@@ -2320,7 +2324,6 @@ static const struct {
 } shape_parsers[] = {
 	{ "box",      parse_box },
 	{ "rect",     parse_rect },
-	{ "rounded-rect", parse_rounded_rect },
 	{ "circle",   parse_circle },
 	{ "ellipse",  parse_ellipse },
 	{ "star",     parse_star },
@@ -2646,7 +2649,7 @@ static void warn_unknown_children(Scene *s, XmlNode *parent, const char *path, i
 		else if(!strcmp(parent->tag,"shape")) supported=!strcmp(n->tag,"v") || !strcmp(n->tag,"fillet") || has_modifier_parser(n->tag);
 		else if(!strcmp(parent->tag,"wall")||!strcmp(parent->tag,"floor")||!strcmp(parent->tag,"window")||!strcmp(parent->tag,"door")) supported=0;
 		else if(!strcmp(parent->tag,"prefab")) supported=!strcmp(n->tag,"array") || !strcmp(n->tag,"joint") || !strcmp(n->tag,"ik") || !strcmp(n->tag,"gait") || !strcmp(n->tag,"layer") || !strcmp(n->tag,"option");
-		else if(has_shape_parser(parent->tag)) supported=has_modifier_parser(n->tag);
+		else if(has_shape_parser(parent->tag)) supported=has_modifier_parser(n->tag) || !strcmp(n->tag,"fillet");
 		if(!supported){
 			warn_unsupported_tree(s,n,path,parent->tag);
 			continue;
@@ -2953,7 +2956,6 @@ int scene_create_promo_shape(Scene *s,const char *tag,vec3 ground){
 	int screen=!strcmp(tag,"screen");
 	const struct { const char *tag,*size,*radius,*outer,*inner,*points,*depth,*bevel; float lift; } presets[]={
 		{ "rect",         "100 100", NULL, NULL, NULL, NULL, "20", "2", 0.5f },
-		{ "rounded-rect", "7.6 16.2", "1.28", NULL, NULL, NULL, "0.8", "0.16", 0.081f },
 		{ "circle",       NULL, "50", NULL, NULL, NULL, "20", "2", 0.5f },
 		{ "ellipse",      "100 70", NULL, NULL, NULL, NULL, "20", "2", 0.35f },
 		{ "star",         NULL, NULL, "50", "25", "5", "20", "2", 0.5f },

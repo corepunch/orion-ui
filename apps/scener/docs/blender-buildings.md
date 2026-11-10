@@ -29,7 +29,7 @@ python3 apps/scener/tools/gen_nile_buildings.py     # or: lua apps/scener/tools/
 scener --render apps/scener/scenes/nile_buildings.blks --camera Overview --output-dir /tmp/nile
 ```
 
-The kit draws with modifiers, not hard-coded primitives: a box is a `rect` or `rounded-rect` extruded and
+The kit draws with modifiers, not hard-coded primitives: a box is a `rect` (with a `fillet` when rounded) extruded and
 bevelled, a battered block adds `taper`, a tube is a `circle` extruded and tapered along its axis, a sphere,
 vase or pyramid is one profile revolved with `<lathe>` (a sphere is a half circle, shared by every ball and
 scaled), a flag is a line extruded. Only `<group>` frames remain besides these.
@@ -46,7 +46,7 @@ Lua 5.4 with no dependencies; Scener itself does not embed Lua, so for now it ge
 |---|---|---|
 | per-vertex colour (`col` attribute) | `gradientFrom`/`gradientTo` on a shape (bounding-box gizmo) | leaves and clay darken towards the ground; other gradients are authored per shape |
 | free surfaces (`surface`, palm fronds, tiled roofs `pane`) | none | fronds are flattened revolved spheres; `pane`/`hip_roof` are not ported |
-| triangle soup per material, one bevel modifier | `<rounded-rect>` + `<extrude>` + `<bevel>` per box | bevels follow the piece, edges parallel to depth only |
+| triangle soup per material, one bevel modifier | `<rect>` + `<extrude>` + `<bevel>` per box | bevels follow the piece, edges parallel to depth only |
 | `frustum` with different x and y insets | `<taper>` is uniform in both axes | the pylon's depth inset is 0.16 tile, not 0.10 |
 | arbitrary 3D `poly` | `<shape>` + `<extrude>` in a vertical plane | enough for flags and cloth; arched window fills need a vertical plane too |
 | footprint clamp after the fact | none | builders must stay inside their footprint |

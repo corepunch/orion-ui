@@ -7,7 +7,7 @@ def e(s): out.append(s)
 def f(v): return ("%.2f" % v).rstrip("0").rstrip(".") if abs(v) > 1e-6 else "0"
 def v3(a, b, c): return "%s %s %s" % (f(a), f(b), f(c))
 
-# Kit pieces have softly rounded edges: every box is a rounded rectangle extruded along local Z
+# Kit pieces have softly rounded edges: every box is a rect, filleted, extruded along local Z
 # with a bevelled rim, and every cylinder a bevelled circle. Radii scale with the piece so thin
 # trims stay crisp while walls and roofs read as chunky toys.
 ROUND = 0.42      # corner radius as a fraction of the smaller cross-section side
@@ -22,9 +22,9 @@ def box(p, s, m, rot=None, extra="", mods=""):
     if mods: e('    <box pos="%s" size="%s"%s material="%s"%s>%s</box>' % (v3(*p), v3(*s), r, m, extra, mods))
     else:    e('    <box pos="%s" size="%s"%s material="%s"%s/>' % (v3(*p), v3(*s), r, m, extra))
     return
-  e('    <rounded-rect pos="%s" size="%s %s" radius="%s" segments="5"%s material="%s"%s>'
-    '<extrude amount="%s"/><bevel amount="%s" bevelSegments="4"/>%s</rounded-rect>'
-    % (v3(*p), f(s[0]), f(s[1]), f(rad), r, m, extra, f(s[2]), f(bev), mods))
+  e('    <rect pos="%s" size="%s %s"%s material="%s"%s>'
+    '<fillet radius="%s" segments="5"/><extrude amount="%s"/><bevel amount="%s" bevelSegments="4"/>%s</rect>'
+    % (v3(*p), f(s[0]), f(s[1]), r, m, extra, f(rad), f(s[2]), f(bev), mods))
 
 def cyl(p, r, h, m, sides=8, rot=None, extra="", mods=""):
   bev = min(ROUND_MAX, ROUND * min(r * 2, h), h * 0.5) * BEVEL

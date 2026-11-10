@@ -53,7 +53,7 @@
   </group>
 
   <prefab source="study/pendant_lamp" pos="0 0 {H}"/>
-  <rounded-rect pos="-60 -10 0.3" size="300 220" radius="18" material="rug"><extrude amount="0.6"/></rounded-rect>
+  <rect pos="-60 -10 0.3" size="300 220" material="rug"><fillet radius="18" segments="8"/><extrude amount="0.6"/></rect>
 
   <!-- The kitten's chair, a side table with a lamp, a bookshelf and a trunk along the walls. -->
   <prefab source="study/chair" name="chair" pos="{CHAIR_X} {CHAIR_Y} 0" rot="0 0 -90"/>

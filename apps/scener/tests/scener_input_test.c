@@ -146,9 +146,9 @@ static void test_device_screen_geometry_and_assets(void) {
   }
   Scene created = {0};
   ASSERT_TRUE(window_test_load(&created, "<scene/>"));
-  ASSERT_TRUE(scene_create_promo_shape(&created, "rounded-rect", v3(0, 0, 0)));
+  ASSERT_TRUE(scene_create_promo_shape(&created, "star", v3(0, 0, 0)));
   ASSERT_EQUAL(created.nobjs, 1);
-  ASSERT_TRUE(!strcmp(scene_node_tag(created.selectedNode), "rounded-rect"));
+  ASSERT_TRUE(!strcmp(scene_node_tag(created.selectedNode), "star"));
   snprintf(created.scenePath, sizeof(created.scenePath), "%s/scener-profile-%d.blks", window_test_temp_dir(), getpid());
   ASSERT_TRUE(scene_save_all(&created));
   Scene restored = {0};
@@ -250,9 +250,9 @@ static void test_shell_amount_is_centimetres(void) {
 }
 
 static void test_profile_extrude_and_bevel(void) {
-  TEST("2D profiles: rect, rounded rect, circle, ellipse and star share sealed extrusion and bevel");
+  TEST("2D profiles: rect with fillet, circle, ellipse and star share sealed extrusion and bevel");
   const char *xml = "<scene>"
-    "<rounded-rect size=\"7.6 16.2\" radius=\"1.28\"><extrude amount=\"0.8\"/><bevel amount=\"0.16\" bevelSegments=\"4\"/></rounded-rect>"
+    "<rect size=\"7.6 16.2\"><fillet radius=\"1.28\" segments=\"8\"/><extrude amount=\"0.8\"/><bevel amount=\"0.16\" bevelSegments=\"4\"/></rect>"
     "<rect size=\"4 3\"><extrude amount=\"1\"/><bevel amount=\"0.1\"/></rect>"
     "<circle radius=\"2\"><extrude amount=\"1\"/><bevel amount=\"0.1\"/></circle>"
     "<ellipse size=\"5 3\"><extrude amount=\"1\"/><bevel amount=\"0.1\"/></ellipse>"

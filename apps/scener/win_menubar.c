@@ -79,7 +79,6 @@ bool scener_create_primitive(scene_doc_t *doc, uint16_t id, vec3 ground_pos) {
   const char *profile_tag = NULL;
   switch (id) {
     case ID_CREATE_RECT:         profile_tag = "rect"; break;
-    case ID_CREATE_ROUNDED_RECT: profile_tag = "rounded-rect"; break;
     case ID_CREATE_CIRCLE:       profile_tag = "circle"; break;
     case ID_CREATE_ELLIPSE:      profile_tag = "ellipse"; break;
     case ID_CREATE_STAR:         profile_tag = "star"; break;
@@ -260,7 +259,6 @@ void handle_menu_command(uint16_t id) {
 
     case ID_CREATE_BOX:
     case ID_CREATE_RECT:
-    case ID_CREATE_ROUNDED_RECT:
     case ID_CREATE_CIRCLE:
     case ID_CREATE_ELLIPSE:
     case ID_CREATE_STAR:

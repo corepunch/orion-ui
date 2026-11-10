@@ -8,9 +8,9 @@
   <rect pos="-12 0 0" size="4 5" color="0.76 0.43 0.29" shininess="55">
     <extrude amount="0.8"/><bevel amount="0.12" bevelSegments="4"/>
   </rect>
-  <rounded-rect pos="-6 0 0" size="4 5" radius="0.9" color="0.46 0.62 0.92" shininess="55">
+  <rect pos="-6 0 0" size="4 5" color="0.46 0.62 0.92" shininess="55"><fillet radius="0.9" segments="8"/>
     <extrude amount="0.8"/><bevel amount="0.12" bevelSegments="4"/>
-  </rounded-rect>
+  </rect>
   <circle radius="2.35" pos="0 0 0" color="0.40 0.79 0.73" shininess="55">
     <extrude amount="0.8"/><bevel amount="0.12" bevelSegments="4"/>
   </circle>

@@ -105,9 +105,9 @@ local function pos(x, y, z) return v3(x * TILE, z * TILE, -y * TILE) end
 -- Solids: every shape is a profile (line, rect, circle, revolved curve) put through modifiers.
 
 -- A 2D profile extruded `depth` cm along local Z, bevelled, then deformed by `mods`.
-function Kit:solid(tag, pattrs, depth, p, mat, col, rot, mods)
+function Kit:solid(tag, pattrs, depth, p, mat, col, rot, mods, pre)
   self:emit(fmt('<%s%s%s%s%s>%s%s</%s>', tag, attrs(pattrs), attrs({{"pos", p}}), attrs(rot or {}), attrs(self:look(mat, col)),
-    fmt('<extrude amount="%s"/>', f(depth)), mods or "", tag))
+    (pre or "") .. fmt('<extrude amount="%s"/>', f(depth)), mods or "", tag))
 end
 
 -- Corner radius and rim bevel (cm) for a piece with cross-section a x b tiles and extruded depth cm.
@@ -117,13 +117,13 @@ local function rounded(mat, a, b, depth)
   return 0, 0
 end
 
--- A box as a rect (or rounded-rect) of a x b tiles, extruded `depth` cm, with the kit's bevels.
+-- A box as a rect (filleted when the material is rounded) of a x b tiles, extruded `depth` cm, with the kit's bevels.
 function Kit:prism(mat, p, a, b, depth, col, rot, mods)
   local rad, bev = rounded(mat, a, b, depth)
   local size = {"size", f(a * TILE) .. " " .. f(b * TILE)}
   if rad == 0 then return self:solid("rect", {size}, depth, p, mat, col, rot, mods) end
   local bevel = fmt('<bevel amount="%s" bevelSegments="3"/>', f(bev))
-  return self:solid("rounded-rect", {size, {"radius", f(rad)}, {"segments", 4}}, depth, p, mat, col, rot, bevel .. (mods or ""))
+  return self:solid("rect", {size}, depth, p, mat, col, rot, bevel .. (mods or ""), fmt('<fillet radius="%s" segments="4"/>', f(rad)))
 end
 
 function Kit:box(mat, x, y, z, sx, sy, sz, col, rz)

@@ -32,7 +32,7 @@ The complete supported element inventory is:
 | `<scene>` attributes | `ambient`, `background`, `up`, `convention`, `duration` |
 | Scene configuration | `<camera>`, `<pose>`, `<clip>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
 | Character rig parts | `<bone>`, `<hub>`, `<spine>`, `<tail>`, `<limb>`, `<collarbone>`, `<palm>`, `<ankle>`, `<digit>` |
-| Transformable content | `<box>`, `<rect>`, `<rounded-rect>`, `<circle>`, `<ellipse>`, `<star>`, `<shape>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
+| Transformable content | `<box>`, `<rect>`, `<rect>`, `<circle>`, `<ellipse>`, `<star>`, `<shape>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
 | Wall cutters | `<bool-negative-box>`, `<bool-negative-arch>`, `<bool-negative-cylinder>` |
 | Mesh modifiers | `<taper>`, `<twist>`, `<bend>`, `<stretch>`, `<skew>`, `<array>`, `<extrude>`, `<bevel>`, `<mirror>`, `<noise>`, `<shell>` |
 | Expressions | `<let>` in `<scene>`, `<prefab>`, `<group>` and bones; `{expr}` in any attribute value |
@@ -594,7 +594,7 @@ Example: moon through a back-wall window at 45° down and 30° horizontal offset
 
 ## Shape objects
 
-All shapes share common attributes plus shape-specific ones. Shapes may contain modifier child elements. The supported shapes include `box`, `rect`, `rounded-rect`, `circle`, `ellipse`, `star`, `shape`, `screen`, `sphere`, `cylinder`, `arch`, `prism`, `cone`/`pyramid`, `torus`, `lathe`, `loft`, and `wall`.
+All shapes share common attributes plus shape-specific ones. Shapes may contain modifier child elements. The supported shapes include `box`, `rect`, `circle`, `ellipse`, `star`, `shape`, `screen`, `sphere`, `cylinder`, `arch`, `prism`, `cone`/`pyramid`, `torus`, `lathe`, `loft`, and `wall`.
 
 ### Common attributes
 
@@ -650,7 +650,7 @@ Axis-aligned box centered at origin.
 | `size`    | vec3 | 1 1 1   | Width, height, depth |
 | `inset`   | float/vec2 | 0 | Hollow the box into a rectangular tube. One value uses the same inset on X and Y; two values are `insetX insetY`. The opening passes fully through local Z |
 
-### 2D profiles: `<rect>`, `<rounded-rect>`, `<circle>`, `<ellipse>`, `<star>`
+### 2D profiles: `<rect>`, `<circle>`, `<ellipse>`, `<star>`
 
 These elements define closed outlines in local XY. They require one child
 `<extrude amount="…"/>` to make a renderable solid along local Z. An optional
@@ -662,22 +662,23 @@ on local Z, so its front face lies at `+amount/2`.
 | Profile | Attributes | Defaults |
 |---------|------------|----------|
 | `<rect>` | `size="width height"` | `1 1` |
-| `<rounded-rect>` | `size="width height"`, `radius`, `segments` per corner (2–32) | `1 1`, `0`, `8` |
 | `<circle>` | `radius`, `segments` (8–128) | `0.5`, `32` |
 | `<ellipse>` | `size="width height"`, `segments` (8–128) | `1 1`, `48` |
 | `<star>` | `outerRadius`, `innerRadius`, `points` (3–32) | `0.5`, `0.25`, `5` |
 
-`radius` on a rounded rectangle is clamped to half its shorter side. The
+Any profile may take `<fillet radius segments/>` children before `<extrude>` to round its
+corners (a rounded rectangle is a `<rect>` with a fillet); a fillet radius is clamped to half
+the shorter side. The
 bevel must be smaller than half the extrusion depth and leave a simple,
 non-self-intersecting inset outline. If the inset would fold over, Scener
 rejects that solid with a diagnostic; reduce the bevel amount. This is
 especially relevant to sharp star points.
 
 ```xml
-<rounded-rect size="7.6 16.2" radius="1.28">
+<rect size="7.6 16.2"><fillet radius="1.28" segments="8"/>
   <extrude amount="0.8"/>
   <bevel amount="0.16" bevelSegments="4"/>
-</rounded-rect>
+</rect>
 <star outerRadius="3" innerRadius="1.5" points="5">
   <extrude amount="1"/>
   <bevel amount="0.1"/>

@@ -10,7 +10,7 @@ That keeps handedness: Blender's front (-Y) is Scener's +Z, the side a camera at
 Rotations about Blender's Z become Scener rotations about Y with the same sign.
 
 Everything is a profile put through modifiers, as Scener prefers, not a hard-coded primitive:
-  box / beam / frustum  rect or rounded-rect -> extrude -> bevel (-> taper)
+  box / beam / frustum  rect -> fillet -> extrude -> bevel (-> taper)
   tube                  circle -> extrude -> bevel -> taper along the axis
   ball / lathe / pyramid  a profile curve revolved about the vertical axis (a sphere is a half circle)
   poly / roof           a line -> extrude (-> shell -> fillet)
@@ -124,10 +124,10 @@ class Kit:
 
   # ---- solids: every shape is a profile (line, rect, circle, revolved curve) put through modifiers
 
-  def solid(self, profile, depth, pos, mat, col, rot=(), mods=""):
-    """A 2D profile extruded `depth` cm along local Z, bevelled, then deformed by `mods`."""
+  def solid(self, profile, depth, pos, mat, col, rot=(), mods="", pre=""):
+    """A 2D profile, shaped by `pre` (a fillet), extruded `depth` cm along local Z, bevelled, then deformed by `mods`."""
     ext = "<extrude amount=\"%s\"/>" % f(depth)
-    return self.emit("<%s%s%s%s>%s</%s>" % (profile[0], attrs(profile[1]), attrs([("pos", pos)]) + attrs(list(rot)), attrs(self.look(mat, col)), ext + mods, profile[0]))
+    return self.emit("<%s%s%s%s>%s</%s>" % (profile[0], attrs(profile[1]), attrs([("pos", pos)]) + attrs(list(rot)), attrs(self.look(mat, col)), pre + ext + mods, profile[0]))
 
   def rounded(self, mat, a, b, depth):
     """Corner radius and rim bevel (cm) for a piece with cross-section a x b tiles and extruded depth cm."""
@@ -135,13 +135,13 @@ class Kit:
     return (rad, min(.85 * rad, SOLID_ROUND * depth)) if rad >= .8 and depth >= 2.4 else (0, 0)
 
   def prism(self, mat, pos, a, b, depth, col, rot=(), mods=""):
-    """A box as a rect (or rounded-rect) of a x b tiles, extruded `depth` cm, with the kit's bevels."""
+    """A box as a rect (filleted when the material is rounded) of a x b tiles, extruded `depth` cm, with the kit's bevels."""
     rad, bev = self.rounded(mat, a, b, depth)
     size = ("size", "%s %s" % (f(a * TILE), f(b * TILE)))
     if not rad:
       return self.solid(("rect", [size]), depth, pos, mat, col, rot, mods)
     bevel = "<bevel amount=\"%s\" bevelSegments=\"3\"/>" % f(bev)
-    return self.solid(("rounded-rect", [size, ("radius", f(rad)), ("segments", 4)]), depth, pos, mat, col, rot, bevel + mods)
+    return self.solid(("rect", [size]), depth, pos, mat, col, rot, bevel + mods, "<fillet radius=\"%s\" segments=\"4\"/>" % f(rad))
 
   def box(self, mat, x, y, z, sx, sy, sz, col, rz=0.):
     self.prism(mat, v3(x * TILE, (z + sz / 2) * TILE, -y * TILE), sx, sz, sy * TILE, col, [("rot", v3(0, math.degrees(rz), 0))] if rz else [])

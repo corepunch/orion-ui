@@ -54,7 +54,7 @@ Primitive generators should work at the highest useful level. Prefer composing c
 
 `extrude_polygon()` is the common implementation for boxes, cylinders, cylinder tubes, Roman arches, and circular or arched wall-opening pieces. It triangulates convex or concave caps, can emit caps or boundary walls independently, supports inward-facing hole boundaries, and can smooth circular side normals. This keeps triangulation and winding rules in one place.
 
-Renderable 2D profile elements (`rect`, `rounded-rect`, `circle`, `ellipse`,
+Renderable 2D profile elements (`rect`, `circle`, `ellipse`,
 `star`) use `<extrude>` to create a closed local-Z solid. A following `<bevel>`
 insets the cap outline and adds rounded perimeter rings before later mesh
 modifiers run. The same extrusion and bevel generator consumes each profile.

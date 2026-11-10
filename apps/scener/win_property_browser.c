@@ -38,10 +38,6 @@ static const prop_def_t kBoxProperties[] = {
 	PV("Inset X", "inset", "0 0 0", PROP_X), PV("Inset Y", "inset", "0 0 0", PROP_Y),
 };
 static const prop_def_t kRectProperties[] = { PV("Width", "size", "100 100", PROP_X), PV("Height", "size", "100 100", PROP_Y) };
-static const prop_def_t kRoundedRectProperties[] = {
-	PV("Width", "size", "7.6 16.2", PROP_X), PV("Height", "size", "7.6 16.2", PROP_Y),
-	P("Corner Radius", "radius", "1.28"), P("Segments", "segments", "8"),
-};
 static const prop_def_t kShapeProperties[] = { P("Id", "id", ""), PB("Closed", "closed", "0") };
 static const prop_def_t kFilletProperties[] = { P("Radius", "radius", "0"), P("Segments", "segments", "6") };
 static const prop_def_t kShellProperties[] = { P("Amount", "amount", "5") };
@@ -96,7 +92,6 @@ static const node_class_t kNodeClasses[] = {
 	{ "window", "Window", kWindowProperties, PROP_COUNT(kWindowProperties), 1, 1 },
 	{ "box", "Box", kBoxProperties, PROP_COUNT(kBoxProperties), 1, 1 }, { "sphere", "Sphere", kSphereProperties, PROP_COUNT(kSphereProperties), 1, 1 },
 	{ "rect", "Rect", kRectProperties, PROP_COUNT(kRectProperties), 1, 1 },
-	{ "rounded-rect", "Rounded Rect", kRoundedRectProperties, PROP_COUNT(kRoundedRectProperties), 1, 1 },
 	{ "circle", "Circle", kCircleProperties, PROP_COUNT(kCircleProperties), 1, 1 },
 	{ "shape", "Shape", kShapeProperties, PROP_COUNT(kShapeProperties), 1, 1 },
 	{ "ellipse", "Ellipse", kEllipseProperties, PROP_COUNT(kEllipseProperties), 1, 1 },

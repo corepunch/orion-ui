@@ -217,7 +217,6 @@ static const cp_command_t kControlItems[] = {
 static const cp_command_t kShapeItems[] = {
 	CP_MENU_COMMAND("Box",      ID_CREATE_BOX,      "primitives/box"),
 	CP_MENU_COMMAND("Rect", ID_CREATE_RECT, "primitives/box"),
-	CP_MENU_COMMAND("Rounded Rect", ID_CREATE_ROUNDED_RECT, "primitives/box"),
 	CP_MENU_COMMAND("Circle", ID_CREATE_CIRCLE, "primitives/sphere"),
 	CP_MENU_COMMAND("Ellipse", ID_CREATE_ELLIPSE, "primitives/sphere"),
 	CP_MENU_COMMAND("Star", ID_CREATE_STAR, "primitives/prism"),

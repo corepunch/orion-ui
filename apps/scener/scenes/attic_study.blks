@@ -161,7 +161,7 @@
   <cylinder pos="-192 58 0.3" rot="0 0 60" radius="0.3" height="22" material="yarn" />
 
   <!-- Room furniture along the walls, clear of the route. -->
-  <rounded-rect pos="-10 -45 0.4" size="200 120" radius="12" material="rug"><extrude amount="0.8" /></rounded-rect>
+  <rect pos="-10 -45 0.4" size="200 120" material="rug"><fillet radius="12" segments="8"/><extrude amount="0.8" /></rect>
   <prefab source="study/bookshelf" pos="-242.5 -40 0" rot="0 0 90" />
   <prefab source="study/trunk" pos="236 -70 0" rot="0 0 -90" />
   <prefab source="study/book" pos="236 -62 46" rot="0 0 12" color="0.36 0.20 0.34" />
