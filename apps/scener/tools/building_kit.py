@@ -36,6 +36,8 @@ HALF = 50.0     # cm radius of the shared unit-sphere profile
 # along the shape's own up axis, the Blender kit's darker-at-the-bottom vertex colours (<gradient> attributes)
 # material -> (specular level, metallic) when it is not Blender's default (0.5, 0); the shape then carries specular= and metallic=
 SURFACE = {}
+# material -> bevel segments, as the Blender kit's BEVELS give its bevel modifier; others take soft-box's 2
+SEGMENTS = {"stone": 3, "slab": 3, "hedge": 3}
 LAMP_RANGE = 0     # cm; beyond it a kit lamp neither lights nor shadows (0: unlimited)
 LAMP_SHADOWS = 0   # 1: the kit's point lights cast shadows (the Blender master's do)
 GRADIENTS = {"leaf": (.6, 1.2), "clay": (.8, 1.05)}
@@ -145,7 +147,8 @@ class Kit:
     """A box of a x b tiles, `depth` cm deep, as a call to the scene's soft-box (rounded) or slab (square) utility; `mods` become its children."""
     rad, bev = self.rounded(mat, a, b, depth)
     size = [("width", f(a * TILE)), ("height", f(b * TILE)), ("depth", f(depth))]
-    call = [("soft-box", size + [("radius", f(rad)), ("bevel", f(bev))]) if rad else ("slab", size + [("bevel", 0)])][0]
+    seg = SEGMENTS.get(mat, 2)
+    call = [("soft-box", size + [("radius", f(rad)), ("bevel", f(bev))] + ([("segments", seg)] if seg != 2 else [])) if rad else ("slab", size + [("bevel", 0)])][0]
     return self.emit("<%s%s%s%s>%s</%s>" % (call[0], attrs(call[1]), attrs([("pos", pos)]) + attrs(list(rot)), attrs(self.look(mat, col)), mods, call[0]) if mods
                      else "<%s%s%s%s/>" % (call[0], attrs(call[1]), attrs([("pos", pos)]) + attrs(list(rot)), attrs(self.look(mat, col))))
 

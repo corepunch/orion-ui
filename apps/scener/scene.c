@@ -682,6 +682,7 @@ void scene_add_obj(Scene *s, Mesh mesh, mat4 M, mat4 R, vec3 color, float shin, 
 	if(castsShadow && mesh_signed_volume(&mesh) < 0.0f) mesh_flip_winding(&mesh);
 	mesh_compute_face_normals(&mesh);
 	if(castsShadow) mesh_build_edges(&mesh);
+	mesh_shrink(&mesh);
 	SceneObj o={0};
 	o.mesh=mesh; o.color=color; o.shininess=shin; o.ramp=s->activeRamp; o.castsShadow=castsShadow;
 	o.specular=s->activeSpecular; o.metallic=s->activeMetallic;
@@ -3705,8 +3706,8 @@ static void scene_apply_drag_transform(Scene *s,XmlNode *n){
 			o->mesh.verts[i].nrm=mat4_xform_normal(delta,start[i].nrm);
 		}
 		o->editMatrix=matrix;
+		o->mesh.gpuDirty=1;
 		mesh_compute_face_normals(&o->mesh);
-		if(o->castsShadow) mesh_update_edge_positions(&o->mesh);
 	}
 	scene_rebuild_node_shadow_volumes(s,s->selectedNode);
 }

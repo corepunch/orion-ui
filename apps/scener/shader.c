@@ -3,15 +3,16 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "vertex_cache.h"
 #include "shader.h"
 #include <orion/kernel/renderer.h>
 
 #define SRGB_TO_LINEAR_GAMMA 2.2f
 
-static GLuint prog, s_mesh_vao, s_mesh_vbo, s_mesh_ebo;
+static GLuint prog;
 static GLuint vlocPos, vlocNrm;
 static GLint ulocViewProj, ulocViewPos, ulocLightPos, ulocLightColor, ulocLightRadius;
-static GLint ulocLightRange, ulocSky, ulocSkyOn, ulocSpecular, ulocMetallic, ulocColor, ulocShininess, ulocRamp, ulocRampOn, ulocGradOn, ulocGradFrom, ulocGradTo;
+static GLint ulocAmbient, ulocAmbientOn, ulocLightRange, ulocSky, ulocSkyOn, ulocSpecular, ulocMetallic, ulocColor, ulocShininess, ulocRamp, ulocRampOn, ulocGradOn, ulocGradFrom, ulocGradTo;
 static GLint vlocGrad;
 #ifdef SCENER_USE_TEXTURES
 static GLint ulocTex;
@@ -70,6 +71,8 @@ static const char *fs_src =
 "uniform float uSpecular;\n"
 "uniform float uMetallic;\n"
 "uniform vec3 uSky;\n"
+"uniform vec3 uAmbient;\n"
+"uniform int uAmbientOn;\n"
 "uniform int uSkyOn;\n"
 "uniform vec3 uRamp[RAMP_SHADES];\n"
 "uniform int uRampOn;\n"
@@ -113,6 +116,7 @@ static const char *fs_src =
 "    vec3 texColor=vec3(1.0);\n"
 #endif
 "    if(uGradOn>0) texColor*=mix(uGradFrom,uGradTo,clamp(vGrad,0.0,1.0));\n"
+"    if(uAmbientOn>0){ fragColor=vec4(clamp(uColor*texColor*uAmbient,0.0,1.0),1.0); return; }\n"
 "    /* The diffuse term drops its 1/pi, so a light colour is irradiance/pi; the specular lobe times NdotL needs the pi back. */\n"
 "    vec3 spec=(D*G*F)*PI/(max(4.0*NdotV,MIN_SPECULAR))*uLightColor;\n"
 "    vec3 diff=uColor*texColor*(vec3(1.0)-F)*(1.0-uMetallic)*NdotL*uLightColor;\n"
@@ -159,6 +163,8 @@ void shader_init(void){
 	ulocShininess   = glGetUniformLocation(prog, "uShininess");
 	ulocSpecular    = glGetUniformLocation(prog, "uSpecular");
 	ulocSky         = glGetUniformLocation(prog, "uSky");
+	ulocAmbient     = glGetUniformLocation(prog, "uAmbient");
+	ulocAmbientOn   = glGetUniformLocation(prog, "uAmbientOn");
 	ulocSkyOn       = glGetUniformLocation(prog, "uSkyOn");
 	ulocMetallic    = glGetUniformLocation(prog, "uMetallic");
 	ulocRamp        = glGetUniformLocation(prog, "uRamp");
@@ -167,18 +173,16 @@ void shader_init(void){
 	ulocGradFrom    = glGetUniformLocation(prog, "uGradFrom");
 	ulocGradTo      = glGetUniformLocation(prog, "uGradTo");
 	vlocGrad        = glGetAttribLocation(prog, "aGrad");
+	vcache_set_attribs((int)vlocPos,(int)vlocNrm,(int)vlocGrad);
 #ifdef SCENER_USE_TEXTURES
 	ulocTex         = glGetUniformLocation(prog, "uTex");
 #endif
 }
 
 void shader_deinit(void){
+	vcache_shutdown();
 	if(prog) glDeleteProgram(prog);
-	if(s_mesh_vao) glDeleteVertexArrays(1,&s_mesh_vao);
-	if(s_mesh_vbo) glDeleteBuffers(1,&s_mesh_vbo);
-	if(s_mesh_ebo) glDeleteBuffers(1,&s_mesh_ebo);
 	prog = 0;
-	s_mesh_vao=s_mesh_vbo=s_mesh_ebo=0;
 }
 
 void shader_bind(void){
@@ -216,6 +220,11 @@ void shader_set_material(vec3 color, float shininess, float specular, float meta
 	glUniform1f(ulocMetallic, metallic);
 }
 
+void shader_set_ambient(int on, vec3 linear){
+	glUniform1i(ulocAmbientOn, on ? 1 : 0);
+	if(on) glUniform3f(ulocAmbient, linear.x, linear.y, linear.z);
+}
+
 void shader_set_sky(int on, vec3 color){
 	glUniform1i(ulocSkyOn, on ? 1 : 0);
 	if(on){ color=srgb_to_linear(color); glUniform3f(ulocSky, color.x, color.y, color.z); }
@@ -245,27 +254,4 @@ void shader_set_texture(unsigned int tex){
 }
 #endif
 
-void shader_draw_mesh(Mesh *m){
-	if(!s_mesh_vao){
-		glGenVertexArrays(1,&s_mesh_vao);
-		glGenBuffers(1,&s_mesh_vbo);
-		glGenBuffers(1,&s_mesh_ebo);
-	}
-	glBindVertexArray(s_mesh_vao);
-	glBindBuffer(GL_ARRAY_BUFFER,s_mesh_vbo);
-	glBufferData(GL_ARRAY_BUFFER,(GLsizeiptr)(m->nverts*sizeof(Vertex)),m->verts,GL_DYNAMIC_DRAW);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,s_mesh_ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER,(GLsizeiptr)(m->ntris*sizeof(Tri)),m->tris,GL_DYNAMIC_DRAW);
-	glEnableVertexAttribArray(vlocPos);
-	glEnableVertexAttribArray(vlocNrm);
-	if(vlocGrad>=0) glEnableVertexAttribArray(vlocGrad);
-	glVertexAttribPointer(vlocPos,3,GL_FLOAT,GL_FALSE,sizeof(Vertex),(void*)0);
-	glVertexAttribPointer(vlocNrm,3,GL_FLOAT,GL_FALSE,sizeof(Vertex),(void*)(3*sizeof(float)));
-	if(vlocGrad>=0) glVertexAttribPointer(vlocGrad,1,GL_FLOAT,GL_FALSE,sizeof(Vertex),(void*)offsetof(Vertex,g));
-	glDrawElements(GL_TRIANGLES,m->ntris*3,GL_UNSIGNED_INT,(void*)0);
-	glDisableVertexAttribArray(vlocPos);
-	glDisableVertexAttribArray(vlocNrm);
-	if(vlocGrad>=0) glDisableVertexAttribArray(vlocGrad);
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER,0);
-}
+void shader_draw_mesh(Mesh *m){ vcache_draw_mesh(m); }

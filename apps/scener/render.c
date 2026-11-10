@@ -1,6 +1,7 @@
 #include <orion/user/gl_compat.h>
 #include <math.h>
 #include <stdio.h>
+#include "vertex_cache.h"
 #include <stddef.h>
 #include <string.h>
 #include "simplegl.h"
@@ -19,7 +20,7 @@ static GLuint s_shadow_prog;
 static GLuint s_image_prog,s_image_vao,s_image_vbo,s_image_ebo;
 static GLint s_image_viewproj_loc,s_image_color_loc,s_image_sampler_loc;
 static vec3 render_srgb_to_linear(vec3 color);
-static GLint s_shadow_proj_loc, s_shadow_view_loc, s_shadow_color_loc;
+static GLint s_shadow_proj_loc, s_shadow_view_loc, s_shadow_color_loc, s_shadow_verts_loc, s_shadow_stride_loc, s_shadow_light_loc;
 GLuint s_line_prog;
 GLint s_line_viewproj_loc;
 
@@ -37,12 +38,21 @@ static const char *s_line_fs =
     "out vec4 frag;\n"
     "void main(){ frag=vec4(vColor,1); }\n";
 
+/* Doom 3's shadow.vertex: no vertex data of its own. Index 2i is mesh vertex i where it is, 2i+1 the same
+   vertex pushed to infinity away from the light; positions are read from the mesh's own buffer. */
 static const char *s_shadow_vs =
     "#version 150\n"
-    "in vec4 aPos;\n"
+    "uniform samplerBuffer uVerts;\n"
+    "uniform int uStride;\n"
+    "uniform vec3 uLight;\n"
     "uniform mat4 uProj;\n"
     "uniform mat4 uView;\n"
-    "void main(){ gl_Position=uProj*uView*aPos; }\n";
+    "void main(){\n"
+    "    int b=(gl_VertexID>>1)*uStride;\n"
+    "    vec3 p=vec3(texelFetch(uVerts,b).r,texelFetch(uVerts,b+1).r,texelFetch(uVerts,b+2).r);\n"
+    "    vec4 pos=(gl_VertexID&1)==1?vec4(p-uLight,0.0):vec4(p,1.0);\n"
+    "    gl_Position=uProj*uView*pos;\n"
+    "}\n";
 
 static const char *s_shadow_fs =
     "#version 150\n"
@@ -137,6 +147,9 @@ static void ensure_shadow_prog(void) {
     s_shadow_proj_loc = glGetUniformLocation(s_shadow_prog, "uProj");
     s_shadow_view_loc = glGetUniformLocation(s_shadow_prog, "uView");
     s_shadow_color_loc = glGetUniformLocation(s_shadow_prog, "uColor");
+    s_shadow_verts_loc = glGetUniformLocation(s_shadow_prog, "uVerts");
+    s_shadow_stride_loc = glGetUniformLocation(s_shadow_prog, "uStride");
+    s_shadow_light_loc = glGetUniformLocation(s_shadow_prog, "uLight");
 }
 
 static void ensure_buffers(void) {
@@ -192,23 +205,6 @@ static int shadows_supported(void) {
     return supported;
 }
 #endif
-
-static void begin_shadow_pass(void) {
-#ifdef USE_ZPASS
-    glStencilOpSeparate(GL_BACK, GL_KEEP, GL_KEEP, GL_INCR_WRAP);
-    glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_DECR_WRAP);
-#else
-    glEnable(GL_DEPTH_CLAMP);
-    glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
-    glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
-#endif
-}
-
-static void end_shadow_pass(void) {
-#ifndef USE_ZPASS
-    glDisable(GL_DEPTH_CLAMP);
-#endif
-}
 
 static vec3 render_srgb_to_linear(vec3 color) {
     return v3(powf(color.x, 2.2f), powf(color.y, 2.2f), powf(color.z, 2.2f));
@@ -314,6 +310,8 @@ static void draw_stencil_debug_quad(mat4 proj, mat4 view) {
 
 /* ---- Doom 3 style light culling helpers ---- */
 
+#define SHADOW_NEAR_REACH 0.5f   /* m: how far the near plane can reach past the eye into a volume */
+
 typedef struct { int x0, y0, x1, y1; } ScreenRect;   /* pixels, half open, origin bottom left */
 static int rect_empty(ScreenRect r) { return r.x1 <= r.x0 || r.y1 <= r.y0; }
 static ScreenRect rect_isect(ScreenRect a, ScreenRect b) {
@@ -384,59 +382,68 @@ static void shadow_bounds(vec3 mlo, vec3 mhi, vec3 llo, vec3 lhi, vec3 o, vec3 *
     *shi = v3(o.x > mhi.x ? mhi.x : lhi.x, o.y > mhi.y ? mhi.y : lhi.y, o.z > mhi.z ? mhi.z : lhi.z);
 }
 
-/* Shadow volumes on the GPU, one buffer per (light, caster), built the first time a view needs them and kept
-   until the scene says its volumes are stale (Doom 3's interactions and vertex cache). */
-static GLuint *s_part; static int *s_partVerts; static int s_partLights, s_partObjs; static const Scene *s_partScene; static unsigned s_partRev;
+/* Shadow volumes as Doom 3 keeps them: per (light, caster) only indices into the caster's own vertices,
+   built the first time a view needs the pair and kept until the scene says its volumes are stale. */
+typedef struct { int chunk, first, sides, total; } shadow_part_t;   /* total < 0: not built yet */
+static shadow_part_t *s_part; static int s_partLights, s_partObjs; static const Scene *s_partScene; static unsigned s_partRev;
 static void shadow_cache_sync(Scene *s) {
-    ensure_buffers();
     if (s_partScene == s && s_partRev == s->shadowRev && s_partLights == s->nlights && s_partObjs == s->nobjs) return;
-    if (s_part) {
-        size_t n = (size_t)s_partLights * (size_t)s_partObjs;
-        for (size_t i = 0; i < n; i++) if (s_part[i]) glDeleteBuffers(1, &s_part[i]);
-    }
-    free(s_part); free(s_partVerts);
+    vcache_index_reset();
+    free(s_part);
     size_t n = (size_t)s->nlights * (size_t)s->nobjs;
-    s_part = calloc(n ? n : 1, sizeof(GLuint)); s_partVerts = malloc((n ? n : 1) * sizeof(int));
-    for (size_t i = 0; i < n; i++) s_partVerts[i] = -1;
+    s_part = malloc((n ? n : 1) * sizeof(shadow_part_t));
+    for (size_t i = 0; i < n; i++) s_part[i].total = -1;
     s_partLights = s->nlights; s_partObjs = s->nobjs; s_partScene = s; s_partRev = s->shadowRev;
 }
 
-static int shadow_part(Scene *s, int li, int oi) {
-    size_t idx = (size_t)li * (size_t)s->nobjs + (size_t)oi;
-    if (s_partVerts[idx] < 0) {
+/* Where the light's rays start, for the shadow shader: a sun stands far away against its direction. */
+static vec3 shadow_light_origin(const Light *L) { return L->isDirectional ? vscale(L->dir, -10000.0f) : L->pos; }
+
+/* Doom 3's R_ViewPotentiallyInsideInfiniteShadowVolume, conservatively: the view (grown by the near plane)
+   inside the box the caster's shadow can reach needs z-fail and caps; anywhere else z-pass and sides do. */
+static int view_may_be_inside(vec3 sLo, vec3 sHi, vec3 eye, float reach) {
+    return eye.x >= sLo.x - reach && eye.x <= sHi.x + reach && eye.y >= sLo.y - reach && eye.y <= sHi.y + reach &&
+           eye.z >= sLo.z - reach && eye.z <= sHi.z + reach;
+}
+
+static void draw_shadow_part(Scene *s, int li, int oi, int zfail) {
+    shadow_part_t *p = &s_part[(size_t)li * (size_t)s->nobjs + (size_t)oi];
+    Mesh *m = &s->objs[oi].mesh;
+    if (p->total < 0) {
         const Light *L = &s->lights[li];
-        ShadowVolume sv;
-        build_shadow_volume(&s->objs[oi].mesh, L->pos, L->dir, L->isDirectional, &sv);
-        s_partVerts[idx] = sv.nverts;
-        if (sv.nverts > 0) {
-            glGenBuffers(1, &s_part[idx]);
-            glBindBuffer(GL_ARRAY_BUFFER, s_part[idx]);
-            glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)((size_t)sv.nverts * sizeof(ShadowVertex)), sv.verts, GL_STATIC_DRAW);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-        }
-        free(sv.verts);
+        unsigned *ix; int sides;
+        int n = build_shadow_indices(m, L->pos, L->dir, L->isDirectional, &ix, &sides);
+        p->total = vcache_index_alloc(ix, n, &p->chunk, &p->first);
+        p->sides = sides;
+        free(ix);
     }
-    return s_partVerts[idx];
+    if (p->total <= 0) return;
+    int first;
+    unsigned tex = vcache_mesh_texture(m, &first);
+    glBindTexture(GL_TEXTURE_BUFFER, tex);
+    if (zfail) {
+        glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
+        glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
+        vcache_index_draw(p->chunk, p->first, p->total, 2 * first);
+    } else if (p->sides > 0) {
+        glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR_WRAP);
+        glStencilOpSeparate(GL_BACK, GL_KEEP, GL_KEEP, GL_DECR_WRAP);
+        vcache_index_draw(p->chunk, p->first, p->sides, 2 * first);
+    }
 }
 
-/* Draws the volume of one caster for one light, bound and sent from its own buffer. */
-static void draw_shadow_part(Scene *s, int li, int oi) {
-    int n = shadow_part(s, li, oi);
-    if (n <= 0) return;
-    glBindBuffer(GL_ARRAY_BUFFER, s_part[(size_t)li * (size_t)s->nobjs + (size_t)oi]);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(ShadowVertex), (void *)0);
-    glDrawArrays(GL_TRIANGLES, 0, n);
-}
-
-static void shadow_pass_begin(void) {
+static void shadow_pass_begin(const Light *L) {
     ensure_shadow_prog();
     glUseProgram(s_shadow_prog);
-    glBindVertexArray(s_shadow_vao);
-    glEnableVertexAttribArray(0);
+    vec3 o = shadow_light_origin(L);
+    glUniform3f(s_shadow_light_loc, o.x, o.y, o.z);
+    glUniform1i(s_shadow_verts_loc, 0);
+    glUniform1i(s_shadow_stride_loc, (int)(sizeof(Vertex) / sizeof(float)));
+    glActiveTexture(GL_TEXTURE0);
 }
 static void shadow_pass_end(void) {
+    glBindTexture(GL_TEXTURE_BUFFER, 0);
     glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glUseProgram(0);
 }
 
@@ -461,6 +468,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     glDepthRange(0.0, 1.0);
     glEnable(GL_FRAMEBUFFER_SRGB);
     glViewport(0, 0, w, h);
+    vcache_collect();   /* vertex cache ranges of meshes freed since the last frame */
     vec3 bg = render_srgb_to_linear(s->bg);
     glClearColor(bg.x, bg.y, bg.z, 1.0f);
     glClearStencil(0);
@@ -499,23 +507,31 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     vec3 ambient = render_srgb_to_linear(s->ambient);
-    for (int i = 0; i < s->nobjs; i++) {
-        if (!s->objs[i].renderable) continue;
-        if(s->objs[i].screenTexture>=0 && !(flags & DBG_FLAT) &&
-           draw_screen_image(&s->objs[i],&s->screenTextures[s->objs[i].screenTexture],viewProj)){
-            continue;
-        }
-        vec3 color = render_srgb_to_linear(s->objs[i].color);
-        draw_mesh_flat_gradient_vbo(&s->objs[i].mesh, (s->objs[i].unlit || (flags & DBG_FLAT)) ? color : vmul(color, ambient),
-                                    s->objs[i].gradient, s->objs[i].gradFrom, s->objs[i].gradTo);
-    }
-
-    if(flags & DBG_FLAT)return;
-
-    /* Per-light pass: shadow volume + PBR lit */
     shader_bind();
     shader_set_viewproj(viewProj);
     shader_set_camera_pos(camPos);
+    for (int i = 0; i < s->nobjs; i++) {
+        SceneObj *o = &s->objs[i];
+        if (!o->renderable) continue;
+        if (o->screenTexture >= 0 && !(flags & DBG_FLAT) &&
+            draw_screen_image(o, &s->screenTextures[o->screenTexture], viewProj)) {
+            shader_bind();
+            continue;
+        }
+        shader_set_ambient(1, (o->unlit || (flags & DBG_FLAT)) ? v3(1, 1, 1) : ambient);
+        shader_set_material(o->color, o->shininess, o->specular, o->metallic);
+        shader_set_ramp(NULL);
+        shader_set_gradient(o->gradient, o->gradFrom, o->gradTo);
+#ifdef SCENER_USE_TEXTURES
+        shader_set_texture(o->texIndex >= 0 ? s->materialTextures[o->texIndex] : s->whiteTexture);
+#endif
+        shader_draw_mesh(&o->mesh);
+    }
+    shader_set_ambient(0, v3(0, 0, 0));
+
+    if(flags & DBG_FLAT){ shader_unbind(); return; }
+
+    /* Per-light pass: shadow volume + PBR lit */
 
     if (s->skyReflection > 0) {   /* sky reflection: one additive pass without a light */
         glDepthFunc(GL_LEQUAL);
@@ -542,9 +558,10 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
         sceneLo = v3(fminf(sceneLo.x, s->objs[i].bmin.x), fminf(sceneLo.y, s->objs[i].bmin.y), fminf(sceneLo.z, s->objs[i].bmin.z));
         sceneHi = v3(fmaxf(sceneHi.x, s->objs[i].bmax.x), fmaxf(sceneHi.y, s->objs[i].bmax.y), fmaxf(sceneHi.z, s->objs[i].bmax.z));
     }
-    static int *litIdx, *castIdx; static ScreenRect *litRect, *castRect; static int litCap;
+    static int *litIdx, *castIdx, *castZFail; static ScreenRect *litRect, *castRect; static int litCap;
     if (litCap < s->nobjs) {
-        free(litIdx); free(litRect); free(castIdx); free(castRect);
+        free(litIdx); free(litRect); free(castIdx); free(castRect); free(castZFail);
+        castZFail = malloc((size_t)s->nobjs * sizeof(int));
         litIdx = malloc((size_t)s->nobjs * sizeof(int)); litRect = malloc((size_t)s->nobjs * sizeof(ScreenRect));
         castIdx = malloc((size_t)s->nobjs * sizeof(int)); castRect = malloc((size_t)s->nobjs * sizeof(ScreenRect)); litCap = s->nobjs;
     }
@@ -579,7 +596,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
                 shadow_bounds(o->bmin, o->bmax, lightLo, lightHi, lightOrigin, &sLo, &sHi);
                 ScreenRect r = rect_isect(box_screen_rect(viewProj, sLo, sHi, w, h), lightScissor);
                 if (rect_empty(r)) continue;   /* its shadow cannot reach anything on screen */
-                castIdx[ncast] = i; castRect[ncast++] = r;
+                castIdx[ncast] = i; castRect[ncast] = r; castZFail[ncast++] = view_may_be_inside(sLo, sHi, camPos, SHADOW_NEAR_REACH);
             }
         }
         int drawShadows = ncast > 0;
@@ -597,11 +614,11 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
             glStencilMask(0xFF);
             glStencilFunc(GL_ALWAYS, 0, 0xFF);
             glDisable(GL_CULL_FACE);
-            begin_shadow_pass();
-            shadow_pass_begin();
-            for (int k = 0; k < ncast; k++) { set_scissor(castRect[k]); draw_shadow_part(s, li, castIdx[k]); }
+            glEnable(GL_DEPTH_CLAMP);   /* far caps and sides at infinity stay inside the depth range */
+            shadow_pass_begin(L);
+            for (int k = 0; k < ncast; k++) { set_scissor(castRect[k]); draw_shadow_part(s, li, castIdx[k], castZFail[k]); }
             shadow_pass_end();
-            end_shadow_pass();
+            glDisable(GL_DEPTH_CLAMP);
 
             if (flags & DBG_WIRE_SHADOWVOL) {
                 glDisable(GL_STENCIL_TEST);
@@ -610,8 +627,8 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
                 glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
                 glDepthFunc(GL_LEQUAL);
                 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-                shadow_pass_begin();
-                for (int k = 0; k < ncast; k++) { set_scissor(castRect[k]); draw_shadow_part(s, li, castIdx[k]); }
+                shadow_pass_begin(L);
+                for (int k = 0; k < ncast; k++) { set_scissor(castRect[k]); draw_shadow_part(s, li, castIdx[k], 1); }
                 shadow_pass_end();
                 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
                 glDisable(GL_POLYGON_OFFSET_LINE);

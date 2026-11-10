@@ -30,7 +30,8 @@ void build_shadow_volume(Mesh *m, vec3 lightPos, vec3 lightDir, int isDir, Shado
 		int silhouette = (e->t1<0) ? f0 : (f0!=f1);
 		if(!silhouette) continue;
 		vec3 v0,v1;
-		if(f0){ v0=e->p0; v1=e->p1; } else { v0=e->p1; v1=e->p0; }
+		vec3 p0=m->verts[e->v0].pos,p1=m->verts[e->v1].pos;
+		if(f0){ v0=p0; v1=p1; } else { v0=p1; v1=p0; }
 #ifdef USE_ZPASS
 		PUSHP(v0); PUSHP(v1); PUSHD(v1);
 		PUSHP(v0); PUSHD(v1); PUSHD(v0);
@@ -51,6 +52,46 @@ void build_shadow_volume(Mesh *m, vec3 lightPos, vec3 lightDir, int isDir, Shado
 
 	#undef PUSHP
 	#undef PUSHD
+}
+
+/* Doom 3's shadow volumes without vertices of their own: vertex i of the mesh is 2i at its place and 2i+1
+   pushed away from the light (the shadow shader does the pushing), so a volume is just indices. Sides of the
+   silhouette come first; the light-facing cap and the far cap follow, needed only when the view may be inside
+   the volume (z-fail). Same windings as build_shadow_volume. */
+int build_shadow_indices(const Mesh *m,vec3 lightPos,vec3 lightDir,int isDir,unsigned **out,int *nsides){
+	int nt=m->ntris;
+	char *facing=malloc((size_t)(nt?nt:1));
+	Light light={.pos=lightPos,.dir=lightDir,.isDirectional=isDir};
+	int nsil=0,nface=0;
+	for(int i=0;i<nt;i++){
+		vec3 p=m->verts[m->tris[i].a].pos;
+		facing[i]=vdot(m->triN[i],light_to_source(&light,p))>0.0f;
+		nface+=facing[i];
+	}
+	for(int i=0;i<m->nedges;i++){
+		const Edge *e=&m->edges[i];
+		int f0=facing[e->t0],f1=(e->t1>=0)?facing[e->t1]:0;
+		if((e->t1<0)?f0:(f0!=f1)) nsil++;
+	}
+	unsigned *ix=malloc(sizeof(unsigned)*(size_t)(nsil*6+nt*3+1)); int n=0;
+	for(int i=0;i<m->nedges;i++){
+		const Edge *e=&m->edges[i];
+		int f0=facing[e->t0],f1=(e->t1>=0)?facing[e->t1]:0;
+		if(!((e->t1<0)?f0:(f0!=f1))) continue;
+		unsigned v0=f0?(unsigned)e->v0:(unsigned)e->v1,v1=f0?(unsigned)e->v1:(unsigned)e->v0;
+		unsigned P0=2*v0,P1=2*v1,D0=2*v0+1,D1=2*v1+1;
+		ix[n++]=P1; ix[n++]=P0; ix[n++]=D0;
+		ix[n++]=P1; ix[n++]=D0; ix[n++]=D1;
+	}
+	*nsides=n;
+	for(int i=0;i<nt;i++){
+		unsigned a=(unsigned)m->tris[i].a,b=(unsigned)m->tris[i].b,c=(unsigned)m->tris[i].c,far=facing[i]?0u:1u;
+		ix[n++]=2*a+far; ix[n++]=2*b+far; ix[n++]=2*c+far;
+	}
+	(void)nface;
+	free(facing);
+	*out=ix;
+	return n;
 }
 
 void shadow_volume_release(ShadowVolume *sv){

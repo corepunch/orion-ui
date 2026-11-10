@@ -10,9 +10,10 @@
     <param name="depth"  doc="z size, cm"/>
     <param name="radius" default="6" doc="corner radius of the front outline, cm; 0 for square corners"/>
     <param name="bevel"  default="1.5" doc="rim bevel, cm; keep it below radius and half of depth"/>
+    <param name="segments" default="2" doc="segments of each rounded corner and of the rim bevel (Blender's bevel segments)"/>
     <shape closed="0">
       <v x="-{${width}/2}" y="-{${height}/2}"/><v x="{${width}/2}" y="-{${height}/2}"/>
-      <shell amount="${height}"/><fillet radius="${radius}"/><extrude amount="${depth}"/><bevel amount="${bevel}"/>
+      <shell amount="${height}"/><fillet radius="${radius}" segments="${segments}"/><extrude amount="${depth}"/><bevel amount="${bevel}" bevelSegments="${segments}"/>
     </shape>
   </define>
 
@@ -21,9 +22,10 @@
     <param name="height" doc="y size, cm"/>
     <param name="depth"  doc="z size, cm"/>
     <param name="bevel"  default="1" doc="rim bevel, cm"/>
+    <param name="segments" default="2" doc="rim bevel segments"/>
     <shape closed="0">
       <v x="-{${width}/2}" y="-{${height}/2}"/><v x="{${width}/2}" y="-{${height}/2}"/>
-      <shell amount="${height}"/><extrude amount="${depth}"/><bevel amount="${bevel}"/>
+      <shell amount="${height}"/><extrude amount="${depth}"/><bevel amount="${bevel}" bevelSegments="${segments}"/>
     </shape>
   </define>
 

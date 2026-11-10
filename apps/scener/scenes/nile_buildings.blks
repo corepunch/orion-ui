@@ -30,17 +30,17 @@
   <shape id="lathe13" closed="0"><v x="0" y="0"/><v x="25" y="6.7"/><v x="43.3" y="25"/><v x="50" y="50"/><v x="43.3" y="75"/><v x="25" y="93.3"/><v x="0" y="100"/></shape>
   <box pos="0 -8 0" size="2880 16 1920" material="grass"/>
   <group name="small_pyramid" pos="-800 0 -320">
-    <soft-box width="320" height="16" depth="320" radius="6.4" bevel="5.44" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
-    <soft-box width="265.6" height="48" depth="265.6" radius="6.4" bevel="5.44" pos="0 40 0" color="0.885 0.809 0.625" shininess="6"/>
-    <soft-box width="208" height="48" depth="208" radius="6.4" bevel="5.44" pos="0 88 0" color="0.910 0.837 0.648" shininess="6"/>
-    <soft-box width="150.4" height="48" depth="150.4" radius="6.4" bevel="5.44" pos="0 136 0" color="0.912 0.840 0.651" shininess="6"/>
-    <soft-box width="92.8" height="48" depth="92.8" radius="6.4" bevel="5.44" pos="0 184 0" color="0.888 0.811 0.629" shininess="6"/>
+    <soft-box width="320" height="16" depth="320" radius="6.4" bevel="5.44" segments="3" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
+    <soft-box width="265.6" height="48" depth="265.6" radius="6.4" bevel="5.44" segments="3" pos="0 40 0" color="0.885 0.809 0.625" shininess="6"/>
+    <soft-box width="208" height="48" depth="208" radius="6.4" bevel="5.44" segments="3" pos="0 88 0" color="0.910 0.837 0.648" shininess="6"/>
+    <soft-box width="150.4" height="48" depth="150.4" radius="6.4" bevel="5.44" segments="3" pos="0 136 0" color="0.912 0.840 0.651" shininess="6"/>
+    <soft-box width="92.8" height="48" depth="92.8" radius="6.4" bevel="5.44" segments="3" pos="0 184 0" color="0.888 0.811 0.629" shininess="6"/>
     <lathe shape="lathe0" segments="4" pos="0 208 0" rot="0 45 0" color="0.910 0.682 0.173" shininess="60"/>
     <group pos="132.8 0 132.8" rot="0 90 0">
       <slab width="48" height="41.6" depth="4.8" bevel="0" pos="132.8 36.8 1.92" color="0.227 0.149 0.078" shininess="6"/>
-      <soft-box width="16" height="41.6" depth="8" radius="6.4" bevel="3.6" pos="100.8 36.8 3.2" color="0.953 0.902 0.761" shininess="6"/>
-      <soft-box width="16" height="41.6" depth="8" radius="6.4" bevel="3.6" pos="164.8 36.8 3.2" color="0.953 0.902 0.761" shininess="6"/>
-      <soft-box width="89.6" height="19.2" depth="11.2" radius="6.4" bevel="5.04" pos="132.8 67.2 4.8" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="16" height="41.6" depth="8" radius="6.4" bevel="3.6" segments="3" pos="100.8 36.8 3.2" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="16" height="41.6" depth="8" radius="6.4" bevel="3.6" segments="3" pos="164.8 36.8 3.2" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="89.6" height="19.2" depth="11.2" radius="6.4" bevel="5.04" segments="3" pos="132.8 67.2 4.8" color="0.953 0.902 0.761" shininess="6"/>
       <soft-box width="28.8" height="11.2" depth="3.2" radius="4.48" bevel="1.44" pos="132.8 66.4 8" color="0.169 0.361 0.682" shininess="40"/>
     </group>
     <lathe shape="lathe1" segments="10" pos="139.72 11.24 125.53" scale="0.4 0.4 0.4" color="0.423 0.782 0.256" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
@@ -76,19 +76,19 @@
     <lathe shape="lathe2" segments="8" pos="-100.68 114.56 -85.47" scale="0.19 0.27 0.19" color="0.784 0.392 0.118" shininess="6"/>
   </group>
   <group name="mud_house" pos="-160 0 -320">
-    <soft-box width="320" height="16" depth="320" radius="6.4" bevel="5.44" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
-    <soft-box width="208" height="160" depth="208" radius="6.4" bevel="5.44" pos="0 96 -16" color="0.928 0.891 0.793" shininess="6"/>
-    <soft-box width="220.8" height="11.2" depth="220.8" radius="5.04" bevel="4.28" pos="0 181.6 -16" color="0.780 0.675 0.471" shininess="6"/>
-    <soft-box width="80" height="80" depth="92.8" radius="6.4" bevel="5.44" pos="-57.6 227.2 -70.4" color="0.954 0.911 0.817" shininess="6"/>
+    <soft-box width="320" height="16" depth="320" radius="6.4" bevel="5.44" segments="3" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
+    <soft-box width="208" height="160" depth="208" radius="6.4" bevel="5.44" segments="3" pos="0 96 -16" color="0.928 0.891 0.793" shininess="6"/>
+    <soft-box width="220.8" height="11.2" depth="220.8" radius="5.04" bevel="4.28" segments="3" pos="0 181.6 -16" color="0.780 0.675 0.471" shininess="6"/>
+    <soft-box width="80" height="80" depth="92.8" radius="6.4" bevel="5.44" segments="3" pos="-57.6 227.2 -70.4" color="0.954 0.911 0.817" shininess="6"/>
     <soft-box width="128" height="6.4" depth="128" radius="2.88" bevel="2.45" pos="40 251.2 16" color="0.086 0.635 0.588" shininess="3"/>
     <circle radius="4" segments="8" pos="-16 217.6 72" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="60.8"/><bevel amount="1.4" bevelSegments="2"/></circle>
     <circle radius="4" segments="8" pos="96 217.6 72" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="60.8"/><bevel amount="1.4" bevelSegments="2"/></circle>
     <circle radius="4" segments="8" pos="96 217.6 -56" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="60.8"/><bevel amount="1.4" bevelSegments="2"/></circle>
     <group pos="104 0 88" rot="0 90 0">
       <slab width="44.8" height="92.8" depth="4.8" bevel="0" pos="88 62.4 1.92" color="0.227 0.149 0.078" shininess="6"/>
-      <soft-box width="16" height="92.8" depth="8" radius="6.4" bevel="3.6" pos="57.6 62.4 3.2" color="0.953 0.902 0.761" shininess="6"/>
-      <soft-box width="16" height="92.8" depth="8" radius="6.4" bevel="3.6" pos="118.4 62.4 3.2" color="0.953 0.902 0.761" shininess="6"/>
-      <soft-box width="86.4" height="19.2" depth="11.2" radius="6.4" bevel="5.04" pos="88 118.4 4.8" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="16" height="92.8" depth="8" radius="6.4" bevel="3.6" segments="3" pos="57.6 62.4 3.2" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="16" height="92.8" depth="8" radius="6.4" bevel="3.6" segments="3" pos="118.4 62.4 3.2" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="86.4" height="19.2" depth="11.2" radius="6.4" bevel="5.04" segments="3" pos="88 118.4 4.8" color="0.953 0.902 0.761" shininess="6"/>
       <soft-box width="26.88" height="11.2" depth="3.2" radius="4.48" bevel="1.44" pos="88 117.6 8" color="0.169 0.361 0.682" shininess="40"/>
     </group>
     <group pos="-104 0 88" rot="0 0 0">
@@ -97,11 +97,11 @@
     <group pos="-104 0 88" rot="0 0 0">
       <slab width="28.8" height="32" depth="4.8" bevel="0" pos="152 120 1.92" color="0.227 0.149 0.078" shininess="6"/>
     </group>
-    <soft-box width="32" height="32" depth="35.2" radius="6.4" bevel="5.44" pos="-88 32 115.2" color="0.942 0.890 0.749" shininess="6"/>
-    <soft-box width="32" height="64" depth="35.2" radius="6.4" bevel="5.44" pos="-56 48 115.2" color="0.959 0.910 0.762" shininess="6"/>
-    <soft-box width="32" height="96" depth="35.2" radius="6.4" bevel="5.44" pos="-24 64 115.2" color="0.939 0.887 0.748" shininess="6"/>
-    <soft-box width="32" height="128" depth="35.2" radius="6.4" bevel="5.44" pos="8 80 115.2" color="0.947 0.895 0.755" shininess="6"/>
-    <soft-box width="32" height="160" depth="35.2" radius="6.4" bevel="5.44" pos="40 96 115.2" color="0.944 0.890 0.755" shininess="6"/>
+    <soft-box width="32" height="32" depth="35.2" radius="6.4" bevel="5.44" segments="3" pos="-88 32 115.2" color="0.942 0.890 0.749" shininess="6"/>
+    <soft-box width="32" height="64" depth="35.2" radius="6.4" bevel="5.44" segments="3" pos="-56 48 115.2" color="0.959 0.910 0.762" shininess="6"/>
+    <soft-box width="32" height="96" depth="35.2" radius="6.4" bevel="5.44" segments="3" pos="-24 64 115.2" color="0.939 0.887 0.748" shininess="6"/>
+    <soft-box width="32" height="128" depth="35.2" radius="6.4" bevel="5.44" segments="3" pos="8 80 115.2" color="0.947 0.895 0.755" shininess="6"/>
+    <soft-box width="32" height="160" depth="35.2" radius="6.4" bevel="5.44" segments="3" pos="40 96 115.2" color="0.944 0.890 0.755" shininess="6"/>
     <lathe shape="lathe3" segments="14" pos="128 16 120" color="0.686 0.369 0.220" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
     <lathe shape="lathe4" segments="14" pos="128 34.4 120" color="0.169 0.361 0.682" shininess="40"/>
     <circle radius="12" segments="10" pos="102.88 88 -102.88" rot="-90 0 0" color="0.557 0.329 0.153" shininess="8"><extrude amount="144"/><bevel amount="3.36" bevelSegments="2"/><taper amount="-0.2" axis="z"/></circle>
@@ -129,17 +129,17 @@
     <lathe shape="lathe2" segments="8" pos="100.18 130.56 -90.37" scale="0.19 0.27 0.19" color="0.784 0.392 0.118" shininess="6"/>
   </group>
   <group name="pottery" pos="480 0 -320">
-    <soft-box width="320" height="16" depth="320" radius="6.4" bevel="5.44" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
-    <soft-box width="160" height="120" depth="144" radius="6.4" bevel="5.44" pos="-48 76 -56" color="0.806 0.642 0.446" shininess="6"/>
-    <soft-box width="169.6" height="9.6" depth="153.6" radius="4.32" bevel="3.67" pos="-48 140.8 -56" color="0.725 0.545 0.361" shininess="6"/>
+    <soft-box width="320" height="16" depth="320" radius="6.4" bevel="5.44" segments="3" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
+    <soft-box width="160" height="120" depth="144" radius="6.4" bevel="5.44" segments="3" pos="-48 76 -56" color="0.806 0.642 0.446" shininess="6"/>
+    <soft-box width="169.6" height="9.6" depth="153.6" radius="4.32" bevel="3.67" segments="3" pos="-48 140.8 -56" color="0.725 0.545 0.361" shininess="6"/>
     <soft-box width="160" height="6.4" depth="80" radius="2.88" bevel="2.45" pos="-48 115.2 48" color="0.725 0.333 0.184" shininess="3"/>
     <circle radius="4.8" segments="8" pos="-120 64 80" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="96"/><bevel amount="1.68" bevelSegments="2"/></circle>
     <circle radius="4.8" segments="8" pos="24 64 80" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="96"/><bevel amount="1.68" bevelSegments="2"/></circle>
     <group pos="-128 0 16" rot="0 0 0">
       <slab width="41.6" height="80" depth="4.8" bevel="0" pos="112 56 1.92" color="0.227 0.149 0.078" shininess="6"/>
-      <soft-box width="16" height="80" depth="8" radius="6.4" bevel="3.6" pos="83.2 56 3.2" color="0.953 0.902 0.761" shininess="6"/>
-      <soft-box width="16" height="80" depth="8" radius="6.4" bevel="3.6" pos="140.8 56 3.2" color="0.953 0.902 0.761" shininess="6"/>
-      <soft-box width="83.2" height="19.2" depth="11.2" radius="6.4" bevel="5.04" pos="112 105.6 4.8" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="16" height="80" depth="8" radius="6.4" bevel="3.6" segments="3" pos="83.2 56 3.2" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="16" height="80" depth="8" radius="6.4" bevel="3.6" segments="3" pos="140.8 56 3.2" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="83.2" height="19.2" depth="11.2" radius="6.4" bevel="5.04" segments="3" pos="112 105.6 4.8" color="0.953 0.902 0.761" shininess="6"/>
       <soft-box width="24.96" height="11.2" depth="3.2" radius="4.48" bevel="1.44" pos="112 104.8 8" color="0.169 0.361 0.682" shininess="40"/>
     </group>
     <lathe shape="lathe5" segments="16" pos="80 16 -72" color="0.801 0.310 0.175" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
@@ -155,15 +155,15 @@
     <light pos="80 48 8" color="1.000 0.620 0.280" intensity="0.28" radius="224" castShadows="0"/>
   </group>
   <group name="bakery" pos="-720 0 320">
-    <soft-box width="480" height="16" depth="320" radius="6.4" bevel="5.44" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
-    <soft-box width="272" height="136" depth="176" radius="6.4" bevel="5.44" pos="-56 84 -32" color="0.807 0.638 0.452" shininess="6"/>
+    <soft-box width="480" height="16" depth="320" radius="6.4" bevel="5.44" segments="3" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
+    <soft-box width="272" height="136" depth="176" radius="6.4" bevel="5.44" segments="3" pos="-56 84 -32" color="0.807 0.638 0.452" shininess="6"/>
     <soft-box width="281.6" height="12.8" depth="185.6" radius="4.48" bevel="3.81" pos="-56 158.4 -32" color="0.725 0.333 0.184" shininess="40"/>
-    <soft-box width="294.4" height="16" depth="198.4" radius="6.4" bevel="5.44" pos="-56 172.8 -32" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="294.4" height="16" depth="198.4" radius="6.4" bevel="5.44" segments="3" pos="-56 172.8 -32" color="0.953 0.902 0.761" shininess="6"/>
     <group pos="-192 0 56" rot="0 0 0">
       <slab width="48" height="88" depth="4.8" bevel="0" pos="136 60 1.92" color="0.227 0.149 0.078" shininess="6"/>
-      <soft-box width="16" height="88" depth="8" radius="6.4" bevel="3.6" pos="104 60 3.2" color="0.953 0.902 0.761" shininess="6"/>
-      <soft-box width="16" height="88" depth="8" radius="6.4" bevel="3.6" pos="168 60 3.2" color="0.953 0.902 0.761" shininess="6"/>
-      <soft-box width="89.6" height="19.2" depth="11.2" radius="6.4" bevel="5.04" pos="136 113.6 4.8" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="16" height="88" depth="8" radius="6.4" bevel="3.6" segments="3" pos="104 60 3.2" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="16" height="88" depth="8" radius="6.4" bevel="3.6" segments="3" pos="168 60 3.2" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="89.6" height="19.2" depth="11.2" radius="6.4" bevel="5.04" segments="3" pos="136 113.6 4.8" color="0.953 0.902 0.761" shininess="6"/>
       <soft-box width="28.8" height="11.2" depth="3.2" radius="4.48" bevel="1.44" pos="136 112.8 8" color="0.169 0.361 0.682" shininess="40"/>
     </group>
     <group pos="-192 0 56" rot="0 0 0">
@@ -190,22 +190,22 @@
     <light pos="217.6 38.4 -56" color="1.000 0.620 0.280" intensity="0.21" radius="224" castShadows="0"/>
   </group>
   <group name="watchtower" pos="0 0 320">
-    <soft-box width="320" height="16" depth="320" radius="6.4" bevel="5.44" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
-    <soft-box width="240" height="19.2" depth="240" radius="6.4" bevel="5.44" pos="0 25.6 0" color="0.953 0.902 0.761" shininess="6"/>
-    <soft-box width="168" height="304" depth="168" radius="6.4" bevel="5.44" pos="0 187.2 0" color="0.768 0.662 0.463" shininess="6"><taper amount="-0.0952"/></soft-box>
-    <soft-box width="168" height="16" depth="168" radius="6.4" bevel="5.44" pos="0 347.2 0" color="0.902 0.827 0.639" shininess="6"/>
-    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" pos="-57.6 369.6 72" color="0.953 0.902 0.761" shininess="6"/>
-    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" pos="-57.6 369.6 -72" color="0.953 0.902 0.761" shininess="6"/>
-    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" pos="-72 369.6 57.6" color="0.953 0.902 0.761" shininess="6"/>
-    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" pos="72 369.6 57.6" color="0.953 0.902 0.761" shininess="6"/>
-    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" pos="0 369.6 72" color="0.953 0.902 0.761" shininess="6"/>
-    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" pos="0 369.6 -72" color="0.953 0.902 0.761" shininess="6"/>
-    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" pos="-72 369.6 0" color="0.953 0.902 0.761" shininess="6"/>
-    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" pos="72 369.6 0" color="0.953 0.902 0.761" shininess="6"/>
-    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" pos="57.6 369.6 72" color="0.953 0.902 0.761" shininess="6"/>
-    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" pos="57.6 369.6 -72" color="0.953 0.902 0.761" shininess="6"/>
-    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" pos="-72 369.6 -57.6" color="0.953 0.902 0.761" shininess="6"/>
-    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" pos="72 369.6 -57.6" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="320" height="16" depth="320" radius="6.4" bevel="5.44" segments="3" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
+    <soft-box width="240" height="19.2" depth="240" radius="6.4" bevel="5.44" segments="3" pos="0 25.6 0" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="168" height="304" depth="168" radius="6.4" bevel="5.44" segments="3" pos="0 187.2 0" color="0.768 0.662 0.463" shininess="6"><taper amount="-0.0952"/></soft-box>
+    <soft-box width="168" height="16" depth="168" radius="6.4" bevel="5.44" segments="3" pos="0 347.2 0" color="0.902 0.827 0.639" shininess="6"/>
+    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="-57.6 369.6 72" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="-57.6 369.6 -72" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="-72 369.6 57.6" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="72 369.6 57.6" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="0 369.6 72" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="0 369.6 -72" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="-72 369.6 0" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="72 369.6 0" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="57.6 369.6 72" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="57.6 369.6 -72" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="-72 369.6 -57.6" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="72 369.6 -57.6" color="0.953 0.902 0.761" shininess="6"/>
     <circle radius="5.2" segments="8" pos="32 411.2 -32" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="112"/><bevel amount="1.68" bevelSegments="2"/><taper amount="-0.0769" axis="z"/></circle>
     <lathe shape="lathe1" segments="10" pos="32 462.4 -32" scale="0.16 0.16 0.16" color="0.910 0.682 0.173" shininess="60"/>
     <group pos="32 460.8 -32" rot="0 0 0">
@@ -218,9 +218,9 @@
     </group>
     <group pos="-91.2 0 91.2" rot="0 0 0">
       <slab width="48" height="80" depth="4.8" bevel="0" pos="91.2 75.2 1.92" color="0.227 0.149 0.078" shininess="6"/>
-      <soft-box width="16" height="80" depth="8" radius="6.4" bevel="3.6" pos="59.2 75.2 3.2" color="0.953 0.902 0.761" shininess="6"/>
-      <soft-box width="16" height="80" depth="8" radius="6.4" bevel="3.6" pos="123.2 75.2 3.2" color="0.953 0.902 0.761" shininess="6"/>
-      <soft-box width="89.6" height="19.2" depth="11.2" radius="6.4" bevel="5.04" pos="91.2 124.8 4.8" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="16" height="80" depth="8" radius="6.4" bevel="3.6" segments="3" pos="59.2 75.2 3.2" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="16" height="80" depth="8" radius="6.4" bevel="3.6" segments="3" pos="123.2 75.2 3.2" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="89.6" height="19.2" depth="11.2" radius="6.4" bevel="5.04" segments="3" pos="91.2 124.8 4.8" color="0.953 0.902 0.761" shininess="6"/>
       <soft-box width="28.8" height="11.2" depth="3.2" radius="4.48" bevel="1.44" pos="91.2 124 8" color="0.169 0.361 0.682" shininess="40"/>
     </group>
     <group pos="88 0 88" rot="0 90 0">
@@ -233,10 +233,10 @@
     <soft-box width="43.2" height="9.6" depth="43.2" radius="4.32" bevel="3.67" pos="-96 56 99.2" color="0.557 0.329 0.153" shininess="8"/>
   </group>
   <group name="pylon_gate" pos="720 0 320">
-    <soft-box width="480" height="16" depth="320" radius="6.4" bevel="5.44" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
-    <soft-box width="150.4" height="296" depth="150.4" radius="6.4" bevel="5.44" pos="-136 164 0" color="0.880 0.809 0.628" shininess="6"><taper amount="-0.1702"/></soft-box>
+    <soft-box width="480" height="16" depth="320" radius="6.4" bevel="5.44" segments="3" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
+    <soft-box width="150.4" height="296" depth="150.4" radius="6.4" bevel="5.44" segments="3" pos="-136 164 0" color="0.880 0.809 0.628" shininess="6"><taper amount="-0.1702"/></soft-box>
     <soft-box width="134.4" height="12.8" depth="153.6" radius="4.48" bevel="3.81" pos="-136 318.4 0" color="0.086 0.635 0.588" shininess="40"/>
-    <soft-box width="147.2" height="16" depth="166.4" radius="6.4" bevel="5.44" pos="-136 332.8 0" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="147.2" height="16" depth="166.4" radius="6.4" bevel="5.44" segments="3" pos="-136 332.8 0" color="0.953 0.902 0.761" shininess="6"/>
     <group pos="-216 0 80" rot="0 0 0">
       <slab width="92.8" height="144" depth="3.2" bevel="0" pos="80 168 1.6" color="0.955 0.903 0.766" shininess="6"/>
       <slab width="12.06" height="74.88" depth="3.2" bevel="0" pos="52.71 153.6 3.52" color="0.725 0.333 0.184" shininess="6"/>
@@ -256,9 +256,9 @@
         <extrude amount="1.5"/>
       </shape>
     </group>
-    <soft-box width="150.4" height="296" depth="150.4" radius="6.4" bevel="5.44" pos="136 164 0" color="0.893 0.813 0.632" shininess="6"><taper amount="-0.1702"/></soft-box>
+    <soft-box width="150.4" height="296" depth="150.4" radius="6.4" bevel="5.44" segments="3" pos="136 164 0" color="0.893 0.813 0.632" shininess="6"><taper amount="-0.1702"/></soft-box>
     <soft-box width="134.4" height="12.8" depth="153.6" radius="4.48" bevel="3.81" pos="136 318.4 0" color="0.086 0.635 0.588" shininess="40"/>
-    <soft-box width="147.2" height="16" depth="166.4" radius="6.4" bevel="5.44" pos="136 332.8 0" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="147.2" height="16" depth="166.4" radius="6.4" bevel="5.44" segments="3" pos="136 332.8 0" color="0.953 0.902 0.761" shininess="6"/>
     <group pos="56 0 80" rot="0 0 0">
       <slab width="92.8" height="144" depth="3.2" bevel="0" pos="80 168 1.6" color="0.974 0.916 0.773" shininess="6"/>
       <slab width="12.06" height="74.88" depth="3.2" bevel="0" pos="52.71 153.6 3.52" color="0.725 0.333 0.184" shininess="6"/>
@@ -278,14 +278,14 @@
         <extrude amount="1.5"/>
       </shape>
     </group>
-    <soft-box width="102.4" height="200" depth="128" radius="6.4" bevel="5.44" pos="0 116 0" color="0.780 0.675 0.471" shininess="6"/>
+    <soft-box width="102.4" height="200" depth="128" radius="6.4" bevel="5.44" segments="3" pos="0 116 0" color="0.780 0.675 0.471" shininess="6"/>
     <soft-box width="105.6" height="12.8" depth="137.6" radius="4.48" bevel="3.81" pos="0 222.4 0" color="0.169 0.361 0.682" shininess="40"/>
-    <soft-box width="118.4" height="16" depth="150.4" radius="6.4" bevel="5.44" pos="0 236.8 0" color="0.953 0.902 0.761" shininess="6"/>
+    <soft-box width="118.4" height="16" depth="150.4" radius="6.4" bevel="5.44" segments="3" pos="0 236.8 0" color="0.953 0.902 0.761" shininess="6"/>
     <group pos="-51.2 0 64" rot="0 0 0">
       <slab width="57.6" height="136" depth="4.8" bevel="0" pos="51.2 84 1.92" color="0.227 0.149 0.078" shininess="6"/>
-      <soft-box width="16" height="136" depth="8" radius="6.4" bevel="3.6" pos="14.4 84 3.2" color="0.953 0.902 0.761" shininess="6"/>
-      <soft-box width="16" height="136" depth="8" radius="6.4" bevel="3.6" pos="88 84 3.2" color="0.953 0.902 0.761" shininess="6"/>
-      <soft-box width="99.2" height="19.2" depth="11.2" radius="6.4" bevel="5.04" pos="51.2 161.6 4.8" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="16" height="136" depth="8" radius="6.4" bevel="3.6" segments="3" pos="14.4 84 3.2" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="16" height="136" depth="8" radius="6.4" bevel="3.6" segments="3" pos="88 84 3.2" color="0.953 0.902 0.761" shininess="6"/>
+      <soft-box width="99.2" height="19.2" depth="11.2" radius="6.4" bevel="5.04" segments="3" pos="51.2 161.6 4.8" color="0.953 0.902 0.761" shininess="6"/>
       <soft-box width="34.56" height="11.2" depth="3.2" radius="4.48" bevel="1.44" pos="51.2 160.8 8" color="0.169 0.361 0.682" shininess="40"/>
     </group>
     <lathe shape="lathe13" segments="12" pos="0 217.6 70.4" scale="0.32 0.32 0.1" color="0.910 0.682 0.173" shininess="60"/>

@@ -111,6 +111,9 @@ function Kit:solid(tag, pattrs, depth, p, mat, col, rot, mods, pre)
 end
 
 -- Corner radius and rim bevel (cm) for a piece with cross-section a x b tiles and extruded depth cm.
+-- material -> bevel segments, as the Blender kit's BEVELS give its bevel modifier; others take soft-box's 2
+local SEGMENTS = {stone = 3, slab = 3, hedge = 3}
+
 local function rounded(mat, a, b, depth)
   local rad = min(MATERIALS[mat][2] * TILE, SOLID_ROUND * min(a, b) * TILE)
   if rad >= .8 and depth >= 2.4 then return rad, min(.85 * rad, SOLID_ROUND * depth) end
@@ -122,7 +125,11 @@ function Kit:prism(mat, p, a, b, depth, col, rot, mods)
   local rad, bev = rounded(mat, a, b, depth)
   local size = {{"width", f(a * TILE)}, {"height", f(b * TILE)}, {"depth", f(depth)}}
   local tag, extra = "slab", {{"bevel", 0}}
-  if rad ~= 0 then tag, extra = "soft-box", {{"radius", f(rad)}, {"bevel", f(bev)}} end
+  if rad ~= 0 then
+    tag, extra = "soft-box", {{"radius", f(rad)}, {"bevel", f(bev)}}
+    local seg = SEGMENTS[mat] or 2
+    if seg ~= 2 then extra[#extra + 1] = {"segments", seg} end
+  end
   local head = fmt('<%s%s%s%s%s%s', tag, attrs(size), attrs(extra), attrs({{"pos", p}}), attrs(rot or {}), attrs(self:look(mat, col)))
   self:emit((mods and mods ~= "") and fmt('%s>%s</%s>', head, mods, tag) or head .. "/>")
 end

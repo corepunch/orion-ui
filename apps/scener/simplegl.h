@@ -126,14 +126,18 @@ typedef struct MocapSource {
 
 typedef struct { vec3 pos,nrm; float u,v; float g; } Vertex; /* g: position along the gradient axis, 0 at the bounding box minimum to 1 at the maximum */
 typedef struct { int a,b,c; } Tri;
-typedef struct { vec3 p0,p1; int t0,t1; int v0,v1; } Edge;
+typedef struct { int t0,t1; int v0,v1; } Edge; /* t0,t1: adjacent triangles (t1 -1 on an open edge); v0,v1: its vertices, in t0's winding */
 
 typedef struct {
 	Vertex *verts; int nverts,cverts;
 	Tri *tris; int ntris,ctris;
 	Edge *edges; int nedges,cedges;
 	vec3 *triN;
+	int gpuChunk;                  /* vertex cache chunk + 1 holding its GPU copy (vertex_cache.c); 0 = none yet */
+	unsigned gpuVertex,gpuIndex;   /* where in that chunk its vertices and indices start */
+	int gpuDirty;                  /* vertices changed since the GPU copy was made */
 } Mesh;
+int mesh_gpu_take_retired(int **chunks); /* the vertex cache chunks (+1) of meshes freed since the last call */
 
 typedef struct {
 	vec3 *pts; int npts,cpts;
@@ -174,7 +178,7 @@ void mesh_transform(Mesh *m,mat4 posM,mat4 rotM);
 void mesh_gradient_param(Mesh *m,char axis); /* sets Vertex.g from the bounding box along local x, y or z */
 void mesh_compute_face_normals(Mesh *m);
 void mesh_build_edges(Mesh *m);
-void mesh_update_edge_positions(Mesh *m);
+void mesh_shrink(Mesh *m); /* releases spare array capacity once a mesh is complete */
 float mesh_signed_volume(Mesh *m);
 void mesh_flip_winding(Mesh *m);
 void mesh_apply_taper(Mesh *m,float amount,float curvature,char axis);
@@ -390,6 +394,7 @@ void gizmo_apply_drag(Scene *s, int mX, int mY, int W, int H,
 
 
 void shadow_volume_release(ShadowVolume *sv);
+int build_shadow_indices(const Mesh *m,vec3 lightPos,vec3 lightDir,int isDir,unsigned **out,int *nsides); /* total count; sides first, then caps */
 void build_shadow_volume(Mesh *m,vec3 lightPos,vec3 lightDir,int isDir,ShadowVolume *sv);
 void scene_build_all_shadow_volumes(Scene *s);
 void scene_rebuild_node_shadow_volumes(Scene *s,void *editNode);

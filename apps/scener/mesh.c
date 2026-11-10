@@ -35,7 +35,19 @@
 #define PROFILE_FILLET_STRAIGHT_COS 0.9999f
 #define PROFILE_STROKE_MAX_MITER 4.0f
 
+/* Meshes are freed where no GL context may be current (loading, --check), so the vertex cache only
+   learns of it here and releases the range on its next frame. */
+static int *s_retired; static int s_nretired,s_cretired;
+int mesh_gpu_take_retired(int **chunks){
+    int n=s_nretired;
+    *chunks=malloc(sizeof(int)*(size_t)(n+1));
+    if(n) memcpy(*chunks,s_retired,sizeof(int)*(size_t)n);
+    s_nretired=0;
+    return n;
+}
+
 void mesh_free(Mesh *m){
+    if(m->gpuChunk) DA_PUSH(s_retired,s_nretired,s_cretired,m->gpuChunk);
     free(m->verts); free(m->tris); free(m->edges); free(m->triN);
     memset(m,0,sizeof(*m));
 }
@@ -143,7 +155,7 @@ void mesh_build_edges(Mesh *m){
                 if(prev<0) first[h]=chain[found]; else chain[prev]=chain[found];
                 if(last[h]==found) last[h]=prev;
             } else {
-                Edge ne={ m->verts[v0].pos, m->verts[v1].pos, i, -1, v0, v1 };
+                Edge ne={ i, -1, v0, v1 };
                 DA_PUSH(m->edges,m->nedges,m->cedges,ne);
                 int k=m->nedges-1;
                 uint32_t own=edge_hash((uint32_t)w0,(uint32_t)w1)&(uint32_t)(slots-1);
@@ -156,12 +168,10 @@ void mesh_build_edges(Mesh *m){
     free(first); free(last); free(chain);
     free(weld);
 }
-void mesh_update_edge_positions(Mesh *m){
-    for(int i=0;i<m->nedges;i++){
-        Edge *e=&m->edges[i];
-        e->p0=m->verts[e->v0].pos;
-        e->p1=m->verts[e->v1].pos;
-    }
+void mesh_shrink(Mesh *m){
+    if(m->nverts && m->cverts>m->nverts){ m->verts=realloc(m->verts,sizeof(Vertex)*(size_t)m->nverts); m->cverts=m->nverts; }
+    if(m->ntris && m->ctris>m->ntris){ m->tris=realloc(m->tris,sizeof(Tri)*(size_t)m->ntris); m->ctris=m->ntris; }
+    if(m->nedges && m->cedges>m->nedges){ m->edges=realloc(m->edges,sizeof(Edge)*(size_t)m->nedges); m->cedges=m->nedges; }
 }
 
 /* Tetrahedra are taken against the first vertex: against the origin, a small mesh far from it
@@ -178,7 +188,7 @@ float mesh_signed_volume(Mesh *m){
 }
 void mesh_flip_winding(Mesh *m){
     for(int i=0;i<m->ntris;i++){ int t=m->tris[i].b; m->tris[i].b=m->tris[i].c; m->tris[i].c=t; }
-    for(int i=0;i<m->nedges;i++){ vec3 p=m->edges[i].p0; m->edges[i].p0=m->edges[i].p1; m->edges[i].p1=p; int v=m->edges[i].v0; m->edges[i].v0=m->edges[i].v1; m->edges[i].v1=v; }
+    for(int i=0;i<m->nedges;i++){ int v=m->edges[i].v0; m->edges[i].v0=m->edges[i].v1; m->edges[i].v1=v; }
 }
 
 /* ------------------------------------------------------- primitive gens */
@@ -782,7 +792,10 @@ static int profile_offset(const Shape2D *profile,float amount,vec3 *inset){
 	return 1;
 }
 
-Mesh gen_profile_extrusion_beveled(const Shape2D *profile,float depth,float bevel,int bevel_segments){
+#define PROFILE_BEVEL_CLAMP_STEPS 12
+#define PROFILE_BEVEL_RETRIES 8
+#define PROFILE_BEVEL_SHRINK 0.8f
+static Mesh gen_profile_extrusion_beveled_once(const Shape2D *profile,float depth,float bevel,int bevel_segments){
 	Mesh mesh={0};
 	if(!profile||!profile->closed||!isfinite(depth)||!isfinite(bevel)||depth<=0||bevel<0||bevel>=depth*0.5f||
 		!profile_simple(profile->pts,profile->npts)) return mesh;
@@ -795,7 +808,13 @@ Mesh gen_profile_extrusion_beveled(const Shape2D *profile,float depth,float beve
 		if(bevel_segments<1) bevel_segments=1;
 		if(bevel_segments>ROUNDED_BOX_MAX_BEVEL_SEGMENTS) bevel_segments=ROUNDED_BOX_MAX_BEVEL_SEGMENTS;
 		vec3 *inset=malloc(sizeof(vec3)*(size_t)n);
-		if(!profile_offset(profile,bevel,inset)){ free(inset); return mesh; }
+		/* Blender's Clamp Overlap: a bevel too wide for a short edge of the outline is narrowed until it fits */
+		if(!profile_offset(profile,bevel,inset)){
+			float lo=0,hi=bevel;
+			for(int k=0;k<PROFILE_BEVEL_CLAMP_STEPS;k++){ float mid=(lo+hi)*0.5f; if(profile_offset(profile,mid,inset)) lo=mid; else hi=mid; }
+			if(lo<=PROFILE_EPSILON || !profile_offset(profile,lo,inset)){ free(inset); return mesh; }
+			bevel=lo;
+		}
 		int ring_count=2*(bevel_segments+1);
 		for(int ring=0;ring<ring_count;ring++){
 			int front=ring>bevel_segments,step=front?ring-bevel_segments-1:ring;
@@ -829,6 +848,17 @@ Mesh gen_profile_extrusion_beveled(const Shape2D *profile,float depth,float beve
 	for(int i=0;i<mesh.nverts;i++){
 		mesh.verts[i].u=(mesh.verts[i].pos.x-lo.x)/width;
 		mesh.verts[i].v=(hi.y-mesh.verts[i].pos.y)/height;
+	}
+	return mesh;
+}
+
+/* Blender's Clamp Overlap, all the way: a bevel the outline cannot take (an inset that folds, or caps that
+   no longer triangulate) is narrowed until the solid builds. */
+Mesh gen_profile_extrusion_beveled(const Shape2D *profile,float depth,float bevel,int bevel_segments){
+	Mesh mesh=gen_profile_extrusion_beveled_once(profile,depth,bevel,bevel_segments);
+	for(int k=0;k<PROFILE_BEVEL_RETRIES && !mesh.ntris && bevel>0;k++){
+		bevel*=PROFILE_BEVEL_SHRINK;
+		mesh=gen_profile_extrusion_beveled_once(profile,depth,bevel,bevel_segments);
 	}
 	return mesh;
 }
@@ -1276,7 +1306,7 @@ void mesh_apply_extrude(Mesh *m, float amount, char axis){
 	mesh_build_edges(m);
 	for(int e=0;e<m->nedges;e++){
 		if(m->edges[e].t1>=0) continue;
-		vec3 e0=m->edges[e].p0, e1=m->edges[e].p1;
+		vec3 e0=m->verts[m->edges[e].v0].pos, e1=m->verts[m->edges[e].v1].pos;
 		int v0=-1, v1=-1, nv0=-1, nv1=-1;
 		for(int v=0;v<ov;v++){
 			vec3 p=m->verts[v].pos;
@@ -1368,7 +1398,7 @@ void mesh_apply_shell(Mesh *m, float amount){
 	mesh_build_edges(m);
 	for(int e=0;e<m->nedges;e++){
 		if(m->edges[e].t1>=0) continue;
-		vec3 e0=m->edges[e].p0, e1=m->edges[e].p1;
+		vec3 e0=m->verts[m->edges[e].v0].pos, e1=m->verts[m->edges[e].v1].pos;
 		int v0=-1, v1=-1, nv0=-1, nv1=-1;
 		for(int v=0;v<ov;v++){
 			vec3 p=m->verts[v].pos;

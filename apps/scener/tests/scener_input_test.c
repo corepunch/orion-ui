@@ -87,8 +87,12 @@ static void test_device_screen_geometry_and_assets(void) {
     ASSERT_TRUE(vdot(normal, mesh.verts[t.a].nrm) > -1e-6f);
   }
   mesh_free(&mesh);
+  /* a bevel wider than half the depth is narrowed until it fits, as Blender's Clamp Overlap does */
   mesh = beveled_rounded_rect(2.0f, 4.0f, 0.4f, 0.3f, 0.3f);
-  ASSERT_EQUAL(mesh.ntris, 0);
+  ASSERT_TRUE(mesh.ntris > 0);
+  mesh_build_edges(&mesh);
+  for (int i = 0; i < mesh.nedges; i++) ASSERT_TRUE(mesh.edges[i].t1 >= 0);
+  mesh_free(&mesh);
   for (int beveled = 0; beveled <= 1; beveled++) {
     mesh = beveled_rounded_rect(2.0f, 4.0f, 0.4f, 1.0f, beveled ? 0.08f : 0);
     mesh_build_edges(&mesh);

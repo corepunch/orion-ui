@@ -200,6 +200,7 @@ def apply_blender_materials(nile):
   specular level and metallic go across as they are."""
   seen = {}
   nile.make_material = lambda name, **kw: seen.setdefault(name, kw)
+  for name, (_, seg) in nile.BEVELS.items(): scener.SEGMENTS[name] = seg   # the bevel modifier's segments
   nile.make_materials()
   for name, kw in seen.items():
     if name not in scener.MATERIALS: continue
