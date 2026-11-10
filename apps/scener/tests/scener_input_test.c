@@ -205,6 +205,34 @@ static void test_cone_normals_follow_slope(void) {
   PASS();
 }
 
+static void test_mesh_faces_and_sheets(void) {
+  TEST("<mesh>: concave faces are ear-clipped; two-sided smooth sheets keep normals on their own side");
+  Scene scene;
+  ASSERT_TRUE(load_scene("apps/scener/tests/mesh_faces.blks", &scene));
+  ASSERT_TRUE(scene.nobjs == 3);
+  Mesh *chevron = scene.objs[0].mesh;
+  ASSERT_TRUE(chevron->ntris == 4);
+  for (int i = 0; i < chevron->ntris; i++) {   /* a fan from the first corner would cover the notch under the apex */
+    Tri t = chevron->tris[i];
+    vec3 c = vscale(vadd(vadd(chevron->verts[t.a].pos, chevron->verts[t.b].pos), chevron->verts[t.c].pos), 1.0f / 3.0f);
+    ASSERT_TRUE(c.y > 0.8f * (1.0f - fabsf(c.x)) - 1e-4f);
+  }
+  for (int k = 1; k < 3; k++) {
+    Mesh *m = scene.objs[k].mesh;
+    ASSERT_TRUE(m->twoSided);
+    for (int i = 0; i < m->ntris; i++) {
+      Tri t = m->tris[i];
+      vec3 a = m->verts[t.a].pos, n = vcross(vsub(m->verts[t.b].pos, a), vsub(m->verts[t.c].pos, a));
+      ASSERT_TRUE(vdot(n, m->verts[t.a].nrm) > 0 && vdot(n, m->verts[t.b].nrm) > 0 && vdot(n, m->verts[t.c].nrm) > 0);
+    }
+    int twins = 0;   /* only the rim closes against the back; inside, a triangle paired with its own twin self-shadows */
+    for (int e = 0; e < m->nedges; e++) twins += m->edges[e].t1 >= 0 && abs(m->edges[e].t1 - m->edges[e].t0) == m->ntris / 2;
+    ASSERT_TRUE(twins == 2 * (6 + 4));
+  }
+  scene_free(&scene);
+  PASS();
+}
+
 static int issues_of_kind(Scene *s,const char *kind);
 
 static void test_shape_modifier_stack(void) {
@@ -1425,6 +1453,7 @@ int main(void) {
   test_prefab_files_open_as_documents();
   test_device_screen_geometry_and_assets();
   test_cone_normals_follow_slope();
+  test_mesh_faces_and_sheets();
   test_profile_extrude_and_bevel();
   test_shape_modifier_stack();
   test_shell_amount_is_centimetres();

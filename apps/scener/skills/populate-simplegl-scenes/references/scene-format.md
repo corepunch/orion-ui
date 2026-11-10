@@ -630,9 +630,11 @@ The `pivotOffset` is in local space, applied before the object's own `rot`. Rota
 
 The lowest atom: a polygon soup, for geometry no profile or modifier gives (a draped sheet, a converted
 Blender mesh). Vertices as `v="x y z x y z ..."` in cm and faces as `f="i j k, i j k l, ..."` (3 to 64
-vertex indices each, counter-clockwise seen from outside, each triangulated as a fan); `<v x y z/>` and
+vertex indices each, counter-clockwise seen from outside; a face may be concave, such as a roof's chevron end,
+and is ear-clipped in its own plane); `<v x y z/>` and
 `<f v="i j k"/>` children say the same for small hand-written meshes. `smooth="1"` shares vertices and averages
-normals; `twoSided="1"` adds the reversed faces, for open sheets. Takes the [common attributes](#common-attributes)
+normals; `twoSided="1"` adds the reversed faces, for open sheets: each side keeps its own normals, and the sheet
+is never turned inside out by the solid-winding check, as it encloses no volume. Takes the [common attributes](#common-attributes)
 and mesh modifiers.
 
 ### `<box>`

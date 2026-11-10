@@ -723,7 +723,7 @@ static void scene_obj_set_matrix(SceneObj *o,mat4 M){
 void scene_add_obj(Scene *s, Mesh mesh, mat4 M, mat4 R, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)R;
 	if(s->activeGradient) mesh_gradient_param(&mesh, s->activeGradAxis);
-	if(castsShadow && mesh_signed_volume(&mesh) < 0.0f) mesh_flip_winding(&mesh);   /* a solid model winds outward; mirroring is the matrix's */
+	if(castsShadow && !mesh.twoSided && mesh_signed_volume(&mesh) < 0.0f) mesh_flip_winding(&mesh);   /* a solid model winds outward; mirroring is the matrix's */
 	SceneObj o={0};
 	o.mesh=scene_share_mesh(s,&mesh,castsShadow);
 	scene_obj_set_matrix(&o,M);
@@ -933,9 +933,41 @@ static void parse_lathe(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,
 }
 
 /* <mesh>: the lowest atom, a polygon soup. Vertices as v="x y z x y z ..." (cm) and faces as
-   f="i j k, i j k l, ..." (counter-clockwise from outside), or as <v x y z>/<f v="..."> children; faces are
-   triangulated as fans. smooth="1" shares vertices and averages
+   f="i j k, i j k l, ..." (counter-clockwise from outside), or as <v x y z>/<f v="..."> children; a face may
+   be concave and is ear-clipped in its own plane. smooth="1" shares vertices and averages
    normals; twoSided="1" also adds the reversed faces, for open sheets. */
+#define MESH_FACE_MAX 64
+
+/* Ear clipping in the plane of the face's Newell normal: a fan fills a concave outline (a roof's chevron
+   end) solid. Writes ni-2 triangles as index triples; a degenerate face falls back to a fan. */
+static int mesh_face_triangles(const vec3 *p,const int *idx,int ni,int tri[][3]){
+	vec3 nrm=v3(0,0,0);
+	for(int k=0;k<ni;k++){ vec3 a=p[idx[k]],b=p[idx[(k+1)%ni]]; nrm.x+=(a.y-b.y)*(a.z+b.z); nrm.y+=(a.z-b.z)*(a.x+b.x); nrm.z+=(a.x-b.x)*(a.y+b.y); }
+	int ax=fabsf(nrm.x)>fabsf(nrm.y)?(fabsf(nrm.x)>fabsf(nrm.z)?0:2):(fabsf(nrm.y)>fabsf(nrm.z)?1:2);
+	float sign=(ax==0?nrm.x:ax==1?nrm.y:nrm.z)<0?-1.f:1.f;
+	float u[MESH_FACE_MAX],w[MESH_FACE_MAX]; int ring[MESH_FACE_MAX],nr=ni,nt=0;
+	for(int k=0;k<ni;k++){ vec3 q=p[idx[k]]; u[k]=ax==0?q.y:q.x; w[k]=(ax==2?q.y:q.z)*(ax==1?-sign:sign); ring[k]=k; }
+	#define CROSS2(a,b,c) ((u[b]-u[a])*(w[c]-w[a])-(w[b]-w[a])*(u[c]-u[a]))
+	for(int guard=0;nr>3 && guard<ni*ni;guard++){
+		int found=0;
+		for(int i=0;i<nr && !found;i++){
+			int a=ring[(i+nr-1)%nr],b=ring[i],c=ring[(i+1)%nr];
+			if(CROSS2(a,b,c)<=0) continue;
+			int inside=0;
+			for(int j=0;j<nr && !inside;j++){ int q=ring[j]; if(q==a||q==b||q==c) continue;
+				inside=CROSS2(a,b,q)>=0 && CROSS2(b,c,q)>=0 && CROSS2(c,a,q)>=0; }
+			if(inside) continue;
+			tri[nt][0]=idx[a]; tri[nt][1]=idx[b]; tri[nt][2]=idx[c]; nt++;
+			for(int j=i;j<nr-1;j++) ring[j]=ring[j+1];
+			nr--; found=1;
+		}
+		if(!found) break;
+	}
+	#undef CROSS2
+	for(int k=1;k+1<nr;k++){ tri[nt][0]=idx[ring[0]]; tri[nt][1]=idx[ring[k]]; tri[nt][2]=idx[ring[k+1]]; nt++; }
+	return nt;
+}
+
 static void parse_mesh(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,vec3 rot,vec3 color,float shin,int castsShadow,int renderable,int unlit){
 	(void)parentM; (void)pos; (void)rot;
 	int smooth=xml_attr_i(n,"smooth",0),both=xml_attr_i(n,"twoSided",0),nv=0;
@@ -950,13 +982,14 @@ static void parse_mesh(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,v
 		DA_PUSH(p,nv,cp,q);
 	}
 	Mesh m={0}; vec3 *acc=smooth?calloc((size_t)(nv?nv:1),sizeof(vec3)):NULL;
-	int *base=smooth?malloc((size_t)(nv?nv:1)*sizeof(int)):NULL;
-	if(smooth) for(int i=0;i<nv;i++) base[i]=mesh_add_vert(&m,p[i],v3(0,1,0));
+	/* a two-sided smooth sheet keeps its back faces on their own vertices: shared ones would sum both normals to zero */
+	int nb=smooth?(both?2:1)*nv:0,*base=smooth?malloc((size_t)(nb?nb:1)*sizeof(int)):NULL;
+	for(int i=0;i<nb;i++) base[i]=mesh_add_vert(&m,p[i%nv],v3(0,1,0));
 	int ok=nv>0;
 	/* faces: f="a b c, d e f g, ..." or <f v="a b c"/> children */
-	const char *fcur=ftext; int kid=0;
+	const char *fcur=ftext; int kid=0; Tri *ft=NULL; int nft=0,cft=0;
 	for(;ok;){
-		int idx[64],ni=0; char text[XML_VALUE_CAPACITY]; const char *t; int line=n->line;
+		int idx[MESH_FACE_MAX],ni=0; char text[XML_VALUE_CAPACITY]; const char *t; int line=n->line;
 		if(fcur && *fcur){
 			const char *end=strchr(fcur,','); size_t len=end?(size_t)(end-fcur):strlen(fcur);
 			if(len>=sizeof(text)) len=sizeof(text)-1;
@@ -967,18 +1000,25 @@ static void parse_mesh(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,v
 			XmlNode *c=n->kids[kid++]; t=xml_attr(c,"v",""); line=c->line;
 		}
 		const char *src=t;
-		for(char *e;ni<64;){ long v=strtol(t,&e,10); if(e==t) break; idx[ni++]=(int)v; t=e; }
+		for(char *e;ni<MESH_FACE_MAX;){ long v=strtol(t,&e,10); if(e==t) break; idx[ni++]=(int)v; t=e; }
 		if(!ni) continue;
 		int bad=ni<3; for(int k=0;k<ni;k++) if(idx[k]<0||idx[k]>=nv) bad=1;
 		if(bad){ scene_issue(s,SCENE_ISSUE_ERROR,"mesh",node_file(s,n),line,"<mesh> face \"%s\": a face needs 3 to 64 valid vertex indices (0..%d)",src,nv-1); ok=0; break; }
-		for(int pass=0;pass<(both?2:1);pass++) for(int k=1;k+1<ni;k++){
-			int a=idx[0],b=idx[k],d=idx[k+1]; if(pass){ int tmp=b; b=d; d=tmp; }
-			vec3 fn=vcross(vsub(p[b],p[a]),vsub(p[d],p[a]));
-			if(smooth){ acc[a]=vadd(acc[a],fn); acc[b]=vadd(acc[b],fn); acc[d]=vadd(acc[d],fn); mesh_add_tri(&m,base[a],base[b],base[d]); }
-			else { vec3 nn=vnorm(fn); int ia=mesh_add_vert(&m,p[a],nn),ib=mesh_add_vert(&m,p[b],nn),id=mesh_add_vert(&m,p[d],nn); mesh_add_tri(&m,ia,ib,id); }
-		}
+		int tri[MESH_FACE_MAX][3],nt=mesh_face_triangles(p,idx,ni,tri);
+		for(int k=0;k<nt;k++){ Tri t={tri[k][0],tri[k][1],tri[k][2]}; DA_PUSH(ft,nft,cft,t); }
 	}
-	if(smooth) for(int i=0;i<nv;i++) m.verts[base[i]].nrm=vnorm(acc[i]);
+	/* all front faces before the back ones: edges pair oldest first, so a sheet's edges meet their neighbours and
+	   only its rim closes against the back, instead of every triangle against its own twin (a self-shadowing sheet) */
+	for(int pass=0;ok && pass<(both?2:1);pass++) for(int k=0;k<nft;k++){
+		int a=ft[k].a,b=ft[k].b,d=ft[k].c; if(pass){ int tmp=b; b=d; d=tmp; }
+		vec3 fn=vcross(vsub(p[b],p[a]),vsub(p[d],p[a]));
+		if(smooth){ if(!pass){ acc[a]=vadd(acc[a],fn); acc[b]=vadd(acc[b],fn); acc[d]=vadd(acc[d],fn); }
+			int o=pass*nv; mesh_add_tri(&m,base[o+a],base[o+b],base[o+d]); }
+		else { vec3 nn=vnorm(fn); int ia=mesh_add_vert(&m,p[a],nn),ib=mesh_add_vert(&m,p[b],nn),id=mesh_add_vert(&m,p[d],nn); mesh_add_tri(&m,ia,ib,id); }
+	}
+	free(ft);
+	m.twoSided=both;
+	for(int i=0;i<nb;i++) m.verts[base[i]].nrm=i<nv?vnorm(acc[i]):vscale(vnorm(acc[i-nv]),-1.f);
 	free(p); free(acc); free(base);
 	if(!ok||!m.ntris){ if(ok) scene_issue(s,SCENE_ISSUE_ERROR,"mesh",node_file(s,n),n->line,"<mesh> has no faces"); mesh_free(&m); return; }
 	apply_modifiers(&m,n);

@@ -137,6 +137,7 @@ typedef struct {
 	unsigned gpuVertex,gpuIndex;   /* where in that chunk its vertices start, and its indices (bytes) */
 	int gpuWide;                   /* 32-bit indices (more than 65536 vertices); else 16-bit */
 	int refs,serial; unsigned long long hash; /* a shared model (scene_add_obj): objects using it, content hash */
+	int twoSided;                  /* a sheet drawn from both sides: encloses nothing, so its winding is never corrected */
 } Mesh;
 int mesh_gpu_take_retired(int **chunks); /* the vertex cache chunks (+1) of meshes freed since the last call */
 
