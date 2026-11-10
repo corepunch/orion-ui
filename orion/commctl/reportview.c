@@ -158,22 +158,17 @@ static void report_paint(window_t *win, reportview_data_t *data) {
     draw_text_clipped(ui_selector(win, "TableView::group"), data->items[row].section, &caption, group_fg, 0);
   }
 
-  // Rows ruled by hairlines, under the selection's face.
-  if (ui_flag(ui_selector(win, "TableView::row"), "--divider-width")) {
-    set_clip_rect(win, (irect16_t){0, header_h, eff_w, MAX(0, body_bottom - header_h)});
-    for (int row = first_row; row < last_row; row++) {
-      int y = window_scroll_rect_to_client(win, report_item_rect(win, data, row)).y;
-      theme_draw_in(win, THEME_PART_ROW_RULE, R(0, y + entry_h - 1, eff_w, 1), CTRL_NORMAL);
-    }
-  }
-
-  // Rows that act as links show where the keyboard is, and nothing without focus.
+  // The selection's face, then the rows' hairlines over it: the sheet decides whether a rule has a colour.
   bool show_selection = !(data->extended_style & RVS_EX_ONECLICK) || !(selection & CTRL_INACTIVE);
   if (show_selection && data->selected >= first_row && data->selected < last_row) {
     int y = window_scroll_rect_to_client(win, report_item_rect(win, data, data->selected)).y;
-    int rule = ui_flag(ui_selector(win, "TableView::row"), "--divider-width") ? 1 : 0;   // the face stops above the hairline, like every row
-    int top = MAX(y, header_h), bottom = MIN(y + entry_h - rule, body_bottom);
+    int top = MAX(y, header_h), bottom = MIN(y + entry_h, body_bottom);
     theme_draw_in(win, THEME_PART_LIST_ITEM, R(0, top, eff_w, bottom - top), selection);
+  }
+  set_clip_rect(win, (irect16_t){0, header_h, eff_w, MAX(0, body_bottom - header_h)});
+  for (int row = first_row; row < last_row; row++) {
+    int y = window_scroll_rect_to_client(win, report_item_rect(win, data, row)).y;
+    theme_draw_in(win, THEME_PART_ROW_RULE, R(0, y + entry_h - 1, eff_w, 1), CTRL_NORMAL);
   }
 
   int col_x = 0;

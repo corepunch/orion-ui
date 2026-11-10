@@ -55,7 +55,7 @@ Toolbar::grip       { width: 12px; }
 Toolbar::split-arrow { width: 12px; }
 TabView::bar        { padding-left: 0; }
 TableView::header   { min-height: 0; }
-TableView::row      { min-height: 0; --divider-width: 0; }
+TableView::row      { min-height: 0; }
 TableView::divider  { width: 1px; }
 TextEdit            { padding-left: 12px; }
 IconView::thumbnail { --gap: 2px; }
@@ -163,7 +163,7 @@ TableView::divider { background: var(--dark-edge); }
 TableView::divider:hover { background: var(--accent); }
 TableView::group   { color: var(--text-secondary); }
 TableView::body    { background: var(--column-view-bg); }
-TableView::rule    { background: color-mix(in srgb, var(--light-edge) 56.5%, transparent); }
+TableView::rule    { background: transparent; }   /* a theme that rules its rows gives it a colour */
 TableView::frame   { border: 1px solid var(--light-edge); border-radius: var(--table-radius); }
 
 IconView::item          { background: var(--column-view-bg); }
