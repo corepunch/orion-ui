@@ -16,7 +16,8 @@ Everything is a profile put through modifiers, as Scener prefers, not a hard-cod
   poly / roof           a line -> extrude (-> shell -> fillet)
 
 Differences from the Blender kit, all forced by what a scene file can say:
-  - no per-vertex colour; every piece carries one jittered sRGB colour
+  - no per-vertex colour: every piece carries one jittered sRGB colour, and leaves and clay a vertical
+    gradient (gradientFrom/gradientTo, a multiplier over the piece's bounding box)
   - no free-form surfaces: palm fronds are flattened revolved spheres, polygons must stand in a vertical plane
   - a taper scales both axes alike, so a frustum's two insets cannot differ
   - no footprint clamp (Blender clamps vertices to the footprint after the fact)
@@ -31,7 +32,9 @@ SOLID_ROUND = 0.45   # a bevel never exceeds this fraction of a piece's thinnest
 THIN = 1.5      # cm thickness of a flat polygon
 HALF = 50.0     # cm radius of the shared unit-sphere profile
 
-# material -> (shininess, bevel width in tiles or 0, unlit)
+# material -> (shininess, bevel width in tiles or 0, unlit); GRADIENTS: material -> darkest..lightest multiplier
+# along the shape's own up axis, the Blender kit's darker-at-the-bottom vertex colours (<gradient> attributes)
+GRADIENTS = {"leaf": (.6, 1.2), "clay": (.8, 1.05)}
 MATERIALS = {
   "stone": (6, .04, False), "slab": (6, .04, False), "wood": (8, .03, False), "clay": (14, .03, False),
   "glaze": (40, .028, False), "gold": (60, .022, False), "cloth": (3, .025, False), "hedge": (6, .07, False),
@@ -103,6 +106,7 @@ class Kit:
   def look(self, mat, col):
     shin, _, unlit = MATERIALS[mat]
     p = [("color", rgb(col)), ("shininess", shin)]
+    if mat in GRADIENTS: p += [("gradientFrom", v3(*[GRADIENTS[mat][0]] * 3)), ("gradientTo", v3(*[GRADIENTS[mat][1]] * 3))]
     return p + ([("unlit", 1), ("castShadow", 0)] if unlit else [])
 
   # ---- primitives

@@ -214,7 +214,11 @@ static vec3 render_srgb_to_linear(vec3 color) {
     return v3(powf(color.x, 2.2f), powf(color.y, 2.2f), powf(color.z, 2.2f));
 }
 
-static void draw_mesh_flat_vbo(Mesh *m, vec3 color) {
+static void draw_mesh_flat_gradient_vbo(Mesh *m, vec3 color, int gradient, vec3 from, vec3 to);
+static void draw_mesh_flat_vbo(Mesh *m, vec3 color) { draw_mesh_flat_gradient_vbo(m, color, 0, v3(1,1,1), v3(1,1,1)); }
+
+/* A gradient multiplies the colour by from..to (sRGB multipliers) along Vertex.g. */
+static void draw_mesh_flat_gradient_vbo(Mesh *m, vec3 color, int gradient, vec3 from, vec3 to) {
     ensure_buffers();
     ensure_line_prog();
     if (!s_line_prog) return;
@@ -224,8 +228,14 @@ static void draw_mesh_flat_vbo(Mesh *m, vec3 color) {
     for (int i = 0; i < m->ntris; i++) {
         Tri t = m->tris[i];
         for (int j = 0; j < 3; j++) {
-            vec3 p = j == 0 ? m->verts[t.a].pos : j == 1 ? m->verts[t.b].pos : m->verts[t.c].pos;
-            verts[i * 3 + j] = (LineVert){ p.x, p.y, p.z, color.x, color.y, color.z };
+            Vertex *v = j == 0 ? &m->verts[t.a] : j == 1 ? &m->verts[t.b] : &m->verts[t.c];
+            vec3 c = color;
+            if (gradient) {
+                vec3 a = render_srgb_to_linear(from), b = render_srgb_to_linear(to);
+                float g = v->g < 0 ? 0 : v->g > 1 ? 1 : v->g;
+                c = v3(color.x * (a.x + (b.x - a.x) * g), color.y * (a.y + (b.y - a.y) * g), color.z * (a.z + (b.z - a.z) * g));
+            }
+            verts[i * 3 + j] = (LineVert){ v->pos.x, v->pos.y, v->pos.z, c.x, c.y, c.z };
         }
     }
 
@@ -372,7 +382,8 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
             continue;
         }
         vec3 color = render_srgb_to_linear(s->objs[i].color);
-        draw_mesh_flat_vbo(&s->objs[i].mesh, (s->objs[i].unlit || (flags & DBG_FLAT)) ? color : vmul(color, ambient));
+        draw_mesh_flat_gradient_vbo(&s->objs[i].mesh, (s->objs[i].unlit || (flags & DBG_FLAT)) ? color : vmul(color, ambient),
+                                    s->objs[i].gradient, s->objs[i].gradFrom, s->objs[i].gradTo);
     }
 
     if(flags & DBG_FLAT)return;
@@ -430,6 +441,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
                 if (!s->objs[i].renderable || s->objs[i].unlit) continue;
                 shader_set_material(s->objs[i].color, s->objs[i].shininess);
                 shader_set_ramp(s->objs[i].ramp >= 0 ? s->ramps[s->objs[i].ramp].shade : NULL);
+                shader_set_gradient(s->objs[i].gradient, s->objs[i].gradFrom, s->objs[i].gradTo);
 #ifdef SCENER_USE_TEXTURES
                 shader_set_texture(s->objs[i].texIndex >= 0
                                    ? s->materialTextures[s->objs[i].texIndex]
@@ -448,6 +460,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
                 if (!s->objs[i].renderable || s->objs[i].unlit) continue;
                 shader_set_material(s->objs[i].color, s->objs[i].shininess);
                 shader_set_ramp(s->objs[i].ramp >= 0 ? s->ramps[s->objs[i].ramp].shade : NULL);
+                shader_set_gradient(s->objs[i].gradient, s->objs[i].gradFrom, s->objs[i].gradTo);
 #ifdef SCENER_USE_TEXTURES
                 shader_set_texture(s->objs[i].texIndex >= 0
                                    ? s->materialTextures[s->objs[i].texIndex]

@@ -45,6 +45,23 @@ int mesh_add_vert(Mesh *m, vec3 p, vec3 n){
 void mesh_add_tri(Mesh *m,int a,int b,int c){
     Tri t={a,b,c}; DA_PUSH(m->tris,m->ntris,m->ctris,t);
 }
+void mesh_gradient_param(Mesh *m, char axis){
+	if(m->nverts<=0) return;
+	float lo=1e30f, hi=-1e30f;
+	for(int i=0;i<m->nverts;i++){
+		vec3 p=m->verts[i].pos;
+		float c=axis=='x'?p.x:axis=='z'?p.z:p.y;
+		if(c<lo) lo=c;
+		if(c>hi) hi=c;
+	}
+	float span=hi-lo;
+	for(int i=0;i<m->nverts;i++){
+		vec3 p=m->verts[i].pos;
+		float c=axis=='x'?p.x:axis=='z'?p.z:p.y;
+		m->verts[i].g=span>1e-6f?(c-lo)/span:0.0f;
+	}
+}
+
 void mesh_transform(Mesh *m, mat4 posM, mat4 rotM){
     for(int i=0;i<m->nverts;i++){
         m->verts[i].pos = mat4_xform_point(posM, m->verts[i].pos);

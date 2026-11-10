@@ -124,7 +124,7 @@ typedef struct MocapSource {
 } MocapSource;
 
 
-typedef struct { vec3 pos,nrm; float u,v; } Vertex;
+typedef struct { vec3 pos,nrm; float u,v; float g; } Vertex; /* g: position along the gradient axis, 0 at the bounding box minimum to 1 at the maximum */
 typedef struct { int a,b,c; } Tri;
 typedef struct { vec3 p0,p1; int t0,t1; int v0,v1; } Edge;
 
@@ -171,6 +171,7 @@ void mesh_free(Mesh *m);
 int mesh_add_vert(Mesh *m,vec3 p,vec3 n);
 void mesh_add_tri(Mesh *m,int a,int b,int c);
 void mesh_transform(Mesh *m,mat4 posM,mat4 rotM);
+void mesh_gradient_param(Mesh *m,char axis); /* sets Vertex.g from the bounding box along local x, y or z */
 void mesh_compute_face_normals(Mesh *m);
 void mesh_build_edges(Mesh *m);
 void mesh_update_edge_positions(Mesh *m);
@@ -216,7 +217,7 @@ typedef struct {
 typedef struct { vec3 pos,color,dir; float intensity,radius; int castsShadow,isDirectional; } Light;
 typedef struct { float x,y,z,w; } ShadowVertex;
 typedef struct { ShadowVertex *verts; int nverts,cverts; } ShadowVolume;
-typedef struct { Mesh mesh; vec3 color; float shininess; int ramp; int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
+typedef struct { Mesh mesh; vec3 color; float shininess; int ramp; int gradient; vec3 gradFrom,gradTo; /* gradient: colour multipliers at Vertex.g 0 and 1, valid when set */ int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
 typedef struct { char path[1024]; unsigned char *pixels; int width,height; unsigned int texture; } ScreenTexture;
 typedef struct { char name[32]; vec3 pos; } AttachPoint;
 #define SCENE_PREFAB_PATH_CAPACITY 1024
@@ -302,6 +303,7 @@ typedef struct {
 	void *sceneRoot, *editRoot, *selectedNode, *activeEditNode;
 	mat4 activeEditMatrix;
 	int activeTexIndex;
+	int activeGradient; vec3 activeGradFrom,activeGradTo; char activeGradAxis; /* gradient of the shape being placed: multipliers from the box minimum to maximum along a local axis */
 	int activeRamp; /* ramp of the material being placed, -1 for none; mirrors activeTexIndex */
 	const char *activeScreenImage;
 	int activeScreenTexture;

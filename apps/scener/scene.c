@@ -676,12 +676,14 @@ static Material* find_material(Scene*s, const char*id){
 }
 
 void scene_add_obj(Scene *s, Mesh mesh, mat4 M, mat4 R, vec3 color, float shin, int castsShadow, int renderable, int unlit){
+	if(s->activeGradient) mesh_gradient_param(&mesh, s->activeGradAxis);
 	mesh_transform(&mesh, M, R);
 	if(castsShadow && mesh_signed_volume(&mesh) < 0.0f) mesh_flip_winding(&mesh);
 	mesh_compute_face_normals(&mesh);
 	if(castsShadow) mesh_build_edges(&mesh);
 	SceneObj o={0};
 	o.mesh=mesh; o.color=color; o.shininess=shin; o.ramp=s->activeRamp; o.castsShadow=castsShadow;
+	o.gradient=s->activeGradient; o.gradFrom=s->activeGradFrom; o.gradTo=s->activeGradTo;
 	o.renderable=renderable; o.unlit=unlit; o.sanityIgnore=s->sanityIgnoreActive;
 	o.sanityFloor=s->sanityFloorActive; o.sanityCheck=s->sanityCheckActive;
 	o.editNode=s->activeEditNode; o.editMatrix=s->activeEditMatrix;
@@ -2440,6 +2442,16 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 		int castsShadow = xml_attr_i(n,"castShadow",1);
 		int renderable = xml_attr_i(n,"renderable",1);
 		int unlit = xml_attr_i(n,"unlit",0);
+		{	/* gradient: a UV-like gizmo from the shape's own bounding box, no vertex painting */
+			const char *axis=xml_attr(n,"gradientAxis","y");
+			int gotFrom=xml_attr(n,"gradientFrom",NULL)!=NULL, gotTo=xml_attr(n,"gradientTo",NULL)!=NULL;
+			s->activeGradient=gotFrom||gotTo;
+			s->activeGradFrom=xml_attr_v3(n,"gradientFrom",v3(1,1,1));
+			s->activeGradTo=xml_attr_v3(n,"gradientTo",v3(1,1,1));
+			s->activeGradAxis=(axis[0]=='x'||axis[0]=='z')?axis[0]:'y';
+			if(s->activeGradient && axis[0]!='x'&&axis[0]!='y'&&axis[0]!='z')
+				scene_issue(s,SCENE_ISSUE_ERROR,"gradient",node_file(s,n),n->line,"<%s> gradientAxis must be x, y or z, not '%s'",tag,axis);
+		}
 
 		for(int j=0;j<(int)(sizeof(shape_parsers)/sizeof(shape_parsers[0]));j++){
 			if(!strcmp(tag, shape_parsers[j].tag)){
@@ -2971,7 +2983,7 @@ int scene_create_door(Scene *s,const char *preset,vec3 ground){ return scene_cre
 int load_scene(const char *path, Scene *s){
 	memset(s,0,sizeof(*s));
 	s->selectedObj=-1; s->editMode=EDIT_W_MOVE;
-	s->activeTexIndex=-1; s->activeRamp=-1;
+	s->activeTexIndex=-1; s->activeRamp=-1; s->activeGradient=0;
 	s->activeScreenTexture=-1;
 	strncpy(s->scenePath,path,sizeof(s->scenePath)-1);
 	const char *content=strstr(path,"/scenes/");

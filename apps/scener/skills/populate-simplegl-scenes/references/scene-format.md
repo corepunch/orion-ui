@@ -581,8 +581,16 @@ All shapes share common attributes plus shape-specific ones. Shapes may contain 
 | `pivotOffset`| vec3   | 0 0 0            | Offsets the rotation center. Translate by offset, rotate, translate back |
 | `attach`     | string | (none)           | Snap to a named instance's attach point: `instanceName:slotName` |
 | `tint`       | int    | 0                | On prefab children, allow instance `color` to replace this part's diffuse color |
+| `gradientFrom`, `gradientTo` | vec3 | (none) | Colour multipliers at the minimum and maximum of the shape's bounding box along `gradientAxis`; a gradient is on when either is given, the missing one is `1 1 1` |
+| `gradientAxis` | x, y, z | y | The shape's own axis, before `pos`, `rot` and `scale` (a tube extruded along Z takes `z`) |
 
 If a `material` attribute is given, `color`, `shininess` and any `ramp` are taken from the referenced material definition.
+
+**Gradients** shade a shape without painting vertices. Like a UV gizmo, the bounding box of the shape's
+own mesh (after its modifiers, before its transform) maps to 0..1 along `gradientAxis`, and the colour is
+`color` multiplied by the blend of `gradientFrom` and `gradientTo` at that position. They are sRGB
+multipliers, so `0.6 0.6 0.6` to `1.2 1.2 1.2` darkens the foot of a bush and brightens its crown, and
+`0.4 0.4 0.5` to `1 1 1` gives a wall ambient occlusion. Lit, ambient and `unlit` shapes all use it.
 
 An unlit object still renders into the depth buffer. Its `castShadow` setting is
 independent, although visible emitter geometry normally uses

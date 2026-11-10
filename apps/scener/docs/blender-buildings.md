@@ -44,7 +44,7 @@ Lua 5.4 with no dependencies; Scener itself does not embed Lua, so for now it ge
 
 | Blender kit | Scener | Effect |
 |---|---|---|
-| per-vertex colour (`col` attribute) | one colour per shape | gradients on lathes and leaves flatten |
+| per-vertex colour (`col` attribute) | `gradientFrom`/`gradientTo` on a shape (bounding-box gizmo) | leaves and clay darken towards the ground; other gradients are authored per shape |
 | free surfaces (`surface`, palm fronds, tiled roofs `pane`) | none | fronds are flattened revolved spheres; `pane`/`hip_roof` are not ported |
 | triangle soup per material, one bevel modifier | `<rounded-rect>` + `<extrude>` + `<bevel>` per box | bevels follow the piece, edges parallel to depth only |
 | `frustum` with different x and y insets | `<taper>` is uniform in both axes | the pylon's depth inset is 0.16 tile, not 0.10 |

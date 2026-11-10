@@ -20,6 +20,9 @@ local MATERIALS = {
   flame = {4, 0, true}, glow = {4, 0, true},
 }
 
+-- material -> darkest..lightest multiplier along the shape's own up axis (gradientFrom/gradientTo)
+local GRADIENTS = {leaf = {.6, 1.2}, clay = {.8, 1.05}}
+
 local function deg(r) return r * 180 / pi end
 
 function M.C(h)
@@ -84,6 +87,8 @@ end
 function Kit:look(mat, col)
   local m = MATERIALS[mat]
   local p = {{"color", rgb(col)}, {"shininess", m[1]}}
+  local g = GRADIENTS[mat]
+  if g then p[#p + 1] = {"gradientFrom", v3(g[1], g[1], g[1])}; p[#p + 1] = {"gradientTo", v3(g[2], g[2], g[2])} end
   if m[3] then p[#p + 1] = {"unlit", 1}; p[#p + 1] = {"castShadow", 0} end
   return p
 end

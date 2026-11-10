@@ -42,34 +42,34 @@
       <rounded-rect size="89.6 19.2" radius="6.4" segments="4" pos="132.8 67.2 4.8" color="0.953 0.902 0.761" shininess="6"><extrude amount="11.2"/><bevel amount="5.04" bevelSegments="3"/></rounded-rect>
       <rounded-rect size="28.8 11.2" radius="4.48" segments="4" pos="132.8 66.4 8" color="0.169 0.361 0.682" shininess="40"><extrude amount="3.2"/><bevel amount="1.44" bevelSegments="3"/></rounded-rect>
     </group>
-    <lathe shape="lathe1" segments="10" pos="139.72 11.24 125.53" scale="0.4 0.4 0.4" color="0.423 0.782 0.256" shininess="10"/>
-    <lathe shape="lathe1" segments="10" pos="118.03 11.24 118.64" scale="0.4 0.4 0.4" color="0.330 0.752 0.241" shininess="10"/>
-    <lathe shape="lathe1" segments="10" pos="125.04 11.24 139.65" scale="0.4 0.4 0.4" color="0.250 0.696 0.237" shininess="10"/>
-    <lathe shape="lathe1" segments="10" pos="127.24 24.4 127.24" scale="0.42 0.42 0.42" color="0.439 0.823 0.261" shininess="10"/>
-    <lathe shape="lathe1" segments="10" pos="-118.72 11.58 122.45" scale="0.37 0.37 0.37" color="0.236 0.677 0.226" shininess="10"/>
-    <lathe shape="lathe1" segments="10" pos="-137.4 11.58 122.62" scale="0.37 0.37 0.37" color="0.330 0.758 0.244" shininess="10"/>
-    <lathe shape="lathe1" segments="10" pos="-130.94 11.58 140.9" scale="0.37 0.37 0.37" color="0.237 0.669 0.225" shininess="10"/>
-    <lathe shape="lathe1" segments="10" pos="-128 23.8 129.58" scale="0.39 0.39 0.39" color="0.434 0.799 0.258" shininess="10"/>
+    <lathe shape="lathe1" segments="10" pos="139.72 11.24 125.53" scale="0.4 0.4 0.4" color="0.423 0.782 0.256" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
+    <lathe shape="lathe1" segments="10" pos="118.03 11.24 118.64" scale="0.4 0.4 0.4" color="0.330 0.752 0.241" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
+    <lathe shape="lathe1" segments="10" pos="125.04 11.24 139.65" scale="0.4 0.4 0.4" color="0.250 0.696 0.237" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
+    <lathe shape="lathe1" segments="10" pos="127.24 24.4 127.24" scale="0.42 0.42 0.42" color="0.439 0.823 0.261" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
+    <lathe shape="lathe1" segments="10" pos="-118.72 11.58 122.45" scale="0.37 0.37 0.37" color="0.236 0.677 0.226" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
+    <lathe shape="lathe1" segments="10" pos="-137.4 11.58 122.62" scale="0.37 0.37 0.37" color="0.330 0.758 0.244" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
+    <lathe shape="lathe1" segments="10" pos="-130.94 11.58 140.9" scale="0.37 0.37 0.37" color="0.237 0.669 0.225" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
+    <lathe shape="lathe1" segments="10" pos="-128 23.8 129.58" scale="0.39 0.39 0.39" color="0.434 0.799 0.258" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     <circle radius="12" segments="10" pos="-97.98 80 -97.98" rot="-90 0 0" color="0.557 0.329 0.153" shininess="8"><extrude amount="128"/><bevel amount="3.36" bevelSegments="2"/><taper amount="-0.2" axis="z"/></circle>
     <group pos="-97.98 144 -97.98" rot="0 6.7 0">
-      <lathe shape="lathe2" segments="8" pos="30.4 -8.51 0" scale="0.63 0.05 0.21" rot="0 0 -22" color="0.325 0.756 0.240" shininess="10"/>
+      <lathe shape="lathe2" segments="8" pos="30.4 -8.51 0" scale="0.63 0.05 0.21" rot="0 0 -22" color="0.325 0.756 0.240" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     </group>
     <group pos="-97.98 144 -97.98" rot="0 52.99 0">
-      <lathe shape="lathe2" segments="8" pos="30.4 -8.51 0" scale="0.63 0.05 0.21" rot="0 0 -22" color="0.247 0.693 0.237" shininess="10"/>
+      <lathe shape="lathe2" segments="8" pos="30.4 -8.51 0" scale="0.63 0.05 0.21" rot="0 0 -22" color="0.247 0.693 0.237" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     </group>
     <group pos="-97.98 144 -97.98" rot="0 122.65 0">
-      <lathe shape="lathe2" segments="8" pos="30.4 -8.51 0" scale="0.63 0.05 0.21" rot="0 0 -22" color="0.344 0.786 0.252" shininess="10"/>
+      <lathe shape="lathe2" segments="8" pos="30.4 -8.51 0" scale="0.63 0.05 0.21" rot="0 0 -22" color="0.344 0.786 0.252" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     </group>
     <group pos="-97.98 144 -97.98" rot="0 183.61 0">
-      <lathe shape="lathe2" segments="8" pos="30.4 -8.51 0" scale="0.63 0.05 0.21" rot="0 0 -22" color="0.442 0.833 0.270" shininess="10"/>
+      <lathe shape="lathe2" segments="8" pos="30.4 -8.51 0" scale="0.63 0.05 0.21" rot="0 0 -22" color="0.442 0.833 0.270" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     </group>
     <group pos="-97.98 144 -97.98" rot="0 236.53 0">
-      <lathe shape="lathe2" segments="8" pos="30.4 -8.51 0" scale="0.63 0.05 0.21" rot="0 0 -22" color="0.240 0.675 0.225" shininess="10"/>
+      <lathe shape="lathe2" segments="8" pos="30.4 -8.51 0" scale="0.63 0.05 0.21" rot="0 0 -22" color="0.240 0.675 0.225" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     </group>
     <group pos="-97.98 144 -97.98" rot="0 296.16 0">
-      <lathe shape="lathe2" segments="8" pos="30.4 -8.51 0" scale="0.63 0.05 0.21" rot="0 0 -22" color="0.435 0.813 0.261" shininess="10"/>
+      <lathe shape="lathe2" segments="8" pos="30.4 -8.51 0" scale="0.63 0.05 0.21" rot="0 0 -22" color="0.435 0.813 0.261" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     </group>
-    <lathe shape="lathe1" segments="10" pos="-97.98 131.2 -97.98" scale="0.26 0.26 0.26" color="0.334 0.757 0.246" shininess="10"/>
+    <lathe shape="lathe1" segments="10" pos="-97.98 131.2 -97.98" scale="0.26 0.26 0.26" color="0.334 0.757 0.246" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     <lathe shape="lathe2" segments="8" pos="-87.42 114.56 -105.21" scale="0.19 0.27 0.19" color="0.784 0.392 0.118" shininess="6"/>
     <lathe shape="lathe2" segments="8" pos="-108.95 114.56 -104.58" scale="0.19 0.27 0.19" color="0.784 0.392 0.118" shininess="6"/>
     <lathe shape="lathe2" segments="8" pos="-100.68 114.56 -85.47" scale="0.19 0.27 0.19" color="0.784 0.392 0.118" shininess="6"/>
@@ -101,28 +101,28 @@
     <rounded-rect size="32 96" radius="6.4" segments="4" pos="-24 64 115.2" color="0.939 0.887 0.748" shininess="6"><extrude amount="35.2"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
     <rounded-rect size="32 128" radius="6.4" segments="4" pos="8 80 115.2" color="0.947 0.895 0.755" shininess="6"><extrude amount="35.2"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
     <rounded-rect size="32 160" radius="6.4" segments="4" pos="40 96 115.2" color="0.944 0.890 0.755" shininess="6"><extrude amount="35.2"/><bevel amount="5.44" bevelSegments="3"/></rounded-rect>
-    <lathe shape="lathe3" segments="14" pos="128 16 120" color="0.686 0.369 0.220" shininess="14"/>
+    <lathe shape="lathe3" segments="14" pos="128 16 120" color="0.686 0.369 0.220" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
     <lathe shape="lathe4" segments="14" pos="128 34.4 120" color="0.169 0.361 0.682" shininess="40"/>
     <circle radius="12" segments="10" pos="102.88 88 -102.88" rot="-90 0 0" color="0.557 0.329 0.153" shininess="8"><extrude amount="144"/><bevel amount="3.36" bevelSegments="2"/><taper amount="-0.2" axis="z"/></circle>
     <group pos="102.88 160 -102.88" rot="0 -0.56 0">
-      <lathe shape="lathe2" segments="8" pos="28 -7.84 0" scale="0.58 0.04 0.19" rot="0 0 -22" color="0.240 0.679 0.228" shininess="10"/>
+      <lathe shape="lathe2" segments="8" pos="28 -7.84 0" scale="0.58 0.04 0.19" rot="0 0 -22" color="0.240 0.679 0.228" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     </group>
     <group pos="102.88 160 -102.88" rot="0 64.11 0">
-      <lathe shape="lathe2" segments="8" pos="28 -7.84 0" scale="0.58 0.04 0.19" rot="0 0 -22" color="0.448 0.845 0.272" shininess="10"/>
+      <lathe shape="lathe2" segments="8" pos="28 -7.84 0" scale="0.58 0.04 0.19" rot="0 0 -22" color="0.448 0.845 0.272" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     </group>
     <group pos="102.88 160 -102.88" rot="0 127.55 0">
-      <lathe shape="lathe2" segments="8" pos="28 -7.84 0" scale="0.58 0.04 0.19" rot="0 0 -22" color="0.249 0.706 0.235" shininess="10"/>
+      <lathe shape="lathe2" segments="8" pos="28 -7.84 0" scale="0.58 0.04 0.19" rot="0 0 -22" color="0.249 0.706 0.235" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     </group>
     <group pos="102.88 160 -102.88" rot="0 182.95 0">
-      <lathe shape="lathe2" segments="8" pos="28 -7.84 0" scale="0.58 0.04 0.19" rot="0 0 -22" color="0.346 0.802 0.256" shininess="10"/>
+      <lathe shape="lathe2" segments="8" pos="28 -7.84 0" scale="0.58 0.04 0.19" rot="0 0 -22" color="0.346 0.802 0.256" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     </group>
     <group pos="102.88 160 -102.88" rot="0 240.18 0">
-      <lathe shape="lathe2" segments="8" pos="28 -7.84 0" scale="0.58 0.04 0.19" rot="0 0 -22" color="0.245 0.687 0.230" shininess="10"/>
+      <lathe shape="lathe2" segments="8" pos="28 -7.84 0" scale="0.58 0.04 0.19" rot="0 0 -22" color="0.245 0.687 0.230" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     </group>
     <group pos="102.88 160 -102.88" rot="0 301.52 0">
-      <lathe shape="lathe2" segments="8" pos="28 -7.84 0" scale="0.58 0.04 0.19" rot="0 0 -22" color="0.441 0.817 0.265" shininess="10"/>
+      <lathe shape="lathe2" segments="8" pos="28 -7.84 0" scale="0.58 0.04 0.19" rot="0 0 -22" color="0.441 0.817 0.265" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     </group>
-    <lathe shape="lathe1" segments="10" pos="102.88 147.2 -102.88" scale="0.26 0.26 0.26" color="0.325 0.760 0.244" shininess="10"/>
+    <lathe shape="lathe1" segments="10" pos="102.88 147.2 -102.88" scale="0.26 0.26 0.26" color="0.325 0.760 0.244" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     <lathe shape="lathe2" segments="8" pos="113.44 130.56 -110.11" scale="0.19 0.27 0.19" color="0.784 0.392 0.118" shininess="6"/>
     <lathe shape="lathe2" segments="8" pos="91.91 130.56 -109.48" scale="0.19 0.27 0.19" color="0.784 0.392 0.118" shininess="6"/>
     <lathe shape="lathe2" segments="8" pos="100.18 130.56 -90.37" scale="0.19 0.27 0.19" color="0.784 0.392 0.118" shininess="6"/>
@@ -141,16 +141,16 @@
       <rounded-rect size="83.2 19.2" radius="6.4" segments="4" pos="112 105.6 4.8" color="0.953 0.902 0.761" shininess="6"><extrude amount="11.2"/><bevel amount="5.04" bevelSegments="3"/></rounded-rect>
       <rounded-rect size="24.96 11.2" radius="4.48" segments="4" pos="112 104.8 8" color="0.169 0.361 0.682" shininess="40"><extrude amount="3.2"/><bevel amount="1.44" bevelSegments="3"/></rounded-rect>
     </group>
-    <lathe shape="lathe5" segments="16" pos="80 16 -72" color="0.801 0.310 0.175" shininess="14"/>
+    <lathe shape="lathe5" segments="16" pos="80 16 -72" color="0.801 0.310 0.175" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
     <rect size="32 28.8" pos="80 46.4 -11.2" color="1.000 0.478 0.039" shininess="4" unlit="1" castShadow="0"><extrude amount="6.4"/></rect>
     <lathe shape="lathe6" segments="14" pos="48 16 72" color="0.706 0.455 0.212" shininess="8"/>
-    <lathe shape="lathe7" segments="12" pos="48 64 72" color="0.878 0.416 0.227" shininess="14"/>
-    <lathe shape="lathe3" segments="14" pos="-128 16 128" color="0.702 0.378 0.221" shininess="14"/>
+    <lathe shape="lathe7" segments="12" pos="48 64 72" color="0.878 0.416 0.227" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
+    <lathe shape="lathe3" segments="14" pos="-128 16 128" color="0.702 0.378 0.221" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
     <lathe shape="lathe4" segments="14" pos="-128 34.4 128" color="0.086 0.635 0.588" shininess="40"/>
-    <lathe shape="lathe8" segments="14" pos="120 16 120" color="0.683 0.367 0.221" shininess="14"/>
-    <lathe shape="lathe9" segments="14" pos="128 16 64" color="0.753 0.399 0.240" shininess="14"/>
+    <lathe shape="lathe8" segments="14" pos="120 16 120" color="0.683 0.367 0.221" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
+    <lathe shape="lathe9" segments="14" pos="128 16 64" color="0.753 0.399 0.240" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
     <lathe shape="lathe10" segments="14" pos="128 30.72 64" color="0.169 0.361 0.682" shininess="40"/>
-    <lathe shape="lathe9" segments="14" pos="-88 16 124.8" color="0.732 0.384 0.235" shininess="14"/>
+    <lathe shape="lathe9" segments="14" pos="-88 16 124.8" color="0.732 0.384 0.235" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
     <light pos="80 48 8" color="1.000 0.620 0.280" intensity="0.28" radius="224" castShadows="0"/>
   </group>
   <group name="bakery" pos="-720 0 320">
@@ -171,9 +171,9 @@
     <group pos="-192 0 56" rot="0 0 0">
       <rect size="32 28.8" pos="216 102.4 1.92" color="0.227 0.149 0.078" shininess="6"><extrude amount="4.8"/></rect>
     </group>
-    <lathe shape="lathe11" segments="16" pos="160 16 64" color="0.801 0.308 0.176" shininess="14"/>
+    <lathe shape="lathe11" segments="16" pos="160 16 64" color="0.801 0.308 0.176" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
     <rect size="6.4 22.4" pos="206.4 36.8 64" color="1.000 0.478 0.039" shininess="4" unlit="1" castShadow="0"><extrude amount="25.6"/></rect>
-    <lathe shape="lathe11" segments="16" pos="160 16 -56" color="0.794 0.310 0.174" shininess="14"/>
+    <lathe shape="lathe11" segments="16" pos="160 16 -56" color="0.794 0.310 0.174" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
     <rect size="6.4 22.4" pos="206.4 36.8 -56" color="1.000 0.478 0.039" shininess="4" unlit="1" castShadow="0"><extrude amount="25.6"/></rect>
     <rounded-rect size="96 48" radius="4.8" segments="4" pos="48 40 115.2" color="0.706 0.455 0.212" shininess="8"><extrude amount="48"/><bevel amount="4.08" bevelSegments="3"/></rounded-rect>
     <lathe shape="lathe1" segments="10" pos="19.2 63.04 115.2" scale="0.19 0.12 0.19" color="0.827 0.580 0.275" shininess="6"/>

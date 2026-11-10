@@ -1,5 +1,6 @@
 #include <orion/user/gl_compat.h>
 #include <math.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "shader.h"
@@ -10,7 +11,8 @@
 static GLuint prog, s_mesh_vao, s_mesh_vbo, s_mesh_ebo;
 static GLuint vlocPos, vlocNrm;
 static GLint ulocViewProj, ulocViewPos, ulocLightPos, ulocLightColor, ulocLightRadius;
-static GLint ulocColor, ulocShininess, ulocRamp, ulocRampOn;
+static GLint ulocColor, ulocShininess, ulocRamp, ulocRampOn, ulocGradOn, ulocGradFrom, ulocGradTo;
+static GLint vlocGrad;
 #ifdef SCENER_USE_TEXTURES
 static GLint ulocTex;
 #endif
@@ -19,13 +21,16 @@ static const char *vs_src =
 "#version 150\n"
 "in vec3 aPos;\n"
 "in vec3 aNrm;\n"
+"in float aGrad;\n"
 "uniform mat4 uViewProj;\n"
+"out float vGrad;\n"
 "out vec3 vWorldPos;\n"
 "out vec3 vWorldNrm;\n"
 "out vec2 vWorldUV;\n"
 "void main(){\n"
 "    vWorldPos=aPos;\n"
 "    vWorldNrm=aNrm;\n"
+"    vGrad=aGrad;\n"
 "    vec3 n=abs(aNrm);\n"
 "    if(n.y>n.x&&n.y>n.z) vWorldUV=aPos.xz*0.5;\n"
 "    else if(n.x>n.y&&n.x>n.z) vWorldUV=aPos.yz*0.5;\n"
@@ -53,6 +58,7 @@ static const char *fs_src =
 "in vec3 vWorldPos;\n"
 "in vec3 vWorldNrm;\n"
 "in vec2 vWorldUV;\n"
+"in float vGrad;\n"
 "out vec4 fragColor;\n"
 "uniform vec3 uViewPos;\n"
 "uniform vec4 uLightPos;\n"
@@ -62,6 +68,9 @@ static const char *fs_src =
 "uniform float uShininess;\n"
 "uniform vec3 uRamp[RAMP_SHADES];\n"
 "uniform int uRampOn;\n"
+"uniform int uGradOn;\n"
+"uniform vec3 uGradFrom;\n"
+"uniform vec3 uGradTo;\n"
 #ifdef SCENER_USE_TEXTURES
 "uniform sampler2D uTex;\n"
 #endif
@@ -88,6 +97,7 @@ static const char *fs_src =
 #else
 "    vec3 texColor=vec3(1.0);\n"
 #endif
+"    if(uGradOn>0) texColor*=mix(uGradFrom,uGradTo,clamp(vGrad,0.0,1.0));\n"
 "    vec3 spec=(D*G*F)/(max(4.0*NdotL*NdotV,MIN_SPECULAR))*uLightColor;\n"
 "    vec3 diff=uColor*texColor*(1.0-F)*NdotL*uLightColor;\n"
 "    float att=1.0;\n"
@@ -127,6 +137,10 @@ void shader_init(void){
 	ulocShininess   = glGetUniformLocation(prog, "uShininess");
 	ulocRamp        = glGetUniformLocation(prog, "uRamp");
 	ulocRampOn      = glGetUniformLocation(prog, "uRampOn");
+	ulocGradOn      = glGetUniformLocation(prog, "uGradOn");
+	ulocGradFrom    = glGetUniformLocation(prog, "uGradFrom");
+	ulocGradTo      = glGetUniformLocation(prog, "uGradTo");
+	vlocGrad        = glGetAttribLocation(prog, "aGrad");
 #ifdef SCENER_USE_TEXTURES
 	ulocTex         = glGetUniformLocation(prog, "uTex");
 #endif
@@ -181,6 +195,14 @@ void shader_set_ramp(const vec3 *shades){
 	glUniform1i(ulocRampOn, 1);
 }
 
+void shader_set_gradient(int on, vec3 from, vec3 to){
+	glUniform1i(ulocGradOn, on ? 1 : 0);
+	if(!on) return;
+	vec3 a=srgb_to_linear(from), b=srgb_to_linear(to);
+	glUniform3f(ulocGradFrom, a.x, a.y, a.z);
+	glUniform3f(ulocGradTo, b.x, b.y, b.z);
+}
+
 #ifdef SCENER_USE_TEXTURES
 void shader_set_texture(unsigned int tex){
 	glActiveTexture(GL_TEXTURE0);
@@ -202,11 +224,14 @@ void shader_draw_mesh(Mesh *m){
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER,(GLsizeiptr)(m->ntris*sizeof(Tri)),m->tris,GL_DYNAMIC_DRAW);
 	glEnableVertexAttribArray(vlocPos);
 	glEnableVertexAttribArray(vlocNrm);
+	if(vlocGrad>=0) glEnableVertexAttribArray(vlocGrad);
 	glVertexAttribPointer(vlocPos,3,GL_FLOAT,GL_FALSE,sizeof(Vertex),(void*)0);
 	glVertexAttribPointer(vlocNrm,3,GL_FLOAT,GL_FALSE,sizeof(Vertex),(void*)(3*sizeof(float)));
+	if(vlocGrad>=0) glVertexAttribPointer(vlocGrad,1,GL_FLOAT,GL_FALSE,sizeof(Vertex),(void*)offsetof(Vertex,g));
 	glDrawElements(GL_TRIANGLES,m->ntris*3,GL_UNSIGNED_INT,(void*)0);
 	glDisableVertexAttribArray(vlocPos);
 	glDisableVertexAttribArray(vlocNrm);
+	if(vlocGrad>=0) glDisableVertexAttribArray(vlocGrad);
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER,0);
 }
