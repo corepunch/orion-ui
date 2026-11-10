@@ -9,6 +9,11 @@
 #endif
 #include "simplegl.h"
 
+/* Stencil shadow volumes. build_shadow_indices is what the renderer uses: like Doom 3's dynamic shadow
+   volume job (jobs/dynamicshadowvolume/DynamicShadowVolume.cpp) it emits only indices, into a vertex stream
+   where vertex i is 2i at its place and 2i+1 projected to infinity (idShadowVert::CreateShadowCache), from
+   the mesh's edge list (Doom 3's silEdge_t: two triangles and two vertices per edge).
+   build_shadow_volume is the older form with vertices of its own, kept for the z-pass build and tests. */
 void build_shadow_volume(Mesh *m, vec3 lightPos, vec3 lightDir, int isDir, ShadowVolume *sv){
 	memset(sv,0,sizeof(*sv));
 	int nt=m->ntris;

@@ -10,7 +10,8 @@
 #define VCACHE_INDEX_RATIO   5            /* indices per vertex a chunk reserves (generated meshes run ~4.5) */
 #define VCACHE_SHADOW_CHUNK  (1 << 20)    /* shadow indices a chunk holds */
 
-/* Doom 3 keeps 32-byte idDrawVerts with byte normals and 16-bit indices; the GPU copy here is the same idea:
+/* Doom 3 keeps 32-byte idDrawVerts with byte normals and 16-bit indices (idlib/geometry/DrawVert.h,
+   triIndex_t in sys_types.h); the GPU copy here is the same idea:
    position, normal packed into 10-bit components, gradient parameter. 20 bytes instead of 36. */
 typedef struct { float x, y, z; unsigned n; float g; } gpu_vertex_t;
 

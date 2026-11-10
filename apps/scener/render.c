@@ -1,3 +1,24 @@
+/* The renderer follows Doom 3 BFG (neo/renderer in the GPL source). Where to look when changing it:
+
+   here                                   Doom 3 BFG
+   -------------------------------------  ---------------------------------------------------------------
+   front end, then back end               tr_frontend_*.cpp build the view, tr_backend_draw.cpp only draws
+   light_bounds, box_screen_rect          R_AddSingleLight: the light's scissor from its clipped bounds
+                                          (idRenderMatrix::ProjectedFullyClippedBounds); empty drops the light
+   lit list and its union                 R_OptimizeViewLightsList: no lit surface on screen, no shadows
+   shadow_bounds                          R_ShadowBounds (tr_frontend_addlights.cpp)
+   view_may_be_inside, z-pass or z-fail   R_ViewPotentiallyInsideInfiniteShadowVolume, renderZFail
+                                          (jobs/dynamicshadowvolume/DynamicShadowVolume.cpp)
+   s_shadow_vs                            base/renderprogs/shadow.vertex: w=1 stays, w=0 goes to infinity
+   prepare_shadow_part: light in model    idInteraction: localLightOrigin (Interaction.cpp)
+   space, built on first need and kept
+   batches sorted by model and state      draw surfaces sorted by material (R_SortDrawSurfs)
+   vertex_cache.c                         VertexCache.h: static buffers that surfaces are ranges of
+   shared models placed by matrices       idRenderModel + idRenderEntityLocal::modelMatrix
+
+   Not taken: the depth-bounds test (GL_EXT_depth_bounds_test does not exist in macOS OpenGL), portal
+   areas, precomputed pre-light shadow volumes, parallel jobs. Added on top: instancing (GL 3.2), which
+   Doom 3 does not use. */
 #include <orion/user/gl_compat.h>
 #include <math.h>
 #include <stdio.h>

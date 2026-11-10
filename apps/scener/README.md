@@ -271,42 +271,47 @@ Reproduce any camera in the scene with:
   same door/window/negative profiles before extrusion. This preserves matching
   apertures across colors and projecting trim bands, including curved, stacked
   and overlapping openings. It remains wall-specific geometry, not arbitrary CSG.
-- **Scene evaluation owns shadow rebuilding.** Shadow volumes are built for
-  the evaluated scene. `scene_set_time()` rebuilds animated character geometry
-  and its shadow volumes, so batch animation retains the same lighting and
-  shadow behavior as still renders. Unchanged scenes reuse their built volumes.
+- **Scene evaluation owns shadow rebuilding.** `scene_set_time()` rebuilds animated
+  character geometry and marks the cached shadow volumes stale, so batch animation
+  retains the same lighting and shadow behavior as still renders. Unchanged scenes
+  reuse their volumes, which the renderer builds the first time a view needs them.
+
+## Renderer design: Doom 3
+
+The renderer is modelled on Doom 3 BFG: unified per-light lighting with stencil shadow volumes, and the
+same engineering around it. Geometry is stored once and placed by matrices; the GPU holds it in a few large
+buffers; each frame runs a front end (cull, sort, build, upload) and then a back end that only draws; lights
+are culled by the screen rectangle of their bounds and shadows by the box they can reach.
+[ARCHITECTURE.md](ARCHITECTURE.md#the-renderer-follows-doom-3) maps every part to the Doom 3 source and
+lists what was deliberately not taken.
+
+What this buys on the Christmas Market scene (5936 objects, 38 lights, 36 of them shadow-casting lamps): the
+frame went from not finishing to about half a second, and peak memory from 4.5 GB to about 310 MB, of which
+about 120 MB is the empty application.
 
 ## Shadow algorithm
 
-Classic robust **z-fail (Carmack's Reverse)** stencil shadow volumes, one
-point light per pass:
+Stencil shadow volumes, one light per pass:
 
-The side-only, infinitely extruded Z-pass implementation is available with
-`make zpass`, `make run-zpass`, and `make test-zpass`. These targets compile
-with `USE_ZPASS` and write separate `*-zpass` binaries under `build/bin`.
+1. **Depth-filling pass** – everything at `ambient * color` (plus the sky mirrored in glossy surfaces), with
+   depth writes on.
+2. For each shadow-casting light, inside the light's scissor rectangle:
+   a. **Stencil pass** – the volumes of the casters whose shadow can reach the lit part of the screen, color and
+      depth writes off. A caster the camera cannot be inside is drawn **z-pass**, silhouette sides only; the
+      others **z-fail** (Carmack's Reverse) with light and dark caps, which stays correct when the camera is in
+      the shadow. Extruded vertices are homogeneous directions (`w=0`) and depth clamp prevents clipping; if
+      depth clamp is unavailable, stencil shadows are disabled and the lights render without shadows.
+   b. **Lit pass** – the lit objects, diffuse plus specular, additively blended, only where stencil is `0`.
+3. Lights that cast no shadows get the lit pass without the stencil test.
 
-1. **Ambient pass** – draw everything flat-shaded at `ambient * color`, with
-   depth writes on. This seeds the depth buffer and the base (unlit) look.
-2. For each shadow-casting light:
-   a. **Stencil pass** – draw the light's closed shadow volume (silhouette
-      side quads + light/dark caps) with color writes off, depth writes off,
-      `glStencilOpSeparate`: back faces `INCR_WRAP` / front faces
-      `DECR_WRAP` on depth-fail. This is the part that's still correct even
-      when the camera itself is inside a shadow.
-      Extruded vertices use homogeneous directions (`w=0`), and depth clamp
-      prevents near/far clipping. If depth clamp is unavailable, stencil
-      shadows are disabled and the lights render without shadows.
-   b. **Lit pass** – redraw the scene fully lit (diffuse+specular, ambient
-      zeroed to avoid double-counting), additively blended (`GL_ONE,
-      GL_ONE`), only where the stencil value is `0` (i.e. *not* in shadow).
-3. Non-shadow-casting lights just get an unconditional additive lit pass, no
-   stencil test.
+A point light with falloff has a `range` where it stops lighting and shadowing; by default it is where the
+light's contribution has fallen to 5% (`LIGHT_CUTOFF`), so strong lights reach farther than weak ones.
 
-Silhouette detection needs a *flat* face normal per triangle
-(`Mesh.triN`, computed straight from triangle vertex positions) — this is
-kept separate from the shading normal (`Vertex.nrm`, smooth for
-sphere/torus, per-facet for box/prism/cone) so the shadow math never cares
-how a mesh happens to be shaded.
+`make zpass`, `make run-zpass` and `make test-zpass` build the older all-z-pass variant (`USE_ZPASS`) as
+separate `*-zpass` binaries.
+
+Silhouette detection needs a *flat* face normal per triangle (`Mesh.triN`) — kept separate from the shading
+normal (`Vertex.nrm`) so the shadow math never cares how a mesh happens to be shaded.
 
 ## XML scene authoring
 

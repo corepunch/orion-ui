@@ -46,8 +46,10 @@ deployed command from the consuming project's working directory.
 | `scene_motion.h`, `scene_capture.h` | Private timeline/gait and capture-profile/contact implementation included by scene.c |
 | `scene_expr.h`, `scene_inspect.h` | Private `<let>`/`{expr}` resolution and `--check`/`--query` geometry diagnostics and JSON, included by scene.c |
 | `scene.c` | Tiny XML parser, scene loading, named cameras, modifier dispatch, **prefab loading** |
-| `render.c` | OpenGL core-profile shader/VBO renderer with stencil shadows |
-| `shadow.c` | Stencil shadow volume construction (silhouette detection + edge extrusion) |
+| `render.c` | OpenGL core-profile renderer: front end (cull, batch, build), back end (instanced draws, stencil shadows) |
+| `vertex_cache.c`, `vertex_cache.h` | GPU storage: models and shadow indices as ranges of a few large buffers |
+| `shadow.c` | Stencil shadow volume construction (silhouette detection, index lists) |
+| `scene_define.h` | `<define>`/`<include>` utilities expanded at load |
 | `tests/scener_input_test.c` | Focused document, tool command and scene-axis tests |
 | `tests/test_cli.py`, `tests/test_shadow_backend.py` | Deployed CLI, backend rejection and GPU pixel regressions |
 | `shader.c` | PBR mesh shader and material/light uniforms |
@@ -58,6 +60,26 @@ deployed command from the consuming project's working directory.
 | `prefabs/characters/presets/` | CAT rig presets (`biped`, `quadruped`) copied to start characters |
 | `scenes/` | Runnable and diagnostic scene files (`*.blks`) |
 | `prefabs/` | Reusable object files (`chair.blk`, `sofa.blk`, etc.) |
+
+## Renderer rules (Doom 3 model)
+
+The renderer is modelled on Doom 3 BFG; [ARCHITECTURE.md](ARCHITECTURE.md#the-renderer-follows-doom-3) maps
+each part to the Doom 3 source (`~/Developer/idTech/DOOM-3-BFG-master/neo/renderer` on this machine). Before
+changing lighting, shadows, culling or GPU storage, read the Doom 3 code it names and do it the same way unless
+there is a measured reason not to. Rules that follow from it:
+
+- **Never create a GL buffer per object, per mesh or per shadow volume.** Allocate ranges through
+  `vertex_cache.c`. One buffer each cost over a gigabyte of driver memory on macOS.
+- **No uploads in the back end.** Everything a frame needs is prepared in the front end and sent by one
+  `vcache_flush()` before the first draw; an upload between draws ends the driver's render pass.
+- **A shared model is immutable.** Objects differ by `SceneObj.model`; move an object by changing its matrix
+  (`scene_obj_set_matrix` in `scene.c`). For world-space triangles call `scene_obj_world_mesh()` and free the copy.
+- **Draw in batches.** Per-object values go into the instance buffer (`shader_fill_instance`), not into
+  uniforms set per object.
+- **Lights need a range to be culled.** `<light>` gets one from `LIGHT_CUTOFF`; do not hand out fixed ranges in
+  generators.
+- **Measure before and after**: time with `sample <pid>`, memory with `footprint -p <pid>` (peak, and which
+  category), and compare images pixel by pixel. Record dead ends in ARCHITECTURE.md so they are not retried.
 
 ## Reels and 3D infographics
 

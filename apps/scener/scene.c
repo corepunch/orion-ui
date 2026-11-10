@@ -684,7 +684,8 @@ static unsigned long long mesh_content_hash(const Mesh *m){
 }
 
 /* Identical geometry is stored once: a lathe ball, a garland bead or a snow drift made a thousand times is
-   one model with a thousand matrices. */
+   one model with a thousand matrices. This is Doom 3's split between idRenderModel (the geometry, shared) and
+   the render entity (its modelMatrix); the model is never changed once objects share it. */
 static Mesh *scene_share_mesh(Scene *s,Mesh *mesh,int castsShadow){
 	unsigned long long h=mesh_content_hash(mesh);
 	for(int i=0;i<s->nmodels;i++){
@@ -2413,7 +2414,8 @@ static void parse_prefab(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 	s->activeScreenImage=oldScreenImage;
 }
 
-/* A light with falloff stops where its contribution, intensity / (1 + d / radius)^2, has fallen to
+/* Doom 3 lights are boxes with a hard edge, which is what lets it cull by light bounds; here the box is
+   derived from the falloff. A light with falloff stops where its contribution, intensity / (1 + d / radius)^2, has fallen to
    LIGHT_CUTOFF: a strong lamp reaches far, a weak one lights only what stands near it, and neither is
    lit, shadowed or drawn for beyond that. A light without falloff (radius 0) has no range. */
 #define LIGHT_CUTOFF 0.05f

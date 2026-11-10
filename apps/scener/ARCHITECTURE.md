@@ -136,59 +136,81 @@ static const struct { const char *tag; modifier_parser_fn parse; } modifier_pars
 
 **Wall support:** `parse_wall` handles a `<wall>` tag with child `<opening>` tags. It performs "boolean via boxes" — the wall length axis is partitioned at opening boundaries, and each segment produces rectangular boxes below/above openings or across uninterrupted spans. Walls ignore scale; `castShadow` applies to the generated boxes.
 
+### The renderer follows Doom 3
+
+Lighting, shadows, memory layout and frame structure are modelled on Doom 3 BFG (`neo/renderer` in the GPL source).
+When changing the renderer, read the Doom 3 code named below first and keep the correspondence.
+
+| Scener | Doom 3 BFG | What it does |
+|---|---|---|
+| front end then back end in `render_frame()` | `tr_frontend_*.cpp`, `tr_backend_draw.cpp` | The front end decides what is drawn, builds and uploads it; the back end only draws |
+| `Scene.models`, `SceneObj.mesh/model/normalM` | `idRenderModel`, `idRenderEntityLocal::modelMatrix` | Geometry stored once, placed by matrices |
+| `vertex_cache.c` | `VertexCache.h` | Models and shadow indices are ranges of a few large buffers |
+| 20-byte GPU vertex, 16-bit indices | `idDrawVert`, `triIndex_t` | Compact vertices, packed normals |
+| `light_bounds()`, `box_screen_rect()` | `R_AddSingleLight`, `ProjectedFullyClippedBounds` | A light's scissor from its near-clipped bounds; empty drops the light |
+| lit list and its union per light | `R_OptimizeViewLightsList` | Nothing lit on screen: no shadows drawn either |
+| `shadow_bounds()` | `R_ShadowBounds` | A caster is drawn only if the box its shadow can reach meets the lit rectangle |
+| `view_may_be_inside()` | `R_ViewPotentiallyInsideInfiniteShadowVolume`, `renderZFail` | Z-fail with caps only where the view may be inside the volume, z-pass with sides elsewhere |
+| `build_shadow_indices()`, `Edge` | dynamic shadow volume job, `silEdge_t` | A volume is indices only: 2i is vertex i, 2i+1 the same vertex at infinity |
+| `s_shadow_vs` | `renderprogs/shadow.vertex` | The shader pushes the 2i+1 vertices away from the light |
+| light carried into model space | `localLightOrigin` in `Interaction.cpp` | Silhouettes are found on the shared model, not on a world copy |
+| batches sorted by model and state | draw surfaces sorted by material | Fewer state changes |
+| `<light range>`, `LIGHT_CUTOFF` | light volumes with a hard edge | What makes culling by light bounds possible |
+
+Not taken from Doom 3, and why: the depth-bounds test (macOS OpenGL has no such extension); portal areas (scenes
+are small and open); precomputed pre-light shadow volumes and parallel jobs (not needed yet). Per-frame shadow
+volumes in a frame-temporary buffer, which Doom 3 uses for moving geometry, become the right design once animated
+characters stand near shadow-casting lamps; static pairs should stay cached as they are. Added on top of Doom 3:
+instancing.
+
+Measured dead ends, so they are not tried again: drawing a model's whole edge set instanced and picking the
+silhouette in the vertex shader cut shadow draws 3.5 times but cost 50 MB more on a tile-based GPU and no time;
+one GL buffer per mesh or per shadow volume cost over a gigabyte in driver regions; `glFinish` per light lowers peak
+driver memory but blocks the interactive viewport.
+
+### Shared models
+
+`scene_add_obj()` looks the generated mesh up by content (`Scene.models`); every `SceneObj` keeps a pointer to
+that shared model in its own space plus `model`, `normalM` and `mirrored`, and `bmin`/`bmax` are its world bounds.
+Code that needs world-space triangles (`--check`, exporters, tests) asks `scene_obj_world_mesh()` for a copy.
+Dragging changes the matrix, never the shared vertices. A model is immutable once shared.
+
+### vertex_cache.c — GPU storage
+
+Models (20-byte vertices with packed normals, 16-bit indices) and shadow index lists are sub-allocated from a few
+large buffers. The macOS driver gives every GL buffer its own memory region, so one buffer per mesh costs
+gigabytes. Data is staged on the CPU and sent once per chunk by `vcache_flush()`: every upload to a buffer the GPU
+is using makes the driver keep another copy, and an upload between draws ends its render pass.
+
 ### shadow.c — Stencil shadow volumes
 
-Implements the classic vertex-shader-free algorithm:
-1. For each triangle edge: classify as silhouette edge if one adjacent face faces the light and the other faces away.
-2. Extrude silhouette edges away from the light as homogeneous directions with `w=0`.
-3. Close each volume with finite light caps and infinite dark caps.
-4. Store the sides and caps as a homogeneous triangle list in `ShadowVolume.verts`.
+1. `mesh_build_edges()` welds coincident positions and records the two triangles of each edge.
+2. `build_shadow_indices()` classifies triangles against the light (in model space); an edge is a silhouette when one
+   of its triangles faces the light and the other does not. It emits a quad per silhouette edge, then the caps.
+3. The shadow shader reads positions from the model's own buffer; odd indices are pushed to infinity (`w=0`).
 
-Volumes are built on demand, as Doom 3 builds interactions: `scene_build_all_shadow_volumes()` only marks the cached ones stale
-(`Scene.shadowRev`), and `render.c` builds the volume of a (light, caster) pair the first time a view needs it and keeps it in
-a GPU buffer. Each light follows Doom 3's `R_AddSingleLight`: the screen rectangle of its clipped bounds (a point light's
-`range` box, else the scene) drops the light when empty; only surfaces inside it are lit, each under its own `glScissor`; a
-light with nothing lit on screen draws no shadows; a caster is drawn only if the box its shadow can reach (`R_ShadowBounds`)
-meets the lit rectangle, and under that scissor. Not taken from Doom 3: the depth-bounds test (no such extension on
-macOS OpenGL), static pre-light volumes, and z-pass for volumes the camera cannot be inside (all volumes are z-fail).
+Volumes are built the first time a view needs a (light, caster) pair and kept until `Scene.shadowRev` changes.
+Casters the view cannot be inside draw z-pass with sides only; the others draw z-fail with caps, under depth clamp.
 
-### Shared models and the vertex cache
-
-As in Doom 3, geometry is stored once and placed by matrices. `scene_add_obj()` looks the generated mesh up by
-content (`Scene.models`); every `SceneObj` keeps a pointer to that shared model in its own space plus `model`,
-`normalM` and `mirrored`, and `bmin`/`bmax` are its world bounds. The renderer draws models with those matrices;
-shadow volumes are built with the light carried into model space (Doom 3's `localLightOrigin`). Code that needs
-world-space triangles (`--check`, exporters, tests) asks `scene_obj_world_mesh()` for a copy. Dragging changes the
-matrix, never the shared vertices.
-
-A frame has a front end and a back end, as Doom 3 does. The front end decides what is drawn (frustum and light
-culling), sorts objects into batches of one model and state, fills the instance buffer (matrix, normal matrix, colour,
-material and gradient per object, read by the vertex shader from a buffer texture), builds missing shadow volumes and
-uploads everything once. The back end only draws: one instanced call per batch for the depth-filling pass (ambient
-and mirrored sky together) and for each light. An upload between draws ends the macOS driver's render pass, so
-none happens there. Shadow volumes stay one draw per (light, caster): drawing a model's whole edge set instanced and
-picking the silhouette in the shader was tried, cut the draws by 3.5 times, and cost 50 MB more on a tile-based GPU
-for no gain in time.
-
-On the GPU, `vertex_cache.c` sub-allocates models (20-byte vertices with packed normals, 16-bit indices) and shadow
-index lists from a few large buffers; the macOS driver gives every GL buffer its own memory region, so one buffer
-per mesh cost gigabytes. Shadow volumes have no vertices of their own: index 2i is model vertex i, 2i+1 the same
-vertex at infinity, read by the shadow shader from the model's buffer. Caps exist only for casters drawn z-fail.
-
-Shadow construction depends on the sealed-mesh invariant. `mesh_build_edges()` welds coincident positions and records the two adjacent triangles for each edge. `build_shadow_volume()` compares those two face directions against the light; an edge is a silhouette only when one face points toward the light and the other points away. It extrudes only those silhouette edges, then uses the original mesh triangles as the finite and infinite caps for Z-fail.
-
-An open mesh gives an edge only one adjacent face, so the shadow builder treats it as a boundary silhouette. The resulting volume is generally not closed and stencil increments cannot cancel reliably. Fix the primitive instead of special-casing its shadows. `castShadow="0"` is for intentionally non-shadowing geometry, not for hiding invalid topology.
+Shadow construction depends on the sealed-mesh invariant. An open mesh gives an edge only one adjacent face, so
+the builder treats it as a boundary silhouette; the resulting volume is generally not closed and stencil counts
+cannot cancel reliably. Fix the primitive instead of special-casing its shadows. `castShadow="0"` is for
+intentionally non-shadowing geometry, not for hiding invalid topology.
 
 ### render.c — OpenGL rasterizer
 
-Uses a hybrid OpenGL 2.1 pipeline. Rendering passes:
+Core-profile OpenGL 3.2. A frame is:
 
-1. **Ambient pass**: Enable depth-write, disable stencil-write. Draw all objects with fixed-function vertex colors containing the linear material × ambient product.
-2. **Per-light pass** (for each light):
-   - Clear stencil buffer to 0.
-   - **Shadow volume pass (Z-fail)**: Disable color writes and depth writes, enable required depth clamp, and update stencil on depth failure. Render the closed, infinitely extruded volume. If depth clamp is unavailable, log that stencil shadows are unsupported and render the lights without shadows.
-   - **Lighting pass**: Enable additive blending, depth-test LEQUAL, and stencil-test EQUAL to 0. Draw diffuse plus GGX Cook-Torrance specular lighting through `shader.c`.
-3. **Debug modes**: wireframe shadow volumes (red), stencil != 0 overlay (red).
+1. **Front end** (no drawing): frustum-cull objects; for each light compute its screen rectangle, its lit objects
+   and its shadow casters; sort objects into batches of one model and state; fill the instance buffer (matrix,
+   normal matrix, colour, material, gradient per object, read by the vertex shader from a buffer texture); build
+   missing shadow indices; `vcache_flush()` and upload instances once.
+2. **Depth-filling pass**: one instanced draw per batch: ambient light plus the sky mirrored in glossy surfaces
+   (`skyReflection`). Screens with an image draw as images.
+3. **Per light**, under the light's scissor: clear stencil; draw its casters' volumes with color and depth writes
+   off (z-pass or z-fail per caster, each under its own scissor); then one instanced, additively blended draw per
+   lit batch where stencil is 0: diffuse plus GGX specular (`specular`, `metallic`), with the light's `range` window.
+4. **Debug modes**: wireframe, flat, wireframe shadow volumes.
 
 ### Color-space boundary
 
