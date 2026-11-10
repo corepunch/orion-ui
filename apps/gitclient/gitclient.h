@@ -45,6 +45,8 @@ static const char *gc_status_label(char c) {
 #define SCREEN_H 768
 #define evGitOpDone (evUser + 500)
 #define evOpenRepo  (evUser + 501)
+#define evRepoLoaded      (evUser + 503)   // lparam = git_repo_snapshot_t* (owned by the receiver)
+#define evSyncStatusLoaded (evUser + 504)  // lparam = git_sync_result_t* (owned by the receiver)
 #define evWorkspaceLoaded (evUser + 502)   // lparam = git_workspace_result_t* (owned by the receiver; NULL = the load failed)
 
 typedef struct { char hash[41]; char author[64]; char date[20]; char subject[256]; } git_commit_t;
@@ -226,6 +228,12 @@ typedef struct {
   git_summary_t checkouts[GC_MAX_CHECKOUTS];
   int checkout_count;
   bool fetching_all;
+  bool repo_loading, repo_stale;           // a repository load is running / a refresh was asked for while it ran
+  bool sync_loading, sync_stale;           // same for the branch/ahead/behind status
+  bool sync_loads;                         // run the loads on the calling thread (tests, scripting)
+  unsigned repo_generation;                // bumped whenever another repository is opened; stale results are dropped
+  git_sync_status_t sync;                  // last status read for gc->repo
+  bool sync_valid;
   bool overview_loading, overview_stale;   // a background load is running / the workspace changed while it ran
   bool ephemeral;
   char workspace[GC_MAX_RECENT_REPOS][512];
@@ -313,6 +321,28 @@ bool git_locate(const char *path, char *checkout, size_t checkout_n, char *main_
 bool git_get_summary(const char *path, const char *repo_name, bool linked, git_summary_t *out);
 int  git_workspace_checkouts(char (*roots)[512], int root_count, git_summary_t *out, int max);
 typedef struct { int count; git_summary_t rows[GC_MAX_CHECKOUTS]; } git_workspace_result_t;
+
+// Everything the Changes and History databases show, read with git only (no UI state), so a worker thread can fill it.
+#define GC_DB_LOAD_SNAPSHOT 1   // dbLoad wparam: lparam is a git_repo_snapshot_t instead of a git_repo_t
+enum { GIT_SNAP_FILES = 1, GIT_SNAP_HISTORY = 2, GIT_SNAP_SYNC = 4, GIT_SNAP_ALL = 7 };
+typedef struct {
+  git_repo_t *repo;            // set by the UI thread before the databases apply it
+  char path[512];
+  unsigned generation;         // the open-repository generation this was started for
+  int parts;
+  git_sync_status_t sync;
+  git_file_status_t files[256];   int file_count;
+  git_branch_t branches[256];     int branch_count;
+  git_commit_t commits[500];      int commit_count; int commit_branch;   // log of the current branch (-1 = none)
+  git_tag_t tags[256];            int tag_count;
+  git_stash_t stash[64];          int stash_count;
+  char remotes[16][256];          char remote_urls[16][512]; int remote_count;
+  git_worktree_t worktrees[GC_MAX_WORKTREES]; int worktree_count;
+} git_repo_snapshot_t;
+typedef struct { unsigned generation; char path[512]; git_sync_status_t sync; } git_sync_result_t;
+git_repo_snapshot_t *git_repo_snapshot_read(const char *path, int parts, unsigned generation);   // heap; NULL on allocation failure
+bool git_repo_snapshot_async(const char *path, int parts, unsigned generation, window_t *notify_win);
+bool git_sync_status_async(const char *path, unsigned generation, window_t *notify_win);
 bool git_workspace_checkouts_async(char (*roots)[512], int root_count, window_t *notify_win);
 bool git_fetch_all_async(char (*roots)[512], int count, window_t *notify_win);
 bool git_run_async(git_repo_t *repo, git_op_t op, const char *args[], window_t *notify_win);
@@ -327,11 +357,17 @@ result_t gc_toolbar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpa
 
 result_t gc_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void gc_open_repo(const char *path);
+void gc_open_checkout(const char *checkout, bool known);   // an already located checkout; returns before git has been read
+void gc_apply_snapshot(git_repo_snapshot_t *snap);
+void gc_render_status(void);
 void gc_add_repo(const char *path);
 void gc_update_title(void);
 bool gc_handle_open_file(const char *path);
 int  gc_fill_worktree_combo(window_t *combo, const char *select_path, char (*paths)[512], int max);
-void gc_refresh_all(void);
+void gc_refresh_all(void);       // reads the repository on a worker thread; pages update when it posts evRepoLoaded
+void gc_refresh_all_sync(void);  // same, on the calling thread (tests)
+void gc_repo_loaded(git_repo_snapshot_t *snap);
+void gc_sync_status_loaded(git_sync_result_t *res);
 void gc_show_search_dialog(window_t *parent);
 void gc_show_worktrees_dialog(window_t *parent);
 void gc_show_reflog_dialog(window_t *parent);
