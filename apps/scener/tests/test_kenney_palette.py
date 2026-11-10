@@ -15,7 +15,7 @@ def main():
   name, (bottom, top) = next((n, s) for n, s in pal.items() if s[0] != s[1])
   k = bk.Kit(2, 2, {})
   k.box("stone", 0, 0, 0, 1, 1, 1, (bottom, top))
-  line = k.lines[0]
+  line = k.lines[0].strip()
   assert 'color="1 1 1"' in line and "gradientFrom=" in line and "gradientTo=" in line, line
   if shutil.which("lua"):
     lua = 'package.path="%s/?.lua;"..package.path local K=require("building_kit") local p=K.palette("fantasy_town") local n=0 for _ in pairs(p) do n=n+1 end assert(n==%d, n) local k=K.new_kit(2,2,{ids={},order={}}) k:box("stone",0,0,0,1,1,1,p[%r]) print(k.lines[1])' % (

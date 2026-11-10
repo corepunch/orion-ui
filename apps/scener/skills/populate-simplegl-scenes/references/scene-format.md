@@ -349,6 +349,8 @@ Named material referenced by shapes via the `material` attribute. Scene-defined 
 | `shininess`  | float  | 8.0            | Phong specular exponent |
 | `ramp`       | 16 × vec3 | (none)      | Palette ramp: 48 numbers, sixteen sRGB shades from dark to light |
 
+| `gradientFrom`, `gradientTo`, `gradientAxis` | vec3, vec3, x/y/z | (none), y | A [gradient](#common-attributes) every shape using the material gets, unless the shape sets its own |
+
 A material with a `ramp` is lit like an Ecstatica palette run: for each light,
 the surface brightness (N·L, attenuation and light intensity) picks one of the
 sixteen shades, with a half-step dither between neighbours, and the light's hue
