@@ -32,6 +32,14 @@
 #include "theme.h"
 #include "style.h"
 
+// The pseudo-classes a control state matches.
+uint32_t theme_style_state(ctrl_state_t state) {
+  return ((state & CTRL_HOVER) ? STYLE_HOVER : 0) | ((state & CTRL_PRESSED) ? STYLE_ACTIVE : 0) |
+         ((state & CTRL_SELECTED) ? STYLE_CHECKED : 0) | ((state & CTRL_DISABLED) ? STYLE_DISABLED : 0) |
+         ((state & CTRL_FOCUSED) ? STYLE_FOCUS : 0) | ((state & CTRL_DEFAULT) ? STYLE_DEFAULT : 0) |
+         ((state & CTRL_INACTIVE) ? STYLE_WINDOW_INACTIVE : 0);
+}
+
 typedef struct {
   unsigned generation;
   bool background, gradient;
@@ -253,10 +261,7 @@ static void box_compute(theme_box_t *b, theme_part_t part, ctrl_state_t state, c
   const char *id = ui_scope_id(scope);
   style_query_t q = {
     .element = k_part_selectors[part].element, .part = k_part_selectors[part].part, .classes = classes, .id = *id ? id : NULL,
-    .state = ((state & CTRL_HOVER) ? STYLE_HOVER : 0) | ((state & CTRL_PRESSED) ? STYLE_ACTIVE : 0) |
-             ((state & CTRL_SELECTED) ? STYLE_CHECKED : 0) | ((state & CTRL_DISABLED) ? STYLE_DISABLED : 0) |
-             ((state & CTRL_FOCUSED) ? STYLE_FOCUS : 0) | ((state & CTRL_DEFAULT) ? STYLE_DEFAULT : 0) |
-             ((state & CTRL_INACTIVE) ? STYLE_WINDOW_INACTIVE : 0),
+    .state = theme_style_state(state),
     .vars = own_count ? instance_vars : NULL, .var_count = own_count,
   };
   b->color = get_sys_color(brTextNormal);

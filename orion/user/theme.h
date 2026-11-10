@@ -60,11 +60,6 @@ typedef enum {
 
 // ── Text rendering ────────────────────────────────────────────────────────
 
-// Standard 1-pixel drop-shadow offset used for all text labels.
-// Shadow is drawn at (x + TEXT_SHADOW_OFFSET, y + TEXT_SHADOW_OFFSET)
-// before the main text pass.
-#define TEXT_SHADOW_OFFSET   1
-
 // ── Buttons ───────────────────────────────────────────────────────────────
 
 // Pixel inset from the button frame to the text/icon content area.
@@ -323,6 +318,14 @@ void theme_css_apply_palette(void);   // writes the sheet's colour roles into g_
 void theme_draw_window_chrome(irect16_t titlebar, irect16_t caption, const char *title, ctrl_state_t state, bool maximizable);
 void theme_draw_statusbar_text(irect16_t r, const char *text);
 void theme_draw_button_label(const window_t *win, irect16_t r, const char *text, ctrl_state_t state);
+// Text of a control, styled by its selector in its state: the sheet's text-shadow
+// (`CheckBox:disabled { text-shadow: none }`) decides whether and where it is engraved.
+void theme_draw_text_clipped(const char *selector, const char *text, irect16_t r, uint32_t color, ctrl_state_t state);
+void theme_draw_text_wrapped(const char *selector, const char *text, irect16_t r, uint32_t color, ctrl_state_t state);
+int  theme_text_inset(const char *selector);   // room a box leaves for the text-shadow of selector
+// The pseudo-classes (STYLE_*) a control state matches, and a selector carrying them (ui_style.c).
+uint32_t theme_style_state(ctrl_state_t state);
+const char *ui_state_selector(const char *selector, ctrl_state_t state);
 void theme_draw_combobox(const window_t *win, irect16_t r, const char *text, ctrl_state_t state);
 
 // Tests observe what would be painted: while a recorder is set, parts and the

@@ -35,7 +35,8 @@ SplitView        { gap: 0; }
 /* Containers: spacing=, padding= and orientation= in a form override these, as inline styles would. */
 StackView, GridView, FlowView { gap: 4px; padding: 0; }
 StackView        { flex-direction: column; }
-Button           { padding-left: var(--control-padding); --press-offset: 0; text-shadow: none; }
+Button           { padding-left: var(--control-padding); padding-top: 2px; padding-bottom: 2px; --press-offset: 0; --label-offset: 0; }
+Button, Label, CheckBox { text-shadow: none; }
 Menu::item       { --shape: capsule; }
 Card {
   padding: 8px 12px;

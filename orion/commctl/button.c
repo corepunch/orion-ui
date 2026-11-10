@@ -60,6 +60,13 @@ static int command_link_height(const window_t *win) {
 }
 
 // Button control window procedure (text label buttons).
+// The box a button's label is laid out in: its frame less the sheet's padding.
+static irect16_t button_content(const window_t *win, irect16_t local) {
+  const char *button = ui_selector(win, "Button");
+  irect16_t r = rect_inset_xy(local, ui_px(button, "padding-left"), 0);
+  return rect_trim_bottom(rect_trim_top(r, ui_px(button, "padding-top")), ui_px(button, "padding-bottom"));
+}
+
 result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evDestroy:
@@ -153,7 +160,7 @@ result_t win_button(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) 
         }
         if (!icon_w) return true;
       }
-      irect16_t content = rect_inset_xy(local, ui_px(ui_selector(win, "Button"), "padding-left"), 2);
+      irect16_t content = button_content(win, local);
       irect16_t label = rect_center(content, text_strwidth(ui_selector(win, "Button"), win->title) + icon_w, text_char_height(ui_selector(win, "Button")));
       label = rect_trim_left(label, icon_w);
       theme_draw_button_label(win, label, win->title, state);
@@ -276,8 +283,7 @@ result_t win_toolbar_button(window_t *win, uint32_t msg, uint32_t wparam, void *
       }
       if (!drew_icon) {
         // Fallback: draw text label when no image has been set.
-        irect16_t inner = rect_inset_xy(local, ui_px(ui_selector(win, "Button"), "padding-left"), 2);
-        theme_draw_button_label(win, inner, win->title, state);
+        theme_draw_button_label(win, button_content(win, local), win->title, state);
       }
       return true;
     }
