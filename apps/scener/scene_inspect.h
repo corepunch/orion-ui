@@ -96,11 +96,16 @@ static vec3 closest_on_triangle(vec3 p,vec3 a,vec3 b,vec3 c){
 	return vadd(a,vadd(vscale(ab,vb*denom),vscale(ac,vc*denom)));
 }
 
-static float mesh_surface_distance(const Mesh *m,vec3 p){
+/* Distance from p to the mesh surface; stops as soon as it is known to be at most floor, and skips
+   triangles whose bounds are already farther than the best found (bounds: 6 floats per triangle). */
+static float mesh_surface_distance(const Mesh *m,const float *bounds,vec3 p,float floor){
 	float best=INFINITY;
 	for(int i=0;i<m->ntris;i++){
+		const float *b=bounds+6*i;
+		float dx=fmaxf(fmaxf(b[0]-p.x,p.x-b[3]),0),dy=fmaxf(fmaxf(b[1]-p.y,p.y-b[4]),0),dz=fmaxf(fmaxf(b[2]-p.z,p.z-b[5]),0);
+		if(dx*dx+dy*dy+dz*dz>=best*best) continue;
 		vec3 q=closest_on_triangle(p,m->verts[m->tris[i].a].pos,m->verts[m->tris[i].b].pos,m->verts[m->tris[i].c].pos);
-		float d=vlen(vsub(p,q)); if(d<best) best=d;
+		float d=vlen(vsub(p,q)); if(d<best){ best=d; if(best<=floor) break; }
 	}
 	return best;
 }
@@ -112,24 +117,70 @@ static Bounds tri_bounds(const Mesh *m,int t){
 	return b;
 }
 
-static float point_penetration(const Mesh *b,Bounds bb,vec3 p){
-	if(!point_in_bounds(p,bb,0) || !mesh_encloses(b,p)) return 0;
-	return mesh_surface_distance(b,p);
+/* mesh_encloses with a cheap reject: the ray direction is fixed, so each triangle's footprint along it
+   (a 2D box in the plane across the ray) is computed once per mesh and most triangles are skipped per point. */
+typedef struct { float *box,*bounds; vec3 u,w; } enclose_cache_t;   /* per triangle: footprint min u, max u, min w, max w; and 3D min xyz, max xyz */
+static void enclose_basis(vec3 *u,vec3 *w){
+	vec3 d=vnorm(v3(ENCLOSURE_RAY_X,ENCLOSURE_RAY_Y,ENCLOSURE_RAY_Z));
+	vec3 t=fabsf(d.x)<0.9f?v3(1,0,0):v3(0,1,0);
+	*u=vnorm(vcross(d,t)); *w=vcross(d,*u);
+}
+static enclose_cache_t enclose_cache_build(const Mesh *m){
+	enclose_cache_t c; c.box=malloc(sizeof(float)*4*(size_t)(m->ntris?m->ntris:1)); c.bounds=malloc(sizeof(float)*6*(size_t)(m->ntris?m->ntris:1));
+	vec3 u,w; enclose_basis(&u,&w); c.u=u; c.w=w;
+	for(int i=0;i<m->ntris;i++){
+		float *b=c.box+4*i; b[0]=b[2]=INFINITY; b[1]=b[3]=-INFINITY;
+		int id[3]={m->tris[i].a,m->tris[i].b,m->tris[i].c};
+		Bounds tb=tri_bounds(m,i); memcpy(c.bounds+6*i,&tb,sizeof(tb));
+		for(int k=0;k<3;k++){
+			vec3 p=m->verts[id[k]].pos; float pu=vdot(p,u),pw=vdot(p,w);
+			b[0]=fminf(b[0],pu); b[1]=fmaxf(b[1],pu); b[2]=fminf(b[2],pw); b[3]=fmaxf(b[3],pw);
+		}
+	}
+	return c;
+}
+static int mesh_encloses_cached(const Mesh *m,const enclose_cache_t *c,vec3 p){
+	vec3 d=v3(ENCLOSURE_RAY_X,ENCLOSURE_RAY_Y,ENCLOSURE_RAY_Z);
+	float pu=vdot(p,c->u),pw=vdot(p,c->w),margin=1e-4f;
+	int crossings=0;
+	for(int i=0;i<m->ntris;i++){
+		const float *b=c->box+4*i;
+		if(pu<b[0]-margin || pu>b[1]+margin || pw<b[2]-margin || pw>b[3]+margin) continue;
+		vec3 a=m->verts[m->tris[i].a].pos,bb=m->verts[m->tris[i].b].pos,cc=m->verts[m->tris[i].c].pos;
+		vec3 e1=vsub(bb,a),e2=vsub(cc,a),h=vcross(d,e2); float det=vdot(e1,h);
+		if(fabsf(det)<ENCLOSURE_EPSILON) continue;
+		vec3 q=vsub(p,a); float uu=vdot(q,h)/det; if(uu<0 || uu>1) continue;
+		vec3 r=vcross(q,e1); float v=vdot(d,r)/det; if(v<0 || uu+v>1) continue;
+		if(vdot(e2,r)/det>ENCLOSURE_EPSILON) crossings++;
+	}
+	return crossings&1;
+}
+
+/* Depth of p inside the closed mesh b, or anything at most floor. A point inside b lies within floor of
+   its bounds' face only if the surface is that close (the mesh fills its bounds, so the ray to that face
+   crosses it), so such points are skipped before the expensive tests. */
+static float point_penetration(const Mesh *b,const enclose_cache_t *c,Bounds bb,vec3 p,float floor){
+	if(!point_in_bounds(p,bb,-floor) || !mesh_encloses_cached(b,c,p)) return 0;
+	return mesh_surface_distance(b,c->bounds,p,floor);
 }
 
 /* Deepest sample of a inside the closed mesh b, in metres. Edges and faces are sampled as well as
    vertices, so a cylinder pushed through a slab is found although none of its vertices are inside. */
-static float mesh_penetration(const Mesh *a,const Mesh *b,Bounds bb){
-	float depth=0;
-	for(int i=0;i<a->nverts;i++) depth=fmaxf(depth,point_penetration(b,bb,a->verts[i].pos));
+static float mesh_penetration(const Mesh *a,const Mesh *b,Bounds bb,float known){
+	float depth=0,floor=fmaxf(known,CHECK_PENETRATION_CM/CM_PER_METRE);
+	enclose_cache_t cache=enclose_cache_build(b);
+#define SAMPLE(P) do{ depth=fmaxf(depth,point_penetration(b,&cache,bb,(P),floor)); floor=fmaxf(floor,depth); }while(0)
+	for(int i=0;i<a->nverts;i++) SAMPLE(a->verts[i].pos);
 	for(int t=0;t<a->ntris;t++){
 		vec3 p[3]={a->verts[a->tris[t].a].pos,a->verts[a->tris[t].b].pos,a->verts[a->tris[t].c].pos};
 		Bounds tb=tri_bounds(a,t);
 		if(bounds_gap(tb,bb)>0) continue;
-		depth=fmaxf(depth,point_penetration(b,bb,vscale(vadd(p[0],vadd(p[1],p[2])),1.0f/3)));
+		SAMPLE(vscale(vadd(p[0],vadd(p[1],p[2])),1.0f/3));
 		for(int e=0;e<3;e++) for(int k=1;k<CHECK_EDGE_SAMPLES;k++)
-			depth=fmaxf(depth,point_penetration(b,bb,lerp(p[e],p[(e+1)%3],(float)k/CHECK_EDGE_SAMPLES)));
+			SAMPLE(lerp(p[e],p[(e+1)%3],(float)k/CHECK_EDGE_SAMPLES));
 	}
+#undef SAMPLE
+	free(cache.box); free(cache.bounds);
 	return depth;
 }
 
@@ -215,15 +266,14 @@ static void check_geometry(Scene *s){
 		SceneObj *oa=&s->objs[a->obj],*ob=&s->objs[b->obj];
 		char la[CHECK_LABEL_CAPACITY],lb[CHECK_LABEL_CAPACITY];
 		if(a->unit!=b->unit && -gap>penetration){
-			float depth=0;
-			if(mesh_closed(&ob->mesh)) depth=fmaxf(depth,mesh_penetration(&oa->mesh,&ob->mesh,b->b));
-			if(mesh_closed(&oa->mesh)) depth=fmaxf(depth,mesh_penetration(&ob->mesh,&oa->mesh,a->b));
+			int at=-1;   /* a deeper hit of this unit pair is already known: only deeper samples can change the report */
+			for(int k=0;k<nhits;k++) if((hits[k].a==a->unit && hits[k].b==b->unit) || (hits[k].a==b->unit && hits[k].b==a->unit)) at=k;
+			float known=at>=0?hits[at].depth:0,depth=0;
+			if(mesh_closed(&ob->mesh)) depth=fmaxf(depth,mesh_penetration(&oa->mesh,&ob->mesh,b->b,known));
+			if(mesh_closed(&oa->mesh)) depth=fmaxf(depth,mesh_penetration(&ob->mesh,&oa->mesh,a->b,known));
 			if(depth>penetration){
-				int found=0;
-				for(int k=0;k<nhits;k++) if((hits[k].a==a->unit && hits[k].b==b->unit) || (hits[k].a==b->unit && hits[k].b==a->unit)){
-					hits[k].depth=fmaxf(hits[k].depth,depth); found=1;
-				}
-				if(!found){ check_pair_t h={a->unit,b->unit,depth}; DA_PUSH(hits,nhits,chits,h); }
+				if(at>=0) hits[at].depth=fmaxf(hits[at].depth,depth);
+				else { check_pair_t h={a->unit,b->unit,depth}; DA_PUSH(hits,nhits,chits,h); }
 			}
 		}
 		if(meshes_share_plane(&oa->mesh,a->b,&ob->mesh,b->b)){
