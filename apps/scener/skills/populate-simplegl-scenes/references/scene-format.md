@@ -147,6 +147,33 @@ clamp mix hypot rad deg`). Scene expressions are static: reel names such as
 load; the editor and saving keep the source text, and dragging an object
 replaces its expression with the dragged value.
 
+## Utilities: `<define>` and `<include>`
+
+A utility is a named, documented composition of atoms, written in XML. The engine has no `box`-like
+primitive for it; a `<define>` is expanded at load, before expressions are evaluated.
+
+```xml
+<define name="soft-box" doc="Box with rounded vertical edges">
+  <param name="width"  doc="x size, cm"/>
+  <param name="radius" default="6" doc="corner radius, cm"/>
+  <shape closed="0">
+    <v x="-{${width}/2}" y="-50"/><v x="{${width}/2}" y="-50"/>
+    <shell amount="100"/><fillet radius="${radius}"/><extrude amount="80"/><bevel amount="2"/>
+  </shape>
+</define>
+<soft-box width="200" pos="0 50 0" material="mud"/>
+```
+
+- `<param name default doc>` declares an argument; a param without `default` is required.
+  `${name}` is replaced by the argument text in every attribute of the body (then `{expr}` is evaluated as usual).
+- The body is exactly one element. Call attributes that are not params (`pos`, `rot`, `color`,
+  `material`, ...) are set on that element; child elements of the call are appended to it.
+- A body may call other utilities. Definitions sit at the top level of a scene or of a `<library>`
+  file, which `<include src="utilities.xml"/>` pulls in (path relative to the including file).
+  A later definition of the same name replaces an earlier one (warning).
+- `scenes/utilities.xml` provides `soft-box`, `slab` and `column`; `scenes/handwritten_hut.blks` uses them.
+- Saving a scene writes the expanded elements, not the calls.
+
 ## Quick example
 
 ```xml
@@ -393,6 +420,9 @@ ref="...">`. Declare it as a top-level scene child.
 | `feet` | float | 0.0 | Foot landmark height fraction |
 
 ### `<shape>`
+
+A `<shell>` before `<extrude>` thickens an open line into a flat outline, so
+line, `<shell>`, `<fillet>`, `<extrude>`, `<bevel>` builds a rounded slab.
 
 A line or outline in the XY plane, given as a sequence of `(x, y)` vertices.
 With an `id` it is a reusable profile for `<lathe>` and `<loft>`. With an

@@ -724,6 +724,9 @@ static void scene_issue(Scene *s,int severity,const char *kind,const char *file,
 }
 
 #include "scene_expr.h"
+static char* read_file(const char*path);
+static int scene_let_name_valid_tag(const char *name){ if(!name||!*name) return 0; for(const char *c=name;*c;c++) if(!isalnum((unsigned char)*c)&&*c!='-'&&*c!='_') return 0; return 1; }
+#include "scene_define.h"
 
 static int axis_vector(const char *text,vec3 *out);
 /* A prefab may declare its authored up axis and the direction its front faces at rot 0. */
@@ -1076,7 +1079,8 @@ typedef enum { PROFILE_RECT, PROFILE_ROUNDED_RECT, PROFILE_CIRCLE, PROFILE_ELLIP
    points are a line (closed="0") or a perimeter; <fillet> rounds the current outline's corners
    (only the inner bends of a line); <extrude> pushes it along local Z, turning a line into a face
    and a perimeter into a solid; <shell> gives a face its thickness, growing to the left of the
-   line's direction (a negative amount grows to the right); <bevel> rounds the solid's two rims.
+   line's direction (a negative amount grows to the right; before <extrude> it turns a line into a
+   flat outline, so line, shell, fillet, extrude, bevel builds a rounded slab); <bevel> rounds the solid's two rims.
    Everything after the bevel is an ordinary mesh modifier. */
 static void parse_shape_node(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,vec3 rot,vec3 color,float shin,int castsShadow,int renderable,int unlit){
 	(void)parentM; (void)pos; (void)rot;
@@ -1098,8 +1102,8 @@ static void parse_shape_node(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3
 			depth=xml_attr_f_cm(c,"amount",0); extruded=1; stage=1;
 		} else if(!strcmp(tag,"shell")){
 			float amount=xml_attr_f_cm(c,"amount",0);
-			if(!extruded||cur.closed||fabsf(amount)<=0){
-				scene_issue(s,SCENE_ISSUE_ERROR,"shape",file,c->line,"<shell> in <shape> thickens an extruded open line; it needs <extrude> before it and a non-zero amount");
+			if(cur.closed||fabsf(amount)<=0){
+				scene_issue(s,SCENE_ISSUE_ERROR,"shape",file,c->line,"<shell> in <shape> thickens an open line into an outline; it needs a line (not a closed outline) and a non-zero amount");
 				ok=0; break;
 			}
 			Shape2D next=shape2d_stroke(&cur,amount>0?amount:0,amount<0?-amount:0);
@@ -1110,7 +1114,7 @@ static void parse_shape_node(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3
 		} else { stage=3; last=i; }
 	}
 	if(ok&&!cur.closed){
-		scene_issue(s,SCENE_ISSUE_ERROR,"shape",file,n->line,"<shape> line needs <shell> after <extrude> to become a solid");
+		scene_issue(s,SCENE_ISSUE_ERROR,"shape",file,n->line,"<shape> line needs <shell> (before or after <extrude>) to become a solid");
 		ok=0;
 	}
 	Shape2D outline=ok?shape2d_outline(&cur):(Shape2D){0};
@@ -1896,6 +1900,7 @@ static XmlNode* load_prefab(Scene *s, const char *name){
 	PrefabDef pd; memset(&pd,0,sizeof(pd)); snprintf(pd.ref,sizeof(pd.ref),"%s",name); pd.root=root;
 	strncpy(pd.path,path,sizeof(pd.path)-1);
 	snprintf(pd.description,sizeof(pd.description),"%s",xp_comment);
+	scene_expand_defines(s,root,path);
 	scene_resolve_expressions(s,root,path);
 	if(!strcmp(root->tag,"prefab")) check_prefab_axes(s,root,path);
 	warn_unknown_elements(s,root,path,1);
@@ -3012,6 +3017,7 @@ int load_scene(const char *path, Scene *s){
 	if(!root){ fprintf(stderr,"failed to parse %s\n",path); return 0; }
 	snprintf(s->description,sizeof(s->description),"%s",xp_comment);
 	s->sceneRoot=s->editRoot=root;
+	scene_expand_defines(s,root,path);
 	scene_resolve_expressions(s,root,path);
 	const char *up=xml_attr(root,"up","y");
 	if(strcmp(up,"y") && strcmp(up,"z")){ fprintf(stderr,"invalid scene up axis: %s\n",up); scene_free(s); return 0; }

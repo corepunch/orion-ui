@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A hut written by hand, the way an agent would: a few utilities from utilities.xml, no generator. -->
+<scene ambient="0.55 0.54 0.58" background="0.62 0.72 0.95">
+  <include src="utilities.xml"/>
+  <sun dir="-0.4 -1 -0.9" color="1.0 0.93 0.80" intensity="0.95" castShadows="1"/>
+  <camera name="Front" pos="260 220 380" look="0 60 0" fov="30"/>
+  <material id="mud" color="0.78 0.62 0.42" shininess="3"/>
+  <material id="roof" color="0.55 0.42 0.28" shininess="3"/>
+  <slab width="600" height="6" depth="600" pos="0 3 0" color="0.7 0.68 0.6"/>
+  <soft-box width="200" height="120" depth="160" radius="10" bevel="3" pos="0 66 0" material="mud"/>
+  <soft-box width="230" height="14" depth="190" radius="6" bevel="2" pos="0 133 0" material="roof"/>
+  <column radius="7" height="130" taper="-0.08" pos="-110 6 90" material="mud"/>
+</scene>
