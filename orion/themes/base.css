@@ -29,7 +29,11 @@ MenuBar          { height: var(--menubar-height); }
 Scrollbar        { width: var(--scrollbar-width); }
 Toolbar          { padding: 3px; }
 Toolbar::button  { height: var(--toolbar-height); }
-TabView::tab     { height: var(--titlebar-height); min-width: 80px; padding-left: 16px; }
+TabView          { --desired-width: 200px; --desired-height: 200px; }
+TabView::tab     { height: var(--titlebar-height); min-width: 80px; padding-left: 16px; padding-right: 16px; gap: 3px;
+                   --icon-only-pad: 8px; --icon-margin: 4px; --rest-offset: 2px; }
+TabView::list    { padding: 6px; }
+TabView::row     { height: 24px; min-width: 96px; padding-left: 6px; padding-right: 6px; gap: 3px; --capsule-bleed: 4px; }
 TabView::pane    { --frame-width: 0; --pane-margin: 2px; }
 SplitView        { gap: 0; }
 /* Containers: spacing=, padding= and orientation= in a form override these, as inline styles would. */
@@ -54,7 +58,7 @@ Scrollbar           { --overlay: 0; }
 Toolbar.compact     { padding: 2px; gap: 6px; --icon-size: var(--compact-icon-size); margin-left: 8px; }
 Toolbar::grip       { width: 12px; }
 Toolbar::split-arrow { width: 12px; }
-TabView::bar        { padding-left: 0; }
+TabView::bar        { padding-left: 0; padding-top: 1px; }
 TableView::header   { min-height: 0; }
 TableView::row      { min-height: 0; }
 TableView::divider  { width: 1px; }

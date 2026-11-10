@@ -53,8 +53,29 @@ typedef struct {
   bool item_mode;
 } tabview_state_t;
 
-#define SIDEBAR_PAD 6
-#define TAB_TOP_PAD 1
+// Every metric below is the style sheet's (TabView::tab, ::bar, ::pane, ::list, ::row); this is the one
+// place that reads them, and paint, hit-testing, measure and arrange all take their geometry from it.
+typedef struct {
+  int tab_h, tab_min, tab_pad_l, tab_pad_r, tab_gap, icon_only_pad, icon_margin, rest_offset;
+  int bar_pad, bar_top, pane_frame;
+  int row_h, row_min, row_pad_l, row_pad_r, row_gap, row_bleed;
+  irect16_t list_pad; // left, top, right, bottom around the rows
+  int desired_w, desired_h;
+} tab_metrics_t;
+
+static tab_metrics_t tab_metrics(const window_t *win) {
+  const char *tab = ui_selector(win, "TabView::tab"), *bar = ui_selector(win, "TabView::bar");
+  const char *row = ui_selector(win, "TabView::row"), *list = ui_selector(win, "TabView::list");
+  const char *pane = ui_selector(win, "TabView::pane"), *self = ui_selector(win, "TabView");
+  return (tab_metrics_t){
+    ui_px(tab, "height"), ui_px(tab, "min-width"), ui_px(tab, "padding-left"), ui_px(tab, "padding-right"),
+    ui_px(tab, "gap"), ui_px(tab, "--icon-only-pad"), ui_px(tab, "--icon-margin"), ui_px(tab, "--rest-offset"),
+    ui_px(bar, "padding-left"), ui_px(bar, "padding-top"), ui_px(pane, "--frame-width"),
+    ui_px(row, "height"), ui_px(row, "min-width"), ui_px(row, "padding-left"), ui_px(row, "padding-right"),
+    ui_px(row, "gap"), ui_px(row, "--capsule-bleed"),
+    R(ui_px(list, "padding-left"), ui_px(list, "padding-top"), ui_px(list, "padding-right"), ui_px(list, "padding-bottom")),
+    ui_px(self, "--desired-width"), ui_px(self, "--desired-height")};
+}
 
 static bool is_sidebar(const tabview_state_t *st) { return st && (st->style & TAB_STYLE_SIDEBAR); }
 
@@ -154,8 +175,9 @@ static void tab_forget_window(tabview_state_t *st, window_t *win) {
   }
 }
 
-static int tab_header_height(tabview_state_t *st) {
-  return (st && st->strip.cols > 0) ? MAX(TAB_CONTROL_HEIGHT, st->strip.icon_h + 4) : TAB_CONTROL_HEIGHT;
+static int tab_header_height(window_t *win, tabview_state_t *st) {
+  tab_metrics_t m = tab_metrics(win);
+  return (st && st->strip.cols > 0) ? MAX(m.tab_h, st->strip.icon_h + m.icon_margin) : m.tab_h;
 }
 
 static bool tab_single_hidden(window_t *win, tabview_state_t *st) {
@@ -163,7 +185,7 @@ static bool tab_single_hidden(window_t *win, tabview_state_t *st) {
 }
 
 static int tab_header_extent(window_t *win, tabview_state_t *st) {
-  return tab_single_hidden(win, st) && !st->actions ? 0 : tab_header_height(st);
+  return tab_single_hidden(win, st) && !st->actions ? 0 : tab_header_height(win, st);
 }
 
 static bool tab_has_icon(tabview_state_t *st, int idx) {
@@ -171,24 +193,22 @@ static bool tab_has_icon(tabview_state_t *st, int idx) {
          && st->tab_icons[idx] >= 0 && st->strip.cols > 0;
 }
 
-static int tab_icon_gap(tabview_state_t *st) {
-  (void)st; return 3;
-}
-
 static int tab_width(window_t *win, const char *title, tabview_state_t *st, int idx) {
+  tab_metrics_t m = tab_metrics(win);
   if (st && (st->style & TAB_STYLE_ICONS_ONLY))
-    return tab_has_icon(st, idx) ? st->strip.icon_w + 8 : TAB_CONTROL_HEIGHT;
-  int w = MAX(ui_px(ui_selector(win, "TabView::tab"), "min-width"), text_strwidth(ui_selector(win, "TabView::tab"), title) + 2 * ui_px(ui_selector(win, "TabView::tab"), "padding-left"));
-  if (tab_has_icon(st, idx)) w += st->strip.icon_w + tab_icon_gap(st);
+    return tab_has_icon(st, idx) ? st->strip.icon_w + m.icon_only_pad : m.tab_h;
+  int w = MAX(m.tab_min, text_strwidth(ui_selector(win, "TabView::tab"), title) + m.tab_pad_l + m.tab_pad_r);
+  if (tab_has_icon(st, idx)) w += st->strip.icon_w + m.tab_gap;
   return w;
 }
 
 // Width of the row column; the list window adds its scrollbar when one shows.
 static int sidebar_rows_width(window_t *win, tabview_state_t *st) {
-  int w = 96;
+  tab_metrics_t m = tab_metrics(win);
+  int w = m.row_min, chrome = m.list_pad.x + m.list_pad.w + m.row_pad_l + m.row_pad_r;
   for (int i = 0, n = tab_count(win); i < n; i++) {
-    int iw = tab_has_icon(st, i) ? st->strip.icon_w + tab_icon_gap(st) : 0;
-    w = MAX(w, text_strwidth(ui_selector(win, "TabView::tab"), tab_title(win, i)) + iw + 4 * SIDEBAR_PAD);
+    int iw = tab_has_icon(st, i) ? st->strip.icon_w + m.row_gap : 0;
+    w = MAX(w, text_strwidth(ui_selector(win, "TabView::row"), tab_title(win, i)) + iw + chrome);
   }
   return w;
 }
@@ -199,14 +219,14 @@ static int sidebar_width(window_t *win, tabview_state_t *st) {
 
 // Row rectangle in the list's content space.
 static irect16_t sidebar_row(window_t *win, tabview_state_t *st, int idx) {
-  (void)win;
+  int h = tab_metrics(win).row_h;
   irect16_t content = window_scroll_content_rect(st->list);
-  return R(content.x, content.y + idx * TAB_SIDEBAR_ROW_HEIGHT, content.w, TAB_SIDEBAR_ROW_HEIGHT);
+  return R(content.x, content.y + idx * h, content.w, h);
 }
 
 static void sidebar_sync_scroll(window_t *win, tabview_state_t *st) {
-  window_set_scroll_content(st->list, 0, tab_count(win) * TAB_SIDEBAR_ROW_HEIGHT,
-                            (irect16_t){SIDEBAR_PAD, SIDEBAR_PAD, SIDEBAR_PAD, SIDEBAR_PAD}, (irect16_t){0});
+  tab_metrics_t m = tab_metrics(win);
+  window_set_scroll_content(st->list, 0, tab_count(win) * m.row_h, m.list_pad, (irect16_t){0});
 }
 
 static void draw_tab_icon(tabview_state_t *st, int idx, int x, int y, int h) {
@@ -225,17 +245,18 @@ static void draw_tab_icon(tabview_state_t *st, int idx, int x, int y, int h) {
 
 static void draw_tab_item(window_t *win, const char *title, int x, bool selected, tabview_state_t *st, int idx) {
   int w = tab_width(win, title, st, idx);
-  int th = tab_header_height(st);
-  int y = (selected ? 0 : 2) + ((st->style & TAB_STYLE_PANE) ? 0 : TAB_TOP_PAD);
+  tab_metrics_t m = tab_metrics(win);
+  int th = tab_header_height(win, st);
+  int y = (selected ? 0 : m.rest_offset) + ((st->style & TAB_STYLE_PANE) ? 0 : m.bar_top);
   int h = th - y;
   ctrl_state_t state = selected ? CTRL_SELECTED : CTRL_NORMAL;
-  theme_draw_in(win, THEME_PART_TAB, rect_inset_xy(R(x, y, w, h), selected ? 0 : 2, 0), state);
+  theme_draw_in(win, THEME_PART_TAB, rect_inset_xy(R(x, y, w, h), selected ? 0 : m.rest_offset, 0), state);
   bool has_icon = tab_has_icon(st, idx);
   if (st->style & TAB_STYLE_ICONS_ONLY) {
     draw_tab_icon(st, idx, x + (w - st->strip.icon_w) / 2, y, h);
     return;
   }
-  int sw = text_strwidth(ui_selector(win, "TabView::tab"), title), iw = has_icon ? st->strip.icon_w + tab_icon_gap(st) : 0;
+  int sw = text_strwidth(ui_selector(win, "TabView::tab"), title), iw = has_icon ? st->strip.icon_w + m.tab_gap : 0;
   int content_w = iw + sw;
   int cx = x + (w - content_w) / 2;
   if (has_icon) { draw_tab_icon(st, idx, cx, y, h); cx += iw; }
@@ -247,7 +268,7 @@ static irect16_t tab_page_rect(window_t *win, tabview_state_t *st, irect16_t r) 
   if (is_sidebar(st)) return rect_trim_left(r, sidebar_width(win, st));
   if (!tab_header_extent(win, st)) return r;
   irect16_t page_rect = rect_trim_top(r, tab_header_extent(win, st));
-  int frame = ui_px(ui_selector(win, "TabView::pane"), "--frame-width");
+  int frame = tab_metrics(win).pane_frame;
   page_rect.x += frame; page_rect.w = MAX(0, page_rect.w - 2 * frame);
   page_rect.h = MAX(0, page_rect.h - frame);
   return page_rect;
@@ -271,7 +292,7 @@ static void tab_arrange(window_t *win) {
   if (!st) return;
   if (st->actions) {
     show_window(st->actions, !is_sidebar(st));
-    int height = tab_header_height(st);
+    int height = tab_header_height(win, st);
     send_message(st->actions, tbSetButtonSize, MAX(8, height - 2 * toolbar_effective_padding(st->actions)), NULL);
     isize16_t size = {0};
     send_message(st->actions, tbGetIdealSize, 0, &size);
@@ -290,7 +311,7 @@ static void tab_arrange(window_t *win) {
   }
   if (tab_single_hidden(win, st)) st->scroll = 0;
   else if (!is_sidebar(st)) {
-    int start = ui_px(ui_selector(win, "TabView::bar"), "padding-left");
+    int start = tab_metrics(win).bar_pad;
     int x = start, selected_x = start, selected_w = 0, width = tab_available_width(win, st);
     for (int idx = 0; idx < count; idx++) {
       int w = tab_width(win, tab_title(win, idx), st, idx);
@@ -347,17 +368,19 @@ static result_t win_tabview_list(window_t *win, uint32_t msg, uint32_t wparam, v
   switch (msg) {
     case evPaint: {
       int h = get_client_rect(win).h;
+      tab_metrics_t m = tab_metrics(tabs);
       theme_draw_in(win, THEME_PART_SIDEBAR, get_client_rect(win), CTRL_NORMAL);
       for (int i = 0, n = tab_count(tabs); i < n; i++) {
         irect16_t r = window_scroll_rect_to_client(win, sidebar_row(tabs, st, i));
         if (r.y + r.h >= 0 && r.y <= h) {
           ctrl_state_t state = i == st->selected ? CTRL_SELECTED : CTRL_NORMAL;
           // Same capsule as a menu item; the theme insets it, so widen the rect to land on the row.
-          if (i == st->selected) theme_draw_in(win, THEME_PART_MENU_ITEM, rect_inset_xy(r, -MENU_CAPSULE_INSET, 0), state);
-          int x = r.x + SIDEBAR_PAD;
-          if (tab_has_icon(st, i)) { draw_tab_icon(st, i, x, r.y, r.h); x += st->strip.icon_w + tab_icon_gap(st); }
-          draw_text_ellipsized(ui_selector(win, "TabView::tab"), tab_title(tabs, i), x, r.y + (r.h - text_char_height(ui_selector(win, "TabView::tab"))) / 2,
-                               r.x + r.w - SIDEBAR_PAD - x, theme_foreground_in(win, THEME_PART_MENU_ITEM, state));
+          if (i == st->selected) theme_draw_in(win, THEME_PART_MENU_ITEM, rect_inset_xy(r, -m.row_bleed, 0), state);
+          const char *row = ui_selector(tabs, "TabView::row");
+          int x = r.x + m.row_pad_l;
+          if (tab_has_icon(st, i)) { draw_tab_icon(st, i, x, r.y, r.h); x += st->strip.icon_w + m.row_gap; }
+          draw_text_ellipsized(row, tab_title(tabs, i), x, r.y + (r.h - text_char_height(row)) / 2,
+                               r.x + r.w - m.row_pad_r - x, theme_foreground_in(win, THEME_PART_MENU_ITEM, state));
         }
       }
       return true;
@@ -397,11 +420,12 @@ static bool tab_paint(window_t *win) {
   if (!st) return true;
 
   set_clip_rect(win, R(0, 0, tab_available_width(win, st), th));
-  int selected_x = ui_px(ui_selector(win, "TabView::bar"), "padding-left") - st->scroll;
+  tab_metrics_t m = tab_metrics(win);
+  int selected_x = m.bar_pad - st->scroll;
   int x = selected_x;
   if (tab_single_hidden(win, st)) {
-    if (th) draw_text_ellipsized(ui_selector(win, "TabView::tab"), tab_title(win, 0), ui_px(ui_selector(win, "TabView::tab"), "padding-left"),
-      (th - text_char_height(ui_selector(win, "TabView::tab"))) / 2, MAX(0, tab_available_width(win, st) - 2 * ui_px(ui_selector(win, "TabView::tab"), "padding-left")),
+    if (th) draw_text_ellipsized(ui_selector(win, "TabView::tab"), tab_title(win, 0), m.tab_pad_l,
+      (th - text_char_height(ui_selector(win, "TabView::tab"))) / 2, MAX(0, tab_available_width(win, st) - m.tab_pad_l - m.tab_pad_r),
       get_sys_color(brTextNormal));
   } else {
     for (int i = 0, n = tab_count(win); i < n; i++) {
@@ -544,7 +568,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return true;
     case evMeasure: {
       layout_measure_t *m = (layout_measure_t *)lparam;
-      if (m) { m->desired_w = 200; m->desired_h = 200; }
+      if (m) { tab_metrics_t tm = tab_metrics(win); m->desired_w = tm.desired_w; m->desired_h = tm.desired_h; }
       return true;
     }
     case evArrange: {
@@ -566,7 +590,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       if (is_sidebar(st)) return false;
       int th = tab_header_extent(win, st);
       if (my < 0 || my >= th || mx < 0 || mx >= tab_available_width(win, st)) return false;
-      int left = tab_single_hidden(win, st) ? 0 : ui_px(ui_selector(win, "TabView::bar"), "padding-left") - st->scroll;
+      int left = tab_single_hidden(win, st) ? 0 : tab_metrics(win).bar_pad - st->scroll;
       for (int i = 0, n = tab_count(win); i < n; i++) {
         int w = tab_single_hidden(win, st) ? tab_available_width(win, st) - left : tab_width(win, tab_title(win, i), st, i);
         if (mx >= left && mx < left + w) {
@@ -673,7 +697,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
       return (result_t)(intptr_t)page;
     }
     case tcGetTabRect: {
-      int index = (int)wparam, x = ui_px(ui_selector(win, "TabView::bar"), "padding-left") - (st ? st->scroll : 0), i = 0;
+      int index = (int)wparam, x = tab_metrics(win).bar_pad - (st ? st->scroll : 0), i = 0;
       if (!st || !lparam || index < 0 || index >= tab_count(win)) {
         fprintf(stderr, "[tv] get_tab_rect rejected win=%u index=%d\n", win->id, index);
         fflush(stderr); return false;
@@ -683,7 +707,7 @@ result_t win_tabview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
         return true;
       }
       if (tab_single_hidden(win, st)) {
-        *(irect16_t *)lparam = st->actions ? R(0, 0, tab_available_width(win, st), tab_header_height(st)) : R(0, 0, 0, 0);
+        *(irect16_t *)lparam = st->actions ? R(0, 0, tab_available_width(win, st), tab_header_height(win, st)) : R(0, 0, 0, 0);
         return true;
       }
       for (; i < index; i++) x += tab_width(win, tab_title(win, i), st, i);
