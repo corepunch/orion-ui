@@ -160,14 +160,25 @@ def make_kit(nile_kit):
     def surface(self, mat, fn, nu, nv, col):
       pts = [fn(i / nu, j / nv) for j in range(nv + 1) for i in range(nu + 1)]
       faces = [(j * (nu + 1) + i, j * (nu + 1) + i + 1, j * (nu + 1) + i + nu + 2, j * (nu + 1) + i + nu + 1) for j in range(nv) for i in range(nu)]
-      mean = (lambda: colour(col(.5, .5))) if callable(col) else (lambda: colour(col))
-      self._mesh(mat, pts, faces, mean(), smooth=True, both=True)
+      cols = [col((i + .5) / nu, (j + .5) / nv) if callable(col) else col for j in range(nv) for i in range(nu)]
+      self._meshes(mat, pts, faces, cols, smooth=True, both=True)
 
     def add(self, mat, verts, faces, col, smooth=False, m=None):
       if m is not None: verts = [tuple(m @ Vector(v)) for v in verts]
-      self._mesh(mat, verts, faces, colour(col), smooth, both=False)
+      cols = [tuple(sum(col[i][c] for i in fc) / len(fc) for c in range(3)) for fc in faces] if isinstance(col, list) else [col] * len(faces)
+      self._meshes(mat, verts, faces, cols, smooth, both=False)
 
-    def poly(self, mat, pts, col, smooth=False): self._mesh(mat, pts, [tuple(range(len(pts)))], colour(col), False, both=True)
+    def poly(self, mat, pts, col, smooth=False): self._meshes(mat, pts, [tuple(range(len(pts)))], [col], False, both=True)
+
+    def _meshes(self, mat, pts, faces, cols, smooth, both):
+      """One <mesh> per face colour (scene files colour a piece, not a vertex); a continuous gradient is quantised."""
+      for step in (.01, .03, .06, .1):
+        groups = {}
+        for fc, c in zip(faces, cols): groups.setdefault(tuple(round(v / step) for v in c), (c, []))[1].append(fc)
+        if len(groups) <= 12: break
+      for c, fcs in groups.values():
+        used = sorted({i for fc in fcs for i in fc}); remap = {v: n for n, v in enumerate(used)}
+        self._mesh(mat, [pts[i] for i in used], [tuple(remap[i] for i in fc) for fc in fcs], colour(c), smooth, both)
 
     def _mesh(self, mat, pts, faces, col, smooth, both):
       s = self.sk
@@ -177,28 +188,48 @@ def make_kit(nile_kit):
       s.close("mesh")
 
     def finish(self):
-      for p, watts in self.lights: self.sk.light(p[0], p[1], p[2], watts)
+      for p, watts in self.lights: self.sk.light(p[0], p[1], p[2], watts * float(LIGHT["LAMPS"]))
       return self.sk.finish()
 
   return SKit
 
 
+def apply_blender_materials(nile):
+  """Both renderers get the same material settings: Blender's roughness and emission from the kit's own
+  make_materials(), turned into Scener's shininess (roughness = exp(-shininess / 18) in its shader)."""
+  seen = {}
+  nile.make_material = lambda name, **kw: seen.setdefault(name, kw)
+  nile.make_materials()
+  for name, kw in seen.items():
+    if name not in scener.MATERIALS: continue
+    shin, bevel, _ = scener.MATERIALS[name]
+    rough = max(kw.get("rough", .7), .05)
+    scener.MATERIALS[name] = (round(-18 * math.log(rough), 1), bevel, kw.get("emit", 0) > 0)
+    print("material %-6s roughness %.2f -> shininess %.1f%s" % (name, rough, scener.MATERIALS[name][0], "  (metallic %.1f ignored)" % kw["metal"] if kw.get("metal") else ""))
+
+
 HEAD = """<?xml version="1.0" encoding="UTF-8"?>
 <!-- The twelve Christmas Market objects, converted from market_wishes.py (nile-archive games/christmas-market)
      by tools/gen_christmas_market.py. Each is a named group; boxes are utilities.xml soft-box/slab calls. -->
-<scene ambient="0.50 0.55 0.68" background="0.30 0.38 0.58">
+<scene ambient="AMBIENT" background="BACKGROUND">
   <include src="utilities.xml"/>
-  <sun dir="-0.4 -1 -0.9" color="0.95 0.92 1.0" intensity="0.8" castShadows="1"/>
-  <sun dir="1.0 -0.5 0.6" color="0.7 0.8 1.0" intensity="0.2" castShadows="0"/>
+  <sun dir="-0.325 -0.738 -0.591" color="SUNCOLOR" intensity="SUN" castShadows="1"/>
+  <sun dir="-0.845 -0.507 -0.169" color="0.88 0.93 1.0" intensity="FILL" castShadows="0"/>
   <material id="snowfield" color="0.86 0.9 0.96" shininess="4"/>"""
+
+
+LIGHT = dict(AMBIENT="0.27 0.33 0.52", SUN="0.95", FILL="0.35", BACKGROUND="0.64 0.70 0.84", SUNCOLOR="0.96 0.95 0.95", LAMPS="0.5")   # tuned against the Blender renders
 
 
 def main():
   ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
   ap.add_argument("out", nargs="?", default=os.path.join(HERE, "..", "scenes", "christmas_market_buildings.blks"))
+  for k in LIGHT: ap.add_argument("--" + k.lower(), default=LIGHT[k], help="LAMPS scales the shop point lights. Blender sun 3.0 / fill 0.55 / sky 0.7 are the targets (default %s)" % LIGHT[k])
   ap.add_argument("--nile", default=os.path.expanduser("~/Developer/nile-archive"))
   a = ap.parse_args()
+  for k in LIGHT: LIGHT[k] = getattr(a, k.lower())
   nile = load_nile(a.nile)
+  apply_blender_materials(nile)
   nile.Kit = make_kit(nile)
   import market_wishes as mw
   mw.Kit = nile.Kit
@@ -213,7 +244,7 @@ def main():
   rows = (len(body) + cols - 1) // cols
   cell = 3 + gap
   W, D = cols * cell + gap, rows * cell + gap
-  out = [HEAD]
+  out = [HEAD.replace("AMBIENT", LIGHT["AMBIENT"]).replace("SUN", LIGHT["SUN"]).replace("FILL", LIGHT["FILL"]).replace("BACKGROUND", LIGHT["BACKGROUND"]).replace("SUNCOLOR", LIGHT["SUNCOLOR"])]
   out.append('  <camera name="Overview" comment="The whole market, three-quarter view" pos="%s" look="0 30 0" fov="30"/>' % scener.v3(W * TILE * .15, W * TILE * .55, D * TILE * .5 + W * TILE * .45))
   placed = []
   for n, (it, lines) in enumerate(body):
