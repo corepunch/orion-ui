@@ -66,3 +66,20 @@ Not yet:
   Market use their own palettes and more kit.
 - The sprite stage (Cycles render, shadows, registration) stays in Blender, or becomes `scener --render`
   with an orthographic camera if Scener gets one.
+
+## Kenney palettes
+
+Kenney's kits are textured from one `colormap.png`: columns of vertical gradients that faces are mapped
+across by height. `tools/kenney_palette.py COLORMAP.png --name fantasy_town --blks … --lua … --py …`
+reads them as swatches (bottom and top colour) and writes them three ways, ready in `palettes/` for the
+fantasy-town, holiday and mini-forest kits:
+
+- `kenney_<kit>.xml`: `<material id="fantasy_town_c01_b1" color="1 1 1" gradientFrom=… gradientTo=…/>`
+  elements for a `.blks`, used as `material="…"` (a material's gradient applies unless the shape has its own);
+- `kenney_<kit>.py` and `kenney_<kit>.lua`: tables for the kits. `building_kit.palette("fantasy_town")`
+  (Python) or `K.palette("fantasy_town")` (Lua) returns them, and a swatch is accepted anywhere a kit
+  takes a colour: `k.box("stone", …, palette["fantasy_town_c01_b1"])`.
+
+Each swatch is taken over the middle 40 % of its height (`--span 0.3 0.7`), the part Kenney's own wall
+faces map to. Scener applies one gradient over a shape's bounding box, where Kenney maps each face
+separately, so tops of boxes take the top colour instead of their own.

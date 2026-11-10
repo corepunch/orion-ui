@@ -67,6 +67,14 @@ def J(col, j=.08):
   return tuple(min(1, max(0, c * m * (1 + R.uniform(-j, j) * .25))) for c in col)
 
 
+def palette(name):
+  """Kenney gradient swatches (see kenney_palette.py): swatch name -> (bottom, top) sRGB. A swatch is a
+  colour for any kit call; the piece is drawn with gradientFrom/gradientTo over its height."""
+  import importlib, os, sys
+  sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "palettes"))
+  return importlib.import_module("kenney_" + name).PALETTE
+
+
 def f(v):
   s = "%.2f" % v
   if "." in s: s = s.rstrip("0").rstrip(".")
@@ -105,8 +113,11 @@ class Kit:
 
   def look(self, mat, col):
     shin, _, unlit = MATERIALS[mat]
-    p = [("color", rgb(col)), ("shininess", shin)]
-    if mat in GRADIENTS: p += [("gradientFrom", v3(*[GRADIENTS[mat][0]] * 3)), ("gradientTo", v3(*[GRADIENTS[mat][1]] * 3))]
+    if isinstance(col[0], tuple):   # a swatch: bottom and top colour
+      p = [("color", "1 1 1"), ("gradientFrom", rgb(col[0])), ("gradientTo", rgb(col[1])), ("shininess", shin)]
+    else:
+      p = [("color", rgb(col)), ("shininess", shin)]
+    if mat in GRADIENTS and not isinstance(col[0], tuple): p += [("gradientFrom", v3(*[GRADIENTS[mat][0]] * 3)), ("gradientTo", v3(*[GRADIENTS[mat][1]] * 3))]
     return p + ([("unlit", 1), ("castShadow", 0)] if unlit else [])
 
   # ---- primitives

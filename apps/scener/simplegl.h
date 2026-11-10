@@ -205,7 +205,7 @@ Mesh gen_box_hole_arch(float w,float h,float depth,int sides);
 
 #define MATERIAL_RAMP_SHADES 16
 typedef struct { vec3 shade[MATERIAL_RAMP_SHADES]; } MaterialRamp; /* dark to light; replaces diffuse and specular */
-typedef struct { char id[32]; vec3 color; float shininess; int ramp, prefabDefined; } Material; /* ramp: index into Scene.ramps, -1 for none */
+typedef struct { char id[32]; vec3 color; float shininess; int ramp, prefabDefined; int gradient; vec3 gradFrom,gradTo; char gradAxis; } Material; /* gradient: see SceneObj */ /* ramp: index into Scene.ramps, -1 for none */
 typedef struct { char target[32]; vec3 pos,rot,scale; } CameraTransform;
 #define MAX_CAMERA_NAME 128
 

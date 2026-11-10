@@ -2449,6 +2449,9 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 			s->activeGradFrom=xml_attr_v3(n,"gradientFrom",v3(1,1,1));
 			s->activeGradTo=xml_attr_v3(n,"gradientTo",v3(1,1,1));
 			s->activeGradAxis=(axis[0]=='x'||axis[0]=='z')?axis[0]:'y';
+			if(!s->activeGradient && mat && mat->gradient){ /* a material's gradient applies unless the shape sets its own */
+				s->activeGradient=1; s->activeGradFrom=mat->gradFrom; s->activeGradTo=mat->gradTo; s->activeGradAxis=mat->gradAxis;
+			}
 			if(s->activeGradient && axis[0]!='x'&&axis[0]!='y'&&axis[0]!='z')
 				scene_issue(s,SCENE_ISSUE_ERROR,"gradient",node_file(s,n),n->line,"<%s> gradientAxis must be x, y or z, not '%s'",tag,axis);
 		}
@@ -2531,6 +2534,10 @@ static void read_material(Scene *s, XmlNode *n, Material *m){
 	m->shininess = xml_attr_f(n,"shininess",8.0f);
 	const char *ramp=xml_attr(n,"ramp",NULL);
 	m->ramp = ramp ? parse_material_ramp(s,n,ramp) : -1;
+	const char *axis=xml_attr(n,"gradientAxis","y");
+	m->gradient=xml_attr(n,"gradientFrom",NULL)!=NULL || xml_attr(n,"gradientTo",NULL)!=NULL;
+	m->gradFrom=xml_attr_v3(n,"gradientFrom",v3(1,1,1)); m->gradTo=xml_attr_v3(n,"gradientTo",v3(1,1,1));
+	m->gradAxis=(axis[0]=='x'||axis[0]=='z')?axis[0]:'y';
 }
 
 static int material_equal(const Scene *s, const Material *a, const Material *b){

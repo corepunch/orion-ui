@@ -23,6 +23,11 @@ local MATERIALS = {
 -- material -> darkest..lightest multiplier along the shape's own up axis (gradientFrom/gradientTo)
 local GRADIENTS = {leaf = {.6, 1.2}, clay = {.8, 1.05}}
 
+-- Kenney gradient swatches (see kenney_palette.py): name -> {bottom = {r,g,b}, top = {r,g,b}}. A swatch is a
+-- colour for any kit call; the piece is drawn with gradientFrom/gradientTo over its height.
+local here = debug.getinfo(1, "S").source:sub(2):match("^(.*)/[^/]*$") or "."
+function M.palette(name) return dofile(here .. "/../palettes/kenney_" .. name .. ".lua") end
+
 local function deg(r) return r * 180 / pi end
 
 function M.C(h)
@@ -86,8 +91,10 @@ end
 
 function Kit:look(mat, col)
   local m = MATERIALS[mat]
-  local p = {{"color", rgb(col)}, {"shininess", m[1]}}
-  local g = GRADIENTS[mat]
+  local swatch = col.bottom ~= nil
+  local p = swatch and {{"color", "1 1 1"}, {"gradientFrom", rgb(col.bottom)}, {"gradientTo", rgb(col.top)}, {"shininess", m[1]}}
+    or {{"color", rgb(col)}, {"shininess", m[1]}}
+  local g = (not swatch) and GRADIENTS[mat]
   if g then p[#p + 1] = {"gradientFrom", v3(g[1], g[1], g[1])}; p[#p + 1] = {"gradientTo", v3(g[2], g[2], g[2])} end
   if m[3] then p[#p + 1] = {"unlit", 1}; p[#p + 1] = {"castShadow", 0} end
   return p
