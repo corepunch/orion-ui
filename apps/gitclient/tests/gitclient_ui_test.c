@@ -742,7 +742,11 @@ void test_overview_table_filters_and_removes(void) {
   // Only the missing folder needs attention once the repository counts as published.
   for (int i = 0; i < g_test_state.checkout_count; i++)
     if (!g_test_state.checkouts[i].missing) g_test_state.checkouts[i].no_upstream = false, g_test_state.checkouts[i].untracked = 0;
-  ASSERT_TRUE(gc_overview_handle_command(MAKEDWORD(g_test_state.filter_btn->id, btnClicked), g_test_state.filter_btn));
+  window_t *filter = g_test_state.filter_win;   // centred in its bar, hugging its labels
+  ASSERT_EQUAL(2 * filter->frame.y + filter->frame.h, filter->parent->frame.h);
+  ASSERT_TRUE(filter->frame.w < filter->parent->frame.w);
+  send_message(g_test_state.filter_win, sgSetSelection, 1, NULL);
+  ASSERT_TRUE(gc_overview_handle_command(MAKEDWORD(g_test_state.filter_win->id, sgnSelChange), g_test_state.filter_win));
   ASSERT_TRUE(g_test_state.attention_only);
   ASSERT_EQUAL(table_rows(g_test_state.checkouts_win), 1);
   send_message(g_test_state.checkouts_win, RVM_SETSELECTION, 0, NULL);
@@ -751,7 +755,9 @@ void test_overview_table_filters_and_removes(void) {
   ASSERT_STR_EQUAL(g_test_state.workspace[0], s_repo);
   ASSERT_TRUE(g_test_state.workspace_dirty);
 
-  ASSERT_TRUE(gc_overview_handle_command(MAKEDWORD(g_test_state.filter_btn->id, btnClicked), g_test_state.filter_btn));
+  send_message(g_test_state.filter_win, sgSetSelection, 0, NULL);
+  ASSERT_TRUE(gc_overview_handle_command(MAKEDWORD(g_test_state.filter_win->id, sgnSelChange), g_test_state.filter_win));
+  ASSERT_FALSE(g_test_state.attention_only);
   ASSERT_EQUAL(table_rows(g_test_state.checkouts_win), 1);
   send_message(g_test_state.checkouts_win, RVM_SETSELECTION, 0, NULL);
   ASSERT_TRUE(gc_overview_remove_selected());

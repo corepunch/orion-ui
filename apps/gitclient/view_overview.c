@@ -98,29 +98,9 @@ static void fill_rows(void) {
   }
 }
 
-// ── summary strip ──────────────────────────────────────────────────────────────
+// ── filter ─────────────────────────────────────────────────────────────────────
 
-static window_t *make_label(window_t *parent, const char *text) {
-  irect16_t frame = {0, 0, 10, CONTROL_HEIGHT};
-  window_t *label = create_window(text, 0, &frame, parent, win_label, g_gc->hinstance, NULL);
-  if (!label) return NULL;
-  label_create_params_t style = { .color_index = brTextNormal, .font = LABEL_TEXT, .color_set = true, .truncate = true };
-  send_message(label, lbSetStyle, 0, &style);
-  return label;
-}
-
-static void make_badge_text(window_t *parent, sys_color_idx_t role, const char *text) {
-  irect16_t frame = {0, 0, 10, BADGE_HEIGHT};
-  window_t *badge = create_window(text, 0, &frame, parent, win_badge, g_gc->hinstance, NULL);
-  if (badge) send_message(badge, bdSetColor, role, NULL);
-}
-
-static void make_badge(window_t *parent, sys_color_idx_t role, const char *fmt, int n) {
-  char text[64]; snprintf(text, sizeof(text), fmt, n);
-  make_badge_text(parent, role, text);
-}
-
-typedef struct { int repos, trees, dirty, push, pull, conflicts; } overview_counts_t;
+typedef struct { int repos, trees, dirty, push, pull, conflicts, attention; } overview_counts_t;
 
 static overview_counts_t count_rows(void) {
   overview_counts_t c = {0};
@@ -128,29 +108,25 @@ static overview_counts_t count_rows(void) {
     const git_summary_t *t = &g_gc->checkouts[i];
     c.repos += !t->linked; c.trees++;
     c.dirty += row_dirty(t); c.push += t->ahead > 0; c.pull += t->behind > 0; c.conflicts += t->conflicts > 0;
+    c.attention += gc_checkout_needs_attention(t);
   }
   return c;
 }
 
-static void rebuild_summary(void) {
+// The segments carry the counts, like GitHub's Open/Closed list header; the dot
+// marks that something needs attention even while every checkout is shown.
+static void update_filter(void) {
   gc_state_t *gc = g_gc;
-  if (!gc->summary_win) return;
-  while (gc->summary_win->children) destroy_window(gc->summary_win->children);
+  if (!gc->filter_win) return;
   overview_counts_t c = count_rows();
-  char text[96]; snprintf(text, sizeof(text), ui_tr("%d repositories, %d worktrees"), c.repos, c.trees);
-  window_t *summary = gc->summary_win;
-  make_label(summary, text);
-  if (c.conflicts) make_badge(summary, brTextError,   ui_tr("%d with conflicts"), c.conflicts);
-  if (c.dirty)     make_badge(summary, brTextWarning, ui_tr("%d uncommitted"),    c.dirty);
-  if (c.push)      make_badge(summary, brTextInfo,    ui_tr("%d to push"),        c.push);
-  if (c.pull)      make_badge(summary, brTextInfo,    ui_tr("%d to pull"),        c.pull);
-  if (!c.conflicts && !c.dirty && !c.push && !c.pull && gc->checkout_count)
-    make_badge_text(summary, brTextSuccess, ui_tr("everything is in sync"));
-  irect16_t frame = {0, 0, 170, BUTTON_HEIGHT};
-  gc->filter_btn = create_window(ui_tr(gc->attention_only ? "Showing: needs attention" : "Showing: all"), BUTTON_PUSHLIKE, &frame,
-                                 summary, win_button, gc->hinstance, NULL);
-  if (gc->filter_btn) { gc->filter_btn->value = gc->attention_only; gc->filter_btn->layout.layout_fixed_w = 170; }
-  window_layout_sync(summary->parent ? summary->parent : summary);
+  char all[64], attention[64], text[136];
+  snprintf(all, sizeof(all), ui_tr("All (%d)"), c.trees);
+  snprintf(attention, sizeof(attention), ui_tr("Needs attention (%d)"), c.attention);
+  snprintf(text, sizeof(text), "%s|%s", all, attention);
+  send_message(gc->filter_win, sgSetSegments, 0, text);
+  send_message(gc->filter_win, sgSetSelection, gc->attention_only, NULL);
+  uint32_t dot = c.conflicts ? get_sys_color(brTextError) : c.attention ? get_sys_color(brTextWarning) : 0;
+  send_message(gc->filter_win, sgSetSegmentColor, 1, (void *)(uintptr_t)dot);
 }
 
 // ── page ───────────────────────────────────────────────────────────────────────
@@ -168,13 +144,13 @@ result_t gc_page_overview_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
   if (!g_gc) return false;
   if (msg == evCreate) {
     g_gc->overview_page_win = win;
-    g_gc->summary_win   = get_window_item(win, ID_OVERVIEW_PAGE_SUMMARY);
+    g_gc->filter_win    = get_window_item(win, ID_OVERVIEW_PAGE_FILTER);
     g_gc->checkouts_win = get_window_item(win, ID_OVERVIEW_PAGE_CHECKOUTS);
     g_gc->targets_win   = get_window_item(win, ID_OVERVIEW_PAGE_TARGETS);
     return true;
   }
   if (msg == evDestroy && g_gc->overview_page_win == win) {
-    g_gc->overview_page_win = g_gc->summary_win = g_gc->checkouts_win = g_gc->targets_win = g_gc->filter_btn = NULL;
+    g_gc->overview_page_win = g_gc->filter_win = g_gc->checkouts_win = g_gc->targets_win = NULL;
     return true;
   }
   return false;
@@ -191,9 +167,9 @@ static int row_cmp(const void *pa, const void *pb) {
 static void overview_show(void) {
   gc_state_t *gc = g_gc;
   qsort(gc->checkouts, (size_t)gc->checkout_count, sizeof(gc->checkouts[0]), row_cmp);
-  rebuild_summary();
+  update_filter();
   fill_rows();
-  if (gc->overview_page_win) window_layout_sync(gc->overview_page_win);   // the strip's height comes from its children
+  if (gc->overview_page_win) window_layout_sync(gc->overview_page_win);   // the segment labels set the filter's width
   if (gc->tab == GC_TAB_OVERVIEW) gc_update_status();
 }
 
@@ -294,9 +270,8 @@ bool gc_overview_handle_command(uint32_t wparam, void *lparam) {
     return true;
   }
   if ((src == gc->checkouts_win || src == gc->targets_win) && code == RVN_SELCHANGE) { gc_update_status(); return true; }
-  if (code == btnClicked && src == gc->filter_btn) {
-    gc->attention_only = !gc->attention_only;
-    rebuild_summary();
+  if (code == sgnSelChange && src == gc->filter_win) {
+    gc->attention_only = send_message(src, sgGetSelection, 0, NULL) == 1;
     fill_rows();
     window_layout_sync(gc->overview_page_win);
     return true;

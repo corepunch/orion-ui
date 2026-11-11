@@ -200,8 +200,7 @@ typedef struct {
   window_t *toolbar_win;
   window_t *activity_win;
   window_t *overview_page_win;
-  window_t *summary_win;
-  window_t *filter_btn;
+  window_t *filter_win;
   window_t *checkouts_win;
   window_t *targets_win;
   database_t *workspace_db;
