@@ -5,7 +5,7 @@ name: Platform Builds
 # release.yml, which passes a version to produce the package-manager archives
 # and run the tests; run it by hand (workflow_dispatch) to check a branch on
 # every platform before a release. Pushes and pull requests build and test on
-# Linux only (build.yml).
+# Linux only (build.yml: build, test).
 
 on:
   workflow_call:
