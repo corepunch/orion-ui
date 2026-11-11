@@ -664,6 +664,8 @@ gradient's attributes.
 | `bond` | float | 0.5 | bricks: how far each row shifts, in brick lengths (0.5 is running bond) |
 | `vary` | 0..1 | 0 | bricks: each brick's colour varies by up to this much |
 
+![Bricks with bump and per-brick variation, a noise-bumped sphere, a checker box, and a stone material on two blocks](../../../docs/maps.jpg)
+
 Points are in the shape's own coordinates (before `pos`, `rot`, `scale`), so a pattern moves with its shape and
 scales with it. Edges of checkers and joints are filtered over a pixel.
 
