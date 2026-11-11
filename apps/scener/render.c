@@ -547,6 +547,22 @@ static int add_batches(Scene *s, int *idx, int n, int *count) {
     return first;
 }
 
+static GLuint s_map_buf, s_map_tex;
+/* Every object's maps, as one table the fragment shader reads (shader_fill_maps); part of the front end. */
+static void upload_maps(const Scene *s) {
+    if (!s_map_buf) { glGenBuffers(1, &s_map_buf); glGenTextures(1, &s_map_tex); }
+    size_t floats = (size_t)(s->nmaps ? s->nmaps : 1) * MAP_TEXELS * 4;
+    float *t = calloc(floats, sizeof(float));
+    if (t && s->nmaps) shader_fill_maps(t, s->maps, s->nmaps);
+    glBindBuffer(GL_TEXTURE_BUFFER, s_map_buf);
+    glBufferData(GL_TEXTURE_BUFFER, (GLsizeiptr)(floats * sizeof(float)), t, GL_STREAM_DRAW);
+    glBindTexture(GL_TEXTURE_BUFFER, s_map_tex);
+    glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, s_map_buf);
+    glBindTexture(GL_TEXTURE_BUFFER, 0);
+    glBindBuffer(GL_TEXTURE_BUFFER, 0);
+    free(t);
+}
+
 static void upload_instances(void) {
     if (!s_inst_buf) {
         glGenBuffers(1, &s_inst_buf);
@@ -694,6 +710,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     }
     vcache_flush();
     upload_instances();
+    upload_maps(s);
 
     /* ---- Back end: draws only. ---- */
     glEnable(GL_DEPTH_TEST);
@@ -706,6 +723,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     shader_set_viewproj(viewProj);
     shader_set_camera_pos(camPos);
     shader_set_instances(s_inst_tex);
+    shader_set_maps(s_map_tex);
 
     /* the depth-filling pass: ambient light and the sky mirrored in glossy surfaces, in one draw per batch */
     if (flags & DBG_FLAT) shader_set_ambient(1, v3(1, 1, 1), 0, v3(0, 0, 0));
@@ -755,6 +773,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
 
             shader_bind();
             shader_set_instances(s_inst_tex);
+            shader_set_maps(s_map_tex);
             glEnable(GL_CULL_FACE);
             glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
             glStencilFunc(GL_EQUAL, 0, 0xFF);

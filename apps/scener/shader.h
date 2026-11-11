@@ -10,7 +10,10 @@ void shader_unbind(void);
 void shader_set_viewproj(mat4 m);
 void shader_set_camera_pos(vec3 pos);
 void shader_set_light(Light *L);
-#define SHADER_INSTANCE_FLOATS 44   /* floats per object in the instance buffer */
+#define SHADER_INSTANCE_FLOATS 48   /* floats per object in the instance buffer */
+#define MAP_TEXELS 5                /* RGBA32F texels per map in the map table */
+void shader_fill_maps(float *texels, const map_t *maps, int count);  /* writes MAP_TEXELS * 4 floats per map */
+void shader_set_maps(unsigned int bufferTexture);                     /* the RGBA32F buffer texture holding the maps */
 void shader_set_ambient(int on, vec3 linear, int skyOn, vec3 sky); /* on: the depth-filling pass (ambient, plus the mirrored sky when skyOn) */
 void shader_fill_instance(float *texels, const SceneObj *o);       /* writes SHADER_INSTANCE_FLOATS */
 void shader_set_instances(unsigned int bufferTexture);              /* the RGBA32F buffer texture holding the instances */

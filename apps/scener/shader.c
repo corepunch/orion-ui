@@ -13,7 +13,7 @@ static GLuint prog;
 static GLuint vlocPos, vlocNrm;
 static GLint ulocInst, ulocInstBase, ulocViewProj, ulocViewPos, ulocLightPos, ulocLightColor, ulocLightRadius;
 static GLint ulocAmbient, ulocAmbientOn, ulocLightRange, ulocSky, ulocSkyOn, ulocRamp, ulocRampOn;
-static GLint vlocGrad;
+static GLint vlocGrad, ulocMaps;
 #ifdef SCENER_USE_TEXTURES
 static GLint ulocTex;
 #endif
@@ -28,10 +28,15 @@ static const char *vs_src =
 "in vec3 aPos;\n"
 "in vec3 aNrm;\n"
 "in float aGrad;\n"
+"in vec2 aUV;\n"
 "uniform mat4 uViewProj;\n"
 "uniform samplerBuffer uInst;\n"
 "uniform int uInstBase;\n"
 "out float vGrad;\n"
+"out vec3 vLocalPos;\n"
+"out vec3 vLocalNrm;\n"
+"out vec2 vUV;\n"
+"flat out ivec2 vMaps;\n"
 "out vec3 vWorldPos;\n"
 "out vec3 vWorldNrm;\n"
 "out vec2 vWorldUV;\n"
@@ -43,7 +48,7 @@ static const char *vs_src =
 "flat out vec3 vGradShape;\n"
 "out vec4 vGradRadial;\n"
 "void main(){\n"
-"    int b=(uInstBase+gl_InstanceID)*11;\n"
+"    int b=(uInstBase+gl_InstanceID)*12;\n"
 "    vec4 m0=texelFetch(uInst,b),m1=texelFetch(uInst,b+1),m2=texelFetch(uInst,b+2);\n"
 "    vec4 n0=texelFetch(uInst,b+3),n1=texelFetch(uInst,b+4),n2=texelFetch(uInst,b+5);\n"
 "    vec4 c=texelFetch(uInst,b+6);\n"
@@ -51,7 +56,8 @@ static const char *vs_src =
 "    vec4 wp=vec4(dot(m0,p),dot(m1,p),dot(m2,p),1.0);\n"
 "    vWorldPos=wp.xyz;\n"
 "    vWorldNrm=normalize(vec3(dot(n0.xyz,aNrm),dot(n1.xyz,aNrm),dot(n2.xyz,aNrm)));\n"
-"    vGrad=aGrad;\n"
+"    vGrad=aGrad; vLocalPos=aPos; vLocalNrm=aNrm; vUV=aUV;\n"
+"    vec4 mp=texelFetch(uInst,b+11); vMaps=ivec2(int(mp.x),int(mp.y));\n"
 "    vColor=c.rgb; vUnlit=c.a; vMat=vec3(n0.w,n1.w,n2.w);\n"
 "    vGradFrom=texelFetch(uInst,b+7); vGradTo=texelFetch(uInst,b+8).rgb; vGradShape=texelFetch(uInst,b+9).xyz;\n"
 "    vec4 rc=texelFetch(uInst,b+10);\n"
@@ -109,6 +115,64 @@ static const char *fs_src =
 "    float up=clamp((t-vGradShape.y)/w+0.5,0.0,1.0);\n"
 "    return rep&&!mir?up*clamp((1.0-t)/w+0.5,0.0,1.0)+(1.0-clamp(t/w+0.5,0.0,1.0)):up;\n"
 "}\n"
+"/* <map>: procedural textures, per pixel, from the map table (MAP_TEXELS texels each, see shader_fill_maps). */\n"
+"uniform samplerBuffer uMaps;\n"
+"flat in ivec2 vMaps;\n"
+"in vec3 vLocalPos;\n"
+"in vec3 vLocalNrm;\n"
+"in vec2 vUV;\n"
+"float map_hash(vec3 p){ p=fract(p*0.1031); p+=dot(p,p.zyx+31.32); return fract((p.x+p.y)*p.z); }\n"
+"float map_noise(vec3 p){\n"
+"    vec3 i=floor(p),f=fract(p); f=f*f*(3.0-2.0*f);\n"
+"    return mix(mix(mix(map_hash(i),map_hash(i+vec3(1,0,0)),f.x),mix(map_hash(i+vec3(0,1,0)),map_hash(i+vec3(1,1,0)),f.x),f.y),\n"
+"               mix(mix(map_hash(i+vec3(0,0,1)),map_hash(i+vec3(1,0,1)),f.x),mix(map_hash(i+vec3(0,1,1)),map_hash(i+vec3(1,1,1)),f.x),f.y),f.z);\n"
+"}\n"
+"float map_fbm(vec3 p,int octaves){\n"
+"    float a=0.5,s=0.0,n=0.0;\n"
+"    for(int k=0;k<6;k++){ if(k>=octaves) break; s+=a*map_noise(p); n+=a; p=p*2.03+vec3(17.1,5.3,9.7); a*=0.5; }\n"
+"    return s/n;\n"
+"}\n"
+"/* the 2D coordinates a planar gizmo gives, in metres: box picks the face's main axis, as Max's Box mapping */\n"
+"vec2 map_plane(int mapping,vec3 p,vec3 n){\n"
+"    if(mapping==3) return p.zy; if(mapping==4) return p.xz; if(mapping==5) return p.xy;\n"
+"    vec3 a=abs(n); if(a.x>=a.y&&a.x>=a.z) return p.zy; if(a.y>=a.z) return p.xz; return p.xy;\n"
+"}\n"
+"void apply_maps(inout vec3 col,inout vec3 N){\n"
+"    float height=0.0; bool bumped=false;\n"
+"    for(int i=0;i<vMaps.y;i++){\n"
+"        int b=(vMaps.x+i)*5;\n"
+"        vec4 t0=texelFetch(uMaps,b),t1=texelFetch(uMaps,b+1),t2=texelFetch(uMaps,b+2),t3=texelFetch(uMaps,b+3),t4=texelFetch(uMaps,b+4);\n"
+"        int type=int(t0.x)%16,mapping=int(t0.x)/16;\n"
+"        vec3 p=vLocalPos-t4.xyz;\n"
+"        float amount=0.0,h=0.0; vec3 tint=vec3(1.0);\n"
+"        if(type==0){   /* noise: fractal value noise in the object's space (or over u, v) */\n"
+"            vec3 q=mapping==2?vec3(vUV/t3.xy,0.0):mapping==0?p/t3.xyz:vec3(map_plane(mapping,p,vLocalNrm)/t3.xy,0.0);\n"
+"            amount=map_fbm(q+vec3(t3.w*7.13),int(t0.y)); h=amount;\n"
+"        } else {\n"
+"            vec2 c=mapping==2?vUV/t3.xy:map_plane(mapping,p,vLocalNrm)/t3.xy;\n"
+"            if(type==1){   /* checker */\n"
+"                vec2 w=max(fwidth(c),vec2(1e-5)),s=clamp((abs(fract(c)-0.5)-0.25)/w+0.5,0.0,1.0);\n"
+"                amount=s.x+s.y-2.0*s.x*s.y;\n"
+"            } else {       /* bricks: rows along the second axis, each shifted by bond; amount 1 in the mortar */\n"
+"                float row=floor(c.y); c.x+=row*t4.w;\n"
+"                vec2 f=fract(c),m=0.5*t2.w/t3.xy,w=max(fwidth(c),vec2(1e-5));\n"
+"                vec2 inside=clamp((min(f,1.0-f)-m)/w+0.5,0.0,1.0);\n"
+"                float brick=inside.x*inside.y; amount=1.0-brick; h=brick;\n"
+"                float r=map_hash(vec3(floor(c),t3.w+3.7));\n"
+"                tint=vec3(1.0+t0.w*(2.0*r-1.0)*brick);\n"
+"            }\n"
+"        }\n"
+"        amount=pow(clamp(amount,0.0,1.0),t0.z);\n"
+"        col*=mix(t1.rgb,t2.rgb,amount)*tint;\n"
+"        if(t1.a!=0.0){ height+=t1.a*h; bumped=true; }\n"
+"    }\n"
+"    if(bumped){   /* bump without tangents, from the height's screen derivatives (Mikkelsen 2010) */\n"
+"        vec3 dpdx=dFdx(vWorldPos),dpdy=dFdy(vWorldPos);\n"
+"        vec3 r1=cross(dpdy,N),r2=cross(N,dpdx); float det=dot(dpdx,r1);\n"
+"        vec3 g=sign(det)*(dFdx(height)*r1+dFdy(height)*r2);\n"
+"        if(abs(det)>1e-12) N=normalize(abs(det)*N-g);\n"
+"    }\n"
+"}\n"
 "uniform vec3 uSky;\n"
 "uniform vec3 uAmbient;\n"
 "uniform int uAmbientOn;\n"
@@ -121,6 +185,7 @@ static const char *fs_src =
 "void main(){\n"
 "    vec3 uColor=vColor; float uShininess=vMat.x,uSpecular=vMat.y,uMetallic=vMat.z;\n"
 "    vec3 N=normalize(vWorldNrm);\n"
+"    if(vMaps.y>0) apply_maps(uColor,N);\n"
 "    vec3 V=normalize(uViewPos-vWorldPos);\n"
 "    vec3 L=normalize(uLightPos.xyz-vWorldPos*uLightPos.w);\n"
 "    vec3 H=normalize(V+L);\n"
@@ -196,6 +261,7 @@ void shader_init(void){
 	vlocNrm = 1;
 	ulocViewProj    = glGetUniformLocation(prog, "uViewProj");
 	ulocInst        = glGetUniformLocation(prog, "uInst");
+	ulocMaps        = glGetUniformLocation(prog, "uMaps");
 	ulocInstBase    = glGetUniformLocation(prog, "uInstBase");
 	ulocViewPos     = glGetUniformLocation(prog, "uViewPos");
 	ulocLightPos    = glGetUniformLocation(prog, "uLightPos");
@@ -209,7 +275,7 @@ void shader_init(void){
 	ulocRamp        = glGetUniformLocation(prog, "uRamp");
 	ulocRampOn      = glGetUniformLocation(prog, "uRampOn");
 	vlocGrad        = glGetAttribLocation(prog, "aGrad");
-	vcache_set_attribs((int)vlocPos,(int)vlocNrm,(int)vlocGrad);
+	vcache_set_attribs((int)vlocPos,(int)vlocNrm,(int)vlocGrad,(int)glGetAttribLocation(prog, "aUV"));
 #ifdef SCENER_USE_TEXTURES
 	ulocTex         = glGetUniformLocation(prog, "uTex");
 #endif
@@ -274,6 +340,28 @@ void shader_fill_instance(float *t, const SceneObj *o){
 	t[36]=(g->repeat?1.0f:0.0f)+(g->mirror?2.0f:0.0f); t[37]=g->edge; t[38]=g->power>0?g->power:1.0f; t[39]=0;
 	float len=vlen(vsub(g->end,g->start)); int radial=g->on && g->type==GRADIENT_RADIAL && len>0;
 	t[40]=g->start.x; t[41]=g->start.y; t[42]=g->start.z; t[43]=radial?1.0f/len:0.0f;
+	t[44]=(float)o->mapFirst; t[45]=(float)o->mapCount; t[46]=0; t[47]=0;
+}
+
+/* A map's MAP_TEXELS texels of the map table: 0 type + 16 * mapping, octaves, power, vary; 1 from (linear) and bump
+   (m); 2 to (linear) and mortar (m); 3 size (m, or u v periods) and seed; 4 offset (m) and bond. */
+void shader_fill_maps(float *t, const map_t *maps, int count){
+	for(int i=0;i<count;i++,t+=MAP_TEXELS*4){
+		const map_t *m=&maps[i];
+		vec3 a=srgb_to_linear(m->from),b=srgb_to_linear(m->to);
+		float v[MAP_TEXELS*4]={(float)(m->type+16*m->mapping),(float)m->octaves,m->power,m->vary,
+		                       a.x,a.y,a.z,m->bump, b.x,b.y,b.z,m->mortar,
+		                       m->size.x,m->size.y,m->size.z,m->seed, m->offset.x,m->offset.y,m->offset.z,m->bond};
+		memcpy(t,v,sizeof(v));
+	}
+}
+
+/* The map table buffer texture sits on unit 2. */
+void shader_set_maps(unsigned int bufferTexture){
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_BUFFER, bufferTexture);
+	glActiveTexture(GL_TEXTURE0);
+	glUniform1i(ulocMaps, 2);
 }
 
 /* The instance buffer texture sits on unit 1 (unit 0 is the material texture). */

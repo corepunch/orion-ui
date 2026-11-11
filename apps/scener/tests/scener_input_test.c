@@ -590,13 +590,36 @@ static void test_bone_skeleton(void){
 	scene_free(&authored); scene_free(&restored); PASS();
 }
 
+static void test_maps_parse_and_inherit(void){
+	TEST("<map> children stack on a shape, a material's maps apply unless the shape has its own, errors are reported");
+	Scene s={0};
+	ASSERT_TRUE(window_test_load(&s,"<scene><material id=\"stone\" color=\"0.5 0.5 0.5\"><map type=\"noise\" size=\"6\" bump=\"1\"/></material>"
+		"<box size=\"10 10 10\" color=\"1 0 0\"><map type=\"bricks\" size=\"24 8\" mortar=\"1\"/><map type=\"checker\" mapping=\"uv\" size=\"0.25\"/></box>"
+		"<box pos=\"50 0 0\" size=\"10 10 10\" material=\"stone\" color=\"0 1 0\"/>"
+		"<box pos=\"100 0 0\" size=\"10 10 10\"><map type=\"waves\"/></box></scene>"));
+	ASSERT_EQUAL(s.nobjs,3);
+	ASSERT_EQUAL(s.objs[0].mapCount,2);
+	ASSERT_EQUAL(s.maps[s.objs[0].mapFirst].type,MAP_BRICKS);
+	ASSERT_TRUE(fabsf(s.maps[s.objs[0].mapFirst].size.x-0.24f)<1e-5f);
+	ASSERT_EQUAL(s.maps[s.objs[0].mapFirst+1].mapping,MAPPING_UV);
+	ASSERT_EQUAL(s.objs[1].mapCount,1);
+	ASSERT_EQUAL(s.maps[s.objs[1].mapFirst].type,MAP_NOISE);
+	ASSERT_TRUE(s.objs[1].color.y==1);
+	ASSERT_EQUAL(s.objs[2].mapCount,0);
+	int bad=0; for(int i=0;i<s.nissues;i++) if(!strcmp(s.issues[i].kind,"map")) bad++;
+	ASSERT_EQUAL(bad,1);
+	scene_free(&s); PASS();
+}
+
 static void test_ignored_attributes_reported(void){
-	TEST("load reports misspelled and overridden attributes but not deferred pose data");
+	TEST("load reports misspelled attributes but not deferred pose data; a shape's colour wins over its material's");
 	Scene s={0};
 	ASSERT_TRUE(window_test_load(&s,"<scene up=\"z\"><camera name=\"A\" textRect=\"0 0 0.5 0.5\"><use-pose instance=\"X\" name=\"P\"/></camera>"
 		"<pose name=\"P\"><joint target=\"j\" aim=\"0 0\"/></pose><material id=\"m\" color=\"1 0 0\"/>"
 		"<torus radius=\"5\" tube=\"1\"/><box size=\"1 1 1\" material=\"m\" color=\"0 1 0\"/><sphere radius=\"2\"/></scene>"));
-	ASSERT_EQUAL(s.ignoredAttributes,3);
+	ASSERT_EQUAL(s.ignoredAttributes,2);   /* the torus's radius and tube */
+	int green=0; for(int i=0;i<s.nobjs;i++) if(s.objs[i].color.x==0 && s.objs[i].color.y==1 && s.objs[i].color.z==0) green=1;
+	ASSERT_TRUE(green);
 	scene_free(&s); PASS();
 }
 
@@ -1580,6 +1603,7 @@ int main(void) {
   test_preserved_cat_geometry();
   test_volume_character_cast();
   test_segmented_joint_only_volumes();
+  test_maps_parse_and_inherit();
   test_ignored_attributes_reported();
   test_enclosed_light_reported();
   test_material_ramps();
