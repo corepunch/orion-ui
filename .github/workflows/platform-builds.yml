@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04   # 26.04 runners cannot reach security.ubuntu.com for apt (Nov 2026)
             platform: linux-x86_64
           - os: macos-14
             platform: macos-arm64
