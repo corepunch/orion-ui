@@ -28,12 +28,10 @@ static const char *vs_src =
 "in vec3 aPos;\n"
 "in vec3 aNrm;\n"
 "in float aGrad;\n"
-"in vec4 aCol;\n"
 "uniform mat4 uViewProj;\n"
 "uniform samplerBuffer uInst;\n"
 "uniform int uInstBase;\n"
 "out float vGrad;\n"
-"out vec3 vVertexColor;\n"
 "out vec3 vWorldPos;\n"
 "out vec3 vWorldNrm;\n"
 "out vec2 vWorldUV;\n"
@@ -54,7 +52,6 @@ static const char *vs_src =
 "    vWorldPos=wp.xyz;\n"
 "    vWorldNrm=normalize(vec3(dot(n0.xyz,aNrm),dot(n1.xyz,aNrm),dot(n2.xyz,aNrm)));\n"
 "    vGrad=aGrad;\n"
-"    vVertexColor=aCol.a>0.5?mix(aCol.rgb/12.92,pow((aCol.rgb+0.055)/1.055,vec3(2.4)),step(vec3(0.04045),aCol.rgb)):vec3(1.0);   /* a <mesh colors> colour, sRGB, multiplies the piece colour */\n"
 "    vColor=c.rgb; vUnlit=c.a; vMat=vec3(n0.w,n1.w,n2.w);\n"
 "    vGradFrom=texelFetch(uInst,b+7); vGradTo=texelFetch(uInst,b+8).rgb; vGradShape=texelFetch(uInst,b+9).xyz;\n"
 "    vec4 rc=texelFetch(uInst,b+10);\n"
@@ -87,7 +84,6 @@ static const char *fs_src =
 "in vec3 vWorldNrm;\n"
 "in vec2 vWorldUV;\n"
 "in float vGrad;\n"
-"in vec3 vVertexColor;\n"
 "out vec4 fragColor;\n"
 "uniform vec3 uViewPos;\n"
 "uniform vec4 uLightPos;\n"
@@ -102,14 +98,16 @@ static const char *fs_src =
 "flat in vec3 vGradShape;\n"
 "in vec4 vGradRadial;\n"
 "/* gradient_amount() in mesh.c, with the edges filtered over a pixel: repeat wraps the gizmo coordinate,\n"
-"   power curves it, edge steps it */\n"
+"   mirror folds it (0 at both ends, 1 in the middle), power curves it, edge steps it. x is repeat + 2 * mirror. */\n"
 "float gradient_amount(float g){\n"
-"    float t=vGradShape.x>0.5?fract(g):clamp(g,0.0,1.0);\n"
+"    bool rep=mod(vGradShape.x,2.0)>0.5,mir=vGradShape.x>1.5;\n"
+"    float t=rep?fract(g):clamp(g,0.0,1.0);\n"
+"    if(mir) t=1.0-abs(2.0*t-1.0);\n"
 "    if(vGradShape.z!=1.0) t=pow(t,vGradShape.z);\n"
 "    if(vGradShape.y<=0.0) return t;\n"
-"    float w=max(fwidth(g),1e-5);\n"
+"    float w=max(fwidth(g)*(mir?2.0:1.0),1e-5);\n"
 "    float up=clamp((t-vGradShape.y)/w+0.5,0.0,1.0);\n"
-"    return vGradShape.x>0.5?up*clamp((1.0-t)/w+0.5,0.0,1.0)+(1.0-clamp(t/w+0.5,0.0,1.0)):up;\n"
+"    return rep&&!mir?up*clamp((1.0-t)/w+0.5,0.0,1.0)+(1.0-clamp(t/w+0.5,0.0,1.0)):up;\n"
 "}\n"
 "uniform vec3 uSky;\n"
 "uniform vec3 uAmbient;\n"
@@ -121,7 +119,7 @@ static const char *fs_src =
 "uniform sampler2D uTex;\n"
 #endif
 "void main(){\n"
-"    vec3 uColor=vColor*vVertexColor; float uShininess=vMat.x,uSpecular=vMat.y,uMetallic=vMat.z;\n"
+"    vec3 uColor=vColor; float uShininess=vMat.x,uSpecular=vMat.y,uMetallic=vMat.z;\n"
 "    vec3 N=normalize(vWorldNrm);\n"
 "    vec3 V=normalize(uViewPos-vWorldPos);\n"
 "    vec3 L=normalize(uLightPos.xyz-vWorldPos*uLightPos.w);\n"
@@ -211,7 +209,7 @@ void shader_init(void){
 	ulocRamp        = glGetUniformLocation(prog, "uRamp");
 	ulocRampOn      = glGetUniformLocation(prog, "uRampOn");
 	vlocGrad        = glGetAttribLocation(prog, "aGrad");
-	vcache_set_attribs((int)vlocPos,(int)vlocNrm,(int)vlocGrad,(int)glGetAttribLocation(prog, "aCol"));
+	vcache_set_attribs((int)vlocPos,(int)vlocNrm,(int)vlocGrad);
 #ifdef SCENER_USE_TEXTURES
 	ulocTex         = glGetUniformLocation(prog, "uTex");
 #endif
@@ -273,7 +271,7 @@ void shader_fill_instance(float *t, const SceneObj *o){
 	t[24]=c.x; t[25]=c.y; t[26]=c.z; t[27]=o->unlit?1.0f:0.0f;
 	t[28]=a.x; t[29]=a.y; t[30]=a.z; t[31]=g->on?1.0f:0.0f;
 	t[32]=b.x; t[33]=b.y; t[34]=b.z; t[35]=0;
-	t[36]=g->repeat?1.0f:0.0f; t[37]=g->edge; t[38]=g->power>0?g->power:1.0f; t[39]=0;
+	t[36]=(g->repeat?1.0f:0.0f)+(g->mirror?2.0f:0.0f); t[37]=g->edge; t[38]=g->power>0?g->power:1.0f; t[39]=0;
 	float len=vlen(vsub(g->end,g->start)); int radial=g->on && g->type==GRADIENT_RADIAL && len>0;
 	t[40]=g->start.x; t[41]=g->start.y; t[42]=g->start.z; t[43]=radial?1.0f/len:0.0f;
 }

@@ -125,7 +125,7 @@ typedef struct MocapSource {
 } MocapSource;
 
 
-typedef struct { vec3 pos,nrm; float u,v; float g; unsigned col; } Vertex; /* u,v: surface parameters (0..1); g: the gradient gizmo's coordinate (gradient_t); col: a <mesh colors> vertex colour, sRGB 0xAABBGGRR with A 255, or 0 for none (white) */
+typedef struct { vec3 pos,nrm; float u,v; float g; } Vertex; /* u,v: surface parameters (0..1); g: the gradient gizmo's coordinate (gradient_t) */
 typedef struct { int a,b,c; } Tri;
 typedef struct { int t0,t1; int v0,v1; } Edge; /* t0,t1: adjacent triangles (t1 -1 on an open edge); v0,v1: its vertices, in t0's winding */
 
@@ -183,7 +183,7 @@ void mesh_transform(Mesh *m,mat4 posM,mat4 rotM);
    curved by power. Gizmos: the local bounding box along x, y or z; a line or a radius between two local points
    (cm); or a linear map of the surface parameters, g = u*tileU + v*tileV + offset. */
 enum { GRADIENT_BOX, GRADIENT_LINE, GRADIENT_RADIAL, GRADIENT_UV };
-typedef struct { int on,type,repeat; char axis; vec3 from,to,start,end; float tileU,tileV,offset,edge,power; } gradient_t;
+typedef struct { int on,type,repeat,mirror; char axis; vec3 from,to,start,end; float tileU,tileV,offset,edge,power; } gradient_t;
 gradient_t gradient_default(void);
 void mesh_gradient_param(Mesh *m,const gradient_t *g); /* sets Vertex.g from the gizmo */
 float gradient_amount(const gradient_t *g,float coord);  /* 0 = from .. 1 = to, as the shader computes it (unfiltered) */
@@ -313,6 +313,7 @@ typedef struct {
 	Shape2D *shapes; int nshapes,cshapes;
 	vec3 prefabTint; int prefabTintActive;
 	int sanityIgnoreActive, sanityFloorActive, sanityCheckActive;
+	int hiddenActive;   /* inside an element with renderable="0": everything under it casts shadows unseen */
 	OverlayLine *overlayLines; int noverlayLines, coverlayLines;
 	CharDef *charDefs; int ncharDefs, ccharDefs;
 	void *activeRigInstance, *activeRigPose, *activeRigRoot, *selectedRigInstance, *selectedRigJoint;

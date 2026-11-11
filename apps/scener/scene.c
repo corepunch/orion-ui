@@ -734,7 +734,7 @@ void scene_add_obj(Scene *s, Mesh mesh, mat4 M, mat4 R, vec3 color, float shin, 
 	o.color=color; o.shininess=shin; o.ramp=s->activeRamp; o.castsShadow=castsShadow;
 	o.specular=s->activeSpecular; o.metallic=s->activeMetallic;
 	o.gradient=s->activeGradient;
-	o.renderable=renderable; o.unlit=unlit; o.sanityIgnore=s->sanityIgnoreActive;
+	o.renderable=renderable && !s->hiddenActive; o.unlit=unlit; o.sanityIgnore=s->sanityIgnoreActive;
 	o.sanityFloor=s->sanityFloorActive; o.sanityCheck=s->sanityCheckActive;
 	o.editNode=s->activeEditNode; o.editMatrix=s->activeEditMatrix;
 	o.sourceNode=s->activeSourceNode; o.record=s->activeRecord;
@@ -1014,12 +1014,7 @@ static int mesh_face_triangles(const vec3 *p,const int *idx,int ni,int tri[][3])
 /* The triangles of a <mesh> or <surface> over points p (metres). smooth shares vertices and averages face normals,
    summed at seam[i] when given (a closed surface's two copies of a seam point share one normal); both adds the
    reversed faces. uv (two per point) becomes Vertex.u,v. */
-static Mesh mesh_from_triangles_col(const vec3 *p,const float *uv,const unsigned *col,const int *seam,int nv,const Tri *ft,int nft,int smooth,int both);
 static Mesh mesh_from_triangles(const vec3 *p,const float *uv,const int *seam,int nv,const Tri *ft,int nft,int smooth,int both){
-	return mesh_from_triangles_col(p,uv,NULL,seam,nv,ft,nft,smooth,both);
-}
-/* col (one packed sRGB colour per point, as Vertex.col) colours the vertices made from each point. */
-static Mesh mesh_from_triangles_col(const vec3 *p,const float *uv,const unsigned *col,const int *seam,int nv,const Tri *ft,int nft,int smooth,int both){
 	Mesh m={0}; vec3 *acc=smooth?calloc((size_t)(nv?nv:1),sizeof(vec3)):NULL;
 	/* a two-sided smooth sheet keeps its back faces on their own vertices: shared ones would sum both normals to zero */
 	int nb=smooth?(both?2:1)*nv:0,*base=smooth?malloc((size_t)(nb?nb:1)*sizeof(int)):NULL;
@@ -1034,7 +1029,6 @@ static Mesh mesh_from_triangles_col(const vec3 *p,const float *uv,const unsigned
 		else {
 			vec3 nn=vnorm(fn); int ia=mesh_add_vert(&m,p[a],nn),ib=mesh_add_vert(&m,p[b],nn),id=mesh_add_vert(&m,p[d],nn);
 			if(uv){ int src[3]={a,b,d},dst[3]={ia,ib,id}; for(int j=0;j<3;j++){ m.verts[dst[j]].u=uv[2*src[j]]; m.verts[dst[j]].v=uv[2*src[j]+1]; } }
-			if(col){ m.verts[ia].col=col[a]; m.verts[ib].col=col[b]; m.verts[id].col=col[d]; }
 			mesh_add_tri(&m,ia,ib,id);
 		}
 	}
@@ -1042,7 +1036,6 @@ static Mesh mesh_from_triangles_col(const vec3 *p,const float *uv,const unsigned
 		int q=i%nv,r=seam?seam[q]:q; Vertex *v=&m.verts[base[i]];
 		v->nrm=i<nv?vnorm(acc[r]):vscale(vnorm(acc[r]),-1.f);
 		if(uv){ v->u=uv[2*q]; v->v=uv[2*q+1]; }
-		if(col) v->col=col[q];
 	}
 	m.twoSided=both;
 	free(acc); free(base);
@@ -1063,20 +1056,6 @@ static void parse_mesh(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,v
 		DA_PUSH(p,nv,cp,q);
 	}
 	int ok=nv>0;
-	/* colors="rrggbb rrggbb ...": one sRGB colour per vertex, multiplying the piece's colour (a converted Blender
-	   mesh's vertex colours). */
-	unsigned *col=NULL; const char *ctext=xml_attr(n,"colors",NULL);
-	if(ok && ctext){
-		col=calloc((size_t)nv,sizeof(unsigned)); int nc=0;
-		for(const char *t=ctext;*t && nc<=nv;){
-			while(*t==' '||*t=='\t'||*t=='\n'||*t=='\r'||*t=='#') t++;
-			if(!*t) break;
-			char *e; unsigned long v=strtoul(t,&e,16); if(e-t!=6){ nc=-1; break; }
-			if(nc<nv) col[nc]=0xff000000u|((unsigned)(v>>16)&0xffu)|(((unsigned)(v>>8)&0xffu)<<8)|(((unsigned)v&0xffu)<<16);
-			nc++; t=e;
-		}
-		if(nc!=nv){ scene_issue(s,SCENE_ISSUE_ERROR,"mesh",node_file(s,n),n->line,"<mesh> colors: one rrggbb colour per vertex (%d), found %s",nv,nc<0?"a malformed one":"a different count"); ok=0; }
-	}
 	/* faces: f="a b c, d e f g, ..." or <f v="a b c"/> children */
 	const char *fcur=ftext; int kid=0; Tri *ft=NULL; int nft=0,cft=0;
 	for(;ok;){
@@ -1098,8 +1077,8 @@ static void parse_mesh(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,v
 		int tri[MESH_FACE_MAX][3],nt=mesh_face_triangles(p,idx,ni,tri);
 		for(int k=0;k<nt;k++){ Tri t={tri[k][0],tri[k][1],tri[k][2]}; DA_PUSH(ft,nft,cft,t); }
 	}
-	Mesh m=ok?mesh_from_triangles_col(p,NULL,col,NULL,nv,ft,nft,smooth,both):(Mesh){0};
-	free(ft); free(p); free(col);
+	Mesh m=ok?mesh_from_triangles(p,NULL,NULL,nv,ft,nft,smooth,both):(Mesh){0};
+	free(ft); free(p);
 	if(!ok||!m.ntris){ if(ok) scene_issue(s,SCENE_ISSUE_ERROR,"mesh",node_file(s,n),n->line,"<mesh> has no faces"); mesh_free(&m); return; }
 	apply_modifiers(s,&m,n);
 	scene_add_obj(s,m,M,R,color,shin,castsShadow,renderable,unlit);
@@ -2670,8 +2649,9 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 		mat4 oldEditMatrix=s->activeEditMatrix;
 		int ownsEditNode=!s->activeEditNode;
 		if(ownsEditNode) s->activeEditNode=n;
-		int oldIgnore=s->sanityIgnoreActive, oldFloor=s->sanityFloorActive, oldCheck=s->sanityCheckActive;
+		int oldIgnore=s->sanityIgnoreActive, oldFloor=s->sanityFloorActive, oldCheck=s->sanityCheckActive, oldHidden=s->hiddenActive;
 		s->sanityIgnoreActive |= xml_attr_i(n,"sanityIgnore",0);
+		s->hiddenActive |= !xml_attr_i(n,"renderable",1);   /* a group's renderable="0" hides all it holds */
 		s->sanityFloorActive |= xml_attr_i(n,"sanityFloor",0);
 		s->sanityCheckActive |= xml_attr_i(n,"sanityCheck",0);
 		char *tag=n->tag;
@@ -2760,6 +2740,7 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 			}
 		}
 		s->sanityIgnoreActive=oldIgnore;
+		s->hiddenActive=oldHidden;
 		s->sanityFloorActive=oldFloor;
 		s->sanityCheckActive=oldCheck;
 		s->activeRecord=oldRecord; s->activeSourceNode=oldSource;
@@ -2855,6 +2836,7 @@ static void read_gradient(Scene *s, XmlNode *n, gradient_t *g){
 		float tu=0,tv=1; sscanf(xml_attr(c,"tile","0 1"),"%f %f",&tu,&tv); g->tileU=tu; g->tileV=tv;
 		g->offset=xml_attr_f(c,"offset",0.0f);
 		g->repeat=xml_attr_i(c,"repeat",0);
+		g->mirror=xml_attr_i(c,"mirror",0);
 		g->edge=xml_attr_f(c,"edge",0.0f);
 		g->power=xml_attr_f(c,"power",1.0f);
 		if((g->type==GRADIENT_LINE||g->type==GRADIENT_RADIAL) && (!gotStart||!gotEnd||vlen(vsub(g->end,g->start))<1e-6f))

@@ -623,6 +623,7 @@ it runs, the way a 3ds Max map is placed by its UVW gizmo. The attributes above 
 | `tile` | `tu tv` | `0 1` | `uv`: coordinate = u·tu + v·tv + offset over a `<surface>`'s parameters (both 0..1) |
 | `offset` | float | 0 | Added to the coordinate |
 | `repeat` | 0/1 | 0 | The coordinate wraps (stripes, rings) instead of clamping to 0..1 |
+| `mirror` | 0/1 | 0 | Ping-pong, as 3ds Max's mirror tiling: the coordinate folds about 0.5 (after `repeat`), 0 at both ends and 1 in the middle, so one gradient gives a centre stripe or a leaf brighter along its midrib |
 | `edge` | 0..1 | 0 | A hard step from `from` to `to` at this value (filtered over a pixel); 0 blends smoothly |
 | `power` | float > 0 | 1 | Curves the blend: amount = coordinate^power |
 
@@ -687,9 +688,7 @@ The lowest atom: a polygon soup, for geometry no profile or modifier gives (a dr
 Blender mesh). Vertices as `v="x y z x y z ..."` in cm and faces as `f="i j k, i j k l, ..."` (3 to 64
 vertex indices each, counter-clockwise seen from outside; a face may be concave, such as a roof's chevron end,
 and is ear-clipped in its own plane); `<v x y z/>` and
-`<f v="i j k"/>` children say the same for small hand-written meshes. `colors="rrggbb rrggbb ..."` gives each vertex an sRGB colour
-(hex, one per vertex, as a converted Blender mesh's vertex colours) that multiplies the piece's `color`, and is
-interpolated across faces. `smooth="1"` shares vertices and averages
+`<f v="i j k"/>` children say the same for small hand-written meshes. `smooth="1"` shares vertices and averages
 normals; `twoSided="1"` adds the reversed faces, for open sheets: each side keeps its own normals, and the sheet
 is never turned inside out by the solid-winding check, as it encloses no volume. Takes the [common attributes](#common-attributes)
 and mesh modifiers.
@@ -1353,7 +1352,9 @@ sweeping a circular cross-section (2D circle in XY) along a circular path
 Revolves a named 2D profile around the Y axis to produce a rotationally
 symmetric solid (bottle, vase, goblet, column, etc.). Think of it as a
 potter's wheel: you define the profile in the XY plane, and the lathe sweeps
-it around Y.
+it around Y. Its vertices carry u (around, 0..1 from +X) and v (along the profile, 0..1), so a
+`<gradient type="uv" tile="6 0" repeat="1" edge="0.5">` paints six stripes around it and `tile="0 3"`
+three bands up it.
 
 The referenced shape **must be open** (`closed="0"`). The first profile vertex
 defines the radius of the bottom cap; the last defines the top cap. Ends at
