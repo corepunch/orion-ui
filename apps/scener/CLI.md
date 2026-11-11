@@ -98,7 +98,7 @@ the editor debug-bit interface. `--transparent` clears the background to alpha 0
 so a PNG keeps only what was drawn (supersampling averages colour by coverage, so
 edges keep their colour). A camera with `size="W H"` renders at that size and one
 with `ortho="HEIGHT_CM"` is orthographic, which together frame sprites on whole
-pixels. A shape with `renderable="0"` still casts shadows: it is invisible to the
+pixels. A shape or group with `renderable="0"` (a group hides all it holds) still casts shadows: it is invisible to the
 camera and always takes z-fail (Carmack's reverse), since z-pass relies on the
 caster's own depth. Over a white catcher lit by one sun this gives a shadow-only
 pass; nile-archive's `tools/scener_buildings.py` renders its city buildings and

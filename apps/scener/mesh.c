@@ -93,6 +93,7 @@ void mesh_gradient_param(Mesh *m, const gradient_t *g){
 
 float gradient_amount(const gradient_t *g, float coord){
 	float t=g->repeat?coord-floorf(coord):fminf(fmaxf(coord,0.0f),1.0f);
+	if(g->mirror) t=1.0f-fabsf(2.0f*t-1.0f);   /* ping-pong, as 3ds Max's mirror tiling: 0 at both ends, 1 in the middle */
 	if(g->power>0 && g->power!=1.0f) t=powf(t,g->power);
 	if(g->edge>0) t=t<g->edge?0.0f:1.0f;
 	return t;
@@ -1094,7 +1095,9 @@ Mesh gen_lathe(Shape2D *profile,int segments){
 	}
 	int n=profile->npts;
 
-	for(int j=0;j<segments;j++){
+	/* segments + 1 columns: the last repeats the first, so u (around, 0..1) and v (along the profile, 0..1) run
+	   unbroken and a <gradient type="uv"> can stripe a lathe; the seam's two columns share position and normal */
+	for(int j=0;j<=segments;j++){
 		float a0=(float)j/segments*2.0f*M_PIf;
 		float ca0=cosf(a0),sa0=sinf(a0);
 		for(int i=0;i<n;i++){
@@ -1103,12 +1106,13 @@ Mesh gen_lathe(Shape2D *profile,int segments){
 				profile->nrm[i].x*ca0,
 				profile->nrm[i].y,
 				profile->nrm[i].x*sa0));
-			mesh_add_vert(&m,v3(px*ca0,py,px*sa0),nrm);
+			int v=mesh_add_vert(&m,v3(px*ca0,py,px*sa0),nrm);
+			m.verts[v].u=(float)j/segments; m.verts[v].v=n>1?(float)i/(n-1):0;
 		}
 	}
 
 	for(int j=0;j<segments;j++){
-		int jn=(j+1)%segments;
+		int jn=j+1;
 		for(int i=0;i<n-1;i++){
 			int v00=j*n+i, v01=j*n+i+1;
 			mesh_add_tri(&m,v00,v01,jn*n+i);
@@ -1119,8 +1123,9 @@ Mesh gen_lathe(Shape2D *profile,int segments){
 	vec3 botN=v3(0,-1,0), topN=v3(0,1,0);
 	int vBot=mesh_add_vert(&m,v3(0,profile->pts[0].y,0),botN);
 	int vTop=mesh_add_vert(&m,v3(0,profile->pts[n-1].y,0),topN);
+	m.verts[vTop].v=1;
 	for(int j=0;j<segments;j++){
-		int jn=(j+1)%segments;
+		int jn=j+1;
 		mesh_add_tri(&m,vBot,j*n,jn*n);
 		mesh_add_tri(&m,vTop,jn*n+n-1,j*n+n-1);
 	}
