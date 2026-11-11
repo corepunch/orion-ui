@@ -97,6 +97,42 @@ Other commands: `покажи клиентов`, `найди клиента "А�
 "Intertrade"`, `open first`. The interface and clarifications use the selected UI language (`--lang en`, `de`, or `ru`); command vocabulary is accepted in all three languages.
 Unknown words reject the entire command; user input is never evaluated as Lua.
 
+### Accountant queries
+
+The same grammar now supports these composable requests:
+
+| Task | Command |
+|---|---|
+| Payables above a threshold | `show creditors over 1000` → `sort by owed descending` → `open first` |
+| Russian payable review | `покажи кредиторов больше 1000` |
+| German payable review | `zeige Gläubiger über 1000` |
+| Documents in an inclusive period | `show documents date at least 2026-03-01 date at most 2026-03-31` → `only draft` |
+| Possible duplicate counterparties | `find duplicate customers` / `найди дубли контрагентов` |
+| Possible duplicate item identifiers | `find duplicate items` / `zeige doppelte Artikel` |
+
+Dates must be valid ISO calendar dates. `after` / `before` exclude the boundary;
+`at least` / `at most` include it. Creditor queries use positive payable balances;
+the supplier aliases mean this same payable subset, not a separate supplier
+catalog. Debtor queries continue to use receivable balances.
+
+Duplicate checks compare nonempty, trimmed, case-normalized country + Tax ID
+for counterparties and SKU for items. Results include the matching identifier.
+They are candidates for review, not proof that records should be merged. The
+check reads the complete catalog before applying further filters and never
+changes records.
+
+Payable/receivable topic answers and reconciliation movements now establish the
+same object context as typed lists, so `open first`, `it`, and refinements refer
+to the displayed records. A question without record results clears stale object
+context. Topic answers reject recognized unsupported periods, amounts, and
+conflicting topics; a failed typed command cannot be reinterpreted as an
+unfiltered topic. A zero-result debt threshold no longer claims that nobody
+owes the company.
+
+The [workflow coverage audit](../../../docs/assistant-workflow-coverage.md)
+distinguishes assistant commands from the separate automation runner and records
+the remaining 1C developer tasks and the next capability boundary.
+
 ## The Office 97 balloon model
 
 Office 97 did not draw balloons from dialog templates. Each balloon was a

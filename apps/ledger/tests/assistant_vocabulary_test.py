@@ -31,7 +31,7 @@ class AssistantVocabularyTest(unittest.TestCase):
             output = directory / 'vocabulary.lua'
             output.write_text(generator.generate(directory), encoding='utf-8')
             subprocess.run([runtime, '-', str(output)], cwd=ROOT, check=True, input='''
-package.path='apps/ledger/share/addons/assistant/?.lua;'..package.path
+package.path='apps/ledger/share/addons/assistant/?.lua;share/lua/?.lua;'..package.path
 package.loaded.vocabulary=assert(loadfile(arg[1]))()
 local P=require('parser')
 local ast=assert(P.parse('display defaulters over seventyish thousand'))
@@ -98,7 +98,7 @@ end
             output = directory / 'vocabulary.lua'
             output.write_text(generator.generate(directory), encoding='utf-8')
             subprocess.run([runtime, '-', str(output)], cwd=ROOT, check=True, input='''
-package.path='apps/ledger/share/addons/assistant/?.lua;'..package.path
+package.path='apps/ledger/share/addons/assistant/?.lua;share/lua/?.lua;'..package.path
 package.loaded.vocabulary=assert(loadfile(arg[1]))()
 local G=require('german_numbers')
 assert(G.number('pentpluszwanzig')==25)
@@ -127,7 +127,7 @@ assert(ast.filters[1].value==5505)
             output = directory / 'vocabulary.lua'
             output.write_text(generator.generate(directory), encoding='utf-8')
             subprocess.run([runtime, '-', str(output)], cwd=ROOT, check=True, input='''
-package.path='apps/ledger/share/addons/assistant/?.lua;'..package.path
+package.path='apps/ledger/share/addons/assistant/?.lua;share/lua/?.lua;'..package.path
 package.loaded.vocabulary=assert(loadfile(arg[1]))()
 local P=require('parser')
 for _,word in ipairs(require('vocabulary').lexicon.verbs.open) do assert(word~='open') end
@@ -177,7 +177,7 @@ assert(not P.parse('open first'))
         self.assertEqual(generator.inflect({'p': (1, ['=', '0', '-', 'ей'])}, 'тысяча', 'p', 'test'),
                          ['тысяча', 'тысяч', 'тысячей'])
         subprocess.run([runtime, '-'], cwd=ROOT, check=True, input='''
-package.path='apps/ledger/share/addons/assistant/?.lua;build/share/ledger/addons/assistant/?.lua;'..package.path
+package.path='apps/ledger/share/addons/assistant/?.lua;build/share/ledger/addons/assistant/?.lua;share/lua/?.lua;'..package.path
 local P=require('parser')
 for _,text in ipairs{'покажи покупателей с задолженностью больше ста тысячами','oeffne den vierten',
   'zeige Kunden mit Schulden über fünfzig tausend','show counterparties owing over 5'} do

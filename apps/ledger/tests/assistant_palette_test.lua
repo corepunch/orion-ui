@@ -28,12 +28,40 @@ check(#Tips.from_checks({},'Советы')==0,'nothing undone, no tips')
 local Topics=require('topics')
 local function topic(text) return (Topics.match(text)) end
 check(topic('проверь учет')=='checks','a check of the books')
-check(topic('почему красное сальдо по 60')=='negative','a red balance, among unknown words')
+local _,_,scope=Topics.match('почему красное сальдо по 60')
+check(scope~=nil,'an account filter cannot silently become an unfiltered balance answer')
 check(topic('кому мы должны')=='payables' and topic('кто нам должен')=='receivables','who owes whom')
 check(topic('сколько денег в кассе')=='money','money')
 check(topic('Wer schuldet uns Geld?')=='receivables' or topic('Wer schuldet uns Geld?')=='money','German topics')
 check(topic('who do we owe')=='payables','English topics')
 check(topic('show debtors')==nil,'commands are not topics')
+for _,text in ipairs({'show creditors over 50000 nonsense','taxes in 2025','налоги за 2025 год','кредиторы больше пятидесяти тысяч',
+  'money in May','кому должны "Alpha"','кому мы должны и кто нам должен'}) do
+  local _,_,err=Topics.match(text)
+  check(err~=nil,'topic answer must not drop unsupported filter or scope: '..text)
+end
+local _,_,conflict=Topics.match('кто нам должен и сколько денег')
+check(conflict~=nil,'conflicting topics do not select an arbitrary answer')
+for _,text in ipairs({'закрыт ли месяц','закрытие месяца','is the month closed','Monatsabschluss'}) do
+  local matched,_,error=Topics.match(text)
+  check(matched=='closing' and not error,'a month-close question is not a period filter: '..text)
+end
+for _,text in ipairs({'taxes yesterday','налоги сегодня','Geld gestern'}) do
+  local _,_,error=Topics.match(text)
+  check(error~=nil,'relative periods are not silently dropped: '..text)
+end
+local german_topic,_,german_error=Topics.match('Wer schuldet uns Geld?')
+check(german_topic=='receivables' and not german_error,'longest phrase covers the complete German question')
+local _,_,err=Topics.match('сверка с "Бета"')
+check(err==nil,'quoted counterparty is supported for reconciliation')
+local _,_,quoted_number_error=Topics.match('сверка с "Bank 24"')
+check(quoted_number_error==nil,'digits inside a quoted counterparty name are not a date filter')
+local _,_,date_error=Topics.match('сверка с "Бета" за 2025 год')
+check(date_error~=nil,'reconciliation cannot ignore a requested period')
+for _,text in ipairs({'сверка с "Бета" и "Альфа"','сверка с ""','сверка с "Бета'}) do
+  local _,_,quote_error=Topics.match(text)
+  check(quote_error~=nil,'reconciliation requires one complete, nonempty quoted party: '..text)
+end
 local _,rest=Topics.match('акт сверки с альфой')
 check(Topics.match('акт сверки с альфой')=='reconciliation','reconciliation')
 found=Topics.parties('акт сверки с альфой',rest,{{id=1,name='ООО "Торговый дом Альфа"'},{id=2,name='ЗАО "Бета-Снаб"'}})

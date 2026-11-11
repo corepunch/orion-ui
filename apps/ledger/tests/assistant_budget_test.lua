@@ -47,7 +47,19 @@ rejects(function() B.propose(report,'90.01',1,0/0) end)
 rejects(function() B.run(plan,{configuration='unknown'}) end)
 rejects(function() B.run(plan,{configuration='ru-2026',account=function() return nil end}) end)
 rejects(function() B.run(plan,{configuration='ru-2026',account=api.account,movements=function() return {{date='2026-04-01'}} end}) end)
+for _,movement in ipairs({
+  {date='2026-02-30',document=1,number='BAD',account='90.01',corr='62',debit=0,credit=1},
+  {date='2026-02-01',document=1.5,number='BAD',account='90.01',corr='62',debit=0,credit=1},
+  {date='2026-02-01',document=1,number='BAD',account='90.01',corr='62',debit=0/0,credit=1},
+  {date='2026-02-01',document=1,number=2,account='90.01',corr='62',debit=0,credit=1},
+  {date='2026-02-01',document=1,number='BAD',account=90.01,corr='62',debit=0,credit=1},
+  {date='2026-02-01',document=1,number='BAD',account='90.01',debit=0,credit=1},
+}) do rejects(function() B.run(plan,{configuration='ru-2026',account=api.account,movements=function() return {movement} end}) end) end
 local de=B.run(plan,{configuration='de-2026',account=api.account,movements=function() return {} end})
+local reversal=B.run(plan,{configuration='ru-2026',account=api.account,movements=function(code)
+  return code=='90.01' and {{date='2026-02-01',document=1,number='REV',account=code,corr='62',debit=0,credit=-10}} or {}
+end})
+check(reversal.rows[1].actual[2]==-1000,'signed native storno movements reduce income')
 check(de.currency=='EUR' and #de.rows==14,'DE has independent chart mapping')
 check(B.render(de):find('coverage unknown',1,true),'empty months flagged as unknown coverage')
 print(string.format('assistant budget: %d checks passed',checks))

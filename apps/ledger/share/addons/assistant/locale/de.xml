@@ -157,4 +157,13 @@
   <string source="Budget sources" where="code">Budgetquellen</string>
   <string source="Budget worksheet ready. Use план ACCOUNT MONTH AMOUNT to edit proposals and recalculate. Source documents are below." where="code">Budget bereit. план KONTO MONAT BETRAG ändert Planwerte und berechnet Summen neu. Quellbelege stehen unten.</string>
   <string source="Editable worksheet text; free text edits do not recalculate. Use plan commands to update amounts and totals." where="code">Arbeitsblatttext ist editierbar; freie Textänderungen berechnen nichts neu. Planbefehle aktualisieren Beträge und Summen.</string>
+  <string source="Your question names more than one accounting topic. Ask about one topic at a time." where="code">Ihre Frage nennt mehrere Buchhaltungsthemen. Fragen Sie jeweils nur nach einem Thema.</string>
+  <string source="That question includes a filter or period this answer cannot apply. Remove it or use a supported list command." where="code">Diese Frage enthält einen Filter oder Zeitraum, den diese Antwort nicht anwenden kann. Entfernen Sie ihn oder verwenden Sie einen unterstützten Listenbefehl.</string>
+  <string source="Budget total exceeds the safe financial range." where="code">Die Budgetsummen überschreiten den sicheren Zahlenbereich.</string>
+  <string source="Name one counterparty in a single pair of quotes." where="code">Geben Sie genau einen Geschäftspartner in einem Anführungszeichenpaar an.</string>
+  <string source="Choose either posted or draft documents." where="code">Wählen Sie entweder gebuchte oder Entwurfsbelege.</string>
+  <string source="Choose either debtors or creditors." where="code">Wählen Sie entweder Schuldner oder Gläubiger.</string>
+  <string source="Duplicate checks apply only to customers and items." where="code">Duplikatprüfungen gelten nur für Kunden und Artikel.</string>
+  <string source="Enter a date as YYYY-MM-DD." where="code">Geben Sie das Datum im Format JJJJ-MM-TT ein.</string>
+  <string source="Possible duplicates: %d. Matching identifiers need review; no records were changed." where="code">Mögliche Duplikate: %d. Übereinstimmende Kennungen müssen geprüft werden; es wurden keine Datensätze geändert.</string>
 </strings>

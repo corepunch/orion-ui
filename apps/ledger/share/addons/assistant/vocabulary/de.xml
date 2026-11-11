@@ -29,25 +29,32 @@
 
   <noun source="customer" paradigm="noun-weak">Kunde</noun>
   <noun source="debtor"   paradigm="noun-er">Schuldner</noun>
+  <noun source="creditor" paradigm="noun-er">Gläubiger</noun>
+  <noun source="creditor" forms="Lieferanten">Lieferant</noun>
   <noun source="document" paradigm="noun-e" forms="Belegs">Beleg</noun>
   <noun source="item"     paradigm="noun-er">Artikel</noun>
 
   <adjective  source="posted" paradigm="adjective">gebucht</adjective>
   <adjective  source="draft"  paradigm="adjective">ungebucht</adjective>
   <adjective  source="owing"  paradigm="adjective">schuldend</adjective>
+  <adjective  source="duplicate" paradigm="adjective">doppelt</adjective>
   <topic source="check" synonyms="prüfen Prüfung Probleme Problem Fehler">prüfe</topic>
   <topic source="check">was ist falsch</topic>
   <topic source="money" synonyms="Kasse Bank">Geld</topic>
+  <topic source="calendar_month" synonyms="gestern heute morgen überfällig Januar Februar März April Mai Juni Juli August September Oktober November Dezember">Januar</topic>
   <topic source="payables" synonyms="Kreditoren Lieferanten">Verbindlichkeiten</topic>
   <topic source="payables">wir schulden</topic>
   <topic source="receivables" synonyms="Debitoren">Forderungen</topic>
   <topic source="receivables">schuldet uns</topic>
+  <topic source="receivables">schuldet uns Geld</topic>
   <topic source="taxes" synonyms="Steuern Umsatzsteuer Vorsteuer">Steuer</topic>
   <topic source="closing" synonyms="Abschluss abschließen abgeschlossen">Monatsabschluss</topic>
   <topic source="negative" synonyms="negative negativer negativen Minus">negativ</topic>
   <topic source="reconciliation" synonyms="Kontoabstimmung Saldenbestätigung Abgleich">Abstimmung</topic>
 
   <field      source="debt">Schulden</field>
+  <field      source="owed">geschuldet</field>
+  <field      source="date">Datum</field>
   <field      source="amount" forms="Betrags Beträge Beträgen">Betrag</field>
   <field      source="name"   forms="Namens Namen">Name</field>
   <comparison source="greater than">über</comparison>
@@ -57,6 +64,9 @@
   <comparison source="at least">mindestens</comparison>
   <comparison source="at most">höchstens</comparison>
   <comparison source="exactly">genau</comparison>
+  <comparison source="after">danach</comparison>
+  <comparison source="before">vor</comparison>
+  <comparison source="on">am</comparison>
   <relation   source="for">für</relation>
   <direction  source="descending">absteigend</direction>
   <direction  source="ascending">aufsteigend</direction>

@@ -24,6 +24,7 @@
   <noun source="customer" means="counterparties" paradigm="noun" synonyms="client"/>
   <noun source="customer" paradigm="noun-y">counterparty</noun>
   <noun source="debtor"   means="debtors"        paradigm="noun"/>
+  <noun source="creditor" means="creditors"     paradigm="noun" synonyms="supplier"/>
   <noun source="document" means="documents"      paradigm="noun"/>
   <noun source="item"     means="items"          paradigm="noun"/>
 
@@ -31,15 +32,21 @@
   <adjective  source="posted"       means="posted"/>
   <adjective  source="draft"        means="draft"   paradigm="noun"/>
   <adjective  source="owing"        means="debtors"/>
+  <adjective  source="duplicate"    means="duplicates" synonyms="duplicates"/>
   <field      source="debt"         means="debt"/>
+  <field      source="owed"         means="owed"/>
   <field      source="amount"       means="amount"  synonyms="total"/>
   <field      source="name"         means="name"/>
+  <field      source="date"         means="date"/>
   <comparison source="greater than" means="gt"      synonyms="over"/>
   <comparison source="greater than">more than</comparison>
   <comparison source="less than"    means="lt"      synonyms="under"/>
   <comparison source="at least"     means="ge"/>
   <comparison source="at most"      means="le"/>
   <comparison source="exactly"      means="eq"      synonyms="equals"/>
+  <comparison source="after"        means="gt"/>
+  <comparison source="before"       means="lt"/>
+  <comparison source="on"           means="eq"/>
   <relation   source="for"          means="counterparty"/>
   <direction  source="descending"   means="desc"/>
   <direction  source="ascending"    means="asc"/>
@@ -49,6 +56,7 @@
   <topic source="check"          means="checks"         synonyms="checks problems problem errors error wrong attention"/>
   <topic source="check">what is wrong</topic>
   <topic source="money"          means="money"          synonyms="cash bank"/>
+  <topic source="calendar_month" means="period" synonyms="yesterday today tomorrow overdue January February March April May June July August September October November December">January</topic>
   <topic source="payables"       means="payables"       synonyms="payable creditors creditor suppliers"/>
   <topic source="payables">we owe</topic>
   <topic source="receivables"    means="receivables"    synonyms="receivable"/>

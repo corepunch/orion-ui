@@ -3,6 +3,7 @@ local orion = require('orion')
 local Model = require('orion.model')
 local ledger = require('ledger')
 local Engine = require('engine')
+local Parser = require('parser')
 local Budget = require('budget')
 local animations = require('animations')
 local Models = {
@@ -58,9 +59,9 @@ local function rows(entity)
   end
   for _,record in ipairs(Models[entity]:all()) do
     local row={id=record.id,name=record.name or record.number or '',number=record.number,date=record.date}
-    if entity=='counterparties' then row.debt=debt[record.id] or 0; row.owed=owed[record.id] or 0; row.amount=row.debt
+    if entity=='counterparties' then row.tax_id=record.tax_id; row.country_code=record.country_code; row.debt=debt[record.id] or 0; row.owed=owed[record.id] or 0; row.amount=row.debt
     elseif entity=='documents' then row.counterparty_id=record.counterparty_id; row.amount=record.total; row.posted=record.posted==true or record.posted==1
-    elseif entity=='items' then row.amount=record.price end
+    elseif entity=='items' then row.sku=record.sku; row.amount=record.price end
     out[#out+1]=row
   end
   return out
@@ -128,9 +129,10 @@ local function money(v) return orion.formatNumber(v,2) end
 
 -- A question about the state of the books: its answer and rows.
 function Assistant:topic(text)
-  local topic,rest=Topics.match(text)
+  local topic,rest,err=Topics.match(text)
+  if err then return {ok=false,message=err,items={},animation='IDLEHEADSCRATCH'} end
   if not topic then return nil end
-  local items,message={},nil
+  local items,message,scope={},nil,nil
   local function checks(filter,section)
     for _,row in ipairs(home_rows(1)) do
       if not filter or filter(row) then
@@ -170,7 +172,9 @@ function Assistant:topic(text)
     local field=topic=='payables' and 'owed' or 'debt'
     local people,total={},0
     for _,row in ipairs(rows('counterparties')) do if (row[field] or 0)>0.005 then people[#people+1]=row end end
-    table.sort(people,function(a,b) return a[field]>b[field] end)
+    table.sort(people,function(a,b) return a[field]==b[field] and a.id<b.id or a[field]>b[field] end)
+    scope={entity='counterparties',rows=people,query={verb='list',entity='counterparties',filters={},
+      debtors=topic=='receivables' or nil,creditors=topic=='payables' or nil,sort={field=field,direction='desc'}}}
     for _,row in ipairs(people) do
       total=total+row[field]
       items[#items+1]={section=tr('Counterparties'),kind='counterparties',name=row.name,amount=row[field],action='open',arg='counterparties',record_id=row.id}
@@ -183,7 +187,7 @@ function Assistant:topic(text)
   elseif topic=='reconciliation' then
     return self:reconcile(text,rest)
   end
-  return {ok=true,message=message,items=items,animation=#items>0 and 'CHECKINGSOMETHING' or 'CONGRATULATE'}
+  return {ok=true,message=message,items=items,scope=scope,animation=#items>0 and 'CHECKINGSOMETHING' or 'CONGRATULATE'}
 end
 
 -- An act of reconciliation (акт сверки) with one counterparty: their
@@ -200,7 +204,7 @@ function Assistant:reconcile(text,rest)
       or tr('Reconcile with whom? Name the counterparty, for example: reconcile with "Alpha".'),items=items,animation='IDLEHEADSCRATCH'}
   end
   local party=people[1]
-  local items,seen,balance={},{},0
+  local items,seen,balance,documents={},{},0,{}
   for book=1,2 do
     local account=settlement_account(book)
     if account and not seen[account] then
@@ -210,6 +214,7 @@ function Assistant:reconcile(text,rest)
       if to~='' then filter.to=to end
       for _,m in ipairs(ledger.movements(account,filter)) do
         balance=balance+m.debit-m.credit
+        documents[#documents+1]={id=m.document,name=m.number,date=m.date}
         items[#items+1]={section=tr('Movements'),kind='documents',name=orion.formatDate(m.date)..'  '..m.number..'  '..m.account,
           amount=m.debit-m.credit,action='open',arg='documents',record_id=m.document}
       end
@@ -219,7 +224,25 @@ function Assistant:reconcile(text,rest)
   if balance>0.005 then message=string.format(tr('%s owes the company %s.'),party.name,money(balance))
   elseif balance<-0.005 then message=string.format(tr('The company owes %s %s, or holds their advance.'),party.name,money(-balance))
   else message=string.format(tr('Settlements with %s are closed.'),party.name) end
-  return {ok=true,message=message,items=items,animation='CHECKINGSOMETHING'}
+  return {ok=true,message=message,items=items,scope={entity='documents',rows=documents},animation='CHECKINGSOMETHING'}
+end
+
+function Assistant:adopt(result)
+  if not result.ok then return end
+  local scope=result.scope
+  self.engine:adopt(scope and scope.entity,scope and scope.rows or {},scope and scope.query)
+  self:publish_results(self.engine.rows)
+end
+
+function Assistant:publish_results(records)
+  self.lines={}
+  local query=self.engine.context.query
+  for i,row in ipairs(records or {}) do
+    local amount=query and query.creditors and row.owed or row.amount or 0
+    self.lines[#self.lines+1]={id=i,record_id=row.id,name=row.name,amount=amount,date=row.date or ''}
+  end
+  for _,row in ipairs(Results:all()) do orion.assert(row:delete()) end
+  for _,row in ipairs(self.lines) do orion.assert(Results:create(row)) end
 end
 
 function Assistant:data()
@@ -238,26 +261,25 @@ function Assistant:show(result,text)
   self.revision=self.revision+1
   self.animation=result.animation
   self.hint=next_hint(self.hint)
-  self.lines={}
-  for i,row in ipairs(result.rows or {}) do
-    self.lines[#self.lines+1]={id=i,record_id=row.id,name=row.name,amount=row.amount or 0,date=row.date or ''}
-  end
-  for _,row in ipairs(Results:all()) do orion.assert(row:delete()) end
-  for _,row in ipairs(self.lines) do orion.assert(Results:create(row)) end
+  local query=self.engine.context.query
+  local function amount(row) return query and query.creditors and row.owed or row.amount or 0 end
+  self:publish_results(result.rows)
   -- A refusal keeps the previous list in the engine, but the balloon shows
   -- records only for an answer or a question about them.
   local items,entity={},self.engine.scope and self.engine.scope.entity
   local shown=(result.ok or result.clarification) and result.rows or {}
   for i,row in ipairs(shown) do
     if i>LIMIT then break end
-    items[#items+1]={section=SECTIONS[entity] or tr('Results'),kind=entity or 'record',name=(row.name or ''):gsub('[\r\n]+',' '),
-      amount=row.amount or 0,action='choose',ordinal=i}
+    local name=row.name or ''
+    if result.duplicate_keys and result.duplicate_keys[row.id] then name=name..' · '..result.duplicate_keys[row.id] end
+    items[#items+1]={section=SECTIONS[entity] or tr('Results'),kind=entity or 'record',name=name:gsub('[\r\n]+',' '),
+      amount=amount(row),action='choose',ordinal=i}
   end
   local more=#shown>LIMIT and string.format(tr('And %d more. Ask to narrow the list.'),#shown-LIMIT) or nil
   -- No debtors: who paid in advance is the other side of the same question.
-  local query=self.engine.context.query
   local message=result.message
-  if result.ok and #(result.rows or {})==0 and query and query.debtors then
+  if result.ok and #(result.rows or {})==0 and query and query.debtors and not query.name
+    and not query.duplicates and not query.scope_ids and #(query.filters or {})==0 then
     message=tr('No one owes the company.')
     for _,row in ipairs(rows('counterparties')) do
       if (row.debt or 0)<0 then
@@ -310,6 +332,7 @@ function Assistant:submit(values)
   local budget_ok,budget=pcall(self.budget_request,self,text)
   if not budget_ok then budget={ok=false,message=tostring(budget),items={},animation='ALERT'} end
   if budget then
+    self:adopt(budget)
     self.command=budget.ok and '' or text
     self.balloon={text=budget.message}; self.items=budget.items
     self.expanded=true; self.revision=self.revision+1; self.animation=budget.animation
@@ -319,10 +342,11 @@ function Assistant:submit(values)
   self.budget_pending=false
   local result=self.engine:submit(text)
   -- What the command grammar does not take may still ask about the books.
-  if not result.ok and not result.clarification then
+  if not result.ok and not result.clarification and not self.engine.pending and not Parser.has_verb(text) then
     local ok,answer=pcall(self.topic,self,text)
     if not ok then answer={ok=false,message=string.format(tr('Could not retrieve data: %s'),tostring(answer)),items={},animation='ALERT'} end
     if answer then
+      self:adopt(answer)
       self.command=answer.ok and '' or text
       self.expanded=true
       self.revision=self.revision+1
@@ -351,7 +375,9 @@ function Assistant:choose(values,control)
     return
   end
   if row.action=='open' then
-    if not ledger.open(row.arg,row.record_id) then return nil,tr('Could not open the record.') end
+    local record=self.engine:live(row.arg,row.record_id)
+    if not record or not ledger.open(row.arg,row.record_id) then return nil,tr('Could not open the record.') end
+    self.engine:this_is_it(row.arg,record)
     return
   end
   if row.action=='command' then

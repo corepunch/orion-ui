@@ -80,6 +80,15 @@ local function copy(t)
 end
 P.copy=copy
 
+local function iso_date(text)
+  local y,m,d=text:match('^(%d%d%d%d)%-(%d%d)%-(%d%d)$')
+  y,m,d=tonumber(y),tonumber(m),tonumber(d)
+  if not y or m<1 or m>12 then return false end
+  local days=({31,28,31,30,31,30,31,31,30,31,30,31})[m]
+  if m==2 and (y%4==0 and (y%100~=0 or y%400==0)) then days=29 end
+  return d>=1 and d<=days
+end
+
 local function parse(text,context,initial_verb)
   if type(text)~='string' or #text>2048 then return nil,tr('Enter a command of at most 2048 bytes.') end
   local ok,words,err=pcall(tokenize,text)
@@ -99,21 +108,35 @@ local function parse(text,context,initial_verb)
         if ast.verb then return nil,tr('Use one command at a time.') end
         ast.verb=value; i=i+n
       elseif category=='nouns' then
-        local entity=value=='debtors' and 'counterparties' or value
+        local entity=(value=='debtors' or value=='creditors') and 'counterparties' or value
         if ast.entity and ast.entity~=entity then return nil,tr('Specify one object type.') end
         ast.entity=entity
         if value=='debtors' then ast.debtors=true end
+        if value=='creditors' then ast.creditors=true end
         i=i+n
       elseif category=='adjectives' then
         if value=='debtors' then ast.debtors=true
-        else ast.filters[#ast.filters+1]={field='posted',op='eq',value=value=='posted'} end
+        elseif value=='duplicates' then ast.duplicates=true
+        else
+          local posted=value=='posted'
+          if ast.posted~=nil and ast.posted~=posted then return nil,tr('Choose either posted or draft documents.') end
+          ast.posted=posted
+          ast.filters[#ast.filters+1]={field='posted',op='eq',value=posted}
+        end
         i=i+n
       elseif category=='fields' then
         field=value; ast.field=value; if value=='debt' and ast.verb~='sort' then ast.debtors=true end; i=i+n
       elseif category=='comparisons' then
-        local amount,last=P.number(words,i+n)
-        if not amount then return nil,tr('Which amount should I use?') end
-        ast.filters[#ast.filters+1]={field=field,op=value,value=amount}; i=last
+        local start=i+n
+        if field=='date' then
+          local token=words[start]
+          if not token or token.quoted or not iso_date(token.text) then return nil,tr('Enter a date as YYYY-MM-DD.') end
+          ast.filters[#ast.filters+1]={field=field,op=value,value=token.text}; i=start+1
+        else
+          local amount,last=P.number(words,start)
+          if not amount then return nil,tr('Which amount should I use?') end
+          ast.filters[#ast.filters+1]={field=field,op=value,value=amount}; i=last
+        end
       elseif category=='relations' then
         local parts={}
         for j=i+n,#words do
@@ -154,7 +177,7 @@ local function parse(text,context,initial_verb)
   end
   if ast.verb=='open' then
     if ast.name=='' then return nil,tr('Specify a nonempty name.') end
-    if #ast.filters>0 or ast.field or ast.debtors or ast.direction then return nil,tr('Find objects first, then open one.') end
+    if #ast.filters>0 or ast.field or ast.debtors or ast.creditors or ast.duplicates or ast.direction then return nil,tr('Find objects first, then open one.') end
     if ast.ordinal and (ast.ordinal<1 or ast.ordinal%1~=0) then return nil,tr('Use a whole row number starting at 1.') end
     if (ast.pronoun and (ast.name or ast.ordinal)) or (ast.name and ast.ordinal) then
       return nil,tr('Specify one object reference.')
@@ -170,23 +193,33 @@ local function parse(text,context,initial_verb)
     local added=ast.filters; ast.filters=copy(previous.filters)
     for _,f in ipairs(added) do ast.filters[#ast.filters+1]=f end
     ast.debtors=ast.debtors or previous.debtors
+    ast.creditors=ast.creditors or previous.creditors
+    ast.duplicates=ast.duplicates or previous.duplicates
     ast.party_id=previous.party_id
+    ast.scope_ids=copy(previous.scope_ids)
     if ast.verb~='sort' then ast.sort=copy(previous.sort) end
   end
-  if ast.debtors and not ast.entity then ast.entity='counterparties' end
+  if (ast.debtors or ast.creditors) and not ast.entity then ast.entity='counterparties' end
   if not ast.entity then return nil,tr('What should I find: customers, documents or items?') end
   if ast.for_party and ast.entity~='documents' then return nil,tr('Only documents can be filtered by customer.') end
   if ast.name=='' then return nil,tr('Specify a nonempty name.') end
   if ast.debtors and ast.entity~='counterparties' then return nil,tr('Debt filters apply only to counterparties.') end
+  if ast.creditors and (ast.entity~='counterparties' or ast.debtors) then return nil,tr('Choose either debtors or creditors.') end
+  if ast.duplicates and ast.entity~='counterparties' and ast.entity~='items' then return nil,tr('Duplicate checks apply only to customers and items.') end
+  local posted
   for _, f in ipairs(ast.filters) do
-    f.field=f.field or (ast.entity=='counterparties' and 'debt' or 'amount')
-    if f.field=='posted' and ast.entity~='documents' or f.field=='debt' and ast.entity~='counterparties' or f.field=='amount' and ast.entity=='counterparties' or f.field=='name' then
+    if f.field=='posted' then
+      if posted~=nil and posted~=f.value then return nil,tr('Choose either posted or draft documents.') end
+      posted=f.value
+    end
+    f.field=f.field or (ast.entity=='counterparties' and (ast.creditors and 'owed' or 'debt') or 'amount')
+    if f.field=='posted' and ast.entity~='documents' or f.field=='date' and ast.entity~='documents' or f.field=='debt' and ast.entity~='counterparties' or f.field=='owed' and ast.entity~='counterparties' or f.field=='amount' and ast.entity=='counterparties' or f.field=='name' then
       return nil,tr('This filter does not apply to these objects.')
     end
   end
   if ast.verb=='sort' then
-    local key=ast.field or (ast.entity=='counterparties' and 'debt' or 'amount')
-    if key=='debt' and ast.entity~='counterparties' or key=='amount' and ast.entity=='counterparties' then return nil,tr('This sort field does not apply to these objects.') end
+    local key=ast.field or (ast.entity=='counterparties' and (ast.creditors and 'owed' or 'debt') or 'amount')
+    if key=='debt' and ast.entity~='counterparties' or key=='owed' and ast.entity~='counterparties' or key=='date' and ast.entity~='documents' or key=='amount' and ast.entity=='counterparties' then return nil,tr('This sort field does not apply to these objects.') end
     ast.sort={field=key,direction=ast.direction or 'desc'}
   elseif ast.direction then return nil,tr('Use the sort command to set a direction.') end
   return ast
