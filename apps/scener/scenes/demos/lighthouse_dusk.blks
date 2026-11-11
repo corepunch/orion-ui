@@ -34,8 +34,8 @@
   <!-- Sea, its surface at z=0, and the island as two tapered rock steps. -->
   <box pos="0 0 -10" size="7000 7000 20" material="sea"/>
   <group name="island">
-    <prism pos="0 0 {LOW/2}" rot="90 0 7" radius="1100" height="{LOW}" sides="16" material="rock"><taper amount="-0.2"/></prism>
-    <prism pos="0 0 {LOW + (ROCK - LOW)/2}" rot="90 0 23" radius="380" height="{ROCK - LOW}" sides="9" material="rock"><taper amount="-0.25"/></prism>
+    <prism pos="0 0 {LOW/2}" rot="90 0 7" radius="1100" height="{LOW}" sides="16" material="rock"><taper center="0 0 0" amount="-0.4"/></prism>
+    <prism pos="0 0 {LOW + (ROCK - LOW)/2}" rot="90 0 23" radius="380" height="{ROCK - LOW}" sides="9" material="rock"><taper center="0 0 0" amount="-0.5"/></prism>
   </group>
 
   <!-- Tower: lathe profile with a flared base, a red band, and the gallery floor at its top. -->

@@ -33,14 +33,14 @@
   <group pos="-300 40 -200">
     <prism pos="0 145 0" radius="48" height="290" sides="4" material="slate">
       <twist angle="38" axis="y"/>
-      <taper amount="0.32" axis="y"/>
+      <taper center="0 0 0" amount="0.64" axis="y"/>
     </prism>
     <sphere pos="0 305 0" radius="22" material="blue"/>
   </group>
   <group pos="300 40 -200">
     <prism pos="0 145 0" radius="48" height="290" sides="4" material="slate">
       <twist angle="-38" axis="y"/>
-      <taper amount="0.32" axis="y"/>
+      <taper center="0 0 0" amount="0.64" axis="y"/>
     </prism>
     <sphere pos="0 305 0" radius="22" material="blue"/>
   </group>
@@ -48,14 +48,14 @@
   <group pos="-300 40 -465">
     <prism pos="0 115 0" radius="42" height="230" sides="4" material="slate">
       <twist angle="-28" axis="y"/>
-      <taper amount="0.28" axis="y"/>
+      <taper center="0 0 0" amount="0.56" axis="y"/>
     </prism>
     <sphere pos="0 242 0" radius="18" material="ember"/>
   </group>
   <group pos="300 40 -465">
     <prism pos="0 115 0" radius="42" height="230" sides="4" material="slate">
       <twist angle="28" axis="y"/>
-      <taper amount="0.28" axis="y"/>
+      <taper center="0 0 0" amount="0.56" axis="y"/>
     </prism>
     <sphere pos="0 242 0" radius="18" material="ember"/>
   </group>

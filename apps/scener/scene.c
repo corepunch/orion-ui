@@ -13,6 +13,10 @@
 #define SURFACE_EPSILON 0.000001f
 #define MATERIAL_EPSILON 0.000001f
 #define NOISE_DEFAULT_STRENGTH_CM 1.0f
+#define NOISE_DEFAULT_SCALE_CM 100.0f   /* Max's default Scale */
+#define NOISE_DEFAULT_ITERATIONS 6
+#define MIRROR_DEFAULT_WELD_CM 0.1f
+#define SHELL_DEFAULT_OUTER_CM 5.0f
 #define SURFACE_NAME_CAPACITY 64
 #define WALL_DEFAULT_LENGTH 4.0f
 #define WALL_DEFAULT_HEIGHT 2.7f
@@ -788,47 +792,83 @@ static void check_prefab_axes(Scene *s,XmlNode *root,const char *path){
 static char* read_file(const char*path);
 static void warn_unknown_elements(Scene *s, XmlNode *root, const char *path, int prefab);
 
-typedef void (*modifier_parser_fn)(Mesh *m, XmlNode *n);
+typedef void (*modifier_parser_fn)(Scene *s, Mesh *m, XmlNode *n);
 
 static char mod_axis(XmlNode *n){ const char *a=xml_attr(n,"axis","y"); return a[0]? a[0] : 'y'; }
 
-/* amount="a" scales both crosswise axes; amount="a b" each its own, in x, y, z order (axis y: x then z). */
-static void parse_mod_taper(Mesh *m, XmlNode *n){
-	float b=0,c=0; int got=sscanf(xml_attr(n,"amount","0"),"%f %f",&b,&c);
-	if(got<2) c=b;
-	mesh_apply_taper(m, b, c, xml_attr_f(n,"curvature",1.0f), mod_axis(n));
+/* The shared gizmo of the 3ds Max-style deformers: axis, center (cm, local) and limit="lower upper" (cm along the
+   axis from the centre, Max's Limit Effect). */
+static deform_gizmo_t mod_gizmo(Scene *s, XmlNode *n){
+	deform_gizmo_t g={.axis=mod_axis(n)};
+	const char *axis=xml_attr(n,"axis","y"),*limit=xml_attr(n,"limit",NULL);
+	if(strlen(axis)!=1 || !strchr("xyz",axis[0])) scene_issue(s,SCENE_ISSUE_ERROR,"modifier",node_file(s,n),n->line,"<%s axis=\"%s\">: the axis is x, y or z",n->tag,axis);
+	if(xml_attr(n,"center",NULL)){ g.hasCenter=1; g.center=xml_attr_v3_cm(n,"center",v3(0,0,0)); }
+	if(limit){
+		float lo=0,hi=0;
+		if(sscanf(limit,"%f %f",&lo,&hi)!=2 || lo>=hi) scene_issue(s,SCENE_ISSUE_ERROR,"modifier",node_file(s,n),n->line,"<%s limit=\"%s\">: the limit is \"lower upper\" in cm, lower below upper",n->tag,limit);
+		else { g.limited=1; g.lower=lo*0.01f; g.upper=hi*0.01f; }
+	}
+	return g;
 }
-static void parse_mod_twist(Mesh *m, XmlNode *n){
-	mesh_apply_twist(m, xml_attr_f(n,"angle",0.0f), mod_axis(n));
+
+static void parse_mod_taper(Scene *s, Mesh *m, XmlNode *n){
+	deform_gizmo_t g=mod_gizmo(s,n);
+	const char *effect=xml_attr(n,"effect","");
+	for(const char *c=effect;*c;c++) if(!strchr("xyz",*c) || *c==g.axis){
+		scene_issue(s,SCENE_ISSUE_ERROR,"modifier",node_file(s,n),n->line,"<taper effect=\"%s\">: the effect names the crosswise axes to scale (not the axis %c)",effect,g.axis); break; }
+	mesh_apply_taper(m,&g,xml_attr_f(n,"amount",0.0f),xml_attr_f(n,"curve",0.0f),xml_attr_i(n,"symmetry",0),effect);
 }
-static void parse_mod_bend(Mesh *m, XmlNode *n){
-	mesh_apply_bend(m, xml_attr_f(n,"angle",0.0f), mod_axis(n));
+static void parse_mod_twist(Scene *s, Mesh *m, XmlNode *n){
+	deform_gizmo_t g=mod_gizmo(s,n);
+	mesh_apply_twist(m,&g,xml_attr_f(n,"angle",0.0f),xml_attr_f(n,"bias",0.0f));
 }
-static void parse_mod_stretch(Mesh *m, XmlNode *n){
-	mesh_apply_stretch(m, xml_attr_f(n,"amount",0.0f), xml_attr_f(n,"amplify",1.0f), mod_axis(n));
+static void parse_mod_bend(Scene *s, Mesh *m, XmlNode *n){
+	deform_gizmo_t g=mod_gizmo(s,n);
+	mesh_apply_bend(m,&g,xml_attr_f(n,"angle",0.0f),xml_attr_f(n,"direction",0.0f));
 }
-static void parse_mod_skew(Mesh *m, XmlNode *n){
-	mesh_apply_skew(m, xml_attr_f(n,"amount",0.0f), mod_axis(n));
+static void parse_mod_stretch(Scene *s, Mesh *m, XmlNode *n){
+	deform_gizmo_t g=mod_gizmo(s,n);
+	float st=xml_attr_f(n,"stretch",0.0f);
+	if(st<=-1.0f) scene_issue(s,SCENE_ISSUE_ERROR,"modifier",node_file(s,n),n->line,"<stretch stretch=\"%g\">: stretch must stay above -1",st);
+	mesh_apply_stretch(m,&g,st,xml_attr_f(n,"amplify",0.0f));
 }
-static void parse_mod_array(Mesh *m, XmlNode *n){
+static void parse_mod_skew(Scene *s, Mesh *m, XmlNode *n){
+	deform_gizmo_t g=mod_gizmo(s,n);
+	mesh_apply_skew(m,&g,xml_attr_f_cm(n,"amount",0.0f),xml_attr_f(n,"direction",0.0f));
+}
+static void parse_mod_array(Scene *s, Mesh *m, XmlNode *n){
+	(void)s;
 	mesh_apply_array(m, xml_attr_i(n,"count",1),
 		xml_attr_v3_cm(n,"translation",v3(0,0,0)),
 		xml_attr_v3(n,"rotation",v3(0,0,0)));
 }
-static void parse_mod_extrude(Mesh *m, XmlNode *n){
+static void parse_mod_extrude(Scene *s, Mesh *m, XmlNode *n){
+	(void)s;
 	mesh_apply_extrude(m,xml_attr_f_cm(n,"amount",0.1f),mod_axis(n));
 }
-static void parse_mod_mirror(Mesh *m, XmlNode *n){
-	mesh_apply_mirror(m,mod_axis(n),xml_attr_f(n,"weld",0.001f));
+static void parse_mod_mirror(Scene *s, Mesh *m, XmlNode *n){
+	const char *axes=xml_attr(n,"axis","x");
+	if(!*axes || axes[strspn(axes,"xyz")]) scene_issue(s,SCENE_ISSUE_ERROR,"modifier",node_file(s,n),n->line,"<mirror axis=\"%s\">: the axis is x, y, z or a pair such as xy",axes);
+	mesh_apply_mirror(m,axes,xml_attr_f_cm(n,"offset",0.0f),xml_attr_i(n,"copy",1),xml_attr_f_cm(n,"weld",MIRROR_DEFAULT_WELD_CM));
 }
-static void parse_mod_noise(Mesh *m, XmlNode *n){
-	mesh_apply_noise(m,xml_attr_f_cm(n,"strength",NOISE_DEFAULT_STRENGTH_CM),xml_attr_i(n,"seed",1));
+/* strength="x y z" (cm per axis; one value: all three), scale (cm), fractal, roughness, iterations: Max's Noise. */
+static void parse_mod_noise(Scene *s, Mesh *m, XmlNode *n){
+	float sx=NOISE_DEFAULT_STRENGTH_CM,sy=-1,sz=-1;
+	int got=sscanf(xml_attr(n,"strength","1"),"%f %f %f",&sx,&sy,&sz);
+	if(got!=1 && got!=3) scene_issue(s,SCENE_ISSUE_ERROR,"modifier",node_file(s,n),n->line,"<noise strength>: one value or \"x y z\" in cm");
+	if(got<3) sy=sz=sx;
+	float scale=xml_attr_f_cm(n,"scale",NOISE_DEFAULT_SCALE_CM*0.01f);
+	if(scale<=0) scene_issue(s,SCENE_ISSUE_ERROR,"modifier",node_file(s,n),n->line,"<noise scale=\"%g\">: the scale must be positive",scale*100);
+	mesh_apply_noise(m,xml_attr_i(n,"seed",1),scale,v3(sx*0.01f,sy*0.01f,sz*0.01f),xml_attr_i(n,"fractal",0),
+		xml_attr_f(n,"roughness",0.0f),xml_attr_i(n,"iterations",NOISE_DEFAULT_ITERATIONS));
 }
-static void parse_mod_shell(Mesh *m, XmlNode *n){
-	mesh_apply_shell(m,xml_attr_f_cm(n,"amount",0.05f));
+static void parse_mod_shell(Scene *s, Mesh *m, XmlNode *n){
+	float inner=xml_attr_f_cm(n,"inner",0.0f),outer=xml_attr_f_cm(n,"outer",SHELL_DEFAULT_OUTER_CM*0.01f);
+	if(inner+outer<=0) scene_issue(s,SCENE_ISSUE_ERROR,"modifier",node_file(s,n),n->line,"<shell>: inner + outer must be a positive thickness");
+	mesh_apply_shell(m,inner,outer);
 }
-static void parse_mod_bevel(Mesh *m, XmlNode *n){
-	(void)m; (void)n;
+static void parse_mod_bevel(Scene *s, Mesh *m, XmlNode *n){
+	(void)s; (void)m; (void)n;
 	fprintf(stderr,"[scener] bevel requires an extruded 2D profile\n");
 }
 
@@ -849,24 +889,24 @@ static const struct {
 	{ "bevel",   parse_mod_bevel },
 };
 
-static void apply_modifiers(Mesh *m, XmlNode *n){
+static void apply_modifiers(Scene *s, Mesh *m, XmlNode *n){
 	for(int i=0;i<n->nkids;i++){
 		XmlNode *c=n->kids[i];
 		for(int j=0;j<(int)(sizeof(modifier_parsers)/sizeof(modifier_parsers[0]));j++){
 			if(!strcmp(c->tag, modifier_parsers[j].tag)){
-				modifier_parsers[j].parse(m, c);
+				modifier_parsers[j].parse(s, m, c);
 				break;
 			}
 		}
 	}
 }
 
-static void apply_profile_modifiers(Mesh *m,XmlNode *n){
+static void apply_profile_modifiers(Scene *s, Mesh *m,XmlNode *n){
 	for(int i=0;i<n->nkids;i++){
 		XmlNode *c=n->kids[i];
 		if(!strcmp(c->tag,"extrude")||!strcmp(c->tag,"bevel")||!strcmp(c->tag,"fillet")) continue;
 		for(int j=0;j<(int)(sizeof(modifier_parsers)/sizeof(modifier_parsers[0]));j++)
-			if(!strcmp(c->tag,modifier_parsers[j].tag)){ modifier_parsers[j].parse(m,c); break; }
+			if(!strcmp(c->tag,modifier_parsers[j].tag)){ modifier_parsers[j].parse(s,m,c); break; }
 	}
 }
 
@@ -931,7 +971,7 @@ static void parse_lathe(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,
 	Shape2D *sh=find_shape(s,sid);
 	if(!sh){ scene_issue(s,SCENE_ISSUE_ERROR,"shape",node_file(s,n),n->line,"<lathe> uses undefined shape '%s'",sid?sid:""); return; }
 	Mesh mesh=gen_lathe(sh,xml_attr_i(n,"segments",24));
-	apply_modifiers(&mesh,n);
+	apply_modifiers(s,&mesh,n);
 	scene_add_obj(s,mesh,M,R,color,shin,castsShadow,renderable,unlit);
 }
 
@@ -1040,7 +1080,7 @@ static void parse_mesh(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,v
 	Mesh m=ok?mesh_from_triangles(p,NULL,NULL,nv,ft,nft,smooth,both):(Mesh){0};
 	free(ft); free(p);
 	if(!ok||!m.ntris){ if(ok) scene_issue(s,SCENE_ISSUE_ERROR,"mesh",node_file(s,n),n->line,"<mesh> has no faces"); mesh_free(&m); return; }
-	apply_modifiers(&m,n);
+	apply_modifiers(s,&m,n);
 	scene_add_obj(s,m,M,R,color,shin,castsShadow,renderable,unlit);
 }
 
@@ -1096,7 +1136,7 @@ static void parse_surface(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 po
 	Mesh m=ok?mesh_from_triangles(p,uv,seam,nv,ft,nft,smooth,both):(Mesh){0};
 	free(p); free(uv); free(seam); free(ft);
 	if(!ok){ mesh_free(&m); return; }
-	apply_modifiers(&m,n);
+	apply_modifiers(s,&m,n);
 	scene_add_obj(s,m,M,R,color,shin,castsShadow,renderable,unlit);
 }
 
@@ -1127,7 +1167,7 @@ static void parse_loft(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,v
 	cross.npts=cross.cpts=crossS->npts; cross.closed=1;
 	shape2d_compute_normals(&cross);
 	Mesh mesh=gen_loft(&lp,&cross,lclosed);
-	apply_modifiers(&mesh,n);
+	apply_modifiers(s,&mesh,n);
 	scene_add_obj(s,mesh,M,R,color,shin,castsShadow,renderable,unlit);
 	shape2d_free(&cross);
 	free(lp.pts);
@@ -1272,7 +1312,7 @@ static void parse_box(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 p
 	xml_attr_2f(n,"inset",0.0f,0.0f,&insetX,&insetY);
 	Mesh mesh=(insetX>0.0f || insetY>0.0f) ? gen_box_inset(sz.x,sz.y,sz.z,insetX,insetY)
 		: gen_box(sz.x,sz.y,sz.z);
-	apply_modifiers(&mesh,n);
+	apply_modifiers(s,&mesh,n);
 	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
 }
 
@@ -1353,7 +1393,7 @@ static void parse_shape_node(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3
 		XmlNode *c=n->kids[i];
 		if(!strcmp(c->tag,"v")||!strcmp(c->tag,"fillet")||!strcmp(c->tag,"extrude")||!strcmp(c->tag,"shell")||!strcmp(c->tag,"bevel")) continue;
 		for(int j=0;j<(int)(sizeof(modifier_parsers)/sizeof(modifier_parsers[0]));j++)
-			if(!strcmp(c->tag,modifier_parsers[j].tag)){ modifier_parsers[j].parse(&mesh,c); break; }
+			if(!strcmp(c->tag,modifier_parsers[j].tag)){ modifier_parsers[j].parse(s,&mesh,c); break; }
 	}
 	scene_add_obj(s,mesh,M,R,color,shin,castsShadow,renderable,unlit);
 }
@@ -1395,7 +1435,7 @@ static void parse_profile_primitive(Scene *s,XmlNode *n,mat4 M,mat4 R,vec3 color
 	Mesh mesh=gen_profile_extrusion_beveled(&profile,depth,amount,bevel?xml_attr_i(bevel,"bevelSegments",4):1);
 	shape2d_free(&profile);
 	if(!mesh.ntris){ fprintf(stderr,"[scener] %s: invalid extrusion or bevel\n",n->tag); return; }
-	apply_profile_modifiers(&mesh,n);
+	apply_profile_modifiers(s,&mesh,n);
 	scene_add_obj(s,mesh,M,R,color,shin,castsShadow,renderable,unlit);
 }
 
@@ -1415,7 +1455,7 @@ static void parse_screen(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 	vec3 size=xml_attr_v3_cm(n,"size",v3(0.01f,0.01f,0.0004f));
 	Mesh mesh=gen_rounded_box(size.x,size.y,size.z,xml_attr_f_cm(n,"radius",0),xml_attr_i(n,"segments",8));
 	if(!mesh.ntris){ fprintf(stderr,"[scener] screen: invalid size or radius\n"); return; }
-	apply_modifiers(&mesh,n);
+	apply_modifiers(s,&mesh,n);
 	const char *own=xml_attr(n,"image",NULL),*image=s->activeScreenImage?s->activeScreenImage:own;
 	int old=s->activeScreenTexture;
 	s->activeScreenTexture=image&&image[0]?screen_texture_index(s,image):-1;
@@ -1426,7 +1466,7 @@ static void parse_screen(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec
 static void parse_sphere(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)parentM; (void)pos; (void)rot;
 	float r=xml_attr_f_cm(n,"radius",0.5f);
-	Mesh mesh=gen_sphere(r,xml_attr_i(n,"rings",16),xml_attr_i(n,"slices",24)); apply_modifiers(&mesh,n);
+	Mesh mesh=gen_sphere(r,xml_attr_i(n,"rings",16),xml_attr_i(n,"slices",24)); apply_modifiers(s,&mesh,n);
 	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
 }
 
@@ -1436,14 +1476,14 @@ static void parse_cylinder(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, v
 	float wall=xml_attr_f_cm(n,"tube",0.0f);
 	Mesh mesh=wall>0.0f ? gen_cylinder_tube(r,h,wall,xml_attr_i(n,"sides",24))
 		: gen_cylinder(r,h,xml_attr_i(n,"sides",24));
-	apply_modifiers(&mesh,n);
+	apply_modifiers(s,&mesh,n);
 	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
 }
 
 static void parse_prism(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)parentM; (void)pos; (void)rot;
 	float r=xml_attr_f_cm(n,"radius",0.5f), h=xml_attr_f_cm(n,"height",1.0f);
-	Mesh mesh=gen_prism(r,h,xml_attr_i(n,"sides",6)); apply_modifiers(&mesh,n);
+	Mesh mesh=gen_prism(r,h,xml_attr_i(n,"sides",6)); apply_modifiers(s,&mesh,n);
 	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
 }
 
@@ -1452,14 +1492,14 @@ static void parse_cone(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 
 	float rb=xml_attr_f_cm(n,"radius",0.5f), rt=xml_attr_f_cm(n,"radiusTop",0.0f), h=xml_attr_f_cm(n,"height",1.0f);
 	int pyramid=!strcmp(n->tag,"pyramid");
 	int sides = xml_attr_i(n,"sides", pyramid?4:24);
-	Mesh mesh=gen_cone(rb,rt,h,sides,xml_attr_i(n,"smooth",!pyramid)); apply_modifiers(&mesh,n);
+	Mesh mesh=gen_cone(rb,rt,h,sides,xml_attr_i(n,"smooth",!pyramid)); apply_modifiers(s,&mesh,n);
 	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
 }
 
 static void parse_torus(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)parentM; (void)pos; (void)rot;
 	float R_=xml_attr_f_cm(n,"majorRadius",0.5f), r_=xml_attr_f_cm(n,"minorRadius",0.15f);
-	Mesh mesh=gen_torus(R_,r_,xml_attr_i(n,"majorSegments",24),xml_attr_i(n,"minorSegments",12)); apply_modifiers(&mesh,n);
+	Mesh mesh=gen_torus(R_,r_,xml_attr_i(n,"majorSegments",24),xml_attr_i(n,"minorSegments",12)); apply_modifiers(s,&mesh,n);
 	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
 }
 
@@ -1469,7 +1509,7 @@ static void parse_arch(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 
 	float wall=xml_attr_f_cm(n,"tube",xml_attr_f_cm(n,"thickness",0.0f));
 	float archInset=xml_attr_f_cm(n,"inset",0.0f);
 	Mesh mesh=gen_arch(w,h,d,wall,xml_attr_i(n,"segments",16),archInset);
-	apply_modifiers(&mesh,n);
+	apply_modifiers(s,&mesh,n);
 	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
 }
 
@@ -1719,7 +1759,7 @@ static void parse_capsule(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, ve
 	(void)parentM; (void)pos; (void)rot;
 	float r=xml_attr_f_cm(n,"radius",0.5f), h=xml_attr_f_cm(n,"height",1.0f);
 	Mesh mesh=gen_capsule(r,h,xml_attr_i(n,"rings",12),xml_attr_i(n,"slices",24));
-	apply_modifiers(&mesh,n);
+	apply_modifiers(s,&mesh,n);
 	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
 }
 
@@ -1729,7 +1769,7 @@ static void parse_ellipsoid(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, 
 	if(radii.x<=0 || radii.y<=0 || radii.z<=0){ fprintf(stderr,"[scener] ellipsoid: radii must be positive\n"); return; }
 	Mesh mesh=gen_ellipsoid(v3(0,0,0),v3(1,0,0),v3(0,1,0),v3(0,0,1),radii,xml_attr_f(n,"taper",1.0f),
 		xml_attr_i(n,"rings",BONE_DEFAULT_RINGS),xml_attr_i(n,"slices",BONE_DEFAULT_SLICES));
-	apply_modifiers(&mesh,n);
+	apply_modifiers(s,&mesh,n);
 	scene_add_obj(s, mesh, M,R, color,shin,castsShadow,renderable,unlit);
 }
 

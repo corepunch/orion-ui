@@ -51,7 +51,7 @@
     <lathe shape="lathe1" segments="10" pos="-137.4 11.58 122.62" scale="0.37 0.37 0.37" color="0.330 0.758 0.244" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     <lathe shape="lathe1" segments="10" pos="-130.94 11.58 140.9" scale="0.37 0.37 0.37" color="0.237 0.669 0.225" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     <lathe shape="lathe1" segments="10" pos="-128 23.8 129.58" scale="0.39 0.39 0.39" color="0.434 0.799 0.258" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
-    <circle radius="12" segments="10" pos="-97.98 80 -97.98" rot="-90 0 0" color="0.557 0.329 0.153" shininess="8"><extrude amount="128"/><bevel amount="3.36" bevelSegments="2"/><taper amount="-0.2" axis="z"/></circle>
+    <circle radius="12" segments="10" pos="-97.98 80 -97.98" rot="-90 0 0" color="0.557 0.329 0.153" shininess="8"><extrude amount="128"/><bevel amount="3.36" bevelSegments="2"/><taper center="0 0 0" amount="-0.4" axis="z"/></circle>
     <group pos="-97.98 144 -97.98" rot="0 6.7 0">
       <lathe shape="lathe2" segments="8" pos="30.4 -8.51 0" scale="0.63 0.05 0.21" rot="0 0 -22" color="0.325 0.756 0.240" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     </group>
@@ -104,7 +104,7 @@
     <soft-box width="32" height="160" depth="35.2" radius="6.4" bevel="5.44" segments="3" pos="40 96 115.2" color="0.944 0.890 0.755" shininess="6"/>
     <lathe shape="lathe3" segments="14" pos="128 16 120" color="0.686 0.369 0.220" shininess="14" gradientFrom="0.8 0.8 0.8" gradientTo="1.05 1.05 1.05"/>
     <lathe shape="lathe4" segments="14" pos="128 34.4 120" color="0.169 0.361 0.682" shininess="40"/>
-    <circle radius="12" segments="10" pos="102.88 88 -102.88" rot="-90 0 0" color="0.557 0.329 0.153" shininess="8"><extrude amount="144"/><bevel amount="3.36" bevelSegments="2"/><taper amount="-0.2" axis="z"/></circle>
+    <circle radius="12" segments="10" pos="102.88 88 -102.88" rot="-90 0 0" color="0.557 0.329 0.153" shininess="8"><extrude amount="144"/><bevel amount="3.36" bevelSegments="2"/><taper center="0 0 0" amount="-0.4" axis="z"/></circle>
     <group pos="102.88 160 -102.88" rot="0 -0.56 0">
       <lathe shape="lathe2" segments="8" pos="28 -7.84 0" scale="0.58 0.04 0.19" rot="0 0 -22" color="0.240 0.679 0.228" shininess="10" gradientFrom="0.6 0.6 0.6" gradientTo="1.2 1.2 1.2"/>
     </group>
@@ -192,7 +192,7 @@
   <group name="watchtower" pos="0 0 320">
     <soft-box width="320" height="16" depth="320" radius="6.4" bevel="5.44" segments="3" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
     <soft-box width="240" height="19.2" depth="240" radius="6.4" bevel="5.44" segments="3" pos="0 25.6 0" color="0.953 0.902 0.761" shininess="6"/>
-    <soft-box width="168" height="304" depth="168" radius="6.4" bevel="5.44" segments="3" pos="0 187.2 0" color="0.768 0.662 0.463" shininess="6"><taper amount="-0.0952 -0.0952"/></soft-box>
+    <soft-box width="168" height="304" depth="168" radius="6.4" bevel="5.44" segments="3" pos="0 187.2 0" color="0.768 0.662 0.463" shininess="6"><taper center="0 0 0" amount="-0.1905" effect="x"/><taper center="0 0 0" amount="-0.1905" effect="z"/></soft-box>
     <soft-box width="168" height="16" depth="168" radius="6.4" bevel="5.44" segments="3" pos="0 347.2 0" color="0.902 0.827 0.639" shininess="6"/>
     <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="-57.6 369.6 72" color="0.953 0.902 0.761" shininess="6"/>
     <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="-57.6 369.6 -72" color="0.953 0.902 0.761" shininess="6"/>
@@ -206,7 +206,7 @@
     <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="57.6 369.6 -72" color="0.953 0.902 0.761" shininess="6"/>
     <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="-72 369.6 -57.6" color="0.953 0.902 0.761" shininess="6"/>
     <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="72 369.6 -57.6" color="0.953 0.902 0.761" shininess="6"/>
-    <circle radius="5.2" segments="8" pos="32 411.2 -32" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="112"/><bevel amount="1.68" bevelSegments="2"/><taper amount="-0.0769" axis="z"/></circle>
+    <circle radius="5.2" segments="8" pos="32 411.2 -32" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="112"/><bevel amount="1.68" bevelSegments="2"/><taper center="0 0 0" amount="-0.1538" axis="z"/></circle>
     <lathe shape="lathe1" segments="10" pos="32 462.4 -32" scale="0.16 0.16 0.16" color="0.910 0.682 0.173" shininess="60"/>
     <group pos="32 460.8 -32" rot="0 0 0">
       <shape closed="1" v="0 0 67.2 -16 0 -51.2" color="0.169 0.361 0.682" shininess="3">
@@ -231,7 +231,7 @@
   </group>
   <group name="pylon_gate" pos="720 0 320">
     <soft-box width="480" height="16" depth="320" radius="6.4" bevel="5.44" segments="3" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
-    <soft-box width="150.4" height="296" depth="160" radius="6.4" bevel="5.44" segments="3" pos="-136 164 0" color="0.880 0.809 0.628" shininess="6"><taper amount="-0.1702 -0.1"/></soft-box>
+    <soft-box width="150.4" height="296" depth="160" radius="6.4" bevel="5.44" segments="3" pos="-136 164 0" color="0.880 0.809 0.628" shininess="6"><taper center="0 0 0" amount="-0.3404" effect="x"/><taper center="0 0 0" amount="-0.2" effect="z"/></soft-box>
     <soft-box width="134.4" height="12.8" depth="153.6" radius="4.48" bevel="3.81" pos="-136 318.4 0" color="0.086 0.635 0.588" shininess="40"/>
     <soft-box width="147.2" height="16" depth="166.4" radius="6.4" bevel="5.44" segments="3" pos="-136 332.8 0" color="0.953 0.902 0.761" shininess="6"/>
     <group pos="-216 0 80" rot="0 0 0">
@@ -243,14 +243,14 @@
       <slab width="12.06" height="74.88" depth="3.2" bevel="0" pos="107.29 153.6 3.52" color="0.910 0.682 0.173" shininess="6"/>
       <lathe shape="lathe2" segments="8" pos="107.29 198.94 4.16" scale="0.13 0.13 0.04" color="0.169 0.141 0.125" shininess="6"/>
     </group>
-    <circle radius="5.2" segments="8" pos="-187.2 176 99.2" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="320"/><bevel amount="1.68" bevelSegments="2"/><taper amount="-0.0769" axis="z"/></circle>
+    <circle radius="5.2" segments="8" pos="-187.2 176 99.2" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="320"/><bevel amount="1.68" bevelSegments="2"/><taper center="0 0 0" amount="-0.1538" axis="z"/></circle>
     <lathe shape="lathe1" segments="10" pos="-187.2 331.2 99.2" scale="0.16 0.16 0.16" color="0.910 0.682 0.173" shininess="60"/>
     <group pos="-187.2 329.6 99.2" rot="0 180 0">
       <shape closed="1" v="0 0 67.2 -16 0 -51.2" color="0.725 0.333 0.184" shininess="3">
         <extrude amount="1.5"/>
       </shape>
     </group>
-    <soft-box width="150.4" height="296" depth="160" radius="6.4" bevel="5.44" segments="3" pos="136 164 0" color="0.893 0.813 0.632" shininess="6"><taper amount="-0.1702 -0.1"/></soft-box>
+    <soft-box width="150.4" height="296" depth="160" radius="6.4" bevel="5.44" segments="3" pos="136 164 0" color="0.893 0.813 0.632" shininess="6"><taper center="0 0 0" amount="-0.3404" effect="x"/><taper center="0 0 0" amount="-0.2" effect="z"/></soft-box>
     <soft-box width="134.4" height="12.8" depth="153.6" radius="4.48" bevel="3.81" pos="136 318.4 0" color="0.086 0.635 0.588" shininess="40"/>
     <soft-box width="147.2" height="16" depth="166.4" radius="6.4" bevel="5.44" segments="3" pos="136 332.8 0" color="0.953 0.902 0.761" shininess="6"/>
     <group pos="56 0 80" rot="0 0 0">
@@ -262,7 +262,7 @@
       <slab width="12.06" height="74.88" depth="3.2" bevel="0" pos="107.29 153.6 3.52" color="0.910 0.682 0.173" shininess="6"/>
       <lathe shape="lathe2" segments="8" pos="107.29 198.94 4.16" scale="0.13 0.13 0.04" color="0.169 0.141 0.125" shininess="6"/>
     </group>
-    <circle radius="5.2" segments="8" pos="187.2 176 99.2" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="320"/><bevel amount="1.68" bevelSegments="2"/><taper amount="-0.0769" axis="z"/></circle>
+    <circle radius="5.2" segments="8" pos="187.2 176 99.2" rot="-90 0 0" color="0.353 0.196 0.086" shininess="8"><extrude amount="320"/><bevel amount="1.68" bevelSegments="2"/><taper center="0 0 0" amount="-0.1538" axis="z"/></circle>
     <lathe shape="lathe1" segments="10" pos="187.2 331.2 99.2" scale="0.16 0.16 0.16" color="0.910 0.682 0.173" shininess="60"/>
     <group pos="187.2 329.6 99.2" rot="0 0 0">
       <shape closed="1" v="0 0 67.2 -16 0 -51.2" color="0.169 0.361 0.682" shininess="3">

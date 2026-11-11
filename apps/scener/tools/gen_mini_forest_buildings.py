@@ -13,6 +13,7 @@ def v3(a, b, c): return "%s %s %s" % (f(a), f(b), f(c))
 ROUND = 0.42      # corner radius as a fraction of the smaller cross-section side
 ROUND_MAX = 22.0  # cm
 BEVEL = 0.92      # rim bevel as a fraction of the corner radius (must stay below it)
+NOISE_SCALE = 0.6 # <noise> scale as a fraction of the radius: neighbouring vertices of a low-poly sphere move apart
 
 def box(p, s, m, rot=None, extra="", mods=""):
   r = ' rot="%s"' % v3(*rot) if rot else ""
@@ -110,8 +111,8 @@ def pine(x, z, s=1.0, seed=0):
     cone((x, (y + h / 2) * s, z), r * s, h * s, m, sides=6, top=top * s, rot=(0, i * 30, 0), smooth=False)
 
 def bush(x, z, r=26, m="leaf"):
-  e('    <sphere pos="%s" radius="%s" rings="5" slices="7" material="%s"><noise strength="2" seed="%d"/></sphere>'
-    % (v3(x, r * 0.7, z), f(r), m, int(abs(x * 7 + z * 13)) % 97 + 1))
+  e('    <sphere pos="%s" radius="%s" rings="5" slices="7" material="%s"><noise strength="2" scale="%s" seed="%d"/></sphere>'
+    % (v3(x, r * 0.7, z), f(r), m, f(r * NOISE_SCALE), int(abs(x * 7 + z * 13)) % 97 + 1))
 
 def rock(x, z, r=16):
   e('    <sphere pos="%s" radius="%s" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>' % (v3(x, r * 0.5, z), f(r)))
@@ -221,12 +222,12 @@ def watermill():
 
 def treehouse():
   """Treehouse: fat trunk, round leafy crown, small hut on a platform."""
-  cyl((0, 140, 0), 34, 280, "trunk", sides=9, mods='<taper amount="0.25" axis="z"/>')
+  cyl((0, 140, 0), 34, 280, "trunk", sides=9, mods='<taper center="0 0 0" amount="0.5" axis="z"/>')
   for a in (0, 120, 240):
     r = math.radians(a)
     box((math.cos(r) * 40, 10, math.sin(r) * 40), (60, 20, 22), "trunk", rot=(0, -a, -20))
   for (x, y, z, r, m) in ((0, 360, 0, 120, "leaf"), (-90, 320, 50, 80, "leaf_light"), (80, 330, -60, 85, "leaf_light"), (40, 410, 70, 70, "leaf")):
-    e('    <sphere pos="%s" radius="%d" rings="6" slices="9" material="%s"><noise strength="5" seed="%d"/></sphere>' % (v3(x, y, z), r, m, r))
+    e('    <sphere pos="%s" radius="%d" rings="6" slices="9" material="%s"><noise strength="5" scale="%s" seed="%d"/></sphere>' % (v3(x, y, z), r, m, f(r * NOISE_SCALE), r))
   box((60, 175, 50), (210, 10, 180), "deck")
   box((70, 225, 50), (120, 90, 110), "wood_light")
   gable_roof(70, 270, 50, 130, 110, 50, "roof_red", along="x", fill="wood_light", ov=12, t=8)
@@ -299,7 +300,7 @@ def ranger_station():
 
 def stone_tower():
   """Round stone tower with a tall pointed roof and a pennant."""
-  cyl((0, 140, 0), 80, 280, "stone_light", sides=24, mods='<taper amount="0.08" axis="z"/>')
+  cyl((0, 140, 0), 80, 280, "stone_light", sides=24, mods='<taper center="0 0 0" amount="0.16" axis="z"/>')
   cyl((0, 10, 0), 92, 20, "stone", sides=24)
   cyl((0, 286, 0), 94, 16, "stone", sides=24)
   e('    <cone pos="0 359 0" radius="104" height="130" sides="24" material="roof_purple"/>')

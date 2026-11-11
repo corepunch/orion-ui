@@ -26,9 +26,10 @@ a scene from scratch:
 
 - Cylinders, cones, prisms and lathes stand along local Y. In a Z-up scene give
   them `rot="90 0 0"`, or they lie down.
-- `<taper amount="a">` scales the base by `1 - a` and the top by `1 + a`: a
-  rock that stands on its wide end takes a negative amount, and either way the
-  wide end reaches past the nominal radius.
+- `<taper amount="a">` works like 3ds Max's: from the gizmo centre (by default
+  the base) the far end scales by `1 + a`. On a centred prism, `center="0 0 0"`
+  scales the base by `1 - a/2` and the top by `1 + a/2`, so the wide end reaches
+  past the nominal radius.
 - A camera inside a room must stay inside its walls: a position past a wall
   renders a flat, unlit frame with no diagnostic.
 - Furniture on a rug stands on the rug's top, not through it; the checker

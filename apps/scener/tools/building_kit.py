@@ -171,7 +171,7 @@ class Kit:
     ratio = r1 / r0
     t = (ratio - 1) / (ratio + 1)
     bev = min(.35 * min(r0, r1) * TILE, SOLID_ROUND * L * TILE)
-    mods = ("<bevel amount=\"%s\" bevelSegments=\"2\"/>" % f(bev) if bev >= .6 else "") + ("<taper amount=\"%s\" axis=\"z\"/>" % f4(t) if abs(t) > .001 else "")
+    mods = ("<bevel amount=\"%s\" bevelSegments=\"2\"/>" % f(bev) if bev >= .6 else "") + ("<taper center=\"0 0 0\" amount=\"%s\" axis=\"z\"/>" % f4(2 * t) if abs(t) > .001 else "")
     tilt = math.degrees(math.acos(max(-1, min(1, dz / L))))
     p = v3(mid[0] * TILE, mid[2] * TILE, -mid[1] * TILE)
     if tilt < .01:
@@ -215,14 +215,14 @@ class Kit:
     self.close("group")
 
   def frustum(self, mat, x, y, z, sx, sy, h, tx, ty, col, rz=0.):
-    """A battered block: a box tapered towards its top, inset tx on its width and ty on its depth. The taper
-    pivots at mid-height, so the box is sized for that height."""
+    """A battered block: a box tapered towards its top, inset tx on its width and ty on its depth: one taper per
+    crosswise axis (Max's Effect), pivoting at mid-height, so the box is sized for that height."""
     def amount(s, t):
       ratio = (s - 2 * t) / s
       return (ratio - 1) / (ratio + 1)
     ax, ay = amount(sx, tx), amount(sy, ty)
     self.prism(mat, v3(x * TILE, (z + h / 2) * TILE, -y * TILE), sx / (1 - ax), h, sy / (1 - ay) * TILE, col,
-               [("rot", v3(0, math.degrees(rz), 0))] if rz else [], "<taper amount=\"%s %s\"/>" % (f4(ax), f4(ay)))
+               [("rot", v3(0, math.degrees(rz), 0))] if rz else [], "<taper center=\"0 0 0\" amount=\"%s\" effect=\"x\"/><taper center=\"0 0 0\" amount=\"%s\" effect=\"z\"/>" % (f4(2 * ax), f4(2 * ay)))
 
   def pyramid(self, mat, x, y, z, s, h, col):
     """Four revolved segments turned a quarter step, so the base is square."""

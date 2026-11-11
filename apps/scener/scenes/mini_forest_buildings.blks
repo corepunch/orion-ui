@@ -173,7 +173,7 @@
     <cone pos="210 76 -190" radius="32" radiusTop="6.4" height="46.4" sides="6" rot="0 30 0" smooth="0" material="pine"/>
     <cone pos="210 104 -190" radius="25.6" radiusTop="4.8" height="41.6" sides="6" rot="0 60 0" smooth="0" material="pine"/>
     <cone pos="210 128.8 -190" radius="17.6" height="36.8" sides="6" rot="0 90 0" smooth="0" material="pine"/>
-    <sphere pos="-220 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" seed="93"/></sphere>
+    <sphere pos="-220 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" scale="14.4" seed="93"/></sphere>
     <sphere pos="230 7 240" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Cream cottage with red roof, flower boxes and a chimney. -->
@@ -234,7 +234,7 @@
     <cone pos="220 66.5 210" radius="28" radiusTop="5.6" height="40.6" sides="6" rot="0 30 0" smooth="0" material="pine"/>
     <cone pos="220 91 210" radius="22.4" radiusTop="4.2" height="36.4" sides="6" rot="0 60 0" smooth="0" material="pine"/>
     <cone pos="220 112.7 210" radius="15.4" height="32.2" sides="6" rot="0 90 0" smooth="0" material="pine"/>
-    <sphere pos="-183 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" seed="61"/></sphere>
+    <sphere pos="-183 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" scale="14.4" seed="61"/></sphere>
     <sphere pos="207 7 229" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- A-frame hut: the roof reaches the ground; glazed front gable. -->
@@ -273,7 +273,7 @@
     <cone pos="-210 71.25 -170" radius="30" radiusTop="6" height="43.5" sides="6" rot="0 30 0" smooth="0" material="pine"/>
     <cone pos="-210 97.5 -170" radius="24" radiusTop="4.5" height="39" sides="6" rot="0 60 0" smooth="0" material="pine"/>
     <cone pos="-210 120.75 -170" radius="16.5" height="34.5" sides="6" rot="0 90 0" smooth="0" material="pine"/>
-    <sphere pos="-146 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" seed="29"/></sphere>
+    <sphere pos="-146 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" scale="14.4" seed="29"/></sphere>
     <sphere pos="184 7 218" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Ranger lookout: four log legs, cross braces, platform and a pyramid-roofed cabin. -->
@@ -338,7 +338,7 @@
     <cone pos="210 95 -210" radius="40" radiusTop="8" height="58" sides="6" rot="0 30 0" smooth="0" material="pine_light"/>
     <cone pos="210 130 -210" radius="32" radiusTop="6" height="52" sides="6" rot="0 60 0" smooth="0" material="pine_light"/>
     <cone pos="210 161 -210" radius="22" height="46" sides="6" rot="0 90 0" smooth="0" material="pine_light"/>
-    <sphere pos="-189 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" seed="19"/></sphere>
+    <sphere pos="-189 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" scale="14.4" seed="19"/></sphere>
     <sphere pos="221 7 207" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Stone mill with a timber upper storey and a paddle wheel in a stream. -->
@@ -385,7 +385,7 @@
     <cone pos="-220 85.5 -210" radius="36" radiusTop="7.2" height="52.2" sides="6" rot="0 30 0" smooth="0" material="pine"/>
     <cone pos="-220 117 -210" radius="28.8" radiusTop="5.4" height="46.8" sides="6" rot="0 60 0" smooth="0" material="pine"/>
     <cone pos="-220 144.9 -210" radius="19.8" height="41.4" sides="6" rot="0 90 0" smooth="0" material="pine"/>
-    <sphere pos="-152 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" seed="84"/></sphere>
+    <sphere pos="-152 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" scale="14.4" seed="84"/></sphere>
     <sphere pos="198 7 236" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Treehouse: fat trunk, round leafy crown, small hut on a platform. -->
@@ -393,15 +393,15 @@
     <soft-box width="560" height="28" depth="560" radius="11.76" bevel="10.82" pos="0 -16 0" material="dirt"></soft-box>
     <soft-box width="562" height="8" depth="562" radius="3.36" bevel="3.09" pos="0 -4 0" material="grass"></soft-box>
     <group pos="0 140 0">
-    <circle radius="34" segments="9" rot="90 0 0" material="trunk"><extrude amount="280"/><bevel amount="20.24" bevelSegments="4"/><taper amount="0.25" axis="z"/></circle>
+    <circle radius="34" segments="9" rot="90 0 0" material="trunk"><extrude amount="280"/><bevel amount="20.24" bevelSegments="4"/><taper center="0 0 0" amount="0.5" axis="z"/></circle>
     </group>
     <soft-box width="60" height="20" depth="22" radius="8.4" bevel="7.73" pos="40 10 0" rot="0 0 -20" material="trunk"></soft-box>
     <soft-box width="60" height="20" depth="22" radius="8.4" bevel="7.73" pos="-20 10 34.64" rot="0 -120 -20" material="trunk"></soft-box>
     <soft-box width="60" height="20" depth="22" radius="8.4" bevel="7.73" pos="-20 10 -34.64" rot="0 -240 -20" material="trunk"></soft-box>
-    <sphere pos="0 360 0" radius="120" rings="6" slices="9" material="leaf"><noise strength="5" seed="120"/></sphere>
-    <sphere pos="-90 320 50" radius="80" rings="6" slices="9" material="leaf_light"><noise strength="5" seed="80"/></sphere>
-    <sphere pos="80 330 -60" radius="85" rings="6" slices="9" material="leaf_light"><noise strength="5" seed="85"/></sphere>
-    <sphere pos="40 410 70" radius="70" rings="6" slices="9" material="leaf"><noise strength="5" seed="70"/></sphere>
+    <sphere pos="0 360 0" radius="120" rings="6" slices="9" material="leaf"><noise strength="5" scale="72" seed="120"/></sphere>
+    <sphere pos="-90 320 50" radius="80" rings="6" slices="9" material="leaf_light"><noise strength="5" scale="48" seed="80"/></sphere>
+    <sphere pos="80 330 -60" radius="85" rings="6" slices="9" material="leaf_light"><noise strength="5" scale="51" seed="85"/></sphere>
+    <sphere pos="40 410 70" radius="70" rings="6" slices="9" material="leaf"><noise strength="5" scale="42" seed="70"/></sphere>
     <soft-box width="210" height="10" depth="180" radius="4.2" bevel="3.86" pos="60 175 50" material="deck"></soft-box>
     <soft-box width="120" height="90" depth="110" radius="22" bevel="20.24" pos="70 225 50" material="wood_light"></soft-box>
     <group pos="70 0 50" rot="0 90 0">
@@ -438,7 +438,7 @@
     <cone pos="220 76 -220" radius="32" radiusTop="6.4" height="46.4" sides="6" rot="0 30 0" smooth="0" material="pine_light"/>
     <cone pos="220 104 -220" radius="25.6" radiusTop="4.8" height="41.6" sides="6" rot="0 60 0" smooth="0" material="pine_light"/>
     <cone pos="220 128.8 -220" radius="17.6" height="36.8" sides="6" rot="0 90 0" smooth="0" material="pine_light"/>
-    <sphere pos="-195 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" seed="74"/></sphere>
+    <sphere pos="-195 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" scale="14.4" seed="74"/></sphere>
     <sphere pos="175 7 225" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Round hut: cylinder wall, conical thatch with a little cap. -->
@@ -494,7 +494,7 @@
     <cone pos="210 66.5 210" radius="28" radiusTop="5.6" height="40.6" sides="6" rot="0 30 0" smooth="0" material="pine_light"/>
     <cone pos="210 91 210" radius="22.4" radiusTop="4.2" height="36.4" sides="6" rot="0 60 0" smooth="0" material="pine_light"/>
     <cone pos="210 112.7 210" radius="15.4" height="32.2" sides="6" rot="0 90 0" smooth="0" material="pine_light"/>
-    <sphere pos="-158 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" seed="42"/></sphere>
+    <sphere pos="-158 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" scale="14.4" seed="42"/></sphere>
     <sphere pos="212 7 214" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Open lean-to woodshed with a stack of split logs and a chopping block. -->
@@ -605,7 +605,7 @@
     <cone pos="220 76 220" radius="32" radiusTop="6.4" height="46.4" sides="6" rot="0 30 0" smooth="0" material="pine"/>
     <cone pos="220 104 220" radius="25.6" radiusTop="4.8" height="41.6" sides="6" rot="0 60 0" smooth="0" material="pine"/>
     <cone pos="220 128.8 220" radius="17.6" height="36.8" sides="6" rot="0 90 0" smooth="0" material="pine"/>
-    <sphere pos="-201 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" seed="32"/></sphere>
+    <sphere pos="-201 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" scale="14.4" seed="32"/></sphere>
     <sphere pos="189 7 203" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Two-storey ranger station: stone ground floor, shingled upper floor, porch. -->
@@ -659,7 +659,7 @@
     <cone pos="-220 95 -210" radius="40" radiusTop="8" height="58" sides="6" rot="0 30 0" smooth="0" material="pine"/>
     <cone pos="-220 130 -210" radius="32" radiusTop="6" height="52" sides="6" rot="0 60 0" smooth="0" material="pine"/>
     <cone pos="-220 161 -210" radius="22" height="46" sides="6" rot="0 90 0" smooth="0" material="pine"/>
-    <sphere pos="-164 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" seed="97"/></sphere>
+    <sphere pos="-164 16.8 230" radius="24" rings="5" slices="7" material="leaf"><noise strength="2" scale="14.4" seed="97"/></sphere>
     <sphere pos="226 7 232" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
   <!-- Round stone tower with a tall pointed roof and a pennant. -->
@@ -667,7 +667,7 @@
     <soft-box width="560" height="28" depth="560" radius="11.76" bevel="10.82" pos="0 -16 0" material="dirt"></soft-box>
     <soft-box width="562" height="8" depth="562" radius="3.36" bevel="3.09" pos="0 -4 0" material="grass"></soft-box>
     <group pos="0 140 0">
-    <circle radius="80" segments="24" rot="90 0 0" material="stone_light"><extrude amount="280"/><bevel amount="20.24" bevelSegments="4"/><taper amount="0.08" axis="z"/></circle>
+    <circle radius="80" segments="24" rot="90 0 0" material="stone_light"><extrude amount="280"/><bevel amount="20.24" bevelSegments="4"/><taper center="0 0 0" amount="0.16" axis="z"/></circle>
     </group>
     <group pos="0 10 0">
     <circle radius="92" segments="24" rot="90 0 0" material="stone"><extrude amount="20"/><bevel amount="7.73" bevelSegments="4"/></circle>
@@ -722,7 +722,7 @@
     <cone pos="-220 76 -190" radius="32" radiusTop="6.4" height="46.4" sides="6" rot="0 30 0" smooth="0" material="pine"/>
     <cone pos="-220 104 -190" radius="25.6" radiusTop="4.8" height="41.6" sides="6" rot="0 60 0" smooth="0" material="pine"/>
     <cone pos="-220 128.8 -190" radius="17.6" height="36.8" sides="6" rot="0 90 0" smooth="0" material="pine"/>
-    <sphere pos="-207 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" seed="87"/></sphere>
+    <sphere pos="-207 16.8 230" radius="24" rings="5" slices="7" material="leaf_light"><noise strength="2" scale="14.4" seed="87"/></sphere>
     <sphere pos="203 7 221" radius="14" rings="3" slices="6" scale="1.2 0.7 1" material="rock"/>
   </group>
 </scene>

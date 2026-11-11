@@ -159,7 +159,7 @@ function Kit:tube(mat, a, b, r0, r1, col, n)
   local t = (ratio - 1) / (ratio + 1)
   local bev = min(.35 * min(r0, r1) * TILE, SOLID_ROUND * L * TILE)
   local mods = (bev >= .6 and fmt('<bevel amount="%s" bevelSegments="2"/>', f(bev)) or "") ..
-    (abs(t) > .001 and fmt('<taper amount="%s" axis="z"/>', f4(t)) or "")
+    (abs(t) > .001 and fmt('<taper center="0 0 0" amount="%s" axis="z"/>', f4(2 * t)) or "")
   local tilt = deg(acos(max(-1, min(1, dz / L))))
   local p = v3(mx * TILE, mz * TILE, -my * TILE)
   local circle = {{"radius", f(r0 * TILE / (1 - t))}, {"segments", max(8, n)}}
@@ -227,8 +227,8 @@ function Kit:poly(mat, pts, col)
   self:close("group")
 end
 
--- A battered block: a box tapered towards its top, inset tx on its width and ty on its depth. The taper
--- pivots at mid-height, so the box is sized for that height.
+-- A battered block: a box tapered towards its top, inset tx on its width and ty on its depth: one taper per
+-- crosswise axis (Max's Effect), pivoting at mid-height, so the box is sized for that height.
 function Kit:frustum(mat, x, y, z, sx, sy, h, tx, ty, col, rz)
   local function amount(s, t)
     local ratio = (s - 2 * t) / s
@@ -236,7 +236,7 @@ function Kit:frustum(mat, x, y, z, sx, sy, h, tx, ty, col, rz)
   end
   local ax, ay = amount(sx, tx), amount(sy, ty)
   self:prism(mat, v3(x * TILE, (z + h / 2) * TILE, -y * TILE), sx / (1 - ax), h, sy / (1 - ay) * TILE, col,
-    (rz and rz ~= 0) and {{"rot", v3(0, deg(rz), 0)}} or {}, fmt('<taper amount="%s %s"/>', f4(ax), f4(ay)))
+    (rz and rz ~= 0) and {{"rot", v3(0, deg(rz), 0)}} or {}, fmt('<taper center="0 0 0" amount="%s" effect="x"/><taper center="0 0 0" amount="%s" effect="z"/>', f4(2 * ax), f4(2 * ay)))
 end
 
 -- Four revolved segments turned a quarter step, so the base is square.

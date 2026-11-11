@@ -233,8 +233,71 @@ static void test_mesh_faces_and_sheets(void) {
   PASS();
 }
 
+static int issues_of_kind(Scene *s,const char *kind);
+
+/* Bounds of an object's local mesh (metres). */
+static void local_bounds(const Mesh *m, vec3 *lo, vec3 *hi) {
+  *lo = v3(1e30f, 1e30f, 1e30f); *hi = v3(-1e30f, -1e30f, -1e30f);
+  for (int i = 0; i < m->nverts; i++) {
+    vec3 p = m->verts[i].pos;
+    *lo = v3(fminf(lo->x, p.x), fminf(lo->y, p.y), fminf(lo->z, p.z)); *hi = v3(fmaxf(hi->x, p.x), fmaxf(hi->y, p.y), fmaxf(hi->z, p.z));
+  }
+}
+#define NEAR(a, b) (fabsf((a) - (b)) < 2e-3f)
+
+static void test_max_style_modifiers(void) {
+  TEST("deform modifiers take 3ds Max parameters: gizmo centre, limits, effect, bias, direction");
+  Scene scene = {0}; vec3 lo, hi; float R = 2.0f / M_PIf;   /* a 90 degree bend of a 1 m bar has radius 2/pi m */
+  ASSERT_TRUE(window_test_load(&scene,
+    "<scene><sun/>"
+    "<box size=\"20 100 20\"><bend angle=\"90\"/></box>"                                  /* 0: from its base towards +x */
+    "<box size=\"20 100 20\"><bend angle=\"90\" direction=\"90\"/></box>"                 /* 1: towards +z */
+    "<box size=\"20 100 20\"><bend angle=\"90\" limit=\"0 50\"/></box>"                   /* 2: lower half bends, the rest goes on straight */
+    "<box size=\"100 100 100\"><taper center=\"0 0 0\" amount=\"1\" symmetry=\"1\" effect=\"x\"/></box>"   /* 3 */
+    "<box size=\"20 100 20\"><stretch stretch=\"1\"/></box>"                              /* 4 */
+    "<box size=\"20 100 20\"><skew amount=\"30\" direction=\"90\"/></box>"                /* 5 */
+    "<surface segments=\"1 2\" x=\"20*u-10\" y=\"100*v-50\" z=\"0\"><twist angle=\"90\" bias=\"50\"/></surface>"   /* 6 */
+    "<box size=\"100 100 100\"><mirror axis=\"xy\" offset=\"100\"/></box>"                /* 7 */
+    "<box size=\"100 100 100\"><noise strength=\"0 0 5\" scale=\"50\" seed=\"3\"/></box>" /* 8 */
+    "</scene>"));
+  ASSERT_EQUAL(scene.nobjs, 9);
+  local_bounds(scene.objs[0].mesh, &lo, &hi); ASSERT_TRUE(NEAR(hi.x, R) && NEAR(hi.y, -0.5f + R + 0.1f));
+  local_bounds(scene.objs[1].mesh, &lo, &hi); ASSERT_TRUE(NEAR(hi.z, R) && NEAR(hi.x, 0.1f));
+  local_bounds(scene.objs[2].mesh, &lo, &hi); ASSERT_TRUE(NEAR(hi.x, R / 2.0f + 0.5f));
+  local_bounds(scene.objs[3].mesh, &lo, &hi); ASSERT_TRUE(NEAR(hi.x, 0.75f) && NEAR(lo.x, -0.75f) && NEAR(hi.z, 0.5f));
+  local_bounds(scene.objs[4].mesh, &lo, &hi); ASSERT_TRUE(NEAR(hi.y, 1.5f) && NEAR(hi.x, 0.1f));
+  for (int i = 0; i < scene.objs[4].mesh->nverts; i++) {   /* the squash is strongest at the gizmo centre, the base */
+    Vertex *v = &scene.objs[4].mesh->verts[i];
+    if (NEAR(v->pos.y, -0.5f)) ASSERT_TRUE(NEAR(fabsf(v->pos.x), 0.1f / sqrtf(2.0f)));
+  }
+  local_bounds(scene.objs[5].mesh, &lo, &hi); ASSERT_TRUE(NEAR(hi.z, 0.4f) && NEAR(lo.z, -0.1f) && NEAR(hi.x, 0.1f));
+  for (int i = 0; i < scene.objs[6].mesh->nverts; i++) {   /* bias 50 turns the middle row by 90 * 0.5^0.415 = 67.5 degrees */
+    Vertex *v = &scene.objs[6].mesh->verts[i];
+    if (NEAR(v->pos.y, 0.0f)) ASSERT_TRUE(fabsf(fabsf(atan2f(v->pos.z, v->pos.x)) - 67.5f * M_PIf / 180.0f) < 1e-2f || fabsf(fabsf(atan2f(v->pos.z, v->pos.x)) - 112.5f * M_PIf / 180.0f) < 1e-2f);
+  }
+  ASSERT_EQUAL(scene.objs[7].mesh->ntris, 24);
+  local_bounds(scene.objs[7].mesh, &lo, &hi); ASSERT_TRUE(NEAR(hi.x, 2.5f) && NEAR(hi.y, 2.5f) && NEAR(lo.x, -0.5f));
+  float moved = 0;
+  for (int i = 0; i < scene.objs[8].mesh->nverts; i++) {
+    Vertex *v = &scene.objs[8].mesh->verts[i];
+    ASSERT_TRUE(NEAR(fabsf(v->pos.x), 0.5f) && NEAR(fabsf(v->pos.y), 0.5f) && fabsf(fabsf(v->pos.z) - 0.5f) <= 0.05f);
+    moved = fmaxf(moved, fabsf(fabsf(v->pos.z) - 0.5f));
+    for (int j = 0; j < i; j++) {   /* the noise is a function of position: a box's repeated corners stay together */
+      Vertex *w = &scene.objs[8].mesh->verts[j];
+      if (NEAR(v->pos.x, w->pos.x) && NEAR(v->pos.y, w->pos.y) && fabsf(v->pos.z - w->pos.z) < 0.02f) ASSERT_TRUE(fabsf(v->pos.z - w->pos.z) < 1e-6f);
+    }
+  }
+  ASSERT_TRUE(moved > 0.001f);
+  scene_free(&scene);
+  ASSERT_TRUE(window_test_load(&scene,
+    "<scene><sun/><box size=\"10 10 10\"><bend axis=\"w\"/><taper limit=\"5 1\"/><taper effect=\"y\"/><mirror axis=\"q\"/><shell inner=\"0\" outer=\"0\"/></box></scene>"));
+  ASSERT_EQUAL(issues_of_kind(&scene, "modifier"), 5);
+  scene_free(&scene);
+  PASS();
+}
+
 static void test_surface_gradient_taper(void) {
-  TEST("<surface>, <gradient> gizmos and a two-amount <taper>");
+  TEST("<surface>, <gradient> gizmos and a taper per crosswise axis");
   Scene scene;
   ASSERT_TRUE(load_scene("apps/scener/tests/surface_gradient.blks", &scene));
   ASSERT_TRUE(scene.nobjs == 6);
@@ -250,7 +313,7 @@ static void test_surface_gradient_taper(void) {
     Vertex *a = &candy->verts[j * 25], *b = &candy->verts[j * 25 + 24];
     ASSERT_TRUE(vlen(vsub(a->nrm, b->nrm)) < 1e-5f && a->u == 0.0f && b->u == 1.0f && a->nrm.x > 0.99f);
   }
-  Mesh *frustum = scene.objs[2].mesh;   /* amount -0.5 on x, -0.15 on z: the top is 50 x 85 cm */
+  Mesh *frustum = scene.objs[2].mesh;   /* Effect x amount -1 and Effect z amount -0.3 about the centre: the top is 50 x 85 cm */
   float topX = 0, topZ = 0;
   for (int i = 0; i < frustum->nverts; i++) {
     Vertex *v = &frustum->verts[i];
@@ -323,9 +386,9 @@ static void test_shape_modifier_stack(void) {
 }
 
 static void test_shell_amount_is_centimetres(void) {
-  TEST("<shell>: the mesh modifier's amount is in centimetres like every spatial value");
+  TEST("<shell>: the mesh modifier's outer amount is in centimetres like every spatial value");
   Scene scene = {0};
-  ASSERT_TRUE(window_test_load(&scene, "<scene><sun/><box size=\"100 100 100\"><shell amount=\"10\"/></box></scene>"));
+  ASSERT_TRUE(window_test_load(&scene, "<scene><sun/><box size=\"100 100 100\"><shell outer=\"10\"/></box></scene>"));
   ASSERT_EQUAL(scene.nobjs, 1);
   float reach = 0;
   Mesh *mesh = world_mesh(&scene.objs[0]);
@@ -1491,6 +1554,7 @@ int main(void) {
   test_cone_normals_follow_slope();
   test_mesh_faces_and_sheets();
   test_surface_gradient_taper();
+  test_max_style_modifiers();
   test_profile_extrude_and_bevel();
   test_shape_modifier_stack();
   test_shell_amount_is_centimetres();

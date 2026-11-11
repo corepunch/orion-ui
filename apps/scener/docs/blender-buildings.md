@@ -45,9 +45,9 @@ Lua 5.4 with no dependencies; Scener itself does not embed Lua, so for now it ge
 | Blender kit | Scener | Effect |
 |---|---|---|
 | per-vertex colour (`col` attribute) | `gradientFrom`/`gradientTo` on a shape (bounding-box gizmo) | leaves and clay darken towards the ground; other gradients are authored per shape |
-| free surfaces (`surface`, palm fronds, tiled roofs `pane`) | none | fronds are flattened revolved spheres; `pane`/`hip_roof` are not ported |
+| free surfaces (`surface`, palm fronds, tiled roofs `pane`) | `<surface>` in the Christmas Market converter; none in the nile port | nile fronds are flattened revolved spheres; `pane`/`hip_roof` are not ported |
 | triangle soup per material, one bevel modifier | `<rect>` + `<extrude>` + `<bevel>` per box | bevels follow the piece, edges parallel to depth only |
-| `frustum` with different x and y insets | `<taper>` is uniform in both axes | the pylon's depth inset is 0.16 tile, not 0.10 |
+| `frustum` with different x and y insets | two `<taper>`s, one per crosswise axis (`effect`) | exact |
 | arbitrary 3D `poly` | `<shape>` + `<extrude>` in a vertical plane | enough for flags and cloth; arched window fills need a vertical plane too |
 | footprint clamp after the fact | none | builders must stay inside their footprint |
 | emissive materials, point lights | `unlit="1"` and `<light>` | same idea; light units differ and need tuning |

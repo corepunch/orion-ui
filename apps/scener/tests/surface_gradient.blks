@@ -11,9 +11,9 @@
            x="{r}*cos(u*2*pi)" y="v*160" z="-{r}*sin(u*2*pi)">
     <gradient type="uv" tile="1 5" repeat="1" edge="0.5" from="0.83 0.13 0.17" to="0.98 0.95 0.9"/>
   </surface>
-  <!-- a frustum with different insets on x and z -->
+  <!-- a frustum with different insets on x and z: one taper per crosswise axis (Max's Effect) -->
   <box name="frustum" pos="-140 50 0" size="100 100 100" color="0.36 0.62 0.38">
-    <taper amount="-0.5 -0.15" axis="y"/>
+    <taper center="0 0 0" amount="-1" effect="x"/><taper center="0 0 0" amount="-0.3" effect="z"/>
   </box>
   <!-- a snow sheet with a lip coloured by a hard step along v, and its soft fold -->
   <surface name="snow" pos="20 60 -60" segments="20 20" twoSided="1" color="0.95 0.97 1"

@@ -42,6 +42,6 @@
   <sphere pos="0 -118 24" radius="11.5" material="brass"/>
   <cylinder pos="-31 -98 22" radius="1.2" height="62" material="brass"/>
   <cylinder pos="31 -106 22" radius="1.2" height="78" material="brass"/>
-  <prism pos="-31 -138 22" radius="11" height="34" sides="8" material="bronze"><taper amount="0.34"/></prism>
-  <prism pos="31 -154 22" radius="11" height="34" sides="8" material="bronze"><taper amount="0.34"/></prism>
+  <prism pos="-31 -138 22" radius="11" height="34" sides="8" material="bronze"><taper center="0 0 0" amount="0.68"/></prism>
+  <prism pos="31 -154 22" radius="11" height="34" sides="8" material="bronze"><taper center="0 0 0" amount="0.68"/></prism>
 </prefab>

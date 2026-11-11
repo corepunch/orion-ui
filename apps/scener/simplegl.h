@@ -191,16 +191,20 @@ void mesh_build_edges(Mesh *m);
 void mesh_shrink(Mesh *m); /* releases spare array capacity once a mesh is complete */
 float mesh_signed_volume(Mesh *m);
 void mesh_flip_winding(Mesh *m);
-void mesh_apply_taper(Mesh *m,float amountB,float amountC,float curvature,char axis); /* B, C: the two crosswise axes in x, y, z order */
-void mesh_apply_twist(Mesh *m,float angle_deg,char axis);
-void mesh_apply_bend(Mesh *m,float angle_deg,char axis);
-void mesh_apply_stretch(Mesh *m,float amount,float amplify,char axis);
-void mesh_apply_skew(Mesh *m,float amount,char axis);
+/* The gizmo of a 3ds Max-style deform modifier: the axis it acts along, its centre (local metres; by default on the
+   axis at the bottom of the mesh's bounds, where a Max primitive's pivot sits, crosswise at the origin) and, when
+   limited, the lower and upper limits along the axis measured from the centre. */
+typedef struct { char axis; int hasCenter,limited; vec3 center; float lower,upper; } deform_gizmo_t;
+void mesh_apply_taper(Mesh *m,const deform_gizmo_t *g,float amount,float curve,int symmetry,const char *effect);
+void mesh_apply_twist(Mesh *m,const deform_gizmo_t *g,float angleDeg,float bias);
+void mesh_apply_bend(Mesh *m,const deform_gizmo_t *g,float angleDeg,float directionDeg);
+void mesh_apply_stretch(Mesh *m,const deform_gizmo_t *g,float stretch,float amplify);
+void mesh_apply_skew(Mesh *m,const deform_gizmo_t *g,float amount,float directionDeg);
 void mesh_apply_array(Mesh *m,int count,vec3 off,vec3 rot);
 void mesh_apply_extrude(Mesh *m,float amount,char axis);
-void mesh_apply_mirror(Mesh *m,char axis,float weldThreshold);
-void mesh_apply_noise(Mesh *m,float strength,int seed);
-void mesh_apply_shell(Mesh *m,float amount);
+void mesh_apply_mirror(Mesh *m,const char *axes,float offset,int copy,float weldThreshold);
+void mesh_apply_noise(Mesh *m,int seed,float scale,vec3 strength,int fractal,float roughness,int iterations);
+void mesh_apply_shell(Mesh *m,float inner,float outer);
 Mesh gen_box(float sx,float sy,float sz);
 Mesh gen_box_inset(float sx,float sy,float sz,float insetX,float insetY);
 Mesh gen_rounded_box(float sx,float sy,float sz,float radius,int segments);

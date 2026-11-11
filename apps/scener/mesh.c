@@ -14,10 +14,16 @@
 #define EDGE_HASH_A 0x9e3779b1u
 #define NOISE_HASH_SEED 0x27d4eb2fu
 #define NOISE_HASH_MIX 0x165667b1u
-#define NOISE_QUANTUM 1e-5f /* vertices this close share one displacement, so unwelded corners stay joined */
-#define NOISE_LCG_A 1103515245u
-#define NOISE_LCG_C 12345u
-#define NOISE_RANDOM_MASK 0xFFFFu
+#define NOISE_PRIME_X 73856093u
+#define NOISE_PRIME_Y 19349663u
+#define NOISE_PRIME_Z 83492791u
+#define NOISE_CHANNEL_SHIFT 31.7f   /* x, y and z displacements read the field far apart, so they are independent */
+#define NOISE_LACUNARITY 2.0f
+#define NOISE_MAX_ITERATIONS 10
+#define NOISE_MIN_SCALE 1e-4f
+#define DEFORM_MIN_EXTENT 1e-6f
+#define DEFORM_MIN_ANGLE 1e-6f
+#define DEFORM_BIAS_MIN 0.01f
 #define EDGE_HASH_B 0x85ebca77u
 #define EDGE_HASH_C 0xc2b2ae3du
 #define MESH_EDGE_WELD_MAX 1e-4f
@@ -1182,117 +1188,114 @@ Mesh gen_loft(LoftPath *path,Shape2D *cross,int closed){
 
 /* ---------------------------------------------------------- modifiers ------ */
 
-static void mesh_find_bounds(Mesh *m, char axis, float *minV, float *maxV){
-	*minV=1e9f; *maxV=-1e9f;
-	for(int i=0;i<m->nverts;i++){
-		float v = axis=='x' ? m->verts[i].pos.x
-		       : axis=='y' ? m->verts[i].pos.y : m->verts[i].pos.z;
-		if(v<*minV) *minV=v; if(v>*maxV) *maxV=v;
-	}
-	if(*maxV-*minV < 1e-6f){ *minV=-0.5f; *maxV=0.5f; }
-}
+/* ---- 3ds Max-style deform modifiers (Taper, Twist, Bend, Stretch, Skew) ----
+   Each acts along an axis through its gizmo centre: a is a vertex's distance along the axis from the centre and
+   z = a / H, H being the gizmo's extent (the mesh's bounds along the axis, or upper - lower when limited). With
+   limits, the effect is computed at a clamped into [lower, upper] and the geometry beyond carries on rigidly, as
+   in Max's Limit Effect. Normals take the inverse transpose of each deformation's Jacobian. */
+typedef struct { int ia,ib,ic,limited; float c[3],H,lo,hi; } deform_t;
 
-/* Each crosswise axis scales by 1 + amount*(2t-1)^curvature along the main axis, so a frustum's two insets
-   may differ. Normals take the inverse transpose of the deformation's Jacobian (its cofactor matrix). */
-void mesh_apply_taper(Mesh *m, float amountB, float amountC, float curvature, char axis){
-	float mn,mx; mesh_find_bounds(m,axis,&mn,&mx);
-	float range=mx-mn, k=curvature>0?curvature:1.0f;
-	int ia=axis=='x'?0:axis=='y'?1:2, ib=axis=='x'?1:0, ic=axis=='z'?1:2;
-	for(int i=0;i<m->nverts;i++){
-		float *p=&m->verts[i].pos.x, *n=&m->verts[i].nrm.x;
-		/* an odd whole curvature keeps the sign of 2t-1 (the classic taper), any other is symmetric */
-		float t=(p[ia]-mn)/range, x=2.0f*t-1.0f, sx=x<0?-1.0f:1.0f; int odd=fmodf(k,2.0f)==1.0f;
-		float f=powf(fabsf(x),k)*(odd?sx:1.0f);
-		float df=fabsf(x)<1e-6f && k>1.0f?0.0f:k*powf(fabsf(x),k-1.0f)*(odd?1.0f:sx)*2.0f/range;   /* d f / d axis */
-		float sb=1.0f+amountB*f, sc=1.0f+amountC*f, db=amountB*df*p[ib], dc=amountC*df*p[ic];
-		/* Jacobian rows (b', c', a') over (b, c, a): [sb 0 db], [0 sc dc], [0 0 1]; its cofactor transforms normals */
-		float nb=sc*n[ib], nc=sb*n[ic], na=-db*sc*n[ib]-dc*sb*n[ic]+sb*sc*n[ia];
-		float l=sqrtf(nb*nb+nc*nc+na*na);
-		if(l>0){ n[ib]=nb/l; n[ic]=nc/l; n[ia]=na/l; }
-		p[ib]*=sb; p[ic]*=sc;
-	}
+static int deform_setup(const Mesh *m,const deform_gizmo_t *g,deform_t *d){
+	memset(d,0,sizeof(*d));
+	d->ia=g->axis=='x'?0:g->axis=='y'?1:2; d->ib=g->axis=='x'?1:0; d->ic=g->axis=='z'?1:2;
+	if(m->nverts<=0) return 0;
+	float mn=INFINITY,mx=-INFINITY;
+	for(int i=0;i<m->nverts;i++){ float a=(&m->verts[i].pos.x)[d->ia]; mn=fminf(mn,a); mx=fmaxf(mx,a); }
+	if(g->hasCenter){ d->c[0]=g->center.x; d->c[1]=g->center.y; d->c[2]=g->center.z; }
+	else d->c[d->ia]=mn;   /* the bottom of the bounds, where a Max primitive keeps its pivot */
+	d->limited=g->limited; d->lo=g->lower; d->hi=g->upper;
+	d->H=g->limited?g->upper-g->lower:mx-mn;
+	return d->H>DEFORM_MIN_EXTENT;
 }
+/* The vertex's distance along the axis inside the limits, and how far it lies beyond them (0 inside). */
+static float deform_clamp(const deform_t *d,float a,float *beyond){
+	float ac=d->limited?fminf(fmaxf(a,d->lo),d->hi):a;
+	*beyond=a-ac; return ac;
+}
+static void vec_normalize3(float *n){ float l=sqrtf(n[0]*n[0]+n[1]*n[1]+n[2]*n[2]); if(l>0){ n[0]/=l; n[1]/=l; n[2]/=l; } }
 
-void mesh_apply_twist(Mesh *m, float angle_deg, char axis){
-	float mn,mx; mesh_find_bounds(m,axis,&mn,&mx);
-	float range=mx-mn;
-	float rad=angle_deg*M_PIf/180.0f;
+/* Taper: the crosswise axes named by effect (both by default) scale by 1 + amount*z + curve*z*(1-z);
+   symmetry tapers both sides of the centre alike (z = |a| / H). */
+void mesh_apply_taper(Mesh *m,const deform_gizmo_t *g,float amount,float curve,int symmetry,const char *effect){
+	deform_t d; if(!deform_setup(m,g,&d)) return;
+	int eb=1,ec=1;
+	if(effect && *effect){ eb=strchr(effect,"xyz"[d.ib])!=NULL; ec=strchr(effect,"xyz"[d.ic])!=NULL; }
 	for(int i=0;i<m->nverts;i++){
-		float *pa, *pb, *pc, *nb, *nc;
-		switch(axis){
-			case 'x': pa=&m->verts[i].pos.x; pb=&m->verts[i].pos.y; pc=&m->verts[i].pos.z;
-			          nb=&m->verts[i].nrm.y; nc=&m->verts[i].nrm.z; break;
-			case 'y': pa=&m->verts[i].pos.y; pb=&m->verts[i].pos.x; pc=&m->verts[i].pos.z;
-			          nb=&m->verts[i].nrm.x; nc=&m->verts[i].nrm.z; break;
-			default:  pa=&m->verts[i].pos.z; pb=&m->verts[i].pos.x; pc=&m->verts[i].pos.y;
-			          nb=&m->verts[i].nrm.x; nc=&m->verts[i].nrm.y; break;
-		}
-		float t=(*pa-mn)/range;
-		float a=rad*t, ca=cosf(a), sa=sinf(a);
-		float b=*pb, c=*pc;
-		*pb=b*ca - c*sa; *pc=b*sa + c*ca;
-		float n_b=*nb, n_c=*nc;
-		*nb=n_b*ca - n_c*sa; *nc=n_b*sa + n_c*ca;
+		float *p=&m->verts[i].pos.x,*n=&m->verts[i].nrm.x,beyond;
+		float a=deform_clamp(&d,p[d.ia]-d.c[d.ia],&beyond),z=a/d.H,sg=1.0f;
+		if(symmetry && z<0){ z=-z; sg=-1.0f; }
+		float sv=1.0f+amount*z+curve*z*(1.0f-z),ds=beyond!=0?0.0f:(amount+curve*(1.0f-2.0f*z))*sg/d.H;
+		float sb=eb?sv:1.0f,sc=ec?sv:1.0f,xb=p[d.ib]-d.c[d.ib],xc=p[d.ic]-d.c[d.ic];
+		float db=eb?ds*xb:0.0f,dc=ec?ds*xc:0.0f;
+		float nb=sc*n[d.ib],nc=sb*n[d.ic],na=-db*sc*n[d.ib]-dc*sb*n[d.ic]+sb*sc*n[d.ia];
+		n[d.ib]=nb; n[d.ic]=nc; n[d.ia]=na; vec_normalize3(n);
+		p[d.ib]=d.c[d.ib]+xb*sb; p[d.ic]=d.c[d.ic]+xc*sc;
 	}
 }
 
-void mesh_apply_bend(Mesh *m, float angle_deg, char axis){
-	float mn,mx; mesh_find_bounds(m,axis,&mn,&mx);
-	float range=mx-mn;
-	float alpha=angle_deg*M_PIf/180.0f;
-	float R=range/alpha;
-	if(fabsf(alpha)<1e-6f) return;
+/* Twist: the cross-section turns by angle * z about the axis through the centre; bias (-100..100) gathers the
+   turn towards the centre (positive) or away from it (negative), as Perlin's bias curve. */
+void mesh_apply_twist(Mesh *m,const deform_gizmo_t *g,float angleDeg,float bias){
+	deform_t d; if(!deform_setup(m,g,&d)) return;
+	float rad=angleDeg*M_PIf/180.0f,b=fminf(fmaxf((bias/100.0f+1.0f)*0.5f,DEFORM_BIAS_MIN),1.0f-DEFORM_BIAS_MIN);
+	float e=logf(b)/logf(0.5f);
 	for(int i=0;i<m->nverts;i++){
-		float *pa, *pb, *na, *nb;
-		switch(axis){
-			case 'x': pa=&m->verts[i].pos.x; pb=&m->verts[i].pos.y;
-			          na=&m->verts[i].nrm.x; nb=&m->verts[i].nrm.y; break;
-			case 'y': pa=&m->verts[i].pos.y; pb=&m->verts[i].pos.x;
-			          na=&m->verts[i].nrm.y; nb=&m->verts[i].nrm.x; break;
-			default:  pa=&m->verts[i].pos.z; pb=&m->verts[i].pos.x;
-			          na=&m->verts[i].nrm.z; nb=&m->verts[i].nrm.x; break;
-		}
-		float along=*pa-mn;
-		float theta=along/R;
-		float cr=cosf(theta), sr=sinf(theta);
-		float radial=*pb;
-		*pb = (R+radial)*sr;
-		*pa = mn + R - (R+radial)*cr;
-		float n_al=*na, n_rd=*nb;
-		*na = n_rd*sr + n_al*cr;
-		*nb = n_rd*cr - n_al*sr;
+		float *p=&m->verts[i].pos.x,*n=&m->verts[i].nrm.x,beyond;
+		float a=deform_clamp(&d,p[d.ia]-d.c[d.ia],&beyond),z=fabsf(a/d.H),sg=a<0?-1.0f:1.0f;
+		float th=rad*sg*powf(z,e),dth=beyond!=0||z<DEFORM_MIN_EXTENT?0.0f:rad*e*powf(z,e-1.0f)/d.H;
+		float ct=cosf(th),st=sinf(th),xb=p[d.ib]-d.c[d.ib],xc=p[d.ic]-d.c[d.ic];
+		float nb=n[d.ib],nc=n[d.ic];
+		n[d.ia]-=dth*(-xc*nb+xb*nc);
+		n[d.ib]=nb*ct-nc*st; n[d.ic]=nb*st+nc*ct; vec_normalize3(n);
+		p[d.ib]=d.c[d.ib]+xb*ct-xc*st; p[d.ic]=d.c[d.ic]+xb*st+xc*ct;
 	}
 }
 
-void mesh_apply_stretch(Mesh *m, float amount, float amplify, char axis){
-	float mn,mx; mesh_find_bounds(m,axis,&mn,&mx);
-	float range=mx-mn;
+/* Bend: the axis curls through angle over the gizmo's extent, about the centre, towards direction (degrees about
+   the axis from the first crosswise axis: x for y and z, y for x). Beyond a limit the shape goes on straight. */
+void mesh_apply_bend(Mesh *m,const deform_gizmo_t *g,float angleDeg,float directionDeg){
+	deform_t d; if(!deform_setup(m,g,&d)) return;
+	float rad=angleDeg*M_PIf/180.0f;
+	if(fabsf(rad)<DEFORM_MIN_ANGLE) return;
+	float R=d.H/rad,dir=directionDeg*M_PIf/180.0f,ub=cosf(dir),uc=sinf(dir);
 	for(int i=0;i<m->nverts;i++){
-		float *pa, *pb, *pc;
-		switch(axis){
-			case 'x': pa=&m->verts[i].pos.x; pb=&m->verts[i].pos.y; pc=&m->verts[i].pos.z; break;
-			case 'y': pa=&m->verts[i].pos.y; pb=&m->verts[i].pos.x; pc=&m->verts[i].pos.z; break;
-			default:  pa=&m->verts[i].pos.z; pb=&m->verts[i].pos.x; pc=&m->verts[i].pos.y; break;
-		}
-		float t=(*pa-mn)/range;
-		float s=amount*(t*t - t);
-		*pb*=1.0f-s*amplify; *pc*=1.0f-s*amplify;
-		*pa = mn + t*range*(1.0f+s);
+		float *p=&m->verts[i].pos.x,*n=&m->verts[i].nrm.x,beyond;
+		float a=deform_clamp(&d,p[d.ia]-d.c[d.ia],&beyond),xb=p[d.ib]-d.c[d.ib],xc=p[d.ic]-d.c[d.ic];
+		float u=xb*ub+xc*uc,w=-xb*uc+xc*ub,th=a/R,ct=cosf(th),st=sinf(th);
+		float u2=R-(R-u)*ct+beyond*st,a2=(R-u)*st+beyond*ct;
+		float k=beyond!=0?1.0f:(R-u)/R; if(fabsf(k)<DEFORM_MIN_EXTENT) k=DEFORM_MIN_EXTENT;
+		float nu=n[d.ib]*ub+n[d.ic]*uc,nw=-n[d.ib]*uc+n[d.ic]*ub,na=n[d.ia];
+		float nu2=ct*nu+st/k*na,na2=-st*nu+ct/k*na;
+		n[d.ib]=nu2*ub-nw*uc; n[d.ic]=nu2*uc+nw*ub; n[d.ia]=na2; vec_normalize3(n);
+		p[d.ib]=d.c[d.ib]+u2*ub-w*uc; p[d.ic]=d.c[d.ic]+u2*uc+w*ub; p[d.ia]=d.c[d.ia]+a2;
 	}
 }
 
-void mesh_apply_skew(Mesh *m, float amount, char axis){
-	float mn,mx; mesh_find_bounds(m,axis,&mn,&mx);
-	float range=mx-mn;
+/* Stretch: the axis scales by 1 + stretch from the centre while the cross-section takes the opposite scale,
+   1/sqrt(1 + stretch), strongest at the centre and gone at z = 1; amplify (-1..) strengthens or weakens it. */
+void mesh_apply_stretch(Mesh *m,const deform_gizmo_t *g,float stretch,float amplify){
+	deform_t d; if(!deform_setup(m,g,&d)) return;
+	float sa=1.0f+stretch; if(sa<DEFORM_MIN_EXTENT) sa=DEFORM_MIN_EXTENT;
+	float q=(1.0f/sqrtf(sa)-1.0f)*(1.0f+amplify);
 	for(int i=0;i<m->nverts;i++){
-		float *pa, *pb, *pc;
-		switch(axis){
-			case 'x': pa=&m->verts[i].pos.x; pb=&m->verts[i].pos.y; pc=&m->verts[i].pos.z; break;
-			case 'y': pa=&m->verts[i].pos.y; pb=&m->verts[i].pos.x; pc=&m->verts[i].pos.z; break;
-			default:  pa=&m->verts[i].pos.z; pb=&m->verts[i].pos.x; pc=&m->verts[i].pos.y; break;
-		}
-		float t=(*pa-mn)/range;
-		*pb+=amount*t; *pc+=amount*t;
+		float *p=&m->verts[i].pos.x,*n=&m->verts[i].nrm.x,beyond;
+		float a=deform_clamp(&d,p[d.ia]-d.c[d.ia],&beyond),z=fminf(fabsf(a/d.H),1.0f),sg=a<0?-1.0f:1.0f;
+		float k=1.0f+q*(1.0f-z*z),dk=beyond!=0||z>=1.0f?0.0f:-2.0f*q*z*sg/d.H;
+		float xb=p[d.ib]-d.c[d.ib],xc=p[d.ic]-d.c[d.ic];
+		n[d.ia]=(n[d.ia]-dk*(xb*n[d.ib]+xc*n[d.ic])/k)/sa; n[d.ib]/=k; n[d.ic]/=k; vec_normalize3(n);
+		p[d.ib]=d.c[d.ib]+xb*k; p[d.ic]=d.c[d.ic]+xc*k; p[d.ia]=d.c[d.ia]+a*sa+beyond;
+	}
+}
+
+/* Skew: the cross-section slides amount (metres at z = 1) towards direction (degrees about the axis, as Bend). */
+void mesh_apply_skew(Mesh *m,const deform_gizmo_t *g,float amount,float directionDeg){
+	deform_t d; if(!deform_setup(m,g,&d)) return;
+	float dir=directionDeg*M_PIf/180.0f,ub=cosf(dir),uc=sinf(dir);
+	for(int i=0;i<m->nverts;i++){
+		float *p=&m->verts[i].pos.x,*n=&m->verts[i].nrm.x,beyond;
+		float a=deform_clamp(&d,p[d.ia]-d.c[d.ia],&beyond),o=amount*a/d.H,dO=beyond!=0?0.0f:amount/d.H;
+		n[d.ia]-=dO*(ub*n[d.ib]+uc*n[d.ic]); vec_normalize3(n);
+		p[d.ib]+=o*ub; p[d.ic]+=o*uc;
 	}
 }
 
@@ -1347,19 +1350,24 @@ void mesh_apply_extrude(Mesh *m, float amount, char axis){
 	}
 }
 
-void mesh_apply_mirror(Mesh *m, char axis, float weldThreshold){
+/* Mirror, as Max's: reflect across the planes named by axes ("x", "xy", ...) placed offset (metres) from the
+   origin along each, either moving the mesh (copy 0) or adding the reflection to it, welded at weld (metres).
+   An odd number of planes turns the faces inside out, so their winding is reversed. */
+void mesh_apply_mirror(Mesh *m,const char *axes,float offset,int copy,float weldThreshold){
+	int flip[3]={strchr(axes,'x')!=NULL,strchr(axes,'y')!=NULL,strchr(axes,'z')!=NULL},odd=(flip[0]+flip[1]+flip[2])&1;
+	if(!flip[0]&&!flip[1]&&!flip[2]) return;
 	int ov=m->nverts, ot=m->ntris;
-
 	for(int v=0;v<ov;v++){
-		vec3 p=m->verts[v].pos, n=m->verts[v].nrm;
-		if(axis=='x'){ p.x=-p.x; n.x=-n.x; }
-		else if(axis=='y'){ p.y=-p.y; n.y=-n.y; }
-		else{ p.z=-p.z; n.z=-n.z; }
-		mesh_add_vert(m,p,n);
+		Vertex q=m->verts[v]; float *p=&q.pos.x,*n=&q.nrm.x;
+		for(int k=0;k<3;k++) if(flip[k]){ p[k]=2.0f*offset-p[k]; n[k]=-n[k]; }
+		if(copy){ int c=mesh_add_vert(m,q.pos,q.nrm); m->verts[c].u=q.u; m->verts[c].v=q.v; }
+		else m->verts[v]=q;
 	}
-	for(int t=0;t<ot;t++)
-		mesh_add_tri(m,m->tris[t].b+ov,m->tris[t].a+ov,m->tris[t].c+ov);
-
+	if(!copy){ if(odd) for(int t=0;t<ot;t++){ int b=m->tris[t].b; m->tris[t].b=m->tris[t].c; m->tris[t].c=b; } return; }
+	for(int t=0;t<ot;t++){
+		Tri r=m->tris[t];
+		if(odd) mesh_add_tri(m,r.b+ov,r.a+ov,r.c+ov); else mesh_add_tri(m,r.a+ov,r.b+ov,r.c+ov);
+	}
 	if(weldThreshold>0){
 		int *weld=malloc(sizeof(int)*(size_t)m->nverts);
 		for(int i=0;i<m->nverts;i++){
@@ -1377,70 +1385,69 @@ void mesh_apply_mirror(Mesh *m, char axis, float weldThreshold){
 	}
 }
 
-static unsigned int noise_hash(unsigned int h,float value){
-	unsigned int q=(unsigned int)(int)lrintf(value/NOISE_QUANTUM);
-	h^=q+NOISE_HASH_SEED+(h<<6)+(h>>2);
-	return h*NOISE_HASH_MIX;
+/* Gradient noise on the integer lattice (Perlin's improved noise, with a hashed gradient per lattice point). */
+static unsigned noise_lattice_hash(int x,int y,int z,unsigned seed){
+	unsigned h=seed*NOISE_HASH_SEED^(unsigned)x*NOISE_PRIME_X^(unsigned)y*NOISE_PRIME_Y^(unsigned)z*NOISE_PRIME_Z;
+	h^=h>>15; h*=NOISE_HASH_MIX; h^=h>>13; return h;
+}
+static float noise_grad(unsigned h,float x,float y,float z){
+	switch(h&15){
+		case 0: return x+y;  case 1: return -x+y; case 2: return x-y;  case 3: return -x-y;
+		case 4: return x+z;  case 5: return -x+z; case 6: return x-z;  case 7: return -x-z;
+		case 8: return y+z;  case 9: return -y+z; case 10: return y-z; case 11: return -y-z;
+		case 12: return x+y; case 13: return -y+z; case 14: return -x+y; default: return -y-z;
+	}
+}
+static float noise_fade(float t){ return t*t*t*(t*(t*6.0f-15.0f)+10.0f); }
+static float noise_lerp(float a,float b,float t){ return a+(b-a)*t; }
+static float noise3(float x,float y,float z,unsigned seed){
+	int X=(int)floorf(x),Y=(int)floorf(y),Z=(int)floorf(z);
+	float fx=x-X,fy=y-Y,fz=z-Z,u=noise_fade(fx),v=noise_fade(fy),w=noise_fade(fz),c[8];
+	for(int k=0;k<8;k++){ int dx=k&1,dy=(k>>1)&1,dz=(k>>2)&1; c[k]=noise_grad(noise_lattice_hash(X+dx,Y+dy,Z+dz,seed),fx-dx,fy-dy,fz-dz); }
+	return noise_lerp(noise_lerp(noise_lerp(c[0],c[1],u),noise_lerp(c[2],c[3],u),v),noise_lerp(noise_lerp(c[4],c[5],u),noise_lerp(c[6],c[7],u),v),w);
 }
 
-static float noise_random(unsigned int *state){
-	*state=*state*NOISE_LCG_A+NOISE_LCG_C;
-	return ((float)(*state&NOISE_RANDOM_MASK)/(float)NOISE_RANDOM_MASK-0.5f)*2.0f;
-}
-
-/* The displacement is a hash of the vertex position, so the corners a box or prism repeats for each
-   face move together and the surface stays sealed. */
-void mesh_apply_noise(Mesh *m, float strength, int seed){
+/* Noise, as Max's: each vertex moves by strength (metres per axis) times smooth noise sampled at its position over
+   scale (metres; larger is smoother); fractal sums iterations octaves, each roughness times the last. The noise is
+   a function of position, so corners a box repeats for each face move together and the surface stays sealed. */
+void mesh_apply_noise(Mesh *m,int seed,float scale,vec3 strength,int fractal,float roughness,int iterations){
+	if(scale<NOISE_MIN_SCALE) scale=NOISE_MIN_SCALE;
+	int octaves=fractal?(iterations<1?1:iterations>NOISE_MAX_ITERATIONS?NOISE_MAX_ITERATIONS:iterations):1;
+	float st[3]={strength.x,strength.y,strength.z};
 	for(int i=0;i<m->nverts;i++){
-		vec3 p=m->verts[i].pos;
-		unsigned int s=noise_hash(noise_hash(noise_hash((unsigned int)seed,p.x),p.y),p.z);
-		float rx=noise_random(&s),ry=noise_random(&s),rz=noise_random(&s);
-		m->verts[i].pos=vadd(p,v3(rx*strength,ry*strength,rz*strength));
+		vec3 p=vscale(m->verts[i].pos,1.0f/scale); float *q=&m->verts[i].pos.x;
+		for(int k=0;k<3;k++){
+			float sum=0,amp=1,f=1,norm=0;
+			for(int o=0;o<octaves;o++){ sum+=amp*noise3(p.x*f+k*NOISE_CHANNEL_SHIFT,p.y*f,p.z*f,(unsigned)seed+(unsigned)o); norm+=amp; amp*=roughness; f*=NOISE_LACUNARITY; }
+			q[k]+=st[k]*sum/(norm>0?norm:1);
+		}
 	}
 }
 
-void mesh_apply_shell(Mesh *m, float amount){
+/* Shell, as Max's: the surface becomes a solid between outer (metres along each vertex's averaged normal) and
+   inner (against it). The original faces move out to the outer skin, a reversed copy lines the inner one, and
+   every open edge gets a rim quad joining the two. */
+void mesh_apply_shell(Mesh *m,float inner,float outer){
 	mesh_compute_face_normals(m);
 	int ov=m->nverts, ot=m->ntris;
-	vec3 *vNorm=calloc((size_t)ov,sizeof(vec3));
-	int *vCount=calloc((size_t)ov,sizeof(int));
+	vec3 *vNorm=calloc((size_t)(ov?ov:1),sizeof(vec3));
 	for(int t=0;t<ot;t++){
 		Tri tr=m->tris[t];
-		vNorm[tr.a]=vadd(vNorm[tr.a],m->triN[t]);
-		vNorm[tr.b]=vadd(vNorm[tr.b],m->triN[t]);
-		vNorm[tr.c]=vadd(vNorm[tr.c],m->triN[t]);
-		vCount[tr.a]++; vCount[tr.b]++; vCount[tr.c]++;
+		vNorm[tr.a]=vadd(vNorm[tr.a],m->triN[t]); vNorm[tr.b]=vadd(vNorm[tr.b],m->triN[t]); vNorm[tr.c]=vadd(vNorm[tr.c],m->triN[t]);
 	}
 	for(int v=0;v<ov;v++){
-		if(vCount[v]>0) vNorm[v]=vnorm(vscale(vNorm[v],1.0f/(float)vCount[v]));
-		vec3 p=vadd(m->verts[v].pos,vscale(vNorm[v],amount));
-		mesh_add_vert(m,p,vscale(vNorm[v],-1.0f));
+		vec3 nn=vnorm(vNorm[v]),p=m->verts[v].pos;
+		int c=mesh_add_vert(m,vsub(p,vscale(nn,inner)),vscale(m->verts[v].nrm,-1.0f));
+		m->verts[c].u=m->verts[v].u; m->verts[c].v=m->verts[v].v;
+		m->verts[v].pos=vadd(p,vscale(nn,outer));
 	}
-	for(int t=0;t<ot;t++)
-		mesh_add_tri(m,m->tris[t].b+ov,m->tris[t].a+ov,m->tris[t].c+ov);
-
+	for(int t=0;t<ot;t++) mesh_add_tri(m,m->tris[t].b+ov,m->tris[t].a+ov,m->tris[t].c+ov);
 	mesh_build_edges(m);
-	for(int e=0;e<m->nedges;e++){
-		if(m->edges[e].t1>=0) continue;
-		vec3 e0=m->verts[m->edges[e].v0].pos, e1=m->verts[m->edges[e].v1].pos;
-		int v0=-1, v1=-1, nv0=-1, nv1=-1;
-		for(int v=0;v<ov;v++){
-			vec3 p=m->verts[v].pos;
-			if(v0<0 && vlen(vsub(p,e0))<1e-4f) v0=v;
-			if(v1<0 && vlen(vsub(p,e1))<1e-4f) v1=v;
-		}
-		if(v0>=0 && v1>=0){
-			for(int v=ov;v<m->nverts;v++){
-				float dist0=vlen(vsub(m->verts[v].pos,m->verts[v0].pos));
-				float dist1=vlen(vsub(m->verts[v].pos,m->verts[v1].pos));
-				if(nv0<0 && dist0<1e-4f) nv0=v;
-				if(nv1<0 && dist1<1e-4f) nv1=v;
-			}
-		}
-		if(v0>=0 && v1>=0 && nv0>=0 && nv1>=0){
-			mesh_add_tri(m,v0,v1,nv1);
-			mesh_add_tri(m,v0,nv1,nv0);
-		}
+	int ne=m->nedges; Edge *open=malloc(sizeof(Edge)*(size_t)(ne?ne:1)); int no=0;
+	for(int e=0;e<ne;e++) if(m->edges[e].t1<0 && m->edges[e].t0<ot) open[no++]=m->edges[e];
+	for(int e=0;e<no;e++){
+		int v0=open[e].v0,v1=open[e].v1;   /* in t0's winding: the rim continues the outer face across the edge */
+		mesh_add_tri(m,v1,v0,v0+ov); mesh_add_tri(m,v1,v0+ov,v1+ov);
 	}
-	free(vNorm); free(vCount);
+	free(open); free(vNorm);
 }

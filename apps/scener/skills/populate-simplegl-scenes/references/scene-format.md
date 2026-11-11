@@ -1577,93 +1577,95 @@ local space before the shape transform. `<array>` is also accepted as a child
 of a `<prefab>` instance, where it repeats the complete prefab assembly.
 `<window>` does not accept modifier children.
 
-Deform modifiers (`taper`, `twist`, `bend`, `stretch`, `skew`) operate relative to the object's bounding box along the chosen axis. The axis range [min, max] is mapped to [0, 1]. Each accepts `axis="y"` (`x`, `y`, or `z`), defaulting to `"y"`.
+The deform modifiers (`taper`, `twist`, `bend`, `stretch`, `skew`) take the parameters of their 3ds Max
+namesakes, so a Max user's intuitions carry over. Each acts along `axis` through a **gizmo centre** and shares
+these attributes:
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `axis` | x, y, z | y | The axis the effect runs along (Scener is Y-up: Max's Z is `y`) |
+| `center` | vec3 (cm) | on the axis at the bottom of the bounds | The gizmo centre in the shape's own coordinates. The default puts it where a Max primitive's pivot sits: at the base, crosswise at the origin. `center="0 0 0"` is the middle of a centred primitive (`box`, `prism`, `sphere`, an extruded profile) |
+| `limit` | `lower upper` (cm) | (none) | Max's Limit Effect: the effect happens between these distances from the centre along the axis, and the geometry beyond carries on rigidly (a bend goes on straight, a twist keeps its last angle) |
+
+A vertex's coordinate along the axis is z = a / H: a its distance from the centre, H the gizmo's extent (the
+mesh's size along the axis, or upper - lower when limited). Normals follow every deformation exactly (they
+take the inverse transpose of its Jacobian), so smooth shading stays right.
 
 The `<array>` modifier duplicates the mesh rather than deforming it. Place it last so copies include the effect of any preceding deform modifiers.
 
 ### `<taper>`
 
-Scales the two perpendicular axes along the chosen axis. The bottom of the
-axis range is scaled by `1 - amount` and the top by `1 + amount`: a positive
-amount widens the top and narrows the base, so a rock or column that should
-stand on its wider end takes a negative amount. Two amounts taper the crosswise
-axes separately, in x, y, z order (for `axis="y"`: x, then z), so a battered
-wall can lean in more on its face than on its sides. Normals tilt with the faces.
+Scales the cross-section by 1 + amount·z + curve·z·(1 − z). With the default centre the base keeps its size and
+the top is scaled by 1 + amount; with `center="0 0 0"` on a centred shape the ends are scaled by 1 ∓ amount/2.
 
-| Attribute    | Type   | Default | Description |
-|--------------|--------|---------|-------------|
-| `amount`     | float, or two floats | 0.0     | Taper intensity (± values, positive = wide top and narrow base along axis); `"a b"` per crosswise axis |
-| `curvature`  | float  | 1.0     | Non-linearity exponent (1 = linear, >1 = bowed, <1 = pinched) |
-| `axis`       | char   | y       | Axis along which taper varies (x, y, or z) |
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `amount` | float | 0 | Max's Amount: how much the far end scales (−1 brings it to a point) |
+| `curve` | float | 0 | Max's Curve: bows the sides out (positive) or in (negative) |
+| `effect` | crosswise axes | both | Max's Effect: which crosswise axes scale, e.g. `x` or `xz` for `axis="y"`. Two tapers with different effects give different insets per side |
+| `symmetry` | 0/1 | 0 | Taper both sides of the centre alike (z = abs(a) / H) |
 
 ```xml
-<box size="2 3 2">
-  <taper amount="0.4" axis="y"/>
-</box>
+<prism radius="40" height="200" sides="4">
+  <taper amount="-0.6"/>                       <!-- base 80 cm, top 32 cm -->
+</prism>
 <box size="100 100 100">
-  <taper amount="-0.5 -0.15"/>   <!-- top 50 cm wide, 85 cm deep -->
+  <taper center="0 0 0" amount="-1" effect="x"/><taper center="0 0 0" amount="-0.3" effect="z"/>   <!-- top 50 x 85 cm -->
 </box>
 ```
 
 ### `<twist>`
 
-Rotates the perpendicular axes around the chosen axis proportionally to position along it. Normals are also rotated.
+Turns the cross-section about the axis through the centre by angle·z.
 
-| Attribute | Type  | Default | Description |
-|-----------|-------|---------|-------------|
-| `angle`   | float | 0.0     | Total twist angle in degrees |
-| `axis`    | char  | y       | Axis around which to twist (x, y, or z) |
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `angle` | degrees | 0 | Max's Angle: the turn over the gizmo's extent |
+| `bias` | −100..100 | 0 | Max's Bias: positive gathers the turn towards the centre, negative towards the far end |
 
 ```xml
-<box size="2 4 2">
-  <twist angle="45" axis="y"/>
-</box>
+<prism radius="48" height="290" sides="4"><twist angle="38"/></prism>
 ```
 
 ### `<bend>`
 
-Bends the chosen axis into a circular arc in the plane defined by the axis and its first perpendicular component.
+Curls the axis through angle over the gizmo's extent, about the centre.
 
-| Attribute | Type  | Default | Description |
-|-----------|-------|---------|-------------|
-| `angle`   | float | 0.0     | Bend angle in degrees |
-| `axis`    | char  | y       | Axis to bend (x, y, or z) |
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `angle` | degrees | 0 | Max's Angle |
+| `direction` | degrees | 0 | Max's Direction: turns the bend about the axis, from the first crosswise axis (x for `axis="y"` or `"z"`, y for `"x"`) |
 
 ```xml
-<cylinder radius="20" height="300">
-  <bend angle="90" axis="y"/>
-</cylinder>
+<cylinder radius="10" height="300"><bend angle="90"/></cylinder>                  <!-- a quarter circle from its base -->
+<cylinder radius="10" height="300"><bend angle="90" limit="150 300"/></cylinder>  <!-- straight, then a hook -->
 ```
 
 ### `<stretch>`
 
-Non-linear stretch/squash along the chosen axis; pinch the middle, expand the ends (or vice versa).
+Scales along the axis by 1 + stretch from the centre while the cross-section takes the opposite scale,
+1/sqrt(1 + stretch), strongest at the centre and gone at z = ±1.
 
-| Attribute  | Type  | Default | Description |
-|------------|-------|---------|-------------|
-| `amount`   | float | 0.0     | Stretch amount (positive = squeeze middle) |
-| `amplify`  | float | 1.0     | How much perpendicular axes squeeze in response |
-| `axis`     | char  | y       | Axis along which to stretch (x, y, or z) |
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `stretch` | float > −1 | 0 | Max's Stretch |
+| `amplify` | float | 0 | Max's Amplify: strengthens (positive) or weakens (negative) the crosswise scale |
 
 ```xml
-<sphere radius="50">
-  <stretch amount="0.5" amplify="0.5" axis="y"/>
-</sphere>
+<sphere radius="50"><stretch stretch="0.5" center="0 0 0"/></sphere>
 ```
 
 ### `<skew>`
 
-Shears the two perpendicular axes proportionally to position along the chosen axis.
+Slides the cross-section by amount·z towards direction.
 
-| Attribute | Type  | Default | Description |
-|-----------|-------|---------|-------------|
-| `amount`  | float | 0.0     | Skew intensity (positive = top shifts along perpendiculars) |
-| `axis`    | char  | y       | Axis along which to skew (x, y, or z) |
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `amount` | cm | 0 | Max's Amount: the offset at z = 1 |
+| `direction` | degrees | 0 | Max's Direction, as on `<bend>` |
 
 ```xml
-<box size="1 3 1">
-  <skew amount="0.5" axis="y"/>
-</box>
+<box size="40 200 40"><skew amount="30"/></box>   <!-- the top leans 30 cm towards +x -->
 ```
 
 ### `<array>`
@@ -1718,56 +1720,62 @@ arbitrary pre-existing 3D meshes.
 
 ### `<mirror>`
 
-Creates a mirrored copy of the mesh across a plane, optionally welding vertices
-that lie on (or very near) the mirror plane. Useful for building symmetric
-objects from one half.
+Max's Mirror: reflects the mesh across one or more planes, as a copy (welded to the original where they meet)
+or in place.
 
-| Attribute | Type  | Default | Description |
-|-----------|-------|---------|-------------|
-| `axis`    | char  | y       | Mirror plane normal axis (x=YZ plane, y=XZ plane, z=XY plane) |
-| `weld`    | float | 0.1     | Distance threshold in cm for welding vertices on the mirror plane |
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `axis` | x, y, z, xy, yz, xz | x | The plane normals: `x` reflects across the YZ plane; two axes reflect across both |
+| `offset` | cm | 0 | Moves the planes along their axes |
+| `copy` | 0/1 | 1 | 1 adds the reflection (a symmetric object from one half); 0 replaces the mesh with it |
+| `weld` | cm | 0.1 | Vertices this close after mirroring are joined |
 
 ```xml
 <box size="100 200 50" pos="-50 0 0">
-  <mirror axis="x" weld="0.001"/>
+  <mirror axis="x" offset="50"/>
 </box>
 ```
 
 ### `<noise>`
 
-Displaces each vertex by a random vector for organic, uneven surfaces. Valid on
-any shape. Keep strength small on smooth primitives and larger on terrain or
-foliage. Seeded for deterministic output.
+Max's Noise: moves each vertex by smooth 3D noise sampled at its position, for organic, uneven surfaces.
+Seeded, so the result is the same on every load; a function of position, so the corners a box or prism
+repeats for every face move together and the surface stays sealed.
 
-| Attribute  | Type  | Default | Description |
-|------------|-------|---------|-------------|
-| `strength` | float | 1       | Maximum displacement per axis, in centimetres |
-| `seed`     | int   | 1       | Random seed for reproducible noise |
-
-The displacement is a hash of each vertex's position, so the corners a box or
-prism repeats for every face move together and the surface stays sealed.
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `strength` | cm, or `x y z` | 1 | Max's Strength: the largest displacement along each axis |
+| `scale` | cm | 100 | Max's Scale: the size of the bumps; smaller is rougher, below the vertex spacing every vertex moves on its own |
+| `seed` | int | 1 | Max's Seed |
+| `fractal` | 0/1 | 0 | Max's Fractal: add finer octaves |
+| `roughness` | 0..1 | 0 | With fractal: each octave's strength relative to the last |
+| `iterations` | 1..10 | 6 | With fractal: the number of octaves |
 
 ```xml
-<sphere radius="50">
-  <noise strength="8" seed="42"/>
+<sphere radius="50" rings="8" slices="12">
+  <noise strength="8" scale="30" seed="42" fractal="1" roughness="0.5" iterations="3"/>
 </sphere>
 ```
 
 ### `<shell>`
 
-Thickens a mesh by pushing each face outward along its vertex-averaged normals
-and bridging boundary edges. Turns a flat plane into a slab, or adds wall
-thickness to an open container.
+Max's Shell: turns a surface into a solid between an outer skin (pushed along the vertex-averaged normals)
+and an inner one (pushed against them), joined by rims along the open edges. Gives an open sheet or a
+container wall its thickness.
 
-| Attribute | Type  | Default | Description |
-|-----------|-------|---------|-------------|
-| `amount`  | float | 5       | Thickness amount pushed along normals, in cm |
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `outer` | cm | 5 | Max's Outer Amount |
+| `inner` | cm | 0 | Max's Inner Amount |
 
 ```xml
-  <box size="200 2 100">
-  <shell amount="10"/>
-</box>
+<surface segments="12 6" x="u*200-100" y="20*sin(u*pi)" z="v*100" smooth="1">
+  <shell outer="4"/>
+</surface>
 ```
+
+(`<shell amount>` inside a `<shape>` is a different step: it thickens a 2D line into an outline before
+extrusion.)
 
 ## Prefabs
 

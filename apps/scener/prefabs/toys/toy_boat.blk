@@ -3,7 +3,7 @@
      tint=1 changes the hull; mast and sail keep their materials. -->
 <prefab up="y" front="+x">
   <box pos="0 8.52 0" size="38 12 18" color="0.10 0.28 0.48" shininess="14" tint="1">
-    <taper amount="0.42" axis="x"/>
+    <taper center="0 0 0" amount="0.84" axis="x"/>
   </box>
   <cylinder pos="0 28 0" radius="1.4" height="44" color="0.34 0.19 0.08" shininess="10"/>
   <pyramid pos="9 31 0" rot="0 0 -90" radius="14" height="26" color="0.82 0.74 0.56" shininess="2"/>

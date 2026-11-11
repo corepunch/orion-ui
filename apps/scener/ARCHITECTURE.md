@@ -81,14 +81,18 @@ Open edges, crossed cap triangles, duplicate faces, mismatched boundary segmenta
 
 | Function | Effect |
 |----------|--------|
-| `mesh_apply_taper(m, amount, curvature)` | Scale X,Z non-uniformly along Y |
-| `mesh_apply_twist(m, angle_deg)` | Rotate around Y proportional to Y |
-| `mesh_apply_bend(m, angle_deg)` | Map Y axis into circular arc in XY plane |
-| `mesh_apply_stretch(m, amount, amplify)` | Non-linear squash/stretch along Y |
-| `mesh_apply_skew(m, amount)` | Shear X,Z proportional to Y |
+| `mesh_apply_taper(m, gizmo, amount, curve, symmetry, effect)` | Max's Taper: scale the cross-section by 1 + amount·z + curve·z(1−z) |
+| `mesh_apply_twist(m, gizmo, angle, bias)` | Max's Twist: turn about the axis by angle·z, biased |
+| `mesh_apply_bend(m, gizmo, angle, direction)` | Max's Bend: curl the axis through angle about the gizmo centre |
+| `mesh_apply_stretch(m, gizmo, stretch, amplify)` | Max's Stretch: scale along the axis, squash across |
+| `mesh_apply_skew(m, gizmo, amount, direction)` | Max's Skew: slide the cross-section by amount·z |
+| `mesh_apply_noise`, `mesh_apply_shell`, `mesh_apply_mirror` | Max's Noise (smooth gradient noise, fractal), Shell (inner/outer), Mirror (planes, offset, copy) |
 | `mesh_apply_array(m, count, translation, rotation)` | Duplicate and transform a complete mesh |
 
-Deformation modifiers accept an X, Y, or Z axis, compute the mesh bounds on that axis, and deform the already-complete mesh. XML child order is modifier order, so each modifier consumes the result of the previous one. Modifiers must preserve matching positions along welded edges; a modifier that separates formerly coincident boundary vertices will unseal the mesh. `array` operates on complete meshes rather than reconstructing their triangles.
+The deformers follow 3ds Max: a `deform_gizmo_t` gives the axis, the gizmo centre (by default on the axis at the
+base of the bounds, where a Max primitive's pivot sits) and optional limits; z = a / H is a vertex's distance
+from the centre over the gizmo's extent. Normals take the inverse transpose of each deformation's Jacobian.
+Modifiers deform the already-complete mesh. XML child order is modifier order, so each modifier consumes the result of the previous one. Modifiers must preserve matching positions along welded edges; a modifier that separates formerly coincident boundary vertices will unseal the mesh. `array` operates on complete meshes rather than reconstructing their triangles.
 
 ### scene.c — XML parser + scene loader
 
