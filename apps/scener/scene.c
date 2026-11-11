@@ -647,7 +647,7 @@ void scene_free(Scene *s){
 	for(int i=0;i<s->nnegativeProfiles;i++) shape2d_free(&s->negativeProfiles[i].profile);
 	free(s->negativeProfiles);
 	for(int i=0;i<s->ncameras;i++) free(s->cameras[i].transforms);
-	free(s->lights); free(s->mats); free(s->ramps); free(s->objs); free(s->svols); free(s->cameras);
+	free(s->lights); free(s->mats); free(s->ramps); free(s->objs); free(s->maps); free(s->svols); free(s->cameras);
 	free(s->prefabs); free(s->instances); free(s->rigRotations); free(s->rigTargets); free(s->rigJointWorlds); free(s->negativeBoxes); free(s->negativeArches);
 	free(s->negativeCylinders); free(s->overlayLines); free(s->charDefs); free(s->shapes);
 	free(s->dragStartModels); free(s->dragObjIndices);
@@ -734,6 +734,8 @@ void scene_add_obj(Scene *s, Mesh mesh, mat4 M, mat4 R, vec3 color, float shin, 
 	o.color=color; o.shininess=shin; o.ramp=s->activeRamp; o.castsShadow=castsShadow;
 	o.specular=s->activeSpecular; o.metallic=s->activeMetallic;
 	o.gradient=s->activeGradient;
+	o.mapFirst=s->nmaps; o.mapCount=s->nactiveMaps;
+	for(int i=0;i<s->nactiveMaps;i++) DA_PUSH(s->maps,s->nmaps,s->cmaps,s->activeMaps[i]);
 	o.renderable=renderable && !s->hiddenActive; o.unlit=unlit; o.sanityIgnore=s->sanityIgnoreActive;
 	o.sanityFloor=s->sanityFloorActive; o.sanityCheck=s->sanityCheckActive;
 	o.editNode=s->activeEditNode; o.editMatrix=s->activeEditMatrix;
@@ -1302,6 +1304,7 @@ void scene_rebuild_camera_gizmos(Scene *s, float aspect){
 
 static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR);
 static void read_gradient(Scene *s, XmlNode *n, gradient_t *g);
+static int read_maps(Scene *s, XmlNode *n, map_t *out);
 
 typedef void (*shape_parser_fn)(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit);
 
@@ -2721,7 +2724,7 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 			scene_issue(s,SCENE_ISSUE_ERROR,"material",node_file(s,n),n->line,"<%s> uses undefined material '%s'",tag,matName);
 		s->activeTexIndex = materials_index_for_name(mat ? mat->id : matName);
 		s->activeRamp = mat ? mat->ramp : -1;
-		vec3 color = mat? mat->color : xml_attr_v3(n,"color",v3(0.8f,0.8f,0.8f));
+		vec3 color = xml_attr(n,"color",NULL) || !mat ? xml_attr_v3(n,"color",v3(0.8f,0.8f,0.8f)) : mat->color;   /* the shape's own colour wins */
 		int tint=xml_attr_i(n,"tint",0);
 		if(s->prefabTintActive && tint) color=s->prefabTint;
 		float shin = mat? mat->shininess : xml_attr_f(n,"shininess",8.0f);
@@ -2732,6 +2735,8 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 		int unlit = xml_attr_i(n,"unlit",0);
 		read_gradient(s,n,&s->activeGradient);   /* colour without vertex painting: see gradient_t */
 		if(!s->activeGradient.on && mat && mat->gradient.on) s->activeGradient=mat->gradient;   /* a material's gradient applies unless the shape sets its own */
+		s->nactiveMaps=read_maps(s,n,s->activeMaps);   /* and its maps, unless the shape has its own */
+		if(!s->nactiveMaps && mat){ s->nactiveMaps=mat->nmaps; memcpy(s->activeMaps,mat->maps,sizeof(map_t)*(size_t)mat->nmaps); }
 
 		for(int j=0;j<(int)(sizeof(shape_parsers)/sizeof(shape_parsers[0]));j++){
 			if(!strcmp(tag, shape_parsers[j].tag)){
@@ -2822,13 +2827,13 @@ static void read_gradient(Scene *s, XmlNode *n, gradient_t *g){
 	g->on=xml_attr(n,"gradientFrom",NULL)!=NULL || xml_attr(n,"gradientTo",NULL)!=NULL;
 	g->from=xml_attr_v3(n,"gradientFrom",g->from); g->to=xml_attr_v3(n,"gradientTo",g->to);
 	XmlNode *c=NULL;
-	for(int i=0;i<n->nkids && !c;i++) if(!strcmp(n->kids[i]->tag,"gradient")) c=n->kids[i];
+	for(int i=0;i<n->nkids && !c;i++) if(!strcmp(n->kids[i]->tag,"gradient") || (!strcmp(n->kids[i]->tag,"map") && !strcmp(xml_attr(n->kids[i],"type",""),"gradient"))) c=n->kids[i];
 	if(c){
 		if(g->on) scene_issue(s,SCENE_ISSUE_WARNING,"gradient",node_file(s,c),c->line,"<%s> has both gradientFrom/gradientTo and a <gradient>; the element wins",n->tag);
 		g->on=1;
 		g->from=xml_attr_v3(c,"from",v3(1,1,1)); g->to=xml_attr_v3(c,"to",v3(1,1,1));
 		axis=xml_attr(c,"axis","y");
-		const char *type=xml_attr(c,"type","box"); g->type=-1;
+		const char *type=!strcmp(c->tag,"map")?xml_attr(c,"mapping","box"):xml_attr(c,"type","box"); g->type=-1;   /* a <map type="gradient"> names its gizmo by mapping */
 		for(int k=0;k<(int)(sizeof(gradient_types)/sizeof(gradient_types[0]));k++) if(!strcmp(type,gradient_types[k])) g->type=k;
 		if(g->type<0){ scene_issue(s,SCENE_ISSUE_ERROR,"gradient",node_file(s,c),c->line,"<gradient type=\"%s\">: the type is box, line, radial or uv",type); g->type=GRADIENT_BOX; }
 		int gotStart=xml_attr(c,"start",NULL)!=NULL, gotEnd=xml_attr(c,"end",NULL)!=NULL;
@@ -2849,6 +2854,42 @@ static void read_gradient(Scene *s, XmlNode *n, gradient_t *g){
 	g->axis=(axis[0]=='x'||axis[0]=='z')?axis[0]:'y';
 }
 
+/* <map> children of a shape or material: procedural textures placed by a gizmo (see map_t). */
+static const char *map_types[MAP_TYPES]={"noise","checker","bricks"};
+static const char *mappings[MAPPINGS]={"object","box","uv","x","y","z"};
+static int read_maps(Scene *s, XmlNode *n, map_t *out){
+	int count=0;
+	for(int i=0;i<n->nkids;i++){
+		XmlNode *c=n->kids[i];
+		if(strcmp(c->tag,"map") || !strcmp(xml_attr(c,"type",""),"gradient")) continue;   /* type="gradient" is <gradient> */
+		if(count>=MAP_MAX){ scene_issue(s,SCENE_ISSUE_ERROR,"map",node_file(s,c),c->line,"<%s> stacks more than %d maps",n->tag,MAP_MAX); break; }
+		map_t m={0};
+		const char *type=xml_attr(c,"type","noise"); m.type=-1;
+		for(int k=0;k<MAP_TYPES;k++) if(!strcmp(type,map_types[k])) m.type=k;
+		if(m.type<0){ scene_issue(s,SCENE_ISSUE_ERROR,"map",node_file(s,c),c->line,"<map type=\"%s\">: the type is noise, checker, bricks or gradient",type); continue; }
+		const char *mapping=xml_attr(c,"mapping",m.type==MAP_NOISE?"object":"box"); m.mapping=-1;
+		for(int k=0;k<MAPPINGS;k++) if(!strcmp(mapping,mappings[k])) m.mapping=k;
+		if(m.mapping<0){ scene_issue(s,SCENE_ISSUE_ERROR,"map",node_file(s,c),c->line,"<map mapping=\"%s\">: the mapping is object, box, uv, x, y or z",mapping); m.mapping=MAPPING_BOX; }
+		m.from=xml_attr_v3(c,"from",v3(1,1,1)); m.to=xml_attr_v3(c,"to",v3(1,1,1));
+		/* size: the pattern's period (a noise's feature size, a brick's length height depth), cm; uv mapping: in u, v */
+		float a=0,b=0,d=0; int got=sscanf(xml_attr(c,"size",m.mapping==MAPPING_UV?"1":"20"),"%f %f %f",&a,&b,&d);
+		if(got<2) b=a; if(got<3) d=a;
+		float unit=m.mapping==MAPPING_UV?1.0f:0.01f;
+		m.size=v3(a*unit,b*unit,d*unit);
+		if(m.size.x<=0||m.size.y<=0||m.size.z<=0){ scene_issue(s,SCENE_ISSUE_ERROR,"map",node_file(s,c),c->line,"<map size>: every period must be positive"); m.size=v3(0.2f,0.2f,0.2f); }
+		m.offset=xml_attr_v3_cm(c,"offset",v3(0,0,0));
+		m.octaves=xml_attr_i(c,"octaves",3); if(m.octaves<1) m.octaves=1; if(m.octaves>6) m.octaves=6;
+		m.power=xml_attr_f(c,"power",1.0f); if(m.power<=0){ scene_issue(s,SCENE_ISSUE_ERROR,"map",node_file(s,c),c->line,"<map power>: positive"); m.power=1; }
+		m.bump=xml_attr_f(c,"bump",0.0f)*0.01f;     /* cm: how far amount 1 stands out */
+		m.mortar=xml_attr_f(c,"mortar",1.0f)*0.01f;
+		m.bond=xml_attr_f(c,"bond",0.5f);
+		m.vary=xml_attr_f(c,"vary",0.0f);
+		m.seed=xml_attr_f(c,"seed",0.0f);
+		out[count++]=m;
+	}
+	return count;
+}
+
 static void read_material(Scene *s, XmlNode *n, Material *m){
 	strncpy(m->id, xml_attr(n,"id","mat"), 31);
 	m->color = xml_attr_v3(n,"color",v3(0.8f,0.8f,0.8f));
@@ -2858,6 +2899,7 @@ static void read_material(Scene *s, XmlNode *n, Material *m){
 	const char *ramp=xml_attr(n,"ramp",NULL);
 	m->ramp = ramp ? parse_material_ramp(s,n,ramp) : -1;
 	read_gradient(s,n,&m->gradient);
+	m->nmaps=read_maps(s,n,m->maps);
 }
 
 static int material_equal(const Scene *s, const Material *a, const Material *b){
@@ -2958,7 +3000,7 @@ static void warn_unknown_children(Scene *s, XmlNode *parent, const char *path, i
 		else if(!strcmp(parent->tag,"capture-profile")) supported=!strcmp(n->tag,"map");
 		else if(!strcmp(parent->tag,"layer")) supported=!strcmp(n->tag,"contact");
 		else if(!strcmp(parent->tag,"clip")) supported=!strcmp(n->tag,"key");
-		else if(!strcmp(n->tag,"gradient")) supported=!strcmp(parent->tag,"material") || has_shape_parser(parent->tag) || !strcmp(parent->tag,"shape");
+		else if(!strcmp(n->tag,"gradient") || !strcmp(n->tag,"map")) supported=!strcmp(parent->tag,"material") || has_shape_parser(parent->tag) || !strcmp(parent->tag,"shape");
 		else if(!strcmp(parent->tag,"mesh")) supported=!strcmp(n->tag,"v") || !strcmp(n->tag,"f") || has_modifier_parser(n->tag);
 		else if(!strcmp(parent->tag,"shape")) supported=!strcmp(n->tag,"v") || !strcmp(n->tag,"fillet") || has_modifier_parser(n->tag);
 		else if(!strcmp(parent->tag,"wall")||!strcmp(parent->tag,"floor")||!strcmp(parent->tag,"window")||!strcmp(parent->tag,"door")) supported=0;
@@ -3119,11 +3161,11 @@ static void scene_clear_view(Scene *s){
 	for(int i=0;i<s->nnegativeProfiles;i++) shape2d_free(&s->negativeProfiles[i].profile);
 	free(s->negativeProfiles);
 	for(int i=0;i<s->ncameras;i++) free(s->cameras[i].transforms);
-	free(s->lights); free(s->mats); free(s->ramps); free(s->objs); free(s->svols); free(s->cameras);
+	free(s->lights); free(s->mats); free(s->ramps); free(s->objs); free(s->maps); free(s->svols); free(s->cameras);
 	free(s->instances); free(s->rigRotations); free(s->rigTargets); free(s->rigJointWorlds); free(s->negativeBoxes); free(s->negativeArches);
 	free(s->negativeCylinders); free(s->overlayLines); free(s->charDefs); free(s->shapes); free(s->records);
 	s->records=NULL; s->nrecords=s->crecords=0; s->activeRecord=-1; s->prefabDepth=0; s->activeSourceNode=NULL;
-	s->lights=NULL; s->mats=NULL; s->ramps=NULL; s->nramps=s->cramps=0; s->activeRamp=-1; s->objs=NULL; s->svols=NULL; s->cameras=NULL;
+	s->lights=NULL; s->mats=NULL; s->ramps=NULL; s->nramps=s->cramps=0; s->activeRamp=-1; s->objs=NULL; s->maps=NULL; s->nmaps=s->cmaps=0; s->svols=NULL; s->cameras=NULL;
 	s->negativeProfiles=NULL; s->nnegativeProfiles=s->cnegativeProfiles=0;
 	s->rigRotations=NULL; s->nrigRotations=s->crigRotations=0;
 	s->rigTargets=NULL; s->nrigTargets=s->crigTargets=0;
@@ -3131,6 +3173,7 @@ static void scene_clear_view(Scene *s){
 	s->instances=NULL; s->negativeBoxes=NULL; s->negativeArches=NULL;
 	s->negativeCylinders=NULL; s->overlayLines=NULL; s->charDefs=NULL; s->shapes=NULL;
 	s->nlights=s->clights=s->nmats=s->cmats=s->nobjs=s->cobjs=0;
+	s->nmaps=s->cmaps=0;
 	s->ncameras=s->ccameras=s->ninstances=s->cinstances=0;
 	s->nnegativeBoxes=s->cnegativeBoxes=s->nnegativeArches=s->cnegativeArches=0;
 	s->nnegativeCylinders=s->cnegativeCylinders=s->noverlayLines=s->coverlayLines=0;
@@ -3314,7 +3357,7 @@ int scene_create_door(Scene *s,const char *preset,vec3 ground){ return scene_cre
 int load_scene(const char *path, Scene *s){
 	memset(s,0,sizeof(*s));
 	s->selectedObj=-1; s->editMode=EDIT_W_MOVE;
-	s->activeTexIndex=-1; s->activeRamp=-1; s->activeGradient=gradient_default(); s->activeSpecular=DEFAULT_SPECULAR; s->activeMetallic=0;
+	s->activeTexIndex=-1; s->activeRamp=-1; s->activeGradient=gradient_default(); s->nactiveMaps=0; s->activeSpecular=DEFAULT_SPECULAR; s->activeMetallic=0;
 	s->activeScreenTexture=-1;
 	strncpy(s->scenePath,path,sizeof(s->scenePath)-1);
 	const char *content=strstr(path,"/scenes/");

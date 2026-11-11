@@ -36,7 +36,7 @@ The complete supported element inventory is:
 | Wall cutters | `<bool-negative-box>`, `<bool-negative-arch>`, `<bool-negative-cylinder>` |
 | Mesh modifiers | `<taper>`, `<twist>`, `<bend>`, `<stretch>`, `<skew>`, `<array>`, `<extrude>`, `<bevel>`, `<mirror>`, `<noise>`, `<shell>` |
 | Expressions | `<let>` in `<scene>`, `<prefab>`, `<group>` and bones; `{expr}` in any attribute value |
-| Context-only children | `<gradient>` in any shape or `<material>`, `<shape><fillet>`, `<camera><transform>`, `<camera><use-pose>`, `<pose><joint>`, `<pose><ik>`, `<clip><key>`, `<key><joint>`, `<key><ik>`, `<prefab><joint>`, `<prefab><ik>`, `<prefab><gait>`, `<prefab><layer>`, `<shape><v>`, `<prefab><attach>` |
+| Context-only children | `<gradient>` and `<map>` in any shape or `<material>`, `<shape><fillet>`, `<camera><transform>`, `<camera><use-pose>`, `<pose><joint>`, `<pose><ik>`, `<clip><key>`, `<key><joint>`, `<key><ik>`, `<prefab><joint>`, `<prefab><ik>`, `<prefab><gait>`, `<prefab><layer>`, `<shape><v>`, `<prefab><attach>` |
 
 Unknown elements produce an `unsupported XML element` error. Element names
 and attribute names are case-sensitive.
@@ -602,7 +602,7 @@ All shapes share common attributes plus shape-specific ones. Shapes may contain 
 | `gradientFrom`, `gradientTo` | vec3 | (none) | Colour multipliers at the minimum and maximum of the shape's bounding box along `gradientAxis`; a gradient is on when either is given, the missing one is `1 1 1` |
 | `gradientAxis` | x, y, z | y | The shape's own axis, before `pos`, `rot` and `scale` (a tube extruded along Z takes `z`) |
 
-If a `material` attribute is given, `color`, `shininess` and any `ramp` are taken from the referenced material definition.
+If a `material` attribute is given, `shininess`, any `ramp`, its gradient and its maps come from the referenced material definition, and so does `color` unless the shape gives its own: a stone material can carry its mottle and bump while every block keeps its colour.
 
 **Gradients** shade a shape without painting vertices. Like a UV gizmo, the bounding box of the shape's
 own mesh (after its modifiers, before its transform) maps to 0..1 along `gradientAxis`, and the colour is
@@ -638,6 +638,47 @@ cleanly:
 </surface>
 <!-- glowing ember: brighter towards a point, by distance -->
 <sphere radius="30" color="1 1 1"><gradient type="radial" start="0 20 0" end="0 -30 0" from="1 0.8 0.3" to="0.5 0.1 0"/></sphere>
+```
+
+### `<map>`: procedural textures
+
+A `<map>` is a texture made by a formula and evaluated per pixel, placed on the shape by a gizmo like a 3ds Max
+map by its UVW Map. It lays an amount, 0..1, between `from` and `to` (sRGB colour multipliers, so with
+`color="1 1 1"` they are the colours) and can raise the surface by it (`bump`). A shape or `<material>` takes up to
+four; their colours multiply. A material's maps apply to every shape using it unless the shape has maps of its
+own. `<map type="gradient" mapping="box|line|radial|uv" …>` is the same as `<gradient type="…" …>`, with the
+gradient's attributes.
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `type` | noise, checker, bricks, gradient | noise | The pattern |
+| `mapping` | object, box, uv, x, y, z | object (noise), box (others) | The gizmo. `object`: the shape's own 3D space (noise only). `box`: each face takes the plane across its main axis, as Max's Box mapping. `uv`: a `<surface>`'s or `<lathe>`'s parameters. `x`, `y`, `z`: one plane across that axis |
+| `size` | 1 to 3 floats | 20 (cm); 1 for uv | The period: a noise's feature size, a checker square, a brick's length and height (cm, in the shape's own units); for `uv` in u and v |
+| `offset` | vec3 (cm) | 0 0 0 | Moves the pattern |
+| `from`, `to` | vec3 | 1 1 1 | Multipliers at amount 0 and 1 |
+| `power` | float > 0 | 1 | Curves the amount |
+| `bump` | float (cm) | 0 | How far amount 1 stands out; the shading normal follows, no geometry moves |
+| `octaves` | 1–6 | 3 | noise: layers of finer detail |
+| `seed` | float | 0 | noise, bricks: another arrangement |
+| `mortar` | float (cm) | 1 | bricks: the joint's width; amount is 1 in the joints, 0 on the bricks (so `bump` raises the bricks) |
+| `bond` | float | 0.5 | bricks: how far each row shifts, in brick lengths (0.5 is running bond) |
+| `vary` | 0..1 | 0 | bricks: each brick's colour varies by up to this much |
+
+![Bricks with bump and per-brick variation, a noise-bumped sphere, a checker box, and a stone material on two blocks](../../../docs/maps.jpg)
+
+Points are in the shape's own coordinates (before `pos`, `rot`, `scale`), so a pattern moves with its shape and
+scales with it. Edges of checkers and joints are filtered over a pixel.
+
+```xml
+<!-- a brick wall: running bond, raised bricks, each a little different -->
+<box size="160 120 20" color="0.75 0.4 0.3">
+  <map type="bricks" size="24 8" mortar="1.2" vary="0.12" to="0.95 0.92 0.85" bump="0.8"/>
+</box>
+<!-- a stone material: mottled and rough; every block using it keeps its own colour -->
+<material id="stone" shininess="4"><map type="noise" size="6" from="0.8 0.8 0.8" to="1.15 1.15 1.15" bump="0.6"/></material>
+<box size="50 40 50" material="stone" color="0.8 0.7 0.5"/>
+<!-- a chequered sheet, by its own u and v -->
+<surface segments="8 8" color="1 1 1" x="u*100" y="0" z="v*100"><map type="checker" mapping="uv" size="0.125" from="0.9 0.2 0.2" to="1 1 1"/></surface>
 ```
 
 An unlit object still renders into the depth buffer. Its `castShadow` setting is

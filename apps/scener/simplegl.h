@@ -183,6 +183,12 @@ void mesh_transform(Mesh *m,mat4 posM,mat4 rotM);
    curved by power. Gizmos: the local bounding box along x, y or z; a line or a radius between two local points
    (cm); or a linear map of the surface parameters, g = u*tileU + v*tileV + offset. */
 enum { GRADIENT_BOX, GRADIENT_LINE, GRADIENT_RADIAL, GRADIENT_UV };
+/* <map>: a procedural texture on a shape or material, evaluated per pixel. Like a 3ds Max map it is placed by a
+   gizmo (mapping) and lays its amount (0..1) between from and to, colour multipliers; bump raises the surface by it. */
+enum { MAP_NOISE, MAP_CHECKER, MAP_BRICKS, MAP_TYPES };
+enum { MAPPING_OBJECT, MAPPING_BOX, MAPPING_UV, MAPPING_X, MAPPING_Y, MAPPING_Z, MAPPINGS };
+#define MAP_MAX 4   /* maps one shape can stack */
+typedef struct { int type,mapping,octaves; vec3 from,to,size,offset; float bump,mortar,bond,vary,power,seed; } map_t;
 typedef struct { int on,type,repeat,mirror; char axis; vec3 from,to,start,end; float tileU,tileV,offset,edge,power; } gradient_t;
 gradient_t gradient_default(void);
 void mesh_gradient_param(Mesh *m,const gradient_t *g); /* sets Vertex.g from the gizmo */
@@ -224,7 +230,7 @@ Mesh gen_box_hole_arch(float w,float h,float depth,int sides);
 
 #define MATERIAL_RAMP_SHADES 16
 typedef struct { vec3 shade[MATERIAL_RAMP_SHADES]; } MaterialRamp; /* dark to light; replaces diffuse and specular */
-typedef struct { char id[32]; vec3 color; float shininess,specular,metallic; int ramp, prefabDefined; gradient_t gradient; } Material; /* gradient: see SceneObj */ /* ramp: index into Scene.ramps, -1 for none */
+typedef struct { char id[32]; vec3 color; float shininess,specular,metallic; int ramp, prefabDefined; gradient_t gradient; map_t maps[MAP_MAX]; int nmaps; } Material; /* gradient: see SceneObj */ /* ramp: index into Scene.ramps, -1 for none */
 typedef struct { char target[32]; vec3 pos,rot,scale; } CameraTransform;
 #define MAX_CAMERA_NAME 128
 
@@ -241,7 +247,7 @@ typedef struct { float x,y,z,w; } ShadowVertex;
 typedef struct { ShadowVertex *verts; int nverts,cverts; int *obj,*first,*count; int nranges; } ShadowVolume;
 /* An object is a model shared with every object of the same geometry, placed by its own matrix, as a Doom 3
    entity places a render model; bmin/bmax are its world bounds. */
-typedef struct { Mesh *mesh; mat4 model,normalM; int mirrored; vec3 bmin,bmax; vec3 color; float shininess,specular,metallic; /* specular: Blender-style level, F0 = 0.08 * specular (0.5 gives 4%); metallic 0..1 tints the reflection with the colour and drops the diffuse */ int ramp; gradient_t gradient; /* colour multipliers from..to by Vertex.g, when on */ int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
+typedef struct { Mesh *mesh; mat4 model,normalM; int mirrored; vec3 bmin,bmax; vec3 color; float shininess,specular,metallic; /* specular: Blender-style level, F0 = 0.08 * specular (0.5 gives 4%); metallic 0..1 tints the reflection with the colour and drops the diffuse */ int ramp; gradient_t gradient; /* colour multipliers from..to by Vertex.g, when on */ int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; int mapFirst,mapCount; /* its maps: Scene.maps[mapFirst..] */ } SceneObj;
 typedef struct { char path[1024]; unsigned char *pixels; int width,height; unsigned int texture; } ScreenTexture;
 typedef struct { char name[32]; vec3 pos; } AttachPoint;
 #define SCENE_PREFAB_PATH_CAPACITY 1024
@@ -295,6 +301,7 @@ typedef struct {
 	Material *mats; int nmats,cmats;
 	MaterialRamp *ramps; int nramps,cramps;
 	SceneObj *objs; int nobjs,cobjs;
+	map_t *maps; int nmaps,cmaps;   /* every object's maps, end to end (SceneObj.mapFirst) */
 	Mesh **models; int nmodels,cmodels; /* the shared models, looked up by content when objects are added */
 	ShadowVolume *svols;
 	unsigned shadowRev; /* bumped whenever the combined volumes are rebuilt; GPU copies of them are keyed by it */
@@ -333,6 +340,7 @@ typedef struct {
 	int activeTexIndex;
 	float activeSpecular,activeMetallic; /* of the shape being placed */
 	gradient_t activeGradient; /* gradient of the shape being placed */
+	map_t activeMaps[MAP_MAX]; int nactiveMaps; /* its maps */
 	int activeRamp; /* ramp of the material being placed, -1 for none; mirrors activeTexIndex */
 	const char *activeScreenImage;
 	int activeScreenTexture;

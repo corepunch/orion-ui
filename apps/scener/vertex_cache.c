@@ -13,7 +13,7 @@
 /* Doom 3 keeps 32-byte idDrawVerts with byte normals and 16-bit indices (idlib/geometry/DrawVert.h,
    triIndex_t in sys_types.h); the GPU copy here is the same idea:
    position, normal packed into 10-bit components, gradient parameter. 20 bytes instead of 36. */
-typedef struct { float x, y, z; unsigned n; float g; } gpu_vertex_t;
+typedef struct { float x, y, z; unsigned n; float g; float u, v; } gpu_vertex_t;   /* u, v: for <map mapping="uv"> */
 
 typedef struct {
     GLuint vao, vbo, ibo, tex;                  /* tex: the vertices as a buffer texture, read by the shadow shader */
@@ -25,9 +25,9 @@ typedef struct { GLuint vao, ibo; int cap, used, wide; unsigned char *pending; i
 
 static geom_chunk_t *s_geom; static int s_ngeom, s_cgeom;
 static index_chunk_t *s_index; static int s_nindex, s_cindex;
-static GLint s_locPos = -1, s_locNrm = -1, s_locGrad = -1;
+static GLint s_locPos = -1, s_locNrm = -1, s_locGrad = -1, s_locUV = -1;
 
-void vcache_set_attribs(int pos, int nrm, int grad) { s_locPos = pos; s_locNrm = nrm; s_locGrad = grad; }
+void vcache_set_attribs(int pos, int nrm, int grad, int uv) { s_locPos = pos; s_locNrm = nrm; s_locGrad = grad; s_locUV = uv; }
 int vcache_vertex_floats(void) { return (int)(sizeof(gpu_vertex_t) / sizeof(float)); }
 
 static unsigned pack_normal(vec3 n) {
@@ -60,6 +60,10 @@ static int geom_chunk_for(int nv, int ibytes) {
         glEnableVertexAttribArray((GLuint)s_locGrad);
         glVertexAttribPointer((GLuint)s_locGrad, 1, GL_FLOAT, GL_FALSE, sizeof(gpu_vertex_t), (void *)offsetof(gpu_vertex_t, g));
     }
+    if (s_locUV >= 0) {
+        glEnableVertexAttribArray((GLuint)s_locUV);
+        glVertexAttribPointer((GLuint)s_locUV, 2, GL_FLOAT, GL_FALSE, sizeof(gpu_vertex_t), (void *)offsetof(gpu_vertex_t, u));
+    }
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glGenTextures(1, &c.tex);
@@ -89,7 +93,7 @@ static void mesh_upload(Mesh *m) {
     gpu_vertex_t *g = c->sv + m->gpuVertex;
     for (int i = 0; i < m->nverts; i++) {
         const Vertex *s = &m->verts[i];
-        g[i].x = s->pos.x; g[i].y = s->pos.y; g[i].z = s->pos.z; g[i].n = pack_normal(s->nrm); g[i].g = s->g;
+        g[i].x = s->pos.x; g[i].y = s->pos.y; g[i].z = s->pos.z; g[i].n = pack_normal(s->nrm); g[i].g = s->g; g[i].u = s->u; g[i].v = s->v;
     }
     c->vused += m->nverts; c->iused += ni * size; c->live++;
 }
