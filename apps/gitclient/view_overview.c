@@ -55,11 +55,13 @@ static void overview_clear_table(database_t *db, int table) {
   free_result_list(rows);
 }
 
-static void insert_targets(database_t *db, int checkout_id, const gc_launch_t *launch) {
+static void insert_targets(database_t *db, int checkout_id, const char *checkout, const gc_launch_t *launch) {
   for (int i = 0; i < launch->count; i++) {
     const gc_launch_target_t *t = &launch->targets[i];
     db_target_t rec = {0};
     rec.checkout_id = checkout_id;
+    snprintf(rec.checkout, sizeof(rec.checkout), "%s", checkout);
+    rec.running = gc_run_is_running(checkout, t->name);
     snprintf(rec.name, sizeof(rec.name), "%s", t->name);
     snprintf(rec.kind, sizeof(rec.kind), "%s", gc_launch_kind_name(t->kind));
     if (!gc_launch_command(t, NULL, rec.command, sizeof(rec.command))) rec.command[0] = 0;
@@ -88,7 +90,7 @@ static void fill_rows(void) {
     if (targets < 0) snprintf(rec.target, sizeof(rec.target), "%s", ui_tr("launch.xml has errors"));
     else if (targets > 0) snprintf(rec.target, sizeof(rec.target), "%s", launch->targets[launch->default_index].name);
     const db_checkout_t *row = (const db_checkout_t *)send_db_message(db, dbInsert, TABLE_CHECKOUTS, &rec);
-    if (row && targets > 0) insert_targets(db, row->id, launch);
+    if (row && targets > 0) insert_targets(db, row->id, t->path, launch);
     free(launch);
   }
   // Reinserted checkouts get new keys, so the targets follow the selection again.
@@ -147,10 +149,16 @@ result_t gc_page_overview_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
     g_gc->filter_win    = get_window_item(win, ID_OVERVIEW_PAGE_FILTER);
     g_gc->checkouts_win = get_window_item(win, ID_OVERVIEW_PAGE_CHECKOUTS);
     g_gc->targets_win   = get_window_item(win, ID_OVERVIEW_PAGE_TARGETS);
+    g_gc->run_button_win      = get_window_item(win, ID_OVERVIEW_PAGE_RUN_TARGET);
+    g_gc->terminal_button_win = get_window_item(win, ID_OVERVIEW_PAGE_SHOW_TERMINAL);
+    g_gc->terminal_tabs_win   = get_window_item(win, ID_OVERVIEW_PAGE_TERMINAL_TABS);
+    if (g_gc->terminal_tabs_win) window_set_state(g_gc->terminal_tabs_win, WINDOW_STATE_VISIBLE, false);   // the Terminal button shows it
     return true;
   }
   if (msg == evDestroy && g_gc->overview_page_win == win) {
     g_gc->overview_page_win = g_gc->filter_win = g_gc->checkouts_win = g_gc->targets_win = NULL;
+    g_gc->run_button_win = g_gc->terminal_button_win = g_gc->terminal_tabs_win = NULL;
+    g_gc->run_count = 0;
     return true;
   }
   return false;
@@ -263,6 +271,7 @@ void gc_overview_fetch_all(void) {
 bool gc_overview_handle_command(uint32_t wparam, void *lparam) {
   gc_state_t *gc = g_gc; uint16_t code = HIWORD(wparam);
   if (!gc || !lparam) return false;
+  if (gc_run_handle_command(wparam, lparam)) return true;
   window_t *src = lparam;
   if (src == gc->checkouts_win && code == RVN_DBLCLK) {
     const db_checkout_t *row = selected_checkout();

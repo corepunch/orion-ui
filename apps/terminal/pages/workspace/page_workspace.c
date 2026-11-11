@@ -1,5 +1,4 @@
-#include "../../vgat.h"
-#include "build/generated/apps/terminal/terminal.h"
+#include "../../terminal_app.h"
 
 typedef struct {
   unsigned next_tab;

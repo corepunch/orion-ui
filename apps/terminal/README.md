@@ -26,8 +26,11 @@ The TabBar selects sessions; it is distinct from the outer window TitleBar.
 `main.c` initializes PageHost. The framework routes projected toolbar commands,
 menu commands, and accelerators to the active Page using the same command IDs. `pages/workspace/page_workspace.c`
 creates/closes session forms and routes commands through Page and TabView.
-`view_main.c`, `vgat_screen.c`, and `pty.c` implement terminal behavior; they do not manage tabs or page navigation.
-FormEditor uses the registered TerminalView preview from `components/plug.c`.
+`components/view_main.c`, `vgat_screen.c`, and `pty.c` implement terminal behavior; they do not manage tabs or page navigation.
+They build the `terminal_components` plugin, which registers the real `TerminalView` for this app, FormEditor and
+Git Client. Other apps drive a view only through the messages in `components/terminal_view.h`: `termExec` runs a
+shell command in a PTY in a given directory, `termKill` stops its process group, and `termnExited` reports the exit
+code. Git Client runs launch targets this way.
 
 Drag a tab onto a pane's center to move it, onto its TabBar to choose an insertion
 position, or near an edge to split it. A highlighted rectangle previews the snap

@@ -19,13 +19,18 @@ int vgat_pty_open(const char *shell, int rows, int cols, int *pid_out);
 
 // Open a new PTY and exec an arbitrary program.
 // argv: NULL-terminated argument vector (argv[0] = program path)
+// cwd: working directory of the program (NULL = inherit)
 // rows, cols: initial terminal size
 // pid_out: set to child process ID on success
 // Returns: master fd on success, -1 on failure
-int vgat_pty_exec(const char *const *argv, int rows, int cols, int *pid_out);
+int vgat_pty_exec(const char *const *argv, const char *cwd, int rows, int cols, int *pid_out);
 
-// Close the PTY and terminate the child process.
-void vgat_pty_close(int pid);
+// Reap the child, terminating its process group first if it still runs.
+// Returns its exit code, 128 + signal when a signal ended it, -1 without a child.
+int vgat_pty_close(int pid);
+
+// Ask the child's process group to terminate (SIGTERM) without waiting.
+void vgat_pty_terminate(int pid);
 
 // Resize the terminal (signal child via TIOCSWINSZ on Unix).
 bool vgat_pty_resize(int master_fd, int rows, int cols);

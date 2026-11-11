@@ -63,6 +63,18 @@ static bool report_hit_checkbox(window_t *win, reportview_data_t *data,
   return true;
 }
 
+// The row icon drawn before the first column's text (see the paint loop).
+static bool report_hit_row_icon(window_t *win, reportview_data_t *data, uint32_t wparam, int *index_out) {
+  if (!data || data->cell_style == REPORTVIEW_CELL_TWO_LINE) return false;
+  int row = report_hit_index(win, data, wparam);
+  if (!rv_valid_index(data, row) || !data->items[row].icon_name) return false;
+  int mx = (int16_t)LOWORD(wparam);
+  int first_x = window_scroll_content_rect(win).x + WIN_PADDING;
+  if (mx < first_x || mx >= first_x + ICON_OFFSET) return false;
+  if (index_out) *index_out = row;
+  return true;
+}
+
 static bool report_set_item_state(window_t *win, reportview_data_t *data,
                                   int index, uint32_t state, uint32_t mask,
                                   bool notify) {
@@ -463,6 +475,8 @@ result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         if (report_hit_checkbox(win, data, wparam, &checked_index)) {
           report_toggle_check(win, data, checked_index);
         }
+        if (report_hit_row_icon(win, data, wparam, &checked_index))
+          rv_notify(win, data, checked_index, RVN_ICONCLICK);
       }
       data->press_row = (data->extended_style & RVS_EX_ONECLICK) && rv_valid_index(data, index) ? index : -1;
       return true;

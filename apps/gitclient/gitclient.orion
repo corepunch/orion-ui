@@ -231,6 +231,8 @@
                 <field name="name" type="string" length="64"/>
                 <field name="kind" type="string" length="8"/>
                 <field name="command" type="string" length="1024"/>
+                <field name="checkout" type="string" length="512"/>
+                <field name="running" type="bool"/>
             </table>
         </database>
         <database name="github_db" class="github_database_proc">
@@ -255,6 +257,7 @@
 
     <plugins>
         <plugin name="gitclient_components" />
+        <plugin name="terminal_components" />
     </plugins>
 
     <forms>
@@ -265,6 +268,10 @@
                 <Page form="history_page" command="view.history" />
                 <Page form="github_page" command="view.github" />
             </ActivityBar>
+        </form>
+        <form name="terminal_tab" title="Terminal" width="640" height="240" flags="notitle,nofill" spacing="0" padding="0">
+            <requires library="terminal_components" />
+            <TerminalView name="terminal" flags="notitle,nofill,vscroll,flexspace" />
         </form>
         <form name="overview_page" title="Overview" icon="gc-nav-overview" checked-icon="gc-nav-overview-fill" tooltip="All repositories (Ctrl+0)" focus="checkouts" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">
             <PaneToolbar replace="true">
@@ -289,15 +296,25 @@
                         </TableView>
                     </StackView>
                 </TabView>
-                <TabView name="targets_tabs" hide-single-tab="true" flags="flexspace">
-                    <TableView name="targets" text="Launch Targets" source="workspace.targets" master="checkouts" flags="notitle,nofill,vscroll,flexspace">
-                        <RowIcon field="kind" value="build" icon="gc-hammer" color="secondary" />
-                        <RowIcon field="kind" value="test" icon="gc-flask" color="secondary" />
-                        <RowIcon icon="gc-play" color="success" />
-                        <Column field="name" title="Target" width="150" />
-                        <Column field="command" title="Command" width="0" />
-                    </TableView>
-                </TabView>
+                <SplitView name="targets_split" orientation="vertical" split-ratio="0.45" flags="flexspace">
+                    <TabView name="targets_tabs" hide-single-tab="true" flags="flexspace">
+                        <StackView name="targets_panel" text="Launch Targets" flags="flexspace" spacing="0" padding="0">
+                            <StackView name="targets_bar" orientation="horizontal" spacing="6" padding="14 8 14 8">
+                                <Button name="run_target" text="Run" icon="gc-play" tooltip="Run the selected target; click a running target's icon to stop it" />
+                                <Button name="show_terminal" text="Terminal" icon="gc-terminal-window" tooltip="Show or hide the output of the targets that ran" />
+                            </StackView>
+                            <TableView name="targets" source="workspace.targets" master="checkouts" flags="notitle,nofill,vscroll,flexspace">
+                                <RowIcon field="running" icon="gc-stop-circle" color="info" />
+                                <RowIcon field="kind" value="build" icon="gc-hammer" color="secondary" />
+                                <RowIcon field="kind" value="test" icon="gc-flask" color="secondary" />
+                                <RowIcon icon="gc-play" color="success" />
+                                <Column field="name" title="Target" width="150" />
+                                <Column field="command" title="Command" width="0" />
+                            </TableView>
+                        </StackView>
+                    </TabView>
+                    <TabView name="terminal_tabs" hide-single-tab="true" flags="flexspace" />
+                </SplitView>
             </SplitView>
         </form>
         <form name="changes_page" title="Changes" icon="gc-nav-changes" checked-icon="gc-nav-changes-fill" tooltip="Working tree (Ctrl+1)" focus="changes_files" width="960" height="600" role="page" auto_layout="1" flags="nofill,flexspace">

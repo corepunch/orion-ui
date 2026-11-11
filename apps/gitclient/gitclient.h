@@ -84,6 +84,14 @@ static inline bool gc_checkout_needs_attention(const git_summary_t *t) {
       || t->no_upstream || t->gone || t->prunable;
 }
 
+// A launch target that ran: its tab in the Overview's terminal pane (gc_run.c).
+#define GC_MAX_RUNS 16
+typedef struct {
+  char checkout[512], target[64];
+  window_t *tab, *term;   // the tab page and its TerminalView
+  bool stopping;          // Stop was asked: a second Stop kills, the exit shows no failure
+} gc_run_t;
+
 #define GC_MAX_BRANCHES 256
 #define GC_MAX_COMMITS 1024
 #define GC_MAX_FILES 4096
@@ -163,6 +171,7 @@ enum {
 
 #define gc_main_window_form gitclient_main_window_form
 #define gc_overview_page_form gitclient_overview_page_form
+#define gc_terminal_tab_form gitclient_terminal_tab_form
 #define gc_changes_page_form gitclient_changes_page_form
 #define gc_history_page_form gitclient_history_page_form
 #define gc_github_page_form gitclient_github_page_form
@@ -203,6 +212,12 @@ typedef struct {
   window_t *filter_win;
   window_t *checkouts_win;
   window_t *targets_win;
+  window_t *run_button_win;
+  window_t *terminal_button_win;
+  window_t *terminal_tabs_win;
+  bool terminal_shown;
+  gc_run_t runs[GC_MAX_RUNS];
+  int run_count;
   database_t *workspace_db;
   bool attention_only;
   window_t *changes_page_win;
@@ -382,6 +397,12 @@ database_t *gc_workspace_db_create(void);
 void gc_overview_fetch_all(void);
 void gc_overview_status(char *out, size_t n);
 bool gc_overview_handle_command(uint32_t wparam, void *lparam);
+bool gc_run_start(const char *checkout, const char *target, const char *command);
+bool gc_run_stop(const char *checkout, const char *target);
+bool gc_run_is_running(const char *checkout, const char *target);
+void gc_run_show_terminal(bool show);
+void gc_run_sync_targets(void);
+bool gc_run_handle_command(uint32_t wparam, void *lparam);
 result_t gc_page_overview_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 void gc_recent_load(void);
 void gc_recent_save(void);

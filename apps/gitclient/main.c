@@ -95,13 +95,14 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   // Register commctl classes (tableview, stack, grid, etc.).
   register_commctl_classes();
 
-  // Load gitclient component plugin (DiffView, etc.).
-  {
+  // Component plugins: DiffView (gitclient), TerminalView (terminal) for launch targets.
+  static const char *plugins[] = {"gitclient_components", "terminal_components"};
+  for (int i = 0; i < ARRAY_LEN(plugins); i++) {
     char path[4096];
-    int n = snprintf(path, sizeof(path), "%s/../lib/gitclient_components%s",
-                     ui_get_exe_dir(), AX_DYNLIB_EXT);
-    if (n > 0 && (size_t)n < sizeof(path))
-      fe_load_component_plugin(path);
+    int n = snprintf(path, sizeof(path), "%s/../lib/%s%s", ui_get_exe_dir(), plugins[i], AX_DYNLIB_EXT);
+    if (n > 0 && (size_t)n < sizeof(path) && !fe_load_component_plugin(path)) {
+      fprintf(stderr, "[gc] cannot load %s\n", path); fflush(stderr);
+    }
   }
 
   // Menubar + accelerators.

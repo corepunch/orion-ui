@@ -25,6 +25,15 @@ warning for uncommitted changes, blue arrows for commits to push or pull, a gree
 The right pane lists the selected checkout's [launch targets](#launch-targets-launchxml); the status
 bar shows the selected target's full command.
 
+Double-click a target, click its icon, or press Run to start it. It runs in the checkout as
+`/bin/sh -c command` inside the Terminal app's `TerminalView` (the `terminal_components` plugin),
+in a PTY, so colours and progress lines look as they do in a shell. While it runs, its icon is a
+stop sign and Run reads Stop. Click either to end the target's process group. A second click kills it.
+Output stays out of the way: the Terminal button shows or hides a pane below the targets with
+one tab per target that ran. A target that fails, rather than being stopped, opens that pane by itself.
+Running the target again reuses its tab. Targets use their parameters' default values. Windows has
+no PTY yet, so targets do not run there.
+
 Drop a git folder onto the window to add its repository. File → Save Workspace writes a `.gitworkspace`
 file of main-worktree roots; pass that file to reopen every repository at once. File → Remove from
 Workspace (also on the row's context menu) drops the selected row's repository.
