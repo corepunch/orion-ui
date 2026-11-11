@@ -128,7 +128,7 @@ int vgat_pty_open(const char *shell, int rows, int cols, int *pid_out) {
   return master_fd;
 }
 
-int vgat_pty_exec(const char *const *argv, int rows, int cols, int *pid_out) {
+int vgat_pty_exec(const char *const *argv, const char *cwd, int rows, int cols, int *pid_out) {
   if (!pid_out || !argv || !argv[0]) return -1;
 
   struct winsize ws = { .ws_row = (unsigned short)rows, .ws_col = (unsigned short)cols };
@@ -136,6 +136,10 @@ int vgat_pty_exec(const char *const *argv, int rows, int cols, int *pid_out) {
   int pid = forkpty(&master_fd, NULL, NULL, &ws);
   if (pid == 0) {
     setenv("TERM", "linux", 1);
+    if (cwd && cwd[0] && chdir(cwd) != 0) {
+      fprintf(stderr, "%s: %s\r\n", cwd, strerror(errno));
+      _exit(127);
+    }
     execvp(argv[0], (char *const *)argv);
     fprintf(stderr, "%s: %s\r\n", argv[0], strerror(errno));
     _exit(127);
@@ -155,19 +159,29 @@ int vgat_pty_exec(const char *const *argv, int rows, int cols, int *pid_out) {
   return master_fd;
 }
 
-void vgat_pty_close(int pid) {
-  if (pid <= 0) return;
-  // Send SIGTERM, then wait briefly. Escalate to SIGKILL if it doesn't exit.
-  kill(pid, SIGTERM);
+static int pty_exit_code(int status) {
+  return WIFEXITED(status) ? WEXITSTATUS(status) : WIFSIGNALED(status) ? 128 + WTERMSIG(status) : -1;
+}
+
+// forkpty makes the child a session leader, so its pid is also its process group.
+void vgat_pty_terminate(int pid) {
+  if (pid > 0 && kill(-pid, SIGTERM) != 0) kill(pid, SIGTERM);
+}
+
+int vgat_pty_close(int pid) {
+  if (pid <= 0) return -1;
+  int status;
+  if (waitpid(pid, &status, WNOHANG) == pid) return pty_exit_code(status);
+  // Still running: SIGTERM, wait briefly, then SIGKILL.
+  vgat_pty_terminate(pid);
   for (int i = 0; i < 10; i++) {
-    int status;
     pid_t r = waitpid(pid, &status, WNOHANG);
-    if (r != 0) return;
+    if (r == pid) return pty_exit_code(status);
+    if (r < 0) return -1;
     usleep(1000);  // 1ms × 10 = 10ms total
   }
-  kill(pid, SIGKILL);
-  int status;
-  waitpid(pid, &status, 0);
+  if (kill(-pid, SIGKILL) != 0) kill(pid, SIGKILL);
+  return waitpid(pid, &status, 0) == pid ? pty_exit_code(status) : -1;
 }
 
 bool vgat_pty_resize(int master_fd, int rows, int cols) {
@@ -196,14 +210,17 @@ int vgat_pty_open(const char *shell, int rows, int cols, int *pid_out) {
   return -1;  // Not yet implemented on Windows
 }
 
-int vgat_pty_exec(const char *const *argv, int rows, int cols, int *pid_out) {
-  (void)argv; (void)rows; (void)cols; (void)pid_out;
+int vgat_pty_exec(const char *const *argv, const char *cwd, int rows, int cols, int *pid_out) {
+  (void)argv; (void)cwd; (void)rows; (void)cols; (void)pid_out;
   return -1;  // Not yet implemented on Windows
 }
 
-void vgat_pty_close(int pid) {
+int vgat_pty_close(int pid) {
   (void)pid;
+  return -1;
 }
+
+void vgat_pty_terminate(int pid) { (void)pid; }
 
 bool vgat_pty_resize(int master_fd, int rows, int cols) {
   (void)master_fd; (void)rows; (void)cols;

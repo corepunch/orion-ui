@@ -480,7 +480,9 @@ rule that matches a record wins. `field=` matches a set field (non-empty,
 non-zero), `field=` with `value=` an exact value, and a rule without `field`
 any row. `color=` is a theme role: `success`, `error`, `warning`, `info`,
 `secondary`, `disabled` or `accent` (the text colour otherwise). Give each
-state its own shape, not only its own colour:
+state its own shape, not only its own colour. A click on the icon selects the
+row and then emits `RVN_ICONCLICK` (`LOWORD(wparam)` is the row), so an icon can
+act on its own state, as Git Client's play/stop icons on launch targets do:
 
 ```xml
 <TableView name="documents" source="ib.documents">

@@ -17,6 +17,7 @@
 #include <platform/platform.h>
 #include <orion/user/ansi.h>
 #include "pty.h"
+#include "terminal_view.h"
 #include "ansi_parser.h"
 
 /* Lua headers - same probe logic as commctl/terminal.c */
@@ -116,6 +117,8 @@ struct vgat_state_s {
   vgat_parser_t parser;          // ANSI escape sequence parser
   char read_buf[VGAT_PTY_READ_BUF]; // buffer for PTY reads
   bool escape_pending;           // Ctrl-A pressed, waiting for next key
+  bool exec_run;                 // the program came from termExec: report its exit
+  int exit_code;                 // last termExec exit code (-1 = none yet)
 
   // Startup script path (owned copy, NULL if none)
   char *startup_script;
@@ -136,10 +139,6 @@ struct vgat_state_s {
 };
 
 extern const vgat_cmd_t g_cmds[];
-
-result_t terminal_workspace_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-bool terminal_workspace_command(window_t *page, uint32_t command);
-window_t *terminal_workspace_terminal(window_t *page, int pane);
 
 result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 bool terminal_run_lua_file(vgat_state_t *st, const char *path);

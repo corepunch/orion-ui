@@ -329,7 +329,7 @@ static void spawn_program(vgat_state_t *st, char *const *argv) {
   if (cols <= 0) cols = 80;
   if (rows <= 0) rows = 24;
 
-  st->pty_fd = vgat_pty_exec((const char *const *)argv, rows, cols, &st->pty_pid);
+  st->pty_fd = vgat_pty_exec((const char *const *)argv, NULL, rows, cols, &st->pty_pid);
   if (st->pty_fd < 0) {
     vgat_screen_write_string(&st->screen, "Failed to run: ", 9, VGAT_BG_DEFAULT);
     vgat_screen_write_string(&st->screen, argv[0], VGAT_FG_DEFAULT, VGAT_BG_DEFAULT);
@@ -438,17 +438,70 @@ static void stop_cursor_blink(vgat_state_t *st) {
 
 static void enter_cmd_mode(vgat_state_t *st) {
   stop_pty_watch(st);
+  int code = -1;
   if (st->pty_fd >= 0) {
-    vgat_pty_close(st->pty_pid);
+    code = vgat_pty_close(st->pty_pid);
     close(st->pty_fd);
     st->pty_fd = -1;
     st->pty_pid = 0;
   }
   st->mode = VGAT_MODE_CMD;
   st->escape_pending = false;
-  vgat_screen_write_string(&st->screen, "\n[returned to command mode]\n",
-                           VGAT_FG_DEFAULT, VGAT_BG_DEFAULT);
+  if (!st->exec_run) {
+    vgat_screen_write_string(&st->screen, "\n[returned to command mode]\n",
+                             VGAT_FG_DEFAULT, VGAT_BG_DEFAULT);
+    vgat_screen_newline(&st->screen);
+    return;
+  }
+  char line[64];
+  snprintf(line, sizeof(line), "\n[exited with code %d]\n", code);
+  vgat_screen_write_string(&st->screen, line, code == 0 ? 10 : 9, VGAT_BG_DEFAULT);
+  st->exec_run = false;
+  st->exit_code = code;
+  send_message(get_root_window(st->win), evCommand, MAKEDWORD(st->win->id, termnExited), st->win);
+}
+
+// termExec: `/bin/sh -c command` in cwd, the screen cleared and the command echoed.
+static bool terminal_exec(vgat_state_t *st, const terminal_exec_t *ex) {
+  if (!ex || !ex->command || !ex->command[0]) {
+    fprintf(stderr, "[terminal] termExec rejected view=%u: no command\n", st->win->id); fflush(stderr); return false;
+  }
+  if (st->mode == VGAT_MODE_PTY) {
+    fprintf(stderr, "[terminal] termExec rejected view=%u: pid %d still runs\n", st->win->id, st->pty_pid); fflush(stderr); return false;
+  }
+  irect16_t cr = get_client_rect(st->win);
+  int cols = cr.w / text_cell_width("Terminal"), rows = cr.h / text_char_height("Terminal");
+  if (cols <= 0) cols = VGAT_DEFAULT_COLS;
+  if (rows <= 0) rows = VGAT_DEFAULT_ROWS;
+  const char *cwd = ex->cwd && ex->cwd[0] ? ex->cwd : st->cwd;
+  const char *argv[] = {"/bin/sh", "-c", ex->command, NULL};
+  vgat_screen_clear(&st->screen);
+  st->scroll_pos = 0;
+  vgat_screen_write_string(&st->screen, "$ ", 10, VGAT_BG_DEFAULT);
+  vgat_screen_write_string(&st->screen, ex->command, VGAT_FG_DEFAULT, VGAT_BG_DEFAULT);
   vgat_screen_newline(&st->screen);
+  st->pty_fd = vgat_pty_exec(argv, cwd, rows, cols, &st->pty_pid);
+  if (st->pty_fd < 0) {
+    fprintf(stderr, "[terminal] termExec failed view=%u cwd=%s: no PTY on this platform or fork failed\n", st->win->id, cwd);
+    fflush(stderr);
+    vgat_screen_write_string(&st->screen, "Failed to start the command\n", 9, VGAT_BG_DEFAULT);
+    invalidate_window(st->win);
+    return false;
+  }
+  st->mode = VGAT_MODE_PTY;
+  st->escape_pending = false;
+  init_ansi_parser(st);
+  if (!start_pty_watch(st)) {
+    vgat_pty_close(st->pty_pid); close(st->pty_fd);
+    st->pty_fd = -1; st->pty_pid = 0; st->mode = VGAT_MODE_CMD;
+    fprintf(stderr, "[terminal] termExec failed view=%u: cannot watch the PTY\n", st->win->id); fflush(stderr);
+    return false;
+  }
+  st->exec_run = true;
+  if (cwd != st->cwd) snprintf(st->cwd, sizeof(st->cwd), "%s", cwd);   // commands typed afterwards run there too
+  terminal_proc(st->win, evResize, 0, NULL);
+  invalidate_window(st->win);
+  return true;
 }
 
 // ── ANSI parser callbacks ────────────────────────────────────────────────
@@ -523,6 +576,7 @@ result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       st->scroll_pos = 0;
       st->cursor_visible = true;
       st->pty_fd = -1;
+      st->exit_code = -1;
       if (!getcwd(st->cwd, sizeof(st->cwd)))
         snprintf(st->cwd, sizeof(st->cwd), "/");
 
@@ -604,6 +658,19 @@ result_t terminal_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       }
       if (st->mode == VGAT_MODE_PTY) vgat_pty_watch_rearm(st->pty_watch);
       if (dirty || st->mode != VGAT_MODE_PTY) invalidate_window(win);
+      return true;
+    }
+
+    case termExec:        return st && terminal_exec(st, (const terminal_exec_t *)lparam);
+    case termIsRunning:   return st && st->mode == VGAT_MODE_PTY;
+    case termGetExitCode: return st ? st->exit_code : -1;
+    case termRunScript:   return terminal_start_script(win, (const char *)lparam);
+    case termKill: {
+      if (!st || st->mode != VGAT_MODE_PTY) {
+        fprintf(stderr, "[terminal] termKill rejected view=%u: nothing runs\n", win->id); fflush(stderr); return false;
+      }
+      if (wparam) { enter_cmd_mode(st); invalidate_window(win); }
+      else vgat_pty_terminate(st->pty_pid);   // the PTY closes and evTerminalPtyReady reports the exit
       return true;
     }
 

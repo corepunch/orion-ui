@@ -119,6 +119,7 @@ enum {
   RVN_DBLCLK,
   RVN_DELETE,
   RVN_ITEMCHECK,
+  RVN_ICONCLICK,   // the row's icon (item.icon_name, a TableView RowIcon) was clicked; it is also selected
 };
 
 result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);

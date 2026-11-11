@@ -1,5 +1,4 @@
-#include "vgat.h"
-#include "build/generated/apps/terminal/terminal.h"
+#include "terminal_app.h"
 #include <orion/gem.h>
 #include <orion/commctl/commctl.h>
 #include <orion/user/svg_icon_loader.h>
@@ -34,25 +33,19 @@ static result_t terminal_host_proc(window_t *win, uint32_t msg, uint32_t wparam,
   return false;
 }
 
-static const fe_component_desc_t k_terminal_view = {
-  .class_name = "TerminalView", .name_prefix = "IDC_TERM", .toolbar_icon = "terminal",
-  .default_size = {480, 400}, .capabilities = FE_COMPONENT_PLACEABLE | FE_COMPONENT_SHOW_TOOLBAR,
-  .proc = terminal_proc, .default_layout_size = {0, 0},
-  .default_flags = WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_VSCROLL | WINDOW_FLEXSPACE,
-  .default_h_align = LAYOUT_ALIGN_STRETCH, .default_v_align = LAYOUT_ALIGN_STRETCH,
-};
-
 void gem_shutdown(void);
 
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   register_commctl_classes();
-  if (!register_window_class(&k_terminal_view)) return false;
+  char plugin[1024];
+  int p = snprintf(plugin, sizeof(plugin), "%s/../lib/terminal_components%s", ui_get_exe_dir(), AX_DYNLIB_EXT);
+  if (p <= 0 || (size_t)p >= sizeof(plugin) || !fe_load_component_plugin(plugin)) {
+    fprintf(stderr, "[terminal] cannot load %s\n", plugin); fflush(stderr); return false;
+  }
 
   char icons_path[1024];
   int n = snprintf(icons_path, sizeof(icons_path), "%s/../share/terminal/icons", ui_get_exe_dir());
   if (n > 0 && (size_t)n < sizeof(icons_path)) svg_add_icons_dir(hinstance, icons_path);
-
-  ansi_init_palette256();
 
   g_terminal.accel = load_accelerators(terminal_default_accels, terminal_default_accel_count);
   if (!g_terminal.accel) { gem_shutdown(); return false; }
@@ -65,8 +58,8 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   window_t *left = terminal_workspace_terminal(g_terminal.page, 0);
   window_t *right = terminal_workspace_terminal(g_terminal.page, 1);
   if (argc > 1 && argv[1]) {
-    terminal_start_script(left, argv[1]);
-    terminal_start_script(right, argv[1]);
+    send_message(left, termRunScript, 0, argv[1]);
+    send_message(right, termRunScript, 0, argv[1]);
   }
   maximize_window(g_terminal.host);
   show_window(g_terminal.host, true);
@@ -76,6 +69,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
 
 void gem_shutdown(void) {
   if (g_terminal.host && is_window(g_terminal.host)) destroy_window(g_terminal.host);
+  fe_unload_component_plugins();   // after the views: their procedure lives in the plugin
   free_accelerators(g_terminal.accel);
   memset(&g_terminal, 0, sizeof(g_terminal));
 }
