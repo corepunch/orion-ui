@@ -126,7 +126,8 @@ def appearance(recipe):
     source_floor=[];edited_floor=[];state=fields(actor)
     for part in actor['parts']:
         binding=cal['bindings'][part['id']];owner=binding['owner']
-        if not owner.endswith('_foot'):continue
+        # The source blob shadow is not emitted geometry, so it never supports the sole.
+        if not owner.endswith('_foot') or part['name'].lower()=='shadow':continue
         r=binding['rotation'];axes=vmul(get(state,part['id'],'halfaxes'),SCALE)
         center=vadd(binding['offset'],vmul(mv(r,get(state,part['id'],'centre')),SCALE))
         transform=body_transform(owner);edited_rotation=mm(transform,r)
