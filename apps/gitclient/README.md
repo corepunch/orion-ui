@@ -37,7 +37,7 @@ Workspace (also on the row's context menu) drops the selected row's repository.
 | Ctrl+O | open a workspace file |
 | Ctrl+S | save the workspace |
 | Ctrl+Shift+R | fetch every repository in the background |
-| "Showing" pill | filter to checkouts that need attention |
+| All / Needs attention | show every checkout, or only those with changes, conflicts or commits to sync |
 
 Opening a checkout switches pages at once. Changes, History, branches, tags, worktrees and the
 branch/ahead/behind status are read on worker threads (`git_repo_snapshot_async`,

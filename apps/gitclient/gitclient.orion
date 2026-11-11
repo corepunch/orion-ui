@@ -273,7 +273,9 @@
             <SplitView name="overview_split" split-ratio="0.62" flags="flexspace">
                 <TabView name="checkouts_tabs" hide-single-tab="true" flags="flexspace">
                     <StackView name="checkouts_panel" text="Worktrees" flags="flexspace" spacing="0" padding="0">
-                        <FlowView name="summary" spacing="6" padding="14 10 14 6" />
+                        <StackView name="filter_bar" orientation="horizontal" spacing="6" padding="14 8 14 8">
+                            <SegmentedControl name="filter" text="All|Needs attention" tooltip="Show every checkout, or only those with changes, conflicts or commits to sync" />
+                        </StackView>
                         <TableView name="checkouts" source="workspace.checkouts" group-field="project" context-menu="checkouts" flags="notitle,nofill,vscroll,flexspace">
                             <RowIcon field="tone" value="conflict" icon="gc-x-circle" color="error" />
                             <RowIcon field="tone" value="dirty" icon="gc-warning-circle" color="warning" />
