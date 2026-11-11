@@ -233,6 +233,42 @@ static void test_mesh_faces_and_sheets(void) {
   PASS();
 }
 
+static void test_surface_gradient_taper(void) {
+  TEST("<surface>, <gradient> gizmos and a two-amount <taper>");
+  Scene scene;
+  ASSERT_TRUE(load_scene("apps/scener/tests/surface_gradient.blks", &scene));
+  ASSERT_TRUE(scene.nobjs == 6);
+  Mesh *candy = scene.objs[1].mesh;   /* 24 x 60 quads, closed in u: u and v ride on the vertices, g = u + 5 v */
+  ASSERT_TRUE(candy->nverts == 25 * 61);
+  ASSERT_TRUE(scene.objs[1].gradient.on && scene.objs[1].gradient.type == GRADIENT_UV && scene.objs[1].gradient.repeat);
+  for (int i = 0; i < candy->nverts; i++) {
+    Vertex *v = &candy->verts[i];
+    ASSERT_TRUE(fabsf(v->g - (v->u + 5.0f * v->v)) < 1e-4f);
+    ASSERT_TRUE(fabsf(vlen(vadd(v->pos, v3(0, -v->pos.y, 0))) - 0.14f) < 1e-4f);
+  }
+  for (int j = 0; j <= 60; j++) {   /* the seam's two columns share one normal, pointing out */
+    Vertex *a = &candy->verts[j * 25], *b = &candy->verts[j * 25 + 24];
+    ASSERT_TRUE(vlen(vsub(a->nrm, b->nrm)) < 1e-5f && a->u == 0.0f && b->u == 1.0f && a->nrm.x > 0.99f);
+  }
+  Mesh *frustum = scene.objs[2].mesh;   /* amount -0.5 on x, -0.15 on z: the top is 50 x 85 cm */
+  float topX = 0, topZ = 0;
+  for (int i = 0; i < frustum->nverts; i++) {
+    Vertex *v = &frustum->verts[i];
+    if (v->pos.y > 0.499f) { topX = fmaxf(topX, fabsf(v->pos.x)); topZ = fmaxf(topZ, fabsf(v->pos.z)); }
+    if (fabsf(v->nrm.y) < 0.999f && fabsf(v->nrm.x) > 0.5f) ASSERT_TRUE(fabsf(v->nrm.y - 0.4472f) < 1e-3f);   /* x faces lean in by atan(50/100) */
+  }
+  ASSERT_TRUE(fabsf(topX - 0.25f) < 1e-4f && fabsf(topZ - 0.425f) < 1e-4f);
+  ASSERT_TRUE(scene.objs[3].mesh->twoSided && scene.objs[3].gradient.edge > 0.9f);
+  ASSERT_TRUE(scene.objs[4].gradient.type == GRADIENT_LINE && fabsf(scene.objs[4].gradient.power - 0.6f) < 1e-6f);
+  for (int i = 0; i < scene.objs[4].mesh->nverts; i++) {
+    Vertex *v = &scene.objs[4].mesh->verts[i];
+    ASSERT_TRUE(fabsf(v->g - (v->pos.y + 0.5f)) < 1e-4f);
+  }
+  ASSERT_TRUE(scene.objs[5].gradient.type == GRADIENT_RADIAL);   /* a radius is not linear: the shader takes it per fragment */
+  scene_free(&scene);
+  PASS();
+}
+
 static int issues_of_kind(Scene *s,const char *kind);
 
 static void test_shape_modifier_stack(void) {
@@ -1454,6 +1490,7 @@ int main(void) {
   test_device_screen_geometry_and_assets();
   test_cone_normals_follow_slope();
   test_mesh_faces_and_sheets();
+  test_surface_gradient_taper();
   test_profile_extrude_and_bevel();
   test_shape_modifier_stack();
   test_shell_amount_is_centimetres();

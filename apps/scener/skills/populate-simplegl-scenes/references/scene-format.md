@@ -32,11 +32,11 @@ The complete supported element inventory is:
 | `<scene>` attributes | `ambient`, `background`, `up`, `convention`, `duration` |
 | Scene configuration | `<camera>`, `<pose>`, `<clip>`, `<material>`, `<sun>`, `<chardef>`, `<shape>` |
 | Character rig parts | `<bone>`, `<hub>`, `<spine>`, `<tail>`, `<limb>`, `<collarbone>`, `<palm>`, `<ankle>`, `<digit>` |
-| Transformable content | `<box>`, `<rect>`, `<rect>`, `<circle>`, `<ellipse>`, `<star>`, `<shape>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
+| Transformable content | `<box>`, `<rect>`, `<rect>`, `<circle>`, `<ellipse>`, `<star>`, `<shape>`, `<screen>`, `<sphere>`, `<cylinder>`, `<capsule>`, `<arch>`, `<prism>`, `<cone>`, `<pyramid>`, `<torus>`, `<lathe>`, `<loft>`, `<surface>`, `<mesh>`, `<wall>`, `<window>`, `<door>`, `<group>`, `<prefab>`, `<light>`, `<line>`, `<dummy>` |
 | Wall cutters | `<bool-negative-box>`, `<bool-negative-arch>`, `<bool-negative-cylinder>` |
 | Mesh modifiers | `<taper>`, `<twist>`, `<bend>`, `<stretch>`, `<skew>`, `<array>`, `<extrude>`, `<bevel>`, `<mirror>`, `<noise>`, `<shell>` |
 | Expressions | `<let>` in `<scene>`, `<prefab>`, `<group>` and bones; `{expr}` in any attribute value |
-| Context-only children | `<shape><fillet>`, `<camera><transform>`, `<camera><use-pose>`, `<pose><joint>`, `<pose><ik>`, `<clip><key>`, `<key><joint>`, `<key><ik>`, `<prefab><joint>`, `<prefab><ik>`, `<prefab><gait>`, `<prefab><layer>`, `<shape><v>`, `<prefab><attach>` |
+| Context-only children | `<gradient>` in any shape or `<material>`, `<shape><fillet>`, `<camera><transform>`, `<camera><use-pose>`, `<pose><joint>`, `<pose><ik>`, `<clip><key>`, `<key><joint>`, `<key><ik>`, `<prefab><joint>`, `<prefab><ik>`, `<prefab><gait>`, `<prefab><layer>`, `<shape><v>`, `<prefab><attach>` |
 
 Unknown elements produce an `unsupported XML element` error. Element names
 and attribute names are case-sensitive.
@@ -608,6 +608,35 @@ own mesh (after its modifiers, before its transform) maps to 0..1 along `gradien
 multipliers, so `0.6 0.6 0.6` to `1.2 1.2 1.2` darkens the foot of a bush and brightens its crown, and
 `0.4 0.4 0.5` to `1 1 1` gives a wall ambient occlusion. Lit, ambient and `unlit` shapes all use it.
 
+Scener has no per-vertex colour: a colour that varies over a shape is a gradient whose **gizmo** says where
+it runs, the way a 3ds Max map is placed by its UVW gizmo. The attributes above are the bounding-box gizmo; a
+`<gradient>` child (of a shape or a `<material>`) states the whole gizmo and wins over them:
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `from`, `to` | vec3 | `1 1 1` | sRGB colour multipliers at coordinate 0 and 1 (with `color="1 1 1"` they are the colours) |
+| `type` | box, line, radial, uv | box | The gizmo; see below |
+| `axis` | x, y, z | y | `box`: the bounding box along this local axis maps to 0..1 |
+| `start`, `end` | vec3 (cm) | (required for line, radial) | `line`: the coordinate is the projection on start→end (0 at start, 1 at end); `radial`: the distance from `start` over the distance to `end`, taken per pixel |
+| `tile` | `tu tv` | `0 1` | `uv`: coordinate = u·tu + v·tv + offset over a `<surface>`'s parameters (both 0..1) |
+| `offset` | float | 0 | Added to the coordinate |
+| `repeat` | 0/1 | 0 | The coordinate wraps (stripes, rings) instead of clamping to 0..1 |
+| `edge` | 0..1 | 0 | A hard step from `from` to `to` at this value (filtered over a pixel); 0 blends smoothly |
+| `power` | float > 0 | 1 | Curves the blend: amount = coordinate^power |
+
+Points are in the shape's own coordinates (before `pos`, `rot`, `scale`; a `<mesh>` or `<surface>`'s point
+units). The coordinate is per vertex and the step, wrap and curve per pixel, so a stripe crosses triangles
+cleanly:
+
+```xml
+<!-- candy cane: a spiral of stripes over a closed tube, u + 5 v -->
+<surface segments="24 60" closed="u" color="1 1 1" x="14*cos(u*2*pi)" y="v*160" z="-14*sin(u*2*pi)">
+  <gradient type="uv" tile="1 5" repeat="1" edge="0.5" from="0.83 0.13 0.17" to="0.98 0.95 0.9"/>
+</surface>
+<!-- glowing ember: brighter towards a point, by distance -->
+<sphere radius="30" color="1 1 1"><gradient type="radial" start="0 20 0" end="0 -30 0" from="1 0.8 0.3" to="0.5 0.1 0"/></sphere>
+```
+
 An unlit object still renders into the depth buffer. Its `castShadow` setting is
 independent, although visible emitter geometry normally uses
 `unlit="1" castShadow="0"` so it stays bright without blocking the light it
@@ -625,6 +654,30 @@ Shifts the rotation center away from the object's origin. The object is translat
 ```
 
 The `pivotOffset` is in local space, applied before the object's own `rot`. Rotation-only matrices (for normals) are unaffected.
+
+### `<surface>`
+
+A parametric sheet: a grid of `segments="nu nv"` quads over u, v from 0 to 1. Use it for draped, curling or
+swept forms no profile gives (snow pouring off a roof, a tent cloth, a spiral post), in place of a `<mesh>`
+listing every point. The points come either from three expressions in `u` and `v` or from a list:
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `segments` | `nu nv` (one value: both) | 24 | Quads along u and v, 1 to 512 each |
+| `x`, `y`, `z` | expression (cm) | | Each point's coordinates as functions of `u` and `v`, in the [expression](#expressions) language without braces; `{name}` still substitutes a `<let>` |
+| `points` | `x y z ...` (cm) | | The (nu+1)·(nv+1) grid points, row by row with u running fastest; what a converter writes |
+| `closed` | u, v, uv | (none) | The last column (row) meets the first: their normals are shared, each keeps its own u, v |
+| `smooth` | 0/1 | 1 | Averaged normals |
+| `twoSided` | 0/1 | 0 | Both faces, for open sheets, as on `<mesh>` |
+
+Give either `points` or all three expressions. The front faces the direction of du × dv. Its vertices carry
+u and v, so a `<gradient type="uv">` follows the sheet. It takes the common attributes and mesh modifiers.
+
+```xml
+<let name="r" value="40"/>
+<surface segments="32 8" closed="u" twoSided="1" color="0.95 0.97 1"
+         x="({r}+10*v)*cos(u*2*pi)" y="30*(1-v)-12*v*v*(1+0.3*sin(u*14*pi))" z="-({r}+10*v)*sin(u*2*pi)"/>
+```
 
 ### `<mesh>`
 
@@ -1533,17 +1586,22 @@ The `<array>` modifier duplicates the mesh rather than deforming it. Place it la
 Scales the two perpendicular axes along the chosen axis. The bottom of the
 axis range is scaled by `1 - amount` and the top by `1 + amount`: a positive
 amount widens the top and narrows the base, so a rock or column that should
-stand on its wider end takes a negative amount.
+stand on its wider end takes a negative amount. Two amounts taper the crosswise
+axes separately, in x, y, z order (for `axis="y"`: x, then z), so a battered
+wall can lean in more on its face than on its sides. Normals tilt with the faces.
 
 | Attribute    | Type   | Default | Description |
 |--------------|--------|---------|-------------|
-| `amount`     | float  | 0.0     | Taper intensity (± values, positive = wide top and narrow base along axis) |
+| `amount`     | float, or two floats | 0.0     | Taper intensity (± values, positive = wide top and narrow base along axis); `"a b"` per crosswise axis |
 | `curvature`  | float  | 1.0     | Non-linearity exponent (1 = linear, >1 = bowed, <1 = pinched) |
 | `axis`       | char   | y       | Axis along which taper varies (x, y, or z) |
 
 ```xml
 <box size="2 3 2">
   <taper amount="0.4" axis="y"/>
+</box>
+<box size="100 100 100">
+  <taper amount="-0.5 -0.15"/>   <!-- top 50 cm wide, 85 cm deep -->
 </box>
 ```
 

@@ -91,6 +91,36 @@ static void gl_box(GizmoLines *gl,vec3 center,float half,vec3 color){
 	for(int i=0;i<12;i++) gl_add(gl,p[e[i][0]],p[e[i][1]],color);
 }
 
+#define GRADIENT_GIZMO_TICK 0.04f   /* half-size of the end marks, as a fraction of the gizmo's length */
+#define GRADIENT_GIZMO_SEGMENTS 48
+
+/* The selected shape's gradient gizmo (gradient_t), drawn in its from..to colours: the box axis through the
+   bounds, the start-end line, or the radial sphere's three circles. A uv gizmo lives in the surface's own
+   parameters and has nothing to draw. */
+static void gl_gradient_gizmo(GizmoLines *gl,const SceneObj *o){
+	const gradient_t *g=&o->gradient;
+	if(!g->on || g->type==GRADIENT_UV) return;
+	vec3 a=g->start,b=g->end;
+	if(g->type==GRADIENT_BOX){
+		float lo=1e30f,hi=-1e30f; int ax=g->axis=='x'?0:g->axis=='z'?2:1;
+		vec3 mn=v3(1e30f,1e30f,1e30f),mx=v3(-1e30f,-1e30f,-1e30f);
+		for(int i=0;i<o->mesh->nverts;i++){ vec3 p=o->mesh->verts[i].pos; mn=v3(fminf(mn.x,p.x),fminf(mn.y,p.y),fminf(mn.z,p.z)); mx=v3(fmaxf(mx.x,p.x),fmaxf(mx.y,p.y),fmaxf(mx.z,p.z)); }
+		if(o->mesh->nverts<=0) return;
+		lo=(&mn.x)[ax]; hi=(&mx.x)[ax];
+		a=vscale(vadd(mn,mx),0.5f); b=a; (&a.x)[ax]=lo; (&b.x)[ax]=hi;
+	}
+	vec3 wa=mat4_xform_point(o->model,a),wb=mat4_xform_point(o->model,b),d=vsub(wb,wa);
+	float len=vlen(d); if(len<=0) return;
+	vec3 mid=vadd(wa,vscale(d,0.5f)),u,v; basis(vscale(d,1.0f/len),&u,&v);
+	float t=len*GRADIENT_GIZMO_TICK;
+	gl_add(gl,wa,mid,g->from); gl_add(gl,mid,wb,g->to);
+	gl_add(gl,vsub(wa,vscale(u,t)),vadd(wa,vscale(u,t)),g->from); gl_add(gl,vsub(wa,vscale(v,t)),vadd(wa,vscale(v,t)),g->from);
+	gl_add(gl,vsub(wb,vscale(u,t)),vadd(wb,vscale(u,t)),g->to);   gl_add(gl,vsub(wb,vscale(v,t)),vadd(wb,vscale(v,t)),g->to);
+	if(g->type!=GRADIENT_RADIAL) return;
+	vec3 axes[3]={v3(1,0,0),v3(0,1,0),v3(0,0,1)};
+	for(int k=0;k<3;k++) gl_circle(gl,wa,axes[k],len,g->to);
+}
+
 static void gl_bounds_corners(GizmoLines *gl,mat4 matrix,vec3 bmin,vec3 bmax){
 	vec3 s=v3(bmax.x-bmin.x,bmax.y-bmin.y,bmax.z-bmin.z);
 	float ex=s.x*0.1f,ey=s.y*0.1f,ez=s.z*0.1f;
@@ -137,7 +167,7 @@ void gizmo_draw(Scene *s,vec3 camPos,vec3 camLook,float camFov,int vpW,int vpH){
 	glDisable(GL_DEPTH_TEST); glDisable(GL_CULL_FACE);
 	glDisable(GL_BLEND); glLineWidth(1.0f);
 	GizmoLines gl={0};
-	if(!s->selectedRigJoint) gl_bounds_corners(&gl,matrix,bmin,bmax);
+	if(!s->selectedRigJoint){ gl_bounds_corners(&gl,matrix,bmin,bmax); gl_gradient_gizmo(&gl,&s->objs[s->selectedObj]); }
 	if(!s->selectedNode){
 		/* no XML node — bounds only, no transform handles */
 	} else if(s->editMode==EDIT_W_MOVE){

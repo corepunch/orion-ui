@@ -124,7 +124,7 @@ typedef struct MocapSource {
 } MocapSource;
 
 
-typedef struct { vec3 pos,nrm; float u,v; float g; } Vertex; /* g: position along the gradient axis, 0 at the bounding box minimum to 1 at the maximum */
+typedef struct { vec3 pos,nrm; float u,v; float g; } Vertex; /* u,v: surface parameters (0..1); g: the gradient gizmo's coordinate (gradient_t) */
 typedef struct { int a,b,c; } Tri;
 typedef struct { int t0,t1; int v0,v1; } Edge; /* t0,t1: adjacent triangles (t1 -1 on an open edge); v0,v1: its vertices, in t0's winding */
 
@@ -177,13 +177,21 @@ void mesh_free(Mesh *m);
 int mesh_add_vert(Mesh *m,vec3 p,vec3 n);
 void mesh_add_tri(Mesh *m,int a,int b,int c);
 void mesh_transform(Mesh *m,mat4 posM,mat4 rotM);
-void mesh_gradient_param(Mesh *m,char axis); /* sets Vertex.g from the bounding box along local x, y or z */
+/* A gradient colours a shape without vertex colours, as a 3ds Max map colours through its gizmo: the gizmo gives
+   each vertex a coordinate g, and the fragment shader blends from..to by it, repeated, stepped at edge and
+   curved by power. Gizmos: the local bounding box along x, y or z; a line or a radius between two local points
+   (cm); or a linear map of the surface parameters, g = u*tileU + v*tileV + offset. */
+enum { GRADIENT_BOX, GRADIENT_LINE, GRADIENT_RADIAL, GRADIENT_UV };
+typedef struct { int on,type,repeat; char axis; vec3 from,to,start,end; float tileU,tileV,offset,edge,power; } gradient_t;
+gradient_t gradient_default(void);
+void mesh_gradient_param(Mesh *m,const gradient_t *g); /* sets Vertex.g from the gizmo */
+float gradient_amount(const gradient_t *g,float coord);  /* 0 = from .. 1 = to, as the shader computes it (unfiltered) */
 void mesh_compute_face_normals(Mesh *m);
 void mesh_build_edges(Mesh *m);
 void mesh_shrink(Mesh *m); /* releases spare array capacity once a mesh is complete */
 float mesh_signed_volume(Mesh *m);
 void mesh_flip_winding(Mesh *m);
-void mesh_apply_taper(Mesh *m,float amount,float curvature,char axis);
+void mesh_apply_taper(Mesh *m,float amountB,float amountC,float curvature,char axis); /* B, C: the two crosswise axes in x, y, z order */
 void mesh_apply_twist(Mesh *m,float angle_deg,char axis);
 void mesh_apply_bend(Mesh *m,float angle_deg,char axis);
 void mesh_apply_stretch(Mesh *m,float amount,float amplify,char axis);
@@ -211,7 +219,7 @@ Mesh gen_box_hole_arch(float w,float h,float depth,int sides);
 
 #define MATERIAL_RAMP_SHADES 16
 typedef struct { vec3 shade[MATERIAL_RAMP_SHADES]; } MaterialRamp; /* dark to light; replaces diffuse and specular */
-typedef struct { char id[32]; vec3 color; float shininess,specular,metallic; int ramp, prefabDefined; int gradient; vec3 gradFrom,gradTo; char gradAxis; } Material; /* gradient: see SceneObj */ /* ramp: index into Scene.ramps, -1 for none */
+typedef struct { char id[32]; vec3 color; float shininess,specular,metallic; int ramp, prefabDefined; gradient_t gradient; } Material; /* gradient: see SceneObj */ /* ramp: index into Scene.ramps, -1 for none */
 typedef struct { char target[32]; vec3 pos,rot,scale; } CameraTransform;
 #define MAX_CAMERA_NAME 128
 
@@ -226,7 +234,7 @@ typedef struct { float x,y,z,w; } ShadowVertex;
 typedef struct { ShadowVertex *verts; int nverts,cverts; int *obj,*first,*count; int nranges; } ShadowVolume;
 /* An object is a model shared with every object of the same geometry, placed by its own matrix, as a Doom 3
    entity places a render model; bmin/bmax are its world bounds. */
-typedef struct { Mesh *mesh; mat4 model,normalM; int mirrored; vec3 bmin,bmax; vec3 color; float shininess,specular,metallic; /* specular: Blender-style level, F0 = 0.08 * specular (0.5 gives 4%); metallic 0..1 tints the reflection with the colour and drops the diffuse */ int ramp; int gradient; vec3 gradFrom,gradTo; /* gradient: colour multipliers at Vertex.g 0 and 1, valid when set */ int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
+typedef struct { Mesh *mesh; mat4 model,normalM; int mirrored; vec3 bmin,bmax; vec3 color; float shininess,specular,metallic; /* specular: Blender-style level, F0 = 0.08 * specular (0.5 gives 4%); metallic 0..1 tints the reflection with the colour and drops the diffuse */ int ramp; gradient_t gradient; /* colour multipliers from..to by Vertex.g, when on */ int castsShadow,renderable,unlit,sanityIgnore,sanityFloor,sanityCheck; void *editNode,*sourceNode; int record; mat4 editMatrix; ShadowVolume *shadowParts; int nshadowParts; int texIndex,screenTexture; } SceneObj;
 typedef struct { char path[1024]; unsigned char *pixels; int width,height; unsigned int texture; } ScreenTexture;
 typedef struct { char name[32]; vec3 pos; } AttachPoint;
 #define SCENE_PREFAB_PATH_CAPACITY 1024
@@ -316,7 +324,7 @@ typedef struct {
 	mat4 activeEditMatrix;
 	int activeTexIndex;
 	float activeSpecular,activeMetallic; /* of the shape being placed */
-	int activeGradient; vec3 activeGradFrom,activeGradTo; char activeGradAxis; /* gradient of the shape being placed: multipliers from the box minimum to maximum along a local axis */
+	gradient_t activeGradient; /* gradient of the shape being placed */
 	int activeRamp; /* ramp of the material being placed, -1 for none; mirrors activeTexIndex */
 	const char *activeScreenImage;
 	int activeScreenTexture;

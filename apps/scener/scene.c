@@ -722,14 +722,14 @@ static void scene_obj_set_matrix(SceneObj *o,mat4 M){
 
 void scene_add_obj(Scene *s, Mesh mesh, mat4 M, mat4 R, vec3 color, float shin, int castsShadow, int renderable, int unlit){
 	(void)R;
-	if(s->activeGradient) mesh_gradient_param(&mesh, s->activeGradAxis);
+	if(s->activeGradient.on) mesh_gradient_param(&mesh, &s->activeGradient);
 	if(castsShadow && !mesh.twoSided && mesh_signed_volume(&mesh) < 0.0f) mesh_flip_winding(&mesh);   /* a solid model winds outward; mirroring is the matrix's */
 	SceneObj o={0};
 	o.mesh=scene_share_mesh(s,&mesh,castsShadow);
 	scene_obj_set_matrix(&o,M);
 	o.color=color; o.shininess=shin; o.ramp=s->activeRamp; o.castsShadow=castsShadow;
 	o.specular=s->activeSpecular; o.metallic=s->activeMetallic;
-	o.gradient=s->activeGradient; o.gradFrom=s->activeGradFrom; o.gradTo=s->activeGradTo;
+	o.gradient=s->activeGradient;
 	o.renderable=renderable; o.unlit=unlit; o.sanityIgnore=s->sanityIgnoreActive;
 	o.sanityFloor=s->sanityFloorActive; o.sanityCheck=s->sanityCheckActive;
 	o.editNode=s->activeEditNode; o.editMatrix=s->activeEditMatrix;
@@ -792,8 +792,11 @@ typedef void (*modifier_parser_fn)(Mesh *m, XmlNode *n);
 
 static char mod_axis(XmlNode *n){ const char *a=xml_attr(n,"axis","y"); return a[0]? a[0] : 'y'; }
 
+/* amount="a" scales both crosswise axes; amount="a b" each its own, in x, y, z order (axis y: x then z). */
 static void parse_mod_taper(Mesh *m, XmlNode *n){
-	mesh_apply_taper(m, xml_attr_f(n,"amount",0.0f), xml_attr_f(n,"curvature",1.0f), mod_axis(n));
+	float b=0,c=0; int got=sscanf(xml_attr(n,"amount","0"),"%f %f",&b,&c);
+	if(got<2) c=b;
+	mesh_apply_taper(m, b, c, xml_attr_f(n,"curvature",1.0f), mod_axis(n));
 }
 static void parse_mod_twist(Mesh *m, XmlNode *n){
 	mesh_apply_twist(m, xml_attr_f(n,"angle",0.0f), mod_axis(n));
@@ -968,6 +971,37 @@ static int mesh_face_triangles(const vec3 *p,const int *idx,int ni,int tri[][3])
 	return nt;
 }
 
+/* The triangles of a <mesh> or <surface> over points p (metres). smooth shares vertices and averages face normals,
+   summed at seam[i] when given (a closed surface's two copies of a seam point share one normal); both adds the
+   reversed faces. uv (two per point) becomes Vertex.u,v. */
+static Mesh mesh_from_triangles(const vec3 *p,const float *uv,const int *seam,int nv,const Tri *ft,int nft,int smooth,int both){
+	Mesh m={0}; vec3 *acc=smooth?calloc((size_t)(nv?nv:1),sizeof(vec3)):NULL;
+	/* a two-sided smooth sheet keeps its back faces on their own vertices: shared ones would sum both normals to zero */
+	int nb=smooth?(both?2:1)*nv:0,*base=smooth?malloc((size_t)(nb?nb:1)*sizeof(int)):NULL;
+	for(int i=0;i<nb;i++) base[i]=mesh_add_vert(&m,p[i%nv],v3(0,1,0));
+	/* all front faces before the back ones: edges pair oldest first, so a sheet's edges meet their neighbours and
+	   only its rim closes against the back, instead of every triangle against its own twin (a self-shadowing sheet) */
+	for(int pass=0;pass<(both?2:1);pass++) for(int k=0;k<nft;k++){
+		int a=ft[k].a,b=ft[k].b,d=ft[k].c; if(pass){ int tmp=b; b=d; d=tmp; }
+		vec3 fn=vcross(vsub(p[b],p[a]),vsub(p[d],p[a]));
+		if(smooth){ if(!pass){ int sa=seam?seam[a]:a,sb=seam?seam[b]:b,sd=seam?seam[d]:d; acc[sa]=vadd(acc[sa],fn); acc[sb]=vadd(acc[sb],fn); acc[sd]=vadd(acc[sd],fn); }
+			int o=pass*nv; mesh_add_tri(&m,base[o+a],base[o+b],base[o+d]); }
+		else {
+			vec3 nn=vnorm(fn); int ia=mesh_add_vert(&m,p[a],nn),ib=mesh_add_vert(&m,p[b],nn),id=mesh_add_vert(&m,p[d],nn);
+			if(uv){ int src[3]={a,b,d},dst[3]={ia,ib,id}; for(int j=0;j<3;j++){ m.verts[dst[j]].u=uv[2*src[j]]; m.verts[dst[j]].v=uv[2*src[j]+1]; } }
+			mesh_add_tri(&m,ia,ib,id);
+		}
+	}
+	for(int i=0;i<nb;i++){
+		int q=i%nv,r=seam?seam[q]:q; Vertex *v=&m.verts[base[i]];
+		v->nrm=i<nv?vnorm(acc[r]):vscale(vnorm(acc[r]),-1.f);
+		if(uv){ v->u=uv[2*q]; v->v=uv[2*q+1]; }
+	}
+	m.twoSided=both;
+	free(acc); free(base);
+	return m;
+}
+
 static void parse_mesh(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,vec3 rot,vec3 color,float shin,int castsShadow,int renderable,int unlit){
 	(void)parentM; (void)pos; (void)rot;
 	int smooth=xml_attr_i(n,"smooth",0),both=xml_attr_i(n,"twoSided",0),nv=0;
@@ -981,10 +1015,6 @@ static void parse_mesh(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,v
 		XmlNode *c=n->kids[i]; vec3 q=v3(xml_attr_f_cm(c,"x",0),xml_attr_f_cm(c,"y",0),xml_attr_f_cm(c,"z",0));
 		DA_PUSH(p,nv,cp,q);
 	}
-	Mesh m={0}; vec3 *acc=smooth?calloc((size_t)(nv?nv:1),sizeof(vec3)):NULL;
-	/* a two-sided smooth sheet keeps its back faces on their own vertices: shared ones would sum both normals to zero */
-	int nb=smooth?(both?2:1)*nv:0,*base=smooth?malloc((size_t)(nb?nb:1)*sizeof(int)):NULL;
-	for(int i=0;i<nb;i++) base[i]=mesh_add_vert(&m,p[i%nv],v3(0,1,0));
 	int ok=nv>0;
 	/* faces: f="a b c, d e f g, ..." or <f v="a b c"/> children */
 	const char *fcur=ftext; int kid=0; Tri *ft=NULL; int nft=0,cft=0;
@@ -1007,20 +1037,65 @@ static void parse_mesh(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,v
 		int tri[MESH_FACE_MAX][3],nt=mesh_face_triangles(p,idx,ni,tri);
 		for(int k=0;k<nt;k++){ Tri t={tri[k][0],tri[k][1],tri[k][2]}; DA_PUSH(ft,nft,cft,t); }
 	}
-	/* all front faces before the back ones: edges pair oldest first, so a sheet's edges meet their neighbours and
-	   only its rim closes against the back, instead of every triangle against its own twin (a self-shadowing sheet) */
-	for(int pass=0;ok && pass<(both?2:1);pass++) for(int k=0;k<nft;k++){
-		int a=ft[k].a,b=ft[k].b,d=ft[k].c; if(pass){ int tmp=b; b=d; d=tmp; }
-		vec3 fn=vcross(vsub(p[b],p[a]),vsub(p[d],p[a]));
-		if(smooth){ if(!pass){ acc[a]=vadd(acc[a],fn); acc[b]=vadd(acc[b],fn); acc[d]=vadd(acc[d],fn); }
-			int o=pass*nv; mesh_add_tri(&m,base[o+a],base[o+b],base[o+d]); }
-		else { vec3 nn=vnorm(fn); int ia=mesh_add_vert(&m,p[a],nn),ib=mesh_add_vert(&m,p[b],nn),id=mesh_add_vert(&m,p[d],nn); mesh_add_tri(&m,ia,ib,id); }
-	}
-	free(ft);
-	m.twoSided=both;
-	for(int i=0;i<nb;i++) m.verts[base[i]].nrm=i<nv?vnorm(acc[i]):vscale(vnorm(acc[i-nv]),-1.f);
-	free(p); free(acc); free(base);
+	Mesh m=ok?mesh_from_triangles(p,NULL,NULL,nv,ft,nft,smooth,both):(Mesh){0};
+	free(ft); free(p);
 	if(!ok||!m.ntris){ if(ok) scene_issue(s,SCENE_ISSUE_ERROR,"mesh",node_file(s,n),n->line,"<mesh> has no faces"); mesh_free(&m); return; }
+	apply_modifiers(&m,n);
+	scene_add_obj(s,m,M,R,color,shin,castsShadow,renderable,unlit);
+}
+
+#define SURFACE_DEFAULT_SEGMENTS 24
+#define SURFACE_MAX_SEGMENTS 512
+
+/* <surface>: a parametric sheet, a grid of segments="nu nv" quads over u, v in 0..1. Its points are either
+   x, y, z expressions in u and v (cm, the reel expression language; {let} substitutions work as anywhere), or
+   points="x y z ..." listing the (nu+1)*(nv+1) grid points row by row, u fastest. The front is the side du x dv
+   faces. smooth (default 1) and twoSided as on <mesh>; closed="u", "v" or "uv" shares normals across that seam
+   while each side keeps its own u, v, so a uv gradient stays continuous. Vertices carry u, v for <gradient type="uv">. */
+static void parse_surface(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,vec3 rot,vec3 color,float shin,int castsShadow,int renderable,int unlit){
+	(void)parentM; (void)pos; (void)rot;
+	int su=SURFACE_DEFAULT_SEGMENTS,sv=-1;
+	if(sscanf(xml_attr(n,"segments","24"),"%d %d",&su,&sv)<2) sv=su;
+	const char *closed=xml_attr(n,"closed",""),*pts=xml_attr(n,"points",NULL);
+	const char *ex[3]={xml_attr(n,"x",NULL),xml_attr(n,"y",NULL),xml_attr(n,"z",NULL)};
+	int smooth=xml_attr_i(n,"smooth",1),both=xml_attr_i(n,"twoSided",0),cu=strchr(closed,'u')!=NULL,cv=strchr(closed,'v')!=NULL;
+	const char *file=node_file(s,n);
+	if(su<1||sv<1||su>SURFACE_MAX_SEGMENTS||sv>SURFACE_MAX_SEGMENTS){ scene_issue(s,SCENE_ISSUE_ERROR,"surface",file,n->line,"<surface segments=\"%d %d\">: each count lies in 1..%d",su,sv,SURFACE_MAX_SEGMENTS); return; }
+	if(closed[strspn(closed,"uv")]){ scene_issue(s,SCENE_ISSUE_ERROR,"surface",file,n->line,"<surface closed=\"%s\">: closed is u, v or uv",closed); return; }
+	int haveExpr=ex[0]||ex[1]||ex[2];
+	if(!pts==!haveExpr || (haveExpr && !(ex[0]&&ex[1]&&ex[2]))){ scene_issue(s,SCENE_ISSUE_ERROR,"surface",file,n->line,"<surface> needs either points or all of x, y and z"); return; }
+	int cols=su+1,nv=cols*(sv+1),ok=1;
+	vec3 *p=malloc(sizeof(vec3)*(size_t)nv); float *uv=malloc(sizeof(float)*2*(size_t)nv); int *seam=malloc(sizeof(int)*(size_t)nv);
+	for(int j=0;j<=sv;j++) for(int i=0;i<=su;i++){ int k=j*cols+i; uv[2*k]=(float)i/su; uv[2*k+1]=(float)j/sv; }
+	if(pts){
+		int got=0; const char *t=pts;
+		for(char *e;;t=e){ float x=strtof(t,&e); if(e==t) break; if(got<nv*3) (&p[got/3].x)[got%3]=x*0.01f; got++; }
+		if(got!=nv*3){ scene_issue(s,SCENE_ISSUE_ERROR,"surface",file,n->line,"<surface segments=\"%d %d\"> needs %d points (%d numbers), not %d numbers",su,sv,nv,nv*3,got); ok=0; }
+	} else {
+		static char names[2][REEL_NAME]={"u","v"}; float uvv[2]={0,0};
+		reel_t *r=calloc(1,sizeof(reel_t)); r->scene_scope=true; r->let_names=names; r->lets=uvv; r->nlets=2;
+		reel_expr_t e[3]; memset(e,0,sizeof(e));
+		for(int a=0;a<3 && ok;a++) if(!reel_expr_compile(r,ex[a],&e[a])){ scene_issue(s,SCENE_ISSUE_ERROR,"surface",file,n->line,"<surface %c=\"%s\">: %s","xyz"[a],ex[a],r->error); ok=0; }
+		for(int k=0;k<nv && ok;k++){
+			uvv[0]=uv[2*k]; uvv[1]=uv[2*k+1];
+			float c[3]; for(int a=0;a<3;a++) c[a]=reel_expr_eval(&e[a],r);
+			if(!isfinite(c[0])||!isfinite(c[1])||!isfinite(c[2])){ scene_issue(s,SCENE_ISSUE_ERROR,"surface",file,n->line,"<surface> is not finite at u=%g v=%g",uvv[0],uvv[1]); ok=0; }
+			p[k]=v3(c[0]*0.01f,c[1]*0.01f,c[2]*0.01f);
+		}
+		for(int a=0;a<3;a++) reel_expr_free(&e[a]);
+		free(r);
+	}
+	for(int k=0;k<nv;k++) seam[k]=k;
+	if(cu) for(int j=0;j<=sv;j++) seam[j*cols+su]=j*cols;
+	if(cv) for(int i=0;i<=su;i++) seam[sv*cols+i]=seam[i];
+	Tri *ft=malloc(sizeof(Tri)*2*(size_t)su*(size_t)sv); int nft=0;
+	for(int j=0;j<sv;j++) for(int i=0;i<su;i++){
+		int a=j*cols+i;
+		ft[nft++]=(Tri){a,a+1,a+cols+1}; ft[nft++]=(Tri){a,a+cols+1,a+cols};
+	}
+	Mesh m=ok?mesh_from_triangles(p,uv,seam,nv,ft,nft,smooth,both):(Mesh){0};
+	free(p); free(uv); free(seam); free(ft);
+	if(!ok){ mesh_free(&m); return; }
 	apply_modifiers(&m,n);
 	scene_add_obj(s,m,M,R,color,shin,castsShadow,renderable,unlit);
 }
@@ -1186,6 +1261,7 @@ void scene_rebuild_camera_gizmos(Scene *s, float aspect){
 /* ---------------------------------------------------- Shape parsers ------- */
 
 static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR);
+static void read_gradient(Scene *s, XmlNode *n, gradient_t *g);
 
 typedef void (*shape_parser_fn)(Scene *s, XmlNode *n, mat4 M, mat4 R, mat4 parentM, vec3 pos, vec3 rot, vec3 color, float shin, int castsShadow, int renderable, int unlit);
 
@@ -2488,6 +2564,7 @@ static const struct {
 	{ "star",     parse_star },
 	{ "shape",    parse_shape_node },
 	{ "mesh",     parse_mesh },
+	{ "surface",  parse_surface },
 	{ "screen",   parse_screen },
 	{ "sphere",   parse_sphere },
 	{ "cylinder", parse_cylinder },
@@ -2612,19 +2689,8 @@ static void parse_nodes(Scene *s, XmlNode *parent, mat4 parentM, mat4 parentR){
 		int castsShadow = xml_attr_i(n,"castShadow",1);
 		int renderable = xml_attr_i(n,"renderable",1);
 		int unlit = xml_attr_i(n,"unlit",0);
-		{	/* gradient: a UV-like gizmo from the shape's own bounding box, no vertex painting */
-			const char *axis=xml_attr(n,"gradientAxis","y");
-			int gotFrom=xml_attr(n,"gradientFrom",NULL)!=NULL, gotTo=xml_attr(n,"gradientTo",NULL)!=NULL;
-			s->activeGradient=gotFrom||gotTo;
-			s->activeGradFrom=xml_attr_v3(n,"gradientFrom",v3(1,1,1));
-			s->activeGradTo=xml_attr_v3(n,"gradientTo",v3(1,1,1));
-			s->activeGradAxis=(axis[0]=='x'||axis[0]=='z')?axis[0]:'y';
-			if(!s->activeGradient && mat && mat->gradient){ /* a material's gradient applies unless the shape sets its own */
-				s->activeGradient=1; s->activeGradFrom=mat->gradFrom; s->activeGradTo=mat->gradTo; s->activeGradAxis=mat->gradAxis;
-			}
-			if(s->activeGradient && axis[0]!='x'&&axis[0]!='y'&&axis[0]!='z')
-				scene_issue(s,SCENE_ISSUE_ERROR,"gradient",node_file(s,n),n->line,"<%s> gradientAxis must be x, y or z, not '%s'",tag,axis);
-		}
+		read_gradient(s,n,&s->activeGradient);   /* colour without vertex painting: see gradient_t */
+		if(!s->activeGradient.on && mat && mat->gradient.on) s->activeGradient=mat->gradient;   /* a material's gradient applies unless the shape sets its own */
 
 		for(int j=0;j<(int)(sizeof(shape_parsers)/sizeof(shape_parsers[0]));j++){
 			if(!strcmp(tag, shape_parsers[j].tag)){
@@ -2698,6 +2764,46 @@ static int parse_material_ramp(Scene *s, XmlNode *n, const char *text){
 	return s->nramps-1;
 }
 
+/* A shape's or material's gradient: the gradientFrom/gradientTo/gradientAxis attributes (the bounding box along an
+   axis), or a <gradient> child with the whole gizmo (gradient_t):
+     <gradient from to axis="x|y|z"/>                  the local bounding box along an axis
+     <gradient from to type="line|radial" start end/>  a line, or a radius, between two local points (cm)
+     <gradient from to type="uv" tile="tu tv" offset/>  g = u*tu + v*tv + offset over a surface's parameters
+   with repeat="1" (the coordinate wraps), edge="e" (a hard step at e, 0..1) and power="p" on any of them. */
+static const char *gradient_types[]={"box","line","radial","uv"};
+
+static void read_gradient(Scene *s, XmlNode *n, gradient_t *g){
+	*g=gradient_default();
+	const char *axis=xml_attr(n,"gradientAxis","y");
+	g->on=xml_attr(n,"gradientFrom",NULL)!=NULL || xml_attr(n,"gradientTo",NULL)!=NULL;
+	g->from=xml_attr_v3(n,"gradientFrom",g->from); g->to=xml_attr_v3(n,"gradientTo",g->to);
+	XmlNode *c=NULL;
+	for(int i=0;i<n->nkids && !c;i++) if(!strcmp(n->kids[i]->tag,"gradient")) c=n->kids[i];
+	if(c){
+		if(g->on) scene_issue(s,SCENE_ISSUE_WARNING,"gradient",node_file(s,c),c->line,"<%s> has both gradientFrom/gradientTo and a <gradient>; the element wins",n->tag);
+		g->on=1;
+		g->from=xml_attr_v3(c,"from",v3(1,1,1)); g->to=xml_attr_v3(c,"to",v3(1,1,1));
+		axis=xml_attr(c,"axis","y");
+		const char *type=xml_attr(c,"type","box"); g->type=-1;
+		for(int k=0;k<(int)(sizeof(gradient_types)/sizeof(gradient_types[0]));k++) if(!strcmp(type,gradient_types[k])) g->type=k;
+		if(g->type<0){ scene_issue(s,SCENE_ISSUE_ERROR,"gradient",node_file(s,c),c->line,"<gradient type=\"%s\">: the type is box, line, radial or uv",type); g->type=GRADIENT_BOX; }
+		int gotStart=xml_attr(c,"start",NULL)!=NULL, gotEnd=xml_attr(c,"end",NULL)!=NULL;
+		g->start=xml_attr_v3_cm(c,"start",v3(0,0,0)); g->end=xml_attr_v3_cm(c,"end",v3(0,1,0));
+		float tu=0,tv=1; sscanf(xml_attr(c,"tile","0 1"),"%f %f",&tu,&tv); g->tileU=tu; g->tileV=tv;
+		g->offset=xml_attr_f(c,"offset",0.0f);
+		g->repeat=xml_attr_i(c,"repeat",0);
+		g->edge=xml_attr_f(c,"edge",0.0f);
+		g->power=xml_attr_f(c,"power",1.0f);
+		if((g->type==GRADIENT_LINE||g->type==GRADIENT_RADIAL) && (!gotStart||!gotEnd||vlen(vsub(g->end,g->start))<1e-6f))
+			scene_issue(s,SCENE_ISSUE_ERROR,"gradient",node_file(s,c),c->line,"<gradient type=\"%s\"> needs distinct start and end points",type);
+		if(g->edge<0||g->edge>=1) scene_issue(s,SCENE_ISSUE_ERROR,"gradient",node_file(s,c),c->line,"<gradient edge=\"%g\">: the edge lies in 0..1",g->edge);
+		if(g->power<=0){ scene_issue(s,SCENE_ISSUE_ERROR,"gradient",node_file(s,c),c->line,"<gradient power=\"%g\">: the power must be positive",g->power); g->power=1; }
+	}
+	if(g->on && axis[0]!='x'&&axis[0]!='y'&&axis[0]!='z')
+		scene_issue(s,SCENE_ISSUE_ERROR,"gradient",node_file(s,c?c:n),(c?c:n)->line,"<%s> gradient axis must be x, y or z, not '%s'",c?"gradient":n->tag,axis);
+	g->axis=(axis[0]=='x'||axis[0]=='z')?axis[0]:'y';
+}
+
 static void read_material(Scene *s, XmlNode *n, Material *m){
 	strncpy(m->id, xml_attr(n,"id","mat"), 31);
 	m->color = xml_attr_v3(n,"color",v3(0.8f,0.8f,0.8f));
@@ -2706,10 +2812,7 @@ static void read_material(Scene *s, XmlNode *n, Material *m){
 	m->metallic = fminf(fmaxf(xml_attr_f(n,"metallic",0.0f),0.0f),1.0f);
 	const char *ramp=xml_attr(n,"ramp",NULL);
 	m->ramp = ramp ? parse_material_ramp(s,n,ramp) : -1;
-	const char *axis=xml_attr(n,"gradientAxis","y");
-	m->gradient=xml_attr(n,"gradientFrom",NULL)!=NULL || xml_attr(n,"gradientTo",NULL)!=NULL;
-	m->gradFrom=xml_attr_v3(n,"gradientFrom",v3(1,1,1)); m->gradTo=xml_attr_v3(n,"gradientTo",v3(1,1,1));
-	m->gradAxis=(axis[0]=='x'||axis[0]=='z')?axis[0]:'y';
+	read_gradient(s,n,&m->gradient);
 }
 
 static int material_equal(const Scene *s, const Material *a, const Material *b){
@@ -2810,6 +2913,7 @@ static void warn_unknown_children(Scene *s, XmlNode *parent, const char *path, i
 		else if(!strcmp(parent->tag,"capture-profile")) supported=!strcmp(n->tag,"map");
 		else if(!strcmp(parent->tag,"layer")) supported=!strcmp(n->tag,"contact");
 		else if(!strcmp(parent->tag,"clip")) supported=!strcmp(n->tag,"key");
+		else if(!strcmp(n->tag,"gradient")) supported=!strcmp(parent->tag,"material") || has_shape_parser(parent->tag) || !strcmp(parent->tag,"shape");
 		else if(!strcmp(parent->tag,"mesh")) supported=!strcmp(n->tag,"v") || !strcmp(n->tag,"f") || has_modifier_parser(n->tag);
 		else if(!strcmp(parent->tag,"shape")) supported=!strcmp(n->tag,"v") || !strcmp(n->tag,"fillet") || has_modifier_parser(n->tag);
 		else if(!strcmp(parent->tag,"wall")||!strcmp(parent->tag,"floor")||!strcmp(parent->tag,"window")||!strcmp(parent->tag,"door")) supported=0;
@@ -3165,7 +3269,7 @@ int scene_create_door(Scene *s,const char *preset,vec3 ground){ return scene_cre
 int load_scene(const char *path, Scene *s){
 	memset(s,0,sizeof(*s));
 	s->selectedObj=-1; s->editMode=EDIT_W_MOVE;
-	s->activeTexIndex=-1; s->activeRamp=-1; s->activeGradient=0; s->activeSpecular=DEFAULT_SPECULAR; s->activeMetallic=0;
+	s->activeTexIndex=-1; s->activeRamp=-1; s->activeGradient=gradient_default(); s->activeSpecular=DEFAULT_SPECULAR; s->activeMetallic=0;
 	s->activeScreenTexture=-1;
 	strncpy(s->scenePath,path,sizeof(s->scenePath)-1);
 	const char *content=strstr(path,"/scenes/");

@@ -227,13 +227,16 @@ function Kit:poly(mat, pts, col)
   self:close("group")
 end
 
--- A battered block: a box tapered towards its top. A taper scales both axes alike, so ty is not honoured.
+-- A battered block: a box tapered towards its top, inset tx on its width and ty on its depth. The taper
+-- pivots at mid-height, so the box is sized for that height.
 function Kit:frustum(mat, x, y, z, sx, sy, h, tx, ty, col, rz)
-  local ratio = (sx - 2 * tx) / sx
-  local a = (ratio - 1) / (ratio + 1)
-  local k = 1 / (1 - a)
-  self:prism(mat, v3(x * TILE, (z + h / 2) * TILE, -y * TILE), sx * k, h, sy * k * TILE, col,
-    (rz and rz ~= 0) and {{"rot", v3(0, deg(rz), 0)}} or {}, fmt('<taper amount="%s"/>', f4(a)))
+  local function amount(s, t)
+    local ratio = (s - 2 * t) / s
+    return (ratio - 1) / (ratio + 1)
+  end
+  local ax, ay = amount(sx, tx), amount(sy, ty)
+  self:prism(mat, v3(x * TILE, (z + h / 2) * TILE, -y * TILE), sx / (1 - ax), h, sy / (1 - ay) * TILE, col,
+    (rz and rz ~= 0) and {{"rot", v3(0, deg(rz), 0)}} or {}, fmt('<taper amount="%s %s"/>', f4(ax), f4(ay)))
 end
 
 -- Four revolved segments turned a quarter step, so the base is square.

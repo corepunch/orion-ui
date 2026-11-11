@@ -21,7 +21,8 @@ static GLint ulocTex;
 /* Objects are drawn in instanced batches of one model. What differs per object (matrix, normal matrix,
    colour, material, gradient) comes from a buffer texture, INSTANCE_TEXELS RGBA32F texels per instance:
    0-2 model rows; 3-5 normal-matrix rows with shininess, specular, metallic in w; 6 colour (linear) and unlit;
-   7 gradient from (linear) and on; 8 gradient to. */
+   7 gradient from (linear) and on; 8 gradient to; 9 gradient repeat, edge and power (gradient_t);
+   10 a radial gradient's centre (local) and 1/radius, 0 for any other gizmo. */
 static const char *vs_src =
 "#version 150\n"
 "in vec3 aPos;\n"
@@ -39,8 +40,10 @@ static const char *vs_src =
 "flat out float vUnlit;\n"
 "flat out vec4 vGradFrom;\n"
 "flat out vec3 vGradTo;\n"
+"flat out vec3 vGradShape;\n"
+"out vec4 vGradRadial;\n"
 "void main(){\n"
-"    int b=(uInstBase+gl_InstanceID)*9;\n"
+"    int b=(uInstBase+gl_InstanceID)*11;\n"
 "    vec4 m0=texelFetch(uInst,b),m1=texelFetch(uInst,b+1),m2=texelFetch(uInst,b+2);\n"
 "    vec4 n0=texelFetch(uInst,b+3),n1=texelFetch(uInst,b+4),n2=texelFetch(uInst,b+5);\n"
 "    vec4 c=texelFetch(uInst,b+6);\n"
@@ -50,7 +53,9 @@ static const char *vs_src =
 "    vWorldNrm=normalize(vec3(dot(n0.xyz,aNrm),dot(n1.xyz,aNrm),dot(n2.xyz,aNrm)));\n"
 "    vGrad=aGrad;\n"
 "    vColor=c.rgb; vUnlit=c.a; vMat=vec3(n0.w,n1.w,n2.w);\n"
-"    vGradFrom=texelFetch(uInst,b+7); vGradTo=texelFetch(uInst,b+8).rgb;\n"
+"    vGradFrom=texelFetch(uInst,b+7); vGradTo=texelFetch(uInst,b+8).rgb; vGradShape=texelFetch(uInst,b+9).xyz;\n"
+"    vec4 rc=texelFetch(uInst,b+10);\n"
+"    vGradRadial=vec4((aPos-rc.xyz)*rc.w,rc.w);   /* a distance is not linear, so the fragment takes the length */\n"
 "    vec3 n=abs(vWorldNrm);\n"
 "    if(n.y>n.x&&n.y>n.z) vWorldUV=wp.xz*0.5;\n"
 "    else if(n.x>n.y&&n.x>n.z) vWorldUV=wp.yz*0.5;\n"
@@ -90,6 +95,18 @@ static const char *fs_src =
 "flat in float vUnlit;\n"
 "flat in vec4 vGradFrom;\n"
 "flat in vec3 vGradTo;\n"
+"flat in vec3 vGradShape;\n"
+"in vec4 vGradRadial;\n"
+"/* gradient_amount() in mesh.c, with the edges filtered over a pixel: repeat wraps the gizmo coordinate,\n"
+"   power curves it, edge steps it */\n"
+"float gradient_amount(float g){\n"
+"    float t=vGradShape.x>0.5?fract(g):clamp(g,0.0,1.0);\n"
+"    if(vGradShape.z!=1.0) t=pow(t,vGradShape.z);\n"
+"    if(vGradShape.y<=0.0) return t;\n"
+"    float w=max(fwidth(g),1e-5);\n"
+"    float up=clamp((t-vGradShape.y)/w+0.5,0.0,1.0);\n"
+"    return vGradShape.x>0.5?up*clamp((1.0-t)/w+0.5,0.0,1.0)+(1.0-clamp(t/w+0.5,0.0,1.0)):up;\n"
+"}\n"
 "uniform vec3 uSky;\n"
 "uniform vec3 uAmbient;\n"
 "uniform int uAmbientOn;\n"
@@ -125,7 +142,7 @@ static const char *fs_src =
 #else
 "    vec3 texColor=vec3(1.0);\n"
 #endif
-"    if(vGradFrom.a>0.5) texColor*=mix(vGradFrom.rgb,vGradTo,clamp(vGrad,0.0,1.0));\n"
+"    if(vGradFrom.a>0.5) texColor*=mix(vGradFrom.rgb,vGradTo,gradient_amount(vGradRadial.w>0.0?length(vGradRadial.xyz)+vGrad:vGrad));\n"
 "    if(uAmbientOn>0){\n"
 "        /* The depth-filling pass: ambient light (an unlit object shows its own colour), plus the sky in glossy\n"
 "           surfaces: the reflection direction picks sky above, ground below; Fresnel is damped by roughness. */\n"
@@ -247,10 +264,14 @@ void shader_fill_instance(float *t, const SceneObj *o){
 		t[r*4]=m[r]; t[r*4+1]=m[4+r]; t[r*4+2]=m[8+r]; t[r*4+3]=m[12+r];
 		t[12+r*4]=n[r]; t[12+r*4+1]=n[4+r]; t[12+r*4+2]=n[8+r]; t[12+r*4+3]=mat[r];
 	}
-	vec3 c=srgb_to_linear(o->color),a=srgb_to_linear(o->gradFrom),b=srgb_to_linear(o->gradTo);
+	const gradient_t *g=&o->gradient;
+	vec3 c=srgb_to_linear(o->color),a=srgb_to_linear(g->from),b=srgb_to_linear(g->to);
 	t[24]=c.x; t[25]=c.y; t[26]=c.z; t[27]=o->unlit?1.0f:0.0f;
-	t[28]=a.x; t[29]=a.y; t[30]=a.z; t[31]=o->gradient?1.0f:0.0f;
+	t[28]=a.x; t[29]=a.y; t[30]=a.z; t[31]=g->on?1.0f:0.0f;
 	t[32]=b.x; t[33]=b.y; t[34]=b.z; t[35]=0;
+	t[36]=g->repeat?1.0f:0.0f; t[37]=g->edge; t[38]=g->power>0?g->power:1.0f; t[39]=0;
+	float len=vlen(vsub(g->end,g->start)); int radial=g->on && g->type==GRADIENT_RADIAL && len>0;
+	t[40]=g->start.x; t[41]=g->start.y; t[42]=g->start.z; t[43]=radial?1.0f/len:0.0f;
 }
 
 /* The instance buffer texture sits on unit 1 (unit 0 is the material texture). */

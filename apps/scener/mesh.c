@@ -57,21 +57,39 @@ int mesh_add_vert(Mesh *m, vec3 p, vec3 n){
 void mesh_add_tri(Mesh *m,int a,int b,int c){
     Tri t={a,b,c}; DA_PUSH(m->tris,m->ntris,m->ctris,t);
 }
-void mesh_gradient_param(Mesh *m, char axis){
+gradient_t gradient_default(void){
+	return (gradient_t){.type=GRADIENT_BOX,.axis='y',.from={1,1,1},.to={1,1,1},.tileV=1.0f,.power=1.0f};
+}
+
+void mesh_gradient_param(Mesh *m, const gradient_t *g){
 	if(m->nverts<=0) return;
+	char axis=g->axis;
 	float lo=1e30f, hi=-1e30f;
-	for(int i=0;i<m->nverts;i++){
+	for(int i=0;g->type==GRADIENT_BOX && i<m->nverts;i++){
 		vec3 p=m->verts[i].pos;
 		float c=axis=='x'?p.x:axis=='z'?p.z:p.y;
 		if(c<lo) lo=c;
 		if(c>hi) hi=c;
 	}
 	float span=hi-lo;
+	vec3 d=vsub(g->end,g->start); float len2=vdot(d,d);
 	for(int i=0;i<m->nverts;i++){
-		vec3 p=m->verts[i].pos;
-		float c=axis=='x'?p.x:axis=='z'?p.z:p.y;
-		m->verts[i].g=span>1e-6f?(c-lo)/span:0.0f;
+		Vertex *v=&m->verts[i]; vec3 p=v->pos; float c;
+		switch(g->type){
+			case GRADIENT_LINE:   c=len2>0?vdot(vsub(p,g->start),d)/len2:0; break;
+			case GRADIENT_RADIAL: c=0; break;   /* the distance is taken per fragment (shader.c); g keeps the offset */
+			case GRADIENT_UV:     c=v->u*g->tileU+v->v*g->tileV; break;
+			default: { float a=axis=='x'?p.x:axis=='z'?p.z:p.y; c=span>1e-6f?(a-lo)/span:0.0f; }
+		}
+		v->g=c+g->offset;
 	}
+}
+
+float gradient_amount(const gradient_t *g, float coord){
+	float t=g->repeat?coord-floorf(coord):fminf(fmaxf(coord,0.0f),1.0f);
+	if(g->power>0 && g->power!=1.0f) t=powf(t,g->power);
+	if(g->edge>0) t=t<g->edge?0.0f:1.0f;
+	return t;
 }
 
 /* Positions take posM. Normals take its inverse transpose, so a non-uniform scale (a flattened sphere, a
@@ -1174,19 +1192,24 @@ static void mesh_find_bounds(Mesh *m, char axis, float *minV, float *maxV){
 	if(*maxV-*minV < 1e-6f){ *minV=-0.5f; *maxV=0.5f; }
 }
 
-void mesh_apply_taper(Mesh *m, float amount, float curvature, char axis){
+/* Each crosswise axis scales by 1 + amount*(2t-1)^curvature along the main axis, so a frustum's two insets
+   may differ. Normals take the inverse transpose of the deformation's Jacobian (its cofactor matrix). */
+void mesh_apply_taper(Mesh *m, float amountB, float amountC, float curvature, char axis){
 	float mn,mx; mesh_find_bounds(m,axis,&mn,&mx);
-	float range=mx-mn;
+	float range=mx-mn, k=curvature>0?curvature:1.0f;
+	int ia=axis=='x'?0:axis=='y'?1:2, ib=axis=='x'?1:0, ic=axis=='z'?1:2;
 	for(int i=0;i<m->nverts;i++){
-		float *pa, *pb, *pc;
-		switch(axis){
-			case 'x': pa=&m->verts[i].pos.x; pb=&m->verts[i].pos.y; pc=&m->verts[i].pos.z; break;
-			case 'y': pa=&m->verts[i].pos.y; pb=&m->verts[i].pos.x; pc=&m->verts[i].pos.z; break;
-			default:  pa=&m->verts[i].pos.z; pb=&m->verts[i].pos.x; pc=&m->verts[i].pos.y; break;
-		}
-		float t=(*pa-mn)/range;
-		float s=1.0f+amount*powf(2.0f*t-1.0f, curvature>0?curvature:1.0f);
-		*pb*=s; *pc*=s;
+		float *p=&m->verts[i].pos.x, *n=&m->verts[i].nrm.x;
+		/* an odd whole curvature keeps the sign of 2t-1 (the classic taper), any other is symmetric */
+		float t=(p[ia]-mn)/range, x=2.0f*t-1.0f, sx=x<0?-1.0f:1.0f; int odd=fmodf(k,2.0f)==1.0f;
+		float f=powf(fabsf(x),k)*(odd?sx:1.0f);
+		float df=fabsf(x)<1e-6f && k>1.0f?0.0f:k*powf(fabsf(x),k-1.0f)*(odd?1.0f:sx)*2.0f/range;   /* d f / d axis */
+		float sb=1.0f+amountB*f, sc=1.0f+amountC*f, db=amountB*df*p[ib], dc=amountC*df*p[ic];
+		/* Jacobian rows (b', c', a') over (b, c, a): [sb 0 db], [0 sc dc], [0 0 1]; its cofactor transforms normals */
+		float nb=sc*n[ib], nc=sb*n[ic], na=-db*sc*n[ib]-dc*sb*n[ic]+sb*sc*n[ia];
+		float l=sqrtf(nb*nb+nc*nc+na*na);
+		if(l>0){ n[ib]=nb/l; n[ic]=nc/l; n[ia]=na/l; }
+		p[ib]*=sb; p[ic]*=sc;
 	}
 }
 

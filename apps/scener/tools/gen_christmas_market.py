@@ -7,10 +7,11 @@ to a Scener scene, running that script unchanged.
 The Blender scripts build meshes through nile-archive/tools/building_kit.py. This converter imports that
 kit with stand-ins for bpy, bmesh and mathutils (a 4x4 Matrix and a Vector), then subclasses its Kit so the
 primitives write Scener elements instead of vertices: boxes become soft-box/slab utility calls, tubes and
-lathes their modifier stacks, frames (k.at) groups with pos/rot/scale, and free-form geometry (surface,
-add, poly) a <mesh>. Masonry, windows, awnings and plants are the kit's own code on top of these.
+lathes their modifier stacks, frames (k.at) groups with pos/rot/scale, surfaces a <surface> grid, and other
+free-form geometry (add, poly) a <mesh>. Masonry, windows, awnings and plants are the kit's own code on top.
 
-Not carried over: per-vertex colour (a piece gets the mean of its colours) and the footprint clamp.
+Colour that varies over a surface is a building_kit.Gradient, written as its <gradient type="uv"> gizmo.
+Not carried over: other per-vertex colour (a piece gets the mean of its colours) and the footprint clamp.
 The nile kit draws with Python's random, so there is no Lua twin of this converter.
 """
 import argparse, importlib.util, math, os, sys, types
@@ -158,10 +159,24 @@ def make_kit(nile_kit):
       self.sk.close("group")
 
     def surface(self, mat, fn, nu, nv, col):
+      """A <surface> of the grid points; a Gradient becomes its <gradient type="uv">. Another colour function has
+      no gizmo, so it falls back to one <mesh> per (quantised) face colour."""
       pts = [fn(i / nu, j / nv) for j in range(nv + 1) for i in range(nu + 1)]
-      faces = [(j * (nu + 1) + i, j * (nu + 1) + i + 1, j * (nu + 1) + i + nu + 2, j * (nu + 1) + i + nu + 1) for j in range(nv) for i in range(nu)]
-      cols = [col((i + .5) / nu, (j + .5) / nv) if callable(col) else col for j in range(nv) for i in range(nu)]
-      self._meshes(mat, pts, faces, cols, smooth=True, both=True)
+      grad = isinstance(col, nile_kit.Gradient)
+      if callable(col) and not grad:
+        print("warning: a surface coloured by %s has no gizmo; write it as a Gradient" % getattr(col, "__name__", col))
+        faces = [(j * (nu + 1) + i, j * (nu + 1) + i + 1, j * (nu + 1) + i + nu + 2, j * (nu + 1) + i + nu + 1) for j in range(nv) for i in range(nu)]
+        cols = [col((i + .5) / nu, (j + .5) / nv) for j in range(nv) for i in range(nu)]
+        return self._meshes(mat, pts, faces, cols, smooth=True, both=True)
+      s = self.sk
+      look = [(k, v) for k, v in s.look(mat, (1., 1., 1.) if grad else colour(col)) if not (grad and k.startswith("gradient"))]
+      head = '<surface segments="%d %d"%s points="%s"' % (nu, nv, attrs([("twoSided", 1)] + look), " ".join(f(c) for p in pts for c in to_scener(p)))
+      if not grad: return s.emit(head + "/>")
+      g = col
+      ga = [("type", "uv"), ("tile", "%s %s" % (f(g.tile[0]), f(g.tile[1]))), ("offset", f(g.offset) if g.offset else None),
+            ("repeat", 1 if g.repeat else None), ("edge", f(g.edge) if g.edge else None), ("power", f(g.power) if g.power != 1 else None),
+            ("from", v3(*srgb(g.a))), ("to", v3(*srgb(g.b)))]
+      s.emit(head + "><gradient%s/></surface>" % attrs(ga))
 
     def add(self, mat, verts, faces, col, smooth=False, m=None):
       if m is not None: verts = [tuple(m @ Vector(v)) for v in verts]

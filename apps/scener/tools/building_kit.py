@@ -19,7 +19,6 @@ Differences from the Blender kit, all forced by what a scene file can say:
   - no per-vertex colour: every piece carries one jittered sRGB colour, and leaves and clay a vertical
     gradient (gradientFrom/gradientTo, a multiplier over the piece's bounding box)
   - no free-form surfaces: palm fronds are flattened revolved spheres, polygons must stand in a vertical plane
-  - a taper scales both axes alike, so a frustum's two insets cannot differ
   - no footprint clamp (Blender clamps vertices to the footprint after the fact)
 
 Randomness is a small LCG shared with building_kit.lua so both ports write identical files.
@@ -216,13 +215,14 @@ class Kit:
     self.close("group")
 
   def frustum(self, mat, x, y, z, sx, sy, h, tx, ty, col, rz=0.):
-    """A battered block: a box tapered towards its top. Scener tapers both axes alike, so the
-    taper follows tx and the depth is scaled with it; ty is not honoured."""
-    ratio = (sx - 2 * tx) / sx
-    a = (ratio - 1) / (ratio + 1)
-    k = 1 / (1 - a)
-    self.prism(mat, v3(x * TILE, (z + h / 2) * TILE, -y * TILE), sx * k, h, sy * k * TILE, col,
-               [("rot", v3(0, math.degrees(rz), 0))] if rz else [], "<taper amount=\"%s\"/>" % f4(a))
+    """A battered block: a box tapered towards its top, inset tx on its width and ty on its depth. The taper
+    pivots at mid-height, so the box is sized for that height."""
+    def amount(s, t):
+      ratio = (s - 2 * t) / s
+      return (ratio - 1) / (ratio + 1)
+    ax, ay = amount(sx, tx), amount(sy, ty)
+    self.prism(mat, v3(x * TILE, (z + h / 2) * TILE, -y * TILE), sx / (1 - ax), h, sy / (1 - ay) * TILE, col,
+               [("rot", v3(0, math.degrees(rz), 0))] if rz else [], "<taper amount=\"%s %s\"/>" % (f4(ax), f4(ay)))
 
   def pyramid(self, mat, x, y, z, s, h, col):
     """Four revolved segments turned a quarter step, so the base is square."""

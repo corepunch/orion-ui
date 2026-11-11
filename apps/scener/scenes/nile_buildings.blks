@@ -192,7 +192,7 @@
   <group name="watchtower" pos="0 0 320">
     <soft-box width="320" height="16" depth="320" radius="6.4" bevel="5.44" segments="3" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
     <soft-box width="240" height="19.2" depth="240" radius="6.4" bevel="5.44" segments="3" pos="0 25.6 0" color="0.953 0.902 0.761" shininess="6"/>
-    <soft-box width="168" height="304" depth="168" radius="6.4" bevel="5.44" segments="3" pos="0 187.2 0" color="0.768 0.662 0.463" shininess="6"><taper amount="-0.0952"/></soft-box>
+    <soft-box width="168" height="304" depth="168" radius="6.4" bevel="5.44" segments="3" pos="0 187.2 0" color="0.768 0.662 0.463" shininess="6"><taper amount="-0.0952 -0.0952"/></soft-box>
     <soft-box width="168" height="16" depth="168" radius="6.4" bevel="5.44" segments="3" pos="0 347.2 0" color="0.902 0.827 0.639" shininess="6"/>
     <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="-57.6 369.6 72" color="0.953 0.902 0.761" shininess="6"/>
     <soft-box width="28.8" height="28.8" depth="28.8" radius="6.4" bevel="5.44" segments="3" pos="-57.6 369.6 -72" color="0.953 0.902 0.761" shininess="6"/>
@@ -231,7 +231,7 @@
   </group>
   <group name="pylon_gate" pos="720 0 320">
     <soft-box width="480" height="16" depth="320" radius="6.4" bevel="5.44" segments="3" pos="0 8 0" color="0.804 0.698 0.514" shininess="6"/>
-    <soft-box width="150.4" height="296" depth="150.4" radius="6.4" bevel="5.44" segments="3" pos="-136 164 0" color="0.880 0.809 0.628" shininess="6"><taper amount="-0.1702"/></soft-box>
+    <soft-box width="150.4" height="296" depth="160" radius="6.4" bevel="5.44" segments="3" pos="-136 164 0" color="0.880 0.809 0.628" shininess="6"><taper amount="-0.1702 -0.1"/></soft-box>
     <soft-box width="134.4" height="12.8" depth="153.6" radius="4.48" bevel="3.81" pos="-136 318.4 0" color="0.086 0.635 0.588" shininess="40"/>
     <soft-box width="147.2" height="16" depth="166.4" radius="6.4" bevel="5.44" segments="3" pos="-136 332.8 0" color="0.953 0.902 0.761" shininess="6"/>
     <group pos="-216 0 80" rot="0 0 0">
@@ -250,7 +250,7 @@
         <extrude amount="1.5"/>
       </shape>
     </group>
-    <soft-box width="150.4" height="296" depth="150.4" radius="6.4" bevel="5.44" segments="3" pos="136 164 0" color="0.893 0.813 0.632" shininess="6"><taper amount="-0.1702"/></soft-box>
+    <soft-box width="150.4" height="296" depth="160" radius="6.4" bevel="5.44" segments="3" pos="136 164 0" color="0.893 0.813 0.632" shininess="6"><taper amount="-0.1702 -0.1"/></soft-box>
     <soft-box width="134.4" height="12.8" depth="153.6" radius="4.48" bevel="3.81" pos="136 318.4 0" color="0.086 0.635 0.588" shininess="40"/>
     <soft-box width="147.2" height="16" depth="166.4" radius="6.4" bevel="5.44" segments="3" pos="136 332.8 0" color="0.953 0.902 0.761" shininess="6"/>
     <group pos="56 0 80" rot="0 0 0">
