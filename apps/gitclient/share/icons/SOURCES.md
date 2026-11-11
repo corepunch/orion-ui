@@ -28,6 +28,8 @@ same revision (`assets/regular/<name>.svg`), saved with a `gc-` prefix:
 | gc-play.svg | play | run target |
 | gc-hammer.svg | hammer | build target |
 | gc-flask.svg | flask | test target |
+| gc-stop-circle.svg | stop-circle | running target (click to stop) |
+| gc-terminal-window.svg | terminal-window | show the target terminal |
 
 The Changes pair uses Bootstrap Icons v1.13.1's `file-diff` and `file-diff-fill`,
 which show additions and deletions on a document. Blind review found Phosphor's

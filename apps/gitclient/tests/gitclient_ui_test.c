@@ -19,6 +19,7 @@
 #include "apps/gitclient/gitclient.h"
 #include "apps/gitclient/gc_actions.h"
 #include "apps/gitclient/components/diff_view.h"
+#include "apps/terminal/components/terminal_view.h"
 #include <orion/user/toolbar.h>
 
 #include <stdio.h>
@@ -773,6 +774,110 @@ void test_overview_table_filters_and_removes(void) {
   PASS();
 }
 
+static const db_target_t *select_target(const char *name) {
+  for (int i = 0; ; i++) {
+    const db_target_t *t = (const db_target_t *)send_message(g_test_state.targets_win, tvGetRecord, (uint32_t)i, NULL);
+    if (!t) return NULL;
+    if (strcmp(t->name, name)) continue;
+    send_message(g_test_state.targets_win, RVM_SETSELECTION, (uint32_t)i, NULL);
+    return t;
+  }
+}
+
+static bool click_target_icon(const char *name) {
+  if (!select_target(name)) return false;
+  int row = (int)send_message(g_test_state.targets_win, RVM_GETSELECTION, 0, NULL);
+  return gc_overview_handle_command(MAKEDWORD(row, RVN_ICONCLICK), g_test_state.targets_win);
+}
+
+// Deliver the PTY watcher's readiness posts until the target is no longer running.
+static bool wait_target_stopped(const char *name) {
+  for (int i = 0; i < 3000; i++) {
+    ui_event_t e;
+    while (axPeekMessage(&e)) dispatch_message(&e);
+    if (!gc_run_is_running(select_target(name)->checkout, name)) return true;
+    usleep(1000);
+  }
+  return false;
+}
+
+void test_overview_runs_targets_in_terminal(void) {
+  TEST("overview: a target runs in a hidden TerminalView; its icon stops it; a failure shows the terminal");
+#ifdef _WIN32
+  SKIP("TerminalView has no PTY on Windows");
+#endif
+  test_env_init();
+  char plugin[1024];
+  snprintf(plugin, sizeof(plugin), "%s/../lib/terminal_components%s", ui_get_exe_dir(), AX_DYNLIB_EXT);
+  ASSERT_TRUE(fe_load_component_plugin(plugin));
+  gc_state_t saved = g_test_state;
+  memset(&g_test_state, 0, sizeof(g_test_state));
+  g_test_state.workspace_db = gc_workspace_db_create();
+  window_t *host = test_env_create_window("overview", 0, 0, 800, 600, overview_test_host, NULL);
+  g_test_state.main_win = host;
+  g_test_state.tab = GC_TAB_OVERVIEW;
+  g_test_state.overview_page_win = create_window_from_form(&gitclient_overview_page_form, 0, 0, host, gc_page_overview_proc, 0, NULL);
+  ASSERT_NOT_NULL(g_test_state.terminal_tabs_win);
+  ASSERT_FALSE(window_has_state(g_test_state.terminal_tabs_win, WINDOW_STATE_VISIBLE));
+
+  char launch[700];
+  snprintf(launch, sizeof(launch), "%s/" GC_LAUNCH_FILE, s_repo);
+  ASSERT_TRUE(gct_write_file(launch,
+    "<launch project=\"demo\">\n"
+    "  <target name=\"Serve\" run=\"pwd &gt; served.txt; sleep 30\" />\n"
+    "  <target name=\"Broken\" kind=\"test\" run=\"exit 3\" />\n"
+    "</launch>\n"));
+  snprintf(g_test_state.workspace[0], 512, "%s", s_repo);
+  g_test_state.workspace_count = 1;
+  gc_overview_refresh_sync();
+  send_message(g_test_state.checkouts_win, RVM_SETSELECTION, 0, NULL);
+  tableview_handle_master_selection(get_root_window(g_test_state.checkouts_win), g_test_state.checkouts_win);
+
+  // The icon starts the target in the checkout; the row turns into a stop icon.
+  ASSERT_TRUE(click_target_icon("Serve"));
+  ASSERT_TRUE(gc_run_is_running(select_target("Serve")->checkout, "Serve"));
+  ASSERT_TRUE(select_target("Serve")->running);
+  ASSERT_STR_EQUAL(g_test_state.run_button_win->title, "Stop");
+  ASSERT_EQUAL(g_test_state.run_count, 1);
+  ASSERT_EQUAL(g_test_state.runs[0].tab->parent, g_test_state.terminal_tabs_win);
+  ASSERT_FALSE(g_test_state.terminal_shown);
+  char served[700];
+  snprintf(served, sizeof(served), "%s/served.txt", s_repo);
+  for (int i = 0; i < 2000 && !axPathExists(served); i++) usleep(1000);
+  ASSERT_TRUE(axPathExists(served));
+
+  // Clicking the stop icon ends the process group quietly: the terminal stays hidden.
+  ASSERT_TRUE(click_target_icon("Serve"));
+  ASSERT_TRUE(wait_target_stopped("Serve"));
+  ASSERT_FALSE(select_target("Serve")->running);
+  ASSERT_STR_EQUAL(g_test_state.run_button_win->title, "Run");
+  ASSERT_FALSE(g_test_state.terminal_shown);
+
+  // A failing target opens the terminal on its own tab.
+  ASSERT_TRUE(click_target_icon("Broken"));
+  ASSERT_TRUE(wait_target_stopped("Broken"));
+  ASSERT_EQUAL(g_test_state.run_count, 2);
+  ASSERT_EQUAL(send_message(g_test_state.runs[1].term, termGetExitCode, 0, NULL), 3);
+  ASSERT_TRUE(g_test_state.terminal_shown);
+  ASSERT_TRUE(window_has_state(g_test_state.terminal_tabs_win, WINDOW_STATE_VISIBLE));
+  ASSERT_EQUAL(send_message(g_test_state.terminal_tabs_win, tcGetSelection, 0, NULL), 1);
+
+  // The Terminal button hides it again; running the same target reuses its tab.
+  ASSERT_TRUE(gc_overview_handle_command(MAKEDWORD(g_test_state.terminal_button_win->id, btnClicked), g_test_state.terminal_button_win));
+  ASSERT_FALSE(window_has_state(g_test_state.terminal_tabs_win, WINDOW_STATE_VISIBLE));
+  ASSERT_TRUE(click_target_icon("Broken"));
+  ASSERT_TRUE(wait_target_stopped("Broken"));
+  ASSERT_EQUAL(g_test_state.run_count, 2);
+
+  remove(served); remove(launch);
+  destroy_window(host);
+  fe_unload_component_plugins();
+  test_env_shutdown();
+  destroy_database(g_test_state.workspace_db);
+  g_test_state = saved;
+  PASS();
+}
+
 void test_activitybar_navigation(void) {
   TEST("activity bar: clicks and View commands select one page, preserve state and resize beside the rail");
   test_env_init();
@@ -1018,7 +1123,7 @@ static void test_gitclient_pane_layout(void) {
   window_t *changes = g_test_state.changes_page_win;
   window_t *history = g_test_state.history_page_win;
   window_t *github = g_test_state.github_page_win;
-  ASSERT_EQUAL(page_pane_count(g_test_state.overview_page_win), 2);
+  ASSERT_EQUAL(page_pane_count(g_test_state.overview_page_win), 3);   // checkouts, targets, target terminal
   ASSERT_EQUAL(page_pane_count(changes), 2); ASSERT_EQUAL(page_pane_count(history), 7); ASSERT_EQUAL(page_pane_count(github), 2);
   window_t *pages[] = {g_test_state.overview_page_win, changes, history, github};
   for (int p = 0; p < ARRAY_LEN(pages); p++) {
@@ -1165,6 +1270,7 @@ int main(void) {
     test_every_menu_action_has_handler();
     test_reload_history_log_invalidates_diff_and_reports_failure();
     test_overview_table_filters_and_removes();
+    test_overview_runs_targets_in_terminal();
     test_activitybar_navigation();
     test_history_latest_commit_diff();
     test_gitclient_pane_layout();

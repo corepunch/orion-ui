@@ -592,6 +592,9 @@ install: all
 	  $(INSTALL) -m 644 "$$file" "$$dest"; \
 	done
 
+# Git Client runs launch targets in the Terminal app's TerminalView, loaded from its plugin.
+$(BIN_DIR)/gitclient$(EXE_EXT) $(GEM_DIR)/gitclient.gem: | $(LIB_DIR)/terminal_components.$(LIB_EXT)
+
 # Individual phony-app convenience targets (e.g. "make penciltest").
 $(foreach a,$(PHONY_APP_NAMES),$(eval $(a): $(BIN_DIR)/$(a)$(EXE_EXT)))
 

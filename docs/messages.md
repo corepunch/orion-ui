@@ -69,6 +69,7 @@ Sent to the **root window** via `evCommand`:
 | `RVN_SELCHANGE` | ColumnView | Single-click selection change |
 | `RVN_DBLCLK` | ColumnView | Double-click on item |
 | `RVN_ITEMCHECK` | ReportView / TableView | Row checkbox state changed |
+| `RVN_ICONCLICK` | ReportView / TableView | Row icon (`RowIcon`) clicked; the row is selected first |
 | `kMenuBarNotificationItemClick` | MenuBar | Menu item selected |
 
 Decoding in the parent window procedure:

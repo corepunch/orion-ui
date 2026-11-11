@@ -17,8 +17,11 @@ static void portable_usleep(unsigned int us) { Sleep(us / 1000); }
 static void portable_usleep(unsigned int us) { usleep(us); }
 #endif
 
-// Forward declarations from terminal source files
-extern const vgat_cmd_t g_cmds[];
+// The emulator ships in the terminal_components plugin; unit tests compile it in.
+#include "apps/terminal/components/view_main.c"
+#include "apps/terminal/components/vgat_screen.c"
+#include "apps/terminal/components/ansi_parser.c"
+#include "apps/terminal/components/pty.c"
 
 static const vgat_cmd_t *find_cmd(const char *name) {
   for (int i = 0; g_cmds[i].name; i++)
