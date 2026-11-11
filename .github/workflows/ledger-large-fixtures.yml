@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 jobs:
   workloads:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # 26.04 runners cannot reach security.ubuntu.com for apt (Nov 2026)
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
