@@ -47,6 +47,7 @@ vec3 mat4_xform_point(mat4 m,vec3 p);
 vec3 mat4_xform_dir(mat4 m,vec3 p);
 vec3 mat4_xform_normal(mat4 m,vec3 p);
 mat4 mat4_perspective(float fovy_deg,float aspect,float znear,float zfar);
+mat4 scene_camera_projection(float fov,float orthoHeight,float aspect,float znear,float zfar);
 mat4 mat4_ortho(float left,float right,float bottom,float top,float znear,float zfar);
 mat4 mat4_lookat(vec3 eye,vec3 center,vec3 up);
 int ray_intersect_aabb(vec3 origin,vec3 dir,vec3 bbMin,vec3 bbMax,float *tOut);
@@ -124,7 +125,7 @@ typedef struct MocapSource {
 } MocapSource;
 
 
-typedef struct { vec3 pos,nrm; float u,v; float g; } Vertex; /* u,v: surface parameters (0..1); g: the gradient gizmo's coordinate (gradient_t) */
+typedef struct { vec3 pos,nrm; float u,v; float g; unsigned col; } Vertex; /* u,v: surface parameters (0..1); g: the gradient gizmo's coordinate (gradient_t); col: a <mesh colors> vertex colour, sRGB 0xAABBGGRR with A 255, or 0 for none (white) */
 typedef struct { int a,b,c; } Tri;
 typedef struct { int t0,t1; int v0,v1; } Edge; /* t0,t1: adjacent triangles (t1 -1 on an open edge); v0,v1: its vertices, in t0's winding */
 
@@ -229,6 +230,8 @@ typedef struct { char target[32]; vec3 pos,rot,scale; } CameraTransform;
 
 typedef struct {
 	char name[MAX_CAMERA_NAME],comment[64]; vec3 pos,look; float fov;
+	float ortho;        /* > 0: an orthographic camera this many metres high (ortho="cm"); fov is then unused */
+	int width,height;   /* size="W H": the batch render size of this camera's image, 0 for --size */
 	char follow[32]; /* instance whose root the camera tracks across the ground */
 	CameraTransform *transforms; int ntransforms,ctransforms;
 } Camera;
@@ -283,7 +286,7 @@ enum {
 };
 
 typedef struct {
-	vec3 camPos,camLook,worldUp; float camFov;
+	vec3 camPos,camLook,worldUp; float camFov,camOrtho; /* camOrtho: the active camera's orthographic height (m), 0 for perspective */
 	int convention3dsMax;
 	Camera *cameras; int ncameras,ccameras;
 	vec3 ambient,bg;
@@ -427,6 +430,7 @@ void scene_rebuild_node_shadow_volumes(Scene *s,void *editNode);
 #define DBG_HIDE_GIZMOS     (1 << 5)
 #define DBG_WIREFRAME       (1 << 6)
 #define DBG_FLAT            (1 << 7)
+#define DBG_TRANSPARENT     (1 << 8)   /* clear to alpha 0, so a PNG keeps only what was drawn */
 
 void render_frame(Scene *s,int w,int h,mat4 proj,mat4 view,vec3 camPos,vec3 camLook,int debugFlags);
 void render_deinit(void);

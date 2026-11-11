@@ -1014,7 +1014,12 @@ static int mesh_face_triangles(const vec3 *p,const int *idx,int ni,int tri[][3])
 /* The triangles of a <mesh> or <surface> over points p (metres). smooth shares vertices and averages face normals,
    summed at seam[i] when given (a closed surface's two copies of a seam point share one normal); both adds the
    reversed faces. uv (two per point) becomes Vertex.u,v. */
+static Mesh mesh_from_triangles_col(const vec3 *p,const float *uv,const unsigned *col,const int *seam,int nv,const Tri *ft,int nft,int smooth,int both);
 static Mesh mesh_from_triangles(const vec3 *p,const float *uv,const int *seam,int nv,const Tri *ft,int nft,int smooth,int both){
+	return mesh_from_triangles_col(p,uv,NULL,seam,nv,ft,nft,smooth,both);
+}
+/* col (one packed sRGB colour per point, as Vertex.col) colours the vertices made from each point. */
+static Mesh mesh_from_triangles_col(const vec3 *p,const float *uv,const unsigned *col,const int *seam,int nv,const Tri *ft,int nft,int smooth,int both){
 	Mesh m={0}; vec3 *acc=smooth?calloc((size_t)(nv?nv:1),sizeof(vec3)):NULL;
 	/* a two-sided smooth sheet keeps its back faces on their own vertices: shared ones would sum both normals to zero */
 	int nb=smooth?(both?2:1)*nv:0,*base=smooth?malloc((size_t)(nb?nb:1)*sizeof(int)):NULL;
@@ -1029,6 +1034,7 @@ static Mesh mesh_from_triangles(const vec3 *p,const float *uv,const int *seam,in
 		else {
 			vec3 nn=vnorm(fn); int ia=mesh_add_vert(&m,p[a],nn),ib=mesh_add_vert(&m,p[b],nn),id=mesh_add_vert(&m,p[d],nn);
 			if(uv){ int src[3]={a,b,d},dst[3]={ia,ib,id}; for(int j=0;j<3;j++){ m.verts[dst[j]].u=uv[2*src[j]]; m.verts[dst[j]].v=uv[2*src[j]+1]; } }
+			if(col){ m.verts[ia].col=col[a]; m.verts[ib].col=col[b]; m.verts[id].col=col[d]; }
 			mesh_add_tri(&m,ia,ib,id);
 		}
 	}
@@ -1036,6 +1042,7 @@ static Mesh mesh_from_triangles(const vec3 *p,const float *uv,const int *seam,in
 		int q=i%nv,r=seam?seam[q]:q; Vertex *v=&m.verts[base[i]];
 		v->nrm=i<nv?vnorm(acc[r]):vscale(vnorm(acc[r]),-1.f);
 		if(uv){ v->u=uv[2*q]; v->v=uv[2*q+1]; }
+		if(col) v->col=col[q];
 	}
 	m.twoSided=both;
 	free(acc); free(base);
@@ -1056,6 +1063,20 @@ static void parse_mesh(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,v
 		DA_PUSH(p,nv,cp,q);
 	}
 	int ok=nv>0;
+	/* colors="rrggbb rrggbb ...": one sRGB colour per vertex, multiplying the piece's colour (a converted Blender
+	   mesh's vertex colours). */
+	unsigned *col=NULL; const char *ctext=xml_attr(n,"colors",NULL);
+	if(ok && ctext){
+		col=calloc((size_t)nv,sizeof(unsigned)); int nc=0;
+		for(const char *t=ctext;*t && nc<=nv;){
+			while(*t==' '||*t=='\t'||*t=='\n'||*t=='\r'||*t=='#') t++;
+			if(!*t) break;
+			char *e; unsigned long v=strtoul(t,&e,16); if(e-t!=6){ nc=-1; break; }
+			if(nc<nv) col[nc]=0xff000000u|((unsigned)(v>>16)&0xffu)|(((unsigned)(v>>8)&0xffu)<<8)|(((unsigned)v&0xffu)<<16);
+			nc++; t=e;
+		}
+		if(nc!=nv){ scene_issue(s,SCENE_ISSUE_ERROR,"mesh",node_file(s,n),n->line,"<mesh> colors: one rrggbb colour per vertex (%d), found %s",nv,nc<0?"a malformed one":"a different count"); ok=0; }
+	}
 	/* faces: f="a b c, d e f g, ..." or <f v="a b c"/> children */
 	const char *fcur=ftext; int kid=0; Tri *ft=NULL; int nft=0,cft=0;
 	for(;ok;){
@@ -1077,8 +1098,8 @@ static void parse_mesh(Scene *s,XmlNode *n,mat4 M,mat4 R,mat4 parentM,vec3 pos,v
 		int tri[MESH_FACE_MAX][3],nt=mesh_face_triangles(p,idx,ni,tri);
 		for(int k=0;k<nt;k++){ Tri t={tri[k][0],tri[k][1],tri[k][2]}; DA_PUSH(ft,nft,cft,t); }
 	}
-	Mesh m=ok?mesh_from_triangles(p,NULL,NULL,nv,ft,nft,smooth,both):(Mesh){0};
-	free(ft); free(p);
+	Mesh m=ok?mesh_from_triangles_col(p,NULL,col,NULL,nv,ft,nft,smooth,both):(Mesh){0};
+	free(ft); free(p); free(col);
 	if(!ok||!m.ntris){ if(ok) scene_issue(s,SCENE_ISSUE_ERROR,"mesh",node_file(s,n),n->line,"<mesh> has no faces"); mesh_free(&m); return; }
 	apply_modifiers(s,&m,n);
 	scene_add_obj(s,m,M,R,color,shin,castsShadow,renderable,unlit);
@@ -2757,6 +2778,8 @@ static void parse_camera_tag(Scene *s, XmlNode *n){
 	cam.pos = cvt3ds(s,xml_attr_v3_cm(n,"pos", s->ncameras>0 ? cvt3ds_inv(s,s->camPos) : (s->convention3dsMax?v3(0,-3.0f,1.6f):v3(0,1.6f,5))));
 	cam.look = cvt3ds(s,xml_attr_v3_cm(n,"look", s->ncameras>0 ? cvt3ds_inv(s,s->camLook) : (s->convention3dsMax?v3(0,1.0f,1.2f):v3(0,1.2f,0))));
 	cam.fov = xml_attr_f(n,"fov",60.0f);
+	cam.ortho = xml_attr_f(n,"ortho",0.0f)*0.01f;   /* orthographic: the view's height in cm */
+	{ int w=0,h=0; const char *size=xml_attr(n,"size",NULL); if(size && sscanf(size,"%d %d",&w,&h)==2 && w>0 && h>0){ cam.width=w; cam.height=h; } }
 	snprintf(cam.follow,sizeof(cam.follow),"%s",xml_attr(n,"follow",""));
 	for(int i=0;i<n->nkids;i++) if(!strcmp(n->kids[i]->tag,"transform")){
 		CameraTransform x={0};
@@ -2768,7 +2791,7 @@ static void parse_camera_tag(Scene *s, XmlNode *n){
 	}
 	DA_PUSH(s->cameras,s->ncameras,s->ccameras,cam);
 	if(s->ncameras==1){
-		s->camPos=cam.pos; s->camLook=cam.look; s->camFov=cam.fov;
+		s->camPos=cam.pos; s->camLook=cam.look; s->camFov=cam.fov; s->camOrtho=cam.ortho;
 		snprintf(s->activeCamera,sizeof(s->activeCamera),"%s",cam.name);
 	}
 }
@@ -3145,7 +3168,7 @@ static void scene_rebuild_view(Scene *s){
 	void *selected=s->selectedNode;
 	char requestedCamera[MAX_CAMERA_NAME]; snprintf(requestedCamera,sizeof(requestedCamera),"%s",s->activeCamera);
 	scene_clear_view(s);
-	s->camPos=v3(0,1.6f,5); s->camLook=v3(0,1.2f,0); s->camFov=60;
+	s->camPos=v3(0,1.6f,5); s->camLook=v3(0,1.2f,0); s->camFov=60; s->camOrtho=0;
 	s->convention3dsMax=!strcmp(xml_attr(sceneRoot,"convention",""),"3dsmax");
 	s->duration=fmaxf(0,xml_attr_f(sceneRoot,"duration",0));
 	s->worldUp=!s->convention3dsMax&&!strcmp(xml_attr(sceneRoot,"up","y"),"z")?v3(0,0,1):v3(0,1,0);
@@ -3171,7 +3194,7 @@ static void scene_rebuild_view(Scene *s){
 		if(!strcmp(root->kids[i]->tag,scene_tags[j].tag)){ scene_tags[j].parse(s,root->kids[i]); break; }
 	if(prefabMode) for(int i=0;i<root->nkids;i++) if(!strcmp(root->kids[i]->tag,"material")) parse_material_tag(s,root->kids[i]);
 	if(requestedCamera[0]) for(int i=0;i<s->ncameras;i++) if(!strcmp(s->cameras[i].name,requestedCamera)){
-		s->camPos=s->cameras[i].pos; s->camLook=s->cameras[i].look; s->camFov=s->cameras[i].fov;
+		s->camPos=s->cameras[i].pos; s->camLook=s->cameras[i].look; s->camFov=s->cameras[i].fov; s->camOrtho=s->cameras[i].ortho;
 		snprintf(s->activeCamera,sizeof(s->activeCamera),"%s",requestedCamera);
 		break;
 	}
@@ -3200,7 +3223,7 @@ static void scene_rebuild_view(Scene *s){
 	}
 	if(!s->ncameras){
 		Camera def={0}; snprintf(def.name,sizeof(def.name),"%s","Camera1");
-		def.pos=s->camPos; def.look=s->camLook; def.fov=s->camFov;
+		def.pos=s->camPos; def.look=s->camLook; def.fov=s->camFov; def.ortho=s->camOrtho;
 		DA_PUSH(s->cameras,s->ncameras,s->ccameras,def);
 	}
 	s->svols=calloc((size_t)s->nlights,sizeof(ShadowVolume));
@@ -3354,7 +3377,7 @@ int load_scene(const char *path, Scene *s){
    joint is over the ground, so it tracks a walking or mocap-driven character. */
 static void scene_apply_camera(Scene *s,int index){
 	Camera *cam=&s->cameras[index];
-	s->camPos=cam->pos; s->camLook=cam->look; s->camFov=cam->fov;
+	s->camPos=cam->pos; s->camLook=cam->look; s->camFov=cam->fov; s->camOrtho=cam->ortho;
 	if(!cam->follow[0]) return;
 	for(int i=0;i<s->nrigJointWorlds;i++) if(!strcmp(xml_attr((XmlNode*)s->rigJointWorlds[i].instance,"name",""),cam->follow)){
 		vec3 p=mat4_xform_point(s->rigJointWorlds[i].matrix,v3(0,0,0));

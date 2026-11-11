@@ -41,6 +41,7 @@ static GLuint s_shadow_prog;
 static GLuint s_image_prog,s_image_vao,s_image_vbo,s_image_ebo;
 static GLint s_image_viewproj_loc,s_image_color_loc,s_image_sampler_loc;
 static vec3 render_srgb_to_linear(vec3 color);
+static GLint s_shadow_finite_loc;
 static GLint s_shadow_proj_loc, s_shadow_view_loc, s_shadow_color_loc, s_shadow_verts_loc, s_shadow_stride_loc, s_shadow_light_loc, s_shadow_model_loc;
 GLuint s_line_prog;
 GLint s_line_viewproj_loc;
@@ -69,11 +70,13 @@ static const char *s_shadow_vs =
     "uniform mat4 uModel;\n"
     "uniform mat4 uProj;\n"
     "uniform mat4 uView;\n"
+    "uniform float uFinite;\n"
     "void main(){\n"
     "    int b=(gl_VertexID>>1)*uStride;\n"
     "    vec3 p=vec3(texelFetch(uVerts,b).r,texelFetch(uVerts,b+1).r,texelFetch(uVerts,b+2).r);\n"
     "    vec3 w=(uModel*vec4(p,1.0)).xyz;\n"
     "    vec4 pos=(gl_VertexID&1)==1?vec4(w-uLight,0.0):vec4(w,1.0);\n"
+    "    if(uFinite>0.0&&pos.w==0.0) pos=vec4(w+normalize(pos.xyz)*uFinite,1.0);   /* an orthographic view has no point at infinity */\n"
     "    gl_Position=uProj*uView*pos;\n"
     "}\n";
 
@@ -180,6 +183,7 @@ static void ensure_shadow_prog(void) {
     s_shadow_verts_loc = glGetUniformLocation(s_shadow_prog, "uVerts");
     s_shadow_stride_loc = glGetUniformLocation(s_shadow_prog, "uStride");
     s_shadow_light_loc = glGetUniformLocation(s_shadow_prog, "uLight");
+    s_shadow_finite_loc = glGetUniformLocation(s_shadow_prog, "uFinite");
     s_shadow_model_loc = glGetUniformLocation(s_shadow_prog, "uModel");
 }
 
@@ -428,6 +432,7 @@ static void shadow_cache_sync(Scene *s) {
 }
 
 /* Where the light's rays start, for the shadow shader: a sun stands far away against its direction. */
+#define SHADOW_FINITE_EXTRUSION 2000.0f   /* metres: past any scene Scener renders */
 static vec3 shadow_light_origin(const Light *L) { return L->isDirectional ? vscale(L->dir, -10000.0f) : L->pos; }
 
 /* Doom 3's R_ViewPotentiallyInsideInfiniteShadowVolume, conservatively: the view (grown by the near plane)
@@ -582,7 +587,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     glViewport(0, 0, w, h);
     vcache_collect();   /* vertex cache ranges of meshes freed since the last frame */
     vec3 bg = render_srgb_to_linear(s->bg);
-    glClearColor(bg.x, bg.y, bg.z, 1.0f);
+    glClearColor(bg.x, bg.y, bg.z, (flags & DBG_TRANSPARENT) ? 0.0f : 1.0f);
     glClearStencil(0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
@@ -602,6 +607,9 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
         glUniformMatrix4fv(s_shadow_proj_loc, 1, GL_FALSE, proj.m);
         glUniformMatrix4fv(s_shadow_view_loc, 1, GL_FALSE, view.m);
         glUniform4f(s_shadow_color_loc, 1.0f, 0.0f, 0.0f, 1.0f);
+        /* An orthographic projection (w row 0 0 0 1) sends w=0 to no point: extrude shadows a finite, long way
+           instead; depth clamping keeps the far ends inside the depth range as it does for infinite ones. */
+        glUniform1f(s_shadow_finite_loc, proj.m[15] > 0.5f ? SHADOW_FINITE_EXTRUSION : 0.0f);
         glUseProgram(0);
     }
 
@@ -676,7 +684,9 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
             shadow_bounds(o->bmin, o->bmax, lightLo, lightHi, lightOrigin, &sLo, &sHi);
             ScreenRect r = rect_isect(box_screen_rect(viewProj, sLo, sHi, w, h), wk->scissor);
             if (rect_empty(r)) continue;   /* its shadow cannot reach anything on screen */
-            caster_t c = { i, view_may_be_inside(sLo, sHi, camPos, SHADOW_NEAR_REACH), r };
+            /* z-pass relies on the caster's own depth to hide where its volume starts; an invisible caster
+               (renderable="0": a shadow catcher pass) has none, so it always takes z-fail with caps */
+            caster_t c = { i, !o->renderable || view_may_be_inside(sLo, sHi, camPos, SHADOW_NEAR_REACH), r };
             DA_PUSH(s_cast, s_ncast, s_ccast, c);
             prepare_shadow_part(s, li, c.obj, c.zfail);
         }

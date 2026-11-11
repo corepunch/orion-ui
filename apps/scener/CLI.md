@@ -94,7 +94,15 @@ to 2x supersampling on each axis, followed by linear-light downsampling.
 `--supersample 1`, `2`, `3` or `4` controls this; intermediate dimensions are
 limited to 8192 on either axis. Shadows are enabled by default. `-no-shadows`
 disables them, `-wireframe` draws unlit white geometry, and `-d FLAGS` retains
-the editor debug-bit interface. Helper overlays are hidden by default.
+the editor debug-bit interface. `--transparent` clears the background to alpha 0,
+so a PNG keeps only what was drawn (supersampling averages colour by coverage, so
+edges keep their colour). A camera with `size="W H"` renders at that size and one
+with `ortho="HEIGHT_CM"` is orthographic, which together frame sprites on whole
+pixels. A shape with `renderable="0"` still casts shadows: it is invisible to the
+camera and always takes z-fail (Carmack's reverse), since z-pass relies on the
+caster's own depth. Over a white catcher lit by one sun this gives a shadow-only
+pass; nile-archive's `tools/scener_buildings.py` renders its city buildings and
+their ground shadows this way. Helper overlays are hidden by default.
 
 A logged-in graphical session and OpenGL context are needed for rendering;
 help, version and camera listing need no graphical startup.

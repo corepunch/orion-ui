@@ -44,6 +44,7 @@ typedef struct {
 	char output_path[1024];
 	char camera_name[MAX_CAMERA_NAME];
 	int width, height, supersample;
+	bool transparent;   /* --transparent: the background is alpha 0 in PNG output */
 	int debug_flags;
 } scener_cli_t;
 
@@ -89,7 +90,8 @@ static void cli_usage(void) {
 	     "scener --reel REEL --sheet FILE.png [--columns N] [--sheet-times T1,T2,...]   one thumbnail per shot (or 12 across the reel)\n"
 	     "scener --render SCENE --camera NAME --frames START:END:FPS --output FILE.mp4 [--size WIDTHxHEIGHT]\n"
 	     "Options: --time SECONDS, --frames START:END:FPS (with --render), --supersample 1..4 (default 2),\n"
-	     "  -no-shadows, -wireframe, -d FLAGS, --help, --version\n"
+	     "  --transparent (PNG background alpha 0), -no-shadows, -wireframe, -d FLAGS, --help, --version\n"
+	     "A camera with size=\"W H\" renders at that size in --render; ortho=\"HEIGHT_CM\" makes it orthographic.\n"
 	     "Scenes default to Y up; <scene up=\"z\"> selects Z-up views without changing primitive axes.");
 }
 #endif
@@ -109,6 +111,7 @@ static void cli_parse(int argc, char *argv[]) {
 		if(!strcmp(arg,"--list-joints")){g_cli.list_joints=true;continue;}
 		if(!strcmp(arg,"-no-shadows")){g_cli.debug_flags|=DBG_NO_SHADOWS;continue;}
 		if(!strcmp(arg,"-wireframe")){g_cli.debug_flags|=DBG_WIREFRAME;continue;}
+		if(!strcmp(arg,"--transparent")){g_cli.transparent=true;continue;}
 		if(!strcmp(arg,"--check")){g_cli.check=true;continue;}
 		if(!strcmp(arg,"--query")){g_cli.query=true;continue;}
 		if(!strcmp(arg,"--list-exporters")){g_cli.list_exporters=true;continue;}
@@ -398,14 +401,16 @@ static uint8_t *cli_downsample(const uint8_t *pixels,int width,int height,int fa
 	uint8_t *out=malloc((size_t)outW*outH*4);if(!out)return NULL;
 	float linear[256];for(int i=0;i<256;i++)linear[i]=powf(i/CLI_BYTE_MAX,CLI_COLOR_GAMMA);
 	for(int y=0;y<outH;y++)for(int x=0;x<outW;x++){
-		float sum[3]={0};
+		float sum[3]={0},alpha=0;   /* colour weighted by coverage, so an edge over a transparent background keeps its colour */
 		for(int dy=0;dy<factor;dy++)for(int dx=0;dx<factor;dx++){
 			const uint8_t *src=pixels+((size_t)(y*factor+dy)*width+x*factor+dx)*4;
-			for(int c=0;c<3;c++)sum[c]+=linear[src[c]];
+			float a=src[3]/CLI_BYTE_MAX;
+			for(int c=0;c<3;c++)sum[c]+=linear[src[c]]*a;
+			alpha+=a;
 		}
 		uint8_t *dst=out+((size_t)y*outW+x)*4;
-		for(int c=0;c<3;c++)dst[c]=(uint8_t)fminf(CLI_BYTE_MAX,roundf(CLI_BYTE_MAX*powf(sum[c]/(factor*factor),1/CLI_COLOR_GAMMA)));
-		dst[3]=255;
+		for(int c=0;c<3;c++)dst[c]=(uint8_t)fminf(CLI_BYTE_MAX,roundf(CLI_BYTE_MAX*powf(alpha>0?sum[c]/alpha:0,1/CLI_COLOR_GAMMA)));
+		dst[3]=(uint8_t)roundf(CLI_BYTE_MAX*alpha/(factor*factor));
 	}
 	return out;
 }
@@ -417,11 +422,13 @@ static bool scener_write_screenshot(scene_doc_t *doc, const char *path, reel_vid
 	Scene *scene = &doc->scene;
 	scene->camFov = scene->camFov > 0 ? scene->camFov : DEFAULT_FOV;
 	if (g_cli.camera_name[0] && !g_cli.layout && !cli_select_camera(scene,g_cli.camera_name)) return false;
+	if (g_cli.batch && !video) for (int i = 0; i < scene->ncameras; i++)   /* a camera may ask for its own image size */
+		if (!strcmp(scene->cameras[i].name, scene->activeCamera) && scene->cameras[i].width > 0) { width = scene->cameras[i].width; height = scene->cameras[i].height; }
 
 	vec3 dir = vsub(scene->camLook, scene->camPos);
 	if (vlen(dir) < DIR_EPSILON) dir = v3(0, 0, -1);
 	dir = vnorm(dir);
-	mat4 proj = mat4_perspective(scene->camFov, (float)width / (float)height, SCENER_NEAR, SCENER_FAR);
+	mat4 proj = scene_camera_projection(scene->camFov, scene->camOrtho, (float)width / (float)height, SCENER_NEAR, SCENER_FAR);
 	mat4 view = mat4_lookat(scene->camPos, scene->camLook, scene->worldUp);
 	if(g_cli.layout){
 		vec3 lo,hi;scene_get_bounds(scene,&lo,&hi);
@@ -464,7 +471,7 @@ static bool scener_write_screenshot(scene_doc_t *doc, const char *path, reel_vid
 	glViewport(0, 0, width, height);
 	glScissor(0, 0, width, height);
 	glEnable(GL_SCISSOR_TEST);
-	render_frame(scene, width, height, proj, view, scene->camPos, dir, g_cli.debug_flags|DBG_HIDE_GIZMOS|(g_cli.layout?DBG_FLAT:0));
+	render_frame(scene, width, height, proj, view, scene->camPos, dir, g_cli.debug_flags|DBG_HIDE_GIZMOS|(g_cli.layout?DBG_FLAT:0)|(g_cli.transparent?DBG_TRANSPARENT:0));
 
 	size_t bytes = (size_t)width * (size_t)height * 4;
 	uint8_t *pixels = malloc(bytes);
