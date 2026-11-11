@@ -36,7 +36,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: ${{ matrix.os == 'windows-latest' && 'false' || 'recursive' }}
+      # libnsbmp's fuzz corpus (test/afl-bmp) has ':' in its file names, which Windows cannot create:
+      # check out every other submodule as usual and libnsbmp without its test directory.
+      - name: Check out submodules (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          git -c submodule.libnsbmp.update=none submodule update --init --recursive
+          sha=$(git rev-parse HEAD:vendor/libnsbmp)
+          rm -rf vendor/libnsbmp
+          git clone --quiet --filter=blob:none --no-checkout "$(git config -f .gitmodules submodule.libnsbmp.url)" vendor/libnsbmp
+          git -C vendor/libnsbmp sparse-checkout set --no-cone '/*' '!/test/'
+          git -C vendor/libnsbmp checkout --quiet "$sha"
+          test -f vendor/libnsbmp/src/libnsbmp.c
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
