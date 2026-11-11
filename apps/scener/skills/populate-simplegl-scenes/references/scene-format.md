@@ -317,6 +317,8 @@ Defines a viewpoint. Multiple cameras are allowed; select one with
 | `pos`     | vec3   | 0 160 500  | Eye position in cm |
 | `look`    | vec3   | 0 120 0  | Look-at target in cm |
 | `fov`     | float  | 60       | Vertical FOV in degrees |
+| `ortho`   | float  | 0        | Orthographic when > 0: the view's height in cm (its width follows the image's aspect); `fov` is then unused. Shadows from an orthographic view are extruded a finite 2 km instead of to infinity |
+| `size`    | `W H`  | (none)   | Pixel size of this camera's image in `--render`, in place of `--size`; one batch run can then frame every camera exactly (sprites on whole pixels) |
 | `follow`  | string | (none)   | Prefab instance to track: `pos` and `look` become offsets from its root joint over the ground |
 
 When no `<camera>` tag is present, a default "Camera1" is created with the defaults above.
@@ -685,7 +687,9 @@ The lowest atom: a polygon soup, for geometry no profile or modifier gives (a dr
 Blender mesh). Vertices as `v="x y z x y z ..."` in cm and faces as `f="i j k, i j k l, ..."` (3 to 64
 vertex indices each, counter-clockwise seen from outside; a face may be concave, such as a roof's chevron end,
 and is ear-clipped in its own plane); `<v x y z/>` and
-`<f v="i j k"/>` children say the same for small hand-written meshes. `smooth="1"` shares vertices and averages
+`<f v="i j k"/>` children say the same for small hand-written meshes. `colors="rrggbb rrggbb ..."` gives each vertex an sRGB colour
+(hex, one per vertex, as a converted Blender mesh's vertex colours) that multiplies the piece's `color`, and is
+interpolated across faces. `smooth="1"` shares vertices and averages
 normals; `twoSided="1"` adds the reversed faces, for open sheets: each side keeps its own normals, and the sheet
 is never turned inside out by the solid-winding check, as it encloses no volume. Takes the [common attributes](#common-attributes)
 and mesh modifiers.

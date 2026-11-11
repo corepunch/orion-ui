@@ -105,6 +105,11 @@ mat4 mat4_perspective(float fovy_deg,float aspect,float zn,float zf){
     r.m[14]=(2*zf*zn)/(zn-zf);
     return r;
 }
+/* The active camera's projection: orthographic when it has a height (camOrtho, metres), else perspective. */
+mat4 scene_camera_projection(float fov,float orthoHeight,float aspect,float zn,float zf){
+    if(orthoHeight>0){ float h=orthoHeight*0.5f,w=h*aspect; return mat4_ortho(-w,w,-h,h,zn,zf); }
+    return mat4_perspective(fov,aspect,zn,zf);
+}
 mat4 mat4_ortho(float l,float r_,float b,float t,float zn,float zf){
     mat4 m={{0}};
     m.m[0]=2.0f/(r_-l); m.m[5]=2.0f/(t-b); m.m[10]=-2.0f/(zf-zn);

@@ -28,10 +28,12 @@ static const char *vs_src =
 "in vec3 aPos;\n"
 "in vec3 aNrm;\n"
 "in float aGrad;\n"
+"in vec4 aCol;\n"
 "uniform mat4 uViewProj;\n"
 "uniform samplerBuffer uInst;\n"
 "uniform int uInstBase;\n"
 "out float vGrad;\n"
+"out vec3 vVertexColor;\n"
 "out vec3 vWorldPos;\n"
 "out vec3 vWorldNrm;\n"
 "out vec2 vWorldUV;\n"
@@ -52,6 +54,7 @@ static const char *vs_src =
 "    vWorldPos=wp.xyz;\n"
 "    vWorldNrm=normalize(vec3(dot(n0.xyz,aNrm),dot(n1.xyz,aNrm),dot(n2.xyz,aNrm)));\n"
 "    vGrad=aGrad;\n"
+"    vVertexColor=aCol.a>0.5?mix(aCol.rgb/12.92,pow((aCol.rgb+0.055)/1.055,vec3(2.4)),step(vec3(0.04045),aCol.rgb)):vec3(1.0);   /* a <mesh colors> colour, sRGB, multiplies the piece colour */\n"
 "    vColor=c.rgb; vUnlit=c.a; vMat=vec3(n0.w,n1.w,n2.w);\n"
 "    vGradFrom=texelFetch(uInst,b+7); vGradTo=texelFetch(uInst,b+8).rgb; vGradShape=texelFetch(uInst,b+9).xyz;\n"
 "    vec4 rc=texelFetch(uInst,b+10);\n"
@@ -84,6 +87,7 @@ static const char *fs_src =
 "in vec3 vWorldNrm;\n"
 "in vec2 vWorldUV;\n"
 "in float vGrad;\n"
+"in vec3 vVertexColor;\n"
 "out vec4 fragColor;\n"
 "uniform vec3 uViewPos;\n"
 "uniform vec4 uLightPos;\n"
@@ -117,7 +121,7 @@ static const char *fs_src =
 "uniform sampler2D uTex;\n"
 #endif
 "void main(){\n"
-"    vec3 uColor=vColor; float uShininess=vMat.x,uSpecular=vMat.y,uMetallic=vMat.z;\n"
+"    vec3 uColor=vColor*vVertexColor; float uShininess=vMat.x,uSpecular=vMat.y,uMetallic=vMat.z;\n"
 "    vec3 N=normalize(vWorldNrm);\n"
 "    vec3 V=normalize(uViewPos-vWorldPos);\n"
 "    vec3 L=normalize(uLightPos.xyz-vWorldPos*uLightPos.w);\n"
@@ -207,7 +211,7 @@ void shader_init(void){
 	ulocRamp        = glGetUniformLocation(prog, "uRamp");
 	ulocRampOn      = glGetUniformLocation(prog, "uRampOn");
 	vlocGrad        = glGetAttribLocation(prog, "aGrad");
-	vcache_set_attribs((int)vlocPos,(int)vlocNrm,(int)vlocGrad);
+	vcache_set_attribs((int)vlocPos,(int)vlocNrm,(int)vlocGrad,(int)glGetAttribLocation(prog, "aCol"));
 #ifdef SCENER_USE_TEXTURES
 	ulocTex         = glGetUniformLocation(prog, "uTex");
 #endif
