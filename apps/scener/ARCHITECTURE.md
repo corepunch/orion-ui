@@ -210,7 +210,10 @@ Core-profile OpenGL 3.2. A frame is:
    normal matrix, colour, material, gradient per object, read by the vertex shader from a buffer texture); build
    missing shadow indices; `vcache_flush()` and upload instances once.
 2. **Depth-filling pass**: one instanced draw per batch: ambient light plus the sky mirrored in glossy surfaces
-   (`skyReflection`). Screens with an image draw as images.
+   (`skyReflection`). Screens with an image draw as images. With SSAO enabled, the same mesh batches first fill
+   a cached half-resolution depth texture. The ambient shader reconstructs neighboring view-space positions from
+   that texture using the current projection and attenuates ambient diffuse using the mesh normal and a 35 cm
+   radius. Direct light, sky reflections, unlit materials, and image screens keep their regular shading.
 3. **Per light**, under the light's scissor: clear stencil; draw its casters' volumes with color and depth writes
    off (z-pass or z-fail per caster, each under its own scissor); then one instanced, additively blended draw per
    lit batch where stencil is 0: diffuse plus GGX specular (`specular`, `metallic`), with the light's `range` window.
