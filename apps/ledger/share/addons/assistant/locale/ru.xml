@@ -157,4 +157,13 @@
   <string source="Budget sources" where="code">Источники бюджета</string>
   <string source="Budget worksheet ready. Use план ACCOUNT MONTH AMOUNT to edit proposals and recalculate. Source documents are below." where="code">Бюджет готов. Команда план СЧЕТ МЕСЯЦ СУММА меняет план и пересчитывает итоги. Ниже — исходные документы.</string>
   <string source="Editable worksheet text; free text edits do not recalculate. Use plan commands to update amounts and totals." where="code">Текст можно редактировать; свободные правки не пересчитывают итоги. Для сумм и итогов используйте команду план.</string>
+  <string source="Your question names more than one accounting topic. Ask about one topic at a time." where="code">В вопросе указано несколько тем учета. Задавайте по одной теме за раз.</string>
+  <string source="That question includes a filter or period this answer cannot apply. Remove it or use a supported list command." where="code">В вопросе есть фильтр или период, который этот ответ не умеет применять. Уберите его или используйте поддерживаемую команду списка.</string>
+  <string source="Budget total exceeds the safe financial range." where="code">Итог бюджета превышает безопасный числовой диапазон.</string>
+  <string source="Name one counterparty in a single pair of quotes." where="code">Укажите одного контрагента в одной паре кавычек.</string>
+  <string source="Choose either posted or draft documents." where="code">Выберите проведенные документы или черновики.</string>
+  <string source="Choose either debtors or creditors." where="code">Выберите дебиторов или кредиторов.</string>
+  <string source="Duplicate checks apply only to customers and items." where="code">Поиск дубликатов доступен только для контрагентов и товаров.</string>
+  <string source="Enter a date as YYYY-MM-DD." where="code">Введите дату в формате ГГГГ-ММ-ДД.</string>
+  <string source="Possible duplicates: %d. Matching identifiers need review; no records were changed." where="code">Возможные дубликаты: %d. Совпадающие идентификаторы требуют проверки; записи не изменены.</string>
 </strings>

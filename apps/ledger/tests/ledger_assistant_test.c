@@ -75,7 +75,7 @@ static void test_assistant(void) {
   lua_State *L = script_state_new(ASSISTANT_SHARE, "assistant-spec");
   ASSERT_NOT_NULL(L);
   const char *specs[] = {"assistant_test.lua", "assistant_examples.lua", "assistant_dialogue_test.lua", "assistant_dictionary_test.lua",
-                         "assistant_palette_test.lua", "assistant_budget_test.lua"};
+                         "assistant_palette_test.lua", "assistant_budget_test.lua", "assistant_diagnostics_test.lua", "assistant_workflow_test.lua"};
   for (size_t i = 0; i < ARRAY_LEN(specs); i++) {
     char path[256];
     snprintf(path, sizeof(path), "apps/ledger/tests/%s", specs[i]);
@@ -169,6 +169,28 @@ static void test_assistant(void) {
     ASSERT_TRUE(script_page_perform(page, "submit"));
     ASSERT_EQUAL(count_rows("assistant", 0), count_rows("ib", TABLE_DOCUMENTS));
     test_document_relation(page);
+    set_text(page, "command", "show debtors over 999999999");
+    ASSERT_TRUE(script_page_perform(page, "submit"));
+    ASSERT_EQUAL(count_rows("assistant", 0), 0);
+    ASSERT(strstr(summary->title, "Found: 0.") == summary->title, "an empty filtered list does not claim that nobody owes the company");
+    set_text(page, "command", "who do we owe");
+    ASSERT_TRUE(script_page_perform(page, "submit"));
+    ASSERT(strstr(summary->title, "We owe") == summary->title, "payables topic is answered");
+    ASSERT(count_rows("assistant", 0) > 0, "topic publishes its own record scope");
+    set_text(page, "command", "over 999999999");
+    ASSERT_TRUE(script_page_perform(page, "submit"));
+    ASSERT_EQUAL(count_rows("assistant", 0), 0);
+    set_text(page, "command", "how much money");
+    ASSERT_TRUE(script_page_perform(page, "submit"));
+    set_text(page, "command", "open first");
+    ASSERT_TRUE(script_page_perform(page, "submit"));
+    ASSERT_STR_EQUAL(summary->title, "List objects of this type first.");
+    set_text(page, "command", "taxes in 2025");
+    ASSERT_TRUE(script_page_perform(page, "submit"));
+    ASSERT(strstr(summary->title, "That question includes a filter") == summary->title, "topic cannot silently ignore a period");
+    set_text(page, "command", "закрыт ли месяц");
+    ASSERT_TRUE(script_page_perform(page, "submit"));
+    ASSERT(!strcmp(summary->title, "Every finished month is closed.") || !strcmp(summary->title, "Closing needs attention."), "closing question remains supported");
     if (i >= 2) {
       set_text(page, "command", "show debtors");
       ASSERT_TRUE(script_page_perform(page, "submit"));

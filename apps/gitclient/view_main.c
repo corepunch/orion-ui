@@ -365,6 +365,9 @@ result_t gc_main_proc(window_t *win, uint32_t msg,
   gc_state_t *gc = (gc_state_t *)win->userdata;
 
   switch (msg) {
+    case evDropFile:
+      gc_handle_open_file((const char *)lparam);
+      return true;
     case evGetWorkspaceRect:
       *(irect16_t *)lparam = rect_trim_top(*(irect16_t *)lparam, MENUBAR_HEIGHT);
       return true;

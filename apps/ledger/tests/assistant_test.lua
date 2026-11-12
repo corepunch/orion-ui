@@ -40,7 +40,33 @@ for _,text in ipairs({'покажи должников','покажи клиен
 end
 assert(parse('покажи клиентов больше 50,5 тысяч').filters[1].value==50500)
 assert(parse('покажи клиентов не меньше 50 тысяч').filters[1].op=='ge')
+local creditors=parse('show suppliers with owed more than fifty thousand')
+assert(creditors.entity=='counterparties' and creditors.creditors and creditors.filters[1].field=='owed' and creditors.filters[1].value==50000)
+assert(parse('sort creditors by owed ascending').sort.field=='owed')
+assert(parse('find duplicate customers').duplicates)
+assert(parse('zeige doppelte Kunden').duplicates)
+assert(parse('найди дублирующий товар').duplicates)
+assert(parse('найди дублирующие товары').duplicates)
+assert(parse('найди дубли контрагентов').duplicates)
+assert(parse('покажи поставщиков больше 100').filters[1].field=='owed')
+assert(parse('zeige Lieferanten über 100').filters[1].field=='owed')
+local date_query=parse('show documents date after 2026-02-28 date before 2026-04-01')
+assert(#date_query.filters==2 and date_query.filters[1].op=='gt' and date_query.filters[1].value=='2026-02-28'
+  and date_query.filters[2].op=='lt' and date_query.filters[2].value=='2026-04-01')
+assert(parse('zeige Belege Datum danach 2026-02-28').filters[1].value=='2026-02-28')
+assert(parse('покажи документы дата после 2026-02-28').filters[1].op=='gt')
+assert(not P.parse('draft',{query={entity='documents',filters={{field='posted',op='eq',value=true}}}}))
+local scoped=parse('date on 2026-03-01',{query={entity='documents',filters={},scope_ids={31,32}}})
+assert(scoped.scope_ids[1]==31 and scoped.scope_ids[2]==32 and scoped.filters[1].op=='eq')
+for _,text in ipairs({'show documents date after 2026-02-29','show documents date after 2026-13-01',
+  'show customers date after 2026-02-28','show posted draft documents','show documents except drafts',
+  'show duplicate documents','show customers overdue'}) do
+  assert(not P.parse(text),text)
+end
 r=e:submit('покажи документы'); assert(r.ok,r.message); assert(#r.rows==2)
+local saved=P.copy(e.context)
+r=e:submit('date after 2026-02-29'); assert(not r.ok)
+assert(e.context.query.entity==saved.query.entity and #e.context.query.filters==#saved.query.filters)
 r=e:submit('только проведенные'); assert(r.ok,r.message); assert(#r.rows==1 and r.rows[1].id==31)
 r=e:submit('открой'); assert(r.ok and r.inferred)
 r=e:submit('открой первого'); assert(r.ok,r.message); assert(opened[#opened][2]==31)

@@ -1035,7 +1035,11 @@ static void test_history_latest_commit_diff(void) {
   ASSERT_TRUE(fe_load_component_plugin(plugin));
   window_t *root = create_window_from_form(&gitclient_main_window_form, 0, 0, NULL, gc_main_proc, 0, NULL);
   ASSERT_NOT_NULL(root);
-  gc_open_repo(s_repo);
+  ASSERT_TRUE(send_message(root, evDropFile, 0, s_repo));
+  ASSERT_EQUAL(g_test_state.workspace_count, 1);
+  ASSERT_NOT_NULL(g_test_state.repo);
+  ASSERT_TRUE(send_message(root, evDropFile, 0, s_repo));
+  ASSERT_EQUAL(g_test_state.workspace_count, 1);
   gc_set_view_mode(GC_TAB_HISTORY);
   window_t *branches = g_test_state.branches_win, *log = g_test_state.log_win;
   window_t *files = g_test_state.history_files_win;

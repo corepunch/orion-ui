@@ -15,7 +15,7 @@ ADDON = ROOT / 'apps/ledger/share/addons/assistant'
 class AssistantLocaleTest(unittest.TestCase):
     def test_catalogs(self):
         sources = set()
-        for name in ('parser.lua', 'engine.lua', 'assistant.lua', 'budget.lua'):
+        for name in ('parser.lua', 'engine.lua', 'assistant.lua', 'budget.lua', 'topics.lua'):
             sources.update(re.findall(r"\btr\('([^']*)'\)", (ADDON / name).read_text()))
         for node in ET.parse(ADDON / 'assistant.orion').iter():
             sources.update(node.attrib[key] for key in ('title', 'text') if key in node.attrib)
@@ -34,13 +34,13 @@ class AssistantLocaleTest(unittest.TestCase):
                 # json strings are valid Lua strings for these Unicode catalogs.
                 table = ',\n'.join(f'[{json.dumps(k, ensure_ascii=False)}]={json.dumps(v, ensure_ascii=False)}'
                                     for k, v in catalog.items())
-                script = '''package.path='apps/ledger/share/addons/assistant/?.lua;build/share/ledger/addons/assistant/?.lua;'..package.path
+                script = '''package.path='apps/ledger/share/addons/assistant/?.lua;build/share/ledger/addons/assistant/?.lua;share/lua/?.lua;share/lua/?/init.lua;'..package.path
 local catalog={%s}
 local seen={}
 package.preload.orion=function() return {tr=function(text)
   assert(catalog[text],text); seen[text]=true; return catalog[text]
 end} end
-local P,E=require('parser'),require('engine')
+local P,E,Topics=require('parser'),require('engine'),require('topics')
 local _,message=P.parse('open 0')
 assert(message==catalog['Use a whole row number starting at 1.'])
 local e=E.new{rows=function() return {{id=1,name='Untouched Ё GmbH',debt=5}} end,
@@ -50,6 +50,10 @@ assert(r.message==string.format(catalog['Found: %%d. Amounts are in the accounti
 r=e:submit('open first')
 assert(r.message==string.format(catalog['Opened record: %%s'],'Untouched Ё GmbH'))
 assert(e:submit('reset').message==catalog['Context cleared.'])
+local _,_,scope=Topics.match('taxes in 2025')
+assert(scope==catalog['That question includes a filter or period this answer cannot apply. Remove it or use a supported list command.'])
+local _,_,conflict=Topics.match('who do we owe and money')
+assert(conflict==catalog['Your question names more than one accounting topic. Ask about one topic at a time.'])
 local records={counterparties={{id=1,name='Untouched Ё GmbH'}},
   documents={{id=2,name='Invoice',counterparty_id=1,amount=5}}}
 local related=E.new{rows=function(entity) return records[entity] end,open=function() return true end}

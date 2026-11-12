@@ -1,16 +1,28 @@
 local tr = require('messages')
 local P = require('parser')
+local Diagnostics = require('diagnostics')
 local E = {}; E.__index=E
 function E.new(host) return setmetatable({host=host,context={},rows={}},E) end
 local operations={gt=function(a,b)return a>b end,lt=function(a,b)return a<b end,
   ge=function(a,b)return a>=b end,le=function(a,b)return a<=b end,eq=function(a,b)return a==b end}
 
 function E:query(ast)
-  local rows={}
-  for _,row in ipairs(self.host.rows(ast.entity)) do
+  local rows,duplicate_keys={},nil
+  local source=self.host.rows(ast.entity)
+  if ast.duplicates then
+    local groups
+    source,groups=Diagnostics.find(source,ast.entity)
+    duplicate_keys={}
+    for _,group in ipairs(groups) do
+      for _,row in ipairs(group.rows) do duplicate_keys[row.id]=group.key end
+    end
+  end
+  for _,row in ipairs(source) do
     local match=not ast.party_id or row.counterparty_id==ast.party_id
+    if ast.scope_ids and not ast.scope_ids[row.id] then match=false end
     if ast.name and not P.normalize(row.name or row.number or ''):find(ast.name,1,true) then match=false end
     if ast.debtors and (row.debt or 0)<=0 then match=false end
+    if ast.creditors and (row.owed or 0)<=0 then match=false end
     for _,f in ipairs(ast.filters or {}) do
       local actual=row[f.field]
       if actual==nil or not operations[f.op](actual,f.value) then match=false end
@@ -26,12 +38,28 @@ function E:query(ast)
     if sort.direction=='desc' then return x>y end
     return x<y
   end)
-  return rows
+  return rows,duplicate_keys
+end
+
+-- Topic answers enter the same object scope as grammar queries. Snapshot
+-- scopes can be narrowed, but cannot accidentally grow into the whole catalog.
+function E:adopt(entity,rows,query)
+  self.pending,self.duplicate_keys=nil,nil
+  if not entity then
+    self.rows,self.scope,self.context={},nil,{}
+    return
+  end
+  query=P.copy(query or {verb='list',entity=entity,filters={},scope_ids={}})
+  if query.scope_ids then for _,row in ipairs(rows) do query.scope_ids[row.id]=true end end
+  self.rows,self.scope,self.context.query=rows,{entity=entity,rows=rows},query
+  self.context.it=nil
+  if #rows==1 then self:this_is_it(entity,rows[1]) end
 end
 
 function E:result(ok,message,extra)
   local out=extra or {}
   out.ok,out.message,out.rows=ok,message,out.rows or self.rows
+  out.duplicate_keys=self.duplicate_keys
   out.animation=out.animation or (ok and 'EXPLAIN' or 'IDLEHEADSCRATCH')
   return out
 end
@@ -68,7 +96,10 @@ function E:resolve(ref,expected,scope,query)
     if not row then return nil,tr('The referenced record is no longer available.') end
     return {entity=focus.entity,row=row}
   end
-  if not entity then return nil,tr('Which object should I open? Try: open first.'),{} end
+  if not entity then
+    if ref.ordinal then return nil,tr('List objects of this type first.') end
+    return nil,tr('Which object should I open? Try: open first.'),{}
+  end
   if ref.ordinal then
     if not scope or scope.entity~=entity then return nil,tr('List objects of this type first.') end
     local row=scope.rows[ref.ordinal]
@@ -150,13 +181,15 @@ function E:execute(ast,answer_scope)
     return self:result(true,string.format(template,object.row.name or object.row.number or object.row.id),
       {opened={entity=object.entity,id=object.row.id},inferred=object.inferred,animation='GESTURELEFT'})
   end
-  local rows=self:query(ast)
+  local rows,duplicate_keys=self:query(ast)
   self.rows,self.scope=rows,{entity=ast.entity,rows=rows}
+  self.duplicate_keys=duplicate_keys
   self.context.query=P.copy(ast); self.pending=nil
   if #rows==1 then self:this_is_it(ast.entity,rows[1])
   elseif party and mentioned_party then self:this_is_it(party.entity,party.row) end
   local message=party and string.format(tr('Found: %d. Customer: %s. Amounts are in the accounting currency.'),#rows,party.row.name)
     or string.format(tr('Found: %d. Amounts are in the accounting currency.'),#rows)
+  if ast.duplicates then message=string.format(tr('Possible duplicates: %d. Matching identifiers need review; no records were changed.'),#rows) end
   return self:result(true,message,{command=ast,inferred=party and party.inferred,animation=#rows>0 and 'EXPLAIN' or 'RESTPOSE'})
 end
 
@@ -200,7 +233,7 @@ function E:submit(text)
   if not ast then return self:result(false,message) end
   if ast.verb=='help' then return self:result(true,tr('Try: show debtors; find customer "Name" → show documents for it → only posted → open first. Missing customer: show documents for. Cancel a question: cancel.')) end
   if ast.verb=='reset' then
-    self.context,self.rows,self.pending,self.scope={},{},nil,nil
+    self.context,self.rows,self.pending,self.scope,self.duplicate_keys={},{},nil,nil,nil
     return self:result(true,tr('Context cleared.'),{animation='GREETING'})
   end
   if ast.verb=='cancel' then
