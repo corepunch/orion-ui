@@ -3,6 +3,7 @@
 // builds the reports. Pure data logic over the cfg and ib databases.
 
 #include "ledger.h"
+#include <ctype.h>
 #include <float.h>
 #include <math.h>
 #include <orion/user/money.h>
@@ -846,6 +847,9 @@ void ledger_unpost(database_t *ib, database_t *cfg, int doc_id) {
 
 int ledger_reverse_posting(database_t *ib, database_t *cfg, int original_id, const char *date, const char *reason) {
   if (!ib || !cfg || !ledger_valid_date(date) || !reason || !*reason || strlen(reason) >= 256 || ledger_period_closed(ib, date)) goto rejected;
+  const unsigned char *nonspace = (const unsigned char *)reason;
+  while (*nonspace && isspace(*nonspace)) nonspace++;
+  if (!*nonspace) goto rejected;
   const db_document_t *doc = find(ib, TABLE_DOCUMENTS, original_id);
   if (!doc || !doc->posted || doc->correction_of || strcmp(date, doc->date) < 0) goto rejected;
   result_node_t *links = fetch(ib, TABLE_REVERSAL_LINKS, "original_id", original_id);

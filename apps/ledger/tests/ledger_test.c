@@ -1111,6 +1111,10 @@ static void test_reversal(void) {
   ASSERT_TRUE(send_db_message(g_ledger->ib, dbUpdate, TABLE_DOCUMENTS, &moved));
   ASSERT_TRUE(ledger_close_through(g_ledger->ib, "2026-03-31"));
   ASSERT_EQUAL(ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, id, "2026-03-31", "Correction"), 0);
+  int documents_before = demo_record_count(TABLE_DOCUMENTS);
+  ASSERT_EQUAL(ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, id, "2026-04-01", " \t\n"), 0);
+  ASSERT_EQUAL(demo_record_count(TABLE_DOCUMENTS), documents_before);
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_REVERSAL_LINKS, "original_id", id), 0);
   char error[512];
   ASSERT_TRUE(ledger_script_run("apps/ledger/tests/fixtures/reverse-posting.lua", true, error, sizeof(error)));
   result_node_t *links = (void *)send_db_message(g_ledger->ib, dbFetch,
@@ -1247,6 +1251,10 @@ static void test_service(void) {
   ASSERT_FALSE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
   doc = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ASSERT(doc && doc->posted && doc->amount_minor == 400, "posted exact document cannot be replaced");
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fprintf(f, "{\"command\":\"documents.reverse\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"document_id\":%d,\"date\":\"2026-04-02\",\"reason\":\"   \"}}", id); fclose(f);
+  ASSERT_FALSE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_REVERSAL_LINKS, "original_id", id), 0);
   f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
   fprintf(f, "{\"command\":\"documents.reverse\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"document_id\":%d,\"date\":\"2026-04-02\",\"reason\":\"Correction\"}}", id); fclose(f);
   ASSERT_TRUE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));

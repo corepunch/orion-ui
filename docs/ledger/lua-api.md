@@ -192,7 +192,7 @@ ledger.transaction(function() ledger.close_through("2026-12-31") end)
 
 ## `ledger.reverse(document_id, date, reason)`
 
-Create and post one linked manual accounting reversal from the latest matching posting snapshot, in an open period. Requires a writable script inside ledger.transaction. The source remains posted; duplicate reversals, changed entries and missing snapshots are rejected. This is not a corrected invoice or a statutory tax-return correction.
+Create and post one linked manual accounting reversal from the latest matching posting snapshot, in an open period. Requires a writable script inside ledger.transaction. The reason must contain a non-whitespace character. The source remains posted; duplicate reversals, changed entries and missing snapshots are rejected. This is not a corrected invoice or a statutory tax-return correction.
 
 | Argument | Type | Description |
 |---|---|---|

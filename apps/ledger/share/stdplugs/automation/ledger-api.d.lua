@@ -88,7 +88,7 @@ function ledger.transaction(callback) end
 ---@param date string Inclusive ISO date YYYY-MM-DD.
 function ledger.close_through(date) end
 
----Create and post one linked manual accounting reversal from the latest matching posting snapshot, in an open period. Requires a writable script inside ledger.transaction. The source remains posted; duplicate reversals, changed entries and missing snapshots are rejected. This is not a corrected invoice or a statutory tax-return correction.
+---Create and post one linked manual accounting reversal from the latest matching posting snapshot, in an open period. Requires a writable script inside ledger.transaction. The reason must contain a non-whitespace character. The source remains posted; duplicate reversals, changed entries and missing snapshots are rejected. This is not a corrected invoice or a statutory tax-return correction.
 ---@param document_id integer Posted source document ID.
 ---@param date string Reversal date in YYYY-MM-DD, no earlier than the source.
 ---@param reason string Nonempty reason, at most 255 bytes.
