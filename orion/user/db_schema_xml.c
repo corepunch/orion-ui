@@ -406,18 +406,16 @@ static bool dbs_load(database_t *db, dbs_context_t *ctx) {
     }
     for (xmlNodePtr rn = tn->children; rn; rn = rn->next) {
       if (rn->type != XML_ELEMENT_NODE) continue;
-      if (migrated && db->schema->migrate_xml == db_schema_xml_migrate_additive) {
-        for (xmlAttrPtr a = rn->properties; a; a = a->next)
-          if (db_schema_field_index(t, (const char *)a->name) < 0) {
-            fprintf(stderr, "[db_schema_xml] migration would discard field db=%s table=%s field=%s\n", db->name, t->name, a->name);
-            fflush(stderr); free(record); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
-          }
-        for (xmlNodePtr child = rn->children; child; child = child->next)
-          if (child->type == XML_ELEMENT_NODE && db_schema_field_index(t, (const char *)child->name) < 0) {
-            fprintf(stderr, "[db_schema_xml] migration would discard field db=%s table=%s field=%s\n", db->name, t->name, child->name);
-            fflush(stderr); free(record); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
-          }
-      }
+      for (xmlAttrPtr a = rn->properties; a; a = a->next)
+        if (db_schema_field_index(t, (const char *)a->name) < 0) {
+          fprintf(stderr, "[db_schema_xml] unknown field db=%s table=%s field=%s\n", db->name, t->name, a->name);
+          fflush(stderr); free(record); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
+        }
+      for (xmlNodePtr child = rn->children; child; child = child->next)
+        if (child->type == XML_ELEMENT_NODE && db_schema_field_index(t, (const char *)child->name) < 0) {
+          fprintf(stderr, "[db_schema_xml] unknown field db=%s table=%s field=%s\n", db->name, t->name, child->name);
+          fflush(stderr); free(record); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
+        }
       dbs_init_record(t, record);
       for (int f = 0; f < t->meta_count; f++) {
         bool loaded = db_load_field_from_xml(rn, record, &t->meta[f]);

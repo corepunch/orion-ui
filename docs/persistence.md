@@ -51,6 +51,10 @@ made available. The additive migration accepts existing tables and fields only
 if they remain in the target schema; new fields receive their schema defaults.
 It cannot establish that a field's type or business meaning is compatible.
 Changing or deleting historical data requires an explicit, reviewed migration.
+After migration (or when opening a current-version file), unknown record fields
+cause opening to fail without rewriting the source; they are never silently
+dropped on the next save. Preserve a copy and use a compatible schema or a
+reviewed migration that explicitly handles those fields.
 
 Native schemas can supply a version and `migrate_xml(root, from_version)`
 callback. It receives a libxml root node, performs exactly the step from that
@@ -76,7 +80,7 @@ or a declarative transformation language. Maintain supported-version policies
 and test every application migration against actual historical data. The native
 `test_db_persistence_test` exercises writer exclusion, backup contents, killed
 writer lock release, rejected newer versions, migration and publication failure,
-read-only migration, field-loss rejection, explicit backup recovery and rejection
+read-only migration, unknown-field rejection, explicit backup recovery and rejection
 of a backup with an invalid field before publication. It copies a backup into
 a separate directory, restores and reopens it, and checks independent records.
 On POSIX, it also kills

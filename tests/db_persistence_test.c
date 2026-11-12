@@ -207,6 +207,26 @@ static void test_restore_rejects_unloadable_backup(void) {
   ASSERT_NOT_NULL(saved); ASSERT_EQUAL(saved->amount, 42); destroy_database(db);
   unlink(path); unlink(backup); unlink(lock); rmdir(dir); PASS();
 }
+static void test_unknown_fields_preserved(void) {
+  TEST("schema XML: unknown fields reject opening without changing the source");
+  char dir[512], path[1024], lock[1040], bytes[512];
+  const char *sources[] = {
+    "<book orion-version=\"1\"><records><record id=\"1\" value=\"10\" legacy=\"42\"/></records></book>",
+    "<book orion-version=\"1\"><records><record id=\"1\" value=\"10\"><legacy>42</legacy></record></records></book>",
+  };
+  ASSERT_TRUE(persistence_tempdir(dir, sizeof(dir)));
+  snprintf(path, sizeof(path), "%s/book.xml", dir);
+  snprintf(lock, sizeof(lock), "%s.lock", path);
+  for (size_t i = 0; i < sizeof(sources) / sizeof(sources[0]); i++) {
+    FILE *f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+    ASSERT_EQUAL(fwrite(sources[i], 1, strlen(sources[i]), f), strlen(sources[i])); ASSERT_EQUAL(fclose(f), 0);
+    ASSERT_NULL(open_book(path));
+    f = fopen(path, "rb"); ASSERT_NOT_NULL(f);
+    size_t n = fread(bytes, 1, sizeof(bytes) - 1, f); ASSERT_FALSE(ferror(f)); ASSERT_EQUAL(fclose(f), 0);
+    bytes[n] = 0; ASSERT_TRUE(!strcmp(bytes, sources[i]));
+  }
+  unlink(path); unlink(lock); rmdir(dir); PASS();
+}
 static void test_backup_in_separate_directory(void) {
   TEST("schema XML: backup restores independently in a separate directory");
   char source_dir[512], target_dir[512], source[1024], target[1024], source_backup[1040], target_backup[1040], lock[1040];
@@ -304,7 +324,7 @@ static void test_persistence(void) {
 }
 int main(void) {
   TEST_START("Database persistence"); DB_CLASS(db_schema_xml);
-  test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); test_backup_in_separate_directory();
+  test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); test_unknown_fields_preserved(); test_backup_in_separate_directory();
 #ifndef _WIN32
   test_migration_crashes();
 #endif
