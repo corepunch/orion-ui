@@ -673,6 +673,67 @@ static bool posting_amounts_valid(const post_t *p) {
   return valid;
 }
 
+// Existing later stock postings retain their original cost; inserting an earlier
+// movement would invalidate it. Refuse until a verified correction workflow exists.
+static bool exact_stock_order_valid(const post_t *p) {
+  if (!p->doc->exact_money) return true;
+  result_node_t *types = fetch(p->cfg, TABLE_DOC_TYPES, NULL, 0);
+  result_node_t *current = fetch(p->ib, TABLE_ENTRIES, "document_id", p->doc->id);
+  result_node_t *all = fetch(p->ib, TABLE_ENTRIES, NULL, 0);
+  bool valid = true;
+  EACH_RECORD(db_doc_type_t, type, types) {
+    if (!type->cost_credit_id) continue;
+    EACH_RECORD(db_entry_t, own, current) {
+      int own_items[] = {
+        ledger_account_within(p->cfg, own->debit_id, type->cost_credit_id) ? own->debit_subconto_id : 0,
+        ledger_account_within(p->cfg, own->credit_id, type->cost_credit_id) ? own->credit_subconto_id : 0
+      };
+      if (p->doc->correction_of) for (int i = 0; i < 2; i++) {
+        int item = own_items[i];
+        if (!item) continue;
+        int64_t quantity = 0, value = 0;
+        EACH_RECORD(db_entry_t, movement, all) {
+          bool debit = movement->debit_subconto_id == item && ledger_account_within(p->cfg, movement->debit_id, type->cost_credit_id);
+          bool credit = movement->credit_subconto_id == item && ledger_account_within(p->cfg, movement->credit_id, type->cost_credit_id);
+          if (!debit && !credit) continue;
+          if (movement->document_id != p->doc->id) {
+            const db_document_t *doc = find(p->ib, TABLE_DOCUMENTS, movement->document_id);
+            if (!doc || !doc->posted || doc_order(p->cfg, doc, p->doc) >= 0) continue;
+          }
+          if (!movement->exact_money || movement->quantity_milli < 0 || movement->amount_minor < 0 ||
+              (debit && (!money_add(quantity, movement->quantity_milli, &quantity) || !money_add(value, movement->amount_minor, &value))) ||
+              (credit && (!money_add(quantity, -movement->quantity_milli, &quantity) || !money_add(value, -movement->amount_minor, &value)))) {
+            valid = false; break;
+          }
+        }
+        if (!valid || quantity < 0 || value < 0) {
+          fprintf(stderr, "[ledger] reversal rejected: document=%d item=%d stock is insufficient or not exact\n", p->doc->id, item);
+          fflush(stderr); valid = false; goto done;
+        }
+      }
+      EACH_RECORD(db_entry_t, other, all) {
+        if (other->document_id == p->doc->id) continue;
+        const db_document_t *doc = find(p->ib, TABLE_DOCUMENTS, other->document_id);
+        if (!doc || !doc->posted || doc_order(p->cfg, doc, p->doc) <= 0) continue;
+        int other_items[] = {
+          ledger_account_within(p->cfg, other->debit_id, type->cost_credit_id) ? other->debit_subconto_id : 0,
+          ledger_account_within(p->cfg, other->credit_id, type->cost_credit_id) ? other->credit_subconto_id : 0
+        };
+        for (int i = 0; i < 2; i++) for (int j = 0; j < 2; j++)
+          if (own_items[i] && own_items[i] == other_items[j]) valid = false;
+        if (!valid) {
+          fprintf(stderr, "[ledger] post rejected: document=%d item=%d has later stock movement in document=%d\n",
+            p->doc->id, own_items[0] ? own_items[0] : own_items[1], doc->id);
+          fflush(stderr); goto done;
+        }
+      }
+    }
+  }
+done:
+  free_result_list(types); free_result_list(current); free_result_list(all);
+  return valid;
+}
+
 // Posting hooks and entry replacement share one nested database change scope.
 static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool preview) {
   post_t p;
@@ -710,7 +771,7 @@ static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool prev
   bool ok = !p.type->validate_script[0] || ledger_script_post(&p, p.type->validate_script);
   if (ok) ok = write_entries(&p);
   if (ok && !preview) ok = ledger_script_event("post", &p);
-  if (entry_failed || (ok && !posting_amounts_valid(&p))) ok = false;
+  if (entry_failed || (ok && (!posting_amounts_valid(&p) || !exact_stock_order_valid(&p)))) ok = false;
   if (ok && !preview) {
     p.doc->posted = true;
     ok = send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, p.doc) != 0;

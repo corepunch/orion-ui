@@ -66,8 +66,11 @@ New domestic trading documents created locally or through the service store
 quantities in thousandths and money in signed integer minor units. Goods net
 and tax amounts round halves away from zero using checked integer operations;
 the existing doubles remain compatibility and display fields. Exact stock-cost
-posting rejects insufficient stock and any matching legacy stock movement;
-there is no automatic conversion of historic balances. Inputs are bounded to
+posting rejects insufficient stock and any matching legacy stock movement. Exact
+postings and reversals reject insertion before a later posted movement of the
+same item and stock account, preserving earlier calculated costs. Reversals also
+reject a negative or incompatible exact stock balance. There is no automatic
+conversion of historic balances. Inputs are bounded to
 10,000 units per line and 100,000 currency units per unit price. Exact mode is
 limited to domestic receipt and sale types in `ru-2026` and `de-2026`;
 the exact path rejects foreign currency. Existing foreign-currency records and
