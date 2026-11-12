@@ -22,6 +22,8 @@ static void set_text(script_page_t *page, const char *name, const char *value) {
 }
 static void test_ledger_remote_ui(void) {
   TEST("remote Ledger form creates, posts, reverses and closes a trading period");
+  const char *country = getenv("ORION_TEST_COUNTRY");
+  const char *expected_total = country && !strcmp(country, "RU") ? "12.20" : "11.90";
   char error[2048];
   ASSERT_TRUE(script_remote_configure_from_environment(error, sizeof(error)));
   test_env_init();
@@ -63,11 +65,15 @@ static void test_ledger_remote_ui(void) {
       db_get_field_text(cache, document_lines->table_id, row, "quantity", quantity, sizeof(quantity));
       db_get_field_text(cache, document_lines->table_id, row, "price", price, sizeof(price));
       db_get_field_text(cache, document_lines->table_id, row, "total", total, sizeof(total));
-      line_found = !strcmp(quantity, "1.000") && !strcmp(price, "10.00") && !strcmp(total, "11.90");
+      line_found = !strcmp(quantity, "1.000") && !strcmp(price, "10.00") && !strcmp(total, expected_total);
     }
     if (!line_found) { struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); }
   }
   ASSERT(line_found, "shared document lines display saved exact values");
+  ASSERT_TRUE(script_page_perform(page, "prepare_copy_lines"));
+  ASSERT(strstr(script_page_control(page, "copy_lines_title")->title, "1 saved"), "copy review identifies saved lines");
+  ASSERT_TRUE(script_page_perform(page, "copy_lines"));
+  ASSERT_TRUE(script_page_perform(page, "replace_lines")); ASSERT_TRUE(wait_notice(page, "Draft lines replaced."));
   ASSERT_TRUE(script_page_perform(page, "post")); ASSERT_TRUE(wait_notice(page, "Document posted."));
   ASSERT_TRUE(script_page_perform(page, "show_posting_history"));
   const db_table_schema_t *posting_history = db_schema_table_named(cache->schema, "posting_history"); ASSERT_NOT_NULL(posting_history);
@@ -80,7 +86,7 @@ static void test_ledger_remote_ui(void) {
       db_get_field_text(cache, posting_history->table_id, row, "actor", actor, sizeof(actor));
       db_get_field_text(cache, posting_history->table_id, row, "action", action, sizeof(action));
       db_get_field_text(cache, posting_history->table_id, row, "total", total, sizeof(total));
-      posting_found = !strcmp(actor, "tester") && !strcmp(action, "post") && !strcmp(total, "11.90");
+      posting_found = !strcmp(actor, "tester") && !strcmp(action, "post") && !strcmp(total, expected_total);
     }
     if (!posting_found) { struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); }
   }

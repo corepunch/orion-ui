@@ -39,6 +39,29 @@ pending({{id = 8, item_id = 2, vat_rate_id = 1, exact_money = true, quantity_mil
 assert(cache[1].source == 'ledger_remote_cache.document_lines' and cache[1].rows[1].quantity == '1.250' and cache[1].rows[1].price == '2.40' and cache[1].rows[1].total == '3.57')
 assert(cache[1].rows[2].quantity:sub(1, 1) == '~' and cache[1].rows[2].total:sub(1, 1) == '~', 'legacy values are marked approximate')
 assert(page:data().values.document_lines_title == 'Lines for document ID 7' and page:data().disabled.next_document_lines)
+assert(not pcall(function() page:prepare_copy_lines({}) end), 'legacy lines cannot be silently converted')
+page:load_document_lines(7, 0); state.busy, state.pending = false, false
+pending({{id = 8, item_id = 2, vat_rate_id = 1, exact_money = true, quantity_milli = '1250', price_minor = '240', total_minor = '357'}}, nil)
+page:add_line({item_id = 9, vat_id = 1, quantity = '1.000', price = '3.00'})
+page:prepare_copy_lines({})
+assert(page:data().values.copy_lines_title == 'Copy lines from document ID 7: 1 saved, 1 staged will be replaced.')
+assert(page.lines[1].item_id == 9, 'review does not replace staged work')
+state.pending = true; assert(not pcall(function() page:copy_lines({}) end), 'pending request blocks replacement'); state.pending = false
+page:copy_lines({})
+assert(#page.lines == 1 and page.lines[1].item_id == 2 and page.lines[1].quantity == '1.250' and page.lines[1].price == '2.40')
+assert(page:data().disabled.copy_lines, 'copy requires a new review')
+page:prepare_copy_lines({}); page:add_line({item_id = 2, vat_id = 1, quantity = '1.000', price = '2.00'})
+assert(page:data().disabled.copy_lines, 'changing staged lines invalidates review')
+page:prepare_copy_lines({}); state.revision = state.revision + 1
+assert(page:data().disabled.copy_lines and not pcall(function() page:copy_lines({}) end), 'revision change invalidates copy review')
+state.revision = state.revision - 1; page.document_lines_offset = 200
+assert(not pcall(function() page:prepare_copy_lines({}) end), 'a later page is not a complete document')
+page.document_lines_offset = 0
+local one = page.document_line_rows[1]
+for i = 2, 101 do page.document_line_rows[i] = one end
+assert(not pcall(function() page:prepare_copy_lines({}) end), 'more than 100 saved lines cannot be copied partially')
+for i = 2, 101 do page.document_line_rows[i] = nil end
+page.lines = {}; page:publish_lines()
 page:add_line({item_id = 2, vat_id = 1, quantity = '1.000', price = '2.00'})
 page:replace_lines({documents = {id = 7}})
 state.busy = false; state.pending = false; pending({}, nil)

@@ -737,6 +737,10 @@ Select a document and choose **Show document lines** to inspect its saved lines
 on the Document lines tab. This view is separate from the locally staged lines
 used to create a document or replace a draft's lines. Values prefixed with `~`
 come from legacy floating-point storage.
+For a document with at most 100 exact lines, **Review copying lines** previews
+the replacement of the staged lines, and **Replace staged lines** confirms it.
+The copied lines can then be removed or supplemented before replacing a draft's
+saved lines. Legacy approximate lines cannot be copied into the exact workflow.
 To edit an item or counterparty, open its catalog, select a row and choose
 **Edit selected**. The editing label identifies the record; save its displayed
 fields with **Save changes**. Other fields are preserved. After a refresh or

@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="ru">
+  <string source="Review copying lines" where="remote_ledger">Проверить перенос строк</string>
+  <string source="Replace staged lines" where="remote_ledger">Заменить подготовленные строки</string>
+  <string source="Show a complete document of at most 100 lines first.">Сначала покажите документ целиком, не более 100 строк.</string>
+  <string source="Only exact saved lines can be copied.">Можно перенести только строки, сохранённые с точными суммами.</string>
+  <string source="Invalid saved item ID.">Некорректный сохранённый ID товара.</string>
+  <string source="Invalid saved VAT rate ID.">Некорректный сохранённый ID ставки НДС.</string>
+  <string source="Review the lines again before copying.">Перед переносом снова проверьте строки.</string>
+  <string source="Saved lines copied to the staged draft.">Сохранённые строки перенесены в подготовленный черновик.</string>
+  <string source="Copy lines from document ID %d: %d saved, %d staged will be replaced.">Перенос строк документа с ID %d: сохранено %d, подготовленных будет заменено %d.</string>
+  <string source="Review before replacing staged lines.">Проверьте перенос перед заменой подготовленных строк.</string>
   <string source="Edit draft details" where="remote_ledger">Изменить реквизиты черновика</string>
   <string source="Refresh the documents first.">Сначала обновите список документов.</string>
   <string source="Select an editable draft.">Выберите доступный для изменения черновик.</string>

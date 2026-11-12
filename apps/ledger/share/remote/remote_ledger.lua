@@ -3,7 +3,7 @@ local Remote = require("orion.remote")
 local json = require("orion.json")
 
 local Ledger = {form = "remote_ledger", title = orion.tr("Ledger — Shared Company")}
-local controls = {"post", "load_draft", "update", "replace_lines", "reverse", "create", "add_line", "remove_line",
+local controls = {"post", "load_draft", "update", "replace_lines", "reverse", "create", "add_line", "remove_line", "prepare_copy_lines", "copy_lines",
   "save_counterparty", "save_item", "prepare_close", "close_period", "type_id", "draft_party_id", "draft_date",
   "item_id", "vat_id", "quantity", "price", "document_date", "counterparty_id", "reversal_date", "reason",
   "name", "sku", "tax_id", "unit_id", "catalog_vat_id", "close_date", "load_catalog_entry", "update_catalog_entry"}
@@ -27,6 +27,11 @@ end
 local function integer(value, message)
   return orion.assert(type(value) == "number" and math.type(value) == "integer" and value > 0 and value <= 2147483647 and value, message)
 end
+local function wire_scaled(value, places)
+  if type(value) ~= "string" or not value:match("^%d+$") then return nil end
+  while #value <= places do value = "0" .. value end
+  return value:sub(1, -places - 1) .. "." .. value:sub(-places)
+end
 local function selected(value)
   return orion.assert(value, orion.tr("Select a document."))
 end
@@ -49,6 +54,7 @@ function Ledger:init()
   self.lines, self.doc_offset, self.catalog_offset, self.journal_offset = {}, 0, 0, 0
   self.history_offset, self.posting_history_offset = 0, 0
   self.document_lines_document, self.document_lines_offset, self.document_lines_count = nil, 0, 0
+  self.document_line_rows, self.document_lines_revision, self.copy_review = {}, nil, nil
   self.posting_history_document, self.revision_entries_revision = nil, nil
   self.revision_entries_offset, self.revision_entries_count = 0, 0
   self.next_line, self.role, self.connected, self.catalog_kind = 1, "", false, "items"
@@ -70,7 +76,7 @@ function Ledger:complete(result, err)
   local callback = self.pending_callback
   local state = self.remote:state()
   if err then
-    if state.conflict then self.closing_date, self.closing_revision, self.catalog_edit, self.draft_edit = nil, nil, nil, nil end
+    if state.conflict then self.closing_date, self.closing_revision, self.catalog_edit, self.draft_edit, self.copy_review = nil, nil, nil, nil, nil end
     self.error = err
     self.notice = state.conflict and orion.tr("Data changed. Refresh before continuing.") or
       state.pending and orion.tr("The outcome is unknown. Retry the same request before making changes.") or ""
@@ -100,6 +106,7 @@ function Ledger:connect(values)
   self.catalog_edit = nil
   self.draft_edit = nil
   self.catalog_rows_revision, self.document_rows_revision = nil, nil
+  self.document_lines_revision, self.copy_review = nil, nil
   local ok, err = self.remote:refresh(function(status, failure)
     if failure then self.error = failure; return end
     if status.application ~= "ledger" or (status.country ~= "RU" and status.country ~= "DE") then
@@ -149,6 +156,7 @@ function Ledger:next_documents(v) self:remember(v); self:load_documents(self.doc
 
 function Ledger:load_document_lines(document_id, offset)
   self:request("documents.lines", {document_id = document_id, offset = offset, limit = 200}, function(rows)
+    self.document_line_rows, self.document_lines_revision, self.copy_review = rows, self.remote:state().revision, nil
     local view = {}
     for _, row in ipairs(rows) do
       view[#view + 1] = {id = row.id, item_id = row.item_id, vat_rate_id = row.vat_rate_id,
@@ -163,6 +171,37 @@ end
 function Ledger:show_document_lines(v) self:remember(v); self:load_document_lines(selected(v.documents).id, 0) end
 function Ledger:previous_document_lines(v) self:remember(v); self:load_document_lines(self.document_lines_document, math.max(0, self.document_lines_offset - 200)) end
 function Ledger:next_document_lines(v) self:remember(v); self:load_document_lines(self.document_lines_document, self.document_lines_offset + 200) end
+
+function Ledger:prepare_copy_lines(v)
+  self:remember(v)
+  local state = self.remote:state()
+  orion.assert(self.connected and not state.busy and not state.pending and not state.conflict, orion.tr("Resolve the pending request before changing the draft."))
+  local rows = self.document_line_rows
+  orion.assert(self.document_lines_revision == self.remote:state().revision and self.document_lines_document and
+    self.document_lines_offset == 0 and #rows > 0 and #rows <= 100, orion.tr("Show a complete document of at most 100 lines first."))
+  local lines = {}
+  for _, row in ipairs(rows) do
+    local quantity, price = wire_scaled(row.quantity_milli, 3), wire_scaled(row.price_minor, 2)
+    orion.assert(row.exact_money and quantity and price, orion.tr("Only exact saved lines can be copied."))
+    lines[#lines + 1] = {item_id = integer(row.item_id, orion.tr("Invalid saved item ID.")),
+      vat_rate_id = integer(row.vat_rate_id, orion.tr("Invalid saved VAT rate ID.")), quantity = quantity, price = price}
+  end
+  self.copy_review = {document_id = self.document_lines_document, revision = self.document_lines_revision, lines = lines}
+end
+function Ledger:copy_lines(v)
+  self:remember(v)
+  local state = self.remote:state()
+  orion.assert(self.connected and not state.busy and not state.pending and not state.conflict, orion.tr("Resolve the pending request before changing the draft."))
+  local review = self.copy_review
+  orion.assert(review and review.revision == self.remote:state().revision, orion.tr("Review the lines again before copying."))
+  self.lines = {}
+  for _, row in ipairs(review.lines) do
+    self.lines[#self.lines + 1] = {id = self.next_line, item_id = row.item_id, vat_rate_id = row.vat_rate_id, quantity = row.quantity, price = row.price}
+    self.next_line = self.next_line + 1
+  end
+  self.copy_review = nil; self:publish_lines()
+  self.notice = orion.tr("Saved lines copied to the staged draft.")
+end
 
 function Ledger:load_catalog(kind, offset)
   self:request("catalogs.list", {table = kind, offset = offset, limit = 200}, function(rows)
@@ -292,6 +331,7 @@ function Ledger:add_line(v)
   local state = self.remote:state()
   orion.assert(not state.busy and not state.pending and not state.conflict, orion.tr("Resolve the pending request before changing the draft."))
   self:remember(v)
+  self.copy_review = nil
   orion.assert(#self.lines < 100, orion.tr("A draft can contain at most 100 lines."))
   self.lines[#self.lines + 1] = {id = self.next_line, item_id = integer(v.item_id, orion.tr("Enter an item ID.")),
     vat_rate_id = integer(v.vat_id, orion.tr("Enter a VAT rate ID.")), quantity = decimal(v.quantity, orion.tr("Enter a quantity.")),
@@ -303,6 +343,7 @@ function Ledger:remove_line(v)
   local state = self.remote:state()
   orion.assert(not state.busy and not state.pending and not state.conflict, orion.tr("Resolve the pending request before changing the draft."))
   self:remember(v)
+  self.copy_review = nil
   local row = orion.assert(v.lines, orion.tr("Select a draft line."))
   for i, line in ipairs(self.lines) do if line.id == row.id then table.remove(self.lines, i); break end end
   self:publish_lines()
@@ -397,6 +438,8 @@ function Ledger:data()
   disabled.load_catalog_entry = blocked or readonly or (self.catalog_kind ~= "items" and self.catalog_kind ~= "counterparties")
   disabled.update_catalog_entry = blocked or readonly or not self.catalog_edit or self.catalog_edit.revision ~= state.revision
   disabled.update = blocked or readonly or not self.draft_edit or self.draft_edit.revision ~= state.revision
+  disabled.prepare_copy_lines = blocked or readonly or not self.document_lines_document or self.document_lines_revision ~= state.revision
+  disabled.copy_lines = blocked or readonly or not self.copy_review or self.copy_review.revision ~= state.revision
   for _, name in ipairs({"previous_documents", "next_documents", "previous_catalog", "next_catalog", "previous_journal", "next_journal",
                          "document_types", "vat_rates", "units", "items", "counterparties", "show_journal", "show_history", "show_posting_history", "show_document_lines", "show_revision_entries", "find_posting_history", "history_document_id"}) do disabled[name] = blocked end
   disabled.previous_document_lines = blocked or not self.document_lines_document or self.document_lines_offset == 0
@@ -419,6 +462,7 @@ function Ledger:data()
     draft_edit_title = self.draft_edit and string.format(orion.tr("Editing draft ID %d"), self.draft_edit.id) or orion.tr("Select a draft to edit its details."),
     catalog_edit_title = self.catalog_edit and string.format(orion.tr(self.catalog_edit.kind == "items" and "Editing item ID %d" or "Editing counterparty ID %d"), self.catalog_edit.id) or orion.tr("Select an item or counterparty to edit."),
     document_lines_title = self.document_lines_document and string.format(orion.tr("Lines for document ID %d"), self.document_lines_document) or orion.tr("Select a document and show its lines."),
+    copy_lines_title = self.copy_review and string.format(orion.tr("Copy lines from document ID %d: %d saved, %d staged will be replaced."), self.copy_review.document_id, #self.copy_review.lines, #self.lines) or orion.tr("Review before replacing staged lines."),
     posting_history_title = self.posting_history_document and string.format(orion.tr("Posting history for document ID %d"), self.posting_history_document) or orion.tr("Select a document and show its posting history."),
     revision_entries_title = self.revision_entries_revision and string.format(orion.tr("Entries for posting snapshot ID %d"), self.revision_entries_revision) or orion.tr("Select a posting snapshot to show its entries.")}
   for key, value in pairs(self.fields) do values[key] = value end

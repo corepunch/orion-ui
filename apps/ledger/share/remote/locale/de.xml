@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="de">
+  <string source="Review copying lines" where="remote_ledger">Übernahme der Positionen prüfen</string>
+  <string source="Replace staged lines" where="remote_ledger">Vorbereitete Positionen ersetzen</string>
+  <string source="Show a complete document of at most 100 lines first.">Zeigen Sie zuerst einen vollständigen Beleg mit höchstens 100 Positionen an.</string>
+  <string source="Only exact saved lines can be copied.">Nur exakt gespeicherte Positionen können übernommen werden.</string>
+  <string source="Invalid saved item ID.">Ungültige gespeicherte Artikel-ID.</string>
+  <string source="Invalid saved VAT rate ID.">Ungültige gespeicherte Umsatzsteuersatz-ID.</string>
+  <string source="Review the lines again before copying.">Prüfen Sie die Positionen vor der Übernahme erneut.</string>
+  <string source="Saved lines copied to the staged draft.">Gespeicherte Positionen wurden in den vorbereiteten Entwurf übernommen.</string>
+  <string source="Copy lines from document ID %d: %d saved, %d staged will be replaced.">Positionen aus Beleg-ID %d übernehmen: %d gespeichert, %d vorbereitete werden ersetzt.</string>
+  <string source="Review before replacing staged lines.">Prüfen Sie die Übernahme, bevor Sie vorbereitete Positionen ersetzen.</string>
   <string source="Edit draft details" where="remote_ledger">Entwurfsdaten bearbeiten</string>
   <string source="Refresh the documents first.">Aktualisieren Sie zuerst die Belege.</string>
   <string source="Select an editable draft.">Wählen Sie einen bearbeitbaren Entwurf.</string>

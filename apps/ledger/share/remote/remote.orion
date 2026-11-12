@@ -97,7 +97,10 @@
           <StackView orientation="horizontal" spacing="6">
             <Button name="previous_document_lines" text="Previous page" action="previous_document_lines" />
             <Button name="next_document_lines" text="Next page" action="next_document_lines" />
+            <Button name="prepare_copy_lines" text="Review copying lines" action="prepare_copy_lines" />
+            <Button name="copy_lines" text="Replace staged lines" action="copy_lines" />
           </StackView>
+          <Label name="copy_lines_title" />
         </StackView>
         <StackView name="draft_tab" text="New draft" spacing="6" flags="flexspace">
           <Label text="Choose a document type and counterparty from Catalogs. Enter quantities and prices as decimal values." />
