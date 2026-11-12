@@ -134,7 +134,26 @@ class LedgerHostTests(unittest.TestCase):
                     purchase_code, sale_code = ('receipt', 'sale') if country == 'RU' else ('incoming_invoice', 'outgoing_invoice')
                     purchase = call('documents.create', {'doc_type_id': codes[purchase_code], 'counterparty_id': party['id'], 'date': '2026-11-10',
                         'lines': [{'item_id': item['id'], 'vat_rate_id': vat_rates[0]['id'], 'quantity': '10.000', 'price': '10.00'}]})
+                    throwaway = call('documents.create', {'doc_type_id': codes[purchase_code], 'counterparty_id': party['id'], 'date': '2026-11-10',
+                        'lines': [{'item_id': item['id'], 'vat_rate_id': vat_rates[0]['id'], 'quantity': '1.000', 'price': '10.00'}]})
+                    with self.assertRaises(server.Refusal) as failure:
+                        call('documents.delete', throwaway, 'auditor')
+                    self.assertEqual(failure.exception.status, 403)
+                    revision = company.status()['revision']; sequence += 1
+                    delete_request = {'request_id': f'trade-{sequence}', 'expected_revision': revision,
+                                      'command': 'documents.delete', 'args': throwaway}
+                    deleted = company.execute('trade-accountant', 'accountant', delete_request)
+                    self.assertTrue(deleted['ok'], deleted)
+                    self.assertEqual(company.execute('trade-accountant', 'accountant', delete_request), deleted)
+                    self.assertEqual(company.status()['revision'], revision + 1)
+                    self.assertFalse(any(row['id'] == throwaway['document_id'] for row in call('documents.list')))
+                    self.assertEqual(call('documents.lines', throwaway), [])
                     call('documents.post', purchase)
+                    before_rejection = company.status()['revision']; sequence += 1
+                    rejected = company.execute('trade-accountant', 'accountant', {'request_id': f'trade-{sequence}',
+                        'expected_revision': before_rejection, 'command': 'documents.delete', 'args': purchase})
+                    self.assertFalse(rejected['ok'])
+                    self.assertEqual(company.status()['revision'], before_rejection)
                     sale = call('documents.create', {'doc_type_id': codes[sale_code], 'counterparty_id': party['id'], 'date': '2026-11-11',
                         'lines': [{'item_id': item['id'], 'vat_rate_id': vat_rates[0]['id'], 'quantity': '2.000', 'price': '19.00'}]})
                     call('documents.update', {**sale, 'counterparty_id': party['id'], 'date': '2026-11-12'})

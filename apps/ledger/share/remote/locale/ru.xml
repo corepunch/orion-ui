@@ -166,4 +166,11 @@
   <string source="Document ID:" where="remote_ledger">ID документа:</string>
   <string source="Find history" where="remote_ledger">Найти историю</string>
   <string source="Enter a document ID." where="code">Введите ID документа.</string>
+  <string source="Review deleting draft" where="remote_ledger">Проверить удаление черновика</string>
+  <string source="Confirm deletion" where="remote_ledger">Подтвердить удаление</string>
+  <string source="Select an editable exact draft." where="code">Выберите редактируемый черновик с точными суммами.</string>
+  <string source="Review the draft again before deleting." where="code">Перед удалением снова проверьте черновик.</string>
+  <string source="Draft %d deleted." where="code">Черновик %d удалён.</string>
+  <string source="Delete draft ID %d and its lines? Confirm to continue." where="code">Удалить черновик ID %d и его строки? Подтвердите действие.</string>
+  <string source="Select an exact draft to review deletion." where="code">Выберите черновик с точными суммами для проверки удаления.</string>
 </strings>

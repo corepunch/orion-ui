@@ -374,6 +374,18 @@ static int l_service_replace_lines(lua_State *L) {
   lua_pop(L, 1); lua_pushinteger(L, id); return 1;
 }
 
+static int l_service_delete(lua_State *L) {
+  if (!g_service_active || !g_script_writable || g_post || g_executor_active) return luaL_error(L, "service write unavailable");
+  lua_Integer id = luaL_checkinteger(L, 1);
+  database_t *ib = get_database_by_name("ib"), *cfg = get_database_by_name("cfg");
+  const db_document_t *doc = ib && id > 0 && id <= INT_MAX ? (const void *)send_db_message(ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id) : NULL;
+  if (!doc || doc->posted || doc->correction_of || !doc->exact_money || ledger_exact_posted(ib, (int)id) ||
+      ledger_period_closed(ib, doc->date) || !service_trading_type(cfg, doc->doc_type_id))
+    return luaL_error(L, "document is not an editable exact draft");
+  if (!send_db_message(ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id)) return luaL_error(L, "cannot delete draft");
+  lua_pushinteger(L, id); return 1;
+}
+
 static int l_service_post(lua_State *L) {
   if (!g_service_active || !g_script_writable || g_post || g_executor_active) return luaL_error(L, "service write unavailable");
   lua_Integer id = luaL_checkinteger(L, 1);
@@ -671,6 +683,7 @@ bool ledger_script_service(const char *path, const char *request, bool writable,
   lua_pushcfunction(g_lua, l_service_access); lua_setfield(g_lua, -2, "access");
   lua_pushcfunction(g_lua, l_service_create); lua_setfield(g_lua, -2, "create");
   lua_pushcfunction(g_lua, l_service_post); lua_setfield(g_lua, -2, "post");
+  lua_pushcfunction(g_lua, l_service_delete); lua_setfield(g_lua, -2, "delete");
   lua_pushcfunction(g_lua, l_service_update); lua_setfield(g_lua, -2, "update");
   lua_pushcfunction(g_lua, l_service_replace_lines); lua_setfield(g_lua, -2, "replace_lines");
   lua_pushcfunction(g_lua, l_service_reverse); lua_setfield(g_lua, -2, "reverse");

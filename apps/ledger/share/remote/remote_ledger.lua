@@ -3,7 +3,7 @@ local Remote = require("orion.remote")
 local json = require("orion.json")
 
 local Ledger = {form = "remote_ledger", title = orion.tr("Ledger — Shared Company")}
-local controls = {"post", "load_draft", "update", "replace_lines", "reverse", "create", "add_line", "remove_line", "prepare_copy_lines", "copy_lines",
+local controls = {"post", "prepare_delete", "delete_draft", "load_draft", "update", "replace_lines", "reverse", "create", "add_line", "remove_line", "prepare_copy_lines", "copy_lines",
   "save_counterparty", "save_item", "prepare_close", "close_period", "type_id", "draft_party_id", "draft_date",
   "item_id", "vat_id", "quantity", "price", "document_date", "counterparty_id", "reversal_date", "reason",
   "name", "sku", "tax_id", "unit_id", "catalog_vat_id", "close_date", "load_catalog_entry", "update_catalog_entry"}
@@ -60,7 +60,7 @@ function Ledger:init()
   self.next_line, self.role, self.connected, self.catalog_kind = 1, "", false, "items"
   self.closing_date, self.closing_revision = nil, nil
   self.catalog_rows, self.catalog_edit = {}, nil
-  self.document_rows, self.draft_edit = {}, nil
+  self.document_rows, self.draft_edit, self.delete_review = {}, nil, nil
   self.catalog_rows_revision, self.document_rows_revision = nil, nil
   self.notice, self.error = "", ""
 end
@@ -76,7 +76,7 @@ function Ledger:complete(result, err)
   local callback = self.pending_callback
   local state = self.remote:state()
   if err then
-    if state.conflict then self.closing_date, self.closing_revision, self.catalog_edit, self.draft_edit, self.copy_review = nil, nil, nil, nil, nil end
+    if state.conflict then self.closing_date, self.closing_revision, self.catalog_edit, self.draft_edit, self.copy_review, self.delete_review = nil, nil, nil, nil, nil, nil end
     self.error = err
     self.notice = state.conflict and orion.tr("Data changed. Refresh before continuing.") or
       state.pending and orion.tr("The outcome is unknown. Retry the same request before making changes.") or ""
@@ -104,7 +104,7 @@ function Ledger:connect(values)
   self:remember(values)
   self.closing_date, self.closing_revision = nil, nil
   self.catalog_edit = nil
-  self.draft_edit = nil
+  self.draft_edit, self.delete_review = nil, nil
   self.catalog_rows_revision, self.document_rows_revision = nil, nil
   self.document_lines_revision, self.copy_review = nil, nil
   local ok, err = self.remote:refresh(function(status, failure)
@@ -139,7 +139,7 @@ end
 
 function Ledger:load_documents(offset)
   self:request("documents.list", {offset = offset, limit = 200}, function(rows)
-    local view = {}; self.document_rows, self.draft_edit = {}, nil
+    local view = {}; self.document_rows, self.draft_edit, self.delete_review = {}, nil, nil
     self.document_rows_revision = self.remote:state().revision
     for _, row in ipairs(rows) do
       self.document_rows[row.id] = row
@@ -390,6 +390,26 @@ function Ledger:replace_lines(v)
     self.notice = orion.tr("Draft lines replaced."); self:load_documents(self.doc_offset)
   end)
 end
+function Ledger:prepare_delete(v)
+  self:remember(v)
+  local row = selected(v.documents)
+  local doc = orion.assert(self.document_rows_revision == self.remote:state().revision and self.document_rows[row.id], orion.tr("Refresh the documents first."))
+  orion.assert(not doc.posted and (not doc.correction_of or doc.correction_of == 0) and doc.exact_money, orion.tr("Select an editable exact draft."))
+  self.delete_review = {id = doc.id, revision = self.remote:state().revision}
+end
+function Ledger:delete_draft(v)
+  self:remember(v)
+  local review = self.delete_review
+  orion.assert(review and review.revision == self.remote:state().revision, orion.tr("Review the draft again before deleting."))
+  self:request("documents.delete", {document_id = review.id}, function()
+    self.delete_review = nil
+    if self.document_lines_document == review.id then
+      self.document_lines_document, self.document_lines_offset, self.document_lines_count = nil, 0, 0
+      Remote.replace_many({projection("document_lines", {}, {"id", "item_id", "vat_rate_id", "quantity", "price", "total"})})
+    end
+    self.notice = string.format(orion.tr("Draft %d deleted."), review.id); self:load_documents(self.doc_offset)
+  end)
+end
 function Ledger:post(v)
   self:remember(v); local row = selected(v.documents)
   self:request("documents.post", {document_id = row.id}, function() self.notice = orion.tr("Document posted."); self:load_documents(self.doc_offset) end)
@@ -437,6 +457,7 @@ function Ledger:data()
   disabled.prepare_close = blocked or self.role ~= "admin"
   disabled.load_catalog_entry = blocked or readonly or (self.catalog_kind ~= "items" and self.catalog_kind ~= "counterparties")
   disabled.update_catalog_entry = blocked or readonly or not self.catalog_edit or self.catalog_edit.revision ~= state.revision
+  disabled.delete_draft = blocked or readonly or not self.delete_review or self.delete_review.revision ~= state.revision
   disabled.update = blocked or readonly or not self.draft_edit or self.draft_edit.revision ~= state.revision
   disabled.prepare_copy_lines = blocked or readonly or not self.document_lines_document or self.document_lines_revision ~= state.revision
   disabled.copy_lines = blocked or readonly or not self.copy_review or self.copy_review.revision ~= state.revision
@@ -459,6 +480,7 @@ function Ledger:data()
   local status = self.connected and string.format(orion.tr("Country: %s · Role: %s · Revision: %d"), self.country, self.role, state.revision or 0) or orion.tr("Not connected")
   local titles = {doc_types = "Document types", vat_rates = "VAT rates", units = "Units", items = "Items", counterparties = "Counterparties"}
   local values = {connection = status, notice = self.notice, error = self.error, catalog_title = orion.tr(titles[self.catalog_kind]),
+    delete_review_title = self.delete_review and string.format(orion.tr("Delete draft ID %d and its lines? Confirm to continue."), self.delete_review.id) or orion.tr("Select an exact draft to review deletion."),
     draft_edit_title = self.draft_edit and string.format(orion.tr("Editing draft ID %d"), self.draft_edit.id) or orion.tr("Select a draft to edit its details."),
     catalog_edit_title = self.catalog_edit and string.format(orion.tr(self.catalog_edit.kind == "items" and "Editing item ID %d" or "Editing counterparty ID %d"), self.catalog_edit.id) or orion.tr("Select an item or counterparty to edit."),
     document_lines_title = self.document_lines_document and string.format(orion.tr("Lines for document ID %d"), self.document_lines_document) or orion.tr("Select a document and show its lines."),

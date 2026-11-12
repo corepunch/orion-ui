@@ -733,6 +733,10 @@ further changes. A revision conflict requires refreshing the company first.
 To change a draft's date or counterparty, select it and choose **Edit draft
 details**. The editing label identifies the draft whose fields will be saved;
 refreshing or changing the revision requires selecting it again.
+To discard an exact, unposted trading draft, select it and choose **Review
+deleting draft**, then **Confirm deletion**. The review identifies the document
+and its lines; a changed revision requires a new review. Posted documents and
+historical approximate drafts cannot be deleted through the shared workspace.
 Select a document and choose **Show document lines** to inspect its saved lines
 on the Document lines tab. This view is separate from the locally staged lines
 used to create a document or replace a draft's lines. Values prefixed with `~`

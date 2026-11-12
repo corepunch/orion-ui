@@ -20,6 +20,17 @@ state.revision = state.revision + 1
 assert(not pcall(function() page:load_draft({documents = {id = 7}}) end), 'stale document cache cannot be reviewed')
 state.revision = state.revision - 1
 assert(not pcall(function() page:load_draft({documents = {id = 8}}) end), 'posted documents cannot be loaded for editing')
+page.document_rows[7].exact_money = true
+page:prepare_delete({documents = {id = 7}})
+assert(not page:data().disabled.delete_draft and page:data().values.delete_review_title == 'Delete draft ID 7 and its lines? Confirm to continue.')
+state.revision = state.revision + 1
+assert(page:data().disabled.delete_draft and not pcall(function() page:delete_draft({}) end), 'changed revision invalidates deletion review')
+state.revision = state.revision - 1
+page:delete_draft({documents = {id = 8}})
+assert(client.command == 'documents.delete' and client.args.document_id == 7, 'deletion targets reviewed draft')
+state.busy, state.pending = false, false; pending({}, nil)
+state.busy, state.pending = false, false; pending({{id = 7, date = '2026-04-01', counterparty_id = 4, doc_type_id = 1, posted = false, correction_of = 0}}, nil)
+assert(page:data().disabled.delete_draft, 'deletion requires a new review')
 page:load_draft({documents = {id = 7}})
 assert(page:data().values.draft_edit_title == 'Editing draft ID 7' and page:data().values.counterparty_id == 4)
 state.revision = state.revision + 1

@@ -39,7 +39,7 @@ POLICIES = {
     },
     "ledger": {
         **{c: {"admin", "accountant", "auditor"} for c in ("documents.list", "documents.lines", "documents.history", "documents.history_entries", "journal.list", "catalogs.list", "period.history")},
-        **{c: {"admin", "accountant"} for c in ("documents.create", "documents.update", "documents.post", "documents.reverse", "documents.replace_lines", "counterparties.save", "items.save")},
+        **{c: {"admin", "accountant"} for c in ("documents.create", "documents.update", "documents.delete", "documents.post", "documents.reverse", "documents.replace_lines", "counterparties.save", "items.save")},
         "period.close": {"admin"},
     },
 }

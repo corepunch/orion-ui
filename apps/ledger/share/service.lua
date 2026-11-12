@@ -92,6 +92,10 @@ local function dispatch(request)
   elseif command == "documents.create" then
     assert(role == "admin" or role == "accountant", "role cannot create documents")
     return {document_id = ledger_service_native.create(args)}
+  elseif command == "documents.delete" then
+    assert(role == "admin" or role == "accountant", "role cannot delete documents")
+    assert(type(args.document_id) == "number" and math.type(args.document_id) == "integer", "invalid document id")
+    return {document_id = ledger_service_native.delete(args.document_id)}
   elseif command == "documents.post" then
     assert(role == "admin" or role == "accountant", "role cannot post documents")
     assert(type(args.document_id) == "number" and math.type(args.document_id) == "integer", "invalid document id")

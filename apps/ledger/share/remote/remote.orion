@@ -76,6 +76,11 @@
             <Button name="update" text="Update draft details" action="update" />
             <Button name="replace_lines" text="Replace draft lines" action="replace_lines" />
           </StackView>
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="prepare_delete" text="Review deleting draft" action="prepare_delete" />
+            <Button name="delete_draft" text="Confirm deletion" action="delete_draft" />
+            <Label name="delete_review_title" />
+          </StackView>
           <Label name="draft_edit_title" />
           <GridView spacing="4">
             <Column width="auto"><Label text="Document date:" /><Label text="Counterparty ID:" /><Label text="Reversal date:" /><Label text="Reason:" /></Column>
