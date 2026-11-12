@@ -84,6 +84,11 @@ python3 tools/orion_server.py user --state /srv/orion/company --user ID --role R
 
 The list shows current accounts, not a history of revoked accounts. Manage this
 local operator command through OS permissions.
+If the user directory is malformed or contains duplicate IDs or token hashes,
+authentication and account changes fail closed. Restore a known-good
+`users.json` from a secure administrative copy or recreate the directory and
+issue new tokens; company backups intentionally exclude credentials. Never
+publish the directory or its token hashes in a diagnostic report.
 
 ## Remote client request recovery
 

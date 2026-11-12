@@ -65,6 +65,27 @@ def decode(data):
     return json.loads(data, object_pairs_hook=pairs, parse_constant=invalid)
 
 
+def load_users(root, application):
+    try:
+        users = decode((root / "users.json").read_bytes())
+    except (ValueError, UnicodeError, RecursionError) as error:
+        raise ValueError("invalid user directory") from error
+    roles = set().union(*POLICIES[application].values())
+    if not isinstance(users, list):
+        raise ValueError("invalid user directory")
+    ids, fingerprints = set(), set()
+    for user in users:
+        if (not isinstance(user, dict) or not isinstance(user.get("id"), str) or
+                not IDENTIFIER.fullmatch(user["id"]) or user["id"] in ids or
+                not isinstance(user.get("role"), str) or user["role"] not in roles or
+                not isinstance(user.get("token_sha256"), str) or
+                not re.fullmatch(r"[0-9a-f]{64}", user["token_sha256"]) or
+                user["token_sha256"] in fingerprints):
+            raise ValueError("invalid user directory")
+        ids.add(user["id"]); fingerprints.add(user["token_sha256"])
+    return users
+
+
 def sync_directory(path):
     if os.name != "nt":
         fd = os.open(path, os.O_RDONLY)
@@ -238,13 +259,13 @@ class Company:
             raise Refusal(401, "Authentication required")
         fingerprint = hashlib.sha256(token.encode()).hexdigest()
         # Reload credentials on every request so revocation is immediate.
-        credentials = decode((self.root / "users.json").read_bytes())
+        try:
+            credentials = load_users(self.root, self.kind)
+        except (ValueError, TypeError, UnicodeError, RecursionError):
+            print("[server] invalid user directory", file=sys.stderr, flush=True)
+            raise Refusal(503, "User directory unavailable")
         for user in credentials:
-            if not isinstance(user, dict) or not isinstance(user.get("id"), str) or not IDENTIFIER.fullmatch(user["id"]) or not isinstance(user.get("token_sha256"), str):
-                continue
             if hmac.compare_digest(user["token_sha256"], fingerprint):
-                if user["role"] not in set().union(*POLICIES[self.kind].values()):
-                    break
                 return user["id"], user["role"]
         raise Refusal(401, "Authentication required")
 
@@ -488,7 +509,7 @@ def add_user(args):
         config = decode((root / "server.json").read_bytes())
         if not IDENTIFIER.fullmatch(args.user) or args.role not in set().union(*POLICIES[config["application"]].values()):
             raise ValueError("invalid user or role")
-        users = decode((root / "users.json").read_bytes())
+        users = load_users(root, config["application"])
         users = [user for user in users if user["id"] != args.user]
         if not args.revoke:
             token = secrets.token_urlsafe(32)
@@ -503,18 +524,8 @@ def add_user(args):
 def list_users(args):
     root = Path(args.state).resolve()
     config = decode((root / "server.json").read_bytes())
-    roles = set().union(*POLICIES[config["application"]].values())
-    users = decode((root / "users.json").read_bytes())
-    if not isinstance(users, list):
-        raise ValueError("invalid user directory")
-    result, seen = [], set()
-    for user in users:
-        if (not isinstance(user, dict) or not isinstance(user.get("id"), str) or
-                not IDENTIFIER.fullmatch(user["id"]) or user["id"] in seen or
-                not isinstance(user.get("role"), str) or user["role"] not in roles):
-            raise ValueError("invalid user directory")
-        seen.add(user["id"])
-        result.append({"id": user["id"], "role": user["role"]})
+    users = load_users(root, config["application"])
+    result = [{"id": user["id"], "role": user["role"]} for user in users]
     print(json.dumps(sorted(result, key=lambda user: user["id"]), ensure_ascii=False, indent=2))
 
 

@@ -294,6 +294,28 @@ company.execute("alice", "reception", {"request_id": "crash", "expected_revision
         cli("user", "--state", state, "--user", "alice", "--role", "reception", "--revoke")
         self.assertEqual(json.loads(cli("users", "--state", state)), [{"id": "bob", "role": "auditor"}])
 
+    def test_invalid_user_directory_fails_closed_without_rewriting(self):
+        fingerprint = hashlib.sha256(b"token").hexdigest()
+        valid = {"id": "alice", "role": "reception", "token_sha256": fingerprint}
+        invalid_directories = [
+            {}, [valid, valid], [valid, {**valid, "id": "bob"}],
+            [valid, {"id": "bob", "role": "reception", "token_sha256": "broken"}],
+            [valid, {"id": "bob", "token_sha256": "0" * 64}],
+        ]
+        path = self.root / "users.json"
+        for directory in invalid_directories:
+            with self.subTest(directory=directory):
+                original = json.dumps(directory).encode(); path.write_bytes(original)
+                with self.assertRaises(server.Refusal) as caught:
+                    self.company.authenticate("token")
+                self.assertEqual(caught.exception.status, 503)
+                for command in (("users",), ("user", "--user", "bob", "--role", "reception")):
+                    result = subprocess.run([sys.executable, str(SCRIPT), *command, "--state", str(self.root)],
+                                            text=True, capture_output=True)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("invalid user directory", result.stderr)
+                    self.assertEqual(path.read_bytes(), original)
+
     def test_offline_backup_verify_restore_and_no_credentials(self):
         request = self.request("saved")
         self.company.execute("alice", "reception", request)
