@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "runtime_api": 1,
+  "service_api": 1,
+  "ledger_api": 1,
+  "applications": {
+    "ledger": {"schema": 3, "countries": ["RU", "DE"], "configurations": ["ru-2026", "de-2026"]},
+    "lodge": {"schema": 4, "countries": ["RU", "DE"], "currencies": ["RUB", "EUR"]}
+  },
+  "verification": {"macOS": "local", "Linux": "CI required", "Windows": "CI required"}
+}

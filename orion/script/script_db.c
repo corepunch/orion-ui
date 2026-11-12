@@ -142,7 +142,9 @@ static void *lookup_value(lua_State *L, const db_field_meta_t *m, int arg) {
   if (m->type == DB_TYPE_STRING || m->type == DB_TYPE_DATE) return (void *)luaL_checkstring(L, arg);
   if (m->type == DB_TYPE_BOOL) return (void *)(intptr_t)lua_toboolean(L, arg);
   if (m->type == DB_TYPE_INT64 && sizeof(intptr_t) < sizeof(int64_t)) luaL_error(L, "int64 filters require a 64-bit host");
-  return (void *)(intptr_t)luaL_checkinteger(L, arg);
+  lua_Integer value = luaL_checkinteger(L, arg);
+  if (m->type == DB_TYPE_INT && (value < INT_MIN || value > INT_MAX)) luaL_argerror(L, arg, "integer filter out of range");
+  return (void *)(intptr_t)value;
 }
 
 static int refuse_with(lua_State *L, const char *message) {

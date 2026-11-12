@@ -58,6 +58,12 @@ ok, err = pcall(function() return db.find("club", "people") end)
 expect(not ok and tostring(err):find("bad argument #4 to 'find'", 1, true), "a missing argument names its position and function")
 ok, err = pcall(function() return db.update("club", "people", "one", {}) end)
 expect(not ok and tostring(err):find("number expected", 1, true), "an integer argument rejects a string")
+for _, key in ipairs({4294967296 + ada.id, -4294967296 + ada.id}) do
+	expect(not pcall(db.find, "club", "people", nil, key), "out-of-range key cannot wrap to a real row")
+	expect(not pcall(db.update, "club", "people", key, {name = "Changed"}), "generated int arguments reject wrapping updates")
+	expect(not pcall(db.delete, "club", "people", key), "generated int arguments reject wrapping deletes")
+end
+expect(People:find(ada.id).name == "Ada", "rejected wrapped keys preserve the original record")
 ok, err = pcall(function() return db.insert("club", "people", "Ada") end)
 expect(not ok and tostring(err):find("table expected", 1, true), "a table argument rejects a string")
 expect(db.find("club", "people", nil, ada.id).name == "Ada", "an optional argument takes nil")

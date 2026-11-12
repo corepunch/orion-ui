@@ -17,6 +17,16 @@ Records of any registered datasource, through the messages C code sends: dbFetch
 
 Records cross as plain tables of field values; dates are ISO strings. The database keeps its rules (defaults, numbering, delete rules) as it does for C callers. A value it cannot store comes back as nil and a message; an unknown database, table or field, or a value of the wrong type, raises an error. Scripts usually go through orion.model instead.
 
+## `db.actor(database)`
+
+Host-assigned session identity, or local-owner for a local database without a session. Scripts cannot change this identity.
+
+| Argument | Type | |
+|---|---|---|
+| `database` | string | The registered database |
+
+Returns The trusted host's actor identifier.
+
 ## `db.schema(database, table)`
 
 A table's layout.
