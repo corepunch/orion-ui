@@ -248,4 +248,11 @@
   <string source="Guest checked in" where="code">Гость заселён</string>
   <string source="No guest checked in" where="code">Гость не заселён</string>
   <string source="Occupancy unknown" where="code">Проживание неизвестно</string>
+  <string source="Preview group cancellation" where="remote">Проверить отмену группы</string>
+  <string source="Confirm group cancellation" where="remote">Подтвердить отмену группы</string>
+  <string source="This group has no reservations." where="code">В этой группе нет бронирований.</string>
+  <string source="All group reservations must be reserved before cancelling the group." where="code">Для отмены группы все её бронирования должны иметь статус «Забронировано».</string>
+  <string source="Preview the group cancellation again." where="code">Повторно проверьте отмену группы.</string>
+  <string source="Cancel group %s: %d reservations; payments held: %s. Refunds are separate." where="code">Отменить группу %s: бронирований — %d; удержанные оплаты — %s. Возвраты оформляются отдельно.</string>
+  <string source="Group reservations cancelled. Check payments for refunds." where="code">Бронирования группы отменены. Проверьте необходимость возврата оплат.</string>
 </strings>

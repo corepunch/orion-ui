@@ -5,10 +5,10 @@ spec = importlib.util.spec_from_file_location('server', root / 'tools/orion_serv
 server = importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 
 
-def run_case(base, kind):
+def run_case(base, kind, country):
     state, profile = base / 'company', base / 'profile'
     profile.mkdir(mode=0o700)
-    server.initialize(argparse.Namespace(state=str(state), application='lodge', country='DE', configuration=None,
+    server.initialize(argparse.Namespace(state=str(state), application='lodge', country=country, configuration=None,
                       executable=str(root / 'build/bin/orion-service'), resources=str(root / 'apps/lodge/share'), source=None))
     token = 'disposable-integration-test-token'
     (state / 'users.json').unlink()
@@ -18,7 +18,7 @@ def run_case(base, kind):
     thread = threading.Thread(target=http.serve_forever); thread.start()
     try:
         env = os.environ.copy()
-        env.update(ORION_SERVER_URL='http://127.0.0.1:' + str(http.server_port), ORION_SERVER_TOKEN=token, ORION_REMOTE_PROFILE=str(profile))
+        env.update(ORION_TEST_CURRENCY='EUR' if country == 'DE' else 'RUB', ORION_SERVER_URL='http://127.0.0.1:' + str(http.server_port), ORION_SERVER_TOKEN=token, ORION_REMOTE_PROFILE=str(profile))
         if kind:
             def perform(key, command, args):
                 body = {'request_id': key, 'expected_revision': company.status()['revision'], 'command': command, 'args': args}
@@ -45,6 +45,7 @@ def run_case(base, kind):
 
 
 with tempfile.TemporaryDirectory() as temp:
-    for name, kind in (('normal', None), ('payment', 'payment'), ('guest', 'guest')):
-        base = pathlib.Path(temp) / name; base.mkdir()
-        run_case(base, kind)
+    for country in ('DE', 'RU'):
+        for name, kind in (('normal', None), ('payment', 'payment'), ('guest', 'guest')):
+            base = pathlib.Path(temp) / (country + '-' + name); base.mkdir()
+            run_case(base, kind, country)

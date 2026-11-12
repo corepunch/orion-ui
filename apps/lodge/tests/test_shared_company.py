@@ -170,6 +170,50 @@ class SharedCompanyTests(unittest.TestCase):
                     company.close()
 
 
+    def test_group_cancellation_is_atomic_and_replayable(self):
+        for country in ('DE', 'RU'):
+            with self.subTest(country=country), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'company'
+                server.initialize(argparse.Namespace(state=str(path), application='lodge', country=country, configuration=None,
+                                  executable=str(ROOT / 'build/bin/orion-service'), resources=str(ROOT / 'apps/lodge/share'), source=None))
+                company = server.Company(path)
+                try:
+                    def request(key, command, args, actor='alice', role='reception'):
+                        body = {'request_id': key, 'expected_revision': company.status()['revision'], 'command': command, 'args': args}
+                        return body, company.execute(actor, role, body)
+                    rooms = [request('room-' + str(i), 'save_room', {'name': str(i), 'capacity': 2, 'rate': 100})[1]['result']['id'] for i in (101, 102)]
+                    guest = request('guest', 'save_guest', {'name': 'Guest'})[1]['result']['id']
+                    def stay(room):
+                        return {'room_id': room, 'guest_id': guest, 'arrival': '2035-01-01', 'departure': '2035-01-02',
+                                'persons': 1, 'rate': 100, 'extras': 0, 'notes': ''}
+                    group = request('group', 'group_reserve', {'name': 'Group', 'stays': [stay(r) for r in rooms]})[1]['result']
+                    first, second = group['reservations']
+                    request('clean', 'set_room_cleaning', {'id': rooms[1], 'state': 'clean'}, 'cleaner', 'housekeeping')
+                    request('in', 'check_in', {'id': second})
+                    self.assertFalse(request('bad-cancel', 'group_cancel', {'id': group['id']})[1]['ok'])
+                    view = request('view', 'snapshot', {})[1]['result']
+                    self.assertEqual([r['status'] for r in view['reservations']], ['reserved', 'checked_in'])
+                    request('pay-second', 'payment', {'id': second, 'amount_minor': 10000, 'request_key': 'pay-second'})
+                    request('checkout', 'check_out', {'id': second})
+                    self.assertFalse(request('bad-closed', 'group_cancel', {'id': group['id']})[1]['ok'])
+                    group2 = request('group2', 'group_reserve', {'name': 'Future', 'stays': [dict(stay(r), arrival='2035-02-01', departure='2035-02-02') for r in rooms]})[1]['result']
+                    request('deposit', 'payment', {'id': group2['reservations'][0], 'amount_minor': 2500, 'request_key': 'deposit'})
+                    with self.assertRaises(server.Refusal) as denied:
+                        request('denied', 'group_cancel', {'id': group2['id']}, 'cleaner', 'housekeeping')
+                    self.assertEqual(denied.exception.status, 403)
+                    body, result = request('cancel', 'group_cancel', {'id': group2['id']})
+                    self.assertTrue(result['ok'])
+                    company.close(); company = server.Company(path)
+                    self.assertEqual(company.execute('alice', 'reception', body), result)
+                    view = request('after', 'snapshot', {}, 'bob')[1]['result']
+                    members = [r for r in view['reservations'] if r['group_id'] == group2['id']]
+                    self.assertEqual([r['status'] for r in members], ['cancelled', 'cancelled'])
+                    self.assertEqual(members[0]['paid'], 25)
+                    self.assertEqual(len(view['payment_events']), 2)
+                    self.assertFalse(request('again', 'group_cancel', {'id': group2['id']})[1]['ok'])
+                finally:
+                    company.close()
+
     def test_group_atomicity_and_retry_after_restart(self):
         for country in ('DE', 'RU'):
             with self.subTest(country=country), tempfile.TemporaryDirectory() as directory:

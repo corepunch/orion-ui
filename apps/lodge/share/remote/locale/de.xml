@@ -248,4 +248,11 @@
   <string source="Guest checked in" where="code">Gast eingecheckt</string>
   <string source="No guest checked in" where="code">Kein Gast eingecheckt</string>
   <string source="Occupancy unknown" where="code">Belegung unbekannt</string>
+  <string source="Preview group cancellation" where="remote">Gruppenstornierung prüfen</string>
+  <string source="Confirm group cancellation" where="remote">Gruppenstornierung bestätigen</string>
+  <string source="This group has no reservations." where="code">Diese Gruppe hat keine Reservierungen.</string>
+  <string source="All group reservations must be reserved before cancelling the group." where="code">Alle Gruppenreservierungen müssen reserviert sein, um die Gruppe zu stornieren.</string>
+  <string source="Preview the group cancellation again." where="code">Prüfen Sie die Gruppenstornierung erneut.</string>
+  <string source="Cancel group %s: %d reservations; payments held: %s. Refunds are separate." where="code">Gruppe %s stornieren: %d Reservierungen; erhaltene Zahlungen: %s. Erstattungen erfolgen separat.</string>
+  <string source="Group reservations cancelled. Check payments for refunds." where="code">Gruppenreservierungen storniert. Prüfen Sie Zahlungen auf Erstattungen.</string>
 </strings>

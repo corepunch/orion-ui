@@ -237,6 +237,20 @@ function Hotel.create_group(name, stays)
     return {id = group.id, reservations = ids}
   end)
 end
+function Hotel.cancel_group(id)
+  local group = Hotel.reservation_groups.model:find(id)
+  if not group then return nil, orion.tr("Choose a reservation group.") end
+  local members = Hotel.reservations.model:select({group_id = id})
+  if #members == 0 then return nil, orion.tr("This group has no reservations.") end
+  for _, row in ipairs(members) do
+    if row.status ~= "reserved" then return nil, orion.tr("All group reservations must be reserved before cancelling the group.") end
+  end
+  return Hotel.reservations.model:transaction(function()
+    for _, row in ipairs(members) do orion.assert(Hotel.transition(row.id, "cancelled")) end
+    orion.assert(require("orion.application").save("lodge"))
+    return {id = id}
+  end)
+end
 function Hotel.transition(id, target)
   local row = Hotel.reservations.model:find(id)
   if not row then return nil, orion.tr("Choose a reservation.") end

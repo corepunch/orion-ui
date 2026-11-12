@@ -11,7 +11,7 @@ local roles = {
   check_out = {admin = true, reception = true}, cancel = {admin = true, reception = true},
   payment = {admin = true, reception = true}, set_night = {admin = true, reception = true},
   reset_night = {admin = true, reception = true}, set_room_cleaning = {admin = true, housekeeping = true},
-  group_reserve = {admin = true, reception = true},
+  group_reserve = {admin = true, reception = true}, group_cancel = {admin = true, reception = true},
   day_preview = {admin = true, reception = true, auditor = true}, close_day = {admin = true},
   configure_hotel = {admin = true},
 }
@@ -94,6 +94,9 @@ local function run(command, args, role)
       persons = true, rate = true, extras = true, notes = true})
     local id = values.id and positive_id(values.id); values.id = nil
     return write(function() return Hotel.save(id, values) end)
+  end
+  if command == "group_cancel" then
+    fields(args, {id = true}); return orion.assert(Hotel.cancel_group(positive_id(args.id)))
   end
   if command == "group_reserve" then
     fields(args, {name = true, stays = true})

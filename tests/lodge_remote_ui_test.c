@@ -180,7 +180,7 @@ static void test_lodge_remote_ui(void) {
   size_t html_size = fread(html, 1, sizeof(html) - 1, confirmation_file); fclose(confirmation_file); html[html_size] = 0;
   ASSERT_NOT_NULL(strstr(html, "Updated &lt;guest&gt;")); ASSERT_NULL(strstr(html, "Updated <guest>"));
   ASSERT_NOT_NULL(strstr(html, "Updated 101")); ASSERT_NOT_NULL(strstr(html, "125.00"));
-  ASSERT_NOT_NULL(strstr(html, "EUR")); ASSERT_NOT_NULL(strstr(html, "Checked in"));
+  ASSERT_NOT_NULL(getenv("ORION_TEST_CURRENCY")); ASSERT_NOT_NULL(strstr(html, getenv("ORION_TEST_CURRENCY"))); ASSERT_NOT_NULL(strstr(html, "Checked in"));
   char moved_directory[160]; snprintf(moved_directory, sizeof(moved_directory), "%s-moved", directory);
   ASSERT_EQUAL(rename(directory, moved_directory), 0);
   ASSERT_TRUE(script_page_perform(page, "confirmation"));
@@ -238,6 +238,14 @@ static void test_lodge_remote_ui(void) {
   ASSERT_NOT_NULL(strstr(html, "75.00")); ASSERT_NOT_NULL(strstr(html, "60.00")); ASSERT_NOT_NULL(strstr(html, "135.00"));
   send_message(script_page_control(page, "sections"), tcSetSelection, 2, NULL);
   ASSERT_TRUE(script_page_perform(page, "reset_night")); ASSERT_TRUE(wait_for(db, stays->table_id, 2, "balance", "50.00"));
+  send_message(script_page_control(page, "sections"), tcSetSelection, 1, NULL);
+  ASSERT_FALSE(window_is_enabled(script_page_control(page, "confirm_group_cancel")));
+  ASSERT_TRUE(script_page_perform(page, "preview_group_cancel"));
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "group_cancel_notice")->title, "2 reservations"));
+  ASSERT_TRUE(script_page_perform(page, "confirm_group_cancel"));
+  ASSERT_TRUE(wait_for(db, stays->table_id, 2, "status", "Cancelled"));
+  ASSERT_TRUE(wait_for(db, stays->table_id, 3, "status", "Cancelled"));
+  ASSERT_FALSE(window_is_enabled(script_page_control(page, "confirm_group_cancel")));
   send_message(script_page_control(page, "sections"), tcSetSelection, 3, NULL);
   ASSERT_TRUE(script_page_perform(page, "preview_day"));
   for (int i = 0; i < 500 && !strstr(script_page_control(page, "day_report")->title, "Overdue:"); i++) {

@@ -61,7 +61,10 @@ sources and the remaining German and Russian tax-document work.
 **Group reservation** creates two room reservations together at the rooms'
 current base rates. If either room is unavailable or invalid, neither reservation
 is saved. The service API can create a group of up to 100 rooms. Group members
-are edited and paid individually; there is no group folio or group-wide change.
+are edited and paid individually; there is no group folio. To cancel the whole
+group, select one member locally (or the group in the shared view), preview the
+number of reservations and payments held, then confirm. All members must still
+be reserved; the cancellation is atomic and does not issue refunds.
 **Export group statement** writes a printable `group-statement.html` listing
 each member and its total, paid amount and balance. Its totals include cancelled
 reservations, following the individual balances; reconcile refunds separately.

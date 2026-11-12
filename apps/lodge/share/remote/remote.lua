@@ -25,6 +25,7 @@ function Page:remember(values)
   for _, key in ipairs(inputs) do if values[key] ~= nil then self.values[key] = values[key] end end
 end
 function Page:load_snapshot(after)
+  self.cancel_group_id, self.cancel_group_notice = nil, ""
   self.day_report, self.cancelled_paid_report = "", ""
   self.snapshot_ready = false
   local ok, err = self.client:submit("snapshot", {}, function(result, failure)
@@ -217,6 +218,28 @@ function Page:group_statement(v)
     self.notice = written and string.format(orion.tr("Group statement saved: %s"), path) or tostring(path)
   end)
 end
+function Page:preview_group_cancel(v)
+  self.cancel_group_id, self.cancel_group_notice = nil, ""
+  self:remember(v)
+  local group = orion.assert(self.groups and self.groups[v.statement_group], orion.tr("Choose a reservation group."))
+  local count, paid = 0, 0
+  for _, row in pairs(self.reservations) do
+    if row.group_id == group.id then
+      orion.assert(row.status == "reserved", orion.tr("All group reservations must be reserved before cancelling the group."))
+      count, paid = count + 1, paid + money.minor(row.paid)
+    end
+  end
+  orion.assert(count > 0, orion.tr("This group has no reservations."))
+  self.cancel_group_id, self.cancel_group_revision = group.id, self.client:state().revision
+  self.cancel_group_notice = string.format(orion.tr("Cancel group %s: %d reservations; payments held: %s. Refunds are separate."), group.name, count, orion.formatNumber(paid / 100, 2))
+end
+function Page:confirm_group_cancel(v)
+  orion.assert(self.cancel_group_id and self.cancel_group_id == v.statement_group and self.cancel_group_revision == self.client:state().revision,
+    orion.tr("Preview the group cancellation again."))
+  local id = self.cancel_group_id
+  self.cancel_group_id, self.cancel_group_notice = nil, ""
+  self:submit(v, "group_cancel", {id = id})
+end
 function Page:night_price(v, command)
   local id = orion.assert(v.night_booking and v.night_booking > 0 and v.night_booking, orion.tr("Choose a reservation."))
   local args = {id = id, night = v.night}
@@ -243,8 +266,9 @@ function Page:data()
   local disabled = {connect = state.busy or (state.pending and not state.conflict), retry = state.busy or not state.pending}
   local map = {add_room = "save_room", add_guest = "save_guest", mark_clean = "set_room_cleaning", mark_dirty = "set_room_cleaning", mark_inspection = "set_room_cleaning", reserve = "reserve",
     check_in = "check_in", check_out = "check_out", cancel = "cancel", confirmation = "snapshot", pay = "payment", refund = "payment",
-    group_reserve = "group_reserve", group_statement = "snapshot", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
+    group_reserve = "group_reserve", group_statement = "snapshot", preview_group_cancel = "group_cancel", confirm_group_cancel = "group_cancel", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
   for control, command in pairs(map) do disabled[control] = blocked or not self.allowed[command] end
+  disabled.confirm_group_cancel = disabled.confirm_group_cancel or not self.cancel_group_id
   disabled.reserve = disabled.reserve or self.needs_reload == true
   disabled.pay, disabled.refund = disabled.pay or self.payment_done == true, disabled.refund or self.payment_done == true
   disabled.new_payment = blocked or not self.allowed.payment or not self.payment_done
@@ -254,7 +278,7 @@ function Page:data()
   disabled.load_room = blocked or not self.allowed.save_room
   disabled.save_room = disabled.load_room or not self.editing_room or self.room_needs_reload
   local connection = self.connected and string.format(orion.tr("Country: %s · Role: %s · Revision: %d"), self.country, self.role, state.revision) or self.connection
-  local values = {connection = connection, notice = self.notice, day_report = self.day_report, cancelled_paid_report = self.cancelled_paid_report,
+  local values = {connection = connection, notice = self.notice, group_cancel_notice = self.cancel_group_notice or "", day_report = self.day_report, cancelled_paid_report = self.cancelled_paid_report,
     editor = self.editing and string.format(orion.tr("Edit reservation %d"), self.editing) or orion.tr("New reservation"),
     payment_status = self.payment_done and orion.tr("Start a new payment or refund before recording another.") or "",
     room_editor = self.room_needs_reload and orion.tr("Load the room again before saving.") or

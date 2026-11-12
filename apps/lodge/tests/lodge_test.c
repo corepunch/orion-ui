@@ -467,10 +467,10 @@ static void test_currency_setup(void) {
   char backup[168], lock[168]; snprintf(backup, sizeof(backup), "%s.bak", target); snprintf(lock, sizeof(lock), "%s.lock", target);
   unlink(backup); unlink(lock); unlink(target); rmdir(directory); PASS();
 }
-static void test_group_form(void) {
+static void test_group_form(const char *country, const char *currency) {
   TEST("group form creates both room reservations together");
   char directory[128], target[160], error[2048];
-  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-group-%ld", (long)getpid()); mkdir(directory, 0700);
+  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-group-%ld-%s", (long)getpid(), country); mkdir(directory, 0700);
   snprintf(target, sizeof(target), "%s/hotel.xml", directory);
   FILE *in = fopen("apps/lodge/share/samples/demo.xml", "rb"), *out = fopen(target, "wb");
   ASSERT_NOT_NULL(in); ASSERT_NOT_NULL(out);
@@ -478,7 +478,8 @@ static void test_group_form(void) {
   fclose(in); fclose(out);
   script_application_t *app = script_application_open("apps/lodge/share", directory, error, sizeof(error)); ASSERT_NOT_NULL(app);
   hotel = get_database_by_name("lodge");
-  ASSERT_TRUE(hotel_script(app, "assert(require('hotel').configure_hotel('DE','EUR'))"));
+  char configure[128]; snprintf(configure, sizeof(configure), "assert(require('hotel').configure_hotel('%s','%s'))", country, currency);
+  ASSERT_TRUE(hotel_script(app, configure));
   form_library_t *library = form_library_load("apps/lodge/share/application.orion"); ASSERT_NOT_NULL(library);
   script_page_t *page = script_page_open_library(script_application_runtime(app), library, "group_reservation", "apps/lodge/share/group_reservation.lua", error, sizeof(error));
   ASSERT_NOT_NULL(page); ASSERT_NOT_NULL(script_page_create(page, NULL));
@@ -502,7 +503,7 @@ static void test_group_form(void) {
   char statement_path[160], html[4096]; snprintf(statement_path, sizeof(statement_path), "%s/group-statement.html", directory);
   FILE *statement = fopen(statement_path, "rb"); ASSERT_NOT_NULL(statement);
   size_t html_size = fread(html, 1, sizeof(html) - 1, statement); fclose(statement); html[html_size] = 0;
-  ASSERT_NOT_NULL(strstr(html, "Conference")); ASSERT_NOT_NULL(strstr(html, "EUR"));
+  ASSERT_NOT_NULL(strstr(html, "Conference")); ASSERT_NOT_NULL(strstr(html, currency));
   ASSERT_TRUE(hotel_script(app,
     "local render=require('remote.group_statement'); local rows={"
     "{id=2,room='B',guest='Guest',arrival='2035-01-01',departure='2035-01-02',status='cancelled',total=0.20,paid=0.30,balance=-0.10},"
@@ -510,11 +511,26 @@ static void test_group_form(void) {
     "local html=render('Team <A>',rows,'EUR'); assert(html:find('Team &lt;A&gt;',1,true) and html:find('Cancelled',1,true)); "
     "assert(html:find('Total 0.30',1,true) and html:find('Paid 0.30',1,true) and html:find('Balance 0.00',1,true)); "
     "assert(html:find('<td>A</td>',1,true)<html:find('<td>B</td>',1,true))"));
+  ASSERT_TRUE(hotel_script(app, "assert(require('hotel').payment(4,2500,'group-deposit'))"));
+  ASSERT_TRUE(script_page_perform(script_application_main(app), "preview_group_cancel"));
+  ASSERT_NOT_NULL(strstr(script_page_control(script_application_main(app), "group_cancel_notice")->title, "2 reservations"));
+  char original[sizeof(hotel->source_path)]; snprintf(original, sizeof(original), "%s", hotel->source_path);
+  snprintf(hotel->source_path, sizeof(hotel->source_path), "/nonexistent-orion-lodge-directory/hotel.xml");
+  ASSERT_FALSE(script_page_perform(script_application_main(app), "confirm_group_cancel"));
+  first = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)4);
+  second = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)5);
+  ASSERT_STR_EQUAL(first->status, "reserved"); ASSERT_STR_EQUAL(second->status, "reserved");
+  snprintf(hotel->source_path, sizeof(hotel->source_path), "%s", original);
+  ASSERT_TRUE(script_page_perform(script_application_main(app), "confirm_group_cancel"));
+  first = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)4);
+  second = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)5);
+  ASSERT_STR_EQUAL(first->status, "cancelled"); ASSERT_STR_EQUAL(second->status, "cancelled");
+  ASSERT_FALSE(script_page_perform(script_application_main(app), "confirm_group_cancel"));
   script_page_close(page); form_library_free(library); script_application_close(app); hotel = NULL;
   app = script_application_open("apps/lodge/share", directory, error, sizeof(error)); ASSERT_NOT_NULL(app);
   hotel = get_database_by_name("lodge");
   second = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)5);
-  ASSERT_NOT_NULL(second); ASSERT_EQUAL(second->group_id, 1);
+  ASSERT_NOT_NULL(second); ASSERT_EQUAL(second->group_id, 1); ASSERT_STR_EQUAL(second->status, "cancelled");
   script_application_close(app); hotel = NULL;
   char backup[168], lock[168]; snprintf(backup, sizeof(backup), "%s.bak", target); snprintf(lock, sizeof(lock), "%s.lock", target);
   unlink(statement_path); unlink(backup); unlink(lock); unlink(target); rmdir(directory); PASS();
@@ -525,7 +541,7 @@ int main(void) {
   snprintf(hotel_path, sizeof(hotel_path), "/tmp/orion-lodge-%ld.xml", (long)getpid());
   hotel = create_database_with_schema("lodge", "db_schema_xml", &lodge_lodge_schema, hotel_path);
   register_database("lodge", hotel);
-  test_hotel(); test_persistence_and_page(); test_refused_migration(); test_payment_form(); test_nightly_prices(); test_service(); test_group_form(); test_currency_setup();
+  test_hotel(); test_persistence_and_page(); test_refused_migration(); test_payment_form(); test_nightly_prices(); test_service(); test_group_form("DE", "EUR"); test_group_form("RU", "RUB"); test_currency_setup();
   if (hotel) { unregister_database("lodge"); destroy_database(hotel); } unlink(hotel_path);
   test_env_shutdown(); TEST_END();
 }
