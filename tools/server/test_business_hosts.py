@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('orion_server_e2e', ROOT / 'tools/orion_server.py')
@@ -107,6 +108,12 @@ class LedgerHostTests(unittest.TestCase):
                     replacement = {**sale, 'lines': [{'item_id': item['id'], 'vat_rate_id': vat_rates[0]['id'], 'quantity': '2.000', 'price': '20.00'}]}
                     call('documents.replace_lines', replacement)
                     call('documents.post', sale)
+                    snapshot = company.db.execute('SELECT snapshot FROM current').fetchone()[0]
+                    stored = ET.parse(path / 'snapshots' / snapshot / 'infobase.xml').getroot()
+                    revisions = stored.find('posting_revisions')
+                    self.assertIsNotNone(revisions)
+                    sale_revision = next(row for row in revisions if int(row.get('document_id', '0')) == sale['document_id'])
+                    self.assertEqual(sale_revision.get('actor'), 'trade-accountant')
                     before_rejection = company.status()['revision']; sequence += 1
                     rejected = company.execute('trade-accountant', 'accountant', {'request_id': f'trade-{sequence}',
                         'expected_revision': before_rejection, 'command': 'documents.replace_lines', 'args': replacement})

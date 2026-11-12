@@ -38,11 +38,14 @@ before it; posting and unposting are rejected, and bulk repost skips that
 period. New exact trading postings also reject ordinary datasource edits,
 deletion, reposting and unposting; use a linked reversal. Once a reversal is linked, ordinary datasource edits, deletion, reposting and unposting of both the original and reversal are rejected, including legacy postings; bulk repost skips both. There is no reopening API. Successful posts and unposts now append
 transactional snapshots of the document identity, totals and entries, with a
-UTC clock timestamp; older postings acquire snapshots only when next posted
+UTC clock timestamp and the declared access-context actor when present; older
+postings acquire snapshots only when next posted
 or unposted. Ordinary datasource writes to those snapshots are rejected.
 These are not a complete immutable audit system: native code can mutate exposed
-record pointers, the clock is untrusted, actors and source lines are not
-recorded. An accounting reversal can copy a verified latest posting snapshot
+record pointers, the clock is untrusted and source lines are not recorded. The shared host supplies
+its authenticated actor; direct service callers can declare any actor, and local
+operations without an access context have no actor. The snapshot alone does not
+prove the identity source. An accounting reversal can copy a verified latest posting snapshot
 into a linked manual operation in an open period; it does not issue a corrected
 invoice or adjust tax returns, and cannot reverse historical postings that
 have no snapshot. Closing does not

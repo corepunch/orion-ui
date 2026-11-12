@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
 #include <limits.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -343,6 +344,16 @@ static bool dbs_append_history(dbs_context_t *ctx, unsigned version) {
   return n >= 0 && (size_t)n < sizeof(ctx->history) - length;
 }
 
+static xmlChar *dbs_field_xml_value(xmlNodePtr row, const db_field_meta_t *field) {
+  xmlChar *value = xmlGetProp(row, BAD_CAST field->name);
+  for (xmlNodePtr child = row->children; child && !value; child = child->next)
+    if (child->type == XML_ELEMENT_NODE && !xmlStrcmp(child->name, BAD_CAST field->name))
+      value = xmlNodeGetContent(child);
+  if (!value && (!strcmp(field->name, "body") || !strcmp(field->name, "text")))
+    value = xmlNodeGetContent(row);
+  return value;
+}
+
 static bool dbs_load(database_t *db, dbs_context_t *ctx) {
   dbs_clear(db, ctx);
   if (!db->source_path[0]) return true;
@@ -420,10 +431,7 @@ static bool dbs_load(database_t *db, dbs_context_t *ctx) {
       dbs_init_record(t, record);
       for (int f = 0; f < t->meta_count; f++) {
         if (t->meta[f].type == DB_TYPE_INT) {
-          xmlChar *value = xmlGetProp(rn, BAD_CAST t->meta[f].name);
-          for (xmlNodePtr child = rn->children; child && !value; child = child->next)
-            if (child->type == XML_ELEMENT_NODE && !xmlStrcmp(child->name, BAD_CAST t->meta[f].name))
-              value = xmlNodeGetContent(child);
+          xmlChar *value = dbs_field_xml_value(rn, &t->meta[f]);
           if (value) {
             char *end = NULL; errno = 0;
             long parsed = strtol((const char *)value, &end, 10);
@@ -431,6 +439,21 @@ static bool dbs_load(database_t *db, dbs_context_t *ctx) {
             xmlFree(value);
             if (!valid) {
               fprintf(stderr, "[db_schema_xml] invalid int db=%s table=%s field=%s\n", db->name, t->name, t->meta[f].name);
+              fflush(stderr); free(record); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
+            }
+          }
+        }
+        if (t->meta[f].type == DB_TYPE_STRING || t->meta[f].type == DB_TYPE_DATE) {
+          xmlChar *value = dbs_field_xml_value(rn, &t->meta[f]);
+          if (value) {
+            const char *start = (const char *)value, *end = start + strlen(start);
+            while (*start && isspace((unsigned char)*start)) start++;
+            while (end > start && isspace((unsigned char)end[-1])) end--;
+            bool valid = t->meta[f].length > 0 && (size_t)(end - start) < (size_t)t->meta[f].length;
+            xmlFree(value);
+            if (!valid) {
+              fprintf(stderr, "[db_schema_xml] text exceeds field capacity db=%s table=%s field=%s capacity=%d\n",
+                      db->name, t->name, t->meta[f].name, t->meta[f].length);
               fflush(stderr); free(record); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
             }
           }

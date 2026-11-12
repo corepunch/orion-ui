@@ -134,7 +134,7 @@
         <field name="tax_name" type="string" length="32" />
         <field name="tax_id_name" type="string" length="32" />
         <field name="version" type="string" length="32" />
-        <field name="basis" type="string" length="512" />
+        <field name="basis" type="string" length="2048" />
       </table>
       <!-- Kinds of analytics (subconto): each names the infobase table whose
            records an account is analysed by. -->
@@ -149,7 +149,7 @@
         <field name="subconto_kind_id" type="integer" relation="subconto_kinds.id" />
         <field name="code" type="string" length="16" />
         <field name="name" type="string" length="160" />
-        <field name="kind" type="string" length="8" />
+        <field name="kind" type="string" length="32" />
         <field name="section" type="string" length="96" />
         <!-- Kept in foreign currency too; revalued when the month is closed. -->
         <field name="currency" type="boolean" />
@@ -347,7 +347,7 @@
          class: numbering, recalculation of documents when they or their lines
          change. default= fills new records; on-delete= says what deleting a
          referenced record does: cascade, nullify or deny. -->
-    <database name="ib" class="ledger_ib" version="3" migration="additive">
+    <database name="ib" class="ledger_ib" version="4" migration="additive">
       <table name="organizations">
         <field name="id" type="integer" key="YES" />
         <field name="legal_details" type="string" length="512" />
@@ -363,7 +363,7 @@
         <field name="bank" type="string" length="160" />
         <field name="bank_account" type="string" length="32" />
         <field name="bik" type="string" length="16" />
-        <field name="corr_account" type="string" length="32" />
+        <field name="corr_account" type="string" length="64" />
         <field name="director" type="string" length="96" />
         <field name="accountant" type="string" length="96" />
         <field name="cashier" type="string" length="96" />
@@ -536,6 +536,7 @@
         <field name="doc_type_id" type="integer" />
         <field name="action" type="string" length="16" />
         <field name="recorded_utc" type="string" length="21" />
+        <field name="actor" type="string" length="128" />
         <field name="number" type="string" length="24" />
         <field name="date" type="date" />
         <field name="amount" type="double" />

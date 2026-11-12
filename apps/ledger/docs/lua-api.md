@@ -634,6 +634,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `doc_type_id` | `integer` |  |
 | `action` | `string` |  |
 | `recorded_utc` | `string` |  |
+| `actor` | `string` |  |
 | `number` | `string` |  |
 | `date` | `date` |  |
 | `amount` | `double` |  |

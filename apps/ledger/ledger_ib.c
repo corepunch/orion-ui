@@ -93,6 +93,7 @@ bool ledger_record_revision(database_t *db, const db_document_t *doc, const char
   if (!utc || !strftime(revision.recorded_utc, sizeof(revision.recorded_utc), "%Y-%m-%dT%H:%M:%SZ", utc)) {
     fprintf(stderr, "[ledger] revision rejected: document=%d cannot read clock\n", doc->id); fflush(stderr); return false;
   }
+  if (db->access_enabled) snprintf(revision.actor, sizeof(revision.actor), "%s", db->access_actor);
   snprintf(revision.number, sizeof(revision.number), "%s", doc->number);
   snprintf(revision.date, sizeof(revision.date), "%s", doc->date);
   const db_posting_revision_t *saved = (const db_posting_revision_t *)db_schema_xml(db, dbInsert, TABLE_POSTING_REVISIONS, &revision);

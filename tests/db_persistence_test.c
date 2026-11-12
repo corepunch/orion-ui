@@ -247,6 +247,45 @@ static void test_invalid_integer_preserved(void) {
   }
   unlink(path); unlink(lock); rmdir(dir); PASS();
 }
+typedef struct { int id; char name[6]; } short_text_row_t;
+static const db_field_meta_t short_text_meta[] = {
+  {"id", DB_TYPE_INT, offsetof(short_text_row_t, id)},
+  {"name", DB_TYPE_STRING, offsetof(short_text_row_t, name), sizeof(((short_text_row_t *)0)->name)},
+};
+static const db_field_schema_t short_text_fields[] = {
+  {.name="id", .type=DB_TYPE_INT, .primary_key=true}, {.name="name", .type=DB_TYPE_STRING},
+};
+static const db_table_schema_t short_text_tables[] = {
+  {.table_id=0, .name="records", .fields=short_text_fields, .field_count=2,
+   .meta=short_text_meta, .meta_count=2, .record_size=sizeof(short_text_row_t)},
+};
+static const db_schema_def_t short_text_schema = {
+  .name="book", .class_name="db_schema_xml", .tables=short_text_tables, .table_count=1,
+};
+static void test_oversized_text_preserved(void) {
+  TEST("schema XML: oversized text rejects opening without truncating source");
+  char dir[512], path[1024], lock[1040], bytes[512];
+  const char *sources[] = {
+    "<book><records><record id=\"1\" name=\"abcdef\"/></records></book>",
+    "<book><records><record id=\"1\"><name>abcdef</name></record></records></book>",
+  };
+  ASSERT_TRUE(persistence_tempdir(dir, sizeof(dir)));
+  snprintf(path, sizeof(path), "%s/book.xml", dir); snprintf(lock, sizeof(lock), "%s.lock", path);
+  for (size_t i = 0; i < sizeof(sources) / sizeof(sources[0]); i++) {
+    FILE *f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+    ASSERT_EQUAL(fwrite(sources[i], 1, strlen(sources[i]), f), strlen(sources[i])); ASSERT_EQUAL(fclose(f), 0);
+    ASSERT_NULL(create_database_with_schema("book", "db_schema_xml", &short_text_schema, path));
+    f = fopen(path, "rb"); ASSERT_NOT_NULL(f);
+    size_t n = fread(bytes, 1, sizeof(bytes) - 1, f); ASSERT_FALSE(ferror(f)); ASSERT_EQUAL(fclose(f), 0);
+    bytes[n] = 0; ASSERT_TRUE(!strcmp(bytes, sources[i]));
+  }
+  FILE *f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fputs("<book><records><record id=\"1\" name=\" abcde \"/></records></book>", f); ASSERT_EQUAL(fclose(f), 0);
+  database_t *db = create_database_with_schema("book", "db_schema_xml", &short_text_schema, path); ASSERT_NOT_NULL(db);
+  short_text_row_t *row = (void *)send_db_message(db, dbFind, 0, (void *)(intptr_t)1);
+  ASSERT_NOT_NULL(row); ASSERT_TRUE(!strcmp(row->name, "abcde")); destroy_database(db);
+  unlink(path); unlink(lock); rmdir(dir); PASS();
+}
 static void test_backup_in_separate_directory(void) {
   TEST("schema XML: backup restores independently in a separate directory");
   char source_dir[512], target_dir[512], source[1024], target[1024], source_backup[1040], target_backup[1040], lock[1040];
@@ -344,7 +383,7 @@ static void test_persistence(void) {
 }
 int main(void) {
   TEST_START("Database persistence"); DB_CLASS(db_schema_xml);
-  test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); test_unknown_fields_preserved(); test_invalid_integer_preserved(); test_backup_in_separate_directory();
+  test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); test_unknown_fields_preserved(); test_invalid_integer_preserved(); test_oversized_text_preserved(); test_backup_in_separate_directory();
 #ifndef _WIN32
   test_migration_crashes();
 #endif

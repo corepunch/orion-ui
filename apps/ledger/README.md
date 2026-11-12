@@ -40,11 +40,11 @@ which remains available after closing Ledger so you can reopen your edits with
 
 ## Infobase migration and recovery
 
-The native Ledger application writes infobase schema version 3. It upgrades a
-version 1 or 2 infobase when opening it, adding period-lock and posting-history
-tables and integer trade amounts while keeping the prior file as
+The native Ledger application writes infobase schema version 4. It upgrades a
+version 1, 2 or 3 infobase when opening it, adding period-lock and posting-history
+tables, integer trade amounts and the declared posting actor while keeping the prior file as
 `infobase.xml.bak`. Existing records remain marked legacy and are not silently
-converted. A version-aware older reader rejects version 3; older builds that predate version checks must not be used to
+converted. A version-aware older reader rejects version 4; older builds that predate version checks must not be used to
 open the upgraded data. Back up the whole data directory before an upgrade.
 
 When a primary already exists, a successful save retains its previous committed

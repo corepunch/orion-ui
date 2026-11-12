@@ -1005,7 +1005,7 @@ static void test_closed_period(void) {
   result_node_t *history = (void *)send_db_message(g_ledger->ib, dbFetch,
     MAKEDWORD(TABLE_POSTING_REVISIONS, ledger_field(g_ledger->ib, TABLE_POSTING_REVISIONS, "document_id")), (void *)(intptr_t)id);
   db_posting_revision_t *revision = history ? *(db_posting_revision_t **)history->data : NULL;
-  ASSERT(revision && revision->recorded_utc[0], "revision records UTC time");
+  ASSERT(revision && revision->recorded_utc[0] && !revision->actor[0], "local revision records time without inventing an actor");
   int revision_id = revision->id;
   ASSERT(ledger_count_references(g_ledger->ib, TABLE_REVISION_ENTRIES, "revision_id", revision_id) > 0, "revision retains entry values");
   ASSERT_FALSE(send_db_message(g_ledger->ib, dbDelete, TABLE_POSTING_REVISIONS, (void *)(intptr_t)revision_id));
@@ -1055,7 +1055,7 @@ static void test_closed_period(void) {
 }
 
 static void test_infobase_migration(void) {
-  TEST("infobase v1 migrates to v2 with backup and explicit recovery");
+  TEST("infobase migration preserves history and supports backup recovery");
   char dir[128], path[160], backup[168];
   ASSERT_TRUE(ledger_test_directory(dir, sizeof(dir)));
   snprintf(path, sizeof(path), "%s/migration.xml", dir);
@@ -1075,12 +1075,26 @@ static void test_infobase_migration(void) {
   db_schema_def_t old_schema = ledger_ib_schema;
   old_schema.version = 1; old_schema.migrate_xml = NULL;
   db = create_database_with_schema_readonly("ib", "ledger_ib", &old_schema, path);
-  ASSERT(db == NULL, "version-aware v1 schema rejects v2");
+  ASSERT(db == NULL, "version-aware v1 schema rejects current version");
   f = fopen(path, "wb"); ASSERT_NOT_NULL(f); fputs("<broken", f); fclose(f);
   db = db_schema_xml_open_backup("ib", "ledger_ib", &ledger_ib_schema, path);
   ASSERT_NOT_NULL(db);
   doc = (const db_document_t *)send_db_message(db, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)17);
   ASSERT(doc && !strcmp(doc->number, "MIG-17"), "recovery restores and migrates v1 backup");
+  destroy_database(db);
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fputs("<ib orion-version=\"3\"><posting_revisions><posting_revision id=\"1\" document_id=\"17\" action=\"post\"/></posting_revisions></ib>", f);
+  ASSERT_EQUAL(fclose(f), 0);
+  db = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path);
+  ASSERT_NOT_NULL(db);
+  const db_posting_revision_t *revision = (void *)send_db_message(db, dbFind, TABLE_POSTING_REVISIONS, (void *)(intptr_t)1);
+  ASSERT(revision && !revision->actor[0], "v3 history retains an unknown actor");
+  ASSERT_TRUE(send_db_message(db, dbSave, 0, NULL));
+  destroy_database(db);
+  db = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path);
+  ASSERT_NOT_NULL(db);
+  revision = (void *)send_db_message(db, dbFind, TABLE_POSTING_REVISIONS, (void *)(intptr_t)1);
+  ASSERT(revision && !revision->actor[0], "migrated unknown actor survives reload");
   destroy_database(db);
   PASS();
 }
@@ -1222,6 +1236,12 @@ static void test_service(void) {
   f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
   fprintf(f, "{\"command\":\"documents.post\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"document_id\":%d}}", id); fclose(f);
   ASSERT_TRUE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  result_node_t *revisions = (void *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_POSTING_REVISIONS, ledger_field(g_ledger->ib, TABLE_POSTING_REVISIONS, "document_id")), (void *)(intptr_t)id);
+  ASSERT_NOT_NULL(revisions);
+  const db_posting_revision_t *revision = *(db_posting_revision_t **)revisions->data;
+  ASSERT(!strcmp(revision->actor, "test"), "posting records declared service actor");
+  free_result_list(revisions);
   f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
   fprintf(f, "{\"command\":\"documents.replace_lines\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"document_id\":%d,\"lines\":[{\"item_id\":1,\"vat_rate_id\":1,\"quantity\":\"1.000\",\"price\":\"1.00\"}]}}", id); fclose(f);
   ASSERT_FALSE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
@@ -1231,6 +1251,16 @@ static void test_service(void) {
   fprintf(f, "{\"command\":\"documents.reverse\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"document_id\":%d,\"date\":\"2026-04-02\",\"reason\":\"Correction\"}}", id); fclose(f);
   ASSERT_TRUE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
   ASSERT_FALSE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
+  char saved_path[sizeof(g_ledger->ib->source_path)]; snprintf(saved_path, sizeof(saved_path), "%s", g_ledger->ib->source_path);
+  destroy_database(g_ledger->ib);
+  g_ledger->ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, saved_path);
+  ASSERT_NOT_NULL(g_ledger->ib); register_database("ib", g_ledger->ib);
+  revisions = (void *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_POSTING_REVISIONS, ledger_field(g_ledger->ib, TABLE_POSTING_REVISIONS, "document_id")), (void *)(intptr_t)id);
+  ASSERT_NOT_NULL(revisions); revision = *(db_posting_revision_t **)revisions->data;
+  ASSERT(!strcmp(revision->actor, "test"), "declared actor survives reload");
+  free_result_list(revisions);
   restore_configuration(cfg, ib);
   PASS();
 }
