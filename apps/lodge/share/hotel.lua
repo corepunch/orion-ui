@@ -36,6 +36,12 @@ Hotel.rooms = records.bind("lodge.rooms", function(row, previous)
   return true
 end)
 Hotel.guests = records.bind("lodge.guests", named)
+function Hotel.room_occupied(id)
+  for _, row in ipairs(Hotel.reservations.model:select({room_id = id})) do
+    if row.status == "checked_in" then return true end
+  end
+  return false
+end
 Hotel.hotel_settings = records.bind("lodge.hotel_settings", function(row, previous)
   if previous or not Hotel.configuring then return nil, orion.tr("Hotel currency settings cannot be changed directly.") end
   if not ((row.country == "DE" and row.currency == "EUR") or (row.country == "RU" and row.currency == "RUB")) then

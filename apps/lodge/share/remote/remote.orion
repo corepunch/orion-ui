@@ -1,7 +1,7 @@
 <orion>
   <databases>
     <database name="lodge_remote_cache" class="db_schema_xml">
-      <table name="rooms" transient="true"><field name="id" type="integer" key="YES"/><field name="name" type="string" length="40"/><field name="cleaning_state" type="string" length="24"/></table>
+      <table name="rooms" transient="true"><field name="id" type="integer" key="YES"/><field name="name" type="string" length="40"/><field name="cleaning_state" type="string" length="24"/><field name="occupancy_label" type="string" length="80"/></table>
       <table name="guests" transient="true"><field name="id" type="integer" key="YES"/><field name="name" type="string" length="100"/></table>
       <table name="groups" transient="true"><field name="id" type="integer" key="YES"/><field name="name" type="string" length="100"/></table>
       <table name="day_closes" transient="true"><field name="id" type="integer" key="YES"/><field name="day" type="date"/><field name="actor" type="string" length="101"/><field name="net_display" type="string" length="64"/><field name="outstanding_display" type="string" length="64"/><field name="cancelled_count_display" type="string" length="64"/><field name="cancelled_paid_display" type="string" length="64"/></table>
@@ -30,7 +30,7 @@
       <StackView orientation="horizontal" spacing="6"><Button name="reserve" text="Save reservation" action="reserve" flags="BUTTON_DEFAULT"/><Button name="new_booking" text="New reservation" action="new_booking"/><Button name="edit_booking" text="Edit selected reservation" action="edit_booking"/></StackView>
       <StackView name="lists" orientation="horizontal" spacing="8" flags="flexspace">
       <TableView name="room_status" source="lodge_remote_cache.rooms" flags="flexspace,vscroll" frame="true">
-        <Column field="name" title="Room" width="0"/><Column field="cleaning_state" title="Cleaning status" width="150"/>
+        <Column field="name" title="Room" width="0"/><Column field="cleaning_state" title="Cleaning status" width="150"/><Column field="occupancy_label" title="Occupancy" width="160"/>
       </TableView>
       <TableView name="bookings" source="lodge_remote_cache.reservations" flags="flexspace,vscroll" frame="true">
         <Column field="room_name" title="Room" width="90"/><Column field="guest_name" title="Guest" width="0" min-width="140"/><Column field="arrival" title="Arrival" width="100"/><Column field="departure" title="Departure" width="100"/><Column field="status" title="Status" width="110"/><Column field="balance" title="Balance" width="100"/>

@@ -120,6 +120,7 @@ function Model:after_write(table, operation, current, previous)
 end
 function Model:compute(table, row, property)
   if table == "rooms" and property == "cleaning_label" then return orion.tr(cleaning_labels[row.cleaning_state] or row.cleaning_state) end
+  if table == "rooms" and property == "occupancy_label" then return orion.tr(Hotel.room_occupied(row.id) and "Guest checked in" or "No guest checked in") end
   if table == "day_closes" and ({net_display = true, outstanding_display = true, cancelled_paid_display = true, cancelled_count_display = true})[property] then
     return require("remote.close_display")(row, property)
   end

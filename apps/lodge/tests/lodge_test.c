@@ -171,10 +171,17 @@ static void test_persistence_and_page(void) {
   db_room_t clean = *room_row; snprintf(clean.cleaning_state, sizeof(clean.cleaning_state), "clean");
   ASSERT_TRUE(send_db_message(hotel, dbUpdate, TABLE_ROOMS, &clean));
   ASSERT_TRUE(send_db_message(hotel, dbUpdate, TABLE_RESERVATIONS, &checking_in));
+  char occupancy[80]; db_get_field_text(hotel, TABLE_ROOMS, room_row, "occupancy_label", occupancy, sizeof(occupancy));
+  ASSERT_STR_EQUAL(occupancy, "Guest checked in");
+  form_library_t *housekeeping_library = form_library_load("apps/lodge/share/application.orion"); ASSERT_NOT_NULL(housekeeping_library);
+  script_page_t *housekeeping = script_page_open_library(script_application_runtime(app), housekeeping_library, "housekeeping", "apps/lodge/share/housekeeping.lua", error, sizeof(error));
+  ASSERT_NOT_NULL(housekeeping); ASSERT_NOT_NULL(script_page_create(housekeeping, NULL)); ASSERT_NOT_NULL(script_page_control(housekeeping, "rooms"));
   ASSERT_TRUE(hotel_script(app, "assert(require('hotel').payment(4, 17150, 'settle-room'))"));
   ASSERT_TRUE(hotel_script(app, "assert(require('hotel').transition(4, 'checked_out'))"));
   room_row = (void *)send_db_message(hotel, dbFind, TABLE_ROOMS, (void *)(intptr_t)room.id);
   ASSERT_STR_EQUAL(room_row->cleaning_state, "dirty");
+  db_get_field_text(hotel, TABLE_ROOMS, room_row, "occupancy_label", occupancy, sizeof(occupancy)); ASSERT_STR_EQUAL(occupancy, "No guest checked in");
+  ASSERT_TRUE(script_page_perform(housekeeping, "refresh")); script_page_close(housekeeping); form_library_free(housekeeping_library);
   ASSERT_TRUE(send_db_message(hotel, dbSave, 0, NULL));
   script_application_close(app); hotel = NULL;
   app = script_application_open("apps/lodge/share", directory, error, sizeof(error)); ASSERT_NOT_NULL(app);
@@ -366,7 +373,7 @@ static void test_service(void) {
     "assert(call('save_guest',{id=guest,name='Updated guest',phone='+49 123'}).ok); "
     "assert(not call('save_guest',{id=guest,name=''},'reception').ok); "
     "local saved_guest=call('snapshot').result.guests[1]; assert(saved_guest.id==guest and saved_guest.name=='Updated guest' and saved_guest.phone=='+49 123'); "
-    "local hs=call('snapshot',{},'housekeeping'); assert(hs.ok and hs.result.guests==nil and hs.result.payment_events==nil and #hs.result.rooms==1); "
+    "local hs=call('snapshot',{},'housekeeping'); assert(hs.ok and hs.result.guests==nil and hs.result.reservations==nil and hs.result.payment_events==nil and #hs.result.rooms==1 and hs.result.rooms[1].occupied==false); "
     "assert(call('set_room_cleaning',{id=room,state='clean'},'housekeeping').ok); "
     "assert(not call('set_room_cleaning',{id=room,state='dirty'},'reception').ok); "
     "assert(call('set_room_cleaning',{id=room,state='dirty'},'housekeeping').ok); "
@@ -379,14 +386,17 @@ static void test_service(void) {
     "local edited=call('snapshot').result.reservations[1]; assert(edited.id==r and edited.rate==125 and edited.notes=='Late arrival'); "
     "assert(call('set_night',{id=r,night=old,amount_minor=15000}).ok); "
     "assert(call('check_in',{id=r}).ok); "
+    "assert(call('snapshot',{},'housekeeping').result.rooms[1].occupied==true); "
     "local room2=assert(call('save_room',{name='R2',capacity=2,rate=100}).result).id; "
     "local h=require('hotel'); assert(not h.save(r,{room_id=room2})); "
     "assert(h.rooms:save(room2,{cleaning_state='clean'})); assert(h.save(r,{room_id=room2})); "
+    "local moved=call('snapshot',{},'housekeeping').result.rooms; assert(not moved[1].occupied and moved[2].occupied); "
     "assert(h.rooms.model:find(room).cleaning_state=='dirty'); assert(h.rooms:save(room,{cleaning_state='clean'})); "
     "assert(h.save(r,{room_id=room})); assert(h.rooms.model:find(room2).cleaning_state=='dirty'); "
     "assert(call('payment',{id=r,amount_minor=15000,request_key='server-test'}).ok); "
     "assert(call('payment',{id=r,amount_minor=15000,request_key='server-test'}).ok); "
     "assert(call('check_out',{id=r}).ok); local snap=call('snapshot'); "
+    "assert(call('snapshot',{},'housekeeping').result.rooms[1].occupied==false); "
     "assert(snap.ok and #snap.result.payment_events==1 and snap.result.reservations[1].balance==0 and snap.result.rooms[1].cleaning_state=='dirty'); "
     "assert(not call('reserve',{id=r,notes='Changed after checkout'}).ok); "
     "assert(not call('reset_night',{id=r,night=old}).ok); "

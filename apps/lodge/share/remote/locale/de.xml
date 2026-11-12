@@ -244,4 +244,8 @@
   <string source="Cancelled with payments" where="remote">Stornierte mit Zahlungen</string>
   <string source="Paid on cancelled" where="remote">Zahlungen für stornierte</string>
   <string source="Unknown" where="code">Unbekannt</string>
+  <string source="Occupancy" where="remote">Belegung</string>
+  <string source="Guest checked in" where="code">Gast eingecheckt</string>
+  <string source="No guest checked in" where="code">Kein Gast eingecheckt</string>
+  <string source="Occupancy unknown" where="code">Belegung unbekannt</string>
 </strings>

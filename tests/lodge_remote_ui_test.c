@@ -127,6 +127,7 @@ static void test_lodge_remote_ui(void) {
   ASSERT_TRUE(script_page_perform(page, "load_guest")); ASSERT_TRUE(window_is_enabled(script_page_control(page, "save_guest")));
   send_message(script_page_control(page, "clean_room"), cbSetCurrentValue, 1, NULL);
   ASSERT_TRUE(script_page_perform(page, "mark_clean")); ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "cleaning_state", "Clean"));
+  ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "occupancy_label", "No guest checked in"));
   ASSERT_TRUE(script_page_perform(page, "mark_dirty")); ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "cleaning_state", "Dirty"));
   ASSERT_TRUE(script_page_perform(page, "mark_inspection")); ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "cleaning_state", "Inspection needed"));
   ASSERT_TRUE(script_page_perform(page, "mark_clean")); ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "cleaning_state", "Clean"));
@@ -155,6 +156,7 @@ static void test_lodge_remote_ui(void) {
   ASSERT_TRUE(script_page_perform(page, "new_booking"));
   ASSERT_STR_EQUAL(script_page_control(page, "editor")->title, "New reservation");
   ASSERT_TRUE(script_page_perform(page, "check_in")); ASSERT_TRUE(wait_for(db, stays->table_id, 1, "status", "Checked in"));
+  ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "occupancy_label", "Guest checked in"));
   send_message(script_page_control(page, "amount"), edSetText, 0, "125.00");
   ASSERT_TRUE(script_page_perform(page, "pay"));
   ASSERT_TRUE(wait_for(db, stays->table_id, 1, "balance", "0.00"));
@@ -188,6 +190,7 @@ static void test_lodge_remote_ui(void) {
   ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "The document could not be written"));
   ASSERT_EQUAL(rename(moved_directory, directory), 0);
   ASSERT_TRUE(script_page_perform(page, "check_out")); ASSERT_TRUE(wait_for(db, stays->table_id, 1, "status", "Checked out"));
+  ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "occupancy_label", "No guest checked in"));
   send_message(script_page_control(page, "room_name"), edSetText, 0, "Remote 102");
   ASSERT_TRUE(script_page_perform(page, "add_room")); ASSERT_TRUE(wait_for(db, rooms->table_id, 2, "name", "Remote 102"));
   send_message(script_page_control(page, "edit_room_choice"), cbSetCurrentValue, 2, NULL);

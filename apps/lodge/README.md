@@ -41,6 +41,11 @@ to Cancelled. Check-out requires a zero balance; cancelled and checked-out
 reservations cannot be edited, but payments and refunds can still be recorded.
 Use **Housekeeping** to mark rooms clean, dirty, or
 needing inspection. Check-in requires a clean room; check-out marks it dirty.
+The room list also shows whether a guest is currently checked in, independently
+of cleaning status and scheduled dates. Use **Refresh rooms** in the local
+housekeeping window, or refresh the shared view, to see changes made elsewhere.
+The indicator does not show guest details or establish
+whether anyone is physically present in the room.
 An adjacent reservation cannot check in, or transfer into a room, while another
 guest is still checked in there, even if the scheduled dates do not overlap.
 New rooms and rooms migrated from older databases need inspection. Amounts use the

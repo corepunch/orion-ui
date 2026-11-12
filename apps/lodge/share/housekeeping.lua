@@ -13,4 +13,5 @@ end
 function Housekeeping:mark_clean(values) self:set_status(values, "clean") end
 function Housekeeping:mark_dirty(values) self:set_status(values, "dirty") end
 function Housekeeping:mark_inspection(values) self:set_status(values, "inspection_needed") end
+function Housekeeping:refresh() end
 return Housekeeping

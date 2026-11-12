@@ -148,11 +148,12 @@
     <form name="housekeeping" controller="housekeeping" title="Housekeeping" width="600" height="400" padding="10" spacing="6">
       <Label text="Select a room to update its cleaning status." />
       <TableView name="rooms" source="housekeeping_rooms.objects" flags="flexspace,vscroll" frame="true">
-        <Column field="name" title="Room" width="0" /><Column field="cleaning_label" title="Cleaning status" width="180" />
+        <Column field="name" title="Room" width="0" /><Column field="cleaning_label" title="Cleaning status" width="180" /><Column field="occupancy_label" title="Occupancy" width="180" />
       </TableView>
       <StackView orientation="horizontal" spacing="6">
         <Button text="Mark clean" action="mark_clean" /><Button text="Mark dirty" action="mark_dirty" />
         <Button text="Needs inspection" action="mark_inspection" />
+        <Button text="Refresh rooms" action="refresh" />
       </StackView>
       <Label name="error" />
     </form>

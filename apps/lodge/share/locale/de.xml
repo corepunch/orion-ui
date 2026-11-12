@@ -190,4 +190,9 @@
   <string source="Cancelled with payments" where="day_close">Stornierte mit Zahlungen</string>
   <string source="Paid on cancelled" where="day_close">Zahlungen für stornierte</string>
   <string source="Unknown" where="code">Unbekannt</string>
+  <string source="Occupancy" where="housekeeping">Belegung</string>
+  <string source="Refresh rooms" where="housekeeping">Zimmer aktualisieren</string>
+  <string source="Guest checked in" where="code">Gast eingecheckt</string>
+  <string source="No guest checked in" where="code">Kein Gast eingecheckt</string>
+  <string source="Occupancy unknown" where="code">Belegung unbekannt</string>
 </strings>

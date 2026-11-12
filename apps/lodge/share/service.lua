@@ -38,7 +38,7 @@ end
 local function snapshot(role)
   local result = {rooms = json.array({})}
   for _, room in ipairs(Hotel.rooms.model:all()) do
-    local item = {id = room.id, name = room.name, cleaning_state = room.cleaning_state}
+    local item = {id = room.id, name = room.name, cleaning_state = room.cleaning_state, occupied = Hotel.room_occupied(room.id)}
     if role ~= "housekeeping" then item.category, item.capacity, item.rate = room.category, room.capacity, room.rate end
     result.rooms[#result.rooms + 1] = item
   end

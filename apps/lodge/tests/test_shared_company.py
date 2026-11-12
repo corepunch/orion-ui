@@ -173,6 +173,8 @@ class SharedCompanyTests(unittest.TestCase):
                                       'departure': '2035-01-02', 'persons': 1, 'rate': 100, 'extras': 0, 'notes': ''})['result']['id']
                     self.assertTrue(request('clean-first', 'set_room_cleaning', {'id': rooms[0], 'state': 'clean'}, 'housekeeping')['ok'])
                     self.assertTrue(request('check-in', 'check_in', {'id': booking})['ok'])
+                    hs = request('occupied-view', 'snapshot', {}, 'housekeeping')['result']
+                    self.assertTrue(hs['rooms'][0]['occupied']); self.assertNotIn('reservations', hs); self.assertNotIn('guests', hs)
                     self.assertFalse(request('bad-transfer', 'reserve', {'id': booking, 'room_id': rooms[1]})['ok'])
                     before = request('before-transfer', 'snapshot', {})['result']
                     self.assertEqual(before['reservations'][0]['room_id'], rooms[0])
@@ -184,6 +186,8 @@ class SharedCompanyTests(unittest.TestCase):
                     self.assertEqual(after['reservations'][0]['room_id'], rooms[1])
                     self.assertEqual(after['rooms'][0]['cleaning_state'], 'dirty')
                     self.assertEqual(after['rooms'][1]['cleaning_state'], 'clean')
+                    hs = request('transfer-view', 'snapshot', {}, 'housekeeping')['result']
+                    self.assertEqual([room['occupied'] for room in hs['rooms']], [False, True])
                 finally:
                     company.close()
 

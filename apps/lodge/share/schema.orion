@@ -9,6 +9,7 @@
         <field name="rate" type="double" />
         <field name="cleaning_state" type="string" length="24" default="inspection_needed" />
         <field name="cleaning_label" type="string" length="80" computed="cleaning_label" />
+        <field name="occupancy_label" type="string" length="80" computed="occupancy_label" />
       </table>
       <table name="guests">
         <field name="id" type="integer" key="YES" />

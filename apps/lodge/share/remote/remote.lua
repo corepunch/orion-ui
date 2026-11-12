@@ -34,7 +34,8 @@ function Page:load_snapshot(after)
     self.currency = result.hotel and result.hotel.currency
     for _, item in ipairs(result.rooms or {}) do
       self.rooms[item.id] = item
-      rooms[#rooms + 1] = {id = item.id, name = item.name, cleaning_state = orion.tr(cleaning_labels[item.cleaning_state] or item.cleaning_state)}
+      rooms[#rooms + 1] = {id = item.id, name = item.name, cleaning_state = orion.tr(cleaning_labels[item.cleaning_state] or item.cleaning_state),
+        occupancy_label = orion.tr(item.occupied == nil and "Occupancy unknown" or (item.occupied and "Guest checked in" or "No guest checked in"))}
       room_names[item.id] = item.name
     end
     for _, item in ipairs(result.guests or {}) do
@@ -55,7 +56,7 @@ function Page:load_snapshot(after)
         arrival = item.arrival, departure = item.departure, status = orion.tr(status_labels[item.status] or item.status), balance = item.balance}
     end
     Remote.replace_many({
-      {source = "lodge_remote_cache.rooms", rows = rooms, fields = {"id", "name", "cleaning_state"}},
+      {source = "lodge_remote_cache.rooms", rows = rooms, fields = {"id", "name", "cleaning_state", "occupancy_label"}},
       {source = "lodge_remote_cache.guests", rows = guests, fields = {"id", "name"}},
       {source = "lodge_remote_cache.groups", rows = groups, fields = {"id", "name"}},
       {source = "lodge_remote_cache.day_closes", rows = day_closes, fields = {"id", "day", "actor", "net_display", "outstanding_display", "cancelled_count_display", "cancelled_paid_display"}},

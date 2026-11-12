@@ -190,4 +190,9 @@
   <string source="Cancelled with payments" where="day_close">Отменённые с оплатами</string>
   <string source="Paid on cancelled" where="day_close">Оплачено по отменённым</string>
   <string source="Unknown" where="code">Неизвестно</string>
+  <string source="Occupancy" where="housekeeping">Проживание</string>
+  <string source="Refresh rooms" where="housekeeping">Обновить номера</string>
+  <string source="Guest checked in" where="code">Гость заселён</string>
+  <string source="No guest checked in" where="code">Гость не заселён</string>
+  <string source="Occupancy unknown" where="code">Проживание неизвестно</string>
 </strings>
