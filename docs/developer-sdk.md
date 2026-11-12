@@ -98,6 +98,10 @@ before `check` or `pack`; bundled manifests remain authoritative for bundled IDs
 extensions, caps individual files at 16 MiB and the package at 64 MiB, and writes
 an archive outside the source directory. It refuses an existing output. Sorted
 entries, fixed timestamps and modes make archives repeatable on the same toolchain.
+The limits include the generated inventory; at most 4095 source files are allowed.
+Names must not collide case-insensitively or contain colons or backslashes, and
+`SHA256SUMS.json` is reserved regardless of case. These restrictions make plugin
+archives compatible with the package manager's portable path checks.
 `SHA256SUMS.json` records each source file's hash. Hashes detect accidental changes;
 they are not signatures. Keep the source directory unchanged while packaging.
 Never point the packer at a company data directory. Add license, tested versions,

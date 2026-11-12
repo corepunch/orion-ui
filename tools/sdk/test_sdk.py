@@ -58,6 +58,25 @@ class SDKTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             sdk.check(app)
 
+    def test_reject_names_and_count_not_accepted_by_package_manager(self):
+        app = self.root / "app"; sdk.create(app, "example", "application")
+        (app / "A.lua").write_text("return true")
+        collision = app / "a.lua"
+        if not collision.exists():
+            collision.write_text("return true")
+            with self.assertRaises(ValueError): sdk.pack(app, self.root / "collision.zip")
+            collision.unlink()
+        (app / "A.lua").unlink()
+        for name in ("bad:name.lua", "bad\\name.lua", "sha256sums.json"):
+            path = app / name
+            try: path.write_text("{}")
+            except OSError: continue
+            with self.assertRaises(ValueError): sdk.pack(app, self.root / "invalid.zip")
+            self.assertFalse((self.root / "invalid.zip").exists())
+            path.unlink()
+        for index in range(4094): (app / f"f{index}.txt").touch()
+        with self.assertRaisesRegex(ValueError, "4095"): sdk.files(app)
+
     def test_reject_invalid_plugin_version_and_lua(self):
         plugin = self.root / "plugin"
         sdk.create(plugin, "example", "plugin")
