@@ -1,4 +1,4 @@
-# Lodge database versions 2–5
+# Lodge database versions 2–6
 
 Version 2 adds reservation history and signed payment events. Before opening an
 existing hotel with the new version, close Lodge and make a separate copy of
@@ -41,9 +41,16 @@ Version 5 adds the paid cancellation count and amount to new day closes.
 Earlier closes did not capture those values, so their history shows Unknown;
 the upgrade does not reconstruct them from current reservations.
 
+Version 6 adds immutable group settlement records. Existing groups and payment
+events remain unchanged; no past group settlements are invented. Downgrading
+requires restoring the independently backed-up database.
+
 The reception payment window submits a payment or refund using a key retained
 for retries in that window. Integrations may use
 `Hotel.payment(id, amount_minor, request_key)` with their own stable retry key.
+The `group:` prefix is reserved for internally allocated group payment events;
+new individual payments must use a different prefix. Previously recorded
+individual payments with that prefix can still be retried.
 If a save reports failure after the primary file was replaced but directory sync
 failed, the outcome is uncertain: inspect the database before starting a new
 request. Lodge does not yet provide payment-provider integration,

@@ -32,7 +32,7 @@ POLICIES = {
     "lodge": {
         "snapshot": {"admin", "reception", "housekeeping", "auditor"},
         **{c: {"admin", "reception"} for c in (
-            "save_room", "save_guest", "reserve", "check_in", "check_out", "cancel", "payment", "set_night", "reset_night", "group_reserve", "group_cancel")},
+            "save_room", "save_guest", "reserve", "check_in", "check_out", "cancel", "payment", "set_night", "reset_night", "group_reserve", "group_cancel", "group_settle")},
         "set_room_cleaning": {"admin", "housekeeping"},
         "day_preview": {"admin", "reception", "auditor"}, "close_day": {"admin"},
         "configure_hotel": {"admin"},
@@ -314,6 +314,11 @@ class Company:
                     if not isinstance(payment_key, str) or not payment_key.strip() or len(payment_key) > 100:
                         raise Refusal(400, "Payment requires a stable request_key of 1–100 characters")
                     host_args["request_key"] = "server:" + hashlib.sha256(canonical([actor, payment_key]).encode()).hexdigest()
+                if self.kind == "lodge" and command == "group_settle":
+                    group_key = host_args.get("request_key")
+                    if not isinstance(group_key, str) or not re.fullmatch(r"[a-zA-Z0-9_.-]{1,70}", group_key):
+                        raise Refusal(400, "Group settlement requires a stable request_key of 1–70 ASCII letters, digits, dots, underscores or hyphens")
+                    host_args["request_key"] = "srv-" + hashlib.sha256(canonical([actor, group_key]).encode()).hexdigest()
                 payload = {"command": command, "args": host_args, "actor": actor, "role": role}
                 response = self.runner(stage, payload)
                 if not isinstance(response, dict) or type(response.get("ok")) is not bool:

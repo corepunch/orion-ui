@@ -114,6 +114,30 @@ function Reception:confirm_group_cancel(v)
   self.cancel_group_id, self.cancel_group_notice = nil, ""
   self.notice = orion.tr("Group reservations cancelled. Check payments for refunds.")
 end
+function Reception:preview_group_settlement(v)
+  self.settlement, self.settlement_notice = nil, ""
+  self:group_statement(v)
+  local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
+  local row = orion.assert(Hotel.reservations.model:find(selected.id))
+  local allocation, total = {}, 0
+  for _, member in ipairs(Hotel.reservations.model:select({group_id = row.group_id})) do
+    local balance = money.minor(Hotel.balance(member))
+    orion.assert(member.status ~= "cancelled" and balance >= 0, orion.tr("Settle cancelled reservations and credits individually before paying the group."))
+    orion.assert(balance <= 100000000 and money.minor(Hotel.paid(member)) + balance <= 100000000, orion.tr("The resulting paid amount is out of range."))
+    if balance > 0 then allocation[#allocation + 1] = {id = member.id, amount_minor = balance}; total = total + balance end
+  end
+  orion.assert(#allocation > 0, orion.tr("This group has no outstanding balance."))
+  self.settlement = {id = row.group_id, allocation = allocation, key = Hotel.next_group_settlement_key()}
+  self.settlement_notice = string.format(orion.tr("Pay group %s: %s %s across %d reservations. Review the exported group statement before confirming."), orion.assert(Hotel.reservation_groups.model:find(row.group_id)).name, orion.formatNumber(total / 100, 2), orion.assert(Hotel.hotel_settings.model:all()[1]).currency, #allocation)
+end
+function Reception:confirm_group_settlement(v)
+  local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
+  local row = orion.assert(Hotel.reservations.model:find(selected.id))
+  local settlement = orion.assert(self.settlement and self.settlement.id == row.group_id and self.settlement, orion.tr("Preview the group settlement again."))
+  orion.assert(Hotel.settle_group(settlement.id, settlement.allocation, settlement.key))
+  self.settlement, self.settlement_notice = nil, ""
+  self.notice = orion.tr("Group settlement recorded.")
+end
 function Reception:data()
   local count, outstanding = 0, 0
   for _, row in ipairs(Hotel.reservations.model:select(nil, {order = "arrival, id"})) do
@@ -122,12 +146,12 @@ function Reception:data()
     count = count + 1
   end
   local values = {editor = self.editing and string.format(orion.tr("Edit reservation %d"), self.editing) or orion.tr("New reservation"),
-    summary = string.format(orion.tr("%d reservations · Outstanding: %s"), count, orion.formatNumber(outstanding / 100, 2)), notice = self.notice, group_cancel_notice = self.cancel_group_notice or ""}
+    summary = string.format(orion.tr("%d reservations · Outstanding: %s"), count, orion.formatNumber(outstanding / 100, 2)), notice = self.notice, group_cancel_notice = self.cancel_group_notice or "", settlement_notice = self.settlement_notice or ""}
   local settings = Hotel.hotel_settings.model:all()[1]
   values.currency = settings and string.format(orion.tr("Country: %s · Currency: %s"), settings.country, settings.currency) or orion.tr("Hotel country and currency are not configured.")
   for k, v in pairs(self.fields) do values[k] = v end
   local edited = self.editing and Hotel.reservations.model:find(self.editing)
   values.paid = orion.formatNumber(edited and Hotel.paid(edited) or 0, 2)
-  return {values = values, disabled = {confirm_group_cancel = not self.cancel_group_id}}
+  return {values = values, disabled = {confirm_group_cancel = not self.cancel_group_id, confirm_group_settlement = not self.settlement}}
 end
 return Reception

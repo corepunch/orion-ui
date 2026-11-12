@@ -53,8 +53,13 @@ def run_case(base, kind, country):
         http.shutdown(); http.server_close(); thread.join(); company.close()
 
 
-with tempfile.TemporaryDirectory() as temp:
-    for country in ('DE', 'RU'):
-        for name, kind in (('normal', None), ('payment', 'payment'), ('guest', 'guest')):
-            base = pathlib.Path(temp) / (country + '-' + name); base.mkdir()
-            run_case(base, kind, country)
+original_tz = os.environ.get('TZ')
+try:
+    with tempfile.TemporaryDirectory() as temp:
+        for country in ('DE', 'RU'):
+            for name, kind in (('normal', None), ('payment', 'payment'), ('guest', 'guest')):
+                base = pathlib.Path(temp) / (country + '-' + name); base.mkdir()
+                run_case(base, kind, country)
+finally:
+    if original_tz is None: os.environ.pop('TZ', None)
+    else: os.environ['TZ'] = original_tz

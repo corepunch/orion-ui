@@ -24,7 +24,7 @@ function Page:remember(values)
   for _, key in ipairs(inputs) do if values[key] ~= nil then self.values[key] = values[key] end end
 end
 function Page:load_snapshot(after)
-  self.cancel_group_id, self.cancel_group_notice = nil, ""
+  self.cancel_group_id, self.cancel_group_notice, self.settlement, self.settlement_notice = nil, "", nil, ""
   self.day_report, self.cancelled_paid_report = "", ""
   self.snapshot_ready = false
   local ok, err = self.client:submit("snapshot", {}, function(result, failure)
@@ -267,6 +267,38 @@ function Page:confirm_group_cancel(v)
   self.cancel_group_id, self.cancel_group_notice = nil, ""
   self:submit(v, "group_cancel", {id = id})
 end
+function Page:preview_group_settlement(v)
+  self.settlement, self.settlement_notice = nil, ""
+  self:remember(v)
+  local id = orion.assert(v.statement_group and v.statement_group > 0 and v.statement_group, orion.tr("Choose a reservation group."))
+  self:load_snapshot(function()
+    local group = orion.assert(self.groups[id], orion.tr("Choose a reservation group."))
+    local lines, allocation, total = {}, {}, 0
+    for _, row in pairs(self.reservations) do
+      if row.group_id == id then
+        local balance = money.minor(row.balance)
+        orion.assert(row.status ~= "cancelled" and balance >= 0, orion.tr("Settle cancelled reservations and credits individually before paying the group."))
+        orion.assert(balance <= 100000000 and money.minor(row.paid) + balance <= 100000000, orion.tr("The resulting paid amount is out of range."))
+        if balance > 0 then allocation[#allocation + 1] = {id = row.id, amount_minor = balance}; total = total + balance end
+        local room, guest = orion.assert(self.rooms[row.room_id]), orion.assert(self.guests[row.guest_id])
+        lines[#lines + 1] = {id = row.id, room = room.name, guest = guest.name, arrival = row.arrival, departure = row.departure,
+          status = row.status, total = row.total, paid = row.paid, balance = row.balance}
+      end
+    end
+    orion.assert(#allocation > 0, orion.tr("This group has no outstanding balance."))
+    local html = group_statement(group.name, lines, orion.assert(self.currency))
+    local path = orion.assert(application.write("group-statement.html", html))
+    self.settlement = {id = id, allocation = allocation, key = Remote.new_key(), revision = self.client:state().revision}
+    self.settlement_notice = string.format(orion.tr("Pay group %s: %s %s across %d reservations. Review the exported group statement before confirming."), group.name, orion.formatNumber(total / 100, 2), self.currency, #allocation)
+    self.notice = string.format(orion.tr("Group statement saved: %s"), path)
+  end)
+end
+function Page:confirm_group_settlement(v)
+  local settlement = orion.assert(self.settlement and self.settlement.id == v.statement_group and
+    self.settlement.revision == self.client:state().revision and self.settlement, orion.tr("Preview the group settlement again."))
+  self:submit(v, "group_settle", {id = settlement.id, allocation = settlement.allocation, request_key = settlement.key})
+  self.settlement, self.settlement_notice = nil, ""
+end
 function Page:night_price(v, command)
   local id = orion.assert(v.night_booking and v.night_booking > 0 and v.night_booking, orion.tr("Choose a reservation."))
   local args = {id = id, night = v.night}
@@ -293,9 +325,10 @@ function Page:data()
   local disabled = {connect = state.busy or (state.pending and not state.conflict), retry = state.busy or not state.pending}
   local map = {add_room = "save_room", add_guest = "save_guest", mark_clean = "set_room_cleaning", mark_dirty = "set_room_cleaning", mark_inspection = "set_room_cleaning", reserve = "reserve",
     check_in = "check_in", check_out = "check_out", cancel = "cancel", confirmation = "snapshot", pay = "payment", refund = "payment",
-    group_reserve = "group_reserve", group_statement = "snapshot", preview_group_cancel = "group_cancel", confirm_group_cancel = "group_cancel", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
+    group_reserve = "group_reserve", group_statement = "snapshot", preview_group_cancel = "group_cancel", confirm_group_cancel = "group_cancel", preview_group_settlement = "group_settle", confirm_group_settlement = "group_settle", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
   for control, command in pairs(map) do disabled[control] = blocked or not self.allowed[command] end
   disabled.confirm_group_cancel = disabled.confirm_group_cancel or not self.cancel_group_id
+  disabled.confirm_group_settlement = disabled.confirm_group_settlement or not self.settlement
   disabled.new_booking = blocked or not self.allowed.reserve
   disabled.new_group = blocked or not self.allowed.group_reserve
   disabled.room_rate = blocked or not self.allowed.reserve
@@ -310,7 +343,7 @@ function Page:data()
   disabled.load_room = blocked or not self.allowed.save_room
   disabled.save_room = disabled.load_room or not self.editing_room or self.room_needs_reload
   local connection = self.connected and string.format(orion.tr("Country: %s · Role: %s · Revision: %d"), self.country, self.role, state.revision) or self.connection
-  local values = {connection = connection, hotel_day = self.server_day and string.format(orion.tr("Hotel day at refresh: %s"), orion.formatDate(self.server_day)) or "", notice = self.notice, group_cancel_notice = self.cancel_group_notice or "", day_report = self.day_report, cancelled_paid_report = self.cancelled_paid_report,
+  local values = {connection = connection, hotel_day = self.server_day and string.format(orion.tr("Hotel day at refresh: %s"), orion.formatDate(self.server_day)) or "", notice = self.notice, group_cancel_notice = self.cancel_group_notice or "", settlement_notice = self.settlement_notice or "", day_report = self.day_report, cancelled_paid_report = self.cancelled_paid_report,
     editor = self.editing and string.format(orion.tr("Edit reservation %d"), self.editing) or orion.tr("New reservation"),
     payment_status = self.payment_done and orion.tr("Start a new payment or refund before recording another.") or "",
     room_editor = self.room_needs_reload and orion.tr("Load the room again before saving.") or

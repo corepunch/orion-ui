@@ -57,6 +57,7 @@
         <Button name="confirmation" text="Export confirmation" action="confirmation" /><Button name="save_data" text="Retry saving" action="save_data" />
       </StackView>
       <StackView orientation="horizontal" spacing="6"><Button name="preview_group_cancel" text="Preview group cancellation" action="preview_group_cancel"/><Button name="confirm_group_cancel" text="Confirm group cancellation" action="confirm_group_cancel"/></StackView><Label name="group_cancel_notice"/>
+      <StackView orientation="horizontal" spacing="6"><Button name="preview_group_settlement" text="Preview group settlement" action="preview_group_settlement"/><Button name="confirm_group_settlement" text="Confirm group settlement" action="confirm_group_settlement"/></StackView><Label name="settlement_notice"/>
       <StackView name="pricing_actions" orientation="horizontal" spacing="6"><Button name="night_prices" text="Nightly prices" action="night_prices" /><Button name="group_statement" text="Export group statement" action="group_statement" /></StackView>
       <Label name="summary" /><Label name="notice" /><Label name="error" />
     </form>

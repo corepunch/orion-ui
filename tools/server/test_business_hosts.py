@@ -65,7 +65,8 @@ class LodgeHostTests(unittest.TestCase):
         self.assertEqual(view['payment_events'][0]['actor'], 'tester-reception')
         self.assertEqual(view['rooms'][0]['cleaning_state'], 'dirty')
         cleaner = self.call('snapshot', role='housekeeping')['result']
-        self.assertEqual(set(cleaner), {'rooms'})
+        self.assertEqual(set(cleaner), {'rooms', 'today'})
+        self.assertEqual(cleaner['today'], view['today'])
         self.assertNotIn('rate', cleaner['rooms'][0])
         with self.assertRaises(server.Refusal) as failure:
             self.call('payment', {'id': booking_id, 'amount_minor': 1, 'request_key': 'bad'}, 'auditor')

@@ -207,7 +207,7 @@ static void test_refused_migration(void) {
   file = fopen(target, "rb"); ASSERT_NOT_NULL(file);
   size_t size = fread(contents, 1, sizeof(contents) - 1, file); fclose(file); contents[size] = 0;
   ASSERT_STR_EQUAL(contents, xml);
-  const char *future = "<lodge orion-version=\"6\"><reservations/></lodge>";
+  const char *future = "<lodge orion-version=\"7\"><reservations/></lodge>";
   file = fopen(target, "wb"); ASSERT_NOT_NULL(file); ASSERT_EQUAL(fputs(future, file) >= 0, true); fclose(file);
   app = script_application_open("apps/lodge/share", directory, error, sizeof(error));
   ASSERT_NULL(app);
@@ -240,6 +240,18 @@ static void test_refused_migration(void) {
   app = script_application_open("apps/lodge/share", directory, error, sizeof(error)); ASSERT_NOT_NULL(app);
   db = get_database_by_name("lodge"); old_close = (void *)send_db_message(db, dbFind, TABLE_DAY_CLOSES, (void *)(intptr_t)1);
   ASSERT_NOT_NULL(old_close); ASSERT_EQUAL(old_close->cancelled_paid_count, -1); ASSERT_STR_EQUAL(old_close->net_minor, "100");
+  script_application_close(app);
+  const char *v5 = "<lodge orion-version=\"5\"><reservation_groups><reservation_group id=\"1\" name=\"Existing\"/></reservation_groups></lodge>";
+  file = fopen(target, "wb"); ASSERT_NOT_NULL(file); ASSERT_TRUE(fputs(v5, file) >= 0); fclose(file);
+  app = script_application_open("apps/lodge/share", directory, error, sizeof(error)); ASSERT_NOT_NULL(app);
+  db = get_database_by_name("lodge");
+  ASSERT_NOT_NULL((void *)send_db_message(db, dbFind, TABLE_RESERVATION_GROUPS, (void *)(intptr_t)1));
+  ASSERT_NULL((void *)send_db_message(db, dbFind, TABLE_GROUP_SETTLEMENTS, (void *)(intptr_t)1));
+  ASSERT_TRUE(send_db_message(db, dbSave, 0, NULL)); script_application_close(app);
+  app = script_application_open("apps/lodge/share", directory, error, sizeof(error)); ASSERT_NOT_NULL(app);
+  db = get_database_by_name("lodge");
+  ASSERT_NOT_NULL((void *)send_db_message(db, dbFind, TABLE_RESERVATION_GROUPS, (void *)(intptr_t)1));
+  ASSERT_NULL((void *)send_db_message(db, dbFind, TABLE_GROUP_SETTLEMENTS, (void *)(intptr_t)1));
   script_application_close(app);
   char backup[168]; snprintf(backup, sizeof(backup), "%s.bak", target);
   unlink(backup); unlink(target); rmdir(directory); PASS();
@@ -514,7 +526,24 @@ static void test_group_form(const char *country, const char *currency) {
     "local html=render('Team <A>',rows,'EUR'); assert(html:find('Team &lt;A&gt;',1,true) and html:find('Cancelled',1,true)); "
     "assert(html:find('Total 0.30',1,true) and html:find('Paid 0.30',1,true) and html:find('Balance 0.00',1,true)); "
     "assert(html:find('<td>A</td>',1,true)<html:find('<td>B</td>',1,true))"));
-  ASSERT_TRUE(hotel_script(app, "assert(require('hotel').payment(4,2500,'group-deposit'))"));
+  ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); h.payment_request='group:legacy:4'; assert(h.reservations:save(4,{paid=25})); h.payment_request=nil; assert(h.payment(4,2500,'group:legacy:4'))"));
+  ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); local r=h.reservations.model:find(1); h.payment_request='group:local-1:1'; assert(h.reservations:save(1,{paid=r.paid+1})); h.payment_request=nil"));
+  ASSERT_TRUE(script_page_perform(script_application_main(app), "preview_group_settlement"));
+  ASSERT_NOT_NULL(strstr(script_page_control(script_application_main(app), "settlement_notice")->title, "2 reservations"));
+  char original_settle[sizeof(hotel->source_path)]; snprintf(original_settle, sizeof(original_settle), "%s", hotel->source_path);
+  snprintf(hotel->source_path, sizeof(hotel->source_path), "/nonexistent-orion-lodge-directory/hotel.xml");
+  ASSERT_FALSE(script_page_perform(script_application_main(app), "confirm_group_settlement"));
+  first = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)4);
+  second = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)5);
+  ASSERT_EQUAL(first->paid, 25); ASSERT_EQUAL(second->paid, 0);
+  ASSERT_NULL((void *)send_db_message(hotel, dbFind, TABLE_GROUP_SETTLEMENTS, (void *)(intptr_t)1));
+  snprintf(hotel->source_path, sizeof(hotel->source_path), "%s", original_settle);
+  ASSERT_TRUE(script_page_perform(script_application_main(app), "confirm_group_settlement"));
+  ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); assert(h.balance(h.reservations.model:find(4))==0 and h.balance(h.reservations.model:find(5))==0)"));
+  ASSERT_TRUE(hotel_script(app, "assert(require('hotel').payment(1,100,'group:local-1:1'))"));
+  ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); local e=require('orion.model'):extend('lodge.payment_events'); for _,p in ipairs(e:select({reservation_id=4})) do if p.request_key=='group:local-1:4' then assert(not h.payment(4,p.amount_minor,p.request_key)); return end end; error('missing group payment')"));
+  ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); assert(not h.group_settlements:save(1,{allocation='changed'})); assert(not h.group_settlements:delete(1))"));
+  ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); assert(not h.settle_group(nil,{{id=4,amount_minor=1}},'invalid')); assert(not h.settle_group(1,{{id=2147483648,amount_minor=1}},'invalid'))"));
   ASSERT_TRUE(script_page_perform(script_application_main(app), "preview_group_cancel"));
   ASSERT_NOT_NULL(strstr(script_page_control(script_application_main(app), "group_cancel_notice")->title, "2 reservations"));
   char original[sizeof(hotel->source_path)]; snprintf(original, sizeof(original), "%s", hotel->source_path);
@@ -534,6 +563,14 @@ static void test_group_form(const char *country, const char *currency) {
   hotel = get_database_by_name("lodge");
   second = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)5);
   ASSERT_NOT_NULL(second); ASSERT_EQUAL(second->group_id, 1); ASSERT_STR_EQUAL(second->status, "cancelled");
+  ASSERT_TRUE(hotel_script(app,
+    "local h=require('hotel'); local stays={}; "
+    "for i=1,100 do local r=assert(h.rooms:save(nil,{name='Batch'..i,capacity=1,rate=1})); "
+    "stays[i]={room_id=r.id,guest_id=1,arrival='2040-01-01',departure='2040-01-02',persons=1,rate=1,extras=0,notes=''} end; "
+    "local g=assert(h.create_group('Large group',stays)); local a={}; "
+    "for i,id in ipairs(g.reservations) do a[i]={id=id,amount_minor=100} end; "
+    "assert(h.settle_group(g.id,a,'large-group')); assert(h.settle_group(g.id,a,'large-group')); "
+    "for _,id in ipairs(g.reservations) do assert(h.balance(h.reservations.model:find(id))==0) end"));
   script_application_close(app); hotel = NULL;
   char backup[168], lock[168]; snprintf(backup, sizeof(backup), "%s.bak", target); snprintf(lock, sizeof(lock), "%s.lock", target);
   unlink(statement_path); unlink(backup); unlink(lock); unlink(target); rmdir(directory); PASS();

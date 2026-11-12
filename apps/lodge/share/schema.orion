@@ -1,6 +1,6 @@
 <orion>
   <databases>
-    <database name="lodge" class="db_schema_xml" source="hotel.xml" version="5" migration="additive">
+    <database name="lodge" class="db_schema_xml" source="hotel.xml" version="6" migration="additive">
       <table name="rooms">
         <field name="id" type="integer" key="YES" />
         <field name="name" type="string" length="40" />
@@ -65,6 +65,13 @@
         <field name="actor" type="string" length="101" default="legacy-unknown" />
         <field name="request_key" type="string" length="101" />
         <field name="posted_on" type="date" />
+      </table>
+      <table name="group_settlements">
+        <field name="id" type="integer" key="YES" />
+        <field name="group_id" type="integer" relation="reservation_groups.id" on-delete="deny" />
+        <field name="request_key" type="string" length="71" />
+        <field name="allocation" type="string" length="4096" />
+        <field name="actor" type="string" length="101" />
       </table>
       <table name="day_closes">
         <field name="id" type="integer" key="YES" />

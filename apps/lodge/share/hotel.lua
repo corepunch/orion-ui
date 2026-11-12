@@ -237,6 +237,81 @@ function Hotel.create_group(name, stays)
     return {id = group.id, reservations = ids}
   end)
 end
+Hotel.group_settlements = records.bind("lodge.group_settlements", function(row, previous)
+  if previous or not Hotel.settling_group then return nil, orion.tr("Group settlement records cannot be changed directly.") end
+  if Hotel.group_settlements.model:find({request_key = row.request_key}) then return nil, orion.tr("The group settlement request key was already used.") end
+  return true
+end)
+local group_payment_sequence = 0
+function Hotel.next_group_settlement_key()
+  local key
+  repeat
+    group_payment_sequence = group_payment_sequence + 1
+    key = "local-" .. group_payment_sequence
+  until not Hotel.group_settlements.model:find({request_key = key})
+  return key
+end
+-- The explicit allocation is part of the retry identity and must still match
+-- every member's current balance before any payment can be recorded.
+function Hotel.settle_group(id, allocation, request_key)
+  if type(id) ~= "number" or id % 1 ~= 0 or id < 1 or id > 2147483647 or
+     type(request_key) ~= "string" or not request_key:match("^[%w_.%-]+$") or #request_key > 70 or
+     type(allocation) ~= "table" or #allocation < 1 or #allocation > 100 then
+    return nil, orion.tr("Enter a valid group settlement request.")
+  end
+  local copy, seen = {}, {}
+  for _, item in ipairs(allocation) do
+    if type(item) ~= "table" or type(item.id) ~= "number" or item.id % 1 ~= 0 or item.id < 1 or item.id > 2147483647 or
+       type(item.amount_minor) ~= "number" or item.amount_minor % 1 ~= 0 or item.amount_minor < 1 or
+       item.amount_minor > 100000000 or seen[item.id] then return nil, orion.tr("Enter a valid group settlement request.") end
+    for key in pairs(item) do if key ~= "id" and key ~= "amount_minor" then return nil, orion.tr("Enter a valid group settlement request.") end end
+    seen[item.id] = item.amount_minor; copy[#copy + 1] = {id = item.id, amount_minor = item.amount_minor}
+  end
+  table.sort(copy, function(a, b) return a.id < b.id end)
+  local parts = {}
+  for _, item in ipairs(copy) do parts[#parts + 1] = item.id .. ":" .. item.amount_minor end
+  local encoded = table.concat(parts, ";")
+  local existing = Hotel.group_settlements.model:find({request_key = request_key})
+  if existing then
+    if existing.group_id ~= id or existing.allocation ~= encoded then return nil, orion.tr("The group settlement request key was already used.") end
+    return {id = existing.id}
+  end
+  if not Hotel.reservation_groups.model:find(id) then return nil, orion.tr("Choose a reservation group.") end
+  local members = Hotel.reservations.model:select({group_id = id})
+  local count = 0
+  for _, row in ipairs(members) do
+    local balance = money.minor(Hotel.balance(row))
+    if row.status == "cancelled" or balance < 0 then return nil, orion.tr("Settle cancelled reservations and credits individually before paying the group.") end
+    if balance > 0 then
+      count = count + 1
+      if seen[row.id] ~= balance or money.minor(row.paid) + balance > 100000000 then
+        return nil, orion.tr("Group balances changed; preview the settlement again.")
+      end
+    elseif seen[row.id] then return nil, orion.tr("Group balances changed; preview the settlement again.") end
+  end
+  if count ~= #copy then return nil, orion.tr("Group balances changed; preview the settlement again.") end
+  local events = require("orion.model"):extend("lodge.payment_events")
+  for _, item in ipairs(copy) do
+    if events:find({request_key = "group:" .. request_key .. ":" .. item.id}) then return nil, orion.tr("The group settlement request key was already used.") end
+  end
+  Hotel.settling_group = true
+  local ok, result, message = pcall(function()
+    return Hotel.reservations.model:transaction(function()
+      local header = orion.assert(Hotel.group_settlements:save(nil, {group_id = id, request_key = request_key, allocation = encoded,
+        actor = require("orion.db").actor("lodge")}))
+      for _, item in ipairs(copy) do
+        local row = orion.assert(Hotel.reservations.model:find(item.id))
+        Hotel.payment_request = "group:" .. request_key .. ":" .. item.id
+        orion.assert(Hotel.reservations:save(item.id, {paid = (money.minor(row.paid) + item.amount_minor) / 100}))
+      end
+      orion.assert(require("orion.application").save("lodge"))
+      return {id = header.id}
+    end)
+  end)
+  Hotel.payment_request, Hotel.settling_group = nil, false
+  if not ok then error(result, 0) end
+  return result, message
+end
 function Hotel.cancel_group(id)
   local group = Hotel.reservation_groups.model:find(id)
   if not group then return nil, orion.tr("Choose a reservation group.") end
@@ -277,6 +352,18 @@ function Hotel.payment(id, amount_minor, request_key)
   end
   local events = require("orion.model"):extend("lodge.payment_events")
   local existing = events:find({request_key = request_key})
+  local group_key = request_key:match("^group:([%w_.%-]+):%d+$")
+  if request_key:sub(1, 6) == "group:" then
+    if not existing then return nil, orion.tr("Enter a valid payment amount and request key.") end
+    local group = group_key and Hotel.group_settlements.model:find({request_key = group_key})
+    if group then
+      for member, amount in group.allocation:gmatch("(%d+):(%d+)") do
+        if tonumber(member) == existing.reservation_id and tonumber(amount) == existing.amount_minor then
+          return nil, orion.tr("Enter a valid payment amount and request key.")
+        end
+      end
+    end
+  end
   if existing then
     if existing.reservation_id ~= id or existing.amount_minor ~= amount_minor then
       return nil, orion.tr("The payment request key was already used for a different payment.")

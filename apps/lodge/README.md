@@ -61,14 +61,28 @@ sources and the remaining German and Russian tax-document work.
 **Group reservation** creates two room reservations together at the rooms'
 current base rates. If either room is unavailable or invalid, neither reservation
 is saved. The service API can create a group of up to 100 rooms. Group members
-are edited and paid individually; there is no group folio. To cancel the whole
+are edited individually; there is no group folio. To pay the full outstanding
+balance of a group, select a member locally or choose the group in shared mode,
+then preview the settlement. Lodge exports a group statement with each member's
+balance and shows the total and number of payments; review it before confirming.
+The payment settles each positive balance in full in one transaction, with a
+separate payment event per reservation. Groups containing cancelled reservations
+or credits must be reconciled individually first; partial group payments and
+group refunds are not supported. If balances change after the preview, preview
+again. A failed or uncertain shared request must be retried using the pending
+request. The Lua `Hotel.settle_group(group_id, allocation, request_key)` API
+accepts the exact positive balances as `{id, amount_minor}` entries. A key is
+1–70 ASCII letters, digits, dots, underscores or hyphens; retrying the same
+allocation with the same key returns the original settlement, while a changed
+allocation is refused. Shared-server keys are scoped to the authenticated
+actor. To cancel the whole
 group, select one member locally (or the group in the shared view), preview the
 number of reservations and payments held, then confirm. All members must still
 be reserved; the cancellation is atomic and does not issue refunds.
 **Export group statement** writes a printable `group-statement.html` listing
 each member and its total, paid amount and balance. Its totals include cancelled
 reservations, following the individual balances; reconcile refunds separately.
-The statement is an operational summary, not a tax invoice or group payment.
+The statement is an operational summary, not a tax invoice or proof of payment.
 
 **Close day** previews today's net recorded payments, outstanding balance and
 overdue arrivals or departures. It separately shows the number of cancelled

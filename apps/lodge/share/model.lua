@@ -25,6 +25,7 @@ function Model:validate(table, row, previous)
     return nil, orion.tr("Configure the hotel country and currency before recording reservations or payments.")
   end
   if table == "day_closes" then return Hotel.day_closes.validate(row, previous) end
+  if table == "group_settlements" then return Hotel.group_settlements.validate(row, previous) end
   if (table == "reservations" or table == "night_rates" or table == "reservation_groups") and Hotel.day_closes.model:find({day = orion.today()}) then
     return nil, orion.tr("Today is closed; reservation and payment changes resume tomorrow.")
   end
@@ -42,6 +43,7 @@ end
 function Model:validate_delete(table, previous)
   if table == "hotel_settings" then return nil, orion.tr("Hotel currency settings cannot be changed directly.") end
   if table == "day_closes" then return nil, orion.tr("Day close records cannot be changed directly.") end
+  if table == "group_settlements" then return nil, orion.tr("Group settlement records cannot be changed directly.") end
   if table == "night_rates" then
     if #Hotel.hotel_settings.model:all() == 0 then return nil, orion.tr("Configure the hotel country and currency before recording reservations or payments.") end
     if Hotel.day_closes.model:find({day = orion.today()}) then return nil, orion.tr("Today is closed; reservation and payment changes resume tomorrow.") end

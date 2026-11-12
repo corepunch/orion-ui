@@ -202,4 +202,15 @@
   <string source="Preview the group cancellation again." where="code">Повторно проверьте отмену группы.</string>
   <string source="Cancel group %s: %d reservations; payments held: %s. Refunds are separate." where="code">Отменить группу %s: бронирований — %d; удержанные оплаты — %s. Возвраты оформляются отдельно.</string>
   <string source="Group reservations cancelled. Check payments for refunds." where="code">Бронирования группы отменены. Проверьте необходимость возврата оплат.</string>
+  <string source="Preview group settlement" where="reception">Проверить оплату группы</string>
+  <string source="Confirm group settlement" where="reception">Подтвердить оплату группы</string>
+  <string source="Group settlement records cannot be changed directly." where="code">Записи об оплате группы нельзя изменять напрямую.</string>
+  <string source="The group settlement request key was already used." where="code">Ключ запроса оплаты группы уже использован.</string>
+  <string source="Enter a valid group settlement request." where="code">Укажите корректный запрос оплаты группы.</string>
+  <string source="Settle cancelled reservations and credits individually before paying the group." where="code">Перед оплатой группы отдельно урегулируйте отменённые бронирования и переплаты.</string>
+  <string source="Group balances changed; preview the settlement again." where="code">Остатки группы изменились; повторно проверьте оплату.</string>
+  <string source="This group has no outstanding balance." where="code">У группы нет задолженности.</string>
+  <string source="Preview the group settlement again." where="code">Повторно проверьте оплату группы.</string>
+  <string source="Group settlement recorded." where="code">Оплата группы записана.</string>
+  <string source="Pay group %s: %s %s across %d reservations. Review the exported group statement before confirming." where="code">Оплатить группу %s: %s %s по %d бронированиям. Перед подтверждением проверьте выгруженную ведомость группы.</string>
 </strings>

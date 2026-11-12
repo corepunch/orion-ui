@@ -202,4 +202,15 @@
   <string source="Preview the group cancellation again." where="code">Prüfen Sie die Gruppenstornierung erneut.</string>
   <string source="Cancel group %s: %d reservations; payments held: %s. Refunds are separate." where="code">Gruppe %s stornieren: %d Reservierungen; erhaltene Zahlungen: %s. Erstattungen erfolgen separat.</string>
   <string source="Group reservations cancelled. Check payments for refunds." where="code">Gruppenreservierungen storniert. Prüfen Sie Zahlungen auf Erstattungen.</string>
+  <string source="Preview group settlement" where="reception">Gruppenzahlung prüfen</string>
+  <string source="Confirm group settlement" where="reception">Gruppenzahlung bestätigen</string>
+  <string source="Group settlement records cannot be changed directly." where="code">Gruppenzahlungen können nicht direkt geändert werden.</string>
+  <string source="The group settlement request key was already used." where="code">Der Schlüssel für diese Gruppenzahlung wurde bereits verwendet.</string>
+  <string source="Enter a valid group settlement request." where="code">Geben Sie eine gültige Gruppenzahlung ein.</string>
+  <string source="Settle cancelled reservations and credits individually before paying the group." where="code">Begleichen Sie stornierte Reservierungen und Guthaben einzeln, bevor Sie die Gruppe bezahlen.</string>
+  <string source="Group balances changed; preview the settlement again." where="code">Die Gruppenbeträge haben sich geändert; prüfen Sie die Zahlung erneut.</string>
+  <string source="This group has no outstanding balance." where="code">Für diese Gruppe ist kein Betrag offen.</string>
+  <string source="Preview the group settlement again." where="code">Prüfen Sie die Gruppenzahlung erneut.</string>
+  <string source="Group settlement recorded." where="code">Gruppenzahlung erfasst.</string>
+  <string source="Pay group %s: %s %s across %d reservations. Review the exported group statement before confirming." where="code">Gruppe %s: %s %s für %d Reservierungen bezahlen. Prüfen Sie vor der Bestätigung die exportierte Gruppenübersicht.</string>
 </strings>

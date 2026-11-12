@@ -267,6 +267,15 @@ static void test_lodge_remote_ui(void) {
   send_message(script_page_control(page, "sections"), tcSetSelection, 2, NULL);
   ASSERT_TRUE(script_page_perform(page, "reset_night")); ASSERT_TRUE(wait_for(db, stays->table_id, 2, "balance", "50.00"));
   send_message(script_page_control(page, "sections"), tcSetSelection, 1, NULL);
+  ASSERT_TRUE(script_page_perform(page, "preview_group_settlement"));
+  for (int i = 0; i < 500 && !window_is_enabled(script_page_control(page, "confirm_group_settlement")); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "settlement_notice")->title, "2 reservations"));
+  ASSERT_TRUE(script_page_perform(page, "confirm_group_settlement"));
+  ASSERT_TRUE(wait_for(db, stays->table_id, 2, "balance", "0.00"));
+  ASSERT_TRUE(wait_for(db, stays->table_id, 3, "balance", "0.00"));
+  ASSERT_FALSE(window_is_enabled(script_page_control(page, "confirm_group_settlement")));
   ASSERT_FALSE(window_is_enabled(script_page_control(page, "confirm_group_cancel")));
   ASSERT_TRUE(script_page_perform(page, "preview_group_cancel"));
   ASSERT_NOT_NULL(strstr(script_page_control(page, "group_cancel_notice")->title, "2 reservations"));
@@ -280,14 +289,14 @@ static void test_lodge_remote_ui(void) {
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
   }
   ASSERT_NOT_NULL(strstr(script_page_control(page, "day_report")->title, "Overdue: 0"));
-  ASSERT_NOT_NULL(strstr(script_page_control(page, "cancelled_paid_report")->title, "Cancelled reservations with payments: 0"));
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "cancelled_paid_report")->title, "Cancelled reservations with payments: 2"));
   ASSERT_TRUE(script_page_perform(page, "close_day"));
   for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Server data refreshed"); i++) {
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
   }
   ASSERT_NOT_NULL(script_page_control(page, "day_history"));
   const db_table_schema_t *history = db_schema_table_named(db->schema, "day_closes"); ASSERT_NOT_NULL(history);
-  ASSERT_TRUE(wait_for(db, history->table_id, 1, "cancelled_paid_display", "0.00"));
+  ASSERT_TRUE(wait_for(db, history->table_id, 1, "cancelled_paid_display", "110.00"));
   ASSERT_TRUE(script_page_perform(page, "preview_day"));
   for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Today is closed"); i++) {
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();

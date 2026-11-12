@@ -170,6 +170,70 @@ class SharedCompanyTests(unittest.TestCase):
                     company.close()
 
 
+    def test_group_settlement_allocations_and_retry(self):
+        for country in ('DE', 'RU'):
+            with self.subTest(country=country), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'company'
+                server.initialize(argparse.Namespace(state=str(path), application='lodge', country=country, configuration=None,
+                                  executable=str(ROOT / 'build/bin/orion-service'), resources=str(ROOT / 'apps/lodge/share'), source=None))
+                company = server.Company(path)
+                try:
+                    def request(key, command, args, actor='alice', role='reception'):
+                        body = {'request_id': key, 'expected_revision': company.status()['revision'], 'command': command, 'args': args}
+                        return body, company.execute(actor, role, body)
+                    rooms = [request('room-' + str(i), 'save_room', {'name': str(i), 'capacity': 2, 'rate': 100})[1]['result']['id'] for i in (101, 102)]
+                    guest = request('guest', 'save_guest', {'name': 'Guest'})[1]['result']['id']
+                    def stay(room):
+                        return {'room_id': room, 'guest_id': guest, 'arrival': '2035-01-01', 'departure': '2035-01-02',
+                                'persons': 1, 'rate': 100, 'extras': 0, 'notes': ''}
+                    group = request('group', 'group_reserve', {'name': 'Group', 'stays': [stay(r) for r in rooms]})[1]['result']
+                    first, second = group['reservations']
+                    allocation = [{'id': first, 'amount_minor': 10000}, {'id': second, 'amount_minor': 10000}]
+                    stale_revision = company.status()['revision']
+                    stale_body = {'request_id': 'stale-client', 'expected_revision': stale_revision, 'command': 'group_settle',
+                                  'args': {'id': group['id'], 'allocation': allocation, 'request_key': 'stale-client'}}
+                    request('deposit', 'payment', {'id': first, 'amount_minor': 2500, 'request_key': 'deposit'})
+                    with self.assertRaises(server.Refusal) as conflict:
+                        company.execute('bob', 'reception', stale_body)
+                    self.assertEqual(conflict.exception.status, 409)
+                    args = {'id': group['id'], 'allocation': allocation, 'request_key': 'settlement'}
+                    self.assertFalse(request('stale', 'group_settle', args)[1]['ok'])
+                    view = request('after-stale', 'snapshot', {})[1]['result']
+                    self.assertEqual(len(view['payment_events']), 1)
+                    allocation[0]['amount_minor'] = 7500
+                    with self.assertRaises(server.Refusal) as denied:
+                        request('denied', 'group_settle', args, 'cleaner', 'housekeeping')
+                    self.assertEqual(denied.exception.status, 403)
+                    body, result = request('settle', 'group_settle', args)
+                    self.assertTrue(result['ok'], result)
+                    company.close(); company = server.Company(path)
+                    self.assertEqual(company.execute('alice', 'reception', body), result)
+                    replay = request('new-envelope', 'group_settle', args)[1]
+                    self.assertTrue(replay['ok'], replay)
+                    self.assertFalse(request('other-actor-same-key', 'group_settle', args, 'bob')[1]['ok'])
+                    bob_group = request('bob-group', 'group_reserve', {'name': 'Bob', 'stays': [dict(stay(r), arrival='2035-03-01', departure='2035-03-02') for r in rooms]}, 'bob')[1]['result']
+                    bob_args = {'id': bob_group['id'], 'allocation': [{'id': i, 'amount_minor': 10000} for i in bob_group['reservations']], 'request_key': 'settlement'}
+                    self.assertTrue(request('bob-settle', 'group_settle', bob_args, 'bob')[1]['ok'])
+                    altered = {'id': group['id'], 'allocation': [allocation[0]], 'request_key': 'settlement'}
+                    self.assertFalse(request('altered', 'group_settle', altered)[1]['ok'])
+                    view = request('final', 'snapshot', {}, 'bob')[1]['result']
+                    self.assertEqual([r['balance'] for r in view['reservations']], [0, 0, 0, 0])
+                    self.assertEqual([e['amount_minor'] for e in view['payment_events']], [2500, 7500, 10000, 10000, 10000])
+                    self.assertEqual([e['actor'] for e in view['payment_events']], ['alice', 'alice', 'alice', 'bob', 'bob'])
+                    request('refund', 'payment', {'id': first, 'amount_minor': -2500, 'request_key': 'refund'})
+                    request('cancel-second', 'cancel', {'id': second})
+                    cancelled = {'id': group['id'], 'allocation': [{'id': first, 'amount_minor': 2500}], 'request_key': 'cancelled-group'}
+                    self.assertFalse(request('cancelled-group', 'group_settle', cancelled)[1]['ok'])
+                    other = request('other-group', 'group_reserve', {'name': 'Credit', 'stays': [dict(stay(r), arrival='2035-02-01', departure='2035-02-02') for r in rooms]})[1]['result']
+                    a, b = other['reservations']
+                    request('overpay', 'payment', {'id': a, 'amount_minor': 11000, 'request_key': 'overpay'})
+                    credit = {'id': other['id'], 'allocation': [{'id': b, 'amount_minor': 10000}], 'request_key': 'credit-group'}
+                    self.assertFalse(request('credit-group', 'group_settle', credit)[1]['ok'])
+                    view = request('unchanged', 'snapshot', {})[1]['result']
+                    self.assertEqual([r['balance'] for r in view['reservations']], [25, 0, 0, 0, -10, 100])
+                finally:
+                    company.close()
+
     def test_group_cancellation_is_atomic_and_replayable(self):
         for country in ('DE', 'RU'):
             with self.subTest(country=country), tempfile.TemporaryDirectory() as directory:
