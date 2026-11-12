@@ -22,7 +22,7 @@
   <string source="Extra charges:" where="remote">Zusatzkosten:</string>
   <string source="Paid to date:" obsolete="true">Bereits bezahlt:</string>
   <string source="Notes:" where="remote">Notizen:</string>
-  <string source="Use room rate" obsolete="true">Zimmerpreis übernehmen</string>
+  <string source="Use room rate" where="remote">Zimmerpreis übernehmen</string>
   <string source="Save reservation" where="remote">Reservierung speichern</string>
   <string source="New reservation" where="remote">Neue Reservierung</string>
   <string source="New reservation discards unsaved editor changes." obsolete="true">Eine neue Reservierung verwirft ungespeicherte Eingaben.</string>
@@ -255,4 +255,6 @@
   <string source="Preview the group cancellation again." where="code">Prüfen Sie die Gruppenstornierung erneut.</string>
   <string source="Cancel group %s: %d reservations; payments held: %s. Refunds are separate." where="code">Gruppe %s stornieren: %d Reservierungen; erhaltene Zahlungen: %s. Erstattungen erfolgen separat.</string>
   <string source="Group reservations cancelled. Check payments for refunds." where="code">Gruppenreservierungen storniert. Prüfen Sie Zahlungen auf Erstattungen.</string>
+  <string source="Use first room rate" where="remote">Preis des ersten Zimmers übernehmen</string>
+  <string source="Use second room rate" where="remote">Preis des zweiten Zimmers übernehmen</string>
 </strings>

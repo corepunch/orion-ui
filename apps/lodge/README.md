@@ -161,6 +161,8 @@ before recording another. This prevents repeated clicks from creating a second
 payment. This also applies after restoring a pending payment on restart. An uncertain request must be retried using the
 pending request, rather than entered again as a new payment.
 
+The shared view provides **Use room rate** for individual reservations and separate rate-copy actions for each room in a group. Rates can still be edited before saving.
+
 The shared view supports creating and editing rooms and guests, all three cleaning states (clean,
 dirty and inspection needed), creating and editing reservations, check-in,
 payments, refunds, checkout, printable booking confirmations, two-room group reservations, group statements, nightly prices and

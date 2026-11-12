@@ -130,6 +130,14 @@ end
 function Page:mark_clean(v) self:submit(v, "set_room_cleaning", {id = v.clean_room, state = "clean"}) end
 function Page:mark_dirty(v) self:submit(v, "set_room_cleaning", {id = v.clean_room, state = "dirty"}) end
 function Page:mark_inspection(v) self:submit(v, "set_room_cleaning", {id = v.clean_room, state = "inspection_needed"}) end
+function Page:use_room_rate(v, room_field, rate_field)
+  self:remember(v)
+  local room = orion.assert(self.rooms and self.rooms[v[room_field]], orion.tr("Choose a room."))
+  self.values[rate_field] = room.rate
+end
+function Page:room_rate(v) self:use_room_rate(v, "room", "rate") end
+function Page:group_rate_first(v) self:use_room_rate(v, "group_room1", "group_rate1") end
+function Page:group_rate_second(v) self:use_room_rate(v, "group_room2", "group_rate2") end
 function Page:reserve(v)
   orion.assert(not self.needs_reload, orion.tr("Reload the selected reservation before saving, or start a new reservation."))
   self:submit(v, "reserve", {id = self.editing, room_id = v.room, guest_id = v.guest, arrival = v.arrival, departure = v.departure,
@@ -269,6 +277,9 @@ function Page:data()
     group_reserve = "group_reserve", group_statement = "snapshot", preview_group_cancel = "group_cancel", confirm_group_cancel = "group_cancel", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
   for control, command in pairs(map) do disabled[control] = blocked or not self.allowed[command] end
   disabled.confirm_group_cancel = disabled.confirm_group_cancel or not self.cancel_group_id
+  disabled.room_rate = blocked or not self.allowed.reserve
+  disabled.group_rate_first = blocked or not self.allowed.group_reserve
+  disabled.group_rate_second = blocked or not self.allowed.group_reserve
   disabled.reserve = disabled.reserve or self.needs_reload == true
   disabled.pay, disabled.refund = disabled.pay or self.payment_done == true, disabled.refund or self.payment_done == true
   disabled.new_payment = blocked or not self.allowed.payment or not self.payment_done

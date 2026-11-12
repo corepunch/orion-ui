@@ -22,7 +22,7 @@
   <string source="Extra charges:" where="remote">Дополнительные услуги:</string>
   <string source="Paid to date:" obsolete="true">Уже оплачено:</string>
   <string source="Notes:" where="remote">Примечания:</string>
-  <string source="Use room rate" obsolete="true">Взять цену номера</string>
+  <string source="Use room rate" where="remote">Взять цену номера</string>
   <string source="Save reservation" where="remote">Сохранить бронь</string>
   <string source="New reservation" where="remote">Новая бронь</string>
   <string source="New reservation discards unsaved editor changes." obsolete="true">Новая бронь сбрасывает несохранённые изменения.</string>
@@ -255,4 +255,6 @@
   <string source="Preview the group cancellation again." where="code">Повторно проверьте отмену группы.</string>
   <string source="Cancel group %s: %d reservations; payments held: %s. Refunds are separate." where="code">Отменить группу %s: бронирований — %d; удержанные оплаты — %s. Возвраты оформляются отдельно.</string>
   <string source="Group reservations cancelled. Check payments for refunds." where="code">Бронирования группы отменены. Проверьте необходимость возврата оплат.</string>
+  <string source="Use first room rate" where="remote">Взять цену первого номера</string>
+  <string source="Use second room rate" where="remote">Взять цену второго номера</string>
 </strings>

@@ -136,6 +136,9 @@ static void test_lodge_remote_ui(void) {
   send_message(script_page_control(page, "arrival"), edSetText, 0, "2035-01-01");
   send_message(script_page_control(page, "departure"), edSetText, 0, "2035-01-02");
   send_message(script_page_control(page, "persons"), edSetText, 0, "1");
+  ASSERT_TRUE(script_page_perform(page, "room_rate"));
+  ASSERT_STR_EQUAL(script_page_control(page, "rate")->title, "150.00");
+  ASSERT_STR_EQUAL(script_page_control(page, "persons")->title, "1");
   send_message(script_page_control(page, "rate"), edSetText, 0, "100.00");
   ASSERT_TRUE(script_page_perform(page, "reserve")); ASSERT_TRUE(wait_for(db, stays->table_id, 1, "status", "Reserved"));
   ASSERT_TRUE(script_page_perform(page, "edit_booking"));
@@ -206,6 +209,11 @@ static void test_lodge_remote_ui(void) {
   send_message(script_page_control(page, "group_departure"), edSetText, 0, "2035-02-02");
   send_message(script_page_control(page, "group_persons1"), edSetText, 0, "1");
   send_message(script_page_control(page, "group_persons2"), edSetText, 0, "1");
+  ASSERT_TRUE(script_page_perform(page, "group_rate_first"));
+  ASSERT_TRUE(script_page_perform(page, "group_rate_second"));
+  ASSERT_STR_EQUAL(script_page_control(page, "group_rate1")->title, "150.00");
+  ASSERT_STR_EQUAL(script_page_control(page, "group_rate2")->title, "150.00");
+  ASSERT_STR_EQUAL(script_page_control(page, "group_name")->title, "Conference <team>");
   send_message(script_page_control(page, "group_rate1"), edSetText, 0, "50.00");
   send_message(script_page_control(page, "group_rate2"), edSetText, 0, "60.00");
   ASSERT_TRUE(script_page_perform(page, "group_reserve")); ASSERT_TRUE(wait_for(db, stays->table_id, 3, "status", "Reserved"));
