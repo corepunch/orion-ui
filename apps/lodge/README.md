@@ -124,3 +124,29 @@ See the [developer SDK](../../docs/developer-sdk.md) for application/plugin
 scaffolding, dependency checks and source packaging, and the
 [platform readiness plan](../../docs/business-platform-readiness.md) for
 production acceptance criteria shared by Ledger and Lodge.
+
+### Shared company
+
+Start the shared-company launch target, or run `lodge --remote`, with
+`ORION_SERVER_URL` and `ORION_SERVER_TOKEN` in the host environment. The
+server URL must use HTTPS or literal loopback HTTP. The native client keeps
+the token out of Lua and command-line arguments. The POSIX transport supports
+this mode; unsupported platforms refuse to connect.
+
+The shared view supports rooms, guests, cleaning, reservations, check-in,
+payments, refunds and checkout, subject to the authenticated role. Other
+hotel operations remain available through the local app and server business
+API. Data displayed in this view is a transient projection; the server is the
+authority. A pending request is saved in a private OS-user profile before it
+is sent. After an uncertain result or restart, retry that same request before
+starting new work. A stale revision requires an explicit refresh. The profile
+contains business data, so protect the operating-system account and its
+backups. `ORION_REMOTE_PROFILE` may point to an existing owner-only `0700`
+directory when an isolated profile is needed. Only trusted application scripts
+and plugins should be loaded: native outbox operations are not a sandbox
+boundary against malicious Lua code.
+
+To exercise the connected Lodge form with a disposable company and profile,
+build `build/bin/orion-service` and `build/bin/test_lodge_remote_ui_test`, then
+run `python3 tools/server/test_lodge_remote_ui.py`. The test uses a loopback
+listener and does not touch a real company.
