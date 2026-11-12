@@ -1237,6 +1237,17 @@ static void test_local_exact_trade(void) {
   ASSERT_TRUE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
   saved = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ASSERT(saved && saved->amount_minor == 101 && saved->vat_minor == 22 && saved->total_minor == 123, "integer rounding for local receipt");
+  db_document_t *imported = (void *)saved;
+  snprintf(imported->date, sizeof(imported->date), "2026-02-30");
+  ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
+  ASSERT_FALSE(ledger_preview_entries(g_ledger->ib, g_ledger->cfg, id));
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", id), 0);
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_POSTING_REVISIONS, "document_id", id), 0);
+  snprintf(imported->date, sizeof(imported->date), "2026-04-01");
+  snprintf(imported->tax_date, sizeof(imported->tax_date), "2026-02-29");
+  ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", id), 0);
+  imported->tax_date[0] = '\0';
   ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
   saved = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ASSERT_NOT_NULL(saved);

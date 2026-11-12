@@ -738,6 +738,10 @@ done:
 static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool preview) {
   post_t p;
   if (!posting_of(ib, cfg, doc_id, &p, preview ? "preview" : "post")) return false;
+  if (!ledger_valid_date(p.doc->date) || (p.doc->tax_date[0] && !ledger_valid_date(p.doc->tax_date))) {
+    fprintf(stderr, "[ledger] post rejected: document=%d invalid date=%s tax_date=%s\n", doc_id, p.doc->date, p.doc->tax_date);
+    fflush(stderr); return false;
+  }
   if (ledger_exact_posted(ib, doc_id) || ledger_reversal_linked(ib, doc_id)) {
     fprintf(stderr, "[ledger] post rejected: document=%d is protected by exact posting or reversal\n", doc_id); fflush(stderr); return false;
   }
