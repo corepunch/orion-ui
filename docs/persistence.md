@@ -54,7 +54,9 @@ Changing or deleting historical data requires an explicit, reviewed migration.
 After migration (or when opening a current-version file), unknown record fields
 cause opening to fail without rewriting the source; they are never silently
 dropped on the next save. Preserve a copy and use a compatible schema or a
-reviewed migration that explicitly handles those fields.
+reviewed migration that explicitly handles those fields. Invalid or out-of-range
+integer values also reject opening rather than being silently converted; repair
+or migrate a preserved copy before retrying.
 
 Native schemas can supply a version and `migrate_xml(root, from_version)`
 callback. It receives a libxml root node, performs exactly the step from that

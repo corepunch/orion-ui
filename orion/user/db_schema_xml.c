@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #ifdef _WIN32
@@ -418,6 +419,22 @@ static bool dbs_load(database_t *db, dbs_context_t *ctx) {
         }
       dbs_init_record(t, record);
       for (int f = 0; f < t->meta_count; f++) {
+        if (t->meta[f].type == DB_TYPE_INT) {
+          xmlChar *value = xmlGetProp(rn, BAD_CAST t->meta[f].name);
+          for (xmlNodePtr child = rn->children; child && !value; child = child->next)
+            if (child->type == XML_ELEMENT_NODE && !xmlStrcmp(child->name, BAD_CAST t->meta[f].name))
+              value = xmlNodeGetContent(child);
+          if (value) {
+            char *end = NULL; errno = 0;
+            long parsed = strtol((const char *)value, &end, 10);
+            bool valid = !errno && end != (char *)value && !*end && parsed >= INT_MIN && parsed <= INT_MAX;
+            xmlFree(value);
+            if (!valid) {
+              fprintf(stderr, "[db_schema_xml] invalid int db=%s table=%s field=%s\n", db->name, t->name, t->meta[f].name);
+              fflush(stderr); free(record); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
+            }
+          }
+        }
         bool loaded = db_load_field_from_xml(rn, record, &t->meta[f]);
         if (!loaded && t->meta[f].type == DB_TYPE_INT64) {
           bool present = xmlHasProp(rn, BAD_CAST t->meta[f].name) != NULL;
