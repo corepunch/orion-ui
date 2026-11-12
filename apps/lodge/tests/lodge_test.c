@@ -110,9 +110,14 @@ static void test_persistence_and_page(void) {
   ASSERT_FALSE(send_db_message(hotel, dbUpdate, TABLE_RESERVATIONS, &fractional));
   ASSERT_NOT_NULL(strstr(hotel->error, "decimal"));
   db_reservation_t paid = *created; paid.paid = 25.50;
-  ASSERT_TRUE(send_db_message(hotel, dbUpdate, TABLE_RESERVATIONS, &paid));
+  ASSERT_FALSE(send_db_message(hotel, dbUpdate, TABLE_RESERVATIONS, &paid));
+  ASSERT_NOT_NULL(strstr(hotel->error, "payment action"));
+  paid.id = 0; snprintf(paid.arrival, sizeof(paid.arrival), "2026-08-01"); snprintf(paid.departure, sizeof(paid.departure), "2026-08-02");
+  ASSERT_FALSE(send_db_message(hotel, dbInsert, TABLE_RESERVATIONS, &paid));
+  ASSERT_NULL((void *)send_db_message(hotel, dbFind, TABLE_PAYMENT_EVENTS, (void *)(intptr_t)4));
+  ASSERT_TRUE(hotel_script(app, "assert(require('hotel').payment(4, 2550, 'initial-payment'))"));
   db_payment_event_t *event = (void *)send_db_message(hotel, dbFind, TABLE_PAYMENT_EVENTS, (void *)(intptr_t)4);
-  ASSERT_NOT_NULL(event); ASSERT_EQUAL(event->reservation_id, 4); ASSERT_EQUAL(event->amount_minor, 2550);
+  ASSERT_NOT_NULL(event); ASSERT_EQUAL(event->reservation_id, 4); ASSERT_EQUAL(event->amount_minor, 2550); ASSERT_STR_EQUAL(event->request_key, "initial-payment");
   db_payment_event_t changed = *event; changed.amount_minor = 1;
   ASSERT_FALSE(send_db_message(hotel, dbUpdate, TABLE_PAYMENT_EVENTS, &changed));
   ASSERT_FALSE(send_db_message(hotel, dbDelete, TABLE_PAYMENT_EVENTS, (void *)(intptr_t)4));

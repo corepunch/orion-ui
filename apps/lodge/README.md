@@ -91,6 +91,9 @@ opening an existing hotel database.
 Open it in a browser to print. It includes the current reservation status and hotel currency; it is a booking confirmation, not a tax invoice.
 Reservation actions save immediately; catalog edits save when closing a window. A save failure rolls the action back and stays visible;
 **Retry saving** retries any pending database save; closing is blocked if the final save fails.
+The model rejects direct changes to the paid field; record payments and refunds
+through the payment action so each new event has a retry key. Migrated opening
+balances retain their historical treatment.
 
 ## Architecture
 

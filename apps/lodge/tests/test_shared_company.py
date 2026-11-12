@@ -51,6 +51,7 @@ class SharedCompanyTests(unittest.TestCase):
 
                     winner, loser = race('reserve', lambda actor: dict(stay))
                     booking = winner[2]['result']['id']
+                    self.assertFalse(request('alice', 'direct-paid', 'reserve', {'id': booking, 'paid': 100})['ok'])
                     self.assertFalse(request('alice', 'reduce-capacity', 'save_room', {'id': room, 'capacity': 1})['ok'])
                     self.assertEqual(request('alice', 'room-view', 'snapshot', {})['result']['rooms'][0]['capacity'], 2)
                     overlap = request(loser[0], 'reserve-after-refresh', 'reserve', stay)

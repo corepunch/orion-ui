@@ -32,6 +32,9 @@ function Model:validate(table, row, previous)
     if previous or not writing_history then return nil, orion.tr("History records cannot be changed directly.") end
     return true
   end
+  if table == "reservations" and row.paid ~= (previous and previous.paid or 0) and not Hotel.payment_request then
+    return nil, orion.tr("Record payments and refunds using the payment action.")
+  end
   local records = Hotel[table]
   if records then return records.validate(row, previous) end
   return true

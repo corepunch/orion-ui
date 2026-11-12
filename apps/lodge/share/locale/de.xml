@@ -100,6 +100,7 @@
   <string source="Choose a valid room cleaning status." where="code">Wählen Sie einen gültigen Reinigungsstatus.</string>
   <string source="Mark the room clean before checking in." where="code">Markieren Sie das Zimmer vor dem Check-in als sauber.</string>
   <string source="Another guest is still checked in to this room." where="code">In diesem Zimmer ist noch ein anderer Gast eingecheckt.</string>
+  <string source="Record payments and refunds using the payment action." where="code">Erfassen Sie Zahlungen und Erstattungen über die Zahlungsfunktion.</string>
   <string source="Payment or refund" where="reception,payment">Zahlung oder Erstattung</string>
   <string source="Amount:" where="payment">Betrag:</string>
   <string source="Record payment" where="payment">Zahlung erfassen</string>
