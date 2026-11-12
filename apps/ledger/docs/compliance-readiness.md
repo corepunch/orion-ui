@@ -30,7 +30,9 @@ The exact-trade, reversal and service limitations below were updated on
 ## Work still required before production use
 
 An initial close boundary can be advanced with `ledger.close_through(date)` in
-a writable `ledger.transaction`, then saved. The boundary persists and the
+a writable `ledger.transaction`, then saved. Closing rejects unposted documents
+in the requested period and documents with invalid dates so they do not become
+trapped behind the boundary. The boundary persists and the
 Ledger datasource rejects ordinary document, line and entry writes dated on or
 before it; posting and unposting are rejected, and bulk repost skips that
 period. New exact trading postings also reject ordinary datasource edits,

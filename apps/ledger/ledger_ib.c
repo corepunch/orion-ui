@@ -63,6 +63,16 @@ bool ledger_close_through(database_t *db, const char *date) {
   if (old && strcmp(date, old->closed_through) <= 0) {
     fprintf(stderr, "[ledger] close rejected: date=%s current=%s\n", date, old->closed_through); fflush(stderr); return false;
   }
+  result_node_t *documents = (void *)db_schema_xml(db, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
+  for (result_node_t *node = documents; node; node = node->next) {
+    const db_document_t *doc = *(db_document_t **)node->data;
+    if (!ledger_valid_date(doc->date) || (!doc->posted && strcmp(doc->date, date) <= 0)) {
+      fprintf(stderr, "[ledger] close rejected: document=%d date=%s posted=%d blocks close through %s\n",
+        doc->id, doc->date, doc->posted, date);
+      fflush(stderr); free_result_list(documents); return false;
+    }
+  }
+  free_result_list(documents);
   db_period_lock_t lock = { .id = 1 };
   snprintf(lock.closed_through, sizeof(lock.closed_through), "%s", date);
   return db_schema_xml(db, old ? dbUpdate : dbInsert, TABLE_PERIOD_LOCKS, &lock) != 0;
