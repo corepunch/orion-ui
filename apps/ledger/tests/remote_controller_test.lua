@@ -170,23 +170,36 @@ page:update_catalog_entry({name = 'Changed', tax_id = '456'})
 assert(client.command == 'counterparties.save' and client.args.id == 7 and client.args.fields.tax_id == '456' and client.args.fields.country_code == nil)
 state.busy, state.pending = false, false; pending({id = 7}, nil)
 state.busy, state.pending = false, false; pending({}, nil)
+local function review_close(date, blockers)
+  page:prepare_close({close_date = date})
+  assert(client.command == 'period.preview_close' and client.args.date == date)
+  state.busy, state.pending = false, false
+  pending({blockers = blockers or 0, first_document_id = blockers and 42 or 0, closed_through = ''}, nil)
+end
 for _, country in ipairs({'RU', 'DE'}) do
   page:init(); state.pending, state.busy, state.conflict, state.revision = false, false, false, 10
   page:connect({}); state.busy = false; pending({application = 'ledger', country = country, role = 'admin'}, nil)
   state.busy, state.pending = false, false; pending({}, nil)
   page:prepare_close({close_date = '2026-03-31'})
+  page:remember({close_date = '2026-04-30'})
+  state.busy, state.pending = false, false
+  pending({blockers = 0, first_document_id = 0, closed_through = ''}, nil)
+  assert(page:data().disabled.close_period, country .. ': changing date while checking discards result')
+  review_close('2026-03-31', 2)
+  assert(page:data().disabled.close_period and page.notice == 'Cannot close: 2 documents need attention; first document ID 42.', country .. ': blockers prevent confirmation')
+  review_close('2026-03-31')
   assert(not page:data().disabled.close_period, country .. ': reviewed close is enabled')
   page:remember({close_date = '2026-04-30'})
   page:remember({close_date = '2026-03-31'})
   assert(page:data().disabled.close_period, country .. ': changing and restoring the date requires review')
-  page:prepare_close({close_date = '2026-03-31'}); state.revision = 11
+  review_close('2026-03-31'); state.revision = 11
   assert(page:data().disabled.close_period, country .. ': changed revision requires review')
   assert(not pcall(function() page:close_period({close_date = '2026-03-31'}) end))
-  page:prepare_close({close_date = '2026-03-31'}); page:connect({})
+  review_close('2026-03-31'); page:connect({})
   state.busy = false; pending({application = 'ledger', country = country, role = 'admin'}, nil)
   state.busy, state.pending = false, false; pending({}, nil)
   assert(page:data().disabled.close_period, country .. ': reconnect requires review')
-  page:prepare_close({close_date = '2026-03-31'}); page:close_period({close_date = '2026-03-31'})
+  review_close('2026-03-31'); page:close_period({close_date = '2026-03-31'})
   assert(client.command == 'period.close' and client.args.date == '2026-03-31')
   local close_args = client.args
   state.busy = false; pending(nil, 'connection lost')
@@ -195,7 +208,7 @@ for _, country in ipairs({'RU', 'DE'}) do
   state.busy, state.pending = false, false; pending({}, nil)
   assert(client.command == 'documents.list' and page:data().disabled.close_period)
   state.busy, state.pending = false, false; pending({}, nil)
-  page:prepare_close({close_date = '2026-04-30'}); page:close_period({close_date = '2026-04-30'})
+  review_close('2026-04-30'); page:close_period({close_date = '2026-04-30'})
   state.busy, state.pending, state.conflict = false, false, true; pending(nil, 'stale revision')
   state.conflict = false
   assert(page:data().disabled.close_period, country .. ': conflict invalidates review')

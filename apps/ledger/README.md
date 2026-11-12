@@ -730,6 +730,11 @@ workspace without opening a local infobase; `--lang` may also be supplied.
 The server controls the authenticated role and company. Draft lines are staged
 locally until submitted, and an uncertain request must be retried before making
 further changes. A revision conflict requires refreshing the company first.
+Before closing a period, **Review period close** checks the server for unposted
+documents in the period and documents with invalid dates. If any block closing,
+it shows their count and the first document ID; resolve them and review again.
+The confirmation is tied to the checked revision and must be repeated after a
+change. The final close repeats the validation on the server.
 To change a draft's date or counterparty, select it and choose **Edit draft
 details**. The editing label identifies the draft whose fields will be saved;
 refreshing or changing the revision requires selecting it again.

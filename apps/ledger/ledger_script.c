@@ -322,6 +322,28 @@ static void service_insert_lines(lua_State *L, int index, database_t *ib, databa
   }
 }
 
+static int l_service_close_preview(lua_State *L) {
+  if (!g_service_active) return luaL_error(L, "service unavailable");
+  const char *date = luaL_checkstring(L, 1);
+  database_t *ib = get_database_by_name("ib");
+  if (!ib || !ledger_valid_date(date)) return luaL_error(L, "invalid close date");
+  char boundary[11];
+  if (!ledger_period_boundary(ib, boundary, sizeof(boundary)) || (boundary[0] && strcmp(date, boundary) <= 0))
+    return luaL_error(L, "invalid or already closed period");
+  result_node_t *docs = (void *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
+  int count = 0, first = 0;
+  for (result_node_t *n = docs; n; n = n->next) {
+    const db_document_t *doc = *(db_document_t **)n->data;
+    if (ledger_close_document_blocks(doc, date)) { count++; if (!first || doc->id < first) first = doc->id; }
+  }
+  free_result_list(docs);
+  lua_createtable(L, 0, 3);
+  lua_pushinteger(L, count); lua_setfield(L, -2, "blockers");
+  lua_pushinteger(L, first); lua_setfield(L, -2, "first_document_id");
+  lua_pushstring(L, boundary); lua_setfield(L, -2, "closed_through");
+  return 1;
+}
+
 static int l_service_create(lua_State *L) {
   if (!g_service_active || !g_script_writable || g_post || g_executor_active) return luaL_error(L, "service write unavailable");
   luaL_checktype(L, 1, LUA_TTABLE);
@@ -681,6 +703,7 @@ bool ledger_script_service(const char *path, const char *request, bool writable,
   int top = lua_gettop(g_lua);
   lua_newtable(g_lua);
   lua_pushcfunction(g_lua, l_service_access); lua_setfield(g_lua, -2, "access");
+  lua_pushcfunction(g_lua, l_service_close_preview); lua_setfield(g_lua, -2, "close_preview");
   lua_pushcfunction(g_lua, l_service_create); lua_setfield(g_lua, -2, "create");
   lua_pushcfunction(g_lua, l_service_post); lua_setfield(g_lua, -2, "post");
   lua_pushcfunction(g_lua, l_service_delete); lua_setfield(g_lua, -2, "delete");

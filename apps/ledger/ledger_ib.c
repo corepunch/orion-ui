@@ -50,7 +50,7 @@ bool ledger_valid_date(const char *date) {
   return d <= days[m - 1] + (m == 2 && (y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)));
 }
 
-static bool period_boundary(database_t *db, char *boundary, size_t size) {
+bool ledger_period_boundary(database_t *db, char *boundary, size_t size) {
   boundary[0] = '\0';
   if (!db) {
     fprintf(stderr, "[ledger] period lock rejected: missing database\n"); fflush(stderr); return false;
@@ -72,8 +72,12 @@ static bool period_boundary(database_t *db, char *boundary, size_t size) {
 
 bool ledger_period_closed(database_t *db, const char *date) {
   char boundary[11];
-  if (!period_boundary(db, boundary, sizeof(boundary))) return true;
+  if (!ledger_period_boundary(db, boundary, sizeof(boundary))) return true;
   return boundary[0] && (!ledger_valid_date(date) || strcmp(date, boundary) <= 0);
+}
+
+bool ledger_close_document_blocks(const db_document_t *doc, const char *date) {
+  return !doc || !ledger_valid_date(doc->date) || (!doc->posted && strcmp(doc->date, date) <= 0);
 }
 
 bool ledger_close_through(database_t *db, const char *date) {
@@ -81,14 +85,14 @@ bool ledger_close_through(database_t *db, const char *date) {
     fprintf(stderr, "[ledger] close rejected: invalid date=%s\n", date ? date : "(null)"); fflush(stderr); return false;
   }
   char boundary[11];
-  if (!period_boundary(db, boundary, sizeof(boundary))) return false;
+  if (!ledger_period_boundary(db, boundary, sizeof(boundary))) return false;
   if (boundary[0] && strcmp(date, boundary) <= 0) {
     fprintf(stderr, "[ledger] close rejected: date=%s current=%s\n", date, boundary); fflush(stderr); return false;
   }
   result_node_t *documents = (void *)db_schema_xml(db, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
   for (result_node_t *node = documents; node; node = node->next) {
     const db_document_t *doc = *(db_document_t **)node->data;
-    if (!ledger_valid_date(doc->date) || (!doc->posted && strcmp(doc->date, date) <= 0)) {
+    if (ledger_close_document_blocks(doc, date)) {
       fprintf(stderr, "[ledger] close rejected: document=%d date=%s posted=%d blocks close through %s\n",
         doc->id, doc->date, doc->posted, date);
       fflush(stderr); free_result_list(documents); return false;

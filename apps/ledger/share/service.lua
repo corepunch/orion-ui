@@ -111,6 +111,10 @@ local function dispatch(request)
     assert(type(args.document_id) == "number" and math.type(args.document_id) == "integer", "invalid document id")
     assert(type(args.date) == "string" and type(args.reason) == "string", "invalid reversal details")
     return {document_id = ledger_service_native.reverse(args.document_id, args.date, args.reason)}
+  elseif command == "period.preview_close" then
+    assert(role == "admin", "role cannot close periods")
+    assert(type(args.date) == "string", "invalid date")
+    return ledger_service_native.close_preview(args.date)
   elseif command == "period.close" then
     assert(role == "admin", "role cannot close periods")
     assert(type(args.date) == "string", "invalid date")

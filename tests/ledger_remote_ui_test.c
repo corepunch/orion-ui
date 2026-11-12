@@ -45,6 +45,9 @@ static void test_ledger_remote_ui(void) {
   set_text(page, "type_id", "1"); set_text(page, "draft_party_id", "1"); set_text(page, "draft_date", "2035-01-01");
   set_text(page, "item_id", "1"); set_text(page, "vat_id", "1"); set_text(page, "quantity", "1.000"); set_text(page, "price", "10.00");
   ASSERT_TRUE(script_page_perform(page, "add_line")); ASSERT_TRUE(script_page_perform(page, "create")); ASSERT_TRUE(wait_notice(page, "Draft 1 created."));
+  set_text(page, "close_date", "2035-01-01"); ASSERT_TRUE(script_page_perform(page, "prepare_close"));
+  ASSERT_TRUE(wait_notice(page, "Cannot close: 1 documents need attention; first document ID 1."));
+  ASSERT(!window_is_enabled(script_page_control(page, "close_period")), "blocking draft prevents close");
   ASSERT_TRUE(script_page_perform(page, "load_draft"));
   ASSERT(strstr(script_page_control(page, "draft_edit_title")->title, "1"), "reviewed draft is identified before saving");
   set_text(page, "document_date", "2034-12-31"); set_text(page, "counterparty_id", "1");
@@ -112,10 +115,11 @@ static void test_ledger_remote_ui(void) {
   set_text(page, "reversal_date", "2035-01-01"); set_text(page, "reason", "Test correction");
   ASSERT_TRUE(script_page_perform(page, "reverse")); ASSERT_TRUE(wait_notice(page, "Reversal 2 posted."));
   set_text(page, "close_date", "2035-01-01"); ASSERT_TRUE(script_page_perform(page, "prepare_close"));
+  ASSERT_TRUE(wait_notice(page, "Review: close through"));
   ASSERT(window_is_enabled(script_page_control(page, "close_period")), "review enables period close");
   ASSERT_TRUE(script_page_perform(page, "connect")); ASSERT_TRUE(wait_notice(page, "Connected."));
   ASSERT(!window_is_enabled(script_page_control(page, "close_period")), "reconnecting invalidates close review");
-  ASSERT_TRUE(script_page_perform(page, "prepare_close"));
+  ASSERT_TRUE(script_page_perform(page, "prepare_close")); ASSERT_TRUE(wait_notice(page, "Review: close through"));
   ASSERT_TRUE(script_page_perform(page, "close_period")); ASSERT_TRUE(wait_notice(page, "Accounting period closed."));
   ASSERT_TRUE(script_page_perform(page, "show_history"));
   const db_table_schema_t *history = db_schema_table_named(cache->schema, "period_history"); ASSERT_NOT_NULL(history);

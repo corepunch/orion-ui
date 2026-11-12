@@ -435,9 +435,18 @@ function Ledger:save_item(v)
     function(result) self.notice = string.format(orion.tr("Item %d created."), result.id); self:load_catalog("items", 0) end)
 end
 function Ledger:prepare_close(v)
-  self:remember(v); self.closing_date = orion.assert(v.close_date, orion.tr("Enter a valid close date."))
-  self.closing_revision = self.remote:state().revision
-  self.notice = string.format(orion.tr("Review: close through %s. Confirm to continue."), orion.formatDate(self.closing_date))
+  self:remember(v)
+  local date = orion.assert(v.close_date, orion.tr("Enter a valid close date."))
+  self.closing_date, self.closing_revision = nil, nil
+  self:request("period.preview_close", {date = date}, function(result)
+    if self.fields.close_date ~= date then return end
+    if result.blockers > 0 then
+      self.notice = string.format(orion.tr("Cannot close: %d documents need attention; first document ID %d."), result.blockers, result.first_document_id)
+    else
+      self.closing_date, self.closing_revision = date, self.remote:state().revision
+      self.notice = string.format(orion.tr("Review: close through %s. Confirm to continue."), orion.formatDate(date))
+    end
+  end)
 end
 function Ledger:close_period(v)
   self:remember(v)

@@ -148,7 +148,17 @@ class LedgerHostTests(unittest.TestCase):
                     self.assertEqual(company.status()['revision'], revision + 1)
                     self.assertFalse(any(row['id'] == throwaway['document_id'] for row in call('documents.list')))
                     self.assertEqual(call('documents.lines', throwaway), [])
+                    before_preview = company.status()['revision']
+                    preview = call('period.preview_close', {'date': '2026-11-10'}, 'admin')
+                    self.assertGreaterEqual(preview['blockers'], 1)
+                    self.assertGreater(preview['first_document_id'], 0)
+                    self.assertEqual(company.status()['revision'], before_preview)
+                    with self.assertRaises(server.Refusal) as failure:
+                        call('period.preview_close', {'date': '2026-11-10'}, 'accountant')
+                    self.assertEqual(failure.exception.status, 403)
                     call('documents.post', purchase)
+                    preview = call('period.preview_close', {'date': '2026-11-10'}, 'admin')
+                    self.assertEqual((preview['blockers'], preview['first_document_id']), (0, 0))
                     before_rejection = company.status()['revision']; sequence += 1
                     rejected = company.execute('trade-accountant', 'accountant', {'request_id': f'trade-{sequence}',
                         'expected_revision': before_rejection, 'command': 'documents.delete', 'args': purchase})

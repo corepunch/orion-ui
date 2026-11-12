@@ -80,6 +80,8 @@ bool ledger_reversal_linked(database_t *ib, int doc_id);
 bool ledger_close_through(database_t *ib, const char *date);
 bool ledger_period_closed(database_t *ib, const char *date);
 bool ledger_valid_date(const char *date);
+bool ledger_period_boundary(database_t *db, char *boundary, size_t size);
+bool ledger_close_document_blocks(const db_document_t *doc, const char *date);
 bool ledger_record_revision(database_t *ib, const db_document_t *doc, const char *action);
 int ledger_reverse_posting(database_t *ib, database_t *cfg, int original_id, const char *date, const char *reason);
 // Writes the entries posting would, leaving the posted flag and plugins alone:

@@ -173,4 +173,5 @@
   <string source="Draft %d deleted." where="code">Черновик %d удалён.</string>
   <string source="Delete draft ID %d and its lines? Confirm to continue." where="code">Удалить черновик ID %d и его строки? Подтвердите действие.</string>
   <string source="Select an exact draft to review deletion." where="code">Выберите черновик с точными суммами для проверки удаления.</string>
+  <string source="Cannot close: %d documents need attention; first document ID %d." where="code">Нельзя закрыть период: документы требуют проверки: %d; первый ID документа: %d.</string>
 </strings>
