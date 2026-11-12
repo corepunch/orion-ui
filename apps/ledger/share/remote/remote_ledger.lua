@@ -3,7 +3,7 @@ local Remote = require("orion.remote")
 local json = require("orion.json")
 
 local Ledger = {form = "remote_ledger", title = orion.tr("Ledger — Shared Company")}
-local controls = {"post", "update", "replace_lines", "reverse", "create", "add_line", "remove_line",
+local controls = {"post", "load_draft", "update", "replace_lines", "reverse", "create", "add_line", "remove_line",
   "save_counterparty", "save_item", "prepare_close", "close_period", "type_id", "draft_party_id", "draft_date",
   "item_id", "vat_id", "quantity", "price", "document_date", "counterparty_id", "reversal_date", "reason",
   "name", "sku", "tax_id", "unit_id", "catalog_vat_id", "close_date", "load_catalog_entry", "update_catalog_entry"}
@@ -54,6 +54,8 @@ function Ledger:init()
   self.next_line, self.role, self.connected, self.catalog_kind = 1, "", false, "items"
   self.closing_date, self.closing_revision = nil, nil
   self.catalog_rows, self.catalog_edit = {}, nil
+  self.document_rows, self.draft_edit = {}, nil
+  self.catalog_rows_revision, self.document_rows_revision = nil, nil
   self.notice, self.error = "", ""
 end
 
@@ -68,7 +70,7 @@ function Ledger:complete(result, err)
   local callback = self.pending_callback
   local state = self.remote:state()
   if err then
-    if state.conflict then self.closing_date, self.closing_revision, self.catalog_edit = nil, nil, nil end
+    if state.conflict then self.closing_date, self.closing_revision, self.catalog_edit, self.draft_edit = nil, nil, nil, nil end
     self.error = err
     self.notice = state.conflict and orion.tr("Data changed. Refresh before continuing.") or
       state.pending and orion.tr("The outcome is unknown. Retry the same request before making changes.") or ""
@@ -96,6 +98,8 @@ function Ledger:connect(values)
   self:remember(values)
   self.closing_date, self.closing_revision = nil, nil
   self.catalog_edit = nil
+  self.draft_edit = nil
+  self.catalog_rows_revision, self.document_rows_revision = nil, nil
   local ok, err = self.remote:refresh(function(status, failure)
     if failure then self.error = failure; return end
     if status.application ~= "ledger" or (status.country ~= "RU" and status.country ~= "DE") then
@@ -128,8 +132,10 @@ end
 
 function Ledger:load_documents(offset)
   self:request("documents.list", {offset = offset, limit = 200}, function(rows)
-    local view = {}
+    local view = {}; self.document_rows, self.draft_edit = {}, nil
+    self.document_rows_revision = self.remote:state().revision
     for _, row in ipairs(rows) do
+      self.document_rows[row.id] = row
       view[#view + 1] = {id = row.id, date = row.date, number = row.number, correction_of = row.correction_of,
         kind = tostring(row.doc_type_id), party = tostring(row.counterparty_id), amount = minor(row.exact_money and row.amount_minor or nil, row.amount),
         posted = row.posted, state = row.posted and orion.tr("Posted") or orion.tr("Draft")}
@@ -161,6 +167,7 @@ function Ledger:next_document_lines(v) self:remember(v); self:load_document_line
 function Ledger:load_catalog(kind, offset)
   self:request("catalogs.list", {table = kind, offset = offset, limit = 200}, function(rows)
     local view = {}; self.catalog_rows = {}; self.catalog_edit = nil
+    self.catalog_rows_revision = self.remote:state().revision
     for _, row in ipairs(rows) do
       self.catalog_rows[row.id] = row
       view[#view + 1] = {id = row.id, name = row.name or row.code or "", detail = tostring(row.code or row.sku or row.rate or row.tax_id or "")}
@@ -180,7 +187,7 @@ function Ledger:load_catalog_entry(v)
   self:remember(v)
   orion.assert(self.catalog_kind == "items" or self.catalog_kind == "counterparties", orion.tr("Choose items or counterparties first."))
   local selected_row = orion.assert(v.catalog, orion.tr("Select a catalog entry."))
-  local row = orion.assert(self.catalog_rows[selected_row.id], orion.tr("Refresh the catalog first."))
+  local row = orion.assert(self.catalog_rows_revision == self.remote:state().revision and self.catalog_rows[selected_row.id], orion.tr("Refresh the catalog first."))
   self.catalog_edit = {id = row.id, kind = self.catalog_kind, revision = self.remote:state().revision}
   self.fields.name = row.name or ""
   if self.catalog_kind == "items" then
@@ -316,10 +323,21 @@ function Ledger:create(v)
     self.lines = {}; self:publish_lines(); self:load_documents(0)
   end)
 end
+function Ledger:load_draft(v)
+  self:remember(v)
+  local selected_row = selected(v.documents)
+  local row = orion.assert(self.document_rows_revision == self.remote:state().revision and self.document_rows[selected_row.id], orion.tr("Refresh the documents first."))
+  orion.assert(not row.posted and (not row.correction_of or row.correction_of == 0), orion.tr("Select an editable draft."))
+  self.draft_edit = {id = row.id, revision = self.remote:state().revision}
+  self.fields.document_date, self.fields.counterparty_id = row.date, row.counterparty_id
+end
 function Ledger:update(v)
-  self:remember(v); local row = selected(v.documents)
-  self:request("documents.update", {document_id = row.id, counterparty_id = integer(v.counterparty_id, orion.tr("Enter a counterparty ID.")),
-    date = orion.assert(v.document_date, orion.tr("Enter a valid document date."))}, function() self:load_documents(self.doc_offset) end)
+  self:remember(v); local edit = self.draft_edit
+  orion.assert(edit and edit.revision == self.remote:state().revision, orion.tr("Select the draft again before saving."))
+  self:request("documents.update", {document_id = edit.id, counterparty_id = integer(v.counterparty_id, orion.tr("Enter a counterparty ID.")),
+    date = orion.assert(v.document_date, orion.tr("Enter a valid document date."))}, function()
+      self.draft_edit = nil; self.notice = string.format(orion.tr("Draft %d updated."), edit.id); self:load_documents(self.doc_offset)
+    end)
 end
 function Ledger:replace_lines(v)
   self:remember(v); local row = selected(v.documents)
@@ -378,6 +396,7 @@ function Ledger:data()
   disabled.prepare_close = blocked or self.role ~= "admin"
   disabled.load_catalog_entry = blocked or readonly or (self.catalog_kind ~= "items" and self.catalog_kind ~= "counterparties")
   disabled.update_catalog_entry = blocked or readonly or not self.catalog_edit or self.catalog_edit.revision ~= state.revision
+  disabled.update = blocked or readonly or not self.draft_edit or self.draft_edit.revision ~= state.revision
   for _, name in ipairs({"previous_documents", "next_documents", "previous_catalog", "next_catalog", "previous_journal", "next_journal",
                          "document_types", "vat_rates", "units", "items", "counterparties", "show_journal", "show_history", "show_posting_history", "show_document_lines", "show_revision_entries", "find_posting_history", "history_document_id"}) do disabled[name] = blocked end
   disabled.previous_document_lines = blocked or not self.document_lines_document or self.document_lines_offset == 0
@@ -397,6 +416,7 @@ function Ledger:data()
   local status = self.connected and string.format(orion.tr("Country: %s · Role: %s · Revision: %d"), self.country, self.role, state.revision or 0) or orion.tr("Not connected")
   local titles = {doc_types = "Document types", vat_rates = "VAT rates", units = "Units", items = "Items", counterparties = "Counterparties"}
   local values = {connection = status, notice = self.notice, error = self.error, catalog_title = orion.tr(titles[self.catalog_kind]),
+    draft_edit_title = self.draft_edit and string.format(orion.tr("Editing draft ID %d"), self.draft_edit.id) or orion.tr("Select a draft to edit its details."),
     catalog_edit_title = self.catalog_edit and string.format(orion.tr(self.catalog_edit.kind == "items" and "Editing item ID %d" or "Editing counterparty ID %d"), self.catalog_edit.id) or orion.tr("Select an item or counterparty to edit."),
     document_lines_title = self.document_lines_document and string.format(orion.tr("Lines for document ID %d"), self.document_lines_document) or orion.tr("Select a document and show its lines."),
     posting_history_title = self.posting_history_document and string.format(orion.tr("Posting history for document ID %d"), self.posting_history_document) or orion.tr("Select a document and show its posting history."),

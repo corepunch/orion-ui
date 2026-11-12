@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="de">
+  <string source="Edit draft details" where="remote_ledger">Entwurfsdaten bearbeiten</string>
+  <string source="Refresh the documents first.">Aktualisieren Sie zuerst die Belege.</string>
+  <string source="Select an editable draft.">Wählen Sie einen bearbeitbaren Entwurf.</string>
+  <string source="Select the draft again before saving.">Wählen Sie den Entwurf vor dem Speichern erneut.</string>
+  <string source="Draft %d updated.">Entwurf %d aktualisiert.</string>
+  <string source="Editing draft ID %d">Entwurf-ID %d wird bearbeitet</string>
+  <string source="Select a draft to edit its details.">Wählen Sie einen Entwurf zum Bearbeiten seiner Daten.</string>
   <string source="Edit selected" where="remote_ledger">Auswahl bearbeiten</string>
   <string source="Save changes" where="remote_ledger">Änderungen speichern</string>
   <string source="Choose items or counterparties first.">Wählen Sie zuerst Artikel oder Geschäftspartner.</string>

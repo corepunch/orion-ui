@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="ru">
+  <string source="Edit draft details" where="remote_ledger">Изменить реквизиты черновика</string>
+  <string source="Refresh the documents first.">Сначала обновите список документов.</string>
+  <string source="Select an editable draft.">Выберите доступный для изменения черновик.</string>
+  <string source="Select the draft again before saving.">Перед сохранением снова выберите черновик.</string>
+  <string source="Draft %d updated.">Черновик %d обновлён.</string>
+  <string source="Editing draft ID %d">Изменение черновика с ID %d</string>
+  <string source="Select a draft to edit its details.">Выберите черновик для изменения реквизитов.</string>
   <string source="Edit selected" where="remote_ledger">Изменить выбранное</string>
   <string source="Save changes" where="remote_ledger">Сохранить изменения</string>
   <string source="Choose items or counterparties first.">Сначала выберите товары или контрагентов.</string>

@@ -43,8 +43,16 @@ static void test_ledger_remote_ui(void) {
   set_text(page, "type_id", "1"); set_text(page, "draft_party_id", "1"); set_text(page, "draft_date", "2035-01-01");
   set_text(page, "item_id", "1"); set_text(page, "vat_id", "1"); set_text(page, "quantity", "1.000"); set_text(page, "price", "10.00");
   ASSERT_TRUE(script_page_perform(page, "add_line")); ASSERT_TRUE(script_page_perform(page, "create")); ASSERT_TRUE(wait_notice(page, "Draft 1 created."));
-  ASSERT_TRUE(script_page_perform(page, "show_document_lines"));
+  ASSERT_TRUE(script_page_perform(page, "load_draft"));
+  ASSERT(strstr(script_page_control(page, "draft_edit_title")->title, "1"), "reviewed draft is identified before saving");
+  set_text(page, "document_date", "2034-12-31"); set_text(page, "counterparty_id", "1");
+  ASSERT_TRUE(script_page_perform(page, "update")); ASSERT_TRUE(wait_notice(page, "Draft 1 updated."));
   database_t *cache = get_database_by_name("ledger_remote_cache"); ASSERT_NOT_NULL(cache);
+  const db_table_schema_t *documents = db_schema_table_named(cache->schema, "documents"); ASSERT_NOT_NULL(documents);
+  void *draft = (void *)send_db_message(cache, dbFind, documents->table_id, (void *)(intptr_t)1); ASSERT_NOT_NULL(draft);
+  char draft_date[32]; db_get_field_text(cache, documents->table_id, draft, "date", draft_date, sizeof(draft_date));
+  ASSERT(!strcmp(draft_date, "2034-12-31"), "refreshed draft displays the saved date");
+  ASSERT_TRUE(script_page_perform(page, "show_document_lines"));
   const db_table_schema_t *document_lines = db_schema_table_named(cache->schema, "document_lines"); ASSERT_NOT_NULL(document_lines);
   bool line_found = false;
   for (int i = 0; i < 500 && !line_found; i++) {

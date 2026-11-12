@@ -136,6 +136,9 @@ class LedgerHostTests(unittest.TestCase):
                     call('documents.post', purchase)
                     sale = call('documents.create', {'doc_type_id': codes[sale_code], 'counterparty_id': party['id'], 'date': '2026-11-11',
                         'lines': [{'item_id': item['id'], 'vat_rate_id': vat_rates[0]['id'], 'quantity': '2.000', 'price': '19.00'}]})
+                    call('documents.update', {**sale, 'counterparty_id': party['id'], 'date': '2026-11-12'})
+                    updated_sale = next(row for row in call('documents.list') if row['id'] == sale['document_id'])
+                    self.assertEqual(updated_sale['date'], '2026-11-12')
                     replacement = {**sale, 'lines': [{'item_id': item['id'], 'vat_rate_id': vat_rates[0]['id'], 'quantity': '2.000', 'price': '20.00'}]}
                     call('documents.replace_lines', replacement)
                     call('documents.post', sale)

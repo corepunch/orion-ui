@@ -72,9 +72,11 @@
             <Button name="show_posting_history" text="Show posting history" action="show_posting_history" />
             <Button name="show_document_lines" text="Show document lines" action="show_document_lines" />
             <Button name="post" text="Post selected" action="post" />
+            <Button name="load_draft" text="Edit draft details" action="load_draft" />
             <Button name="update" text="Update draft details" action="update" />
             <Button name="replace_lines" text="Replace draft lines" action="replace_lines" />
           </StackView>
+          <Label name="draft_edit_title" />
           <GridView spacing="4">
             <Column width="auto"><Label text="Document date:" /><Label text="Counterparty ID:" /><Label text="Reversal date:" /><Label text="Reason:" /></Column>
             <Column><TextBox name="document_date" type="date" /><TextBox name="counterparty_id" type="integer" />

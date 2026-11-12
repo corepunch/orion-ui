@@ -13,6 +13,23 @@ package.preload['orion.json'] = function() return {array = function(t) return t 
 local page = require('remote_ledger'); page.app = {handle = 1}; page:init(); page:connect({})
 state.busy = false; pending({application = 'ledger', country = 'RU', role = 'accountant'}, nil)
 assert(client.command == 'documents.list'); state.busy = false; state.pending = false; pending({}, nil)
+page:load_documents(0); state.busy, state.pending = false, false
+pending({{id = 7, date = '2026-04-01', counterparty_id = 4, doc_type_id = 1, posted = false, correction_of = 0},
+  {id = 8, date = '2026-04-01', counterparty_id = 4, doc_type_id = 1, posted = true}}, nil)
+state.revision = state.revision + 1
+assert(not pcall(function() page:load_draft({documents = {id = 7}}) end), 'stale document cache cannot be reviewed')
+state.revision = state.revision - 1
+assert(not pcall(function() page:load_draft({documents = {id = 8}}) end), 'posted documents cannot be loaded for editing')
+page:load_draft({documents = {id = 7}})
+assert(page:data().values.draft_edit_title == 'Editing draft ID 7' and page:data().values.counterparty_id == 4)
+state.revision = state.revision + 1
+assert(page:data().disabled.update and not pcall(function() page:update({document_date = '2026-04-02', counterparty_id = 5}) end), 'new revision requires renewed review')
+state.revision = state.revision - 1
+page:update({documents = {id = 8}, document_date = '2026-04-02', counterparty_id = 5})
+assert(client.command == 'documents.update' and client.args.document_id == 7 and client.args.counterparty_id == 5, 'save targets the reviewed draft even if selection changes')
+state.busy, state.pending = false, false; pending({document_id = 7}, nil)
+assert(client.command == 'documents.list'); state.busy, state.pending = false, false; pending({}, nil)
+assert(page:data().disabled.update, 'saved draft must be selected again')
 assert(not pcall(function() page:show_document_lines({}) end), 'document lines require selection')
 page:show_document_lines({documents = {id = 7}})
 assert(client.command == 'documents.lines' and client.args.document_id == 7)
@@ -85,6 +102,9 @@ assert(cache[1].rows[1].quantity == '1,250', 'staged line uses locale decimal se
 assert(not pcall(function() page:add_line({item_id = 1, vat_id = 1, quantity = '1.250', price = '2,40'}) end), 'misplaced separator is rejected')
 page:items({}); state.busy, state.pending = false, false
 pending({{id = 42, name = 'Goods', sku = 'G1', unit_id = 1, vat_rate_id = 2}}, nil)
+state.revision = state.revision + 1
+assert(not pcall(function() page:load_catalog_entry({catalog = {id = 42}}) end), 'stale catalog cache cannot be reviewed')
+state.revision = state.revision - 1
 page:load_catalog_entry({catalog = {id = 42}})
 assert(page:data().values.catalog_edit_title == 'Editing item ID 42' and page:data().values.sku == 'G1')
 page:update_catalog_entry({name = 'Goods revised', sku = 'G2', unit_id = 1, catalog_vat_id = 2})

@@ -730,6 +730,9 @@ workspace without opening a local infobase; `--lang` may also be supplied.
 The server controls the authenticated role and company. Draft lines are staged
 locally until submitted, and an uncertain request must be retried before making
 further changes. A revision conflict requires refreshing the company first.
+To change a draft's date or counterparty, select it and choose **Edit draft
+details**. The editing label identifies the draft whose fields will be saved;
+refreshing or changing the revision requires selecting it again.
 Select a document and choose **Show document lines** to inspect its saved lines
 on the Document lines tab. This view is separate from the locally staged lines
 used to create a document or replace a draft's lines. Values prefixed with `~`
