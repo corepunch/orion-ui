@@ -207,6 +207,46 @@ static void test_restore_rejects_unloadable_backup(void) {
   ASSERT_NOT_NULL(saved); ASSERT_EQUAL(saved->amount, 42); destroy_database(db);
   unlink(path); unlink(backup); unlink(lock); rmdir(dir); PASS();
 }
+static void test_backup_in_separate_directory(void) {
+  TEST("schema XML: backup restores independently in a separate directory");
+  char source_dir[512], target_dir[512], source[1024], target[1024], source_backup[1040], target_backup[1040], lock[1040];
+  ASSERT_TRUE(persistence_tempdir(source_dir, sizeof(source_dir)));
+  ASSERT_TRUE(persistence_tempdir(target_dir, sizeof(target_dir)));
+  snprintf(source, sizeof(source), "%s/book.xml", source_dir);
+  snprintf(target, sizeof(target), "%s/book.xml", target_dir);
+  snprintf(source_backup, sizeof(source_backup), "%s.bak", source);
+  snprintf(target_backup, sizeof(target_backup), "%s.bak", target);
+  database_t *original = open_book(source); ASSERT_NOT_NULL(original);
+  persistence_row_t first = {.id=1, .value=10}, second = {.id=2, .value=20};
+  ASSERT_TRUE(send_db_message(original, dbInsert, 0, &first));
+  ASSERT_TRUE(send_db_message(original, dbInsert, 0, &second));
+  ASSERT_TRUE(send_db_message(original, dbSave, 0, NULL));
+  first.value = 11; ASSERT_TRUE(send_db_message(original, dbUpdate, 0, &first));
+  ASSERT_TRUE(send_db_message(original, dbSave, 0, NULL));
+  FILE *in = fopen(source_backup, "rb"), *out = fopen(target_backup, "wb");
+  ASSERT_NOT_NULL(in); ASSERT_NOT_NULL(out);
+  char bytes[1024]; size_t count;
+  while ((count = fread(bytes, 1, sizeof(bytes), in)) > 0) ASSERT_EQUAL(fwrite(bytes, 1, count, out), count);
+  ASSERT_FALSE(ferror(in)); ASSERT_EQUAL(fclose(in), 0); ASSERT_EQUAL(fclose(out), 0);
+  database_t *restored = db_schema_xml_open_backup("book", "db_schema_xml", &schema, target);
+  ASSERT_NOT_NULL(restored);
+  persistence_row_t *saved = (void *)send_db_message(restored, dbFind, 0, (void *)(intptr_t)1);
+  ASSERT_NOT_NULL(saved); ASSERT_EQUAL(saved->value, 10);
+  saved = (void *)send_db_message(restored, dbFind, 0, (void *)(intptr_t)2);
+  ASSERT_NOT_NULL(saved); ASSERT_EQUAL(saved->value, 20);
+  first.value = 12; ASSERT_TRUE(send_db_message(restored, dbUpdate, 0, &first));
+  ASSERT_TRUE(send_db_message(restored, dbSave, 0, NULL)); destroy_database(restored);
+  saved = (void *)send_db_message(original, dbFind, 0, (void *)(intptr_t)1);
+  ASSERT_NOT_NULL(saved); ASSERT_EQUAL(saved->value, 11); destroy_database(original);
+  restored = open_book(target); ASSERT_NOT_NULL(restored);
+  saved = (void *)send_db_message(restored, dbFind, 0, (void *)(intptr_t)1);
+  ASSERT_NOT_NULL(saved); ASSERT_EQUAL(saved->value, 12);
+  saved = (void *)send_db_message(restored, dbFind, 0, (void *)(intptr_t)2);
+  ASSERT_NOT_NULL(saved); ASSERT_EQUAL(saved->value, 20); destroy_database(restored);
+  unlink(source); unlink(source_backup); snprintf(lock, sizeof(lock), "%s.lock", source); unlink(lock); rmdir(source_dir);
+  unlink(target); unlink(target_backup); snprintf(lock, sizeof(lock), "%s.lock", target); unlink(lock); rmdir(target_dir);
+  PASS();
+}
 static void test_persistence(void) {
   TEST("schema XML: exclusive writer, atomic backup and version rejection");
   char dir[512], path[1024], backup[1040], lock[1040];
@@ -264,7 +304,7 @@ static void test_persistence(void) {
 }
 int main(void) {
   TEST_START("Database persistence"); DB_CLASS(db_schema_xml);
-  test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup();
+  test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); test_backup_in_separate_directory();
 #ifndef _WIN32
   test_migration_crashes();
 #endif

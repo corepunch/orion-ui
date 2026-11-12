@@ -77,7 +77,9 @@ and test every application migration against actual historical data. The native
 `test_db_persistence_test` exercises writer exclusion, backup contents, killed
 writer lock release, rejected newer versions, migration and publication failure,
 read-only migration, field-loss rejection, explicit backup recovery and rejection
-of a backup with an invalid field before publication. On POSIX, it also kills
+of a backup with an invalid field before publication. It copies a backup into
+a separate directory, restores and reopens it, and checks independent records.
+On POSIX, it also kills
 a migrating process during each of two migration steps, before saving, and
 after a successful save, then checks the primary and previous-version backup.
 It does not simulate power failure or termination at every filesystem operation.
