@@ -44,6 +44,34 @@ static void test_lodge_remote_ui(void) {
   send_message(script_page_control(page, "capacity"), edSetText, 0, "2");
   send_message(script_page_control(page, "room_rate"), edSetText, 0, "100.00");
   ASSERT_TRUE(script_page_perform(page, "add_room")); ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "name", "Remote 101"));
+  send_message(script_page_control(page, "edit_room_choice"), cbSetCurrentValue, 1, NULL);
+  ASSERT_TRUE(script_page_perform(page, "load_room"));
+  ASSERT_STR_EQUAL(script_page_control(page, "room_name")->title, "Remote 101");
+  send_message(script_page_control(page, "room_name"), edSetText, 0, "Updated 101");
+  send_message(script_page_control(page, "room_category"), edSetText, 0, "Suite");
+  send_message(script_page_control(page, "capacity"), edSetText, 0, "3");
+  send_message(script_page_control(page, "room_rate"), edSetText, 0, "150.00");
+  ASSERT_TRUE(script_page_perform(page, "save_room")); ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "name", "Updated 101"));
+  ASSERT_TRUE(script_page_perform(page, "load_room"));
+  ASSERT_STR_EQUAL(script_page_control(page, "room_category")->title, "Suite");
+  ASSERT_STR_EQUAL(script_page_control(page, "capacity")->title, "3");
+  ASSERT_STR_EQUAL(script_page_control(page, "room_rate")->title, "150.00");
+  send_message(script_page_control(page, "capacity"), edSetText, 0, "0");
+  ASSERT_TRUE(script_page_perform(page, "save_room"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Capacity must be a positive integer"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "Capacity must be a positive integer"));
+  ASSERT_TRUE(script_page_perform(page, "load_room")); ASSERT_STR_EQUAL(script_page_control(page, "capacity")->title, "3");
+  ASSERT_TRUE(script_page_perform(page, "connect"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "room_editor")->title, "Load the room again"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_FALSE(window_is_enabled(script_page_control(page, "save_room")));
+  for (int i = 0; i < 500 && !window_is_enabled(script_page_control(page, "load_room")); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_TRUE(script_page_perform(page, "load_room")); ASSERT_TRUE(window_is_enabled(script_page_control(page, "save_room")));
   send_message(script_page_control(page, "guest_name"), edSetText, 0, "Remote guest");
   ASSERT_TRUE(script_page_perform(page, "add_guest")); ASSERT_TRUE(wait_for(db, guests->table_id, 1, "name", "Remote guest"));
   send_message(script_page_control(page, "edit_guest_choice"), cbSetCurrentValue, 1, NULL);
@@ -98,6 +126,8 @@ static void test_lodge_remote_ui(void) {
   ASSERT_TRUE(script_page_perform(page, "check_out")); ASSERT_TRUE(wait_for(db, stays->table_id, 1, "status", "Checked out"));
   send_message(script_page_control(page, "room_name"), edSetText, 0, "Remote 102");
   ASSERT_TRUE(script_page_perform(page, "add_room")); ASSERT_TRUE(wait_for(db, rooms->table_id, 2, "name", "Remote 102"));
+  send_message(script_page_control(page, "edit_room_choice"), cbSetCurrentValue, 2, NULL);
+  ASSERT_FALSE(script_page_perform(page, "save_room"));
   send_message(script_page_control(page, "room_name"), edSetText, 0, "Remote 103");
   ASSERT_TRUE(script_page_perform(page, "add_room")); ASSERT_TRUE(wait_for(db, rooms->table_id, 3, "name", "Remote 103"));
   send_message(script_page_control(page, "sections"), tcSetSelection, 1, NULL);

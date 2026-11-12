@@ -5,7 +5,7 @@
   <string source="Rooms, guests and reservations · Amounts in your hotel's currency" obsolete="true">Zimmer, Gäste und Reservierungen · Beträge in der Hotelwährung</string>
   <string source="Add a room" obsolete="true">Zimmer hinzufügen</string>
   <string source="Room name:" where="remote">Zimmername:</string>
-  <string source="Category:" obsolete="true">Kategorie:</string>
+  <string source="Category:" where="remote">Kategorie:</string>
   <string source="Capacity:" where="remote">Kapazität:</string>
   <string source="Nightly rate:" where="remote">Preis pro Nacht:</string>
   <string source="Add room" where="remote">Zimmer hinzufügen</string>
@@ -219,4 +219,10 @@
   <string source="Load the guest again before saving." where="code">Laden Sie den Gast vor dem Speichern erneut.</string>
   <string source="Editing guest %d" where="code">Gast %d bearbeiten</string>
   <string source="No guest loaded" where="code">Kein Gast geladen</string>
+  <string source="Room to edit:" where="remote">Zimmer zur Bearbeitung:</string>
+  <string source="Load room" where="remote">Zimmer laden</string>
+  <string source="Save room" where="remote">Zimmer speichern</string>
+  <string source="Load the room again before saving." where="code">Laden Sie das Zimmer vor dem Speichern erneut.</string>
+  <string source="Editing room %d" where="code">Zimmer %d bearbeiten</string>
+  <string source="No room loaded" where="code">Kein Zimmer geladen</string>
 </strings>

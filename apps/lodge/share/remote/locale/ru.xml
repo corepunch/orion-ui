@@ -5,7 +5,7 @@
   <string source="Rooms, guests and reservations · Amounts in your hotel's currency" obsolete="true">Номера, гости и брони · Суммы в валюте отеля</string>
   <string source="Add a room" obsolete="true">Добавить номер</string>
   <string source="Room name:" where="remote">Название номера:</string>
-  <string source="Category:" obsolete="true">Категория:</string>
+  <string source="Category:" where="remote">Категория:</string>
   <string source="Capacity:" where="remote">Вместимость:</string>
   <string source="Nightly rate:" where="remote">Цена за ночь:</string>
   <string source="Add room" where="remote">Добавить номер</string>
@@ -219,4 +219,10 @@
   <string source="Load the guest again before saving." where="code">Перед сохранением заново откройте гостя.</string>
   <string source="Editing guest %d" where="code">Изменение гостя %d</string>
   <string source="No guest loaded" where="code">Гость не открыт</string>
+  <string source="Room to edit:" where="remote">Номер для изменения:</string>
+  <string source="Load room" where="remote">Открыть номер</string>
+  <string source="Save room" where="remote">Сохранить номер</string>
+  <string source="Load the room again before saving." where="code">Перед сохранением заново откройте номер.</string>
+  <string source="Editing room %d" where="code">Изменение номера %d</string>
+  <string source="No room loaded" where="code">Номер не открыт</string>
 </strings>

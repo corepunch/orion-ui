@@ -13,10 +13,11 @@
       <StackView orientation="horizontal" spacing="6"><Button name="connect" text="Connect or refresh" action="connect"/><Button name="retry" text="Retry pending request" action="retry"/></StackView>
       <TabView name="sections" flags="flexspace"><StackView name="reception_tab" text="Reception" spacing="6" flags="flexspace">
       <Separator/><Label text="Rooms and guests" font="heading"/>
-      <GridView spacing="4"><Column width="auto"><Label text="Room name:"/><Label text="Capacity:"/><Label text="Nightly rate:"/><Label text="Guest name:"/><Label text="Phone:"/></Column><Column>
-        <TextBox name="room_name"/><TextBox name="capacity" type="integer"/><TextBox name="room_rate" type="number" decimals="2"/><TextBox name="guest_name"/><TextBox name="phone"/>
+      <GridView spacing="4"><Column width="auto"><Label text="Room name:"/><Label text="Category:"/><Label text="Capacity:"/><Label text="Nightly rate:"/><Label text="Guest name:"/><Label text="Phone:"/></Column><Column>
+        <TextBox name="room_name"/><TextBox name="room_category"/><TextBox name="capacity" type="integer"/><TextBox name="room_rate" type="number" decimals="2"/><TextBox name="guest_name"/><TextBox name="phone"/>
       </Column></GridView>
       <StackView orientation="horizontal" spacing="6"><Button name="add_room" text="Add room" action="add_room"/><Button name="add_guest" text="Add guest" action="add_guest"/></StackView>
+      <StackView orientation="horizontal" spacing="6"><Label text="Room to edit:"/><ComboBox name="edit_room_choice" source="lodge_remote_cache.rooms" display="name" value="id"/><Button name="load_room" text="Load room" action="load_room"/><Button name="save_room" text="Save room" action="save_room"/><Label name="room_editor"/></StackView>
       <StackView orientation="horizontal" spacing="6"><Label text="Guest to edit:"/><ComboBox name="edit_guest_choice" source="lodge_remote_cache.guests" display="name" value="id"/><Button name="load_guest" text="Load guest" action="load_guest"/><Button name="save_guest" text="Save guest" action="save_guest"/><Label name="guest_editor"/></StackView>
       <StackView orientation="horizontal" spacing="6"><Label text="Room:"/><ComboBox name="clean_room" source="lodge_remote_cache.rooms" display="name" value="id"/><Button name="mark_clean" text="Mark clean" action="mark_clean"/><Button name="mark_dirty" text="Mark dirty" action="mark_dirty"/><Button name="mark_inspection" text="Needs inspection" action="mark_inspection"/></StackView>
       <Separator/><Label name="editor" font="heading"/>
