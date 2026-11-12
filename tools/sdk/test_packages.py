@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import os
+import signal
 import shutil
 import subprocess
 from pathlib import Path
@@ -67,6 +69,77 @@ class PackageTests(unittest.TestCase):
         with patch.object(packages.os, "replace", side_effect=fail_registry):
             with self.assertRaises(OSError): packages.install(self.store, archive)
         self.assertEqual((self.store / "state.json").read_bytes(), previous)
+
+    def test_registry_write_failure_cleans_staging_and_retains_active_profile(self):
+        packages.install(self.store, self.release())
+        before = (self.store / "state.json").read_bytes()
+        snapshots = set((self.store / "snapshots").iterdir())
+        files = set(self.store.iterdir())
+        def fail_dump(value, handle, **kwargs):
+            handle.write("{partial")
+            raise OSError("injected write failure")
+        with patch.object(packages.json, "dump", side_effect=fail_dump):
+            with self.assertRaisesRegex(OSError, "write failure"):
+                packages.configure(self.store, "example", {"revision": 2})
+        self.assertEqual((self.store / "state.json").read_bytes(), before)
+        self.assertEqual(set((self.store / "snapshots").iterdir()), snapshots)
+        self.assertEqual(set(self.store.iterdir()), files)
+        packages.verify_snapshot(self.store, packages.state(self.store))
+
+    def test_final_sync_failure_reports_published_profile(self):
+        packages.install(self.store, self.release())
+        sync = packages.sync_directory
+        def fail_final(directory):
+            if directory == self.store:
+                raise OSError("injected directory failure")
+            sync(directory)
+        with patch.object(packages, "sync_directory", side_effect=fail_final):
+            with self.assertRaisesRegex(packages.PublicationUncertainError, "inspect the active profile"):
+                packages.configure(self.store, "example", {"revision": 2})
+        current = packages.state(self.store)
+        self.assertEqual(current["configuration"]["example"], {"revision": 2})
+        packages.verify_snapshot(self.store, current)
+
+    @unittest.skipUnless(hasattr(os, "fork"), "requires POSIX process termination")
+    def test_killed_publication_keeps_complete_active_snapshot(self):
+        archive = self.release()
+        for stage in ("snapshot_sync", "snapshot_directory", "registry_write", "registry_replace", "registry_directory"):
+            for after in (False, True):
+                with self.subTest(stage=stage, after=after):
+                    store = self.root / (stage + str(after))
+                    packages.install(store, archive)
+                    previous = packages.state(store)
+                    child = os.fork()
+                    if child == 0:
+                        def stop(): os.kill(os.getpid(), signal.SIGKILL)
+                        def wrap(function, match):
+                            def call(*args, **kwargs):
+                                selected = match(*args, **kwargs)
+                                if selected and not after: stop()
+                                result = function(*args, **kwargs)
+                                if selected and after: stop()
+                                return result
+                            return call
+                        tree = wrap(packages.sync_tree, lambda path: stage == "snapshot_sync")
+                        directory = wrap(packages.sync_directory, lambda path: (
+                            stage == "snapshot_directory" and path == store / "snapshots") or (
+                            stage == "registry_directory" and path == store))
+                        dump = wrap(packages.json.dump, lambda *args, **kwargs: stage == "registry_write")
+                        replace = wrap(packages.os.replace, lambda source, target: stage == "registry_replace" and Path(target) == store / "state.json")
+                        with patch.object(packages, "sync_tree", tree), patch.object(packages, "sync_directory", directory), \
+                             patch.object(packages.json, "dump", dump), patch.object(packages.os, "replace", replace):
+                            packages.configure(store, "example", {"revision": 2})
+                        os._exit(3)
+                    _, status = os.waitpid(child, 0)
+                    self.assertTrue(os.WIFSIGNALED(status) and os.WTERMSIG(status) == signal.SIGKILL)
+                    current = packages.state(store)
+                    published = stage == "registry_directory" or (stage == "registry_replace" and after)
+                    if published:
+                        self.assertEqual(current["configuration"]["example"], {"revision": 2})
+                    else:
+                        self.assertEqual(current, previous)
+                    packages.verify_selected(store, current)
+                    packages.verify_snapshot(store, current)
 
     def test_configuration_survives_disable_and_lock_rejects_writers(self):
         packages.install(self.store, self.release())
@@ -147,6 +220,15 @@ class PackageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "signature required"):
             packages.set_signature_policy(self.store, "require")
         self.assertEqual((self.store / "state.json").read_bytes(), previous)
+
+    def test_verify_command_detects_snapshot_damage_without_launch(self):
+        packages.install(self.store, self.release())
+        with patch("sys.argv", ["orion-packages", "--store", str(self.store), "verify"]):
+            self.assertEqual(packages.main(), 0)
+            current = packages.state(self.store)
+            snapshot = self.store / "snapshots" / current["generation"] / "orion/plugins/example/main.lua"
+            snapshot.write_text("return nil")
+            self.assertEqual(packages.main(), 1)
 
     def test_run_refuses_tampered_snapshot_before_launch(self):
         packages.install(self.store, self.release())

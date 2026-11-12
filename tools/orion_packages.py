@@ -342,6 +342,10 @@ def sync_tree(directory):
                 finally: os.close(descriptor)
 
 
+class PublicationUncertainError(OSError):
+    """The new registry is visible, but its directory sync failed."""
+
+
 def publish(directory, current):
     validate_selection(current)
     verify_selected(directory, current)
@@ -362,16 +366,22 @@ def publish(directory, current):
         sync_tree(snapshot)
         sync_directory(snapshot.parent)
         current["generation"] = generation
-        with tempfile.NamedTemporaryFile(mode="w", dir=directory, delete=False) as handle:
-            temporary = Path(handle.name)
-            json.dump(current, handle, sort_keys=True, indent=2)
-            handle.flush(); os.fsync(handle.fileno())
+        temporary = None
         try:
+            with tempfile.NamedTemporaryFile(mode="w", dir=directory, delete=False) as handle:
+                temporary = Path(handle.name)
+                json.dump(current, handle, sort_keys=True, indent=2)
+                handle.flush(); os.fsync(handle.fileno())
             os.replace(temporary, directory / "state.json")
             published = True
-            sync_directory(directory)
+            try:
+                sync_directory(directory)
+            except OSError as error:
+                raise PublicationUncertainError(
+                    "registry published but directory sync failed; inspect the active profile before retrying"
+                ) from error
         finally:
-            temporary.unlink(missing_ok=True)
+            if temporary is not None: temporary.unlink(missing_ok=True)
     except BaseException:
         if not published: shutil.rmtree(snapshot)
         raise
@@ -508,7 +518,7 @@ def main():
     cmd = commands.add_parser("policy"); cmd.add_argument("mode", choices=("optional", "require"))
     cmd = commands.add_parser("enable"); cmd.add_argument("id"); cmd.add_argument("release")
     cmd = commands.add_parser("disable"); cmd.add_argument("id")
-    commands.add_parser("rollback"); commands.add_parser("list"); commands.add_parser("diagnose")
+    commands.add_parser("rollback"); commands.add_parser("list"); commands.add_parser("diagnose"); commands.add_parser("verify")
     cmd = commands.add_parser("configure"); cmd.add_argument("id"); cmd.add_argument("json_file", type=Path)
     cmd = commands.add_parser("run"); cmd.add_argument("executable"); cmd.add_argument("arguments", nargs=argparse.REMAINDER)
     args = parser.parse_args()
@@ -525,6 +535,11 @@ def main():
         elif args.command == "configure": configure(directory, args.id, json.loads(args.json_file.read_text()))
         elif args.command == "rollback": select(directory, rollback=True)
         elif args.command == "diagnose": print(json.dumps(diagnose(directory), sort_keys=True, indent=2))
+        elif args.command == "verify":
+            with locked(directory):
+                current = state(directory); validate_selection(current)
+                verify_selected(directory, current); verify_snapshot(directory, current)
+            print("Package profile verified")
         elif args.command == "list": print(json.dumps(state(directory), sort_keys=True, indent=2))
         elif args.command == "run":
             executable = shutil.which(args.executable)

@@ -148,6 +148,7 @@ budget, and syntax-checks Lua files; it does not execute plugin factories.
 ```sh
 python3 tools/orion_packages.py --store /tmp/my_plugins install /tmp/stay_dates.zip
 python3 tools/orion_packages.py --store /tmp/my_plugins list
+python3 tools/orion_packages.py --store /tmp/my_plugins verify
 python3 tools/orion_packages.py --store /tmp/my_plugins diagnose > /tmp/plugin-diagnostics.json
 python3 tools/orion_packages.py --store /tmp/my_plugins configure stay_dates /tmp/settings.json
 python3 tools/orion_packages.py --store /tmp/my_plugins run build/bin/lodge --data /tmp/my_hotel
@@ -170,7 +171,16 @@ a rejected dependency leaves both the registry and object store unchanged. Bundl
 manifests are evaluated in a restricted Lua environment and checked for matching
 identity and interface instead of extracting a version from their text; a missing
 or invalid manifest prevents activation or launch. Failed activation leaves the
-previous registry available. Running processes retain a fixed `ORION_PLUGIN_ROOT`; restart to use a new generation.
+previous registry available. If the final directory sync fails, publication has
+an uncertain durable outcome: inspect `list` and run `verify` before retrying.
+`verify` checks the SDK checkout's bundled interfaces, package objects, signatures
+and selected snapshot without launching the application; `run` additionally checks
+against the selected executable's runtime. A process killed during publication may leave an unreferenced snapshot
+or temporary file; retain the active and previous generations and inspect the
+store before manual cleanup. POSIX tests kill a separate process around snapshot
+sync, registry write and replacement, then verify the active snapshot. They do not
+simulate power loss. Running processes retain a fixed `ORION_PLUGIN_ROOT`; restart
+to use a new generation.
 External search is restricted to the `orion.plugins.*` namespace, after bundled
 modules and before app-local plugin files. External packages cannot replace the
 runtime's core modules. `run` checks bundled dependency versions beside the actual
