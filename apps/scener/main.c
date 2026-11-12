@@ -72,11 +72,11 @@ accel_table_t *scener_active_accelerators(void) {
 
 #ifndef BUILD_AS_GEM
 static void cli_usage(void) {
-	puts("scener [SCENE] [--cam NAME]\n"
-	     "scener --render SCENE [--camera NAME] [--size WIDTHxHEIGHT] [--format jpg|png] [--output-dir DIR]\n"
+	puts("scener [SCENE] [--cam NAME] [--ssao]\n"
+	     "scener --render SCENE [--camera NAME] [--size WIDTHxHEIGHT] [--format jpg|png] [--output-dir DIR] [--ssao]\n"
 	     "scener --layout SCENE [--scale PIXELS_PER_CM] [--format jpg|png] [--output-dir DIR]\n"
 	     "scener --list-cameras SCENE\n"
-	     "scener SCENE --screenshot FILE [--cam NAME] [--size WIDTHxHEIGHT]\n"
+	     "scener SCENE --screenshot FILE [--cam NAME] [--size WIDTHxHEIGHT] [--ssao]\n"
 	     "scener --list-joints SCENE [--camera NAME] [--time SECONDS]\n"
 	     "scener --check SCENE [--camera NAME | --all-cameras] [--time SECONDS] [--json] [--strict]\n"
 	     "                                            load diagnostics plus floating, intersecting and z-fighting geometry in that camera's view\n"
@@ -85,13 +85,16 @@ static void cli_usage(void) {
 	     "                                            write the built scene through an exporter plugin chosen by extension\n"
 	     "scener --list-exporters                    installed exporter plugins and their options (SCENER_EXPORTER_PATH adds directories)\n"
 	     "scener --prefab-info SOURCE|FILE.blk        JSON for one prefab: bounds, attach points, up, front, description\n"
-	     "scener --reel REEL (--output FILE.mp4|FILE.png | --output-dir DIR) [--time SECONDS] [--poster FILE.png]\n"
+	     "scener --reel REEL (--output FILE.mp4|FILE.png | --output-dir DIR) [--time SECONDS] [--poster FILE.png] [--ssao]\n"
 	     "scener --reel REEL --check\n"
-	     "scener --reel REEL --sheet FILE.png [--columns N] [--sheet-times T1,T2,...]   one thumbnail per shot (or 12 across the reel)\n"
-	     "scener --render SCENE --camera NAME --frames START:END:FPS --output FILE.mp4 [--size WIDTHxHEIGHT]\n"
+	     "scener --reel REEL --sheet FILE.png [--columns N] [--sheet-times T1,T2,...] [--ssao]   one thumbnail per shot (or 12 across the reel)\n"
+	     "scener --render SCENE --camera NAME --frames START:END:FPS --output FILE.mp4 [--size WIDTHxHEIGHT] [--ssao]\n"
 	     "Options: --time SECONDS, --frames START:END:FPS (with --render), --supersample 1..4 (default 2),\n"
-	     "  --transparent (PNG background alpha 0), --ssao, -no-shadows, -wireframe, -d FLAGS, --help, --version\n"
-	     "A camera with size=\"W H\" renders at that size in --render; ortho=\"HEIGHT_CM\" makes it orthographic.\n"
+	     "  --transparent (PNG background alpha 0), -no-shadows, -wireframe, -d FLAGS, --help, --version");
+	printf("  --ssao  %s\n          %s\n",
+	       ui_tr("Enable screen-space ambient occlusion for filled 3D views (off by default)."),
+	       ui_tr("Darkens ambient light at visible contacts in the editor, renders, and reel scene layers."));
+	puts("A camera with size=\"W H\" renders at that size in --render; ortho=\"HEIGHT_CM\" makes it orthographic.\n"
 	     "Scenes default to Y up; <scene up=\"z\"> selects Z-up views without changing primitive axes.");
 }
 #endif

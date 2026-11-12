@@ -104,12 +104,6 @@ caster's own depth. Over a white catcher lit by one sun this gives a shadow-only
 pass; nile-archive's `tools/scener_buildings.py` renders its city buildings and
 their ground shadows this way. Helper overlays are hidden by default.
 
-Screen-space ambient occlusion (SSAO) is off by default. Choose **View → Toggle
-Ambient Occlusion** in the editor or pass `--ssao` when opening a scene or
-rendering stills, video, or reel scene layers. SSAO darkens ambient diffuse
-lighting near visible contacts and creases. Flat layouts and wireframe
-renders skip it. See the [attic scene comparison](docs/images/ssao-comparison.png).
-
 A logged-in graphical session and OpenGL context are needed for rendering;
 help, version and camera listing need no graphical startup.
 
@@ -124,6 +118,30 @@ Scenes authored for main’s 3ds Max coordinate conversion can declare
 `<scene convention="3dsmax">`. This maps authored position/rotation `(x,y,z)`
 to renderer `(x,z,-y)` and box sizes to `(x,z,y)`, retaining the upstream
 conversion. It takes precedence over `up`; omit it for native Y/Z-up scenes.
+
+## Screen-space ambient occlusion
+
+SSAO darkens ambient diffuse light around visible contacts and creases, such as
+the joint between a window sill and its frame. It uses the geometry visible
+from the active camera, so the effect can change as the camera moves.
+
+SSAO is off by default. In the editor, use **View → Toggle Ambient Occlusion**
+or launch `scener SCENE --ssao` to start with it enabled. Pass `--ssao` to
+`--screenshot`, `--render` (stills, frame sequences, or MP4), or `--reel`
+to enable it for output. Both perspective and orthographic cameras support
+SSAO in filled 3D views. The `-no-shadows` flag controls stencil shadows
+independently. Flat layouts and wireframe views skip SSAO.
+
+Run both commands from the Orion repository root to reproduce the comparison.
+Each writes a `table-show-desk.png` in its own directory.
+[Attic scene comparison](docs/images/ssao-comparison.png).
+
+```sh
+scener --render apps/scener/scenes/attic_study.blks --camera table-show-desk \
+  --size 1200x800 --supersample 2 --format png --output-dir render/ssao-off
+scener --render apps/scener/scenes/attic_study.blks --camera table-show-desk \
+  --size 1200x800 --supersample 2 --format png --output-dir render/ssao-on --ssao
+```
 
 ## Reels and animated infographics
 
