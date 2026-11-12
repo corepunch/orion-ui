@@ -3,7 +3,7 @@ local Hotel = require("hotel")
 local application = require("orion.application")
 local Plugins = require("orion.plugins")
 local calendar = Plugins.use("calendar", 1)
-local template = Plugins.use("template", 1)
+local confirmation = require("remote.confirmation")
 local money = Plugins.use("money", 1)
 local Reception = {form = "reception", title = orion.tr("Orion Lodge")}
 
@@ -69,17 +69,8 @@ function Reception:confirmation(v)
   self:remember(v)
   local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
   local row = orion.assert(Hotel.reservations.model:find(selected.id))
-  local html = template.render([[<!doctype html><html><meta charset="utf-8"><title>{{title}}</title>
-<style>body{font:16px sans-serif;max-width:700px;margin:40px auto} @page{size:A4;margin:20mm}</style>
-<h1>{{title}}</h1><p>{{guest_label}} {{guest}}</p><p>{{room_label}} {{room}}</p>
-<p>{{arrival_label}} {{arrival}} — {{departure_label}} {{departure}}</p>
-<p>{{total_label}} {{total}} · {{paid_label}} {{paid}} · {{balance_label}} {{balance}}</p></html>]], {
-    title = orion.tr("Booking confirmation"), guest_label = orion.tr("Guest:"), guest = row.guest.name,
-    room_label = orion.tr("Room:"), room = row.room.name, arrival_label = orion.tr("Arrival:"), arrival = orion.formatDate(row.arrival),
-    departure_label = orion.tr("Departure:"), departure = orion.formatDate(row.departure),
-    total_label = orion.tr("Total:"), total = orion.formatNumber(Hotel.total(row), 2),
-    paid_label = orion.tr("Paid:"), paid = orion.formatNumber(Hotel.paid(row), 2), balance_label = orion.tr("Balance:"), balance = orion.formatNumber(Hotel.balance(row), 2),
-  })
+  local html = confirmation({guest = row.guest.name, room = row.room.name, arrival = row.arrival, departure = row.departure,
+    total = Hotel.total(row), paid = Hotel.paid(row), balance = Hotel.balance(row)})
   self.notice = string.format(orion.tr("Confirmation saved: %s"), orion.assert(application.write("confirmation.html", html)))
 end
 function Reception:data()

@@ -77,9 +77,9 @@ static void test_lodge_remote_ui(void) {
   send_message(script_page_control(page, "edit_guest_choice"), cbSetCurrentValue, 1, NULL);
   ASSERT_TRUE(script_page_perform(page, "load_guest"));
   ASSERT_STR_EQUAL(script_page_control(page, "guest_name")->title, "Remote guest");
-  send_message(script_page_control(page, "guest_name"), edSetText, 0, "Updated guest");
+  send_message(script_page_control(page, "guest_name"), edSetText, 0, "Updated <guest>");
   send_message(script_page_control(page, "phone"), edSetText, 0, "+49 123");
-  ASSERT_TRUE(script_page_perform(page, "save_guest")); ASSERT_TRUE(wait_for(db, guests->table_id, 1, "name", "Updated guest"));
+  ASSERT_TRUE(script_page_perform(page, "save_guest")); ASSERT_TRUE(wait_for(db, guests->table_id, 1, "name", "Updated <guest>"));
   ASSERT_TRUE(script_page_perform(page, "load_guest")); ASSERT_STR_EQUAL(script_page_control(page, "phone")->title, "+49 123");
   ASSERT_TRUE(script_page_perform(page, "connect"));
   for (int i = 0; i < 500 && !strstr(script_page_control(page, "guest_editor")->title, "Load the guest again"); i++) {
@@ -123,6 +123,24 @@ static void test_lodge_remote_ui(void) {
   send_message(script_page_control(page, "amount"), edSetText, 0, "125.00");
   ASSERT_TRUE(script_page_perform(page, "pay"));
   ASSERT_TRUE(wait_for(db, stays->table_id, 1, "balance", "0.00"));
+  ASSERT_TRUE(script_page_perform(page, "confirmation"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Confirmation saved:"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "Confirmation saved:"));
+  char confirmation_path[160], html[4096]; snprintf(confirmation_path, sizeof(confirmation_path), "%s/confirmation.html", directory);
+  FILE *confirmation_file = fopen(confirmation_path, "rb"); ASSERT_NOT_NULL(confirmation_file);
+  size_t html_size = fread(html, 1, sizeof(html) - 1, confirmation_file); fclose(confirmation_file); html[html_size] = 0;
+  ASSERT_NOT_NULL(strstr(html, "Updated &lt;guest&gt;")); ASSERT_NULL(strstr(html, "Updated <guest>"));
+  ASSERT_NOT_NULL(strstr(html, "Updated 101")); ASSERT_NOT_NULL(strstr(html, "125.00"));
+  char moved_directory[160]; snprintf(moved_directory, sizeof(moved_directory), "%s-moved", directory);
+  ASSERT_EQUAL(rename(directory, moved_directory), 0);
+  ASSERT_TRUE(script_page_perform(page, "confirmation"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "The document could not be written"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "The document could not be written"));
+  ASSERT_EQUAL(rename(moved_directory, directory), 0);
   ASSERT_TRUE(script_page_perform(page, "check_out")); ASSERT_TRUE(wait_for(db, stays->table_id, 1, "status", "Checked out"));
   send_message(script_page_control(page, "room_name"), edSetText, 0, "Remote 102");
   ASSERT_TRUE(script_page_perform(page, "add_room")); ASSERT_TRUE(wait_for(db, rooms->table_id, 2, "name", "Remote 102"));
@@ -177,7 +195,7 @@ static void test_lodge_remote_ui(void) {
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
   }
   ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "already closed"));
-  script_application_close(app); test_env_shutdown(); rmdir(directory); PASS();
+  script_application_close(app); test_env_shutdown(); unlink(confirmation_path); rmdir(directory); PASS();
 }
 int main(void) {
   TEST_START("Lodge remote UI");

@@ -37,7 +37,7 @@
   <string source="Check in" where="remote">Заселить</string>
   <string source="Check out" where="remote">Выселить</string>
   <string source="Cancel reservation" where="remote">Отменить бронь</string>
-  <string source="Export confirmation" obsolete="true">Экспорт подтверждения</string>
+  <string source="Export confirmation" where="remote">Экспорт подтверждения</string>
   <string source="Retry saving" obsolete="true">Повторить сохранение</string>
   <string source="%d reservations · Outstanding: %s" where="code">Броней: %d · К оплате: %s</string>
   <string source="Balance:" where="code">Остаток:</string>

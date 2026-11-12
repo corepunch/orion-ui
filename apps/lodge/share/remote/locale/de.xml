@@ -37,7 +37,7 @@
   <string source="Check in" where="remote">Einchecken</string>
   <string source="Check out" where="remote">Auschecken</string>
   <string source="Cancel reservation" where="remote">Reservierung stornieren</string>
-  <string source="Export confirmation" obsolete="true">Bestätigung exportieren</string>
+  <string source="Export confirmation" where="remote">Bestätigung exportieren</string>
   <string source="Retry saving" obsolete="true">Speichern wiederholen</string>
   <string source="%d reservations · Outstanding: %s" where="code">%d Reservierungen · Offen: %s</string>
   <string source="Balance:" where="code">Restbetrag:</string>

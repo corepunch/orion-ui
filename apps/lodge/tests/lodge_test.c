@@ -64,6 +64,9 @@ static void test_persistence_and_page(void) {
   script_page_t *page = script_application_main(app);
   ASSERT_NOT_NULL(script_page_control(page, "bookings"));
   ASSERT_NOT_NULL(strstr(script_page_control(page, "summary")->title, "3"));
+  ASSERT_TRUE(script_page_perform(page, "confirmation"));
+  char confirmation_path[160]; snprintf(confirmation_path, sizeof(confirmation_path), "%s/confirmation.html", directory);
+  FILE *confirmation_file = fopen(confirmation_path, "rb"); ASSERT_NOT_NULL(confirmation_file); fclose(confirmation_file);
   ASSERT_TRUE(script_page_perform(page, "new_booking"));
   ASSERT_FALSE(script_page_perform(page, "reserve"));
   ASSERT_NOT_NULL(strstr(script_page_message(page), "room"));
@@ -166,7 +169,7 @@ static void test_persistence_and_page(void) {
   room_row = (void *)send_db_message(hotel, dbFind, TABLE_ROOMS, (void *)(intptr_t)room.id);
   ASSERT_NOT_NULL(room_row); ASSERT_STR_EQUAL(room_row->cleaning_state, "dirty");
   script_application_close(app); hotel = NULL;
-  unlink(target); rmdir(directory);
+  unlink(confirmation_path); unlink(target); rmdir(directory);
   PASS();
 }
 static void test_refused_migration(void) {

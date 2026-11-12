@@ -1,6 +1,7 @@
 local orion = require("orion")
 local Remote = require("orion.remote")
 local Plugins = require("orion.plugins")
+local application, confirmation = require("orion.application"), require("confirmation")
 local calendar, money = Plugins.use("calendar", 1), Plugins.use("money", 1)
 local Page = {form = "remote", title = orion.tr("Lodge · Shared server")}
 local status_labels = {reserved = "Reserved", checked_in = "Checked in", checked_out = "Checked out", cancelled = "Cancelled"}
@@ -20,7 +21,7 @@ end
 function Page:remember(values)
   for _, key in ipairs(inputs) do if values[key] ~= nil then self.values[key] = values[key] end end
 end
-function Page:load_snapshot()
+function Page:load_snapshot(after)
   self.snapshot_ready = false
   local ok, err = self.client:submit("snapshot", {}, function(result, failure)
     if not result then self.notice = failure; return end
@@ -47,6 +48,7 @@ function Page:load_snapshot()
     })
     self.snapshot_ready = true
     self.notice = self.needs_reload and orion.tr("Reload the selected reservation before saving, or start a new reservation.") or orion.tr("Server data refreshed.")
+    if after then after() end
   end)
   if not ok then self.notice = err end
 end
@@ -135,6 +137,19 @@ end
 function Page:check_in(v) self:transition(v, "check_in") end
 function Page:check_out(v) self:transition(v, "check_out") end
 function Page:cancel(v) self:transition(v, "cancel") end
+function Page:confirmation(v)
+  self:remember(v)
+  local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
+  local id = selected.id
+  self:load_snapshot(function()
+    local row = orion.assert(self.reservations[id], orion.tr("Choose a reservation."))
+    local room, guest = orion.assert(self.rooms[row.room_id]), orion.assert(self.guests[row.guest_id])
+    local html = confirmation({guest = guest.name, room = room.name, arrival = row.arrival, departure = row.departure,
+      total = row.total, paid = row.paid, balance = row.balance})
+    local written, path = pcall(application.write, "confirmation.html", html)
+    self.notice = written and string.format(orion.tr("Confirmation saved: %s"), path) or tostring(path)
+  end)
+end
 function Page:payment(v, sign)
   local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
   local amount = v.amount
@@ -176,7 +191,7 @@ function Page:data()
   local blocked = not self.connected or not self.snapshot_ready or state.busy or state.pending or state.conflict
   local disabled = {connect = state.busy or (state.pending and not state.conflict), retry = state.busy or not state.pending}
   local map = {add_room = "save_room", add_guest = "save_guest", mark_clean = "set_room_cleaning", mark_dirty = "set_room_cleaning", mark_inspection = "set_room_cleaning", reserve = "reserve",
-    check_in = "check_in", check_out = "check_out", cancel = "cancel", pay = "payment", refund = "payment",
+    check_in = "check_in", check_out = "check_out", cancel = "cancel", confirmation = "snapshot", pay = "payment", refund = "payment",
     group_reserve = "group_reserve", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
   for control, command in pairs(map) do disabled[control] = blocked or not self.allowed[command] end
   disabled.reserve = disabled.reserve or self.needs_reload
