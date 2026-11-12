@@ -260,6 +260,27 @@ company.execute("alice", "reception", {"request_id": "crash", "expected_revision
         (self.root / "users.json").write_text("[]")
         self.assertEqual(invoke(token)[0], 401)
 
+    def test_revocation_while_request_body_is_read_blocks_saved_receipt(self):
+        token = "test-token-with-entropy"
+        users = [{"id": "alice", "role": "reception", "token_sha256": hashlib.sha256(token.encode()).hexdigest()}]
+        (self.root / "users.json").write_text(json.dumps(users))
+        request = self.request("saved")
+        self.company.execute("alice", "reception", request)
+        body = json.dumps(request).encode()
+        class RevokingBody(io.BytesIO):
+            def read(stream, length):
+                (self.root / "users.json").write_text("[]")
+                return super().read(length)
+        handler = object.__new__(server.Handler)
+        handler.headers = Message(); handler.headers["Authorization"] = "Bearer " + token
+        handler.headers["Content-Length"] = str(len(body)); handler.rfile = RevokingBody(body)
+        handler.connection = SimpleNamespace(settimeout=lambda value: None)
+        handler.path = "/v1/command"; handler.server = SimpleNamespace(company=self.company)
+        result = []; handler.reply = lambda status, value: result.append((status, value))
+        handler.perform(True)
+        self.assertEqual(result[0][0], 401)
+        self.assertEqual(len(self.host.calls), 1)
+
     def test_offline_backup_verify_restore_and_no_credentials(self):
         request = self.request("saved")
         self.company.execute("alice", "reception", request)

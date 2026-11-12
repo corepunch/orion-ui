@@ -383,10 +383,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
         try:
             self.connection.settimeout(15)
             header = self.headers.get("Authorization", "")
-            actor, role = self.server.company.authenticate(header[7:] if header.startswith("Bearer ") else "")
+            token = header[7:] if header.startswith("Bearer ") else ""
+            self.server.company.authenticate(token)
             if not write and self.path == "/v1/status":
-                self.reply(200, {**self.server.company.status(), "actor": actor, "role": role,
-                                 "commands": sorted(command for command, roles in POLICIES[self.server.company.kind].items() if role in roles)}); return
+                with self.server.company.lock:
+                    actor, role = self.server.company.authenticate(token)
+                    result = {**self.server.company.status(), "actor": actor, "role": role,
+                              "commands": sorted(command for command, roles in POLICIES[self.server.company.kind].items() if role in roles)}
+                self.reply(200, result); return
             if not write or self.path != "/v1/command":
                 raise Refusal(404, "Unknown endpoint")
             if self.headers.get("Transfer-Encoding") or len(self.headers.get_all("Content-Length", [])) != 1:
@@ -397,7 +401,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             body = self.rfile.read(length)
             if len(body) != length:
                 raise Refusal(400, "Incomplete request")
-            self.reply(200, self.server.company.execute(actor, role, decode(body)))
+            request = decode(body)
+            with self.server.company.lock:
+                actor, role = self.server.company.authenticate(token)
+                result = self.server.company.execute(actor, role, request)
+            self.reply(200, result)
         except Refusal as error:
             if error.status in (401, 403):
                 print(f"[server] access denied status={error.status}", file=sys.stderr)
