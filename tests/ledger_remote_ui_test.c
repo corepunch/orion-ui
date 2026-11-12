@@ -75,6 +75,10 @@ static void test_ledger_remote_ui(void) {
   set_text(page, "reversal_date", "2035-01-01"); set_text(page, "reason", "Test correction");
   ASSERT_TRUE(script_page_perform(page, "reverse")); ASSERT_TRUE(wait_notice(page, "Reversal 2 posted."));
   set_text(page, "close_date", "2035-01-01"); ASSERT_TRUE(script_page_perform(page, "prepare_close"));
+  ASSERT(window_is_enabled(script_page_control(page, "close_period")), "review enables period close");
+  ASSERT_TRUE(script_page_perform(page, "connect")); ASSERT_TRUE(wait_notice(page, "Connected."));
+  ASSERT(!window_is_enabled(script_page_control(page, "close_period")), "reconnecting invalidates close review");
+  ASSERT_TRUE(script_page_perform(page, "prepare_close"));
   ASSERT_TRUE(script_page_perform(page, "close_period")); ASSERT_TRUE(wait_notice(page, "Accounting period closed."));
   ASSERT_TRUE(script_page_perform(page, "show_history"));
   const db_table_schema_t *history = db_schema_table_named(cache->schema, "period_history"); ASSERT_NOT_NULL(history);

@@ -51,17 +51,22 @@ function Ledger:init()
   self.posting_history_document, self.revision_entries_revision = nil, nil
   self.revision_entries_offset, self.revision_entries_count = 0, 0
   self.next_line, self.role, self.connected, self.catalog_kind = 1, "", false, "items"
+  self.closing_date, self.closing_revision = nil, nil
   self.notice, self.error = "", ""
 end
 
 function Ledger:remember(values)
   for _, name in ipairs(inputs) do if values[name] ~= nil then self.fields[name] = values[name] end end
+  if self.closing_date and values.close_date ~= nil and values.close_date ~= self.closing_date then
+    self.closing_date, self.closing_revision = nil, nil
+  end
 end
 
 function Ledger:complete(result, err)
   local callback = self.pending_callback
   local state = self.remote:state()
   if err then
+    if state.conflict then self.closing_date, self.closing_revision = nil, nil end
     self.error = err
     self.notice = state.conflict and orion.tr("Data changed. Refresh before continuing.") or
       state.pending and orion.tr("The outcome is unknown. Retry the same request before making changes.") or ""
@@ -87,6 +92,7 @@ end
 
 function Ledger:connect(values)
   self:remember(values)
+  self.closing_date, self.closing_revision = nil, nil
   local ok, err = self.remote:refresh(function(status, failure)
     if failure then self.error = failure; return end
     if status.application ~= "ledger" or (status.country ~= "RU" and status.country ~= "DE") then
@@ -296,13 +302,15 @@ function Ledger:save_item(v)
 end
 function Ledger:prepare_close(v)
   self:remember(v); self.closing_date = orion.assert(v.close_date, orion.tr("Enter a valid close date."))
+  self.closing_revision = self.remote:state().revision
   self.notice = string.format(orion.tr("Review: close through %s. Confirm to continue."), orion.formatDate(self.closing_date))
 end
 function Ledger:close_period(v)
   self:remember(v)
-  orion.assert(self.closing_date and self.closing_date == v.close_date, orion.tr("Review the close date first."))
+  orion.assert(self.closing_date and self.closing_date == v.close_date and self.closing_revision == self.remote:state().revision,
+    orion.tr("Review the close date first."))
   self:request("period.close", {date = self.closing_date}, function()
-    self.notice = orion.tr("Accounting period closed."); self.closing_date = nil; self:load_documents(0)
+    self.notice = orion.tr("Accounting period closed."); self.closing_date, self.closing_revision = nil, nil; self:load_documents(0)
   end)
 end
 function Ledger:data()
@@ -311,7 +319,7 @@ function Ledger:data()
   local readonly = self.role ~= "admin" and self.role ~= "accountant"
   local disabled = {connect = state.busy or (state.pending and not state.conflict), retry = state.busy or not state.pending}
   for _, name in ipairs(controls) do disabled[name] = blocked or readonly end
-  disabled.close_period = blocked or self.role ~= "admin" or not self.closing_date
+  disabled.close_period = blocked or self.role ~= "admin" or not self.closing_date or self.closing_revision ~= state.revision
   disabled.prepare_close = blocked or self.role ~= "admin"
   for _, name in ipairs({"previous_documents", "next_documents", "previous_catalog", "next_catalog", "previous_journal", "next_journal",
                          "document_types", "vat_rates", "units", "items", "counterparties", "show_journal", "show_history", "show_posting_history", "show_revision_entries", "find_posting_history", "history_document_id"}) do disabled[name] = blocked end

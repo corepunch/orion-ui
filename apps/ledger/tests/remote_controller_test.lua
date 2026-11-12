@@ -68,4 +68,34 @@ decimal_separator = ','; page:add_line({item_id = 1, vat_id = 1, quantity = '1,2
 assert(page.lines[1].quantity == '1.250' and page.lines[1].price == '2.40', 'localized input becomes exact wire decimals')
 assert(cache[1].rows[1].quantity == '1,250', 'staged line uses locale decimal separator')
 assert(not pcall(function() page:add_line({item_id = 1, vat_id = 1, quantity = '1.250', price = '2,40'}) end), 'misplaced separator is rejected')
+for _, country in ipairs({'RU', 'DE'}) do
+  page:init(); state.pending, state.busy, state.conflict, state.revision = false, false, false, 10
+  page:connect({}); state.busy = false; pending({application = 'ledger', country = country, role = 'admin'}, nil)
+  state.busy, state.pending = false, false; pending({}, nil)
+  page:prepare_close({close_date = '2026-03-31'})
+  assert(not page:data().disabled.close_period, country .. ': reviewed close is enabled')
+  page:remember({close_date = '2026-04-30'})
+  page:remember({close_date = '2026-03-31'})
+  assert(page:data().disabled.close_period, country .. ': changing and restoring the date requires review')
+  page:prepare_close({close_date = '2026-03-31'}); state.revision = 11
+  assert(page:data().disabled.close_period, country .. ': changed revision requires review')
+  assert(not pcall(function() page:close_period({close_date = '2026-03-31'}) end))
+  page:prepare_close({close_date = '2026-03-31'}); page:connect({})
+  state.busy = false; pending({application = 'ledger', country = country, role = 'admin'}, nil)
+  state.busy, state.pending = false, false; pending({}, nil)
+  assert(page:data().disabled.close_period, country .. ': reconnect requires review')
+  page:prepare_close({close_date = '2026-03-31'}); page:close_period({close_date = '2026-03-31'})
+  assert(client.command == 'period.close' and client.args.date == '2026-03-31')
+  local close_args = client.args
+  state.busy = false; pending(nil, 'connection lost')
+  assert(page:data().disabled.close_period and not page:data().disabled.retry)
+  page:retry({}); assert(client.args == close_args, country .. ': retry preserves the close request')
+  state.busy, state.pending = false, false; pending({}, nil)
+  assert(client.command == 'documents.list' and page:data().disabled.close_period)
+  state.busy, state.pending = false, false; pending({}, nil)
+  page:prepare_close({close_date = '2026-04-30'}); page:close_period({close_date = '2026-04-30'})
+  state.busy, state.pending, state.conflict = false, false, true; pending(nil, 'stale revision')
+  state.conflict = false
+  assert(page:data().disabled.close_period, country .. ': conflict invalidates review')
+end
 print('Ledger remote controller tests passed')
