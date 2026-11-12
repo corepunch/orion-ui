@@ -44,6 +44,11 @@ static inline irect16_t rect_offset(irect16_t r, int dx, int dy) {
   return (irect16_t){ r.x + dx, r.y + dy, r.w, r.h };
 }
 
+// Scale origin and size by an integer factor (logical units to pixels).
+static inline irect16_t rect_scale(irect16_t r, int k) {
+  return (irect16_t){ r.x * k, r.y * k, r.w * k, r.h * k };
+}
+
 // ── Centering ─────────────────────────────────────────────────────────────
 
 // Return a rect of given size centered inside r.

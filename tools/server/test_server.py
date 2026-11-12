@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import tempfile
 import sqlite3
+import subprocess
 import threading
 import time
 import unittest
@@ -79,6 +80,29 @@ class ServerTests(unittest.TestCase):
             self.company.execute(actor, role, request)
         self.assertEqual(caught.exception.status, expected_status)
 
+    def test_initialization_rejects_mismatched_jurisdiction(self):
+        target = Path(self.temp.name) / "wrong-country"
+        args = argparse.Namespace(state=str(target), application="ledger", country="DE", configuration="ru-2026",
+                                  executable="unused", resources="unused", source=None)
+        with self.assertRaises(ValueError):
+            server.initialize(args)
+        self.assertFalse(target.exists())
+
+    def test_company_identity_is_stable_and_new_companies_are_distinct(self):
+        identity = self.company.company_id
+        self.reopen(); self.assertEqual(self.company.company_id, identity)
+        other = self.root.parent / "other-company"
+        args = argparse.Namespace(state=str(other), application="lodge", country="DE", executable="unused",
+                                  resources="unused", configuration=None, source=None)
+        with patch.object(server.Company, "run_host", return_value={"ok": True, "result": {}}): server.initialize(args)
+        second = server.Company(other, self.host)
+        try: self.assertNotEqual(second.company_id, identity)
+        finally: second.close()
+        self.company.db.execute("DROP TABLE company_identity")
+        self.reopen(); legacy_identity = self.company.company_id
+        self.assertNotEqual(legacy_identity, identity)
+        self.reopen(); self.assertEqual(self.company.company_id, legacy_identity)
+
     def test_cas_and_idempotency_actor_isolation(self):
         request = self.request("order1", marker="A")
         first = self.company.execute("alice", "reception", request)
@@ -101,6 +125,45 @@ class ServerTests(unittest.TestCase):
         self.assertFalse(result["ok"])
         self.assertEqual(self.company.status()["revision"], 0)
         self.assertFalse((self.root / "snapshots" / "initial" / "partial.xml").exists())
+
+    def test_process_crash_before_and_after_commit(self):
+        self.close_company()
+        child = r"""
+import os, sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+import orion_server as server
+mode = sys.argv[3]
+def run(stage, payload):
+    (stage / "hotel.xml").write_text("committed company data")
+    if mode == "before": os._exit(17)
+    return {"ok": True, "result": {"id": 42}}
+company = server.Company(sys.argv[2], run)
+if mode == "after":
+    class CrashAfterCommit:
+        def __init__(self, db): self.db = db
+        def execute(self, sql, *args):
+            result = self.db.execute(sql, *args)
+            if sql == "COMMIT": os._exit(18)
+            return result
+        @property
+        def in_transaction(self): return self.db.in_transaction
+    company.db = CrashAfterCommit(company.db)
+company.execute("alice", "reception", {"request_id": "crash", "expected_revision": 0, "command": "reserve", "args": {}})
+"""
+        for mode, code in (("before", 17), ("after", 18)):
+            result = subprocess.run([sys.executable, "-c", child, str(SCRIPT.parent), str(self.root), mode], timeout=10)
+            self.assertEqual(result.returncode, code)
+            self.reopen()
+            if mode == "before":
+                self.assertEqual(self.company.status()["revision"], 0)
+                self.assertEqual([p.name for p in (self.root / "snapshots").iterdir()], ["initial"])
+                self.close_company()
+            else:
+                self.assertEqual(self.company.status()["revision"], 1)
+                receipt = self.company.execute("alice", "reception", self.request("crash"))
+                self.assertEqual(receipt["result"], {"id": 42})
+                self.assertEqual(len(self.host.calls), 0)
 
     def test_read_is_pure_and_roles_are_enforced(self):
         self.refusal(403, "cleaner", "housekeeping", self.request("no", command="reserve"))
@@ -189,7 +252,9 @@ class ServerTests(unittest.TestCase):
             return result[0]
         self.assertEqual(invoke(None)[0], 401)
         self.assertEqual(invoke("invalid")[0], 401)
-        self.assertEqual(invoke(token)[0], 200)
+        status, details = invoke(token)
+        self.assertEqual(status, 200); self.assertEqual(details["actor"], "cleaner")
+        self.assertEqual(details["company_id"], self.company.company_id)
         self.assertEqual(invoke(token, self.request("denied"))[0], 403)
         self.assertEqual(len(self.host.calls), 0)
         (self.root / "users.json").write_text("[]")
@@ -198,6 +263,7 @@ class ServerTests(unittest.TestCase):
     def test_offline_backup_verify_restore_and_no_credentials(self):
         request = self.request("saved")
         self.company.execute("alice", "reception", request)
+        identity = self.company.company_id
         (self.root / "users.json").write_text('[{"id":"alice","token_sha256":"secret"}]')
         self.close_company()
         backup = self.root.parent / "backup"
@@ -212,6 +278,7 @@ class ServerTests(unittest.TestCase):
         restored_company = server.Company(restored, self.host)
         try:
             self.assertEqual(restored_company.status()["revision"], 1)
+            self.assertEqual(restored_company.company_id, identity)
             self.assertEqual(restored_company.execute("alice", "reception", request)["revision"], 1)
         finally:
             restored_company.close()

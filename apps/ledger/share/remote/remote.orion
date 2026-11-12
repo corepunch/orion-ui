@@ -1,0 +1,128 @@
+<orion>
+  <application runtime-api="1" name="ledger_remote" form="remote_ledger" />
+  <databases>
+    <database name="ledger_remote_cache" class="db_schema_xml">
+      <table name="documents" transient="true">
+        <field name="id" type="integer" key="YES" /><field name="date" type="date" />
+        <field name="number" type="string" length="24" /><field name="kind" type="string" length="32" />
+        <field name="party" type="string" length="128" /><field name="amount" type="string" length="32" />
+        <field name="state" type="string" length="32" /><field name="posted" type="boolean" />
+      </table>
+      <table name="catalog" transient="true">
+        <field name="id" type="integer" key="YES" /><field name="name" type="string" length="256" />
+        <field name="detail" type="string" length="128" />
+      </table>
+      <table name="lines" transient="true">
+        <field name="id" type="integer" key="YES" /><field name="item_id" type="integer" />
+        <field name="vat_rate_id" type="integer" /><field name="quantity" type="string" length="32" />
+        <field name="price" type="string" length="32" />
+      </table>
+      <table name="journal" transient="true">
+        <field name="id" type="integer" key="YES" /><field name="date" type="date" />
+        <field name="document_id" type="integer" /><field name="debit_id" type="integer" />
+        <field name="credit_id" type="integer" /><field name="amount" type="string" length="32" />
+        <field name="content" type="string" length="160" />
+      </table>
+    </database>
+  </databases>
+  <forms>
+    <form name="remote_ledger" controller="remote_ledger" title="Ledger — Shared Company" width="1100" height="700" spacing="8" padding="12">
+      <Label text="Shared company" font="title" />
+      <Label name="connection" text="Not connected" />
+      <StackView orientation="horizontal" spacing="6">
+        <Button name="connect" text="Connect or refresh" action="connect" flags="BUTTON_DEFAULT" />
+        <Button name="retry" text="Retry pending request" action="retry" />
+        <Label name="notice" />
+      </StackView>
+      <Label name="error" color="error" flags="LABEL_COLLAPSE_EMPTY" />
+      <TabView name="sections" flags="flexspace">
+        <StackView name="documents_tab" text="Documents" spacing="6" flags="flexspace">
+          <Label text="Select a document to post, edit its draft details, or reverse its accounting entries." />
+          <TableView name="documents" source="ledger_remote_cache.documents" flags="flexspace,vscroll" frame="true">
+            <Column field="id" title="ID" width="58" /><Column field="date" title="Date" width="100" />
+            <Column field="number" title="Number" width="105" /><Column field="kind" title="Type" width="140" />
+            <Column field="party" title="Counterparty" width="0" min-width="110" /><Column field="amount" title="Amount" width="110" />
+            <Column field="state" title="State" width="90" />
+          </TableView>
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="previous_documents" text="Previous page" action="previous_documents" />
+            <Button name="next_documents" text="Next page" action="next_documents" />
+            <Button name="post" text="Post selected" action="post" />
+            <Button name="update" text="Update draft details" action="update" />
+            <Button name="replace_lines" text="Replace draft lines" action="replace_lines" />
+          </StackView>
+          <GridView spacing="4">
+            <Column width="auto"><Label text="Document date:" /><Label text="Counterparty ID:" /><Label text="Reversal date:" /><Label text="Reason:" /></Column>
+            <Column><TextBox name="document_date" type="date" /><TextBox name="counterparty_id" type="integer" />
+              <TextBox name="reversal_date" type="date" /><TextBox name="reason" /></Column>
+          </GridView>
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="reverse" text="Reverse selected" action="reverse" />
+            <Label text="The reversal does not issue a corrected invoice or tax return." />
+          </StackView>
+        </StackView>
+        <StackView name="draft_tab" text="New draft" spacing="6" flags="flexspace">
+          <Label text="Choose a document type and counterparty from Catalogs. Enter quantities and prices as decimal values." />
+          <GridView spacing="4">
+            <Column width="auto"><Label text="Document type ID:" /><Label text="Counterparty ID:" /><Label text="Date:" /></Column>
+            <Column><TextBox name="type_id" type="integer" /><TextBox name="draft_party_id" type="integer" /><TextBox name="draft_date" type="date" /></Column>
+          </GridView>
+          <GridView spacing="4">
+            <Column width="auto"><Label text="Item ID:" /><Label text="VAT rate ID:" /><Label text="Quantity:" /><Label text="Unit price:" /></Column>
+            <Column><TextBox name="item_id" type="integer" /><TextBox name="vat_id" type="integer" />
+              <TextBox name="quantity" /><TextBox name="price" /></Column>
+          </GridView>
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="add_line" text="Add line" action="add_line" /><Button name="remove_line" text="Remove selected line" action="remove_line" />
+            <Button name="create" text="Create draft" action="create" />
+          </StackView>
+          <TableView name="lines" source="ledger_remote_cache.lines" flags="flexspace,vscroll" frame="true">
+            <Column field="item_id" title="Item ID" width="90" /><Column field="vat_rate_id" title="VAT ID" width="90" />
+            <Column field="quantity" title="Quantity" width="110" /><Column field="price" title="Unit price" width="110" />
+          </TableView>
+        </StackView>
+        <StackView name="catalog_tab" text="Catalogs" spacing="6" flags="flexspace">
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="document_types" text="Document types" action="document_types" /><Button name="vat_rates" text="VAT rates" action="vat_rates" />
+            <Button name="units" text="Units" action="units" /><Button name="items" text="Items" action="items" />
+            <Button name="counterparties" text="Counterparties" action="counterparties" />
+          </StackView>
+          <Label name="catalog_title" />
+          <TableView name="catalog" source="ledger_remote_cache.catalog" flags="flexspace,vscroll" frame="true">
+            <Column field="id" title="ID" width="70" /><Column field="name" title="Name" width="0" />
+            <Column field="detail" title="Code or detail" width="180" />
+          </TableView>
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="previous_catalog" text="Previous page" action="previous_catalog" /><Button name="next_catalog" text="Next page" action="next_catalog" />
+          </StackView>
+          <GridView spacing="4"><Column width="auto"><Label text="Name:" /><Label text="SKU:" /><Label text="Tax ID:" />
+              <Label text="Unit ID:" /><Label text="VAT rate ID:" /></Column>
+            <Column><TextBox name="name" /><TextBox name="sku" /><TextBox name="tax_id" />
+              <TextBox name="unit_id" type="integer" /><TextBox name="catalog_vat_id" type="integer" /></Column></GridView>
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="save_counterparty" text="Create counterparty" action="save_counterparty" />
+            <Button name="save_item" text="Create item" action="save_item" />
+          </StackView>
+        </StackView>
+        <StackView name="journal_tab" text="Journal and close" spacing="6" flags="flexspace">
+          <Label text="Accounting entries. Exact amounts are shown in currency units." />
+          <TableView name="journal" source="ledger_remote_cache.journal" flags="flexspace,vscroll" frame="true">
+            <Column field="date" title="Date" width="100" /><Column field="document_id" title="Document ID" width="100" />
+            <Column field="debit_id" title="Debit ID" width="85" /><Column field="credit_id" title="Credit ID" width="85" />
+            <Column field="amount" title="Amount" width="110" /><Column field="content" title="Description" width="0" />
+          </TableView>
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="show_journal" text="Refresh journal" action="show_journal" />
+            <Button name="previous_journal" text="Previous page" action="previous_journal" /><Button name="next_journal" text="Next page" action="next_journal" />
+          </StackView>
+          <GridView spacing="4"><Column width="auto"><Label text="Close through:" /></Column><Column><TextBox name="close_date" type="date" /></Column></GridView>
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="prepare_close" text="Review period close" action="prepare_close" />
+            <Button name="close_period" text="Confirm period close" action="close_period" />
+          </StackView>
+          <Label text="Closing is permanent. Reversals must use a later open date." />
+        </StackView>
+      </TabView>
+    </form>
+  </forms>
+</orion>

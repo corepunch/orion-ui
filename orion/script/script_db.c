@@ -157,6 +157,7 @@ static int script_db_schema(lua_State *L, const char *database, const char *tabl
   const db_table_schema_t *t = script_table(L, database, table, NULL);
   lua_createtable(L, 0, 4);
   lua_pushstring(L, t->name); lua_setfield(L, -2, "name");
+  lua_pushboolean(L, t->transient); lua_setfield(L, -2, "transient");
   lua_pushstring(L, t->meta[key_index(t)].name); lua_setfield(L, -2, "key");
   lua_createtable(L, t->field_count, 0);
   for (int i = 0; i < t->field_count; i++) {

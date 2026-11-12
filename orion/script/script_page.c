@@ -511,11 +511,24 @@ bool script_page_perform_from(script_page_t *page, const char *action, const cha
 
 // ── self.app: what the window offers the page ───────────────────────────────
 
-static script_page_t *page_for_handle(lua_State *L, int handle) {
+static script_page_t *page_find_for_handle(lua_State *L, int handle) {
   lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
   lua_State *main = lua_tothread(L, -1); lua_pop(L, 1);
   for (script_page_t *page = live_pages; page; page = page->next)
     if (page->handle == handle && page->L == main) return page;
+  return NULL;
+}
+window_t *script_page_remote_window(lua_State *L, int handle) {
+  script_page_t *page = page_find_for_handle(L, handle);
+  return page ? page->win : NULL;
+}
+void script_page_remote_refresh(lua_State *L, int handle) {
+  script_page_t *page = page_find_for_handle(L, handle);
+  if (page && page->win) render(page);
+}
+static script_page_t *page_for_handle(lua_State *L, int handle) {
+  script_page_t *page = page_find_for_handle(L, handle);
+  if (page) return page;
   luaL_error(L, "window handle %d is closed or belongs to another application", handle);
   return NULL;
 }

@@ -243,3 +243,38 @@ through the common launcher; Ledger supports the same switch in its native launc
 Keep an independent backup before an upgrade. Recovery replaces the primary with a
 previous committed snapshot and can therefore lose later operations; it is explicit,
 never a silent fallback when opening a damaged database.
+
+## Compatibility and deprecation policy
+
+The machine-readable [current matrix](business-platform-api.json) is checked by
+`make business-server-check` against the runtime constant, generated Ledger API
+and the two persistent schemas. Runtime API, Ledger API, service protocol,
+plugin interface and storage schema versions are independent numbers.
+
+- Published functions and argument meanings of `runtime-api="1"`, Ledger Lua
+  API 1 and `/v1` remain supported within those interfaces. Additions must preserve
+  existing valid calls and defaults. Rejecting an out-of-range value that previously
+  wrapped or corrupted data is a bug fix, not a supported old behavior.
+- Removing/renaming a public function or changing a valid argument's meaning
+  requires a new major interface. First document the replacement and keep the old
+  interface through one supported release cycle; a release cannot silently claim
+  interface 1 while dropping its supported contract.
+- Plugin release `X.Y.Z` identifies release bytes. Its integer exported interface
+  is the compatibility contract; a semantic version label alone never overrides
+  dependency/interface validation. A package cannot replace bundled interfaces.
+- Persistent schema versions only move forward. An executable that supports an
+  older schema must refuse newer data. Rolling back plugin code does not roll back
+  company data. Restore a compatible backup explicitly when a schema downgrade is
+  needed; preserve the current data separately first.
+- Only documented APIs are covered. Internal `Hotel` Lua tables, window structure
+  layouts, generated C record layouts and arbitrary native pointers are not stable
+  binary extension interfaces. Native modules must be rebuilt and regression-tested
+  with their host revision. Trusted Lua extensions still share the host's authority;
+  signatures identify approved bytes, not a sandbox.
+
+Shared-server integrations use the [data-only business protocol](business-service.md).
+It reuses domain validation and avoids vendor-file changes; clients create, post,
+reverse or book through named operations. The command-line client is an executable
+example. Native application windows do not yet bind to this protocol: HTTP request
+lifetimes, deadlines, credential storage and remote datasource projection need a
+complete client contract before that mode is offered in those windows.

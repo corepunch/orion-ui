@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="ru">
+  <string source="Orion Lodge" obsolete="true">Orion Lodge</string>
+  <string source="Reception" obsolete="true">Ресепшен</string>
+  <string source="Rooms, guests and reservations · Amounts in your hotel's currency" obsolete="true">Номера, гости и брони · Суммы в валюте отеля</string>
+  <string source="Add a room" obsolete="true">Добавить номер</string>
+  <string source="Room name:" where="remote">Название номера:</string>
+  <string source="Category:" obsolete="true">Категория:</string>
+  <string source="Capacity:" where="remote">Вместимость:</string>
+  <string source="Nightly rate:" where="remote">Цена за ночь:</string>
+  <string source="Add room" where="remote">Добавить номер</string>
+  <string source="Add a guest" obsolete="true">Добавить гостя</string>
+  <string source="Guest name:" where="remote">Имя гостя:</string>
+  <string source="Phone:" where="remote">Телефон:</string>
+  <string source="Add guest" where="remote">Добавить гостя</string>
+  <string source="Room:" where="remote">Номер:</string>
+  <string source="Guest:" where="remote">Гость:</string>
+  <string source="Arrival:" where="remote">Заезд:</string>
+  <string source="Departure:" where="remote">Выезд:</string>
+  <string source="Guests:" where="remote">Гостей:</string>
+  <string source="Extra charges:" where="remote">Дополнительные услуги:</string>
+  <string source="Paid to date:" obsolete="true">Уже оплачено:</string>
+  <string source="Notes:" obsolete="true">Примечания:</string>
+  <string source="Use room rate" obsolete="true">Взять цену номера</string>
+  <string source="Save reservation" obsolete="true">Сохранить бронь</string>
+  <string source="New reservation" where="remote">Новая бронь</string>
+  <string source="New reservation discards unsaved editor changes." obsolete="true">Новая бронь сбрасывает несохранённые изменения.</string>
+  <string source="Room" where="remote">Номер</string>
+  <string source="Guest" where="remote">Гость</string>
+  <string source="Arrival" where="remote">Заезд</string>
+  <string source="Departure" where="remote">Выезд</string>
+  <string source="Status" where="remote">Статус</string>
+  <string source="Total" obsolete="true">Итого</string>
+  <string source="Paid" obsolete="true">Оплачено</string>
+  <string source="Balance" where="remote">Остаток</string>
+  <string source="Edit selected" obsolete="true">Изменить выбранную</string>
+  <string source="Check in" where="remote">Заселить</string>
+  <string source="Check out" where="remote">Выселить</string>
+  <string source="Cancel reservation" where="remote">Отменить бронь</string>
+  <string source="Export confirmation" obsolete="true">Экспорт подтверждения</string>
+  <string source="Retry saving" obsolete="true">Повторить сохранение</string>
+  <string source="%d reservations · Outstanding: %s" where="code">Броней: %d · К оплате: %s</string>
+  <string source="Balance:" where="code">Остаток:</string>
+  <string source="Booking confirmation" where="code">Подтверждение бронирования</string>
+  <string source="Cancelled" where="code">Отменено</string>
+  <string source="Capacity must be a positive integer." where="code">Вместимость должна быть положительным целым числом.</string>
+  <string source="Checked in" where="code">Заселён</string>
+  <string source="Checked out" where="code">Выселен</string>
+  <string source="Choose a reservation." where="code">Выберите бронь.</string>
+  <string source="Choose a room and a guest." where="code">Выберите номер и гостя.</string>
+  <string source="Choose a room." where="code">Выберите номер.</string>
+  <string source="Confirmation saved: %s" where="code">Подтверждение сохранено: %s</string>
+  <string source="Departure must follow a valid arrival date." where="code">Дата выезда должна быть позже корректной даты заезда.</string>
+  <string source="Edit reservation %d" where="code">Изменение брони %d</string>
+  <string source="Enter a name." where="code">Введите имя или название.</string>
+  <string source="Enter a nightly rate between 0 and 1000000." where="code">Введите цену за ночь от 0 до 1000000.</string>
+  <string source="Enter amounts between 0 and 1000000." where="code">Введите суммы от 0 до 1000000.</string>
+  <string source="Enter an amount from 0 to 1000000 with at most two decimal places." where="code">Введите сумму от 0 до 1000000 не более чем с двумя знаками после запятой.</string>
+  <string source="History records cannot be changed directly." where="code">Записи истории нельзя изменять напрямую.</string>
+  <string source="History records and reservations cannot be deleted." where="code">Записи истории и бронирования нельзя удалить.</string>
+  <string source="Enter a valid payment amount and request key." where="code">Введите допустимую сумму платежа и ключ запроса.</string>
+  <string source="The payment request key was already used for a different payment." where="code">Ключ запроса уже использован для другого платежа.</string>
+  <string source="The resulting paid amount is out of range." where="code">Итоговая сумма оплаты вне допустимого диапазона.</string>
+  <string source="Record payments separately from status changes." where="code">Регистрируйте платежи отдельно от изменения статуса.</string>
+  <string source="An existing paid amount has fractional cents or is out of range; reconcile it before upgrading." where="code">Существующая сумма оплаты содержит доли копейки или выходит за допустимый диапазон; исправьте её перед обновлением.</string>
+  <string source="Lodge" where="code">Lodge</string>
+  <string source="Paid:" where="code">Оплачено:</string>
+  <string source="Record no longer exists." where="code">Запись больше не существует.</string>
+  <string source="Reserved" where="code">Забронировано</string>
+  <string source="Settle the balance before checking out." where="code">Перед выездом погасите остаток.</string>
+  <string source="The booking confirmation could not be written." where="code">Не удалось записать подтверждение бронирования.</string>
+  <string source="The guest count exceeds the room capacity." where="code">Количество гостей не соответствует вместимости номера.</string>
+  <string source="The hotel data could not be saved. Retry before closing." where="code">Не удалось сохранить данные отеля. Повторите перед закрытием.</string>
+  <string source="The room is already booked for these dates." where="code">На эти даты номер уже забронирован.</string>
+  <string source="This reservation cannot make that transition." where="code">Этот переход статуса брони недоступен.</string>
+  <string source="This reservation is closed." where="code">Эта бронь закрыта.</string>
+  <string source="Total:" where="code">Итого:</string>
+  <string source="Unknown reservation status." where="code">Неизвестный статус брони.</string>
+  <string source="A room with this name already exists." where="code">Номер с таким названием уже существует.</string>
+  <string source="The reservation total is too large." where="code">Сумма брони слишком велика.</string>
+  <string source="Rooms" obsolete="true">Номера</string>
+  <string source="Guests" obsolete="true">Гости</string>
+  <string source="Name" obsolete="true">Имя</string>
+  <string source="Add" obsolete="true">Добавить</string>
+  <string source="Edit" obsolete="true">Изменить</string>
+  <string source="Delete" obsolete="true">Удалить</string>
+  <string source="Fetch" obsolete="true">Обновить</string>
+  <string source="Save" obsolete="true">Сохранить</string>
+  <string source="Cancel" obsolete="true">Отмена</string>
+  <string source="Housekeeping" obsolete="true">Уборка</string>
+  <string source="Cleaning status" where="remote">Статус уборки</string>
+  <string source="Cleaning status:" obsolete="true">Статус уборки:</string>
+  <string source="Select a room to update its cleaning status." obsolete="true">Выберите номер, чтобы изменить статус уборки.</string>
+  <string source="Mark clean" obsolete="true">Отметить чистым</string>
+  <string source="Mark dirty" obsolete="true">Отметить грязным</string>
+  <string source="Needs inspection" obsolete="true">Требуется проверка</string>
+  <string source="Inspection needed" where="code">Требуется проверка</string>
+  <string source="Dirty" where="code">Грязный</string>
+  <string source="Clean" where="code">Чистый</string>
+  <string source="Choose a valid room cleaning status." where="code">Выберите допустимый статус уборки номера.</string>
+  <string source="Mark the room clean before checking in." where="code">Перед заселением отметьте номер чистым.</string>
+  <string source="Payment or refund" obsolete="true">Оплата или возврат</string>
+  <string source="Amount:" obsolete="true">Сумма:</string>
+  <string source="Record payment" where="remote">Записать оплату</string>
+  <string source="Record refund" where="remote">Записать возврат</string>
+  <string source="This payment has already been recorded." where="code">Этот платёж уже записан.</string>
+  <string source="Enter a positive amount with at most two decimal places." where="code">Введите положительную сумму не более чем с двумя знаками после запятой.</string>
+  <string source="Retry the same amount and action, or close this window to start another request." where="code">Повторите ту же операцию с той же суммой или закройте окно для нового запроса.</string>
+  <string source="Payment recorded." where="code">Оплата записана.</string>
+  <string source="Refund recorded." where="code">Возврат записан.</string>
+  <string source="Reservation %d" where="code">Бронирование %d</string>
+  <string source="Balance: %s" where="code">Остаток: %s</string>
+  <string source="Nightly prices" obsolete="true">Цены по ночам</string>
+  <string source="Night:" obsolete="true">Ночь:</string>
+  <string source="Nightly price:" obsolete="true">Цена за ночь:</string>
+  <string source="Show price" obsolete="true">Показать цену</string>
+  <string source="Set price" obsolete="true">Сохранить цену</string>
+  <string source="Use base rate" obsolete="true">Использовать базовую цену</string>
+  <string source="Remove nightly prices outside the new stay before changing the dates." where="code">Перед изменением дат удалите цены за ночи вне нового периода проживания.</string>
+  <string source="A nightly price cannot be moved to another date or reservation." where="code">Цену за ночь нельзя перенести на другую дату или бронирование.</string>
+  <string source="Choose a night within the reservation dates." where="code">Выберите ночь в периоде бронирования.</string>
+  <string source="Enter a valid nightly amount in minor units." where="code">Введите допустимую цену за ночь в минимальных единицах валюты.</string>
+  <string source="A nightly price already exists for this date." where="code">Для этой даты цена за ночь уже задана.</string>
+  <string source="Custom price for this night." where="code">Для этой ночи установлена отдельная цена.</string>
+  <string source="This night uses the base rate." where="code">Для этой ночи действует базовая цена.</string>
+  <string source="Nightly price saved." where="code">Цена за ночь сохранена.</string>
+  <string source="This night already uses the base rate." where="code">Для этой ночи уже действует базовая цена.</string>
+  <string source="Base rate restored for this night." where="code">Для этой ночи восстановлена базовая цена.</string>
+  <string source="Total: %s" where="code">Итого: %s</string>
+  <string source="Choose a valid record." where="code">Выберите допустимую запись.</string>
+  <string source="Invalid request." where="code">Недопустимый запрос.</string>
+  <string source="Invalid request field." where="code">Недопустимое поле запроса.</string>
+  <string source="Unknown service command." where="code">Неизвестная команда сервиса.</string>
+  <string source="This role cannot perform that action." where="code">Эта роль не может выполнить действие.</string>
+  <string source="Group reservation" obsolete="true">Групповое бронирование</string>
+  <string source="Close day" obsolete="true">Закрыть день</string>
+  <string source="Closing prevents reservation and payment changes until tomorrow." obsolete="true">После закрытия изменения бронирований и платежей будут доступны завтра.</string>
+  <string source="Close today" obsolete="true">Закрыть сегодня</string>
+  <string source="Create reservations for two rooms under one group." obsolete="true">Создайте бронирования двух номеров для одной группы.</string>
+  <string source="Group name:" obsolete="true">Название группы:</string>
+  <string source="First room:" obsolete="true">Первый номер:</string>
+  <string source="Guests in first room:" obsolete="true">Гостей в первом номере:</string>
+  <string source="Second room:" obsolete="true">Второй номер:</string>
+  <string source="Guests in second room:" obsolete="true">Гостей во втором номере:</string>
+  <string source="Create group reservations" obsolete="true">Создать бронирования группы</string>
+  <string source="Choose a valid reservation group." where="code">Выберите допустимую группу бронирований.</string>
+  <string source="A reservation cannot be moved to another group." where="code">Бронирование нельзя перенести в другую группу.</string>
+  <string source="A group needs between 2 and 100 room reservations." where="code">Для группы требуется от 2 до 100 бронирований номеров.</string>
+  <string source="These group reservations were already created." where="code">Эти бронирования группы уже созданы.</string>
+  <string source="Created group %d with two reservations." where="code">Создана группа %d с двумя бронированиями.</string>
+  <string source="Day close records cannot be changed directly." where="code">Записи закрытия дня нельзя изменять напрямую.</string>
+  <string source="Today is already closed or is not the current day." where="code">Сегодняшний день уже закрыт или дата не является текущей.</string>
+  <string source="The day totals are too large." where="code">Итоговые суммы дня слишком велики.</string>
+  <string source="Resolve overdue arrivals and departures before closing the day." where="code">Перед закрытием дня обработайте просроченные заезды и выезды.</string>
+  <string source="Today is closed; reservation and payment changes resume tomorrow." where="code">Сегодняшний день закрыт; изменять бронирования и платежи можно будет завтра.</string>
+  <string source="Today is closed." where="code">Сегодняшний день закрыт.</string>
+  <string source="Operational day: %s" where="code">Операционный день: %s</string>
+  <string source="Today's net payments: %s" where="code">Платежи за сегодня за вычетом возвратов: %s</string>
+  <string source="Outstanding balance: %s" where="code">Непогашенный остаток: %s</string>
+  <string source="Overdue arrivals and departures: %d" where="code">Просроченные заезды и выезды: %d</string>
+  <string source="Hotel setup" obsolete="true">Настройка отеля</string>
+  <string source="Existing amounts will be interpreted in the selected currency without conversion." obsolete="true">Существующие суммы будут считаться указанными в выбранной валюте без пересчёта.</string>
+  <string source="This choice cannot be changed after it is saved." obsolete="true">После сохранения изменить этот выбор нельзя.</string>
+  <string source="Set Germany and EUR" obsolete="true">Выбрать Германию и EUR</string>
+  <string source="Set Russia and RUB" obsolete="true">Выбрать Россию и RUB</string>
+  <string source="Hotel currency settings cannot be changed directly." where="code">Настройки валюты отеля нельзя изменить напрямую.</string>
+  <string source="Choose Germany with EUR or Russia with RUB." where="code">Выберите Германию с EUR или Россию с RUB.</string>
+  <string source="Hotel currency is already configured." where="code">Валюта отеля уже настроена.</string>
+  <string source="Configure the hotel country and currency before recording reservations or payments." where="code">Перед записью бронирований и платежей настройте страну и валюту отеля.</string>
+  <string source="Hotel country and currency saved." where="code">Страна и валюта отеля сохранены.</string>
+  <string source="Country: %s · Currency: %s" where="code">Страна: %s · Валюта: %s</string>
+  <string source="Hotel country and currency are not configured." where="code">Страна и валюта отеля не настроены.</string>
+  <string source="Choose a guest." where="code">Выберите гостя.</string>
+  <string source="Lodge · Shared server" where="remote">Lodge · Общий сервер</string>
+  <string source="Shared hotel reception" where="remote">Общая стойка регистрации</string>
+  <string source="Connect or refresh" where="remote">Подключиться или обновить</string>
+  <string source="Retry pending request" where="remote">Повторить ожидающий запрос</string>
+  <string source="Rooms and guests" where="remote">Номера и гости</string>
+  <string source="Mark room clean" where="remote">Отметить номер чистым</string>
+  <string source="Create reservation" where="remote">Создать бронирование</string>
+  <string source="Not connected." where="code">Нет подключения.</string>
+  <string source="Server data refreshed." where="code">Данные сервера обновлены.</string>
+  <string source="This server does not host Lodge." where="code">На этом сервере не работает Lodge.</string>
+  <string source="Country: %s · Role: %s · Revision: %d" where="code">Страна: %s · Роль: %s · Версия: %d</string>
+  <string source="Request completed." where="code">Запрос выполнен.</string>
+  <string source="Retry the pending request before refreshing." where="code">Перед обновлением повторите ожидающий запрос.</string>
+  <string source="A request is already in progress." where="code">Запрос уже выполняется.</string>
+  <string source="Could not refresh the server status." where="code">Не удалось обновить состояние сервера.</string>
+  <string source="Data changed; refresh before continuing." where="code">Данные изменились; обновите их перед продолжением.</string>
+  <string source="The server refused the request." where="code">Сервер отклонил запрос.</string>
+  <string source="The request outcome is uncertain; retry the same request." where="code">Результат запроса неизвестен; повторите тот же запрос.</string>
+  <string source="Retry the pending request before starting another." where="code">Повторите ожидающий запрос перед созданием нового.</string>
+  <string source="Refresh the server before starting a request." where="code">Перед запросом обновите данные сервера.</string>
+  <string source="Invalid remote request." where="code">Недопустимый запрос к серверу.</string>
+  <string source="There is no request to retry." where="code">Нет запроса для повтора.</string>
+  <string source="Remote request is unavailable." where="code">Запрос к серверу недоступен.</string>
+  <string source="Remote connections are unavailable on this platform." where="code">Подключение к серверу недоступно на этой платформе.</string>
+  <string source="Remote server configuration is missing or invalid." where="code">Настройки сервера отсутствуют или неверны.</string>
+  <string source="A saved request needs retry before new work." where="code">Перед дальнейшей работой нужно повторить сохранённый запрос.</string>
+  <string source="The saved request is invalid." where="code">Сохранённый запрос недействителен.</string>
+  <string source="The pending request could not be stored or recovered." where="code">Не удалось сохранить или восстановить ожидающий запрос.</string>
+  <string source="Remote server identity is invalid or changed." where="code">Идентификатор сервера недействителен или изменился.</string>
+  <string source="This server hosts a different application. Close the app and check the server configuration." where="code">На сервере работает другое приложение. Закройте приложение и проверьте настройки сервера.</string>
+</strings>

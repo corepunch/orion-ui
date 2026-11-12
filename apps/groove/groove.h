@@ -334,6 +334,9 @@ bool groove_encode_mp3(const char *wav, const char *path, ui_media_progress_fn p
 #endif
 void song_draw_overview(const song_t *song, irect16_t r);
 bool song_export_canvas(const song_t *song, int width, int height, const char *title, bool branding, ui_media_video_t *video);
+// Encoder-worker step after the WAV mixdown: drives the spectrum from the rendered mix.
+bool song_export_video_analyze(ui_media_video_t *video, const char *wav, ui_media_progress_fn progress, void *userdata);
+void song_export_video_free(ui_media_video_t *video);
 void app_export_media(window_t *owner, int kind);
 void app_share_song(window_t *owner);
 

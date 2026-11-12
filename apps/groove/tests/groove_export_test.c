@@ -163,10 +163,59 @@ static void test_video_clock(void) {
   PASS();
 }
 
+static bool video_region_differs(const uint8_t *a, const uint8_t *b, int width, irect16_t r) {
+  for (int y = r.y; y < r.y + r.h; y++)
+    if (memcmp(a + ((size_t)y * width + r.x) * 4, b + ((size_t)y * width + r.x) * 4, (size_t)r.w * 4)) return true;
+  return false;
+}
+
+static void test_motion_video(void) {
+  TEST("motion video scrolls the zoomed timeline and drives the spectrum from the mix");
+  test_env_init();
+  g_app = app_init(); ASSERT_NOT_NULL(g_app);
+  song_t song; song_init(&song);
+  ASSERT(app_block_audio(0), "source ready");
+  for (int bar = 0; bar < 24; bar += 2) ASSERT(song_add_clip(&song, 0, bar % 8, bar * GR_TICKS_BAR) >= 0, "clip placed");
+  char directory[] = "/tmp/orion-motion-XXXXXX"; ASSERT_NOT_NULL(mkdtemp(directory));
+  char wav[512]; snprintf(wav, sizeof(wav), "%s/mix.wav", directory);
+  ASSERT(song_export_wav(&song, wav, NULL, NULL), "WAV exported");
+  ui_media_video_t video = {0};
+  ASSERT(song_export_canvas(&song, 1280, 720, "Motion", false, &video), "canvas rendered");
+  ASSERT_NOT_NULL(video.render);
+  ASSERT(song_export_video_analyze(&video, wav, NULL, NULL), "spectrum analysed");
+  ASSERT_FALSE(song_export_video_analyze(&video, wav, export_test_cancel, NULL));
+  int64_t count = (video.frames * video.fps + video.rate - 1) / video.rate;
+  size_t bytes = (size_t)video.width * video.height * 4;
+  uint8_t *first = malloc(bytes), *middle = malloc(bytes), *next = malloc(bytes);
+  ASSERT_NOT_NULL(first); ASSERT_NOT_NULL(middle); ASSERT_NOT_NULL(next);
+  ASSERT(ui_media_video_frame(&video, 0, first), "first frame");
+  ASSERT(ui_media_video_frame(&video, count / 2, middle), "middle frame");
+  ASSERT(ui_media_video_frame(&video, count / 2 + 1, next), "next frame");
+  ASSERT_FALSE(ui_media_video_frame(&video, count, next));
+  irect16_t view = {video.x, video.y, video.w, video.h}, title = {0, 0, video.width, 40};
+  ASSERT(video_region_differs(middle, next, video.width, view), "consecutive frames move");
+  ASSERT(video_region_differs(first, middle, video.width, R(0, 470, video.width, 226)), "spectrum responds to the mix");
+  ASSERT_FALSE(video_region_differs(first, middle, video.width, title));
+  const char *out = getenv("GROOVE_MEDIA_TEST_OUTPUT");
+  if (out) {
+    char path[1024]; axMkDir(out);
+    snprintf(path, sizeof(path), "%s/motion.mp4", out); remove(path);
+    ASSERT(ui_media_encode(wav, path, UI_MEDIA_MP4, &video, NULL, NULL), "motion MP4 encoded");
+    snprintf(path, sizeof(path), "%s/motion-middle.rgba", out);
+    FILE *f = fopen(path, "wb"); ASSERT_NOT_NULL(f); fwrite(middle, 1, bytes, f); fclose(f);
+  }
+  free(first); free(middle); free(next);
+  song_export_video_free(&video);
+  ASSERT(video.render == NULL, "video released");
+  remove(wav); rmdir(directory);
+  app_shutdown(g_app); test_env_shutdown(); PASS();
+}
+
 int main(void) {
   TEST_START("Groove export");
   test_export_formats();
   test_audio_export();
   test_video_clock();
+  test_motion_video();
   TEST_END();
 }

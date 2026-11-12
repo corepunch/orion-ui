@@ -173,6 +173,7 @@ typedef struct {
   http_pending_t   *queue_head;
   http_pending_t   *queue_tail;
   http_delivery_t  *delivery_head, *delivery_tail;
+  unsigned          external_count;
   bool              worker_quit;
   http_request_id_t next_id;   /* starts at 1; 0 = invalid */
 } http_state_t;
@@ -180,6 +181,7 @@ typedef struct {
 static http_state_t g_http = {
   .next_id = 1,
 };
+static bool http_sync_init(void);
 
 extern bool is_valid_window_ptr(window_t *target, window_t *list);
 
@@ -223,9 +225,33 @@ void http_dispatch_pending(void) {
 bool http_has_pending(void) {
   if (!g_http.sync_ready) return false;
   http_mutex_lock(&g_http.mutex);
-  bool pending = g_http.queue_head || g_http.delivery_head;
+  bool pending = g_http.queue_head || g_http.delivery_head || g_http.external_count;
   http_mutex_unlock(&g_http.mutex);
   return pending;
+}
+void *http_external_begin(window_t *target, uint64_t serial, uint32_t *id) {
+  if (!target || !id || !http_sync_init()) return NULL;
+  http_delivery_t *item = calloc(1, sizeof(*item));
+  if (!item) return NULL;
+  http_mutex_lock(&g_http.mutex);
+  item->id = g_http.next_id++;
+  if (g_http.next_id == HTTP_INVALID_REQUEST) g_http.next_id = 1;
+  item->target = target; item->serial = serial; item->message = evHttpDone;
+  g_http.external_count++; *id = item->id;
+  http_mutex_unlock(&g_http.mutex);
+  return item;
+}
+void http_external_complete(void *ticket, http_response_t *response) {
+  http_delivery_t *item = ticket;
+  if (!item) { http_response_free(response); return; }
+  http_mutex_lock(&g_http.mutex);
+  if (g_http.external_count) g_http.external_count--;
+  if (response) {
+    item->payload = response;
+    if (g_http.delivery_tail) g_http.delivery_tail->next = item; else g_http.delivery_head = item;
+    g_http.delivery_tail = item;
+  } else free(item);
+  http_mutex_unlock(&g_http.mutex);
 }
 
 static bool

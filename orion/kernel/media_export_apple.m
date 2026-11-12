@@ -41,8 +41,10 @@ static AVAssetTrack *media_apple_track(AVAsset *asset, AVMediaType type, ui_medi
 static bool media_apple_movie(NSURL *url, const ui_media_video_t *v, ui_media_progress_fn progress, void *userdata) {
   NSError *error = nil;
   AVAssetWriter *writer = [[AVAssetWriter alloc] initWithURL:url fileType:AVFileTypeMPEG4 error:&error];
+  // Scrolling content needs bits in proportion to the pixel rate.
+  long bitrate = MAX(4000000L, (long)v->width * v->height * v->fps / 12);
   NSDictionary *settings = @{AVVideoCodecKey: AVVideoCodecTypeH264, AVVideoWidthKey: @(v->width), AVVideoHeightKey: @(v->height),
-    AVVideoCompressionPropertiesKey: @{AVVideoAverageBitRateKey: @4000000, AVVideoMaxKeyFrameIntervalKey: @(v->fps * 2)}};
+    AVVideoCompressionPropertiesKey: @{AVVideoAverageBitRateKey: @(bitrate), AVVideoMaxKeyFrameIntervalKey: @(v->fps * 2)}};
   AVAssetWriterInput *input = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo outputSettings:settings];
   input.expectsMediaDataInRealTime = NO;
   AVAssetWriterInputPixelBufferAdaptor *adaptor = [AVAssetWriterInputPixelBufferAdaptor assetWriterInputPixelBufferAdaptorWithAssetWriterInput:input

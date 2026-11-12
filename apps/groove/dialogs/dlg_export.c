@@ -46,9 +46,15 @@ static bool export_render_progress(void *userdata, float fraction) {
   return !atomic_load(&st->cancel);
 }
 
+static bool export_analyze_progress(void *userdata, float fraction) {
+  export_media_t *st = userdata;
+  atomic_store(&st->progress, 40 + (int)(fraction * 5));
+  return !atomic_load(&st->cancel);
+}
+
 static bool export_encode_progress(void *userdata, float fraction) {
   export_media_t *st = userdata;
-  atomic_store(&st->progress, 40 + (int)(fraction * 60));
+  atomic_store(&st->progress, 45 + (int)(fraction * 55));
   return !atomic_load(&st->cancel);
 }
 
@@ -56,6 +62,7 @@ static void export_media_worker(void *userdata) {
   export_media_t *st = userdata;
   bool wav_only = st->kind != 2 && st->format == EXPORT_WAV;
   st->ok = song_export_wav_with_audio(&st->song, st->audio, wav_only ? st->stage : st->wav, export_render_progress, st);
+  if (st->ok && st->kind == 2) st->ok = song_export_video_analyze(&st->video, st->wav, export_analyze_progress, st);
   if (st->ok && !wav_only) {
 #ifdef GROOVE_USE_SHINE
     if (st->format == EXPORT_MP3 && st->kind != 2) st->ok = groove_encode_mp3(st->wav, st->stage, export_encode_progress, st);
@@ -154,7 +161,7 @@ static void export_media_start(window_t *win, export_media_t *st, bool share) {
     export_audio_clear(st);
     set_window_item_text(win, ID_EXPORT_MEDIA_STATUS, "%s", ui_tr("Not enough memory to prepare the export.")); return;
   }
-  free((void *)st->video.rgba); st->video = (ui_media_video_t){0};
+  song_export_video_free(&st->video);
   if (st->kind == 2) {
     int aspect = (int)send_message(get_window_item(win, ID_EXPORT_MEDIA_ASPECT), cbGetCurrentSelection, 0, NULL);
     if (aspect < 0 || aspect >= ARRAY_LEN(kVideoSizes)) aspect = EXPORT_VIDEO_LANDSCAPE;
@@ -264,7 +271,7 @@ static result_t export_media_proc(window_t *win, uint32_t msg, uint32_t wparam, 
       if (st) {
         if (st->timer) axCancelTimer(st->timer);
         atomic_store(&st->cancel, true); axThreadJoin(st->worker);
-        export_audio_clear(st); free((void *)st->video.rgba); free(st); win->userdata = NULL;
+        export_audio_clear(st); song_export_video_free(&st->video); free(st); win->userdata = NULL;
       }
       return true;
     default: return false;

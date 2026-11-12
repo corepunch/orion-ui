@@ -8,15 +8,23 @@ available in the same dialog. Files made for sharing remain in
 On iPad, Save File saves in Documents, accessible in Files.
 
 File > Export Timeline Video (Ctrl+Shift+E) makes MP4 with H.264 video and
-AAC audio at 30 fps in 16:9 (1280×720), 21:9 (1680×720), or 9:16
+AAC audio at 60 fps in 16:9 (1280×720), 21:9 (1680×720), or 9:16
 (1080×1920). The 9:16 format has an editable cover title and optional
 Groove branding, enabled by default. Use **Share…** to open the system
 share sheet with the finished MP4. The image comes from the actual arrangement:
-eight tracks, bar ruler, original block names and sample waveforms, with
-a playhead driven by audio sample time. It is a complete-song overview,
-independent of the visible viewport, screen size and live transport.
-The same overview renderer draws saved-song thumbnails. Muted tracks
-are dimmed. Mono instruments remain mono within a stereo output file.
+eight tracks, a beat ruler, original block names and sample waveforms,
+zoomed to about eight bars (four in 9:16). The timeline scrolls under a
+playhead driven by audio sample time: the camera holds the playhead at 40%
+of the view and eases in and out at the song edges, with sub-pixel
+resampling so motion stays fluid. Played material is lit, upcoming material
+is dimmed, and the playhead glow and trail flare on every beat and with the
+bass. Below the timeline a 48-band spectrum analyser follows the rendered
+mix (one FFT per video frame, fast attack, slow release, falling peak caps),
+coloured through the song's block families. A song shorter than the view
+fits it without scrolling. The video is independent of the visible viewport,
+screen size and live transport. The same overview renderer draws saved-song
+thumbnails. Muted tracks are dimmed. Mono instruments remain mono within a
+stereo output file.
 
 Exports start at zero and end at the arrangement's effective last clip,
 including deliberate gaps. Loop and library/recording audition are excluded.
@@ -28,8 +36,10 @@ like the stock library.
 
 The dialog stays responsive, supports cancellation, and joins its worker
 before freeing resources. A private source-audio snapshot protects exports
-from concurrent transport/library changes. Memory contains source samples
-and a static video canvas, never the whole rendered song or movie. Staging
+from concurrent transport/library changes. Memory contains source samples,
+a static backdrop, the zoomed timeline strip and per-frame spectrum levels,
+never the whole rendered song or movie. Frames are composited in software on
+the export worker. Staging
 files are removed on failure or cancellation. An existing destination is
 replaced only after successful encoding. Export never changes the active
 project filename or transport position.
@@ -39,13 +49,13 @@ network service or social-account login is needed. Portable MP3 uses the
 vendored Shine encoder (upstream revision and LGPL license in
 `third_party/shine`). Linux/Windows AAC and MP4 require ffmpeg on PATH.
 The desktop backend passes paths as process arguments, without a shell, and
-loops one static frame while overlaying the audio-clocked playhead; it does
-not spool an uncompressed movie. Native sharing falls back to a saved file
+pipes rendered frames to ffmpeg's stdin; it does not spool an uncompressed
+movie. Native sharing falls back to a saved file
 and explains how to use Save File on other platforms.
 
 Validation: Groove's tests check finite WAV duration, bit-exact playback PCM,
-unchanged transport, cancellation cleanup, MP3 decode, and both playhead
-ratios. Set `GROOVE_MEDIA_TEST_OUTPUT=/tmp/groove-media` when running
+unchanged transport, cancellation cleanup, MP3 decode, both playhead
+ratios, and that the motion video scrolls and its spectrum follows the mix. Set `GROOVE_MEDIA_TEST_OUTPUT=/tmp/groove-media` when running
 `build/bin/test_groove_export_test` for real AAC and MP4 backend integration files;
 this optional check needs ffmpeg on non-Apple desktops. Use ffprobe to inspect
 codecs, dimensions and stream durations. CI also runs a standalone AVFoundation smoke test for AAC, both H.264 sizes,

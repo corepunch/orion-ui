@@ -80,13 +80,20 @@ single previous copy, not a substitute for independent backups.
 | Storage | One XML infobase per configuration, saved on `File > Save` or on exit |
 | Import from 1C | Catalogs and opening balances from a 1C:Enterprise 8 exchange file (EnterpriseData), see below |
 
-`Reports > Recalculate` (F5) reposts documents outside the closed period in date
-order and rebuilds the reports; `Reports > Print Report Forms` writes the cash
+`Reports > Recalculate` (F5) reposts legacy documents outside the closed period
+in date order and rebuilds the reports; posted exact trading documents are
+preserved. `Reports > Print Report Forms` writes the cash
 book. A trusted writable Lua script can advance the close boundary with
 `ledger.transaction(function() ledger.close_through("2026-12-31") end)`;
-save the infobase afterward. There is no reopening command. Posts and unposts
-append snapshots of the posting and entries, but these are not a complete audit
-trail. The boundary and history limitations are described in the
+save the infobase afterward. There is no reopening command. In the document
+journal, select a posted document and choose **Reverse** to create a linked
+accounting reversal in an open period. The dialog saves it and selects the new
+operation. A trusted writable Lua script can also use
+`ledger.transaction(function() return ledger.reverse(7, "2027-01-01", "Correction") end)`
+and save. Both create a linked manual operation; neither generates a
+corrected invoice or tax return. New exact postings reject ordinary edits,
+deletion, reposting and unposting. Posts and unposts append snapshots of the
+posting and entries, but these are not a complete audit trail. The boundary and history limitations are described in the
 [readiness audit](docs/compliance-readiness.md).
 
 The headless `ledger-run --request` service accepts data-only JSON requests for
@@ -98,7 +105,12 @@ or admin role, and closing requires admin. The host must authenticate the actor
 and supply the role; a request file alone is not authentication. Local and
 service-created domestic trade documents store checked minor-unit amounts and
 thousandth-unit quantities; foreign-currency trade, historical stock and
-reports have the limits described in the readiness audit.
+reports have the limits described in the readiness audit. Service list commands
+accept `offset` and `limit` (default 0 and 200; maximum limit 500), ordered by
+record ID. Exact `_minor` and `_milli` values are returned as decimal strings
+so clients do not lose precision when parsing JSON. The service accepts only
+positive VAT rates; choosing a legally applicable rate remains the operator's
+responsibility.
 
 ## Look and feel
 
@@ -687,3 +699,14 @@ See the [developer SDK](../../docs/developer-sdk.md) for application/plugin
 scaffolding, dependency checks and source packaging, and the
 [platform readiness plan](../../docs/business-platform-readiness.md) for
 production acceptance criteria shared by Ledger and Lodge.
+
+### Shared company desktop mode
+
+Start Ledger with `--remote` after setting `ORION_SERVER_URL` and
+`ORION_SERVER_TOKEN` in its environment. This mode opens the shared-company
+workspace without opening a local infobase; `--lang` may also be supplied.
+The server controls the authenticated role and company. Draft lines are staged
+locally until submitted, and an uncertain request must be retried before making
+further changes. A revision conflict requires refreshing the company first.
+The shared workspace is an initial implementation and still needs integration,
+localization, and visual verification before it is considered ready for use.

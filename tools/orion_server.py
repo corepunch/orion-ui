@@ -39,10 +39,12 @@ POLICIES = {
     },
     "ledger": {
         **{c: {"admin", "accountant", "auditor"} for c in ("documents.list", "journal.list", "catalogs.list")},
-        **{c: {"admin", "accountant"} for c in ("documents.create", "documents.update", "documents.post", "documents.reverse", "counterparties.save", "items.save")},
+        **{c: {"admin", "accountant"} for c in ("documents.create", "documents.update", "documents.post", "documents.reverse", "documents.replace_lines", "counterparties.save", "items.save")},
         "period.close": {"admin"},
     },
 }
+for _commands in POLICIES.values():
+    _commands["maintenance.upgrade"] = {"admin"}
 READS = {"snapshot", "day_preview", "documents.list", "journal.list", "catalogs.list"}
 
 
@@ -208,6 +210,12 @@ class Company:
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.execute("PRAGMA foreign_keys=ON")
         self.db.execute("CREATE TABLE IF NOT EXISTS current (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER, snapshot TEXT, digest TEXT, previous TEXT)")
+        self.db.execute("CREATE TABLE IF NOT EXISTS company_identity (id INTEGER PRIMARY KEY CHECK(id=1), company_id TEXT NOT NULL)")
+        self.db.execute("INSERT OR IGNORE INTO company_identity(id,company_id) VALUES(1,?)", (secrets.token_hex(16),))
+        identity = self.db.execute("SELECT company_id FROM company_identity WHERE id=1").fetchone()
+        if not identity or not isinstance(identity[0], str) or not re.fullmatch(r"[0-9a-f]{32}", identity[0]):
+            raise ValueError("invalid company identity")
+        self.company_id = identity[0]
         self.db.execute("CREATE TABLE IF NOT EXISTS receipts (actor TEXT, request_id TEXT, fingerprint TEXT, response TEXT, PRIMARY KEY(actor,request_id))")
         self.db.execute("CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY, utc TEXT, actor TEXT, command TEXT, outcome TEXT, revision INTEGER, previous TEXT, digest TEXT)")
         os.chmod(self.root / "state.sqlite", 0o600)
@@ -251,7 +259,8 @@ class Company:
     def status(self):
         with self.lock:
             revision = self.db.execute("SELECT revision FROM current").fetchone()[0]
-            return {"protocol": 1, "application": self.kind, "country": self.config["country"], "revision": revision}
+            return {"protocol": 1, "application": self.kind, "country": self.config["country"],
+                    "company_id": self.company_id, "revision": revision}
 
     def execute(self, actor, role, request):
         if not isinstance(request, dict) or set(request) != {"request_id", "expected_revision", "command", "args"}:
@@ -326,6 +335,11 @@ class Company:
                     shutil.rmtree(stage)
 
     def run_host(self, stage, payload):
+        upgrade = payload["command"] == "maintenance.upgrade"
+        if upgrade:
+            if payload["args"]:
+                raise Refusal(400, "Upgrade does not accept parameters")
+            payload = {**payload, "command": "snapshot" if self.kind == "lodge" else "documents.list"}
         with tempfile.TemporaryDirectory(prefix="request-", dir=self.root) as directory:
             request_path = Path(directory) / "request.json"
             private_write(request_path, canonical(payload))
@@ -337,7 +351,10 @@ class Company:
                            "--config", self.config["configuration"], "--request", str(request_path), "--write"]
             environment = os.environ.copy()
             environment.pop("ORION_PLUGIN_ROOT", None)
-            return decode(run_limited(command, environment, stage))
+            result = decode(run_limited(command, environment, stage))
+            if upgrade and isinstance(result, dict) and result.get("ok") is True:
+                return {"ok": True, "result": {"application": self.kind, "validated": True}}
+            return result
 
 
 
@@ -368,7 +385,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             header = self.headers.get("Authorization", "")
             actor, role = self.server.company.authenticate(header[7:] if header.startswith("Bearer ") else "")
             if not write and self.path == "/v1/status":
-                self.reply(200, {**self.server.company.status(), "role": role,
+                self.reply(200, {**self.server.company.status(), "actor": actor, "role": role,
                                  "commands": sorted(command for command, roles in POLICIES[self.server.company.kind].items() if role in roles)}); return
             if not write or self.path != "/v1/command":
                 raise Refusal(404, "Unknown endpoint")
@@ -421,6 +438,9 @@ class BusinessServer(http.server.ThreadingHTTPServer):
 
 
 def initialize(args):
+    configuration = args.configuration or ("ru-2026" if args.country == "RU" else "de-2026")
+    if args.application == "ledger" and (not IDENTIFIER.fullmatch(configuration) or not configuration.startswith(args.country.lower() + "-")):
+        raise ValueError("Ledger configuration must match the selected country")
     root = Path(args.state).resolve()
     if root.exists():
         raise ValueError("state directory must be new")
@@ -431,7 +451,7 @@ def initialize(args):
         copy_company(Path(args.source).resolve(), initial)
     config = {"application": args.application, "country": args.country,
               "executable": str(Path(args.executable).resolve()), "resources": str(Path(args.resources).resolve()),
-              "configuration": args.configuration or ("ru-2026" if args.country == "RU" else "de-2026")}
+              "configuration": configuration}
     private_write(root / "server.json", canonical(config))
     private_write(root / "users.json", "[]")
     company = Company(root)

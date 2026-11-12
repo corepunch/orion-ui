@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="ru">
+  <string source="Ledger — Shared Company" where="remote_ledger">Ledger — Общая компания</string>
+  <string source="Shared company" where="remote_ledger">Общая компания</string>
+  <string source="Not connected" where="remote_ledger">Нет подключения</string>
+  <string source="Connect or refresh" where="remote_ledger">Подключиться или обновить</string>
+  <string source="Retry pending request" where="remote_ledger">Повторить ожидающий запрос</string>
+  <string source="Documents" where="remote_ledger">Документы</string>
+  <string source="Select a document to post, edit its draft details, or reverse its accounting entries." where="remote_ledger">Выберите документ для проведения, изменения черновика или сторнирования проводок.</string>
+  <string source="ID" where="remote_ledger">ID</string>
+  <string source="Date" where="remote_ledger">Дата</string>
+  <string source="Number" where="remote_ledger">Номер</string>
+  <string source="Type" where="remote_ledger">Вид</string>
+  <string source="Counterparty" where="remote_ledger">Контрагент</string>
+  <string source="Amount" where="remote_ledger">Сумма</string>
+  <string source="State" where="remote_ledger">Состояние</string>
+  <string source="Previous page" where="remote_ledger">Предыдущая страница</string>
+  <string source="Next page" where="remote_ledger">Следующая страница</string>
+  <string source="Post selected" where="remote_ledger">Провести выбранный</string>
+  <string source="Update draft details" where="remote_ledger">Изменить реквизиты черновика</string>
+  <string source="Replace draft lines" where="remote_ledger">Заменить строки черновика</string>
+  <string source="Document date:" where="remote_ledger">Дата документа:</string>
+  <string source="Counterparty ID:" where="remote_ledger">ID контрагента:</string>
+  <string source="Reversal date:" where="remote_ledger">Дата сторно:</string>
+  <string source="Reason:" where="remote_ledger">Причина:</string>
+  <string source="Reverse selected" where="remote_ledger">Сторнировать выбранный</string>
+  <string source="The reversal does not issue a corrected invoice or tax return." where="remote_ledger">Сторнирование не создаёт исправленный счёт-фактуру или налоговую декларацию.</string>
+  <string source="New draft" where="remote_ledger">Новый черновик</string>
+  <string source="Choose a document type and counterparty from Catalogs. Enter quantities and prices as decimal values." where="remote_ledger">Выберите вид документа и контрагента в справочниках. Введите количество и цену десятичными числами.</string>
+  <string source="Document type ID:" where="remote_ledger">ID вида документа:</string>
+  <string source="Date:" where="remote_ledger">Дата:</string>
+  <string source="Item ID:" where="remote_ledger">ID товара:</string>
+  <string source="VAT rate ID:" where="remote_ledger">ID ставки НДС:</string>
+  <string source="Quantity:" where="remote_ledger">Количество:</string>
+  <string source="Unit price:" where="remote_ledger">Цена за единицу:</string>
+  <string source="Add line" where="remote_ledger">Добавить строку</string>
+  <string source="Remove selected line" where="remote_ledger">Удалить выбранную строку</string>
+  <string source="Create draft" where="remote_ledger">Создать черновик</string>
+  <string source="Item ID" where="remote_ledger">ID товара</string>
+  <string source="VAT ID" where="remote_ledger">ID НДС</string>
+  <string source="Quantity" where="remote_ledger">Количество</string>
+  <string source="Unit price" where="remote_ledger">Цена за единицу</string>
+  <string source="Catalogs" where="remote_ledger">Справочники</string>
+  <string source="Document types" where="remote_ledger">Виды документов</string>
+  <string source="VAT rates" where="remote_ledger">Ставки НДС</string>
+  <string source="Units" where="remote_ledger">Единицы</string>
+  <string source="Items" where="remote_ledger">Товары</string>
+  <string source="Counterparties" where="remote_ledger">Контрагенты</string>
+  <string source="Name" where="remote_ledger">Наименование</string>
+  <string source="Code or detail" where="remote_ledger">Код или сведения</string>
+  <string source="Name:" where="remote_ledger">Наименование:</string>
+  <string source="SKU:" where="remote_ledger">Артикул:</string>
+  <string source="Tax ID:" where="remote_ledger">ИНН:</string>
+  <string source="Unit ID:" where="remote_ledger">ID единицы:</string>
+  <string source="Create counterparty" where="remote_ledger">Создать контрагента</string>
+  <string source="Create item" where="remote_ledger">Создать товар</string>
+  <string source="Journal and close" where="remote_ledger">Журнал и закрытие</string>
+  <string source="Accounting entries. Exact amounts are shown in currency units." where="remote_ledger">Проводки. Точные суммы показаны в единицах валюты.</string>
+  <string source="Document ID" where="remote_ledger">ID документа</string>
+  <string source="Debit ID" where="remote_ledger">ID дебета</string>
+  <string source="Credit ID" where="remote_ledger">ID кредита</string>
+  <string source="Description" where="remote_ledger">Описание</string>
+  <string source="Refresh journal" where="remote_ledger">Обновить журнал</string>
+  <string source="Close through:" where="remote_ledger">Закрыть по:</string>
+  <string source="Review period close" where="remote_ledger">Проверить закрытие периода</string>
+  <string source="Confirm period close" where="remote_ledger">Подтвердить закрытие периода</string>
+  <string source="Closing is permanent. Reversals must use a later open date." where="remote_ledger">Закрытие необратимо. Для сторно требуется более поздняя открытая дата.</string>
+  <string source="Select a document." where="code">Выберите документ.</string>
+  <string source="Data changed. Refresh before continuing." where="code">Данные изменились. Обновите их перед продолжением.</string>
+  <string source="The outcome is unknown. Retry the same request before making changes." where="code">Результат неизвестен. Перед изменениями повторите тот же запрос.</string>
+  <string source="Connect to the shared company first." where="code">Сначала подключитесь к общей компании.</string>
+  <string source="The request could not be started." where="code">Не удалось начать запрос.</string>
+  <string source="This server is not a supported Ledger company." where="code">Этот сервер не является поддерживаемой компанией Ledger.</string>
+  <string source="Connected. Amounts marked approximately use legacy storage." where="code">Подключено. Приблизительные суммы получены из старых данных.</string>
+  <string source="Posted" where="code">Проведён</string>
+  <string source="Draft" where="code">Черновик</string>
+  <string source="Resolve the pending request before changing the draft." where="code">Завершите ожидающий запрос перед изменением черновика.</string>
+  <string source="A draft can contain at most 100 lines." where="code">Черновик может содержать не более 100 строк.</string>
+  <string source="Enter an item ID." where="code">Введите ID товара.</string>
+  <string source="Enter a VAT rate ID." where="code">Введите ID ставки НДС.</string>
+  <string source="Enter a quantity." where="code">Введите количество.</string>
+  <string source="Enter a unit price." where="code">Введите цену за единицу.</string>
+  <string source="Select a draft line." where="code">Выберите строку черновика.</string>
+  <string source="Add at least one line." where="code">Добавьте хотя бы одну строку.</string>
+  <string source="Enter a document type ID." where="code">Введите ID вида документа.</string>
+  <string source="Enter a counterparty ID." where="code">Введите ID контрагента.</string>
+  <string source="Enter a valid document date." where="code">Введите корректную дату документа.</string>
+  <string source="Draft %d created." where="code">Черновик %d создан.</string>
+  <string source="Draft lines replaced." where="code">Строки черновика заменены.</string>
+  <string source="Document posted." where="code">Документ проведён.</string>
+  <string source="Enter a valid reversal date." where="code">Введите корректную дату сторно.</string>
+  <string source="Enter a reason." where="code">Введите причину.</string>
+  <string source="Reversal %d posted." where="code">Сторно %d проведено.</string>
+  <string source="Enter a name." where="code">Введите наименование.</string>
+  <string source="Counterparty %d created." where="code">Контрагент %d создан.</string>
+  <string source="Enter an SKU." where="code">Введите артикул.</string>
+  <string source="Enter a unit ID." where="code">Введите ID единицы.</string>
+  <string source="Item %d created." where="code">Товар %d создан.</string>
+  <string source="Enter a valid close date." where="code">Введите корректную дату закрытия.</string>
+  <string source="Review: close through %s. Confirm to continue." where="code">Проверьте: закрыть по %s. Подтвердите для продолжения.</string>
+  <string source="Review the close date first." where="code">Сначала проверьте дату закрытия.</string>
+  <string source="Accounting period closed." where="code">Учётный период закрыт.</string>
+  <string source="Country: %s · Role: %s · Revision: %d" where="code">Страна: %s · Роль: %s · Ревизия: %d</string>
+  <string source="Retry the pending request before refreshing." where="code">Повторите ожидающий запрос перед обновлением.</string>
+  <string source="A request is already in progress." where="code">Запрос уже выполняется.</string>
+  <string source="This server hosts a different application. Close the app and check the server configuration." where="code">На этом сервере работает другое приложение. Закройте приложение и проверьте настройки сервера.</string>
+  <string source="The saved request is invalid." where="code">Сохранённый запрос недействителен.</string>
+  <string source="Could not refresh the server status." where="code">Не удалось обновить состояние сервера.</string>
+  <string source="Data changed; refresh before continuing." where="code">Данные изменились; обновите их перед продолжением.</string>
+  <string source="The server refused the request." where="code">Сервер отклонил запрос.</string>
+  <string source="The request outcome is uncertain; retry the same request." where="code">Результат запроса неизвестен; повторите тот же запрос.</string>
+  <string source="Retry the pending request before starting another." where="code">Повторите ожидающий запрос перед началом нового.</string>
+  <string source="Refresh the server before starting a request." where="code">Обновите состояние сервера перед новым запросом.</string>
+  <string source="Invalid remote request." where="code">Недопустимый удалённый запрос.</string>
+  <string source="There is no request to retry." where="code">Нет запроса для повтора.</string>
+</strings>

@@ -245,3 +245,6 @@ See the [developer SDK](docs/developer-sdk.md) for application/plugin
 scaffolding, dependency checks and source packaging, and the
 [platform readiness plan](docs/business-platform-readiness.md) for
 production acceptance criteria shared by Ledger and Lodge.
+The [shared business service](docs/business-service.md) documents authenticated
+commands, revisions and retries; [server operations](docs/server-operations.md)
+covers verified backups and recovery.

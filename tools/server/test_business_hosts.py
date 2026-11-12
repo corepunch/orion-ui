@@ -30,6 +30,9 @@ class LodgeHostTests(unittest.TestCase):
         return self.company.execute('tester-' + role, role, request)
 
     def test_booking_payment_permissions_replay_and_restart(self):
+        upgrade = self.call('maintenance.upgrade', role='admin')
+        self.assertTrue(upgrade['ok'], upgrade)
+        self.assertTrue(upgrade['result']['validated'])
         room = self.call('save_room', {'name': '101', 'capacity': 2, 'rate': 80, 'category': 'Double'})
         self.assertTrue(room['ok'], room)
         room_id = room['result']['id']
@@ -85,6 +88,7 @@ class LedgerHostTests(unittest.TestCase):
                         result = company.execute('trade-' + role, role, {'request_id': f'trade-{sequence}', 'expected_revision': company.status()['revision'], 'command': command, 'args': args or {}})
                         self.assertTrue(result['ok'], result)
                         return result['result']
+                    self.assertTrue(call('maintenance.upgrade', role='admin')['validated'])
                     party = call('counterparties.save', {'fields': {'name': 'Small trade test', 'country_code': country}})
                     vat_rates = call('catalogs.list', {'table': 'vat_rates'})
                     types = call('catalogs.list', {'table': 'doc_types'})
@@ -92,7 +96,39 @@ class LedgerHostTests(unittest.TestCase):
                     self.assertTrue(vat_rates)
                     self.assertTrue(types)
                     self.assertTrue(party)
-                    call('documents.list')
+                    item = call('items.save', {'fields': {'name': 'Test product', 'sku': 'TEST-1', 'unit_id': 1, 'vat_rate_id': vat_rates[0]['id']}})
+                    codes = {row['code']: row['id'] for row in types}
+                    purchase_code, sale_code = ('receipt', 'sale') if country == 'RU' else ('incoming_invoice', 'outgoing_invoice')
+                    purchase = call('documents.create', {'doc_type_id': codes[purchase_code], 'counterparty_id': party['id'], 'date': '2026-11-10',
+                        'lines': [{'item_id': item['id'], 'vat_rate_id': vat_rates[0]['id'], 'quantity': '10.000', 'price': '10.00'}]})
+                    call('documents.post', purchase)
+                    sale = call('documents.create', {'doc_type_id': codes[sale_code], 'counterparty_id': party['id'], 'date': '2026-11-11',
+                        'lines': [{'item_id': item['id'], 'vat_rate_id': vat_rates[0]['id'], 'quantity': '2.000', 'price': '19.00'}]})
+                    replacement = {**sale, 'lines': [{'item_id': item['id'], 'vat_rate_id': vat_rates[0]['id'], 'quantity': '2.000', 'price': '20.00'}]}
+                    call('documents.replace_lines', replacement)
+                    call('documents.post', sale)
+                    before_rejection = company.status()['revision']; sequence += 1
+                    rejected = company.execute('trade-accountant', 'accountant', {'request_id': f'trade-{sequence}',
+                        'expected_revision': before_rejection, 'command': 'documents.replace_lines', 'args': replacement})
+                    self.assertFalse(rejected['ok'], rejected)
+                    self.assertEqual(company.status()['revision'], before_rejection)
+                    docs = call('documents.list')
+                    sale_row = next(row for row in docs if row['id'] == sale['document_id'])
+                    self.assertTrue(sale_row['exact_money'])
+                    self.assertEqual(sale_row['amount_minor'], '4000')
+                    self.assertEqual(sale_row['vat_minor'], '880' if country == 'RU' else '760')
+                    journal = call('journal.list')
+                    self.assertTrue(journal)
+                    self.assertTrue(all(row['exact_money'] for row in journal))
+                    self.assertTrue(all(isinstance(row['amount_minor'], str) for row in journal))
+                    reversal = call('documents.reverse', {**sale, 'date': '2026-11-12', 'reason': 'Accounting correction in integration test'})
+                    self.assertNotEqual(reversal['document_id'], sale['document_id'])
+                    self.assertEqual(call('documents.list', {'offset': 500, 'limit': 10}), [])
+                    call('period.close', {'date': '2026-11-30'}, 'admin')
+                    sequence += 1
+                    denied = company.execute('trade-accountant', 'accountant', {'request_id': f'trade-{sequence}', 'expected_revision': company.status()['revision'],
+                        'command': 'documents.update', 'args': {**sale, 'counterparty_id': party['id'], 'date': '2026-11-11'}})
+                    self.assertFalse(denied['ok'], denied)
                     with self.assertRaises(server.Refusal) as failure:
                         call('counterparties.save', {'fields': {'name': 'Denied'}}, 'auditor')
                     self.assertEqual(failure.exception.status, 403)

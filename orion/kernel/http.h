@@ -204,6 +204,9 @@ void http_shutdown(void);
 void http_dispatch_pending(void);
 /** True while a request or its undelivered result exists. */
 bool http_has_pending(void);
+// Reserve a delivery and unique request ID on the UI thread; complete on a worker.
+void *http_external_begin(window_t *target, uint64_t serial, uint32_t *id);
+void http_external_complete(void *ticket, http_response_t *response);
 
 /**
  * @brief Issue an asynchronous HTTP or HTTPS request.

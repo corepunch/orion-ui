@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings language="de">
+  <string source="Ledger — Shared Company" where="remote_ledger">Ledger — Gemeinsames Unternehmen</string>
+  <string source="Shared company" where="remote_ledger">Gemeinsames Unternehmen</string>
+  <string source="Not connected" where="remote_ledger">Nicht verbunden</string>
+  <string source="Connect or refresh" where="remote_ledger">Verbinden oder aktualisieren</string>
+  <string source="Retry pending request" where="remote_ledger">Ausstehende Anfrage wiederholen</string>
+  <string source="Documents" where="remote_ledger">Belege</string>
+  <string source="Select a document to post, edit its draft details, or reverse its accounting entries." where="remote_ledger">Wählen Sie einen Beleg zum Buchen, Bearbeiten oder Stornieren.</string>
+  <string source="ID" where="remote_ledger">ID</string>
+  <string source="Date" where="remote_ledger">Datum</string>
+  <string source="Number" where="remote_ledger">Nummer</string>
+  <string source="Type" where="remote_ledger">Art</string>
+  <string source="Counterparty" where="remote_ledger">Geschäftspartner</string>
+  <string source="Amount" where="remote_ledger">Betrag</string>
+  <string source="State" where="remote_ledger">Status</string>
+  <string source="Previous page" where="remote_ledger">Vorherige Seite</string>
+  <string source="Next page" where="remote_ledger">Nächste Seite</string>
+  <string source="Post selected" where="remote_ledger">Auswahl buchen</string>
+  <string source="Update draft details" where="remote_ledger">Entwurfsdaten ändern</string>
+  <string source="Replace draft lines" where="remote_ledger">Entwurfspositionen ersetzen</string>
+  <string source="Document date:" where="remote_ledger">Belegdatum:</string>
+  <string source="Counterparty ID:" where="remote_ledger">Geschäftspartner-ID:</string>
+  <string source="Reversal date:" where="remote_ledger">Stornodatum:</string>
+  <string source="Reason:" where="remote_ledger">Grund:</string>
+  <string source="Reverse selected" where="remote_ledger">Auswahl stornieren</string>
+  <string source="The reversal does not issue a corrected invoice or tax return." where="remote_ledger">Die Stornierung erstellt keine korrigierte Rechnung oder Steuererklärung.</string>
+  <string source="New draft" where="remote_ledger">Neuer Entwurf</string>
+  <string source="Choose a document type and counterparty from Catalogs. Enter quantities and prices as decimal values." where="remote_ledger">Wählen Sie Belegart und Geschäftspartner aus den Stammdaten. Geben Sie Mengen und Preise als Dezimalzahlen ein.</string>
+  <string source="Document type ID:" where="remote_ledger">Belegart-ID:</string>
+  <string source="Date:" where="remote_ledger">Datum:</string>
+  <string source="Item ID:" where="remote_ledger">Artikel-ID:</string>
+  <string source="VAT rate ID:" where="remote_ledger">Umsatzsteuersatz-ID:</string>
+  <string source="Quantity:" where="remote_ledger">Menge:</string>
+  <string source="Unit price:" where="remote_ledger">Einzelpreis:</string>
+  <string source="Add line" where="remote_ledger">Position hinzufügen</string>
+  <string source="Remove selected line" where="remote_ledger">Gewählte Position entfernen</string>
+  <string source="Create draft" where="remote_ledger">Entwurf erstellen</string>
+  <string source="Item ID" where="remote_ledger">Artikel-ID</string>
+  <string source="VAT ID" where="remote_ledger">USt-ID</string>
+  <string source="Quantity" where="remote_ledger">Menge</string>
+  <string source="Unit price" where="remote_ledger">Einzelpreis</string>
+  <string source="Catalogs" where="remote_ledger">Stammdaten</string>
+  <string source="Document types" where="remote_ledger">Belegarten</string>
+  <string source="VAT rates" where="remote_ledger">Umsatzsteuersätze</string>
+  <string source="Units" where="remote_ledger">Einheiten</string>
+  <string source="Items" where="remote_ledger">Artikel</string>
+  <string source="Counterparties" where="remote_ledger">Geschäftspartner</string>
+  <string source="Name" where="remote_ledger">Name</string>
+  <string source="Code or detail" where="remote_ledger">Code oder Details</string>
+  <string source="Name:" where="remote_ledger">Name:</string>
+  <string source="SKU:" where="remote_ledger">Artikelnummer:</string>
+  <string source="Tax ID:" where="remote_ledger">Steuer-ID:</string>
+  <string source="Unit ID:" where="remote_ledger">Einheiten-ID:</string>
+  <string source="Create counterparty" where="remote_ledger">Geschäftspartner anlegen</string>
+  <string source="Create item" where="remote_ledger">Artikel anlegen</string>
+  <string source="Journal and close" where="remote_ledger">Journal und Abschluss</string>
+  <string source="Accounting entries. Exact amounts are shown in currency units." where="remote_ledger">Buchungen. Exakte Beträge werden in Währungseinheiten angezeigt.</string>
+  <string source="Document ID" where="remote_ledger">Beleg-ID</string>
+  <string source="Debit ID" where="remote_ledger">Sollkonto-ID</string>
+  <string source="Credit ID" where="remote_ledger">Habenkonto-ID</string>
+  <string source="Description" where="remote_ledger">Beschreibung</string>
+  <string source="Refresh journal" where="remote_ledger">Journal aktualisieren</string>
+  <string source="Close through:" where="remote_ledger">Abschließen bis:</string>
+  <string source="Review period close" where="remote_ledger">Periodenabschluss prüfen</string>
+  <string source="Confirm period close" where="remote_ledger">Periodenabschluss bestätigen</string>
+  <string source="Closing is permanent. Reversals must use a later open date." where="remote_ledger">Der Abschluss ist dauerhaft. Stornierungen benötigen ein späteres offenes Datum.</string>
+  <string source="Select a document." where="code">Wählen Sie einen Beleg.</string>
+  <string source="Data changed. Refresh before continuing." where="code">Die Daten wurden geändert. Aktualisieren Sie vor dem Fortfahren.</string>
+  <string source="The outcome is unknown. Retry the same request before making changes." where="code">Das Ergebnis ist unbekannt. Wiederholen Sie vor Änderungen dieselbe Anfrage.</string>
+  <string source="Connect to the shared company first." where="code">Verbinden Sie sich zuerst mit dem gemeinsamen Unternehmen.</string>
+  <string source="The request could not be started." where="code">Die Anfrage konnte nicht gestartet werden.</string>
+  <string source="This server is not a supported Ledger company." where="code">Dieser Server ist kein unterstütztes Ledger-Unternehmen.</string>
+  <string source="Connected. Amounts marked approximately use legacy storage." where="code">Verbunden. Ungefähre Beträge stammen aus älteren Daten.</string>
+  <string source="Posted" where="code">Gebucht</string>
+  <string source="Draft" where="code">Entwurf</string>
+  <string source="Resolve the pending request before changing the draft." where="code">Klären Sie die ausstehende Anfrage, bevor Sie den Entwurf ändern.</string>
+  <string source="A draft can contain at most 100 lines." where="code">Ein Entwurf kann höchstens 100 Positionen enthalten.</string>
+  <string source="Enter an item ID." where="code">Geben Sie eine Artikel-ID ein.</string>
+  <string source="Enter a VAT rate ID." where="code">Geben Sie eine Umsatzsteuersatz-ID ein.</string>
+  <string source="Enter a quantity." where="code">Geben Sie eine Menge ein.</string>
+  <string source="Enter a unit price." where="code">Geben Sie einen Einzelpreis ein.</string>
+  <string source="Select a draft line." where="code">Wählen Sie eine Entwurfsposition.</string>
+  <string source="Add at least one line." where="code">Fügen Sie mindestens eine Position hinzu.</string>
+  <string source="Enter a document type ID." where="code">Geben Sie eine Belegart-ID ein.</string>
+  <string source="Enter a counterparty ID." where="code">Geben Sie eine Geschäftspartner-ID ein.</string>
+  <string source="Enter a valid document date." where="code">Geben Sie ein gültiges Belegdatum ein.</string>
+  <string source="Draft %d created." where="code">Entwurf %d erstellt.</string>
+  <string source="Draft lines replaced." where="code">Entwurfspositionen ersetzt.</string>
+  <string source="Document posted." where="code">Beleg gebucht.</string>
+  <string source="Enter a valid reversal date." where="code">Geben Sie ein gültiges Stornodatum ein.</string>
+  <string source="Enter a reason." where="code">Geben Sie einen Grund ein.</string>
+  <string source="Reversal %d posted." where="code">Storno %d gebucht.</string>
+  <string source="Enter a name." where="code">Geben Sie einen Namen ein.</string>
+  <string source="Counterparty %d created." where="code">Geschäftspartner %d angelegt.</string>
+  <string source="Enter an SKU." where="code">Geben Sie eine Artikelnummer ein.</string>
+  <string source="Enter a unit ID." where="code">Geben Sie eine Einheiten-ID ein.</string>
+  <string source="Item %d created." where="code">Artikel %d angelegt.</string>
+  <string source="Enter a valid close date." where="code">Geben Sie ein gültiges Abschlussdatum ein.</string>
+  <string source="Review: close through %s. Confirm to continue." where="code">Prüfung: Abschluss bis %s. Bestätigen Sie zum Fortfahren.</string>
+  <string source="Review the close date first." where="code">Prüfen Sie zuerst das Abschlussdatum.</string>
+  <string source="Accounting period closed." where="code">Buchungsperiode abgeschlossen.</string>
+  <string source="Country: %s · Role: %s · Revision: %d" where="code">Land: %s · Rolle: %s · Revision: %d</string>
+  <string source="Retry the pending request before refreshing." where="code">Wiederholen Sie die ausstehende Anfrage vor dem Aktualisieren.</string>
+  <string source="A request is already in progress." where="code">Eine Anfrage wird bereits bearbeitet.</string>
+  <string source="This server hosts a different application. Close the app and check the server configuration." where="code">Dieser Server betreibt eine andere Anwendung. Schließen Sie die Anwendung und prüfen Sie die Serverkonfiguration.</string>
+  <string source="The saved request is invalid." where="code">Die gespeicherte Anfrage ist ungültig.</string>
+  <string source="Could not refresh the server status." where="code">Der Serverstatus konnte nicht aktualisiert werden.</string>
+  <string source="Data changed; refresh before continuing." where="code">Die Daten wurden geändert; aktualisieren Sie vor dem Fortfahren.</string>
+  <string source="The server refused the request." where="code">Der Server hat die Anfrage abgelehnt.</string>
+  <string source="The request outcome is uncertain; retry the same request." where="code">Das Ergebnis der Anfrage ist ungewiss; wiederholen Sie dieselbe Anfrage.</string>
+  <string source="Retry the pending request before starting another." where="code">Wiederholen Sie die ausstehende Anfrage, bevor Sie eine neue starten.</string>
+  <string source="Refresh the server before starting a request." where="code">Aktualisieren Sie den Serverstatus vor einer neuen Anfrage.</string>
+  <string source="Invalid remote request." where="code">Ungültige Remote-Anfrage.</string>
+  <string source="There is no request to retry." where="code">Es gibt keine Anfrage zur Wiederholung.</string>
+</strings>

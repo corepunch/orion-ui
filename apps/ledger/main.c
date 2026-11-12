@@ -11,11 +11,14 @@
 
 #include "ledger.h"
 #include <orion/gem.h>
+#include <orion/script/application.h>
+#include <orion/script/remote.h>
 #include <orion/commctl/appchrome.h>
 #include <platform/platform.h>
 #include <orion/user/svg_icon_loader.h>
 
 static ledger_t g_ledger_state;
+static script_application_t *g_remote_application;
 
 static bool find_share_dir(char *out, size_t sz) {
   const char *candidates[] = { "%s/../share/ledger", "%s/../../apps/ledger/share" };
@@ -75,6 +78,29 @@ static void choose_ui_language(const char *requested, const char *share) {
 }
 
 bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
+  bool remote_mode = false;
+  for (int i = 1; i < argc; i++) if (!strcmp(argv[i], "--remote")) remote_mode = true;
+  if (remote_mode) {
+    const char *language = NULL;
+    for (int i = 1; i < argc; i++) {
+      if (!strcmp(argv[i], "--remote")) continue;
+      if (!strcmp(argv[i], "--lang") && i + 1 < argc) { language = argv[++i]; continue; }
+      fprintf(stderr, "[ledger] remote mode accepts only --lang and --remote\n"); fflush(stderr); return false;
+    }
+    char share[LEDGER_PATH_MAX], manifest[LEDGER_PATH_MAX * 3], error[1024] = {0};
+    if (language) ui_set_language(language);
+    if (!find_share_dir(share, sizeof(share)) ||
+        !script_remote_configure_from_environment(error, sizeof(error)) ||
+        !script_remote_manifest(share, manifest, sizeof(manifest))) {
+      fprintf(stderr, "[ledger] cannot start remote mode: %s\n", error[0] ? error : "remote resources unavailable"); fflush(stderr); return false;
+    }
+    g_remote_application = script_application_open(manifest, NULL, error, sizeof(error));
+#ifndef BUILD_AS_GEM
+    if (g_remote_application) script_application_quit_on_close(g_remote_application, true);
+#endif
+    if (!g_remote_application) { fprintf(stderr, "[ledger] cannot open remote application: %s\n", error); fflush(stderr); }
+    return g_remote_application != NULL;
+  }
   memset(&g_ledger_state, 0, sizeof(g_ledger_state));
   g_ledger = &g_ledger_state;
   g_ledger->hinstance = hinstance;
@@ -165,6 +191,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
 }
 
 void gem_shutdown(void) {
+  if (g_remote_application) { script_application_close(g_remote_application); g_remote_application = NULL; return; }
   if (!g_ledger) return;
   // Editors borrow the infobase; release their working contexts first.
   if (is_window(g_ledger->main_win)) destroy_window(g_ledger->main_win);
@@ -182,4 +209,4 @@ void gem_shutdown(void) {
 GEM_DEFINE("Ledger", "1.0", gem_init, gem_shutdown, NULL)
 
 GEM_STANDALONE_MAIN("Orion Ledger", UI_INIT_DESKTOP, LEDGER_SCREEN_W, LEDGER_SCREEN_H,
-                    g_ledger->menubar_win, g_ledger->accel)
+                    g_ledger ? g_ledger->menubar_win : NULL, g_ledger ? g_ledger->accel : NULL)

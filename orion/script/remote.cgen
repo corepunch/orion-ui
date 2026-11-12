@@ -1,0 +1,13 @@
+<module name="orion.remote_native" prefix="script_remote_" luaopen="luaopen_orion_remote_native">
+  <summary>Host-configured asynchronous business RPC; credentials stay in native memory.</summary>
+  <functions>
+    <function name="new_id" lua="true"><returns type="nresults">A random request identifier.</returns></function>
+    <function name="outbox_load" lua="true"><returns type="nresults">The pending envelope, or nil; errors return nil and a refusal.</returns></function>
+    <function name="outbox_save" lua="true"><arg name="body" type="string"/><returns type="nresults">True, or nil and a refusal.</returns></function>
+    <function name="outbox_clear" lua="true"><arg name="body" type="string"/><returns type="nresults">True, or nil and a refusal.</returns></function>
+    <function name="request" lua="true">
+      <arg name="handle" type="int"/><arg name="method" type="string"/><arg name="body" type="string"/><arg name="callback" type="function"/>
+      <returns type="nresults">Request handle, or nil and a refusal.</returns>
+    </function>
+  </functions>
+</module>

@@ -10,6 +10,7 @@
 #include <lauxlib.h>
 
 #include <orion/user/database.h>
+typedef struct window_s window_t;
 
 #define SCRIPT_REFUSAL "orion.Refusal"
 
@@ -34,6 +35,9 @@ int script_refuse(lua_State *L, const char *message);
 int luaopen_orion(lua_State *L);
 int luaopen_orion_db(lua_State *L);
 int luaopen_orion_window_native(lua_State *L);
+// UI-thread-only page lookup; NULL if closed or from a different Lua state.
+window_t *script_page_remote_window(lua_State *L, int handle);
+void script_page_remote_refresh(lua_State *L, int handle);
 
 // Records as Lua tables, through a table's schema.
 void script_push_record(lua_State *L, const db_table_schema_t *t, const void *record);

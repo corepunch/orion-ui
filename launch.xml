@@ -10,6 +10,9 @@
     <target name="Ledger" run="make run-ledger-${lang}">
         <param name="lang" choices="ru de" />
     </target>
+    <!-- Shared targets require ORION_SERVER_URL and ORION_SERVER_TOKEN in the launch environment. -->
+    <target name="Lodge shared company" build="make share build/bin/lodge" run="build/bin/lodge --remote" />
+    <target name="Ledger shared company" build="make share build/bin/ledger" run="build/bin/ledger --remote" />
     <target name="Scener" build="make scener" run="build/bin/scener" />
     <target name="Image Editor" build="make build/bin/imageeditor" run="build/bin/imageeditor" />
     <target name="Form Editor" build="make build/bin/formeditor" run="build/bin/formeditor" />

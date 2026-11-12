@@ -1,0 +1,4 @@
+<orion><application runtime-api="1" name="remote_bridge_test" form="remote"/><forms>
+<form name="remote" controller="remote" title="Remote test" width="320" height="120">
+  <Label name="result"/><Button name="connect" text="Connect" action="connect"/>
+</form></forms></orion>
