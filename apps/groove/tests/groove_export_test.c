@@ -29,6 +29,18 @@ static void test_export_formats(void) {
       ASSERT(send_message(format, cbGetListBoxText, (uint32_t)i, text), "format exists");
       ASSERT_STR_EQUAL(text, audio[i]);
     }
+    if (kind == 2) {
+      window_t *size = get_window_item(dlg, ID_EXPORT_MEDIA_ASPECT);
+      window_t *branding = get_window_item(dlg, ID_EXPORT_MEDIA_BRANDING);
+      char text[256];
+      ASSERT(send_message(size, cbGetListBoxText, 2, text), "portrait size exists");
+      ASSERT_STR_EQUAL(text, "9:16 (1080 x 1920)");
+      ASSERT_FALSE(window_is_enabled(branding));
+      send_message(size, cbSetCurrentSelection, 2, NULL);
+      send_message(dlg, evCommand, MAKEDWORD(ID_EXPORT_MEDIA_ASPECT, cbSelectionChange), size);
+      ASSERT_TRUE(window_is_enabled(branding));
+      ASSERT_EQUAL(send_message(branding, btnGetCheck, 0, NULL), btnStateChecked);
+    }
     destroy_window(dlg);
   }
   test_env_shutdown(); PASS();
@@ -107,13 +119,16 @@ static void test_audio_export(void) {
     axMkDir(out); char path[1024];
     snprintf(path, sizeof(path), "%s/audio.m4a", out);
     ASSERT(ui_media_encode(wav, path, UI_MEDIA_M4A, NULL, NULL, NULL), "AAC encoded using the platform backend");
-    for (int aspect = 0; aspect < 2; aspect++) {
-      int width = aspect ? 1680 : 1280;
-      uint8_t *rgba = calloc((size_t)width * 720, 4); ASSERT_NOT_NULL(rgba);
-      for (int i = 0; i < width * 720; i++) { rgba[i * 4] = 30; rgba[i * 4 + 3] = 255; }
-      ui_media_video_t video = {.rgba=rgba, .width=width, .height=720, .x=64, .y=92, .w=width-96, .h=596,
+    const struct { int width, height; const char *suffix; } sizes[] = {
+      {1280, 720, "16-9"}, {1680, 720, "21-9"}, {1080, 1920, "9-16"},
+    };
+    for (size_t i = 0; i < ARRAY_LEN(sizes); i++) {
+      int width = sizes[i].width, height = sizes[i].height;
+      uint8_t *rgba = calloc((size_t)width * height, 4); ASSERT_NOT_NULL(rgba);
+      for (int pixel = 0; pixel < width * height; pixel++) { rgba[pixel * 4] = 30; rgba[pixel * 4 + 3] = 255; }
+      ui_media_video_t video = {.rgba=rgba, .width=width, .height=height, .x=64, .y=92, .w=width-96, .h=596,
         .frames=frames, .rate=GR_SAMPLE_RATE, .fps=30, .color=0xffffffff};
-      snprintf(path, sizeof(path), "%s/timeline-%s.mp4", out, aspect ? "21-9" : "16-9");
+      snprintf(path, sizeof(path), "%s/timeline-%s.mp4", out, sizes[i].suffix);
       ASSERT(ui_media_encode(wav, path, UI_MEDIA_MP4, &video, NULL, NULL), "MP4 with audio encoded");
       free(rgba);
     }

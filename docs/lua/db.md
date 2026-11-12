@@ -54,6 +54,17 @@ The first row whose field equals a value.
 
 Returns the row, or nil.
 
+## `db.defaults(database, table)`
+
+Typed defaults for a new record, excluding keys and computed fields; does not insert a row.
+
+| Argument | Type | |
+|---|---|---|
+| `database` | string | The registered database |
+| `table` | string | The table |
+
+Returns a table of initial field values.
+
 ## `db.insert(database, table, fields)`
 
 Inserts a record: defaults first (dbInitRecord), then the given fields.

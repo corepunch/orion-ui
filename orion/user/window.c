@@ -139,9 +139,11 @@ static uint32_t next_child_id(window_t const *parent) {
 // Callers are responsible for sending evCreate (and invalidating if needed).
 static window_t *alloc_window(char const *title, flags_t flags, irect16_t const *frame,
                                window_t *parent, winproc_t proc, hinstance_t hinstance) {
+  static uint64_t next_lifetime_serial;
   window_t *win = malloc(sizeof(window_t));
   if (!win) return NULL;
   memset(win, 0, sizeof(window_t));
+  win->lifetime_serial = ++next_lifetime_serial;
   win->frame = *frame;
   win->layout.layout_fixed_w = frame ? frame->w : 0;
   win->layout.layout_fixed_h = frame ? frame->h : 0;

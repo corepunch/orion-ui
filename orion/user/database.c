@@ -3,10 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
+#include <inttypes.h>
 
 #include "user.h"
 #include "database.h"
 #include "display_group.h"
+#include "i18n.h"
 
 // ── Database class registry (analogous to window class registry) ────────────
 
@@ -118,9 +121,9 @@ database_t *create_database(const char *name, const char *class_name, const char
   return create_database_with_schema(name, class_name, NULL, source_path);
 }
 
-database_t *create_database_with_schema(const char *name, const char *class_name,
-                                        const db_schema_def_t *schema,
-                                        const char *source_path) {
+static database_t *create_database_with_options(const char *name, const char *class_name,
+                                                const db_schema_def_t *schema,
+                                                const char *source_path, bool read_only) {
   if (!name || !class_name) return NULL;
   
   dbproc_t proc = find_database_class_proc(class_name);
@@ -137,6 +140,7 @@ database_t *create_database_with_schema(const char *name, const char *class_name
   db->proc = proc;
   db->dirty = false;
   db->schema = schema;
+  db->read_only = read_only;
   
   if (source_path)
     strncpy(db->source_path, source_path, sizeof(db->source_path) - 1);
@@ -145,9 +149,24 @@ database_t *create_database_with_schema(const char *name, const char *class_name
   send_db_message(db, dbCreate, 0, (void *)source_path);
   
   // Send dbLoad message to load initial data
-  send_db_message(db, dbLoad, 0, NULL);
-  
+  if (!db->open_failed) send_db_message(db, dbLoad, 0, NULL);
+  if (db->open_failed) {
+    send_db_message(db, dbDestroy, 0, NULL);
+    free(db);
+    return NULL;
+  }
+
   return db;
+}
+
+database_t *create_database_with_schema(const char *name, const char *class_name,
+                                        const db_schema_def_t *schema, const char *source_path) {
+  return create_database_with_options(name, class_name, schema, source_path, false);
+}
+
+database_t *create_database_with_schema_readonly(const char *name, const char *class_name,
+                                                 const db_schema_def_t *schema, const char *source_path) {
+  return create_database_with_options(name, class_name, schema, source_path, true);
 }
 
 void destroy_database(database_t *db) {
@@ -155,13 +174,17 @@ void destroy_database(database_t *db) {
   if (db->message_refs) { db->destroy_pending = true; return; }
   
   // Save if dirty
-  if (db->dirty && !db->edit_parent)
+  if (db->dirty && !db->edit_parent && !db->discard_on_destroy)
     send_db_message(db, dbSave, 0, NULL);
   
   // Send destroy message (proc can free userdata)
   send_db_message(db, dbDestroy, 0, NULL);
   
   free(db);
+}
+
+void database_discard_on_destroy(database_t *db) {
+  if (db) db->discard_on_destroy = true;
 }
 
 void db_message_retain(database_t *db) { if (db) db->message_refs++; }
@@ -209,13 +232,68 @@ static void db_publish_changes(db_change_state_t *state) {
   }
   state->notifying = false;
 }
+bool database_set_access(database_t *db, const char *actor, uint32_t capabilities,
+                         db_access_policy_fn policy, db_access_audit_fn audit, void *context) {
+  bool invalid_actor = !actor || !actor[0];
+  for (const unsigned char *p = (const unsigned char *)actor; p && *p; p++)
+    if (*p < 32 || *p == 127) invalid_actor = true;
+  if (!db || invalid_actor || strlen(actor) >= sizeof(db->access_actor) || db->access_transactions ||
+      (capabilities & ~(DB_ACCESS_READ | DB_ACCESS_WRITE | DB_ACCESS_ADMIN))) {
+    fprintf(stderr, "[database] invalid access session db=%s capabilities=%u\n", db ? db->name : "(null)", capabilities);
+    fflush(stderr); return false;
+  }
+  snprintf(db->access_actor, sizeof(db->access_actor), "%s", actor);
+  db->access_capabilities = capabilities; db->access_policy = policy;
+  db->access_audit = audit; db->access_context = context; db->access_enabled = true;
+  return true;
+}
+
+static uint32_t db_access_required(uint32_t message) {
+  switch (message) {
+    case dbCreate: case dbDestroy: return 0;
+    case dbLoad: return DB_ACCESS_ADMIN;
+    case dbSave: case dbInsert: case dbUpdate: case dbDelete: case dbBeginChanges:
+    case dbCommitChanges: case dbRevertChanges: case dbReserveKey: return DB_ACCESS_WRITE;
+    case dbFetch: case dbFind: case dbGetDirty: case dbGetObjectProc: case dbGetFieldBindings:
+    case dbGetSchema: case dbGetFieldMeta: case dbGetApi: case dbGetFieldText: case dbInitRecord:
+    case dbCountReferrers: case dbCreateEditContext: return DB_ACCESS_READ;
+    default: return DB_ACCESS_ADMIN;
+  }
+}
+
+static void db_access_audit(database_t *db, uint32_t message, uint32_t wparam, bool allowed, bool success) {
+  if (!db->access_audit || db->access_auditing) return;
+  db->access_auditing = true;
+  db->access_audit(db, db->access_actor, message, wparam, allowed, success, db->access_context);
+  db->access_auditing = false;
+}
+
 lresult_t send_db_message(database_t *db, uint32_t msg, uint32_t wparam, void *lparam) {
   if (!db || !db->proc) return 0;
+  uint32_t required = db_access_required(msg);
+  if (db->access_enabled && required &&
+      (!(db->access_capabilities & required) ||
+       (db->access_policy && !db->access_policy(db, db->access_actor, msg, wparam, db->access_context)))) {
+    snprintf(db->error, sizeof(db->error), "%s", ui_tr("Permission denied."));
+    fprintf(stderr, "[database] access denied db=%s actor=%s message=%u wparam=%u required=%u\n",
+            db->name, db->access_actor, msg, wparam, required);
+    fflush(stderr);
+    db_access_audit(db, msg, wparam, false, false);
+    return 0;
+  }
   db_change_state_t *state = NULL;
   for (int i = 0; i < 64; i++) if (db_changes[i].database == db) { state = &db_changes[i]; break; }
   if (!state) for (int i = 0; i < 64; i++) if (!db_changes[i].database) { state = &db_changes[i]; state->database = db; break; }
   if (state) state->calls++;
   lresult_t result = db->proc(db, msg, wparam, lparam);
+  if (result) {
+    if (msg == dbBeginChanges) db->access_transactions++;
+    else if ((msg == dbCommitChanges || msg == dbRevertChanges) && db->access_transactions) db->access_transactions--;
+  }
+  if (db->access_enabled && required &&
+      (msg == dbInsert || msg == dbUpdate || msg == dbDelete || msg == dbSave ||
+       msg == dbCommitChanges || msg == dbRevertChanges || msg >= dbUser))
+    db_access_audit(db, msg, wparam, true, result != 0);
   if (state) {
     state->calls--;
     if (result && msg == dbBeginChanges) state->transactions++;
@@ -336,6 +414,7 @@ bool db_record_equal(const db_field_meta_t *fields, int count, const void *a, co
     const char *x = (const char *)a + f->offset, *y = (const char *)b + f->offset;
     switch (f->type) {
       case DB_TYPE_INT:    if (*(const int *)x != *(const int *)y) return false;       break;
+      case DB_TYPE_INT64:  if (*(const int64_t *)x != *(const int64_t *)y) return false; break;
       case DB_TYPE_BOOL:   if (*(const bool *)x != *(const bool *)y) return false;     break;
       case DB_TYPE_FLOAT:  if (*(const float *)x != *(const float *)y) return false;   break;
       case DB_TYPE_DOUBLE: if (*(const double *)x != *(const double *)y) return false; break;
@@ -356,6 +435,7 @@ bool db_format_field(const db_field_meta_t *field, const void *record, char *buf
   int decimals = field->precision > 0 ? field->precision : 2;
   switch (field->type) {
     case DB_TYPE_INT:    snprintf(buf, buf_sz, "%d", *(const int *)p);                    return true;
+    case DB_TYPE_INT64:  ui_format_int64(*(const int64_t *)p, buf, buf_sz);               return true;
     case DB_TYPE_STRING: snprintf(buf, buf_sz, "%s", p);                                  return true;
     case DB_TYPE_DATE:   ui_format_date(p, buf, buf_sz);                                  return true;
     case DB_TYPE_BOOL:   snprintf(buf, buf_sz, "%d", *(const bool *)p ? 1 : 0);           return true;
@@ -370,6 +450,14 @@ bool db_parse_field(const db_field_meta_t *field, void *record, const char *text
   char *p = (char *)record + field->offset;
   switch (field->type) {
     case DB_TYPE_INT:    *(int *)p = atoi(text);                                                    return true;
+    case DB_TYPE_INT64: {
+      char *end = NULL; errno = 0;
+      intmax_t value = strtoimax(text, &end, 10);
+      if (errno || end == text || *end || value < INT64_MIN || value > INT64_MAX) {
+        fprintf(stderr, "[database] invalid int64 field=%s value=%s\n", field->name, text); fflush(stderr); return false;
+      }
+      *(int64_t *)p = (int64_t)value; return true;
+    }
     case DB_TYPE_BOOL:   *(bool *)p = text[0] == '1' || text[0] == 't' || text[0] == 'Y';           return true;
     case DB_TYPE_FLOAT:  *(float *)p = (float)atof(text);                                           return true;
     case DB_TYPE_DOUBLE: *(double *)p = atof(text);                                                 return true;
@@ -567,7 +655,8 @@ bool db_load_record_from_xml(xmlNodePtr node, void *record,
   // Zero the record first
   memset(record, 0, fields[field_count - 1].offset +
          (fields[field_count - 1].type == DB_TYPE_STRING || fields[field_count - 1].type == DB_TYPE_DATE ?
-          fields[field_count - 1].length : sizeof(int)));
+          (size_t)fields[field_count - 1].length : fields[field_count - 1].type == DB_TYPE_INT64 ? sizeof(int64_t) :
+          fields[field_count - 1].type == DB_TYPE_DOUBLE ? sizeof(double) : sizeof(int)));
   
   // Load each field
   for (int i = 0; i < field_count; i++) {
@@ -589,6 +678,9 @@ bool db_save_field_to_xml(xmlNodePtr node, const void *record_base,
   switch (field->type) {
     case DB_TYPE_INT:
       snprintf(buf, sizeof(buf), "%d", *(const int *)field_ptr);
+      break;
+    case DB_TYPE_INT64:
+      snprintf(buf, sizeof(buf), "%" PRId64, *(const int64_t *)field_ptr);
       break;
       
     case DB_TYPE_DATE:

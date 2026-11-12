@@ -2,6 +2,7 @@
 // Edits touch the song under the audio lock; the audio callback only reads it.
 
 #include "groove.h"
+#include "store/store.h"
 
 groove_t *g_app;
 
@@ -408,6 +409,7 @@ bool app_duplicate_track(int track) {
 
 bool app_drop(const drag_t *d) {
   if (!d) return false;
+  if (d->from_clip < 0 && !groove_store_can_add(d->block)) return false;
   int block = d->from_clip >= 0 && d->from_clip < g_app->song.nclips ? g_app->song.clips[d->from_clip].block : d->block;
   if (!track_accepts_block(d->track, block, d->from_clip)) return false;
   song_t *s = &g_app->song;
@@ -446,8 +448,15 @@ static void project_file_dialog(bool exporting) {
 void app_command(uint16_t id) {
   song_t *s = &g_app->song;
   switch (id) {
+#if GROOVE_APP_STORE
+    case ID_WINDOW_PACKS:
+    case ID_LIBRARY_WINDOW_PACKS: groove_store_show(); break;
+#endif
     case ID_FILE_EXPORT_AUDIO: app_export_media(g_app->win, 0); break;
     case ID_FILE_SHARE_AUDIO: app_export_media(g_app->win, 1); break;
+#if defined(GROOVE_SHARE_LINKS) && GROOVE_SHARE_LINKS && defined(GROOVE_USE_SHINE)
+    case ID_FILE_SHARE_SONG: app_share_song(g_app->win); break;
+#endif
     case ID_FILE_EXPORT_VIDEO: app_export_media(g_app->win, 2); break;
     case ID_FILE_RECORD:
     case ID_LIBRARY_WINDOW_RECORD_AUDIO: app_record_sample(g_app->win); break;

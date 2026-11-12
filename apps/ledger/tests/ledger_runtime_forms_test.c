@@ -16,9 +16,9 @@ static void setup(void) {
   DB_CLASS(ledger_ib);
   memset(&g_test_ledger, 0, sizeof(g_test_ledger));
   g_ledger = &g_test_ledger;
-  g_ledger->catalog = create_database_with_schema("catalog", "db_schema_xml", &ledger_catalog_schema, SHARE "/index.xml");
-  g_ledger->cfg = create_database_with_schema("cfg", "db_schema_xml", &ledger_cfg_schema, SHARE "/ru-2003/configuration.xml");
-  g_ledger->ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, SHARE "/ru-2003/demo.xml");
+  g_ledger->catalog = create_database_with_schema_readonly("catalog", "db_schema_xml", &ledger_catalog_schema, SHARE "/index.xml");
+  g_ledger->cfg = create_database_with_schema_readonly("cfg", "db_schema_xml", &ledger_cfg_schema, SHARE "/ru-2003/configuration.xml");
+  g_ledger->ib = create_database_with_schema_readonly("ib", "ledger_ib", &ledger_ib_schema, SHARE "/ru-2003/demo.xml");
   register_database("catalog", g_ledger->catalog);
   register_database("cfg", g_ledger->cfg);
   register_database("ib", g_ledger->ib);

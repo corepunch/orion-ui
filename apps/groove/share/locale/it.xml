@@ -40,12 +40,12 @@
   <string source="Go to end (End)" where="main_window">Vai alla fine (Fine)</string>
   <string source="Drum Loops" where="code">Loop di batteria</string>
   <string source="Drum Fills" where="code">Fill di batteria</string>
-  <string source="Bass" where="code">Basso</string>
-  <string source="Guitar" where="code">Chitarra</string>
+  <string source="Bass" where="sample_store">Basso</string>
+  <string source="Guitar" where="sample_store">Chitarra</string>
   <string source="Synth" where="code">Sintetizzatore</string>
   <string source="Pads" where="code">Pad</string>
   <string source="Stabs" where="code">Accenti</string>
-  <string source="Vocals" where="code">Voci</string>
+  <string source="Vocals" where="sample_store">Voci</string>
   <string source="Scratch" where="code">Scratch</string>
   <string source="Effects" where="code">Effetti</string>
   <string source="My Samples" where="code">I miei campioni</string>
@@ -80,7 +80,7 @@
   <string source="Ready to export." where="export_media">Pronto per l’esportazione.</string>
   <string source="Save File..." where="export_media">Salva file...</string>
   <string source="Share..." where="export_media">Condividi...</string>
-  <string source="Close" where="export_media,manage_samples">Chiudi</string>
+  <string source="Close" where="sample_store,export_media,share_song,manage_song_link,manage_samples">Chiudi</string>
   <string source="Cancel Export" where="code">Annulla esportazione</string>
   <string source="Could not create the export folder. Try Save File." where="code">Impossibile creare la cartella di esportazione. Prova con Salva file.</string>
   <string source="Use the filename extension matching the selected format." where="code">Usa l’estensione del file corrispondente al formato selezionato.</string>
@@ -154,4 +154,63 @@
   <string source="More actions" where="main_window">Altre azioni</string>
   <string source="Add Track" where="menu">Aggiungi traccia</string>
   <string source="Track %d" where="code">Traccia %d</string>
+  <string source="Sample Packs..." where="menu,library_window">Pacchetti di suoni…</string>
+  <string source="Sample Packs" where="sample_store">Pacchetti di suoni</string>
+  <string source="Expand your sound library" where="sample_store">Amplia la tua libreria di suoni</string>
+  <string source="The starter bank is free. Buy a pack or unlock the full library." where="sample_store">Il pacchetto base è gratis. Acquista un pacchetto o sblocca tutti i suoni.</string>
+  <string source="Unlock Full Version (all six packs)" where="sample_store">Versione completa (tutti e sei i pacchetti)</string>
+  <string source="Drums &amp; Fills" where="sample_store">Batteria e fill</string>
+  <string source="Synths, Pads &amp; Stabs" where="sample_store">Synth, pad e stab</string>
+  <string source="Scratch &amp; FX" where="sample_store">Scratch ed effetti</string>
+  <string source="Unavailable" where="sample_store">Non disponibile</string>
+  <string source="Each purchase is a one-time payment." where="sample_store">Ogni acquisto prevede un solo pagamento.</string>
+  <string source="Restore Purchases" where="sample_store">Ripristina acquisti</string>
+  <string source="Listen to any sound. Unlock packs to use preview sounds in your songs." where="library_window">Ascolta tutti i suoni. Sblocca i pacchetti per usarli nei tuoi brani.</string>
+  <string source="Preview" where="code">Anteprima</string>
+  <string source="Unlocked" where="code">Sbloccato</string>
+  <string source="Buy for %s" where="code">Acquista: %s</string>
+  <string source="Loading prices from the App Store…" where="code">Caricamento dei prezzi dall’App Store…</string>
+  <string source="Some prices are unavailable. Reopen Sample Packs to retry." where="code">Alcuni prezzi non sono disponibili. Riapri Pacchetti di suoni.</string>
+  <string source="Waiting for the App Store…" where="code">In attesa dell’App Store…</string>
+  <string source="Purchase pending. The pack unlocks when Apple approves it." where="code">Acquisto in sospeso. Il pacchetto si sbloccherà dopo l’approvazione di Apple.</string>
+  <string source="Purchase complete. Your new sounds are ready to use." where="code">Acquisto completato. I tuoi nuovi suoni sono pronti.</string>
+  <string source="The purchase could not be completed. Please try again." where="code">Impossibile completare l’acquisto. Riprova.</string>
+  <string source="Restoring your purchases…" where="code">Ripristino degli acquisti…</string>
+  <string source="Your purchases are up to date." where="code">I tuoi acquisti sono aggiornati.</string>
+  <string source="No previous purchases were found." where="code">Non sono stati trovati acquisti precedenti.</string>
+  <string source="Purchases could not be restored. Please try again." where="code">Impossibile ripristinare gli acquisti. Riprova.</string>
+  <string source="Share Song..." where="menu,main_window">Condividi brano…</string>
+  <string source="Share Song" where="share_song">Condividi brano</string>
+  <string source="Anyone with the link can listen to this song." where="share_song">Chiunque abbia il link può ascoltare questo brano.</string>
+  <string source="Include editable song (contains embedded recordings)" where="share_song">Allega il progetto modificabile con le registrazioni</string>
+  <string source="Ready to share." where="share_song">Pronto per la condivisione.</string>
+  <string source="Create Link" where="share_song">Crea link</string>
+  <string source="Share MP3..." where="share_song">Condividi MP3…</string>
+  <string source="Manage Links..." where="share_song">Gestisci link…</string>
+  <string source="Manage Song Links" where="manage_song_link">Gestisci link dei brani</string>
+  <string source="Newer" where="manage_song_link">Più recente</string>
+  <string source="Older" where="manage_song_link">Meno recente</string>
+  <string source="Share Link..." where="manage_song_link">Condividi link…</string>
+  <string source="Stop Sharing" where="manage_song_link">Interrompi condivisione</string>
+  <string source="Add blocks to the song before sharing." where="code">Aggiungi dei blocchi al brano prima di condividerlo.</string>
+  <string source="Preparing your MP3..." where="code">Preparazione dell’MP3…</string>
+  <string source="Preparing and uploading your song..." where="code">Preparazione e caricamento del brano…</string>
+  <string source="Could not prepare the song for sharing." where="code">Impossibile preparare il brano per la condivisione.</string>
+  <string source="No shared songs." where="code">Nessun brano condiviso.</string>
+  <string source="Sharing stopped." where="code">Condivisione interrotta.</string>
+  <string source="Could not stop sharing. Check your connection and try again." where="code">Impossibile interrompere la condivisione. Controlla la connessione e riprova.</string>
+  <string source="Song link" where="code">Link del brano</string>
+  <string source="Stop sharing this song? Its listening link will no longer work." where="code">Interrompere la condivisione del brano? Il link smetterà di funzionare.</string>
+  <string source="Stopping sharing..." where="code">Interruzione della condivisione…</string>
+  <string source="Share an MP3 of this song." where="code">Condividi questo brano in MP3.</string>
+  <string source="Listening links are not available." where="code">I link di ascolto non sono disponibili.</string>
+  <string source="MP3 ready to share." where="code">L’MP3 è pronto per la condivisione.</string>
+  <string source="Link created." where="code">Link creato.</string>
+  <string source="Could not prepare the MP3. Check available space and try again." where="code">Impossibile preparare l’MP3. Controlla lo spazio disponibile e riprova.</string>
+  <string source="Could not create the link. Check your connection and try again." where="code">Impossibile creare il link. Controlla la connessione e riprova.</string>
+  <string source="Cover title:" where="export_media">Titolo di copertina:</string>
+  <string source="Include Groove branding" where="export_media">Includi il logo di Groove</string>
+  <string source="Made with Groove" where="code">Creato con Groove</string>
+  <string source="%s BPM" where="code">%s BPM</string>
+  <string source="Untitled" where="export_media">Senza titolo</string>
 </strings>

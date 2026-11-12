@@ -8,7 +8,7 @@ std = "lua54"
 self = false              -- an unused `self` in a method is not a mistake
 unused_args = false       -- hooks and callbacks keep the signature they are called with
 max_line_length = false   -- compact one-line cases are the house style
-exclude_files = {"build/**", "platform/**"}
+exclude_files = {"build/**", "platform/**", ".claude/worktrees/**", ".codex/worktrees/**"}
 
 -- 131: a rule defined here is found by name from C, so it looks unused.
 local ledger_host = {globals = {"ledger"}, allow_defined_top = true, ignore = {"131"}}

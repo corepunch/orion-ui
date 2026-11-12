@@ -3,7 +3,9 @@
 // builds the reports. Pure data logic over the cfg and ib databases.
 
 #include "ledger.h"
+#include <float.h>
 #include <math.h>
+#include <orion/user/money.h>
 
 static double round2(double v) { return v < 0 ? -floor(-v * 100.0 + 0.5) / 100.0 : floor(v * 100.0 + 0.5) / 100.0; }
 
@@ -133,16 +135,42 @@ turnover_t ledger_turnover(const post_t *p, int account_id, int subconto_id, int
 
 void ledger_add_entry(const post_t *p, int debit, int credit, double amount, const subjects_t *s, double quantity,
                       int currency_id, double currency_amount, const char *content) {
+  if (!isfinite(amount) || !isfinite(quantity) || !isfinite(currency_amount) || fabs(amount) > DBL_MAX / 100.0) {
+    fprintf(stderr, "[ledger] entry rejected: document=%d amount=%g quantity=%g currency_amount=%g\n",
+            p->doc->id, amount, quantity, currency_amount);
+    fflush(stderr);
+    if (p->entry_failed) *p->entry_failed = true;
+    return;
+  }
   amount = round2(amount);
   if (!debit || !credit || amount == 0) return;
   bool by_item = !strcmp(ledger_subconto_table(p->cfg, debit), "items") || !strcmp(ledger_subconto_table(p->cfg, credit), "items");
   db_entry_t e = { .document_id = p->doc->id, .debit_id = debit, .credit_id = credit, .amount = amount,
                    .debit_subconto_id = subconto_for(p->cfg, debit, s), .credit_subconto_id = subconto_for(p->cfg, credit, s),
                    .quantity = by_item ? quantity : 0, .currency_id = currency_id, .currency_amount = currency_amount };
+  if (p->doc->exact_money) {
+    char amount_text[64], quantity_text[64];
+    snprintf(amount_text, sizeof(amount_text), "%.2f", amount);
+    snprintf(quantity_text, sizeof(quantity_text), "%.3f", e.quantity);
+    if (currency_id || !money_parse_decimal(amount_text, 2, &e.amount_minor) ||
+        !money_parse_decimal(quantity_text, 3, &e.quantity_milli) ||
+        fabs(e.quantity - (double)e.quantity_milli / 1000.0) > 1e-9) {
+      fprintf(stderr, "[ledger] exact entry rejected: document=%d\n", p->doc->id); fflush(stderr);
+      if (p->entry_failed) *p->entry_failed = true;
+      return;
+    }
+    e.exact_money = true;
+    e.amount = (double)e.amount_minor / 100.0;
+    e.quantity = (double)e.quantity_milli / 1000.0;
+  }
   snprintf(e.date, sizeof(e.date), "%s", p->doc->date);
   if (content) snprintf(e.content, sizeof(e.content), "%s", content);
   else snprintf(e.content, sizeof(e.content), "%s %s", p->type->name, p->doc->number);
-  send_db_message(p->ib, dbInsert, TABLE_ENTRIES, &e);
+  if (!send_db_message(p->ib, dbInsert, TABLE_ENTRIES, &e)) {
+    fprintf(stderr, "[ledger] entry insert failed: document=%d debit=%d credit=%d amount=%g\n", p->doc->id, debit, credit, amount);
+    fflush(stderr);
+    if (p->entry_failed) *p->entry_failed = true;
+  }
 }
 
 // An amount in the document's currency, kept in both currencies.
@@ -151,10 +179,12 @@ static void add_doc_entry(const post_t *p, int debit, int credit, double amount,
   else ledger_add_entry(p, debit, credit, amount, s, quantity, 0, 0, NULL);
 }
 
-static void delete_entries(database_t *ib, int doc_id) {
+static bool delete_entries(database_t *ib, int doc_id) {
   result_node_t *entries = fetch(ib, TABLE_ENTRIES, "document_id", doc_id);
-  EACH_RECORD(db_entry_t, e, entries) send_db_message(ib, dbDelete, TABLE_ENTRIES, (void *)(intptr_t)e->id);
+  bool ok = true;
+  EACH_RECORD(db_entry_t, e, entries) if (!send_db_message(ib, dbDelete, TABLE_ENTRIES, (void *)(intptr_t)e->id)) { ok = false; break; }
   free_result_list(entries);
+  return ok;
 }
 
 // ── Payroll taxes ──────────────────────────────────────────────────────────
@@ -270,10 +300,17 @@ static bool payroll_taxes(const post_t *p, const db_payroll_line_t *line, double
 
 static void sum_entries(database_t *ib, db_document_t *doc) {
   double total = 0;
+  int64_t exact_total = 0; bool exact = true;
   result_node_t *entries = fetch(ib, TABLE_ENTRIES, "document_id", doc->id);
-  EACH_RECORD(db_entry_t, e, entries) total += e->amount;
+  EACH_RECORD(db_entry_t, e, entries) {
+    total += e->amount;
+    if (doc->exact_money && (!e->exact_money || !money_add(exact_total, e->amount_minor, &exact_total))) exact = false;
+  }
   free_result_list(entries);
-  doc->amount = doc->total = round2(total);
+  if (doc->exact_money && exact) {
+    doc->amount_minor = doc->total_minor = exact_total; doc->vat_minor = 0;
+    doc->amount = doc->total = (double)exact_total / 100.0;
+  } else doc->amount = doc->total = doc->exact_money ? NAN : round2(total);
   doc->vat = 0;
 }
 
@@ -294,22 +331,44 @@ static void date_manual_entries(database_t *ib, db_document_t *doc) {
 static void recalc_goods(database_t *ib, database_t *cfg, db_document_t *doc) {
   result_node_t *lines = fetch(ib, TABLE_DOC_LINES, "document_id", doc->id);
   double amount = 0, vat = 0;
+  int64_t exact_amount = 0, exact_vat = 0;
   int count = 0;
   EACH_RECORD(db_doc_line_t, line, lines) {  // amount = quantity x price; tax on top at the line's rate
     db_item_t *item = find(ib, TABLE_ITEMS, line->item_id);
     if (item && line->price == 0) line->price = item->price;
     if (item && !line->vat_rate_id) line->vat_rate_id = item->vat_rate_id;
     db_vat_rate_t *rate = find(cfg, TABLE_VAT_RATES, line->vat_rate_id);
-    line->amount = round2(line->quantity * line->price);
-    // Calculate tax cents from rounded net cents: avoid a second binary
-    // scaling at half-cent boundaries (244.50 * 7% must be 17.12).
-    line->vat = round(round(line->amount * 100.0) * (rate ? rate->rate : 0) / 100.0) / 100.0;
-    line->total = line->amount + line->vat;
+    char qty[64], price[64], tax[64];
+    int64_t q = 0, p = 0, basis, cents, vat_cents;
+    snprintf(qty, sizeof(qty), "%.3f", line->quantity);
+    snprintf(price, sizeof(price), "%.2f", line->price);
+    snprintf(tax, sizeof(tax), "%.2f", rate ? rate->rate : 0);
+    bool inputs;
+    if (doc->exact_money) {
+      q = line->quantity_milli; p = line->price_minor;
+      inputs = p || line->price == 0 || (money_parse_decimal(price, 2, &p) && p <= 10000000 &&
+               fabs(line->price - (double)p / 100.0) <= 1e-9);
+      line->price_minor = p;
+    } else inputs = money_parse_decimal(qty, 3, &q) && money_parse_decimal(price, 2, &p);
+    if (inputs &&
+        money_parse_decimal(tax, 2, &basis) && money_mul_div(q, p, 1000, &cents) &&
+        money_mul_div(cents, basis, 10000, &vat_cents) && money_add(cents, vat_cents, &line->total_minor) &&
+        (!doc->exact_money || (money_add(exact_amount, cents, &exact_amount) && money_add(exact_vat, vat_cents, &exact_vat)))) {
+      line->amount_minor = cents; line->vat_minor = vat_cents;
+      line->amount = (double)cents / 100.0;
+      line->vat = (double)vat_cents / 100.0;
+      line->total = (double)line->total_minor / 100.0;
+    } else {
+      line->amount = line->vat = line->total = NAN;
+    }
     send_db_message(ib, dbUpdate, TABLE_DOC_LINES, line);
     amount += line->amount; vat += line->vat; count++;
   }
   free_result_list(lines);
-  if (count) { doc->amount = amount; doc->vat = vat; doc->total = amount + vat; }
+  if (count && doc->exact_money && isfinite(amount) && isfinite(vat) && money_add(exact_amount, exact_vat, &doc->total_minor)) {
+    doc->amount_minor = exact_amount; doc->vat_minor = exact_vat;
+    doc->amount = (double)exact_amount / 100.0; doc->vat = (double)exact_vat / 100.0; doc->total = (double)doc->total_minor / 100.0;
+  } else if (count) { doc->amount = amount; doc->vat = vat; doc->total = amount + vat; }
   else       { doc->amount = doc->total - doc->vat; }  // documents without lines keep their entered total
 }
 
@@ -364,6 +423,32 @@ void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id) {
 // Goods leave stock at their average cost, as desktop suites of the time wrote
 // them off when the sale was posted.
 static void post_cost_of_sales(const post_t *p, const db_doc_line_t *line) {
+  if (p->doc->exact_money) {
+    int64_t qty = 0, value = 0, cost = 0;
+    bool ok = true;
+    result_node_t *entries = fetch(p->ib, TABLE_ENTRIES, NULL, 0);
+    EACH_RECORD(db_entry_t, e, entries) {
+      bool debit = e->debit_subconto_id == line->item_id && ledger_account_within(p->cfg, e->debit_id, p->type->cost_credit_id);
+      bool credit = e->credit_subconto_id == line->item_id && ledger_account_within(p->cfg, e->credit_id, p->type->cost_credit_id);
+      if (!debit && !credit) continue;
+      if (e->document_id != p->doc->id) {
+        const db_document_t *d = find(p->ib, TABLE_DOCUMENTS, e->document_id);
+        if (!d || !d->posted || doc_order(p->cfg, d, p->doc) >= 0) continue;
+      }
+      if (!e->exact_money || e->amount_minor < 0 || e->quantity_milli < 0) { ok = false; break; }
+      if (debit && (!money_add(qty, e->quantity_milli, &qty) || !money_add(value, e->amount_minor, &value))) { ok = false; break; }
+      if (credit && (!money_add(qty, -e->quantity_milli, &qty) || !money_add(value, -e->amount_minor, &value))) { ok = false; break; }
+    }
+    free_result_list(entries);
+    if (!ok || qty <= 0 || value < 0 || line->quantity_milli <= 0 || line->quantity_milli > qty ||
+        !money_mul_div(value, line->quantity_milli, qty, &cost)) {
+      fprintf(stderr, "[ledger] exact cost rejected: document=%d item=%d stock is insufficient or not exact\n", p->doc->id, line->item_id);
+      fflush(stderr); if (p->entry_failed) *p->entry_failed = true; return;
+    }
+    subjects_t s = { .counterparty = p->doc->counterparty_id, .item = line->item_id };
+    ledger_add_entry(p, p->type->cost_debit_id, p->type->cost_credit_id, (double)cost / 100.0, &s, line->quantity, 0, 0, NULL);
+    return;
+  }
   turnover_t t = ledger_turnover(p, p->type->cost_credit_id, line->item_id, -1);
   double qty = t.dr_qty - t.cr_qty, value = t.dr - t.cr;
   if (qty <= 0) {
@@ -539,7 +624,7 @@ static bool write_entries(const post_t *p) {
   int doc_id = doc->id;
   if (form_is(type, "operation")) date_manual_entries(ib, doc);
   else {
-    delete_entries(ib, doc_id);
+    if (!delete_entries(ib, doc_id)) return false;
     if (type->script[0]) {  // the configuration's rules.lua posts this type
       if (!ledger_script_post(p, type->script)) return false;
     }
@@ -567,32 +652,59 @@ static bool posting_of(database_t *ib, database_t *cfg, int doc_id, post_t *p, c
   return true;
 }
 
+static bool posting_amounts_valid(const post_t *p) {
+  bool valid = isfinite(p->doc->amount) && isfinite(p->doc->vat) && isfinite(p->doc->total);
+  result_node_t *entries = fetch(p->ib, TABLE_ENTRIES, "document_id", p->doc->id);
+  EACH_RECORD(db_entry_t, e, entries)
+    if (!isfinite(e->amount) || !isfinite(e->quantity) || !isfinite(e->currency_amount) ||
+        (p->doc->exact_money && (!e->exact_money || e->currency_id ||
+          e->amount != (double)e->amount_minor / 100.0 || e->quantity != (double)e->quantity_milli / 1000.0))) valid = false;
+  free_result_list(entries);
+  if (!valid) {
+    fprintf(stderr, "[ledger] post rejected: document=%d has non-finite totals or entries\n", p->doc->id);
+    fflush(stderr);
+  }
+  return valid;
+}
+
 // Posting hooks and entry replacement share one nested database change scope.
 static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool preview) {
   post_t p;
   if (!posting_of(ib, cfg, doc_id, &p, preview ? "preview" : "post")) return false;
+  if (!preview && ledger_period_closed(ib, p.doc->date)) {
+    fprintf(stderr, "[ledger] post rejected: document=%d date=%s is closed\n", doc_id, p.doc->date); fflush(stderr); return false;
+  }
+  bool entry_failed = false;
+  p.entry_failed = &entry_failed;
   if (p.doc->currency_id && (!isfinite(p.doc->rate) || p.doc->rate <= 0)) {
     fprintf(stderr, "[ledger] post rejected: document=%d has no valid exchange rate\n", doc_id);
     return false;
   }
   result_node_t *lines = fetch(ib, TABLE_DOC_LINES, "document_id", doc_id);
-  bool valid = true;
+  bool valid = true, has_line = false;
   EACH_RECORD(db_doc_line_t, line, lines) {
+    has_line = true;
     const db_vat_rate_t *rate = find(cfg, TABLE_VAT_RATES, line->vat_rate_id);
     if ((line->vat_rate_id && !rate) || (rate &&
         ((rate->valid_from[0] && strcmp(p.doc->tax_date[0] ? p.doc->tax_date : p.doc->date, rate->valid_from) < 0) ||
          (rate->valid_to[0] && strcmp(p.doc->tax_date[0] ? p.doc->tax_date : p.doc->date, rate->valid_to) > 0)))) valid = false;
     if (!isfinite(line->quantity) || !isfinite(line->price) || !isfinite(line->amount) || !isfinite(line->vat)) valid = false;
+    if (p.doc->exact_money && (line->quantity_milli <= 0 || line->price_minor <= 0 || line->amount_minor <= 0 ||
+        line->quantity != (double)line->quantity_milli / 1000.0 || line->price != (double)line->price_minor / 100.0 ||
+        line->amount != (double)line->amount_minor / 100.0 || line->vat != (double)line->vat_minor / 100.0)) valid = false;
   }
   free_result_list(lines);
+  if (p.doc->exact_money && !p.doc->correction_of && !has_line) valid = false;
   if (!valid) { fprintf(stderr, "[ledger] post rejected: document=%d has invalid amounts or tax validity\n", doc_id); return false; }
   if (!send_db_message(ib, dbBeginChanges, 0, NULL)) return false;
   bool ok = !p.type->validate_script[0] || ledger_script_post(&p, p.type->validate_script);
   if (ok) ok = write_entries(&p);
   if (ok && !preview) ok = ledger_script_event("post", &p);
+  if (entry_failed || (ok && !posting_amounts_valid(&p))) ok = false;
   if (ok && !preview) {
     p.doc->posted = true;
     ok = send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, p.doc) != 0;
+    if (ok) ok = ledger_record_revision(ib, p.doc, "post");
   }
   if (ok && send_db_message(ib, dbCommitChanges, 0, NULL)) return true;
   send_db_message(ib, dbRevertChanges, 0, NULL);
@@ -612,9 +724,94 @@ bool ledger_preview_entries(database_t *ib, database_t *cfg, int doc_id) {
 void ledger_unpost(database_t *ib, database_t *cfg, int doc_id) {
   db_document_t *doc = find(ib, TABLE_DOCUMENTS, doc_id);
   if (!doc) return;
-  if (!form_is(find(cfg, TABLE_DOC_TYPES, doc->doc_type_id), "operation")) delete_entries(ib, doc_id);
+  if (ledger_period_closed(ib, doc->date)) {
+    fprintf(stderr, "[ledger] unpost rejected: document=%d date=%s is closed\n", doc_id, doc->date); fflush(stderr); return;
+  }
+  if (!doc->posted) {
+    if (!form_is(find(cfg, TABLE_DOC_TYPES, doc->doc_type_id), "operation")) delete_entries(ib, doc_id);
+    return;
+  }
+  if (!send_db_message(ib, dbBeginChanges, 0, NULL)) return;
+  if (!ledger_record_revision(ib, doc, "unpost")) {
+    send_db_message(ib, dbRevertChanges, 0, NULL); return;
+  }
+  if (!form_is(find(cfg, TABLE_DOC_TYPES, doc->doc_type_id), "operation") && !delete_entries(ib, doc_id)) {
+    send_db_message(ib, dbRevertChanges, 0, NULL); return;
+  }
   doc->posted = false;
-  send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, doc);
+  if (!send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, doc) || !send_db_message(ib, dbCommitChanges, 0, NULL)) {
+    send_db_message(ib, dbRevertChanges, 0, NULL);
+    fprintf(stderr, "[ledger] unpost rolled back: document=%d\n", doc_id); fflush(stderr);
+  }
+}
+
+int ledger_reverse_posting(database_t *ib, database_t *cfg, int original_id, const char *date, const char *reason) {
+  if (!ib || !cfg || !ledger_valid_date(date) || !reason || !*reason || strlen(reason) >= 256 || ledger_period_closed(ib, date)) goto rejected;
+  const db_document_t *doc = find(ib, TABLE_DOCUMENTS, original_id);
+  if (!doc || !doc->posted || doc->correction_of || strcmp(date, doc->date) < 0) goto rejected;
+  result_node_t *links = fetch(ib, TABLE_REVERSAL_LINKS, "original_id", original_id);
+  bool already = links != NULL; free_result_list(links);
+  if (already) goto rejected;
+  result_node_t *revisions = fetch(ib, TABLE_POSTING_REVISIONS, "document_id", original_id);
+  const db_posting_revision_t *latest = NULL;
+  EACH_RECORD(db_posting_revision_t, r, revisions) if (!latest || r->id > latest->id) latest = r;
+  if (!latest || strcmp(latest->action, "post") || latest->doc_type_id != doc->doc_type_id ||
+      strcmp(latest->date, doc->date) || strcmp(latest->number, doc->number) ||
+      latest->amount != doc->amount || latest->vat != doc->vat || latest->total != doc->total ||
+      latest->exact_money != doc->exact_money || (doc->exact_money && (latest->amount_minor != doc->amount_minor ||
+      latest->vat_minor != doc->vat_minor || latest->total_minor != doc->total_minor))) {
+    free_result_list(revisions); goto rejected;
+  }
+  int revision_id = latest->id;
+  result_node_t *snapshots = fetch(ib, TABLE_REVISION_ENTRIES, "revision_id", revision_id);
+  result_node_t *current = fetch(ib, TABLE_ENTRIES, "document_id", original_id);
+  result_node_t *a = snapshots, *b = current;
+  bool same = a && b;
+  while (a && b && same) {
+    const db_revision_entry_t *x = *(db_revision_entry_t **)a->data;
+    const db_entry_t *y = *(db_entry_t **)b->data;
+    same = x->debit_id == y->debit_id && x->credit_id == y->credit_id &&
+      x->debit_subconto_id == y->debit_subconto_id && x->credit_subconto_id == y->credit_subconto_id &&
+      x->currency_id == y->currency_id && x->amount == y->amount && x->quantity == y->quantity &&
+      x->currency_amount == y->currency_amount && x->exact_money == y->exact_money &&
+      (!x->exact_money || (x->amount_minor == y->amount_minor && x->quantity_milli == y->quantity_milli)) &&
+      !strcmp(x->date, y->date) && !strcmp(x->content, y->content);
+    a = a->next; b = b->next;
+  }
+  same = same && !a && !b;
+  free_result_list(current); free_result_list(revisions);
+  if (!same) { free_result_list(snapshots); goto rejected; }
+  result_node_t *types = fetch(cfg, TABLE_DOC_TYPES, NULL, 0);
+  int operation_id = 0;
+  EACH_RECORD(db_doc_type_t, type, types) if (!operation_id && form_is(type, "operation")) operation_id = type->id;
+  free_result_list(types);
+  if (!operation_id || !send_db_message(ib, dbBeginChanges, 0, NULL)) { free_result_list(snapshots); goto rejected; }
+  db_document_t reverse = { .doc_type_id = operation_id, .correction_of = original_id, .exact_money = doc->exact_money };
+  snprintf(reverse.date, sizeof(reverse.date), "%s", date);
+  snprintf(reverse.comment, sizeof(reverse.comment), "%s", reason);
+  const db_document_t *created = (const void *)send_db_message(ib, dbInsert, TABLE_DOCUMENTS, &reverse);
+  int id = created ? created->id : 0;
+  bool ok = id != 0;
+  EACH_RECORD(db_revision_entry_t, entry, snapshots) {
+    if (!ok) break;
+    db_entry_t line = { .document_id = id, .debit_id = entry->credit_id, .credit_id = entry->debit_id,
+      .debit_subconto_id = entry->credit_subconto_id, .credit_subconto_id = entry->debit_subconto_id,
+      .currency_id = entry->currency_id, .quantity = entry->quantity, .currency_amount = entry->currency_amount, .amount = entry->amount,
+      .exact_money = entry->exact_money, .amount_minor = entry->amount_minor, .quantity_milli = entry->quantity_milli };
+    snprintf(line.date, sizeof(line.date), "%s", date);
+    snprintf(line.content, sizeof(line.content), "%s", reason);
+    ok = send_db_message(ib, dbInsert, TABLE_ENTRIES, &line) != 0;
+  }
+  free_result_list(snapshots);
+  if (ok) {
+    db_reversal_link_t link = { .original_id = original_id, .reversal_id = id, .revision_id = revision_id };
+    ok = db_schema_xml(ib, dbInsert, TABLE_REVERSAL_LINKS, &link) != 0 && ledger_post(ib, cfg, id);
+  }
+  if (ok && send_db_message(ib, dbCommitChanges, 0, NULL)) return id;
+  send_db_message(ib, dbRevertChanges, 0, NULL);
+rejected:
+  fprintf(stderr, "[ledger] reversal rejected: document=%d date=%s\n", original_id, date ? date : "(null)"); fflush(stderr);
+  return 0;
 }
 
 // Numbers follow the configuration's prefix per document type: ПТ-0001, ...
@@ -646,6 +843,7 @@ bool ledger_repost_all(database_t *ib, database_t *cfg) {
   bool ok = true;
   for (int i = 0; i < count && ok; i++) {
     int id = order[i]->id;
+    if (ledger_period_closed(ib, order[i]->date)) continue;
     ledger_recalc_document(ib, cfg, id);
     if (order[i]->posted) ok = ledger_post(ib, cfg, id);
     else ledger_unpost(ib, cfg, id);

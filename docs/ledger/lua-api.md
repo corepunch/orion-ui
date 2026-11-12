@@ -176,6 +176,20 @@ ledger.transaction(function()
 end)
 ```
 
+## `ledger.close_through(date)`
+
+Advance the inclusive accounting close date. Requires a writable script inside ledger.transaction; invalid dates and dates that do not advance the boundary are rejected. The caller must save the infobase after the transaction. There is no reopening API. This initial guard does not provide an immutable audit trail or prevent native code from mutating exposed record pointers.
+
+| Argument | Type | Description |
+|---|---|---|
+| `date` | `string` | Inclusive ISO date YYYY-MM-DD. |
+
+**Returns:** `nil` — No values.
+
+```lua
+ledger.transaction(function() ledger.close_through("2026-12-31") end)
+```
+
 ## `ledger.validate(table, fields, id?)`
 
 Validate a catalog insert or patch without writing. Applies the same schema, value, reference and table restrictions as insert/update, and fills datasource defaults. Supplying id validates an update; omitting it validates an insert. Available in read-only runs.
@@ -514,10 +528,15 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `date` | `date` |  |
 | `comment` | `string` |  |
 | `import_source` | `string` |  |
+| `correction_of` | `integer` | documents.id |
 | `rate` | `double` |  |
 | `amount` | `double` |  |
 | `vat` | `double` |  |
 | `total` | `double` |  |
+| `exact_money` | `boolean` |  |
+| `amount_minor` | `int64` |  |
+| `vat_minor` | `int64` |  |
+| `total_minor` | `int64` |  |
 | `posted` | `boolean` |  |
 
 ## `ib.doc_lines`
@@ -542,6 +561,11 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `amount` | `double` |  |
 | `vat` | `double` |  |
 | `total` | `double` |  |
+| `quantity_milli` | `int64` |  |
+| `price_minor` | `int64` |  |
+| `amount_minor` | `int64` |  |
+| `vat_minor` | `int64` |  |
+| `total_minor` | `int64` |  |
 
 ## `ib.payroll_lines`
 
@@ -580,6 +604,64 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `currency_amount` | `double` |  |
 | `amount` | `double` |  |
 | `content` | `string` |  |
+| `exact_money` | `boolean` |  |
+| `amount_minor` | `int64` |  |
+| `quantity_milli` | `int64` |  |
+
+## `ib.period_locks`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `closed_through` | `date` |  |
+
+## `ib.posting_revisions`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `document_id` | `integer` |  |
+| `doc_type_id` | `integer` |  |
+| `action` | `string` |  |
+| `recorded_utc` | `string` |  |
+| `number` | `string` |  |
+| `date` | `date` |  |
+| `amount` | `double` |  |
+| `vat` | `double` |  |
+| `total` | `double` |  |
+| `exact_money` | `boolean` |  |
+| `amount_minor` | `int64` |  |
+| `vat_minor` | `int64` |  |
+| `total_minor` | `int64` |  |
+
+## `ib.revision_entries`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `revision_id` | `integer` | posting_revisions.id |
+| `debit_id` | `integer` |  |
+| `credit_id` | `integer` |  |
+| `debit_subconto_id` | `integer` |  |
+| `credit_subconto_id` | `integer` |  |
+| `currency_id` | `integer` |  |
+| `date` | `date` |  |
+| `quantity` | `double` |  |
+| `currency_amount` | `double` |  |
+| `amount` | `double` |  |
+| `content` | `string` |  |
+| `exact_money` | `boolean` |  |
+| `amount_minor` | `int64` |  |
+| `quantity_milli` | `int64` |  |
+
+## `ib.reversal_links`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `original_id` | `integer` |  |
+| `reversal_id` | `integer` |  |
+| `revision_id` | `integer` |  |
 
 ## `ib.report_settings`
 

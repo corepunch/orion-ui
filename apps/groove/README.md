@@ -26,6 +26,40 @@ from the project's **Preprocessor Macros** setting. See
 Shine's upstream revision, license, and local changes are documented in
 `third_party/shine/README.orion.md` when that optional folder is present.
 
+## Song sharing
+
+**Share Song…** opens the system share sheet with an MP3. With a sharing
+host configured, it can also create an unlisted browser listening link
+and optionally include the editable project. See [hosting and verification](docs/share-links.md).
+
+## Sample packs
+
+Groove's App Store builds include a permanent starter bank: 175 of the 583
+built-in sounds, including all sounds used in the three demos. Every sound can
+be auditioned. Sounds marked **Preview** require a pack before they can be
+dragged from the library into a song. Recordings and clips already in a song
+continue to work, including playback and export of imported projects.
+
+**Sample Packs…** in the library opens the store. Drums & Fills, Bass, Guitar,
+Synths, Pads & Stabs, Vocals, and Scratch & FX are each one-time purchases at
+$0.99 in the U.S. or €0.99 in Germany. **Unlock Full Version** includes all six
+at $4.99 or €4.99. StoreKit supplies the actual price for the player's storefront
+and restores purchases from the same Apple Account.
+
+Both shared Xcode schemes use [the local StoreKit catalog](store/Groove.storekit)
+when run from Xcode. Use the StoreKit transaction manager to test an individual
+pack, the full unlock, and refunds without charges. On a fresh test account,
+audition and try to drag a Preview card; buy its pack and drag the same card
+again. Verify that other packs still require a purchase, then verify the full
+unlock, relaunch, and Restore Purchases. Use a signed TestFlight build to verify
+the App Store Connect catalog and the sandbox purchase sheet and restore flow.
+
+The seven products belong to [Groove in App Store Connect](https://appstoreconnect.apple.com/apps/6821380428/distribution).
+Attach a screenshot of **Sample Packs…** with the purchase buttons visible to
+each product's App Review information. Submit the first purchases with the new
+app build that contains the store. A free download price is required for the
+intended free-to-try release.
+
 ## Apple release checks
 
 Use the `groove-macos` and `groove-ipad` schemes from the linked Xcode

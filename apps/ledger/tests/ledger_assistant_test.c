@@ -3,6 +3,7 @@
 #include "test_framework.h"
 #include "test_env.h"
 #include "apps/ledger/ledger.h"
+#include "apps/ledger/tests/test_databases.h"
 #include <orion/script/script.h>
 #include <orion/script/script_internal.h>
 #include <lauxlib.h>
@@ -17,12 +18,11 @@ static void open_configuration(const char *code) {
   snprintf(g_ledger->config_dir,sizeof(g_ledger->config_dir),SHARE "/configurations/%s",code);
   char path[LEDGER_PATH_MAX*2];
   snprintf(path,sizeof(path),"%s/configuration.xml",g_ledger->config_dir);
-  g_ledger->cfg=create_database_with_schema("cfg","db_schema_xml",&ledger_cfg_schema,path);
+  g_ledger->cfg=create_database_with_schema_readonly("cfg","db_schema_xml",&ledger_cfg_schema,path);
   register_database("cfg",g_ledger->cfg);
   ledger_script_close(); ledger_script_open(g_ledger->config_dir,"build");
   snprintf(path,sizeof(path),"%s/demo.xml",g_ledger->config_dir);
-  g_ledger->ib=create_database_with_schema("ib","ledger_ib",&ledger_ib_schema,path);
-  g_ledger->ib->source_path[0]=0;
+  g_ledger->ib=ledger_test_infobase(path);
   register_database("ib",g_ledger->ib);
   ledger_repost_all(g_ledger->ib,g_ledger->cfg);
 }

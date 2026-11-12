@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <errno.h>
+#include <inttypes.h>
 #include <orion/ui.h>
 #include <orion/user/user.h>
 #include <orion/kernel/kernel.h>
@@ -41,11 +43,25 @@ static void db_dialog_finish(window_t *win, db_dlg_ctx_t *ctx, bool save) {
 static size_t db_field_size(const db_field_meta_t *f) {
   switch (f->type) {
     case DB_TYPE_INT:    return sizeof(int);
+    case DB_TYPE_INT64:  return sizeof(int64_t);
     case DB_TYPE_BOOL:   return sizeof(bool);
     case DB_TYPE_FLOAT:  return sizeof(float);
     case DB_TYPE_DOUBLE: return sizeof(double);
     default:             return (size_t)f->length;
   }
+}
+
+static bool dialog_validate_int64(window_t *win, const ctrl_binding_t *bindings, int count) {
+  for (int i = 0; bindings && i < count; i++) if (bindings[i].pull == ddx_pull_int64) {
+    window_t *ctrl = get_window_item(win, bindings[i].ctrl_id);
+    int64_t value;
+    if (ctrl && !ui_parse_int64(ctrl->title, &value)) {
+      fprintf(stderr, "[dialog] invalid int64 input win=%u control=%u\n", win->id, bindings[i].ctrl_id); fflush(stderr);
+      message_box(win, ui_tr("Enter a valid whole number."), ui_tr("Invalid input"), MB_OK);
+      return false;
+    }
+  }
+  return true;
 }
 
 // Shows what the database changed since the record was last shown — totals a
@@ -210,18 +226,14 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
       if (notif == edUpdate && ctx->hook) return ctx->hook(win, msg, wparam, lparam);
       if (notif == edUpdate) {
         if (ctx->modeless) { db_form_save(win, true); return true; }
+        if (!dialog_validate_int64(win, ctx->def->bindings, ctx->def->binding_count)) return true;
         if (ctx->def->bindings) {
           dialog_pull(win, ctx->record_buf,
                       ctx->def->bindings, ctx->def->binding_count);
         }
-        if (ctx->is_new) {
-          send_db_message(ctx->db, dbInsert,
-            ctx->def->db_table_id, ctx->record_buf);
-        } else {
-          send_db_message(ctx->db, dbUpdate,
-            MAKEDWORD(ctx->def->db_table_id, ctx->record_id),
-            ctx->record_buf);
-        }
+        lresult_t saved = ctx->is_new ? send_db_message(ctx->db, dbInsert, ctx->def->db_table_id, ctx->record_buf) :
+          send_db_message(ctx->db, dbUpdate, MAKEDWORD(ctx->def->db_table_id, ctx->record_id), ctx->record_buf);
+        if (!saved) { message_box(win, ui_tr("Unable to save the record."), ui_tr("Save"), MB_OK); return true; }
         db_dialog_finish(win, ctx, true);
         return true;
       }
@@ -231,18 +243,14 @@ static result_t dialog_db_proc(window_t *win, uint32_t msg,
       if (form_dispatch_target_action(win, ctx->def, src)) return true;
       if (ctx->def->ok_id && src->id == ctx->def->ok_id) {
         if (ctx->modeless) { db_form_save(win, true); return true; }
+        if (!dialog_validate_int64(win, ctx->def->bindings, ctx->def->binding_count)) return true;
         if (ctx->def->bindings) {
           dialog_pull(win, ctx->record_buf,
                       ctx->def->bindings, ctx->def->binding_count);
         }
-        if (ctx->is_new) {
-          send_db_message(ctx->db, dbInsert,
-            ctx->def->db_table_id, ctx->record_buf);
-        } else {
-          send_db_message(ctx->db, dbUpdate,
-            MAKEDWORD(ctx->def->db_table_id, ctx->record_id),
-            ctx->record_buf);
-        }
+        lresult_t saved = ctx->is_new ? send_db_message(ctx->db, dbInsert, ctx->def->db_table_id, ctx->record_buf) :
+          send_db_message(ctx->db, dbUpdate, MAKEDWORD(ctx->def->db_table_id, ctx->record_id), ctx->record_buf);
+        if (!saved) { message_box(win, ui_tr("Unable to save the record."), ui_tr("Save"), MB_OK); return true; }
         db_dialog_finish(win, ctx, true);
         return true;
       }
@@ -331,6 +339,7 @@ bool db_form_save(window_t *win, bool close_after_save) {
   if (!is_window(win) || win->proc != dialog_db_proc || !win->userdata) return false;
   db_dlg_ctx_t *ctx = win->userdata;
   if (!ctx->modeless) return false;
+  if (!dialog_validate_int64(win, ctx->def->bindings, ctx->def->binding_count)) return false;
   dialog_pull(win, ctx->record_buf, ctx->def->bindings, ctx->def->binding_count);
   if (!send_db_message(ctx->db, dbUpdate, (uint32_t)ctx->def->db_table_id, ctx->record_buf)) return false;
   if (close_after_save) { db_dialog_finish(win, ctx, true); return !is_window(win); }
@@ -808,6 +817,7 @@ static result_t dialog_ddx_proc(window_t *win, uint32_t msg,
       // Pressing Enter (or Tab) in a single-line edit box fires edUpdate.
       // Treat this as equivalent to clicking the OK button.
       if (notif == edUpdate) {
+        if (!dialog_validate_int64(win, ctx->def->bindings, ctx->def->binding_count)) return true;
         if (ctx->def->bindings)
           dialog_pull(win, ctx->state,
                       ctx->def->bindings, ctx->def->binding_count);
@@ -820,6 +830,7 @@ static result_t dialog_ddx_proc(window_t *win, uint32_t msg,
       if (!src) return false;
 
       if (ctx->def->ok_id && src->id == ctx->def->ok_id) {
+        if (!dialog_validate_int64(win, ctx->def->bindings, ctx->def->binding_count)) return true;
         if (ctx->def->bindings)
           dialog_pull(win, ctx->state,
                       ctx->def->bindings, ctx->def->binding_count);
@@ -882,6 +893,22 @@ void ddx_pull_int(window_t *dlg, const ctrl_binding_t *b, void *state) {
   if (!ctrl) return;
   v = atoi(ctrl->title);
   *(int *)(base + b->offset) = v;
+}
+
+void ddx_push_int64(window_t *dlg, const ctrl_binding_t *b, const void *state) {
+  int64_t value = *(const int64_t *)((const char *)state + b->offset);
+  char text[64];
+  if (!ddx_zero_shows_cue(dlg, b, value == 0 ? 0 : 1)) set_window_item_text(dlg, b->ctrl_id, "%s", ui_format_int64(value, text, sizeof(text)));
+}
+
+void ddx_pull_int64(window_t *dlg, const ctrl_binding_t *b, void *state) {
+  window_t *ctrl = get_window_item(dlg, b->ctrl_id);
+  if (!ctrl) return;
+  int64_t value;
+  if (!ui_parse_int64(ctrl->title, &value)) {
+    fprintf(stderr, "[dialog] int64 input rejected win=%u control=%u\n", dlg->id, b->ctrl_id); fflush(stderr); return;
+  }
+  *(int64_t *)((char *)state + b->offset) = value;
 }
 
 void ddx_push_float(window_t *dlg, const ctrl_binding_t *b, const void *state) {

@@ -22,12 +22,29 @@ legal completeness. Russia/Germany 2003 remain historical fixtures.
 
 ## Work still required before production use
 
+An initial close boundary can be advanced with `ledger.close_through(date)` in
+a writable `ledger.transaction`, then saved. The boundary persists and the
+Ledger datasource rejects ordinary document, line and entry writes dated on or
+before it; posting and unposting are rejected, and bulk repost skips that
+period. There is no reopening API. Successful posts and unposts now append
+transactional snapshots of the document identity, totals and entries, with a
+UTC clock timestamp; older postings acquire snapshots only when next posted
+or unposted. Ordinary datasource writes to those snapshots are rejected.
+These are not a complete immutable audit system: native code can mutate exposed
+record pointers, the clock is untrusted, actors and source lines are not
+recorded. An accounting reversal can copy a verified latest posting snapshot
+into a linked manual operation in an open period; it does not issue a corrected
+invoice or adjust tax returns, and cannot reverse historical postings that
+have no snapshot. Closing does not
+certify the balances. Do not treat the boundary as a security or statutory
+control.
+
 | Priority | Gap | Completion evidence |
 |---|---|---|
 | P0 | German payroll approximates the tariff and Vorsorgepauschale; employee circumstances and insurance rates are incomplete | Official BMF PAP implementation with exact decimal/rounding semantics; official expected results across all supported employee profiles and dates |
 | P0 | Russian cumulative deductions use accrual counts, with incomplete residency/income categories | Explicit tax bases, actual deductions and prior withholding; independent examples for multiple payments per month, thresholds, hires, residency and corrections |
-| P0 | Editable posted documents, unrestricted reposting, no closed-period/audit workflow | Immutable posting revisions, reversals, closed-period controls and audit history, with persistence and failure-recovery tests |
-| P0 | Money uses binary floating point | Defined decimal/minor-unit representation and currency-specific rounding with migration and independent boundary fixtures |
+| P0 | Posted documents remain editable; close boundary and posting snapshots have native-pointer and audit gaps | Immutable posting revisions, reversals, closed-period controls and attributable audit history, with persistence and failure-recovery tests |
+| P0 | Legacy amounts, non-trading operations, foreign currency and reports still use binary floating point | Complete decimal/minor-unit representation and currency-specific rounding with migration and independent boundary fixtures |
 | P0 | National tax eligibility is not captured fully | Organization registrations, tax/accounting regimes, counterparty jurisdictions, supply/tax/payment dates and recoverability captured and validated |
 | P1 | RU printable forms are not FNS electronic formats; DE now has a separately validated core UBL subset; complete electronic workflows remain outstanding | Versioned schema-valid output, mandatory fields, official validation artefacts, correction workflows and acceptance tests |
 | P1 | DE UStVA and RU VAT summaries cover only selected cases; zero rates do not identify legal reporting categories | Explicit treatment-to-return-box mappings and official expected returns for the supported regimes; no guessed box assignment |
@@ -40,6 +57,25 @@ These gaps are not resolved by relabelling a configuration. Do not promote a
 profile to production or describe it as compliant until its supported scope
 has the evidence above. Existing RU/DE payroll remains demonstrative; this
 revision does not replace it with an official payroll calculation engine.
+
+New domestic trading documents created locally or through the service store
+quantities in thousandths and money in signed integer minor units. Goods net
+and tax amounts round halves away from zero using checked integer operations;
+the existing doubles remain compatibility and display fields. Exact stock-cost
+posting rejects insufficient stock and any matching legacy stock movement;
+there is no automatic conversion of historic balances. Inputs are bounded to
+10,000 units per line and 100,000 currency units per unit price. This does not
+make reports, payroll, foreign exchange, statutory tax calculations or older
+records exact, and it does not establish that a reduced VAT rate is legally
+appropriate.
+
+For the initial trading service, Russia's tax authority distinguishes an
+invoice correction for an original error from an adjustment invoice for an
+agreed change of price or quantity; see [FNS guidance](https://www.nalog.gov.ru/rn77/service/complaint_decision/10536840/).
+German [UStDV § 31(5)](https://www.gesetze-im-internet.de/ustdv_1980/__31.html)
+sets requirements for invoice corrections. Ledger's linked accounting reversal
+does not implement either jurisdiction's electronic correction workflow or
+establish the applicable tax treatment.
 
 ## Invoice form work
 

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct script_runtime_s { lua_State *L; unsigned controllers, pages; };
+struct script_runtime_s { lua_State *L; unsigned controllers, pages; char directory[1200]; };
 
 // Callers may pass no error buffer; diagnostics still need somewhere to land.
 #define RUNTIME_ERROR_BUFFER(error, size) char fallback[1024]; if (!(error) || !(size)) { error = fallback; size = sizeof(fallback); } (error)[0] = 0
@@ -42,9 +42,18 @@ static int runtime_read(lua_State *L) {
   lua_pushcclosure(L, runtime_local_chunk, 1);
   return 1;
 }
+bool script_runtime_check_api(const char *required, char *error, size_t size) {
+  if (!required || !*required || !strcmp(required, "1")) return true;
+  if (error && size) snprintf(error, size, "unsupported runtime API '%s'; host supports %d", required, ORION_RUNTIME_API);
+  fprintf(stderr, "[runtime] unsupported API requirement '%s'; host supports %d\n", required, ORION_RUNTIME_API);
+  fflush(stderr); return false;
+}
 script_runtime_t *script_runtime_open(const char *directory, const char *name) {
+  if (!directory || strlen(directory) >= sizeof(((script_runtime_t *)0)->directory)) {
+    fprintf(stderr, "[runtime] invalid application directory\n"); fflush(stderr); return NULL;
+  }
   script_runtime_t *runtime = calloc(1, sizeof(*runtime));
-  if (runtime) runtime->L = script_state_new(directory, name);
+  if (runtime) { snprintf(runtime->directory, sizeof(runtime->directory), "%s", directory); runtime->L = script_state_new(directory, name); }
   if (!runtime || !runtime->L) { free(runtime); return NULL; }
   return runtime;
 }
@@ -116,6 +125,39 @@ void script_runtime_release(script_runtime_t *runtime, int controller) {
   if (!runtime || controller == LUA_NOREF || controller == LUA_REFNIL) return;
   luaL_unref(runtime->L, LUA_REGISTRYINDEX, controller);
   if (runtime->controllers) runtime->controllers--;
+}
+
+char *script_runtime_request(script_runtime_t *runtime, const char *module, const char *argument, char *error, size_t size) {
+  RUNTIME_ERROR_BUFFER(error, size);
+  if (!runtime || !module || !argument) { snprintf(error, size, "invalid service request"); return NULL; }
+  if (!*module || strspn(module, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") != strlen(module)) {
+    snprintf(error, size, "invalid service module name"); return NULL;
+  }
+  char path[1600];
+  int length = snprintf(path, sizeof(path), "%s/%s.lua", runtime->directory, module);
+  if (length < 0 || (size_t)length >= sizeof(path)) { snprintf(error, size, "service module path is too long"); return NULL; }
+  // Model, controllers and business service must share the application's
+  // scoped require cache, including transaction-local domain state.
+  int controller = script_runtime_controller(runtime, path, error, size);
+  if (controller == LUA_NOREF) return NULL;
+  lua_State *L = runtime->L; int base = lua_gettop(L); bool refused = false;
+  char *result = NULL;
+  lua_rawgeti(L, LUA_REGISTRYINDEX, controller);
+  lua_getfield(L, -1, "handle"); lua_remove(L, -2);
+  if (!lua_isfunction(L, -1)) { snprintf(error, size, "service has no handle function"); goto done; }
+  lua_pushstring(L, argument);
+  if (!script_call(L, 1, 1, error, size, &refused)) goto done;
+  size_t bytes = 0;
+  const char *text = lua_type(L, -1) == LUA_TSTRING ? lua_tolstring(L, -1, &bytes) : NULL;
+  if (!text || bytes > 4 * 1024 * 1024 || memchr(text, 0, bytes)) { snprintf(error, size, "invalid service response"); goto done; }
+  result = malloc(bytes + 1);
+  if (result) memcpy(result, text, bytes + 1);
+  else snprintf(error, size, "cannot allocate service response");
+done:
+  lua_settop(L, base);
+  script_runtime_release(runtime, controller);
+  if (!result) runtime_report("service", module, refused, error);
+  return result;
 }
 
 void script_runtime_page_retain(script_runtime_t *runtime) { if (runtime) runtime->pages++; }

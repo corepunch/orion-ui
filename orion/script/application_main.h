@@ -12,13 +12,14 @@ bool gem_init(int argc, char *argv[], hinstance_t instance) {
   char manifest[1400];
   snprintf(manifest, sizeof(manifest), "%s/../share/%s/application.orion", ui_get_exe_dir(), ORION_APP_NAME);
   const char *path = manifest, *data = NULL;
-  bool supplied = false;
+  bool supplied = false, recovery = false;
   for (int i = 1; i < argc; i++) {
     const char *option = argv[i];
     if (!strcmp(option, "--help") || !strcmp(option, "-h")) {
-      fprintf(stderr, "Usage: %s [APP_DIRECTORY|application.orion] [--data DIRECTORY] [--lang LANGUAGE]\n", argv[0]);
+      fprintf(stderr, "Usage: %s [APP_DIRECTORY|application.orion] [--data DIRECTORY] [--lang LANGUAGE] [--restore-backup]\n", argv[0]);
       return false;
     }
+    if (!strcmp(option, "--restore-backup")) { recovery = true; continue; }
     if (!strcmp(option, "--app") || !strcmp(option, "--data") || !strcmp(option, "--lang")) {
       if (i + 1 >= argc) { fprintf(stderr, "[application] missing value for %s\n", option); return false; }
       if (!strcmp(option, "--app")) { path = argv[++i]; supplied = true; }
@@ -34,7 +35,8 @@ bool gem_init(int argc, char *argv[], hinstance_t instance) {
     if (file) { fclose(file); snprintf(manifest, sizeof(manifest), "%s", resource_manifest); }
   }
   char error[1024];
-  launched_application = script_application_open(path, data, error, sizeof(error));
+  launched_application = recovery ? script_application_open_recovery(path, data, error, sizeof(error)) :
+    script_application_open(path, data, error, sizeof(error));
 #ifndef BUILD_AS_GEM
   script_application_quit_on_close(launched_application, true);
 #endif

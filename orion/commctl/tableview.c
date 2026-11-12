@@ -25,6 +25,7 @@
 //                                win_tableview, &params);
 
 #include <orion/ui.h>
+#include <orion/user/money.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -164,7 +165,7 @@ static int tv_type(const tableview_state_t *s, int col) {
   return s->metas && s->metas[col] ? (int)s->metas[col]->type : -1;
 }
 
-static bool tv_numeric(int type) { return type == DB_TYPE_INT || type == DB_TYPE_FLOAT || type == DB_TYPE_DOUBLE; }
+static bool tv_numeric(int type) { return type == DB_TYPE_INT || type == DB_TYPE_INT64 || type == DB_TYPE_FLOAT || type == DB_TYPE_DOUBLE; }
 
 static void tv_present_cell(tableview_state_t *s, int col, char *text, size_t sz) {
   int type = tv_type(s, col);
@@ -193,7 +194,7 @@ static const tableview_row_icon_t *tv_row_icon(tableview_state_t *s, void *recor
 }
 
 // The totals row: sums in their columns, the caption in the first other one.
-static void tv_set_footer(window_t *win, tableview_state_t *s, const double *sums) {
+static void tv_set_footer(window_t *win, tableview_state_t *s, const double *sums, const int64_t *exact, const bool *invalid) {
   if (!s->totals) return;
   char (*text)[64] = calloc((size_t)s->column_count, sizeof(*text));
   const char **texts = calloc((size_t)s->column_count, sizeof(*texts));
@@ -211,6 +212,10 @@ static void tv_set_footer(window_t *win, tableview_state_t *s, const double *sum
       continue;
     }
     const db_field_meta_t *meta = s->metas ? s->metas[col] : NULL;
+    if (meta && meta->type == DB_TYPE_INT64) {
+      if (!invalid || !invalid[col]) ui_format_int64(exact ? exact[col] : 0, text[col], sizeof(text[col]));
+      continue;
+    }
     int decimals = !meta || meta->type == DB_TYPE_INT ? 0 : meta->precision > 0 ? meta->precision : 2;
     ui_format_number(sums ? sums[col] : 0, decimals, text[col], sizeof(text[col]));
     if (s->blank_zeros && tv_zero_text(text[col])) text[col][0] = '\0';
@@ -291,17 +296,19 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
   if (!results) {
     TV_LOG("fetch returned no rows: id=%u table=%d", (unsigned)win->id,
            s->table_id);
-    tv_set_footer(win, s, NULL);
+    tv_set_footer(win, s, NULL, NULL, NULL);
     return;
   }
   
   // Allocate cell buffers
   char (*cell_buf)[256] = calloc((size_t)s->column_count, sizeof(*cell_buf));
   double *sums = s->totals ? calloc((size_t)s->column_count, sizeof(double)) : NULL;
-  if (!cell_buf || (s->totals && !sums)) {
+  int64_t *exact = s->totals ? calloc((size_t)s->column_count, sizeof(*exact)) : NULL;
+  bool *invalid = s->totals ? calloc((size_t)s->column_count, sizeof(*invalid)) : NULL;
+  if (!cell_buf || (s->totals && (!sums || !exact || !invalid))) {
     fprintf(stderr, "[tableview] row buffer allocation failed win=%u columns=%d\n", win->id, s->column_count);
     fflush(stderr);
-    free(cell_buf); free(sums);
+    free(cell_buf); free(sums); free(exact); free(invalid);
     free_result_list(results);
     return;
   }
@@ -324,7 +331,12 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
                              cell_buf[col], sizeof(cell_buf[col]))) {
         cell_buf[col][0] = '\0';
       }
-      if (sums && s->totals[col] && counted) sums[col] += ui_parse_number(cell_buf[col]);
+      if (sums && s->totals[col] && counted) {
+        if (tv_type(s, col) == DB_TYPE_INT64) {
+          int64_t value;
+          if (!ui_parse_int64(cell_buf[col], &value) || !money_add(exact[col], value, &exact[col])) invalid[col] = true;
+        } else sums[col] += ui_parse_number(cell_buf[col]);
+      }
       tv_present_cell(s, col, cell_buf[col], sizeof(cell_buf[col]));
     }
     
@@ -361,9 +373,10 @@ static void tv_refresh(window_t *win, tableview_state_t *s, int keep_row) {
     row_idx++;
   }
   
-  tv_set_footer(win, s, sums);
+  tv_set_footer(win, s, sums, exact, invalid);
   free(cell_buf);
   free(sums);
+  free(exact); free(invalid);
   free_result_list(results);
   TV_LOG("refresh complete: id=%u table=%d rows=%d",
          (unsigned)win->id, s->table_id, row_idx);

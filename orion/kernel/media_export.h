@@ -24,6 +24,8 @@ bool ui_media_video_frame(const ui_media_video_t *video, int64_t index, uint8_t 
 // UI thread only. File must remain available until the native share UI closes.
 // Returns false where native sharing is unavailable; caller can offer Save As.
 bool ui_media_share(const char *path);
+// UI thread only. Opens the native share sheet with a web link.
+bool ui_media_share_url(const char *url);
 #ifdef __APPLE__
 // Native Documents directory for user-owned media. Returns false if unavailable.
 bool ui_media_documents_directory(char *path, size_t capacity);

@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
   CHECK(axPathExists(ib_path));
   DB_CLASS(db_schema_xml); DB_CLASS(ledger_ib);
   clock_t start = clock();
-  state.cfg = create_database_with_schema("cfg", "db_schema_xml", &ledger_cfg_schema, cfg_path);
+  state.cfg = create_database_with_schema_readonly("cfg", "db_schema_xml", &ledger_cfg_schema, cfg_path);
   state.ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, ib_path);
   CHECK(state.cfg && state.ib);
   register_database("cfg", state.cfg); register_database("ib", state.ib);

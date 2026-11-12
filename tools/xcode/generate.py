@@ -10,7 +10,7 @@ import plistlib
 import subprocess
 import xml.etree.ElementTree as ET
 
-from common import ROOT, unity_sources, write
+from common import ROOT, theme_sheets, unity_sources, write
 
 
 def encode(value):
@@ -81,7 +81,7 @@ def signing_settings(args, output):
     }
 
 
-def scheme(path, project_name, name, target):
+def scheme(path, project_name, name, target, storekit_path):
     root = ET.Element('Scheme', LastUpgradeVersion='1600', version='1.3')
     action = ET.SubElement(root, 'BuildAction', parallelizeBuildables='YES', buildImplicitDependencies='YES')
     entries = ET.SubElement(action, 'BuildActionEntries')
@@ -97,6 +97,8 @@ def scheme(path, project_name, name, target):
             action.set('selectedLauncherIdentifier', 'Xcode.IDEFoundation.Launcher.LLDB')
         runnable = ET.SubElement(action, 'BuildableProductRunnable', runnableDebuggingMode='0')
         ET.SubElement(runnable, 'BuildableReference', **reference)
+        if tag == 'LaunchAction':
+            ET.SubElement(action, 'StoreKitConfigurationFileReference', identifier='../../' + storekit_path)
     ET.SubElement(root, 'AnalyzeAction', buildConfiguration='Debug')
     ET.SubElement(root, 'ArchiveAction', buildConfiguration='Release', revealArchiveInOrganizer='YES')
     ET.indent(root)
@@ -125,11 +127,17 @@ def generate(args):
                                '$(SDKROOT)/usr/include/libxml2'],
         'GCC_PREPROCESSOR_DEFINITIONS': ['$(inherited)', 'ORION_ALLOW_HIGHDPI=1',
                                        'GL_SILENCE_DEPRECATION', 'HAVE_WINDOWING', 'GROOVE_USE_SHINE',
+                                       'GROOVE_APP_STORE=$(GROOVE_APP_STORE)',
+                                       'GROOVE_SHARE_LINKS=1',
                                        'SHAREDIR=\"../share/groove\"'],
         'OTHER_CFLAGS': ['$(inherited)', '-fblocks', '-Wall', '-Wextra', '-Wno-unused-parameter',
                          '-Wno-unused-function', '-Wno-missing-field-initializers', '-Wno-deprecated-declarations'],
         'PRODUCT_NAME': args.app, 'PRODUCT_BUNDLE_IDENTIFIER': args.bundle_id,
         'MARKETING_VERSION': '1.0', 'CURRENT_PROJECT_VERSION': '1',
+        'GROOVE_APP_STORE': '1',
+        'GROOVE_SHARE_BASE_URL': '',
+        'SWIFT_VERSION': '5.0',
+        'SWIFT_OBJC_BRIDGING_HEADER': '$(ORION_ROOT)/apps/groove/store/store_bridge.h',
     }
     root_configs = project.configurations('project', common)
     icon_ref = project.add('app-icon', 'PBXFileReference', path='Assets.xcassets',
@@ -146,14 +154,21 @@ def generate(args):
     resource_ref = project.add('app-resources', 'PBXFileReference', name='Application resources',
                                path=os.path.relpath(ROOT / 'apps' / args.app / 'share', output),
                                sourceTree='SOURCE_ROOT', lastKnownFileType='folder')
+    store_dir = ROOT / 'apps' / args.app / 'store'
+    storekit_path = os.path.relpath(store_dir / 'Groove.storekit', output)
+    storekit_ref = project.add('storekit-config', 'PBXFileReference', path=storekit_path,
+                              sourceTree='SOURCE_ROOT', lastKnownFileType='text')
+    store_bridge_ref = project.add('storekit-bridge', 'PBXFileReference',
+                                  path=os.path.relpath(store_dir / 'StoreKitBridge.swift', output),
+                                  sourceTree='SOURCE_ROOT', lastKnownFileType='sourcecode.swift')
     browse = [
         project.add('group/application', 'PBXGroup', name='Application',
-                    children=[source_refs[app_unit], form_ref, resource_ref, icon_ref], sourceTree='<group>'),
+                    children=[source_refs[app_unit], form_ref, resource_ref, icon_ref, storekit_ref], sourceTree='<group>'),
         project.add('group/engine', 'PBXGroup', name='Engine',
                     children=[ref for name, ref in source_refs.items() if name.endswith('.c') and name != app_unit],
                     sourceTree='<group>'),
         project.add('group/native', 'PBXGroup', name='Native Sources',
-                    children=[ref for name, ref in source_refs.items() if name.endswith('.m')], sourceTree='<group>'),
+                    children=[ref for name, ref in source_refs.items() if name.endswith('.m')] + [store_bridge_ref], sourceTree='<group>'),
     ]
     targets, products = [], []
     signing = signing_settings(args, bundle) if not args.unsigned else {'CODE_SIGN_STYLE': 'Automatic'}
@@ -181,9 +196,10 @@ def generate(args):
                 'com.apple.security.app-sandbox': True,
                 'com.apple.security.device.audio-input': True,
                 'com.apple.security.files.user-selected.read-write': True,
+                'com.apple.security.network.client': True,
             }).decode())
             frameworks = ('AppKit', 'Cocoa', 'OpenGL', 'IOSurface', 'Security', 'CoreFoundation', 'AudioToolbox', 'AVFoundation', 'CoreMedia', 'CoreVideo', 'UniformTypeIdentifiers')
-        for framework in frameworks:
+        for framework in (*frameworks, 'StoreKit'):
             settings['OTHER_LDFLAGS'] += ['-framework', framework]
         configs = project.configurations(name, settings, None if ipad else {
             'OTHER_CODE_SIGN_FLAGS': ['$(inherited)', '--timestamp'],
@@ -200,6 +216,7 @@ def generate(args):
                     CFBundleInfoDictionaryVersion='6.0', CFBundleShortVersionString='$(MARKETING_VERSION)',
                     CFBundleVersion='$(CURRENT_PROJECT_VERSION)', CFBundleDevelopmentRegion='en',
                     CFBundleLocalizations=languages,
+                    GrooveShareBaseURL='$(GROOVE_SHARE_BASE_URL)',
                     NSMicrophoneUsageDescription='Record your own sounds and vocals as samples in Groove songs.',
                     ITSAppUsesNonExemptEncryption=False)
         if ipad:
@@ -217,22 +234,25 @@ def generate(args):
                         LSApplicationCategoryType='public.app-category.music')
         write(bundle / 'Generated' / (platform + '-Info.plist'), plistlib.dumps(info).decode())
         target_sources = {filename: ref for filename, ref in source_refs.items()
-                          if not filename.endswith('.m') or filename in ('u_platform_' + platform + '.m', 'u_audio_input.m', 'u_media_export.m')}
+                          if not filename.startswith('u_platform_') or filename == 'u_platform_' + platform + '.m'}
         build_files = []
         for filename, ref in target_sources.items():
             fields = {'fileRef': ref}
             if filename == 'u_platform_ipad.m':
                 fields['settings'] = {'COMPILER_FLAGS': '-fobjc-arc'}
             build_files.append(project.add(name + '/' + filename, 'PBXBuildFile', **fields))
+        build_files.append(project.add(name + '/storekit-bridge', 'PBXBuildFile', fileRef=store_bridge_ref))
         forms = project.add(name + '/forms', 'PBXShellScriptBuildPhase', buildActionMask=2147483647,
             name='Prepare Orion sources and forms', shellPath='/bin/sh',
             shellScript='set -eu\n/usr/bin/python3 "$ORION_ROOT/tools/xcode/build.py" forms\n',
             inputPaths=['$(ORION_ROOT)/tools/xcode/build.py', '$(ORION_ROOT)/tools/xcode/common.py',
                         '$(ORION_ROOT)/tools/orionc.c', '$(ORION_ROOT)/apps/groove/groove.orion',
-                        '$(ORION_ROOT)/apps/groove/share/icon.png'],
+                        '$(ORION_ROOT)/apps/groove/share/icon.png', '$(ORION_ROOT)/tools/embed_text.py'] +
+                        ['$(ORION_ROOT)/' + sheet.relative_to(ROOT).as_posix() for sheet in theme_sheets(ROOT)],
             outputPaths=['$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h',
                          '$(DERIVED_FILE_DIR)/Assets.xcassets', '$(DERIVED_FILE_DIR)/liborion_freetype.a',
                          '$(DERIVED_FILE_DIR)/liborion_image_deps.a'] +
+                        ['$(DERIVED_FILE_DIR)/include/orion/themes/' + sheet.stem + '_css.h' for sheet in theme_sheets(ROOT)] +
                         ['$(DERIVED_FILE_DIR)/' + filename for filename in target_sources if filename in units],
             runOnlyForDeploymentPostprocessing=0,
             alwaysOutOfDate=1)
@@ -254,7 +274,7 @@ def generate(args):
         targets.append(target)
         scheme_path = bundle / 'xcshareddata/xcschemes' / (name + '.xcscheme')
         if not scheme_path.exists():
-            scheme(scheme_path, bundle.name, name, target)
+            scheme(scheme_path, bundle.name, name, target, storekit_path)
     products_group = project.add('group/products', 'PBXGroup', name='Products', children=products, sourceTree='<group>')
     main_group = project.add('group/main', 'PBXGroup', children=browse + [products_group], sourceTree='<group>')
     root = project.add('project', 'PBXProject', buildConfigurationList=root_configs, compatibilityVersion='Xcode 14.0',

@@ -84,6 +84,10 @@ function ledger.update(table, id, fields) end
 ---@return any
 function ledger.transaction(callback) end
 
+---Advance the inclusive accounting close date. Requires a writable script inside ledger.transaction; invalid dates and dates that do not advance the boundary are rejected. The caller must save the infobase after the transaction. There is no reopening API. This initial guard does not provide an immutable audit trail or prevent native code from mutating exposed record pointers.
+---@param date string Inclusive ISO date YYYY-MM-DD.
+function ledger.close_through(date) end
+
 ---Validate a catalog insert or patch without writing. Applies the same schema, value, reference and table restrictions as insert/update, and fills datasource defaults. Supplying id validates an update; omitting it validates an insert. Available in read-only runs.
 ---@param table string Writable catalog table.
 ---@param fields table Typed values excluding id.

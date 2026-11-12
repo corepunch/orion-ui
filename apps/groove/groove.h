@@ -15,6 +15,9 @@
 #include <orion/user/accel.h>
 #include <orion/user/rect.h>
 #include <orion/commctl/menubar.h>
+#ifndef GROOVE_APP_STORE
+#define GROOVE_APP_STORE 0
+#endif
 #include "build/generated/apps/groove/groove.h"
 
 #define SCREEN_W        1180
@@ -240,6 +243,7 @@ enum {
   grCardSetBlock,              // wparam = block id
   grCardSetState,              // wparam = ctrl_state_t
   grPreviewSetSong,            // lparam = path of a .groove file; NULL clears
+  grStoreChanged,              // refresh the price and ownership display
 };
 
 #define ID_PLAY      ID_TRANSPORT_PLAY
@@ -329,7 +333,8 @@ bool song_export_wav(const song_t *song, const char *path, ui_media_progress_fn 
 bool groove_encode_mp3(const char *wav, const char *path, ui_media_progress_fn progress, void *userdata);
 #endif
 void song_draw_overview(const song_t *song, irect16_t r);
-bool song_export_canvas(const song_t *song, int width, int height, ui_media_video_t *video);
+bool song_export_canvas(const song_t *song, int width, int height, const char *title, bool branding, ui_media_video_t *video);
 void app_export_media(window_t *owner, int kind);
+void app_share_song(window_t *owner);
 
 #endif

@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import sys
 
-from common import unity_sources, write
+from common import theme_sheets, unity_sources, write
 
 
 def run(*args):
@@ -41,6 +41,13 @@ def app_icon(root, output):
 def forms(root, output):
     for name, sources in unity_sources(root, 'groove').items():
         write(output / name, ''.join(f'#include "{p.relative_to(root).as_posix()}"\n' for p in sources))
+    embed = root / 'tools/embed_text.py'
+    for sheet in theme_sheets(root):
+        name = sheet.stem.replace('-', '_')
+        header = output / 'include/orion/themes' / (sheet.stem + '_css.h')
+        if not header.exists() or max(embed.stat().st_mtime, sheet.stat().st_mtime) > header.stat().st_mtime:
+            contents = subprocess.check_output([sys.executable, str(embed), str(sheet), f'k_{name}_css'], text=True)
+            write(header, contents)
     freetype = root / 'vendor/freetype'
     components = ('base/ftbase', 'base/ftinit', 'base/ftsystem', 'base/ftglyph', 'base/ftbitmap',
                   'base/ftdebug', 'base/ftmm', 'gzip/ftgzip', 'autofit/autofit', 'truetype/truetype',
@@ -133,6 +140,8 @@ def resources(root, output):
     if ipad:
         (bundle / 'bin').mkdir(exist_ok=True)
     else:
+        # The Mac App Store rejects quarantine attributes on bundled resources.
+        run('/usr/bin/xattr', '-dr', 'com.apple.quarantine', destination)
         link = bundle / 'Contents/share'
         if not link.is_symlink():
             link.symlink_to('Resources/share')

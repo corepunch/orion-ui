@@ -18,4 +18,8 @@
     </target>
     <target name="All apps" kind="build" run="make" />
     <target name="Tests" kind="test" run="make test" />
+    <target name="Business server checks" kind="test" run="make business-server-check" />
+    <target name="Business server" run="python3 tools/orion_server.py serve --state ${state}">
+        <param name="state" default="/tmp/orion-company-server" />
+    </target>
 </launch>

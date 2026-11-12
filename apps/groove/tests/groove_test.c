@@ -5,12 +5,39 @@
 #include "test_env.h"
 #include "apps/groove/groove.h"
 #include "apps/groove/sample_levels.h"
+#include "apps/groove/store/store.h"
 #include <orion/user/toolbar.h>
 #include <orion/kernel/audio_input.h>
 #include <unistd.h>
 #include <utime.h>
 
 static float peak_of(const float *p, int n) { float m = 0; for (int i = 0; i < n; i++) m = fmaxf(m, fabsf(p[i])); return m; }
+
+static void test_sample_packs(void) {
+  TEST("starter and owned sounds can be added; a pack does not unlock other packs");
+  int starter = 0, free_family[FAMILY_COUNT] = {0}, premium_family[FAMILY_COUNT] = {0};
+  for (int i = 0; i < blocks_builtin_count(); i++) {
+    const block_t *b = block_get(i);
+    groove_pack_t pack = groove_store_block_pack(i);
+    ASSERT_TRUE(groove_store_allows(i, 1u << GR_PACK_FULL));
+    if (pack == GR_PACK_FREE) {
+      starter++;
+      free_family[b->family]++;
+      ASSERT_TRUE(groove_store_allows(i, 0));
+      continue;
+    }
+    premium_family[b->family]++;
+    ASSERT(pack > GR_PACK_FULL && pack < GR_PACK_COUNT, "every premium sound belongs to a paid pack");
+    ASSERT_FALSE(groove_store_allows(i, 0));
+    for (int p = GR_PACK_DRUMS; p < GR_PACK_COUNT; p++)
+      ASSERT_EQUAL(groove_store_allows(i, 1u << p), p == pack);
+  }
+  ASSERT_EQUAL(starter, (blocks_builtin_count() * 3 + 5) / 10);
+  for (int f = FAMILY_LOOP; f < FAMILY_SAMPLES; f++)
+    ASSERT(free_family[f] && premium_family[f], "every instrument family has free and premium sounds");
+  ASSERT_TRUE(groove_store_allows(blocks_builtin_count(), 0)); // personal recordings
+  PASS();
+}
 
 // The mute/solo button with this id inside the track header column.
 static window_t *tracks_find(uint32_t id) {
@@ -54,6 +81,7 @@ static void test_eurodance_demos(void) {
       clip_t *a = &expected.clips[i];
       const block_t *b = block_get(a->block);
       ASSERT(b && b->audio.pcm && b->audio_bpm == 140, "all sources are ready at native tempo");
+      ASSERT_TRUE(groove_store_allows(a->block, 0));
       ASSERT(b->cat != CAT_HAT, "full loops have no extra hat-only layer");
       int mix_db = a->gain_db + b->audio.balance_db;
       if (b->cat == CAT_KEYS) ASSERT(mix_db <= -3 && mix_db >= -7, "piano retains its approved total arrangement level");
@@ -2009,6 +2037,7 @@ static void test_library_below_arrangement(void) {
 
 int main(void) {
   TEST_START("Groove");
+  test_sample_packs();
   test_library_below_arrangement();
   test_library_levels();
   test_blocks();

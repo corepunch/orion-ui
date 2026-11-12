@@ -5,6 +5,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def theme_sheets(root):
+    return sorted((root / 'orion/themes').glob('*.css'))
+
+
 def write(path, content):
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists() or path.read_text() != content:
@@ -29,6 +33,7 @@ def unity_sources(root, app):
         'u_' + app + '.c': sorted(app_sources) + [app_dir / 'main.c'],
         'u_audio_input.m': [root / 'orion/kernel/audio_input_apple.m'],
         'u_media_export.m': [root / 'orion/kernel/media_export_apple.m'],
+        'u_groove_share.m': [app_dir / 'share_song_apple.m'],
     }
     for platform, backend in (('macos', 'macos'), ('ipad', 'ios')):
         units['u_platform_' + platform + '.m'] = (sorted((root / 'platform' / backend).glob('*.m'))

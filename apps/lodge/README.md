@@ -21,9 +21,16 @@ build/bin/orion-run --app apps/lodge/share/application.orion --data /path/to/hot
 
 Without `--data`, Lodge uses `<settings>/lodge/hotel.xml`. New databases start
 empty. For a demo, copy `share/samples/demo.xml` to `hotel.xml` inside a new,
-separate data directory, then launch with `--data` pointing there. Add rooms and guests, select them in the reservation editor, choose
+separate data directory, then launch with `--data` pointing there. Open **Hotel
+setup** and choose Germany/EUR or Russia/RUB before recording reservations or
+payments. For an existing hotel this explicitly adopts the existing amounts as
+the selected currency without converting them; the choice cannot be changed.
+Back up and verify those amounts first. Add rooms and guests, select them in the reservation editor, choose
 dates and use **Use room rate**, then **Save reservation**. Select a reservation
-in the table and use **Edit selected** to change dates, room, extras or payments.
+in the table and use **Edit selected** to change dates, room or extras.
+Select a reservation and choose **Payment or refund** to record an amount.
+If saving fails, retry the same operation and amount in that window; close it
+to start a different request.
 **New reservation** discards editor inputs; saved reservations are retained.
 
 Room-night availability uses half-open dates: a departure on 31 October permits
@@ -31,13 +38,50 @@ the next arrival on 31 October. Non-cancelled reservations occupy their dates;
 capacity and overlapping bookings are checked before changes are written.
 A reservation goes from Reserved to Checked in to Checked out, or from Reserved
 to Cancelled. Check-out requires a zero balance; cancelled and checked-out
-reservations are read-only. Amounts use a single hotel currency with two decimal
-places. The nightly rate is copied into the booking, so editing a room's rate
-later would not change existing bookings.
+reservations cannot be edited, but payments and refunds can still be recorded.
+Use **Housekeeping** to mark rooms clean, dirty, or
+needing inspection. Check-in requires a clean room; check-out marks it dirty.
+New rooms and rooms migrated from older databases need inspection. Amounts use the
+configured EUR or RUB currency with two decimal places; amounts with fractional
+cents are rejected rather than silently rounded. Currency conversion is not
+provided. Country selection does not configure tax or make confirmations into
+statutory invoices. The nightly
+rate is copied into the booking, so editing a room's rate later would not
+change existing bookings.
+See [country readiness](../../docs/lodge/country-readiness.md) for the official
+sources and the remaining German and Russian tax-document work.
 
-The total is nights × nightly rate + extra charges; balance subtracts the
-cumulative paid amount. **Export confirmation** writes an escaped, printable
+**Group reservation** creates two room reservations together at the rooms'
+current base rates. If either room is unavailable or invalid, neither reservation
+is saved. The service API can create a group of up to 100 rooms. Group members
+are edited and paid individually; there is no group folio or group-wide change.
+
+**Close day** previews today's net recorded payments, outstanding balance and
+overdue arrivals or departures. Resolve the overdue stays before closing. After
+closing, reservation, nightly-price and payment changes are blocked until the
+next calendar day in the host process's time zone; housekeeping remains available. Close records are
+immutable and there is no reopening workflow. This is an operational snapshot,
+not a tax close or statutory report. Old payment events lack a reliable posting
+date and are excluded from daily payment totals; their opening balances remain
+included in reservation balances.
+
+The **Nightly prices** action lets staff override the copied base rate for an
+individual night, inspect the applied price, or restore the base rate. Rates
+are stored in minor units and changes are recorded in reservation history.
+A stay cannot be shortened past an override until that override is removed;
+closed reservations do not accept price changes. The total adds the price of
+each night and extra charges. New reservation changes produce a history snapshot and
+changes to paid produce signed minor-unit payment events. These records cannot
+be edited or deleted through the running application. An upgraded database
+records each existing paid amount as an imported opening balance, not as a
+reconstruction of historical payments. Balance subtracts the sum of payment
+events. The Lua `Hotel.payment(id, amount_minor, request_key)` operation saves
+one signed payment or refund and recognizes retries with the same key; key
+reuse for a different request is refused. Reception uses a distinct key for each
+payment window and keeps it for retries. **Export confirmation** writes an escaped, printable
 `confirmation.html` in the data directory (replacing the previous export).
+See the [database migration guide](../../docs/lodge/migration-v2.md) before
+opening an existing hotel database.
 Open it in a browser to print. It is a booking confirmation, not a tax invoice.
 Reservation actions save immediately; catalog edits save when closing a window. A save failure rolls the action back and stays visible;
 **Retry saving** retries any pending database save; closing is blocked if the final save fails.
@@ -54,9 +98,10 @@ Reservation actions save immediately; catalog edits save when closing a window. 
   [authoring and usage](../../docs/plugins.md).
 
 This first version provides a reservation list, rather than a timeline. It
-supports adding, editing and deleting rooms and guests through codeless forms. Housekeeping,
-category-level inventory, per-night rates, multi-room reservations, payment
-ledgers, taxes, online distribution, access control and concurrent reception
+supports adding, editing and deleting rooms and guests through codeless forms. Housekeeping
+tracks room readiness but does not assign staff or schedule work.
+Category-level inventory, group folios, tax rules,
+online distribution, access control and concurrent reception
 terminals are follow-up work. Use a single process per hotel XML file. The Lua
 plugins are portable; desktop builds use the repository's normal Linux, macOS
 and Windows targets. Lodge is not yet added to the iOS packaging allowlist.
@@ -72,3 +117,10 @@ build/bin/test_lodge_test
 Tests exercise the real datasource and Lua sandbox, rejection of overlapping
 and invalid bookings, adjacent stays, capacity, cancellation, settlement,
 closed reservations, XML save/reopen, and creation of the reception UI.
+
+## External developers
+
+See the [developer SDK](../../docs/developer-sdk.md) for application/plugin
+scaffolding, dependency checks and source packaging, and the
+[platform readiness plan](../../docs/business-platform-readiness.md) for
+production acceptance criteria shared by Ledger and Lodge.

@@ -192,6 +192,8 @@ typedef struct ctrl_binding_s {
 // Built-in DDX callbacks for common scalar/text fields.
 void ddx_push_int(window_t *dlg, const ctrl_binding_t *b, const void *state);
 void ddx_pull_int(window_t *dlg, const ctrl_binding_t *b, void *state);
+void ddx_push_int64(window_t *dlg, const ctrl_binding_t *b, const void *state);
+void ddx_pull_int64(window_t *dlg, const ctrl_binding_t *b, void *state);
 void ddx_push_float(window_t *dlg, const ctrl_binding_t *b, const void *state);
 void ddx_pull_float(window_t *dlg, const ctrl_binding_t *b, void *state);
 void ddx_push_u8(window_t *dlg, const ctrl_binding_t *b, const void *state);
@@ -547,6 +549,7 @@ struct window_s {
   irect16_t frame;
   struct window_placement_s *placement; // lazily allocated on maximize (≈ WINDOWPLACEMENT)
   uint32_t id;
+  uint64_t lifetime_serial; // unique within this process, never a control identifier
   uint64_t editor_id;    // optional design-time stable identity; 0 outside editors
   window_role_t role;
   // Runtime style/state flags share one 64-bit word; bits 32+ hold extended window styles.

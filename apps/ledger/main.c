@@ -7,6 +7,7 @@
 //   --data DIR      infobase directory (default: <settings>/ledger/CODE)
 //   --lang CODE     UI language (default: last selected, the configuration's,
 //                   then the system's)
+//   --restore-backup  explicitly restore infobase.xml.bak; requires --data
 
 #include "ledger.h"
 #include <orion/gem.h>
@@ -27,26 +28,31 @@ static bool find_share_dir(char *out, size_t sz) {
 }
 
 // A new infobase starts from the configuration's demo data, posted.
-static database_t *open_infobase(void) {
+static database_t *open_infobase(bool restore_backup) {
   char path[LEDGER_PATH_MAX * 2], demo[LEDGER_PATH_MAX * 2];
   snprintf(path, sizeof(path), "%s/infobase.xml", g_ledger->data_dir);
   bool fresh = !axPathExists(path);
   snprintf(demo, sizeof(demo), "%s/demo.xml", g_ledger->config_dir);
-  database_t *ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, fresh ? demo : path);
+  const db_schema_def_t *schema = &ledger_ib_schema;
+  database_t *ib = restore_backup ? db_schema_xml_open_backup("ib", "ledger_ib", schema, path) :
+                   fresh ? create_database_with_schema_readonly("ib", "ledger_ib", schema, demo) :
+                           create_database_with_schema("ib", "ledger_ib", schema, path);
   if (!ib) return NULL;
   register_database("ib", ib);
-  if (fresh) {
-    snprintf(ib->source_path, sizeof(ib->source_path), "%.*s", (int)sizeof(ib->source_path) - 1, path);
+  if (fresh && !restore_backup) {
+    if (!db_schema_xml_seed_to(ib, path)) { destroy_database(ib); return NULL; }
     if (!send_db_message(ib, dbFind, MAKEDWORD(TABLE_ORGANIZATIONS, 0), (void *)(intptr_t)1)) {
       db_organization_t org = { .id = 1 };
       snprintf(org.name, sizeof(org.name), "My Organization");
       send_db_message(ib, dbInsert, TABLE_ORGANIZATIONS, &org);
     }
-    if (!ledger_repost_all(ib, g_ledger->cfg)) { destroy_database(ib); return NULL; }
-    send_db_message(ib, dbSave, 0, NULL);
+    if (!ledger_repost_all(ib, g_ledger->cfg) || !send_db_message(ib, dbSave, 0, NULL)) {
+      database_discard_on_destroy(ib); destroy_database(ib); return NULL;
+    }
   } else {
+    bool migrated = ib->dirty;
     ledger_build_reports(ib, g_ledger->cfg);
-    ib->dirty = false;  // totals are derived; nothing new to save
+    ib->dirty = migrated;  // reports are derived; preserve a pending migration
   }
   return ib;
 }
@@ -74,16 +80,20 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   g_ledger->hinstance = hinstance;
 
   const char *data_dir = NULL, *language = NULL;
-  bool show_assistant = true, open_assistant = false;
+  bool show_assistant = true, open_assistant = false, restore_backup = false;
   size_t loaded = 0;
   if (!axSettingsLoad("ledger_configuration", g_ledger->configuration, sizeof(g_ledger->configuration) - 1, &loaded) || !loaded)
     snprintf(g_ledger->configuration, sizeof(g_ledger->configuration), "%s", LEDGER_DEFAULT_CONFIGURATION);
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "--assistant")) open_assistant = true;
+    else if (!strcmp(argv[i], "--restore-backup")) restore_backup = true;
     else if (!strcmp(argv[i], "--no-assistant")) show_assistant = false;
     else if (i + 1 < argc && !strcmp(argv[i], "--config")) snprintf(g_ledger->configuration, sizeof(g_ledger->configuration), "%s", argv[++i]);
     else if (i + 1 < argc && !strcmp(argv[i], "--data")) data_dir = argv[++i];
     else if (i + 1 < argc && !strcmp(argv[i], "--lang")) language = argv[++i];
+  }
+  if (restore_backup && !data_dir) {
+    fprintf(stderr, "[ledger] --restore-backup requires an explicit --data directory\n"); fflush(stderr); return false;
   }
 
   char share[LEDGER_PATH_MAX], path[LEDGER_PATH_MAX * 3];
@@ -106,7 +116,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   DB_CLASS(ledger_ib);
 
   snprintf(path, sizeof(path), "%s/configurations/index.xml", share);
-  g_ledger->catalog = create_database_with_schema("catalog", "db_schema_xml", &ledger_catalog_schema, path);
+  g_ledger->catalog = create_database_with_schema_readonly("catalog", "db_schema_xml", &ledger_catalog_schema, path);
   snprintf(path, sizeof(path), "%s/configuration.xml", g_ledger->config_dir);
   if (!axPathExists(path) && strcmp(g_ledger->configuration, LEDGER_DEFAULT_CONFIGURATION)) {
     // A remembered configuration that was removed or renamed: open the default one.
@@ -121,14 +131,14 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
     fprintf(stderr, "[ledger] configuration '%s' not found at %s\n", g_ledger->configuration, path);
     return false;
   }
-  g_ledger->cfg = create_database_with_schema("cfg", "db_schema_xml", &ledger_cfg_schema, path);
+  g_ledger->cfg = create_database_with_schema_readonly("cfg", "db_schema_xml", &ledger_cfg_schema, path);
   if (!g_ledger->catalog || !g_ledger->cfg) return false;
   register_database("catalog", g_ledger->catalog);
   register_database("cfg", g_ledger->cfg);
   ledger_script_open(g_ledger->config_dir, g_ledger->data_dir);  // rules.lua and plugins
   ledger_addons_init();
   choose_ui_language(language, share);
-  if (!(g_ledger->ib = open_infobase())) return false;
+  if (!(g_ledger->ib = open_infobase(restore_backup))) return false;
   if (!ledger_ui_open(share)) return false;
 
 #ifdef BUILD_AS_GEM
@@ -147,6 +157,7 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   window_t *win = create_window_from_form(&ledger_main_window_form, 16, MENUBAR_HEIGHT + 16,
                                           NULL, ledger_main_proc, hinstance, NULL);
   if (!win) return false;
+  if (g_ledger->ib->dirty && !send_db_message(g_ledger->ib, dbSave, 0, NULL)) return false;
   show_window(win, true);
   if (show_assistant || open_assistant) ledger_show_assistant();
   if (open_assistant) ledger_open_assistant();

@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <ctype.h>
 
 #include "user.h"
 #include "i18n.h"
@@ -394,4 +397,42 @@ const char *ui_format_number(double value, int decimals, char *buf, size_t buf_s
   if (point) n += (size_t)snprintf(buf + n, n < buf_sz ? buf_sz - n : 0, "%s%s", g_locale.decimal, point + 1);
   buf[n < buf_sz ? n : buf_sz - 1] = '\0';
   return buf;
+}
+
+const char *ui_format_int64(int64_t value, char *buf, size_t buf_sz) {
+  if (!buf || !buf_sz) return buf;
+  char raw[32]; snprintf(raw, sizeof(raw), "%" PRId64, value);
+  const char *digits = raw + (raw[0] == '-');
+  size_t length = strlen(digits), n = 0, group = strlen(g_locale.group);
+  if (raw[0] == '-' && n + 1 < buf_sz) buf[n++] = '-';
+  for (size_t i = 0; i < length; i++) {
+    if (i && group && (length - i) % 3 == 0) {
+      for (size_t j = 0; j < group && n + 1 < buf_sz; j++) buf[n++] = g_locale.group[j];
+    }
+    if (n + 1 < buf_sz) buf[n++] = digits[i];
+  }
+  buf[n] = '\0'; return buf;
+}
+
+bool ui_parse_int64(const char *text, int64_t *out) {
+  if (!text || !out) return false;
+  while (isspace((unsigned char)*text)) text++;
+  const char *end_text = text + strlen(text);
+  while (end_text > text && isspace((unsigned char)end_text[-1])) end_text--;
+  char clean[64]; size_t n = 0, group = strlen(g_locale.group), digits = 0;
+  bool grouped = false;
+  if (text < end_text && (*text == '-' || *text == '+')) clean[n++] = *text++;
+  for (const char *p = text; p < end_text;) {
+    if (group && (size_t)(end_text - p) >= group && !strncmp(p, g_locale.group, group)) {
+      if ((!grouped && (digits < 1 || digits > 3)) || (grouped && digits != 3)) return false;
+      grouped = true; digits = 0; p += group; continue;
+    }
+    if (*p < '0' || *p > '9' || n + 1 >= sizeof(clean)) return false;
+    clean[n++] = *p++; digits++;
+  }
+  clean[n] = '\0';
+  if (!digits || (grouped && digits != 3)) return false;
+  char *end = NULL; errno = 0; intmax_t value = strtoimax(clean, &end, 10);
+  if (errno || end == clean || *end || value < INT64_MIN || value > INT64_MAX) return false;
+  *out = (int64_t)value; return true;
 }

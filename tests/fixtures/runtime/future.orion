@@ -1,0 +1,3 @@
+<orion><application name="future_app" form="main" runtime-api="999"/>
+<databases><database name="future_app" class="db_schema_xml" source="future.xml"><table name="items"><field name="id" type="integer" key="YES"/></table></database></databases>
+<forms><form name="main" title="Future" width="300" height="200"/></forms></orion>

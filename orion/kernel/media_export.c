@@ -108,4 +108,5 @@ bool ui_media_encode(const char *wav, const char *output, ui_media_format_t form
 }
 
 bool ui_media_share(const char *path) { (void)path; return false; }
+bool ui_media_share_url(const char *url) { (void)url; return false; }
 #endif

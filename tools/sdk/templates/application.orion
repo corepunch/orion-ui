@@ -1,0 +1,27 @@
+<orion>
+  <application name="starter" form="records" runtime-api="1"/>
+  <databases><database name="starter" class="db_schema_xml" source="records.xml">
+    <table name="records"><field name="id" type="integer" key="YES"/>
+      <field name="name" type="string" length="100"/>
+    </table>
+  </database></databases>
+  <forms>
+    <form name="records" title="Records" width="600" height="400" padding="10" spacing="6">
+      <TableView name="records" source="starter.records" form="record" flags="flexspace,vscroll">
+        <Column field="name" title="Name" width="0"/>
+      </TableView>
+      <StackView orientation="horizontal" spacing="6">
+        <Button text="Add" target="records" action="insert" flags="BUTTON_DEFAULT"/>
+        <Button text="Edit" target="records" action="edit"/>
+        <Button text="Delete" target="records" action="delete"/>
+      </StackView>
+    </form>
+    <form name="record" title="Record" width="420" height="160" padding="10" spacing="6">
+      <GridView spacing="6"><Column width="auto"><Label text="Name:"/></Column>
+        <Column><TextBox name="name" field="starter.records.name"/></Column></GridView>
+      <StackView orientation="horizontal" spacing="6">
+        <Button text="Save" action="db.update" flags="BUTTON_DEFAULT"/><Button text="Cancel"/>
+      </StackView>
+    </form>
+  </forms>
+</orion>

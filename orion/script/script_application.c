@@ -106,7 +106,7 @@ static int application_api_open(lua_State *L, const char *form) {
 }
 #include "build/generated/orion/script/application_lua.h"
 
-script_application_t *script_application_open(const char *manifest, const char *data_directory, char *error, size_t size) {
+static script_application_t *app_open(const char *manifest, const char *data_directory, bool recovery, bool headless, char *error, size_t size) {
   char fallback[1024];
   if (!error || !size) { error = fallback; size = sizeof(fallback); }
   error[0] = 0;
@@ -127,6 +127,15 @@ script_application_t *script_application_open(const char *manifest, const char *
   snprintf(app->directory, sizeof(app->directory), "%.*s", slash ? (int)(slash - manifest) : 1, slash ? manifest : ".");
   app->library = form_library_load(manifest);
   if (!app->library) { snprintf(error, size, "cannot load application manifest"); goto failed; }
+  if (!script_runtime_check_api(form_library_application_attr(app->library, "runtime-api"), error, size)) goto failed;
+  if (recovery) {
+    int persistent = 0;
+    for (int i = 0; i < form_library_schema_count(app->library); i++) {
+      const db_schema_def_t *schema = form_library_schema_at(app->library, i);
+      if (schema->source_path && *schema->source_path && (!schema->class_name || strcmp(schema->class_name, "db_display_group"))) persistent++;
+    }
+    if (!data_directory || persistent != 1) { snprintf(error, size, "recovery requires an explicit data directory and exactly one persistent database"); goto failed; }
+  }
   const char *name = form_library_application_attr(app->library, "name");
   const char *form = form_library_application_attr(app->library, "form");
   if (!name || !*name || strpbrk(name, "/\\.") || !form) { snprintf(error, size, "application requires name and form"); goto failed; }
@@ -149,7 +158,10 @@ script_application_t *script_application_open(const char *manifest, const char *
       if (strpbrk(schema->source_path, "/\\:") || strstr(schema->source_path, "..")) { snprintf(error, size, "invalid datasource filename"); goto failed; }
       snprintf(path, sizeof(path), "%s/%s", app->data, schema->source_path);
     }
-    database_t *database = create_database_with_schema(schema->name, schema->class_name ? schema->class_name : "db_schema_xml", schema, path);
+    const char *class_name = schema->class_name ? schema->class_name : "db_schema_xml";
+    database_t *database = recovery && !display_group && *path ?
+      db_schema_xml_open_backup(schema->name, class_name, schema, path) :
+      create_database_with_schema(schema->name, class_name, schema, path);
     if (!database || !register_database(schema->name, database)) { if (database) destroy_database(database); snprintf(error, size, "cannot create application datasource"); goto failed; }
     app->databases[app->database_count++] = database;
   }
@@ -168,12 +180,27 @@ script_application_t *script_application_open(const char *manifest, const char *
     for (int i = 0; i < app->database_count; i++)
       if (!app_is_display_group(app->databases[i]) && !script_model_attach(app->databases[i], app->runtime, app->model)) goto failed;
   }
+  for (int i = 0; i < app->database_count; i++) {
+    if (!app_is_display_group(app->databases[i]) && !script_model_initialize(app->databases[i])) {
+      snprintf(error, size, "%s", app->databases[i]->error); goto failed;
+    }
+  }
   for (int i = 0; i < app->database_count; i++) app->observers[i] = db_observe(app->databases[i], app_data_changed, app);
-  if (!app_open_form(app, form, error, size)) goto failed;
+  if (!headless && !app_open_form(app, form, error, size)) goto failed;
   return app;
 failed:
   fprintf(stderr, "[application] %s: %s\n", manifest ? manifest : "?", error); fflush(stderr);
+  for (int i = 0; i < app->database_count; i++) database_discard_on_destroy(app->databases[i]);
   script_application_close(app); return NULL;
+}
+script_application_t *script_application_open(const char *manifest, const char *data_directory, char *error, size_t size) {
+  return app_open(manifest, data_directory, false, false, error, size);
+}
+script_application_t *script_application_open_headless(const char *manifest, const char *data_directory, char *error, size_t size) {
+  return app_open(manifest, data_directory, false, true, error, size);
+}
+script_application_t *script_application_open_recovery(const char *manifest, const char *data_directory, char *error, size_t size) {
+  return app_open(manifest, data_directory, true, false, error, size);
 }
 void script_application_close(script_application_t *app) {
   if (!app) return;

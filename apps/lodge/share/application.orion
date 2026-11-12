@@ -1,13 +1,18 @@
 <orion>
   <include file="schema.orion" />
-  <application name="lodge" form="reception" model="model" />
-  <display-groups><DisplayGroup name="bookings" source="lodge.reservations" /></display-groups>
+  <application runtime-api="1" name="lodge" form="reception" model="model" />
+  <display-groups><DisplayGroup name="bookings" source="lodge.reservations" /><DisplayGroup name="housekeeping_rooms" source="lodge.rooms" /></display-groups>
   <forms>
     <form name="reception" controller="reception" title="Orion Lodge" width="1160" height="790" spacing="8" padding="12">
       <Label name="heading" text="Reception" font="title" />
       <Label name="context" text="Rooms, guests and reservations · Amounts in your hotel's currency" />
+      <Label name="currency" />
       <StackView name="catalogs" orientation="horizontal" spacing="6">
         <Button name="rooms" text="Rooms" target="orion.application" action="open" argument="rooms" />
+        <Button name="housekeeping" text="Housekeeping" target="orion.application" action="open" argument="housekeeping" />
+        <Button name="group_reservation" text="Group reservation" target="orion.application" action="open" argument="group_reservation" />
+        <Button name="day_close" text="Close day" target="orion.application" action="open" argument="day_close" />
+        <Button name="hotel_setup" text="Hotel setup" target="orion.application" action="open" argument="hotel_setup" />
         <Button name="guests" text="Guests" target="orion.application" action="open" argument="guests" />
       </StackView>
       <Separator />
@@ -29,7 +34,7 @@
         </Column>
         <Column>
           <TextBox name="rate" type="number" decimals="2" /><TextBox name="extras" type="number" decimals="2" />
-          <TextBox name="paid" type="number" decimals="2" /><TextBox name="notes" />
+          <Label name="paid" /><TextBox name="notes" />
           <Button name="room_rate" text="Use room rate" action="room_rate" />
         </Column>
         </GridView>
@@ -48,13 +53,68 @@
       <StackView name="selection_actions" orientation="horizontal" spacing="6">
         <Button name="edit" text="Edit selected" action="edit" /><Button name="check_in" text="Check in" action="check_in" />
         <Button name="check_out" text="Check out" action="check_out" /><Button name="cancel_booking" text="Cancel reservation" action="cancel_booking" />
+        <Button name="payment" text="Payment or refund" action="payment" />
         <Button name="confirmation" text="Export confirmation" action="confirmation" /><Button name="save_data" text="Retry saving" action="save_data" />
       </StackView>
+      <StackView name="pricing_actions" orientation="horizontal" spacing="6"><Button name="night_prices" text="Nightly prices" action="night_prices" /></StackView>
       <Label name="summary" /><Label name="notice" /><Label name="error" />
+    </form>
+    <form name="hotel_setup" controller="hotel_setup" title="Hotel setup" width="640" height="260" padding="12" spacing="8">
+      <Label name="current" font="title" />
+      <Label text="Existing amounts will be interpreted in the selected currency without conversion." />
+      <Label text="This choice cannot be changed after it is saved." />
+      <StackView orientation="horizontal" spacing="6">
+        <Button name="germany" text="Set Germany and EUR" action="germany" />
+        <Button name="russia" text="Set Russia and RUB" action="russia" />
+      </StackView>
+      <Label name="notice" /><Label name="error" />
+    </form>
+    <form name="day_close" controller="day_close" title="Close day" width="600" height="300" padding="12" spacing="8">
+      <Label name="day" font="title" /><Label name="payments" /><Label name="outstanding" /><Label name="pending" />
+      <Label text="Closing prevents reservation and payment changes until tomorrow." />
+      <Button name="close_day" text="Close today" action="close_day" flags="BUTTON_DEFAULT" />
+      <Label name="notice" /><Label name="error" />
+    </form>
+    <form name="group_reservation" controller="group_reservation" title="Group reservation" width="560" height="420" padding="12" spacing="8">
+      <Label text="Create reservations for two rooms under one group." />
+      <GridView spacing="4"><Column width="auto">
+        <Label text="Group name:" /><Label text="Guest:" /><Label text="Arrival:" /><Label text="Departure:" />
+        <Label text="First room:" /><Label text="Guests in first room:" /><Label text="Second room:" /><Label text="Guests in second room:" />
+      </Column><Column>
+        <TextBox name="name" /><ComboBox name="guest" source="lodge.guests" display="name" value="id" />
+        <TextBox name="arrival" type="date" /><TextBox name="departure" type="date" />
+        <ComboBox name="room1" source="lodge.rooms" display="name" value="id" /><TextBox name="persons1" type="integer" />
+        <ComboBox name="room2" source="lodge.rooms" display="name" value="id" /><TextBox name="persons2" type="integer" />
+      </Column></GridView>
+      <Button name="create_group" text="Create group reservations" action="create_group" flags="BUTTON_DEFAULT" />
+      <Label name="notice" /><Label name="error" />
+    </form>
+    <form name="payment" controller="payment" title="Payment or refund" width="500" height="260" padding="12" spacing="8">
+      <Label name="reservation" font="title" />
+      <Label name="balance" />
+      <GridView spacing="4"><Column width="auto"><Label text="Amount:" /></Column><Column>
+        <TextBox name="amount" type="number" decimals="2" />
+      </Column></GridView>
+      <StackView orientation="horizontal" spacing="6">
+        <Button name="pay" text="Record payment" action="pay" flags="BUTTON_DEFAULT" />
+        <Button name="refund" text="Record refund" action="refund" />
+      </StackView>
+      <Label name="notice" /><Label name="error" />
+    </form>
+    <form name="night_prices" controller="night_prices" title="Nightly prices" width="540" height="300" padding="12" spacing="8">
+      <Label name="reservation" font="title" /><Label name="total" />
+      <GridView spacing="4"><Column width="auto"><Label text="Night:" /><Label text="Nightly price:" /></Column><Column>
+        <TextBox name="night" type="date" /><TextBox name="amount" type="number" decimals="2" />
+      </Column></GridView>
+      <StackView orientation="horizontal" spacing="6">
+        <Button text="Show price" action="show_price" /><Button text="Set price" action="set_price" flags="BUTTON_DEFAULT" />
+        <Button text="Use base rate" action="reset_price" />
+      </StackView>
+      <Label name="notice" /><Label name="error" />
     </form>
     <form name="rooms" title="Rooms" width="600" height="400" padding="10" spacing="6">
       <TableView name="records" source="lodge.rooms" form="room" flags="flexspace,vscroll">
-        <Column field="name" title="Name" width="0" />
+        <Column field="name" title="Name" width="0" /><Column field="cleaning_label" title="Cleaning status" width="160" />
       </TableView>
       <StackView orientation="horizontal" spacing="6">
         <Button text="Add" target="records" action="insert" />
@@ -63,19 +123,32 @@
         <Button text="Fetch" target="records" action="fetch" />
       </StackView>
     </form>
-    <form name="room" title="Room" width="430" height="230" padding="10" spacing="6">
+    <form name="room" title="Room" width="430" height="260" padding="10" spacing="6">
       <GridView spacing="4"><Column width="auto">
         <Label text="Room name:" />
         <Label text="Category:" />
         <Label text="Capacity:" />
         <Label text="Nightly rate:" />
+        <Label text="Cleaning status:" />
       </Column><Column>
         <TextBox name="name" field="lodge.rooms.name" />
         <TextBox name="category" field="lodge.rooms.category" />
         <TextBox name="capacity" field="lodge.rooms.capacity" />
         <TextBox name="rate" field="lodge.rooms.rate" />
+        <Label name="cleaning_status" field="lodge.rooms.cleaning_label" />
       </Column></GridView>
       <StackView orientation="horizontal" spacing="6"><Button text="Save" action="db.update" flags="BUTTON_DEFAULT" /><Button text="Cancel" /></StackView>
+    </form>
+    <form name="housekeeping" controller="housekeeping" title="Housekeeping" width="600" height="400" padding="10" spacing="6">
+      <Label text="Select a room to update its cleaning status." />
+      <TableView name="rooms" source="housekeeping_rooms.objects" flags="flexspace,vscroll" frame="true">
+        <Column field="name" title="Room" width="0" /><Column field="cleaning_label" title="Cleaning status" width="180" />
+      </TableView>
+      <StackView orientation="horizontal" spacing="6">
+        <Button text="Mark clean" action="mark_clean" /><Button text="Mark dirty" action="mark_dirty" />
+        <Button text="Needs inspection" action="mark_inspection" />
+      </StackView>
+      <Label name="error" />
     </form>
     <form name="guests" title="Guests" width="600" height="400" padding="10" spacing="6">
       <TableView name="records" source="lodge.guests" form="guest" flags="flexspace,vscroll">

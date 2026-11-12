@@ -60,10 +60,12 @@ class FileReferenceTests(unittest.TestCase):
                 files = [objects[objects[uid]['fileRef']]['path'] for uid in phase['files']]
                 self.assertIn('u_audio_input.m', files)
                 self.assertIn('u_media_export.m', files)
+                self.assertIn('u_groove_share.m', files)
                 config = objects[objects[target['buildConfigurationList']]['buildConfigurations'][0]]['buildSettings']
                 self.assertIn('AVFoundation', config['OTHER_LDFLAGS'])
                 info = config['INFOPLIST_FILE'].replace('$(PROJECT_FILE_PATH)', str(bundle))
                 self.assertTrue(plistlib.loads(Path(info).read_bytes())['NSMicrophoneUsageDescription'])
+                self.assertEqual(plistlib.loads(Path(info).read_bytes())['GrooveShareBaseURL'], '$(GROOVE_SHARE_BASE_URL)')
                 if target['name'] == 'groove-ipad':
                     self.assertTrue(plistlib.loads(Path(info).read_bytes())['NSPhotoLibraryAddUsageDescription'])
                     self.assertIn('PhotosUI', config['OTHER_LDFLAGS'])
@@ -72,6 +74,7 @@ class FileReferenceTests(unittest.TestCase):
                     self.assertIn('UniformTypeIdentifiers', config['OTHER_LDFLAGS'])
             permissions = plistlib.loads((bundle / 'Generated/macos.entitlements').read_bytes())
             self.assertIs(permissions['com.apple.security.device.audio-input'], True)
+            self.assertIs(permissions['com.apple.security.network.client'], True)
 
     def test_macos_sandbox_entitlements_are_wired_to_both_configurations(self):
         with tempfile.TemporaryDirectory(prefix='orion xcode ') as directory:
@@ -97,7 +100,7 @@ class FileReferenceTests(unittest.TestCase):
                         self.assertIs(entitlements['com.apple.security.app-sandbox'], True)
                         self.assertIs(entitlements['com.apple.security.files.user-selected.read-write'], True)
 
-    def test_navigator_and_build_phases_use_only_unity_sources(self):
+    def test_navigator_and_build_phases_use_expected_sources(self):
         with tempfile.TemporaryDirectory(prefix='orion xcode ') as directory:
             output = Path(directory) / 'nested' / 'project'
             subprocess.run(['python3', str(Path(generate.__file__)), 'groove', '--unsigned',
@@ -126,6 +129,7 @@ class FileReferenceTests(unittest.TestCase):
             visit(objects[data['rootObject']]['mainGroup'], output)
             self.assertIn((generate.ROOT / 'apps/groove/groove.orion').resolve(), seen)
             self.assertIn((generate.ROOT / 'apps/groove/share').resolve(), seen)
+            self.assertIn(generate.ROOT / 'apps/groove/store/Groove.storekit', seen)
             self.assertFalse(any(path.suffix in ('.c', '.h', '.m') for path in seen))
             self.assertEqual(generated, {uid for uid, obj in objects.items() if obj.get('sourceTree') == 'DERIVED_FILE_DIR'})
             main = objects[objects[data['rootObject']]['mainGroup']]
@@ -136,10 +140,12 @@ class FileReferenceTests(unittest.TestCase):
                 phase = next(objects[uid] for uid in target['buildPhases'] if objects[uid]['isa'] == 'PBXSourcesBuildPhase')
                 refs = [objects[objects[uid]['fileRef']] for uid in phase['files']]
                 platform = target['name'].removeprefix('groove-')
-                self.assertEqual({ref['path'] for ref in refs},
+                self.assertEqual({ref['path'] for ref in refs if ref['sourceTree'] == 'DERIVED_FILE_DIR'},
                                  {'u_user.c', 'u_kernel.c', 'u_commctl.c', 'u_commdlg.c', 'u_groove.c',
-                                  'u_audio_input.m', 'u_media_export.m', 'u_platform_' + platform + '.m'})
-                self.assertTrue(all(ref['sourceTree'] == 'DERIVED_FILE_DIR' for ref in refs))
+                                  'u_audio_input.m', 'u_media_export.m', 'u_groove_share.m', 'u_platform_' + platform + '.m'})
+                native = [output / ref['path'] for ref in refs if ref['sourceTree'] == 'SOURCE_ROOT']
+                self.assertEqual([path.resolve() for path in native],
+                                 [generate.ROOT / 'apps/groove/store/StoreKitBridge.swift'])
                 for uid in phase['files']:
                     build_file = objects[uid]
                     ref = objects[build_file['fileRef']]

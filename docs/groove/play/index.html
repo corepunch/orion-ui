@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>if (location.pathname.startsWith("/s/")) document.write('<base href="/">');</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Groove</title>
 <meta name="description" content="Listen to a song made with Groove, then make your own.">
@@ -77,6 +78,14 @@ header .tag { color: var(--muted); font-size: 14px; }
 .btn.secondary { background: transparent; color: var(--text); border-color: var(--panel-edge); }
 .btn.secondary:hover { border-color: var(--muted); }
 .btn svg { width: 20px; height: 20px; }
+.upload { margin-top: 28px; padding: 20px; background: var(--panel); border: 1px solid var(--panel-edge); border-radius: var(--radius); }
+.upload h2 { margin: 0 0 6px; }
+.upload p { color: var(--muted); margin: 0 0 16px; }
+.upload form { display: grid; gap: 14px; }
+.upload label { display: grid; gap: 6px; font-weight: 600; }
+.upload input { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--panel-edge); border-radius: 8px; padding: 10px; }
+.upload .btn { justify-self: start; }
+.upload .hint { font-size: 14px; font-weight: 400; color: var(--muted); }
 .note { color: var(--muted); font-size: 14px; margin: 4px 0 0; min-height: 1.4em; }
 
 .downloads { margin-top: 28px; padding: 18px 20px; background: var(--panel); border: 1px solid var(--panel-edge);
@@ -151,9 +160,23 @@ footer a { color: var(--muted); }
         <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z"/></svg>
         Open in Groove
       </a>
+      <a class="btn secondary" id="download-project" hidden download>Download project</a>
+      <button class="btn secondary" id="share" type="button" hidden>Share link</button>
+      <button class="btn secondary" id="remove" type="button" hidden>Remove song</button>
       <a class="btn secondary" href="#downloads" id="get-app">Download Groove</a>
     </div>
     <p class="note" id="note" role="status"></p>
+
+    <section class="upload" id="upload" hidden aria-labelledby="upload-title">
+      <h2 id="upload-title">Share a song</h2>
+      <p>Anyone with the link can listen. Upload an MP3 up to 12 MiB. You can also attach an editable project up to 20 MiB.</p>
+      <form id="upload-form">
+        <label>Song title <input name="title" maxlength="120" required autocomplete="off"></label>
+        <label>MP3 file <input name="audio" type="file" accept="audio/mpeg,.mp3" required></label>
+        <label>Groove project <span class="hint">Optional. Listeners can download it, including embedded recordings.</span><input name="project" type="file" accept=".groove"></label>
+        <button class="btn primary" type="submit">Create link</button>
+      </form>
+    </section>
 
     <section class="downloads" id="downloads" aria-labelledby="downloads-title">
       <h2 id="downloads-title">Get Groove</h2>
@@ -164,8 +187,8 @@ footer a { color: var(--muted); }
 
   <footer>
     <span id="disclaimer" hidden>This song was shared by a Groove user.
-      <a id="report" href="#">Report this song</a> ·</span>
-    <a href="../privacy/">Privacy</a> · <a href="../support/">Support</a>
+      <button id="report" type="button" style="font: inherit; color: inherit; background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer">Report this song</button> ·</span>
+    <a href="https://corepunch.github.io/orion-ui/groove/privacy/">Privacy</a> · <a href="https://corepunch.github.io/orion-ui/groove/support/">Support</a>
   </footer>
 </div>
 
@@ -173,11 +196,10 @@ footer a { color: var(--muted); }
 (() => {
   'use strict';
 
-  // Upload storage. Committed songs live at SONG_BASE/<id>/. Set this when the
-  // share service is deployed; until then only the fixtures below play.
-  const SONG_BASE = null;
-  const FIXTURES = { 'neon-skyline': 'fixtures/neon-skyline/' };
-  const ID_PATTERN = /^[A-Za-z0-9]{10}$/;
+  const SERVICE = location.hostname !== "corepunch.github.io";
+  let uploadsAvailable = false;
+  const FIXTURE_ID = 'neon-skyline';
+  const ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
   const APP_STORE = 'https://apps.apple.com/app/id6821380428';
   const RELEASES = 'https://github.com/corepunch/orion-ui/releases/latest/download/';
   const REPORT_EMAIL = 'igor.chernakov@gmail.com';
@@ -185,7 +207,10 @@ footer a { color: var(--muted); }
 
   const $ = id => document.getElementById(id);
   const audio = $('audio'), cover = $('cover'), seek = $('seek');
-  let meta = null, base = '', dragging = false;
+  let meta = null, base = '', dragging = false, currentSong = '', isFixture = false;
+  const tokenKey = id => 'groove-delete-' + id;
+  const getToken = id => { try { return localStorage.getItem(tokenKey(id)); } catch (_) { return null; } };
+  const setToken = (id, token) => { try { localStorage.setItem(tokenKey(id), token); return true; } catch (_) { return false; } };
 
   const platform = (() => {
     const ua = navigator.userAgent, touch = navigator.maxTouchPoints > 1;
@@ -224,7 +249,7 @@ footer a { color: var(--muted); }
     return m + ':' + String(s).padStart(2, '0');
   }
 
-  function duration() { return isFinite(audio.duration) && audio.duration > 0 ? audio.duration : meta.duration; }
+  function duration() { return isFinite(audio.duration) && audio.duration > 0 ? audio.duration : (meta && meta.duration || 0); }
 
   function layoutOverlay() {
     const t = meta.cover.timeline, W = meta.cover.width, H = meta.cover.height;
@@ -238,10 +263,10 @@ footer a { color: var(--muted); }
   function updatePosition() {
     if (!meta) return;
     const d = duration(), t = Math.min(audio.currentTime, d), f = d ? t / d : 0;
-    $('playhead').style.left = (overlay.left + f * overlay.width) + '%';
-    $('played').style.width = (f * overlay.width) + '%';
+    if (overlay) { $('playhead').style.left = (overlay.left + f * overlay.width) + '%'; $('played').style.width = (f * overlay.width) + '%'; }
     $('time').textContent = clock(t);
     if (!dragging) seek.value = t;
+    if (!isFixture) { $('facts').textContent = clock(d); return; }
     const bar = Math.min(meta.bars, Math.floor(t * meta.bpm / 60 / BEATS_PER_BAR) + 1);
     cover.setAttribute('aria-valuenow', Math.round(t));
     cover.setAttribute('aria-valuetext', `${clock(t)}, bar ${bar} of ${meta.bars}`);
@@ -263,7 +288,8 @@ footer a { color: var(--muted); }
 
   function seekTo(seconds) {
     const d = duration();
-    audio.currentTime = Math.max(0, Math.min(d - 0.05, seconds));
+    if (!d) return;
+    audio.currentTime = Math.max(0, Math.min(d, seconds));
     updatePosition();
   }
 
@@ -289,49 +315,103 @@ footer a { color: var(--muted); }
   }
 
   async function load(id) {
-    audio.pause(); audio.removeAttribute('src'); meta = null; showNote('');
+    audio.pause(); audio.removeAttribute('src'); meta = null; overlay = null; currentSong = id; showNote('');
+    $('upload').hidden = true; $('share').hidden = true; $('remove').hidden = true;
+    $('download-project').hidden = true; $('open-app').hidden = true;
     if (!id) {
-      showEmpty('Songs made with Groove play here',
-        'When someone shares a song from Groove, its link opens this page. Get Groove below to make your own.');
+      showEmpty('Songs made with Groove play here', 'Share a song or get Groove below to make your own.');
+      $('upload').hidden = !uploadsAvailable;
       return;
     }
-    if (FIXTURES[id]) base = FIXTURES[id];
-    else if (SONG_BASE && ID_PATTERN.test(id)) base = `${SONG_BASE}/${id}/`;
-    else { showEmpty('This link doesn’t point to a song', 'Check that you copied the whole link.'); return; }
-
+    isFixture = id === FIXTURE_ID;
+    if (!isFixture && (!SERVICE || !ID_PATTERN.test(id))) {
+      showEmpty('This link doesn’t point to a song', 'Check that you copied the whole link.'); return;
+    }
     let m;
     try {
-      const response = await fetch(base + 'meta.json', { cache: 'no-cache', referrerPolicy: 'no-referrer' });
+      base = isFixture ? 'fixtures/neon-skyline/' : '';
+      const response = await fetch(isFixture ? base + 'meta.json' : '/api/songs/' + encodeURIComponent(id),
+        { cache: 'no-cache', referrerPolicy: 'no-referrer' });
       if (!response.ok) throw new Error(response.status);
       m = await response.json();
-    } catch (e) {
-      showEmpty('This song is no longer available', 'It may have been deleted by the person who shared it.');
-      return;
+      if (isFixture ? !validMeta(m) : (!m || typeof m.title !== 'string' || typeof m.audioUrl !== 'string' ||
+          !m.audioUrl.startsWith('/') || m.audioUrl.startsWith('//') ||
+          (m.projectUrl != null && (typeof m.projectUrl !== 'string' || !m.projectUrl.startsWith('/') || m.projectUrl.startsWith('//'))))) throw new Error('Invalid metadata');
+    } catch (_) {
+      showEmpty('This song is no longer available', 'It may have been removed or the link may be incomplete.'); return;
     }
-    if (!validMeta(m)) { showEmpty('This song can’t be played', 'Its files are damaged or from a newer version of Groove.'); return; }
-
     meta = m;
     const files = Object.assign({ song: 'song.groove', audio: 'audio.m4a', cover: 'cover.png' }, m.files);
     const title = m.title.trim() || 'Untitled song';
     $('empty').hidden = true; $('song').hidden = false; $('actions').hidden = false; $('disclaimer').hidden = false;
-    $('song-title').textContent = title;
-    document.title = `${title} · Groove`;
-    $('cover-img').src = base + files.cover;
-    $('cover-img').alt = `Arrangement of ${title}: clips on eight tracks over ${m.bars} bars`;
-    overlay = layoutOverlay();
-    seek.max = m.duration; cover.setAttribute('aria-valuemax', Math.round(m.duration));
-    $('duration').textContent = clock(m.duration);
-    audio.src = base + files.audio;
-    $('play').disabled = false;
-    $('open-app').href = 'groove://open?id=' + encodeURIComponent(id);
-    $('report').href = `mailto:${REPORT_EMAIL}?subject=` + encodeURIComponent(`Report shared Groove song ${id}`) +
-      '&body=' + encodeURIComponent(`Song: ${location.href}\nReason: `);
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({ title, artist: 'Made with Groove',
-        artwork: [{ src: new URL(base + files.cover, location.href).href, sizes: '1200x630', type: 'image/png' }] });
+    $('song-title').textContent = title; document.title = `${title} · Groove`;
+    cover.hidden = !isFixture;
+    if (isFixture) {
+      $('cover-img').src = base + files.cover;
+      $('cover-img').alt = `Arrangement of ${title}: clips on eight tracks over ${m.bars} bars`;
+      overlay = layoutOverlay(); seek.max = m.duration; cover.setAttribute('aria-valuemax', Math.round(m.duration));
+      audio.src = base + files.audio;
+      $('open-app').hidden = false; $('open-app').href = 'groove://open?id=' + encodeURIComponent(id);
+      $('download-project').href = base + files.song; $('download-project').hidden = false;
+    } else {
+      seek.max = 0; audio.src = m.audioUrl;
+      if (m.projectUrl) { $('download-project').href = m.projectUrl; $('download-project').hidden = false; }
+      $('share').hidden = false; $('remove').hidden = !getToken(id);
     }
+    $('duration').textContent = clock(duration()); $('play').disabled = false;
+    if ('mediaSession' in navigator && 'MediaMetadata' in window) navigator.mediaSession.metadata = new MediaMetadata({ title, artist: 'Made with Groove' });
     setPlaying(false); updatePosition();
   }
+
+  $('upload-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.currentTarget, button = form.querySelector('button'), data = new FormData(form);
+    const audioFile = data.get('audio'), project = data.get('project');
+    if (!audioFile || !/\.mp3$/i.test(audioFile.name)) { showNote('Choose an MP3 file.'); return; }
+    if (audioFile.size > 12 * 1024 * 1024 || (project && project.size > 20 * 1024 * 1024)) { showNote('The MP3 must be at most 12 MiB and the project at most 20 MiB.'); return; }
+    if (project && project.name && !/\.groove$/i.test(project.name)) { showNote('Choose a .groove project file.'); return; }
+    if (!project || !project.name) data.delete('project');
+    button.disabled = true; showNote('Uploading your song…');
+    try {
+      const response = await fetch('/api/songs', { method: 'POST', body: data });
+      if (!response.ok) throw new Error(response.status === 413 ? 'The files are too large to upload.' : 'Upload failed. Please try again.');
+      const result = await response.json();
+      if (!ID_PATTERN.test(result.id || '') || typeof result.url !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(result.deleteToken || '')) throw new Error('The server returned an invalid response.');
+      const url = new URL(result.url, location.href);
+      if (url.origin !== location.origin || url.pathname !== '/s/' + result.id) throw new Error('The server returned an invalid link.');
+      const saved = setToken(result.id, result.deleteToken);
+      history.pushState(null, '', url.pathname); await load(result.id);
+      showNote(saved ? 'Your song is ready to share.' : 'Your song is ready. This browser could not save the removal key.');
+    } catch (err) { showNote(err.message || 'Upload failed. Please try again.'); }
+    finally { button.disabled = false; }
+  });
+
+  $('share').addEventListener('click', async () => {
+    try {
+      if (navigator.share) await navigator.share({ title: document.title, url: location.href });
+      else if (navigator.clipboard) { await navigator.clipboard.writeText(location.href); showNote('Link copied.'); }
+      else showNote('Copy the link from your browser’s address bar.');
+    } catch (err) { if (err.name !== 'AbortError') showNote('Copy the link from your browser’s address bar.'); }
+  });
+  $('remove').addEventListener('click', async () => {
+    if (!confirm('Remove this song? Its link will stop working.')) return;
+    try {
+      const response = await fetch('/api/songs/' + encodeURIComponent(currentSong), { method: 'DELETE', headers: { Authorization: 'Bearer ' + getToken(currentSong) } });
+      if (!response.ok) throw new Error();
+      try { localStorage.removeItem(tokenKey(currentSong)); } catch (_) {}
+      history.replaceState(null, '', '/'); load(''); showNote('Song removed.');
+    } catch (_) { showNote('Could not remove this song. Please try again.'); }
+  });
+  $('report').addEventListener('click', async () => {
+    if (isFixture) { location.href = `mailto:${REPORT_EMAIL}?subject=` + encodeURIComponent(`Report shared Groove song ${currentSong}`); return; }
+    const reason = prompt('Why are you reporting this song?');
+    if (!reason || !reason.trim()) return;
+    try {
+      const response = await fetch('/api/songs/' + encodeURIComponent(currentSong) + '/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: reason.trim() }) });
+      if (!response.ok) throw new Error();
+      showNote('Report sent. Thank you.');
+    } catch (_) { showNote('Could not send the report. Please try again.'); }
+  });
 
   $('play').addEventListener('click', toggle);
   audio.addEventListener('play', () => { setPlaying(true); requestAnimationFrame(tick); });
@@ -371,17 +451,22 @@ footer a { color: var(--muted); }
     }, 1500);
   });
 
-  $('home').addEventListener('click', e => { e.preventDefault(); history.pushState(null, '', location.pathname); load(''); });
+  $('home').addEventListener('click', e => { e.preventDefault(); history.pushState(null, '', SERVICE ? '/' : location.pathname); load(''); });
   if ('mediaSession' in navigator) {
     navigator.mediaSession.setActionHandler('play', () => audio.play());
     navigator.mediaSession.setActionHandler('pause', () => audio.pause());
     navigator.mediaSession.setActionHandler('seekto', d => seekTo(d.seekTime));
   }
 
-  const currentId = () => decodeURIComponent(location.hash.slice(1));
+  const currentId = () => { const match = location.pathname.match(/^\/s\/([A-Za-z0-9_-]+)\/?$/); return match ? match[1] : location.hash.slice(1); };
   window.addEventListener('hashchange', () => load(currentId()));
+  window.addEventListener('popstate', () => load(currentId()));
   renderDownloads();
   load(currentId());
+  if (SERVICE) fetch('/api/health', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(data => {
+    uploadsAvailable = !!(data && data.uploads === true);
+    if (!currentId()) $('upload').hidden = !uploadsAvailable;
+  }).catch(() => {});
 })();
 </script>
 </body>

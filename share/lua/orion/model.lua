@@ -154,6 +154,10 @@ local function check(model, fields)
 end
 
 -- create(fields) -> row, or nil and a message
+function Model:defaults()
+	return db.defaults(self.database, self.table)
+end
+
 function Model:create(fields)
 	local ok, message = check(self, fields)
 	if not ok then return nil, message end

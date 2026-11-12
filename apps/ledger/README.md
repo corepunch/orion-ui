@@ -38,6 +38,29 @@ purchases, paid sales, and draft orders. The target prints the data directory,
 which remains available after closing Ledger so you can reopen your edits with
 `--data`.
 
+## Infobase migration and recovery
+
+The native Ledger application writes infobase schema version 3. It upgrades a
+version 1 or 2 infobase when opening it, adding period-lock and posting-history
+tables and integer trade amounts while keeping the prior file as
+`infobase.xml.bak`. Existing records remain marked legacy and are not silently
+converted. A version-aware older reader rejects version 3; older builds that predate version checks must not be used to
+open the upgraded data. Back up the whole data directory before an upgrade.
+
+When a primary already exists, a successful save retains its previous committed
+file as `infobase.xml.bak`.
+To explicitly replace a damaged primary with that backup, first preserve both
+files elsewhere, close all Ledger processes, then run:
+
+```sh
+build/bin/ledger --config de-2026 --data /path/to/books --restore-backup
+```
+
+The option requires an explicit `--data` directory and replaces its primary
+with the backup, so changes since that backup are lost. Recovery does not run
+automatically. A restored version 1 backup is migrated on opening. This is a
+single previous copy, not a substitute for independent backups.
+
 ## Features
 
 | Area | What Ledger does |
@@ -57,8 +80,25 @@ which remains available after closing Ledger so you can reopen your edits with
 | Storage | One XML infobase per configuration, saved on `File > Save` or on exit |
 | Import from 1C | Catalogs and opening balances from a 1C:Enterprise 8 exchange file (EnterpriseData), see below |
 
-`Reports > Recalculate` (F5) reposts every document in date order and rebuilds
-the reports; `Reports > Print Report Forms` writes the cash book.
+`Reports > Recalculate` (F5) reposts documents outside the closed period in date
+order and rebuilds the reports; `Reports > Print Report Forms` writes the cash
+book. A trusted writable Lua script can advance the close boundary with
+`ledger.transaction(function() ledger.close_through("2026-12-31") end)`;
+save the infobase afterward. There is no reopening command. Posts and unposts
+append snapshots of the posting and entries, but these are not a complete audit
+trail. The boundary and history limitations are described in the
+[readiness audit](docs/compliance-readiness.md).
+
+The headless `ledger-run --request` service accepts data-only JSON requests for
+the `ru-2026` and `de-2026` configurations. It supports catalog listing and
+counterparty/item setup; draft goods receipt and sale creation, date and party
+edits, posting, and linked accounting reversal; document and journal listing;
+and advancing the close date. Catalog and document writes require an accountant
+or admin role, and closing requires admin. The host must authenticate the actor
+and supply the role; a request file alone is not authentication. Local and
+service-created domestic trade documents store checked minor-unit amounts and
+thousandth-unit quantities; foreign-currency trade, historical stock and
+reports have the limits described in the readiness audit.
 
 ## Look and feel
 
@@ -640,3 +680,10 @@ Trusted assistant windows use the same application runtime with package-local
 module scopes and independent controllers. Arbitrary external add-ons and the
 accounting configuration evaluator retain separate trust-domain VMs.
 See [the application architecture](../../docs/declarative-applications.md).
+
+## External developers
+
+See the [developer SDK](../../docs/developer-sdk.md) for application/plugin
+scaffolding, dependency checks and source packaging, and the
+[platform readiness plan](../../docs/business-platform-readiness.md) for
+production acceptance criteria shared by Ledger and Lodge.

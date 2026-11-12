@@ -8,8 +8,10 @@ available in the same dialog. Files made for sharing remain in
 On iPad, Save File saves in Documents, accessible in Files.
 
 File > Export Timeline Video (Ctrl+Shift+E) makes MP4 with H.264 video and
-AAC audio at 30 fps: 16:9 = 1280×720, 21:9 = 1680×720. Both are exact
-ratios with square pixels. The image comes from the actual arrangement:
+AAC audio at 30 fps in 16:9 (1280×720), 21:9 (1680×720), or 9:16
+(1080×1920). The 9:16 format has an editable cover title and optional
+Groove branding, enabled by default. Use **Share…** to open the system
+share sheet with the finished MP4. The image comes from the actual arrangement:
 eight tracks, bar ruler, original block names and sample waveforms, with
 a playhead driven by audio sample time. It is a complete-song overview,
 independent of the visible viewport, screen size and live transport.

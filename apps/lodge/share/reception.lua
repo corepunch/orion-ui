@@ -16,7 +16,7 @@ function Reception:new_booking()
 end
 function Reception:save_data() orion.assert(application.save("lodge")) end
 function Reception:remember(v)
-  for _, key in ipairs({"room", "guest", "arrival", "departure", "persons", "rate", "extras", "paid", "notes"}) do self.fields[key] = v[key] end
+  for _, key in ipairs({"room", "guest", "arrival", "departure", "persons", "rate", "extras", "notes"}) do self.fields[key] = v[key] end
 end
 function Reception:write(model, action)
   return model:transaction(function()
@@ -40,7 +40,7 @@ end
 function Reception:reserve(v)
   local row = self:write(Hotel.reservations.model, function() return Hotel.save(self.editing, {room_id = v.room or 0, guest_id = v.guest or 0,
     arrival = v.arrival or "", departure = v.departure or "", persons = v.persons or 0, rate = v.rate or 0,
-    extras = v.extras or 0, paid = v.paid or 0, notes = v.notes or ""}) end)
+    extras = v.extras or 0, notes = v.notes or ""}) end)
   self.editing = row.id
   self.fields = {room = row.room_id, guest = row.guest_id, arrival = row.arrival, departure = row.departure,
     persons = row.persons, rate = row.rate, extras = row.extras, paid = row.paid, notes = row.notes}
@@ -53,6 +53,18 @@ end
 function Reception:check_in(v) self:transition(v, "checked_in") end
 function Reception:check_out(v) self:transition(v, "checked_out") end
 function Reception:cancel_booking(v) self:transition(v, "cancelled") end
+function Reception:payment(v)
+  local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
+  self:remember(v)
+  Hotel.pending_payment_id = selected.id
+  orion.assert(application.open("payment"))
+end
+function Reception:night_prices(v)
+  local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
+  self:remember(v)
+  Hotel.pending_night_id = selected.id
+  orion.assert(application.open("night_prices"))
+end
 function Reception:confirmation(v)
   self:remember(v)
   local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
@@ -66,7 +78,7 @@ function Reception:confirmation(v)
     room_label = orion.tr("Room:"), room = row.room.name, arrival_label = orion.tr("Arrival:"), arrival = orion.formatDate(row.arrival),
     departure_label = orion.tr("Departure:"), departure = orion.formatDate(row.departure),
     total_label = orion.tr("Total:"), total = orion.formatNumber(Hotel.total(row), 2),
-    paid_label = orion.tr("Paid:"), paid = orion.formatNumber(row.paid, 2), balance_label = orion.tr("Balance:"), balance = orion.formatNumber(Hotel.balance(row), 2),
+    paid_label = orion.tr("Paid:"), paid = orion.formatNumber(Hotel.paid(row), 2), balance_label = orion.tr("Balance:"), balance = orion.formatNumber(Hotel.balance(row), 2),
   })
   self.notice = string.format(orion.tr("Confirmation saved: %s"), orion.assert(application.write("confirmation.html", html)))
 end
@@ -79,7 +91,11 @@ function Reception:data()
   end
   local values = {editor = self.editing and string.format(orion.tr("Edit reservation %d"), self.editing) or orion.tr("New reservation"),
     summary = string.format(orion.tr("%d reservations · Outstanding: %s"), count, orion.formatNumber(outstanding / 100, 2)), notice = self.notice}
+  local settings = Hotel.hotel_settings.model:all()[1]
+  values.currency = settings and string.format(orion.tr("Country: %s · Currency: %s"), settings.country, settings.currency) or orion.tr("Hotel country and currency are not configured.")
   for k, v in pairs(self.fields) do values[k] = v end
+  local edited = self.editing and Hotel.reservations.model:find(self.editing)
+  values.paid = orion.formatNumber(edited and Hotel.paid(edited) or 0, 2)
   return {values = values}
 end
 return Reception

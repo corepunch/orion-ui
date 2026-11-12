@@ -2,7 +2,8 @@
 local ui = require("ledger.ui")
 local orion = require("orion")
 local Model = require("orion.model")
-local calendar = require("orion.plugins").use("calendar", 1)
+local plugins = require("orion.plugins").load({calendar = 1, money = 1, template = 1})
+local calendar = plugins.calendar
 local documents, types, entries = Model:extend("ib.documents"), Model:extend("cfg.doc_types"), Model:extend("ib.entries")
 local organizations, configurations, report_settings = Model:extend("ib.organizations"), Model:extend("cfg.settings"), Model:extend("ib.report_settings")
 local Controller = {}

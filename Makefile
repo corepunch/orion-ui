@@ -333,6 +333,10 @@ lua-check:
 tools: $(TOOLS_BINS)
 	@echo "All tools built"
 
+.PHONY: business-server-check
+business-server-check: share $(BIN_DIR)/orion-service$(EXE_EXT) $(BIN_DIR)/ledger-run$(EXE_EXT)
+	PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools/server -p 'test_*.py' -v
+
 $(BIN_DIR)/%$(EXE_EXT): tools/%.c $(CORE_LIBS) | $(BIN_DIR)
 	@echo "TOOL    $@"
 	@$(CC) $(TOOLS_CFLAGS) -I. -Itools -o $@ $< \

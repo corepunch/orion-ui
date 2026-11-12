@@ -89,6 +89,7 @@ static void format_value(const script_page_t *page, uint32_t id, lua_State *L, i
   const char *type = control_attr(page, id, "type"), *decimals = control_attr(page, id, "decimals");
   if (lua_isnil(L, idx)) { buf[0] = 0; return; }
   if (lua_type(L, idx) == LUA_TNUMBER) {
+    if (type && !strcmp(type, "integer") && lua_isinteger(L, idx)) { ui_format_int64((int64_t)lua_tointeger(L, idx), buf, sz); return; }
     if (type && !strcmp(type, "integer")) { snprintf(buf, sz, "%lld", (long long)llround(lua_tonumber(L, idx))); return; }
     if (lua_isinteger(L, idx) && !decimals && !(type && !strcmp(type, "number"))) { snprintf(buf, sz, "%lld", (long long)lua_tointeger(L, idx)); return; }
     ui_format_number(lua_tonumber(L, idx), decimals ? atoi(decimals) : 2, buf, sz);
@@ -419,8 +420,11 @@ static void push_input(script_page_t *page, const form_ctrl_def_t *d, window_t *
   while (isspace((unsigned char)*s)) s++;
   if (type && (!strcmp(type, "integer") || !strcmp(type, "number"))) {
     if (!*s) { lua_pushnil(L); return; }
-    double v = ui_parse_number(s);
-    if (!strcmp(type, "integer")) lua_pushinteger(L, (lua_Integer)llround(v)); else lua_pushnumber(L, v);
+    if (!strcmp(type, "integer")) {
+      int64_t value;
+      if (!ui_parse_int64(s, &value) || value < (int64_t)LUA_MININTEGER || value > (int64_t)LUA_MAXINTEGER) { lua_pushnil(L); return; }
+      lua_pushinteger(L, (lua_Integer)value);
+    } else lua_pushnumber(L, ui_parse_number(s));
     return;
   }
   if (type && !strcmp(type, "date")) {

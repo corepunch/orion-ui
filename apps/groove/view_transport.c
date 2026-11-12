@@ -44,6 +44,10 @@ result_t win_transport(window_t *win, uint32_t msg, uint32_t wparam, void *lpara
       }
       window_t *families = get_window_item(win, ID_LIBRARY_WINDOW_FAMILIES);
       if (families) families_mark_colors(families);
+#if GROOVE_APP_STORE
+      window_t *store_row = get_window_item(win, ID_LIBRARY_WINDOW_STORE_ROW);
+      if (store_row) window_set_state(store_row, WINDOW_STATE_VISIBLE, true);
+#endif
       if (g_app->bin) send_message(g_app->bin, binPopulate, 0, NULL);
       transport_refresh();
       return true;

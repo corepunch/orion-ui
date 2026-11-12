@@ -1,6 +1,8 @@
 #ifndef __UI_I18N_H__
 #define __UI_I18N_H__
 
+#include <stdint.h>
+
 // i18n — localization: string catalogs in the spirit of Win32 MUI and Qt .ts files.
 //
 // Source text in .orion files and code is the neutral (English) language and
@@ -71,6 +73,8 @@ const char *ui_get_string_context(void);
 // Formats a number with the catalog's decimal and grouping separators
 // ("16 656,00" in Russian; "16656.00" without a catalog).
 const char *ui_format_number(double value, int decimals, char *buf, size_t buf_sz);
+const char *ui_format_int64(int64_t value, char *buf, size_t buf_sz);
+bool ui_parse_int64(const char *text, int64_t *out);
 // Formats an ISO date ("2003-03-10") with the catalog's date pattern, e.g.
 // date="dd.MM.yyyy" -> "10.03.2003". Without a pattern the ISO text is kept.
 const char *ui_format_date(const char *iso, char *buf, size_t buf_sz);

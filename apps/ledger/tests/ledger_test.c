@@ -4,6 +4,7 @@
 
 #include "test_framework.h"
 #include "apps/ledger/ledger.h"
+#include "apps/ledger/tests/test_databases.h"
 #include <math.h>
 #include <orion/user/file.h>
 
@@ -20,7 +21,7 @@ static void report_through(const char *date) {
 }
 
 static database_t *open_db(const char *name, const db_schema_def_t *schema, const char *path) {
-  database_t *db = create_database_with_schema(name, strcmp(name, "ib") ? "db_schema_xml" : "ledger_ib", schema, path);
+  database_t *db = ledger_test_writable_seed(name, strcmp(name, "ib") ? "db_schema_xml" : "ledger_ib", schema, path);
   if (db) register_database(name, db);
   return db;
 }
@@ -36,7 +37,6 @@ static void setup(void) {
   axMkDir(TMP_DIR);
   g_ledger->cfg = open_db("cfg", &ledger_cfg_schema, SHARE "/ru-2003/configuration.xml");
   g_ledger->ib = open_db("ib", &ledger_ib_schema, SHARE "/ru-2003/demo.xml");
-  snprintf(g_ledger->ib->source_path, sizeof(g_ledger->ib->source_path), TMP_DIR "/infobase.xml");
   ledger_script_open(g_ledger->config_dir, TMP_DIR);
   ledger_repost_all(g_ledger->ib, g_ledger->cfg);
   report_through("2003-03-31");
@@ -343,7 +343,7 @@ static void test_transient_tables(void) {
   send_db_message(g_ledger->ib, dbSave, 0, NULL);
   ledger_build_reports(g_ledger->ib, g_ledger->cfg);
   ASSERT_FALSE(send_db_message(g_ledger->ib, dbGetDirty, 0, NULL));
-  FILE *f = fopen(TMP_DIR "/infobase.xml", "rb");
+  FILE *f = fopen(g_ledger->ib->source_path, "rb");
   ASSERT_NOT_NULL(f);
   static char xml[1 << 18];
   size_t n = fread(xml, 1, sizeof(xml) - 1, f);
@@ -459,8 +459,8 @@ static void test_turnover_filters(void) {
 
 static void test_vat_half_cent(void) {
   TEST("VAT: a half cent rounds up from integer net cents");
-  database_t *cfg = create_database_with_schema("vat_cfg", "db_schema_xml", &ledger_cfg_schema, SHARE "/ru-2003/configuration.xml");
-  database_t *ib = create_database_with_schema("vat_ib", "db_schema_xml", &ledger_ib_schema, SHARE "/ru-2003/demo.xml");
+  database_t *cfg = ledger_test_writable_seed("vat_cfg", "db_schema_xml", &ledger_cfg_schema, SHARE "/ru-2003/configuration.xml");
+  database_t *ib = ledger_test_writable_seed("vat_ib", "db_schema_xml", &ledger_ib_schema, SHARE "/ru-2003/demo.xml");
   ASSERT(cfg && ib, "isolated databases load");
   db_vat_rate_t rate = { .id = 9999, .rate = 7 };
   ASSERT_NOT_NULL(send_db_message(cfg, dbInsert, TABLE_VAT_RATES, &rate));
@@ -479,7 +479,7 @@ static void test_vat_half_cent(void) {
 static void test_save_and_reload(void) {
   TEST("db_schema_xml: save and reload keep records, doubles and ids");
   ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
-  database_t *copy = create_database_with_schema("ib_copy", "db_schema_xml", &ledger_ib_schema, TMP_DIR "/infobase.xml");
+  database_t *copy = ledger_test_writable_seed("ib_copy", "db_schema_xml", &ledger_ib_schema, g_ledger->ib->source_path);
   ASSERT_NOT_NULL(copy);
   db_document_t *doc = (db_document_t *)send_db_message(copy, dbFind,
     MAKEDWORD(TABLE_DOCUMENTS, ledger_field(copy, TABLE_DOCUMENTS, "number")), (void *)"ПТ-0001");
@@ -580,7 +580,6 @@ static void test_german_configuration(void) {
   database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
   g_ledger->cfg = open_db("cfg", &ledger_cfg_schema, SHARE "/de-2003/configuration.xml");
   g_ledger->ib = open_db("ib", &ledger_ib_schema, SHARE "/de-2003/demo.xml");
-  snprintf(g_ledger->ib->source_path, sizeof(g_ledger->ib->source_path), TMP_DIR "/infobase-de.xml");
   ledger_repost_all(g_ledger->ib, g_ledger->cfg);
   report_through("2003-03-31");
   const db_balance_t *bank = balance("1200"), *ust = balance("1775"), *receivables = balance("1400");
@@ -608,14 +607,13 @@ static void test_german_configuration(void) {
 
 // Opens another configuration and its demo infobase in place of the test's.
 static void switch_configuration(const char *code, const char *tmp_ib) {
+  (void)tmp_ib;
   snprintf(g_ledger->config_dir, sizeof(g_ledger->config_dir), SHARE "/%s", code);
   char path[512];
   snprintf(path, sizeof(path), SHARE "/%s/configuration.xml", code);
   g_ledger->cfg = open_db("cfg", &ledger_cfg_schema, path);
-  snprintf(g_ledger->cfg->source_path, sizeof(g_ledger->cfg->source_path), TMP_DIR "/cfg-%s.xml", code);
   snprintf(path, sizeof(path), SHARE "/%s/demo.xml", code);
   g_ledger->ib = open_db("ib", &ledger_ib_schema, path);
-  snprintf(g_ledger->ib->source_path, sizeof(g_ledger->ib->source_path), TMP_DIR "/%s", tmp_ib);
   ledger_script_open(g_ledger->config_dir, TMP_DIR);
   ledger_repost_all(g_ledger->ib, g_ledger->cfg);
 }
@@ -949,6 +947,13 @@ static void test_posting_rollback(void) {
   ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, doc->id));
   ASSERT(doc->posted && approx(doc->total, total), "failed repost preserves the previous posted document");
   ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", doc->id), count);
+  const char *invalid_entries[] = { "invalid_entry_nan", "invalid_entry_infinite" };
+  for (int i = 0; i < 2; i++) {
+    snprintf(type->script, sizeof(type->script), "%s", invalid_entries[i]);
+    ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, doc->id));
+    ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", doc->id), count);
+    ASSERT(approx(entry_sum("51", "62.01"), settlements), "invalid entry restores previous postings");
+  }
   ASSERT(approx(entry_sum("51", "62.01"), settlements), "failed hook leaves no injected entry");
   ASSERT_FALSE(ledger_preview_entries(g_ledger->ib, g_ledger->cfg, doc->id));
   ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", doc->id), count);
@@ -982,6 +987,222 @@ static void test_posting_rollback(void) {
   ASSERT_FALSE(ledger_repost_all(g_ledger->ib, g_ledger->cfg));
   ASSERT(approx(entry_sum("51", "62.01"), settlements), "whole-ledger recalculation rolls back on error");
   ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", doc->id), count);
+  restore_configuration(cfg, ib);
+  PASS();
+}
+
+static void test_closed_period(void) {
+  TEST("closed period persists and rejects posting, document and line mutations");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  switch_configuration("ru-2026", "closed-period.xml");
+  db_document_t *doc = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "РТ-0001");
+  ASSERT_NOT_NULL(doc);
+  int id = doc->id;
+  char date[sizeof(doc->date)]; snprintf(date, sizeof(date), "%s", doc->date);
+  int revisions = ledger_count_references(g_ledger->ib, TABLE_POSTING_REVISIONS, "document_id", id);
+  ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_POSTING_REVISIONS, "document_id", id), revisions + 1);
+  result_node_t *history = (void *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_POSTING_REVISIONS, ledger_field(g_ledger->ib, TABLE_POSTING_REVISIONS, "document_id")), (void *)(intptr_t)id);
+  db_posting_revision_t *revision = history ? *(db_posting_revision_t **)history->data : NULL;
+  ASSERT(revision && revision->recorded_utc[0], "revision records UTC time");
+  int revision_id = revision->id;
+  ASSERT(ledger_count_references(g_ledger->ib, TABLE_REVISION_ENTRIES, "revision_id", revision_id) > 0, "revision retains entry values");
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbDelete, TABLE_POSTING_REVISIONS, (void *)(intptr_t)revision_id));
+  free_result_list(history);
+  ASSERT_FALSE(ledger_close_through(g_ledger->ib, "2026-02-30"));
+  char error[512];
+  ASSERT_FALSE(ledger_script_run("apps/ledger/tests/fixtures/close-period.lua", false, error, sizeof(error)));
+  ASSERT_TRUE(ledger_script_run("apps/ledger/tests/fixtures/close-period.lua", true, error, sizeof(error)));
+  ASSERT_FALSE(ledger_close_through(g_ledger->ib, date));
+  ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
+  db_document_t changed = *doc;
+  snprintf(changed.comment, sizeof(changed.comment), "changed");
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbUpdate, TABLE_DOCUMENTS, &changed));
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id));
+  db_doc_line_t line = { .document_id = id, .quantity = 1, .price = 10 };
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
+  snprintf(changed.date, sizeof(changed.date), "2026-03-11");
+  changed.id = 0;
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &changed));
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
+  char saved_path[sizeof(g_ledger->ib->source_path)];
+  snprintf(saved_path, sizeof(saved_path), "%s", g_ledger->ib->source_path);
+  destroy_database(g_ledger->ib);
+  g_ledger->ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, saved_path);
+  ASSERT_NOT_NULL(g_ledger->ib);
+  register_database("ib", g_ledger->ib);
+  ASSERT_TRUE(ledger_period_closed(g_ledger->ib, date));
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_POSTING_REVISIONS, "document_id", id), revisions + 1);
+  ASSERT(ledger_count_references(g_ledger->ib, TABLE_REVISION_ENTRIES, "revision_id", revision_id) > 0, "revision entries persist");
+  ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
+  restore_configuration(cfg, ib);
+  PASS();
+}
+
+static void test_infobase_migration(void) {
+  TEST("infobase v1 migrates to v2 with backup and explicit recovery");
+  char dir[128], path[160], backup[168];
+  ASSERT_TRUE(ledger_test_directory(dir, sizeof(dir)));
+  snprintf(path, sizeof(path), "%s/migration.xml", dir);
+  snprintf(backup, sizeof(backup), "%s.bak", path);
+  FILE *f = fopen(path, "wb");
+  ASSERT_NOT_NULL(f);
+  fputs("<ib><documents><document id=\"17\" number=\"MIG-17\" date=\"2026-03-10\"/></documents></ib>", f);
+  ASSERT_EQUAL(fclose(f), 0);
+  database_t *db = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path);
+  ASSERT_NOT_NULL(db);
+  const db_document_t *doc = (const db_document_t *)send_db_message(db, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)17);
+  ASSERT(doc && !strcmp(doc->number, "MIG-17"), "migration preserves documents");
+  ASSERT_FALSE(ledger_period_closed(db, "2026-03-10"));
+  ASSERT_TRUE(send_db_message(db, dbSave, 0, NULL));
+  destroy_database(db);
+  f = fopen(backup, "rb"); ASSERT_NOT_NULL(f); fclose(f);
+  db_schema_def_t old_schema = ledger_ib_schema;
+  old_schema.version = 1; old_schema.migrate_xml = NULL;
+  db = create_database_with_schema_readonly("ib", "ledger_ib", &old_schema, path);
+  ASSERT(db == NULL, "version-aware v1 schema rejects v2");
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f); fputs("<broken", f); fclose(f);
+  db = db_schema_xml_open_backup("ib", "ledger_ib", &ledger_ib_schema, path);
+  ASSERT_NOT_NULL(db);
+  doc = (const db_document_t *)send_db_message(db, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)17);
+  ASSERT(doc && !strcmp(doc->number, "MIG-17"), "recovery restores and migrates v1 backup");
+  destroy_database(db);
+  PASS();
+}
+
+static void test_reversal(void) {
+  TEST("accounting reversal uses preserved postings once and permits a later open period");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  switch_configuration("ru-2026", "reversal.xml");
+  const db_document_t *doc = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "РТ-0001");
+  ASSERT_NOT_NULL(doc); int id = doc->id;
+  ASSERT_TRUE(ledger_close_through(g_ledger->ib, "2026-03-31"));
+  ASSERT_EQUAL(ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, id, "2026-03-31", "Correction"), 0);
+  int reversal = ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, id, "2026-04-01", "Correction");
+  ASSERT(reversal > 0, "reversal posted in open period");
+  const db_document_t *created = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)reversal);
+  ASSERT(created && created->posted && created->correction_of == id, "reversal refers to source");
+  result_node_t *original = (void *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)id);
+  result_node_t *reversed = (void *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)reversal);
+  ASSERT_EQUAL(count_result_list(original), count_result_list(reversed));
+  for (result_node_t *a = original, *b = reversed; a && b; a = a->next, b = b->next) {
+    const db_entry_t *x = *(db_entry_t **)a->data, *y = *(db_entry_t **)b->data;
+    ASSERT(x->debit_id == y->credit_id && x->credit_id == y->debit_id && x->amount == y->amount &&
+           x->quantity == y->quantity && x->currency_amount == y->currency_amount, "amounts and sides reverse exactly");
+  }
+  free_result_list(original); free_result_list(reversed);
+  ASSERT_EQUAL(ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, id, "2026-04-02", "Again"), 0);
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
+  char path[sizeof(g_ledger->ib->source_path)]; snprintf(path, sizeof(path), "%s", g_ledger->ib->source_path);
+  destroy_database(g_ledger->ib);
+  g_ledger->ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path);
+  ASSERT_NOT_NULL(g_ledger->ib); register_database("ib", g_ledger->ib);
+  ASSERT_EQUAL(ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, id, "2026-04-02", "Again"), 0);
+  restore_configuration(cfg, ib);
+  PASS();
+}
+
+static void test_service(void) {
+  TEST("trading service validates roles and decimal inputs, creates, posts and reverses atomically");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  switch_configuration("ru-2026", "service.xml");
+  char dir[128], path[160], response[65536];
+  ASSERT_TRUE(ledger_test_directory(dir, sizeof(dir)));
+  snprintf(path, sizeof(path), "%s/request.json", dir);
+  FILE *f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fputs("{\"command\":\"counterparties.save\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"fields\":{\"name\":\"Test Trading Partner\"}}}", f); fclose(f);
+  ASSERT_TRUE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  ASSERT(strstr(response, "\"id\":"), "counterparty setup returns an id");
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fputs("{\"command\":\"items.save\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"fields\":{\"name\":\"Test goods\",\"sku\":\"SERVICE-ITEM\",\"unit_id\":1,\"vat_rate_id\":1}}}", f); fclose(f);
+  ASSERT_TRUE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fputs("{\"command\":\"catalogs.list\",\"actor\":\"test\",\"role\":\"auditor\",\"args\":{\"table\":\"items\"}}", f); fclose(f);
+  ASSERT_TRUE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  ASSERT(strstr(response, "SERVICE-ITEM"), "auditor can list catalog");
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fputs("{\"command\":\"documents.create\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"doc_type_id\":1,\"counterparty_id\":1,\"date\":\"2026-04-01\",\"lines\":[{\"item_id\":1,\"vat_rate_id\":1,\"quantity\":\"1.005\",\"price\":\"1.00\"}]}}", f); fclose(f);
+  ASSERT_TRUE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  char *value = strstr(response, "\"document_id\":"); ASSERT_NOT_NULL(value);
+  int id = atoi(value + strlen("\"document_id\":")); ASSERT(id > 0, "service returns document id");
+  const db_document_t *doc = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  ASSERT(doc && doc->exact_money && doc->amount_minor == 101 && approx(doc->amount, 1.01), "quantity times price rounds and persists as minor units");
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fprintf(f, "{\"command\":\"documents.post\",\"actor\":\"test\",\"role\":\"auditor\",\"args\":{\"document_id\":%d}}", id); fclose(f);
+  ASSERT_FALSE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  doc = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  ASSERT(doc && !doc->posted, "denied role cannot post");
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fprintf(f, "{\"command\":\"documents.post\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"document_id\":%d}}", id); fclose(f);
+  ASSERT_TRUE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fprintf(f, "{\"command\":\"documents.reverse\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"document_id\":%d,\"date\":\"2026-04-02\",\"reason\":\"Correction\"}}", id); fclose(f);
+  ASSERT_TRUE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  ASSERT_FALSE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  restore_configuration(cfg, ib);
+  PASS();
+}
+
+static void test_local_exact_trade(void) {
+  TEST("local trading documents use minor-unit postings and reject unsupported legacy stock");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  switch_configuration("ru-2026", "local-exact.xml");
+  db_document_t receipt = { .doc_type_id = 1, .counterparty_id = 1 };
+  snprintf(receipt.date, sizeof(receipt.date), "2026-04-01");
+  const db_document_t *saved = (void *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &receipt);
+  ASSERT(saved && saved->exact_money, "new local trading draft is exact");
+  int id = saved->id;
+  db_doc_line_t line = { .document_id = id, .item_id = 1, .vat_rate_id = 1, .quantity = 1.005, .price = 1.00 };
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
+  saved = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  ASSERT(saved && saved->amount_minor == 101 && saved->vat_minor == 22 && saved->total_minor == 123, "integer rounding for local receipt");
+  ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
+  result_node_t *entries = (void *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)id);
+  ASSERT(entries, "receipt posts entries");
+  for (result_node_t *n = entries; n; n = n->next) ASSERT((*(db_entry_t **)n->data)->exact_money, "entry stores minor units");
+  free_result_list(entries);
+  db_document_t sale = { .doc_type_id = 2, .counterparty_id = 3 };
+  snprintf(sale.date, sizeof(sale.date), "2026-04-02");
+  saved = (void *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &sale);
+  ASSERT(saved && saved->exact_money, "new sale is exact"); int sale_id = saved->id;
+  line.document_id = sale_id; line.quantity = 1; line.price = 2;
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
+  ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, sale_id));
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", sale_id), 0);
+  db_item_t item = { .unit_id = 1, .vat_rate_id = 1 };
+  snprintf(item.name, sizeof(item.name), "Exact stock"); snprintf(item.sku, sizeof(item.sku), "EXACT-STOCK");
+  const db_item_t *new_item = (void *)send_db_message(g_ledger->ib, dbInsert, TABLE_ITEMS, &item);
+  ASSERT_NOT_NULL(new_item); int item_id = new_item->id;
+  saved = (void *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &receipt);
+  ASSERT_NOT_NULL(saved); int purchase_id = saved->id;
+  line.document_id = purchase_id; line.item_id = item_id; line.quantity = 1.005; line.price = 1;
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
+  ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, purchase_id));
+  saved = (void *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &sale);
+  ASSERT_NOT_NULL(saved); int exact_sale = saved->id;
+  line.document_id = exact_sale; line.quantity = .5; line.price = 2;
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
+  ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, exact_sale));
+  entries = (void *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)exact_sale);
+  bool cost_found = false;
+  for (result_node_t *n = entries; n; n = n->next) {
+    const db_entry_t *e = *(db_entry_t **)n->data;
+    if (e->quantity_milli == 500 && e->amount_minor == 50) cost_found = true;
+  }
+  free_result_list(entries);
+  ASSERT(cost_found, "average stock cost uses checked integer units");
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
+  char path[sizeof(g_ledger->ib->source_path)]; snprintf(path, sizeof(path), "%s", g_ledger->ib->source_path);
+  destroy_database(g_ledger->ib);
+  g_ledger->ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path);
+  ASSERT_NOT_NULL(g_ledger->ib); register_database("ib", g_ledger->ib);
+  saved = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)purchase_id);
+  ASSERT(saved && saved->exact_money && saved->amount_minor == 101 && saved->vat_minor == 22, "minor units survive reload");
   restore_configuration(cfg, ib);
   PASS();
 }
@@ -1129,7 +1350,7 @@ static void test_invoice_requirements(void) {
 // and scales it defines: the check a compliance refresh must keep passing.
 static void test_configuration_integrity(void) {
   TEST("configurations: every installed configuration resolves its accounts, templates and tax scales");
-  database_t *catalog = create_database_with_schema("catalog_test", "db_schema_xml", &ledger_catalog_schema, SHARE "/index.xml");
+  database_t *catalog = create_database_with_schema_readonly("catalog_test", "db_schema_xml", &ledger_catalog_schema, SHARE "/index.xml");
   ASSERT_NOT_NULL(catalog);
   result_node_t *configs = (result_node_t *)send_db_message(catalog, dbFetch, MAKEDWORD(TABLE_CONFIGURATIONS, 0), NULL);
   int checked = 0, problems = 0;
@@ -1137,7 +1358,7 @@ static void test_configuration_integrity(void) {
     const db_configuration_t *c = *(db_configuration_t **)n->data;
     char path[512];
     snprintf(path, sizeof(path), SHARE "/%s/configuration.xml", c->code);
-    database_t *cfg = create_database_with_schema("cfg_check", "db_schema_xml", &ledger_cfg_schema, path);
+    database_t *cfg = create_database_with_schema_readonly("cfg_check", "db_schema_xml", &ledger_cfg_schema, path);
     if (!cfg) { problems++; fprintf(stderr, "  %s: configuration.xml missing\n", c->code); continue; }
     const int account_fields[][2] = { { TABLE_DOC_TYPES, 0 }, { TABLE_PAYROLL_TAXES, 0 }, { TABLE_CLOSING_RULES, 0 }, { TABLE_BALANCE_RULES, 0 }, { TABLE_VAT_RATES, 0 }, { TABLE_SETTINGS, 0 } };
     for (size_t t = 0; t < ARRAY_LEN(account_fields); t++) {
@@ -1419,6 +1640,11 @@ int main(int argc, char **argv) {
   test_de_2026();
   test_scripted_rules();
   test_posting_rollback();
+  test_closed_period();
+  test_infobase_migration();
+  test_reversal();
+  test_service();
+  test_local_exact_trade();
   test_english_configurations();
   test_invoice_requirements();
   test_configuration_integrity();

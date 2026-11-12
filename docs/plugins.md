@@ -40,6 +40,23 @@ exports. Different add-ons have different states and plugin instances.
 The version is a positive integer interface version, **not** a SemVer range.
 The loader checks the requested version even when a plugin is already loaded.
 
+## Inspect and load a set
+
+```lua
+local requirements = {calendar = 1, money = 1, template = 1}
+local manifests = Plugins.inspect(requirements)
+local plugins = Plugins.load(requirements)
+```
+
+Inspection returns copied manifests in deterministic dependency order and does
+not load factories. Batch loading checks every root and transitive dependency
+before initializing any factory; version conflicts do not partially initialize
+the set. Factory code is still trusted and must be side-effect free. Recursive
+`use`/`load` inside a factory is rejected; use injected dependencies instead.
+Successfully constructed dependencies remain cached after a factory error.
+
+See the [developer SDK](developer-sdk.md) for scaffolding and source packaging.
+
 ## Write a plugin
 
 Put two files in `share/lua/orion/plugins/<id>/`:

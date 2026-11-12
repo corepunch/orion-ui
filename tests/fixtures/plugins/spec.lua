@@ -85,3 +85,34 @@ local dictionary = lexicon.compile({actions = {reserve = {'BOOK', 'book room'}, 
 local entry, consumed = dictionary:lookup({{text = 'book'}, {text = 'room'}}, 1)
 assert(consumed == 2 and entry.roles.actions == 'reserve')
 assert(not pcall(lexicon.compile, {actions = {one = {'BOOK'}, two = {'book'}}}, options))
+
+-- Inspect the whole graph before running any factory, including separate roots.
+local runs = 0
+local package_manifests = {
+  common = {id = "common", api = 1, version = 1, dependencies = {}},
+  first = {id = "first", api = 1, version = 1, dependencies = {common = 1}},
+  second = {id = "second", api = 1, version = 1, dependencies = {common = 2}},
+}
+local batch = Plugins.new(function(id, part)
+  if part == "manifest" then return package_manifests[id] end
+  return function() runs = runs + 1; return {} end
+end)
+assert(not pcall(batch.load, batch, {first = 1, second = 1}))
+assert(runs == 0)
+package_manifests.second.dependencies.common = 1
+local inspected = batch:inspect({first = 1, second = 1})
+assert(runs == 0 and #inspected == 3 and inspected[1].id == "common")
+inspected[1].version = 999
+local exports = batch:load({first = 1, second = 1})
+assert(exports.first and exports.second and runs == 3)
+assert(batch:load({first = 1}).first == exports.first and runs == 3)
+assert(not pcall(batch.load, batch, {first = false}))
+package_manifests.common.version = 2 -- cached manifest is a snapshot
+assert(batch:use("common", 1))
+assert(not pcall(batch.use, batch, "common", 2))
+local recursive
+recursive = Plugins.new(function(id, part)
+  if part == "manifest" then return {id = id, api = 1, version = 1, dependencies = {}} end
+  return function() return recursive:use("same", 1) end
+end)
+assert(not pcall(recursive.use, recursive, "same", 1))

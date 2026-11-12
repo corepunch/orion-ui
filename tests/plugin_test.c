@@ -54,9 +54,32 @@ static void test_native_template(void) {
   PASS();
 }
 
+static void test_external_plugin(void) {
+  TEST("explicit external plugin root uses the same runtime and bundled dependencies");
+  const char *existing = getenv("ORION_PLUGIN_ROOT");
+  char *saved = existing ? strdup(existing) : NULL;
+#ifdef _WIN32
+  _putenv_s("ORION_PLUGIN_ROOT", "tests/fixtures/plugins/external");
+#else
+  setenv("ORION_PLUGIN_ROOT", "tests/fixtures/plugins/external", 1);
+#endif
+  lua_State *L = script_state_new(NULL, "external plugin test");
+  ASSERT_NOT_NULL(L);
+  ASSERT_EQUAL(luaL_loadstring(L, "local p = require('orion.plugins').load({sdk_external=1}); assert(p.sdk_external.next_day('2026-12-31') == '2027-01-01')"), LUA_OK);
+  char error[1024]; bool refused;
+  ASSERT_TRUE(script_call(L, 0, 0, error, sizeof(error), &refused));
+  script_state_close(L);
+#ifdef _WIN32
+  _putenv_s("ORION_PLUGIN_ROOT", saved ? saved : ""); free(saved);
+#else
+  if (saved) { setenv("ORION_PLUGIN_ROOT", saved, 1); free(saved); } else unsetenv("ORION_PLUGIN_ROOT");
+#endif
+  PASS();
+}
 int main(void) {
   TEST_START("Portable Lua plugins");
   test_plugins();
   test_native_template();
+  test_external_plugin();
   TEST_END();
 }

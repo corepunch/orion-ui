@@ -142,10 +142,7 @@ bool ui_media_encode(const char *wav, const char *output, ui_media_format_t form
   }
 }
 
-bool ui_media_share(const char *path) {
-  @autoreleasepool {
-    NSURL *url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:path]];
-    if (![[NSFileManager defaultManager] fileExistsAtPath:url.path]) return false;
+static bool media_apple_share_url(NSURL *url) {
 #if TARGET_OS_IPHONE
     UIWindow *window = nil;
     for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) if ([scene isKindOfClass:[UIWindowScene class]])
@@ -166,6 +163,19 @@ bool ui_media_share(const char *path) {
     [picker showRelativeToRect:NSMakeRect(NSMidX(view.bounds), NSMidY(view.bounds), 1, 1) ofView:view preferredEdge:NSMinYEdge];
     [picker autorelease];
 #endif
-    return true;
+  return true;
+}
+
+bool ui_media_share(const char *path) {
+  @autoreleasepool {
+    NSURL *url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:path]];
+    return [[NSFileManager defaultManager] fileExistsAtPath:url.path] && media_apple_share_url(url);
+  }
+}
+
+bool ui_media_share_url(const char *value) {
+  @autoreleasepool {
+    NSURL *url = [NSURL URLWithString:[NSString stringWithUTF8String:value]];
+    return [url.scheme.lowercaseString isEqualToString:@"https"] && url.host.length && media_apple_share_url(url);
   }
 }

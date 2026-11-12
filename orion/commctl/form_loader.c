@@ -609,6 +609,7 @@ static void fl_binding(fl_build_t *b, xmlNodePtr c, uint32_t id, const char *kla
     switch (meta->type) {
       case DB_TYPE_DATE:   x->wparam = (size_t)meta->length; x->push = ddx_push_date;   x->pull = ddx_pull_date;   return;
       case DB_TYPE_INT:    x->wparam = sizeof(int);          x->push = ddx_push_int;    x->pull = ddx_pull_int;    return;
+      case DB_TYPE_INT64:  x->wparam = sizeof(int64_t);      x->push = ddx_push_int64;  x->pull = ddx_pull_int64;  return;
       case DB_TYPE_DOUBLE: x->wparam = sizeof(double);       x->push = ddx_push_double; x->pull = ddx_pull_double; return;
       case DB_TYPE_FLOAT:  x->wparam = sizeof(float);        x->push = ddx_push_float;  x->pull = ddx_pull_float;  return;
       case DB_TYPE_STRING: x->wparam = (size_t)meta->length; x->getter = edGetText; return;
@@ -620,6 +621,7 @@ static void fl_binding(fl_build_t *b, xmlNodePtr c, uint32_t id, const char *kla
     switch (meta->type) {
       case DB_TYPE_DATE:   x->push = ddx_push_date;       return;
       case DB_TYPE_INT:    x->push = ddx_push_int;        return;
+      case DB_TYPE_INT64:  x->push = ddx_push_int64;      return;
       case DB_TYPE_DOUBLE: x->push = ddx_push_double;     return;
       case DB_TYPE_FLOAT:  x->push = ddx_push_float;      return;
       case DB_TYPE_STRING: x->push = ddx_push_label_text; return;
@@ -742,6 +744,7 @@ typedef struct { const char *xml; db_field_type_t type; int length; size_t size,
 // and dates as char arrays.
 static const fl_type_t kTypes[] = {
   { "integer", DB_TYPE_INT, 0, sizeof(int), _Alignof(int) },     { "int", DB_TYPE_INT, 0, sizeof(int), _Alignof(int) },
+  { "int64", DB_TYPE_INT64, 0, sizeof(int64_t), _Alignof(int64_t) },
   { "string", DB_TYPE_STRING, 256, 1, 1 },                         { "date", DB_TYPE_DATE, 11, 1, 1 },
   { "boolean", DB_TYPE_BOOL, 0, sizeof(bool), _Alignof(bool) },    { "bool", DB_TYPE_BOOL, 0, sizeof(bool), _Alignof(bool) },
   { "float", DB_TYPE_FLOAT, 0, sizeof(float), _Alignof(float) },   { "real", DB_TYPE_FLOAT, 0, sizeof(float), _Alignof(float) },
@@ -834,8 +837,16 @@ static bool fl_schema(form_library_t *lib, xmlNodePtr db, fl_schema_t *out) {
     if (!fl_table_schema(lib, t, i, &table[i])) return false;
     i++;
   }
+  const char *version = fl_attr(lib, db, "version"), *migration = fl_attr(lib, db, "migration");
+  char *end = NULL; unsigned long value = version ? strtoul(version, &end, 10) : 1;
+  if ((version && (!*version || *end || value == 0 || value > UINT32_MAX)) ||
+      (migration && strcmp(migration, "additive"))) {
+    fprintf(stderr, "[form_loader] invalid database version or migration db=%s\n", fl_nz(fl_attr(lib, db, "name"), "db"));
+    fflush(stderr); return false;
+  }
   out->def = (db_schema_def_t){ fl_nz(fl_attr(lib, db, "name"), "db"), fl_attr(lib, db, "class"),
-                                fl_attr(lib, db, "source"), table, tables };
+                                fl_attr(lib, db, "source"), table, tables, (unsigned)value,
+                                migration ? db_schema_xml_migrate_additive : NULL };
   return true;
 }
 

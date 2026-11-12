@@ -1,5 +1,6 @@
 #include "test_framework.h"
 #include "apps/ledger/ledger.h"
+#include "apps/ledger/tests/test_databases.h"
 #include <platform/platform.h>
 #include <math.h>
 
@@ -23,8 +24,8 @@ static void setup_executor(void) {
   DB_CLASS(ledger_ib);
   g_ledger = &executor_test;
   snprintf(g_ledger->config_dir,sizeof(g_ledger->config_dir),"apps/ledger/share/configurations/ru-2003");
-  g_ledger->cfg = create_database_with_schema("cfg","db_schema_xml",&ledger_cfg_schema,"apps/ledger/share/configurations/ru-2003/configuration.xml");
-  g_ledger->ib = create_database_with_schema("ib","ledger_ib",&ledger_ib_schema,"apps/ledger/share/configurations/ru-2003/demo.xml");
+  g_ledger->cfg = create_database_with_schema_readonly("cfg","db_schema_xml",&ledger_cfg_schema,"apps/ledger/share/configurations/ru-2003/configuration.xml");
+  g_ledger->ib = ledger_test_infobase("apps/ledger/share/configurations/ru-2003/demo.xml");
   register_database("cfg",g_ledger->cfg); register_database("ib",g_ledger->ib);
   ledger_script_open(g_ledger->config_dir,NULL);
   ledger_repost_all(g_ledger->ib,g_ledger->cfg);

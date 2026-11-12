@@ -105,6 +105,12 @@ typedef struct {
    * timeouts yet.
    */
   uint32_t      timeout_ms;
+
+  /** Do not follow redirects; deliver the original 3xx response. */
+  bool          no_redirects;
+
+  /** Maximum received response bytes including headers; 0 keeps the default. */
+  size_t        max_response_bytes;
 } http_options_t;
 
 /* -------------------------------------------------------------------------
@@ -193,6 +199,9 @@ bool http_init(void);
  * call no further evHttpDone messages will be posted.
  */
 void http_shutdown(void);
+
+/** Deliver queued worker completions on the UI thread. */
+void http_dispatch_pending(void);
 
 /**
  * @brief Issue an asynchronous HTTP or HTTPS request.

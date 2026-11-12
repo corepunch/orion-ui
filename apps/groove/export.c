@@ -1,5 +1,7 @@
 #include "groove.h"
 #include <errno.h>
+#include <orion/kernel/renderer.h>
+#include <orion/user/image.h>
 
 void groove_master_pcm(const float *in, int16_t *out, int samples) {
   for (int i = 0; i < samples; i++) out[i] = (int16_t)(tanhf(in[i]) * 32000.0f);
@@ -73,34 +75,92 @@ void song_draw_overview(const song_t *song, irect16_t r) {
   }
 }
 
+typedef struct {
+  const song_t *song;
+  const char *title;
+  irect16_t timeline;
+  bool portrait, branding;
+  uint32_t logo;
+  ipoint16_t logo_size;
+} export_canvas_t;
+
+static void export_canvas_load_logo(export_canvas_t *canvas) {
+  char path[1024];
+  int n = snprintf(path, sizeof(path), "%s/../share/groove/branding/groove.png", ui_get_exe_dir());
+  if (n < 0 || n >= (int)sizeof(path)) return;
+  int width = 0, height = 0;
+  uint8_t *pixels = load_image(path, &width, &height);
+  if (!pixels) return;
+  canvas->logo = R_CreateTextureSRGBA8(width, height, pixels, R_FILTER_LINEAR, R_WRAP_CLAMP);
+  canvas->logo_size = (ipoint16_t){ width, height };
+  image_free(pixels);
+}
+
+static void export_portrait_cover(const export_canvas_t *canvas, irect16_t r) {
+  irect16_t safe = rect_inset_edges(r, R(34, 144, 62, 155));
+  uint32_t primary = get_sys_color(brTextNormal), secondary = get_sys_color(brTextSecondary);
+  if (canvas->branding) {
+    irect16_t mark = rect_split_top(safe, 88);
+    if (canvas->logo) {
+      int width = MIN(174, mark.w);
+      int height = width * canvas->logo_size.y / canvas->logo_size.x;
+      draw_rect_ex(canvas->logo, rect_center(mark, width, height), 0, 1.0f);
+    } else draw_text_clipped("Heading", ui_tr("Made with Groove"), &mark, secondary, TEXT_ALIGN_CENTER);
+  }
+  irect16_t title_area = rect_split_top(rect_trim_top(safe, 98), 54);
+  char title[256];
+  text_ellipsize("Display", canvas->title, title_area.w, title, sizeof(title));
+  draw_text_clipped("Display", title, &title_area, primary, TEXT_ALIGN_CENTER);
+  irect16_t tempo_area = rect_split_top(rect_trim_top(safe, 156), 26);
+  char number[24], tempo[40];
+  ui_format_number(canvas->song->bpm, 0, number, sizeof(number));
+  snprintf(tempo, sizeof(tempo), ui_tr("%s BPM"), number);
+  draw_text_clipped("Heading", tempo, &tempo_area, secondary, TEXT_ALIGN_CENTER);
+}
+
 static result_t win_export_canvas(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
-  (void)wparam; (void)lparam;
-  const song_t *s = win->userdata;
+  (void)wparam;
   if (msg == evCreate) { win->userdata = lparam; return true; }
   if (msg == evDestroy) { win->userdata = NULL; return true; }
   if (msg != evPaint) return false;
+  const export_canvas_t *canvas = win->userdata;
+  const song_t *s = canvas->song;
   irect16_t r = get_client_rect(win);
   fill_rect(get_sys_color(brControlBg), r);
-  char title[80]; snprintf(title, sizeof(title), "Orion Groove  /  %d BPM", s->bpm);
-  draw_text("Text", title, 32, 24, get_sys_color(brTextNormal));
-  int span = MAX(1, song_length_ticks(s)), step = MAX(1, (span / GR_TICKS_BAR + 15) / 16);
-  irect16_t timeline = R(64, 92, r.w - 96, r.h - 124);
+  if (canvas->portrait) export_portrait_cover(canvas, r);
+  else {
+    char title[80]; snprintf(title, sizeof(title), "Orion Groove  /  %d BPM", s->bpm);
+    draw_text("Text", title, 32, 24, get_sys_color(brTextNormal));
+  }
+  irect16_t timeline = canvas->timeline;
+  int span = MAX(1, song_length_ticks(s)), labels = canvas->portrait ? 8 : 16;
+  int step = MAX(1, (span / GR_TICKS_BAR + labels - 1) / labels);
   for (int bar = 0; bar * GR_TICKS_BAR < span; bar += step) {
     char text[20]; snprintf(text, sizeof(text), "%d", bar + 1);
-    draw_text("Text", text, timeline.x + (int)((int64_t)bar * GR_TICKS_BAR * timeline.w / span), 68, get_sys_color(brTextSecondary));
+    draw_text("Text", text, timeline.x + (int)((int64_t)bar * GR_TICKS_BAR * timeline.w / span), timeline.y - 24, get_sys_color(brTextSecondary));
   }
   for (int track = 0; track < GR_TRACKS; track++) {
     char number[8]; snprintf(number, sizeof(number), "%d", track + 1);
-    draw_text("Text", number, 32, timeline.y + track * timeline.h / GR_TRACKS + 12, get_sys_color(brTextSecondary));
+    draw_text("Text", number, timeline.x - 32, timeline.y + track * timeline.h / GR_TRACKS + 12, get_sys_color(brTextSecondary));
   }
   song_draw_overview(s, timeline);
   return true;
 }
 
-bool song_export_canvas(const song_t *s, int width, int height, ui_media_video_t *video) {
+bool song_export_canvas(const song_t *s, int width, int height, const char *title, bool branding, ui_media_video_t *video) {
+  bool portrait = width < height;
+  // Lay out the portrait artwork at 2x so its type and spacing read at phone size.
+  int scale = portrait ? 2 : 1;
+  int canvas_width = width / scale, canvas_height = height / scale;
+  export_canvas_t artwork = { .song = s, .title = title ? title : "", .portrait = portrait, .branding = branding,
+    .timeline = portrait ? R(58, 360, canvas_width - 120, 320) : R(64, 92, width - 96, height - 124) };
+  if (portrait && branding) export_canvas_load_logo(&artwork);
   window_t *canvas = create_window("", WINDOW_NOTITLE | WINDOW_NOFILL | WINDOW_NOACTIVATE | WINDOW_NOTABSTOP,
-    MAKERECT(0, 0, width, height), NULL, win_export_canvas, 0, (void *)s);
-  if (!canvas) return false;
+    MAKERECT(0, 0, canvas_width, canvas_height), NULL, win_export_canvas, 0, &artwork);
+  if (!canvas) {
+    if (artwork.logo) R_DeleteTexture(artwork.logo);
+    return false;
+  }
   send_message(canvas, evPaint, 0, NULL);
   uint8_t *pixels = NULL, *scaled = NULL;
   int w = 0, h = 0;
@@ -113,9 +173,11 @@ bool song_export_canvas(const song_t *s, int width, int height, ui_media_video_t
     free(pixels); pixels = scaled;
   }
   destroy_window(canvas);
+  if (artwork.logo) R_DeleteTexture(artwork.logo);
   if (!ok) { free(pixels); return false; }
+  irect16_t timeline = artwork.timeline;
   *video = (ui_media_video_t){ .rgba = pixels, .width = width, .height = height,
-    .x = 64, .y = 92, .w = width - 96, .h = height - 124,
+    .x = timeline.x * scale, .y = timeline.y * scale, .w = timeline.w * scale, .h = timeline.h * scale,
     .color = get_sys_color(brTextNormal), .frames = position_frames_for_bpm(song_length_ticks(s), s->bpm), .rate = GR_SAMPLE_RATE, .fps = 30 };
   return true;
 }

@@ -1,0 +1,117 @@
+{
+  "identifier": "76912408",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "4.99",
+      "familyShareable": false,
+      "internalID": "00000001",
+      "localizations": [
+        {
+          "description": "Unlock all six Groove sample packs.",
+          "displayName": "Unlock Full Version",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.orion.groove.full",
+      "referenceName": "Unlock Full Version",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "00000002",
+      "localizations": [
+        {
+          "description": "Add more drum grooves, kits, and fills.",
+          "displayName": "Drums & Fills",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.orion.groove.drums",
+      "referenceName": "Drums & Fills",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "00000003",
+      "localizations": [
+        {
+          "description": "Add more bass lines and grooves.",
+          "displayName": "Bass",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.orion.groove.bass",
+      "referenceName": "Bass",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "00000004",
+      "localizations": [
+        {
+          "description": "Add more guitar riffs and phrases.",
+          "displayName": "Guitar",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.orion.groove.guitar",
+      "referenceName": "Guitar",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "00000005",
+      "localizations": [
+        {
+          "description": "Add more synths, keys, pads, and stabs.",
+          "displayName": "Synths, Pads & Stabs",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.orion.groove.synths",
+      "referenceName": "Synths, Pads & Stabs",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "00000006",
+      "localizations": [
+        {
+          "description": "Add more vocal hooks, calls, and scat.",
+          "displayName": "Vocals",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.orion.groove.vocals",
+      "referenceName": "Vocals",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "00000007",
+      "localizations": [
+        {
+          "description": "Add more scratches, sweeps, and effects.",
+          "displayName": "Scratch & FX",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.orion.groove.fx",
+      "referenceName": "Scratch & FX",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {},
+  "subscriptionGroups": [],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

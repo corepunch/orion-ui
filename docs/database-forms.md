@@ -964,6 +964,13 @@ For data that lives in XML, an app needs no adaptor at all. orionc emits a
 sizes, field offsets, keys and joins, and the framework's `db_schema_xml`
 class implements the whole message set from it:
 
+`<field type="int64">` stores a signed 64-bit integer exactly in XML and Lua
+and uses localized whole-number text in forms. Integer keys remain 32-bit;
+`int64` cannot be a primary key. On hosts with a narrower Lua integer or
+pointer, out-of-range Lua values and unsupported 64-bit filters are rejected.
+Use explicit units such as minor currency units; the type does not itself
+define a currency or rounding policy.
+
 ```c
 DB_CLASS(db_schema_xml);
 database_t *ib = create_database_with_schema("ib", "db_schema_xml",

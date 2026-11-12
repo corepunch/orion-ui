@@ -14,12 +14,20 @@ enum {
   EXPORT_M4A
 };
 
+enum { EXPORT_VIDEO_LANDSCAPE, EXPORT_VIDEO_WIDE, EXPORT_VIDEO_PORTRAIT };
+static const struct { int width, height; const char *label; } kVideoSizes[] = {
+  [EXPORT_VIDEO_LANDSCAPE] = {1280,  720, "16:9 (1280 x 720)"},
+  [EXPORT_VIDEO_WIDE]      = {1680,  720, "21:9 (1680 x 720)"},
+  [EXPORT_VIDEO_PORTRAIT]  = {1080, 1920, "9:16 (1080 x 1920)"},
+};
+
 typedef struct {
   int kind, format;
   song_t song;
   block_pcm_t *audio;
   int audio_count;
   ui_media_video_t video;
+  char cover_title[256];
   char path[1024], stage[1200], wav[1200];
   axthread_t worker;
   uint32_t timer;
@@ -27,6 +35,10 @@ typedef struct {
   atomic_bool cancel, done;
   bool ok, share;
 } export_media_t;
+
+static const ctrl_binding_t kExportCoverBindings[] = {
+  DDX_TEXT(ID_EXPORT_MEDIA_TITLE, export_media_t, cover_title),
+};
 
 static bool export_render_progress(void *userdata, float fraction) {
   export_media_t *st = userdata;
@@ -72,8 +84,13 @@ static void export_media_worker(void *userdata) {
 }
 
 static void export_controls(window_t *win, export_media_t *st, bool working) {
+  int aspect = (int)send_message(get_window_item(win, ID_EXPORT_MEDIA_ASPECT), cbGetCurrentSelection, 0, NULL);
+  bool cover = st->kind == 2 && aspect == EXPORT_VIDEO_PORTRAIT;
   enable_window(get_window_item(win, ID_EXPORT_MEDIA_FORMAT), !working && st->kind != 2);
   enable_window(get_window_item(win, ID_EXPORT_MEDIA_ASPECT), !working && st->kind == 2);
+  enable_window(get_window_item(win, ID_EXPORT_MEDIA_TITLE), !working && cover);
+  enable_window(get_window_item(win, ID_EXPORT_MEDIA_LBL_TITLE), !working && cover);
+  enable_window(get_window_item(win, ID_EXPORT_MEDIA_BRANDING), !working && cover);
   enable_window(get_window_item(win, ID_EXPORT_MEDIA_SAVE), !working);
   enable_window(get_window_item(win, ID_EXPORT_MEDIA_SHARE), !working);
   set_window_item_text(win, ID_EXPORT_MEDIA_CANCEL, "%s", ui_tr(working ? "Cancel Export" : "Close"));
@@ -140,7 +157,12 @@ static void export_media_start(window_t *win, export_media_t *st, bool share) {
   free((void *)st->video.rgba); st->video = (ui_media_video_t){0};
   if (st->kind == 2) {
     int aspect = (int)send_message(get_window_item(win, ID_EXPORT_MEDIA_ASPECT), cbGetCurrentSelection, 0, NULL);
-    if (!song_export_canvas(&st->song, aspect == 1 ? 1680 : 1280, 720, &st->video)) {
+    if (aspect < 0 || aspect >= ARRAY_LEN(kVideoSizes)) aspect = EXPORT_VIDEO_LANDSCAPE;
+    dialog_pull(win, st, kExportCoverBindings, ARRAY_LEN(kExportCoverBindings));
+    bool branding = send_message(get_window_item(win, ID_EXPORT_MEDIA_BRANDING), btnGetCheck, 0, NULL);
+    const char *title = st->cover_title[0] ? st->cover_title : ui_tr("Untitled");
+    if (!song_export_canvas(&st->song, kVideoSizes[aspect].width, kVideoSizes[aspect].height,
+                            title, branding, &st->video)) {
       set_window_item_text(win, ID_EXPORT_MEDIA_STATUS, "%s", ui_tr("Could not render the timeline.")); return;
     }
   }
@@ -186,9 +208,18 @@ static result_t export_media_proc(window_t *win, uint32_t msg, uint32_t wparam, 
         send_message(format, cbAddString, 0, "M4A (AAC)");
       }
       send_message(format, cbSetCurrentSelection, kind == 1 ? EXPORT_M4A : EXPORT_WAV, NULL);
-      send_message(aspect, cbAddString, 0, "16:9 (1280 x 720)");
-      send_message(aspect, cbAddString, 0, "21:9 (1680 x 720)");
-      send_message(aspect, cbSetCurrentSelection, 0, NULL);
+      for (int i = 0; i < ARRAY_LEN(kVideoSizes); i++)
+        send_message(aspect, cbAddString, 0, (void *)kVideoSizes[i].label);
+      send_message(aspect, cbSetCurrentSelection, EXPORT_VIDEO_LANDSCAPE, NULL);
+      if (kind == 2) {
+        if (g_app) song_name_from_path(g_app->filename, st->cover_title, sizeof(st->cover_title));
+        dialog_push(win, st, kExportCoverBindings, ARRAY_LEN(kExportCoverBindings));
+        send_message(get_window_item(win, ID_EXPORT_MEDIA_BRANDING), btnSetCheck, btnStateChecked, NULL);
+      } else {
+        show_window(get_window_item(win, ID_EXPORT_MEDIA_LBL_TITLE), false);
+        show_window(get_window_item(win, ID_EXPORT_MEDIA_TITLE), false);
+        show_window(get_window_item(win, ID_EXPORT_MEDIA_BRANDING), false);
+      }
       export_controls(win, st, false);
       st->timer = axSetTimer(win, 100, NULL, true);
       return true;
@@ -211,6 +242,10 @@ static result_t export_media_proc(window_t *win, uint32_t msg, uint32_t wparam, 
       }
       return true;
     case evCommand:
+      if (LOWORD(wparam) == ID_EXPORT_MEDIA_ASPECT && HIWORD(wparam) == cbSelectionChange) {
+        export_controls(win, st, st->worker != NULL);
+        return true;
+      }
       if (HIWORD(wparam) != btnClicked) return false;
       switch (LOWORD(wparam)) {
         case ID_EXPORT_MEDIA_SAVE: export_media_start(win, st, false); return true;

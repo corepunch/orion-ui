@@ -52,6 +52,11 @@
   return ledger.update("items", 1, {price = 150})
 end)</example>
   </function>
+  <function name="close_through" impl="l_close_through">
+    <description>Advance the inclusive accounting close date. Requires a writable script inside ledger.transaction; invalid dates and dates that do not advance the boundary are rejected. The caller must save the infobase after the transaction. There is no reopening API. This initial guard does not provide an immutable audit trail or prevent native code from mutating exposed record pointers.</description>
+    <param name="date" type="string">Inclusive ISO date YYYY-MM-DD.</param><returns type="nil">No values.</returns>
+    <example>ledger.transaction(function() ledger.close_through("2026-12-31") end)</example>
+  </function>
   <function name="validate" impl="l_validate">
     <description>Validate a catalog insert or patch without writing. Applies the same schema, value, reference and table restrictions as insert/update, and fills datasource defaults. Supplying id validates an update; omitting it validates an insert. Available in read-only runs.</description>
     <param name="table" type="string">Writable catalog table.</param><param name="fields" type="table">Typed values excluding id.</param><param name="id" type="integer" optional="true">Existing record ID for an update.</param><returns type="table">Validated record copy; a new record has id=0 until insertion.</returns>

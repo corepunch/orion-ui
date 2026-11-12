@@ -8,7 +8,7 @@ return function()
     function records:save(id, fields)
       local row = id and model:find(id)
       if id and not row then return nil, orion.tr("Record no longer exists.") end
-      local merged = {}
+      local merged = row and {} or model:defaults()
       for k, v in pairs(row or {}) do merged[k] = v end
       for k, v in pairs(fields) do merged[k] = v end
       if validate then

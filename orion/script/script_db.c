@@ -10,16 +10,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include <orion/user/i18n.h>
 
 static const char *const kTypeNames[] = {
   [DB_TYPE_INT] = "integer", [DB_TYPE_STRING] = "string", [DB_TYPE_BOOL] = "boolean",
   [DB_TYPE_FLOAT] = "float", [DB_TYPE_DOUBLE] = "double", [DB_TYPE_DATE] = "date",
+  [DB_TYPE_INT64] = "int64",
 };
 
 static database_t *find_database(const char *name) {
   return get_database_by_name(name);
+}
+
+static const char *script_db_actor(lua_State *L, const char *database) {
+  database_t *db = find_database(database);
+  if (!db) { luaL_error(L, "no database '%s' is open", database); return NULL; }
+  return db->access_actor[0] ? db->access_actor : "local-owner";
 }
 
 const db_table_schema_t *script_table(lua_State *L, const char *db_name, const char *table, database_t **out) {
@@ -51,6 +59,11 @@ void script_push_record(lua_State *L, const db_table_schema_t *t, const void *re
     const char *p = (const char *)record + m->offset;
     switch (m->type) {
       case DB_TYPE_INT:    lua_pushinteger(L, *(const int *)p); break;
+      case DB_TYPE_INT64: {
+        int64_t value = *(const int64_t *)p;
+        if (value < (int64_t)LUA_MININTEGER || value > (int64_t)LUA_MAXINTEGER) luaL_error(L, "int64 field '%s' exceeds Lua integer range", m->name);
+        lua_pushinteger(L, (lua_Integer)value); break;
+      }
       case DB_TYPE_BOOL:   lua_pushboolean(L, *(const bool *)p); break;
       case DB_TYPE_FLOAT:  lua_pushnumber(L, *(const float *)p); break;
       case DB_TYPE_DOUBLE: lua_pushnumber(L, *(const double *)p); break;
@@ -84,10 +97,13 @@ bool script_read_record(lua_State *L, int idx, const db_table_schema_t *t, void 
       case DB_TYPE_INT: {
         int ok = 0;
         lua_Integer v = lua_tointegerx(L, -1, &ok);
-        if (!ok) luaL_error(L, "field '%s' takes an integer, not %s", name, luaL_typename(L, -1));
+        if (!ok || v < INT_MIN || v > INT_MAX) luaL_error(L, "field '%s' takes a 32-bit integer, not an out-of-range %s", name, luaL_typename(L, -1));
         *(int *)p = (int)v;
         break;
       }
+      case DB_TYPE_INT64:
+        if (!lua_isinteger(L, -1)) luaL_error(L, "field '%s' takes a 64-bit integer", name);
+        *(int64_t *)p = (int64_t)lua_tointeger(L, -1); break;
       case DB_TYPE_BOOL:
         if (!lua_isboolean(L, -1)) luaL_error(L, "field '%s' takes a boolean, not %s", name, luaL_typename(L, -1));
         *(bool *)p = lua_toboolean(L, -1);
@@ -125,6 +141,7 @@ bool script_read_record(lua_State *L, int idx, const db_table_schema_t *t, void 
 static void *lookup_value(lua_State *L, const db_field_meta_t *m, int arg) {
   if (m->type == DB_TYPE_STRING || m->type == DB_TYPE_DATE) return (void *)luaL_checkstring(L, arg);
   if (m->type == DB_TYPE_BOOL) return (void *)(intptr_t)lua_toboolean(L, arg);
+  if (m->type == DB_TYPE_INT64 && sizeof(intptr_t) < sizeof(int64_t)) luaL_error(L, "int64 filters require a 64-bit host");
   return (void *)(intptr_t)luaL_checkinteger(L, arg);
 }
 
@@ -199,6 +216,22 @@ static int script_db_find(lua_State *L, const char *database, const char *table,
                                                      lookup_value(L, &t->meta[f], value));
   if (record) script_push_record(L, t, record);
   else lua_pushnil(L);
+  return 1;
+}
+
+static int script_db_defaults(lua_State *L, const char *database, const char *table) {
+  database_t *db = NULL;
+  const db_table_schema_t *t = script_table(L, database, table, &db);
+  void *record = lua_newuserdatauv(L, t->record_size, 0);
+  memset(record, 0, t->record_size);
+  send_db_message(db, dbInitRecord, (uint32_t)t->table_id, record);
+  script_push_record(L, t, record);
+  for (int i = 0; i < t->field_count; i++) {
+    const db_field_schema_t *field = &t->fields[i];
+    if (field->primary_key || (field->computed && *field->computed)) {
+      lua_pushnil(L); lua_setfield(L, -2, field->name);
+    }
+  }
   return 1;
 }
 

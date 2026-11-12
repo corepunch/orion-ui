@@ -346,7 +346,7 @@
          class: numbering, recalculation of documents when they or their lines
          change. default= fills new records; on-delete= says what deleting a
          referenced record does: cascade, nullify or deny. -->
-    <database name="ib" class="ledger_ib">
+    <database name="ib" class="ledger_ib" version="3" migration="additive">
       <table name="organizations">
         <field name="id" type="integer" key="YES" />
         <field name="legal_details" type="string" length="512" />
@@ -452,10 +452,15 @@
         <field name="date" type="date" default="today" />
         <field name="comment" type="string" length="256" />
         <field name="import_source" type="string" length="65" />
+        <field name="correction_of" type="integer" relation="documents.id" on-delete="deny" />
         <field name="rate" type="double" precision="4" />
         <field name="amount" type="double" />
         <field name="vat" type="double" />
         <field name="total" type="double" />
+        <field name="exact_money" type="boolean" />
+        <field name="amount_minor" type="int64" />
+        <field name="vat_minor" type="int64" />
+        <field name="total_minor" type="int64" />
         <field name="posted" type="boolean" />
       </table>
       <table name="doc_lines">
@@ -477,6 +482,11 @@
         <field name="amount" type="double" />
         <field name="vat" type="double" />
         <field name="total" type="double" />
+        <field name="quantity_milli" type="int64" />
+        <field name="price_minor" type="int64" />
+        <field name="amount_minor" type="int64" />
+        <field name="vat_minor" type="int64" />
+        <field name="total_minor" type="int64" />
       </table>
       <!-- amount: accrued pay, or the sum paid out by a payout document. -->
       <table name="payroll_lines">
@@ -509,6 +519,54 @@
         <field name="currency_amount" type="double" />
         <field name="amount" type="double" />
         <field name="content" type="string" length="160" />
+        <field name="exact_money" type="boolean" />
+        <field name="amount_minor" type="int64" />
+        <field name="quantity_milli" type="int64" />
+      </table>
+      <!-- A monotonic accounting close boundary, inclusive. -->
+      <table name="period_locks">
+        <field name="id" type="integer" key="YES" />
+        <field name="closed_through" type="date" />
+      </table>
+      <!-- Posting snapshots retain their original document and entry values. -->
+      <table name="posting_revisions">
+        <field name="id" type="integer" key="YES" />
+        <field name="document_id" type="integer" />
+        <field name="doc_type_id" type="integer" />
+        <field name="action" type="string" length="16" />
+        <field name="recorded_utc" type="string" length="21" />
+        <field name="number" type="string" length="24" />
+        <field name="date" type="date" />
+        <field name="amount" type="double" />
+        <field name="vat" type="double" />
+        <field name="total" type="double" />
+        <field name="exact_money" type="boolean" />
+        <field name="amount_minor" type="int64" />
+        <field name="vat_minor" type="int64" />
+        <field name="total_minor" type="int64" />
+      </table>
+      <table name="revision_entries">
+        <field name="id" type="integer" key="YES" />
+        <field name="revision_id" type="integer" relation="posting_revisions.id" on-delete="deny" />
+        <field name="debit_id" type="integer" />
+        <field name="credit_id" type="integer" />
+        <field name="debit_subconto_id" type="integer" />
+        <field name="credit_subconto_id" type="integer" />
+        <field name="currency_id" type="integer" />
+        <field name="date" type="date" />
+        <field name="quantity" type="double" precision="3" />
+        <field name="currency_amount" type="double" />
+        <field name="amount" type="double" />
+        <field name="content" type="string" length="160" />
+        <field name="exact_money" type="boolean" />
+        <field name="amount_minor" type="int64" />
+        <field name="quantity_milli" type="int64" />
+      </table>
+      <table name="reversal_links">
+        <field name="id" type="integer" key="YES" />
+        <field name="original_id" type="integer" />
+        <field name="reversal_id" type="integer" />
+        <field name="revision_id" type="integer" />
       </table>
       <!-- Report parameters (one record): the period and the analysed account. -->
       <table name="report_settings">

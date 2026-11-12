@@ -49,6 +49,7 @@ typedef struct {
   db_document_t *doc;
   const db_doc_type_t *type;
   double rate;  // national units per document currency unit
+  bool *entry_failed;  // transaction-local failure latch, when posting
 } ledger_post_t;
 // What a posting is about; each side of an entry takes the object its account is analysed by.
 typedef struct { int counterparty, item, employee, asset; } ledger_subjects_t;
@@ -73,6 +74,11 @@ bool ledger_document_settlement(database_t *ib, database_t *cfg, int doc_id, dou
 const char *ledger_subconto_table(database_t *cfg, int account_id);
 void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id);
 bool ledger_post(database_t *ib, database_t *cfg, int doc_id);
+bool ledger_close_through(database_t *ib, const char *date);
+bool ledger_period_closed(database_t *ib, const char *date);
+bool ledger_valid_date(const char *date);
+bool ledger_record_revision(database_t *ib, const db_document_t *doc, const char *action);
+int ledger_reverse_posting(database_t *ib, database_t *cfg, int original_id, const char *date, const char *reason);
 // Writes the entries posting would, leaving the posted flag and plugins alone:
 // the document form previews them in its editing context.
 bool ledger_preview_entries(database_t *ib, database_t *cfg, int doc_id);
@@ -105,6 +111,7 @@ bool ledger_script_in_executor(void);
 bool ledger_execute_document(database_t *ib, database_t *cfg, const char *operation, int document_id);
 // Execute trusted local Lua; the entire run rolls back on error.
 bool ledger_script_run(const char *path, bool writable, char *error, size_t error_sz);
+bool ledger_script_service(const char *path, const char *request, bool writable, char *response, size_t response_sz);
 bool ledger_script_has(const char *function);
 bool ledger_script_post(const ledger_post_t *p, const char *function);
 bool ledger_script_closing(const ledger_post_t *p, const db_closing_rule_t *rule);

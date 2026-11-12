@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <strings language="de">
   <string source="Orion Lodge" where="reception">Orion Lodge</string>
   <string source="Reception" where="reception">Rezeption</string>
@@ -13,9 +14,9 @@
   <string source="Phone:" where="guest">Telefon:</string>
   <string source="Add guest" obsolete="true">Gast hinzufügen</string>
   <string source="Room:" where="reception">Zimmer:</string>
-  <string source="Guest:" where="reception">Gast:</string>
-  <string source="Arrival:" where="reception">Anreise:</string>
-  <string source="Departure:" where="reception">Abreise:</string>
+  <string source="Guest:" where="reception,group_reservation">Gast:</string>
+  <string source="Arrival:" where="reception,group_reservation">Anreise:</string>
+  <string source="Departure:" where="reception,group_reservation">Abreise:</string>
   <string source="Guests:" where="reception">Gäste:</string>
   <string source="Extra charges:" where="reception">Zusatzkosten:</string>
   <string source="Paid to date:" where="reception">Bereits bezahlt:</string>
@@ -24,7 +25,7 @@
   <string source="Save reservation" where="reception">Reservierung speichern</string>
   <string source="New reservation" where="reception">Neue Reservierung</string>
   <string source="New reservation discards unsaved editor changes." where="reception">Eine neue Reservierung verwirft ungespeicherte Eingaben.</string>
-  <string source="Room" where="reception,room">Zimmer</string>
+  <string source="Room" where="reception,room,housekeeping">Zimmer</string>
   <string source="Guest" where="reception,guest">Gast</string>
   <string source="Arrival" where="reception">Anreise</string>
   <string source="Departure" where="reception">Abreise</string>
@@ -54,6 +55,14 @@
   <string source="Enter a name." where="code">Geben Sie einen Namen ein.</string>
   <string source="Enter a nightly rate between 0 and 1000000." where="code">Geben Sie einen Nachtpreis zwischen 0 und 1000000 ein.</string>
   <string source="Enter amounts between 0 and 1000000." where="code">Geben Sie Beträge zwischen 0 und 1000000 ein.</string>
+  <string source="Enter an amount from 0 to 1000000 with at most two decimal places." where="code">Geben Sie einen Betrag von 0 bis 1000000 mit höchstens zwei Dezimalstellen ein.</string>
+  <string source="History records cannot be changed directly." where="code">Verlaufseinträge können nicht direkt geändert werden.</string>
+  <string source="History records and reservations cannot be deleted." where="code">Verlaufseinträge und Reservierungen können nicht gelöscht werden.</string>
+  <string source="Enter a valid payment amount and request key." where="code">Geben Sie einen gültigen Zahlungsbetrag und Anfrageschlüssel ein.</string>
+  <string source="The payment request key was already used for a different payment." where="code">Der Anfrageschlüssel wurde bereits für eine andere Zahlung verwendet.</string>
+  <string source="The resulting paid amount is out of range." where="code">Der resultierende Zahlungsbetrag liegt außerhalb des zulässigen Bereichs.</string>
+  <string source="Record payments separately from status changes." where="code">Erfassen Sie Zahlungen getrennt von Statusänderungen.</string>
+  <string source="An existing paid amount has fractional cents or is out of range; reconcile it before upgrading." where="code">Ein vorhandener Zahlungsbetrag enthält Bruchteile eines Cents oder liegt außerhalb des zulässigen Bereichs; korrigieren Sie ihn vor dem Upgrade.</string>
   <string source="Lodge" where="code">Lodge</string>
   <string source="Paid:" where="code">Bezahlt:</string>
   <string source="Record no longer exists." where="code">Der Datensatz existiert nicht mehr.</string>
@@ -78,4 +87,88 @@
   <string source="Fetch" where="rooms,guests">Aktualisieren</string>
   <string source="Save" where="room,guest">Speichern</string>
   <string source="Cancel" where="room,guest">Abbrechen</string>
+  <string source="Housekeeping" where="reception,housekeeping">Zimmerreinigung</string>
+  <string source="Cleaning status" where="rooms,housekeeping">Reinigungsstatus</string>
+  <string source="Cleaning status:" where="room">Reinigungsstatus:</string>
+  <string source="Select a room to update its cleaning status." where="housekeeping">Wählen Sie ein Zimmer, um den Reinigungsstatus zu ändern.</string>
+  <string source="Mark clean" where="housekeeping">Als sauber markieren</string>
+  <string source="Mark dirty" where="housekeeping">Als schmutzig markieren</string>
+  <string source="Needs inspection" where="housekeeping">Prüfung erforderlich</string>
+  <string source="Inspection needed" where="code">Prüfung erforderlich</string>
+  <string source="Dirty" where="code">Schmutzig</string>
+  <string source="Clean" where="code">Sauber</string>
+  <string source="Choose a valid room cleaning status." where="code">Wählen Sie einen gültigen Reinigungsstatus.</string>
+  <string source="Mark the room clean before checking in." where="code">Markieren Sie das Zimmer vor dem Check-in als sauber.</string>
+  <string source="Payment or refund" where="reception,payment">Zahlung oder Erstattung</string>
+  <string source="Amount:" where="payment">Betrag:</string>
+  <string source="Record payment" where="payment">Zahlung erfassen</string>
+  <string source="Record refund" where="payment">Erstattung erfassen</string>
+  <string source="This payment has already been recorded." where="code">Diese Zahlung wurde bereits erfasst.</string>
+  <string source="Enter a positive amount with at most two decimal places." where="code">Geben Sie einen positiven Betrag mit höchstens zwei Dezimalstellen ein.</string>
+  <string source="Retry the same amount and action, or close this window to start another request." where="code">Wiederholen Sie denselben Betrag und dieselbe Aktion oder schließen Sie dieses Fenster für eine neue Anfrage.</string>
+  <string source="Payment recorded." where="code">Zahlung erfasst.</string>
+  <string source="Refund recorded." where="code">Erstattung erfasst.</string>
+  <string source="Reservation %d" where="code">Reservierung %d</string>
+  <string source="Balance: %s" where="code">Saldo: %s</string>
+  <string source="Nightly prices" where="reception,night_prices">Nachtpreise</string>
+  <string source="Night:" where="night_prices">Nacht:</string>
+  <string source="Nightly price:" where="night_prices">Nachtpreis:</string>
+  <string source="Show price" where="night_prices">Preis anzeigen</string>
+  <string source="Set price" where="night_prices">Preis speichern</string>
+  <string source="Use base rate" where="night_prices">Grundpreis verwenden</string>
+  <string source="Remove nightly prices outside the new stay before changing the dates." where="code">Entfernen Sie Nachtpreise außerhalb des neuen Aufenthalts, bevor Sie die Daten ändern.</string>
+  <string source="A nightly price cannot be moved to another date or reservation." where="code">Ein Nachtpreis kann nicht auf ein anderes Datum oder eine andere Reservierung verschoben werden.</string>
+  <string source="Choose a night within the reservation dates." where="code">Wählen Sie eine Nacht innerhalb des Reservierungszeitraums.</string>
+  <string source="Enter a valid nightly amount in minor units." where="code">Geben Sie einen gültigen Nachtpreis in Cent ein.</string>
+  <string source="A nightly price already exists for this date." where="code">Für dieses Datum ist bereits ein Nachtpreis vorhanden.</string>
+  <string source="Custom price for this night." where="code">Individueller Preis für diese Nacht.</string>
+  <string source="This night uses the base rate." where="code">Für diese Nacht gilt der Grundpreis.</string>
+  <string source="Nightly price saved." where="code">Nachtpreis gespeichert.</string>
+  <string source="This night already uses the base rate." where="code">Für diese Nacht gilt bereits der Grundpreis.</string>
+  <string source="Base rate restored for this night." where="code">Grundpreis für diese Nacht wiederhergestellt.</string>
+  <string source="Total: %s" where="code">Gesamt: %s</string>
+  <string source="Choose a valid record." where="code">Wählen Sie einen gültigen Datensatz.</string>
+  <string source="Invalid request." where="code">Ungültige Anfrage.</string>
+  <string source="Invalid request field." where="code">Ungültiges Anfragefeld.</string>
+  <string source="Unknown service command." where="code">Unbekannter Dienstbefehl.</string>
+  <string source="This role cannot perform that action." where="code">Diese Rolle darf diese Aktion nicht ausführen.</string>
+  <string source="Group reservation" where="reception,group_reservation">Gruppenreservierung</string>
+  <string source="Close day" where="reception,day_close">Tag abschließen</string>
+  <string source="Closing prevents reservation and payment changes until tomorrow." where="day_close">Nach dem Abschluss sind Reservierungs- und Zahlungsänderungen erst morgen möglich.</string>
+  <string source="Close today" where="day_close">Heute abschließen</string>
+  <string source="Create reservations for two rooms under one group." where="group_reservation">Erstellen Sie Reservierungen für zwei Zimmer in einer Gruppe.</string>
+  <string source="Group name:" where="group_reservation">Gruppenname:</string>
+  <string source="First room:" where="group_reservation">Erstes Zimmer:</string>
+  <string source="Guests in first room:" where="group_reservation">Gäste im ersten Zimmer:</string>
+  <string source="Second room:" where="group_reservation">Zweites Zimmer:</string>
+  <string source="Guests in second room:" where="group_reservation">Gäste im zweiten Zimmer:</string>
+  <string source="Create group reservations" where="group_reservation">Gruppenreservierungen erstellen</string>
+  <string source="Choose a valid reservation group." where="code">Wählen Sie eine gültige Reservierungsgruppe.</string>
+  <string source="A reservation cannot be moved to another group." where="code">Eine Reservierung kann nicht in eine andere Gruppe verschoben werden.</string>
+  <string source="A group needs between 2 and 100 room reservations." where="code">Eine Gruppe benötigt 2 bis 100 Zimmerreservierungen.</string>
+  <string source="These group reservations were already created." where="code">Diese Gruppenreservierungen wurden bereits erstellt.</string>
+  <string source="Created group %d with two reservations." where="code">Gruppe %d mit zwei Reservierungen erstellt.</string>
+  <string source="Day close records cannot be changed directly." where="code">Tagesabschlüsse können nicht direkt geändert werden.</string>
+  <string source="Today is already closed or is not the current day." where="code">Heute ist bereits abgeschlossen oder das Datum ist nicht aktuell.</string>
+  <string source="The day totals are too large." where="code">Die Tagessummen sind zu groß.</string>
+  <string source="Resolve overdue arrivals and departures before closing the day." where="code">Bearbeiten Sie überfällige An- und Abreisen vor dem Tagesabschluss.</string>
+  <string source="Today is closed; reservation and payment changes resume tomorrow." where="code">Heute ist abgeschlossen; Reservierungs- und Zahlungsänderungen sind morgen wieder möglich.</string>
+  <string source="Today is closed." where="code">Heute ist abgeschlossen.</string>
+  <string source="Operational day: %s" where="code">Geschäftstag: %s</string>
+  <string source="Today's net payments: %s" where="code">Nettozahlungen heute: %s</string>
+  <string source="Outstanding balance: %s" where="code">Offener Saldo: %s</string>
+  <string source="Overdue arrivals and departures: %d" where="code">Überfällige An- und Abreisen: %d</string>
+  <string source="Hotel setup" where="reception,hotel_setup">Hoteleinstellungen</string>
+  <string source="Existing amounts will be interpreted in the selected currency without conversion." where="hotel_setup">Vorhandene Beträge werden ohne Umrechnung in der gewählten Währung interpretiert.</string>
+  <string source="This choice cannot be changed after it is saved." where="hotel_setup">Diese Auswahl kann nach dem Speichern nicht geändert werden.</string>
+  <string source="Set Germany and EUR" where="hotel_setup">Deutschland und EUR festlegen</string>
+  <string source="Set Russia and RUB" where="hotel_setup">Russland und RUB festlegen</string>
+  <string source="Hotel currency settings cannot be changed directly." where="code">Die Hotelwährung kann nicht direkt geändert werden.</string>
+  <string source="Choose Germany with EUR or Russia with RUB." where="code">Wählen Sie Deutschland mit EUR oder Russland mit RUB.</string>
+  <string source="Hotel currency is already configured." where="code">Die Hotelwährung ist bereits festgelegt.</string>
+  <string source="Configure the hotel country and currency before recording reservations or payments." where="code">Legen Sie Land und Währung des Hotels fest, bevor Sie Reservierungen oder Zahlungen erfassen.</string>
+  <string source="Hotel country and currency saved." where="code">Land und Währung des Hotels gespeichert.</string>
+  <string source="Country: %s · Currency: %s" where="code">Land: %s · Währung: %s</string>
+  <string source="Hotel country and currency are not configured." where="code">Land und Währung des Hotels sind nicht festgelegt.</string>
+  <string source="Choose a guest." where="code">Wählen Sie einen Gast.</string>
 </strings>

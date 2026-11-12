@@ -91,6 +91,8 @@ typedef struct http_pending_s {
   size_t              body_len;
   char               *headers;     /* heap copy, or NULL */
   uint32_t            timeout_ms;
+  bool                no_redirects;
+  size_t              max_response_bytes;
 
   struct http_pending_s *next;
 } http_pending_t;
@@ -315,7 +317,7 @@ send_all(int sock, AXtlsctx *tls, const void *buf, int len)
  * On error returns NULL. */
 static char *
 recv_response(int sock, AXtlsctx *tls, size_t *out_len,
-              window_t *notify_win, http_request_id_t req_id)
+              window_t *notify_win, http_request_id_t req_id, size_t maximum)
 {
   size_t  cap  = HTTP_RECV_INITIAL;
   size_t  used = 0;
@@ -343,6 +345,7 @@ recv_response(int sock, AXtlsctx *tls, size_t *out_len,
 
     if (n < 0) { free(buf); return NULL; }
     if (n == 0) break; /* connection closed */
+    if (maximum && ((size_t)n > maximum || used > maximum - (size_t)n)) { free(buf); return NULL; }
     used += (size_t)n;
 
     /* Once headers are complete, extract Content-Length for progress. */
@@ -672,7 +675,7 @@ execute_request(http_pending_t *req)
     /* Receive full response. */
     size_t raw_len = 0;
     char  *raw     = recv_response(sock, tls, &raw_len,
-                                   req->notify_win, req->id);
+                                   req->notify_win, req->id, req->max_response_bytes);
 
     if (tls) axTlsClose(tls);
     axNetClose(sock);
@@ -700,7 +703,7 @@ execute_request(http_pending_t *req)
     }
 
     /* Handle redirects (301, 302, 303, 307, 308). */
-    if ((status == 301 || status == 302 || status == 303 ||
+    if (!req->no_redirects && (status == 301 || status == 302 || status == 303 ||
          status == 307 || status == 308) &&
         location && redirect_count < HTTP_MAX_REDIRECTS)
     {
@@ -937,6 +940,8 @@ http_request_async(window_t           *notify_win,
     /* timeout_ms is accepted and preserved for forward compatibility.
      * Current worker implementation does not enforce request timeouts. */
     req->timeout_ms = opts->timeout_ms;
+    req->no_redirects = opts->no_redirects;
+    req->max_response_bytes = opts->max_response_bytes;
 
     if (opts->body) {
       size_t blen   = opts->body_len ? opts->body_len : strlen(opts->body);

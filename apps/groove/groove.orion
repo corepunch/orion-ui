@@ -23,6 +23,7 @@
         <Separator />
         <item name="export_audio" label="Export Audio..." shortcut="Ctrl+E" />
         <item name="share_audio" label="Share Audio..." />
+        <item name="share_song" label="Share Song..." if="GROOVE_SHARE_LINKS &amp;&amp; defined(GROOVE_USE_SHINE)" />
         <item name="export_video" label="Export Timeline Video..." shortcut="Ctrl+Shift+E" />
         <Separator />
         <item name="demo" label="Demo: Neon Skyline" />
@@ -46,6 +47,7 @@
       <menu name="window" label="Window">
         <item name="library" label="Show Library" />
         <item name="reset" label="Reset Workspace" />
+        <item name="packs" label="Sample Packs..." shortcut="Ctrl+Shift+P" if="GROOVE_APP_STORE" />
       </menu>
     </menus>
 
@@ -61,11 +63,13 @@
         <Separator />
         <item command="file.manage_samples" label="Manage Recordings..." />
         <item command="file.share_audio" label="Share Audio..." />
+        <item command="file.share_song" label="Share Song..." if="GROOVE_SHARE_LINKS &amp;&amp; defined(GROOVE_USE_SHINE)" />
         <item command="file.export_video" label="Export Timeline Video..." />
         <Separator />
         <item command="file.demo" label="Demo: Neon Skyline" />
         <item command="file.demo_afterglow" label="Demo: Afterglow Avenue" />
         <item command="file.demo_victory" label="Demo: Victory Lights" />
+        <item command="window.packs" label="Sample Packs..." if="GROOVE_APP_STORE" />
         <item command="window.reset" label="Reset Workspace" />
         <item command="file.quit" label="Quit" if="!defined(AX_PLATFORM_IOS)" />
       </contextmenu>
@@ -97,17 +101,52 @@
     </databases>
 
     <forms>
+      <form name="sample_store" title="Sample Packs" width="540" height="498" spacing="8" padding="14"
+            flags="WINDOW_AUTO_LAYOUT | WINDOW_NORESIZE | WINDOW_NOCOLLAPSE">
+        <Label name="heading" text="Expand your sound library" font="title" />
+        <Label name="intro" text="The starter bank is free. Buy a pack or unlock the full library." color="text-secondary" />
+        <GridView name="products" spacing="4">
+          <Column name="packs">
+            <Label name="lbl_full" text="Unlock Full Version (all six packs)" v-align="center" font="heading" />
+            <Label name="lbl_drums" text="Drums &amp; Fills" v-align="center" />
+            <Label name="lbl_bass" text="Bass" v-align="center" />
+            <Label name="lbl_guitar" text="Guitar" v-align="center" />
+            <Label name="lbl_synths" text="Synths, Pads &amp; Stabs" v-align="center" />
+            <Label name="lbl_vocals" text="Vocals" v-align="center" />
+            <Label name="lbl_fx" text="Scratch &amp; FX" v-align="center" />
+          </Column>
+          <Column name="actions" width="auto">
+            <Button name="full" text="Unavailable" width="156" />
+            <Button name="drums" text="Unavailable" width="156" />
+            <Button name="bass" text="Unavailable" width="156" />
+            <Button name="guitar" text="Unavailable" width="156" />
+            <Button name="synths" text="Unavailable" width="156" />
+            <Button name="vocals" text="Unavailable" width="156" />
+            <Button name="fx" text="Unavailable" width="156" />
+          </Column>
+        </GridView>
+        <Label name="status" text="Each purchase is a one-time payment." height="36" color="text-secondary" />
+        <StackView name="footer" orientation="horizontal" spacing="6">
+          <Button name="restore" text="Restore Purchases" />
+          <Space name="flex" />
+          <Button name="close" text="Close" flags="BUTTON_DEFAULT" />
+        </StackView>
+      </form>
+
       <form name="export_media" title="Export" width="520" spacing="8" padding="12">
         <GridView name="fields" spacing="6">
           <Column name="labels" width="auto">
             <Label name="lbl_format" text="Format:" />
             <Label name="lbl_aspect" text="Video size:" />
+            <Label name="lbl_title" text="Cover title:" />
           </Column>
           <Column name="inputs">
             <ComboBox name="format" />
             <ComboBox name="aspect" />
+            <TextBox name="title" placeholder="Untitled" />
           </Column>
         </GridView>
+        <CheckBox name="branding" text="Include Groove branding" />
         <Label name="details" text="Export the whole song, with current mute, solo and block levels." height="44" />
         <Label name="status" text="Ready to export." height="44" />
         <StackView name="actions" orientation="horizontal" spacing="6">
@@ -115,6 +154,32 @@
           <Button name="share" text="Share..." />
           <Space name="flex" />
           <Button name="cancel" text="Close" />
+        </StackView>
+      </form>
+      <form name="share_song" title="Share Song" width="520" spacing="8" padding="12">
+        <Label name="details" text="Anyone with the link can listen to this song." height="40" />
+        <CheckBox name="project" text="Include editable song (contains embedded recordings)" />
+        <Label name="status" text="Ready to share." height="44" />
+        <StackView name="actions" orientation="horizontal" spacing="6">
+          <Button name="share" text="Create Link" flags="BUTTON_DEFAULT" />
+          <Button name="attachment" text="Share MP3..." />
+          <Button name="manage" text="Manage Links..." />
+          <Space name="flex" />
+          <Button name="close" text="Close" />
+        </StackView>
+      </form>
+      <form name="manage_song_link" title="Manage Song Links" width="520" spacing="8" padding="12">
+        <StackView name="navigation" orientation="horizontal" spacing="6">
+          <Button name="newer" text="Newer" />
+          <Label name="title" text="" flags="WINDOW_FLEXSPACE" />
+          <Button name="older" text="Older" />
+        </StackView>
+        <Label name="status" text="" height="36" />
+        <StackView name="actions" orientation="horizontal" spacing="6">
+          <Button name="share" text="Share Link..." />
+          <Button name="delete" text="Stop Sharing" />
+          <Space name="flex" />
+          <Button name="close" text="Close" />
         </StackView>
       </form>
       <form name="record_sample" title="Record Sample" width="460" spacing="8" padding="12">
@@ -177,7 +242,8 @@
           <Button command="transport.loop" icon="phosphor-repeat" checked-icon="phosphor-repeat-fill" tooltip="Loop (L)" />
           <Button command="edit.delete" icon="phosphor-trash" tooltip="Remove selected block (Delete)" />
           <Button command="file.record" icon="phosphor-microphone" tooltip="Record Sample..." />
-          <Button command="file.export_audio" icon="phosphor-arrow-square-out" tooltip="Export Audio..." />
+          <Button command="file.share_song" icon="phosphor-arrow-square-out" tooltip="Share Song..." if="GROOVE_SHARE_LINKS &amp;&amp; defined(GROOVE_USE_SHINE)" />
+          <Button command="file.export_audio" icon="phosphor-arrow-square-out" tooltip="Export Audio..." if="!GROOVE_SHARE_LINKS || !defined(GROOVE_USE_SHINE)" />
           <Button name="more" icon="phosphor-dots-three" tooltip="More actions" />
         </Toolbar>
         <GrooveTracks name="tracks" width="28" />
@@ -188,6 +254,10 @@
             flags="WINDOW_AUTO_LAYOUT | WINDOW_NOTITLE | WINDOW_NORESIZE | WINDOW_NOCLOSE | WINDOW_NOCOLLAPSE"
             spacing="4" padding="4">
         <SegmentedControl name="families" text="Drums|Fills|Bass|Guitar|Synth|Pads|Stabs|Vocals|Scratch|FX|My Samples" flags="CONTROL_SIZE_LARGE | WINDOW_NOFOCUS" />
+        <StackView name="store_row" orientation="horizontal" spacing="6" flags="WINDOW_HIDDEN">
+          <Label name="store_hint" text="Listen to any sound. Unlock packs to use preview sounds in your songs." color="text-secondary" flags="WINDOW_FLEXSPACE" v-align="center" />
+          <Button name="packs" text="Sample Packs..." />
+        </StackView>
         <GrooveBlockBin name="bin" source="library.blocks" flags="WINDOW_FLEXSPACE">
           <FlowView name="blocks" spacing="0" padding="0" flags="WINDOW_FLEXSPACE">
             <GrooveBlockCard name="record_audio" text="Add Recording" width="176" height="44" flags="WINDOW_HIDDEN" />

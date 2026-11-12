@@ -18,6 +18,7 @@
 #include "page.h"
 #include "theme.h"
 #include <orion/kernel/renderer.h>
+#include <orion/kernel/http.h>
 
 #define CONTAINS(x, y, x1, y1, w1, h1) \
 ((x1) <= (x) && (y1) <= (y) && (x1) + (w1) > (x) && (y1) + (h1) > (y))
@@ -41,6 +42,10 @@ static void free_posted_lparam(uint32_t msg, void *lparam) {
   if (!lparam) return;
   if (msg == evHttpProgress)
     free(lparam);
+}
+static void discard_posted_lparam(uint32_t msg, void *lparam) {
+  if (msg == evHttpDone) http_response_free(lparam);
+  else free_posted_lparam(msg, lparam);
 }
 // Window hooks
 typedef struct winhook_s {
@@ -657,6 +662,7 @@ static void order_background_before_content(window_t *win, uint8_t nc_index) {
 // keyboard events while flushing paints.
 void post_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   for (uint8_t w = queue.write, r = queue.read; r != w; r++) {
+    if (msg == evHttpDone) break;
     if (queue.messages[r].target == win &&
         queue.messages[r].msg == msg)
     {
@@ -708,6 +714,7 @@ bool is_valid_window_ptr(window_t *target, window_t *list) {
 }
 
 void repost_messages(void) {
+  http_dispatch_pending();
   bool frame_began = g_ui_runtime.running;
   bool frame_had_paint = false;
   window_t *unfinished[0x100];
@@ -718,16 +725,16 @@ void repost_messages(void) {
   for (uint8_t write = queue.write; queue.read != write;) {
     msg_t *m = &queue.messages[queue.read++];
     if (m->target == NULL) {
-      free_posted_lparam(m->msg, m->lparam);
+      discard_posted_lparam(m->msg, m->lparam);
       continue;
     }
     if (m->msg == evRefreshStencil) {
       // Stencil no longer used; discard.
-      free_posted_lparam(m->msg, m->lparam);
+      discard_posted_lparam(m->msg, m->lparam);
       continue;
     }
     if (!is_valid_window_ptr(m->target, g_ui_runtime.windows)) {
-      free_posted_lparam(m->msg, m->lparam);
+      discard_posted_lparam(m->msg, m->lparam);
       continue;
     }
     if (m->msg == evNCPaint && m->wparam == 0) {

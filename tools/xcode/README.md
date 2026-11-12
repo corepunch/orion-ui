@@ -17,7 +17,8 @@ method during export.
 
 The macOS target enables Hardened Runtime in both configurations. Release builds
 request a secure timestamp and omit debug entitlements. To distribute outside the
-Mac App Store, create a new `groove-macos` archive, then choose **Distribute App →
+Mac App Store, archive `groove-macos` with `GROOVE_APP_STORE=0` so the entire
+library is available without StoreKit. Then choose **Distribute App →
 Developer ID → Automatically manage signing** in Organizer. Xcode can create the
 Developer ID Application certificate for an authorized team account. A development
 certificate alone cannot satisfy notarization. Upload through Organizer to notarize
@@ -29,7 +30,7 @@ For a local Developer ID export, the generator also writes
 ```sh
 xcodebuild -project apps/groove/groove.xcodeproj -scheme groove-macos \
   -configuration Release -destination 'generic/platform=macOS' \
-  -archivePath build/xcode/groove.xcarchive -allowProvisioningUpdates archive
+  -archivePath build/xcode/groove.xcarchive -allowProvisioningUpdates GROOVE_APP_STORE=0 archive
 xcodebuild -exportArchive -archivePath build/xcode/groove.xcarchive \
   -exportPath build/xcode/DeveloperID \
   -exportOptionsPlist apps/groove/groove.xcodeproj/Generated/DeveloperIDExportOptions.plist \
@@ -60,11 +61,12 @@ Xcode creates unity sources, the resource compiler and generated form headers in
 DerivedData at build time, so a fresh checkout needs no pre-generated C files.
 The source list is refreshed on every build, including newly added framework
 modules such as localization. No build products are written into the app folder.
-The navigator and Compile Sources phases reference only generated unity files:
+The navigator and Compile Sources phases reference generated unity files:
 `u_user.c`, `u_kernel.c`, `u_commctl.c`, `u_commdlg.c`, `u_groove.c`,
 `u_audio_input.m` and the target's `u_platform_macos.m` or `u_platform_ipad.m`.
 Each unity file includes the module's sources; individual implementation files
-are not listed or compiled separately. The Engine, Application and Native Sources
+in C and Objective-C are not listed or compiled separately. Both Apple targets
+also compile Groove's Swift StoreKit bridge. The Engine, Application and Native Sources
 groups follow the same structure as Orca's Xcode projects. Generated files appear
 after the first build; the application form and resources remain directly accessible.
 The normal `build/generated/` headers and Makefile-built binaries/libraries are

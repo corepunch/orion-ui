@@ -36,4 +36,5 @@
   <string source="The record was changed in another window. Close and reopen this document." where="code">L’enregistrement a été modifié dans une autre fenêtre. Fermez et rouvrez ce document.</string>
   <string source="The document could not be saved. No changes were applied." where="code">Impossible d’enregistrer le document. Aucune modification n’a été appliquée.</string>
   <string source="Save changes to this document?" where="code">Enregistrer les modifications de ce document ?</string>
+  <string source="Permission denied." where="code">Accès refusé.</string>
 </strings>

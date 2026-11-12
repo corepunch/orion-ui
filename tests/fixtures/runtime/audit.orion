@@ -1,0 +1,10 @@
+<orion>
+  <application name="audit_test" form="records" model="audit_model" runtime-api="1"/>
+  <databases><database name="audit_test" class="db_schema_xml">
+    <table name="items"><field name="id" type="integer" key="YES"/><field name="name" type="string" length="80"/></table>
+    <table name="events"><field name="id" type="integer" key="YES"/><field name="name" type="string" length="80"/></table>
+  </database></databases>
+  <forms><form name="records" title="Audit test" width="400" height="300">
+    <TableView source="audit_test.items"><Column field="name" title="Name" width="0"/></TableView>
+  </form></forms>
+</orion>

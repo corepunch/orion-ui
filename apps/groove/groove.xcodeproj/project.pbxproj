@@ -31,6 +31,8 @@
 "GL_SILENCE_DEPRECATION",
 "HAVE_WINDOWING",
 "GROOVE_USE_SHINE",
+"GROOVE_APP_STORE=$(GROOVE_APP_STORE)",
+"GROOVE_SHARE_LINKS=1",
 "SHAREDIR=\"../share/groove\"",
 );
 "OTHER_CFLAGS" = ("$(inherited)",
@@ -46,6 +48,10 @@
 "PRODUCT_BUNDLE_IDENTIFIER" = "com.orion.groove";
 "MARKETING_VERSION" = "1.0";
 "CURRENT_PROJECT_VERSION" = "1";
+"GROOVE_APP_STORE" = "1";
+"GROOVE_SHARE_BASE_URL" = "";
+"SWIFT_VERSION" = "5.0";
+"SWIFT_OBJC_BRIDGING_HEADER" = "$(ORION_ROOT)/apps/groove/store/store_bridge.h";
 "GCC_OPTIMIZATION_LEVEL" = "0";
 "DEBUG_INFORMATION_FORMAT" = "dwarf";
 "ONLY_ACTIVE_ARCH" = "YES";
@@ -80,6 +86,8 @@
 "GL_SILENCE_DEPRECATION",
 "HAVE_WINDOWING",
 "GROOVE_USE_SHINE",
+"GROOVE_APP_STORE=$(GROOVE_APP_STORE)",
+"GROOVE_SHARE_LINKS=1",
 "SHAREDIR=\"../share/groove\"",
 );
 "OTHER_CFLAGS" = ("$(inherited)",
@@ -95,6 +103,10 @@
 "PRODUCT_BUNDLE_IDENTIFIER" = "com.orion.groove";
 "MARKETING_VERSION" = "1.0";
 "CURRENT_PROJECT_VERSION" = "1";
+"GROOVE_APP_STORE" = "1";
+"GROOVE_SHARE_BASE_URL" = "";
+"SWIFT_VERSION" = "5.0";
+"SWIFT_OBJC_BRIDGING_HEADER" = "$(ORION_ROOT)/apps/groove/store/store_bridge.h";
 "GCC_OPTIMIZATION_LEVEL" = "s";
 "DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
 "ONLY_ACTIVE_ARCH" = "NO";
@@ -147,6 +159,11 @@
 "sourceTree" = "DERIVED_FILE_DIR";
 "lastKnownFileType" = "sourcecode.c.objc";
 };
+"FBDEB5A60ACE579B413EE058" = {"isa" = "PBXFileReference";
+"path" = "u_groove_share.m";
+"sourceTree" = "DERIVED_FILE_DIR";
+"lastKnownFileType" = "sourcecode.c.objc";
+};
 "6AFC5056EE569FE6BA670B77" = {"isa" = "PBXFileReference";
 "path" = "u_platform_macos.m";
 "sourceTree" = "DERIVED_FILE_DIR";
@@ -168,12 +185,23 @@
 "sourceTree" = "SOURCE_ROOT";
 "lastKnownFileType" = "folder";
 };
+"D6E17D91700FEBFDD8F4CD52" = {"isa" = "PBXFileReference";
+"path" = "store/Groove.storekit";
+"sourceTree" = "SOURCE_ROOT";
+"lastKnownFileType" = "text";
+};
+"52C523C2F3295CE1886B6DAF" = {"isa" = "PBXFileReference";
+"path" = "store/StoreKitBridge.swift";
+"sourceTree" = "SOURCE_ROOT";
+"lastKnownFileType" = "sourcecode.swift";
+};
 "2E9B4638E583BC38CE83A8CB" = {"isa" = "PBXGroup";
 "name" = "Application";
 "children" = ("52712183AB34940F529AC8B4",
 "AFA694CA91AFA31E2E92047C",
 "F9187E824FE171A6F0EFAE28",
 "4D6FC5A1736DCA577CF68A90",
+"D6E17D91700FEBFDD8F4CD52",
 );
 "sourceTree" = "<group>";
 };
@@ -190,8 +218,10 @@
 "name" = "Native Sources";
 "children" = ("C92F773921705A4A14AB975B",
 "CDA93E0D55CAD9347B3B68B8",
+"FBDEB5A60ACE579B413EE058",
 "6AFC5056EE569FE6BA670B77",
 "05FA0772FDFDB095DBDBC5C1",
+"52C523C2F3295CE1886B6DAF",
 );
 "sourceTree" = "<group>";
 };
@@ -226,6 +256,8 @@
 "CoreVideo",
 "-framework",
 "UniformTypeIdentifiers",
+"-framework",
+"StoreKit",
 );
 "SUPPORTED_PLATFORMS" = "macosx";
 "MACOSX_DEPLOYMENT_TARGET" = "12.0";
@@ -273,6 +305,8 @@
 "CoreVideo",
 "-framework",
 "UniformTypeIdentifiers",
+"-framework",
+"StoreKit",
 );
 "SUPPORTED_PLATFORMS" = "macosx";
 "MACOSX_DEPLOYMENT_TARGET" = "12.0";
@@ -321,8 +355,14 @@
 "4C01A38B8A841D1D228A4B63" = {"isa" = "PBXBuildFile";
 "fileRef" = "CDA93E0D55CAD9347B3B68B8";
 };
+"A5980EF0D954F7A36225075B" = {"isa" = "PBXBuildFile";
+"fileRef" = "FBDEB5A60ACE579B413EE058";
+};
 "139C15DDDDF4FEDFDC7EB6D3" = {"isa" = "PBXBuildFile";
 "fileRef" = "6AFC5056EE569FE6BA670B77";
+};
+"CD6C1E78E0614794F927C0CB" = {"isa" = "PBXBuildFile";
+"fileRef" = "52C523C2F3295CE1886B6DAF";
 };
 "CF7AB7229AFF63CA1DD36A9B" = {"isa" = "PBXShellScriptBuildPhase";
 "buildActionMask" = 2147483647;
@@ -334,11 +374,26 @@
 "$(ORION_ROOT)/tools/orionc.c",
 "$(ORION_ROOT)/apps/groove/groove.orion",
 "$(ORION_ROOT)/apps/groove/share/icon.png",
+"$(ORION_ROOT)/tools/embed_text.py",
+"$(ORION_ROOT)/orion/themes/amber.css",
+"$(ORION_ROOT)/orion/themes/base.css",
+"$(ORION_ROOT)/orion/themes/classic.css",
+"$(ORION_ROOT)/orion/themes/metro.css",
+"$(ORION_ROOT)/orion/themes/modern.css",
+"$(ORION_ROOT)/orion/themes/navy.css",
+"$(ORION_ROOT)/orion/themes/porcelain.css",
 );
 "outputPaths" = ("$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h",
 "$(DERIVED_FILE_DIR)/Assets.xcassets",
 "$(DERIVED_FILE_DIR)/liborion_freetype.a",
 "$(DERIVED_FILE_DIR)/liborion_image_deps.a",
+"$(DERIVED_FILE_DIR)/include/orion/themes/amber_css.h",
+"$(DERIVED_FILE_DIR)/include/orion/themes/base_css.h",
+"$(DERIVED_FILE_DIR)/include/orion/themes/classic_css.h",
+"$(DERIVED_FILE_DIR)/include/orion/themes/metro_css.h",
+"$(DERIVED_FILE_DIR)/include/orion/themes/modern_css.h",
+"$(DERIVED_FILE_DIR)/include/orion/themes/navy_css.h",
+"$(DERIVED_FILE_DIR)/include/orion/themes/porcelain_css.h",
 "$(DERIVED_FILE_DIR)/u_user.c",
 "$(DERIVED_FILE_DIR)/u_kernel.c",
 "$(DERIVED_FILE_DIR)/u_commctl.c",
@@ -346,6 +401,7 @@
 "$(DERIVED_FILE_DIR)/u_groove.c",
 "$(DERIVED_FILE_DIR)/u_audio_input.m",
 "$(DERIVED_FILE_DIR)/u_media_export.m",
+"$(DERIVED_FILE_DIR)/u_groove_share.m",
 "$(DERIVED_FILE_DIR)/u_platform_macos.m",
 );
 "runOnlyForDeploymentPostprocessing" = 0;
@@ -360,7 +416,9 @@
 "EC3D26CF32F284C3C2614797",
 "4B00FB7A29471712749C8706",
 "4C01A38B8A841D1D228A4B63",
+"A5980EF0D954F7A36225075B",
 "139C15DDDDF4FEDFDC7EB6D3",
+"CD6C1E78E0614794F927C0CB",
 );
 "runOnlyForDeploymentPostprocessing" = 0;
 };
@@ -437,6 +495,8 @@
 "PhotosUI",
 "-framework",
 "ImageIO",
+"-framework",
+"StoreKit",
 );
 "CODE_SIGN_STYLE" = "Automatic";
 "SDKROOT" = "iphoneos";
@@ -487,6 +547,8 @@
 "PhotosUI",
 "-framework",
 "ImageIO",
+"-framework",
+"StoreKit",
 );
 "CODE_SIGN_STYLE" = "Automatic";
 "SDKROOT" = "iphoneos";
@@ -528,10 +590,16 @@
 "AB773A6BB925B28F37D271DD" = {"isa" = "PBXBuildFile";
 "fileRef" = "CDA93E0D55CAD9347B3B68B8";
 };
+"83D6CAB853DD34982DD5EA2D" = {"isa" = "PBXBuildFile";
+"fileRef" = "FBDEB5A60ACE579B413EE058";
+};
 "EB8476BA7832E6EA16443B37" = {"isa" = "PBXBuildFile";
 "fileRef" = "05FA0772FDFDB095DBDBC5C1";
 "settings" = {"COMPILER_FLAGS" = "-fobjc-arc";
 };
+};
+"856C79CFA2E4CEB0C07A39B9" = {"isa" = "PBXBuildFile";
+"fileRef" = "52C523C2F3295CE1886B6DAF";
 };
 "4E46F7B1B0DE6B87A9FE094B" = {"isa" = "PBXShellScriptBuildPhase";
 "buildActionMask" = 2147483647;
@@ -543,11 +611,26 @@
 "$(ORION_ROOT)/tools/orionc.c",
 "$(ORION_ROOT)/apps/groove/groove.orion",
 "$(ORION_ROOT)/apps/groove/share/icon.png",
+"$(ORION_ROOT)/tools/embed_text.py",
+"$(ORION_ROOT)/orion/themes/amber.css",
+"$(ORION_ROOT)/orion/themes/base.css",
+"$(ORION_ROOT)/orion/themes/classic.css",
+"$(ORION_ROOT)/orion/themes/metro.css",
+"$(ORION_ROOT)/orion/themes/modern.css",
+"$(ORION_ROOT)/orion/themes/navy.css",
+"$(ORION_ROOT)/orion/themes/porcelain.css",
 );
 "outputPaths" = ("$(DERIVED_FILE_DIR)/include/build/generated/apps/groove/groove.h",
 "$(DERIVED_FILE_DIR)/Assets.xcassets",
 "$(DERIVED_FILE_DIR)/liborion_freetype.a",
 "$(DERIVED_FILE_DIR)/liborion_image_deps.a",
+"$(DERIVED_FILE_DIR)/include/orion/themes/amber_css.h",
+"$(DERIVED_FILE_DIR)/include/orion/themes/base_css.h",
+"$(DERIVED_FILE_DIR)/include/orion/themes/classic_css.h",
+"$(DERIVED_FILE_DIR)/include/orion/themes/metro_css.h",
+"$(DERIVED_FILE_DIR)/include/orion/themes/modern_css.h",
+"$(DERIVED_FILE_DIR)/include/orion/themes/navy_css.h",
+"$(DERIVED_FILE_DIR)/include/orion/themes/porcelain_css.h",
 "$(DERIVED_FILE_DIR)/u_user.c",
 "$(DERIVED_FILE_DIR)/u_kernel.c",
 "$(DERIVED_FILE_DIR)/u_commctl.c",
@@ -555,6 +638,7 @@
 "$(DERIVED_FILE_DIR)/u_groove.c",
 "$(DERIVED_FILE_DIR)/u_audio_input.m",
 "$(DERIVED_FILE_DIR)/u_media_export.m",
+"$(DERIVED_FILE_DIR)/u_groove_share.m",
 "$(DERIVED_FILE_DIR)/u_platform_ipad.m",
 );
 "runOnlyForDeploymentPostprocessing" = 0;
@@ -569,7 +653,9 @@
 "92E6E1B327C728B18B5F6643",
 "E5DB06AFE9B71EF03F1D3B2E",
 "AB773A6BB925B28F37D271DD",
+"83D6CAB853DD34982DD5EA2D",
 "EB8476BA7832E6EA16443B37",
+"856C79CFA2E4CEB0C07A39B9",
 );
 "runOnlyForDeploymentPostprocessing" = 0;
 };

@@ -1,33 +1,77 @@
 <orion>
   <databases>
-    <database name="lodge" class="db_schema_xml" source="hotel.xml">
+    <database name="lodge" class="db_schema_xml" source="hotel.xml" version="4" migration="additive">
       <table name="rooms">
         <field name="id" type="integer" key="YES" />
         <field name="name" type="string" length="40" />
         <field name="category" type="string" length="40" />
         <field name="capacity" type="integer" default="2" />
         <field name="rate" type="double" />
+        <field name="cleaning_state" type="string" length="24" default="inspection_needed" />
+        <field name="cleaning_label" type="string" length="80" computed="cleaning_label" />
       </table>
       <table name="guests">
         <field name="id" type="integer" key="YES" />
         <field name="name" type="string" length="100" />
         <field name="phone" type="string" length="60" />
       </table>
+      <table name="hotel_settings">
+        <field name="id" type="integer" key="YES" />
+        <field name="country" type="string" length="2" />
+        <field name="currency" type="string" length="3" />
+        <field name="actor" type="string" length="100" default="legacy-unknown" />
+      </table>
+      <table name="reservation_groups">
+        <field name="id" type="integer" key="YES" />
+        <field name="name" type="string" length="100" />
+      </table>
       <table name="reservations">
         <field name="id" type="integer" key="YES" />
         <field name="room_id" type="integer" relation="rooms.id" on-delete="deny" />
         <field name="guest_id" type="integer" relation="guests.id" on-delete="deny" />
+        <field name="group_id" type="integer" relation="reservation_groups.id" on-delete="deny" />
         <field name="arrival" type="date" />
         <field name="departure" type="date" />
         <field name="persons" type="integer" default="1" />
         <field name="rate" type="double" />
         <field name="extras" type="double" />
-        <field name="paid" type="double" />
+        <field name="paid" type="double" default="0" />
         <field name="status" type="string" length="20" default="reserved" />
         <field name="notes" type="string" length="256" />
         <field name="total" type="double" computed="total" />
         <field name="balance" type="double" computed="balance" />
         <field name="status_label" type="string" length="80" computed="status_label" />
+      </table>
+      <table name="reservation_history">
+        <field name="id" type="integer" key="YES" />
+        <field name="reservation_id" type="integer" relation="reservations.id" on-delete="deny" />
+        <field name="operation" type="string" length="20" />
+        <field name="actor" type="string" length="100" default="legacy-unknown" />
+        <field name="before" type="string" length="1024" />
+        <field name="after" type="string" length="1024" />
+      </table>
+      <table name="night_rates">
+        <field name="id" type="integer" key="YES" />
+        <field name="reservation_id" type="integer" relation="reservations.id" on-delete="deny" />
+        <field name="night" type="date" />
+        <field name="amount_minor" type="integer" />
+      </table>
+      <table name="payment_events">
+        <field name="id" type="integer" key="YES" />
+        <field name="reservation_id" type="integer" relation="reservations.id" on-delete="deny" />
+        <field name="amount_minor" type="integer" />
+        <field name="kind" type="string" length="20" />
+        <field name="actor" type="string" length="100" default="legacy-unknown" />
+        <field name="request_key" type="string" length="100" />
+        <field name="posted_on" type="date" />
+      </table>
+      <table name="day_closes">
+        <field name="id" type="integer" key="YES" />
+        <field name="day" type="date" />
+        <field name="actor" type="string" length="100" default="legacy-unknown" />
+        <field name="net_minor" type="string" length="32" />
+        <field name="outstanding_minor" type="string" length="32" />
+        <field name="reservations" type="integer" />
       </table>
     </database>
   </databases>

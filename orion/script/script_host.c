@@ -220,13 +220,18 @@ static int l_search(lua_State *L) {
     if (!(*p == '.' || *p == '_' || (*p >= '0' && *p <= '9') || (*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')) || (p[0] == '.' && p[1] == '.'))
       return lua_pushfstring(L, "\n\tmodule name '%s' is not a dotted identifier", name), 1;
   char rel[256];
+  if (!*name || strlen(name) >= sizeof(rel)) return luaL_error(L, "invalid module name length");
   snprintf(rel, sizeof(rel), "%s", name);
   for (char *p = rel; *p; p++) if (*p == '.') *p = '/';
-  for (int i = 1; i <= 2; i++) {
+  bool plugin = !strncmp(name, "orion.plugins.", 14);
+  const int roots[] = {plugin ? 2 : 1, plugin ? 3 : 2, 1};
+  for (int at = 0; at < (plugin ? 3 : 2); at++) {
+    int i = roots[at];
     const char *root = lua_tostring(L, lua_upvalueindex(i));
     if (!root || !*root) continue;
     char path[1024];
-    snprintf(path, sizeof(path), "%s/%s.lua", root, rel);
+    int length = snprintf(path, sizeof(path), "%s/%s.lua", root, rel);
+    if (length < 0 || (size_t)length >= sizeof(path)) return luaL_error(L, "module path is too long");
     FILE *f = fopen(path, "rb");
     if (!f) continue;
     fclose(f);
@@ -320,7 +325,8 @@ lua_State *script_state_new(const char *dir, const char *name) {
   snprintf(lua_root, sizeof(lua_root), "%s/../share/orion/lua", ui_get_exe_dir());
   lua_pushstring(L, dir ? dir : "");
   lua_pushstring(L, lua_root);
-  lua_pushcclosure(L, l_search, 2);
+  lua_pushstring(L, getenv("ORION_PLUGIN_ROOT") ? getenv("ORION_PLUGIN_ROOT") : "");
+  lua_pushcclosure(L, l_search, 3);
   lua_rawseti(L, -2, 2);
   lua_setfield(L, -3, "searchers");
   lua_pop(L, 2);

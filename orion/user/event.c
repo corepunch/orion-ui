@@ -17,6 +17,7 @@
 #include "scrollbar.h"
 #include "font_sdf.h"
 #include <orion/kernel/kernel.h>
+#include <orion/kernel/http.h>
 
 // External functions
 extern intptr_t send_message(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
@@ -1342,6 +1343,10 @@ void dispatch_message(ui_event_t *msg) {
         if (msg->message == evHttpProgress && msg->lParam) {
           free(msg->lParam);
         }
+      } else if (msg->message == evHttpDone) {
+        http_response_free(msg->lParam);
+      } else if (msg->message == evHttpProgress) {
+        free(msg->lParam);
       }
       break;
     }
@@ -1400,5 +1405,10 @@ void wake_event_loop(void) {
   if (g_wakeup_pending) return;
   if (!g_ui_runtime.running) return;
   g_wakeup_pending = true;
+  axPostMessageW(&g_wakeup_sentinel, kEventWindowPaint, 0, NULL);
+}
+
+// Worker threads cannot access the UI thread's coalescing flag.
+void wake_event_loop_external(void) {
   axPostMessageW(&g_wakeup_sentinel, kEventWindowPaint, 0, NULL);
 }

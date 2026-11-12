@@ -238,3 +238,10 @@ This software is based in part on the work of the Independent JPEG Group.
 PNG, JPEG, BMP and ZIP decoding use the libpng, IJG libjpeg, libnsbmp and zlib
 submodules. Indexed BMP reading and writing use the bmplib submodule. Their
 license notices are included in `share/licenses/`.
+
+## External developers
+
+See the [developer SDK](docs/developer-sdk.md) for application/plugin
+scaffolding, dependency checks and source packaging, and the
+[platform readiness plan](docs/business-platform-readiness.md) for
+production acceptance criteria shared by Ledger and Lodge.

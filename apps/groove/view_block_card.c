@@ -1,9 +1,9 @@
 #include "groove.h"
+#include "store/store.h"
 
 #define CARD_SLOP 5
 #define CARD_LABEL_PADDING 4
 #define CARD_TAG_INSET 2
-#define CARD_LABEL_BG 0xB8000000u
 #define CARD_REPEAT_OVERLAY 0x54000000u
 #define CARD_LABEL_FONT "Caption"
 
@@ -36,16 +36,17 @@ static void paint_card_label(const block_t *b, irect16_t r, int visible_right, i
   if (text_w) draw_text_ellipsized(CARD_LABEL_FONT, b->display_name, text_x, r.y + CARD_TAG_INSET, text_w, ink);
 }
 
-static void paint_card_variant(const block_t *b, irect16_t r, int visible_width) {
-  if (!b->variant) return;
-  char text[8];
-  snprintf(text, sizeof(text), "%u", b->variant);
-  int size = MAX(text_char_height("Caption") + 1, text_strwidth("Caption", text) + 2 * CARD_LABEL_PADDING);
+static void paint_card_tag(const block_t *b, irect16_t r, int visible_width, bool locked) {
+  if (!locked && !b->variant) return;
+  char variant[8];
+  snprintf(variant, sizeof(variant), "%u", b->variant);
+  const char *text = locked ? ui_tr("Preview") : variant;
+  int h = text_char_height("Caption") + 1, w = MAX(h, text_strwidth("Caption", text) + 2 * CARD_LABEL_PADDING);
   r.w = MIN(r.w, visible_width);
   irect16_t area = rect_inset(r, CARD_TAG_INSET);
-  if (size > area.w || size > area.h) return;
-  irect16_t badge = rect_split_right(rect_split_bottom(area, size), size);
-  draw_badge_ex("Caption", text, badge, 0xFFFFFFFFu, CARD_LABEL_BG);
+  if (w > area.w || h > area.h) return;
+  irect16_t badge = rect_split_right(rect_split_bottom(area, h), w);
+  draw_badge_ex("Caption", text, badge, get_sys_color(brTextNormal), get_sys_color(brPanelDark));
 }
 
 static int sheet_card_index(window_t *win) {
@@ -56,7 +57,7 @@ static int sheet_card_index(window_t *win) {
 }
 
 // period > 0 draws the source waveform at its own scale, repeating when the clip is longer.
-static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state, int period) {
+static void paint_block_card(int block, const block_t *b, irect16_t r, int visible_width, uint32_t color, ctrl_state_t state, int period, bool locked) {
   theme_draw_ex(THEME_PART_CARD, r, state | CTRL_PLASTIC, &(theme_draw_opts_t){.color = color}); // its shadow margin is the only gap between neighbouring cards
   int source_width = period > 0 ? period : r.w, source_x = r.x;
   r = theme_content_rect(THEME_PART_CARD, r, state | CTRL_PLASTIC);
@@ -75,7 +76,7 @@ static void paint_block_card(int block, const block_t *b, irect16_t r, int visib
   int label_x = wave.x + waveform_first_bar_offset(source_width, wave.x - source_x);
   uint32_t label_ink = color_with_alpha(get_sys_color(brTextOnColor), color >> 24);
   paint_card_label(b, r, source_x + visible_width, label_x, label_ink);
-  paint_card_variant(b, r, visible_width);
+  paint_card_tag(b, r, visible_width, locked);
   if (period > 0 && r.w > 0 && r.h > 0)
     fill_rounded_rect_bands(CARD_REPEAT_OVERLAY, r, radius, source_width, r.x - source_x);
 }
@@ -149,7 +150,8 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
         } else r.w = natural_w; // an overlap crops the full card; the window clips the tail
       }
       if (win->parent && card_on_screen(win)) app_block_peaks(st->block); // a stale overview stays up until the new one is ready
-      paint_block_card(st->block, b, r, visible_width, category_color(b->cat), state, period);
+      bool locked = win->parent != g_app->sheet && !groove_store_can_add(st->block);
+      paint_block_card(st->block, b, r, visible_width, category_color(b->cat), state, period, locked);
       return true;
     }
     case grCardSetBlock:
@@ -178,7 +180,7 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       bool inside = rect_contains_point(get_client_rect(win), (ipoint16_t){ (int16_t)mx, (int16_t)my });
       if (inside != st->hover) { st->hover = inside; invalidate_window(win); }
       track_mouse(win);
-      if (!st->down) return true;
+      if (!st->down || (!window_is_lifted(win) && !groove_store_can_add(st->block))) return true;
       int sx, sy;
       card_screen(win, mx, my, &sx, &sy);
       if (!window_is_lifted(win) && abs(mx - st->press.x) + abs(my - st->press.y) > CARD_SLOP) {
@@ -196,7 +198,7 @@ result_t win_block_card(window_t *win, uint32_t msg, uint32_t wparam, void *lpar
       if (win->parent == g_app->sheet) return false;
       if (st->hover) { st->hover = false; invalidate_window(win); }
       return true;
-    case evQueryDrag: return win->parent == g_app->sheet ? DRAG_NONE : DRAG_AFTER_HOLD; // swipe scrolls the library, hold picks up
+    case evQueryDrag: return win->parent == g_app->sheet || !groove_store_can_add(st->block) ? DRAG_NONE : DRAG_AFTER_HOLD;
     case evLeftButtonDown:
       if (win->parent == g_app->sheet) return false;
       st->down = true;

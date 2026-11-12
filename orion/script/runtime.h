@@ -4,6 +4,9 @@
 #include <stddef.h>
 #include <lua.h>
 
+#define ORION_RUNTIME_API 1
+bool script_runtime_check_api(const char *required, char *error, size_t size);
+
 typedef struct script_runtime_s script_runtime_t;
 // One runtime per application/trust domain; UI-thread confined. Controllers
 // are registry references, not VMs. The runtime outlives all attached pages.
@@ -19,5 +22,7 @@ int script_runtime_controller(script_runtime_t *runtime, const char *path, char 
 bool script_runtime_invoke(script_runtime_t *runtime, int controller, const char *method, const char *argument,
                            char *error, size_t size);
 bool script_runtime_action(script_runtime_t *runtime, const char *module, const char *method, const char *argument, char *error, size_t size);
+// Data-only request to a host-selected module; caller frees the returned string.
+char *script_runtime_request(script_runtime_t *runtime, const char *module, const char *argument, char *error, size_t size);
 void script_runtime_release(script_runtime_t *runtime, int controller);
 #endif

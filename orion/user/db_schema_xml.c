@@ -29,12 +29,83 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <direct.h>
+#define DBS_BINARY _O_BINARY
+#else
+#include <sys/file.h>
+#include <unistd.h>
+#define DBS_BINARY 0
+#endif
 
 #include "user.h"
 #include "database.h"
 #include "i18n.h"
 #include <libxml/parser.h>
 #include <libxml/tree.h>
+
+#ifdef _WIN32
+static bool dbs_resolve_directory(const char *directory, char *out, size_t size) {
+  HANDLE handle = CreateFileA(directory, FILE_READ_ATTRIBUTES,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+                              OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+  if (handle == INVALID_HANDLE_VALUE) { errno = EACCES; return false; }
+  typedef DWORD (WINAPI *dbs_final_path_fn)(HANDLE, LPSTR, DWORD, DWORD);
+  dbs_final_path_fn final_path = (dbs_final_path_fn)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetFinalPathNameByHandleA");
+  char resolved[4096];
+  DWORD length = final_path ? final_path(handle, resolved, sizeof(resolved), 0) : 0;
+  CloseHandle(handle);
+  if (!length || length >= sizeof(resolved)) { errno = EIO; return false; }
+  const char *path = resolved;
+  if (!strncmp(path, "\\\\?\\UNC\\", 8)) {
+    if (snprintf(out, size, "\\\\%s", path + 8) >= (int)size) { errno = ENAMETOOLONG; return false; }
+  } else {
+    if (!strncmp(path, "\\\\?\\", 4)) path += 4;
+    if (snprintf(out, size, "%s", path) >= (int)size) { errno = ENAMETOOLONG; return false; }
+  }
+  return true;
+}
+static bool dbs_lock_file(int fd) {
+  OVERLAPPED offset = {0};
+  if (LockFileEx((HANDLE)_get_osfhandle(fd), LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY,
+                 0, MAXDWORD, MAXDWORD, &offset)) return true;
+  errno = EACCES; return false;
+}
+static int dbs_sync_file(int fd) { return _commit(fd); }
+static int dbs_replace(const char *from, const char *to) {
+  if (MoveFileExA(from, to, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) return 0;
+  errno = EACCES; return -1;
+}
+static int dbs_link(const char *from, const char *to) {
+  if (CreateHardLinkA(to, from, NULL)) return 0;
+  errno = EACCES; return -1;
+}
+static int dbs_temporary(char *path, size_t size) {
+  char directory[MAX_PATH], generated[MAX_PATH];
+  if (strlen(path) >= sizeof(directory)) { errno = ENAMETOOLONG; return -1; }
+  snprintf(directory, sizeof(directory), "%s", path);
+  char *slash = strrchr(directory, '/'), *backslash = strrchr(directory, '\\');
+  if (!slash || (backslash && backslash > slash)) slash = backslash;
+  if (slash) *slash = 0; else strcpy(directory, ".");
+  if (!GetTempFileNameA(directory, "ori", 0, generated)) { errno = EIO; return -1; }
+  if (strlen(generated) >= size) { DeleteFileA(generated); errno = ENAMETOOLONG; return -1; }
+  snprintf(path, size, "%s", generated);
+  int fd = _open(path, _O_RDWR | _O_BINARY);
+  if (fd < 0) DeleteFileA(path);
+  return fd;
+}
+#else
+static bool dbs_lock_file(int fd) { return flock(fd, LOCK_EX | LOCK_NB) == 0; }
+static int dbs_sync_file(int fd) { return fsync(fd); }
+static int dbs_replace(const char *from, const char *to) { return rename(from, to); }
+static int dbs_link(const char *from, const char *to) { return link(from, to); }
+static int dbs_temporary(char *path, size_t size) { (void)size; return mkstemp(path); }
+#endif
 
 typedef struct {
   void **rows;
@@ -54,6 +125,10 @@ typedef struct dbs_scope_s {
 } dbs_scope_t;
 
 typedef struct {
+  int lock_fd;
+  unsigned delete_depth;
+  char history[512];
+  char locked_path[sizeof(((database_t *)0)->source_path)];
   dbs_table_t *tables;  // parallel to db->schema->tables
   dbs_scope_t *scope;   // innermost open change scope
   dbs_scope_t *baseline; // original rows of an independent document context
@@ -139,6 +214,7 @@ static bool dbs_field_matches(const db_field_meta_t *f, const void *record, cons
   const char *p = (const char *)record + f->offset;
   switch (f->type) {
     case DB_TYPE_INT:    return *(const int *)p == (int)(intptr_t)value;
+    case DB_TYPE_INT64:  return sizeof(intptr_t) >= sizeof(int64_t) && *(const int64_t *)p == (int64_t)(intptr_t)value;
     case DB_TYPE_BOOL:   return *(const bool *)p == ((intptr_t)value != 0);
     case DB_TYPE_STRING:
     case DB_TYPE_DATE:   return value && !strcmp(p, (const char *)value);
@@ -155,44 +231,233 @@ static void dbs_clear(database_t *db, dbs_context_t *ctx) {
   }
 }
 
+static bool dbs_lock_path(database_t *db, dbs_context_t *ctx, const char *path, bool must_be_new) {
+  char directory[sizeof(db->source_path)], canonical[sizeof(db->source_path)];
+  char resolved[4096], lock_path[sizeof(db->source_path) + 16];
+  if (!path || !path[0] || strlen(path) >= sizeof(directory)) return false;
+  snprintf(directory, sizeof(directory), "%s", path);
+  char *slash = strrchr(directory, '/');
+#ifdef _WIN32
+  char *backslash = strrchr(directory, '\\');
+  if (!slash || (backslash && backslash > slash)) slash = backslash;
+#endif
+  char name[sizeof(db->source_path)];
+  snprintf(name, sizeof(name), "%s", slash ? slash + 1 : path);
+  if (!name[0]) return false;
+  if (slash) {
+#ifdef _WIN32
+    if (slash == directory + 2 && directory[1] == ':') slash[1] = 0;
+    else
+#endif
+    if (slash == directory) slash[1] = 0; else *slash = 0;
+  } else strcpy(directory, ".");
+#ifdef _WIN32
+  if (!dbs_resolve_directory(directory, resolved, sizeof(resolved)) || snprintf(canonical, sizeof(canonical), "%s/%s", resolved, name) >= (int)sizeof(canonical)) return false;
+  DWORD attributes = GetFileAttributesA(canonical);
+  if (attributes != INVALID_FILE_ATTRIBUTES && (attributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY))) return false;
+#else
+  if (!realpath(directory, resolved) || snprintf(canonical, sizeof(canonical), "%s/%s", resolved, name) >= (int)sizeof(canonical)) return false;
+  struct stat st;
+  if (lstat(canonical, &st) == 0 && (S_ISLNK(st.st_mode) || !S_ISREG(st.st_mode))) return false;
+#endif
+  snprintf(lock_path, sizeof(lock_path), "%s.lock", canonical);
+  int fd = open(lock_path, O_CREAT | O_RDWR, 0600);
+  if (fd < 0 || !dbs_lock_file(fd)) { if (fd >= 0) close(fd); return false; }
+  if (must_be_new) {
+    struct stat target;
+    if (stat(canonical, &target) == 0) { close(fd); errno = EEXIST; return false; }
+    if (errno != ENOENT) { close(fd); return false; }
+  }
+  if (ctx->lock_fd >= 0) close(ctx->lock_fd);
+  ctx->lock_fd = fd;
+  snprintf(ctx->locked_path, sizeof(ctx->locked_path), "%s", canonical);
+  snprintf(db->source_path, sizeof(db->source_path), "%s", canonical);
+  return true;
+}
+
+bool db_schema_xml_seed_to(database_t *db, const char *path) {
+  dbs_context_t *ctx = db ? db->userdata : NULL;
+  if (!ctx || !dbs_lock_path(db, ctx, path, true)) {
+    fprintf(stderr, "[db_schema_xml] cannot lock new destination db=%s path=%s: %s\n",
+            db ? db->name : "(null)", path ? path : "(null)", strerror(errno));
+    fflush(stderr);
+    return false;
+  }
+  db->read_only = false;
+  db->dirty = true;
+  return true;
+}
+
+static bool dbs_sync_directory(const char *path) {
+#ifdef _WIN32
+  (void)path; return true;
+#else
+  char directory[sizeof(((database_t *)0)->source_path)];
+  snprintf(directory, sizeof(directory), "%s", path);
+  char *slash = strrchr(directory, '/');
+  if (slash) { if (slash == directory) slash[1] = 0; else *slash = 0; }
+  else strcpy(directory, ".");
+  int fd = open(directory, O_RDONLY);
+  if (fd < 0) return false;
+  bool ok = fsync(fd) == 0;
+  close(fd);
+  return ok;
+#endif
+}
+
+static bool dbs_save(database_t *db, dbs_context_t *ctx);
+
+bool db_schema_xml_migrate_additive(void *root, unsigned from_version) {
+  (void)root; (void)from_version;
+  return true;
+}
+
+static void dbs_init_record(const db_table_schema_t *t, void *record);
+
+static bool dbs_read_history(dbs_context_t *ctx, xmlNodePtr root, unsigned version) {
+  ctx->history[0] = 0;
+  xmlChar *history = xmlGetProp(root, BAD_CAST "orion-history");
+  if (!history) return true;
+  const char *p = (const char *)history;
+  unsigned long previous = 0;
+  bool valid = *p && strlen(p) < sizeof(ctx->history);
+  while (valid && *p) {
+    char *end = NULL; errno = 0;
+    unsigned long value = strtoul(p, &end, 10);
+    if (errno || end == p || !value || value > UINT32_MAX || (previous && value != previous + 1)) { valid = false; break; }
+    previous = value;
+    if (!*end) { p = end; break; }
+    if (*end != ',' || !end[1]) { valid = false; break; }
+    p = end + 1;
+  }
+  valid = valid && previous == version;
+  if (valid) snprintf(ctx->history, sizeof(ctx->history), "%s", (char *)history);
+  xmlFree(history);
+  return valid;
+}
+
+static bool dbs_append_history(dbs_context_t *ctx, unsigned version) {
+  size_t length = strlen(ctx->history);
+  int n = snprintf(ctx->history + length, sizeof(ctx->history) - length, "%s%u", length ? "," : "", version);
+  return n >= 0 && (size_t)n < sizeof(ctx->history) - length;
+}
+
 static bool dbs_load(database_t *db, dbs_context_t *ctx) {
   dbs_clear(db, ctx);
-  if (!db->source_path[0] || !axPathExists(db->source_path)) return true;
+  if (!db->source_path[0]) return true;
+  struct stat st;
+  if (stat(db->source_path, &st) != 0) {
+    if (errno == ENOENT && !db->read_only) return true;
+    fprintf(stderr, "[db_schema_xml] cannot inspect db=%s path=%s: %s\n", db->name, db->source_path, strerror(errno));
+    fflush(stderr); db->open_failed = true; return false;
+  }
   xmlDocPtr doc = xmlReadFile(db->source_path, NULL, XML_PARSE_NONET);
   xmlNodePtr root = doc ? xmlDocGetRootElement(doc) : NULL;
-  if (!root) {
-    fprintf(stderr, "[db_schema_xml] cannot parse db=%s path=%s\n", db->name, db->source_path);
+  xmlChar *version = root ? xmlGetProp(root, BAD_CAST "orion-version") : NULL;
+  unsigned current = db->schema->version ? db->schema->version : 1, found = 1;
+  bool compatible = true;
+  if (version) {
+    char *end = NULL; errno = 0; unsigned long parsed = strtoul((const char *)version, &end, 10);
+    compatible = !errno && end && *end == 0 && end != (char *)version && parsed > 0 && parsed <= current;
+    if (compatible) found = (unsigned)parsed;
+    xmlFree(version);
+  }
+  if (!root || (xmlStrcmp(root->name, BAD_CAST db->name) &&
+                (!db->schema->name || xmlStrcmp(root->name, BAD_CAST db->schema->name))) || !compatible ||
+      (found < current && !db->schema->migrate_xml)) {
+    fprintf(stderr, "[db_schema_xml] incompatible or invalid db=%s path=%s version=%u supported=%u\n",
+            db->name, db->source_path, found, current);
     fflush(stderr);
     if (doc) xmlFreeDoc(doc);
+    db->open_failed = true;
     return false;
+  }
+  if (!dbs_read_history(ctx, root, found)) {
+    fprintf(stderr, "[db_schema_xml] invalid migration history db=%s path=%s\n", db->name, db->source_path);
+    fflush(stderr); xmlFreeDoc(doc); db->open_failed = true; return false;
+  }
+  bool migrated = found < current;
+  if (migrated && !ctx->history[0] && !dbs_append_history(ctx, found)) {
+    xmlFreeDoc(doc); db->open_failed = true; return false;
+  }
+  while (found < current) {
+    if (!db->schema->migrate_xml(root, found)) {
+      fprintf(stderr, "[db_schema_xml] migration failed db=%s from=%u\n", db->name, found);
+      fflush(stderr); xmlFreeDoc(doc); db->open_failed = true; return false;
+    }
+    found++;
+    if (!dbs_append_history(ctx, found)) {
+      fprintf(stderr, "[db_schema_xml] migration history too long db=%s\n", db->name);
+      fflush(stderr); xmlFreeDoc(doc); db->open_failed = true; return false;
+    }
   }
   for (xmlNodePtr tn = root->children; tn; tn = tn->next) {
     if (tn->type != XML_ELEMENT_NODE) continue;
     const db_table_schema_t *t = db_schema_table_named(db->schema, (const char *)tn->name);
     if (!t) {
-      fprintf(stderr, "[db_schema_xml] skipping unknown table db=%s table=%s\n", db->name, tn->name);
-      continue;
+      fprintf(stderr, "[db_schema_xml] unknown table db=%s table=%s\n", db->name, tn->name);
+      fflush(stderr); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
     }
     int ti = (int)(t - db->schema->tables);
     void *record = calloc(1, t->record_size);
-    if (!record) break;
+    if (!record) {
+      fprintf(stderr, "[db_schema_xml] load allocation failed db=%s table=%s\n", db->name, t->name);
+      fflush(stderr); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
+    }
     for (xmlNodePtr rn = tn->children; rn; rn = rn->next) {
       if (rn->type != XML_ELEMENT_NODE) continue;
-      memset(record, 0, t->record_size);
-      for (int f = 0; f < t->meta_count; f++) db_load_field_from_xml(rn, record, &t->meta[f]);
-      dbs_append(db, t, &ctx->tables[ti], record);
+      if (migrated && db->schema->migrate_xml == db_schema_xml_migrate_additive) {
+        for (xmlAttrPtr a = rn->properties; a; a = a->next)
+          if (db_schema_field_index(t, (const char *)a->name) < 0) {
+            fprintf(stderr, "[db_schema_xml] migration would discard field db=%s table=%s field=%s\n", db->name, t->name, a->name);
+            fflush(stderr); free(record); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
+          }
+        for (xmlNodePtr child = rn->children; child; child = child->next)
+          if (child->type == XML_ELEMENT_NODE && db_schema_field_index(t, (const char *)child->name) < 0) {
+            fprintf(stderr, "[db_schema_xml] migration would discard field db=%s table=%s field=%s\n", db->name, t->name, child->name);
+            fflush(stderr); free(record); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
+          }
+      }
+      dbs_init_record(t, record);
+      for (int f = 0; f < t->meta_count; f++) {
+        bool loaded = db_load_field_from_xml(rn, record, &t->meta[f]);
+        if (!loaded && t->meta[f].type == DB_TYPE_INT64) {
+          bool present = xmlHasProp(rn, BAD_CAST t->meta[f].name) != NULL;
+          for (xmlNodePtr child = rn->children; child && !present; child = child->next)
+            present = child->type == XML_ELEMENT_NODE && !xmlStrcmp(child->name, BAD_CAST t->meta[f].name);
+          if (present) {
+            fprintf(stderr, "[db_schema_xml] invalid int64 db=%s table=%s field=%s\n", db->name, t->name, t->meta[f].name);
+            fflush(stderr); free(record); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
+          }
+        }
+      }
+      if (!dbs_append(db, t, &ctx->tables[ti], record)) {
+        free(record); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
+      }
     }
     free(record);
   }
   xmlFreeDoc(doc);
-  db->dirty = false;
+  db->dirty = migrated && !db->read_only;
   return true;
 }
 
 static bool dbs_save(database_t *db, dbs_context_t *ctx) {
   if (!db->source_path[0]) return false;
+  if (strcmp(db->source_path, ctx->locked_path)) {
+    fprintf(stderr, "[db_schema_xml] unlocked destination db=%s path=%s\n", db->name, db->source_path);
+    fflush(stderr);
+    return false;
+  }
   xmlDocPtr doc = xmlNewDoc((const xmlChar *)"1.0");
   xmlNodePtr root = xmlNewNode(NULL, (const xmlChar *)db->name);
+  if (!doc || !root) {
+    if (doc) xmlFreeDoc(doc);
+    if (root) xmlFreeNode(root);
+    fprintf(stderr, "[db_schema_xml] document allocation failed db=%s\n", db->name);
+    fflush(stderr);
+    return false;
+  }
   xmlDocSetRootElement(doc, root);
   for (int i = 0; i < db->schema->table_count; i++) {
     const db_table_schema_t *t = &db->schema->tables[i];
@@ -200,21 +465,135 @@ static bool dbs_save(database_t *db, dbs_context_t *ctx) {
     char tag[128];
     dbs_row_tag(t->name, tag, sizeof(tag));
     xmlNodePtr tn = xmlNewChild(root, NULL, (const xmlChar *)t->name, NULL);
+    if (!tn) { xmlFreeDoc(doc); return false; }
     for (int r = 0; r < ctx->tables[i].count; r++) {
       xmlNodePtr row = db_save_record_to_xml(tn, tag, ctx->tables[i].rows[r], t->meta, t->meta_count);
-      for (int f = 0; row && f < t->field_count; f++)
+      if (!row) { xmlFreeDoc(doc); return false; }
+      for (int f = 0; f < t->field_count; f++)
         if (t->fields[f].computed && *t->fields[f].computed) xmlUnsetProp(row, BAD_CAST t->fields[f].name);
     }
   }
-  int written = xmlSaveFormatFileEnc(db->source_path, doc, "UTF-8", 1);
+  char version[16];
+  snprintf(version, sizeof(version), "%u", db->schema->version ? db->schema->version : 1);
+  if (!xmlSetProp(root, BAD_CAST "orion-version", BAD_CAST version) ||
+      (ctx->history[0] && !xmlSetProp(root, BAD_CAST "orion-history", BAD_CAST ctx->history))) {
+    xmlFreeDoc(doc); return false;
+  }
+  char temporary[sizeof(db->source_path) + 32], backup[sizeof(db->source_path) + 32];
+  snprintf(temporary, sizeof(temporary), "%s.tmp.XXXXXX", db->source_path);
+  snprintf(backup, sizeof(backup), "%s.bak", db->source_path);
+  int fd = dbs_temporary(temporary, sizeof(temporary));
+  bool ok = fd >= 0;
+  xmlChar *data = NULL; int length = 0;
+  xmlDocDumpFormatMemoryEnc(doc, &data, &length, "UTF-8", 1);
+  if (!data || length <= 0) ok = false;
+  for (int offset = 0; ok && offset < length;) {
+    ssize_t n = write(fd, data + offset, (size_t)(length - offset));
+    if (n < 0 && errno == EINTR) continue;
+    if (n <= 0) ok = false; else offset += (int)n;
+  }
+  if (data) xmlFree(data);
   xmlFreeDoc(doc);
-  if (written < 0) {
-    fprintf(stderr, "[db_schema_xml] cannot write db=%s path=%s\n", db->name, db->source_path);
+  if (ok && dbs_sync_file(fd) != 0) ok = false;
+  if (fd >= 0 && close(fd) != 0) ok = false;
+  // Keep the previous committed inode until the replacement is durable.
+  char backup_tmp[sizeof(db->source_path) + 32];
+  snprintf(backup_tmp, sizeof(backup_tmp), "%s.bak.tmp", db->source_path);
+  if (ok && access(db->source_path, F_OK) == 0) {
+    unlink(backup_tmp);
+    if (dbs_link(db->source_path, backup_tmp) != 0 || dbs_replace(backup_tmp, backup) != 0 ||
+        !dbs_sync_directory(db->source_path)) ok = false;
+  }
+  if (ok && dbs_replace(temporary, db->source_path) != 0) ok = false;
+  if (ok && !dbs_sync_directory(db->source_path)) ok = false;
+  if (!ok) {
+    fprintf(stderr, "[db_schema_xml] cannot commit db=%s path=%s: %s\n", db->name, db->source_path, strerror(errno));
     fflush(stderr);
+    unlink(temporary); unlink(backup_tmp);
     return false;
   }
   db->dirty = false;
   return true;
+}
+
+bool db_schema_xml_restore_backup(database_t *db) {
+  dbs_context_t *ctx = db ? db->userdata : NULL;
+  if (!ctx || db->read_only || db->dirty || ctx->scope || ctx->lock_fd < 0 ||
+      strcmp(db->source_path, ctx->locked_path)) goto failed;
+  char backup[sizeof(db->source_path) + 16], temporary[sizeof(db->source_path) + 32];
+  snprintf(backup, sizeof(backup), "%s.bak", db->source_path);
+  xmlDocPtr doc = xmlReadFile(backup, NULL, XML_PARSE_NONET);
+  xmlNodePtr root = doc ? xmlDocGetRootElement(doc) : NULL;
+  xmlChar *version = root ? xmlGetProp(root, BAD_CAST "orion-version") : NULL;
+  char *end = NULL;
+  unsigned long found = version ? strtoul((char *)version, &end, 10) : 1;
+  unsigned current = db->schema->version ? db->schema->version : 1;
+  bool valid = root && (!xmlStrcmp(root->name, BAD_CAST db->name) ||
+                        (db->schema->name && !xmlStrcmp(root->name, BAD_CAST db->schema->name))) &&
+               found > 0 && found <= current &&
+               (!version || (end != (char *)version && *end == 0)) &&
+               (found == current || db->schema->migrate_xml);
+  dbs_context_t history_context = {0};
+  if (valid && !dbs_read_history(&history_context, root, (unsigned)found)) valid = false;
+  unsigned long checking = found;
+  while (valid && checking < current) {
+    if (!db->schema->migrate_xml(root, (unsigned)checking)) valid = false;
+    checking++;
+  }
+  if (valid) {
+    for (xmlNodePtr tn = root->children; valid && tn; tn = tn->next) {
+      if (tn->type != XML_ELEMENT_NODE) continue;
+      const db_table_schema_t *table = db_schema_table_named(db->schema, (const char *)tn->name);
+      if (!table) { valid = false; break; }
+      for (xmlNodePtr row = tn->children; valid && row; row = row->next) {
+        if (row->type != XML_ELEMENT_NODE) continue;
+        for (xmlAttrPtr a = row->properties; a; a = a->next)
+          if (db_schema_field_index(table, (const char *)a->name) < 0) { valid = false; break; }
+      }
+    }
+  }
+  if (version) xmlFree(version);
+  if (doc) xmlFreeDoc(doc);
+  if (!valid) goto failed;
+  snprintf(temporary, sizeof(temporary), "%s.restore.XXXXXX", db->source_path);
+  int input = open(backup, O_RDONLY | DBS_BINARY), output = dbs_temporary(temporary, sizeof(temporary));
+  bool ok = input >= 0 && output >= 0;
+  char bytes[8192];
+  while (ok) {
+    ssize_t n = read(input, bytes, sizeof(bytes));
+    if (n < 0 && errno == EINTR) continue;
+    if (n < 0) { ok = false; break; }
+    if (!n) break;
+    for (ssize_t off = 0; ok && off < n;) {
+      ssize_t written = write(output, bytes + off, (size_t)(n - off));
+      if (written < 0 && errno == EINTR) continue;
+      if (written <= 0) ok = false; else off += written;
+    }
+  }
+  if (ok && dbs_sync_file(output) != 0) ok = false;
+  if (input >= 0) close(input);
+  if (output >= 0 && close(output) != 0) ok = false;
+  if (ok && dbs_replace(temporary, db->source_path) != 0) ok = false;
+  if (!ok) { unlink(temporary); goto failed; }
+  if (!dbs_sync_directory(db->source_path)) goto failed;
+  if (!dbs_load(db, ctx)) goto failed;
+  return true;
+failed:
+  fprintf(stderr, "[db_schema_xml] backup restore failed db=%s path=%s\n",
+          db ? db->name : "(null)", db ? db->source_path : "(null)");
+  fflush(stderr);
+  return false;
+}
+
+database_t *db_schema_xml_open_backup(const char *name, const char *class_name,
+                                      const db_schema_def_t *schema, const char *path) {
+  database_t *db = create_database_with_schema(name, class_name, schema, "");
+  dbs_context_t *ctx = db ? db->userdata : NULL;
+  if (!ctx || !dbs_lock_path(db, ctx, path, false) || !db_schema_xml_restore_backup(db)) {
+    destroy_database(db);
+    return NULL;
+  }
+  return db;
 }
 
 // ── Defaults and delete rules ──────────────────────────────────────────────
@@ -438,14 +817,39 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
       fprintf(stderr, "[db_schema_xml] db=%s created without a schema; use create_database_with_schema\n",
               db->name);
       fflush(stderr);
+      db->open_failed = true;
       return 0;
+    }
+    for (int i = 0; i < db->schema->table_count; i++) {
+      const db_table_schema_t *table = &db->schema->tables[i];
+      for (int f = 0; f < table->field_count && f < table->meta_count; f++)
+        if (table->fields[f].primary_key && table->meta[f].type == DB_TYPE_INT64) {
+          fprintf(stderr, "[db_schema_xml] int64 key unsupported db=%s table=%s field=%s\n", db->name, table->name, table->fields[f].name);
+          fflush(stderr); db->open_failed = true; return 0;
+        }
+      for (int f = 0; f < table->field_count && f < table->meta_count; f++)
+        if (table->meta[f].type == DB_TYPE_INT64 && table->fields[f].default_value && table->fields[f].default_value[0]) {
+          db_field_meta_t field = table->meta[f]; int64_t value;
+          field.offset = 0;
+          if (!db_parse_field(&field, &value, table->fields[f].default_value)) {
+            fprintf(stderr, "[db_schema_xml] invalid int64 default db=%s table=%s field=%s\n", db->name, table->name, field.name);
+            fflush(stderr); db->open_failed = true; return 0;
+          }
+        }
     }
     ctx = calloc(1, sizeof(*ctx));
     if (ctx) ctx->tables = calloc((size_t)db->schema->table_count, sizeof(dbs_table_t));
     if (!ctx || !ctx->tables) {
       fprintf(stderr, "[db_schema_xml] context allocation failed db=%s\n", db->name);
       free(ctx);
+      db->open_failed = true;
       return 0;
+    }
+    ctx->lock_fd = -1;
+    if (!db->read_only && db->source_path[0] && !dbs_lock_path(db, ctx, db->source_path, false)) {
+      fprintf(stderr, "[db_schema_xml] cannot lock db=%s path=%s: %s\n", db->name, db->source_path, strerror(errno));
+      fflush(stderr);
+      free(ctx->tables); free(ctx); db->open_failed = true; return 0;
     }
     for (int i = 0; i < db->schema->table_count; i++) ctx->tables[i].next_id = 1;
     db->userdata = ctx;
@@ -453,6 +857,11 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
   }
   if (!ctx) return 0;
 
+  if (db->read_only && (msg == dbInsert || msg == dbUpdate || msg == dbDelete || msg == dbSave)) {
+    fprintf(stderr, "[db_schema_xml] write rejected for read-only db=%s message=%u\n", db->name, msg);
+    fflush(stderr);
+    return 0;
+  }
   int ti = -1;
   switch (msg) {
     case dbInsert: case dbUpdate: case dbDelete: case dbFetch: case dbFind:
@@ -470,6 +879,7 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
       if (ctx->clean) dbs_free_scope(db, ctx->clean);
       dbs_clear(db, ctx);
       free(ctx->tables);
+      if (ctx->lock_fd >= 0) close(ctx->lock_fd);
       free(ctx);
       db->userdata = NULL;
       return 1;
@@ -498,7 +908,15 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
       db->dirty |= !t->transient;
       return 1;
     }
-    case dbDelete:         return dbs_delete(db, ctx, ti, (int)(intptr_t)lparam);
+    case dbDelete: {
+      if (!db->access_enabled || ctx->delete_depth) return dbs_delete(db, ctx, ti, (int)(intptr_t)lparam);
+      if (!dbs_begin(db, ctx)) return 0;
+      ctx->delete_depth++;
+      bool deleted = dbs_delete(db, ctx, ti, (int)(intptr_t)lparam);
+      ctx->delete_depth--;
+      dbs_end(db, ctx, !deleted);
+      return deleted;
+    }
     case dbCountReferrers: return dbs_count_referrers(db, ctx, t, (int)(intptr_t)lparam);
     case dbInitRecord:     if (lparam) dbs_init_record(t, lparam); return lparam != NULL;
     case dbBeginChanges:   return dbs_begin(db, ctx);
@@ -535,6 +953,10 @@ static database_t *dbs_create_edit_context(database_t *store) {
     }
   database_t *copy = create_database_with_schema(store->name, store->class_name, store->schema, "");
   if (!copy || !copy->userdata) { destroy_database(copy); return NULL; }
+  if (store->access_enabled && !database_set_access(copy, store->access_actor, store->access_capabilities,
+                                                    store->access_policy, store->access_audit, store->access_context)) {
+    destroy_database(copy); return NULL;
+  }
   dbs_context_t *source = store->userdata, *target = copy->userdata;
   for (int i = 0; i < store->schema->table_count; i++) {
     const db_table_schema_t *table = &store->schema->tables[i];

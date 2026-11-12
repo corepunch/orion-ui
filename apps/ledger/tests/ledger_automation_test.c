@@ -1,5 +1,6 @@
 #include "test_framework.h"
 #include "apps/ledger/ledger.h"
+#include "apps/ledger/tests/test_databases.h"
 #include <platform/platform.h>
 
 static ledger_t automation_test_ledger;
@@ -11,8 +12,8 @@ static void test_local_automation(void) {
   snprintf(g_ledger->config_dir, sizeof(g_ledger->config_dir), "apps/ledger/share/configurations/ru-2003");
   snprintf(g_ledger->data_dir, sizeof(g_ledger->data_dir), "build/test-ledger-automation");
   axMkDir(g_ledger->data_dir);
-  g_ledger->cfg = create_database_with_schema("cfg", "db_schema_xml", &ledger_cfg_schema, "apps/ledger/share/configurations/ru-2003/configuration.xml");
-  g_ledger->ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, "apps/ledger/share/configurations/ru-2003/demo.xml");
+  g_ledger->cfg = create_database_with_schema_readonly("cfg", "db_schema_xml", &ledger_cfg_schema, "apps/ledger/share/configurations/ru-2003/configuration.xml");
+  g_ledger->ib = ledger_test_infobase("apps/ledger/share/configurations/ru-2003/demo.xml");
   ASSERT_NOT_NULL(g_ledger->cfg);
   ASSERT_NOT_NULL(g_ledger->ib);
   register_database("cfg", g_ledger->cfg);

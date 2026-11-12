@@ -40,12 +40,12 @@
   <string source="Go to end (End)" where="main_window">В конец (End)</string>
   <string source="Drum Loops" where="code">Ритмы</string>
   <string source="Drum Fills" where="code">Сбивки</string>
-  <string source="Bass" where="code">Бас</string>
-  <string source="Guitar" where="code">Гитара</string>
+  <string source="Bass" where="sample_store">Бас</string>
+  <string source="Guitar" where="sample_store">Гитара</string>
   <string source="Synth" where="code">Синтезатор</string>
   <string source="Pads" where="code">Пэды</string>
   <string source="Stabs" where="code">Акценты</string>
-  <string source="Vocals" where="code">Вокал</string>
+  <string source="Vocals" where="sample_store">Вокал</string>
   <string source="Scratch" where="code">Скрэтч</string>
   <string source="Effects" where="code">Эффекты</string>
   <string source="My Samples" where="code">Мои сэмплы</string>
@@ -80,7 +80,7 @@
   <string source="Ready to export." where="export_media">Всё готово к экспорту.</string>
   <string source="Save File..." where="export_media">Сохранить файл...</string>
   <string source="Share..." where="export_media">Поделиться...</string>
-  <string source="Close" where="export_media,manage_samples">Закрыть</string>
+  <string source="Close" where="sample_store,export_media,share_song,manage_song_link,manage_samples">Закрыть</string>
   <string source="Cancel Export" where="code">Отменить экспорт</string>
   <string source="Could not create the export folder. Try Save File." where="code">Не удалось создать папку экспорта. Используйте «Сохранить файл».</string>
   <string source="Use the filename extension matching the selected format." where="code">Расширение файла должно соответствовать выбранному формату.</string>
@@ -154,4 +154,63 @@
   <string source="More actions" where="main_window">Другие действия</string>
   <string source="Add Track" where="menu">Добавить дорожку</string>
   <string source="Track %d" where="code">Дорожка %d</string>
+  <string source="Sample Packs..." where="menu,library_window">Наборы сэмплов…</string>
+  <string source="Sample Packs" where="sample_store">Наборы сэмплов</string>
+  <string source="Expand your sound library" where="sample_store">Расширьте библиотеку звуков</string>
+  <string source="The starter bank is free. Buy a pack or unlock the full library." where="sample_store">Стартовый набор бесплатный. Купите набор или откройте все звуки.</string>
+  <string source="Unlock Full Version (all six packs)" where="sample_store">Полная версия (все шесть наборов)</string>
+  <string source="Drums &amp; Fills" where="sample_store">Ударные и сбивки</string>
+  <string source="Synths, Pads &amp; Stabs" where="sample_store">Синтезаторы, пэды и стабы</string>
+  <string source="Scratch &amp; FX" where="sample_store">Скрэтчи и эффекты</string>
+  <string source="Unavailable" where="sample_store">Недоступно</string>
+  <string source="Each purchase is a one-time payment." where="sample_store">Каждая покупка оплачивается один раз.</string>
+  <string source="Restore Purchases" where="sample_store">Восстановить покупки</string>
+  <string source="Listen to any sound. Unlock packs to use preview sounds in your songs." where="library_window">Слушайте любые звуки. Откройте наборы, чтобы использовать эти звуки в песнях.</string>
+  <string source="Preview" where="code">Прослушать</string>
+  <string source="Unlocked" where="code">Открыто</string>
+  <string source="Buy for %s" where="code">Купить за %s</string>
+  <string source="Loading prices from the App Store…" where="code">Загружаем цены из App Store…</string>
+  <string source="Some prices are unavailable. Reopen Sample Packs to retry." where="code">Некоторые цены недоступны. Снова откройте наборы сэмплов.</string>
+  <string source="Waiting for the App Store…" where="code">Ожидаем ответа App Store…</string>
+  <string source="Purchase pending. The pack unlocks when Apple approves it." where="code">Покупка ожидает подтверждения Apple. После этого набор откроется.</string>
+  <string source="Purchase complete. Your new sounds are ready to use." where="code">Покупка завершена. Новые звуки доступны.</string>
+  <string source="The purchase could not be completed. Please try again." where="code">Не удалось совершить покупку. Попробуйте ещё раз.</string>
+  <string source="Restoring your purchases…" where="code">Восстанавливаем покупки…</string>
+  <string source="Your purchases are up to date." where="code">Ваши покупки уже доступны.</string>
+  <string source="No previous purchases were found." where="code">Предыдущие покупки не найдены.</string>
+  <string source="Purchases could not be restored. Please try again." where="code">Не удалось восстановить покупки. Попробуйте ещё раз.</string>
+  <string source="Share Song..." where="menu,main_window">Поделиться песней…</string>
+  <string source="Share Song" where="share_song">Поделиться песней</string>
+  <string source="Anyone with the link can listen to this song." where="share_song">Любой, у кого есть ссылка, может прослушать эту песню.</string>
+  <string source="Include editable song (contains embedded recordings)" where="share_song">Приложить проект с записями</string>
+  <string source="Ready to share." where="share_song">Готово к отправке.</string>
+  <string source="Create Link" where="share_song">Создать ссылку</string>
+  <string source="Share MP3..." where="share_song">Поделиться MP3…</string>
+  <string source="Manage Links..." where="share_song">Управление ссылками…</string>
+  <string source="Manage Song Links" where="manage_song_link">Управление ссылками на песни</string>
+  <string source="Newer" where="manage_song_link">Новее</string>
+  <string source="Older" where="manage_song_link">Старее</string>
+  <string source="Share Link..." where="manage_song_link">Поделиться ссылкой…</string>
+  <string source="Stop Sharing" where="manage_song_link">Закрыть доступ</string>
+  <string source="Add blocks to the song before sharing." where="code">Добавьте в песню блоки, прежде чем поделиться ею.</string>
+  <string source="Preparing your MP3..." where="code">Подготовка MP3…</string>
+  <string source="Preparing and uploading your song..." where="code">Подготовка и загрузка песни…</string>
+  <string source="Could not prepare the song for sharing." where="code">Не удалось подготовить песню к отправке.</string>
+  <string source="No shared songs." where="code">Нет опубликованных песен.</string>
+  <string source="Sharing stopped." where="code">Доступ закрыт.</string>
+  <string source="Could not stop sharing. Check your connection and try again." where="code">Не удалось закрыть доступ. Проверьте подключение и повторите попытку.</string>
+  <string source="Song link" where="code">Ссылка на песню</string>
+  <string source="Stop sharing this song? Its listening link will no longer work." where="code">Закрыть доступ к песне? Ссылка для прослушивания перестанет работать.</string>
+  <string source="Stopping sharing..." where="code">Закрываем доступ…</string>
+  <string source="Share an MP3 of this song." where="code">Поделитесь этой песней в формате MP3.</string>
+  <string source="Listening links are not available." where="code">Ссылки для прослушивания недоступны.</string>
+  <string source="MP3 ready to share." where="code">MP3 готов к отправке.</string>
+  <string source="Link created." where="code">Ссылка создана.</string>
+  <string source="Could not prepare the MP3. Check available space and try again." where="code">Не удалось подготовить MP3. Проверьте свободное место и повторите попытку.</string>
+  <string source="Could not create the link. Check your connection and try again." where="code">Не удалось создать ссылку. Проверьте подключение и повторите попытку.</string>
+  <string source="Cover title:" where="export_media">Название на обложке:</string>
+  <string source="Include Groove branding" where="export_media">Показать логотип Groove</string>
+  <string source="Made with Groove" where="code">Сделано в Groove</string>
+  <string source="%s BPM" where="code">%s уд/мин</string>
+  <string source="Untitled" where="export_media">Без названия</string>
 </strings>

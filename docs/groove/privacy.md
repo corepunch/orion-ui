@@ -6,13 +6,11 @@ nav_exclude: true
 
 # Groove Privacy Policy
 
-Effective November 4, 2026. This policy covers Groove for iPad, published by
-Igor Chernakov.
+Effective November 4, 2026. This policy covers Groove for iPad and Mac, published by Igor Chernakov.
 
 Groove processes your music on your device. Groove has no account requirement
-and uses no advertising, analytics, or tracking services. The app does not
-collect your personal data or send your projects and recordings to the
-developer.
+and uses no advertising, analytics, or tracking services. Your projects and
+recordings stay on your device until you choose to export or share them.
 
 In versions with sample recording, Groove requests microphone permission when
 you choose to record a sample.
@@ -22,8 +20,19 @@ You can revoke microphone permission in iPad Settings and remove Groove's
 local data by deleting the app. Manage any copies you exported in the location
 where you saved them.
 
-If you export or share a file, the destination you choose handles that copy
-under its own privacy terms. If you contact support, the information you
+If you export or share a file directly, the destination you choose handles
+that copy under its own privacy terms.
+
+When you choose to create a listening link, Groove sends the song title and
+rendered MP3 to its sharing service, hosted on Cloudflare. If you include the
+editable project, the service also receives the project and its embedded
+recordings. Anyone with the unlisted link can listen or download the files
+you included. The service uses your IP address to limit uploads and reports.
+Stop sharing from the app or the browser used to create the link. This removes
+access through the link. Copies already downloaded by listeners remain with
+them. Reports are kept for review.
+
+If you contact support, the information you
 provide is used to respond to your request. GitHub issues are public.
 
 For privacy questions, use [Groove Support](../support/).

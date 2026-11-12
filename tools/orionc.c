@@ -54,6 +54,7 @@ typedef struct {
 
 static const field_type_t kFieldTypes[] = {
   { "integer", "int", "DB_TYPE_INT", 0 }, { "int", "int", "DB_TYPE_INT", 0 },
+  { "int64", "int64_t", "DB_TYPE_INT64", 0 },
   { "string", "char", "DB_TYPE_STRING", 256 }, { "date", "char", "DB_TYPE_DATE", 11 }, { "boolean", "bool", "DB_TYPE_BOOL", 0 },
   { "bool", "bool", "DB_TYPE_BOOL", 0 }, { "float", "float", "DB_TYPE_FLOAT", 0 },
   { "real", "float", "DB_TYPE_FLOAT", 0 }, { "double", "double", "DB_TYPE_DOUBLE", 0 },
@@ -732,6 +733,13 @@ static xmlNodePtr find_field_node(xmlNodePtr scope, const char *table, const cha
 // Relations may name another database: relation="cfg.accounts.id".
 static void emit_database_schema(FILE *f, xmlNodePtr db, const char *prefix) {
   char *db_name = attr(db, "name"), *klass = attr(db, "class"), *source = attr(db, "source");
+  char *version = attr(db, "version"), *migration = attr(db, "migration"), *end = NULL;
+  unsigned long v = version ? strtoul(version, &end, 10) : 1;
+  if ((version && (!*version || *end || !v || v > 4294967295UL)) ||
+      (migration && strcmp(migration, "additive"))) {
+    fprintf(stderr, "orionc: invalid database version or migration in %s\n", nz(db_name, "db"));
+    exit(1);
+  }
   char db_id[128]; ident(db_id, sizeof(db_id), nz(db_name, "db"), false);
   int tables = 0;
   EACH_ELEMENT(t, db) if (elem(t, "table")) {
@@ -788,9 +796,10 @@ static void emit_database_schema(FILE *f, xmlNodePtr db, const char *prefix) {
   }
   LINE("};\n");
   char klassq[ORIONC_STRING_SIZE], sourceq[ORIONC_STRING_SIZE]; cstr(klassq, sizeof(klassq), klass); cstr(sourceq, sizeof(sourceq), source);
-  OUT("static const db_schema_def_t %s_%s_schema = { \"%s\", %s, %s, %s_%s_tables, ARRAY_LEN(%s_%s_tables) };\n\n",
-      prefix, db_id, nz(db_name, "db"), klassq, sourceq, prefix, db_id, prefix, db_id);
-  free(db_name); free(klass); free(source);
+  OUT("static const db_schema_def_t %s_%s_schema = { \"%s\", %s, %s, %s_%s_tables, ARRAY_LEN(%s_%s_tables), %lu, %s };\n\n",
+      prefix, db_id, nz(db_name, "db"), klassq, sourceq, prefix, db_id, prefix, db_id, v,
+      migration ? "db_schema_xml_migrate_additive" : "NULL");
+  free(db_name); free(klass); free(source); free(version); free(migration);
 }
 
 // Emits one <database> block. `primary` selects the original, unqualified
@@ -1246,7 +1255,7 @@ static void emit_bindings(FILE *f, const char *prefix, const char *form, const b
       free(kind); continue;
     }
     if (!strcasecmp(x->klass, "label")) {
-      const char *push = eq(ft->db, "DB_TYPE_DATE") ? "date" : eq(ft->c, "int") ? "int" : eq(ft->c, "double") ? "double" :
+      const char *push = eq(ft->db, "DB_TYPE_DATE") ? "date" : eq(ft->c, "int") ? "int" : eq(ft->c, "int64_t") ? "int64" : eq(ft->c, "double") ? "double" :
                          eq(ft->c, "float") ? "float" : eq(ft->db, "DB_TYPE_STRING") ? "label_text" : NULL;
       if (!push) fprintf(stderr, "orionc: Label '%s' cannot show field '%s.%s' of this type\n", x->ctrl, x->table, x->field);
       if (push) OUT("  { %s, 0, 0, offsetof(%s, %s), 0, ddx_push_%s, NULL },\n", x->ctrl, type, x->field, push);
@@ -1256,6 +1265,7 @@ static void emit_bindings(FILE *f, const char *prefix, const char *form, const b
     }
     const char *ddx = eq(getter, "edGetText") && eq(ft->db, "DB_TYPE_DATE") ? "date" :
                       eq(getter, "edGetText") && eq(ft->c, "int") ? "int" :
+                      eq(getter, "edGetText") && eq(ft->c, "int64_t") ? "int64" :
                       eq(getter, "edGetText") && eq(ft->c, "double") ? "double" :
                       eq(getter, "edGetText") && eq(ft->c, "float") ? "float" :
                       eq(getter, "cbGetCurrentValue") ? "combo_value" :

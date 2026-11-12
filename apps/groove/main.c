@@ -2,6 +2,7 @@
 // Dance eDJay: drag pre-made musical blocks from the bin onto the sheet.
 
 #include "groove.h"
+#include "store/store.h"
 #include <orion/gem.h>
 #include <orion/commctl/commctl.h>
 #include <orion/user/svg_icon_loader.h>
@@ -79,6 +80,9 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (!win) { app_shutdown(g_app); return false; }
   show_window(win, true);
   maximize_window(win);
+#if GROOVE_APP_STORE
+  groove_storekit_start();
+#endif
 #ifdef AX_PLATFORM_IOS
   app_show_startup_songs(win);
 #endif

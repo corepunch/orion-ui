@@ -58,13 +58,19 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y liblua5.4-dev libgl1-mesa-dev libcglm-dev libx11-dev libegl-dev libxml2-dev libgl1-mesa-dri libpng-dev lua-check
+        sudo apt-get install -y liblua5.4-dev libgl1-mesa-dev libcglm-dev libx11-dev libegl-dev libxml2-dev libgl1-mesa-dri libpng-dev lua-check lua5.4
 
     - name: Check Lua sources
       run: make lua-check
 
+    - name: Check developer SDK
+      run: python3 -m unittest discover -s tools/sdk -p 'test_*.py' -v
+
     - name: Build and run tests
       run: env -u DISPLAY -u WAYLAND_DISPLAY make test
+
+    - name: Check business server and real application hosts
+      run: env -u DISPLAY -u WAYLAND_DISPLAY make business-server-check
 
     - name: Check Doom-ED WAD imports and geometry
       run: make doom-ed-test

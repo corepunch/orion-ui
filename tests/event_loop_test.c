@@ -19,6 +19,7 @@
 #include "test_framework.h"
 #include "test_env.h"
 #include <orion/ui.h>
+#include <orion/kernel/http.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -281,6 +282,27 @@ void test_post_message_deduplication(void) {
   destroy_window(win);
   test_env_shutdown();
   PASS();
+}
+
+static int http_done_count;
+static result_t http_sink(window_t *win, uint32_t msg, uint32_t wp, void *lp) {
+  (void)win; (void)wp;
+  if (msg == evHttpDone) { http_done_count++; http_response_free(lp); return true; }
+  return false;
+}
+void test_http_completions_are_not_coalesced(void) {
+  TEST("HTTP completions retain distinct messages and discard on window destruction");
+  test_env_init();
+  window_t *win = test_env_create_window("http-completions", 0, 0, 100, 100, http_sink, NULL);
+  ASSERT_NOT_NULL(win); http_done_count = 0;
+  http_response_t *first = calloc(1, sizeof(*first)), *second = calloc(1, sizeof(*second));
+  ASSERT_NOT_NULL(first); ASSERT_NOT_NULL(second);
+  post_message(win, evHttpDone, 1, first); post_message(win, evHttpDone, 2, second);
+  repost_messages(); ASSERT_EQUAL(http_done_count, 2);
+  http_response_t *discarded = calloc(1, sizeof(*discarded)); ASSERT_NOT_NULL(discarded);
+  post_message(win, evHttpDone, 3, discarded); destroy_window(win); repost_messages();
+  ASSERT_EQUAL(http_done_count, 2);
+  test_env_shutdown(); PASS();
 }
 
 void test_post_message_different_targets_both_delivered(void) {
@@ -712,6 +734,7 @@ int main(int argc, char *argv[]) {
 
   // Part 2: post_message deduplication
   test_post_message_deduplication();
+  test_http_completions_are_not_coalesced();
   test_post_message_different_targets_both_delivered();
   test_full_invalidation_keeps_background_before_content();
   test_incomplete_repaint_defers_composition();
