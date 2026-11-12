@@ -86,8 +86,10 @@ function Page:submit(values, command, args)
 end
 function Page:retry(values)
   self:remember(values)
+  local payment = self.client:state().pending_command == "payment"
   local ok, err = self.client:retry(function(result, failure)
     if not result then self.notice = failure; return end
+    if payment then self.payment_done = true end
     self.notice = orion.tr("Request completed."); self:load_snapshot()
   end)
   if not ok then self.notice = err end
@@ -158,14 +160,27 @@ function Page:confirmation(v)
   end)
 end
 function Page:payment(v, sign)
+  orion.assert(not self.payment_done, orion.tr("Start a new payment or refund before recording another."))
   local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
   local amount = v.amount
   orion.assert(type(amount) == "number" and amount > 0 and amount <= 1000000 and math.abs(amount * 100 - math.floor(amount * 100 + 0.5)) < 1e-7,
     orion.tr("Enter a positive amount with at most two decimal places."))
-  self:submit(v, "payment", {id = selected.id, amount_minor = sign * money.minor(amount), request_key = Remote.new_key()})
+  self:remember(v)
+  local ok, err = self.client:submit("payment", {id = selected.id, amount_minor = sign * money.minor(amount), request_key = Remote.new_key()}, function(result, failure)
+    if not result then self.notice = failure; return end
+    self.payment_done = true
+    self:load_snapshot()
+  end)
+  if not ok then self.notice = err end
 end
 function Page:pay(v) self:payment(v, 1) end
 function Page:refund(v) self:payment(v, -1) end
+function Page:new_payment(v)
+  local state = self.client:state()
+  orion.assert(self.payment_done and not state.pending and not state.busy and not state.conflict, orion.tr("Start a new payment or refund before recording another."))
+  self:remember(v)
+  self.payment_done, self.values.amount = false, 0
+end
 function Page:group_reserve(v)
   local stays = {}
   for i = 1, 2 do
@@ -219,7 +234,9 @@ function Page:data()
     check_in = "check_in", check_out = "check_out", cancel = "cancel", confirmation = "snapshot", pay = "payment", refund = "payment",
     group_reserve = "group_reserve", group_statement = "snapshot", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
   for control, command in pairs(map) do disabled[control] = blocked or not self.allowed[command] end
-  disabled.reserve = disabled.reserve or self.needs_reload
+  disabled.reserve = disabled.reserve or self.needs_reload == true
+  disabled.pay, disabled.refund = disabled.pay or self.payment_done == true, disabled.refund or self.payment_done == true
+  disabled.new_payment = blocked or not self.allowed.payment or not self.payment_done
   disabled.edit_booking = blocked or not self.allowed.reserve
   disabled.load_guest = blocked or not self.allowed.save_guest
   disabled.save_guest = disabled.load_guest or not self.editing_guest or self.guest_needs_reload
@@ -228,6 +245,7 @@ function Page:data()
   local connection = self.connected and string.format(orion.tr("Country: %s · Role: %s · Revision: %d"), self.country, self.role, state.revision) or self.connection
   local values = {connection = connection, notice = self.notice, day_report = self.day_report,
     editor = self.editing and string.format(orion.tr("Edit reservation %d"), self.editing) or orion.tr("New reservation"),
+    payment_status = self.payment_done and orion.tr("Start a new payment or refund before recording another.") or "",
     room_editor = self.room_needs_reload and orion.tr("Load the room again before saving.") or
       (self.editing_room and string.format(orion.tr("Editing room %d"), self.editing_room) or orion.tr("No room loaded")),
     guest_editor = self.guest_needs_reload and orion.tr("Load the guest again before saving.") or

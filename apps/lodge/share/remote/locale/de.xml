@@ -233,4 +233,6 @@
   <string source="Choose a reservation in a group." where="code">Wählen Sie eine Reservierung einer Gruppe.</string>
   <string source="Choose a reservation group." where="code">Wählen Sie eine Reservierungsgruppe.</string>
   <string source="Group statement saved: %s" where="code">Gruppenübersicht gespeichert: %s</string>
+  <string source="New payment or refund" where="remote">Neue Zahlung oder Erstattung</string>
+  <string source="Start a new payment or refund before recording another." where="code">Beginnen Sie eine neue Zahlung oder Erstattung, bevor Sie eine weitere erfassen.</string>
 </strings>

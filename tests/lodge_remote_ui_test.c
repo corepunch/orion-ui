@@ -3,6 +3,7 @@
 #include "test_env.h"
 #include <orion/script/application.h>
 #include <orion/script/remote.h>
+#include <orion/script/remote_outbox.h>
 #include <orion/kernel/http.h>
 #include <time.h>
 #include <stdlib.h>
@@ -22,6 +23,40 @@ static bool wait_for(database_t *db, int table, int id, const char *field, const
   }
   fprintf(stderr, "wait failed: %s=%s\n", field, expected);
   return false;
+}
+static void test_recovered_request(void) {
+  TEST("recovered payment requires an explicit new operation");
+  const char *body = getenv("ORION_TEST_RECOVERY_BODY"), *company = getenv("ORION_TEST_COMPANY"), *kind = getenv("ORION_TEST_RECOVERY_KIND");
+  ASSERT_NOT_NULL(body); ASSERT_NOT_NULL(company); ASSERT_NOT_NULL(kind);
+  ASSERT_EQUAL(remote_outbox_save_at(getenv("ORION_REMOTE_PROFILE"), "lodge", getenv("ORION_SERVER_URL"), company, "tester", body), REMOTE_OUTBOX_OK);
+  char error[2048], directory[128];
+  ASSERT_TRUE(script_remote_configure_from_environment(error, sizeof(error)));
+  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-recovery-%ld", (long)getpid()); mkdir(directory, 0700);
+  test_env_init();
+  script_application_t *app = script_application_open("apps/lodge/share/remote/remote.orion", directory, error, sizeof(error));
+  ASSERT_NOT_NULL(app); script_page_t *page = script_application_main(app); ASSERT_NOT_NULL(page);
+  ASSERT_TRUE(script_page_perform(page, "connect"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "saved request needs retry"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "saved request needs retry"));
+  ASSERT_TRUE(script_page_perform(page, "retry"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Server data refreshed"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "Server data refreshed"));
+  if (!strcmp(kind, "payment")) {
+    ASSERT_FALSE(window_is_enabled(script_page_control(page, "pay")));
+    ASSERT_FALSE(window_is_enabled(script_page_control(page, "refund")));
+    ASSERT_FALSE(script_page_perform(page, "pay"));
+    ASSERT_TRUE(window_is_enabled(script_page_control(page, "new_payment")));
+    ASSERT_TRUE(script_page_perform(page, "new_payment"));
+    ASSERT_TRUE(window_is_enabled(script_page_control(page, "pay")));
+  } else {
+    ASSERT_TRUE(window_is_enabled(script_page_control(page, "pay")));
+    ASSERT_FALSE(window_is_enabled(script_page_control(page, "new_payment")));
+  }
+  script_application_close(app); test_env_shutdown(); rmdir(directory); PASS();
 }
 static void test_lodge_remote_ui(void) {
   TEST("remote Lodge form drives a shared-server stay");
@@ -123,6 +158,16 @@ static void test_lodge_remote_ui(void) {
   send_message(script_page_control(page, "amount"), edSetText, 0, "125.00");
   ASSERT_TRUE(script_page_perform(page, "pay"));
   ASSERT_TRUE(wait_for(db, stays->table_id, 1, "balance", "0.00"));
+  ASSERT_FALSE(window_is_enabled(script_page_control(page, "pay")));
+  ASSERT_FALSE(window_is_enabled(script_page_control(page, "refund")));
+  ASSERT_FALSE(script_page_perform(page, "pay"));
+  ASSERT_TRUE(script_page_perform(page, "new_payment"));
+  send_message(script_page_control(page, "amount"), edSetText, 0, "25.00");
+  ASSERT_TRUE(script_page_perform(page, "refund")); ASSERT_TRUE(wait_for(db, stays->table_id, 1, "balance", "25.00"));
+  ASSERT_FALSE(window_is_enabled(script_page_control(page, "refund")));
+  ASSERT_TRUE(script_page_perform(page, "new_payment"));
+  send_message(script_page_control(page, "amount"), edSetText, 0, "25.00");
+  ASSERT_TRUE(script_page_perform(page, "pay")); ASSERT_TRUE(wait_for(db, stays->table_id, 1, "balance", "0.00"));
   ASSERT_TRUE(script_page_perform(page, "confirmation"));
   for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Confirmation saved:"); i++) {
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
@@ -213,7 +258,8 @@ static void test_lodge_remote_ui(void) {
 }
 int main(void) {
   TEST_START("Lodge remote UI");
-  if (getenv("ORION_SERVER_URL") && getenv("ORION_SERVER_TOKEN")) test_lodge_remote_ui();
+  if (getenv("ORION_TEST_RECOVERY_BODY")) test_recovered_request();
+  else if (getenv("ORION_SERVER_URL") && getenv("ORION_SERVER_TOKEN")) test_lodge_remote_ui();
   else printf("SKIP: no disposable remote server configured\n");
   TEST_END();
 }

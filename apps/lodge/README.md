@@ -137,6 +137,11 @@ server URL must use HTTPS or literal loopback HTTP. The native client keeps
 the token out of Lua and command-line arguments. The POSIX transport supports
 this mode; unsupported platforms refuse to connect.
 
+After a payment or refund succeeds, start a new payment or refund explicitly
+before recording another. This prevents repeated clicks from creating a second
+payment. This also applies after restoring a pending payment on restart. An uncertain request must be retried using the
+pending request, rather than entered again as a new payment.
+
 The shared view supports creating and editing rooms and guests, all three cleaning states (clean,
 dirty and inspection needed), creating and editing reservations, check-in,
 payments, refunds, checkout, printable booking confirmations, two-room group reservations, group statements, nightly prices and
@@ -154,3 +159,7 @@ To exercise the connected Lodge form with a disposable company and profile,
 build `build/bin/orion-service` and `build/bin/test_lodge_remote_ui_test`, then
 run `python3 tools/server/test_lodge_remote_ui.py`. The test uses a loopback
 listener and does not touch a real company.
+
+Run `python3 apps/lodge/tests/test_shared_company.py` with `orion-service`
+built to exercise competing reservations and payments in both country
+configurations, including replay after a lost response and server restart.

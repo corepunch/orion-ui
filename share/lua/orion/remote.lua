@@ -24,7 +24,8 @@ function Remote.new(handle, expected_application)
 end
 function Remote.new_key() return native.newId() end
 function Client:state()
-  return {pending = self.pending ~= nil, busy = self.busy == true, conflict = self.conflict, revision = self.revision}
+  return {pending = self.pending ~= nil, pending_command = self.pending and self.pending.command,
+    busy = self.busy == true, conflict = self.conflict, revision = self.revision}
 end
 function Client:refresh(callback)
   if self.pending and not self.conflict then return nil, orion.tr("Retry the pending request before refreshing.") end
@@ -47,8 +48,8 @@ function Client:refresh(callback)
       self.revision, self.conflict = data.revision, false
       if saved then
         local request = reply(saved)
-        if not request or type(request.request_id) ~= "string" then callback(nil, orion.tr("The saved request is invalid.")); return end
-        self.pending = {id = request.request_id, body = saved}
+        if not request or type(request.request_id) ~= "string" or type(request.command) ~= "string" then callback(nil, orion.tr("The saved request is invalid.")); return end
+        self.pending = {id = request.request_id, command = request.command, body = saved}
       else self.pending = nil end
       callback(data, nil)
     else callback(nil, failure or orion.tr("Could not refresh the server status.")) end
@@ -96,7 +97,7 @@ function Client:submit(command, args, callback)
   if self.conflict or self.revision == nil then return nil, orion.tr("Refresh the server before starting a request.") end
   if type(command) ~= "string" or type(args) ~= "table" or type(callback) ~= "function" then return nil, orion.tr("Invalid remote request.") end
   local request = {request_id = native.newId(), expected_revision = self.revision, command = command, args = args}
-  self.pending = {id = request.request_id, body = json.encode(request)}
+  self.pending = {id = request.request_id, command = command, body = json.encode(request)}
   local saved, save_error = native.outboxSave(self.pending.body)
   if not saved then self.pending = nil; return nil, save_error end
   return self:_send_pending(callback)
