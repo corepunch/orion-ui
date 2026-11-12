@@ -195,13 +195,15 @@ bool http_init(void);
 /**
  * @brief Shut down the async HTTP subsystem.
  *
- * Cancels all in-flight requests and joins the worker thread.  After this
- * call no further evHttpDone messages will be posted.
+ * Cancels all in-flight requests and joins the worker thread. Blocking DNS,
+ * connect and TLS operations are not interrupted and can delay shutdown.
  */
 void http_shutdown(void);
 
 /** Deliver queued worker completions on the UI thread. */
 void http_dispatch_pending(void);
+/** True while a request or its undelivered result exists. */
+bool http_has_pending(void);
 
 /**
  * @brief Issue an asynchronous HTTP or HTTPS request.
@@ -235,9 +237,8 @@ http_request_id_t http_request_async(window_t       *notify_win,
 /**
  * @brief Cancel a pending request.
  *
- * If the request is still running it is abandoned; no
- * evHttpDone will be posted for it.  Safe to call after the
- * request has already completed (no-op in that case).
+ * Suppresses an undelivered completion. A running blocking network operation
+ * is not interrupted, and may delay the worker and shutdown.
  *
  * @param id  Handle returned by http_request_async().
  */

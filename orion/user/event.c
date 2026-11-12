@@ -49,7 +49,6 @@ static bool is_printable_text(const char *text) {
   }
   return true;
 }
-
 // Absolute screen origin of the client area for a window. Child frames are
 // parent-relative, so nested windows must include every ancestor offset.
 static inline int win_abs_x(window_t *w) {
@@ -1375,7 +1374,10 @@ int get_message(ui_event_t *evt) {
     }
   } else {
     ui_rc_poll(); // remote-control queries are serviced once per loop pass, wherever the loop runs
-    r = axGetMessage(evt);
+    if (http_has_pending()) {
+      r = axPeekMessage(evt);
+      if (!r) { axWaitMessage(50); r = axPeekMessage(evt); }
+    } else r = axGetMessage(evt);
     if (!r) return 0;
     s_draining_queue = true;
   }
@@ -1405,10 +1407,5 @@ void wake_event_loop(void) {
   if (g_wakeup_pending) return;
   if (!g_ui_runtime.running) return;
   g_wakeup_pending = true;
-  axPostMessageW(&g_wakeup_sentinel, kEventWindowPaint, 0, NULL);
-}
-
-// Worker threads cannot access the UI thread's coalescing flag.
-void wake_event_loop_external(void) {
   axPostMessageW(&g_wakeup_sentinel, kEventWindowPaint, 0, NULL);
 }

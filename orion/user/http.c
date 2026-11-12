@@ -6,11 +6,10 @@
  * Requests are queued onto an internal linked list protected by a mutex.  A
  * single persistent worker thread drains the queue, performs the blocking
  * connect/TLS-handshake/send/recv cycle using the platform axNet* / axTls*
- * primitives, then posts a evHttpDone Orion message back to the
- * caller's window via post_message().
+ * primitives, then queues a completion for delivery on the UI thread.
  *
- * The worker thread signals the Orion event loop via axPostMessageW so that
- * axWaitMessage() wakes up and the message is dispatched without polling delay.
+ * While requests are active, the UI loop uses a 50 ms bounded wait to drain
+ * the worker queue; with no HTTP work it continues to block normally.
  *
  * Threading model
  * ---------------
@@ -81,6 +80,7 @@ typedef struct http_pending_s {
   http_request_id_t   id;
   http_req_state_t    state;
   window_t           *notify_win;
+  uint64_t            notify_serial;
 
   /* URL copy (heap-allocated). */
   char               *url;
@@ -96,6 +96,14 @@ typedef struct http_pending_s {
 
   struct http_pending_s *next;
 } http_pending_t;
+
+typedef struct http_delivery_s {
+  window_t *target;
+  uint64_t serial;
+  uint32_t message, id;
+  void *payload;
+  struct http_delivery_s *next;
+} http_delivery_t;
 
 /* =========================================================================
  * Internal threading abstraction
@@ -164,6 +172,7 @@ typedef struct {
   http_cond_t       cond;
   http_pending_t   *queue_head;
   http_pending_t   *queue_tail;
+  http_delivery_t  *delivery_head, *delivery_tail;
   bool              worker_quit;
   http_request_id_t next_id;   /* starts at 1; 0 = invalid */
 } http_state_t;
@@ -171,6 +180,53 @@ typedef struct {
 static http_state_t g_http = {
   .next_id = 1,
 };
+
+extern bool is_valid_window_ptr(window_t *target, window_t *list);
+
+static bool queue_delivery_locked(window_t *target, uint64_t serial, uint32_t message, uint32_t id, void *payload) {
+  http_delivery_t *item = malloc(sizeof(*item));
+  if (!item) {
+    fprintf(stderr, "[http] cannot allocate delivery for request=%u message=%u\n", id, message); fflush(stderr);
+    if (message == evHttpDone) http_response_free(payload); else free(payload);
+    return false;
+  }
+  *item = (http_delivery_t){target, serial, message, id, payload, NULL};
+  if (g_http.delivery_tail) g_http.delivery_tail->next = item; else g_http.delivery_head = item;
+  g_http.delivery_tail = item;
+  return true;
+}
+
+static void discard_delivery(http_delivery_t *item) {
+  if (item->message == evHttpDone) http_response_free(item->payload); else free(item->payload);
+  free(item);
+}
+
+void http_dispatch_pending(void) {
+  if (!g_http.sync_ready) return;
+  for (;;) {
+    http_mutex_lock(&g_http.mutex);
+    http_delivery_t *item = g_http.delivery_head;
+    if (item) {
+      g_http.delivery_head = item->next;
+      if (!g_http.delivery_head) g_http.delivery_tail = NULL;
+    }
+    http_mutex_unlock(&g_http.mutex);
+    if (!item) break;
+    if (is_valid_window_ptr(item->target, g_ui_runtime.windows) && item->target->lifetime_serial == item->serial) {
+      result_t handled = send_message(item->target, item->message, item->id, item->payload);
+      if (item->message == evHttpProgress) free(item->payload);
+      else if (!handled) http_response_free(item->payload);
+      free(item);
+    } else discard_delivery(item);
+  }
+}
+bool http_has_pending(void) {
+  if (!g_http.sync_ready) return false;
+  http_mutex_lock(&g_http.mutex);
+  bool pending = g_http.queue_head || g_http.delivery_head;
+  http_mutex_unlock(&g_http.mutex);
+  return pending;
+}
 
 static bool
 http_sync_init(void)
@@ -317,8 +373,9 @@ send_all(int sock, AXtlsctx *tls, const void *buf, int len)
  * On error returns NULL. */
 static char *
 recv_response(int sock, AXtlsctx *tls, size_t *out_len,
-              window_t *notify_win, http_request_id_t req_id, size_t maximum)
+              http_pending_t *req)
 {
+  size_t maximum = req->max_response_bytes;
   size_t  cap  = HTTP_RECV_INITIAL;
   size_t  used = 0;
   char   *buf  = (char *)malloc(cap);
@@ -371,7 +428,7 @@ recv_response(int sock, AXtlsctx *tls, size_t *out_len,
     }
 
     /* Post progress notification when Content-Length is known. */
-    if (headers_done && notify_win && content_length >= 0) {
+    if (headers_done && req->notify_win && content_length >= 0) {
       size_t body_received = used > body_start ? used - body_start : 0;
       if (body_received - last_progress >= HTTP_PROGRESS_INTERVAL) {
         last_progress = body_received;
@@ -379,9 +436,13 @@ recv_response(int sock, AXtlsctx *tls, size_t *out_len,
         if (prog) {
           prog->bytes_received = body_received;
           prog->bytes_total    = content_length;
-          prog->request_id     = req_id;
-          post_message(notify_win, evHttpProgress,
-                       (uint32_t)req_id, prog);
+          prog->request_id     = req->id;
+          http_mutex_lock(&g_http.mutex);
+          bool queued = req->state != HTTP_STATE_CANCELLED && !g_http.worker_quit &&
+            queue_delivery_locked(req->notify_win, req->notify_serial, evHttpProgress, req->id, prog);
+          if (req->state == HTTP_STATE_CANCELLED || g_http.worker_quit) free(prog);
+          http_mutex_unlock(&g_http.mutex);
+          (void)queued;
         }
       }
     }
@@ -674,8 +735,7 @@ execute_request(http_pending_t *req)
 
     /* Receive full response. */
     size_t raw_len = 0;
-    char  *raw     = recv_response(sock, tls, &raw_len,
-                                   req->notify_win, req->id, req->max_response_bytes);
+    char  *raw     = recv_response(sock, tls, &raw_len, req);
 
     if (tls) axTlsClose(tls);
     axNetClose(sock);
@@ -819,18 +879,13 @@ worker_thread(void *arg)
     bool cancelled = (req->state == HTTP_STATE_CANCELLED);
     bool shutting_down = g_http.worker_quit;
     req->state = HTTP_STATE_DONE;
+    bool queued = false;
+    if (!resp) { fprintf(stderr, "[http] cannot allocate response for request=%u\n", req->id); fflush(stderr); }
+    else if (!cancelled && !shutting_down && req->notify_win)
+      queued = queue_delivery_locked(req->notify_win, req->notify_serial, evHttpDone, req->id, resp);
+    else http_response_free(resp);
     http_mutex_unlock(&g_http.mutex);
-
-    if (cancelled || shutting_down) {
-      /* Discard result; don't post a message. */
-      http_response_free(resp);
-    } else if (req->notify_win) {
-      /* Transfer ownership of resp to the window proc via post_message. */
-      post_message(req->notify_win, evHttpDone,
-                   (uint32_t)req->id, resp);
-    } else {
-      http_response_free(resp);
-    }
+    (void)queued;
 
     /* Remove the completed request from the queue. */
     http_mutex_lock(&g_http.mutex);
@@ -907,6 +962,11 @@ http_shutdown(void)
     g_http.queue_head = next;
   }
   g_http.queue_tail = NULL;
+  while (g_http.delivery_head) {
+    http_delivery_t *next = g_http.delivery_head->next;
+    discard_delivery(g_http.delivery_head); g_http.delivery_head = next;
+  }
+  g_http.delivery_tail = NULL;
   http_mutex_unlock(&g_http.mutex);
 
   // Keep axNet initialized for process lifetime. Repeated init/shutdown cycles
@@ -924,6 +984,10 @@ http_request_async(window_t           *notify_win,
   (void)userdata; /* reserved for future use */
 
   if (!g_http.initialized || !url) return HTTP_INVALID_REQUEST;
+  if (notify_win && !is_valid_window_ptr(notify_win, g_ui_runtime.windows)) {
+    fprintf(stderr, "[http] invalid notification window=%p\n", (void *)notify_win); fflush(stderr);
+    return HTTP_INVALID_REQUEST;
+  }
 
   /* Validate the URL before queueing. */
   parsed_url_t pu;
@@ -963,6 +1027,7 @@ http_request_async(window_t           *notify_win,
   }
 
   req->notify_win = notify_win;
+  req->notify_serial = notify_win ? notify_win->lifetime_serial : 0;
   req->state      = HTTP_STATE_PENDING;
 
   http_mutex_lock(&g_http.mutex);
@@ -985,7 +1050,7 @@ http_request_async(window_t           *notify_win,
 void
 http_cancel(http_request_id_t id)
 {
-  if (id == HTTP_INVALID_REQUEST) return;
+  if (id == HTTP_INVALID_REQUEST || !g_http.sync_ready) return;
 
   http_mutex_lock(&g_http.mutex);
   for (http_pending_t *it = g_http.queue_head; it; it = it->next) {
@@ -994,6 +1059,13 @@ http_cancel(http_request_id_t id)
         it->state = HTTP_STATE_CANCELLED;
       break;
     }
+  }
+  http_delivery_t **link = &g_http.delivery_head;
+  g_http.delivery_tail = NULL;
+  while (*link) {
+    http_delivery_t *item = *link;
+    if (item->id == id) { *link = item->next; discard_delivery(item); }
+    else { g_http.delivery_tail = item; link = &item->next; }
   }
   http_mutex_unlock(&g_http.mutex);
 }

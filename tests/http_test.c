@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <time.h>
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <netinet/in.h>
@@ -229,13 +230,13 @@ static result_t response_proc(window_t *win, uint32_t msg, uint32_t wp, void *lp
 static int response_server(const char *response, pid_t *child) {
   int listener = socket(AF_INET, SOCK_STREAM, 0);
   if (listener < 0) return -1;
-  struct sockaddr_in address = {.sin_family = AF_INET, .sin_addr.s_addr = htonl(INADDR_LOOPBACK), .sin_port = 0};
+  struct sockaddr_in address = {.sin_family = AF_INET, .sin_addr.s_addr = inet_addr("127.0.0.1"), .sin_port = 0};
   if (bind(listener, (struct sockaddr *)&address, sizeof(address)) || listen(listener, 1)) { close(listener); return -1; }
   socklen_t size = sizeof(address);
   if (getsockname(listener, (struct sockaddr *)&address, &size)) { close(listener); return -1; }
   *child = fork();
   if (*child == 0) {
-    alarm(5); int connection = accept(listener, NULL, NULL);
+    signal(SIGPIPE, SIG_IGN); alarm(5); int connection = accept(listener, NULL, NULL);
     if (connection >= 0) {
       char request[4096]; (void)read(connection, request, sizeof(request));
       size_t length = strlen(response), sent = 0;
