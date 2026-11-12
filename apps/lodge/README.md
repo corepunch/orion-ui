@@ -208,5 +208,9 @@ configurations, including replay after a lost response and server restart. It al
 failed group reservation leaves no partial group or bookings, and that a successful
 group request remains idempotent after restart. A service-level shift also covers
 room preparation, a stale edit and retry, check-in, payment and refund, checkout,
-role restrictions, day close, and replay after restart in both countries. These
-checks do not replace a full two-client UI shift and pilot acceptance.
+role restrictions, day close, and replay after restart in both countries. Calendar
+checks cover adjacent stays across New Year and leap day, invalid dates, and the
+server day in the Berlin and Moscow process time zones, including after restart.
+They use the actual system clock and do not simulate the instant of midnight or a
+daylight-saving transition. These checks do not replace a full two-client UI
+shift and pilot acceptance.

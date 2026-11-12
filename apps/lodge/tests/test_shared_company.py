@@ -1,11 +1,15 @@
 """Exercise Lodge conflicts and retries against a disposable shared company."""
 import argparse
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 import importlib.util
+import os
 from pathlib import Path
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[3]
 spec = importlib.util.spec_from_file_location('orion_server_lodge', ROOT / 'tools/orion_server.py')
@@ -76,6 +80,44 @@ class SharedCompanyTests(unittest.TestCase):
                                              {'id': booking, 'amount_minor': 100, 'request_key': 'after-close'})[1]['ok'])
                 finally:
                     company.close()
+
+    def test_server_timezone_and_calendar_boundaries(self):
+        for country in ('DE', 'RU'):
+            for zone in ('Europe/Berlin', 'Europe/Moscow'):
+                with self.subTest(country=country, zone=zone), tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'TZ': zone}):
+                    path = Path(directory) / 'company'
+                    server.initialize(argparse.Namespace(state=str(path), application='lodge', country=country, configuration=None,
+                                      executable=str(ROOT / 'build/bin/orion-service'), resources=str(ROOT / 'apps/lodge/share'), source=None))
+                    company = server.Company(path)
+                    try:
+                        def request(key, command, args):
+                            result = company.execute('alice', 'reception', {'request_id': key, 'expected_revision': company.status()['revision'],
+                                                                            'command': command, 'args': args})
+                            return result
+                        before = datetime.now(ZoneInfo(zone)).date().isoformat()
+                        snapshot = request('snapshot', 'snapshot', {})['result']
+                        report = request('preview', 'day_preview', {})['result']
+                        after = datetime.now(ZoneInfo(zone)).date().isoformat()
+                        self.assertIn(snapshot['today'], (before, after))
+                        self.assertIn(report['day'], (before, after))
+                        room = request('room', 'save_room', {'name': '101', 'capacity': 2, 'rate': 100})['result']['id']
+                        guest = request('guest', 'save_guest', {'name': 'Guest'})['result']['id']
+                        def stay(arrival, departure):
+                            return {'room_id': room, 'guest_id': guest, 'arrival': arrival, 'departure': departure,
+                                    'persons': 1, 'rate': 100, 'extras': 0, 'notes': ''}
+                        for key, arrival, departure in (('year', '2035-12-31', '2036-01-01'),
+                                                        ('next-year', '2036-01-01', '2036-01-02'),
+                                                        ('leap', '2036-02-28', '2036-02-29'),
+                                                        ('after-leap', '2036-02-29', '2036-03-01')):
+                            self.assertTrue(request(key, 'reserve', stay(arrival, departure))['ok'])
+                        self.assertFalse(request('overlap', 'reserve', stay('2036-02-28', '2036-03-01'))['ok'])
+                        self.assertFalse(request('invalid-date', 'reserve', stay('2035-02-29', '2035-03-01'))['ok'])
+                        company.close(); company = server.Company(path)
+                        view = request('after-restart', 'snapshot', {})['result']
+                        self.assertEqual(len(view['reservations']), 4)
+                        self.assertIn(view['today'], (datetime.now(ZoneInfo(zone)).date().isoformat(),))
+                    finally:
+                        company.close()
 
     def test_cancelled_payments_in_day_preview(self):
         for country in ('DE', 'RU'):
