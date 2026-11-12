@@ -70,6 +70,25 @@ class PackageTests(unittest.TestCase):
             with self.assertRaises(OSError): packages.install(self.store, archive)
         self.assertEqual((self.store / "state.json").read_bytes(), previous)
 
+    def test_check_install_validates_without_publishing(self):
+        packages.install(self.store, self.release())
+        before = (self.store / "state.json").read_bytes()
+        objects = set((self.store / "objects").iterdir())
+        snapshots = set((self.store / "snapshots").iterdir())
+        candidate = self.release(release="0.2.0")
+        report = packages.install(self.store, candidate, check_only=True)
+        self.assertEqual((report["id"], report["release"]), ("example", "0.2.0"))
+        with patch("sys.argv", ["orion-packages", "--store", str(self.store), "check-install", str(candidate)]):
+            self.assertEqual(packages.main(), 0)
+        bad = self.release("consumer", dependencies={"missing": 1})
+        with self.assertRaisesRegex(ValueError, "consumer requires missing@1"):
+            packages.install(self.store, bad, check_only=True)
+        self.assertEqual((self.store / "state.json").read_bytes(), before)
+        self.assertEqual(set((self.store / "objects").iterdir()), objects)
+        self.assertEqual(set((self.store / "snapshots").iterdir()), snapshots)
+        packages.install(self.store, candidate)
+        self.assertEqual(packages.state(self.store)["active"]["example"], "0.2.0")
+
     def test_registry_write_failure_cleans_staging_and_retains_active_profile(self):
         packages.install(self.store, self.release())
         before = (self.store / "state.json").read_bytes()
@@ -178,6 +197,8 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(len(fingerprint), 64)
         packages.set_signature_policy(self.store, "require")
         with self.assertRaisesRegex(ValueError, "signature required"): packages.install(self.store, archive)
+        with self.assertRaisesRegex(ValueError, "signature required"): packages.install(self.store, archive, check_only=True)
+        self.assertEqual(packages.install(self.store, archive, signature, check_only=True)["id"], "example")
         packages.install(self.store, archive, signature)
         current = packages.state(self.store)
         packages.verify_selected(self.store, current); packages.verify_snapshot(self.store, current)

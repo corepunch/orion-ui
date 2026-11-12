@@ -150,6 +150,7 @@ evaluates only the manifest in an empty Lua environment under an instruction
 budget, and syntax-checks Lua files; it does not execute plugin factories.
 
 ```sh
+python3 tools/orion_packages.py --store /tmp/my_plugins check-install /tmp/stay_dates.zip
 python3 tools/orion_packages.py --store /tmp/my_plugins install /tmp/stay_dates.zip
 python3 tools/orion_packages.py --store /tmp/my_plugins list
 python3 tools/orion_packages.py --store /tmp/my_plugins verify
@@ -171,7 +172,11 @@ Release objects and per-launch snapshots remain separate from the active registr
 The manager serializes writers, checks hashes, paths, publisher consistency and
 dependency compatibility, then publishes the selected generation by atomic file
 replacement. Dependency validation occurs before writing a new release object;
-a rejected dependency leaves both the registry and object store unchanged. Bundled
+a rejected dependency leaves both the registry and object store unchanged.
+`check-install` validates the candidate, signature policy, dependencies and other
+selected release objects without publishing it. It takes the manager lock and may
+create the store and lock file. The store or archive can change after this check;
+installation repeats the checks and is the authoritative decision. Bundled
 manifests are evaluated in a restricted Lua environment and checked for matching
 identity and interface instead of extracting a version from their text; a missing
 or invalid manifest prevents activation or launch. Failed activation leaves the

@@ -389,7 +389,7 @@ def publish(directory, current):
         raise
 
 
-def install(directory, archive, signature_path=None):
+def install(directory, archive, signature_path=None, check_only=False):
     info, contents = read_archive(archive)
     validate_contents(info, contents)
     name, release = info["id"], info["release"]
@@ -413,6 +413,12 @@ def install(directory, archive, signature_path=None):
         current["previous"] = {"active": dict(current["active"]), "configuration": copy.deepcopy(current.get("configuration", {}))}
         current["active"][name] = release
         validate_selection(current)
+        if check_only:
+            # The candidate is still an archive; verify the other selected objects.
+            others = dict(current, active={key: value for key, value in current["active"].items() if key != name})
+            verify_selected(directory, others)
+            if (directory / "objects" / digest).exists(): read_object(directory, digest)
+            return {"id": name, "release": release, "digest": digest}
         destination = directory / "objects" / digest
         if not destination.exists():
             destination.parent.mkdir(exist_ok=True)
@@ -514,6 +520,7 @@ def main():
     parser.add_argument("--store", type=Path)
     commands = parser.add_subparsers(dest="command", required=True)
     cmd = commands.add_parser("install"); cmd.add_argument("archive", type=Path); cmd.add_argument("--signature", type=Path)
+    cmd = commands.add_parser("check-install"); cmd.add_argument("archive", type=Path); cmd.add_argument("--signature", type=Path)
     cmd = commands.add_parser("sign"); cmd.add_argument("archive", type=Path); cmd.add_argument("private_key", type=Path); cmd.add_argument("output", type=Path)
     cmd = commands.add_parser("trust"); cmd.add_argument("publisher"); cmd.add_argument("public_key", type=Path)
     cmd = commands.add_parser("untrust"); cmd.add_argument("publisher")
@@ -532,6 +539,8 @@ def main():
         elif args.command == "untrust": untrust_publisher(directory, args.publisher)
         elif args.command == "policy": set_signature_policy(directory, args.mode)
         elif args.command == "install": install(directory, args.archive, args.signature)
+        elif args.command == "check-install":
+            print(json.dumps(install(directory, args.archive, args.signature, check_only=True), sort_keys=True, indent=2))
         elif args.command == "enable": select(directory, args.id, args.release)
         elif args.command == "disable": select(directory, args.id, disable=True)
         elif args.command == "configure": configure(directory, args.id, json.loads(args.json_file.read_text()))
