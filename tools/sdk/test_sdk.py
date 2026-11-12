@@ -90,6 +90,24 @@ class SDKTests(unittest.TestCase):
         with self.assertRaises(subprocess.CalledProcessError):
             sdk.check(plugin)
 
+    def test_plugin_package_contract_checked_before_archive(self):
+        plugin = self.root / "plugin"; sdk.create(plugin, "example", "plugin")
+        package = plugin / "package.json"; original = json.loads(package.read_text())
+        output = self.root / "release.zip"
+        for change in ({"id": "other"}, {"interface": 2}, {"dependencies": {}}, {"runtime_api": 99}):
+            info = dict(original); info.update(change); package.write_text(json.dumps(info))
+            with self.assertRaises(ValueError): sdk.check(plugin)
+            with self.assertRaises(ValueError): sdk.pack(plugin, output)
+            self.assertFalse(output.exists())
+        package.write_text(json.dumps(original))
+        (plugin / "settings.lua").write_text("return {}")
+        with self.assertRaisesRegex(ValueError, "reserved"): sdk.pack(plugin, output)
+        (plugin / "settings.lua").unlink()
+        package.unlink()
+        self.assertTrue(sdk.check(plugin))
+        with self.assertRaisesRegex(ValueError, "requires package.json"): sdk.pack(plugin, output)
+        self.assertFalse(output.exists())
+
     def test_existing_lodge_and_bundled_plugins(self):
         self.assertTrue(sdk.check(sdk.ROOT / "apps/lodge/share"))
         for manifest in (sdk.ROOT / "share/lua/orion/plugins").glob("*/manifest.lua"):

@@ -89,7 +89,11 @@ validation belongs in the model/datasource so native form edits cannot bypass it
 
 `check` validates Lua syntax, plugin manifest dependency graphs against this
 checkout's bundled plugins, and application XML includes, initial form and declared
-model/controller files. It rejects include escapes/cycles and package symlinks.
+model/controller files. When a plugin has `package.json`, it also validates the
+package metadata and its agreement with the manifest, including runtime API,
+interface and dependencies; `settings.lua` is reserved. It rejects include
+escapes/cycles and package symlinks. A standalone plugin without `package.json`
+can still be checked as source, but a distributable plugin archive requires it.
 It is not the complete Orion schema compiler, an interpreter of dynamic `require`,
 or a proof of accounting correctness. For external plugin dependencies, pass `--plugin-root /path/to/store/snapshots/GENERATION`
 before `check` or `pack`; bundled manifests remain authoritative for bundled IDs.

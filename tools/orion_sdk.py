@@ -2,6 +2,7 @@
 """Local authoring and reproducible source packaging for Orion (Python stdlib)."""
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -75,6 +76,14 @@ def check(root, plugin_root=None):
             raise ValueError("plugin is missing main.lua")
         subprocess.run([lua, str(ROOT / "tools/sdk/check_plugins.lua"), str(root), str(ROOT / "share/lua"), str(plugin_root or "")],
                        check=True, timeout=10, capture_output=True, text=True)
+        package = root / "package.json"
+        if package.exists():
+            spec = importlib.util.spec_from_file_location("orion_packages_contract", ROOT / "tools/orion_packages.py")
+            contract = importlib.util.module_from_spec(spec); spec.loader.exec_module(contract)
+            info = contract.metadata(json.loads(package.read_text(encoding="utf-8")))
+            contents = {name: (root / name).read_bytes() for name in ("package.json", "manifest.lua", "main.lua")}
+            if (root / "settings.lua").exists(): contents["settings.lua"] = b""
+            contract.validate_contents(info, contents)
     else:
         visited, active, documents = set(), set(), []
         def read(path):
@@ -140,6 +149,8 @@ def create(root, name, kind):
 def pack(root, output, plugin_root=None):
     root = root.resolve()
     sources = check(root, plugin_root)
+    if (root / "manifest.lua").exists() and not (root / "package.json").is_file():
+        raise ValueError("plugin package requires package.json")
     output = output.resolve()
     if output.is_relative_to(root.resolve()) or output.exists():
         raise ValueError("output must be a new file outside the source directory")
