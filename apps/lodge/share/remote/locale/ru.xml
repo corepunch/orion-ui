@@ -257,4 +257,7 @@
   <string source="Group reservations cancelled. Check payments for refunds." where="code">Бронирования группы отменены. Проверьте необходимость возврата оплат.</string>
   <string source="Use first room rate" where="remote">Взять цену первого номера</string>
   <string source="Use second room rate" where="remote">Взять цену второго номера</string>
+  <string source="New group" where="remote">Новая группа</string>
+  <string source="Hotel day at refresh: %s" where="code">День отеля на момент обновления: %s</string>
+  <string source="The server did not provide a valid hotel day." where="code">Сервер не сообщил корректный день отеля.</string>
 </strings>

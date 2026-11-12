@@ -257,4 +257,7 @@
   <string source="Group reservations cancelled. Check payments for refunds." where="code">Gruppenreservierungen storniert. Prüfen Sie Zahlungen auf Erstattungen.</string>
   <string source="Use first room rate" where="remote">Preis des ersten Zimmers übernehmen</string>
   <string source="Use second room rate" where="remote">Preis des zweiten Zimmers übernehmen</string>
+  <string source="New group" where="remote">Neue Gruppe</string>
+  <string source="Hotel day at refresh: %s" where="code">Hoteltag beim Aktualisieren: %s</string>
+  <string source="The server did not provide a valid hotel day." where="code">Der Server hat keinen gültigen Hoteltag geliefert.</string>
 </strings>

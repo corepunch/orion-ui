@@ -75,6 +75,15 @@ static void test_lodge_remote_ui(void) {
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
   }
   ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "Server data refreshed"));
+  const char *server_day = getenv("ORION_TEST_SERVER_DAY"), *server_tomorrow = getenv("ORION_TEST_SERVER_TOMORROW");
+  ASSERT_NOT_NULL(server_day); ASSERT_NOT_NULL(server_tomorrow);
+  char formatted_day[64], formatted_tomorrow[64];
+  ui_format_date(server_day, formatted_day, sizeof(formatted_day)); ui_format_date(server_tomorrow, formatted_tomorrow, sizeof(formatted_tomorrow));
+  ASSERT_STR_EQUAL(script_page_control(page, "arrival")->title, formatted_day);
+  ASSERT_STR_EQUAL(script_page_control(page, "departure")->title, formatted_tomorrow);
+  ASSERT_STR_EQUAL(script_page_control(page, "group_arrival")->title, formatted_day);
+  ASSERT_STR_EQUAL(script_page_control(page, "group_departure")->title, formatted_tomorrow);
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "hotel_day")->title, formatted_day));
   send_message(script_page_control(page, "room_name"), edSetText, 0, "Remote 101");
   send_message(script_page_control(page, "capacity"), edSetText, 0, "2");
   send_message(script_page_control(page, "room_rate"), edSetText, 0, "100.00");
@@ -157,7 +166,12 @@ static void test_lodge_remote_ui(void) {
   ASSERT_TRUE(script_page_perform(page, "edit_booking"));
   ASSERT_TRUE(window_is_enabled(script_page_control(page, "reserve")));
   ASSERT_TRUE(script_page_perform(page, "new_booking"));
+  for (int i = 0; i < 500 && strcmp(script_page_control(page, "editor")->title, "New reservation"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
   ASSERT_STR_EQUAL(script_page_control(page, "editor")->title, "New reservation");
+  ASSERT_STR_EQUAL(script_page_control(page, "arrival")->title, formatted_day);
+  ASSERT_STR_EQUAL(script_page_control(page, "departure")->title, formatted_tomorrow);
   ASSERT_TRUE(script_page_perform(page, "check_in")); ASSERT_TRUE(wait_for(db, stays->table_id, 1, "status", "Checked in"));
   ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "occupancy_label", "Guest checked in"));
   send_message(script_page_control(page, "amount"), edSetText, 0, "125.00");
@@ -201,6 +215,12 @@ static void test_lodge_remote_ui(void) {
   send_message(script_page_control(page, "room_name"), edSetText, 0, "Remote 103");
   ASSERT_TRUE(script_page_perform(page, "add_room")); ASSERT_TRUE(wait_for(db, rooms->table_id, 3, "name", "Remote 103"));
   send_message(script_page_control(page, "sections"), tcSetSelection, 1, NULL);
+  ASSERT_TRUE(script_page_perform(page, "new_group"));
+  for (int i = 0; i < 500 && !window_is_enabled(script_page_control(page, "new_group")); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_STR_EQUAL(script_page_control(page, "group_arrival")->title, formatted_day);
+  ASSERT_STR_EQUAL(script_page_control(page, "group_departure")->title, formatted_tomorrow);
   send_message(script_page_control(page, "group_name"), edSetText, 0, "Conference <team>");
   send_message(script_page_control(page, "group_guest"), cbSetCurrentValue, 1, NULL);
   send_message(script_page_control(page, "group_room1"), cbSetCurrentValue, 2, NULL);

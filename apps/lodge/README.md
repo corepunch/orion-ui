@@ -76,7 +76,14 @@ reservations with payments still held and their total paid after refunds. Check
 each reservation against the hotel's cancellation policy; this amount does not
 decide whether a refund is due. Resolve the overdue stays before closing. After
 closing, reservation, nightly-price and payment changes are blocked until the
-next calendar day in the host process's time zone; housekeeping remains available. Close records are
+next calendar day in the host process's time zone; housekeeping remains available.
+The hotel day follows the operating-system time zone of the local process or,
+in shared mode, the server process; there is no separate per-hotel time-zone
+setting. Configure the server's time zone for the hotel and keep it consistent
+across restarts. Changing it can change the current hotel day and day-close
+boundary. In shared mode the displayed hotel day is as of the latest refresh;
+**New reservation** and **New group** refresh the server day before setting
+default dates. An ordinary refresh preserves entered dates. Close records are
 immutable and there is no reopening workflow. This is an operational snapshot,
 not a tax close or statutory report. Old payment events lack a reliable posting
 date and are excluded from daily payment totals; their opening balances remain

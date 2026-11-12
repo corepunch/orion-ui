@@ -10,13 +10,12 @@ local status_labels = {reserved = "Reserved", checked_in = "Checked in", checked
 local cleaning_labels = {inspection_needed = "Inspection needed", dirty = "Dirty", clean = "Clean"}
 local inputs = {"room_name", "room_category", "capacity", "room_rate", "edit_room_choice", "guest_name", "phone", "edit_guest_choice", "clean_room", "room", "guest", "arrival", "departure", "persons", "rate", "extras", "notes", "amount", "group_name", "group_room1", "group_room2", "group_guest", "group_arrival", "group_departure", "group_persons1", "group_persons2", "group_rate1", "group_rate2", "statement_group", "night", "night_amount", "night_booking"}
 function Page:init()
-  local day = orion.today()
   self.client = Remote.new(self.app.handle, "lodge")
   self.values = {room_name = "", room_category = "", capacity = 2, room_rate = 0, edit_room_choice = 0, guest_name = "", phone = "", edit_guest_choice = 0, clean_room = 0,
-    room = 0, guest = 0, arrival = day, departure = calendar.add(day, 1), persons = 1, rate = 0, extras = 0, notes = "", amount = 0}
+    room = 0, guest = 0, arrival = "", departure = "", persons = 1, rate = 0, extras = 0, notes = "", amount = 0}
   self.values.group_name, self.values.group_room1, self.values.group_room2, self.values.group_guest = "", 0, 0, 0
-  self.values.group_arrival, self.values.group_departure, self.values.group_persons1, self.values.group_persons2 = day, calendar.add(day, 1), 1, 1
-  self.values.group_rate1, self.values.group_rate2, self.values.night, self.values.night_amount, self.values.night_booking = 0, 0, day, 0, 0
+  self.values.group_arrival, self.values.group_departure, self.values.group_persons1, self.values.group_persons2 = "", "", 1, 1
+  self.values.group_rate1, self.values.group_rate2, self.values.night, self.values.night_amount, self.values.night_booking = 0, 0, "", 0, 0
   self.values.statement_group = 0
   self.day_report, self.cancelled_paid_report = "", ""
   self.allowed, self.connected, self.connection, self.notice = {}, false, orion.tr("Not connected."), ""
@@ -30,6 +29,15 @@ function Page:load_snapshot(after)
   self.snapshot_ready = false
   local ok, err = self.client:submit("snapshot", {}, function(result, failure)
     if not result then self.notice = failure; return end
+    if type(result.today) ~= "string" or not pcall(calendar.day, result.today) then
+      self.notice = orion.tr("The server did not provide a valid hotel day."); return
+    end
+    self.server_day = result.today
+    if not self.dates_initialized then
+      self.values.arrival, self.values.departure = result.today, calendar.add(result.today, 1)
+      self.values.group_arrival, self.values.group_departure, self.values.night = result.today, calendar.add(result.today, 1), result.today
+      self.dates_initialized = true
+    end
     local rooms, guests, groups, reservations, day_closes, room_names, guest_names = {}, {}, {}, {}, {}, {}, {}
     self.reservations, self.guests, self.rooms, self.groups = {}, {}, {}, {}
     self.currency = result.hotel and result.hotel.currency
@@ -145,10 +153,21 @@ function Page:reserve(v)
 end
 function Page:new_booking(v)
   self:remember(v)
-  local day = orion.today()
-  self.editing, self.needs_reload = nil, false
-  self.values.room, self.values.guest, self.values.arrival, self.values.departure = 0, 0, day, calendar.add(day, 1)
-  self.values.persons, self.values.rate, self.values.extras, self.values.notes = 1, 0, 0, ""
+  self:load_snapshot(function()
+    local day = self.server_day
+    self.editing, self.needs_reload = nil, false
+    self.values.room, self.values.guest, self.values.arrival, self.values.departure = 0, 0, day, calendar.add(day, 1)
+    self.values.persons, self.values.rate, self.values.extras, self.values.notes = 1, 0, 0, ""
+  end)
+end
+function Page:new_group(v)
+  self:remember(v)
+  self:load_snapshot(function()
+    local day = self.server_day
+    self.values.group_name, self.values.group_guest, self.values.group_room1, self.values.group_room2 = "", 0, 0, 0
+    self.values.group_arrival, self.values.group_departure = day, calendar.add(day, 1)
+    self.values.group_persons1, self.values.group_persons2, self.values.group_rate1, self.values.group_rate2 = 1, 1, 0, 0
+  end)
 end
 function Page:edit_booking(v)
   self:remember(v)
@@ -277,6 +296,8 @@ function Page:data()
     group_reserve = "group_reserve", group_statement = "snapshot", preview_group_cancel = "group_cancel", confirm_group_cancel = "group_cancel", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
   for control, command in pairs(map) do disabled[control] = blocked or not self.allowed[command] end
   disabled.confirm_group_cancel = disabled.confirm_group_cancel or not self.cancel_group_id
+  disabled.new_booking = blocked or not self.allowed.reserve
+  disabled.new_group = blocked or not self.allowed.group_reserve
   disabled.room_rate = blocked or not self.allowed.reserve
   disabled.group_rate_first = blocked or not self.allowed.group_reserve
   disabled.group_rate_second = blocked or not self.allowed.group_reserve
@@ -289,7 +310,7 @@ function Page:data()
   disabled.load_room = blocked or not self.allowed.save_room
   disabled.save_room = disabled.load_room or not self.editing_room or self.room_needs_reload
   local connection = self.connected and string.format(orion.tr("Country: %s · Role: %s · Revision: %d"), self.country, self.role, state.revision) or self.connection
-  local values = {connection = connection, notice = self.notice, group_cancel_notice = self.cancel_group_notice or "", day_report = self.day_report, cancelled_paid_report = self.cancelled_paid_report,
+  local values = {connection = connection, hotel_day = self.server_day and string.format(orion.tr("Hotel day at refresh: %s"), orion.formatDate(self.server_day)) or "", notice = self.notice, group_cancel_notice = self.cancel_group_notice or "", day_report = self.day_report, cancelled_paid_report = self.cancelled_paid_report,
     editor = self.editing and string.format(orion.tr("Edit reservation %d"), self.editing) or orion.tr("New reservation"),
     payment_status = self.payment_done and orion.tr("Start a new payment or refund before recording another.") or "",
     room_editor = self.room_needs_reload and orion.tr("Load the room again before saving.") or

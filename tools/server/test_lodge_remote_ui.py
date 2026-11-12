@@ -1,4 +1,4 @@
-import argparse, hashlib, importlib.util, os, pathlib, subprocess, tempfile, threading
+import argparse, datetime, hashlib, importlib.util, os, pathlib, subprocess, tempfile, threading
 
 root = pathlib.Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('server', root / 'tools/orion_server.py')
@@ -6,6 +6,9 @@ server = importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
 
 
 def run_case(base, kind, country):
+    # Synthetic extreme UTC offsets guarantee different calendar dates on the
+    # host and client, including at midnight and daylight-saving transitions.
+    os.environ['TZ'] = 'UTC-24'
     state, profile = base / 'company', base / 'profile'
     profile.mkdir(mode=0o700)
     server.initialize(argparse.Namespace(state=str(state), application='lodge', country=country, configuration=None,
@@ -17,8 +20,14 @@ def run_case(base, kind, country):
     http = server.BusinessServer(('127.0.0.1', 0), server.Handler); http.company = company
     thread = threading.Thread(target=http.serve_forever); thread.start()
     try:
+        snapshot = company.execute('tester', 'admin', {'request_id': 'test-server-day', 'expected_revision': company.status()['revision'],
+                                   'command': 'snapshot', 'args': {}})
+        assert snapshot['ok'], snapshot
+        server_day = datetime.date.fromisoformat(snapshot['result']['today'])
+        client_day = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)).date()
+        assert server_day != client_day
         env = os.environ.copy()
-        env.update(ORION_TEST_CURRENCY='EUR' if country == 'DE' else 'RUB', ORION_SERVER_URL='http://127.0.0.1:' + str(http.server_port), ORION_SERVER_TOKEN=token, ORION_REMOTE_PROFILE=str(profile))
+        env.update(TZ='UTC+24', ORION_TEST_SERVER_DAY=server_day.isoformat(), ORION_TEST_SERVER_TOMORROW=(server_day + datetime.timedelta(days=1)).isoformat(), ORION_TEST_CURRENCY='EUR' if country == 'DE' else 'RUB', ORION_SERVER_URL='http://127.0.0.1:' + str(http.server_port), ORION_SERVER_TOKEN=token, ORION_REMOTE_PROFILE=str(profile))
         if kind:
             def perform(key, command, args):
                 body = {'request_id': key, 'expected_revision': company.status()['revision'], 'command': command, 'args': args}

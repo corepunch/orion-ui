@@ -11,7 +11,7 @@
   <application runtime-api="1" name="lodge_remote" form="remote" />
   <forms>
     <form name="remote" controller="remote" title="Lodge · Shared server" width="1180" height="850" padding="12" spacing="8">
-      <Label text="Shared hotel reception" font="title"/><Label name="connection"/><Label name="notice"/><Label name="error"/>
+      <Label text="Shared hotel reception" font="title"/><Label name="connection"/><Label name="hotel_day"/><Label name="notice"/><Label name="error"/>
       <StackView orientation="horizontal" spacing="6"><Button name="connect" text="Connect or refresh" action="connect"/><Button name="retry" text="Retry pending request" action="retry"/></StackView>
       <TabView name="sections" flags="flexspace"><StackView name="reception_tab" text="Reception" spacing="6" flags="flexspace">
       <Separator/><Label text="Rooms and guests" font="heading"/>
@@ -47,7 +47,7 @@
       </Column><Column width="auto"><Label text="Second room:"/><Label text="Guests:"/><Label text="Nightly rate:"/></Column><Column>
         <ComboBox name="group_room2" source="lodge_remote_cache.rooms" display="name" value="id"/><TextBox name="group_persons2" type="integer"/><TextBox name="group_rate2" type="number" decimals="2"/>
       </Column></GridView>
-      <StackView orientation="horizontal" spacing="6"><Button name="group_rate_first" text="Use first room rate" action="group_rate_first"/><Button name="group_rate_second" text="Use second room rate" action="group_rate_second"/><Button name="group_reserve" text="Create group reservations" action="group_reserve"/></StackView>
+      <StackView orientation="horizontal" spacing="6"><Button name="group_rate_first" text="Use first room rate" action="group_rate_first"/><Button name="group_rate_second" text="Use second room rate" action="group_rate_second"/><Button name="group_reserve" text="Create group reservations" action="group_reserve"/><Button name="new_group" text="New group" action="new_group"/></StackView>
       <Separator/><Label text="Group reservation statement" font="heading"/>
       <StackView orientation="horizontal" spacing="6"><Label text="Group:"/><ComboBox name="statement_group" source="lodge_remote_cache.groups" display="name" value="id"/><Button name="group_statement" text="Export group statement" action="group_statement"/></StackView>
       <StackView orientation="horizontal" spacing="6"><Button name="preview_group_cancel" text="Preview group cancellation" action="preview_group_cancel"/><Button name="confirm_group_cancel" text="Confirm group cancellation" action="confirm_group_cancel"/></StackView><Label name="group_cancel_notice"/>
