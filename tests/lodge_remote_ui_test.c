@@ -48,6 +48,9 @@ static void test_lodge_remote_ui(void) {
   ASSERT_TRUE(script_page_perform(page, "add_guest")); ASSERT_TRUE(wait_for(db, guests->table_id, 1, "name", "Remote guest"));
   send_message(script_page_control(page, "clean_room"), cbSetCurrentValue, 1, NULL);
   ASSERT_TRUE(script_page_perform(page, "mark_clean")); ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "cleaning_state", "Clean"));
+  ASSERT_TRUE(script_page_perform(page, "mark_dirty")); ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "cleaning_state", "Dirty"));
+  ASSERT_TRUE(script_page_perform(page, "mark_inspection")); ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "cleaning_state", "Inspection needed"));
+  ASSERT_TRUE(script_page_perform(page, "mark_clean")); ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "cleaning_state", "Clean"));
   send_message(script_page_control(page, "room"), cbSetCurrentValue, 1, NULL);
   send_message(script_page_control(page, "guest"), cbSetCurrentValue, 1, NULL);
   send_message(script_page_control(page, "arrival"), edSetText, 0, "2035-01-01");

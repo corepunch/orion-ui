@@ -77,6 +77,8 @@ end
 function Page:add_room(v) self:submit(v, "save_room", {name = v.room_name, category = "", capacity = v.capacity, rate = v.room_rate}) end
 function Page:add_guest(v) self:submit(v, "save_guest", {name = v.guest_name, phone = v.phone}) end
 function Page:mark_clean(v) self:submit(v, "set_room_cleaning", {id = v.clean_room, state = "clean"}) end
+function Page:mark_dirty(v) self:submit(v, "set_room_cleaning", {id = v.clean_room, state = "dirty"}) end
+function Page:mark_inspection(v) self:submit(v, "set_room_cleaning", {id = v.clean_room, state = "inspection_needed"}) end
 function Page:reserve(v)
   self:submit(v, "reserve", {room_id = v.room, guest_id = v.guest, arrival = v.arrival, departure = v.departure,
     persons = v.persons, rate = v.rate, extras = v.extras, notes = ""})
@@ -128,7 +130,7 @@ function Page:data()
   local state = self.client:state()
   local blocked = not self.connected or state.busy or state.pending or state.conflict
   local disabled = {connect = state.busy or (state.pending and not state.conflict), retry = state.busy or not state.pending}
-  local map = {add_room = "save_room", add_guest = "save_guest", mark_clean = "set_room_cleaning", reserve = "reserve",
+  local map = {add_room = "save_room", add_guest = "save_guest", mark_clean = "set_room_cleaning", mark_dirty = "set_room_cleaning", mark_inspection = "set_room_cleaning", reserve = "reserve",
     check_in = "check_in", check_out = "check_out", cancel = "cancel", pay = "payment", refund = "payment",
     group_reserve = "group_reserve", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
   for control, command in pairs(map) do disabled[control] = blocked or not self.allowed[command] end

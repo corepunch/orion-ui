@@ -91,9 +91,9 @@
   <string source="Cleaning status" where="remote">Reinigungsstatus</string>
   <string source="Cleaning status:" obsolete="true">Reinigungsstatus:</string>
   <string source="Select a room to update its cleaning status." obsolete="true">Wählen Sie ein Zimmer, um den Reinigungsstatus zu ändern.</string>
-  <string source="Mark clean" obsolete="true">Als sauber markieren</string>
-  <string source="Mark dirty" obsolete="true">Als schmutzig markieren</string>
-  <string source="Needs inspection" obsolete="true">Prüfung erforderlich</string>
+  <string source="Mark clean" where="remote">Als sauber markieren</string>
+  <string source="Mark dirty" where="remote">Als schmutzig markieren</string>
+  <string source="Needs inspection" where="remote">Prüfung erforderlich</string>
   <string source="Inspection needed" where="code">Prüfung erforderlich</string>
   <string source="Dirty" where="code">Schmutzig</string>
   <string source="Clean" where="code">Sauber</string>
@@ -176,7 +176,7 @@
   <string source="Connect or refresh" where="remote">Verbinden oder aktualisieren</string>
   <string source="Retry pending request" where="remote">Ausstehende Anfrage wiederholen</string>
   <string source="Rooms and guests" where="remote">Zimmer und Gäste</string>
-  <string source="Mark room clean" where="remote">Zimmer als sauber markieren</string>
+  <string source="Mark room clean" obsolete="true">Zimmer als sauber markieren</string>
   <string source="Create reservation" where="remote">Reservierung erstellen</string>
   <string source="Not connected." where="code">Nicht verbunden.</string>
   <string source="Server data refreshed." where="code">Serverdaten aktualisiert.</string>
