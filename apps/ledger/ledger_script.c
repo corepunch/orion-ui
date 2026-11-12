@@ -119,7 +119,9 @@ static int l_fetch(lua_State *L) {
   } else if (!lua_isnoneornil(L, 4)) {
     return luaL_error(L, "filter value requires a field");
   }
+  db->error[0] = '\0';
   result_node_t *rows = (result_node_t *)send_db_message(db, dbFetch, MAKEDWORD(t->table_id, field), value);
+  if (!rows && db->error[0]) return luaL_error(L, "%s", db->error);
   lua_newtable(L);
   int n = 0;
   for (result_node_t *r = rows; r; r = r->next) { push_record(L, t, *(void **)r->data); lua_rawseti(L, -2, ++n); }
@@ -331,6 +333,7 @@ static int l_service_close_preview(lua_State *L) {
   if (!ledger_period_boundary(ib, boundary, sizeof(boundary)) || (boundary[0] && strcmp(date, boundary) <= 0))
     return luaL_error(L, "invalid or already closed period");
   result_node_t *docs = (void *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
+  if (!docs && ib->error[0]) return luaL_error(L, "%s", ib->error);
   int count = 0, first = 0;
   for (result_node_t *n = docs; n; n = n->next) {
     const db_document_t *doc = *(db_document_t **)n->data;

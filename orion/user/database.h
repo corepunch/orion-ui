@@ -163,6 +163,9 @@ struct database_s {
   char error[512];
 };
 
+// For db_schema_xml, dbFetch clears error on entry. NULL with an empty error is
+// an empty result; NULL with a non-empty error means the fetch failed. Callers
+// must inspect the error immediately, before another database operation.
 // Database management functions
 database_t *create_database(const char *name, const char *class_name, const char *source_path);
 // Like create_database, but attaches the orionc-generated schema before

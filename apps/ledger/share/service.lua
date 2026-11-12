@@ -80,6 +80,16 @@ local function dispatch(request)
       if row.revision_id == args.revision_id then rows[#rows + 1] = row end
     end
     return page(rows, args)
+  elseif command == "documents.history_lines" then
+    assert(type(args.revision_id) == "number" and math.type(args.revision_id) == "integer" and args.revision_id > 0, "invalid revision id")
+    local revision
+    for _, row in ipairs(ledger.fetch("ib", "posting_revisions")) do if row.id == args.revision_id then revision = row; break end end
+    assert(revision, "unknown revision")
+    local rows = {}
+    if revision.lines_captured then
+      for _, row in ipairs(ledger.fetch("ib", "revision_lines")) do if row.revision_id == revision.id then rows[#rows + 1] = row end end
+    end
+    return {available = revision.lines_captured, lines = page(rows, args)}
   elseif command == "journal.list" then
     local posted, result = {}, json.array({})
     for _, doc in ipairs(ledger.fetch("ib", "documents")) do if doc.posted then posted[doc.id] = true end end

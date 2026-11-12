@@ -174,4 +174,11 @@
   <string source="Delete draft ID %d and its lines? Confirm to continue." where="code">Entwurf ID %d und seine Positionen löschen? Bestätigen Sie den Vorgang.</string>
   <string source="Select an exact draft to review deletion." where="code">Wählen Sie einen Entwurf mit exakten Beträgen zur Prüfung der Löschung.</string>
   <string source="Cannot close: %d documents need attention; first document ID %d." where="code">Abschluss nicht möglich: %d Belege erfordern Prüfung; erste Beleg-ID: %d.</string>
+  <string source="Show snapshot source lines" where="remote_ledger">Ausgangspositionen des Snapshots anzeigen</string>
+  <string source="Line ID" where="remote_ledger">Positions-ID</string>
+  <string source="Previous lines" where="remote_ledger">Vorherige Positionen</string>
+  <string source="Next lines" where="remote_ledger">Nächste Positionen</string>
+  <string source="Select a posting snapshot to show its source lines." where="code">Wählen Sie einen Buchungssnapshot, um seine Ausgangspositionen anzuzeigen.</string>
+  <string source="Source lines for posting snapshot ID %d" where="code">Ausgangspositionen für Buchungssnapshot ID %d</string>
+  <string source="Source lines were not captured for this snapshot." where="code">Für diesen Snapshot wurden keine Ausgangspositionen erfasst.</string>
 </strings>

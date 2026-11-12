@@ -1119,8 +1119,30 @@ static void test_infobase_migration(void) {
   ASSERT(revision && !revision->actor[0], "migrated unknown actor survives reload");
   destroy_database(db);
   ASSERT_EQUAL(remove(path), 0);
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fputs("<ib orion-version=\"5\"><posting_revisions><posting_revision id=\"9\" document_id=\"17\" action=\"post\"/></posting_revisions><unknown_table><unknown id=\"1\"/></unknown_table></ib>", f);
+  ASSERT_EQUAL(fclose(f), 0);
+  db = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path);
+  ASSERT(!db && file_contains(path, "unknown_table", NULL), "unknown historical table is refused without changing source");
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fputs("<ib orion-version=\"5\"><posting_revisions><posting_revision id=\"9\" document_id=\"17\" action=\"post\"/></posting_revisions></ib>", f);
+  ASSERT_EQUAL(fclose(f), 0);
+  db = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path); ASSERT_NOT_NULL(db);
+  revision = (void *)send_db_message(db, dbFind, TABLE_POSTING_REVISIONS, (void *)(intptr_t)9);
+  ASSERT(revision && !revision->lines_captured, "v5 snapshots explicitly have no captured lines");
+  ASSERT_FALSE(send_db_message(db, dbFetch, TABLE_REVISION_LINES, NULL));
+  ASSERT_TRUE(send_db_message(db, dbSave, 0, NULL)); destroy_database(db);
+  db_schema_def_t v5 = ledger_ib_schema;
+  v5.version = 5; v5.table_count--; v5.migrate_xml = NULL;
+  db = create_database_with_schema_readonly("ib", "ledger_ib", &v5, path);
+  ASSERT(!db, "v5 reader rejects migrated v6 before opening data");
+  db = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path); ASSERT_NOT_NULL(db);
+  revision = (void *)send_db_message(db, dbFind, TABLE_POSTING_REVISIONS, (void *)(intptr_t)9);
+  ASSERT(revision && !revision->lines_captured, "unknown source lines remain unavailable after migration and reopen");
+  destroy_database(db);
+  ASSERT_EQUAL(remove(path), 0);
   db_schema_def_t v4 = ledger_ib_schema;
-  v4.version = 4; v4.table_count--;
+  v4.version = 4; v4.table_count -= 2;
   db = create_database_with_schema("ib", "db_schema_xml", &v4, path);
   ASSERT_NOT_NULL(db);
   db_period_lock_t old_lock = { .id = 1 };
@@ -1275,6 +1297,15 @@ static void test_reversal(void) {
   PASS();
 }
 
+static dbproc_t guard_test_proc;
+static int guard_fault_table;
+static lresult_t guard_fetch_fault(database_t *db, uint32_t msg, uint32_t wp, void *lp) {
+  if (msg == dbFetch && LOWORD(wp) == guard_fault_table) {
+    snprintf(db->error, sizeof(db->error), "Injected fetch allocation failure"); return 0;
+  }
+  return guard_test_proc(db, msg, wp, lp);
+}
+
 static void test_reversal_protection(void) {
   TEST("linked legacy postings reject edits, unposting and reposting in an open period");
   database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
@@ -1283,6 +1314,23 @@ static void test_reversal_protection(void) {
   ASSERT_NOT_NULL(source);
   int ids[] = { source->id, ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, source->id, "2026-04-01", "Correction") };
   ASSERT(ids[1] > 0, "reversal created");
+  guard_test_proc = g_ledger->ib->proc; g_ledger->ib->proc = guard_fetch_fault;
+  guard_fault_table = TABLE_REVERSAL_LINKS;
+  ASSERT_TRUE(ledger_reversal_linked(g_ledger->ib, ids[0]));
+  const db_document_t *protected = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)ids[0]);
+  ASSERT_NOT_NULL(protected); db_document_t changed = *protected;
+  snprintf(changed.comment, sizeof(changed.comment), "Must not save");
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbUpdate, TABLE_DOCUMENTS, &changed));
+  ASSERT_FALSE(ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, ids[0], "2026-04-02", "Again"));
+  guard_fault_table = TABLE_POSTING_REVISIONS;
+  ASSERT_TRUE(ledger_exact_posted(g_ledger->ib, ids[0]));
+  db_document_t candidate = { .id = 900, .doc_type_id = 1, .counterparty_id = 1 };
+  snprintf(candidate.date, sizeof(candidate.date), "2026-05-01");
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &candidate));
+  candidate.id = 0;
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &candidate));
+  g_ledger->ib->proc = guard_test_proc;
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)900));
   for (int pass = 0; pass < 2; pass++) {
     for (int i = 0; i < 2; i++) {
       const db_document_t *doc = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)ids[i]);
@@ -1450,6 +1498,34 @@ static void test_exact_correction_countries(void) {
   PASS();
 }
 
+static dbproc_t snapshot_test_proc;
+static int snapshot_fault_table, snapshot_fault_document;
+static bool snapshot_fetch_rejected;
+static lresult_t snapshot_fetch_fault(database_t *db, uint32_t msg, uint32_t wp, void *lp) {
+  if (msg == dbFetch && LOWORD(wp) == snapshot_fault_table && !snapshot_fetch_rejected) {
+    int field = db_schema_field_index(db_schema_table(db->schema, TABLE_POSTING_REVISIONS), "document_id");
+    result_node_t *revisions = (void *)db_schema_xml(db, dbFetch, MAKEDWORD(TABLE_POSTING_REVISIONS, field), (void *)(intptr_t)snapshot_fault_document);
+    bool capturing = revisions != NULL; free_result_list(revisions);
+    if (capturing) {
+      snapshot_fetch_rejected = true;
+      snprintf(db->error, sizeof(db->error), "Injected fetch allocation failure");
+      return 0;
+    }
+  }
+  return snapshot_test_proc(db, msg, wp, lp);
+}
+
+static dbproc_t reversal_test_proc;
+static bool reversal_commit_rejected;
+static lresult_t reversal_commit_fault(database_t *db, uint32_t msg, uint32_t wp, void *lp) {
+  if (msg == dbCommitChanges && !reversal_commit_rejected) {
+    result_node_t *links = (void *)reversal_test_proc(db, dbFetch, MAKEDWORD(TABLE_REVERSAL_LINKS, 0), NULL);
+    bool present = links != NULL; free_result_list(links);
+    if (present) { reversal_commit_rejected = true; return 0; }
+  }
+  return reversal_test_proc(db, msg, wp, lp);
+}
+
 static void test_local_exact_trade(void) {
   TEST("local trading documents use minor-unit postings and reject unsupported legacy stock");
   database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
@@ -1524,7 +1600,32 @@ static void test_local_exact_trade(void) {
   ASSERT_NOT_NULL(saved); int purchase_id = saved->id;
   line.document_id = purchase_id; line.item_id = item_id; line.quantity = 1.005; line.price = 1;
   ASSERT_TRUE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
+  snapshot_test_proc = g_ledger->ib->proc; snapshot_fault_document = purchase_id;
+  int fault_tables[] = { TABLE_ENTRIES, TABLE_DOC_LINES };
+  for (int i = 0; i < 2; i++) {
+    snapshot_fault_table = fault_tables[i]; snapshot_fetch_rejected = false; g_ledger->ib->proc = snapshot_fetch_fault;
+    bool posted = ledger_post(g_ledger->ib, g_ledger->cfg, purchase_id);
+    g_ledger->ib->proc = snapshot_test_proc;
+    ASSERT(snapshot_fetch_rejected && !posted, "snapshot fetch failure rejects posting");
+    saved = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)purchase_id);
+    ASSERT(saved && !saved->posted, "fetch failure restores draft");
+    ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_POSTING_REVISIONS, "document_id", purchase_id), 0);
+    ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", purchase_id), 0);
+  }
   ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, purchase_id));
+  result_node_t *history = (void *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_POSTING_REVISIONS, ledger_field(g_ledger->ib, TABLE_POSTING_REVISIONS, "document_id")), (void *)(intptr_t)purchase_id);
+  const db_posting_revision_t *snapshot = history ? *(db_posting_revision_t **)history->data : NULL;
+  ASSERT(snapshot && snapshot->lines_captured, "exact posting captures its source lines");
+  int snapshot_id = snapshot->id; free_result_list(history);
+  result_node_t *captured = (void *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_REVISION_LINES, ledger_field(g_ledger->ib, TABLE_REVISION_LINES, "revision_id")), (void *)(intptr_t)snapshot_id);
+  const db_revision_line_t *snapshot_line = captured ? *(db_revision_line_t **)captured->data : NULL;
+  ASSERT(snapshot_line && snapshot_line->item_id == item_id && snapshot_line->quantity_milli == 1005 &&
+    snapshot_line->price_minor == 100 && snapshot_line->total_minor == 123, "snapshot retains exact source values");
+  int snapshot_line_id = snapshot_line->id;
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbDelete, TABLE_REVISION_LINES, (void *)(intptr_t)snapshot_line_id));
+  free_result_list(captured);
   saved = (void *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &sale);
   ASSERT_NOT_NULL(saved); int exact_sale = saved->id;
   line.document_id = exact_sale; line.quantity = .5; line.price = 2;
@@ -1549,8 +1650,24 @@ static void test_local_exact_trade(void) {
   ASSERT(saved && !saved->posted, "backdated receipt rolls back");
   ASSERT_EQUAL(ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, purchase_id, "2026-04-01", "Backdated correction"), 0);
   ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_REVERSAL_LINKS, "original_id", purchase_id), 0);
+  int revisions_before = demo_record_count(TABLE_POSTING_REVISIONS), lines_before = demo_record_count(TABLE_REVISION_LINES);
   ASSERT_EQUAL(ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, purchase_id, "2026-04-03", "Insufficient stock"), 0);
+  ASSERT_EQUAL(demo_record_count(TABLE_POSTING_REVISIONS), revisions_before);
+  ASSERT_EQUAL(demo_record_count(TABLE_REVISION_LINES), lines_before);
   ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_REVERSAL_LINKS, "original_id", purchase_id), 0);
+  int documents_before = demo_record_count(TABLE_DOCUMENTS), entries_before = demo_record_count(TABLE_ENTRIES);
+  revisions_before = demo_record_count(TABLE_POSTING_REVISIONS); lines_before = demo_record_count(TABLE_REVISION_LINES);
+  int revision_entries_before = demo_record_count(TABLE_REVISION_ENTRIES);
+  reversal_test_proc = g_ledger->ib->proc; reversal_commit_rejected = false; g_ledger->ib->proc = reversal_commit_fault;
+  int failed_reversal = ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, exact_sale, "2026-04-03", "Return sale");
+  g_ledger->ib->proc = reversal_test_proc;
+  ASSERT(reversal_commit_rejected && !failed_reversal, "injected failure occurs after reversal link is inserted");
+  ASSERT_EQUAL(demo_record_count(TABLE_DOCUMENTS), documents_before);
+  ASSERT_EQUAL(demo_record_count(TABLE_ENTRIES), entries_before);
+  ASSERT_EQUAL(demo_record_count(TABLE_POSTING_REVISIONS), revisions_before);
+  ASSERT_EQUAL(demo_record_count(TABLE_REVISION_LINES), lines_before);
+  ASSERT_EQUAL(demo_record_count(TABLE_REVISION_ENTRIES), revision_entries_before);
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_REVERSAL_LINKS, "original_id", exact_sale), 0);
   int sale_reversal = ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, exact_sale, "2026-04-03", "Return sale");
   ASSERT(sale_reversal > 0, "sale reversal restores stock");
   ASSERT(ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, purchase_id, "2026-04-04", "Reverse receipt") > 0,
@@ -1568,6 +1685,8 @@ static void test_local_exact_trade(void) {
   destroy_database(g_ledger->ib);
   g_ledger->ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path);
   ASSERT_NOT_NULL(g_ledger->ib); register_database("ib", g_ledger->ib);
+  snapshot_line = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_REVISION_LINES, (void *)(intptr_t)snapshot_line_id);
+  ASSERT(snapshot_line && snapshot_line->quantity_milli == 1005 && snapshot_line->total_minor == 123, "source snapshot survives reopen");
   saved = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)purchase_id);
   ASSERT(saved && saved->exact_money && saved->amount_minor == 101 && saved->vat_minor == 22, "minor units survive reload");
   restore_configuration(cfg, ib);

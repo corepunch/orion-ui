@@ -853,7 +853,7 @@ int ledger_reverse_posting(database_t *ib, database_t *cfg, int original_id, con
   const db_document_t *doc = find(ib, TABLE_DOCUMENTS, original_id);
   if (!doc || !doc->posted || doc->correction_of || strcmp(date, doc->date) < 0) goto rejected;
   result_node_t *links = fetch(ib, TABLE_REVERSAL_LINKS, "original_id", original_id);
-  bool already = links != NULL; free_result_list(links);
+  bool already = links != NULL || ib->error[0]; free_result_list(links);
   if (already) goto rejected;
   result_node_t *revisions = fetch(ib, TABLE_POSTING_REVISIONS, "document_id", original_id);
   const db_posting_revision_t *latest = NULL;

@@ -38,4 +38,5 @@
   <string source="The document could not be saved. No changes were applied." where="code">Der Beleg konnte nicht gespeichert werden. Es wurden keine Änderungen übernommen.</string>
   <string source="Save changes to this document?" where="code">Änderungen an diesem Beleg speichern?</string>
   <string source="Permission denied." where="code">Zugriff verweigert.</string>
+  <string source="Could not read database records." where="code">Datenbankeinträge konnten nicht gelesen werden.</string>
 </strings>

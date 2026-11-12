@@ -143,7 +143,7 @@ static int dbs_table_index(database_t *db, int table_id) {
   for (int i = 0; db->schema && i < db->schema->table_count; i++)
     if (db->schema->tables[i].table_id == table_id) return i;
   fprintf(stderr, "[db_schema_xml] unknown table db=%s table_id=%d\n", db->name, table_id);
-  return -1;
+  fflush(stderr); return -1;
 }
 
 static int dbs_key_index(const db_table_schema_t *t) {
@@ -872,16 +872,21 @@ static bool dbs_end(database_t *db, dbs_context_t *ctx, bool revert) {
 static lresult_t dbs_fetch(database_t *db, dbs_context_t *ctx, int ti, int field, const void *value) {
   const db_table_schema_t *t = &db->schema->tables[ti];
   if (field < 0 || field >= t->meta_count) {
+    snprintf(db->error, sizeof(db->error), "%s", ui_tr("Could not read database records."));
     fprintf(stderr, "[db_schema_xml] fetch filter out of range db=%s table=%s field=%d\n",
             db->name, t->name, field);
-    return 0;
+    fflush(stderr); return 0;
   }
   result_node_t *head = NULL, *tail = NULL;
   for (int r = 0; r < ctx->tables[ti].count; r++) {
     void *record = ctx->tables[ti].rows[r];
     if (field > 0 && !dbs_field_matches(&t->meta[field], record, value)) continue;
     result_node_t *node = malloc(sizeof(result_node_t) + sizeof(void *));
-    if (!node) { free_result_list(head); return 0; }
+    if (!node) {
+      free_result_list(head); snprintf(db->error, sizeof(db->error), "%s", ui_tr("Could not read database records."));
+      fprintf(stderr, "[db_schema_xml] fetch allocation failed db=%s table=%s field=%d\n", db->name, t->name, field);
+      fflush(stderr); return 0;
+    }
     node->next = NULL;
     *(void **)node->data = record;
     if (tail) tail->next = node; else head = node;
@@ -935,7 +940,10 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
     db->userdata = ctx;
     return 1;
   }
-  if (!ctx) return 0;
+  if (!ctx) {
+    if (msg == dbFetch) snprintf(db->error, sizeof(db->error), "%s", ui_tr("Could not read database records."));
+    return 0;
+  }
 
   if (db->read_only && (msg == dbInsert || msg == dbUpdate || msg == dbDelete || msg == dbSave)) {
     fprintf(stderr, "[db_schema_xml] write rejected for read-only db=%s message=%u\n", db->name, msg);
@@ -943,11 +951,15 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
     return 0;
   }
   int ti = -1;
+  if (msg == dbFetch) db->error[0] = '\0';
   switch (msg) {
     case dbInsert: case dbUpdate: case dbDelete: case dbFetch: case dbFind:
     case dbGetFieldMeta: case dbGetFieldText: case dbInitRecord: case dbCountReferrers:
     case dbReserveKey:
-      if ((ti = dbs_table_index(db, LOWORD(wparam))) < 0) return 0;
+      if ((ti = dbs_table_index(db, LOWORD(wparam))) < 0) {
+        if (msg == dbFetch) snprintf(db->error, sizeof(db->error), "%s", ui_tr("Could not read database records."));
+        return 0;
+      }
       break;
   }
   const db_table_schema_t *t = ti >= 0 ? &db->schema->tables[ti] : NULL;

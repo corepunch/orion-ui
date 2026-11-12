@@ -206,6 +206,12 @@ class LedgerHostTests(unittest.TestCase):
                         self.assertEqual(history[0]['document_id'], sale['document_id'])
                         self.assertEqual(history[0]['actor'], 'trade-accountant')
                         self.assertEqual(history[0]['action'], 'post')
+                        self.assertTrue(history[0]['lines_captured'])
+                        captured = call('documents.history_lines', {'revision_id': history[0]['id']}, role)
+                        self.assertTrue(captured['available'])
+                        self.assertEqual(len(captured['lines']), 1)
+                        self.assertEqual((captured['lines'][0]['item_id'], captured['lines'][0]['quantity_milli'],
+                                          captured['lines'][0]['price_minor']), (item['id'], '2000', '2000'))
                         entries = call('documents.history_entries', {'revision_id': history[0]['id'], 'offset': 0, 'limit': 1}, role)
                         self.assertEqual(len(entries), 1)
                         self.assertEqual(entries[0]['revision_id'], history[0]['id'])

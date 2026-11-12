@@ -650,6 +650,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `amount_minor` | `int64` |  |
 | `vat_minor` | `int64` |  |
 | `total_minor` | `int64` |  |
+| `lines_captured` | `boolean` |  |
 
 ## `ib.revision_entries`
 
@@ -847,3 +848,32 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `closed_through` | `date` |  |
 | `recorded_utc` | `string` |  |
 | `actor` | `string` |  |
+
+## `ib.revision_lines`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `revision_id` | `integer` | posting_revisions.id |
+| `source_line_id` | `integer` |  |
+| `commodity_code` | `string` |  |
+| `origin_code` | `string` |  |
+| `origin_name` | `string` |  |
+| `customs_reference` | `string` |  |
+| `tracking_unit_code` | `string` |  |
+| `tracking_unit_name` | `string` |  |
+| `tracking_quantity` | `double` |  |
+| `tracking_value` | `double` |  |
+| `is_traceable` | `boolean` |  |
+| `item_id` | `integer` |  |
+| `vat_rate_id` | `integer` |  |
+| `quantity` | `double` |  |
+| `price` | `double` |  |
+| `amount` | `double` |  |
+| `vat` | `double` |  |
+| `total` | `double` |  |
+| `quantity_milli` | `int64` |  |
+| `price_minor` | `int64` |  |
+| `amount_minor` | `int64` |  |
+| `vat_minor` | `int64` |  |
+| `total_minor` | `int64` |  |

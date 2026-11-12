@@ -348,7 +348,7 @@
          class: numbering, recalculation of documents when they or their lines
          change. default= fills new records; on-delete= says what deleting a
          referenced record does: cascade, nullify or deny. -->
-    <database name="ib" class="ledger_ib" version="5" migration="additive">
+    <database name="ib" class="ledger_ib" version="6" migration="additive">
       <table name="organizations">
         <field name="id" type="integer" key="YES" />
         <field name="legal_details" type="string" length="512" />
@@ -547,6 +547,7 @@
         <field name="amount_minor" type="int64" />
         <field name="vat_minor" type="int64" />
         <field name="total_minor" type="int64" />
+        <field name="lines_captured" type="boolean" />
       </table>
       <table name="revision_entries">
         <field name="id" type="integer" key="YES" />
@@ -719,6 +720,32 @@
         <field name="closed_through" type="date" />
         <field name="recorded_utc" type="string" length="21" />
         <field name="actor" type="string" length="128" />
+      </table>
+      <table name="revision_lines">
+        <field name="id" type="integer" key="YES" />
+        <field name="revision_id" type="integer" relation="posting_revisions.id" on-delete="deny" />
+        <field name="source_line_id" type="integer" />
+        <field name="commodity_code" type="string" length="32" />
+        <field name="origin_code" type="string" length="4" />
+        <field name="origin_name" type="string" length="64" />
+        <field name="customs_reference" type="string" length="128" />
+        <field name="tracking_unit_code" type="string" length="8" />
+        <field name="tracking_unit_name" type="string" length="32" />
+        <field name="tracking_quantity" type="double" />
+        <field name="tracking_value" type="double" />
+        <field name="is_traceable" type="boolean" />
+        <field name="item_id" type="integer" />
+        <field name="vat_rate_id" type="integer" />
+        <field name="quantity" type="double" precision="3" />
+        <field name="price" type="double" />
+        <field name="amount" type="double" />
+        <field name="vat" type="double" />
+        <field name="total" type="double" />
+        <field name="quantity_milli" type="int64" />
+        <field name="price_minor" type="int64" />
+        <field name="amount_minor" type="int64" />
+        <field name="vat_minor" type="int64" />
+        <field name="total_minor" type="int64" />
       </table>
     </database>
   </databases>
@@ -903,12 +930,20 @@
               <Column field="date" title="Document Date" width="110" />
               <Column field="number" title="Document Number" width="120" />
               <Column field="total" title="Total" width="90" />
+              <Column field="lines_captured" title="Lines captured" width="100" />
             </TableView>
-              <TableView name="revision_entries" source="ib.revision_entries" master="posting_history" zeros="blank" flags="notitle,nofill,vscroll,flexspace">
+              <TabView name="revision_details" flags="flexspace">
+              <TableView name="revision_entries" text="Entries" source="ib.revision_entries" master="posting_history" zeros="blank" flags="notitle,nofill,vscroll,flexspace">
                 <Column field="date" title="Date" width="100" /><Column field="debit_id" title="Debit ID" width="80" />
                 <Column field="credit_id" title="Credit ID" width="80" /><Column field="quantity" title="Qty" width="64" />
                 <Column field="amount" title="Amount" width="90" /><Column field="content" title="Content" width="0" />
               </TableView>
+              <TableView name="revision_lines" text="Source lines" source="ib.revision_lines" master="posting_history" flags="notitle,nofill,vscroll,flexspace">
+                <Column field="source_line_id" title="Line ID" width="70" /><Column field="item_id" title="Item ID" width="80" />
+                <Column field="vat_rate_id" title="VAT ID" width="80" /><Column field="quantity" title="Quantity" width="90" />
+                <Column field="price" title="Unit price" width="90" /><Column field="total" title="Total" width="90" />
+              </TableView>
+              </TabView>
             </SplitView>
           </TabView>
         </SplitView>
@@ -1184,13 +1219,20 @@
               <Column field="document_id" title="Document ID" width="90" /><Column field="recorded_utc" title="Recorded (UTC)" width="160" />
               <Column field="actor" title="Actor" width="120" /><Column field="action" title="Action" width="80" />
               <Column field="date" title="Document Date" width="110" /><Column field="number" title="Document Number" width="120" />
-              <Column field="total" title="Total" width="90" />
+              <Column field="total" title="Total" width="90" /><Column field="lines_captured" title="Lines captured" width="100" />
             </TableView>
-            <TableView name="all_revision_entries" source="ib.revision_entries" master="all_posting_history" zeros="blank" flags="notitle,nofill,vscroll,flexspace">
+            <TabView name="all_revision_details" flags="flexspace">
+            <TableView name="all_revision_entries" text="Entries" source="ib.revision_entries" master="all_posting_history" zeros="blank" flags="notitle,nofill,vscroll,flexspace">
               <Column field="date" title="Date" width="100" /><Column field="debit_id" title="Debit ID" width="80" />
               <Column field="credit_id" title="Credit ID" width="80" /><Column field="quantity" title="Qty" width="64" />
               <Column field="amount" title="Amount" width="90" /><Column field="content" title="Content" width="0" />
             </TableView>
+            <TableView name="all_revision_lines" text="Source lines" source="ib.revision_lines" master="all_posting_history" flags="notitle,nofill,vscroll,flexspace">
+              <Column field="source_line_id" title="Line ID" width="70" /><Column field="item_id" title="Item ID" width="80" />
+              <Column field="vat_rate_id" title="VAT ID" width="80" /><Column field="quantity" title="Quantity" width="90" />
+              <Column field="price" title="Unit price" width="90" /><Column field="total" title="Total" width="90" />
+            </TableView>
+            </TabView>
           </SplitView>
           <TableView name="period_history" text="Period Close History" source="ib.period_closures" flags="notitle,nofill,vscroll">
             <Column field="previous_through" title="Previous close" width="120" />

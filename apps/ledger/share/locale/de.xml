@@ -63,7 +63,7 @@
   <string source="Tax" where="journal_page,items_page,reports_page,config_page,document">Steuer</string>
   <string source="Tax Amount" where="journal_page,document">Steuerbetrag</string>
   <string source="Total" where="journal_page,reports_page,document">Gesamt</string>
-  <string source="Entries" where="journal_page,entries_page,document">Buchungen</string>
+  <string source="Entries" where="journal_page,entries_page,reports_page,document">Buchungen</string>
   <string source="Dr" where="journal_page,entries_page,reports_page,config_page,document,operation,closing">Soll</string>
   <string source="Cr" where="journal_page,entries_page,reports_page,config_page,document,operation,closing">Haben</string>
   <string source="Content" where="journal_page,entries_page,reports_page,document,operation,closing">Buchungstext</string>
@@ -540,6 +540,13 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Credit ID" where="journal_page,reports_page">Haben-ID</string>
   <string source="All Posting History" where="reports_page">Gesamter Buchungsverlauf</string>
   <string source="Document ID" where="reports_page">Beleg-ID</string>
+  <string source="Lines captured" where="journal_page,reports_page">Positionen erfasst</string>
+  <string source="Source lines" where="journal_page,reports_page">Ausgangspositionen</string>
+  <string source="Line ID" where="journal_page,reports_page">Positions-ID</string>
+  <string source="Item ID" where="journal_page,reports_page">Artikel-ID</string>
+  <string source="VAT ID" where="journal_page,reports_page">USt-ID</string>
+  <string source="Quantity" where="journal_page,reports_page">Menge</string>
+  <string source="Unit price" where="journal_page,reports_page">Einzelpreis</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

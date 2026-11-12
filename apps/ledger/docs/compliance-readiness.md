@@ -42,7 +42,7 @@ UTC clock timestamp and the declared access-context actor when present; older
 postings acquire snapshots only when next posted
 or unposted. Ordinary datasource writes to those snapshots are rejected.
 These are not a complete immutable audit system: native code can mutate exposed
-record pointers, the clock is untrusted and source lines are not recorded. The shared host supplies
+record pointers, the clock is untrusted. Newly recorded exact-document snapshots preserve source lines, but older snapshots and non-exact documents do not. The shared host supplies
 its authenticated actor; direct service callers can declare any actor, and local
 operations without an access context have no actor. The snapshot alone does not
 prove the identity source. An accounting reversal can copy a verified latest posting snapshot

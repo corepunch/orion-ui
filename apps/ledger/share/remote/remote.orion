@@ -40,6 +40,12 @@
         <field name="quantity" type="string" length="32" /><field name="amount" type="string" length="32" />
         <field name="content" type="string" length="160" />
       </table>
+      <table name="revision_lines" transient="true">
+        <field name="id" type="integer" key="YES" /><field name="source_line_id" type="integer" />
+        <field name="item_id" type="integer" /><field name="vat_rate_id" type="integer" />
+        <field name="quantity" type="string" length="32" /><field name="price" type="string" length="32" />
+        <field name="total" type="string" length="32" />
+      </table>
       <table name="period_history" transient="true">
         <field name="id" type="integer" key="YES" /><field name="previous_through" type="date" />
         <field name="closed_through" type="date" /><field name="recorded_utc" type="string" length="21" />
@@ -193,6 +199,17 @@
             <Column field="credit_id" title="Credit ID" width="80" /><Column field="quantity" title="Quantity" width="80" />
             <Column field="amount" title="Amount" width="110" /><Column field="content" title="Description" width="0" />
           </TableView>
+          <Button name="show_revision_lines" text="Show snapshot source lines" action="show_revision_lines" />
+          <Label name="revision_lines_title" />
+          <TableView name="revision_lines" source="ledger_remote_cache.revision_lines" flags="flexspace,vscroll" frame="true">
+            <Column field="source_line_id" title="Line ID" width="70" /><Column field="item_id" title="Item ID" width="80" />
+            <Column field="vat_rate_id" title="VAT ID" width="80" /><Column field="quantity" title="Quantity" width="90" />
+            <Column field="price" title="Unit price" width="90" /><Column field="total" title="Total" width="90" />
+          </TableView>
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="previous_revision_lines" text="Previous lines" action="previous_revision_lines" />
+            <Button name="next_revision_lines" text="Next lines" action="next_revision_lines" />
+          </StackView>
           <StackView orientation="horizontal" spacing="6">
             <Button name="previous_revision_entries" text="Previous page" action="previous_revision_entries" />
             <Button name="next_revision_entries" text="Next page" action="next_revision_entries" />

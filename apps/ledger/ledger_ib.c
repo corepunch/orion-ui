@@ -56,7 +56,7 @@ bool ledger_period_boundary(database_t *db, char *boundary, size_t size) {
     fprintf(stderr, "[ledger] period lock rejected: missing database\n"); fflush(stderr); return false;
   }
   result_node_t *rows = (void *)db_schema_xml(db, dbFetch, MAKEDWORD(TABLE_PERIOD_LOCKS, 0), NULL);
-  bool ok = true;
+  bool ok = rows || !db->error[0];
   for (result_node_t *n = rows; n; n = n->next) {
     const db_period_lock_t *lock = *(db_period_lock_t **)n->data;
     if (!lock || lock->id != 1 || boundary[0] || !ledger_valid_date(lock->closed_through)) {
@@ -90,6 +90,9 @@ bool ledger_close_through(database_t *db, const char *date) {
     fprintf(stderr, "[ledger] close rejected: date=%s current=%s\n", date, boundary); fflush(stderr); return false;
   }
   result_node_t *documents = (void *)db_schema_xml(db, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
+  if (!documents && db->error[0]) {
+    fprintf(stderr, "[ledger] close rejected: cannot read documents through %s\n", date); fflush(stderr); return false;
+  }
   for (result_node_t *node = documents; node; node = node->next) {
     const db_document_t *doc = *(db_document_t **)node->data;
     if (ledger_close_document_blocks(doc, date)) {
@@ -126,7 +129,7 @@ static bool locked_document(database_t *db, int id) {
 
 bool ledger_record_revision(database_t *db, const db_document_t *doc, const char *action) {
   db_posting_revision_t revision = { .document_id = doc->id, .doc_type_id = doc->doc_type_id,
-    .amount = doc->amount, .vat = doc->vat, .total = doc->total, .exact_money = doc->exact_money,
+    .amount = doc->amount, .vat = doc->vat, .total = doc->total, .exact_money = doc->exact_money, .lines_captured = doc->exact_money,
     .amount_minor = doc->amount_minor, .vat_minor = doc->vat_minor, .total_minor = doc->total_minor };
   snprintf(revision.action, sizeof(revision.action), "%s", action);
   time_t now = time(NULL);
@@ -143,8 +146,8 @@ bool ledger_record_revision(database_t *db, const db_document_t *doc, const char
   }
   int revision_id = saved->id;
   int field = db_schema_field_index(db_schema_table(db->schema, TABLE_ENTRIES), "document_id");
-  result_node_t *rows = (result_node_t *)db_schema_xml(db, dbFetch, MAKEDWORD(TABLE_ENTRIES, field), (void *)(intptr_t)doc->id);
-  bool ok = true;
+  result_node_t *rows = (result_node_t *)send_db_message(db, dbFetch, MAKEDWORD(TABLE_ENTRIES, field), (void *)(intptr_t)doc->id);
+  bool ok = rows || !db->error[0];
   for (result_node_t *node = rows; node; node = node->next) {
     const db_entry_t *e = *(db_entry_t **)node->data;
     db_revision_entry_t copy = { .revision_id = revision_id, .debit_id = e->debit_id, .credit_id = e->credit_id,
@@ -156,6 +159,27 @@ bool ledger_record_revision(database_t *db, const db_document_t *doc, const char
     if (!db_schema_xml(db, dbInsert, TABLE_REVISION_ENTRIES, &copy)) { ok = false; break; }
   }
   free_result_list(rows);
+  if (ok && revision.lines_captured) {
+    field = db_schema_field_index(db_schema_table(db->schema, TABLE_DOC_LINES), "document_id");
+    rows = (result_node_t *)send_db_message(db, dbFetch, MAKEDWORD(TABLE_DOC_LINES, field), (void *)(intptr_t)doc->id);
+    if (!rows && db->error[0]) ok = false;
+    for (result_node_t *node = rows; ok && node; node = node->next) {
+      const db_doc_line_t *line = *(db_doc_line_t **)node->data;
+      db_revision_line_t copy = { .revision_id = revision_id, .source_line_id = line->id, .item_id = line->item_id,
+        .vat_rate_id = line->vat_rate_id, .quantity = line->quantity, .price = line->price, .amount = line->amount,
+        .vat = line->vat, .total = line->total, .quantity_milli = line->quantity_milli, .price_minor = line->price_minor,
+        .amount_minor = line->amount_minor, .vat_minor = line->vat_minor, .total_minor = line->total_minor,
+        .tracking_quantity = line->tracking_quantity, .tracking_value = line->tracking_value, .is_traceable = line->is_traceable };
+      snprintf(copy.commodity_code, sizeof(copy.commodity_code), "%s", line->commodity_code);
+      snprintf(copy.origin_code, sizeof(copy.origin_code), "%s", line->origin_code);
+      snprintf(copy.origin_name, sizeof(copy.origin_name), "%s", line->origin_name);
+      snprintf(copy.customs_reference, sizeof(copy.customs_reference), "%s", line->customs_reference);
+      snprintf(copy.tracking_unit_code, sizeof(copy.tracking_unit_code), "%s", line->tracking_unit_code);
+      snprintf(copy.tracking_unit_name, sizeof(copy.tracking_unit_name), "%s", line->tracking_unit_name);
+      if (!db_schema_xml(db, dbInsert, TABLE_REVISION_LINES, &copy)) { ok = false; break; }
+    }
+    free_result_list(rows);
+  }
   if (!ok) { fprintf(stderr, "[ledger] revision rejected: document=%d action=%s\n", doc->id, action); fflush(stderr); }
   return ok;
 }
@@ -194,8 +218,8 @@ bool ledger_exact_posted(database_t *db, int id) {
   if (!doc) return false;
   if (doc->exact_money && doc->posted) return true;
   int field = db_schema_field_index(db_schema_table(db->schema, TABLE_POSTING_REVISIONS), "document_id");
-  result_node_t *rows = (void *)db_schema_xml(db, dbFetch, MAKEDWORD(TABLE_POSTING_REVISIONS, field), (void *)(intptr_t)id);
-  bool posted = false;
+  result_node_t *rows = (void *)send_db_message(db, dbFetch, MAKEDWORD(TABLE_POSTING_REVISIONS, field), (void *)(intptr_t)id);
+  bool posted = !rows && db->error[0];
   for (result_node_t *n = rows; n; n = n->next) {
     const db_posting_revision_t *revision = *(db_posting_revision_t **)n->data;
     if (revision->exact_money && !strcmp(revision->action, "post")) { posted = true; break; }
@@ -210,8 +234,8 @@ bool ledger_reversal_linked(database_t *db, int id) {
   const char *fields[] = { "original_id", "reversal_id" };
   for (size_t i = 0; i < sizeof(fields) / sizeof(fields[0]); i++) {
     int field = db_schema_field_index(table, fields[i]);
-    result_node_t *rows = (void *)db_schema_xml(db, dbFetch, MAKEDWORD(TABLE_REVERSAL_LINKS, field), (void *)(intptr_t)id);
-    bool found = rows != NULL;
+    result_node_t *rows = (void *)send_db_message(db, dbFetch, MAKEDWORD(TABLE_REVERSAL_LINKS, field), (void *)(intptr_t)id);
+    bool found = rows != NULL || db->error[0];
     free_result_list(rows);
     if (found) return true;
   }
@@ -220,17 +244,19 @@ bool ledger_reversal_linked(database_t *db, int id) {
 
 static bool document_id_has_history(database_t *db, int id) {
   int field = db_schema_field_index(db_schema_table(db->schema, TABLE_POSTING_REVISIONS), "document_id");
-  result_node_t *rows = (void *)db_schema_xml(db, dbFetch, MAKEDWORD(TABLE_POSTING_REVISIONS, field), (void *)(intptr_t)id);
-  bool found = rows != NULL;
+  result_node_t *rows = (void *)send_db_message(db, dbFetch, MAKEDWORD(TABLE_POSTING_REVISIONS, field), (void *)(intptr_t)id);
+  bool found = rows != NULL || db->error[0];
   free_result_list(rows);
   return found;
 }
 
 static int reserve_document_id(database_t *db) {
-  int id;
+  int id; bool history;
   do {
     id = (int)db_schema_xml(db, dbReserveKey, TABLE_DOCUMENTS, NULL);
-  } while (id > 0 && document_id_has_history(db, id));
+    history = id > 0 && document_id_has_history(db, id);
+    if (id > 0 && db->error[0]) { id = 0; break; }
+  } while (id > 0 && history);
   if (id <= 0) { fprintf(stderr, "[ledger] document key reservation failed id=%d\n", id); fflush(stderr); }
   return id;
 }
@@ -253,7 +279,7 @@ lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam)
 
   if (msg == dbInsert || msg == dbUpdate || msg == dbDelete) {
     uint32_t table = LOWORD(wparam);
-    bool locked = table == TABLE_PERIOD_LOCKS || table == TABLE_PERIOD_CLOSURES || table == TABLE_POSTING_REVISIONS || table == TABLE_REVISION_ENTRIES || table == TABLE_REVERSAL_LINKS;
+    bool locked = table == TABLE_PERIOD_LOCKS || table == TABLE_PERIOD_CLOSURES || table == TABLE_POSTING_REVISIONS || table == TABLE_REVISION_ENTRIES || table == TABLE_REVISION_LINES || table == TABLE_REVERSAL_LINKS;
     if (table == TABLE_DOCUMENTS) {
       const db_document_t *doc = msg == dbDelete ? NULL : lparam;
       int id = msg == dbDelete ? (int)(intptr_t)lparam : doc ? doc->id : 0;

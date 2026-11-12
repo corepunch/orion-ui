@@ -418,6 +418,20 @@ static void test_key_integrity(void) {
   ASSERT_FALSE(send_db_message(db, dbInsert, 0, &automatic)); destroy_database(db);
   unlink(path); unlink(backup); unlink(lock); rmdir(dir); PASS();
 }
+static void test_fetch_errors(void) {
+  TEST("schema XML: failed fetch is distinct from an empty result");
+  database_t *db = create_database_with_schema("book", "db_schema_xml", &schema, NULL); ASSERT_NOT_NULL(db);
+  ASSERT_FALSE(send_db_message(db, dbFetch, MAKEDWORD(0, 0), NULL));
+  ASSERT(!db->error[0], "empty fetch has no error");
+  ASSERT_FALSE(send_db_message(db, dbFetch, MAKEDWORD(0, 99), NULL));
+  ASSERT(db->error[0], "invalid filter reports an error");
+  ASSERT_FALSE(send_db_message(db, dbFetch, MAKEDWORD(0, 0), NULL));
+  ASSERT(!db->error[0], "next successful empty fetch clears the error");
+  ASSERT_FALSE(send_db_message(db, dbFetch, MAKEDWORD(99, 0), NULL));
+  ASSERT(db->error[0], "invalid table reports an error");
+  destroy_database(db); PASS();
+}
+
 static void test_persistence(void) {
   TEST("schema XML: exclusive writer, atomic backup and version rejection");
   char dir[512], path[1024], backup[1040], lock[1040];
@@ -475,7 +489,7 @@ static void test_persistence(void) {
 }
 int main(void) {
   TEST_START("Database persistence"); DB_CLASS(db_schema_xml);
-  test_key_integrity(); test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); test_unknown_fields_preserved(); test_unknown_container_attributes_preserved(); test_duplicate_fields_preserved(); test_invalid_integer_preserved(); test_oversized_text_preserved(); test_backup_in_separate_directory();
+  test_key_integrity(); test_fetch_errors(); test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); test_unknown_fields_preserved(); test_unknown_container_attributes_preserved(); test_duplicate_fields_preserved(); test_invalid_integer_preserved(); test_oversized_text_preserved(); test_backup_in_separate_directory();
 #ifndef _WIN32
   test_migration_crashes();
 #endif

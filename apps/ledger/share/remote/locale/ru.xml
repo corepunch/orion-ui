@@ -174,4 +174,11 @@
   <string source="Delete draft ID %d and its lines? Confirm to continue." where="code">Удалить черновик ID %d и его строки? Подтвердите действие.</string>
   <string source="Select an exact draft to review deletion." where="code">Выберите черновик с точными суммами для проверки удаления.</string>
   <string source="Cannot close: %d documents need attention; first document ID %d." where="code">Нельзя закрыть период: документы требуют проверки: %d; первый ID документа: %d.</string>
+  <string source="Show snapshot source lines" where="remote_ledger">Показать исходные строки снимка</string>
+  <string source="Line ID" where="remote_ledger">ID строки</string>
+  <string source="Previous lines" where="remote_ledger">Предыдущие строки</string>
+  <string source="Next lines" where="remote_ledger">Следующие строки</string>
+  <string source="Select a posting snapshot to show its source lines." where="code">Выберите снимок проведения, чтобы показать его исходные строки.</string>
+  <string source="Source lines for posting snapshot ID %d" where="code">Исходные строки снимка проведения ID %d</string>
+  <string source="Source lines were not captured for this snapshot." where="code">Исходные строки для этого снимка не сохранялись.</string>
 </strings>

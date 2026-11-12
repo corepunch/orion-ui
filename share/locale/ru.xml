@@ -39,4 +39,5 @@
   <string source="The document could not be saved. No changes were applied." where="code">Не удалось сохранить документ. Изменения не применены.</string>
   <string source="Save changes to this document?" where="code">Сохранить изменения в этом документе?</string>
   <string source="Permission denied." where="code">Доступ запрещён.</string>
+  <string source="Could not read database records." where="code">Не удалось прочитать записи базы данных.</string>
 </strings>

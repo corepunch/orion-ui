@@ -112,6 +112,16 @@ static void test_ledger_remote_ui(void) {
   }
   ASSERT(entry_found, "shared snapshot entries are displayed");
   ASSERT(strstr(script_page_control(page, "revision_entries_title")->title, "1"), "entry heading identifies the snapshot");
+  ASSERT_TRUE(script_page_perform(page, "show_revision_lines"));
+  const db_table_schema_t *snapshot_lines = db_schema_table_named(cache->schema, "revision_lines"); ASSERT_NOT_NULL(snapshot_lines);
+  bool snapshot_line_found = false;
+  for (int i = 0; i < 500 && !snapshot_line_found; i++) {
+    repost_messages();
+    result_node_t *rows = (void *)send_db_message(cache, dbFetch, snapshot_lines->table_id, NULL);
+    snapshot_line_found = count_result_list(rows) == 1; free_result_list(rows);
+    if (!snapshot_line_found) { struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); }
+  }
+  ASSERT(snapshot_line_found, "shared source line snapshot is displayed");
   set_text(page, "reversal_date", "2035-01-01"); set_text(page, "reason", "Test correction");
   ASSERT_TRUE(script_page_perform(page, "reverse")); ASSERT_TRUE(wait_notice(page, "Reversal 2 posted."));
   set_text(page, "close_date", "2035-01-01"); ASSERT_TRUE(script_page_perform(page, "prepare_close"));

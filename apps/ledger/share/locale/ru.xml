@@ -60,7 +60,7 @@
   <string source="Tax" where="journal_page,items_page,reports_page,config_page,document">Налог</string>
   <string source="Tax Amount" where="journal_page,document">Сумма налога</string>
   <string source="Total" where="journal_page,reports_page,document">Всего</string>
-  <string source="Entries" where="journal_page,entries_page,document">Проводки</string>
+  <string source="Entries" where="journal_page,entries_page,reports_page,document">Проводки</string>
   <string source="Dr" where="journal_page,entries_page,reports_page,config_page,document,operation,closing">Дт</string>
   <string source="Cr" where="journal_page,entries_page,reports_page,config_page,document,operation,closing">Кт</string>
   <string source="Content" where="journal_page,entries_page,reports_page,document,operation,closing">Содержание</string>
@@ -540,6 +540,13 @@
   <string source="Credit ID" where="journal_page,reports_page">ID кредита</string>
   <string source="All Posting History" where="reports_page">Вся история проведения</string>
   <string source="Document ID" where="reports_page">ID документа</string>
+  <string source="Lines captured" where="journal_page,reports_page">Строки сохранены</string>
+  <string source="Source lines" where="journal_page,reports_page">Исходные строки</string>
+  <string source="Line ID" where="journal_page,reports_page">ID строки</string>
+  <string source="Item ID" where="journal_page,reports_page">ID товара</string>
+  <string source="VAT ID" where="journal_page,reports_page">ID НДС</string>
+  <string source="Quantity" where="journal_page,reports_page">Количество</string>
+  <string source="Unit price" where="journal_page,reports_page">Цена за единицу</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>

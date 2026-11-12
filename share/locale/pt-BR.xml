@@ -37,4 +37,5 @@
   <string source="The document could not be saved. No changes were applied." where="code">Não foi possível salvar o documento. Nenhuma alteração foi aplicada.</string>
   <string source="Save changes to this document?" where="code">Salvar as alterações neste documento?</string>
   <string source="Permission denied." where="code">Acesso negado.</string>
+  <string source="Could not read database records." where="code">Não foi possível ler os registros do banco de dados.</string>
 </strings>
