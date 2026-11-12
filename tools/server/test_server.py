@@ -281,6 +281,19 @@ company.execute("alice", "reception", {"request_id": "crash", "expected_revision
         self.assertEqual(result[0][0], 401)
         self.assertEqual(len(self.host.calls), 1)
 
+    def test_user_directory_listing_excludes_credentials_and_tracks_revocation(self):
+        def cli(*args):
+            return subprocess.run([sys.executable, str(SCRIPT), *args], text=True, capture_output=True, check=True).stdout
+        state = str(self.root)
+        token = cli("user", "--state", state, "--user", "alice", "--role", "reception").strip()
+        cli("user", "--state", state, "--user", "bob", "--role", "auditor")
+        listing = cli("users", "--state", state)
+        self.assertEqual(json.loads(listing), [{"id": "alice", "role": "reception"}, {"id": "bob", "role": "auditor"}])
+        self.assertNotIn(token, listing)
+        self.assertNotIn(hashlib.sha256(token.encode()).hexdigest(), listing)
+        cli("user", "--state", state, "--user", "alice", "--role", "reception", "--revoke")
+        self.assertEqual(json.loads(cli("users", "--state", state)), [{"id": "bob", "role": "auditor"}])
+
     def test_offline_backup_verify_restore_and_no_credentials(self):
         request = self.request("saved")
         self.company.execute("alice", "reception", request)

@@ -499,6 +499,25 @@ def add_user(args):
             print(token)  # Deliberate one-time credential output to the operator.
 
 
+
+def list_users(args):
+    root = Path(args.state).resolve()
+    config = decode((root / "server.json").read_bytes())
+    roles = set().union(*POLICIES[config["application"]].values())
+    users = decode((root / "users.json").read_bytes())
+    if not isinstance(users, list):
+        raise ValueError("invalid user directory")
+    result, seen = [], set()
+    for user in users:
+        if (not isinstance(user, dict) or not isinstance(user.get("id"), str) or
+                not IDENTIFIER.fullmatch(user["id"]) or user["id"] in seen or
+                not isinstance(user.get("role"), str) or user["role"] not in roles):
+            raise ValueError("invalid user directory")
+        seen.add(user["id"])
+        result.append({"id": user["id"], "role": user["role"]})
+    print(json.dumps(sorted(result, key=lambda user: user["id"]), ensure_ascii=False, indent=2))
+
+
 def serve(args):
     if not (Path(args.state) / "READY").is_file():
         raise ValueError("server initialization has not completed")
@@ -537,6 +556,8 @@ def main():
     user.add_argument("--user", required=True)
     user.add_argument("--role", required=True)
     user.add_argument("--revoke", action="store_true")
+    users = commands.add_parser("users", help="list active user IDs and roles without credentials")
+    users.add_argument("--state", required=True)
     server = commands.add_parser("serve")
     server.add_argument("--state", required=True)
     server.add_argument("--bind", default="127.0.0.1")
@@ -544,7 +565,7 @@ def main():
     server.add_argument("--cert"); server.add_argument("--key")
     args = parser.parse_args()
     try:
-        {"init": initialize, "user": add_user, "serve": serve}[args.action](args)
+        {"init": initialize, "user": add_user, "users": list_users, "serve": serve}[args.action](args)
     except (ValueError, OSError, sqlite3.Error) as error:
         parser.exit(1, f"[server] {error}\n")
 

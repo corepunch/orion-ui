@@ -67,6 +67,24 @@ by the Python server on Windows. The current crash tests cover process terminati
 on macOS, not power loss, failing storage controllers, Windows directory durability
 or network filesystems. Do not infer those guarantees from the SQLite setting alone.
 
+## Inspecting access
+
+List active user IDs and roles without exposing tokens or their hashes:
+
+```sh
+python3 tools/orion_server.py users --state /srv/orion/company
+```
+
+To rotate a token, run `user` again for that ID and role; distribute the new
+secret securely. To revoke it, run:
+
+```sh
+python3 tools/orion_server.py user --state /srv/orion/company --user ID --role ROLE --revoke
+```
+
+The list shows current accounts, not a history of revoked accounts. Manage this
+local operator command through OS permissions.
+
 ## Remote client request recovery
 
 The shared desktop clients save the exact pending request before transmission,
