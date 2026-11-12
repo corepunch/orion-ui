@@ -390,49 +390,72 @@ def publish(directory, current):
 
 
 def install(directory, archive, signature_path=None, check_only=False):
-    info, contents = read_archive(archive)
-    validate_contents(info, contents)
-    name, release = info["id"], info["release"]
-    digest = content_digest(contents)
-    envelope = None
-    if signature_path is not None:
-        signature_path = Path(signature_path)
-        if signature_path.stat().st_size > 8192: raise ValueError("signature envelope too large")
-        envelope = json.loads(signature_path.read_text(encoding="utf-8"))
+    result = install_set(directory, [(archive, signature_path)], check_only)
+    if check_only: return result[0]
+
+
+def install_set(directory, archives, check_only=False):
+    if not archives or len(archives) > 8: raise ValueError("install set must contain 1 to 8 packages")
+    candidates, seen, total = [], set(), 0
+    for archive, signature_path in archives:
+        info, contents = read_archive(archive)
+        validate_contents(info, contents)
+        if info["id"] in seen: raise ValueError("duplicate package in install set")
+        seen.add(info["id"]); total += sum(len(data) for data in contents.values())
+        if total > LIMIT: raise ValueError("install set exceeds 64 MiB")
+        envelope = None
+        if signature_path is not None:
+            signature_path = Path(signature_path)
+            if signature_path.stat().st_size > 8192: raise ValueError("signature envelope too large")
+            envelope = json.loads(signature_path.read_text(encoding="utf-8"))
+        candidates.append((info, contents, content_digest(contents), envelope))
     with locked(directory):
         current = state(directory)
-        releases = current["installed"].setdefault(name, {})
-        if any(item["metadata"]["publisher"] != info["publisher"] for item in releases.values()):
-            raise ValueError("publisher differs from installed package")
-        if release in releases and releases[release]["digest"] != digest:
-            raise ValueError("release already exists with different contents")
-        if envelope is None and release in releases:
-            envelope = releases[release].get("signature")
-        verify_signature(current, info, digest, envelope)
-        releases[release] = {"digest": digest, "metadata": info, "signature": envelope}
         current["previous"] = {"active": dict(current["active"]), "configuration": copy.deepcopy(current.get("configuration", {}))}
-        current["active"][name] = release
+        for info, contents, digest, envelope in candidates:
+            name, release = info["id"], info["release"]
+            releases = current["installed"].setdefault(name, {})
+            if any(item["metadata"]["publisher"] != info["publisher"] for item in releases.values()):
+                raise ValueError("publisher differs from installed package")
+            if release in releases and releases[release]["digest"] != digest:
+                raise ValueError("release already exists with different contents")
+            if envelope is None and release in releases: envelope = releases[release].get("signature")
+            verify_signature(current, info, digest, envelope)
+            releases[release] = {"digest": digest, "metadata": info, "signature": envelope}
+            current["active"][name] = release
         validate_selection(current)
-        if check_only:
-            # The candidate is still an archive; verify the other selected objects.
-            others = dict(current, active={key: value for key, value in current["active"].items() if key != name})
-            verify_selected(directory, others)
+        others = dict(current, active={key: value for key, value in current["active"].items() if key not in seen})
+        verify_selected(directory, others)
+        footprint = total
+        for name, release in others["active"].items():
+            obj = read_object(directory, current["installed"][name][release]["digest"])
+            footprint += sum(len(data) for data in obj.values())
+        for _, contents, digest, _ in candidates:
             if (directory / "objects" / digest).exists(): read_object(directory, digest)
-            return {"id": name, "release": release, "digest": digest}
-        destination = directory / "objects" / digest
-        if not destination.exists():
-            destination.parent.mkdir(exist_ok=True)
-            staging = Path(tempfile.mkdtemp(dir=destination.parent))
-            try:
-                for relative, data in contents.items():
-                    path = staging / relative
-                    path.parent.mkdir(parents=True, exist_ok=True)
-                    path.write_bytes(data)
-                sync_tree(staging)
-                os.replace(staging, destination)
-                sync_directory(destination.parent)
-            finally:
-                if staging.exists(): shutil.rmtree(staging)
+            else: footprint += sum(len(data) for data in contents.values())
+        for name in current["active"]:
+            info = current["installed"][name][current["active"][name]]["metadata"]
+            manifest = {"id": name, "api": 1, "version": info["interface"], "dependencies": info["dependencies"]}
+            footprint += len(lua_value(manifest).encode("utf-8")) + len(lua_value(current.get("configuration", {}).get(name, {})).encode("utf-8")) + 32
+        if footprint > 500_000_000: raise ValueError("install set exceeds 500 MB local working limit")
+        if check_only:
+            return [{"id": info["id"], "release": info["release"], "digest": digest}
+                    for info, _, digest, _ in candidates]
+        for _, contents, digest, _ in candidates:
+            destination = directory / "objects" / digest
+            if not destination.exists():
+                destination.parent.mkdir(exist_ok=True)
+                staging = Path(tempfile.mkdtemp(dir=destination.parent))
+                try:
+                    for relative, data in contents.items():
+                        path = staging / relative
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_bytes(data)
+                    sync_tree(staging)
+                    os.replace(staging, destination)
+                    sync_directory(destination.parent)
+                finally:
+                    if staging.exists(): shutil.rmtree(staging)
         publish(directory, current)
 
 
@@ -537,6 +560,9 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     cmd = commands.add_parser("install"); cmd.add_argument("archive", type=Path); cmd.add_argument("--signature", type=Path)
     cmd = commands.add_parser("check-install"); cmd.add_argument("archive", type=Path); cmd.add_argument("--signature", type=Path)
+    for action in ("install-set", "check-install-set"):
+        cmd = commands.add_parser(action); cmd.add_argument("archives", nargs="*", type=Path)
+        cmd.add_argument("--signed", action="append", nargs=2, default=[], metavar=("ARCHIVE", "SIGNATURE"))
     cmd = commands.add_parser("sign"); cmd.add_argument("archive", type=Path); cmd.add_argument("private_key", type=Path); cmd.add_argument("output", type=Path)
     cmd = commands.add_parser("trust"); cmd.add_argument("publisher"); cmd.add_argument("public_key", type=Path)
     cmd = commands.add_parser("untrust"); cmd.add_argument("publisher")
@@ -558,6 +584,10 @@ def main():
         elif args.command == "install": install(directory, args.archive, args.signature)
         elif args.command == "check-install":
             print(json.dumps(install(directory, args.archive, args.signature, check_only=True), sort_keys=True, indent=2))
+        elif args.command in ("install-set", "check-install-set"):
+            archives = [(path, None) for path in args.archives] + [(Path(path), Path(sig)) for path, sig in args.signed]
+            result = install_set(directory, archives, check_only=args.command == "check-install-set")
+            if result is not None: print(json.dumps(result, sort_keys=True, indent=2))
         elif args.command == "enable": select(directory, args.id, args.release)
         elif args.command == "disable": select(directory, args.id, disable=True)
         elif args.command == "remove": remove_release(directory, args.id, args.release)

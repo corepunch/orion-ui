@@ -152,6 +152,8 @@ budget, and syntax-checks Lua files; it does not execute plugin factories.
 ```sh
 python3 tools/orion_packages.py --store /tmp/my_plugins check-install /tmp/stay_dates.zip
 python3 tools/orion_packages.py --store /tmp/my_plugins install /tmp/stay_dates.zip
+python3 tools/orion_packages.py --store /tmp/my_plugins check-install-set /tmp/provider.zip /tmp/consumer.zip
+python3 tools/orion_packages.py --store /tmp/my_plugins install-set /tmp/provider.zip /tmp/consumer.zip
 python3 tools/orion_packages.py --store /tmp/my_plugins list
 python3 tools/orion_packages.py --store /tmp/my_plugins verify
 python3 tools/orion_packages.py --store /tmp/my_plugins diagnose > /tmp/plugin-diagnostics.json
@@ -194,6 +196,16 @@ store before manual cleanup. POSIX tests kill a separate process around snapshot
 sync, registry write and replacement, then verify the active snapshot. They do not
 simulate power loss. Running processes retain a fixed `ORION_PLUGIN_ROOT`; restart
 to use a new generation.
+
+`install-set` validates and activates up to eight packages as one profile, so
+dependent interfaces can change together without an incompatible intermediate
+profile. `check-install-set` performs the same preflight without publication.
+For signed packages use `--signed ARCHIVE SIGNATURE` for each signed archive;
+unsigned archives may be supplied as positional arguments subject to store policy.
+An install set is limited to 64 MiB of package contents, and an estimated local
+working footprint over 500 MB is refused. Rejected sets leave the active profile
+unchanged; interrupted installation can leave unreferenced release objects.
+Rollback restores the whole previous profile and its settings, not company data.
 External search is restricted to the `orion.plugins.*` namespace, after bundled
 modules and before app-local plugin files. External packages cannot replace the
 runtime's core modules. `run` checks bundled dependency versions beside the actual

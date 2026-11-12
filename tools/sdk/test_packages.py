@@ -27,15 +27,15 @@ class PackageTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.store = self.root / "store"
 
-    def release(self, name="example", release="0.1.0", dependencies=None):
+    def release(self, name="example", release="0.1.0", dependencies=None, interface=1):
         source = self.root / (name + release)
         sdk.create(source, name, "plugin")
         path = source / "package.json"
-        info = json.loads(path.read_text()); info["release"] = release
-        if dependencies is not None:
-            info["dependencies"] = dependencies
+        info = json.loads(path.read_text()); info["release"] = release; info["interface"] = interface
+        if dependencies is not None or interface != 1:
+            if dependencies is not None: info["dependencies"] = dependencies
             (source / "manifest.lua").write_text("return " + packages.lua_value({
-                "id": name, "api": 1, "version": info["interface"], "dependencies": dependencies}) + "\n")
+                "id": name, "api": 1, "version": info["interface"], "dependencies": info["dependencies"]}) + "\n")
         path.write_text(json.dumps(info))
         archive = self.root / (name + release + ".zip")
         if dependencies is None:
@@ -46,6 +46,40 @@ class PackageTests(unittest.TestCase):
             with patch.object(sdk, "check", return_value=sorted(p.resolve() for p in source.rglob("*") if p.is_file())):
                 sdk.pack(source, archive)
         return archive
+
+    def test_install_set_updates_dependencies_atomically_and_rolls_back(self):
+        base1 = self.release("base", dependencies={})
+        user1 = self.release("consumer", dependencies={"base": 1})
+        packages.install_set(self.store, [(user1, None), (base1, None)])
+        before = packages.state(self.store)
+        base2 = self.release("base", "0.2.0", dependencies={}, interface=2)
+        user2 = self.release("consumer", "0.2.0", dependencies={"base": 2})
+        with self.assertRaisesRegex(ValueError, "base@1"): packages.install(self.store, base2)
+        registry = (self.store / "state.json").read_bytes()
+        objects = set((self.store / "objects").iterdir())
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            packages.install_set(self.store, [(base2, None), (base2, None)])
+        report = packages.install_set(self.store, [(user2, None), (base2, None)], check_only=True)
+        self.assertEqual({item["id"] for item in report}, {"base", "consumer"})
+        with patch("sys.argv", ["orion-packages", "--store", str(self.store), "check-install-set", str(user2), str(base2)]):
+            self.assertEqual(packages.main(), 0)
+        self.assertEqual((self.store / "state.json").read_bytes(), registry)
+        self.assertEqual(set((self.store / "objects").iterdir()), objects)
+        replace = packages.os.replace
+        def fail_registry(source, destination):
+            if Path(destination).name == "state.json": raise OSError("injected publication failure")
+            return replace(source, destination)
+        with patch.object(packages.os, "replace", side_effect=fail_registry):
+            with self.assertRaisesRegex(OSError, "publication failure"):
+                packages.install_set(self.store, [(user2, None), (base2, None)])
+        self.assertEqual((self.store / "state.json").read_bytes(), registry)
+        packages.verify_snapshot(self.store, packages.state(self.store))
+        with patch("sys.argv", ["orion-packages", "--store", str(self.store), "install-set", str(user2), str(base2)]):
+            self.assertEqual(packages.main(), 0)
+        self.assertEqual(packages.state(self.store)["active"], {"base": "0.2.0", "consumer": "0.2.0"})
+        packages.select(self.store, rollback=True)
+        self.assertEqual(packages.state(self.store)["active"], before["active"])
+        packages.verify_snapshot(self.store, packages.state(self.store))
 
     def test_install_update_disable_rollback(self):
         packages.install(self.store, self.release())
@@ -233,6 +267,10 @@ class PackageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "signature required"): packages.install(self.store, archive)
         with self.assertRaisesRegex(ValueError, "signature required"): packages.install(self.store, archive, check_only=True)
         self.assertEqual(packages.install(self.store, archive, signature, check_only=True)["id"], "example")
+        other = self.release("other")
+        with self.assertRaisesRegex(ValueError, "signature required"):
+            packages.install_set(self.store, [(archive, signature), (other, None)])
+        self.assertFalse(packages.state(self.store)["active"])
         packages.install(self.store, archive, signature)
         current = packages.state(self.store)
         packages.verify_selected(self.store, current); packages.verify_snapshot(self.store, current)
