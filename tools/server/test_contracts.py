@@ -3,6 +3,7 @@ import json
 import importlib.util
 from pathlib import Path
 import re
+import subprocess
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -10,6 +11,13 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class ContractTests(unittest.TestCase):
+    @unittest.skipUnless((ROOT / 'build/bin/orion-service').is_file(), 'build orion-service first')
+    def test_host_version_query_matches_contract(self):
+        matrix = json.loads((ROOT / 'docs/business-platform-api.json').read_text())
+        result = subprocess.run([str(ROOT / 'build/bin/orion-service'), '--version'],
+                                capture_output=True, check=True, timeout=10)
+        self.assertEqual(json.loads(result.stdout), {'host_api': 1, 'runtime_api': matrix['runtime_api']})
+
     def test_published_versions_match_runtime_and_application_schemas(self):
         matrix = json.loads((ROOT / 'docs/business-platform-api.json').read_text())
         runtime = (ROOT / 'orion/script/runtime.h').read_text()
@@ -23,6 +31,8 @@ class ContractTests(unittest.TestCase):
         for code in matrix['applications']['ledger']['configurations']:
             self.assertTrue((ROOT / 'apps/ledger/share/configurations' / code / 'configuration.xml').is_file())
         self.assertEqual(matrix['service_api'], 1)  # /v1 is the advertised wire contract.
+        server = (ROOT / 'tools/orion_server.py').read_text()
+        self.assertEqual(matrix['service_api'], int(re.search(r'^SERVICE_API = (\d+)', server, re.M)[1]))
 
     def test_plugin_contract_matches_loader_and_package_validator(self):
         matrix = json.loads((ROOT / 'docs/business-platform-api.json').read_text())

@@ -114,6 +114,22 @@ authentication and account changes fail closed. Restore a known-good
 issue new tokens; company backups intentionally exclude credentials. Never
 publish the directory or its token hashes in a diagnostic report.
 
+## Runtime versions
+
+For the installed Lodge business host, collect runtime interface versions without
+opening a company or reading its configuration:
+
+```sh
+python3 tools/orion_server_admin.py diagnose-runtime --executable /opt/orion/bin/orion-service > runtime-diagnostic.json
+```
+
+This executes the trusted host with `--version` and reports its host and runtime
+API versions, the gateway's service API, OS and Python version. It excludes the
+executable path and host stderr, and reports a fixed failure category if the host
+cannot provide the expected version response. It does not validate the host's
+application resources, installed schemas or compatibility with a particular company;
+Ledger's separate `ledger-run` does not yet implement this version query.
+
 ## Remote client request recovery
 
 The shared desktop clients save the exact pending request before transmission,

@@ -26,6 +26,7 @@ import threading
 import time
 
 MAX_REQUEST = 1024 * 1024
+SERVICE_API = 1
 MAX_RESPONSE = 4 * 1024 * 1024
 MAX_COMPANY = 32 * 1024 * 1024
 IDENTIFIER = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,99}\Z")
@@ -289,7 +290,7 @@ class Company:
     def status(self):
         with self.lock:
             revision = self.db.execute("SELECT revision FROM current").fetchone()[0]
-            return {"protocol": 1, "application": self.kind, "country": self.config["country"],
+            return {"protocol": SERVICE_API, "application": self.kind, "country": self.config["country"],
                     "company_id": self.company_id, "revision": revision}
 
     def execute(self, actor, role, request):

@@ -30,6 +30,21 @@ admin_spec.loader.exec_module(admin)
 
 
 class WorkingDirectoryScanTests(unittest.TestCase):
+    def test_runtime_diagnostic_is_allowlisted_and_redacts_failures(self):
+        executable = "/private/company-secret/host"
+        with patch.object(admin.subprocess, "run", return_value=SimpleNamespace(stdout=b'{"host_api":1,"runtime_api":1}')):
+            report = admin.diagnose_runtime(executable)
+        self.assertEqual(report["verification"], "passed")
+        self.assertEqual((report["host_api"], report["runtime_api"]), (1, 1))
+        self.assertNotIn(executable, json.dumps(report))
+        for output in (b'{"host_api":true,"runtime_api":1}', b'{"host_api":1,"runtime_api":1,"secret":"company"}', b'invalid'):
+            with patch.object(admin.subprocess, "run", return_value=SimpleNamespace(stdout=output)):
+                report = admin.diagnose_runtime(executable)
+            self.assertEqual(report["failure"], "host_version_unavailable")
+            self.assertNotIn("company", json.dumps(report))
+        with patch.object(admin.subprocess, "run", side_effect=OSError(executable)):
+            self.assertNotIn(executable, json.dumps(admin.diagnose_runtime(executable)))
+
     def test_renamed_temporary_file_is_allowed_only_during_host_monitoring(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

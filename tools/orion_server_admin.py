@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 import shutil
 import sqlite3
+import subprocess
 import sys
 import tempfile
 
@@ -150,6 +151,26 @@ def diagnose_backup(bundle):
     return report
 
 
+def diagnose_runtime(executable):
+    report = {"format": 1, "subject": "runtime", "verification": "failed",
+              "environment": {"os": platform.system(), "python": platform.python_version()},
+              "service_api": server.SERVICE_API}
+    try:
+        result = subprocess.run([str(executable), "--version"], capture_output=True, timeout=10, check=True)
+        if len(result.stdout) > 4096: raise ValueError("oversized version response")
+        version = server.decode(result.stdout)
+        if (not isinstance(version, dict) or set(version) != {"host_api", "runtime_api"} or
+                any(type(value) is not int or value < 1 for value in version.values())):
+            raise ValueError("invalid version response")
+    except (OSError, subprocess.SubprocessError, ValueError, UnicodeError, RecursionError):
+        report["failure"] = "host_version_unavailable"
+        return report
+    report["verification"] = "passed"
+    report["host_api"] = version["host_api"]
+    report["runtime_api"] = version["runtime_api"]
+    return report
+
+
 def staged_directory(destination):
     destination = Path(destination).resolve()
     if destination.exists(): raise ValueError("destination must not exist")
@@ -247,6 +268,7 @@ def main():
     command = commands.add_parser("backup"); command.add_argument("source"); command.add_argument("destination")
     command = commands.add_parser("verify"); command.add_argument("backup")
     command = commands.add_parser("diagnose"); command.add_argument("backup")
+    command = commands.add_parser("diagnose-runtime"); command.add_argument("--executable", required=True)
     command = commands.add_parser("restore"); command.add_argument("backup"); command.add_argument("destination")
     command.add_argument("--executable", required=True); command.add_argument("--resources", required=True)
     args = parser.parse_args()
@@ -255,6 +277,10 @@ def main():
         elif args.action == "verify": print(json.dumps(verify(args.backup), sort_keys=True, indent=2))
         elif args.action == "diagnose":
             report = diagnose_backup(args.backup)
+            print(json.dumps(report, sort_keys=True, indent=2))
+            if report["verification"] != "passed": return 1
+        elif args.action == "diagnose-runtime":
+            report = diagnose_runtime(args.executable)
             print(json.dumps(report, sort_keys=True, indent=2))
             if report["verification"] != "passed": return 1
         else: restore(args.backup, args.destination, args.executable, args.resources)

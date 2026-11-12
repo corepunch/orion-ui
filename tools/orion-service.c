@@ -1,5 +1,6 @@
 // One trusted, data-only business request. The gateway owns the staging directory.
 #include <orion/script/application.h>
+#include <orion/script/runtime.h>
 #include <orion/script/script_internal.h>
 #include <orion/user/database.h>
 #include <stdio.h>
@@ -27,6 +28,9 @@ done:
 }
 
 int main(int argc, char **argv) {
+  if (argc == 2 && !strcmp(argv[1], "--version")) {
+    printf("{\"host_api\":1,\"runtime_api\":%d}\n", ORION_RUNTIME_API); return 0;
+  }
   const char *application = NULL, *data = NULL, *request = NULL, *actor = NULL, *role = NULL;
   for (int i = 1; i < argc; i++) {
     if (i + 1 < argc && !strcmp(argv[i], "--application")) application = argv[++i];
