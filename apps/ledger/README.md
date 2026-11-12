@@ -98,7 +98,8 @@ corrected invoice or tax return. New exact postings reject ordinary edits,
 deletion, reposting and unposting. Posts and unposts append snapshots of the
 posting and entries, but these are not a complete audit trail. The journal shows
 the source number for a reversal and the selected document’s posting snapshots
-on the Posting History tab. Actions are stored as `post` or `unpost`; a blank
+on the Posting History tab. Select a snapshot to inspect its stored entries;
+account IDs are preserved as recorded. Actions are stored as `post` or `unpost`; a blank
 actor means no actor was authenticated. Snapshots created before this feature
 are unavailable, and deleting a document leaves its snapshots stored but not
 visible in the document journal. The boundary and history limitations are described in the
@@ -112,7 +113,8 @@ close history listing; and advancing the close date. The Reports page and the
 shared client also show close history. In the shared client, select a document
 and choose **Show posting history**, then open the Posting History tab. The
 heading identifies the selected document and the page buttons navigate its
-snapshots. The documents list shows the original document ID for a reversal. It begins with closes recorded after the
+snapshots. Select a snapshot and choose **Show snapshot entries** to inspect
+its recorded entries. The documents list shows the original document ID for a reversal. It begins with closes recorded after the
 history feature was installed; a blank actor means none was authenticated.
 Catalog and document writes require an accountant
 or admin role, and closing requires admin. The host must authenticate the actor

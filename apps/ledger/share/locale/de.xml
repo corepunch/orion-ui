@@ -536,6 +536,8 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Posting History" where="journal_page">Buchungsverlauf</string>
   <string source="Document Date" where="journal_page">Belegdatum</string>
   <string source="Document Number" where="journal_page">Belegnummer</string>
+  <string source="Debit ID" where="journal_page">Soll-ID</string>
+  <string source="Credit ID" where="journal_page">Haben-ID</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

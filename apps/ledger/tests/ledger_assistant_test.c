@@ -391,7 +391,8 @@ static void test_modeless_documents(void) {
   ASSERT_EQUAL(send_message(get_window_item(frame, ID_JOURNAL_PAGE_DETAILS), tcGetSelection, 0, NULL), 1);
   window_t *documents = get_window_item(frame, ID_JOURNAL_PAGE_DOCUMENTS);
   window_t *history = get_window_item(frame, ID_JOURNAL_PAGE_POSTING_HISTORY);
-  ASSERT_NOT_NULL(documents); ASSERT_NOT_NULL(history);
+  window_t *entries = get_window_item(frame, ID_JOURNAL_PAGE_REVISION_ENTRIES);
+  ASSERT_NOT_NULL(documents); ASSERT_NOT_NULL(history); ASSERT_NOT_NULL(entries);
   int document_count = (int)send_message(documents, RVM_GETITEMCOUNT, 0, NULL);
   ASSERT(document_count >= 2, "journal has documents to inspect");
   int history_rows = 0;
@@ -405,6 +406,16 @@ static void test_modeless_documents(void) {
     send_message(documents, RVM_SETSELECTION, (uint32_t)row, NULL);
     tableview_handle_master_selection(frame, documents);
     ASSERT_EQUAL(send_message(history, RVM_GETITEMCOUNT, 0, NULL), expected);
+    if (expected) {
+      const db_posting_revision_t *revision = (const void *)send_message(history, tvGetRecord, 0, NULL);
+      ASSERT_NOT_NULL(revision);
+      int entry_field = db_schema_field_index(db_schema_table(g_ledger->ib->schema, TABLE_REVISION_ENTRIES), "revision_id");
+      result_node_t *saved_entries = (void *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_REVISION_ENTRIES, entry_field), (void *)(intptr_t)revision->id);
+      int entry_count = count_result_list(saved_entries); free_result_list(saved_entries);
+      send_message(history, RVM_SETSELECTION, 0, NULL);
+      tableview_handle_master_selection(frame, history);
+      ASSERT_EQUAL(send_message(entries, RVM_GETITEMCOUNT, 0, NULL), entry_count);
+    }
   }
   ASSERT(history_rows > 0, "posting history contains a saved snapshot");
   window_t *client = get_window_item(frame, ID_MAIN_WINDOW_DOCUMENTS_CLIENT);

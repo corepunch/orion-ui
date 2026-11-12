@@ -128,4 +128,8 @@
   <string source="Document Number" where="remote_ledger">Номер документа</string>
   <string source="Total" where="remote_ledger">Итого</string>
   <string source="Posting history for document ID %d" where="code">История проведения документа ID %d</string>
+  <string source="Show snapshot entries" where="remote_ledger">Показать проводки снимка</string>
+  <string source="Select a posting snapshot to show its entries." where="remote_ledger">Выберите снимок проведения, чтобы увидеть его проводки.</string>
+  <string source="Select a posting snapshot." where="code">Выберите снимок проведения.</string>
+  <string source="Entries for posting snapshot ID %d" where="code">Проводки снимка ID %d</string>
 </strings>

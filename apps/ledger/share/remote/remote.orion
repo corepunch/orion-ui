@@ -29,6 +29,12 @@
         <field name="date" type="date" /><field name="number" type="string" length="24" />
         <field name="total" type="string" length="32" />
       </table>
+      <table name="revision_entries" transient="true">
+        <field name="id" type="integer" key="YES" /><field name="date" type="date" />
+        <field name="debit_id" type="integer" /><field name="credit_id" type="integer" />
+        <field name="quantity" type="string" length="32" /><field name="amount" type="string" length="32" />
+        <field name="content" type="string" length="160" />
+      </table>
       <table name="period_history" transient="true">
         <field name="id" type="integer" key="YES" /><field name="previous_through" type="date" />
         <field name="closed_through" type="date" /><field name="recorded_utc" type="string" length="21" />
@@ -142,8 +148,19 @@
             <Column field="number" title="Document Number" width="120" /><Column field="total" title="Total" width="110" />
           </TableView>
           <StackView orientation="horizontal" spacing="6">
+            <Button name="show_revision_entries" text="Show snapshot entries" action="show_revision_entries" />
             <Button name="previous_posting_history" text="Previous page" action="previous_posting_history" />
             <Button name="next_posting_history" text="Next page" action="next_posting_history" />
+          </StackView>
+          <Label name="revision_entries_title" text="Select a posting snapshot to show its entries." />
+          <TableView name="revision_entries" source="ledger_remote_cache.revision_entries" flags="flexspace,vscroll" frame="true">
+            <Column field="date" title="Date" width="100" /><Column field="debit_id" title="Debit ID" width="80" />
+            <Column field="credit_id" title="Credit ID" width="80" /><Column field="quantity" title="Quantity" width="80" />
+            <Column field="amount" title="Amount" width="110" /><Column field="content" title="Description" width="0" />
+          </TableView>
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="previous_revision_entries" text="Previous page" action="previous_revision_entries" />
+            <Button name="next_revision_entries" text="Next page" action="next_revision_entries" />
           </StackView>
         </StackView>
         <StackView name="history_tab" text="Period Close History" spacing="6" flags="flexspace">

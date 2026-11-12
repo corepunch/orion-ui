@@ -55,6 +55,17 @@ static void test_ledger_remote_ui(void) {
   }
   ASSERT(posting_found, "shared posting history displays the selected document snapshot");
   ASSERT(strstr(script_page_control(page, "posting_history_title")->title, "1"), "history heading identifies the document");
+  ASSERT_TRUE(script_page_perform(page, "show_revision_entries"));
+  const db_table_schema_t *snapshot_entries = db_schema_table_named(cache->schema, "revision_entries"); ASSERT_NOT_NULL(snapshot_entries);
+  bool entry_found = false;
+  for (int i = 0; i < 500 && !entry_found; i++) {
+    repost_messages();
+    result_node_t *rows = (void *)send_db_message(cache, dbFetch, snapshot_entries->table_id, NULL);
+    entry_found = count_result_list(rows) > 0; free_result_list(rows);
+    if (!entry_found) { struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); }
+  }
+  ASSERT(entry_found, "shared snapshot entries are displayed");
+  ASSERT(strstr(script_page_control(page, "revision_entries_title")->title, "1"), "entry heading identifies the snapshot");
   set_text(page, "reversal_date", "2035-01-01"); set_text(page, "reason", "Test correction");
   ASSERT_TRUE(script_page_perform(page, "reverse")); ASSERT_TRUE(wait_notice(page, "Reversal 2 posted."));
   set_text(page, "close_date", "2035-01-01"); ASSERT_TRUE(script_page_perform(page, "prepare_close"));

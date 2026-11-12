@@ -63,6 +63,13 @@ local function dispatch(request)
       if row.document_id == args.document_id then rows[#rows + 1] = row end
     end
     return page(rows, args)
+  elseif command == "documents.history_entries" then
+    assert(type(args.revision_id) == "number" and math.type(args.revision_id) == "integer" and args.revision_id > 0, "invalid revision id")
+    local rows = {}
+    for _, row in ipairs(ledger.fetch("ib", "revision_entries")) do
+      if row.revision_id == args.revision_id then rows[#rows + 1] = row end
+    end
+    return page(rows, args)
   elseif command == "journal.list" then
     local posted, result = {}, json.array({})
     for _, doc in ipairs(ledger.fetch("ib", "documents")) do if doc.posted then posted[doc.id] = true end end

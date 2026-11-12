@@ -895,7 +895,8 @@
               <Column field="amount" title="Amount" width="90" total="sum" />
               <Column field="content" title="Content" width="0" />
             </TableView>
-            <TableView name="posting_history" text="Posting History" source="ib.posting_revisions" flags="notitle,nofill,vscroll">
+            <SplitView name="posting_history_panel" text="Posting History" orientation="vertical" split-ratio="0.5" flags="flexspace">
+            <TableView name="posting_history" source="ib.posting_revisions" flags="notitle,nofill,vscroll">
               <Column field="recorded_utc" title="Recorded (UTC)" width="160" />
               <Column field="actor" title="Actor" width="120" />
               <Column field="action" title="Action" width="80" />
@@ -903,6 +904,12 @@
               <Column field="number" title="Document Number" width="120" />
               <Column field="total" title="Total" width="90" />
             </TableView>
+              <TableView name="revision_entries" source="ib.revision_entries" master="posting_history" zeros="blank" flags="notitle,nofill,vscroll,flexspace">
+                <Column field="date" title="Date" width="100" /><Column field="debit_id" title="Debit ID" width="80" />
+                <Column field="credit_id" title="Credit ID" width="80" /><Column field="quantity" title="Qty" width="64" />
+                <Column field="amount" title="Amount" width="90" /><Column field="content" title="Content" width="0" />
+              </TableView>
+            </SplitView>
           </TabView>
         </SplitView>
       </StackView>

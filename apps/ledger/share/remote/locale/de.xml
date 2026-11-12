@@ -128,4 +128,8 @@
   <string source="Document Number" where="remote_ledger">Belegnummer</string>
   <string source="Total" where="remote_ledger">Summe</string>
   <string source="Posting history for document ID %d" where="code">Buchungsverlauf für Beleg-ID %d</string>
+  <string source="Show snapshot entries" where="remote_ledger">Buchungssätze des Schnappschusses anzeigen</string>
+  <string source="Select a posting snapshot to show its entries." where="remote_ledger">Wählen Sie einen Buchungsschnappschuss, um seine Buchungssätze anzuzeigen.</string>
+  <string source="Select a posting snapshot." where="code">Wählen Sie einen Buchungsschnappschuss.</string>
+  <string source="Entries for posting snapshot ID %d" where="code">Buchungssätze für Schnappschuss-ID %d</string>
 </strings>

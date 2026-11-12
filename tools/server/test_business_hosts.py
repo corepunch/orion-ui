@@ -134,6 +134,11 @@ class LedgerHostTests(unittest.TestCase):
                         self.assertEqual(history[0]['document_id'], sale['document_id'])
                         self.assertEqual(history[0]['actor'], 'trade-accountant')
                         self.assertEqual(history[0]['action'], 'post')
+                        entries = call('documents.history_entries', {'revision_id': history[0]['id'], 'offset': 0, 'limit': 1}, role)
+                        self.assertEqual(len(entries), 1)
+                        self.assertEqual(entries[0]['revision_id'], history[0]['id'])
+                        self.assertIsInstance(entries[0]['amount_minor'], str)
+                        self.assertEqual(call('documents.history_entries', {'revision_id': 2147483647}, role), [])
                         self.assertEqual(history[0]['total_minor'], '4880' if country == 'RU' else '4760')
                         self.assertEqual(call('documents.history', {**sale, 'offset': 1, 'limit': 1}, role), [])
                         self.assertEqual(call('documents.history', {'document_id': 2147483647}, role), [])
@@ -143,6 +148,13 @@ class LedgerHostTests(unittest.TestCase):
                     self.assertFalse(invalid['ok'], invalid)
                     with self.assertRaises(server.Refusal) as failure:
                         call('documents.history', {**sale}, 'reception')
+                    self.assertEqual(failure.exception.status, 403)
+                    sequence += 1
+                    invalid = company.execute('trade-auditor', 'auditor', {'request_id': f'trade-{sequence}',
+                        'expected_revision': company.status()['revision'], 'command': 'documents.history_entries', 'args': {'revision_id': -1}})
+                    self.assertFalse(invalid['ok'], invalid)
+                    with self.assertRaises(server.Refusal) as failure:
+                        call('documents.history_entries', {'revision_id': 1}, 'reception')
                     self.assertEqual(failure.exception.status, 403)
                     reversal = call('documents.reverse', {**sale, 'date': '2026-11-12', 'reason': 'Accounting correction in integration test'})
                     self.assertNotEqual(reversal['document_id'], sale['document_id'])

@@ -536,6 +536,8 @@
   <string source="Posting History" where="journal_page">История проведения</string>
   <string source="Document Date" where="journal_page">Дата документа</string>
   <string source="Document Number" where="journal_page">Номер документа</string>
+  <string source="Debit ID" where="journal_page">ID дебета</string>
+  <string source="Credit ID" where="journal_page">ID кредита</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>

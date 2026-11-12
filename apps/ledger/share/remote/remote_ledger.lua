@@ -18,6 +18,12 @@ local function minor(value, fallback)
   local separator = decimal_separator()
   return sign .. digits:sub(1, -3) .. separator .. digits:sub(-2)
 end
+local function milli(value, fallback)
+  if type(value) ~= "string" or not value:match("^-?%d+$") then return "~" .. orion.formatNumber(fallback or 0, 3) end
+  local sign, digits = value:match("^(-?)(%d+)$")
+  while #digits < 4 do digits = "0" .. digits end
+  return sign .. digits:sub(1, -4) .. decimal_separator() .. digits:sub(-3)
+end
 local function integer(value, message)
   return orion.assert(type(value) == "number" and math.type(value) == "integer" and value > 0 and value <= 2147483647 and value, message)
 end
@@ -42,7 +48,8 @@ function Ledger:init()
                  close_date = orion.today(), quantity = "1" .. decimal_separator() .. "000", price = "0" .. decimal_separator() .. "00"}
   self.lines, self.doc_offset, self.catalog_offset, self.journal_offset = {}, 0, 0, 0
   self.history_offset, self.posting_history_offset = 0, 0
-  self.posting_history_document = nil
+  self.posting_history_document, self.revision_entries_revision = nil, nil
+  self.revision_entries_offset, self.revision_entries_count = 0, 0
   self.next_line, self.role, self.connected, self.catalog_kind = 1, "", false, "items"
   self.notice, self.error = "", ""
 end
@@ -89,7 +96,9 @@ function Ledger:connect(values)
     end
     self.connected, self.role, self.country, self.error = true, status.role or "", status.country, ""
     self.posting_history_document, self.posting_history_offset, self.posting_history_count = nil, 0, 0
-    Remote.replace_many({projection("posting_history", {}, {"id", "recorded_utc", "actor", "action", "date", "number", "total"})})
+    self.revision_entries_revision, self.revision_entries_offset, self.revision_entries_count = nil, 0, 0
+    Remote.replace_many({projection("posting_history", {}, {"id", "recorded_utc", "actor", "action", "date", "number", "total"}),
+      projection("revision_entries", {}, {"id", "date", "debit_id", "credit_id", "quantity", "amount", "content"})})
     if self.remote:state().pending then
       self.notice = orion.tr("The outcome is unknown. Retry the same request before making changes.")
     else
@@ -160,8 +169,10 @@ function Ledger:load_posting_history(document_id, offset)
       view[#view + 1] = {id = row.id, recorded_utc = row.recorded_utc, actor = row.actor, action = row.action,
         date = row.date, number = row.number, total = minor(row.exact_money and row.total_minor or nil, row.total)}
     end
-    Remote.replace_many({projection("posting_history", view, {"id", "recorded_utc", "actor", "action", "date", "number", "total"})})
+    Remote.replace_many({projection("posting_history", view, {"id", "recorded_utc", "actor", "action", "date", "number", "total"}),
+      projection("revision_entries", {}, {"id", "date", "debit_id", "credit_id", "quantity", "amount", "content"})})
     self.posting_history_document, self.posting_history_offset, self.posting_history_count = document_id, offset, #rows
+    self.revision_entries_revision, self.revision_entries_offset, self.revision_entries_count = nil, 0, 0
   end)
 end
 function Ledger:show_posting_history(v)
@@ -170,6 +181,26 @@ function Ledger:show_posting_history(v)
 end
 function Ledger:previous_posting_history(v) self:remember(v); self:load_posting_history(self.posting_history_document, math.max(0, self.posting_history_offset - 200)) end
 function Ledger:next_posting_history(v) self:remember(v); self:load_posting_history(self.posting_history_document, self.posting_history_offset + 200) end
+
+function Ledger:load_revision_entries(revision_id, offset)
+  self:request("documents.history_entries", {revision_id = revision_id, offset = offset, limit = 200}, function(rows)
+    local view = {}
+    for _, row in ipairs(rows) do
+      view[#view + 1] = {id = row.id, date = row.date, debit_id = row.debit_id, credit_id = row.credit_id,
+        quantity = milli(row.exact_money and row.quantity_milli or nil, row.quantity),
+        amount = minor(row.exact_money and row.amount_minor or nil, row.amount), content = row.content}
+    end
+    Remote.replace_many({projection("revision_entries", view, {"id", "date", "debit_id", "credit_id", "quantity", "amount", "content"})})
+    self.revision_entries_revision, self.revision_entries_offset, self.revision_entries_count = revision_id, offset, #rows
+  end)
+end
+function Ledger:show_revision_entries(v)
+  self:remember(v)
+  local revision = orion.assert(v.posting_history, orion.tr("Select a posting snapshot."))
+  self:load_revision_entries(revision.id, 0)
+end
+function Ledger:previous_revision_entries(v) self:remember(v); self:load_revision_entries(self.revision_entries_revision, math.max(0, self.revision_entries_offset - 200)) end
+function Ledger:next_revision_entries(v) self:remember(v); self:load_revision_entries(self.revision_entries_revision, self.revision_entries_offset + 200) end
 
 function Ledger:load_history(offset)
   self:request("period.history", {offset = offset, limit = 200}, function(rows)
@@ -279,7 +310,7 @@ function Ledger:data()
   disabled.close_period = blocked or self.role ~= "admin" or not self.closing_date
   disabled.prepare_close = blocked or self.role ~= "admin"
   for _, name in ipairs({"previous_documents", "next_documents", "previous_catalog", "next_catalog", "previous_journal", "next_journal",
-                         "document_types", "vat_rates", "units", "items", "counterparties", "show_journal", "show_history", "show_posting_history"}) do disabled[name] = blocked end
+                         "document_types", "vat_rates", "units", "items", "counterparties", "show_journal", "show_history", "show_posting_history", "show_revision_entries"}) do disabled[name] = blocked end
   disabled.previous_documents = blocked or self.doc_offset == 0
   disabled.previous_catalog = blocked or self.catalog_offset == 0
   disabled.previous_journal = blocked or self.journal_offset == 0
@@ -290,10 +321,13 @@ function Ledger:data()
   disabled.next_history = blocked or self.history_count ~= 200
   disabled.previous_posting_history = blocked or not self.posting_history_document or self.posting_history_offset == 0
   disabled.next_posting_history = blocked or not self.posting_history_document or self.posting_history_count ~= 200
+  disabled.previous_revision_entries = blocked or not self.revision_entries_revision or self.revision_entries_offset == 0
+  disabled.next_revision_entries = blocked or not self.revision_entries_revision or self.revision_entries_count ~= 200
   local status = self.connected and string.format(orion.tr("Country: %s · Role: %s · Revision: %d"), self.country, self.role, state.revision or 0) or orion.tr("Not connected")
   local titles = {doc_types = "Document types", vat_rates = "VAT rates", units = "Units", items = "Items", counterparties = "Counterparties"}
   local values = {connection = status, notice = self.notice, error = self.error, catalog_title = orion.tr(titles[self.catalog_kind]),
-    posting_history_title = self.posting_history_document and string.format(orion.tr("Posting history for document ID %d"), self.posting_history_document) or orion.tr("Select a document and show its posting history.")}
+    posting_history_title = self.posting_history_document and string.format(orion.tr("Posting history for document ID %d"), self.posting_history_document) or orion.tr("Select a document and show its posting history."),
+    revision_entries_title = self.revision_entries_revision and string.format(orion.tr("Entries for posting snapshot ID %d"), self.revision_entries_revision) or orion.tr("Select a posting snapshot to show its entries.")}
   for key, value in pairs(self.fields) do values[key] = value end
   return {values = values, disabled = disabled}
 end

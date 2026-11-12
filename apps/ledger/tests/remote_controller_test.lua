@@ -21,6 +21,13 @@ pending({{id = 2, recorded_utc = '2026-04-01T00:00:00Z', actor = 'accountant', a
 assert(cache[1].source == 'ledger_remote_cache.posting_history' and cache[1].rows[1].total == '12.34')
 assert(page:data().values.posting_history_title == 'Posting history for document ID 7')
 assert(page:data().disabled.previous_posting_history and page:data().disabled.next_posting_history)
+assert(not pcall(function() page:show_revision_entries({}) end), 'snapshot selection is required')
+page:show_revision_entries({posting_history = {id = 2}})
+assert(client.command == 'documents.history_entries' and client.args.revision_id == 2)
+state.busy = false; state.pending = false
+pending({{id = 4, date = '2026-03-31', debit_id = 1, credit_id = 2, exact_money = true, quantity_milli = '1250', amount_minor = '1234', content = 'test'}}, nil)
+assert(cache[1].source == 'ledger_remote_cache.revision_entries' and cache[1].rows[1].amount == '12.34' and cache[1].rows[1].quantity == '1.250')
+assert(page:data().values.revision_entries_title == 'Entries for posting snapshot ID 2')
 page:show_history({}); assert(client.command == 'period.history' and client.args.offset == 0)
 state.busy = false; state.pending = false
 pending({{id = 1, previous_through = '', closed_through = '2026-03-31', recorded_utc = '2026-04-01T00:00:00Z', actor = 'admin'}}, nil)
