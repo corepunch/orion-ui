@@ -172,6 +172,7 @@ static bool video_region_differs(const uint8_t *a, const uint8_t *b, int width, 
 static void test_motion_video(void) {
   TEST("motion video scrolls the zoomed timeline and drives the spectrum from the mix");
   test_env_init();
+  if (!ui_init_graphics(UI_INIT_HIDDEN, "groove-motion-test", 320, 240)) { test_env_shutdown(); SKIP("Offscreen graphics unavailable"); }
   g_app = app_init(); ASSERT_NOT_NULL(g_app);
   song_t song; song_init(&song);
   ASSERT(app_block_audio(0), "source ready");
@@ -208,7 +209,7 @@ static void test_motion_video(void) {
   song_export_video_free(&video);
   ASSERT(video.render == NULL, "video released");
   remove(wav); rmdir(directory);
-  app_shutdown(g_app); test_env_shutdown(); PASS();
+  app_shutdown(g_app); ui_shutdown_graphics(); test_env_shutdown(); PASS();
 }
 
 int main(void) {

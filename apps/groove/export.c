@@ -381,7 +381,8 @@ static void video_fft(float *re, float *im, int n) {
 }
 
 // One FFT per video frame over the exported mix, mapped to log-spaced bands
-// with a pink tilt, then smoothed: fast attack, slow release, falling caps.
+// with a pink tilt and normalised to the song's peak, then smoothed: fast
+// attack, slow release, falling caps.
 bool song_export_video_analyze(ui_media_video_t *video, const char *wav, ui_media_progress_fn progress, void *userdata) {
   song_video_t *v = video && video->render == song_video_frame ? video->userdata : NULL;
   if (!v || !wav) { fprintf(stderr, "[groove-export] video analysis rejected video=%p wav=%p\n", (void *)v, (void *)wav); fflush(stderr); return false; }
@@ -391,7 +392,7 @@ bool song_export_video_analyze(ui_media_video_t *video, const char *wav, ui_medi
   bool ok = f && levels && caps && pulse;
   if (!ok) fprintf(stderr, "[groove-export] video analysis unavailable wav=%s: %s\n", wav, strerror(errno));
   float window[VIDEO_FFT], re[VIDEO_FFT], im[VIDEO_FFT], lo[VIDEO_BANDS], hi[VIDEO_BANDS], tilt[VIDEO_BANDS];
-  float level[VIDEO_BANDS] = {0}, cap[VIDEO_BANDS] = {0}, fall[VIDEO_BANDS] = {0}, bass = 0;
+  float level[VIDEO_BANDS] = {0}, cap[VIDEO_BANDS] = {0}, fall[VIDEO_BANDS] = {0}, bass = 0, peak = -60;
   int hold[VIDEO_BANDS] = {0};
   int16_t pcm[VIDEO_FFT * 2];
   for (int i = 0; i < VIDEO_FFT; i++) window[i] = 0.5f - 0.5f * cosf(2 * 3.14159265f * i / (VIDEO_FFT - 1));
@@ -410,7 +411,7 @@ bool song_export_video_analyze(ui_media_video_t *video, const char *wav, ui_medi
     }
     for (int i = 0; i < VIDEO_FFT; i++) { re[i] = (pcm[i * 2] + pcm[i * 2 + 1]) / 65536.0f * window[i]; im[i] = 0; }
     video_fft(re, im, VIDEO_FFT);
-    float target[VIDEO_BANDS];
+    float *db = levels + frame * VIDEO_BANDS;
     for (int band = 0; band < VIDEO_BANDS; band++) {
       float mag = 0;
       if (hi[band] - lo[band] < 1) {
@@ -418,9 +419,18 @@ bool song_export_video_analyze(ui_media_video_t *video, const char *wav, ui_medi
         int k = (int)at;
         mag = hypotf(re[k], im[k]) * (1 - t) + hypotf(re[k + 1], im[k + 1]) * t;
       } else for (int k = (int)ceilf(lo[band]); k <= (int)hi[band] && k < VIDEO_FFT / 2; k++) mag = MAX(mag, hypotf(re[k], im[k]));
-      float db = 20 * log10f(mag * 4 / VIDEO_FFT + 1e-9f) + tilt[band];
-      float t = (db + 64) / 58;
-      target[band] = t <= 0 ? 0 : t >= 1 ? 1 : powf(t, 1.35f);
+      db[band] = 20 * log10f(mag * 4 / VIDEO_FFT + 1e-9f) + tilt[band];
+      peak = MAX(peak, db[band]);
+    }
+  }
+  if (f) fclose(f);
+  // The loudest band of the song reaches near the top; 48 dB below it is the floor.
+  float top = peak - 2, range = 46;
+  for (int64_t frame = 0; ok && frame < v->count; frame++) {
+    float *row = levels + frame * VIDEO_BANDS, target[VIDEO_BANDS];
+    for (int band = 0; band < VIDEO_BANDS; band++) {
+      float t = (row[band] - (top - range)) / range;
+      target[band] = t <= 0 ? 0 : t >= 1 ? 1 : powf(t, 1.5f);
     }
     float bass_target = 0;
     for (int band = 0; band < VIDEO_BANDS; band++) {
@@ -432,11 +442,10 @@ bool song_export_video_analyze(ui_media_video_t *video, const char *wav, ui_medi
       if (band < 6) bass_target += level[band] / 6;
     }
     bass += (bass_target - bass) * (bass_target > bass ? 0.6f : 0.12f);
-    memcpy(levels + frame * VIDEO_BANDS, level, sizeof(level));
+    memcpy(row, level, sizeof(level));
     memcpy(caps + frame * VIDEO_BANDS, cap, sizeof(cap));
     pulse[frame] = bass;
   }
-  if (f) fclose(f);
   if (!ok) { free(levels); free(caps); free(pulse); fflush(stderr); return false; }
   free(v->levels); free(v->caps); free(v->pulse);
   v->levels = levels; v->caps = caps; v->pulse = pulse;
