@@ -70,6 +70,40 @@ class PackageTests(unittest.TestCase):
             with self.assertRaises(OSError): packages.install(self.store, archive)
         self.assertEqual((self.store / "state.json").read_bytes(), previous)
 
+    def test_remove_release_preserves_active_and_rollback(self):
+        packages.install(self.store, self.release())
+        first = packages.state(self.store)
+        first_digest = first["installed"]["example"]["0.1.0"]["digest"]
+        packages.configure(self.store, "example", {"label": "retained"})
+        packages.install(self.store, self.release(release="0.2.0"))
+        before = (self.store / "state.json").read_bytes()
+        for release in ("0.1.0", "0.2.0"):
+            with self.assertRaisesRegex(ValueError, "cannot remove"):
+                packages.remove_release(self.store, "example", release)
+        self.assertEqual((self.store / "state.json").read_bytes(), before)
+        packages.configure(self.store, "example", {"label": "retained"})
+        with patch("sys.argv", ["orion-packages", "--store", str(self.store), "remove", "example", "0.1.0"]):
+            self.assertEqual(packages.main(), 0)
+        current = packages.state(self.store)
+        self.assertNotIn("0.1.0", current["installed"]["example"])
+        self.assertTrue((self.store / "objects" / first_digest).is_dir())
+        self.assertEqual(current["configuration"]["example"]["label"], "retained")
+        packages.select(self.store, rollback=True)
+        self.assertEqual(packages.state(self.store)["active"]["example"], "0.2.0")
+        with self.assertRaisesRegex(ValueError, "not installed"):
+            packages.remove_release(self.store, "example", "0.1.0")
+        packages.select(self.store, "example", disable=True)
+        with self.assertRaisesRegex(ValueError, "rollback"):
+            packages.remove_release(self.store, "example", "0.2.0")
+        packages.configure(self.store, "example", {"label": "retained"})
+        packages.remove_release(self.store, "example", "0.2.0")
+        current = packages.state(self.store)
+        self.assertNotIn("example", current["installed"])
+        self.assertEqual(current["configuration"]["example"]["label"], "retained")
+        packages.verify_snapshot(self.store, current)
+        packages.install(self.store, self.root / "example0.2.0.zip")
+        self.assertEqual(packages.state(self.store)["configuration"]["example"]["label"], "retained")
+
     def test_check_install_validates_without_publishing(self):
         packages.install(self.store, self.release())
         before = (self.store / "state.json").read_bytes()

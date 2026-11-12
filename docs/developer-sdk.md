@@ -160,6 +160,7 @@ python3 tools/orion_packages.py --store /tmp/my_plugins run build/bin/lodge --da
 python3 tools/orion_packages.py --store /tmp/my_plugins disable stay_dates
 python3 tools/orion_packages.py --store /tmp/my_plugins enable stay_dates 0.1.0
 python3 tools/orion_packages.py --store /tmp/my_plugins rollback
+python3 tools/orion_packages.py --store /tmp/my_plugins remove stay_dates 0.1.0
 ```
 
 The same `run` command accepts `build/bin/ledger`. Applications/add-ons explicitly
@@ -167,6 +168,9 @@ consume plugins through `Plugins.load` or `Plugins.use`; installation does not
 implicitly execute them or add a menu item. Load package settings with
 `require("orion.plugins.stay_dates.settings")`. Settings survive disable/re-enable;
 rollback restores the previous active releases and package settings, never company data.
+`remove` unregisters an installed release only when neither the active profile nor
+the rollback profile references it. It preserves package settings and does not delete
+release objects or snapshots, which may still be in use by running processes.
 
 Release objects and per-launch snapshots remain separate from the active registry.
 The manager serializes writers, checks hashes, paths, publisher consistency and

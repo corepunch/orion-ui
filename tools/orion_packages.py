@@ -471,6 +471,22 @@ def configure(directory, name, values):
         publish(directory, current)
 
 
+def remove_release(directory, name, release):
+    identifier(name)
+    with locked(directory):
+        current = state(directory)
+        releases = current["installed"].get(name, {})
+        if release not in releases: raise ValueError("release is not installed")
+        if current["active"].get(name) == release:
+            raise ValueError("cannot remove an active release")
+        previous = current.get("previous")
+        if previous is not None and previous["active"].get(name) == release:
+            raise ValueError("cannot remove a release needed for rollback")
+        del releases[release]
+        if not releases: del current["installed"][name]
+        publish(directory, current)
+
+
 def trust_publisher(directory, publisher, public_path):
     identifier(publisher)
     key = public_key(public_path)
@@ -527,6 +543,7 @@ def main():
     cmd = commands.add_parser("policy"); cmd.add_argument("mode", choices=("optional", "require"))
     cmd = commands.add_parser("enable"); cmd.add_argument("id"); cmd.add_argument("release")
     cmd = commands.add_parser("disable"); cmd.add_argument("id")
+    cmd = commands.add_parser("remove"); cmd.add_argument("id"); cmd.add_argument("release")
     commands.add_parser("rollback"); commands.add_parser("list"); commands.add_parser("diagnose"); commands.add_parser("verify")
     cmd = commands.add_parser("configure"); cmd.add_argument("id"); cmd.add_argument("json_file", type=Path)
     cmd = commands.add_parser("run"); cmd.add_argument("executable"); cmd.add_argument("arguments", nargs=argparse.REMAINDER)
@@ -543,6 +560,7 @@ def main():
             print(json.dumps(install(directory, args.archive, args.signature, check_only=True), sort_keys=True, indent=2))
         elif args.command == "enable": select(directory, args.id, args.release)
         elif args.command == "disable": select(directory, args.id, disable=True)
+        elif args.command == "remove": remove_release(directory, args.id, args.release)
         elif args.command == "configure": configure(directory, args.id, json.loads(args.json_file.read_text()))
         elif args.command == "rollback": select(directory, rollback=True)
         elif args.command == "diagnose": print(json.dumps(diagnose(directory), sort_keys=True, indent=2))
