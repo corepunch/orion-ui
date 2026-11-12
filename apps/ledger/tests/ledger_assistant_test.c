@@ -383,6 +383,12 @@ static void test_modeless_documents(void) {
     if (type && !strcmp(type->form, "document")) ids[count++] = doc->id;
   }
   free_result_list(rows); ASSERT_EQUAL(count, 2);
+  db_posting_revision_t orphan = { .document_id = 999999 };
+  snprintf(orphan.action, sizeof(orphan.action), "post");
+  const db_posting_revision_t *saved_orphan = (const void *)db_schema_xml(g_ledger->ib, dbInsert, TABLE_POSTING_REVISIONS, &orphan);
+  ASSERT_NOT_NULL(saved_orphan); int orphan_id = saved_orphan->id;
+  db_revision_entry_t orphan_entry = { .revision_id = orphan_id, .debit_id = 1, .credit_id = 2, .amount = 12.34 };
+  ASSERT_TRUE(db_schema_xml(g_ledger->ib, dbInsert, TABLE_REVISION_ENTRIES, &orphan_entry));
   window_t *frame = create_window_from_form(&ledger_main_window_form, 10, 30, NULL, ledger_main_proc, 0, NULL);
   ASSERT_NOT_NULL(frame);
   ledger_command(ID_VIEW_HOME);
@@ -418,6 +424,20 @@ static void test_modeless_documents(void) {
     }
   }
   ASSERT(history_rows > 0, "posting history contains a saved snapshot");
+  ledger_command(ID_VIEW_REPORTS);
+  window_t *all_history = get_window_item(frame, ID_REPORTS_PAGE_ALL_POSTING_HISTORY);
+  window_t *all_entries = get_window_item(frame, ID_REPORTS_PAGE_ALL_REVISION_ENTRIES);
+  ASSERT_NOT_NULL(all_history); ASSERT_NOT_NULL(all_entries);
+  int orphan_row = -1, all_count = (int)send_message(all_history, RVM_GETITEMCOUNT, 0, NULL);
+  for (int row = 0; row < all_count; row++) {
+    const db_posting_revision_t *revision = (const void *)send_message(all_history, tvGetRecord, (uint32_t)row, NULL);
+    if (revision && revision->id == orphan_id) orphan_row = row;
+  }
+  ASSERT(orphan_row >= 0, "all history includes a snapshot without a current document");
+  send_message(all_history, RVM_SETSELECTION, (uint32_t)orphan_row, NULL);
+  tableview_handle_master_selection(frame, all_history);
+  ASSERT_EQUAL(send_message(all_entries, RVM_GETITEMCOUNT, 0, NULL), 1);
+  ledger_command(ID_VIEW_JOURNAL);
   window_t *client = get_window_item(frame, ID_MAIN_WINDOW_DOCUMENTS_CLIENT);
   ASSERT_NOT_NULL(client);
   ASSERT_TRUE(ledger_open_record("documents", ids[0])); window_t *a = mdi_active_document(client);

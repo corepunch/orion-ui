@@ -55,6 +55,12 @@ static void test_ledger_remote_ui(void) {
   }
   ASSERT(posting_found, "shared posting history displays the selected document snapshot");
   ASSERT(strstr(script_page_control(page, "posting_history_title")->title, "1"), "history heading identifies the document");
+  set_text(page, "history_document_id", "1");
+  ASSERT_TRUE(script_page_perform(page, "find_posting_history"));
+  for (int i = 0; i < 500 && !window_is_enabled(script_page_control(page, "show_revision_entries")); i++) {
+    repost_messages(); struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL);
+  }
+  ASSERT(window_is_enabled(script_page_control(page, "show_revision_entries")), "history lookup completed");
   ASSERT_TRUE(script_page_perform(page, "show_revision_entries"));
   const db_table_schema_t *snapshot_entries = db_schema_table_named(cache->schema, "revision_entries"); ASSERT_NOT_NULL(snapshot_entries);
   bool entry_found = false;

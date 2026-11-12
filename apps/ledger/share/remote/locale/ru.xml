@@ -132,4 +132,7 @@
   <string source="Select a posting snapshot to show its entries." where="remote_ledger">Выберите снимок проведения, чтобы увидеть его проводки.</string>
   <string source="Select a posting snapshot." where="code">Выберите снимок проведения.</string>
   <string source="Entries for posting snapshot ID %d" where="code">Проводки снимка ID %d</string>
+  <string source="Document ID:" where="remote_ledger">ID документа:</string>
+  <string source="Find history" where="remote_ledger">Найти историю</string>
+  <string source="Enter a document ID." where="code">Введите ID документа.</string>
 </strings>

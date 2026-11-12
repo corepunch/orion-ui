@@ -74,6 +74,28 @@ class LodgeHostTests(unittest.TestCase):
 
 @unittest.skipUnless((ROOT / 'build/bin/ledger-run').is_file(), 'build ledger-run before integration tests')
 class LedgerHostTests(unittest.TestCase):
+    def test_retained_history_of_deleted_document(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); source = root / 'source'; source.mkdir()
+            (source / 'infobase.xml').write_text(
+                '<ib orion-version="3"><posting_revisions><posting_revision id="1" document_id="17" action="post"/>'
+                '</posting_revisions><revision_entries><revision_entry id="1" revision_id="1" debit_id="1" credit_id="2" amount="12.34"/>'
+                '</revision_entries></ib>', encoding='utf-8')
+            path = root / 'company'
+            server.initialize(argparse.Namespace(state=str(path), application='ledger', country='DE', configuration=None,
+                              executable=str(ROOT / 'build/bin/ledger-run'), resources=str(ROOT / 'apps/ledger/share'), source=str(source)))
+            company = server.Company(path)
+            try:
+                for index, (command, args) in enumerate((('documents.history', {'document_id': 17}),
+                                                         ('documents.history_entries', {'revision_id': 1}))):
+                    result = company.execute('auditor', 'auditor', {'request_id': f'old-history-{index}',
+                        'expected_revision': company.status()['revision'], 'command': command, 'args': args})
+                    self.assertTrue(result['ok'], result)
+                    self.assertEqual(len(result['result']), 1)
+                self.assertEqual(result['result'][0]['amount'], 12.34)
+            finally:
+                company.close()
+
     def test_russian_and_german_small_trade_period(self):
         for country in ('RU', 'DE'):
             with self.subTest(country=country), tempfile.TemporaryDirectory() as directory:

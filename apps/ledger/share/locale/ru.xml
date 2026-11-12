@@ -55,7 +55,7 @@
   <string source="Lines" where="journal_page,document">Товары</string>
   <string source="Item" where="journal_page,document,item">Номенклатура</string>
   <string source="Unit" where="journal_page,items_page,config_page,document">Ед.</string>
-  <string source="Qty" where="journal_page,entries_page,document,operation">Кол-во</string>
+  <string source="Qty" where="journal_page,entries_page,reports_page,document,operation">Кол-во</string>
   <string source="Price" where="journal_page,items_page,document">Цена</string>
   <string source="Tax" where="journal_page,items_page,reports_page,config_page,document">Налог</string>
   <string source="Tax Amount" where="journal_page,document">Сумма налога</string>
@@ -413,7 +413,7 @@
   <string source="Needs attention" where="home_page">Требует внимания</string>
   <string source="Task" where="home_page">Задача</string>
   <string source="Detail" where="home_page">Подробности</string>
-  <string source="Action" where="home_page,journal_page">Действие</string>
+  <string source="Action" where="home_page,journal_page,reports_page">Действие</string>
   <string source="The books are in order: nothing is waiting." where="code">Учет в порядке: ничего не ждет.</string>
   <string source="Money" where="home_page">Деньги</string>
   <string source="Total money" where="home_page">Всего денег</string>
@@ -534,10 +534,12 @@
   <string source="The period could not be closed. Check unposted documents and the close date." where="code">Не удалось закрыть период. Проверьте непроведённые документы и дату закрытия.</string>
   <string source="Reverses" where="journal_page">Сторнирует</string>
   <string source="Posting History" where="journal_page">История проведения</string>
-  <string source="Document Date" where="journal_page">Дата документа</string>
-  <string source="Document Number" where="journal_page">Номер документа</string>
-  <string source="Debit ID" where="journal_page">ID дебета</string>
-  <string source="Credit ID" where="journal_page">ID кредита</string>
+  <string source="Document Date" where="journal_page,reports_page">Дата документа</string>
+  <string source="Document Number" where="journal_page,reports_page">Номер документа</string>
+  <string source="Debit ID" where="journal_page,reports_page">ID дебета</string>
+  <string source="Credit ID" where="journal_page,reports_page">ID кредита</string>
+  <string source="All Posting History" where="reports_page">Вся история проведения</string>
+  <string source="Document ID" where="reports_page">ID документа</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>

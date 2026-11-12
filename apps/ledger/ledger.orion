@@ -1179,6 +1179,19 @@
             <Column field="deducted" title="Withheld and Paid" width="96" total="sum" />
             <Column field="closing" title="Owed at End" width="86" total="sum" />
           </TableView>
+          <SplitView name="all_posting_history_panel" text="All Posting History" orientation="vertical" split-ratio="0.5" flags="flexspace">
+            <TableView name="all_posting_history" source="ib.posting_revisions" master="none" flags="notitle,nofill,vscroll,flexspace">
+              <Column field="document_id" title="Document ID" width="90" /><Column field="recorded_utc" title="Recorded (UTC)" width="160" />
+              <Column field="actor" title="Actor" width="120" /><Column field="action" title="Action" width="80" />
+              <Column field="date" title="Document Date" width="110" /><Column field="number" title="Document Number" width="120" />
+              <Column field="total" title="Total" width="90" />
+            </TableView>
+            <TableView name="all_revision_entries" source="ib.revision_entries" master="all_posting_history" zeros="blank" flags="notitle,nofill,vscroll,flexspace">
+              <Column field="date" title="Date" width="100" /><Column field="debit_id" title="Debit ID" width="80" />
+              <Column field="credit_id" title="Credit ID" width="80" /><Column field="quantity" title="Qty" width="64" />
+              <Column field="amount" title="Amount" width="90" /><Column field="content" title="Content" width="0" />
+            </TableView>
+          </SplitView>
           <TableView name="period_history" text="Period Close History" source="ib.period_closures" flags="notitle,nofill,vscroll">
             <Column field="previous_through" title="Previous close" width="120" />
             <Column field="closed_through" title="Closed through" width="120" />

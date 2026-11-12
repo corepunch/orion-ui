@@ -141,6 +141,10 @@
           <Label text="Closing is permanent. Reversals must use a later open date." />
         </StackView>
         <StackView name="posting_history_tab" text="Posting History" spacing="6" flags="flexspace">
+          <StackView orientation="horizontal" spacing="6">
+            <Label text="Document ID:" /><TextBox name="history_document_id" type="integer" />
+            <Button name="find_posting_history" text="Find history" action="find_posting_history" />
+          </StackView>
           <Label name="posting_history_title" text="Select a document and show its posting history." />
           <TableView name="posting_history" source="ledger_remote_cache.posting_history" flags="flexspace,vscroll" frame="true">
             <Column field="recorded_utc" title="Recorded (UTC)" width="160" /><Column field="actor" title="Actor" width="120" />

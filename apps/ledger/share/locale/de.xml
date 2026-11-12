@@ -58,7 +58,7 @@
   <string source="Lines" where="journal_page,document">Positionen</string>
   <string source="Item" where="journal_page,document,item">Artikel</string>
   <string source="Unit" where="journal_page,items_page,config_page,document">Einheit</string>
-  <string source="Qty" where="journal_page,entries_page,document,operation">Menge</string>
+  <string source="Qty" where="journal_page,entries_page,reports_page,document,operation">Menge</string>
   <string source="Price" where="journal_page,items_page,document">Preis</string>
   <string source="Tax" where="journal_page,items_page,reports_page,config_page,document">Steuer</string>
   <string source="Tax Amount" where="journal_page,document">Steuerbetrag</string>
@@ -413,7 +413,7 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Needs attention" where="home_page">Zu erledigen</string>
   <string source="Task" where="home_page">Aufgabe</string>
   <string source="Detail" where="home_page">Details</string>
-  <string source="Action" where="home_page,journal_page">Aktion</string>
+  <string source="Action" where="home_page,journal_page,reports_page">Aktion</string>
   <string source="The books are in order: nothing is waiting." where="code">Die Bücher sind in Ordnung: nichts wartet.</string>
   <string source="Money" where="home_page">Geld</string>
   <string source="Total money" where="home_page">Geld gesamt</string>
@@ -534,10 +534,12 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="The period could not be closed. Check unposted documents and the close date." where="code">Die Periode konnte nicht abgeschlossen werden. Prüfen Sie ungebuchte Belege und das Abschlussdatum.</string>
   <string source="Reverses" where="journal_page">Storniert</string>
   <string source="Posting History" where="journal_page">Buchungsverlauf</string>
-  <string source="Document Date" where="journal_page">Belegdatum</string>
-  <string source="Document Number" where="journal_page">Belegnummer</string>
-  <string source="Debit ID" where="journal_page">Soll-ID</string>
-  <string source="Credit ID" where="journal_page">Haben-ID</string>
+  <string source="Document Date" where="journal_page,reports_page">Belegdatum</string>
+  <string source="Document Number" where="journal_page,reports_page">Belegnummer</string>
+  <string source="Debit ID" where="journal_page,reports_page">Soll-ID</string>
+  <string source="Credit ID" where="journal_page,reports_page">Haben-ID</string>
+  <string source="All Posting History" where="reports_page">Gesamter Buchungsverlauf</string>
+  <string source="Document ID" where="reports_page">Beleg-ID</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

@@ -101,8 +101,9 @@ the source number for a reversal and the selected document’s posting snapshots
 on the Posting History tab. Select a snapshot to inspect its stored entries;
 account IDs are preserved as recorded. Actions are stored as `post` or `unpost`; a blank
 actor means no actor was authenticated. Snapshots created before this feature
-are unavailable, and deleting a document leaves its snapshots stored but not
-visible in the document journal. New document IDs skip IDs retained by posting
+are unavailable. Deleting a document leaves its snapshots stored: use Reports >
+All Posting History to inspect snapshots for current and deleted documents.
+New document IDs skip IDs retained by posting
 snapshots, including after reopening and when using editing contexts. Existing
 files may already contain a reused ID from before this protection; the stored
 ID alone cannot distinguish such histories and requires independent review.
@@ -115,8 +116,9 @@ counterparty/item setup; draft goods receipt and sale creation, date and party
 edits, posting, and linked accounting reversal; document, journal and period
 close history listing; and advancing the close date. The Reports page and the
 shared client also show close history. In the shared client, select a document
-and choose **Show posting history**, then open the Posting History tab. The
-heading identifies the selected document and the page buttons navigate its
+and choose **Show posting history**, then open the Posting History tab. To
+find snapshots of a deleted document, enter its ID on that tab and choose
+**Find history**. The heading identifies the selected document and the page buttons navigate its
 snapshots. Select a snapshot and choose **Show snapshot entries** to inspect
 its recorded entries. The documents list shows the original document ID for a reversal. It begins with closes recorded after the
 history feature was installed; a blank actor means none was authenticated.

@@ -132,4 +132,7 @@
   <string source="Select a posting snapshot to show its entries." where="remote_ledger">Wählen Sie einen Buchungsschnappschuss, um seine Buchungssätze anzuzeigen.</string>
   <string source="Select a posting snapshot." where="code">Wählen Sie einen Buchungsschnappschuss.</string>
   <string source="Entries for posting snapshot ID %d" where="code">Buchungssätze für Schnappschuss-ID %d</string>
+  <string source="Document ID:" where="remote_ledger">Beleg-ID:</string>
+  <string source="Find history" where="remote_ledger">Verlauf suchen</string>
+  <string source="Enter a document ID." where="code">Geben Sie eine Beleg-ID ein.</string>
 </strings>

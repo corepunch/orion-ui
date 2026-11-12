@@ -8,7 +8,7 @@ local controls = {"post", "update", "replace_lines", "reverse", "create", "add_l
   "item_id", "vat_id", "quantity", "price", "document_date", "counterparty_id", "reversal_date", "reason",
   "name", "sku", "tax_id", "unit_id", "catalog_vat_id", "close_date"}
 local inputs = {"type_id", "draft_party_id", "draft_date", "item_id", "vat_id", "quantity", "price",
-  "document_date", "counterparty_id", "reversal_date", "reason", "name", "sku", "tax_id", "unit_id", "catalog_vat_id", "close_date"}
+  "document_date", "counterparty_id", "reversal_date", "reason", "name", "sku", "tax_id", "unit_id", "catalog_vat_id", "close_date", "history_document_id"}
 
 local function decimal_separator() return orion.formatNumber(1.5, 1):match("1(.-)5") or "." end
 local function minor(value, fallback)
@@ -179,6 +179,10 @@ function Ledger:show_posting_history(v)
   self:remember(v)
   self:load_posting_history(selected(v.documents).id, 0)
 end
+function Ledger:find_posting_history(v)
+  self:remember(v)
+  self:load_posting_history(integer(v.history_document_id, orion.tr("Enter a document ID.")), 0)
+end
 function Ledger:previous_posting_history(v) self:remember(v); self:load_posting_history(self.posting_history_document, math.max(0, self.posting_history_offset - 200)) end
 function Ledger:next_posting_history(v) self:remember(v); self:load_posting_history(self.posting_history_document, self.posting_history_offset + 200) end
 
@@ -310,7 +314,7 @@ function Ledger:data()
   disabled.close_period = blocked or self.role ~= "admin" or not self.closing_date
   disabled.prepare_close = blocked or self.role ~= "admin"
   for _, name in ipairs({"previous_documents", "next_documents", "previous_catalog", "next_catalog", "previous_journal", "next_journal",
-                         "document_types", "vat_rates", "units", "items", "counterparties", "show_journal", "show_history", "show_posting_history", "show_revision_entries"}) do disabled[name] = blocked end
+                         "document_types", "vat_rates", "units", "items", "counterparties", "show_journal", "show_history", "show_posting_history", "show_revision_entries", "find_posting_history", "history_document_id"}) do disabled[name] = blocked end
   disabled.previous_documents = blocked or self.doc_offset == 0
   disabled.previous_catalog = blocked or self.catalog_offset == 0
   disabled.previous_journal = blocked or self.journal_offset == 0
