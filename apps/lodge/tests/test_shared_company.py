@@ -23,8 +23,8 @@ class SharedCompanyTests(unittest.TestCase):
                                   executable=str(ROOT / 'build/bin/orion-service'), resources=str(ROOT / 'apps/lodge/share'), source=None))
                 company = server.Company(path)
                 try:
-                    def request(key, command, args):
-                        result = company.execute('alice', 'reception', {'request_id': key, 'expected_revision': company.status()['revision'],
+                    def request(key, command, args, role='reception'):
+                        result = company.execute('alice', role, {'request_id': key, 'expected_revision': company.status()['revision'],
                                                                         'command': command, 'args': args})
                         self.assertTrue(result['ok'], result)
                         return result['result']
@@ -41,6 +41,11 @@ class SharedCompanyTests(unittest.TestCase):
                     request('refund-rest', 'payment', {'id': booking, 'amount_minor': -5000, 'request_key': 'refund-rest'})
                     report = request('preview-again', 'day_preview', {})
                     self.assertEqual((report['cancelled_paid_count'], report['cancelled_paid_minor']), (0, 0))
+                    request('repay', 'payment', {'id': booking, 'amount_minor': 5000, 'request_key': 'repay'})
+                    request('close', 'close_day', {}, 'admin')
+                    company.close(); company = server.Company(path)
+                    close = request('closed-view', 'snapshot', {})['day_closes'][0]
+                    self.assertEqual((close['cancelled_paid_count'], close['cancelled_paid_minor']), (1, '5000'))
                 finally:
                     company.close()
 

@@ -236,4 +236,12 @@
   <string source="Group statement saved: %s" where="code">Сводка группы сохранена: %s</string>
   <string source="New payment or refund" where="remote">Новая оплата или возврат</string>
   <string source="Start a new payment or refund before recording another." where="code">Перед следующей операцией начните новую оплату или возврат.</string>
+  <string source="Previous day closes" where="remote">Предыдущие закрытия дня</string>
+  <string source="Day" where="remote">День</string>
+  <string source="Closed by" where="remote">Закрыл</string>
+  <string source="Net payments" where="remote">Платежи за вычетом возвратов</string>
+  <string source="Outstanding" where="remote">Остаток к оплате</string>
+  <string source="Cancelled with payments" where="remote">Отменённые с оплатами</string>
+  <string source="Paid on cancelled" where="remote">Оплачено по отменённым</string>
+  <string source="Unknown" where="code">Неизвестно</string>
 </strings>

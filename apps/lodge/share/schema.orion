@@ -1,6 +1,6 @@
 <orion>
   <databases>
-    <database name="lodge" class="db_schema_xml" source="hotel.xml" version="4" migration="additive">
+    <database name="lodge" class="db_schema_xml" source="hotel.xml" version="5" migration="additive">
       <table name="rooms">
         <field name="id" type="integer" key="YES" />
         <field name="name" type="string" length="40" />
@@ -72,6 +72,12 @@
         <field name="net_minor" type="string" length="32" />
         <field name="outstanding_minor" type="string" length="32" />
         <field name="reservations" type="integer" />
+        <field name="cancelled_paid_minor" type="string" length="32" />
+        <field name="cancelled_paid_count" type="integer" default="-1" />
+        <field name="net_display" type="string" length="64" computed="net_display" />
+        <field name="outstanding_display" type="string" length="64" computed="outstanding_display" />
+        <field name="cancelled_paid_display" type="string" length="64" computed="cancelled_paid_display" />
+        <field name="cancelled_count_display" type="string" length="64" computed="cancelled_count_display" />
       </table>
     </database>
   </databases>

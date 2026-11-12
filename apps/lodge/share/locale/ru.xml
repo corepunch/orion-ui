@@ -182,4 +182,12 @@
   <string source="Choose a reservation in a group." where="code">Выберите бронирование группы.</string>
   <string source="Choose a reservation group." where="code">Выберите группу бронирований.</string>
   <string source="Group statement saved: %s" where="code">Сводка группы сохранена: %s</string>
+  <string source="Previous day closes" where="day_close">Предыдущие закрытия дня</string>
+  <string source="Day" where="day_close">День</string>
+  <string source="Closed by" where="day_close">Закрыл</string>
+  <string source="Net payments" where="day_close">Платежи за вычетом возвратов</string>
+  <string source="Outstanding" where="day_close">Остаток к оплате</string>
+  <string source="Cancelled with payments" where="day_close">Отменённые с оплатами</string>
+  <string source="Paid on cancelled" where="day_close">Оплачено по отменённым</string>
+  <string source="Unknown" where="code">Неизвестно</string>
 </strings>

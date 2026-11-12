@@ -4,6 +4,7 @@
       <table name="rooms" transient="true"><field name="id" type="integer" key="YES"/><field name="name" type="string" length="40"/><field name="cleaning_state" type="string" length="24"/></table>
       <table name="guests" transient="true"><field name="id" type="integer" key="YES"/><field name="name" type="string" length="100"/></table>
       <table name="groups" transient="true"><field name="id" type="integer" key="YES"/><field name="name" type="string" length="100"/></table>
+      <table name="day_closes" transient="true"><field name="id" type="integer" key="YES"/><field name="day" type="date"/><field name="actor" type="string" length="101"/><field name="net_display" type="string" length="64"/><field name="outstanding_display" type="string" length="64"/><field name="cancelled_count_display" type="string" length="64"/><field name="cancelled_paid_display" type="string" length="64"/></table>
       <table name="reservations" transient="true"><field name="id" type="integer" key="YES"/><field name="choice" type="string" length="180"/><field name="room_name" type="string" length="40"/><field name="guest_name" type="string" length="100"/><field name="arrival" type="date"/><field name="departure" type="date"/><field name="status" type="string" length="20"/><field name="balance" type="double"/></table>
     </database>
   </databases>
@@ -55,6 +56,7 @@
       </StackView><StackView name="day_tab" text="Day close" spacing="6" flags="flexspace">
       <Separator/><Label text="Operational day" font="heading"/><Label name="day_report"/><Label name="cancelled_paid_report"/>
       <StackView orientation="horizontal" spacing="6"><Button name="preview_day" text="Preview day" action="preview_day"/><Button name="close_day" text="Close day" action="close_day"/></StackView>
+      <Label text="Previous day closes" font="heading"/><TableView name="day_history" source="lodge_remote_cache.day_closes" flags="flexspace,vscroll" frame="true"><Column field="day" title="Day" width="110"/><Column field="actor" title="Closed by" width="0" min-width="140"/><Column field="net_display" title="Net payments" width="120"/><Column field="outstanding_display" title="Outstanding" width="120"/><Column field="cancelled_count_display" title="Cancelled with payments" width="180"/><Column field="cancelled_paid_display" title="Paid on cancelled" width="150"/></TableView>
       </StackView></TabView>
     </form>
   </forms>

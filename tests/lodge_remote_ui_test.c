@@ -246,6 +246,9 @@ static void test_lodge_remote_ui(void) {
   for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Server data refreshed"); i++) {
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
   }
+  ASSERT_NOT_NULL(script_page_control(page, "day_history"));
+  const db_table_schema_t *history = db_schema_table_named(db->schema, "day_closes"); ASSERT_NOT_NULL(history);
+  ASSERT_TRUE(wait_for(db, history->table_id, 1, "cancelled_paid_display", "0.00"));
   ASSERT_TRUE(script_page_perform(page, "preview_day"));
   for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Today is closed"); i++) {
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();

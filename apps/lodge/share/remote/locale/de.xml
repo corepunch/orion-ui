@@ -236,4 +236,12 @@
   <string source="Group statement saved: %s" where="code">Gruppenübersicht gespeichert: %s</string>
   <string source="New payment or refund" where="remote">Neue Zahlung oder Erstattung</string>
   <string source="Start a new payment or refund before recording another." where="code">Beginnen Sie eine neue Zahlung oder Erstattung, bevor Sie eine weitere erfassen.</string>
+  <string source="Previous day closes" where="remote">Frühere Tagesabschlüsse</string>
+  <string source="Day" where="remote">Tag</string>
+  <string source="Closed by" where="remote">Abgeschlossen von</string>
+  <string source="Net payments" where="remote">Nettozahlungen</string>
+  <string source="Outstanding" where="remote">Offener Betrag</string>
+  <string source="Cancelled with payments" where="remote">Stornierte mit Zahlungen</string>
+  <string source="Paid on cancelled" where="remote">Zahlungen für stornierte</string>
+  <string source="Unknown" where="code">Unbekannt</string>
 </strings>

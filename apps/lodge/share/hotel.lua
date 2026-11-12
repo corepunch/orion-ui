@@ -172,7 +172,8 @@ function Hotel.close_today()
   local ok, result, message = pcall(function()
     return Hotel.day_closes.model:transaction(function()
       local row = orion.assert(Hotel.day_closes:save(nil, {day = report.day, actor = require("orion.db").actor("lodge"),
-        net_minor = string.format("%.0f", report.net_minor), outstanding_minor = string.format("%.0f", report.outstanding_minor), reservations = report.reservations}))
+        net_minor = string.format("%.0f", report.net_minor), outstanding_minor = string.format("%.0f", report.outstanding_minor), reservations = report.reservations,
+        cancelled_paid_minor = string.format("%.0f", report.cancelled_paid_minor), cancelled_paid_count = report.cancelled_paid_count}))
       orion.assert(require("orion.application").save("lodge"))
       return row
     end)

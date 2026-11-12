@@ -1,4 +1,4 @@
-# Lodge database versions 2–4
+# Lodge database versions 2–5
 
 Version 2 adds reservation history and signed payment events. Before opening an
 existing hotel with the new version, close Lodge and make a separate copy of
@@ -36,6 +36,10 @@ It also adds groups, operational day-close records and actor/date fields for
 new activity. Earlier audit actors remain `legacy-unknown`; imported opening
 balances are labeled `migration`. Older payment events have no posting date,
 so they cannot be attributed to a daily payment report.
+
+Version 5 adds the paid cancellation count and amount to new day closes.
+Earlier closes did not capture those values, so their history shows Unknown;
+the upgrade does not reconstruct them from current reservations.
 
 The reception payment window submits a payment or refund using a key retained
 for retries in that window. Integrations may use

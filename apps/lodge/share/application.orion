@@ -69,11 +69,17 @@
       </StackView>
       <Label name="notice" /><Label name="error" />
     </form>
-    <form name="day_close" controller="day_close" title="Close day" width="600" height="300" padding="12" spacing="8">
+    <form name="day_close" controller="day_close" title="Close day" width="900" height="520" padding="12" spacing="8">
       <Label name="day" font="title" /><Label name="payments" /><Label name="outstanding" /><Label name="cancelled_paid" /><Label name="pending" />
       <Label text="Closing prevents reservation and payment changes until tomorrow." />
       <Button name="close_day" text="Close today" action="close_day" flags="BUTTON_DEFAULT" />
       <Label name="notice" /><Label name="error" />
+      <Label text="Previous day closes" font="heading" />
+      <TableView name="day_history" source="lodge.day_closes" flags="flexspace,vscroll" frame="true">
+        <Column field="day" title="Day" width="110" /><Column field="actor" title="Closed by" width="0" min-width="140" />
+        <Column field="net_display" title="Net payments" width="120" /><Column field="outstanding_display" title="Outstanding" width="120" />
+        <Column field="cancelled_count_display" title="Cancelled with payments" width="180" /><Column field="cancelled_paid_display" title="Paid on cancelled" width="150" />
+      </TableView>
     </form>
     <form name="group_reservation" controller="group_reservation" title="Group reservation" width="560" height="420" padding="12" spacing="8">
       <Label text="Create reservations for two rooms under one group." />

@@ -72,8 +72,10 @@ next calendar day in the host process's time zone; housekeeping remains availabl
 immutable and there is no reopening workflow. This is an operational snapshot,
 not a tax close or statutory report. Old payment events lack a reliable posting
 date and are excluded from daily payment totals; their opening balances remain
-included in reservation balances. The cancelled-payment figure is a current
-preview, not part of the stored close record.
+included in reservation balances. Close-day history preserves the figures
+recorded at each close, including the amount and count for paid cancellations.
+For closes created before this information was recorded, those columns show
+Unknown rather than a fabricated zero.
 
 The **Nightly prices** action lets staff override the copied base rate for an
 individual night, inspect the applied price, or restore the base rate. Rates

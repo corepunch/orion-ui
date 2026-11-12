@@ -182,4 +182,12 @@
   <string source="Choose a reservation in a group." where="code">Wählen Sie eine Reservierung einer Gruppe.</string>
   <string source="Choose a reservation group." where="code">Wählen Sie eine Reservierungsgruppe.</string>
   <string source="Group statement saved: %s" where="code">Gruppenübersicht gespeichert: %s</string>
+  <string source="Previous day closes" where="day_close">Frühere Tagesabschlüsse</string>
+  <string source="Day" where="day_close">Tag</string>
+  <string source="Closed by" where="day_close">Abgeschlossen von</string>
+  <string source="Net payments" where="day_close">Nettozahlungen</string>
+  <string source="Outstanding" where="day_close">Offener Betrag</string>
+  <string source="Cancelled with payments" where="day_close">Stornierte mit Zahlungen</string>
+  <string source="Paid on cancelled" where="day_close">Zahlungen für stornierte</string>
+  <string source="Unknown" where="code">Unbekannt</string>
 </strings>

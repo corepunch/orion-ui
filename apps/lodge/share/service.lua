@@ -70,7 +70,8 @@ local function snapshot(role)
   for _, row in ipairs(Hotel.reservation_groups.model:all()) do result.reservation_groups[#result.reservation_groups + 1] = {id = row.id, name = row.name} end
   for _, row in ipairs(Hotel.day_closes.model:all()) do
     result.day_closes[#result.day_closes + 1] = {id = row.id, day = row.day, actor = row.actor,
-      net_minor = row.net_minor, outstanding_minor = row.outstanding_minor, reservations = row.reservations}
+      net_minor = row.net_minor, outstanding_minor = row.outstanding_minor, reservations = row.reservations,
+      cancelled_paid_minor = row.cancelled_paid_minor, cancelled_paid_count = row.cancelled_paid_count}
   end
   return result
 end

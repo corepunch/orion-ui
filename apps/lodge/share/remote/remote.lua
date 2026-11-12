@@ -3,6 +3,7 @@ local Remote = require("orion.remote")
 local Plugins = require("orion.plugins")
 local application, confirmation = require("orion.application"), require("confirmation")
 local group_statement = require("group_statement")
+local close_display = require("close_display")
 local calendar, money = Plugins.use("calendar", 1), Plugins.use("money", 1)
 local Page = {form = "remote", title = orion.tr("Lodge · Shared server")}
 local status_labels = {reserved = "Reserved", checked_in = "Checked in", checked_out = "Checked out", cancelled = "Cancelled"}
@@ -28,7 +29,7 @@ function Page:load_snapshot(after)
   self.snapshot_ready = false
   local ok, err = self.client:submit("snapshot", {}, function(result, failure)
     if not result then self.notice = failure; return end
-    local rooms, guests, groups, reservations, room_names, guest_names = {}, {}, {}, {}, {}, {}
+    local rooms, guests, groups, reservations, day_closes, room_names, guest_names = {}, {}, {}, {}, {}, {}, {}
     self.reservations, self.guests, self.rooms, self.groups = {}, {}, {}, {}
     self.currency = result.hotel and result.hotel.currency
     for _, item in ipairs(result.rooms or {}) do
@@ -43,6 +44,11 @@ function Page:load_snapshot(after)
     for _, item in ipairs(result.reservation_groups or {}) do
       self.groups[item.id] = item; groups[#groups + 1] = {id = item.id, name = item.name}
     end
+    for _, item in ipairs(result.day_closes or {}) do
+      day_closes[#day_closes + 1] = {id = item.id, day = item.day, actor = item.actor,
+        net_display = close_display(item, "net_display"), outstanding_display = close_display(item, "outstanding_display"),
+        cancelled_count_display = close_display(item, "cancelled_count_display"), cancelled_paid_display = close_display(item, "cancelled_paid_display")}
+    end
     for _, item in ipairs(result.reservations or {}) do
       self.reservations[item.id] = item
       reservations[#reservations + 1] = {id = item.id, choice = string.format("#%d · %s · %s", item.id, room_names[item.room_id] or "", item.arrival), room_name = room_names[item.room_id] or "", guest_name = guest_names[item.guest_id] or "",
@@ -52,6 +58,7 @@ function Page:load_snapshot(after)
       {source = "lodge_remote_cache.rooms", rows = rooms, fields = {"id", "name", "cleaning_state"}},
       {source = "lodge_remote_cache.guests", rows = guests, fields = {"id", "name"}},
       {source = "lodge_remote_cache.groups", rows = groups, fields = {"id", "name"}},
+      {source = "lodge_remote_cache.day_closes", rows = day_closes, fields = {"id", "day", "actor", "net_display", "outstanding_display", "cancelled_count_display", "cancelled_paid_display"}},
       {source = "lodge_remote_cache.reservations", rows = reservations, fields = {"id", "choice", "room_name", "guest_name", "arrival", "departure", "status", "balance"}},
     })
     self.snapshot_ready = true
