@@ -756,6 +756,7 @@ static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool prev
   }
   result_node_t *lines = fetch(ib, TABLE_DOC_LINES, "document_id", doc_id);
   bool valid = true, has_line = false;
+  int64_t exact_amount = 0, exact_vat = 0;
   EACH_RECORD(db_doc_line_t, line, lines) {
     has_line = true;
     const db_vat_rate_t *rate = find(cfg, TABLE_VAT_RATES, line->vat_rate_id);
@@ -766,9 +767,28 @@ static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool prev
     if (p.doc->exact_money && (line->quantity_milli <= 0 || line->price_minor <= 0 || line->amount_minor <= 0 ||
         line->quantity != (double)line->quantity_milli / 1000.0 || line->price != (double)line->price_minor / 100.0 ||
         line->amount != (double)line->amount_minor / 100.0 || line->vat != (double)line->vat_minor / 100.0)) valid = false;
+    if (p.doc->exact_money) {
+      int64_t basis = 0, amount = 0, vat = 0, total = 0;
+      char tax[64];
+      double percent = rate ? rate->rate : 0;
+      snprintf(tax, sizeof(tax), "%.2f", percent);
+      if (!isfinite(percent) || percent < 0 || percent > 100 || !money_parse_decimal(tax, 2, &basis) ||
+          fabs(percent - (double)basis / 100.0) > 1e-9 ||
+          !money_mul_div(line->quantity_milli, line->price_minor, 1000, &amount) ||
+          !money_mul_div(amount, basis, 10000, &vat) || !money_add(amount, vat, &total) ||
+          amount != line->amount_minor || vat != line->vat_minor || total != line->total_minor ||
+          line->total != (double)total / 100.0 || !money_add(exact_amount, amount, &exact_amount) ||
+          !money_add(exact_vat, vat, &exact_vat)) valid = false;
+    }
   }
   free_result_list(lines);
-  if (p.doc->exact_money && !p.doc->correction_of && !has_line) valid = false;
+  if (p.doc->exact_money && !p.doc->correction_of) {
+    int64_t exact_total = 0;
+    if (!has_line || !money_add(exact_amount, exact_vat, &exact_total) ||
+        p.doc->amount_minor != exact_amount || p.doc->vat_minor != exact_vat || p.doc->total_minor != exact_total ||
+        p.doc->amount != (double)exact_amount / 100.0 || p.doc->vat != (double)exact_vat / 100.0 ||
+        p.doc->total != (double)exact_total / 100.0) valid = false;
+  }
   if (!valid) { fprintf(stderr, "[ledger] post rejected: document=%d has invalid amounts or tax validity\n", doc_id); return false; }
   if (!send_db_message(ib, dbBeginChanges, 0, NULL)) return false;
   g_posting_depth++;

@@ -15,6 +15,8 @@ The exact-trade, reversal and service limitations below were updated on
   partial postings. Tax, closing and post-event errors propagate to callers.
 - Scripted payroll taxes must return finite numbers; invalid/missing results
   reject posting instead of silently removing a tax.
+- Exact trade posting and preview verify line and document totals against the
+  current representable tax rate, rejecting stale or inconsistent amounts.
 - Posting and preview reject invalid document or non-empty tax dates, including
   malformed historical values, before entries or revisions are written.
 - Missing foreign-exchange rates and expired referenced tax rates reject

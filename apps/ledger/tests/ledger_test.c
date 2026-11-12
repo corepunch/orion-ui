@@ -1248,6 +1248,17 @@ static void test_local_exact_trade(void) {
   ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
   ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", id), 0);
   imported->tax_date[0] = '\0';
+  rate->rate = original_rate - 1;
+  ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
+  ASSERT_FALSE(ledger_preview_entries(g_ledger->ib, g_ledger->cfg, id));
+  rate->rate = original_rate + 0.001;
+  ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
+  rate->rate = original_rate;
+  imported->total_minor++;
+  ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
+  imported->total_minor--;
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_ENTRIES, "document_id", id), 0);
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_POSTING_REVISIONS, "document_id", id), 0);
   ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
   saved = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ASSERT_NOT_NULL(saved);
