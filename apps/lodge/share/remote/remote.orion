@@ -18,12 +18,12 @@
       </Column></GridView>
       <StackView orientation="horizontal" spacing="6"><Button name="add_room" text="Add room" action="add_room"/><Button name="add_guest" text="Add guest" action="add_guest"/></StackView>
       <StackView orientation="horizontal" spacing="6"><Label text="Room:"/><ComboBox name="clean_room" source="lodge_remote_cache.rooms" display="name" value="id"/><Button name="mark_clean" text="Mark clean" action="mark_clean"/><Button name="mark_dirty" text="Mark dirty" action="mark_dirty"/><Button name="mark_inspection" text="Needs inspection" action="mark_inspection"/></StackView>
-      <Separator/><Label text="New reservation" font="heading"/>
-      <GridView spacing="4"><Column width="auto"><Label text="Room:"/><Label text="Guest:"/><Label text="Arrival:"/><Label text="Departure:"/><Label text="Guests:"/><Label text="Nightly rate:"/><Label text="Extra charges:"/></Column><Column>
+      <Separator/><Label name="editor" font="heading"/>
+      <GridView spacing="4"><Column width="auto"><Label text="Room:"/><Label text="Guest:"/><Label text="Arrival:"/><Label text="Departure:"/><Label text="Guests:"/><Label text="Nightly rate:"/><Label text="Extra charges:"/><Label text="Notes:"/></Column><Column>
         <ComboBox name="room" source="lodge_remote_cache.rooms" display="name" value="id"/><ComboBox name="guest" source="lodge_remote_cache.guests" display="name" value="id"/>
-        <TextBox name="arrival" type="date"/><TextBox name="departure" type="date"/><TextBox name="persons" type="integer"/><TextBox name="rate" type="number" decimals="2"/><TextBox name="extras" type="number" decimals="2"/>
+        <TextBox name="arrival" type="date"/><TextBox name="departure" type="date"/><TextBox name="persons" type="integer"/><TextBox name="rate" type="number" decimals="2"/><TextBox name="extras" type="number" decimals="2"/><TextBox name="notes"/>
       </Column></GridView>
-      <Button name="reserve" text="Create reservation" action="reserve" flags="BUTTON_DEFAULT"/>
+      <StackView orientation="horizontal" spacing="6"><Button name="reserve" text="Save reservation" action="reserve" flags="BUTTON_DEFAULT"/><Button name="new_booking" text="New reservation" action="new_booking"/><Button name="edit_booking" text="Edit selected reservation" action="edit_booking"/></StackView>
       <StackView name="lists" orientation="horizontal" spacing="8" flags="flexspace">
       <TableView name="room_status" source="lodge_remote_cache.rooms" flags="flexspace,vscroll" frame="true">
         <Column field="name" title="Room" width="0"/><Column field="cleaning_state" title="Cleaning status" width="150"/>

@@ -58,8 +58,25 @@ static void test_lodge_remote_ui(void) {
   send_message(script_page_control(page, "persons"), edSetText, 0, "1");
   send_message(script_page_control(page, "rate"), edSetText, 0, "100.00");
   ASSERT_TRUE(script_page_perform(page, "reserve")); ASSERT_TRUE(wait_for(db, stays->table_id, 1, "status", "Reserved"));
+  ASSERT_TRUE(script_page_perform(page, "edit_booking"));
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "editor")->title, "Edit reservation 1"));
+  send_message(script_page_control(page, "rate"), edSetText, 0, "125.00");
+  send_message(script_page_control(page, "notes"), edSetText, 0, "Late arrival");
+  ASSERT_TRUE(script_page_perform(page, "reserve")); ASSERT_TRUE(wait_for(db, stays->table_id, 1, "balance", "125.00"));
+  ASSERT_TRUE(script_page_perform(page, "edit_booking"));
+  ASSERT_STR_EQUAL(script_page_control(page, "notes")->title, "Late arrival");
+  ASSERT_TRUE(script_page_perform(page, "connect"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Reload the selected reservation"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "Reload the selected reservation"));
+  ASSERT_FALSE(window_is_enabled(script_page_control(page, "reserve")));
+  ASSERT_TRUE(script_page_perform(page, "edit_booking"));
+  ASSERT_TRUE(window_is_enabled(script_page_control(page, "reserve")));
+  ASSERT_TRUE(script_page_perform(page, "new_booking"));
+  ASSERT_STR_EQUAL(script_page_control(page, "editor")->title, "New reservation");
   ASSERT_TRUE(script_page_perform(page, "check_in")); ASSERT_TRUE(wait_for(db, stays->table_id, 1, "status", "Checked in"));
-  send_message(script_page_control(page, "amount"), edSetText, 0, "100.00");
+  send_message(script_page_control(page, "amount"), edSetText, 0, "125.00");
   ASSERT_TRUE(script_page_perform(page, "pay"));
   ASSERT_TRUE(wait_for(db, stays->table_id, 1, "balance", "0.00"));
   ASSERT_TRUE(script_page_perform(page, "check_out")); ASSERT_TRUE(wait_for(db, stays->table_id, 1, "status", "Checked out"));

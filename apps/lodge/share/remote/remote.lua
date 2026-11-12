@@ -5,12 +5,12 @@ local calendar, money = Plugins.use("calendar", 1), Plugins.use("money", 1)
 local Page = {form = "remote", title = orion.tr("Lodge · Shared server")}
 local status_labels = {reserved = "Reserved", checked_in = "Checked in", checked_out = "Checked out", cancelled = "Cancelled"}
 local cleaning_labels = {inspection_needed = "Inspection needed", dirty = "Dirty", clean = "Clean"}
-local inputs = {"room_name", "capacity", "room_rate", "guest_name", "phone", "clean_room", "room", "guest", "arrival", "departure", "persons", "rate", "extras", "amount", "group_name", "group_room1", "group_room2", "group_guest", "group_arrival", "group_departure", "group_persons1", "group_persons2", "group_rate1", "group_rate2", "night", "night_amount", "night_booking"}
+local inputs = {"room_name", "capacity", "room_rate", "guest_name", "phone", "clean_room", "room", "guest", "arrival", "departure", "persons", "rate", "extras", "notes", "amount", "group_name", "group_room1", "group_room2", "group_guest", "group_arrival", "group_departure", "group_persons1", "group_persons2", "group_rate1", "group_rate2", "night", "night_amount", "night_booking"}
 function Page:init()
   local day = orion.today()
   self.client = Remote.new(self.app.handle, "lodge")
   self.values = {room_name = "", capacity = 2, room_rate = 0, guest_name = "", phone = "", clean_room = 0,
-    room = 0, guest = 0, arrival = day, departure = calendar.add(day, 1), persons = 1, rate = 0, extras = 0, amount = 0}
+    room = 0, guest = 0, arrival = day, departure = calendar.add(day, 1), persons = 1, rate = 0, extras = 0, notes = "", amount = 0}
   self.values.group_name, self.values.group_room1, self.values.group_room2, self.values.group_guest = "", 0, 0, 0
   self.values.group_arrival, self.values.group_departure, self.values.group_persons1, self.values.group_persons2 = day, calendar.add(day, 1), 1, 1
   self.values.group_rate1, self.values.group_rate2, self.values.night, self.values.night_amount, self.values.night_booking = 0, 0, day, 0, 0
@@ -21,9 +21,11 @@ function Page:remember(values)
   for _, key in ipairs(inputs) do if values[key] ~= nil then self.values[key] = values[key] end end
 end
 function Page:load_snapshot()
+  self.snapshot_ready = false
   local ok, err = self.client:submit("snapshot", {}, function(result, failure)
     if not result then self.notice = failure; return end
     local rooms, guests, reservations, room_names, guest_names = {}, {}, {}, {}, {}
+    self.reservations = {}
     for _, item in ipairs(result.rooms or {}) do
       rooms[#rooms + 1] = {id = item.id, name = item.name, cleaning_state = orion.tr(cleaning_labels[item.cleaning_state] or item.cleaning_state)}
       room_names[item.id] = item.name
@@ -32,6 +34,7 @@ function Page:load_snapshot()
       guests[#guests + 1] = {id = item.id, name = item.name}; guest_names[item.id] = item.name
     end
     for _, item in ipairs(result.reservations or {}) do
+      self.reservations[item.id] = item
       reservations[#reservations + 1] = {id = item.id, choice = string.format("#%d · %s · %s", item.id, room_names[item.room_id] or "", item.arrival), room_name = room_names[item.room_id] or "", guest_name = guest_names[item.guest_id] or "",
         arrival = item.arrival, departure = item.departure, status = orion.tr(status_labels[item.status] or item.status), balance = item.balance}
     end
@@ -40,12 +43,14 @@ function Page:load_snapshot()
       {source = "lodge_remote_cache.guests", rows = guests, fields = {"id", "name"}},
       {source = "lodge_remote_cache.reservations", rows = reservations, fields = {"id", "choice", "room_name", "guest_name", "arrival", "departure", "status", "balance"}},
     })
-    self.notice = orion.tr("Server data refreshed.")
+    self.snapshot_ready = true
+    self.notice = self.needs_reload and orion.tr("Reload the selected reservation before saving, or start a new reservation.") or orion.tr("Server data refreshed.")
   end)
   if not ok then self.notice = err end
 end
 function Page:connect(values)
   self:remember(values)
+  if self.editing then self.needs_reload = true end
   local ok, err = self.client:refresh(function(status, failure)
     if not status then self.connected = false; self.notice = failure; return end
     if status.application ~= "lodge" then self.connected = false; self.notice = orion.tr("This server does not host Lodge."); return end
@@ -80,8 +85,24 @@ function Page:mark_clean(v) self:submit(v, "set_room_cleaning", {id = v.clean_ro
 function Page:mark_dirty(v) self:submit(v, "set_room_cleaning", {id = v.clean_room, state = "dirty"}) end
 function Page:mark_inspection(v) self:submit(v, "set_room_cleaning", {id = v.clean_room, state = "inspection_needed"}) end
 function Page:reserve(v)
-  self:submit(v, "reserve", {room_id = v.room, guest_id = v.guest, arrival = v.arrival, departure = v.departure,
-    persons = v.persons, rate = v.rate, extras = v.extras, notes = ""})
+  orion.assert(not self.needs_reload, orion.tr("Reload the selected reservation before saving, or start a new reservation."))
+  self:submit(v, "reserve", {id = self.editing, room_id = v.room, guest_id = v.guest, arrival = v.arrival, departure = v.departure,
+    persons = v.persons, rate = v.rate, extras = v.extras, notes = v.notes})
+end
+function Page:new_booking(v)
+  self:remember(v)
+  local day = orion.today()
+  self.editing, self.needs_reload = nil, false
+  self.values.room, self.values.guest, self.values.arrival, self.values.departure = 0, 0, day, calendar.add(day, 1)
+  self.values.persons, self.values.rate, self.values.extras, self.values.notes = 1, 0, 0, ""
+end
+function Page:edit_booking(v)
+  self:remember(v)
+  local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
+  local row = orion.assert(self.reservations and self.reservations[selected.id], orion.tr("Refresh the server before starting a request."))
+  self.editing, self.needs_reload = row.id, false
+  self.values.room, self.values.guest, self.values.arrival, self.values.departure = row.room_id, row.guest_id, row.arrival, row.departure
+  self.values.persons, self.values.rate, self.values.extras, self.values.notes = row.persons, row.rate, row.extras, row.notes or ""
 end
 function Page:transition(v, command)
   local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
@@ -128,14 +149,17 @@ end
 function Page:close_day(v) self:submit(v, "close_day", {}) end
 function Page:data()
   local state = self.client:state()
-  local blocked = not self.connected or state.busy or state.pending or state.conflict
+  local blocked = not self.connected or not self.snapshot_ready or state.busy or state.pending or state.conflict
   local disabled = {connect = state.busy or (state.pending and not state.conflict), retry = state.busy or not state.pending}
   local map = {add_room = "save_room", add_guest = "save_guest", mark_clean = "set_room_cleaning", mark_dirty = "set_room_cleaning", mark_inspection = "set_room_cleaning", reserve = "reserve",
     check_in = "check_in", check_out = "check_out", cancel = "cancel", pay = "payment", refund = "payment",
     group_reserve = "group_reserve", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
   for control, command in pairs(map) do disabled[control] = blocked or not self.allowed[command] end
+  disabled.reserve = disabled.reserve or self.needs_reload
+  disabled.edit_booking = blocked or not self.allowed.reserve
   local connection = self.connected and string.format(orion.tr("Country: %s · Role: %s · Revision: %d"), self.country, self.role, state.revision) or self.connection
-  local values = {connection = connection, notice = self.notice, day_report = self.day_report}
+  local values = {connection = connection, notice = self.notice, day_report = self.day_report,
+    editor = self.editing and string.format(orion.tr("Edit reservation %d"), self.editing) or orion.tr("New reservation")}
   for key, value in pairs(self.values) do values[key] = value end
   return {values = values, disabled = disabled}
 end

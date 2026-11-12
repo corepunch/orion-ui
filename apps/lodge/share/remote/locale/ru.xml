@@ -20,9 +20,9 @@
   <string source="Guests:" where="remote">Гостей:</string>
   <string source="Extra charges:" where="remote">Дополнительные услуги:</string>
   <string source="Paid to date:" obsolete="true">Уже оплачено:</string>
-  <string source="Notes:" obsolete="true">Примечания:</string>
+  <string source="Notes:" where="remote">Примечания:</string>
   <string source="Use room rate" obsolete="true">Взять цену номера</string>
-  <string source="Save reservation" obsolete="true">Сохранить бронь</string>
+  <string source="Save reservation" where="remote">Сохранить бронь</string>
   <string source="New reservation" where="remote">Новая бронь</string>
   <string source="New reservation discards unsaved editor changes." obsolete="true">Новая бронь сбрасывает несохранённые изменения.</string>
   <string source="Room" where="remote">Номер</string>
@@ -177,7 +177,7 @@
   <string source="Retry pending request" where="remote">Повторить ожидающий запрос</string>
   <string source="Rooms and guests" where="remote">Номера и гости</string>
   <string source="Mark room clean" obsolete="true">Отметить номер чистым</string>
-  <string source="Create reservation" where="remote">Создать бронирование</string>
+  <string source="Create reservation" obsolete="true">Создать бронирование</string>
   <string source="Not connected." where="code">Нет подключения.</string>
   <string source="Server data refreshed." where="code">Данные сервера обновлены.</string>
   <string source="This server does not host Lodge." where="code">На этом сервере не работает Lodge.</string>
@@ -211,4 +211,6 @@
   <string source="Preview day" where="remote">Обзор дня</string>
   <string source="Day: %s · Net payments: %s · Outstanding: %s · Overdue: %d" where="code">День: %s · Чистые платежи: %s · Долг: %s · Просрочено: %d</string>
   <string source="Day preview refreshed." where="code">Обзор дня обновлён.</string>
+  <string source="Edit selected reservation" where="remote">Изменить выбранную бронь</string>
+  <string source="Reload the selected reservation before saving, or start a new reservation." where="code">Перед сохранением заново откройте выбранную бронь или начните новую.</string>
 </strings>

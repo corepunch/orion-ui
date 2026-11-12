@@ -20,9 +20,9 @@
   <string source="Guests:" where="remote">Gäste:</string>
   <string source="Extra charges:" where="remote">Zusatzkosten:</string>
   <string source="Paid to date:" obsolete="true">Bereits bezahlt:</string>
-  <string source="Notes:" obsolete="true">Notizen:</string>
+  <string source="Notes:" where="remote">Notizen:</string>
   <string source="Use room rate" obsolete="true">Zimmerpreis übernehmen</string>
-  <string source="Save reservation" obsolete="true">Reservierung speichern</string>
+  <string source="Save reservation" where="remote">Reservierung speichern</string>
   <string source="New reservation" where="remote">Neue Reservierung</string>
   <string source="New reservation discards unsaved editor changes." obsolete="true">Eine neue Reservierung verwirft ungespeicherte Eingaben.</string>
   <string source="Room" where="remote">Zimmer</string>
@@ -177,7 +177,7 @@
   <string source="Retry pending request" where="remote">Ausstehende Anfrage wiederholen</string>
   <string source="Rooms and guests" where="remote">Zimmer und Gäste</string>
   <string source="Mark room clean" obsolete="true">Zimmer als sauber markieren</string>
-  <string source="Create reservation" where="remote">Reservierung erstellen</string>
+  <string source="Create reservation" obsolete="true">Reservierung erstellen</string>
   <string source="Not connected." where="code">Nicht verbunden.</string>
   <string source="Server data refreshed." where="code">Serverdaten aktualisiert.</string>
   <string source="This server does not host Lodge." where="code">Dieser Server stellt Lodge nicht bereit.</string>
@@ -211,4 +211,6 @@
   <string source="Preview day" where="remote">Tagesübersicht</string>
   <string source="Day: %s · Net payments: %s · Outstanding: %s · Overdue: %d" where="code">Tag: %s · Nettozahlungen: %s · Offen: %s · Überfällig: %d</string>
   <string source="Day preview refreshed." where="code">Tagesübersicht aktualisiert.</string>
+  <string source="Edit selected reservation" where="remote">Ausgewählte Reservierung bearbeiten</string>
+  <string source="Reload the selected reservation before saving, or start a new reservation." where="code">Laden Sie die ausgewählte Reservierung vor dem Speichern erneut oder beginnen Sie eine neue Reservierung.</string>
 </strings>

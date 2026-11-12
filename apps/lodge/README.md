@@ -134,7 +134,7 @@ the token out of Lua and command-line arguments. The POSIX transport supports
 this mode; unsupported platforms refuse to connect.
 
 The shared view supports rooms, guests, all three cleaning states (clean,
-dirty and inspection needed), reservations, check-in,
+dirty and inspection needed), creating and editing reservations, check-in,
 payments, refunds, checkout, two-room group reservations, nightly prices and
 day preview or closing, subject to the authenticated role. Data displayed in this view is a transient projection; the server is the
 authority. A pending request is saved in a private OS-user profile before it
