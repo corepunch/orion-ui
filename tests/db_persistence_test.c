@@ -114,6 +114,59 @@ static void test_migrations(void) {
   ASSERT_NULL(db_schema_xml_open_backup("book", "db_schema_xml", &schema, path)); unlink(extra);
   snprintf(extra, sizeof(extra), "%s.lock", path); unlink(extra); rmdir(dir); PASS();
 }
+#ifndef _WIN32
+static int migration_crash_stage;
+static bool migrate_with_crash(void *root, unsigned from) {
+  xmlNodePtr table = ((xmlNodePtr)root)->children;
+  while (table && table->type != XML_ELEMENT_NODE) table = table->next;
+  xmlNodePtr row = table ? table->children : NULL;
+  while (row && row->type != XML_ELEMENT_NODE) row = row->next;
+  if (!row || (from != 1 && from != 2) ||
+      !xmlSetProp(row, BAD_CAST "value", BAD_CAST (from == 1 ? "20" : "30"))) return false;
+  if (migration_crash_stage == (int)from) kill(getpid(), SIGKILL);
+  return true;
+}
+static void test_migration_crashes(void) {
+  TEST("schema XML: killed migration preserves old or published new version");
+  char dir[512], path[1024], backup[1040], lock[1040];
+  ASSERT_TRUE(persistence_tempdir(dir, sizeof(dir)));
+  snprintf(path, sizeof(path), "%s/book.xml", dir);
+  snprintf(backup, sizeof(backup), "%s.bak", path);
+  snprintf(lock, sizeof(lock), "%s.lock", path);
+  db_schema_def_t v3 = schema; v3.version = 3; v3.migrate_xml = migrate_with_crash;
+  for (int stage = 1; stage <= 4; stage++) {
+    database_t *db = open_book(path); ASSERT_NOT_NULL(db);
+    persistence_row_t row = {.id=1, .value=10};
+    ASSERT_TRUE(send_db_message(db, dbInsert, 0, &row));
+    ASSERT_TRUE(send_db_message(db, dbSave, 0, NULL)); destroy_database(db);
+    pid_t child = fork(); ASSERT(child >= 0, "fork succeeds");
+    if (!child) {
+      migration_crash_stage = stage;
+      db = create_database_with_schema("book", "db_schema_xml", &v3, path);
+      if (!db) _exit(1);
+      if (stage == 3) kill(getpid(), SIGKILL);
+      if (!send_db_message(db, dbSave, 0, NULL)) _exit(2);
+      kill(getpid(), SIGKILL);
+      _exit(3);
+    }
+    int status = 0; ASSERT_EQUAL(waitpid(child, &status, 0), child);
+    ASSERT_TRUE(WIFSIGNALED(status) && WTERMSIG(status) == SIGKILL);
+    db = create_database_with_schema("book", "db_schema_xml", stage == 4 ? &v3 : &schema, path);
+    ASSERT_NOT_NULL(db);
+    persistence_row_t *saved = (void *)send_db_message(db, dbFind, 0, (void *)(intptr_t)1);
+    ASSERT_NOT_NULL(saved); ASSERT_EQUAL(saved->value, stage == 4 ? 30 : 10);
+    destroy_database(db);
+    if (stage == 4) {
+      db = create_database_with_schema_readonly("book", "db_schema_xml", &schema, backup);
+      ASSERT_NOT_NULL(db);
+      saved = (void *)send_db_message(db, dbFind, 0, (void *)(intptr_t)1);
+      ASSERT_NOT_NULL(saved); ASSERT_EQUAL(saved->value, 10); destroy_database(db);
+    }
+    unlink(path); unlink(backup);
+  }
+  unlink(lock); rmdir(dir); PASS();
+}
+#endif
 typedef struct { int id; int64_t amount; } recovery_row_t;
 static const db_field_meta_t recovery_meta[] = {
   {"id", DB_TYPE_INT, offsetof(recovery_row_t, id)},
@@ -209,4 +262,11 @@ static void test_persistence(void) {
   snprintf(lock, sizeof(lock), "%s.bak.lock", path); unlink(lock); rmdir(dir);
   PASS();
 }
-int main(void) { TEST_START("Database persistence"); DB_CLASS(db_schema_xml); test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); TEST_END(); }
+int main(void) {
+  TEST_START("Database persistence"); DB_CLASS(db_schema_xml);
+  test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup();
+#ifndef _WIN32
+  test_migration_crashes();
+#endif
+  TEST_END();
+}
