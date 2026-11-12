@@ -17,13 +17,13 @@
       </table>
       <table name="hotel_settings">
         <field name="id" type="integer" key="YES" />
-        <field name="country" type="string" length="2" />
-        <field name="currency" type="string" length="3" />
-        <field name="actor" type="string" length="100" default="legacy-unknown" />
+        <field name="country" type="string" length="3" />
+        <field name="currency" type="string" length="4" />
+        <field name="actor" type="string" length="101" default="legacy-unknown" />
       </table>
       <table name="reservation_groups">
         <field name="id" type="integer" key="YES" />
-        <field name="name" type="string" length="100" />
+        <field name="name" type="string" length="101" />
       </table>
       <table name="reservations">
         <field name="id" type="integer" key="YES" />
@@ -46,7 +46,7 @@
         <field name="id" type="integer" key="YES" />
         <field name="reservation_id" type="integer" relation="reservations.id" on-delete="deny" />
         <field name="operation" type="string" length="20" />
-        <field name="actor" type="string" length="100" default="legacy-unknown" />
+        <field name="actor" type="string" length="101" default="legacy-unknown" />
         <field name="before" type="string" length="1024" />
         <field name="after" type="string" length="1024" />
       </table>
@@ -61,14 +61,14 @@
         <field name="reservation_id" type="integer" relation="reservations.id" on-delete="deny" />
         <field name="amount_minor" type="integer" />
         <field name="kind" type="string" length="20" />
-        <field name="actor" type="string" length="100" default="legacy-unknown" />
-        <field name="request_key" type="string" length="100" />
+        <field name="actor" type="string" length="101" default="legacy-unknown" />
+        <field name="request_key" type="string" length="101" />
         <field name="posted_on" type="date" />
       </table>
       <table name="day_closes">
         <field name="id" type="integer" key="YES" />
         <field name="day" type="date" />
-        <field name="actor" type="string" length="100" default="legacy-unknown" />
+        <field name="actor" type="string" length="101" default="legacy-unknown" />
         <field name="net_minor" type="string" length="32" />
         <field name="outstanding_minor" type="string" length="32" />
         <field name="reservations" type="integer" />
