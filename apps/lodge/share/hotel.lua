@@ -94,6 +94,13 @@ Hotel.reservations = records.bind("lodge.reservations", function(row, previous)
   if previous and previous.status == "checked_in" and row.room_id ~= previous.room_id and room.cleaning_state ~= "clean" then
     return nil, orion.tr("Mark the room clean before checking in.")
   end
+  if row.status == "checked_in" then
+    for _, other in ipairs(Hotel.reservations.model:select({room_id = row.room_id})) do
+      if other.id ~= row.id and other.status == "checked_in" then
+        return nil, orion.tr("Another guest is still checked in to this room.")
+      end
+    end
+  end
   if previous and previous.status ~= row.status then
     if money.minor(previous.paid) ~= money.minor(row.paid) then return nil, orion.tr("Record payments separately from status changes.") end
     local allowed = {reserved = {checked_in = true, cancelled = true}, checked_in = {checked_out = true}}

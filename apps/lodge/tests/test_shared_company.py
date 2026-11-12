@@ -152,6 +152,44 @@ class SharedCompanyTests(unittest.TestCase):
                 finally:
                     company.close()
 
+    def test_adjacent_stays_require_actual_checkout(self):
+        for country in ('DE', 'RU'):
+            with self.subTest(country=country), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'company'
+                server.initialize(argparse.Namespace(state=str(path), application='lodge', country=country, configuration=None,
+                                  executable=str(ROOT / 'build/bin/orion-service'), resources=str(ROOT / 'apps/lodge/share'), source=None))
+                company = server.Company(path)
+                try:
+                    def request(actor, key, command, args, role='reception'):
+                        return company.execute(actor, role, {'request_id': key, 'expected_revision': company.status()['revision'],
+                                                             'command': command, 'args': args})
+                    rooms = [request('alice', 'room-' + str(i), 'save_room', {'name': str(i), 'capacity': 2, 'rate': 100})['result']['id'] for i in (101, 102)]
+                    guest = request('alice', 'guest', 'save_guest', {'name': 'Guest'})['result']['id']
+                    def reserve(key, room, arrival, departure):
+                        return request('alice', key, 'reserve', {'room_id': room, 'guest_id': guest, 'arrival': arrival,
+                                       'departure': departure, 'persons': 1, 'rate': 100, 'extras': 0, 'notes': ''})['result']['id']
+                    first = reserve('first', rooms[0], '2035-01-01', '2035-01-02')
+                    adjacent = reserve('adjacent', rooms[0], '2035-01-02', '2035-01-03')
+                    transfer = reserve('transfer-stay', rooms[1], '2035-01-02', '2035-01-03')
+                    for index, room in enumerate(rooms):
+                        self.assertTrue(request('housekeeper', 'clean-' + str(index), 'set_room_cleaning',
+                                                {'id': room, 'state': 'clean'}, 'housekeeping')['ok'])
+                    self.assertTrue(request('alice', 'first-in', 'check_in', {'id': first})['ok'])
+                    self.assertFalse(request('bob', 'adjacent-in', 'check_in', {'id': adjacent})['ok'])
+                    self.assertTrue(request('bob', 'transfer-in', 'check_in', {'id': transfer})['ok'])
+                    self.assertFalse(request('bob', 'transfer-occupied', 'reserve', {'id': transfer, 'room_id': rooms[0]})['ok'])
+                    self.assertTrue(request('alice', 'pay', 'payment', {'id': first, 'amount_minor': 10000, 'request_key': 'pay-first'})['ok'])
+                    self.assertTrue(request('alice', 'first-out', 'check_out', {'id': first})['ok'])
+                    self.assertFalse(request('bob', 'unclean-in', 'check_in', {'id': adjacent})['ok'])
+                    self.assertTrue(request('housekeeper', 'reclean', 'set_room_cleaning', {'id': rooms[0], 'state': 'clean'}, 'housekeeping')['ok'])
+                    self.assertTrue(request('bob', 'adjacent-after-checkout', 'check_in', {'id': adjacent})['ok'])
+                    company.close(); company = server.Company(path)
+                    view = request('alice', 'after-restart', 'snapshot', {})['result']
+                    self.assertEqual([r['status'] for r in view['reservations']], ['checked_out', 'checked_in', 'checked_in'])
+                    self.assertEqual([r['room_id'] for r in view['reservations']], [rooms[0], rooms[0], rooms[1]])
+                finally:
+                    company.close()
+
 
 if __name__ == '__main__':
     unittest.main()

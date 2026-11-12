@@ -41,6 +41,8 @@ to Cancelled. Check-out requires a zero balance; cancelled and checked-out
 reservations cannot be edited, but payments and refunds can still be recorded.
 Use **Housekeeping** to mark rooms clean, dirty, or
 needing inspection. Check-in requires a clean room; check-out marks it dirty.
+An adjacent reservation cannot check in, or transfer into a room, while another
+guest is still checked in there, even if the scheduled dates do not overlap.
 New rooms and rooms migrated from older databases need inspection. Amounts use the
 configured EUR or RUB currency with two decimal places; amounts with fractional
 cents are rejected rather than silently rounded. Currency conversion is not
