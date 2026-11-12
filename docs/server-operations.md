@@ -67,6 +67,12 @@ it does not run the chosen business host or prove that the host understands the
 restored schema. Test the recovered company in isolation before switching users.
 Backups and restores whose estimated local working footprint exceeds 500 MB are
 rejected; perform those operations in an appropriate cloud environment instead.
+An interrupted backup can leave a private `.orion-admin-*` staging directory
+beside its intended destination. With backup and restore operations stopped,
+an operator may remove a confirmed abandoned staging directory after inspecting
+it; it is not a published backup. Verify any published destination before use.
+POSIX process-crash tests cover snapshot copy, manifest writing, verification,
+staging sync and both sides of the final rename; they do not model power loss.
 
 Verification checks SQLite integrity, current snapshot against its SQLite digest,
 backup inventory, and the audit hash chain. The server metadata does not retain
