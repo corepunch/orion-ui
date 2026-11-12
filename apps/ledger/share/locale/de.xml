@@ -134,7 +134,7 @@
   <string source="Tax:" obsolete="true">Steuer:</string>
   <string source="Total:" where="operation,payroll">Gesamt:</string>
   <string source="OK and Post" where="payroll,asset_document,closing">OK und buchen</string>
-  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,reverse_posting,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,report_settings">Abbrechen</string>
+  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,lock_period,reverse_posting,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,report_settings">Abbrechen</string>
   <string source="Document Line" where="doc_line">Belegposition</string>
   <string source="Item:" where="doc_line">Artikel:</string>
   <string source="Quantity:" where="doc_line,entry">Menge:</string>
@@ -522,10 +522,21 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Closed through" where="reports_page">Abgeschlossen bis</string>
   <string source="Recorded (UTC)" where="reports_page">Erfasst (UTC)</string>
   <string source="Actor" where="reports_page">Benutzer</string>
+  <string source="Close Accounting Period..." where="menu">Buchungsperiode abschließen...</string>
+  <string source="Close Accounting Period" where="lock_period">Buchungsperiode abschließen</string>
+  <string source="Closing is permanent. Reversals must use a later open date." where="lock_period">Der Abschluss ist endgültig. Stornos benötigen ein späteres offenes Datum.</string>
+  <string source="Close through:" where="lock_period">Abschließen bis:</string>
+  <string source="Review period close" where="lock_period">Periodenabschluss prüfen</string>
+  <string source="Confirm period close" where="lock_period">Periodenabschluss bestätigen</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>
   <context name="reports_page">
     <string source="Expense">Ausgabe</string>
   </context>
+  <string source="Close Accounting Period" where="code">Buchungsperiode abschließen</string>
+  <string source="Enter a valid close date." where="code">Geben Sie ein gültiges Abschlussdatum ein.</string>
+  <string source="Review: close through %s. Confirm to continue." where="code">Prüfung: Abschluss bis %s. Bestätigen Sie zum Fortfahren.</string>
+  <string source="The close could not be saved. Check the infobase before trying again; the file's state may be uncertain." where="code">Der Abschluss konnte nicht gespeichert werden. Prüfen Sie die Datenbank vor einem erneuten Versuch; der Dateistatus kann ungewiss sein.</string>
+  <string source="The period could not be closed. Check unposted documents and the close date." where="code">Die Periode konnte nicht abgeschlossen werden. Prüfen Sie ungebuchte Belege und das Abschlussdatum.</string>
 </strings>

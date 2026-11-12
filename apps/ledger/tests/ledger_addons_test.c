@@ -16,6 +16,7 @@
 
 static ledger_t g_test_ledger;
 static result_t reverse_posting_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+static result_t lock_period_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 static void open_configuration(const char *code) {
   char path[LEDGER_PATH_MAX * 2];
@@ -310,6 +311,46 @@ static void test_reverse_dialog(void) {
   PASS();
 }
 
+static void test_lock_period_dialog(void) {
+  TEST("local period close requires review and persists for both configurations");
+  ui_set_language("en");
+  const char *configs[] = { "ru-2026", "de-2026" };
+  for (size_t i = 0; i < ARRAY_LEN(configs); i++) {
+    open_configuration(configs[i]);
+    window_t *dialog = create_window_from_form(&ledger_lock_period_form, 0, 0, NULL, lock_period_proc, 0, NULL);
+    ASSERT_NOT_NULL(dialog);
+    uint32_t result = 0; dialog->userdata2 = &result;
+    char formatted[32];
+    set_window_item_text(dialog, ID_LOCK_PERIOD_DATE, "%s", ui_format_date("2020-01-01", formatted, sizeof(formatted)));
+    window_t *prepare = get_window_item(dialog, ID_LOCK_PERIOD_PREPARE), *confirm = get_window_item(dialog, ID_LOCK_PERIOD_CONFIRM);
+    ASSERT_NOT_NULL(prepare); ASSERT_NOT_NULL(confirm);
+    ASSERT_FALSE(window_is_enabled(confirm));
+    send_message(dialog, evCommand, MAKEDWORD(ID_LOCK_PERIOD_CONFIRM, btnClicked), confirm);
+    ASSERT_FALSE(ledger_period_closed(g_ledger->ib, "2020-01-01"));
+    send_message(dialog, evCommand, MAKEDWORD(ID_LOCK_PERIOD_PREPARE, btnClicked), prepare);
+    ASSERT_TRUE(window_is_enabled(confirm));
+    set_window_item_text(dialog, ID_LOCK_PERIOD_DATE, "%s", ui_format_date("2020-01-02", formatted, sizeof(formatted)));
+    send_message(dialog, evCommand, MAKEDWORD(ID_LOCK_PERIOD_DATE, edUpdate), get_window_item(dialog, ID_LOCK_PERIOD_DATE));
+    ASSERT_FALSE(window_is_enabled(confirm));
+    send_message(dialog, evCommand, MAKEDWORD(ID_LOCK_PERIOD_CONFIRM, btnClicked), confirm);
+    ASSERT_FALSE(ledger_period_closed(g_ledger->ib, "2020-01-01"));
+    set_window_item_text(dialog, ID_LOCK_PERIOD_DATE, "%s", ui_format_date("2020-01-01", formatted, sizeof(formatted)));
+    send_message(dialog, evCommand, MAKEDWORD(ID_LOCK_PERIOD_PREPARE, btnClicked), prepare);
+    send_message(dialog, evCommand, MAKEDWORD(ID_LOCK_PERIOD_CONFIRM, btnClicked), confirm);
+    ASSERT(result == 1 && !is_window(dialog), "confirmed close ends dialog");
+    ASSERT_TRUE(ledger_period_closed(g_ledger->ib, "2020-01-01"));
+    ASSERT_FALSE(send_db_message(g_ledger->ib, dbGetDirty, 0, NULL));
+    ASSERT_EQUAL(count_rows("ib", TABLE_PERIOD_CLOSURES), 1);
+    char path[sizeof(g_ledger->ib->source_path)]; snprintf(path, sizeof(path), "%s", g_ledger->ib->source_path);
+    unregister_database("ib"); destroy_database(g_ledger->ib);
+    g_ledger->ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path);
+    ASSERT_NOT_NULL(g_ledger->ib); register_database("ib", g_ledger->ib);
+    ASSERT_TRUE(ledger_period_closed(g_ledger->ib, "2020-01-01"));
+    ASSERT_EQUAL(count_rows("ib", TABLE_PERIOD_CLOSURES), 1);
+  }
+  PASS();
+}
+
 int main(int argc, char **argv) {
   (void)argc; (void)argv;
   TEST_START("Ledger add-ons");
@@ -319,6 +360,7 @@ int main(int argc, char **argv) {
   test_penalties();
   test_german_accounts();
   test_reverse_dialog();
+  test_lock_period_dialog();
   test_translations();
   unregister_database("ib");
   unregister_database("cfg");

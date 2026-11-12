@@ -43,6 +43,7 @@
       <item name="post_close" label="Post and Close" shortcut="Ctrl+Enter" />
       <item name="unpost" label="Cancel Posting" />
       <item name="reverse" label="Reverse Posting..." />
+      <item name="lock_period" label="Close Accounting Period..." />
       <item name="print" label="Print Forms" shortcut="Ctrl+P" />
       <Separator />
       <item name="delete" label="Delete Document..." />
@@ -1620,6 +1621,18 @@
       <StackView name="actions" orientation="horizontal" spacing="6">
         <Space name="flex" />
         <Button name="print" text="Print" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="lock_period" title="Close Accounting Period" focus="date" width="520" spacing="6" padding="8">
+      <Label text="Closing is permanent. Reversals must use a later open date." />
+      <GridView spacing="4"><Column width="auto"><Label text="Close through:" /></Column><Column><TextBox name="date" /></Column></GridView>
+      <Label name="review" />
+      <StackView orientation="horizontal" spacing="6">
+        <Button name="prepare" text="Review period close" />
+        <Space />
+        <Button name="confirm" text="Confirm period close" flags="BUTTON_DEFAULT" />
         <Button name="cancel" text="Cancel" />
       </StackView>
     </form>

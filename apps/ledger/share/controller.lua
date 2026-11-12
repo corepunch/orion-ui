@@ -41,6 +41,7 @@ local commands = {
   ["help.assistant"] = ui.assistant, ["help.find_command"] = ui.assistant,
   ["report.settings"] = function() ui.form("report_settings") end,
   ["report.card"] = ui.account_card, ["report.print"] = ui.print_reports,
+  ["doc.lock_period"] = ui.lock_period,
   ["report.recalc"] = function()
     if not ui.repost() then ui.message(orion.tr("Recalculation failed. Previous accounting entries were restored. Check the configuration and documents."), orion.tr("Recalculation Failed")) end
     ui.changed(0)

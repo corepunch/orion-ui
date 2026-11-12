@@ -83,7 +83,10 @@ single previous copy, not a substitute for independent backups.
 `Reports > Recalculate` (F5) reposts legacy documents outside the closed period
 in date order and rebuilds the reports; posted exact trading documents are
 preserved. `Reports > Print Report Forms` writes the cash
-book. A trusted writable Lua script can advance the close boundary with
+book. To protect a period from further changes, choose **Documents > Close
+Accounting Period**, review the date and confirm. The dialog saves the close;
+this is separate from posting the month-end closing document. A trusted
+writable Lua script can advance the close boundary with
 `ledger.transaction(function() ledger.close_through("2026-12-31") end)`;
 save the infobase afterward. There is no reopening command. In the document
 journal, select a posted document and choose **Reverse** to create a linked

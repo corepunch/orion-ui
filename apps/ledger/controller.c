@@ -61,6 +61,63 @@ static db_doc_type_t *document_type(const db_document_t *doc) {
                                                (void *)(intptr_t)doc->doc_type_id) : NULL;
 }
 
+typedef struct { char reviewed[11]; } period_dialog_t;
+
+static result_t lock_period_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  period_dialog_t *state = win->userdata;
+  switch (msg) {
+    case evCreate: {
+      state = allocate_window_data(win, sizeof(*state));
+      if (!state) return false;
+      char iso[16] = "", date[32] = ""; time_t now = time(NULL); struct tm *today = localtime(&now);
+      if (today) strftime(iso, sizeof(iso), "%Y-%m-%d", today);
+      set_window_item_text(win, ID_LOCK_PERIOD_DATE, "%s", ui_format_date(iso, date, sizeof(date)));
+      enable_window(get_window_item(win, ID_LOCK_PERIOD_CONFIRM), false);
+      return true;
+    }
+    case evCommand: {
+      if (LOWORD(wparam) == ID_LOCK_PERIOD_DATE && HIWORD(wparam) == edUpdate) {
+        state->reviewed[0] = '\0';
+        enable_window(get_window_item(win, ID_LOCK_PERIOD_CONFIRM), false);
+        set_window_item_text(win, ID_LOCK_PERIOD_REVIEW, "%s", "");
+        return true;
+      }
+      if (HIWORD(wparam) != btnClicked) return false;
+      if (LOWORD(wparam) == ID_LOCK_PERIOD_CANCEL) { end_dialog(win, 0); return true; }
+      if (LOWORD(wparam) != ID_LOCK_PERIOD_PREPARE && LOWORD(wparam) != ID_LOCK_PERIOD_CONFIRM) return false;
+      char entered[64] = "", date[16] = "";
+      send_message(get_window_item(win, ID_LOCK_PERIOD_DATE), edGetText, sizeof(entered), entered);
+      if (!ui_parse_date(entered, date, sizeof(date)) || !ledger_valid_date(date)) {
+        message_box(win, ui_tr("Enter a valid close date."), ui_tr("Close Accounting Period"), MB_OK); return true;
+      }
+      if (LOWORD(wparam) == ID_LOCK_PERIOD_PREPARE) {
+        snprintf(state->reviewed, sizeof(state->reviewed), "%s", date);
+        char formatted[32];
+        set_window_item_text(win, ID_LOCK_PERIOD_REVIEW, ui_tr("Review: close through %s. Confirm to continue."), ui_format_date(date, formatted, sizeof(formatted)));
+        enable_window(get_window_item(win, ID_LOCK_PERIOD_CONFIRM), true);
+        return true;
+      }
+      if (strcmp(state->reviewed, date)) return true;
+      if (!send_db_message(g_ledger->ib, dbBeginChanges, 0, NULL)) {
+        message_box(win, ui_tr("The period could not be closed. Check unposted documents and the close date."), ui_tr("Close Accounting Period"), MB_OK); return true;
+      }
+      bool ok = ledger_close_through(g_ledger->ib, date);
+      bool closed = ok;
+      if (ok) ok = send_db_message(g_ledger->ib, dbSave, 0, NULL) != 0;
+      if (ok) ok = send_db_message(g_ledger->ib, dbCommitChanges, 0, NULL) != 0;
+      if (!ok) {
+        send_db_message(g_ledger->ib, dbRevertChanges, 0, NULL);
+        message_box(win, closed ? ui_tr("The close could not be saved. Check the infobase before trying again; the file's state may be uncertain.") :
+          ui_tr("The period could not be closed. Check unposted documents and the close date."), ui_tr("Close Accounting Period"), MB_OK); return true;
+      }
+      end_dialog(win, 1); return true;
+    }
+    case evClose: end_dialog(win, 0); return true;
+    case evPaint: case evDestroy: return false;
+    default: return false;
+  }
+}
+
 static result_t reverse_posting_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate: {
@@ -605,6 +662,9 @@ static void ledger_ui_reverse(lua_State *L, int id) {
   char message[160];
   snprintf(message, sizeof(message), ui_tr("Reversal %s was posted and saved."), result ? result->number : "");
   message_box(g_ledger->main_win, message, ui_tr("Reverse Posting"), MB_OK);
+}
+static void ledger_ui_lock_period(lua_State *L) {
+  if (show_dialog_from_form(&ledger_lock_period_form, NULL, g_ledger->main_win, lock_period_proc, NULL)) after_save(0);
 }
 static bool ledger_ui_repost(lua_State *L) { return ledger_repost_all(g_ledger->ib, g_ledger->cfg); }
 static bool ledger_ui_confirm(lua_State *L, const char *text, const char *title) { return message_box(g_ledger->main_win, text, title, MB_YESNO) == IDYES; }
