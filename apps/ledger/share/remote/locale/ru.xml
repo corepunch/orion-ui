@@ -119,4 +119,13 @@
   <string source="Recorded (UTC)" where="remote_ledger">Записано (UTC)</string>
   <string source="Actor" where="remote_ledger">Автор</string>
   <string source="Refresh history" where="remote_ledger">Обновить историю</string>
+  <string source="Reverses ID" where="remote_ledger">ID сторнируемого</string>
+  <string source="Show posting history" where="remote_ledger">Показать историю проведения</string>
+  <string source="Posting History" where="remote_ledger">История проведения</string>
+  <string source="Select a document and show its posting history." where="remote_ledger">Выберите документ и откройте историю проведения.</string>
+  <string source="Action" where="remote_ledger">Действие</string>
+  <string source="Document Date" where="remote_ledger">Дата документа</string>
+  <string source="Document Number" where="remote_ledger">Номер документа</string>
+  <string source="Total" where="remote_ledger">Итого</string>
+  <string source="Posting history for document ID %d" where="code">История проведения документа ID %d</string>
 </strings>

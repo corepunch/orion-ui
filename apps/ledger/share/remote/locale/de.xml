@@ -119,4 +119,13 @@
   <string source="Recorded (UTC)" where="remote_ledger">Erfasst (UTC)</string>
   <string source="Actor" where="remote_ledger">Benutzer</string>
   <string source="Refresh history" where="remote_ledger">Verlauf aktualisieren</string>
+  <string source="Reverses ID" where="remote_ledger">Storniert ID</string>
+  <string source="Show posting history" where="remote_ledger">Buchungsverlauf anzeigen</string>
+  <string source="Posting History" where="remote_ledger">Buchungsverlauf</string>
+  <string source="Select a document and show its posting history." where="remote_ledger">Wählen Sie einen Beleg und zeigen Sie seinen Buchungsverlauf an.</string>
+  <string source="Action" where="remote_ledger">Aktion</string>
+  <string source="Document Date" where="remote_ledger">Belegdatum</string>
+  <string source="Document Number" where="remote_ledger">Belegnummer</string>
+  <string source="Total" where="remote_ledger">Summe</string>
+  <string source="Posting history for document ID %d" where="code">Buchungsverlauf für Beleg-ID %d</string>
 </strings>

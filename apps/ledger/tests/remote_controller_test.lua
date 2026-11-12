@@ -13,6 +13,14 @@ package.preload['orion.json'] = function() return {array = function(t) return t 
 local page = require('remote_ledger'); page.app = {handle = 1}; page:init(); page:connect({})
 state.busy = false; pending({application = 'ledger', country = 'RU', role = 'accountant'}, nil)
 assert(client.command == 'documents.list'); state.busy = false; state.pending = false; pending({}, nil)
+assert(not pcall(function() page:show_posting_history({}) end), 'history requires selection')
+page:show_posting_history({documents = {id = 7}})
+assert(client.command == 'documents.history' and client.args.document_id == 7 and client.args.offset == 0)
+state.busy = false; state.pending = false
+pending({{id = 2, recorded_utc = '2026-04-01T00:00:00Z', actor = 'accountant', action = 'post', date = '2026-03-31', number = '7', exact_money = true, total_minor = '1234'}}, nil)
+assert(cache[1].source == 'ledger_remote_cache.posting_history' and cache[1].rows[1].total == '12.34')
+assert(page:data().values.posting_history_title == 'Posting history for document ID 7')
+assert(page:data().disabled.previous_posting_history and page:data().disabled.next_posting_history)
 page:show_history({}); assert(client.command == 'period.history' and client.args.offset == 0)
 state.busy = false; state.pending = false
 pending({{id = 1, previous_through = '', closed_through = '2026-03-31', recorded_utc = '2026-04-01T00:00:00Z', actor = 'admin'}}, nil)

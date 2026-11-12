@@ -4,7 +4,7 @@
     <database name="ledger_remote_cache" class="db_schema_xml">
       <table name="documents" transient="true">
         <field name="id" type="integer" key="YES" /><field name="date" type="date" />
-        <field name="number" type="string" length="24" /><field name="kind" type="string" length="32" />
+        <field name="number" type="string" length="24" /><field name="correction_of" type="integer" /><field name="kind" type="string" length="32" />
         <field name="party" type="string" length="128" /><field name="amount" type="string" length="32" />
         <field name="state" type="string" length="32" /><field name="posted" type="boolean" />
       </table>
@@ -22,6 +22,12 @@
         <field name="document_id" type="integer" /><field name="debit_id" type="integer" />
         <field name="credit_id" type="integer" /><field name="amount" type="string" length="32" />
         <field name="content" type="string" length="160" />
+      </table>
+      <table name="posting_history" transient="true">
+        <field name="id" type="integer" key="YES" /><field name="recorded_utc" type="string" length="21" />
+        <field name="actor" type="string" length="128" /><field name="action" type="string" length="16" />
+        <field name="date" type="date" /><field name="number" type="string" length="24" />
+        <field name="total" type="string" length="32" />
       </table>
       <table name="period_history" transient="true">
         <field name="id" type="integer" key="YES" /><field name="previous_through" type="date" />
@@ -45,13 +51,14 @@
           <Label text="Select a document to post, edit its draft details, or reverse its accounting entries." />
           <TableView name="documents" source="ledger_remote_cache.documents" flags="flexspace,vscroll" frame="true">
             <Column field="id" title="ID" width="58" /><Column field="date" title="Date" width="100" />
-            <Column field="number" title="Number" width="105" /><Column field="kind" title="Type" width="140" />
+            <Column field="number" title="Number" width="105" /><Column field="correction_of" title="Reverses ID" width="90" /><Column field="kind" title="Type" width="140" />
             <Column field="party" title="Counterparty" width="0" min-width="110" /><Column field="amount" title="Amount" width="110" />
             <Column field="state" title="State" width="90" />
           </TableView>
           <StackView orientation="horizontal" spacing="6">
             <Button name="previous_documents" text="Previous page" action="previous_documents" />
             <Button name="next_documents" text="Next page" action="next_documents" />
+            <Button name="show_posting_history" text="Show posting history" action="show_posting_history" />
             <Button name="post" text="Post selected" action="post" />
             <Button name="update" text="Update draft details" action="update" />
             <Button name="replace_lines" text="Replace draft lines" action="replace_lines" />
@@ -126,6 +133,18 @@
             <Button name="close_period" text="Confirm period close" action="close_period" />
           </StackView>
           <Label text="Closing is permanent. Reversals must use a later open date." />
+        </StackView>
+        <StackView name="posting_history_tab" text="Posting History" spacing="6" flags="flexspace">
+          <Label name="posting_history_title" text="Select a document and show its posting history." />
+          <TableView name="posting_history" source="ledger_remote_cache.posting_history" flags="flexspace,vscroll" frame="true">
+            <Column field="recorded_utc" title="Recorded (UTC)" width="160" /><Column field="actor" title="Actor" width="120" />
+            <Column field="action" title="Action" width="80" /><Column field="date" title="Document Date" width="110" />
+            <Column field="number" title="Document Number" width="120" /><Column field="total" title="Total" width="110" />
+          </TableView>
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="previous_posting_history" text="Previous page" action="previous_posting_history" />
+            <Button name="next_posting_history" text="Next page" action="next_posting_history" />
+          </StackView>
         </StackView>
         <StackView name="history_tab" text="Period Close History" spacing="6" flags="flexspace">
           <TableView name="period_history" source="ledger_remote_cache.period_history" flags="flexspace,vscroll" frame="true">

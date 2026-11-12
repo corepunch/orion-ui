@@ -37,12 +37,29 @@ static void test_ledger_remote_ui(void) {
   set_text(page, "item_id", "1"); set_text(page, "vat_id", "1"); set_text(page, "quantity", "1.000"); set_text(page, "price", "10.00");
   ASSERT_TRUE(script_page_perform(page, "add_line")); ASSERT_TRUE(script_page_perform(page, "create")); ASSERT_TRUE(wait_notice(page, "Draft 1 created."));
   ASSERT_TRUE(script_page_perform(page, "post")); ASSERT_TRUE(wait_notice(page, "Document posted."));
+  ASSERT_TRUE(script_page_perform(page, "show_posting_history"));
+  database_t *cache = get_database_by_name("ledger_remote_cache"); ASSERT_NOT_NULL(cache);
+  const db_table_schema_t *posting_history = db_schema_table_named(cache->schema, "posting_history"); ASSERT_NOT_NULL(posting_history);
+  bool posting_found = false;
+  for (int i = 0; i < 500 && !posting_found; i++) {
+    repost_messages();
+    void *row = (void *)send_db_message(cache, dbFind, posting_history->table_id, (void *)(intptr_t)1);
+    if (row) {
+      char actor[128], action[32], total[32];
+      db_get_field_text(cache, posting_history->table_id, row, "actor", actor, sizeof(actor));
+      db_get_field_text(cache, posting_history->table_id, row, "action", action, sizeof(action));
+      db_get_field_text(cache, posting_history->table_id, row, "total", total, sizeof(total));
+      posting_found = !strcmp(actor, "tester") && !strcmp(action, "post") && !strcmp(total, "11.90");
+    }
+    if (!posting_found) { struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); }
+  }
+  ASSERT(posting_found, "shared posting history displays the selected document snapshot");
+  ASSERT(strstr(script_page_control(page, "posting_history_title")->title, "1"), "history heading identifies the document");
   set_text(page, "reversal_date", "2035-01-01"); set_text(page, "reason", "Test correction");
   ASSERT_TRUE(script_page_perform(page, "reverse")); ASSERT_TRUE(wait_notice(page, "Reversal 2 posted."));
   set_text(page, "close_date", "2035-01-01"); ASSERT_TRUE(script_page_perform(page, "prepare_close"));
   ASSERT_TRUE(script_page_perform(page, "close_period")); ASSERT_TRUE(wait_notice(page, "Accounting period closed."));
   ASSERT_TRUE(script_page_perform(page, "show_history"));
-  database_t *cache = get_database_by_name("ledger_remote_cache"); ASSERT_NOT_NULL(cache);
   const db_table_schema_t *history = db_schema_table_named(cache->schema, "period_history"); ASSERT_NOT_NULL(history);
   bool found = false;
   for (int i = 0; i < 500 && !found; i++) {

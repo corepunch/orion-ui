@@ -109,7 +109,10 @@ the `ru-2026` and `de-2026` configurations. It supports catalog listing and
 counterparty/item setup; draft goods receipt and sale creation, date and party
 edits, posting, and linked accounting reversal; document, journal and period
 close history listing; and advancing the close date. The Reports page and the
-shared client also show close history. It begins with closes recorded after the
+shared client also show close history. In the shared client, select a document
+and choose **Show posting history**, then open the Posting History tab. The
+heading identifies the selected document and the page buttons navigate its
+snapshots. The documents list shows the original document ID for a reversal. It begins with closes recorded after the
 history feature was installed; a blank actor means none was authenticated.
 Catalog and document writes require an accountant
 or admin role, and closing requires admin. The host must authenticate the actor

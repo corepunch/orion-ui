@@ -128,6 +128,22 @@ class LedgerHostTests(unittest.TestCase):
                     self.assertTrue(journal)
                     self.assertTrue(all(row['exact_money'] for row in journal))
                     self.assertTrue(all(isinstance(row['amount_minor'], str) for row in journal))
+                    for role in ('admin', 'accountant', 'auditor'):
+                        history = call('documents.history', {**sale, 'offset': 0, 'limit': 1}, role)
+                        self.assertEqual(len(history), 1)
+                        self.assertEqual(history[0]['document_id'], sale['document_id'])
+                        self.assertEqual(history[0]['actor'], 'trade-accountant')
+                        self.assertEqual(history[0]['action'], 'post')
+                        self.assertEqual(history[0]['total_minor'], '4880' if country == 'RU' else '4760')
+                        self.assertEqual(call('documents.history', {**sale, 'offset': 1, 'limit': 1}, role), [])
+                        self.assertEqual(call('documents.history', {'document_id': 2147483647}, role), [])
+                    sequence += 1
+                    invalid = company.execute('trade-auditor', 'auditor', {'request_id': f'trade-{sequence}',
+                        'expected_revision': company.status()['revision'], 'command': 'documents.history', 'args': {'document_id': -1}})
+                    self.assertFalse(invalid['ok'], invalid)
+                    with self.assertRaises(server.Refusal) as failure:
+                        call('documents.history', {**sale}, 'reception')
+                    self.assertEqual(failure.exception.status, 403)
                     reversal = call('documents.reverse', {**sale, 'date': '2026-11-12', 'reason': 'Accounting correction in integration test'})
                     self.assertNotEqual(reversal['document_id'], sale['document_id'])
                     self.assertEqual(call('documents.list', {'offset': 500, 'limit': 10}), [])

@@ -56,6 +56,13 @@ local function dispatch(request)
   elseif command == "documents.list" then
     local rows = ledger.fetch("ib", "documents")
     return page(rows, args)
+  elseif command == "documents.history" then
+    assert(type(args.document_id) == "number" and math.type(args.document_id) == "integer" and args.document_id > 0, "invalid document id")
+    local rows = {}
+    for _, row in ipairs(ledger.fetch("ib", "posting_revisions")) do
+      if row.document_id == args.document_id then rows[#rows + 1] = row end
+    end
+    return page(rows, args)
   elseif command == "journal.list" then
     local posted, result = {}, json.array({})
     for _, doc in ipairs(ledger.fetch("ib", "documents")) do if doc.posted then posted[doc.id] = true end end
