@@ -213,4 +213,10 @@
   <string source="Day preview refreshed." where="code">Обзор дня обновлён.</string>
   <string source="Edit selected reservation" where="remote">Изменить выбранную бронь</string>
   <string source="Reload the selected reservation before saving, or start a new reservation." where="code">Перед сохранением заново откройте выбранную бронь или начните новую.</string>
+  <string source="Guest to edit:" where="remote">Гость для изменения:</string>
+  <string source="Load guest" where="remote">Открыть гостя</string>
+  <string source="Save guest" where="remote">Сохранить гостя</string>
+  <string source="Load the guest again before saving." where="code">Перед сохранением заново откройте гостя.</string>
+  <string source="Editing guest %d" where="code">Изменение гостя %d</string>
+  <string source="No guest loaded" where="code">Гость не открыт</string>
 </strings>

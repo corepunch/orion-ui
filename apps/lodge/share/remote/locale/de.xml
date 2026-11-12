@@ -213,4 +213,10 @@
   <string source="Day preview refreshed." where="code">Tagesübersicht aktualisiert.</string>
   <string source="Edit selected reservation" where="remote">Ausgewählte Reservierung bearbeiten</string>
   <string source="Reload the selected reservation before saving, or start a new reservation." where="code">Laden Sie die ausgewählte Reservierung vor dem Speichern erneut oder beginnen Sie eine neue Reservierung.</string>
+  <string source="Guest to edit:" where="remote">Gast zur Bearbeitung:</string>
+  <string source="Load guest" where="remote">Gast laden</string>
+  <string source="Save guest" where="remote">Gast speichern</string>
+  <string source="Load the guest again before saving." where="code">Laden Sie den Gast vor dem Speichern erneut.</string>
+  <string source="Editing guest %d" where="code">Gast %d bearbeiten</string>
+  <string source="No guest loaded" where="code">Kein Gast geladen</string>
 </strings>

@@ -46,6 +46,22 @@ static void test_lodge_remote_ui(void) {
   ASSERT_TRUE(script_page_perform(page, "add_room")); ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "name", "Remote 101"));
   send_message(script_page_control(page, "guest_name"), edSetText, 0, "Remote guest");
   ASSERT_TRUE(script_page_perform(page, "add_guest")); ASSERT_TRUE(wait_for(db, guests->table_id, 1, "name", "Remote guest"));
+  send_message(script_page_control(page, "edit_guest_choice"), cbSetCurrentValue, 1, NULL);
+  ASSERT_TRUE(script_page_perform(page, "load_guest"));
+  ASSERT_STR_EQUAL(script_page_control(page, "guest_name")->title, "Remote guest");
+  send_message(script_page_control(page, "guest_name"), edSetText, 0, "Updated guest");
+  send_message(script_page_control(page, "phone"), edSetText, 0, "+49 123");
+  ASSERT_TRUE(script_page_perform(page, "save_guest")); ASSERT_TRUE(wait_for(db, guests->table_id, 1, "name", "Updated guest"));
+  ASSERT_TRUE(script_page_perform(page, "load_guest")); ASSERT_STR_EQUAL(script_page_control(page, "phone")->title, "+49 123");
+  ASSERT_TRUE(script_page_perform(page, "connect"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "guest_editor")->title, "Load the guest again"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_FALSE(window_is_enabled(script_page_control(page, "save_guest")));
+  for (int i = 0; i < 500 && !window_is_enabled(script_page_control(page, "load_guest")); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_TRUE(script_page_perform(page, "load_guest")); ASSERT_TRUE(window_is_enabled(script_page_control(page, "save_guest")));
   send_message(script_page_control(page, "clean_room"), cbSetCurrentValue, 1, NULL);
   ASSERT_TRUE(script_page_perform(page, "mark_clean")); ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "cleaning_state", "Clean"));
   ASSERT_TRUE(script_page_perform(page, "mark_dirty")); ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "cleaning_state", "Dirty"));
