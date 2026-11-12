@@ -152,6 +152,20 @@ bool ledger_exact_posted(database_t *db, int id) {
   return posted;
 }
 
+bool ledger_reversal_linked(database_t *db, int id) {
+  if (!db || id <= 0) return false;
+  const db_table_schema_t *table = db_schema_table(db->schema, TABLE_REVERSAL_LINKS);
+  const char *fields[] = { "original_id", "reversal_id" };
+  for (size_t i = 0; i < sizeof(fields) / sizeof(fields[0]); i++) {
+    int field = db_schema_field_index(table, fields[i]);
+    result_node_t *rows = (void *)db_schema_xml(db, dbFetch, MAKEDWORD(TABLE_REVERSAL_LINKS, field), (void *)(intptr_t)id);
+    bool found = rows != NULL;
+    free_result_list(rows);
+    if (found) return true;
+  }
+  return false;
+}
+
 lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam) {
   if (msg == dbInsert || msg == dbUpdate || msg == dbDelete) {
     uint32_t table = LOWORD(wparam);
@@ -160,17 +174,17 @@ lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam)
       const db_document_t *doc = msg == dbDelete ? NULL : lparam;
       int id = msg == dbDelete ? (int)(intptr_t)lparam : doc ? doc->id : 0;
       locked = (doc && ledger_period_closed(db, doc->date)) || (msg != dbInsert && locked_document(db, id));
-      if (!ledger_posting_active() && msg != dbInsert && ledger_exact_posted(db, id)) locked = true;
+      if (!ledger_posting_active() && msg != dbInsert && (ledger_exact_posted(db, id) || ledger_reversal_linked(db, id))) locked = true;
     } else if (table == TABLE_DOC_LINES || table == TABLE_PAYROLL_LINES || table == TABLE_ASSET_LINES || table == TABLE_ENTRIES) {
       const void *old = msg == dbInsert || !lparam ? NULL : (const void *)db_schema_xml(db, dbFind, MAKEDWORD(table, 0),
         msg == dbDelete ? lparam : (void *)(intptr_t)*(const int *)lparam);
       locked = (old && locked_document(db, document_of(db, table, old))) ||
                (msg != dbDelete && lparam && locked_document(db, document_of(db, table, lparam)));
-      if (!ledger_posting_active() && ((old && ledger_exact_posted(db, document_of(db, table, old))) ||
-          (msg != dbDelete && lparam && ledger_exact_posted(db, document_of(db, table, lparam))))) locked = true;
+      if (!ledger_posting_active() && ((old && (ledger_exact_posted(db, document_of(db, table, old)) || ledger_reversal_linked(db, document_of(db, table, old)))) ||
+          (msg != dbDelete && lparam && (ledger_exact_posted(db, document_of(db, table, lparam)) || ledger_reversal_linked(db, document_of(db, table, lparam)))))) locked = true;
     }
     if (locked) {
-      fprintf(stderr, "[ledger] write rejected: closed period, posted exact document or protected history table=%u message=%u\n", table, msg);
+      fprintf(stderr, "[ledger] write rejected: closed period, protected posting or history table=%u message=%u\n", table, msg);
       fflush(stderr); return 0;
     }
   }

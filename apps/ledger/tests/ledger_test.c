@@ -1111,6 +1111,54 @@ static void test_reversal(void) {
   PASS();
 }
 
+static void test_reversal_protection(void) {
+  TEST("linked legacy postings reject edits, unposting and reposting in an open period");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  switch_configuration("ru-2026", "reversal-protection.xml");
+  const db_document_t *source = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "РТ-0001");
+  ASSERT_NOT_NULL(source);
+  int ids[] = { source->id, ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, source->id, "2026-04-01", "Correction") };
+  ASSERT(ids[1] > 0, "reversal created");
+  for (int pass = 0; pass < 2; pass++) {
+    for (int i = 0; i < 2; i++) {
+      const db_document_t *doc = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)ids[i]);
+      ASSERT(doc && doc->posted, "linked document remains posted");
+      db_document_t changed = *doc;
+      snprintf(changed.comment, sizeof(changed.comment), "Changed");
+      ASSERT_FALSE(send_db_message(g_ledger->ib, dbUpdate, TABLE_DOCUMENTS, &changed));
+      ASSERT_FALSE(send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)ids[i]));
+      result_node_t *entries = (void *)send_db_message(g_ledger->ib, dbFetch,
+        MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)ids[i]);
+      ASSERT_NOT_NULL(entries);
+      db_entry_t entry = **(db_entry_t **)entries->data;
+      free_result_list(entries);
+      entry.amount += 1;
+      ASSERT_FALSE(send_db_message(g_ledger->ib, dbUpdate, TABLE_ENTRIES, &entry));
+      ASSERT_FALSE(send_db_message(g_ledger->ib, dbDelete, TABLE_ENTRIES, (void *)(intptr_t)entry.id));
+      entry.id = 0;
+      ASSERT_FALSE(send_db_message(g_ledger->ib, dbInsert, TABLE_ENTRIES, &entry));
+      ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, ids[i]));
+      ledger_unpost(g_ledger->ib, g_ledger->cfg, ids[i]);
+      doc = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)ids[i]);
+      ASSERT(doc && doc->posted, "unposting was rejected");
+    }
+    ASSERT_TRUE(ledger_repost_all(g_ledger->ib, g_ledger->cfg));
+    for (int i = 0; i < 2; i++) {
+      const db_document_t *doc = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)ids[i]);
+      ASSERT(doc && doc->posted, "bulk repost preserves linked posting");
+    }
+    if (!pass) {
+      ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
+      char path[sizeof(g_ledger->ib->source_path)]; snprintf(path, sizeof(path), "%s", g_ledger->ib->source_path);
+      destroy_database(g_ledger->ib);
+      g_ledger->ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path);
+      ASSERT_NOT_NULL(g_ledger->ib); register_database("ib", g_ledger->ib);
+    }
+  }
+  restore_configuration(cfg, ib);
+  PASS();
+}
+
 static void test_service(void) {
   TEST("trading service validates roles and decimal inputs, creates, posts and reverses atomically");
   database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
@@ -1681,6 +1729,7 @@ int main(int argc, char **argv) {
   test_closed_period();
   test_infobase_migration();
   test_reversal();
+  test_reversal_protection();
   test_service();
   test_local_exact_trade();
   test_english_configurations();

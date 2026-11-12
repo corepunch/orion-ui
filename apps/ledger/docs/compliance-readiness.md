@@ -30,7 +30,7 @@ a writable `ledger.transaction`, then saved. The boundary persists and the
 Ledger datasource rejects ordinary document, line and entry writes dated on or
 before it; posting and unposting are rejected, and bulk repost skips that
 period. New exact trading postings also reject ordinary datasource edits,
-deletion, reposting and unposting; use a linked reversal. There is no reopening API. Successful posts and unposts now append
+deletion, reposting and unposting; use a linked reversal. Once a reversal is linked, ordinary datasource edits, deletion, reposting and unposting of both the original and reversal are rejected, including legacy postings; bulk repost skips both. There is no reopening API. Successful posts and unposts now append
 transactional snapshots of the document identity, totals and entries, with a
 UTC clock timestamp; older postings acquire snapshots only when next posted
 or unposted. Ordinary datasource writes to those snapshots are rejected.

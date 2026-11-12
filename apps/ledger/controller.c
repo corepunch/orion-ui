@@ -23,7 +23,7 @@ static void update_home(void);
 static void update_journal_actions(void) {
   const db_document_t *doc = selected(ID_JOURNAL_PAGE_DOCUMENTS);
   window_t *unpost = view(ID_DOC_UNPOST), *reverse = view(ID_DOC_REVERSE);
-  if (unpost) enable_window(unpost, doc && doc->posted && !ledger_exact_posted(g_ledger->ib, doc->id) && !ledger_period_closed(g_ledger->ib, doc->date));
+  if (unpost) enable_window(unpost, doc && doc->posted && !ledger_exact_posted(g_ledger->ib, doc->id) && !ledger_reversal_linked(g_ledger->ib, doc->id) && !ledger_period_closed(g_ledger->ib, doc->date));
   if (reverse) enable_window(reverse, doc && doc->posted && !doc->correction_of);
 }
 
@@ -576,7 +576,7 @@ static void ledger_ui_print_document(lua_State *L, int id) { if (id) print_docum
 static void ledger_ui_changed(lua_State *L, int id) { after_save(id); }
 static void ledger_ui_unpost(lua_State *L, int id) {
   const db_document_t *doc = find_document(id);
-  if (doc && (ledger_exact_posted(g_ledger->ib, id) || ledger_period_closed(g_ledger->ib, doc->date))) {
+  if (doc && (ledger_exact_posted(g_ledger->ib, id) || ledger_reversal_linked(g_ledger->ib, id) || ledger_period_closed(g_ledger->ib, doc->date))) {
     message_box(g_ledger->main_win, ui_tr("This posting cannot be cancelled. Create a reversal in an open period."), ui_tr("Cancel Posting"), MB_OK); return;
   }
   ledger_unpost(g_ledger->ib, g_ledger->cfg, id);

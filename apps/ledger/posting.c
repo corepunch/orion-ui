@@ -409,7 +409,9 @@ static void recalc_assets(database_t *ib, db_document_t *doc) {
 void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id) {
   db_document_t *doc = find(ib, TABLE_DOCUMENTS, doc_id);
   if (!doc) return;
-  if (doc->exact_money && doc->posted && !ledger_posting_active()) return;
+  if (!ledger_posting_active() && ((doc->exact_money && doc->posted) || ledger_reversal_linked(ib, doc_id))) {
+    fprintf(stderr, "[ledger] recalculation rejected: document=%d is protected by exact posting or reversal\n", doc_id); fflush(stderr); return;
+  }
   db_doc_type_t *type = find(cfg, TABLE_DOC_TYPES, doc->doc_type_id);
   if (doc->currency_id && doc->rate == 0) doc->rate = ledger_rate_on(ib, doc->currency_id, doc->date);
   if (!doc->currency_id) doc->rate = 0;
@@ -675,8 +677,8 @@ static bool posting_amounts_valid(const post_t *p) {
 static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool preview) {
   post_t p;
   if (!posting_of(ib, cfg, doc_id, &p, preview ? "preview" : "post")) return false;
-  if (ledger_exact_posted(ib, doc_id)) {
-    fprintf(stderr, "[ledger] post rejected: exact document=%d is already posted; use reversal\n", doc_id); fflush(stderr); return false;
+  if (ledger_exact_posted(ib, doc_id) || ledger_reversal_linked(ib, doc_id)) {
+    fprintf(stderr, "[ledger] post rejected: document=%d is protected by exact posting or reversal\n", doc_id); fflush(stderr); return false;
   }
   if (!preview && ledger_period_closed(ib, p.doc->date)) {
     fprintf(stderr, "[ledger] post rejected: document=%d date=%s is closed\n", doc_id, p.doc->date); fflush(stderr); return false;
@@ -733,8 +735,8 @@ bool ledger_preview_entries(database_t *ib, database_t *cfg, int doc_id) {
 void ledger_unpost(database_t *ib, database_t *cfg, int doc_id) {
   db_document_t *doc = find(ib, TABLE_DOCUMENTS, doc_id);
   if (!doc) return;
-  if (doc->exact_money && doc->posted) {
-    fprintf(stderr, "[ledger] unpost rejected: exact document=%d requires reversal\n", doc_id); fflush(stderr); return;
+  if ((doc->exact_money && doc->posted) || ledger_reversal_linked(ib, doc_id)) {
+    fprintf(stderr, "[ledger] unpost rejected: document=%d is protected by exact posting or reversal\n", doc_id); fflush(stderr); return;
   }
   if (ledger_period_closed(ib, doc->date)) {
     fprintf(stderr, "[ledger] unpost rejected: document=%d date=%s is closed\n", doc_id, doc->date); fflush(stderr); return;
@@ -817,7 +819,7 @@ int ledger_reverse_posting(database_t *ib, database_t *cfg, int original_id, con
   free_result_list(snapshots);
   if (ok) {
     db_reversal_link_t link = { .original_id = original_id, .reversal_id = id, .revision_id = revision_id };
-    ok = db_schema_xml(ib, dbInsert, TABLE_REVERSAL_LINKS, &link) != 0 && ledger_post(ib, cfg, id);
+    ok = ledger_post(ib, cfg, id) && db_schema_xml(ib, dbInsert, TABLE_REVERSAL_LINKS, &link) != 0;
   }
   if (ok && send_db_message(ib, dbCommitChanges, 0, NULL)) return id;
   send_db_message(ib, dbRevertChanges, 0, NULL);
@@ -855,7 +857,7 @@ bool ledger_repost_all(database_t *ib, database_t *cfg) {
   bool ok = true;
   for (int i = 0; i < count && ok; i++) {
     int id = order[i]->id;
-    if (ledger_period_closed(ib, order[i]->date) || (order[i]->exact_money && order[i]->posted)) continue;
+    if (ledger_period_closed(ib, order[i]->date) || (order[i]->exact_money && order[i]->posted) || ledger_reversal_linked(ib, order[i]->id)) continue;
     ledger_recalc_document(ib, cfg, id);
     if (order[i]->posted) ok = ledger_post(ib, cfg, id);
     else ledger_unpost(ib, cfg, id);
