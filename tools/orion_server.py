@@ -32,7 +32,7 @@ POLICIES = {
     "lodge": {
         "snapshot": {"admin", "reception", "housekeeping", "auditor"},
         **{c: {"admin", "reception"} for c in (
-            "save_room", "save_guest", "reserve", "check_in", "check_out", "cancel", "payment", "set_night", "reset_night", "group_reserve", "group_cancel", "group_settle")},
+            "save_room", "save_guest", "delete_room", "delete_guest", "reserve", "check_in", "check_out", "cancel", "payment", "set_night", "reset_night", "group_reserve", "group_cancel", "group_settle")},
         "set_room_cleaning": {"admin", "housekeeping"},
         "day_preview": {"admin", "reception", "auditor"}, "close_day": {"admin"},
         "configure_hotel": {"admin"},

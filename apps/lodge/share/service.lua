@@ -7,6 +7,7 @@ local service = {}
 local roles = {
   snapshot = {admin = true, reception = true, housekeeping = true, auditor = true},
   save_room = {admin = true, reception = true}, save_guest = {admin = true, reception = true},
+  delete_room = {admin = true, reception = true}, delete_guest = {admin = true, reception = true},
   reserve = {admin = true, reception = true}, check_in = {admin = true, reception = true},
   check_out = {admin = true, reception = true}, cancel = {admin = true, reception = true},
   payment = {admin = true, reception = true}, set_night = {admin = true, reception = true},
@@ -88,6 +89,13 @@ local function run(command, args, role)
     local values = fields(args, allowed); local id = values.id and positive_id(values.id); values.id = nil
     local records = command == "save_room" and Hotel.rooms or Hotel.guests
     return write(function() return records:save(id, values) end)
+  end
+  if command == "delete_room" or command == "delete_guest" then
+    fields(args, {id = true}); local id = positive_id(args.id)
+    local records = command == "delete_room" and Hotel.rooms or Hotel.guests
+    return Hotel.reservations.model:transaction(function()
+      orion.assert(records:delete(id)); orion.assert(application.save("lodge")); return {id = id}
+    end)
   end
   if command == "reserve" then
     local values = fields(args, {id = true, room_id = true, guest_id = true, arrival = true, departure = true,

@@ -184,7 +184,7 @@ pending request, rather than entered again as a new payment.
 
 The shared view provides **Use room rate** for individual reservations and separate rate-copy actions for each room in a group. Rates can still be edited before saving.
 
-The shared view supports creating and editing rooms and guests, all three cleaning states (clean,
+The shared view supports creating and editing rooms and guests, and deleting unused records after confirmation. Rooms and guests referenced by any reservation cannot be deleted. It also supports all three cleaning states (clean,
 dirty and inspection needed), creating and editing reservations, check-in,
 payments, refunds, checkout, printable booking confirmations, two-room group reservations, group statements, nightly prices and
 day preview or closing, subject to the authenticated role. Data displayed in this view is a transient projection; the server is the

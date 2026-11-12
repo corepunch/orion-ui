@@ -214,6 +214,21 @@ static void test_lodge_remote_ui(void) {
   ASSERT_FALSE(script_page_perform(page, "save_room"));
   send_message(script_page_control(page, "room_name"), edSetText, 0, "Remote 103");
   ASSERT_TRUE(script_page_perform(page, "add_room")); ASSERT_TRUE(wait_for(db, rooms->table_id, 3, "name", "Remote 103"));
+  send_message(script_page_control(page, "room_name"), edSetText, 0, "Temporary room");
+  ASSERT_TRUE(script_page_perform(page, "add_room")); ASSERT_TRUE(wait_for(db, rooms->table_id, 4, "name", "Temporary room"));
+  send_message(script_page_control(page, "edit_room_choice"), cbSetCurrentValue, 4, NULL);
+  ASSERT_TRUE(script_page_perform(page, "preview_delete_room"));
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "delete_notice")->title, "Temporary room"));
+  send_message(script_page_control(page, "edit_room_choice"), cbSetCurrentValue, 2, NULL);
+  ASSERT_FALSE(script_page_perform(page, "confirm_delete"));
+  ASSERT_NOT_NULL((void *)send_db_message(db, dbFind, rooms->table_id, (void *)(intptr_t)4));
+  send_message(script_page_control(page, "edit_room_choice"), cbSetCurrentValue, 4, NULL);
+  ASSERT_TRUE(script_page_perform(page, "preview_delete_room"));
+  ASSERT_TRUE(script_page_perform(page, "confirm_delete"));
+  for (int i = 0; i < 500 && send_db_message(db, dbFind, rooms->table_id, (void *)(intptr_t)4); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_NULL((void *)send_db_message(db, dbFind, rooms->table_id, (void *)(intptr_t)4));
   send_message(script_page_control(page, "sections"), tcSetSelection, 1, NULL);
   ASSERT_TRUE(script_page_perform(page, "new_group"));
   for (int i = 0; i < 500 && !window_is_enabled(script_page_control(page, "new_group")); i++) {

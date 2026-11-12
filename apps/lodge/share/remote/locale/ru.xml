@@ -271,4 +271,9 @@
   <string source="Preview the group settlement again." where="code">Повторно проверьте оплату группы.</string>
   <string source="Group settlement recorded." where="code">Оплата группы записана.</string>
   <string source="Pay group %s: %s %s across %d reservations. Review the exported group statement before confirming." where="code">Оплатить группу %s: %s %s по %d бронированиям. Перед подтверждением проверьте выгруженную ведомость группы.</string>
+  <string source="Delete room" where="remote">Удалить номер</string>
+  <string source="Delete guest" where="remote">Удалить гостя</string>
+  <string source="Confirm deletion" where="remote">Подтвердить удаление</string>
+  <string source="Delete %s? Confirm to remove this record." where="code">Удалить %s? Подтвердите удаление записи.</string>
+  <string source="Preview the deletion again." where="code">Повторно проверьте удаление.</string>
 </strings>

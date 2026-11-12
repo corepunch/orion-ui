@@ -119,6 +119,39 @@ class SharedCompanyTests(unittest.TestCase):
                     finally:
                         company.close()
 
+    def test_catalog_deletion_restrictions_and_recovery(self):
+        for country in ('DE', 'RU'):
+            with self.subTest(country=country), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'company'
+                server.initialize(argparse.Namespace(state=str(path), application='lodge', country=country, configuration=None,
+                                  executable=str(ROOT / 'build/bin/orion-service'), resources=str(ROOT / 'apps/lodge/share'), source=None))
+                company = server.Company(path)
+                try:
+                    def request(key, command, args, role='reception'):
+                        body = {'request_id': key, 'expected_revision': company.status()['revision'], 'command': command, 'args': args}
+                        return body, company.execute('alice', role, body)
+                    rooms = [request('room-' + str(i), 'save_room', {'name': str(i), 'capacity': 2, 'rate': 100})[1]['result']['id'] for i in (101, 102)]
+                    guests = [request('guest-' + str(i), 'save_guest', {'name': str(i)})[1]['result']['id'] for i in (1, 2)]
+                    stay = {'room_id': rooms[0], 'guest_id': guests[0], 'arrival': '2035-01-01', 'departure': '2035-01-02',
+                            'persons': 1, 'rate': 100, 'extras': 0, 'notes': ''}
+                    self.assertTrue(request('stay', 'reserve', stay)[1]['ok'])
+                    for kind, record in (('room', rooms[0]), ('guest', guests[0])):
+                        self.assertFalse(request('used-' + kind, 'delete_' + kind, {'id': record})[1]['ok'])
+                        with self.assertRaises(server.Refusal) as denied:
+                            request('denied-' + kind, 'delete_' + kind, {'id': record}, 'housekeeping')
+                        self.assertEqual(denied.exception.status, 403)
+                    body, result = request('delete-room', 'delete_room', {'id': rooms[1]})
+                    self.assertTrue(result['ok'], result)
+                    self.assertTrue(request('delete-guest', 'delete_guest', {'id': guests[1]})[1]['ok'])
+                    company.close(); company = server.Company(path)
+                    self.assertEqual(company.execute('alice', 'reception', body), result)
+                    view = request('view', 'snapshot', {})[1]['result']
+                    self.assertEqual([r['id'] for r in view['rooms']], [rooms[0]])
+                    self.assertEqual([g['id'] for g in view['guests']], [guests[0]])
+                    self.assertEqual(len(view['reservations']), 1)
+                finally:
+                    company.close()
+
     def test_cancelled_payments_in_day_preview(self):
         for country in ('DE', 'RU'):
             with self.subTest(country=country), tempfile.TemporaryDirectory() as directory:

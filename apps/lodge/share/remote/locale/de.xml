@@ -271,4 +271,9 @@
   <string source="Preview the group settlement again." where="code">Prüfen Sie die Gruppenzahlung erneut.</string>
   <string source="Group settlement recorded." where="code">Gruppenzahlung erfasst.</string>
   <string source="Pay group %s: %s %s across %d reservations. Review the exported group statement before confirming." where="code">Gruppe %s: %s %s für %d Reservierungen bezahlen. Prüfen Sie vor der Bestätigung die exportierte Gruppenübersicht.</string>
+  <string source="Delete room" where="remote">Zimmer löschen</string>
+  <string source="Delete guest" where="remote">Gast löschen</string>
+  <string source="Confirm deletion" where="remote">Löschen bestätigen</string>
+  <string source="Delete %s? Confirm to remove this record." where="code">%s löschen? Bestätigen Sie das Löschen dieses Datensatzes.</string>
+  <string source="Preview the deletion again." where="code">Prüfen Sie den Löschvorgang erneut.</string>
 </strings>
