@@ -213,4 +213,6 @@
   <string source="Preview the group settlement again." where="code">Prüfen Sie die Gruppenzahlung erneut.</string>
   <string source="Group settlement recorded." where="code">Gruppenzahlung erfasst.</string>
   <string source="Pay group %s: %s %s across %d reservations. Review the exported group statement before confirming." where="code">Gruppe %s: %s %s für %d Reservierungen bezahlen. Prüfen Sie vor der Bestätigung die exportierte Gruppenübersicht.</string>
+  <string source="The day has changed. Preview it again before closing." where="code">Der Tag hat sich geändert. Prüfen Sie ihn vor dem Abschluss erneut.</string>
+  <string source="Preview the day before closing." where="code">Prüfen Sie den Tag vor dem Abschluss.</string>
 </strings>

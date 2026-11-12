@@ -299,6 +299,7 @@ static void test_lodge_remote_ui(void) {
   ASSERT_TRUE(wait_for(db, stays->table_id, 3, "status", "Cancelled"));
   ASSERT_FALSE(window_is_enabled(script_page_control(page, "confirm_group_cancel")));
   send_message(script_page_control(page, "sections"), tcSetSelection, 3, NULL);
+  ASSERT_FALSE(window_is_enabled(script_page_control(page, "close_day")));
   ASSERT_TRUE(script_page_perform(page, "preview_day"));
   for (int i = 0; i < 500 && !strstr(script_page_control(page, "day_report")->title, "Overdue:"); i++) {
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
@@ -317,11 +318,7 @@ static void test_lodge_remote_ui(void) {
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
   }
   ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "Today is closed"));
-  ASSERT_TRUE(script_page_perform(page, "close_day"));
-  for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "already closed"); i++) {
-    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
-  }
-  ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "already closed"));
+  ASSERT_FALSE(window_is_enabled(script_page_control(page, "close_day")));
   script_application_close(app); test_env_shutdown(); unlink(statement_path); unlink(confirmation_path); rmdir(directory); PASS();
 }
 int main(void) {

@@ -3,11 +3,12 @@ local Hotel = require("hotel")
 local DayClose = {form = "day_close", title = orion.tr("Close day")}
 function DayClose:init() self.notice = "" end
 function DayClose:close_day()
-  orion.assert(Hotel.close_today())
+  orion.assert(Hotel.close_today(orion.assert(self.preview, orion.tr("Preview the day before closing."))))
   self.notice = orion.tr("Today is closed.")
 end
 function DayClose:data()
   local report = Hotel.day_report()
+  self.preview = report
   return {values = {
     day = string.format(orion.tr("Operational day: %s"), orion.formatDate(report.day)),
     payments = string.format(orion.tr("Today's net payments: %s"), orion.formatNumber(report.net_minor / 100, 2)),

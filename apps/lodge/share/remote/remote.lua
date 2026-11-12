@@ -95,7 +95,7 @@ function Page:connect(values)
   if not ok then self.notice = err end
 end
 function Page:submit(values, command, args)
-  self.day_report, self.cancelled_paid_report = "", ""
+  self.day_report, self.cancelled_paid_report, self.day_preview = "", "", nil
   self:remember(values)
   local ok, err = self.client:submit(command, args, function(result, failure)
     if not result then self.notice = failure; return end
@@ -326,17 +326,26 @@ end
 function Page:set_night(v) self:night_price(v, "set_night") end
 function Page:reset_night(v) self:night_price(v, "reset_night") end
 function Page:preview_day(v)
+  self.day_preview = nil
   self:remember(v)
   local ok, err = self.client:submit("day_preview", {}, function(report, failure)
     if not report then self.notice = failure; return end
     self.day_report = string.format(orion.tr("Day: %s · Net payments: %s · Outstanding: %s · Overdue: %d"),
       orion.formatDate(report.day), orion.formatNumber(report.net_minor / 100, 2), orion.formatNumber(report.outstanding_minor / 100, 2), report.pending)
     self.cancelled_paid_report = string.format(orion.tr("Cancelled reservations with payments: %d · Paid: %s"), report.cancelled_paid_count, orion.formatNumber(report.cancelled_paid_minor / 100, 2))
+    if not report.closed and report.pending == 0 then
+      self.day_preview = {day = report.day, net_minor = report.net_minor, outstanding_minor = report.outstanding_minor,
+        reservations = report.reservations, pending = report.pending, cancelled_paid_minor = report.cancelled_paid_minor,
+        cancelled_paid_count = report.cancelled_paid_count}
+    end
     self.notice = report.closed and orion.tr("Today is closed.") or orion.tr("Day preview refreshed.")
   end)
   if not ok then self.notice = err end
 end
-function Page:close_day(v) self:submit(v, "close_day", {}) end
+function Page:close_day(v)
+  local preview = orion.assert(self.day_preview, orion.tr("Preview the day before closing."))
+  self:submit(v, "close_day", preview)
+end
 function Page:data()
   local state = self.client:state()
   local blocked = not self.connected or not self.snapshot_ready or state.busy or state.pending or state.conflict
@@ -345,6 +354,7 @@ function Page:data()
     check_in = "check_in", check_out = "check_out", cancel = "cancel", confirmation = "snapshot", pay = "payment", refund = "payment",
     group_reserve = "group_reserve", group_statement = "snapshot", preview_group_cancel = "group_cancel", confirm_group_cancel = "group_cancel", preview_group_settlement = "group_settle", confirm_group_settlement = "group_settle", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
   for control, command in pairs(map) do disabled[control] = blocked or not self.allowed[command] end
+  disabled.close_day = disabled.close_day or not self.day_preview
   disabled.preview_delete_room = blocked or not self.allowed.delete_room
   disabled.preview_delete_guest = blocked or not self.allowed.delete_guest
   disabled.confirm_delete = blocked or not self.delete_choice or not self.allowed["delete_" .. self.delete_choice.kind]

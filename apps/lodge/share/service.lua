@@ -83,7 +83,11 @@ local function run(command, args, role)
     local row = orion.assert(Hotel.configure_hotel(args.country, args.currency)); return {id = row.id}
   end
   if command == "day_preview" then fields(args, {}); return Hotel.day_report() end
-  if command == "close_day" then fields(args, {}); local row = orion.assert(Hotel.close_today()); return {id = row.id} end
+  if command == "close_day" then
+    fields(args, {day = true, net_minor = true, outstanding_minor = true, reservations = true, pending = true,
+      cancelled_paid_minor = true, cancelled_paid_count = true})
+    local row = orion.assert(Hotel.close_today(args)); return {id = row.id}
+  end
   if command == "save_room" or command == "save_guest" then
     local allowed = command == "save_room" and {id = true, name = true, category = true, capacity = true, rate = true} or {id = true, name = true, phone = true}
     local values = fields(args, allowed); local id = values.id and positive_id(values.id); values.id = nil

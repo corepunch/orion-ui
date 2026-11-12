@@ -213,4 +213,6 @@
   <string source="Preview the group settlement again." where="code">Повторно проверьте оплату группы.</string>
   <string source="Group settlement recorded." where="code">Оплата группы записана.</string>
   <string source="Pay group %s: %s %s across %d reservations. Review the exported group statement before confirming." where="code">Оплатить группу %s: %s %s по %d бронированиям. Перед подтверждением проверьте выгруженную ведомость группы.</string>
+  <string source="The day has changed. Preview it again before closing." where="code">День изменился. Повторно проверьте его перед закрытием.</string>
+  <string source="Preview the day before closing." where="code">Проверьте день перед закрытием.</string>
 </strings>

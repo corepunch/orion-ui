@@ -429,7 +429,9 @@ static void test_service(void) {
     "assert(call('payment',{id=g.result.reservations[1],amount_minor=1000,request_key='cancel-deposit'}).ok); "
     "assert(call('payment',{id=g.result.reservations[1],amount_minor=-500,request_key='cancel-refund'}).ok); "
     "local preview=call('day_preview').result; assert(preview.net_minor==15500 and preview.cancelled_paid_count==1 and preview.cancelled_paid_minor==500); "
-    "assert(call('close_day',{},'admin').ok); "
+    "local expected={day=preview.day,net_minor=preview.net_minor,outstanding_minor=preview.outstanding_minor,reservations=preview.reservations,pending=preview.pending,cancelled_paid_minor=preview.cancelled_paid_minor,cancelled_paid_count=preview.cancelled_paid_count}; "
+    "local wrong={}; for k,v in pairs(expected) do wrong[k]=v end; wrong.day='2000-01-01'; assert(not call('close_day',wrong,'admin').ok); "
+    "wrong.day=expected.day; wrong.net_minor=wrong.net_minor+1; assert(not call('close_day',wrong,'admin').ok); assert(call('close_day',expected,'admin').ok); "
     "assert(not call('close_day',{},'admin').ok); assert(not call('reserve',stay(room,'2027-08-01','2027-08-02')).ok); "
     "assert(not j.decode(s.handle('not json')).ok)"));
   form_library_t *library = form_library_load("apps/lodge/share/application.orion"); ASSERT_NOT_NULL(library);

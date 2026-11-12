@@ -276,4 +276,6 @@
   <string source="Confirm deletion" where="remote">Подтвердить удаление</string>
   <string source="Delete %s? Confirm to remove this record." where="code">Удалить %s? Подтвердите удаление записи.</string>
   <string source="Preview the deletion again." where="code">Повторно проверьте удаление.</string>
+  <string source="The day has changed. Preview it again before closing." where="code">День изменился. Повторно проверьте его перед закрытием.</string>
+  <string source="Preview the day before closing." where="code">Проверьте день перед закрытием.</string>
 </strings>

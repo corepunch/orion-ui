@@ -170,8 +170,13 @@ function Hotel.day_report()
   return {day = day, net_minor = net, outstanding_minor = outstanding, reservations = count, pending = pending,
     cancelled_paid_minor = cancelled_paid, cancelled_paid_count = cancelled_count, closed = Hotel.day_closes.model:find({day = day}) ~= nil}
 end
-function Hotel.close_today()
+function Hotel.close_today(expected)
   local report = Hotel.day_report()
+  if expected then
+    for _, key in ipairs({"day", "net_minor", "outstanding_minor", "reservations", "pending", "cancelled_paid_minor", "cancelled_paid_count"}) do
+      if expected[key] == nil or expected[key] ~= report[key] then return nil, orion.tr("The day has changed. Preview it again before closing.") end
+    end
+  end
   if report.closed then return nil, orion.tr("Today is already closed or is not the current day.") end
   if report.pending > 0 then return nil, orion.tr("Resolve overdue arrivals and departures before closing the day.") end
   Hotel.closing_day = true

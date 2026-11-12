@@ -70,7 +70,10 @@ class SharedCompanyTests(unittest.TestCase):
                     with self.assertRaises(server.Refusal) as denied_close:
                         request('alice', 'reception', 'denied-close', 'close_day', {})
                     self.assertEqual(denied_close.exception.status, 403)
-                    close_body, close_result = ok('manager', 'admin', 'close', 'close_day', {})
+                    close_args = {key: preview[key] for key in ('day', 'net_minor', 'outstanding_minor', 'reservations', 'pending', 'cancelled_paid_minor', 'cancelled_paid_count')}
+                    self.assertFalse(request('manager', 'admin', 'wrong-day', 'close_day', dict(close_args, day='2000-01-01'))[1]['ok'])
+                    self.assertFalse(request('manager', 'admin', 'wrong-total', 'close_day', dict(close_args, net_minor=0))[1]['ok'])
+                    close_body, close_result = ok('manager', 'admin', 'close', 'close_day', close_args)
                     company.close(); company = server.Company(path)
                     self.assertEqual(company.execute('manager', 'admin', close_body), close_result)
                     closed = ok('bob', 'reception', 'closed', 'snapshot', {})[1]['result']
@@ -179,7 +182,9 @@ class SharedCompanyTests(unittest.TestCase):
                     report = request('preview-again', 'day_preview', {})
                     self.assertEqual((report['cancelled_paid_count'], report['cancelled_paid_minor']), (0, 0))
                     request('repay', 'payment', {'id': booking, 'amount_minor': 5000, 'request_key': 'repay'})
-                    request('close', 'close_day', {}, 'admin')
+                    report = request('final-preview', 'day_preview', {})
+                    close_args = {key: report[key] for key in ('day', 'net_minor', 'outstanding_minor', 'reservations', 'pending', 'cancelled_paid_minor', 'cancelled_paid_count')}
+                    request('close', 'close_day', close_args, 'admin')
                     company.close(); company = server.Company(path)
                     close = request('closed-view', 'snapshot', {})['day_closes'][0]
                     self.assertEqual((close['cancelled_paid_count'], close['cancelled_paid_minor']), (1, '5000'))
