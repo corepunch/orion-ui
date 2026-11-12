@@ -24,7 +24,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y liblua5.4-dev libgl1-mesa-dev libcglm-dev libx11-dev libegl-dev libxml2-dev libpng-dev
+        sudo apt-get install -y liblua5.4-dev libgl1-mesa-dev libcglm-dev libx11-dev libegl-dev libxml2-dev libpng-dev curl openssl
 
     - name: Build library
       run: make library
@@ -48,6 +48,7 @@ jobs:
     runs-on: ubuntu-24.04   # 26.04 runners cannot reach security.ubuntu.com for apt (Nov 2026)
     env:
       LIBGL_ALWAYS_SOFTWARE: "1"
+      ORION_REQUIRE_LOOPBACK_TESTS: "1"
 
     steps:
     - name: Checkout code
@@ -58,7 +59,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y liblua5.4-dev libgl1-mesa-dev libcglm-dev libx11-dev libegl-dev libxml2-dev libgl1-mesa-dri libpng-dev lua-check lua5.4
+        sudo apt-get install -y liblua5.4-dev libgl1-mesa-dev libcglm-dev libx11-dev libegl-dev libxml2-dev libgl1-mesa-dri libpng-dev lua-check lua5.4 curl openssl
 
     - name: Check Lua sources
       run: make lua-check
