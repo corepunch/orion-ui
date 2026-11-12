@@ -71,5 +71,51 @@ class SharedCompanyTests(unittest.TestCase):
                     company.close()
 
 
+    def test_group_atomicity_and_retry_after_restart(self):
+        for country in ('DE', 'RU'):
+            with self.subTest(country=country), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'company'
+                server.initialize(argparse.Namespace(state=str(path), application='lodge', country=country, configuration=None,
+                                  executable=str(ROOT / 'build/bin/orion-service'), resources=str(ROOT / 'apps/lodge/share'), source=None))
+                company = server.Company(path)
+                try:
+                    def request(actor, key, command, args):
+                        body = {'request_id': key, 'expected_revision': company.status()['revision'], 'command': command, 'args': args}
+                        return body, company.execute(actor, 'reception', body)
+                    rooms = [request('alice', 'room-' + str(i), 'save_room',
+                                     {'name': str(i), 'capacity': 2, 'rate': 100})[1]['result']['id'] for i in (101, 102, 103)]
+                    guest = request('alice', 'guest', 'save_guest', {'name': 'Guest'})[1]['result']['id']
+                    def stay(room):
+                        return {'room_id': room, 'guest_id': guest, 'arrival': '2035-01-01', 'departure': '2035-01-02',
+                                'persons': 1, 'rate': 100, 'extras': 0, 'notes': ''}
+                    request('alice', 'occupied', 'reserve', stay(rooms[2]))
+                    revision = company.status()['revision']
+                    _, failed = request('alice', 'failed-group', 'group_reserve',
+                                        {'name': 'Rejected group', 'stays': [stay(rooms[0]), stay(rooms[2])]})
+                    self.assertFalse(failed['ok'])
+                    self.assertEqual(company.status()['revision'], revision)
+                    view = request('alice', 'after-failure', 'snapshot', {})[1]['result']
+                    self.assertEqual(len(view['reservations']), 1)
+                    self.assertEqual(len(view['reservation_groups']), 0)
+
+                    body, result = request('alice', 'group', 'group_reserve',
+                                           {'name': 'Group', 'stays': [stay(rooms[0]), stay(rooms[1])]})
+                    self.assertTrue(result['ok'])
+                    company.close(); company = server.Company(path)
+                    self.assertEqual(company.execute('alice', 'reception', body), result)
+                    altered = dict(body, args={'name': 'Other', 'stays': body['args']['stays']})
+                    with self.assertRaises(server.Refusal) as reuse:
+                        company.execute('alice', 'reception', altered)
+                    self.assertEqual(reuse.exception.status, 409)
+                    view = request('bob', 'after-restart', 'snapshot', {})[1]['result']
+                    self.assertEqual(len(view['reservation_groups']), 1)
+                    self.assertEqual(len(view['reservations']), 3)
+                    self.assertEqual(len([r for r in view['reservations'] if r['group_id'] == result['result']['id']]), 2)
+                    _, overlap = request('bob', 'overlap', 'reserve', stay(rooms[0]))
+                    self.assertFalse(overlap['ok'])
+                finally:
+                    company.close()
+
+
 if __name__ == '__main__':
     unittest.main()

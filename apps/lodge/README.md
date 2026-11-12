@@ -162,4 +162,7 @@ listener and does not touch a real company.
 
 Run `python3 apps/lodge/tests/test_shared_company.py` with `orion-service`
 built to exercise competing reservations and payments in both country
-configurations, including replay after a lost response and server restart.
+configurations, including replay after a lost response and server restart. It also checks that a
+failed group reservation leaves no partial group or bookings, and that a successful
+group request remains idempotent after restart. These checks do not replace the
+full two-client shift and failure-recovery acceptance scenario.
