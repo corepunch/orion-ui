@@ -533,7 +533,7 @@
       <!-- Posting snapshots retain their original document and entry values. -->
       <table name="posting_revisions">
         <field name="id" type="integer" key="YES" />
-        <field name="document_id" type="integer" />
+        <field name="document_id" type="integer" relation="documents.id" />
         <field name="doc_type_id" type="integer" />
         <field name="action" type="string" length="16" />
         <field name="recorded_utc" type="string" length="21" />
@@ -868,6 +868,7 @@
             <RowIcon icon="ledger-doc-draft" color="secondary" />
             <Column field="date" title="Date" width="100" />
             <Column field="number" title="Number" width="80" />
+            <Column field="correction_of.number" title="Reverses" width="90" />
             <Column field="doc_type.name" title="Document" width="0" min-width="120" />
             <Column field="counterparty.name" title="Counterparty" width="0" min-width="120" />
             <Column field="total" title="Amount" width="90" />
@@ -893,6 +894,14 @@
               <Column field="quantity" title="Qty" width="64" />
               <Column field="amount" title="Amount" width="90" total="sum" />
               <Column field="content" title="Content" width="0" />
+            </TableView>
+            <TableView name="posting_history" text="Posting History" source="ib.posting_revisions" flags="notitle,nofill,vscroll">
+              <Column field="recorded_utc" title="Recorded (UTC)" width="160" />
+              <Column field="actor" title="Actor" width="120" />
+              <Column field="action" title="Action" width="80" />
+              <Column field="date" title="Document Date" width="110" />
+              <Column field="number" title="Document Number" width="120" />
+              <Column field="total" title="Total" width="90" />
             </TableView>
           </TabView>
         </SplitView>

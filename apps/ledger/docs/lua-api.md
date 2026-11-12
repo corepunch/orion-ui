@@ -630,7 +630,7 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | Field | XML type | Relation |
 |---|---|---|
 | `id` | `integer` |  |
-| `document_id` | `integer` |  |
+| `document_id` | `integer` | documents.id |
 | `doc_type_id` | `integer` |  |
 | `action` | `string` |  |
 | `recorded_utc` | `string` |  |

@@ -413,7 +413,7 @@
   <string source="Needs attention" where="home_page">Требует внимания</string>
   <string source="Task" where="home_page">Задача</string>
   <string source="Detail" where="home_page">Подробности</string>
-  <string source="Action" where="home_page">Действие</string>
+  <string source="Action" where="home_page,journal_page">Действие</string>
   <string source="The books are in order: nothing is waiting." where="code">Учет в порядке: ничего не ждет.</string>
   <string source="Money" where="home_page">Деньги</string>
   <string source="Total money" where="home_page">Всего денег</string>
@@ -520,23 +520,26 @@
   <string source="Period Close History" where="reports_page">История закрытия периодов</string>
   <string source="Previous close" where="reports_page">Предыдущее закрытие</string>
   <string source="Closed through" where="reports_page">Закрыто по</string>
-  <string source="Recorded (UTC)" where="reports_page">Записано (UTC)</string>
-  <string source="Actor" where="reports_page">Автор</string>
+  <string source="Recorded (UTC)" where="journal_page,reports_page">Записано (UTC)</string>
+  <string source="Actor" where="journal_page,reports_page">Автор</string>
   <string source="Close Accounting Period..." where="menu">Закрыть учётный период...</string>
   <string source="Close Accounting Period" where="lock_period">Закрытие учётного периода</string>
   <string source="Closing is permanent. Reversals must use a later open date." where="lock_period">Закрытие необратимо. Для сторно требуется более поздняя открытая дата.</string>
   <string source="Close through:" where="lock_period">Закрыть по:</string>
   <string source="Review period close" where="lock_period">Проверить закрытие периода</string>
   <string source="Confirm period close" where="lock_period">Подтвердить закрытие периода</string>
+  <string source="Enter a valid close date." where="code">Введите корректную дату закрытия.</string>
+  <string source="Review: close through %s. Confirm to continue." where="code">Проверьте: закрыть по %s. Подтвердите для продолжения.</string>
+  <string source="The close could not be saved. Check the infobase before trying again; the file's state may be uncertain." where="code">Не удалось сохранить закрытие. Перед повторной попыткой проверьте информационную базу; состояние файла может быть неопределённым.</string>
+  <string source="The period could not be closed. Check unposted documents and the close date." where="code">Не удалось закрыть период. Проверьте непроведённые документы и дату закрытия.</string>
+  <string source="Reverses" where="journal_page">Сторнирует</string>
+  <string source="Posting History" where="journal_page">История проведения</string>
+  <string source="Document Date" where="journal_page">Дата документа</string>
+  <string source="Document Number" where="journal_page">Номер документа</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>
   <context name="reports_page">
     <string source="Expense">Расход</string>
   </context>
-  <string source="Close Accounting Period" where="code">Закрытие учётного периода</string>
-  <string source="Enter a valid close date." where="code">Введите корректную дату закрытия.</string>
-  <string source="Review: close through %s. Confirm to continue." where="code">Проверьте: закрыть по %s. Подтвердите для продолжения.</string>
-  <string source="The close could not be saved. Check the infobase before trying again; the file's state may be uncertain." where="code">Не удалось сохранить закрытие. Перед повторной попыткой проверьте информационную базу; состояние файла может быть неопределённым.</string>
-  <string source="The period could not be closed. Check unposted documents and the close date." where="code">Не удалось закрыть период. Проверьте непроведённые документы и дату закрытия.</string>
 </strings>

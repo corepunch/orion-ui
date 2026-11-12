@@ -413,7 +413,7 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Needs attention" where="home_page">Zu erledigen</string>
   <string source="Task" where="home_page">Aufgabe</string>
   <string source="Detail" where="home_page">Details</string>
-  <string source="Action" where="home_page">Aktion</string>
+  <string source="Action" where="home_page,journal_page">Aktion</string>
   <string source="The books are in order: nothing is waiting." where="code">Die Bücher sind in Ordnung: nichts wartet.</string>
   <string source="Money" where="home_page">Geld</string>
   <string source="Total money" where="home_page">Geld gesamt</string>
@@ -520,23 +520,26 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Period Close History" where="reports_page">Periodenabschlüsse</string>
   <string source="Previous close" where="reports_page">Vorheriger Abschluss</string>
   <string source="Closed through" where="reports_page">Abgeschlossen bis</string>
-  <string source="Recorded (UTC)" where="reports_page">Erfasst (UTC)</string>
-  <string source="Actor" where="reports_page">Benutzer</string>
+  <string source="Recorded (UTC)" where="journal_page,reports_page">Erfasst (UTC)</string>
+  <string source="Actor" where="journal_page,reports_page">Benutzer</string>
   <string source="Close Accounting Period..." where="menu">Buchungsperiode abschließen...</string>
   <string source="Close Accounting Period" where="lock_period">Buchungsperiode abschließen</string>
   <string source="Closing is permanent. Reversals must use a later open date." where="lock_period">Der Abschluss ist endgültig. Stornos benötigen ein späteres offenes Datum.</string>
   <string source="Close through:" where="lock_period">Abschließen bis:</string>
   <string source="Review period close" where="lock_period">Periodenabschluss prüfen</string>
   <string source="Confirm period close" where="lock_period">Periodenabschluss bestätigen</string>
+  <string source="Enter a valid close date." where="code">Geben Sie ein gültiges Abschlussdatum ein.</string>
+  <string source="Review: close through %s. Confirm to continue." where="code">Prüfung: Abschluss bis %s. Bestätigen Sie zum Fortfahren.</string>
+  <string source="The close could not be saved. Check the infobase before trying again; the file's state may be uncertain." where="code">Der Abschluss konnte nicht gespeichert werden. Prüfen Sie die Datenbank vor einem erneuten Versuch; der Dateistatus kann ungewiss sein.</string>
+  <string source="The period could not be closed. Check unposted documents and the close date." where="code">Die Periode konnte nicht abgeschlossen werden. Prüfen Sie ungebuchte Belege und das Abschlussdatum.</string>
+  <string source="Reverses" where="journal_page">Storniert</string>
+  <string source="Posting History" where="journal_page">Buchungsverlauf</string>
+  <string source="Document Date" where="journal_page">Belegdatum</string>
+  <string source="Document Number" where="journal_page">Belegnummer</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>
   <context name="reports_page">
     <string source="Expense">Ausgabe</string>
   </context>
-  <string source="Close Accounting Period" where="code">Buchungsperiode abschließen</string>
-  <string source="Enter a valid close date." where="code">Geben Sie ein gültiges Abschlussdatum ein.</string>
-  <string source="Review: close through %s. Confirm to continue." where="code">Prüfung: Abschluss bis %s. Bestätigen Sie zum Fortfahren.</string>
-  <string source="The close could not be saved. Check the infobase before trying again; the file's state may be uncertain." where="code">Der Abschluss konnte nicht gespeichert werden. Prüfen Sie die Datenbank vor einem erneuten Versuch; der Dateistatus kann ungewiss sein.</string>
-  <string source="The period could not be closed. Check unposted documents and the close date." where="code">Die Periode konnte nicht abgeschlossen werden. Prüfen Sie ungebuchte Belege und das Abschlussdatum.</string>
 </strings>

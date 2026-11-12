@@ -96,7 +96,12 @@ operation. A trusted writable Lua script can also use
 and save. Both create a linked manual operation; neither generates a
 corrected invoice or tax return. New exact postings reject ordinary edits,
 deletion, reposting and unposting. Posts and unposts append snapshots of the
-posting and entries, but these are not a complete audit trail. The boundary and history limitations are described in the
+posting and entries, but these are not a complete audit trail. The journal shows
+the source number for a reversal and the selected document’s posting snapshots
+on the Posting History tab. Actions are stored as `post` or `unpost`; a blank
+actor means no actor was authenticated. Snapshots created before this feature
+are unavailable, and deleting a document leaves its snapshots stored but not
+visible in the document journal. The boundary and history limitations are described in the
 [readiness audit](docs/compliance-readiness.md).
 
 The headless `ledger-run --request` service accepts data-only JSON requests for
