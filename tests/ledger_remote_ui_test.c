@@ -36,9 +36,25 @@ static void test_ledger_remote_ui(void) {
   set_text(page, "type_id", "1"); set_text(page, "draft_party_id", "1"); set_text(page, "draft_date", "2035-01-01");
   set_text(page, "item_id", "1"); set_text(page, "vat_id", "1"); set_text(page, "quantity", "1.000"); set_text(page, "price", "10.00");
   ASSERT_TRUE(script_page_perform(page, "add_line")); ASSERT_TRUE(script_page_perform(page, "create")); ASSERT_TRUE(wait_notice(page, "Draft 1 created."));
+  ASSERT_TRUE(script_page_perform(page, "show_document_lines"));
+  database_t *cache = get_database_by_name("ledger_remote_cache"); ASSERT_NOT_NULL(cache);
+  const db_table_schema_t *document_lines = db_schema_table_named(cache->schema, "document_lines"); ASSERT_NOT_NULL(document_lines);
+  bool line_found = false;
+  for (int i = 0; i < 500 && !line_found; i++) {
+    repost_messages();
+    void *row = (void *)send_db_message(cache, dbFind, document_lines->table_id, (void *)(intptr_t)1);
+    if (row) {
+      char quantity[32], price[32], total[32];
+      db_get_field_text(cache, document_lines->table_id, row, "quantity", quantity, sizeof(quantity));
+      db_get_field_text(cache, document_lines->table_id, row, "price", price, sizeof(price));
+      db_get_field_text(cache, document_lines->table_id, row, "total", total, sizeof(total));
+      line_found = !strcmp(quantity, "1.000") && !strcmp(price, "10.00") && !strcmp(total, "11.90");
+    }
+    if (!line_found) { struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); }
+  }
+  ASSERT(line_found, "shared document lines display saved exact values");
   ASSERT_TRUE(script_page_perform(page, "post")); ASSERT_TRUE(wait_notice(page, "Document posted."));
   ASSERT_TRUE(script_page_perform(page, "show_posting_history"));
-  database_t *cache = get_database_by_name("ledger_remote_cache"); ASSERT_NOT_NULL(cache);
   const db_table_schema_t *posting_history = db_schema_table_named(cache->schema, "posting_history"); ASSERT_NOT_NULL(posting_history);
   bool posting_found = false;
   for (int i = 0; i < 500 && !posting_found; i++) {

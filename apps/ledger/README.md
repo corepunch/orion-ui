@@ -730,5 +730,9 @@ workspace without opening a local infobase; `--lang` may also be supplied.
 The server controls the authenticated role and company. Draft lines are staged
 locally until submitted, and an uncertain request must be retried before making
 further changes. A revision conflict requires refreshing the company first.
+Select a document and choose **Show document lines** to inspect its saved lines
+on the Document lines tab. This view is separate from the locally staged lines
+used to create a document or replace a draft's lines. Values prefixed with `~`
+come from legacy floating-point storage.
 The shared workspace is an initial implementation and still needs integration,
 localization, and visual verification before it is considered ready for use.

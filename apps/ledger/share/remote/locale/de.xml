@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="de">
+  <string source="Show document lines" where="remote_ledger">Belegpositionen anzeigen</string>
+  <string source="Document lines" where="remote_ledger">Belegpositionen</string>
+  <string source="Lines for document ID %d">Positionen für Beleg-ID %d</string>
+  <string source="Select a document and show its lines.">Wählen Sie einen Beleg und zeigen Sie seine Positionen an.</string>
   <string source="Ledger — Shared Company" where="remote_ledger">Ledger — Gemeinsames Unternehmen</string>
   <string source="Shared company" where="remote_ledger">Gemeinsames Unternehmen</string>
   <string source="Not connected" where="remote_ledger">Nicht verbunden</string>

@@ -151,6 +151,14 @@ class LedgerHostTests(unittest.TestCase):
                     self.assertTrue(all(row['exact_money'] for row in journal))
                     self.assertTrue(all(isinstance(row['amount_minor'], str) for row in journal))
                     for role in ('admin', 'accountant', 'auditor'):
+                        lines = call('documents.lines', {**sale, 'offset': 0, 'limit': 1}, role)
+                        self.assertEqual(len(lines), 1)
+                        self.assertEqual(lines[0]['document_id'], sale['document_id'])
+                        self.assertTrue(lines[0]['exact_money'])
+                        self.assertEqual(lines[0]['quantity_milli'], '2000')
+                        self.assertEqual(lines[0]['price_minor'], '2000')
+                        self.assertEqual(call('documents.lines', {**sale, 'offset': 1, 'limit': 1}, role), [])
+                        self.assertEqual(call('documents.lines', {'document_id': 2147483647}, role), [])
                         history = call('documents.history', {**sale, 'offset': 0, 'limit': 1}, role)
                         self.assertEqual(len(history), 1)
                         self.assertEqual(history[0]['document_id'], sale['document_id'])
@@ -170,6 +178,9 @@ class LedgerHostTests(unittest.TestCase):
                     self.assertFalse(invalid['ok'], invalid)
                     with self.assertRaises(server.Refusal) as failure:
                         call('documents.history', {**sale}, 'reception')
+                    self.assertEqual(failure.exception.status, 403)
+                    with self.assertRaises(server.Refusal) as failure:
+                        call('documents.lines', {**sale}, 'reception')
                     self.assertEqual(failure.exception.status, 403)
                     sequence += 1
                     invalid = company.execute('trade-auditor', 'auditor', {'request_id': f'trade-{sequence}',

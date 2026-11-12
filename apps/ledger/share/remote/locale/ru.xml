@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="ru">
+  <string source="Show document lines" where="remote_ledger">Показать строки документа</string>
+  <string source="Document lines" where="remote_ledger">Строки документа</string>
+  <string source="Lines for document ID %d">Строки документа с ID %d</string>
+  <string source="Select a document and show its lines.">Выберите документ и покажите его строки.</string>
   <string source="Ledger — Shared Company" where="remote_ledger">Ledger — Общая компания</string>
   <string source="Shared company" where="remote_ledger">Общая компания</string>
   <string source="Not connected" where="remote_ledger">Нет подключения</string>

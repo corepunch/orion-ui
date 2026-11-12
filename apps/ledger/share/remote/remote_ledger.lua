@@ -48,6 +48,7 @@ function Ledger:init()
                  close_date = orion.today(), quantity = "1" .. decimal_separator() .. "000", price = "0" .. decimal_separator() .. "00"}
   self.lines, self.doc_offset, self.catalog_offset, self.journal_offset = {}, 0, 0, 0
   self.history_offset, self.posting_history_offset = 0, 0
+  self.document_lines_document, self.document_lines_offset, self.document_lines_count = nil, 0, 0
   self.posting_history_document, self.revision_entries_revision = nil, nil
   self.revision_entries_offset, self.revision_entries_count = 0, 0
   self.next_line, self.role, self.connected, self.catalog_kind = 1, "", false, "items"
@@ -101,9 +102,11 @@ function Ledger:connect(values)
       return
     end
     self.connected, self.role, self.country, self.error = true, status.role or "", status.country, ""
+    self.document_lines_document, self.document_lines_offset, self.document_lines_count = nil, 0, 0
     self.posting_history_document, self.posting_history_offset, self.posting_history_count = nil, 0, 0
     self.revision_entries_revision, self.revision_entries_offset, self.revision_entries_count = nil, 0, 0
-    Remote.replace_many({projection("posting_history", {}, {"id", "recorded_utc", "actor", "action", "date", "number", "total"}),
+    Remote.replace_many({projection("document_lines", {}, {"id", "item_id", "vat_rate_id", "quantity", "price", "total"}),
+      projection("posting_history", {}, {"id", "recorded_utc", "actor", "action", "date", "number", "total"}),
       projection("revision_entries", {}, {"id", "date", "debit_id", "credit_id", "quantity", "amount", "content"})})
     if self.remote:state().pending then
       self.notice = orion.tr("The outcome is unknown. Retry the same request before making changes.")
@@ -135,6 +138,23 @@ function Ledger:load_documents(offset)
 end
 function Ledger:previous_documents(v) self:remember(v); self:load_documents(math.max(0, self.doc_offset - 200)) end
 function Ledger:next_documents(v) self:remember(v); self:load_documents(self.doc_offset + 200) end
+
+function Ledger:load_document_lines(document_id, offset)
+  self:request("documents.lines", {document_id = document_id, offset = offset, limit = 200}, function(rows)
+    local view = {}
+    for _, row in ipairs(rows) do
+      view[#view + 1] = {id = row.id, item_id = row.item_id, vat_rate_id = row.vat_rate_id,
+        quantity = milli(row.exact_money and row.quantity_milli or nil, row.quantity),
+        price = minor(row.exact_money and row.price_minor or nil, row.price),
+        total = minor(row.exact_money and row.total_minor or nil, row.total)}
+    end
+    Remote.replace_many({projection("document_lines", view, {"id", "item_id", "vat_rate_id", "quantity", "price", "total"})})
+    self.document_lines_document, self.document_lines_offset, self.document_lines_count = document_id, offset, #rows
+  end)
+end
+function Ledger:show_document_lines(v) self:remember(v); self:load_document_lines(selected(v.documents).id, 0) end
+function Ledger:previous_document_lines(v) self:remember(v); self:load_document_lines(self.document_lines_document, math.max(0, self.document_lines_offset - 200)) end
+function Ledger:next_document_lines(v) self:remember(v); self:load_document_lines(self.document_lines_document, self.document_lines_offset + 200) end
 
 function Ledger:load_catalog(kind, offset)
   self:request("catalogs.list", {table = kind, offset = offset, limit = 200}, function(rows)
@@ -273,6 +293,10 @@ end
 function Ledger:replace_lines(v)
   self:remember(v); local row = selected(v.documents)
   self:request("documents.replace_lines", {document_id = row.id, lines = self:line_arguments()}, function()
+    if self.document_lines_document == row.id then
+      self.document_lines_document, self.document_lines_offset, self.document_lines_count = nil, 0, 0
+      Remote.replace_many({projection("document_lines", {}, {"id", "item_id", "vat_rate_id", "quantity", "price", "total"})})
+    end
     self.notice = orion.tr("Draft lines replaced."); self:load_documents(self.doc_offset)
   end)
 end
@@ -322,7 +346,9 @@ function Ledger:data()
   disabled.close_period = blocked or self.role ~= "admin" or not self.closing_date or self.closing_revision ~= state.revision
   disabled.prepare_close = blocked or self.role ~= "admin"
   for _, name in ipairs({"previous_documents", "next_documents", "previous_catalog", "next_catalog", "previous_journal", "next_journal",
-                         "document_types", "vat_rates", "units", "items", "counterparties", "show_journal", "show_history", "show_posting_history", "show_revision_entries", "find_posting_history", "history_document_id"}) do disabled[name] = blocked end
+                         "document_types", "vat_rates", "units", "items", "counterparties", "show_journal", "show_history", "show_posting_history", "show_document_lines", "show_revision_entries", "find_posting_history", "history_document_id"}) do disabled[name] = blocked end
+  disabled.previous_document_lines = blocked or not self.document_lines_document or self.document_lines_offset == 0
+  disabled.next_document_lines = blocked or not self.document_lines_document or self.document_lines_count ~= 200
   disabled.previous_documents = blocked or self.doc_offset == 0
   disabled.previous_catalog = blocked or self.catalog_offset == 0
   disabled.previous_journal = blocked or self.journal_offset == 0
@@ -338,6 +364,7 @@ function Ledger:data()
   local status = self.connected and string.format(orion.tr("Country: %s · Role: %s · Revision: %d"), self.country, self.role, state.revision or 0) or orion.tr("Not connected")
   local titles = {doc_types = "Document types", vat_rates = "VAT rates", units = "Units", items = "Items", counterparties = "Counterparties"}
   local values = {connection = status, notice = self.notice, error = self.error, catalog_title = orion.tr(titles[self.catalog_kind]),
+    document_lines_title = self.document_lines_document and string.format(orion.tr("Lines for document ID %d"), self.document_lines_document) or orion.tr("Select a document and show its lines."),
     posting_history_title = self.posting_history_document and string.format(orion.tr("Posting history for document ID %d"), self.posting_history_document) or orion.tr("Select a document and show its posting history."),
     revision_entries_title = self.revision_entries_revision and string.format(orion.tr("Entries for posting snapshot ID %d"), self.revision_entries_revision) or orion.tr("Select a posting snapshot to show its entries.")}
   for key, value in pairs(self.fields) do values[key] = value end

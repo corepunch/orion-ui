@@ -56,6 +56,16 @@ local function dispatch(request)
   elseif command == "documents.list" then
     local rows = ledger.fetch("ib", "documents")
     return page(rows, args)
+  elseif command == "documents.lines" then
+    assert(type(args.document_id) == "number" and math.type(args.document_id) == "integer" and args.document_id > 0, "invalid document id")
+    local exact, rows = false, {}
+    for _, doc in ipairs(ledger.fetch("ib", "documents")) do
+      if doc.id == args.document_id then exact = doc.exact_money; break end
+    end
+    for _, row in ipairs(ledger.fetch("ib", "doc_lines")) do
+      if row.document_id == args.document_id then row.exact_money = exact; rows[#rows + 1] = row end
+    end
+    return page(rows, args)
   elseif command == "documents.history" then
     assert(type(args.document_id) == "number" and math.type(args.document_id) == "integer" and args.document_id > 0, "invalid document id")
     local rows = {}

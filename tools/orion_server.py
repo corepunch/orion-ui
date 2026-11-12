@@ -32,20 +32,20 @@ POLICIES = {
     "lodge": {
         "snapshot": {"admin", "reception", "housekeeping", "auditor"},
         **{c: {"admin", "reception"} for c in (
-            "save_room", "save_guest", "reserve", "check_in", "check_out", "cancel", "payment", "set_night", "reset_night", "group_reserve")},
+            "save_room", "save_guest", "reserve", "check_in", "check_out", "cancel", "payment", "set_night", "reset_night", "group_reserve", "group_cancel")},
         "set_room_cleaning": {"admin", "housekeeping"},
         "day_preview": {"admin", "reception", "auditor"}, "close_day": {"admin"},
         "configure_hotel": {"admin"},
     },
     "ledger": {
-        **{c: {"admin", "accountant", "auditor"} for c in ("documents.list", "documents.history", "documents.history_entries", "journal.list", "catalogs.list", "period.history")},
+        **{c: {"admin", "accountant", "auditor"} for c in ("documents.list", "documents.lines", "documents.history", "documents.history_entries", "journal.list", "catalogs.list", "period.history")},
         **{c: {"admin", "accountant"} for c in ("documents.create", "documents.update", "documents.post", "documents.reverse", "documents.replace_lines", "counterparties.save", "items.save")},
         "period.close": {"admin"},
     },
 }
 for _commands in POLICIES.values():
     _commands["maintenance.upgrade"] = {"admin"}
-READS = {"snapshot", "day_preview", "documents.list", "documents.history", "documents.history_entries", "journal.list", "catalogs.list", "period.history"}
+READS = {"snapshot", "day_preview", "documents.list", "documents.lines", "documents.history", "documents.history_entries", "journal.list", "catalogs.list", "period.history"}
 
 
 def canonical(value):

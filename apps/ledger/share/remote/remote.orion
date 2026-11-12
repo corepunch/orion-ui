@@ -17,6 +17,11 @@
         <field name="vat_rate_id" type="integer" /><field name="quantity" type="string" length="32" />
         <field name="price" type="string" length="32" />
       </table>
+      <table name="document_lines" transient="true">
+        <field name="id" type="integer" key="YES" /><field name="item_id" type="integer" />
+        <field name="vat_rate_id" type="integer" /><field name="quantity" type="string" length="32" />
+        <field name="price" type="string" length="32" /><field name="total" type="string" length="32" />
+      </table>
       <table name="journal" transient="true">
         <field name="id" type="integer" key="YES" /><field name="date" type="date" />
         <field name="document_id" type="integer" /><field name="debit_id" type="integer" />
@@ -65,6 +70,7 @@
             <Button name="previous_documents" text="Previous page" action="previous_documents" />
             <Button name="next_documents" text="Next page" action="next_documents" />
             <Button name="show_posting_history" text="Show posting history" action="show_posting_history" />
+            <Button name="show_document_lines" text="Show document lines" action="show_document_lines" />
             <Button name="post" text="Post selected" action="post" />
             <Button name="update" text="Update draft details" action="update" />
             <Button name="replace_lines" text="Replace draft lines" action="replace_lines" />
@@ -77,6 +83,18 @@
           <StackView orientation="horizontal" spacing="6">
             <Button name="reverse" text="Reverse selected" action="reverse" />
             <Label text="The reversal does not issue a corrected invoice or tax return." />
+          </StackView>
+        </StackView>
+        <StackView name="document_lines_tab" text="Document lines" spacing="6" flags="flexspace">
+          <Label name="document_lines_title" />
+          <TableView name="document_lines" source="ledger_remote_cache.document_lines" flags="flexspace,vscroll" frame="true">
+            <Column field="item_id" title="Item ID" width="90" /><Column field="vat_rate_id" title="VAT ID" width="90" />
+            <Column field="quantity" title="Quantity" width="110" /><Column field="price" title="Unit price" width="110" />
+            <Column field="total" title="Total" width="110" />
+          </TableView>
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="previous_document_lines" text="Previous page" action="previous_document_lines" />
+            <Button name="next_document_lines" text="Next page" action="next_document_lines" />
           </StackView>
         </StackView>
         <StackView name="draft_tab" text="New draft" spacing="6" flags="flexspace">
