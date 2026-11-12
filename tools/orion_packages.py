@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 IDENTIFIER = re.compile(r"[a-z][a-z0-9_]*\Z")
 RELEASE = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+\Z")
 LIMIT = 64 * 1024 * 1024
+PACKAGE_FORMAT = 1
 
 
 def identifier(value):
@@ -32,7 +33,8 @@ def identifier(value):
 
 
 def metadata(value):
-    if not isinstance(value, dict) or value.get("format") != 1 or value.get("kind") != "plugin":
+    if (not isinstance(value, dict) or type(value.get("format")) is not int or
+            value["format"] != PACKAGE_FORMAT or value.get("kind") != "plugin"):
         raise ValueError("unsupported package metadata")
     identifier(value.get("id")); identifier(value.get("publisher"))
     if not isinstance(value.get("release"), str) or not RELEASE.fullmatch(value["release"]):

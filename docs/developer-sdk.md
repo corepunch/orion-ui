@@ -270,9 +270,11 @@ never a silent fallback when opening a damaged database.
 ## Compatibility and deprecation policy
 
 The machine-readable [current matrix](business-platform-api.json) is checked by
-`make business-server-check` against the runtime constant, generated Ledger API
-and the two persistent schemas. Runtime API, Ledger API, service protocol,
-plugin interface and storage schema versions are independent numbers.
+`make business-server-check` against the runtime constant, generated Ledger API,
+plugin loader and package validator, and the two persistent schemas. Runtime API,
+Ledger API, service protocol, plugin loader API, package format, each plugin's
+exported interface and storage schema versions are independent numbers. The matrix
+records the loader API and package format, not the interface version of every plugin.
 
 - Published functions and argument meanings of `runtime-api="1"`, Ledger Lua
   API 1 and `/v1` remain supported within those interfaces. Additions must preserve

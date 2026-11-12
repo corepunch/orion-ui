@@ -1,5 +1,6 @@
 """Published compatibility matrix must describe the actual shipped contracts."""
 import json
+import importlib.util
 from pathlib import Path
 import re
 import unittest
@@ -22,6 +23,21 @@ class ContractTests(unittest.TestCase):
         for code in matrix['applications']['ledger']['configurations']:
             self.assertTrue((ROOT / 'apps/ledger/share/configurations' / code / 'configuration.xml').is_file())
         self.assertEqual(matrix['service_api'], 1)  # /v1 is the advertised wire contract.
+
+    def test_plugin_contract_matches_loader_and_package_validator(self):
+        matrix = json.loads((ROOT / 'docs/business-platform-api.json').read_text())
+        loader = (ROOT / 'share/lua/orion/plugins.lua').read_text()
+        self.assertEqual(matrix['plugin_loader_api'], int(re.search(r'local Plugins = \{api = (\d+)\}', loader)[1]))
+        spec = importlib.util.spec_from_file_location('packages_contract', ROOT / 'tools/orion_packages.py')
+        packages = importlib.util.module_from_spec(spec); spec.loader.exec_module(packages)
+        self.assertEqual(matrix['plugin_package_format'], packages.PACKAGE_FORMAT)
+        valid = {'format': matrix['plugin_package_format'], 'kind': 'plugin', 'id': 'example',
+                 'publisher': 'local', 'release': '1.0.0', 'runtime_api': matrix['runtime_api'],
+                 'interface': 1, 'dependencies': {}}
+        self.assertEqual(packages.metadata(valid), valid)
+        for invalid in (True, matrix['plugin_package_format'] + 1):
+            with self.subTest(format=invalid), self.assertRaises(ValueError):
+                packages.metadata(dict(valid, format=invalid))
 
 
 if __name__ == '__main__':
