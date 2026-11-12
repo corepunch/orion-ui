@@ -301,6 +301,35 @@ company.execute("alice", "reception", {"request_id": "crash", "expected_revision
         (backup / "manifest.json").write_text(json.dumps(info))
         with self.assertRaisesRegex(ValueError, "audit chain"): admin.verify(backup)
 
+    def test_backup_rejects_missing_or_invalid_company_identity(self):
+        self.close_company()
+        backup = self.root.parent / "backup"; admin.backup(self.root, backup)
+        db_path = backup / "state.sqlite"
+        info = admin.verify(backup)
+        for statement in ("DELETE FROM company_identity", "DROP TABLE company_identity"):
+            with sqlite3.connect(db_path) as db:
+                db.execute(statement)
+            info["database_sha256"] = admin.hash_file(db_path)
+            (backup / "manifest.json").write_text(json.dumps(info))
+            with self.assertRaisesRegex(ValueError, "company identity"):
+                admin.verify(backup)
+            restored = self.root.parent / "restored"
+            with self.assertRaisesRegex(ValueError, "company identity"):
+                admin.restore(backup, restored, sys.executable, self.root)
+            self.assertFalse(restored.exists())
+            if statement.startswith("DELETE"):
+                with sqlite3.connect(db_path) as db:
+                    db.execute("INSERT INTO company_identity VALUES(1, 'invalid')")
+                info["database_sha256"] = admin.hash_file(db_path)
+                (backup / "manifest.json").write_text(json.dumps(info))
+                with self.assertRaisesRegex(ValueError, "company identity"):
+                    admin.verify(backup)
+        with sqlite3.connect(self.root / "state.sqlite") as db:
+            db.execute("DROP TABLE company_identity")
+        with self.assertRaisesRegex(ValueError, "company identity"):
+            admin.backup(self.root, self.root.parent / "invalid-backup")
+        self.assertFalse((self.root.parent / "invalid-backup").exists())
+
     def test_http_requires_token_and_rechecks_revocation(self):
         token = "high-entropy-test-token"
         users = [{"id": "alice", "role": "reception", "token_sha256": hashlib.sha256(token.encode()).hexdigest()}]

@@ -56,6 +56,13 @@ def inspect_database(path):
     with contextlib.closing(open_readonly(path)) as db:
         if db.execute("PRAGMA integrity_check").fetchone() != ("ok",):
             raise ValueError("SQLite integrity check failed")
+        try:
+            identities = db.execute("SELECT id,company_id FROM company_identity").fetchall()
+        except sqlite3.Error as error:
+            raise ValueError("missing company identity") from error
+        if (len(identities) != 1 or identities[0][0] != 1 or
+                not isinstance(identities[0][1], str) or not re.fullmatch(r"[0-9a-f]{32}", identities[0][1])):
+            raise ValueError("invalid company identity")
         rows = db.execute("SELECT revision,snapshot,digest,previous FROM current WHERE id=1").fetchall()
         if len(rows) != 1:
             raise ValueError("invalid current revision")

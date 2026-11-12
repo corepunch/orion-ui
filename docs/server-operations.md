@@ -16,6 +16,26 @@ tokens, `users.json`, server executable paths and credentials. Copy it to
 independent protected storage and retain multiple generations; a checksum in the
 same backup is not proof against a party able to modify the whole backup.
 
+### Legacy databases without a company identity
+
+The verifier rejects a database that has no valid company identity. For an old
+installation that predates identities, stop the server and preserve an offline
+copy of the entire company directory, including any SQLite journal or WAL, in
+protected storage before updating. Use a compatible current server package and
+start the original company once on loopback, with clients disconnected:
+
+```sh
+python3 tools/orion_server.py serve --state /srv/orion/company --bind 127.0.0.1
+```
+
+The server creates and persists an identity when it opens the legacy database.
+Stop it cleanly, then run `backup` and `verify` as above and test restoration in
+an isolated directory. Keep the original offline copy until application records
+and the restored company have been reconciled. Do this upgrade only once on the
+original company: independently opening multiple legacy copies generates
+separate identities. An existing invalid identity is rejected and requires
+operator investigation; do not delete or replace it to bypass verification.
+
 Restore only to a new directory and select the trusted executable and resources
 for this installation explicitly:
 
