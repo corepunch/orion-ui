@@ -173,6 +173,8 @@ static void dbs_row_tag(const char *table, char *out, size_t cap) {
   else snprintf(out, cap, "%s_row", table);
 }
 
+static int dbs_find_row(const db_table_schema_t *t, dbs_table_t *rows, int id);
+
 static void *dbs_append(database_t *db, const db_table_schema_t *t, dbs_table_t *rows, const void *src) {
   if (rows->count >= rows->capacity) {
     int cap = rows->capacity ? rows->capacity * 2 : 16;
@@ -198,9 +200,17 @@ static void *dbs_append(database_t *db, const db_table_schema_t *t, dbs_table_t 
       database_t *store = db->edit_parent;
       while (store && store->edit_parent) store = store->edit_parent;
       *key = store ? (int)send_db_message(store, dbReserveKey, (uint32_t)t->table_id, NULL) : rows->next_id;
-      if (*key <= 0) { free(record); return NULL; }
+      if (*key <= 0) {
+        fprintf(stderr, "[db_schema_xml] key space exhausted db=%s table=%s\n", db->name, t->name);
+        fflush(stderr); free(record); return NULL;
+      }
     }
-    if (*key >= rows->next_id) rows->next_id = *key + 1;
+    if (dbs_find_row(t, rows, *key) >= 0) {
+      fprintf(stderr, "[db_schema_xml] duplicate key db=%s table=%s id=%d\n", db->name, t->name, *key);
+      fflush(stderr); free(record); return NULL;
+    }
+    if (rows->next_id > 0 && *key >= rows->next_id)
+      rows->next_id = *key == INT_MAX ? 0 : *key + 1;
   }
   rows->rows[rows->count++] = record;
   return record;
@@ -956,7 +966,15 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
     case dbLoad: return dbs_load(db, ctx);
     case dbSave: return db->dirty ? dbs_save(db, ctx) : 1;
     case dbGetDirty: return db->dirty;
-    case dbReserveKey: return ctx->tables[ti].next_id++;
+    case dbReserveKey: {
+      int id = ctx->tables[ti].next_id;
+      if (id <= 0) {
+        fprintf(stderr, "[db_schema_xml] key space exhausted db=%s table=%s\n", db->name, t->name);
+        fflush(stderr); return 0;
+      }
+      ctx->tables[ti].next_id = id == INT_MAX ? 0 : id + 1;
+      return id;
+    }
     case dbGetSchema: return (lresult_t)db->schema;
     case dbCreateEditContext: return (lresult_t)dbs_create_edit_context(db);
     case dbInsert: {
@@ -973,6 +991,11 @@ lresult_t db_schema_xml(database_t *db, uint32_t msg, uint32_t wparam, void *lpa
         fprintf(stderr, "[db_schema_xml] update of missing record db=%s table=%s id=%d\n",
                 db->name, t->name, id);
         return 0;
+      }
+      if (dbs_key_index(t) >= 0 && dbs_key(t, lparam) != id) {
+        fprintf(stderr, "[db_schema_xml] key change rejected db=%s table=%s id=%d new_id=%d\n",
+                db->name, t->name, id, dbs_key(t, lparam));
+        fflush(stderr); return 0;
       }
       memmove(ctx->tables[ti].rows[row], lparam, t->record_size);
       db->dirty |= !t->transient;

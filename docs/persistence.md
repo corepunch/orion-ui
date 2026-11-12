@@ -55,10 +55,12 @@ After migration (or when opening a current-version file), unknown record fields
 cause opening to fail without rewriting the source; they are never silently
 dropped on the next save. Preserve a copy and use a compatible schema or a
 reviewed migration that explicitly handles those fields. Invalid or out-of-range
-integer values, duplicate record fields and text exceeding the schema field
-capacity also reject opening
+integer values, duplicate record fields or primary keys and text exceeding the
+schema field capacity also reject opening
 rather than being silently converted or truncated; repair or migrate a preserved
-copy before retrying.
+copy before retrying. Inserts with an existing primary key and attempts to change
+a primary key are rejected. Automatic key allocation fails when its integer
+space is exhausted; it never wraps to an existing key.
 
 Native schemas can supply a version and `migrate_xml(root, from_version)`
 callback. It receives a libxml root node, performs exactly the step from that

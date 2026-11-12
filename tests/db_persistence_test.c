@@ -1,6 +1,7 @@
 #include "test_framework.h"
 #include <orion/ui.h>
 #include <sys/stat.h>
+#include <limits.h>
 #include <libxml/tree.h>
 #ifdef _WIN32
 #include <windows.h>
@@ -384,6 +385,39 @@ static void test_backup_in_separate_directory(void) {
   unlink(target); unlink(target_backup); snprintf(lock, sizeof(lock), "%s.lock", target); unlink(lock); rmdir(target_dir);
   PASS();
 }
+static void test_key_integrity(void) {
+  TEST("schema XML: duplicate keys and exhausted key space preserve records");
+  char dir[512], path[1024], backup[1040], lock[1040], bytes[512];
+  const char *duplicate = "<book><records><record id=\"1\" value=\"10\"/><record id=\"1\" value=\"20\"/></records></book>";
+  ASSERT_TRUE(persistence_tempdir(dir, sizeof(dir)));
+  snprintf(path, sizeof(path), "%s/book.xml", dir); snprintf(backup, sizeof(backup), "%s.bak", path);
+  snprintf(lock, sizeof(lock), "%s.lock", path);
+  FILE *f = fopen(path, "wb"); ASSERT_NOT_NULL(f); fputs(duplicate, f); ASSERT_EQUAL(fclose(f), 0);
+  ASSERT_NULL(open_book(path));
+  f = fopen(path, "rb"); ASSERT_NOT_NULL(f); size_t n = fread(bytes, 1, sizeof(bytes) - 1, f);
+  ASSERT_FALSE(ferror(f)); ASSERT_EQUAL(fclose(f), 0); bytes[n] = 0; ASSERT_TRUE(!strcmp(bytes, duplicate));
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f); fputs("<book/>", f); ASSERT_EQUAL(fclose(f), 0);
+  database_t *db = open_book(path); ASSERT_NOT_NULL(db);
+  f = fopen(backup, "wb"); ASSERT_NOT_NULL(f); fputs(duplicate, f); ASSERT_EQUAL(fclose(f), 0);
+  ASSERT_FALSE(db_schema_xml_restore_backup(db));
+  persistence_row_t first = {.id=1, .value=10}, second = {.id=2, .value=20};
+  ASSERT_TRUE(send_db_message(db, dbInsert, 0, &first));
+  ASSERT_FALSE(send_db_message(db, dbInsert, 0, &first));
+  ASSERT_TRUE(send_db_message(db, dbInsert, 0, &second));
+  ASSERT_FALSE(send_db_message(db, dbUpdate, MAKEDWORD(0, 1), &second));
+  first.id = INT_MAX; ASSERT_TRUE(send_db_message(db, dbInsert, 0, &first));
+  persistence_row_t automatic = {.value=30};
+  ASSERT_FALSE(send_db_message(db, dbInsert, 0, &automatic));
+  ASSERT_FALSE(send_db_message(db, dbReserveKey, 0, NULL));
+  ASSERT_TRUE(send_db_message(db, dbSave, 0, NULL)); destroy_database(db);
+  db = open_book(path); ASSERT_NOT_NULL(db);
+  persistence_row_t *saved = (void *)send_db_message(db, dbFind, 0, (void *)(intptr_t)1);
+  ASSERT_NOT_NULL(saved); ASSERT_EQUAL(saved->value, 10);
+  saved = (void *)send_db_message(db, dbFind, 0, (void *)(intptr_t)INT_MAX);
+  ASSERT_NOT_NULL(saved); ASSERT_EQUAL(saved->value, 10);
+  ASSERT_FALSE(send_db_message(db, dbInsert, 0, &automatic)); destroy_database(db);
+  unlink(path); unlink(backup); unlink(lock); rmdir(dir); PASS();
+}
 static void test_persistence(void) {
   TEST("schema XML: exclusive writer, atomic backup and version rejection");
   char dir[512], path[1024], backup[1040], lock[1040];
@@ -441,7 +475,7 @@ static void test_persistence(void) {
 }
 int main(void) {
   TEST_START("Database persistence"); DB_CLASS(db_schema_xml);
-  test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); test_unknown_fields_preserved(); test_unknown_container_attributes_preserved(); test_duplicate_fields_preserved(); test_invalid_integer_preserved(); test_oversized_text_preserved(); test_backup_in_separate_directory();
+  test_key_integrity(); test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); test_unknown_fields_preserved(); test_unknown_container_attributes_preserved(); test_duplicate_fields_preserved(); test_invalid_integer_preserved(); test_oversized_text_preserved(); test_backup_in_separate_directory();
 #ifndef _WIN32
   test_migration_crashes();
 #endif
