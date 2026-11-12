@@ -6,7 +6,7 @@ local Ledger = {form = "remote_ledger", title = orion.tr("Ledger — Shared Comp
 local controls = {"post", "update", "replace_lines", "reverse", "create", "add_line", "remove_line",
   "save_counterparty", "save_item", "prepare_close", "close_period", "type_id", "draft_party_id", "draft_date",
   "item_id", "vat_id", "quantity", "price", "document_date", "counterparty_id", "reversal_date", "reason",
-  "name", "sku", "tax_id", "unit_id", "catalog_vat_id", "close_date"}
+  "name", "sku", "tax_id", "unit_id", "catalog_vat_id", "close_date", "load_catalog_entry", "update_catalog_entry"}
 local inputs = {"type_id", "draft_party_id", "draft_date", "item_id", "vat_id", "quantity", "price",
   "document_date", "counterparty_id", "reversal_date", "reason", "name", "sku", "tax_id", "unit_id", "catalog_vat_id", "close_date", "history_document_id"}
 
@@ -53,6 +53,7 @@ function Ledger:init()
   self.revision_entries_offset, self.revision_entries_count = 0, 0
   self.next_line, self.role, self.connected, self.catalog_kind = 1, "", false, "items"
   self.closing_date, self.closing_revision = nil, nil
+  self.catalog_rows, self.catalog_edit = {}, nil
   self.notice, self.error = "", ""
 end
 
@@ -67,7 +68,7 @@ function Ledger:complete(result, err)
   local callback = self.pending_callback
   local state = self.remote:state()
   if err then
-    if state.conflict then self.closing_date, self.closing_revision = nil, nil end
+    if state.conflict then self.closing_date, self.closing_revision, self.catalog_edit = nil, nil, nil end
     self.error = err
     self.notice = state.conflict and orion.tr("Data changed. Refresh before continuing.") or
       state.pending and orion.tr("The outcome is unknown. Retry the same request before making changes.") or ""
@@ -94,6 +95,7 @@ end
 function Ledger:connect(values)
   self:remember(values)
   self.closing_date, self.closing_revision = nil, nil
+  self.catalog_edit = nil
   local ok, err = self.remote:refresh(function(status, failure)
     if failure then self.error = failure; return end
     if status.application ~= "ledger" or (status.country ~= "RU" and status.country ~= "DE") then
@@ -158,8 +160,9 @@ function Ledger:next_document_lines(v) self:remember(v); self:load_document_line
 
 function Ledger:load_catalog(kind, offset)
   self:request("catalogs.list", {table = kind, offset = offset, limit = 200}, function(rows)
-    local view = {}
+    local view = {}; self.catalog_rows = {}; self.catalog_edit = nil
     for _, row in ipairs(rows) do
+      self.catalog_rows[row.id] = row
       view[#view + 1] = {id = row.id, name = row.name or row.code or "", detail = tostring(row.code or row.sku or row.rate or row.tax_id or "")}
     end
     Remote.replace_many({projection("catalog", view, {"id", "name", "detail"})})
@@ -172,6 +175,34 @@ for _, kind in ipairs({"doc_types", "vat_rates", "units", "items", "counterparti
 end
 function Ledger:previous_catalog(v) self:remember(v); self:load_catalog(self.catalog_kind, math.max(0, self.catalog_offset - 200)) end
 function Ledger:next_catalog(v) self:remember(v); self:load_catalog(self.catalog_kind, self.catalog_offset + 200) end
+
+function Ledger:load_catalog_entry(v)
+  self:remember(v)
+  orion.assert(self.catalog_kind == "items" or self.catalog_kind == "counterparties", orion.tr("Choose items or counterparties first."))
+  local selected_row = orion.assert(v.catalog, orion.tr("Select a catalog entry."))
+  local row = orion.assert(self.catalog_rows[selected_row.id], orion.tr("Refresh the catalog first."))
+  self.catalog_edit = {id = row.id, kind = self.catalog_kind, revision = self.remote:state().revision}
+  self.fields.name = row.name or ""
+  if self.catalog_kind == "items" then
+    self.fields.sku, self.fields.unit_id, self.fields.catalog_vat_id = row.sku or "", row.unit_id, row.vat_rate_id
+  else self.fields.tax_id = row.tax_id or "" end
+end
+function Ledger:update_catalog_entry(v)
+  self:remember(v)
+  local edit = self.catalog_edit
+  orion.assert(edit and edit.revision == self.remote:state().revision, orion.tr("Select the catalog entry again before saving."))
+  local fields = {name = orion.assert(v.name and v.name:match("%S") and v.name, orion.tr("Enter a name."))}
+  if edit.kind == "items" then
+    fields.sku = orion.assert(v.sku and v.sku:match("%S") and v.sku, orion.tr("Enter an SKU."))
+    fields.unit_id = integer(v.unit_id, orion.tr("Enter a unit ID."))
+    fields.vat_rate_id = integer(v.catalog_vat_id, orion.tr("Enter a VAT rate ID."))
+  else fields.tax_id = v.tax_id or "" end
+  self:request(edit.kind .. ".save", {id = edit.id, fields = fields}, function(result)
+    self.catalog_edit = nil
+    self.notice = string.format(orion.tr("Catalog entry %d updated."), result.id)
+    self:load_catalog(edit.kind, self.catalog_offset)
+  end)
+end
 
 function Ledger:load_journal(offset)
   self:request("journal.list", {offset = offset, limit = 200}, function(rows)
@@ -345,6 +376,8 @@ function Ledger:data()
   for _, name in ipairs(controls) do disabled[name] = blocked or readonly end
   disabled.close_period = blocked or self.role ~= "admin" or not self.closing_date or self.closing_revision ~= state.revision
   disabled.prepare_close = blocked or self.role ~= "admin"
+  disabled.load_catalog_entry = blocked or readonly or (self.catalog_kind ~= "items" and self.catalog_kind ~= "counterparties")
+  disabled.update_catalog_entry = blocked or readonly or not self.catalog_edit or self.catalog_edit.revision ~= state.revision
   for _, name in ipairs({"previous_documents", "next_documents", "previous_catalog", "next_catalog", "previous_journal", "next_journal",
                          "document_types", "vat_rates", "units", "items", "counterparties", "show_journal", "show_history", "show_posting_history", "show_document_lines", "show_revision_entries", "find_posting_history", "history_document_id"}) do disabled[name] = blocked end
   disabled.previous_document_lines = blocked or not self.document_lines_document or self.document_lines_offset == 0
@@ -364,6 +397,7 @@ function Ledger:data()
   local status = self.connected and string.format(orion.tr("Country: %s · Role: %s · Revision: %d"), self.country, self.role, state.revision or 0) or orion.tr("Not connected")
   local titles = {doc_types = "Document types", vat_rates = "VAT rates", units = "Units", items = "Items", counterparties = "Counterparties"}
   local values = {connection = status, notice = self.notice, error = self.error, catalog_title = orion.tr(titles[self.catalog_kind]),
+    catalog_edit_title = self.catalog_edit and string.format(orion.tr(self.catalog_edit.kind == "items" and "Editing item ID %d" or "Editing counterparty ID %d"), self.catalog_edit.id) or orion.tr("Select an item or counterparty to edit."),
     document_lines_title = self.document_lines_document and string.format(orion.tr("Lines for document ID %d"), self.document_lines_document) or orion.tr("Select a document and show its lines."),
     posting_history_title = self.posting_history_document and string.format(orion.tr("Posting history for document ID %d"), self.posting_history_document) or orion.tr("Select a document and show its posting history."),
     revision_entries_title = self.revision_entries_revision and string.format(orion.tr("Entries for posting snapshot ID %d"), self.revision_entries_revision) or orion.tr("Select a posting snapshot to show its entries.")}

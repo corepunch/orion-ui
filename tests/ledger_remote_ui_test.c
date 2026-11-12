@@ -31,8 +31,15 @@ static void test_ledger_remote_ui(void) {
   ASSERT_TRUE(script_page_perform(page, "connect")); ASSERT_TRUE(wait_notice(page, "Connected."));
   set_text(page, "name", "Remote Partner");
   ASSERT_TRUE(script_page_perform(page, "save_counterparty")); ASSERT_TRUE(wait_notice(page, "Counterparty 1 created."));
+  ASSERT_TRUE(script_page_perform(page, "load_catalog_entry"));
+  ASSERT(strstr(script_page_control(page, "catalog_edit_title")->title, "1"), "selected counterparty is identified before saving");
+  set_text(page, "name", "Remote Partner Updated"); set_text(page, "tax_id", "TEST-TAX");
+  ASSERT_TRUE(script_page_perform(page, "update_catalog_entry")); ASSERT_TRUE(wait_notice(page, "Catalog entry 1 updated."));
   set_text(page, "name", "Remote Goods"); set_text(page, "sku", "TEST-1"); set_text(page, "unit_id", "1"); set_text(page, "catalog_vat_id", "1");
   ASSERT_TRUE(script_page_perform(page, "save_item")); ASSERT_TRUE(wait_notice(page, "Item 1 created."));
+  ASSERT_TRUE(script_page_perform(page, "load_catalog_entry"));
+  set_text(page, "name", "Remote Goods Updated"); set_text(page, "sku", "TEST-2");
+  ASSERT_TRUE(script_page_perform(page, "update_catalog_entry")); ASSERT_TRUE(wait_notice(page, "Catalog entry 1 updated."));
   set_text(page, "type_id", "1"); set_text(page, "draft_party_id", "1"); set_text(page, "draft_date", "2035-01-01");
   set_text(page, "item_id", "1"); set_text(page, "vat_id", "1"); set_text(page, "quantity", "1.000"); set_text(page, "price", "10.00");
   ASSERT_TRUE(script_page_perform(page, "add_line")); ASSERT_TRUE(script_page_perform(page, "create")); ASSERT_TRUE(wait_notice(page, "Draft 1 created."));

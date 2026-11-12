@@ -734,5 +734,9 @@ Select a document and choose **Show document lines** to inspect its saved lines
 on the Document lines tab. This view is separate from the locally staged lines
 used to create a document or replace a draft's lines. Values prefixed with `~`
 come from legacy floating-point storage.
+To edit an item or counterparty, open its catalog, select a row and choose
+**Edit selected**. The editing label identifies the record; save its displayed
+fields with **Save changes**. Other fields are preserved. After a refresh or
+revision change, select the record again before saving.
 The shared workspace is an initial implementation and still needs integration,
 localization, and visual verification before it is considered ready for use.

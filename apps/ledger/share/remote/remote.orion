@@ -138,7 +138,10 @@
           <StackView orientation="horizontal" spacing="6">
             <Button name="save_counterparty" text="Create counterparty" action="save_counterparty" />
             <Button name="save_item" text="Create item" action="save_item" />
+            <Button name="load_catalog_entry" text="Edit selected" action="load_catalog_entry" />
+            <Button name="update_catalog_entry" text="Save changes" action="update_catalog_entry" />
           </StackView>
+          <Label name="catalog_edit_title" />
         </StackView>
         <StackView name="journal_tab" text="Journal and close" spacing="6" flags="flexspace">
           <Label text="Accounting entries. Exact amounts are shown in currency units." />

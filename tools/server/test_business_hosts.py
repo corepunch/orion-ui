@@ -120,6 +120,15 @@ class LedgerHostTests(unittest.TestCase):
                     self.assertTrue(types)
                     self.assertTrue(party)
                     item = call('items.save', {'fields': {'name': 'Test product', 'sku': 'TEST-1', 'unit_id': 1, 'vat_rate_id': vat_rates[0]['id']}})
+                    call('counterparties.save', {'id': party['id'], 'fields': {'name': 'Updated party', 'tax_id': 'TEST'}})
+                    call('items.save', {'id': item['id'], 'fields': {'name': 'Updated product', 'sku': 'TEST-2', 'unit_id': 1, 'vat_rate_id': vat_rates[0]['id']}})
+                    updated_party = next(row for row in call('catalogs.list', {'table': 'counterparties'}) if row['id'] == party['id'])
+                    updated_item = next(row for row in call('catalogs.list', {'table': 'items'}) if row['id'] == item['id'])
+                    self.assertEqual((updated_party['name'], updated_party['tax_id'], updated_party['country_code']), ('Updated party', 'TEST', country))
+                    self.assertEqual((updated_item['name'], updated_item['sku']), ('Updated product', 'TEST-2'))
+                    with self.assertRaises(server.Refusal) as failure:
+                        call('items.save', {'id': item['id'], 'fields': {'name': 'Denied', 'sku': 'X'}}, 'auditor')
+                    self.assertEqual(failure.exception.status, 403)
                     codes = {row['code']: row['id'] for row in types}
                     purchase_code, sale_code = ('receipt', 'sale') if country == 'RU' else ('incoming_invoice', 'outgoing_invoice')
                     purchase = call('documents.create', {'doc_type_id': codes[purchase_code], 'counterparty_id': party['id'], 'date': '2026-11-10',

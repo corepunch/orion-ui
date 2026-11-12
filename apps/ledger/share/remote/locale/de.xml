@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="de">
+  <string source="Edit selected" where="remote_ledger">Auswahl bearbeiten</string>
+  <string source="Save changes" where="remote_ledger">Änderungen speichern</string>
+  <string source="Choose items or counterparties first.">Wählen Sie zuerst Artikel oder Geschäftspartner.</string>
+  <string source="Select a catalog entry.">Wählen Sie einen Stammdatensatz.</string>
+  <string source="Refresh the catalog first.">Aktualisieren Sie zuerst die Stammdaten.</string>
+  <string source="Select the catalog entry again before saving.">Wählen Sie den Stammdatensatz vor dem Speichern erneut.</string>
+  <string source="Catalog entry %d updated.">Stammdatensatz %d aktualisiert.</string>
+  <string source="Editing item ID %d">Artikel-ID %d wird bearbeitet</string>
+  <string source="Editing counterparty ID %d">Geschäftspartner-ID %d wird bearbeitet</string>
+  <string source="Select an item or counterparty to edit.">Wählen Sie einen Artikel oder Geschäftspartner zum Bearbeiten.</string>
   <string source="Show document lines" where="remote_ledger">Belegpositionen anzeigen</string>
   <string source="Document lines" where="remote_ledger">Belegpositionen</string>
   <string source="Lines for document ID %d">Positionen für Beleg-ID %d</string>

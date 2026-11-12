@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="ru">
+  <string source="Edit selected" where="remote_ledger">Изменить выбранное</string>
+  <string source="Save changes" where="remote_ledger">Сохранить изменения</string>
+  <string source="Choose items or counterparties first.">Сначала выберите товары или контрагентов.</string>
+  <string source="Select a catalog entry.">Выберите запись справочника.</string>
+  <string source="Refresh the catalog first.">Сначала обновите справочник.</string>
+  <string source="Select the catalog entry again before saving.">Перед сохранением снова выберите запись справочника.</string>
+  <string source="Catalog entry %d updated.">Запись справочника %d обновлена.</string>
+  <string source="Editing item ID %d">Изменение товара с ID %d</string>
+  <string source="Editing counterparty ID %d">Изменение контрагента с ID %d</string>
+  <string source="Select an item or counterparty to edit.">Выберите товар или контрагента для изменения.</string>
   <string source="Show document lines" where="remote_ledger">Показать строки документа</string>
   <string source="Document lines" where="remote_ledger">Строки документа</string>
   <string source="Lines for document ID %d">Строки документа с ID %d</string>

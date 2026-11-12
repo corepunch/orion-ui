@@ -83,6 +83,24 @@ decimal_separator = ','; page:add_line({item_id = 1, vat_id = 1, quantity = '1,2
 assert(page.lines[1].quantity == '1.250' and page.lines[1].price == '2.40', 'localized input becomes exact wire decimals')
 assert(cache[1].rows[1].quantity == '1,250', 'staged line uses locale decimal separator')
 assert(not pcall(function() page:add_line({item_id = 1, vat_id = 1, quantity = '1.250', price = '2,40'}) end), 'misplaced separator is rejected')
+page:items({}); state.busy, state.pending = false, false
+pending({{id = 42, name = 'Goods', sku = 'G1', unit_id = 1, vat_rate_id = 2}}, nil)
+page:load_catalog_entry({catalog = {id = 42}})
+assert(page:data().values.catalog_edit_title == 'Editing item ID 42' and page:data().values.sku == 'G1')
+page:update_catalog_entry({name = 'Goods revised', sku = 'G2', unit_id = 1, catalog_vat_id = 2})
+assert(client.command == 'items.save' and client.args.id == 42 and client.args.fields.sku == 'G2')
+state.busy, state.pending = false, false; pending({id = 42}, nil)
+assert(client.command == 'catalogs.list'); state.busy, state.pending = false, false; pending({}, nil)
+assert(page:data().disabled.update_catalog_entry, 'saved entry must be selected again')
+page:counterparties({}); state.busy, state.pending = false, false
+pending({{id = 7, name = 'Party', tax_id = '123'}}, nil)
+page:load_catalog_entry({catalog = {id = 7}}); state.revision = state.revision + 1
+assert(page:data().disabled.update_catalog_entry and not pcall(function() page:update_catalog_entry({name = 'Changed'}) end), 'revision change requires a new selection')
+state.revision = state.revision - 1
+page:update_catalog_entry({name = 'Changed', tax_id = '456'})
+assert(client.command == 'counterparties.save' and client.args.id == 7 and client.args.fields.tax_id == '456' and client.args.fields.country_code == nil)
+state.busy, state.pending = false, false; pending({id = 7}, nil)
+state.busy, state.pending = false, false; pending({}, nil)
 for _, country in ipairs({'RU', 'DE'}) do
   page:init(); state.pending, state.busy, state.conflict, state.revision = false, false, false, 10
   page:connect({}); state.busy = false; pending({application = 'ledger', country = country, role = 'admin'}, nil)
