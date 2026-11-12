@@ -227,6 +227,34 @@ static void test_unknown_fields_preserved(void) {
   }
   unlink(path); unlink(lock); rmdir(dir); PASS();
 }
+static void test_unknown_container_attributes_preserved(void) {
+  TEST("schema XML: unknown container attributes preserve primary and backup");
+  char dir[512], path[1024], backup[1040], lock[1040], bytes[512];
+  const char *sources[] = {
+    "<book legacy=\"42\"><records><record id=\"1\" value=\"10\"/></records></book>",
+    "<book><records legacy=\"42\"><record id=\"1\" value=\"10\"/></records></book>",
+  };
+  ASSERT_TRUE(persistence_tempdir(dir, sizeof(dir)));
+  snprintf(path, sizeof(path), "%s/book.xml", dir); snprintf(backup, sizeof(backup), "%s.bak", path);
+  snprintf(lock, sizeof(lock), "%s.lock", path);
+  for (size_t i = 0; i < sizeof(sources) / sizeof(sources[0]); i++) {
+    FILE *f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+    ASSERT_EQUAL(fwrite(sources[i], 1, strlen(sources[i]), f), strlen(sources[i])); ASSERT_EQUAL(fclose(f), 0);
+    ASSERT_NULL(open_book(path));
+    f = fopen(path, "rb"); ASSERT_NOT_NULL(f);
+    size_t n = fread(bytes, 1, sizeof(bytes) - 1, f); ASSERT_FALSE(ferror(f)); ASSERT_EQUAL(fclose(f), 0);
+    bytes[n] = 0; ASSERT_TRUE(!strcmp(bytes, sources[i]));
+    f = fopen(backup, "wb"); ASSERT_NOT_NULL(f);
+    ASSERT_EQUAL(fwrite(sources[i], 1, strlen(sources[i]), f), strlen(sources[i])); ASSERT_EQUAL(fclose(f), 0);
+    f = fopen(path, "wb"); ASSERT_NOT_NULL(f); fputs("<book/>", f); ASSERT_EQUAL(fclose(f), 0);
+    database_t *db = open_book(path); ASSERT_NOT_NULL(db);
+    ASSERT_FALSE(db_schema_xml_restore_backup(db)); destroy_database(db);
+    f = fopen(path, "rb"); ASSERT_NOT_NULL(f);
+    n = fread(bytes, 1, sizeof(bytes) - 1, f); ASSERT_FALSE(ferror(f)); ASSERT_EQUAL(fclose(f), 0);
+    bytes[n] = 0; ASSERT_TRUE(!strcmp(bytes, "<book/>"));
+  }
+  unlink(path); unlink(backup); unlink(lock); rmdir(dir); PASS();
+}
 static void test_duplicate_fields_preserved(void) {
   TEST("schema XML: duplicate fields reject opening without changing the source");
   char dir[512], path[1024], backup[1040], lock[1040], bytes[512];
@@ -413,7 +441,7 @@ static void test_persistence(void) {
 }
 int main(void) {
   TEST_START("Database persistence"); DB_CLASS(db_schema_xml);
-  test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); test_unknown_fields_preserved(); test_duplicate_fields_preserved(); test_invalid_integer_preserved(); test_oversized_text_preserved(); test_backup_in_separate_directory();
+  test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); test_unknown_fields_preserved(); test_unknown_container_attributes_preserved(); test_duplicate_fields_preserved(); test_invalid_integer_preserved(); test_oversized_text_preserved(); test_backup_in_separate_directory();
 #ifndef _WIN32
   test_migration_crashes();
 #endif

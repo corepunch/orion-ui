@@ -403,11 +403,22 @@ static bool dbs_load(database_t *db, dbs_context_t *ctx) {
       fflush(stderr); xmlFreeDoc(doc); db->open_failed = true; return false;
     }
   }
+  for (xmlAttrPtr a = root->properties; a; a = a->next) {
+    if (xmlStrcmp(a->name, BAD_CAST "orion-version") && xmlStrcmp(a->name, BAD_CAST "orion-history")) {
+      fprintf(stderr, "[db_schema_xml] unknown root attribute db=%s attribute=%s\n", db->name, a->name);
+      fflush(stderr); xmlFreeDoc(doc); db->open_failed = true; return false;
+    }
+  }
   for (xmlNodePtr tn = root->children; tn; tn = tn->next) {
     if (tn->type != XML_ELEMENT_NODE) continue;
     const db_table_schema_t *t = db_schema_table_named(db->schema, (const char *)tn->name);
     if (!t) {
       fprintf(stderr, "[db_schema_xml] unknown table db=%s table=%s\n", db->name, tn->name);
+      fflush(stderr); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
+    }
+    if (tn->properties) {
+      fprintf(stderr, "[db_schema_xml] unknown table attribute db=%s table=%s attribute=%s\n",
+              db->name, t->name, tn->properties->name);
       fflush(stderr); xmlFreeDoc(doc); dbs_clear(db, ctx); db->open_failed = true; return false;
     }
     int ti = (int)(t - db->schema->tables);
