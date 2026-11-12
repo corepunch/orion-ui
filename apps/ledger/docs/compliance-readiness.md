@@ -78,7 +78,10 @@ the existing doubles remain compatibility and display fields. Exact stock-cost
 posting rejects insufficient stock and any matching legacy stock movement. Exact
 postings and reversals reject insertion before a later posted movement of the
 same item and stock account, preserving earlier calculated costs. Reversals also
-reject a negative or incompatible exact stock balance. There is no automatic
+reject a negative or incompatible exact stock balance, including a nonzero value
+with zero quantity. This can prevent reversal of a receipt after mixed-cost sales;
+there is no automatic revaluation or correction of subsequent cost postings. The
+supplied DE configuration does not post stock cost in this workflow. There is no automatic
 conversion of historic balances. Inputs are bounded to
 10,000 units per line and 100,000 currency units per unit price. Exact mode is
 limited to domestic receipt and sale types in `ru-2026` and `de-2026`;

@@ -707,7 +707,7 @@ static bool exact_stock_order_valid(const post_t *p) {
             valid = false; break;
           }
         }
-        if (!valid || quantity < 0 || value < 0) {
+        if (!valid || quantity < 0 || value < 0 || (!quantity && value)) {
           fprintf(stderr, "[ledger] reversal rejected: document=%d item=%d stock is insufficient or not exact\n", p->doc->id, item);
           fflush(stderr); valid = false; goto done;
         }

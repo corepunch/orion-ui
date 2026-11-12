@@ -1498,6 +1498,37 @@ static void test_exact_correction_countries(void) {
   PASS();
 }
 
+static void test_reversal_stock_value(void) {
+  TEST("stock reversal rejects value stranded without quantity");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  {
+    switch_configuration("ru-2026", "reversal-stock-value.xml");
+    db_item_t item = { .unit_id = 1, .vat_rate_id = 1 };
+    snprintf(item.name, sizeof(item.name), "Mixed cost stock");
+    snprintf(item.sku, sizeof(item.sku), "MIXED-COST");
+    const db_item_t *created = (void *)send_db_message(g_ledger->ib, dbInsert, TABLE_ITEMS, &item);
+    ASSERT_NOT_NULL(created); int item_id = created->id, first_id = 0;
+    for (int n = 0; n < 3; n++) {
+      db_document_t doc = { .doc_type_id = n == 2 ? 2 : 1, .counterparty_id = 1 };
+      snprintf(doc.date, sizeof(doc.date), "2026-04-0%d", n + 1);
+      const db_document_t *saved = (void *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &doc);
+      ASSERT_NOT_NULL(saved); int id = saved->id;
+      if (!n) first_id = id;
+      db_doc_line_t line = { .document_id = id, .item_id = item_id, .vat_rate_id = 1,
+        .quantity = 1, .price = n == 1 ? 2 : 1 };
+      ASSERT_TRUE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
+      ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
+    }
+    ASSERT_EQUAL(ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, first_id, "2026-04-04", "Correction"), 0);
+    ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_REVERSAL_LINKS, "original_id", first_id), 0);
+    const db_document_t *first = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)first_id);
+    ASSERT(first && first->posted && first->amount_minor == 100, "rejected correction preserves original posting");
+    ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
+    restore_configuration(cfg, ib);
+  }
+  PASS();
+}
+
 static dbproc_t snapshot_test_proc;
 static int snapshot_fault_table, snapshot_fault_document;
 static bool snapshot_fetch_rejected;
@@ -2134,6 +2165,7 @@ int main(int argc, char **argv) {
   test_reversal_protection();
   test_service();
   test_exact_correction_countries();
+  test_reversal_stock_value();
   test_local_exact_trade();
   test_english_configurations();
   test_invoice_requirements();
