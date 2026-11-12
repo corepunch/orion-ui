@@ -29,6 +29,36 @@ admin = importlib.util.module_from_spec(admin_spec)
 admin_spec.loader.exec_module(admin)
 
 
+class WorkingDirectoryScanTests(unittest.TestCase):
+    def test_renamed_temporary_file_is_allowed_only_during_host_monitoring(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            temporary = root / "hotel.xml.tmp.123456"
+            temporary.write_text("new")
+            original_lstat = Path.lstat
+            def rename_before_stat(path, *args, **kwargs):
+                if path == temporary: path.rename(root / "hotel.xml")
+                return original_lstat(path, *args, **kwargs)
+            with patch.object(Path, "lstat", rename_before_stat):
+                self.assertEqual(list(server.files(root, changing=True)), [])
+            self.assertEqual((root / "hotel.xml").read_text(), "new")
+            (root / "hotel.xml").rename(temporary)
+            with patch.object(Path, "lstat", rename_before_stat), self.assertRaises(FileNotFoundError):
+                list(server.files(root))
+
+    def test_monitor_rejects_links_and_special_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "link").symlink_to(root / "missing")
+            with self.assertRaisesRegex(ValueError, "symbolic links"):
+                list(server.files(root, changing=True))
+            (root / "link").unlink()
+            if hasattr(os, "mkfifo"):
+                os.mkfifo(root / "pipe")
+                with self.assertRaisesRegex(ValueError, "ordinary files"):
+                    list(server.files(root, changing=True))
+
+
 class FakeHost:
     def __init__(self):
         self.calls = []

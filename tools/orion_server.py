@@ -18,6 +18,7 @@ import secrets
 import shutil
 import sqlite3
 import ssl
+import stat
 import subprocess
 import sys
 import tempfile
@@ -125,7 +126,7 @@ def exclusive(path):
                 fcntl.flock(stream, fcntl.LOCK_UN)
 
 
-def files(directory):
+def files(directory, changing=False):
     total, count = 0, 0
     for parent, directories, names in os.walk(directory, followlinks=False):
         directories.sort(); names.sort()
@@ -135,13 +136,21 @@ def files(directory):
         if count > 4096:
             raise ValueError("company file count limit")
         for name in directories + names:
-            if (Path(parent) / name).is_symlink():
-                raise ValueError("company data cannot contain symbolic links")
-        for name in names:
             path = Path(parent) / name
-            if not path.is_file():
+            try:
+                info = path.lstat()
+            except FileNotFoundError:
+                if changing: continue
+                raise
+            if stat.S_ISLNK(info.st_mode):
+                raise ValueError("company data cannot contain symbolic links")
+            if name in directories:
+                if not stat.S_ISDIR(info.st_mode):
+                    raise ValueError("company data must contain ordinary files")
+                continue
+            if not stat.S_ISREG(info.st_mode):
                 raise ValueError("company data must contain ordinary files")
-            total += path.stat().st_size
+            total += info.st_size
             if total > MAX_COMPANY * 2:
                 raise ValueError("company working directory exceeds 64 MiB")
             if not name.endswith((".lock", ".bak")):
@@ -172,7 +181,7 @@ def run_limited(command, environment, stage):
             if time.monotonic() > deadline:
                 raise Refusal(504, "Business host timed out; no changes published")
             # Trusted hosts only; production additionally needs an OS disk quota.
-            for _ in files(stage):
+            for _ in files(stage, changing=True):
                 pass
             time.sleep(0.05)
     finally:
