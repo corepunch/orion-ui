@@ -15,6 +15,35 @@ spec.loader.exec_module(server)
 
 @unittest.skipUnless((ROOT / 'build/bin/orion-service').is_file(), 'build orion-service first')
 class SharedCompanyTests(unittest.TestCase):
+    def test_cancelled_payments_in_day_preview(self):
+        for country in ('DE', 'RU'):
+            with self.subTest(country=country), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'company'
+                server.initialize(argparse.Namespace(state=str(path), application='lodge', country=country, configuration=None,
+                                  executable=str(ROOT / 'build/bin/orion-service'), resources=str(ROOT / 'apps/lodge/share'), source=None))
+                company = server.Company(path)
+                try:
+                    def request(key, command, args):
+                        result = company.execute('alice', 'reception', {'request_id': key, 'expected_revision': company.status()['revision'],
+                                                                        'command': command, 'args': args})
+                        self.assertTrue(result['ok'], result)
+                        return result['result']
+                    room = request('room', 'save_room', {'name': '101', 'capacity': 2, 'rate': 100})['id']
+                    guest = request('guest', 'save_guest', {'name': 'Guest'})['id']
+                    booking = request('stay', 'reserve', {'room_id': room, 'guest_id': guest, 'arrival': '2035-01-01',
+                                      'departure': '2035-01-02', 'persons': 1, 'rate': 100, 'extras': 0, 'notes': ''})['id']
+                    request('pay', 'payment', {'id': booking, 'amount_minor': 7000, 'request_key': 'deposit'})
+                    request('cancel', 'cancel', {'id': booking})
+                    request('refund', 'payment', {'id': booking, 'amount_minor': -2000, 'request_key': 'refund'})
+                    company.close(); company = server.Company(path)
+                    report = request('preview', 'day_preview', {})
+                    self.assertEqual((report['cancelled_paid_count'], report['cancelled_paid_minor']), (1, 5000))
+                    request('refund-rest', 'payment', {'id': booking, 'amount_minor': -5000, 'request_key': 'refund-rest'})
+                    report = request('preview-again', 'day_preview', {})
+                    self.assertEqual((report['cancelled_paid_count'], report['cancelled_paid_minor']), (0, 0))
+                finally:
+                    company.close()
+
     def test_two_clients_conflicts_and_lost_payment_reply(self):
         for country in ('DE', 'RU'):
             with self.subTest(country=country), tempfile.TemporaryDirectory() as directory:

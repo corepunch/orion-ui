@@ -12,6 +12,7 @@ function DayClose:data()
     day = string.format(orion.tr("Operational day: %s"), orion.formatDate(report.day)),
     payments = string.format(orion.tr("Today's net payments: %s"), orion.formatNumber(report.net_minor / 100, 2)),
     outstanding = string.format(orion.tr("Outstanding balance: %s"), orion.formatNumber(report.outstanding_minor / 100, 2)),
+    cancelled_paid = string.format(orion.tr("Cancelled reservations with payments: %d · Paid: %s"), report.cancelled_paid_count, orion.formatNumber(report.cancelled_paid_minor / 100, 2)),
     pending = string.format(orion.tr("Overdue arrivals and departures: %d"), report.pending), notice = self.notice,
   }, disabled = {close_day = report.closed}}
 end

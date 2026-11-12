@@ -17,13 +17,14 @@ function Page:init()
   self.values.group_arrival, self.values.group_departure, self.values.group_persons1, self.values.group_persons2 = day, calendar.add(day, 1), 1, 1
   self.values.group_rate1, self.values.group_rate2, self.values.night, self.values.night_amount, self.values.night_booking = 0, 0, day, 0, 0
   self.values.statement_group = 0
-  self.day_report = ""
+  self.day_report, self.cancelled_paid_report = "", ""
   self.allowed, self.connected, self.connection, self.notice = {}, false, orion.tr("Not connected."), ""
 end
 function Page:remember(values)
   for _, key in ipairs(inputs) do if values[key] ~= nil then self.values[key] = values[key] end end
 end
 function Page:load_snapshot(after)
+  self.day_report, self.cancelled_paid_report = "", ""
   self.snapshot_ready = false
   local ok, err = self.client:submit("snapshot", {}, function(result, failure)
     if not result then self.notice = failure; return end
@@ -76,6 +77,7 @@ function Page:connect(values)
   if not ok then self.notice = err end
 end
 function Page:submit(values, command, args)
+  self.day_report, self.cancelled_paid_report = "", ""
   self:remember(values)
   local ok, err = self.client:submit(command, args, function(result, failure)
     if not result then self.notice = failure; return end
@@ -221,6 +223,7 @@ function Page:preview_day(v)
     if not report then self.notice = failure; return end
     self.day_report = string.format(orion.tr("Day: %s · Net payments: %s · Outstanding: %s · Overdue: %d"),
       orion.formatDate(report.day), orion.formatNumber(report.net_minor / 100, 2), orion.formatNumber(report.outstanding_minor / 100, 2), report.pending)
+    self.cancelled_paid_report = string.format(orion.tr("Cancelled reservations with payments: %d · Paid: %s"), report.cancelled_paid_count, orion.formatNumber(report.cancelled_paid_minor / 100, 2))
     self.notice = report.closed and orion.tr("Today is closed.") or orion.tr("Day preview refreshed.")
   end)
   if not ok then self.notice = err end
@@ -243,7 +246,7 @@ function Page:data()
   disabled.load_room = blocked or not self.allowed.save_room
   disabled.save_room = disabled.load_room or not self.editing_room or self.room_needs_reload
   local connection = self.connected and string.format(orion.tr("Country: %s · Role: %s · Revision: %d"), self.country, self.role, state.revision) or self.connection
-  local values = {connection = connection, notice = self.notice, day_report = self.day_report,
+  local values = {connection = connection, notice = self.notice, day_report = self.day_report, cancelled_paid_report = self.cancelled_paid_report,
     editor = self.editing and string.format(orion.tr("Edit reservation %d"), self.editing) or orion.tr("New reservation"),
     payment_status = self.payment_done and orion.tr("Start a new payment or refund before recording another.") or "",
     room_editor = self.room_needs_reload and orion.tr("Load the room again before saving.") or

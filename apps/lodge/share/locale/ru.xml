@@ -101,6 +101,7 @@
   <string source="Mark the room clean before checking in." where="code">Перед заселением отметьте номер чистым.</string>
   <string source="Another guest is still checked in to this room." where="code">В этом номере ещё проживает другой гость.</string>
   <string source="Record payments and refunds using the payment action." where="code">Регистрируйте оплаты и возвраты через действие оплаты.</string>
+  <string source="Cancelled reservations with payments: %d · Paid: %s" where="code">Отменённые брони с оплатами: %d · Оплачено: %s</string>
   <string source="Payment or refund" where="reception,payment">Оплата или возврат</string>
   <string source="Amount:" where="payment">Сумма:</string>
   <string source="Record payment" where="payment">Записать оплату</string>

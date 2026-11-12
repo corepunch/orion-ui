@@ -241,6 +241,7 @@ static void test_lodge_remote_ui(void) {
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
   }
   ASSERT_NOT_NULL(strstr(script_page_control(page, "day_report")->title, "Overdue: 0"));
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "cancelled_paid_report")->title, "Cancelled reservations with payments: 0"));
   ASSERT_TRUE(script_page_perform(page, "close_day"));
   for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Server data refreshed"); i++) {
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();

@@ -148,16 +148,21 @@ Hotel.day_closes = records.bind("lodge.day_closes", function(row, previous)
 end)
 function Hotel.day_report()
   local day, net, outstanding, count, pending = orion.today(), 0, 0, 0, 0
+  local cancelled_paid, cancelled_count = 0, 0
   local events = require("orion.model"):extend("lodge.payment_events")
   for _, event in ipairs(events:select({posted_on = day})) do net = net + event.amount_minor end
   for _, row in ipairs(Hotel.reservations.model:all()) do
-    if row.status ~= "cancelled" then outstanding = outstanding + money.minor(Hotel.balance(row)) end
+    if row.status ~= "cancelled" then outstanding = outstanding + money.minor(Hotel.balance(row))
+    else
+      local paid = money.minor(Hotel.paid(row))
+      if paid > 0 then cancelled_paid, cancelled_count = cancelled_paid + paid, cancelled_count + 1 end
+    end
     if (row.status == "reserved" and row.arrival <= day) or (row.status == "checked_in" and row.departure <= day) then pending = pending + 1 end
     count = count + 1
   end
-  orion.assert(math.abs(net) <= 9007199254740991 and math.abs(outstanding) <= 9007199254740991, orion.tr("The day totals are too large."))
+  orion.assert(math.abs(net) <= 9007199254740991 and math.abs(outstanding) <= 9007199254740991 and cancelled_paid <= 9007199254740991, orion.tr("The day totals are too large."))
   return {day = day, net_minor = net, outstanding_minor = outstanding, reservations = count, pending = pending,
-    closed = Hotel.day_closes.model:find({day = day}) ~= nil}
+    cancelled_paid_minor = cancelled_paid, cancelled_paid_count = cancelled_count, closed = Hotel.day_closes.model:find({day = day}) ~= nil}
 end
 function Hotel.close_today()
   local report = Hotel.day_report()

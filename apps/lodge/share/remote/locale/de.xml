@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="de">
+  <string source="Cancelled reservations with payments: %d · Paid: %s" where="code">Stornierte Reservierungen mit Zahlungen: %d · Bezahlt: %s</string>
   <string source="Orion Lodge" obsolete="true">Orion Lodge</string>
   <string source="Reception" where="remote">Rezeption</string>
   <string source="Rooms, guests and reservations · Amounts in your hotel's currency" obsolete="true">Zimmer, Gäste und Reservierungen · Beträge in der Hotelwährung</string>

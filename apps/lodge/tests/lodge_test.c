@@ -389,11 +389,22 @@ static void test_service(void) {
     "assert(call('snapshot').result.reservations[3].room_id==room2); "
     "assert(not call('close_day',{},'reception').ok); assert(not call('close_day',{},'admin').ok); "
     "assert(call('cancel',{id=g.result.reservations[1]}).ok and call('cancel',{id=g.result.reservations[2]}).ok); "
-    "assert(call('day_preview').result.net_minor==15000); assert(call('close_day',{},'admin').ok); "
+    "assert(call('payment',{id=g.result.reservations[1],amount_minor=1000,request_key='cancel-deposit'}).ok); "
+    "assert(call('payment',{id=g.result.reservations[1],amount_minor=-500,request_key='cancel-refund'}).ok); "
+    "local preview=call('day_preview').result; assert(preview.net_minor==15500 and preview.cancelled_paid_count==1 and preview.cancelled_paid_minor==500); "
+    "assert(call('close_day',{},'admin').ok); "
     "assert(not call('close_day',{},'admin').ok); assert(not call('reserve',stay(room,'2027-08-01','2027-08-02')).ok); "
     "assert(not j.decode(s.handle('not json')).ok)"));
+  form_library_t *library = form_library_load("apps/lodge/share/application.orion"); ASSERT_NOT_NULL(library);
+  script_page_t *day_page = script_page_open_library(script_application_runtime(app), library, "day_close", "apps/lodge/share/day_close.lua", error, sizeof(error));
+  if (!day_page) fprintf(stderr, "%s\n", error);
+  ASSERT_NOT_NULL(day_page);
+  ASSERT_NOT_NULL(script_page_create(day_page, NULL));
+  window_t *cancelled_paid = script_page_control(day_page, "cancelled_paid"); ASSERT_NOT_NULL(cancelled_paid);
+  ASSERT_NOT_NULL(strstr(cancelled_paid->title, "Cancelled reservations with payments: 1"));
+  script_page_close(day_page); form_library_free(library);
   db_day_close_t *close = (void *)send_db_message(hotel, dbFind, TABLE_DAY_CLOSES, (void *)(intptr_t)1);
-  ASSERT_NOT_NULL(close); ASSERT_STR_EQUAL(close->net_minor, "15000"); ASSERT_STR_EQUAL(close->actor, "local-owner");
+  ASSERT_NOT_NULL(close); ASSERT_STR_EQUAL(close->net_minor, "15500"); ASSERT_STR_EQUAL(close->actor, "local-owner");
   db_day_close_t changed = *close; snprintf(changed.net_minor, sizeof(changed.net_minor), "0");
   ASSERT_FALSE(send_db_message(hotel, dbUpdate, TABLE_DAY_CLOSES, &changed));
   ASSERT_FALSE(send_db_message(hotel, dbDelete, TABLE_DAY_CLOSES, (void *)(intptr_t)1));
@@ -401,8 +412,8 @@ static void test_service(void) {
   app = script_application_open("apps/lodge/share", directory, error, sizeof(error)); ASSERT_NOT_NULL(app);
   hotel = get_database_by_name("lodge");
   close = (void *)send_db_message(hotel, dbFind, TABLE_DAY_CLOSES, (void *)(intptr_t)1);
-  ASSERT_NOT_NULL(close); ASSERT_STR_EQUAL(close->net_minor, "15000");
-  ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); assert(h.day_report().closed); assert(not h.close_today())"));
+  ASSERT_NOT_NULL(close); ASSERT_STR_EQUAL(close->net_minor, "15500");
+  ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); local r=h.day_report(); assert(r.closed and r.cancelled_paid_count==1 and r.cancelled_paid_minor==500); assert(not h.close_today())"));
   script_application_close(app); hotel = NULL;
   char backup[168], lock[168]; snprintf(backup, sizeof(backup), "%s.bak", target); snprintf(lock, sizeof(lock), "%s.lock", target);
   unlink(backup); unlink(lock); unlink(target); rmdir(directory); PASS();

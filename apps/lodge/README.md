@@ -63,13 +63,17 @@ reservations, following the individual balances; reconcile refunds separately.
 The statement is an operational summary, not a tax invoice or group payment.
 
 **Close day** previews today's net recorded payments, outstanding balance and
-overdue arrivals or departures. Resolve the overdue stays before closing. After
+overdue arrivals or departures. It separately shows the number of cancelled
+reservations with payments still held and their total paid after refunds. Check
+each reservation against the hotel's cancellation policy; this amount does not
+decide whether a refund is due. Resolve the overdue stays before closing. After
 closing, reservation, nightly-price and payment changes are blocked until the
 next calendar day in the host process's time zone; housekeeping remains available. Close records are
 immutable and there is no reopening workflow. This is an operational snapshot,
 not a tax close or statutory report. Old payment events lack a reliable posting
 date and are excluded from daily payment totals; their opening balances remain
-included in reservation balances.
+included in reservation balances. The cancelled-payment figure is a current
+preview, not part of the stored close record.
 
 The **Nightly prices** action lets staff override the copied base rate for an
 individual night, inspect the applied price, or restore the base rate. Rates

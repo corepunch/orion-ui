@@ -70,7 +70,7 @@
       <Label name="notice" /><Label name="error" />
     </form>
     <form name="day_close" controller="day_close" title="Close day" width="600" height="300" padding="12" spacing="8">
-      <Label name="day" font="title" /><Label name="payments" /><Label name="outstanding" /><Label name="pending" />
+      <Label name="day" font="title" /><Label name="payments" /><Label name="outstanding" /><Label name="cancelled_paid" /><Label name="pending" />
       <Label text="Closing prevents reservation and payment changes until tomorrow." />
       <Button name="close_day" text="Close today" action="close_day" flags="BUTTON_DEFAULT" />
       <Label name="notice" /><Label name="error" />

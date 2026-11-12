@@ -53,7 +53,7 @@
       <Separator/><Label text="Selected reservation: nightly price" font="heading"/>
       <StackView orientation="horizontal" spacing="6"><ComboBox name="night_booking" source="lodge_remote_cache.reservations" display="choice" value="id"/><Label text="Night:"/><TextBox name="night" type="date"/><Label text="Price:"/><TextBox name="night_amount" type="number" decimals="2"/><Button name="set_night" text="Set price" action="set_night"/><Button name="reset_night" text="Restore base price" action="reset_night"/></StackView>
       </StackView><StackView name="day_tab" text="Day close" spacing="6" flags="flexspace">
-      <Separator/><Label text="Operational day" font="heading"/><Label name="day_report"/>
+      <Separator/><Label text="Operational day" font="heading"/><Label name="day_report"/><Label name="cancelled_paid_report"/>
       <StackView orientation="horizontal" spacing="6"><Button name="preview_day" text="Preview day" action="preview_day"/><Button name="close_day" text="Close day" action="close_day"/></StackView>
       </StackView></TabView>
     </form>
