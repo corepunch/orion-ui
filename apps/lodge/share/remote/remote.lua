@@ -2,11 +2,12 @@ local orion = require("orion")
 local Remote = require("orion.remote")
 local Plugins = require("orion.plugins")
 local application, confirmation = require("orion.application"), require("confirmation")
+local group_statement = require("group_statement")
 local calendar, money = Plugins.use("calendar", 1), Plugins.use("money", 1)
 local Page = {form = "remote", title = orion.tr("Lodge · Shared server")}
 local status_labels = {reserved = "Reserved", checked_in = "Checked in", checked_out = "Checked out", cancelled = "Cancelled"}
 local cleaning_labels = {inspection_needed = "Inspection needed", dirty = "Dirty", clean = "Clean"}
-local inputs = {"room_name", "room_category", "capacity", "room_rate", "edit_room_choice", "guest_name", "phone", "edit_guest_choice", "clean_room", "room", "guest", "arrival", "departure", "persons", "rate", "extras", "notes", "amount", "group_name", "group_room1", "group_room2", "group_guest", "group_arrival", "group_departure", "group_persons1", "group_persons2", "group_rate1", "group_rate2", "night", "night_amount", "night_booking"}
+local inputs = {"room_name", "room_category", "capacity", "room_rate", "edit_room_choice", "guest_name", "phone", "edit_guest_choice", "clean_room", "room", "guest", "arrival", "departure", "persons", "rate", "extras", "notes", "amount", "group_name", "group_room1", "group_room2", "group_guest", "group_arrival", "group_departure", "group_persons1", "group_persons2", "group_rate1", "group_rate2", "statement_group", "night", "night_amount", "night_booking"}
 function Page:init()
   local day = orion.today()
   self.client = Remote.new(self.app.handle, "lodge")
@@ -15,6 +16,7 @@ function Page:init()
   self.values.group_name, self.values.group_room1, self.values.group_room2, self.values.group_guest = "", 0, 0, 0
   self.values.group_arrival, self.values.group_departure, self.values.group_persons1, self.values.group_persons2 = day, calendar.add(day, 1), 1, 1
   self.values.group_rate1, self.values.group_rate2, self.values.night, self.values.night_amount, self.values.night_booking = 0, 0, day, 0, 0
+  self.values.statement_group = 0
   self.day_report = ""
   self.allowed, self.connected, self.connection, self.notice = {}, false, orion.tr("Not connected."), ""
 end
@@ -25,8 +27,9 @@ function Page:load_snapshot(after)
   self.snapshot_ready = false
   local ok, err = self.client:submit("snapshot", {}, function(result, failure)
     if not result then self.notice = failure; return end
-    local rooms, guests, reservations, room_names, guest_names = {}, {}, {}, {}, {}
-    self.reservations, self.guests, self.rooms = {}, {}, {}
+    local rooms, guests, groups, reservations, room_names, guest_names = {}, {}, {}, {}, {}, {}
+    self.reservations, self.guests, self.rooms, self.groups = {}, {}, {}, {}
+    self.currency = result.hotel and result.hotel.currency
     for _, item in ipairs(result.rooms or {}) do
       self.rooms[item.id] = item
       rooms[#rooms + 1] = {id = item.id, name = item.name, cleaning_state = orion.tr(cleaning_labels[item.cleaning_state] or item.cleaning_state)}
@@ -36,6 +39,9 @@ function Page:load_snapshot(after)
       self.guests[item.id] = item
       guests[#guests + 1] = {id = item.id, name = item.name}; guest_names[item.id] = item.name
     end
+    for _, item in ipairs(result.reservation_groups or {}) do
+      self.groups[item.id] = item; groups[#groups + 1] = {id = item.id, name = item.name}
+    end
     for _, item in ipairs(result.reservations or {}) do
       self.reservations[item.id] = item
       reservations[#reservations + 1] = {id = item.id, choice = string.format("#%d · %s · %s", item.id, room_names[item.room_id] or "", item.arrival), room_name = room_names[item.room_id] or "", guest_name = guest_names[item.guest_id] or "",
@@ -44,6 +50,7 @@ function Page:load_snapshot(after)
     Remote.replace_many({
       {source = "lodge_remote_cache.rooms", rows = rooms, fields = {"id", "name", "cleaning_state"}},
       {source = "lodge_remote_cache.guests", rows = guests, fields = {"id", "name"}},
+      {source = "lodge_remote_cache.groups", rows = groups, fields = {"id", "name"}},
       {source = "lodge_remote_cache.reservations", rows = reservations, fields = {"id", "choice", "room_name", "guest_name", "arrival", "departure", "status", "balance"}},
     })
     self.snapshot_ready = true
@@ -167,6 +174,24 @@ function Page:group_reserve(v)
   end
   self:submit(v, "group_reserve", {name = v.group_name, stays = stays})
 end
+function Page:group_statement(v)
+  self:remember(v)
+  local id = orion.assert(v.statement_group and v.statement_group > 0 and v.statement_group, orion.tr("Choose a reservation group."))
+  self:load_snapshot(function()
+    local group = orion.assert(self.groups[id], orion.tr("Choose a reservation group."))
+    local lines = {}
+    for _, row in pairs(self.reservations) do
+      if row.group_id == id then
+        local room, guest = orion.assert(self.rooms[row.room_id]), orion.assert(self.guests[row.guest_id])
+        lines[#lines + 1] = {id = row.id, room = room.name, guest = guest.name, arrival = row.arrival, departure = row.departure,
+          status = row.status, total = row.total, paid = row.paid, balance = row.balance}
+      end
+    end
+    local html = group_statement(group.name, lines, orion.assert(self.currency))
+    local written, path = pcall(application.write, "group-statement.html", html)
+    self.notice = written and string.format(orion.tr("Group statement saved: %s"), path) or tostring(path)
+  end)
+end
 function Page:night_price(v, command)
   local id = orion.assert(v.night_booking and v.night_booking > 0 and v.night_booking, orion.tr("Choose a reservation."))
   local args = {id = id, night = v.night}
@@ -192,7 +217,7 @@ function Page:data()
   local disabled = {connect = state.busy or (state.pending and not state.conflict), retry = state.busy or not state.pending}
   local map = {add_room = "save_room", add_guest = "save_guest", mark_clean = "set_room_cleaning", mark_dirty = "set_room_cleaning", mark_inspection = "set_room_cleaning", reserve = "reserve",
     check_in = "check_in", check_out = "check_out", cancel = "cancel", confirmation = "snapshot", pay = "payment", refund = "payment",
-    group_reserve = "group_reserve", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
+    group_reserve = "group_reserve", group_statement = "snapshot", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
   for control, command in pairs(map) do disabled[control] = blocked or not self.allowed[command] end
   disabled.reserve = disabled.reserve or self.needs_reload
   disabled.edit_booking = blocked or not self.allowed.reserve

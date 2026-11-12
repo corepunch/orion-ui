@@ -225,4 +225,12 @@
   <string source="Load the room again before saving." where="code">Laden Sie das Zimmer vor dem Speichern erneut.</string>
   <string source="Editing room %d" where="code">Zimmer %d bearbeiten</string>
   <string source="No room loaded" where="code">Kein Zimmer geladen</string>
+  <string source="Group reservation statement" where="remote">Übersicht der Gruppenreservierungen</string>
+  <string source="Group:" where="remote">Gruppe:</string>
+  <string source="Export group statement" where="remote">Gruppenübersicht exportieren</string>
+  <string source="Currency:" where="code">Währung:</string>
+  <string source="Totals sum all listed reservations, including cancelled stays. Payments and refunds are recorded per reservation; this is not a tax invoice." where="code">Die Summen umfassen alle aufgeführten Reservierungen, auch stornierte. Zahlungen und Erstattungen werden je Reservierung erfasst; dies ist keine Steuerrechnung.</string>
+  <string source="Choose a reservation in a group." where="code">Wählen Sie eine Reservierung einer Gruppe.</string>
+  <string source="Choose a reservation group." where="code">Wählen Sie eine Reservierungsgruppe.</string>
+  <string source="Group statement saved: %s" where="code">Gruppenübersicht gespeichert: %s</string>
 </strings>

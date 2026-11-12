@@ -440,6 +440,21 @@ static void test_group_form(void) {
   db_reservation_t *second = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)5);
   ASSERT_NOT_NULL(group); ASSERT_NOT_NULL(first); ASSERT_NOT_NULL(second);
   ASSERT_EQUAL(first->group_id, group->id); ASSERT_EQUAL(second->group_id, group->id);
+  window_t *booking_table = script_page_control(script_application_main(app), "bookings"); ASSERT_NOT_NULL(booking_table);
+  send_message(booking_table, tvRefresh, 0, NULL);
+  send_message(booking_table, RVM_SETSELECTION, 3, NULL);
+  ASSERT_TRUE(script_page_perform(script_application_main(app), "group_statement"));
+  char statement_path[160], html[4096]; snprintf(statement_path, sizeof(statement_path), "%s/group-statement.html", directory);
+  FILE *statement = fopen(statement_path, "rb"); ASSERT_NOT_NULL(statement);
+  size_t html_size = fread(html, 1, sizeof(html) - 1, statement); fclose(statement); html[html_size] = 0;
+  ASSERT_NOT_NULL(strstr(html, "Conference")); ASSERT_NOT_NULL(strstr(html, "EUR"));
+  ASSERT_TRUE(hotel_script(app,
+    "local render=require('remote.group_statement'); local rows={"
+    "{id=2,room='B',guest='Guest',arrival='2035-01-01',departure='2035-01-02',status='cancelled',total=0.20,paid=0.30,balance=-0.10},"
+    "{id=1,room='A',guest='Guest',arrival='2035-01-01',departure='2035-01-02',status='reserved',total=0.10,paid=0,balance=0.10}}; "
+    "local html=render('Team <A>',rows,'EUR'); assert(html:find('Team &lt;A&gt;',1,true) and html:find('Cancelled',1,true)); "
+    "assert(html:find('Total 0.30',1,true) and html:find('Paid 0.30',1,true) and html:find('Balance 0.00',1,true)); "
+    "assert(html:find('<td>A</td>',1,true)<html:find('<td>B</td>',1,true))"));
   script_page_close(page); form_library_free(library); script_application_close(app); hotel = NULL;
   app = script_application_open("apps/lodge/share", directory, error, sizeof(error)); ASSERT_NOT_NULL(app);
   hotel = get_database_by_name("lodge");
@@ -447,7 +462,7 @@ static void test_group_form(void) {
   ASSERT_NOT_NULL(second); ASSERT_EQUAL(second->group_id, 1);
   script_application_close(app); hotel = NULL;
   char backup[168], lock[168]; snprintf(backup, sizeof(backup), "%s.bak", target); snprintf(lock, sizeof(lock), "%s.lock", target);
-  unlink(backup); unlink(lock); unlink(target); rmdir(directory); PASS();
+  unlink(statement_path); unlink(backup); unlink(lock); unlink(target); rmdir(directory); PASS();
 }
 int main(void) {
   TEST_START("Orion Lodge");

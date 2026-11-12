@@ -4,6 +4,7 @@ local application = require("orion.application")
 local Plugins = require("orion.plugins")
 local calendar = Plugins.use("calendar", 1)
 local confirmation = require("remote.confirmation")
+local group_statement = require("remote.group_statement")
 local money = Plugins.use("money", 1)
 local Reception = {form = "reception", title = orion.tr("Orion Lodge")}
 
@@ -72,6 +73,20 @@ function Reception:confirmation(v)
   local html = confirmation({guest = row.guest.name, room = row.room.name, arrival = row.arrival, departure = row.departure,
     total = Hotel.total(row), paid = Hotel.paid(row), balance = Hotel.balance(row)})
   self.notice = string.format(orion.tr("Confirmation saved: %s"), orion.assert(application.write("confirmation.html", html)))
+end
+function Reception:group_statement(v)
+  self:remember(v)
+  local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
+  local row = orion.assert(Hotel.reservations.model:find(selected.id))
+  local group = orion.assert(row.group_id and row.group_id ~= 0 and Hotel.reservation_groups.model:find(row.group_id), orion.tr("Choose a reservation in a group."))
+  local lines = {}
+  for _, member in ipairs(Hotel.reservations.model:select({group_id = group.id})) do
+    lines[#lines + 1] = {id = member.id, room = member.room.name, guest = member.guest.name, arrival = member.arrival, departure = member.departure,
+      status = member.status, total = Hotel.total(member), paid = Hotel.paid(member), balance = Hotel.balance(member)}
+  end
+  local settings = orion.assert(Hotel.hotel_settings.model:all()[1])
+  local html = group_statement(group.name, lines, settings.currency)
+  self.notice = string.format(orion.tr("Group statement saved: %s"), orion.assert(application.write("group-statement.html", html)))
 end
 function Reception:data()
   local count, outstanding = 0, 0

@@ -171,4 +171,12 @@
   <string source="Country: %s · Currency: %s" where="code">Land: %s · Währung: %s</string>
   <string source="Hotel country and currency are not configured." where="code">Land und Währung des Hotels sind nicht festgelegt.</string>
   <string source="Choose a guest." where="code">Wählen Sie einen Gast.</string>
+  <string source="Export group statement" where="reception">Gruppenübersicht exportieren</string>
+  <string source="Group reservation statement" where="code">Übersicht der Gruppenreservierungen</string>
+  <string source="Group:" where="code">Gruppe:</string>
+  <string source="Currency:" where="code">Währung:</string>
+  <string source="Totals sum all listed reservations, including cancelled stays. Payments and refunds are recorded per reservation; this is not a tax invoice." where="code">Die Summen umfassen alle aufgeführten Reservierungen, auch stornierte. Zahlungen und Erstattungen werden je Reservierung erfasst; dies ist keine Steuerrechnung.</string>
+  <string source="Choose a reservation in a group." where="code">Wählen Sie eine Reservierung einer Gruppe.</string>
+  <string source="Choose a reservation group." where="code">Wählen Sie eine Reservierungsgruppe.</string>
+  <string source="Group statement saved: %s" where="code">Gruppenübersicht gespeichert: %s</string>
 </strings>

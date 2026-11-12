@@ -55,6 +55,10 @@ sources and the remaining German and Russian tax-document work.
 current base rates. If either room is unavailable or invalid, neither reservation
 is saved. The service API can create a group of up to 100 rooms. Group members
 are edited and paid individually; there is no group folio or group-wide change.
+**Export group statement** writes a printable `group-statement.html` listing
+each member and its total, paid amount and balance. Its totals include cancelled
+reservations, following the individual balances; reconcile refunds separately.
+The statement is an operational summary, not a tax invoice or group payment.
 
 **Close day** previews today's net recorded payments, outstanding balance and
 overdue arrivals or departures. Resolve the overdue stays before closing. After
@@ -135,7 +139,7 @@ this mode; unsupported platforms refuse to connect.
 
 The shared view supports creating and editing rooms and guests, all three cleaning states (clean,
 dirty and inspection needed), creating and editing reservations, check-in,
-payments, refunds, checkout, printable booking confirmations, two-room group reservations, nightly prices and
+payments, refunds, checkout, printable booking confirmations, two-room group reservations, group statements, nightly prices and
 day preview or closing, subject to the authenticated role. Data displayed in this view is a transient projection; the server is the
 authority. A pending request is saved in a private OS-user profile before it
 is sent. After an uncertain result or restart, retry that same request before

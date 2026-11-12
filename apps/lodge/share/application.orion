@@ -56,7 +56,7 @@
         <Button name="payment" text="Payment or refund" action="payment" />
         <Button name="confirmation" text="Export confirmation" action="confirmation" /><Button name="save_data" text="Retry saving" action="save_data" />
       </StackView>
-      <StackView name="pricing_actions" orientation="horizontal" spacing="6"><Button name="night_prices" text="Nightly prices" action="night_prices" /></StackView>
+      <StackView name="pricing_actions" orientation="horizontal" spacing="6"><Button name="night_prices" text="Nightly prices" action="night_prices" /><Button name="group_statement" text="Export group statement" action="group_statement" /></StackView>
       <Label name="summary" /><Label name="notice" /><Label name="error" />
     </form>
     <form name="hotel_setup" controller="hotel_setup" title="Hotel setup" width="640" height="260" padding="12" spacing="8">

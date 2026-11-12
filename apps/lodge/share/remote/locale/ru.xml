@@ -225,4 +225,12 @@
   <string source="Load the room again before saving." where="code">Перед сохранением заново откройте номер.</string>
   <string source="Editing room %d" where="code">Изменение номера %d</string>
   <string source="No room loaded" where="code">Номер не открыт</string>
+  <string source="Group reservation statement" where="remote">Сводка бронирований группы</string>
+  <string source="Group:" where="remote">Группа:</string>
+  <string source="Export group statement" where="remote">Экспорт сводки группы</string>
+  <string source="Currency:" where="code">Валюта:</string>
+  <string source="Totals sum all listed reservations, including cancelled stays. Payments and refunds are recorded per reservation; this is not a tax invoice." where="code">Итоги включают все перечисленные бронирования, включая отменённые. Оплаты и возвраты учитываются отдельно по каждой брони; это не налоговый счёт.</string>
+  <string source="Choose a reservation in a group." where="code">Выберите бронирование группы.</string>
+  <string source="Choose a reservation group." where="code">Выберите группу бронирований.</string>
+  <string source="Group statement saved: %s" where="code">Сводка группы сохранена: %s</string>
 </strings>

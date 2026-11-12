@@ -149,7 +149,7 @@ static void test_lodge_remote_ui(void) {
   send_message(script_page_control(page, "room_name"), edSetText, 0, "Remote 103");
   ASSERT_TRUE(script_page_perform(page, "add_room")); ASSERT_TRUE(wait_for(db, rooms->table_id, 3, "name", "Remote 103"));
   send_message(script_page_control(page, "sections"), tcSetSelection, 1, NULL);
-  send_message(script_page_control(page, "group_name"), edSetText, 0, "Conference");
+  send_message(script_page_control(page, "group_name"), edSetText, 0, "Conference <team>");
   send_message(script_page_control(page, "group_guest"), cbSetCurrentValue, 1, NULL);
   send_message(script_page_control(page, "group_room1"), cbSetCurrentValue, 2, NULL);
   send_message(script_page_control(page, "group_room2"), cbSetCurrentValue, 3, NULL);
@@ -174,6 +174,20 @@ static void test_lodge_remote_ui(void) {
   bool price_set = wait_for(db, stays->table_id, 2, "balance", "75.00");
   if (!price_set) fprintf(stderr, "notice: %s; error: %s\n", script_page_control(page, "notice")->title, script_page_control(page, "error")->title);
   ASSERT_TRUE(price_set);
+  send_message(script_page_control(page, "sections"), tcSetSelection, 1, NULL);
+  send_message(script_page_control(page, "statement_group"), cbSetCurrentValue, 1, NULL);
+  ASSERT_TRUE(script_page_perform(page, "group_statement"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Group statement saved:"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "Group statement saved:"));
+  char statement_path[160]; snprintf(statement_path, sizeof(statement_path), "%s/group-statement.html", directory);
+  FILE *statement = fopen(statement_path, "rb"); ASSERT_NOT_NULL(statement);
+  html_size = fread(html, 1, sizeof(html) - 1, statement); fclose(statement); html[html_size] = 0;
+  ASSERT_NOT_NULL(strstr(html, "Conference &lt;team&gt;")); ASSERT_NOT_NULL(strstr(html, "Updated &lt;guest&gt;"));
+  ASSERT_NOT_NULL(strstr(html, "Remote 102")); ASSERT_NOT_NULL(strstr(html, "Remote 103"));
+  ASSERT_NOT_NULL(strstr(html, "75.00")); ASSERT_NOT_NULL(strstr(html, "60.00")); ASSERT_NOT_NULL(strstr(html, "135.00"));
+  send_message(script_page_control(page, "sections"), tcSetSelection, 2, NULL);
   ASSERT_TRUE(script_page_perform(page, "reset_night")); ASSERT_TRUE(wait_for(db, stays->table_id, 2, "balance", "50.00"));
   send_message(script_page_control(page, "sections"), tcSetSelection, 3, NULL);
   ASSERT_TRUE(script_page_perform(page, "preview_day"));
@@ -195,7 +209,7 @@ static void test_lodge_remote_ui(void) {
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
   }
   ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "already closed"));
-  script_application_close(app); test_env_shutdown(); unlink(confirmation_path); rmdir(directory); PASS();
+  script_application_close(app); test_env_shutdown(); unlink(statement_path); unlink(confirmation_path); rmdir(directory); PASS();
 }
 int main(void) {
   TEST_START("Lodge remote UI");
