@@ -149,7 +149,7 @@ static result_t remote_window(window_t *window, uint32_t message, uint32_t wpara
     if (response && response->error) lua_pushstring(L, ui_tr(response->error)); else lua_pushnil(L);
     r->response = NULL; http_response_free(response);
     char error[1024]; bool refused;
-    if (!script_call(L, 3, 0, error, sizeof(error), &refused)) { fprintf(stderr, "[remote] callback failed page=%d\n", page); fflush(stderr); }
+    if (!script_call(L, 3, 0, error, sizeof(error), &refused)) { fprintf(stderr, "[remote] callback failed page=%d: %s\n", page, error); fflush(stderr); }
     script_page_remote_refresh(L, page);
     if (is_valid_window_ptr(window, g_ui_runtime.windows) && window->lifetime_serial == serial) destroy_window(window);
     return true;

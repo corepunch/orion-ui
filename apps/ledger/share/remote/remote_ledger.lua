@@ -65,6 +65,8 @@ end
 
 function Ledger:request(command, args, callback)
   orion.assert(self.connected, orion.tr("Connect to the shared company first."))
+  local state = self.remote:state()
+  orion.assert(not state.busy and not state.pending and not state.conflict, orion.tr("Resolve the pending request before changing the draft."))
   self.error = ""
   self.pending_callback = callback
   local ok, err = self.remote:submit(command, args, function(result, failure) self:complete(result, failure) end)
