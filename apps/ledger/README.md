@@ -99,8 +99,11 @@ posting and entries, but these are not a complete audit trail. The boundary and 
 The headless `ledger-run --request` service accepts data-only JSON requests for
 the `ru-2026` and `de-2026` configurations. It supports catalog listing and
 counterparty/item setup; draft goods receipt and sale creation, date and party
-edits, posting, and linked accounting reversal; document and journal listing;
-and advancing the close date. Catalog and document writes require an accountant
+edits, posting, and linked accounting reversal; document, journal and period
+close history listing; and advancing the close date. The Reports page and the
+shared client also show close history. It begins with closes recorded after the
+history feature was installed; a blank actor means none was authenticated.
+Catalog and document writes require an accountant
 or admin role, and closing requires admin. The host must authenticate the actor
 and supply the role; a request file alone is not authentication. Local and
 service-created domestic trade documents store checked minor-unit amounts and

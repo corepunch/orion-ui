@@ -132,6 +132,13 @@ class LedgerHostTests(unittest.TestCase):
                     self.assertNotEqual(reversal['document_id'], sale['document_id'])
                     self.assertEqual(call('documents.list', {'offset': 500, 'limit': 10}), [])
                     call('period.close', {'date': '2026-11-30'}, 'admin')
+                    for role in ('admin', 'accountant', 'auditor'):
+                        history = call('period.history', {'offset': 0, 'limit': 1}, role)
+                        self.assertEqual(len(history), 1)
+                        self.assertEqual(history[0]['closed_through'], '2026-11-30')
+                        self.assertEqual(history[0]['actor'], 'trade-admin')
+                        self.assertTrue(history[0]['recorded_utc'])
+                        self.assertEqual(call('period.history', {'offset': 1, 'limit': 1}, role), [])
                     sequence += 1
                     denied = company.execute('trade-accountant', 'accountant', {'request_id': f'trade-{sequence}', 'expected_revision': company.status()['revision'],
                         'command': 'documents.update', 'args': {**sale, 'counterparty_id': party['id'], 'date': '2026-11-11'}})

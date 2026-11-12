@@ -41,6 +41,22 @@ static void test_ledger_remote_ui(void) {
   ASSERT_TRUE(script_page_perform(page, "reverse")); ASSERT_TRUE(wait_notice(page, "Reversal 2 posted."));
   set_text(page, "close_date", "2035-01-01"); ASSERT_TRUE(script_page_perform(page, "prepare_close"));
   ASSERT_TRUE(script_page_perform(page, "close_period")); ASSERT_TRUE(wait_notice(page, "Accounting period closed."));
+  ASSERT_TRUE(script_page_perform(page, "show_history"));
+  database_t *cache = get_database_by_name("ledger_remote_cache"); ASSERT_NOT_NULL(cache);
+  const db_table_schema_t *history = db_schema_table_named(cache->schema, "period_history"); ASSERT_NOT_NULL(history);
+  bool found = false;
+  for (int i = 0; i < 500 && !found; i++) {
+    repost_messages();
+    void *row = (void *)send_db_message(cache, dbFind, history->table_id, (void *)(intptr_t)1);
+    if (row) {
+      char actor[128], date[32];
+      db_get_field_text(cache, history->table_id, row, "actor", actor, sizeof(actor));
+      db_get_field_text(cache, history->table_id, row, "closed_through", date, sizeof(date));
+      found = !strcmp(actor, "tester") && !strcmp(date, "2035-01-01");
+    }
+    if (!found) { struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); }
+  }
+  ASSERT(found, "shared history displays the recorded close and actor");
   script_application_close(app); test_env_shutdown(); PASS();
 }
 int main(void) {

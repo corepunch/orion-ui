@@ -1162,6 +1162,12 @@
             <Column field="deducted" title="Withheld and Paid" width="96" total="sum" />
             <Column field="closing" title="Owed at End" width="86" total="sum" />
           </TableView>
+          <TableView name="period_history" text="Period Close History" source="ib.period_closures" flags="notitle,nofill,vscroll">
+            <Column field="previous_through" title="Previous close" width="120" />
+            <Column field="closed_through" title="Closed through" width="120" />
+            <Column field="recorded_utc" title="Recorded (UTC)" width="180" />
+            <Column field="actor" title="Actor" width="0" min-width="120" />
+          </TableView>
         </TabView>
       </StackView>
     </form>

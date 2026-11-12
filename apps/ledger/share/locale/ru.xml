@@ -517,6 +517,11 @@
   <string source="Select a posted document to reverse." where="code">Выберите проведённый документ для сторнирования.</string>
   <string source="The reversal could not be saved. Check the infobase before trying again; the file's state may be uncertain." where="code">Не удалось сохранить сторно. Перед повторной попыткой проверьте информационную базу: состояние файла может быть неопределённым.</string>
   <string source="Reversal %s was posted and saved." where="code">Сторно %s проведено и сохранено.</string>
+  <string source="Period Close History" where="reports_page">История закрытия периодов</string>
+  <string source="Previous close" where="reports_page">Предыдущее закрытие</string>
+  <string source="Closed through" where="reports_page">Закрыто по</string>
+  <string source="Recorded (UTC)" where="reports_page">Записано (UTC)</string>
+  <string source="Actor" where="reports_page">Автор</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>

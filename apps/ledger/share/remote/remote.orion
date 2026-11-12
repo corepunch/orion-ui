@@ -23,6 +23,11 @@
         <field name="credit_id" type="integer" /><field name="amount" type="string" length="32" />
         <field name="content" type="string" length="160" />
       </table>
+      <table name="period_history" transient="true">
+        <field name="id" type="integer" key="YES" /><field name="previous_through" type="date" />
+        <field name="closed_through" type="date" /><field name="recorded_utc" type="string" length="21" />
+        <field name="actor" type="string" length="128" />
+      </table>
     </database>
   </databases>
   <forms>
@@ -121,6 +126,19 @@
             <Button name="close_period" text="Confirm period close" action="close_period" />
           </StackView>
           <Label text="Closing is permanent. Reversals must use a later open date." />
+        </StackView>
+        <StackView name="history_tab" text="Period Close History" spacing="6" flags="flexspace">
+          <TableView name="period_history" source="ledger_remote_cache.period_history" flags="flexspace,vscroll" frame="true">
+            <Column field="previous_through" title="Previous close" width="120" />
+            <Column field="closed_through" title="Closed through" width="120" />
+            <Column field="recorded_utc" title="Recorded (UTC)" width="180" />
+            <Column field="actor" title="Actor" width="0" min-width="120" />
+          </TableView>
+          <StackView orientation="horizontal" spacing="6">
+            <Button name="show_history" text="Refresh history" action="show_history" />
+            <Button name="previous_history" text="Previous page" action="previous_history" />
+            <Button name="next_history" text="Next page" action="next_history" />
+          </StackView>
         </StackView>
       </TabView>
     </form>

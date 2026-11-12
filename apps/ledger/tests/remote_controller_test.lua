@@ -13,6 +13,11 @@ package.preload['orion.json'] = function() return {array = function(t) return t 
 local page = require('remote_ledger'); page.app = {handle = 1}; page:init(); page:connect({})
 state.busy = false; pending({application = 'ledger', country = 'RU', role = 'accountant'}, nil)
 assert(client.command == 'documents.list'); state.busy = false; state.pending = false; pending({}, nil)
+page:show_history({}); assert(client.command == 'period.history' and client.args.offset == 0)
+state.busy = false; state.pending = false
+pending({{id = 1, previous_through = '', closed_through = '2026-03-31', recorded_utc = '2026-04-01T00:00:00Z', actor = 'admin'}}, nil)
+assert(cache[1].source == 'ledger_remote_cache.period_history' and cache[1].rows[1].actor == 'admin')
+assert(page:data().disabled.previous_history and page:data().disabled.next_history)
 page:add_line({item_id = 1, vat_id = 1, quantity = '1.000', price = '10.00'})
 assert(cache[1].rows[1].item_id == 1, 'line is projected for review')
 page:create({type_id = 1, draft_party_id = 1, draft_date = '2026-04-01'})

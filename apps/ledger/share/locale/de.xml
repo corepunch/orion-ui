@@ -517,6 +517,11 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Select a posted document to reverse." where="code">Wählen Sie einen gebuchten Beleg zum Stornieren aus.</string>
   <string source="The reversal could not be saved. Check the infobase before trying again; the file's state may be uncertain." where="code">Die Stornobuchung konnte nicht gespeichert werden. Prüfen Sie den Mandanten vor einem erneuten Versuch; der Dateistand ist möglicherweise ungewiss.</string>
   <string source="Reversal %s was posted and saved." where="code">Die Stornobuchung %s wurde gebucht und gespeichert.</string>
+  <string source="Period Close History" where="reports_page">Periodenabschlüsse</string>
+  <string source="Previous close" where="reports_page">Vorheriger Abschluss</string>
+  <string source="Closed through" where="reports_page">Abgeschlossen bis</string>
+  <string source="Recorded (UTC)" where="reports_page">Erfasst (UTC)</string>
+  <string source="Actor" where="reports_page">Benutzer</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

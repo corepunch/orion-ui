@@ -63,6 +63,8 @@ local function dispatch(request)
       if posted[entry.document_id] then result[#result + 1] = entry end
     end
     return page(result, args)
+  elseif command == "period.history" then
+    return page(ledger.fetch("ib", "period_closures"), args)
   elseif command == "documents.create" then
     assert(role == "admin" or role == "accountant", "role cannot create documents")
     return {document_id = ledger_service_native.create(args)}

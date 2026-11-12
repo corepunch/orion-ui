@@ -113,4 +113,10 @@
   <string source="Refresh the server before starting a request." where="code">Обновите состояние сервера перед новым запросом.</string>
   <string source="Invalid remote request." where="code">Недопустимый удалённый запрос.</string>
   <string source="There is no request to retry." where="code">Нет запроса для повтора.</string>
+  <string source="Period Close History" where="remote_ledger">История закрытия периодов</string>
+  <string source="Previous close" where="remote_ledger">Предыдущее закрытие</string>
+  <string source="Closed through" where="remote_ledger">Закрыто по</string>
+  <string source="Recorded (UTC)" where="remote_ledger">Записано (UTC)</string>
+  <string source="Actor" where="remote_ledger">Автор</string>
+  <string source="Refresh history" where="remote_ledger">Обновить историю</string>
 </strings>

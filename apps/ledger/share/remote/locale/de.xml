@@ -113,4 +113,10 @@
   <string source="Refresh the server before starting a request." where="code">Aktualisieren Sie den Serverstatus vor einer neuen Anfrage.</string>
   <string source="Invalid remote request." where="code">Ungültige Remote-Anfrage.</string>
   <string source="There is no request to retry." where="code">Es gibt keine Anfrage zur Wiederholung.</string>
+  <string source="Period Close History" where="remote_ledger">Periodenabschlüsse</string>
+  <string source="Previous close" where="remote_ledger">Vorheriger Abschluss</string>
+  <string source="Closed through" where="remote_ledger">Abgeschlossen bis</string>
+  <string source="Recorded (UTC)" where="remote_ledger">Erfasst (UTC)</string>
+  <string source="Actor" where="remote_ledger">Benutzer</string>
+  <string source="Refresh history" where="remote_ledger">Verlauf aktualisieren</string>
 </strings>

@@ -38,14 +38,14 @@ POLICIES = {
         "configure_hotel": {"admin"},
     },
     "ledger": {
-        **{c: {"admin", "accountant", "auditor"} for c in ("documents.list", "journal.list", "catalogs.list")},
+        **{c: {"admin", "accountant", "auditor"} for c in ("documents.list", "journal.list", "catalogs.list", "period.history")},
         **{c: {"admin", "accountant"} for c in ("documents.create", "documents.update", "documents.post", "documents.reverse", "documents.replace_lines", "counterparties.save", "items.save")},
         "period.close": {"admin"},
     },
 }
 for _commands in POLICIES.values():
     _commands["maintenance.upgrade"] = {"admin"}
-READS = {"snapshot", "day_preview", "documents.list", "journal.list", "catalogs.list"}
+READS = {"snapshot", "day_preview", "documents.list", "journal.list", "catalogs.list", "period.history"}
 
 
 def canonical(value):
