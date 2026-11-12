@@ -1099,6 +1099,28 @@ static void test_infobase_migration(void) {
   PASS();
 }
 
+static void test_corrupt_period_lock(void) {
+  TEST("invalid period locks fail closed and cannot be advanced");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  switch_configuration("ru-2026", "corrupt-period.xml");
+  db_period_lock_t lock = { .id = 1 };
+  snprintf(lock.closed_through, sizeof(lock.closed_through), "2026-02-30");
+  ASSERT_TRUE(db_schema_xml(g_ledger->ib, dbInsert, TABLE_PERIOD_LOCKS, &lock));
+  ASSERT_TRUE(ledger_period_closed(g_ledger->ib, "2027-01-01"));
+  ASSERT_FALSE(ledger_close_through(g_ledger->ib, "2027-01-01"));
+  db_document_t draft = { .doc_type_id = 1, .counterparty_id = 1 };
+  snprintf(draft.date, sizeof(draft.date), "2027-01-01");
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &draft));
+  ASSERT_TRUE(db_schema_xml(g_ledger->ib, dbDelete, TABLE_PERIOD_LOCKS, (void *)(intptr_t)1));
+  lock.id = 2;
+  snprintf(lock.closed_through, sizeof(lock.closed_through), "2026-03-31");
+  ASSERT_TRUE(db_schema_xml(g_ledger->ib, dbInsert, TABLE_PERIOD_LOCKS, &lock));
+  ASSERT_TRUE(ledger_period_closed(g_ledger->ib, "2027-01-01"));
+  ASSERT_FALSE(ledger_close_through(g_ledger->ib, "2027-01-01"));
+  restore_configuration(cfg, ib);
+  PASS();
+}
+
 static void test_reversal(void) {
   TEST("accounting reversal uses preserved postings once and permits a later open period");
   database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
@@ -1831,6 +1853,7 @@ int main(int argc, char **argv) {
   test_scripted_rules();
   test_posting_rollback();
   test_closed_period();
+  test_corrupt_period_lock();
   test_infobase_migration();
   test_reversal();
   test_reversal_protection();

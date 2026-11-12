@@ -172,7 +172,7 @@ end)
 
 ## `ledger.close_through(date)`
 
-Advance the inclusive accounting close date. Requires a writable script inside ledger.transaction; invalid dates and dates that do not advance the boundary are rejected. Closing also rejects any unposted document on or before the requested date and any document with an invalid date; resolve these before closing. The caller must save the infobase after the transaction. There is no reopening API. This initial guard does not provide an immutable audit trail or prevent native code from mutating exposed record pointers.
+Advance the inclusive accounting close date. Requires a writable script inside ledger.transaction; invalid dates and dates that do not advance the boundary are rejected. Closing also rejects any unposted document on or before the requested date and any document with an invalid date; resolve these before closing. A malformed or unexpected stored period lock blocks document changes and further closing until the infobase is recovered. The caller must save the infobase after the transaction. There is no reopening API. This initial guard does not provide an immutable audit trail or prevent native code from mutating exposed record pointers.
 
 | Argument | Type | Description |
 |---|---|---|

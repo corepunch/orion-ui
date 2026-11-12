@@ -50,18 +50,40 @@ bool ledger_valid_date(const char *date) {
   return d <= days[m - 1] + (m == 2 && (y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)));
 }
 
+static bool period_boundary(database_t *db, char *boundary, size_t size) {
+  boundary[0] = '\0';
+  if (!db) {
+    fprintf(stderr, "[ledger] period lock rejected: missing database\n"); fflush(stderr); return false;
+  }
+  result_node_t *rows = (void *)db_schema_xml(db, dbFetch, MAKEDWORD(TABLE_PERIOD_LOCKS, 0), NULL);
+  bool ok = true;
+  for (result_node_t *n = rows; n; n = n->next) {
+    const db_period_lock_t *lock = *(db_period_lock_t **)n->data;
+    if (!lock || lock->id != 1 || boundary[0] || !ledger_valid_date(lock->closed_through)) {
+      fprintf(stderr, "[ledger] period lock rejected: invalid or duplicate boundary id=%d date=%s\n",
+        lock ? lock->id : 0, lock ? lock->closed_through : "(null)");
+      fflush(stderr); ok = false; break;
+    }
+    snprintf(boundary, size, "%s", lock->closed_through);
+  }
+  free_result_list(rows);
+  return ok;
+}
+
 bool ledger_period_closed(database_t *db, const char *date) {
-  const db_period_lock_t *lock = (const db_period_lock_t *)db_schema_xml(db, dbFind, MAKEDWORD(TABLE_PERIOD_LOCKS, 0), (void *)(intptr_t)1);
-  return lock && lock->closed_through[0] && (!ledger_valid_date(date) || strcmp(date, lock->closed_through) <= 0);
+  char boundary[11];
+  if (!period_boundary(db, boundary, sizeof(boundary))) return true;
+  return boundary[0] && (!ledger_valid_date(date) || strcmp(date, boundary) <= 0);
 }
 
 bool ledger_close_through(database_t *db, const char *date) {
   if (!ledger_valid_date(date)) {
     fprintf(stderr, "[ledger] close rejected: invalid date=%s\n", date ? date : "(null)"); fflush(stderr); return false;
   }
-  const db_period_lock_t *old = (const db_period_lock_t *)db_schema_xml(db, dbFind, MAKEDWORD(TABLE_PERIOD_LOCKS, 0), (void *)(intptr_t)1);
-  if (old && strcmp(date, old->closed_through) <= 0) {
-    fprintf(stderr, "[ledger] close rejected: date=%s current=%s\n", date, old->closed_through); fflush(stderr); return false;
+  char boundary[11];
+  if (!period_boundary(db, boundary, sizeof(boundary))) return false;
+  if (boundary[0] && strcmp(date, boundary) <= 0) {
+    fprintf(stderr, "[ledger] close rejected: date=%s current=%s\n", date, boundary); fflush(stderr); return false;
   }
   result_node_t *documents = (void *)db_schema_xml(db, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
   for (result_node_t *node = documents; node; node = node->next) {
@@ -75,7 +97,7 @@ bool ledger_close_through(database_t *db, const char *date) {
   free_result_list(documents);
   db_period_lock_t lock = { .id = 1 };
   snprintf(lock.closed_through, sizeof(lock.closed_through), "%s", date);
-  return db_schema_xml(db, old ? dbUpdate : dbInsert, TABLE_PERIOD_LOCKS, &lock) != 0;
+  return db_schema_xml(db, boundary[0] ? dbUpdate : dbInsert, TABLE_PERIOD_LOCKS, &lock) != 0;
 }
 
 static bool locked_document(database_t *db, int id) {
