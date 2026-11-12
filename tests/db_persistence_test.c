@@ -227,6 +227,36 @@ static void test_unknown_fields_preserved(void) {
   }
   unlink(path); unlink(lock); rmdir(dir); PASS();
 }
+static void test_duplicate_fields_preserved(void) {
+  TEST("schema XML: duplicate fields reject opening without changing the source");
+  char dir[512], path[1024], backup[1040], lock[1040], bytes[512];
+  const char *sources[] = {
+    "<book><records><record id=\"1\" value=\"10\"><value>20</value></record></records></book>",
+    "<book><records><record id=\"1\"><value>10</value><value>20</value></record></records></book>",
+  };
+  ASSERT_TRUE(persistence_tempdir(dir, sizeof(dir)));
+  snprintf(path, sizeof(path), "%s/book.xml", dir); snprintf(backup, sizeof(backup), "%s.bak", path);
+  snprintf(lock, sizeof(lock), "%s.lock", path);
+  for (size_t i = 0; i < sizeof(sources) / sizeof(sources[0]); i++) {
+    FILE *f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+    ASSERT_EQUAL(fwrite(sources[i], 1, strlen(sources[i]), f), strlen(sources[i])); ASSERT_EQUAL(fclose(f), 0);
+    ASSERT_NULL(open_book(path));
+    f = fopen(path, "rb"); ASSERT_NOT_NULL(f);
+    size_t n = fread(bytes, 1, sizeof(bytes) - 1, f); ASSERT_FALSE(ferror(f)); ASSERT_EQUAL(fclose(f), 0);
+    bytes[n] = 0; ASSERT_TRUE(!strcmp(bytes, sources[i]));
+  }
+  FILE *f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fputs("<book><records><record id=\"1\" value=\"42\"/></records></book>", f); ASSERT_EQUAL(fclose(f), 0);
+  f = fopen(backup, "wb"); ASSERT_NOT_NULL(f); fputs(sources[0], f); ASSERT_EQUAL(fclose(f), 0);
+  database_t *db = open_book(path); ASSERT_NOT_NULL(db);
+  ASSERT_FALSE(db_schema_xml_restore_backup(db));
+  persistence_row_t *row = (void *)send_db_message(db, dbFind, 0, (void *)(intptr_t)1);
+  ASSERT_NOT_NULL(row); ASSERT_EQUAL(row->value, 42); destroy_database(db);
+  db = open_book(path); ASSERT_NOT_NULL(db);
+  row = (void *)send_db_message(db, dbFind, 0, (void *)(intptr_t)1);
+  ASSERT_NOT_NULL(row); ASSERT_EQUAL(row->value, 42); destroy_database(db);
+  unlink(path); unlink(backup); unlink(lock); rmdir(dir); PASS();
+}
 static void test_invalid_integer_preserved(void) {
   TEST("schema XML: invalid integers reject opening without changing the source");
   char dir[512], path[1024], lock[1040], bytes[512];
@@ -383,7 +413,7 @@ static void test_persistence(void) {
 }
 int main(void) {
   TEST_START("Database persistence"); DB_CLASS(db_schema_xml);
-  test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); test_unknown_fields_preserved(); test_invalid_integer_preserved(); test_oversized_text_preserved(); test_backup_in_separate_directory();
+  test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); test_unknown_fields_preserved(); test_duplicate_fields_preserved(); test_invalid_integer_preserved(); test_oversized_text_preserved(); test_backup_in_separate_directory();
 #ifndef _WIN32
   test_migration_crashes();
 #endif
