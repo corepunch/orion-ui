@@ -16,7 +16,7 @@
 #include <orion/user/scrollbar.h>
 #include <platform/platform.h>
 #include <orion/user/ansi.h>
-#include "pty.h"
+#include "terminal_pty.h"
 #include "terminal_view.h"
 #include "ansi_parser.h"
 
