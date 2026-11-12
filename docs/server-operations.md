@@ -66,4 +66,7 @@ do not run the original and restored copy concurrently as independent servers.
 For isolated testing only, trusted host launchers may set `ORION_REMOTE_PROFILE`
 to an existing directory owned by the user with mode 0700; symlink final
 components and unsafe permissions are rejected. Lua code receives no profile
-path API. Windows shared desktop transport/outbox is not yet implemented.
+path API. Remote application and plugin Lua code is trusted: code able to load
+the native remote module can inspect or clear its pending request. Do not load
+unreviewed plugins into a remote workspace. Windows shared desktop
+transport/outbox is not yet implemented.

@@ -126,8 +126,9 @@ results independently derived from the business rules.
 
 This SDK makes the existing runtime accessible and checks source packages. The local package manager and schema XML migration/backup mechanisms described
 below are now available, including optional local publisher signature checks.
-A publisher identity service, permission broker, general schema rollback and
-multi-user access control remain unfinished. See [platform readiness](business-platform-readiness.md) for the
+A publisher identity service, extension permission broker and general schema
+rollback remain unfinished. The shared server has fixed roles; general-purpose
+multi-user authorization and hostile native-code isolation remain unfinished. See [platform readiness](business-platform-readiness.md) for the
 remaining acceptance criteria shared by Ledger and Lodge. Keep those capabilities
 separate from a claim of statutory accounting completeness.
 
@@ -275,6 +276,12 @@ plugin interface and storage schema versions are independent numbers.
 Shared-server integrations use the [data-only business protocol](business-service.md).
 It reuses domain validation and avoids vendor-file changes; clients create, post,
 reverse or book through named operations. The command-line client is an executable
-example. Native application windows do not yet bind to this protocol: HTTP request
-lifetimes, deadlines, credential storage and remote datasource projection need a
-complete client contract before that mode is offered in those windows.
+example. Initial Ledger and Lodge desktop workspaces also bind to this protocol
+when launched with `--remote`. They use a bounded, cancellable RPC transport and
+transient projections; the exact pending request is stored before transmission
+and can be retried after a restart with the same server, company and actor.
+The bearer token is supplied by the trusted launcher, not as a command argument.
+The desktop transport currently supports macOS and Linux; Windows, iOS, Android
+and WebGL fail closed. These initial workspaces still need broader workflow,
+accessibility and independent pilot validation. See [server operations](server-operations.md)
+for the outbox, backup and recovery boundaries.
