@@ -17,6 +17,9 @@ page:add_line({item_id = 1, vat_id = 1, quantity = '1.000', price = '10.00'})
 assert(cache[1].rows[1].item_id == 1, 'line is projected for review')
 page:create({type_id = 1, draft_party_id = 1, draft_date = '2026-04-01'})
 assert(client.command == 'documents.create'); local original = client.args
+local callback = page.pending_callback
+assert(not pcall(function() page:post({documents = {id = 7}}) end), 'a second action must be refused while busy')
+assert(page.pending_callback == callback, 'refusal preserves the original completion callback')
 state.busy = false; pending(nil, 'connection lost'); assert(page:data().disabled.create)
 page:retry({}); assert(client.args == original); state.busy = false; state.pending = false; pending({document_id = 1}, nil)
 assert(client.command == 'documents.list' and #page.lines == 0)
