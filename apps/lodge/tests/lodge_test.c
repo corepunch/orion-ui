@@ -446,6 +446,11 @@ static void test_service(void) {
   ASSERT_NOT_NULL(script_page_control(day_page, "day_history"));
   window_t *cancelled_paid = script_page_control(day_page, "cancelled_paid"); ASSERT_NOT_NULL(cancelled_paid);
   ASSERT_NOT_NULL(strstr(cancelled_paid->title, "Cancelled reservations with payments: 1"));
+  ASSERT_TRUE(hotel_script(app, "local f=require('remote.overdue'); local h=f('2036-03-01',{{id=9,room='A<&',guest='Guest <one>',arrival='2036-02-29',departure='2036-03-02',status='reserved'},{id=10,room='B',guest='Leaving',arrival='2036-02-27',departure='2036-03-01',status='checked_in'},{id=11,room='C',guest='Future',arrival='2036-03-02',departure='2036-03-03',status='reserved'},{id=12,room='D',guest='Done',arrival='2036-02-27',departure='2036-03-01',status='checked_out'}}); assert(h:find('A&lt;&amp;',1,true) and h:find('Guest &lt;one&gt;',1,true) and h:find('Overdue arrival',1,true) and h:find('Overdue departure',1,true) and not h:find('Future',1,true) and not h:find('Done',1,true))"));
+  ASSERT_TRUE(script_page_perform(day_page, "export_overdue"));
+  ASSERT_NOT_NULL(strstr(script_page_control(day_page, "notice")->title, "overdue-stays.html"));
+  char overdue_path[192]; snprintf(overdue_path, sizeof(overdue_path), "%s/overdue-stays.html", directory); ASSERT_EQUAL(access(overdue_path, F_OK), 0); unlink(overdue_path);
+
   script_page_close(day_page); form_library_free(library);
   db_day_close_t *close = (void *)send_db_message(hotel, dbFind, TABLE_DAY_CLOSES, (void *)(intptr_t)1);
   ASSERT_NOT_NULL(close); ASSERT_STR_EQUAL(close->net_minor, "15500"); ASSERT_STR_EQUAL(close->actor, "local-owner");

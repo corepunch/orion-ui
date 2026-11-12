@@ -307,6 +307,15 @@ static void test_lodge_remote_ui(void) {
   ASSERT_TRUE(wait_for(db, stays->table_id, 3, "status", "Cancelled"));
   ASSERT_FALSE(window_is_enabled(script_page_control(page, "confirm_group_cancel")));
   send_message(script_page_control(page, "sections"), tcSetSelection, 3, NULL);
+  ASSERT_TRUE(script_page_perform(page, "export_overdue"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Overdue stays saved"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "overdue-stays.html"));
+  char overdue_path[192]; snprintf(overdue_path, sizeof(overdue_path), "%s/overdue-stays.html", directory);
+  FILE *overdue_file = fopen(overdue_path, "rb"); ASSERT_NOT_NULL(overdue_file);
+  char overdue_html[8192]; size_t overdue_length = fread(overdue_html, 1, sizeof(overdue_html) - 1, overdue_file); fclose(overdue_file); overdue_html[overdue_length] = 0;
+  ASSERT_NOT_NULL(strstr(overdue_html, formatted_day)); unlink(overdue_path);
   ASSERT_FALSE(window_is_enabled(script_page_control(page, "close_day")));
   ASSERT_TRUE(script_page_perform(page, "preview_day"));
   for (int i = 0; i < 500 && !strstr(script_page_control(page, "day_report")->title, "Overdue:"); i++) {

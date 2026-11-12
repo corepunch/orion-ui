@@ -75,7 +75,7 @@
     <form name="day_close" controller="day_close" title="Close day" width="900" height="520" padding="12" spacing="8">
       <Label name="day" font="title" /><Label name="payments" /><Label name="outstanding" /><Label name="cancelled_paid" /><Label name="pending" />
       <Label text="Closing prevents reservation and payment changes until tomorrow." />
-      <Button name="close_day" text="Close today" action="close_day" flags="BUTTON_DEFAULT" />
+      <StackView orientation="horizontal" spacing="6"><Button name="export_overdue" text="Export overdue stays" action="export_overdue"/><Button name="close_day" text="Close today" action="close_day" flags="BUTTON_DEFAULT" /></StackView>
       <Label name="notice" /><Label name="error" />
       <Label text="Previous day closes" font="heading" />
       <TableView name="day_history" source="lodge.day_closes" flags="flexspace,vscroll" frame="true">

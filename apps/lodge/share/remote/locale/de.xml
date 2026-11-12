@@ -283,4 +283,13 @@
   <string source="Cancel reservation %d · %s · %s to %s · Payments held: %s %s. Refunds are separate." where="code">Buchung %d stornieren · %s · %s bis %s · Erhaltene Zahlungen: %s %s. Erstattungen erfolgen separat.</string>
   <string source="Only reserved bookings can be cancelled." where="code">Nur reservierte Buchungen können storniert werden.</string>
   <string source="Preview the cancellation again." where="code">Prüfen Sie die Stornierung erneut.</string>
+  <string source="Export overdue stays" where="remote">Überfällige An- und Abreisen exportieren</string>
+  <string source="Overdue arrival" where="code">Überfällige Anreise</string>
+  <string source="Overdue departure" where="code">Überfällige Abreise</string>
+  <string source="Overdue stays" where="code">Überfällige An- und Abreisen</string>
+  <string source="Operational day:" where="code">Betriebstag:</string>
+  <string source="Reservations still awaiting arrival or departure at the time of export." where="code">Buchungen, deren An- oder Abreise zum Exportzeitpunkt noch aussteht.</string>
+  <string source="Reservation" where="code">Buchung</string>
+  <string source="Action" where="code">Vorgang</string>
+  <string source="Overdue stays saved: %s" where="code">Überfällige An- und Abreisen gespeichert: %s</string>
 </strings>

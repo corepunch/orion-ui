@@ -1,10 +1,20 @@
 local orion = require("orion")
 local Hotel = require("hotel")
+local application = require("orion.application")
+local overdue = require("remote.overdue")
 local DayClose = {form = "day_close", title = orion.tr("Close day")}
 function DayClose:init() self.notice = "" end
 function DayClose:close_day()
   orion.assert(Hotel.close_today(orion.assert(self.preview, orion.tr("Preview the day before closing."))))
   self.notice = orion.tr("Today is closed.")
+end
+function DayClose:export_overdue()
+  local day, rows = Hotel.day_report().day, {}
+  for _, row in ipairs(Hotel.reservations.model:all()) do
+    rows[#rows + 1] = {id = row.id, room = row.room.name, guest = row.guest.name, arrival = row.arrival,
+      departure = row.departure, status = row.status}
+  end
+  self.notice = string.format(orion.tr("Overdue stays saved: %s"), orion.assert(application.write("overdue-stays.html", overdue(day, rows))))
 end
 function DayClose:data()
   local report = Hotel.day_report()

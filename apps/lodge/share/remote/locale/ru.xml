@@ -283,4 +283,13 @@
   <string source="Cancel reservation %d · %s · %s to %s · Payments held: %s %s. Refunds are separate." where="code">Отменить бронь %d · %s · с %s по %s · Удержано оплат: %s %s. Возвраты оформляются отдельно.</string>
   <string source="Only reserved bookings can be cancelled." where="code">Отменить можно только подтверждённую бронь.</string>
   <string source="Preview the cancellation again." where="code">Повторно проверьте отмену.</string>
+  <string source="Export overdue stays" where="remote">Экспорт просроченных заездов и выездов</string>
+  <string source="Overdue arrival" where="code">Просроченный заезд</string>
+  <string source="Overdue departure" where="code">Просроченный выезд</string>
+  <string source="Overdue stays" where="code">Просроченные заезды и выезды</string>
+  <string source="Operational day:" where="code">Операционный день:</string>
+  <string source="Reservations still awaiting arrival or departure at the time of export." where="code">Бронирования, ожидающие заезда или выезда на момент экспорта.</string>
+  <string source="Reservation" where="code">Бронирование</string>
+  <string source="Action" where="code">Действие</string>
+  <string source="Overdue stays saved: %s" where="code">Список просроченных заездов и выездов сохранён: %s</string>
 </strings>

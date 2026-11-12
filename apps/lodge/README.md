@@ -88,7 +88,7 @@ The statement is an operational summary, not a tax invoice or proof of payment.
 overdue arrivals or departures. It separately shows the number of cancelled
 reservations with payments still held and their total paid after refunds. Check
 each reservation against the hotel's cancellation policy; this amount does not
-decide whether a refund is due. Resolve the overdue stays before closing. In shared mode, preview the day before closing; Lodge refuses the close if the day or its figures have changed since that preview. After
+decide whether a refund is due. Use **Export overdue stays** to write a printable `overdue-stays.html` listing the reservations needing arrival or departure; the shared view refreshes from the server first. The file replaces the previous export and contains guest data. Resolve the overdue stays before closing. In shared mode, preview the day before closing; Lodge refuses the close if the day or its figures have changed since that preview. After
 closing, reservation, nightly-price and payment changes are blocked until the
 next calendar day in the host process's time zone; housekeeping remains available.
 The hotel day follows the operating-system time zone of the local process or,

@@ -3,6 +3,7 @@ local Remote = require("orion.remote")
 local Plugins = require("orion.plugins")
 local application, confirmation = require("orion.application"), require("confirmation")
 local group_statement = require("group_statement")
+local overdue = require("overdue")
 local close_display = require("close_display")
 local calendar, money = Plugins.use("calendar", 1), Plugins.use("money", 1)
 local Page = {form = "remote", title = orion.tr("Lodge · Shared server")}
@@ -343,6 +344,19 @@ function Page:night_price(v, command)
 end
 function Page:set_night(v) self:night_price(v, "set_night") end
 function Page:reset_night(v) self:night_price(v, "reset_night") end
+function Page:export_overdue(v)
+  self:remember(v)
+  self:load_snapshot(function()
+    local rows = {}
+    for _, row in pairs(self.reservations) do
+      local room, guest = orion.assert(self.rooms[row.room_id]), orion.assert(self.guests[row.guest_id])
+      rows[#rows + 1] = {id = row.id, room = room.name, guest = guest.name, arrival = row.arrival,
+        departure = row.departure, status = row.status}
+    end
+    local written, path = pcall(application.write, "overdue-stays.html", overdue(self.server_day, rows))
+    self.notice = written and string.format(orion.tr("Overdue stays saved: %s"), path) or tostring(path)
+  end)
+end
 function Page:preview_day(v)
   self.day_preview = nil
   self:remember(v)
@@ -370,7 +384,7 @@ function Page:data()
   local disabled = {connect = state.busy or (state.pending and not state.conflict), retry = state.busy or not state.pending}
   local map = {add_room = "save_room", add_guest = "save_guest", mark_clean = "set_room_cleaning", mark_dirty = "set_room_cleaning", mark_inspection = "set_room_cleaning", reserve = "reserve",
     check_in = "check_in", check_out = "check_out", preview_cancel = "cancel", confirm_cancel = "cancel", confirmation = "snapshot", pay = "payment", refund = "payment",
-    group_reserve = "group_reserve", group_statement = "snapshot", preview_group_cancel = "group_cancel", confirm_group_cancel = "group_cancel", preview_group_settlement = "group_settle", confirm_group_settlement = "group_settle", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
+    group_reserve = "group_reserve", group_statement = "snapshot", preview_group_cancel = "group_cancel", confirm_group_cancel = "group_cancel", preview_group_settlement = "group_settle", confirm_group_settlement = "group_settle", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", export_overdue = "day_preview", close_day = "close_day"}
   for control, command in pairs(map) do disabled[control] = blocked or not self.allowed[command] end
   disabled.confirm_cancel = disabled.confirm_cancel or not self.cancel_booking
   disabled.close_day = disabled.close_day or not self.day_preview

@@ -59,7 +59,7 @@
       <StackView orientation="horizontal" spacing="6"><ComboBox name="night_booking" source="lodge_remote_cache.reservations" display="choice" value="id"/><Label text="Night:"/><TextBox name="night" type="date"/><Label text="Price:"/><TextBox name="night_amount" type="number" decimals="2"/><Button name="set_night" text="Set price" action="set_night"/><Button name="reset_night" text="Restore base price" action="reset_night"/></StackView>
       </StackView><StackView name="day_tab" text="Day close" spacing="6" flags="flexspace">
       <Separator/><Label text="Operational day" font="heading"/><Label name="day_report"/><Label name="cancelled_paid_report"/>
-      <StackView orientation="horizontal" spacing="6"><Button name="preview_day" text="Preview day" action="preview_day"/><Button name="close_day" text="Close day" action="close_day"/></StackView>
+      <StackView orientation="horizontal" spacing="6"><Button name="preview_day" text="Preview day" action="preview_day"/><Button name="export_overdue" text="Export overdue stays" action="export_overdue"/><Button name="close_day" text="Close day" action="close_day"/></StackView>
       <Label text="Previous day closes" font="heading"/><TableView name="day_history" source="lodge_remote_cache.day_closes" flags="flexspace,vscroll" frame="true"><Column field="day" title="Day" width="110"/><Column field="actor" title="Closed by" width="0" min-width="140"/><Column field="net_display" title="Net payments" width="120"/><Column field="outstanding_display" title="Outstanding" width="120"/><Column field="cancelled_count_display" title="Cancelled with payments" width="180"/><Column field="cancelled_paid_display" title="Paid on cancelled" width="150"/></TableView>
       </StackView></TabView>
     </form>
