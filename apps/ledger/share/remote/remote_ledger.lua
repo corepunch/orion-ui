@@ -108,7 +108,7 @@ function Ledger:connect(values)
   self.catalog_rows_revision, self.document_rows_revision = nil, nil
   self.document_lines_revision, self.copy_review = nil, nil
   local ok, err = self.remote:refresh(function(status, failure)
-    if failure then self.error = failure; return end
+    if failure then self.connected, self.role, self.error = false, "", failure; return end
     if status.application ~= "ledger" or (status.country ~= "RU" and status.country ~= "DE") then
       self.connected, self.role = false, ""
       self.error = orion.tr("This server is not a supported Ledger company.")
@@ -128,7 +128,7 @@ function Ledger:connect(values)
       self:load_documents(0)
     end
   end)
-  if not ok then self.error = err end
+  if not ok then self.connected, self.role, self.error = false, "", err end
 end
 
 function Ledger:retry(values)

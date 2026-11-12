@@ -105,6 +105,21 @@ state.busy = false; pending(nil, 'connection lost'); assert(page:data().disabled
 page:retry({}); assert(client.args == original); state.busy = false; state.pending = false; pending({document_id = 1}, nil)
 assert(client.command == 'documents.list' and #page.lines == 0)
 state.busy = false; state.pending = false; pending({}, nil)
+for _, country in ipairs({'RU', 'DE'}) do
+  page:connect({}); state.busy = false; pending(nil, 'identity mismatch')
+  assert(not page.connected and page:data().disabled.create and page:data().disabled.post,
+    country .. ': failed refresh disconnects the old session before any further changes')
+  page:connect({}); state.busy = false; pending({application = 'ledger', country = country, role = 'accountant'}, nil)
+  state.busy, state.pending = false, false; pending({}, nil)
+  assert(page.connected and not page:data().disabled.create, country .. ': successful refresh restores the session')
+end
+local refresh = client.refresh
+client.refresh = function() return nil, 'request could not start' end
+page:connect({})
+assert(not page.connected and page:data().disabled.create, 'failure to start refresh disconnects the old session')
+client.refresh = refresh
+page:connect({}); state.busy = false; pending({application = 'ledger', country = 'RU', role = 'accountant'}, nil)
+state.busy, state.pending = false, false; pending({}, nil)
 page.fields.name = 'Preserved name'; page:remember({quantity = '2.000'})
 assert(page.fields.name == 'Preserved name', 'tab changes preserve draft input')
 local ok = pcall(function() page:post({}) end); assert(not ok, 'posting requires selection')
