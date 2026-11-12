@@ -113,7 +113,7 @@
   <string source="Tax:" obsolete="true">Налог:</string>
   <string source="Total:" where="operation,payroll">Всего:</string>
   <string source="OK and Post" where="payroll,asset_document,closing">ОК и провести</string>
-  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,report_settings">Отмена</string>
+  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,reverse_posting,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,report_settings">Отмена</string>
   <string source="Document Line" where="doc_line">Строка документа</string>
   <string source="Item:" where="doc_line">Номенклатура:</string>
   <string source="Quantity:" where="doc_line,entry">Количество:</string>
@@ -504,6 +504,19 @@
   <string source="Show Entries (Dr/Cr)" where="menu">Показать проводки (Дт/Кт)</string>
   <string source="Cancel posting: remove the document's entries" where="journal_page">Отменить проведение: удалить проводки документа</string>
   <string source="Show the entries the document wrote" where="journal_page">Показать проводки документа</string>
+  <string source="Reverse Posting..." where="menu">Сторнировать проведение...</string>
+  <string source="Reverse" where="journal_page">Сторнировать</string>
+  <string source="Create a linked accounting reversal" where="journal_page">Создать связанную операцию сторно</string>
+  <string source="Reverse Posting" where="reverse_posting">Сторнировать проведение</string>
+  <string source="Creates a linked accounting reversal. It does not issue a corrected invoice or amend a tax return." where="reverse_posting">Создаётся связанная операция сторно. Исправленный счёт-фактура и уточнённая декларация не формируются.</string>
+  <string source="Reversal date:" where="reverse_posting">Дата сторно:</string>
+  <string source="Reason:" where="reverse_posting">Причина:</string>
+  <string source="Enter a valid reversal date and a short, non-empty reason." where="code">Укажите корректную дату сторно и краткую причину.</string>
+  <string source="The reversal could not be created. Check the open period, posting history and existing reversals." where="code">Не удалось создать сторно. Проверьте открытый период, историю проведения и ранее созданные сторно.</string>
+  <string source="This posting cannot be cancelled. Create a reversal in an open period." where="code">Это проведение нельзя отменить. Создайте сторно в открытом периоде.</string>
+  <string source="Select a posted document to reverse." where="code">Выберите проведённый документ для сторнирования.</string>
+  <string source="The reversal could not be saved. Check the infobase before trying again; the file's state may be uncertain." where="code">Не удалось сохранить сторно. Перед повторной попыткой проверьте информационную базу: состояние файла может быть неопределённым.</string>
+  <string source="Reversal %s was posted and saved." where="code">Сторно %s проведено и сохранено.</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>

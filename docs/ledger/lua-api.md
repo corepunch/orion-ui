@@ -190,6 +190,22 @@ Advance the inclusive accounting close date. Requires a writable script inside l
 ledger.transaction(function() ledger.close_through("2026-12-31") end)
 ```
 
+## `ledger.reverse(document_id, date, reason)`
+
+Create and post one linked manual accounting reversal from the latest matching posting snapshot, in an open period. Requires a writable script inside ledger.transaction. The source remains posted; duplicate reversals, changed entries and missing snapshots are rejected. This is not a corrected invoice or a statutory tax-return correction.
+
+| Argument | Type | Description |
+|---|---|---|
+| `document_id` | `integer` | Posted source document ID. |
+| `date` | `string` | Reversal date in YYYY-MM-DD, no earlier than the source. |
+| `reason` | `string` | Nonempty reason, at most 255 bytes. |
+
+**Returns:** `integer` — Created reversal document ID.
+
+```lua
+local id = ledger.transaction(function() return ledger.reverse(7, "2026-04-01", "Correction") end)
+```
+
 ## `ledger.validate(table, fields, id?)`
 
 Validate a catalog insert or patch without writing. Applies the same schema, value, reference and table restrictions as insert/update, and fills datasource defaults. Supplying id validates an update; omitting it validates an insert. Available in read-only runs.

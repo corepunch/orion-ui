@@ -12,7 +12,7 @@ ledger_t *g_ledger;
 int main(int argc, char **argv) {
   ledger_t state = {0};
   g_ledger = &state;
-  const char *configuration = "ru-2026", *data = NULL, *script = NULL, *request = NULL, *share = "apps/ledger/share";
+  const char *configuration = "ru-2026", *data = NULL, *script = NULL, *request = NULL, *share = NULL;
   bool write = false;
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "--write")) write = true;
@@ -27,6 +27,12 @@ int main(int argc, char **argv) {
       (request && strcmp(configuration, "ru-2026") && strcmp(configuration, "de-2026"))) {
     fprintf(stderr, "[ledger-run] --data and exactly one of --script or --request are required; request mode supports ru-2026 and de-2026\n");
     if (request) puts("{\"ok\":false,\"error\":\"invalid invocation\"}"); return 2;
+  }
+  char default_share[LEDGER_PATH_MAX * 2];
+  if (!share) {
+    snprintf(default_share, sizeof(default_share), "%s/../share/ledger", ui_get_exe_dir());
+    if (!axPathExists(default_share)) snprintf(default_share, sizeof(default_share), "%s/../../apps/ledger/share", ui_get_exe_dir());
+    share = default_share;
   }
   if (snprintf(state.config_dir, sizeof(state.config_dir), "%s/configurations/%s", share, configuration) >= (int)sizeof(state.config_dir) ||
       snprintf(state.data_dir, sizeof(state.data_dir), "%s", data) >= (int)sizeof(state.data_dir)) return 2;

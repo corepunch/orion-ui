@@ -8,6 +8,8 @@
 #include <orion/user/money.h>
 
 static double round2(double v) { return v < 0 ? -floor(-v * 100.0 + 0.5) / 100.0 : floor(v * 100.0 + 0.5) / 100.0; }
+static unsigned g_posting_depth;
+bool ledger_posting_active(void) { return g_posting_depth != 0; }
 
 // Table ids are numbered per database, so fields resolve through its schema.
 int ledger_field(database_t *db, int table_id, const char *field) {
@@ -369,6 +371,7 @@ static void recalc_goods(database_t *ib, database_t *cfg, db_document_t *doc) {
     doc->amount_minor = exact_amount; doc->vat_minor = exact_vat;
     doc->amount = (double)exact_amount / 100.0; doc->vat = (double)exact_vat / 100.0; doc->total = (double)doc->total_minor / 100.0;
   } else if (count) { doc->amount = amount; doc->vat = vat; doc->total = amount + vat; }
+  else if (doc->exact_money) { doc->amount = doc->vat = doc->total = 0; doc->amount_minor = doc->vat_minor = doc->total_minor = 0; }
   else       { doc->amount = doc->total - doc->vat; }  // documents without lines keep their entered total
 }
 
@@ -406,6 +409,7 @@ static void recalc_assets(database_t *ib, db_document_t *doc) {
 void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id) {
   db_document_t *doc = find(ib, TABLE_DOCUMENTS, doc_id);
   if (!doc) return;
+  if (doc->exact_money && doc->posted && !ledger_posting_active()) return;
   db_doc_type_t *type = find(cfg, TABLE_DOC_TYPES, doc->doc_type_id);
   if (doc->currency_id && doc->rate == 0) doc->rate = ledger_rate_on(ib, doc->currency_id, doc->date);
   if (!doc->currency_id) doc->rate = 0;
@@ -671,6 +675,9 @@ static bool posting_amounts_valid(const post_t *p) {
 static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool preview) {
   post_t p;
   if (!posting_of(ib, cfg, doc_id, &p, preview ? "preview" : "post")) return false;
+  if (ledger_exact_posted(ib, doc_id)) {
+    fprintf(stderr, "[ledger] post rejected: exact document=%d is already posted; use reversal\n", doc_id); fflush(stderr); return false;
+  }
   if (!preview && ledger_period_closed(ib, p.doc->date)) {
     fprintf(stderr, "[ledger] post rejected: document=%d date=%s is closed\n", doc_id, p.doc->date); fflush(stderr); return false;
   }
@@ -697,6 +704,7 @@ static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool prev
   if (p.doc->exact_money && !p.doc->correction_of && !has_line) valid = false;
   if (!valid) { fprintf(stderr, "[ledger] post rejected: document=%d has invalid amounts or tax validity\n", doc_id); return false; }
   if (!send_db_message(ib, dbBeginChanges, 0, NULL)) return false;
+  g_posting_depth++;
   bool ok = !p.type->validate_script[0] || ledger_script_post(&p, p.type->validate_script);
   if (ok) ok = write_entries(&p);
   if (ok && !preview) ok = ledger_script_event("post", &p);
@@ -706,8 +714,9 @@ static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool prev
     ok = send_db_message(ib, dbUpdate, TABLE_DOCUMENTS, p.doc) != 0;
     if (ok) ok = ledger_record_revision(ib, p.doc, "post");
   }
-  if (ok && send_db_message(ib, dbCommitChanges, 0, NULL)) return true;
+  if (ok && send_db_message(ib, dbCommitChanges, 0, NULL)) { g_posting_depth--; return true; }
   send_db_message(ib, dbRevertChanges, 0, NULL);
+  g_posting_depth--;
   fprintf(stderr, "[ledger] %s rolled back: document=%d\n", preview ? "preview" : "post", doc_id);
   return false;
 }
@@ -724,6 +733,9 @@ bool ledger_preview_entries(database_t *ib, database_t *cfg, int doc_id) {
 void ledger_unpost(database_t *ib, database_t *cfg, int doc_id) {
   db_document_t *doc = find(ib, TABLE_DOCUMENTS, doc_id);
   if (!doc) return;
+  if (doc->exact_money && doc->posted) {
+    fprintf(stderr, "[ledger] unpost rejected: exact document=%d requires reversal\n", doc_id); fflush(stderr); return;
+  }
   if (ledger_period_closed(ib, doc->date)) {
     fprintf(stderr, "[ledger] unpost rejected: document=%d date=%s is closed\n", doc_id, doc->date); fflush(stderr); return;
   }
@@ -843,7 +855,7 @@ bool ledger_repost_all(database_t *ib, database_t *cfg) {
   bool ok = true;
   for (int i = 0; i < count && ok; i++) {
     int id = order[i]->id;
-    if (ledger_period_closed(ib, order[i]->date)) continue;
+    if (ledger_period_closed(ib, order[i]->date) || (order[i]->exact_money && order[i]->posted)) continue;
     ledger_recalc_document(ib, cfg, id);
     if (order[i]->posted) ok = ledger_post(ib, cfg, id);
     else ledger_unpost(ib, cfg, id);

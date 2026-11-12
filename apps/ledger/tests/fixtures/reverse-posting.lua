@@ -1,0 +1,5 @@
+local documents = ledger.fetch("ib", "documents", "number", "РТ-0001")
+assert(#documents == 1)
+ledger.transaction(function()
+  return ledger.reverse(documents[1].id, "2026-04-01", "Correction")
+end)

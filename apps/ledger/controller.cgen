@@ -20,6 +20,9 @@
     <function name="unpost" lua="true" export="unpost">
       <arg name="id" type="int" />
     </function>
+    <function name="reverse" lua="true" export="reverse">
+      <arg name="id" type="int" />
+    </function>
     <function name="repost" lua="true" export="repost">
       <returns type="bool" />
     </function>

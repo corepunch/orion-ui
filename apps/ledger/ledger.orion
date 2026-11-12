@@ -42,6 +42,7 @@
       <item name="post" label="Post" shortcut="F9" />
       <item name="post_close" label="Post and Close" shortcut="Ctrl+Enter" />
       <item name="unpost" label="Cancel Posting" />
+      <item name="reverse" label="Reverse Posting..." />
       <item name="print" label="Print Forms" shortcut="Ctrl+P" />
       <Separator />
       <item name="delete" label="Delete Document..." />
@@ -838,6 +839,7 @@
         <Button command="doc.new" text="Create" icon="ledger-new" flags="BUTTON_DEFAULT" tooltip="New document (Ctrl+N)" />
         <Button command="doc.post" text="Post" icon="ledger-post" tooltip="Post: write accounting entries (F9)" />
         <Button command="doc.unpost" text="Cancel Posting" icon="ledger-unpost" tooltip="Cancel posting: remove the document's entries" />
+        <Button command="doc.reverse" text="Reverse" tooltip="Create a linked accounting reversal" />
         <Separator name="command_rule1" />
         <Button command="doc.print" text="Print" icon="ledger-print" tooltip="Print forms (Ctrl+P)" />
         <Button command="doc.entries" text="Dr/Cr" tooltip="Show the entries the document wrote" />
@@ -1604,6 +1606,26 @@
       <StackView name="actions" orientation="horizontal" spacing="6">
         <Space name="flex" />
         <Button name="print" text="Print" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="reverse_posting" title="Reverse Posting" focus="date" width="480" spacing="6" padding="8">
+      <Label name="hint" text="Creates a linked accounting reversal. It does not issue a corrected invoice or amend a tax return." />
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_date" text="Reversal date:" />
+          <Label name="lbl_reason" text="Reason:" />
+        </Column>
+        <Column name="inputs">
+          <TextBox name="date" />
+          <TextBox name="reason" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="confirm" text="Reverse Posting" flags="BUTTON_DEFAULT" />
         <Button name="cancel" text="Cancel" />
       </StackView>
     </form>

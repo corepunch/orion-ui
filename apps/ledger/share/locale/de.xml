@@ -134,7 +134,7 @@
   <string source="Tax:" obsolete="true">Steuer:</string>
   <string source="Total:" where="operation,payroll">Gesamt:</string>
   <string source="OK and Post" where="payroll,asset_document,closing">OK und buchen</string>
-  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,report_settings">Abbrechen</string>
+  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,reverse_posting,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,report_settings">Abbrechen</string>
   <string source="Document Line" where="doc_line">Belegposition</string>
   <string source="Item:" where="doc_line">Artikel:</string>
   <string source="Quantity:" where="doc_line,entry">Menge:</string>
@@ -504,6 +504,19 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Show Entries (Dr/Cr)" where="menu">Buchungen anzeigen (Soll/Haben)</string>
   <string source="Cancel posting: remove the document's entries" where="journal_page">Buchung aufheben: die Buchungen des Belegs entfernen</string>
   <string source="Show the entries the document wrote" where="journal_page">Die Buchungen des Belegs anzeigen</string>
+  <string source="Reverse Posting..." where="menu">Buchung stornieren...</string>
+  <string source="Reverse" where="journal_page">Stornieren</string>
+  <string source="Create a linked accounting reversal" where="journal_page">Verknüpfte Stornobuchung erstellen</string>
+  <string source="Reverse Posting" where="reverse_posting">Buchung stornieren</string>
+  <string source="Creates a linked accounting reversal. It does not issue a corrected invoice or amend a tax return." where="reverse_posting">Erstellt eine verknüpfte Stornobuchung. Eine korrigierte Rechnung oder Steuererklärung wird nicht erstellt.</string>
+  <string source="Reversal date:" where="reverse_posting">Stornodatum:</string>
+  <string source="Reason:" where="reverse_posting">Grund:</string>
+  <string source="Enter a valid reversal date and a short, non-empty reason." where="code">Geben Sie ein gültiges Stornodatum und einen kurzen Grund ein.</string>
+  <string source="The reversal could not be created. Check the open period, posting history and existing reversals." where="code">Die Stornobuchung konnte nicht erstellt werden. Prüfen Sie den offenen Zeitraum, den Buchungsverlauf und vorhandene Stornos.</string>
+  <string source="This posting cannot be cancelled. Create a reversal in an open period." where="code">Diese Buchung kann nicht aufgehoben werden. Erstellen Sie eine Stornobuchung in einem offenen Zeitraum.</string>
+  <string source="Select a posted document to reverse." where="code">Wählen Sie einen gebuchten Beleg zum Stornieren aus.</string>
+  <string source="The reversal could not be saved. Check the infobase before trying again; the file's state may be uncertain." where="code">Die Stornobuchung konnte nicht gespeichert werden. Prüfen Sie den Mandanten vor einem erneuten Versuch; der Dateistand ist möglicherweise ungewiss.</string>
+  <string source="Reversal %s was posted and saved." where="code">Die Stornobuchung %s wurde gebucht und gespeichert.</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

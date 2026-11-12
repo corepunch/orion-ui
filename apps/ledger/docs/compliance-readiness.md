@@ -5,6 +5,9 @@ certification. No shipped configuration currently has complete statutory
 coverage. A passing demo or configuration-integrity test is not evidence of
 legal completeness. Russia/Germany 2003 remain historical fixtures.
 
+The exact-trade, reversal and service limitations below were updated on
+2026-11-12; that update is not a new statutory audit.
+
 ## Correctness changes in this revision
 
 - Document posting, previews and complete repost runs use nested database
@@ -26,7 +29,8 @@ An initial close boundary can be advanced with `ledger.close_through(date)` in
 a writable `ledger.transaction`, then saved. The boundary persists and the
 Ledger datasource rejects ordinary document, line and entry writes dated on or
 before it; posting and unposting are rejected, and bulk repost skips that
-period. There is no reopening API. Successful posts and unposts now append
+period. New exact trading postings also reject ordinary datasource edits,
+deletion, reposting and unposting; use a linked reversal. There is no reopening API. Successful posts and unposts now append
 transactional snapshots of the document identity, totals and entries, with a
 UTC clock timestamp; older postings acquire snapshots only when next posted
 or unposted. Ordinary datasource writes to those snapshots are rejected.
@@ -43,7 +47,7 @@ control.
 |---|---|---|
 | P0 | German payroll approximates the tariff and Vorsorgepauschale; employee circumstances and insurance rates are incomplete | Official BMF PAP implementation with exact decimal/rounding semantics; official expected results across all supported employee profiles and dates |
 | P0 | Russian cumulative deductions use accrual counts, with incomplete residency/income categories | Explicit tax bases, actual deductions and prior withholding; independent examples for multiple payments per month, thresholds, hires, residency and corrections |
-| P0 | Posted documents remain editable; close boundary and posting snapshots have native-pointer and audit gaps | Immutable posting revisions, reversals, closed-period controls and attributable audit history, with persistence and failure-recovery tests |
+| P0 | Legacy posted documents remain editable; exact posting protection, close boundary and snapshots have native-pointer and audit gaps | Immutable posting revisions, reversals, closed-period controls and attributable audit history, with persistence and failure-recovery tests |
 | P0 | Legacy amounts, non-trading operations, foreign currency and reports still use binary floating point | Complete decimal/minor-unit representation and currency-specific rounding with migration and independent boundary fixtures |
 | P0 | National tax eligibility is not captured fully | Organization registrations, tax/accounting regimes, counterparty jurisdictions, supply/tax/payment dates and recoverability captured and validated |
 | P1 | RU printable forms are not FNS electronic formats; DE now has a separately validated core UBL subset; complete electronic workflows remain outstanding | Versioned schema-valid output, mandatory fields, official validation artefacts, correction workflows and acceptance tests |
@@ -64,10 +68,20 @@ and tax amounts round halves away from zero using checked integer operations;
 the existing doubles remain compatibility and display fields. Exact stock-cost
 posting rejects insufficient stock and any matching legacy stock movement;
 there is no automatic conversion of historic balances. Inputs are bounded to
-10,000 units per line and 100,000 currency units per unit price. This does not
-make reports, payroll, foreign exchange, statutory tax calculations or older
-records exact, and it does not establish that a reduced VAT rate is legally
-appropriate.
+10,000 units per line and 100,000 currency units per unit price. Exact mode is
+limited to domestic receipt and sale types in `ru-2026` and `de-2026`;
+the exact path rejects foreign currency. Existing foreign-currency records and
+records from earlier configurations retain the legacy representation. This does not make reports, payroll, foreign exchange,
+statutory tax calculations or older records exact, and it does not establish
+that a reduced VAT rate is legally appropriate.
+
+The native regression suite exercises decimal boundary rounding, local and
+service-created integer amounts, exact stock costing and refusal of legacy
+stock, save/reload, rejected posted-document edits, rollback on invalid
+recalculation, reversal and duplicate-reversal rejection, close boundaries,
+and schema migration and backup recovery. These are implementation tests with
+synthetic data, not independent verification of a trading period, filings,
+currency conventions or legal compliance.
 
 For the initial trading service, Russia's tax authority distinguishes an
 invoice correction for an original error from an adjustment invoice for an

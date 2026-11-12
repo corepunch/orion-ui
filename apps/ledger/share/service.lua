@@ -11,6 +11,18 @@ local function safe_rows(rows)
   return json.array(rows)
 end
 
+local function page(rows, args)
+  local offset, limit = args.offset, args.limit
+  if offset == nil then offset = 0 end
+  if limit == nil then limit = 200 end
+  assert(type(offset) == "number" and math.type(offset) == "integer" and offset >= 0 and offset <= 1000000000, "invalid offset")
+  assert(type(limit) == "number" and math.type(limit) == "integer" and limit >= 1 and limit <= 500, "invalid limit")
+  table.sort(rows, function(a, b) return a.id < b.id end)
+  local result = json.array({})
+  for i = offset + 1, math.min(#rows, offset + limit) do result[#result + 1] = rows[i] end
+  return safe_rows(result)
+end
+
 local function dispatch(request)
   assert(type(request) == "table" and not getmetatable(request) and type(request.args) == "table" and not getmetatable(request.args), "request and args must be objects")
   assert(type(request.actor) == "string" and #request.actor > 0 and #request.actor < 128, "invalid actor")
@@ -22,8 +34,7 @@ local function dispatch(request)
     local tables = {doc_types = "cfg", vat_rates = "cfg", units = "cfg", items = "ib", counterparties = "ib"}
     assert(type(args.table) == "string" and tables[args.table], "unsupported catalog")
     local rows = ledger.fetch(tables[args.table], args.table)
-    assert(#rows <= 500, "too many catalog records; pagination is not yet supported")
-    return safe_rows(rows)
+    return page(rows, args)
   elseif command == "counterparties.save" or command == "items.save" then
     assert(role == "admin" or role == "accountant", "role cannot edit catalogs")
     local items = command == "items.save"
@@ -44,16 +55,14 @@ local function dispatch(request)
     return {id = record.id}
   elseif command == "documents.list" then
     local rows = ledger.fetch("ib", "documents")
-    assert(#rows <= 500, "too many documents; filtered pagination is not yet supported")
-    return safe_rows(rows)
+    return page(rows, args)
   elseif command == "journal.list" then
     local posted, result = {}, json.array({})
     for _, doc in ipairs(ledger.fetch("ib", "documents")) do if doc.posted then posted[doc.id] = true end end
     for _, entry in ipairs(ledger.fetch("ib", "entries")) do
       if posted[entry.document_id] then result[#result + 1] = entry end
-      assert(#result <= 500, "too many entries; filtered pagination is not yet supported")
     end
-    return safe_rows(result)
+    return page(result, args)
   elseif command == "documents.create" then
     assert(role == "admin" or role == "accountant", "role cannot create documents")
     return {document_id = ledger_service_native.create(args)}
@@ -64,6 +73,9 @@ local function dispatch(request)
   elseif command == "documents.update" then
     assert(role == "admin" or role == "accountant", "role cannot edit documents")
     return {document_id = ledger_service_native.update(args)}
+  elseif command == "documents.replace_lines" then
+    assert(role == "admin" or role == "accountant", "role cannot edit documents")
+    return {document_id = ledger_service_native.replace_lines(args)}
   elseif command == "documents.reverse" then
     assert(role == "admin" or role == "accountant", "role cannot reverse documents")
     assert(type(args.document_id) == "number" and math.type(args.document_id) == "integer", "invalid document id")

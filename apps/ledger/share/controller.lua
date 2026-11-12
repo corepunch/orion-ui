@@ -70,6 +70,7 @@ function Controller:command(name)
   if action == "open" then ui.edit_document(id)
   elseif action == "post" then ui.changed(id)
   elseif action == "unpost" then ui.unpost(id); ui.changed(0)
+  elseif action == "reverse" then ui.reverse(id)
   elseif action == "print" then ui.print_document(id)
   elseif action == "delete" and ui.confirm(orion.tr("Delete the selected document and its entries?"), orion.tr("Delete Document")) then
     orion.assert(documents:delete(id)); ui.changed(0)

@@ -21,6 +21,8 @@ static int g_recalculating;  // the rules write through this proc too
 static database_t *cfg(void) { return get_database_by_name("cfg"); }
 
 static bool exact_trade_type(int id) {
+  const db_setting_t *settings = cfg() ? (const void *)send_db_message(cfg(), dbFind, TABLE_SETTINGS, (void *)(intptr_t)1) : NULL;
+  if (!settings || (strcmp(settings->code, "ru-2026") && strcmp(settings->code, "de-2026"))) return false;
   const db_doc_type_t *type = cfg() ? (const void *)send_db_message(cfg(), dbFind, TABLE_DOC_TYPES, (void *)(intptr_t)id) : NULL;
   return type && !strcmp(type->form, "document") && (!strcmp(type->code, "receipt") || !strcmp(type->code, "sale") ||
     !strcmp(type->code, "incoming_invoice") || !strcmp(type->code, "outgoing_invoice"));
@@ -128,9 +130,26 @@ static bool recalculate(database_t *db, int doc_id, bool number) {
   if (!doc_id || !cfg()) return true;
   g_recalculating++;
   ledger_recalc_document(db, cfg(), doc_id);
-  bool ok = !number || ledger_number_document(db, cfg(), doc_id);
+  const db_document_t *doc = (const void *)db_schema_xml(db, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)doc_id);
+  bool ok = doc && (!doc->exact_money || (isfinite(doc->amount) && isfinite(doc->vat) && isfinite(doc->total))) &&
+            (!number || ledger_number_document(db, cfg(), doc_id));
   g_recalculating--;
   return ok;
+}
+
+bool ledger_exact_posted(database_t *db, int id) {
+  const db_document_t *doc = (const void *)db_schema_xml(db, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  if (!doc) return false;
+  if (doc->exact_money && doc->posted) return true;
+  int field = db_schema_field_index(db_schema_table(db->schema, TABLE_POSTING_REVISIONS), "document_id");
+  result_node_t *rows = (void *)db_schema_xml(db, dbFetch, MAKEDWORD(TABLE_POSTING_REVISIONS, field), (void *)(intptr_t)id);
+  bool posted = false;
+  for (result_node_t *n = rows; n; n = n->next) {
+    const db_posting_revision_t *revision = *(db_posting_revision_t **)n->data;
+    if (revision->exact_money && !strcmp(revision->action, "post")) { posted = true; break; }
+  }
+  free_result_list(rows);
+  return posted;
 }
 
 lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam) {
@@ -141,14 +160,17 @@ lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam)
       const db_document_t *doc = msg == dbDelete ? NULL : lparam;
       int id = msg == dbDelete ? (int)(intptr_t)lparam : doc ? doc->id : 0;
       locked = (doc && ledger_period_closed(db, doc->date)) || (msg != dbInsert && locked_document(db, id));
+      if (!ledger_posting_active() && msg != dbInsert && ledger_exact_posted(db, id)) locked = true;
     } else if (table == TABLE_DOC_LINES || table == TABLE_PAYROLL_LINES || table == TABLE_ASSET_LINES || table == TABLE_ENTRIES) {
       const void *old = msg == dbInsert || !lparam ? NULL : (const void *)db_schema_xml(db, dbFind, MAKEDWORD(table, 0),
         msg == dbDelete ? lparam : (void *)(intptr_t)*(const int *)lparam);
       locked = (old && locked_document(db, document_of(db, table, old))) ||
                (msg != dbDelete && lparam && locked_document(db, document_of(db, table, lparam)));
+      if (!ledger_posting_active() && ((old && ledger_exact_posted(db, document_of(db, table, old))) ||
+          (msg != dbDelete && lparam && ledger_exact_posted(db, document_of(db, table, lparam))))) locked = true;
     }
     if (locked) {
-      fprintf(stderr, "[ledger] write rejected: closed period or protected lock table=%u message=%u\n", table, msg);
+      fprintf(stderr, "[ledger] write rejected: closed period, posted exact document or protected history table=%u message=%u\n", table, msg);
       fflush(stderr); return 0;
     }
   }
@@ -161,6 +183,9 @@ lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam)
     staged_doc = *(const db_document_t *)lparam;
     const db_document_t *old = msg == dbUpdate ? (const void *)db_schema_xml(db, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)staged_doc.id) : NULL;
     if (msg == dbInsert && !staged_doc.currency_id && exact_trade_type(staged_doc.doc_type_id)) staged_doc.exact_money = true;
+    if (!ledger_posting_active() && staged_doc.exact_money && staged_doc.posted) {
+      fprintf(stderr, "[ledger] document rejected: exact document=%d must be posted by the posting API\n", staged_doc.id); fflush(stderr); return 0;
+    }
     if (old && old->exact_money && (!staged_doc.exact_money || staged_doc.currency_id ||
         (!old->correction_of && !exact_trade_type(staged_doc.doc_type_id)))) {
       fprintf(stderr, "[ledger] document rejected: exact document=%d cannot change representation or currency\n", staged_doc.id); fflush(stderr); return 0;
@@ -178,6 +203,14 @@ lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam)
       fprintf(stderr, "[ledger] line rejected: document=%d quantity=%g price=%g\n", staged_line.document_id, staged_line.quantity, staged_line.price); fflush(stderr); return 0;
     }
     lparam = &staged_line;
+  } else if (table_id == TABLE_ENTRIES && msg != dbDelete && lparam) {
+    const db_entry_t *entry = lparam;
+    const db_document_t *doc = (const void *)db_schema_xml(db, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)entry->document_id);
+    if (doc && doc->exact_money && (!entry->exact_money || entry->currency_id || !isfinite(entry->amount) ||
+        !isfinite(entry->quantity) || entry->amount != (double)entry->amount_minor / 100.0 ||
+        entry->quantity != (double)entry->quantity_milli / 1000.0)) {
+      fprintf(stderr, "[ledger] entry rejected: document=%d exact values do not match\n", entry->document_id); fflush(stderr); return 0;
+    }
   }
   int doc_id = 0;
   if (msg == dbDelete && table_id != TABLE_DOCUMENTS) {
@@ -185,7 +218,10 @@ lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam)
     doc_id = document_of(db, table_id, record);
   }
   const db_document_t *input = table_id == TABLE_DOCUMENTS && msg != dbDelete ? lparam : NULL;
-  bool scope = input && !input->number[0];
+  int owner = table_id == TABLE_DOCUMENTS ? 0 : msg == dbDelete ? doc_id : document_of(db, table_id, lparam);
+  const db_document_t *owner_doc = owner ? (const void *)db_schema_xml(db, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)owner) : NULL;
+  bool scope = (input && (!input->number[0] || input->exact_money)) ||
+               (owner_doc && owner_doc->exact_money && is_line_table(db, table_id, owner));
   if (scope && !db_schema_xml(db, dbBeginChanges, 0, NULL)) return 0;
   lresult_t result = db_schema_xml(db, msg, wparam, lparam);
   if (!result) {
@@ -200,7 +236,10 @@ lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam)
     }
   } else if (table_id != TABLE_DOCUMENTS) {
     if (msg != dbDelete) doc_id = document_of(db, table_id, msg == dbInsert ? (const void *)result : lparam);
-    if (is_line_table(db, table_id, doc_id)) recalculate(db, doc_id, false);
+    if (is_line_table(db, table_id, doc_id) && !recalculate(db, doc_id, false)) {
+      if (scope) db_schema_xml(db, dbRevertChanges, 0, NULL);
+      return 0;
+    }
   }
   if (scope && !db_schema_xml(db, dbCommitChanges, 0, NULL)) {
     db_schema_xml(db, dbRevertChanges, 0, NULL);

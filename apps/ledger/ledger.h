@@ -74,6 +74,8 @@ bool ledger_document_settlement(database_t *ib, database_t *cfg, int doc_id, dou
 const char *ledger_subconto_table(database_t *cfg, int account_id);
 void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id);
 bool ledger_post(database_t *ib, database_t *cfg, int doc_id);
+bool ledger_posting_active(void);
+bool ledger_exact_posted(database_t *ib, int doc_id);
 bool ledger_close_through(database_t *ib, const char *date);
 bool ledger_period_closed(database_t *ib, const char *date);
 bool ledger_valid_date(const char *date);

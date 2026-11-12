@@ -15,6 +15,7 @@
 #define PENALTIES SHARE "/addons/penalties/penalties"
 
 static ledger_t g_test_ledger;
+static result_t reverse_posting_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 static void open_configuration(const char *code) {
   char path[LEDGER_PATH_MAX * 2];
@@ -142,13 +143,33 @@ static void set_text(script_page_t *page, const char *name, const char *text) {
 // 25 March; paper and cartridges to Облачные сервисы on 20 March (29 280 in
 // two lines, one debt); Бета-Снаб's shipment РТ-0002 is covered by its prepayment.
 static int seed_debts(void) {
+  int items[3];
+  const int original[] = {3, 1, 2};
+  for (int i = 0; i < 3; i++) {
+    const db_item_t *src = (const void *)send_db_message(g_ledger->ib, dbFind, TABLE_ITEMS, (void *)(intptr_t)original[i]);
+    if (!src) return 0;
+    db_item_t item = *src; item.id = 0;
+    snprintf(item.sku, sizeof(item.sku), "PENALTY-%d", i + 1);
+    const db_item_t *created = (const void *)send_db_message(g_ledger->ib, dbInsert, TABLE_ITEMS, &item);
+    if (!created) return 0;
+    items[i] = created->id;
+  }
+  int receipt = test_document(1, "2026-03-15", 2, 0);
+  db_doc_line_t stock[] = {
+    { .document_id = receipt, .item_id = items[0], .vat_rate_id = 1, .quantity = 10, .price = 18000 },
+    { .document_id = receipt, .item_id = items[1], .vat_rate_id = 1, .quantity = 20, .price = 400 },
+    { .document_id = receipt, .item_id = items[2], .vat_rate_id = 1, .quantity = 2, .price = 5000 }
+  };
+  for (size_t i = 0; i < ARRAY_LEN(stock); i++)
+    if (!send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &stock[i])) return 0;
+  if (!ledger_post(g_ledger->ib, g_ledger->cfg, receipt)) return 0;
   int sale = test_document(2, "2026-03-16", 1, 0);
-  db_doc_line_t line = { .document_id = sale, .item_id = 3, .vat_rate_id = 1, .quantity = 10, .price = 28000 };
+  db_doc_line_t line = { .document_id = sale, .item_id = items[0], .vat_rate_id = 1, .quantity = 10, .price = 28000 };
   send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line);
   ledger_post(g_ledger->ib, g_ledger->cfg, sale);
   int second = test_document(2, "2026-03-20", 5, 0);
-  db_doc_line_t paper = { .document_id = second, .item_id = 1, .vat_rate_id = 1, .quantity = 20, .price = 550 };
-  db_doc_line_t toner = { .document_id = second, .item_id = 2, .vat_rate_id = 1, .quantity = 2, .price = 6500 };
+  db_doc_line_t paper = { .document_id = second, .item_id = items[1], .vat_rate_id = 1, .quantity = 20, .price = 550 };
+  db_doc_line_t toner = { .document_id = second, .item_id = items[2], .vat_rate_id = 1, .quantity = 2, .price = 6500 };
   send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &paper);
   send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &toner);
   ledger_post(g_ledger->ib, g_ledger->cfg, second);
@@ -265,6 +286,30 @@ static void test_translations(void) {
   PASS();
 }
 
+static void test_reverse_dialog(void) {
+  TEST("reverse dialog posts, saves and returns the linked reversal");
+  ui_set_language("en");
+  open_configuration("ru-2026");
+  const db_document_t *original = (const void *)send_db_message(g_ledger->ib, dbFind,
+    MAKEDWORD(TABLE_DOCUMENTS, ledger_field(g_ledger->ib, TABLE_DOCUMENTS, "number")), (void *)"РТ-0001");
+  ASSERT(original && original->posted, "fixture has a posted source");
+  int source_id = original->id;
+  window_t *dialog = create_window_from_form(&ledger_reverse_posting_form, 0, 0, NULL,
+                                              reverse_posting_proc, 0, (void *)(intptr_t)source_id);
+  ASSERT_NOT_NULL(dialog);
+  uint32_t result = 0; dialog->userdata2 = &result;
+  set_window_item_text(dialog, ID_REVERSE_POSTING_DATE, "%s", "2026-04-01");
+  set_window_item_text(dialog, ID_REVERSE_POSTING_REASON, "%s", "Correction");
+  window_t *button = get_window_item(dialog, ID_REVERSE_POSTING_CONFIRM);
+  ASSERT_NOT_NULL(button);
+  send_message(dialog, evCommand, MAKEDWORD(ID_REVERSE_POSTING_CONFIRM, btnClicked), button);
+  ASSERT(result > 0 && !is_window(dialog), "successful reversal closes dialog with its id");
+  const db_document_t *reversal = (const void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)result);
+  ASSERT(reversal && reversal->posted && reversal->correction_of == source_id, "posted reversal links its source");
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbGetDirty, 0, NULL));
+  PASS();
+}
+
 int main(int argc, char **argv) {
   (void)argc; (void)argv;
   TEST_START("Ledger add-ons");
@@ -273,6 +318,7 @@ int main(int argc, char **argv) {
   test_ledger_module();
   test_penalties();
   test_german_accounts();
+  test_reverse_dialog();
   test_translations();
   unregister_database("ib");
   unregister_database("cfg");

@@ -292,6 +292,36 @@ static bool service_trading_type(database_t *cfg, int id) {
     !strcmp(type->code, "incoming_invoice") || !strcmp(type->code, "outgoing_invoice"));
 }
 
+static void service_insert_lines(lua_State *L, int index, database_t *ib, database_t *cfg, int document_id) {
+  index = lua_absindex(L, index);
+  luaL_checktype(L, index, LUA_TTABLE);
+  size_t count = lua_rawlen(L, index);
+  if (!count || count > 100) luaL_error(L, "document requires 1 to 100 lines");
+  for (size_t i = 1; i <= count; i++) {
+    lua_rawgeti(L, index, (lua_Integer)i); luaL_checktype(L, -1, LUA_TTABLE);
+    int item = service_int(L, -1, "item_id"), vat = service_int(L, -1, "vat_rate_id");
+    const db_vat_rate_t *tax = (const void *)send_db_message(cfg, dbFind, TABLE_VAT_RATES, (void *)(intptr_t)vat);
+    if (!send_db_message(ib, dbFind, TABLE_ITEMS, (void *)(intptr_t)item) || !tax || !isfinite(tax->rate) || tax->rate <= 0 || tax->rate > 100)
+      luaL_error(L, "unknown item or unsupported tax rate");
+    int64_t q, p, cents;
+    lua_getfield(L, -1, "quantity");
+    if (lua_type(L, -1) != LUA_TSTRING) luaL_error(L, "quantity must be a decimal string");
+    const char *quantity = lua_tostring(L, -1);
+    if (!money_parse_decimal(quantity, 3, &q) || q <= 0 || q > 10000000) luaL_error(L, "invalid quantity");
+    lua_pop(L, 1);
+    lua_getfield(L, -1, "price");
+    if (lua_type(L, -1) != LUA_TSTRING) luaL_error(L, "price must be a decimal string");
+    const char *price = lua_tostring(L, -1);
+    if (!money_parse_decimal(price, 2, &p) || p <= 0 || p > 10000000 || !money_mul_div(q, p, 1000, &cents) || cents <= 0)
+      luaL_error(L, "invalid price or line amount");
+    lua_pop(L, 1);
+    db_doc_line_t line = { .document_id = document_id, .item_id = item, .vat_rate_id = vat,
+      .quantity = (double)q / 1000.0, .price = (double)p / 100.0, .quantity_milli = q, .price_minor = p };
+    if (!send_db_message(ib, dbInsert, TABLE_DOC_LINES, &line)) luaL_error(L, "cannot create document line");
+    lua_pop(L, 1);
+  }
+}
+
 static int l_service_create(lua_State *L) {
   if (!g_service_active || !g_script_writable || g_post || g_executor_active) return luaL_error(L, "service write unavailable");
   luaL_checktype(L, 1, LUA_TTABLE);
@@ -313,32 +343,35 @@ static int l_service_create(lua_State *L) {
   const db_document_t *inserted = (const void *)send_db_message(ib, dbInsert, TABLE_DOCUMENTS, &doc);
   if (!inserted) return luaL_error(L, "cannot create document");
   int document_id = inserted->id;
-  for (size_t i = 1; i <= count; i++) {
-    lua_rawgeti(L, -1, (lua_Integer)i); luaL_checktype(L, -1, LUA_TTABLE);
-    int item = service_int(L, -1, "item_id"), vat = service_int(L, -1, "vat_rate_id");
-    const db_vat_rate_t *tax = (const void *)send_db_message(cfg, dbFind, TABLE_VAT_RATES, (void *)(intptr_t)vat);
-    if (!send_db_message(ib, dbFind, TABLE_ITEMS, (void *)(intptr_t)item) || !tax || !isfinite(tax->rate) || tax->rate <= 0 || tax->rate > 100)
-      return luaL_error(L, "unknown item or unsupported tax rate");
-    int64_t q, p, cents;
-    lua_getfield(L, -1, "quantity");
-    if (lua_type(L, -1) != LUA_TSTRING) return luaL_error(L, "quantity must be a decimal string");
-    const char *quantity = lua_tostring(L, -1);
-    if (!money_parse_decimal(quantity, 3, &q) || q <= 0 || q > 10000000) return luaL_error(L, "invalid quantity");
-    lua_pop(L, 1);
-    lua_getfield(L, -1, "price");
-    if (lua_type(L, -1) != LUA_TSTRING) return luaL_error(L, "price must be a decimal string");
-    const char *price = lua_tostring(L, -1);
-    if (!money_parse_decimal(price, 2, &p) || p <= 0 || p > 10000000 || !money_mul_div(q, p, 1000, &cents) || cents <= 0)
-      return luaL_error(L, "invalid price or line amount");
-    lua_pop(L, 1);
-    db_doc_line_t line = { .document_id = document_id, .item_id = item, .vat_rate_id = vat,
-      .quantity = (double)q / 1000.0, .price = (double)p / 100.0, .quantity_milli = q, .price_minor = p };
-    if (!send_db_message(ib, dbInsert, TABLE_DOC_LINES, &line)) return luaL_error(L, "cannot create document line");
-    lua_pop(L, 1);
-  }
+  service_insert_lines(L, -1, ib, cfg, document_id);
   lua_pop(L, 1);
   lua_pushinteger(L, document_id);
   return 1;
+}
+
+static int l_service_replace_lines(lua_State *L) {
+  if (!g_service_active || !g_script_writable || g_post || g_executor_active) return luaL_error(L, "service write unavailable");
+  luaL_checktype(L, 1, LUA_TTABLE);
+  int id = service_int(L, 1, "document_id");
+  database_t *ib = get_database_by_name("ib"), *cfg = get_database_by_name("cfg");
+  const db_document_t *doc = ib ? (const void *)send_db_message(ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id) : NULL;
+  if (!doc || doc->posted || doc->correction_of || !doc->exact_money || ledger_exact_posted(ib, id) ||
+      ledger_period_closed(ib, doc->date) || !service_trading_type(cfg, doc->doc_type_id))
+    return luaL_error(L, "document is not an editable exact draft");
+  lua_getfield(L, 1, "lines"); luaL_checktype(L, -1, LUA_TTABLE);
+  size_t count = lua_rawlen(L, -1);
+  if (!count || count > 100) return luaL_error(L, "document requires 1 to 100 lines");
+  int parent = db_schema_field_index(db_schema_table(ib->schema, TABLE_DOC_LINES), "document_id");
+  result_node_t *old = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_DOC_LINES, parent), (void *)(intptr_t)id);
+  bool ok = true;
+  for (result_node_t *n = old; n; n = n->next) {
+    const db_doc_line_t *line = *(db_doc_line_t **)n->data;
+    if (!send_db_message(ib, dbDelete, TABLE_DOC_LINES, (void *)(intptr_t)line->id)) { ok = false; break; }
+  }
+  free_result_list(old);
+  if (!ok) return luaL_error(L, "cannot replace document lines");
+  service_insert_lines(L, -1, ib, cfg, id);
+  lua_pop(L, 1); lua_pushinteger(L, id); return 1;
 }
 
 static int l_service_post(lua_State *L) {
@@ -505,6 +538,18 @@ static int l_close_through(lua_State *L) {
   return 0;
 }
 
+static int l_reverse(lua_State *L) {
+  if (!g_script_writable || !g_script_transactions || g_post)
+    return luaL_error(L, "reverse requires a writable script and ledger.transaction, outside posting");
+  lua_Integer id = luaL_checkinteger(L, 1);
+  const char *date = luaL_checkstring(L, 2), *reason = luaL_checkstring(L, 3);
+  if (id <= 0 || id > INT_MAX || !ledger_valid_date(date) || !reason[0] || strlen(reason) >= 256)
+    return luaL_error(L, "invalid reversal arguments");
+  int result = ledger_reverse_posting(get_database_by_name("ib"), get_database_by_name("cfg"), (int)id, date, reason);
+  if (!result) return luaL_error(L, "cannot reverse posting");
+  lua_pushinteger(L, result); return 1;
+}
+
 static int l_transaction(lua_State *L) {
   if (!g_script_writable || g_post) return luaL_error(L, "transaction requires a writable script outside posting");
   database_t *db = get_database_by_name("ib");
@@ -627,11 +672,13 @@ bool ledger_script_service(const char *path, const char *request, bool writable,
   lua_pushcfunction(g_lua, l_service_create); lua_setfield(g_lua, -2, "create");
   lua_pushcfunction(g_lua, l_service_post); lua_setfield(g_lua, -2, "post");
   lua_pushcfunction(g_lua, l_service_update); lua_setfield(g_lua, -2, "update");
+  lua_pushcfunction(g_lua, l_service_replace_lines); lua_setfield(g_lua, -2, "replace_lines");
   lua_pushcfunction(g_lua, l_service_reverse); lua_setfield(g_lua, -2, "reverse");
   lua_setglobal(g_lua, "ledger_service_native");
   lua_getglobal(g_lua, "package"); lua_getfield(g_lua, -1, "path");
   const char *old_path = lua_tostring(g_lua, -1);
-  lua_pushfstring(g_lua, "%s;share/lua/?.lua;build/share/orion/lua/?.lua", old_path ? old_path : "");
+  const char *exe = ui_get_exe_dir();
+  lua_pushfstring(g_lua, "%s;%s/../share/orion/lua/?.lua;%s/../../share/lua/?.lua", old_path ? old_path : "", exe, exe);
   lua_setfield(g_lua, -3, "path"); lua_pop(g_lua, 2);
   g_script_writable = writable; g_script_running = true; g_service_active = true; g_service_scope = false;
   bool ok = luaL_loadfile(g_lua, path) == LUA_OK;

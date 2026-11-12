@@ -14,6 +14,7 @@ exclude_files = {"build/**", "platform/**", ".claude/worktrees/**", ".codex/work
 local ledger_host = {globals = {"ledger"}, allow_defined_top = true, ignore = {"131"}}
 files["apps/ledger/share/configurations"] = ledger_host
 files["apps/ledger/share/stdplugs"] = ledger_host
+files["apps/ledger/share/service.lua"] = {globals = {"ledger", "ledger_service_native"}}
 files["apps/ledger/tests"] = ledger_host
 -- Declarations for the editor, not code that runs.
 files["apps/ledger/share/stdplugs/automation/ledger-api.d.lua"] = {ignore = {"1"}}

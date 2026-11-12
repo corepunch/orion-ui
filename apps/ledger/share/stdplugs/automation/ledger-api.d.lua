@@ -88,6 +88,13 @@ function ledger.transaction(callback) end
 ---@param date string Inclusive ISO date YYYY-MM-DD.
 function ledger.close_through(date) end
 
+---Create and post one linked manual accounting reversal from the latest matching posting snapshot, in an open period. Requires a writable script inside ledger.transaction. The source remains posted; duplicate reversals, changed entries and missing snapshots are rejected. This is not a corrected invoice or a statutory tax-return correction.
+---@param document_id integer Posted source document ID.
+---@param date string Reversal date in YYYY-MM-DD, no earlier than the source.
+---@param reason string Nonempty reason, at most 255 bytes.
+---@return integer
+function ledger.reverse(document_id, date, reason) end
+
 ---Validate a catalog insert or patch without writing. Applies the same schema, value, reference and table restrictions as insert/update, and fills datasource defaults. Supplying id validates an update; omitting it validates an insert. Available in read-only runs.
 ---@param table string Writable catalog table.
 ---@param fields table Typed values excluding id.

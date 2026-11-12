@@ -430,7 +430,7 @@ static void test_turnover_filters(void) {
     { .id = 1, .doc_type_id = closing->id, .date = "2003-03-10", .posted = true }
   };
   for (size_t i = 0; i < sizeof(docs) / sizeof(*docs); i++)
-    ASSERT_NOT_NULL(send_db_message(ib, dbInsert, TABLE_DOCUMENTS, &docs[i]));
+    ASSERT_TRUE(send_db_message(ib, dbInsert, TABLE_DOCUMENTS, &docs[i]));
   db_entry_t entries[] = {
     { .document_id = 10, .debit_id = stock->id, .credit_id = bank->id, .debit_subconto_id = 1, .amount = 100, .quantity = 10, .currency_id = 1, .currency_amount = 5 },
     { .document_id = 19, .debit_id = bank->id, .credit_id = stock->id, .credit_subconto_id = 1, .amount = 20, .quantity = 2, .currency_id = 1, .currency_amount = 2 },
@@ -438,11 +438,11 @@ static void test_turnover_filters(void) {
     { .document_id = 10, .debit_id = stock->id, .credit_id = stock->id, .debit_subconto_id = 2, .credit_subconto_id = 1, .amount = 30, .quantity = 3, .currency_id = 1, .currency_amount = 3 }
   };
   for (size_t i = 0; i < sizeof(entries) / sizeof(*entries); i++)
-    ASSERT_NOT_NULL(send_db_message(ib, dbInsert, TABLE_ENTRIES, &entries[i]));
+    ASSERT_TRUE(send_db_message(ib, dbInsert, TABLE_ENTRIES, &entries[i]));
   const int excluded[] = {21, 30, 11, 1, 999};
   for (size_t i = 0; i < sizeof(excluded) / sizeof(*excluded); i++) {
     db_entry_t e = { .document_id = excluded[i], .debit_id = stock->id, .credit_id = bank->id, .debit_subconto_id = 1, .amount = 999, .quantity = 999, .currency_id = 1, .currency_amount = 999 };
-    ASSERT_NOT_NULL(send_db_message(ib, dbInsert, TABLE_ENTRIES, &e));
+    ASSERT_TRUE(send_db_message(ib, dbInsert, TABLE_ENTRIES, &e));
   }
   ledger_post_t p = { .ib = ib, .cfg = g_ledger->cfg, .doc = &docs[2] };
   ledger_turnover_t t = ledger_turnover(&p, stock->id, 1, -1);
@@ -463,12 +463,12 @@ static void test_vat_half_cent(void) {
   database_t *ib = ledger_test_writable_seed("vat_ib", "db_schema_xml", &ledger_ib_schema, SHARE "/ru-2003/demo.xml");
   ASSERT(cfg && ib, "isolated databases load");
   db_vat_rate_t rate = { .id = 9999, .rate = 7 };
-  ASSERT_NOT_NULL(send_db_message(cfg, dbInsert, TABLE_VAT_RATES, &rate));
+  ASSERT_TRUE(send_db_message(cfg, dbInsert, TABLE_VAT_RATES, &rate));
   db_document_t doc = { .doc_type_id = 1 };
   db_document_t *inserted = (void *)send_db_message(ib, dbInsert, TABLE_DOCUMENTS, &doc);
   ASSERT_NOT_NULL(inserted);
   db_doc_line_t line = { .document_id = inserted->id, .item_id = 1, .vat_rate_id = 9999, .quantity = 10, .price = 24.45 };
-  ASSERT_NOT_NULL(send_db_message(ib, dbInsert, TABLE_DOC_LINES, &line));
+  ASSERT_TRUE(send_db_message(ib, dbInsert, TABLE_DOC_LINES, &line));
   ledger_recalc_document(ib, cfg, inserted->id);
   ASSERT(approx(inserted->amount, 244.50) && approx(inserted->vat, 17.12) && approx(inserted->total, 261.62), "VAT must round half a cent up");
   cfg->dirty = ib->dirty = false;
@@ -1023,7 +1023,7 @@ static void test_closed_period(void) {
   db_doc_line_t line = { .document_id = id, .quantity = 1, .price = 10 };
   ASSERT_FALSE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
   snprintf(changed.date, sizeof(changed.date), "2026-03-11");
-  changed.id = 0;
+  changed.id = 0; changed.posted = false;
   ASSERT_TRUE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &changed));
   ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
   char saved_path[sizeof(g_ledger->ib->source_path)];
@@ -1079,7 +1079,13 @@ static void test_reversal(void) {
   ASSERT_NOT_NULL(doc); int id = doc->id;
   ASSERT_TRUE(ledger_close_through(g_ledger->ib, "2026-03-31"));
   ASSERT_EQUAL(ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, id, "2026-03-31", "Correction"), 0);
-  int reversal = ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, id, "2026-04-01", "Correction");
+  char error[512];
+  ASSERT_TRUE(ledger_script_run("apps/ledger/tests/fixtures/reverse-posting.lua", true, error, sizeof(error)));
+  result_node_t *links = (void *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_REVERSAL_LINKS, ledger_field(g_ledger->ib, TABLE_REVERSAL_LINKS, "original_id")), (void *)(intptr_t)id);
+  ASSERT_NOT_NULL(links);
+  int reversal = (*(db_reversal_link_t **)links->data)->reversal_id;
+  free_result_list(links);
   ASSERT(reversal > 0, "reversal posted in open period");
   const db_document_t *created = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)reversal);
   ASSERT(created && created->posted && created->correction_of == id, "reversal refers to source");
@@ -1131,6 +1137,16 @@ static void test_service(void) {
   const db_document_t *doc = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ASSERT(doc && doc->exact_money && doc->amount_minor == 101 && approx(doc->amount, 1.01), "quantity times price rounds and persists as minor units");
   f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fprintf(f, "{\"command\":\"documents.replace_lines\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"document_id\":%d,\"lines\":[{\"item_id\":1,\"vat_rate_id\":1,\"quantity\":\"2.000\",\"price\":\"2.00\"}]}}", id); fclose(f);
+  ASSERT_TRUE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  doc = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  ASSERT(doc && doc->amount_minor == 400, "replacement recalculates exact totals");
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fprintf(f, "{\"command\":\"documents.replace_lines\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"document_id\":%d,\"lines\":[{\"item_id\":1,\"vat_rate_id\":1,\"quantity\":\"2.0001\",\"price\":\"2.00\"}]}}", id); fclose(f);
+  ASSERT_FALSE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  doc = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  ASSERT(doc && doc->amount_minor == 400, "invalid replacement rolls back old lines and totals");
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
   fprintf(f, "{\"command\":\"documents.post\",\"actor\":\"test\",\"role\":\"auditor\",\"args\":{\"document_id\":%d}}", id); fclose(f);
   ASSERT_FALSE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
   doc = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
@@ -1138,6 +1154,11 @@ static void test_service(void) {
   f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
   fprintf(f, "{\"command\":\"documents.post\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"document_id\":%d}}", id); fclose(f);
   ASSERT_TRUE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fprintf(f, "{\"command\":\"documents.replace_lines\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"document_id\":%d,\"lines\":[{\"item_id\":1,\"vat_rate_id\":1,\"quantity\":\"1.000\",\"price\":\"1.00\"}]}}", id); fclose(f);
+  ASSERT_FALSE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
+  doc = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  ASSERT(doc && doc->posted && doc->amount_minor == 400, "posted exact document cannot be replaced");
   f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
   fprintf(f, "{\"command\":\"documents.reverse\",\"actor\":\"test\",\"role\":\"accountant\",\"args\":{\"document_id\":%d,\"date\":\"2026-04-02\",\"reason\":\"Correction\"}}", id); fclose(f);
   ASSERT_TRUE(ledger_script_service("apps/ledger/share/service.lua", path, true, response, sizeof(response)));
@@ -1156,10 +1177,27 @@ static void test_local_exact_trade(void) {
   ASSERT(saved && saved->exact_money, "new local trading draft is exact");
   int id = saved->id;
   db_doc_line_t line = { .document_id = id, .item_id = 1, .vat_rate_id = 1, .quantity = 1.005, .price = 1.00 };
+  db_vat_rate_t *rate = (void *)send_db_message(g_ledger->cfg, dbFind, TABLE_VAT_RATES, (void *)(intptr_t)1);
+  ASSERT_NOT_NULL(rate); double original_rate = rate->rate; rate->rate = NAN;
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
+  rate->rate = original_rate;
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_DOC_LINES, "document_id", id), 0);
+  saved = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  ASSERT(saved && saved->amount_minor == 0 && isfinite(saved->total), "failed recalculation rolls back line and totals");
   ASSERT_TRUE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
   saved = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
   ASSERT(saved && saved->amount_minor == 101 && saved->vat_minor == 22 && saved->total_minor == 123, "integer rounding for local receipt");
   ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
+  saved = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  ASSERT_NOT_NULL(saved);
+  db_document_t edited = *saved; snprintf(edited.comment, sizeof(edited.comment), "Changed after posting");
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbUpdate, TABLE_DOCUMENTS, &edited));
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)id));
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
+  ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
+  ledger_unpost(g_ledger->ib, g_ledger->cfg, id);
+  saved = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+  ASSERT(saved && saved->posted, "posted exact document requires linked reversal");
   result_node_t *entries = (void *)send_db_message(g_ledger->ib, dbFetch,
     MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)id);
   ASSERT(entries, "receipt posts entries");

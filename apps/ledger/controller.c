@@ -6,6 +6,7 @@
 #include <orion/commdlg/msgbox.h>
 #include <orion/commdlg/filepicker.h>
 #include <time.h>
+#include <ctype.h>
 #include <orion/script/script_internal.h>
 
 ledger_t *g_ledger = NULL;
@@ -19,6 +20,13 @@ static void *selected(uint32_t table_view) {
 
 static void update_home(void);
 
+static void update_journal_actions(void) {
+  const db_document_t *doc = selected(ID_JOURNAL_PAGE_DOCUMENTS);
+  window_t *unpost = view(ID_DOC_UNPOST), *reverse = view(ID_DOC_REVERSE);
+  if (unpost) enable_window(unpost, doc && doc->posted && !ledger_exact_posted(g_ledger->ib, doc->id) && !ledger_period_closed(g_ledger->ib, doc->date));
+  if (reverse) enable_window(reverse, doc && doc->posted && !doc->correction_of);
+}
+
 static void refresh_tree(window_t *win) {
   for (window_t *c = win ? win->children : NULL; c; c = c->next) {
     if (c->proc == win_tableview) send_message(c, tvRefresh, 0, NULL);
@@ -28,6 +36,7 @@ static void refresh_tree(window_t *win) {
 
 void ledger_refresh_views(void) {
   refresh_tree(g_ledger->main_win);
+  update_journal_actions();
   ledger_update_status();
 }
 
@@ -50,6 +59,53 @@ static db_document_t *find_document(int doc_id) {
 static db_doc_type_t *document_type(const db_document_t *doc) {
   return doc ? (db_doc_type_t *)send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_DOC_TYPES, 0),
                                                (void *)(intptr_t)doc->doc_type_id) : NULL;
+}
+
+static result_t reverse_posting_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  switch (msg) {
+    case evCreate: {
+      win->userdata = lparam;
+      char iso[16] = "", date[32] = ""; time_t now = time(NULL); struct tm *today = localtime(&now);
+      if (today) strftime(iso, sizeof(iso), "%Y-%m-%d", today);
+      set_window_item_text(win, ID_REVERSE_POSTING_DATE, "%s", ui_format_date(iso, date, sizeof(date)));
+      return true;
+    }
+    case evCommand: {
+      if (HIWORD(wparam) != btnClicked) return false;
+      if (LOWORD(wparam) == ID_REVERSE_POSTING_CANCEL) { end_dialog(win, 0); return true; }
+      if (LOWORD(wparam) != ID_REVERSE_POSTING_CONFIRM) return false;
+      window_t *date_input = get_window_item(win, ID_REVERSE_POSTING_DATE);
+      window_t *reason_input = get_window_item(win, ID_REVERSE_POSTING_REASON);
+      char entered[64] = "", date[16] = "", reason[256] = "";
+      size_t reason_length = (size_t)send_message(reason_input, edGetText, 0, NULL);
+      send_message(date_input, edGetText, sizeof(entered), entered);
+      send_message(reason_input, edGetText, sizeof(reason), reason);
+      const char *nonspace = reason; while (*nonspace && isspace((unsigned char)*nonspace)) nonspace++;
+      if (reason_length >= sizeof(reason) || !*nonspace || !ui_parse_date(entered, date, sizeof(date)) || !ledger_valid_date(date)) {
+        message_box(win, ui_tr("Enter a valid reversal date and a short, non-empty reason."), ui_tr("Reverse Posting"), MB_OK); return true;
+      }
+      if (!send_db_message(g_ledger->ib, dbBeginChanges, 0, NULL)) {
+        message_box(win, ui_tr("The reversal could not be created. Check the open period, posting history and existing reversals."), ui_tr("Reverse Posting"), MB_OK); return true;
+      }
+      int id = ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, (int)(intptr_t)win->userdata, date, reason);
+      if (!id) {
+        send_db_message(g_ledger->ib, dbRevertChanges, 0, NULL);
+        message_box(win, ui_tr("The reversal could not be created. Check the open period, posting history and existing reversals."), ui_tr("Reverse Posting"), MB_OK); return true;
+      }
+      if (!send_db_message(g_ledger->ib, dbSave, 0, NULL)) {
+        send_db_message(g_ledger->ib, dbRevertChanges, 0, NULL);
+        message_box(win, ui_tr("The reversal could not be saved. Check the infobase before trying again; the file's state may be uncertain."), ui_tr("Reverse Posting"), MB_OK); return true;
+      }
+      if (!send_db_message(g_ledger->ib, dbCommitChanges, 0, NULL)) {
+        send_db_message(g_ledger->ib, dbRevertChanges, 0, NULL);
+        message_box(win, ui_tr("The reversal could not be saved. Check the infobase before trying again; the file's state may be uncertain."), ui_tr("Reverse Posting"), MB_OK); return true;
+      }
+      end_dialog(win, (uint32_t)id); return true;
+    }
+    case evClose: end_dialog(win, 0); return true;
+    case evPaint: case evDestroy: return false;
+    default: return false;
+  }
 }
 
 // Fill takes the type and date the dialog shows, which may not be saved yet.
@@ -518,7 +574,38 @@ static void ledger_ui_new_document(lua_State *L, int type, const char *date) { n
 static void ledger_ui_edit_document(lua_State *L, int id) { if (id) edit_document(id); }
 static void ledger_ui_print_document(lua_State *L, int id) { if (id) print_document(g_ledger->main_win, id); }
 static void ledger_ui_changed(lua_State *L, int id) { after_save(id); }
-static void ledger_ui_unpost(lua_State *L, int id) { ledger_unpost(g_ledger->ib, g_ledger->cfg, id); }
+static void ledger_ui_unpost(lua_State *L, int id) {
+  const db_document_t *doc = find_document(id);
+  if (doc && (ledger_exact_posted(g_ledger->ib, id) || ledger_period_closed(g_ledger->ib, doc->date))) {
+    message_box(g_ledger->main_win, ui_tr("This posting cannot be cancelled. Create a reversal in an open period."), ui_tr("Cancel Posting"), MB_OK); return;
+  }
+  ledger_unpost(g_ledger->ib, g_ledger->cfg, id);
+}
+static void ledger_ui_reverse(lua_State *L, int id) {
+  const db_document_t *doc = find_document(id);
+  if (!doc || !doc->posted || doc->correction_of) {
+    message_box(g_ledger->main_win, ui_tr("Select a posted document to reverse."), ui_tr("Reverse Posting"), MB_OK); return;
+  }
+  int reversed = (int)show_dialog_from_form(&ledger_reverse_posting_form, NULL, g_ledger->main_win,
+                                             reverse_posting_proc, (void *)(intptr_t)id);
+  if (!reversed) return;
+  after_save(0);
+  window_t *table = view(ID_JOURNAL_PAGE_DOCUMENTS);
+  int count = table ? (int)send_message(table, RVM_GETITEMCOUNT, 0, NULL) : 0;
+  for (int row = 0; row < count; row++) {
+    const db_document_t *item = (const void *)send_message(table, tvGetRecord, (uint32_t)row, NULL);
+    if (item && item->id == reversed) {
+      send_message(table, RVM_SETSELECTION, (uint32_t)row, NULL);
+      tableview_handle_master_selection(g_ledger->main_win, table);
+      update_journal_actions();
+      break;
+    }
+  }
+  const db_document_t *result = find_document(reversed);
+  char message[160];
+  snprintf(message, sizeof(message), ui_tr("Reversal %s was posted and saved."), result ? result->number : "");
+  message_box(g_ledger->main_win, message, ui_tr("Reverse Posting"), MB_OK);
+}
 static bool ledger_ui_repost(lua_State *L) { return ledger_repost_all(g_ledger->ib, g_ledger->cfg); }
 static bool ledger_ui_confirm(lua_State *L, const char *text, const char *title) { return message_box(g_ledger->main_win, text, title, MB_YESNO) == IDYES; }
 static void ledger_ui_message(lua_State *L, const char *text, const char *title) { message_box(g_ledger->main_win, text, title, MB_OK); }
@@ -620,6 +707,7 @@ result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
     case evCreate:
       g_ledger->main_win = win;
       if (!page_host_init(win, &ledger_main_window_form, NULL, 0)) return false;
+      update_journal_actions();
       ledger_update_status();
       return true;
     case evCommand: {
@@ -636,6 +724,7 @@ result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
       // An operation, payroll or closing has no goods lines: show what it wrote
       // instead of an empty Lines tab.
       if (code == RVN_SELCHANGE && src && src->id == ID_JOURNAL_PAGE_DOCUMENTS) {
+        update_journal_actions();
         const db_doc_type_t *type = document_type(selected(ID_JOURNAL_PAGE_DOCUMENTS));
         if (type && strcmp(type->form, "document")) send_message(view(ID_JOURNAL_PAGE_DETAILS), tcSetSelection, 1, NULL);
         return false;
