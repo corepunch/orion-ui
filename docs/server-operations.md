@@ -10,6 +10,21 @@ python3 tools/orion_server_admin.py backup /srv/orion/company /backups/company-2
 python3 tools/orion_server_admin.py verify /backups/company-2026-11-12
 ```
 
+For a shareable diagnostic summary, run:
+
+```sh
+python3 tools/orion_server_admin.py diagnose /backups/company-2026-11-12 > backup-diagnostic.json
+```
+
+This checks the backup with the same verifier and reports only a fixed result,
+recognized failure category, OS and Python version, and, for a valid backup,
+the application, country and backup format. It excludes paths, company records,
+users, tokens, hashes and audit contents. The command exits nonzero on failure;
+unknown errors are reported as `invalid_or_unavailable`. For a local detailed
+error use `verify`, whose output is not intended as a sanitized report. The
+summary does not inspect runtime logs, prove physical durability or replace an
+application-level reconciliation.
+
 The backup contains the SQLite metadata and receipts, current and previous
 snapshots, checksums, and the audit-chain head. It deliberately excludes access
 tokens, `users.json`, server executable paths and credentials. Copy it to

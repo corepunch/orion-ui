@@ -357,6 +357,27 @@ company.execute("alice", "reception", {"request_id": "crash", "expected_revision
         (backup / "manifest.json").write_text(json.dumps(info))
         with self.assertRaisesRegex(ValueError, "audit chain"): admin.verify(backup)
 
+    def test_backup_diagnostic_is_sanitized_and_reports_failure(self):
+        self.company.execute("private-actor", "reception", self.request("private-request")); self.close_company()
+        backup = self.root.parent / "private-backup"; admin.backup(self.root, backup)
+        script = SCRIPT.with_name("orion_server_admin.py")
+        def run():
+            return subprocess.run([sys.executable, str(script), "diagnose", str(backup)], text=True, capture_output=True)
+        result = run(); self.assertEqual(result.returncode, 0)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["verification"], "passed")
+        self.assertEqual(report["application"], "lodge")
+        for secret in (str(backup), "private-actor", "private-request", "token_sha256", "audit_head"):
+            self.assertNotIn(secret, result.stdout + result.stderr)
+        info = admin.verify(backup)
+        current = next(name for name in info["snapshots"] if name != "initial")
+        (backup / "snapshots" / current / "hotel.xml").write_text("private-record")
+        result = run(); self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(json.loads(result.stdout)["failure"], "snapshot_checksum")
+        self.assertNotIn("private-record", result.stdout + result.stderr)
+        with patch.object(admin, "verify", side_effect=OSError("private path")):
+            self.assertEqual(admin.diagnose_backup(backup)["failure"], "invalid_or_unavailable")
+
     def test_backup_rejects_missing_or_invalid_company_identity(self):
         self.close_company()
         backup = self.root.parent / "backup"; admin.backup(self.root, backup)

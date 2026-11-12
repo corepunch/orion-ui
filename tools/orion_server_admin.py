@@ -5,6 +5,7 @@ import contextlib
 import hashlib
 import json
 import os
+import platform
 from pathlib import Path
 import re
 import shutil
@@ -126,6 +127,29 @@ def verify(bundle):
     return info
 
 
+def diagnose_backup(bundle):
+    report = {"format": 1, "subject": "backup", "verification": "failed",
+              "environment": {"os": platform.system(), "python": platform.python_version()}}
+    try:
+        info = verify(bundle)
+    except (ValueError, OSError, sqlite3.Error, KeyError, TypeError, UnicodeError, RecursionError) as error:
+        known = {
+            "SQLite integrity check failed": "database_integrity",
+            "state database checksum mismatch": "database_checksum",
+            "snapshot checksum mismatch": "snapshot_checksum",
+            "current snapshot does not match database": "snapshot_metadata",
+            "audit chain is broken": "audit_chain",
+            "unsupported backup format": "unsupported_format",
+        }
+        report["failure"] = known.get(str(error), "invalid_or_unavailable")
+        return report
+    report["verification"] = "passed"
+    report["application"] = info["company"]["application"]
+    report["country"] = info["company"]["country"]
+    report["backup_format"] = info["format"]
+    return report
+
+
 def staged_directory(destination):
     destination = Path(destination).resolve()
     if destination.exists(): raise ValueError("destination must not exist")
@@ -222,15 +246,20 @@ def main():
     commands = parser.add_subparsers(dest="action", required=True)
     command = commands.add_parser("backup"); command.add_argument("source"); command.add_argument("destination")
     command = commands.add_parser("verify"); command.add_argument("backup")
+    command = commands.add_parser("diagnose"); command.add_argument("backup")
     command = commands.add_parser("restore"); command.add_argument("backup"); command.add_argument("destination")
     command.add_argument("--executable", required=True); command.add_argument("--resources", required=True)
     args = parser.parse_args()
     try:
         if args.action == "backup": backup(args.source, args.destination)
         elif args.action == "verify": print(json.dumps(verify(args.backup), sort_keys=True, indent=2))
+        elif args.action == "diagnose":
+            report = diagnose_backup(args.backup)
+            print(json.dumps(report, sort_keys=True, indent=2))
+            if report["verification"] != "passed": return 1
         else: restore(args.backup, args.destination, args.executable, args.resources)
     except (ValueError, OSError, sqlite3.Error, KeyError, TypeError) as error:
         parser.exit(1, f"[orion-server-admin] {error}\n")
 
 
-if __name__ == "__main__": main()
+if __name__ == "__main__": sys.exit(main())
