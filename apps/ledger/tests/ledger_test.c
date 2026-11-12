@@ -1401,6 +1401,55 @@ static void test_service(void) {
   PASS();
 }
 
+static void test_exact_correction_countries(void) {
+  TEST("RU and DE exact purchases survive close, correction and reopen");
+  const char *codes[] = { "ru-2026", "de-2026" };
+  const int vat[] = { 22, 19 };
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  for (int i = 0; i < 2; i++) {
+    switch_configuration(codes[i], "exact-correction.xml");
+    db_document_t doc = { .doc_type_id = 1, .counterparty_id = 1 };
+    snprintf(doc.date, sizeof(doc.date), "2026-04-01");
+    const db_document_t *saved = (void *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &doc);
+    ASSERT(saved && saved->exact_money, "purchase draft uses exact amounts");
+    int id = saved->id;
+    db_item_t item = { .unit_id = 1, .vat_rate_id = 1 };
+    snprintf(item.name, sizeof(item.name), "Correction stock"); snprintf(item.sku, sizeof(item.sku), "CORRECTION-STOCK");
+    const db_item_t *created = (void *)send_db_message(g_ledger->ib, dbInsert, TABLE_ITEMS, &item);
+    ASSERT_NOT_NULL(created);
+    db_doc_line_t line = { .document_id = id, .item_id = created->id, .vat_rate_id = 1, .quantity = 1.005, .price = 1.0 };
+    ASSERT_TRUE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOC_LINES, &line));
+    saved = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+    ASSERT(saved && saved->amount_minor == 101 && saved->vat_minor == vat[i], "country rate rounds exact amount");
+    ASSERT_TRUE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
+    result_node_t *docs = (void *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
+    for (result_node_t *n = docs; n; n = n->next) {
+      const db_document_t *existing = *(db_document_t **)n->data;
+      if (!existing->posted && strcmp(existing->date, "2026-04-30") <= 0) {
+        db_document_t moved = *existing; snprintf(moved.date, sizeof(moved.date), "2026-05-02");
+        ASSERT_TRUE(send_db_message(g_ledger->ib, dbUpdate, TABLE_DOCUMENTS, &moved));
+      }
+    }
+    free_result_list(docs);
+    ASSERT_TRUE(ledger_close_through(g_ledger->ib, "2026-04-30"));
+    ASSERT_EQUAL(ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, id, "2026-04-30", "Correction"), 0);
+    int reversal = ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, id, "2026-05-01", "Correction");
+    ASSERT(reversal > 0, "correction posts in an open period");
+    ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
+    char path[sizeof(g_ledger->ib->source_path)]; snprintf(path, sizeof(path), "%s", g_ledger->ib->source_path);
+    destroy_database(g_ledger->ib);
+    g_ledger->ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path);
+    ASSERT_NOT_NULL(g_ledger->ib); register_database("ib", g_ledger->ib);
+    saved = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)id);
+    ASSERT(saved && saved->posted && saved->amount_minor == 101 && saved->vat_minor == vat[i], "exact source survives reopen");
+    saved = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)reversal);
+    ASSERT(saved && saved->posted && saved->correction_of == id, "linked correction survives reopen");
+    ASSERT_EQUAL(ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, id, "2026-05-02", "Again"), 0);
+    restore_configuration(cfg, ib);
+  }
+  PASS();
+}
+
 static void test_local_exact_trade(void) {
   TEST("local trading documents use minor-unit postings and reject unsupported legacy stock");
   database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
@@ -1965,6 +2014,7 @@ int main(int argc, char **argv) {
   test_reversal();
   test_reversal_protection();
   test_service();
+  test_exact_correction_countries();
   test_local_exact_trade();
   test_english_configurations();
   test_invoice_requirements();
