@@ -1,4 +1,4 @@
-#include "pty.h"
+#include "terminal_pty.h"
 #include "vgat.h"
 
 #if defined(__unix__) || defined(__APPLE__)

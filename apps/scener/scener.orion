@@ -54,6 +54,7 @@
         <Separator />
         <item name="show_grid" label="[x] Show Grid" />
         <item name="show_shadows" label="[x] Show Shadows" />
+        <item name="toggle_ssao" label="Toggle Ambient Occlusion" />
         <item name="show_wireframe" label="[ ] Wireframe Overlay" />
         <Separator />
         <item name="grid_options" label="Grid Options..." />

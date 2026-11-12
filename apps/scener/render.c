@@ -30,6 +30,8 @@
 #include <orion/kernel/renderer.h>
 
 #define MAX_BATCH_VERTS 65536
+#define SSAO_DEPTH_DIVISOR 2
+#define SSAO_DEPTH_MAX_SIZE 4096
 
 typedef struct { float x, y, z, r, g, b; } LineVert;
 
@@ -39,6 +41,8 @@ static GLuint s_shadow_vao, s_shadow_vbo;
 static GLuint s_quad_vao, s_quad_vbo;
 static GLuint s_shadow_prog;
 static GLuint s_image_prog,s_image_vao,s_image_vbo,s_image_ebo;
+static GLuint s_ssao_fbo, s_ssao_depth;
+static int s_ssao_width, s_ssao_height, s_ssao_ready;
 static GLint s_image_viewproj_loc,s_image_color_loc,s_image_sampler_loc;
 static vec3 render_srgb_to_linear(vec3 color);
 static GLint s_shadow_finite_loc;
@@ -161,6 +165,10 @@ static int draw_screen_image(SceneObj *obj,ScreenTexture *image,mat4 viewProj) {
 }
 
 void render_deinit(void) {
+    if (s_ssao_fbo) glDeleteFramebuffers(1, &s_ssao_fbo);
+    if (s_ssao_depth) glDeleteTextures(1, &s_ssao_depth);
+    s_ssao_fbo = s_ssao_depth = 0;
+    s_ssao_width = s_ssao_height = s_ssao_ready = 0;
     if(s_image_ebo) glDeleteBuffers(1,&s_image_ebo);
     if(s_image_vbo) glDeleteBuffers(1,&s_image_vbo);
     if(s_image_vao) glDeleteVertexArrays(1,&s_image_vao);
@@ -591,6 +599,59 @@ static void draw_batches(Scene *s, int first, int count, int ramps) {
     }
 }
 
+static int prepare_ssao_depth(int w, int h) {
+    int width = (w + SSAO_DEPTH_DIVISOR - 1) / SSAO_DEPTH_DIVISOR;
+    int height = (h + SSAO_DEPTH_DIVISOR - 1) / SSAO_DEPTH_DIVISOR;
+    if (width > SSAO_DEPTH_MAX_SIZE) width = SSAO_DEPTH_MAX_SIZE;
+    if (height > SSAO_DEPTH_MAX_SIZE) height = SSAO_DEPTH_MAX_SIZE;
+    if (width == s_ssao_width && height == s_ssao_height) return s_ssao_ready;
+
+    GLint draw_fbo, read_fbo, texture;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_fbo);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
+    if (!s_ssao_fbo) glGenFramebuffers(1, &s_ssao_fbo);
+    if (s_ssao_depth) glDeleteTextures(1, &s_ssao_depth);
+    glGenTextures(1, &s_ssao_depth);
+    glBindTexture(GL_TEXTURE_2D, s_ssao_depth);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, (GLuint)texture);
+    glBindFramebuffer(GL_FRAMEBUFFER, s_ssao_fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, s_ssao_depth, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)draw_fbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)read_fbo);
+    s_ssao_width = width;
+    s_ssao_height = height;
+    s_ssao_ready = status == GL_FRAMEBUFFER_COMPLETE;
+    if (!s_ssao_ready) {
+        fprintf(stderr, "[scener] SSAO depth framebuffer %dx%d is incomplete (0x%x)\n", width, height, status);
+        fflush(stderr);
+    }
+    return s_ssao_ready;
+}
+
+static void draw_ssao_depth(Scene *s, int first, int count, int w, int h) {
+    GLint draw_fbo;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
+    GLboolean scissor = glIsEnabled(GL_SCISSOR_TEST);
+    glDisable(GL_SCISSOR_TEST);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, s_ssao_fbo);
+    glViewport(0, 0, s_ssao_width, s_ssao_height);
+    const GLfloat far_depth = 1.0f;
+    glClearBufferfv(GL_DEPTH, 0, &far_depth);
+    shader_set_depth_only(1);
+    draw_batches(s, first, count, 0);
+    shader_set_depth_only(0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)draw_fbo);
+    glViewport(0, 0, w, h);
+    if (scissor) glEnable(GL_SCISSOR_TEST);
+}
+
 void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
                   vec3 camPos, vec3 camLook, int flags) {
     if (!scene_is_prefab_mode(s)) scene_rebuild_camera_gizmos(s, h > 0 ? (float)w / (float)h : 1.0f);
@@ -605,8 +666,6 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     vec3 bg = render_srgb_to_linear(s->bg);
     glClearColor(bg.x, bg.y, bg.z, (flags & DBG_TRANSPARENT) ? 0.0f : 1.0f);
     glClearStencil(0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
     ensure_buffers();
     ensure_line_prog();
     ensure_shadow_prog();
@@ -630,6 +689,7 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     }
 
     if(flags & DBG_WIREFRAME){
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
         for(int i=0;i<s->nobjs;i++)if(s->objs[i].renderable){ Mesh w; scene_obj_world_mesh(&s->objs[i],&w); draw_mesh_flat_vbo(&w,v3(1,1,1)); mesh_free(&w); }
         glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
@@ -711,6 +771,8 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     vcache_flush();
     upload_instances();
     upload_maps(s);
+    int ssao = (flags & DBG_SSAO) && !(flags & DBG_FLAT) && fillCount > 0 &&
+        (ambient.x > 0 || ambient.y > 0 || ambient.z > 0) && prepare_ssao_depth(w, h);
 
     /* ---- Back end: draws only. ---- */
     glEnable(GL_DEPTH_TEST);
@@ -718,21 +780,34 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     glDepthMask(GL_TRUE);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-    for (int k = 0; k < nscreens; k++) draw_screen_image(&s->objs[screens[k]], &s->screenTextures[s->objs[screens[k]].screenTexture], viewProj);
+    GLint saved_occlusion_texture;
+    glActiveTexture(GL_TEXTURE3);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &saved_occlusion_texture);
+    glActiveTexture(GL_TEXTURE0);
     shader_bind();
     shader_set_viewproj(viewProj);
-    shader_set_camera_pos(camPos);
     shader_set_instances(s_inst_tex);
     shader_set_maps(s_map_tex);
+    shader_set_occlusion(0, proj, view, w, h);
+    if (ssao) draw_ssao_depth(s, fillFirst, fillCount, w, h);
+    /* Clear after the FBO switch so Apple GL encodes the background to sRGB. */
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    if (nscreens) {
+        for (int k = 0; k < nscreens; k++)
+            draw_screen_image(&s->objs[screens[k]], &s->screenTextures[s->objs[screens[k]].screenTexture], viewProj);
+        shader_bind();
+    }
+    shader_set_camera_pos(camPos);
+
+    if (ssao) shader_set_occlusion(s_ssao_depth, proj, view, w, h);
 
     /* the depth-filling pass: ambient light and the sky mirrored in glossy surfaces, in one draw per batch */
     if (flags & DBG_FLAT) shader_set_ambient(1, v3(1, 1, 1), 0, v3(0, 0, 0));
     else shader_set_ambient(1, ambient, s->skyReflection > 0, vscale(s->ambient, s->skyReflection));
     draw_batches(s, fillFirst, fillCount, 0);
+    if (ssao) shader_set_occlusion(0, proj, view, w, h);
     shader_set_ambient(0, v3(0, 0, 0), 0, v3(0, 0, 0));
-    if (flags & DBG_FLAT) { shader_unbind(); return; }
-
-    for (int li = 0; li < s->nlights; li++) {
+    for (int li = 0; li < s->nlights && !(flags & DBG_FLAT); li++) {
         light_work_t *wk = &s_work[li];
         if (!wk->active) continue;
         Light *L = &s->lights[li];
@@ -792,6 +867,10 @@ void render_frame(Scene *s, int w, int h, mat4 proj, mat4 view,
     }
 
     shader_unbind();
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, (GLuint)saved_occlusion_texture);
+    glActiveTexture(GL_TEXTURE0);
+    if (flags & DBG_FLAT) return;
     glDepthMask(GL_TRUE);
 
     /* Overlay lines */

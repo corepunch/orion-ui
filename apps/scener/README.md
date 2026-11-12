@@ -179,6 +179,10 @@ the default for both interactive and batch camera views:
 ./build/bin/scener --render apps/scener/scenes/sample_room.blks
 ```
 
+Choose **View → Toggle Ambient Occlusion** or render with `--ssao` to add
+contact shading from ambient light. SSAO is off by default. See the
+[SSAO options and comparison commands](CLI.md#screen-space-ambient-occlusion).
+
 Render with the same filled materials and lighting but disable stencil
 shadows. This is useful for determining whether a visual artifact comes from
 scene geometry or a shadow volume:
