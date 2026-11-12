@@ -73,6 +73,9 @@ an operator may remove a confirmed abandoned staging directory after inspecting
 it; it is not a published backup. Verify any published destination before use.
 POSIX process-crash tests cover snapshot copy, manifest writing, verification,
 staging sync and both sides of the final rename; they do not model power loss.
+Restore tests also terminate after snapshot and database copies, READY creation,
+staging sync and both sides of publication. They verify the source backup and,
+when published, reopen the restored company and check its saved receipt.
 
 Verification checks SQLite integrity, current snapshot against its SQLite digest,
 backup inventory, and the audit hash chain. The server metadata does not retain

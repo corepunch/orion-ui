@@ -413,6 +413,64 @@ sys.exit(2)
                 self.assertEqual(self.company.execute("alice", "reception", self.request("saved"))["revision"], 1)
                 self.close_company()
 
+    @unittest.skipIf(os.name == "nt", "SIGKILL process crash test requires POSIX")
+    def test_restore_process_crash_at_publication_boundaries(self):
+        self.company.execute("alice", "reception", self.request("saved")); self.close_company()
+        backup = self.root.parent / "backup"; admin.backup(self.root, backup)
+        script = r'''
+import os, signal, sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+import orion_server_admin as admin
+import orion_server as server
+stage, backup, destination, executable, resources = sys.argv[2:]
+def die(): os.kill(os.getpid(), signal.SIGKILL)
+copy = server.copy_company
+def copy_then_die(src, dst):
+    copy(src, dst)
+    if stage == "snapshot": die()
+server.copy_company = copy_then_die
+copyfile = admin.shutil.copyfile
+def database_then_die(src, dst):
+    result = copyfile(src, dst)
+    if stage == "database" and Path(dst).name == "state.sqlite": die()
+    return result
+admin.shutil.copyfile = database_then_die
+write = server.private_write
+def ready_then_die(path, data):
+    write(path, data)
+    if stage == "ready" and Path(path).name == "READY": die()
+server.private_write = ready_then_die
+sync = server.sync_directory
+def sync_then_die(path):
+    sync(path)
+    if stage == "staged" and Path(path).name.startswith(".orion-admin-"): die()
+server.sync_directory = sync_then_die
+rename = os.rename
+def rename_with_crash(src, dst):
+    if stage == "before_rename": die()
+    rename(src, dst)
+    if stage == "after_rename": die()
+os.rename = rename_with_crash
+admin.restore(backup, destination, executable, resources)
+sys.exit(2)
+'''
+        for stage in ("snapshot", "database", "ready", "staged", "before_rename", "after_rename"):
+            with self.subTest(stage=stage):
+                destination = self.root.parent / ("restored-" + stage)
+                result = subprocess.run([sys.executable, "-c", script, str(SCRIPT.parent), stage,
+                                         str(backup), str(destination), sys.executable, str(self.root)], capture_output=True)
+                self.assertEqual(result.returncode, -signal.SIGKILL, result.stderr.decode(errors="replace"))
+                self.assertEqual(destination.exists(), stage == "after_rename")
+                self.assertEqual(admin.verify(backup)["revision"], 1)
+                if destination.exists():
+                    restored = server.Company(destination, self.host)
+                    try:
+                        self.assertEqual(restored.status()["revision"], 1)
+                        self.assertEqual(restored.execute("alice", "reception", self.request("saved"))["revision"], 1)
+                        self.assertEqual(json.loads((destination / "users.json").read_text()), [])
+                    finally: restored.close()
+
     def test_backup_diagnostic_is_sanitized_and_reports_failure(self):
         self.company.execute("private-actor", "reception", self.request("private-request")); self.close_company()
         backup = self.root.parent / "private-backup"; admin.backup(self.root, backup)
