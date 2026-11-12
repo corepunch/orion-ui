@@ -23,6 +23,13 @@ Hotel.rooms = records.bind("lodge.rooms", function(row, previous)
   end
   if not row.capacity or row.capacity < 1 or row.capacity % 1 ~= 0 then return nil, orion.tr("Capacity must be a positive integer.") end
   if not valid_amount(row.rate) then return nil, orion.tr("Enter an amount from 0 to 1000000 with at most two decimal places.") end
+  if previous and row.capacity < previous.capacity then
+    for _, reservation in ipairs(Hotel.reservations.model:select({room_id = row.id})) do
+      if (reservation.status == "reserved" or reservation.status == "checked_in") and reservation.persons > row.capacity then
+        return nil, orion.tr("The guest count exceeds the room capacity.")
+      end
+    end
+  end
   if not ((not previous and row.cleaning_state == nil) or ({inspection_needed = true, dirty = true, clean = true})[row.cleaning_state]) then
     return nil, orion.tr("Choose a valid room cleaning status.")
   end

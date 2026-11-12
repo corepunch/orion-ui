@@ -10,6 +10,8 @@ local function fields(a, d)
   return {room_id = room.id, guest_id = guest.id, arrival = a, departure = d, persons = 2, rate = 99.95, extras = 10, paid = 50, notes = ""}
 end
 local booking = orion.assert(Hotel.save(nil, fields("2026-03-28", "2026-03-30")))
+assert(not Hotel.rooms:save(room.id, {capacity = 1}))
+assert(Hotel.rooms.model:find(room.id).capacity == 2)
 assert(Hotel.total(booking) == 209.9 and Hotel.balance(booking) == 159.9)
 local fractional = fields("2026-04-01", "2026-04-02"); fractional.extras = 0.001
 assert(not Hotel.save(nil, fractional))
@@ -27,6 +29,7 @@ assert(not Hotel.transition(nextBooking.id, "checked_in"))
 assert(not Hotel.transition(booking.id, "checked_in"))
 orion.assert(Hotel.rooms:save(room.id, {cleaning_state = "clean"}))
 orion.assert(Hotel.transition(booking.id, "checked_in"))
+assert(not Hotel.rooms:save(room.id, {capacity = 1}))
 assert(not Hotel.transition(booking.id, "checked_out"))
 local settled = fields("2026-03-28", "2026-03-30"); settled.paid = 209.9
 orion.assert(Hotel.save(booking.id, settled))

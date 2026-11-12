@@ -29,7 +29,7 @@ class SharedCompanyTests(unittest.TestCase):
                     room = request('alice', 'room', 'save_room', {'name': '101', 'capacity': 2, 'rate': 100})['result']['id']
                     guest = request('alice', 'guest', 'save_guest', {'name': 'Guest'})['result']['id']
                     stay = {'room_id': room, 'guest_id': guest, 'arrival': '2035-01-01', 'departure': '2035-01-02',
-                            'persons': 1, 'rate': 100, 'extras': 0, 'notes': ''}
+                            'persons': 2, 'rate': 100, 'extras': 0, 'notes': ''}
 
                     def race(command, args):
                         revision = company.status()['revision']
@@ -51,6 +51,8 @@ class SharedCompanyTests(unittest.TestCase):
 
                     winner, loser = race('reserve', lambda actor: dict(stay))
                     booking = winner[2]['result']['id']
+                    self.assertFalse(request('alice', 'reduce-capacity', 'save_room', {'id': room, 'capacity': 1})['ok'])
+                    self.assertEqual(request('alice', 'room-view', 'snapshot', {})['result']['rooms'][0]['capacity'], 2)
                     overlap = request(loser[0], 'reserve-after-refresh', 'reserve', stay)
                     self.assertFalse(overlap['ok'])
                     self.assertEqual(len(request('alice', 'reservation-view', 'snapshot', {})['result']['reservations']), 1)
@@ -88,7 +90,7 @@ class SharedCompanyTests(unittest.TestCase):
                     def stay(room):
                         return {'room_id': room, 'guest_id': guest, 'arrival': '2035-01-01', 'departure': '2035-01-02',
                                 'persons': 1, 'rate': 100, 'extras': 0, 'notes': ''}
-                    request('alice', 'occupied', 'reserve', stay(rooms[2]))
+                    occupied = request('alice', 'occupied', 'reserve', dict(stay(rooms[2]), persons=2))[1]['result']['id']
                     revision = company.status()['revision']
                     _, failed = request('alice', 'failed-group', 'group_reserve',
                                         {'name': 'Rejected group', 'stays': [stay(rooms[0]), stay(rooms[2])]})
@@ -113,6 +115,8 @@ class SharedCompanyTests(unittest.TestCase):
                     self.assertEqual(len([r for r in view['reservations'] if r['group_id'] == result['result']['id']]), 2)
                     _, overlap = request('bob', 'overlap', 'reserve', stay(rooms[0]))
                     self.assertFalse(overlap['ok'])
+                    self.assertTrue(request('alice', 'cancel-occupied', 'cancel', {'id': occupied})[1]['ok'])
+                    self.assertTrue(request('alice', 'reduce-cancelled', 'save_room', {'id': rooms[2], 'capacity': 1})[1]['ok'])
                 finally:
                     company.close()
 
