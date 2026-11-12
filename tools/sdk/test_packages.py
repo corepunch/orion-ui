@@ -376,5 +376,16 @@ class PackageTests(unittest.TestCase):
         with self.assertRaises(ValueError): packages.install(self.store, corrupt)
         self.assertFalse((self.root / "escape.lua").exists())
 
+    def test_archive_rejects_conflicting_path_components_before_install(self):
+        for names in (("Dir/a.lua", "dir/b.lua"), ("dir", "dir/a.lua"),
+                      ("dir/a.lua", "DIR"), ("same.lua", "same.lua")):
+            archive = self.root / "conflict.zip"
+            with zipfile.ZipFile(archive, "w") as output:
+                for name in names:
+                    output.writestr(name, "return true")
+            with self.subTest(names=names), self.assertRaisesRegex(ValueError, "conflicting package path"):
+                packages.install(self.store, archive)
+            self.assertFalse(self.store.exists())
+
 
 if __name__ == "__main__": unittest.main()

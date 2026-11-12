@@ -20,7 +20,9 @@ ALLOWED = {".orion", ".lua", ".xml", ".md", ".txt", ".html", ".css", ".svg", ".p
 
 
 def files(root):
-    result, folded = [], set()
+    spec = importlib.util.spec_from_file_location("orion_packages_contract", ROOT / "tools/orion_packages.py")
+    contract = importlib.util.module_from_spec(spec); spec.loader.exec_module(contract)
+    result, paths = [], {}
     for path in sorted(root.rglob("*")):
         if path.is_symlink():
             raise ValueError(f"symbolic links are not packaged: {path}")
@@ -28,9 +30,9 @@ def files(root):
             relative = path.relative_to(root)
             name = relative.as_posix()
             if (path.suffix not in ALLOWED or any(p.startswith(".") for p in relative.parts) or
-                    "\\" in name or ":" in name or name.casefold() in folded):
+                    "\\" in name or ":" in name):
                 raise ValueError(f"unexpected package file: {path}; use a clean source directory")
-            folded.add(name.casefold())
+            contract.portable_path(name, paths)
             if path.stat().st_size > 16 * 1024 * 1024:
                 raise ValueError(f"file exceeds 16 MiB: {path}")
             result.append(path)

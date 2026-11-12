@@ -77,6 +77,20 @@ class SDKTests(unittest.TestCase):
         for index in range(4094): (app / f"f{index}.txt").touch()
         with self.assertRaisesRegex(ValueError, "4095"): sdk.files(app)
 
+    def test_reject_colliding_parent_directories(self):
+        app = self.root / "app"; sdk.create(app, "example", "application")
+        upper = app / "Dir"; lower = app / "dir"
+        upper.mkdir()
+        if lower.exists():
+            self.skipTest("filesystem is case insensitive")
+        lower.mkdir()
+        (upper / "a.lua").write_text("return true")
+        (lower / "b.lua").write_text("return true")
+        output = self.root / "collision.zip"
+        with self.assertRaisesRegex(ValueError, "conflicting package path"):
+            sdk.pack(app, output)
+        self.assertFalse(output.exists())
+
     def test_reject_invalid_plugin_version_and_lua(self):
         plugin = self.root / "plugin"
         sdk.create(plugin, "example", "plugin")

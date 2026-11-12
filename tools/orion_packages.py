@@ -26,6 +26,19 @@ LIMIT = 64 * 1024 * 1024
 PACKAGE_FORMAT = 1
 
 
+def portable_path(name, paths):
+    """Register a file and its parent directories in a portable namespace."""
+    parts = name.split("/")
+    for index in range(1, len(parts) + 1):
+        path = "/".join(parts[:index])
+        key = path.casefold()
+        kind = "file" if index == len(parts) else "directory"
+        previous = paths.get(key)
+        if previous and (previous != (path, kind) or kind == "file"):
+            raise ValueError(f"conflicting package path: {path}")
+        paths[key] = (path, kind)
+
+
 def identifier(value):
     if not isinstance(value, str) or not IDENTIFIER.fullmatch(value):
         raise ValueError("invalid package identifier")
@@ -58,16 +71,16 @@ def read_archive(path):
         infos = archive.infolist()
         if len(infos) > 4096 or sum(i.file_size for i in infos) > LIMIT:
             raise ValueError("package exceeds limits")
-        folded = set()
+        paths = {}
         for info in infos:
             name = info.filename
             parts = PurePosixPath(name).parts
             if (not parts or name.startswith("/") or "\\" in name or ":" in name
                     or any(p in (".", "..") for p in parts) or PurePosixPath(name).as_posix() != name
                     or info.is_dir() or stat.S_ISLNK(info.external_attr >> 16)
-                    or name.casefold() in folded or info.file_size > 16 * 1024 * 1024):
+                    or info.file_size > 16 * 1024 * 1024):
                 raise ValueError(f"invalid archive entry: {name}")
-            folded.add(name.casefold())
+            portable_path(name, paths)
             contents[name] = archive.read(info)
     inventory = json.loads(contents.pop("SHA256SUMS.json"))
     if not isinstance(inventory, dict) or set(inventory) != set(contents):

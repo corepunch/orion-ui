@@ -103,7 +103,8 @@ extensions, caps individual files at 16 MiB and the package at 64 MiB, and write
 an archive outside the source directory. It refuses an existing output. Sorted
 entries, fixed timestamps and modes make archives repeatable on the same toolchain.
 The limits include the generated inventory; at most 4095 source files are allowed.
-Names must not collide case-insensitively or contain colons or backslashes, and
+Path components must have consistent case and must not collide with a file or
+directory, even on case-insensitive filesystems. Names cannot contain colons or backslashes, and
 `SHA256SUMS.json` is reserved regardless of case. These restrictions make plugin
 archives compatible with the package manager's portable path checks.
 `SHA256SUMS.json` records each source file's hash. Hashes detect accidental changes;
