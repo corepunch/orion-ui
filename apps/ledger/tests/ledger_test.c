@@ -1027,7 +1027,27 @@ static void test_closed_period(void) {
   snprintf(malformed->date, sizeof(malformed->date), "2026-03-11");
   char error[512];
   ASSERT_FALSE(ledger_script_run("apps/ledger/tests/fixtures/close-period.lua", false, error, sizeof(error)));
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbBeginChanges, 0, NULL));
+  g_ledger->ib->access_enabled = true;
+  snprintf(g_ledger->ib->access_actor, sizeof(g_ledger->ib->access_actor), "accountant-1");
+  ASSERT_TRUE(ledger_close_through(g_ledger->ib, date));
+  g_ledger->ib->access_enabled = false;
+  result_node_t *closures = (void *)send_db_message(g_ledger->ib, dbFetch, TABLE_PERIOD_CLOSURES, NULL);
+  db_period_closure_t *closure = closures ? *(db_period_closure_t **)closures->data : NULL;
+  ASSERT(closure && !strcmp(closure->actor, "accountant-1"), "close records authenticated actor");
+  free_result_list(closures);
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbRevertChanges, 0, NULL));
+  ASSERT_FALSE(ledger_period_closed(g_ledger->ib, date));
+  closures = (void *)send_db_message(g_ledger->ib, dbFetch, TABLE_PERIOD_CLOSURES, NULL);
+  ASSERT(closures == NULL, "rolled-back close leaves no history");
   ASSERT_TRUE(ledger_script_run("apps/ledger/tests/fixtures/close-period.lua", true, error, sizeof(error)));
+  closures = (void *)send_db_message(g_ledger->ib, dbFetch, TABLE_PERIOD_CLOSURES, NULL);
+  closure = closures ? *(db_period_closure_t **)closures->data : NULL;
+  ASSERT(closure && !closure->previous_through[0] && !strcmp(closure->closed_through, date) &&
+    closure->recorded_utc[0] && !closure->actor[0], "close records boundary and time without inventing an actor");
+  int closure_id = closure->id;
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbDelete, TABLE_PERIOD_CLOSURES, (void *)(intptr_t)closure_id));
+  free_result_list(closures);
   ASSERT_FALSE(ledger_close_through(g_ledger->ib, date));
   ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
   db_document_t changed = *doc;
@@ -1047,6 +1067,8 @@ static void test_closed_period(void) {
   ASSERT_NOT_NULL(g_ledger->ib);
   register_database("ib", g_ledger->ib);
   ASSERT_TRUE(ledger_period_closed(g_ledger->ib, date));
+  closure = (void *)send_db_message(g_ledger->ib, dbFind, TABLE_PERIOD_CLOSURES, (void *)(intptr_t)closure_id);
+  ASSERT(closure && !strcmp(closure->closed_through, date) && closure->recorded_utc[0], "close history persists");
   ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_POSTING_REVISIONS, "document_id", id), revisions + 1);
   ASSERT(ledger_count_references(g_ledger->ib, TABLE_REVISION_ENTRIES, "revision_id", revision_id) > 0, "revision entries persist");
   ASSERT_FALSE(ledger_post(g_ledger->ib, g_ledger->cfg, id));
@@ -1096,6 +1118,42 @@ static void test_infobase_migration(void) {
   revision = (void *)send_db_message(db, dbFind, TABLE_POSTING_REVISIONS, (void *)(intptr_t)1);
   ASSERT(revision && !revision->actor[0], "migrated unknown actor survives reload");
   destroy_database(db);
+  ASSERT_EQUAL(remove(path), 0);
+  db_schema_def_t v4 = ledger_ib_schema;
+  v4.version = 4; v4.table_count--;
+  db = create_database_with_schema("ib", "db_schema_xml", &v4, path);
+  ASSERT_NOT_NULL(db);
+  db_period_lock_t old_lock = { .id = 1 };
+  snprintf(old_lock.closed_through, sizeof(old_lock.closed_through), "2026-03-31");
+  ASSERT_TRUE(send_db_message(db, dbInsert, TABLE_PERIOD_LOCKS, &old_lock));
+  db_document_t old_doc = { .id = 17, .posted = true };
+  snprintf(old_doc.number, sizeof(old_doc.number), "V4-17");
+  snprintf(old_doc.date, sizeof(old_doc.date), "2026-03-01");
+  ASSERT_TRUE(send_db_message(db, dbInsert, TABLE_DOCUMENTS, &old_doc));
+  ASSERT_TRUE(send_db_message(db, dbSave, 0, NULL));
+  destroy_database(db);
+  db = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path);
+  ASSERT_NOT_NULL(db);
+  ASSERT_TRUE(ledger_period_closed(db, "2026-03-31"));
+  doc = (void *)send_db_message(db, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)17);
+  ASSERT(doc && !strcmp(doc->number, "V4-17") && doc->posted, "migration retains v4 document");
+  ASSERT_FALSE(send_db_message(db, dbFetch, TABLE_PERIOD_CLOSURES, NULL));
+  ASSERT_TRUE(ledger_close_through(db, "2026-04-30"));
+  result_node_t *closures = (void *)send_db_message(db, dbFetch, TABLE_PERIOD_CLOSURES, NULL);
+  const db_period_closure_t *closure = closures ? *(db_period_closure_t **)closures->data : NULL;
+  ASSERT(closure && !strcmp(closure->previous_through, "2026-03-31") &&
+    !strcmp(closure->closed_through, "2026-04-30"), "migration retains old boundary without inventing history");
+  int closure_id = closure->id;
+  free_result_list(closures);
+  ASSERT_TRUE(send_db_message(db, dbSave, 0, NULL));
+  destroy_database(db);
+  db = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path);
+  ASSERT_NOT_NULL(db);
+  closure = (void *)send_db_message(db, dbFind, TABLE_PERIOD_CLOSURES, (void *)(intptr_t)closure_id);
+  ASSERT(closure && !strcmp(closure->previous_through, "2026-03-31") &&
+    !strcmp(closure->closed_through, "2026-04-30") && closure->recorded_utc[0], "migrated history survives restart");
+  ASSERT_TRUE(ledger_period_closed(db, "2026-04-30"));
+  destroy_database(db);
   PASS();
 }
 
@@ -1117,6 +1175,18 @@ static void test_corrupt_period_lock(void) {
   ASSERT_TRUE(db_schema_xml(g_ledger->ib, dbInsert, TABLE_PERIOD_LOCKS, &lock));
   ASSERT_TRUE(ledger_period_closed(g_ledger->ib, "2027-01-01"));
   ASSERT_FALSE(ledger_close_through(g_ledger->ib, "2027-01-01"));
+  ASSERT_TRUE(db_schema_xml(g_ledger->ib, dbDelete, TABLE_PERIOD_LOCKS, (void *)(intptr_t)2));
+  ASSERT_TRUE(ledger_close_through(g_ledger->ib, "0001-01-01"));
+  ASSERT_TRUE(ledger_close_through(g_ledger->ib, "0001-01-02"));
+  result_node_t *closures = (void *)send_db_message(g_ledger->ib, dbFetch, TABLE_PERIOD_CLOSURES, NULL);
+  int count = 0; bool found_advance = false;
+  for (result_node_t *n = closures; n; n = n->next) {
+    const db_period_closure_t *closure = *(db_period_closure_t **)n->data;
+    count++;
+    if (!strcmp(closure->previous_through, "0001-01-01") && !strcmp(closure->closed_through, "0001-01-02")) found_advance = true;
+  }
+  ASSERT(count == 2 && found_advance, "successive closes retain both boundaries");
+  free_result_list(closures);
   restore_configuration(cfg, ib);
   PASS();
 }

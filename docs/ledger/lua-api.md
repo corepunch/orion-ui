@@ -178,7 +178,7 @@ end)
 
 ## `ledger.close_through(date)`
 
-Advance the inclusive accounting close date. Requires a writable script inside ledger.transaction; invalid dates and dates that do not advance the boundary are rejected. Closing also rejects any unposted document on or before the requested date and any document with an invalid date; resolve these before closing. The caller must save the infobase after the transaction. There is no reopening API. This initial guard does not provide an immutable audit trail or prevent native code from mutating exposed record pointers.
+Advance the inclusive accounting close date. Requires a writable script inside ledger.transaction; invalid dates and dates that do not advance the boundary are rejected. Closing also rejects any unposted document on or before the requested date and any document with an invalid date; resolve these before closing. A malformed or unexpected stored period lock blocks document changes and further closing until the infobase is recovered. Each successful close records the previous and new boundaries, UTC time, and authenticated actor when available, in the same transaction. Earlier closes have no reconstructed history. The caller must save the infobase after the transaction. There is no reopening API. This history is not tamper-proof and native code can mutate exposed record pointers.
 
 | Argument | Type | Description |
 |---|---|---|
@@ -837,3 +837,13 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `id` | `integer` |  |
 | `document_id` | `integer` | documents.id |
 | `posted` | `boolean` |  |
+
+## `ib.period_closures`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `previous_through` | `date` |  |
+| `closed_through` | `date` |  |
+| `recorded_utc` | `string` |  |
+| `actor` | `string` |  |

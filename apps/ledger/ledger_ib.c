@@ -96,8 +96,23 @@ bool ledger_close_through(database_t *db, const char *date) {
   }
   free_result_list(documents);
   db_period_lock_t lock = { .id = 1 };
+  db_period_closure_t closure = {0};
   snprintf(lock.closed_through, sizeof(lock.closed_through), "%s", date);
-  return db_schema_xml(db, boundary[0] ? dbUpdate : dbInsert, TABLE_PERIOD_LOCKS, &lock) != 0;
+  snprintf(closure.previous_through, sizeof(closure.previous_through), "%s", boundary);
+  snprintf(closure.closed_through, sizeof(closure.closed_through), "%s", date);
+  time_t now = time(NULL);
+  const struct tm *utc = gmtime(&now);
+  if (!utc || !strftime(closure.recorded_utc, sizeof(closure.recorded_utc), "%Y-%m-%dT%H:%M:%SZ", utc)) {
+    fprintf(stderr, "[ledger] close rejected: cannot read clock for date=%s\n", date); fflush(stderr); return false;
+  }
+  if (db->access_enabled) snprintf(closure.actor, sizeof(closure.actor), "%s", db->access_actor);
+  if (!db_schema_xml(db, dbBeginChanges, 0, NULL)) return false;
+  bool ok = db_schema_xml(db, boundary[0] ? dbUpdate : dbInsert, TABLE_PERIOD_LOCKS, &lock) &&
+            db_schema_xml(db, dbInsert, TABLE_PERIOD_CLOSURES, &closure);
+  if (ok && db_schema_xml(db, dbCommitChanges, 0, NULL)) return true;
+  db_schema_xml(db, dbRevertChanges, 0, NULL);
+  fprintf(stderr, "[ledger] close rolled back: date=%s\n", date); fflush(stderr);
+  return false;
 }
 
 static bool locked_document(database_t *db, int id) {
@@ -202,7 +217,7 @@ bool ledger_reversal_linked(database_t *db, int id) {
 lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam) {
   if (msg == dbInsert || msg == dbUpdate || msg == dbDelete) {
     uint32_t table = LOWORD(wparam);
-    bool locked = table == TABLE_PERIOD_LOCKS || table == TABLE_POSTING_REVISIONS || table == TABLE_REVISION_ENTRIES || table == TABLE_REVERSAL_LINKS;
+    bool locked = table == TABLE_PERIOD_LOCKS || table == TABLE_PERIOD_CLOSURES || table == TABLE_POSTING_REVISIONS || table == TABLE_REVISION_ENTRIES || table == TABLE_REVERSAL_LINKS;
     if (table == TABLE_DOCUMENTS) {
       const db_document_t *doc = msg == dbDelete ? NULL : lparam;
       int id = msg == dbDelete ? (int)(intptr_t)lparam : doc ? doc->id : 0;

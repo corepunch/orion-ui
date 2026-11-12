@@ -347,7 +347,7 @@
          class: numbering, recalculation of documents when they or their lines
          change. default= fills new records; on-delete= says what deleting a
          referenced record does: cascade, nullify or deny. -->
-    <database name="ib" class="ledger_ib" version="4" migration="additive">
+    <database name="ib" class="ledger_ib" version="5" migration="additive">
       <table name="organizations">
         <field name="id" type="integer" key="YES" />
         <field name="legal_details" type="string" length="512" />
@@ -711,6 +711,13 @@
         <field name="id" type="integer" key="YES" />
         <field name="document_id" type="integer" relation="documents.id" />
         <field name="posted" type="boolean" />
+      </table>
+      <table name="period_closures">
+        <field name="id" type="integer" key="YES" />
+        <field name="previous_through" type="date" />
+        <field name="closed_through" type="date" />
+        <field name="recorded_utc" type="string" length="21" />
+        <field name="actor" type="string" length="128" />
       </table>
     </database>
   </databases>
