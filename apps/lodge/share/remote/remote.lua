@@ -5,12 +5,16 @@ local calendar, money = Plugins.use("calendar", 1), Plugins.use("money", 1)
 local Page = {form = "remote", title = orion.tr("Lodge · Shared server")}
 local status_labels = {reserved = "Reserved", checked_in = "Checked in", checked_out = "Checked out", cancelled = "Cancelled"}
 local cleaning_labels = {inspection_needed = "Inspection needed", dirty = "Dirty", clean = "Clean"}
-local inputs = {"room_name", "capacity", "room_rate", "guest_name", "phone", "clean_room", "room", "guest", "arrival", "departure", "persons", "rate", "extras", "amount"}
+local inputs = {"room_name", "capacity", "room_rate", "guest_name", "phone", "clean_room", "room", "guest", "arrival", "departure", "persons", "rate", "extras", "amount", "group_name", "group_room1", "group_room2", "group_guest", "group_arrival", "group_departure", "group_persons1", "group_persons2", "group_rate1", "group_rate2", "night", "night_amount", "night_booking"}
 function Page:init()
   local day = orion.today()
   self.client = Remote.new(self.app.handle, "lodge")
   self.values = {room_name = "", capacity = 2, room_rate = 0, guest_name = "", phone = "", clean_room = 0,
     room = 0, guest = 0, arrival = day, departure = calendar.add(day, 1), persons = 1, rate = 0, extras = 0, amount = 0}
+  self.values.group_name, self.values.group_room1, self.values.group_room2, self.values.group_guest = "", 0, 0, 0
+  self.values.group_arrival, self.values.group_departure, self.values.group_persons1, self.values.group_persons2 = day, calendar.add(day, 1), 1, 1
+  self.values.group_rate1, self.values.group_rate2, self.values.night, self.values.night_amount, self.values.night_booking = 0, 0, day, 0, 0
+  self.day_report = ""
   self.allowed, self.connected, self.connection, self.notice = {}, false, orion.tr("Not connected."), ""
 end
 function Page:remember(values)
@@ -28,13 +32,13 @@ function Page:load_snapshot()
       guests[#guests + 1] = {id = item.id, name = item.name}; guest_names[item.id] = item.name
     end
     for _, item in ipairs(result.reservations or {}) do
-      reservations[#reservations + 1] = {id = item.id, room_name = room_names[item.room_id] or "", guest_name = guest_names[item.guest_id] or "",
+      reservations[#reservations + 1] = {id = item.id, choice = string.format("#%d · %s · %s", item.id, room_names[item.room_id] or "", item.arrival), room_name = room_names[item.room_id] or "", guest_name = guest_names[item.guest_id] or "",
         arrival = item.arrival, departure = item.departure, status = orion.tr(status_labels[item.status] or item.status), balance = item.balance}
     end
     Remote.replace_many({
       {source = "lodge_remote_cache.rooms", rows = rooms, fields = {"id", "name", "cleaning_state"}},
       {source = "lodge_remote_cache.guests", rows = guests, fields = {"id", "name"}},
-      {source = "lodge_remote_cache.reservations", rows = reservations, fields = {"id", "room_name", "guest_name", "arrival", "departure", "status", "balance"}},
+      {source = "lodge_remote_cache.reservations", rows = reservations, fields = {"id", "choice", "room_name", "guest_name", "arrival", "departure", "status", "balance"}},
     })
     self.notice = orion.tr("Server data refreshed.")
   end)
@@ -93,15 +97,43 @@ function Page:payment(v, sign)
 end
 function Page:pay(v) self:payment(v, 1) end
 function Page:refund(v) self:payment(v, -1) end
+function Page:group_reserve(v)
+  local stays = {}
+  for i = 1, 2 do
+    stays[i] = {room_id = v["group_room" .. i], guest_id = v.group_guest, arrival = v.group_arrival,
+      departure = v.group_departure, persons = v["group_persons" .. i], rate = v["group_rate" .. i], extras = 0, notes = ""}
+  end
+  self:submit(v, "group_reserve", {name = v.group_name, stays = stays})
+end
+function Page:night_price(v, command)
+  local id = orion.assert(v.night_booking and v.night_booking > 0 and v.night_booking, orion.tr("Choose a reservation."))
+  local args = {id = id, night = v.night}
+  if command == "set_night" then args.amount_minor = money.minor(v.night_amount) end
+  self:submit(v, command, args)
+end
+function Page:set_night(v) self:night_price(v, "set_night") end
+function Page:reset_night(v) self:night_price(v, "reset_night") end
+function Page:preview_day(v)
+  self:remember(v)
+  local ok, err = self.client:submit("day_preview", {}, function(report, failure)
+    if not report then self.notice = failure; return end
+    self.day_report = string.format(orion.tr("Day: %s · Net payments: %s · Outstanding: %s · Overdue: %d"),
+      orion.formatDate(report.day), orion.formatNumber(report.net_minor / 100, 2), orion.formatNumber(report.outstanding_minor / 100, 2), report.pending)
+    self.notice = report.closed and orion.tr("Today is closed.") or orion.tr("Day preview refreshed.")
+  end)
+  if not ok then self.notice = err end
+end
+function Page:close_day(v) self:submit(v, "close_day", {}) end
 function Page:data()
   local state = self.client:state()
   local blocked = not self.connected or state.busy or state.pending or state.conflict
   local disabled = {connect = state.busy or (state.pending and not state.conflict), retry = state.busy or not state.pending}
   local map = {add_room = "save_room", add_guest = "save_guest", mark_clean = "set_room_cleaning", reserve = "reserve",
-    check_in = "check_in", check_out = "check_out", cancel = "cancel", pay = "payment", refund = "payment"}
+    check_in = "check_in", check_out = "check_out", cancel = "cancel", pay = "payment", refund = "payment",
+    group_reserve = "group_reserve", set_night = "set_night", reset_night = "reset_night", preview_day = "day_preview", close_day = "close_day"}
   for control, command in pairs(map) do disabled[control] = blocked or not self.allowed[command] end
   local connection = self.connected and string.format(orion.tr("Country: %s · Role: %s · Revision: %d"), self.country, self.role, state.revision) or self.connection
-  local values = {connection = connection, notice = self.notice}
+  local values = {connection = connection, notice = self.notice, day_report = self.day_report}
   for key, value in pairs(self.values) do values[key] = value end
   return {values = values, disabled = disabled}
 end

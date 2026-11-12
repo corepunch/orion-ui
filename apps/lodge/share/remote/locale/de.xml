@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="de">
   <string source="Orion Lodge" obsolete="true">Orion Lodge</string>
-  <string source="Reception" obsolete="true">Rezeption</string>
+  <string source="Reception" where="remote">Rezeption</string>
   <string source="Rooms, guests and reservations · Amounts in your hotel's currency" obsolete="true">Zimmer, Gäste und Reservierungen · Beträge in der Hotelwährung</string>
   <string source="Add a room" obsolete="true">Zimmer hinzufügen</string>
   <string source="Room name:" where="remote">Zimmername:</string>
@@ -110,11 +110,11 @@
   <string source="Refund recorded." where="code">Erstattung erfasst.</string>
   <string source="Reservation %d" where="code">Reservierung %d</string>
   <string source="Balance: %s" where="code">Saldo: %s</string>
-  <string source="Nightly prices" obsolete="true">Nachtpreise</string>
-  <string source="Night:" obsolete="true">Nacht:</string>
+  <string source="Nightly prices" where="remote">Nachtpreise</string>
+  <string source="Night:" where="remote">Nacht:</string>
   <string source="Nightly price:" obsolete="true">Nachtpreis:</string>
   <string source="Show price" obsolete="true">Preis anzeigen</string>
-  <string source="Set price" obsolete="true">Preis speichern</string>
+  <string source="Set price" where="remote">Preis speichern</string>
   <string source="Use base rate" obsolete="true">Grundpreis verwenden</string>
   <string source="Remove nightly prices outside the new stay before changing the dates." where="code">Entfernen Sie Nachtpreise außerhalb des neuen Aufenthalts, bevor Sie die Daten ändern.</string>
   <string source="A nightly price cannot be moved to another date or reservation." where="code">Ein Nachtpreis kann nicht auf ein anderes Datum oder eine andere Reservierung verschoben werden.</string>
@@ -133,16 +133,16 @@
   <string source="Unknown service command." where="code">Unbekannter Dienstbefehl.</string>
   <string source="This role cannot perform that action." where="code">Diese Rolle darf diese Aktion nicht ausführen.</string>
   <string source="Group reservation" obsolete="true">Gruppenreservierung</string>
-  <string source="Close day" obsolete="true">Tag abschließen</string>
+  <string source="Close day" where="remote">Tag abschließen</string>
   <string source="Closing prevents reservation and payment changes until tomorrow." obsolete="true">Nach dem Abschluss sind Reservierungs- und Zahlungsänderungen erst morgen möglich.</string>
   <string source="Close today" obsolete="true">Heute abschließen</string>
   <string source="Create reservations for two rooms under one group." obsolete="true">Erstellen Sie Reservierungen für zwei Zimmer in einer Gruppe.</string>
-  <string source="Group name:" obsolete="true">Gruppenname:</string>
-  <string source="First room:" obsolete="true">Erstes Zimmer:</string>
+  <string source="Group name:" where="remote">Gruppenname:</string>
+  <string source="First room:" where="remote">Erstes Zimmer:</string>
   <string source="Guests in first room:" obsolete="true">Gäste im ersten Zimmer:</string>
-  <string source="Second room:" obsolete="true">Zweites Zimmer:</string>
+  <string source="Second room:" where="remote">Zweites Zimmer:</string>
   <string source="Guests in second room:" obsolete="true">Gäste im zweiten Zimmer:</string>
-  <string source="Create group reservations" obsolete="true">Gruppenreservierungen erstellen</string>
+  <string source="Create group reservations" where="remote">Gruppenreservierungen erstellen</string>
   <string source="Choose a valid reservation group." where="code">Wählen Sie eine gültige Reservierungsgruppe.</string>
   <string source="A reservation cannot be moved to another group." where="code">Eine Reservierung kann nicht in eine andere Gruppe verschoben werden.</string>
   <string source="A group needs between 2 and 100 room reservations." where="code">Eine Gruppe benötigt 2 bis 100 Zimmerreservierungen.</string>
@@ -201,4 +201,14 @@
   <string source="The pending request could not be stored or recovered." where="code">Die ausstehende Anfrage konnte nicht gespeichert oder wiederhergestellt werden.</string>
   <string source="Remote server identity is invalid or changed." where="code">Die Serveridentität ist ungültig oder hat sich geändert.</string>
   <string source="This server hosts a different application. Close the app and check the server configuration." where="code">Dieser Server stellt eine andere Anwendung bereit. Schließen Sie die Anwendung und prüfen Sie die Serverkonfiguration.</string>
+  <string source="Group" where="remote">Gruppe</string>
+  <string source="Two-room group" where="remote">Gruppe mit zwei Zimmern</string>
+  <string source="Selected reservation: nightly price" where="remote">Ausgewählte Reservierung: Nachtpreis</string>
+  <string source="Price:" where="remote">Preis:</string>
+  <string source="Restore base price" where="remote">Grundpreis wiederherstellen</string>
+  <string source="Day close" where="remote">Tagesabschluss</string>
+  <string source="Operational day" where="remote">Geschäftstag</string>
+  <string source="Preview day" where="remote">Tagesübersicht</string>
+  <string source="Day: %s · Net payments: %s · Outstanding: %s · Overdue: %d" where="code">Tag: %s · Nettozahlungen: %s · Offen: %s · Überfällig: %d</string>
+  <string source="Day preview refreshed." where="code">Tagesübersicht aktualisiert.</string>
 </strings>

@@ -11,7 +11,7 @@
 #include <sys/stat.h>
 
 static bool wait_for(database_t *db, int table, int id, const char *field, const char *expected) {
-  for (int i = 0; i < 3000; i++) {
+  for (int i = 0; i < 500; i++) {
     repost_messages();
     void *row = (void *)send_db_message(db, dbFind, (uint32_t)table, (void *)(intptr_t)id);
     if (row) {
@@ -20,6 +20,7 @@ static bool wait_for(database_t *db, int table, int id, const char *field, const
     }
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL);
   }
+  fprintf(stderr, "wait failed: %s=%s\n", field, expected);
   return false;
 }
 static void test_lodge_remote_ui(void) {
@@ -35,7 +36,7 @@ static void test_lodge_remote_ui(void) {
   const db_table_schema_t *rooms = db_schema_table_named(db->schema, "rooms"), *guests = db_schema_table_named(db->schema, "guests"), *stays = db_schema_table_named(db->schema, "reservations");
   ASSERT_NOT_NULL(rooms); ASSERT_NOT_NULL(guests); ASSERT_NOT_NULL(stays);
   ASSERT_TRUE(script_page_perform(page, "connect"));
-  for (int i = 0; i < 3000 && !strstr(script_page_control(page, "notice")->title, "Server data refreshed"); i++) {
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Server data refreshed"); i++) {
     struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
   }
   ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "Server data refreshed"));
@@ -59,6 +60,57 @@ static void test_lodge_remote_ui(void) {
   ASSERT_TRUE(script_page_perform(page, "pay"));
   ASSERT_TRUE(wait_for(db, stays->table_id, 1, "balance", "0.00"));
   ASSERT_TRUE(script_page_perform(page, "check_out")); ASSERT_TRUE(wait_for(db, stays->table_id, 1, "status", "Checked out"));
+  send_message(script_page_control(page, "room_name"), edSetText, 0, "Remote 102");
+  ASSERT_TRUE(script_page_perform(page, "add_room")); ASSERT_TRUE(wait_for(db, rooms->table_id, 2, "name", "Remote 102"));
+  send_message(script_page_control(page, "room_name"), edSetText, 0, "Remote 103");
+  ASSERT_TRUE(script_page_perform(page, "add_room")); ASSERT_TRUE(wait_for(db, rooms->table_id, 3, "name", "Remote 103"));
+  send_message(script_page_control(page, "sections"), tcSetSelection, 1, NULL);
+  send_message(script_page_control(page, "group_name"), edSetText, 0, "Conference");
+  send_message(script_page_control(page, "group_guest"), cbSetCurrentValue, 1, NULL);
+  send_message(script_page_control(page, "group_room1"), cbSetCurrentValue, 2, NULL);
+  send_message(script_page_control(page, "group_room2"), cbSetCurrentValue, 3, NULL);
+  send_message(script_page_control(page, "group_arrival"), edSetText, 0, "2035-02-01");
+  send_message(script_page_control(page, "group_departure"), edSetText, 0, "2035-02-02");
+  send_message(script_page_control(page, "group_persons1"), edSetText, 0, "1");
+  send_message(script_page_control(page, "group_persons2"), edSetText, 0, "1");
+  send_message(script_page_control(page, "group_rate1"), edSetText, 0, "50.00");
+  send_message(script_page_control(page, "group_rate2"), edSetText, 0, "60.00");
+  ASSERT_TRUE(script_page_perform(page, "group_reserve")); ASSERT_TRUE(wait_for(db, stays->table_id, 3, "status", "Reserved"));
+  ASSERT_TRUE(script_page_perform(page, "group_reserve"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "already booked"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "already booked"));
+  ASSERT_NULL((void *)send_db_message(db, dbFind, stays->table_id, (void *)(intptr_t)4));
+  send_message(script_page_control(page, "sections"), tcSetSelection, 2, NULL);
+  send_message(script_page_control(page, "night_booking"), cbSetCurrentValue, 2, NULL);
+  send_message(script_page_control(page, "night"), edSetText, 0, "2035-02-01");
+  send_message(script_page_control(page, "night_amount"), edSetText, 0, "75.00");
+  ASSERT_TRUE(script_page_perform(page, "set_night"));
+  bool price_set = wait_for(db, stays->table_id, 2, "balance", "75.00");
+  if (!price_set) fprintf(stderr, "notice: %s; error: %s\n", script_page_control(page, "notice")->title, script_page_control(page, "error")->title);
+  ASSERT_TRUE(price_set);
+  ASSERT_TRUE(script_page_perform(page, "reset_night")); ASSERT_TRUE(wait_for(db, stays->table_id, 2, "balance", "50.00"));
+  send_message(script_page_control(page, "sections"), tcSetSelection, 3, NULL);
+  ASSERT_TRUE(script_page_perform(page, "preview_day"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "day_report")->title, "Overdue:"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "day_report")->title, "Overdue: 0"));
+  ASSERT_TRUE(script_page_perform(page, "close_day"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Server data refreshed"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_TRUE(script_page_perform(page, "preview_day"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "Today is closed"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "Today is closed"));
+  ASSERT_TRUE(script_page_perform(page, "close_day"));
+  for (int i = 0; i < 500 && !strstr(script_page_control(page, "notice")->title, "already closed"); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "notice")->title, "already closed"));
   script_application_close(app); test_env_shutdown(); rmdir(directory); PASS();
 }
 int main(void) {

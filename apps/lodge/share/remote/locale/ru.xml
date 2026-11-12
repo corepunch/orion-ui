@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="ru">
   <string source="Orion Lodge" obsolete="true">Orion Lodge</string>
-  <string source="Reception" obsolete="true">Ресепшен</string>
+  <string source="Reception" where="remote">Ресепшен</string>
   <string source="Rooms, guests and reservations · Amounts in your hotel's currency" obsolete="true">Номера, гости и брони · Суммы в валюте отеля</string>
   <string source="Add a room" obsolete="true">Добавить номер</string>
   <string source="Room name:" where="remote">Название номера:</string>
@@ -110,11 +110,11 @@
   <string source="Refund recorded." where="code">Возврат записан.</string>
   <string source="Reservation %d" where="code">Бронирование %d</string>
   <string source="Balance: %s" where="code">Остаток: %s</string>
-  <string source="Nightly prices" obsolete="true">Цены по ночам</string>
-  <string source="Night:" obsolete="true">Ночь:</string>
+  <string source="Nightly prices" where="remote">Цены по ночам</string>
+  <string source="Night:" where="remote">Ночь:</string>
   <string source="Nightly price:" obsolete="true">Цена за ночь:</string>
   <string source="Show price" obsolete="true">Показать цену</string>
-  <string source="Set price" obsolete="true">Сохранить цену</string>
+  <string source="Set price" where="remote">Сохранить цену</string>
   <string source="Use base rate" obsolete="true">Использовать базовую цену</string>
   <string source="Remove nightly prices outside the new stay before changing the dates." where="code">Перед изменением дат удалите цены за ночи вне нового периода проживания.</string>
   <string source="A nightly price cannot be moved to another date or reservation." where="code">Цену за ночь нельзя перенести на другую дату или бронирование.</string>
@@ -133,16 +133,16 @@
   <string source="Unknown service command." where="code">Неизвестная команда сервиса.</string>
   <string source="This role cannot perform that action." where="code">Эта роль не может выполнить действие.</string>
   <string source="Group reservation" obsolete="true">Групповое бронирование</string>
-  <string source="Close day" obsolete="true">Закрыть день</string>
+  <string source="Close day" where="remote">Закрыть день</string>
   <string source="Closing prevents reservation and payment changes until tomorrow." obsolete="true">После закрытия изменения бронирований и платежей будут доступны завтра.</string>
   <string source="Close today" obsolete="true">Закрыть сегодня</string>
   <string source="Create reservations for two rooms under one group." obsolete="true">Создайте бронирования двух номеров для одной группы.</string>
-  <string source="Group name:" obsolete="true">Название группы:</string>
-  <string source="First room:" obsolete="true">Первый номер:</string>
+  <string source="Group name:" where="remote">Название группы:</string>
+  <string source="First room:" where="remote">Первый номер:</string>
   <string source="Guests in first room:" obsolete="true">Гостей в первом номере:</string>
-  <string source="Second room:" obsolete="true">Второй номер:</string>
+  <string source="Second room:" where="remote">Второй номер:</string>
   <string source="Guests in second room:" obsolete="true">Гостей во втором номере:</string>
-  <string source="Create group reservations" obsolete="true">Создать бронирования группы</string>
+  <string source="Create group reservations" where="remote">Создать бронирования группы</string>
   <string source="Choose a valid reservation group." where="code">Выберите допустимую группу бронирований.</string>
   <string source="A reservation cannot be moved to another group." where="code">Бронирование нельзя перенести в другую группу.</string>
   <string source="A group needs between 2 and 100 room reservations." where="code">Для группы требуется от 2 до 100 бронирований номеров.</string>
@@ -201,4 +201,14 @@
   <string source="The pending request could not be stored or recovered." where="code">Не удалось сохранить или восстановить ожидающий запрос.</string>
   <string source="Remote server identity is invalid or changed." where="code">Идентификатор сервера недействителен или изменился.</string>
   <string source="This server hosts a different application. Close the app and check the server configuration." where="code">На сервере работает другое приложение. Закройте приложение и проверьте настройки сервера.</string>
+  <string source="Group" where="remote">Группа</string>
+  <string source="Two-room group" where="remote">Группа из двух номеров</string>
+  <string source="Selected reservation: nightly price" where="remote">Выбранное бронирование: цена за ночь</string>
+  <string source="Price:" where="remote">Цена:</string>
+  <string source="Restore base price" where="remote">Восстановить базовую цену</string>
+  <string source="Day close" where="remote">Закрытие дня</string>
+  <string source="Operational day" where="remote">Операционный день</string>
+  <string source="Preview day" where="remote">Обзор дня</string>
+  <string source="Day: %s · Net payments: %s · Outstanding: %s · Overdue: %d" where="code">День: %s · Чистые платежи: %s · Долг: %s · Просрочено: %d</string>
+  <string source="Day preview refreshed." where="code">Обзор дня обновлён.</string>
 </strings>
