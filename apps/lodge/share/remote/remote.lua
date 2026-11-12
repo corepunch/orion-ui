@@ -154,7 +154,7 @@ function Page:confirmation(v)
     local row = orion.assert(self.reservations[id], orion.tr("Choose a reservation."))
     local room, guest = orion.assert(self.rooms[row.room_id]), orion.assert(self.guests[row.guest_id])
     local html = confirmation({guest = guest.name, room = room.name, arrival = row.arrival, departure = row.departure,
-      total = row.total, paid = row.paid, balance = row.balance})
+      status = row.status, currency = orion.assert(self.currency), total = row.total, paid = row.paid, balance = row.balance})
     local written, path = pcall(application.write, "confirmation.html", html)
     self.notice = written and string.format(orion.tr("Confirmation saved: %s"), path) or tostring(path)
   end)

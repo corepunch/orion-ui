@@ -71,6 +71,7 @@ function Reception:confirmation(v)
   local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
   local row = orion.assert(Hotel.reservations.model:find(selected.id))
   local html = confirmation({guest = row.guest.name, room = row.room.name, arrival = row.arrival, departure = row.departure,
+    status = row.status, currency = orion.assert(Hotel.hotel_settings.model:all()[1]).currency,
     total = Hotel.total(row), paid = Hotel.paid(row), balance = Hotel.balance(row)})
   self.notice = string.format(orion.tr("Confirmation saved: %s"), orion.assert(application.write("confirmation.html", html)))
 end

@@ -66,7 +66,15 @@ static void test_persistence_and_page(void) {
   ASSERT_NOT_NULL(strstr(script_page_control(page, "summary")->title, "3"));
   ASSERT_TRUE(script_page_perform(page, "confirmation"));
   char confirmation_path[160]; snprintf(confirmation_path, sizeof(confirmation_path), "%s/confirmation.html", directory);
-  FILE *confirmation_file = fopen(confirmation_path, "rb"); ASSERT_NOT_NULL(confirmation_file); fclose(confirmation_file);
+  FILE *confirmation_file = fopen(confirmation_path, "rb"); ASSERT_NOT_NULL(confirmation_file);
+  char confirmation_html[4096]; size_t confirmation_size = fread(confirmation_html, 1, sizeof(confirmation_html) - 1, confirmation_file);
+  fclose(confirmation_file); confirmation_html[confirmation_size] = 0;
+  ASSERT_NOT_NULL(strstr(confirmation_html, "EUR")); ASSERT_NOT_NULL(strstr(confirmation_html, "Checked out"));
+  ASSERT_TRUE(hotel_script(app,
+    "local render=require('remote.confirmation'); "
+    "for _,currency in ipairs({'EUR','RUB'}) do "
+    "local html=render({guest='<Guest>',room='101',arrival='2035-01-01',departure='2035-01-02',status='cancelled',currency=currency,total=100,paid=0,balance=100}); "
+    "assert(html:find(currency,1,true) and html:find('Cancelled',1,true) and html:find('&lt;Guest&gt;',1,true)); end"));
   ASSERT_TRUE(script_page_perform(page, "new_booking"));
   ASSERT_FALSE(script_page_perform(page, "reserve"));
   ASSERT_NOT_NULL(strstr(script_page_message(page), "room"));

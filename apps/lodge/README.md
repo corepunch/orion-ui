@@ -86,7 +86,7 @@ payment window and keeps it for retries. **Export confirmation** writes an escap
 `confirmation.html` in the data directory (replacing the previous export).
 See the [database migration guide](../../docs/lodge/migration-v2.md) before
 opening an existing hotel database.
-Open it in a browser to print. It is a booking confirmation, not a tax invoice.
+Open it in a browser to print. It includes the current reservation status and hotel currency; it is a booking confirmation, not a tax invoice.
 Reservation actions save immediately; catalog edits save when closing a window. A save failure rolls the action back and stays visible;
 **Retry saving** retries any pending database save; closing is blocked if the final save fails.
 

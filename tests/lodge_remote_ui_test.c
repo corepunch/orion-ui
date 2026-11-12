@@ -178,6 +178,7 @@ static void test_lodge_remote_ui(void) {
   size_t html_size = fread(html, 1, sizeof(html) - 1, confirmation_file); fclose(confirmation_file); html[html_size] = 0;
   ASSERT_NOT_NULL(strstr(html, "Updated &lt;guest&gt;")); ASSERT_NULL(strstr(html, "Updated <guest>"));
   ASSERT_NOT_NULL(strstr(html, "Updated 101")); ASSERT_NOT_NULL(strstr(html, "125.00"));
+  ASSERT_NOT_NULL(strstr(html, "EUR")); ASSERT_NOT_NULL(strstr(html, "Checked in"));
   char moved_directory[160]; snprintf(moved_directory, sizeof(moved_directory), "%s-moved", directory);
   ASSERT_EQUAL(rename(directory, moved_directory), 0);
   ASSERT_TRUE(script_page_perform(page, "confirmation"));
