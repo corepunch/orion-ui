@@ -180,5 +180,7 @@ Run `python3 apps/lodge/tests/test_shared_company.py` with `orion-service`
 built to exercise competing reservations and payments in both country
 configurations, including replay after a lost response and server restart. It also checks that a
 failed group reservation leaves no partial group or bookings, and that a successful
-group request remains idempotent after restart. These checks do not replace the
-full two-client shift and failure-recovery acceptance scenario.
+group request remains idempotent after restart. A service-level shift also covers
+room preparation, a stale edit and retry, check-in, payment and refund, checkout,
+role restrictions, day close, and replay after restart in both countries. These
+checks do not replace a full two-client UI shift and pilot acceptance.

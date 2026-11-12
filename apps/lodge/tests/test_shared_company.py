@@ -15,6 +15,68 @@ spec.loader.exec_module(server)
 
 @unittest.skipUnless((ROOT / 'build/bin/orion-service').is_file(), 'build orion-service first')
 class SharedCompanyTests(unittest.TestCase):
+    def test_complete_shift_with_recovery_and_roles(self):
+        for country in ('DE', 'RU'):
+            with self.subTest(country=country), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'company'
+                server.initialize(argparse.Namespace(state=str(path), application='lodge', country=country, configuration=None,
+                                  executable=str(ROOT / 'build/bin/orion-service'), resources=str(ROOT / 'apps/lodge/share'), source=None))
+                company = server.Company(path)
+                try:
+                    def request(actor, role, key, command, args, revision=None):
+                        body = {'request_id': key, 'expected_revision': company.status()['revision'] if revision is None else revision,
+                                'command': command, 'args': args}
+                        return body, company.execute(actor, role, body)
+                    def ok(actor, role, key, command, args):
+                        body, result = request(actor, role, key, command, args)
+                        self.assertTrue(result['ok'], result)
+                        return body, result
+                    room = ok('alice', 'reception', 'room', 'save_room', {'name': '101', 'capacity': 2, 'rate': 100})[1]['result']['id']
+                    guest = ok('alice', 'reception', 'guest', 'save_guest', {'name': 'Guest'})[1]['result']['id']
+                    stay = {'room_id': room, 'guest_id': guest, 'arrival': '2035-01-01', 'departure': '2035-01-02',
+                            'persons': 1, 'rate': 100, 'extras': 0, 'notes': ''}
+                    booking = ok('alice', 'reception', 'stay', 'reserve', stay)[1]['result']['id']
+                    self.assertFalse(request('bob', 'reception', 'premature', 'check_in', {'id': booking})[1]['ok'])
+                    with self.assertRaises(server.Refusal) as denied:
+                        request('cleaner', 'housekeeping', 'unauthorized-pay', 'payment',
+                                {'id': booking, 'amount_minor': 10000, 'request_key': 'denied'})
+                    self.assertEqual(denied.exception.status, 403)
+                    stale = company.status()['revision']
+                    ok('cleaner', 'housekeeping', 'inspect', 'set_room_cleaning', {'id': room, 'state': 'inspection_needed'})
+                    with self.assertRaises(server.Refusal) as conflict:
+                        request('bob', 'reception', 'stale-edit', 'reserve', {'id': booking, 'notes': 'Late arrival'}, stale)
+                    self.assertEqual(conflict.exception.status, 409)
+                    ok('bob', 'reception', 'edit', 'reserve', {'id': booking, 'notes': 'Late arrival'})
+                    ok('cleaner', 'housekeeping', 'clean', 'set_room_cleaning', {'id': room, 'state': 'clean'})
+                    ok('bob', 'reception', 'check-in', 'check_in', {'id': booking})
+                    payment_body, payment_result = ok('alice', 'reception', 'payment', 'payment',
+                                                       {'id': booking, 'amount_minor': 12000, 'request_key': 'payment'})
+                    company.close(); company = server.Company(path)
+                    self.assertEqual(company.execute('alice', 'reception', payment_body), payment_result)
+                    ok('bob', 'reception', 'refund', 'payment', {'id': booking, 'amount_minor': -2000, 'request_key': 'refund'})
+                    ok('bob', 'reception', 'checkout', 'check_out', {'id': booking})
+                    view = ok('alice', 'reception', 'view', 'snapshot', {})[1]['result']
+                    self.assertEqual(view['reservations'][0]['status'], 'checked_out')
+                    self.assertEqual(view['reservations'][0]['notes'], 'Late arrival')
+                    self.assertEqual(view['reservations'][0]['balance'], 0)
+                    self.assertEqual(view['rooms'][0]['cleaning_state'], 'dirty')
+                    self.assertEqual([event['amount_minor'] for event in view['payment_events']], [12000, -2000])
+                    preview = ok('alice', 'reception', 'preview', 'day_preview', {})[1]['result']
+                    self.assertEqual((preview['net_minor'], preview['outstanding_minor'], preview['pending']), (10000, 0, 0))
+                    with self.assertRaises(server.Refusal) as denied_close:
+                        request('alice', 'reception', 'denied-close', 'close_day', {})
+                    self.assertEqual(denied_close.exception.status, 403)
+                    close_body, close_result = ok('manager', 'admin', 'close', 'close_day', {})
+                    company.close(); company = server.Company(path)
+                    self.assertEqual(company.execute('manager', 'admin', close_body), close_result)
+                    closed = ok('bob', 'reception', 'closed', 'snapshot', {})[1]['result']
+                    self.assertEqual(len(closed['day_closes']), 1)
+                    self.assertEqual(len(closed['payment_events']), 2)
+                    self.assertFalse(request('bob', 'reception', 'after-close', 'payment',
+                                             {'id': booking, 'amount_minor': 100, 'request_key': 'after-close'})[1]['ok'])
+                finally:
+                    company.close()
+
     def test_cancelled_payments_in_day_preview(self):
         for country in ('DE', 'RU'):
             with self.subTest(country=country), tempfile.TemporaryDirectory() as directory:
