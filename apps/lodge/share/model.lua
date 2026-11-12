@@ -104,8 +104,9 @@ function Model:after_write(table, operation, current, previous)
         request_key = Hotel.payment_request or ""})
       if not saved then return nil, refusal end
     end
-    if previous and previous.status ~= "checked_out" and current and current.status == "checked_out" then
-      saved, refusal = Hotel.rooms:save(current.room_id, {cleaning_state = "dirty"})
+    if previous and current and ((previous.status ~= "checked_out" and current.status == "checked_out") or
+      (previous.status == "checked_in" and current.room_id ~= previous.room_id)) then
+      saved, refusal = Hotel.rooms:save(previous.room_id, {cleaning_state = "dirty"})
       if not saved then return nil, refusal end
     end
     return true

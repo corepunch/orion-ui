@@ -121,5 +121,37 @@ class SharedCompanyTests(unittest.TestCase):
                     company.close()
 
 
+    def test_checked_in_room_transfer(self):
+        for country in ('DE', 'RU'):
+            with self.subTest(country=country), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'company'
+                server.initialize(argparse.Namespace(state=str(path), application='lodge', country=country, configuration=None,
+                                  executable=str(ROOT / 'build/bin/orion-service'), resources=str(ROOT / 'apps/lodge/share'), source=None))
+                company = server.Company(path)
+                try:
+                    def request(key, command, args, role='reception'):
+                        return company.execute('alice', role, {'request_id': key, 'expected_revision': company.status()['revision'],
+                                                               'command': command, 'args': args})
+                    rooms = [request('room-' + str(i), 'save_room', {'name': str(i), 'capacity': 2, 'rate': 100})['result']['id'] for i in (101, 102)]
+                    guest = request('guest', 'save_guest', {'name': 'Guest'})['result']['id']
+                    booking = request('reserve', 'reserve', {'room_id': rooms[0], 'guest_id': guest, 'arrival': '2035-01-01',
+                                      'departure': '2035-01-02', 'persons': 1, 'rate': 100, 'extras': 0, 'notes': ''})['result']['id']
+                    self.assertTrue(request('clean-first', 'set_room_cleaning', {'id': rooms[0], 'state': 'clean'}, 'housekeeping')['ok'])
+                    self.assertTrue(request('check-in', 'check_in', {'id': booking})['ok'])
+                    self.assertFalse(request('bad-transfer', 'reserve', {'id': booking, 'room_id': rooms[1]})['ok'])
+                    before = request('before-transfer', 'snapshot', {})['result']
+                    self.assertEqual(before['reservations'][0]['room_id'], rooms[0])
+                    self.assertEqual(before['rooms'][0]['cleaning_state'], 'clean')
+                    self.assertTrue(request('clean-second', 'set_room_cleaning', {'id': rooms[1], 'state': 'clean'}, 'housekeeping')['ok'])
+                    self.assertTrue(request('transfer', 'reserve', {'id': booking, 'room_id': rooms[1]})['ok'])
+                    company.close(); company = server.Company(path)
+                    after = request('after-transfer', 'snapshot', {})['result']
+                    self.assertEqual(after['reservations'][0]['room_id'], rooms[1])
+                    self.assertEqual(after['rooms'][0]['cleaning_state'], 'dirty')
+                    self.assertEqual(after['rooms'][1]['cleaning_state'], 'clean')
+                finally:
+                    company.close()
+
+
 if __name__ == '__main__':
     unittest.main()
