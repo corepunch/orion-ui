@@ -9,11 +9,12 @@
 
 #define SRGB_TO_LINEAR_GAMMA 2.2f
 
-static GLuint prog;
+static GLuint prog, occlusion_fallback;
 static GLuint vlocPos, vlocNrm;
 static GLint ulocInst, ulocInstBase, ulocViewProj, ulocViewPos, ulocLightPos, ulocLightColor, ulocLightRadius;
 static GLint ulocAmbient, ulocAmbientOn, ulocLightRange, ulocSky, ulocSkyOn, ulocRamp, ulocRampOn;
 static GLint vlocGrad, ulocMaps;
+static GLint ulocDepthOnly, ulocOcclusionOn, ulocOcclusionProj, ulocOcclusionView, ulocOcclusionViewport;
 #ifdef SCENER_USE_TEXTURES
 static GLint ulocTex;
 #endif
@@ -32,6 +33,7 @@ static const char *vs_src =
 "uniform mat4 uViewProj;\n"
 "uniform samplerBuffer uInst;\n"
 "uniform int uInstBase;\n"
+"uniform bool uDepthOnly;\n"
 "out float vGrad;\n"
 "out vec3 vLocalPos;\n"
 "out vec3 vLocalNrm;\n"
@@ -50,10 +52,12 @@ static const char *vs_src =
 "void main(){\n"
 "    int b=(uInstBase+gl_InstanceID)*12;\n"
 "    vec4 m0=texelFetch(uInst,b),m1=texelFetch(uInst,b+1),m2=texelFetch(uInst,b+2);\n"
-"    vec4 n0=texelFetch(uInst,b+3),n1=texelFetch(uInst,b+4),n2=texelFetch(uInst,b+5);\n"
-"    vec4 c=texelFetch(uInst,b+6);\n"
 "    vec4 p=vec4(aPos,1.0);\n"
 "    vec4 wp=vec4(dot(m0,p),dot(m1,p),dot(m2,p),1.0);\n"
+"    gl_Position=uViewProj*wp;\n"
+"    if(uDepthOnly) return;\n"
+"    vec4 n0=texelFetch(uInst,b+3),n1=texelFetch(uInst,b+4),n2=texelFetch(uInst,b+5);\n"
+"    vec4 c=texelFetch(uInst,b+6);\n"
 "    vWorldPos=wp.xyz;\n"
 "    vWorldNrm=normalize(vec3(dot(n0.xyz,aNrm),dot(n1.xyz,aNrm),dot(n2.xyz,aNrm)));\n"
 "    vGrad=aGrad; vLocalPos=aPos; vLocalNrm=aNrm; vUV=aUV;\n"
@@ -66,7 +70,6 @@ static const char *vs_src =
 "    if(n.y>n.x&&n.y>n.z) vWorldUV=wp.xz*0.5;\n"
 "    else if(n.x>n.y&&n.x>n.z) vWorldUV=wp.yz*0.5;\n"
 "    else vWorldUV=wp.xy*0.5;\n"
-"    gl_Position=uViewProj*wp;\n"
 "}\n";
 
 static const char *fs_src =
@@ -173,6 +176,49 @@ static const char *fs_src =
 "        if(abs(det)>1e-12) N=normalize(abs(det)*N-g);\n"
 "    }\n"
 "}\n"
+"#define AO_RADIUS 0.35\n"
+"#define AO_BIAS 0.006\n"
+"#define AO_SAMPLES 24\n"
+"#define AO_STRENGTH 4.0\n"
+"#define AO_MIN_VISIBILITY 0.25\n"
+"uniform bool uDepthOnly;\n"
+"uniform bool uOcclusionOn;\n"
+"uniform sampler2D uOcclusionDepth;\n"
+"uniform mat4 uOcclusionProj;\n"
+"uniform mat3 uOcclusionView;\n"
+"uniform vec2 uOcclusionViewport;\n"
+"vec3 view_position(vec2 uv,float depth){\n"
+"    vec3 ndc=vec3(uv,depth)*2.0-1.0;\n"
+"    mat4 p=uOcclusionProj;\n"
+"    float z=(p[3][2]-ndc.z*p[3][3])/(ndc.z*p[2][3]-p[2][2]);\n"
+"    float w=p[2][3]*z+p[3][3];\n"
+"    return vec3((ndc.xy*w-p[3].xy)/vec2(p[0][0],p[1][1]),z);\n"
+"}\n"
+"float ambient_visibility(vec3 normal){\n"
+"    vec2 uv=gl_FragCoord.xy/uOcclusionViewport;\n"
+"    vec3 center=view_position(uv,gl_FragCoord.z);\n"
+"    vec3 n=uOcclusionView*normal;\n"
+"    mat4 p=uOcclusionProj;\n"
+"    vec2 radius=0.5*AO_RADIUS*vec2(p[0][0],p[1][1])/(p[2][3]*center.z+p[3][3]);\n"
+"    vec2 size=vec2(textureSize(uOcclusionDepth,0));\n"
+"    // A fixed golden-angle spiral keeps the taps stable during animation.\n"
+"    const mat2 turn=mat2(-0.737369,0.675490,-0.675490,-0.737369);\n"
+"    vec2 dir=vec2(1.0,0.0);\n"
+"    float sum=0.0;\n"
+"    for(int i=0;i<AO_SAMPLES;i++,dir=turn*dir){\n"
+"        vec2 sampleUV=uv+dir*radius*((float(i)+0.5)/float(AO_SAMPLES));\n"
+"        if(any(lessThan(sampleUV,vec2(0.0)))||any(greaterThanEqual(sampleUV,vec2(1.0)))) continue;\n"
+"        ivec2 pixel=ivec2(sampleUV*size);\n"
+"        float depth=texelFetch(uOcclusionDepth,pixel,0).r;\n"
+"        if(depth>=1.0) continue;\n"
+"        vec3 delta=view_position((vec2(pixel)+0.5)/size,depth)-center;\n"
+"        float dist2=dot(delta,delta);\n"
+"        float angle=max(dot(n,delta)-AO_BIAS,0.0)*inversesqrt(max(dist2,AO_BIAS*AO_BIAS));\n"
+"        float falloff=max(1.0-dist2/(AO_RADIUS*AO_RADIUS),0.0);\n"
+"        sum+=angle*falloff*falloff;\n"
+"    }\n"
+"    return max(1.0-sum*(AO_STRENGTH/float(AO_SAMPLES)),AO_MIN_VISIBILITY);\n"
+"}\n"
 "uniform vec3 uSky;\n"
 "uniform vec3 uAmbient;\n"
 "uniform int uAmbientOn;\n"
@@ -183,6 +229,7 @@ static const char *fs_src =
 "uniform sampler2D uTex;\n"
 #endif
 "void main(){\n"
+"    if(uDepthOnly) return;\n"
 "    vec3 uColor=vColor; float uShininess=vMat.x,uSpecular=vMat.y,uMetallic=vMat.z;\n"
 "    vec3 N=normalize(vWorldNrm);\n"
 "    if(vMaps.y>0) apply_maps(uColor,N);\n"
@@ -214,6 +261,7 @@ static const char *fs_src =
 "        /* The depth-filling pass: ambient light (an unlit object shows its own colour), plus the sky in glossy\n"
 "           surfaces: the reflection direction picks sky above, ground below; Fresnel is damped by roughness. */\n"
 "        vec3 base=clamp(uColor*texColor*mix(uAmbient,vec3(1.0),vUnlit),0.0,1.0);\n"
+"        if(uOcclusionOn && vUnlit<0.5) base*=ambient_visibility(normalize(vWorldNrm));\n"
 "        if(uSkyOn>0 && vUnlit<0.5){\n"
 "            vec3 Rv=reflect(-V,N);\n"
 "            float up=clamp(Rv.y*0.5+0.5,0.0,1.0);\n"
@@ -271,6 +319,21 @@ void shader_init(void){
 	ulocSky         = glGetUniformLocation(prog, "uSky");
 	ulocAmbient     = glGetUniformLocation(prog, "uAmbient");
 	ulocAmbientOn   = glGetUniformLocation(prog, "uAmbientOn");
+	ulocDepthOnly   = glGetUniformLocation(prog, "uDepthOnly");
+	ulocOcclusionOn = glGetUniformLocation(prog, "uOcclusionOn");
+	ulocOcclusionProj = glGetUniformLocation(prog, "uOcclusionProj");
+	ulocOcclusionView = glGetUniformLocation(prog, "uOcclusionView");
+	ulocOcclusionViewport = glGetUniformLocation(prog, "uOcclusionViewport");
+	glUseProgram(prog);
+	glUniform1i(glGetUniformLocation(prog, "uOcclusionDepth"), 3);
+	glUseProgram(0);
+	GLint previous_texture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, &previous_texture);
+	glGenTextures(1, &occlusion_fallback);
+	glBindTexture(GL_TEXTURE_2D, occlusion_fallback);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, 1, 1, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glBindTexture(GL_TEXTURE_2D, (GLuint)previous_texture);
 	ulocSkyOn       = glGetUniformLocation(prog, "uSkyOn");
 	ulocRamp        = glGetUniformLocation(prog, "uRamp");
 	ulocRampOn      = glGetUniformLocation(prog, "uRampOn");
@@ -284,7 +347,8 @@ void shader_init(void){
 void shader_deinit(void){
 	vcache_shutdown();
 	if(prog) glDeleteProgram(prog);
-	prog = 0;
+	if(occlusion_fallback) glDeleteTextures(1, &occlusion_fallback);
+	prog = occlusion_fallback = 0;
 }
 
 void shader_bind(void){
@@ -301,6 +365,26 @@ void shader_set_viewproj(mat4 m){
 
 void shader_set_camera_pos(vec3 pos){
 	glUniform3f(ulocViewPos, pos.x, pos.y, pos.z);
+}
+
+void shader_set_depth_only(int on){
+	glUniform1i(ulocDepthOnly, on);
+}
+
+void shader_set_occlusion(unsigned int depth, mat4 proj, mat4 view, int w, int h){
+	glUniform1i(ulocOcclusionOn, depth != 0);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, depth ? depth : occlusion_fallback);
+	glActiveTexture(GL_TEXTURE0);
+	if(!depth) return;
+	float rotation[] = {
+		view.m[0], view.m[1], view.m[2],
+		view.m[4], view.m[5], view.m[6],
+		view.m[8], view.m[9], view.m[10],
+	};
+	glUniformMatrix4fv(ulocOcclusionProj, 1, GL_FALSE, proj.m);
+	glUniformMatrix3fv(ulocOcclusionView, 1, GL_FALSE, rotation);
+	glUniform2f(ulocOcclusionViewport, (float)w, (float)h);
 }
 
 void shader_set_light(Light *L){

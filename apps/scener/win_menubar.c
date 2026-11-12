@@ -235,6 +235,12 @@ void handle_menu_command(uint16_t id) {
       g_app->debug_flags ^= DBG_NO_SHADOWS;
       break;
 
+    case ID_VIEW_TOGGLE_SSAO:
+      g_app->debug_flags ^= DBG_SSAO;
+      for (scene_doc_t *view = g_app->docs; view; view = view->next)
+        if (view->viewport_win) invalidate_window(view->viewport_win);
+      break;
+
     case ID_VIEW_SHOW_WIREFRAME:
       g_app->debug_flags ^= DBG_WIRE_SHADOWVOL;
       break;

@@ -90,7 +90,7 @@ static void cli_usage(void) {
 	     "scener --reel REEL --sheet FILE.png [--columns N] [--sheet-times T1,T2,...]   one thumbnail per shot (or 12 across the reel)\n"
 	     "scener --render SCENE --camera NAME --frames START:END:FPS --output FILE.mp4 [--size WIDTHxHEIGHT]\n"
 	     "Options: --time SECONDS, --frames START:END:FPS (with --render), --supersample 1..4 (default 2),\n"
-	     "  --transparent (PNG background alpha 0), -no-shadows, -wireframe, -d FLAGS, --help, --version\n"
+	     "  --transparent (PNG background alpha 0), --ssao, -no-shadows, -wireframe, -d FLAGS, --help, --version\n"
 	     "A camera with size=\"W H\" renders at that size in --render; ortho=\"HEIGHT_CM\" makes it orthographic.\n"
 	     "Scenes default to Y up; <scene up=\"z\"> selects Z-up views without changing primitive axes.");
 }
@@ -101,6 +101,7 @@ static void cli_parse(int argc, char *argv[]) {
 	g_cli.width=1280; g_cli.height=800; g_cli.layout_scale=2;g_cli.supersample=CLI_DEFAULT_SUPERSAMPLE;
 	strcpy(g_cli.format,"jpg"); strcpy(g_cli.output_dir,".");
 	g_cli.debug_flags=DBG_HIDE_CHARS|DBG_HIDE_LIGHTS;
+	bool ssao=false;
 	for(int i=1;i<argc;i++){
 		const char *arg=argv[i], *value=NULL;
 		if(!strcmp(arg,"--help")||!strcmp(arg,"-h")){g_cli.help=true;continue;}
@@ -109,6 +110,7 @@ static void cli_parse(int argc, char *argv[]) {
 		if(!strcmp(arg,"--layout")){g_cli.layout=g_cli.screenshot_mode=true;continue;}
 		if(!strcmp(arg,"--list-cameras")||!strcmp(arg,"-list-cameras")){g_cli.list_cameras=true;continue;}
 		if(!strcmp(arg,"--list-joints")){g_cli.list_joints=true;continue;}
+		if(!strcmp(arg,"--ssao")){ssao=true;continue;}
 		if(!strcmp(arg,"-no-shadows")){g_cli.debug_flags|=DBG_NO_SHADOWS;continue;}
 		if(!strcmp(arg,"-wireframe")){g_cli.debug_flags|=DBG_WIREFRAME;continue;}
 		if(!strcmp(arg,"--transparent")){g_cli.transparent=true;continue;}
@@ -178,6 +180,7 @@ static void cli_parse(int argc, char *argv[]) {
 			else{g_cli.frames=true;g_cli.frame_start=a;g_cli.frame_end=b;g_cli.fps=f;}
 		}else if(!strcmp(arg,"-d")) g_cli.debug_flags=atoi(value);
 	}
+	if(ssao) g_cli.debug_flags|=DBG_SSAO;
 	if(g_cli.json&&!g_cli.check){fprintf(stderr,"--json applies to --check\n");g_cli.invalid=true;}
 	if(g_cli.strict&&(!g_cli.check||g_cli.reel_path[0])){fprintf(stderr,"--strict applies to a scene --check\n");g_cli.invalid=true;}
 	if(g_cli.all_cameras&&(!g_cli.check||g_cli.reel_path[0]||g_cli.camera_name[0])){fprintf(stderr,"--all-cameras applies to a scene --check without --camera\n");g_cli.invalid=true;}
@@ -283,7 +286,7 @@ static bool cli_run_reel(void){
 	bool ok=reel_sample(r,stderr);
 	bool video=g_cli.output_path[0]&&cli_has_extension(g_cli.output_path,".mp4");
 	if(ok&&g_cli.output_dir_set)ok=cli_make_dirs(g_cli.output_dir);
-	ok=ok&&reel_gl_init(r,(g_cli.debug_flags&(DBG_NO_SHADOWS|DBG_WIREFRAME))|DBG_HIDE_CHARS|DBG_HIDE_LIGHTS|DBG_HIDE_GIZMOS);
+	ok=ok&&reel_gl_init(r,(g_cli.debug_flags&(DBG_NO_SHADOWS|DBG_WIREFRAME|DBG_SSAO))|DBG_HIDE_CHARS|DBG_HIDE_LIGHTS|DBG_HIDE_GIZMOS);
 	uint8_t *pixels=ok?malloc((size_t)r->width*r->height*4):NULL;
 	ok=ok&&pixels;
 	double start=axGetMilliseconds();

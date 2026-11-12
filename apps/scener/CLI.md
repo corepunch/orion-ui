@@ -25,7 +25,7 @@ scener --help
 scener --version
 scener --list-cameras /absolute/path/room.blks
 scener --render /absolute/path/room.blks --size 1536x1024 --format jpg --output-dir render/room
-scener --render /absolute/path/room.blks --camera room-main --size 1536x1024 --format png --output-dir render/room
+scener --render /absolute/path/room.blks --camera room-main --size 1536x1024 --format png --output-dir render/room --ssao
 scener --layout /absolute/path/room.blks --scale 2 --format jpg --output-dir render/room
 scener /absolute/path/room.blks --cam room-main --screenshot /tmp/preview.png
 scener --render /absolute/path/walk.blks --camera Track --frames 0:7.5:24 --output-dir render/walk
@@ -103,6 +103,12 @@ camera and always takes z-fail (Carmack's reverse), since z-pass relies on the
 caster's own depth. Over a white catcher lit by one sun this gives a shadow-only
 pass; nile-archive's `tools/scener_buildings.py` renders its city buildings and
 their ground shadows this way. Helper overlays are hidden by default.
+
+Screen-space ambient occlusion (SSAO) is off by default. Choose **View → Toggle
+Ambient Occlusion** in the editor or pass `--ssao` when opening a scene or
+rendering stills, video, or reel scene layers. SSAO darkens ambient diffuse
+lighting near visible contacts and creases. Flat layouts and wireframe
+renders skip it. See the [attic scene comparison](docs/images/ssao-comparison.png).
 
 A logged-in graphical session and OpenGL context are needed for rendering;
 help, version and camera listing need no graphical startup.

@@ -9,6 +9,8 @@ void shader_bind(void);
 void shader_unbind(void);
 void shader_set_viewproj(mat4 m);
 void shader_set_camera_pos(vec3 pos);
+void shader_set_depth_only(int on);
+void shader_set_occlusion(unsigned int depth, mat4 proj, mat4 view, int w, int h);
 void shader_set_light(Light *L);
 #define SHADER_INSTANCE_FLOATS 48   /* floats per object in the instance buffer */
 #define MAP_TEXELS 5                /* RGBA32F texels per map in the map table */

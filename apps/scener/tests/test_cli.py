@@ -127,6 +127,38 @@ def main():
         if not software:
             assert sum(a != b for lit, unshadowed in zip(rows, no_shadow_rows) for a, b in zip(lit, unshadowed)) > 100, 'default render has no cast shadows'
 
+        ao_scene = work / 'occlusion.blks'
+        ao_scene.write_text("""<scene up="z" ambient="0.65 0.65 0.65" background="0.1 0.2 0.3">
+<camera name="perspective" pos="140 -240 160" look="0 0 25" fov="56"/>
+<camera name="orthographic" pos="140 -240 160" look="0 0 25" ortho="250"/>
+<box size="240 200 10" pos="0 0 -5" color="0.8 0.8 0.8"/>
+<box size="60 60 75" pos="0 10 37.5" color="0.8 0.8 0.8"/>
+<box size="24 24 20" pos="55 -25 10" color="0.2 0.9 0.2" unlit="1"/>
+</scene>""")
+        ao_args = ('--render', ao_scene, '--size', '241x181', '--supersample', '1',
+                   '--format', 'png', '-no-shadows')
+        run(*ao_args, '--output-dir', 'ao-off')
+        result = run(*ao_args, '--output-dir', 'ao-on', '--ssao')
+        assert 'SSAO depth framebuffer' not in result.stderr, result.stderr
+        for camera in ('perspective', 'orthographic'):
+            off, stride = png_rows(work / f'ao-off/{camera}.png')
+            on, _ = png_rows(work / f'ao-on/{camera}.png')
+            assert off[0][:stride] == on[0][:stride], f'{camera}: SSAO changed the background'
+            changed = 0
+            unlit = 0
+            for before, after in zip(off, on):
+                assert before[3::stride] == after[3::stride], f'{camera}: SSAO changed coverage'
+                changed += sum(a - b > 6 for a, b in zip(before[0::stride], after[0::stride]))
+                for x in range(0, len(before), stride):
+                    if before[x + 1] > 2 * before[x]:
+                        unlit += 1
+                        assert before[x:x + stride] == after[x:x + stride], f'{camera}: SSAO changed an unlit object'
+            assert unlit > 50
+            assert changed > 35, f'{camera}: SSAO did not darken contacts'
+        run(*ao_args, '--camera', 'perspective', '--transparent', '--ssao', '--output-dir', 'ao-alpha')
+        alpha, stride = png_rows(work / 'ao-alpha/perspective.png')
+        assert stride == 4 and alpha[0][3] == 0 and alpha[90][120 * stride + 3] == 255
+
         run('--layout', scene, '--scale', '0.2', '--format', 'jpg', '--output-dir', 'layout')
         assert all(value > 0 for value in dimensions(work / 'layout/layout.jpg'))
         run(scene, '--screenshot', 'legacy.png', '--cam', 'front', '--size', '160x120', '-wireframe')

@@ -440,6 +440,7 @@ void scene_rebuild_node_shadow_volumes(Scene *s,void *editNode);
 #define DBG_WIREFRAME       (1 << 6)
 #define DBG_FLAT            (1 << 7)
 #define DBG_TRANSPARENT     (1 << 8)   /* clear to alpha 0, so a PNG keeps only what was drawn */
+#define DBG_SSAO            (1 << 9)
 
 void render_frame(Scene *s,int w,int h,mat4 proj,mat4 view,vec3 camPos,vec3 camLook,int debugFlags);
 void render_deinit(void);
