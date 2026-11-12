@@ -27,7 +27,12 @@ raw frames to `ffmpeg` elsewhere. No intermediate images are written.
 the poster frame. `--sheet FILE.png` writes a contact sheet (480 px thumbnails,
 `--columns N`, default 4): the middle of each `<shot>`, or twelve even frames
 when the reel has none; `--sheet-times 1.5,4,9` picks the moments. It prints
-each thumbnail's time, and works alone or together with `--output`. `-no-shadows` applies to scene layers. A video has
+each thumbnail's time, and works alone or together with `--output`.
+`--ssao` enables ambient occlusion for 3D scene layers in frames, videos,
+posters, and contact sheets. The `-no-shadows` flag controls stencil shadows
+independently. [SSAO options](../CLI.md#screen-space-ambient-occlusion).
+
+A video has
 `floor(duration × fps)` frames, so a 6 s, 24 fps reel is exactly 144 frames
 and loops without a duplicated frame.
 

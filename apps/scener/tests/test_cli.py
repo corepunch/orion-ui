@@ -101,7 +101,10 @@ def main():
             assert (result.returncode == 0) == success, result.stdout + result.stderr
             return result
         assert 'scener' in run('--version').stdout
-        assert '--render' in run('--help').stdout
+        help_text = run('--help').stdout
+        assert '--render' in help_text
+        assert any(line.startswith('  --ssao ') and 'off by default' in line
+                   for line in help_text.splitlines())
         assert run('--list-cameras', scene).stdout.splitlines() == ['front', 'side']
         for arguments in [('--bogus',), ('--render',), ('--render', scene, '--format', 'gif'), ('--render', scene, '--size', '0x100'), ('--render', scene, '--supersample', '5'), ('--render', scene, '--camera', 'absent')]:
             run(*arguments, success=False)
@@ -291,7 +294,7 @@ def main():
         for prefab in sorted((content / 'prefabs').rglob('*.blk')):
             report = json.loads(run('--check', prefab, '--json').stdout)
             assert report['errors'] == 0 and report['warnings'] == 0, report
-        print('PASS: CLI errors, cameras, JPEG/PNG encoding, output dimensions, batch, selection, layout, legacy screenshot, reels, check, per-camera check, query, prefab info')
+        print('PASS: CLI help and errors, cameras, SSAO, JPEG/PNG encoding, output dimensions, batch, selection, layout, legacy screenshot, reels, check, per-camera check, query, prefab info')
 
 
 if __name__ == '__main__':
