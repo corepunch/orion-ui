@@ -24,8 +24,11 @@ not held.
 
 To restore, stop other writers and preserve a copy of both files. The explicit
 `db_schema_xml_open_backup(name, class_name, schema, path)` operation acquires
-the primary lock, checks the backup XML root and supported version, copies and
-syncs it into place, and returns an open database. It fails if the backup is
+the primary lock, checks the backup XML root and supported version, copies and syncs it to a
+temporary file, fully loads that copy, then publishes it and returns an open
+database. A backup that cannot be loaded leaves the primary and open records
+unchanged. A directory sync failure after publication has an uncertain durable
+outcome; the open records reflect the published copy. It fails if the backup is
 missing, malformed or incompatible. `db_schema_xml_restore_backup(db)` does
 the same for an already open, clean store with no active change scope. Recovery
 is deliberate; opening a broken primary never silently replaces it. Validation
@@ -73,5 +76,6 @@ or a declarative transformation language. Maintain supported-version policies
 and test every application migration against actual historical data. The native
 `test_db_persistence_test` exercises writer exclusion, backup contents, killed
 writer lock release, rejected newer versions, migration and publication failure,
-read-only migration, field-loss rejection and explicit backup recovery. It does
+read-only migration, field-loss rejection, explicit backup recovery and rejection
+of a backup with an invalid field before publication. It does
 not simulate power failure at every filesystem operation.

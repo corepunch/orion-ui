@@ -114,6 +114,46 @@ static void test_migrations(void) {
   ASSERT_NULL(db_schema_xml_open_backup("book", "db_schema_xml", &schema, path)); unlink(extra);
   snprintf(extra, sizeof(extra), "%s.lock", path); unlink(extra); rmdir(dir); PASS();
 }
+typedef struct { int id; int64_t amount; } recovery_row_t;
+static const db_field_meta_t recovery_meta[] = {
+  {"id", DB_TYPE_INT, offsetof(recovery_row_t, id)},
+  {"amount", DB_TYPE_INT64, offsetof(recovery_row_t, amount)},
+};
+static const db_field_schema_t recovery_fields[] = {
+  {.name="id", .type=DB_TYPE_INT, .primary_key=true},
+  {.name="amount", .type=DB_TYPE_INT64},
+};
+static const db_table_schema_t recovery_tables[] = {
+  {.table_id=0, .name="records", .fields=recovery_fields, .field_count=2,
+   .meta=recovery_meta, .meta_count=2, .record_size=sizeof(recovery_row_t)},
+};
+static const db_schema_def_t recovery_schema = {
+  .name="book", .class_name="db_schema_xml", .tables=recovery_tables, .table_count=1,
+};
+static void test_restore_rejects_unloadable_backup(void) {
+  TEST("schema XML: failed backup load preserves primary and open records");
+  char dir[512], path[1024], backup[1040], lock[1040];
+  ASSERT_TRUE(persistence_tempdir(dir, sizeof(dir)));
+  snprintf(path, sizeof(path), "%s/book.xml", dir);
+  snprintf(backup, sizeof(backup), "%s.bak", path);
+  snprintf(lock, sizeof(lock), "%s.lock", path);
+  database_t *db = create_database_with_schema("book", "db_schema_xml", &recovery_schema, path);
+  ASSERT_NOT_NULL(db);
+  recovery_row_t row = {.id=1, .amount=42};
+  ASSERT_TRUE(send_db_message(db, dbInsert, 0, &row));
+  ASSERT_TRUE(send_db_message(db, dbSave, 0, NULL));
+  FILE *f = fopen(backup, "w"); ASSERT_NOT_NULL(f);
+  fputs("<book><records><record id=\"1\" amount=\"invalid\"/></records></book>", f); fclose(f);
+  ASSERT_FALSE(db_schema_xml_restore_backup(db));
+  recovery_row_t *saved = (void *)send_db_message(db, dbFind, 0, (void *)(intptr_t)1);
+  ASSERT_NOT_NULL(saved); ASSERT_EQUAL(saved->amount, 42);
+  destroy_database(db);
+  db = create_database_with_schema("book", "db_schema_xml", &recovery_schema, path);
+  ASSERT_NOT_NULL(db);
+  saved = (void *)send_db_message(db, dbFind, 0, (void *)(intptr_t)1);
+  ASSERT_NOT_NULL(saved); ASSERT_EQUAL(saved->amount, 42); destroy_database(db);
+  unlink(path); unlink(backup); unlink(lock); rmdir(dir); PASS();
+}
 static void test_persistence(void) {
   TEST("schema XML: exclusive writer, atomic backup and version rejection");
   char dir[512], path[1024], backup[1040], lock[1040];
@@ -169,4 +209,4 @@ static void test_persistence(void) {
   snprintf(lock, sizeof(lock), "%s.bak.lock", path); unlink(lock); rmdir(dir);
   PASS();
 }
-int main(void) { TEST_START("Database persistence"); DB_CLASS(db_schema_xml); test_persistence(); test_migrations(); TEST_END(); }
+int main(void) { TEST_START("Database persistence"); DB_CLASS(db_schema_xml); test_persistence(); test_migrations(); test_restore_rejects_unloadable_backup(); TEST_END(); }

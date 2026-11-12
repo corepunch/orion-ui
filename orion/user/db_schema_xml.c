@@ -573,10 +573,22 @@ bool db_schema_xml_restore_backup(database_t *db) {
   if (ok && dbs_sync_file(output) != 0) ok = false;
   if (input >= 0) close(input);
   if (output >= 0 && close(output) != 0) ok = false;
+  database_t staged = *db;
+  dbs_context_t loaded = {0};
+  loaded.tables = calloc((size_t)db->schema->table_count, sizeof(*loaded.tables));
+  if (!loaded.tables || snprintf(staged.source_path, sizeof(staged.source_path), "%s", temporary) >= (int)sizeof(staged.source_path)) ok = false;
+  if (ok && !dbs_load(&staged, &loaded)) ok = false;
   if (ok && dbs_replace(temporary, db->source_path) != 0) ok = false;
-  if (!ok) { unlink(temporary); goto failed; }
+  if (!ok) {
+    if (loaded.tables) { dbs_clear(db, &loaded); free(loaded.tables); }
+    unlink(temporary); goto failed;
+  }
+  dbs_clear(db, ctx);
+  free(ctx->tables);
+  ctx->tables = loaded.tables;
+  memcpy(ctx->history, loaded.history, sizeof(ctx->history));
+  db->dirty = staged.dirty;
   if (!dbs_sync_directory(db->source_path)) goto failed;
-  if (!dbs_load(db, ctx)) goto failed;
   return true;
 failed:
   fprintf(stderr, "[db_schema_xml] backup restore failed db=%s path=%s\n",
