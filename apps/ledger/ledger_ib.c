@@ -214,7 +214,39 @@ bool ledger_reversal_linked(database_t *db, int id) {
   return false;
 }
 
+static bool document_id_has_history(database_t *db, int id) {
+  int field = db_schema_field_index(db_schema_table(db->schema, TABLE_POSTING_REVISIONS), "document_id");
+  result_node_t *rows = (void *)db_schema_xml(db, dbFetch, MAKEDWORD(TABLE_POSTING_REVISIONS, field), (void *)(intptr_t)id);
+  bool found = rows != NULL;
+  free_result_list(rows);
+  return found;
+}
+
+static int reserve_document_id(database_t *db) {
+  int id;
+  do {
+    id = (int)db_schema_xml(db, dbReserveKey, TABLE_DOCUMENTS, NULL);
+  } while (id > 0 && document_id_has_history(db, id));
+  if (id <= 0) { fprintf(stderr, "[ledger] document key reservation failed id=%d\n", id); fflush(stderr); }
+  return id;
+}
+
 lresult_t ledger_ib(database_t *db, uint32_t msg, uint32_t wparam, void *lparam) {
+  db_document_t reserved_doc;
+  if (msg == dbReserveKey && LOWORD(wparam) == TABLE_DOCUMENTS) return reserve_document_id(db);
+  if (msg == dbInsert && LOWORD(wparam) == TABLE_DOCUMENTS && lparam &&
+      ((const db_document_t *)lparam)->id > 0 && document_id_has_history(db, ((const db_document_t *)lparam)->id)) {
+    fprintf(stderr, "[ledger] document insert rejected: id=%d belongs to retained posting history\n", ((const db_document_t *)lparam)->id);
+    fflush(stderr); return 0;
+  }
+  if (msg == dbInsert && LOWORD(wparam) == TABLE_DOCUMENTS && lparam &&
+      ((const db_document_t *)lparam)->id <= 0 && !db->edit_parent) {
+    reserved_doc = *(const db_document_t *)lparam;
+    reserved_doc.id = reserve_document_id(db);
+    if (reserved_doc.id <= 0) return 0;
+    lparam = &reserved_doc;
+  }
+
   if (msg == dbInsert || msg == dbUpdate || msg == dbDelete) {
     uint32_t table = LOWORD(wparam);
     bool locked = table == TABLE_PERIOD_LOCKS || table == TABLE_PERIOD_CLOSURES || table == TABLE_POSTING_REVISIONS || table == TABLE_REVISION_ENTRIES || table == TABLE_REVERSAL_LINKS;

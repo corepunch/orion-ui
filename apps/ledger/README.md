@@ -102,7 +102,11 @@ on the Posting History tab. Select a snapshot to inspect its stored entries;
 account IDs are preserved as recorded. Actions are stored as `post` or `unpost`; a blank
 actor means no actor was authenticated. Snapshots created before this feature
 are unavailable, and deleting a document leaves its snapshots stored but not
-visible in the document journal. The boundary and history limitations are described in the
+visible in the document journal. New document IDs skip IDs retained by posting
+snapshots, including after reopening and when using editing contexts. Existing
+files may already contain a reused ID from before this protection; the stored
+ID alone cannot distinguish such histories and requires independent review.
+The boundary and history limitations are described in the
 [readiness audit](docs/compliance-readiness.md).
 
 The headless `ledger-run --request` service accepts data-only JSON requests for

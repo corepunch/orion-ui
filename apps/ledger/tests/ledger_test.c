@@ -1191,6 +1191,42 @@ static void test_corrupt_period_lock(void) {
   PASS();
 }
 
+static void test_retired_document_ids(void) {
+  TEST("retained posting history prevents document ID reuse after reopening");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  switch_configuration("ru-2026", "retired-ids.xml");
+  db_document_t high = { .id = 499, .doc_type_id = 1, .counterparty_id = 1 };
+  snprintf(high.date, sizeof(high.date), "2026-04-01");
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &high));
+  db_posting_revision_t retained = { .document_id = 500 };
+  snprintf(retained.action, sizeof(retained.action), "post");
+  ASSERT_TRUE(db_schema_xml(g_ledger->ib, dbInsert, TABLE_POSTING_REVISIONS, &retained));
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
+  char path[sizeof(g_ledger->ib->source_path)]; snprintf(path, sizeof(path), "%s", g_ledger->ib->source_path);
+  destroy_database(g_ledger->ib);
+  g_ledger->ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path);
+  ASSERT_NOT_NULL(g_ledger->ib); register_database("ib", g_ledger->ib);
+  db_document_t reused = high; reused.id = 500;
+  ASSERT_FALSE(send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &reused));
+  db_document_t draft = high; draft.id = 0;
+  const db_document_t *created = (void *)send_db_message(g_ledger->ib, dbInsert, TABLE_DOCUMENTS, &draft);
+  ASSERT(created && created->id == 501, "direct insertion skips the retained ID");
+  database_t *edit = db_edit_context_create(g_ledger->ib); ASSERT_NOT_NULL(edit);
+  created = (void *)send_db_message(edit, dbInsert, TABLE_DOCUMENTS, &draft);
+  ASSERT(created && created->id == 502, "editing context reserves a distinct ID");
+  char error[256]; ASSERT_TRUE(db_edit_context_save(edit, error, sizeof(error)));
+  destroy_database(edit);
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
+  destroy_database(g_ledger->ib);
+  g_ledger->ib = create_database_with_schema("ib", "ledger_ib", &ledger_ib_schema, path);
+  ASSERT_NOT_NULL(g_ledger->ib); register_database("ib", g_ledger->ib);
+  ASSERT_NOT_NULL((void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)501));
+  ASSERT_NOT_NULL((void *)send_db_message(g_ledger->ib, dbFind, TABLE_DOCUMENTS, (void *)(intptr_t)502));
+  ASSERT_EQUAL(ledger_count_references(g_ledger->ib, TABLE_POSTING_REVISIONS, "document_id", 500), 1);
+  restore_configuration(cfg, ib);
+  PASS();
+}
+
 static void test_reversal(void) {
   TEST("accounting reversal uses preserved postings once and permits a later open period");
   database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
@@ -1925,6 +1961,7 @@ int main(int argc, char **argv) {
   test_closed_period();
   test_corrupt_period_lock();
   test_infobase_migration();
+  test_retired_document_ids();
   test_reversal();
   test_reversal_protection();
   test_service();
