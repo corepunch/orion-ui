@@ -165,8 +165,12 @@ rollback restores the previous active releases and package settings, never compa
 Release objects and per-launch snapshots remain separate from the active registry.
 The manager serializes writers, checks hashes, paths, publisher consistency and
 dependency compatibility, then publishes the selected generation by atomic file
-replacement. Failed activation leaves the previous registry available. Running
-processes retain a fixed `ORION_PLUGIN_ROOT`; restart to use a new generation.
+replacement. Dependency validation occurs before writing a new release object;
+a rejected dependency leaves both the registry and object store unchanged. Bundled
+manifests are evaluated in a restricted Lua environment and checked for matching
+identity and interface instead of extracting a version from their text; a missing
+or invalid manifest prevents activation or launch. Failed activation leaves the
+previous registry available. Running processes retain a fixed `ORION_PLUGIN_ROOT`; restart to use a new generation.
 External search is restricted to the `orion.plugins.*` namespace, after bundled
 modules and before app-local plugin files. External packages cannot replace the
 runtime's core modules. `run` checks bundled dependency versions beside the actual

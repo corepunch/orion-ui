@@ -30,10 +30,19 @@ class PackageTests(unittest.TestCase):
         sdk.create(source, name, "plugin")
         path = source / "package.json"
         info = json.loads(path.read_text()); info["release"] = release
-        if dependencies is not None: info["dependencies"] = dependencies
+        if dependencies is not None:
+            info["dependencies"] = dependencies
+            (source / "manifest.lua").write_text("return " + packages.lua_value({
+                "id": name, "api": 1, "version": info["interface"], "dependencies": dependencies}) + "\n")
         path.write_text(json.dumps(info))
         archive = self.root / (name + release + ".zip")
-        sdk.pack(source, archive)
+        if dependencies is None:
+            sdk.pack(source, archive)
+        else:
+            # Construct a well-formed package even when the SDK cannot resolve its
+            # dependencies locally; installation must independently reject it.
+            with patch.object(sdk, "check", return_value=sorted(p.resolve() for p in source.rglob("*") if p.is_file())):
+                sdk.pack(source, archive)
         return archive
 
     def test_install_update_disable_rollback(self):
@@ -142,24 +151,50 @@ class PackageTests(unittest.TestCase):
     def test_run_refuses_tampered_snapshot_before_launch(self):
         packages.install(self.store, self.release())
         runtime = self.root / "runtime"; binary = runtime / "bin" / "orion"
-        binary.parent.mkdir(parents=True); binary.write_text("")
+        binary.parent.mkdir(parents=True); binary.write_text(""); binary.chmod(0o755)
         lua_root = runtime / "share" / "orion" / "lua"
         shutil.copytree(ROOT.parent / "share" / "lua", lua_root)
         current = packages.state(self.store)
         snapshot = self.store / "snapshots" / current["generation"] / "orion/plugins/example/main.lua"
         snapshot.write_text("return nil")
+        run = packages.subprocess.run
         with patch("sys.argv", ["orion-packages", "--store", str(self.store), "run", str(binary)]), \
-             patch.object(packages.shutil, "which", return_value=str(binary)), \
-             patch.object(packages.subprocess, "run") as launch:
+             patch.object(packages.subprocess, "run", wraps=run) as launch:
             self.assertEqual(packages.main(), 1)
-            launch.assert_not_called()
+            self.assertFalse(any(call.args[0][0] == str(binary) for call in launch.call_args_list))
+
+    def test_bundled_versions_use_validated_manifest(self):
+        lua_root = self.root / "lua"
+        plugin = lua_root / "orion/plugins/calendar"
+        plugin.mkdir(parents=True)
+        (plugin / "main.lua").write_text("return {}")
+        manifest = plugin / "manifest.lua"
+        manifest.write_text('-- version = 99\nreturn {id="calendar", api=1, version=1+1, dependencies={}}')
+        self.assertEqual(packages.builtin_versions(lua_root), {"calendar": 2})
+        selection = {"active": {"external": "1.0.0"}, "installed": {"external": {"1.0.0": {
+            "metadata": {"interface": 1, "dependencies": {"calendar": 1}}}}}}
+        with self.assertRaisesRegex(ValueError, "calendar@1"):
+            packages.validate_selection(selection, lua_root)
+        manifest.write_text('return {id="other", api=1, version=1, dependencies={}}')
+        with self.assertRaisesRegex(ValueError, "invalid bundled plugin manifest"):
+            packages.validate_selection(selection, lua_root)
+        manifest.unlink()
+        with self.assertRaisesRegex(ValueError, "invalid bundled plugin manifest"):
+            packages.builtin_versions(lua_root)
+        with self.assertRaisesRegex(ValueError, "directory is missing"):
+            packages.builtin_versions(self.root / "missing")
 
     def test_dependencies_and_corrupt_archive(self):
         packages.install(self.store, self.release())
         before = (self.store / "state.json").read_bytes()
         bad = self.release("consumer", dependencies={"missing": 1})
-        with self.assertRaises(ValueError): packages.install(self.store, bad)
+        info, contents = packages.read_archive(bad)
+        packages.validate_contents(info, contents)
+        objects = set((self.store / "objects").iterdir())
+        with self.assertRaisesRegex(ValueError, "consumer requires missing@1"):
+            packages.install(self.store, bad)
         self.assertEqual((self.store / "state.json").read_bytes(), before)
+        self.assertEqual(set((self.store / "objects").iterdir()), objects)
         corrupt = self.root / "corrupt.zip"
         with zipfile.ZipFile(corrupt, "w") as archive:
             archive.writestr("../escape.lua", "return {}")

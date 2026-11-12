@@ -262,12 +262,23 @@ def state(directory):
 
 
 def builtin_versions(lua_root=None):
-    # Shipped manifests are authored data. Use the explicit exported interface only.
+    plugins = (lua_root or ROOT / "share/lua") / "orion/plugins"
+    if not plugins.is_dir():
+        raise ValueError("bundled plugin directory is missing")
     versions = {}
-    for path in ((lua_root or ROOT / "share/lua") / "orion/plugins").glob("*/manifest.lua"):
-        match = re.search(r"\bversion\s*=\s*(\d+)", path.read_text())
-        if match:
-            versions[path.parent.name] = int(match.group(1))
+    for directory in sorted(plugins.iterdir()):
+        if not directory.is_dir():
+            continue
+        name = identifier(directory.name)
+        try:
+            result = subprocess.run([find_tool("lua"), str(ROOT / "tools/sdk/validate_package.lua"), str(directory)],
+                                    check=True, capture_output=True, text=True, timeout=10)
+            root = result.stdout.splitlines()[0].split("\t")
+            if len(root) != 4 or root[:3] != ["ROOT", name, "1"] or int(root[3]) < 1:
+                raise ValueError("manifest identity or version mismatch")
+            versions[name] = int(root[3])
+        except (IndexError, ValueError, subprocess.SubprocessError) as error:
+            raise ValueError(f"invalid bundled plugin manifest: {name}") from error
     return versions
 
 
@@ -386,6 +397,10 @@ def install(directory, archive, signature_path=None):
         if envelope is None and release in releases:
             envelope = releases[release].get("signature")
         verify_signature(current, info, digest, envelope)
+        releases[release] = {"digest": digest, "metadata": info, "signature": envelope}
+        current["previous"] = {"active": dict(current["active"]), "configuration": copy.deepcopy(current.get("configuration", {}))}
+        current["active"][name] = release
+        validate_selection(current)
         destination = directory / "objects" / digest
         if not destination.exists():
             destination.parent.mkdir(exist_ok=True)
@@ -400,9 +415,6 @@ def install(directory, archive, signature_path=None):
                 sync_directory(destination.parent)
             finally:
                 if staging.exists(): shutil.rmtree(staging)
-        releases[release] = {"digest": digest, "metadata": info, "signature": envelope}
-        current["previous"] = {"active": dict(current["active"]), "configuration": copy.deepcopy(current.get("configuration", {}))}
-        current["active"][name] = release
         publish(directory, current)
 
 
