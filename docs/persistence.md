@@ -92,4 +92,11 @@ a separate directory, restores and reopens it, and checks independent records.
 On POSIX, it also kills
 a migrating process during each of two migration steps, before saving, and
 after a successful save, then checks the primary and previous-version backup.
-It does not simulate power failure or termination at every filesystem operation.
+On POSIX, `test_db_save_fault_test` separately compiles the adapter with test-only
+system-call wrappers. It kills a child before and after the write, file sync,
+backup link and rename, directory sync, primary rename and final directory sync;
+it also kills during a partial write. Restore is checked at its write, file sync,
+rename and directory sync. At each stage it injects ENOSPC and EIO before the
+call and verifies both primary and backup by reopening them. These tests do not
+simulate power failure, every possible filesystem operation, or Windows directory
+durability.
