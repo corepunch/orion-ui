@@ -172,6 +172,14 @@ static void test_lodge_remote_ui(void) {
   ASSERT_STR_EQUAL(script_page_control(page, "editor")->title, "New reservation");
   ASSERT_STR_EQUAL(script_page_control(page, "arrival")->title, formatted_day);
   ASSERT_STR_EQUAL(script_page_control(page, "departure")->title, formatted_tomorrow);
+  ASSERT_FALSE(window_is_enabled(script_page_control(page, "confirm_cancel")));
+  ASSERT_TRUE(script_page_perform(page, "preview_cancel"));
+  ASSERT_NOT_NULL(strstr(script_page_control(page, "cancel_notice")->title, "Payments held: 0.00"));
+  ASSERT_TRUE(script_page_perform(page, "connect"));
+  for (int i = 0; i < 500 && !window_is_enabled(script_page_control(page, "preview_cancel")); i++) {
+    struct timespec delay = {.tv_nsec = 10000000}; nanosleep(&delay, NULL); repost_messages();
+  }
+  ASSERT_FALSE(window_is_enabled(script_page_control(page, "confirm_cancel")));
   ASSERT_TRUE(script_page_perform(page, "check_in")); ASSERT_TRUE(wait_for(db, stays->table_id, 1, "status", "Checked in"));
   ASSERT_TRUE(wait_for(db, rooms->table_id, 1, "occupancy_label", "Guest checked in"));
   send_message(script_page_control(page, "amount"), edSetText, 0, "125.00");

@@ -37,7 +37,8 @@
         <Column field="room_name" title="Room" width="90"/><Column field="guest_name" title="Guest" width="0" min-width="140"/><Column field="arrival" title="Arrival" width="100"/><Column field="departure" title="Departure" width="100"/><Column field="status" title="Status" width="110"/><Column field="balance" title="Balance" width="100"/>
       </TableView>
       </StackView>
-      <StackView orientation="horizontal" spacing="6"><Button name="check_in" text="Check in" action="check_in"/><Button name="check_out" text="Check out" action="check_out"/><Button name="cancel" text="Cancel reservation" action="cancel"/><Button name="confirmation" text="Export confirmation" action="confirmation"/></StackView>
+      <StackView orientation="horizontal" spacing="6"><Button name="check_in" text="Check in" action="check_in"/><Button name="check_out" text="Check out" action="check_out"/><Button name="preview_cancel" text="Preview cancellation" action="preview_cancel"/><Button name="confirmation" text="Export confirmation" action="confirmation"/></StackView>
+      <StackView orientation="horizontal" spacing="6"><Label name="cancel_notice"/><Button name="confirm_cancel" text="Confirm cancellation" action="confirm_cancel"/></StackView>
       <StackView orientation="horizontal" spacing="6"><TextBox name="amount" type="number" decimals="2"/><Button name="pay" text="Record payment" action="pay"/><Button name="refund" text="Record refund" action="refund"/><Button name="new_payment" text="New payment or refund" action="new_payment"/><Label name="payment_status"/></StackView>
       </StackView><StackView name="group_tab" text="Group" spacing="6" flags="flexspace">
       <Separator/><Label text="Two-room group" font="heading"/>

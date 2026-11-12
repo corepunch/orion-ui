@@ -53,7 +53,28 @@ function Reception:transition(v, target)
 end
 function Reception:check_in(v) self:transition(v, "checked_in") end
 function Reception:check_out(v) self:transition(v, "checked_out") end
-function Reception:cancel_booking(v) self:transition(v, "cancelled") end
+function Reception:preview_cancel(v)
+  self.cancel_booking, self.cancel_notice = nil, ""
+  self:remember(v)
+  local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
+  local row = orion.assert(Hotel.reservations.model:find(selected.id))
+  orion.assert(row.status == "reserved", orion.tr("Only reserved bookings can be cancelled."))
+  self.cancel_booking = {id = row.id, room_id = row.room_id, guest_id = row.guest_id, arrival = row.arrival,
+    departure = row.departure, paid = money.minor(Hotel.paid(row))}
+  self.cancel_notice = string.format(orion.tr("Cancel reservation %d · %s · %s to %s · Payments held: %s %s. Refunds are separate."),
+    row.id, row.guest.name, orion.formatDate(row.arrival), orion.formatDate(row.departure),
+    orion.formatNumber(self.cancel_booking.paid / 100, 2), orion.assert(Hotel.hotel_settings.model:all()[1]).currency)
+end
+function Reception:confirm_cancel(v)
+  local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
+  local preview = orion.assert(self.cancel_booking, orion.tr("Preview the cancellation again."))
+  local row = Hotel.reservations.model:find(selected.id)
+  orion.assert(row and row.id == preview.id and row.room_id == preview.room_id and row.guest_id == preview.guest_id and
+    row.arrival == preview.arrival and row.departure == preview.departure and row.status == "reserved" and
+    money.minor(Hotel.paid(row)) == preview.paid, orion.tr("Preview the cancellation again."))
+  self:transition(v, "cancelled")
+  self.cancel_booking, self.cancel_notice = nil, ""
+end
 function Reception:payment(v)
   local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
   self:remember(v)
@@ -146,12 +167,12 @@ function Reception:data()
     count = count + 1
   end
   local values = {editor = self.editing and string.format(orion.tr("Edit reservation %d"), self.editing) or orion.tr("New reservation"),
-    summary = string.format(orion.tr("%d reservations · Outstanding: %s"), count, orion.formatNumber(outstanding / 100, 2)), notice = self.notice, group_cancel_notice = self.cancel_group_notice or "", settlement_notice = self.settlement_notice or ""}
+    summary = string.format(orion.tr("%d reservations · Outstanding: %s"), count, orion.formatNumber(outstanding / 100, 2)), notice = self.notice, cancel_notice = self.cancel_notice or "", group_cancel_notice = self.cancel_group_notice or "", settlement_notice = self.settlement_notice or ""}
   local settings = Hotel.hotel_settings.model:all()[1]
   values.currency = settings and string.format(orion.tr("Country: %s · Currency: %s"), settings.country, settings.currency) or orion.tr("Hotel country and currency are not configured.")
   for k, v in pairs(self.fields) do values[k] = v end
   local edited = self.editing and Hotel.reservations.model:find(self.editing)
   values.paid = orion.formatNumber(edited and Hotel.paid(edited) or 0, 2)
-  return {values = values, disabled = {confirm_group_cancel = not self.cancel_group_id, confirm_group_settlement = not self.settlement}}
+  return {values = values, disabled = {confirm_cancel = not self.cancel_booking, confirm_group_cancel = not self.cancel_group_id, confirm_group_settlement = not self.settlement}}
 end
 return Reception

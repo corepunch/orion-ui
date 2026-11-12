@@ -37,7 +37,7 @@ Room-night availability uses half-open dates: a departure on 31 October permits
 the next arrival on 31 October. Non-cancelled reservations occupy their dates;
 capacity and overlapping bookings are checked before changes are written.
 A reservation goes from Reserved to Checked in to Checked out, or from Reserved
-to Cancelled. Check-out requires a zero balance; cancelled and checked-out
+to Cancelled. Preview an individual cancellation to see the guest, dates and payments held, then confirm it; refunds are recorded separately. Check-out requires a zero balance; cancelled and checked-out
 reservations cannot be edited, but payments and refunds can still be recorded.
 Use **Housekeeping** to mark rooms clean, dirty, or
 needing inspection. Check-in requires a clean room; check-out marks it dirty.

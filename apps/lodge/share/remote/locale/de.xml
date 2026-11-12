@@ -37,7 +37,7 @@
   <string source="Edit selected" obsolete="true">Auswahl bearbeiten</string>
   <string source="Check in" where="remote">Einchecken</string>
   <string source="Check out" where="remote">Auschecken</string>
-  <string source="Cancel reservation" where="remote">Reservierung stornieren</string>
+  <string source="Cancel reservation" obsolete="true">Reservierung stornieren</string>
   <string source="Export confirmation" where="remote">Bestätigung exportieren</string>
   <string source="Retry saving" obsolete="true">Speichern wiederholen</string>
   <string source="%d reservations · Outstanding: %s" where="code">%d Reservierungen · Offen: %s</string>
@@ -278,4 +278,9 @@
   <string source="Preview the deletion again." where="code">Prüfen Sie den Löschvorgang erneut.</string>
   <string source="The day has changed. Preview it again before closing." where="code">Der Tag hat sich geändert. Prüfen Sie ihn vor dem Abschluss erneut.</string>
   <string source="Preview the day before closing." where="code">Prüfen Sie den Tag vor dem Abschluss.</string>
+  <string source="Preview cancellation" where="remote">Stornierung prüfen</string>
+  <string source="Confirm cancellation" where="remote">Stornierung bestätigen</string>
+  <string source="Cancel reservation %d · %s · %s to %s · Payments held: %s %s. Refunds are separate." where="code">Buchung %d stornieren · %s · %s bis %s · Erhaltene Zahlungen: %s %s. Erstattungen erfolgen separat.</string>
+  <string source="Only reserved bookings can be cancelled." where="code">Nur reservierte Buchungen können storniert werden.</string>
+  <string source="Preview the cancellation again." where="code">Prüfen Sie die Stornierung erneut.</string>
 </strings>

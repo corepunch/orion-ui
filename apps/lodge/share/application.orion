@@ -52,10 +52,11 @@
       </TableView>
       <StackView name="selection_actions" orientation="horizontal" spacing="6">
         <Button name="edit" text="Edit selected" action="edit" /><Button name="check_in" text="Check in" action="check_in" />
-        <Button name="check_out" text="Check out" action="check_out" /><Button name="cancel_booking" text="Cancel reservation" action="cancel_booking" />
+        <Button name="check_out" text="Check out" action="check_out" /><Button name="preview_cancel" text="Preview cancellation" action="preview_cancel" />
         <Button name="payment" text="Payment or refund" action="payment" />
         <Button name="confirmation" text="Export confirmation" action="confirmation" /><Button name="save_data" text="Retry saving" action="save_data" />
       </StackView>
+      <StackView orientation="horizontal" spacing="6"><Label name="cancel_notice"/><Button name="confirm_cancel" text="Confirm cancellation" action="confirm_cancel"/></StackView>
       <StackView orientation="horizontal" spacing="6"><Button name="preview_group_cancel" text="Preview group cancellation" action="preview_group_cancel"/><Button name="confirm_group_cancel" text="Confirm group cancellation" action="confirm_group_cancel"/></StackView><Label name="group_cancel_notice"/>
       <StackView orientation="horizontal" spacing="6"><Button name="preview_group_settlement" text="Preview group settlement" action="preview_group_settlement"/><Button name="confirm_group_settlement" text="Confirm group settlement" action="confirm_group_settlement"/></StackView><Label name="settlement_notice"/>
       <StackView name="pricing_actions" orientation="horizontal" spacing="6"><Button name="night_prices" text="Nightly prices" action="night_prices" /><Button name="group_statement" text="Export group statement" action="group_statement" /></StackView>

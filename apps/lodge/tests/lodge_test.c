@@ -293,12 +293,16 @@ static void test_payment_form(void) {
   db_reservation_t *saved = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)2);
   ASSERT_NOT_NULL(saved); ASSERT_EQUAL(saved->paid, 95);
   script_page_close(page);
-  ASSERT_TRUE(hotel_script(app, "assert(require('hotel').transition(2,'cancelled'))"));
+  ASSERT_TRUE(hotel_script(app, "local p=require('reception'); local h=require('hotel'); p:init(); local v={bookings={id=2}}; "
+    "p:preview_cancel(v); assert(p.cancel_notice:find('95.00',1,true)); "
+    "assert(h.payment(2,100,'changed-after-preview')); assert(not pcall(function() p:confirm_cancel(v) end)); "
+    "assert(h.payment(2,-100,'restore-after-preview')); p:preview_cancel(v); p:confirm_cancel(v); "
+    "assert(h.reservations.model:find(2).status=='cancelled')"));
   page = script_page_open_library(script_application_runtime(app), library, "payment", "apps/lodge/share/payment.lua", error, sizeof(error));
   ASSERT_NOT_NULL(page); ASSERT_NOT_NULL(script_page_create(page, NULL));
   send_message(script_page_control(page, "amount"), edSetText, 0, "2.50");
   ASSERT_TRUE(script_page_perform(page, "refund"));
-  event = (void *)send_db_message(hotel, dbFind, TABLE_PAYMENT_EVENTS, (void *)(intptr_t)5);
+  event = (void *)send_db_message(hotel, dbFind, TABLE_PAYMENT_EVENTS, (void *)(intptr_t)7);
   ASSERT_NOT_NULL(event); ASSERT_EQUAL(event->amount_minor, -250); ASSERT_STR_EQUAL(event->kind, "refund");
   script_page_close(page); form_library_free(library);
   script_application_close(app); hotel = NULL;
@@ -306,7 +310,7 @@ static void test_payment_form(void) {
   hotel = get_database_by_name("lodge");
   db_reservation_t *row = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)2);
   ASSERT_NOT_NULL(row); ASSERT_STR_EQUAL(row->status, "cancelled"); ASSERT_EQUAL(row->paid, 92.5);
-  ASSERT_NULL((void *)send_db_message(hotel, dbFind, TABLE_PAYMENT_EVENTS, (void *)(intptr_t)6));
+  ASSERT_NULL((void *)send_db_message(hotel, dbFind, TABLE_PAYMENT_EVENTS, (void *)(intptr_t)8));
   script_application_close(app); hotel = NULL;
   char backup[168], lock[168]; snprintf(backup, sizeof(backup), "%s.bak", target); snprintf(lock, sizeof(lock), "%s.lock", target);
   unlink(backup); unlink(lock); unlink(target); rmdir(directory); PASS();
