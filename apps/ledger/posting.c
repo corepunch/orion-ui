@@ -1008,7 +1008,9 @@ db_report_setting_t *ledger_report_settings(database_t *ib, database_t *cfg) {
 // join the in-memory cfg; ids from LEDGER_EXT_ID_BASE up never meet the
 // configuration's own. Safe to call again: records already present are kept,
 // and extension records the infobase no longer has (an import rolled back)
-// leave the configuration.
+// leave the configuration. An account matched by code keeps the analytics
+// slots 1C gives it that the configuration lacks, as an extension of the
+// configuration's own record.
 bool ledger_apply_extensions(database_t *ib, database_t *cfg) {
   bool ok = true;
   result_node_t *stale = fetch(cfg, TABLE_ACCOUNTS, NULL, 0);
@@ -1017,7 +1019,19 @@ bool ledger_apply_extensions(database_t *ib, database_t *cfg) {
   free_result_list(stale);
   stale = fetch(cfg, TABLE_SUBCONTO_KINDS, NULL, 0);
   EACH_RECORD(db_subconto_kind_t, k, stale)
-    if (k->id >= LEDGER_EXT_ID_BASE && !find(ib, TABLE_EXT_SUBCONTO_KINDS, k->id)) ok &= db_schema_xml_overlay_remove(cfg, TABLE_SUBCONTO_KINDS, k->id);
+    if (k->id >= LEDGER_EXT_ID_BASE && !find(ib, TABLE_EXT_SUBCONTO_KINDS, k->id)) {
+      // An extended account's slot named this kind; it goes with it.
+      result_node_t *accounts = fetch(cfg, TABLE_ACCOUNTS, NULL, 0);
+      EACH_RECORD(db_account_t, a, accounts) {
+        db_account_t held = *a;
+        int *slots[3] = { &held.subconto_kind_id, &held.subconto2_kind_id, &held.subconto3_kind_id };
+        bool dropped = false;
+        for (int i = 0; i < 3; i++) if (*slots[i] == k->id) { *slots[i] = 0; dropped = true; }
+        if (dropped) ok &= db_schema_xml_overlay_update(cfg, TABLE_ACCOUNTS, &held) != NULL;
+      }
+      free_result_list(accounts);
+      ok &= db_schema_xml_overlay_remove(cfg, TABLE_SUBCONTO_KINDS, k->id);
+    }
   free_result_list(stale);
   result_node_t *kinds = fetch(ib, TABLE_EXT_SUBCONTO_KINDS, NULL, 0);
   EACH_RECORD(db_ext_subconto_kind_t, k, kinds) {
@@ -1031,7 +1045,16 @@ bool ledger_apply_extensions(database_t *ib, database_t *cfg) {
   free_result_list(kinds);
   result_node_t *accounts = fetch(ib, TABLE_EXT_ACCOUNTS, NULL, 0);
   EACH_RECORD(db_ext_account_t, e, accounts) {
-    if (find(cfg, TABLE_ACCOUNTS, e->id)) continue;
+    db_account_t *known = find(cfg, TABLE_ACCOUNTS, e->id);
+    if (known) {  // an account matched by code: fill the slots the configuration lacks
+      db_account_t merged = *known;
+      int *slots[3] = { &merged.subconto_kind_id, &merged.subconto2_kind_id, &merged.subconto3_kind_id };
+      const int given[3] = { e->subconto_kind_id, e->subconto2_kind_id, e->subconto3_kind_id };
+      bool fill = false;
+      for (int i = 0; i < 3; i++) if (!*slots[i] && given[i]) { *slots[i] = given[i]; fill = true; }
+      if (fill) ok &= db_schema_xml_overlay_update(cfg, TABLE_ACCOUNTS, &merged) != NULL;
+      continue;
+    }
     db_account_t a = { .id = e->id, .subconto_kind_id = e->subconto_kind_id, .subconto2_kind_id = e->subconto2_kind_id,
                        .subconto3_kind_id = e->subconto3_kind_id, .currency = e->currency };
     snprintf(a.code, sizeof(a.code), "%s", e->code);

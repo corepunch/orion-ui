@@ -179,6 +179,31 @@ static const char *ledger_account_kind(const char *kind) {
   return !strcmp(kind, "active") ? "А" : !strcmp(kind, "passive") ? "П" : "АП";
 }
 
+// 1C's analytics slots the configuration's account lacks are kept as an
+// extension of the matched account: an ext_account row carrying the account's
+// own id, which ledger_apply_extensions lays over the configuration's record.
+static void extend_matched_account(stage_t *st, xmlNodePtr rec, const db_account_t *known, const char *code) {
+  db_ext_account_t a = { .id = known->id, .currency = known->currency };
+  ledger_copy_text(a.code, sizeof(a.code), known->code);
+  ledger_copy_text(a.name, sizeof(a.name), known->name);
+  ledger_copy_text(a.kind, sizeof(a.kind), known->kind);
+  ledger_copy_text(a.section, sizeof(a.section), known->section);
+  int *slots[3] = { &a.subconto_kind_id, &a.subconto2_kind_id, &a.subconto3_kind_id };
+  const int have[3] = { known->subconto_kind_id, known->subconto2_kind_id, known->subconto3_kind_id };
+  for (int i = 0; i < 3; i++) *slots[i] = have[i];
+  bool fill = false;
+  for (xmlNodePtr s = rec->children; s; s = s->next) {
+    if (!is_el(s, "subkonto")) continue;
+    char n[8], kind_guid[40];
+    attr(s, "n", n, sizeof(n)); attr(s, "kind", kind_guid, sizeof(kind_guid));
+    int slot = atoi(n) - 1, id = ledger_kind_for(st, kind_guid);
+    if (slot < 0 || slot > 2 || !id) { note(st, "account %s: analytics slot %s has no usable kind", code, n); continue; }
+    if (!*slots[slot]) { *slots[slot] = id; fill = true; }
+  }
+  if (fill && !send_db_message(st->ib, dbInsert, TABLE_EXT_ACCOUNTS, &a))
+    snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot store an imported account."));
+}
+
 static void import_account(stage_t *st, xmlNodePtr rec) {
   char metadata[256], guid[40], code[64], name[512], kind[32], currency[8];
   attr(rec, "type", metadata, sizeof(metadata)); attr(rec, "id", guid, sizeof(guid));
@@ -189,6 +214,7 @@ static void import_account(stage_t *st, xmlNodePtr rec) {
   if (known) {
     st->out->accounts_matched++;
     if (!source_remember(st, metadata, guid, "accounts", known->id)) snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot record the source of an imported record."));
+    else extend_matched_account(st, rec, known, code);
     return;
   }
   db_ext_account_t a = { .id = next_ext_id(st->ib, TABLE_EXT_ACCOUNTS), .currency = !strcmp(currency, "true") };

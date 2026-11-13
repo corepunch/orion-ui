@@ -1243,6 +1243,26 @@ void *db_schema_xml_overlay_insert(database_t *db, uint32_t table_id, const void
   return dbs_append(db, &db->schema->tables[ti], &ctx->tables[ti], record);
 }
 
+// Replaces a record in memory only, for a record the store already holds (a
+// configuration account an infobase extends). Nothing reaches the file.
+void *db_schema_xml_overlay_update(database_t *db, uint32_t table_id, const void *record) {
+  dbs_context_t *ctx = db ? (dbs_context_t *)db->userdata : NULL;
+  int ti = ctx && record ? dbs_table_index(db, table_id) : -1;
+  if (ti < 0) {
+    fprintf(stderr, "[db_schema_xml] overlay update rejected db=%s table=%u\n", db ? db->name : "(null)", table_id);
+    fflush(stderr); return NULL;
+  }
+  const db_table_schema_t *t = &db->schema->tables[ti];
+  int id = dbs_key(t, record);
+  int row = id > 0 ? dbs_find_row(t, &ctx->tables[ti], id) : -1;
+  if (row < 0) {
+    fprintf(stderr, "[db_schema_xml] overlay update: no record db=%s table=%s id=%d\n", db->name, t->name, id);
+    fflush(stderr); return NULL;
+  }
+  memcpy(ctx->tables[ti].rows[row], record, t->record_size);
+  return ctx->tables[ti].rows[row];
+}
+
 // Removes a record that db_schema_xml_overlay_insert() added, again in memory only.
 bool db_schema_xml_overlay_remove(database_t *db, uint32_t table_id, int id) {
   dbs_context_t *ctx = db ? (dbs_context_t *)db->userdata : NULL;
