@@ -743,6 +743,12 @@ done:
   return valid;
 }
 
+// Documents imported from a 1CD staging file keep the entries 1C wrote; Ledger's
+// own rules never post them again.
+bool ledger_document_imported(const db_document_t *doc) {
+  return doc && !strncmp(doc->import_source, "1cd:", 4);
+}
+
 // Posting hooks and entry replacement share one nested database change scope.
 static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool preview) {
   post_t p;
@@ -753,6 +759,9 @@ static bool post_document(database_t *ib, database_t *cfg, int doc_id, bool prev
   }
   if (ledger_exact_posted(ib, doc_id) || ledger_reversal_linked(ib, doc_id)) {
     fprintf(stderr, "[ledger] post rejected: document=%d is protected by exact posting or reversal\n", doc_id); fflush(stderr); return false;
+  }
+  if (!preview && p.doc->posted && ledger_document_imported(p.doc)) {
+    fprintf(stderr, "[ledger] post rejected: document=%d was imported from 1C and keeps its entries\n", doc_id); fflush(stderr); return false;
   }
   if (!preview && ledger_period_closed(ib, p.doc->date)) {
     fprintf(stderr, "[ledger] post rejected: document=%d date=%s is closed\n", doc_id, p.doc->date); fflush(stderr); return false;
@@ -834,6 +843,9 @@ void ledger_unpost(database_t *ib, database_t *cfg, int doc_id) {
   }
   if (ledger_period_closed(ib, doc->date)) {
     fprintf(stderr, "[ledger] unpost rejected: document=%d date=%s is closed\n", doc_id, doc->date); fflush(stderr); return;
+  }
+  if (doc->posted && ledger_document_imported(doc)) {
+    fprintf(stderr, "[ledger] unpost rejected: document=%d was imported from 1C; reverse it instead\n", doc_id); fflush(stderr); return;
   }
   if (!doc->posted) {
     if (!form_is(find(cfg, TABLE_DOC_TYPES, doc->doc_type_id), "operation")) delete_entries(ib, doc_id);
@@ -966,7 +978,8 @@ bool ledger_repost_all(database_t *ib, database_t *cfg) {
   bool ok = true;
   for (int i = 0; i < count && ok; i++) {
     int id = order[i]->id;
-    if (ledger_period_closed(ib, order[i]->date) || (order[i]->exact_money && order[i]->posted) || ledger_reversal_linked(ib, order[i]->id)) continue;
+    if (ledger_period_closed(ib, order[i]->date) || (order[i]->exact_money && order[i]->posted) || ledger_reversal_linked(ib, order[i]->id) ||
+        (order[i]->posted && ledger_document_imported(order[i]))) continue;
     ledger_recalc_document(ib, cfg, id);
     if (order[i]->posted) ok = ledger_post(ib, cfg, id);
     else ledger_unpost(ib, cfg, id);
@@ -993,9 +1006,19 @@ db_report_setting_t *ledger_report_settings(database_t *ib, database_t *cfg) {
 
 // The accounts and analytics kinds an infobase carries beyond its configuration
 // join the in-memory cfg; ids from LEDGER_EXT_ID_BASE up never meet the
-// configuration's own. Safe to call again: records already present are kept.
+// configuration's own. Safe to call again: records already present are kept,
+// and extension records the infobase no longer has (an import rolled back)
+// leave the configuration.
 bool ledger_apply_extensions(database_t *ib, database_t *cfg) {
   bool ok = true;
+  result_node_t *stale = fetch(cfg, TABLE_ACCOUNTS, NULL, 0);
+  EACH_RECORD(db_account_t, a, stale)
+    if (a->id >= LEDGER_EXT_ID_BASE && !find(ib, TABLE_EXT_ACCOUNTS, a->id)) ok &= db_schema_xml_overlay_remove(cfg, TABLE_ACCOUNTS, a->id);
+  free_result_list(stale);
+  stale = fetch(cfg, TABLE_SUBCONTO_KINDS, NULL, 0);
+  EACH_RECORD(db_subconto_kind_t, k, stale)
+    if (k->id >= LEDGER_EXT_ID_BASE && !find(ib, TABLE_EXT_SUBCONTO_KINDS, k->id)) ok &= db_schema_xml_overlay_remove(cfg, TABLE_SUBCONTO_KINDS, k->id);
+  free_result_list(stale);
   result_node_t *kinds = fetch(ib, TABLE_EXT_SUBCONTO_KINDS, NULL, 0);
   EACH_RECORD(db_ext_subconto_kind_t, k, kinds) {
     if (find(cfg, TABLE_SUBCONTO_KINDS, k->id)) continue;

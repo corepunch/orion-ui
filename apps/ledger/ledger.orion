@@ -305,6 +305,15 @@
            by what they hold (Документ.ОстаткиРасчетовСПоставщикамиДолги): each
            opens its rows on account (Dt, or Kt when credit), on
            currency_account_id when the row is in a foreign currency. -->
+      <!-- 1C document types imported from a staging file, and the document type
+           each becomes. Imported documents keep the entries 1C wrote, so the
+           target is a type of form "operation"; a type listed nowhere becomes
+           the general "operation". -->
+      <table name="import_documents">
+        <field name="id" type="integer" key="YES" />
+        <field name="doc_type_id" type="integer" relation="doc_types.id" />
+        <field name="source_type" type="string" length="128" />
+      </table>
       <table name="balance_rules">
         <field name="id" type="integer" key="YES" />
         <field name="account_id" type="integer" relation="accounts.id" />
@@ -516,7 +525,7 @@
       <table name="import_sources">
         <field name="id" type="integer" key="YES" />
         <field name="metadata" type="string" length="96" />
-        <field name="guid" type="string" length="40" />
+        <field name="guid" type="string" length="64" />
         <field name="table_name" type="string" length="32" />
         <field name="record_id" type="integer" />
       </table>

@@ -94,6 +94,8 @@ bool ledger_repost_all(database_t *ib, database_t *cfg);
 // Ids of accounts and analytics kinds an infobase adds to its configuration start here.
 #define LEDGER_EXT_ID_BASE 1000000
 bool ledger_apply_extensions(database_t *ib, database_t *cfg);
+// True for a document imported from a 1CD staging file: it keeps its 1C entries.
+bool ledger_document_imported(const db_document_t *doc);
 // Fills a payroll document: salaries for an accrual, what is owed for a payout.
 bool ledger_fill_payroll(database_t *ib, database_t *cfg, int doc_id);
 // Rebuilds the transient report tables for the period in report settings.
@@ -159,9 +161,10 @@ typedef struct {
   int accounts_added, accounts_matched;  // by code against the configuration
   int kinds_added, kinds_mapped;         // analytics kinds: new, or onto a Ledger table
   int updated;                           // records found again through their source identity
+  int entries;                           // register movements written as entries
   struct { char type[128]; int added, updated, held; } counts[48];  // per 1C metadata type
   int count_types;
-  char notes[1024];                      // held-back or unmapped items, one per line
+  char notes[4096];                      // held-back or unmapped items, one per line
   char error[256];
 } ledger_stage_import_t;
 bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledger_stage_import_t *out);

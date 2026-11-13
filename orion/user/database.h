@@ -276,6 +276,8 @@ bool db_schema_xml_migrate_additive(void *root, unsigned from_version);
 // read-only: a configuration extended by data an infobase carries. Returns the
 // stored record, or NULL (logged) on a bad table, a duplicate key or no memory.
 void *db_schema_xml_overlay_insert(database_t *db, uint32_t table_id, const void *record);
+// Takes such a record away again; false (logged) when the table or record is missing.
+bool db_schema_xml_overlay_remove(database_t *db, uint32_t table_id, int id);
 
 // Switch a loaded schema XML seed to a new, exclusively locked destination.
 bool db_schema_xml_seed_to(database_t *db, const char *path);

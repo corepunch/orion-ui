@@ -1242,3 +1242,14 @@ void *db_schema_xml_overlay_insert(database_t *db, uint32_t table_id, const void
   }
   return dbs_append(db, &db->schema->tables[ti], &ctx->tables[ti], record);
 }
+
+// Removes a record that db_schema_xml_overlay_insert() added, again in memory only.
+bool db_schema_xml_overlay_remove(database_t *db, uint32_t table_id, int id) {
+  dbs_context_t *ctx = db ? (dbs_context_t *)db->userdata : NULL;
+  int ti = ctx ? dbs_table_index(db, table_id) : -1;
+  if (ti < 0) {
+    fprintf(stderr, "[db_schema_xml] overlay remove rejected db=%s table=%u id=%d\n", db ? db->name : "(null)", table_id, id);
+    fflush(stderr); return false;
+  }
+  return dbs_delete(db, ctx, ti, id) != 0;
+}

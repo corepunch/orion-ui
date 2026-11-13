@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stage format="orion-1cd-stage-v1">
+  <header>
+    <source file="synthetic.1CD" size="0" sha256="0" format-version="8.3.8.0" locale="ru_RU"/>
+    <configuration name="Synthetic" version="1"/>
+  </header>
+  <chart-of-accounts type="ПланСчетов.Хозрасчетный">
+    <account type="ПланСчетов.Хозрасчетный" id="a1000000-0000-0000-0000-000000000001" code="99.1" description="Расчеты и затраты" deleted="false" kind="active" currency="false" quantity="true">
+      <subkonto n="1" kind="b1000000-0000-0000-0000-000000000001"/>
+      <subkonto n="2" kind="b1000000-0000-0000-0000-000000000002"/>
+    </account>
+    <account type="ПланСчетов.Хозрасчетный" id="a1000000-0000-0000-0000-000000000002" code="99.2" description="Виды платежей" deleted="false" kind="passive" currency="false" quantity="false">
+      <subkonto n="1" kind="b1000000-0000-0000-0000-000000000003"/>
+    </account>
+    <account type="ПланСчетов.Хозрасчетный" id="a1000000-0000-0000-0000-000000000003" code="99.3" description="Расчетные документы" deleted="false" kind="active" currency="false" quantity="false">
+      <subkonto n="1" kind="b1000000-0000-0000-0000-000000000004"/>
+    </account>
+  </chart-of-accounts>
+  <subkonto-kinds type="ПланВидовХарактеристик.ВидыСубконтоХозрасчетные">
+    <record type="ПланВидовХарактеристик.ВидыСубконтоХозрасчетные" id="b1000000-0000-0000-0000-000000000001" code="00005" description="Контрагенты" deleted="false">
+      <types><type t="ref" type="Справочник.Контрагенты"/></types>
+    </record>
+    <record type="ПланВидовХарактеристик.ВидыСубконтоХозрасчетные" id="b1000000-0000-0000-0000-000000000002" code="00007" description="Статьи затрат" deleted="false">
+      <types><type t="ref" type="Справочник.СтатьиЗатрат"/></types>
+    </record>
+    <record type="ПланВидовХарактеристик.ВидыСубконтоХозрасчетные" id="b1000000-0000-0000-0000-000000000003" code="00099" description="Виды платежей" deleted="false">
+      <types><type t="enum" type="Перечисление.ВидыПлатежей"/></types>
+    </record>
+    <record type="ПланВидовХарактеристик.ВидыСубконтоХозрасчетные" id="b1000000-0000-0000-0000-000000000004" code="00098" description="Документы расчетов" deleted="false">
+      <types><type t="ref" type="Документ.РегламентнаяОперация"/></types>
+    </record>
+  </subkonto-kinds>
+  <records>
+    <record type="Справочник.Контрагенты" id="c1000000-0000-0000-0000-000000000001" code="1" description="Арендодатель" deleted="false" folder="false">
+      <v n="ИНН" t="string">7700000009</v>
+      <v n="КПП" t="string">770001001</v>
+    </record>
+    <record type="Справочник.СтатьиЗатрат" id="c1000000-0000-0000-0000-000000000002" code="1" description="Аренда" deleted="false" folder="false"/>
+  </records>
+  <documents>
+    <document type="Документ.ПриходныйКассовыйОрдер" id="d1000000-0000-0000-0000-000000000001" number="0000-000001" date="2015-01-12T12:00:01" posted="true" deleted="false">
+      <v n="Контрагент" t="ref" type="Справочник.Контрагенты" id="c1000000-0000-0000-0000-000000000001"/>
+      <v n="Комментарий" t="string">Аренда за январь</v>
+    </document>
+    <document type="Документ.РегламентнаяОперация" id="d1000000-0000-0000-0000-000000000002" number="0000-000002" date="2015-01-31T23:59:59" posted="false" deleted="false"/>
+    <document type="Документ.РегламентнаяОперация" id="d1000000-0000-0000-0000-000000000003" number="0000-000003" date="2015-02-28T23:59:59" posted="false" deleted="false"/>
+    <document type="Документ.РегламентнаяОперация" id="d1000000-0000-0000-0000-000000000004" number="0000-000004" date="2015-03-31T23:59:59" posted="true" deleted="true"/>
+  </documents>
+  <registers>
+    <register type="РегистрБухгалтерии.Хозрасчетный" chart="ПланСчетов.Хозрасчетный">
+      <movement line="1" recorder-type="Документ.ПриходныйКассовыйОрдер" recorder="d1000000-0000-0000-0000-000000000001" period="2015-01-12T12:00:00" active="true">
+        <v n="Сумма" t="decimal">100.50</v>
+        <v n="Содержание" t="string">Аренда</v>
+        <debit account="a1000000-0000-0000-0000-000000000001">
+          <v n="Количество" t="decimal">2.500</v>
+          <v n="СуммаНУ" t="decimal">100.50</v>
+          <v n="СуммаПР" t="null"/>
+          <v n="СуммаВР" t="null"/>
+          <subkonto n="1" kind="b1000000-0000-0000-0000-000000000001" t="ref" type="Справочник.Контрагенты" id="c1000000-0000-0000-0000-000000000001"/>
+          <subkonto n="2" kind="b1000000-0000-0000-0000-000000000002" t="ref" type="Справочник.СтатьиЗатрат" id="c1000000-0000-0000-0000-000000000002"/>
+        </debit>
+        <credit account="a1000000-0000-0000-0000-000000000002">
+          <v n="Количество" t="null"/>
+          <v n="СуммаНУ" t="null"/>
+          <subkonto n="1" kind="b1000000-0000-0000-0000-000000000003" t="enum" type="Перечисление.ВидыПлатежей" name="Налог" id="e1000000-0000-0000-0000-000000000001"/>
+        </credit>
+      </movement>
+      <movement line="2" recorder-type="Документ.ПриходныйКассовыйОрдер" recorder="d1000000-0000-0000-0000-000000000001" period="2015-01-12T12:00:00" active="true">
+        <v n="Сумма" t="decimal">49.50</v>
+        <v n="Содержание" t="string">Расчеты</v>
+        <debit account="a1000000-0000-0000-0000-000000000003">
+          <subkonto n="1" kind="b1000000-0000-0000-0000-000000000004" t="ref" type="Документ.РегламентнаяОперация" id="d1000000-0000-0000-0000-000000000002"/>
+        </debit>
+        <credit account="a1000000-0000-0000-0000-000000000001">
+          <subkonto n="1" kind="b1000000-0000-0000-0000-000000000001" t="ref" type="Справочник.Контрагенты" id="c1000000-0000-0000-0000-000000000001"/>
+        </credit>
+      </movement>
+      <movement line="3" recorder-type="Документ.РегламентнаяОперация" recorder="d1000000-0000-0000-0000-000000000002" period="2015-01-31T23:59:59" active="true">
+        <v n="Сумма" t="decimal">10.00</v>
+        <v n="Содержание" t="string">Забалансовая</v>
+        <debit account="a1000000-0000-0000-0000-000000000001"/>
+        <credit account="" account-empty="true"/>
+      </movement>
+    </register>
+  </registers>
+</stage>

@@ -14,6 +14,7 @@
 #include "ledger.h"
 #include <libxml/parser.h>
 #include <libxml/tree.h>
+#include <orion/user/money.h>
 #include <stdalign.h>
 #include <stddef.h>
 
@@ -40,6 +41,9 @@ typedef struct {
   xmlNodePtr records;                            // <records>: the catalogs
   struct { char ref_type[96]; int kind_id; } kinds[128];  // 1C type an analytics kind holds -> Ledger kind
   int kind_count;
+  xmlNodePtr documents;                          // <documents>
+  struct { xmlNodePtr node; int next; } *movements;  // register movements, chained by recorder
+  int movement_count, buckets[1024];             // buckets hold index + 1; 0 is empty
 } stage_t;
 
 // Copies into a record field, cutting at a character boundary: the stores
@@ -70,11 +74,13 @@ static void attr(xmlNodePtr n, const char *name, char *buf, size_t sz) {
 }
 
 static void note(stage_t *st, const char *fmt, const char *a, const char *b) {
-  size_t used = strlen(st->out->notes);
-  if (used + 2 >= sizeof(st->out->notes)) return;
-  snprintf(st->out->notes + used, sizeof(st->out->notes) - used, fmt, a, b);
-  used = strlen(st->out->notes);
-  if (used + 1 < sizeof(st->out->notes)) { st->out->notes[used] = '\n'; st->out->notes[used + 1] = '\0'; }
+  char line[256];
+  snprintf(line, sizeof(line), fmt, a, b);
+  if (strstr(st->out->notes, line)) return;  // one line per distinct item
+  size_t used = strlen(st->out->notes), n = strlen(line);
+  if (used + n + 2 >= sizeof(st->out->notes)) return;
+  memcpy(st->out->notes + used, line, n);
+  st->out->notes[used + n] = '\n'; st->out->notes[used + n + 1] = '\0';
 }
 
 static void tally(stage_t *st, const char *type, int added, int updated, int held) {
@@ -507,6 +513,225 @@ static void report_unimported(stage_t *st) {
   }
 }
 
+// ── Documents and their register movements ──────────────────────────────────
+static unsigned guid_bucket(const char *guid) {
+  unsigned h = 2166136261u;
+  for (; *guid; guid++) h = (h ^ (unsigned char)*guid) * 16777619u;
+  return h % 1024;
+}
+
+static bool index_movements(stage_t *st, xmlNodePtr root) {
+  int count = 0;
+  xmlNodePtr registers = child(root, "registers");
+  for (xmlNodePtr reg = registers ? registers->children : NULL; reg; reg = reg->next)
+    for (xmlNodePtr m = reg->children; m; m = m->next) count += is_el(m, "movement");
+  st->movements = calloc((size_t)count + 1, sizeof(*st->movements));
+  if (!st->movements) return false;
+  for (xmlNodePtr reg = registers ? registers->children : NULL; reg; reg = reg->next)
+    for (xmlNodePtr m = reg->children; m; m = m->next) {
+      char recorder[40], active[8];
+      if (!is_el(m, "movement")) continue;
+      attr(m, "active", active, sizeof(active));
+      if (!strcmp(active, "false")) continue;  // 1C ignores inactive records
+      attr(m, "recorder", recorder, sizeof(recorder));
+      unsigned b = guid_bucket(recorder);
+      st->movements[st->movement_count].node = m;
+      st->movements[st->movement_count].next = st->buckets[b];
+      st->buckets[b] = ++st->movement_count;
+    }
+  return true;
+}
+
+static xmlNodePtr document_by_guid(stage_t *st, const char *guid) {
+  for (xmlNodePtr d = guid[0] && st->documents ? st->documents->children : NULL; d; d = d->next) {
+    char id[40];
+    if (!is_el(d, "document")) continue;
+    attr(d, "id", id, sizeof(id));
+    if (!strcmp(id, guid)) return d;
+  }
+  return NULL;
+}
+
+// What an analytics value names: a catalog record, a document, or an enum value.
+// Kinds over the general catalog take a record of it, found again through the
+// value's GUID joined with the kind, since one GUID may serve several kinds.
+static int analytics_value(stage_t *st, const db_account_t *account, int slot, xmlNodePtr node) {
+  int kind_id = slot == 1 ? account->subconto_kind_id : slot == 2 ? account->subconto2_kind_id : account->subconto3_kind_id;
+  char t[16], guid[40], empty[8], type[128], name[160];
+  attr(node, "t", t, sizeof(t)); attr(node, "id", guid, sizeof(guid)); attr(node, "empty", empty, sizeof(empty));
+  attr(node, "type", type, sizeof(type)); attr(node, "name", name, sizeof(name));
+  if (!guid[0] || !strcmp(empty, "true") || !strcmp(t, "null")) return 0;
+  const db_subconto_kind_t *kind = kind_id ? (const db_subconto_kind_t *)send_db_message(st->cfg, dbFind, MAKEDWORD(TABLE_SUBCONTO_KINDS, 0), (void *)(intptr_t)kind_id) : NULL;
+  if (!kind) { note(st, "account %s: analytics value with no kind in slot %s", account->code, slot == 1 ? "1" : slot == 2 ? "2" : "3"); return 0; }
+  bool general = !strcmp(kind->table, "analytic_items");
+  db_import_source_t *seen = source_find(st, guid);
+  if (seen && (!strcmp(seen->table_name, kind->table))) return seen->record_id;
+  if (!general) { note(st, "%s: analytics value not imported (no record in the file)", type, ""); return 0; }
+  char key[64];
+  snprintf(key, sizeof(key), "%s@%d", guid, kind_id);
+  db_import_source_t *alias = source_find(st, key);
+  if (alias) return alias->record_id;
+  db_analytic_item_t a = { .kind_id = kind_id };
+  if (!strcmp(t, "ref") && !strncmp(type, "Документ.", strlen("Документ."))) {
+    xmlNodePtr d = document_by_guid(st, guid);
+    char number[40] = "", date[40] = "";
+    attr(d, "number", number, sizeof(number)); attr(d, "date", date, sizeof(date));
+    snprintf(name, sizeof(name), "%s %s %.10s", type + strlen("Документ."), number, date);
+    copy_text(a.code, sizeof(a.code), number);
+  } else if (!strcmp(t, "ref")) {
+    xmlNodePtr r = record_by_guid(st, guid);
+    if (!r) { note(st, "%s: analytics value not imported (no record in the file)", type, ""); return 0; }
+    attr(r, "description", name, sizeof(name));
+  }
+  copy_text(a.name, sizeof(a.name), name);
+  const int *added = (const int *)send_db_message(st->ib, dbInsert, TABLE_ANALYTIC_ITEMS, &a);
+  if (!added || !source_remember(st, type, key, "analytic_items", *added)) {
+    snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot store an imported analytics record."));
+    return 0;
+  }
+  return *added;
+}
+
+typedef struct {
+  int account, currency, subconto[3];
+  bool has_quantity, has_currency_amount, tax_set;
+  double quantity, currency_amount;
+  int64_t quantity_milli, tax, permanent, temporary;
+} side_t;
+
+// A decimal value of a side; false for NULL, which is not zero.
+static bool side_decimal(xmlNodePtr side, const char *name, double *value, int64_t *minor, unsigned scale) {
+  xmlNodePtr n = v_node(side, name);
+  char t[16], text[64];
+  attr(n, "t", t, sizeof(t));
+  if (!n || !strcmp(t, "null")) return false;
+  v_text(side, name, text, sizeof(text));
+  int64_t m = 0;
+  if (!text[0] || !money_parse_decimal(text, scale, &m)) return false;
+  if (value) *value = strtod(text, NULL);
+  if (minor) *minor = m;
+  return true;
+}
+
+static void read_side(stage_t *st, xmlNodePtr side, side_t *out) {
+  memset(out, 0, sizeof(*out));
+  char guid[40];
+  attr(side, "account", guid, sizeof(guid));
+  db_import_source_t *acc = source_find(st, guid);
+  out->account = acc ? acc->record_id : 0;
+  if (guid[0] && !acc) note(st, "movement account %s was not imported", guid, "");
+  out->currency = ref_id(st, side, "Валюта");
+  out->has_quantity = side_decimal(side, "Количество", &out->quantity, &out->quantity_milli, 3);
+  out->has_currency_amount = side_decimal(side, "ВалютнаяСумма", &out->currency_amount, NULL, 2);
+  bool a = side_decimal(side, "СуммаНУ", NULL, &out->tax, 2), b = side_decimal(side, "СуммаПР", NULL, &out->permanent, 2),
+       c = side_decimal(side, "СуммаВР", NULL, &out->temporary, 2);
+  out->tax_set = a || b || c;
+  const db_account_t *account = out->account ? (const db_account_t *)send_db_message(st->cfg, dbFind, MAKEDWORD(TABLE_ACCOUNTS, 0), (void *)(intptr_t)out->account) : NULL;
+  for (xmlNodePtr s = side->children; s && account; s = s->next) {
+    char n[8];
+    if (!is_el(s, "subkonto")) continue;
+    attr(s, "n", n, sizeof(n));
+    int slot = atoi(n);
+    if (slot >= 1 && slot <= 3) out->subconto[slot - 1] = analytics_value(st, account, slot, s);
+  }
+}
+
+static bool import_movement(stage_t *st, int doc_id, xmlNodePtr mv) {
+  side_t d, c;
+  xmlNodePtr dn = child(mv, "debit"), cn = child(mv, "credit");
+  read_side(st, dn, &d);
+  read_side(st, cn, &c);
+  if (!d.account && !c.account) { note(st, "a movement with neither account was held back", "", ""); return true; }
+  db_entry_t e = {0};
+  send_db_message(st->ib, dbInitRecord, TABLE_ENTRIES, &e);
+  char text[512];
+  e.document_id = doc_id;
+  e.debit_id = d.account; e.credit_id = c.account;
+  e.debit_subconto_id = d.subconto[0]; e.debit_subconto2_id = d.subconto[1]; e.debit_subconto3_id = d.subconto[2];
+  e.credit_subconto_id = c.subconto[0]; e.credit_subconto2_id = c.subconto[1]; e.credit_subconto3_id = c.subconto[2];
+  attr(mv, "period", text, sizeof(text));
+  copy_text(e.date, sizeof(e.date), text[0] ? (text[10] = '\0', text) : "");
+  v_text(mv, "Сумма", text, sizeof(text));
+  e.amount = strtod(text, NULL);
+  money_parse_decimal(text, 2, &e.amount_minor);
+  v_text(mv, "Содержание", text, sizeof(text));
+  copy_text(e.content, sizeof(e.content), text);
+  const side_t *q = d.has_quantity ? &d : &c;
+  if (q->has_quantity) {
+    e.quantity = q->quantity; e.quantity_milli = q->quantity_milli;
+    if (d.has_quantity && c.has_quantity && d.quantity_milli != c.quantity_milli) note(st, "a movement has different quantities on its two sides; the debit's is kept", "", "");
+  }
+  const side_t *cur = d.has_currency_amount || d.currency ? &d : &c;
+  e.currency_id = cur->currency;
+  if (cur->has_currency_amount) e.currency_amount = cur->currency_amount;
+  e.debit_tax_set = d.tax_set; e.debit_tax_minor = d.tax; e.debit_permanent_minor = d.permanent; e.debit_temporary_minor = d.temporary;
+  e.credit_tax_set = c.tax_set; e.credit_tax_minor = c.tax; e.credit_permanent_minor = c.permanent; e.credit_temporary_minor = c.temporary;
+  return send_db_message(st->ib, dbInsert, TABLE_ENTRIES, &e) != 0;
+}
+
+static int document_type_for(stage_t *st, const char *source_type) {
+  db_import_document_t *map = (db_import_document_t *)find_by_text(st->cfg, TABLE_IMPORT_DOCUMENTS, "source_type", source_type);
+  db_doc_type_t *type = map ? (db_doc_type_t *)send_db_message(st->cfg, dbFind, MAKEDWORD(TABLE_DOC_TYPES, 0), (void *)(intptr_t)map->doc_type_id) : NULL;
+  if (type && strcmp(type->form, "operation")) {
+    note(st, "%s: mapped to a type that is not an operation; the general operation is used", source_type, "");
+    type = NULL;
+  }
+  if (!type) type = (db_doc_type_t *)find_by_text(st->cfg, TABLE_DOC_TYPES, "code", "operation");
+  return type ? type->id : 0;
+}
+
+static void import_document(stage_t *st, xmlNodePtr doc) {
+  char type[128], guid[40], number[40], date[40], posted[8], deleted[8], key[80];
+  attr(doc, "type", type, sizeof(type)); attr(doc, "id", guid, sizeof(guid)); attr(doc, "number", number, sizeof(number));
+  attr(doc, "date", date, sizeof(date)); attr(doc, "posted", posted, sizeof(posted)); attr(doc, "deleted", deleted, sizeof(deleted));
+  if (!strcmp(deleted, "true")) { tally(st, type, 0, 0, 1); return; }
+  if (source_find(st, guid)) { tally(st, type, 0, 1, 0); return; }  // an imported document is not rewritten
+  int first = st->buckets[guid_bucket(guid)], moves = 0;
+  for (int i = first; i; i = st->movements[i - 1].next) {
+    char recorder[40];
+    attr(st->movements[i - 1].node, "recorder", recorder, sizeof(recorder));
+    moves += !strcmp(recorder, guid);
+  }
+  bool is_posted = !strcmp(posted, "true");
+  if (!is_posted && !moves) {
+    note(st, "%s: documents not posted in 1C and without movements are not imported", type, "");
+    tally(st, type, 0, 0, 1);
+    return;
+  }
+  if (!is_posted) note(st, "%s: not posted in 1C but with register movements; imported posted", type, "");
+  int type_id = document_type_for(st, type);
+  if (!type_id) { snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("The configuration has no operation document type.")); return; }
+  db_document_t d = {0};
+  send_db_message(st->ib, dbInitRecord, TABLE_DOCUMENTS, &d);
+  d.doc_type_id = type_id;
+  copy_text(d.number, sizeof(d.number), number);
+  copy_text(d.date, sizeof(d.date), date[0] ? (date[10] = '\0', date) : "");
+  d.counterparty_id = ref_id(st, doc, "Контрагент");
+  d.contract_id = ref_id(st, doc, "ДоговорКонтрагента");
+  d.warehouse_id = ref_id(st, doc, "Склад");
+  d.bank_account_id = ref_id(st, doc, "СчетОрганизации") ? ref_id(st, doc, "СчетОрганизации") : ref_id(st, doc, "БанковскийСчет");
+  d.currency_id = ref_id(st, doc, "ВалютаДокумента");
+  char text[512];
+  v_text(doc, "Комментарий", text, sizeof(text));
+  copy_text(d.comment, sizeof(d.comment), text);
+  snprintf(key, sizeof(key), "1cd:%s", guid);
+  copy_text(d.import_source, sizeof(d.import_source), key);
+  const db_document_t *added = (const db_document_t *)send_db_message(st->ib, dbInsert, TABLE_DOCUMENTS, &d);
+  if (!added) { snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store the imported document %s."), number); return; }
+  int doc_id = added->id;
+  for (int i = first; i && !st->out->error[0]; i = st->movements[i - 1].next) {
+    char recorder[40];
+    attr(st->movements[i - 1].node, "recorder", recorder, sizeof(recorder));
+    if (!strcmp(recorder, guid) && !import_movement(st, doc_id, st->movements[i - 1].node))
+      snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store an entry of the imported document %s."), number);
+  }
+  if (!st->out->error[0] && !ledger_post(st->ib, st->cfg, doc_id))
+    snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot post the imported document %s."), number);
+  if (!st->out->error[0] && !source_remember(st, type, guid, "documents", doc_id))
+    snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot record the source of an imported record."));
+  if (!st->out->error[0]) { tally(st, type, 1, 0, 0); st->out->entries += moves; }
+}
+
 // ── Entry point ──────────────────────────────────────────────────────────────
 bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledger_stage_import_t *out) {
   memset(out, 0, sizeof(*out));
@@ -535,6 +760,8 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
     attr(r, "type", type, sizeof(type));
     if (is_el(r, "record") && !strcmp(type, "Справочник.Организации")) import_organization(&st, r);
   }
+  if (!out->error[0] && !ledger_apply_extensions(ib, cfg))  // movements name the new accounts
+    snprintf(out->error, sizeof(out->error), "%s", ui_tr("The imported accounts could not join the configuration."));
   for (size_t i = 0; i < ARRAY_LEN(kStageCatalogs) && !out->error[0]; i++)
     for (xmlNodePtr r = st.records ? st.records->children : NULL; r && !out->error[0]; r = r->next) {
       char type[96];
@@ -543,6 +770,9 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
     }
   if (!out->error[0]) import_analytic_records(&st);
   if (!out->error[0]) report_unimported(&st);
+  st.documents = child(root, "documents");
+  if (!out->error[0] && !index_movements(&st, root)) snprintf(out->error, sizeof(out->error), "%s", ui_tr("Out of memory."));
+  for (xmlNodePtr d = st.documents ? st.documents->children : NULL; d && !out->error[0]; d = d->next) if (is_el(d, "document")) import_document(&st, d);
   if (!out->error[0] && !send_db_message(ib, dbCommitChanges, 0, NULL))
     snprintf(out->error, sizeof(out->error), "%s", ui_tr("Cannot commit the import transaction."));
   if (out->error[0]) {
@@ -551,9 +781,9 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
     snprintf(error, sizeof(error), "%s", out->error);
     memset(out, 0, sizeof(*out));
     snprintf(out->error, sizeof(out->error), "%s", error);
-  } else if (!ledger_apply_extensions(ib, cfg)) {
-    snprintf(out->error, sizeof(out->error), "%s", ui_tr("The imported accounts could not join the configuration."));
+    ledger_apply_extensions(ib, cfg);  // the configuration forgets what the infobase rolled back
   }
+  free(st.movements);
   xmlFreeDoc(xml);
   return !out->error[0];
 }

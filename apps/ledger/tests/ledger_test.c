@@ -9,6 +9,7 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 #include <orion/user/file.h>
+#include <orion/user/money.h>
 
 #define SHARE "apps/ledger/share/configurations"
 #define TMP_DIR "build/test-ledger"
@@ -2197,6 +2198,136 @@ static void test_import_stage_catalogs(void) {
   PASS();
 }
 
+// Turnovers per account read straight from the staging file's movements.
+typedef struct { char code[16]; int64_t debit, credit; } stage_turnover_t;
+
+static stage_turnover_t *stage_turnover_of(stage_turnover_t *list, int *count, const char *code) {
+  for (int i = 0; i < *count; i++) if (!strcmp(list[i].code, code)) return &list[i];
+  if (*count == 1024) return NULL;
+  snprintf(list[*count].code, sizeof(list[*count].code), "%s", code);
+  return &list[(*count)++];
+}
+
+static const char *xml_attr(xmlNodePtr n, const char *name) {
+  static char bufs[4][256];
+  static int next;
+  char *buf = bufs[next++ & 3];
+  xmlChar *v = n ? xmlGetProp(n, (const xmlChar *)name) : NULL;
+  snprintf(buf, 256, "%s", v ? (const char *)v : "");
+  if (v) xmlFree(v);
+  return buf;
+}
+
+static char (*g_recorders)[40];  // documents the staging file's movements belong to
+static int g_recorder_count;
+
+static bool stage_turnovers(const char *path, stage_turnover_t *list, int *count) {
+  xmlDocPtr xml = xmlReadFile(path, NULL, XML_PARSE_NONET | XML_PARSE_NOBLANKS | XML_PARSE_HUGE);
+  xmlNodePtr root = xml ? xmlDocGetRootElement(xml) : NULL;
+  if (!root) return false;
+  struct { char guid[40], code[16]; } *chart = calloc(2048, sizeof(*chart));
+  int accounts = 0;
+  for (xmlNodePtr sect = root->children; sect; sect = sect->next) {
+    if (!sect->name) continue;
+    if (!strcmp((const char *)sect->name, "chart-of-accounts"))
+      for (xmlNodePtr a = sect->children; a && accounts < 2048; a = a->next) {
+        snprintf(chart[accounts].guid, sizeof(chart[0].guid), "%s", xml_attr(a, "id"));
+        snprintf(chart[accounts++].code, sizeof(chart[0].code), "%s", xml_attr(a, "code"));
+      }
+    if (strcmp((const char *)sect->name, "registers")) continue;
+    for (xmlNodePtr reg = sect->children; reg; reg = reg->next)
+      for (xmlNodePtr m = reg->children; m; m = m->next) {
+        if (strcmp(xml_attr(m, "active"), "false") == 0) continue;
+        int64_t amount = 0;
+        if (g_recorder_count < 4096) snprintf(g_recorders[g_recorder_count++], 40, "%s", xml_attr(m, "recorder"));
+        for (xmlNodePtr v = m->children; v; v = v->next)
+          if (!strcmp((const char *)v->name, "v") && !strcmp(xml_attr(v, "n"), "Сумма")) {
+            xmlChar *text = xmlNodeGetContent(v);
+            money_parse_decimal((const char *)text, 2, &amount);
+            xmlFree(text);
+          }
+        for (xmlNodePtr side = m->children; side; side = side->next) {
+          bool debit = !strcmp((const char *)side->name, "debit"), credit = !strcmp((const char *)side->name, "credit");
+          if (!debit && !credit) continue;
+          for (int i = 0; i < accounts; i++) if (!strcmp(chart[i].guid, xml_attr(side, "account"))) {
+            stage_turnover_t *t = stage_turnover_of(list, count, chart[i].code);
+            if (t) { if (debit) t->debit += amount; else t->credit += amount; }
+          }
+        }
+      }
+  }
+  free(chart);
+  xmlFreeDoc(xml);
+  return true;
+}
+
+static bool ledger_turnovers(stage_turnover_t *list, int *count) {
+  result_node_t *entries = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ENTRIES, 0), NULL);
+  for (result_node_t *n = entries; n; n = n->next) {
+    const db_entry_t *e = *(db_entry_t **)n->data;
+    const db_document_t *d = (const db_document_t *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)e->document_id);
+    bool ours = false;
+    for (int i = 0; d && ledger_document_imported(d) && i < g_recorder_count && !ours; i++) ours = !strcmp(d->import_source + 4, g_recorders[i]);
+    if (!ours) continue;
+    const db_account_t *dr = e->debit_id ? (const db_account_t *)send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_ACCOUNTS, 0), (void *)(intptr_t)e->debit_id) : NULL;
+    const db_account_t *cr = e->credit_id ? (const db_account_t *)send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_ACCOUNTS, 0), (void *)(intptr_t)e->credit_id) : NULL;
+    int64_t minor = e->amount_minor;
+    if (dr) { stage_turnover_t *t = stage_turnover_of(list, count, dr->code); if (t) t->debit += minor; }
+    if (cr) { stage_turnover_t *t = stage_turnover_of(list, count, cr->code); if (t) t->credit += minor; }
+  }
+  free_result_list(entries);
+  return true;
+}
+
+// Turnovers per account computed from the stage equal those in Ledger after the import.
+static bool turnovers_reconcile(const char *stage) {
+  stage_turnover_t *from_stage = calloc(1024, sizeof(stage_turnover_t)), *in_ledger = calloc(1024, sizeof(stage_turnover_t));
+  int a = 0, b = 0;
+  g_recorders = calloc(4096, 40);
+  g_recorder_count = 0;
+  bool ok = stage_turnovers(stage, from_stage, &a) && ledger_turnovers(in_ledger, &b) && a == b && a > 0;
+  for (int i = 0; ok && i < a; i++) {
+    stage_turnover_t *t = stage_turnover_of(in_ledger, &b, from_stage[i].code);
+    ok = t && t->debit == from_stage[i].debit && t->credit == from_stage[i].credit;
+    if (!ok) printf("\n    account %s: stage %lld/%lld, ledger %lld/%lld\n", from_stage[i].code, (long long)from_stage[i].debit, (long long)from_stage[i].credit, t ? (long long)t->debit : -1, t ? (long long)t->credit : -1);
+  }
+  free(from_stage); free(in_ledger); free(g_recorders);
+  return ok;
+}
+
+static void test_import_stage_documents(void) {
+  TEST("1CD staging import: documents keep their 1C entries, analytics resolve, imported postings are guarded");
+  ledger_stage_import_t r;
+  const char *stage = "apps/ledger/tests/fixtures/onecd/stage_documents.xml";
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
+  ASSERT(r.entries == 3, "all three movements became entries");
+  db_document_t *d1 = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000001");
+  db_document_t *d2 = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000002");
+  ASSERT(d1 && d1->posted && !strcmp(d1->date, "2015-01-12") && !strcmp(d1->comment, "Аренда за январь") && d1->counterparty_id, "a posted document keeps its date, comment and counterparty");
+  ASSERT(d2 && d2->posted && strstr(r.notes, "not posted in 1C but with register movements"), "a document with movements is posted and the report says so");
+  ASSERT(!find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000003") && !find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000004"), "an unposted document without movements and a deleted one are not imported");
+  db_account_t *a1 = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "99.1");
+  result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)d1->id);
+  const db_entry_t *first = NULL, *second = NULL;
+  for (result_node_t *n = rows; n; n = n->next) { const db_entry_t *e = *(db_entry_t **)n->data; if (e->debit_id == a1->id) first = e; else second = e; }
+  db_counterparty_t *cp = find_by(g_ledger->ib, TABLE_COUNTERPARTIES, "tax_id", "7700000009");
+  if (first && cp) printf("\n    sub1=%d cp=%d sub2=%d q=%lld amt=%lld\n", first->debit_subconto_id, cp->id, first->debit_subconto2_id, (long long)first->quantity_milli, (long long)first->amount_minor);
+  ASSERT(first && cp && first->debit_subconto_id == cp->id && first->debit_subconto2_id && first->quantity_milli == 2500 && first->amount_minor == 10050, "entry carries catalog and general analytics, quantity and exact amount");
+  ASSERT(first && first->debit_tax_set && first->debit_tax_minor == 10050 && !first->debit_permanent_minor && !first->credit_tax_set, "tax-accounting amounts keep their unset flag per side");
+  ASSERT(first && first->credit_subconto_id && second && second->debit_subconto_id && second->credit_subconto_id == cp->id, "enum and document values became analytics records");
+  free_result_list(rows);
+  db_analytic_item_t *tax = find_by(g_ledger->ib, TABLE_ANALYTIC_ITEMS, "name", "Налог");
+  ASSERT(tax && first && tax->id == first->credit_subconto_id, "the enum value is an analytic item");
+  ASSERT(turnovers_reconcile(stage), "turnovers per account equal those of the staging file");
+  ledger_unpost(g_ledger->ib, g_ledger->cfg, d1->id);
+  ASSERT(((db_document_t *)find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000001"))->posted, "an imported document cannot be unposted");
+  ASSERT(!ledger_post(g_ledger->ib, g_ledger->cfg, d1->id), "nor posted again");
+  ASSERT(ledger_repost_all(g_ledger->ib, g_ledger->cfg) && turnovers_reconcile(stage), "repost-all leaves imported entries as they were");
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
+  ASSERT(r.entries == 0 && turnovers_reconcile(stage), "a second import adds no entries");
+  PASS();
+}
+
 static void test_import_external_stage(void) {
   const char *path = getenv("LEDGER_TEST_1CD_STAGE");
   if (!path || !*path) return;
@@ -2206,6 +2337,8 @@ static void test_import_external_stage(void) {
   printf("\n    accounts +%d =%d, kinds +%d mapped %d\n", r.accounts_added, r.accounts_matched, r.kinds_added, r.kinds_mapped);
   for (int i = 0; i < r.count_types; i++) printf("    %-48s +%d ~%d held %d\n", r.counts[i].type, r.counts[i].added, r.counts[i].updated, r.counts[i].held);
   printf("%s", r.notes);
+  printf("    entries %d\n", r.entries);
+  ASSERT(turnovers_reconcile(path), "turnovers per account equal those of the staging file");
   ASSERT(ledger_import_stage(g_ledger->ib, g_ledger->cfg, path, &r) && !r.accounts_added && !r.kinds_added, "repeat adds nothing");
   for (int i = 0; i < r.count_types; i++) { if (r.counts[i].added) printf("    repeat added %d of %s\n", r.counts[i].added, r.counts[i].type); ASSERT(!r.counts[i].added, "repeat adds no catalog record"); }
   PASS();
@@ -2431,6 +2564,7 @@ int main(int argc, char **argv) {
   test_infobase_extensions();
   test_import_stage_chart();
   test_import_stage_catalogs();
+  test_import_stage_documents();
   test_import_external_stage();
   test_import_digest();
   test_import_integrity();
