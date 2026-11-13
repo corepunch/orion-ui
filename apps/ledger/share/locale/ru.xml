@@ -320,6 +320,32 @@
   <string source="%s %s dated %s" where="code">%s %s от %s</string>
   <string source="Cannot open the file %s." where="code">Не удалось открыть файл %s.</string>
   <string source="Import from 1C" where="code">Загрузка из 1С</string>
+  <string source="Cannot record the source of an imported record." where="code">Не удалось записать источник импортируемой записи.</string>
+  <string source="Cannot store an imported analytics kind." where="code">Не удалось сохранить импортируемый вид аналитики (субконто).</string>
+  <string source="Cannot store an imported account." where="code">Не удалось сохранить импортируемый счёт.</string>
+  <string source="Cannot store the imported organization." where="code">Не удалось сохранить импортируемую организацию.</string>
+  <string source="Cannot store an imported record of %s." where="code">Не удалось сохранить импортируемую запись вида %s.</string>
+  <string source="Cannot store an imported analytics record." where="code">Не удалось сохранить импортируемую запись аналитики.</string>
+  <string source="The configuration has no operation document type." where="code">В конфигурации нет вида документа «Операция».</string>
+  <string source="Cannot store the imported document %s." where="code">Не удалось сохранить импортируемый документ %s.</string>
+  <string source="Cannot store an entry of the imported document %s." where="code">Не удалось сохранить проводку импортируемого документа %s.</string>
+  <string source="Cannot post the imported document %s." where="code">Не удалось провести импортируемый документ %s.</string>
+  <string source="The file is not a 1C staging file (orion-1cd-stage-v1)." where="code">Файл не является промежуточным файлом 1С (orion-1cd-stage-v1).</string>
+  <string source="The imported accounts could not join the configuration." where="code">Импортируемые счета не удалось включить в конфигурацию.</string>
+  <string source="Out of memory." where="code">Недостаточно памяти.</string>
+  <string source="Accounts added: %d, found in the configuration: %d&#10;" where="code">Счетов добавлено: %d, найдено в конфигурации: %d
+</string>
+  <string source="Analytics kinds added: %d, mapped onto Ledger catalogs: %d&#10;" where="code">Видов аналитики (субконто) добавлено: %d, сопоставлено со справочниками Ledger: %d
+</string>
+  <string source="Entries written: %d&#10;" where="code">Записано проводок: %d
+</string>
+  <string source="Held back or not imported: %d" where="code">Отложено или не импортировано: %d</string>
+  <string source="%s: added %d, updated %d, held back %d&#10;" where="code">%s: добавлено %d, обновлено %d, отложено %d
+</string>
+  <string source="Held back or not imported:" where="code">Отложено или не импортировано:</string>
+  <string source="&#10;&#10;The full report is in %s" where="code">
+
+Полный отчёт сохранён в %s</string>
   <string source="Counterparties: %d&#10;Items: %d&#10;Employees: %d&#10;Fixed assets: %d&#10;Currencies: %d&#10;Already in the infobase: %d&#10;Opening entries: %d (debit %s, credit %s)" where="code">Контрагенты: %d
 Номенклатура: %d
 Сотрудники: %d
@@ -341,7 +367,7 @@
   <string source="Reports (Ctrl+9)" where="reports_page">Отчеты (Ctrl+9)</string>
   <string source="Setup" where="config_page">Настройка</string>
   <string source="Active configuration (Ctrl+0)" where="config_page">Текущая конфигурация (Ctrl+0)</string>
-  <string source="Import from 1C (EnterpriseData)..." where="menu">Загрузить из 1С (EnterpriseData)...</string>
+  <string source="Import from 1C..." where="menu">Загрузить из 1С...</string>
   <string source="Tax Summary" where="reports_page">Налог по ставкам</string>
   <string source="Book" where="reports_page">Книга</string>
   <string source="Above Cap" where="config_page">Свыше предела</string>

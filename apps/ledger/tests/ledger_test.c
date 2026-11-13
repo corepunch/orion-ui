@@ -2301,6 +2301,12 @@ static void test_import_stage_documents(void) {
   const char *stage = "apps/ledger/tests/fixtures/onecd/stage_documents.xml";
   ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
   ASSERT(r.entries == 3, "all three movements became entries");
+  char report[2048];
+  ledger_stage_report(&r, report, sizeof(report), false);
+  ASSERT(strstr(report, "Документ.ПриходныйКассовыйОрдер: added 1") && strstr(report, "Entries written: 3") && strstr(report, "0000-000003") == NULL, "the report lists the types and totals");
+  ledger_stage_report(&r, report, sizeof(report), true);
+  ASSERT(strstr(report, "Held back or not imported: 2") && !strstr(report, "Документ."), "the summary has totals only");
+  ASSERT(ledger_file_is_stage(stage) && !ledger_file_is_stage("apps/ledger/tests/enterprisedata_sample.xml") && !ledger_file_is_stage("no/such/file"), "a staging file is told from an exchange file by its first line");
   db_document_t *d1 = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000001");
   db_document_t *d2 = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000002");
   ASSERT(d1 && d1->posted && !strcmp(d1->date, "2015-01-12") && !strcmp(d1->comment, "Аренда за январь") && d1->counterparty_id, "a posted document keeps its date, comment and counterparty");

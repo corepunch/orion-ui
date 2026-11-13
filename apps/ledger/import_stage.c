@@ -787,3 +787,34 @@ bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledg
   xmlFreeDoc(xml);
   return !out->error[0];
 }
+
+// A staging file announces itself on its first line; the file itself can be large.
+bool ledger_file_is_stage(const char *path) {
+  char head[1024] = "";
+  FILE *f = path ? fopen(path, "rb") : NULL;
+  if (!f) return false;
+  size_t n = fread(head, 1, sizeof(head) - 1, f);
+  fclose(f);
+  head[n] = '\0';
+  const char *root = strstr(head, "<stage");
+  return root && strstr(root, "format=\"" STAGE_FORMAT "\"");
+}
+
+// The totals, a line per 1C type, then every held-back or unmapped item.
+size_t ledger_stage_report(const ledger_stage_import_t *r, char *buf, size_t sz, bool summary) {
+  size_t n = 0;
+#define ADD(...) do { if (n < sz) { int w = snprintf(buf + n, sz - n, __VA_ARGS__); if (w > 0) n += (size_t)w < sz - n ? (size_t)w : sz - n - 1; } } while (0)
+  if (sz) buf[0] = '\0';
+  int held = 0;
+  for (int i = 0; i < r->count_types; i++) held += r->counts[i].held;
+  ADD(ui_tr("Accounts added: %d, found in the configuration: %d\n"), r->accounts_added, r->accounts_matched);
+  ADD(ui_tr("Analytics kinds added: %d, mapped onto Ledger catalogs: %d\n"), r->kinds_added, r->kinds_mapped);
+  ADD(ui_tr("Entries written: %d\n"), r->entries);
+  if (summary) { ADD(ui_tr("Held back or not imported: %d"), held); return n; }
+  ADD("\n");
+  for (int i = 0; i < r->count_types; i++)
+    ADD(ui_tr("%s: added %d, updated %d, held back %d\n"), r->counts[i].type, r->counts[i].added, r->counts[i].updated, r->counts[i].held);
+  if (r->notes[0]) ADD("\n%s\n%s", ui_tr("Held back or not imported:"), r->notes);
+#undef ADD
+  return n;
+}

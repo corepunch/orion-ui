@@ -24,7 +24,7 @@
       <item name="configuration" label="Select Configuration..." />
       <item name="language" label="Language..." />
       <Separator />
-      <item name="import_1c" label="Import from 1C (EnterpriseData)..." />
+      <item name="import_1c" label="Import from 1C..." />
       <item name="addon" label="Open Add-on..." />
       <Separator />
       <item name="quit" label="Exit" />

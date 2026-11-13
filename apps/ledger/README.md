@@ -79,7 +79,7 @@ single previous copy, not a substitute for independent backups.
 | Print forms | HTML templates with amounts in words. ru-2026: счет-фактура and УПД per Decree 1137, invoice for payment, КО-1/КО-2/КО-4, payment order 0401060 (762-П), расчетная ведомость Т-51, books of sales and purchases, VAT summary for the return, trial balance, journal. de-2026: Rechnung per § 14 UStG, Quittung, Lohnjournal, Kassenbuch, Summen- und Saldenliste, UStVA Kennzahlen, Buchungsjournal and a **DATEV Buchungsstapel** CSV export. The 2003 configurations keep their TORG-12, KO forms, T-49, Rechnung and Lohnjournal |
 | Legal basis | `Setup > Legal Basis` lists the acts each configuration implements with the date they took effect and where to re-check them |
 | Storage | One XML infobase per configuration, saved on `File > Save` or on exit |
-| Import from 1C | Catalogs and opening balances from a 1C:Enterprise 8 exchange file (EnterpriseData), see below |
+| Import from 1C | Catalogs and opening balances from a 1C:Enterprise 8 exchange file (EnterpriseData), or the accounts, catalogs, documents and postings of a 1CD staging file, see below |
 
 `Reports > Recalculate` (F5) reposts legacy documents outside the closed period
 in date order and rebuilds the reports; posted exact trading documents are
@@ -257,7 +257,8 @@ accounts, subkonto kinds, catalogs, documents with tabular sections and the acco
 register movements, with every non-exported table listed. The format is described in
 [the 1CD verification notes](docs/1cd-verification-without-1c.md#выгрузка-в-staging-xml).
 
-`File > Import from 1C (EnterpriseData)...` reads the exchange file that
+`File > Import from 1C...` reads either an EnterpriseData exchange file or a 1CD
+staging file (see below). For the exchange file it reads the file that
 1C:Enterprise 8 writes in the EnterpriseData format (Администрирование →
 Синхронизация данных → Выгрузка данных в файл, or the «Выгрузка загрузка
 EnterpriseData» processor). Catalogs come from any configuration that speaks
@@ -337,6 +338,18 @@ Check posting accounts, analytics and totals against the XML, then repeat
 import and verify that no opening entries are added. Use
 `apps/ledger/tests/enterprisedata_sample.xml` for the small synthetic fixture
 and automated regression tests.
+
+### Staging file from a 1CD database
+
+The same command takes the staging file `inspect_1cd.py export-stage` writes and
+recognises it by its first line. One transaction brings in the chart of accounts and
+analytics kinds the configuration lacks, the organization, catalogs, and every
+document that has register movements, as operations holding the entries 1C wrote.
+Imported documents cannot be unposted or posted again; reverse them. Records keep
+their 1C GUIDs, so importing the file again updates catalogs instead of duplicating
+them. The summary shows totals; the full report, a line per 1C type and every held-back
+item, is saved as `import-1cd-report.txt` beside the infobase.
+Details: [the 1CD verification notes](docs/1cd-verification-without-1c.md).
 
 ## Research on 1C programmer tasks
 

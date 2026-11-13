@@ -320,6 +320,32 @@ stammen aus der aktiven Konfiguration.</string>
   <string source="%s %s dated %s" where="code">%s %s vom %s</string>
   <string source="Cannot open the file %s." where="code">Die Datei %s lässt sich nicht öffnen.</string>
   <string source="Import from 1C" where="code">Import aus 1C</string>
+  <string source="Cannot record the source of an imported record." where="code">Die Herkunft des importierten Datensatzes konnte nicht erfasst werden.</string>
+  <string source="Cannot store an imported analytics kind." where="code">Die importierte Analysenart konnte nicht gespeichert werden.</string>
+  <string source="Cannot store an imported account." where="code">Das importierte Konto konnte nicht gespeichert werden.</string>
+  <string source="Cannot store the imported organization." where="code">Die importierte Organisation konnte nicht gespeichert werden.</string>
+  <string source="Cannot store an imported record of %s." where="code">Ein importierter Datensatz der Art %s konnte nicht gespeichert werden.</string>
+  <string source="Cannot store an imported analytics record." where="code">Der importierte Analysedatensatz konnte nicht gespeichert werden.</string>
+  <string source="The configuration has no operation document type." where="code">Die Konfiguration hat keinen Belegtyp für Operationen.</string>
+  <string source="Cannot store the imported document %s." where="code">Der importierte Beleg %s konnte nicht gespeichert werden.</string>
+  <string source="Cannot store an entry of the imported document %s." where="code">Eine Buchung des importierten Belegs %s konnte nicht gespeichert werden.</string>
+  <string source="Cannot post the imported document %s." where="code">Der importierte Beleg %s konnte nicht gebucht werden.</string>
+  <string source="The file is not a 1C staging file (orion-1cd-stage-v1)." where="code">Die Datei ist keine 1C-Zwischendatei (orion-1cd-stage-v1).</string>
+  <string source="The imported accounts could not join the configuration." where="code">Die importierten Konten konnten nicht in die Konfiguration übernommen werden.</string>
+  <string source="Out of memory." where="code">Nicht genügend Speicher.</string>
+  <string source="Accounts added: %d, found in the configuration: %d&#10;" where="code">Konten hinzugefügt: %d, in der Konfiguration gefunden: %d
+</string>
+  <string source="Analytics kinds added: %d, mapped onto Ledger catalogs: %d&#10;" where="code">Analysenarten hinzugefügt: %d, auf Ledger-Kataloge abgebildet: %d
+</string>
+  <string source="Entries written: %d&#10;" where="code">Buchungen geschrieben: %d
+</string>
+  <string source="Held back or not imported: %d" where="code">Zurückgestellt oder nicht importiert: %d</string>
+  <string source="%s: added %d, updated %d, held back %d&#10;" where="code">%s: hinzugefügt %d, aktualisiert %d, zurückgestellt %d
+</string>
+  <string source="Held back or not imported:" where="code">Zurückgestellt oder nicht importiert:</string>
+  <string source="&#10;&#10;The full report is in %s" where="code">
+
+Der vollständige Bericht steht in %s</string>
   <string source="Counterparties: %d&#10;Items: %d&#10;Employees: %d&#10;Fixed assets: %d&#10;Currencies: %d&#10;Already in the infobase: %d&#10;Opening entries: %d (debit %s, credit %s)" where="code">Geschäftspartner: %d
 Artikel: %d
 Mitarbeiter: %d
@@ -341,7 +367,7 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Reports (Ctrl+9)" where="reports_page">Auswertungen (Strg+9)</string>
   <string source="Setup" where="config_page">Einstellungen</string>
   <string source="Active configuration (Ctrl+0)" where="config_page">Aktive Konfiguration (Strg+0)</string>
-  <string source="Import from 1C (EnterpriseData)..." where="menu">Aus 1C importieren (EnterpriseData)...</string>
+  <string source="Import from 1C..." where="menu">Aus 1C importieren...</string>
   <string source="Tax Summary" where="reports_page">Steuer nach Sätzen</string>
   <string source="Book" where="reports_page">Buch</string>
   <string source="Above Cap" where="config_page">Über Grenze</string>

@@ -168,6 +168,9 @@ typedef struct {
   char error[256];
 } ledger_stage_import_t;
 bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledger_stage_import_t *out);
+bool ledger_file_is_stage(const char *path);  // the file's first line names the staging format
+// The report as text: the totals alone when summary, else a line per 1C type and every note.
+size_t ledger_stage_report(const ledger_stage_import_t *r, char *buf, size_t sz, bool summary);
 
 // ledger_addons.c — external processings: an add-on's .orion form driven by
 // its Lua script, with the "ledger" module for accounts, turnovers and posting.
