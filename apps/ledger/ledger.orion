@@ -501,6 +501,25 @@
         <field name="section" type="string" length="96" />
         <field name="currency" type="boolean" />
       </table>
+      <!-- Analytics records for kinds with no table of their own (cost items,
+           other income and expenses, cash-flow items ...): subconto columns
+           of entries point here when the kind's table is "analytic_items". -->
+      <table name="analytic_items">
+        <field name="id" type="integer" key="YES" />
+        <field name="kind_id" type="integer" />
+        <field name="code" type="string" length="32" />
+        <field name="name" type="string" length="160" />
+      </table>
+      <!-- Where an imported record came from: the source's metadata name and
+           GUID, apart from the Ledger record it became, so a second import
+           finds it and updates instead of duplicating. -->
+      <table name="import_sources">
+        <field name="id" type="integer" key="YES" />
+        <field name="metadata" type="string" length="96" />
+        <field name="guid" type="string" length="40" />
+        <field name="table_name" type="string" length="32" />
+        <field name="record_id" type="integer" />
+      </table>
       <!-- Amounts are in the document's currency; posting converts them at
            its rate (the rate on the document date when left empty). -->
       <table name="documents">

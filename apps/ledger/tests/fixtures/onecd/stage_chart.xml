@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stage format="orion-1cd-stage-v1">
+  <header>
+    <source file="synthetic.1CD" size="0" sha256="0" format-version="8.3.8.0" locale="ru_RU"/>
+    <configuration name="Synthetic" version="1"/>
+  </header>
+  <chart-of-accounts type="ПланСчетов.Хозрасчетный">
+    <account type="ПланСчетов.Хозрасчетный" id="a0000000-0000-0000-0000-000000000010" code="10" description="Материалы" deleted="false" off-balance="false" kind="active" currency="false" quantity="true">
+      <subkonto n="1" kind="b0000000-0000-0000-0000-000000000001"/>
+    </account>
+    <account type="ПланСчетов.Хозрасчетный" id="a0000000-0000-0000-0000-000000000991" code="99.91" description="Расходы по статьям" deleted="false" off-balance="false" kind="active-passive" currency="true" quantity="false">
+      <subkonto n="1" kind="b0000000-0000-0000-0000-000000000007"/>
+      <subkonto n="2" kind="b0000000-0000-0000-0000-000000000001"/>
+      <subkonto n="3" kind="b0000000-0000-0000-0000-0000000000ff"/>
+    </account>
+  </chart-of-accounts>
+  <subkonto-kinds type="ПланВидовХарактеристик.ВидыСубконтоХозрасчетные">
+    <record type="ПланВидовХарактеристик.ВидыСубконтоХозрасчетные" id="b0000000-0000-0000-0000-000000000001" code="00001" description="Номенклатура" deleted="false">
+      <types><type t="ref" type="Справочник.Номенклатура"/></types>
+    </record>
+    <record type="ПланВидовХарактеристик.ВидыСубконтоХозрасчетные" id="b0000000-0000-0000-0000-000000000007" code="00007" description="Статьи затрат" deleted="false">
+      <types><type t="ref" type="Справочник.СтатьиЗатрат"/></types>
+    </record>
+  </subkonto-kinds>
+</stage>

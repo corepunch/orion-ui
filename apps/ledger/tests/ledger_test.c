@@ -2152,6 +2152,38 @@ static void test_infobase_extensions(void) {
   PASS();
 }
 
+static void test_import_stage_chart(void) {
+  TEST("1CD staging import: accounts and analytics kinds, identity kept, repeat does not duplicate");
+  ledger_stage_import_t r;
+  const char *stage = "apps/ledger/tests/fixtures/onecd/stage_chart.xml";
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
+  ASSERT(r.accounts_added == 1 && r.accounts_matched == 1, "one account is new, 10 matches by code");
+  ASSERT(r.kinds_added == 1 && r.kinds_mapped == 1, "cost items is a new kind, items maps onto a table");
+  db_account_t *a = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "99.91");
+  ASSERT(a && a->id > LEDGER_EXT_ID_BASE && !strcmp(a->kind, "АП") && a->currency, "the new account joined the configuration");
+  db_subconto_kind_t *items = find_by(g_ledger->cfg, TABLE_SUBCONTO_KINDS, "table", "items");
+  db_subconto_kind_t *costs = find_by(g_ledger->cfg, TABLE_SUBCONTO_KINDS, "table", "analytic_items");
+  ASSERT(a && costs && items && a->subconto_kind_id == costs->id && a->subconto2_kind_id == items->id, "slots carry the mapped and the new kind");
+  ASSERT(a && a->subconto3_kind_id == 0 && strstr(r.notes, "99.91"), "an unknown kind is reported, not guessed");
+  db_import_source_t *src = find_by(g_ledger->ib, TABLE_IMPORT_SOURCES, "guid", "a0000000-0000-0000-0000-000000000991");
+  ASSERT(src && src->record_id == a->id && !strcmp(src->metadata, "ПланСчетов.Хозрасчетный"), "source identity is stored");
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
+  ASSERT(r.accounts_added == 0 && r.kinds_added == 0 && r.updated == 4, "the second import finds everything again");
+  ASSERT(!ledger_import_stage(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/enterprisedata_sample.xml", &r) && r.error[0], "other files are refused");
+  PASS();
+}
+
+static void test_import_external_stage(void) {
+  const char *path = getenv("LEDGER_TEST_1CD_STAGE");
+  if (!path || !*path) return;
+  TEST("1CD staging import: an exported base's chart of accounts");
+  ledger_stage_import_t r;
+  ASSERT(ledger_import_stage(g_ledger->ib, g_ledger->cfg, path, &r), r.error);
+  printf("\n    accounts +%d =%d, kinds +%d mapped %d\n%s", r.accounts_added, r.accounts_matched, r.kinds_added, r.kinds_mapped, r.notes);
+  ASSERT(ledger_import_stage(g_ledger->ib, g_ledger->cfg, path, &r) && !r.accounts_added && !r.kinds_added, "repeat adds nothing");
+  PASS();
+}
+
 static void test_import_external_1cd_catalog(void) {
   const char *path = getenv("LEDGER_TEST_1CD_XML");
   if (!path || !*path) return;
@@ -2370,6 +2402,8 @@ int main(int argc, char **argv) {
   test_import_1cd_catalog();
   test_import_external_1cd_catalog();
   test_infobase_extensions();
+  test_import_stage_chart();
+  test_import_external_stage();
   test_import_digest();
   test_import_integrity();
   test_german_configuration();

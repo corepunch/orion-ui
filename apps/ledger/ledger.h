@@ -152,6 +152,18 @@ typedef struct {
 } ledger_import_t;
 bool ledger_import_enterprisedata(database_t *ib, database_t *cfg, const char *path, ledger_import_t *out);
 
+// import_stage.c — the staging file `inspect_1cd.py export-stage` writes from a
+// 1CD file database (orion-1cd-stage-v1). Imported postings keep their 1C
+// accounts: the ones the configuration lacks join the infobase (ext_accounts).
+typedef struct {
+  int accounts_added, accounts_matched;  // by code against the configuration
+  int kinds_added, kinds_mapped;         // analytics kinds: new, or onto a Ledger table
+  int updated;                           // records found again through their source identity
+  char notes[1024];                      // held-back or unmapped items, one per line
+  char error[256];
+} ledger_stage_import_t;
+bool ledger_import_stage(database_t *ib, database_t *cfg, const char *path, ledger_stage_import_t *out);
+
 // ledger_addons.c — external processings: an add-on's .orion form driven by
 // its Lua script, with the "ledger" module for accounts, turnovers and posting.
 void ledger_addons_init(void);
