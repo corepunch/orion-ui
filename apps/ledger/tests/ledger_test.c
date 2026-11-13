@@ -2339,6 +2339,15 @@ static void test_import_stage_documents(void) {
   ASSERT(ledger_repost_all(g_ledger->ib, g_ledger->cfg) && turnovers_reconcile(stage), "repost-all leaves imported entries as they were");
   ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
   ASSERT(r.entries == 0 && turnovers_reconcile(stage), "a second import adds no entries");
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
+  database_t *copy = ledger_test_writable_seed("ib_imported_copy", "db_schema_xml", &ledger_ib_schema, g_ledger->ib->source_path);
+  ASSERT_NOT_NULL(copy);
+  const db_document_t *again = (const db_document_t *)send_db_message(copy, dbFind, MAKEDWORD(TABLE_DOCUMENTS, ledger_field(copy, TABLE_DOCUMENTS, "number")), (void *)"0000-000001");
+  const db_import_source_t *src = (const db_import_source_t *)send_db_message(copy, dbFind, MAKEDWORD(TABLE_IMPORT_SOURCES, ledger_field(copy, TABLE_IMPORT_SOURCES, "guid")), (void *)"d1000000-0000-0000-0000-000000000001");
+  const db_ext_account_t *ext = (const db_ext_account_t *)send_db_message(copy, dbFind, MAKEDWORD(TABLE_EXT_ACCOUNTS, ledger_field(copy, TABLE_EXT_ACCOUNTS, "code")), (void *)"99.1");
+  bool kept = again && again->posted && !strncmp(again->import_source, "1cd:", 4) && src && src->record_id == again->id && ext && ext->subconto_kind_id;
+  destroy_database(copy);
+  ASSERT(kept, "the saved infobase reloads with the imported document, its identity and its extension account");
   PASS();
 }
 
@@ -2353,6 +2362,15 @@ static void test_import_external_stage(void) {
   printf("%s", r.notes);
   printf("    entries %d\n", r.entries);
   ASSERT(turnovers_reconcile(path), "turnovers per account equal those of the staging file");
+  const char *save_to = getenv("LEDGER_TEST_1CD_SAVE_TO");  // an infobase to open in the app: Ledger --config ru-2003 --data DIR
+  if (save_to && *save_to) {
+    char target[1024], cmd[2200];
+    snprintf(target, sizeof(target), "%s/infobase.xml", save_to);
+    axMkDir(save_to);
+    ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
+    snprintf(cmd, sizeof(cmd), "cp '%s' '%s'", g_ledger->ib->source_path, target);
+    ASSERT(system(cmd) == 0, "the imported infobase was copied");
+  }
   ASSERT(ledger_import_stage(g_ledger->ib, g_ledger->cfg, path, &r) && !r.accounts_added && !r.kinds_added, "repeat adds nothing");
   for (int i = 0; i < r.count_types; i++) { if (r.counts[i].added) printf("    repeat added %d of %s\n", r.counts[i].added, r.counts[i].type); ASSERT(!r.counts[i].added, "repeat adds no catalog record"); }
   PASS();
