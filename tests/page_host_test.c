@@ -1,6 +1,6 @@
 #include <orion/ui.h>
 #include <orion/user/toolbar.h>
-#include <orion/commctl/menubar.h>
+#include <orion/commctl/commctl.h>
 #include "test_env.h"
 #include "test_framework.h"
 

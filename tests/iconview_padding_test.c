@@ -1,7 +1,7 @@
 #include "test_framework.h"
 #include "test_env.h"
 #include <orion/ui.h>
-#include <orion/commctl/columnview.h>
+#include <orion/commctl/commctl.h>
 
 static result_t parent_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   (void)win; (void)wparam; (void)lparam;

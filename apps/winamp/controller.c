@@ -1,7 +1,7 @@
 // CONTROLLER: commands, playback state and the UI tick.
 
 #include "winamp.h"
-#include <orion/commdlg/filepicker.h>
+#include <orion/commdlg/commdlg.h>
 #include <unistd.h>
 #include <strings.h>
 #include <sys/stat.h>

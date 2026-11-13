@@ -14,7 +14,7 @@
 
 #include <orion/commctl/commctl.h>
 #include <orion/commctl/form_loader.h>
-#include <orion/commdlg/msgbox.h>
+#include <orion/commdlg/commdlg.h>
 #include <orion/user/i18n.h>
 #include <orion/user/gdi.h>
 #include <platform/platform.h>

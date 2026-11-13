@@ -1,7 +1,7 @@
 #include "test_framework.h"
 #include "test_env.h"
 #include <orion/ui.h>
-#include <orion/commctl/columnview.h>
+#include <orion/commctl/commctl.h>
 
 static int g_check_count, g_check_row = -1;
 

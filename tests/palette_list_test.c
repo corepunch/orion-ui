@@ -7,7 +7,6 @@
 #include "test_framework.h"
 #include "test_env.h"
 #include <orion/ui.h>
-#include <orion/commctl/columnview.h>
 #include <orion/commctl/commctl.h>
 
 static int g_opened = -1, g_submitted = 0;

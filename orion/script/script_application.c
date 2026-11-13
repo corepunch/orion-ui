@@ -4,7 +4,7 @@
 #include <orion/user/display_group.h>
 #include "script_internal.h"
 #include <orion/user/file.h>
-#include <orion/commdlg/msgbox.h>
+#include <orion/commdlg/commdlg.h>
 #include <platform/platform.h>
 #include <stdio.h>
 #include <stdlib.h>

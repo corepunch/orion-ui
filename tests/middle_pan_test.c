@@ -1,7 +1,6 @@
 #include "test_framework.h"
 #include "test_env.h"
-#include <orion/commctl/filelist.h>
-#include <orion/commctl/columnview.h>
+#include <orion/commctl/commctl.h>
 #include <orion/user/scrollbar.h>
 #include <math.h>
 #include <stdlib.h>

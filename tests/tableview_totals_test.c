@@ -6,7 +6,7 @@
 #include "test_env.h"
 #include <orion/ui.h>
 #include <orion/commctl/commctl.h>
-#include <orion/commctl/columnview_internal.h>
+#include <orion/commctl/commctl_internal.h>
 
 enum { TABLE_ROWS = 1 };
 

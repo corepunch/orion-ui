@@ -5,7 +5,7 @@
 #include "test_framework.h"
 #include "test_env.h"
 #include <orion/ui.h>
-#include <orion/commctl/menubar.h>
+#include <orion/commctl/commctl.h>
 
 #define DIR "build/test-i18n"
 

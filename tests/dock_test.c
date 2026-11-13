@@ -2,7 +2,7 @@
 #include "test_env.h"
 #include <orion/user/dock.h>
 #include <orion/user/toolbar.h>
-#include <orion/commctl/appchrome.h>
+#include <orion/commctl/commctl.h>
 
 static int dock_clicks;
 static ipoint16_t dock_point;

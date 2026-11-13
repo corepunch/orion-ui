@@ -1,6 +1,6 @@
 #include "user.h"
 #include "messages.h"
-#include <orion/commctl/layout_shared.h>
+#include <orion/commctl/commctl_internal.h>
 
 static void layout_stack_measure_fallback(window_t *win, layout_measure_t *m) {
   irect16_t cr = get_client_rect(win);

@@ -3,7 +3,7 @@
 #include "dock.h"
 #include "messages.h"
 #include "toolbar.h"
-#include <orion/commctl/menubar.h>
+#include <orion/commctl/commctl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
