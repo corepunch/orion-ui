@@ -221,6 +221,12 @@ build/bin/orionc --input apps/ledger/ledger.orion --strings apps/ledger/share/lo
 
 ## Import from 1C
 
+An experimental, read-only tool can resolve a catalog from metadata and extract it from
+an offline `1Cv8.1CD` copy without 1C and prepare XML for this importer. It is
+limited to file format 8.3.8.0 and remains experimental; a small catalog from
+one real educational infobase has been checked. See the [1CD research and instructions](docs/1c-accounting-replacement-plan.md#эксперимент-чтение-1cd-без-платформы)
+before using it.
+
 `File > Import from 1C (EnterpriseData)...` reads the exchange file that
 1C:Enterprise 8 writes in the EnterpriseData format (Администрирование →
 Синхронизация данных → Выгрузка данных в файл, or the «Выгрузка загрузка

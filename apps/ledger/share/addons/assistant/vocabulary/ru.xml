@@ -38,6 +38,7 @@
   <noun source="creditor" paradigm="noun-m-velar-animate">поставщик</noun>
   <noun source="document" paradigm="noun-m">документ</noun>
   <noun source="item"     paradigm="noun-m">товар</noun>
+  <noun source="item"     paradigm="noun-f">номенклатура</noun>
 
   <adjective  source="posted" paradigm="adjective">проведенный</adjective>
   <adjective  source="draft"  paradigm="adjective">непроведенный</adjective>
@@ -66,7 +67,10 @@
   <direction  source="descending">убыванию</direction>
   <direction  source="ascending">возрастанию</direction>
 
-  <topic source="check" synonyms="проверку проверки проверь проверить экспресс-проверка проблемы проблема проблем ошибки ошибка ошибок внимание внимания">проверка</topic>
+  <topic source="check">проверка учета</topic>
+  <topic source="check">проверку учета</topic>
+  <topic source="check">проверить учет</topic>
+  <topic source="check">проверь учет</topic>
   <topic source="check">что не так</topic>
   <topic source="check">требует внимания</topic>
   <topic source="money" synonyms="денег деньгам деньгами касса кассе кассу кассы">деньги</topic>
@@ -80,10 +84,20 @@
   <topic source="receivables">нам должны</topic>
   <topic source="receivables">нам должен</topic>
   <topic source="taxes" synonyms="налоги налогов налогам ндс ндфл взносы взносов вычет">налог</topic>
+  <topic source="unsupported_scope" synonyms="аванса авансу авансом авансе авансы авансов авансам авансами авансах предоплаты предоплате предоплату предоплатой предоплатами предоплатах">аванс</topic>
+  <topic source="unsupported_scope">авансовый платеж</topic>
+  <topic source="unsupported_scope">авансового платежа</topic>
+  <topic source="unsupported_scope">авансовому платежу</topic>
+  <topic source="unsupported_scope">авансовым платежом</topic>
+  <topic source="unsupported_scope">авансовые платежи</topic>
+  <topic source="unsupported_scope">авансовых платежей</topic>
   <topic source="closing" synonyms="закрытия закрыт закрыть">закрытие</topic>
-  <topic source="negative" synonyms="минусе отрицательный отрицательные отрицательных отрицательное отрицательного">минус</topic>
+  <topic source="negative" synonyms="минусе отрицательный отрицательные отрицательных отрицательное отрицательного отрицательным отрицательном отрицательной отрицательную отрицательными">минус</topic>
   <topic source="negative">красное сальдо</topic>
-  <topic source="reconciliation" synonyms="сверку сверки сверке сверить сверь">сверка</topic>
+  <topic source="reconciliation">акт сверки</topic>
+  <topic source="reconciliation">сверка с</topic>
+  <topic source="reconciliation">сверку с</topic>
+  <topic source="reconciliation">сверке с</topic>
 
   <ordinal value="1" paradigm="adjective">первый</ordinal>
   <ordinal value="2" paradigm="adjective">второй</ordinal>
