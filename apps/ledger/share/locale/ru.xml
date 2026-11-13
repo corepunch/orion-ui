@@ -339,6 +339,9 @@
 </string>
   <string source="Entries written: %d&#10;" where="code">Записано проводок: %d
 </string>
+  <string source="Document lines written: %d&#10;" where="code">Записано строк документов: %d
+</string>
+  <string source="Cannot store a line of the imported document %s." where="code">Не удалось сохранить строку импортируемого документа %s.</string>
   <string source="Held back or not imported: %d" where="code">Отложено или не импортировано: %d</string>
   <string source="%s: added %d, updated %d, held back %d&#10;" where="code">%s: добавлено %d, обновлено %d, отложено %d
 </string>

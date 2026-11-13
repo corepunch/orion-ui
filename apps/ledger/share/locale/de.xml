@@ -339,6 +339,9 @@ stammen aus der aktiven Konfiguration.</string>
 </string>
   <string source="Entries written: %d&#10;" where="code">Buchungen geschrieben: %d
 </string>
+  <string source="Document lines written: %d&#10;" where="code">Geschriebene Belegzeilen: %d
+</string>
+  <string source="Cannot store a line of the imported document %s." where="code">Eine Zeile des importierten Belegs %s konnte nicht gespeichert werden.</string>
   <string source="Held back or not imported: %d" where="code">Zurückgestellt oder nicht importiert: %d</string>
   <string source="%s: added %d, updated %d, held back %d&#10;" where="code">%s: hinzugefügt %d, aktualisiert %d, zurückgestellt %d
 </string>

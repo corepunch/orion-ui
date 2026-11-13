@@ -680,6 +680,66 @@ static int document_type_for(stage_t *st, const char *source_type) {
   return type ? type->id : 0;
 }
 
+// The configuration's rate for a 1C VAT enum value (НДС18, БезНДС ...) valid on the date.
+static int vat_rate_for(stage_t *st, const char *enum_name, const char *date) {
+  if (!enum_name[0]) return 0;
+  const char *digits = strstr(enum_name, "НДС");
+  int percent = digits ? atoi(digits + strlen("НДС")) : -1;
+  if (!strcmp(enum_name, "БезНДС")) {
+    db_vat_rate_t *r = (db_vat_rate_t *)find_by_text(st->cfg, TABLE_VAT_RATES, "name", "Без НДС");
+    return r ? r->id : 0;
+  }
+  int found = 0;
+  result_node_t *rates = (result_node_t *)send_db_message(st->cfg, dbFetch, MAKEDWORD(TABLE_VAT_RATES, 0), NULL);
+  EACH_RECORD(db_vat_rate_t, r, rates) {
+    bool valid = (!r->valid_from[0] || strcmp(date, r->valid_from) >= 0) && (!r->valid_to[0] || strcmp(date, r->valid_to) <= 0);
+    if (!found && valid && percent >= 0 && (int)(r->rate + 0.5) == percent && strcmp(r->treatment, "exempt")) found = r->id;
+  }
+  free_result_list(rates);
+  if (!found) note(st, "VAT rate %s has no rate in the configuration; lines keep none", enum_name, "");
+  return found;
+}
+
+// A tabular section whose rows name an item becomes lines of the document;
+// other sections (settlements, payment breakdowns) are listed, not imported.
+static bool import_lines(stage_t *st, int doc_id, xmlNodePtr doc, const char *type, const char *date, bool vat_included) {
+  for (xmlNodePtr t = doc->children; t; t = t->next) {
+    if (!is_el(t, "table")) continue;
+    char tname[96];
+    attr(t, "n", tname, sizeof(tname));
+    bool items = false;
+    for (xmlNodePtr row = t->children; row && !items; row = row->next) items = is_el(row, "row") && v_node(row, "Номенклатура");
+    if (!items) { if (child(t, "row")) note(st, "%s: table %s is not imported as lines", type, tname); continue; }
+    for (xmlNodePtr row = t->children; row; row = row->next) {
+      if (!is_el(row, "row")) continue;
+      db_doc_line_t l = {0};
+      send_db_message(st->ib, dbInitRecord, TABLE_DOC_LINES, &l);
+      l.document_id = doc_id;
+      l.item_id = ref_id(st, row, "Номенклатура");
+      double quantity = 0, price = 0, amount = 0, vat = 0;
+      int64_t q = 0, p = 0, a = 0, v = 0;
+      side_decimal(row, "Количество", &quantity, &q, 3);
+      side_decimal(row, "Цена", &price, &p, 2);
+      side_decimal(row, "Сумма", &amount, &a, 2);
+      side_decimal(row, "СуммаНДС", &vat, &v, 2);
+      if (!q && a) { quantity = 1; q = 1000; price = amount; p = a; }  // a service row has no quantity
+      if (vat_included) { amount -= vat; a -= v; }
+      l.quantity = quantity; l.quantity_milli = q;
+      l.price = price; l.price_minor = p;
+      l.amount = amount; l.amount_minor = a;
+      l.vat = vat; l.vat_minor = v;
+      l.total = amount + vat; l.total_minor = a + v;
+      char rate[64];
+      v_enum(row, "СтавкаНДС", rate, sizeof(rate));
+      l.vat_rate_id = vat_rate_for(st, rate, date);
+      if (!l.item_id) note(st, "%s: a line names an item that was not imported", type, "");
+      if (!send_db_message(st->ib, dbInsert, TABLE_DOC_LINES, &l)) return false;
+      st->out->lines++;
+    }
+  }
+  return true;
+}
+
 static void import_document(stage_t *st, xmlNodePtr doc) {
   char type[128], guid[40], number[40], date[40], posted[8], deleted[8], key[80];
   attr(doc, "type", type, sizeof(type)); attr(doc, "id", guid, sizeof(guid)); attr(doc, "number", number, sizeof(number));
@@ -719,6 +779,10 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
   const db_document_t *added = (const db_document_t *)send_db_message(st->ib, dbInsert, TABLE_DOCUMENTS, &d);
   if (!added) { snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store the imported document %s."), number); return; }
   int doc_id = added->id;
+  char included[8];
+  v_text(doc, "СуммаВключаетНДС", included, sizeof(included));
+  if (!import_lines(st, doc_id, doc, type, d.date, !strcmp(included, "true")))
+    snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store a line of the imported document %s."), number);
   for (int i = first; i && !st->out->error[0]; i = st->movements[i - 1].next) {
     char recorder[40];
     attr(st->movements[i - 1].node, "recorder", recorder, sizeof(recorder));
@@ -810,6 +874,7 @@ size_t ledger_stage_report(const ledger_stage_import_t *r, char *buf, size_t sz,
   ADD(ui_tr("Accounts added: %d, found in the configuration: %d\n"), r->accounts_added, r->accounts_matched);
   ADD(ui_tr("Analytics kinds added: %d, mapped onto Ledger catalogs: %d\n"), r->kinds_added, r->kinds_mapped);
   ADD(ui_tr("Entries written: %d\n"), r->entries);
+  ADD(ui_tr("Document lines written: %d\n"), r->lines);
   if (summary) { ADD(ui_tr("Held back or not imported: %d"), held); return n; }
   ADD("\n");
   for (int i = 0; i < r->count_types; i++)

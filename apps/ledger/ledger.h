@@ -162,6 +162,7 @@ typedef struct {
   int kinds_added, kinds_mapped;         // analytics kinds: new, or onto a Ledger table
   int updated;                           // records found again through their source identity
   int entries;                           // register movements written as entries
+  int lines;                             // rows of tabular sections written as document lines
   struct { char type[128]; int added, updated, held; } counts[48];  // per 1C metadata type
   int count_types;
   char notes[4096];                      // held-back or unmapped items, one per line

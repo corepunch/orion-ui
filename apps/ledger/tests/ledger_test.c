@@ -2300,7 +2300,8 @@ static void test_import_stage_documents(void) {
   ledger_stage_import_t r;
   const char *stage = "apps/ledger/tests/fixtures/onecd/stage_documents.xml";
   ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
-  ASSERT(r.entries == 3, "all three movements became entries");
+  ASSERT(r.entries == 3 && r.lines == 2, "all three movements became entries and the item rows became lines");
+  ASSERT(strstr(r.notes, "table РасшифровкаПлатежа is not imported as lines"), "a section without items is listed");
   char report[2048];
   ledger_stage_report(&r, report, sizeof(report), false);
   ASSERT(strstr(report, "Документ.ПриходныйКассовыйОрдер: added 1") && strstr(report, "Entries written: 3") && strstr(report, "0000-000003") == NULL, "the report lists the types and totals");
@@ -2312,6 +2313,13 @@ static void test_import_stage_documents(void) {
   ASSERT(d1 && d1->posted && !strcmp(d1->date, "2015-01-12") && !strcmp(d1->comment, "Аренда за январь") && d1->counterparty_id, "a posted document keeps its date, comment and counterparty");
   ASSERT(d2 && d2->posted && strstr(r.notes, "not posted in 1C but with register movements"), "a document with movements is posted and the report says so");
   ASSERT(!find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000003") && !find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000004"), "an unposted document without movements and a deleted one are not imported");
+  db_item_t *nut = find_by(g_ledger->ib, TABLE_ITEMS, "sku", "NUT-1");
+  result_node_t *lines = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_DOC_LINES, ledger_field(g_ledger->ib, TABLE_DOC_LINES, "document_id")), (void *)(intptr_t)d1->id);
+  const db_doc_line_t *goods = NULL, *service = NULL;
+  for (result_node_t *n = lines; n; n = n->next) { const db_doc_line_t *l = *(db_doc_line_t **)n->data; if (l->quantity_milli == 2000) goods = l; else service = l; }
+  ASSERT(goods && nut && goods->item_id == nut->id && goods->price_minor == 5000 && goods->amount_minor == 10000 && goods->vat_minor == 2000 && goods->total_minor == 12000 && goods->vat_rate_id, "a goods line keeps its quantity, price, amounts and VAT rate");
+  ASSERT(service && service->quantity_milli == 1000 && service->price_minor == 3500 && service->amount_minor == 3500 && service->vat_rate_id, "a service row without quantity becomes one unit");
+  free_result_list(lines);
   db_account_t *a1 = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "99.1");
   result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ENTRIES, ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id")), (void *)(intptr_t)d1->id);
   const db_entry_t *first = NULL, *second = NULL;
