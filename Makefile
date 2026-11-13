@@ -387,6 +387,11 @@ lua-docs-check: $(CGEN_BIN)
 	done
 	@diff -r docs/lua $(BUILD_DIR)/lua-docs > /dev/null || { echo "FAIL docs/lua is out of date: run make lua-docs"; exit 1; }
 
+# Every `make X` in launch.xml must still name a Makefile target (see AGENTS.md).
+.PHONY: launch-check
+launch-check:
+	@python3 -I tools/launch_check.py .
+
 # Lua bindings, editor metadata and reference share an XML source of truth.
 LEDGER_API_XML = apps/ledger/ledger-api.xml
 LEDGER_API_HEADER = $(GENERATED_DIR)/apps/ledger/ledger_api.h
@@ -540,7 +545,7 @@ plugins: $(COMPONENT_PLUGIN_BINS)
 # orionc, cgen) are left out so the refresh cannot form a cycle.
 LINKED_BINS      = $(EXAMPLE_BINS) $(PHONY_APP_BINS) $(BIN_DIR)/doom-ed$(EXE_EXT) $(patsubst tools/%.c,$(BIN_DIR)/%$(EXE_EXT),$(TOOLS_SRCS))
 BUILT_APP_BINS   = $(filter-out $(MAKECMDGOALS),$(wildcard $(LINKED_BINS)))
-NO_REFRESH_GOALS = clean help install% ipad% mac-deploy list-devices app-source check-lua refresh-built-apps
+NO_REFRESH_GOALS = clean help install% ipad% mac-deploy list-devices app-source check-lua launch-check .launch-check-database refresh-built-apps
 NO_REFRESH_FILES = $(filter-out $(LINKED_BINS) $(TEST_BINS),$(filter $(BUILD_DIR)/%,$(MAKECMDGOALS)))
 REFRESH_GOALS    = $(filter-out $(NO_REFRESH_GOALS) $(NO_REFRESH_FILES),$(MAKECMDGOALS))
 .PHONY: refresh-built-apps
@@ -661,7 +666,7 @@ $(GEM_BINS) $(PHONY_APP_GEMS): $(GEM_DIR)/%.gem: tools/app_sources.mk $(CORE_LIB
 # ── Tests ────────────────────────────────────────────────────────────────
 include apps/doom-ed/build.mk
 
-test: share $(TEST_BINS) lua-docs-check
+test: share $(TEST_BINS) lua-docs-check launch-check
 	@echo "Running tests..."
 	python3 apps/ledger/tests/test_1cd_extract.py
 	python3 apps/ledger/tests/test_1cd_stage.py

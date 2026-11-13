@@ -13,7 +13,8 @@ defined in [docs/design-language.md](docs/design-language.md).
 
 `launch.xml` at the repository root lists the ways to start this checkout; Git
 Client shows them for every worktree. When a change adds, renames or removes an
-app or a run target in the Makefile, update `launch.xml` in the same change.
+app or a run target in the Makefile, update `launch.xml` in the same change;
+`make launch-check` (run by `make test`) fails when they disagree.
 The format is in [apps/gitclient/README.md](apps/gitclient/README.md#launch-targets-launchxml).
 
 # Debug macros
