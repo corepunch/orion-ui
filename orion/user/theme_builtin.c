@@ -11,12 +11,6 @@
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
 #include <orion/user/style.h>
-#include "orion/themes/modern_css.h"
-#include "orion/themes/navy_css.h"
-#include "orion/themes/amber_css.h"
-#include "orion/themes/porcelain_css.h"
-#include "orion/themes/metro_css.h"
-#include "orion/themes/classic_css.h"
 
 #define MODERN_CAPTION_TEXT_INSET 8
 
@@ -122,40 +116,37 @@ void theme_reset_stylesheets(void) {
 }
 
 static theme_t *css_theme(theme_style_t style, const char *name, bool dark, theme_style_t counterpart,
-                          const char *css, const char *origin) {
-  theme_t *themes = g_themes;
-  bool *built = g_built;
-  theme_t *slot = &themes[style];
-  if (!built[style]) {
-    built[style] = true;
+                          const char *origin) {
+  theme_t *slot = &g_themes[style];
+  if (!g_built[style]) {
+    g_built[style] = true;
     *slot = k_modern_template;
     slot->style = style;
     slot->name = name;
     slot->appearance.dark = dark;
     slot->appearance.counterpart = counterpart;
-    slot->css = css;
     slot->css_origin = origin;
   }
   return slot;
 }
 
 theme_t *theme_modern_instance(void) {
-  return css_theme(THEME_MODERN, "Modern", true, THEME_LIGHT, k_modern_css, "orion/themes/modern.css");
+  return css_theme(THEME_MODERN, "Modern", true, THEME_LIGHT, "orion/themes/modern.css");
 }
 theme_t *theme_light_instance(void) {
-  return css_theme(THEME_LIGHT, "Light", false, THEME_MODERN, k_modern_css, "orion/themes/modern.css");
+  return css_theme(THEME_LIGHT, "Light", false, THEME_MODERN, "orion/themes/modern.css");
 }
 theme_t *theme_navy_instance(void) {
-  return css_theme(THEME_NAVY, "Navy", true, THEME_NAVY, k_navy_css, "orion/themes/navy.css");
+  return css_theme(THEME_NAVY, "Navy", true, THEME_NAVY, "orion/themes/navy.css");
 }
 theme_t *theme_amber_instance(void) {
-  return css_theme(THEME_AMBER, "Amber", false, THEME_AMBER, k_amber_css, "orion/themes/amber.css");
+  return css_theme(THEME_AMBER, "Amber", false, THEME_AMBER, "orion/themes/amber.css");
 }
 theme_t *theme_porcelain_instance(void) {
-  return css_theme(THEME_PORCELAIN, "Porcelain", false, THEME_PORCELAIN_DARK, k_porcelain_css, "orion/themes/porcelain.css");
+  return css_theme(THEME_PORCELAIN, "Porcelain", false, THEME_PORCELAIN_DARK, "orion/themes/porcelain.css");
 }
 theme_t *theme_porcelain_dark_instance(void) {
-  return css_theme(THEME_PORCELAIN_DARK, "Porcelain Dark", true, THEME_PORCELAIN, k_porcelain_css, "orion/themes/porcelain.css");
+  return css_theme(THEME_PORCELAIN_DARK, "Porcelain Dark", true, THEME_PORCELAIN, "orion/themes/porcelain.css");
 }
 // Classic: bevelled, square, compact chrome.
 static const theme_t k_classic_template = {
@@ -170,12 +161,11 @@ theme_t *theme_classic_instance(void) {
     classic->style = THEME_CLASSIC;
     classic->appearance.dark = true;
     classic->appearance.counterpart = THEME_CLASSIC;
-    classic->css = k_classic_css;
     classic->css_origin = "orion/themes/classic.css";
   }
   return classic;
 }
 
 theme_t *theme_metro_instance(void) {
-  return css_theme(THEME_METRO, "Metro", true, THEME_METRO, k_metro_css, "orion/themes/metro.css");
+  return css_theme(THEME_METRO, "Metro", true, THEME_METRO, "orion/themes/metro.css");
 }

@@ -217,10 +217,8 @@ typedef struct {
   } appearance;
   // Every metric is a style sheet property, read with ui_px() and its kin (ui_style.h).
 
-  // CSS themes: the theme's sheet (embedded text), read after
-  // orion/themes/base.css. theme_stylesheet() parses them on first use.
-  const char    *css;
-  const char    *css_origin;
+  // CSS themes: loaded from share/orion/<css_origin> at first use.
+  const char    *css_origin;   // e.g. "orion/themes/modern.css"
   style_sheet_t *sheet;
 } theme_t;
 
@@ -286,7 +284,7 @@ theme_t *theme_metro_instance(void);
 
 // ── Style sheets ──────────────────────────────────────────────────────────────
 //
-// CSS-driven themes (orion/themes/*.css, embedded at build time): :root custom
+// CSS-driven themes (orion/themes/*.css, loaded from the app bundle at runtime): :root custom
 // properties are the system colour roles, named in kebab case (brControlBg is
 // --control-bg), control properties set theme_t metrics, and every theme part
 // is painted from its box properties. See docs/styling.md.
@@ -295,8 +293,8 @@ int  theme_sys_color_role(const char *name);     // -1 when no role has that nam
 // Every role from the sheet's :root; false (missing roles logged) when any is undefined.
 bool theme_palette_from_stylesheet(style_sheet_t *sheet, uint32_t palette[brCount]);
 
-// base.css + theme->css (or the file ORION_THEME_CSS names), in the theme's
-// appearance; colour roles resolve against the live palette.
+// base.css + theme->css_origin (or ORION_THEME_CSS), loaded from share/orion/,
+// in the theme's appearance; colour roles resolve against the live palette.
 style_sheet_t *theme_stylesheet(theme_t *theme);
 // An application's own sheet, read after the theme's as a page's sheet follows
 // the user agent's; NULL removes it. Applies to every theme.

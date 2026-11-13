@@ -12,7 +12,6 @@
 #include "theme.h"
 #include "style.h"
 #include "config.h"
-#include "orion/themes/base_css.h"
 
 static const char *const k_sys_color_names[brCount] = {
   [brTransparent] = "transparent",                 [brControlBg] = "control-bg",
@@ -83,7 +82,7 @@ static bool theme_platform_var(const char *name, char *out, size_t n, void *ctx)
 
 static char *theme_read_file(const char *path) {
   FILE *f = fopen(path, "rb");
-  if (!f) { fprintf(stderr, "[theme] cannot read ORION_THEME_CSS=%s\n", path); fflush(stderr); return NULL; }
+  if (!f) return NULL;
   fseek(f, 0, SEEK_END); long size = ftell(f); fseek(f, 0, SEEK_SET);
   char *text = size >= 0 ? malloc((size_t)size + 1) : NULL;
   size_t got = text ? fread(text, 1, (size_t)size, f) : 0;
@@ -92,16 +91,31 @@ static char *theme_read_file(const char *path) {
   return text;
 }
 
+static char *theme_read_share(const char *origin) {
+  char path[512];
+  snprintf(path, sizeof(path), "%s/../share/%s", ui_get_exe_dir(), origin);
+  char *css = theme_read_file(path);
+  if (!css) fprintf(stderr, "[theme] cannot read %s\n", path);
+  return css;
+}
+
 static char *g_app_css, *g_app_origin;   // ui_set_app_stylesheet()
 
 // base.css, the theme's sheet, then an application's.
 static style_sheet_t *theme_build_sheet(theme_t *theme, const char *app_css, const char *app_origin) {
-  style_sheet_t *sheet = style_sheet_parse(k_base_css, "orion/themes/base.css");
+  char *base = theme_read_share("orion/themes/base.css");
+  if (!base) return NULL;
+  style_sheet_t *sheet = style_sheet_parse(base, "orion/themes/base.css");
+  free(base);
   if (!sheet) return NULL;
-  const char *path = getenv("ORION_THEME_CSS");
-  char *override = path && *path ? theme_read_file(path) : NULL;
-  style_sheet_append(sheet, override ? override : theme->css, override ? path : theme->css_origin);
-  free(override);
+  const char *override_path = getenv("ORION_THEME_CSS");
+  if (override_path && *override_path) {
+    char *override = theme_read_file(override_path);
+    if (override) { style_sheet_append(sheet, override, override_path); free(override); }
+  } else {
+    char *theme_css = theme_read_share(theme->css_origin);
+    if (theme_css) { style_sheet_append(sheet, theme_css, theme->css_origin); free(theme_css); }
+  }
   if (app_css) style_sheet_append(sheet, app_css, app_origin);
   style_sheet_set_dark(sheet, theme->appearance.dark);
   style_sheet_set_var_hook(sheet, theme_role_var, theme_platform_var, NULL);
@@ -109,7 +123,7 @@ static style_sheet_t *theme_build_sheet(theme_t *theme, const char *app_css, con
 }
 
 style_sheet_t *theme_stylesheet(theme_t *theme) {
-  if (!theme || !theme->css) return NULL;
+  if (!theme || !theme->css_origin) return NULL;
   if (!theme->sheet) theme->sheet = theme_build_sheet(theme, g_app_css, g_app_origin);
   return theme->sheet;
 }

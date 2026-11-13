@@ -33,6 +33,10 @@ def main():
     target.mkdir(parents=True)
     (target / 'bin').mkdir()  # bin/../share paths resolve inside the bundle.
     shutil.copytree(root / 'share', target / 'share/orion')
+    themes_dst = target / 'share/orion/themes'
+    themes_dst.mkdir(parents=True, exist_ok=True)
+    for css in (root / 'orion/themes').glob('*.css'):
+        shutil.copy2(css, themes_dst / css.name)
     shutil.copytree(root / 'apps' / source / 'share', target / 'share' / source)
     if source != args.app and (root / 'apps' / source / args.app / 'share').is_dir():
         shutil.copytree(root / 'apps' / source / args.app / 'share', target / 'share' / source / args.app)
