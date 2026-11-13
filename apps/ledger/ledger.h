@@ -154,6 +154,10 @@ typedef struct {
 } ledger_import_t;
 bool ledger_import_enterprisedata(database_t *ib, database_t *cfg, const char *path, ledger_import_t *out);
 
+// Copies into a record field, cutting at a UTF-8 character boundary: the stores
+// write UTF-8, and a name cut inside a Cyrillic letter would not load again.
+void ledger_copy_text(char *dst, size_t sz, const char *src);
+
 // import_stage.c — the staging file `inspect_1cd.py export-stage` writes from a
 // 1CD file database (orion-1cd-stage-v1). Imported postings keep their 1C
 // accounts: the ones the configuration lacks join the infobase (ext_accounts).

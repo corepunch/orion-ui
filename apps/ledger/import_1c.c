@@ -103,7 +103,7 @@ static void ed_text(xmlNodePtr n, char *buf, size_t sz) {
   if (!v) return;
   const char *s = (const char *)v;
   while (*s == ' ' || *s == '\n' || *s == '\r' || *s == '\t') s++;
-  snprintf(buf, sz, "%s", s);
+  ledger_copy_text(buf, sz, s);
   for (size_t len = strlen(buf); len && strchr(" \n\r\t", buf[len - 1]); len--) buf[len - 1] = '\0';
   xmlFree(v);
 }
@@ -201,7 +201,7 @@ static int ed_counterparty(ed_import_t *im, xmlNodePtr obj) {
   if (old) { im->out->matched++; return ed_remember(im, TABLE_COUNTERPARTIES, ref, old->id); }
   db_counterparty_t c = {0};
   send_db_message(im->ib, dbInitRecord, TABLE_COUNTERPARTIES, &c);
-  snprintf(c.name, sizeof(c.name), "%s", name);
+  ledger_copy_text(c.name, sizeof(c.name), name);
   snprintf(c.tax_id, sizeof(c.tax_id), "%s", tax_id);
   snprintf(c.kpp, sizeof(c.kpp), "%s", kpp);
   ed_contact(obj, "Адрес", c.address, sizeof(c.address));
@@ -244,7 +244,7 @@ static int ed_item(ed_import_t *im, xmlNodePtr obj) {
   if (old) { im->out->matched++; return ed_remember(im, TABLE_ITEMS, ref, old->id); }
   db_item_t it = {0};
   send_db_message(im->ib, dbInitRecord, TABLE_ITEMS, &it);
-  snprintf(it.name, sizeof(it.name), "%s", name);
+  ledger_copy_text(it.name, sizeof(it.name), name);
   snprintf(it.sku, sizeof(it.sku), "%s", sku);
   xmlNodePtr row = ed_is(obj->parent, "ДанныеНоменклатуры") ? obj->parent->parent : NULL;
   xmlNodePtr u = ed_part(obj, "ЕдиницаИзмерения"), vat = ed_part(obj, "СтавкаНДС");
@@ -283,7 +283,7 @@ static int ed_employee(ed_import_t *im, xmlNodePtr obj) {
   db_employee_t e = {0}, *like = ed_first(im->ib, TABLE_EMPLOYEES);
   send_db_message(im->ib, dbInitRecord, TABLE_EMPLOYEES, &e);
   e.account_id = like ? like->account_id : 0;
-  snprintf(e.name, sizeof(e.name), "%s", name);
+  ledger_copy_text(e.name, sizeof(e.name), name);
   snprintf(e.tax_id, sizeof(e.tax_id), "%s", tax_id);
   if ((id = ed_insert(im, TABLE_EMPLOYEES, &e))) im->out->employees++;
   return ed_remember(im, TABLE_EMPLOYEES, ref, id);
@@ -303,7 +303,7 @@ static int ed_asset(ed_import_t *im, xmlNodePtr obj) {
   db_asset_t a = {0}, *like = ed_first(im->ib, TABLE_ASSETS);
   send_db_message(im->ib, dbInitRecord, TABLE_ASSETS, &a);
   if (like) { a.account_id = like->account_id; a.depreciation_id = like->depreciation_id; a.expense_id = like->expense_id; a.life = like->life; }
-  snprintf(a.name, sizeof(a.name), "%s", name);
+  ledger_copy_text(a.name, sizeof(a.name), name);
   snprintf(a.inventory, sizeof(a.inventory), "%s", inventory);
   if ((id = ed_insert(im, TABLE_ASSETS, &a))) im->out->assets++;
   return ed_remember(im, TABLE_ASSETS, ref, id);
@@ -332,7 +332,7 @@ static int ed_currency(ed_import_t *im, xmlNodePtr obj) {
   send_db_message(im->ib, dbInitRecord, TABLE_CURRENCIES, &c);
   snprintf(c.code, sizeof(c.code), "%.3s", code);
   if (!ed_prop(obj, "НаименованиеПолное", name, sizeof(name))) snprintf(name, sizeof(name), "%s", code);
-  snprintf(c.name, sizeof(c.name), "%s", name);
+  ledger_copy_text(c.name, sizeof(c.name), name);
   if ((id = ed_insert(im, TABLE_CURRENCIES, &c))) im->out->currencies++;
   return ed_remember(im, TABLE_CURRENCIES, ref, id);
 }
@@ -380,7 +380,7 @@ static int ed_opening_document(ed_import_t *im, xmlNodePtr doc) {
   d.doc_type_id = type->id;
   if (date[0]) snprintf(d.date, sizeof(d.date), "%.10s", date);
   snprintf(d.import_source, sizeof(d.import_source), "%s", im->source);
-  snprintf(d.comment, sizeof(d.comment), "%s", ui_tr("Opening balances imported from 1C"));
+  ledger_copy_text(d.comment, sizeof(d.comment), ui_tr("Opening balances imported from 1C"));
   result_node_t *docs = (result_node_t *)send_db_message(im->ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
   for (result_node_t *n = docs; n; n = n->next) {
     const db_document_t *old = *(db_document_t **)n->data;
@@ -425,7 +425,7 @@ static void ed_balance_row(ed_import_t *im, xmlNodePtr doc, xmlNodePtr row, cons
   e.quantity = quantity;
   e.amount = national;
   if (currency_id && account->currency) { e.currency_id = currency_id; e.currency_amount = amount; }
-  snprintf(e.content, sizeof(e.content), "%s", account->name);
+  ledger_copy_text(e.content, sizeof(e.content), account->name);
   if (!ed_insert(im, TABLE_ENTRIES, &e)) return;
   im->out->entries++;
   if (credit) im->out->credit += national; else im->out->debit += national;

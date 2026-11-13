@@ -46,9 +46,7 @@ typedef struct {
   int movement_count, buckets[1024];             // buckets hold index + 1; 0 is empty
 } stage_t;
 
-// Copies into a record field, cutting at a character boundary: the stores
-// write UTF-8, and a name cut inside a Cyrillic letter would not load again.
-static void copy_text(char *dst, size_t sz, const char *src) {
+void ledger_copy_text(char *dst, size_t sz, const char *src) {
   size_t n = strlen(src);
   if (n >= sz) {
     n = sz - 1;
@@ -69,7 +67,7 @@ static xmlNodePtr child(xmlNodePtr n, const char *name) {
 
 static void attr(xmlNodePtr n, const char *name, char *buf, size_t sz) {
   xmlChar *v = n ? xmlGetProp(n, (const xmlChar *)name) : NULL;
-  snprintf(buf, sz, "%s", v ? (const char *)v : "");
+  ledger_copy_text(buf, sz, v ? (const char *)v : "");
   if (v) xmlFree(v);
 }
 
@@ -86,7 +84,7 @@ static void note(stage_t *st, const char *fmt, const char *a, const char *b) {
 static void tally(stage_t *st, const char *type, int added, int updated, int held) {
   ledger_stage_import_t *o = st->out;
   char key[sizeof(o->counts[0].type)];
-  copy_text(key, sizeof(key), type);
+  ledger_copy_text(key, sizeof(key), type);
   int i = 0;
   while (i < o->count_types && strcmp(o->counts[i].type, key)) i++;
   if (i == o->count_types) {
@@ -109,9 +107,9 @@ static db_import_source_t *source_find(stage_t *st, const char *guid) {
 static bool source_remember(stage_t *st, const char *metadata, const char *guid, const char *table, int record_id) {
   if (!guid[0] || source_find(st, guid)) return true;
   db_import_source_t s = { .record_id = record_id };
-  copy_text(s.metadata, sizeof(s.metadata), metadata);
-  copy_text(s.guid, sizeof(s.guid), guid);
-  copy_text(s.table_name, sizeof(s.table_name), table);
+  ledger_copy_text(s.metadata, sizeof(s.metadata), metadata);
+  ledger_copy_text(s.guid, sizeof(s.guid), guid);
+  ledger_copy_text(s.table_name, sizeof(s.table_name), table);
   return send_db_message(st->ib, dbInsert, TABLE_IMPORT_SOURCES, &s) != 0;
 }
 
@@ -160,8 +158,8 @@ static void import_kind(stage_t *st, xmlNodePtr rec) {
     return;
   }
   db_ext_subconto_kind_t k = { .id = next_ext_id(st->ib, TABLE_EXT_SUBCONTO_KINDS) };
-  copy_text(k.code, sizeof(k.code), code);
-  copy_text(k.name, sizeof(k.name), name);
+  ledger_copy_text(k.code, sizeof(k.code), code);
+  ledger_copy_text(k.name, sizeof(k.name), name);
   snprintf(k.table, sizeof(k.table), "analytic_items");
   if (!send_db_message(st->ib, dbInsert, TABLE_EXT_SUBCONTO_KINDS, &k) || !source_remember(st, metadata, guid, "ext_subconto_kinds", k.id)) {
     snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot store an imported analytics kind."));
@@ -194,9 +192,9 @@ static void import_account(stage_t *st, xmlNodePtr rec) {
     return;
   }
   db_ext_account_t a = { .id = next_ext_id(st->ib, TABLE_EXT_ACCOUNTS), .currency = !strcmp(currency, "true") };
-  copy_text(a.code, sizeof(a.code), code);
-  copy_text(a.name, sizeof(a.name), name);
-  copy_text(a.kind, sizeof(a.kind), ledger_account_kind(kind));
+  ledger_copy_text(a.code, sizeof(a.code), code);
+  ledger_copy_text(a.name, sizeof(a.name), name);
+  ledger_copy_text(a.kind, sizeof(a.kind), ledger_account_kind(kind));
   int *slots[3] = { &a.subconto_kind_id, &a.subconto2_kind_id, &a.subconto3_kind_id };
   for (xmlNodePtr s = rec->children; s; s = s->next) {
     if (!is_el(s, "subkonto")) continue;
@@ -231,7 +229,7 @@ static void v_text(xmlNodePtr rec, const char *name, char *buf, size_t sz) {
   char t[16];
   attr(n, "t", t, sizeof(t));
   xmlChar *v = n && strcmp(t, "null") && strcmp(t, "blob") ? xmlNodeGetContent(n) : NULL;
-  if (v) { snprintf(buf, sz, "%s", (const char *)v); xmlFree(v); }
+  if (v) { ledger_copy_text(buf, sz, (const char *)v); xmlFree(v); }
 }
 
 static void v_enum(xmlNodePtr rec, const char *name, char *buf, size_t sz) { attr(v_node(rec, name), "name", buf, sz); }
@@ -268,14 +266,14 @@ typedef struct stage_catalog {
 static void text_field(char *dst, size_t sz, xmlNodePtr rec, const char *name) {
   char buf[512];
   v_text(rec, name, buf, sizeof(buf));
-  copy_text(dst, sz, buf);
+  ledger_copy_text(dst, sz, buf);
 }
 
 static bool fill_counterparty(stage_t *st, xmlNodePtr rec, void *out, const char **why) {
   db_counterparty_t *c = out;
   char name[512];
   attr(rec, "description", name, sizeof(name));
-  copy_text(c->name, sizeof(c->name), name);
+  ledger_copy_text(c->name, sizeof(c->name), name);
   text_field(c->tax_id, sizeof(c->tax_id), rec, "ИНН");
   text_field(c->kpp, sizeof(c->kpp), rec, "КПП");
   return true;
@@ -285,7 +283,7 @@ static bool fill_item(stage_t *st, xmlNodePtr rec, void *out, const char **why) 
   db_item_t *it = out;
   char name[512], guid[40];
   attr(rec, "description", name, sizeof(name));
-  copy_text(it->name, sizeof(it->name), name);
+  ledger_copy_text(it->name, sizeof(it->name), name);
   text_field(it->sku, sizeof(it->sku), rec, "Артикул");
   v_ref(rec, "ЕдиницаИзмерения", guid, sizeof(guid));
   xmlNodePtr unit = record_by_guid(st, guid);
@@ -301,7 +299,7 @@ static bool fill_employee(stage_t *st, xmlNodePtr rec, void *out, const char **w
   db_employee_t *e = out;
   char name[512];
   text_field(e->name, sizeof(e->name), rec, "ФИО");
-  if (!e->name[0]) { attr(rec, "description", name, sizeof(name)); copy_text(e->name, sizeof(e->name), name); }
+  if (!e->name[0]) { attr(rec, "description", name, sizeof(name)); ledger_copy_text(e->name, sizeof(e->name), name); }
   text_field(e->tax_id, sizeof(e->tax_id), rec, "ИНН");
   return true;
 }
@@ -310,9 +308,9 @@ static bool fill_warehouse(stage_t *st, xmlNodePtr rec, void *out, const char **
   db_warehouse_t *w = out;
   char name[512], type[64];
   attr(rec, "description", name, sizeof(name));
-  copy_text(w->name, sizeof(w->name), name);
+  ledger_copy_text(w->name, sizeof(w->name), name);
   v_enum(rec, "ТипСклада", type, sizeof(type));
-  copy_text(w->kind, sizeof(w->kind), !strcmp(type, "ОптовыйСклад") ? "wholesale" : !strcmp(type, "РозничныйМагазин") ? "retail" : "");
+  ledger_copy_text(w->kind, sizeof(w->kind), !strcmp(type, "ОптовыйСклад") ? "wholesale" : !strcmp(type, "РозничныйМагазин") ? "retail" : "");
   return true;
 }
 
@@ -325,14 +323,14 @@ static bool fill_contract(stage_t *st, xmlNodePtr rec, void *out, const char **w
   c->counterparty_id = cp->record_id;
   c->currency_id = ref_id(st, rec, "ВалютаВзаиморасчетов");
   attr(rec, "description", name, sizeof(name));
-  copy_text(c->name, sizeof(c->name), name);
+  ledger_copy_text(c->name, sizeof(c->name), name);
   text_field(c->number, sizeof(c->number), rec, "Номер");
   v_text(rec, "Дата", date, sizeof(date));
-  copy_text(c->date, sizeof(c->date), date);
+  ledger_copy_text(c->date, sizeof(c->date), date);
   v_text(rec, "СрокДействия", date, sizeof(date));
-  if (strlen(date) >= 10) { date[10] = '\0'; copy_text(c->valid_until, sizeof(c->valid_until), date); }
+  if (strlen(date) >= 10) { date[10] = '\0'; ledger_copy_text(c->valid_until, sizeof(c->valid_until), date); }
   v_enum(rec, "ВидДоговора", kind, sizeof(kind));
-  copy_text(c->kind, sizeof(c->kind), !strcmp(kind, "СПоставщиком") ? "supplier" : !strcmp(kind, "СПокупателем") ? "customer" : "other");
+  ledger_copy_text(c->kind, sizeof(c->kind), !strcmp(kind, "СПоставщиком") ? "supplier" : !strcmp(kind, "СПокупателем") ? "customer" : "other");
   return true;
 }
 
@@ -345,13 +343,13 @@ static bool fill_bank_account(stage_t *st, xmlNodePtr rec, void *out, const char
   if (!strcmp(owner_type, "Справочник.Организации")) b->organization_id = own->record_id; else b->counterparty_id = own->record_id;
   b->currency_id = ref_id(st, rec, "ВалютаДенежныхСредств");
   attr(rec, "description", name, sizeof(name));
-  copy_text(b->name, sizeof(b->name), name);
+  ledger_copy_text(b->name, sizeof(b->name), name);
   text_field(b->number, sizeof(b->number), rec, "НомерСчета");
   v_ref(rec, "Банк", guid, sizeof(guid));
   xmlNodePtr bank = record_by_guid(st, guid);
   if (bank) {
-    attr(bank, "description", name, sizeof(name)); copy_text(b->bank, sizeof(b->bank), name);
-    attr(bank, "code", name, sizeof(name)); copy_text(b->bik, sizeof(b->bik), name);
+    attr(bank, "description", name, sizeof(name)); ledger_copy_text(b->bank, sizeof(b->bank), name);
+    attr(bank, "code", name, sizeof(name)); ledger_copy_text(b->bik, sizeof(b->bik), name);
     text_field(b->corr_account, sizeof(b->corr_account), bank, "КоррСчет");
     text_field(b->swift, sizeof(b->swift), bank, "СВИФТБИК");
   }
@@ -361,8 +359,8 @@ static bool fill_bank_account(stage_t *st, xmlNodePtr rec, void *out, const char
 static bool fill_currency(stage_t *st, xmlNodePtr rec, void *out, const char **why) {
   db_currency_t *c = out;
   char name[512];
-  attr(rec, "code", name, sizeof(name)); copy_text(c->code, sizeof(c->code), name);
-  attr(rec, "description", name, sizeof(name)); copy_text(c->name, sizeof(c->name), name);
+  attr(rec, "code", name, sizeof(name)); ledger_copy_text(c->code, sizeof(c->code), name);
+  attr(rec, "description", name, sizeof(name)); ledger_copy_text(c->name, sizeof(c->name), name);
   return true;
 }
 
@@ -379,7 +377,7 @@ static void import_organization(stage_t *st, xmlNodePtr rec) {
   }
   if (seen && seen->record_id != own->id) return;
   db_organization_t o = *own;
-  attr(rec, "description", text, sizeof(text)); copy_text(o.name, sizeof(o.name), text);
+  attr(rec, "description", text, sizeof(text)); ledger_copy_text(o.name, sizeof(o.name), text);
   text_field(o.tax_id, sizeof(o.tax_id), rec, "ИНН");
   text_field(o.kpp, sizeof(o.kpp), rec, "КПП");
   char bank_guid[40];
@@ -391,8 +389,8 @@ static void import_organization(stage_t *st, xmlNodePtr rec) {
     bank = record_by_guid(st, bank_guid);
   }
   if (bank) {
-    attr(bank, "description", text, sizeof(text)); copy_text(o.bank, sizeof(o.bank), text);
-    attr(bank, "code", text, sizeof(text)); copy_text(o.bik, sizeof(o.bik), text);
+    attr(bank, "description", text, sizeof(text)); ledger_copy_text(o.bank, sizeof(o.bank), text);
+    attr(bank, "code", text, sizeof(text)); ledger_copy_text(o.bik, sizeof(o.bik), text);
     text_field(o.corr_account, sizeof(o.corr_account), bank, "КоррСчет");
   }
   if (!send_db_message(st->ib, dbUpdate, TABLE_ORGANIZATIONS, &o) || !source_remember(st, "Справочник.Организации", guid, "organizations", o.id))
@@ -476,8 +474,8 @@ static void import_analytic_records(stage_t *st) {
     if (!strcmp(folder, "true")) { tally(st, type, 0, 0, 1); continue; }
     char text[512];
     db_analytic_item_t a = { .kind_id = kind };
-    attr(rec, "code", text, sizeof(text)); copy_text(a.code, sizeof(a.code), text);
-    attr(rec, "description", text, sizeof(text)); copy_text(a.name, sizeof(a.name), text);
+    attr(rec, "code", text, sizeof(text)); ledger_copy_text(a.code, sizeof(a.code), text);
+    attr(rec, "description", text, sizeof(text)); ledger_copy_text(a.name, sizeof(a.name), text);
     db_import_source_t *seen = source_find(st, guid);
     if (seen && strcmp(seen->table_name, "analytic_items")) {
       note(st, "%s: also a catalog of its own; as analytics it is held back", type, "");
@@ -508,7 +506,7 @@ static void report_unimported(stage_t *st) {
     for (int i = 0; i < st->out->count_types && !known; i++) known = !strcmp(st->out->counts[i].type, type);
     for (int i = 0; i < count && !known; i++) known = !strcmp(seen[i], type);
     if (known || count == 48) continue;
-    copy_text(seen[count++], sizeof(seen[0]), type);
+    ledger_copy_text(seen[count++], sizeof(seen[0]), type);
     note(st, "%s: no Ledger catalog for this type, not imported", type, "");
   }
 }
@@ -576,14 +574,16 @@ static int analytics_value(stage_t *st, const db_account_t *account, int slot, x
     xmlNodePtr d = document_by_guid(st, guid);
     char number[40] = "", date[40] = "";
     attr(d, "number", number, sizeof(number)); attr(d, "date", date, sizeof(date));
-    snprintf(name, sizeof(name), "%s %s %.10s", type + strlen("Документ."), number, date);
-    copy_text(a.code, sizeof(a.code), number);
+    char caption[192];  // the parts fit: type is 127, number 39, date 10
+    snprintf(caption, sizeof(caption), "%s %s %.10s", type + strlen("Документ."), number, date);
+    ledger_copy_text(name, sizeof(name), caption);
+    ledger_copy_text(a.code, sizeof(a.code), number);
   } else if (!strcmp(t, "ref")) {
     xmlNodePtr r = record_by_guid(st, guid);
     if (!r) { note(st, "%s: analytics value not imported (no record in the file)", type, ""); return 0; }
     attr(r, "description", name, sizeof(name));
   }
-  copy_text(a.name, sizeof(a.name), name);
+  ledger_copy_text(a.name, sizeof(a.name), name);
   const int *added = (const int *)send_db_message(st->ib, dbInsert, TABLE_ANALYTIC_ITEMS, &a);
   if (!added || !source_remember(st, type, key, "analytic_items", *added)) {
     snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot store an imported analytics record."));
@@ -650,12 +650,12 @@ static bool import_movement(stage_t *st, int doc_id, xmlNodePtr mv) {
   e.debit_subconto_id = d.subconto[0]; e.debit_subconto2_id = d.subconto[1]; e.debit_subconto3_id = d.subconto[2];
   e.credit_subconto_id = c.subconto[0]; e.credit_subconto2_id = c.subconto[1]; e.credit_subconto3_id = c.subconto[2];
   attr(mv, "period", text, sizeof(text));
-  copy_text(e.date, sizeof(e.date), text[0] ? (text[10] = '\0', text) : "");
+  ledger_copy_text(e.date, sizeof(e.date), text[0] ? (text[10] = '\0', text) : "");
   v_text(mv, "Сумма", text, sizeof(text));
   e.amount = strtod(text, NULL);
   money_parse_decimal(text, 2, &e.amount_minor);
   v_text(mv, "Содержание", text, sizeof(text));
-  copy_text(e.content, sizeof(e.content), text);
+  ledger_copy_text(e.content, sizeof(e.content), text);
   const side_t *q = d.has_quantity ? &d : &c;
   if (q->has_quantity) {
     e.quantity = q->quantity; e.quantity_milli = q->quantity_milli;
@@ -764,8 +764,8 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
   db_document_t d = {0};
   send_db_message(st->ib, dbInitRecord, TABLE_DOCUMENTS, &d);
   d.doc_type_id = type_id;
-  copy_text(d.number, sizeof(d.number), number);
-  copy_text(d.date, sizeof(d.date), date[0] ? (date[10] = '\0', date) : "");
+  ledger_copy_text(d.number, sizeof(d.number), number);
+  ledger_copy_text(d.date, sizeof(d.date), date[0] ? (date[10] = '\0', date) : "");
   d.counterparty_id = ref_id(st, doc, "Контрагент");
   d.contract_id = ref_id(st, doc, "ДоговорКонтрагента");
   d.warehouse_id = ref_id(st, doc, "Склад");
@@ -773,9 +773,9 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
   d.currency_id = ref_id(st, doc, "ВалютаДокумента");
   char text[512];
   v_text(doc, "Комментарий", text, sizeof(text));
-  copy_text(d.comment, sizeof(d.comment), text);
+  ledger_copy_text(d.comment, sizeof(d.comment), text);
   snprintf(key, sizeof(key), "1cd:%s", guid);
-  copy_text(d.import_source, sizeof(d.import_source), key);
+  ledger_copy_text(d.import_source, sizeof(d.import_source), key);
   const db_document_t *added = (const db_document_t *)send_db_message(st->ib, dbInsert, TABLE_DOCUMENTS, &d);
   if (!added) { snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store the imported document %s."), number); return; }
   int doc_id = added->id;

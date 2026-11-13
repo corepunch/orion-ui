@@ -22,7 +22,7 @@ static void update_home(void);
 static void update_journal_actions(void) {
   const db_document_t *doc = selected(ID_JOURNAL_PAGE_DOCUMENTS);
   window_t *unpost = view(ID_DOC_UNPOST), *reverse = view(ID_DOC_REVERSE);
-  if (unpost) enable_window(unpost, doc && doc->posted && !ledger_exact_posted(g_ledger->ib, doc->id) && !ledger_reversal_linked(g_ledger->ib, doc->id) && !ledger_period_closed(g_ledger->ib, doc->date));
+  if (unpost) enable_window(unpost, doc && doc->posted && !ledger_document_imported(doc) && !ledger_exact_posted(g_ledger->ib, doc->id) && !ledger_reversal_linked(g_ledger->ib, doc->id) && !ledger_period_closed(g_ledger->ib, doc->date));
   if (reverse) enable_window(reverse, doc && doc->posted && !doc->correction_of);
 }
 
