@@ -272,6 +272,11 @@ database_t *get_database_at(int index);
 
 bool db_schema_xml_migrate_additive(void *root, unsigned from_version);
 
+// Adds a record to a store's memory without saving it, even when the store is
+// read-only: a configuration extended by data an infobase carries. Returns the
+// stored record, or NULL (logged) on a bad table, a duplicate key or no memory.
+void *db_schema_xml_overlay_insert(database_t *db, uint32_t table_id, const void *record);
+
 // Switch a loaded schema XML seed to a new, exclusively locked destination.
 bool db_schema_xml_seed_to(database_t *db, const char *path);
 // Restore the previous committed backup while holding this store's lock.

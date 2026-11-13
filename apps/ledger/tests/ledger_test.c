@@ -2129,6 +2129,29 @@ static void test_import_1cd_catalog(void) {
   PASS();
 }
 
+static void test_infobase_extensions(void) {
+  TEST("Infobase extensions: accounts carried by the infobase join the configuration");
+  db_ext_subconto_kind_t kind = { .id = LEDGER_EXT_ID_BASE + 1 };
+  snprintf(kind.code, sizeof(kind.code), "XK1"); snprintf(kind.name, sizeof(kind.name), "Cost items"); snprintf(kind.table, sizeof(kind.table), "items");
+  ASSERT(send_db_message(g_ledger->ib, dbInsert, TABLE_EXT_SUBCONTO_KINDS, &kind), "kind stored in the infobase");
+  db_ext_account_t acc = { .id = LEDGER_EXT_ID_BASE + 1, .subconto_kind_id = kind.id };
+  snprintf(acc.code, sizeof(acc.code), "99.9"); snprintf(acc.name, sizeof(acc.name), "Imported"); snprintf(acc.kind, sizeof(acc.kind), "active");
+  ASSERT(send_db_message(g_ledger->ib, dbInsert, TABLE_EXT_ACCOUNTS, &acc), "account stored in the infobase");
+  ASSERT_TRUE(ledger_apply_extensions(g_ledger->ib, g_ledger->cfg));
+  ASSERT_TRUE(ledger_apply_extensions(g_ledger->ib, g_ledger->cfg));  // idempotent
+  db_account_t *a = (db_account_t *)send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_ACCOUNTS, 0), (void *)(intptr_t)acc.id);
+  ASSERT(a && !strcmp(a->code, "99.9") && a->subconto_kind_id == kind.id, "cfg sees the account");
+  ASSERT(send_db_message(g_ledger->cfg, dbFind, MAKEDWORD(TABLE_SUBCONTO_KINDS, 0), (void *)(intptr_t)kind.id), "cfg sees the kind");
+  send_db_message(g_ledger->cfg, dbDelete, TABLE_ACCOUNTS, (void *)(intptr_t)acc.id);
+  send_db_message(g_ledger->cfg, dbDelete, TABLE_SUBCONTO_KINDS, (void *)(intptr_t)kind.id);
+  database_t *shared = create_database_with_schema_readonly("cfg_shared", "db_schema_xml", &ledger_cfg_schema, SHARE "/ru-2003/configuration.xml");
+  ASSERT(shared && ledger_apply_extensions(g_ledger->ib, shared), "a read-only configuration takes the extensions");
+  ASSERT(send_db_message(shared, dbFind, MAKEDWORD(TABLE_ACCOUNTS, 0), (void *)(intptr_t)acc.id), "and shows the account");
+  ASSERT(!send_db_message(shared, dbInsert, TABLE_ACCOUNTS, &(db_account_t){ .id = 7 }), "ordinary writes are still refused");
+  destroy_database(shared);
+  PASS();
+}
+
 static void test_import_external_1cd_catalog(void) {
   const char *path = getenv("LEDGER_TEST_1CD_XML");
   if (!path || !*path) return;
@@ -2346,6 +2369,7 @@ int main(int argc, char **argv) {
   test_import_enterprisedata();
   test_import_1cd_catalog();
   test_import_external_1cd_catalog();
+  test_infobase_extensions();
   test_import_digest();
   test_import_integrity();
   test_german_configuration();

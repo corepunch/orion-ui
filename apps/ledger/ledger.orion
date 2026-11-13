@@ -363,7 +363,7 @@
          class: numbering, recalculation of documents when they or their lines
          change. default= fills new records; on-delete= says what deleting a
          referenced record does: cascade, nullify or deny. -->
-    <database name="ib" class="ledger_ib" version="7" migration="additive">
+    <database name="ib" class="ledger_ib" version="8" migration="additive">
       <table name="organizations">
         <field name="id" type="integer" key="YES" />
         <field name="legal_details" type="string" length="512" />
@@ -477,6 +477,29 @@
         <field name="kind" type="string" length="16" />
         <field name="address" type="string" length="256" />
         <field name="keeper" type="string" length="96" />
+      </table>
+      <!-- Chart of accounts carried by this infobase beyond the shipped
+           configuration (accounts and analytics kinds imported from 1C).
+           ledger_apply_extensions() adds them to the in-memory cfg when the
+           infobase opens, so posting, reports and scripts see one chart.
+           Ids start at LEDGER_EXT_ID_BASE and never collide with the
+           configuration's. -->
+      <table name="ext_subconto_kinds">
+        <field name="id" type="integer" key="YES" />
+        <field name="code" type="string" length="16" />
+        <field name="name" type="string" length="64" />
+        <field name="table" type="string" length="32" />
+      </table>
+      <table name="ext_accounts">
+        <field name="id" type="integer" key="YES" />
+        <field name="subconto_kind_id" type="integer" />
+        <field name="subconto2_kind_id" type="integer" />
+        <field name="subconto3_kind_id" type="integer" />
+        <field name="code" type="string" length="16" />
+        <field name="name" type="string" length="160" />
+        <field name="kind" type="string" length="32" />
+        <field name="section" type="string" length="96" />
+        <field name="currency" type="boolean" />
       </table>
       <!-- Amounts are in the document's currency; posting converts them at
            its rate (the rate on the document date when left empty). -->

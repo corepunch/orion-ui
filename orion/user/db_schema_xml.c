@@ -1230,3 +1230,15 @@ failed:
   if (error && error_size) snprintf(error, error_size, "%s", store->error[0] ? store->error : ui_tr("The document could not be saved. No changes were applied."));
   return false;
 }
+
+// Adds a record to memory only. A read-only store (a shared configuration)
+// takes it for this process's lifetime; nothing reaches the file.
+void *db_schema_xml_overlay_insert(database_t *db, uint32_t table_id, const void *record) {
+  dbs_context_t *ctx = db ? (dbs_context_t *)db->userdata : NULL;
+  int ti = ctx && record ? dbs_table_index(db, table_id) : -1;
+  if (ti < 0) {
+    fprintf(stderr, "[db_schema_xml] overlay insert rejected db=%s table=%u\n", db ? db->name : "(null)", table_id);
+    fflush(stderr); return NULL;
+  }
+  return dbs_append(db, &db->schema->tables[ti], &ctx->tables[ti], record);
+}

@@ -991,6 +991,36 @@ db_report_setting_t *ledger_report_settings(database_t *ib, database_t *cfg) {
   return (db_report_setting_t *)send_db_message(ib, dbInsert, TABLE_REPORT_SETTINGS, &fresh);
 }
 
+// The accounts and analytics kinds an infobase carries beyond its configuration
+// join the in-memory cfg; ids from LEDGER_EXT_ID_BASE up never meet the
+// configuration's own. Safe to call again: records already present are kept.
+bool ledger_apply_extensions(database_t *ib, database_t *cfg) {
+  bool ok = true;
+  result_node_t *kinds = fetch(ib, TABLE_EXT_SUBCONTO_KINDS, NULL, 0);
+  EACH_RECORD(db_ext_subconto_kind_t, k, kinds) {
+    if (find(cfg, TABLE_SUBCONTO_KINDS, k->id)) continue;
+    db_subconto_kind_t kind = { .id = k->id };
+    snprintf(kind.code, sizeof(kind.code), "%s", k->code);
+    snprintf(kind.name, sizeof(kind.name), "%s", k->name);
+    snprintf(kind.table, sizeof(kind.table), "%s", k->table);
+    ok &= db_schema_xml_overlay_insert(cfg, TABLE_SUBCONTO_KINDS, &kind) != NULL;
+  }
+  free_result_list(kinds);
+  result_node_t *accounts = fetch(ib, TABLE_EXT_ACCOUNTS, NULL, 0);
+  EACH_RECORD(db_ext_account_t, e, accounts) {
+    if (find(cfg, TABLE_ACCOUNTS, e->id)) continue;
+    db_account_t a = { .id = e->id, .subconto_kind_id = e->subconto_kind_id, .subconto2_kind_id = e->subconto2_kind_id,
+                       .subconto3_kind_id = e->subconto3_kind_id, .currency = e->currency };
+    snprintf(a.code, sizeof(a.code), "%s", e->code);
+    snprintf(a.name, sizeof(a.name), "%s", e->name);
+    snprintf(a.kind, sizeof(a.kind), "%s", e->kind);
+    snprintf(a.section, sizeof(a.section), "%s", e->section);
+    ok &= db_schema_xml_overlay_insert(cfg, TABLE_ACCOUNTS, &a) != NULL;
+  }
+  free_result_list(accounts);
+  return ok;
+}
+
 static void clear_table(database_t *ib, int table_id) {
   result_node_t *rows = fetch(ib, table_id, NULL, 0);
   EACH_RECORD(int, key, rows) send_db_message(ib, dbDelete, (uint32_t)table_id, (void *)(intptr_t)*key);

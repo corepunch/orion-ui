@@ -91,6 +91,9 @@ bool ledger_preview_entries(database_t *ib, database_t *cfg, int doc_id);
 void ledger_unpost(database_t *ib, database_t *cfg, int doc_id);
 bool ledger_number_document(database_t *ib, database_t *cfg, int doc_id);
 bool ledger_repost_all(database_t *ib, database_t *cfg);
+// Ids of accounts and analytics kinds an infobase adds to its configuration start here.
+#define LEDGER_EXT_ID_BASE 1000000
+bool ledger_apply_extensions(database_t *ib, database_t *cfg);
 // Fills a payroll document: salaries for an accrual, what is owed for a payout.
 bool ledger_fill_payroll(database_t *ib, database_t *cfg, int doc_id);
 // Rebuilds the transient report tables for the period in report settings.

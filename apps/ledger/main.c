@@ -41,6 +41,7 @@ static database_t *open_infobase(bool restore_backup) {
                            create_database_with_schema("ib", "ledger_ib", schema, path);
   if (!ib) return NULL;
   register_database("ib", ib);
+  if (!ledger_apply_extensions(ib, g_ledger->cfg)) { destroy_database(ib); return NULL; }
   if (fresh && !restore_backup) {
     if (!db_schema_xml_seed_to(ib, path)) { destroy_database(ib); return NULL; }
     if (!send_db_message(ib, dbFind, MAKEDWORD(TABLE_ORGANIZATIONS, 0), (void *)(intptr_t)1)) {
