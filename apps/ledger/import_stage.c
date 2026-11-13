@@ -33,6 +33,7 @@ static const stage_table_t kKindTables[] = {
   { "Справочник.ДоговорыКонтрагентов", "contracts" },
   { "Справочник.Склады",              "warehouses" },
   { "Справочник.БанковскиеСчета",     "bank_accounts" },
+  { "Справочник.Организации",         "organizations" },
 };
 
 typedef struct {
@@ -160,7 +161,7 @@ static void import_kind(stage_t *st, xmlNodePtr rec) {
   db_ext_subconto_kind_t k = { .id = next_ext_id(st->ib, TABLE_EXT_SUBCONTO_KINDS) };
   ledger_copy_text(k.code, sizeof(k.code), code);
   ledger_copy_text(k.name, sizeof(k.name), name);
-  snprintf(k.table, sizeof(k.table), "analytic_items");
+  snprintf(k.table, sizeof(k.table), "%s", table ? table : "analytic_items");
   if (!send_db_message(st->ib, dbInsert, TABLE_EXT_SUBCONTO_KINDS, &k) || !source_remember(st, metadata, guid, "ext_subconto_kinds", k.id)) {
     snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot store an imported analytics kind."));
     return;
@@ -390,13 +391,17 @@ static bool fill_currency(stage_t *st, xmlNodePtr rec, void *out, const char **w
   return true;
 }
 
-// The organization is the infobase's one: its record takes the 1C organization's details.
+// The organization is the infobase's one: a fresh record takes the 1C
+// organization's details, and an already named one is joined when their tax
+// IDs agree, so a base imported before keeps its own organization.
 static void import_organization(stage_t *st, xmlNodePtr rec) {
-  char guid[40], text[512];
+  char guid[40], text[512], inn[32];
   attr(rec, "id", guid, sizeof(guid));
   db_organization_t *own = (db_organization_t *)send_db_message(st->ib, dbFind, MAKEDWORD(TABLE_ORGANIZATIONS, 0), (void *)(intptr_t)1);
   db_import_source_t *seen = source_find(st, guid);
-  if (!own || (!seen && own->tax_id[0])) {
+  text_field(inn, sizeof(inn), rec, "ИНН");
+  bool joined = own && (!own->tax_id[0] || (inn[0] && !strcmp(own->tax_id, inn)));
+  if (!own || (!seen && !joined)) {
     note(st, "%s: the infobase already has an organization; not replaced", "Справочник.Организации", "");
     tally(st, "Справочник.Организации", 0, 0, 1);
     return;

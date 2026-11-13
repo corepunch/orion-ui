@@ -30,5 +30,16 @@
       <v n="Номер" t="string">9</v>
     </record>
     <record type="Справочник.Контактные" id="c0000000-0000-0000-0000-000000000008" code="1" description="Прочее" deleted="false"/>
+    <record type="Справочник.Организации" id="c0000000-0000-0000-0000-000000000009" code="1" description="Ромашка из 1С" deleted="false" folder="false">
+      <v n="ИНН" t="string">7701234567</v>
+      <v n="КПП" t="string">770101001</v>
+    </record>
+    <record type="Справочник.Организации" id="c0000000-0000-0000-0000-00000000000a" code="2" description="Чужая организация" deleted="false" folder="false">
+      <v n="ИНН" t="string">7733005559</v>
+    </record>
+    <record type="Справочник.БанковскиеСчета" id="c0000000-0000-0000-0000-00000000000b" code="2" description="Основной расчетный" deleted="false" owner-type="Справочник.Организации" owner="c0000000-0000-0000-0000-000000000009">
+      <v n="НомерСчета" t="string">40702810401300099999</v>
+      <v n="Банк" t="ref" type="Справочник.Банки" id="c0000000-0000-0000-0000-000000000004"/>
+    </record>
   </records>
 </stage>

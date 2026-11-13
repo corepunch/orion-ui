@@ -8,6 +8,7 @@
     <account type="ПланСчетов.Хозрасчетный" id="a1000000-0000-0000-0000-000000000001" code="99.1" description="Расчеты и затраты" deleted="false" kind="active" currency="false" quantity="true">
       <subkonto n="1" kind="b1000000-0000-0000-0000-000000000001"/>
       <subkonto n="2" kind="b1000000-0000-0000-0000-000000000002"/>
+      <subkonto n="3" kind="b1000000-0000-0000-0000-000000000005"/>
     </account>
     <account type="ПланСчетов.Хозрасчетный" id="a1000000-0000-0000-0000-000000000002" code="99.2" description="Виды платежей" deleted="false" kind="passive" currency="false" quantity="false">
       <subkonto n="1" kind="b1000000-0000-0000-0000-000000000003"/>
@@ -29,6 +30,9 @@
     <record type="ПланВидовХарактеристик.ВидыСубконтоХозрасчетные" id="b1000000-0000-0000-0000-000000000004" code="00098" description="Документы расчетов" deleted="false">
       <types><type t="ref" type="Документ.РегламентнаяОперация"/></types>
     </record>
+    <record type="ПланВидовХарактеристик.ВидыСубконтоХозрасчетные" id="b1000000-0000-0000-0000-000000000005" code="00009" description="Организации" deleted="false">
+      <types><type t="ref" type="Справочник.Организации"/></types>
+    </record>
   </subkonto-kinds>
   <records>
     <record type="Справочник.Контрагенты" id="c1000000-0000-0000-0000-000000000001" code="1" description="Арендодатель" deleted="false" folder="false">
@@ -39,6 +43,10 @@
       <v n="Артикул" t="string">NUT-1</v>
     </record>
     <record type="Справочник.СтатьиЗатрат" id="c1000000-0000-0000-0000-000000000002" code="1" description="Аренда" deleted="false" folder="false"/>
+    <record type="Справочник.Организации" id="c1000000-0000-0000-0000-00000000000a" code="1" description="Ромашка из 1С" deleted="false" folder="false">
+      <v n="ИНН" t="string">7701234567</v>
+      <v n="КПП" t="string">770101001</v>
+    </record>
   </records>
   <documents>
     <document type="Документ.ПриходныйКассовыйОрдер" id="d1000000-0000-0000-0000-000000000001" number="0000-000001" date="2015-01-12T12:00:01" posted="true" deleted="false">
@@ -82,6 +90,7 @@
           <v n="СуммаВР" t="null"/>
           <subkonto n="1" kind="b1000000-0000-0000-0000-000000000001" t="ref" type="Справочник.Контрагенты" id="c1000000-0000-0000-0000-000000000001"/>
           <subkonto n="2" kind="b1000000-0000-0000-0000-000000000002" t="ref" type="Справочник.СтатьиЗатрат" id="c1000000-0000-0000-0000-000000000002"/>
+          <subkonto n="3" kind="b1000000-0000-0000-0000-000000000005" t="ref" type="Справочник.Организации" id="c1000000-0000-0000-0000-00000000000a"/>
         </debit>
         <credit account="a1000000-0000-0000-0000-000000000002">
           <v n="Количество" t="null"/>

@@ -15,6 +15,7 @@
     </account>
     <account type="ПланСчетов.Хозрасчетный" id="a0000000-0000-0000-0000-000000000051" code="51" description="Расчетные счета" deleted="false" off-balance="false" kind="active" currency="false" quantity="false">
       <subkonto n="1" kind="b0000000-0000-0000-0000-000000000008"/>
+      <subkonto n="2" kind="b0000000-0000-0000-0000-000000000009"/>
     </account>
   </chart-of-accounts>
   <subkonto-kinds type="ПланВидовХарактеристик.ВидыСубконтоХозрасчетные">
@@ -26,6 +27,9 @@
     </record>
     <record type="ПланВидовХарактеристик.ВидыСубконтоХозрасчетные" id="b0000000-0000-0000-0000-000000000008" code="00008" description="Банковские счета" deleted="false">
       <types><type t="ref" type="Справочник.БанковскиеСчета"/></types>
+    </record>
+    <record type="ПланВидовХарактеристик.ВидыСубконтоХозрасчетные" id="b0000000-0000-0000-0000-000000000009" code="00009" description="Организации" deleted="false">
+      <types><type t="ref" type="Справочник.Организации"/></types>
     </record>
   </subkonto-kinds>
 </stage>

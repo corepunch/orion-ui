@@ -2159,7 +2159,7 @@ static void test_import_stage_chart(void) {
   const char *stage = "apps/ledger/tests/fixtures/onecd/stage_chart.xml";
   ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
   ASSERT(r.accounts_added == 1 && r.accounts_matched == 2, "one account is new, 10 and 51 match by code");
-  ASSERT(r.kinds_added == 1 && r.kinds_mapped == 2, "cost items is a new kind; items and bank accounts map onto tables");
+  ASSERT(r.kinds_added == 2 && r.kinds_mapped == 2, "cost items and organizations are new kinds; items and bank accounts map onto tables");
   db_account_t *a = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "99.91");
   ASSERT(a && a->id > LEDGER_EXT_ID_BASE && !strcmp(a->kind, "АП") && a->currency, "the new account joined the configuration");
   db_subconto_kind_t *items = find_by(g_ledger->cfg, TABLE_SUBCONTO_KINDS, "table", "items");
@@ -2168,13 +2168,15 @@ static void test_import_stage_chart(void) {
   ASSERT(a && a->subconto3_kind_id == 0 && strstr(r.notes, "99.91"), "an unknown kind is reported, not guessed");
   db_account_t *bank51 = find_by(g_ledger->cfg, TABLE_ACCOUNTS, "code", "51");
   db_subconto_kind_t *banks = find_by(g_ledger->cfg, TABLE_SUBCONTO_KINDS, "table", "bank_accounts");
+  db_subconto_kind_t *orgs = find_by(g_ledger->cfg, TABLE_SUBCONTO_KINDS, "table", "organizations");
   db_ext_account_t *ext51 = bank51 ? (db_ext_account_t *)send_db_message(g_ledger->ib, dbFind, MAKEDWORD(TABLE_EXT_ACCOUNTS, 0), (void *)(intptr_t)bank51->id) : NULL;
   ASSERT(bank51 && banks && bank51->subconto_kind_id == banks->id, "the matched account gains the slot the configuration lacks");
-  ASSERT(ext51 && ext51->subconto_kind_id == banks->id, "the extension is kept in the infobase under the account's own id");
+  ASSERT(ext51 && ext51->subconto_kind_id == banks->id && ext51->subconto2_kind_id == orgs->id, "the extension is kept in the infobase under the account's own id");
+  ASSERT(orgs && orgs->id > LEDGER_EXT_ID_BASE, "a kind over the organization becomes an extension over its own table");
   db_import_source_t *src = find_by(g_ledger->ib, TABLE_IMPORT_SOURCES, "guid", "a0000000-0000-0000-0000-000000000991");
   ASSERT(src && src->record_id == a->id && !strcmp(src->metadata, "ПланСчетов.Хозрасчетный"), "source identity is stored");
   ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
-  ASSERT(r.accounts_added == 0 && r.kinds_added == 0 && r.updated == 6, "the second import finds everything again");
+  ASSERT(r.accounts_added == 0 && r.kinds_added == 0 && r.updated == 7, "the second import finds everything again");
   ASSERT(!ledger_import_stage(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/enterprisedata_sample.xml", &r) && r.error[0], "other files are refused");
   PASS();
 }
@@ -2194,6 +2196,13 @@ static void test_import_stage_catalogs(void) {
   ASSERT(ct && cp && ct->counterparty_id == cp->id && !strcmp(ct->kind, "supplier") && !strcmp(ct->date, "2014-01-15") && !ct->valid_until[0], "contract carries its counterparty");
   ASSERT(!find_by(g_ledger->ib, TABLE_CONTRACTS, "number", "9") && strstr(r.notes, "Справочник.ДоговорыКонтрагентов: held back"), "a contract without an owner is held back and listed");
   ASSERT(strstr(r.notes, "Справочник.Контактные: no Ledger catalog"), "an unknown catalog type is listed");
+  db_organization_t *org = find_by(g_ledger->ib, TABLE_ORGANIZATIONS, "tax_id", "7701234567");
+  ASSERT(org && !strcmp(org->name, "Ромашка из 1С"), "an organization with the infobase's tax ID is joined, not held back");
+  db_import_source_t *osrc = find_by(g_ledger->ib, TABLE_IMPORT_SOURCES, "guid", "c0000000-0000-0000-0000-000000000009");
+  ASSERT(osrc && org && osrc->record_id == org->id, "the joined organization keeps its source identity");
+  ASSERT(strstr(r.notes, "Справочник.Организации: the infobase already has an organization"), "an organization with another tax ID is held back");
+  db_bank_account_t *oba = find_by(g_ledger->ib, TABLE_BANK_ACCOUNTS, "number", "40702810401300099999");
+  ASSERT(oba && org && oba->organization_id == org->id, "a bank account owned by the organization follows it");
   int id = cp->id;
   snprintf(cp->name, sizeof(cp->name), "Renamed here");
   ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
@@ -2337,6 +2346,10 @@ static void test_import_stage_documents(void) {
   free_result_list(rows);
   db_analytic_item_t *tax = find_by(g_ledger->ib, TABLE_ANALYTIC_ITEMS, "name", "Налог");
   ASSERT(tax && first && tax->id == first->credit_subconto_id, "the enum value is an analytic item");
+  db_organization_t *org = find_by(g_ledger->ib, TABLE_ORGANIZATIONS, "tax_id", "7701234567");
+  db_subconto_kind_t *orgs = find_by(g_ledger->cfg, TABLE_SUBCONTO_KINDS, "table", "organizations");
+  ASSERT(org && orgs && first && first->debit_subconto3_id == org->id, "an organization analytics value resolves to the organization itself");
+  ASSERT(!find_by(g_ledger->ib, TABLE_ANALYTIC_ITEMS, "name", "Ромашка из 1С"), "the organization is not duplicated as an analytic item");
   ASSERT(turnovers_reconcile(stage), "turnovers per account equal those of the staging file");
   ledger_unpost(g_ledger->ib, g_ledger->cfg, d1->id);
   ASSERT(((db_document_t *)find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000001"))->posted, "an imported document cannot be unposted");
