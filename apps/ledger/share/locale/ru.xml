@@ -103,7 +103,9 @@
   <string source="Document:" where="document,payroll,asset_document,closing">Документ:</string>
   <string source="Number:" where="document,operation,payroll,asset_document,closing,contract">Номер:</string>
   <string source="Date:" where="operation,payroll,asset_document,rate,contract">Дата:</string>
-  <string source="Counterparty:" where="document,contract,bank_account">Контрагент:</string>
+  <string source="Contract:" where="document,operation">Договор:</string>
+  <string source="Warehouse:" where="document,operation">Склад:</string>
+  <string source="Counterparty:" where="document,contract,bank_account,operation">Контрагент:</string>
   <string source="Comment:" where="document,operation,payroll,asset_document,closing,contract">Комментарий:</string>
   <string source="Assigned when saved" where="document,operation,payroll,asset_document,closing">Присваивается при записи</string>
   <string source="Add Line..." where="payroll">Добавить строку...</string>
@@ -184,7 +186,7 @@
   <string source="End" where="report_settings">по текущую дату</string>
   <string source="Report period: %s – %s" where="code">Период отчетов: %s – %s</string>
   <string source="New Manual Operation" where="code">Новая операция</string>
-  <string source="Bank account:" where="counterparty,organization">Расчетный счет:</string>
+  <string source="Bank account:" where="counterparty,organization,document,operation">Расчетный счет:</string>
   <string source="New Payroll Document..." where="menu">Начисление зарплаты...</string>
   <string source="Put Assets into Service..." where="menu">Ввод ОС в эксплуатацию...</string>
   <string source="Close Month..." where="menu">Закрытие месяца...</string>

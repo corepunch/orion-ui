@@ -124,7 +124,9 @@
   <string source="Document:" where="document,payroll,asset_document,closing">Beleg:</string>
   <string source="Number:" where="document,operation,payroll,asset_document,closing,contract">Nummer:</string>
   <string source="Date:" where="operation,payroll,asset_document,rate,contract">Datum:</string>
-  <string source="Counterparty:" where="document,contract,bank_account">Geschäftspartner:</string>
+  <string source="Contract:" where="document,operation">Vertrag:</string>
+  <string source="Warehouse:" where="document,operation">Lager:</string>
+  <string source="Counterparty:" where="document,contract,bank_account,operation">Geschäftspartner:</string>
   <string source="Comment:" where="document,operation,payroll,asset_document,closing,contract">Bemerkung:</string>
   <string source="Assigned when saved" where="document,operation,payroll,asset_document,closing">wird beim Speichern vergeben</string>
   <string source="Add Line..." where="payroll">Position hinzufügen...</string>
@@ -147,7 +149,7 @@
   <string source="KPP:" where="counterparty,organization">Steuer-Zusatznummer:</string>
   <string source="Address:" where="counterparty,organization,warehouse">Anschrift:</string>
   <string source="Bank:" where="counterparty,organization,bank_account">Bank:</string>
-  <string source="Bank account:" where="counterparty,organization">Kontonummer:</string>
+  <string source="Bank account:" where="counterparty,organization,document,operation">Kontonummer:</string>
   <string source="Bank ID (BIK):" where="counterparty,organization,bank_account">Bankleitzahl:</string>
   <string source="Phone:" where="counterparty">Telefon:</string>
   <string source="Code:" where="item,currency">Nummer:</string>

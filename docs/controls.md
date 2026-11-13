@@ -444,6 +444,14 @@ name to bind it, or `none` for an unfiltered working-set view:
 <TableView name="commit_files" source="db.files" master="commits" />
 ```
 
+A table with several relations follows its first by default. Name the relation
+with `master-field` when another one is meant, such as a bank account that belongs
+to a counterparty as well as to an organization:
+
+```xml
+<TableView name="bank_accounts" source="ib.bank_accounts" master="counterparties" master-field="counterparty_id" />
+```
+
 A static filter shows one slice of a table. Two views can share the same
 source and differ only by filter, like the sales and purchase VAT books:
 

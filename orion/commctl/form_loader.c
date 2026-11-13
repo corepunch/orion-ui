@@ -454,9 +454,17 @@ static const tableview_params_t *fl_tableview(fl_build_t *b, xmlNodePtr c, const
   p->column_min_widths = min_widths;
 
   // Master/detail: the table's first relation names the master's table.
-  const char *master_attr = fl_attr(lib, c, "master");
+  // master-field names the relation to follow when the table has several (a bank account
+  // belongs to an organization or a counterparty).
+  const char *master_attr = fl_attr(lib, c, "master"), *master_field = fl_attrs_first(lib, c, "master-field", "master_field");
+  if (master_field && *master_field) {
+    bool found = false;
+    for (int f = 0; f < t->field_count && !found; f++) found = fl_eq(t->fields[f].name, master_field) && t->fields[f].relation_table;
+    if (!found) fl_warn(b, c, "TableView '%s': master-field '%s' is not a relation field", fl_nz(name, ""), master_field);
+  }
   for (int f = 0; f < t->field_count; f++) {
     if (!t->fields[f].relation_table) continue;
+    if (master_field && *master_field && !fl_eq(t->fields[f].name, master_field)) continue;
     p->master_filter_field = f;
     xmlNodePtr master = NULL;
     if (master_attr && *master_attr && !fl_eq(master_attr, "none")) master = fl_tableview_named(lib, b->form_node, master_attr);

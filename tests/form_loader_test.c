@@ -11,7 +11,7 @@
 enum { TABLE_PEOPLE = 1, TABLE_PETS = 2 };
 
 typedef struct { int id; char name[32]; int age; bool active; char born[11]; } person_t;
-typedef struct { int id; int owner_id; char name[24]; } pet_t;
+typedef struct { int id; int owner_id; char name[24]; int vet_id; } pet_t;
 
 static const db_field_meta_t person_meta[] = {
   { "id", DB_TYPE_INT, offsetof(person_t, id), 0, 0 },         { "name", DB_TYPE_STRING, offsetof(person_t, name), 32, 0 },
@@ -25,15 +25,15 @@ static const db_field_schema_t person_fields[] = {
 };
 static const db_field_meta_t pet_meta[] = {
   { "id", DB_TYPE_INT, offsetof(pet_t, id), 0, 0 }, { "owner_id", DB_TYPE_INT, offsetof(pet_t, owner_id), 0, 0 },
-  { "name", DB_TYPE_STRING, offsetof(pet_t, name), 24, 0 },
+  { "name", DB_TYPE_STRING, offsetof(pet_t, name), 24, 0 }, { "vet_id", DB_TYPE_INT, offsetof(pet_t, vet_id), 0, 0 },
 };
 static const db_field_schema_t pet_fields[] = {
   { "id", DB_TYPE_INT, 0, true, NULL, NULL }, { "owner_id", DB_TYPE_INT, 0, false, "people", "id" },
-  { "name", DB_TYPE_STRING, 24, false, NULL, NULL },
+  { "name", DB_TYPE_STRING, 24, false, NULL, NULL }, { "vet_id", DB_TYPE_INT, 0, false, "people", "id" },
 };
 static const db_table_schema_t tables[] = {
   { TABLE_PEOPLE, "people", NULL, person_fields, 5, NULL, 0, sizeof(person_t), person_meta, 5, false },
-  { TABLE_PETS, "pets", NULL, pet_fields, 3, NULL, 0, sizeof(pet_t), pet_meta, 3, false },
+  { TABLE_PETS, "pets", NULL, pet_fields, 4, NULL, 0, sizeof(pet_t), pet_meta, 4, false },
 };
 static const db_schema_def_t schema = { "club", "db_schema_xml", NULL, tables, 2 };
 
@@ -47,6 +47,9 @@ static const char kDoc[] =
   "        <Column field=\"age\" title=\"Age\" width=\"40\" total=\"sum\" />\n"
   "      </TableView>\n"
   "      <TableView name=\"pets\" source=\"club.pets\">\n"
+  "        <Column field=\"name\" title=\"Pet\" />\n"
+  "      </TableView>\n"
+  "      <TableView name=\"vet_pets\" source=\"club.pets\" master=\"list\" master-field=\"vet_id\">\n"
   "        <Column field=\"name\" title=\"Pet\" />\n"
   "      </TableView>\n"
   "      <StackView orientation=\"horizontal\">\n"
@@ -106,7 +109,7 @@ static void test_controls(void) {
   const form_def_t *people = form_library_form(lib, "people"), *person = form_library_form(lib, "person");
   ASSERT_STR_EQUAL(people->name, "People");
   ASSERT_TRUE(people->flags & WINDOW_AUTO_LAYOUT);
-  ASSERT_EQUAL(people->child_count, 5);
+  ASSERT_EQUAL(people->child_count, 6);
 
   uint32_t list = form_library_control_id(lib, people, "list"), pets = form_library_control_id(lib, people, "pets");
   uint32_t add = form_library_control_id(lib, people, "add"), calculate = form_library_control_id(lib, people, "calculate");
@@ -128,6 +131,8 @@ static void test_controls(void) {
   ASSERT_EQUAL(detail->master_id, list);
   ASSERT_EQUAL(detail->master_filter_field, 1);
   ASSERT_STR_EQUAL(detail->master_key, "id");
+  const tableview_params_t *vets = form_library_control(lib, people, form_library_control_id(lib, people, "vet_pets"))->lparam;
+  ASSERT(vets->master_id == list && vets->master_filter_field == 3, "master-field picks the relation to follow, not the first");
 
   const form_ctrl_def_t *button = form_library_control(lib, people, add);
   ASSERT_EQUAL(button->target, list);

@@ -1121,7 +1121,7 @@
               <Column field="kind" title="Kind" width="72" />
               <Column field="valid_until" title="Valid Until" width="84" />
             </TableView>
-            <TableView name="bank_accounts" text="Bank Accounts" source="ib.bank_accounts" form="bank_account" flags="nofill,vscroll,flexspace">
+            <TableView name="bank_accounts" text="Bank Accounts" source="ib.bank_accounts" form="bank_account" master="counterparties" master-field="counterparty_id" flags="nofill,vscroll,flexspace">
               <Column field="name" title="Name" width="0" min-width="100" />
               <Column field="number" title="Account" width="160" />
               <Column field="bank" title="Bank" width="0" min-width="100" />
@@ -1537,7 +1537,8 @@
         <Column name="labels" width="auto">
           <Label name="lbl_number" text="Number:" />
           <Label name="lbl_counterparty" text="Counterparty:" />
-          <Label name="lbl_spare" />
+          <Label name="lbl_contract" text="Contract:" />
+          <Label name="lbl_bank_account" text="Bank account:" />
         </Column>
         <Column name="inputs">
           <StackView name="number_row" orientation="horizontal" spacing="8">
@@ -1547,17 +1548,20 @@
             <Space name="number_flex" />
           </StackView>
           <ComboBox name="counterparty" field="ib.documents.counterparty_id" source="ib.counterparties" display="name" value="id" />
-          <Label name="spare" />
+          <ComboBox name="contract" field="ib.documents.contract_id" source="ib.contracts" display="name" value="id" />
+          <ComboBox name="bank_account" field="ib.documents.bank_account_id" source="ib.bank_accounts" display="number" value="id" />
         </Column>
         <Column name="labels2" width="auto">
           <Label name="lbl_type" text="Document:" />
           <Label name="lbl_currency" text="Currency:" />
           <Label name="lbl_rate" text="Exchange rate:" />
+          <Label name="lbl_warehouse" text="Warehouse:" />
         </Column>
         <Column name="inputs2">
           <ComboBox name="doc_type" field="ib.documents.doc_type_id" source="cfg.doc_types" display="name" value="id" filter-field="form" filter-value="document" />
           <ComboBox name="currency" field="ib.documents.currency_id" source="ib.currencies" display="code" value="id" />
           <TextBox name="rate" field="ib.documents.rate" placeholder="Rate on the document date" />
+          <ComboBox name="warehouse" field="ib.documents.warehouse_id" source="ib.warehouses" display="name" value="id" />
         </Column>
       </GridView>
       <SplitView name="body" orientation="vertical" split-ratio="0.58" flags="flexspace">
@@ -1907,18 +1911,26 @@
     </form>
 
     <!-- Manual operation: the accountant types the entries themselves. -->
-    <form name="operation" title="Manual Operation" width="680" height="420" spacing="6" padding="8">
+    <form name="operation" title="Manual Operation" width="680" height="520" spacing="6" padding="8">
       <GridView name="header" spacing="4">
         <Column name="labels" width="auto">
           <Label name="lbl_type" text="Operation:" />
           <Label name="lbl_number" text="Number:" />
           <Label name="lbl_date" text="Date:" />
+          <Label name="lbl_counterparty" text="Counterparty:" />
+          <Label name="lbl_contract" text="Contract:" />
+          <Label name="lbl_warehouse" text="Warehouse:" />
+          <Label name="lbl_bank_account" text="Bank account:" />
           <Label name="lbl_comment" text="Comment:" />
         </Column>
         <Column name="inputs">
           <ComboBox name="doc_type" field="ib.documents.doc_type_id" source="cfg.doc_types" display="name" value="id" filter-field="form" filter-value="operation" />
           <TextBox name="number" field="ib.documents.number" placeholder="Assigned when saved" />
           <TextBox name="date" field="ib.documents.date" />
+          <ComboBox name="counterparty" field="ib.documents.counterparty_id" source="ib.counterparties" display="name" value="id" />
+          <ComboBox name="contract" field="ib.documents.contract_id" source="ib.contracts" display="name" value="id" />
+          <ComboBox name="warehouse" field="ib.documents.warehouse_id" source="ib.warehouses" display="name" value="id" />
+          <ComboBox name="bank_account" field="ib.documents.bank_account_id" source="ib.bank_accounts" display="number" value="id" />
           <TextBox name="comment" field="ib.documents.comment" />
         </Column>
       </GridView>
