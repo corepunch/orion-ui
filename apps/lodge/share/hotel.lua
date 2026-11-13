@@ -155,6 +155,10 @@ end)
 function Hotel.day_report()
   local day, net, outstanding, count, pending = orion.today(), 0, 0, 0, 0
   local cancelled_paid, cancelled_count = 0, 0
+  local history_revision = 0
+  for _, entry in ipairs(require("orion.model"):extend("lodge.reservation_history"):all()) do
+    history_revision = math.max(history_revision, entry.id)
+  end
   local events = require("orion.model"):extend("lodge.payment_events")
   for _, event in ipairs(events:select({posted_on = day})) do net = net + event.amount_minor end
   for _, row in ipairs(Hotel.reservations.model:all()) do
@@ -168,12 +172,13 @@ function Hotel.day_report()
   end
   orion.assert(math.abs(net) <= 9007199254740991 and math.abs(outstanding) <= 9007199254740991 and cancelled_paid <= 9007199254740991, orion.tr("The day totals are too large."))
   return {day = day, net_minor = net, outstanding_minor = outstanding, reservations = count, pending = pending,
-    cancelled_paid_minor = cancelled_paid, cancelled_paid_count = cancelled_count, closed = Hotel.day_closes.model:find({day = day}) ~= nil}
+    cancelled_paid_minor = cancelled_paid, cancelled_paid_count = cancelled_count, history_revision = history_revision,
+    closed = Hotel.day_closes.model:find({day = day}) ~= nil}
 end
 function Hotel.close_today(expected)
   local report = Hotel.day_report()
   if expected then
-    for _, key in ipairs({"day", "net_minor", "outstanding_minor", "reservations", "pending", "cancelled_paid_minor", "cancelled_paid_count"}) do
+    for _, key in ipairs({"day", "net_minor", "outstanding_minor", "reservations", "pending", "cancelled_paid_minor", "cancelled_paid_count", "history_revision"}) do
       if expected[key] == nil or expected[key] ~= report[key] then return nil, orion.tr("The day has changed. Preview it again before closing.") end
     end
   end

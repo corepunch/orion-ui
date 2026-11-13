@@ -62,6 +62,11 @@
   <topic source="receivables"    means="receivables"    synonyms="receivable"/>
   <topic source="receivables">owe us</topic>
   <topic source="taxes"          means="taxes"          synonyms="tax vat"/>
+  <topic source="unsupported_scope" means="unsupported_scope" synonyms="advance advances prepayment prepayments"/>
+  <topic source="unsupported_scope">advance payment</topic>
+  <topic source="unsupported_scope">advance payments</topic>
+  <topic source="unsupported_scope">payment in advance</topic>
+  <topic source="unsupported_scope">payments in advance</topic>
   <topic source="closing"        means="closing"        synonyms="close closed closing"/>
   <topic source="closing">month end</topic>
   <topic source="negative"       means="negative"       synonyms="minus overdrawn"/>

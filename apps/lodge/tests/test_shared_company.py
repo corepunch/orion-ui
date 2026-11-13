@@ -41,6 +41,10 @@ class SharedCompanyTests(unittest.TestCase):
                             'persons': 1, 'rate': 100, 'extras': 0, 'notes': ''}
                     booking = ok('alice', 'reception', 'stay', 'reserve', stay)[1]['result']['id']
                     self.assertFalse(request('bob', 'reception', 'premature', 'check_in', {'id': booking})[1]['ok'])
+                    old_preview = ok('alice', 'reception', 'old-preview', 'day_preview', {})[1]['result']
+                    old_preview.pop('closed')
+                    ok('bob', 'reception', 'same-total-edit', 'reserve', {'id': booking, 'notes': 'Changed'})
+                    self.assertFalse(request('manager', 'admin', 'stale-preview', 'close_day', old_preview)[1]['ok'])
                     with self.assertRaises(server.Refusal) as denied:
                         request('cleaner', 'housekeeping', 'unauthorized-pay', 'payment',
                                 {'id': booking, 'amount_minor': 10000, 'request_key': 'denied'})
@@ -70,7 +74,7 @@ class SharedCompanyTests(unittest.TestCase):
                     with self.assertRaises(server.Refusal) as denied_close:
                         request('alice', 'reception', 'denied-close', 'close_day', {})
                     self.assertEqual(denied_close.exception.status, 403)
-                    close_args = {key: preview[key] for key in ('day', 'net_minor', 'outstanding_minor', 'reservations', 'pending', 'cancelled_paid_minor', 'cancelled_paid_count')}
+                    close_args = {key: preview[key] for key in ('day', 'net_minor', 'outstanding_minor', 'reservations', 'pending', 'cancelled_paid_minor', 'cancelled_paid_count', 'history_revision')}
                     self.assertFalse(request('manager', 'admin', 'wrong-day', 'close_day', dict(close_args, day='2000-01-01'))[1]['ok'])
                     self.assertFalse(request('manager', 'admin', 'wrong-total', 'close_day', dict(close_args, net_minor=0))[1]['ok'])
                     close_body, close_result = ok('manager', 'admin', 'close', 'close_day', close_args)
@@ -183,7 +187,7 @@ class SharedCompanyTests(unittest.TestCase):
                     self.assertEqual((report['cancelled_paid_count'], report['cancelled_paid_minor']), (0, 0))
                     request('repay', 'payment', {'id': booking, 'amount_minor': 5000, 'request_key': 'repay'})
                     report = request('final-preview', 'day_preview', {})
-                    close_args = {key: report[key] for key in ('day', 'net_minor', 'outstanding_minor', 'reservations', 'pending', 'cancelled_paid_minor', 'cancelled_paid_count')}
+                    close_args = {key: report[key] for key in ('day', 'net_minor', 'outstanding_minor', 'reservations', 'pending', 'cancelled_paid_minor', 'cancelled_paid_count', 'history_revision')}
                     request('close', 'close_day', close_args, 'admin')
                     company.close(); company = server.Company(path)
                     close = request('closed-view', 'snapshot', {})['day_closes'][0]

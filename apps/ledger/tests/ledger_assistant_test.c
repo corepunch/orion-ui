@@ -33,6 +33,142 @@ static int count_rows(const char *name,int table) {
 static void set_text(script_page_t *page,const char *name,const char *text) {
   send_message(script_page_control(page,name),edSetText,0,(void*)text);
 }
+static void assert_assistant_record_ids(database_t *assistant, const bool *source_ids, bool *seen, int max_id, int expected) {
+  result_node_t *rows = (void *)send_db_message(assistant, dbFetch, MAKEDWORD(0, 0), NULL);
+  int count = 0;
+  for (result_node_t *n = rows; n; n = n->next) {
+    char value[32] = "";
+    db_get_field_text(assistant, 0, *(void **)n->data, "record_id", value, sizeof(value));
+    int id = atoi(value);
+    ASSERT(id > 0 && id <= max_id, "assistant item identity is a valid infobase record id");
+    ASSERT(source_ids[id], "assistant identity belongs to the imported infobase table");
+    ASSERT_FALSE(seen[id]);
+    seen[id] = true;
+    count++;
+  }
+  free_result_list(rows);
+  ASSERT_EQUAL(count, expected);
+  for (int id = 1; id <= max_id; id++) ASSERT(seen[id] == source_ids[id], "assistant returns each source identity exactly once");
+}
+static void snapshot_table(database_t *db, int table, size_t record_size, int *count, void **out) {
+  result_node_t *rows = (void *)send_db_message(db, dbFetch, MAKEDWORD(table, 0), NULL);
+  *count = count_result_list(rows);
+  *out = calloc((size_t)(*count ? *count : 1), record_size);
+  ASSERT_NOT_NULL(*out);
+  int i = 0;
+  for (result_node_t *n = rows; n; n = n->next) memcpy((char *)*out + (size_t)i++ * record_size, *(void **)n->data, record_size);
+  free_result_list(rows);
+}
+static void test_imported_1cd_assistant(void) {
+  TEST("assistant: imported 1CD catalog identities and read-only queries");
+  const char *paths[] = {"apps/ledger/tests/fixtures/onecd/catalog.xml", getenv("LEDGER_TEST_1CD_XML")};
+  int cases = paths[1] && paths[1][0] ? 2 : 1;
+  char error[512] = "", config[LEDGER_PATH_MAX * 2];
+  ledger_script_close();
+  if (g_ledger->ib) { unregister_database("ib"); destroy_database(g_ledger->ib); }
+  if (g_ledger->cfg) { unregister_database("cfg"); destroy_database(g_ledger->cfg); }
+  snprintf(g_ledger->configuration, sizeof(g_ledger->configuration), "ru-2003");
+  snprintf(g_ledger->config_dir, sizeof(g_ledger->config_dir), SHARE "/configurations/ru-2003");
+  snprintf(config, sizeof(config), "%s/configuration.xml", g_ledger->config_dir);
+  g_ledger->cfg = create_database_with_schema_readonly("cfg", "db_schema_xml", &ledger_cfg_schema, config);
+  ASSERT_NOT_NULL(g_ledger->cfg);
+  register_database("cfg", g_ledger->cfg);
+  ASSERT_TRUE(ledger_script_open(g_ledger->config_dir, "build"));
+  for (int i = 0; i < cases; i++) {
+    g_ledger->ib = ledger_test_infobase(SHARE "/configurations/ru-2003/demo.xml");
+    register_database("ib", g_ledger->ib);
+    int before_items = count_rows("ib", TABLE_ITEMS), before_parties = count_rows("ib", TABLE_COUNTERPARTIES);
+    int before_docs = count_rows("ib", TABLE_DOCUMENTS), before_entries = count_rows("ib", TABLE_ENTRIES);
+    ledger_import_t imported;
+    ASSERT_TRUE(ledger_import_enterprisedata(g_ledger->ib, g_ledger->cfg, paths[i], &imported));
+    ASSERT(imported.items + imported.counterparties + imported.matched > 0, "1CD catalog contains supported records");
+    if (i == 0) {
+      db_item_t *sample = NULL;
+      result_node_t *items = (void *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ITEMS, 0), NULL);
+      for (result_node_t *n = items; n; n = n->next) {
+        db_item_t *item = *(db_item_t **)n->data;
+        if (!strcmp(item->sku, "ICD001")) sample = item;
+      }
+      free_result_list(items);
+      ASSERT(sample && !strcmp(sample->name, "1CD Sample Item"), "fixture import preserves the sample item's identity fields");
+    }
+    int item_count = count_rows("ib", TABLE_ITEMS);
+    ASSERT_EQUAL(item_count, before_items + imported.items);
+    int snapshot_counts[4] = {0};
+    int snapshot_tables[] = {TABLE_ITEMS, TABLE_COUNTERPARTIES, TABLE_DOCUMENTS, TABLE_ENTRIES};
+    size_t snapshot_sizes[] = {sizeof(db_item_t), sizeof(db_counterparty_t), sizeof(db_document_t), sizeof(db_entry_t)};
+    void *snapshots[4];
+    for (int t = 0; t < 4; t++) snapshot_table(g_ledger->ib, snapshot_tables[t], snapshot_sizes[t], &snapshot_counts[t], &snapshots[t]);
+    g_ledger->ib->dirty = false;
+    script_page_t *page = script_page_open(ASSISTANT_SHARE "/assistant", error, sizeof(error));
+    ASSERT(page != NULL, "assistant page opens for imported catalog");
+    ASSERT_NOT_NULL(script_page_create(page, NULL));
+    g_ledger->ib->dirty = false;
+    set_text(page, "command", "show items");
+    ASSERT_TRUE(script_page_perform(page, "submit"));
+    ASSERT_STR_EQUAL(script_page_message(page), "");
+    database_t *assistant = get_database_by_name("assistant");
+    ASSERT_NOT_NULL(assistant);
+    int max_id = 0;
+    result_node_t *items = (void *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ITEMS, 0), NULL);
+    for (result_node_t *n = items; n; n = n->next) {
+      int id = (*(db_item_t **)n->data)->id;
+      if (id > max_id) max_id = id;
+    }
+    free_result_list(items);
+    bool *source_ids = calloc((size_t)max_id + 1, sizeof(bool)), *seen = calloc((size_t)max_id + 1, sizeof(bool));
+    ASSERT_NOT_NULL(source_ids); ASSERT_NOT_NULL(seen);
+    items = (void *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ITEMS, 0), NULL);
+    for (result_node_t *n = items; n; n = n->next) source_ids[(*(db_item_t **)n->data)->id] = true;
+    free_result_list(items);
+    assert_assistant_record_ids(assistant, source_ids, seen, max_id, item_count);
+    if (i == 0) {
+      db_item_t *sample = NULL;
+      result_node_t *items = (void *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ITEMS, 0), NULL);
+      for (result_node_t *n = items; n; n = n->next) {
+        db_item_t *item = *(db_item_t **)n->data;
+        if (!strcmp(item->sku, "ICD001")) sample = item;
+      }
+      free_result_list(items);
+      ASSERT_NOT_NULL(sample);
+      ASSERT(seen[sample->id], "assistant row retains the imported item's database identity");
+    }
+    free(source_ids); free(seen);
+    set_text(page, "command", "show customers");
+    ASSERT_TRUE(script_page_perform(page, "submit"));
+    int party_count = count_rows("ib", TABLE_COUNTERPARTIES), max_party_id = 0;
+    result_node_t *parties = (void *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_COUNTERPARTIES, 0), NULL);
+    for (result_node_t *n = parties; n; n = n->next) {
+      int id = (*(db_counterparty_t **)n->data)->id;
+      if (id > max_party_id) max_party_id = id;
+    }
+    free_result_list(parties);
+    source_ids = calloc((size_t)max_party_id + 1, sizeof(bool)); seen = calloc((size_t)max_party_id + 1, sizeof(bool));
+    ASSERT_NOT_NULL(source_ids); ASSERT_NOT_NULL(seen);
+    parties = (void *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_COUNTERPARTIES, 0), NULL);
+    for (result_node_t *n = parties; n; n = n->next) source_ids[(*(db_counterparty_t **)n->data)->id] = true;
+    free_result_list(parties);
+    assert_assistant_record_ids(assistant, source_ids, seen, max_party_id, party_count);
+    free(source_ids); free(seen);
+    ASSERT_EQUAL(count_rows("ib", TABLE_ITEMS), item_count);
+    ASSERT_EQUAL(count_rows("ib", TABLE_COUNTERPARTIES), before_parties + imported.counterparties);
+    ASSERT_EQUAL(count_rows("ib", TABLE_DOCUMENTS), before_docs);
+    ASSERT_EQUAL(count_rows("ib", TABLE_ENTRIES), before_entries);
+    for (int t = 0; t < 4; t++) {
+      int after_count = 0;
+      void *after = NULL;
+      snapshot_table(g_ledger->ib, snapshot_tables[t], snapshot_sizes[t], &after_count, &after);
+      ASSERT_EQUAL(after_count, snapshot_counts[t]);
+      ASSERT(memcmp(after, snapshots[t], (size_t)after_count * snapshot_sizes[t]) == 0, "assistant queries leave source records unchanged");
+      free(after); free(snapshots[t]);
+    }
+    script_page_close(page);
+    unregister_database("ib"); destroy_database(g_ledger->ib); g_ledger->ib = NULL;
+  }
+  ledger_script_close();
+  unregister_database("cfg"); destroy_database(g_ledger->cfg); g_ledger->cfg = NULL;
+  PASS();
+}
 static void test_document_relation(script_page_t *page) {
   result_node_t *docs = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_DOCUMENTS, 0), NULL);
   int party = 0, expected = 0;
@@ -625,6 +761,7 @@ int main(void) {
   snprintf(state.share_dir,sizeof(state.share_dir),SHARE);
   ledger_addons_init();
   test_assistant();
+  test_imported_1cd_assistant();
   test_quarter_budget();
   test_assistant_companion();
   test_modeless_documents();

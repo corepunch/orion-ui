@@ -85,7 +85,7 @@ local function run(command, args, role)
   if command == "day_preview" then fields(args, {}); return Hotel.day_report() end
   if command == "close_day" then
     fields(args, {day = true, net_minor = true, outstanding_minor = true, reservations = true, pending = true,
-      cancelled_paid_minor = true, cancelled_paid_count = true})
+      cancelled_paid_minor = true, cancelled_paid_count = true, history_revision = true})
     local row = orion.assert(Hotel.close_today(args)); return {id = row.id}
   end
   if command == "save_room" or command == "save_guest" then

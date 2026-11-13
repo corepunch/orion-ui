@@ -88,7 +88,7 @@ The statement is an operational summary, not a tax invoice or proof of payment.
 overdue arrivals or departures. It separately shows the number of cancelled
 reservations with payments still held and their total paid after refunds. Check
 each reservation against the hotel's cancellation policy; this amount does not
-decide whether a refund is due. Use **Export overdue stays** to write a printable `overdue-stays.html` listing the reservations needing arrival or departure; the shared view refreshes from the server first. The file replaces the previous export and contains guest data. Resolve the overdue stays before closing. In shared mode, preview the day before closing; Lodge refuses the close if the day or its figures have changed since that preview. After
+decide whether a refund is due. Use **Export overdue stays** to write a printable `overdue-stays.html` listing the reservations needing arrival or departure; the shared view refreshes from the server first. The file replaces the previous export and contains guest data. Resolve the overdue stays before closing. In shared mode, preview the day before closing; Lodge refuses the close if the day, its figures, or reservation and nightly-price history have changed since that preview, even when the totals are unchanged. Preview again after such changes. After
 closing, reservation, nightly-price and payment changes are blocked until the
 next calendar day in the host process's time zone; housekeeping remains available.
 The hotel day follows the operating-system time zone of the local process or,
@@ -206,7 +206,7 @@ Run `python3 apps/lodge/tests/test_shared_company.py` with `orion-service`
 built to exercise competing reservations and payments in both country
 configurations, including replay after a lost response and server restart. It also checks that a
 failed group reservation leaves no partial group or bookings, and that a successful
-group request remains idempotent after restart. A service-level shift also covers
+group request remains idempotent after restart. The close-day checks also reject a stale preview after a reservation edit that leaves all totals unchanged. A service-level shift also covers
 room preparation, a stale edit and retry, check-in, payment and refund, checkout,
 role restrictions, day close, and replay after restart in both countries. Calendar
 checks cover adjacent stays across New Year and leap day, invalid dates, and the

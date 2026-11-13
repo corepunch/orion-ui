@@ -368,7 +368,7 @@ function Page:preview_day(v)
     if not report.closed and report.pending == 0 then
       self.day_preview = {day = report.day, net_minor = report.net_minor, outstanding_minor = report.outstanding_minor,
         reservations = report.reservations, pending = report.pending, cancelled_paid_minor = report.cancelled_paid_minor,
-        cancelled_paid_count = report.cancelled_paid_count}
+        cancelled_paid_count = report.cancelled_paid_count, history_revision = report.history_revision}
     end
     self.notice = report.closed and orion.tr("Today is closed.") or orion.tr("Day preview refreshed.")
   end)

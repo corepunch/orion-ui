@@ -6,6 +6,8 @@
 #include "apps/ledger/ledger.h"
 #include "apps/ledger/tests/test_databases.h"
 #include <math.h>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
 #include <orion/user/file.h>
 
 #define SHARE "apps/ledger/share/configurations"
@@ -1976,6 +1978,58 @@ static void test_import_enterprisedata(void) {
   PASS();
 }
 
+static void test_import_1cd_catalog(void) {
+  TEST("1CD extraction: import a generated catalog through the exchange importer");
+  ledger_import_t r;
+  ASSERT_TRUE(ledger_import_enterprisedata(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/fixtures/onecd/catalog.xml", &r));
+  db_item_t *item = find_by(g_ledger->ib, TABLE_ITEMS, "sku", "ICD001");
+  ASSERT(item && !strcmp(item->name, "1CD Sample Item") && r.items == 1, "extracted item was imported");
+  ASSERT_TRUE(ledger_import_enterprisedata(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/fixtures/onecd/catalog.xml", &r));
+  ASSERT(r.items == 0 && r.matched == 1, "reimport matches the item");
+  PASS();
+}
+
+static void test_import_external_1cd_catalog(void) {
+  const char *path = getenv("LEDGER_TEST_1CD_XML");
+  if (!path || !*path) return;
+  TEST("1CD extraction: import an external catalog and reimport it");
+  ledger_import_t first, again;
+  ASSERT_TRUE(ledger_import_enterprisedata(g_ledger->ib, g_ledger->cfg, path, &first));
+  xmlDocPtr doc = xmlReadFile(path, NULL, XML_PARSE_NONET);
+  ASSERT_NOT_NULL(doc);
+  xmlNodePtr body = xmlDocGetRootElement(doc)->children;
+  while (body && xmlStrcmp(body->name, BAD_CAST "Body")) body = body->next;
+  ASSERT_NOT_NULL(body);
+  int count = 0;
+  for (xmlNodePtr obj = body->children; obj; obj = obj->next) {
+    if (obj->type != XML_ELEMENT_NODE) continue;
+    bool item = !xmlStrcmp(obj->name, BAD_CAST "Справочник.Номенклатура");
+    ASSERT(item || !xmlStrcmp(obj->name, BAD_CAST "Справочник.Контрагенты"), "unexpected record type");
+    xmlNodePtr key = obj->children, name = NULL, code = NULL;
+    while (key && xmlStrcmp(key->name, BAD_CAST "КлючевыеСвойства")) key = key->next;
+    ASSERT_NOT_NULL(key);
+    for (xmlNodePtr p = key->children; p; p = p->next) {
+      if (!xmlStrcmp(p->name, BAD_CAST "Наименование")) name = p;
+      if (!xmlStrcmp(p->name, BAD_CAST "КодВПрограмме")) code = p;
+    }
+    ASSERT_NOT_NULL(name);
+    xmlChar *value = xmlNodeGetContent(name), *sku = code ? xmlNodeGetContent(code) : NULL;
+    if (item) {
+      db_item_t *row = find_by(g_ledger->ib, TABLE_ITEMS, sku && *sku ? "sku" : "name", (const char *)(sku && *sku ? sku : value));
+      ASSERT(row && !strcmp(row->name, (const char *)value) && (!sku || !strcmp(row->sku, (const char *)sku)), "item fields match the extracted record");
+    } else {
+      db_counterparty_t *row = find_by(g_ledger->ib, TABLE_COUNTERPARTIES, "name", (const char *)value);
+      ASSERT(row && !strcmp(row->name, (const char *)value), "counterparty name matches the extracted record");
+    }
+    xmlFree(value); if (sku) xmlFree(sku); count++;
+  }
+  xmlFreeDoc(doc);
+  ASSERT(count > 0 && first.counterparties + first.items + first.matched == count, "every extracted record accounted for");
+  ASSERT_TRUE(ledger_import_enterprisedata(g_ledger->ib, g_ledger->cfg, path, &again));
+  ASSERT(again.counterparties + again.items == 0, "reimport creates no records");
+  PASS();
+}
+
 // Inject failures at the database boundary, leaving the production API unchanged.
 static dbproc_t import_db_proc;
 static int import_fault, import_writes, import_entry_writes;
@@ -2150,6 +2204,8 @@ int main(int argc, char **argv) {
   test_generated_bindings();
   test_russian_catalogs();
   test_import_enterprisedata();
+  test_import_1cd_catalog();
+  test_import_external_1cd_catalog();
   test_import_digest();
   test_import_integrity();
   test_german_configuration();

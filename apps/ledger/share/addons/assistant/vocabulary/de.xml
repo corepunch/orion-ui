@@ -48,6 +48,7 @@
   <topic source="receivables">schuldet uns</topic>
   <topic source="receivables">schuldet uns Geld</topic>
   <topic source="taxes" synonyms="Steuern Umsatzsteuer Vorsteuer">Steuer</topic>
+  <topic source="unsupported_scope" synonyms="Vorschüsse Vorschüssen Vorauszahlungen Anzahlungen Vorschusszahlung Vorschusszahlungen Vorauszahlung Anzahlung">Vorschuss</topic>
   <topic source="closing" synonyms="Abschluss abschließen abgeschlossen">Monatsabschluss</topic>
   <topic source="negative" synonyms="negative negativer negativen Minus">negativ</topic>
   <topic source="reconciliation" synonyms="Kontoabstimmung Saldenbestätigung Abgleich">Abstimmung</topic>
