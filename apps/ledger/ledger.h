@@ -70,6 +70,9 @@ int  ledger_posted_entries(database_t *ib, db_entry_t ***out);
 bool ledger_document_settlement(database_t *ib, database_t *cfg, int doc_id, double *due, double *paid);
 // The infobase table an account is analysed by ("counterparties"), or "".
 const char *ledger_subconto_table(database_t *cfg, int account_id);
+// The same for analytics slot 1..3 (1C allows three kinds per account); empty or NULL when the slot is unused.
+const char *ledger_subconto_slot_table(database_t *cfg, int account_id, int slot);
+const db_subconto_kind_t *ledger_subconto_kind(database_t *cfg, int account_id, int slot);
 void ledger_recalc_document(database_t *ib, database_t *cfg, int doc_id);
 bool ledger_post(database_t *ib, database_t *cfg, int doc_id);
 bool ledger_posting_active(void);

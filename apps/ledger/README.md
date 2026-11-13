@@ -69,7 +69,8 @@ single previous copy, not a substitute for independent backups.
 | Documents | Journal of typed documents with numbering by prefix, lines, totals with VAT, post / unpost / delete; posting rules come from the configuration |
 | Goods | Receipts and sales by item; a sale writes the goods off at average cost (Dt 90.02 Kt 41.01) |
 | Manual operations | `Documents > New Manual Operation` (Ctrl+M): entries typed by the accountant; opening balances are an operation of that kind |
-| Analytics | Each account has an analytics kind (counterparties, items, employees, fixed assets); every entry keeps the debit and the credit object separately |
+| Analytics | Each account has up to three analytics kinds (counterparties, items, employees, fixed assets, contracts, warehouses, bank accounts); every entry keeps up to three objects per side, plus tax-accounting amounts per side (tax, permanent and temporary differences as exact minor units, unset distinct from zero). Posting rules, reports and the Lua API use only the first analytics; quantity and currency stay one per entry |
+| Contracts, bank accounts, warehouses | Catalogs for 1C's contracts, bank accounts and warehouses: contracts and bank accounts on the Counterparties page, warehouses on the Items page, with `Catalogs` menu commands. Documents may refer to a contract, a warehouse and a bank account (storage only; the document form does not edit them yet) |
 | Payroll | Employees with salary, allowance and expense account; accrual with withheld income tax and employer contributions from the configuration's payroll taxes: flat rates with monthly or annual caps, progressive scales (cumulative as НДФЛ or annualized as Lohnsteuer), allowances with an income limit, all effective-dated by document date; payout of what is owed; payroll statement |
 | Fixed assets | Asset register; putting assets into service; straight-line depreciation in month-end closing |
 | Currencies | Currencies and exchange rates; documents in a currency post at the day's rate and keep both amounts; currency accounts are revalued at month end |
@@ -185,7 +186,7 @@ separates its engine from a country's typical configuration.
 |---|---|---|
 | Platform | `ledger.orion`, `*.c` | Schemas, screens, menus, posting engine, print engine |
 | Configuration | `share/configurations/<code>/` | Chart of accounts with analytics kinds, units, tax rates (with optional automatic accounts), document types with posting rules, effective-dated payroll taxes and tax scales, closing rules, print forms, the regulations behind them |
-| Infobase | `<settings>/ledger/<code>/infobase.xml` | The organization's counterparties, items, documents, entries and totals |
+| Infobase | `<settings>/ledger/<code>/infobase.xml` | The organization's counterparties, items, contracts, bank accounts, warehouses, documents, entries and totals |
 
 The platform never names an account, a tax rate or a national form. A document
 type in the configuration says which accounts it debits and credits, whether

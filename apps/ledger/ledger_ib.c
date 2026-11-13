@@ -152,6 +152,12 @@ bool ledger_record_revision(database_t *db, const db_document_t *doc, const char
     const db_entry_t *e = *(db_entry_t **)node->data;
     db_revision_entry_t copy = { .revision_id = revision_id, .debit_id = e->debit_id, .credit_id = e->credit_id,
       .debit_subconto_id = e->debit_subconto_id, .credit_subconto_id = e->credit_subconto_id,
+      .debit_subconto2_id = e->debit_subconto2_id, .debit_subconto3_id = e->debit_subconto3_id,
+      .credit_subconto2_id = e->credit_subconto2_id, .credit_subconto3_id = e->credit_subconto3_id,
+      .debit_tax_set = e->debit_tax_set, .debit_tax_minor = e->debit_tax_minor,
+      .debit_permanent_minor = e->debit_permanent_minor, .debit_temporary_minor = e->debit_temporary_minor,
+      .credit_tax_set = e->credit_tax_set, .credit_tax_minor = e->credit_tax_minor,
+      .credit_permanent_minor = e->credit_permanent_minor, .credit_temporary_minor = e->credit_temporary_minor,
       .currency_id = e->currency_id, .quantity = e->quantity, .currency_amount = e->currency_amount, .amount = e->amount,
       .exact_money = e->exact_money, .amount_minor = e->amount_minor, .quantity_milli = e->quantity_milli };
     snprintf(copy.date, sizeof(copy.date), "%s", e->date);

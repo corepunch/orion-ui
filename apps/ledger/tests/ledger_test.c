@@ -13,6 +13,10 @@
 #define SHARE "apps/ledger/share/configurations"
 #define TMP_DIR "build/test-ledger"
 
+#define EACH_RECORD(type, var, list) \
+  for (result_node_t *var##_node = (list); var##_node; var##_node = var##_node->next) \
+    for (type *var = *(type **)var##_node->data; var; var = NULL)
+
 static ledger_t g_test_ledger;
 static void ed_digest(const unsigned char *data, size_t len, char hex[65]);
 
@@ -1299,6 +1303,142 @@ static void test_reversal(void) {
   PASS();
 }
 
+static void test_extended_entry_analytics(void) {
+  TEST("entry: three analytics and tax-accounting amounts per side survive snapshot and reversal, sides swapped");
+  database_t *cfg = g_ledger->cfg, *ib = g_ledger->ib;
+  switch_configuration("ru-2026", "extended-entry.xml");
+  const db_document_t *doc = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "РТ-0001");
+  ASSERT_NOT_NULL(doc); int id = doc->id;
+  int document_field = ledger_field(g_ledger->ib, TABLE_ENTRIES, "document_id");
+  result_node_t *rows = (void *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ENTRIES, document_field), (void *)(intptr_t)id);
+  ASSERT_NOT_NULL(rows);
+  db_entry_t entry = **(db_entry_t **)rows->data;
+  free_result_list(rows);
+  entry.debit_subconto2_id = 11; entry.debit_subconto3_id = 12; entry.credit_subconto2_id = 13; entry.credit_subconto3_id = 14;
+  entry.debit_tax_set = true; entry.debit_tax_minor = 12345; entry.debit_permanent_minor = -200; entry.debit_temporary_minor = 300;
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbUpdate, TABLE_ENTRIES, &entry));
+  doc = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "РТ-0001");
+  ASSERT_TRUE(ledger_record_revision(g_ledger->ib, doc, "post"));
+  int latest = 0;
+  result_node_t *revisions = (void *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_POSTING_REVISIONS, ledger_field(g_ledger->ib, TABLE_POSTING_REVISIONS, "document_id")), (void *)(intptr_t)id);
+  EACH_RECORD(db_posting_revision_t, r, revisions) if (r->id > latest) latest = r->id;
+  free_result_list(revisions);
+  result_node_t *snapshots = (void *)send_db_message(g_ledger->ib, dbFetch,
+    MAKEDWORD(TABLE_REVISION_ENTRIES, ledger_field(g_ledger->ib, TABLE_REVISION_ENTRIES, "revision_id")), (void *)(intptr_t)latest);
+  int kept = 0;
+  EACH_RECORD(db_revision_entry_t, r, snapshots) if (r->debit_tax_set && r->debit_id == entry.debit_id) {
+    kept += r->debit_subconto2_id == 11 && r->debit_subconto3_id == 12 && r->credit_subconto2_id == 13 && r->credit_subconto3_id == 14 &&
+            r->debit_tax_minor == 12345 && r->debit_permanent_minor == -200 && r->debit_temporary_minor == 300 &&
+            !r->credit_tax_set && !r->credit_tax_minor;
+  }
+  free_result_list(snapshots);
+  ASSERT_EQUAL(kept, 1);
+  int reversal = ledger_reverse_posting(g_ledger->ib, g_ledger->cfg, id, "2026-04-01", "Correction");
+  ASSERT(reversal > 0, "an entry with extended analytics reverses against its snapshot");
+  rows = (void *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(TABLE_ENTRIES, document_field), (void *)(intptr_t)reversal);
+  int swapped = 0;
+  EACH_RECORD(db_entry_t, r, rows) if (r->credit_tax_set) {
+    swapped += r->credit_id == entry.debit_id && r->debit_id == entry.credit_id &&
+               r->credit_subconto2_id == 11 && r->credit_subconto3_id == 12 && r->debit_subconto2_id == 13 && r->debit_subconto3_id == 14 &&
+               r->credit_tax_minor == 12345 && r->credit_permanent_minor == -200 && r->credit_temporary_minor == 300 &&
+               !r->debit_tax_set && !r->debit_tax_minor && !r->debit_permanent_minor && !r->debit_temporary_minor;
+  }
+  free_result_list(rows);
+  ASSERT_EQUAL(swapped, 1);
+  restore_configuration(cfg, ib);
+  PASS();
+}
+
+static void test_contract_bank_warehouse_catalogs(void) {
+  TEST("catalogs: contracts, bank accounts and warehouses store records and documents refer to them with deny");
+  database_t *ib = g_ledger->ib;
+  db_contract_t contract = { .counterparty_id = 1, .currency_id = 1, .valid_until = "2027-12-31" };
+  snprintf(contract.number, sizeof(contract.number), "Д-17"); snprintf(contract.date, sizeof(contract.date), "2026-01-15");
+  snprintf(contract.name, sizeof(contract.name), "Поставка"); snprintf(contract.kind, sizeof(contract.kind), "supplier");
+  const db_contract_t *c = (void *)send_db_message(ib, dbInsert, TABLE_CONTRACTS, &contract);
+  ASSERT_NOT_NULL(c); int contract_id = c->id;
+  ASSERT(!strcmp(c->number, "Д-17") && !strcmp(c->kind, "supplier") && c->counterparty_id == 1 && !strcmp(c->valid_until, "2027-12-31"), "contract fields");
+  db_bank_account_t account = { .counterparty_id = 1, .currency_id = 1 };
+  snprintf(account.name, sizeof(account.name), "Расчетный"); snprintf(account.number, sizeof(account.number), "40702810900000000001");
+  snprintf(account.bank, sizeof(account.bank), "Банк"); snprintf(account.bik, sizeof(account.bik), "044525225");
+  snprintf(account.swift, sizeof(account.swift), "SABRRUMM"); snprintf(account.corr_account, sizeof(account.corr_account), "30101810400000000225");
+  const db_bank_account_t *a = (void *)send_db_message(ib, dbInsert, TABLE_BANK_ACCOUNTS, &account);
+  ASSERT_NOT_NULL(a); int account_id = a->id;
+  ASSERT(!strcmp(a->bik, "044525225") && !strcmp(a->swift, "SABRRUMM") && a->counterparty_id == 1 && !a->organization_id, "bank account fields");
+  db_bank_account_t own = { .organization_id = 1 };
+  snprintf(own.name, sizeof(own.name), "Own");
+  ASSERT_NOT_NULL((void *)send_db_message(ib, dbInsert, TABLE_BANK_ACCOUNTS, &own));
+  db_warehouse_t warehouse = {0};
+  snprintf(warehouse.name, sizeof(warehouse.name), "Main"); snprintf(warehouse.kind, sizeof(warehouse.kind), "wholesale");
+  snprintf(warehouse.address, sizeof(warehouse.address), "Moscow"); snprintf(warehouse.keeper, sizeof(warehouse.keeper), "Petrov");
+  const db_warehouse_t *w = (void *)send_db_message(ib, dbInsert, TABLE_WAREHOUSES, &warehouse);
+  ASSERT_NOT_NULL(w); int warehouse_id = w->id;
+  ASSERT(!strcmp(w->keeper, "Petrov") && !strcmp(w->kind, "wholesale"), "warehouse fields");
+  char text[64];
+  ASSERT_TRUE(db_get_field_text(ib, TABLE_CONTRACTS, c, "counterparty.name", text, sizeof(text)));
+  ASSERT(text[0], "a contract names its counterparty through the relation");
+  db_document_t blank;
+  ASSERT_TRUE(send_db_message(ib, dbInitRecord, TABLE_DOCUMENTS, &blank));
+  ASSERT_TRUE(send_db_message(ib, dbBeginChanges, 0, NULL));
+  blank.doc_type_id = 1; blank.counterparty_id = 1;
+  blank.contract_id = contract_id; blank.bank_account_id = account_id; blank.warehouse_id = warehouse_id;
+  snprintf(blank.date, sizeof(blank.date), "2003-03-25");
+  const db_document_t *doc = (void *)send_db_message(ib, dbInsert, TABLE_DOCUMENTS, &blank);
+  ASSERT(doc && doc->contract_id == contract_id && doc->bank_account_id == account_id && doc->warehouse_id == warehouse_id, "document refers to its catalogs");
+  ASSERT_FALSE(send_db_message(ib, dbDelete, TABLE_CONTRACTS, (void *)(intptr_t)contract_id));
+  ASSERT_FALSE(send_db_message(ib, dbDelete, TABLE_BANK_ACCOUNTS, (void *)(intptr_t)account_id));
+  ASSERT_FALSE(send_db_message(ib, dbDelete, TABLE_WAREHOUSES, (void *)(intptr_t)warehouse_id));
+  ASSERT_NOT_NULL((void *)send_db_message(ib, dbFind, MAKEDWORD(TABLE_CONTRACTS, 0), (void *)(intptr_t)contract_id));
+  ASSERT_TRUE(send_db_message(ib, dbRevertChanges, 0, NULL));
+  ASSERT_FALSE(send_db_message(ib, dbDelete, TABLE_COUNTERPARTIES, (void *)(intptr_t)1));  // contracts and bank accounts refer to it
+  ASSERT_TRUE(send_db_message(ib, dbDelete, TABLE_CONTRACTS, (void *)(intptr_t)contract_id));
+  ASSERT_TRUE(send_db_message(ib, dbDelete, TABLE_BANK_ACCOUNTS, (void *)(intptr_t)account_id));
+  ASSERT_TRUE(send_db_message(ib, dbDelete, TABLE_WAREHOUSES, (void *)(intptr_t)warehouse_id));
+  PASS();
+}
+
+static void test_legacy_configuration_analytics(void) {
+  TEST("configuration: accounts without second and third analytics kinds load with kinds 0");
+  const char *path = TMP_DIR "/legacy-cfg.xml";
+  FILE *f = fopen(path, "wb"); ASSERT_NOT_NULL(f);
+  fputs("<cfg><subconto_kinds><subconto_kind id=\"1\" code=\"counterparty\" name=\"C\" table=\"counterparties\"/></subconto_kinds>"
+        "<accounts><account id=\"1\" subconto_kind_id=\"1\" code=\"60\" name=\"Settlements\" kind=\"AP\" section=\"S\" currency=\"0\"/></accounts></cfg>", f);
+  ASSERT_EQUAL(fclose(f), 0);
+  database_t *legacy = create_database_with_schema_readonly("cfg_legacy", "db_schema_xml", &ledger_cfg_schema, path);
+  ASSERT_NOT_NULL(legacy);
+  const db_account_t *a = (void *)send_db_message(legacy, dbFind, TABLE_ACCOUNTS, (void *)(intptr_t)1);
+  ASSERT(a && a->subconto_kind_id == 1 && a->subconto2_kind_id == 0 && a->subconto3_kind_id == 0, "missing attributes read as 0");
+  ASSERT_STR_EQUAL(ledger_subconto_slot_table(legacy, 1, 1), "counterparties");
+  ASSERT_STR_EQUAL(ledger_subconto_slot_table(legacy, 1, 2), "");
+  ASSERT_STR_EQUAL(ledger_subconto_slot_table(legacy, 1, 3), "");
+  destroy_database(legacy);
+  remove(path);
+  PASS();
+}
+
+static void test_ru_2026_second_analytics(void) {
+  TEST("ru-2026 and ru-2003: settlements carry contracts and stock carries warehouses as second analytics");
+  const char *codes[] = { "ru-2026", "ru-2003" };
+  for (int i = 0; i < 2; i++) {
+    char path[512]; snprintf(path, sizeof(path), SHARE "/%s/configuration.xml", codes[i]);
+    database_t *c = create_database_with_schema_readonly("cfg_second", "db_schema_xml", &ledger_cfg_schema, path);
+    ASSERT_NOT_NULL(c);
+    int settlement = 0, stock = 0;
+    result_node_t *accounts = (void *)send_db_message(c, dbFetch, MAKEDWORD(TABLE_ACCOUNTS, 0), NULL);
+    EACH_RECORD(db_account_t, a, accounts) {
+      const char *table2 = ledger_subconto_slot_table(c, a->id, 2);
+      if (!strcmp(ledger_subconto_slot_table(c, a->id, 1), "counterparties") && !strncmp(a->code, "60", 2)) settlement += !strcmp(table2, "contracts");
+      if (!strcmp(ledger_subconto_slot_table(c, a->id, 1), "items") && !strncmp(a->code, "41", 2)) stock += !strcmp(table2, "warehouses");
+      ASSERT_EQUAL(a->subconto3_kind_id, 0);
+    }
+    free_result_list(accounts);
+    ASSERT(settlement > 0 && stock > 0, "second analytics configured");
+    destroy_database(c);
+  }
+  PASS();
+}
+
 static dbproc_t guard_test_proc;
 static int guard_fault_table;
 static lresult_t guard_fetch_fault(database_t *db, uint32_t msg, uint32_t wp, void *lp) {
@@ -2218,6 +2358,10 @@ int main(int argc, char **argv) {
   test_infobase_migration();
   test_retired_document_ids();
   test_reversal();
+  test_extended_entry_analytics();
+  test_contract_bank_warehouse_catalogs();
+  test_legacy_configuration_analytics();
+  test_ru_2026_second_analytics();
   test_reversal_protection();
   test_service();
   test_exact_correction_countries();

@@ -3,8 +3,7 @@
 // only behavior the declarations cannot express.
 
 #include "ledger.h"
-#include <orion/commdlg/msgbox.h>
-#include <orion/commdlg/filepicker.h>
+#include <orion/commdlg/commdlg.h>
 #include <time.h>
 #include <ctype.h>
 #include <orion/script/script_internal.h>
@@ -684,7 +683,9 @@ static void ledger_ui_catalog(lua_State *L, const char *name, const char *verb) 
   static const struct { const char *name; int id; } tables[] = {
     {"counterparty", ID_COUNTERPARTIES_PAGE_COUNTERPARTIES}, {"item", ID_ITEMS_PAGE_ITEMS},
     {"employee", ID_EMPLOYEES_PAGE_EMPLOYEES}, {"asset", ID_ASSETS_PAGE_ASSETS},
-    {"currency", ID_CURRENCIES_PAGE_CURRENCIES}, {"rate", ID_CURRENCIES_PAGE_RATES}
+    {"currency", ID_CURRENCIES_PAGE_CURRENCIES}, {"rate", ID_CURRENCIES_PAGE_RATES},
+    {"contract", ID_COUNTERPARTIES_PAGE_CONTRACTS}, {"bank_account", ID_COUNTERPARTIES_PAGE_BANK_ACCOUNTS},
+    {"warehouse", ID_ITEMS_PAGE_WAREHOUSES}
   };
   for (size_t i = 0; i < ARRAY_LEN(tables); i++) if (!strcmp(name, tables[i].name)) {
     catalog_action(tables[i].id, !strcmp(verb, "new") ? tvInsertRecord : !strcmp(verb, "edit") ? tvEditRecord : tvDeleteRecord); return;

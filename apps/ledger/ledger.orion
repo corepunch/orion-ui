@@ -69,6 +69,18 @@
       <item name="edit_currency" label="Edit Currency..." />
       <item name="new_rate" label="New Exchange Rate..." />
       <item name="delete_rate" label="Delete Exchange Rate..." />
+      <Separator />
+      <item name="new_contract" label="New Contract..." />
+      <item name="edit_contract" label="Edit Contract..." />
+      <item name="delete_contract" label="Delete Contract..." />
+      <Separator />
+      <item name="new_bank_account" label="New Bank Account..." />
+      <item name="edit_bank_account" label="Edit Bank Account..." />
+      <item name="delete_bank_account" label="Delete Bank Account..." />
+      <Separator />
+      <item name="new_warehouse" label="New Warehouse..." />
+      <item name="edit_warehouse" label="Edit Warehouse..." />
+      <item name="delete_warehouse" label="Delete Warehouse..." />
     </menu>
     <menu name="view" label="View">
       <item name="back" label="Back" shortcut="Alt+Left" />
@@ -148,6 +160,9 @@
       <table name="accounts">
         <field name="id" type="integer" key="YES" />
         <field name="subconto_kind_id" type="integer" relation="subconto_kinds.id" />
+        <!-- Second and third analytics kinds (1C allows three per account); posting rules use only the first. -->
+        <field name="subconto2_kind_id" type="integer" relation="subconto_kinds.id" />
+        <field name="subconto3_kind_id" type="integer" relation="subconto_kinds.id" />
         <field name="code" type="string" length="16" />
         <field name="name" type="string" length="160" />
         <field name="kind" type="string" length="32" />
@@ -348,7 +363,7 @@
          class: numbering, recalculation of documents when they or their lines
          change. default= fills new records; on-delete= says what deleting a
          referenced record does: cascade, nullify or deny. -->
-    <database name="ib" class="ledger_ib" version="6" migration="additive">
+    <database name="ib" class="ledger_ib" version="7" migration="additive">
       <table name="organizations">
         <field name="id" type="integer" key="YES" />
         <field name="legal_details" type="string" length="512" />
@@ -430,6 +445,39 @@
         <field name="date" type="date" default="today" />
         <field name="rate" type="double" precision="4" />
       </table>
+      <!-- Contracts with counterparties (1C Договоры контрагентов). kind: supplier, customer or other. -->
+      <table name="contracts">
+        <field name="id" type="integer" key="YES" />
+        <field name="counterparty_id" type="integer" relation="counterparties.id" on-delete="deny" />
+        <field name="currency_id" type="integer" relation="currencies.id" on-delete="deny" />
+        <field name="number" type="string" length="32" />
+        <field name="date" type="date" default="today" />
+        <field name="name" type="string" length="160" />
+        <field name="kind" type="string" length="16" />
+        <field name="valid_until" type="date" />
+        <field name="comment" type="string" length="256" />
+      </table>
+      <!-- Bank accounts of the organization or of a counterparty (1C Банковские счета). -->
+      <table name="bank_accounts">
+        <field name="id" type="integer" key="YES" />
+        <field name="organization_id" type="integer" relation="organizations.id" on-delete="deny" />
+        <field name="counterparty_id" type="integer" relation="counterparties.id" on-delete="deny" />
+        <field name="currency_id" type="integer" relation="currencies.id" on-delete="deny" />
+        <field name="name" type="string" length="160" />
+        <field name="number" type="string" length="34" />
+        <field name="bank" type="string" length="160" />
+        <field name="bik" type="string" length="16" />
+        <field name="swift" type="string" length="16" />
+        <field name="corr_account" type="string" length="64" />
+      </table>
+      <!-- Warehouses (1C Склады). kind: wholesale, retail, ... -->
+      <table name="warehouses">
+        <field name="id" type="integer" key="YES" />
+        <field name="name" type="string" length="128" />
+        <field name="kind" type="string" length="16" />
+        <field name="address" type="string" length="256" />
+        <field name="keeper" type="string" length="96" />
+      </table>
       <!-- Amounts are in the document's currency; posting converts them at
            its rate (the rate on the document date when left empty). -->
       <table name="documents">
@@ -450,6 +498,9 @@
         <field name="doc_type_id" type="integer" relation="cfg.doc_types.id" />
         <field name="counterparty_id" type="integer" relation="counterparties.id" on-delete="deny" />
         <field name="currency_id" type="integer" relation="currencies.id" on-delete="deny" />
+        <field name="contract_id" type="integer" relation="contracts.id" on-delete="deny" />
+        <field name="warehouse_id" type="integer" relation="warehouses.id" on-delete="deny" />
+        <field name="bank_account_id" type="integer" relation="bank_accounts.id" on-delete="deny" />
         <field name="number" type="string" length="24" />
         <field name="date" type="date" default="today" />
         <field name="comment" type="string" length="256" />
@@ -515,6 +566,10 @@
         <field name="credit_id" type="integer" relation="cfg.accounts.id" />
         <field name="debit_subconto_id" type="integer" relation="ib.{debit.subconto_kind.table}.id" />
         <field name="credit_subconto_id" type="integer" relation="ib.{credit.subconto_kind.table}.id" />
+        <field name="debit_subconto2_id" type="integer" relation="ib.{debit.subconto2_kind.table}.id" />
+        <field name="debit_subconto3_id" type="integer" relation="ib.{debit.subconto3_kind.table}.id" />
+        <field name="credit_subconto2_id" type="integer" relation="ib.{credit.subconto2_kind.table}.id" />
+        <field name="credit_subconto3_id" type="integer" relation="ib.{credit.subconto3_kind.table}.id" />
         <field name="currency_id" type="integer" relation="currencies.id" />
         <field name="date" type="date" />
         <field name="quantity" type="double" precision="3" />
@@ -524,6 +579,15 @@
         <field name="exact_money" type="boolean" />
         <field name="amount_minor" type="int64" />
         <field name="quantity_milli" type="int64" />
+        <!-- Tax-accounting amounts per side (1C СуммаНУ, СуммаПР, СуммаВР); *_tax_set tells "no values" from zero. -->
+        <field name="debit_tax_set" type="boolean" />
+        <field name="debit_tax_minor" type="int64" />
+        <field name="debit_permanent_minor" type="int64" />
+        <field name="debit_temporary_minor" type="int64" />
+        <field name="credit_tax_set" type="boolean" />
+        <field name="credit_tax_minor" type="int64" />
+        <field name="credit_permanent_minor" type="int64" />
+        <field name="credit_temporary_minor" type="int64" />
       </table>
       <!-- A monotonic accounting close boundary, inclusive. -->
       <table name="period_locks">
@@ -556,6 +620,10 @@
         <field name="credit_id" type="integer" />
         <field name="debit_subconto_id" type="integer" />
         <field name="credit_subconto_id" type="integer" />
+        <field name="debit_subconto2_id" type="integer" />
+        <field name="debit_subconto3_id" type="integer" />
+        <field name="credit_subconto2_id" type="integer" />
+        <field name="credit_subconto3_id" type="integer" />
         <field name="currency_id" type="integer" />
         <field name="date" type="date" />
         <field name="quantity" type="double" precision="3" />
@@ -565,6 +633,14 @@
         <field name="exact_money" type="boolean" />
         <field name="amount_minor" type="int64" />
         <field name="quantity_milli" type="int64" />
+        <field name="debit_tax_set" type="boolean" />
+        <field name="debit_tax_minor" type="int64" />
+        <field name="debit_permanent_minor" type="int64" />
+        <field name="debit_temporary_minor" type="int64" />
+        <field name="credit_tax_set" type="boolean" />
+        <field name="credit_tax_minor" type="int64" />
+        <field name="credit_permanent_minor" type="int64" />
+        <field name="credit_temporary_minor" type="int64" />
       </table>
       <table name="reversal_links">
         <field name="id" type="integer" key="YES" />
@@ -648,12 +724,24 @@
         <field name="credit_id" type="integer" relation="cfg.accounts.id" />
         <field name="debit_subconto_id" type="integer" relation="ib.{debit.subconto_kind.table}.id" />
         <field name="credit_subconto_id" type="integer" relation="ib.{credit.subconto_kind.table}.id" />
+        <field name="debit_subconto2_id" type="integer" relation="ib.{debit.subconto2_kind.table}.id" />
+        <field name="debit_subconto3_id" type="integer" relation="ib.{debit.subconto3_kind.table}.id" />
+        <field name="credit_subconto2_id" type="integer" relation="ib.{credit.subconto2_kind.table}.id" />
+        <field name="credit_subconto3_id" type="integer" relation="ib.{credit.subconto3_kind.table}.id" />
         <field name="currency_id" type="integer" relation="currencies.id" />
         <field name="date" type="date" />
         <field name="quantity" type="double" precision="3" />
         <field name="currency_amount" type="double" />
         <field name="amount" type="double" />
         <field name="content" type="string" length="160" />
+        <field name="debit_tax_set" type="boolean" />
+        <field name="debit_tax_minor" type="int64" />
+        <field name="debit_permanent_minor" type="int64" />
+        <field name="debit_temporary_minor" type="int64" />
+        <field name="credit_tax_set" type="boolean" />
+        <field name="credit_tax_minor" type="int64" />
+        <field name="credit_permanent_minor" type="int64" />
+        <field name="credit_temporary_minor" type="int64" />
       </table>
       <!-- Cash book: per day the opening balance, the cash orders, the day's
            totals and the closing balance. -->
@@ -957,17 +1045,43 @@
       <Toolbar>
         <Button command="catalog.new_counterparty" icon="ledger-new" text="New" tooltip="New counterparty" />
         <Button command="catalog.edit_counterparty" icon="ledger-edit" text="Edit" tooltip="Edit counterparty" />
+        <Button command="catalog.new_contract" icon="ledger-new" text="Contract" tooltip="New contract" />
+        <Button command="catalog.new_bank_account" icon="ledger-new" text="Bank Account" tooltip="New bank account" />
         <spacer />
         <Button command="catalog.delete_counterparty" icon="ledger-delete" text="Delete" tooltip="Delete counterparty" />
       </Toolbar>
-      <TableView name="counterparties" source="ib.counterparties" form="counterparty" flags="notitle,nofill,vscroll,flexspace">
-        <RowIcon icon="ledger-row-counterparty" color="info" />
-        <Column field="name" title="Name" width="0" min-width="160" />
-        <Column field="tax_id" title="Tax ID" width="100" />
-        <Column field="kpp" title="KPP" width="84" />
-        <Column field="phone" title="Phone" width="100" />
-        <Column field="address" title="Address" width="0" />
-      </TableView>
+      <StackView name="counterparty_stack" spacing="0" flags="flexspace">
+        <SplitView name="counterparty_split" orientation="vertical" split-ratio="0.55" flags="flexspace">
+          <TableView name="counterparties" source="ib.counterparties" form="counterparty" flags="notitle,nofill,vscroll,flexspace">
+            <RowIcon icon="ledger-row-counterparty" color="info" />
+            <Column field="name" title="Name" width="0" min-width="160" />
+            <Column field="tax_id" title="Tax ID" width="100" />
+            <Column field="kpp" title="KPP" width="84" />
+            <Column field="phone" title="Phone" width="100" />
+            <Column field="address" title="Address" width="0" />
+          </TableView>
+          <SplitView name="counterparty_detail_split" orientation="horizontal" split-ratio="0.5" flags="flexspace">
+            <TableView name="contracts" text="Contracts" source="ib.contracts" form="contract" flags="nofill,vscroll,flexspace">
+              <Column field="date" title="Date" width="84" />
+              <Column field="number" title="Number" width="72" />
+              <Column field="name" title="Name" width="0" min-width="100" />
+              <Column field="counterparty.name" title="Counterparty" width="0" min-width="100" />
+              <Column field="currency.code" title="Cur." width="40" />
+              <Column field="kind" title="Kind" width="72" />
+              <Column field="valid_until" title="Valid Until" width="84" />
+            </TableView>
+            <TableView name="bank_accounts" text="Bank Accounts" source="ib.bank_accounts" form="bank_account" flags="nofill,vscroll,flexspace">
+              <Column field="name" title="Name" width="0" min-width="100" />
+              <Column field="number" title="Account" width="160" />
+              <Column field="bank" title="Bank" width="0" min-width="100" />
+              <Column field="bik" title="BIK" width="84" />
+              <Column field="counterparty.name" title="Counterparty" width="0" min-width="100" />
+              <Column field="organization.name" title="Organization" width="0" min-width="100" />
+              <Column field="currency.code" title="Cur." width="40" />
+            </TableView>
+          </SplitView>
+        </SplitView>
+      </StackView>
     </form>
 
     <form name="items_page" label="Items" title="Items" icon="ledger-nav-items" checked-icon="ledger-nav-items-fill"
@@ -976,17 +1090,28 @@
       <Toolbar>
         <Button command="catalog.new_item" icon="ledger-new" text="New" tooltip="New item" />
         <Button command="catalog.edit_item" icon="ledger-edit" text="Edit" tooltip="Edit item" />
+        <Button command="catalog.new_warehouse" icon="ledger-new" text="Warehouse" tooltip="New warehouse" />
         <spacer />
         <Button command="catalog.delete_item" icon="ledger-delete" text="Delete" tooltip="Delete item" />
       </Toolbar>
-      <TableView name="items" source="ib.items" form="item" flags="notitle,nofill,vscroll,flexspace">
-        <RowIcon icon="ledger-row-item" color="info" />
-        <Column field="sku" title="Code" width="80" />
-        <Column field="name" title="Name" width="0" min-width="160" />
-        <Column field="unit.name" title="Unit" width="56" />
-        <Column field="vat_rate.name" title="Tax" width="56" />
-        <Column field="price" title="Price" width="90" />
-      </TableView>
+      <StackView name="item_stack" spacing="0" flags="flexspace">
+        <SplitView name="item_split" orientation="horizontal" split-ratio="0.65" flags="flexspace">
+          <TableView name="items" source="ib.items" form="item" flags="notitle,nofill,vscroll,flexspace">
+            <RowIcon icon="ledger-row-item" color="info" />
+            <Column field="sku" title="Code" width="80" />
+            <Column field="name" title="Name" width="0" min-width="160" />
+            <Column field="unit.name" title="Unit" width="56" />
+            <Column field="vat_rate.name" title="Tax" width="56" />
+            <Column field="price" title="Price" width="90" />
+          </TableView>
+          <TableView name="warehouses" text="Warehouses" source="ib.warehouses" form="warehouse" flags="nofill,vscroll,flexspace">
+            <Column field="name" title="Name" width="0" min-width="100" />
+            <Column field="kind" title="Kind" width="72" />
+            <Column field="keeper" title="Keeper" width="0" />
+            <Column field="address" title="Address" width="0" />
+          </TableView>
+        </SplitView>
+      </StackView>
     </form>
 
     <form name="accounts_page" label="Accounts" title="Chart of Accounts" icon="ledger-nav-accounts"
@@ -1003,6 +1128,8 @@
         <Column field="name" title="Account" width="0" min-width="200" />
         <Column field="kind" title="Kind" width="44" />
         <Column field="subconto_kind.name" title="Analytics" width="136" />
+        <Column field="subconto2_kind.name" title="Analytics 2" width="100" />
+        <Column field="subconto3_kind.name" title="Analytics 3" width="100" />
         <Column field="currency" title="Currency" width="64" />
         <Column field="section" title="Section" width="0" />
       </TableView>
@@ -2048,6 +2175,93 @@
       <StackView name="actions" orientation="horizontal" spacing="6">
         <Space name="flex" />
         <Button name="ok" text="OK" action="ib.rates.insert" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="contract" title="Contract" width="420" spacing="6" padding="8">
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_counterparty" text="Counterparty:" />
+          <Label name="lbl_number" text="Number:" />
+          <Label name="lbl_date" text="Date:" />
+          <Label name="lbl_name" text="Name:" />
+          <Label name="lbl_kind" text="Kind:" />
+          <Label name="lbl_currency" text="Currency:" />
+          <Label name="lbl_valid_until" text="Valid until:" />
+          <Label name="lbl_comment" text="Comment:" />
+        </Column>
+        <Column name="inputs">
+          <ComboBox name="counterparty" field="ib.contracts.counterparty_id" source="ib.counterparties" display="name" value="id" />
+          <TextBox name="number" field="ib.contracts.number" />
+          <TextBox name="date" field="ib.contracts.date" />
+          <TextBox name="name" field="ib.contracts.name" />
+          <TextBox name="kind" field="ib.contracts.kind" placeholder="supplier, customer, other" />
+          <ComboBox name="currency" field="ib.contracts.currency_id" source="ib.currencies" display="code" value="id" />
+          <TextBox name="valid_until" field="ib.contracts.valid_until" />
+          <TextBox name="comment" field="ib.contracts.comment" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="ib.contracts.insert" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="bank_account" title="Bank Account" width="420" spacing="6" padding="8">
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_organization" text="Organization:" />
+          <Label name="lbl_counterparty" text="Counterparty:" />
+          <Label name="lbl_name" text="Name:" />
+          <Label name="lbl_number" text="Account number:" />
+          <Label name="lbl_currency" text="Currency:" />
+          <Label name="lbl_bank" text="Bank:" />
+          <Label name="lbl_bik" text="Bank ID (BIK):" />
+          <Label name="lbl_swift" text="SWIFT:" />
+          <Label name="lbl_corr_account" text="Corr. account:" />
+        </Column>
+        <Column name="inputs">
+          <ComboBox name="organization" field="ib.bank_accounts.organization_id" source="ib.organizations" display="name" value="id" />
+          <ComboBox name="counterparty" field="ib.bank_accounts.counterparty_id" source="ib.counterparties" display="name" value="id" />
+          <TextBox name="name" field="ib.bank_accounts.name" />
+          <TextBox name="number" field="ib.bank_accounts.number" />
+          <ComboBox name="currency" field="ib.bank_accounts.currency_id" source="ib.currencies" display="code" value="id" />
+          <TextBox name="bank" field="ib.bank_accounts.bank" />
+          <TextBox name="bik" field="ib.bank_accounts.bik" />
+          <TextBox name="swift" field="ib.bank_accounts.swift" />
+          <TextBox name="corr_account" field="ib.bank_accounts.corr_account" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="ib.bank_accounts.insert" flags="BUTTON_DEFAULT" />
+        <Button name="cancel" text="Cancel" />
+      </StackView>
+    </form>
+
+    <form name="warehouse" title="Warehouse" width="360" spacing="6" padding="8">
+      <GridView name="fields" spacing="4">
+        <Column name="labels" width="auto">
+          <Label name="lbl_name" text="Name:" />
+          <Label name="lbl_kind" text="Kind:" />
+          <Label name="lbl_address" text="Address:" />
+          <Label name="lbl_keeper" text="Keeper:" />
+        </Column>
+        <Column name="inputs">
+          <TextBox name="name" field="ib.warehouses.name" />
+          <TextBox name="kind" field="ib.warehouses.kind" />
+          <TextBox name="address" field="ib.warehouses.address" />
+          <TextBox name="keeper" field="ib.warehouses.keeper" />
+        </Column>
+      </GridView>
+      <Separator name="sep" />
+      <StackView name="actions" orientation="horizontal" spacing="6">
+        <Space name="flex" />
+        <Button name="ok" text="OK" action="ib.warehouses.insert" flags="BUTTON_DEFAULT" />
         <Button name="cancel" text="Cancel" />
       </StackView>
     </form>

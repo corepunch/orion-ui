@@ -49,10 +49,10 @@
   <string source="Print forms (Ctrl+P)" where="journal_page">Druckformulare (Strg+P)</string>
   <string source="Delete" where="counterparties_page,items_page,employees_page,assets_page,document">Löschen</string>
   <string source="Delete document" where="journal_page">Beleg löschen</string>
-  <string source="Date" where="home_page,journal_page,currencies_page,entries_page,reports_page">Datum</string>
-  <string source="Number" where="home_page,journal_page">Nummer</string>
+  <string source="Date" where="home_page,journal_page,counterparties_page,currencies_page,entries_page,reports_page">Datum</string>
+  <string source="Number" where="home_page,journal_page,counterparties_page">Nummer</string>
   <string source="Document" where="home_page,journal_page,entries_page,reports_page,config_page,document">Beleg</string>
-  <string source="Counterparty" where="home_page,journal_page,reports_page,counterparty">Geschäftspartner</string>
+  <string source="Counterparty" where="home_page,journal_page,counterparties_page,reports_page,counterparty">Geschäftspartner</string>
   <string source="Amount" where="home_page,journal_page,entries_page,reports_page,document,operation,payroll,closing">Betrag</string>
   <string source="Comment" where="journal_page">Bemerkung</string>
   <string source="Lines" where="journal_page,document">Positionen</string>
@@ -76,15 +76,15 @@
   <string source="Tax ID" where="counterparties_page,employees_page,reports_page">Steuernummer</string>
   <string source="KPP" where="counterparties_page">Steuer-Zusatznummer</string>
   <string source="Phone" where="counterparties_page">Telefon</string>
-  <string source="Address" where="counterparties_page">Anschrift</string>
+  <string source="Address" where="counterparties_page,items_page">Anschrift</string>
   <string source="Goods and services (Ctrl+3)" where="items_page">Waren und Leistungen (Strg+3)</string>
   <string source="New item" where="items_page">Neuer Artikel</string>
   <string source="Edit item" where="items_page">Artikel bearbeiten</string>
   <string source="Delete item" where="items_page">Artikel löschen</string>
   <string source="Code" where="home_page,items_page,accounts_page,currencies_page,config_page">Nummer</string>
   <string source="Chart of accounts (Ctrl+4)" where="accounts_page">Kontenplan (Strg+4)</string>
-  <string source="Account" where="home_page,accounts_page,assets_page,reports_page,config_page">Konto</string>
-  <string source="Kind" where="accounts_page,config_page">Art</string>
+  <string source="Account" where="home_page,counterparties_page,accounts_page,assets_page,reports_page,config_page">Konto</string>
+  <string source="Kind" where="counterparties_page,items_page,accounts_page,config_page">Art</string>
   <string source="Analytics" where="accounts_page,reports_page,config_page">Nebenbuch</string>
   <string source="Section" where="accounts_page">Kontenklasse</string>
   <string source="Settings" where="accounts_page,reports_page">Einstellungen</string>
@@ -122,10 +122,10 @@
   <string source="Percent" where="config_page">Prozent</string>
   <string source="Units" where="config_page">Einheiten</string>
   <string source="Document:" where="document,payroll,asset_document,closing">Beleg:</string>
-  <string source="Number:" where="document,operation,payroll,asset_document,closing">Nummer:</string>
-  <string source="Date:" where="operation,payroll,asset_document,rate">Datum:</string>
-  <string source="Counterparty:" where="document">Geschäftspartner:</string>
-  <string source="Comment:" where="document,operation,payroll,asset_document,closing">Bemerkung:</string>
+  <string source="Number:" where="document,operation,payroll,asset_document,closing,contract">Nummer:</string>
+  <string source="Date:" where="operation,payroll,asset_document,rate,contract">Datum:</string>
+  <string source="Counterparty:" where="document,contract,bank_account">Geschäftspartner:</string>
+  <string source="Comment:" where="document,operation,payroll,asset_document,closing,contract">Bemerkung:</string>
   <string source="Assigned when saved" where="document,operation,payroll,asset_document,closing">wird beim Speichern vergeben</string>
   <string source="Add Line..." where="payroll">Position hinzufügen...</string>
   <string source="Edit Line..." where="payroll">Position bearbeiten...</string>
@@ -134,26 +134,26 @@
   <string source="Tax:" obsolete="true">Steuer:</string>
   <string source="Total:" where="operation,payroll">Gesamt:</string>
   <string source="OK and Post" where="payroll,asset_document,closing">OK und buchen</string>
-  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,lock_period,reverse_posting,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,report_settings">Abbrechen</string>
+  <string source="Cancel" where="document,doc_line,counterparty,item,organization,select_configuration,select_language,select_print_form,lock_period,reverse_posting,operation,entry,payroll,payroll_line,asset_document,asset_line,closing,employee,currency,rate,contract,bank_account,warehouse,report_settings">Abbrechen</string>
   <string source="Document Line" where="doc_line">Belegposition</string>
   <string source="Item:" where="doc_line">Artikel:</string>
   <string source="Quantity:" where="doc_line,entry">Menge:</string>
   <string source="Price:" where="doc_line,item">Preis:</string>
   <string source="Tax rate:" where="doc_line,item">Steuersatz:</string>
   <string source="Item price" where="doc_line">Artikelpreis</string>
-  <string source="OK" where="doc_line,counterparty,item,organization,select_configuration,select_language,operation,entry,payroll_line,asset_line,employee,currency,rate,report_settings">OK</string>
-  <string source="Name:" where="counterparty,item,organization,employee,asset,currency">Name:</string>
+  <string source="OK" where="doc_line,counterparty,item,organization,select_configuration,select_language,operation,entry,payroll_line,asset_line,employee,currency,rate,contract,bank_account,warehouse,report_settings">OK</string>
+  <string source="Name:" where="counterparty,item,organization,employee,asset,currency,contract,bank_account,warehouse">Name:</string>
   <string source="Tax ID:" where="counterparty,organization,employee">Steuernummer:</string>
   <string source="KPP:" where="counterparty,organization">Steuer-Zusatznummer:</string>
-  <string source="Address:" where="counterparty,organization">Anschrift:</string>
-  <string source="Bank:" where="counterparty,organization">Bank:</string>
+  <string source="Address:" where="counterparty,organization,warehouse">Anschrift:</string>
+  <string source="Bank:" where="counterparty,organization,bank_account">Bank:</string>
   <string source="Bank account:" where="counterparty,organization">Kontonummer:</string>
-  <string source="Bank ID (BIK):" where="counterparty,organization">Bankleitzahl:</string>
+  <string source="Bank ID (BIK):" where="counterparty,organization,bank_account">Bankleitzahl:</string>
   <string source="Phone:" where="counterparty">Telefon:</string>
   <string source="Code:" where="item,currency">Nummer:</string>
   <string source="Unit:" where="item">Einheit:</string>
   <string source="Organization Details" where="organization">Firmendaten</string>
-  <string source="Corr. account:" where="organization">Korrespondenzkonto:</string>
+  <string source="Corr. account:" where="organization,bank_account">Korrespondenzkonto:</string>
   <string source="Director:" where="organization">Geschäftsführer:</string>
   <string source="Chief accountant:" where="organization">Buchhalter:</string>
   <string source="Select Configuration" where="select_configuration">Konfiguration wählen</string>
@@ -234,7 +234,7 @@
   <string source="New exchange rate" where="currencies_page">Neuer Kurs</string>
   <string source="Delete Rate" where="currencies_page">Kurs löschen</string>
   <string source="Delete exchange rate" where="currencies_page">Kurs löschen</string>
-  <string source="Cur." where="journal_page,entries_page">Whg.</string>
+  <string source="Cur." where="journal_page,counterparties_page,entries_page">Whg.</string>
   <string source="Cur. Amount" where="entries_page">Betrag in Währung</string>
   <string source="Print report forms: cash book (Ctrl+Shift+P)" where="reports_page">Berichtsformulare drucken: Kassenbuch (Strg+Umschalt+P)</string>
   <string source="Cash Book" where="reports_page">Kassenbuch</string>
@@ -261,7 +261,7 @@
   <string source="Loss" where="config_page">Aufwand</string>
   <string source="Analytics Kinds" where="config_page">Objektarten</string>
   <string source="Catalog" where="config_page">Stammdaten</string>
-  <string source="Currency:" where="document,entry,rate">Währung:</string>
+  <string source="Currency:" where="document,entry,rate,contract,bank_account">Währung:</string>
   <string source="Exchange rate:" where="document">Wechselkurs:</string>
   <string source="Rate on the document date" where="document">Kurs am Belegdatum</string>
   <string source="Cashier:" where="organization">Kassierer/in:</string>
@@ -547,6 +547,38 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="VAT ID" where="journal_page,reports_page">USt-ID</string>
   <string source="Quantity" where="journal_page,reports_page">Menge</string>
   <string source="Unit price" where="journal_page,reports_page">Einzelpreis</string>
+  <string source="New Contract..." where="menu">Neuer Vertrag...</string>
+  <string source="Edit Contract..." where="menu">Vertrag bearbeiten...</string>
+  <string source="Delete Contract..." where="menu">Vertrag löschen...</string>
+  <string source="New Bank Account..." where="menu">Neues Bankkonto...</string>
+  <string source="Edit Bank Account..." where="menu">Bankkonto bearbeiten...</string>
+  <string source="Delete Bank Account..." where="menu">Bankkonto löschen...</string>
+  <string source="New Warehouse..." where="menu">Neues Lager...</string>
+  <string source="Edit Warehouse..." where="menu">Lager bearbeiten...</string>
+  <string source="Delete Warehouse..." where="menu">Lager löschen...</string>
+  <string source="Contract" where="counterparties_page,contract">Vertrag</string>
+  <string source="New contract" where="counterparties_page">Neuer Vertrag</string>
+  <string source="Bank Account" where="counterparties_page,bank_account">Bankkonto</string>
+  <string source="New bank account" where="counterparties_page">Neues Bankkonto</string>
+  <string source="Contracts" where="counterparties_page">Verträge</string>
+  <string source="Valid Until" where="counterparties_page">Gültig bis</string>
+  <string source="Bank Accounts" where="counterparties_page">Bankkonten</string>
+  <string source="Bank" where="counterparties_page">Bank</string>
+  <string source="BIK" where="counterparties_page">BLZ</string>
+  <string source="Organization" where="counterparties_page">Organisation</string>
+  <string source="Warehouse" where="items_page,warehouse">Lager</string>
+  <string source="New warehouse" where="items_page">Neues Lager</string>
+  <string source="Warehouses" where="items_page">Lager</string>
+  <string source="Keeper" where="items_page">Lagerverwalter</string>
+  <string source="Analytics 2" where="accounts_page">Nebenbuch 2</string>
+  <string source="Analytics 3" where="accounts_page">Nebenbuch 3</string>
+  <string source="Kind:" where="contract,warehouse">Art:</string>
+  <string source="Valid until:" where="contract">Gültig bis:</string>
+  <string source="supplier, customer, other" where="contract">Lieferant, Kunde, sonstige</string>
+  <string source="Organization:" where="bank_account">Organisation:</string>
+  <string source="Account number:" where="bank_account">Kontonummer:</string>
+  <string source="SWIFT:" where="bank_account">SWIFT:</string>
+  <string source="Keeper:" where="warehouse">Lagerverwalter:</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

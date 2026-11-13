@@ -48,12 +48,20 @@ bool ledger_account_within(database_t *cfg, int account_id, int parent_id) {
 
 // ── Analytics ──────────────────────────────────────────────────────────────
 
-// The catalog an account is analysed by ("counterparties"), or "".
-const char *ledger_subconto_table(database_t *cfg, int account_id) {
+// The kind of the account's analytics slot 1..3, or NULL.
+const db_subconto_kind_t *ledger_subconto_kind(database_t *cfg, int account_id, int slot) {
   const db_account_t *a = find(cfg, TABLE_ACCOUNTS, account_id);
-  const db_subconto_kind_t *kind = a ? find(cfg, TABLE_SUBCONTO_KINDS, a->subconto_kind_id) : NULL;
+  int kind = !a ? 0 : slot == 1 ? a->subconto_kind_id : slot == 2 ? a->subconto2_kind_id : slot == 3 ? a->subconto3_kind_id : 0;
+  return kind ? find(cfg, TABLE_SUBCONTO_KINDS, kind) : NULL;
+}
+
+// The catalog slot 1..3 of an account is analysed by ("counterparties"), or "".
+const char *ledger_subconto_slot_table(database_t *cfg, int account_id, int slot) {
+  const db_subconto_kind_t *kind = ledger_subconto_kind(cfg, account_id, slot);
   return kind ? kind->table : "";
 }
+
+const char *ledger_subconto_table(database_t *cfg, int account_id) { return ledger_subconto_slot_table(cfg, account_id, 1); }
 
 // What a posting is about; each side of an entry takes the object its
 // account is analysed by.
@@ -875,6 +883,12 @@ int ledger_reverse_posting(database_t *ib, database_t *cfg, int original_id, con
     const db_entry_t *y = *(db_entry_t **)b->data;
     same = x->debit_id == y->debit_id && x->credit_id == y->credit_id &&
       x->debit_subconto_id == y->debit_subconto_id && x->credit_subconto_id == y->credit_subconto_id &&
+      x->debit_subconto2_id == y->debit_subconto2_id && x->debit_subconto3_id == y->debit_subconto3_id &&
+      x->credit_subconto2_id == y->credit_subconto2_id && x->credit_subconto3_id == y->credit_subconto3_id &&
+      x->debit_tax_set == y->debit_tax_set && x->debit_tax_minor == y->debit_tax_minor &&
+      x->debit_permanent_minor == y->debit_permanent_minor && x->debit_temporary_minor == y->debit_temporary_minor &&
+      x->credit_tax_set == y->credit_tax_set && x->credit_tax_minor == y->credit_tax_minor &&
+      x->credit_permanent_minor == y->credit_permanent_minor && x->credit_temporary_minor == y->credit_temporary_minor &&
       x->currency_id == y->currency_id && x->amount == y->amount && x->quantity == y->quantity &&
       x->currency_amount == y->currency_amount && x->exact_money == y->exact_money &&
       (!x->exact_money || (x->amount_minor == y->amount_minor && x->quantity_milli == y->quantity_milli)) &&
@@ -899,6 +913,12 @@ int ledger_reverse_posting(database_t *ib, database_t *cfg, int original_id, con
     if (!ok) break;
     db_entry_t line = { .document_id = id, .debit_id = entry->credit_id, .credit_id = entry->debit_id,
       .debit_subconto_id = entry->credit_subconto_id, .credit_subconto_id = entry->debit_subconto_id,
+      .debit_subconto2_id = entry->credit_subconto2_id, .debit_subconto3_id = entry->credit_subconto3_id,
+      .credit_subconto2_id = entry->debit_subconto2_id, .credit_subconto3_id = entry->debit_subconto3_id,
+      .debit_tax_set = entry->credit_tax_set, .debit_tax_minor = entry->credit_tax_minor,
+      .debit_permanent_minor = entry->credit_permanent_minor, .debit_temporary_minor = entry->credit_temporary_minor,
+      .credit_tax_set = entry->debit_tax_set, .credit_tax_minor = entry->debit_tax_minor,
+      .credit_permanent_minor = entry->debit_permanent_minor, .credit_temporary_minor = entry->debit_temporary_minor,
       .currency_id = entry->currency_id, .quantity = entry->quantity, .currency_amount = entry->currency_amount, .amount = entry->amount,
       .exact_money = entry->exact_money, .amount_minor = entry->amount_minor, .quantity_milli = entry->quantity_milli };
     snprintf(line.date, sizeof(line.date), "%s", date);
@@ -1126,6 +1146,12 @@ static void build_journal(const report_t *r) {
     if (in_period(r->rs, e->date) != WITHIN) continue;
     db_journal_row_t row = { .document_id = e->document_id, .debit_id = e->debit_id, .credit_id = e->credit_id,
                              .debit_subconto_id = e->debit_subconto_id, .credit_subconto_id = e->credit_subconto_id,
+                             .debit_subconto2_id = e->debit_subconto2_id, .debit_subconto3_id = e->debit_subconto3_id,
+                             .credit_subconto2_id = e->credit_subconto2_id, .credit_subconto3_id = e->credit_subconto3_id,
+                             .debit_tax_set = e->debit_tax_set, .debit_tax_minor = e->debit_tax_minor,
+                             .debit_permanent_minor = e->debit_permanent_minor, .debit_temporary_minor = e->debit_temporary_minor,
+                             .credit_tax_set = e->credit_tax_set, .credit_tax_minor = e->credit_tax_minor,
+                             .credit_permanent_minor = e->credit_permanent_minor, .credit_temporary_minor = e->credit_temporary_minor,
                              .currency_id = e->currency_id, .quantity = e->quantity, .currency_amount = e->currency_amount, .amount = e->amount };
     snprintf(row.date, sizeof(row.date), "%s", e->date);
     snprintf(row.content, sizeof(row.content), "%s", e->content);

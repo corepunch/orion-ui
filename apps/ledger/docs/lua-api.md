@@ -254,6 +254,8 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 |---|---|---|
 | `id` | `integer` |  |
 | `subconto_kind_id` | `integer` | subconto_kinds.id |
+| `subconto2_kind_id` | `integer` | subconto_kinds.id |
+| `subconto3_kind_id` | `integer` | subconto_kinds.id |
 | `code` | `string` |  |
 | `name` | `string` |  |
 | `kind` | `string` |  |
@@ -513,6 +515,45 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `date` | `date` |  |
 | `rate` | `double` |  |
 
+## `ib.contracts`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `counterparty_id` | `integer` | counterparties.id |
+| `currency_id` | `integer` | currencies.id |
+| `number` | `string` |  |
+| `date` | `date` |  |
+| `name` | `string` |  |
+| `kind` | `string` |  |
+| `valid_until` | `date` |  |
+| `comment` | `string` |  |
+
+## `ib.bank_accounts`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `organization_id` | `integer` | organizations.id |
+| `counterparty_id` | `integer` | counterparties.id |
+| `currency_id` | `integer` | currencies.id |
+| `name` | `string` |  |
+| `number` | `string` |  |
+| `bank` | `string` |  |
+| `bik` | `string` |  |
+| `swift` | `string` |  |
+| `corr_account` | `string` |  |
+
+## `ib.warehouses`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `name` | `string` |  |
+| `kind` | `string` |  |
+| `address` | `string` |  |
+| `keeper` | `string` |  |
+
 ## `ib.documents`
 
 | Field | XML type | Relation |
@@ -534,6 +575,9 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `doc_type_id` | `integer` | cfg.doc_types.id |
 | `counterparty_id` | `integer` | counterparties.id |
 | `currency_id` | `integer` | currencies.id |
+| `contract_id` | `integer` | contracts.id |
+| `warehouse_id` | `integer` | warehouses.id |
+| `bank_account_id` | `integer` | bank_accounts.id |
 | `number` | `string` |  |
 | `date` | `date` |  |
 | `comment` | `string` |  |
@@ -608,6 +652,10 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `credit_id` | `integer` | cfg.accounts.id |
 | `debit_subconto_id` | `integer` | ib.{debit.subconto_kind.table}.id |
 | `credit_subconto_id` | `integer` | ib.{credit.subconto_kind.table}.id |
+| `debit_subconto2_id` | `integer` | ib.{debit.subconto2_kind.table}.id |
+| `debit_subconto3_id` | `integer` | ib.{debit.subconto3_kind.table}.id |
+| `credit_subconto2_id` | `integer` | ib.{credit.subconto2_kind.table}.id |
+| `credit_subconto3_id` | `integer` | ib.{credit.subconto3_kind.table}.id |
 | `currency_id` | `integer` | currencies.id |
 | `date` | `date` |  |
 | `quantity` | `double` |  |
@@ -617,6 +665,14 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `exact_money` | `boolean` |  |
 | `amount_minor` | `int64` |  |
 | `quantity_milli` | `int64` |  |
+| `debit_tax_set` | `boolean` |  |
+| `debit_tax_minor` | `int64` |  |
+| `debit_permanent_minor` | `int64` |  |
+| `debit_temporary_minor` | `int64` |  |
+| `credit_tax_set` | `boolean` |  |
+| `credit_tax_minor` | `int64` |  |
+| `credit_permanent_minor` | `int64` |  |
+| `credit_temporary_minor` | `int64` |  |
 
 ## `ib.period_locks`
 
@@ -656,6 +712,10 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `credit_id` | `integer` |  |
 | `debit_subconto_id` | `integer` |  |
 | `credit_subconto_id` | `integer` |  |
+| `debit_subconto2_id` | `integer` |  |
+| `debit_subconto3_id` | `integer` |  |
+| `credit_subconto2_id` | `integer` |  |
+| `credit_subconto3_id` | `integer` |  |
 | `currency_id` | `integer` |  |
 | `date` | `date` |  |
 | `quantity` | `double` |  |
@@ -665,6 +725,14 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `exact_money` | `boolean` |  |
 | `amount_minor` | `int64` |  |
 | `quantity_milli` | `int64` |  |
+| `debit_tax_set` | `boolean` |  |
+| `debit_tax_minor` | `int64` |  |
+| `debit_permanent_minor` | `int64` |  |
+| `debit_temporary_minor` | `int64` |  |
+| `credit_tax_set` | `boolean` |  |
+| `credit_tax_minor` | `int64` |  |
+| `credit_permanent_minor` | `int64` |  |
+| `credit_temporary_minor` | `int64` |  |
 
 ## `ib.reversal_links`
 
@@ -763,12 +831,24 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `credit_id` | `integer` | cfg.accounts.id |
 | `debit_subconto_id` | `integer` | ib.{debit.subconto_kind.table}.id |
 | `credit_subconto_id` | `integer` | ib.{credit.subconto_kind.table}.id |
+| `debit_subconto2_id` | `integer` | ib.{debit.subconto2_kind.table}.id |
+| `debit_subconto3_id` | `integer` | ib.{debit.subconto3_kind.table}.id |
+| `credit_subconto2_id` | `integer` | ib.{credit.subconto2_kind.table}.id |
+| `credit_subconto3_id` | `integer` | ib.{credit.subconto3_kind.table}.id |
 | `currency_id` | `integer` | currencies.id |
 | `date` | `date` |  |
 | `quantity` | `double` |  |
 | `currency_amount` | `double` |  |
 | `amount` | `double` |  |
 | `content` | `string` |  |
+| `debit_tax_set` | `boolean` |  |
+| `debit_tax_minor` | `int64` |  |
+| `debit_permanent_minor` | `int64` |  |
+| `debit_temporary_minor` | `int64` |  |
+| `credit_tax_set` | `boolean` |  |
+| `credit_tax_minor` | `int64` |  |
+| `credit_permanent_minor` | `int64` |  |
+| `credit_temporary_minor` | `int64` |  |
 
 ## `ib.cash_book`
 
