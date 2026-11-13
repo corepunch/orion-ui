@@ -2356,7 +2356,11 @@ static void test_import_stage_documents(void) {
   ASSERT(!ledger_post(g_ledger->ib, g_ledger->cfg, d1->id), "nor posted again");
   ASSERT(ledger_repost_all(g_ledger->ib, g_ledger->cfg) && turnovers_reconcile(stage), "repost-all leaves imported entries as they were");
   ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
-  ASSERT(r.entries == 0 && turnovers_reconcile(stage), "a second import adds no entries");
+  ASSERT(r.entries == 3 && r.lines == 2 && turnovers_reconcile(stage), "a second import rewrites the document's lines and entries");
+  int updated_pk = 0;
+  for (int i = 0; i < r.count_types; i++)
+    if (!strcmp(r.counts[i].type, "Документ.ПриходныйКассовыйОрдер")) updated_pk = r.counts[i].updated;
+  ASSERT(updated_pk == 1, "the document found again is counted as updated");
   ASSERT_TRUE(send_db_message(g_ledger->ib, dbSave, 0, NULL));
   database_t *copy = ledger_test_writable_seed("ib_imported_copy", "db_schema_xml", &ledger_ib_schema, g_ledger->ib->source_path);
   ASSERT_NOT_NULL(copy);
@@ -2366,6 +2370,35 @@ static void test_import_stage_documents(void) {
   bool kept = again && again->posted && !strncmp(again->import_source, "1cd:", 4) && src && src->record_id == again->id && ext && ext->subconto_kind_id;
   destroy_database(copy);
   ASSERT(kept, "the saved infobase reloads with the imported document, its identity and its extension account");
+  // A comment edited outside 1C comes back from the file on the next import.
+  db_document_t *before = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000001");
+  ASSERT_NOT_NULL(before);
+  int d1_id = before->id;
+  db_document_t edited = *before;
+  snprintf(edited.comment, sizeof(edited.comment), "edited outside 1C");
+  ASSERT_TRUE(send_db_message(g_ledger->ib, dbUpdate, TABLE_DOCUMENTS, &edited));
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
+  db_document_t *restored = find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000001");
+  ASSERT(restored && restored->id == d1_id && restored->posted && !strcmp(restored->comment, "Аренда за январь"),
+         "a re-import restores the comment and keeps the document's identity");
+  ASSERT(r.entries == 3 && turnovers_reconcile(stage), "the rewritten entries are the file's again");
+  // The file marks the document deleted: it leaves with its entries and identity.
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, "apps/ledger/tests/fixtures/onecd/stage_documents_deleted.xml", &r));
+  int removed_pk = 0;
+  for (int i = 0; i < r.count_types; i++)
+    if (!strcmp(r.counts[i].type, "Документ.ПриходныйКассовыйОрдер")) removed_pk = r.counts[i].removed;
+  ASSERT(removed_pk == 1, "a document 1C marks deleted is removed and counted");
+  ASSERT(!find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000001"), "the removed document is gone");
+  ASSERT(find_by(g_ledger->ib, TABLE_DOCUMENTS, "number", "0000-000002"), "the other imported document stays");
+  int left = 0;
+  for (int t = 0; t < 2; t++) {
+    int table = t ? TABLE_DOC_LINES : TABLE_ENTRIES;
+    result_node_t *rows = (result_node_t *)send_db_message(g_ledger->ib, dbFetch, MAKEDWORD(table, ledger_field(g_ledger->ib, table, "document_id")), (void *)(intptr_t)d1_id);
+    for (result_node_t *n = rows; n; n = n->next) left++;
+    free_result_list(rows);
+  }
+  ASSERT(left == 0, "the removed document's entries and lines are gone");
+  ASSERT(!find_by(g_ledger->ib, TABLE_IMPORT_SOURCES, "guid", "d1000000-0000-0000-0000-000000000001"), "its source identity is gone too");
   PASS();
 }
 

@@ -345,7 +345,7 @@
 </string>
   <string source="Cannot store a line of the imported document %s." where="code">Не удалось сохранить строку импортируемого документа %s.</string>
   <string source="Held back or not imported: %d" where="code">Отложено или не импортировано: %d</string>
-  <string source="%s: added %d, updated %d, held back %d&#10;" where="code">%s: добавлено %d, обновлено %d, отложено %d
+  <string source="%s: added %d, updated %d, removed %d, held back %d&#10;" where="code">%s: добавлено %d, обновлено %d, удалено %d, отложено %d
 </string>
   <string source="Held back or not imported:" where="code">Отложено или не импортировано:</string>
   <string source="account %s: analytics slot %s has no usable kind" where="code">счёт %s: слот аналитики %s не имеет пригодного вида</string>
@@ -364,6 +364,10 @@
   <string source="%s: a line names an item that was not imported" where="code">%s: строка указывает номенклатуру, которая не импортирована</string>
   <string source="%s: documents not posted in 1C and without movements are not imported" where="code">%s: документы, не проведённые в 1С и без движений, не импортированы</string>
   <string source="%s: not posted in 1C but with register movements; imported posted" where="code">%s: не проведён в 1С, но имеет движения регистра; импортирован проведённым</string>
+  <string source="%s: the document %s was kept: its period is closed" where="code">%s: документ %s оставлен: его период закрыт</string>
+  <string source="%s: the document %s was kept: a reversal is linked to it" where="code">%s: документ %s оставлен: на него ссылается сторно</string>
+  <string source="%s: the document %s was kept: it is still referenced" where="code">%s: документ %s оставлен: на него ещё есть ссылки</string>
+  <string source="%s: the document %s was kept: it could not be updated" where="code">%s: документ %s оставлен: его не удалось обновить</string>
   <string source="its counterparty was not imported" where="code">его контрагент не импортирован</string>
   <string source="its owner was not imported" where="code">его владелец не импортирован</string>
   <string source="&#10;&#10;The full report is in %s" where="code">

@@ -9,6 +9,10 @@
 //
 // Every record imported keeps its source metadata name and GUID in
 // import_sources, apart from the Ledger record, so importing again finds it.
+// A document found again is rewritten from the file — same document, its
+// lines and entries replaced and posted again; one the file marks deleted is
+// removed with its source identity. A closed period or a linked reversal
+// keeps it untouched, with a note saying which.
 // The import is one editing context: a file that fails leaves nothing behind.
 
 #include "ledger.h"
@@ -82,18 +86,31 @@ static void note(stage_t *st, const char *fmt, const char *a, const char *b) {
   st->out->notes[used + n] = '\n'; st->out->notes[used + n + 1] = '\0';
 }
 
-static void tally(stage_t *st, const char *type, int added, int updated, int held) {
+static int tally_slot(stage_t *st, const char *type) {
   ledger_stage_import_t *o = st->out;
   char key[sizeof(o->counts[0].type)];
   ledger_copy_text(key, sizeof(key), type);
   int i = 0;
   while (i < o->count_types && strcmp(o->counts[i].type, key)) i++;
   if (i == o->count_types) {
-    if (i == (int)ARRAY_LEN(o->counts)) return;
+    if (i == (int)ARRAY_LEN(o->counts)) return -1;
     memcpy(o->counts[i].type, key, sizeof(key));
     o->count_types++;
   }
-  o->counts[i].added += added; o->counts[i].updated += updated; o->counts[i].held += held;
+  return i;
+}
+
+static void tally(stage_t *st, const char *type, int added, int updated, int held) {
+  int i = tally_slot(st, type);
+  if (i < 0) return;
+  st->out->counts[i].added += added;
+  st->out->counts[i].updated += updated;
+  st->out->counts[i].held += held;
+}
+
+static void tally_removed(stage_t *st, const char *type) {
+  int i = tally_slot(st, type);
+  if (i >= 0) st->out->counts[i].removed++;
 }
 
 static void *find_by_text(database_t *db, int table, const char *field, const char *value) {
@@ -771,12 +788,57 @@ static bool import_lines(stage_t *st, int doc_id, xmlNodePtr doc, const char *ty
   return true;
 }
 
+// The lines and entries a re-import replaces: deleting the document cascades
+// them away, but a rewrite keeps the document itself and its identity.
+static bool delete_document_body(database_t *ib, int doc_id) {
+  bool ok = true;
+  int field = ledger_field(ib, TABLE_DOC_LINES, "document_id");
+  result_node_t *lines = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_DOC_LINES, field), (void *)(intptr_t)doc_id);
+  EACH_RECORD(db_doc_line_t, l, lines) if (!send_db_message(ib, dbDelete, TABLE_DOC_LINES, (void *)(intptr_t)l->id)) { ok = false; break; }
+  free_result_list(lines);
+  if (!ok) return false;
+  field = ledger_field(ib, TABLE_ENTRIES, "document_id");
+  result_node_t *entries = (result_node_t *)send_db_message(ib, dbFetch, MAKEDWORD(TABLE_ENTRIES, field), (void *)(intptr_t)doc_id);
+  EACH_RECORD(db_entry_t, e, entries) if (!send_db_message(ib, dbDelete, TABLE_ENTRIES, (void *)(intptr_t)e->id)) { ok = false; break; }
+  free_result_list(entries);
+  return ok;
+}
+
+// Why a document found again may not be touched: a closed period or a linked
+// reversal keep it as it is; new_date is the date the file would give it
+// (NULL when the document is only being removed).
+static bool document_is_protected(stage_t *st, const db_document_t *old, const char *type, const char *number, const char *new_date) {
+  if (ledger_period_closed(st->ib, old->date) || (new_date && new_date[0] && ledger_period_closed(st->ib, new_date))) {
+    note(st, "%s: the document %s was kept: its period is closed", type, number);
+    return true;
+  }
+  if (ledger_reversal_linked(st->ib, old->id)) {
+    note(st, "%s: the document %s was kept: a reversal is linked to it", type, number);
+    return true;
+  }
+  return false;
+}
+
 static void import_document(stage_t *st, xmlNodePtr doc) {
   char type[128], guid[40], number[40], date[40], posted[8], deleted[8], key[80];
   attr(doc, "type", type, sizeof(type)); attr(doc, "id", guid, sizeof(guid)); attr(doc, "number", number, sizeof(number));
   attr(doc, "date", date, sizeof(date)); attr(doc, "posted", posted, sizeof(posted)); attr(doc, "deleted", deleted, sizeof(deleted));
-  if (!strcmp(deleted, "true")) { tally(st, type, 0, 0, 1); return; }
-  if (source_find(st, guid)) { tally(st, type, 0, 1, 0); return; }  // an imported document is not rewritten
+  db_import_source_t *src = source_find(st, guid);
+  const db_document_t *old = NULL;
+  if (src && !strcmp(src->table_name, "documents") && src->record_id > 0)
+    old = (const db_document_t *)send_db_message(st->ib, dbFind, MAKEDWORD(TABLE_DOCUMENTS, 0), (void *)(intptr_t)src->record_id);
+  if (!strcmp(deleted, "true")) {
+    if (!old) { tally(st, type, 0, 0, 1); return; }  // never imported: nothing to remove
+    if (document_is_protected(st, old, type, number, NULL)) { tally(st, type, 0, 0, 1); return; }
+    bool gone = send_db_message(st->ib, dbDelete, TABLE_DOCUMENTS, (void *)(intptr_t)old->id) != 0;
+    if (gone) gone = send_db_message(st->ib, dbDelete, TABLE_IMPORT_SOURCES, (void *)(intptr_t)src->id) != 0;
+    if (gone) tally_removed(st, type);
+    else {
+      note(st, "%s: the document %s was kept: it is still referenced", type, number);
+      tally(st, type, 0, 0, 1);
+    }
+    return;
+  }
   int first = st->buckets[guid_bucket(guid)], moves = 0;
   for (int i = first; i; i = st->movements[i - 1].next) {
     char recorder[40];
@@ -792,8 +854,10 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
   if (!is_posted) note(st, "%s: not posted in 1C but with register movements; imported posted", type, "");
   int type_id = document_type_for(st, type);
   if (!type_id) { snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("The configuration has no operation document type.")); return; }
+  if (old && document_is_protected(st, old, type, number, date)) { tally(st, type, 0, 0, 1); return; }
   db_document_t d = {0};
-  send_db_message(st->ib, dbInitRecord, TABLE_DOCUMENTS, &d);
+  if (old) d = *old;  // the document keeps its identity; the file overwrites what it describes
+  else send_db_message(st->ib, dbInitRecord, TABLE_DOCUMENTS, &d);
   d.doc_type_id = type_id;
   ledger_copy_text(d.number, sizeof(d.number), number);
   ledger_copy_text(d.date, sizeof(d.date), date[0] ? (date[10] = '\0', date) : "");
@@ -802,14 +866,37 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
   d.warehouse_id = ref_id(st, doc, "Склад");
   d.bank_account_id = ref_id(st, doc, "СчетОрганизации") ? ref_id(st, doc, "СчетОрганизации") : ref_id(st, doc, "БанковскийСчет");
   d.currency_id = ref_id(st, doc, "ВалютаДокумента");
+  if (old && d.currency_id != old->currency_id) d.rate = 0;  // recalculate fills the new currency's rate
   char text[512];
   v_text(doc, "Комментарий", text, sizeof(text));
   ledger_copy_text(d.comment, sizeof(d.comment), text);
   snprintf(key, sizeof(key), "1cd:%s", guid);
   ledger_copy_text(d.import_source, sizeof(d.import_source), key);
-  const db_document_t *added = (const db_document_t *)send_db_message(st->ib, dbInsert, TABLE_DOCUMENTS, &d);
-  if (!added) { snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store the imported document %s."), number); return; }
-  int doc_id = added->id;
+  int doc_id = 0;
+  if (old) {
+    d.posted = false;  // the rewrite posts it again below
+    if (!send_db_message(st->ib, dbUpdate, TABLE_DOCUMENTS, &d)) {
+      note(st, "%s: the document %s was kept: it could not be updated", type, number);
+      tally(st, type, 0, 0, 1);
+      return;
+    }
+    if (!delete_document_body(st->ib, d.id)) {
+      snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store the imported document %s."), number);
+      return;
+    }
+    doc_id = d.id;
+  } else {
+    const db_document_t *added = (const db_document_t *)send_db_message(st->ib, dbInsert, TABLE_DOCUMENTS, &d);
+    if (!added) { snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot store the imported document %s."), number); return; }
+    doc_id = added->id;
+    if (src && !strcmp(src->table_name, "documents")) {  // its record was deleted in Ledger: the identity follows the new one
+      src->record_id = doc_id;
+      if (!send_db_message(st->ib, dbUpdate, TABLE_IMPORT_SOURCES, src)) {
+        snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot record the source of an imported record."));
+        return;
+      }
+    }
+  }
   char included[8];
   v_text(doc, "СуммаВключаетНДС", included, sizeof(included));
   if (!import_lines(st, doc_id, doc, type, d.date, !strcmp(included, "true")))
@@ -824,7 +911,7 @@ static void import_document(stage_t *st, xmlNodePtr doc) {
     snprintf(st->out->error, sizeof(st->out->error), ui_tr("Cannot post the imported document %s."), number);
   if (!st->out->error[0] && !source_remember(st, type, guid, "documents", doc_id))
     snprintf(st->out->error, sizeof(st->out->error), "%s", ui_tr("Cannot record the source of an imported record."));
-  if (!st->out->error[0]) { tally(st, type, 1, 0, 0); st->out->entries += moves; }
+  if (!st->out->error[0]) { tally(st, type, old ? 0 : 1, old ? 1 : 0, 0); st->out->entries += moves; }
 }
 
 // ── Entry point ──────────────────────────────────────────────────────────────
@@ -909,7 +996,7 @@ size_t ledger_stage_report(const ledger_stage_import_t *r, char *buf, size_t sz,
   if (summary) { ADD(ui_tr("Held back or not imported: %d"), held); return n; }
   ADD("\n");
   for (int i = 0; i < r->count_types; i++)
-    ADD(ui_tr("%s: added %d, updated %d, held back %d\n"), r->counts[i].type, r->counts[i].added, r->counts[i].updated, r->counts[i].held);
+    ADD(ui_tr("%s: added %d, updated %d, removed %d, held back %d\n"), r->counts[i].type, r->counts[i].added, r->counts[i].updated, r->counts[i].removed, r->counts[i].held);
   if (r->notes[0]) ADD("\n%s\n%s", ui_tr("Held back or not imported:"), r->notes);
 #undef ADD
   return n;

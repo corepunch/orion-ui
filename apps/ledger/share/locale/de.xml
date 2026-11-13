@@ -345,7 +345,7 @@ stammen aus der aktiven Konfiguration.</string>
 </string>
   <string source="Cannot store a line of the imported document %s." where="code">Eine Zeile des importierten Belegs %s konnte nicht gespeichert werden.</string>
   <string source="Held back or not imported: %d" where="code">Zurückgestellt oder nicht importiert: %d</string>
-  <string source="%s: added %d, updated %d, held back %d&#10;" where="code">%s: hinzugefügt %d, aktualisiert %d, zurückgestellt %d
+  <string source="%s: added %d, updated %d, removed %d, held back %d&#10;" where="code">%s: hinzugefügt %d, aktualisiert %d, entfernt %d, zurückgestellt %d
 </string>
   <string source="Held back or not imported:" where="code">Zurückgestellt oder nicht importiert:</string>
   <string source="account %s: analytics slot %s has no usable kind" where="code">Konto %s: Analytik-Slot %s hat keine verwendbare Art</string>
@@ -364,6 +364,10 @@ stammen aus der aktiven Konfiguration.</string>
   <string source="%s: a line names an item that was not imported" where="code">%s: eine Zeile benennt einen Artikel, der nicht importiert wurde</string>
   <string source="%s: documents not posted in 1C and without movements are not imported" where="code">%s: in 1C nicht gebuchte Dokumente ohne Bewegungen werden nicht importiert</string>
   <string source="%s: not posted in 1C but with register movements; imported posted" where="code">%s: in 1C nicht gebucht, aber mit Registerbewegungen; als gebucht importiert</string>
+  <string source="%s: the document %s was kept: its period is closed" where="code">%s: Beleg %s belassen: sein Zeitraum ist geschlossen</string>
+  <string source="%s: the document %s was kept: a reversal is linked to it" where="code">%s: Beleg %s belassen: auf ihn verweist eine Stornierung</string>
+  <string source="%s: the document %s was kept: it is still referenced" where="code">%s: Beleg %s belassen: er wird noch referenziert</string>
+  <string source="%s: the document %s was kept: it could not be updated" where="code">%s: Beleg %s belassen: er konnte nicht aktualisiert werden</string>
   <string source="its counterparty was not imported" where="code">sein Geschäftspartner wurde nicht importiert</string>
   <string source="its owner was not imported" where="code">sein Inhaber wurde nicht importiert</string>
   <string source="&#10;&#10;The full report is in %s" where="code">

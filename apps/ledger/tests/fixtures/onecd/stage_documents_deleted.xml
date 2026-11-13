@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stage format="orion-1cd-stage-v1">
+  <header>
+    <source file="synthetic.1CD" size="0" sha256="0" format-version="8.3.8.0" locale="ru_RU"/>
+    <configuration name="Synthetic" version="1"/>
+  </header>
+  <records/>
+  <documents>
+    <document type="Документ.ПриходныйКассовыйОрдер" id="d1000000-0000-0000-0000-000000000001" number="0000-000001" date="2015-01-12T12:00:01" posted="true" deleted="true"/>
+  </documents>
+</stage>

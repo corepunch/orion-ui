@@ -161,13 +161,15 @@ void ledger_copy_text(char *dst, size_t sz, const char *src);
 // import_stage.c — the staging file `inspect_1cd.py export-stage` writes from a
 // 1CD file database (orion-1cd-stage-v1). Imported postings keep their 1C
 // accounts: the ones the configuration lacks join the infobase (ext_accounts).
+// A document found again is rewritten from the file; one 1C marks deleted is
+// removed (a closed period or a linked reversal keeps it as it is).
 typedef struct {
   int accounts_added, accounts_matched;  // by code against the configuration
   int kinds_added, kinds_mapped;         // analytics kinds: new, or onto a Ledger table
   int updated;                           // records found again through their source identity
   int entries;                           // register movements written as entries
   int lines;                             // rows of tabular sections written as document lines
-  struct { char type[128]; int added, updated, held; } counts[48];  // per 1C metadata type
+  struct { char type[128]; int added, updated, removed, held; } counts[48];  // per 1C metadata type
   int count_types;
   char notes[4096];                      // held-back or unmapped items, one per line
   char error[256];
