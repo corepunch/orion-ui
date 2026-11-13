@@ -9,8 +9,6 @@
 #include <orion/ui.h>
 #include <orion/script/script.h>
 #include <orion/commctl/commctl.h>
-#include <orion/commctl/columnview.h>
-#include <orion/commctl/menubar.h>
 #include <orion/user/accel.h>
 #include <orion/user/page_host.h>
 

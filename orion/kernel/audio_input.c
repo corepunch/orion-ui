@@ -1,5 +1,5 @@
 #include <stdbool.h>
-#include "audio_input.h"
+#include "kernel.h"
 #include <stdio.h>
 #ifndef __APPLE__
 ui_microphone_permission_t ui_microphone_permission(bool request) { return UI_MIC_UNAVAILABLE; }

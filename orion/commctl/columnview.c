@@ -2,11 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "columnview_internal.h"
-#include <orion/user/user.h>
-#include <orion/user/messages.h>
-#include <orion/user/draw.h>
-#include <orion/user/theme.h>
+#include "commctl_internal.h"
 
 void tableview_handle_master_selection(window_t *root, window_t *master);
 

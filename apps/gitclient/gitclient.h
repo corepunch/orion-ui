@@ -10,9 +10,6 @@
 #include <orion/ui.h>
 #include "components/diff_view.h"
 #include "gc_launch.h"
-#include <orion/commctl/columnview.h>
-#include <orion/commctl/menubar.h>
-#include <orion/commctl/appchrome.h>
 #include <orion/user/accel.h>
 
 #include "build/generated/apps/gitclient/gitclient.h"

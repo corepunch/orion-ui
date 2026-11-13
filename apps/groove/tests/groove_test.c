@@ -7,7 +7,7 @@
 #include "apps/groove/sample_levels.h"
 #include "apps/groove/store/store.h"
 #include <orion/user/toolbar.h>
-#include <orion/kernel/audio_input.h>
+#include <orion/kernel/kernel.h>
 #include <unistd.h>
 #include <utime.h>
 

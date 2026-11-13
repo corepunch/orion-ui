@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#include "msgbox.h"
+#include "commdlg.h"
 #include <orion/commctl/commctl.h>
 #include <orion/user/user.h>
 

@@ -2,7 +2,7 @@
 #include "test_env.h"
 #include "test_graphics.h"
 #include <orion/user/toolbar.h>
-#include <orion/commctl/menubar.h>
+#include <orion/commctl/commctl.h>
 #include <math.h>
 #ifndef _WIN32
 #include <errno.h>

@@ -1,10 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "columnview_internal.h"
-#include <orion/user/messages.h>
-#include <orion/user/draw.h>
-#include <orion/user/theme.h>
+#include "commctl_internal.h"
 
 // RVM_VIEW_LARGE_ICON: fixed-width cells with a label under each icon, spread across the row.
 // RVM_VIEW_THUMBNAIL: a photo grid. As many columns as fit icon_size (the minimum tile), stretched

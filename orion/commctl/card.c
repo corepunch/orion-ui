@@ -15,8 +15,7 @@
 #include <orion/user/theme.h>
 #include <orion/user/svg_icon_loader.h>
 #include <orion/user/rect.h>
-#include "commctl.h"
-#include "layout_shared.h"
+#include "commctl_internal.h"
 
 // ── Badge ─────────────────────────────────────────────────────────────────────
 

@@ -13,9 +13,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "filepicker.h"
-#include "msgbox.h"
-#include <orion/commctl/filelist.h>
+#include "commdlg.h"
 #include <orion/commctl/commctl.h>
 #include <orion/user/user.h>
 #include <orion/user/messages.h>

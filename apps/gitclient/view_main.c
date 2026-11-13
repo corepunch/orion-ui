@@ -5,7 +5,6 @@
 #include "pages/changes/page_changes.h"
 #include "pages/history/page_history.h"
 #include "pages/github/page_github.h"
-#include <orion/commctl/menubar.h>
 #include <sys/stat.h>
 
 // ============================================================

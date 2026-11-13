@@ -7,8 +7,7 @@
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
-#include "commctl.h"
-#include "popup_item.h"
+#include "commctl_internal.h"
 
 // Forward declare list control procedure  
 extern result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);

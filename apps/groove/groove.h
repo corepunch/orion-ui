@@ -14,7 +14,6 @@
 #include <orion/commctl/commctl.h>
 #include <orion/user/accel.h>
 #include <orion/user/rect.h>
-#include <orion/commctl/menubar.h>
 #ifndef GROOVE_APP_STORE
 #define GROOVE_APP_STORE 0
 #endif

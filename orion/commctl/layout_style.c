@@ -6,7 +6,7 @@
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
 #include <orion/user/ui_style.h>
-#include "layout_shared.h"
+#include "commctl_internal.h"
 
 static int layout_style_gap(const char *sel, const char *property) {
   int gap = ui_px(sel, property);

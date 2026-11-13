@@ -3,8 +3,7 @@
 
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
-#include "commctl.h"
-#include "layout_shared.h"
+#include "commctl_internal.h"
 
 extern void layout_stack_measure_window(window_t *win, layout_measure_t *m);
 extern void layout_stack_arrange_window(window_t *win, const irect16_t *rect);

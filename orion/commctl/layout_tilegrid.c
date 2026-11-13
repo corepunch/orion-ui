@@ -15,8 +15,7 @@
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
-#include "commctl.h"
-#include "layout_shared.h"
+#include "commctl_internal.h"
 
 #define TILEGRID_DEFAULT_MIN_W 232
 #define TILEGRID_DEFAULT_GAP   6

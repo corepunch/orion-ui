@@ -29,9 +29,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "columnview_internal.h"
-#include "menubar.h"
-#include <orion/commdlg/msgbox.h>
+#include "commctl_internal.h"
 
 #ifndef TABLEVIEW_DEBUG
 #define TABLEVIEW_DEBUG 0

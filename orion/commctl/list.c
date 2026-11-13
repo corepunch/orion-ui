@@ -7,8 +7,7 @@
 #include <orion/user/draw.h>
 #include <orion/user/rect.h>
 #include <orion/user/theme.h>
-#include "commctl.h"
-#include "popup_item.h"
+#include "commctl_internal.h"
 
 #define LIST_HEIGHT     POPUP_ITEM_HEIGHT
 

@@ -26,8 +26,7 @@
 #include <orion/user/messages.h>
 #include <orion/user/rect.h>
 #include <orion/user/theme.h>
-#include "commctl.h"
-#include "layout_shared.h"
+#include "commctl_internal.h"
 
 #define SPLITVIEW_MIN_PANE 32
 

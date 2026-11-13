@@ -16,8 +16,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "filelist.h"
-#include "columnview.h"
+#include "commctl.h"
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
 #include <orion/user/draw.h>

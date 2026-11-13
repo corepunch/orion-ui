@@ -3,10 +3,291 @@
 
 #include <orion/user/user.h>
 #include <orion/user/gdi.h>
-#include "columnview.h"
-#include "menubar.h"
-#include "appchrome.h"
-#include "filelist.h"
+#include <orion/user/toolbar.h>
+#include <time.h>
+
+// ---------------------------------------------------------------------------
+// columnview.h
+// ---------------------------------------------------------------------------
+
+// Layout constants shared by the columnview-style controls.
+// FONT_SIZE       — chrome font, from kernel/kernel.h.
+// FONT_SIZE_SMALL — content font, from kernel/kernel.h.
+#define COLUMNVIEW_ENTRY_HEIGHT  (FONT_SIZE_SMALL + 5)  // data rows
+#define REPORTVIEW_TWO_LINE_ENTRY_HEIGHT (FONT_SIZE_SMALL * 2 + 5)
+#define COLUMNVIEW_HEADER_HEIGHT (FONT_SIZE + 6)        // the header
+#define COLUMNVIEW_WIN_PADDING   4
+#define REPORTVIEW_MAX_SUBITEMS  (MAX_REPORTVIEW_COLUMNS - 1)  // every column after the first
+
+// ReportView messages (WinAPI-style report/list view naming).
+enum {
+  RVM_ADDITEM = evUser + 100,
+  RVM_DELETEITEM,
+  RVM_GETITEMCOUNT,
+  RVM_GETSELECTION,
+  RVM_SETSELECTION,
+  RVM_CLEAR,
+  RVM_SETCOLUMNWIDTH,
+  RVM_GETCOLUMNWIDTH,
+  RVM_GETITEMDATA,
+  RVM_SETITEMDATA,
+  RVM_SETVIEWMODE,
+  RVM_ADDCOLUMN,
+  RVM_CLEARCOLUMNS,
+  RVM_GETCOLUMNCOUNT,
+  RVM_SETREPORTCOLUMNWIDTH, // wparam = col_index; lparam = (void*)(uintptr_t)new_width (0 = auto)
+  RVM_GETREPORTCOLUMNWIDTH, // wparam = col_index; returns current report column width
+  RVM_SETREDRAW,            // wparam = 0 suspend redraw; non-zero resume and repaint if dirty
+  RVM_SETICONSTRIP,         // lparam = bitmap_strip_t* (NULL to clear); strip owned by caller
+  RVM_SETICONSIZE,          // wparam = icon pixel size for RVM_VIEW_LARGE_ICON mode
+  RVM_SETLARGEICONCOLS,     // wparam = fixed column count for RVM_VIEW_LARGE_ICON (0 = auto)
+  RVM_SETCOLUMNTITLESVISIBLE, // wparam = 0 hide report headers; non-zero show
+  RVM_GETCOLUMNTITLESVISIBLE,
+  RVM_SETPRESERVEICONCOLORS, // wparam = 0 tint icons with row color; non-zero draw strip colors
+  RVM_SETICONTEXTGAP,      // wparam = pixels between icon slot and item text in icon-list mode
+  RVM_HITTEST,             // wparam = MAKEDWORD(content_x, content_y); returns item index or -1
+  RVM_SETEXTENDEDSTYLE,    // wparam = style mask (0 = all); lparam = new RVS_EX_* bits
+  RVM_GETEXTENDEDSTYLE,
+  RVM_SETITEMSTATE,        // wparam = item index (-1 = all); lparam = reportview_item_state_t*
+  RVM_GETITEMSTATE,        // wparam = item index; lparam = state mask
+  RVM_SETCELLSTYLE,        // wparam = reportview_cell_style_t
+  RVM_GETCELLSTYLE,
+  RVM_SETFOOTER,           // wparam = text count; lparam = const char *const * per column (NULL = no footer row)
+};
+
+// WinAPI list-view compatible state-image model. State image indices are
+// one-based: 1 = unchecked, 2 = checked when RVS_EX_CHECKBOXES is enabled.
+#define RVS_EX_CHECKBOXES          0x00000004u
+#define RVS_EX_FRAME               0x00000008u  // themed rounded frame (theme_t.table); rows clip to it
+#define RVS_EX_FITROWS             0x00000010u  // measures to all its rows, for lists in popovers
+#define RVS_EX_ONECLICK            0x00000020u  // rows are links: a click activates (RVN_DBLCLK); the selection shows only with focus
+#define RVIS_STATEIMAGEMASK        0x0000f000u
+#define RV_INDEXTOSTATEIMAGEMASK(i) ((uint32_t)(i) << 12)
+#define RV_STATEIMAGEINDEX(state)   (((uint32_t)(state) & RVIS_STATEIMAGEMASK) >> 12)
+
+enum {
+  RVM_VIEW_ICON = 0,        // Small-icon list (icon-left, label-right, one row per item)
+  RVM_VIEW_REPORT = 1,      // Multi-column report with sortable header
+  RVM_VIEW_LARGE_ICON = 2,  // Large-thumbnail grid (icon-above, label-below) — WinAPI LVS_ICON
+  RVM_VIEW_THUMBNAIL = 3,   // Photo grid: unlabeled square tiles that fill the width (RVM_SETICONSIZE = minimum tile)
+};
+
+typedef enum {
+  REPORTVIEW_CELL_COLUMNS = 0, // One line per item, rendered as report columns.
+  REPORTVIEW_CELL_TWO_LINE = 1, // First column is title; second is subtitle.
+  REPORTVIEW_CELL_STACKED = 2,  // First column over the second, in secondary text; the others keep their columns.
+} reportview_cell_style_t;
+#define TABLEVIEW_CELL_COLUMNS  REPORTVIEW_CELL_COLUMNS
+#define TABLEVIEW_CELL_TWO_LINE REPORTVIEW_CELL_TWO_LINE
+
+typedef struct {
+  const char *title;
+  uint32_t width;
+  uint32_t min_width;  // 0 = use default (20px), >0 = per-column minimum
+  uint32_t align;      // 0 = left, TEXT_ALIGN_RIGHT (numbers), TEXT_ALIGN_CENTER
+  int color;           // sys colour role of the column's text, 0 = the row's colour
+  bool badge;          // cells are status badges toned by their row's tone
+} reportview_column_t;
+
+typedef struct {
+  const char *text;
+  int         icon;       // strip tile index; icon_name overrides it outside icon grid
+  const char *icon_name;  // SVG icon for report/icon lists; icon grid always uses strip index
+  uint32_t    icon_color; // report rows: tint of icon_name (0 = text colour)
+  uint32_t    color;
+  uint32_t    userdata;
+  uint32_t    state;
+  const char *subitems[REPORTVIEW_MAX_SUBITEMS];
+  uint32_t    subitem_count;
+  const char *section;    // report rows: a caption drawn above this row, starting a group (NULL = none)
+  int         tone;       // sys colour role of the row's badge cells (0 = secondary)
+} reportview_item_t;
+
+typedef struct {
+  uint32_t state;
+  uint32_t state_mask;
+} reportview_item_state_t;
+
+#define ReportView_SetCheckState(win, item, checked) do {                    \
+  reportview_item_state_t _state = {                                         \
+    RV_INDEXTOSTATEIMAGEMASK((checked) ? 2 : 1), RVIS_STATEIMAGEMASK         \
+  };                                                                          \
+  send_message((win), RVM_SETITEMSTATE, (uint32_t)(item), &_state);           \
+} while (0)
+#define ReportView_GetCheckState(win, item)                                  \
+  (RV_STATEIMAGEINDEX(send_message((win), RVM_GETITEMSTATE,                  \
+                                    (uint32_t)(item),                         \
+                                    (void *)(uintptr_t)RVIS_STATEIMAGEMASK)) == 2)
+
+// ReportView notifications
+enum {
+  RVN_SELCHANGE = 200,
+  RVN_DBLCLK,
+  RVN_DELETE,
+  RVN_ITEMCHECK,
+  RVN_ICONCLICK,   // the row's icon (item.icon_name, a TableView RowIcon) was clicked; it is also selected
+};
+
+result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t win_iconview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+// ---------------------------------------------------------------------------
+// menubar.c
+// ---------------------------------------------------------------------------
+
+// Height of the menu bar strip — matches the generous dropdown row rhythm.
+// FONT_SIZE is a compile-time constant from kernel/kernel.h (included via user/user.h).
+#ifdef AX_PLATFORM_IOS
+#define MENUBAR_HEIGHT 29
+#else
+#define MENUBAR_HEIGHT (FONT_SIZE + 12)
+#endif
+
+// One item inside a dropdown menu.  label == NULL && id == 0 means separator.
+// Submenus use id == 0 with a non-NULL label and submenu_items/submenu_count.
+typedef struct menu_item_s {
+  const char        *label;
+  uint16_t           id;
+  const struct menu_item_s *submenu_items;
+  int                submenu_count;
+  bool               disabled;
+} menu_item_t;
+
+// A top-level menu entry, e.g. "File" with its list of dropdown items.
+typedef struct {
+  const char        *label;
+  const menu_item_t *items;
+  int                item_count;
+} menu_def_t;
+
+// Send to a menu-bar window to configure its menus.
+//   wparam = number of menu_def_t entries
+//   lparam = const menu_def_t *  (caller owns; structs are shallow-copied)
+#define kMenuBarMessageSetMenus (evUser + 200)
+
+// Send to a menu-bar window to associate an accelerator table for hotkey hints.
+// The menu bar stores a reference (not a copy); the caller must keep the table
+// alive at least as long as the menu-bar window.
+//   wparam = 0 (unused)
+//   lparam = const accel_table_t *  (pass NULL to clear)
+#define kMenuBarMessageSetAccelerators (evUser + 201)
+#define kMenuBarMessageGetContentWidth (evUser + 202)
+
+// Notification code placed in HIWORD(wparam) of evCommand that
+// win_menubar sends to *itself* when the user selects an item.
+//   LOWORD(wparam) = the selected item's id field
+#define kMenuBarNotificationItemClick 300
+
+result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+// Show a context-menu popup at screen coordinates.
+// Items are shallow-copied; the caller must keep the menu_item_t array alive
+// only until this function returns (the array is copied into the popup).
+// The popup sends evCommand to notify_win with:
+//   HIWORD(wparam) = kMenuBarNotificationItemClick
+//   LOWORD(wparam) = the selected item's id
+// Returns true on success.
+bool show_popup_menu(window_t *notify_win, const menu_item_t *items,
+                     int item_count, int screen_x, int screen_y);
+
+// ---------------------------------------------------------------------------
+// appchrome.c
+// ---------------------------------------------------------------------------
+
+// Application chrome owns menu and docked toolbar bands. Empty space passes input through.
+// A NULL menubar_proc leaves room for the shell menu.
+// A NULL toolbar_proc creates no toolbar band.
+window_t *create_app_chrome(const char *title, winproc_t menubar_proc,
+                            const menu_def_t *menus, int menu_count,
+                            winproc_t toolbar_proc, hinstance_t hinstance);
+window_t *app_chrome_menubar(window_t *chrome);
+window_t *create_application_chrome(const char *title, winproc_t menubar_proc,
+                                    const menu_def_t *menus, int menu_count,
+                                    winproc_t toolbar_proc, const application_toolbar_t *toolbar,
+                                    hinstance_t hinstance);
+window_t *app_chrome_toolbar(window_t *chrome);
+window_t *app_chrome_add_toolbar(window_t *chrome, toolbar_dock_t dock, winproc_t proc);
+
+// ---------------------------------------------------------------------------
+// filelist.c
+// ---------------------------------------------------------------------------
+
+// commctl/filelist.h - A file-browser specific control
+//
+// win_filelist extends win_reportview: it provides directory listing with
+// sorting, optional extension filtering, path navigation, and file metadata
+// (size, modification time).  All directory management is internal; callers
+// receive FLN_* notifications and drive the control through FLM_* messages.
+
+// ---------------------------------------------------------------------------
+// File-item descriptor.  path is heap-allocated (owned by win_filelist).
+// Callers must never free it; the pointer is valid only for the duration of a
+// synchronous notification callback.
+// ---------------------------------------------------------------------------
+typedef struct {
+  char    *path;         // full absolute path
+  int      icon;         // icon index passed to draw_icon8()
+  bool     is_directory;
+  bool     is_hidden;    // entry is a hidden file (name starts with '.')
+  size_t   size;         // file size in bytes (0 for directories)
+  time_t   modified;     // last-modification timestamp
+} fileitem_t;
+
+// ---------------------------------------------------------------------------
+// Messages sent TO win_filelist
+// ---------------------------------------------------------------------------
+enum {
+  // Navigate to a directory.
+  // wparam: unused   lparam: const char* absolute path
+  FLM_SETPATH = evUser + 200,
+
+  // Copy the current directory path into a caller buffer.
+  // wparam: buffer size (incl. NUL)   lparam: char* destination
+  FLM_GETPATH,
+
+  // Reload the current directory from disk.
+  // wparam: unused   lparam: unused
+  FLM_REFRESH,
+
+  // Copy the full path of the selected item into a caller buffer.
+  // Returns an empty string when nothing is selected or when the selected
+  // item is a directory (use FLM_GETPATH to obtain the current directory).
+  // wparam: buffer size (incl. NUL)   lparam: char* destination
+  FLM_GETSELECTEDPATH,
+
+  // Set a file-extension filter.  Only files whose names end with the given
+  // extension (case-insensitive) are shown; directories are always shown.
+  // Pass NULL or "" to remove the filter.
+  // wparam: unused   lparam: const char* extension (e.g. ".png", "png")
+  FLM_SETFILTER,
+};
+
+// ---------------------------------------------------------------------------
+// Notification codes emitted by win_filelist via evCommand to
+// get_root_window(win).  HIWORD(wparam) = code, LOWORD(wparam) = item index.
+// ---------------------------------------------------------------------------
+enum {
+  // Selection changed (single click).
+  // lparam: const fileitem_t* of the selected item (file or directory),
+  //         or NULL when the selection is cleared.
+  FLN_SELCHANGE = 300,
+
+  // A non-directory file was activated (double-click / Enter).
+  // Directory navigation is handled internally before this fires.
+  // lparam: const fileitem_t* of the activated file.
+  FLN_FILEOPEN,
+
+  // The current directory changed after navigation.
+  // lparam: const char* new absolute directory path.
+  FLN_NAVDIR,
+};
+
+result_t win_filelist(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+// ---------------------------------------------------------------------------
+// (original commctl.h body)
+// ---------------------------------------------------------------------------
 
 // Forward declarations for types from other subsystems
 typedef struct database_s database_t;
@@ -83,9 +364,6 @@ typedef struct {
 } activitybar_params_t;
 result_t win_activitybar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_checkbox(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-result_t win_reportview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-result_t win_iconview(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-result_t win_icongrid(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 // Individual desktop-style icon. Each icon is a child window with its own
 // winproc, selection/focus state, image, status image, badges, and opaque model pointer.
@@ -138,8 +416,6 @@ result_t win_list(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_console(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_space(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_separator(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-result_t win_filelist(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_scrollbar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_slider(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 result_t win_segmented(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);

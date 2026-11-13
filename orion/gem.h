@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
-#include <orion/commctl/menubar.h>
+#include <orion/commctl/commctl.h>
 
 // gem_interface_t — the ABI every .gem must export via gem_get_interface().
 //

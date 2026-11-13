@@ -2,8 +2,67 @@
 #define __UI_KERNEL_H__
 
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 #include <platform/platform.h>
 #include "renderer.h"
+
+// ---------------------------------------------------------------------------
+// fmat16.h
+// ---------------------------------------------------------------------------
+
+typedef struct {
+  float v[16];
+} fmat16_t;
+
+static inline const float *fmat16_data(const fmat16_t *m) {
+  return m->v;
+}
+
+static inline void fmat16_copy(const fmat16_t *src, fmat16_t *dst) {
+  memcpy(dst->v, src->v, sizeof(dst->v));
+}
+
+static inline void fmat16_ortho(float l, float r, float b, float t,
+                                float n, float f, fmat16_t *dst) {
+  float rl = r - l;
+  float tb = t - b;
+  float fn = f - n;
+
+  dst->v[0] = 2.0f / rl;
+  dst->v[1] = 0.0f;
+  dst->v[2] = 0.0f;
+  dst->v[3] = 0.0f;
+
+  dst->v[4] = 0.0f;
+  dst->v[5] = 2.0f / tb;
+  dst->v[6] = 0.0f;
+  dst->v[7] = 0.0f;
+
+  dst->v[8] = 0.0f;
+  dst->v[9] = 0.0f;
+  dst->v[10] = -2.0f / fn;
+  dst->v[11] = 0.0f;
+
+  dst->v[12] = -(r + l) / rl;
+  dst->v[13] = -(t + b) / tb;
+  dst->v[14] = -(f + n) / fn;
+  dst->v[15] = 1.0f;
+}
+
+// ---------------------------------------------------------------------------
+// audio_input.h
+// ---------------------------------------------------------------------------
+
+typedef struct ui_audio_input ui_audio_input_t;
+typedef enum { UI_MIC_UNKNOWN, UI_MIC_PENDING, UI_MIC_ALLOWED, UI_MIC_DENIED, UI_MIC_UNAVAILABLE } ui_microphone_permission_t;
+// Request access only in response to a user action. Poll again on the UI thread.
+ui_microphone_permission_t ui_microphone_permission(bool request);
+// Mono signed 16-bit PCM. The callback must not allocate, block, or call UI APIs.
+ui_audio_input_t *ui_audio_input_open(int rate, void (*receive)(void *, const int16_t *, int), void *userdata);
+// Stops synchronously: no callback can run after close returns.
+void ui_audio_input_close(ui_audio_input_t *input);
 
 typedef struct bitmap_strip_s bitmap_strip_t;
 

@@ -4,8 +4,7 @@
 
 #include <orion/user/user.h>
 #include <orion/user/messages.h>
-#include "commctl.h"
-#include "layout_shared.h"
+#include "commctl_internal.h"
 
 extern void window_layout_sync(window_t *win);
 

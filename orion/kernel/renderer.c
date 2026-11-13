@@ -14,7 +14,7 @@
 #include <orion/ui.h>
 #include <orion/user/gl_compat.h>
 #include <orion/user/color.h>
-#include "fmat16.h"
+#include "kernel.h"
 #include "vendor/gl_shader/gl_shader.c"
 
 #define OFFSET_OF(type, field) (void*)((size_t)&(((type *)0)->field))

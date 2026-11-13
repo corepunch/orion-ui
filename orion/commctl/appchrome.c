@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "appchrome.h"
+#include "commctl.h"
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
 #include <orion/user/toolbar.h>

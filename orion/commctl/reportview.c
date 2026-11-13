@@ -1,10 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "columnview_internal.h"
-#include <orion/user/messages.h>
-#include <orion/user/draw.h>
-#include <orion/user/theme.h>
+#include "commctl_internal.h"
 #include <orion/user/svg_icon_loader.h>
 
 // Rows of a grouped list sit below their section captions, each caption one

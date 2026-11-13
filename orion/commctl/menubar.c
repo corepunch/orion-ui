@@ -18,10 +18,8 @@
 #include <orion/user/text.h>
 #include <orion/user/accel.h>
 #include <orion/user/theme.h>
-#include "menubar.h"
+#include "commctl_internal.h"
 #include <orion/user/dock.h>
-#include <orion/user/toolbar.h>
-#include "popup_item.h"
 
 #define MENU_ITEM_H      POPUP_ITEM_HEIGHT
 

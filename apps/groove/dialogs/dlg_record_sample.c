@@ -1,7 +1,6 @@
 #include "groove.h"
-#include <orion/kernel/audio_input.h>
+#include <orion/kernel/kernel.h>
 #include <stdatomic.h>
-#include <orion/commctl/columnview.h>
 
 typedef struct {
   sample_t sample;

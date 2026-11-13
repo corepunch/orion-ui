@@ -9,8 +9,6 @@
 #include <time.h>
 
 #include <orion/ui.h>
-#include <orion/commctl/columnview.h>
-#include <orion/commctl/menubar.h>
 #include <orion/user/accel.h>
 
 // All definitions generated from socialfeed.orion:

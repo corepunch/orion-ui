@@ -13,7 +13,6 @@
 #include <orion/gem.h>
 #include <orion/script/application.h>
 #include <orion/script/remote.h>
-#include <orion/commctl/appchrome.h>
 #include <platform/platform.h>
 #include <orion/user/svg_icon_loader.h>
 

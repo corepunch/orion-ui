@@ -6,7 +6,6 @@
 #include "formeditor.h"
 #include "controls-icons.h"
 #include <orion/commctl/commctl.h>
-#include <orion/commctl/columnview.h>
 #include <orion/kernel/renderer.h>
 #include <orion/user/draw.h>
 #include <orion/user/image.h>
