@@ -29,11 +29,11 @@ static void test_switch_validation(void) {
 
   bool result;
   // A theme whose style sheet does not load is rejected.
-  const char *css = classic->css;
+  const char *origin = classic->css_origin;
   style_sheet_t *sheet = classic->sheet;
-  classic->css = NULL; classic->sheet = NULL;
+  classic->css_origin = "orion/themes/missing.css"; classic->sheet = NULL;
   result = set_theme(THEME_CLASSIC);
-  classic->css = css; classic->sheet = sheet;
+  classic->css_origin = origin; classic->sheet = sheet;
   ASSERT_FALSE(result);
   ASSERT_TRUE(get_theme() == light);
   ASSERT_EQUAL(light_color, get_sys_color(brControlBg));

@@ -114,7 +114,8 @@ static style_sheet_t *theme_build_sheet(theme_t *theme, const char *app_css, con
     if (override) { style_sheet_append(sheet, override, override_path); free(override); }
   } else {
     char *theme_css = theme_read_share(theme->css_origin);
-    if (theme_css) { style_sheet_append(sheet, theme_css, theme->css_origin); free(theme_css); }
+    if (!theme_css) { style_sheet_free(sheet); return NULL; }   // base.css alone has no palette
+    style_sheet_append(sheet, theme_css, theme->css_origin); free(theme_css);
   }
   if (app_css) style_sheet_append(sheet, app_css, app_origin);
   style_sheet_set_dark(sheet, theme->appearance.dark);
