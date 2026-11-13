@@ -73,7 +73,7 @@ static void attr(xmlNodePtr n, const char *name, char *buf, size_t sz) {
 
 static void note(stage_t *st, const char *fmt, const char *a, const char *b) {
   char line[256];
-  snprintf(line, sizeof(line), fmt, a, b);
+  snprintf(line, sizeof(line), ui_tr(fmt), a, b);  // the format is a whole sentence
   if (strstr(st->out->notes, line)) return;  // one line per distinct item
   size_t used = strlen(st->out->notes), n = strlen(line);
   if (used + n + 2 >= sizeof(st->out->notes)) return;
@@ -345,7 +345,7 @@ static bool fill_contract(stage_t *st, xmlNodePtr rec, void *out, const char **w
   char owner[40], name[512], date[32], kind[64];
   attr(rec, "owner", owner, sizeof(owner));
   db_import_source_t *cp = source_find(st, owner);
-  if (!cp) { *why = "its counterparty was not imported"; return false; }
+  if (!cp) { *why = ui_tr("its counterparty was not imported"); return false; }
   c->counterparty_id = cp->record_id;
   c->currency_id = ref_id(st, rec, "ВалютаВзаиморасчетов");
   attr(rec, "description", name, sizeof(name));
@@ -365,7 +365,7 @@ static bool fill_bank_account(stage_t *st, xmlNodePtr rec, void *out, const char
   char owner[40], owner_type[64], name[512], guid[40];
   attr(rec, "owner", owner, sizeof(owner)); attr(rec, "owner-type", owner_type, sizeof(owner_type));
   db_import_source_t *own = source_find(st, owner);
-  if (!own) { *why = "its owner was not imported"; return false; }
+  if (!own) { *why = ui_tr("its owner was not imported"); return false; }
   if (!strcmp(owner_type, "Справочник.Организации")) b->organization_id = own->record_id; else b->counterparty_id = own->record_id;
   b->currency_id = ref_id(st, rec, "ВалютаДенежныхСредств");
   attr(rec, "description", name, sizeof(name));

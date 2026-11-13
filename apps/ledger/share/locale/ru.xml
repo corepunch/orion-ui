@@ -348,6 +348,24 @@
   <string source="%s: added %d, updated %d, held back %d&#10;" where="code">%s: добавлено %d, обновлено %d, отложено %d
 </string>
   <string source="Held back or not imported:" where="code">Отложено или не импортировано:</string>
+  <string source="account %s: analytics slot %s has no usable kind" where="code">счёт %s: слот аналитики %s не имеет пригодного вида</string>
+  <string source="%s: held back (%s)" where="code">%s: отложено (%s)</string>
+  <string source="%s: the infobase already has an organization; not replaced" where="code">%s: в информационной базе уже есть организация; не заменена</string>
+  <string source="%s: also a catalog of its own; as analytics it is held back" where="code">%s: это также отдельный справочник; как аналитика отложено</string>
+  <string source="%s: no Ledger catalog for this type, not imported" where="code">%s: для этого типа нет справочника Ledger, не импортировано</string>
+  <string source="account %s: analytics value with no kind in slot %s" where="code">счёт %s: значение аналитики без вида в слоте %s</string>
+  <string source="%s: analytics value not imported (no record in the file)" where="code">%s: значение аналитики не импортировано (нет записи в файле)</string>
+  <string source="movement account %s was not imported" where="code">счёт проводки %s не импортирован</string>
+  <string source="a movement with neither account was held back" where="code">проводка без счетов отложена</string>
+  <string source="a movement has different quantities on its two sides; the debit's is kept" where="code">у проводки разные количества на двух сторонах; сохранено по дебету</string>
+  <string source="%s: mapped to a type that is not an operation; the general operation is used" where="code">%s: сопоставлен с видом, не являющимся операцией; используется общая операция</string>
+  <string source="VAT rate %s has no rate in the configuration; lines keep none" where="code">ставка НДС %s отсутствует в конфигурации; в строках не указана</string>
+  <string source="%s: table %s is not imported as lines" where="code">%s: таблица %s не импортирована как строки</string>
+  <string source="%s: a line names an item that was not imported" where="code">%s: строка указывает номенклатуру, которая не импортирована</string>
+  <string source="%s: documents not posted in 1C and without movements are not imported" where="code">%s: документы, не проведённые в 1С и без движений, не импортированы</string>
+  <string source="%s: not posted in 1C but with register movements; imported posted" where="code">%s: не проведён в 1С, но имеет движения регистра; импортирован проведённым</string>
+  <string source="its counterparty was not imported" where="code">его контрагент не импортирован</string>
+  <string source="its owner was not imported" where="code">его владелец не импортирован</string>
   <string source="&#10;&#10;The full report is in %s" where="code">
 
 Полный отчёт сохранён в %s</string>

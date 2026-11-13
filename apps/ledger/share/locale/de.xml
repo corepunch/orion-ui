@@ -348,6 +348,24 @@ stammen aus der aktiven Konfiguration.</string>
   <string source="%s: added %d, updated %d, held back %d&#10;" where="code">%s: hinzugefügt %d, aktualisiert %d, zurückgestellt %d
 </string>
   <string source="Held back or not imported:" where="code">Zurückgestellt oder nicht importiert:</string>
+  <string source="account %s: analytics slot %s has no usable kind" where="code">Konto %s: Analytik-Slot %s hat keine verwendbare Art</string>
+  <string source="%s: held back (%s)" where="code">%s: zurückgestellt (%s)</string>
+  <string source="%s: the infobase already has an organization; not replaced" where="code">%s: die Datenbank hat bereits eine Organisation; nicht ersetzt</string>
+  <string source="%s: also a catalog of its own; as analytics it is held back" where="code">%s: auch ein eigener Katalog; als Analytik zurückgestellt</string>
+  <string source="%s: no Ledger catalog for this type, not imported" where="code">%s: kein Ledger-Katalog für diesen Typ, nicht importiert</string>
+  <string source="account %s: analytics value with no kind in slot %s" where="code">Konto %s: Analytikwert ohne Art in Slot %s</string>
+  <string source="%s: analytics value not imported (no record in the file)" where="code">%s: Analytikwert nicht importiert (kein Eintrag in der Datei)</string>
+  <string source="movement account %s was not imported" where="code">Buchungskonto %s wurde nicht importiert</string>
+  <string source="a movement with neither account was held back" where="code">Eine Buchung ohne Konten wurde zurückgestellt</string>
+  <string source="a movement has different quantities on its two sides; the debit's is kept" where="code">Eine Buchung hat unterschiedliche Mengen auf beiden Seiten; die Soll-Seite bleibt</string>
+  <string source="%s: mapped to a type that is not an operation; the general operation is used" where="code">%s: auf einen Typ abgebildet, der keine Operation ist; die allgemeine Operation wird verwendet</string>
+  <string source="VAT rate %s has no rate in the configuration; lines keep none" where="code">Umsatzsteuersatz %s fehlt in der Konfiguration; Zeilen behalten keinen</string>
+  <string source="%s: table %s is not imported as lines" where="code">%s: Tabelle %s wird nicht als Zeilen importiert</string>
+  <string source="%s: a line names an item that was not imported" where="code">%s: eine Zeile benennt einen Artikel, der nicht importiert wurde</string>
+  <string source="%s: documents not posted in 1C and without movements are not imported" where="code">%s: in 1C nicht gebuchte Dokumente ohne Bewegungen werden nicht importiert</string>
+  <string source="%s: not posted in 1C but with register movements; imported posted" where="code">%s: in 1C nicht gebucht, aber mit Registerbewegungen; als gebucht importiert</string>
+  <string source="its counterparty was not imported" where="code">sein Geschäftspartner wurde nicht importiert</string>
+  <string source="its owner was not imported" where="code">sein Inhaber wurde nicht importiert</string>
   <string source="&#10;&#10;The full report is in %s" where="code">
 
 Der vollständige Bericht steht in %s</string>
