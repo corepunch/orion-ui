@@ -532,6 +532,21 @@ apps: share $(EXAMPLE_BINS) $(COMPONENT_PLUGIN_BINS) $(PHONY_APP_BINS)
 
 plugins: $(COMPONENT_PLUGIN_BINS)
 
+# A narrower goal (make test, make ledger, make library) relinks the core
+# libraries without touching the other executables already in $(BIN_DIR), which
+# then load libraries whose structures no longer match theirs and crash. Every
+# build goal therefore also brings the already-built apps and runtime tools up
+# to date. Goals that apps themselves depend on (libraries, generated headers,
+# orionc, cgen) are left out so the refresh cannot form a cycle.
+LINKED_BINS      = $(EXAMPLE_BINS) $(PHONY_APP_BINS) $(BIN_DIR)/doom-ed$(EXE_EXT) $(patsubst tools/%.c,$(BIN_DIR)/%$(EXE_EXT),$(TOOLS_SRCS))
+BUILT_APP_BINS   = $(filter-out $(MAKECMDGOALS),$(wildcard $(LINKED_BINS)))
+NO_REFRESH_GOALS = clean help install% ipad% mac-deploy list-devices app-source check-lua refresh-built-apps
+NO_REFRESH_FILES = $(filter-out $(LINKED_BINS) $(TEST_BINS),$(filter $(BUILD_DIR)/%,$(MAKECMDGOALS)))
+REFRESH_GOALS    = $(filter-out $(NO_REFRESH_GOALS) $(NO_REFRESH_FILES),$(MAKECMDGOALS))
+.PHONY: refresh-built-apps
+refresh-built-apps: $(BUILT_APP_BINS)
+$(REFRESH_GOALS): | refresh-built-apps
+
 # Scener exporter plugins: one shared library per apps/scener/exporters/<id>/export_<id>.c.
 SCENER_EXPORTER_DIR  = $(BUILD_DIR)/exporters
 SCENER_EXPORTER_LIBS = $(foreach s,$(wildcard $(APPS)/scener/exporters/*/export_*.c),$(SCENER_EXPORTER_DIR)/$(basename $(notdir $(s))).$(LIB_EXT))
