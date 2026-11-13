@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import struct
 from dataclasses import dataclass, field
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -70,8 +71,9 @@ def enc_nc(value: str, length: int) -> bytes:
 
 
 def enc_numeric(value: float, length: int, precision: int = 0) -> bytes:
+    value = Decimal(str(value))
     sign = '1' if value >= 0 else '0'
-    scaled = abs(round(float(value) * (10 ** precision)))
+    scaled = int(abs(value * (10 ** precision)).to_integral_value())
     digits = str(scaled).rjust(length, '0')
     nibbles = (sign + digits).ljust((length // 2 + 1) * 2, '0')
     return bytes.fromhex(nibbles)
@@ -123,8 +125,14 @@ def encode_row(fields: list[FixtureField], values: dict[str, Any]) -> bytes:
             raw = (v if isinstance(v, bytes) else b'\x00' * 16)[:f.length].ljust(f.length, b'\x00')
         elif f.type == 'I' and isinstance(v, (tuple, list)) and len(v) == 2:
             raw = struct.pack('<2I', *v)
+        elif f.type == 'NT' and isinstance(v, (tuple, list)) and len(v) == 2:
+            raw = struct.pack('<2I', *v)
         else:
             raw = b'\x00' * size
+        if f.null_exists and f.type in ('B', 'N', 'L', 'DT', 'I', 'NT'):
+            # nullable column: flag byte, then the value; None means NULL
+            body = field_size(f.type, f.length)
+            raw = (b'\x01' + raw[:body].ljust(body, b'\x00')) if v is not None else b'\x00' * (1 + body)
         slots[f.name] = (off, raw)
     end = max((o + len(r) for o, r in slots.values()), default=1)
     row = bytearray(max(end, 5))

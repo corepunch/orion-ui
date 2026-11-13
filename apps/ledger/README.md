@@ -250,6 +250,13 @@ limited to file format 8.3.8.0 and remains experimental; a small catalog from
 one real educational infobase has been checked. See the [1CD research and instructions](docs/1c-accounting-replacement-plan.md#эксперимент-чтение-1cd-без-платформы)
 before using it.
 
+`python3 apps/ledger/tools/inspect_1cd.py SOURCE.1CD export-stage --output stage.xml` (add
+`--overwrite` to replace an existing file) exports the business data of a 1CD copy,
+read-only, into one self-contained staging XML file for a later importer: chart of
+accounts, subkonto kinds, catalogs, documents with tabular sections and the accounting
+register movements, with every non-exported table listed. The format is described in
+[the 1CD verification notes](docs/1cd-verification-without-1c.md#выгрузка-в-staging-xml).
+
 `File > Import from 1C (EnterpriseData)...` reads the exchange file that
 1C:Enterprise 8 writes in the EnterpriseData format (Администрирование →
 Синхронизация данных → Выгрузка данных в файл, or the «Выгрузка загрузка

@@ -649,6 +649,7 @@ include apps/doom-ed/build.mk
 test: share $(TEST_BINS) lua-docs-check
 	@echo "Running tests..."
 	python3 apps/ledger/tests/test_1cd_extract.py
+	python3 apps/ledger/tests/test_1cd_stage.py
 	@$(COPY_DLLS)
 	@for t in $(TEST_BINS); do \
 	    echo "Running $$t..."; \

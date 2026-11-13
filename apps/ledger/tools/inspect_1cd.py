@@ -13,9 +13,13 @@ import uuid
 import xml.etree.ElementTree as ET
 from decimal import Decimal
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # also under `python3 -I`
+
 from vendor.onecreader.raw1cd import Database1CD, decode_datetime, decode_nvc
 from vendor.onecreader import bracket
 from onecd_metadata import accounting_register_map, catalog_map, read_files, walk
+from onecd_meta import decode_numeric_decimal
+import onecd_stage
 
 
 def get_field(table, row, name, kind):
@@ -97,22 +101,6 @@ def accounting_register_tables(db):
     """Return physical accounting-register schemas, without reading their rows."""
     return [(name, table) for name, table in sorted(db.tables.items(), key=lambda item: item[0].casefold())
             if re.fullmatch(r'_AccRg[0-9]+', name, re.IGNORECASE)]
-
-
-def decode_numeric_decimal(data, length, precision):
-    """Decode the reader's packed decimal format without binary float conversion."""
-    if len(data) != length // 2 + 1 or precision < 0 or precision > length:
-        raise ValueError('invalid packed-decimal field dimensions')
-    digits = data.hex()
-    if not digits or digits[0] not in '01':
-        raise ValueError('invalid packed-decimal sign nibble')
-    value, padding = digits[1:1 + length], digits[1 + length:]
-    if len(value) != length or any(ch not in '0123456789' for ch in value):
-        raise ValueError('invalid packed-decimal digit')
-    if any(ch != '0' for ch in padding):
-        raise ValueError('invalid packed-decimal padding')
-    number = Decimal(int(value)).scaleb(-precision)
-    return -number if digits[0] == '0' and number else number
 
 
 def validate_field_schema(table, name, kind, length=None, size=None, nullable=False):
@@ -501,6 +489,9 @@ def main():
     stage = sub.add_parser('stage-register', help='stage exact physical register and subkonto row bytes for review')
     stage.add_argument('table', help='physical accounting-register table, e.g. _AccRg891')
     stage.add_argument('--output', required=True, help='new JSON staging file; existing files are never overwritten')
+    export = sub.add_parser('export-stage', help='export business data to one self-contained staging XML file')
+    export.add_argument('--output', required=True, help='new staging XML file')
+    export.add_argument('--overwrite', action='store_true', help='replace an existing output file')
     extract = sub.add_parser('extract', help='extract an explicitly identified catalog for review')
     source = extract.add_mutually_exclusive_group(required=True)
     source.add_argument('--table', help='physical _ReferenceN table, independently verified')
@@ -528,6 +519,12 @@ def main():
                 print(f'{name}\t{fields}')
         elif args.command == 'audit-register':
             print(json.dumps(audit_accounting_register(db, args.table), ensure_ascii=False, indent=2))
+        elif args.command == 'export-stage':
+            if Path(args.output).exists() and not args.overwrite:
+                raise ValueError(f'{args.output} exists; pass --overwrite to replace it')
+            root, exporter = onecd_stage.build_stage(db)
+            size = onecd_stage.write_stage(root, args.output, args.source, args.overwrite)
+            print(onecd_stage.summary_text(root, exporter, size))
         elif args.command == 'stage-register':
             size, payload = write_register_stage(db, args.table, args.output)
             table_count = len(payload['tables'])

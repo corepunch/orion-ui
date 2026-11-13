@@ -99,3 +99,77 @@ python3 apps/ledger/tests/test_1cd_extract.py
 хранит до трёх субконто и суммы НУ, ПР и ВР на каждую сторону, но количество и
 валюта остаются единственными на проводку, а правила проведения и отчёты читают
 только первое субконто.
+
+## Выгрузка в staging XML
+
+`inspect_1cd.py SOURCE export-stage --output stage.xml` (модули `onecd_meta.py` и
+`onecd_stage.py`) читает базу только на чтение и пишет один самодостаточный файл
+формата `orion-1cd-stage-v1` для будущего импортёра. Существующий файл не
+перезаписывается без `--overwrite`; вывод в сам источник запрещён. Результат
+детерминирован: одна и та же база даёт побайтно одинаковый файл. Имена полей,
+табличных частей и значений перечислений берутся из CONFIG и DBNames по GUID, а не
+по положению колонок и не по совпадению названий.
+
+Идентификаторы пишутся в платформенной форме GUID — той, что стоит в метаданных
+CONFIG (предопределённые элементы, значения перечислений). Она не совпадает с
+`uuid.UUID(bytes_le=...)`, который использует более ранняя команда `extract`.
+
+Структура файла (`n` — имя из метаданных, `t` — тип значения):
+
+```
+stage[format]
+  header: source[file,size,sha256,format-version,locale]  configuration[name,version]  missing-catalogs[names]
+  chart-of-accounts[type]
+    account[type,id,code,description,deleted,off-balance,kind=active|passive|active-passive,order,
+            parent,predefined,predefined-id,currency,quantity]   v*  subkonto*[n,kind,turnover-only,
+            kind-is-metadata,amount,currency,quantity]   (субконто в порядке слотов)
+  subkonto-kinds[type]: record[type,id,code,description,predefined,...] types/type[t,type|length|...]
+  records: record[type,id,code,description,deleted,folder,parent,owner-type,owner,predefined,pulled]
+            v*  table[n]/row[line]/v*   (справочники, ПВХ, планы обмена)
+  documents: document[type,id,number,date,posted,deleted]  v*  table[n]/row[line]/v*  (по порядку строк)
+  registers: register[type,chart]/movement[line,recorder-type,recorder,period,active]
+            v* (измерения и ресурсы без сторон)  debit|credit[account]  v* (поля по сторонам)
+            subkonto*[n,kind,<значение>]  (по слотам счёта)
+  enums: enum[type,name,id,order]   (только значения, на которые есть ссылки)
+  skipped[tables,rows]: table[name,kind,metadata,rows]     partial-tables: table[...,exported]
+  summary: undecoded[count]/item[where,reason,count]   dangling[count]/item[where,type,id]
+```
+
+Значение `v[n]` или `subkonto` несёт `t`: `string` (текст), `decimal` (точный
+десятичный текст, без float), `date`/`datetime`/`time` (`empty="true"` для пустой даты),
+`boolean`, `ref` (`type` и `id`; `empty="true"` для пустой ссылки), `enum` (`type`, `name`,
+`id`), `uuid`, `null` (NULL колонки или Неопределено, `undefined="true"`), `blob`
+(`bytes` — длина, содержимое не выгружается), `string-hex` (текст с недопустимыми для
+XML символами, UTF-8 в hex) и `undecoded` (`reason`, `hex` если значение короткое).
+NULL остаётся отличным от нуля и пустой строки. Составные типы (`_TYPE`/`_RTREF`/`_RRREF`
+и т. д.) раскрываются в фактическое значение. `_Folder` в 1CD хранится инвертированным,
+в файле `folder="true"` — группа. Ссылки на объекты, которых нет в таблице, помечаются
+`dangling="true"` и перечисляются в `summary`. Техническая колонка разделителя данных
+(`ОбластьДанныхОсновныеДанные`, значение 0) и хеши субконто `_EDHASHDT/CT` не
+выгружаются.
+
+В `records` попадают справочники из списка (контрагенты, номенклатура, договоры,
+банковские счета, банки, склады, организации, подразделения, физлица, валюты, статьи
+затрат и движения денег, прочие доходы и расходы, номенклатурные группы, расходы будущих
+периодов, виды номенклатуры, единицы измерения, сотрудники, основные средства, НМА) и
+любой объект, на который ссылается выгруженная запись, документ, движение или субконто
+(`pulled="true"`); подтягивание идёт транзитивно. В `skipped` перечислены все остальные
+непустые таблицы (регистры сведений и накопления, константы, служебные справочники,
+итоги регистра, системные таблицы), в `partial-tables` — таблицы, из которых выгружена
+только часть строк (перечисления, подтянутые справочники).
+
+Результат на учебной базе (SHA-256 источника
+`b5fe49188d8a189f73118db055e672973f2170e595e31cab2898f42aa2d55076`):
+425 счетов, 54 вида субконто, 473 документа (422 «Регламентная операция»; 12 табличных
+частей, 40 строк), 63 движения, 216 значений субконто (164 непустых, 52 пустых),
+132 записи справочников (из них 22 подтянуты по ссылкам), 100 значений перечислений;
+`skipped` — 1461 таблица, 108 619 строк; висячих ссылок нет; сумма движений
+3 059 306,05 и обороты по каждому из 20 счетов совпали с расчётом напрямую из
+`_AccRg891`. Два значения (`Справочник.Пользователи`: подразделение и физическое
+лицо) помечены `undecoded`: тип целевого справочника не описан в этой базе.
+Дважды выгруженный файл (1,8 МБ, 18–70 с) имеет одинаковый SHA-256.
+
+```sh
+python3 -I apps/ledger/tools/inspect_1cd.py ~/Downloads/DemoAccountingEduc-1Cv8.1CD export-stage --output build/ledger-1cd-audit/stage.xml
+python3 apps/ledger/tests/test_1cd_stage.py
+```
