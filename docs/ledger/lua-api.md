@@ -363,6 +363,14 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `script` | `string` |  |
 | `name` | `string` |  |
 
+## `cfg.import_documents`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `doc_type_id` | `integer` | doc_types.id |
+| `source_type` | `string` |  |
+
 ## `cfg.balance_rules`
 
 | Field | XML type | Relation |
@@ -559,6 +567,48 @@ Generated from `apps/ledger/ledger.orion`. Read methods return these fields as L
 | `kind` | `string` |  |
 | `address` | `string` |  |
 | `keeper` | `string` |  |
+
+## `ib.ext_subconto_kinds`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `code` | `string` |  |
+| `name` | `string` |  |
+| `table` | `string` |  |
+
+## `ib.ext_accounts`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `subconto_kind_id` | `integer` |  |
+| `subconto2_kind_id` | `integer` |  |
+| `subconto3_kind_id` | `integer` |  |
+| `code` | `string` |  |
+| `name` | `string` |  |
+| `kind` | `string` |  |
+| `section` | `string` |  |
+| `currency` | `boolean` |  |
+
+## `ib.analytic_items`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `kind_id` | `integer` |  |
+| `code` | `string` |  |
+| `name` | `string` |  |
+
+## `ib.import_sources`
+
+| Field | XML type | Relation |
+|---|---|---|
+| `id` | `integer` |  |
+| `metadata` | `string` |  |
+| `guid` | `string` |  |
+| `table_name` | `string` |  |
+| `record_id` | `integer` |  |
 
 ## `ib.documents`
 
