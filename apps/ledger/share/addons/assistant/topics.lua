@@ -50,6 +50,9 @@ function T.match(text)
   for i, w in ipairs(tokens) do if not used[i] then rest[#rest+1] = w end end
   local count = 0
   for _ in pairs(topics) do count = count + 1 end
+  if topics.unsupported_scope then
+    return topic, rest, tr('That question includes a filter or period this answer cannot apply. Remove it or use a supported list command.')
+  end
   if count > 1 then return topic, rest, tr('Your question names more than one accounting topic. Ask about one topic at a time.') end
   if topic == 'period' then return topic, rest, tr('That question includes a filter or period this answer cannot apply. Remove it or use a supported list command.') end
   local scope_error = T.scope_error(topic, text, rest)
@@ -60,6 +63,15 @@ local function phrase_present(tokens, aliases)
   for _, alias in ipairs(aliases or {}) do
     local phrase = words(alias)
     for i = 1, #tokens - #phrase + 1 do if matches_at(tokens, i, phrase) then return true end end
+  end
+  return false
+end
+
+-- A fixed topic answer must not swallow a remaining entity or field request.
+-- These role maps come from the same generated vocabulary as the command parser.
+local function mentions_role(tokens, groups)
+  for _, aliases in pairs(groups or {}) do
+    if phrase_present(tokens, aliases) then return true end
   end
   return false
 end
@@ -90,6 +102,9 @@ function T.scope_error(topic, text, rest)
     if topic ~= 'reconciliation' or has_number or has_comparison then
       return tr('That question includes a filter or period this answer cannot apply. Remove it or use a supported list command.')
     end
+  end
+  if topic ~= 'reconciliation' and (mentions_role(rest or {}, vocabulary.nouns) or mentions_role(rest or {}, vocabulary.fields)) then
+    return tr('That question includes a filter or period this answer cannot apply. Remove it or use a supported list command.')
   end
 end
 
