@@ -159,6 +159,8 @@ typedef struct {
   int accounts_added, accounts_matched;  // by code against the configuration
   int kinds_added, kinds_mapped;         // analytics kinds: new, or onto a Ledger table
   int updated;                           // records found again through their source identity
+  struct { char type[128]; int added, updated, held; } counts[48];  // per 1C metadata type
+  int count_types;
   char notes[1024];                      // held-back or unmapped items, one per line
   char error[256];
 } ledger_stage_import_t;

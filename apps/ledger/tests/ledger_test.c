@@ -2173,14 +2173,41 @@ static void test_import_stage_chart(void) {
   PASS();
 }
 
+static void test_import_stage_catalogs(void) {
+  TEST("1CD staging import: catalogs with owners, groups held back, bank data inlined, repeat updates");
+  ledger_stage_import_t r;
+  const char *stage = "apps/ledger/tests/fixtures/onecd/stage_catalogs.xml";
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
+  db_counterparty_t *cp = find_by(g_ledger->ib, TABLE_COUNTERPARTIES, "tax_id", "7700000001");
+  ASSERT(cp && !strcmp(cp->name, "Ромашка поставщик") && !strcmp(cp->kpp, "770001001"), "counterparty imported");
+  ASSERT(!find_by(g_ledger->ib, TABLE_COUNTERPARTIES, "name", "Группа поставщиков"), "a group is not a counterparty");
+  ASSERT(find_by(g_ledger->ib, TABLE_ITEMS, "sku", "BOLT-M8"), "item imported");
+  db_bank_account_t *ba = find_by(g_ledger->ib, TABLE_BANK_ACCOUNTS, "number", "40702810000000000001");
+  ASSERT(ba && cp && ba->counterparty_id == cp->id && !strcmp(ba->bik, "044525225") && !strcmp(ba->corr_account, "30101810400000000225"), "bank account carries its owner and the bank's details");
+  db_contract_t *ct = find_by(g_ledger->ib, TABLE_CONTRACTS, "number", "21");
+  ASSERT(ct && cp && ct->counterparty_id == cp->id && !strcmp(ct->kind, "supplier") && !strcmp(ct->date, "2014-01-15") && !ct->valid_until[0], "contract carries its counterparty");
+  ASSERT(!find_by(g_ledger->ib, TABLE_CONTRACTS, "number", "9") && strstr(r.notes, "Справочник.ДоговорыКонтрагентов: held back"), "a contract without an owner is held back and listed");
+  ASSERT(strstr(r.notes, "Справочник.Контактные: no Ledger catalog"), "an unknown catalog type is listed");
+  int id = cp->id;
+  snprintf(cp->name, sizeof(cp->name), "Renamed here");
+  ASSERT_TRUE(ledger_import_stage(g_ledger->ib, g_ledger->cfg, stage, &r));
+  cp = find_by(g_ledger->ib, TABLE_COUNTERPARTIES, "tax_id", "7700000001");
+  ASSERT(cp && cp->id == id && !strcmp(cp->name, "Ромашка поставщик"), "a second import updates the record, not duplicates it");
+  for (int i = 0; i < r.count_types; i++) ASSERT(!r.counts[i].added, "nothing is added twice");
+  PASS();
+}
+
 static void test_import_external_stage(void) {
   const char *path = getenv("LEDGER_TEST_1CD_STAGE");
   if (!path || !*path) return;
   TEST("1CD staging import: an exported base's chart of accounts");
   ledger_stage_import_t r;
   ASSERT(ledger_import_stage(g_ledger->ib, g_ledger->cfg, path, &r), r.error);
-  printf("\n    accounts +%d =%d, kinds +%d mapped %d\n%s", r.accounts_added, r.accounts_matched, r.kinds_added, r.kinds_mapped, r.notes);
+  printf("\n    accounts +%d =%d, kinds +%d mapped %d\n", r.accounts_added, r.accounts_matched, r.kinds_added, r.kinds_mapped);
+  for (int i = 0; i < r.count_types; i++) printf("    %-48s +%d ~%d held %d\n", r.counts[i].type, r.counts[i].added, r.counts[i].updated, r.counts[i].held);
+  printf("%s", r.notes);
   ASSERT(ledger_import_stage(g_ledger->ib, g_ledger->cfg, path, &r) && !r.accounts_added && !r.kinds_added, "repeat adds nothing");
+  for (int i = 0; i < r.count_types; i++) { if (r.counts[i].added) printf("    repeat added %d of %s\n", r.counts[i].added, r.counts[i].type); ASSERT(!r.counts[i].added, "repeat adds no catalog record"); }
   PASS();
 }
 
@@ -2403,6 +2430,7 @@ int main(int argc, char **argv) {
   test_import_external_1cd_catalog();
   test_infobase_extensions();
   test_import_stage_chart();
+  test_import_stage_catalogs();
   test_import_external_stage();
   test_import_digest();
   test_import_integrity();

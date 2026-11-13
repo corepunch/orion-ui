@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stage format="orion-1cd-stage-v1">
+  <header>
+    <source file="synthetic.1CD" size="0" sha256="0" format-version="8.3.8.0" locale="ru_RU"/>
+    <configuration name="Synthetic" version="1"/>
+  </header>
+  <records>
+    <record type="Справочник.Контрагенты" id="c0000000-0000-0000-0000-000000000001" code="1" description="Ромашка поставщик" deleted="false" folder="false">
+      <v n="ИНН" t="string">7700000001</v>
+      <v n="КПП" t="string">770001001</v>
+    </record>
+    <record type="Справочник.Контрагенты" id="c0000000-0000-0000-0000-000000000002" code="2" description="Группа поставщиков" deleted="false" folder="true"/>
+    <record type="Справочник.Номенклатура" id="c0000000-0000-0000-0000-000000000003" code="3" description="Болт М8" deleted="false" folder="false">
+      <v n="Артикул" t="string">BOLT-M8</v>
+    </record>
+    <record type="Справочник.Банки" id="c0000000-0000-0000-0000-000000000004" code="044525225" description="ПАО БАНК" deleted="false" folder="false">
+      <v n="КоррСчет" t="string">30101810400000000225</v>
+    </record>
+    <record type="Справочник.БанковскиеСчета" id="c0000000-0000-0000-0000-000000000005" code="1" description="Расчетный" deleted="false" owner-type="Справочник.Контрагенты" owner="c0000000-0000-0000-0000-000000000001">
+      <v n="НомерСчета" t="string">40702810000000000001</v>
+      <v n="Банк" t="ref" type="Справочник.Банки" id="c0000000-0000-0000-0000-000000000004"/>
+    </record>
+    <record type="Справочник.ДоговорыКонтрагентов" id="c0000000-0000-0000-0000-000000000006" code="1" description="21 от 15.01.2014" deleted="false" owner-type="Справочник.Контрагенты" owner="c0000000-0000-0000-0000-000000000001">
+      <v n="Номер" t="string">21</v>
+      <v n="Дата" t="date">2014-01-15</v>
+      <v n="ВидДоговора" t="enum" type="Перечисление.ВидыДоговоровКонтрагентов" name="СПоставщиком" id="70ad4bc4-0000-0000-0000-000000000000"/>
+      <v n="СрокДействия" t="datetime" empty="true"/>
+    </record>
+    <record type="Справочник.ДоговорыКонтрагентов" id="c0000000-0000-0000-0000-000000000007" code="2" description="Сирота" deleted="false" owner-type="Справочник.Контрагенты" owner="c0000000-0000-0000-0000-0000000000ff">
+      <v n="Номер" t="string">9</v>
+    </record>
+    <record type="Справочник.Контактные" id="c0000000-0000-0000-0000-000000000008" code="1" description="Прочее" deleted="false"/>
+  </records>
+</stage>
