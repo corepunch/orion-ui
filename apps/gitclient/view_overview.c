@@ -87,8 +87,12 @@ static void fill_rows(void) {
     snprintf(rec.root, sizeof(rec.root), "%s", t->root);
     gc_launch_t *launch = calloc(1, sizeof(*launch));
     int targets = launch && !t->missing ? gc_launch_load(t->path, launch) : 0;
+    if (targets == 0 && launch && !t->missing) targets = gc_launch_guess(t->path, launch);   // no launch.xml
+    rec.guessed = targets > 0 && launch->guessed;
+    int shown = targets > 0 ? (launch->default_index >= 0 ? launch->default_index : 0) : -1;
     if (targets < 0) snprintf(rec.target, sizeof(rec.target), "%s", ui_tr("launch.xml has errors"));
-    else if (targets > 0) snprintf(rec.target, sizeof(rec.target), "%s", launch->targets[launch->default_index].name);
+    else if (shown >= 0 && rec.guessed) snprintf(rec.target, sizeof(rec.target), ui_tr("%s (guessed)"), launch->targets[shown].name);
+    else if (shown >= 0) snprintf(rec.target, sizeof(rec.target), "%s", launch->targets[shown].name);
     const db_checkout_t *row = (const db_checkout_t *)send_db_message(db, dbInsert, TABLE_CHECKOUTS, &rec);
     if (row && targets > 0) insert_targets(db, row->id, t->path, launch);
     free(launch);
@@ -98,6 +102,7 @@ static void fill_rows(void) {
     send_message(gc->checkouts_win, tvRefresh, 0, NULL);
     tableview_handle_master_selection(get_root_window(gc->checkouts_win), gc->checkouts_win);
   }
+  gc_run_sync_targets();
 }
 
 // ── filter ─────────────────────────────────────────────────────────────────────
@@ -151,13 +156,14 @@ result_t gc_page_overview_proc(window_t *win, uint32_t msg, uint32_t wparam, voi
     g_gc->targets_win   = get_window_item(win, ID_OVERVIEW_PAGE_TARGETS);
     g_gc->run_button_win      = get_window_item(win, ID_OVERVIEW_PAGE_RUN_TARGET);
     g_gc->terminal_button_win = get_window_item(win, ID_OVERVIEW_PAGE_SHOW_TERMINAL);
+    g_gc->save_launch_button_win = get_window_item(win, ID_OVERVIEW_PAGE_SAVE_LAUNCH);
     g_gc->terminal_tabs_win   = get_window_item(win, ID_OVERVIEW_PAGE_TERMINAL_TABS);
     if (g_gc->terminal_tabs_win) window_set_state(g_gc->terminal_tabs_win, WINDOW_STATE_VISIBLE, false);   // the Terminal button shows it
     return true;
   }
   if (msg == evDestroy && g_gc->overview_page_win == win) {
     g_gc->overview_page_win = g_gc->filter_win = g_gc->checkouts_win = g_gc->targets_win = NULL;
-    g_gc->run_button_win = g_gc->terminal_button_win = g_gc->terminal_tabs_win = NULL;
+    g_gc->run_button_win = g_gc->terminal_button_win = g_gc->save_launch_button_win = g_gc->terminal_tabs_win = NULL;
     g_gc->run_count = 0;
     return true;
   }

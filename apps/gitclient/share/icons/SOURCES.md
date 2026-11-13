@@ -28,6 +28,7 @@ same revision (`assets/regular/<name>.svg`), saved with a `gc-` prefix:
 | gc-play.svg | play | run target |
 | gc-hammer.svg | hammer | build target |
 | gc-flask.svg | flask | test target |
+| gc-floppy-disk.svg | floppy-disk | save guessed targets as launch.xml |
 | gc-stop-circle.svg | stop-circle | running target (click to stop) |
 | gc-terminal-window.svg | terminal-window | show the target terminal |
 

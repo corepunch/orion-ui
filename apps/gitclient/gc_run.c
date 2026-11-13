@@ -57,6 +57,24 @@ void gc_run_sync_targets(void) {
     send_message(gc->run_button_win, btnSetIconName, 0, (void *)(stop ? "gc-stop-circle" : "gc-play"));
     enable_window(gc->run_button_win, t != NULL);
   }
+  if (gc->save_launch_button_win) {
+    const db_checkout_t *c = gc->checkouts_win ? (const db_checkout_t *)send_message(gc->checkouts_win, tvGetSelectedRecord, 0, NULL) : NULL;
+    enable_window(gc->save_launch_button_win, c && c->guessed);
+  }
+}
+
+// Writes the guessed targets of the selected checkout as its launch.xml, which
+// then shows up as an uncommitted file like any other.
+static void save_guessed_targets(void) {
+  gc_state_t *gc = g_gc;
+  const db_checkout_t *c = gc->checkouts_win ? (const db_checkout_t *)send_message(gc->checkouts_win, tvGetSelectedRecord, 0, NULL) : NULL;
+  if (!c || !c->guessed) return;
+  char path[sizeof(c->path)]; snprintf(path, sizeof(path), "%s", c->path);
+  gc_launch_t *launch = calloc(1, sizeof(*launch));
+  bool saved = launch && gc_launch_guess(path, launch) > 0 && gc_launch_save(path, launch);
+  free(launch);
+  if (!saved) { message_box(gc->main_win, ui_tr("Could not write launch.xml in the selected checkout."), ui_tr("Save launch.xml"), MB_OK); return; }
+  gc_overview_refresh();
 }
 
 // The pane that holds the run tabs: the declared one, or (after its last view
@@ -189,9 +207,10 @@ bool gc_run_handle_command(uint32_t wparam, void *lparam) {
   if (!gc || !src) return false;
   if (code == termnExited && window_is_class(src, TERMINAL_VIEW_CLASS)) { run_exited(src); return true; }
   if (src == gc->targets_win && (code == RVN_DBLCLK || code == RVN_ICONCLICK)) { run_toggle_selected(); return true; }
-  if (src == gc->targets_win && code == RVN_SELCHANGE) { gc_run_sync_targets(); return false; }
+  if ((src == gc->targets_win || src == gc->checkouts_win) && code == RVN_SELCHANGE) { gc_run_sync_targets(); return false; }
   if (code != btnClicked) return false;
   if (src == gc->run_button_win)      { run_toggle_selected(); return true; }
   if (src == gc->terminal_button_win) { gc_run_show_terminal(!gc->terminal_shown); return true; }
+  if (src == gc->save_launch_button_win) { save_guessed_targets(); return true; }
   return false;
 }

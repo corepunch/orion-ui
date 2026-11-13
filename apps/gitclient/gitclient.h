@@ -211,6 +211,7 @@ typedef struct {
   window_t *targets_win;
   window_t *run_button_win;
   window_t *terminal_button_win;
+  window_t *save_launch_button_win;
   window_t *terminal_tabs_win;
   bool terminal_shown;
   gc_run_t runs[GC_MAX_RUNS];

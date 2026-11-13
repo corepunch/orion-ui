@@ -6,6 +6,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
 
 static const char *k_kind_names[] = {"run", "build", "test"};
 
@@ -180,4 +188,177 @@ bool gc_launch_command(const gc_launch_target_t *t, const char *const *values, c
   if (!expand(t, values, t->run, true, &s)) return false;
   if (!s.ok) { fprintf(stderr, "[gc] launch target '%s': command longer than %zu bytes\n", t->name, n - 1); fflush(stderr); }
   return s.ok;
+}
+
+// ── guessed targets ────────────────────────────────────────────────────────────
+
+static bool checkout_has(const char *checkout, const char *file) {
+  char path[1024];
+  if (snprintf(path, sizeof(path), "%s/%s", checkout, file) >= (int)sizeof(path)) return false;
+  FILE *f = fopen(path, "rb");
+  if (f) fclose(f);
+  return f != NULL;
+}
+
+static char *read_checkout_file(const char *checkout, const char *file, size_t limit) {
+  char path[1024];
+  if (snprintf(path, sizeof(path), "%s/%s", checkout, file) >= (int)sizeof(path)) return NULL;
+  FILE *f = fopen(path, "rb");
+  if (!f) return NULL;
+  char *buf = malloc(limit + 1);
+  size_t n = buf ? fread(buf, 1, limit, f) : 0;
+  fclose(f);
+  if (buf) buf[n] = 0;
+  return buf;
+}
+
+static void guess(gc_launch_t *l, gc_target_kind_t kind, const char *command) {
+  if (l->count >= GC_MAX_TARGETS) return;
+  for (int i = 0; i < l->count; i++) if (!strcmp(l->targets[i].name, command)) return;
+  gc_launch_target_t *t = &l->targets[l->count++];
+  memset(t, 0, sizeof(*t));
+  snprintf(t->name, sizeof(t->name), "%s", command);
+  snprintf(t->run, sizeof(t->run), "%s", command);
+  t->kind = kind;
+}
+
+// A rule "name:" at the start of a line; enough to tell whether make test exists.
+static bool makefile_defines(const char *text, const char *rule) {
+  size_t len = strlen(rule);
+  for (const char *line = text; line; line = strchr(line, '\n'), line = line ? line + 1 : NULL)
+    if (!strncmp(line, rule, len) && line[len] == ':' && line[len + 1] != '=') return true;
+  return false;
+}
+
+// The keys of the top-level "scripts" object of a package.json.
+static int package_scripts(const char *json, char names[][48], int max) {
+  const char *p = strstr(json, "\"scripts\"");
+  if (!p || !(p = strchr(p + 9, '{'))) return 0;
+  int count = 0, depth = 0; bool key = true;
+  for (p++; *p; p++) {
+    if (*p == '"') {
+      const char *start = ++p;
+      while (*p && *p != '"') { if (*p == '\\' && p[1]) p++; p++; }
+      if (!*p) break;
+      size_t len = (size_t)(p - start);
+      if (depth == 0 && key && count < max && len > 0 && len < 48) {
+        memcpy(names[count], start, len); names[count][len] = 0;
+        bool plain = true;
+        for (size_t i = 0; i < len; i++) if (!isalnum((unsigned char)start[i]) && !strchr(":-_.", start[i])) plain = false;
+        if (plain) count++;
+      }
+    }
+    else if (*p == ':' && depth == 0) key = false;
+    else if (*p == ',' && depth == 0) key = true;
+    else if (*p == '{' || *p == '[') depth++;
+    else if (*p == '}' || *p == ']') { if (depth-- == 0) break; }
+  }
+  return count;
+}
+
+int gc_launch_guess(const char *checkout, gc_launch_t *out) {
+  if (!checkout || !out) return -1;
+  memset(out, 0, sizeof(*out)); out->default_index = -1; out->guessed = true;
+  static const char *makefiles[] = {"GNUmakefile", "makefile", "Makefile"};
+  for (int i = 0; i < 3; i++) {
+    char *text = read_checkout_file(checkout, makefiles[i], 256 * 1024);
+    if (!text) continue;
+    guess(out, GC_TARGET_BUILD, "make");
+    if (makefile_defines(text, "test"))       guess(out, GC_TARGET_TEST, "make test");
+    else if (makefile_defines(text, "check")) guess(out, GC_TARGET_TEST, "make check");
+    free(text);
+    break;
+  }
+  if (checkout_has(checkout, "Package.swift")) {
+    guess(out, GC_TARGET_RUN, "swift run"); guess(out, GC_TARGET_BUILD, "swift build"); guess(out, GC_TARGET_TEST, "swift test");
+  }
+  if (checkout_has(checkout, "Cargo.toml")) {
+    guess(out, GC_TARGET_RUN, "cargo run"); guess(out, GC_TARGET_BUILD, "cargo build"); guess(out, GC_TARGET_TEST, "cargo test");
+  }
+  if (checkout_has(checkout, "go.mod")) {
+    guess(out, GC_TARGET_RUN, "go run ."); guess(out, GC_TARGET_BUILD, "go build ./..."); guess(out, GC_TARGET_TEST, "go test ./...");
+  }
+  if (checkout_has(checkout, "CMakeLists.txt")) {
+    guess(out, GC_TARGET_BUILD, "cmake -S . -B build && cmake --build build");
+    guess(out, GC_TARGET_TEST, "ctest --test-dir build");
+  }
+  char *json = read_checkout_file(checkout, "package.json", 256 * 1024);
+  if (json) {
+    const char *npm = checkout_has(checkout, "pnpm-lock.yaml") ? "pnpm" : checkout_has(checkout, "yarn.lock") ? "yarn" : "npm";
+    char names[GC_MAX_TARGETS][48];
+    int n = package_scripts(json, names, GC_MAX_TARGETS);
+    for (int i = 0; i < n; i++) {
+      char command[96];
+      snprintf(command, sizeof(command), "%s run %s", npm, names[i]);
+      gc_target_kind_t kind = !strcmp(names[i], "test") || !strncmp(names[i], "test:", 5) ? GC_TARGET_TEST
+                            : !strcmp(names[i], "build") || !strncmp(names[i], "build:", 6) ? GC_TARGET_BUILD : GC_TARGET_RUN;
+      guess(out, kind, command);
+      if (kind == GC_TARGET_RUN && (!strcmp(names[i], "start") || !strcmp(names[i], "dev")) && out->default_index < 0)
+        out->default_index = out->count - 1;
+    }
+    free(json);
+  }
+  if (out->default_index < 0)
+    for (int i = 0; i < out->count; i++) if (out->targets[i].kind == GC_TARGET_RUN) { out->default_index = i; break; }
+  if (out->default_index >= 0) out->targets[out->default_index].is_default = true;
+  return out->count;
+}
+
+// ── saving ─────────────────────────────────────────────────────────────────────
+
+static void put_xml_attr(FILE *f, const char *name, const char *v) {
+  fprintf(f, " %s=\"", name);
+  for (; *v; v++)
+    switch (*v) {
+      case '&': fputs("&amp;", f);  break;
+      case '<': fputs("&lt;", f);   break;
+      case '>': fputs("&gt;", f);   break;
+      case '"': fputs("&quot;", f); break;
+      default:  fputc(*v, f);       break;
+    }
+  fputc('"', f);
+}
+
+bool gc_launch_save(const char *checkout, const gc_launch_t *l) {
+  if (!checkout || !l) return false;
+  char path[1024];
+  if (snprintf(path, sizeof(path), "%s/%s", checkout, GC_LAUNCH_FILE) >= (int)sizeof(path)) return false;
+  int fd = open(path, O_WRONLY | O_CREAT | O_EXCL, 0644);
+  FILE *f = fd >= 0 ? fdopen(fd, "w") : NULL;
+  if (!f) {
+    int err = errno;
+    if (fd >= 0) close(fd);
+    fprintf(stderr, "[gc] %s: not written (%s)\n", path, strerror(err)); fflush(stderr);
+    return false;
+  }
+  fputs("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<launch", f);
+  if (l->project[0]) put_xml_attr(f, "project", l->project);
+  fputs(">\n", f);
+  for (int i = 0; i < l->count; i++) {
+    const gc_launch_target_t *t = &l->targets[i];
+    fputs("    <target", f);
+    put_xml_attr(f, "name", t->name);
+    if (t->is_default) fputs(" default=\"true\"", f);
+    if (t->kind != GC_TARGET_RUN) put_xml_attr(f, "kind", gc_launch_kind_name(t->kind));
+    if (t->dir[0])   put_xml_attr(f, "dir", t->dir);
+    if (t->build[0]) put_xml_attr(f, "build", t->build);
+    put_xml_attr(f, "run", t->run);
+    if (!t->param_count && !t->env_count) { fputs(" />\n", f); continue; }
+    fputs(">\n", f);
+    for (int p = 0; p < t->param_count; p++) {
+      fputs("        <param", f); put_xml_attr(f, "name", t->params[p].name);
+      if (t->params[p].choices[0]) put_xml_attr(f, "choices", t->params[p].choices);
+      if (t->params[p].def[0])     put_xml_attr(f, "default", t->params[p].def);
+      fputs(" />\n", f);
+    }
+    for (int e = 0; e < t->env_count; e++) {
+      fputs("        <env", f); put_xml_attr(f, "name", t->env[e].name); put_xml_attr(f, "value", t->env[e].value); fputs(" />\n", f);
+    }
+    fputs("    </target>\n", f);
+  }
+  fputs("</launch>\n", f);
+  bool ok = !ferror(f);
+  if (fclose(f) != 0) ok = false;
+  if (!ok) { fprintf(stderr, "[gc] %s: write failed\n", path); fflush(stderr); }
+  return ok;
 }

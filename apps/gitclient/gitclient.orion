@@ -222,6 +222,7 @@
                 <field name="state" type="string" length="48"/>
                 <field name="tone" type="string" length="12"/>
                 <field name="target" type="string" length="64"/>
+                <field name="guessed" type="bool"/>
                 <field name="path" type="string" length="512"/>
                 <field name="root" type="string" length="512"/>
             </table>
@@ -302,6 +303,7 @@
                             <StackView name="targets_bar" orientation="horizontal" spacing="6" padding="14 8 14 8">
                                 <Button name="run_target" text="Run" icon="gc-play" tooltip="Run the selected target; click a running target's icon to stop it" />
                                 <Button name="show_terminal" text="Terminal" icon="gc-terminal-window" tooltip="Show or hide the output of the targets that ran" />
+                                <Button name="save_launch" text="Save launch.xml" icon="gc-floppy-disk" tooltip="Save the guessed targets as launch.xml at the root of the selected checkout" />
                             </StackView>
                             <TableView name="targets" source="workspace.targets" master="checkouts" flags="notitle,nofill,vscroll,flexspace">
                                 <RowIcon field="running" icon="gc-stop-circle" color="info" />

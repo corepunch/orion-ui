@@ -38,7 +38,8 @@ typedef struct {
   char project[96];
   gc_launch_target_t targets[GC_MAX_TARGETS];
   int count;
-  int default_index;   // -1 without targets
+  int default_index;   // -1 without a run target
+  bool guessed;        // from gc_launch_guess, not from a launch.xml
 } gc_launch_t;
 
 // Reads <checkout>/launch.xml. Returns the number of targets, 0 when the file is
@@ -49,5 +50,12 @@ int  gc_launch_parse(const char *xml_path, gc_launch_t *out);
 // overrides params[i] (NULL or a NULL entry keeps the param's default).
 bool gc_launch_command(const gc_launch_target_t *t, const char *const *values, char *out, size_t n);
 const char *gc_launch_kind_name(gc_target_kind_t kind);
+// Targets for a checkout without launch.xml, from the build files at its root:
+// Makefile (make, make test/check), Package.swift, Cargo.toml, go.mod,
+// CMakeLists.txt and package.json scripts. Each target is named after its
+// command. Returns the number found; out->guessed is set.
+int  gc_launch_guess(const char *checkout, gc_launch_t *out);
+// Writes launch as <checkout>/launch.xml. Refuses to replace an existing file.
+bool gc_launch_save(const char *checkout, const gc_launch_t *launch);
 
 #endif

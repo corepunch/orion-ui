@@ -118,6 +118,19 @@ rejected as a whole: the reason goes to stderr with its line number and the Runs
 "launch.xml has errors". `gc_launch.c` reads the file and builds each target's shell command
 (`gc_launch_command`); this repository's own [launch.xml](../../launch.xml) is an example.
 
+A checkout without a `launch.xml` gets guessed targets from the build files at its root
+(`gc_launch_guess`): `make` and `make test` (or `make check`) for a Makefile, `swift`, `cargo` and
+`go` run/build/test, a CMake build and `ctest`, and one target per `package.json` script, run with
+npm, yarn or pnpm by lock file. Each is named after its command, and the Runs column marks the
+default "(guessed)". **Save launch.xml** writes them to the checkout as a starting point; it never
+replaces an existing file.
+
+`make launch-check` (part of `make test`) keeps a repository's `launch.xml` honest: every
+`make X` in `build=` or `run=`, tried with each of its params' choices, must be a target in make's
+own database, and a command that starts a checkout file (`build/bin/gitclient`,
+`python3 tools/x.py`) must name a file that exists or that make builds. The checker is
+[tools/launch_check.py](../../tools/launch_check.py) and takes a checkout path.
+
 ## Rearranging views
 
 Each activity Page directly owns its [docking layout](../../docs/page-docking.md).

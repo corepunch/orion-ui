@@ -946,6 +946,77 @@ void test_gc_launch_rejects_malformed_files(void) {
     PASS();
 }
 
+static void write_in(const char *dir, const char *name, const char *body) {
+    char path[400];
+    snprintf(path, sizeof(path), "%s/%s", dir, name);
+    gct_write_file(path, body);
+}
+
+static int target_named(const gc_launch_t *l, const char *name) {
+    for (int i = 0; i < l->count; i++) if (!strcmp(l->targets[i].name, name)) return i;
+    return -1;
+}
+
+void test_gc_launch_guess_and_save(void) {
+    TEST("launch.xml: a checkout without one gets guessed targets that save as launch.xml");
+    char dir[256];
+    ASSERT_TRUE(gct_make_temp_dir(dir, sizeof(dir), "orion_gcguess"));
+    gc_launch_t *l = calloc(1, sizeof(*l)), *back = calloc(1, sizeof(*back));
+    ASSERT_NOT_NULL(l); ASSERT_NOT_NULL(back);
+    ASSERT_EQUAL(gc_launch_guess(dir, l), 0);
+    ASSERT_TRUE(l->guessed);
+    ASSERT_EQUAL(l->default_index, -1);
+
+    // make test is offered only when the Makefile has a test rule; TEST := x is not one.
+    write_in(dir, "Makefile", "TEST := x\nall:\n\tcc main.c\n");
+    ASSERT_EQUAL(gc_launch_guess(dir, l), 1);
+    ASSERT_STR_EQUAL(l->targets[0].run, "make");
+    ASSERT_EQUAL(l->targets[0].kind, GC_TARGET_BUILD);
+    ASSERT_EQUAL(l->default_index, -1);
+    write_in(dir, "Makefile", "all:\n\tcc main.c\ntest: all\n\t./run-tests\n");
+    ASSERT_EQUAL(gc_launch_guess(dir, l), 2);
+    ASSERT_EQUAL(l->targets[1].kind, GC_TARGET_TEST);
+    ASSERT_STR_EQUAL(l->targets[1].name, "make test");
+
+    // package.json scripts, with nested values and the lock file choosing the runner.
+    write_in(dir, "package.json",
+        "{ \"name\": \"web\", \"config\": { \"dev\": 1 },\n"
+        "  \"scripts\": { \"build\": \"vite build\", \"dev\": \"vite --port \\\"5173\\\"\", \"test:unit\": \"vitest\",\n"
+        "               \"lint\": \"eslint {src,tests}\" },\n"
+        "  \"devDependencies\": { \"vite\": \"5\" } }\n");
+    write_in(dir, "yarn.lock", "");
+    ASSERT_EQUAL(gc_launch_guess(dir, l), 6);
+    ASSERT_EQUAL(l->targets[target_named(l, "yarn run build")].kind, GC_TARGET_BUILD);
+    ASSERT_EQUAL(l->targets[target_named(l, "yarn run test:unit")].kind, GC_TARGET_TEST);
+    ASSERT_TRUE(target_named(l, "yarn run lint") >= 0);
+    ASSERT_EQUAL(target_named(l, "yarn run vite"), -1);
+    ASSERT_EQUAL(l->default_index, target_named(l, "yarn run dev"));
+
+    write_in(dir, "Package.swift", "// swift-tools-version:5.9\n");
+    ASSERT_EQUAL(gc_launch_guess(dir, l), 9);
+    ASSERT_EQUAL(l->default_index, target_named(l, "yarn run dev"));
+    ASSERT_EQUAL(l->targets[target_named(l, "swift test")].kind, GC_TARGET_TEST);
+
+    // Saving round-trips through the parser and never replaces an existing file.
+    snprintf(l->project, sizeof(l->project), "web & \"tools\"");
+    ASSERT_TRUE(gc_launch_save(dir, l));
+    ASSERT_EQUAL(gc_launch_load(dir, back), 9);
+    ASSERT_FALSE(back->guessed);
+    ASSERT_STR_EQUAL(back->project, "web & \"tools\"");
+    ASSERT_EQUAL(back->default_index, l->default_index);
+    for (int i = 0; i < l->count; i++) {
+        ASSERT_STR_EQUAL(back->targets[i].name, l->targets[i].name);
+        ASSERT_STR_EQUAL(back->targets[i].run, l->targets[i].run);
+        ASSERT_EQUAL(back->targets[i].kind, l->targets[i].kind);
+    }
+    ASSERT_FALSE(gc_launch_save(dir, l));
+    ASSERT_EQUAL(gc_launch_load(dir, back), 9);
+
+    free(l); free(back);
+    gct_remove_dir(dir);
+    PASS();
+}
+
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
@@ -994,6 +1065,7 @@ int main(int argc, char *argv[]) {
     test_gc_worktree_list_submodule_checkout();
     test_gc_launch_targets_and_commands();
     test_gc_launch_rejects_malformed_files();
+    test_gc_launch_guess_and_save();
 
     teardown_test_repo();
 
