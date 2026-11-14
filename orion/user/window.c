@@ -401,8 +401,16 @@ void set_application_workspace(window_t *owner, const irect16_t *area) {
   g_workspaces[slot].owner = owner;
   g_workspaces[slot].area = *area;
   for (window_t *win = g_ui_runtime.windows; win; win = win->next)
-    if (win != owner && !win->parent && win->hinstance == owner->hinstance && window_is_maximized(win))
-      update_maximized_window(win);
+    if (win != owner && !win->parent && win->hinstance == owner->hinstance) {
+      if (window_is_maximized(win)) update_maximized_window(win);
+      // A band that grew (a ribbon unfolding) must not cover a window's caption.
+      else if (!(win->flags & (WINDOW_ALWAYSONTOP | WINDOW_NOTITLE)) && window_has_state(win, WINDOW_STATE_VISIBLE) && win->frame.y < area->y)
+        move_window(win, win->frame.x, area->y);
+    }
+}
+
+bool get_application_workspace(hinstance_t hinstance, irect16_t *area) {
+  return area && registered_workspace_rect(hinstance, area);
 }
 
 static bool window_workspace_rect(window_t *win, irect16_t *area) {

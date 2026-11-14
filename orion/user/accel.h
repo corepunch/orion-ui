@@ -85,4 +85,8 @@ const accel_t *accel_find_cmd(const accel_table_t *table, uint16_t cmd);
 // Returns the number of characters written (not counting NUL).
 int accel_format(const accel_t *a, char *buf, int bufsize);
 
+// The AX_MOD_* keys the user holds for the entry: FCONTROL is Command on Apple
+// platforms, as translate_accelerator() matches it.
+uint32_t accel_modifiers(const accel_t *a);
+
 #endif // __UI_ACCEL_H__

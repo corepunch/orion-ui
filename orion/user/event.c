@@ -798,6 +798,10 @@ void dispatch_message(ui_event_t *msg) {
       theme_system_appearance_changed(msg->wParam != 0);
       break;
 
+    case kEventMenuCommand:
+      ui_native_menu_command(msg->wParam);
+      break;
+
     case kEventWindowResized: {
       int new_w = (int)LOWORD(msg->wParam);
       int new_h = (int)HIWORD(msg->wParam);

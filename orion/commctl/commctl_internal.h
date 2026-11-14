@@ -85,6 +85,14 @@ typedef struct {
 // set to 0 for header-only resize handles.
 #ifndef REPORTVIEW_RESIZE_FULL_HEIGHT
 #define REPORTVIEW_RESIZE_FULL_HEIGHT 1
+// The maximized window whose restore button the application's menu row shows (menu bar or ribbon).
+window_t *menu_row_maximized_window(window_t *row);
+// Shows the menus in the operating system's menu bar, with accel's shortcuts; false where it has none.
+// The choices reach owner as evCommand with kAcceleratorNotification.
+bool menu_install_native(window_t *owner, const menu_def_t *menus, int count, const accel_table_t *accel);
+// A ribbon's tab row, as tall as the window controls it shares the row with.
+int ribbon_tabs_height(const window_t *ribbon);
+
 #endif
 
 void rv_invalidate(window_t *win, reportview_data_t *data);
@@ -277,5 +285,13 @@ static inline void popup_item_paint(irect16_t row, const char *text, ctrl_state_
   if (text) draw_text_ellipsized(font, text, label.x, label.y + (label.h - text_char_height(font)) / 2,
                                 MAX(0, label.w), theme_foreground(THEME_PART_MENU_ITEM, state));
 }
+
+// The maximized window whose restore button the application's menu row shows (menu bar or ribbon).
+window_t *menu_row_maximized_window(window_t *row);
+// Shows the menus in the operating system's menu bar, with accel's shortcuts; false where it has none.
+// The choices reach owner as evCommand with kAcceleratorNotification.
+bool menu_install_native(window_t *owner, const menu_def_t *menus, int count, const accel_table_t *accel);
+// A ribbon's tab row, as tall as the window controls it shares the row with.
+int ribbon_tabs_height(const window_t *ribbon);
 
 #endif

@@ -228,6 +228,44 @@ void test_application_toolbar_declaration(void) {
   ASSERT_TRUE(contains(out, "TOOLBAR_PRESENTATION_NORMAL"));
   PASS();
 }
+static void test_ribbon_declaration(void) {
+  TEST("orionc: a ribbon places menu commands in tabs and groups and names what it leaves out");
+  char out[20000] = {0};
+  const char *menus = "<menus><menu name=\"file\" label=\"File\"><item name=\"new\" label=\"New...\" shortcut=\"Ctrl+N\"/>"
+    "<item name=\"quit\" label=\"Exit\"/></menu><menu name=\"edit\" label=\"Edit\"><item name=\"find\" label=\"Find\"/>"
+    "<item name=\"lost\" label=\"Lost\"/></menu><menu name=\"view\" label=\"View\"><item name=\"zoom\" label=\"Zoom\"/></menu></menus>";
+  char fixture[4000];
+  snprintf(fixture, sizeof(fixture), "<orion>%s<ribbon layout=\"simplified\"><ApplicationMenu menu=\"file\"/>"
+    "<QuickAccessToolbar><Button command=\"file.new\" icon=\"page-plus\"/></QuickAccessToolbar>"
+    "<Tab label=\"Home\"><Group label=\"Editing\"><Button command=\"edit.find\" icon=\"search\" text=\"Find\" size=\"large\" toggle=\"true\"/>"
+    "<Separator/><Button command=\"file.new\"/><DropDown menu=\"view\" text=\"View\"/></Group></Tab></ribbon></orion>", menus);
+  ASSERT_EQUAL(run_orionc(fixture, "ribbon", out, sizeof(out)), 0);
+  ASSERT_TRUE(contains(out, "static const ribbon_def_t test_ribbon"));
+  ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_BUTTON, ID_EDIT_FIND, \"search\", \"Find\", NULL, RIBBON_ITEM_LARGE | RIBBON_ITEM_CHECK, NULL, 0, NULL }"));
+  ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_BUTTON, ID_FILE_NEW, NULL, \"New\", NULL, 0, NULL, 0, NULL }"));
+  ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_DROPDOWN, 0, NULL, \"View\", NULL, 0, MENU_VIEW_ITEMS, ARRAY_LEN(MENU_VIEW_ITEMS), NULL }"));
+  ASSERT_TRUE(contains(out, "{ RIBBON_ITEM_SEPARATOR }"));
+  ASSERT_TRUE(contains(out, ".menu_label = \"File\", .menu_items = MENU_FILE_ITEMS"));
+  ASSERT_TRUE(contains(out, ".quick_access = &test_ribbon_quick_access, .layout = RIBBON_LAYOUT_SIMPLIFIED"));
+  ASSERT_TRUE(contains(out, "warning: command 'edit.lost' is not reachable from the ribbon"));
+  ASSERT_FALSE(contains(out, "'edit.find' is not reachable"));
+  ASSERT_FALSE(contains(out, "'view.zoom' is not reachable"));
+  const char *bad[][2] = {
+    { "<ribbon><Tab label=\"T\"><Group><Button command=\"edit.nope\"/></Group></Tab></ribbon>", "naming a declared command" },
+    { "<ribbon><Tab label=\"T\"><Group><DropDown menu=\"nope\" text=\"X\"/></Group></Tab></ribbon>", "naming a declared menu" },
+    { "<ribbon><ApplicationMenu menu=\"nope\"/></ribbon>", "<ApplicationMenu" },
+    { "<ribbon><Tab><Group/></Tab></ribbon>", "needs a label" },
+    { "<ribbon layout=\"tall\"/>", "classic or simplified" },
+    { "<ribbon><Tab label=\"T\"><Group><Button command=\"edit.find\" size=\"huge\"/></Group></Tab></ribbon>", "large or small" },
+    { "<ribbon><Tab label=\"T\"><Button command=\"edit.find\"/></Tab></ribbon>", "holds <Group>" },
+  };
+  for (int i = 0; i < (int)(sizeof(bad) / sizeof(bad[0])); i++) {
+    snprintf(fixture, sizeof(fixture), "<orion>%s%s</orion>", menus, bad[i][0]);
+    ASSERT_TRUE(run_orionc(fixture, "bad_ribbon", out, sizeof(out)) != 0);
+    ASSERT_TRUE(contains(out, bad[i][1]));
+  }
+  PASS();
+}
 static void test_content_column_width(void) {
   TEST("orionc: auto column width preserves intrinsic sizing");
   char out[12000] = {0};
@@ -396,6 +434,7 @@ int main(void) {
     test_activitybar_declaration();
     test_accounting_presentation_declaration();
     test_application_toolbar_declaration();
+    test_ribbon_declaration();
     test_top_level_toolbars_rejected();
     test_toolbar_reference_rejected();
     test_unknown_form_role_rejected();

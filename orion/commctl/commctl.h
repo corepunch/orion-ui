@@ -4,6 +4,7 @@
 #include <orion/user/user.h>
 #include <orion/user/gdi.h>
 #include <orion/user/toolbar.h>
+#include <orion/user/accel.h>
 #include <time.h>
 
 // ---------------------------------------------------------------------------
@@ -190,6 +191,10 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
 // Returns true on success.
 bool show_popup_menu(window_t *notify_win, const menu_item_t *items,
                      int item_count, int screen_x, int screen_y);
+// The same, with shortcut hints from accel (not owned; may be NULL). The popup is returned so
+// its owner can tell while it is open (is_window); notify_win repaints when it closes.
+window_t *show_popup_menu_accel(window_t *notify_win, const menu_item_t *items, int item_count,
+                                const accel_table_t *accel, int screen_x, int screen_y);
 
 // ---------------------------------------------------------------------------
 // appchrome.c
@@ -208,6 +213,60 @@ window_t *create_application_chrome(const char *title, winproc_t menubar_proc,
                                     hinstance_t hinstance);
 window_t *app_chrome_toolbar(window_t *chrome);
 window_t *app_chrome_add_toolbar(window_t *chrome, toolbar_dock_t dock, winproc_t proc);
+
+// ---------------------------------------------------------------------------
+// ribbon.c
+// ---------------------------------------------------------------------------
+
+// A ribbon is the application's command surface in place of a menu bar and a
+// toolbar band, after the Windows Ribbon framework: an application-menu button
+// and tabs in the menu row, and under them the active tab's commands in groups.
+// See docs/ribbon.md.
+typedef enum { RIBBON_ITEM_BUTTON, RIBBON_ITEM_DROPDOWN, RIBBON_ITEM_SEPARATOR } ribbon_item_type_t;
+typedef enum { RIBBON_LAYOUT_CLASSIC, RIBBON_LAYOUT_SIMPLIFIED } ribbon_layout_t; // three rows with captions; one row
+#define RIBBON_ITEM_LARGE (1u << 0) // icon over caption, as tall as the group (≈ a SizeDefinition's large button)
+#define RIBBON_ITEM_CHECK (1u << 1) // toggles TBSTATE_CHECKED on each click (≈ ToggleButton)
+#define RIBBON_MAX_GROUPS 16        // groups in one tab
+
+typedef struct {
+  ribbon_item_type_t type;
+  uint16_t           ident;        // command ID; 0 for a separator or a drop-down that only opens its menu
+  const char        *icon;         // named icon, NULL = text only
+  const char        *text;
+  const char        *tooltip;      // NULL = text; the command's shortcut is appended
+  uint32_t           style;        // RIBBON_ITEM_*
+  const menu_item_t *menu;         // RIBBON_ITEM_DROPDOWN: the menu it opens
+  int                menu_count;
+  const char        *checked_icon; // shown while TBSTATE_CHECKED
+} ribbon_item_t;
+
+typedef struct { const char *label; const ribbon_item_t *items; int count; } ribbon_group_t;
+typedef struct { const char *label; const ribbon_group_t *groups; int count; } ribbon_tab_t;
+
+typedef struct {
+  const ribbon_tab_t          *tabs;
+  int                          tab_count;
+  const char                  *menu_label;   // application menu ("File"); NULL = no button
+  const menu_item_t           *menu_items;
+  int                          menu_count;
+  const application_toolbar_t *quick_access; // Quick Access Toolbar, beside the tabs; NULL = none
+  ribbon_layout_t              layout;       // initial layout
+} ribbon_def_t;
+
+// Commands arrive at the ribbon's own procedure, so an application wraps win_ribbon as it
+// wraps win_menubar: evCommand with btnClicked from a button, kMenuBarNotificationItemClick
+// from the application menu or a drop-down. kMenuBarMessageSetAccelerators supplies shortcut
+// hints for menus and tooltips; kMenuBarMessageGetContentWidth reports the tab row's extent.
+// kMenuBarMessageSetMenus hands over the application's whole menu for the operating system's
+// menu bar: where there is one the menus show there (their choices arrive as evCommand with
+// kAcceleratorNotification) and the ribbon drops its application-menu button.
+result_t win_ribbon(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+
+// Application chrome whose top row is a ribbon. The Quick Access Toolbar is the compact
+// application toolbar; toolbar_proc may be NULL when the ribbon declares none.
+window_t *create_ribbon_chrome(const char *title, winproc_t ribbon_proc, const ribbon_def_t *ribbon,
+                               winproc_t toolbar_proc, hinstance_t hinstance);
+window_t *app_chrome_ribbon(window_t *chrome);
 
 // ---------------------------------------------------------------------------
 // filelist.c

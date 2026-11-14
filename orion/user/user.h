@@ -763,6 +763,18 @@ bool maximize_window(window_t *win);
 bool restore_window(window_t *win);
 void update_maximized_window(window_t *win);
 void set_application_workspace(window_t *owner, const irect16_t *area);
+// The operating system's own chrome (native_chrome.c). Each answers false where the platform
+// has none, and the application then shows its own menu and keeps its title bar.
+// The menu's choices reach owner as evCommand with kAcceleratorNotification, like accelerators.
+bool ui_set_native_menu(window_t *owner, const ax_menu_item_t *menus, int count);
+void ui_native_menu_command(uint32_t command);
+// Hides the title bar behind the content; ui_native_window_controls() is then the room the
+// window's own buttons take at the screen's top-left corner ({0, 0} when there are none).
+bool ui_set_native_titlebar_hidden(bool hidden);
+isize16_t ui_native_window_controls(void);
+bool ui_drag_native_window(void);   // from evLeftButtonDown over content that stands in for the title bar
+// The registered workspace in screen coordinates; false when the instance has none.
+bool get_application_workspace(hinstance_t hinstance, irect16_t *area);
 // The window that registered the application workspace (its chrome or menu bar), or NULL.
 window_t *get_application_workspace_owner(hinstance_t hinstance);
 void move_window(window_t *win, int x, int y);

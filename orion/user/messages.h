@@ -610,6 +610,21 @@ enum {
   sgSetSegmentColor,            // wparam = index; lparam = (void*)(uintptr_t)color dot drawn before the label; 0 clears
   sgnSelChange,                 // control -> parent (evCommand): LOWORD = control id, lparam = control
 };
+// Ribbon messages (≈ the Windows Ribbon framework's IUIFramework). Commands are addressed by
+// their ident, wherever they sit; a command placed twice keeps one state.
+enum {
+  rbSetRibbon = evUser + 600,   // lparam = const ribbon_def_t* (borrowed: static data, as menus are)
+  rbGetActiveTab,               // returns the active tab's index
+  rbSetActiveTab,               // wparam = tab index
+  rbGetState,                   // wparam = command ident; returns TBSTATE_* bits, or -1 when absent
+  rbSetState,                   // wparam = command ident, lparam = (void *)(uintptr_t)TBSTATE_* bits
+  rbGetLayout,                  // returns ribbon_layout_t
+  rbSetLayout,                  // wparam = ribbon_layout_t
+  rbGetMinimized,               // nonzero while only the tab row shows
+  rbSetMinimized,               // wparam = nonzero hides the command panel (≈ Ctrl+F1)
+  rbGetItemRect,                // wparam = command ident; lparam = irect16_t* out, in control coordinates; false when not shown
+  rbGetTabRect,                 // wparam = tab index, -1 = the application-menu button; lparam = irect16_t* out
+};
 // Sprite controls (SpriteButton / SpriteSlider): bitmap-skinned variants of Button and Slider.
 // SpriteSlider also answers slSetRange / slSetPos / slGetPos and notifies with sliderValueChanged,
 // exactly like Slider; SpriteButton toggles with btnSetCheck / btnGetCheck and notifies btnClicked.
