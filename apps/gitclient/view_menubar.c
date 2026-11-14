@@ -37,6 +37,19 @@ result_t gc_menubar_proc(window_t *win, uint32_t msg,
   return win_menubar(win, msg, wparam, lparam);
 }
 
+#ifndef BUILD_AS_GEM
+result_t gc_ribbon_proc(window_t *win, uint32_t msg,
+                        uint32_t wparam, void *lparam) {
+  if (msg == evCommand &&
+      (HIWORD(wparam) == btnClicked || HIWORD(wparam) == kMenuBarNotificationItemClick ||
+       HIWORD(wparam) == kAcceleratorNotification)) {
+    (void)gc_execute_action(LOWORD(wparam));
+    return true;
+  }
+  return win_ribbon(win, msg, wparam, lparam);
+}
+#endif
+
 result_t gc_toolbar_proc(window_t *win, uint32_t msg,
                         uint32_t wparam, void *lparam) {
   (void)lparam;
@@ -59,10 +72,9 @@ void gc_create_menubar(void) {
                                               gc_toolbar_proc, &gitclient_application_toolbar,
                                               gc->hinstance);
 #else
-  gc->chrome_win  = create_application_chrome("Git Client Chrome", gc_menubar_proc,
-                                              kGCMenus, kGCMenuCount, gc_toolbar_proc,
-                                              &gitclient_application_toolbar, gc->hinstance);
-  gc->menubar_win = app_chrome_menubar(gc->chrome_win);
+  gc->chrome_win  = create_ribbon_chrome("Git Client Chrome", gc_ribbon_proc, &gitclient_ribbon,
+                                         gc_toolbar_proc, gc->hinstance);
+  gc->menubar_win = app_chrome_ribbon(gc->chrome_win);
   if (!gc->menubar_win)
     gc->menubar_win = set_app_menu(gc_menubar_proc, kGCMenus, kGCMenuCount,
                                    gc_handle_command, gc->hinstance);
@@ -74,6 +86,11 @@ void gc_create_menubar(void) {
   if (gc->menubar_win && gc->accel)
     send_message(gc->menubar_win, kMenuBarMessageSetAccelerators,
                  0, gc->accel);
+#ifndef BUILD_AS_GEM
+  // Every menu goes to the operating system's menu bar where it has one; the ribbon keeps the rest.
+  if (gc->menubar_win)
+    send_message(gc->menubar_win, kMenuBarMessageSetMenus, kGCMenuCount, (void *)kGCMenus);
+#endif
 }
 
 void gc_handle_command_impl(uint16_t id) {

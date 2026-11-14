@@ -6,6 +6,10 @@ canonical way to build application-level and per-window toolbars.
 
 ## Overview
 
+An application whose commands are a [ribbon](ribbon.md) has no toolbar band:
+its compact application toolbar is the ribbon's Quick Access Toolbar. Window
+toolbars are the same either way.
+
 `TOOLBAR_STYLE_TRANSPARENT` skips the toolbar band's background fill, allowing
 the parent surface to show through. Buttons retain their ordinary hover and
 pressed feedback. TabView uses this style for its header action toolbar so

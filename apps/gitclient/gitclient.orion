@@ -107,6 +107,120 @@
         </menu>
     </menus>
 
+    <!-- Standalone, Git Client's commands are a ribbon: File is the application menu and the
+         everyday commands stay beside the tabs as the Quick Access Toolbar. As a gem the shell
+         owns the menu row, so the menus above and the toolbar below serve there. -->
+    <ribbon>
+        <ApplicationMenu menu="file" />
+        <QuickAccessToolbar>
+            <Button command="remote.sync" icon="data-transfer-both" tooltip="Publish, pull, or push the current branch" />
+            <Button command="remote.fetch" icon="git-fetch" tooltip="Fetch from remote" />
+            <Button command="commit.commit" icon="git-commit" tooltip="Commit staged changes" />
+            <Button command="repo.search" icon="search" tooltip="Search repository history" />
+            <Button command="repo.refresh" icon="refresh" tooltip="Refresh" />
+        </QuickAccessToolbar>
+        <Tab label="Home">
+            <Group label="Sync">
+                <Button command="remote.sync" icon="data-transfer-both" text="Sync" size="large" tooltip="Publish, pull, or push the current branch" />
+                <Button command="remote.fetch" icon="git-fetch" text="Fetch" />
+                <Button command="remote.pull" icon="download" text="Pull" />
+                <Button command="remote.push" icon="upload" text="Push" />
+            </Group>
+            <Group label="Commit">
+                <Button command="commit.commit" icon="git-commit" text="Commit" size="large" tooltip="Commit staged changes" />
+                <Button command="commit.amend" icon="edit-pencil" text="Amend Last" tooltip="Amend the last commit" />
+                <Button command="commit.undo" icon="undo" text="Undo Last" tooltip="Undo the last commit" />
+                <Button command="commit.discard" icon="trash" text="Discard Changes" />
+            </Group>
+            <Group label="Files">
+                <Button command="files.stage_all" icon="plus-square" text="Stage All" size="large" />
+                <Button command="files.stage" icon="plus" text="Stage" />
+                <Button command="files.unstage" icon="minus" text="Unstage" />
+                <Button command="files.unstage_all" icon="minus-square" text="Unstage All" />
+                <Button command="files.reveal" icon="folder" text="Reveal" tooltip="Reveal in the file manager" />
+                <Button command="files.discard" icon="trash" text="Discard" tooltip="Discard the selected file's changes" />
+            </Group>
+            <Group label="Stash">
+                <Button command="commit.stash" icon="import" text="Stash" tooltip="Stash changes" />
+                <Button command="commit.stash_pop" icon="upload-square" text="Pop" tooltip="Pop the stash" />
+                <Button command="commit.stash_drop" icon="xmark" text="Drop" tooltip="Drop a stash" />
+            </Group>
+            <Group label="Repository">
+                <Button command="repo.refresh" icon="refresh" text="Refresh" size="large" />
+                <Button command="repo.search" icon="search" text="Search" />
+                <Button command="repo.terminal" icon="terminal" text="Terminal" tooltip="Open a terminal here" />
+                <Button command="repo.identity" icon="user" text="Identity" tooltip="Git identity" />
+            </Group>
+        </Tab>
+        <Tab label="Branch">
+            <Group label="Branch">
+                <Button command="branch.new" icon="git-fork" text="New Branch" size="large" />
+                <Button command="branch.checkout" icon="arrow-right" text="Checkout" size="large" />
+            </Group>
+            <Group label="Integrate">
+                <Button command="branch.merge" icon="git-diff" text="Merge Into Current" size="large" />
+                <Button command="branch.rebase" icon="arrow-separate-vertical" text="Rebase Current" size="large" />
+            </Group>
+            <Group label="Manage">
+                <Button command="branch.rename" icon="edit-pencil" text="Rename" />
+                <Button command="branch.delete" icon="trash" text="Delete" />
+                <Button command="branch.delete_merged" icon="check-circle" text="Delete Merged" tooltip="Delete local branches already merged into the default branch" />
+            </Group>
+            <Group label="Tags">
+                <Button command="tag.create" icon="triangle-flag" text="Create Tag" size="large" />
+                <Button command="tag.delete" icon="trash" text="Delete Tag" />
+                <Button command="tag.push" icon="upload" text="Push Tags" />
+            </Group>
+        </Tab>
+        <Tab label="Remote">
+            <Group label="Current Branch">
+                <Button command="remote.sync" icon="data-transfer-both" text="Sync" size="large" tooltip="Publish, pull, or push the current branch" />
+                <Button command="remote.pull" icon="download" text="Pull" size="large" />
+                <Button command="remote.push" icon="upload" text="Push" size="large" />
+            </Group>
+            <Group label="Fetch">
+                <Button command="remote.fetch" icon="git-fetch" text="Fetch" size="large" />
+                <Button command="remote.fetch_all" icon="git-repos" text="Fetch All" size="large" tooltip="Fetch every repository in the background" />
+            </Group>
+            <Group label="Remotes">
+                <Button command="remote.manage" icon="settings" text="Manage Remotes" size="large" />
+                <Button command="remote.prune" icon="scissor" text="Prune Origin" size="large" tooltip="Prune deleted remote-tracking branches" />
+            </Group>
+        </Tab>
+        <Tab label="View">
+            <Group label="Show">
+                <Button command="view.overview" icon="gc-nav-overview" text="Overview" size="large" />
+                <Button command="view.changes" icon="gc-nav-changes" text="Changes" size="large" />
+                <Button command="view.history" icon="gc-nav-history" text="History" size="large" />
+                <Button command="view.github" icon="gc-nav-github" text="GitHub" size="large" />
+            </Group>
+            <Group label="History">
+                <Button command="view.all_commits" icon="list" text="All Commits" />
+                <Button command="view.reflog" icon="clock-rotate-right" text="Reflog" />
+                <Button command="view.worktrees" icon="view-grid" text="Worktrees" />
+            </Group>
+            <Group label="Split">
+                <Button command="view.split_right" icon="pane-split-right" text="Split Right" size="large" />
+                <Button command="view.split_down" icon="pane-split-down" text="Split Below" size="large" />
+                <Button command="view.split_left" icon="pane-split-right" text="Split Left" />
+                <Button command="view.split_up" icon="pane-split-down" text="Split Above" />
+                <Button command="view.move_tab" icon="arrow-right-to-line" text="Move to Next Pane" />
+            </Group>
+            <Group label="Views">
+                <Button command="view.next_pane" icon="select-window" text="Next Pane" />
+                <Button command="view.next_tab" icon="nav-arrow-right" text="Next View" />
+                <Button command="view.close_tab" icon="pane-close" text="Close View" />
+                <Button command="view.show_closed_views" icon="eye" text="Show Closed" tooltip="Show closed views" />
+                <Button command="view.window_mode" icon="expand" text="Maximize" tooltip="Maximize or restore the window" />
+            </Group>
+        </Tab>
+        <Tab label="Help">
+            <Group label="Git Client">
+                <Button command="help.about" icon="info-circle" text="About Git Client" size="large" />
+            </Group>
+        </Tab>
+    </ribbon>
+
     <toolbar presentation="compact">
         <Button name="sync" command="remote.sync" icon="data-transfer-both" text="Sync" tooltip="Publish, pull, or push the current branch" />
         <Button name="fetch" command="remote.fetch" icon="git-fetch" text="Fetch" tooltip="Fetch from remote" />
