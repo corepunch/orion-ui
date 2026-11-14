@@ -22,9 +22,10 @@
 // Fills must match and edges may rasterise differently, as text does: a pixel
 // whose 3x3 neighbourhood in Chrome's image is even (no channel steps by more
 // than EDGE_STEP) is inside a fill and may be off by at most FILL; one on an
-// edge (Chrome flattens curves into chords) by at most EDGE.
+// edge (Chrome flattens curves into chords) by at most EDGE. A soft shadow's
+// blur is the widest fill difference: 12 on macOS, 13 on Mesa's software GL.
 #define EDGE_STEP 24
-#define FILL      12
+#define FILL      14
 #define EDGE      80
 
 // Text rasterises differently in every engine (Chrome hints and positions glyphs on
