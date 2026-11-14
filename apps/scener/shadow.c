@@ -90,8 +90,8 @@ int build_shadow_indices(const Mesh *m,vec3 lightPos,vec3 lightDir,int isDir,uns
 	}
 	*nsides=n;
 	for(int i=0;i<nt;i++){
-		unsigned a=(unsigned)m->tris[i].a,b=(unsigned)m->tris[i].b,c=(unsigned)m->tris[i].c,far=facing[i]?0u:1u;
-		ix[n++]=2*a+far; ix[n++]=2*b+far; ix[n++]=2*c+far;
+		unsigned a=(unsigned)m->tris[i].a,b=(unsigned)m->tris[i].b,c=(unsigned)m->tris[i].c,cap=facing[i]?0u:1u;
+		ix[n++]=2*a+cap; ix[n++]=2*b+cap; ix[n++]=2*c+cap;
 	}
 	(void)nface;
 	free(facing);
