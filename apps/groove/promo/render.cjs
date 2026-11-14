@@ -72,7 +72,7 @@ async function main() {
       svg(brand(false, '02') + lines(['Find your', 'sound.'], 140, 405, 170, '#103a92', 195) +
         lines(['Drums. Bass. Synths.', 'Vocals. And more.'], 150, 765, 64, '#445c85', 95, 500) +
         app('skyline', [1250, 360, 1345, 850]) + pill('THE SOUND LIBRARY · DETAIL', 150, 1200, '#315692') +
-        app('skyline', [150, 1290, 2452, 610], [0, meta.height*960/1520, meta.width, meta.height*560/1520]), false),
+        app('skyline', [150, 1290, 2452, 610], [0, meta.height*845/1520, meta.width, meta.height*587/1520]), false),
       svg(brand(true, '03') + lines(['Layer your ideas.', 'Find your groove.'], 1376, 370, 158, '#ffffff', 185, 700, 'middle') +
         text('Build your arrangement across eight tracks.', 1376, 695, 60, '#d9e7ff', 500, 'middle') +
         app('afterglow', [150, 850, 2452, 985], [0, 0, meta.width, meta.height*950/1520]) +
