@@ -91,3 +91,13 @@ int accel_format(const accel_t *a, char *buf, int bufsize) {
   if (prefix < bufsize - 1 && buf[prefix] >= 'a' && buf[prefix] <= 'z') buf[prefix] = (char)(buf[prefix] - 'a' + 'A');
   return prefix + n;
 }
+
+uint32_t accel_modifiers(const accel_t *a) {
+  if (!a) return 0;
+#ifdef __APPLE__
+  uint32_t ctrl = AX_MOD_CMD;
+#else
+  uint32_t ctrl = AX_MOD_CTRL;
+#endif
+  return ((a->fVirt & FCONTROL) ? ctrl : 0) | ((a->fVirt & FSHIFT) ? AX_MOD_SHIFT : 0) | ((a->fVirt & FALT) ? AX_MOD_ALT : 0);
+}

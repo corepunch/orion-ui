@@ -608,6 +608,151 @@ static void emit_activitybars(FILE *f, xmlNodePtr parent, const char *form) {
   }
 }
 
+// ── Ribbon ────────────────────────────────────────────────────────────────────
+// <ribbon> follows the Windows Ribbon framework's markup: an <ApplicationMenu>, a
+// <QuickAccessToolbar>, and <Tab>s of <Group>s holding <Button>, <DropDown> and
+// <Separator>. Commands are the menu-declared ones; the ribbon only places them.
+
+static xmlNodePtr find_menu(xmlNodePtr menus, const char *name) {
+  EACH_ELEMENT(m, menus) if (elem(m, "menu")) { char *n = attr(m, "name"); bool hit = eq(n, name); free(n); if (hit) return m; }
+  return NULL;
+}
+
+static const action_meta_t *find_action(const action_meta_list_t *meta, const char *name) {
+  for (int i = 0; name && i < meta->n; i++) if (eq(meta->v[i].name, name)) return &meta->v[i];
+  return NULL;
+}
+
+static void collect_ribbon_refs(cmd_refs_t *refs, xmlNodePtr ribbon) {
+  EACH_ELEMENT(tab, ribbon) if (elem(tab, "tab")) EACH_ELEMENT(group, tab) if (elem(group, "group")) EACH_ELEMENT(it, group) {
+    char *command = attr(it, "command"), id[256];
+    if (command && *command && resolve_action(id, sizeof(id), command, NULL, NULL, NULL, NULL) && refs->n < ORIONC_MAX_IDS) {
+      snprintf(refs->v[refs->n].name, ORIONC_MAX_IDENT, "%s", command);
+      snprintf(refs->v[refs->n].id, ORIONC_MAX_IDENT, "%s", id);
+      refs->n++;
+    }
+    free(command);
+  }
+}
+
+static int ribbon_error(const char *what, const char *detail) {
+  fprintf(stderr, "orionc: ribbon: %s%s%s\n", what, detail ? " " : "", nz(detail, ""));
+  return 1;
+}
+
+// Rejects malformed ribbons, and names the menu commands the ribbon leaves unreachable:
+// with no menu bar, a command that is on no tab and in no menu the ribbon opens is lost.
+static int validate_ribbon(xmlNodePtr ribbon, xmlNodePtr menus, const action_meta_list_t *meta) {
+  int errors = 0, app_menus = 0, quick = 0;
+  bool *reached = calloc((size_t)(meta->n ? meta->n : 1), sizeof(bool));
+  char *layout = attr(ribbon, "layout");
+  if (layout && !eq(layout, "classic") && !eq(layout, "simplified")) errors += ribbon_error("layout must be classic or simplified, not", layout);
+  free(layout);
+  EACH_ELEMENT(n, ribbon) {
+    if (elem(n, "applicationmenu")) {
+      char *menu = attr(n, "menu");
+      if (++app_menus > 1 || !find_menu(menus, menu)) errors += ribbon_error("one <ApplicationMenu menu=\"...\"> naming a declared menu is allowed; got", menu);
+      for (int i = 0; i < meta->n; i++) if (eq(meta->v[i].category, menu)) reached[i] = true;
+      free(menu);
+    } else if (elem(n, "quickaccesstoolbar")) {
+      if (++quick > 1) errors += ribbon_error("declares more than one <QuickAccessToolbar>", NULL);
+      EACH_ELEMENT(it, n) { char *command = attr(it, "command"); for (int i = 0; i < meta->n; i++) if (eq(meta->v[i].name, command)) reached[i] = true; free(command); }
+    } else if (elem(n, "tab")) {
+      char *label = attr(n, "label"); int groups = 0;
+      if (!label || !*label) errors += ribbon_error("a <Tab> needs a label", NULL);
+      EACH_ELEMENT(group, n) {
+        if (!elem(group, "group")) { errors += ribbon_error("a <Tab> holds <Group> elements, not", (const char *)group->name); continue; }
+        groups++;
+        EACH_ELEMENT(it, group) {
+          char *command = attr(it, "command"), *menu = attr(it, "menu"), *text = attr(it, "text"), *size = attr(it, "size");
+          if (size && !eq(size, "large") && !eq(size, "small")) errors += ribbon_error("size must be large or small, not", size);
+          if (elem(it, "button")) {
+            if (!find_action(meta, command)) errors += ribbon_error("a <Button> needs command=\"menu.item\" naming a declared command; got", nz(command, "none"));
+          } else if (elem(it, "dropdown")) {
+            if (!find_menu(menus, menu) || !text || !*text) errors += ribbon_error("a <DropDown> needs text and menu=\"...\" naming a declared menu; got", nz(menu, "none"));
+            for (int i = 0; i < meta->n; i++) if (eq(meta->v[i].category, menu)) reached[i] = true;
+          } else if (!elem(it, "separator")) errors += ribbon_error("a <Group> holds <Button>, <DropDown> and <Separator>, not", (const char *)it->name);
+          for (int i = 0; i < meta->n; i++) if (eq(meta->v[i].name, command)) reached[i] = true;
+          free(command); free(menu); free(text); free(size);
+        }
+      }
+      if (groups > 16) errors += ribbon_error("a <Tab> holds at most 16 groups (RIBBON_MAX_GROUPS):", label);
+      free(label);
+    } else errors += ribbon_error("holds <ApplicationMenu>, <QuickAccessToolbar> and <Tab>, not", (const char *)n->name);
+  }
+  for (int i = 0; i < meta->n; i++)
+    if (!reached[i]) fprintf(stderr, "orionc: warning: command '%s' is not reachable from the ribbon\n", meta->v[i].name);
+  free(reached);
+  return errors;
+}
+
+static void emit_ribbon(FILE *f, xmlNodePtr ribbon, xmlNodePtr menus, const char *pre, const action_meta_list_t *meta) {
+  int tab_index = 0;
+  LINE("#include <orion/user/toolbar.h>\n");
+  xmlNodePtr quick = child(ribbon, "quickaccesstoolbar"), app_menu = child(ribbon, "applicationmenu");
+  if (quick) {
+    char symbol[256]; snprintf(symbol, sizeof(symbol), "%s_ribbon_quick_access_items", pre);
+    emit_toolbar(f, quick, symbol, "application");
+    OUT("static const application_toolbar_t %s_ribbon_quick_access = { .items = %s, .count = ARRAY_LEN(%s), .presentation = TOOLBAR_PRESENTATION_COMPACT };\n\n", pre, symbol, symbol);
+  }
+  EACH_ELEMENT(tab, ribbon) if (elem(tab, "tab")) {
+    int group_index = 0;
+    EACH_ELEMENT(group, tab) if (elem(group, "group")) {
+      OUT("static const ribbon_item_t %s_ribbon_tab%d_group%d[] = {\n", pre, tab_index, group_index++);
+      EACH_ELEMENT(it, group) {
+        char *command = attr(it, "command"), *menu = attr(it, "menu"), *icon = attr(it, "icon"), *text = attr(it, "text"), *tooltip = attr(it, "tooltip");
+        char *size = attr(it, "size"), *toggle = attr(it, "toggle"), *checked = attr(it, "checked-icon");
+        char id[256] = "0", textq[ORIONC_STRING_SIZE], tipq[ORIONC_STRING_SIZE], iconq[256], checkedq[256], menuq[600] = "NULL, 0";
+        const action_meta_t *action = find_action(meta, command);
+        if (action) resolve_action(id, sizeof(id), command, NULL, NULL, NULL, NULL);
+        // A button without text takes its command's menu label, less the ellipsis a menu item carries.
+        char fallback[ORIONC_STRING_SIZE] = "";
+        if (action) { snprintf(fallback, sizeof(fallback), "%s", action->label); size_t n = strlen(fallback); if (n > 3 && eq(fallback + n - 3, "...")) fallback[n - 3] = 0; }
+        if (text && *text) cstr(textq, sizeof(textq), text); else if (fallback[0]) cstr(textq, sizeof(textq), fallback); else snprintf(textq, sizeof(textq), "NULL");
+        if (tooltip && *tooltip) cstr(tipq, sizeof(tipq), tooltip); else snprintf(tipq, sizeof(tipq), "NULL");
+        if (icon && *icon) snprintf(iconq, sizeof(iconq), "\"%s\"", icon); else snprintf(iconq, sizeof(iconq), "NULL");
+        if (checked && *checked) snprintf(checkedq, sizeof(checkedq), "\"%s\"", checked); else snprintf(checkedq, sizeof(checkedq), "NULL");
+        if (elem(it, "dropdown")) { char scope[128]; ident(scope, sizeof(scope), menu, true); snprintf(menuq, sizeof(menuq), "MENU_%s_ITEMS, ARRAY_LEN(MENU_%s_ITEMS)", scope, scope); }
+        if (elem(it, "separator")) LINE("  { RIBBON_ITEM_SEPARATOR },\n");
+        else OUT("  { %s, %s, %s, %s, %s, %s%s, %s, %s },\n", elem(it, "dropdown") ? "RIBBON_ITEM_DROPDOWN" : "RIBBON_ITEM_BUTTON", id, iconq, textq, tipq,
+                 eq(size, "large") ? "RIBBON_ITEM_LARGE" : "0", eq(toggle, "true") || eq(toggle, "1") ? " | RIBBON_ITEM_CHECK" : "", menuq, checkedq);
+        free(command); free(menu); free(icon); free(text); free(tooltip); free(size); free(toggle); free(checked);
+      }
+      LINE("};\n");
+    }
+    OUT("static const ribbon_group_t %s_ribbon_tab%d_groups[] = {\n", pre, tab_index);
+    group_index = 0;
+    EACH_ELEMENT(group, tab) if (elem(group, "group")) {
+      char *raw = attr(group, "label"), label[ORIONC_STRING_SIZE];
+      if (raw && *raw) cstr(label, sizeof(label), raw); else snprintf(label, sizeof(label), "NULL");
+      OUT("  { %s, %s_ribbon_tab%d_group%d, ARRAY_LEN(%s_ribbon_tab%d_group%d) },\n", label, pre, tab_index, group_index, pre, tab_index, group_index);
+      group_index++; free(raw);
+    }
+    LINE("};\n\n");
+    tab_index++;
+  }
+  OUT("static const ribbon_tab_t %s_ribbon_tabs[] = {\n", pre);
+  tab_index = 0;
+  EACH_ELEMENT(tab, ribbon) if (elem(tab, "tab")) {
+    char *raw = attr(tab, "label"), label[ORIONC_STRING_SIZE]; cstr(label, sizeof(label), raw);
+    OUT("  { %s, %s_ribbon_tab%d_groups, ARRAY_LEN(%s_ribbon_tab%d_groups) },\n", label, pre, tab_index, pre, tab_index);
+    tab_index++; free(raw);
+  }
+  LINE("};\n");
+  OUT("static const ribbon_def_t %s_ribbon = { .tabs = %s_ribbon_tabs, .tab_count = ARRAY_LEN(%s_ribbon_tabs)", pre, pre, pre);
+  if (app_menu) {
+    char *menu = attr(app_menu, "menu"), *override = attr(app_menu, "label"), scope[128], label[ORIONC_STRING_SIZE];
+    char *raw = override && *override ? strdup(override) : attr(find_menu(menus, menu), "label");
+    ident(scope, sizeof(scope), menu, true); cstr(label, sizeof(label), raw);
+    OUT(", .menu_label = %s, .menu_items = MENU_%s_ITEMS, .menu_count = ARRAY_LEN(MENU_%s_ITEMS)", label, scope, scope);
+    free(menu); free(override); free(raw);
+  }
+  if (quick) OUT(", .quick_access = &%s_ribbon_quick_access", pre);
+  char *layout = attr(ribbon, "layout");
+  OUT(", .layout = %s };\n\n", eq(layout, "simplified") ? "RIBBON_LAYOUT_SIMPLIFIED" : "RIBBON_LAYOUT_CLASSIC");
+  free(layout);
+}
+
 // Validate the action manifest: reject unknown references, duplicate hotkeys,
 // duplicate action names, and malformed hotkey strings. Returns the number of
 // errors found.
@@ -1658,6 +1803,9 @@ int main(int argc, char **argv) {
   EACH_ELEMENT(m, menus) if (elem(m, "menu")) { char *name = attr(m, "name"), scope[128]; ident(scope, sizeof(scope), name, true); collect_menu_ids(&commands, &meta, m, scope, name); free(name); }
   EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"); collect_toolbar_ids(&commands, &refs, child(form, "toolbar"), name); collect_toolbar_ids(&commands, &refs, child(form, "panetoolbar"), name); collect_activitybar_ids(&commands, &refs, form, name); free(name); }
   collect_toolbar_ids(&commands, &refs, app_toolbar, "application");
+  xmlNodePtr ribbon = child(root, "ribbon");
+  collect_toolbar_ids(&commands, &refs, child(ribbon, "quickaccesstoolbar"), "application");
+  collect_ribbon_refs(&refs, ribbon);
   collect_context_ids(&commands, &refs, contexts);
   EACH_ELEMENT(form, forms) if (elem(form, "form")) { char *name = attr(form, "name"), form_id[128]; if (activity_form_needed(form, forms, only)) { ident(form_id, sizeof(form_id), name, false); collect_control_ids(&controls, form, form_id); } free(name); }
   if (commands.failed || controls.failed) {
@@ -1665,6 +1813,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   int errors = validate_actions(&commands, &refs, &meta);
+  if (ribbon) errors += validate_ribbon(ribbon, menus, &meta);
   tpl(f, "/* Generated by orionc_alt from {{input}}. */\n#ifndef {{guard}}\n#define {{guard}}\n\n#include <orion/ui.h>\n\n",
       (kv_t[]){{"input", input}, {"guard", guard}, {NULL, NULL}});
   emit_defines(f, &commands, "ID_COMMAND_BASE"); emit_defines(f, &controls, "ID_CONTROL_BASE");
@@ -1679,6 +1828,7 @@ int main(int argc, char **argv) {
         pre, symbol, symbol, eq(presentation, "compact") ? "TOOLBAR_PRESENTATION_COMPACT" : "TOOLBAR_PRESENTATION_NORMAL");
   }
   free(presentation);
+  if (ribbon && !errors) emit_ribbon(f, ribbon, menus, pre, &meta);
   // Emit every <database> under <databases> (a lone top-level <database> with
   // no wrapper is also supported, for older .orion files). Only the first is
   // "primary" and keeps the original unqualified symbol names.

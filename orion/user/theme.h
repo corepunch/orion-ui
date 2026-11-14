@@ -200,6 +200,15 @@ typedef enum {
   THEME_PART_BADGE,          // a status pill, toned by --tone
   THEME_PART_BADGE_ICON,     // the glyph before its text (fill is the icon's colour)
   THEME_PART_CARD_PLASTIC,   // Card::plastic, what THEME_PART_CARD paints with CTRL_PLASTIC; its tint is the instance variable --surface
+  THEME_PART_RIBBON,           // a Ribbon's command panel, under its tab row
+  THEME_PART_RIBBON_TABS,      // the tab row
+  THEME_PART_RIBBON_TAB,       // one tab; CTRL_SELECTED is the active one
+  THEME_PART_RIBBON_MENU,      // the application-menu button at the start of the tab row
+  THEME_PART_RIBBON_BUTTON,    // a command; CTRL_SELECTED is a checked toggle or an open drop-down
+  THEME_PART_RIBBON_GROUP,     // a group: its foreground is the caption under the commands
+  THEME_PART_RIBBON_SEPARATOR, // the rule between groups
+  THEME_PART_RIBBON_ARROW,     // a drop-down's arrow
+  THEME_PART_RIBBON_TOGGLE,    // switches the three-row and single-row layouts; CTRL_SELECTED in the single row
   THEME_PART_COUNT,
 } theme_part_t;
 

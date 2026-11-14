@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "commctl.h"
+#include "commctl_internal.h"
 #include <orion/user/draw.h>
 #include <orion/user/theme.h>
 #include <orion/user/toolbar.h>
@@ -10,6 +10,7 @@ typedef struct {
   window_t *menubar;
   window_t *toolbar;
   toolbar_presentation_t presentation;
+  bool ribbon;   // the menu row is a ribbon's tab row
 } app_chrome_state_t;
 
 typedef struct {
@@ -17,13 +18,14 @@ typedef struct {
   const menu_def_t *menus;
   int               menu_count;
   winproc_t         toolbar_proc;
+  const ribbon_def_t *ribbon;   // menubar_proc is then the ribbon's procedure
 } app_chrome_create_t;
 
 static void app_chrome_resize_children(window_t *win) {
   app_chrome_state_t *st = (app_chrome_state_t *)win->userdata;
   if (!st) return;
   st->menubar = app_chrome_menubar(win);
-  int menu_h = ui_px("MenuBar", "height");
+  int menu_h = st->ribbon && st->menubar ? ribbon_tabs_height(st->menubar) : ui_px("MenuBar", "height");
   window_t *bar = app_chrome_toolbar(win);
   if (bar && bar->dock && bar->dock->side == DOCK_TOP && st->presentation == TOOLBAR_PRESENTATION_COMPACT) {
     send_message(bar, tbModifyStyle, TOOLBAR_STYLE_COMPACT | TOOLBAR_STYLE_GRIP, (void *)(uintptr_t)(TOOLBAR_STYLE_COMPACT | TOOLBAR_STYLE_GRIP));
@@ -65,11 +67,17 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
         fflush(stderr);
         return false;
       }
-      if (cfg->menubar_proc)
+      st->ribbon = cfg->ribbon != NULL;
+      if (cfg->ribbon) {
+        st->menubar = create_window("ribbon", WINDOW_NOTITLE | WINDOW_NORESIZE,
+                                    MAKERECT(0, 0, win->frame.w, ui_px("Ribbon::tabs", "height")),
+                                    win, cfg->menubar_proc, 0, (void *)cfg->ribbon);
+        if (st->menubar) dock_window(st->menubar, DOCK_TOP, DOCK_EDGE(DOCK_TOP), DOCK_MENU | DOCK_NOFLOAT, 0, 0);
+      } else if (cfg->menubar_proc)
         st->menubar = create_window("menubar", WINDOW_NOTITLE | WINDOW_NORESIZE,
                                     MAKERECT(0, 0, win->frame.w, ui_px("MenuBar", "height")),
                                     win, cfg->menubar_proc, 0, NULL);
-      if (st->menubar) {
+      if (st->menubar && !cfg->ribbon) {
         send_message(st->menubar, kMenuBarMessageSetMenus, cfg->menu_count, (void *)cfg->menus);
         dock_window(st->menubar, DOCK_TOP, DOCK_ALL_EDGES, DOCK_MENU, 0, 0);
       }
@@ -129,20 +137,50 @@ static result_t win_app_chrome(window_t *win, uint32_t msg,
   }
 }
 
-window_t *create_app_chrome(const char *title, winproc_t menubar_proc,
-                            const menu_def_t *menus, int menu_count,
-                            winproc_t toolbar_proc, hinstance_t hinstance) {
+static window_t *app_chrome_create(const char *title, app_chrome_create_t *cfg, hinstance_t hinstance) {
   int sw = ui_get_system_metrics(kSystemMetricScreenWidth);
   int menu_h = ui_px("MenuBar", "height");
   int sh = MAX(menu_h + theme_toolbar_band_height(), ui_get_system_metrics(kSystemMetricScreenHeight));
-  app_chrome_create_t cfg = {menubar_proc, menus, menu_count, toolbar_proc};
   window_t *win = create_window(title ? title : "Application Chrome",
       WINDOW_NOTITLE | WINDOW_TRANSPARENT | WINDOW_NOFILL | WINDOW_ALWAYSONTOP |
       WINDOW_NOTRAYBUTTON | WINDOW_NORESIZE | WINDOW_NODRAG,
-      MAKERECT(0, menubar_proc ? 0 : menu_h, sw, sh - (menubar_proc ? 0 : menu_h)),
-      NULL, win_app_chrome, hinstance, &cfg);
+      MAKERECT(0, cfg->menubar_proc ? 0 : menu_h, sw, sh - (cfg->menubar_proc ? 0 : menu_h)),
+      NULL, win_app_chrome, hinstance, cfg);
   if (win) show_window(win, true);
   return win;
+}
+
+window_t *create_app_chrome(const char *title, winproc_t menubar_proc,
+                            const menu_def_t *menus, int menu_count,
+                            winproc_t toolbar_proc, hinstance_t hinstance) {
+  app_chrome_create_t cfg = {menubar_proc, menus, menu_count, toolbar_proc, NULL};
+  return app_chrome_create(title, &cfg, hinstance);
+}
+
+window_t *create_ribbon_chrome(const char *title, winproc_t ribbon_proc, const ribbon_def_t *ribbon,
+                               winproc_t toolbar_proc, hinstance_t hinstance) {
+  const application_toolbar_t *quick = ribbon ? ribbon->quick_access : NULL;
+  if (!ribbon_proc || !ribbon || (quick && (!toolbar_proc || quick->count <= 0 || !quick->items))) {
+    fprintf(stderr, "[chrome] invalid ribbon definition=%p has_proc=%d quick_access=%p has_toolbar_proc=%d\n",
+            (void *)ribbon, ribbon_proc != NULL, (void *)quick, toolbar_proc != NULL);
+    fflush(stderr);
+    return NULL;
+  }
+  app_chrome_create_t cfg = {ribbon_proc, NULL, 0, quick ? toolbar_proc : NULL, ribbon};
+  // The process's own ribbon takes the title bar's place where the OS lets the content reach it.
+  if (!hinstance) ui_set_native_titlebar_hidden(true);
+  window_t *chrome = app_chrome_create(title, &cfg, hinstance);
+  if (!chrome || !quick) return chrome;
+  app_chrome_state_t *st = chrome->userdata;
+  st->presentation = TOOLBAR_PRESENTATION_COMPACT;
+  send_message(app_chrome_toolbar(chrome), tbSetItems, quick->count, (void *)quick->items);
+  app_chrome_resize_children(chrome);
+  return chrome;
+}
+
+window_t *app_chrome_ribbon(window_t *chrome) {
+  app_chrome_state_t *st = chrome ? (app_chrome_state_t *)chrome->userdata : NULL;
+  return st && st->ribbon ? app_chrome_menubar(chrome) : NULL;
 }
 
 window_t *app_chrome_menubar(window_t *chrome) {

@@ -60,6 +60,16 @@ Toolbar.compact     { padding: 2px; gap: 6px; --icon-size: var(--compact-icon-si
 Toolbar::grip       { width: 12px; }
 Toolbar::split-arrow { width: 12px; }
 TabView::bar        { padding-left: 0; padding-top: 1px; }
+/* A ribbon: the tab row is as tall as a menu bar; a group is three button rows over its caption. */
+Ribbon              { padding: 4px; gap: 2px; }
+Ribbon::tabs        { height: var(--menubar-height); padding: 2px; gap: 4px; }
+Ribbon::tab         { padding-left: 12px; }
+Ribbon::button      { height: calc(var(--font-size) + 9px); --single-height: var(--toolbar-height); min-width: 44px;
+                      padding-left: 5px; gap: 4px; --icon-size: 16px; --large-icon-size: 24px; }
+Ribbon::group       { padding-left: 6px; padding-top: 2px; }
+Ribbon::separator   { width: 1px; }
+Ribbon::arrow       { width: 9px; }
+Ribbon::toggle      { width: 16px; }
 TableView::header   { min-height: 0; }
 TableView::row      { min-height: 0; }
 TableView::divider  { width: 1px; }
@@ -173,6 +183,27 @@ Toolbar::split-arrow:checked, Toolbar::split-arrow:active, Toolbar::split-arrow:
 Toolbar::button:checked, Toolbar::button:active, Toolbar::button:default { color: var(--accent-text); }
 Toolbar::button:disabled, Toolbar::split-arrow:disabled { background: none !important; }
 Toolbar::grip   { content: grip; fill: var(--text-disabled); }
+
+/* ── Ribbon ──────────────────────────────────────────────────────────────── */
+
+Ribbon::tabs      { background: var(--window-dark-bg); }
+Ribbon            { background: var(--control-bg); border-bottom: 1px solid var(--dark-edge); }
+Ribbon::tab       { color: var(--text-normal); border-radius: var(--tab-radius) var(--tab-radius) 0 0; margin: 2px 0 0 0; }
+Ribbon::tab:hover { background: var(--button-hover); }
+Ribbon::tab:checked { background: var(--control-bg); }
+Ribbon::tab.menu  { background: var(--accent); color: var(--accent-text); border-radius: var(--toolbar-radius); margin: 3px 0; }
+Ribbon::tab.menu:hover, Ribbon::tab.menu:checked { background: color-mix(in srgb, var(--accent) 85%, var(--text-normal) 15%); }
+Ribbon::button    { color: var(--toolbar-foreground); border-radius: var(--toolbar-radius); }
+Ribbon::button:hover { background: var(--button-hover); }
+Ribbon::button:checked, Ribbon::button:active { background: var(--selection); color: var(--accent-text); }
+Ribbon::button:disabled { background: none !important; color: var(--text-disabled); }
+Ribbon::group     { color: var(--text-secondary); }
+Ribbon::separator { background: var(--button-inner); margin: 2px 0; }
+Ribbon::arrow     { content: triangle-down; fill: var(--toolbar-foreground); }
+Ribbon::arrow:disabled { fill: var(--text-disabled); }
+Ribbon::toggle    { content: scroll-up; fill: var(--text-secondary); border-radius: var(--toolbar-radius); }
+Ribbon::toggle:checked { content: scroll-down; }
+Ribbon::toggle:hover { background: var(--button-hover); }
 
 /* ── Lists and tables ────────────────────────────────────────────────────── */
 
@@ -300,7 +331,7 @@ Label.heading { font: var(--text-heading); }
 Label.title   { font: var(--text-title); }
 Label.display { font: var(--text-display); }
 
-TableView::detail, TableView::subtitle, Icon, IconView::cell, Toolbar::label, Window::subtitle { font: var(--text-caption); }
+TableView::detail, TableView::subtitle, Icon, IconView::cell, Toolbar::label, Window::subtitle, Ribbon::group { font: var(--text-caption); }
 TableView::group { font: var(--text-heading); }
 Window::title    { font: var(--text-title); }
 Terminal, DiffView { font: var(--text-mono); }

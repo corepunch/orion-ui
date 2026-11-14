@@ -332,6 +332,7 @@ static result_t popup_proc(window_t *win, uint32_t msg,
         set_capture(pd->parent_popup);
       } else {
         set_capture(NULL);
+        if (pd && pd->notify_win && is_window(pd->notify_win)) invalidate_window(pd->notify_win);
       }
       free(win->userdata);
       win->userdata = NULL;
@@ -465,7 +466,10 @@ static void open_popup(window_t *mb_win, menubar_data_t *data, int idx) {
 
 static window_t *menubar_maximized_window(window_t *win) {
   menubar_data_t *data = win->userdata;
-  if (data && data->vertical) return NULL;
+  return data && data->vertical ? NULL : menu_row_maximized_window(win);
+}
+
+window_t *menu_row_maximized_window(window_t *win) {
   hinstance_t owner = get_root_window(win)->hinstance;
   window_t *target = NULL, *document = NULL;
   // A maximized frame wins over its maximized MDI documents, which it restores with it.
@@ -638,12 +642,63 @@ result_t win_menubar(window_t *win, uint32_t msg, uint32_t wparam, void *lparam)
 
 // ---- public context-menu API ------------------------------------------------
 
-bool show_popup_menu(window_t *notify_win, const menu_item_t *items,
-                     int item_count, int screen_x, int screen_y) {
-  if (!notify_win || !items || item_count <= 0) return false;
+window_t *show_popup_menu_accel(window_t *notify_win, const menu_item_t *items, int item_count,
+                                const accel_table_t *accel, int screen_x, int screen_y) {
+  if (!notify_win || !items || item_count <= 0) return NULL;
   if (s_context_popup && is_window(s_context_popup)) dismiss_popup(s_context_popup);
   window_t *popup = create_popup_window(NULL, NULL, items, item_count,
-                                        NULL, screen_x, screen_y, notify_win);
+                                        (accel_table_t *)accel, screen_x, screen_y, notify_win);
   s_context_popup = popup;
-  return popup != NULL;
+  return popup;
+}
+
+bool show_popup_menu(window_t *notify_win, const menu_item_t *items,
+                     int item_count, int screen_x, int screen_y) {
+  return show_popup_menu_accel(notify_win, items, item_count, NULL, screen_x, screen_y) != NULL;
+}
+
+// ---- the operating system's menu bar ---------------------------------------
+
+typedef struct { void *v[2048]; int n; } native_pool_t;
+
+static void *native_keep(native_pool_t *pool, void *p) {
+  if (p && pool->n < ARRAY_LEN(pool->v)) { pool->v[pool->n++] = p; return p; }
+  free(p);
+  return NULL;
+}
+
+static ax_menu_item_t *native_items(native_pool_t *pool, const menu_item_t *items, int count, const accel_table_t *accel) {
+  ax_menu_item_t *out = native_keep(pool, calloc((size_t)MAX(1, count), sizeof(*out)));
+  for (int i = 0; out && i < count; i++) {
+    const menu_item_t *it = &items[i];
+    if (menu_item_is_separator(it)) continue;   // a NULL title
+    const char *label = ui_tr(it->label), *tab = strchr(label, '\t');
+    char *title = native_keep(pool, strdup(label));
+    if (title && tab) title[tab - label] = '\0';
+    out[i].title = title ? title : "";
+    if (menu_item_has_submenu(it)) {
+      out[i].items = native_items(pool, it->submenu_items, it->submenu_count, accel);
+      out[i].count = out[i].items ? (uint32_t)it->submenu_count : 0;
+      continue;
+    }
+    const accel_t *key = accel_find_cmd(accel, it->id);
+    out[i].command = it->id;
+    out[i].key = key ? key->key : 0;
+    out[i].modifiers = accel_modifiers(key);
+  }
+  return out;
+}
+
+bool menu_install_native(window_t *owner, const menu_def_t *menus, int count, const accel_table_t *accel) {
+  native_pool_t *pool = calloc(1, sizeof(*pool));
+  ax_menu_item_t *bar = pool ? native_keep(pool, calloc((size_t)MAX(1, count), sizeof(*bar))) : NULL;
+  for (int i = 0; bar && i < count; i++) {
+    bar[i].title = ui_tr(menus[i].label);
+    bar[i].items = native_items(pool, menus[i].items, menus[i].item_count, accel);
+    bar[i].count = bar[i].items ? (uint32_t)menus[i].item_count : 0;
+  }
+  bool installed = bar && ui_set_native_menu(owner, bar, count);
+  for (int i = 0; pool && i < pool->n; i++) free(pool->v[i]);
+  free(pool);
+  return installed;
 }
