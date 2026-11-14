@@ -660,6 +660,20 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Assistance">Unterstützung</string>
   <string source="Find a Command">Befehl suchen</string>
   <string source="Office Assistant">Office-Assistent</string>
+  <string source="New Counterparty">Neuer Geschäftspartner</string>
+  <string source="New Item">Neuer Artikel</string>
+  <string source="Account card of the selected account">Kontokarte des gewählten Kontos</string>
+  <string source="Period and account">Zeitraum und Konto</string>
+  <string source="New Employee">Neuer Mitarbeiter</string>
+  <string source="New payroll document">Neuer Lohnbeleg</string>
+  <string source="New Asset">Neue Anlage</string>
+  <string source="New Currency">Neue Währung</string>
+  <string source="Edit Currency">Währung bearbeiten</string>
+  <string source="Open Document">Beleg öffnen</string>
+  <string source="Account card of the entry's debit account">Kontokarte des Sollkontos der Buchung</string>
+  <string source="Rebuild reports from entries">Berichte aus den Buchungen neu aufbauen</string>
+  <string source="Print report forms: cash book">Berichtsformulare drucken: Kassenbuch</string>
+  <string source="Infobase">Mandant</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>
