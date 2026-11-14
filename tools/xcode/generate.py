@@ -133,7 +133,7 @@ def generate(args):
         'OTHER_CFLAGS': ['$(inherited)', '-fblocks', '-Wall', '-Wextra', '-Wno-unused-parameter',
                          '-Wno-unused-function', '-Wno-missing-field-initializers', '-Wno-deprecated-declarations'],
         'PRODUCT_NAME': args.app, 'PRODUCT_BUNDLE_IDENTIFIER': args.bundle_id,
-        'MARKETING_VERSION': '1.0', 'CURRENT_PROJECT_VERSION': '1',
+        'MARKETING_VERSION': '1.1', 'CURRENT_PROJECT_VERSION': '1',
         'GROOVE_APP_STORE': '1',
         'GROOVE_SHARE_BASE_URL': '',
         'SWIFT_VERSION': '5.0',
