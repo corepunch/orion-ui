@@ -1,6 +1,6 @@
 <orion>
   <databases>
-    <database name="lodge" class="db_schema_xml" source="hotel.xml" version="6" migration="additive">
+    <database name="lodge" class="db_schema_xml" source="hotel.xml" version="7" migration="additive">
       <table name="rooms">
         <field name="id" type="integer" key="YES" />
         <field name="name" type="string" length="40" />
@@ -15,6 +15,13 @@
         <field name="id" type="integer" key="YES" />
         <field name="name" type="string" length="100" />
         <field name="phone" type="string" length="60" />
+        <field name="email" type="string" length="120" />
+        <field name="birth_date" type="date" />
+        <field name="nationality" type="string" length="60" />
+        <field name="address" type="string" length="200" />
+        <field name="document" type="string" length="60" />
+        <field name="notes" type="string" length="256" />
+        <field name="stays" type="integer" computed="guest_stays" />
       </table>
       <table name="hotel_settings">
         <field name="id" type="integer" key="YES" />
@@ -39,6 +46,7 @@
         <field name="paid" type="double" default="0" />
         <field name="status" type="string" length="20" default="reserved" />
         <field name="notes" type="string" length="256" />
+        <field name="source_id" type="integer" relation="booking_sources.id" on-delete="deny" />
         <field name="total" type="double" computed="total" />
         <field name="balance" type="double" computed="balance" />
         <field name="status_label" type="string" length="80" computed="status_label" />
@@ -65,6 +73,22 @@
         <field name="actor" type="string" length="101" default="legacy-unknown" />
         <field name="request_key" type="string" length="101" />
         <field name="posted_on" type="date" />
+        <field name="method_id" type="integer" relation="payment_methods.id" on-delete="deny" />
+      </table>
+      <table name="booking_sources">
+        <field name="id" type="integer" key="YES" />
+        <field name="name" type="string" length="60" />
+      </table>
+      <table name="payment_methods">
+        <field name="id" type="integer" key="YES" />
+        <field name="name" type="string" length="60" />
+      </table>
+      <table name="room_blocks">
+        <field name="id" type="integer" key="YES" />
+        <field name="room_id" type="integer" relation="rooms.id" on-delete="cascade" />
+        <field name="blocked_from" type="date" />
+        <field name="blocked_until" type="date" />
+        <field name="reason" type="string" length="120" />
       </table>
       <table name="group_settlements">
         <field name="id" type="integer" key="YES" />
@@ -86,6 +110,61 @@
         <field name="outstanding_display" type="string" length="64" computed="outstanding_display" />
         <field name="cancelled_paid_display" type="string" length="64" computed="cancelled_paid_display" />
         <field name="cancelled_count_display" type="string" length="64" computed="cancelled_count_display" />
+      </table>
+    </database>
+    <!-- Lists the pages compute while they render; never saved. -->
+    <database name="lodge_views" class="db_schema_xml">
+      <table name="arrivals" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="reservation_id" type="integer" />
+        <field name="room" type="string" length="40" />
+        <field name="guest" type="string" length="100" />
+        <field name="arrival" type="date" />
+        <field name="departure" type="date" />
+        <field name="detail" type="string" length="120" />
+        <field name="balance" type="double" />
+      </table>
+      <table name="departures" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="reservation_id" type="integer" />
+        <field name="room" type="string" length="40" />
+        <field name="guest" type="string" length="100" />
+        <field name="arrival" type="date" />
+        <field name="departure" type="date" />
+        <field name="detail" type="string" length="120" />
+        <field name="balance" type="double" />
+      </table>
+      <table name="in_house" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="reservation_id" type="integer" />
+        <field name="room" type="string" length="40" />
+        <field name="guest" type="string" length="100" />
+        <field name="arrival" type="date" />
+        <field name="departure" type="date" />
+        <field name="detail" type="string" length="120" />
+        <field name="balance" type="double" />
+      </table>
+      <table name="attention" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="kind" type="string" length="20" />
+        <field name="title" type="string" length="160" />
+        <field name="detail" type="string" length="160" />
+      </table>
+      <table name="free_rooms" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="room_id" type="integer" />
+        <field name="name" type="string" length="40" />
+        <field name="category" type="string" length="40" />
+        <field name="capacity" type="integer" />
+        <field name="rate" type="double" />
+        <field name="total" type="double" />
+        <field name="cleaning" type="string" length="80" />
+      </table>
+      <table name="report" transient="true">
+        <field name="id" type="integer" key="YES" />
+        <field name="section" type="string" length="60" />
+        <field name="label" type="string" length="120" />
+        <field name="value" type="string" length="60" />
       </table>
     </database>
   </databases>

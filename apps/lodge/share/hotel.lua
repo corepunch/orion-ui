@@ -35,7 +35,63 @@ Hotel.rooms = records.bind("lodge.rooms", function(row, previous)
   end
   return true
 end)
-Hotel.guests = records.bind("lodge.guests", named)
+local function unique_name(binding)
+  return function(row)
+    local ok, message = named(row)
+    if not ok then return nil, message end
+    for _, other in ipairs(binding().model:all()) do
+      if other.id ~= row.id and other.name == row.name then return nil, orion.tr("This name is already used.") end
+    end
+    return true
+  end
+end
+-- Where bookings come from and how money moves: catalogs the hotel extends.
+Hotel.booking_sources = records.bind("lodge.booking_sources", unique_name(function() return Hotel.booking_sources end))
+Hotel.payment_methods = records.bind("lodge.payment_methods", unique_name(function() return Hotel.payment_methods end))
+function Hotel.seed_catalogs()
+  local seeds = {{Hotel.booking_sources, {"Direct", "Phone", "Email", "Website", "Booking portal", "Walk-in"}},
+    {Hotel.payment_methods, {"Cash", "Card", "Bank transfer"}}}
+  for _, seed in ipairs(seeds) do
+    if #seed[1].model:all() == 0 then
+      for _, name in ipairs(seed[2]) do orion.assert(seed[1]:save(nil, {name = orion.tr(name)})) end
+    end
+  end
+end
+Hotel.guests = records.bind("lodge.guests", function(row)
+  local ok, message = named(row)
+  if not ok then return nil, message end
+  if row.email and row.email ~= "" and not row.email:match("^[^%s@]+@[^%s@]+%.[^%s@]+$") then
+    return nil, orion.tr("Enter a valid email address or leave it empty.")
+  end
+  if row.birth_date and row.birth_date ~= "" then
+    if not pcall(calendar.day, row.birth_date) or row.birth_date > orion.today() then return nil, orion.tr("Enter a birth date in the past.") end
+  end
+  return true
+end)
+-- A room out of service (repair, renovation) is not sold for its dates; the
+-- block is half-open like a stay.
+Hotel.room_blocks = records.bind("lodge.room_blocks", function(row)
+  if not Hotel.rooms.model:find(row.room_id) then return nil, orion.tr("Choose a room.") end
+  if not intervals.valid(row.blocked_from, row.blocked_until) then return nil, orion.tr("The block must end after it starts.") end
+  if not row.reason or not row.reason:find("%S") then return nil, orion.tr("Enter the reason the room is out of service.") end
+  for _, other in ipairs(Hotel.room_blocks.model:select({room_id = row.room_id})) do
+    if other.id ~= row.id and intervals.overlap(row.blocked_from, row.blocked_until, other.blocked_from, other.blocked_until) then
+      return nil, orion.tr("The room is already out of service for these dates.")
+    end
+  end
+  for _, stay in ipairs(Hotel.reservations.model:select({room_id = row.room_id})) do
+    if (stay.status == "reserved" or stay.status == "checked_in") and
+      intervals.overlap(row.blocked_from, row.blocked_until, stay.arrival, stay.departure) then
+      return nil, orion.tr("Move the reservations in these dates to another room first.")
+    end
+  end
+  return true
+end)
+function Hotel.room_blocked(room_id, arrival, departure)
+  for _, block in ipairs(Hotel.room_blocks.model:select({room_id = room_id})) do
+    if intervals.overlap(arrival, departure, block.blocked_from, block.blocked_until) then return block end
+  end
+end
 function Hotel.room_occupied(id)
   for _, row in ipairs(Hotel.reservations.model:select({room_id = id})) do
     if row.status == "checked_in" then return true end
@@ -92,7 +148,7 @@ Hotel.reservations = records.bind("lodge.reservations", function(row, previous)
   end
   if not ({reserved = true, checked_in = true, checked_out = true, cancelled = true})[row.status] then return nil, orion.tr("Unknown reservation status.") end
   if previous and (previous.status == "checked_out" or previous.status == "cancelled") then
-    for _, field in ipairs({"room_id", "guest_id", "group_id", "arrival", "departure", "persons", "rate", "extras", "status", "notes"}) do
+    for _, field in ipairs({"room_id", "guest_id", "group_id", "arrival", "departure", "persons", "rate", "extras", "status", "notes", "source_id"}) do
       if row[field] ~= previous[field] then return nil, orion.tr("This reservation is closed.") end
     end
     if money.minor(row.paid) == money.minor(previous.paid) then return nil, orion.tr("This reservation is closed.") end
@@ -114,6 +170,11 @@ Hotel.reservations = records.bind("lodge.reservations", function(row, previous)
     if row.status == "checked_in" and room.cleaning_state ~= "clean" then return nil, orion.tr("Mark the room clean before checking in.") end
     if row.status == "checked_out" and money.minor(Hotel.balance(row)) ~= 0 then return nil, orion.tr("Settle the balance before checking out.") end
   elseif not previous and row.status ~= "reserved" then return nil, orion.tr("Unknown reservation status.") end
+  if row.source_id and row.source_id ~= 0 and not Hotel.booking_sources.model:find(row.source_id) then return nil, orion.tr("Choose where the booking came from.") end
+  local moved = not previous or previous.room_id ~= row.room_id or previous.arrival ~= row.arrival or previous.departure ~= row.departure
+  if (row.status == "reserved" or row.status == "checked_in") and moved and Hotel.room_blocked(row.room_id, row.arrival, row.departure) then
+    return nil, orion.tr("The room is out of service for these dates.")
+  end
   if row.status ~= "cancelled" then
     for _, other in ipairs(Hotel.reservations.model:all()) do
       if other.id ~= row.id and other.room_id == row.room_id and other.status ~= "cancelled" and
@@ -238,7 +299,7 @@ function Hotel.create_group(name, stays)
     local ids = {}
     for _, stay in ipairs(stays) do
       local fields = {}
-      for _, key in ipairs({"room_id", "guest_id", "arrival", "departure", "persons", "rate", "extras", "notes"}) do fields[key] = stay[key] end
+      for _, key in ipairs({"room_id", "guest_id", "arrival", "departure", "persons", "rate", "extras", "notes", "source_id"}) do fields[key] = stay[key] end
       fields.group_id = group.id
       local reservation = orion.assert(Hotel.save(nil, fields))
       ids[#ids + 1] = reservation.id
@@ -354,8 +415,10 @@ function Hotel.next_payment_key()
   until not events:find({request_key = key})
   return key
 end
--- The caller supplies a stable key for each payment or refund request.
-function Hotel.payment(id, amount_minor, request_key)
+-- The caller supplies a stable key for each payment or refund request, and
+-- optionally how the money moved (a payment_methods id).
+function Hotel.payment(id, amount_minor, request_key, method_id)
+  if method_id ~= nil and (math.type(method_id) ~= "integer" or not Hotel.payment_methods.model:find(method_id)) then return nil, orion.tr("Choose a payment method.") end
   if type(request_key) ~= "string" or not request_key:find("%S") or #request_key > 100 or
     type(amount_minor) ~= "number" or amount_minor % 1 ~= 0 or amount_minor == 0 or math.abs(amount_minor) > 100000000 then
     return nil, orion.tr("Enter a valid payment amount and request key.")
@@ -384,7 +447,7 @@ function Hotel.payment(id, amount_minor, request_key)
   if not row then return nil, orion.tr("Choose a reservation.") end
   local new_paid = money.minor(row.paid) + amount_minor
   if new_paid < 0 or new_paid > 100000000 then return nil, orion.tr("The resulting paid amount is out of range.") end
-  Hotel.payment_request = request_key
+  Hotel.payment_request, Hotel.payment_method = request_key, method_id
   local ok, result, message = pcall(function()
     return Hotel.reservations.model:transaction(function()
       local saved = orion.assert(Hotel.reservations:save(id, {paid = new_paid / 100}))
@@ -392,7 +455,7 @@ function Hotel.payment(id, amount_minor, request_key)
       return saved
     end)
   end)
-  Hotel.payment_request = nil
+  Hotel.payment_request, Hotel.payment_method = nil, nil
   if not ok then error(result, 0) end
   return result, message
 end

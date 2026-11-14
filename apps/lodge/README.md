@@ -4,9 +4,35 @@ A small hotel's reception desk, built with Orion controls and portable Lua
 plugins. Lodge means a place to stay; it sits alongside Ledger as a focused
 business application.
 
-![Lodge reception in Porcelain](../../docs/lodge/images/reception-light.jpg)
+![Lodge's Today page with arrivals, departures and guests in house](../../docs/lodge/images/today-dark.jpg)
 
-[Dark appearance](../../docs/lodge/images/reception-dark.jpg)
+[Rooms, housekeeping and out-of-service dates](../../docs/lodge/images/rooms-dark.jpg)
+
+## Pages
+
+Lodge is one window with a sidebar, like Ledger:
+
+- **Today**: what needs attention, today's arrivals and departures and the
+  guests in house. Double-click an arrival to check in, a departure to check
+  out; print the registration form (*Meldeschein*) or the guest bill.
+- **Reservations**: the booking editor and list, payments, nightly prices,
+  groups, cancellations, confirmations; **Find** steps through bookings by guest
+  or room name.
+- **Availability**: free rooms for dates and a guest count, cheapest first,
+  with the stay total; reserve one for a guest.
+- **Rooms**: the room catalog, cleaning status, the day's cleaning list and
+  out-of-service dates (repairs), which leave the room out of availability.
+- **Guests**: contact and identity details for registration, and stay counts.
+- **Reports**: occupancy, guest-nights, room revenue, ADR, RevPAR, payments by
+  method and bookings by source for any period up to a year; exportable.
+- **Close day** and **Setup** (country and currency, booking sources and payment
+  methods).
+
+Printable documents are written to the data directory as HTML:
+`registration.html`, `bill.html`, `cleaning-list.html`, `period-report.html`.
+They are operational documents, not tax invoices.
+[What a small hotel needs](../../docs/lodge/small-hotel-needs.md) lists the
+routine work of a small hotel and which parts Lodge covers.
 
 ## Run
 
@@ -20,9 +46,10 @@ build/bin/orion-run --app apps/lodge/share/application.orion --data /path/to/hot
 ```
 
 Without `--data`, Lodge uses `<settings>/lodge/hotel.xml`. New databases start
-empty. For a demo, copy `share/samples/demo.xml` to `hotel.xml` inside a new,
-separate data directory, then launch with `--data` pointing there. Open **Hotel
-setup** and choose Germany/EUR or Russia/RUB before recording reservations or
+empty apart from default booking sources and payment methods. For a demo (nine
+rooms, ten bookings around 14 November 2026), copy `share/samples/demo.xml` to `hotel.xml` inside a new,
+separate data directory, then launch with `--data` pointing there. Open **Setup**
+and choose Germany/EUR or Russia/RUB before recording reservations or
 payments. For an existing hotel this explicitly adopts the existing amounts as
 the selected currency without converting them; the choice cannot be changed.
 Back up and verify those amounts first. Add rooms and guests, select them in the reservation editor, choose
@@ -39,11 +66,11 @@ capacity and overlapping bookings are checked before changes are written.
 A reservation goes from Reserved to Checked in to Checked out, or from Reserved
 to Cancelled. Preview an individual cancellation to see the guest, dates and payments held, then confirm it; refunds are recorded separately. Check-out requires a zero balance; cancelled and checked-out
 reservations cannot be edited, but payments and refunds can still be recorded.
-Use **Housekeeping** to mark rooms clean, dirty, or
+On the **Rooms** page, mark rooms clean, dirty, or
 needing inspection. Check-in requires a clean room; check-out marks it dirty.
 The room list also shows whether a guest is currently checked in, independently
-of cleaning status and scheduled dates. Use **Refresh rooms** in the local
-housekeeping window, or refresh the shared view, to see changes made elsewhere.
+of cleaning status and scheduled dates. Use **Refresh rooms** on the local
+Rooms page, or refresh the shared view, to see changes made elsewhere.
 The indicator does not show guest details or establish
 whether anyone is physically present in the room.
 An adjacent reservation cannot check in, or transfer into a room, while another
@@ -136,14 +163,21 @@ balances retain their historical treatment.
 - `share/application.orion`: application object graph, DisplayGroup, reception and catalog forms.
 - Orion’s shared application host owns the VM, databases, windows and output. No app C host or bindings.
 - `share/model.lua`: validates native and Lua writes and supplies computed values.
-- `share/reception.lua`: page actions, rendering and user feedback.
+- `share/application.orion`'s `main` form is a `role="host"` window; each sidebar
+  `Page` is a form with its own controller (`today.lua`, `reception.lua`,
+  `availability.lua`, `housekeeping.lua`, `reports.lua`, ...).
+- `share/reception.lua`: reservation page actions, rendering and user feedback.
+- `share/front_desk.lua`: read-only views: today's movements, attention items,
+  free rooms and period figures. `share/documents.lua`: printable documents.
+  Computed lists fill transient tables of the in-memory `lodge_views` database.
 - `share/hotel.lua`: hotel-specific availability, capacity and state transitions.
 - Shared `calendar`, `money`, `intervals`, `records` and `template` plugins:
   [authoring and usage](../../docs/plugins.md).
 
-This first version provides a reservation list, rather than a timeline. It
-supports adding, editing and deleting rooms and guests through codeless forms. Housekeeping
-tracks room readiness but does not assign staff or schedule work.
+Lodge provides a reservation list, rather than a timeline. It
+supports adding, editing and deleting rooms, guests, booking sources, payment
+methods and out-of-service dates through codeless forms. Housekeeping
+tracks room readiness and prints a daily list but does not assign staff.
 Category-level inventory, group folios, tax rules,
 online distribution, access control and concurrent reception
 terminals are follow-up work. Use a single process per hotel XML file. The Lua

@@ -6,18 +6,19 @@ local calendar = Plugins.use("calendar", 1)
 local confirmation = require("remote.confirmation")
 local group_statement = require("remote.group_statement")
 local money = Plugins.use("money", 1)
+local Documents = require("documents")
 local Reception = {form = "reception", title = orion.tr("Orion Lodge")}
 
 function Reception:init() self:new_booking() end
 function Reception:new_booking()
   local today = orion.today()
   self.editing = nil
-  self.fields = {room = 0, guest = 0, arrival = today, departure = calendar.add(today, 1), persons = 1, rate = 0, extras = 0, paid = 0, notes = ""}
+  self.fields = {room = 0, guest = 0, arrival = today, departure = calendar.add(today, 1), persons = 1, rate = 0, extras = 0, paid = 0, notes = "", source = 0, search = self.fields and self.fields.search or ""}
   self.notice = ""
 end
 function Reception:save_data() orion.assert(application.save("lodge")) end
 function Reception:remember(v)
-  for _, key in ipairs({"room", "guest", "arrival", "departure", "persons", "rate", "extras", "notes"}) do self.fields[key] = v[key] end
+  for _, key in ipairs({"room", "guest", "arrival", "departure", "persons", "rate", "extras", "notes", "source", "search"}) do self.fields[key] = v[key] end
 end
 function Reception:write(model, action)
   return model:transaction(function()
@@ -29,9 +30,29 @@ end
 function Reception:edit(v)
   local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
   local row = orion.assert(Hotel.reservations.model:find(selected.id))
+  self:load(row)
+end
+function Reception:load(row)
   self.editing = row.id
   self.fields = {room = row.room_id, guest = row.guest_id, arrival = row.arrival, departure = row.departure,
-    persons = row.persons, rate = row.rate, extras = row.extras, paid = row.paid, notes = row.notes}
+    persons = row.persons, rate = row.rate, extras = row.extras, paid = row.paid, notes = row.notes, source = row.source_id,
+    search = self.fields and self.fields.search or ""}
+end
+-- Opens the next active reservation whose guest or room matches the text.
+function Reception:find(v)
+  self:remember(v)
+  local text = orion.assert(v.search and v.search:find("%S") and v.search:lower(), orion.tr("Enter part of a guest or room name."))
+  local matches = {}
+  for _, row in ipairs(Hotel.reservations.model:select(nil, {order = "arrival, id"})) do
+    local guest, room = row.guest and row.guest.name:lower() or "", row.room and row.room.name:lower() or ""
+    if (guest:find(text, 1, true) or room:find(text, 1, true)) and row.status ~= "cancelled" then matches[#matches + 1] = row end
+  end
+  orion.assert(#matches > 0, orion.tr("No active reservation matches."))
+  local index = 1
+  for i, row in ipairs(matches) do if row.id == self.editing then index = i % #matches + 1 end end
+  self:load(matches[index])
+  self.notice = string.format(orion.tr("Match %d of %d: reservation %d, %s, room %s, %s to %s."), index, #matches, matches[index].id,
+    matches[index].guest.name, matches[index].room.name, orion.formatDate(matches[index].arrival), orion.formatDate(matches[index].departure))
 end
 function Reception:room_rate(v)
   local room = orion.assert(Hotel.rooms.model:find(v.room), orion.tr("Choose a room."))
@@ -41,10 +62,8 @@ end
 function Reception:reserve(v)
   local row = self:write(Hotel.reservations.model, function() return Hotel.save(self.editing, {room_id = v.room or 0, guest_id = v.guest or 0,
     arrival = v.arrival or "", departure = v.departure or "", persons = v.persons or 0, rate = v.rate or 0,
-    extras = v.extras or 0, notes = v.notes or ""}) end)
-  self.editing = row.id
-  self.fields = {room = row.room_id, guest = row.guest_id, arrival = row.arrival, departure = row.departure,
-    persons = row.persons, rate = row.rate, extras = row.extras, paid = row.paid, notes = row.notes}
+    extras = v.extras or 0, notes = v.notes or "", source_id = v.source or 0}) end)
+  self:load(row)
 end
 function Reception:transition(v, target)
   local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
@@ -95,6 +114,19 @@ function Reception:confirmation(v)
     status = row.status, currency = orion.assert(Hotel.hotel_settings.model:all()[1]).currency,
     total = Hotel.total(row), paid = Hotel.paid(row), balance = Hotel.balance(row)})
   self.notice = string.format(orion.tr("Confirmation saved: %s"), orion.assert(application.write("confirmation.html", html)))
+end
+function Reception:selected(v)
+  self:remember(v)
+  local selected = orion.assert(v.bookings, orion.tr("Choose a reservation."))
+  return orion.assert(Hotel.reservations.model:find(selected.id))
+end
+function Reception:registration(v)
+  local row = self:selected(v)
+  self.notice = string.format(orion.tr("Registration form saved: %s"), orion.assert(application.write("registration.html", Documents.registration(row))))
+end
+function Reception:invoice(v)
+  local row = self:selected(v)
+  self.notice = string.format(orion.tr("Guest bill saved: %s"), orion.assert(application.write("bill.html", Documents.bill(row))))
 end
 function Reception:group_statement(v)
   self:remember(v)

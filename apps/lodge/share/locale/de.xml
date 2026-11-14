@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <strings language="de">
-  <string source="Orion Lodge" where="reception">Orion Lodge</string>
-  <string source="Reception" where="reception">Rezeption</string>
-  <string source="Rooms, guests and reservations · Amounts in your hotel's currency" where="reception">Zimmer, Gäste und Reservierungen · Beträge in der Hotelwährung</string>
+  <string source="Orion Lodge" where="main">Orion Lodge</string>
+  <string source="Reception" obsolete="true">Rezeption</string>
+  <string source="Rooms, guests and reservations · Amounts in your hotel's currency" obsolete="true">Zimmer, Gäste und Reservierungen · Beträge in der Hotelwährung</string>
   <string source="Add a room" obsolete="true">Zimmer hinzufügen</string>
   <string source="Room name:" where="room">Zimmername:</string>
   <string source="Category:" where="room">Kategorie:</string>
@@ -13,29 +13,29 @@
   <string source="Guest name:" where="guest">Name des Gastes:</string>
   <string source="Phone:" where="guest">Telefon:</string>
   <string source="Add guest" obsolete="true">Gast hinzufügen</string>
-  <string source="Room:" where="reception">Zimmer:</string>
-  <string source="Guest:" where="reception,group_reservation">Gast:</string>
-  <string source="Arrival:" where="reception,group_reservation">Anreise:</string>
-  <string source="Departure:" where="reception,group_reservation">Abreise:</string>
-  <string source="Guests:" where="reception">Gäste:</string>
+  <string source="Room:" where="reception,room_block">Zimmer:</string>
+  <string source="Guest:" where="availability,reception,group_reservation">Gast:</string>
+  <string source="Arrival:" where="availability,reception,group_reservation">Anreise:</string>
+  <string source="Departure:" where="availability,reception,group_reservation">Abreise:</string>
+  <string source="Guests:" where="availability,reception">Gäste:</string>
   <string source="Extra charges:" where="reception">Zusatzkosten:</string>
   <string source="Paid to date:" where="reception">Bereits bezahlt:</string>
-  <string source="Notes:" where="reception">Notizen:</string>
+  <string source="Notes:" where="reception,guests">Notizen:</string>
   <string source="Use room rate" where="reception">Zimmerpreis übernehmen</string>
   <string source="Save reservation" where="reception">Reservierung speichern</string>
   <string source="New reservation" where="reception">Neue Reservierung</string>
   <string source="New reservation discards unsaved editor changes." where="reception">Eine neue Reservierung verwirft ungespeicherte Eingaben.</string>
-  <string source="Room" where="reception,room,housekeeping">Zimmer</string>
-  <string source="Guest" where="reception,guest">Gast</string>
+  <string source="Room" where="today,availability,reception,rooms">Zimmer</string>
+  <string source="Guest" where="today,reception,guest">Gast</string>
   <string source="Arrival" where="reception">Anreise</string>
-  <string source="Departure" where="reception">Abreise</string>
-  <string source="Status" where="reception">Status</string>
+  <string source="Departure" where="today,reception">Abreise</string>
+  <string source="Status" where="today,reception">Status</string>
   <string source="Total" where="reception">Gesamt</string>
   <string source="Paid" where="reception">Bezahlt</string>
-  <string source="Balance" where="reception">Restbetrag</string>
+  <string source="Balance" where="today,reception">Restbetrag</string>
   <string source="Edit selected" where="reception">Auswahl bearbeiten</string>
-  <string source="Check in" where="reception">Einchecken</string>
-  <string source="Check out" where="reception">Auschecken</string>
+  <string source="Check in" where="today,reception">Einchecken</string>
+  <string source="Check out" where="today,reception">Auschecken</string>
   <string source="Cancel reservation" obsolete="true">Reservierung stornieren</string>
   <string source="Export confirmation" where="reception">Bestätigung exportieren</string>
   <string source="Retry saving" where="reception">Speichern wiederholen</string>
@@ -78,22 +78,22 @@
   <string source="Unknown reservation status." where="code">Unbekannter Reservierungsstatus.</string>
   <string source="A room with this name already exists." where="code">Ein Zimmer mit diesem Namen existiert bereits.</string>
   <string source="The reservation total is too large." where="code">Der Gesamtbetrag der Reservierung ist zu hoch.</string>
-  <string source="Rooms" where="reception,rooms">Zimmer</string>
-  <string source="Guests" where="reception,guests">Gäste</string>
-  <string source="Name" where="rooms,guests">Name</string>
-  <string source="Add" where="rooms,guests">Hinzufügen</string>
-  <string source="Edit" where="rooms,guests">Bearbeiten</string>
-  <string source="Delete" where="rooms,guests">Löschen</string>
-  <string source="Fetch" where="rooms,guests">Aktualisieren</string>
-  <string source="Save" where="room,guest">Speichern</string>
-  <string source="Cancel" where="room,guest">Abbrechen</string>
-  <string source="Housekeeping" where="reception,housekeeping">Zimmerreinigung</string>
-  <string source="Cleaning status" where="rooms,housekeeping">Reinigungsstatus</string>
+  <string source="Rooms" where="rooms">Zimmer</string>
+  <string source="Guests" where="guests">Gäste</string>
+  <string source="Name" where="guests">Name</string>
+  <string source="Add" where="hotel_setup,rooms,guests">Hinzufügen</string>
+  <string source="Edit" where="hotel_setup,rooms,guests">Bearbeiten</string>
+  <string source="Delete" where="hotel_setup,rooms,guests">Löschen</string>
+  <string source="Fetch" where="guests">Aktualisieren</string>
+  <string source="Save" where="booking_source,payment_method,room_block,guest">Speichern</string>
+  <string source="Cancel" where="booking_source,payment_method,room_block,guest">Abbrechen</string>
+  <string source="Housekeeping" obsolete="true">Zimmerreinigung</string>
+  <string source="Cleaning status" where="availability,rooms">Reinigungsstatus</string>
   <string source="Cleaning status:" where="room">Reinigungsstatus:</string>
-  <string source="Select a room to update its cleaning status." where="housekeeping">Wählen Sie ein Zimmer, um den Reinigungsstatus zu ändern.</string>
-  <string source="Mark clean" where="housekeeping">Als sauber markieren</string>
-  <string source="Mark dirty" where="housekeeping">Als schmutzig markieren</string>
-  <string source="Needs inspection" where="housekeeping">Prüfung erforderlich</string>
+  <string source="Select a room to update its cleaning status." obsolete="true">Wählen Sie ein Zimmer, um den Reinigungsstatus zu ändern.</string>
+  <string source="Mark clean" where="rooms">Als sauber markieren</string>
+  <string source="Mark dirty" where="rooms">Als schmutzig markieren</string>
+  <string source="Needs inspection" where="rooms">Prüfung erforderlich</string>
   <string source="Inspection needed" where="code">Prüfung erforderlich</string>
   <string source="Dirty" where="code">Schmutzig</string>
   <string source="Clean" where="code">Sauber</string>
@@ -136,7 +136,7 @@
   <string source="Unknown service command." where="code">Unbekannter Dienstbefehl.</string>
   <string source="This role cannot perform that action." where="code">Diese Rolle darf diese Aktion nicht ausführen.</string>
   <string source="Group reservation" where="reception,group_reservation">Gruppenreservierung</string>
-  <string source="Close day" where="reception,day_close">Tag abschließen</string>
+  <string source="Close day" where="day_close">Tag abschließen</string>
   <string source="Closing prevents reservation and payment changes until tomorrow." where="day_close">Nach dem Abschluss sind Reservierungs- und Zahlungsänderungen erst morgen möglich.</string>
   <string source="Close today" where="day_close">Heute abschließen</string>
   <string source="Create reservations for two rooms under one group." where="group_reservation">Erstellen Sie Reservierungen für zwei Zimmer in einer Gruppe.</string>
@@ -161,7 +161,7 @@
   <string source="Today's net payments: %s" where="code">Nettozahlungen heute: %s</string>
   <string source="Outstanding balance: %s" where="code">Offener Saldo: %s</string>
   <string source="Overdue arrivals and departures: %d" where="code">Überfällige An- und Abreisen: %d</string>
-  <string source="Hotel setup" where="reception,hotel_setup">Hoteleinstellungen</string>
+  <string source="Hotel setup" where="hotel_setup">Hoteleinstellungen</string>
   <string source="Existing amounts will be interpreted in the selected currency without conversion." where="hotel_setup">Vorhandene Beträge werden ohne Umrechnung in der gewählten Währung interpretiert.</string>
   <string source="This choice cannot be changed after it is saved." where="hotel_setup">Diese Auswahl kann nach dem Speichern nicht geändert werden.</string>
   <string source="Set Germany and EUR" where="hotel_setup">Deutschland und EUR festlegen</string>
@@ -190,8 +190,8 @@
   <string source="Cancelled with payments" where="day_close">Stornierte mit Zahlungen</string>
   <string source="Paid on cancelled" where="day_close">Zahlungen für stornierte</string>
   <string source="Unknown" where="code">Unbekannt</string>
-  <string source="Occupancy" where="housekeeping">Belegung</string>
-  <string source="Refresh rooms" where="housekeeping">Zimmer aktualisieren</string>
+  <string source="Occupancy" where="rooms">Belegung</string>
+  <string source="Refresh rooms" where="rooms">Zimmer aktualisieren</string>
   <string source="Guest checked in" where="code">Gast eingecheckt</string>
   <string source="No guest checked in" where="code">Kein Gast eingecheckt</string>
   <string source="Occupancy unknown" where="code">Belegung unbekannt</string>
@@ -229,4 +229,174 @@
   <string source="Reservation" where="code">Buchung</string>
   <string source="Action" where="code">Vorgang</string>
   <string source="Overdue stays saved: %s" where="code">Überfällige An- und Abreisen gespeichert: %s</string>
+  <string source="Today" where="today">Heute</string>
+  <string source="Today at the front desk" where="today">Heute an der Rezeption</string>
+  <string source="Needs attention" where="today">Zu erledigen</string>
+  <string source="Task" where="today">Aufgabe</string>
+  <string source="Detail" where="today">Detail</string>
+  <string source="In house" where="today">Im Haus</string>
+  <string source="Arrivals" where="today">Anreisen</string>
+  <string source="Check in the selected arrival (double-click a row)" where="today">Ausgewählte Anreise einchecken (Doppelklick auf eine Zeile)</string>
+  <string source="Registration form" where="today,reception">Meldeschein</string>
+  <string source="Print the guest registration form of the selected arrival" where="today">Meldeschein der ausgewählten Anreise drucken</string>
+  <string source="Departures" where="today">Abreisen</string>
+  <string source="Settle balance" where="today">Restbetrag kassieren</string>
+  <string source="Record a payment for the selected departure" where="today">Zahlung für die ausgewählte Abreise erfassen</string>
+  <string source="Check out the selected departure (double-click a row)" where="today">Ausgewählte Abreise auschecken (Doppelklick auf eine Zeile)</string>
+  <string source="Guest bill" where="today,reception">Gastrechnung</string>
+  <string source="Print the bill of the selected departure" where="today">Rechnung der ausgewählten Abreise drucken</string>
+  <string source="Find a room" where="availability">Zimmer suchen</string>
+  <string source="Availability" where="availability">Verfügbarkeit</string>
+  <string source="Free rooms for a stay" where="availability">Freie Zimmer für einen Aufenthalt</string>
+  <string source="Show free rooms" where="availability">Freie Zimmer anzeigen</string>
+  <string source="Category" where="availability,rooms">Kategorie</string>
+  <string source="Capacity" where="availability,rooms">Kapazität</string>
+  <string source="Nightly rate" where="availability,rooms">Preis pro Nacht</string>
+  <string source="Stay total" where="availability">Gesamtpreis</string>
+  <string source="Booked via:" where="availability,reception">Gebucht über:</string>
+  <string source="Reserve selected room" where="availability">Ausgewähltes Zimmer reservieren</string>
+  <string source="Reservations" where="reception">Reservierungen</string>
+  <string source="Reservations and payments" where="reception">Reservierungen und Zahlungen</string>
+  <string source="Find a guest or room" where="reception">Gast oder Zimmer suchen</string>
+  <string source="Find" where="reception">Suchen</string>
+  <string source="Setup" where="hotel_setup">Einrichtung</string>
+  <string source="Country, currency and catalogs" where="hotel_setup">Land, Währung und Kataloge</string>
+  <string source="Booking sources" where="hotel_setup">Buchungsquellen</string>
+  <string source="Booked via" where="hotel_setup">Gebucht über</string>
+  <string source="Payment methods" where="hotel_setup">Zahlungsarten</string>
+  <string source="Method" where="hotel_setup">Zahlungsart</string>
+  <string source="Booking source" where="booking_source">Buchungsquelle</string>
+  <string source="Name:" where="booking_source,payment_method">Name:</string>
+  <string source="Payment method" where="payment_method">Zahlungsart</string>
+  <string source="Night audit: close the operational day" where="day_close">Tagesabschluss: den Betriebstag abschließen</string>
+  <string source="Method:" where="payment">Zahlungsart:</string>
+  <string source="Rooms, housekeeping and maintenance" where="rooms">Zimmer, Housekeeping und Instandhaltung</string>
+  <string source="Cleaning list" where="rooms">Reinigungsliste</string>
+  <string source="Print today's housekeeping list" where="rooms">Heutige Reinigungsliste drucken</string>
+  <string source="Out of service" where="rooms,room_block">Außer Betrieb</string>
+  <string source="From" where="rooms">Von</string>
+  <string source="Until" where="rooms">Bis</string>
+  <string source="Reason" where="rooms">Grund</string>
+  <string source="Take a room out of service" where="rooms">Zimmer sperren</string>
+  <string source="Return to service" where="rooms">Wieder freigeben</string>
+  <string source="From:" where="room_block,reports">Von:</string>
+  <string source="Until:" where="room_block,reports">Bis:</string>
+  <string source="Reason:" where="room_block">Grund:</string>
+  <string source="The room is free again on the Until date, as a guest's departure frees it." where="room_block">Das Zimmer ist am Bis-Datum wieder frei, wie nach einer Abreise.</string>
+  <string source="Guest records" where="guests">Gästedaten</string>
+  <string source="Phone" where="guests">Telefon</string>
+  <string source="Email" where="guests">E-Mail</string>
+  <string source="Nationality" where="guests">Staatsangehörigkeit</string>
+  <string source="Stays" where="guests">Aufenthalte</string>
+  <string source="Address:" where="guests">Adresse:</string>
+  <string source="Document:" where="guests">Ausweis:</string>
+  <string source="Email:" where="guest">E-Mail:</string>
+  <string source="Date of birth:" where="guest">Geburtsdatum:</string>
+  <string source="Nationality:" where="guest">Staatsangehörigkeit:</string>
+  <string source="Home address:" where="guest">Wohnanschrift:</string>
+  <string source="ID or passport no.:" where="guest">Ausweis- oder Passnr.:</string>
+  <string source="Reports" where="reports">Berichte</string>
+  <string source="Occupancy, revenue and payments" where="reports">Belegung, Umsatz und Zahlungen</string>
+  <string source="Period report" where="reports">Periodenbericht</string>
+  <string source="Show" where="reports">Anzeigen</string>
+  <string source="This month" where="reports">Dieser Monat</string>
+  <string source="Last month" where="reports">Letzter Monat</string>
+  <string source="Export report" where="reports">Bericht exportieren</string>
+  <string source="Figure" where="reports">Kennzahl</string>
+  <string source="Value" where="reports">Wert</string>
+  <string source="Until is exclusive, as a departure date: a month runs from its first day until the first day of the next." where="reports">„Bis“ zählt nicht mit, wie ein Abreisedatum: Ein Monat reicht vom ersten Tag bis zum ersten Tag des nächsten.</string>
+  <string source="Show free rooms, then choose one." where="code">Zeigen Sie freie Zimmer an und wählen Sie eines.</string>
+  <string source="Reservation %d saved: room %s for %s." where="code">Reservierung %d gespeichert: Zimmer %s für %s.</string>
+  <string source="%d rooms free" where="code">%d Zimmer frei</string>
+  <string source="Guest registration form" where="code">Meldeschein</string>
+  <string source="Accompanying guests (name, date of birth):" where="code">Mitreisende (Name, Geburtsdatum):</string>
+  <string source="Guest&#x27;s signature" where="code">Unterschrift des Gastes</string>
+  <string source="Night of %s" where="code">Nacht vom %s</string>
+  <string source="Extra charges" where="code">Zusatzleistungen</string>
+  <string source="Refund" where="code">Erstattung</string>
+  <string source="Payment" where="code">Zahlung</string>
+  <string source="Item" where="code">Posten</string>
+  <string source="Amount, %s" where="code">Betrag, %s</string>
+  <string source="Payments and refunds" where="code">Zahlungen und Erstattungen</string>
+  <string source="This bill is an operational summary, not a tax invoice." where="code">Diese Rechnung ist eine betriebliche Übersicht, keine Steuerrechnung.</string>
+  <string source="Departure: full clean after check-out" where="code">Abreise: Endreinigung nach dem Check-out</string>
+  <string source="Arrival today: prepare first" where="code">Anreise heute: zuerst vorbereiten</string>
+  <string source="Stay-over: tidy" where="code">Bleibegast: Zwischenreinigung</string>
+  <string source="Clean or inspect" where="code">Reinigen oder prüfen</string>
+  <string source="To do" where="code">Zu tun</string>
+  <string source="Done" where="code">Erledigt</string>
+  <string source="%s to %s (exclusive) · Currency: %s" where="code">%s bis %s (ausschließlich) · Währung: %s</string>
+  <string source="Operational figures from Lodge&#x27;s records; not a statutory or tax report." where="code">Betriebszahlen aus den Daten von Lodge; kein amtlicher oder steuerlicher Bericht.</string>
+  <string source="Room not ready" where="code">Zimmer nicht bereit</string>
+  <string source="Room ready" where="code">Zimmer bereit</string>
+  <string source="Balance to settle" where="code">Restbetrag offen</string>
+  <string source="Settled" where="code">Beglichen</string>
+  <string source="%d guests" where="code">%d Gäste</string>
+  <string source="Choose the hotel&#x27;s country and currency" where="code">Land und Währung des Hotels wählen</string>
+  <string source="Setup, before the first reservation" where="code">Einrichtung, vor der ersten Reservierung</string>
+  <string source="Add the hotel&#x27;s rooms" where="code">Zimmer des Hotels anlegen</string>
+  <string source="Rooms page" where="code">Seite Zimmer</string>
+  <string source="%s did not arrive" where="code">%s ist nicht angereist</string>
+  <string source="Room %s · check in or cancel" where="code">Zimmer %s · einchecken oder stornieren</string>
+  <string source="Prepare room %s" where="code">Zimmer %s vorbereiten</string>
+  <string source="%s arrives today" where="code">%s reist heute an</string>
+  <string source="%s is past departure" where="code">%s hat die Abreise überschritten</string>
+  <string source="Room %s · check out or extend" where="code">Zimmer %s · auschecken oder verlängern</string>
+  <string source="Settle %s before departure" where="code">%s vor der Abreise abrechnen</string>
+  <string source="Balance %s" where="code">Restbetrag %s</string>
+  <string source="%d rooms to clean or inspect" where="code">%d Zimmer zu reinigen oder zu prüfen</string>
+  <string source="Room %s is out of service" where="code">Zimmer %s ist außer Betrieb</string>
+  <string source="%s until %s" where="code">%s bis %s</string>
+  <string source="Yesterday was not closed" where="code">Der gestrige Tag wurde nicht abgeschlossen</string>
+  <string source="Close each day after the last departure" where="code">Schließen Sie jeden Tag nach der letzten Abreise ab</string>
+  <string source="Enter the number of guests." where="code">Geben Sie die Zahl der Gäste ein.</string>
+  <string source="The period must end after it starts." where="code">Der Zeitraum muss nach seinem Beginn enden.</string>
+  <string source="Choose a period of at most a year." where="code">Wählen Sie einen Zeitraum von höchstens einem Jahr.</string>
+  <string source="Not recorded" where="code">Nicht erfasst</string>
+  <string source="Revenue" where="code">Umsatz</string>
+  <string source="Payments" where="code">Zahlungen</string>
+  <string source="Bookings" where="code">Buchungen</string>
+  <string source="Room-nights available" where="code">Verfügbare Zimmernächte</string>
+  <string source="Room-nights sold" where="code">Verkaufte Zimmernächte</string>
+  <string source="Guest-nights" where="code">Übernachtungen</string>
+  <string source="Room revenue" where="code">Logisumsatz</string>
+  <string source="Extra charges of departures" where="code">Zusatzleistungen der Abreisen</string>
+  <string source="Average daily rate (ADR)" where="code">Durchschnittlicher Zimmerpreis (ADR)</string>
+  <string source="Revenue per available room (RevPAR)" where="code">Umsatz pro verfügbarem Zimmer (RevPAR)</string>
+  <string source="Cancelled arrivals" where="code">Stornierte Anreisen</string>
+  <string source="This name is already used." where="code">Dieser Name wird bereits verwendet.</string>
+  <string source="Enter a valid email address or leave it empty." where="code">Geben Sie eine gültige E-Mail-Adresse ein oder lassen Sie das Feld leer.</string>
+  <string source="Enter a birth date in the past." where="code">Geben Sie ein Geburtsdatum in der Vergangenheit ein.</string>
+  <string source="The block must end after it starts." where="code">Die Sperre muss nach ihrem Beginn enden.</string>
+  <string source="Enter the reason the room is out of service." where="code">Geben Sie den Grund für die Sperre an.</string>
+  <string source="The room is already out of service for these dates." where="code">Das Zimmer ist für diese Tage bereits gesperrt.</string>
+  <string source="Move the reservations in these dates to another room first." where="code">Verlegen Sie zuerst die Reservierungen dieser Tage in ein anderes Zimmer.</string>
+  <string source="Choose where the booking came from." where="code">Wählen Sie, woher die Buchung kam.</string>
+  <string source="The room is out of service for these dates." where="code">Das Zimmer ist für diese Tage außer Betrieb.</string>
+  <string source="Choose a payment method." where="code">Wählen Sie eine Zahlungsart.</string>
+  <string source="Cleaning list saved: %s" where="code">Reinigungsliste gespeichert: %s</string>
+  <string source="Enter part of a guest or room name." where="code">Geben Sie einen Teil des Gast- oder Zimmernamens ein.</string>
+  <string source="No active reservation matches." where="code">Keine aktive Reservierung passt.</string>
+  <string source="Match %d of %d: reservation %d, %s, room %s, %s to %s." where="code">Treffer %d von %d: Reservierung %d, %s, Zimmer %s, %s bis %s.</string>
+  <string source="Registration form saved: %s" where="code">Meldeschein gespeichert: %s</string>
+  <string source="Guest bill saved: %s" where="code">Gastrechnung gespeichert: %s</string>
+  <string source="Enter the first day." where="code">Geben Sie den ersten Tag ein.</string>
+  <string source="Enter the day after the last." where="code">Geben Sie den Tag nach dem letzten ein.</string>
+  <string source="Report saved: %s" where="code">Bericht gespeichert: %s</string>
+  <string source="%d days · %d rooms" where="code">%d Tage · %d Zimmer</string>
+  <string source="Choose an arrival." where="code">Wählen Sie eine Anreise.</string>
+  <string source="%s checked in to room %s." where="code">%s ist in Zimmer %s eingecheckt.</string>
+  <string source="Choose a departure." where="code">Wählen Sie eine Abreise.</string>
+  <string source="%s checked out of room %s." where="code">%s ist aus Zimmer %s ausgecheckt.</string>
+  <string source="Choose a guest in house." where="code">Wählen Sie einen Gast im Haus.</string>
+  <string source="Today, %s" where="code">Heute, %s</string>
+  <string source="%d of %d rooms occupied" where="code">%d von %d Zimmern belegt</string>
+  <string source="All clear" where="code">Alles erledigt</string>
+  <string source="Direct" where="code">Direkt</string>
+  <string source="Website" where="code">Website</string>
+  <string source="Booking portal" where="code">Buchungsportal</string>
+  <string source="Walk-in" where="code">Laufkundschaft</string>
+  <string source="Cash" where="code">Bar</string>
+  <string source="Card" where="code">Karte</string>
+  <string source="Bank transfer" where="code">Überweisung</string>
 </strings>

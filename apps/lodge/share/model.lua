@@ -9,7 +9,7 @@ local labels = {reserved = "Reserved", checked_in = "Checked in", checked_out = 
 local cleaning_labels = {inspection_needed = "Inspection needed", dirty = "Dirty", clean = "Clean"}
 local Model = {}
 local writing_history = false
-local fields = {"room_id", "guest_id", "group_id", "arrival", "departure", "persons", "rate", "extras", "paid", "status", "notes"}
+local fields = {"room_id", "guest_id", "group_id", "arrival", "departure", "persons", "rate", "extras", "paid", "status", "notes", "source_id"}
 local function snapshot(row)
   if not row then return "" end
   local values = {}
@@ -59,6 +59,7 @@ function Model:validate_delete(table, previous)
 end
 function Model:initialize(database)
   if database ~= "lodge" then return true end
+  Hotel.seed_catalogs()
   writing_history = true
   local ok, result, message = pcall(function()
     for _, row in ipairs(Hotel.reservations.model:all()) do
@@ -106,7 +107,7 @@ function Model:after_write(table, operation, current, previous)
     local delta = money.minor(current and current.paid or 0) - money.minor(previous and previous.paid or 0)
     if delta ~= 0 then
       saved, refusal = payments:create({reservation_id = row.id, amount_minor = delta, kind = delta > 0 and "payment" or "refund", actor = db.actor("lodge"), posted_on = orion.today(),
-        request_key = Hotel.payment_request or ""})
+        request_key = Hotel.payment_request or "", method_id = Hotel.payment_method or 0})
       if not saved then return nil, refusal end
     end
     if previous and current and ((previous.status ~= "checked_out" and current.status == "checked_out") or
@@ -122,6 +123,11 @@ function Model:after_write(table, operation, current, previous)
 end
 function Model:compute(table, row, property)
   if table == "rooms" and property == "cleaning_label" then return orion.tr(cleaning_labels[row.cleaning_state] or row.cleaning_state) end
+  if table == "guests" and property == "guest_stays" then
+    local count = 0
+    for _, stay in ipairs(Hotel.reservations.model:select({guest_id = row.id})) do if stay.status ~= "cancelled" then count = count + 1 end end
+    return count
+  end
   if table == "rooms" and property == "occupancy_label" then return orion.tr(Hotel.room_occupied(row.id) and "Guest checked in" or "No guest checked in") end
   if table == "day_closes" and ({net_display = true, outstanding_display = true, cancelled_paid_display = true, cancelled_count_display = true})[property] then
     return require("remote.close_display")(row, property)

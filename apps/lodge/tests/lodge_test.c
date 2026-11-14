@@ -61,7 +61,7 @@ static void test_persistence_and_page(void) {
   ASSERT_TRUE(hotel_script(app, "assert(require('hotel').configure_hotel('DE','EUR'))"));
   db_payment_event_t *opening = (void *)send_db_message(hotel, dbFind, TABLE_PAYMENT_EVENTS, (void *)(intptr_t)1);
   ASSERT_NOT_NULL(opening); ASSERT_STR_EQUAL(opening->kind, "opening_balance"); ASSERT_STR_EQUAL(opening->actor, "migration"); ASSERT_EQUAL(opening->amount_minor, 20990);
-  script_page_t *page = script_application_main(app);
+  script_page_t *page = script_application_page(app, "reception");
   ASSERT_NOT_NULL(script_page_control(page, "bookings"));
   ASSERT_NOT_NULL(strstr(script_page_control(page, "summary")->title, "3"));
   ASSERT_TRUE(script_page_perform(page, "confirmation"));
@@ -92,7 +92,7 @@ static void test_persistence_and_page(void) {
   db_room_t *inserted = (void *)send_db_message(hotel, dbInsert, TABLE_ROOMS, &room);
   ASSERT_NOT_NULL(inserted); room.id = inserted->id;
   ASSERT_TRUE(script_runtime_action(script_application_runtime(app), "orion.application", "open", "rooms", error, sizeof(error)));
-  ASSERT_TRUE(script_runtime_action(script_application_runtime(app), "orion.application", "open", "housekeeping", error, sizeof(error)));
+  ASSERT_TRUE(script_runtime_action(script_application_runtime(app), "orion.application", "open", "guests", error, sizeof(error)));
   send_message(script_page_control(page, "room"), cbSetCurrentValue, room.id, NULL);
   send_message(script_page_control(page, "guest"), cbSetCurrentValue, 1, NULL);
   send_message(script_page_control(page, "arrival"), edSetText, 0, "2026-05-01");
@@ -173,15 +173,14 @@ static void test_persistence_and_page(void) {
   ASSERT_TRUE(send_db_message(hotel, dbUpdate, TABLE_RESERVATIONS, &checking_in));
   char occupancy[80]; db_get_field_text(hotel, TABLE_ROOMS, room_row, "occupancy_label", occupancy, sizeof(occupancy));
   ASSERT_STR_EQUAL(occupancy, "Guest checked in");
-  form_library_t *housekeeping_library = form_library_load("apps/lodge/share/application.orion"); ASSERT_NOT_NULL(housekeeping_library);
-  script_page_t *housekeeping = script_page_open_library(script_application_runtime(app), housekeeping_library, "housekeeping", "apps/lodge/share/housekeeping.lua", error, sizeof(error));
-  ASSERT_NOT_NULL(housekeeping); ASSERT_NOT_NULL(script_page_create(housekeeping, NULL)); ASSERT_NOT_NULL(script_page_control(housekeeping, "rooms"));
+  script_page_t *housekeeping = script_application_page(app, "rooms");
+  ASSERT_NOT_NULL(housekeeping); ASSERT_NOT_NULL(script_page_control(housekeeping, "rooms")); ASSERT_NOT_NULL(script_page_control(housekeeping, "blocks"));
   ASSERT_TRUE(hotel_script(app, "assert(require('hotel').payment(4, 17150, 'settle-room'))"));
   ASSERT_TRUE(hotel_script(app, "assert(require('hotel').transition(4, 'checked_out'))"));
   room_row = (void *)send_db_message(hotel, dbFind, TABLE_ROOMS, (void *)(intptr_t)room.id);
   ASSERT_STR_EQUAL(room_row->cleaning_state, "dirty");
   db_get_field_text(hotel, TABLE_ROOMS, room_row, "occupancy_label", occupancy, sizeof(occupancy)); ASSERT_STR_EQUAL(occupancy, "No guest checked in");
-  ASSERT_TRUE(script_page_perform(housekeeping, "refresh")); script_page_close(housekeeping); form_library_free(housekeeping_library);
+  ASSERT_TRUE(script_page_perform(housekeeping, "refresh"));
   ASSERT_TRUE(send_db_message(hotel, dbSave, 0, NULL));
   script_application_close(app); hotel = NULL;
   app = script_application_open("apps/lodge/share", directory, error, sizeof(error)); ASSERT_NOT_NULL(app);
@@ -207,7 +206,7 @@ static void test_refused_migration(void) {
   file = fopen(target, "rb"); ASSERT_NOT_NULL(file);
   size_t size = fread(contents, 1, sizeof(contents) - 1, file); fclose(file); contents[size] = 0;
   ASSERT_STR_EQUAL(contents, xml);
-  const char *future = "<lodge orion-version=\"7\"><reservations/></lodge>";
+  const char *future = "<lodge orion-version=\"8\"><reservations/></lodge>";
   file = fopen(target, "wb"); ASSERT_NOT_NULL(file); ASSERT_EQUAL(fputs(future, file) >= 0, true); fclose(file);
   app = script_application_open("apps/lodge/share", directory, error, sizeof(error));
   ASSERT_NULL(app);
@@ -261,7 +260,7 @@ static void test_payment_form(void) {
   char directory[128], target[160], error[2048];
   snprintf(directory, sizeof(directory), "/tmp/orion-lodge-payment-%ld", (long)getpid()); test_mkdir(directory, 0700);
   snprintf(target, sizeof(target), "%s/hotel.xml", directory);
-  FILE *in = fopen("apps/lodge/share/samples/demo.xml", "rb"), *out = fopen(target, "wb");
+  FILE *in = fopen("apps/lodge/tests/fixtures/legacy-hotel.xml", "rb"), *out = fopen(target, "wb");
   ASSERT_NOT_NULL(in); ASSERT_NOT_NULL(out);
   int byte; while ((byte = fgetc(in)) != EOF) fputc(byte, out);
   fclose(in); fclose(out);
@@ -270,7 +269,7 @@ static void test_payment_form(void) {
   ASSERT_TRUE(hotel_script(app, "assert(require('hotel').configure_hotel('DE','EUR'))"));
   database_t *group = get_database_by_name("bookings"); ASSERT_NOT_NULL(group);
   ASSERT_TRUE(send_db_message(group, dbSelectRecord, 2, NULL));
-  script_page_t *reception = script_application_main(app);
+  script_page_t *reception = script_application_page(app, "reception");
   ASSERT_TRUE(script_page_perform(reception, "edit"));
   ASSERT_TRUE(hotel_script(app, "require('hotel').pending_payment_id=2"));
   form_library_t *library = form_library_load("apps/lodge/share/application.orion"); ASSERT_NOT_NULL(library);
@@ -320,7 +319,7 @@ static void test_nightly_prices(void) {
   char directory[128], target[160], error[2048];
   snprintf(directory, sizeof(directory), "/tmp/orion-lodge-night-%ld", (long)getpid()); test_mkdir(directory, 0700);
   snprintf(target, sizeof(target), "%s/hotel.xml", directory);
-  FILE *in = fopen("apps/lodge/share/samples/demo.xml", "rb"), *out = fopen(target, "wb");
+  FILE *in = fopen("apps/lodge/tests/fixtures/legacy-hotel.xml", "rb"), *out = fopen(target, "wb");
   ASSERT_NOT_NULL(in); ASSERT_NOT_NULL(out);
   int byte; while ((byte = fgetc(in)) != EOF) fputc(byte, out);
   fclose(in); fclose(out);
@@ -500,7 +499,7 @@ static void test_group_form(const char *country, const char *currency) {
   char directory[128], target[160], error[2048];
   snprintf(directory, sizeof(directory), "/tmp/orion-lodge-group-%ld-%s", (long)getpid(), country); test_mkdir(directory, 0700);
   snprintf(target, sizeof(target), "%s/hotel.xml", directory);
-  FILE *in = fopen("apps/lodge/share/samples/demo.xml", "rb"), *out = fopen(target, "wb");
+  FILE *in = fopen("apps/lodge/tests/fixtures/legacy-hotel.xml", "rb"), *out = fopen(target, "wb");
   ASSERT_NOT_NULL(in); ASSERT_NOT_NULL(out);
   int byte; while ((byte = fgetc(in)) != EOF) fputc(byte, out);
   fclose(in); fclose(out);
@@ -524,10 +523,10 @@ static void test_group_form(const char *country, const char *currency) {
   db_reservation_t *second = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)5);
   ASSERT_NOT_NULL(group); ASSERT_NOT_NULL(first); ASSERT_NOT_NULL(second);
   ASSERT_EQUAL(first->group_id, group->id); ASSERT_EQUAL(second->group_id, group->id);
-  window_t *booking_table = script_page_control(script_application_main(app), "bookings"); ASSERT_NOT_NULL(booking_table);
+  window_t *booking_table = script_page_control(script_application_page(app, "reception"), "bookings"); ASSERT_NOT_NULL(booking_table);
   send_message(booking_table, tvRefresh, 0, NULL);
   send_message(booking_table, RVM_SETSELECTION, 3, NULL);
-  ASSERT_TRUE(script_page_perform(script_application_main(app), "group_statement"));
+  ASSERT_TRUE(script_page_perform(script_application_page(app, "reception"), "group_statement"));
   char statement_path[160], html[4096]; snprintf(statement_path, sizeof(statement_path), "%s/group-statement.html", directory);
   FILE *statement = fopen(statement_path, "rb"); ASSERT_NOT_NULL(statement);
   size_t html_size = fread(html, 1, sizeof(html) - 1, statement); fclose(statement); html[html_size] = 0;
@@ -541,36 +540,36 @@ static void test_group_form(const char *country, const char *currency) {
     "assert(html:find('<td>A</td>',1,true)<html:find('<td>B</td>',1,true))"));
   ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); h.payment_request='group:legacy:4'; assert(h.reservations:save(4,{paid=25})); h.payment_request=nil; assert(h.payment(4,2500,'group:legacy:4'))"));
   ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); local r=h.reservations.model:find(1); h.payment_request='group:local-1:1'; assert(h.reservations:save(1,{paid=r.paid+1})); h.payment_request=nil"));
-  ASSERT_TRUE(script_page_perform(script_application_main(app), "preview_group_settlement"));
-  ASSERT_NOT_NULL(strstr(script_page_control(script_application_main(app), "settlement_notice")->title, "2 reservations"));
+  ASSERT_TRUE(script_page_perform(script_application_page(app, "reception"), "preview_group_settlement"));
+  ASSERT_NOT_NULL(strstr(script_page_control(script_application_page(app, "reception"), "settlement_notice")->title, "2 reservations"));
   char original_settle[sizeof(hotel->source_path)]; snprintf(original_settle, sizeof(original_settle), "%s", hotel->source_path);
   snprintf(hotel->source_path, sizeof(hotel->source_path), "/nonexistent-orion-lodge-directory/hotel.xml");
-  ASSERT_FALSE(script_page_perform(script_application_main(app), "confirm_group_settlement"));
+  ASSERT_FALSE(script_page_perform(script_application_page(app, "reception"), "confirm_group_settlement"));
   first = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)4);
   second = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)5);
   ASSERT_EQUAL(first->paid, 25); ASSERT_EQUAL(second->paid, 0);
   ASSERT_NULL((void *)send_db_message(hotel, dbFind, TABLE_GROUP_SETTLEMENTS, (void *)(intptr_t)1));
   snprintf(hotel->source_path, sizeof(hotel->source_path), "%s", original_settle);
-  ASSERT_TRUE(script_page_perform(script_application_main(app), "confirm_group_settlement"));
+  ASSERT_TRUE(script_page_perform(script_application_page(app, "reception"), "confirm_group_settlement"));
   ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); assert(h.balance(h.reservations.model:find(4))==0 and h.balance(h.reservations.model:find(5))==0)"));
   ASSERT_TRUE(hotel_script(app, "assert(require('hotel').payment(1,100,'group:local-1:1'))"));
   ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); local e=require('orion.model'):extend('lodge.payment_events'); for _,p in ipairs(e:select({reservation_id=4})) do if p.request_key=='group:local-1:4' then assert(not h.payment(4,p.amount_minor,p.request_key)); return end end; error('missing group payment')"));
   ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); assert(not h.group_settlements:save(1,{allocation='changed'})); assert(not h.group_settlements:delete(1))"));
   ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); assert(not h.settle_group(nil,{{id=4,amount_minor=1}},'invalid')); assert(not h.settle_group(1,{{id=2147483648,amount_minor=1}},'invalid'))"));
-  ASSERT_TRUE(script_page_perform(script_application_main(app), "preview_group_cancel"));
-  ASSERT_NOT_NULL(strstr(script_page_control(script_application_main(app), "group_cancel_notice")->title, "2 reservations"));
+  ASSERT_TRUE(script_page_perform(script_application_page(app, "reception"), "preview_group_cancel"));
+  ASSERT_NOT_NULL(strstr(script_page_control(script_application_page(app, "reception"), "group_cancel_notice")->title, "2 reservations"));
   char original[sizeof(hotel->source_path)]; snprintf(original, sizeof(original), "%s", hotel->source_path);
   snprintf(hotel->source_path, sizeof(hotel->source_path), "/nonexistent-orion-lodge-directory/hotel.xml");
-  ASSERT_FALSE(script_page_perform(script_application_main(app), "confirm_group_cancel"));
+  ASSERT_FALSE(script_page_perform(script_application_page(app, "reception"), "confirm_group_cancel"));
   first = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)4);
   second = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)5);
   ASSERT_STR_EQUAL(first->status, "reserved"); ASSERT_STR_EQUAL(second->status, "reserved");
   snprintf(hotel->source_path, sizeof(hotel->source_path), "%s", original);
-  ASSERT_TRUE(script_page_perform(script_application_main(app), "confirm_group_cancel"));
+  ASSERT_TRUE(script_page_perform(script_application_page(app, "reception"), "confirm_group_cancel"));
   first = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)4);
   second = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)5);
   ASSERT_STR_EQUAL(first->status, "cancelled"); ASSERT_STR_EQUAL(second->status, "cancelled");
-  ASSERT_FALSE(script_page_perform(script_application_main(app), "confirm_group_cancel"));
+  ASSERT_FALSE(script_page_perform(script_application_page(app, "reception"), "confirm_group_cancel"));
   script_page_close(page); form_library_free(library); script_application_close(app); hotel = NULL;
   app = script_application_open("apps/lodge/share", directory, error, sizeof(error)); ASSERT_NOT_NULL(app);
   hotel = get_database_by_name("lodge");
@@ -588,13 +587,115 @@ static void test_group_form(const char *country, const char *currency) {
   char backup[168], lock[168]; snprintf(backup, sizeof(backup), "%s.bak", target); snprintf(lock, sizeof(lock), "%s.lock", target);
   unlink(statement_path); unlink(backup); unlink(lock); unlink(target); rmdir(directory); PASS();
 }
+static bool file_contains(const char *directory, const char *name, const char *text) {
+  char path[256], contents[16384]; snprintf(path, sizeof(path), "%s/%s", directory, name);
+  FILE *file = fopen(path, "rb"); if (!file) return false;
+  size_t size = fread(contents, 1, sizeof(contents) - 1, file); fclose(file); contents[size] = 0; unlink(path);
+  return strstr(contents, text) != NULL;
+}
+static void test_front_desk(void) {
+  TEST("front desk: today's movements, free rooms, out of service, payment methods, documents and reports");
+  char directory[128], error[2048];
+  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-desk-%ld", (long)getpid()); test_mkdir(directory, 0700);
+  script_application_t *app = script_application_open("apps/lodge/share", directory, error, sizeof(error)); ASSERT_NOT_NULL(app);
+  hotel = get_database_by_name("lodge");
+  ASSERT_NOT_NULL(script_application_page(app, "today"));
+  ASSERT_TRUE(hotel_script(app,
+    "local orion,h=require('orion'),require('hotel'); local cal=require('orion.plugins').use('calendar',1); assert(h.configure_hotel('DE','EUR'),'step1'); "
+    "assert(#h.booking_sources.model:all()==6 and #h.payment_methods.model:all()==3,'step2'); "
+    "assert(not h.guests:save(nil,{name='Bad',email='not-an-email'}),'step3'); assert(not h.guests:save(nil,{name='Unborn',birth_date=cal.add(orion.today(),1)}),'step4'); "
+    "assert(h.guests:save(nil,{name='Ada Lovelace',email='ada@example.org',birth_date='1990-12-10',nationality='British',address='1 St James Sq, London',document='P123'}),'step5'); "
+    "assert(h.guests:save(nil,{name='Bo Larsen'}),'step6'); "
+    "for _,r in ipairs({{'A',2,100},{'B',4,150},{'C',2,80}}) do assert(h.rooms:save(nil,{name=r[1],capacity=r[2],rate=r[3]}),'step7') end; "
+    "for id=1,3 do assert(h.rooms:save(id,{cleaning_state='clean'}),'step8') end; "
+    "local t=orion.today(); local phone=h.booking_sources.model:find({name='Phone'}).id; "
+    "assert(h.save(nil,{room_id=1,guest_id=1,arrival=t,departure=cal.add(t,2),persons=2,rate=100,extras=0,notes='',source_id=phone}),'step9'); "
+    "assert(h.save(nil,{room_id=2,guest_id=2,arrival=cal.add(t,-1),departure=t,persons=1,rate=150,extras=12.5,notes=''}),'step10'); "
+    "assert(h.transition(2,'checked_in'),'step11'); "
+    "assert(h.room_blocks:save(nil,{room_id=3,blocked_from=cal.add(t,5),blocked_until=cal.add(t,7),reason='Paint'}),'step12'); "
+    "assert(not h.room_blocks:save(nil,{room_id=1,blocked_from=t,blocked_until=cal.add(t,1),reason='Leak'}),'step13'); "
+    "assert(not h.save(nil,{room_id=3,guest_id=2,arrival=cal.add(t,6),departure=cal.add(t,8),persons=1,rate=80,extras=0,notes=''}),'step14'); "
+    "local fd=require('front_desk'); local free=fd.free_rooms(cal.add(t,5),cal.add(t,6),1); assert(#free==2 and free[1].name=='A' and free[2].name=='B','step15'); "
+    "free=fd.free_rooms(cal.add(t,5),cal.add(t,6),3); assert(#free==1 and free[1].name=='B','step16'); "
+    "assert(#fd.free_rooms(t,cal.add(t,1),1)==2,'step17')"));
+  script_page_t *today = script_application_page(app, "today"); ASSERT_NOT_NULL(today);
+  script_page_update(today);
+  ASSERT_STR_EQUAL(script_page_control(today, "arrivals_count")->title, "1");
+  ASSERT_STR_EQUAL(script_page_control(today, "departures_count")->title, "1");
+  ASSERT_STR_EQUAL(script_page_control(today, "in_house_count")->title, "1");
+  send_message(script_page_control(today, "arrivals"), RVM_SETSELECTION, 0, NULL);
+  ASSERT_TRUE(script_page_perform(today, "registration"));
+  ASSERT_TRUE(file_contains(directory, "registration.html", "P123"));
+  ASSERT_TRUE(script_page_perform(today, "check_in"));
+  db_reservation_t *row = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)1);
+  ASSERT_STR_EQUAL(row->status, "checked_in");
+  ASSERT_STR_EQUAL(script_page_control(today, "in_house_count")->title, "2");
+  send_message(script_page_control(today, "departures"), RVM_SETSELECTION, 0, NULL);
+  ASSERT_FALSE(script_page_perform(today, "check_out"));
+  ASSERT_NOT_NULL(strstr(script_page_message(today), "Settle"));
+  ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); local card=h.payment_methods.model:find({name='Card'}).id; "
+    "assert(not h.payment(2,16250,'desk-1',999)); assert(h.payment(2,16250,'desk-1',card)); "
+    "local e=require('orion.model'):extend('lodge.payment_events'):find({request_key='desk-1'}); assert(e.method_id==card)"));
+  send_message(script_page_control(today, "departures"), RVM_SETSELECTION, 0, NULL);
+  ASSERT_TRUE(script_page_perform(today, "invoice"));
+  ASSERT_TRUE(file_contains(directory, "bill.html", "Card"));
+  send_message(script_page_control(today, "departures"), RVM_SETSELECTION, 0, NULL);
+  ASSERT_TRUE(script_page_perform(today, "check_out"));
+  row = (void *)send_db_message(hotel, dbFind, TABLE_RESERVATIONS, (void *)(intptr_t)2);
+  ASSERT_STR_EQUAL(row->status, "checked_out");
+  ASSERT_STR_EQUAL(script_page_control(today, "departures_count")->title, "0");
+  ASSERT_TRUE(hotel_script(app, "local orion,fd=require('orion'),require('front_desk'); local cal=require('orion.plugins').use('calendar',1); local t=orion.today(); "
+    "local r=fd.period(cal.add(t,-1),cal.add(t,2)); assert(r.available==9 and r.sold==3 and r.guest_nights==5, r.sold); "
+    "assert(r.room_revenue==35000 and r.extras==1250 and r.net==16250); assert(r.methods['Card']==16250); assert(r.sources['Phone']==1); "
+    "local found=false; for _,row in ipairs(fd.period_rows(r)) do if row.label=='Average daily rate (ADR)' then found=row.value end end; assert(found=='116.67', found)"));
+  script_page_t *reports = script_application_page(app, "reports"); ASSERT_NOT_NULL(reports);
+  ASSERT_TRUE(script_page_perform(reports, "export"));
+  ASSERT_TRUE(file_contains(directory, "period-report.html", "RevPAR"));
+  script_page_t *rooms = script_application_page(app, "rooms"); ASSERT_NOT_NULL(rooms);
+  ASSERT_TRUE(script_page_perform(rooms, "cleaning_list"));
+  ASSERT_TRUE(file_contains(directory, "cleaning-list.html", "Stay-over: tidy"));
+  script_page_t *availability = script_application_page(app, "availability"); ASSERT_NOT_NULL(availability);
+  ASSERT_FALSE(script_page_perform(availability, "reserve"));
+  ASSERT_TRUE(script_page_perform(availability, "search"));
+  ASSERT_NOT_NULL(strstr(script_page_control(availability, "summary")->title, "2 rooms free"));
+  send_message(script_page_control(availability, "free"), RVM_SETSELECTION, 0, NULL);
+  send_message(script_page_control(availability, "guest"), cbSetCurrentValue, 2, NULL);
+  ASSERT_TRUE(script_page_perform(availability, "reserve"));
+  ASSERT_NOT_NULL(strstr(script_page_control(availability, "notice")->title, "Bo Larsen"));
+  ASSERT_NOT_NULL(strstr(script_page_control(availability, "summary")->title, "1 rooms free"));
+  script_application_close(app); hotel = NULL;
+  char path[192];
+  const char *files[] = {"hotel.xml", "hotel.xml.bak", "hotel.xml.lock"};
+  for (int i = 0; i < 3; i++) { snprintf(path, sizeof(path), "%s/%s", directory, files[i]); unlink(path); }
+  rmdir(directory);
+  PASS();
+}
+static void test_demo(void) {
+  TEST("the shipped demo hotel opens, migrates and shows its reservations");
+  char directory[128], target[160], error[2048];
+  snprintf(directory, sizeof(directory), "/tmp/orion-lodge-demo-%ld", (long)getpid()); test_mkdir(directory, 0700);
+  snprintf(target, sizeof(target), "%s/hotel.xml", directory);
+  FILE *in = fopen("apps/lodge/share/samples/demo.xml", "rb"), *out = fopen(target, "wb");
+  ASSERT_NOT_NULL(in); ASSERT_NOT_NULL(out);
+  int byte; while ((byte = fgetc(in)) != EOF) fputc(byte, out);
+  fclose(in); fclose(out);
+  script_application_t *app = script_application_open("apps/lodge/share", directory, error, sizeof(error));
+  if (!app) fprintf(stderr, "%s\n", error);
+  ASSERT_NOT_NULL(app); hotel = get_database_by_name("lodge");
+  ASSERT_TRUE(hotel_script(app, "local h=require('hotel'); assert(h.configure_hotel('DE','EUR')); assert(#h.reservations.model:all()==10 and #h.room_blocks.model:all()==1)"));
+  ASSERT_NOT_NULL(strstr(script_page_control(script_application_page(app, "reception"), "summary")->title, "10 reservations"));
+  script_application_close(app); hotel = NULL;
+  char path[192]; const char *files[] = {"hotel.xml", "hotel.xml.bak", "hotel.xml.lock"};
+  for (int i = 0; i < 3; i++) { snprintf(path, sizeof(path), "%s/%s", directory, files[i]); unlink(path); }
+  rmdir(directory); PASS();
+}
 int main(void) {
   TEST_START("Orion Lodge");
   test_env_init(); DB_CLASS(db_schema_xml);
   snprintf(hotel_path, sizeof(hotel_path), "/tmp/orion-lodge-%ld.xml", (long)getpid());
   hotel = create_database_with_schema("lodge", "db_schema_xml", &lodge_lodge_schema, hotel_path);
   register_database("lodge", hotel);
-  test_hotel(); test_persistence_and_page(); test_refused_migration(); test_payment_form(); test_nightly_prices(); test_service(); test_group_form("DE", "EUR"); test_group_form("RU", "RUB"); test_currency_setup();
+  test_hotel(); test_persistence_and_page(); test_refused_migration(); test_payment_form(); test_nightly_prices(); test_service(); test_group_form("DE", "EUR"); test_group_form("RU", "RUB"); test_currency_setup(); test_front_desk(); test_demo();
   if (hotel) { unregister_database("lodge"); destroy_database(hotel); } unlink(hotel_path);
   test_env_shutdown(); TEST_END();
 }

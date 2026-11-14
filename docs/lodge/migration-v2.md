@@ -1,4 +1,4 @@
-# Lodge database versions 2–6
+# Lodge database versions 2–7
 
 Version 2 adds reservation history and signed payment events. Before opening an
 existing hotel with the new version, close Lodge and make a separate copy of
@@ -55,3 +55,13 @@ If a save reports failure after the primary file was replaced but directory sync
 failed, the outcome is uncertain: inspect the database before starting a new
 request. Lodge does not yet provide payment-provider integration,
 user identity, authorization, tax accounting, or multi-terminal transactions.
+
+## Version 7
+
+Version 7 adds guest identity fields (email, birth date, nationality, address,
+document, notes), a booking source on reservations, a payment method on payment
+events, the `booking_sources`, `payment_methods` and `room_blocks` tables. The
+migration is additive: existing reservations get no source and existing payment
+events no method, and both show as *Not recorded* in reports. On first opening,
+Lodge fills empty booking-source and payment-method catalogs with defaults in the
+interface language; they can be renamed or extended on the Setup page.

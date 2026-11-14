@@ -1,0 +1,5 @@
+<lodge>
+<rooms><room id="1" name="101" category="Double" capacity="2" rate="110"/><room id="2" name="102" category="Single" capacity="1" rate="85"/><room id="3" name="201" category="Suite" capacity="4" rate="180"/></rooms>
+<guests><guest id="1" name="Ada Example" phone="+49 30 123456"/><guest id="2" name="Sam Taylor" phone="+44 20 123456"/><guest id="3" name="Alex Morgan" phone=""/></guests>
+<reservations><reservation id="1" room_id="1" guest_id="1" arrival="2026-10-28" departure="2026-10-31" persons="2" rate="110" extras="25" paid="150" status="checked_in"/><reservation id="2" room_id="2" guest_id="2" arrival="2026-10-29" departure="2026-11-01" persons="1" rate="85" extras="0" paid="85" status="reserved"/><reservation id="3" room_id="3" guest_id="3" arrival="2026-11-01" departure="2026-11-05" persons="3" rate="180" extras="40" paid="200" status="reserved"/></reservations>
+</lodge>
