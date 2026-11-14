@@ -256,6 +256,86 @@
         <Button command="help.about" icon="info-circle" text="About Ledger" size="large" />
       </Group>
     </Tab>
+    <!-- Contextual tabs: the commands of the page that is open, in place of the page's <Toolbar>,
+         which the window's title row shows only when there is no ribbon (as a gem). -->
+    <Tab label="Counterparties" context="counterparties">
+      <Group label="Counterparty">
+        <Button command="catalog.new_counterparty" icon="ledger-nav-counterparties" text="New Counterparty" size="large" />
+        <Button command="catalog.edit_counterparty" icon="ledger-edit" text="Edit" tooltip="Edit counterparty" />
+        <Button command="catalog.delete_counterparty" icon="ledger-delete" text="Delete" tooltip="Delete counterparty" />
+      </Group>
+      <Group label="Add">
+        <Button command="catalog.new_contract" icon="ledger-nav-journal" text="Contract" size="large" tooltip="New contract" />
+        <Button command="catalog.new_bank_account" icon="ledger-payroll" text="Bank Account" size="large" tooltip="New bank account" />
+      </Group>
+    </Tab>
+    <Tab label="Items" context="items">
+      <Group label="Item">
+        <Button command="catalog.new_item" icon="ledger-nav-items" text="New Item" size="large" />
+        <Button command="catalog.edit_item" icon="ledger-edit" text="Edit" tooltip="Edit item" />
+        <Button command="catalog.delete_item" icon="ledger-delete" text="Delete" tooltip="Delete item" />
+      </Group>
+      <Group label="Add">
+        <Button command="catalog.new_warehouse" icon="package" text="Warehouse" size="large" tooltip="New warehouse" />
+      </Group>
+    </Tab>
+    <Tab label="Accounts" context="accounts">
+      <Group label="Account">
+        <Button command="report.card" icon="ledger-card" text="Account Card" size="large" tooltip="Account card of the selected account" />
+        <Button command="report.settings" icon="ledger-settings" text="Report Settings" size="large" tooltip="Period and account" />
+      </Group>
+    </Tab>
+    <Tab label="Employees" context="employees">
+      <Group label="Employee">
+        <Button command="catalog.new_employee" icon="ledger-nav-employees" text="New Employee" size="large" />
+        <Button command="catalog.edit_employee" icon="ledger-edit" text="Edit" tooltip="Edit employee" />
+        <Button command="catalog.delete_employee" icon="ledger-delete" text="Delete" tooltip="Delete employee" />
+      </Group>
+      <Group label="Documents">
+        <Button command="doc.new_payroll" icon="ledger-payroll" text="Payroll" size="large" tooltip="New payroll document" />
+      </Group>
+    </Tab>
+    <Tab label="Fixed Assets" context="assets">
+      <Group label="Fixed Asset">
+        <Button command="catalog.new_asset" icon="ledger-nav-assets" text="New Asset" size="large" tooltip="New fixed asset" />
+        <Button command="catalog.edit_asset" icon="ledger-edit" text="Edit" tooltip="Edit fixed asset" />
+        <Button command="catalog.delete_asset" icon="ledger-delete" text="Delete" tooltip="Delete fixed asset" />
+      </Group>
+      <Group label="Documents">
+        <Button command="doc.new_assets" icon="ledger-post" text="Into Service" size="large" tooltip="Put assets into service" />
+      </Group>
+    </Tab>
+    <Tab label="Currencies" context="currencies">
+      <Group label="Currency">
+        <Button command="catalog.new_currency" icon="ledger-nav-currencies" text="New Currency" size="large" />
+        <Button command="catalog.edit_currency" icon="ledger-edit" text="Edit Currency" size="large" />
+      </Group>
+      <Group label="Exchange Rate">
+        <Button command="catalog.new_rate" icon="ledger-new" text="New Rate" size="large" tooltip="New exchange rate" />
+        <Button command="catalog.delete_rate" icon="ledger-delete" text="Delete Rate" size="large" tooltip="Delete exchange rate" />
+      </Group>
+    </Tab>
+    <Tab label="Entries" context="entries">
+      <Group label="Entry">
+        <Button command="doc.open_entry" icon="ledger-open" text="Open Document" size="large" tooltip="Open the entry's document" />
+        <Button command="report.card" icon="ledger-card" text="Account Card" size="large" tooltip="Account card of the entry's debit account" />
+      </Group>
+    </Tab>
+    <Tab label="Report" context="reports">
+      <Group label="Report">
+        <Button command="report.settings" icon="ledger-settings" text="Report Settings" size="large" tooltip="Period and account" />
+        <Button command="report.recalc" icon="refresh" text="Recalculate Totals" size="large" tooltip="Rebuild reports from entries" />
+      </Group>
+      <Group label="Output">
+        <Button command="report.print" icon="ledger-print" text="Print Forms" size="large" tooltip="Print report forms: cash book" />
+      </Group>
+    </Tab>
+    <Tab label="Setup" context="config">
+      <Group label="Infobase">
+        <Button command="file.configuration" icon="ledger-configuration" text="Configuration" size="large" tooltip="Select configuration" />
+        <Button command="file.language" icon="ledger-language" text="Language" size="large" tooltip="Interface language" />
+      </Group>
+    </Tab>
   </ribbon>
 
   <databases>

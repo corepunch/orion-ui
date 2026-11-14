@@ -660,6 +660,20 @@
   <string source="Assistance">Помощь</string>
   <string source="Find a Command">Найти команду</string>
   <string source="Office Assistant">Помощник</string>
+  <string source="New Counterparty">Новый контрагент</string>
+  <string source="New Item">Новая номенклатура</string>
+  <string source="Account card of the selected account">Карточка выбранного счета</string>
+  <string source="Period and account">Период и счет</string>
+  <string source="New Employee">Новый сотрудник</string>
+  <string source="New payroll document">Новый документ начисления зарплаты</string>
+  <string source="New Asset">Новое основное средство</string>
+  <string source="New Currency">Новая валюта</string>
+  <string source="Edit Currency">Изменить валюту</string>
+  <string source="Open Document">Открыть документ</string>
+  <string source="Account card of the entry's debit account">Карточка счета дебета проводки</string>
+  <string source="Rebuild reports from entries">Пересчитать отчеты по проводкам</string>
+  <string source="Print report forms: cash book">Печатные формы отчетов: кассовая книга</string>
+  <string source="Infobase">Информационная база</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>

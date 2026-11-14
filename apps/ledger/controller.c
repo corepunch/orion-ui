@@ -794,10 +794,26 @@ void ledger_command(uint16_t id) {
 
 // ── Windows ─────────────────────────────────────────────────────────────────
 
+// The open page's commands are a contextual tab of the ribbon; opening the page opens the tab.
+static void ledger_show_page_tab(window_t *host) {
+  static const struct { uint32_t page, context; } tabs[] = {
+    { ID_VIEW_COUNTERPARTIES, LEDGER_RIBBON_CONTEXT_COUNTERPARTIES }, { ID_VIEW_ITEMS,      LEDGER_RIBBON_CONTEXT_ITEMS },
+    { ID_VIEW_ACCOUNTS,       LEDGER_RIBBON_CONTEXT_ACCOUNTS },       { ID_VIEW_EMPLOYEES,  LEDGER_RIBBON_CONTEXT_EMPLOYEES },
+    { ID_VIEW_ASSETS,         LEDGER_RIBBON_CONTEXT_ASSETS },         { ID_VIEW_CURRENCIES, LEDGER_RIBBON_CONTEXT_CURRENCIES },
+    { ID_VIEW_ENTRIES,        LEDGER_RIBBON_CONTEXT_ENTRIES },        { ID_VIEW_REPORTS,    LEDGER_RIBBON_CONTEXT_REPORTS },
+    { ID_VIEW_CONFIG,         LEDGER_RIBBON_CONTEXT_CONFIG },
+  };
+  uint32_t page = page_host_selection(host), context = 0;
+  for (int i = 0; i < ARRAY_LEN(tabs); i++) if (tabs[i].page == page) context = tabs[i].context;
+  if (g_ledger->menubar_win) send_message(g_ledger->menubar_win, rbSetContexts, context, (void *)(uintptr_t)1);   // no ribbon in a gem
+}
+
 result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   switch (msg) {
     case evCreate:
       g_ledger->main_win = win;
+      // With a ribbon, a page's commands are its contextual tab, not buttons in the title row.
+      if (g_ledger->menubar_win) set_host_page_toolbars(win, false);
       if (!page_host_init(win, &ledger_main_window_form, NULL, 0)) return false;
       update_journal_actions();
       ledger_update_status();
@@ -829,7 +845,7 @@ result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
       return false;
     }
     case evPageChanged:
-      if (g_ledger->main_win == win) ledger_update_status();
+      if (g_ledger->main_win == win) { ledger_update_status(); ledger_show_page_tab(win); }
       return true;
     case evMove:
     case evResize:

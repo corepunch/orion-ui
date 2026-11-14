@@ -19,7 +19,7 @@ in the menu row, and under them the active tab's commands in captioned groups.
 | Menus | Still declared in `<menus>`: they are the registry of commands, labels and shortcuts. They show in the **operating system's** menu bar where it has one (macOS). |
 | Application toolbar band | The tabs' groups. |
 | Compact toolbar beside the menus | The **Quick Access Toolbar**, in the same place beside the tabs. |
-| Window toolbars (`<Toolbar>` in a form) | Unchanged: they belong to their window. |
+| Window toolbars (`<Toolbar>` in a form) | Unchanged: they belong to their window. A page's toolbar can become a contextual tab. |
 | The OS title bar | On macOS it hides behind the content; the tab row stands in for it, clear of the window's buttons, and drags the window. |
 
 Where the OS has no menu bar of its own, the ribbon shows an
@@ -45,6 +45,7 @@ Windows Ribbon framework's:
 | `Ribbon.ApplicationMenu` | `<ApplicationMenu menu="file" />` | The menu behind the File button; `label=` overrides the menu's |
 | `Ribbon.QuickAccessToolbar` | `<QuickAccessToolbar>` | Toolbar items, as in a compact `<toolbar>` |
 | `Tab`, `Group` | `<Tab label>`, `<Group label>` | At most 16 groups in a tab |
+| `Ribbon.ContextualTabs` | `<Tab label context="name">` | Shows while the application says its context is active: see [Contextual tabs](#contextual-tabs) |
 | `Button` | `<Button command icon text tooltip size>` | `size="large"`: icon over caption, as tall as the group. Without `text` it takes the command's menu label |
 | `ToggleButton` | `<Button toggle="true" checked-icon>` | Checks itself on each click |
 | `DropDownButton` | `<DropDown menu="view" text icon>` | Opens a declared menu |
@@ -109,6 +110,7 @@ button, as Office does on a Mac. The ribbon window is also what
 | `rbGetState`, `rbSetState` | A command's `TBSTATE_CHECKED` / `TBSTATE_DISABLED`, by ident. A command placed on several tabs has one state |
 | `rbGetLayout`, `rbSetLayout` | `RIBBON_LAYOUT_CLASSIC` or `RIBBON_LAYOUT_SIMPLIFIED` |
 | `rbGetMinimized`, `rbSetMinimized` | Only the tab row shows |
+| `rbGetContexts`, `rbSetContexts` | The contexts whose tabs show |
 | `rbGetItemRect`, `rbGetTabRect` | Geometry, for tests and remote control |
 
 ## Layout
@@ -130,8 +132,35 @@ caption a taller ribbon would cover moves down.
 When the window is too narrow the groups shrink, from the last one back:
 first small buttons drop their captions, then large buttons become small.
 
-A tooltip is the item's `tooltip`, or its text, with the command's shortcut
-appended from the accelerator table.
+Only a bare icon has a tooltip: the item's `tooltip`, or its text, with the
+command's shortcut appended from the accelerator table. A button that shows
+its caption has none.
+
+## Contextual tabs
+
+A tab with `context=` holds the commands of what is open or selected, and
+shows only then. `orionc` gives each context a bit,
+`<PREFIX>_RIBBON_CONTEXT_<NAME>`, and the application says which are active:
+
+```c
+// evPageChanged in Ledger: the open page's commands are its tab
+send_message(ribbon, rbSetContexts, LEDGER_RIBBON_CONTEXT_COUNTERPARTIES, (void *)(uintptr_t)1);
+```
+
+A nonzero `lparam` also opens the first tab this reveals. When a context
+leaves while its tab is open, the tab the user came from returns.
+
+![Ledger's Counterparties tab](screenshots/ribbon/ledger_contextual.jpg)
+
+Ledger's pages used to add their buttons to the window's title row. With a
+ribbon those are contextual tabs, and the host is told not to show its pages'
+toolbars:
+
+```c
+if (ribbon) set_host_page_toolbars(win, false);   // before page_host_init
+```
+
+As a gem there is no ribbon, and the pages' `<Toolbar>`s show as before.
 
 ## Styling
 
@@ -139,12 +168,12 @@ appended from the accelerator table.
 |---|---|
 | `Ribbon` | The command panel: `padding`, `gap` between columns |
 | `Ribbon::tabs` | The tab row: `height`, `padding`, `gap` after the File button |
-| `Ribbon::tab`, `Ribbon::tab.menu` | A tab (`:hover`, `:checked`) and the File button |
+| `Ribbon::tab`, `Ribbon::tab.contextual`, `Ribbon::tab.menu` | A tab (`:hover`, `:checked`), a contextual one, and the File button |
 | `Ribbon::button` | A command (`:hover`, `:active`, `:checked`, `:disabled`): `height` of a row, `--single-height` of the single row, `min-width` of a large button, `--icon-size`, `--large-icon-size` |
 | `Ribbon::group` | The caption's `color` and font; `padding-left` inside the group |
 | `Ribbon::separator`, `Ribbon::arrow`, `Ribbon::toggle` | The rule between groups, a drop-down's arrow, the layout switch |
 
 ## Not yet
 
-Contextual tabs, galleries, key tips (Alt, then letters), a Windows backstage
+Galleries, key tips (Alt, then letters), a Windows backstage
 view, and customising the Quick Access Toolbar at run time.
