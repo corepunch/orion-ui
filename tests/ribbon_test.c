@@ -139,8 +139,9 @@ static void test_layouts(void) {
   window_t *ribbon = make_ribbon(900);
   irect16_t large = item_rect(ribbon, ID_NEW), open = item_rect(ribbon, ID_OPEN), save = item_rect(ribbon, ID_SAVE), bold = item_rect(ribbon, ID_BOLD);
   ASSERT(open.x == save.x && save.x == bold.x && open.y < save.y && save.y < bold.y, "small buttons share a column");
-  ASSERT(open.w == save.w && save.w == bold.w, "and its width");
   ASSERT(large.h == open.h * 3 && large.x + large.w <= open.x, "a large button is as tall as the column");
+  ASSERT(large.h >= ui_px("Ribbon::button", "--large-icon-size") + 2 * text_char_height("Ribbon::button"),
+         "and holds its icon over two caption lines");
   int classic = ribbon_height(ribbon);
   ASSERT_TRUE(send_message(ribbon, rbSetLayout, RIBBON_LAYOUT_SIMPLIFIED, NULL));
   ASSERT_EQUAL(send_message(ribbon, rbGetLayout, 0, NULL), RIBBON_LAYOUT_SIMPLIFIED);

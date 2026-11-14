@@ -110,8 +110,16 @@ int ribbon_tabs_height(const window_t *ribbon) { return rb_tabs_height(ribbon); 
 static bool rb_has_menu(const ribbon_state_t *st) { return st->def && st->def->menu_label && !st->os_menu; }
 static bool rb_classic(const ribbon_state_t *st) { return st->layout == RIBBON_LAYOUT_CLASSIC; }
 static int rb_rows(const ribbon_state_t *st) { return rb_classic(st) ? RB_ROWS : 1; }
+// A large button, as in Office: the icon, then room for two caption lines whether it has one or two.
+static int rb_large_height(const window_t *win) {
+  const char *btn = rb_sel(win, "Ribbon::button");
+  return 2 * ui_px(btn, "padding-top") + ui_px(btn, "--large-icon-size") + ui_px(btn, "--caption-gap") + 2 * text_char_height(btn);
+}
+// Three rows are as tall as a large button, so a row grows when the sheet's is too short for one.
 static int rb_row_height(const window_t *win, const ribbon_state_t *st) {
-  return ui_px(rb_sel(win, "Ribbon::button"), rb_classic(st) ? "height" : "--single-height");
+  const char *btn = rb_sel(win, "Ribbon::button");
+  if (!rb_classic(st)) return ui_px(btn, "--single-height");
+  return MAX(ui_px(btn, "height"), (rb_large_height(win) + RB_ROWS - 1) / RB_ROWS);
 }
 static int rb_caption_height(const window_t *win, const ribbon_state_t *st) {
   return rb_classic(st) ? text_char_height(rb_sel(win, "Ribbon::group")) + ui_px(rb_sel(win, "Ribbon::group"), "padding-top") : 0;
@@ -179,8 +187,8 @@ static int rb_item_width(const window_t *win, const ribbon_item_t *it, rb_form_t
     case RB_FORM_ICON:      return ui_px(btn, "--icon-size") + 2 * pad + arrow;
     case RB_FORM_SMALL:     return (it->icon ? ui_px(btn, "--icon-size") + gap : 0) + text_strwidth(btn, text) + 2 * pad + arrow;
     case RB_FORM_LARGE: {
-      int at = rb_caption_break(btn, text);
-      int w = at < 0 ? text_strwidth(btn, text) + arrow
+      int at = rb_caption_break(btn, text);   // a one-line caption leaves the second line to the arrow
+      int w = at < 0 ? text_strwidth(btn, text)
                      : MAX(text_strnwidth(btn, text, at), text_strwidth(btn, text + at + 1) + arrow);
       return MAX(ui_px(btn, "min-width"), MAX(w, ui_px(btn, "--large-icon-size")) + 2 * pad);
     }
@@ -209,20 +217,16 @@ static int rb_layout_pass(window_t *win, ribbon_state_t *st, const int *scale) {
   int x = panel.x, cell = 0;
   for (int g = 0; tab && g < tab->count; g++) {
     const ribbon_group_t *group = &tab->groups[g];
-    int first = cell, cx = x + side, row = 0, column = cell, column_w = 0;
+    int first = cell, cx = x + side, row = 0, column_w = 0;
     for (int i = 0; i <= group->count; i++) {
       const ribbon_item_t *it = i < group->count ? &group->items[i] : NULL;
       rb_form_t form = it ? rb_item_form(st, it, scale[g]) : RB_FORM_SEPARATOR;
       bool stacks = it && (form == RB_FORM_ICON || form == RB_FORM_SMALL) && rows > 1;
       // A full column, a column-high item or the group's end closes the column of small buttons.
-      if (row && (!stacks || row == rows)) {
-        for (int c = column; c < cell; c++) st->cells[c].rect.w = column_w;
-        cx += column_w + gap; row = 0; column_w = 0;
-      }
+      if (row && (!stacks || row == rows)) { cx += column_w + gap; row = 0; column_w = 0; }
       if (!it) break;
       int w = rb_item_width(win, it, form);
       if (stacks) {
-        if (!row) column = cell;
         st->cells[cell++] = (rb_cell_t){R(cx, panel.y + row * row_h, w, row_h), form, g};
         column_w = MAX(column_w, w); row++;
       } else {
@@ -409,21 +413,25 @@ static void rb_draw_item(window_t *win, ribbon_state_t *st, int index) {
   theme_draw_in(win, THEME_PART_RIBBON_BUTTON, r, state);
   if (cell->form == RB_FORM_LARGE) {
     int size = ui_px(btn, "--large-icon-size"), at = rb_caption_break(btn, text);
-    irect16_t body = rect_inset_xy(r, pad, gap);
+    // The content is as tall as rb_large_height() and centred in the cell.
+    irect16_t body = rect_center(r, r.w - 2 * pad, rb_large_height(win) - 2 * ui_px(btn, "padding-top"));
     if (icon) rb_draw_icon(win, icon, rect_split_top(body, size), size, ink);
-    irect16_t caption = rect_split_top(rect_trim_top(body, size + gap), line);
-    irect16_t last = caption;
-    if (at >= 0) {
+    irect16_t caption = rect_split_top(rect_trim_top(body, size + ui_px(btn, "--caption-gap")), line);
+    irect16_t second = rect_offset(caption, 0, line);
+    if (at < 0) {
+      irect16_t run = rect_center(caption, MIN(text_strwidth(btn, text), caption.w), line);
+      draw_text_ellipsized(btn, text, run.x, run.y, run.w, ink);
+      arrow = rect_center(second, arrow_w, line);
+    } else {
       char first[128];
       snprintf(first, sizeof(first), "%.*s", MIN(at, (int)sizeof(first) - 1), text);
       draw_text_clipped(btn, first, &caption, ink, TEXT_ALIGN_CENTER);
-      last = rect_offset(caption, 0, line);
       text += at + 1;
+      int tail = arrow_w ? gap + arrow_w : 0;
+      irect16_t run = rect_center(second, MIN(text_strwidth(btn, text) + tail, second.w), line);
+      draw_text_ellipsized(btn, text, run.x, run.y, run.w - tail, ink);
+      arrow = rect_split_right(run, arrow_w);
     }
-    int w = text_strwidth(btn, text) + (arrow_w ? gap + arrow_w : 0);
-    irect16_t run = rect_center(last, MIN(w, last.w), line);
-    draw_text_ellipsized(btn, text, run.x, run.y, run.w - (arrow_w ? gap + arrow_w : 0), ink);
-    arrow = rect_split_right(run, arrow_w);
   } else {
     irect16_t body = rect_inset_xy(r, pad, 0);
     if (arrow_w) { arrow = rect_split_right(body, arrow_w); body = rect_trim_right(body, arrow_w + gap); }

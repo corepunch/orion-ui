@@ -64,8 +64,8 @@ TabView::bar        { padding-left: 0; padding-top: 1px; }
 Ribbon              { padding: 4px; gap: 2px; }
 Ribbon::tabs        { height: var(--menubar-height); padding: 2px; gap: 4px; }
 Ribbon::tab         { padding-left: 12px; }
-Ribbon::button      { height: calc(var(--font-size) + 9px); --single-height: var(--toolbar-height); min-width: 44px;
-                      padding-left: 5px; gap: 4px; --icon-size: 16px; --large-icon-size: 24px; }
+Ribbon::button      { height: calc(var(--font-size) + 11px); --single-height: var(--toolbar-height); min-width: 44px;
+                      padding-left: 5px; padding-top: 2px; gap: 4px; --caption-gap: 2px; --icon-size: 16px; --large-icon-size: 32px; }
 Ribbon::group       { padding-left: 6px; padding-top: 2px; }
 Ribbon::separator   { width: 1px; }
 Ribbon::arrow       { width: 9px; }

@@ -115,10 +115,14 @@ button, as Office does on a Mac. The ribbon window is also what
 
 ## Layout
 
-**Three rows** (`RIBBON_LAYOUT_CLASSIC`): a large button is as tall as the
-group; small buttons stack three to a column and share its width; the group's
-caption sits under them. A large button's caption breaks once, at the space
-that best balances its two lines.
+**Three rows** (`RIBBON_LAYOUT_CLASSIC`), with Office's proportions: a large
+button is exactly three small rows tall and holds a 32px icon over room for
+two caption lines, whether its caption takes one or two. The caption breaks
+once, at the space that best balances its two lines; a one-line caption sits
+under the icon and leaves the second line empty, or to a drop-down's arrow.
+A row grows when the sheet's `height` is too short for that. Small buttons
+stack three to a column, each as wide as its own icon and caption; the
+group's caption sits under them.
 
 **One row** (`RIBBON_LAYOUT_SIMPLIFIED`), as Office shows on a tablet: large
 buttons keep their caption beside the icon, small ones show their icon and
@@ -169,7 +173,7 @@ As a gem there is no ribbon, and the pages' `<Toolbar>`s show as before.
 | `Ribbon` | The command panel: `padding`, `gap` between columns |
 | `Ribbon::tabs` | The tab row: `height`, `padding`, `gap` after the File button |
 | `Ribbon::tab`, `Ribbon::tab.contextual`, `Ribbon::tab.menu` | A tab (`:hover`, `:checked`), a contextual one, and the File button |
-| `Ribbon::button` | A command (`:hover`, `:active`, `:checked`, `:disabled`): `height` of a row, `--single-height` of the single row, `min-width` of a large button, `--icon-size`, `--large-icon-size` |
+| `Ribbon::button` | A command (`:hover`, `:active`, `:checked`, `:disabled`): `height` of a row, `--single-height` of the single row, `min-width` of a large button, `--icon-size`, `--large-icon-size`, and a large button's `padding-top` and `--caption-gap` between icon and caption |
 | `Ribbon::group` | The caption's `color` and font; `padding-left` inside the group |
 | `Ribbon::separator`, `Ribbon::arrow`, `Ribbon::toggle` | The rule between groups, a drop-down's arrow, the layout switch |
 
