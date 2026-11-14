@@ -1,0 +1,30 @@
+<orion>
+  <application name="pages" form="main"/>
+  <databases>
+    <database name="desk" class="db_schema_xml"><table name="tasks">
+      <field name="id" type="integer" key="YES"/>
+      <field name="title" type="string" length="80"/>
+      <field name="done" type="boolean"/>
+    </table></database>
+    <database name="desk_views" class="db_schema_xml"><table name="open_tasks">
+      <field name="id" type="integer" key="YES"/>
+      <field name="title" type="string" length="80"/>
+    </table></database>
+  </databases>
+  <forms>
+    <form name="main" title="Desk" width="640" height="400" role="host" active-page="today">
+      <ActivityBar name="activity" labels="right">
+        <Page form="tasks"/>
+        <Page form="today"/>
+      </ActivityBar>
+    </form>
+    <form name="today" title="Today" icon="today" role="page" controller="today" focus="open" width="600" height="400">
+      <Label name="summary"/>
+      <TableView name="open" source="desk_views.open_tasks" action="finish"><Column field="title" title="Task" width="0"/></TableView>
+    </form>
+    <form name="tasks" title="Tasks" role="page" controller="tasks" width="600" height="400">
+      <TextBox name="title"/>
+      <Button name="add" text="Add" action="add"/>
+    </form>
+  </forms>
+</orion>

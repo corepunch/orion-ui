@@ -295,10 +295,11 @@ bool page_host_init(window_t *host, const form_def_t *form,
   host->pages->page_host = st;
   for (int i = 0; i < st->count; i++) {
     winproc_t proc = activity_page_proc;
-    for (int j = 0; j < count; j++) if (strcmp(handlers[j].name, defs[i].name) == 0) proc = handlers[j].proc;
+    void *param = NULL;
+    for (int j = 0; j < count; j++) if (strcmp(handlers[j].name, defs[i].name) == 0) { proc = handlers[j].proc; param = handlers[j].param; }
     activity_entry_t *entry = &st->entries[i];
     entry->command = defs[i].command; entry->focus_id = defs[i].focus_id;
-    entry->page = create_window_from_form(defs[i].form, 0, 0, host, proc, host->hinstance, NULL);
+    entry->page = create_window_from_form(defs[i].form, 0, 0, host, proc, host->hinstance, param);
     if (!entry->page) goto fail;
     if (!entry->page->pages) entry->page->pages = calloc(1, sizeof(*entry->page->pages));
     if (!entry->page->pages) goto fail;

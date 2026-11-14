@@ -53,6 +53,7 @@ void script_page_update(script_page_t *page);
 void script_page_refresh(script_page_t *page);
 int script_page_handle(const script_page_t *page);
 window_t *script_page_window(const script_page_t *page);
+const form_def_t *script_page_form(const script_page_t *page);
 const char *script_page_title(const script_page_t *page);
 isize16_t script_page_preferred_size(const script_page_t *page);
 
@@ -64,6 +65,9 @@ window_t *script_page_create(script_page_t *page, window_t *parent);
 // messages are always processed by the page. The page continues to own userdata.
 window_t *script_page_create_hook(script_page_t *page, window_t *parent, winproc_t hook);
 bool script_page_perform(script_page_t *page, const char *action);
+// The page's window procedure, for a PageHost destination: a page_handler_t
+// {form name, script_page_window_proc, page} builds the page into the host.
+result_t script_page_window_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 // As script_page_perform, as if the button named `control` had been clicked:
 // the action receives that name after `values`.
 bool script_page_perform_from(script_page_t *page, const char *action, const char *control);

@@ -130,6 +130,28 @@ DisplayGroups currently provide list/selection adaptation and forward native
 fetch filters; richer query specifications, independent sorting and paging remain
 future extensions. They are application-scoped named objects in this version.
 
+## Pages in one window
+
+An application whose main form is `role="host"` shows its pages in one window,
+with a sidebar, as Ledger does. Each `<Page form="..."/>` names a `role="page"`
+form; that form's `controller=` drives it like any other window. Commands are
+numbered by the loader, so no `command=` is needed.
+
+```xml
+<form name="main" title="Lodge" width="1200" height="760" role="host" active-page="today">
+  <ActivityBar name="sections" labels="right">
+    <Page form="today"/>
+    <Page form="reservations"/>
+  </ActivityBar>
+</form>
+<form name="today" title="Today" icon="today" role="page" controller="today" width="900" height="600">...</form>
+```
+
+A page's `data()` may return `lists = {name = rows}` for a TableView whose
+`source=` is a table of an in-memory database (one without `source=`): the
+host replaces that table's rows. Use it for computed views such as today's
+arrivals; persistent tables are never filled this way.
+
 ## Lua models and computed properties
 
 Add `model="model"` on `<application>` to load `model.lua`. It returns an object

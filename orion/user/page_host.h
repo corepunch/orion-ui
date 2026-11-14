@@ -12,9 +12,11 @@ typedef struct page_binding_s {
 } page_binding_t;
 
 // Runtime behavior only; navigation and form bindings come from .orion.
+// param reaches the page's evCreate as lparam, as CreateWindow's lpParam does.
 typedef struct {
   const char *name;
   winproc_t proc;
+  void *param;
 } page_handler_t;
 
 bool page_host_init(window_t *host, const form_def_t *form,

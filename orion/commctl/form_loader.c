@@ -15,6 +15,7 @@
 #include <strings.h>
 
 #include <orion/user/database.h>
+#include <orion/user/page_host.h>
 #include <orion/user/enum_parse.h>
 #include <orion/user/xml_include.h>
 
@@ -550,8 +551,8 @@ static const void *fl_lparam(fl_build_t *b, xmlNodePtr c, const char *name, cons
   if (fl_elem(c, "combobox")) return fl_combobox(b, c, name);
   if (fl_elem(c, "activitybar")) {
     const char *labels = fl_attr(lib, c, "labels");
-    if (fl_child(c, "toolbar") || fl_child(c, "page")) {
-      fl_error(b, c, "ActivityBar '%s': pages and toolbars need compiled command ids; use orionc", fl_nz(name, ""));
+    if (fl_child(c, "toolbar")) {
+      fl_error(b, c, "ActivityBar '%s': toolbars need compiled command ids; use orionc", fl_nz(name, ""));
       return NULL;
     }
     if (!labels) return NULL;
@@ -982,6 +983,42 @@ static fl_form_t *fl_owner(const form_library_t *lib, const form_def_t *def) {
   return NULL;
 }
 
+static const char *fl_metadata_attr(const fl_control_t *metadata, const char *name);
+// A host's <ActivityBar><Page form="..."/></ActivityBar>: the library numbers
+// each destination's command as it numbers controls, once every form exists.
+static void fl_pages(form_library_t *lib, xmlNodePtr node, fl_form_t *host) {
+  xmlNodePtr bar = NULL;
+  FL_EACH_ELEMENT(c, node) if (fl_elem(c, "activitybar") && fl_child(c, "page")) { bar = c; break; }
+  if (!bar || host->rejected) return;
+  fl_build_t b = { .lib = lib, .form = host, .form_node = node, .ok = true };
+  const char *bar_name = fl_attr(lib, bar, "name"), *active = fl_attr(lib, node, "active-page");
+  uint32_t bar_id = form_library_control_id(lib, &host->def, bar_name);
+  int count = 0;
+  FL_EACH_ELEMENT(p, bar) if (fl_elem(p, "page")) count++;
+  page_binding_t *bindings = fl_alloc(lib, (size_t)count * sizeof(*bindings));
+  if (host->def.role != WINDOW_ROLE_HOST) fl_error(&b, bar, "ActivityBar pages require role=\"host\"");
+  else if (!bar_id) fl_error(&b, bar, "ActivityBar with pages requires a name");
+  else if (!bindings) b.ok = false;
+  int n = 0;
+  FL_EACH_ELEMENT(p, bar) if (b.ok && fl_elem(p, "page")) {
+    const char *name = fl_attr(lib, p, "form");
+    fl_form_t *target = fl_find(lib, name);
+    if (!target || target->def.role != WINDOW_ROLE_PAGE) { fl_error(&b, p, "Page '%s': no role=\"page\" form of that name", fl_nz(name, "")); break; }
+    for (int k = 0; k < n; k++) if (fl_eq(bindings[k].name, name)) { fl_error(&b, p, "Page '%s' is listed twice", name); break; }
+    const char *focus = fl_metadata_attr(&target->attributes, "focus");
+    uint32_t focus_id = focus ? form_library_control_id(lib, &target->def, focus) : 0;
+    if (focus && !focus_id) fl_error(&b, p, "Page '%s': unknown focus control '%s'", name, focus);
+    bindings[n] = (page_binding_t){ lib->next_id++, bar_id, target->name, &target->def, focus_id };
+    if ((!active && n == 0) || fl_eq(active, name)) host->def.initial_page = bindings[n].command;
+    n++;
+  }
+  if (b.ok && active && !host->def.initial_page) fl_error(&b, node, "unknown active-page '%s'", active);
+  if (b.ok) { host->def.page_bindings = bindings; host->def.page_binding_count = n; return; }
+  fprintf(stderr, "[form_loader] %s: form '%s' left out\n", lib->origin, fl_nz(host->name, "?"));
+  fflush(stderr);
+  host->rejected = true;
+}
+
 static form_library_t *fl_build(xmlDocPtr doc, const char *origin) {
   xmlNodePtr root = doc ? xmlDocGetRootElement(doc) : NULL;
   if (!fl_elem(root, "orion")) {
@@ -1005,6 +1042,8 @@ static form_library_t *fl_build(xmlDocPtr doc, const char *origin) {
   if (lib->form_count && !lib->forms) { xmlFreeDoc(doc); form_library_free(lib); return NULL; }
   int i = 0;
   FL_EACH_ELEMENT(f, forms) if (fl_elem(f, "form")) fl_form(lib, f, &lib->forms[i++]);
+  i = 0;
+  FL_EACH_ELEMENT(f, forms) if (fl_elem(f, "form")) fl_pages(lib, f, &lib->forms[i++]);
   xmlFreeDoc(doc);
 
   // Record forms may come later in the file; a TableView's form must exist.

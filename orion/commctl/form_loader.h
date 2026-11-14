@@ -16,9 +16,11 @@
 // registered at load time, so load a library after register_database().
 // Controls get numeric ids from FORM_LIBRARY_ID_BASE up; look them up by name.
 //
-// A form that uses what only compiled forms can express (toolbars, activity
-// pages and context menus, whose commands are C identifiers) is rejected
-// with a diagnostic on stderr; the library keeps every other form.
+// A role="host" form's <ActivityBar><Page form="..."/> destinations get
+// page_bindings whose commands the library numbers like control ids; pass the
+// form to page_host_init(). A form that uses what only compiled forms can
+// express (toolbars and context menus, whose commands are C identifiers) is
+// rejected with a diagnostic on stderr; the library keeps every other form.
 
 #include <stdbool.h>
 #include <stddef.h>

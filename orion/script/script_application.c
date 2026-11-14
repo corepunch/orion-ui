@@ -4,6 +4,7 @@
 #include <orion/user/display_group.h>
 #include "script_internal.h"
 #include <orion/user/file.h>
+#include <orion/user/page_host.h>
 #include <orion/commdlg/commdlg.h>
 #include <platform/platform.h>
 #include <stdio.h>
@@ -23,17 +24,22 @@ struct script_application_s {
   int database_count, page_count;
   int observers[APP_MAX_DATABASES], model;
   char directory[1200], data[1200], output[1600];
-  bool quit_on_close;
+  bool quit_on_close, refreshing;
 };
 static script_application_t *applications;
 
 static bool app_is_display_group(const database_t *database) { return !strcmp(database->class_name, "db_display_group"); }
+// A page that fills its lists while rendering changes an in-memory datasource;
+// that change arrives during the refresh and needs no second one.
 static void app_data_changed(database_t *database, void *userdata) {
   script_application_t *app = userdata;
+  if (app->refreshing) return;
+  app->refreshing = true;
   for (int i = 0; i < app->page_count; i++) {
     if (app_is_display_group(database)) script_page_update(app->pages[i]);
     else script_page_refresh(app->pages[i]);
   }
+  app->refreshing = false;
 }
 static bool app_save_all(script_application_t *app) {
   for (int i = 0; i < app->database_count; i++)
@@ -53,7 +59,8 @@ static result_t app_window_hook(window_t *window, uint32_t msg, uint32_t wparam,
   if (msg == evDestroy && owner->quit_on_close && script_page_window(owner->pages[0]) == window) ui_request_quit();
   return false;
 }
-static script_page_t *app_open_form(script_application_t *app, const char *name, char *error, size_t size) {
+// A form and its controller="module", if any, as a page of the application.
+static script_page_t *app_page(script_application_t *app, const char *name, char *error, size_t size) {
   if (app->page_count >= APP_MAX_PAGES) { snprintf(error, size, "application window limit reached"); return NULL; }
   const form_def_t *form = form_library_form(app->library, name);
   if (!form) { snprintf(error, size, "unknown application form: %s", name ? name : ""); return NULL; }
@@ -64,9 +71,36 @@ static script_page_t *app_open_form(script_application_t *app, const char *name,
     snprintf(path, sizeof(path), "%s/%s.lua", app->directory, module);
   }
   script_page_t *page = script_page_open_library(app->runtime, app->library, name, path, error, size);
+  if (page) app->pages[app->page_count++] = page;
+  return page;
+}
+static void app_drop_pages(script_application_t *app, int from) {
+  while (app->page_count > from) script_page_close(app->pages[--app->page_count]);
+}
+// A role="host" form docks its ActivityBar destinations, each a page with its
+// own controller; the host's window owns their windows.
+static bool app_host_pages(script_application_t *app, script_page_t *host, char *error, size_t size) {
+  const form_def_t *form = script_page_form(host);
+  if (!form || form->role != WINDOW_ROLE_HOST) return true;
+  page_handler_t handlers[APP_MAX_PAGES];
+  int first = app->page_count, count = form->page_binding_count;
+  for (int i = 0; i < count; i++) {
+    script_page_t *page = app_page(app, form->page_bindings[i].name, error, size);
+    if (!page) { app_drop_pages(app, first); return false; }
+    handlers[i] = (page_handler_t){ form->page_bindings[i].name, script_page_window_proc, page };
+  }
+  if (page_host_init(script_page_window(host), form, handlers, count)) return true;
+  snprintf(error, size, "cannot build the pages of form %s", form->id);
+  app_drop_pages(app, first);
+  return false;
+}
+static script_page_t *app_open_form(script_application_t *app, const char *name, char *error, size_t size) {
+  int first = app->page_count;
+  script_page_t *page = app_page(app, name, error, size);
   if (!page) return NULL;
-  app->pages[app->page_count++] = page;
-  if (!script_page_create_hook(page, NULL, app_window_hook)) { app->page_count--; script_page_close(page); return NULL; }
+  if (!script_page_create_hook(page, NULL, app_window_hook) || !app_host_pages(app, page, error, size)) {
+    app_drop_pages(app, first); return NULL;
+  }
   return page;
 }
 static script_application_t *application_context(lua_State *L) {

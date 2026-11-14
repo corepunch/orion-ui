@@ -3,6 +3,7 @@
 #include <orion/script/application.h>
 #include <orion/user/display_group.h>
 #include <orion/commctl/form_loader.h>
+#include <orion/user/page_host.h>
 #include <lua.h>
 #include <lauxlib.h>
 #include <unistd.h>
@@ -64,6 +65,35 @@ static void test_browser(void) {
   ASSERT_EQUAL(notifications, 1);
   ASSERT_NOT_NULL((void *)send_db_message(database, dbFind, 0, (void *)(intptr_t)id));
   db_unobserve(token); free(record);
+  script_application_close(app);
+  PASS();
+}
+static void test_pages(void) {
+  TEST("role=host: ActivityBar pages with their own controllers and computed lists");
+  char error[1024];
+  script_application_t *app = script_application_open("tests/fixtures/runtime/pages", "/tmp", error, sizeof(error));
+  ASSERT_NOT_NULL(app);
+  script_page_t *main = script_application_main(app);
+  const form_def_t *host = script_page_form(main);
+  ASSERT_EQUAL(host->page_binding_count, 2);
+  ASSERT_STR_EQUAL(host->page_bindings[0].name, "tasks");
+  ASSERT(host->page_bindings[0].command != host->page_bindings[1].command, "pages get distinct commands");
+  window_t *win = script_page_window(main);
+  ASSERT_EQUAL(page_host_selection(win), host->page_bindings[1].command);
+  script_page_t *tasks = page_host_page(win, host->page_bindings[0].command)->userdata;
+  script_page_t *today = page_host_page(win, host->page_bindings[1].command)->userdata;
+  ASSERT_STR_EQUAL(script_page_control(today, "summary")->title, "0 open");
+  send_message(script_page_control(tasks, "title"), edSetText, 0, "Call the plumber");
+  ASSERT_TRUE(script_page_perform(tasks, "add"));
+  ASSERT_STR_EQUAL(script_page_control(today, "summary")->title, "1 open");
+  database_t *views = get_database_by_name("desk_views");
+  result_node_t *rows = (result_node_t *)send_db_message(views, dbFetch, 0, NULL);
+  ASSERT_NOT_NULL(rows); ASSERT_NULL(rows->next); free_result_list(rows);
+  window_t *list = script_page_control(today, "open");
+  send_message(list, RVM_SETSELECTION, 0, NULL);
+  ASSERT_TRUE(script_page_perform(today, "finish"));
+  ASSERT_STR_EQUAL(script_page_control(today, "summary")->title, "0 open");
+  ASSERT_TRUE(page_host_select(win, host->page_bindings[0].command));
   script_application_close(app);
   PASS();
 }
@@ -169,5 +199,5 @@ static void test_runtime_api(void) {
 }
 int main(void) {
   TEST_START("Application runtime"); test_env_init();
-  test_runtime(); test_browser(); test_sdk_application(); test_model_hooks(); test_runtime_api(); test_env_shutdown(); TEST_END();
+  test_runtime(); test_browser(); test_pages(); test_sdk_application(); test_model_hooks(); test_runtime_api(); test_env_shutdown(); TEST_END();
 }

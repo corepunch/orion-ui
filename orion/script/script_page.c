@@ -129,10 +129,13 @@ static void set_value(script_page_t *page, const form_ctrl_def_t *d, window_t *c
   else set_window_title(ctrl, text);
 }
 
+// An add-on's own databases, or an in-memory one (no source file) that an
+// application declares for lists its pages compute.
 static database_t *page_database(const script_page_t *page, const char *name) {
   for (int i = 0; i < page->db_count; i++)
     if (!strcmp(page->dbs[i]->name, name)) return page->dbs[i];
-  return NULL;
+  database_t *db = page->borrowed_library ? registered_database(name) : NULL;
+  return db && !db->source_path[0] && strcmp(db->class_name, "db_display_group") ? db : NULL;
 }
 
 static database_t *registered_database(const char *name) {
@@ -177,7 +180,7 @@ static void fill_list(script_page_t *page, const form_ctrl_def_t *d, window_t *c
   if (!class_is(d, "TableView") || !source_parts(d, db_name, sizeof(db_name), table, sizeof(table)))
     luaL_error(L, "lists.%s: not a TableView with source=\"db.table\"", d->name);
   database_t *db = page_database(page, db_name);
-  if (!db) luaL_error(L, "lists.%s: '%s' is not one of the add-on's own databases", d->name, db_name);
+  if (!db) luaL_error(L, "lists.%s: '%s' is not one of the add-on's own or in-memory databases", d->name, db_name);
   const db_table_schema_t *t = db_schema_table_named(db->schema, table);
   if (!t) luaL_error(L, "lists.%s: no table '%s'", d->name, table);
   luaL_checktype(L, idx, LUA_TTABLE);
@@ -574,7 +577,7 @@ static void push_app(script_page_t *page) {
 
 // ── Window ──────────────────────────────────────────────────────────────────
 
-static result_t script_page_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+result_t script_page_window_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   script_page_t *page = (script_page_t *)win->userdata;
   if (page && msg != evCreate && msg != evDestroy && page->hook && page->hook(win, msg, wparam, lparam))
     return true;
@@ -671,7 +674,7 @@ window_t *script_page_create_hook(script_page_t *page, window_t *parent, winproc
   if (!page) return NULL;
   page->hook = hook;
   page->modal = false;
-  window_t *win = create_window_from_form(page->form, 0, 0, parent, script_page_proc, 0, page);
+  window_t *win = create_window_from_form(page->form, 0, 0, parent, script_page_window_proc, 0, page);
   if (win) {
     page->owns_window = true;
     if (!page->form->height) {
@@ -687,7 +690,7 @@ void script_page_run(script_page_t *page, window_t *parent) {
   if (!page) return;
   page->modal = true;
   page->closing = false;
-  show_dialog_from_form(page->form, script_page_title(page), parent, script_page_proc, page);
+  show_dialog_from_form(page->form, script_page_title(page), parent, script_page_window_proc, page);
   page->win = NULL;
 }
 
@@ -872,6 +875,7 @@ window_t *script_page_control(const script_page_t *page, const char *name) {
 
 int script_page_handle(const script_page_t *page) { return page ? page->handle : 0; }
 window_t *script_page_window(const script_page_t *page) { return page ? page->win : NULL; }
+const form_def_t *script_page_form(const script_page_t *page) { return page ? page->form : NULL; }
 
 static void page_refresh_controls(window_t *window) {
   for (window_t *child = window ? window->children : NULL; child; child = child->next) {

@@ -47,7 +47,12 @@ Without it the generator assigns a host-scoped ID using the referenced form name
 The list includes this host's pages, not every page form in the document.
 
 The generator validates page roles, references, focus targets, duplicate bindings,
-and the initial page. Forward references work; `orionc --form main` also emits
+and the initial page. The runtime form loader (`form_library_load`) builds the
+same bindings for a `role="host"` form, numbering each destination's command as
+it numbers controls; `command=` is a C identifier and only `orionc` reads it.
+A declarative application (`orion-run`, see
+[declarative applications](declarative-applications.md#pages-in-one-window))
+opens such a host with one controller per page. Forward references work; `orionc --form main` also emits
 its referenced pages. FormEditor previews navigation using the referenced page
 metadata and retains the declarations when saving; individual forms remain
 independently editable. Legacy `Toolbar` / `Button page="..."` declarations still
@@ -66,7 +71,9 @@ if (!page_host_init(win, &example_main_form, pages, ARRAY_LEN(pages)))
   return false;
 ```
 
-The handler table supplies only C behavior for named forms. Omit handlers with
+The handler table supplies only C behavior for named forms. A handler's optional
+`param` reaches that page's `evCreate` as `lparam`, as `CreateWindow`'s
+`lpParam` does. Omit handlers with
 `NULL, 0` for ordinary forms without custom page procedures. Keep layouts, icons,
 commands, page bindings, and initial focus in `.orion`. Page procedures receive
 `evCreate` with their controls already present and may capture app-specific
