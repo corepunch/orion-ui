@@ -214,7 +214,9 @@ Composite tiles are built from controls and laid out by the auto-layout system, 
 `NSCollectionViewItem` or `UICollectionViewCell` is built from views. Nothing is painted or positioned by hand.
 
 - **Card**: a vertical stack whose box (face, hover, `border-left` accent edge, selection ring) is the
-  sheet's `Card` rule; `cdSetEdgeColor` sets the window's `--tone` accent, and selection state is `:checked`. Children can be Labels, Badges, nested StackViews or FlowViews.
+  sheet's `Card` rule; `cdSetEdgeColor` sets the window's `--tone` accent, and selection state is `:checked`.
+  Only an item of a collection is selectable: a card that receives `cdSetState` (every TileGrid tile) shows
+  `:hover`. A card placed in a form is a still panel; the rows and links inside it give the feedback. Children can be Labels, Badges, nested StackViews or FlowViews.
   Clicks on the face, labels, badges and nested layouts are reported to the parent as `cdnClicked` / `cdnActivated`.
   Interactive children, such as buttons, receive their own input. Its padding comes from the theme
   (`theme_t.card.padding_x/y`) unless the form declares `padding=`; its face is `theme_t.card.face`

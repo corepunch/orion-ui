@@ -179,7 +179,7 @@ Badge metrics live in `theme_t.badge`: `padding`, `corner_radius`, `tint_alpha`
 The accent edge is a plain `card.edge_width` rectangle clipped by the card's silhouette in the shader, so
 there is nothing to align or mask by hand. Geometry lives in `theme_t` (`card.corner_radius`,
 `card.edge_width`, `card.ring_width`). Pass an edge colour with zero alpha for no edge.
-The hovered card face is the 50% midpoint of `brControlBg` and `brButtonHover`.
+The hovered card face is the 50% midpoint of `brControlBg` and `brButtonHover`; only collection items (cards that receive `cdSetState`) hover.
 
 `fill_rounded_rect_bands(color, rect, radius, band_width, offset)` overlays every
 other vertical band inside one rounded silhouette. Band zero is transparent;

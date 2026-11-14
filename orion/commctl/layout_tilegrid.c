@@ -60,9 +60,12 @@ static int tilegrid_layout(window_t *win, int client_w, bool apply) {
   return count ? y - gap : 0;
 }
 
+static void tilegrid_sync_states(window_t *win);
+
 static void tilegrid_relayout(window_t *win) {
   tilegrid_state_t *g = (tilegrid_state_t *)win->userdata;
   if (!g) return;
+  tilegrid_sync_states(win);   // every tile is an item from the first layout, selected or not
   window_set_scroll_content(win, 0, 0,
                             layout_padding_for(win), (irect16_t){0});
   tilegrid_layout(win, get_client_rect(win).w, true);

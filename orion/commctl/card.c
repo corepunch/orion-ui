@@ -91,9 +91,11 @@ result_t win_badge(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
 // ── Card ──────────────────────────────────────────────────────────────────────
 
 // The Card box (margin, border-left accent, ring, hover) is the sheet's; the accent colour is the
-// window's --tone variable (cdSetEdgeColor).
+// window's --tone variable (cdSetEdgeColor). Only an item of a collection (one that sends cdSetState)
+// is selectable and shows :hover; a card in a form is a still panel whose rows carry the feedback.
 typedef struct {
   uint32_t state;        // CTRL_SELECTED | CTRL_FOCUSED, owned by the containing collection
+  bool     item;         // managed by a collection through cdSetState
   bool     hover;
 } card_state_t;
 
@@ -140,6 +142,7 @@ result_t win_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       return true;
     }
     case cdSetState:
+      if (card) card->item = true;
       if (card && card->state != (wparam & (CTRL_SELECTED | CTRL_FOCUSED))) {
         card->state = wparam & (CTRL_SELECTED | CTRL_FOCUSED);
         invalidate_window(win);
@@ -155,7 +158,8 @@ result_t win_card(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
       layout_paint_children(win);
       return true;
     case evMouseMove:
-      if (card && !card->hover) { card->hover = true; invalidate_window(win); }
+      if (!card || !card->item) return false;
+      if (!card->hover) { card->hover = true; invalidate_window(win); }
       track_mouse(win);
       return false;
     case evMouseLeave:
