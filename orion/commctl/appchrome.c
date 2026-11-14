@@ -173,6 +173,7 @@ window_t *create_ribbon_chrome(const char *title, winproc_t ribbon_proc, const r
   if (!chrome || !quick) return chrome;
   app_chrome_state_t *st = chrome->userdata;
   st->presentation = TOOLBAR_PRESENTATION_COMPACT;
+  window_set_style(app_chrome_toolbar(chrome), NULL, "ribbon");   // it sits in the ribbon's tab row and takes its colours
   send_message(app_chrome_toolbar(chrome), tbSetItems, quick->count, (void *)quick->items);
   app_chrome_resize_children(chrome);
   return chrome;

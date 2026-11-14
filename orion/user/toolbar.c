@@ -15,7 +15,12 @@
 
 static bool toolbar_set_checked(toolbar_state_t *tb, int i, bool checked);
 // A toolbar element as this toolbar's window styles it.
-static const window_t *tb_win(const toolbar_state_t *tb) { return tb ? tb->owner : NULL; }
+// A toolbar is styled as the window that carries it: that window's classes and #id are the band's.
+static const window_t *tb_win(const toolbar_state_t *tb) {
+  if (!tb || !tb->owner) return NULL;
+  const window_t *host = tb->owner->parent;
+  return host && host->toolbar == tb->owner ? host : tb->owner;
+}
 static const char *tb_sel(const toolbar_state_t *tb, const char *element) { return ui_selector(tb_win(tb), element); }
 
 bool toolbar_merged_title(const window_t *win) {
@@ -386,7 +391,7 @@ static void draw_toolbar_icon_in_rect(window_t *win, toolbar_state_t *tb, const 
                      UV_RECT(res.u0, res.v0, res.u1, res.v1),
                      from_strip ? (disabled ? 0x80ffffffu : 0xffffffffu) :
                      disabled ? get_sys_color(brTextDisabled) : color ? color :
-                     get_sys_color(compact ? brTextNormal : brToolbarForeground), 0);
+                     compact ? theme_foreground_in(tb_win(tb), THEME_PART_MENU_BAR, CTRL_NORMAL) : get_sys_color(brToolbarForeground), 0);
 }
 
 static void draw_toolbar_item_at_origin(window_t *win, toolbar_state_t *tb, int i) {

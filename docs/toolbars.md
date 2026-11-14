@@ -226,6 +226,10 @@ and returns to compact placement when space permits. Hosts with a shell-owned
 menu (GEMs) also use the normal band; this API does not contribute icons to
 the shell's shared menu.
 
+A toolbar is styled as the window that carries it: that window's classes and
+`#id` (`window_set_style`) select its `Toolbar` rules, and a compact
+toolbar's background and icon colour are `MenuBar`'s `background` and `color`.
+
 The compiler emits `<prefix>_application_toolbar`, an `application_toolbar_t`
 descriptor containing items, count, and presentation. Pass it to
 `create_application_chrome(title, menubar_proc, menus, menu_count, toolbar_proc,

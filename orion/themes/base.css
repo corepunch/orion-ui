@@ -186,14 +186,16 @@ Toolbar::grip   { content: grip; fill: var(--text-disabled); }
 
 /* ── Ribbon ──────────────────────────────────────────────────────────────── */
 
-Ribbon::tabs      { background: var(--window-dark-bg); }
+/* The tab row wears the accent, as Office's does; the open tab joins the panel under it. */
+Ribbon::tabs      { background: var(--accent); color: var(--accent-text); }
 Ribbon            { background: var(--control-bg); border-bottom: 1px solid var(--dark-edge); }
-Ribbon::tab       { color: var(--text-normal); border-radius: var(--tab-radius) var(--tab-radius) 0 0; margin: 2px 0 0 0; }
-Ribbon::tab:hover { background: var(--button-hover); }
-Ribbon::tab:checked { background: var(--control-bg); }
-Ribbon::tab.contextual { color: var(--accent); }
-Ribbon::tab.menu  { background: var(--accent); color: var(--accent-text); border-radius: var(--toolbar-radius); margin: 3px 0; }
-Ribbon::tab.menu:hover, Ribbon::tab.menu:checked { background: color-mix(in srgb, var(--accent) 85%, var(--text-normal) 15%); }
+Ribbon::tab       { color: var(--accent-text); border-radius: var(--tab-radius) var(--tab-radius) 0 0; margin: 2px 0 0 0; }
+Ribbon::tab:hover { background: color-mix(in srgb, var(--accent-text) 18%, transparent); }
+Ribbon::tab:checked { background: var(--control-bg); color: var(--text-normal); }
+Ribbon::tab.contextual { background: color-mix(in srgb, var(--accent-text) 18%, transparent); }
+Ribbon::tab.contextual:checked { background: var(--control-bg); color: var(--accent); }
+Ribbon::tab.menu  { background: color-mix(in srgb, var(--accent) 72%, #000000 28%); color: var(--accent-text); border-radius: var(--toolbar-radius); margin: 3px 0; }
+Ribbon::tab.menu:hover, Ribbon::tab.menu:checked { background: color-mix(in srgb, var(--accent) 58%, #000000 42%); }
 Ribbon::button    { color: var(--toolbar-foreground); border-radius: var(--toolbar-radius); }
 Ribbon::button:hover { background: var(--button-hover); }
 Ribbon::button:checked, Ribbon::button:active { background: var(--selection); color: var(--accent-text); }
@@ -236,7 +238,10 @@ TableView::row:disabled { background: none !important; }
 
 /* ── Menus ───────────────────────────────────────────────────────────────── */
 
-MenuBar   { background: var(--window-dark-bg); }
+MenuBar   { background: var(--window-dark-bg); color: var(--text-normal); }
+/* A ribbon's Quick Access Toolbar sits in its tab row and takes its colours. */
+MenuBar.ribbon { background: var(--accent); color: var(--accent-text); }
+Toolbar.ribbon::grip { fill: color-mix(in srgb, var(--accent-text) 55%, transparent); }
 Menu      { background: var(--control-bg); border-radius: 6px; }
 Menu::item:hover, Menu::item:checked, Menu::item:active {
   background: var(--selection);

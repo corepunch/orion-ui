@@ -454,7 +454,7 @@ static void rb_paint(window_t *win, ribbon_state_t *st) {
   theme_draw_in(win, THEME_PART_RIBBON_TABS, row, CTRL_NORMAL);
   if (!st->def) return;
   window_t *maximized = menu_row_maximized_window(win);
-  if (maximized) draw_theme_icon_in_rect(THEME_ICON_RESTORE, rb_restore_rect(win), get_sys_color(brTextNormal));
+  if (maximized) draw_theme_icon_in_rect(THEME_ICON_RESTORE, rb_restore_rect(win), theme_foreground_in(win, THEME_PART_RIBBON_TABS, CTRL_NORMAL));
   if (rb_has_menu(st)) {
     irect16_t r = rb_tab_rect(win, st, -1);
     ctrl_state_t state = rb_state(st, (rb_hit_t){RB_MENU, 0}, false, false);

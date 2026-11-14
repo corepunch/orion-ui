@@ -171,8 +171,9 @@ As a gem there is no ribbon, and the pages' `<Toolbar>`s show as before.
 | Selector | |
 |---|---|
 | `Ribbon` | The command panel: `padding`, `gap` between columns |
-| `Ribbon::tabs` | The tab row: `height`, `padding`, `gap` after the File button |
-| `Ribbon::tab`, `Ribbon::tab.contextual`, `Ribbon::tab.menu` | A tab (`:hover`, `:checked`), a contextual one, and the File button |
+| `Ribbon::tabs` | The tab row: `height`, `padding`, `gap` after the File button. It wears the accent colour, as Office's does |
+| `Ribbon::tab`, `Ribbon::tab.contextual`, `Ribbon::tab.menu` | A tab (`:hover`, `:checked`: the open tab takes the panel's background), a contextual one, and the File button |
+| `MenuBar.ribbon`, `Toolbar.ribbon::grip` | The Quick Access Toolbar in the tab row: its background, icon `color` and grip. The chrome gives that toolbar the class `ribbon` |
 | `Ribbon::button` | A command (`:hover`, `:active`, `:checked`, `:disabled`): `height` of a row, `--single-height` of the single row, `min-width` of a large button, `--icon-size`, `--large-icon-size`, and a large button's `padding-top` and `--caption-gap` between icon and caption |
 | `Ribbon::group` | The caption's `color` and font; `padding-left` inside the group |
 | `Ribbon::separator`, `Ribbon::arrow`, `Ribbon::toggle` | The rule between groups, a drop-down's arrow, the layout switch |
