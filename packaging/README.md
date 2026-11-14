@@ -188,7 +188,7 @@ Linux, macOS and Windows builds are defined once, in
 pull request and keeps the app downloads as workflow artifacts for a week.
 `release.yml` runs it for a `v*` tag (or a manual run with a version), which
 must match the `VERSION` file. It then also builds the package-manager
-archives and runs the tests on each platform, creates the GitHub Release and
+archives and runs the tests on Linux and macOS, creates the GitHub Release and
 attaches every file:
 
 | Asset | For |
