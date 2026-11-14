@@ -159,7 +159,7 @@ $(BMPLIB_GENERATED)/huffman-codes.h: $(BMPLIB_DIR)/gen-huffman.c $(BMPLIB_DIR)/g
 	@$(BMPLIB_GENERATED)/gen-huffman $@
 $(BUILD_DIR)/image-deps/bmplib/%.o: $(BMPLIB_DIR)/%.c
 	@mkdir -p $(@D)
-	@$(CC) $(CFLAGS) -DNDEBUG -fPIC -c $< -o $@
+	@$(CC) $(CFLAGS) -DNDEBUG -DBMPLIB_LIB -fPIC -c $< -o $@
 $(addprefix $(BUILD_DIR)/image-deps/bmplib/,$(addsuffix .o,$(BMPLIB_COMPONENTS))): $(BMPLIB_GENERATED)/huffman-codes.h
 $(IMAGE_OBJS): $(IMAGE_CONFIG)/jconfig.h $(IMAGE_CONFIG)/pnglibconf.h orion/user/bmplib_config/config.h $(wildcard $(PNG_DIR)/*.h $(JPEG_DIR)/*.h $(ZLIB_DIR)/*.h $(BMP_DIR)/include/*.h $(BMP_DIR)/src/utils/*.h $(BMPLIB_DIR)/*.h)
 $(IMAGE_LIB): $(IMAGE_OBJS)

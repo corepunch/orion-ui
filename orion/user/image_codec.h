@@ -9,6 +9,7 @@
 #include <png.h>
 #include <jpeglib.h>
 #include <libnsbmp.h>
+#define BMPLIB_LIB  // bmplib is compiled into libuser, not imported from a DLL
 #include <bmplib.h>
 #include <zlib.h>
 
