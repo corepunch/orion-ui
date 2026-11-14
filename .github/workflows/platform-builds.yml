@@ -25,7 +25,7 @@ jobs:
         include:
           - os: ubuntu-24.04   # 26.04 runners cannot reach security.ubuntu.com for apt (Nov 2026)
             platform: linux-x86_64
-          - os: macos-14
+          - os: macos-15     # the macos-14 runner configuration is no longer offered (Nov 2026)
             platform: macos-arm64
           - os: windows-latest
             platform: windows-x86_64
