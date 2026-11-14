@@ -851,13 +851,21 @@ result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lp
   }
 }
 
-result_t ledger_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+// The ribbon's buttons, its menus and the accelerators all name the same commands.
+result_t ledger_ribbon_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
   if (msg == evClose && g_ledger && is_window(g_ledger->main_win))
     return send_message(g_ledger->main_win, evClose, 0, NULL);
-  if (msg == evCommand && (HIWORD(wparam) == kMenuBarNotificationItemClick ||
+  if (msg == evCommand && (HIWORD(wparam) == btnClicked || HIWORD(wparam) == kMenuBarNotificationItemClick ||
                            HIWORD(wparam) == kAcceleratorNotification)) {
     ledger_command(LOWORD(wparam));
     return true;
   }
-  return win_menubar(win, msg, wparam, lparam);
+  return win_ribbon(win, msg, wparam, lparam);
+}
+
+result_t ledger_quick_access_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam) {
+  (void)win; (void)lparam;
+  if (msg != evCommand || HIWORD(wparam) != btnClicked) return false;
+  ledger_command(LOWORD(wparam));
+  return true;
 }

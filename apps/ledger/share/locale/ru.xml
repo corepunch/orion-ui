@@ -37,7 +37,7 @@
   <string source="Document journal (Ctrl+1)" where="journal_page">Журнал документов (Ctrl+1)</string>
   <string source="New" where="counterparties_page,items_page,employees_page,assets_page">Новый</string>
   <string source="New document (Ctrl+N)" where="journal_page">Новый документ (Ctrl+N)</string>
-  <string source="Open" obsolete="true">Открыть</string>
+  <string source="Open">Открыть</string>
   <string source="Open document (Ctrl+O)" where="journal_page">Открыть документ (Ctrl+O)</string>
   <string source="Post: write accounting entries (F9)" where="journal_page">Провести: сформировать проводки (F9)</string>
   <string source="Unpost" obsolete="true">Отменить</string>
@@ -105,7 +105,7 @@
   <string source="Date:" where="operation,payroll,asset_document,rate,contract">Дата:</string>
   <string source="Contract:" where="document,operation">Договор:</string>
   <string source="Warehouse:" where="document,operation">Склад:</string>
-  <string source="Counterparty:" where="document,contract,bank_account,operation">Контрагент:</string>
+  <string source="Counterparty:" where="document,operation,contract,bank_account">Контрагент:</string>
   <string source="Comment:" where="document,operation,payroll,asset_document,closing,contract">Комментарий:</string>
   <string source="Assigned when saved" where="document,operation,payroll,asset_document,closing">Присваивается при записи</string>
   <string source="Add Line..." where="payroll">Добавить строку...</string>
@@ -186,7 +186,7 @@
   <string source="End" where="report_settings">по текущую дату</string>
   <string source="Report period: %s – %s" where="code">Период отчетов: %s – %s</string>
   <string source="New Manual Operation" where="code">Новая операция</string>
-  <string source="Bank account:" where="counterparty,organization,document,operation">Расчетный счет:</string>
+  <string source="Bank account:" where="document,counterparty,organization,operation">Расчетный счет:</string>
   <string source="New Payroll Document..." where="menu">Начисление зарплаты...</string>
   <string source="Put Assets into Service..." where="menu">Ввод ОС в эксплуатацию...</string>
   <string source="Close Month..." where="menu">Закрытие месяца...</string>
@@ -632,6 +632,34 @@
   <string source="Account number:" where="bank_account">Номер счета:</string>
   <string source="SWIFT:" where="bank_account">SWIFT:</string>
   <string source="Keeper:" where="warehouse">Кладовщик:</string>
+  <string source="Save (Ctrl+S)">Сохранить (Ctrl+S)</string>
+  <string source="Find a command (Ctrl+Shift+K)">Найти команду (Ctrl+Shift+K)</string>
+  <string source="Assets into Service">Принятие ОС к учету</string>
+  <string source="Entries (Dr/Cr)">Проводки (Дт/Кт)</string>
+  <string source="Entry's Document">Документ проводки</string>
+  <string source="Posting">Проведение</string>
+  <string source="Period">Период</string>
+  <string source="Close Period">Закрыть период</string>
+  <string source="Edit contract">Изменить договор</string>
+  <string source="Delete contract">Удалить договор</string>
+  <string source="Edit bank account">Изменить банковский счет</string>
+  <string source="Delete bank account">Удалить банковский счет</string>
+  <string source="Edit warehouse">Изменить склад</string>
+  <string source="Delete warehouse">Удалить склад</string>
+  <string source="New Rate">Новый курс</string>
+  <string source="Output">Вывод</string>
+  <string source="Navigate">Навигация</string>
+  <string source="Sidebar">Боковая панель</string>
+  <string source="Go To">Перейти</string>
+  <string source="Next">Следующий</string>
+  <string source="Previous">Предыдущий</string>
+  <string source="Close">Закрыть</string>
+  <string source="Arrange">Упорядочить</string>
+  <string source="Cascade">Каскадом</string>
+  <string source="Tile">Рядом</string>
+  <string source="Assistance">Помощь</string>
+  <string source="Find a Command">Найти команду</string>
+  <string source="Office Assistant">Помощник</string>
   <context name="currencies_page">
     <string source="Rate">Курс</string>
   </context>

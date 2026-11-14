@@ -168,21 +168,28 @@ bool gem_init(int argc, char *argv[], hinstance_t hinstance) {
   if (!ledger_ui_open(share)) return false;
 
 #ifdef BUILD_AS_GEM
-  g_ledger->menubar_win = set_app_menu(ledger_menubar_proc, kLedgerMenus, kLedgerMenuCount,
+  g_ledger->menubar_win = set_app_menu(ledger_ribbon_proc, kLedgerMenus, kLedgerMenuCount,
                                        ledger_command, hinstance);
 #else
-  g_ledger->chrome_win = create_app_chrome("Ledger Chrome", ledger_menubar_proc,
-                                         kLedgerMenus, kLedgerMenuCount, NULL, hinstance);
+  g_ledger->chrome_win = create_ribbon_chrome("Ledger Chrome", ledger_ribbon_proc, &ledger_ribbon,
+                                            ledger_quick_access_proc, hinstance);
   if (!g_ledger->chrome_win) return false;
   g_ledger->menubar_win = app_chrome_menubar(g_ledger->chrome_win);
 #endif
   g_ledger->accel = load_accelerators(ledger_default_accels, ledger_default_accel_count);
   if (g_ledger->menubar_win)
     send_message(g_ledger->menubar_win, kMenuBarMessageSetAccelerators, 0, g_ledger->accel);
+#ifndef BUILD_AS_GEM
+  // Every menu goes to the operating system's menu bar where it has one; the ribbon keeps the rest.
+  send_message(g_ledger->menubar_win, kMenuBarMessageSetMenus, kLedgerMenuCount, (void *)kLedgerMenus);
+#endif
 
-  window_t *win = create_window_from_form(&ledger_main_window_form, 16, MENUBAR_HEIGHT + 16,
+  irect16_t workspace = R(0, MENUBAR_HEIGHT, 0, 0);   // a gem's shell keeps the menu row
+  get_application_workspace(hinstance, &workspace);
+  window_t *win = create_window_from_form(&ledger_main_window_form, workspace.x + 16, workspace.y + 16,
                                           NULL, ledger_main_proc, hinstance, NULL);
   if (!win) return false;
+  if (workspace.h > 0 && win->frame.h > workspace.h - 32) resize_window(win, win->frame.w, workspace.h - 32);
   if (g_ledger->ib->dirty && !send_db_message(g_ledger->ib, dbSave, 0, NULL)) return false;
   show_window(win, true);
   if (show_assistant || open_assistant) ledger_show_assistant();

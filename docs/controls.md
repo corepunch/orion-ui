@@ -21,6 +21,9 @@ These application captures show their normal states and proportions.
 | ![Image Editor controls](screenshots/imageeditor_orion.jpg) | Menu bar, icon toolbar, MDI document, tool palette, swatches, layer list, option panel, timeline, and scrollbars |
 | ![Task Manager controls](screenshots/taskmanager_backlog.jpg) | Menu bar, toolbar, table view, status bar, sortable columns, and document window |
 
+An application's command surface can be a [ribbon](ribbon.md) in place of a
+menu bar and a toolbar band.
+
 For focused API details and message contracts, use the sections below. For
 guidance on capturing and presenting a complete application, see the
 [Application Presentation Guide](app-presentation).

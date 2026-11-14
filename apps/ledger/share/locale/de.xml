@@ -40,7 +40,7 @@
   <string source="New document (Ctrl+N)" where="journal_page">Neuer Beleg (Strg+N)</string>
   <string source="Operation" obsolete="true">Umbuchung</string>
   <string source="New manual operation (Ctrl+M)" where="journal_page">Neue Umbuchung, Buchungen manuell (Strg+M)</string>
-  <string source="Open" obsolete="true">Öffnen</string>
+  <string source="Open">Öffnen</string>
   <string source="Open document (Ctrl+O)" where="journal_page">Beleg öffnen (Strg+O)</string>
   <string source="Post: write accounting entries (F9)" where="journal_page">Buchen: Buchungssätze erzeugen (F9)</string>
   <string source="Unpost" obsolete="true">Stornieren</string>
@@ -126,7 +126,7 @@
   <string source="Date:" where="operation,payroll,asset_document,rate,contract">Datum:</string>
   <string source="Contract:" where="document,operation">Vertrag:</string>
   <string source="Warehouse:" where="document,operation">Lager:</string>
-  <string source="Counterparty:" where="document,contract,bank_account,operation">Geschäftspartner:</string>
+  <string source="Counterparty:" where="document,operation,contract,bank_account">Geschäftspartner:</string>
   <string source="Comment:" where="document,operation,payroll,asset_document,closing,contract">Bemerkung:</string>
   <string source="Assigned when saved" where="document,operation,payroll,asset_document,closing">wird beim Speichern vergeben</string>
   <string source="Add Line..." where="payroll">Position hinzufügen...</string>
@@ -149,7 +149,7 @@
   <string source="KPP:" where="counterparty,organization">Steuer-Zusatznummer:</string>
   <string source="Address:" where="counterparty,organization,warehouse">Anschrift:</string>
   <string source="Bank:" where="counterparty,organization,bank_account">Bank:</string>
-  <string source="Bank account:" where="counterparty,organization,document,operation">Kontonummer:</string>
+  <string source="Bank account:" where="document,counterparty,organization,operation">Kontonummer:</string>
   <string source="Bank ID (BIK):" where="counterparty,organization,bank_account">Bankleitzahl:</string>
   <string source="Phone:" where="counterparty">Telefon:</string>
   <string source="Code:" where="item,currency">Nummer:</string>
@@ -632,6 +632,34 @@ Salden ohne Konto in der Konfiguration, ausgelassen: %s</string>
   <string source="Account number:" where="bank_account">Kontonummer:</string>
   <string source="SWIFT:" where="bank_account">SWIFT:</string>
   <string source="Keeper:" where="warehouse">Lagerverwalter:</string>
+  <string source="Save (Ctrl+S)">Speichern (Ctrl+S)</string>
+  <string source="Find a command (Ctrl+Shift+K)">Befehl suchen (Ctrl+Shift+K)</string>
+  <string source="Assets into Service">Anlagen in Betrieb nehmen</string>
+  <string source="Entries (Dr/Cr)">Buchungen (S/H)</string>
+  <string source="Entry's Document">Beleg der Buchung</string>
+  <string source="Posting">Buchung</string>
+  <string source="Period">Zeitraum</string>
+  <string source="Close Period">Zeitraum schließen</string>
+  <string source="Edit contract">Vertrag bearbeiten</string>
+  <string source="Delete contract">Vertrag löschen</string>
+  <string source="Edit bank account">Bankkonto bearbeiten</string>
+  <string source="Delete bank account">Bankkonto löschen</string>
+  <string source="Edit warehouse">Lager bearbeiten</string>
+  <string source="Delete warehouse">Lager löschen</string>
+  <string source="New Rate">Neuer Kurs</string>
+  <string source="Output">Ausgabe</string>
+  <string source="Navigate">Navigation</string>
+  <string source="Sidebar">Seitenleiste</string>
+  <string source="Go To">Gehe zu</string>
+  <string source="Next">Nächster</string>
+  <string source="Previous">Vorheriger</string>
+  <string source="Close">Schließen</string>
+  <string source="Arrange">Anordnen</string>
+  <string source="Cascade">Überlappend</string>
+  <string source="Tile">Nebeneinander</string>
+  <string source="Assistance">Unterstützung</string>
+  <string source="Find a Command">Befehl suchen</string>
+  <string source="Office Assistant">Office-Assistent</string>
   <context name="currencies_page">
     <string source="Rate">Kurs</string>
   </context>

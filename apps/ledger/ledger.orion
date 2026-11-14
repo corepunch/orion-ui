@@ -122,6 +122,142 @@
     </menu>
   </menus>
 
+  <!-- The ribbon is Ledger's command surface when it runs on its own: the File menu is the
+       application menu, the tabs follow the menus above, and the commands used from every
+       page sit in the Quick Access Toolbar. The menus stay the registry of commands,
+       labels and shortcuts, and are what Ledger contributes to the shell's menu as a gem. -->
+  <ribbon>
+    <ApplicationMenu menu="file" />
+    <QuickAccessToolbar>
+      <Button command="file.save" icon="floppy-disk" tooltip="Save (Ctrl+S)" />
+      <Button command="doc.print" icon="ledger-print" tooltip="Print forms (Ctrl+P)" />
+      <Button command="help.find_command" icon="search" tooltip="Find a command (Ctrl+Shift+K)" />
+    </QuickAccessToolbar>
+    <Tab label="Home">
+      <Group label="Create">
+        <Button command="doc.new" icon="page-plus" text="New Document" size="large" />
+        <Button command="doc.new_operation" icon="ledger-operation" text="Manual Operation" />
+        <Button command="doc.new_payroll" icon="ledger-payroll" text="Payroll" />
+        <Button command="doc.new_assets" icon="ledger-nav-assets" text="Assets into Service" />
+      </Group>
+      <Group label="Document">
+        <Button command="doc.open" icon="ledger-open" text="Open" size="large" />
+        <Button command="doc.entries" icon="ledger-nav-entries" text="Entries (Dr/Cr)" />
+        <Button command="doc.open_entry" icon="ledger-row-entry" text="Entry's Document" />
+        <Button command="doc.print" icon="ledger-print" text="Print Forms" />
+      </Group>
+      <Group label="Posting">
+        <Button command="doc.post" icon="ledger-post" text="Post" size="large" />
+        <Button command="doc.post_close" icon="ledger-doc-posted" text="Post and Close" />
+        <Button command="doc.unpost" icon="ledger-unpost" text="Cancel Posting" />
+        <Button command="doc.reverse" icon="undo" text="Reverse" />
+      </Group>
+      <Group label="Period">
+        <Button command="doc.close_month" icon="ledger-close-month" text="Close Month" size="large" />
+        <Button command="doc.lock_period" icon="lock" text="Close Period" size="large" />
+      </Group>
+      <Group label="Edit">
+        <Button command="doc.delete" icon="ledger-delete" text="Delete" size="large" />
+      </Group>
+    </Tab>
+    <Tab label="Catalogs">
+      <Group label="Counterparties">
+        <Button command="catalog.new_counterparty" icon="ledger-nav-counterparties" text="New" size="large" tooltip="New counterparty" />
+        <Button command="catalog.edit_counterparty" icon="ledger-edit" text="Edit" tooltip="Edit counterparty" />
+        <Button command="catalog.delete_counterparty" icon="ledger-delete" text="Delete" tooltip="Delete counterparty" />
+      </Group>
+      <Group label="Contracts">
+        <Button command="catalog.new_contract" icon="ledger-nav-journal" text="New" size="large" tooltip="New contract" />
+        <Button command="catalog.edit_contract" icon="ledger-edit" text="Edit" tooltip="Edit contract" />
+        <Button command="catalog.delete_contract" icon="ledger-delete" text="Delete" tooltip="Delete contract" />
+      </Group>
+      <Group label="Bank Accounts">
+        <Button command="catalog.new_bank_account" icon="ledger-payroll" text="New" size="large" tooltip="New bank account" />
+        <Button command="catalog.edit_bank_account" icon="ledger-edit" text="Edit" tooltip="Edit bank account" />
+        <Button command="catalog.delete_bank_account" icon="ledger-delete" text="Delete" tooltip="Delete bank account" />
+      </Group>
+      <Group label="Items">
+        <Button command="catalog.new_item" icon="ledger-nav-items" text="New" size="large" tooltip="New item" />
+        <Button command="catalog.edit_item" icon="ledger-edit" text="Edit" tooltip="Edit item" />
+        <Button command="catalog.delete_item" icon="ledger-delete" text="Delete" tooltip="Delete item" />
+      </Group>
+      <Group label="Warehouses">
+        <Button command="catalog.new_warehouse" icon="package" text="New" size="large" tooltip="New warehouse" />
+        <Button command="catalog.edit_warehouse" icon="ledger-edit" text="Edit" tooltip="Edit warehouse" />
+        <Button command="catalog.delete_warehouse" icon="ledger-delete" text="Delete" tooltip="Delete warehouse" />
+      </Group>
+      <Group label="Employees">
+        <Button command="catalog.new_employee" icon="ledger-nav-employees" text="New" size="large" tooltip="New employee" />
+        <Button command="catalog.edit_employee" icon="ledger-edit" text="Edit" tooltip="Edit employee" />
+        <Button command="catalog.delete_employee" icon="ledger-delete" text="Delete" tooltip="Delete employee" />
+      </Group>
+      <Group label="Fixed Assets">
+        <Button command="catalog.new_asset" icon="ledger-nav-assets" text="New" size="large" tooltip="New fixed asset" />
+        <Button command="catalog.edit_asset" icon="ledger-edit" text="Edit" tooltip="Edit fixed asset" />
+        <Button command="catalog.delete_asset" icon="ledger-delete" text="Delete" tooltip="Delete fixed asset" />
+      </Group>
+      <Group label="Currencies">
+        <Button command="catalog.new_currency" icon="ledger-nav-currencies" text="New" size="large" tooltip="New currency" />
+        <Button command="catalog.edit_currency" icon="ledger-edit" text="Edit" tooltip="Edit currency" />
+        <Separator />
+        <Button command="catalog.new_rate" icon="ledger-new" text="New Rate" tooltip="New exchange rate" />
+        <Button command="catalog.delete_rate" icon="ledger-delete" text="Delete Rate" tooltip="Delete exchange rate" />
+      </Group>
+    </Tab>
+    <Tab label="Reports">
+      <Group label="Report">
+        <Button command="report.settings" icon="ledger-settings" text="Report Settings" size="large" />
+        <Button command="report.recalc" icon="refresh" text="Recalculate Totals" size="large" />
+      </Group>
+      <Group label="Account">
+        <Button command="report.card" icon="ledger-card" text="Account Card" size="large" />
+      </Group>
+      <Group label="Output">
+        <Button command="report.print" icon="ledger-print" text="Print Forms" size="large" />
+      </Group>
+    </Tab>
+    <Tab label="View">
+      <Group label="Navigate">
+        <Button command="view.back" icon="ledger-back" text="Back" />
+        <Button command="view.forward" icon="ledger-forward" text="Forward" />
+        <Button command="view.sidebar" icon="ledger-sidebar" text="Sidebar" />
+      </Group>
+      <Group label="Go To">
+        <Button command="view.home" icon="ledger-nav-home" text="Home" size="large" />
+        <Button command="view.journal" icon="ledger-nav-journal" text="Journal" />
+        <Button command="view.entries" icon="ledger-nav-entries" text="Entry Journal" />
+        <Button command="view.accounts" icon="ledger-nav-accounts" text="Chart of Accounts" />
+        <Button command="view.counterparties" icon="ledger-nav-counterparties" text="Counterparties" />
+        <Button command="view.items" icon="ledger-nav-items" text="Items" />
+        <Button command="view.employees" icon="ledger-nav-employees" text="Employees" />
+        <Button command="view.assets" icon="ledger-nav-assets" text="Fixed Assets" />
+        <Button command="view.currencies" icon="ledger-nav-currencies" text="Currencies" />
+        <Button command="view.reports" icon="ledger-nav-balance" text="Reports" />
+        <Button command="view.config" icon="ledger-nav-config" text="Configuration" size="large" />
+      </Group>
+    </Tab>
+    <Tab label="Window">
+      <Group label="Documents">
+        <Button command="window.next_document" icon="nav-arrow-right" text="Next" />
+        <Button command="window.previous_document" icon="nav-arrow-left" text="Previous" />
+        <Button command="window.close_document" icon="xmark" text="Close" />
+      </Group>
+      <Group label="Arrange">
+        <Button command="window.cascade" icon="multiple-pages" text="Cascade" size="large" />
+        <Button command="window.tile" icon="view-grid" text="Tile" size="large" />
+      </Group>
+    </Tab>
+    <Tab label="Help">
+      <Group label="Assistance">
+        <Button command="help.find_command" icon="search" text="Find a Command" size="large" />
+        <Button command="help.assistant" icon="ledger-tip" text="Office Assistant" size="large" />
+      </Group>
+      <Group label="Ledger">
+        <Button command="help.about" icon="info-circle" text="About Ledger" size="large" />
+      </Group>
+    </Tab>
+  </ribbon>
+
   <databases>
     <!-- Configuration: national metadata and predefined data. Read-only. -->
     <database name="cfg" class="db_schema_xml">

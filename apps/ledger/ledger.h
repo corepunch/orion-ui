@@ -199,6 +199,7 @@ void     ledger_refresh_views(void);
 void     ledger_home_perform(int row_id);
 void     ledger_update_status(void);
 result_t ledger_main_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
-result_t ledger_menubar_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t ledger_ribbon_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
+result_t ledger_quick_access_proc(window_t *win, uint32_t msg, uint32_t wparam, void *lparam);
 
 #endif // __LEDGER_H__
